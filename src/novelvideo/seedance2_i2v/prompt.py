@@ -21,6 +21,7 @@ from novelvideo.utils.source_language import (
     asset_language_instruction,
     detect_asset_language,
     resolve_asset_language,
+    select_by_language,
 )
 
 
@@ -41,26 +42,32 @@ SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, dict[AssetLanguage, str]] = {
     "subject": {
         "zh": "主体：明确画面核心人物或物体、当前动作和状态，避免多个主体争抢焦点。",
         "en": "Subject: Define the primary character or object, its current action and state, and avoid competing focal subjects.",
+        "vi": "Chủ thể: Xác định nhân vật hoặc vật thể chính của khung hình cùng hành động và trạng thái hiện tại, tránh nhiều chủ thể tranh giành tiêu điểm.",
     },
     "scene": {
         "zh": "场景：补充空间背景、地点关系、关键道具和环境材质，保持与参考图一致。",
         "en": "Scene: Describe the spatial background, location relationships, key props, and environmental materials while staying consistent with the references.",
+        "vi": "Bối cảnh: Bổ sung nền không gian, quan hệ vị trí, đạo cụ then chốt và chất liệu môi trường, giữ nhất quán với ảnh tham chiếu.",
     },
     "lighting": {
         "zh": "光影：描述主光源、明暗层次、色温和氛围，避免忽明忽暗。",
         "en": "Lighting: Describe the key light, tonal layers, color temperature, and atmosphere while avoiding unintended flicker.",
+        "vi": "Ánh sáng: Mô tả nguồn sáng chính, các tầng sáng tối, nhiệt độ màu và không khí, tránh ánh sáng chập chờn.",
     },
     "camera": {
         "zh": "镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
         "en": "Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
+        "vi": "Máy quay: Nêu rõ cỡ cảnh, góc nhìn, tốc độ và hướng chuyển động máy để chuyển động máy rõ ràng, thực hiện được.",
     },
     "style": {
         "zh": "风格：限定画面质感、时代感、色彩倾向和真实度，避免风格漂移。",
         "en": "Style: Define visual texture, period, color direction, and realism to prevent style drift.",
+        "vi": "Phong cách: Giới hạn chất cảm hình ảnh, cảm giác thời đại, xu hướng màu sắc và độ chân thực để tránh lệch phong cách.",
     },
     "no_subtitle": {
         "zh": "无字幕：避免生成任何文字或字幕，保持画面纯净。",
         "en": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean.",
+        "vi": "Không phụ đề: Không tạo bất kỳ chữ hay phụ đề nào, giữ khung hình sạch.",
     },
 }
 
@@ -89,10 +96,12 @@ def detect_seedance2_prompt_language(beat: dict[str, Any]) -> AssetLanguage:
         )
         if _text(beat.get(field))
     )
-    detected = resolve_asset_language(source)
-    # Seedance templates and guidance matching only cover zh/en; Vietnamese
-    # keeps the Chinese scaffolding it always had.
-    return "zh" if detected == "vi" else detected
+    return resolve_asset_language(source)
+
+
+def _is_latin(language: AssetLanguage) -> bool:
+    """en/vi share Latin-script punctuation (". ", "; ", ", ") and spacing."""
+    return language in ("en", "vi")
 
 
 def _text(value: Any) -> str:
@@ -116,15 +125,15 @@ def _beat_spoken_label(
     beat: dict[str, Any], language: AssetLanguage = "zh"
 ) -> str:
     if _text(beat.get("audio_type")) == "dialogue" or _text(beat.get("dialogue")):
-        return "Dialogue" if language == "en" else "台词"
-    return "Narration" if language == "en" else "旁白/解说"
+        return select_by_language(language, zh="台词", en="Dialogue", vi="Lời thoại")
+    return select_by_language(language, zh="旁白/解说", en="Narration", vi="Lời dẫn")
 
 
 def _clean_sentence(value: Any, language: AssetLanguage = "zh") -> str:
     text = _sentence_text(value)
     if not text:
         return ""
-    return f"{text}." if language == "en" else f"{text}。"
+    return f"{text}." if _is_latin(language) else f"{text}。"
 
 
 def _asset_value(asset: Any, name: str, default: Any = "") -> Any:
@@ -170,26 +179,40 @@ def _scene_ref_label(
         details: list[str] = []
         if desired_label and desired_label != asset_label:
             details.append(
-                f"target scene state: {desired_label}"
-                if language == "en"
-                else f"目标场景状态：{desired_label}"
+                select_by_language(
+                    language,
+                    zh=f"目标场景状态：{desired_label}",
+                    en=f"target scene state: {desired_label}",
+                    vi=f"trạng thái cảnh mục tiêu: {desired_label}",
+                )
             )
         if desired_time:
             details.append(
-                f"target time: {desired_time}"
-                if language == "en"
-                else f"目标时间：{desired_time}"
+                select_by_language(
+                    language,
+                    zh=f"目标时间：{desired_time}",
+                    en=f"target time: {desired_time}",
+                    vi=f"thời điểm mục tiêu: {desired_time}",
+                )
             )
         if details:
-            separator = "; " if language == "en" else "；"
+            separator = "; " if _is_latin(language) else "；"
             return f"{asset_label} ({separator.join(details)})"
         return asset_label
     if desired_label and desired_time:
-        if language == "en":
-            return f"{desired_label} (target time: {desired_time})"
-        return f"{desired_label}（目标时间：{desired_time}）"
+        return select_by_language(
+            language,
+            zh=f"{desired_label}（目标时间：{desired_time}）",
+            en=f"{desired_label} (target time: {desired_time})",
+            vi=f"{desired_label} (thời điểm mục tiêu: {desired_time})",
+        )
     if desired_time:
-        return f"target time: {desired_time}" if language == "en" else f"目标时间：{desired_time}"
+        return select_by_language(
+            language,
+            zh=f"目标时间：{desired_time}",
+            en=f"target time: {desired_time}",
+            vi=f"thời điểm mục tiêu: {desired_time}",
+        )
     return desired_label
 
 
@@ -209,6 +232,13 @@ def _guidance_matches_language(guidance: str, language: AssetLanguage) -> bool:
 
     if language == "en":
         return detect_asset_language(guidance) == "en"
+    if language == "vi":
+        # Accept Vietnamese guidance, and also unaccented / ASCII-only text
+        # (e.g. "camera cham, anh sang am") that is clearly not CJK: dropping
+        # it silently would lose user intent. Han/kana/hangul text is rejected.
+        if re.search(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]", guidance):
+            return False
+        return bool(re.search(r"[A-Za-z\u00c0-\u1ef9]", guidance))
     if re.search(r"[\u3040-\u30ff\uac00-\ud7af]", guidance):
         return False
     return bool(re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", guidance))
@@ -367,7 +397,13 @@ def _beat_spoken_prompt_fragment(
             continue
         identity_id = _text(_asset_value(asset, "identity_id"))
         title = speaker_display_name(identity_id) or _text(_asset_value(asset, "label"))
-        if language == "en":
+        if language == "vi":
+            voice_references.append(
+                f"{title} dùng giọng từ {label}"
+                if title
+                else f"dùng giọng từ {label}"
+            )
+        elif language == "en":
             voice_references.append(
                 f"{title} uses the voice from {label}"
                 if title
@@ -382,19 +418,31 @@ def _beat_spoken_prompt_fragment(
     context: list[str] = []
     if speaker:
         context.append(
-            f"the speaking character in this Beat is {speaker}"
-            if language == "en"
-            else f"本 Beat 说话角色为{speaker}"
+            select_by_language(
+                language,
+                zh=f"本 Beat 说话角色为{speaker}",
+                en=f"the speaking character in this Beat is {speaker}",
+                vi=f"nhân vật nói trong Beat này là {speaker}",
+            )
         )
     if voice_references:
         context.append(
-            "voice mapping: " + ", ".join(dict.fromkeys(voice_references))
-            if language == "en"
-            else "声线对应：" + "、".join(dict.fromkeys(voice_references))
+            select_by_language(
+                language,
+                zh="声线对应：" + "、".join(dict.fromkeys(voice_references)),
+                en="voice mapping: " + ", ".join(dict.fromkeys(voice_references)),
+                vi="ánh xạ giọng nói: " + ", ".join(dict.fromkeys(voice_references)),
+            )
         )
-    context_text = ("; " if language == "en" else "；").join(context)
+    context_text = ("; " if _is_latin(language) else "；").join(context)
     if context_text:
-        context_text = f"; {context_text}" if language == "en" else f"；{context_text}"
+        context_text = f"; {context_text}" if _is_latin(language) else f"；{context_text}"
+    if language == "vi":
+        return (
+            "Văn bản thoại và diễn xuất gốc (hãy phân biệt theo ngữ nghĩa giữa chỉ dẫn hành động "
+            "và lời thoại thực sự được nói; giữ nguyên từng chữ của lời thoại"
+            f"{context_text}): {spoken}"
+        )
     if language == "en":
         return (
             "Original dialogue and performance text (distinguish action directions "
@@ -420,10 +468,11 @@ def _text_with_identity_references(
         character, _identity = _split_identity_label(identity_id)
         image_label = identity_labels.get(identity_id)
         if image_label:
-            return (
-                f"{character} from {image_label}"
-                if language == "en"
-                else f"{image_label}中的{character}"
+            return select_by_language(
+                language,
+                zh=f"{image_label}中的{character}",
+                en=f"{character} from {image_label}",
+                vi=f"{character} trong {image_label}",
             )
         fallback_text = identity_fallbacks.get(identity_id)
         if fallback_text:
@@ -445,10 +494,11 @@ def _text_with_asset_references(
         prop_id = _text(match.group(1))
         image_label = prop_labels.get(prop_id)
         if image_label:
-            return (
-                f"the {prop_id} prop from {image_label}"
-                if language == "en"
-                else f"{image_label}中的{prop_id}道具"
+            return select_by_language(
+                language,
+                zh=f"{image_label}中的{prop_id}道具",
+                en=f"the {prop_id} prop from {image_label}",
+                vi=f"đạo cụ {prop_id} trong {image_label}",
             )
         fallback_text = prop_fallbacks.get(prop_id)
         if fallback_text:

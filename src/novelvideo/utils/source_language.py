@@ -11,7 +11,7 @@ import langid
 from langdetect import DetectorFactory, LangDetectException, detect
 import wordninja
 
-AssetLanguage = Literal["zh", "en"]
+AssetLanguage = Literal["zh", "en", "vi"]
 
 DetectorFactory.seed = 0
 
@@ -27,11 +27,36 @@ _SHORT_ENGLISH_ACTION_RE = re.compile(
 )
 
 
-def detect_asset_language(text: str) -> AssetLanguage:
-    """Choose Chinese or English from the dominant script in ``text``.
+# Letters that only Vietnamese uses among the Latin-script languages we meet
+# (ă â ê ô ơ ư đ plus the stacked tone-mark block). Plain à á é í ó ú are left
+# out on purpose: French/Spanish/Portuguese share them, and a name such as
+# "Chloë" or "María" must not tip English prose into Vietnamese.
+_VIETNAMESE_LETTER_RE = re.compile(r"[ăâêôơưđĂÂÊÔƠƯĐ\u1ea0-\u1ef9]")
+_LATIN_LETTER_RE = re.compile(r"[A-Za-z\u00c0-\u024f\u1ea0-\u1ef9]")
+# Vietnamese prose carries a distinctive letter in roughly every sixth Latin
+# letter; an English line with one Vietnamese proper name stays far below this.
+_VIETNAMESE_MIN_RATIO = 0.06
 
-    Chinese and English are the only languages in this contract. Any other
-    script, a tie, or empty input retains the historical Chinese default.
+
+def _looks_vietnamese(prose: str) -> bool:
+    text = unicodedata.normalize("NFC", prose)
+    distinctive = len(_VIETNAMESE_LETTER_RE.findall(text))
+    if not distinctive:
+        return False
+    letters = len(_LATIN_LETTER_RE.findall(text))
+    if distinctive / max(letters, 1) < _VIETNAMESE_MIN_RATIO:
+        return False
+    try:
+        return detect(text) == "vi"
+    except LangDetectException:
+        return False
+
+
+def detect_asset_language(text: str) -> AssetLanguage:
+    """Choose Chinese, English or Vietnamese from the dominant script in ``text``.
+
+    Any other script, a tie, or empty input retains the historical Chinese
+    default.
     """
     raw_text = str(text or "")
     raw_lines = [line.strip() for line in raw_text.splitlines()]
@@ -58,6 +83,9 @@ def detect_asset_language(text: str) -> AssetLanguage:
 
     if han * 2 >= latin and han:
         return "zh"
+
+    if _looks_vietnamese(prose):
+        return "vi"
 
     short_action_match = _SHORT_ENGLISH_ACTION_RE.search(prose)
     # langdetect is intentionally conservative for tiny screenplay actions.
@@ -104,10 +132,21 @@ def asset_language_instruction(language: AssetLanguage) -> str:
             "Keep every supplied character and location name verbatim; "
             "never translate, romanize, or rewrite a name."
         )
+    if language == "vi":
+        return (
+            "Viết mọi trường văn xuôi hiển thị cho người dùng bằng tiếng Việt. "
+            "Giữ nguyên văn mọi tên nhân vật và địa điểm đã cung cấp; "
+            "không dịch, không phiên âm và không viết lại tên."
+        )
     return (
         "所有面向用户的自由文本字段都使用中文。"
         "人物名和地点名必须按输入原样保留，不得翻译、音译或改写。"
     )
+
+
+def asset_language_label(language: str) -> str:
+    """English name of the output language, for task/log text sent to the model."""
+    return {"en": "English", "vi": "Vietnamese (Tiếng Việt)"}.get(language, "Chinese (中文)")
 
 
 async def detect_episode_asset_language(

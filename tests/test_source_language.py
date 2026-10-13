@@ -42,6 +42,10 @@ from novelvideo.utils.source_language import (
         ("JUAN: Tú comes.", "zh"),
         ("Tu marches.", "zh"),
         ("Dia sering tersenyum.", "zh"),
+        ("Anh ấy mở cửa và bước vào phòng.", "vi"),
+        ("Chương 1\nLan mở cửa, nhìn ra sân.", "vi"),
+        ("Mai nói: Đi thôi!", "vi"),
+        ("INT. ROOM - DAY\nNguyễn opens the door.", "en"),
         ("Christopher Montgomery：你好。", "zh"),
         ("", "zh"),
     ],
@@ -62,3 +66,10 @@ def test_chinese_instruction_keeps_prose_chinese_and_names_unchanged():
 
     assert "中文" in instruction
     assert "原样" in instruction
+
+
+def test_vietnamese_instruction_keeps_prose_vietnamese_and_names_verbatim():
+    instruction = asset_language_instruction("vi")
+
+    assert "tiếng Việt" in instruction
+    assert "Giữ nguyên" in instruction

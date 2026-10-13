@@ -88,7 +88,10 @@ def detect_seedance2_prompt_language(beat: dict[str, Any]) -> AssetLanguage:
         )
         if _text(beat.get(field))
     )
-    return detect_asset_language(source)
+    detected = detect_asset_language(source)
+    # Seedance templates and guidance matching only cover zh/en; Vietnamese
+    # keeps the Chinese scaffolding it always had.
+    return "zh" if detected == "vi" else detected
 
 
 def _text(value: Any) -> str:

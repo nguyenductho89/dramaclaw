@@ -16,7 +16,7 @@ from novelvideo.utils.debug_context import (
     create_debug_context,
     validate_episode_consistency,
 )
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import asset_language_instruction, asset_language_label
 
 
 VIDEO_PROMPT_BUILDER_INSTRUCTIONS_EN = """# I2V Motion Director (SuperPower)
@@ -216,7 +216,7 @@ class VideoPromptBuilder:
             language=language,
         )
 
-        language_label = "English" if language == "en" else "中文"
+        language_label = "中文" if language == "zh" else asset_language_label(language)
         log_agent_start(
             "视频提示词生成师",
             f"生成运动描述 ({duration:.1f}秒, {language_label})",
@@ -257,7 +257,7 @@ class VideoPromptBuilder:
                 raise RuntimeError("AI 返回空内容")
 
             # 长度校验：英文更长，放宽到 500 字符
-            max_len = 500 if language == "en" else 200
+            max_len = 200 if language == "zh" else 500
             if len(result) > max_len:
                 raise RuntimeError(f"AI 返回内容过长 ({len(result)}字)，可能解析异常")
 
@@ -300,8 +300,8 @@ class VideoPromptBuilder:
         language="zh",
     ) -> str:
         """构建英文 task 模板 (SuperPower)。"""
-        if language == "en":
-            output_label = "English"
+        if language in ("en", "vi"):
+            output_label = asset_language_label(language)
             sentence_target = "4-6 sentences"
             if duration <= 4:
                 word_target = "35-50 words"

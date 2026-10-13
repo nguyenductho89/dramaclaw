@@ -13,7 +13,7 @@ from PIL import Image as PILImage
 
 from novelvideo.brainclaw_contract import BrainClawProfile
 from novelvideo.utils.logging import log_agent_start, log_agent_end
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import asset_language_instruction, asset_language_label
 
 # 首尾帧过渡提示词生成器指令（英文版 SuperPower）
 KEYFRAME_PROMPT_BUILDER_INSTRUCTIONS_EN = """# Cinematic Transition Director (SuperPower)
@@ -82,7 +82,7 @@ def create_keyframe_prompt_builder_agent(language: str = "zh") -> Agent:
 
 
 def keyframe_output_label(language: str) -> str:
-    return "English" if language == "en" else "Chinese (中文)"
+    return asset_language_label(language)
 
 
 def build_keyframe_system_prompt(language: str = "zh") -> str:
@@ -113,6 +113,9 @@ def build_keyframe_task(
     if language == "en":
         output_label = "English"
         length_target = "4-6 sentences, ~50-90 words"
+    elif language == "vi":
+        output_label = asset_language_label(language)
+        length_target = "4-6 câu, ~50-90 từ"
     else:
         output_label = "Chinese (中文)"
         length_target = "4-6 句, ~50-90 字"

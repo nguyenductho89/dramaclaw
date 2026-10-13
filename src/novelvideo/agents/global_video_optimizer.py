@@ -15,7 +15,7 @@ from pydantic_ai.output import NativeOutput
 from PIL import Image as PILImage
 
 from novelvideo.brainclaw_contract import BrainClawProfile
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import asset_language_instruction, asset_language_label
 
 
 class ReviewResult(BaseModel):
@@ -348,7 +348,7 @@ class GlobalVideoPromptOptimizer:
                 position_hint += "Vary shot scale and angle from adjacent beats to create visual rhythm."
 
         language_instruction = asset_language_instruction(language)
-        output_label = "English" if language == "en" else "Chinese"
+        output_label = asset_language_label(language)
         task = f"""Generate a first-frame motion prompt for Beat {bn}. You see the sketch frame for this beat.
 {position_hint}
 ## Character Color Mapping

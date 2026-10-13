@@ -1044,7 +1044,7 @@ describe("IngestPage settings save", () => {
         <IngestPageContent project="demo" />
       </Wrapper>,
     );
-    expect(screen.getByText("Tiếng Việt")).toBeInTheDocument();
+    expect(screen.getAllByText("Tiếng Việt").length).toBeGreaterThan(0);
     await user.upload(
       container.querySelector<HTMLInputElement>('input[type="file"]')!,
       new File(["Chapter 1"], "novel.txt", { type: "text/plain" }),

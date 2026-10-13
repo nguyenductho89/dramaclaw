@@ -28,6 +28,11 @@ from novelvideo.cognee.screenplay_normalizer import (
     normalize_time_of_day,
 )
 from novelvideo.utils.derived_scenes import compose_derived_scene_name
+from novelvideo.utils.source_language import (
+    asset_language_instruction,
+    resolve_asset_language,
+    select_by_language,
+)
 from novelvideo.workflows.literal_script_writing import (
     LiteralScriptWritingWorkflow,
     SceneBlock,
@@ -51,6 +56,19 @@ PROP_OUTPUT_SCHEMA_HINT = (
     "道具规划结构化输出校验失败: requirements 必须是对象数组，每项必须包含 "
     "prop_name 和 visual_prompt；不能是字符串数组；prop_name 必须逐字来自当前场景块文本或候选道具"
 )
+
+PROP_OUTPUT_SCHEMA_HINT_VI = (
+    "Kiểm tra đầu ra có cấu trúc của bước hoạch định đạo cụ thất bại: requirements "
+    "phải là mảng đối tượng, mỗi phần tử phải có prop_name và visual_prompt; "
+    "không được là mảng chuỗi; prop_name phải được chép nguyên văn từng chữ từ "
+    "văn bản của khối cảnh hiện tại hoặc từ danh sách đạo cụ ứng viên"
+)
+
+
+def get_prop_output_schema_hint(language: str = "zh") -> str:
+    return select_by_language(
+        language, zh=PROP_OUTPUT_SCHEMA_HINT, vi=PROP_OUTPUT_SCHEMA_HINT_VI
+    )
 
 
 class PropRequirement(BaseModel):
@@ -289,6 +307,107 @@ NARRATED_SCENE_PROMPT = """# 你是解说剧场景资产规划师
 - evidence_lines 只放原文中支持该场景的短句
 - 输出的是 2.0 NovelScene 概念，不涉及旧版 scene_registry 或 anchor.png
 """
+
+
+BASE_SCENE_RECONCILE_PROMPT_VI = """# Bạn là biên tập viên đối chiếu tài sản cảnh nền của dự án điện ảnh
+
+Nhiệm vụ: dựa vào văn bản tập này và bảng cảnh nền đã có, xác định các địa điểm vật lý xuất hiện trong văn bản nên tái sử dụng cảnh nền đã có, tạo cảnh nền mới, hay bỏ qua.
+
+Quy tắc:
+- Bạn phải ưu tiên tái sử dụng các cảnh nền đã có và biệt danh của chúng; không tạo cảnh nền mới chỉ vì mô tả, khung giờ, thời tiết hay trạng thái thay đổi.
+- Tên cảnh nền phải là một địa điểm vật lý trung tính, như "Sảnh thang máy chung cư", "Đường phố thành thị", "Hành lang bệnh viện".
+- Không đưa thời gian, thời tiết, trạng thái như "đêm mưa/ban ngày/hoàng hôn/rò nước/sau vụ nổ/bừa bộn/cảnh tuyết" vào tên cảnh nền; những thứ này giao cho bước hoạch định plate/biến thể sau đó.
+- Giờ giấc cụ thể và khung giờ viết bằng tiếng Anh cũng không được đưa vào tên cảnh nền, ví dụ `11:47 PM`, `DAY`, `NIGHT`, `daytime`, `evening`.
+- Chỉ khi rõ ràng là địa điểm vật lý có thể tái sử dụng và có bằng chứng trong nguyên văn mới xuất create.
+- Các cách gọi chung chung như "trong nhà", "ngoại cảnh", "cảnh chính của tập này", "ven đường" đều ignore.
+- evidence_lines phải trích dẫn câu ngắn trong nguyên văn.
+- Giá trị action chỉ nhận reuse / create / ignore, scene_type chỉ nhận interior / exterior / nature, viết đúng nguyên văn; các trường văn xuôi (description) viết bằng tiếng Việt.
+- Xuất kết quả có cấu trúc; không xuất văn xuôi giải thích.
+"""
+
+
+DERIVED_SCENE_PROMPT_VI = """# Bạn là nhà phân tích cảnh phái sinh
+
+Nhiệm vụ: dựa trên văn bản khối cảnh hiện tại, xác định xem cảnh nền này trong tập có xuất hiện trạng thái thị giác ổn định, có thể tái sử dụng, đáng được nâng lên thành cảnh độc lập hay không.
+
+Quy tắc:
+- Chỉ xuất các trạng thái thị giác ổn định, không viết thời gian thông thường, ống kính, cỡ cảnh, vị trí máy thành cảnh độc lập
+- "Ban ngày/ban đêm/hoàng hôn" thông thường chỉ thuộc về time_of_day, không phái sinh một cách máy móc
+- Nhưng nếu thay đổi về ánh sáng/thời tiết/hư hại/bài trí là một plate ổn định cần được duyệt, tái sử dụng xuyên nhiều ống kính, sẽ làm ảnh tham chiếu cho video, thì có thể xuất cảnh phái sinh
+- Ví dụ đúng: bản hơi nước mịt mù, cảnh tuyết, bản sau chiến trận, bản bừa bộn, bản trang trí lễ hội
+- Ví dụ đúng: bản đèn neon đêm mưa bão, bản mất điện dùng đèn pin, bản ánh sáng lạnh rò nước
+- Ví dụ sai: ban ngày, ban đêm, quay từ trên cao, cận cảnh, màn hình đen, góc nhìn thứ nhất
+- Nếu không có thì xuất danh sách rỗng
+- Các trường văn xuôi (label, description, lighting, atmosphere) viết bằng tiếng Việt
+"""
+
+
+BLOCK_PROP_PROMPT_VI = """# Bạn là nhà phân tích đạo cụ then chốt của khối cảnh
+
+Nhiệm vụ: chỉ dựa trên văn bản khối cảnh hiện tại, trích xuất những đạo cụ cần được theo dõi liên tục như "cùng một đối tượng" xuyên nhiều ống kính.
+
+## Tiêu chí đánh giá cốt lõi
+Một vật đáng được liệt kê là đạo cụ khi và chỉ khi:
+- Nó là một **thực thể vật lý độc lập, có thể di chuyển**
+- Nó **xuất hiện lặp lại trong nhiều ống kính/nhiều dòng miêu tả**, hoặc **được nhân vật cầm, trao tay, thao tác**
+- Các ống kính sau cần vẽ ra "cùng một vật đó" để giữ tính liên tục thị giác
+
+## Những thứ không phải đạo cụ
+- **Thiết bị cố định của cảnh**: cửa, cửa sổ, tường, đèn, màn hình khổng lồ, màn hình lớn, bảng quảng cáo, biển hiệu, khóa cửa, đồng hồ treo tường,
+  màn hiển thị số — những thứ này là một phần của cảnh
+- **Bài trí môi trường**: bàn, ghế, ghế đẩu, sô-pha, giường, tủ, lan can — trừ khi nhân vật rõ ràng cầm lên hoặc thao tác
+- **Nội dung hiển thị trên màn hình**: phụ đề phim, LOGO, cửa sổ bật lên, dòng chữ nhắc, nội dung quảng cáo — đây là nội dung hình ảnh, không phải thực thể vật lý
+- **Vật phẩm chỉ thoáng qua trong hồi tưởng/ti vi/ảo ảnh**: bài kiểm tra, cọ vẽ, cọ vẽ bị gãy — trừ khi cũng xuất hiện như thực thể trong cảnh hiện thực
+- **Hiệu ứng đặc biệt/yếu tố ảo**: bàn tay trong suốt, hiệu ứng ánh sáng, hạt số — trừ khi đó là thực thể bị nhân vật thao tác vật lý
+- **Thực phẩm/đồ dùng một lần**: lon nước, bát mì, đũa, khăn giấy — ăn xong là hết, không cần theo dõi xuyên ống kính
+
+## Quy tắc tái sử dụng
+- Ưu tiên tái sử dụng tên đạo cụ đã có và các đạo cụ đã chọn ở phần trước của tập này
+- Tên đạo cụ phải đến từ văn bản khối cảnh hiện tại hoặc danh sách đạo cụ ứng viên đã cho
+
+## Quy tắc đầu ra
+- requirements phải là mảng đối tượng, mỗi phần tử phải có prop_name / visual_prompt; không được là mảng chuỗi
+- Cấm xuất `{{"requirements":["đèn pin cường độ cao"]}}`
+- Ví dụ đầu ra đúng:
+  `{{
+    "requirements": [
+      {{
+        "prop_name": "đèn pin cường độ cao",
+        "prop_type": "object",
+        "owner": "Lục Thần",
+        "visual_prompt": "đèn pin cường độ cao bằng kim loại đen, chùm sáng trắng lạnh, thân đèn có vết xước mài mòn",
+        "description": "Lục Thần chiếu sáng dưới tầng hầm và tìm ngăn bí mật"
+      }}
+    ]
+  }}`
+- Mỗi đạo cụ phải có visual_prompt; đừng chỉ viết công dụng, phải viết ngoại hình có thể vẽ ra được
+- description viết công dụng trong cốt truyện; nếu không có công dụng rõ ràng thì có thể để trống
+- prop_name phải được chép nguyên văn từng chữ từ văn bản khối cảnh hiện tại hoặc danh sách ứng viên; không viết lại, không khái quát hóa, không thêm từ đồng nghĩa. Nếu nguyên văn là "đèn pin cường độ cao" thì đừng viết "đèn pin"
+- Tên đạo cụ (prop_name) giữ đúng nguyên văn ngôn ngữ của văn bản gốc; visual_prompt và description viết bằng tiếng Việt
+"""
+
+
+NARRATED_SCENE_PROMPT_VI = """# Bạn là nhà hoạch định tài sản cảnh cho phim thuyết minh
+
+Nhiệm vụ: từ nguyên văn tiểu thuyết của một tập hoặc bản thảo thuyết minh theo từng dòng, trích xuất các cảnh vật lý ổn định cần đưa vào thư viện tài sản của dự án.
+
+Quy tắc:
+- Chỉ trích xuất địa điểm/không gian có thể tái sử dụng, như hành lang bệnh viện, phòng khách nhà trọ, đường núi, cổng thành
+- Không nâng cảm xúc, ống kính, sự kiện, quan hệ nhân vật thành cảnh
+- Không xuất các tên chung chung như "cảnh chính của tập này", "trong nhà", "ngoại cảnh"
+- Cùng một địa điểm vật lý chỉ xuất một lần, tên cố gắng giữ điểm neo cụ thể trong nguyên văn
+- scene_type chỉ được dùng interior / exterior / nature (viết đúng nguyên văn)
+- evidence_lines chỉ đặt câu ngắn trong nguyên văn hỗ trợ cho cảnh đó
+- Cái xuất ra là khái niệm NovelScene 2.0, không liên quan đến scene_registry hay anchor.png phiên bản cũ
+- Tên cảnh (scene_name) và biệt danh phải bám theo nguyên văn; description viết bằng tiếng Việt
+"""
+
+
+def _system_prompt(zh_prompt: str, vi_prompt: str, language: str) -> str:
+    """Original (Chinese) prompt for zh/en; Vietnamese prompt plus rule for vi."""
+    if language == "vi":
+        return f"{vi_prompt}\n{asset_language_instruction('vi')}"
+    return zh_prompt
 
 
 BACKGROUND_PROP_DENYLIST = {
@@ -650,9 +769,13 @@ class AssetCompiler:
             for scene in existing_scenes
             if not str(getattr(scene, "base_scene_id", "") or "").strip()
         ]
+        language = resolve_asset_language(source_text)
+        vi = language == "vi"
         existing_lines: list[str] = []
         for scene in base_scenes:
-            aliases = "、".join(getattr(scene, "aliases", []) or [])
+            aliases = ("、" if not vi else ", ").join(
+                getattr(scene, "aliases", []) or []
+            )
             prompt = str(
                 getattr(scene, "environment_prompt", "")
                 or getattr(scene, "description", "")
@@ -660,13 +783,13 @@ class AssetCompiler:
             ).strip()
             parts = [str(getattr(scene, "name", "") or "").strip()]
             if aliases:
-                parts.append(f"别名: {aliases}")
+                parts.append(f"Biệt danh: {aliases}" if vi else f"别名: {aliases}")
             scene_type = str(getattr(scene, "scene_type", "") or "").strip()
             if scene_type:
-                parts.append(f"类型: {scene_type}")
+                parts.append(f"Loại: {scene_type}" if vi else f"类型: {scene_type}")
             if prompt:
-                parts.append(f"描述: {prompt[:120]}")
-            existing_lines.append("；".join(part for part in parts if part))
+                parts.append(f"Mô tả: {prompt[:120]}" if vi else f"描述: {prompt[:120]}")
+            existing_lines.append(("; " if vi else "；").join(part for part in parts if part))
 
         agent = Agent(
             get_newapi_text_pydantic_model(
@@ -674,18 +797,29 @@ class AssetCompiler:
                 brainclaw_profile=BrainClawProfile.EPISODE_SCENE_RECONCILIATION,
                 capability="text.generate.agent",
             ),
-            system_prompt=BASE_SCENE_RECONCILE_PROMPT,
+            system_prompt=_system_prompt(
+                BASE_SCENE_RECONCILE_PROMPT, BASE_SCENE_RECONCILE_PROMPT_VI, language
+            ),
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=EpisodeBaseSceneReconcileOutput,
             output_retries=model_gateway_output_retries(2),
             name="基础场景资产校对员",
         )
-        result = await agent.run(f"""## 已有基础场景
+        if vi:
+            reconcile_task = f"""## Cảnh nền đã có
+{chr(10).join(existing_lines) if existing_lines else "(không có)"}
+
+## Văn bản tập {episode.number}
+{source_text}
+"""
+        else:
+            reconcile_task = f"""## 已有基础场景
 {chr(10).join(existing_lines) if existing_lines else "（无）"}
 
 ## 第 {episode.number} 集文本
 {source_text}
-""")
+"""
+        result = await agent.run(reconcile_task)
         return await self._apply_base_scene_reconcile_output(
             result.output, source_text, episode, log
         )
@@ -968,7 +1102,21 @@ class AssetCompiler:
             if str(getattr(scene, "name", "") or "").strip()
         }
         excerpt = source_text[:12000]
-        task = f"""请为当前集规划 2.0 场景资产。
+        language = resolve_asset_language(source_text)
+        if language == "vi":
+            task = f"""Hãy hoạch định tài sản cảnh 2.0 cho tập hiện tại.
+
+## Số tập
+Tập {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
+
+## Tài sản cảnh đã có
+{", ".join(sorted(existing_scene_names)) if existing_scene_names else "(không có)"}
+
+## Văn bản tập này
+{excerpt}
+"""
+        else:
+            task = f"""请为当前集规划 2.0 场景资产。
 
 ## 集数
 第 {getattr(episode, "number", "")} 集 {getattr(episode, "title", "") or ""}
@@ -985,7 +1133,9 @@ class AssetCompiler:
                 brainclaw_profile=BrainClawProfile.NARRATED_SCENE_ASSET_PLANNING,
                 capability="text.generate.agent",
             ),
-            system_prompt=NARRATED_SCENE_PROMPT,
+            system_prompt=_system_prompt(
+                NARRATED_SCENE_PROMPT, NARRATED_SCENE_PROMPT_VI, language
+            ),
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=NarratedScenePlanOutput,
             output_retries=model_gateway_output_retries(2),
@@ -1054,7 +1204,18 @@ class AssetCompiler:
         block_text = "\n".join(content_lines)
         if not block_text:
             return []
-        task = f"""分析场景 `{scene_name}` 在当前场景块里的视觉状态。
+        language = resolve_asset_language(block_text)
+        if language == "vi":
+            task = f"""Phân tích trạng thái thị giác của cảnh `{scene_name}` trong khối cảnh hiện tại.
+
+## Tiêu đề cảnh
+{block.header_line or "Không có"}
+
+## Văn bản khối cảnh hiện tại
+{block_text}
+"""
+        else:
+            task = f"""分析场景 `{scene_name}` 在当前场景块里的视觉状态。
 
 ## 场次头
 {block.header_line or "无"}
@@ -1068,7 +1229,9 @@ class AssetCompiler:
                 brainclaw_profile=BrainClawProfile.EPISODE_SCENE_PLANNING,
                 capability="text.generate.agent",
             ),
-            system_prompt=DERIVED_SCENE_PROMPT,
+            system_prompt=_system_prompt(
+                DERIVED_SCENE_PROMPT, DERIVED_SCENE_PROMPT_VI, language
+            ),
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=BlockDerivedSceneOutput,
             output_retries=model_gateway_output_retries(2),
@@ -1220,6 +1383,8 @@ class AssetCompiler:
             and not has_env_desc
         ):
             return []
+        language = resolve_asset_language(block_text)
+        vi = language == "vi"
         candidate_lines = []
         allowed_existing_names: set[str] = set()
         for prop in preselected:
@@ -1230,15 +1395,34 @@ class AssetCompiler:
                 if alias_text:
                     allowed_existing_names.add(alias_text)
         if prior_selected_prop_ids:
-            candidate_lines.append("## 本集前面已选道具")
+            candidate_lines.append(
+                "## Đạo cụ đã chọn ở phần trước của tập này"
+                if vi
+                else "## 本集前面已选道具"
+            )
             for prop_id in prior_selected_prop_ids:
                 candidate_lines.append(f"- {prop_id}")
                 allowed_existing_names.add(str(prop_id or "").strip())
 
         candidate_section = (
-            "\n".join(candidate_lines) if candidate_lines else "（无预筛候选）"
+            "\n".join(candidate_lines)
+            if candidate_lines
+            else ("(không có ứng viên lọc sẵn)" if vi else "（无预筛候选）")
         )
-        task = f"""分析当前场景块中的关键道具。
+        if vi:
+            task = f"""Phân tích các đạo cụ then chốt trong khối cảnh hiện tại.
+
+## Tiêu đề cảnh
+{block.header_line or "Không có"}
+
+## Văn bản khối cảnh hiện tại
+{block_text}
+
+## Đạo cụ đã có được lọc sẵn
+{candidate_section}
+"""
+        else:
+            task = f"""分析当前场景块中的关键道具。
 
 ## 场次头
 {block.header_line or "无"}
@@ -1255,7 +1439,9 @@ class AssetCompiler:
                 brainclaw_profile=BrainClawProfile.EPISODE_PROP_PLANNING,
                 capability="text.generate.agent",
             ),
-            system_prompt=BLOCK_PROP_PROMPT,
+            system_prompt=_system_prompt(
+                BLOCK_PROP_PROMPT, BLOCK_PROP_PROMPT_VI, language
+            ),
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=BlockPropRequirements,
             output_retries=model_gateway_output_retries(2),
@@ -1268,7 +1454,10 @@ class AssetCompiler:
         try:
             result = await agent.run(task)
         except (UnexpectedModelBehavior, ValidationError) as exc:
-            raise ValueError(f"{PROP_OUTPUT_SCHEMA_HINT}；原始错误: {exc}") from exc
+            hint = get_prop_output_schema_hint(language)
+            if vi:
+                raise ValueError(f"{hint}; lỗi gốc: {exc}") from exc
+            raise ValueError(f"{hint}；原始错误: {exc}") from exc
         return result.output.requirements
 
     @classmethod

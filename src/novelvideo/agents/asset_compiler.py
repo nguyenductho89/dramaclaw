@@ -117,7 +117,13 @@ class BlockPropRequirements(BaseModel):
             if not prop_name or prop_name in seen:
                 continue
             if prop_name not in allowed_existing_names and prop_name not in block_text:
-                raise ValueError(f"道具名 '{prop_name}' 未在当前场景块文本中出现")
+                raise ValueError(
+                    select_by_language(
+                        str((info.context or {}).get("language", "") or "zh"),
+                        zh=f"道具名 '{prop_name}' 未在当前场景块文本中出现",
+                        vi=f"Tên đạo cụ '{prop_name}' không xuất hiện trong văn bản của khối cảnh hiện tại",
+                    )
+                )
             seen.add(prop_name)
             normalized.append(req)
         self.requirements = normalized
@@ -165,7 +171,13 @@ class NarratedSceneRequirement(BaseModel):
         ):
             tokens = [self.scene_name, *self.aliases]
             if not any(token and token in source_text for token in tokens):
-                raise ValueError(f"场景名 '{self.scene_name}' 未在本集文本中出现")
+                raise ValueError(
+                    select_by_language(
+                        str((info.context or {}).get("language", "") or "zh"),
+                        zh=f"场景名 '{self.scene_name}' 未在本集文本中出现",
+                        vi=f"Tên cảnh '{self.scene_name}' không xuất hiện trong văn bản của tập này",
+                    )
+                )
         return self
 
 
@@ -1142,6 +1154,7 @@ Tập {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
             validation_context={
                 "source_text": source_text,
                 "existing_scene_names": existing_scene_names,
+                "language": language,
             },
             name="解说剧场景资产规划师",
         )
@@ -1448,6 +1461,7 @@ Tập {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
             validation_context={
                 "block_text": block_text,
                 "allowed_existing_names": allowed_existing_names,
+                "language": language,
             },
             name="场景块道具分析师",
         )

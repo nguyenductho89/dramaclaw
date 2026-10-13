@@ -999,7 +999,13 @@ Hãy bổ sung siêu dữ liệu beat cho dòng kịch bản hiện tại của 
                 if char_name and char_name not in episode_sticky_identities:
                     episode_sticky_identities[char_name] = identity_id
             safe_prompt_history.append(
-                "[上一行因内容审核未提供]" if content_filtered else raw_line
+                select_by_language(
+                    self._output_language,
+                    zh="[上一行因内容审核未提供]",
+                    vi="[Dòng trước không được cung cấp do kiểm duyệt nội dung]",
+                )
+                if content_filtered
+                else raw_line
             )
             safe_prompt_history = safe_prompt_history[-2:]
             log(f"[Literal] 行 {content_index}/{total} -> {audio_type}")

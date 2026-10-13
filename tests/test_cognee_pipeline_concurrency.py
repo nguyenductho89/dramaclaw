@@ -352,7 +352,7 @@ async def test_episode_planner_does_not_write_planned_episodes_to_cognee(
     monkeypatch.setattr(
         episode_planner,
         "create_episode_planner_agent",
-        lambda _tools: FakeAgent(),
+        lambda _tools, language=None: FakeAgent(),
     )
 
     store = SimpleNamespace(project_name="alice/demo")

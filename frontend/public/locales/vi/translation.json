@@ -2732,6 +2732,8 @@
     "visualStyle": "Phong cách hình ảnh",
     "narrationStyle": "Ngôi kể",
     "ethnicity": "Sắc tộc mặc định cho nhân vật không xác định",
+    "contentLanguage": "Ngôn ngữ nội dung",
+    "contentLanguageHint": "Ngôn ngữ của prompt gửi tới AI và nội dung được tạo. Nội dung đã tạo trước đó sẽ không bị viết lại.",
     "rhythm": "Nhịp phim",
     "ttsProvider": "Nhà cung cấp TTS",
     "ttsVoice": "Giọng TTS",

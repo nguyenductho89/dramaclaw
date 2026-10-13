@@ -11,7 +11,7 @@ from pydantic_ai import Agent, BinaryContent
 
 from novelvideo.models import beat_scene_id
 from .models import EpisodeOverviewResult
-from .prompts import EPISODE_OVERVIEW_PROMPT
+from .prompts import verification_prompt, verifier_language
 from .sanitize import sanitize_prompt_input
 from .utils import compress_image, find_sketch_for_beat, load_all_beats, safe_resolve_under
 
@@ -72,25 +72,33 @@ def _build_numbered_grid(image_paths: list[tuple[int, Path]], output_path: Path)
 
 
 class EpisodeReviewer:
-    def __init__(self):
+    def __init__(self, language: str | None = None):
+        # ``_agent`` is an override slot (tests inject fakes here); real agents are
+        # built lazily per language in ``_agents``.
         self._agent: Agent | None = None
+        self._agents: dict[str, Agent] = {}
+        self._language = language
 
-    def _get_agent(self) -> Agent:
-        if self._agent is None:
+    def _get_agent(self, language: str = "zh") -> Agent:
+        if self._agent is not None:
+            return self._agent
+        agent = self._agents.get(language)
+        if agent is None:
             from novelvideo.config import (
                 get_newapi_structured_output_model_settings,
                 get_pydantic_model,
             )
 
-            self._agent = Agent(
+            agent = Agent(
                 get_pydantic_model(),
-                system_prompt=EPISODE_OVERVIEW_PROMPT,
+                system_prompt=verification_prompt("episode_overview", language),
                 output_type=EpisodeOverviewResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
                 name="导演分镜审片员",
             )
-        return self._agent
+            self._agents[language] = agent
+        return agent
 
     async def review_episode(self, project_dir: Path, episode_num: int, *, sqlite_store=None) -> dict:
         project_dir = Path(project_dir)
@@ -129,6 +137,10 @@ class EpisodeReviewer:
             if scene_id:
                 scene_distribution[scene_id].append(beat_num)
 
+        lang = verifier_language(
+            self._language,
+            " ".join(str(b.get("visual_description", "")) for _, _, b in image_entries),
+        )
         task = (
             f"以下是第 {episode_num} 集的分镜板网格图（共 {len(image_entries)} 个 beat），"
             f"从左到右、从上到下按 beat 顺序排列。每个格子左上角标有 beat 编号。\n\n"
@@ -136,7 +148,15 @@ class EpisodeReviewer:
             f"请评估整集分镜的整体表现。"
         )
 
-        agent = self._get_agent()
+        if lang == "vi":
+            task = (
+                f"Dưới đây là ảnh lưới storyboard của tập {episode_num} (tổng {len(image_entries)} beat), "
+                f"xếp theo thứ tự beat từ trái sang phải, từ trên xuống dưới. Góc trên bên trái mỗi ô có đánh số beat.\n\n"
+                f"## Mô tả từng beat\n{beat_summary}\n\n"
+                f"Hãy đánh giá biểu hiện tổng thể của storyboard cả tập."
+            )
+
+        agent = self._get_agent(lang)
         start = time.monotonic()
         result = await agent.run(
             [task, BinaryContent(data=compress_image(str(grid_path), quality=80), media_type="image/jpeg")]

@@ -85,7 +85,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import type { ProjectConfig, SpineTemplate } from "@/types/project";
+import type { ContentLanguage, ProjectConfig, SpineTemplate } from "@/types/project";
+import { normalize as normalizeUiLanguage } from "@/i18n/languages";
 import type { Chapter, ChapterSceneBlock } from "@/types/episode";
 
 // ─── form schema ─────────────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ const settingsSchema = z.object({
   visual_style: z.string().optional(),
   narration_style: z.string().optional(),
   ethnicity: z.string().optional(),
+  content_language: z.enum(["zh", "en", "vi"]).optional(),
 });
 
 // Option sources — value is persisted to the API; label is what the user sees.
@@ -167,6 +169,14 @@ const NARRATION_STYLE_OPTIONS: { value: string; labelKey: string }[] = [
   { value: "third_person", labelKey: "ingest.thirdPerson" },
 ];
 
+// Content language labels are shown in their own language (not translated), so
+// users can always find their language regardless of the current UI language.
+const CONTENT_LANGUAGE_OPTIONS: { value: ContentLanguage; label: string }[] = [
+  { value: "zh", label: "中文" },
+  { value: "en", label: "English" },
+  { value: "vi", label: "Tiếng Việt" },
+];
+
 type SettingsForm = z.infer<typeof settingsSchema>;
 
 const INGEST_SETTING_FIELDS = [
@@ -174,12 +184,14 @@ const INGEST_SETTING_FIELDS = [
   "visual_style",
   "narration_style",
   "ethnicity",
+  "content_language",
 ] as const;
 type IngestSettingsValues = {
   spine_template: SpineTemplate;
   visual_style: string;
   narration_style: string;
   ethnicity: string;
+  content_language: ContentLanguage;
 };
 
 const DEFAULT_SPINE_TEMPLATE: SpineTemplate = SPINE_TEMPLATE_OPTIONS[0].value;
@@ -192,6 +204,7 @@ const LEGACY_DEFAULT_ETHNICITY = "Japanese";
 
 function normalizeLegacyDefaults(
   config: ProjectConfig | undefined,
+  uiLanguage: ContentLanguage = "en",
 ): IngestSettingsValues {
   const isLegacyDefault =
     config?.visual_style === LEGACY_DEFAULT_VISUAL_STYLE &&
@@ -209,6 +222,8 @@ function normalizeLegacyDefaults(
     ethnicity: isLegacyDefault
       ? DEFAULT_ETHNICITY
       : (config?.ethnicity ?? DEFAULT_ETHNICITY),
+    // A project without a stored choice follows the language the user is using.
+    content_language: config?.content_language ?? uiLanguage,
   };
 }
 
@@ -221,6 +236,7 @@ function resolveIngestSettings(
     visual_style: values.visual_style ?? defaults.visual_style,
     narration_style: values.narration_style ?? defaults.narration_style,
     ethnicity: values.ethnicity ?? defaults.ethnicity,
+    content_language: values.content_language ?? defaults.content_language,
   };
 }
 
@@ -238,6 +254,11 @@ function hasIngestSettingsChanges(
     // 精品剧不消费 narration_style（隐藏入口 + 保存时剥离），其差异不应点亮
     // 「保存设置」按钮，否则会出现按钮可点但点了无事发生的割裂。
     if (field === "narration_style" && settings.spine_template !== "narrated") {
+      return false;
+    }
+    // content_language falls back to the UI language when the project has none;
+    // that implicit default is not a user edit, so it must not light up Save.
+    if (field === "content_language" && config?.content_language === undefined) {
       return false;
     }
     return (config?.[field] ?? "") !== settings[field];
@@ -985,7 +1006,8 @@ function IngestPage() {
 }
 
 export function IngestPageContent({ project }: { project: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const uiLanguage = normalizeUiLanguage(i18n?.language);
   const queryClient = useQueryClient();
 
   // Upload state
@@ -1017,7 +1039,7 @@ export function IngestPageContent({ project }: { project: string }) {
   // project type, so initialize the form before creating that query.
   const { data: projectRes } = useProject(project);
   const config = projectRes?.data;
-  const normalizedDefaults = normalizeLegacyDefaults(config);
+  const normalizedDefaults = normalizeLegacyDefaults(config, uiLanguage);
   const { watch, setValue, getValues } = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
     values: normalizedDefaults,
@@ -1426,7 +1448,7 @@ export function IngestPageContent({ project }: { project: string }) {
   ]);
 
   const saveProjectSettings = useCallback(async () => {
-    const defaults = normalizeLegacyDefaults(config);
+    const defaults = normalizeLegacyDefaults(config, uiLanguage);
     const currentSettings = resolveIngestSettings(
       getValues(),
       defaults,
@@ -1447,7 +1469,7 @@ export function IngestPageContent({ project }: { project: string }) {
     if (!hasPayloadChanges) return false;
     await updateProject.mutateAsync(payload);
     return true;
-  }, [config, getValues, hasImportedContent, reimporting, updateProject]);
+  }, [config, getValues, hasImportedContent, reimporting, uiLanguage, updateProject]);
 
   const handleSaveSettings = useCallback(async () => {
     try {
@@ -1478,8 +1500,12 @@ export function IngestPageContent({ project }: { project: string }) {
           rebuild: true,
           spine_template: resolveIngestSettings(
             getValues(),
-            normalizeLegacyDefaults(config),
+            normalizeLegacyDefaults(config, uiLanguage),
           ).spine_template,
+          content_language: resolveIngestSettings(
+            getValues(),
+            normalizeLegacyDefaults(config, uiLanguage),
+          ).content_language,
         });
         setIngestSubmitted(true);
         setHideImportedPreview(false);
@@ -1499,6 +1525,7 @@ export function IngestPageContent({ project }: { project: string }) {
       startIngestMutation,
       getValues,
       config,
+      uiLanguage,
       project,
       t,
     ],
@@ -1879,6 +1906,43 @@ export function IngestPageContent({ project }: { project: string }) {
                   </SelectContent>
                 </Select>
 
+                <Select
+                  value={settingsValues.content_language}
+                  onValueChange={(val) =>
+                    handleFieldChange("content_language", val ?? undefined)
+                  }
+                >
+                  <SelectTrigger
+                    className={COMPACT_SELECT_TRIGGER_CLASS}
+                    aria-label={t("ingest.contentLanguage")}
+                    title={t("ingest.contentLanguageHint")}
+                  >
+                    <SelectValue placeholder={t("ingest.contentLanguage")}>
+                      {(val: string) => {
+                        const opt = CONTENT_LANGUAGE_OPTIONS.find(
+                          (o) => o.value === val,
+                        );
+                        return opt ? opt.label : val;
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent
+                    alignItemWithTrigger={false}
+                    sideOffset={8}
+                    className={COMPACT_SELECT_CONTENT_CLASS}
+                  >
+                    {CONTENT_LANGUAGE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <p className="col-span-2 w-full text-xs text-muted-foreground md:order-last md:basis-full">
+                  {t("ingest.contentLanguageHint")}
+                </p>
+
                 {/* 导入标准格式只对精品剧成立，解说剧走的是另一套解析。 */}
                 {settingsValues.spine_template === "drama" && (
                   <button
@@ -2136,6 +2200,11 @@ export function IngestPageContent({ project }: { project: string }) {
                           label: t("ingest.ethnicity"),
                           options: ETHNICITY_OPTIONS,
                           value: settingsValues.ethnicity,
+                        },
+                        {
+                          label: t("ingest.contentLanguage"),
+                          options: CONTENT_LANGUAGE_OPTIONS,
+                          value: settingsValues.content_language,
                         },
                       ].map((item) => {
                         const label = resolveOptionLabel(

@@ -2846,6 +2846,8 @@
     "visualStyle": "视觉风格",
     "narrationStyle": "解说风格",
     "ethnicity": "默认未指定人群",
+    "contentLanguage": "内容语言",
+    "contentLanguageHint": "发送给 AI 的提示词与生成内容所用的语言；已生成的内容不会被改写。",
     "rhythm": "节奏",
     "ttsProvider": "TTS 服务",
     "ttsVoice": "TTS 声音",

@@ -40,6 +40,7 @@ from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
     resolve_asset_language,
+    select_by_language,
 )
 
 # Titles and kinship terms refer to whoever is on stage at the time. The same
@@ -125,6 +126,23 @@ CHARACTER_EXTRACTION_SYSTEM_PROMPT = """你是剧本/小说的角色抽取器。
 - 旁白、画外音、镜头提示不是角色。
 - 群体（众人、士兵们、村民们）不是角色。"""
 
+CHARACTER_EXTRACTION_SYSTEM_PROMPT_VI = """Bạn là bộ trích xuất nhân vật của kịch bản/tiểu thuyết. Đầu vào là một đoạn trích từ tác phẩm.
+
+Chỉ phán đoán dựa trên đoạn này, không suy đoán thông tin nằm ngoài đoạn.
+
+Quy tắc:
+- name dùng đúng cách gọi xuất hiện trong nguyên văn đoạn này, giữ nguyên cách viết, không dịch hay viết lại.
+- Mỗi nhân vật phải có ít nhất một evidence.quote, là một câu xuất hiện nguyên văn, từng chữ trong đoạn này.
+- Không được bịa trích dẫn. Nhân vật không tìm được căn cứ trong nguyên văn thì không xuất ra.
+- aliases chỉ điền các biệt danh mà nguyên văn đoạn này nêu rõ, ví dụ "Lâm Mặc còn gọi là Tiểu Mặc".
+- appellations điền các cách gọi khác rõ ràng dùng để chỉ nhân vật này trong đoạn: biệt danh, chức danh, danh xưng.
+  Ví dụ trong đoạn này "bà Trịnh" và "chủ tịch Trịnh" đều chỉ Trịnh Ngọc Cầm thì ghi vào appellations của Trịnh Ngọc Cầm.
+  Mỗi cách gọi đều phải xuất hiện nguyên văn, từng chữ trong đoạn này, không được bịa.
+  Chỉ điền khi từ ngữ cảnh của đoạn này có thể thấy rõ nó chỉ nhân vật đó; không thấy rõ thì đừng điền.
+- Khi không chắc hai cách gọi có phải cùng một người hay không, hãy xuất thành hai nhân vật riêng, không gộp.
+- Lời dẫn, giọng ngoài hình, chỉ dẫn máy quay không phải là nhân vật.
+- Đám đông (mọi người, binh lính, dân làng) không phải là nhân vật."""
+
 
 @dataclass
 class MergedCharacter:
@@ -172,7 +190,25 @@ class StructuredOutputFailure(RuntimeError):
     """A structured run failed; ``str()`` carries the diagnosis."""
 
 
-def _create_character_extraction_agent(agent: Any = None):
+def character_extraction_system_prompt(language: str = "zh") -> str:
+    """Per-language system prompt; en keeps the original (Chinese) scaffold."""
+    return select_by_language(
+        language, zh=CHARACTER_EXTRACTION_SYSTEM_PROMPT, vi=CHARACTER_EXTRACTION_SYSTEM_PROMPT_VI
+    )
+
+
+def _call_agent_factory(factory: Callable[..., Any], agent: Any, language: str) -> Any:
+    """Build an agent; only non-default (vi) prompts need the language handed over.
+
+    zh/en keep calling ``factory(agent)`` so existing single-argument factories
+    (and tests that patch them) behave exactly as before.
+    """
+    if language == "vi":
+        return factory(agent, language=language)
+    return factory(agent)
+
+
+def _create_character_extraction_agent(agent: Any = None, language: str = "zh"):
     if agent is not None:
         return agent
 
@@ -190,7 +226,7 @@ def _create_character_extraction_agent(agent: Any = None):
             "gemini-3-flash-preview",
             capability="text.generate.agent",
         ),
-        system_prompt=CHARACTER_EXTRACTION_SYSTEM_PROMPT,
+        system_prompt=character_extraction_system_prompt(language),
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=ChunkCharacterOutput,
         retries={"output": model_gateway_output_retries(2)},
@@ -354,10 +390,10 @@ def verify_evidence(
 
 def build_character_chunk_prompt(chunk: SourceChunk, language: AssetLanguage) -> str:
     """The user message sent with CHARACTER_EXTRACTION_SYSTEM_PROMPT for one chunk."""
-    return (
-        f"{asset_language_instruction(language)}\n\n"
-        f"【片段 {chunk.section_label}】\n{chunk.text}"
+    label = select_by_language(language, zh="【片段 {}】", vi="[Đoạn {}]").format(
+        chunk.section_label
     )
+    return f"{asset_language_instruction(language)}\n\n{label}\n{chunk.text}"
 
 
 async def extract_characters_from_chunks(
@@ -403,11 +439,11 @@ async def extract_characters_from_chunks(
         if adjudicate:
             merged = await adjudicate_characters(
                 merged, source_text=source_text, roster=roster,
-                agent=adjudication_agent, on_log=log,
+                agent=adjudication_agent, on_log=log, output_language=language,
             )
         return merged, []
 
-    runner = _create_character_extraction_agent(agent)
+    runner = _call_agent_factory(_create_character_extraction_agent, agent, language)
 
     async def analyse(chunk: SourceChunk) -> tuple[SourceChunk, ChunkCharacterOutput]:
         output = await _run_structured(runner, build_character_chunk_prompt(chunk, language))
@@ -444,7 +480,7 @@ async def extract_characters_from_chunks(
         # set, not another pass over the source.
         merged = await adjudicate_characters(
             merged, source_text=source_text, roster=roster,
-            agent=adjudication_agent, on_log=log,
+            agent=adjudication_agent, on_log=log, output_language=language,
         )
     return merged, failures
 
@@ -807,8 +843,32 @@ ADJUDICATION_SYSTEM_PROMPT = """你是角色归一裁决器。
   应该并入那个角色；如果无法确定指向谁，放进 non_characters。
 - 不确定就不要合并，也不要放进 non_characters。漏合并只是留下重复项，错合并会毁掉数据。"""
 
+ADJUDICATION_SYSTEM_PROMPT_VI = """Bạn là bộ phân xử hợp nhất nhân vật.
 
-def _create_adjudication_agent(agent: Any = None):
+Đầu vào là các ứng viên nhân vật được trích lần lượt từng đoạn từ cùng một tác phẩm; mỗi ứng viên kèm số lần xuất hiện trong nguyên văn và vài trích dẫn nguyên văn.
+
+Nhiệm vụ của bạn chỉ có hai việc:
+1. Xác định những ứng viên thực chất chỉ cùng một người, gom thành một nhóm và chọn tên chính.
+2. Chỉ ra những ứng viên hoàn toàn không phải là nhân vật.
+
+Quy tắc:
+- Chỉ được dùng tên ứng viên đã xuất hiện trong đầu vào, không được tự nghĩ ra tên mới.
+- canonical_name phải là một trong các ứng viên của nhóm, ưu tiên cái xuất hiện nhiều lần nhất và giống họ tên chính thức nhất.
+- Chỉ gộp khi bằng chứng thực sự ủng hộ. Muốn gộp "chủ tịch Trần" với "Trần Thanh" thì phải có manh mối cho thấy là cùng một người.
+- Hai ứng viên đều có nhiều bằng chứng độc lập mà không thấy liên hệ gì thì không gộp.
+- Chức danh, chức vụ, đám đông, lời mắng chửi (như "đại tiểu thư", "đầu gấu trường", "sao chổi") nếu chỉ dùng để gọi một nhân vật đã biết
+  thì nên gộp vào nhân vật đó; nếu không xác định được chỉ ai thì đưa vào non_characters.
+- Không chắc thì đừng gộp, cũng đừng đưa vào non_characters. Bỏ sót việc gộp chỉ để lại mục trùng lặp, còn gộp sai sẽ phá hỏng dữ liệu.
+- Viết trường reason bằng tiếng Việt, tên nhân vật giữ nguyên như đầu vào."""
+
+
+def adjudication_system_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language, zh=ADJUDICATION_SYSTEM_PROMPT, vi=ADJUDICATION_SYSTEM_PROMPT_VI
+    )
+
+
+def _create_adjudication_agent(agent: Any = None, language: str = "zh"):
     if agent is not None:
         return agent
 
@@ -825,7 +885,7 @@ def _create_adjudication_agent(agent: Any = None):
             "gemini-3-flash-preview",
             capability="text.generate.agent",
         ),
-        system_prompt=ADJUDICATION_SYSTEM_PROMPT,
+        system_prompt=adjudication_system_prompt(language),
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=CharacterAdjudication,
         name="Structured Character Adjudicator",
@@ -833,7 +893,7 @@ def _create_adjudication_agent(agent: Any = None):
 
 
 def _adjudication_prompt(
-    merged: list[MergedCharacter], source_text: str = ""
+    merged: list[MergedCharacter], source_text: str = "", language: str = "zh"
 ) -> str:
     """Describe every candidate, with enough context to link nicknames to names.
 
@@ -843,13 +903,21 @@ def _adjudication_prompt(
     get a window of the source around their occurrences — the same co-occurrence
     signal a graph search would surface, taken straight from the text.
     """
+    vi = language == "vi"
     lines: list[str] = []
     for item in merged:
-        detail = f"- {item.name}（出现 {len(item.evidence)} 次）"
-        if item.gender:
-            detail += f"，性别 {item.gender}"
-        if item.description:
-            detail += f"，{item.description}"
+        if vi:
+            detail = f"- {item.name} (xuất hiện {len(item.evidence)} lần)"
+            if item.gender:
+                detail += f", giới tính {item.gender}"
+            if item.description:
+                detail += f", {item.description}"
+        else:
+            detail = f"- {item.name}（出现 {len(item.evidence)} 次）"
+            if item.gender:
+                detail += f"，性别 {item.gender}"
+            if item.description:
+                detail += f"，{item.description}"
         lines.append(detail)
 
         rare = len(item.evidence) <= _CONTEXT_WINDOW_EVIDENCE_THRESHOLD
@@ -859,9 +927,21 @@ def _adjudication_prompt(
                 start = max(0, int(evidence["source_start"]) - _CONTEXT_WINDOW_CHARS)
                 end = min(len(source_text), int(evidence["source_end"]) + _CONTEXT_WINDOW_CHARS)
                 window = source_text[start:end].replace("\n", " ")
-                lines.append(f"    上下文：…{window}…")
+                lines.append(
+                    f"    Ngữ cảnh: …{window}…" if vi else f"    上下文：…{window}…"
+                )
             else:
-                lines.append(f"    原文：{evidence['evidence_text']}")
+                lines.append(
+                    f"    Nguyên văn: {evidence['evidence_text']}"
+                    if vi
+                    else f"    原文：{evidence['evidence_text']}"
+                )
+    if vi:
+        return (
+            "Dưới đây là các ứng viên nhân vật của cùng một tác phẩm. Ứng viên xuất hiện ít lần thường là "
+            "biệt danh, chức danh hoặc danh xưng của một nhân vật chính nào đó; hãy dùng ngữ cảnh để xác định nó chỉ ai:\n"
+            + "\n".join(lines)
+        )
     return (
         "以下是同一部作品的角色候选。出现次数少的候选通常是某个主要角色的"
         "昵称、职务或称号，请利用上下文判断它指向谁：\n" + "\n".join(lines)
@@ -886,6 +966,7 @@ async def adjudicate_characters(
     roster: Optional[set[str]] = None,
     agent: Any = None,
     on_log: Optional[Callable[[str], None]] = None,
+    output_language: AssetLanguage | None = None,
 ) -> list[MergedCharacter]:
     """Resolve cross-chunk identity that per-chunk extraction cannot see.
 
@@ -905,10 +986,13 @@ async def adjudicate_characters(
     if len(merged) < 2:
         return merged
 
+    language = output_language or resolve_asset_language(
+        source_text or "\n".join(item.name for item in merged)
+    )
     by_name = {item.name: item for item in merged}
     try:
-        result = (await _create_adjudication_agent(agent).run(
-            _adjudication_prompt(merged, source_text)
+        result = (await _call_agent_factory(_create_adjudication_agent, agent, language).run(
+            _adjudication_prompt(merged, source_text, language)
         )).output
     except Exception as exc:  # noqa: BLE001 - degrade to the rule-only result
         log(f"⚠️ 归一裁决失败，保留规则归一结果: {exc}")
@@ -1038,8 +1122,35 @@ role、body_type、face_prompt 必须使用用户消息指定的输出语言。
 
 不要新增角色，不要删除角色，不要合并角色。输入给几个就返回几个。"""
 
+CHARACTER_APPEARANCE_SYSTEM_PROMPT_VI = """Bạn là nhà thiết kế hình tượng nhân vật. Đầu vào là các nhân vật đã được xác nhận trong một tác phẩm, cùng các đoạn nguyên văn nói về họ.
 
-def _create_character_appearance_agent(agent: Any = None):
+Hãy bổ sung thiết lập hình tượng cho từng nhân vật. Bước này cho phép suy luận hợp lý, nhưng suy luận phải nhất quán với các đoạn nguyên văn được cung cấp, không được mâu thuẫn với nguyên văn.
+role, body_type, face_prompt phải dùng ngôn ngữ đầu ra mà tin nhắn người dùng chỉ định (tiếng Việt).
+
+Với mỗi nhân vật, hãy đưa ra:
+1. name: phải trùng từng chữ với tên nhân vật trong đầu vào, không viết lại, không dịch, không gộp.
+2. role: vai trò của nhân vật (ví dụ: nhân vật chính, bạn thân, bạn trai cũ, hoàng hậu, giáo viên chủ nhiệm).
+3. is_main: có phải nhân vật chính của phần dẫn/người kể chuyện ngôi thứ nhất hay không. Cả loạt nhân vật chỉ được có tối đa một giá trị true; không xác định được thì điền false hết.
+4. age_group: bắt buộc là một trong child (trẻ em) / youth (thanh niên) / middle (trung niên) / elder (người già); hãy giữ nguyên các giá trị tiếng Anh này.
+   Hình thái thời thơ ấu/tuổi già của cùng một nhân vật không tách riêng; lấy nhóm tuổi ứng với giai đoạn chính của họ trong câu chuyện.
+5. body_type: mô tả vóc dáng.
+6. face_prompt: chỉ mô tả đặc điểm khuôn mặt thuần túy.
+   Định dạng: [giới tính], [nhóm tuổi], [kiểu tóc màu tóc], [đặc điểm mắt], [màu da], [dáng mặt/khung xương]
+   Ví dụ: "Nữ, ngoài hai mươi tuổi, tóc đen dài buộc đuôi ngựa, mắt hạnh nhân đen, da bánh mật, mặt trái xoan"
+   ⚠️ Tuyệt đối không mô tả trang phục, phụ kiện hay bối cảnh trong face_prompt. Trang phục sẽ do bước lập kế hoạch danh tính phía sau xử lý riêng.
+
+Không thêm nhân vật, không xóa nhân vật, không gộp nhân vật. Đầu vào có bao nhiêu thì trả về bấy nhiêu."""
+
+
+def character_appearance_system_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language,
+        zh=CHARACTER_APPEARANCE_SYSTEM_PROMPT,
+        vi=CHARACTER_APPEARANCE_SYSTEM_PROMPT_VI,
+    )
+
+
+def _create_character_appearance_agent(agent: Any = None, language: str = "zh"):
     if agent is not None:
         return agent
 
@@ -1056,7 +1167,7 @@ def _create_character_appearance_agent(agent: Any = None):
             "gemini-3-flash-preview",
             capability="text.generate.agent",
         ),
-        system_prompt=CHARACTER_APPEARANCE_SYSTEM_PROMPT,
+        system_prompt=character_appearance_system_prompt(language),
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=CharacterAppearanceList,
         name="Structured Character Appearance",
@@ -1427,14 +1538,35 @@ async def enrich_character_appearances(
         await _settle_narrator_nomination(results, order, cache, narrator_key, keys)
         return results
 
-    llm = _create_character_appearance_agent(agent)
+    llm = _call_agent_factory(_create_character_appearance_agent, agent, language)
     # A screenplay's pre-scene block is its character bible — it names hair,
     # build and bearing outright. Extraction already chunks it, but only as one
     # span among many; handing it to this stage whole is what legacy did, and
     # it is the densest appearance source the source text has.
-    synopsis_section = f"\n\n【剧本梗概与人物设定原文】\n{synopsis}" if synopsis else ""
+    synopsis_section = (
+        select_by_language(
+            language,
+            zh="\n\n【剧本梗概与人物设定原文】\n{}",
+            vi="\n\n[Tóm tắt kịch bản và nguyên văn thiết lập nhân vật]\n{}",
+        ).format(synopsis)
+        if synopsis
+        else ""
+    )
 
     def describe(item: "MergedCharacter") -> str:
+        if language == "vi":
+            aliases = ", ".join(sorted(item.aliases)) or "không có"
+            quotes = (
+                "\n".join(f"- {quote}" for quote in _appearance_quotes(item))
+                or "- không có"
+            )
+            return (
+                f"### Nhân vật: {item.name}\n"
+                f"Biệt danh: {aliases}\n"
+                f"Giới tính: {item.gender or 'không rõ'}\n"
+                f"Mô tả đã biết: {item.description or 'không có'}\n"
+                f"Đoạn nguyên văn:\n{quotes}"
+            )
         aliases = "、".join(sorted(item.aliases)) or "无"
         quotes = "\n".join(f"- {quote}" for quote in _appearance_quotes(item)) or "- 无"
         return (
@@ -1448,8 +1580,13 @@ async def enrich_character_appearances(
     async def run_batch(batch: list["MergedCharacter"]) -> dict[str, CharacterAppearance]:
         prompt = (
             asset_language_instruction(language)
-            + "\n\n请为下面每一个角色补全形象设定，"
-            "name 必须与给出的角色名完全一致，不要合并或遗漏：\n\n"
+            + select_by_language(
+                language,
+                zh="\n\n请为下面每一个角色补全形象设定，"
+                "name 必须与给出的角色名完全一致，不要合并或遗漏：\n\n",
+                vi="\n\nHãy bổ sung thiết lập hình tượng cho từng nhân vật dưới đây, "
+                "name phải trùng từng chữ với tên nhân vật đã cho, không gộp hay bỏ sót:\n\n",
+            )
             + "\n\n".join(describe(item) for item in batch)
             + synopsis_section
         )
@@ -1556,8 +1693,33 @@ SCENE_ADJUDICATION_SYSTEM_PROMPT = """你是场景归一裁决器。
 - 时间、天气、损毁状态不构成新地点，但这里的候选都已经是基础地点，不用管这些。
 - 不确定就不要合并。多留一个重复场景只是资产冗余，错误合并会让两处戏共用一个场景图。"""
 
+SCENE_ADJUDICATION_SYSTEM_PROMPT_VI = """Bạn là bộ phân xử hợp nhất cảnh.
 
-def _create_scene_adjudication_agent(agent: Any = None):
+Đầu vào là các ứng viên địa điểm được phân tích từ tiêu đề cảnh của cùng một kịch bản; mỗi ứng viên kèm số cảnh mà nó xuất hiện trong kịch bản.
+
+Nhiệm vụ của bạn chỉ có một: xác định những ứng viên thực chất là cùng một địa điểm vật lý, gom thành một nhóm và chọn tên chính.
+
+Quy tắc:
+- Chỉ được dùng tên ứng viên đã xuất hiện trong đầu vào, không được tự nghĩ ra tên mới.
+- canonical_name phải là một trong các ứng viên của nhóm, ưu tiên cái xuất hiện ở nhiều cảnh nhất và đầy đủ, cụ thể nhất.
+- Các cách viết khác nhau của cùng một địa điểm thì phải gộp, ví dụ "trước gương phòng tập múa" và "soi gương phòng tập múa",
+  "văn phòng Trịnh Ngọc Cầm" và "bên trong văn phòng Trịnh Ngọc Cầm", "lớp học trường" và "lớp học học viện nhân tài Danh Môn".
+- Các phòng khác nhau trong cùng một tòa nhà là các địa điểm khác nhau, tuyệt đối không được gộp:
+  "phòng khách biệt thự nhà họ Trịnh" và "phòng ăn biệt thự nhà họ Trịnh" là hai cảnh, "bên ngoài biệt thự nhà họ Trịnh" và "phòng khách biệt thự nhà họ Trịnh" cũng vậy.
+- Thời gian, thời tiết, tình trạng hư hại không tạo thành địa điểm mới, nhưng các ứng viên ở đây đều đã là địa điểm cơ bản nên không cần bận tâm những điều này.
+- Không chắc thì đừng gộp. Giữ thêm một cảnh trùng chỉ gây thừa tài sản, còn gộp sai sẽ khiến hai màn kịch dùng chung một ảnh cảnh.
+- Viết trường reason bằng tiếng Việt, tên địa điểm giữ nguyên như đầu vào."""
+
+
+def scene_adjudication_system_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language,
+        zh=SCENE_ADJUDICATION_SYSTEM_PROMPT,
+        vi=SCENE_ADJUDICATION_SYSTEM_PROMPT_VI,
+    )
+
+
+def _create_scene_adjudication_agent(agent: Any = None, language: str = "zh"):
     if agent is not None:
         return agent
 
@@ -1574,7 +1736,7 @@ def _create_scene_adjudication_agent(agent: Any = None):
             "gemini-3-flash-preview",
             capability="text.generate.agent",
         ),
-        system_prompt=SCENE_ADJUDICATION_SYSTEM_PROMPT,
+        system_prompt=scene_adjudication_system_prompt(language),
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=SceneAdjudication,
         name="Structured Scene Adjudicator",
@@ -1593,6 +1755,7 @@ async def adjudicate_scenes(
     agent: Any = None,
     on_log: Optional[Callable[[str], None]] = None,
     cache: Any = None,
+    output_language: AssetLanguage | None = None,
 ) -> list:
     """Fold differently-written spellings of one location into a single scene.
 
@@ -1614,11 +1777,21 @@ async def adjudicate_scenes(
 
     counts = occurrences or {}
     by_name = {scene.name: scene for scene in scenes}
-    listing = "\n".join(
-        f"- {scene.name}（出现 {counts.get(scene.name, 0)} 场）"
-        f"{'，别名 ' + '、'.join(scene.aliases) if scene.aliases else ''}"
-        for scene in scenes
+    language = output_language or resolve_asset_language(
+        "\n".join(scene.name for scene in scenes)
     )
+    if language == "vi":
+        listing = "\n".join(
+            f"- {scene.name} (xuất hiện {counts.get(scene.name, 0)} cảnh)"
+            f"{', biệt danh ' + ', '.join(scene.aliases) if scene.aliases else ''}"
+            for scene in scenes
+        )
+    else:
+        listing = "\n".join(
+            f"- {scene.name}（出现 {counts.get(scene.name, 0)} 场）"
+            f"{'，别名 ' + '、'.join(scene.aliases) if scene.aliases else ''}"
+            for scene in scenes
+        )
 
     # Only the model's grouping is cached, never the merge that follows it. The
     # occurrence ceiling and the canonical-name choice are code, so re-applying
@@ -1652,9 +1825,18 @@ async def adjudicate_scenes(
 
     if groups is None:
         try:
-            result = (await _create_scene_adjudication_agent(agent).run(
-                "以下是同一部剧本的地点候选：\n" + listing
-            )).output
+            result = (
+                await _call_agent_factory(
+                    _create_scene_adjudication_agent, agent, language
+                ).run(
+                    select_by_language(
+                        language,
+                        zh="以下是同一部剧本的地点候选：\n",
+                        vi="Dưới đây là các ứng viên địa điểm của cùng một kịch bản:\n",
+                    )
+                    + listing
+                )
+            ).output
         except Exception as exc:  # noqa: BLE001 - degrade to the unmerged result
             log(f"⚠️ 场景归一裁决失败，保留原始场景: {exc}")
             return scenes

@@ -10,7 +10,7 @@ from pydantic_ai import Agent, BinaryContent
 logger = logging.getLogger(__name__)
 
 from .models import CharacterConsistencyReport, ConsistencyResult
-from .prompts import CONSISTENCY_VERIFY_PROMPT
+from .prompts import verification_prompt, verifier_language
 from .sanitize import sanitize_prompt_input
 from .utils import (
     compress_image,
@@ -22,25 +22,33 @@ from .utils import (
 
 
 class ConsistencyVerifier:
-    def __init__(self):
+    def __init__(self, language: str | None = None):
+        # ``_agent`` is an override slot (tests inject fakes here); real agents are
+        # built lazily per language in ``_agents``.
         self._agent: Agent | None = None
+        self._agents: dict[str, Agent] = {}
+        self._language = language
 
-    def _get_agent(self) -> Agent:
-        if self._agent is None:
+    def _get_agent(self, language: str = "zh") -> Agent:
+        if self._agent is not None:
+            return self._agent
+        agent = self._agents.get(language)
+        if agent is None:
             from novelvideo.config import (
                 get_newapi_structured_output_model_settings,
                 get_pydantic_model,
             )
 
-            self._agent = Agent(
+            agent = Agent(
                 get_pydantic_model(),
-                system_prompt=CONSISTENCY_VERIFY_PROMPT,
+                system_prompt=verification_prompt("consistency_verify", language),
                 output_type=ConsistencyResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
                 name="角色一致性审核员",
             )
-        return self._agent
+            self._agents[language] = agent
+        return agent
 
     def _load_identity_appearances(
         self, project_dir: Path,
@@ -110,7 +118,12 @@ class ConsistencyVerifier:
                 identity_beats[identity_id].append((beat_num, str(safe_img), char_name))
 
         # 只检查出现在 2+ beat 中的角色
-        agent = self._get_agent()
+        lang = verifier_language(
+            self._language,
+            " ".join(str(b.get("visual_description", "")) for b in beats),
+        )
+        vi = lang == "vi"
+        agent = self._get_agent(lang)
         all_reports: list[CharacterConsistencyReport] = []
 
         for identity_id, appearances in identity_beats.items():
@@ -134,7 +147,11 @@ class ConsistencyVerifier:
             appearance_ref = ""
             if identity_id in identity_appearances:
                 safe_appearance = sanitize_prompt_input(identity_appearances[identity_id])
-                appearance_ref = f"\n\nIdentity 外观设定参考：\n{safe_appearance}"
+                appearance_ref = (
+                    f"\n\nTham chiếu thiết lập ngoại hình Identity:\n{safe_appearance}"
+                    if vi
+                    else f"\n\nIdentity 外观设定参考：\n{safe_appearance}"
+                )
 
             safe_char_name = sanitize_prompt_input(char_name)
             safe_identity_id = sanitize_prompt_input(identity_id)
@@ -145,6 +162,15 @@ class ConsistencyVerifier:
                 f"请按维度（face, hair, skin_tone, gender, clothing_style, clothing_color, accessories, body_type）逐一评分。"
                 f"{appearance_ref}"
             )
+
+            if vi:
+                task = (
+                    f"Kiểm tra tính nhất quán ngoại hình của nhân vật \"{safe_char_name}\" (danh tính: {safe_identity_id}) trong các beat sau:\n"
+                    f"Số beat: {beat_nums}\n"
+                    f"Các hình dưới đây xếp theo thứ tự beat, hãy so sánh xem cùng một nhân vật có nhất quán giữa các khung hình hay không.\n"
+                    f"Hãy chấm điểm lần lượt theo từng chiều (face, hair, skin_tone, gender, clothing_style, clothing_color, accessories, body_type)."
+                    f"{appearance_ref}"
+                )
 
             prompt_parts: list = [task]
             for beat_num, img_path, _ in sampled:

@@ -36,6 +36,30 @@ _WINDOW_OVERLAP = 200
 # what keeps a screenplay of many small scenes from being all latency.
 _TARGET_CHUNK_CHARS = 3000
 
+# Section labels are shown to the model ("[Đoạn {label}]") and to the user.
+# Nothing parses them back, so they can follow the project's content language.
+_LABELS_ZH = {
+    "preamble_scene": "片头",
+    "preamble_chapter": "卷首",
+    "scene": "场 {n}",
+    "chapter": "第{n}章",
+    "window": "片段 {n}",
+    "packed": "{first} 等 {count} 段",
+}
+_LABELS_VI = {
+    "preamble_scene": "Mở đầu",
+    "preamble_chapter": "Phần đầu",
+    "scene": "Cảnh {n}",
+    "chapter": "Chương {n}",
+    "window": "Đoạn {n}",
+    "packed": "{first} và {others} đoạn khác",
+}
+
+
+def _label(language: str, key: str, **values: object) -> str:
+    table = _LABELS_VI if language == "vi" else _LABELS_ZH
+    return table[key].format(**values)
+
 
 @dataclass(frozen=True)
 class SourceChunk:
@@ -59,7 +83,9 @@ def source_sha256(text: str) -> str:
     return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
 
 
-def chunk_source_text(text: str, spine_template: str | None) -> list[SourceChunk]:
+def chunk_source_text(
+    text: str, spine_template: str | None, language: str = "zh"
+) -> list[SourceChunk]:
     """Split imported text along the boundaries its format already provides.
 
     Screenplays are cut at scene headings, prose at chapter markers.  Either may
@@ -70,12 +96,12 @@ def chunk_source_text(text: str, spine_template: str | None) -> list[SourceChunk
         return []
 
     if str(spine_template or "").strip() == "drama":
-        chunks = _chunk_by_scene(text)
+        chunks = _chunk_by_scene(text, language)
     else:
-        chunks = _chunk_by_chapter(text)
+        chunks = _chunk_by_chapter(text, language)
 
     if not chunks:
-        return _chunk_by_window(text)
+        return _chunk_by_window(text, language)
 
     # A scene or chapter boundary is the right place to cut, but it says nothing
     # about size: a single chapter can run tens of thousands of characters, while
@@ -84,13 +110,13 @@ def chunk_source_text(text: str, spine_template: str | None) -> list[SourceChunk
     bounded: list[SourceChunk] = []
     for chunk in chunks:
         bounded.extend(_split_oversized(chunk))
-    packed = _pack_small(bounded)
+    packed = _pack_small(bounded, language)
     return [
         replace(chunk, chunk_index=index) for index, chunk in enumerate(packed)
     ]
 
 
-def _pack_small(chunks: list[SourceChunk]) -> list[SourceChunk]:
+def _pack_small(chunks: list[SourceChunk], language: str = "zh") -> list[SourceChunk]:
     """Group consecutive short sections into one analysable chunk.
 
     A model call costs several seconds of round trip no matter how little text
@@ -114,7 +140,13 @@ def _pack_small(chunks: list[SourceChunk]) -> list[SourceChunk]:
             first, last = group[0], group[-1]
             label = first.section_label
             if len(group) > 1:
-                label = f"{first.section_label} 等 {len(group)} 段"
+                label = _label(
+                    language,
+                    "packed",
+                    first=first.section_label,
+                    count=len(group),
+                    others=len(group) - 1,
+                )
             characters: list[str] = []
             for member in group:
                 for name in member.characters:
@@ -182,7 +214,7 @@ def _split_oversized(chunk: SourceChunk) -> list[SourceChunk]:
     return parts
 
 
-def _chunk_by_scene(text: str) -> list[SourceChunk]:
+def _chunk_by_scene(text: str, language: str = "zh") -> list[SourceChunk]:
     from novelvideo.utils.screenplay_scene_parser import parse_scene_blocks
 
     blocks = parse_scene_blocks(text)
@@ -215,7 +247,7 @@ def _chunk_by_scene(text: str) -> list[SourceChunk]:
                 chunk_id="scene-preamble",
                 chunk_index=0,
                 section_type="scene",
-                section_label="片头",
+                section_label=_label(language, "preamble_scene"),
                 source_start=0,
                 source_end=starts[0],
                 text=text[: starts[0]],
@@ -227,7 +259,7 @@ def _chunk_by_scene(text: str) -> list[SourceChunk]:
         end = starts[index + 1] if index + 1 < len(starts) else len(text)
         if end <= start:
             continue
-        label = block.header_line.strip() or block.location.strip() or f"场 {index + 1}"
+        label = block.header_line.strip() or block.location.strip() or _label(language, "scene", n=index + 1)
         chunks.append(
             SourceChunk(
                 chunk_id=f"scene-{index:04d}",
@@ -243,7 +275,7 @@ def _chunk_by_scene(text: str) -> list[SourceChunk]:
     return chunks
 
 
-def _chunk_by_chapter(text: str) -> list[SourceChunk]:
+def _chunk_by_chapter(text: str, language: str = "zh") -> list[SourceChunk]:
     from novelvideo.cognee.chapter_detector import ChapterDetector
 
     # A marker-less novel comes back as one synthesized chapter covering the
@@ -283,7 +315,7 @@ def _chunk_by_chapter(text: str) -> list[SourceChunk]:
                 chunk_id="chapter-preamble",
                 chunk_index=0,
                 section_type="chapter",
-                section_label="卷首",
+                section_label=_label(language, "preamble_chapter"),
                 source_start=0,
                 source_end=first_start,
                 text=text[:first_start],
@@ -300,7 +332,7 @@ def _chunk_by_chapter(text: str) -> list[SourceChunk]:
                 chunk_id=f"chapter-{index:04d}",
                 chunk_index=index,
                 section_type="chapter",
-                section_label=f"第{chapter.number}章",
+                section_label=_label(language, "chapter", n=chapter.number),
                 source_start=start,
                 source_end=end,
                 text=text[start:end],
@@ -309,7 +341,7 @@ def _chunk_by_chapter(text: str) -> list[SourceChunk]:
     return chunks
 
 
-def _chunk_by_window(text: str) -> list[SourceChunk]:
+def _chunk_by_window(text: str, language: str = "zh") -> list[SourceChunk]:
     """Fall back to overlapping fixed windows when no markers were found.
 
     The overlap keeps an entity introduced right at a boundary from being cut in
@@ -326,7 +358,7 @@ def _chunk_by_window(text: str) -> list[SourceChunk]:
                 chunk_id=f"window-{index:04d}",
                 chunk_index=index,
                 section_type="window",
-                section_label=f"片段 {index + 1}",
+                section_label=_label(language, "window", n=index + 1),
                 source_start=start,
                 source_end=end,
                 text=text[start:end],

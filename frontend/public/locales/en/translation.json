@@ -2846,6 +2846,8 @@
     "visualStyle": "Visual Style",
     "narrationStyle": "Narration Style",
     "ethnicity": "Default unspecified people",
+    "contentLanguage": "Content language",
+    "contentLanguageHint": "Language of AI prompts and generated content. Existing generated content is not rewritten.",
     "rhythm": "Rhythm",
     "ttsProvider": "TTS Provider",
     "ttsVoice": "TTS Voice",

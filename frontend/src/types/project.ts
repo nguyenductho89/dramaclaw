@@ -2,11 +2,15 @@
 // Copyright (c) 2026 ClaymoreLab
 export type SpineTemplate = "drama" | "narrated";
 
+/** Language of prompts sent to AI models and of generated content. */
+export type ContentLanguage = "zh" | "en" | "vi";
+
 export interface ProjectConfig {
   spine_template?: SpineTemplate;
   aspect_ratio?: "2:3" | "9:16" | "16:9";
   visual_style?: string;
   narration_style?: string;
+  content_language?: ContentLanguage;
   ethnicity?: string;
   rhythm?: string;
   tts_provider?: string;

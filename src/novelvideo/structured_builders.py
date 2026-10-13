@@ -65,7 +65,7 @@ async def build_characters_structured(
     output_language = resolve_asset_language(novel_text)
 
     report(0.1, lmsg("tasks.progress.characters.chunking", "切分原文..."))
-    chunks = chunk_source_text(novel_text, template)
+    chunks = chunk_source_text(novel_text, template, output_language)
     if not chunks:
         log(lmsg("tasks.log.characters.emptyChunks", "⚠️ 原文切分结果为空"))
         report(1.0, lmsg("tasks.progress.characters.nothingToAnalyze", "无可分析内容"))
@@ -510,6 +510,7 @@ async def build_scenes_structured(
         occurrences=_scene_heading_counts(novel_text),
         on_log=log,
         cache=cache,
+        output_language=resolve_asset_language(novel_text),
     )
 
     report(0.85, lmsg("tasks.progress.scenes.saving", "保存新增场景..."))

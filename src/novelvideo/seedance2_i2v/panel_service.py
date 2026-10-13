@@ -60,6 +60,24 @@ SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, str] = {
     "风格": "风格：限定画面质感、时代感、色彩倾向和真实度，避免风格漂移。",
     "无字幕": "无字幕：避免生成任何文字或字幕，保持画面纯净。",
 }
+# Vietnamese display/prompt text. Keys stay the Chinese template labels the
+# UI/API sends (code depends on them); Vietnamese labels are accepted as aliases.
+SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES_VI: dict[str, str] = {
+    "主体": "Chủ thể: Xác định nhân vật hoặc vật thể chính của khung hình cùng hành động và trạng thái hiện tại, tránh nhiều chủ thể tranh giành tiêu điểm.",
+    "场景": "Bối cảnh: Bổ sung nền không gian, quan hệ vị trí, đạo cụ then chốt và chất liệu môi trường, giữ nhất quán với ảnh tham chiếu.",
+    "光影": "Ánh sáng: Mô tả nguồn sáng chính, các tầng sáng tối, nhiệt độ màu và không khí, tránh ánh sáng chập chờn.",
+    "镜头": "Máy quay: Nêu rõ cỡ cảnh, góc nhìn, tốc độ và hướng chuyển động máy để chuyển động máy rõ ràng, thực hiện được.",
+    "风格": "Phong cách: Giới hạn chất cảm hình ảnh, cảm giác thời đại, xu hướng màu sắc và độ chân thực để tránh lệch phong cách.",
+    "无字幕": "Không phụ đề: Không tạo bất kỳ chữ hay phụ đề nào, giữ khung hình sạch.",
+}
+_SEEDANCE2_GUIDANCE_LABEL_ALIASES_VI: dict[str, str] = {
+    "chủ thể": "主体",
+    "bối cảnh": "场景",
+    "ánh sáng": "光影",
+    "máy quay": "镜头",
+    "phong cách": "风格",
+    "không phụ đề": "无字幕",
+}
 _SEEDANCE2_ASSET_CONCURRENCY = 2
 _seedance2_asset_limiter_var: RunVar[anyio.CapacityLimiter] = RunVar(
     "seedance2_asset_limiter"
@@ -228,6 +246,7 @@ async def append_seedance2_prompt_guidance_template(
     label: str,
     prompt_guidance: str | None = None,
     project_dir: Path | None = None,
+    language: AssetLanguage = "zh",
 ) -> str:
     beat_num = int(beat.get("beat_number") or 0)
     root = _seedance2_panel_project_dir(
@@ -256,6 +275,7 @@ async def append_seedance2_prompt_guidance_template(
             beat=beat,
             label=label,
             prompt_guidance=prompt_guidance,
+            language=language,
             worker_limiter=metadata_io_limiter(),
             finalize=finalize,
         )
@@ -266,8 +286,16 @@ def _prepare_seedance2_prompt_guidance_template(
     beat: dict[str, Any],
     label: str,
     prompt_guidance: str | None,
+    language: AssetLanguage = "zh",
 ) -> str:
-    template = SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES.get(str(label or "").strip())
+    key = str(label or "").strip()
+    key = _SEEDANCE2_GUIDANCE_LABEL_ALIASES_VI.get(key.lower(), key)
+    templates = (
+        SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES_VI
+        if language == "vi"
+        else SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES
+    )
+    template = templates.get(key)
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     if prompt_guidance is not None:
         config.prompt_guidance = str(prompt_guidance or "").strip()
@@ -1186,6 +1214,7 @@ def _seedance2_duration_floor(*, project_dir: Path, episode: int, beat: dict[str
 
 __all__ = [
     "SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES",
+    "SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES_VI",
     "Seedance2VideoPanelState",
     "append_seedance2_prompt_guidance_template",
     "build_seedance2_video_panel_state",

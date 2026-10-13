@@ -12,6 +12,11 @@ from novelvideo.config import (
     get_newapi_structured_output_model_settings,
     get_pydantic_model,
 )
+from novelvideo.utils.source_language import (
+    asset_language_instruction,
+    resolve_asset_language,
+    select_by_language,
+)
 
 
 class FixAction(BaseModel):
@@ -79,18 +84,77 @@ FIXER_INSTRUCTIONS = """你是一个角色修复专家。
 """
 
 
-def create_character_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
+FIXER_INSTRUCTIONS_VI = """Bạn là chuyên gia sửa lỗi nhân vật.
+
+## Nhiệm vụ
+Dựa trên báo cáo rà soát để sửa các vấn đề của nhân vật.
+
+## Công cụ
+- tool_merge_characters(primary_name, alias_names): gộp các nhân vật trùng lặp
+  - primary_name: tên nhân vật chính được giữ lại
+  - alias_names: các tên gọi khác cần gộp, ngăn cách bằng dấu phẩy (ví dụ "Hoàng hậu nương nương,Nương nương")
+
+- tool_delete_character(name): xóa nhân vật
+  - Dùng để xóa xưng hô chung chung hoặc nhân vật không hợp lệ
+
+- tool_update_character_field(name, field, value): cập nhật trường của nhân vật
+  - field có thể là: gender, role, personality, v.v.
+
+- tool_get_character_detail(name): lấy chi tiết nhân vật
+  - Dùng để xác nhận trạng thái trước khi sửa
+
+## Quy trình làm việc
+1. Đọc các vấn đề trong báo cáo rà soát
+2. Với từng vấn đề:
+   - duplicate: gọi tool_merge_characters để gộp
+   - generic: gọi tool_delete_character để xóa
+   - identity_error: gọi tool_update_character_field để sửa
+3. Xác nhận kết quả sau mỗi thao tác
+4. Xuất báo cáo sửa lỗi
+
+## Định dạng đầu ra
+Trả về báo cáo sửa lỗi ở định dạng JSON:
+- fixed: danh sách thao tác, mỗi thao tác gồm action, target, result, success
+- summary: tổng kết việc sửa
+- total_actions: tổng số thao tác
+- success_count: số thao tác thành công
+
+## Lưu ý
+- Khi gộp nhân vật, chọn tên cụ thể hơn làm primary (ví dụ chọn tên riêng của nhân vật thay vì "chú tiểu")
+- Trước khi xóa, dùng tool_get_character_detail để xác nhận
+- Mỗi thao tác đều phải ghi lại thành công hay không
+- Các trường văn xuôi (result, summary) viết bằng tiếng Việt; tên nhân vật giữ nguyên văn như đã cung cấp
+"""
+
+
+def _fixer_system_prompt(language: str | None) -> str:
+    language = language or resolve_asset_language("")
+    prompt = get_fixer_instructions(language)
+    if language == "vi":
+        prompt = f"{prompt}\n{asset_language_instruction('vi')}"
+    return prompt
+
+
+def get_fixer_instructions(language: str = "zh") -> str:
+    """Return the fixer system prompt written in ``language``."""
+    return select_by_language(language, zh=FIXER_INSTRUCTIONS, vi=FIXER_INSTRUCTIONS_VI)
+
+
+def create_character_fixer_agent(
+    tools: Optional[list[Callable]] = None, language: str | None = None
+) -> Agent:
     """创建角色修复 Agent。
 
     Args:
         tools: 角色修复工具列表
+        language: 提示词语言；缺省时取项目声明语言（zh/en 保持原中文提示词，vi 使用越南语提示词）
 
     Returns:
         Agent: 配置好的角色修复 Agent
     """
     return Agent(
         get_pydantic_model(),
-        system_prompt=FIXER_INSTRUCTIONS,
+        system_prompt=_fixer_system_prompt(language),
         output_type=CharacterFixReport,
         model_settings=get_newapi_structured_output_model_settings(),
         tools=tools or [],
@@ -98,17 +162,23 @@ def create_character_fixer_agent(tools: Optional[list[Callable]] = None) -> Agen
     )
 
 
-# 默认实例（延迟初始化）
+# 默认实例（延迟初始化，按语言缓存）
 _fixer_agent = None
+_fixer_agents_by_language: dict[str, Agent] = {}
 
 
-def get_character_fixer_agent() -> Agent:
+def get_character_fixer_agent(language: str | None = None) -> Agent:
     """获取角色修复 Agent 单例（无工具版本）。
 
     Returns:
         Agent: 角色修复 Agent 实例
     """
     global _fixer_agent
-    if _fixer_agent is None:
-        _fixer_agent = create_character_fixer_agent()
-    return _fixer_agent
+    language = language or resolve_asset_language("")
+    if language != "vi":
+        if _fixer_agent is None:
+            _fixer_agent = create_character_fixer_agent()
+        return _fixer_agent
+    if language not in _fixer_agents_by_language:
+        _fixer_agents_by_language[language] = create_character_fixer_agent(language=language)
+    return _fixer_agents_by_language[language]

@@ -12,6 +12,11 @@ from novelvideo.config import (
     get_newapi_structured_output_model_settings,
     get_pydantic_model,
 )
+from novelvideo.utils.source_language import (
+    asset_language_instruction,
+    resolve_asset_language,
+    select_by_language,
+)
 
 
 class CharacterIssue(BaseModel):
@@ -75,18 +80,74 @@ REVIEWER_INSTRUCTIONS = """你是一个角色审核专家。
 """
 
 
-def create_character_reviewer_agent(tools: Optional[list[Callable]] = None) -> Agent:
+REVIEWER_INSTRUCTIONS_VI = """Bạn là chuyên gia rà soát nhân vật.
+
+## Nhiệm vụ
+Rà soát danh sách nhân vật, tìm ra các vấn đề sau:
+
+1. **Nhân vật trùng lặp (duplicate)**:
+   - Cùng một nhân vật nhưng có nhiều cách gọi khác nhau (ví dụ "Hoàng hậu nương nương" và "Hoàng hậu" là cùng một người)
+   - Tên nhân vật và biệt danh (ví dụ tên riêng của chú tiểu và "chú tiểu" có thể là cùng một người)
+
+2. **Nhân vật xưng hô chung chung (generic)**:
+   - Cách gọi chung, không phải một nhân vật cụ thể (ví dụ "Nương nương", "thái giám", "cung nữ")
+   - Những nhân vật này nên bị xóa hoặc gộp vào nhân vật cụ thể
+
+3. **Sai lệch thân phận (identity_error)**:
+   - Thân phận nhân vật không khớp với thiết lập (ví dụ hoàng đế không thể là nhà sư)
+   - Sai giới tính, sai nghề nghiệp, v.v.
+
+## Quy trình làm việc
+1. Trước tiên gọi tool_get_all_characters để lấy danh sách nhân vật hiện tại
+2. Phân tích tên nhân vật, tìm các cặp có thể trùng lặp
+3. Với các cặp đáng ngờ, gọi tool_check_duplicate để xác minh
+4. Với thân phận đáng ngờ, gọi tool_verify_identity để xác nhận
+5. Với nhân vật cần hiểu quan hệ, gọi tool_search_relations
+6. Tổng hợp các vấn đề và xuất báo cáo rà soát
+
+## Định dạng đầu ra
+Trả về báo cáo rà soát ở định dạng JSON, gồm:
+- issues: danh sách vấn đề, mỗi vấn đề gồm issue_type, names, reason, suggestion
+- summary: tổng kết rà soát
+- reviewed_count: số nhân vật đã rà soát
+
+## Lưu ý
+- names của nhân vật trùng lặp phải bao gồm tất cả các tên liên quan
+- names của nhân vật xưng hô chung chung chỉ chứa xưng hô chung đó
+- names của lỗi thân phận chỉ chứa tên nhân vật bị sai
+- Mỗi vấn đề đều phải có suggestion rõ ràng
+- Giá trị issue_type (duplicate/generic/identity_error) phải viết đúng nguyên văn; các trường văn xuôi (reason, suggestion, summary) viết bằng tiếng Việt, tên nhân vật giữ nguyên văn như đã cung cấp
+"""
+
+
+def get_reviewer_instructions(language: str = "zh") -> str:
+    """Return the reviewer system prompt written in ``language``."""
+    return select_by_language(language, zh=REVIEWER_INSTRUCTIONS, vi=REVIEWER_INSTRUCTIONS_VI)
+
+
+def _reviewer_system_prompt(language: str | None) -> str:
+    language = language or resolve_asset_language("")
+    prompt = get_reviewer_instructions(language)
+    if language == "vi":
+        prompt = f"{prompt}\n{asset_language_instruction('vi')}"
+    return prompt
+
+
+def create_character_reviewer_agent(
+    tools: Optional[list[Callable]] = None, language: str | None = None
+) -> Agent:
     """创建角色审核 Agent。
 
     Args:
         tools: 角色审核工具列表
+        language: 提示词语言；缺省时取项目声明语言（zh/en 保持原中文提示词，vi 使用越南语提示词）
 
     Returns:
         Agent: 配置好的角色审核 Agent
     """
     return Agent(
         get_pydantic_model(),
-        system_prompt=REVIEWER_INSTRUCTIONS,
+        system_prompt=_reviewer_system_prompt(language),
         output_type=CharacterReviewReport,
         model_settings=get_newapi_structured_output_model_settings(),
         tools=tools or [],
@@ -94,17 +155,23 @@ def create_character_reviewer_agent(tools: Optional[list[Callable]] = None) -> A
     )
 
 
-# 默认实例（延迟初始化）
+# 默认实例（延迟初始化，按语言缓存）
 _reviewer_agent = None
+_reviewer_agents_by_language: dict[str, Agent] = {}
 
 
-def get_character_reviewer_agent() -> Agent:
+def get_character_reviewer_agent(language: str | None = None) -> Agent:
     """获取角色审核 Agent 单例（无工具版本）。
 
     Returns:
         Agent: 角色审核 Agent 实例
     """
     global _reviewer_agent
-    if _reviewer_agent is None:
-        _reviewer_agent = create_character_reviewer_agent()
-    return _reviewer_agent
+    language = language or resolve_asset_language("")
+    if language != "vi":
+        if _reviewer_agent is None:
+            _reviewer_agent = create_character_reviewer_agent()
+        return _reviewer_agent
+    if language not in _reviewer_agents_by_language:
+        _reviewer_agents_by_language[language] = create_character_reviewer_agent(language=language)
+    return _reviewer_agents_by_language[language]

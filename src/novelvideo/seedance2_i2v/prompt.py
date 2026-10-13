@@ -476,7 +476,7 @@ def _text_with_identity_references(
             )
         fallback_text = identity_fallbacks.get(identity_id)
         if fallback_text:
-            return f"{character}（{fallback_text}）"
+            return f"{character} ({fallback_text})" if language == "vi" else f"{character}（{fallback_text}）"
         return character
 
     return re.sub(r"\{\{([^}]+)\}\}", replace_marker, _text(text))
@@ -502,7 +502,7 @@ def _text_with_asset_references(
             )
         fallback_text = prop_fallbacks.get(prop_id)
         if fallback_text:
-            return f"{prop_id}（{fallback_text}）"
+            return f"{prop_id} ({fallback_text})" if language == "vi" else f"{prop_id}（{fallback_text}）"
         return prop_id
 
     text_with_identities = _text_with_identity_references(text, assets, language)
@@ -530,64 +530,48 @@ def _reference_sentence_for_assets(
 
         if media_type == "audio" or label.startswith("音频"):
             audio_parts.append(
-                f"{label} as {title or 'an audio reference'}"
-                if language == "en"
-                else f"{label}作为{title or '声音参考'}"
+                select_by_language(language, zh=f"{label}作为{title or '声音参考'}", en=f"{label} as {title or 'an audio reference'}", vi=f"{label} làm {title or 'tham chiếu âm thanh'}")
             )
             continue
 
         if mode == Seedance2I2VMode.FIRST_FRAME:
             image_parts.append(
-                f"{label} as the first frame"
-                if language == "en"
-                else f"{label}作为首帧画面"
+                select_by_language(language, zh=f"{label}作为首帧画面", en=f"{label} as the first frame", vi=f"{label} làm khung hình đầu")
             )
             continue
         if mode == Seedance2I2VMode.FIRST_LAST_FRAME and key == "last_frame":
             image_parts.append(
-                f"{label} as the last frame"
-                if language == "en"
-                else f"{label}作为尾帧画面"
+                select_by_language(language, zh=f"{label}作为尾帧画面", en=f"{label} as the last frame", vi=f"{label} làm khung hình cuối")
             )
             continue
         if key == "first_frame":
             image_parts.append(
-                f"{label} as the starting state and overall composition reference"
-                if language == "en"
-                else f"{label}作为起始状态和整体构图依据"
+                select_by_language(language, zh=f"{label}作为起始状态和整体构图依据", en=f"{label} as the starting state and overall composition reference", vi=f"{label} làm trạng thái khởi đầu và căn cứ bố cục tổng thể")
             )
             continue
         if identity_id:
             character, _identity = _split_identity_label(identity_id)
             image_parts.append(
-                f"keep the appearance of {character} consistent with {label}"
-                if language == "en"
-                else f"{label}中的{character}形象保持人物特征一致"
+                select_by_language(language, zh=f"{label}中的{character}形象保持人物特征一致", en=f"keep the appearance of {character} consistent with {label}", vi=f"giữ ngoại hình của {character} nhất quán với {label}")
             )
             continue
         if prop_id:
             image_parts.append(
-                f"keep the shape, material, and details of the {prop_id} prop consistent with {label}"
-                if language == "en"
-                else f"{label}中的{prop_id}道具保持物体造型、材质和细节一致"
+                select_by_language(language, zh=f"{label}中的{prop_id}道具保持物体造型、材质和细节一致", en=f"keep the shape, material, and details of the {prop_id} prop consistent with {label}", vi=f"giữ hình dạng, chất liệu và chi tiết của đạo cụ {prop_id} nhất quán với {label}")
             )
             continue
         if key.startswith("scene:"):
             image_parts.append(
-                f"{label} as the reference for {title or 'the scene'}"
-                if language == "en"
-                else f"{label}作为{title or '场景'}参考"
+                select_by_language(language, zh=f"{label}作为{title or '场景'}参考", en=f"{label} as the reference for {title or 'the scene'}", vi=f"{label} làm tham chiếu cho {title or 'bối cảnh'}")
             )
             continue
         if note:
             image_parts.append(
-                f"{label} for {note}" if language == "en" else f"{label}用于{note}"
+                select_by_language(language, zh=f"{label}用于{note}", en=f"{label} for {note}", vi=f"{label} dùng cho {note}")
             )
             continue
         image_parts.append(
-            f"{label} as {title or 'a visual reference'}"
-            if language == "en"
-            else f"{label}作为{title or '参考图'}"
+            select_by_language(language, zh=f"{label}作为{title or '参考图'}", en=f"{label} as {title or 'a visual reference'}", vi=f"{label} làm {title or 'tham chiếu hình ảnh'}")
         )
 
     for asset in assets or []:
@@ -601,16 +585,27 @@ def _reference_sentence_for_assets(
         if identity_id:
             character, _identity = _split_identity_label(identity_id)
             image_parts.append(
-                f"generate {character}'s appearance from this description: {fallback_text}"
-                if language == "en"
-                else f"{character}造型按提示词生成：{fallback_text}"
+                select_by_language(language, zh=f"{character}造型按提示词生成：{fallback_text}", en=f"generate {character}'s appearance from this description: {fallback_text}", vi=f"tạo ngoại hình của {character} theo mô tả sau: {fallback_text}")
             )
         elif prop_id:
             image_parts.append(
-                f"generate the {prop_id} prop from this description: {fallback_text}"
-                if language == "en"
-                else f"{prop_id}道具按提示词生成：{fallback_text}"
+                select_by_language(language, zh=f"{prop_id}道具按提示词生成：{fallback_text}", en=f"generate the {prop_id} prop from this description: {fallback_text}", vi=f"tạo đạo cụ {prop_id} theo mô tả sau: {fallback_text}")
             )
+
+    if language == "vi":
+        if mode == Seedance2I2VMode.FIRST_LAST_FRAME and len(image_parts) >= 2:
+            base = f"Dùng {image_parts[0]} và {image_parts[1]}, video chuyển tiếp tự nhiên"
+        elif mode == Seedance2I2VMode.FIRST_FRAME and image_parts:
+            base = f"Dùng {image_parts[0]} để tạo video từ ảnh"
+        else:
+            base = (
+                "Tham chiếu " + ", ".join(image_parts)
+                if image_parts
+                else "Tạo video từ ảnh dựa trên các tài nguyên tham chiếu đã cung cấp"
+            )
+        if audio_parts:
+            base = f"{base}, tham chiếu {', '.join(audio_parts)}"
+        return base
 
     if language == "en":
         if mode == Seedance2I2VMode.FIRST_LAST_FRAME and len(image_parts) >= 2:
@@ -662,6 +657,22 @@ def build_text_overlay_prompt_fragment(
     timing = _sentence_text(overlay.get("timing")) or "全片持续"
     style = _sentence_text(overlay.get("style")) or "干净易读"
     speaker = _text(overlay.get("speaker"))
+    if language == "vi":
+        kind_label = {
+            "ad_copy": "câu quảng cáo",
+            "subtitle": "phụ đề",
+            "speech_bubble": "chữ trong bong bóng thoại",
+        }.get(_text(overlay.get("kind")) or "subtitle", "phụ đề")
+        placement = _sentence_text(overlay.get("placement")) or "giữa phía dưới khung hình"
+        timing = _sentence_text(overlay.get("timing")) or "suốt cả đoạn"
+        style = _sentence_text(overlay.get("style")) or "sạch sẽ, dễ đọc"
+        speaker_text = (
+            f", người nói là {speaker_display_name(speaker) or speaker}" if speaker else ""
+        )
+        return (
+            f'Dùng {kind_label} "{content}" đặt ở {placement}, xuất hiện {timing}, '
+            f"kiểu chữ {style}{speaker_text}."
+        )
     if language == "en":
         kind_label = {
             "ad_copy": "advertising copy",
@@ -731,6 +742,31 @@ def build_seedance2_prompt_draft(
     manual = normalize_seedance2_editor_prompt(manual_prompt_reference)
 
     lines = [_clean_sentence(reference, language)]
+    if language == "vi":
+        if visual:
+            lines.append(_clean_sentence(f"Khung hình thể hiện {_sentence_text(visual)}", language))
+        if scene:
+            lines.append(_clean_sentence(f"Bối cảnh là {_sentence_text(scene)}", language))
+        if props:
+            lines.append(
+                _clean_sentence(f"Giữ nhất quán các đạo cụ then chốt: {_sentence_text(props)}", language)
+            )
+        if legacy_motion:
+            lines.append(_clean_sentence(f"Chuyển động: {_sentence_text(legacy_motion)}", language))
+        if spoken:
+            lines.append(_clean_sentence(f"{spoken_label}: {_sentence_text(spoken)}", language))
+        if overlay:
+            lines.append(overlay)
+        if guidance:
+            lines.append(_clean_sentence(guidance, language))
+        if manual:
+            lines.append(
+                _clean_sentence(
+                    f"Có thể dùng phiên bản thủ công này làm tham chiếu để viết lại: {_sentence_text(manual)}",
+                    language,
+                )
+            )
+        return normalize_seedance2_editor_prompt(" ".join(line for line in lines if line))
     if language == "en":
         if visual:
             lines.append(_clean_sentence(f"The scene shows {_sentence_text(visual)}", language))
@@ -859,7 +895,9 @@ def build_seedance2_prompt_composer_task(
         "rule_based_draft_prompt": normalize_seedance2_editor_prompt(draft_prompt),
     }
     language_rule = asset_language_instruction(language)
-    if language == "en":
+    # Instructions to the model stay English for en/vi; the language rule
+    # (asset_language_instruction) selects the output language.
+    if _is_latin(language):
         return (
             "Write the final Seedance 2.0 image-to-video prompt from the JSON below.\n\n"
             "Hard requirements:\n"

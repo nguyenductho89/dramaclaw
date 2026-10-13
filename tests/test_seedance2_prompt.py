@@ -1097,3 +1097,185 @@ def test_seedance2_panel_state_uses_authoritative_language_for_freshness(
 
     assert state.current_prompt_inputs_hash == "current-hash"
     assert seen == {"fallback_language": "en", "hash_language": "en"}
+
+
+_VI_BEAT_TEXT = "Linh bước qua hành lang ga tàu điện ngầm và nâng điện thoại lên."
+
+
+def _vi_first_frame_asset():
+    from novelvideo.seedance2_i2v.assets import Seedance2ResolvedAsset
+
+    return Seedance2ResolvedAsset(
+        key="first_frame",
+        label="Render hiện tại · Beat 1",
+        media_type="image",
+        path=Path("frame.png"),
+        exists=True,
+        selected=True,
+        request_field="reference_images",
+        reference_label="图片1",
+        image_number=1,
+    )
+
+
+def test_seedance2_language_detects_vietnamese_beat():
+    import novelvideo.seedance2_i2v.prompt as prompt_module
+
+    beat = {
+        "visual_description": _VI_BEAT_TEXT,
+        "video_prompt": "遗留的中文视频提示词不应改变语言。",
+    }
+    assert prompt_module.detect_seedance2_prompt_language(beat) == "vi"
+
+
+def test_seedance2_vietnamese_guidance_templates_cover_all_keys():
+    import re
+
+    import novelvideo.seedance2_i2v.prompt as prompt_module
+    from novelvideo.seedance2_i2v import panel_service
+
+    for key, variants in prompt_module.SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES.items():
+        assert "vi" in variants
+        assert not re.search(r"[一-鿿]", variants["vi"])
+    assert set(panel_service.SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES_VI) == set(
+        panel_service.SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES
+    )
+
+
+def test_seedance2_vietnamese_prompt_draft_uses_vietnamese_scaffolding():
+    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
+    from novelvideo.seedance2_i2v.prompt import build_seedance2_prompt_draft
+
+    prompt = build_seedance2_prompt_draft(
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+        beat={
+            "visual_description": _VI_BEAT_TEXT,
+            "scene_description": "Ga tàu điện ngầm",
+            "time_of_day": "đêm",
+            "dialogue": "Đợi tôi với!",
+            "audio_type": "dialogue",
+        },
+        assets=[_vi_first_frame_asset()],
+        text_overlay={"enabled": True, "content": "Tập 1", "kind": "subtitle"},
+        prompt_guidance_template_keys=["camera"],
+        language="vi",
+    )
+
+    assert prompt.startswith("Tham chiếu 图片1 làm trạng thái khởi đầu")
+    assert f"Khung hình thể hiện {_VI_BEAT_TEXT.rstrip('.')}." in prompt
+    assert "thời điểm mục tiêu: đêm" in prompt
+    assert "Lời thoại: " in prompt
+    assert "Dùng phụ đề \"Tập 1\"" in prompt
+    assert "Máy quay: Nêu rõ cỡ cảnh" in prompt
+    assert "画面呈现" not in prompt
+    assert "。" not in prompt and "；" not in prompt
+
+
+def test_seedance2_vietnamese_first_last_frame_and_audio_tokens():
+    from novelvideo.seedance2_i2v.assets import Seedance2ResolvedAsset
+    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
+    from novelvideo.seedance2_i2v.panel_service import (
+        mark_seedance2_prompt_references_for_editor,
+    )
+    from novelvideo.seedance2_i2v.prompt import build_seedance2_prompt_draft
+
+    def asset(key, label, number, media="image"):
+        return Seedance2ResolvedAsset(
+            key=key,
+            label=label,
+            media_type=media,
+            path=Path(f"{key}.bin"),
+            exists=True,
+            selected=True,
+            request_field="reference_images" if media == "image" else "reference_audios",
+            reference_label=("图片" if media == "image" else "音频") + str(number),
+            image_number=number if media == "image" else None,
+        )
+
+    prompt = build_seedance2_prompt_draft(
+        mode=Seedance2I2VMode.FIRST_LAST_FRAME,
+        beat={"visual_description": _VI_BEAT_TEXT},
+        assets=[
+            asset("first_frame", "Đầu", 1),
+            asset("last_frame", "Cuối", 2),
+            asset("voice", "Giọng Linh", 1, media="audio"),
+        ],
+        text_overlay={},
+        language="vi",
+    )
+
+    assert prompt.startswith(
+        "Dùng 图片1 làm trạng thái khởi đầu và căn cứ bố cục tổng thể "
+        "và 图片2 làm khung hình cuối, video chuyển tiếp tự nhiên"
+    )
+    assert "tham chiếu 音频1 làm Giọng Linh" in prompt
+    marked = mark_seedance2_prompt_references_for_editor(prompt)
+    assert "@图片1" in marked and "@图片2" in marked and "@音频1" in marked
+
+
+async def test_seedance2_vietnamese_fallback_guidance_filtering():
+    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
+    from novelvideo.seedance2_i2v.prompt import _guidance_matches_language
+
+    assert _guidance_matches_language("Máy quay chậm, ánh sáng ấm.", "vi")
+    # Unaccented Vietnamese is not silently dropped.
+    assert _guidance_matches_language("may quay cham, anh sang am", "vi")
+    assert not _guidance_matches_language("镜头：缓慢推进。", "vi")
+    assert not _guidance_matches_language("カメラをゆっくり寄せる", "vi")
+    assert Seedance2I2VMode  # import sanity
+
+
+async def test_seedance2_vietnamese_generation_fallback_localizes_guidance():
+    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
+    from novelvideo.seedance2_i2v.prompt import generate_seedance2_prompt
+
+    async def failing_composer(**_kwargs):
+        raise RuntimeError("composer unavailable")
+
+    result = await generate_seedance2_prompt(
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+        beat={"visual_description": _VI_BEAT_TEXT},
+        assets=[],
+        text_overlay={},
+        prompt_guidance="镜头：缓慢推进。",
+        prompt_guidance_template_keys=["camera"],
+        composer=failing_composer,
+        language="vi",
+    )
+
+    assert result.used_ai is False
+    assert "Máy quay: Nêu rõ cỡ cảnh" in result.prompt
+    assert "镜头" not in result.prompt
+    assert "画面呈现" not in result.prompt
+
+
+def test_seedance2_vietnamese_composer_task_and_system_prompt_language():
+    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
+    from novelvideo.seedance2_i2v.prompt import build_seedance2_prompt_composer_task
+    from novelvideo.utils.source_language import asset_language_instruction
+
+    task = build_seedance2_prompt_composer_task(
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+        beat={"visual_description": _VI_BEAT_TEXT},
+        assets=[],
+        text_overlay={},
+        prompt_guidance="",
+        draft_prompt="",
+        language="vi",
+    )
+    assert asset_language_instruction("vi") in task
+    assert "Hard requirements" in task
+
+
+async def test_seedance2_vietnamese_guidance_template_append():
+    from novelvideo.seedance2_i2v import panel_service
+
+    beat = {"beat_number": 1}
+    saved = panel_service._prepare_seedance2_prompt_guidance_template(
+        beat=beat, label="Máy quay", prompt_guidance="", language="vi"
+    )
+    assert "Máy quay: Nêu rõ cỡ cảnh" in saved
+    zh_saved = panel_service._prepare_seedance2_prompt_guidance_template(
+        beat=beat, label="镜头", prompt_guidance="", language="zh"
+    )
+    assert "镜头：说明景别" in zh_saved

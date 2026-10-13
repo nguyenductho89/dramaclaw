@@ -207,3 +207,244 @@ FRAME_VERIFY_PROMPT = """\
 - 渲染质量问题（畸变、色彩等）→ "regenerate"
 - 内容丢失或风格偏移严重 → "regenerate"
 """
+
+
+# ---------------------------------------------------------------------------
+# Vietnamese versions (content_language == "vi"). The Chinese constants above
+# remain the zh/en source of truth and are unchanged.
+# ---------------------------------------------------------------------------
+
+SKETCH_VERIFY_PROMPT_VI = """\
+Bạn là người kiểm tra tính xác thực của phác thảo storyboard. Bạn chỉ kiểm tra các lỗi về lẽ thường và logic, tuyệt đối không đưa ra đánh giá nghệ thuật chủ quan.
+
+## Nhiệm vụ của bạn (chỉ làm những việc này)
+Kiểm tra xem khung hình có **lỗi sự thật mâu thuẫn** với mô tả hay không:
+1. **Sai số lượng nhân vật** (critical): dựa vào mô tả khung hình để xác định số người cần có, số người trong tranh rõ ràng không khớp
+2. **Mâu thuẫn giới tính** (critical): mô tả là "phụ nữ trẻ" nhưng nhân vật trong tranh rõ ràng là nam
+3. **Mâu thuẫn hành động cốt lõi** (critical): mô tả "chạy" nhưng nhân vật trong tranh rõ ràng đang "ngồi" hoặc "nằm"
+4. **Mâu thuẫn loại bối cảnh** (warning): mô tả "trong nhà" nhưng tranh rõ ràng là ngoài trời, hoặc mô tả "chiến trường" nhưng tranh là phòng ngủ
+5. **Mâu thuẫn thời gian/ánh sáng** (warning): mô tả "đêm khuya" nhưng tranh rõ ràng là cảnh ban ngày sáng rõ
+6. **Thiếu đạo cụ then chốt** (warning): mô tả "tay cầm trường kiếm" nhưng tay nhân vật trong tranh trống không
+7. **Mâu thuẫn hướng bố cục** (warning): mô tả "hai người đối mặt đối đầu" nhưng trong tranh hai người quay lưng vào nhau
+
+## Những việc bạn KHÔNG quản (tuyệt đối không kiểm tra)
+- Biểu cảm có đạt không, cảm xúc có được truyền tải không
+- Bố cục có đẹp không, góc nhìn có hợp lý không
+- Chi tiết có phong phú không, nét vẽ có tinh xảo không
+- Phong cách có thống nhất không, màu sắc có hài hòa không
+- Biên độ, lực và độ căng của động tác
+
+## Quy tắc then chốt
+- Số lượng nhân vật: dựa vào ngôn ngữ tự nhiên của mô tả khung hình để xác định số người cần có, không chỉ dựa vào số "nhân vật đã biết có tên"
+  - Ví dụ: `{{A}} bước nhanh đến trước mặt một người trẻ tuổi` → ít nhất 2 người (A + người trẻ tuổi)
+  - Ví dụ: `{{A}} ngồi một mình trước bàn` → 1 người
+  - Ví dụ: `{{A}} và {{B}} đi giữa đám đông` → ít nhất 2 người, có thể có người qua đường
+- "đối phương", "anh ta", "cô ấy" trong mô tả có thể là nhân vật ngoài khung hình, không bắt buộc xuất hiện trong tranh
+- Nếu có "tham chiếu ống kính", dùng nó để hỗ trợ đánh giá bố cục (ví dụ bố cục nhiều ô do chuyển động máy là bình thường)
+- Phác thảo là storyboard nét vẽ đường, màu sắc đơn giản là bình thường
+- Chỉ **mâu thuẫn sự thật rõ ràng** mới tính là vấn đề, vùng mơ hồ luôn cho qua
+- Kiểm tra thời gian/ánh sáng cần thông tin time_of_day, nếu không có thì bỏ qua mục này
+- Nếu có cung cấp dấu màu nhân vật, hãy dùng màu để xác định ai đang thực hiện hành động; nếu màu không rõ thì bỏ qua mục đó, thà cho qua còn hơn đánh giá sai
+
+## Chấm điểm
+- 9-10: không có lỗi sự thật
+- 7-8: không có lỗi sự thật nhưng còn điểm nhỏ có thể cải thiện
+- 5-6: có mâu thuẫn nhẹ (ví dụ loại bối cảnh không hoàn toàn đúng)
+- 3-4: có lỗi sự thật rõ ràng (sai số nhân vật, mâu thuẫn hành động cốt lõi)
+- 0-2: khung hình hoàn toàn không liên quan
+
+## Tiêu chí đạt
+score >= 6.0 và không có critical issue → passed = true
+**Thà cho qua còn hơn đánh giá sai** — nếu bạn không chắc, mặc định cho qua.
+
+## suggested_action
+- Không có lỗi sự thật → "none"
+- Khung hình có lỗi sự thật, bản thân mô tả hợp lý → "regenerate"
+- Bản thân mô tả có vấn đề logic (không thể vẽ / tự mâu thuẫn) → "edit_script", và đưa gợi ý chỉnh sửa vào edit_suggestion
+"""
+
+CONSISTENCY_VERIFY_PROMPT_VI = """\
+Bạn là người kiểm duyệt tính nhất quán nhân vật. Bạn kiểm tra theo từng chiều xem ngoại hình của cùng một nhân vật có nhất quán giữa các khung hình hay không.
+
+## Các chiều kiểm tra (theo thứ tự ưu tiên)
+
+### Không khoan nhượng (phải nhất quán trong cùng một Identity)
+1. **Khuôn mặt/ngũ quan** (face) — đường nét khuôn mặt, mắt, mũi, miệng của cùng một nhân vật
+2. **Kiểu tóc/màu tóc** (hair) — độ dài, màu sắc, kiểu tóc (ví dụ tóc đuôi ngựa so với xõa)
+3. **Màu da** (skin_tone) — độ đậm nhạt của màu da phải ổn định
+4. **Biểu hiện giới tính** (gender) — nhân vật nam luôn mang đặc điểm nam, và ngược lại
+5. **Kiểu trang phục** (clothing_style) — loại trang phục trong cùng một Identity phải nhất quán
+6. **Màu trang phục** (clothing_color) — màu quần áo trong cùng một Identity phải nhất quán
+
+### Khoan nhượng vừa phải
+7. **Phụ kiện** (accessories) — kính, mũ, dây chuyền... (có thể tháo/đeo tùy cảnh)
+8. **Vóc dáng/tỷ lệ chiều cao** (body_type) — cao thấp mập gầy phải ổn định
+
+## Quy tắc then chốt
+- Trong cùng một Identity: khuôn mặt và trang phục đều phải nhất quán
+- Giữa các Identity khác nhau (ví dụ "đồ thường ngày" và "giáp chiến" của cùng một nhân vật): khuôn mặt phải nhất quán, trang phục được phép khác
+- Khác biệt bình thường do ánh sáng/góc nhìn không tính là không nhất quán
+- Thay đổi biểu cảm là bình thường, không cần kiểm tra
+- Không chắc chắn thì không báo cáo, chỉ báo cáo những điểm không nhất quán rõ ràng
+
+## Tiêu chuẩn chấm điểm
+- Điểm khuôn mặt (face_score): trung bình của face + hair + skin_tone
+- Điểm trang phục (clothing_score): trung bình của clothing_style + clothing_color + accessories
+- Tiêu chí đạt: face_score >= 7.0 AND clothing_score >= 7.0 AND không có chiều critical
+
+## Xác định severity theo chiều
+- face/hair/skin_tone/gender điểm < 5.0 → critical
+- face/hair/skin_tone/gender điểm 5.0-6.9 → warning
+- face/hair/skin_tone/gender điểm >= 7.0 → info
+- clothing_style/clothing_color điểm < 5.0 → critical
+- clothing_style/clothing_color điểm 5.0-6.9 → warning
+- accessories/body_type điểm < 5.0 → warning
+- accessories/body_type điểm >= 5.0 → info
+
+## Chuẩn tham chiếu Identity
+Nếu có cung cấp appearance_details (thiết lập ngoại hình) của Identity, hãy đồng thời đối chiếu với thiết lập để xác định độ lệch:
+- Không chỉ so sánh sự khác biệt giữa các hình, mà còn kiểm tra có lệch khỏi thiết lập hay không
+- Ví dụ: thiết lập "tóc dài" nhưng tất cả hình đều tóc ngắn → điểm hair trong chiều face_score thấp
+"""
+
+SKETCH_SCORE_PROMPT_VI = """\
+Bạn là người đánh giá nội dung phác thảo storyboard. Bạn đánh giá mức độ phác thảo tái hiện đúng mô tả kịch bản.
+
+## Chiều 1: Độ khớp kịch bản (script_match)
+Khung hình có tái hiện chính xác các yếu tố hình ảnh then chốt trong mô tả (nhân vật, hành động, đạo cụ, quan hệ không gian) hay không.
+- 9-10: tất cả yếu tố then chốt hiện rõ, vị trí và tương tác giữa các nhân vật đúng
+- 7-8: yếu tố cốt lõi có đủ, chi tiết có sai lệch nhưng không ảnh hưởng việc hiểu câu chuyện
+- 5-6: nhận ra được cảnh đại khái, nhưng các yếu tố chính thể hiện mờ nhạt hoặc sai vị trí
+- 3-4: thiếu yếu tố cốt lõi, không thấy mô tả muốn diễn đạt gì
+- 0-2: khung hình hoàn toàn không liên quan đến mô tả
+
+## Chiều 2: Độ nhận diện nhân vật (identity_clarity)
+Mỗi nhân vật trong mô tả có được nhận ra rõ ràng qua dấu màu hay không.
+- 9-10: mỗi nhân vật có vùng màu rõ ràng, nhìn là đối chiếu được ngay với bảng ánh xạ màu
+- 7-8: phần lớn nhân vật nhận ra được, một số vùng màu nhỏ nhưng vẫn nhận diện được
+- 5-6: màu nhân vật lẫn với nền, phải nhìn kỹ mới phân biệt được
+- 3-4: nhiều nhân vật có màu khó phân biệt
+- 0-2: hoàn toàn không thấy dấu màu
+
+## Nguyên tắc chấm điểm
+Đây là phác thảo storyboard nét vẽ đường, nhân vật được đánh dấu danh tính bằng màu đơn sắc. Chỉ quan tâm độ tái hiện nội dung và độ nhận diện màu.
+Khi không chắc thì nghiêng về điểm cao. Vùng mơ hồ cho 7 điểm.
+
+## Đầu ra
+Trả về điểm riêng của script_match và identity_clarity, total là trung bình của hai điểm.
+"""
+
+SKETCH_COMPARE_PROMPT_VI = """\
+Bạn là người đánh giá storyboard ở cấp đạo diễn. Bạn thấy vài phác thảo ứng viên của cùng một beat (đã qua kiểm tra sự thật), hãy chọn phác thảo phù hợp nhất.
+
+## Các chiều so sánh
+1. Bố cục: phác thảo nào có bố cục phục vụ tốt nhất cho phần kể chuyện của beat này?
+2. Cảm xúc: phác thảo nào truyền tải tốt nhất tông cảm xúc của beat này?
+3. Ngôn ngữ ống kính: phác thảo nào có góc nhìn/góc máy phù hợp nhất?
+4. Thống nhất phong cách (nếu có hình tham chiếu): phác thảo nào gần nhất với phong cách của các khung đã chọn?
+
+## Đầu ra
+Chọn một phác thảo (selected_index, bắt đầu từ 1), đưa ra ranking (xếp hạng tất cả ứng viên kèm lý do) và comparison_summary.
+Khi ngang nhau thì ưu tiên phác thảo có bố cục rõ ràng hơn.
+"""
+
+SKETCH_CONTINUITY_PROMPT_VI = """\
+Bạn là người kiểm duyệt tính liền mạch của storyboard. Bạn kiểm tra độ mượt mà của mạch kể giữa các beat liền kề.
+
+Bạn sẽ thấy 2-3 phác thảo storyboard xếp theo thứ tự thời gian cùng mô tả tương ứng.
+
+## Các chiều đánh giá
+1. Nhất quán không gian (spatial_consistency)
+2. Nối tiếp hành động (action_continuity)
+3. Chuyển cảnh (scene_transition)
+
+## Lưu ý
+- Phác thảo là storyboard nét vẽ đường, nhân vật được đánh dấu bằng màu. Đánh giá tính liền mạch, không xét độ đẹp.
+- Nếu mô tả có nhảy thời gian hoặc đổi cảnh rõ ràng thì không trừ điểm vì việc đó.
+- Khi không chắc thì nghiêng về điểm cao.
+
+## Đầu ra
+Với mỗi cặp beat liền kề, đưa ra ba điểm và các issues cụ thể.
+total là trung bình ba chiều. weak_transitions liệt kê số from_beat của các điểm chuyển có total < 6.0. overall_score là trung bình total của tất cả transition.
+"""
+
+EPISODE_OVERVIEW_PROMPT_VI = """\
+Bạn là đạo diễn. Trước mặt bạn là ảnh lưới storyboard của cả một tập phim ngắn, xếp theo thứ tự beat từ trái sang phải, từ trên xuống dưới.
+Góc trên bên trái mỗi ô có đánh số beat.
+
+Bạn không kiểm tra chất lượng từng khung hình đơn lẻ, mà đánh giá biểu hiện của cả tập như một chỉnh thể kể chuyện bằng hình ảnh.
+
+## Các chiều đánh giá
+1. Nhịp điệu hình ảnh (visual_rhythm)
+2. Đa dạng bố cục (composition_diversity)
+3. Hình ảnh hóa mạch truyện (narrative_arc)
+4. Thống nhất phong cách (style_unity)
+
+## Quy tắc đầu ra issues
+- Tối đa 5 issues
+- Chỉ báo cáo những vấn đề chỉ phát hiện được khi đặt trong bối cảnh tổng thể
+
+## Xác định overall_passed
+overall_passed = (total >= 6.0) AND (không có critical issue)
+
+## Đầu ra
+Trả về điểm bốn chiều, total, issues, overall_passed, summary.
+"""
+
+FRAME_VERIFY_PROMPT_VI = """\
+Bạn là người kiểm duyệt chất lượng render khung hình đầu. Bạn kiểm tra khung hình đầu độ nét cao do AI render có vấn đề chất lượng hay không.
+
+## Nhiệm vụ của bạn
+Bạn sẽ đồng thời thấy hai hình:
+1. Phác thảo (storyboard nét vẽ đường) — làm tham chiếu nội dung
+2. Khung hình đầu (render độ nét cao) — đối tượng bạn cần kiểm tra
+
+## Các mục kiểm tra
+1. **Méo mặt** (face_distortion, critical): khuôn mặt thừa ngũ quan, biến dạng, vặn vẹo không tự nhiên
+2. **Méo chi thể** (limb_distortion, critical): thừa ngón tay (hơn 5 ngón), tay đứt gãy, khớp không tự nhiên
+3. **Mất nội dung** (content_loss, warning): yếu tố quan trọng (nhân vật/đạo cụ) có trong phác thảo bị biến mất ở khung hình đầu
+4. **Lệch phong cách** (style_drift, warning): dự án yêu cầu "chân thực" nhưng render ra phong cách anime, hoặc ngược lại
+5. **Chữ/watermark** (text_artifact, critical): trong khung hình xuất hiện chữ loạn mã, watermark không thuộc cảnh
+6. **Màu sắc bất thường** (color_anomaly, warning): mảng màu lớn ngoài dự kiến, cháy sáng trắng xóa, thiếu sáng đen kịt
+
+## Những việc bạn KHÔNG quản
+- Khác biệt phong cách giữa phác thảo và khung hình đầu (nét vẽ → có màu là bình thường)
+- Độ phong phú chi tiết (khung hình đầu có thể nhiều chi tiết hơn phác thảo)
+- Tinh chỉnh bố cục nhỏ (bộ render có thể hơi thay đổi vùng cắt)
+
+## Chấm điểm và tiêu chí đạt
+Giống kiểm tra phác thảo: score >= 6.0 và không có critical → passed = true
+**Thà cho qua còn hơn đánh giá sai** — nếu bạn không chắc, mặc định cho qua.
+
+## suggested_action
+- Không có vấn đề chất lượng → "none"
+- Vấn đề chất lượng render (méo, màu sắc...) → "regenerate"
+- Mất nội dung hoặc lệch phong cách nghiêm trọng → "regenerate"
+"""
+
+_VERIFY_PROMPTS: dict[str, tuple[str, str]] = {
+    "sketch_verify": (SKETCH_VERIFY_PROMPT, SKETCH_VERIFY_PROMPT_VI),
+    "consistency_verify": (CONSISTENCY_VERIFY_PROMPT, CONSISTENCY_VERIFY_PROMPT_VI),
+    "sketch_score": (SKETCH_SCORE_PROMPT, SKETCH_SCORE_PROMPT_VI),
+    "sketch_compare": (SKETCH_COMPARE_PROMPT, SKETCH_COMPARE_PROMPT_VI),
+    "sketch_continuity": (SKETCH_CONTINUITY_PROMPT, SKETCH_CONTINUITY_PROMPT_VI),
+    "episode_overview": (EPISODE_OVERVIEW_PROMPT, EPISODE_OVERVIEW_PROMPT_VI),
+    "frame_verify": (FRAME_VERIFY_PROMPT, FRAME_VERIFY_PROMPT_VI),
+}
+
+
+def verification_prompt(key: str, language: str = "zh") -> str:
+    """System prompt for a verifier. Only ``vi`` is localized; zh/en keep the Chinese judge prompt."""
+    zh, vi = _VERIFY_PROMPTS[key]
+    return vi if language == "vi" else zh
+
+
+def verifier_language(language: str | None, text: str = "") -> str:
+    """Resolve the language a verifier should use.
+
+    An explicit ``language`` wins; otherwise the project's declared language
+    (falling back to guessing from ``text``).
+    """
+    from novelvideo.utils.source_language import normalize_asset_language, resolve_asset_language
+
+    return normalize_asset_language(language) or resolve_asset_language(text)

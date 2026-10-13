@@ -33,6 +33,11 @@ from novelvideo.brainclaw_contract import BrainClawProfile
 from novelvideo.cognee.tools import create_episode_planner_tools
 from novelvideo.shared.env_guard import preserve_st_env
 from novelvideo.utils.logging import log_agent_start, log_agent_end
+from novelvideo.utils.source_language import (
+    asset_language_instruction,
+    resolve_asset_language,
+    select_by_language,
+)
 
 if TYPE_CHECKING:
     from novelvideo.cognee import CogneeStore
@@ -152,23 +157,164 @@ EPISODE_PLANNER_PROMPT = """# 你是专业的剧集规划师
 """
 
 
+EPISODE_PLANNER_PROMPT_VI = """# Bạn là nhà hoạch định tập phim chuyên nghiệp
+
+## Nhiệm vụ
+Hoạch định nội dung tiểu thuyết thành số tập được chỉ định. Mỗi tập phải có xung đột và nút thắt (hồi hộp) riêng, đồng thời giữ cho toàn bộ mạch kể liền lạc.
+
+## Chiến lược sử dụng công cụ (quan trọng)
+
+Bạn có nhiều công cụ tìm kiếm đồ thị tri thức, hãy sử dụng đầy đủ theo thứ tự sau:
+
+### Bước 1: Nắm cấu trúc tổng thể của câu chuyện
+1. Gọi `tool_get_story_structure()` để lấy khung tổng thể của câu chuyện
+2. Gọi `tool_get_all_characters_for_planning()` để lấy danh sách nhân vật
+
+### Bước 2: Nhận diện các nút then chốt
+3. Gọi `tool_search_plot_points("xung đột chính và các bước ngoặt")` để tìm các điểm cao trào
+4. Gọi `tool_search_timeline_events("các sự kiện chính từ mở đầu đến kết thúc")` để lấy dòng thời gian
+
+### Bước 3: Phân tích sự phát triển nhân vật
+5. Với các nhân vật chính, gọi `tool_search_character_arcs(tên nhân vật)` để hiểu cung phát triển nhân vật
+6. Gọi `tool_search_relationship_changes("thay đổi quan hệ giữa các nhân vật chính")` để hiểu diễn biến quan hệ
+
+### Bước 4: Xác định ranh giới các tập
+7. Dựa trên các thông tin trên, tìm ra các điểm cắt tập tự nhiên (ví dụ:
+   - Xung đột lớn bùng nổ/được giải quyết
+   - Bước ngoặt số phận nhân vật
+   - Thay đổi lớn trong quan hệ
+   - Bí mật được tiết lộ/xuất hiện nút thắt mới)
+
+### Bước 5: Chi tiết hóa nội dung từng tập
+8. Với phạm vi chương của mỗi tập, gọi `tool_search_chapter_summary(phạm vi)` để lấy nội dung chi tiết
+9. Gọi `tool_search_cliffhanger_candidates(nội dung tập này)` để tìm điểm hồi hộp phù hợp
+
+## Nguyên tắc hoạch định tập phim
+
+### Yêu cầu về cấu trúc
+- Tập 1: xây dựng thế giới quan, giới thiệu nhân vật chính, gieo mầm cho tuyến chính
+- Tập 2-3: phát triển xung đột, mở rộng tuyến phụ
+- Các tập giữa: đẩy tuyến chính tiến lên, nhân vật trưởng thành, quan hệ thay đổi
+- 2-3 tập áp chót: xung đột chính leo thang, dạo đầu cho cao trào
+- 1-2 tập cuối: cao trào, kết thúc, chừa khoảng lặng
+
+### Yêu cầu cho mỗi tập
+1. **Tính trọn vẹn**: mỗi tập có mở đầu - phát triển - cao trào riêng
+2. **Hồi hộp**: cuối mỗi tập phải có nút thắt khiến khán giả muốn xem tập sau
+3. **Xung đột**: mỗi tập có xung đột chính rõ ràng
+4. **Nhân vật**: hạn chế số nhân vật xuất hiện (3-6 người là hợp lý)
+5. **Thời lượng**: lượng nội dung phù hợp với video 3-5 phút
+
+### Kỹ thuật cliffhanger
+- Tiết lộ một nửa nút thắt (ví dụ: cánh cửa bị đẩy ra, người bước vào là...)
+- Khủng hoảng ập đến (ví dụ: sứ giả mang tin xấu tới...)
+- Báo trước đảo ngược (ví dụ: nhưng cô không biết rằng...)
+- Bí mật bị phơi bày (ví dụ: một lá thư rơi ra từ tay áo...)
+
+## Quy phạm tham chiếu nhân vật
+
+`character_names` bắt buộc chọn từ danh sách nhân vật đã biết, không được tạo tên nhân vật mới.
+
+## Yêu cầu đầu ra
+
+Sau khi dùng công cụ tìm kiếm đầy đủ thông tin, xuất JSON theo định dạng EpisodePlannerOutput.
+Đảm bảo:
+1. Số thứ tự bắt đầu từ 1 và liên tục
+2. Mỗi tập đều có cliffhanger
+3. Tên nhân vật khớp với danh sách đã biết
+"""
+
+
+def get_episode_planner_prompt(language: str = "zh") -> str:
+    """Return the planner system prompt written in ``language``."""
+    return select_by_language(
+        language, zh=EPISODE_PLANNER_PROMPT, vi=EPISODE_PLANNER_PROMPT_VI
+    )
+
+
+def _planner_system_prompt(language: str | None) -> str:
+    language = language or resolve_asset_language("")
+    prompt = get_episode_planner_prompt(language)
+    if language == "vi":
+        prompt = f"{prompt}\n{asset_language_instruction('vi')}"
+    return prompt
+
+
+def _character_hint(language: str, known_characters: List[str]) -> str:
+    if not known_characters:
+        return ""
+    names = ", ".join(known_characters)
+    if language == "vi":
+        return f"""
+
+## Danh sách nhân vật đã biết
+Dưới đây là các nhân vật đã được xác nhận, trường character_names chỉ được chọn từ danh sách này:
+{names}
+"""
+    return f"""
+
+## 已知角色列表
+以下是已确认的角色，character_names 字段只能从此列表选择：
+{names}
+"""
+
+
+def _planner_task(language: str, target_episodes: int, character_hint: str) -> str:
+    if language == "vi":
+        return f"""Hãy hoạch định {target_episodes} tập cho cuốn tiểu thuyết này.
+{character_hint}
+
+Hãy thực hiện theo các bước sau:
+
+1. Trước hết gọi tool_get_story_structure() để nắm cấu trúc tổng thể của câu chuyện
+2. Gọi tool_get_all_characters_for_planning() để xác nhận danh sách nhân vật
+3. Gọi tool_search_plot_points("xung đột chính và cao trào") để tìm các nút then chốt
+4. Gọi tool_search_timeline_events("từ mở đầu đến kết thúc") để lấy dòng thời gian
+5. Dựa trên kết quả tìm kiếm để hoạch định {target_episodes} tập
+
+Đảm bảo:
+- Mỗi tập có xung đột và nút thắt riêng
+- Tên nhân vật chỉ dùng tên trong danh sách đã biết
+- cliffhanger phải khiến khán giả muốn xem tập sau
+"""
+    return f"""请为这部小说规划 {target_episodes} 集。
+{character_hint}
+
+请按照以下步骤操作：
+
+1. 首先调用 tool_get_story_structure() 了解故事整体结构
+2. 调用 tool_get_all_characters_for_planning() 确认角色列表
+3. 调用 tool_search_plot_points("主要冲突和高潮") 找出关键节点
+4. 调用 tool_search_timeline_events("从开篇到结局") 获取时间线
+5. 根据搜索结果规划 {target_episodes} 集
+
+确保：
+- 每集有独立的冲突和悬念
+- 角色名只使用已知列表中的名字
+- cliffhanger 要吸引观众想看下一集
+"""
+
+
 # =============================================================================
 # Agent Factory
 # =============================================================================
 
 
-def create_episode_planner_agent(tools: List[Callable]) -> Agent:
+def create_episode_planner_agent(
+    tools: List[Callable], language: str | None = None
+) -> Agent:
     """创建剧集规划 Agent。
 
     Args:
         tools: 剧集规划工具列表
+        language: 提示词语言；缺省取项目声明语言（vi 使用越南语提示词，其余保持原中文）
 
     Returns:
         配置好的 Agent
     """
     return Agent(
         get_pydantic_model(brainclaw_profile=BrainClawProfile.EPISODE_STORY_PLANNING),
-        system_prompt=EPISODE_PLANNER_PROMPT,
+        system_prompt=_planner_system_prompt(language),
         tools=tools,
         output_type=EpisodePlannerOutput,
         model_settings=get_newapi_structured_output_model_settings(),
@@ -213,6 +359,7 @@ class EpisodePlannerAgent:
         known_characters: Optional[List[str]] = None,
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
+        language: Optional[str] = None,
     ) -> List["NovelEpisode"]:
         """规划剧集。
 
@@ -251,36 +398,16 @@ class EpisodePlannerAgent:
             known_characters = [c.name for c in characters]
         log(f"已知角色: {len(known_characters)} 个")
 
-        # 构建角色提示
-        character_hint = ""
-        if known_characters:
-            character_hint = f"""
+        language = language or resolve_asset_language("")
 
-## 已知角色列表
-以下是已确认的角色，character_names 字段只能从此列表选择：
-{", ".join(known_characters)}
-"""
+        # 构建角色提示
+        character_hint = _character_hint(language, known_characters)
 
         # 创建 Agent
-        agent = create_episode_planner_agent(self.tools)
+        agent = create_episode_planner_agent(self.tools, language=language)
 
         # 构建任务
-        task = f"""请为这部小说规划 {target_episodes} 集。
-{character_hint}
-
-请按照以下步骤操作：
-
-1. 首先调用 tool_get_story_structure() 了解故事整体结构
-2. 调用 tool_get_all_characters_for_planning() 确认角色列表
-3. 调用 tool_search_plot_points("主要冲突和高潮") 找出关键节点
-4. 调用 tool_search_timeline_events("从开篇到结局") 获取时间线
-5. 根据搜索结果规划 {target_episodes} 集
-
-确保：
-- 每集有独立的冲突和悬念
-- 角色名只使用已知列表中的名字
-- cliffhanger 要吸引观众想看下一集
-"""
+        task = _planner_task(language, target_episodes, character_hint)
 
         report(0.2, "Agent 搜索故事信息...")
         log("开始多轮搜索...")

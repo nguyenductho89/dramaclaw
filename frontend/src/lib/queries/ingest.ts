@@ -7,7 +7,7 @@ import { p } from "@/lib/api-path";
 import { queryKeys } from "@/lib/query-keys";
 import type { ErrorResponse, OkResponse, TaskResponse } from "@/types/api";
 import type { Chapter } from "@/types/episode";
-import type { SpineTemplate } from "@/types/project";
+import type { ContentLanguage, SpineTemplate } from "@/types/project";
 
 export interface FormatCheckIssue {
   code: string;
@@ -163,6 +163,7 @@ export function useStartIngest(project: string) {
       filename: string;
       rebuild?: boolean;
       spine_template?: SpineTemplate;
+      content_language?: ContentLanguage;
     }) => {
       const response = await jsonWithBackendError<TaskResponse | ErrorResponse>(
         api.post(p`api/v1/projects/${project}/ingest/start`, {

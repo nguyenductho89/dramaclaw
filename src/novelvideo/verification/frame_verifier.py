@@ -6,7 +6,7 @@ import time
 from pydantic_ai import Agent, BinaryContent
 
 from .models import VerificationResult
-from .prompts import FRAME_VERIFY_PROMPT
+from .prompts import verification_prompt, verifier_language
 from .sanitize import sanitize_prompt_input
 from .utils import compress_image
 
@@ -16,25 +16,33 @@ logger = logging.getLogger(__name__)
 class FrameVerifier:
     """首帧渲染质量验证。"""
 
-    def __init__(self):
+    def __init__(self, language: str | None = None):
+        # ``_agent`` is an override slot (tests inject fakes here); real agents are
+        # built lazily per language in ``_agents``.
         self._agent: Agent | None = None
+        self._agents: dict[str, Agent] = {}
+        self._language = language
 
-    def _get_agent(self) -> Agent:
-        if self._agent is None:
+    def _get_agent(self, language: str = "zh") -> Agent:
+        if self._agent is not None:
+            return self._agent
+        agent = self._agents.get(language)
+        if agent is None:
             from novelvideo.config import (
                 get_newapi_structured_output_model_settings,
                 get_pydantic_model,
             )
 
-            self._agent = Agent(
+            agent = Agent(
                 get_pydantic_model(),
-                system_prompt=FRAME_VERIFY_PROMPT,
+                system_prompt=verification_prompt("frame_verify", language),
                 output_type=VerificationResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
                 name="首帧质量审核员",
             )
-        return self._agent
+            self._agents[language] = agent
+        return agent
 
     async def verify_frame(
         self,
@@ -51,6 +59,7 @@ class FrameVerifier:
             visual_description: beat 的 visual_description 字段
             project_style: 项目视觉风格（如 realistic, anime 等）
         """
+        lang = verifier_language(self._language, visual_description)
         safe_desc = sanitize_prompt_input(visual_description)
         safe_style = sanitize_prompt_input(project_style)
         style_line = f"\n项目视觉风格: {safe_style}" if safe_style else ""
@@ -60,6 +69,14 @@ class FrameVerifier:
             f"以下两张图：第一张是草图（内容参考），第二张是首帧（检查目标）。"
         )
 
+        if lang == "vi":
+            style_line_vi = f"\nPhong cách hình ảnh dự án: {safe_style}" if safe_style else ""
+            task = (
+                f"Kiểm tra chất lượng render khung hình đầu.\n"
+                f"Mô tả khung hình: {safe_desc}{style_line_vi}\n\n"
+                f"Hai hình sau: hình thứ nhất là phác thảo (tham chiếu nội dung), hình thứ hai là khung hình đầu (đối tượng cần kiểm tra)."
+            )
+
         try:
             sketch_bytes = compress_image(sketch_path)
             frame_bytes = compress_image(frame_path)
@@ -68,7 +85,7 @@ class FrameVerifier:
         except Exception as e:
             raise ValueError(f"Image compression failed: {e}") from e
 
-        agent = self._get_agent()
+        agent = self._get_agent(lang)
         start = time.monotonic()
         result = await agent.run([
             task,

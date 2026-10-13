@@ -8,7 +8,7 @@ from pydantic_ai import Agent, BinaryContent
 
 from novelvideo.models import beat_scene_id
 from .models import ContinuityResult
-from .prompts import SKETCH_CONTINUITY_PROMPT
+from .prompts import verification_prompt, verifier_language
 from .sanitize import sanitize_prompt_input
 from .utils import compress_image, find_sketch_for_beat, load_all_beats, safe_resolve_under
 
@@ -16,25 +16,33 @@ logger = logging.getLogger(__name__)
 
 
 class ContinuityVerifier:
-    def __init__(self):
+    def __init__(self, language: str | None = None):
+        # ``_agent`` is an override slot (tests inject fakes here); real agents are
+        # built lazily per language in ``_agents``.
         self._agent: Agent | None = None
+        self._agents: dict[str, Agent] = {}
+        self._language = language
 
-    def _get_agent(self) -> Agent:
-        if self._agent is None:
+    def _get_agent(self, language: str = "zh") -> Agent:
+        if self._agent is not None:
+            return self._agent
+        agent = self._agents.get(language)
+        if agent is None:
             from novelvideo.config import (
                 get_newapi_structured_output_model_settings,
                 get_pydantic_model,
             )
 
-            self._agent = Agent(
+            agent = Agent(
                 get_pydantic_model(),
-                system_prompt=SKETCH_CONTINUITY_PROMPT,
+                system_prompt=verification_prompt("sketch_continuity", language),
                 output_type=ContinuityResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
                 name="分镜连贯性审核员",
             )
-        return self._agent
+            self._agents[language] = agent
+        return agent
 
     async def verify_continuity(
         self,
@@ -65,7 +73,12 @@ class ContinuityVerifier:
         if len(valid_beats) < 2:
             return {"transitions": [], "weak_transitions": [], "overall_score": 10.0}
 
-        agent = self._get_agent()
+        lang = verifier_language(
+            self._language,
+            " ".join(str(b.get("visual_description", "")) for _, _, b in valid_beats),
+        )
+        vi = lang == "vi"
+        agent = self._get_agent(lang)
         all_transitions = []
 
         for i in range(len(valid_beats) - window_size + 1):
@@ -75,14 +88,25 @@ class ContinuityVerifier:
                 safe_desc = sanitize_prompt_input(beat_data.get("visual_description", ""))
                 scene_id = sanitize_prompt_input(beat_scene_id(beat_data))
                 desc_lines.append(
-                    f"Beat {beat_num}: {safe_desc}" + (f" [场景: {scene_id}]" if scene_id else "")
+                    f"Beat {beat_num}: {safe_desc}" + (
+                        (f" [Cảnh: {scene_id}]" if vi else f" [场景: {scene_id}]")
+                        if scene_id
+                        else ""
+                    )
                 )
 
-            task = (
-                f"检查以下 {len(window)} 个连续 beat 的叙事连贯性:\n"
-                + "\n".join(desc_lines)
-                + "\n\n以下图片按 beat 顺序排列。"
-            )
+            if vi:
+                task = (
+                    f"Kiểm tra tính liền mạch của mạch kể giữa {len(window)} beat liên tiếp sau:\n"
+                    + "\n".join(desc_lines)
+                    + "\n\nCác hình dưới đây xếp theo thứ tự beat."
+                )
+            else:
+                task = (
+                    f"检查以下 {len(window)} 个连续 beat 的叙事连贯性:\n"
+                    + "\n".join(desc_lines)
+                    + "\n\n以下图片按 beat 顺序排列。"
+                )
             prompt_parts: list = [task]
             for beat_num, sketch_path, _ in window:
                 prompt_parts.append(f"\n--- Beat {beat_num} ---")

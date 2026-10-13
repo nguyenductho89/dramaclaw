@@ -10,8 +10,10 @@ from pydantic_ai import Agent, BinaryContent
 from novelvideo.models import beat_scene_id
 from novelvideo.utils.asset_resolver import AssetResolver
 
+from novelvideo.utils.source_language import select_by_language
+
 from .models import VerificationResult
-from .prompts import SKETCH_VERIFY_PROMPT
+from .prompts import verification_prompt, verifier_language
 from .sanitize import sanitize_prompt_input
 from .utils import compress_image
 
@@ -42,25 +44,33 @@ def resolve_verification_scene_context(
 
 
 class ImageVerifier:
-    def __init__(self):
+    def __init__(self, language: str | None = None):
+        # ``_agent`` is an override slot (tests inject fakes here); real agents are
+        # built lazily per language in ``_agents``.
         self._agent: Agent | None = None
+        self._agents: dict[str, Agent] = {}
+        self._language = language
 
-    def _get_agent(self) -> Agent:
-        if self._agent is None:
+    def _get_agent(self, language: str = "zh") -> Agent:
+        if self._agent is not None:
+            return self._agent
+        agent = self._agents.get(language)
+        if agent is None:
             from novelvideo.config import (
                 get_newapi_structured_output_model_settings,
                 get_pydantic_model,
             )
 
-            self._agent = Agent(
+            agent = Agent(
                 get_pydantic_model(),
-                system_prompt=SKETCH_VERIFY_PROMPT,
+                system_prompt=verification_prompt("sketch_verify", language),
                 output_type=VerificationResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
                 name="草图验证员",
             )
-        return self._agent
+            self._agents[language] = agent
+        return agent
 
     async def verify_sketch(
         self,
@@ -88,6 +98,8 @@ class ImageVerifier:
             time_baked: True 表示命中的是已烘焙时间版场景图，应该锁图光
             prompt_time_of_day: 实际用于提示/验证的目标时间；为空时回退 time_of_day
         """
+        lang = verifier_language(self._language, visual_prompt)
+        vi = lang == "vi"
         safe_visual = sanitize_prompt_input(visual_prompt)
         safe_scene_id = sanitize_prompt_input(scene_id)
         safe_resolved_scene = sanitize_prompt_input(resolved_scene_name)
@@ -95,7 +107,26 @@ class ImageVerifier:
         resolved_scene_line = (
             f"\n解析场景: {safe_resolved_scene}" if safe_resolved_scene else ""
         )
-        if safe_time and time_baked:
+        if vi:
+            resolved_scene_line = (
+                f"\nCảnh đã xác định: {safe_resolved_scene}" if safe_resolved_scene else ""
+            )
+        if vi and safe_time and time_baked:
+            time_line = (
+                f"\nThời gian: {safe_time}"
+                f"\nKiểm tra thời gian/ánh sáng: đã khớp ảnh cảnh bản đã nướng sẵn thời gian, "
+                f"khóa theo ánh sáng {safe_time} vốn có của ảnh; "
+                "không yêu cầu relight thêm, chỉ báo mâu thuẫn khi khung hình rõ ràng không phải ánh sáng của thời điểm đó."
+            )
+        elif vi and safe_time:
+            time_line = (
+                f"\nThời gian: {safe_time}"
+                f"\nKiểm tra thời gian/ánh sáng: ảnh cảnh hiện tại không phải bản nướng sẵn thời gian, "
+                f"khung hình phải thể hiện {safe_time} thông qua sinh ảnh/relight."
+            )
+        elif vi:
+            time_line = "\nKiểm tra thời gian/ánh sáng: chưa chỉ định time_of_day, bỏ qua kiểm tra mâu thuẫn thời gian/ánh sáng."
+        elif safe_time and time_baked:
             time_line = (
                 f"\n时间: {safe_time}"
                 f"\n时间/光线验证: 已命中烘焙时间版场景图，锁定该图自带的{safe_time}光照；"
@@ -108,8 +139,18 @@ class ImageVerifier:
             )
         else:
             time_line = "\n时间/光线验证: 未指定 time_of_day，跳过时间/光线矛盾检查。"
+        chars_text_vi = (
+            f"Nhân vật đã biết có tên: {', '.join(named_characters)} (tổng {len(named_characters)} người)"
+            if named_characters
+            else "Nhân vật đã biết có tên: không có"
+        )
         chars_text = f"已知命名角色: {', '.join(named_characters)}（共{len(named_characters)}人）" if named_characters else "已知命名角色: 无"
-        camera_line = f"\n镜头参考: {sanitize_prompt_input(camera_context)}" if camera_context else ""
+        camera_line = (
+            f"\n{select_by_language(lang, zh='镜头参考', vi='Tham chiếu ống kính')}: "
+            f"{sanitize_prompt_input(camera_context)}"
+            if camera_context
+            else ""
+        )
         color_line = ""
         if color_mapping:
             lines = []
@@ -119,7 +160,10 @@ class ImageVerifier:
                 color_name = parts[1] if len(parts) > 1 else ""
                 lines.append(f"- {color_name} ({hex_code}) = {identity_id}")
             if lines:
-                color_line = "\n角色颜色标记:\n" + "\n".join(lines)
+                color_line = (
+                    select_by_language(lang, zh="\n角色颜色标记:\n", vi="\nDấu màu nhân vật:\n")
+                    + "\n".join(lines)
+                )
         task = (
             f"验证草图是否匹配以下描述:\n"
             f"画面描述: {safe_visual}\n"
@@ -128,8 +172,17 @@ class ImageVerifier:
             f"场景: {safe_scene_id}{resolved_scene_line}{time_line}{camera_line}{color_line}\n"
             f"注意：描述中提到的'对方'、'他'、'她'可能是画外角色，不要求出现在画面中。"
         )
+        if vi:
+            task = (
+                f"Kiểm tra phác thảo có khớp với mô tả sau hay không:\n"
+                f"Mô tả khung hình: {safe_visual}\n"
+                f"{chars_text_vi}\n"
+                f"Hãy tự dựa vào mô tả khung hình để xác định số nhân vật cần xuất hiện (có thể nhiều hơn số nhân vật đã biết có tên).\n"
+                f"Cảnh: {safe_scene_id}{resolved_scene_line}{time_line}{camera_line}{color_line}\n"
+                f"Lưu ý: 'đối phương', 'anh ta', 'cô ấy' trong mô tả có thể là nhân vật ngoài khung hình, không bắt buộc xuất hiện trong tranh."
+            )
         image_bytes = compress_image(image_path)
-        agent = self._get_agent()
+        agent = self._get_agent(lang)
         start = time.monotonic()
         result = await agent.run(
             [task, BinaryContent(data=image_bytes, media_type="image/jpeg")]

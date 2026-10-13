@@ -27,13 +27,14 @@ x-langfuse-env: &langfuse-env
   # Media (images/audio/video) is uploaded by the SDK straight to MinIO through a
   # presigned URL, and played back by the browser from the same URL. The host in
   # that URL must therefore resolve from BOTH the api container and the browser.
-  # host.docker.internal does for the container; if your browser cannot resolve
-  # it, add `127.0.0.1 host.docker.internal` to /etc/hosts.
+  # *.localhost resolves to loopback in every modern browser with no /etc/hosts edit,
+  # and the api service maps it to the host via extra_hosts (docker-compose.release.yml).
+  # host.docker.internal is NOT resolvable from a browser on most setups.
   LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
   LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
   LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
   LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-miniosecret}
-  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_MEDIA_ENDPOINT:-http://host.docker.internal:9090}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_MEDIA_ENDPOINT:-http://langfuse-media.localhost:9090}
   LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
   LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
 

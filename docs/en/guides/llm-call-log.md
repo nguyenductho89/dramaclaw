@@ -70,9 +70,11 @@ video files (`utils/media_download.py`) and Gemini WebAI images
 
 Media is uploaded by the SDK to MinIO through presigned URLs and played back by your
 browser from the same URL, so that host must resolve in both places. The default
-`http://host.docker.internal:9090` works for the container; if the browser cannot
-resolve it, add `127.0.0.1 host.docker.internal` to `/etc/hosts` (or set
-`LANGFUSE_MEDIA_ENDPOINT`).
+`http://langfuse-media.localhost:9090` does: browsers resolve `*.localhost` to loopback
+on their own, and `docker-compose.release.yml` maps it to the host for the api
+container (`extra_hosts`). Recreate the api container after pulling this change
+(see step 4). Override with `LANGFUSE_MEDIA_ENDPOINT` only if you need a different host.
+Media already logged with the old `host.docker.internal` URL stays broken; new calls work.
 
 ## Retention
 
@@ -96,6 +98,6 @@ Tracked in [`docs/tech-debt.md`](../../tech-debt.md).
 - Nothing appears: check `docker compose logs api` for `LLM call log enabled`; a
   warning instead means `LANGFUSE_*` is missing or `langfuse` is not installed.
 - Text appears but images show broken: the browser cannot reach the media endpoint
-  (see the hosts note above).
+  (see the media note above; open the presigned URL directly to see the error).
 - Calls fail after enabling: set `LLM_CALL_LOG_ENABLED=` (empty) and restart; the hook
   swallows its own errors, so please report the traceback.

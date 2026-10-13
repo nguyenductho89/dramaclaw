@@ -26,7 +26,8 @@ def _chunks(scope: PreviewScope):
     if text is None:
         return None, None
     template = str(scope.config.get("spine_template") or "drama").strip()
-    return text, chunk_source_text(text, template)
+    # Same language the real build passes, so the section labels match.
+    return text, chunk_source_text(text, template, resolve_asset_language(text))
 
 
 # --- characters: stage 1, one prompt per source chunk ---------------------------------------------
@@ -44,8 +45,8 @@ async def _characters_targets(scope: PreviewScope) -> list[PreviewTarget]:
 
 async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
     from novelvideo.structured_extraction import (
-        CHARACTER_EXTRACTION_SYSTEM_PROMPT,
         build_character_chunk_prompt,
+        character_extraction_system_prompt,
     )
 
     text, chunks = _chunks(scope)
@@ -60,7 +61,11 @@ async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
         model_kind="llm",
         target_label=chunk.section_label,
         parts=[
-            PromptPart("system", "CHARACTER_EXTRACTION_SYSTEM_PROMPT", CHARACTER_EXTRACTION_SYSTEM_PROMPT),
+            PromptPart(
+                "system",
+                "CHARACTER_EXTRACTION_SYSTEM_PROMPT",
+                character_extraction_system_prompt(language),
+            ),
             PromptPart("user", "chunk", build_character_chunk_prompt(chunk, language)),
         ],
         inputs={"chunk_id": chunk.chunk_id, "section_type": chunk.section_type, "language": language},

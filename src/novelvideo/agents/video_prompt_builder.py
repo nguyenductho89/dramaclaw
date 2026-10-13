@@ -278,6 +278,8 @@ class VideoPromptBuilder:
             if audio_type == "dialogue" and dialogue_line:
                 if language == "en":
                     result = f'{result} Says: "{dialogue_line}"'
+                elif language == "vi":
+                    result = f"{result}, nói: {dialogue_line}"
                 else:
                     result = f"{result}，说：{dialogue_line}"
             return result
@@ -403,6 +405,8 @@ Output the motion prompt in {output_label} directly. No explanation.
         """回退方案：根据规则生成默认运动提示词。"""
         if language == "en":
             return "The character moves naturally as the camera follows the action."
+        if language == "vi":
+            return "Nhân vật chuyển động tự nhiên, tư thế thay đổi, máy quay chuyển động tự nhiên."
         return "角色自然动作，姿态变化，自然镜头运动"
 
 

@@ -348,7 +348,7 @@ class GlobalVideoPromptOptimizer:
                 position_hint += "Vary shot scale and angle from adjacent beats to create visual rhythm."
 
         language_instruction = asset_language_instruction(language)
-        output_label = asset_language_label(language)
+        output_label = "Chinese" if language == "zh" else asset_language_label(language)
         task = f"""Generate a first-frame motion prompt for Beat {bn}. You see the sketch frame for this beat.
 {position_hint}
 ## Character Color Mapping
@@ -401,8 +401,10 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         if audio_type == "dialogue":
             line = beat.get("narration_segment", "")
             if line and line not in result["prompt"]:
-                dialogue_prefix = "Says:" if language == "en" else "说："
+                dialogue_prefix = {"en": "Says:", "vi": "Nói:"}.get(language, "说：")
                 separator = " " if language == "en" else "，"
+                if language == "vi":
+                    separator = ", "
                 result["prompt"] = (
                     f"{result['prompt']}{separator}{dialogue_prefix} {line}"
                 )

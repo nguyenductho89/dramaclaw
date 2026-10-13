@@ -44,6 +44,7 @@ from novelvideo.novel_source import require_imported_novel
 from novelvideo.project_config import ensure_cognee_embedding_binding_in_state_dir
 from novelvideo.sqlite_store import SQLiteStore
 from novelvideo.utils.document_parsers import load_novel_text
+from novelvideo.utils.source_language import resolve_asset_language
 
 # 路径计算工具函数 — canonical implementation lives in utils.path_resolver.
 from novelvideo.utils.path_resolver import (  # noqa: F401
@@ -90,6 +91,57 @@ INGEST_PROGRESS_MILESTONES = {
 
 def _json_list_payload(values: list[str]) -> str:
     return json.dumps(list(values or []), ensure_ascii=False)
+
+
+def build_event_assignment_prompt(
+    events_json: str, event_count: int, target_episodes: int, language: str = "zh"
+) -> str:
+    """The events -> episodes prompt. ``assignments`` keys/ids stay machine-read."""
+    if language == "vi":
+        return f"""Hãy phân bổ {event_count} sự kiện dưới đây vào {target_episodes} tập.
+
+Danh sách sự kiện:
+{events_json}
+
+Nguyên tắc phân bổ:
+1. Giữ quan hệ nhân quả: các sự kiện có quan hệ causes nên ở cùng một tập hoặc các tập liền kề
+2. Tính trọn vẹn của tự sự: mỗi tập nên có một cung tự sự nhỏ hoàn chỉnh
+3. Phân bổ cân bằng: số sự kiện mỗi tập xấp xỉ nhau (trung bình {event_count // target_episodes} sự kiện)
+4. Thiết lập nút thắt: sự kiện cuối mỗi tập thích hợp làm cliffhanger
+5. Phân bổ theo thứ tự: không được xáo trộn thứ tự của các sự kiện
+
+Hãy trả về định dạng JSON (giữ nguyên khóa "assignments" và các id sự kiện như trong danh sách):
+{{
+    "assignments": {{
+        "1": ["ch1_e1", "ch1_e2"],
+        "2": ["ch1_e3", "ch2_e1"],
+        ...
+    }}
+}}
+
+Chỉ trả về JSON, không có nội dung nào khác."""
+    return f"""将以下 {event_count} 个事件分配到 {target_episodes} 集中。
+
+事件列表：
+{events_json}
+
+分配原则：
+1. 保持因果关系：有 causes 关系的事件尽量在同一集或相邻集
+2. 叙事完整性：每集应有完整的小叙事弧
+3. 均衡分配：每集事件数量大致相当（平均 {event_count // target_episodes} 个）
+4. 悬念设置：每集最后的事件适合作为 cliffhanger
+5. 按顺序分配：事件的顺序不能打乱
+
+请返回 JSON 格式：
+{{
+    "assignments": {{
+        "1": ["ch1_e1", "ch1_e2"],
+        "2": ["ch1_e3", "ch2_e1"],
+        ...
+    }}
+}}
+
+只返回 JSON，不要有其他内容。"""
 
 
 class CogneeStore:
@@ -1283,28 +1335,12 @@ class CogneeStore:
                 }
             )
 
-        prompt = f"""将以下 {len(events)} 个事件分配到 {target_episodes} 集中。
-
-事件列表：
-{json.dumps(event_summaries, ensure_ascii=False, indent=2)}
-
-分配原则：
-1. 保持因果关系：有 causes 关系的事件尽量在同一集或相邻集
-2. 叙事完整性：每集应有完整的小叙事弧
-3. 均衡分配：每集事件数量大致相当（平均 {len(events) // target_episodes} 个）
-4. 悬念设置：每集最后的事件适合作为 cliffhanger
-5. 按顺序分配：事件的顺序不能打乱
-
-请返回 JSON 格式：
-{{
-    "assignments": {{
-        "1": ["ch1_e1", "ch1_e2"],
-        "2": ["ch1_e3", "ch2_e1"],
-        ...
-    }}
-}}
-
-只返回 JSON，不要有其他内容。"""
+        prompt = build_event_assignment_prompt(
+            json.dumps(event_summaries, ensure_ascii=False, indent=2),
+            len(events),
+            target_episodes,
+            resolve_asset_language("\n".join(e.description for e in events)),
+        )
 
         try:
             log("调用 LLM 分配事件...")

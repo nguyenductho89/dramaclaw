@@ -29,6 +29,7 @@ from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
     resolve_asset_language,
+    select_by_language,
 )
 
 if TYPE_CHECKING:
@@ -325,14 +326,160 @@ OTHER_IDENTITY_PROMPT = """# 你是影视视觉身份分析师
 """
 
 
+APPEARANCE_GENERATION_PROMPT_VI = """# Bạn là nhà tạo hình trang phục điện ảnh chuyên nghiệp
+
+## Nhiệm vụ
+Thiết kế phương án trang phục, tạo hình cho nhân vật trong tác phẩm điện ảnh/truyền hình hư cấu.
+
+## Yêu cầu
+- appearance_details: mô tả kiểu dáng trang phục, chất liệu vải, phụ kiện, kiểu tóc, dài khoảng 120-180 ký tự (tuyệt đối không quá 200 ký tự), **không bao gồm** ngoại hình nhân vật, hành động và biểu cảm
+- face_description: **chỉ điền khi danh tính liên quan đến thay đổi độ tuổi** (thời thơ ấu, thiếu niên, tuổi già, v.v.), mô tả khuôn mặt dài khoảng 60-100 ký tự (tuyệt đối không quá 100 ký tự)
+  - Bao gồm: đặc điểm tuổi tác, đường nét khuôn mặt, tỷ lệ ngũ quan
+  - Không bao gồm: trang phục, phụ kiện, hành động, biểu cảm
+  - Danh tính chỉ thay trang phục (cùng độ tuổi) thì không điền mục này
+- body_type: **chỉ điền khi danh tính liên quan đến thay đổi độ tuổi**, mô tả vóc dáng ngắn gọn (không quá 80 ký tự)
+  - Bao gồm: chiều cao, thể hình, đặc điểm dáng người
+  - Danh tính chỉ thay trang phục (cùng độ tuổi) thì không điền mục này
+- Cụ thể, trực quan, phù hợp làm tài liệu tham khảo cho bộ phận mỹ thuật điện ảnh
+- age_group chỉ nhận một trong các giá trị child/youth/middle/elder, viết đúng nguyên văn bằng chữ Latinh như vậy; các trường mô tả còn lại viết bằng tiếng Việt
+
+## Ví dụ
+- appearance_details: "Áo cà sa vải gai màu trắng ngà, thắt dây thừng gai thô quanh eo, đeo chuỗi hạt gỗ trên cổ, chân đi dép cỏ, đầu cạo trọc"
+- appearance_details: "Áo cưới đỏ thêu kim tuyến, phượng quan và khăn choàng vai, trâm vàng buông tua rủ, hoa điền dán giữa trán, tóc búi cao"
+- face_description (thời thơ ấu): "Bé sáu bảy tuổi, khuôn mặt nhỏ tròn trịa, đôi mắt hạnh to sáng, mũi nhỏ xinh, đôi má phúng phính mỡ trẻ con"
+- face_description (tuổi già): "Cụ ông bảy mươi, gò má hóp nhiều nếp nhăn, hốc mắt sâu, xương gò má nhô cao, tóc mai bạc thưa"
+- body_type (thời thơ ấu): "Vóc dáng trẻ nhỏ thấp bé tròn trịa, chiều cao chỉ ngang eo người lớn"
+- body_type (tuổi già): "Vóc dáng người già còng lưng gầy guộc, thấp hơn một chút, lưng hơi gù"
+"""
+
+
+DEFAULT_IDENTITY_PROMPT_VI = """# Bạn là nhà phân tích hình thái chính của nhân vật điện ảnh
+
+## Nhiệm vụ
+Xác định cho mỗi nhân vật xuất hiện trong tập này một **danh tính mặc định ở tuyến hiện thực chính**.
+
+## "Danh tính mặc định" là gì
+- Hình thái thị giác ổn định mà nhân vật xuất hiện nhiều nhất trong các cảnh **hiện thực** của tập này (không phải hồi tưởng, không phải flashback, không phải giấc mơ)
+- Mỗi nhân vật chỉ có một danh tính mặc định
+- Nếu trong tập này nhân vật chỉ có một hình thái, thì đó chính là danh tính mặc định
+
+## Quy tắc
+- Ưu tiên tái sử dụng tên danh tính đã có, không tạo tên gần nghĩa mới (khi tái sử dụng, viết lại đúng nguyên văn tên visual_state đã có)
+- Đặt tên ưu tiên theo giai đoạn đời người/giai đoạn xã hội/giai đoạn tuổi tác (như "Thời làm ở công ty lớn", "Thời trung niên", "Thời sinh viên", "Thời thơ ấu")
+- Chỉ khi **trong cùng một giai đoạn** có hai bộ tạo hình ổn định, lặp lại lâu dài thì mới dùng tên nhánh tạo hình (như "Trang phục công sở", "Trang phục ở nhà")
+- Không dùng loại trang phục trực tiếp làm tên danh tính mặc định cấp một; nếu về bản chất nó ứng với một giai đoạn đời người, hãy ưu tiên đặt tên theo giai đoạn đó
+- Không dùng từ mang nghĩa diễn biến cốt truyện (không dùng "Thời trở về", "Thời thức tỉnh")
+- Không dùng từ chỉ hoàn cảnh ngắn hạn (không dùng "Thời sa cơ", "Đang bị giam cầm")
+- Không chứa tên nhân vật (dùng "Thời trung niên" chứ không dùng "Đỗ Thần_Thời trung niên")
+- Khi xuất kết quả đồng thời đưa ra age_group (chỉ nhận child/youth/middle/elder, viết đúng nguyên văn)
+  - Nếu visual_state rõ ràng là một giai đoạn tuổi tác (như "Thời thơ ấu", "Thời thiếu niên", "Thời trung niên", "Thời tuổi già") thì bắt buộc điền age_group
+  - Nhánh tạo hình cùng độ tuổi thông thường (như "Trang phục công sở", "Trang phục ở nhà") có thể để trống
+- Các trường văn xuôi (visual_state, reason) viết bằng tiếng Việt; character_name giữ đúng nguyên văn tên chính của nhân vật
+"""
+
+
+OTHER_IDENTITY_PROMPT_VI = """# Bạn là nhà phân tích danh tính thị giác của điện ảnh
+
+## Nhiệm vụ
+Dựa trên toàn văn tập này, tìm ra những danh tính khác mà mỗi nhân vật cần có **ngoài** danh tính mặc định.
+
+## "Danh tính khác" là gì
+- Bất kỳ hình thái nào khác với danh tính mặc định và cần một nền tảng thị giác ổn định, độc lập
+- Bao gồm nhưng không giới hạn:
+  - Các hình thái ở độ tuổi khác nhau trong hồi tưởng/flashback (thơ ấu, thiếu niên, tuổi già)
+  - Một bộ tạo hình ổn định khác xuất hiện lâu dài, lặp lại trong cùng một giai đoạn (như cung trang so với thường phục, trang phục công sở so với trang phục ở nhà)
+  - Hình ảnh lịch sử trong màn hình ti vi/ảnh chụp
+  - Hình thái của một giai đoạn khác tách biệt rõ ràng và lâu dài trong cùng tập
+
+## Cái gì không phải "danh tính khác"
+- Trạng thái một lần (bị bẩn, bị thương, bị ướt mưa)
+- Hoàn cảnh cốt truyện ngắn hạn (chờ gả, sa cơ, đang bị giam)
+- Một hành động hay ngôn ngữ ống kính đơn lẻ
+- Chỉ là thay đổi cảm xúc, thay đổi vị trí đứng, thay đổi bố cục
+
+## Ràng buộc cứng
+- **Biến thể tuổi tác bắt buộc là danh tính độc lập**: khuôn mặt, ngũ quan, chiều cao hoàn toàn khác nhau, dù chỉ xuất hiện một hai cảnh
+- Đừng hiểu bước này là "chỉ bổ sung danh tính theo tuổi"
+- Chỉ cần không cùng một nền tảng thị giác ổn định với danh tính mặc định thì phải liệt kê
+- Đặt tên ưu tiên dùng tên thời kỳ/giai đoạn; chỉ khi phân biệt nhiều bộ tạo hình lâu dài trong cùng một giai đoạn mới dùng tên tạo hình kiểu "trang phục/thường phục/lễ phục"
+- Danh tính mặc định đã được xử lý xong, đừng xuất lặp lại
+- Ưu tiên tái sử dụng tên danh tính đã có (viết lại đúng nguyên văn tên visual_state đã có)
+- Khi xuất kết quả đồng thời đưa ra age_group (chỉ nhận child/youth/middle/elder, viết đúng nguyên văn)
+  - Biến thể tuổi tác (thơ ấu/thiếu niên/trung niên/tuổi già) bắt buộc điền age_group tương ứng
+  - Nhánh tạo hình cùng độ tuổi thông thường có thể để trống
+- Các trường văn xuôi (visual_state, reason) viết bằng tiếng Việt; character_name giữ đúng nguyên văn tên chính của nhân vật
+"""
+
+
+def get_appearance_generation_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language, zh=APPEARANCE_GENERATION_PROMPT, vi=APPEARANCE_GENERATION_PROMPT_VI
+    )
+
+
+def get_default_identity_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language, zh=DEFAULT_IDENTITY_PROMPT, vi=DEFAULT_IDENTITY_PROMPT_VI
+    )
+
+
+def get_other_identity_prompt(language: str = "zh") -> str:
+    return select_by_language(
+        language, zh=OTHER_IDENTITY_PROMPT, vi=OTHER_IDENTITY_PROMPT_VI
+    )
+
+
+def _graph_context_section(graph_context: str | None, language: str) -> str:
+    if not (graph_context and graph_context.strip()):
+        return ""
+    heading = select_by_language(
+        language, zh="## 图谱上下文", vi="## Bối cảnh đồ thị tri thức"
+    )
+    return f"\n{heading}\n{graph_context[:3000]}\n"
+
+
 # =============================================================================
 # IdentityPlanner
 # =============================================================================
 
 
 
-def format_character_info(characters: list[str], resolve_name, get_character) -> str:
+_CHARACTER_INFO_LABELS = {
+    "zh": {
+        "gender": "性别",
+        "age_group": "默认年龄段",
+        "face": "默认面部",
+        "body": "体型",
+        "base": "基础信息",
+        "no_desc": "无描述",
+        "face_extra": "身份级面容",
+        "age_eq": "年龄段",
+        "none": "（无已有身份）",
+        "sep": ", ",
+    },
+    "vi": {
+        "gender": "Giới tính",
+        "age_group": "Độ tuổi mặc định",
+        "face": "Khuôn mặt mặc định",
+        "body": "Vóc dáng",
+        "base": "Thông tin cơ bản",
+        "no_desc": "Không có mô tả",
+        "face_extra": "Khuôn mặt cấp danh tính",
+        "age_eq": "độ tuổi",
+        "none": "(chưa có danh tính nào)",
+        "sep": ", ",
+    },
+}
+
+
+def format_character_info(
+    characters: list[str],
+    resolve_name,
+    get_character,
+    language: str = "zh",
+) -> str:
     """基础信息 + 已有身份文本（Pass A/B 共用）。"""
+    labels = _CHARACTER_INFO_LABELS["vi" if language == "vi" else "zh"]
     lines = []
     for char_name in characters:
         resolved = resolve_name(char_name)
@@ -341,34 +488,43 @@ def format_character_info(characters: list[str], resolve_name, get_character) ->
             lines.append(f"### {char.name}")
             base_attrs = []
             if char.gender:
-                base_attrs.append(f"性别: {char.gender}")
+                base_attrs.append(f"{labels['gender']}: {char.gender}")
             if char.age_group:
-                base_attrs.append(f"默认年龄段: {char.age_group}")
+                base_attrs.append(f"{labels['age_group']}: {char.age_group}")
             if char.face_prompt:
-                base_attrs.append(f"默认面部: {char.face_prompt}")
+                base_attrs.append(f"{labels['face']}: {char.face_prompt}")
             if char.body_type:
-                base_attrs.append(f"体型: {char.body_type}")
+                base_attrs.append(f"{labels['body']}: {char.body_type}")
             if base_attrs:
-                lines.append(f"基础信息: {', '.join(base_attrs)}")
+                lines.append(f"{labels['base']}: {', '.join(base_attrs)}")
             if char.identities:
                 for ident in char.identities:
-                    desc = ident.appearance_details or "无描述"
+                    desc = ident.appearance_details or labels["no_desc"]
                     extra = ""
                     if ident.face_prompt:
-                        extra = f" [身份级面容: {ident.face_prompt[:30]}, 年龄段={ident.age_group}]"
+                        extra = (
+                            f" [{labels['face_extra']}: {ident.face_prompt[:30]}, "
+                            f"{labels['age_eq']}={ident.age_group}]"
+                        )
                     lines.append(f"- `{ident.identity_id}`: {desc}{extra}")
             else:
-                lines.append("- （无已有身份）")
+                lines.append(f"- {labels['none']}")
             lines.append("")
         else:
             lines.append(f"### {resolved or char_name}")
-            lines.append("- （无已有身份）")
+            lines.append(f"- {labels['none']}")
             lines.append("")
     return "\n".join(lines)
 
 
-def build_default_identity_system_prompt(content_text: str) -> str:
-    return f"{DEFAULT_IDENTITY_PROMPT}\n{asset_language_instruction(resolve_asset_language(content_text))}"
+def build_default_identity_system_prompt(
+    content_text: str, language: str | None = None
+) -> str:
+    language = language or resolve_asset_language(content_text)
+    return (
+        f"{get_default_identity_prompt(language)}\n"
+        f"{asset_language_instruction(language)}"
+    )
 
 
 def build_default_identity_task(
@@ -379,11 +535,31 @@ def build_default_identity_task(
     identity_info: str,
     graph_context: str | None,
     content_text: str,
+    language: str = "zh",
 ) -> str:
     """Pass A user message: each cast member's default identity for the episode."""
-    graph_section = ""
-    if graph_context and graph_context.strip():
-        graph_section = f"\n## 图谱上下文\n{graph_context[:3000]}\n"
+    graph_section = _graph_context_section(graph_context, language)
+    if language == "vi":
+        return f"""Phân tích **danh tính mặc định ở tuyến hiện thực chính** của từng nhân vật trong tập {episode_number} «{episode_title}».
+
+## Nhân vật xuất hiện
+{", ".join(cast_names)}
+
+## Danh sách danh tính đã có (ưu tiên tái sử dụng)
+{identity_info}
+{graph_section}
+## Nguyên văn tập này
+{content_text}
+
+---
+Hãy xác định một danh tính mặc định cho mỗi nhân vật xuất hiện (hình thái ổn định xuất hiện nhiều nhất trong tuyến hiện thực chính).
+- Nếu danh tính đã có đủ bao phủ, dùng đúng tên visual_state đó (tái sử dụng)
+- character_name dùng tên chính của nhân vật
+- Mỗi nhân vật chỉ xuất một danh tính mặc định
+- Đồng thời xuất age_group (chỉ nhận child/youth/middle/elder, viết đúng nguyên văn)
+  - Nếu visual_state rõ ràng là một giai đoạn tuổi tác, hãy điền age_group tương ứng
+  - Nếu chỉ là nhánh tạo hình cùng độ tuổi, có thể để trống
+"""
     return f"""分析第 {episode_number} 集《{episode_title}》中每个角色的**现实主线默认身份**。
 
 ## 出场角色
@@ -403,6 +579,108 @@ def build_default_identity_task(
 - 同时输出 age_group
   - 如果 visual_state 明确是年龄阶段，请填写对应 age_group
   - 如果只是同龄造型分支，可留空
+"""
+
+
+def _special_identity_task(
+    language: str,
+    *,
+    episode_number: int,
+    episode_title: str,
+    cast_names: list[str],
+    identity_info: str,
+    already_section: str,
+    graph_section: str,
+    content_text: str,
+) -> str:
+    """Pass B user message: non-default identities for the episode."""
+    if language == "vi":
+        return f"""Phân tích **các danh tính khác** mà từng nhân vật cần có ngoài danh tính mặc định trong tập {episode_number} «{episode_title}».
+
+## Nhân vật xuất hiện
+{", ".join(cast_names)}
+
+## Danh sách danh tính đã có (ưu tiên tái sử dụng)
+{identity_info}
+{already_section}{graph_section}
+## Nguyên văn tập này
+{content_text}
+
+---
+Hãy liệt kê các danh tính không mặc định khác có bằng chứng văn bản mạnh trong tập này.
+- Không xuất lặp lại danh tính mặc định
+- Biến thể tuổi tác (thơ ấu/thiếu niên/tuổi già) bắt buộc là danh tính độc lập, dù chỉ xuất hiện một hai cảnh trong hồi tưởng/flashback
+- Bộ tạo hình/giai đoạn khác ổn định lâu dài cũng phải liệt kê độc lập
+- Nếu danh tính đã có đủ bao phủ, dùng đúng tên visual_state đó (tái sử dụng)
+- Đồng thời xuất age_group (chỉ nhận child/youth/middle/elder, viết đúng nguyên văn)
+  - Biến thể tuổi tác bắt buộc điền age_group tương ứng
+  - Nhánh tạo hình cùng độ tuổi thông thường có thể để trống
+- Nếu không có nhu cầu danh tính nào khác, trả về danh sách rỗng
+"""
+    return f"""分析第 {episode_number} 集《{episode_title}》中各角色在默认身份之外还需要的**其他身份**。
+
+## 出场角色
+{", ".join(cast_names)}
+
+## 已有身份列表（优先复用）
+{identity_info}
+{already_section}{graph_section}
+## 本集原文
+{content_text}
+
+---
+请列出本集中有强文本证据的其他非默认身份。
+- 不要重复输出默认身份
+- 年龄变体（幼年/少年/老年）必须独立身份，即使只在回忆/闪回中出现一两场
+- 长期稳定的另一套造型/阶段也应独立列出
+- 已有身份能覆盖的，使用相同的 visual_state 名称（复用）
+- 同时输出 age_group
+  - 年龄变体必须填写对应 age_group
+  - 普通同龄造型分支可留空
+- 如果没有其他身份需求，返回空列表
+"""
+
+
+def _appearance_task(
+    language: str,
+    *,
+    character_name: str,
+    visual_state: str,
+    default_info: str,
+    base_info: str,
+    planned_age_info: str,
+    reason: str,
+) -> str:
+    """User message for the costume/appearance generation call."""
+    if language == "vi":
+        return f"""Thiết kế phương án trang phục cho nhân vật điện ảnh hư cấu 「{character_name}」 ở tạo hình 「{visual_state}」.
+
+{default_info}{base_info}{planned_age_info}
+Bối cảnh cốt truyện: {reason}
+
+Hãy thiết kế phương án trang phục, tạo hình dài khoảng 120-180 ký tự (kiểu dáng, chất liệu vải, phụ kiện, kiểu tóc; không bao gồm ngoại hình và biểu cảm nhân vật; tuyệt đối không quá 200 ký tự).
+
+⚠️ Quy tắc xác định face_description, age_group, body_type:
+- Nếu phía trên đã cho "độ tuổi đã xác định", khi xuất kết quả phải giữ nhất quán với độ tuổi đó
+- Chỉ điền khi độ tuổi của danh tính này **khác rõ rệt** với độ tuổi mặc định của nhân vật (như hồi tưởng thời thơ ấu, hình thái tuổi già)
+- Nếu độ tuổi của danh tính này giống hoặc gần với mặc định ở trên thì face_description, age_group, body_type bắt buộc để trống
+- Định dạng face_description: mô tả khuôn mặt dài khoảng 60-100 ký tự (đặc điểm tuổi tác, đường nét khuôn mặt, tỷ lệ ngũ quan; không bao gồm trang phục)
+- Định dạng body_type: mô tả vóc dáng ngắn gọn (như "vóc dáng trẻ nhỏ thấp bé tròn trịa", "vóc dáng người già còng lưng gầy guộc")
+- age_group chỉ nhận child/youth/middle/elder, viết đúng nguyên văn
+"""
+    return f"""为虚构影视角色「{character_name}」的「{visual_state}」造型设计服装方案。
+
+{default_info}{base_info}{planned_age_info}
+剧情背景: {reason}
+
+请设计 50-80 字的服装造型方案（款式、面料、配饰、发型，不含人物外貌和表情）。
+
+⚠️ face_description、age_group、body_type 判断规则：
+- 如果上面已经给出“已确定年龄段”，输出时应与该年龄段保持一致
+- 只有当该身份的年龄与角色默认年龄段**明显不同**时才填写（如幼年回忆、老年形态）
+- 如果该身份的年龄与上述默认一致或接近，face_description、age_group、body_type 必须留空
+- face_description 格式：30-50字面部描述（年龄特征、脸型、五官比例，不含服装）
+- body_type 格式：简短体型描述（如"矮小圆润的幼童体型"、"佝偻消瘦的老人体型"）
 """
 
 
@@ -683,7 +961,9 @@ class IdentityPlanner:
         """
         await self.store.patch_episode(episode_number, **fields)
 
-    def _alias_context_from_sqlite(self, all_names: list[str]) -> str:
+    def _alias_context_from_sqlite(
+        self, all_names: list[str], language: str = "zh"
+    ) -> str:
         """Build alias context from the character table instead of the graph.
 
         Structured builds record every alias they could prove from the source
@@ -695,7 +975,15 @@ class IdentityPlanner:
             character = self.store.get_character(self.store.resolve_name(name))
             if character is None:
                 continue
-            if character.aliases:
+            if language == "vi":
+                if character.aliases:
+                    lines.append(
+                        f"{character.name}: biệt danh/cách xưng hô "
+                        f"{', '.join(character.aliases)}"
+                    )
+                else:
+                    lines.append(f"{character.name}: chưa biết biệt danh nào")
+            elif character.aliases:
                 lines.append(
                     f"{character.name}：别名/称谓 {'、'.join(character.aliases)}"
                 )
@@ -770,12 +1058,24 @@ class IdentityPlanner:
                 # SQLite alias index and the evidence recorded when characters
                 # were built, both of which are derived from the source text
                 # rather than from a vector search over it.
-                graph_context = self._alias_context_from_sqlite(all_names)
+                graph_context = self._alias_context_from_sqlite(
+                    all_names, resolve_asset_language(content_text)
+                )
             else:
                 graph_context = await self._graph_alias_context(episode, on_log)
 
+            cast_language = resolve_asset_language(content_text)
             graph_section = ""
-            if graph_context:
+            if graph_context and cast_language == "vi":
+                graph_section = f"""
+
+Dưới đây là thông tin quan hệ nhân vật và biệt danh đã biết (gồm cả cách xưng hô, như "Bệ hạ" → tên một nhân vật):
+---
+{graph_context[:4000]}
+---
+Hãy dùng thông tin trên để quy các cách xưng hô/biệt danh trong nguyên văn về tên chính của nhân vật.
+"""
+            elif graph_context:
                 graph_section = f"""
 
 以下是已知的人物关系与别名信息（包含称谓解析，如"陛下"→某角色名）：
@@ -790,7 +1090,18 @@ class IdentityPlanner:
                 model_settings=self._identity_model_settings(),
                 output_type=EpisodeCastList,
             )
-            cast_result = await cast_agent.run(f"""以下是全部已知角色：
+            if cast_language == "vi":
+                cast_task = f"""Dưới đây là toàn bộ các nhân vật đã biết:
+{chr(10).join(all_names)}
+{graph_section}
+Dựa vào nguyên văn tập {episode.number}, hãy liệt kê các nhân vật **được nhắc đến** trong tập này.
+Chỉ cần tên nhân vật hoặc biệt danh/cách xưng hô của họ xuất hiện trong nguyên văn (dù là xuất hiện trực tiếp, trong hồi tưởng, flashback hay được người dẫn truyện nhắc tới) thì đều tính là có xuất hiện.
+Lưu ý: trả về tên chính của nhân vật, không trả về biệt danh; giữ nguyên văn tên nhân vật như danh sách đã cung cấp.
+
+Nguyên văn:
+{content_text}"""
+            else:
+                cast_task = f"""以下是全部已知角色：
 {chr(10).join(all_names)}
 {graph_section}
 请根据第{episode.number}集原文，列出本集中**被提及**的角色。
@@ -798,7 +1109,8 @@ class IdentityPlanner:
 注意：返回角色主名，不要返回别名。
 
 原文：
-{content_text}""")
+{content_text}"""
+            cast_result = await cast_agent.run(cast_task)
             cast = cast_result.output
             filtered = self._normalize_cast_names(cast.character_names)
             if on_log:
@@ -811,10 +1123,15 @@ class IdentityPlanner:
                 on_log(f"[EP{episode.number:03d}] AI 筛选出场角色失败: {e}")
             raise RuntimeError(f"Pass 0 出场角色筛选失败: {e}") from e
 
-    def _build_character_info(self, characters: list[str]) -> str:
+    def _build_character_info(
+        self, characters: list[str], language: str = "zh"
+    ) -> str:
         """构建角色基础信息 + 已有身份信息文本。"""
         return format_character_info(
-            characters, self.cognee_store.resolve_name, self.cognee_store.get_character
+            characters,
+            self.cognee_store.resolve_name,
+            self.cognee_store.get_character,
+            language,
         )
 
     def _normalize_cast_names(self, names: list[str]) -> list[str]:
@@ -970,7 +1287,8 @@ class IdentityPlanner:
         if cast_names is None:
             cast_names = [c.name for c in self.cognee_store.get_all_characters()]
 
-        identity_info = self._build_character_info(cast_names)
+        language = resolve_asset_language(content_text)
+        identity_info = self._build_character_info(cast_names, language)
         task = build_default_identity_task(
             episode_number=episode.number,
             episode_title=episode.title,
@@ -978,6 +1296,7 @@ class IdentityPlanner:
             identity_info=identity_info,
             graph_context=graph_context,
             content_text=content_text,
+            language=language,
         )
         try:
             agent = Agent(
@@ -985,7 +1304,7 @@ class IdentityPlanner:
                     "IDENTITY_PLANNER_ANALYSIS_MODEL",
                     brainclaw_profile=BrainClawProfile.IDENTITY_DEFAULT_ANALYSIS,
                 ),
-                system_prompt=build_default_identity_system_prompt(content_text),
+                system_prompt=build_default_identity_system_prompt(content_text, language),
                 model_settings=self._identity_model_settings(),
                 output_type=EpisodeDefaultIdentities,
             )
@@ -1026,52 +1345,42 @@ class IdentityPlanner:
             cast_names = [c.name for c in self.cognee_store.get_all_characters()]
 
         canonical_cast_names = self._normalize_cast_names(cast_names)
-        identity_info = self._build_character_info(canonical_cast_names)
-        graph_section = ""
-        if graph_context and graph_context.strip():
-            graph_section = f"\n## 图谱上下文\n{graph_context[:3000]}\n"
+        language = resolve_asset_language(content_text)
+        identity_info = self._build_character_info(canonical_cast_names, language)
+        graph_section = _graph_context_section(graph_context, language)
 
         resolved_default_ids = list(dict.fromkeys(already_resolved or []))
         already_section = ""
         if resolved_default_ids:
+            already_heading = select_by_language(
+                language,
+                zh="## 已确定的默认身份（不要重复）",
+                vi="## Danh tính mặc định đã xác định (không lặp lại)",
+            )
             already_section = (
-                "\n## 已确定的默认身份（不要重复）\n"
+                f"\n{already_heading}\n"
                 + "\n".join(f"- `{iid}`" for iid in resolved_default_ids)
                 + "\n"
             )
 
-        task = f"""分析第 {episode.number} 集《{episode.title}》中各角色在默认身份之外还需要的**其他身份**。
-
-## 出场角色
-{", ".join(canonical_cast_names)}
-
-## 已有身份列表（优先复用）
-{identity_info}
-{already_section}{graph_section}
-## 本集原文
-{content_text}
-
----
-请列出本集中有强文本证据的其他非默认身份。
-- 不要重复输出默认身份
-- 年龄变体（幼年/少年/老年）必须独立身份，即使只在回忆/闪回中出现一两场
-- 长期稳定的另一套造型/阶段也应独立列出
-- 已有身份能覆盖的，使用相同的 visual_state 名称（复用）
-- 同时输出 age_group
-  - 年龄变体必须填写对应 age_group
-  - 普通同龄造型分支可留空
-- 如果没有其他身份需求，返回空列表
-"""
+        task = _special_identity_task(
+            language,
+            episode_number=episode.number,
+            episode_title=episode.title,
+            cast_names=canonical_cast_names,
+            identity_info=identity_info,
+            already_section=already_section,
+            graph_section=graph_section,
+            content_text=content_text,
+        )
         try:
-            language_instruction = asset_language_instruction(
-                resolve_asset_language(content_text)
-            )
+            language_instruction = asset_language_instruction(language)
             agent = Agent(
                 self._identity_model(
                     "IDENTITY_PLANNER_ANALYSIS_MODEL",
                     brainclaw_profile=BrainClawProfile.IDENTITY_SPECIAL_ANALYSIS,
                 ),
-                system_prompt=f"{OTHER_IDENTITY_PROMPT}\n{language_instruction}",
+                system_prompt=f"{get_other_identity_prompt(language)}\n{language_instruction}",
                 model_settings=self._identity_model_settings(),
                 output_type=EpisodeIdentityRequirements,
             )
@@ -1468,6 +1777,10 @@ class IdentityPlanner:
         output_language: AssetLanguage | None = None,
     ) -> AppearanceDescription:
         """用 AI 生成身份的服装造型描述（含可选面部描述）。"""
+        language = output_language or resolve_asset_language(
+            "\n".join((character_name, visual_state, reason))
+        )
+        vi = language == "vi"
         # 获取角色已有造型作为参考（不发送 face_prompt 避免触发安全过滤）
         char = self.cognee_store.get_character(character_name)
         base_info = ""
@@ -1476,13 +1789,27 @@ class IdentityPlanner:
             # 角色默认面部、年龄段、体型——AI 需要对比判断是否需要覆盖
             default_parts = []
             if char.face_prompt:
-                default_parts.append(f"默认面部特征: {char.face_prompt}")
+                default_parts.append(
+                    f"Đặc điểm khuôn mặt mặc định: {char.face_prompt}"
+                    if vi
+                    else f"默认面部特征: {char.face_prompt}"
+                )
             if char.age_group:
-                default_parts.append(f"默认年龄段: {char.age_group}")
+                default_parts.append(
+                    f"Độ tuổi mặc định: {char.age_group}"
+                    if vi
+                    else f"默认年龄段: {char.age_group}"
+                )
             if char.body_type:
-                default_parts.append(f"默认体型: {char.body_type}")
+                default_parts.append(
+                    f"Vóc dáng mặc định: {char.body_type}"
+                    if vi
+                    else f"默认体型: {char.body_type}"
+                )
             if char.gender:
-                default_parts.append(f"性别: {char.gender}")
+                default_parts.append(
+                    f"Giới tính: {char.gender}" if vi else f"性别: {char.gender}"
+                )
             if default_parts:
                 default_info = "\n".join(default_parts) + "\n"
             if char.identities:
@@ -1492,38 +1819,36 @@ class IdentityPlanner:
                     if i.appearance_details
                 )
                 if existing_desc:
-                    base_info = f"已有造型参考:\n{existing_desc}\n"
+                    base_info = (
+                        f"Tạo hình tham khảo đã có:\n{existing_desc}\n"
+                        if vi
+                        else f"已有造型参考:\n{existing_desc}\n"
+                    )
 
         planned_age_info = ""
         if planned_age_group:
             planned_age_info = (
-                f"该身份在前一规划阶段已确定年龄段: {planned_age_group}\n"
+                f"Danh tính này đã được xác định độ tuổi ở giai đoạn hoạch định trước: {planned_age_group}\n"
+                if vi
+                else f"该身份在前一规划阶段已确定年龄段: {planned_age_group}\n"
             )
 
-        task = f"""为虚构影视角色「{character_name}」的「{visual_state}」造型设计服装方案。
-
-{default_info}{base_info}{planned_age_info}
-剧情背景: {reason}
-
-请设计 50-80 字的服装造型方案（款式、面料、配饰、发型，不含人物外貌和表情）。
-
-⚠️ face_description、age_group、body_type 判断规则：
-- 如果上面已经给出“已确定年龄段”，输出时应与该年龄段保持一致
-- 只有当该身份的年龄与角色默认年龄段**明显不同**时才填写（如幼年回忆、老年形态）
-- 如果该身份的年龄与上述默认一致或接近，face_description、age_group、body_type 必须留空
-- face_description 格式：30-50字面部描述（年龄特征、脸型、五官比例，不含服装）
-- body_type 格式：简短体型描述（如"矮小圆润的幼童体型"、"佝偻消瘦的老人体型"）
-"""
+        task = _appearance_task(
+            language,
+            character_name=character_name,
+            visual_state=visual_state,
+            default_info=default_info,
+            base_info=base_info,
+            planned_age_info=planned_age_info,
+            reason=reason,
+        )
 
         try:
-            language = output_language or resolve_asset_language(
-                "\n".join((character_name, visual_state, reason))
-            )
             language_instruction = asset_language_instruction(language)
             appearance_agent = Agent(
                 self._identity_model("IDENTITY_PLANNER_APPEARANCE_MODEL"),
                 system_prompt=(
-                    f"{APPEARANCE_GENERATION_PROMPT}\n{language_instruction}"
+                    f"{get_appearance_generation_prompt(language)}\n{language_instruction}"
                 ),
                 model_settings=self._identity_model_settings(),
                 output_type=AppearanceDescription,

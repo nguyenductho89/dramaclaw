@@ -179,7 +179,7 @@ const mocks = vi.hoisted(() => ({
     visual_style: "chinese_period_drama",
     narration_style: "first_person",
     ethnicity: "Chinese",
-  },
+  } as Record<string, string>,
   updateProject: vi.fn(),
   uploadNovel: vi.fn(),
   startIngest: vi.fn(),
@@ -491,6 +491,7 @@ describe("IngestPage settings save", () => {
         visual_style: "anime",
         narration_style: "first_person",
         ethnicity: "Chinese",
+        content_language: "en",
       }),
     );
     expect(mocks.uploadNovel).not.toHaveBeenCalled();
@@ -606,6 +607,7 @@ describe("IngestPage settings save", () => {
         filename: "original-novel.txt",
         rebuild: true,
         spine_template: "drama",
+        content_language: "en",
       }),
     );
     expect(mocks.uploadNovel).not.toHaveBeenCalled();
@@ -653,6 +655,7 @@ describe("IngestPage settings save", () => {
       filename: "original-novel.txt",
       rebuild: true,
       spine_template: "drama",
+      content_language: "en",
     });
     expect(mocks.uploadNovel).not.toHaveBeenCalled();
   });
@@ -1022,6 +1025,38 @@ describe("IngestPage settings save", () => {
         filename: "novel.txt",
         rebuild: true,
         spine_template: "drama",
+        content_language: "en",
+      }),
+    );
+  });
+
+  it("sends the stored project content language to ingest start", async () => {
+    const user = userEvent.setup();
+    mocks.projectConfig = { ...mocks.projectConfig, content_language: "vi" };
+    mocks.uploadNovel.mockResolvedValue({
+      ok: true,
+      data: { filename: "novel.txt", size: 12 },
+    });
+    mocks.startIngest.mockResolvedValue({ ok: true, data: { task_id: "task-1" } });
+
+    const { container } = render(
+      <Wrapper>
+        <IngestPageContent project="demo" />
+      </Wrapper>,
+    );
+    expect(screen.getByText("Tiếng Việt")).toBeInTheDocument();
+    await user.upload(
+      container.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(["Chapter 1"], "novel.txt", { type: "text/plain" }),
+    );
+    await user.click(screen.getByRole("button", { name: /start import/i }));
+
+    await waitFor(() =>
+      expect(mocks.startIngest).toHaveBeenCalledWith({
+        filename: "novel.txt",
+        rebuild: true,
+        spine_template: "drama",
+        content_language: "vi",
       }),
     );
   });
@@ -1144,6 +1179,7 @@ describe("IngestPage settings save", () => {
         spine_template: "drama",
         visual_style: "anime",
         ethnicity: "Chinese",
+        content_language: "en",
       }),
     );
     expect(mocks.startIngest).not.toHaveBeenCalled();
@@ -1205,6 +1241,7 @@ describe("IngestPage settings save", () => {
         filename: "script.txt",
         rebuild: true,
         spine_template: "drama",
+        content_language: "en",
       }),
     );
   });

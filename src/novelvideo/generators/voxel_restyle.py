@@ -52,8 +52,66 @@ def _load_visual_style_preset(style_id: str) -> dict:
         return {}
 
 
-def _build_prompt(scene_id: str, preset: dict, extra_context: str = "", has_master: bool = False) -> str:
-    """Build a Chinese-language "image repair" prompt.
+def _build_prompt_english(scene_id: str, style_tag: str, style_instructions: str, has_master: bool) -> str:
+    """English "image repair" prompt, used for Vietnamese projects (image models follow English best)."""
+    scene_line = f"Scene: {scene_id}, interior." if scene_id else ""
+
+    if has_master:
+        return f"""[IMAGE REPAIR TASK] Repair image 1 (a low-resolution voxel render) using the material quality of image 2 (the master reference image).
+
+▸ This is image inpainting / image restoration — not regeneration, not a camera change, not fusion.
+
+▸ Image 1 = the damaged image: its composition, camera, aspect ratio, and the position and size of every object are all correct, but the surfaces are covered by coarse voxel blocks that must be "repaired" into real materials.
+▸ Image 2 = the high-quality reference: it shows what the result should look like after repair — materials, textures, colors, lighting, prop details, wear/grime.
+
+▸ Hard repair rules (follow strictly, no exceptions):
+  1. **Keep image 1's camera / composition / object positions — do not move a single pixel.**
+  2. **Every repaired material must match image 2 exactly**:
+     - Whatever tiles, wood grain, stainless steel, menu-board paper, red dish-name blocks, or color palette image 2 has, your output must be 1:1 identical to image 2 in those respects.
+     - Not "a similar style", not "inspired by" — fully identical to the master.
+     - Do not invent any material or color that image 2 does not have.
+     - Do not change image 2's material saturation, contrast, or texture coarseness.
+     - Treat every surface of image 2 as a texture map and "paste" it onto the geometry of image 1.
+
+▸ Pixel-level mapping (image 1 voxels → image 2 materials):
+   · Cyan / dark-blue walls in image 1 → image 2's tile texture + grout lines
+   · Wood-colored tables, cabinets, benches in image 1 → image 2's wood grain
+   · Gray kitchen counters in image 1 → image 2's stainless steel
+   · Red / blue small stools in image 1 → image 2's stool colors and materials
+   · Beige / red menu boards in image 1 → image 2's menu-board paper + lettering + red blocks
+   · White strip along the top of image 1 → image 2's fluorescent tubes
+
+▸ Forbidden:
+   · Do not adopt image 2's camera angle (image 2 provides materials only, not composition)
+   · Do not add, remove, or move any object
+   · Do not drift material details (if image 2's menu board has a few red blocks, keep exactly that many)
+
+▸ {scene_line}
+
+▸ Output: one image. Image 1's exact composition + image 2's exact materials."""
+
+    return f"""[IMAGE REPAIR TASK] Repair image 1 (a voxel render) into a realistic image in the {style_tag} style.
+
+▸ Keep image 1's composition, camera, and the position and size of all objects — do not move a single pixel.
+▸ Replace the coarse voxel-block surfaces in image 1 with real materials (wood, metal, tile, fabric, glass), following this style guide:
+
+STYLE TAG: {style_tag}
+{style_instructions}
+
+{scene_line}
+
+▸ Do not change the camera; do not add, remove, or move any object.
+▸ Output: image 1's exact composition with fine {style_tag}-style materials."""
+
+
+def _build_prompt(
+    scene_id: str,
+    preset: dict,
+    extra_context: str = "",
+    has_master: bool = False,
+    language: str | None = None,
+) -> str:
+    """Build a Chinese-language "image repair" prompt (English for ``language == "vi"``).
 
     Empirically validated: HuiMeng image-2-official responds best to a
     repair / inpainting framing — it treats image 1 as the structural source
@@ -65,6 +123,11 @@ def _build_prompt(scene_id: str, preset: dict, extra_context: str = "", has_mast
     # 不回退到 label：label 含时代词（写实古装剧/民国年代剧）会把题材内容塞回重绘 prompt。
     style_tag = preset.get("style_tag") or "PHOTOREALISTIC"
     style_instructions = preset.get("style_instructions") or ""
+
+    from novelvideo.utils.source_language import resolve_asset_language
+
+    if (language or resolve_asset_language("")) == "vi":
+        return _build_prompt_english(scene_id, style_tag, style_instructions, has_master)
 
     scene_line = f"场景: {scene_id} 室内。" if scene_id else ""
 

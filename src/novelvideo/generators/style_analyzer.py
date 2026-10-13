@@ -61,10 +61,16 @@ Return ONLY valid JSON with no markdown formatting:
   "suggested_label": "..."
 }"""
 
+    LABEL_PROMPT_VI = (
+        '5. **suggested_label**: A Vietnamese display label (e.g. "Phong cách màu nước huyền ảo").'
+    )
+
     def __init__(
         self,
         model: str | None = None,
+        language: str | None = None,
     ):
+        self.language = language
         from novelvideo.config import (
             get_newapi_structured_output_model_settings,
             get_newapi_text_pydantic_model,
@@ -82,6 +88,16 @@ Return ONLY valid JSON with no markdown formatting:
             output_type=StyleAnalysisResult,
             name="Style Analyzer",
         )
+
+    def build_analysis_prompt(self, language: str | None = None) -> str:
+        """The analysis prompt; ``suggested_label`` follows the content language (vi -> Vietnamese)."""
+        from novelvideo.utils.source_language import normalize_asset_language, resolve_asset_language
+
+        lang = normalize_asset_language(language or self.language) or resolve_asset_language("")
+        if lang == "vi":
+            zh_line = '5. **suggested_label**: A Chinese display label (e.g. "水彩幻想风").'
+            return self.ANALYSIS_PROMPT.replace(zh_line, self.LABEL_PROMPT_VI)
+        return self.ANALYSIS_PROMPT
 
     async def analyze(self, image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
         """分析图片，返回风格预设字段。
@@ -103,7 +119,7 @@ Return ONLY valid JSON with no markdown formatting:
 
         response = await self.agent.run(
             [
-                self.ANALYSIS_PROMPT,
+                self.build_analysis_prompt(),
                 ImageUrl(url=image_url, media_type="image/jpeg"),
             ]
         )

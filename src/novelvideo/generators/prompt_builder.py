@@ -210,6 +210,13 @@ class PromptContext:
     image_model: str = ""
 
 
+def _project_language_is_vi() -> bool:
+    """True when the project declares Vietnamese content (image prompts then use English scaffolds)."""
+    from novelvideo.utils.source_language import resolve_asset_language
+
+    return resolve_asset_language("") == "vi"
+
+
 def default_ethnicity_instruction(ethnicity: str) -> str:
     value = (ethnicity or "").strip()
     if not value:
@@ -512,6 +519,15 @@ class PromptComponents:
             if not any(hint in part for hint in PromptComponents._SPATIAL_ENVIRONMENT_HINTS)
         ]
         kept = filtered or phrases
+
+        if _project_language_is_vi():
+            # Image models follow English instructions best; keep the scaffold in
+            # English for Vietnamese projects instead of Chinese fragments.
+            return (
+                f"Environment reference: {', '.join(kept)}\n"
+                "⚠️ Spatial relationships follow the sketch; environment elements may only adapt to the existing "
+                "composition and must not add depth layers, depth of field, or blocking information."
+            )
 
         desc = "，".join(kept)
         return (
@@ -2427,20 +2443,27 @@ Show the STARTING pose, NOT the ending result."""
             panel_desc_lines = scene_lines + prop_lines
             if not panel_desc_lines and panel_scenes[i - 1]:
                 panel_desc_lines = [f"Scene: {panel_scenes[i - 1]}"]
+            vi_scaffold = _project_language_is_vi()
             if ctx.scene_refs.get(i):
                 panel_desc_lines.append(
-                    "⚠️ 静态环境以场景锚图为准；角色位置和姿态以草图为准；道具只能适配既有构图，不得重建或改写场景。"
+                    "⚠️ The static environment follows the scene anchor image; character positions and poses follow the sketch; props may only adapt to the existing composition and must not rebuild or rewrite the scene."
+                    if vi_scaffold
+                    else "⚠️ 静态环境以场景锚图为准；角色位置和姿态以草图为准；道具只能适配既有构图，不得重建或改写场景。"
                 )
                 if any(
                     PromptComponents._is_rough_render_scene_ref(ref)
                     for ref in ctx.scene_refs.get(i, [])
                 ):
                     panel_desc_lines.append(
-                        "⚠️ 当前场景锚图是粗糙 3D Gaussian Splatting/env_only 参考：只保留同机位关系和材质线索，必须清理 Gaussian-splat 噪声、浮点杂点、模糊、破边、投影接缝和扭曲纹理。"
+                        "⚠️ The current scene anchor is a rough 3D Gaussian Splatting/env_only reference: keep only the same-camera relationship and material cues, and clean up Gaussian-splat noise, floaters, blur, broken edges, projection seams, and distorted textures."
+                        if vi_scaffold
+                        else "⚠️ 当前场景锚图是粗糙 3D Gaussian Splatting/env_only 参考：只保留同机位关系和材质线索，必须清理 Gaussian-splat 噪声、浮点杂点、模糊、破边、投影接缝和扭曲纹理。"
                     )
             else:
                 panel_desc_lines.append(
-                    "⚠️ 无场景锚图时才使用场景文字；空间关系以草图为准；环境元素只能适配既有构图，不得新增层级、景深或站位信息。"
+                    "⚠️ Use the scene text only when there is no scene anchor image; spatial relationships follow the sketch; environment elements may only adapt to the existing composition and must not add depth layers, depth of field, or blocking information."
+                    if vi_scaffold
+                    else "⚠️ 无场景锚图时才使用场景文字；空间关系以草图为准；环境元素只能适配既有构图，不得新增层级、景深或站位信息。"
                 )
             panel_desc = "\n".join(panel_desc_lines)
 

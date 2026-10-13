@@ -25,6 +25,7 @@ from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
     resolve_asset_language,
+    select_by_language,
 )
 from novelvideo.models import (
     CharacterIdentity,
@@ -157,6 +158,22 @@ async def extract_episodes_from_text(
 - 每集要有明确的冲突和悬念
 - 情节连贯，前后呼应
 - 高潮放在中后期"""
+    if resolve_asset_language(text) == "vi":
+        system_prompt = f"""Bạn là nhà hoạch định tập phim chuyên nghiệp. Hãy chia nội dung tiểu thuyết thành {target_episodes} tập.
+
+Với mỗi tập, tạo ra:
+1. number: số tập
+2. title: tiêu đề hấp dẫn
+3. content_summary: tóm tắt nội dung (trong vòng 50 chữ)
+4. main_conflict: xung đột chính
+5. cliffhanger: nút thắt cuối tập (khiến khán giả muốn xem tập tiếp theo)
+6. key_events: danh sách sự kiện then chốt
+
+Quy tắc:
+- Mỗi tập phải có xung đột và nút thắt rõ ràng
+- Tình tiết mạch lạc, trước sau hô ứng
+- Cao trào đặt ở khoảng giữa đến cuối
+- Viết các trường văn xuôi bằng tiếng Việt"""
 
     result = await LLMGateway.acreate_structured_output(
         text,
@@ -381,7 +398,12 @@ async def extract_characters_from_graph(
 
         synopsis = extract_synopsis(novel_text)
         if synopsis:
-            context_text += f"\n\n【剧本人物设定原文】\n{synopsis}"
+            synopsis_label = select_by_language(
+                resolve_asset_language(novel_text),
+                zh="【剧本人物设定原文】",
+                vi="[Nguyên văn thiết lập nhân vật của kịch bản]",
+            )
+            context_text += f"\n\n{synopsis_label}\n{synopsis}"
             log(f"已注入人物设定上下文: {len(synopsis)} 字符")
 
     # Step 2: LLM 结构化提取
@@ -419,6 +441,8 @@ async def extract_characters_from_graph(
 - aliases 只保留原文里真实出现过、且能稳定指向该角色的称呼
 - 不要把过于泛化、依赖上下文才成立的称谓塞进 aliases，例如“男人 / 女人 / 老板 / 爸爸 / 女儿 / 店员”这类高歧义称呼默认不要收，除非图谱上下文已经明确它稳定指向同一角色
 - 如果信息不足，只允许对 role / body_type / description 做保守推测；不要为 aliases 编造原文未出现的称呼"""
+    if resolve_asset_language(novel_text or context_text) == "vi":
+        system_prompt = LEGACY_CHARACTER_GRAPH_SYSTEM_PROMPT_VI
 
     try:
         result = await LLMGateway.acreate_structured_output(
@@ -545,6 +569,33 @@ async def extract_episodes_with_characters(
 - 情节连贯，前后呼应
 - 高潮放在中后期
 - 确保角色名称与已确认列表一致"""
+    if resolve_asset_language(text) == "vi":
+        if known_characters:
+            character_hint = f"""
+Danh sách nhân vật đã xác nhận:
+{', '.join(known_characters)}
+
+⚠️ Quan trọng: trường character_names chỉ được chọn từ danh sách trên, không thêm tên nhân vật mới.
+"""
+        system_prompt = f"""Bạn là nhà hoạch định tập phim chuyên nghiệp. Hãy chia nội dung tiểu thuyết thành {target_episodes} tập.
+{character_hint}
+Với mỗi tập, tạo ra:
+1. number: số tập
+2. title: tiêu đề hấp dẫn
+3. chapter_start: chương bắt đầu tương ứng (giá trị ước lượng)
+4. chapter_end: chương kết thúc tương ứng (giá trị ước lượng)
+5. content_summary: tóm tắt nội dung (trong vòng 50 chữ)
+6. main_conflict: xung đột chính
+7. cliffhanger: nút thắt cuối tập (khiến khán giả muốn xem tập tiếp theo)
+8. key_events: danh sách sự kiện then chốt (3-5 sự kiện)
+9. character_names: nhân vật xuất hiện trong tập này (chọn từ các nhân vật đã xác nhận)
+
+Quy tắc:
+- Mỗi tập phải có xung đột và nút thắt rõ ràng
+- Tình tiết mạch lạc, trước sau hô ứng
+- Cao trào đặt ở khoảng giữa đến cuối
+- Bảo đảm tên nhân vật khớp với danh sách đã xác nhận
+- Viết các trường văn xuôi bằng tiếng Việt"""
 
     log("调用 LLM 规划剧集...")
     result = await LLMGateway.acreate_structured_output(
@@ -637,6 +688,82 @@ class GraphSceneCandidateList(BaseModel):
     scenes: List[GraphSceneCandidate] = Field(default_factory=list)
 
 
+LEGACY_CHARACTER_GRAPH_SYSTEM_PROMPT_VI = """Bạn là chuyên gia phân tích nhân vật tiểu thuyết. Dưới đây là thông tin nhân vật và quan hệ được trích từ đồ thị tri thức.
+Hãy dựa trên ngữ cảnh đồ thị để trích xuất tất cả nhân vật.
+
+⚠️ Quy tắc cốt lõi:
+1. **Chỉ trích xuất nhân vật là con người** (nhân vật nam, nữ)
+2. **Không trích xuất**: động vật, thú cưng, thần thú, quái vật, tinh linh, người máy và các thực thể phi nhân loại khác
+3. Biệt danh/cách xưng hô trong đồ thị (như "bệ hạ" -> Tiêu Quyết, "Tĩnh Vương" -> một người nào đó) phải được gộp vào cùng một nhân vật
+4. **Không trích xuất thông tin thân phận/trang phục** — thân phận do quy trình sau lập kế hoạch riêng
+5. **Các biến thể độ tuổi là cùng một nhân vật**: hình thái ấu thơ/thiếu niên/thanh niên/trung niên/lão niên của cùng một người phải gộp thành một nhân vật, age_group lấy theo nhóm tuổi của **giai đoạn chính yếu nhất** của nhân vật trong câu chuyện. Khác biệt ngoại hình theo độ tuổi do hệ thống thân phận xử lý sau, không tách ở bước này. Ví dụ: trong tiểu thuyết có "Tiểu Tạ Tranh" (hồi ức thời thơ ấu) và "Tạ Tranh" (tuyến chính khi trưởng thành), phải gộp thành một nhân vật "Tạ Tranh", age_group="youth", aliases có chứa "Tiểu Tạ Tranh"
+
+Với mỗi nhân vật, tạo ra:
+1. name: tên chính của nhân vật (cách gọi trang trọng nhất)
+2. aliases: các cách gọi/chức danh/biệt danh khác của nhân vật đã thật sự xuất hiện trong nguyên văn (biệt danh ổn định tìm được nhờ quan hệ trong đồ thị)
+3. role: vai trò của nhân vật (ví dụ: nhân vật chính, bạn thân, bạn trai cũ, hoàng hậu)
+4. is_main: có phải nhân vật chính của phần dẫn/người kể chuyện ngôi thứ nhất hay không (cả bộ tiểu thuyết chỉ được có 1 nhân vật is_main=True)
+5. gender: giới tính; giá trị bắt buộc là một trong hai ký tự gốc 男 (nam) hoặc 女 (nữ), giữ nguyên văn
+6. age_group: phân loại nhóm tuổi, bắt buộc là một trong bốn giá trị sau: child (trẻ em) / youth (thanh niên) / middle (trung niên) / elder (người già); giữ nguyên các giá trị tiếng Anh này
+7. body_type: mô tả vóc dáng (ví dụ: mảnh mai cao ráo, vạm vỡ cường tráng, nhỏ nhắn xinh xắn)
+8. description: đặc điểm ngoại hình và tính cách
+
+9. **face_prompt**: mô tả đặc điểm khuôn mặt thuần túy (⚠️ Then chốt! Không có trang phục!)
+   Định dạng: [giới tính], [nhóm tuổi], [kiểu tóc màu tóc], [đặc điểm mắt], [màu da], [dáng mặt/khung xương]
+   Ví dụ: "Nữ, ngoài hai mươi tuổi, tóc đen dài buộc đuôi ngựa, mắt hạnh nhân đen, da bánh mật, mặt trái xoan"
+   ⚠️ Không được mô tả trang phục trong face_prompt!
+
+Quy tắc:
+- face_prompt phải là đặc điểm khuôn mặt thuần túy, tuyệt đối không được chứa mô tả trang phục
+- Các cách gọi khác nhau của cùng một người trong đồ thị phải được gộp (tận dụng các quan hệ như is_alias_of, same_as)
+- aliases chỉ giữ lại những cách gọi đã thật sự xuất hiện trong nguyên văn và chỉ ổn định vào nhân vật đó
+- Không nhét vào aliases những danh xưng quá chung chung, chỉ đúng khi dựa vào ngữ cảnh, ví dụ các cách gọi mơ hồ cao như "người đàn ông / người phụ nữ / ông chủ / bố / con gái / nhân viên" mặc định không thu nhận, trừ khi ngữ cảnh đồ thị đã nói rõ chúng ổn định chỉ cùng một nhân vật
+- Nếu thông tin không đủ, chỉ được suy đoán thận trọng cho role / body_type / description; không bịa cho aliases những cách gọi chưa xuất hiện trong nguyên văn
+- Viết các trường văn xuôi bằng tiếng Việt; tên nhân vật giữ nguyên như trong ngữ cảnh"""
+
+
+LEGACY_PROP_GRAPH_SYSTEM_PROMPT_VI = """Bạn là chuyên gia phân tích đạo cụ tiểu thuyết. Dưới đây là thông tin vật phẩm được trích từ đồ thị tri thức.
+Hãy dựa trên ngữ cảnh đồ thị để trích xuất tất cả đạo cụ/vật phẩm có ý nghĩa cốt truyện; nếu có cung cấp toàn văn nguyên tác thì có thể dùng để bổ sung cách gọi tự nhiên và tên gọi tắt, nhưng không được tự thêm chi tiết mà cả đồ thị lẫn nguyên văn đều không nhắc đến.
+
+⚠️ Chỉ trích xuất những vật phẩm quan trọng thúc đẩy cốt truyện (tín vật, vũ khí, pháp bảo, văn thư...), không trích xuất đồ dùng hằng ngày thông thường.
+
+Với mỗi đạo cụ, tạo ra:
+1. name: tên chính của đạo cụ (ví dụ 'Thất Tinh Kiếm', 'Ngọc Tỷ Truyền Quốc')
+2. aliases: các cách gọi khác, tên gọi tắt hoặc cách gọi tự nhiên đã thật sự xuất hiện trong nguyên văn
+3. prop_type: weapon/accessory/artifact/document/furniture (giữ nguyên các giá trị tiếng Anh này)
+4. visual_prompt: mô tả hình ảnh về ngoại hình vốn có của đạo cụ, 80-120 chữ, yêu cầu:
+   - Bao gồm các chi tiết về **chất liệu, kỹ thuật chế tác, kích thước, màu sắc, hoa văn**
+   - Mô tả **ngoại hình vốn có** (đao gãy thì là gãy, kiếm gỉ thì là gỉ)
+   - **Không bao gồm** nhân vật, bối cảnh sử dụng, hay thay đổi trạng thái tạm thời (như dính máu, bốc cháy)
+   - Tổ chức dựa trên mô tả của đồ thị, không tự tạo thêm chi tiết
+   Ví dụ: "Trường kiếm thanh phong dài ba thước, thân kiếm rèn từ hàn thiết ánh lên sắc xanh lạnh, sống kiếm khắc bảy ngôi sao. Chuôi kiếm quấn da cá mập nâu sẫm, đầu chuôi khảm ngọc bạch hình tròn. Vỏ gỗ tử đàn, thân vỏ chạm nổi hoa văn mây, miệng vỏ mạ vàng"
+5. owner: tên nhân vật sở hữu (nếu có)
+
+Quy tắc:
+- Chỉ trích xuất đạo cụ có vai trò cốt truyện rõ ràng
+- visual_prompt tổ chức dựa trên mô tả của đồ thị, không tự tạo thêm chi tiết
+- Các cách gọi khác nhau của cùng một vật phẩm thì gộp lại (làm biệt danh)
+- Đồ thị là căn cứ chính, toàn văn nguyên tác chỉ là bằng chứng bổ sung, chủ yếu để bổ sung aliases và xác nhận đạo cụ có thực sự xuất hiện lặp lại trong nguyên văn
+- aliases ưu tiên thu nhận cách gọi tự nhiên hoặc tên gọi tắt đã thật sự xuất hiện trong nguyên văn, ví dụ khi tên chính thức quá dài thì có thể bổ sung tên gọi ngắn xuất hiện lặp lại trong chính văn
+- aliases không được suy diễn bịa đặt; không thêm các từ quá chung chung, dễ khớp nhầm với vật khác
+- Không nhét vào aliases các từ chỉ chủng loại quá ngắn, quá chung hoặc dễ va chạm, ví dụ "cái hòm / cái hộp / kiếm / đao / văn bản / xe", mặc định không thu nhận, trừ khi ngữ cảnh đồ thị nói rõ nguyên văn thật sự gọi đạo cụ có tên này một cách ổn định như vậy
+- Nếu một biệt danh chỉ là cách viết lặp lại của tên chính thì đừng xuất lặp
+- Viết các trường văn xuôi bằng tiếng Việt; tên đạo cụ giữ nguyên như trong ngữ cảnh"""
+
+
+GRAPH_SCENE_SYSTEM_PROMPT_VI = """Bạn là chuyên viên phân tích tài sản cảnh tổng thể cho dự án phim.
+Đầu vào là ngữ cảnh thu được từ truy xuất đồ thị tri thức. Chỉ trích xuất những địa điểm vật lý ổn định có thể tái sử dụng xuyên suốt các cảnh quay.
+
+Quy tắc:
+- name phải là địa điểm vật lý cụ thể, ví dụ "phòng ngủ Bồ Đề", "sân trước phủ Trấn Quốc Công"; không được là các từ chung chung như "ở nhà", "hiện trường", "hồi tưởng".
+- Gộp các biệt danh của cùng một địa điểm; thời gian, thời tiết, tình trạng hư hại khác nhau thì không tách thành cảnh cơ bản mới.
+- Loại trừ nhân vật, tổ chức, sự kiện, hành động, cảm xúc, tiêu đề chương và khái niệm trừu tượng.
+- scene_type chỉ được là interior, exterior, nature (giữ nguyên các giá trị tiếng Anh này).
+- evidence_lines phải lấy từ ngữ cảnh đồ thị đầu vào, không được bịa.
+- Khi bằng chứng từ đồ thị không đủ thì thà thiếu còn hơn sai, không được đoán địa điểm.
+- Các trường văn xuôi viết bằng tiếng Việt; tên địa điểm giữ nguyên như trong ngữ cảnh."""
+
+
 SCENE_ENVIRONMENT_REQUIRED_HEADINGS = ("正面", "左侧", "右侧", "背面")
 
 
@@ -665,6 +792,40 @@ environment_prompt 规则：
 - 总长度约 220-320 字，可超过 200 字以保证四向完整。
 5. description: 场景叙述性描述（使用本次指定的输出语言，简短，不超过约 50 字）"""
 
+SCENE_ENRICHMENT_SYSTEM_PROMPT_VI = """Bạn là chuyên gia thiết kế môi trường cảnh.
+Dựa trên tên cảnh và nguyên văn kịch bản được cung cấp, hãy tạo mô tả môi trường hình ảnh cho cảnh đó.
+
+Tạo ra:
+1. name: dùng trực tiếp tên cảnh đã cho (trả về y nguyên)
+2. aliases: danh sách rỗng
+3. scene_type: dựa vào cảnh để xác định interior/exterior/nature (giữ nguyên các giá trị tiếng Anh này)
+4. environment_prompt: bắt buộc xuất ra "hợp đồng không gian 360 đầy đủ", dùng đúng các tiêu đề cố định sau, không được bỏ sót, đổi tên hay gộp lại.
+   Các tiêu đề này là mã máy đọc, phải được chép NGUYÊN VĂN bằng chữ Hán như dưới đây (đừng dịch tiêu đề), còn phần nội dung sau dấu hai chấm thì viết bằng tiếng Việt:
+   正面：
+   左侧：
+   右侧：
+   背面：
+   光源：
+   材质/风格：
+   禁止元素：
+   (nghĩa lần lượt: mặt trước, bên trái, bên phải, mặt sau, nguồn sáng, chất liệu/phong cách, yếu tố cấm)
+
+Quy tắc cho environment_prompt:
+- Bốn mục 正面/左侧/右侧/背面 phải lần lượt nêu rõ ở hướng đó: không gian cố định, tường/ranh giới, cửa ra vào/cửa sổ/lối vào, đồ đạc cố định hoặc phần mở rộng ra bên ngoài.
+- 正面 (mặt trước) là hướng chính mà ảnh master cần nhìn; 背面 (mặt sau) là hướng mà ảnh reverse cần nhìn; 左侧/右侧 (hai bên) là không gian ở rìa hai ảnh cần ghép liền mạch với nhau.
+- Nếu kịch bản không nói rõ một hướng nào đó, bắt buộc phải bổ sung hợp lý dựa trên loại cảnh và bằng chứng trong nguyên văn, không được để trống, không được viết "không đề cập".
+- Mô tả trạng thái mặc định trung tính; không coi hành động tạm thời của cốt truyện, thời tiết, cảm xúc nhân vật là môi trường cố định.
+- Không có nhân vật, không có đạo cụ tạm thời của cốt truyện, không có chỉ đạo máy quay.
+- Tổng độ dài khoảng 220-320 chữ, có thể vượt 200 chữ để bảo đảm đủ bốn hướng.
+5. description: mô tả tường thuật về cảnh (dùng ngôn ngữ đầu ra được chỉ định lần này, ngắn gọn, không quá khoảng 50 chữ)"""
+
+
+def scene_enrichment_system_prompt(language: str = "zh") -> str:
+    """Per-language scene enrichment system prompt (en keeps the original)."""
+    return select_by_language(
+        language, zh=SCENE_ENRICHMENT_SYSTEM_PROMPT, vi=SCENE_ENRICHMENT_SYSTEM_PROMPT_VI
+    )
+
 
 # Every heading the contract may carry, in the order they must appear.
 SCENE_ENVIRONMENT_ALL_HEADINGS = (
@@ -682,9 +843,11 @@ _SCENE_HEADING_RE = re.compile(
 # prompt the system wrote when it could not use the model's.
 SCENE_FALLBACK_FINGERPRINT = "最能代表地点身份的主入口、主墙面、主装置或主要活动面作为正面"
 SCENE_FALLBACK_FINGERPRINT_EN = "Use the main entrance, main wall, main fixture, or primary activity area"
+SCENE_FALLBACK_FINGERPRINT_VI = "Lấy lối vào chính, bức tường chính, vật cố định chính hoặc khu vực hoạt động chính"
 SCENE_FALLBACK_FINGERPRINTS = (
     SCENE_FALLBACK_FINGERPRINT,
     SCENE_FALLBACK_FINGERPRINT_EN,
+    SCENE_FALLBACK_FINGERPRINT_VI,
 )
 
 
@@ -796,12 +959,27 @@ def _ensure_directional_environment_prompt(
     # self-referential contract that cited itself as its own source.
     evidence = _compact_scene_context(context_lines)
     if not evidence:
-        evidence = (
-            f"{scene_name}, {scene_type or 'interior'} scene"
-            if output_language == "en"
-            else f"{scene_name}，{scene_type or 'interior'} 场景"
-        )
+        if output_language == "vi":
+            evidence = f"{scene_name}, cảnh {scene_type or 'interior'}"
+        elif output_language == "en":
+            evidence = f"{scene_name}, {scene_type or 'interior'} scene"
+        else:
+            evidence = f"{scene_name}，{scene_type or 'interior'} 场景"
     type_label = scene_type or "interior"
+    if output_language == "vi":
+        # The seven headings are machine-read (see SCENE_ENVIRONMENT_ALL_HEADINGS)
+        # and stay in their original form; only the bodies are Vietnamese.
+        return "\n".join(
+            [
+                f"正面：{SCENE_FALLBACK_FINGERPRINT_VI} tiêu biểu nhất cho \"{scene_name}\" làm mặt trước; dựa vào bằng chứng nguyên văn \"{evidence}\" để xác định kết cấu cố định và các điểm neo thị giác.",
+                f"左侧：Từ góc nhìn mặt trước mở rộng sang trái, bố trí tường bên, lối đi, cửa ra vào, cửa sổ, đồ đạc cố định hoặc ranh giới bên ngoài phù hợp với \"{scene_name}\"; giữ chất liệu, tỷ lệ và chiều sâu không gian liền mạch với mặt trước, không có người.",
+                "右侧：Từ góc nhìn mặt trước mở rộng sang phải, bố trí không gian bên đối diện với bên trái, góc tường, hành lang/đường phố/phòng nối dài hoặc công trình cố định; không sao chép chủ thể mặt trước, chỉ bổ sung hợp lý và liền mạch.",
+                "背面：Khi quay lưng lại mặt trước sẽ thấy nửa sau của địa điểm, có thể là phía ngược lại của lối vào, cuối hành lang, sân ngoài, tường sau, mặt cửa sổ, đoạn đường kéo dài hoặc khu chức năng phụ; phải cùng mặt trước và hai bên tạo thành không gian khép kín 360 độ hoàn chỉnh.",
+                "光源：Dùng ánh sáng môi trường ổn định ở trạng thái mặc định trung tính; hướng sáng đến từ đèn cố định, cửa sổ, ánh sáng trời hoặc đèn trần của cảnh, tránh coi thời gian cốt truyện hoặc cảm xúc nhất thời là nguồn chiếu sáng duy nhất.",
+                f"材质/风格：Giữ phong cách kiến trúc cố định, chất liệu tường sàn trần, kết cấu cửa sổ cửa ra vào, chất cảm đồ đạc/thiết bị và mức độ cũ kỹ phù hợp với cảnh {type_label}; chỉ mô tả môi trường có thể tái sử dụng, không mô tả hành động của nhân vật.",
+                "禁止元素：Không xuất hiện người, đạo cụ tạm thời của cốt truyện, phụ đề, hình mờ, UI, hay các yếu tố hiện đại/cổ đại/khoa học viễn tưởng mâu thuẫn với tên cảnh và bằng chứng nguyên văn.",
+            ]
+        )
     if output_language == "en":
         return "\n".join(
             [
@@ -854,6 +1032,17 @@ def _create_scene_build_agent(system_prompt: str, output_type: Any, name: str):
     )
 
 
+def _scene_synopsis_section(synopsis: str, language: str) -> str:
+    if not synopsis:
+        return ""
+    label = select_by_language(
+        language,
+        zh="【故事梗概与人物设定】",
+        vi="[Tóm tắt câu chuyện và thiết lập nhân vật]",
+    )
+    return f"\n\n{label}\n{synopsis}"
+
+
 async def enrich_scene_environment_from_context(
     *,
     scene_name: str,
@@ -888,13 +1077,25 @@ async def enrich_scene_environment_from_context(
     )
 
     agent = enrichment_agent or _create_scene_build_agent(
-        SCENE_ENRICHMENT_SYSTEM_PROMPT,
+        scene_enrichment_system_prompt(language),
         SceneEnrichmentList,
         "Scene Build Enricher",
     )
     context = "\n".join(context_lines[:50])
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
-    user_text = f"""{asset_language_instruction(language)}
+    synopsis_section = _scene_synopsis_section(synopsis, language)
+    if language == "vi":
+        user_text = f"""{asset_language_instruction(language)}
+
+Tên cảnh: {scene_name}
+Manh mối về thời điểm xuất hiện: {time_of_day or "không có"} (chỉ dùng để hiểu khung giờ trong cốt truyện, không đưa ánh sáng theo khung giờ như ban ngày, ban đêm, hoàng hôn, ánh trăng vào cảnh cơ bản)
+Trong nhà/ngoài trời: {"trong nhà" if interior else "ngoài trời"}
+Các tập xuất hiện: {episodes}
+Nhân vật xuất hiện: {", ".join(characters) if characters else "không có"}
+
+Dưới đây là các đoạn nguyên văn của cảnh này trong kịch bản:
+{context}{synopsis_section}"""
+    else:
+        user_text = f"""{asset_language_instruction(language)}
 
 场景名称：{scene_name}
 出现时间线索：{time_of_day or "无"}（只用于理解剧情出现时段，不要把白天、夜晚、黄昏、月光等时段光照烘焙进基础场景）
@@ -1000,7 +1201,9 @@ SCENE_BLOCKS_CACHE_VERSION = 2
 SCENE_BLOCKS_CACHE_TYPE = "scene_blocks"
 
 
-def scene_enrichment_cache_key(candidate: dict[str, Any], synopsis: str = "") -> str:
+def scene_enrichment_cache_key(
+    candidate: dict[str, Any], synopsis: str = "", language: str = "zh"
+) -> str:
     """Hash the exact input one scene's enrichment call is made from.
 
     Every field the model sees, plus every field used to build the NovelScene
@@ -1034,6 +1237,10 @@ def scene_enrichment_cache_key(candidate: dict[str, Any], synopsis: str = "") ->
         ],
         "synopsis": str(synopsis or ""),
     }
+    if language == "vi":
+        # Vietnamese asks the model through a different scaffold; zh/en keys
+        # stay exactly as they were so existing stored rows still match.
+        payload["language"] = "vi"
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -1132,7 +1339,7 @@ async def enrich_scene_environments_batched(
     )
 
     keys = {
-        id(candidate): scene_enrichment_cache_key(candidate, synopsis)
+        id(candidate): scene_enrichment_cache_key(candidate, synopsis, language)
         for candidate in candidates
     }
     hits: dict[int, NovelScene] = {}
@@ -1154,17 +1361,24 @@ async def enrich_scene_environments_batched(
                 on_scene(candidate, scene)
 
     agent = enrichment_agent or _create_scene_build_agent(
-        SCENE_ENRICHMENT_SYSTEM_PROMPT,
+        scene_enrichment_system_prompt(language),
         SceneEnrichmentList,
         "Scene Build Enricher",
     )
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
+    synopsis_section = _scene_synopsis_section(synopsis, language)
 
     def describe(candidate: dict[str, Any]) -> str:
         context = "\n".join(
             str(line) for line in (candidate.get("context_lines") or [])[:24]
         )
         interior = bool(candidate.get("interior", True))
+        if language == "vi":
+            return (
+                f"### Cảnh: {candidate['name']}\n"
+                f"Trong nhà/ngoài trời: {'trong nhà' if interior else 'ngoài trời'}\n"
+                f"Nhân vật xuất hiện: {', '.join(candidate.get('characters') or []) or 'không có'}\n"
+                f"Đoạn nguyên văn:\n{context}"
+            )
         return (
             f"### 场景：{candidate['name']}\n"
             f"室内外：{'内' if interior else '外'}\n"
@@ -1175,8 +1389,13 @@ async def enrich_scene_environments_batched(
     async def run_batch(batch: list[dict[str, Any]]) -> list[NovelScene]:
         prompt = (
             asset_language_instruction(language)
-            + "\n\n请为下面每一个场景分别生成 environment_prompt，"
-            "name 必须与给出的场景名完全一致，不要合并或遗漏：\n\n"
+            + select_by_language(
+                language,
+                zh="\n\n请为下面每一个场景分别生成 environment_prompt，"
+                "name 必须与给出的场景名完全一致，不要合并或遗漏：\n\n",
+                vi="\n\nHãy tạo environment_prompt riêng cho từng cảnh dưới đây, "
+                "name phải trùng từng chữ với tên cảnh đã cho, không gộp hay bỏ sót:\n\n",
+            )
             + "\n\n".join(describe(candidate) for candidate in batch)
             + synopsis_section
         )
@@ -1420,6 +1639,7 @@ async def extract_scenes_from_graph(
         return []
 
     report(0.3, "从图谱结构化提取基础场景...")
+    graph_language = resolve_asset_language(context_text)
     system_prompt = """你是影视项目的全局场景资产分析师。
 输入是知识图谱检索得到的上下文。请只提取可以跨镜头复用的稳定物理地点。
 
@@ -1430,6 +1650,8 @@ async def extract_scenes_from_graph(
 - scene_type 只能是 interior、exterior、nature。
 - evidence_lines 必须来自输入图谱上下文，不得编造。
 - 图谱证据不足时宁缺毋滥，不要猜测地点。"""
+    if graph_language == "vi":
+        system_prompt = GRAPH_SCENE_SYSTEM_PROMPT_VI
     try:
         result = await LLMGateway.acreate_structured_output(
             context_text,
@@ -1479,7 +1701,7 @@ async def extract_scenes_from_graph(
 
     report(0.5, "生成场景环境描述...")
     enrichment_agent = _create_scene_build_agent(
-        SCENE_ENRICHMENT_SYSTEM_PROMPT,
+        scene_enrichment_system_prompt(graph_language),
         SceneEnrichmentList,
         "Scene Build Enricher",
     )
@@ -1500,6 +1722,7 @@ async def extract_scenes_from_graph(
             interior=scene_type == "interior",
             context_lines=list(candidate.evidence_lines),
             enrichment_agent=enrichment_agent,
+            output_language=graph_language,
         )
         scene.notes = _append_scene_note(scene.notes, "由 Cognee 图谱提取的基础场景")
         scenes.append(scene)
@@ -1786,7 +2009,7 @@ async def extract_scenes_from_script(
     enrichment_agent = None
     if enrichment_is_default:
         enrichment_agent = _create_scene_build_agent(
-            SCENE_ENRICHMENT_SYSTEM_PROMPT,
+            scene_enrichment_system_prompt(output_language),
             SceneEnrichmentList,
             "Scene Build Enricher",
         )
@@ -1934,7 +2157,12 @@ async def extract_props_from_graph(
         return []
 
     if novel_text:
-        context_text += f"\n\n【剧本原文全文】\n{novel_text}"
+        full_text_label = select_by_language(
+            resolve_asset_language(novel_text),
+            zh="【剧本原文全文】",
+            vi="[Toàn văn nguyên tác kịch bản]",
+        )
+        context_text += f"\n\n{full_text_label}\n{novel_text}"
         log(f"已注入原文全文辅助上下文: {len(novel_text)} 字符")
 
     report(0.3, "LLM 结构化提取道具...")
@@ -1965,6 +2193,8 @@ async def extract_props_from_graph(
 - aliases 不要发散编造；不要加入过于泛化、容易误匹配其他物件的词
 - 不要把过短、过泛、或高碰撞的类别词放进 aliases，例如“箱子 / 盒子 / 剑 / 刀 / 文件 / 车”这类默认不要收，除非图谱上下文明确表明原文就是把该具名道具稳定地这样称呼
 - 如果某个别名只是主名称的重复写法，则不要重复输出"""
+    if resolve_asset_language(novel_text or context_text) == "vi":
+        system_prompt = LEGACY_PROP_GRAPH_SYSTEM_PROMPT_VI
 
     try:
         result = await LLMGateway.acreate_structured_output(

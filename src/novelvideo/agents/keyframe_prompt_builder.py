@@ -331,6 +331,8 @@ class KeyframePromptBuilder:
             if audio_type == "dialogue" and dialogue_line:
                 if language == "en":
                     result = f'{result} Says: "{dialogue_line}"'
+                elif language == "vi":
+                    result = f"{result}, nói: {dialogue_line}"
                 else:
                     result = f"{result}，说：{dialogue_line}"
             return result
@@ -351,6 +353,11 @@ class KeyframePromptBuilder:
             return (
                 "The character adjusts their posture naturally as the camera "
                 "tracks the movement into a smooth transition."
+            )
+        if language == "vi":
+            return (
+                "Nhân vật điều chỉnh tư thế một cách tự nhiên, cơ thể khẽ chuyển động, "
+                "máy quay bám theo ổn định, cảnh chuyển tiếp mượt mà."
             )
         return "角色姿态自然调整，身体轻微移动，镜头平稳跟随，场景渐变过渡。"
 

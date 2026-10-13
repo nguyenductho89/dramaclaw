@@ -9,9 +9,51 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from rich.console import Console
 
+from novelvideo.utils.source_language import resolve_asset_language
+
 from .pipeline import NovelEvent
 
 console = Console()
+
+
+def build_event_extraction_prompt(chapter_text: str, language: str = "zh") -> str:
+    """The user prompt for one chapter. Only ``vi`` has its own scaffold."""
+    if language == "vi":
+        return f"""Phân tích nội dung chương dưới đây, xác định các sự kiện/cảnh độc lập trong đó.
+
+Nội dung chương:
+{chapter_text}
+
+Nguyên tắc chia sự kiện:
+1. Mỗi sự kiện là một đơn vị tự sự hoàn chỉnh (một cuộc đối thoại, một cảnh, một chuỗi hành động)
+2. Thay đổi địa điểm hoặc thời gian thường có nghĩa là sự kiện mới
+3. Giữ quan hệ nhân quả mạch lạc
+4. Gán vai trò trong cấu trúc tự sự Freytag (giữ nguyên các giá trị tiếng Anh):
+   - exposition: mở đầu/giới thiệu bối cảnh
+   - rising_action: tình tiết đi lên/xung đột phát triển
+   - climax: cao trào
+   - falling_action: tình tiết đi xuống/hệ quả mở ra
+   - resolution: kết cục/khép lại
+   - narrative: tự sự thông thường (mặc định)
+5. Mỗi chương thường có 3-8 sự kiện
+6. Viết các trường văn xuôi (description, location, time_marker) bằng tiếng Việt; start_text và end_text phải chép nguyên văn từng chữ từ chương; tên nhân vật giữ nguyên như trong nguyên văn"""
+    return f"""分析以下章节内容，识别其中的独立事件/场景。
+
+章节内容：
+{chapter_text}
+
+事件划分原则：
+1. 每个事件是一个完整的叙事单位（一次对话、一个场景、一个动作序列）
+2. 地点或时间变化通常意味着新事件
+3. 保持因果关系连贯
+4. 标注 Freytag 叙事结构角色：
+   - exposition: 开场/背景介绍
+   - rising_action: 情节上升/冲突发展
+   - climax: 高潮
+   - falling_action: 情节下降/结果展开
+   - resolution: 结局/收尾
+   - narrative: 普通叙事（默认）
+5. 每章通常有 3-8 个事件"""
 
 
 class ExtractedEvent(BaseModel):
@@ -81,23 +123,9 @@ class EventExtractor:
         if len(chapter_content) > 12000:
             log(f"章节内容过长 ({len(chapter_content)} 字)，已截取前 12000 字")
 
-        prompt = f"""分析以下章节内容，识别其中的独立事件/场景。
-
-章节内容：
-{truncated}
-
-事件划分原则：
-1. 每个事件是一个完整的叙事单位（一次对话、一个场景、一个动作序列）
-2. 地点或时间变化通常意味着新事件
-3. 保持因果关系连贯
-4. 标注 Freytag 叙事结构角色：
-   - exposition: 开场/背景介绍
-   - rising_action: 情节上升/冲突发展
-   - climax: 高潮
-   - falling_action: 情节下降/结果展开
-   - resolution: 结局/收尾
-   - narrative: 普通叙事（默认）
-5. 每章通常有 3-8 个事件"""
+        prompt = build_event_extraction_prompt(
+            truncated, resolve_asset_language(truncated)
+        )
 
         try:
             agent = Agent(

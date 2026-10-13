@@ -35,6 +35,20 @@ from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
     resolve_asset_language,
+    select_by_language,
+)
+
+# Speaker labels (casefolded) that mark a non-character voice in Vietnamese scripts.
+_VI_NON_CHARACTER_SPEAKER_TOKENS = (
+    "lời dẫn",
+    "dẫn truyện",
+    "người dẫn",
+    "thuyết minh",
+    "giọng ngoài hình",
+    "ngoài hình",
+    "phát thanh",
+    "thông báo hệ thống",
+    "phụ đề",
 )
 
 DIALOGUE_RE = re.compile(r"^(?P<speaker>[^：:]{1,24})[：:](?P<speech>.+)$")
@@ -177,6 +191,13 @@ class SceneLineContext:
     source_line_number: int = 0
 
 
+def _validator_message(info: ValidationInfo | None, zh: str, vi: str) -> str:
+    """Retry feedback sent back to the model, in the run's prompt language."""
+    context = getattr(info, "context", None)
+    language = context.get("language") if isinstance(context, dict) else None
+    return select_by_language(language or "zh", zh=zh, vi=vi)
+
+
 class LiteralBeatMetaOutput(BaseModel):
     """逐行剧本模式的 LLM 输出。"""
 
@@ -220,7 +241,12 @@ class LiteralBeatMetaOutput(BaseModel):
         )
         if "或者" in visual_description or "二选一" in visual_description:
             raise ValueError(
-                "visual_description 必须是确定画面，不能出现“或者 / 二选一”等备选表达"
+                _validator_message(
+                    info,
+                    "visual_description 必须是确定画面，不能出现“或者 / 二选一”等备选表达",
+                    "visual_description phải là một hình ảnh xác định, không được có "
+                    "cách diễn đạt lựa chọn thay thế như “hoặc / chọn một trong hai”",
+                )
             )
         return visual_description
 
@@ -247,7 +273,12 @@ class LiteralBeatMetaOutput(BaseModel):
             )
             if invalid_identity_ids:
                 raise ValueError(
-                    f"{field_name} 出现非法角色标记: {invalid_identity_ids}；{{{{}}}} 只能用于身份菜单中的 identity_id"
+                    _validator_message(
+                        info,
+                        f"{field_name} 出现非法角色标记: {invalid_identity_ids}；{{{{}}}} 只能用于身份菜单中的 identity_id",
+                        f"{field_name} có thẻ nhân vật không hợp lệ: {invalid_identity_ids}; "
+                        "{{}} chỉ được dùng cho identity_id trong menu danh tính",
+                    )
                 )
 
         prop_marker_ids = extract_prop_ids_from_markers(text, strict=True)
@@ -257,37 +288,65 @@ class LiteralBeatMetaOutput(BaseModel):
             )
             if invalid_prop_ids:
                 raise ValueError(
-                    f"{field_name} 出现非法道具标记: {invalid_prop_ids}；[[ ]] 只能用于道具菜单中的 prop_id"
+                    _validator_message(
+                        info,
+                        f"{field_name} 出现非法道具标记: {invalid_prop_ids}；[[ ]] 只能用于道具菜单中的 prop_id",
+                        f"{field_name} có thẻ đạo cụ không hợp lệ: {invalid_prop_ids}; "
+                        "[[ ]] chỉ được dùng cho prop_id trong menu đạo cụ",
+                    )
                 )
 
         for identity_id in sorted(valid_identity_ids):
             if identity_id in text and f"{{{{{identity_id}}}}}" not in text:
                 raise ValueError(
-                    f"{field_name} 中出现裸 identity_id '{identity_id}'，必须用 {{{{{identity_id}}}}} 包裹"
+                    _validator_message(
+                        info,
+                        f"{field_name} 中出现裸 identity_id '{identity_id}'，必须用 {{{{{identity_id}}}}} 包裹",
+                        f"{field_name} có identity_id trần '{identity_id}', "
+                        f"bắt buộc bọc bằng {{{{{identity_id}}}}}",
+                    )
                 )
 
         return text
 
     @field_validator("audio_type")
     @classmethod
-    def validate_audio_type(cls, value: str) -> str:
+    def validate_audio_type(cls, value: str, info: ValidationInfo) -> str:
         audio_type = (value or "").strip()
         if audio_type not in {"silence", "narration", "dialogue"}:
-            raise ValueError("audio_type 必须是 silence/narration/dialogue")
+            raise ValueError(
+                _validator_message(
+                    info,
+                    "audio_type 必须是 silence/narration/dialogue",
+                    "audio_type phải là silence/narration/dialogue",
+                )
+            )
         return audio_type
 
     @field_validator("speaker_kind")
     @classmethod
-    def validate_speaker_kind(cls, value: str) -> str:
+    def validate_speaker_kind(cls, value: str, info: ValidationInfo) -> str:
         speaker_kind = (value or "").strip()
         if speaker_kind not in {"character", "non_character"}:
-            raise ValueError("speaker_kind 只能是 character 或 non_character")
+            raise ValueError(
+                _validator_message(
+                    info,
+                    "speaker_kind 只能是 character 或 non_character",
+                    "speaker_kind chỉ có thể là character hoặc non_character",
+                )
+            )
         return speaker_kind
 
     @model_validator(mode="after")
-    def validate_dialogue_speaker(self) -> "LiteralBeatMetaOutput":
+    def validate_dialogue_speaker(self, info: ValidationInfo) -> "LiteralBeatMetaOutput":
         if self.audio_type == "dialogue" and not (self.speaker or "").strip():
-            raise ValueError("audio_type=dialogue 时必须填写 speaker")
+            raise ValueError(
+                _validator_message(
+                    info,
+                    "audio_type=dialogue 时必须填写 speaker",
+                    "khi audio_type=dialogue thì bắt buộc phải điền speaker",
+                )
+            )
         if self.audio_type in {"silence", "narration"}:
             self.speaker = ""
             self.speaker_kind = "character"
@@ -365,6 +424,86 @@ LITERAL_SCRIPT_PROMPT = """# 你是短剧剧本逐行分镜标注师
 """
 
 
+LITERAL_SCRIPT_PROMPT_VI = """# Bạn là biên tập viên chú thích phân cảnh từng dòng cho kịch bản phim ngắn
+
+Nhiệm vụ của bạn không phải là viết lại cả tập, mà là bám sát "dòng kịch bản hiện tại" để bổ sung đầy đủ siêu dữ liệu beat 2.0.
+
+## Nguyên tắc cốt lõi
+- Một dòng tương ứng một beat
+- Không viết lại dòng gốc, không gộp nhiều dòng, không tóm tắt cốt truyện
+- Bạn cần đồng thời xác định và xuất `audio_type` / `speaker` / `speaker_kind`; những nhận định này phải tuân thủ nghiêm ngặt chữ nghĩa của dòng gốc, không được tự suy diễn theo lẽ thường
+- Nhiệm vụ của `visual_description` là khôi phục tối đa thông tin hình ảnh nhìn thấy được mà dòng kịch bản hiện tại đã cho, không quyết định đạo diễn thay cho giai đoạn phân cảnh sau
+- Ưu tiên trung thành giữ bản chất hình ảnh của dòng gốc: nếu bản thân dòng gốc đã là hình ảnh phức hợp, hình ảnh trên màn hình, chồng mờ hồi tưởng, phát trực tiếp chia đôi màn hình, góc nhìn camera giám sát, v.v., thì đừng vì "thống nhất thành một ống kính" mà cưỡng ép viết lại
+- Nếu tiền tố của một dòng là gợi ý ống kính/vị trí máy/hình ảnh, đừng nhầm nó là speaker; chỉ khi rõ ràng là "tên nhân vật: nội dung lời thoại" mới xác định là dialogue
+- Chỉ khi cần thiết mới bổ sung dòng gốc thành động tác cơ thể, tư thế, quan hệ không gian dễ vẽ hơn; đừng tự ý mở rộng dòng gốc thành thiết kế ống kính mới
+- Cảnh và thời gian của beat hiện tại do tiêu đề phân cảnh hiện tại quyết định; không được viết lại cảnh, không được chuyển sang scene_id khác
+- Chỉ những đạo cụ có tên cụ thể thực sự xuất hiện, đang được cầm, đang được thao tác, đang được nhìn mới được đánh dấu bằng `[[prop_id]]` trong `visual_description`
+
+## Quy tắc visual_description
+- Chỉ mô tả hình ảnh thực sự nhìn thấy được của nhịp này trong dòng hiện tại
+- Nếu `audio_type=dialogue`, mặc định chủ thể hình ảnh ưu tiên là tư thế nói, biểu cảm hoặc động tác của người nói; chỉ khi dòng gốc nêu rõ phản ứng/động tác của bên kia mới là trọng tâm thì mới chuyển sang bên kia
+- Nếu dòng hiện tại ghi rõ các gợi ý hình ảnh như `【Cận cảnh】` / `【Hình ảnh góc nhìn thứ nhất】` / quay từ trên cao / quay từ dưới lên / cảnh trống / màn hình đen, `visual_description` phải giữ nguyên văn các gợi ý này, không bỏ sót, cũng không viết lại thành câu giải thích
+- Nếu bản thân dòng gốc có thiết bị hình ảnh phức hợp hoặc cách diễn đạt phức hợp, có thể giữ nguyên bản chất hình ảnh đó, đừng cưỡng ép nén thành một ống kính duy nhất
+- visual_description phải là một hình ảnh xác định duy nhất; không viết các cách diễn đạt lựa chọn thay thế như "hoặc / tùy chọn / chọn một trong hai / A hoặc B"
+- Không nén nội dung nhiều dòng vào nhịp này, không chủ động thêm chuyển thời gian mới, chuyển không gian mới hay dàn dựng ống kính mới mà dòng gốc không có
+- Đừng vì trong menu ứng viên có một đạo cụ/tài sản nào đó mà viết nó vào beat hiện tại từ sớm; chỉ khi văn bản dòng hiện tại xuất hiện rõ ràng hoặc nhìn thấy rõ ràng mới được viết
+- Với các tương tác không đối xứng như nắm lấy/ghì giữ/ép uống/trao tay/bóp cổ/đỡ lấy/khống chế, phải viết rõ bên chủ động/bên bị động và hình học của bàn tay
+- Nếu một trường nên để trống thì cứ để trống; đừng viết những câu giải thích như "về lý thuyết nên là", "dòng gốc không ghi, để trống"
+- Nếu dòng thoại trong nguyên văn chỉ có nội dung lời thoại, không có động tác trong ngoặc, thì đừng bịa thêm động tác cơ thể; nhiều nhất chỉ giữ trạng thái nói ở mức tối thiểu "nói / nhìn về phía đối phương / mở miệng"
+
+## Quy tắc đánh dấu nhân vật
+- Thẻ nhân vật trong `visual_description` dùng `{{identity_id}}`, và ưu tiên chỉ gắn cho nhân vật "nhìn thấy được về mặt vật lý và có trong menu danh tính"
+- Thứ tự ưu tiên đánh dấu nhân vật:
+  1. speaker của beat `dialogue` ưu tiên dùng `{{identity_id}}`
+  2. Các nhân vật khác nhìn thấy được về mặt vật lý và có trong menu danh tính cũng nên ưu tiên dùng `{{identity_id}}`
+  3. Nhân vật cốt lõi của động tác hiện tại có ưu tiên cao hơn nhân vật phụ họa không quan trọng
+- Nếu trong hình ảnh xuất hiện nhân vật đã biết trong menu danh tính, và nhân vật đó nhìn thấy được về mặt vật lý, `visual_description` nên ưu tiên dùng `{{identity_id}}`
+- Nhân vật đã biết nhìn thấy rõ ở hậu cảnh nhưng không phải chủ thể cũng nên ưu tiên dùng `{{identity_id}}`
+- Nếu màn hình, ti vi, ảnh chụp, hình ảnh hồi tưởng thể hiện một người cụ thể nhìn thấy rõ, và ngữ cảnh nhận diện được là danh tính theo độ tuổi của nhân vật trong menu danh tính, cũng phải dùng `{{identity_id}}`
+- Nhân vật ngoài menu, người qua đường, nhân vật xưng hô chung chung, người chỉ được nhắc tới/nhớ tới mà không có hình ảnh nhìn thấy thực sự, thì đừng dùng `{{identity_id}}`
+- `{{}}` chỉ được dùng cho identity_id của nhân vật; tên cảnh và tên đạo cụ đều không được viết vào `{{}}`
+
+## Quy tắc đánh dấu đạo cụ
+- Đạo cụ đã biết nhìn thấy được về mặt vật lý, đang được cầm, đang được thao tác, đang được quan sát trong `visual_description` thì ưu tiên dùng `[[prop_id]]`
+- `[[ ]]` chỉ được dùng cho prop_id trong menu đạo cụ
+- Đừng viết nhân vật vào `[[ ]]`, cũng đừng viết đạo cụ vào `{{}}`
+- Trạng thái, cách bài trí của đạo cụ, ai đang cầm nó, đều viết vào `visual_description`
+
+## Quy tắc audio / speaker
+- Chỉ khi rõ ràng là "nhân vật đã biết/người xuất hiện thực tế: nội dung lời thoại" hoặc cách diễn đạt phát ngôn nhân vật rõ ràng tương đương thì mới dùng `audio_type=dialogue`
+- Nếu dòng gốc rõ ràng là lời dẫn, thuyết minh, giọng ngoài hình, phát thanh, giọng từ phòng giám sát, phát ngôn ngoài màn hình, nguồn phát ngôn không phải nhân vật mà cần đọc thành tiếng, thì dùng `audio_type=narration`, không xuất `dialogue`
+- Nếu là miêu tả hành động, miêu tả môi trường, cảnh trống, thuyết minh hình ảnh, phụ đề thời gian, gợi ý ống kính, chỉ dẫn sân khấu, dù có dấu hai chấm cũng ưu tiên xác định là `audio_type=silence`
+- Khi `audio_type=dialogue` bắt buộc điền `speaker`
+- Nếu speaker của `dialogue` tương ứng với nhân vật đã biết trong menu danh tính, `speaker` ưu tiên xuất thẳng `identity_id` tương ứng, đừng chỉ xuất tên nhân vật trần
+- Khi `audio_type=narration` thì để trống `speaker`; phát thanh/giọng ngoài hình/phát ngôn từ màn hình/nguồn phát ngôn không phải nhân vật cũng phải xếp vào narration và để trống speaker
+- `speaker_kind=non_character` chỉ dùng cho các nguồn phát ngôn không phải nhân vật vật lý như phát thanh, giọng ngoài hình, phụ đề, chữ trên màn hình, thông báo hệ thống
+- Các giá trị audio_type (silence / narration / dialogue) và speaker_kind (character / non_character) phải viết đúng nguyên văn như trên
+
+## Quy tắc scene / prop
+- Đạo cụ chỉ được biểu đạt qua `[[prop_id]]` trong `visual_description`; `[[prop_id]]` chỉ được chọn từ menu đạo cụ ứng viên
+- Không bịa prop_id mới hay scene_id mới
+
+## Quy tắc dự phòng scene_id (chỉ dùng khi hệ thống chưa khóa scene_id)
+- Hệ thống thường phân tích scene_id từ "tiêu đề phân cảnh hiện tại" và đưa vào ngữ cảnh. Khi "scene_id hiện tại" đã bị khóa, trường `scene_id` bắt buộc để trống, không xuất lặp lại.
+- Chỉ khi "scene_id hiện tại: chưa khóa" bạn mới cần **chọn chính xác** một scene_id từ "menu cảnh của tập này" điền vào trường `scene_id`.
+- Căn cứ chọn: trường địa điểm của tiêu đề phân cảnh hiện tại, nhãn gốc của phân cảnh, các manh mối không gian nhìn thấy được trong visual_description của dòng hiện tại (cửa nhà/thang máy/đường phố/tiệm mì/trong nhà/không gian mạng/màn hình lớn 3D...).
+- Phải **khớp hoàn toàn từng ký tự** với một scene_id trong menu cảnh của tập này; không bịa tên mới, không viết tắt mơ hồ.
+- Nếu dòng hiện tại rõ ràng diễn ra trong hư không/màn hình đen/không có cảnh, và trong menu không có mục tương ứng thì để trống.
+- Các giá trị scene_id, identity_id, prop_id và time_of_day phải giữ đúng nguyên văn như đã cung cấp, kể cả khi chúng được viết bằng chữ Trung Quốc; không dịch.
+
+## Đầu ra
+- Chỉ xuất siêu dữ liệu có cấu trúc của đúng dòng hiện tại
+- Không giải thích, không nhắc lại dòng gốc
+"""
+
+
+def get_literal_script_prompt(language: str = "zh") -> str:
+    """Return the line-annotation system prompt written in ``language``."""
+    return select_by_language(
+        language, zh=LITERAL_SCRIPT_PROMPT, vi=LITERAL_SCRIPT_PROMPT_VI
+    )
+
+
 def split_literal_source_text(source_text: str) -> list[str]:
     return split_screenplay_lines(source_text)
 
@@ -398,6 +537,7 @@ class LiteralScriptWritingWorkflow:
         )
         self._current_episode = 1
         self._agent: Agent | None = None
+        self._agent_language: AssetLanguage | None = None
         self._valid_identity_ids: set[str] = set()
         self._valid_scene_ids: set[str] = set()
         self._scene_menu_split: dict[str, tuple[str, str, str]] = {}
@@ -412,7 +552,15 @@ class LiteralScriptWritingWorkflow:
 
     @property
     def agent(self) -> Agent:
+        if self._agent is not None and self._agent_language not in (
+            None,
+            self._output_language,
+        ):
+            # The prompt scaffold is language-specific; rebuild when a later
+            # run of this workflow instance resolves a different language.
+            self._agent = None
         if self._agent is None:
+            self._agent_language = self._output_language
             self._agent = Agent(
                 get_newapi_text_pydantic_model(
                     "LITERAL_BEAT_META_MODEL",
@@ -420,7 +568,7 @@ class LiteralScriptWritingWorkflow:
                     capability="text.generate.workflow",
                 ),
                 system_prompt=(
-                    f"{LITERAL_SCRIPT_PROMPT}\n"
+                    f"{get_literal_script_prompt(self._output_language)}\n"
                     f"{asset_language_instruction(self._output_language)}"
                 ),
                 model_settings=get_newapi_structured_output_model_settings(),
@@ -430,6 +578,7 @@ class LiteralScriptWritingWorkflow:
                     "valid_identity_ids": self._valid_identity_ids,
                     "valid_scene_ids": self._valid_scene_ids,
                     "valid_prop_ids": self._valid_prop_ids,
+                    "language": self._output_language,
                 },
                 name="逐行剧本分镜标注师",
             )
@@ -588,14 +737,37 @@ class LiteralScriptWritingWorkflow:
                 )
                 if section and section.strip()
             ]
+            vi = self._output_language == "vi"
             block_menu_text = (
                 "\n\n".join(block_menu_sections)
                 if block_menu_sections
-                else "（无候选资产，回退到本集菜单）"
+                else (
+                    "(không có tài sản ứng viên, quay về menu của tập này)"
+                    if vi
+                    else "（无候选资产，回退到本集菜单）"
+                )
             )
 
             scene_id_fallback_section = ""
-            if current_scene_id and current_allowed_scene_ids:
+            if vi and current_scene_id and current_allowed_scene_ids:
+                scene_id_fallback_section = (
+                    "\n\n## Ứng viên scene_id của phân cảnh hiện tại\n"
+                    f"scene_id cơ sở hiện tại đã được khóa là `{current_scene_id}`; "
+                    "chỉ được chọn chính xác một scene_id trong danh sách dưới đây, "
+                    "hoặc để trống để hệ thống quay về cảnh cơ sở.\n"
+                    + "\n".join(
+                        f"- `{sid}`" for sid in sorted(current_allowed_scene_ids)
+                    )
+                )
+            elif vi and self._valid_scene_ids:
+                scene_id_fallback_section = (
+                    "\n\n## Menu cảnh của tập này (ứng viên dự phòng cho scene_id)\n"
+                    "scene_id hiện tại chưa được khóa, hãy chọn chính xác một scene_id "
+                    "trong danh sách dưới đây điền vào trường `scene_id`; "
+                    "nếu không có mục nào phù hợp thì để trống.\n"
+                    + "\n".join(f"- `{sid}`" for sid in sorted(self._valid_scene_ids))
+                )
+            elif current_scene_id and current_allowed_scene_ids:
                 scene_id_fallback_section = (
                     "\n\n## 当前场次 scene_id 候选\n"
                     f"当前基础 scene_id 已锁定为 `{current_scene_id}`；"
@@ -623,11 +795,17 @@ class LiteralScriptWritingWorkflow:
                 )
                 anchor_parts = []
                 if prev_identities:
-                    anchor_parts.append(f"身份: {', '.join(prev_identities)}")
+                    anchor_parts.append(
+                        f"{'Danh tính' if vi else '身份'}: {', '.join(prev_identities)}"
+                    )
                 if prev_props:
-                    anchor_parts.append(f"道具: {', '.join(prev_props)}")
+                    anchor_parts.append(
+                        f"{'Đạo cụ' if vi else '道具'}: {', '.join(prev_props)}"
+                    )
                 if anchor_parts:
-                    prev_beat_anchor = "- 上一 beat 已选: " + " | ".join(anchor_parts)
+                    prev_beat_anchor = (
+                        "- Beat trước đã chọn: " if vi else "- 上一 beat 已选: "
+                    ) + " | ".join(anchor_parts)
 
             sticky_lines = []
             if block_sticky_identities:
@@ -636,11 +814,56 @@ class LiteralScriptWritingWorkflow:
             sticky_section = ""
             if sticky_lines:
                 sticky_section = (
-                    "- 当前场次已锁定结果（除非有强证据应切换，否则沿用）:\n"
-                    + "\n".join(sticky_lines)
-                )
+                    "- Kết quả đã khóa của phân cảnh hiện tại (giữ nguyên trừ khi có bằng chứng mạnh cần chuyển):\n"
+                    if vi
+                    else "- 当前场次已锁定结果（除非有强证据应切换，否则沿用）:\n"
+                ) + "\n".join(sticky_lines)
 
-            prompt = f"""{asset_language_instruction(self._output_language)}
+            if vi:
+                scene_id_rule = (
+                    "đã khóa ở cấp cơ sở, chỉ được để trống hoặc chọn chính xác từ ứng viên scene_id của phân cảnh hiện tại"
+                    if current_scene_id
+                    else "chưa khóa, hãy chọn chính xác một scene_id từ menu cảnh của tập này điền vào; nếu không có mục phù hợp thì để trống"
+                )
+                prompt = f"""{asset_language_instruction(self._output_language)}
+
+Hãy bổ sung siêu dữ liệu beat cho dòng kịch bản hiện tại của tập {episode_num}.
+
+## Thông tin tập này
+- Tiêu đề: {episode.title}
+- Cấu hình phong cách hình ảnh: {visual_style}
+
+## Menu ứng viên của phân cảnh hiện tại
+{block_menu_text}{scene_id_fallback_section}
+
+## Ngữ cảnh phân cảnh hiện tại
+- Nguyên văn tiêu đề phân cảnh hiện tại: {block.header_line or "Không có"}
+- Nhãn gốc của phân cảnh hiện tại: {current_scene_label or "Chưa khóa"}
+- scene_id hiện tại: {current_scene_id or "Chưa khóa"}
+- time_of_day hiện tại: {current_time_of_day or "Chưa khóa"}
+- Nhân vật xuất hiện trong phân cảnh hiện tại: {", ".join(block.characters) if block.characters else "Chưa đánh dấu"}
+- Văn bản trước của phân cảnh hiện tại (tối đa 2 dòng):
+{chr(10).join(f"  - {item}" for item in safe_prompt_history) if safe_prompt_history else "  - Không có"}
+{prev_beat_anchor or "- Beat trước đã chọn: Không có"}
+{sticky_section or "- Kết quả đã khóa của phân cảnh hiện tại: Không có"}
+## Dòng hiện tại
+- Số thứ tự dòng: {content_index}/{total}
+- Dòng trước: {safe_prompt_history[-1] if safe_prompt_history else "Không có"}
+- Dòng hiện tại: {raw_line}
+## Ràng buộc
+- narration_segment do hệ thống định dạng theo audio_type: dialogue thì trích lời thoại, narration thì giữ văn bản thuyết minh, silence thì để trống; bạn không được xuất narration_segment
+{self._audio_type_mode_instruction()}
+- scene_id và time_of_day của beat hiện tại đã được phân cảnh hiện tại khóa, không được viết lại
+- Đạo cụ nhìn thấy được ở dòng hiện tại được đánh dấu bằng `[[prop_id]]` trong visual_description
+- Trong cùng một khối phân cảnh, cùng một nhân vật mặc định tiếp tục dùng identity_id đã khóa, chỉ khi dòng hiện tại có bằng chứng mạnh mới chuyển
+- Nếu dòng gốc có các gợi ý như `【Cận cảnh】` / `【Hình ảnh góc nhìn thứ nhất】` / quay từ trên cao / quay từ dưới lên / cảnh trống / màn hình đen, phải giữ nguyên trực tiếp vào visual_description
+- Nhân vật chỉ được đánh dấu bằng `{{identity_id}}`, đạo cụ chỉ được đánh dấu bằng `[[prop_id]]`
+- visual_description phải chọn một hình ảnh xác định, không xuất "hoặc / tùy chọn / chọn một trong hai"
+- Menu tài sản ứng viên không phải danh sách những gì nhìn thấy ở dòng hiện tại; đạo cụ/tài sản không xuất hiện rõ ràng ở dòng hiện tại thì đừng viết trước vào visual_description
+- Trường `scene_id`: scene_id hiện tại {scene_id_rule}
+"""
+            else:
+                prompt = f"""{asset_language_instruction(self._output_language)}
 
 请为第 {episode_num} 集当前这一行剧本补全 beat 元数据。
 
@@ -854,10 +1077,11 @@ class LiteralScriptWritingWorkflow:
             audio_type="silence",
             speaker="",
             speaker_kind="character",
-            visual_description=(
-                "This line could not be generated; please complete it manually."
-                if self._output_language == "en"
-                else "该行未能生成，请手动补充。"
+            visual_description=select_by_language(
+                self._output_language,
+                zh="该行未能生成，请手动补充。",
+                en="This line could not be generated; please complete it manually.",
+                vi="Dòng này chưa thể tạo được, vui lòng bổ sung thủ công.",
             ),
             scene_id="",
         )
@@ -871,13 +1095,23 @@ class LiteralScriptWritingWorkflow:
         is_non_character = bool(
             speaker and any(token in speaker for token in non_character_tokens)
         )
+        if (
+            speaker
+            and not is_non_character
+            and self._output_language == "vi"
+        ):
+            folded_speaker = speaker.casefold()
+            is_non_character = any(
+                token in folded_speaker for token in _VI_NON_CHARACTER_SPEAKER_TOKENS
+            )
         if speaker and not is_non_character:
             audio_type = "dialogue"
             fallback_speaker = speaker
-            visual_description = (
-                f"{speaker} speaks."
-                if self._output_language == "en"
-                else f"{speaker}开口说话。"
+            visual_description = select_by_language(
+                self._output_language,
+                zh=f"{speaker}开口说话。",
+                en=f"{speaker} speaks.",
+                vi=f"{speaker} cất lời.",
             )
         elif speaker and is_non_character:
             audio_type = "narration"
@@ -899,10 +1133,11 @@ class LiteralScriptWritingWorkflow:
             .strip()
         )
         if len(visual_description) < 5:
-            visual_description = (
-                f"Visual source line: {visual_description or 'blank line'}"
-                if self._output_language == "en"
-                else f"画面保留原文：{visual_description or '空白行'}"
+            visual_description = select_by_language(
+                self._output_language,
+                zh=f"画面保留原文：{visual_description or '空白行'}",
+                en=f"Visual source line: {visual_description or 'blank line'}",
+                vi=f"Hình ảnh giữ nguyên dòng gốc: {visual_description or 'dòng trống'}",
             )
 
         return LiteralBeatMetaOutput.model_construct(
@@ -930,7 +1165,13 @@ class LiteralScriptWritingWorkflow:
         if not ep_identity_ids:
             return "", set()
 
-        lines = ["\n## 本集可用身份菜单"]
+        lines = [
+            select_by_language(
+                self._output_language,
+                zh="\n## 本集可用身份菜单",
+                vi="\n## Menu danh tính khả dụng của tập này",
+            )
+        ]
         valid_ids: set[str] = set()
         by_character: dict[str, list[str]] = {}
         for identity_id in sorted(ep_identity_ids):
@@ -964,9 +1205,15 @@ class LiteralScriptWritingWorkflow:
                     variant_id,
                     time_of_day,
                 )
+        scene_heading = select_by_language(
+            self._output_language,
+            zh="\n## 本集可用场景菜单",
+            vi="\n## Menu cảnh khả dụng của tập này",
+        )
         if not scene_menu:
-            return "\n## 本集可用场景菜单\n- 无\n"
-        lines = ["\n## 本集可用场景菜单"]
+            none_label = select_by_language(self._output_language, zh="无", vi="Không có")
+            return f"{scene_heading}\n- {none_label}\n"
+        lines = [scene_heading]
         for item in scene_menu:
             lines.append(f"- `{item.scene_id}`")
         return "\n".join(lines) + "\n"
@@ -1006,9 +1253,15 @@ class LiteralScriptWritingWorkflow:
         prop_menu = list(getattr(episode, "prop_menu", []) or [])
         self._valid_prop_ids.clear()
         self._valid_prop_ids.update(item.prop_id for item in prop_menu if item.prop_id)
+        prop_heading = select_by_language(
+            self._output_language,
+            zh="\n## 本集可用道具菜单",
+            vi="\n## Menu đạo cụ khả dụng của tập này",
+        )
         if not prop_menu:
-            return "\n## 本集可用道具菜单\n- 无\n"
-        lines = ["\n## 本集可用道具菜单"]
+            none_label = select_by_language(self._output_language, zh="无", vi="Không có")
+            return f"{prop_heading}\n- {none_label}\n"
+        lines = [prop_heading]
         for item in prop_menu:
             scope = str(getattr(item, "scope", "") or "episode").strip()
             description = str(getattr(item, "description", "") or "").strip()
@@ -1087,7 +1340,13 @@ class LiteralScriptWritingWorkflow:
     ) -> str:
         if not candidate_identity_ids:
             return ""
-        lines = ["## 当前场次候选身份"]
+        lines = [
+            select_by_language(
+                self._output_language,
+                zh="## 当前场次候选身份",
+                vi="## Danh tính ứng viên của phân cảnh hiện tại",
+            )
+        ]
         grouped: dict[str, list[str]] = {}
         for identity_id in sorted(candidate_identity_ids):
             character_name = (
@@ -1097,14 +1356,28 @@ class LiteralScriptWritingWorkflow:
         for character_name in sorted(grouped):
             lines.append(f"### {character_name}")
             for identity_id in grouped[character_name]:
-                marker = "" if identity_id in episode_identity_ids else "（非本集身份）"
+                marker = (
+                    ""
+                    if identity_id in episode_identity_ids
+                    else select_by_language(
+                        self._output_language,
+                        zh="（非本集身份）",
+                        vi=" (không thuộc danh tính của tập này)",
+                    )
+                )
                 lines.append(f"- `{identity_id}`{marker}")
         return "\n".join(lines)
 
     def _format_prop_section(self, candidate_prop_ids: set[str]) -> str:
         if not candidate_prop_ids:
             return ""
-        lines = ["## 当前场次候选道具"]
+        lines = [
+            select_by_language(
+                self._output_language,
+                zh="## 当前场次候选道具",
+                vi="## Đạo cụ ứng viên của phân cảnh hiện tại",
+            )
+        ]
         for prop_id in sorted(candidate_prop_ids):
             lines.append(f"- `{prop_id}`")
         return "\n".join(lines)
@@ -1415,6 +1688,17 @@ class LiteralScriptWritingWorkflow:
         return messages
 
     def _audio_type_mode_instruction(self) -> str:
+        if self._output_language == "vi":
+            if self.audio_type_mode != "narrated":
+                return (
+                    "- Dự án hiện dùng chế độ từng dòng của phim ngắn 2.0: "
+                    "có thể xuất silence / narration / dialogue tùy bản chất của dòng gốc."
+                )
+            return (
+                "- Dự án hiện là phim thuyết minh: giữ cách tính âm thanh của bản 1.0, "
+                "audio_type chỉ được là narration / dialogue, không xuất silence; "
+                "các dòng bản thuyết minh không phải lời thoại nhân vật rõ ràng đều xuất narration."
+            )
         if self.audio_type_mode != "narrated":
             return (
                 "- 当前项目使用 2.0 短剧逐行模式："

@@ -104,3 +104,12 @@ def test_normalize_asset_language(value, expected):
     from novelvideo.utils.source_language import normalize_asset_language
 
     assert normalize_asset_language(value) == expected
+
+
+def test_select_by_language_falls_back_to_the_original_text():
+    from novelvideo.utils.source_language import select_by_language
+
+    assert select_by_language("vi", zh="Z", en="E", vi="V") == "V"
+    assert select_by_language("vi", zh="Z", en="E") == "Z"
+    assert select_by_language("en", zh="Z", vi="V") == "Z"
+    assert select_by_language("zh", zh="Z", en="E", vi="V") == "Z"

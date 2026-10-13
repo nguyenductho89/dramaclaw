@@ -175,6 +175,19 @@ def asset_language_instruction(language: AssetLanguage) -> str:
     )
 
 
+def select_by_language(language: str, *, zh: str, en: str | None = None, vi: str | None = None) -> str:
+    """Pick the prompt text written in ``language``.
+
+    ``zh`` is the original text and the universal fallback: a language whose
+    translation is not provided keeps the pre-existing behaviour.
+    """
+    if language == "vi" and vi is not None:
+        return vi
+    if language == "en" and en is not None:
+        return en
+    return zh
+
+
 def asset_language_label(language: str) -> str:
     """English name of the output language, for task/log text sent to the model."""
     return {"en": "English", "vi": "Vietnamese (Tiếng Việt)"}.get(language, "Chinese (中文)")

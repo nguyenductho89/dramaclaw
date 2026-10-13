@@ -24,7 +24,7 @@ from novelvideo.utils.bounded_concurrency import (
 from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    resolve_asset_language,
 )
 from novelvideo.models import (
     CharacterIdentity,
@@ -883,7 +883,7 @@ async def enrich_scene_environment_from_context(
     scene_type = str(
         scene_type or ("interior" if interior else "exterior") or "interior"
     )
-    language = output_language or detect_asset_language(
+    language = output_language or resolve_asset_language(
         "\n".join([scene_name, *context_lines, synopsis])
     )
 
@@ -1115,7 +1115,7 @@ async def enrich_scene_environments_batched(
     """
     if not candidates:
         return []
-    language = output_language or detect_asset_language(
+    language = output_language or resolve_asset_language(
         "\n".join(
             [
                 synopsis,
@@ -1660,7 +1660,7 @@ async def extract_scenes_from_script(
         print(f"[extract_scenes] {message}")
 
     synopsis = extract_synopsis(novel_text)
-    output_language = detect_asset_language(novel_text)
+    output_language = resolve_asset_language(novel_text)
     if synopsis:
         log(f"提取梗概+人物设定: {len(synopsis)} 字符")
 

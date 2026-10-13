@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import inspect
 import re
 import unicodedata
@@ -12,6 +13,36 @@ from langdetect import DetectorFactory, LangDetectException, detect
 import wordninja
 
 AssetLanguage = Literal["zh", "en", "vi"]
+ASSET_LANGUAGES: tuple[str, ...] = ("zh", "en", "vi")
+CONTENT_LANGUAGE_CONFIG_KEY = "content_language"
+
+# The project's declared content language. Set once per request/task from
+# ``project_config.json``; when unset, callers fall back to guessing from text.
+_PROJECT_LANGUAGE: contextvars.ContextVar[AssetLanguage | None] = (
+    contextvars.ContextVar("project_content_language", default=None)
+)
+
+
+def normalize_asset_language(value: object) -> AssetLanguage | None:
+    """Return a supported language code, or None for missing/unknown values."""
+    code = str(value or "").strip().lower().replace("_", "-").split("-")[0]
+    return code if code in ASSET_LANGUAGES else None  # type: ignore[return-value]
+
+
+def bind_project_language(config: dict | None) -> AssetLanguage | None:
+    """Bind the language declared in a project config to the current context."""
+    language = normalize_asset_language((config or {}).get(CONTENT_LANGUAGE_CONFIG_KEY))
+    _PROJECT_LANGUAGE.set(language)
+    return language
+
+
+def resolve_asset_language(text: str = "") -> AssetLanguage:
+    """The project's declared language, else a best-effort guess from ``text``.
+
+    Guessing is only a fallback for projects that never declared a language;
+    ``detect_asset_language`` stays the pure detector.
+    """
+    return _PROJECT_LANGUAGE.get() or detect_asset_language(text)
 
 DetectorFactory.seed = 0
 
@@ -171,7 +202,7 @@ async def detect_episode_asset_language(
 
             content = await load_episode_planning_content(store, episode)
             if content.strip():
-                return detect_asset_language(content)
+                return resolve_asset_language(content)
 
     for candidate_store in (content_store, store):
         loader = getattr(candidate_store, "load_working_content", None)
@@ -181,6 +212,6 @@ async def detect_episode_asset_language(
         if inspect.isawaitable(content):
             content = await content
         if str(content or "").strip():
-            return detect_asset_language(str(content))
+            return resolve_asset_language(str(content))
 
-    return detect_asset_language(fallback_text)
+    return resolve_asset_language(fallback_text)

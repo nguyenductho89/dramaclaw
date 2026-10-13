@@ -746,6 +746,27 @@ def run_project_task_core_sync(
     run_task_id: str,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # Prompts follow the language the project declared, not a per-call guess.
+    try:
+        from novelvideo.project_config import load_project_config_file_from_state_dir
+        from novelvideo.utils.source_language import bind_project_language
+
+        bind_project_language(load_project_config_file_from_state_dir(ctx.state_dir))
+    except Exception:  # noqa: BLE001 - never block a task on a config read
+        logger.warning("could not bind project content language", exc_info=True)
+    return _run_project_task_core_sync(
+        delivery, ctx, manager, run_task_id=run_task_id, metadata=metadata
+    )
+
+
+def _run_project_task_core_sync(
+    delivery: VerifiedTaskDelivery,
+    ctx: Any,
+    manager: Any,
+    *,
+    run_task_id: str,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if type(delivery) is not VerifiedTaskDelivery:
         raise InvalidTaskEnvelope() from None
 

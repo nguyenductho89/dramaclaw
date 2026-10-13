@@ -28,7 +28,7 @@ from novelvideo.sqlite_store import load_episode_planning_content
 from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    resolve_asset_language,
 )
 
 if TYPE_CHECKING:
@@ -368,7 +368,7 @@ def format_character_info(characters: list[str], resolve_name, get_character) ->
 
 
 def build_default_identity_system_prompt(content_text: str) -> str:
-    return f"{DEFAULT_IDENTITY_PROMPT}\n{asset_language_instruction(detect_asset_language(content_text))}"
+    return f"{DEFAULT_IDENTITY_PROMPT}\n{asset_language_instruction(resolve_asset_language(content_text))}"
 
 
 def build_default_identity_task(
@@ -517,7 +517,7 @@ class IdentityPlanner:
         content_text = await load_episode_planning_content(self.cognee_store, episode)
         if not content_text or not content_text.strip():
             return 0, 0
-        output_language = detect_asset_language(content_text)
+        output_language = resolve_asset_language(content_text)
 
         # 预筛出场角色（只调一次，后续复用）
         all_chars = self.cognee_store.get_all_characters()
@@ -1064,7 +1064,7 @@ class IdentityPlanner:
 """
         try:
             language_instruction = asset_language_instruction(
-                detect_asset_language(content_text)
+                resolve_asset_language(content_text)
             )
             agent = Agent(
                 self._identity_model(
@@ -1516,7 +1516,7 @@ class IdentityPlanner:
 """
 
         try:
-            language = output_language or detect_asset_language(
+            language = output_language or resolve_asset_language(
                 "\n".join((character_name, visual_state, reason))
             )
             language_instruction = asset_language_instruction(language)

@@ -87,6 +87,7 @@ class ProjectGrantSummary(BaseModel):
 
 
 class ProjectUpdate(BaseModel):
+    content_language: Optional[Literal["zh", "en", "vi"]] = None
     spine_template: Optional[Literal["drama", "narrated"]] = None
     aspect_ratio: Optional[Literal["2:3", "9:16", "16:9"]] = None
     visual_style: Optional[str] = None
@@ -127,6 +128,7 @@ class IngestStart(BaseModel):
     filename: str
     rebuild: bool = False
     spine_template: Optional[Literal["drama", "narrated"]] = None
+    content_language: Optional[Literal["zh", "en", "vi"]] = None
 
 
 # ── 角色 ──────────────────────────────────────────────────────────────────────

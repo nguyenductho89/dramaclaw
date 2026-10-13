@@ -39,7 +39,7 @@ from novelvideo.utils.bounded_concurrency import (
 from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    resolve_asset_language,
 )
 
 # Titles and kinship terms refer to whoever is on stage at the time. The same
@@ -387,7 +387,7 @@ async def extract_characters_from_chunks(
             on_log(message)
 
     replayed = list(cached_outcomes or [])
-    language = output_language or detect_asset_language(
+    language = output_language or resolve_asset_language(
         source_text
         or "\n".join(
             [
@@ -1106,7 +1106,7 @@ def character_appearance_cache_key(
     every stored appearance — which is right, since that block is what most of
     them were written from.
     """
-    language = output_language or detect_asset_language(
+    language = output_language or resolve_asset_language(
         "\n".join(
             [
                 item.name,
@@ -1384,7 +1384,7 @@ async def enrich_character_appearances(
     if not merged:
         return {}
 
-    language = output_language or detect_asset_language(
+    language = output_language or resolve_asset_language(
         "\n".join(
             [
                 str(synopsis or ""),

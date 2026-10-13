@@ -113,6 +113,11 @@ async def resolve_project_scope(
         **({"media_read": True} if media_read else {}),
     )
     require_project_home_node(ctx, operation="resolve project files")
+    # Prompts built while serving this request follow the project's language.
+    from novelvideo.project_config import load_project_config_file_from_state_dir
+    from novelvideo.utils.source_language import bind_project_language
+
+    bind_project_language(load_project_config_file_from_state_dir(ctx.state_dir))
     return ProjectResolution(
         ctx=ctx,
         username=ctx.owner_username,

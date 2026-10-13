@@ -38,6 +38,10 @@ from novelvideo.utils.document_parsers import (
     supported_novel_extensions_label,
 )
 from novelvideo.utils.screenplay_quality import build_import_format_check
+from novelvideo.utils.source_language import (
+    detect_asset_language,
+    normalize_asset_language,
+)
 from novelvideo.utils.async_ops import run_sync_bounded
 from novelvideo.utils.upload_safety import (
     MAX_NOVEL_IMPORT_BYTES,
@@ -411,6 +415,13 @@ async def start_ingest(
     # Persist the exact source used by this import. The ingest page can then
     # rebuild from the existing upload without forcing the user to upload again.
     project_config_updates = {"ingest_source_filename": safe_name}
+    # The language prompts are written in is a project setting, not something
+    # to re-guess on every call. An explicit choice wins; otherwise guess once
+    # from the imported text and pin it so later steps stay consistent.
+    if body.content_language is not None:
+        project_config_updates["content_language"] = body.content_language
+    elif not normalize_asset_language(current_project_config.get("content_language")):
+        project_config_updates["content_language"] = detect_asset_language(content)
     if body.spine_template is not None:
         if not body.rebuild:
             return {"ok": False, "error": "项目类型只能在重新导入时修改"}

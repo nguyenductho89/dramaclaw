@@ -73,3 +73,34 @@ def test_vietnamese_instruction_keeps_prose_vietnamese_and_names_verbatim():
 
     assert "tiếng Việt" in instruction
     assert "Giữ nguyên" in instruction
+
+
+def test_declared_project_language_overrides_text_guess():
+    from novelvideo.utils.source_language import (
+        bind_project_language,
+        resolve_asset_language,
+    )
+
+    english = "INT. ROOM - DAY\nMAYA opens the door."
+    try:
+        bind_project_language({"content_language": "vi"})
+        assert resolve_asset_language(english) == "vi"
+        bind_project_language({"content_language": "zh"})
+        assert resolve_asset_language(english) == "zh"
+        # Unknown / missing values fall back to guessing from the text.
+        bind_project_language({"content_language": "xx"})
+        assert resolve_asset_language(english) == "en"
+        bind_project_language({})
+        assert resolve_asset_language(english) == "en"
+    finally:
+        bind_project_language({})
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("vi", "vi"), ("vi-VN", "vi"), ("EN_us", "en"), ("zh-CN", "zh"), ("ja", None), ("", None), (None, None)],
+)
+def test_normalize_asset_language(value, expected):
+    from novelvideo.utils.source_language import normalize_asset_language
+
+    assert normalize_asset_language(value) == expected

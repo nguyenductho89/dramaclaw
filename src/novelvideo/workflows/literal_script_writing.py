@@ -34,7 +34,7 @@ from novelvideo.utils.screenplay_scene_parser import (
 from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    resolve_asset_language,
 )
 
 DIALOGUE_RE = re.compile(r"^(?P<speaker>[^：:]{1,24})[：:](?P<speech>.+)$")
@@ -479,7 +479,7 @@ class LiteralScriptWritingWorkflow:
             )
         if not source_text.strip():
             raise ValueError("当前集原文为空，无法逐行生成脚本")
-        self._output_language = detect_asset_language(source_text)
+        self._output_language = resolve_asset_language(source_text)
 
         quality_report = check_screenplay_import_quality(source_text)
         for issue in quality_report.blocking_issues:

@@ -20,6 +20,7 @@ from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
     detect_asset_language,
+    resolve_asset_language,
 )
 
 
@@ -88,7 +89,7 @@ def detect_seedance2_prompt_language(beat: dict[str, Any]) -> AssetLanguage:
         )
         if _text(beat.get(field))
     )
-    detected = detect_asset_language(source)
+    detected = resolve_asset_language(source)
     # Seedance templates and guidance matching only cover zh/en; Vietnamese
     # keeps the Chinese scaffolding it always had.
     return "zh" if detected == "vi" else detected

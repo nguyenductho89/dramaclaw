@@ -13,7 +13,7 @@ from novelvideo.utils.bounded_concurrency import (
 from novelvideo.utils.screenplay_scene_parser import TIME_TOKEN_RE, parse_scene_blocks
 from novelvideo.utils.source_language import (
     asset_language_instruction,
-    detect_asset_language,
+    resolve_asset_language,
 )
 
 SceneType = Literal["interior", "exterior", "nature"]
@@ -332,7 +332,7 @@ async def normalize_screenplay_scene_header(
     )
 
     runner = agent or _create_screenplay_normalizer_agent()
-    language = detect_asset_language(
+    language = resolve_asset_language(
         "\n".join([header, str(location_hint or ""), context])
     )
     prompt = f"""{asset_language_instruction(language)}
@@ -382,7 +382,7 @@ async def normalize_screenplay_scenes(
     source = str(text or "").strip()
     if not source:
         return []
-    language_instruction = asset_language_instruction(detect_asset_language(source))
+    language_instruction = asset_language_instruction(resolve_asset_language(source))
 
     blocks = [block for block in parse_scene_blocks(source) if block.header_line]
     if not blocks:

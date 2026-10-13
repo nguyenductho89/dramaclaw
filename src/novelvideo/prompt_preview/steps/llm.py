@@ -9,7 +9,7 @@ from __future__ import annotations
 from novelvideo.novel_source import NovelImportRequiredError, require_imported_novel
 from novelvideo.prompt_preview.registry import PreviewScope, StepSpec, empty, register
 from novelvideo.prompt_preview.types import PreviewTarget, PromptPart, PromptPreview
-from novelvideo.utils.source_language import asset_language_instruction, detect_asset_language
+from novelvideo.utils.source_language import asset_language_instruction, resolve_asset_language
 
 
 def _novel_text(scope: PreviewScope) -> str | None:
@@ -54,7 +54,7 @@ async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
     chunk = next((c for c in chunks if c.chunk_id == target), None)
     if chunk is None:
         return empty("characters", "llm", f"找不到片段 / Chunk not found: {target}")
-    language = detect_asset_language(text)
+    language = resolve_asset_language(text)
     return PromptPreview(
         step="characters",
         model_kind="llm",
@@ -128,7 +128,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
 
 def _language(scope: PreviewScope) -> str:
     text = _novel_text(scope)
-    return detect_asset_language(text) if text else "zh"
+    return resolve_asset_language(text) if text else "zh"
 
 
 def _system_only(step: str, label: str, builder, note: str) -> StepSpec:

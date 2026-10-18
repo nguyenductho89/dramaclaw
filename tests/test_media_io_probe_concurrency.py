@@ -57,12 +57,12 @@ async def test_probe_fan_out_never_exceeds_the_cap(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_a_batch_smaller_than_the_cap_runs_fully_parallel(monkeypatch):
-    """闸门是上限不是队列——没超过上限的批次不该被串行化。"""
+    """The gate is a cap, not a queue - a batch that does not exceed the cap must not be serialized."""
     assert await _run_with_cap(monkeypatch, 8, 5) == 5
 
 
 def test_default_cap_is_small_enough_to_matter():
-    """默认值得比线程池默认宽度小，否则这个闸门等于没装。"""
+    """The default must be smaller than the default thread-pool width, otherwise the gate is as good as absent."""
     assert 1 < media_io._PROBE_CONCURRENCY <= 16
 
 
@@ -96,7 +96,7 @@ async def test_empty_input_probes_nothing(monkeypatch):
 
 
 def test_the_cap_is_shared_across_requests_on_one_loop():
-    """两个并发请求不该把上限翻倍——闸门按事件循环取，不是按调用取。"""
+    """Two concurrent requests must not double the cap - the gate is taken per event loop, not per call."""
 
     async def scenario():
         first = media_io._probe_semaphore()
@@ -107,7 +107,7 @@ def test_the_cap_is_shared_across_requests_on_one_loop():
 
 
 def test_each_event_loop_gets_its_own_gate():
-    """信号量绑定首次 await 它的循环；进程里跑多个循环时不能共用一个。"""
+    """A semaphore binds to the loop that first awaits it; it cannot be shared when several loops run in one process."""
     seen = []
 
     async def scenario():
@@ -120,7 +120,7 @@ def test_each_event_loop_gets_its_own_gate():
 
 
 def test_the_probe_passes_a_finite_timeout_to_ffprobe(monkeypatch):
-    """没有 timeout 的 ffprobe 在网络盘上可以永远挂着，闸门位置全被占死。"""
+    """An ffprobe without a timeout can hang forever on a network disk, occupying every gate slot."""
     seen: dict = {}
 
     def fake_run(cmd, **kwargs):
@@ -131,7 +131,7 @@ def test_the_probe_passes_a_finite_timeout_to_ffprobe(monkeypatch):
 
     assert media_io.get_audio_duration("/tmp/beat.mp3") == 3.5
     timeout = seen.get("timeout")
-    assert timeout is not None, "ffprobe 必须带超时"
+    assert timeout is not None, "ffprobe must carry a timeout"
     assert 0 < timeout < 60
 
 
@@ -139,7 +139,7 @@ def test_the_probe_passes_a_finite_timeout_to_ffprobe(monkeypatch):
 async def test_a_timed_out_probe_reports_none_rather_than_a_made_up_duration(
     monkeypatch,
 ):
-    """超时走批量接口的失败语义（None），而不是那个看起来很真的 5.0。"""
+    """A timeout follows the batch interface's failure semantics (None), not that plausible-looking 5.0."""
 
     def fake_run(cmd, **kwargs):
         raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 0))
@@ -150,7 +150,7 @@ async def test_a_timed_out_probe_reports_none_rather_than_a_made_up_duration(
 
 
 def test_a_timed_out_probe_raises_instead_of_returning_the_fallback(monkeypatch):
-    """单文件接口把超时抛出去：调用方要能区分"探测失败"和"探测到了但读不出来"。"""
+    """The single-file interface raises the timeout: callers must tell "probe failed" from "probed but unreadable"."""
 
     def fake_run(cmd, **kwargs):
         raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 0))
@@ -162,7 +162,7 @@ def test_a_timed_out_probe_raises_instead_of_returning_the_fallback(monkeypatch)
 
 
 def test_an_unreadable_answer_still_falls_back(monkeypatch):
-    """5.0 的语义没变：ffprobe 答了、但答案解析不出来时仍然回落。"""
+    """The 5.0 semantics are unchanged: when ffprobe answered but the answer cannot be parsed, it still falls back."""
 
     def fake_run(cmd, **kwargs):
         return subprocess.CompletedProcess(cmd, 0, "N/A\n", "")
@@ -173,7 +173,7 @@ def test_an_unreadable_answer_still_falls_back(monkeypatch):
 
 
 def test_the_worst_case_wall_time_is_bounded():
-    """闸门 × 超时决定了一集 beats 最坏要等多久；两个都得是有限小值。"""
+    """Gate x timeout decides the worst-case wait for one episode of beats; both must be finite and small."""
     assert 0 < media_io._PROBE_TIMEOUT_SECONDS <= 30
     worst_case = -(-40 // media_io._PROBE_CONCURRENCY) * media_io._PROBE_TIMEOUT_SECONDS
     assert worst_case <= 60

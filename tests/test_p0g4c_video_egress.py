@@ -1717,7 +1717,7 @@ async def test_freezone_platform_context_preserves_legacy_leaf(
                 "status": "failed",
                 "error": {
                     "code": "VIDEO_MEDIA_DIMENSIONS_INVALID",
-                    "message": "素材尺寸不符合要求 secret-canary",
+                    "message": "Asset dimensions do not meet requirements secret-canary",
                 },
             },
             "VIDEO_MEDIA_DIMENSIONS_INVALID",
@@ -1726,8 +1726,8 @@ async def test_freezone_platform_context_preserves_legacy_leaf(
             {
                 "status": "failed",
                 "error_message": (
-                    "素材审核失败（共 1 个素材）：\n\n[1] 素材：https://relay.example/"
-                    "a.jpg?OSSAccessKeyId=secret-canary\n    原因：[InvalidParameter."
+                    "Asset review failed (1 asset in total):\n\n[1] Asset: https://relay.example/"
+                    "a.jpg?OSSAccessKeyId=secret-canary\n    Reason: [InvalidParameter."
                     "HeightTooSmall] Height must be between 300px and 6000px."
                 ),
             },
@@ -1744,21 +1744,21 @@ async def test_freezone_platform_context_preserves_legacy_leaf(
             {
                 "status": "failed",
                 "error": "video generation failed",
-                "content": "提示词长度超过模型限制，请缩短后重试",
+                "content": "Prompt length exceeds the model limit, please shorten it and retry",
             },
-            "提示词长度超过模型限制，请缩短后重试",
+            "Prompt length exceeds the model limit, please shorten it and retry",
         ),
         (
             {
                 "status": "failed",
                 "content": {
                     "message": (
-                        "参考素材读取失败：https://relay.example/a.jpg?"
-                        "OSSAccessKeyId=secret-canary 请更换素材后重试"
+                        "Failed to read reference asset: https://relay.example/a.jpg?"
+                        "OSSAccessKeyId=secret-canary please replace the asset and retry"
                     )
                 },
             },
-            "参考素材读取失败：[redacted-url] 请更换素材后重试",
+            "Failed to read reference asset: [redacted-url] please replace the asset and retry",
         ),
     ],
 )
@@ -1768,11 +1768,11 @@ async def test_newapi_organization_failures_keep_safe_provider_error_details(
     poll_response: dict,
     expected_error: str,
 ) -> None:
-    """厂商明确打回时，组织账号拿到安全错误码或脱敏后的具体消息。
+    """When the vendor explicitly rejects, organization accounts get a safe error code or a redacted specific message.
 
-    2026-08-26 3060 上 creator02-zhu 的参考图 338x191 被火山 HeightTooSmall 拒了 8 次，
-    用户只看到 `EGRESS_OPERATION_UNKNOWN`。已知 `VIDEO_*` 枚举码继续优先放行；其他明确
-    失败恢复安全消息，但带签名的 relay URL 依旧不能进 result。
+    On 2026-08-26 on 3060, creator02-zhu's reference image 338x191 was rejected by Volcano HeightTooSmall 8 times,
+    and the user only saw `EGRESS_OPERATION_UNKNOWN`. Known `VIDEO_*` enum codes still pass first; other explicit
+    failures recover a safe message, but signed relay URLs still must not enter the result.
     """
     from novelvideo.generators.video_generator import (
         NewApiVideoGenerator,
@@ -1842,9 +1842,9 @@ async def test_newapi_organization_failures_keep_safe_provider_error_details(
         ),
         (
             400,
-            '{"error": {"content": "请求参数不受当前模型支持：'
-            'https://relay.example/a.png?token=secret-canary 请调整后重试"}}',
-            "请求参数不受当前模型支持：[redacted-url] 请调整后重试",
+            '{"error": {"content": "Request parameters are not supported by the current model: '
+            'https://relay.example/a.png?token=secret-canary please adjust and retry"}}',
+            "Request parameters are not supported by the current model: [redacted-url] please adjust and retry",
             "rejected_before_submit",
         ),
         (
@@ -1869,7 +1869,7 @@ async def test_newapi_organization_submit_response_keeps_safe_error_and_terminal
     expected_error: str,
     expected_transition: str,
 ) -> None:
-    """提交响应恢复安全详情，并按是否明确拒绝收敛出口状态。"""
+    """The submit response recovers safe details and converges the egress state according to whether it was an explicit rejection."""
     from novelvideo.generators.video_generator import (
         NewApiVideoError,
         NewApiVideoGenerator,

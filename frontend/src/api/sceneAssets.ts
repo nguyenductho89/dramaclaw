@@ -4,7 +4,7 @@ import { apiCall } from "./client";
 
 /**
  * Scene asset thumbnails for a given beat — populated lazily when the user
- * opens the "选源" popover on a `selected_background` slot node, or when
+  * opens the "pick source" popover on a `selected_background` slot node, or when
  * a `selected_background` slot is dragged into a canvas and the receiver
  * wants to spawn the full scene subgraph (double-click expand).
  *

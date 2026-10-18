@@ -1,4 +1,4 @@
-"""AI 验证系统 — 草图/首帧事实核查 + 角色一致性检查 + 首帧渲染质量验证。"""
+"""AI verification system - sketch/first-frame fact checking + character consistency checks + first-frame render quality verification."""
 
 from .consistency_verifier import ConsistencyVerifier
 from .continuity_verifier import ContinuityVerifier

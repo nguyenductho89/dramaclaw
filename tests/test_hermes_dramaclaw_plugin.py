@@ -107,7 +107,7 @@ def test_dramaclaw_plugin_adds_chat_error_without_replacing_task_error():
 
 def test_dramaclaw_plugin_adds_voice_prereq_chat_error():
     plugin = _load_plugin_module()
-    raw_error = "Beat 03 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频"
+    raw_error = "Beat 03 narrator voice is missing: the project narrator voice is not configured; upload or record narrator audio"
 
     result = plugin._with_chat_error_hints(
         {
@@ -119,12 +119,12 @@ def test_dramaclaw_plugin_adds_voice_prereq_chat_error():
     )
 
     assert result["error"] == raw_error
-    assert "配音任务没有成功启动" in result["chat_error"]
-    assert "虾塘" in result["chat_error"]
+    assert "The dubbing task did not start" in result["chat_error"]
+    assert "Shrimp Pond" in result["chat_error"]
     assert raw_error in result["chat_error"]
     assert "Do not start another tool" in result["agent_instruction"]
-    assert "由虾导匹配系统声线" in result["agent_instruction"]
-    assert "换别的方向" in result["agent_instruction"]
+    assert "let Shrimp Director match system voices" in result["agent_instruction"]
+    assert "switch to another direction" in result["agent_instruction"]
 
 
 def test_dramaclaw_plugin_stops_before_tts_when_pipeline_requires_voice_setup():
@@ -135,21 +135,21 @@ def test_dramaclaw_plugin_stops_before_tts_when_pipeline_requires_voice_setup():
             "ok": True,
             "data": {
                 "next_step": "voice_setup",
-                "next_step_name": "准备配音声线",
+                "next_step_name": "Prepare dubbing voices",
                 "audio_prerequisites": {
                     "checked": True,
                     "ready": False,
-                    "errors": ["Beat 01 解说声线缺失：请上传或录制解说人音频"],
+                    "errors": ["Beat 01 narrator voice is missing: upload or record narrator audio"],
                 },
             },
         }
     )
 
     data = result["data"]
-    assert "下一步需要先准备配音声线" in result["chat_notice"]
-    assert "1）到「虾塘」上传或录制声线" in result["chat_notice"]
-    assert "2）确认由虾导匹配系统声线" in result["chat_notice"]
-    assert "虾塘" in result["agent_instruction"]
+    assert "The next step is to prepare the dubbing voices first" in result["chat_notice"]
+    assert '1) Upload or record a voice in "Shrimp Pond"' in result["chat_notice"]
+    assert "2) Confirm that Shrimp Director matches a system voice" in result["chat_notice"]
+    assert "Shrimp Pond" in result["agent_instruction"]
     assert "Do not claim TTS started" in result["agent_instruction"]
     assert "chat_error" not in data["audio_prerequisites"]
 
@@ -157,8 +157,8 @@ def test_dramaclaw_plugin_stops_before_tts_when_pipeline_requires_voice_setup():
 def test_dramaclaw_plugin_adds_render_prereq_chat_error():
     plugin = _load_plugin_module()
     raw_error = (
-        "Render 重生未生成可用图片（mode=1x1_2-3, beats=[1, 2, 3]）："
-        "Render 模式需要草图但未找到覆盖 beat 1-1 的草图"
+        "Render regeneration produced no usable image (mode=1x1_2-3, beats=[1, 2, 3]): "
+        "Render mode requires a sketch, but none was found covering beats 1-1"
     )
 
     result = plugin._with_chat_error_hints(
@@ -175,8 +175,8 @@ def test_dramaclaw_plugin_adds_render_prereq_chat_error():
 
     task = result["data"][0]
     assert task["error"] == raw_error
-    assert "Render 任务没有生成可用图片" in task["chat_error"]
-    assert "虾塘" in task["chat_error"]
+    assert "The Render task did not produce a usable image" in task["chat_error"]
+    assert "Shrimp Pond" in task["chat_error"]
     assert raw_error in task["chat_error"]
     assert "Do not start another tool" in task["agent_instruction"]
 
@@ -791,7 +791,7 @@ def test_dramaclaw_freezone_mode_denies_mainline_writes(monkeypatch):
 
     assert denied["ok"] is False
     assert denied["code"] == "freezone_mainline_write_denied"
-    assert "虾画画布" in denied["chat_error"]
+    assert "Shrimp Canvas canvas" in denied["chat_error"]
 
 
 def test_dramaclaw_freezone_mode_denies_whole_canvas_writes(monkeypatch):
@@ -841,7 +841,7 @@ def test_dramaclaw_plugin_controls_episode_auto_without_cancelling_tasks(monkeyp
     plugin._handle_control_episode_auto({
         "project_id": "proj-1",
         "action": "suspend",
-        "reason": "可能修改镜头",
+        "reason": "Might modify a shot",
     })
     plugin._handle_control_episode_auto({"project_id": "proj-1", "action": "resume"})
 
@@ -849,7 +849,7 @@ def test_dramaclaw_plugin_controls_episode_auto_without_cancelling_tasks(monkeyp
         (
             "POST",
             "/api/v1/projects/proj-1/chat/director-auto/suspend",
-            {"reason": "可能修改镜头"},
+            {"reason": "Might modify a shot"},
         ),
         ("POST", "/api/v1/projects/proj-1/chat/director-auto/resume", None),
     ]

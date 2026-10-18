@@ -8,32 +8,23 @@ import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 import type { CanvasNode } from "@/features/canvas/domain/canvasNodes";
 
 const translations: Record<string, string> = {
-  "canvas.history.title": "历史资产",
-  "canvas.history.tabs.image": "图片历史",
-  "canvas.history.tabs.video": "视频历史",
-  "canvas.history.tabs.audio": "音频历史",
-  "canvas.history.tabs.world": "世界历史",
-  "canvas.history.noMatch": "没有匹配的历史资产",
-  "canvas.history.noMatchOtherTabs": "当前分类没有匹配项，试试{{tabs}}",
-  "canvas.history.delete": "删除",
-  "canvas.history.deleteConfirmTitle": "删除这条历史资产？",
-  "canvas.history.deleteConfirmDescription": "删除后将不再出现在历史资产中，且无法恢复。画布中已使用的内容不会受影响。",
-  "canvas.history.deleteConfirmAction": "删除",
-  "canvas.history.promptTitle": "提示词",
-  "canvas.history.viewFullPrompt": "查看完整提示词",
-  "common.cancel": "取消",
-};
-
-const enTranslations: Record<string, string> = {
+  "canvas.history.title": "History Assets",
   "canvas.history.tabs.image": "Images",
   "canvas.history.tabs.video": "Videos",
   "canvas.history.tabs.audio": "Audio",
   "canvas.history.tabs.world": "World Models",
   "canvas.history.noMatch": "No matching history assets",
   "canvas.history.noMatchOtherTabs": "No matches in this tab — try {{tabs}}",
+  "canvas.history.delete": "Delete",
+  "canvas.history.deleteConfirmTitle": "Delete this history asset?",
+  "canvas.history.deleteConfirmDescription": "It will be permanently removed from History Assets. Content already used on the canvas will not be affected.",
+  "canvas.history.deleteConfirmAction": "Delete",
+  "canvas.history.promptTitle": "Prompt",
+  "canvas.history.viewFullPrompt": "View full prompt",
+  "common.cancel": "Cancel",
 };
 
-const i18nState = vi.hoisted(() => ({ language: "zh" }));
+const i18nState = vi.hoisted(() => ({ language: "en" }));
 const canvasState = vi.hoisted(() => ({ nodes: [] as unknown[] }));
 const historyState = vi.hoisted(() => ({
   records: [] as Record<string, unknown>[],
@@ -43,8 +34,7 @@ const historyState = vi.hoisted(() => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
-      const table = i18nState.language.startsWith("zh") ? translations : enTranslations;
-      const raw = table[key] ?? key;
+      const raw = translations[key] ?? key;
       return options
         ? raw.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(options[name] ?? ""))
         : raw;
@@ -57,8 +47,8 @@ vi.mock("@/stores/canvasStore", () => ({
   useCanvasStore: (selector: (state: { nodes: unknown[] }) => unknown) => selector(canvasState),
 }));
 
-// 只测搜索框键盘行为与空态文案,把生成历史/查看器/导演台整条依赖图挡在门外
-// (viewer-kit 那条会把 three.js 拖进 jsdom)。
+// Tests only the search box keyboard behavior and empty-state text, keeping the whole dependency graph of generation history / viewers / director out
+// (the viewer-kit chain would drag three.js into jsdom).
 vi.mock("@/features/canvas/hooks/useCanvasGenerationHistory", () => ({
   useCanvasGenerationHistory: () => ({
     records: historyState.records,
@@ -101,14 +91,14 @@ function renderModal(
 }
 
 afterEach(() => {
-  i18nState.language = "zh";
+  i18nState.language = "en";
   canvasState.nodes = [];
   historyState.records = [];
   historyState.removeRecord.mockReset();
 });
 
-describe("CanvasHistoryAssetsModal 删除确认", () => {
-  it("取消时不删除，确认后删除对应历史记录", async () => {
+describe("CanvasHistoryAssetsModal delete confirmation", () => {
+  it("does not delete on cancel, and deletes the matching history record on confirm", async () => {
     const user = userEvent.setup();
     historyState.records = [
       {
@@ -128,23 +118,23 @@ describe("CanvasHistoryAssetsModal 删除确认", () => {
     historyState.removeRecord.mockResolvedValue(true);
     renderModal(vi.fn(), "generation-history");
 
-    await user.click(screen.getByRole("button", { name: "删除" }));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("删除这条历史资产？");
-    await user.click(screen.getByRole("button", { name: "取消" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Delete this history asset?");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(historyState.removeRecord).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "删除" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(
-      within(screen.getByRole("alertdialog")).getByRole("button", { name: "删除" }),
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Delete" }),
     );
     expect(historyState.removeRecord).toHaveBeenCalledWith("n1", "image:r1");
   });
 });
 
-describe("CanvasHistoryAssetsModal 提示词渐进展示", () => {
-  it("卡片只显示两行摘要，单击后打开完整提示词", async () => {
+describe("CanvasHistoryAssetsModal progressive prompt display", () => {
+  it("the card shows only a two-line summary, and a click opens the full prompt", async () => {
     const user = userEvent.setup();
-    const prompt = "为小游戏设计一张横版海报，主角正在不同高度的平台之间跳跃。";
+    const prompt = "Design a landscape poster for a mini game, with the hero jumping between platforms at different heights.";
     historyState.records = [
       {
         schema_version: 1,
@@ -163,10 +153,10 @@ describe("CanvasHistoryAssetsModal 提示词渐进展示", () => {
     ];
     renderModal(vi.fn(), "generation-history");
 
-    const caption = screen.getByRole("button", { name: "查看完整提示词" });
+    const caption = screen.getByRole("button", { name: "View full prompt" });
     expect(caption).toHaveClass("h-12");
     expect(caption.querySelector("span")).toHaveClass("line-clamp-2");
-    expect(caption).toHaveAttribute("title", "查看完整提示词");
+    expect(caption).toHaveAttribute("title", "View full prompt");
     expect(caption.querySelector("svg")).toHaveClass("lucide-maximize-2");
     const hoverLayer = caption.closest(".group")?.querySelector('[class*="backdrop-blur"]');
     expect(hoverLayer).toHaveClass("bg-black/50", "backdrop-blur-[10px]");
@@ -176,13 +166,13 @@ describe("CanvasHistoryAssetsModal 提示词渐进展示", () => {
     });
 
     await user.click(caption);
-    expect(screen.getByRole("heading", { name: "提示词" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Prompt" })).toBeInTheDocument();
     expect(screen.getAllByText(prompt)).toHaveLength(2);
   });
 });
 
-describe("CanvasHistoryAssetsModal 固定五列布局", () => {
-  it("移除比例调节并让每个日期分组固定为五列网格", () => {
+describe("CanvasHistoryAssetsModal fixed five-column layout", () => {
+  it("removes the ratio control and fixes each date group to a five-column grid", () => {
     historyState.records = Array.from({ length: 7 }, (_, index) => ({
       schema_version: 1,
       canvas_id: "default",
@@ -198,7 +188,7 @@ describe("CanvasHistoryAssetsModal 固定五列布局", () => {
     }));
     renderModal(vi.fn(), "generation-history");
 
-    const dialog = screen.getByRole("dialog", { name: "历史资产" });
+    const dialog = screen.getByRole("dialog", { name: "History Assets" });
     const assetGrid = dialog.querySelector(".grid-cols-5");
 
     expect(dialog).toHaveClass("w-[min(1200px,94vw)]");
@@ -209,21 +199,21 @@ describe("CanvasHistoryAssetsModal 固定五列布局", () => {
   });
 });
 
-describe("CanvasHistoryAssetsModal 搜索框 Escape", () => {
-  it("组字中按 Escape 只取消候选词,不关弹窗、不清空已输入的查询", async () => {
+describe("CanvasHistoryAssetsModal search box Escape", () => {
+  it("pressing Escape while composing only cancels the candidates, without closing the dialog or clearing the typed query", async () => {
     const { onClose, input } = renderModal();
 
     fireEvent.compositionStart(input);
     fireEvent.change(input, { target: { value: "xiaomao" } });
-    // 浏览器在 IME 组字期间照样把 Escape 的 keydown 冒泡到 document —— 这正是回归点:
-    // 搜索框守卫会跳过(不 stopPropagation),全局监听必须自己认出 isComposing。
+    // During IME composition the browser still bubbles the Escape keydown up to document -- that is exactly the regression point:
+    // the search box guard skips it (no stopPropagation), so the global listener must recognize isComposing itself.
     fireEvent.keyDown(input, { key: "Escape", isComposing: true });
 
     expect(onClose).not.toHaveBeenCalled();
     expect(input.value).toBe("xiaomao");
   });
 
-  it("非组字状态下,框里有内容时 Escape 先清空搜索、不关弹窗", async () => {
+  it("outside composition, with content in the box, Escape first clears the search without closing the dialog", async () => {
     const user = userEvent.setup();
     const { onClose, input } = renderModal();
 
@@ -234,7 +224,7 @@ describe("CanvasHistoryAssetsModal 搜索框 Escape", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("搜索框为空时 Escape 关闭弹窗", () => {
+  it("Escape closes the dialog when the search box is empty", () => {
     const { onClose, input } = renderModal();
 
     fireEvent.keyDown(input, { key: "Escape" });
@@ -243,8 +233,8 @@ describe("CanvasHistoryAssetsModal 搜索框 Escape", () => {
   });
 });
 
-describe("CanvasHistoryAssetsModal 跨分类空态", () => {
-  // resolveMediaUrl 只放行同源 /static 路径,跨域绝对 url 会被判 null(资产就进不了桶)。
+describe("CanvasHistoryAssetsModal cross-category empty state", () => {
+  // resolveMediaUrl only lets same-origin /static paths through, and cross-origin absolute urls are judged null (the asset then cannot enter a bucket).
   const nodes = [
     node(CANVAS_NODE_TYPES.upload, "n-img", {
       imageUrl: "/static/demo/dog.png",
@@ -260,19 +250,8 @@ describe("CanvasHistoryAssetsModal 跨分类空态", () => {
     }),
   ];
 
-  it("中文界面用顿号 + 或连接其他命中分类", async () => {
+  it("joins the other matching categories with an English conjunction", async () => {
     const user = userEvent.setup();
-    canvasState.nodes = nodes;
-    const { input } = renderModal();
-
-    await user.type(input, "cat");
-
-    expect(screen.getByText("当前分类没有匹配项，试试视频历史或音频历史")).toBeInTheDocument();
-  });
-
-  it("英文界面用英文连接词,不出现中文顿号", async () => {
-    const user = userEvent.setup();
-    i18nState.language = "en";
     canvasState.nodes = nodes;
     const { input } = renderModal();
 
@@ -280,6 +259,5 @@ describe("CanvasHistoryAssetsModal 跨分类空态", () => {
 
     const empty = screen.getByText(/No matches in this tab/);
     expect(empty).toHaveTextContent("try Videos or Audio");
-    expect(empty.textContent).not.toContain("、");
   });
 });

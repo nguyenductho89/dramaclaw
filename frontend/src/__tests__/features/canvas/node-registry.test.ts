@@ -38,7 +38,7 @@ describe("canvas node registry", () => {
       beat_context: {
         schema: "beat_context.v1",
         source: "standalone",
-        title: "自定义镜头上下文",
+        title: "Custom shot context",
         visual_description: "",
         narration_segment: "",
         scene_id: "",
@@ -69,16 +69,16 @@ const IMAGE_NODE_TYPES = [
   CANVAS_NODE_TYPES.exportImage,
 ] as const;
 
-describe("建边白名单", () => {
-  it("音频节点连不到图片节点上", () => {
+describe("edge creation whitelist", () => {
+  it("an audio node cannot connect to an image node", () => {
     for (const imageType of IMAGE_NODE_TYPES) {
       expect(isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.audio, imageType)).toBe(false);
     }
   });
 
-  it("音频节点的下游只有视频与视频合成", () => {
-    // 只有这两种节点会读上游音频（视频的声轨素材 / 合成的音频轨），连到别处
-    // 不会有任何效果，只是画布上一根骗人的线。
+  it("the downstream of an audio node is only video and video compose", () => {
+    // Only these two node kinds read upstream audio (a video's audio-track material / a composition's audio track), and connecting elsewhere
+    // has no effect at all, just a misleading line on the canvas.
     const allTypes = Object.keys(canvasNodeDefinitions) as CanvasNodeType[];
     const reachable = allTypes.filter((type) =>
       isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.audio, type),
@@ -89,38 +89,38 @@ describe("建边白名单", () => {
     );
   });
 
-  it("「人声/背景音分离」留下的视频 → 音频溯源边合法", () => {
-    // NodeActionToolbar 的音视频分离动作从一个视频节点同时产出「背景音」音频节点
-    // 与「无声」视频节点，两条边都画回源视频。音频那条边曾被建边收口静默丢掉。
+  it("the video -> audio provenance edge left by \"vocal/background separation\" is legal", () => {
+    // The audio/video separation action of NodeActionToolbar produces both a "background audio" audio node
+    // and a "silent" video node from one video node, and both edges are drawn back to the source video. The audio edge used to be silently dropped by the edge gate.
     expect(isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.video, CANVAS_NODE_TYPES.audio)).toBe(
       true,
     );
     expect(isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.video, CANVAS_NODE_TYPES.video)).toBe(
       true,
     );
-    // 放开 video 不等于放开所有类型：图片仍然连不进音频节点。
+    // Opening up video does not open up all types: images still cannot connect into an audio node.
     expect(isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.imageGen, CANVAS_NODE_TYPES.audio)).toBe(
       false,
     );
   });
 
-  it("风格节点只能连到图片节点，且不开放手工拖线", () => {
+  it("a style node can only connect to image nodes and does not allow manual line dragging", () => {
     const allTypes = Object.keys(canvasNodeDefinitions) as CanvasNodeType[];
     const reachable = allTypes.filter((type) =>
       isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.style, type),
     );
     expect(reachable).toEqual([CANVAS_NODE_TYPES.imageGen]);
 
-    // 那根边由图片节点的对账逻辑跟着 styleTemplateId 建（建边收口必须放行），但
-    // 手工拖线不能给 —— 一个风格节点挂到第二个图片节点上，两边的对账会把它来回
-    // 改写成对方的风格，永远收敛不了。
+    // That edge is built by the image node's reconciliation logic following styleTemplateId (the edge gate must let it through), but
+    // manual line dragging must not be offered -- a style node attached to a second image node would be rewritten back and forth by both sides' reconciliation
+    // into the other's style, never converging.
     expect(
       isManualConnectionAllowed(CANVAS_NODE_TYPES.style, CANVAS_NODE_TYPES.imageGen),
     ).toBe(false);
   });
 
-  it("风格节点不进创建菜单，也不进连线菜单", () => {
-    // 用户手工拖出来的空风格节点没有归属的图片节点，谁也不消费它。
+  it("a style node is not in the create menu or the connect menu", () => {
+    // An empty style node dragged out by hand has no owning image node, and nobody consumes it.
     expect(getMenuNodeDefinitions().map((item) => item.type)).not.toContain(
       CANVAS_NODE_TYPES.style,
     );
@@ -129,12 +129,12 @@ describe("建边白名单", () => {
     );
   });
 
-  it("新增的下游白名单不误伤既有连线", () => {
-    // 文本 → 音频（音频节点唯一的合法上游）仍然放行。
+  it("the new downstream whitelist does not hurt existing connections", () => {
+    // Text -> audio (the only legal upstream of an audio node) is still allowed.
     expect(
       isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.textAnnotation, CANVAS_NODE_TYPES.audio),
     ).toBe(true);
-    // 没有下游白名单的源类型不受新表影响。
+    // Source types without a downstream whitelist are unaffected by the new table.
     expect(getAllowedDownstreamTargetTypes(CANVAS_NODE_TYPES.imageGen)).toBeNull();
     expect(
       isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.imageGen, CANVAS_NODE_TYPES.video),
@@ -144,23 +144,23 @@ describe("建边白名单", () => {
     ).toBe(true);
   });
 
-  it("菜单的产品白名单不与建边规则冲突", () => {
-    // 断言落在**声明**的白名单上，而不是 getXxxSpawnTypes 的返回值 —— 那两个函数
-    // 出口处就用建边规则过了一道，拿同一个谓词去断言它们的输出必然恒真，守不住
-    // 任何漂移。这里查的是「产品意图里写了、但建边规则根本不放行」的格子：运行时
-    // 会被静默过滤掉，菜单和白名单从此对不上，而没人会发现。
+  it("the menu's product whitelist does not conflict with the edge creation rules", () => {
+    // The assertion lands on the **declared** whitelist, not on the return value of getXxxSpawnTypes -- those two functions
+    // already filter by the edge rules at their exit, so asserting their output with the same predicate is always true and guards
+    // nothing against drift. What is checked here is the cells "written in the product intent but never allowed by the edge rules": at runtime
+    // they are silently filtered out, the menu and the whitelist no longer match, and nobody notices.
     const conflicts: string[] = [];
     for (const [source, targets] of Object.entries(DOWNSTREAM_SPAWN_WHITELIST)) {
       for (const target of targets ?? []) {
         if (!isUpstreamConnectionAllowed(source as CanvasNodeType, target)) {
-          conflicts.push(`下游白名单 ${source} -> ${target}`);
+          conflicts.push(`downstream whitelist ${source} -> ${target}`);
         }
       }
     }
     for (const [target, sources] of Object.entries(UPSTREAM_SPAWN_WHITELIST)) {
       for (const source of sources ?? []) {
         if (!isUpstreamConnectionAllowed(source, target as CanvasNodeType)) {
-          conflicts.push(`上游白名单 ${source} -> ${target}`);
+          conflicts.push(`upstream whitelist ${source} -> ${target}`);
         }
       }
     }
@@ -169,24 +169,24 @@ describe("建边白名单", () => {
   });
 });
 
-describe("连线菜单候选", () => {
-  it("音频节点的上游菜单里没有视频", () => {
-    // 视频 → 音频那条边是「人声/背景音分离」程序建的溯源边，建边收口必须放行
-    // （否则存量边会被加载规范化丢掉），但用户手工连一根视频进来什么都不会发生
-    // —— AudioOperationsPanel 只读 text 上游。菜单和手动拖线都不该提供。
+describe("connect menu candidates", () => {
+  it("the upstream menu of an audio node has no video", () => {
+    // The video -> audio edge is a provenance edge built by the "vocal/background separation" routine, and the edge gate must let it through
+    // (otherwise existing edges would be dropped by load normalization), but a user manually wiring a video in would do nothing
+    // -- AudioOperationsPanel reads only text upstream. Neither the menu nor manual dragging should offer it.
     expect(getUpstreamSpawnTypes(CANVAS_NODE_TYPES.audio)).toEqual([
       CANVAS_NODE_TYPES.textAnnotation,
     ]);
     expect(isManualConnectionAllowed(CANVAS_NODE_TYPES.video, CANVAS_NODE_TYPES.audio)).toBe(
       false,
     );
-    // 但建边规则本身仍放行 —— 这正是两者要分开的原因。
+    // But the edge rules themselves still allow it -- which is exactly why the two must be kept separate.
     expect(isUpstreamConnectionAllowed(CANVAS_NODE_TYPES.video, CANVAS_NODE_TYPES.audio)).toBe(
       true,
     );
   });
 
-  it("其余节点的菜单候选不受影响", () => {
+  it("menu candidates of the other nodes are unaffected", () => {
     expect(getUpstreamSpawnTypes(CANVAS_NODE_TYPES.video)).toEqual([
       CANVAS_NODE_TYPES.textAnnotation,
       CANVAS_NODE_TYPES.imageGen,
@@ -201,7 +201,7 @@ describe("连线菜单候选", () => {
       CANVAS_NODE_TYPES.video,
       CANVAS_NODE_TYPES.videoCompose,
     ]);
-    // 图片类节点的下游不含音频。
+    // The downstream of image-type nodes does not include audio.
     expect(getDownstreamSpawnTypes(CANVAS_NODE_TYPES.imageGen)).not.toContain(
       CANVAS_NODE_TYPES.audio,
     );

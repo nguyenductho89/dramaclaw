@@ -24,7 +24,7 @@ class _FakeScene:
 
 class _FakeStore:
     async def list_scenes(self) -> list[_FakeScene]:
-        return [_FakeScene("皇宫·大殿")]
+        return [_FakeScene("Imperial Palace Hall")]
 
 
 class _RealProjector:
@@ -113,7 +113,7 @@ async def test_sketch_from_context_payload_gains_the_projection_when_installed(
 
     projection = payload["projection"]
     assert projection["task_type"] == "mainline_sketch_from_context"
-    assert projection["fields"]["scenes"] == [{"name": "皇宫·大殿", "aliases": []}]
+    assert projection["fields"]["scenes"] == [{"name": "Imperial Palace Hall", "aliases": []}]
 
 
 @pytest.mark.asyncio

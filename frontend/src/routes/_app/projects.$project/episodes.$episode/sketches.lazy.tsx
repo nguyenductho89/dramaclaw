@@ -3,7 +3,7 @@
 import { createLazyFileRoute, Navigate } from "@tanstack/react-router";
 
 // v3 redirect — the per-stage sketches page has been merged into /beats as
-// the 草图 sub-tab. Kept so legacy bookmarks / inbound links continue to work.
+// the Sketch sub-tab. Kept so legacy bookmarks / inbound links continue to work.
 function SketchesRedirect() {
   const { project, episode } = Route.useParams();
   return (

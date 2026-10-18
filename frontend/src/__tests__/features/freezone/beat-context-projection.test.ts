@@ -26,7 +26,7 @@ const nodes = [
       __freezone_source: {
         kind: "identity",
         role: "character_identity",
-        meta: { identity_id: "沈月白_青年时期" },
+        meta: { identity_id: "ShenYuebai_young_adult" },
       },
     },
   },
@@ -38,7 +38,7 @@ const nodes = [
       __freezone_source: {
         kind: "identity",
         role: "character_identity",
-        meta: { identity_id: "陆辰_青年时期" },
+        meta: { identity_id: "LuChen_young_adult" },
       },
     },
   },
@@ -50,7 +50,7 @@ const nodes = [
       __freezone_source: {
         kind: "identity",
         role: "character_identity",
-        meta: { identity_id: "春柳_青年时期" },
+        meta: { identity_id: "ChunLiu_young_adult" },
       },
     },
   },
@@ -62,7 +62,7 @@ const nodes = [
       __freezone_source: {
         kind: "prop",
         role: "prop_reference",
-        meta: { prop_id: "账本" },
+        meta: { prop_id: "Ledger" },
       },
     },
   },
@@ -99,28 +99,28 @@ describe("syncBeatContextMainlineEdges", () => {
         "edge_identity_keep",
         "ref_identity_keep",
         "identity",
-        "identity:沈月白_青年时期",
-        { kind: "identity", identity_id: "沈月白_青年时期" },
+        "identity:ShenYuebai_young_adult",
+        { kind: "identity", identity_id: "ShenYuebai_young_adult" },
       ),
       roleEdge(
         "edge_identity_removed",
         "ref_identity_removed",
         "identity",
-        "identity:春柳_青年时期",
-        { kind: "identity", identity_id: "春柳_青年时期" },
+        "identity:ChunLiu_young_adult",
+        { kind: "identity", identity_id: "ChunLiu_young_adult" },
       ),
       roleEdge(
         "edge_prop_removed",
         "ref_prop_removed",
         "prop",
-        "prop:账本",
-        { kind: "prop", prop_id: "账本" },
+        "prop:Ledger",
+        { kind: "prop", prop_id: "Ledger" },
       ),
     ];
 
     const next = syncBeatContextMainlineEdges(
       "context_beat",
-      ["沈月白_青年时期", "陆辰_青年时期"],
+      ["ShenYuebai_young_adult", "LuChen_young_adult"],
       [],
       nodes,
       edges,
@@ -135,7 +135,7 @@ describe("syncBeatContextMainlineEdges", () => {
         .filter((edge) => (edge.data as { role?: unknown }).role === "identity")
         .map((edge) => edge.targetHandle)
         .sort(),
-    ).toEqual(["identity:沈月白_青年时期", "identity:陆辰_青年时期"]);
+    ).toEqual(["identity:LuChen_young_adult", "identity:ShenYuebai_young_adult"]);
     expect(next.some((edge) => (edge.data as { role?: unknown }).role === "prop")).toBe(false);
   });
 });

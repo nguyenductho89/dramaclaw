@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 import { buildChatTaskLabel } from "@/features/superchat/task-notification-label";
 import type { TaskState } from "@/task-center/types";
 
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
-// 真词条表：key 写错、词条漏了都会当场抛，不会静悄悄回显 key。
-const t = zhT as unknown as (key: string, options?: Record<string, unknown>) => string;
+// Real translation table: a mistyped key or a missing entry throws on the spot instead of silently echoing the key.
+const t = enT as unknown as (key: string, options?: Record<string, unknown>) => string;
 
 function task(overrides: Partial<TaskState>): TaskState {
   return {
@@ -39,11 +39,11 @@ describe("buildChatTaskLabel", () => {
       buildChatTaskLabel(
         task({
           task_type: "scene_reference_asset",
-          result: { scene_name: "大学宿舍", kind: "master" },
+          result: { scene_name: "University dorm", kind: "master" },
         }),
         t,
       ),
-    ).toBe("大学宿舍主场景参考图");
+    ).toBe("University dorm — master reference");
   });
 
   it("uses character result fields for portraits", () => {
@@ -51,11 +51,11 @@ describe("buildChatTaskLabel", () => {
       buildChatTaskLabel(
         task({
           task_type: "character_portrait",
-          result: { mode: "portrait", character_name: "苏糖" },
+          result: { mode: "portrait", character_name: "Sutang" },
         }),
         t,
       ),
-    ).toBe("苏糖肖像");
+    ).toBe("Sutang portrait");
   });
 
   it("uses identity result fields for identity images", () => {
@@ -63,11 +63,11 @@ describe("buildChatTaskLabel", () => {
       buildChatTaskLabel(
         task({
           task_type: "identity_image",
-          result: { character_name: "苏糖", identity_name: "大学生" },
+          result: { character_name: "Sutang", identity_name: "College student" },
         }),
         t,
       ),
-    ).toBe("苏糖「大学生」身份图");
+    ).toBe("Sutang — “College student” identity image");
   });
 
   it("falls back to scope when result omits names", () => {
@@ -75,12 +75,12 @@ describe("buildChatTaskLabel", () => {
       buildChatTaskLabel(
         task({
           task_type: "character_portrait",
-          scope: "character:苏糖:identity_portrait:大学生",
+          scope: "character:Sutang:identity_portrait:College student",
           result: {},
         }),
         t,
       ),
-    ).toBe("苏糖「大学生」身份肖像");
+    ).toBe("Sutang — “College student” identity portrait");
   });
 
   it("derives sketch grid labels from result metadata", () => {
@@ -97,7 +97,7 @@ describe("buildChatTaskLabel", () => {
         }),
         t,
       ),
-    ).toBe("第 1 集草图网格 1/2（Beat 1-5）");
+    ).toBe("Ep 1 · Sketch grid 1/2 (Beat 1-5)");
   });
 
   it("keeps non-contiguous sketch beat ranges readable", () => {
@@ -114,6 +114,6 @@ describe("buildChatTaskLabel", () => {
         }),
         t,
       ),
-    ).toBe("第 1 集草图网格 2/2（Beat 26-27, 29-30, 37）");
+    ).toBe("Ep 1 · Sketch grid 2/2 (Beat 26-27, 29-30, 37)");
   });
 });

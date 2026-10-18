@@ -3,9 +3,9 @@
 import type { TFn } from "@/lib/i18n-types";
 
 /**
- * 后端（identity_planner._normalize_age_group_value）把年龄段归一成这四个 code，
- * 生成数据里带的是 code 而不是中文，所以界面按 code 查词条就能跟着语言走。
- * 词条 key 里 youth 写作 young，是历史命名，别改动词条那边（老快照还在用）。
+ * The backend (identity_planner._normalize_age_group_value) normalizes the age group into these four codes.
+ * Generated data carries the code, so the UI looks up the label by code and follows the UI language.
+ * In the label keys `youth` is spelled `young`; that is historical naming, leave the locale entries alone (old snapshots still use them).
  */
 export const AGE_GROUP_CODES = ["child", "youth", "middle", "elder"] as const;
 
@@ -22,7 +22,7 @@ export function isAgeGroupCode(value: string | null | undefined): value is AgeGr
   return AGE_GROUP_CODES.includes(String(value ?? "") as AgeGroupCode);
 }
 
-/** 认得的 code 返回本地化标签；认不得（老数据里直接存了中文）就原样回显。 */
+/** Returns the localized label for a known code; unknown values (legacy data stored as free text) are shown as is. */
 export function ageGroupLabel(value: string | null | undefined, t: TFn): string {
   const raw = String(value ?? "").trim();
   if (!raw) return "";

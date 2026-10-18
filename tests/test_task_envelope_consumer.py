@@ -325,7 +325,7 @@ async def test_consumer_verifies_envelope_before_running_policy():
 
 @pytest.mark.asyncio
 async def test_policy_rejection_carries_verified_settlement_identity():
-    """灰度关闭发生在 verify 成功之后，所以身份是可信的，允许驱动退款。"""
+    """Gray rollout shutdown happens after verify succeeds, so the identity is trusted and may drive a refund."""
     from novelvideo.ports.authz import AuthzError
     from novelvideo.task_backend.consumer import (
         TaskEnvelopeConsumer,
@@ -349,7 +349,7 @@ async def test_policy_rejection_carries_verified_settlement_identity():
 
     settlement = captured.value.settlement
     assert settlement is not None
-    # 刻意不是 VerifiedTaskDelivery：那个类型是「可以进 runner」的凭证。
+    # Deliberately not VerifiedTaskDelivery: that type is the credential for 'may enter the runner'.
     assert not isinstance(settlement, VerifiedTaskDelivery)
     assert settlement.project_id == "project-1"
     assert settlement.requester_user_id == "user-1"
@@ -367,7 +367,7 @@ async def test_policy_rejection_carries_verified_settlement_identity():
 
 @pytest.mark.asyncio
 async def test_stale_authority_rejection_carries_verified_settlement_identity():
-    """authz 漂移同样发生在 verify 之后——这是本条最高频的触发源。"""
+    """Authz drift also happens after verify - this is the most frequent trigger of this path."""
     from novelvideo.task_backend.consumer import TaskEnvelopeConsumer
     from novelvideo.task_backend.envelope import StaleTaskEnvelope
 
@@ -454,7 +454,7 @@ async def test_unclassified_authz_failure_is_retryable_unknown() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("case", ["flat_mismatch", "tampered_signature", "expired"])
 async def test_unverified_rejection_withholds_settlement_identity(case):
-    """签名没通过就没有可信身份，绝不能拿它驱动资金动作。"""
+    """Without a passing signature there is no trusted identity, and it must never drive a funds action."""
     from novelvideo.task_backend.consumer import TaskEnvelopeConsumer
     from novelvideo.task_backend.envelope import InvalidTaskEnvelope
 

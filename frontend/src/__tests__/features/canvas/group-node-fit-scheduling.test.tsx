@@ -47,14 +47,14 @@ describe("GroupNode geometry reconciliation", () => {
           id: "workflow-group",
           type: CANVAS_NODE_TYPES.group,
           position: { x: 0, y: 0 },
-          data: { displayName: "批量工作流" },
+          data: { displayName: "Batch workflow" },
         },
         ...Array.from({ length: 37 }, (_, index) => ({
           id: `node-${index}`,
           type: CANVAS_NODE_TYPES.imageGen,
           parentId: "workflow-group",
           position: { x: index * 20, y: index * 10 },
-          data: { prompt: `镜头 ${index}` },
+          data: { prompt: `Shot ${index}` },
         })),
       ],
       edges: [],
@@ -67,7 +67,7 @@ describe("GroupNode geometry reconciliation", () => {
     render(
       <GroupNode
         id="workflow-group"
-        data={{ displayName: "批量工作流" } as GroupNodeData}
+        data={{ displayName: "Batch workflow" } as GroupNodeData}
       />,
     );
 

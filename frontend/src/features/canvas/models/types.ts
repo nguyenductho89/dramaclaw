@@ -57,14 +57,14 @@ export interface ImageModelDefinition {
   extraParamsSchema?: ExtraParamDefinition[];
   defaultExtraParams?: Record<string, unknown>;
   /**
-   * 后台「媒体模型」下发的 `request.parameters` 原样带过来，交给
-   * `MediaModelParameterChip` 渲染、以 `model_params` 提交。
+   * The `request.parameters` delivered by the backend "media models" are carried over as is, handed to
+   * `MediaModelParameterChip` for rendering and submitted as `model_params`.
    *
-   * 刻意不塞进上面的 `extraParamsSchema`：那是前端静态注册表的老结构，只认
-   * enum/boolean/number/string，没有 multiselect、没有 modes 过滤，选项值也一律
-   * 被 `String()` 拍成字符串。目录里的 multiselect 参数按它渲染会退化成单选、
-   * 数字/布尔选项会变成字符串，后端 `media_model_request_schema` 的类型校验直接
-   * 打回来。两套 schema 各管各的，不互相翻译。
+   * Deliberately not stuffed into the `extraParamsSchema` above: that is the old structure of the frontend static registry, recognizing only
+   * enum/boolean/number/string, with no multiselect, no modes filtering, and option values all
+   * flattened into strings by `String()`. A multiselect parameter in the catalog rendered by it would degrade to single select,
+   * numeric/boolean options would become strings, and the backend `media_model_request_schema` type validation would reject it outright.
+   * The two sets of schema each manage their own and do not translate each other.
    */
   requestParameters?: MediaModelParameterDefinition[];
   pricing?: ModelPricingDefinition;

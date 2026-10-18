@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from novelvideo.utils.source_language import detect_episode_asset_language
 from novelvideo.generators.tts_generator import EdgeTTSGenerator
 from novelvideo.project_config import (
     load_effective_narration_style_for_voice,
@@ -26,29 +27,32 @@ from novelvideo.seedance2_i2v.voice_clone import (
     resolve_narrator_source,
 )
 
-SYSTEM_VOICE_SAMPLE_TEXT = "你好，这是系统生成的参考声线，用于保持整部作品的声音稳定自然。"
-NARRATOR_VOICE = "zh-CN-XiaoxuanNeural"
-FEMALE_VOICES = (
-    "zh-CN-XiaoxiaoNeural",
-    "zh-CN-XiaoyiNeural",
-    "zh-CN-XiaomoNeural",
-)
-MALE_VOICES = (
-    "zh-CN-YunxiNeural",
-    "zh-CN-YunjianNeural",
-    "zh-CN-YunyangNeural",
-)
+SYSTEM_VOICE_SAMPLE_TEXTS = {
+    "en": "Hello, this is a system-generated reference voice that keeps the whole production sounding stable and natural.",
+    "vi": "Xin chào, đây là giọng tham chiếu do hệ thống tạo, giúp toàn bộ tác phẩm giữ được âm thanh ổn định và tự nhiên.",
+}
+NARRATOR_VOICES = {"en": "en-US-ChristopherNeural", "vi": "vi-VN-NamMinhNeural"}
+FEMALE_VOICES = {
+    "en": ("en-US-AriaNeural", "en-US-JennyNeural", "en-US-MichelleNeural"),
+    "vi": ("vi-VN-HoaiMyNeural",),
+}
+MALE_VOICES = {
+    "en": ("en-US-GuyNeural", "en-US-DavisNeural", "en-US-EricNeural"),
+    "vi": ("vi-VN-NamMinhNeural",),
+}
+CHILD_VOICES = {"en": "en-US-AnaNeural", "vi": "vi-VN-HoaiMyNeural"}
 
 
-def _system_voice_for_character(character) -> str:
+def _system_voice_for_character(character, language: str = "en") -> str:
+    language = "vi" if language == "vi" else "en"
     gender = str(getattr(character, "gender", "") or "").strip().lower()
     age_group = str(getattr(character, "age_group", "") or "").strip().lower()
-    if "女" in gender or gender in {"female", "woman", "girl"}:
+    if gender in {"female", "woman", "girl", "f"}:
         if age_group == "child":
-            return "zh-CN-XiaoshuangNeural"
-        pool = FEMALE_VOICES
+            return CHILD_VOICES[language]
+        pool = FEMALE_VOICES[language]
     else:
-        pool = MALE_VOICES
+        pool = MALE_VOICES[language]
     stable_index = sum(ord(char) for char in str(getattr(character, "name", "") or ""))
     return pool[stable_index % len(pool)]
 
@@ -62,6 +66,7 @@ async def _system_voice_content(
     project_dir: Path,
     voice: str,
     cache: dict[str, bytes],
+    language: str = "en",
 ) -> bytes:
     cached = cache.get(voice)
     if cached:
@@ -70,15 +75,15 @@ async def _system_voice_content(
     output_path = cache_dir / f"{_safe_voice_filename(voice)}.mp3"
     if not output_path.exists() or output_path.stat().st_size <= 0:
         result = await EdgeTTSGenerator(voice=voice).generate(
-            text=SYSTEM_VOICE_SAMPLE_TEXT,
+            text=SYSTEM_VOICE_SAMPLE_TEXTS["vi" if language == "vi" else "en"],
             output_path=str(output_path),
             generate_subtitle=False,
         )
         if not result.success or not output_path.exists():
-            raise RuntimeError(result.error or f"系统声线生成失败：{voice}")
+            raise RuntimeError(result.error or f"System voice generation failed: {voice}")
     content = output_path.read_bytes()
     if not content:
-        raise RuntimeError(f"系统声线生成结果为空：{voice}")
+        raise RuntimeError(f"System voice generation returned an empty result: {voice}")
     cache[voice] = content
     return content
 
@@ -117,7 +122,7 @@ async def prepare_missing_system_voices(
             speaker = str(beat.get("speaker") or "").strip()
             character = _matching_character(speaker, characters)
             if character is None:
-                unresolved_speakers.add(speaker or "未指定说话身份")
+                unresolved_speakers.add(speaker or "Unspecified speaking identity")
             else:
                 character_targets[character.name] = character
 
@@ -135,6 +140,8 @@ async def prepare_missing_system_voices(
             if protagonist is not None:
                 character_targets[protagonist.name] = protagonist
 
+    language = await detect_episode_asset_language(store, episode)
+    narrator_voice = NARRATOR_VOICES[language]
     prepared: list[dict[str, str]] = []
     content_cache: dict[str, bytes] = {}
 
@@ -149,8 +156,9 @@ async def prepare_missing_system_voices(
         if resolution.audio_path is None:
             content = await _system_voice_content(
                 project_dir=root,
-                voice=NARRATOR_VOICE,
+                voice=narrator_voice,
                 cache=content_cache,
+                language=language,
             )
             target = root / "assets" / "narrator" / "voice.mp3"
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -162,15 +170,16 @@ async def prepare_missing_system_voices(
                 sha256=voice_content_sha256(content),
             )
             prepared.append(
-                {"target": "项目解说人", "voice": NARRATOR_VOICE, "slot": "narrator"}
+                {"target": "Project narrator", "voice": narrator_voice, "slot": "narrator"}
             )
 
     for character_name, character in character_targets.items():
-        voice = _system_voice_for_character(character)
+        voice = _system_voice_for_character(character, language)
         content = await _system_voice_content(
             project_dir=root,
             voice=voice,
             cache=content_cache,
+            language=language,
         )
         rel_path, sha256, updated_at = persist_character_voice_file(
             project_dir=root,
@@ -202,7 +211,7 @@ async def prepare_missing_system_voices(
         mode="sync_changed",
     )
     for speaker in sorted(unresolved_speakers):
-        detail = f"未找到说话身份对应角色：{speaker}"
+        detail = f"No character found for the speaking identity: {speaker}"
         if detail not in remaining:
             remaining.append(detail)
     return {
@@ -210,4 +219,6 @@ async def prepare_missing_system_voices(
         "prepared_count": len(prepared),
         "remaining_errors": remaining,
         "ready": not remaining,
+        # Stable code the frontend branches on when system voices are still required.
+        "code": "" if not remaining else "system_voice_required",
     }

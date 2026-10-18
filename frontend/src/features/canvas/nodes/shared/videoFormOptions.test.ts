@@ -14,13 +14,13 @@ describe("formatReferenceMediaCompilerLabel", () => {
         kind: "image",
         nodeId: "node-1",
         imageUrl: "https://example.test/scene.png",
-        displayName: "上一镜尾帧",
+        displayName: "Previous shot last frame",
       },
       typeIndex: 4,
       withinCap: true,
     };
 
-    expect(formatReferenceMediaCompilerLabel(entry)).toBe("图片4：上一镜尾帧");
+    expect(formatReferenceMediaCompilerLabel(entry)).toBe("image4: Previous shot last frame");
   });
 
   it("falls back to node id when the media has no display name", () => {
@@ -34,6 +34,6 @@ describe("formatReferenceMediaCompilerLabel", () => {
       withinCap: true,
     };
 
-    expect(formatReferenceMediaCompilerLabel(entry)).toBe("音频2：audio-node");
+    expect(formatReferenceMediaCompilerLabel(entry)).toBe("audio2: audio-node");
   });
 });

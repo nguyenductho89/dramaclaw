@@ -4,25 +4,25 @@ import { describe, expect, it } from "vitest";
 
 import { sceneTypeLabel, sceneTypeOptions } from "@/lib/scene-type";
 
-import { zhT } from "../helpers/i18n-fixtures";
+import { enT } from "../helpers/i18n-fixtures";
 
 describe("scene type labels", () => {
   it("renders canonical scene type values through i18n", () => {
-    expect(sceneTypeOptions(null, zhT)).toEqual([
-      { value: "interior", label: "室内" },
-      { value: "exterior", label: "室外" },
-      { value: "mixed", label: "室内外" },
-      { value: "other", label: "其他" },
+    expect(sceneTypeOptions(null, enT)).toEqual([
+      { value: "interior", label: "Interior" },
+      { value: "exterior", label: "Exterior" },
+      { value: "mixed", label: "Interior & exterior" },
+      { value: "other", label: "Other" },
     ]);
-    expect(sceneTypeLabel("interior", zhT)).toBe("室内");
-    expect(sceneTypeLabel("exterior", zhT)).toBe("室外");
+    expect(sceneTypeLabel("interior", enT)).toBe("Interior");
+    expect(sceneTypeLabel("exterior", enT)).toBe("Exterior");
   });
 
   it("keeps unknown legacy values readable", () => {
-    expect(sceneTypeLabel("underground", zhT)).toBe("underground");
-    expect(sceneTypeLabel("", zhT)).toBe("");
-    // 项目自扩的类型要能选中，不能因为不在规范表里就从下拉里消失
-    expect(sceneTypeOptions("underground", zhT)).toContainEqual({
+    expect(sceneTypeLabel("underground", enT)).toBe("underground");
+    expect(sceneTypeLabel("", enT)).toBe("");
+    // A project-defined type must stay selectable, and must not vanish from the dropdown just because it is not in the canonical table
+    expect(sceneTypeOptions("underground", enT)).toContainEqual({
       value: "underground",
       label: "underground",
     });

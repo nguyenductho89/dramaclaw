@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 
 import {
@@ -14,16 +14,16 @@ import { isSupportedMediaFile } from '@/features/canvas/application/videoFileTyp
 import { stashExternalFile } from '@/features/canvas/application/pendingExternalFiles';
 import type { CanvasEventMap } from '@/features/canvas/application/ports';
 
-/** 与 VideoNode 的 spawnCharacterLibraryReferences 同一套名义尺寸。 */
+/** The same nominal size as VideoNode's spawnCharacterLibraryReferences. */
 const UPLOAD_WIDTH = 320;
 const UPLOAD_HEIGHT = 240;
 const GAP_X = 40;
 const GAP_Y = 24;
 
-/** 对齐 VideoNode.tsx 的 DEFAULT_HEIGHT,target 没给 height 时的兜底值。 */
+/** Aligned with DEFAULT_HEIGHT of VideoNode.tsx, a fallback when the target gives no height. */
 const FALLBACK_TARGET_HEIGHT = 380;
 
-/** 与资产库的「资产参考组」区分来源。组名会显示在画布上，所以是词条不是常量。 */
+/** Distinguishes the source from the library's "asset reference group". The group name is shown on the canvas, so it is a translated entry, not a constant. */
 export function externalAssetGroupLabel(): string {
   return i18n.t('canvas.naming.externalAssetGroup');
 }
@@ -31,7 +31,7 @@ export function externalAssetGroupLabel(): string {
 export interface SpawnExternalAssetsTarget {
   id: string;
   position: { x: number; y: number };
-  /** 用于让竖排的素材节点与目标节点垂直居中;缺省或 0 时按 380 兜底。 */
+  /** Used to vertically center the stacked asset nodes with the target node; falls back to 380 when absent or 0. */
   height?: number;
 }
 
@@ -46,69 +46,68 @@ export interface SpawnExternalAssetsDeps {
     type: 'upload-node/external-file',
     payload: CanvasEventMap['upload-node/external-file'],
   ) => void;
-  /** 用于把新建的素材节点自动编成一组。 */
+  /** Used to automatically group the newly created asset nodes. */
   autoGroupSpawn: (
     sourceNodeId: string,
     spawnedNodeIds: string[],
     opts?: { label?: string },
   ) => string | null;
-  /** 默认 requestAnimationFrame;测试注入同步执行。 */
+  /** Defaults to requestAnimationFrame; tests inject synchronous execution. */
   schedule?: (fn: () => void) => void;
 }
 
 /**
- * 把本地选中的外部文件接成目标节点的上游素材。
+ * Connect locally selected external files as upstream materials of the target node.
  *
- * 每个文件先落成 upload 节点并连边,再把 File 投给它 —— UploadNode 自己按 MIME
- * 分流:图片留在 upload 节点,视频/音频走 convertNodeType 原地变形成 video/audio
- * 节点。变形不换 id,所以先连的边不会丢。
+ * Each file first lands as an upload node and is connected by an edge, and then the File is handed to it - UploadNode splits by MIME itself:
+ * images stay in the upload node, and videos/audios morph in place via convertNodeType into video/audio
+ * nodes. The morph does not change the id, so the edge connected first is not lost.
  *
- * 不传 imageOnly(会让 UploadNode 拒收音视频)、不传 displayName(会顶掉
- * 「用上传文件名作节点标题」的默认行为),只传 user_spawned:true —— 它是
- * nodeMainlineFlags 的分类依据,也是后端 _merge_restored_preset_canvas
- * (freezone.py 的 _is_replaceable_projection_node)判断「刷新预设画布时别覆盖
- * 这个节点」的依据。
+ * Do not pass imageOnly (it would make UploadNode reject audio/video), do not pass displayName (it would override
+ * the default behavior of "use the uploaded file name as the node title"), only pass user_spawned:true - it is the classification basis of
+ * nodeMainlineFlags, and also the basis on which the backend _merge_restored_preset_canvas
+ * (freezone.py's _is_replaceable_projection_node) judges "do not overwrite
+ * this node when refreshing the preset canvas".
  *
- * 别照抄 Canvas.tsx 落文件处那句「不传就会被 NodeActionToolbar 的 canvas 级兜底
- * 锁死」—— 那个兜底已经没了。NodeActionToolbar.tsx:1043 起 isPresetLocked 只看
- * isPresetManaged,不带任何标记的 {} 节点判定为 ordinary、不锁(有测试钉着:
- * system-managed-node-data.test.ts 的 isSystemManagedNodeData({}) === false)。
+ * Do not copy the line in Canvas.tsx at the file drop point saying "if not passed it will be locked by NodeActionToolbar's canvas-level
+ * fallback" - that fallback is gone. From NodeActionToolbar.tsx:1043 isPresetLocked only looks at
+ * isPresetManaged, and a {} node with no marker is judged ordinary and not locked (pinned by a test:
+ * isSystemManagedNodeData({}) === false in system-managed-node-data.test.ts).
  *
- * target 是调用方传入的快照,函数内部不现读 store —— 调用方必须在调用那一刻从
- * store 取最新的 position/height,别塞一个可能过期的闭包值。
+ * target is a snapshot passed in by the caller; this function does not read the store live inside - the caller must take the latest position/height
+ * from the store at the moment of calling, and not stuff in a possibly stale closure value.
  *
- * 本模块形状上像「从已有节点派生新节点」,但语义上是全新导入的外部素材、没有
- * provenance 可继承,所以故意不走 domain/inheritMainlineFields.ts —— 那条 helper
- * 是给「从已有节点/记录派生」的路径准备的,走它会把 slot_target 之类的血统字段
- * 错误地继承进来。手写 user_spawned 与 Canvas.tsx 落文件、assetDrag.ts 同构。
+ * This module looks like "deriving new nodes from existing nodes" in shape, but semantically it is freshly imported external material with no
+ * provenance to inherit, so it deliberately does not go through domain/inheritMainlineFields.ts - that helper
+ * is for paths "deriving from existing nodes/records", and going through it would wrongly inherit lineage fields such as slot_target.
+ * Hand-writing user_spawned is isomorphic with the file drop in Canvas.tsx and assetDrag.ts.
  *
- * 事件投递延后一帧(经 schedule 注入),因为新节点当帧还没挂载订阅;而 File 本体是
- * 同步 stash 进 [[pendingExternalFiles]] 的 —— 低缩放档下新节点会先以 LOD shell 挂
- * 载,完整组件晚于那一帧才订阅,只靠事件必丢(总线无重放)。消费侧挂载时会来取。
+ * Event delivery is deferred by one frame (injected via schedule), because the new node has not mounted its subscription in the same frame; while the File itself is
+ * synchronously stashed into [[pendingExternalFiles]] - at the low-zoom tier a new node first mounts as an LOD shell,
+ * the full component subscribes later than that frame, and relying on the event alone would surely lose it (the bus has no replay). The consumer fetches it on mount.
  *
- * 这里刻意不调 focusNewNodeIfLowZoom:那是给「从画布空白处凭空新建节点」用的 ——
- * 拖入/粘贴落点在哪、用户未必看得见,所以要拉到 0.6 让他确认。本函数是从一个已选中
- * 的目标节点派生上游素材,视野已经在目标节点上,再改一次缩放反而是抢镜头。缺省不是
- * 漏了。
+ * focusNewNodeIfLowZoom is deliberately not called here: it is for "creating a node from nothing at a blank canvas spot" -
+ * where a drag/paste lands the user may not be able to see, so zoom is pulled to 0.6 for confirmation. This function derives upstream materials from an already selected
+ * target node, the view is already on the target node, and changing zoom again would steal the camera. The omission by default is not an oversight.
  *
- * 多文件竖直排布、与目标节点垂直居中,口径对齐 VideoNode.tsx 的
- * spawnCharacterLibraryReferences:同一套 UPLOAD_WIDTH/UPLOAD_HEIGHT/GAP_X/GAP_Y,
- * 目标节点没给 height 时按 FALLBACK_TARGET_HEIGHT(=VideoNode 的 DEFAULT_HEIGHT)
- * 兜底。新建的节点最后会被 autoGroupSpawn 编成一组。
+ * Multiple files are stacked vertically and vertically centered with the target node, aligned with VideoNode.tsx's
+ * spawnCharacterLibraryReferences: the same UPLOAD_WIDTH/UPLOAD_HEIGHT/GAP_X/GAP_Y,
+ * and when the target node gives no height, FALLBACK_TARGET_HEIGHT (= VideoNode's DEFAULT_HEIGHT) is the
+ * fallback. The newly created nodes are finally grouped by autoGroupSpawn.
  */
 export function spawnExternalAssetNodes(
   target: SpawnExternalAssetsTarget,
   files: readonly File[],
   deps: SpawnExternalAssetsDeps,
 ): string[] {
-  // 非媒体文件必须先在这里挡掉:UploadNode.handleMediaFile 对既非图片、也非
-  // 视频/音频的文件是静默 return(没有 else 分支),放进来就会留下一个连着线
-  // 却永远空着的 upload 节点。
+  // Non-media files must be blocked here first: UploadNode.handleMediaFile silently returns for a file that is neither an image nor
+  // a video/audio (there is no else branch), and letting it in would leave an upload node that is connected by an edge
+  // but forever empty.
   const accepted = files.filter(isSupportedMediaFile);
 
-  // 短路必须落在 accepted 算出来之后、判断 accepted.length —— 如果改成在过滤
-  // 之前判断 files.length,「选中的全是非媒体文件」这种情况会绕开短路、走到底,
-  // 然后 autoGroupSpawn(target.id, []) 编出一个空组。
+  // The short circuit must land after accepted is computed, judging accepted.length - if it were changed to judge files.length
+  // before filtering, the case "everything selected is a non-media file" would bypass the short circuit and run to the end,
+  // and then autoGroupSpawn(target.id, []) would build an empty group.
   if (accepted.length === 0) return [];
 
   const schedule =
@@ -117,8 +116,8 @@ export function spawnExternalAssetNodes(
   const baseX = target.position.x - UPLOAD_WIDTH - GAP_X;
   const totalH =
     UPLOAD_HEIGHT * accepted.length + GAP_Y * (accepted.length - 1);
-  // 用 || 而不是 ??:0 和 NaN 也该走兜底。参照实现写的是 ??,那样 height 为 0 时
-  // 会按 0 高度居中、把整组往上推出目标节点范围 —— 这个洞不跟。
+  // Use || rather than ??: 0 and NaN should also take the fallback. The reference implementation wrote ??, in which case when height is 0
+  // it would center by a height of 0 and push the whole group up out of the target node's range - this hole is not followed.
   const startY =
     target.position.y + ((target.height || FALLBACK_TARGET_HEIGHT) - totalH) / 2;
 
@@ -132,13 +131,13 @@ export function spawnExternalAssetNodes(
     );
     const edgeId = deps.addEdge(nodeId, target.id);
     if (edgeId === null) {
-      // 节点建好了、线没连上、文件还是会照投——这是最难排查的静默失败,先打
-      // 一句警告。口径参照 UploadNode.tsx 的 `[upload-node] …`。
+      // The node was built, the edge did not connect, and the file is still delivered - this is the hardest silent failure to troubleshoot, so first
+      // print a warning. The convention follows the `[upload-node] ...` of UploadNode.tsx.
       console.warn(
         `[spawn-external-assets] addEdge(${nodeId} -> ${target.id}) returned null; node created without an edge`,
       );
     }
-    // File 本体走暂存（同步落，不等 schedule），事件只是敲一下已挂载的节点。
+    // The File itself goes through staging (landing synchronously, not waiting for schedule); the event just pokes an already-mounted node.
     stashExternalFile('upload-node/external-file', nodeId, file);
     schedule(() => {
       deps.publish('upload-node/external-file', { nodeId });

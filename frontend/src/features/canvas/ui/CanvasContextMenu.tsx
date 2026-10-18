@@ -21,8 +21,7 @@ interface CanvasContextMenuProps {
 const MENU_VIEWPORT_MARGIN = 12;
 
 /**
- * Lightweight right-click context menu for the canvas pane (上传 / 添加节点 /
- * 撤销 / 重做 / 粘贴 …). Positioned absolutely inside the canvas wrapper, clamped
+ * Lightweight right-click context menu for the canvas pane (Upload / Add node /
  * to the viewport, and dismissed on outside-click or Escape — mirrors how
  * {@link NodeSelectionMenu} anchors and closes.
  */

@@ -2,22 +2,22 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 故事板左列表卡片 →（详情里）生成表单参考区的拖拽 MIME。
+ * The drag MIME from the storyboard left-list card -> (in the detail) the generation form's reference area.
  *
- * 用专属类型而非 text/plain 或工作流的 `CANVAS_ASSET_DRAG_MIME`：
- * - 与系统文件 / 纯文本拖放互不误伤；
- * - 与工作流「侧栏素材拖进画布新建节点」的 payload 区分——那份带 url、落点会
- *   `spawnAssetNode` 新建一个节点；本 payload 只带一个**既有节点 id**，落在详情
- *   表单参考区时语义是「给当前详情节点加一条上游引用连线」(addEdge)，不新建任何节点。
+ * A dedicated type is used instead of text/plain or the workflow's `CANVAS_ASSET_DRAG_MIME`:
+ * - no mutual interference with system file / plain-text drops;
+ * - distinct from the workflow's payload of "a sidebar asset dragged into the canvas to build a new node" - that one carries a url, and the drop point
+ *   `spawnAssetNode` builds a new node; this payload carries only one **existing node id**, and when dropped in the detail
+ *   form's reference area the semantics is "add an upstream reference edge to the current detail node" (addEdge), building no node.
  */
 export const BOARD_REFERENCE_DRAG_MIME = 'application/x-freezone-board-ref';
 
 export interface BoardReferenceDragPayload {
-  /** 被拖拽卡片对应的既有画布节点 id（作为上游源接入当前详情节点）。 */
+  /** The existing canvas node id corresponding to the dragged card (connected to the current detail node as an upstream source). */
   nodeId: string;
 }
 
-/** 把「引用某既有节点」序列化进 dataTransfer（拖拽源 = 左列表卡片）。 */
+/** Serialize "referencing some existing node" into dataTransfer (drag source = the left-list card). */
 export function writeBoardReferenceDragPayload(
   dataTransfer: DataTransfer,
   payload: BoardReferenceDragPayload,
@@ -26,7 +26,7 @@ export function writeBoardReferenceDragPayload(
   dataTransfer.effectAllowed = 'copy';
 }
 
-/** 从 dataTransfer 解析引用拖拽 payload；非本类拖拽或缺 nodeId 返回 null。 */
+/** Parse the reference drag payload from dataTransfer; returns null for a drag of another kind or missing nodeId. */
 export function readBoardReferenceDragPayload(
   dataTransfer: DataTransfer,
 ): BoardReferenceDragPayload | null {
@@ -42,8 +42,8 @@ export function readBoardReferenceDragPayload(
 }
 
 /**
- * 拖拽过程中（dragenter / dragover）判断这是否是一次「引用拖拽」。
- * 注意：dragover 阶段浏览器不允许读 getData，只能看 `types`，故用它做高亮门控。
+ * During the drag (dragenter / dragover), judge whether this is a "reference drag".
+ * Note that during dragover the browser does not allow reading getData, only `types` can be looked at, hence it is used for highlight gating.
  */
 export function hasBoardReferenceDrag(dataTransfer: DataTransfer | null): boolean {
   if (!dataTransfer) return false;

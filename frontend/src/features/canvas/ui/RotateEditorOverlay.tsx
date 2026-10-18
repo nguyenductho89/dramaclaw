@@ -14,18 +14,18 @@ interface RotateEditorOverlayProps {
   node: CanvasNode;
   imageSource: string;
   /**
-   * 关闭旋转编辑器。`committed` 表示是否真正提交了一次旋转（开始写回节点）：
-   *   - `false`：用户退出 / 按 Esc / 无任何变换直接关闭 —— 调用方应把进入旋转时
-   *     预创建的「旋转结果」节点删掉，避免凭空多出一个节点。
-   *   - `true` ：已开始把旋转结果写回该节点，调用方保留它。
+   * Close the rotate editor. `committed` indicates whether a rotation was really committed (write-back to the node has started):
+   *   - `false`: the user exits / presses Esc / closes with no transform at all - the caller should delete the "rotate result"
+   *     node pre-created when entering rotation, avoiding a node appearing from nowhere.
+   *   - `true`: the rotation result has started being written back to that node, and the caller keeps it.
    */
   onClose: (committed: boolean) => void;
 }
 
 /**
- * 工作流画布上的旋转编辑器外壳：预览与控制条都挂在节点上方的 NodeToolbar 上，
- * 随节点一起被视口变换。状态机与控制条本体在 `rotateEditorContent`，与故事板
- * 详情页的 `AssetBoardRotateDialog` 共用。
+ * The rotate editor shell on the workflow canvas: both the preview and the control bar hang on the NodeToolbar above the node,
+ * transformed by the viewport together with the node. The state machine and the control bar itself are in `rotateEditorContent`, shared with the storyboard
+ * detail page's `AssetBoardRotateDialog`.
  */
 export const RotateEditorOverlay = memo(
   ({ node, imageSource, onClose }: RotateEditorOverlayProps) => {
@@ -46,7 +46,7 @@ export const RotateEditorOverlay = memo(
 
     return (
       <>
-        {/* 不透明遮罩 + 实时变换的预览图，盖住原节点图。 */}
+        {/* Opaque mask + live-transformed preview image, covering the original node image. */}
         <ReactFlowNodeToolbar
           nodeId={node.id}
           isVisible
@@ -82,7 +82,7 @@ export const RotateEditorOverlay = memo(
           </div>
         </ReactFlowNodeToolbar>
 
-        {/* 控制条：浮动在节点上方。 */}
+        {/* Control bar: floating above the node. */}
         <ReactFlowNodeToolbar
           nodeId={node.id}
           isVisible
@@ -91,7 +91,7 @@ export const RotateEditorOverlay = memo(
           offset={25}
           className={NODE_TOOLBAR_CLASS}
         >
-          {/* 不显示标题：这条控制条宽度贴着节点走，加标题会顶出节点边界。 */}
+          {/* Title not shown: this control bar's width follows the node, and adding a title would push past the node boundary. */}
           <RotateEditorToolbar controller={controller} />
         </ReactFlowNodeToolbar>
       </>

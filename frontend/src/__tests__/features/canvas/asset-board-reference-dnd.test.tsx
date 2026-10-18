@@ -5,17 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CANVAS_NODE_TYPES, type CanvasEdge, type CanvasNode } from '@/features/canvas/domain/canvasNodes';
 import { AssetBoardView } from '@/features/canvas/ui/asset-board/AssetBoardView';
-import { REFERENCE_DROP_HINT_TEXT } from '@/features/canvas/ui/asset-board/AssetBoardReferenceDropZone';
+import { referenceDropHintText } from '@/features/canvas/ui/asset-board/AssetBoardReferenceDropZone';
 import { BOARD_REFERENCE_DRAG_MIME } from '@/features/canvas/ui/asset-board/boardReferenceDrag';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
-  }),
-}));
-
-// 算力询价走 react-query，测试树里没有 QueryClientProvider —— 直接短路。
+// Compute-cost quoting goes through react-query and the test tree has no QueryClientProvider -- short-circuit it directly.
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
@@ -28,20 +22,20 @@ vi.mock('@/lib/url-params', async (importOriginal) => ({
 vi.mock('@/api/ops', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api/ops')>()),
   fetchFreezoneImageModels: vi.fn(async () => [
-    { id: 'huimeng/test-image', providerId: 'huimeng', apiModel: 'test_image_api', label: '测试模型' },
+    { id: 'huimeng/test-image', providerId: 'huimeng', apiModel: 'test_image_api', label: 'Test model' },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
   fetchFreezoneCameraOptions: vi.fn(async () => null),
   listFreezoneGenerationHistory: vi.fn(async () => []),
 }));
 
-/** dataTransfer 桩：Map backing store + `types` 反映已 setData 的 key（dragover 只能读 types）。 */
+/** dataTransfer stub: a Map backing store + `types` reflecting the keys already set via setData (dragover can only read types). */
 function makeDataTransfer() {
   const store = new Map<string, string>();
   return {
     setData: (type: string, value: string) => store.set(type, value),
     getData: (type: string) => store.get(type) ?? '',
-    // 自定义拖拽虚影入口——卡片在 dragStart 时会调它把虚影换成只显示内容缩略图。
+    // Entry for the custom drag ghost -- the card calls it on dragStart to swap the ghost for a content-thumbnail-only image.
     setDragImage: vi.fn(),
     get types() {
       return Array.from(store.keys());
@@ -55,7 +49,7 @@ function seed(nodes: CanvasNode[], edges: CanvasEdge[] = []) {
   useCanvasStore.getState().setCanvasData(nodes, edges);
 }
 
-/** 当前详情的目标图片生成节点（空节点即可，媒体区占位、下方挂完整表单）。 */
+/** The current detail's target image generation node (an empty node is enough: the media area is a placeholder with the full form below). */
 function targetImageNode(): CanvasNode {
   return {
     id: 'gen-1',
@@ -66,12 +60,12 @@ function targetImageNode(): CanvasNode {
       prompt: '',
       aspectRatio: '16:9',
       size: '2K',
-      displayName: '目标图片节点',
+      displayName: 'Target image node',
     },
   };
 }
 
-/** 左列表里可拖拽的参考图片卡片（upload 节点，带缩略图 → 落成上游即显示为图片 chip）。 */
+/** A draggable reference image card in the left list (an upload node with a thumbnail -> once dropped as upstream it shows as an image chip). */
 function referenceImageNode(): CanvasNode {
   return {
     id: 'ref-2',
@@ -81,18 +75,18 @@ function referenceImageNode(): CanvasNode {
       imageUrl: '/static/ref.png',
       previewImageUrl: '/static/ref.png',
       aspectRatio: '1:1',
-      displayName: '参考图片卡片',
+      displayName: 'Reference image card',
     },
   };
 }
 
 function detailPanel() {
-  return screen.getByRole('region', { name: '资产详情' });
+  return screen.getByRole('region', { name: 'Asset details' });
 }
 
 /**
- * 左列表里某标题对应卡片的可拖拽根元素。当前详情节点的标题在详情工具条里也会以
- * 按钮出现，故用 getAll + 「在可拖拽卡片内」的按钮筛出真正的左列表卡片。
+ * The draggable root element of the card for a given title in the left list. The current detail node's title also appears in the detail toolbar as
+ * a button, so getAll + the button "inside a draggable card" filter picks out the real left-list card.
  */
 function leftListCard(title: string): HTMLElement {
   for (const button of screen.getAllByRole('button', { name: title })) {
@@ -102,18 +96,18 @@ function leftListCard(title: string): HTMLElement {
   throw new Error(`draggable card not found for ${title}`);
 }
 
-/** drop 区内的一个稳定落点（生成按钮在表单里、表单在放置层里，drop 会冒泡到放置层）。 */
+/** A stable drop point inside the drop zone (the generate button is in the form, the form is in the drop layer, and drop bubbles up to the drop layer). */
 function dropTarget() {
-  return within(detailPanel()).getByRole('button', { name: '生成' });
+  return within(detailPanel()).getByRole('button', { name: 'Generate' });
 }
 
-describe('故事板详情 · 拖拽加引用', () => {
-  it('左列表卡片是拖拽源（draggable），拖起时写入引用 payload', () => {
+describe('Storyboard detail · drag to add a reference', () => {
+  it('left-list cards are drag sources (draggable) and write the reference payload when dragged', () => {
     seed([targetImageNode(), referenceImageNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
-    const card = leftListCard('参考图片卡片');
+    const card = leftListCard('Reference image card');
     expect(card).toHaveAttribute('draggable', 'true');
 
     const dt = makeDataTransfer();
@@ -121,66 +115,66 @@ describe('故事板详情 · 拖拽加引用', () => {
     expect(dt.getData(BOARD_REFERENCE_DRAG_MIME)).toBe(JSON.stringify({ nodeId: 'ref-2' }));
   });
 
-  it('拖拽虚影只用内容缩略图，不带标题/参考素材面板（setDragImage 指向缩略图容器）', () => {
+  it('the drag ghost uses only the content thumbnail, without the title / reference assets panel (setDragImage points to the thumbnail container)', () => {
     seed([targetImageNode(), referenceImageNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
     const dt = makeDataTransfer();
-    fireEvent.dragStart(leftListCard('参考图片卡片'), { dataTransfer: dt });
+    fireEvent.dragStart(leftListCard('Reference image card'), { dataTransfer: dt });
 
     expect(dt.setDragImage).toHaveBeenCalledTimes(1);
     const dragImageEl = dt.setDragImage.mock.calls[0][0] as HTMLElement;
-    // 传的是缩略图容器：含参考缩略图 <img>，但本身不是 draggable 的整卡根，
-    // 也不包含标题按钮 → 虚影里不会带上标题与参考素材面板。
+    // The thumbnail container is passed: it contains the reference thumbnail <img> but is not the draggable whole-card root itself,
+    // and it does not contain the title button -> the ghost carries neither the title nor the reference assets panel.
     expect(dragImageEl.querySelector('img')?.getAttribute('src')).toBe('/static/ref.png');
     expect(dragImageEl).not.toHaveAttribute('draggable');
-    expect(within(dragImageEl).queryByRole('button', { name: '参考图片卡片' })).not.toBeInTheDocument();
+    expect(within(dragImageEl).queryByRole('button', { name: 'Reference image card' })).not.toBeInTheDocument();
   });
 
-  it('拖动经过表单参考区 → 高亮提示文案出现', () => {
+  it('dragging over the form reference area -> the highlighted hint text appears', () => {
     seed([targetImageNode(), referenceImageNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
     const dt = makeDataTransfer();
-    fireEvent.dragStart(leftListCard('参考图片卡片'), { dataTransfer: dt });
-    // 悬停前没有提示层。
-    expect(within(detailPanel()).queryByText(REFERENCE_DROP_HINT_TEXT)).not.toBeInTheDocument();
+    fireEvent.dragStart(leftListCard('Reference image card'), { dataTransfer: dt });
+    // There is no hint layer before hovering.
+    expect(within(detailPanel()).queryByText(referenceDropHintText())).not.toBeInTheDocument();
 
     fireEvent.dragEnter(dropTarget(), { dataTransfer: dt });
-    expect(within(detailPanel()).getByText(REFERENCE_DROP_HINT_TEXT)).toBeInTheDocument();
+    expect(within(detailPanel()).getByText(referenceDropHintText())).toBeInTheDocument();
 
-    // 离开后收起（进出计数归零）。
+    // It collapses after leaving (the enter/leave counter returns to zero).
     fireEvent.dragLeave(dropTarget(), { dataTransfer: dt });
-    expect(within(detailPanel()).queryByText(REFERENCE_DROP_HINT_TEXT)).not.toBeInTheDocument();
+    expect(within(detailPanel()).queryByText(referenceDropHintText())).not.toBeInTheDocument();
   });
 
-  it('拖入表单参考区落下 → store 建上游边、引用作为缩略图 chip 出现在表单', () => {
+  it('dropping into the form reference area -> the store creates an upstream edge and the reference appears in the form as a thumbnail chip', () => {
     seed([targetImageNode(), referenceImageNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
-    // 落下前：无边、表单里没有引用 chip。
+    // Before the drop: no edge, and no reference chip in the form.
     expect(useCanvasStore.getState().edges).toHaveLength(0);
-    expect(within(detailPanel()).queryByTitle('取消引用此素材')).not.toBeInTheDocument();
+    expect(within(detailPanel()).queryByTitle('Stop referencing this asset')).not.toBeInTheDocument();
 
     const dt = makeDataTransfer();
-    fireEvent.dragStart(leftListCard('参考图片卡片'), { dataTransfer: dt });
+    fireEvent.dragStart(leftListCard('Reference image card'), { dataTransfer: dt });
     fireEvent.dragEnter(dropTarget(), { dataTransfer: dt });
     fireEvent.drop(dropTarget(), { dataTransfer: dt });
 
-    // 建了一条 ref-2 → gen-1 的上游边（复用工作流 addEdge，确定性 id）。
+    // An upstream edge ref-2 -> gen-1 was created (reusing the workflow's addEdge, deterministic id).
     const edges = useCanvasStore.getState().edges;
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({ source: 'ref-2', target: 'gen-1' });
 
-    // 回流后：表单参考区出现该引用的缩略图 chip（自带取消引用按钮）+ 提示层收起。
-    expect(within(detailPanel()).getByTitle('取消引用此素材')).toBeInTheDocument();
-    expect(within(detailPanel()).queryByText(REFERENCE_DROP_HINT_TEXT)).not.toBeInTheDocument();
+    // After flow-back: the form reference area shows that reference's thumbnail chip (with its own detach button) and the hint layer collapses.
+    expect(within(detailPanel()).getByTitle('Stop referencing this asset')).toBeInTheDocument();
+    expect(within(detailPanel()).queryByText(referenceDropHintText())).not.toBeInTheDocument();
   });
 
-  it('去重：拖入已是上游的节点不重复建边', () => {
+  it('dedupe: dragging in a node that is already upstream does not create the edge again', () => {
     seed(
       [targetImageNode(), referenceImageNode()],
       [
@@ -195,23 +189,23 @@ describe('故事板详情 · 拖拽加引用', () => {
       ],
     );
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
     const dt = makeDataTransfer();
-    fireEvent.dragStart(leftListCard('参考图片卡片'), { dataTransfer: dt });
+    fireEvent.dragStart(leftListCard('Reference image card'), { dataTransfer: dt });
     fireEvent.drop(dropTarget(), { dataTransfer: dt });
 
-    // 仍只有原来那一条边（addEdge 按 e-source-target 幂等去重）。
+    // There is still only the original edge (addEdge dedupes idempotently by e-source-target).
     expect(useCanvasStore.getState().edges).toHaveLength(1);
   });
 
-  it('把当前详情节点自己的卡片拖进自己的表单 → 忽略，不建自环边', () => {
+  it('dragging the current detail node\'s own card into its own form -> ignored, and no self-loop edge is created', () => {
     seed([targetImageNode(), referenceImageNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '目标图片节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Target image node' }));
 
     const dt = makeDataTransfer();
-    fireEvent.dragStart(leftListCard('目标图片节点'), { dataTransfer: dt });
+    fireEvent.dragStart(leftListCard('Target image node'), { dataTransfer: dt });
     fireEvent.drop(dropTarget(), { dataTransfer: dt });
 
     expect(useCanvasStore.getState().edges).toHaveLength(0);

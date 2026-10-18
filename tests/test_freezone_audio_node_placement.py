@@ -57,7 +57,7 @@ class FakeTTSGenerator:
 
 
 class FakeCharacterStore:
-    """只提供 `list_characters` 的项目 store 替身（对应真实的项目 SQLite）。"""
+    """A project store stand-in that only provides `list_characters` (corresponding to the real project SQLite)."""
 
     def __init__(self, characters, state_dir: Path | str = "/state/alice/demo") -> None:
         self.state_dir = str(state_dir)
@@ -70,9 +70,9 @@ class FakeCharacterStore:
 
 
 class ExplodingStore:
-    """任何一次访问都算失败 —— 用来证明「不再回头读项目 store」。"""
+    """Any access counts as a failure -- used to prove that the project store is no longer read back."""
 
-    def __getattr__(self, name: str):  # pragma: no cover - 触发即失败
+    def __getattr__(self, name: str):  # pragma: no cover - failing when triggered
         raise AssertionError(f"project store must not be touched, got .{name}")
 
 
@@ -113,9 +113,9 @@ def _character(name: str, *, is_main: bool = False) -> NovelCharacter:
 
 def _character_project(tmp_path: Path) -> tuple[Path, FakeCharacterStore]:
     project_dir = tmp_path / "output" / "alice" / "demo"
-    _voice_file(project_dir, "小明")
+    _voice_file(project_dir, "Alex")
     return project_dir, FakeCharacterStore(
-        [_character("小明")], tmp_path / "state" / "alice" / "demo"
+        [_character("Alex")], tmp_path / "state" / "alice" / "demo"
     )
 
 
@@ -158,7 +158,7 @@ def _stub_tts(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # --------------------------------------------------------------------------
-# 执行侧：payload 带投射时不碰项目态
+# Execution side: with a projection in the payload, project state is not touched
 # --------------------------------------------------------------------------
 
 
@@ -168,9 +168,9 @@ async def test_generate_speech_consumes_projection_without_project_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     project_dir = tmp_path / "output" / "alice" / "demo"
-    voice_path = _voice_file(project_dir, "小明")
+    voice_path = _voice_file(project_dir, "Alex")
 
-    def _explode(*_a, **_k):  # pragma: no cover - 触发即失败
+    def _explode(*_a, **_k):  # pragma: no cover - failing when triggered
         raise AssertionError("project-local state must not be read")
 
     monkeypatch.setattr(
@@ -179,20 +179,20 @@ async def test_generate_speech_consumes_projection_without_project_state(
     monkeypatch.setattr(audio_node, "load_narrator_reference_audio_from_state_dir", _explode)
     _stub_tts(monkeypatch)
 
-    payload = _projection_payload(_projection_fields(voice_character=_character("小明")))
+    payload = _projection_payload(_projection_fields(voice_character=_character("Alex")))
     result = await audio_node.generate_freezone_audio_speech(
         store=None,
         username="alice",
         project="demo",
         project_dir=project_dir,
         job_id="job-projected",
-        text="旁白响起。",
-        voice_ref={"scope": "character_default", "character_name": "小明"},
+        text="The narration begins.",
+        voice_ref={"scope": "character_default", "character_name": "Alex"},
         projection=read_projection(payload),
     )
 
     assert result.voice_source == "character_default"
-    assert result.voice_sha256 == "sha-小明"
+    assert result.voice_sha256 == "sha-Alex"
     assert FakeTTSGenerator.calls[0]["audio_url"] == f"data://{voice_path.name}"
 
 
@@ -203,9 +203,9 @@ async def test_generate_speech_resolves_the_narrator_main_from_the_projection(
 ) -> None:
     """``first_person`` narration is the branch that reaches voice_clone.py:284."""
     project_dir = tmp_path / "output" / "alice" / "demo"
-    _voice_file(project_dir, "旁白主角")
+    _voice_file(project_dir, "Narrator_Lead")
 
-    def _explode(*_a, **_k):  # pragma: no cover - 触发即失败
+    def _explode(*_a, **_k):  # pragma: no cover - failing when triggered
         raise AssertionError("project-local state must not be read")
 
     monkeypatch.setattr(
@@ -216,7 +216,7 @@ async def test_generate_speech_resolves_the_narrator_main_from_the_projection(
 
     payload = _projection_payload(
         _projection_fields(
-            narrator_main_character=_character("旁白主角", is_main=True),
+            narrator_main_character=_character("Narrator_Lead", is_main=True),
             narration_style="first_person",
         )
     )
@@ -226,12 +226,12 @@ async def test_generate_speech_resolves_the_narrator_main_from_the_projection(
         project="demo",
         project_dir=project_dir,
         job_id="job-narrator",
-        text="旁白响起。",
+        text="The narration begins.",
         projection=read_projection(payload),
     )
 
     assert result.voice_source == "protagonist_identity"
-    assert FakeTTSGenerator.calls[0]["audio_url"] == "data://旁白主角.wav"
+    assert FakeTTSGenerator.calls[0]["audio_url"] == "data://Narrator_Lead.wav"
 
 
 @pytest.mark.asyncio
@@ -241,12 +241,12 @@ async def test_generate_speech_raises_when_the_projection_is_incomplete(
 ) -> None:
     """A projection that is present but short of a field is a defect, not a fallback."""
     project_dir = tmp_path / "output" / "alice" / "demo"
-    _voice_file(project_dir, "小明")
+    _voice_file(project_dir, "Alex")
 
-    fields = _projection_fields(voice_character=_character("小明"))
+    fields = _projection_fields(voice_character=_character("Alex"))
     fields.pop("narration_style")
 
-    with pytest.raises(ValueError, match="必需字段"):
+    with pytest.raises(ValueError, match="required fields"):
         read_projection(_projection_payload(fields))
 
 
@@ -255,7 +255,7 @@ async def test_generate_speech_without_projection_still_reads_project_store(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """不带投射时行为逐字不变（本 EU 不翻任何开关）。"""
+    """Without a projection, behavior is unchanged to the letter (this EU flips no switch)."""
     project_dir, store = _character_project(tmp_path)
     monkeypatch.setattr(
         audio_node,
@@ -270,8 +270,8 @@ async def test_generate_speech_without_projection_still_reads_project_store(
         project="demo",
         project_dir=project_dir,
         job_id="job-store",
-        text="旁白响起。",
-        voice_ref={"scope": "character_default", "character_name": "小明"},
+        text="The narration begins.",
+        voice_ref={"scope": "character_default", "character_name": "Alex"},
     )
 
     assert store.list_characters_calls == 1
@@ -283,7 +283,7 @@ async def test_account_level_voice_never_touches_the_project_store(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """账号级音色本来就不读项目库，投射与否都一样。"""
+    """Account-level voices never read the project library anyway, so it is the same with or without a projection."""
     voice_path = tmp_path / "viewer_voice.mp3"
     voice_path.write_bytes(b"account-voice")
     monkeypatch.setattr(
@@ -307,7 +307,7 @@ async def test_account_level_voice_never_touches_the_project_store(
         account_voice_username="bob",
         project_dir=tmp_path,
         job_id="job-account",
-        text="旁白响起。",
+        text="The narration begins.",
         voice_ref={"scope": USER_VOICE_SCOPE, "voice_id": "fv_viewer"},
     )
 
@@ -323,11 +323,11 @@ async def test_speech_accepts_every_version_in_the_tolerance_window(
 ) -> None:
     """A mixed-version fleet has to work in both directions, not just forwards."""
     project_dir = tmp_path / "output" / "alice" / "demo"
-    _voice_file(project_dir, "小明")
+    _voice_file(project_dir, "Alex")
     _stub_tts(monkeypatch)
 
     payload = _projection_payload(
-        _projection_fields(voice_character=_character("小明")), version=version
+        _projection_fields(voice_character=_character("Alex")), version=version
     )
     result = await audio_node.generate_freezone_audio_speech(
         store=None,
@@ -335,8 +335,8 @@ async def test_speech_accepts_every_version_in_the_tolerance_window(
         project="demo",
         project_dir=project_dir,
         job_id=f"job-v{version}",
-        text="旁白响起。",
-        voice_ref={"scope": "character_default", "character_name": "小明"},
+        text="The narration begins.",
+        voice_ref={"scope": "character_default", "character_name": "Alex"},
         projection=read_projection(payload),
     )
 
@@ -344,7 +344,7 @@ async def test_speech_accepts_every_version_in_the_tolerance_window(
 
 
 # --------------------------------------------------------------------------
-# runner 侧：payload 带投射时不开项目 SQLite（＝可跑在非 home node 上）
+# Runner side: with a projection in the payload, the project SQLite is not opened (= can run on a non-home node)
 # --------------------------------------------------------------------------
 
 
@@ -369,7 +369,7 @@ async def test_audio_speech_runner_with_projection_never_opens_project_store(
     project_dir = Path(ctx.output_dir)
     seen: dict = {}
 
-    async def _explode_store(_ctx):  # pragma: no cover - 触发即失败
+    async def _explode_store(_ctx):  # pragma: no cover - failing when triggered
         raise AssertionError("project SQLite store must not be opened")
 
     async def fake_generate(**kwargs):
@@ -383,21 +383,21 @@ async def test_audio_speech_runner_with_projection_never_opens_project_store(
             mime_type="audio/mpeg",
             model="indextts2",
             voice_source="character_default",
-            voice_sha256="sha-小明",
+            voice_sha256="sha-Alex",
         )
 
     _install_runner_stubs(monkeypatch)
     monkeypatch.setattr("novelvideo.api.deps.make_sqlite_store_for_context", _explode_store)
     monkeypatch.setattr(audio_node, "generate_freezone_audio_speech", fake_generate)
 
-    fields = _projection_fields(voice_character=_character("小明"))
+    fields = _projection_fields(voice_character=_character("Alex"))
     result = await freezone_runner._run_freezone_audio_speech_async(
         {
             "task_type": TASK_TYPE,
             "payload": {
                 "job_id": "job-1",
                 "project_dir": str(project_dir),
-                "text": "旁白响起。",
+                "text": "The narration begins.",
                 **_projection_payload(fields),
             },
         },
@@ -451,7 +451,7 @@ async def test_audio_speech_runner_without_projection_still_opens_project_store(
             "payload": {
                 "job_id": "job-2",
                 "project_dir": str(project_dir),
-                "text": "旁白响起。",
+                "text": "The narration begins.",
             },
         },
         ctx,
@@ -482,7 +482,7 @@ async def test_audio_speech_runner_runs_with_every_project_data_entrypoint_disab
 
     ctx = _ctx(tmp_path)
     project_dir = Path(ctx.output_dir)
-    _voice_file(project_dir, "旁白主角")
+    _voice_file(project_dir, "Narrator_Lead")
     touched: list[str] = []
 
     def _explode(name: str):
@@ -504,10 +504,10 @@ async def test_audio_speech_runner_runs_with_every_project_data_entrypoint_disab
     payload = {
         "job_id": "job-t2",
         "project_dir": str(project_dir),
-        "text": "旁白响起。",
+        "text": "The narration begins.",
         **_projection_payload(
             _projection_fields(
-                narrator_main_character=_character("旁白主角", is_main=True),
+                narrator_main_character=_character("Narrator_Lead", is_main=True),
                 narration_style="first_person",
             )
         ),
@@ -518,11 +518,11 @@ async def test_audio_speech_runner_runs_with_every_project_data_entrypoint_disab
 
     assert touched == []
     assert result["voice_source"] == "protagonist_identity"
-    assert FakeTTSGenerator.calls[0]["audio_url"] == "data://旁白主角.wav"
+    assert FakeTTSGenerator.calls[0]["audio_url"] == "data://Narrator_Lead.wav"
 
 
 # --------------------------------------------------------------------------
-# 静态断言：payload 里只剩投射一套约定
+# Static assertion: only the projection convention remains in the payload
 # --------------------------------------------------------------------------
 
 

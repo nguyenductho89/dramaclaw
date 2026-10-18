@@ -4,73 +4,73 @@ import { useEffect, useRef, type RefObject } from 'react';
 import type { ReactFlowInstance, Viewport } from '@xyflow/react';
 
 /**
- * 接管小地图的拖动平移，替掉 React Flow 内置的 `pannable`。
+ * Takes over minimap drag panning, replacing React Flow's built-in `pannable`.
  *
- * 换掉的理由是内置实现有个正反馈缺陷。React Flow 算小地图范围时用的是
- * 「节点包围盒 ∪ 当前视口框」（@xyflow/react MiniMap 的 selector），而拖动增益
- * moveScale 正比于这个并集的尺寸。于是视口一旦被拖出内容区，并集就开始变大，
- * 增益跟着变大，下一帧拖得更远，并集又更大 —— 复利发散，没有上限。
+ * The reason for replacing it is that the built-in implementation has a positive-feedback defect. React Flow computes the minimap range using
+ * "node bounding box ∪ current viewport box" (the @xyflow/react MiniMap selector), and the drag gain
+ * moveScale is proportional to the size of that union. So once the viewport is dragged out of the content area, the union starts to grow,
+ * the gain grows with it, the next frame drags further, and the union grows again - compounding divergence with no upper bound.
  *
- * 实测（335 节点、包围盒宽 35638、zoom 0.1）：固定每次 +20px 输入连续拖 8 次，
- * 前 3 次增益稳定在 17.8 px/px，从第 4 次拖出内容边缘开始变成
- * 18.6 → 20.5 → 22.7 → 25.1 → 27.7，每次约 +10%；继续拖能把视口甩到 1e8 量级，
- * 而且这个坏视口会被持久化，刷新后依旧。手上动作没变画布却越拖越快，
- * 这就是「小地图拖起来不跟手」的真正来源，跟帧率无关。
+ * Measured (335 nodes, bounding box width 35638, zoom 0.1): with a fixed +20px input dragged 8 times in a row,
+ * the gain stays steady at 17.8 px/px for the first 3 times, and from the 4th drag past the content edge becomes
+ * 18.6 -> 20.5 -> 22.7 -> 25.1 -> 27.7, about +10% each time; continued dragging can fling the viewport to the 1e8 range,
+ * and this bad viewport gets persisted and survives a refresh. The hand motion does not change while the canvas drags faster and faster -
+ * this is the real source of "the minimap drag does not follow the hand", unrelated to frame rate.
  *
- * 这里的三点改动：
- * 1. 增益只按**可见**节点的**绝对**包围盒算，不含视口框 —— 增益在一次手势内恒定，
- *    不再发散，且与内置 MiniMap 实际渲染的范围对齐（它同样只画可见节点）。
- * 2. 视口用 rAF 缓动跟随目标，而不是每帧硬跳，抹掉指针采样抖动和起停的突变。
- * 3. 缓动的开始/收敛/结束都通知外层：外层据此在缓动期间跳过逐帧的视口提交，
- *    并且等真正收敛后才收起小地图（否则清理函数会把缓动掐断在半路）。
+ * Three changes here:
+ * 1. The gain is computed only from the absolute bounding box of **visible** nodes, without the viewport box - the gain is constant within one gesture,
+ *    no longer diverging, and aligned with the range the built-in MiniMap actually renders (it also draws only visible nodes).
+ * 2. The viewport follows the target with rAF easing instead of hard-jumping every frame, smoothing out pointer sampling jitter and abrupt starts/stops.
+ * 3. The easing start/convergence/end are all reported to the outer layer: the outer layer skips per-frame viewport commits during easing,
+ *    and only collapses the minimap after real convergence (otherwise the cleanup function would cut the easing off midway).
  */
 
-/** 与 xyflow MiniMap 的 offsetScale 默认值一致，用于反推它渲染用的 viewBox。 */
+/** Same as the xyflow MiniMap offsetScale default, used to back out the viewBox it renders with. */
 const MINIMAP_FALLBACK_WIDTH = 200;
 const MINIMAP_FALLBACK_HEIGHT = 150;
 
 /**
- * 每帧向目标靠拢的比例，按 60fps 标定。0.3 意味着约 8 帧（130ms）走完 95%，
- * 手感上跟手但不会把指针抖动原样放大 17 倍甩到画布上。
+ * The fraction moved toward the target each frame, calibrated at 60fps. 0.3 means about 8 frames (130ms) to cover 95%,
+ * which feels like following the hand without amplifying pointer jitter 17x as is and flinging it onto the canvas.
  */
 const FOLLOW_PER_FRAME = 0.3;
 const REFERENCE_FRAME_MS = 1000 / 60;
-/** 收尾阈值：差这么点就直接吸附，避免指数逼近永远跑 rAF。 */
+/** Settle threshold: when this close, snap directly, avoiding exponential approach running rAF forever. */
 const SETTLE_EPSILON_PX = 0.4;
-/** 单帧最大补偿时长，防止切标签页回来后一帧跳完。 */
+/** Maximum compensated duration per frame, preventing one frame from finishing the whole jump after switching back from another tab. */
 const MAX_FRAME_MS = 64;
 
 interface SmoothMinimapPanOptions {
-  /** 小地图当前是否挂载。false 时整个 effect 不接线。 */
+  /** Whether the minimap is currently mounted. When false the whole effect wires nothing. */
   enabled: boolean;
-  /** 画布容器，用来找到小地图的 svg。 */
+  /** The canvas container, used to find the minimap's svg. */
   wrapperRef: RefObject<HTMLDivElement | null>;
   instance: ReactFlowInstance;
   /**
-   * 拖动开始。调用方必须借此把小地图钉住不卸载 —— 小地图默认靠 hover 显示，
-   * 指针一划出去 onMouseLeave 就会在 180ms 后卸载 MiniMap，
-   * 连带本 hook 的清理函数摘掉 window 监听、拖动会突然断掉。
+   * Drag start. The caller must use it to pin the minimap so it is not unmounted - the minimap is shown on hover by default,
+   * and once the pointer leaves, onMouseLeave unmounts the MiniMap after 180ms,
+   * which takes this hook's cleanup function with it, removing the window listeners and suddenly cutting the drag off.
    */
   onPanStart?: () => void;
   /**
-   * 拖动**彻底**结束：指针已松开**且**缓动已收敛（或 hook 在拖动中被卸载）。
-   * 调用方据此解除小地图的挂载保护 —— 必须等收敛，不能用固定延时：收敛耗时
-   * 取决于松手瞬间的剩余距离（剩 100px 约 260ms、剩 1000px 约 360ms），
-   * 都超过自动隐藏的 180ms，小地图会在缓动到位前卸载、rAF 被清理函数取消。
+   * The drag **fully** ends: the pointer is released **and** the easing has converged (or the hook is unmounted mid-drag).
+   * The caller uses it to release the minimap's mount protection - it must wait for convergence, not use a fixed delay: the convergence time
+   * depends on the remaining distance at the moment of release (about 260ms with 100px left, about 360ms with 1000px left),
+   * both exceeding the auto-hide 180ms, and the minimap would unmount before the easing arrives, with rAF cancelled by the cleanup function.
    *
-   * `pointerInsideMinimap` 表示松手时指针是否还落在小地图内：拖动期间 hover 态
-   * 多半已经被置 false，调用方据此决定是继续显示还是收起。
+   * `pointerInsideMinimap` indicates whether the pointer is still inside the minimap at release: during the drag the hover state
+   * has mostly been set to false, and the caller decides accordingly whether to keep showing it or collapse.
    */
   onPanEnd?: (pointerInsideMinimap: boolean) => void;
   /**
-   * 缓动收敛到目标（此刻指针可能还按着不动）。调用方据此把最终视口提交一次。
+   * The easing converges to the target (the pointer may still be held still at this moment). The caller uses it to commit the final viewport once.
    *
-   * 之所以要这个回调：`instance.setViewport` 每次都会走一遍完整的
-   * `onMoveStart → onMove → onMoveEnd`（d3 zoom transform，没有 internal 标记），
-   * 而 React Flow 只对 `panOnScroll` 才合并结束事件（`panOnScroll ? 150 : 0`）。
-   * 用户关掉「触控板平移」后合并不存在，缓动的每一帧都会提交一次视口 ——
-   * 正是本 hook 想消掉的 store 风暴。调用方应在缓动期间跳过 `onMoveEnd` 的提交，
-   * 改由这里收敛时提交一次。
+   * This callback exists because: `instance.setViewport` runs the complete
+   * `onMoveStart -> onMove -> onMoveEnd` every time (d3 zoom transform, with no internal marker),
+   * while React Flow only coalesces the end event for `panOnScroll` (`panOnScroll ? 150 : 0`).
+   * After the user turns off "trackpad pan" there is no coalescing, and every easing frame would commit the viewport once -
+   * exactly the store storm this hook wants to eliminate. The caller should skip the `onMoveEnd` commit during easing,
+   * and have it committed once here on convergence.
    */
   onViewportSettled?: (viewport: Viewport) => void;
 }
@@ -83,7 +83,7 @@ export function useSmoothMinimapPan({
   onPanEnd,
   onViewportSettled,
 }: SmoothMinimapPanOptions): void {
-  // 回调走 ref：它们的身份变化不该重挂监听（重挂会在拖动中途摘掉 window 监听）。
+  // Callbacks go through refs: changes in their identity should not re-attach listeners (re-attaching would remove the window listeners mid-drag).
   const onPanStartRef = useRef(onPanStart);
   const onPanEndRef = useRef(onPanEnd);
   const onViewportSettledRef = useRef(onViewportSettled);
@@ -98,7 +98,7 @@ export function useSmoothMinimapPan({
     );
     const svg = minimap?.querySelector<SVGSVGElement>('svg');
     if (!minimap || !svg) return;
-    // 收窄后另起一个非空 const：下面的 endPan 是函数声明，闭包里拿不到窄化结果。
+    // After narrowing, make a separate non-null const: endPan below is a function declaration and cannot see the narrowed result in its closure.
     const minimapEl: HTMLElement = minimap;
 
     let activePointerId: number | null = null;
@@ -106,15 +106,15 @@ export function useSmoothMinimapPan({
     let startClientY = 0;
     let startViewportX = 0;
     let startViewportY = 0;
-    /** 一次手势内固定，见文件头注释。 */
+    /** Fixed within one gesture, see the file header comment. */
     let moveScale = 1;
     let targetX = 0;
     let targetY = 0;
     let rafId = 0;
     let lastFrameTime = 0;
     /**
-     * 指针已松开、只等缓动收尾时记下松手点是否在小地图内；收敛后才把结束通知
-     * 发出去（见 onPanEnd 的注释）。null 表示当前没有待发的结束通知。
+     * After the pointer is released and only the easing wrap-up remains, record whether the release point was inside the minimap; the end notification
+     * is sent only after convergence (see the comment of onPanEnd). null means there is currently no pending end notification.
      */
     let pendingPanEndInside: boolean | null = null;
 
@@ -144,7 +144,7 @@ export function useSmoothMinimapPan({
         : REFERENCE_FRAME_MS;
       lastFrameTime = now;
 
-      // 按实际帧长补偿的指数逼近：掉帧时不会跟得更慢。
+      // Exponential approach compensated by actual frame length: following does not get slower when frames drop.
       const t = 1 - Math.pow(1 - FOLLOW_PER_FRAME, deltaMs / REFERENCE_FRAME_MS);
       let nextX = viewport.x + (targetX - viewport.x) * t;
       let nextY = viewport.y + (targetY - viewport.y) * t;
@@ -157,19 +157,19 @@ export function useSmoothMinimapPan({
         nextY = targetY;
       }
 
-      // 已经落在目标上就别再写一遍：按住不动时每帧 setViewport 会白白触发
-      // React Flow 的 move 生命周期和画布 viewport store 提交。
+      // Already on the target, so do not write again: when held still, setViewport every frame would needlessly trigger
+      // React Flow's move lifecycle and the canvas viewport store commit.
       if (viewport.x !== nextX || viewport.y !== nextY) {
         instance.setViewport({ x: nextX, y: nextY, zoom: viewport.zoom });
       }
 
-      // 收敛就停，不管指针是否还按着。下一次 pointermove 会重新 startLoop()，
-      // 跟手不受影响；按住不动时则彻底静默。
+      // Stop on convergence, regardless of whether the pointer is still held. The next pointermove restarts startLoop(),
+      // so following the hand is unaffected; when held still it is fully silent.
       if (settled) {
         stopLoop();
-        // 最终视口在这里提交一次 —— 缓动期间外层会跳过 onMoveEnd 的逐帧提交。
+        // The final viewport is committed once here - during easing the outer layer skips the per-frame commits of onMoveEnd.
         onViewportSettledRef.current?.({ x: nextX, y: nextY, zoom: viewport.zoom });
-        // 松手后到位才算拖动真正结束，这时才允许外层收起小地图。
+        // Only arriving after release counts as the drag really ending, and only then is the outer layer allowed to collapse the minimap.
         flushPanEnd();
         return;
       }
@@ -180,31 +180,31 @@ export function useSmoothMinimapPan({
       if (event.button !== 0 || activePointerId !== null) return;
 
       const viewport = instance.getViewport();
-      // 必须走 instance 上的 getNodesBounds（它带 nodeLookup），不能用同名的静态
-      // 工具：静态版对普通 node 直接取 `node.position`，而分组成员的 position 是
-      // **相对父节点**的。分镜组把成员改成 `parentId + hidden: true`、position 是
-      // 组内单元格坐标（近原点），组本身却可能在 x=10000 —— 静态版会把包围盒从
-      // 原点一路撑到组的位置，增益随之远大于小地图的视觉映射。
-      // 同时要过滤 hidden：内置 MiniMap 的包围盒是 getInternalNodesBounds(…, {
-      // filter: filterHidden })，只算可见节点，我们得跟它对齐才跟手。
+      // Must go through getNodesBounds on the instance (it carries nodeLookup); the same-named static
+      // utility must not be used: the static version takes `node.position` directly for plain nodes, while a group member's position is
+      // **relative to the parent**. A storyboard group turns members into `parentId + hidden: true` with position being
+      // in-group cell coordinates (near the origin), while the group itself may be at x=10000 - the static version would stretch the bounding box from the
+      // origin all the way to the group's position, and the gain would be far larger than the minimap's visual mapping.
+      // Hidden must also be filtered: the built-in MiniMap's bounding box is getInternalNodesBounds(..., {
+      // filter: filterHidden }), counting only visible nodes, and we must align with it to follow the hand.
       const visibleNodes = instance.getNodes().filter((node) => !node.hidden);
       const bounds = instance.getNodesBounds(visibleNodes);
       const rect = svg.getBoundingClientRect();
       const elementWidth = rect.width || MINIMAP_FALLBACK_WIDTH;
       const elementHeight = rect.height || MINIMAP_FALLBACK_HEIGHT;
 
-      // 复刻 xyflow 的 viewScale，唯一差别是不并上视口框（见文件头）。
-      // 空画布时退化成 1，避免除零后增益变成 0 拖不动。
+      // Replicates xyflow's viewScale, the only difference being that the viewport box is not merged in (see the file header).
+      // For an empty canvas degrade to 1, avoiding division by zero turning the gain into 0 and making it undraggable.
       const viewScale =
         bounds.width > 0 && bounds.height > 0
           ? Math.max(bounds.width / elementWidth, bounds.height / elementHeight)
           : 1;
-      // xyflow 原式是 viewScale * Math.max(zoom, Math.log(zoom))，而 ln(z) < z
-      // 对所有 z > 0 恒成立，那个 Math.max 永远取 zoom，这里直接写成 zoom。
+      // xyflow's original is viewScale * Math.max(zoom, Math.log(zoom)), and ln(z) < z
+      // holds for all z > 0, so that Math.max always takes zoom; here it is written directly as zoom.
       moveScale = viewScale * viewport.zoom;
 
-      // 上一次手势的缓动可能还没收尾就又按了下来：把待发的结束通知丢掉，
-      // 否则这一次收敛时会把它冲出去，拖动中途就被外层收起。
+      // The previous gesture's easing may not have wrapped up when it is pressed again: drop the pending end notification,
+      // otherwise this convergence would flush it out and the outer layer would collapse mid-drag.
       pendingPanEndInside = null;
 
       activePointerId = event.pointerId;
@@ -215,15 +215,15 @@ export function useSmoothMinimapPan({
       targetX = viewport.x;
       targetY = viewport.y;
 
-      // 监听挂在 window 上而不是 svg 上：拖动中指针经常会划出小地图，
-      // 挂在 svg 上会中途丢事件（内置实现用的 d3-drag 同样是 window 级）。
+      // Listeners are attached to window rather than the svg: during a drag the pointer often leaves the minimap,
+      // and attaching to the svg would lose events midway (the built-in implementation's d3-drag is also window-level).
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', endPan);
       window.addEventListener('pointercancel', endPan);
 
-      // 通知外层把小地图钉住：默认非固定模式下指针一划出小地图，
-      // onMouseLeave 会在 180ms 后卸载 MiniMap，本 effect 的清理函数
-      // 会连带摘掉上面这三个 window 监听，拖动就断在半路了。
+      // Notify the outer layer to pin the minimap: in the default non-pinned mode once the pointer leaves the minimap,
+      // onMouseLeave unmounts the MiniMap after 180ms, and this effect's cleanup function
+      // would take the three window listeners above with it, cutting the drag off midway.
       onPanStartRef.current?.();
 
       event.preventDefault();
@@ -250,9 +250,9 @@ export function useSmoothMinimapPan({
         event.clientY >= rect.top &&
         event.clientY <= rect.bottom;
 
-      // 松手后让缓动自己收尾，别硬切；结束通知压到收敛之后再发（见 onPanEnd
-      // 的注释：收敛耗时随剩余距离变化，固定延时会把缓动掐断）。
-      // 若此刻已经在目标上，startLoop 排的这一帧会立刻判定 settled 并把它冲出去。
+      // After release let the easing finish on its own, no hard cut; push the end notification until after convergence (see onPanEnd's
+      // comment: the convergence time varies with the remaining distance, and a fixed delay would cut the easing off).
+      // If already on the target at this moment, the frame scheduled by startLoop immediately judges settled and flushes it out.
       startLoop();
     }
 
@@ -268,9 +268,9 @@ export function useSmoothMinimapPan({
       svg.removeEventListener('pointerdown', handlePointerDown);
       detachWindowListeners();
       stopLoop();
-      // 兜底：真被卸载时（enabled 变 false / 换 instance）必须把「拖动中」还回去，
-      // 否则外层会永远认为还在拖，小地图再也收不起来。缓动没收尾就被卸载的情况
-      // （pendingPanEndInside 还挂着）同理，一并冲出去。
+      // Fallback: when really unmounted (enabled becomes false / instance changes) the "dragging" state must be returned,
+      // otherwise the outer layer would think it is still dragging forever and the minimap could never collapse. The case where the easing is unmounted before wrapping up
+      // (pendingPanEndInside still pending) is the same, and is flushed out together.
       if (activePointerId !== null) {
         activePointerId = null;
         pendingPanEndInside = false;

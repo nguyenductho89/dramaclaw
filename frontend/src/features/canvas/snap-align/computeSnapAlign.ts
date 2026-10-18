@@ -50,9 +50,9 @@ export interface SnapAlignIndex {
 }
 
 export interface SnapAlignOptions {
-  /** Flow 坐标阈值；画布调用方应使用 screenPx / zoom 换算。 */
+  /** Threshold in Flow coordinates; canvas callers should convert with screenPx / zoom. */
   threshold?: number;
-  /** 已吸附后允许离开得更远一点，避免临界点来回跳动。 */
+  /** After snapping, it is allowed to leave a little farther, avoiding jitter back and forth at the critical point. */
   releaseThreshold?: number;
   locks?: SnapAlignLocks;
 }
@@ -67,7 +67,7 @@ const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 100;
 export const SNAP_ALIGN_SCREEN_THRESHOLD = 8;
 export const SNAP_ALIGN_SCREEN_RELEASE_THRESHOLD = 12;
-/** 非画布调用方在 zoom=1 下的默认 Flow 阈值。 */
+/** The default Flow threshold for non-canvas callers at zoom=1. */
 export const SNAP_ALIGN_FLOW_THRESHOLD = SNAP_ALIGN_SCREEN_THRESHOLD;
 const EMPTY_GUIDES: SnapAlignGuides = { vertical: [], horizontal: [] };
 const EMPTY_LOCKS: SnapAlignLocks = { x: null, y: null };
@@ -160,7 +160,7 @@ function emptyIndex(): SnapAlignIndex {
   };
 }
 
-/** 输入节点的位置必须位于同一套绝对 Flow 坐标系。 */
+/** The positions of the input nodes must be in the same absolute Flow coordinate system. */
 export function buildSnapAlignIndex(otherNodes: CanvasNode[]): SnapAlignIndex {
   const index = emptyIndex();
   otherNodes.forEach((node, nodeIndex) => {

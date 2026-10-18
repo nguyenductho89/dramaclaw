@@ -11,11 +11,11 @@ describe("StyleAssetImage", () => {
       <StyleAssetImage
         rel="golden_age/cover.webp"
         assetBase="https://cdn.example.com/styles"
-        alt="黄金时代"
+        alt="Golden Age"
       />,
     );
 
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "https://cdn.example.com/styles/golden_age/cover.webp",
     );
@@ -23,19 +23,19 @@ describe("StyleAssetImage", () => {
 
   it("falls back to a placeholder when the asset 404s", () => {
     render(
-      <StyleAssetImage rel="gone/cover.webp" assetBase="" alt="已下架风格" />,
+      <StyleAssetImage rel="gone/cover.webp" assetBase="" alt="Retired style" />,
     );
 
-    fireEvent.error(screen.getByAltText("已下架风格"));
+    fireEvent.error(screen.getByAltText("Retired style"));
 
-    // 图没了也要留个占位块，别露浏览器的碎图标
-    const placeholder = screen.getByRole("img", { name: "已下架风格" });
+    // Even if the image is gone, keep a placeholder block and do not expose the browser's broken-image icon
+    const placeholder = screen.getByRole("img", { name: "Retired style" });
     expect(placeholder.tagName).toBe("DIV");
   });
 
   it("renders the placeholder when the manifest has no cover", () => {
-    render(<StyleAssetImage rel="" assetBase="" alt="无封面" />);
+    render(<StyleAssetImage rel="" assetBase="" alt="No cover" />);
 
-    expect(screen.getByRole("img", { name: "无封面" }).tagName).toBe("DIV");
+    expect(screen.getByRole("img", { name: "No cover" }).tagName).toBe("DIV");
   });
 });

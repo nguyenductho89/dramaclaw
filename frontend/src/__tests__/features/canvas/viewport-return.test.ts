@@ -17,7 +17,7 @@ describe('focusReferenceNode', () => {
     });
   });
 
-  it('聚焦被引用节点，并记下回到起点节点的退路', () => {
+  it('focuses the referenced node and records a way back to the origin node', () => {
     focusReferenceNode('ref-node', 'origin-node');
 
     expect(useCanvasStore.getState().pendingFocusNodeId).toBe('ref-node');
@@ -27,10 +27,10 @@ describe('focusReferenceNode', () => {
     });
   });
 
-  it('存的是视口快照而不是 store 里的活对象', () => {
+  it('stores a viewport snapshot rather than the live object in the store', () => {
     focusReferenceNode('ref-node', 'origin-node');
-    // 跳转本身会把 currentViewport 改掉；「原视口」不能跟着一起变，
-    // 否则「返回节点」回到的是跳转之后的位置，等于没返回。
+    // The jump itself changes currentViewport; the "original viewport" must not change along with it,
+    // otherwise "return to node" goes back to the post-jump position, which is the same as not returning.
     useCanvasStore.setState({ currentViewport: { x: 999, y: 999, zoom: 2 } });
 
     expect(useViewportReturnStore.getState().request?.originViewport).toEqual({
@@ -40,7 +40,7 @@ describe('focusReferenceNode', () => {
     });
   });
 
-  it('stop 幂等：已经收起来时不产生新的 state 对象', () => {
+  it('stop is idempotent: it produces no new state object when already collapsed', () => {
     const before = useViewportReturnStore.getState();
     useViewportReturnStore.getState().stop();
     expect(useViewportReturnStore.getState()).toBe(before);

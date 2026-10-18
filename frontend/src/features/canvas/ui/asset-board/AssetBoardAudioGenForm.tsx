@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { ArrowUp, Loader2, Music2, Settings2, SlidersHorizontal } from 'lucide-react';
 
@@ -32,28 +33,28 @@ import { useCanvasStore } from '@/stores/canvasStore';
 
 import { createAssetBoardOpsRegistry } from './assetBoardOpsState';
 
-/** 进行中的音频操作（目前只有生成——下载/转码的 busy 态由 chip 自己持有）。 */
+/** Audio operations in progress (currently only generation - the busy state of download/transcode is held by the chip itself). */
 type AudioBusyOp = 'generate';
 
 /**
- * 音频侧的「进行中 + 失败反馈」登记表（与图片/视频/文本侧同一套工厂，见
- * assetBoardOpsState）。生成本身的 loading 与错误其实已经写在 node.data 上
- * （useAudioGeneration 负责），这里登记的是**详情面板这一侧**的重复提交防护：
- * 表单按 key={nodeId} 重挂载，切走再切回不该让同一个节点被再提交一次。
+ * The audio side's "in progress + failure feedback" registry (the same factory as the image/video/text sides, see
+ * assetBoardOpsState). The generation's own loading and errors are actually already written on node.data
+ * (handled by useAudioGeneration); what is registered here is the **duplicate-submit guard on the detail panel side**:
+ * the form remounts by key={nodeId}, and switching away and back must not let the same node be submitted again.
  */
 const audioOpsRegistry = createAssetBoardOpsRegistry<AudioBusyOp>();
 
-/** 导出供测试断言（nodeId → 进行中的音频操作名）。 */
+/** Exported for tests to assert (nodeId -> name of the audio operation in progress). */
 export const inFlightAudioOps: ReadonlyMap<string, AudioBusyOp> = audioOpsRegistry.inFlight;
 
-/** 仅供测试：清空进行中/失败两张登记表，避免用例间靠固定 node id 串态。 */
+/** For tests only: clear the in-progress / failure registries, avoiding cross-talk between cases via fixed node ids. */
 export function __resetAssetBoardAudioOpsStateForTest(): void {
   audioOpsRegistry.resetForTest();
 }
 
 const FIELD_LABEL_CLASS = 'text-[12px] text-white/40';
-// 圆角 6px：本项目 --radius=1rem，rounded-lg 折合 16px，在输入框上过圆（同
-// AssetBoardToolbarButton 收到 rounded-[6px] 的理由）。
+// Corner radius 6px: this project's --radius=1rem, and rounded-lg works out to 16px, too round for an input (same as
+// the reason AssetBoardToolbarButton settled on rounded-[6px]).
 const FIELD_CLASS =
   'w-full rounded-[6px] border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] leading-6 text-white/85 outline-none placeholder:text-white/25 focus:border-white/25';
 const MUSIC_LENGTH_SELECT_CLASS =
@@ -61,7 +62,7 @@ const MUSIC_LENGTH_SELECT_CLASS =
 const MUSIC_LENGTH_SELECT_MENU_CLASS =
   '!z-[260] !min-w-[140px] !border-white/10 !bg-[#2e2e2e] !text-white/85 shadow-xl';
 
-/** 布尔设置开关（与工作流音频面板的拨动开关同构，配色贴故事板暗面板）。 */
+/** Boolean setting switch (isomorphic with the toggle in the workflow audio panel, colors fitted to the storyboard's dark panel). */
 function SettingToggle({
   checked,
   onChange,
@@ -101,14 +102,14 @@ interface AssetBoardAudioGenFormProps {
 }
 
 /**
- * 故事板音频详情里挂在波形播放器下方的「音频生成表单」：合成文本/音乐描述、语气词、
- * 声线选择、音乐高级设置、生成/重新生成。与图片/视频详情的 `AssetBoardImageGenForm`
- * / `AssetBoardVideoGenForm` 同一族位置（媒体区下方一条生成条）。
+ * The "audio generation form" mounted below the waveform player in the storyboard audio detail: synthesis text / music description, tone words,
+ * voice selection, advanced music settings, generate/regenerate. The same family position as the image/video detail's `AssetBoardImageGenForm`
+ * / `AssetBoardVideoGenForm` (a generation bar below the media area).
  *
- * 竖向布局，宽度贴合详情面板（此前的顶部内联展开是横向铺开的一整行，已随音频进
- * 详情栈一并退掉——见 AssetBoardView 的音频条注释）。生成走 useAudioGeneration ——
- * 与工作流节点面板、节点本体的失败重试同一份实现。空音频节点（无 audioUrl）也挂
- * 这份表单，可从零生成，对齐图片/视频空节点体验。
+ * Vertical layout, width fitted to the detail panel (the earlier top inline expansion was a full horizontal row, and was retired along with audio entering
+ * the detail stack - see the audio bar comment in AssetBoardView). Generation goes through useAudioGeneration -
+ * the same implementation as the workflow node panel and the node body's failure retry. An empty audio node (no audioUrl) also mounts
+ * this form and can generate from scratch, matching the image/video empty node experience.
  */
 export function AssetBoardAudioGenForm({
   nodeId,
@@ -126,10 +127,10 @@ export function AssetBoardAudioGenForm({
     typeof data.musicLengthMs === 'number' ? data.musicLengthMs : DEFAULT_MUSIC_LENGTH_MS;
   const currentVoiceRef: AudioVoiceRef = data.voiceRef ?? { scope: 'project_narrator' };
   const voiceMissing = requiresCustomVoiceSelection(data);
-  // 已有产物 → 提交键语义是「重新生成」（与图片/视频详情口径一致）。
+  // With an existing product the submit key means "Regenerate" (consistent with the image/video detail).
   const hasAudio = typeof data.audioUrl === 'string' && data.audioUrl.length > 0;
 
-  // 算力询价：与工作流 AudioOperationsPanel 同一口径（music 按计费秒数，speech 按次）。
+  // Compute cost inquiry: the same basis as the workflow AudioOperationsPanel (music by billed seconds, speech per call).
   const audioCost = useGenerationCreditCost(
     isMusic ? 'freezone_audio_music' : 'beat_tts',
     null,
@@ -158,26 +159,26 @@ export function AssetBoardAudioGenForm({
   const submitDisabled = isGenerating || busyOp !== null || effectivePrompt.length === 0;
 
   return (
-    // 外框与图片/视频生成条同款（CANVAS_NODE_OPS_PANEL_CLASS + 节点圆角）：三种
-    // 生成条摆在同一个详情面板里，边框/底色不该各写一套（用户要求对齐视频）。
+    // The outer frame is the same as the image/video generation bar (CANVAS_NODE_OPS_PANEL_CLASS + node corner radius): the three kinds of
+    // generation bars sit in the same detail panel, and borders/background should not each be written separately (user asked to match video).
     <div
       className={`flex w-full flex-col gap-3 rounded-[var(--node-radius)] p-3 ${CANVAS_NODE_OPS_PANEL_CLASS}`}
     >
-      {/* 失败原因不在这里内联：详情头部下方已有共享失败红条（AssetBoardDetail），
-          对所有栏含音频统一展示 node.data.generationError，与图片/视频 GenForm
-          一致（它们也不内联错误）。此前这份内联块是从旧顶部内联面板带过来的。 */}
+      {/* The failure reason is not inlined here: below the detail header there is already a shared red failure bar (AssetBoardDetail),
+      showing node.data.generationError uniformly for all columns including audio, consistent with the image/video GenForm
+      (they do not inline errors either). This inline block was carried over from the old top inline panel. */}
 
       <div className="flex flex-col gap-1.5">
-        <span className={FIELD_LABEL_CLASS}>{isMusic ? '音乐描述' : '要合成的文本'}</span>
-        {/* 直绑 store（不做本地草稿 + IME 守卫）：工作流面板那份守卫是为了避开
-            画布上高频重渲染打断输入法候选；故事板隐藏时数据源整体冻结，这里没有
-            同一个问题，多一层草稿反而会和「切走再切回」的重挂载互相打架。 */}
+        <span className={FIELD_LABEL_CLASS}>{isMusic ? i18n.t('canvas.assetBoard.audioForm.musicDescription') : i18n.t('canvas.assetBoard.audioForm.textToSynthesize')}</span>
+        {/* Bound directly to the store (no local draft + IME guard): the workflow panel's guard is there to avoid high-frequency
+        re-renders on the canvas interrupting IME candidates; while the storyboard is hidden the data source is frozen as a whole, so there is no
+        such problem here, and an extra draft layer would instead fight with the remount of "switch away and back". */}
         <textarea
           value={text}
           onChange={(event) => patch({ text: event.target.value })}
           disabled={isGenerating}
           placeholder={
-            isMusic ? '描述想要的音乐：风格、乐器、节奏、氛围…' : '输入要合成的文本'
+            isMusic ? i18n.t('canvas.assetBoard.audioForm.musicPlaceholder') : i18n.t('canvas.assetBoard.audioForm.textPlaceholder')
           }
           className={`${FIELD_CLASS} min-h-[84px] resize-y`}
         />
@@ -185,13 +186,13 @@ export function AssetBoardAudioGenForm({
 
       {!isMusic && (
         <div className="flex flex-col gap-1.5">
-          <span className={FIELD_LABEL_CLASS}>语气词（可选）</span>
+          <span className={FIELD_LABEL_CLASS}>{i18n.t('canvas.assetBoard.audioForm.toneOptional')}</span>
           <input
             type="text"
             value={emotionPrompt}
             onChange={(event) => patch({ emotionPrompt: event.target.value })}
             disabled={isGenerating}
-            placeholder="如：紧张、压低声音、带一点恐惧感"
+            placeholder={i18n.t('canvas.assetBoard.audioForm.tonePlaceholder')}
             className={FIELD_CLASS}
           />
         </div>
@@ -204,12 +205,12 @@ export function AssetBoardAudioGenForm({
             onClick={() => setVoiceModalOpen(true)}
             className="h-7 rounded-[5px] bg-white/10 text-[12px] text-white/90 transition-colors hover:bg-white/15"
           >
-            {voiceMissing ? '选择自定义声线' : '更换自定义声线'}
+            {voiceMissing ? i18n.t('canvas.assetBoard.audioForm.chooseCustomVoice') : i18n.t('canvas.assetBoard.audioForm.changeCustomVoice')}
           </button>
           <div className="flex items-center gap-2 text-[12px] text-white/60">
-            <span className={FIELD_LABEL_CLASS}>声线</span>
+            <span className={FIELD_LABEL_CLASS}>{i18n.t('canvas.assetBoard.audioForm.voice')}</span>
             <span className="truncate text-white/85">
-              {voiceMissing ? '未选择（生成时跳过）' : data.voiceLabel ?? '自定义声线'}
+              {voiceMissing ? i18n.t('canvas.assetBoard.audioForm.voiceNotSelected') : data.voiceLabel ?? i18n.t('canvas.assetBoard.audioForm.customVoice')}
             </span>
             {data.voiceLanguage && (
               <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] text-white/70">
@@ -223,9 +224,9 @@ export function AssetBoardAudioGenForm({
       {isMusic && showMusicSettings && (
         <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-white/80">音乐时长</span>
+            <span className="text-[13px] text-white/80">{i18n.t('canvas.assetBoard.audioForm.musicDuration')}</span>
             <UiSelect
-              aria-label="音乐时长"
+              aria-label={i18n.t('canvas.assetBoard.audioForm.musicDuration')}
               value={String(musicLengthMs)}
               onChange={(event) => patch({ musicLengthMs: Number(event.target.value) })}
               className={MUSIC_LENGTH_SELECT_CLASS}
@@ -239,17 +240,17 @@ export function AssetBoardAudioGenForm({
             </UiSelect>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-white/80">强制纯音乐</span>
+            <span className="text-[13px] text-white/80">{i18n.t('canvas.assetBoard.audioForm.forceInstrumental')}</span>
             <SettingToggle
-              ariaLabel="强制纯音乐"
+              ariaLabel={i18n.t('canvas.assetBoard.audioForm.forceInstrumental')}
               checked={data.forceInstrumental ?? true}
               onChange={(next) => patch({ forceInstrumental: next })}
             />
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-white/80">遵守段落时长</span>
+            <span className="text-[13px] text-white/80">{i18n.t('canvas.assetBoard.audioForm.respectSections')}</span>
             <SettingToggle
-              ariaLabel="遵守段落时长"
+              ariaLabel={i18n.t('canvas.assetBoard.audioForm.respectSections')}
               checked={data.respectSectionsDurations ?? true}
               onChange={(next) => patch({ respectSectionsDurations: next })}
             />
@@ -257,23 +258,23 @@ export function AssetBoardAudioGenForm({
         </div>
       )}
 
-      {/* 底部控制行（对标 liblib 的紧凑 footer，去掉模型选择——我们不给选模型）：
-          左 = 模式（自定义声线旁白或文字生成音乐）；
-          右 = 字数 · 音色/高级设置 · 算力 ✦ · 提交箭头。与工作流 AudioOperationsPanel
-          的控制行同款组件（IconButton / CreditCostPill / ArrowUp 提交键）。 */}
+      {/* Bottom control row (matches liblib's compact footer, minus model selection - we do not let users pick a model):
+      left = mode (custom-voice narration or text-to-music);
+      right = character count · voice/advanced settings · compute cost ✦ · submit arrow. The same components as the control row of the workflow AudioOperationsPanel
+      (IconButton / CreditCostPill / ArrowUp submit key). */}
       <div className="flex items-center gap-2 pt-0.5">
         <Music2 className="h-3.5 w-3.5 shrink-0 text-white/40" />
         <span className="min-w-0 truncate text-[12px] text-white/60">
           {isMusic
-            ? '文字生成音乐'
-            : '自定义声线旁白'}
+            ? i18n.t('canvas.assetBoard.audioForm.modeMusic')
+            : i18n.t('canvas.assetBoard.audioForm.modeNarration')}
         </span>
         <span className="flex-1" />
         <span className="shrink-0 text-[11px] tabular-nums text-white/35">{text.length}</span>
         {!isMusic && (
           <button
             type="button"
-            title={`音色设置（当前：${voiceMissing ? '未选择' : data.voiceLabel ?? '自定义声线'}）`}
+            title={i18n.t('canvas.assetBoard.audioForm.voiceSettingsTitle', { voice: voiceMissing ? i18n.t('canvas.assetBoard.audioForm.voiceNotSelectedShort') : data.voiceLabel ?? i18n.t('canvas.assetBoard.audioForm.customVoice') })}
             onClick={() => setVoiceModalOpen(true)}
             className={NODE_INLINE_ICON_BUTTON_CLASS}
           >
@@ -283,7 +284,7 @@ export function AssetBoardAudioGenForm({
         {isMusic && (
           <button
             type="button"
-            title="高级设置"
+            title={i18n.t('canvas.assetBoard.audioForm.advancedSettings')}
             onClick={() => setShowMusicSettings((open) => !open)}
             className={`${NODE_INLINE_ICON_BUTTON_CLASS} ${
               showMusicSettings ? NODE_INLINE_ICON_BUTTON_ACTIVE_CLASS : ''
@@ -301,17 +302,17 @@ export function AssetBoardAudioGenForm({
         <button
           type="button"
           disabled={submitDisabled}
-          // 已有产物时语义是「重新生成」（与图片/视频详情口径一致）。
+          // With an existing product the semantics is "Regenerate" (consistent with the image/video detail).
           title={
             effectivePrompt.length === 0
               ? isMusic
-                ? '先填写音乐描述'
-                : '先填写要合成的文本'
+                ? i18n.t('canvas.assetBoard.audioForm.fillMusicFirst')
+                : i18n.t('canvas.assetBoard.audioForm.fillTextFirst')
               : hasAudio
-                ? '重新生成'
-                : '生成'
+                ? i18n.t('canvas.assetBoard.audioForm.regenerate')
+                : i18n.t('canvas.assetBoard.audioForm.generate')
           }
-          aria-label={hasAudio ? '重新生成' : '生成'}
+          aria-label={hasAudio ? i18n.t('canvas.assetBoard.audioForm.regenerate') : i18n.t('canvas.assetBoard.audioForm.generate')}
           onClick={() => void handleGenerate()}
           className={`${NODE_GENERATE_BUTTON_BASE_CLASS} ${
             submitDisabled

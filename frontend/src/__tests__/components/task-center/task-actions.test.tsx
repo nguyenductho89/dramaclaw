@@ -86,7 +86,7 @@ describe("TaskActions", () => {
     renderActions(
       sampleTask({ status: "running", beat_num: null, scope: null }),
     );
-    expect(await screen.findByText(/cancel|终止/i)).toBeInTheDocument();
+    expect(await screen.findByText(/cancel/i)).toBeInTheDocument();
   });
 
   it("shows Cancel for active scoped tasks (beat_num present)", async () => {
@@ -95,27 +95,27 @@ describe("TaskActions", () => {
     // (see task-actions.tsx). Assert the Cancel affordance is now visible
     // for beat-scoped active tasks.
     renderActions(sampleTask({ status: "running", beat_num: 3 }));
-    await screen.findByText(/copy task id|复制任务/i);
-    expect(screen.getByText(/cancel|终止/i)).toBeInTheDocument();
+    await screen.findByText(/copy task id/i);
+    expect(screen.getByText(/cancel/i)).toBeInTheDocument();
   });
 
   it("shows Cancel for active scoped tasks (scope present)", async () => {
     renderActions(sampleTask({ status: "running", scope: "regen__abc" }));
-    await screen.findByText(/copy task id|复制任务/i);
-    expect(screen.getByText(/cancel|终止/i)).toBeInTheDocument();
+    await screen.findByText(/copy task id/i);
+    expect(screen.getByText(/cancel/i)).toBeInTheDocument();
   });
 
   it("hides Cancel for terminal tasks", async () => {
     renderActions(
       sampleTask({ status: "completed", beat_num: null, scope: null }),
     );
-    await screen.findByText(/copy task id|复制任务/i);
-    expect(screen.queryByText(/cancel|终止/i)).not.toBeInTheDocument();
+    await screen.findByText(/copy task id/i);
+    expect(screen.queryByText(/cancel/i)).not.toBeInTheDocument();
   });
 
   it("Copy ID calls clipboard.writeText", async () => {
     renderActions(sampleTask({ task_id: "uuid-abc" }));
-    const btn = await screen.findByText(/copy task id|复制任务/i);
+    const btn = await screen.findByText(/copy task id/i);
     fireEvent.click(btn);
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith("uuid-abc"),
@@ -124,7 +124,7 @@ describe("TaskActions", () => {
 
   it("Download logs disabled when logs empty", async () => {
     renderActions(sampleTask({ logs: [] }));
-    const label = await screen.findByText(/download logs|下载日志/i);
+    const label = await screen.findByText(/download logs/i);
     const btn = label.closest("button");
     expect(btn).toBeDisabled();
   });

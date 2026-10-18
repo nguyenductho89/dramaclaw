@@ -8,15 +8,15 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { SceneAssetCard } from "@/components/assets/scene-asset-card";
 import type { SceneAsset } from "@/types/scene";
 
-import { zhTranslation } from "../../helpers/i18n-fixtures";
+import { enTranslation } from "../../helpers/i18n-fixtures";
 
 const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
-    resources: { zh: { translation: zhTranslation } },
+    lng: "en",
+    fallbackLng: "en",
+    resources: { en: { translation: enTranslation } },
     interpolation: { escapeValue: false },
   });
 });
@@ -53,9 +53,9 @@ function renderCard(scene: SceneAsset, overrides = {}) {
 describe("SceneAssetCard", () => {
   it("renders master, 360, and active Director World controls", () => {
     const handlers = renderCard({
-      name: "皇宫大殿",
+      name: "Palace Hall",
       scene_type: "interior",
-      environment_prompt: "金色宫灯、朱红立柱、纵深空间",
+      environment_prompt: "Golden palace lanterns, vermilion pillars, deep space",
       description: "",
       aliases: [],
       notes: "",
@@ -105,69 +105,69 @@ describe("SceneAssetCard", () => {
       },
     });
 
-    expect(screen.getByText("皇宫大殿")).toBeInTheDocument();
-    expect(screen.getByText("源图")).toBeInTheDocument();
-    expect(screen.getByText("背面")).toBeInTheDocument();
-    expect(screen.getByText("360 全景")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "上传源图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重生源图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重生 背面" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "上传/替换 360" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成 360" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除 360" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "打开360查看器" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "打开导演世界" })).toBeInTheDocument();
-    expect(screen.getByText("导演世界")).toBeInTheDocument();
-    expect(screen.queryByText(/当前导演世界/)).not.toBeInTheDocument();
-    expect(screen.getByText("自定义导演世界 ✅")).toBeInTheDocument();
-    expect(screen.getByText("正面导演世界 ✅")).toBeInTheDocument();
-    expect(screen.getByText("360 导演世界 ✅")).toBeInTheDocument();
+    expect(screen.getByText("Palace Hall")).toBeInTheDocument();
+    expect(screen.getByText("Master")).toBeInTheDocument();
+    expect(screen.getByText("Reverse")).toBeInTheDocument();
+    expect(screen.getByText("360 panorama")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload master" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate master" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate reverse" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload/replace 360" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate 360" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete 360" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open 360 Viewer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Director World" })).toBeInTheDocument();
+    expect(screen.getByText("Director World")).toBeInTheDocument();
+    expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
+    expect(screen.getByText("Custom Director World ready")).toBeInTheDocument();
+    expect(screen.getByText("master Director World ready")).toBeInTheDocument();
+    expect(screen.getByText("360 Director World ready")).toBeInTheDocument();
     expect(screen.queryByText("/tmp/director_worlds/hall/v1")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "上传/替换 自定义 包" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除 自定义 包" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "正面→导演世界" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "背面→导演世界" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "360→导演世界" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload/replace custom package" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete custom package" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "master→Director World" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "reverse→Director World" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "360→Director World" })).toBeInTheDocument();
     expect(screen.queryByText(/voxel/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/DirectorStage/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "重生 背面" }));
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate reverse" }));
     expect(handlers.onGenerateReverse).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "生成 360" }));
+    fireEvent.click(screen.getByRole("button", { name: "Generate 360" }));
     expect(handlers.onGeneratePano).toHaveBeenCalledWith("master");
 
-    fireEvent.click(screen.getByRole("button", { name: "删除 360" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete 360" }));
     expect(handlers.onDeletePano).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "打开360查看器" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open 360 Viewer" }));
     expect(handlers.onOpenPanoViewer).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "打开导演世界" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Director World" }));
     expect(handlers.onOpenStageViewer).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "正面→导演世界" }));
+    fireEvent.click(screen.getByRole("button", { name: "master→Director World" }));
     expect(handlers.onGenerateStagePly).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "场景单面转 SOG，确认后将立即启动任务。",
+      "Scene single-face to SOG will start immediately after confirmation.",
     );
     expect(screen.getByRole("alertdialog")).toHaveTextContent("6");
-    fireEvent.click(screen.getByRole("button", { name: "确认并启动" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and start" }));
     expect(handlers.onGenerateStagePly).toHaveBeenCalledWith("master");
 
-    fireEvent.click(screen.getByRole("button", { name: "360→导演世界" }));
+    fireEvent.click(screen.getByRole("button", { name: "360→Director World" }));
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "场景全景转 SOG，确认后将立即启动任务。",
+      "Scene panorama to SOG will start immediately after confirmation.",
     );
     expect(screen.getByRole("alertdialog")).toHaveTextContent("8");
-    fireEvent.click(screen.getByRole("button", { name: "确认并启动" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and start" }));
     expect(handlers.onGenerateStagePly).toHaveBeenCalledWith("pano");
   });
 
   it("disables Director World conversion when the organization price is unavailable", () => {
     renderCard(
       {
-        name: "皇宫大殿",
+        name: "Palace Hall",
         scene_type: "interior",
         environment_prompt: "",
         description: "",
@@ -178,39 +178,39 @@ describe("SceneAssetCard", () => {
         pano_url: "/static/pano.png",
       },
       {
-        singleFaceStageCost: "需配置",
-        singleFaceStageDisabledReason: "计费规则未配置，请联系管理员设置积分规则",
-        panoStageCost: "需配置",
-        panoStageDisabledReason: "计费规则未配置，请联系管理员设置积分规则",
+        singleFaceStageCost: "Configure",
+        singleFaceStageDisabledReason: "Billing rule is not configured. Please contact an administrator to set credit pricing.",
+        panoStageCost: "Configure",
+        panoStageDisabledReason: "Billing rule is not configured. Please contact an administrator to set credit pricing.",
       },
     );
 
-    expect(screen.getByRole("button", { name: "正面→导演世界" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "背面→导演世界" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "360→导演世界" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "master→Director World" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "reverse→Director World" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "360→Director World" })).toBeDisabled();
   });
 
   it("falls back to text-to-360 when master is missing", () => {
     const handlers = renderCard({
-      name: "雨夜巷口",
+      name: "Rainy Alley",
       scene_type: "exterior",
       environment_prompt: "",
-      description: "潮湿的巷口和霓虹灯",
+      description: "A damp alley mouth and neon lights",
       aliases: [],
       notes: "",
     });
 
-    expect(screen.getByText("未生成 正面图")).toBeInTheDocument();
-    expect(screen.getByText("未生成 背面图")).toBeInTheDocument();
-    expect(screen.getByText("未生成 360 全景图")).toBeInTheDocument();
-    const generate = screen.getByRole("button", { name: "生成 360" });
+    expect(screen.getByText("master.png missing")).toBeInTheDocument();
+    expect(screen.getByText("reverse_master.png missing")).toBeInTheDocument();
+    expect(screen.getByText("pano_360.png missing")).toBeInTheDocument();
+    const generate = screen.getByRole("button", { name: "Generate 360" });
     fireEvent.click(generate);
     expect(handlers.onGeneratePano).toHaveBeenCalledWith("text");
   });
 
   it("allows opening Director World even when no scene source exists yet", () => {
     const handlers = renderCard({
-      name: "公寓楼家门口",
+      name: "Apartment building doorway",
       scene_type: "exterior",
       environment_prompt: "",
       description: "",
@@ -218,16 +218,16 @@ describe("SceneAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.queryByText(/当前导演世界/)).not.toBeInTheDocument();
-    expect(screen.queryByText("导演世界（片场未就绪）")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Director World not ready")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "打开导演世界" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Director World" }));
     expect(handlers.onOpenStageViewer).toHaveBeenCalledOnce();
   });
 
   it("renders scene type badges in Chinese", () => {
     renderCard({
-      name: "雨夜巷口",
+      name: "Rainy Alley",
       scene_type: "exterior",
       environment_prompt: "",
       description: "",
@@ -235,7 +235,7 @@ describe("SceneAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByText("室外")).toBeInTheDocument();
+    expect(screen.getByText("Exterior")).toBeInTheDocument();
     expect(screen.queryByText("exterior")).not.toBeInTheDocument();
   });
 });

@@ -14,11 +14,11 @@ from novelvideo.model_gateway_runtime import model_gateway_output_retries
 
 
 class AdaptedContentOutput(BaseModel):
-    """改写后的逐行文本输出。"""
+    """Rewritten line-by-line text output."""
 
     lines: list[str] = Field(
         default_factory=list,
-        description="改写后的逐行文本，每行供下游 literal 工作流生成一个 beat",
+        description="The rewritten line-by-line text; each line is used by the downstream literal workflow to generate one beat",
     )
 
     @model_validator(mode="after")
@@ -29,134 +29,134 @@ class AdaptedContentOutput(BaseModel):
             if text:
                 normalized.append(text)
         if not normalized:
-            raise ValueError("lines 不能为空")
+            raise ValueError("lines must not be empty")
         self.lines = normalized
         return self
 
 
-REWRITE_PROMPT = """你是网文小说的短视频解说改写师。
+REWRITE_PROMPT = """You are a short-video narration rewriter for web novels.
 
-你的任务是把原文改写成逐行解说文本，每一行都会被下游工作流当作一个视频 beat。
-改写后的文本将被 TTS 朗读出来配合画面，所以**听感和节奏是第一优先级**。
+Your task is to rewrite the source text into line-by-line narration text; the downstream workflow treats every line as one video beat.
+The rewritten text will be read aloud by TTS over the visuals, so **how it sounds and its rhythm are the top priority**.
 
-## 核心目标
-- 尽可能完整讲清这一集的主线剧情，让没看过原文的人也能听懂发生了什么
-- 同时保留网文解说应有的节奏、情绪和钩子
-- 不是逐段摘要，也不是只摘高能片段，要在“剧情完整”和“听感抓人”之间平衡
+## Core goals
+- Tell the main storyline of this episode as completely as possible, so that someone who has not read the source can follow what happens
+- At the same time keep the rhythm, emotion and hooks that web-novel narration should have
+- This is neither a paragraph-by-paragraph summary nor a highlights-only cut; balance "complete plot" against "gripping to listen to"
 
-## 行长纪律（优先目标，不是死规矩）
-- 每行**优先**落在指定字数范围内（通常 14-20 字），这样 TTS 节奏最稳
-- 但字数只是推荐目标，不是机械硬切；**完整表达、关键信息、核心对白优先**
-- ⚠️ 不要出现 2-4 字的碎行（如"不。""我重生了。""而是。"）—— 这类单独成行会让 TTS 节奏崩掉
-- 一般情况下，行太长就拆；但如果拆开会损伤一句核心对白或一句完整攻防，就允许该行适度超出上限
-- 如果一个信息点太短不够一行，和前后内容合并
-- 行长稳定很重要，但不要为了卡字数把句意切碎、把核心台词截断
+## Line length discipline (a priority target, not a hard rule)
+- Each line should **preferably** fall within the specified length range (usually 14-20 characters), which keeps the TTS rhythm steadiest
+- But the length is a recommended target, not a mechanical hard cut; **complete expression, key information and core dialogue come first**
+- ⚠️ Do not produce fragment lines of 1-2 words (such as "No." "I was reborn." "But.") — a line like that on its own breaks the TTS rhythm
+- Normally, split a line that is too long; but if splitting would damage a piece of core dialogue or a complete exchange of attack and defense, that line may moderately exceed the upper limit
+- If a piece of information is too short for a line, merge it with the content before or after
+- Stable line length matters, but do not chop the meaning of a sentence or truncate core lines just to hit a length
 
-## 听感与节奏
-- 每一行都要适合**被读出来** —— 读出来顺口、有节奏、有情绪起伏
-- 在行长纪律内做长短交替：靠近上限的行推进叙事，靠近下限的行制造冲击
-- 在情绪高点用短行（但不低于下限），在铺垫段用长行蓄力
-- 避免连续多行相同句式 —— 如果连续三行都是"她xxx，他xxx"，打破它
-- 注意气口：读者需要在行与行之间换气，每行结尾要有自然停顿感
-- 对白行和叙述行穿插安排，形成"讲-说-讲"的呼吸节奏
+## Sound and rhythm
+- Every line must suit being **read aloud** — smooth to say, rhythmic, with emotional ups and downs
+- Alternate long and short within the line length discipline: lines near the upper limit advance the narrative, lines near the lower limit create impact
+- Use short lines at emotional peaks (but not below the lower limit) and long lines in setup passages to build tension
+- Avoid many consecutive lines with the same sentence pattern — if three lines in a row are all "She xxx, he xxx", break it up
+- Mind the breathing points: the reader needs to breathe between lines, so every line ending should have a natural pause
+- Interleave dialogue lines and narration lines to create a "tell - speak - tell" breathing rhythm
 
-## 风格
-- 用小说旁白的语气，不是新闻播报、不是摘要、不是剧本台词
-- 保留原文的情绪浓度、句式节奏、用词习惯
-- 允许短句爆发、允许设问、允许省略主语
-- 宁可短、硬、狠，也不要写成统一模板腔或平台套话
-- ⚠️ 禁止无意义的动作补写和环境补写 —— 不要给每句都加"跌跌撞撞""大口喘气""静静立在"这种填充动作。如果原文没有这个动作，也不推进剧情，就不要加
-- ⚠️ 禁止爽文扩写腔 —— 不要用"眼瞎心盲""像死狗一样""狂喜终于掩盖了绝望""任由宰割的鱼肉"这类廉价模板句。每一句的措辞要从原文语感中来，不是从爽文套路库里取
-- 目标不是"更华丽"，而是"更狠、更准、更快推剧情"
+## Style
+- Use the tone of a novel's narration, not news broadcasting, not a summary, not script lines
+- Keep the emotional intensity, sentence rhythm and word habits of the source text
+- Short bursts of sentences, rhetorical questions and dropped subjects are allowed
+- Prefer short, hard, ruthless writing over a uniform template tone or platform boilerplate
+- ⚠️ No meaningless filler actions or scenery — do not add filler actions like "stumbling", "gasping for breath", "standing silently" to every sentence. If the source has no such action and it does not advance the plot, do not add it
+- ⚠️ No cheap power-fantasy padding — do not use stock phrases like "blind and heartless", "like a dead dog", "ecstasy finally drowned out despair", "a fish at the mercy of the knife". Each phrase should come from the feel of the source text, not from a power-fantasy cliché library
+- The goal is not "more ornate" but "harsher, more precise, faster plot movement"
 
-## 对白规则（⚠️ 重要）
-对白行在下游不会用旁白朗读，而是由角色声音配音。所以对白行必须让下游能识别"谁说的"和"怎么说的"。
+## Dialogue rules (⚠️ important)
+Dialogue lines are not read by the narrator downstream but voiced by character voices. So a dialogue line must let the downstream tell "who is speaking" and "how it is said".
 
-格式：`角色名 + 说话方式 + 冒号 + 中文引号原句`
-- 苏清柔冷笑着说：“你的一切，都是我的。”
-- 楚寒怒喝：“偷盗宗门至宝洗髓丹！”
-- 林清清柔声道：“师尊，您别逼师姐了。”
+Format: `Character name + manner of speaking + colon + the original sentence in straight double quotes`
+- Su Qingrou sneered: "Everything you have is mine."
+- Chu Han roared: "Stealing the sect's treasure, the Marrow-Cleansing Pill!"
+- Lin Qingqing said softly: "Master, please stop pressing Senior Sister."
 
-规则：
-- ⚠️ 对白内容**必须用中文引号 `“”` 包裹**，不能裸写，也不要用英文引号 `""`
-- ⚠️ 只要这一行输出的是明确对白，就必须写成 `角色名 + 说话方式 + 冒号 + “原句”` 的完整格式；**禁止**只输出裸引号内容
-- ⚠️ 如果原文里已经出现明确引号对白，且你能判断是谁在说，这一句改写后也必须保留为完整对白格式，不要改写成旁白
-- ⚠️ 原文里单独成句、冲击力强的引号句，优先保留成**独立对白行**；宁可压缩前后叙述，也不要把这类句子改写成旁白总结
-- ⚠️ 特别是解说主角（第一人称叙述者本人）的立誓、威胁、宣判、反击这类引号句，改写后应写成 `我 + 说话方式 + ： + “原句”`，不要改成“我发誓要……”这种旁白
-- ⚠️ 如果原文对白本身就是这一段的核心攻防（试探、拒绝、反击、揭穿、威胁、立誓），优先**完整保留整句对白**
-- ⚠️ 宁可压缩对白前后的叙述，也不要把核心对白截成半句、更不要截掉真正有力的后半句
-- ⚠️ 例如 `“劳妹妹费心，这汤药，你自己喝吧。”` 这种句子，不能只剩 `“劳妹妹费心。”`；`“万一汤药里有不妥，误了我可不好。”` 也不能只剩前半句
-- ⚠️ 禁止写成只有 `“你的一切，都是我的。”` 这种无 speaker 的句子；必须写成 `苏清柔冷笑着说：“你的一切，都是我的。”`
-- 引号内的对白文字内容**必须逐字保留原句**，不要加字、不要改措辞、不要改语气词；如果原文使用的是英文引号 `""`，输出时统一改用中文引号 `“”` 包裹即可
-- 如果对白略微超出推荐字数，但这是更自然的完整表达，优先保留整句
-- 只有在对白明显过长、严重拖慢节奏时，才截取最有冲击力的部分；且优先保留真正决定攻防关系的那半句
-- 说话方式从原文语境推断（冷笑、怒喝、低声、柔声、咬牙切齿、嘶哑着说 等）
-- 如果原文没有明确语气描写，根据剧情推断一个合理的说话方式
-- 不要写成"xxx说"这种干巴巴的格式，说话方式本身要有画面感
+Rules:
+- ⚠️ Dialogue content **must be wrapped in straight double quotes `"..."`**; never write it bare
+- ⚠️ Whenever a line outputs clear dialogue, it must be written in the complete `Character name + manner of speaking + colon + "original sentence"` format; **never** output bare quoted content only
+- ⚠️ If the source already contains clearly quoted dialogue and you can tell who is speaking, that sentence must also be kept in the complete dialogue format after rewriting; do not turn it into narration
+- ⚠️ Quoted sentences in the source that stand alone and hit hard should preferably be kept as **independent dialogue lines**; compress the narration around them rather than rewriting such sentences into narrated summaries
+- ⚠️ In particular, quoted sentences of the narration protagonist (the first-person narrator) — oaths, threats, verdicts, counterattacks — should be written after rewriting as `I + manner of speaking + : + "original sentence"`, not changed into narration like "I swore that..."
+- ⚠️ If the source dialogue is itself the core exchange of the passage (probing, refusing, counterattacking, exposing, threatening, vowing), **keep the whole sentence of dialogue** first
+- ⚠️ Compress the narration around the dialogue rather than cutting core dialogue into half a sentence, and never cut off the genuinely forceful second half
+- ⚠️ For example a sentence like `"Thank you for your trouble, sister, but you may drink this medicine yourself."` must not shrink to `"Thank you for your trouble, sister."`; and `"If anything is wrong with the medicine, it would be bad for me."` must not keep only its first half
+- ⚠️ Never write a speaker-less sentence like `"Everything you have is mine."`; it must be written as `Su Qingrou sneered: "Everything you have is mine."`
+- The dialogue text inside the quotes **must keep the original sentence word for word**: do not add words, change wording or change modal particles; if the source uses other quote styles, simply wrap the output in straight double quotes `"..."`
+- If the dialogue slightly exceeds the recommended length but that is the more natural complete expression, keep the whole sentence
+- Only when the dialogue is clearly too long and seriously drags the rhythm, extract its most impactful part; and prefer keeping the half that truly decides the attack-defense relationship
+- Infer the manner of speaking from the source context (sneered, roared, low voice, soft voice, through gritted teeth, hoarsely, etc.)
+- If the source gives no clear tone, infer a reasonable manner of speaking from the plot
+- Do not write the dry "xxx said" format; the manner of speaking itself should be visual
 
-## 每行 = 一个视频画面
-- 每行会成为一个 3-5 秒的视频 beat：一段 TTS 朗读 + 一个画面
-- 所以每行应该对应一个**可想象的瞬间**（一个动作、一句话、一个反应）
-- 纯内心独白也可以是一行（配角色静态画面），不要因为"不能画"就删掉关键情绪
+## Each line = one video frame
+- Each line becomes a 3-5 second video beat: one TTS reading + one picture
+- So each line should correspond to an **imaginable moment** (an action, a sentence, a reaction)
+- Pure inner monologue can also be a line (paired with a static character shot); do not delete key emotion just because it "can't be drawn"
 
-## 每行合法性检验（⚠️ 最重要的规则）
-每一行必须属于以下三类之一，不属于的就不要写：
-1. **新动作** —— 一个角色做了一件可见的事（进门、端药、撞翻碗、攥紧银针）
-2. **新信息** —— 听众此前不知道的事实或判断（她想在药里动手脚、我重生了、定亲第三日）
-3. **新对抗变化** —— 两人之间的攻防关系发生了一次位移（她试探→我拒绝、她强喂→我反制）
+## Per-line validity test (⚠️ the most important rule)
+Every line must belong to one of the following three categories; if it belongs to none, do not write it:
+1. **New action** — a character does a visible thing (enters, brings the medicine, knocks over the bowl, clenches the silver needle)
+2. **New information** — a fact or judgment the listener did not know before (she wants to tamper with the medicine, I was reborn, the third day after the engagement)
+3. **New shift in confrontation** — the attack-defense relationship between two people moves once (she probes -> I refuse, she force-feeds -> I counter)
 
-⚠️ 以下写法**禁止**：
-- 连续 2-3 行用不同措辞重复确认同一个判断（"她很虚伪 / 她不安好心 / 她在算计我" —— 只能留 1 行）
-- 用情绪复述凑行数（"我恨意翻涌 / 寒意压不住 / 恨意几乎冲破喉咙" —— 选一个最准的，其余删掉）
-- 补写过度推测的内心动机（"她在掂量我的死活""等我彻底病弱再任她拿捏" —— 太满，只保留可感知的判断）
-- 同一个事实最多只讲一次；如果已经说过"她端药试探我"，后面不要再换说法重复确认
+⚠️ The following are **forbidden**:
+- Repeating confirmation of the same judgment over 2-3 consecutive lines in different wording ("She is hypocritical / she means no good / she is scheming against me" — keep only 1 line)
+- Padding lines with emotion restatements ("hatred surged / the chill could not be pressed down / hatred almost burst through my throat" — pick the single most accurate one and delete the rest)
+- Adding over-speculated inner motives ("she is weighing whether I live or die", "once I am fully sick and weak she can do as she pleases" — too much; keep only judgments that can be perceived)
+- Telling the same fact more than once; if you have already said "she brought the medicine to test me", do not restate it later in other words
 
-⚠️ 接近目标行数的正确方式是**拆动作**，不是**复述情绪**：
-- ✓ 她进门 → 她端药 → 她试探 → 我压情绪 → 我拒药 → 她强喂 → 我撞翻药碗 → 她被泼 → 我反刺一句 → 她不敢发作
-- ✗ 她很假 → 她藏着算计 → 她不安好心 → 她在掂量 → 她想掏空我
+⚠️ The right way to approach the target line count is to **split actions**, not to **restate emotions**:
+- ✓ She enters -> she brings the medicine -> she probes -> I suppress my emotion -> I refuse the medicine -> she force-feeds -> I knock over the medicine bowl -> she is splashed -> I jab back with one line -> she dares not lash out
+- ✗ She is fake -> she hides a scheme -> she means no good -> she is weighing -> she wants to hollow me out
 
-## 行数策略（适配任意 target_beats）
-- 目标行数可能是 18、22、25、30，不要把任何固定行数当模板
-- 行数偏少时：优先补**动作节点**、**攻防变化**、**关键反应**
-- 行数偏多时：优先压缩**重复判断**、**重复情绪**、**重复解释**
-- 先数清这一段里有多少个事件节点，再决定怎么拆成目标行数
-- 如果为了凑目标行数只能重复同一意思，宁可更密地合并，也不要水
+## Line count strategy (for any target_beats)
+- The target line count may be 18, 22, 25 or 30; do not treat any fixed line count as a template
+- When there are too few lines: add **action nodes**, **attack-defense shifts** and **key reactions** first
+- When there are too many lines: compress **repeated judgments**, **repeated emotions** and **repeated explanations** first
+- First count how many event nodes the passage has, then decide how to split it into the target line count
+- If you can reach the target line count only by repeating the same meaning, merge more densely rather than water it down
 
-## 补写规则
-- 可以补写原文没有的**可见动作和可感反应**（攥紧银针、药碗碎裂声、药汁溅在裙上）
-- 不可以大量补写**内心揣测和过度动机**（"她在掂量我的死活""她要彻底拿捏我"）
-- 补写的目标是让每一行成为一个可画的画面，不是让读者更了解角色的内心世界
+## Embellishment rules
+- You may add **visible actions and perceivable reactions** that are not in the source (clenching the silver needle, the sound of the medicine bowl shattering, medicine splashing on the skirt)
+- You may not add large amounts of **inner speculation and over-motivation** ("she is weighing whether I live or die", "she wants to have me completely in her grip")
+- The goal of embellishment is to make every line a drawable picture, not to give the reader more insight into a character's inner world
 
-## 结构规则
-- 总行数尽量接近目标行数
-- 可以把长段落拆成多行，也可以把过短内容合并
-- 尽量覆盖整集主线剧情，不要漏掉关键因果和关键转折
-- 必须保留：主冲突、关键转折、人物关系变化、高潮点、结尾钩子
-- 可以压缩：重复解释、重复心理描写、冗长环境铺陈、次要支线细节
-- 如果删掉一句会让后文听不懂，就不要删
-- 如果为了卡目标行数或卡字数，会导致某句关键对白、关键因果或关键反击变弱，那就宁可稍长一点、稍多一点
-- 第一人称/第三人称保持一致
-- 开头几行先把人、事、冲突立起来，不要连续多行只铺气氛
-- 结尾 2-3 行要收在**反制成立 / 局势变化 / 新钩子**上，不要收在空泛狠话
-- 只输出逐行文本，不要编号，不要解释，不要额外标注 narration/dialogue/speaker
-- 不要输出“半旁白半对白”的混合残句；对白要么完整保留为 `xxx说：“...”`，要么改成纯旁白总结，但不要两者夹杂
+## Structure rules
+- Keep the total number of lines as close to the target line count as possible
+- Long paragraphs may be split into multiple lines, and content that is too short may be merged
+- Cover the main storyline of the whole episode as far as possible; do not miss key causality and key turning points
+- Must keep: the main conflict, key turning points, character relationship changes, the climax, the ending hook
+- May compress: repeated explanation, repeated psychological description, lengthy scenery setup, minor subplot details
+- If deleting a sentence would make the following text incomprehensible, do not delete it
+- If hitting the target line count or length would weaken a key line of dialogue, key causality or key counterattack, prefer being a bit longer or a bit more
+- Keep first person / third person consistent
+- In the first few lines establish the people, the matter and the conflict; do not spend several consecutive lines only on atmosphere
+- The last 2-3 lines should close on **a counter-move taking hold / a change in the situation / a new hook**, not on empty tough talk
+- Output only the line-by-line text; no numbering, no explanation, no extra narration/dialogue/speaker labels
+- Do not output "half-narration half-dialogue" hybrid fragments; dialogue is either kept complete as `xxx said: "..."` or turned into pure narrated summary, but never a mix of the two
 
-## 示例（仅供参照语感和对白格式，不是模板）
+## Example (only for the feel of the language and the dialogue format; not a template)
 
-原文片段：
-"桑落，你太让我失望了。"冰冷的声音在戒律堂上方回荡，带着高高在上的威压。我睁开眼，入目是楚寒那张清冷孤傲的脸。他看我的眼神，像在看一团令人作呕的垃圾。"偷盗宗门至宝洗髓丹，只为满足你那可笑的嫉妒心！"我垂着眼，没有辩解。"你确定要我的仙骨？"我声音嘶哑。
+Source passage:
+"Sang Luo, you disappoint me too much." The icy voice echoed above the Discipline Hall, carrying a lofty pressure. I opened my eyes and saw Chu Han's cold, aloof face. The way he looked at me was like looking at a lump of revolting garbage. "Stealing the sect's treasure, the Marrow-Cleansing Pill, just to satisfy your laughable jealousy!" I lowered my eyes and offered no defense. "Are you sure you want my immortal bones?" My voice was hoarse.
 
-改写示例：
-楚寒冷声道：“桑落，你太让我失望了。”
-冰冷的声音压下来，带着高高在上的威压。
-我睁开眼，入目是楚寒那张清冷孤傲的脸。
-他看我的眼神，像在看垃圾。
-楚寒怒喝：“偷盗宗门至宝洗髓丹，只为满足你那可笑的嫉妒心！”
-我垂着眼，一个字都没辩解。
-我嘶哑开口：“你确定要我的仙骨？”
-我在心底立誓：“若有来生，所有践踏我的人，我定要血债血偿！”
+Rewritten example:
+Chu Han said coldly: "Sang Luo, you disappoint me too much."
+The icy voice pressed down, carrying a lofty pressure.
+I opened my eyes and saw Chu Han's cold, aloof face.
+He looked at me like looking at garbage.
+Chu Han roared: "Stealing the sect's treasure, the Marrow-Cleansing Pill, just to satisfy your laughable jealousy!"
+I lowered my eyes and did not say a word in my defense.
+I opened my mouth hoarsely: "Are you sure you want my immortal bones?"
+I swore in my heart: "If there is a next life, I will make everyone who trampled me pay in blood!"
 
-注意：对白用 角色名/我+说话方式+冒号+中文引号原句 格式；叙述句压短但保留冲击力；每行一个画面瞬间。
+Note: dialogue uses the Character name / I + manner of speaking + colon + original sentence in straight double quotes format; narration lines are compressed but keep their impact; one picture moment per line.
 """
 
 
@@ -169,24 +169,24 @@ async def rewrite_episode_content(
     beat_chars_range: tuple[int, int] = (14, 20),
     narration_style: str = "first_person",
 ) -> str:
-    """将原文改写为供 literal 下游消费的逐行文本。"""
+    """Rewrite the source text into line-by-line text consumed by the downstream literal workflow."""
     source_text = (raw_content or "").strip()
     if not source_text:
         return ""
 
     min_chars, max_chars = beat_chars_range
-    task = f"""## 剧集信息
-- 标题: {episode_title or "未命名"}
-- 解说主角（第一人称里的“我”）: {protagonist_name or "未绑定"}
-- 解说风格: {narration_style}
-- 目标行数: {target_beats}
-- 每行字数: {min_chars}-{max_chars} 字
-- 改写目标: 生成适合短视频口播的网文主线解说，不是逐段摘要，也不是只摘爆点
+    task = f"""## Episode info
+- Title: {episode_title or "Untitled"}
+- Narration protagonist (the first-person "I"): {protagonist_name or "Not bound"}
+- Narration style: {narration_style}
+- Target line count: {target_beats}
+- Characters per line: {min_chars}-{max_chars}
+- Rewrite goal: produce a web-novel main-storyline narration suited to short-video voice-over; not a paragraph-by-paragraph summary, and not just the highlights
 
-## 原文
+## Source text
 {source_text}
 
-请输出改写后的逐行文本。"""
+Output the rewritten line-by-line text."""
 
     agent = Agent(
         get_newapi_text_pydantic_model(
@@ -198,7 +198,7 @@ async def rewrite_episode_content(
         output_type=AdaptedContentOutput,
         output_retries=model_gateway_output_retries(3),
         model_settings=get_newapi_structured_output_model_settings(),
-        name="短视频解说改写师",
+        name="Short-video narration rewriter",
     )
     result = await agent.run(task)
     output: AdaptedContentOutput = result.output

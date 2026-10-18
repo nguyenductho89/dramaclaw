@@ -1,188 +1,188 @@
 # Short Drama Workflow
 
-用于短剧、小说转视频、故事转视频。
+For short dramas, novel-to-video and story-to-video.
 
-本 workflow 是虾画自己的节点化生产流程。它只抽象短剧制作方法，不调用、不引用、不绑定外部项目主线流水线。计划被用户确认后，由前端创建真实虾画节点和连线；后续由 Agent 操作这些节点逐步生成内容，每个节点使用自己的实现调用 API 并把结果写回画布。
+This workflow is Shrimp Canvas's own node-based production flow. It abstracts only the short-drama production method, and does not call, reference or bind to any external project mainline pipeline. After the user confirms the plan, the frontend creates real Shrimp Canvas nodes and links; afterwards the Agent operates these nodes to generate content step by step, and each node uses its own implementation to call the API and write the result back onto the canvas.
 
-## 材料要求
+## Material requirements
 
-- 必需其一：剧本、小说、故事梗概、分集大纲、角色设定，或用户在聊天里贴出的长文本。
-- 推荐：主角/反派/配角说明、目标集数、单集时长、风格参考、角色参考图、场景参考图。
-- 可选：已有分镜、旁白稿、配音要求、音乐风格、目标比例、成片时长。
+- One of the following is required: a screenplay, a novel, a story synopsis, an episode outline, character settings, or long text the user pastes in chat.
+- Recommended: descriptions of the protagonist / antagonist / supporting characters, target number of episodes, per-episode duration, style references, character reference images, scene reference images.
+- Optional: existing storyboards, narration scripts, voiceover requirements, music style, target aspect ratio, final duration.
 
-缺少故事文本时，不要假装已有剧本；先规划 `creative_brief -> story_outline` 的最小骨架，并在 `missing_inputs` 中要求补充剧本、梗概或角色设定。
+When story text is missing, do not pretend a screenplay exists; first plan the minimal skeleton `creative_brief -> story_outline`, and ask in `missing_inputs` for a screenplay, synopsis or character settings.
 
-## 生产链路概览
+## Production chain overview
 
-`故事输入 -> 剧情结构 -> 角色关系 -> 场景规划 -> 分集/幕 -> beat -> 分镜 -> 图片资产 -> 视频片段 -> 音频/音乐 -> 成片合成 -> 质检修复`
+`story input -> plot structure -> character relationships -> scene planning -> episodes/acts -> beats -> storyboard -> image assets -> video clips -> audio/music -> final composition -> QA and repair`
 
-这条链路是生产阶段顺序，不等于画布连线顺序。画布边只表达真实输入依赖、参考依赖或上下文依赖。
+This chain is the order of production stages and does not equal the order of canvas links. Canvas edges express only real input dependencies, reference dependencies or context dependencies.
 
-## 虾画节点化阶段
+## Shrimp Canvas node-based stages
 
-### 1. 输入与资源层
+### 1. Input and resource layer
 
-用途：承载用户材料和当前项目/画布资源。
+Purpose: carry the user's material and the current project/canvas resources.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：剧本、小说片段、故事梗概、创意 brief、用户要求。
-- `imageGenNode` 或已有图片节点：角色参考图、场景参考图、风格参考图。
-- 资源查看节点或资源引用节点：当前项目/画布已有图片、视频、音频、文件。
+- `textAnnotationNode`: screenplay, novel excerpts, story synopsis, creative brief, user requirements.
+- `imageGenNode` or existing image nodes: character reference images, scene reference images, style reference images.
+- Resource viewer nodes or resource reference nodes: images, videos, audio and files already in the current project/canvas.
 
-依赖原则：
+Dependency principles:
 
-- 输入文本可以连接到剧情分析、角色设定、场景设定、分镜规划、图片生成和视频生成节点。
-- 图片参考只连接到真正需要参考图的图片/视频节点，不要把所有素材串成一条链。
+- Input text can be linked to plot analysis, character setting, scene setting, storyboard planning, image generation and video generation nodes.
+- Image references link only to the image/video nodes that really need reference images; do not chain all the material into one line.
 
-### 2. 剧情理解层
+### 2. Plot understanding layer
 
-用途：把原始故事变成可生产的结构。
+Purpose: turn the raw story into a producible structure.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：故事摘要、世界观、主线冲突、情绪基调。
-- `textAnnotationNode`：人物关系、角色目标、反派/阻力、爽点/反转。
-- `scriptNode`：当用户明确需要结构化剧本、分集大纲、镜头表或分镜表时使用。
+- `textAnnotationNode`: story summary, world view, main conflict, emotional tone.
+- `textAnnotationNode`: character relationships, character goals, antagonists/obstacles, payoff points/twists.
+- `scriptNode`: use it when the user explicitly needs a structured screenplay, episode outline, shot table or storyboard table.
 
-依赖原则：
+Dependency principles:
 
-- 剧本/梗概输入 -> 故事摘要/结构节点。
-- 剧本/梗概输入 -> 人物关系节点。
-- 故事摘要 + 人物关系 -> 分集/beat 规划节点。
+- Screenplay/synopsis input -> story summary/structure node.
+- Screenplay/synopsis input -> character relationship node.
+- Story summary + character relationships -> episode/beat planning node.
 
-### 3. 分集与 beat 层
+### 3. Episode and beat layer
 
-用途：把长故事拆成可逐步生成的生产单元。
+Purpose: break a long story into production units that can be generated step by step.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：episode 规划、act 规划、beat group。
-- `textAnnotationNode`：单个 beat 的剧情目标、画面描述、旁白/对白、情绪。
-- `scriptNode`：需要结构化字段时，用于保存 episode/beat 表。
+- `textAnnotationNode`: episode planning, act planning, beat group.
+- `textAnnotationNode`: the plot goal, visual description, narration/dialogue and mood of a single beat.
+- `scriptNode`: used to store the episode/beat table when structured fields are needed.
 
-依赖原则：
+Dependency principles:
 
-- 长小说不要一次展开全部镜头，先拆 episode / act / beat group。
-- 每个 beat 后续可以独立连接角色、场景、图片、视频、音频节点。
-- beat 节点是语义源，不是必须串联的执行中继。
+- For a long novel, do not expand all shots at once; first split into episode / act / beat group.
+- Each beat can later independently connect to character, scene, image, video and audio nodes.
+- A beat node is a semantic source, not an execution relay that must be chained.
 
-### 4. 角色与场景资产层
+### 4. Character and scene asset layer
 
-用途：为后续镜头生成提供稳定参考。
+Purpose: provide stable references for later shot generation.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：主角、反派、关键配角设定。
-- `textAnnotationNode`：配角池、路人池、临时人物说明。
-- `imageGenNode`：角色肖像、身份图、服装/造型参考。
-- `textAnnotationNode`：高频场景设定、临时场景池、道具设定。
-- `imageGenNode`：场景参考图、道具参考图、风格板。
+- `textAnnotationNode`: settings for the protagonist, antagonist and key supporting characters.
+- `textAnnotationNode`: supporting-character pool, extras pool, temporary character notes.
+- `imageGenNode`: character portraits, identity images, costume/look references.
+- `textAnnotationNode`: high-frequency scene settings, temporary scene pool, prop settings.
+- `imageGenNode`: scene reference images, prop reference images, style boards.
 
-依赖原则：
+Dependency principles:
 
-- 角色设定 + 风格要求 -> 角色肖像/身份图。
-- 场景设定 + 风格要求 -> 场景参考图。
-- 角色/场景/道具参考图只连接到需要它们的分镜图片或视频节点。
+- Character setting + style requirements -> character portrait/identity image.
+- Scene setting + style requirements -> scene reference image.
+- Character/scene/prop reference images link only to the storyboard image or video nodes that need them.
 
-### 5. 分镜与首帧/图片层
+### 5. Storyboard and first-frame / image layer
 
-用途：把 beat 转为可用于视频生成的视觉输入。
+Purpose: turn beats into visual inputs usable for video generation.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：分镜描述、镜头运动、构图、角色动作、画面气氛。
-- `imageGenNode`：分镜图、首帧图、角色场景合成图、关键帧。
+- `textAnnotationNode`: storyboard description, camera movement, composition, character action, atmosphere.
+- `imageGenNode`: storyboard images, first-frame images, character-scene composite images, keyframes.
 
-依赖原则：
+Dependency principles:
 
-- beat 描述 + 角色参考 + 场景参考 + 风格板 -> 分镜/首帧图片节点。
-- 如果一个镜头需要多个角色参考，多个角色节点应分别汇入同一个图片节点。
-- 图片节点生成完成并产出可用图片 URL 后，才触发下游视频节点。
+- Beat description + character reference + scene reference + style board -> storyboard/first-frame image node.
+- If a shot needs multiple character references, the multiple character nodes should each feed into the same image node.
+- Trigger the downstream video node only after the image node has finished generating and produced a usable image URL.
 
-### 6. 视频片段层
+### 6. Video clip layer
 
-用途：为每个 beat 或镜头生成独立视频片段。
+Purpose: generate an independent video clip for each beat or shot.
 
-建议节点：
+Suggested nodes:
 
-- `videoNode`：单镜头/单 beat 视频片段。
+- `videoNode`: a single shot / single beat video clip.
 
-依赖原则：
+Dependency principles:
 
-- 图片/首帧 + 分镜描述 -> 视频节点。
-- 纯文本镜头也可以直接 文本描述 -> 视频节点。
-- 不要提前使用最终合成节点；只有已有真实视频片段后才考虑合成。
+- Image/first frame + storyboard description -> video node.
+- A pure-text shot can also go directly from text description -> video node.
+- Do not use the final compose node early; consider composing only after real video clips exist.
 
-### 7. 声音层
+### 7. Sound layer
 
-用途：生成或整理配音、背景音乐、音效和字幕文案。
+Purpose: generate or organize voiceover, background music, sound effects and subtitle copy.
 
-建议节点：
+Suggested nodes:
 
-- `textAnnotationNode`：旁白稿、对白稿、字幕稿、音效说明。
-- `audioNode`：TTS、角色声线、背景音乐、音效。
+- `textAnnotationNode`: narration script, dialogue script, subtitle script, sound-effect notes.
+- `audioNode`: TTS, character voices, background music, sound effects.
 
-依赖原则：
+Dependency principles:
 
-- beat/分镜文案 -> 旁白/对白节点。
-- 旁白/对白 + 声线设定 -> 音频节点。
-- 音频节点与视频节点都可以作为最终合成输入。
+- Beat/storyboard copy -> narration/dialogue node.
+- Narration/dialogue + voice setting -> audio node.
+- Both audio nodes and video nodes can serve as final compose inputs.
 
-### 8. 合成与质检层
+### 8. Composition and QA layer
 
-用途：把片段、音频、字幕合成成片，并记录问题修复。
+Purpose: compose clips, audio and subtitles into the final cut, and record issue fixes.
 
-建议节点：
+Suggested nodes:
 
-- `videoComposeNode`：只有已有一个或多个真实视频片段时使用。
-- `textAnnotationNode`：质检清单、失败原因、重试策略、修改建议。
+- `videoComposeNode`: use only when one or more real video clips already exist.
+- `textAnnotationNode`: QA checklist, failure reasons, retry strategy, revision suggestions.
 
-依赖原则：
+Dependency principles:
 
-- 多个视频片段 + 音频 + 字幕稿 -> 合成节点。
-- 质检节点可以引用视频片段、首帧、音频和合成结果，但不要让质检节点成为媒体生成的必经中继。
+- Multiple video clips + audio + subtitle script -> compose node.
+- A QA node may reference video clips, first frames, audio and compose results, but do not make the QA node a mandatory relay of media generation.
 
-## 计划输出要求
+## Plan output requirements
 
-输出 `freezone_workflow_plan.v1` 时，建议包含：
+When outputting `freezone_workflow_plan.v1`, it is recommended to include:
 
-- `phases`：按上面的 8 层列出生产阶段。
-- `analysis.production_units`：说明先按 episode、act、beat group 还是单 beat 展开。
-- `nodes`：使用真实虾画节点类型；抽象职责写在 label/description 中。
-- `edges`：只写真实输入依赖，尤其是多源汇入图片、视频、音频、合成节点。
-- `layout.groups`：把输入、剧情、角色、场景、beat、图片、视频、音频、合成、质检分区展示。
-- `execution_policy`：必须要求用户确认；不自动创建节点，不自动生成内容。
+- `phases`: list the production stages by the 8 layers above.
+- `analysis.production_units`: state whether to expand by episode, act, beat group or single beat first.
+- `nodes`: use real Shrimp Canvas node types; write the abstract responsibilities in label/description.
+- `edges`: write only real input dependencies, especially multi-source merges into image, video, audio and compose nodes.
+- `layout.groups`: show input, plot, characters, scenes, beats, images, videos, audio, compose and QA in separate zones.
+- `execution_policy`: must require user confirmation; do not auto-create nodes and do not auto-generate content.
 
-用户确认后，计划才交给画布节点操作 skill 转成前端命令。节点创建完成后，Agent 可以根据连接线依赖顺序逐步触发节点 action；用户也可以手动打开任意节点修改参数、上传素材、运行或重跑节点。
+Only after user confirmation is the plan handed to the canvas node operation skill to be turned into frontend commands. After the nodes are created, the Agent can trigger node actions step by step following the order of link dependencies; the user can also manually open any node to modify parameters, upload material, run or rerun the node.
 
-## 动态展开
+## Dynamic expansion
 
-- 主角、反派、关键配角：单独角色节点。
-- 路人和一次性人物：合并为配角池。
-- 高频场景：单独场景节点。
-- 一次性地点：合并为临时场景池。
-- 长小说：先按 episode / act / beat group 拆，不要一次展开全部镜头。
-- 短故事：关键 beat 可以直接展开为 `beatContextNode`。
-- 用户只给一句创意：先创建创意 brief、故事梗概、角色/场景占位、首个 beat 试制链路，不要假装已有完整剧本。
-- 用户已上传完整剧本：先规划读取/摘要、角色/场景提取、分集/beat 拆解，再展开首批可生成镜头。
-- 用户已有角色或场景参考图：优先把它们作为参考输入连接到对应图片/视频节点，而不是重新生成全部资产。
-- 用户要求“先试一段”：只展开 1 个 episode 或 1-3 个关键 beat 的最小闭环：beat -> 图片/首帧 -> 视频 -> 音频 -> 合成预览。
+- Protagonist, antagonist, key supporting characters: one character node each.
+- Extras and one-off characters: merge into a supporting-character pool.
+- High-frequency scenes: one scene node each.
+- One-off locations: merge into a temporary scene pool.
+- Long novels: split by episode / act / beat group first; do not expand all shots at once.
+- Short stories: key beats can be expanded directly into `beatContextNode`.
+- When the user gives only a one-line idea: first create the creative brief, story synopsis, character/scene placeholders and a trial production chain for the first beat; do not pretend a complete screenplay exists.
+- When the user has uploaded a complete screenplay: first plan reading/summarization, character/scene extraction, and episode/beat breakdown, then expand the first batch of generatable shots.
+- When the user already has character or scene reference images: prefer connecting them as reference inputs to the corresponding image/video nodes instead of regenerating all the assets.
+- When the user asks to "try a segment first": expand only the minimal closed loop of 1 episode or 1-3 key beats: beat -> image/first frame -> video -> audio -> compose preview.
 
-## 常见最小闭环
+## Common minimal closed loops
 
-### 只有一句创意
+### Only a one-line idea
 
-`创意 brief -> 故事梗概 -> 主角/反派设定 -> 首个 beat -> 首帧图片 -> 视频片段`
+`creative brief -> story synopsis -> protagonist/antagonist settings -> first beat -> first-frame image -> video clip`
 
-### 有完整剧本
+### A complete screenplay
 
-`剧本输入 -> 故事摘要 + 角色关系 + 场景规划 -> episode/beat 表 -> beat 分镜 -> 图片/首帧 -> 视频片段 -> 音频 -> 合成`
+`screenplay input -> story summary + character relationships + scene planning -> episode/beat table -> beat storyboard -> image/first frame -> video clip -> audio -> compose`
 
-### 有角色/场景参考图
+### Character/scene reference images
 
-`角色参考图 + 角色设定 + 场景参考图 + beat 分镜 -> 图片/首帧 -> 视频片段`
+`character reference image + character setting + scene reference image + beat storyboard -> image/first frame -> video clip`
 
-### 已有视频片段
+### Existing video clips
 
-`视频片段 + 音频 + 字幕稿 -> 成片合成 -> 质检修复`
+`video clips + audio + subtitle script -> final composition -> QA and repair`

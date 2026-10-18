@@ -11,19 +11,20 @@ import { initReactI18next } from "react-i18next";
 import { AnnouncementEntry } from "@/components/login/cinematic/AnnouncementEntry";
 import styles from "@/components/login/login.module.css";
 
-// 用真实译文跑，而不是 mock 掉 react-i18next —— 界面词也是文案的一部分，
-// 只有真 i18next 才能验出「新加的 key 忘了补翻译」。
+// Run against the real translations instead of mocking react-i18next: UI wording is
+// part of the copy, and only a real i18next catches "added a key but forgot the translation".
 beforeAll(async () => {
   await i18next.use(initReactI18next).init({
-    lng: "zh",
+    lng: "en",
     resources: {
-      zh: { translation: JSON.parse(readFileSync("public/locales/zh/translation.json", "utf8")) },
+      en: { translation: JSON.parse(readFileSync("public/locales/en/translation.json", "utf8")) },
     },
   });
 });
 
-// 公告内容来自 OSS 上的 JSON。仓库里 public/announcements.json 就是要传上去的那份，
-// 直接拿它当夹具：既测组件，也顺手验这份 JSON 的形状能过 schema。
+// Announcement content comes from a JSON on OSS. public/announcements.json in the repo is
+// the copy to upload, so use it as the fixture: it tests the component and also checks
+// that the JSON shape passes the schema.
 const SHIPPED_PAYLOAD = JSON.parse(readFileSync("public/announcements.json", "utf8"));
 
 function stubFetch(impl: () => unknown) {
@@ -36,7 +37,7 @@ function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as unknown as Response;
 }
 
-// 已读状态落在 localStorage 里，用例之间不清就会互相串。
+// Read state lives in localStorage; without clearing it cases would leak into each other.
 beforeEach(() => {
   window.localStorage.clear();
   stubFetch(() => jsonResponse(SHIPPED_PAYLOAD));
@@ -47,7 +48,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const DIALOG = { name: "公告中心" };
+const DIALOG = { name: "Announcements" };
 
 function findAnnouncementDot(trigger: HTMLElement) {
   return trigger.querySelector(`.${styles.announcementDot}`);
@@ -56,7 +57,7 @@ function findAnnouncementDot(trigger: HTMLElement) {
 async function openCenter() {
   const user = userEvent.setup();
   render(<AnnouncementEntry />);
-  const trigger = screen.getByRole("button", { name: "查看公告" });
+  const trigger = screen.getByRole("button", { name: "View announcements" });
   await user.click(trigger);
   const dialog = await screen.findByRole("dialog", DIALOG);
   return { user, trigger, dialog };
@@ -78,10 +79,11 @@ describe("AnnouncementEntry", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    // 直连 OSS，不是 `media.ts` 那个 CDN 前缀：CDN 有 30 天边缘缓存，且查询串被过滤出缓存键，
-    // 挂时间戳也刷不动，改完公告一个月才见效。这行钉住域名，防止有人顺手"统一"回 cdn()。
+    // Straight to OSS, not the CDN prefix from `media.ts`: the CDN has a 30-day edge cache and
+    // strips the query from the cache key, so even a timestamp cannot refresh it and an edit
+    // would take a month to show. This line pins the domain so nobody "unifies" it back to cdn().
     expect(url).toBe("https://nfg-web.cdnfg.com/dramaclaw/announcements.json");
-    // 登录页是未登录状态下打开的，别把 cookie 带去 OSS。
+    // The login page is opened while logged out; do not send cookies to OSS.
     expect(init).toMatchObject({ credentials: "omit", cache: "no-cache" });
   });
 
@@ -89,7 +91,7 @@ describe("AnnouncementEntry", () => {
     const { trigger, dialog } = await openLoadedCenter();
 
     await waitFor(() => expect(findAnnouncementDot(trigger)).toBeNull());
-    expect(within(dialog).queryByText("1 条未读")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("1 unread")).not.toBeInTheDocument();
     expect(window.localStorage.getItem("dramaclaw.login.announcements.read")).toContain(
       "channel-release-2026-08",
     );
@@ -118,10 +120,10 @@ describe("AnnouncementEntry", () => {
 
     const items = within(dialog).getAllByRole("listitem");
     expect(items).toHaveLength(1);
-    expect(within(items[0]).getByRole("heading")).toHaveTextContent("渠道版本更新");
-    expect(items[0]).toHaveTextContent("渠道版本即将上线");
+    expect(within(items[0]).getByRole("heading")).toHaveTextContent("Channel release update");
+    expect(items[0]).toHaveTextContent("A channel release is going live");
 
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", DIALOG)).not.toBeInTheDocument());
     expect(window.localStorage.getItem("dramaclaw.login.announcements.read")).toContain(
@@ -132,10 +134,10 @@ describe("AnnouncementEntry", () => {
   it("renders the subject and the time window as separate highlight spans", async () => {
     await openLoadedCenter();
 
-    // 高亮片段各自成元素，说明 <time>/<hl> 真的被换成了带样式的 span，
-    // 而不是当成纯文本原样打在正文里。
-    expect(screen.getByText("渠道版本").tagName).toBe("SPAN");
-    expect(screen.getByText("18:00-19:00").tagName).toBe("SPAN");
+    // Highlight fragments are separate elements, proving <time>/<hl> were really turned into
+    // styled spans instead of being printed into the body as plain text.
+    expect(screen.getByText("channel release").tagName).toBe("SPAN");
+    expect(screen.getByText("18:00 and 19:00").tagName).toBe("SPAN");
   });
 
   it("prints any other markup in the remote copy as literal text", async () => {
@@ -145,7 +147,7 @@ describe("AnnouncementEntry", () => {
           {
             id: "escape-check",
             publishedAt: "2026-08-24T10:00:00+08:00",
-            i18n: { zh: { title: "转义", body: "先看 <img src=x onerror=alert(1)> 再看正文" } },
+            i18n: { en: { title: "Escape", body: "See <img src=x onerror=alert(1)> then the body" } },
           },
         ],
       }),
@@ -153,19 +155,20 @@ describe("AnnouncementEntry", () => {
 
     const { dialog } = await openLoadedCenter();
 
-    // 远端文案是不受信任的输入：认识的只有 <hl>/<time>，别的标签只能当字面量。
-    expect(dialog).toHaveTextContent("先看 <img src=x onerror=alert(1)> 再看正文");
+    // Remote copy is untrusted input: only <hl>/<time> are recognized, other tags stay literal.
+    expect(dialog).toHaveTextContent("See <img src=x onerror=alert(1)> then the body");
     expect(dialog.querySelector("img")).toBeNull();
   });
 
   it("falls back to another language when the current one is missing from the json", async () => {
+    window.localStorage.clear();
     stubFetch(() =>
       jsonResponse({
         announcements: [
           {
             id: "en-only",
             publishedAt: "2026-08-24T10:00:00+08:00",
-            i18n: { en: { title: "English only", body: "Body in English" } },
+            i18n: { vi: { title: "English only", body: "Body in English" } },
           },
         ],
       }),
@@ -173,7 +176,7 @@ describe("AnnouncementEntry", () => {
 
     const { dialog } = await openLoadedCenter();
 
-    // 少一种翻译不该让整条公告消失 —— 显示成另一种语言至少信息还在。
+    // A missing translation should not hide the whole announcement; another language keeps the information.
     expect(within(dialog).getByRole("heading", { name: "English only" })).toBeInTheDocument();
   });
 
@@ -184,18 +187,18 @@ describe("AnnouncementEntry", () => {
           {
             id: "old",
             publishedAt: "2026-08-01T10:00:00+08:00",
-            i18n: { zh: { title: "旧公告", body: "旧" } },
+            i18n: { en: { title: "Old announcement", body: "old" } },
           },
           {
             id: "new",
             publishedAt: "2026-08-20T10:00:00+08:00",
-            i18n: { zh: { title: "新公告", body: "新" } },
+            i18n: { en: { title: "New announcement", body: "new" } },
           },
           {
             id: "pinned",
             publishedAt: "2026-07-01T10:00:00+08:00",
             pinned: true,
-            i18n: { zh: { title: "置顶公告", body: "顶" } },
+            i18n: { en: { title: "Pinned announcement", body: "top" } },
           },
         ],
       }),
@@ -203,26 +206,26 @@ describe("AnnouncementEntry", () => {
 
     const { dialog } = await openLoadedCenter();
 
-    // 顺序由数据层定，JSON 里怎么排都不影响展示。
+    // Order is decided by the data layer; the order inside the JSON does not affect display.
     const titles = within(dialog)
       .getAllByRole("heading", { level: 3 })
       .map((node) => node.textContent);
-    expect(titles).toEqual(["置顶公告", "新公告", "旧公告"]);
+    expect(titles).toEqual(["Pinned announcement", "New announcement", "Old announcement"]);
   });
 
   it("shows the complete announcement without an expand control", async () => {
     const { dialog } = await openLoadedCenter();
 
-    expect(dialog).toHaveTextContent("渠道版本即将上线");
-    expect(screen.queryByRole("button", { name: "展开这条公告" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "收起这条公告" })).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent("A channel release is going live");
+    expect(screen.queryByRole("button", { name: "Expand this announcement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Collapse this announcement" })).not.toBeInTheDocument();
   });
 
   it("disables mark-all after opening has acknowledged the visible list", async () => {
     await openLoadedCenter();
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "全部已读" })).toBeDisabled(),
+      expect(screen.getByRole("button", { name: "Mark all read" })).toBeDisabled(),
     );
   });
 
@@ -234,11 +237,11 @@ describe("AnnouncementEntry", () => {
 
     const { dialog, trigger } = await openCenter();
 
-    // 拉不到就是「没有公告」：喇叭照常在，只是不打红点、点开是空的。
-    // 不摆「重新加载」——刷新登录页本来就会重来一次。
+    // A failed fetch means "no announcements": the trigger stays, but no red dot and the list is empty.
+    // No "reload" button, since refreshing the login page retries anyway.
     await waitFor(() => expect(findAnnouncementDot(trigger)).toBeNull());
     expect(within(dialog).queryAllByRole("listitem")).toHaveLength(0);
-    expect(within(dialog).getByRole("button", { name: "全部已读" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Mark all read" })).toBeDisabled();
   });
 
   it("treats a malformed payload as no announcements rather than half a card", async () => {
@@ -256,13 +259,13 @@ describe("AnnouncementEntry", () => {
   it("traps focus in the dialog and hands it back to the trigger on close", async () => {
     const { user, trigger, dialog } = await openLoadedCenter();
 
-    // 回归用例：手搓 portal 的那版没有焦点管理，Tab 会直接跑到弹窗背后的页面上。
+    // Regression case: the hand-rolled portal version had no focus management and Tab escaped to the page behind the dialog.
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 
     await user.keyboard("{Tab}");
     expect(dialog.contains(document.activeElement)).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", DIALOG)).not.toBeInTheDocument());
     await waitFor(() => expect(trigger).toHaveFocus());

@@ -1,13 +1,13 @@
-# 图片节点的 SVG 与 GIF 输出
+# SVG and GIF Outputs of Image Nodes
 
-图片顶部工具栏的「矢量图」「动态图」会创建独立结果节点。节点支持预览、下载、删除及重试；任务引用持久化到画布，刷新后恢复等待。
+The "Vector" and "Animated" buttons in the image top toolbar create standalone result nodes. A node supports preview, download, deletion, and retry; task references are persisted to the canvas, and waiting resumes after a refresh.
 
-- SVG：`POST /projects/{project}/freezone/image/vectorize`，请求 `image_url`、`canvas_id`、`node_id`。本地 vtracer 转换，免费。
-- GIF：`POST /projects/{project}/freezone/image/animate`，请求同上。先生成首帧锁定、4 秒、720p、无音频视频，再转为循环 GIF。视频按目录规则计费，转码免费。
-- 仅重试转换：`POST /projects/{project}/freezone/image/animate-gif`，请求 `video_url`、`canvas_id`、`node_id`。已有视频时不重复生成视频。
+- SVG: `POST /projects/{project}/freezone/image/vectorize`, with the request fields `image_url`, `canvas_id`, `node_id`. Converted locally with vtracer, free of charge.
+- GIF: `POST /projects/{project}/freezone/image/animate`, with the same request. It first generates a first-frame-locked, 4-second, 720p, silent video, then converts it to a looping GIF. The video is billed per the catalog rules; the transcoding is free.
+- Retry only the conversion: `POST /projects/{project}/freezone/image/animate-gif`, with the request fields `video_url`, `canvas_id`, `node_id`. When a video already exists, it is not regenerated.
 
-路径以 `/api/v1` 为前缀。只接受当前项目媒体。视频任务使用 `video` lane，两个本地转换任务使用项目 home node 的 `ffmpeg` lane。EE 必须同时启动对应消费者；部署镜像必须包含 ffmpeg 和 vtracer（两个仓库的 Dockerfile 已包含安装）。本地开发需要把 vtracer 所在目录加入 worker 的 PATH。
+Paths are prefixed with `/api/v1`. Only media of the current project is accepted. The video task uses the `video` lane, and the two local conversion tasks use the `ffmpeg` lane of the project's home node. EE must also start the corresponding consumers; deployment images must include ffmpeg and vtracer (the Dockerfiles of both repositories already include the installation). Local development needs the directory containing vtracer added to the worker's PATH.
 
-转换支持超时、取消清理、输出大小限制、原子写入以及源路径约束。GIF 限制为 12 fps、480 像素宽、最长 15 秒、最大 30 MiB；SVG 最大 12 MiB，复杂照片可能损失细节。
+Conversions support timeouts, cleanup on cancel, output size limits, atomic writes, and source path constraints. GIF is limited to 12 fps, 480 pixels wide, at most 15 seconds, and at most 30 MiB; SVG is at most 12 MiB, and complex photos may lose detail.
 
-视频成功但 GIF 子任务投递失败时，视频结果保留，节点可重试本地转换。上游生成失败时显示错误并支持重新生成。
+When the video succeeds but delivery of the GIF subtask fails, the video result is kept and the node can retry the local conversion. When upstream generation fails, the error is shown and regeneration is supported.

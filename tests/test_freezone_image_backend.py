@@ -282,7 +282,7 @@ class _FakeBeatStore:
             {
                 "episode_number": 1,
                 "beat_number": 2,
-                "scene_ref": {"scene_id": "兰州拉面馆", "render_anchor_id": "master"},
+                "scene_ref": {"scene_id": "Lanzhou Noodle Shop", "render_anchor_id": "master"},
             }
         ]
 
@@ -313,11 +313,11 @@ class _FakeContextBeatStore:
             {
                 "episode_number": 1,
                 "beat_number": 8,
-                "scene_ref": {"name": "兰州拉面馆"},
-                "narration_segment": "男青年盯着桌上的账单。",
-                "visual_description": "男青年坐在拉面馆木桌前，右手停在碗边。",
-                "detected_identities": ["面馆男青年"],
-                "detected_props": ["账单"],
+                "scene_ref": {"name": "Lanzhou Noodle Shop"},
+                "narration_segment": "The young man stares at the bill on the table.",
+                "visual_description": "The young man sits at the wooden table of the noodle shop, his right hand resting by the bowl.",
+                "detected_identities": ["Noodle_Shop_YoungMan"],
+                "detected_props": ["bill"],
             }
         ]
 
@@ -434,7 +434,7 @@ async def test_freezone_omni_video_limit_exception_bubbles_to_global_handler(
     with pytest.raises(ProjectUserTaskLimitExceeded) as exc:
         await freezone_routes.freezone_video_omni_gen(
             project="58",
-            body=freezone_routes.FreezoneVideoOmniGenRequest(prompt="雨夜街头，人物缓慢回头。"),
+            body=freezone_routes.FreezoneVideoOmniGenRequest(prompt="A rainy night street, the character slowly turns around."),
             user={"username": "admin"},
         )
 
@@ -463,7 +463,7 @@ def test_freezone_omni_video_limit_returns_429_envelope_through_asgi(
 
     response = TestClient(app).post(
         "/api/v1/projects/58/freezone/video/omni-gen",
-        json={"prompt": "雨夜街头，人物缓慢回头。"},
+        json={"prompt": "A rainy night street, the character slowly turns around."},
     )
 
     assert response.status_code == 429
@@ -528,7 +528,7 @@ async def test_freezone_video_omni_gen_rejects_happyhorse_model(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="newapi_happyhorse-1.0",
             ),
             user={"username": "admin"},
@@ -539,7 +539,7 @@ async def test_freezone_video_omni_gen_rejects_happyhorse_model(
 
 
 def _audio_reference(project_dir: Path, name: str) -> dict[str, str]:
-    """落一个占位音频文件并返回对应的 reference 条目（时长由测试直接打桩）。"""
+    """Drop a placeholder audio file and return the corresponding reference entry (the duration is stubbed directly by the test)."""
     path = project_dir / "freezone" / "_uploads" / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"RIFF----WAVEfmt ")
@@ -551,10 +551,10 @@ async def test_freezone_video_omni_gen_rejects_audio_total_duration(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """3 条各 6s：逐条全合规、总计 18s —— 后端兜底必须在计费前 400 掉。
+    """3 items of 6s each: every one is compliant, total 18s -- the backend fallback must 400 before billing.
 
-    这就是 2026-08-06 3060 环境两次任务失败的形状：前端那层若被绕过（老画布数据、
-    <audio> 探测失败），厂商会在扣费之后才拒。
+    This is the shape of the two 2026-08-06 task failures in the 3060 environment: if the frontend layer is bypassed (old canvas data,
+    <audio> probing failed), the vendor rejects only after the charge.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"clip{i}.wav") for i in range(3)]
@@ -567,7 +567,7 @@ async def test_freezone_video_omni_gen_rejects_audio_total_duration(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 references=references,
             ),
             user={"username": "admin"},
@@ -583,7 +583,7 @@ async def test_freezone_video_omni_gen_allows_audio_within_total_duration(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """总计正好顶格 15.2s 必须放行——兜底拦过头比不拦更难查。"""
+    """A total of exactly the 15.2s cap must be let through -- a fallback that blocks too much is harder to trace than one that does not block."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"ok{i}.wav") for i in range(2)]
     durations = iter([9.0, 6.2])
@@ -592,14 +592,14 @@ async def test_freezone_video_omni_gen_allows_audio_within_total_duration(
         return next(durations)
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
-    # 走到 enqueue 就说明时长这关过了，不必真的排任务。
+    # Reaching enqueue means the duration check was passed; there is no need to actually schedule a task.
     _patch_runtime_error_enqueue(monkeypatch)
 
     with pytest.raises(HTTPException) as exc:
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 references=references,
             ),
             user={"username": "admin"},
@@ -613,7 +613,7 @@ async def test_freezone_video_omni_gen_skips_unprobeable_audio(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """ffprobe 测不出时不能把正常提交拦死——这层只在「知道超了」时才拦。"""
+    """When ffprobe cannot measure, a normal submission must not be blocked to death -- this layer blocks only when it "knows it is over"."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"blind{i}.wav") for i in range(3)]
     async def fake_probe(_path: str) -> None:
@@ -626,7 +626,7 @@ async def test_freezone_video_omni_gen_skips_unprobeable_audio(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 references=references,
             ),
             user={"username": "admin"},
@@ -636,7 +636,7 @@ async def test_freezone_video_omni_gen_skips_unprobeable_audio(
 
 
 def _patch_video_catalog(monkeypatch: pytest.MonkeyPatch, entry: dict[str, object]) -> None:
-    """视频目录替身：只放一条，omni-gen 会按它解析 backend / capabilities。"""
+    """Video catalog stand-in: only one entry, from which omni-gen resolves the backend / capabilities."""
 
     async def fake_catalog(media_type: str) -> list[dict[str, object]] | None:
         return [entry] if media_type == "video" else None
@@ -649,10 +649,10 @@ async def test_freezone_video_omni_gen_uses_catalog_audio_total_limit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """后台 referenceAudioTotalMaxSeconds 可以把上限**收得更严**（这里 8s < 厂商 15.2s）。
+    """The admin-side referenceAudioTotalMaxSeconds can **tighten the cap further** (here 8s < the vendor's 15.2s).
 
-    配宽的方向由 `..._clamps_catalog_total_to_vendor_cap` 盯着：那边取小之后厂商硬顶仍然
-    生效。两条合起来才是「取小」这个语义。
+    The direction of loosening is watched by `..._clamps_catalog_total_to_vendor_cap`: there, after taking the smaller, the vendor hard cap still
+    applies. Together the two cases make up the "take the smaller" semantics.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -677,14 +677,14 @@ async def test_freezone_video_omni_gen_uses_catalog_audio_total_limit(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="cat-omni",
                 references=references,
             ),
             user={"username": "admin"},
         )
 
-    # 10s 在厂商 15.2s 之内，是后台那条 8s 把它拦下的。
+    # 10s is within the vendor's 15.2s; it was that admin-side 8s that blocked it.
     assert exc.value.status_code == 400
     assert "total duration must be <= 8s" in str(exc.value.detail)
 
@@ -694,10 +694,10 @@ async def test_freezone_video_omni_gen_skips_duration_guard_for_unknown_model(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """边界未知的模型（这里是 seedance-1.5-pro，由目录打开 all_reference）不套 2.0 的数字。
+    """A model with unknown bounds (here seedance-1.5-pro, with all_reference opened by the catalog) does not get 2.0's numbers applied.
 
-    1.8~15.2s 是从 2.0 的报文里实测出来的，别人家的模型凭空 400 比漏拦更糟；要卡就在
-    目录里配 referenceAudioTotalMaxSeconds 显式声明。
+    1.8~15.2s was measured from the 2.0 responses, and a made-up 400 on someone else's model is worse than a missed block; to block, declare it
+    explicitly in the catalog with referenceAudioTotalMaxSeconds.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -713,7 +713,7 @@ async def test_freezone_video_omni_gen_skips_duration_guard_for_unknown_model(
     references = [_audio_reference(project_dir, f"other{i}.wav") for i in range(3)]
 
     async def fake_probe(_path: str) -> float:
-        return 6.0  # 总计 18s，若误套 Seedance 口径就会 400
+        return 6.0  # total 18s; it would 400 if the Seedance rule were applied by mistake
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
     _patch_runtime_error_enqueue(monkeypatch)
@@ -722,7 +722,7 @@ async def test_freezone_video_omni_gen_skips_duration_guard_for_unknown_model(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="cat-other",
                 references=references,
             ),
@@ -737,11 +737,11 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """后台配了总时长≠授权用 Seedance 的逐条边界卡它。
+    """An admin-configured total duration is not authorization to apply Seedance's per-item bounds to it.
 
-    referenceAudioTotalMaxSeconds=60 的非 2.0 模型：一条 25s 的音频在总时长之内，必须放行。
-    早先这里的开关是一个 `audio_bounds_known`，配了总时长就连 1.8~15.2s 一起套上去，
-    正好会把这条 25s 凭空 400 掉。
+    For a non-2.0 model with referenceAudioTotalMaxSeconds=60: a 25s audio within the total duration must be let through.
+    Earlier the switch here was a single `audio_bounds_known`, and configuring a total duration applied 1.8~15.2s along with it,
+    which would have 400-ed this 25s item out of thin air.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -758,7 +758,7 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
     references = [_audio_reference(project_dir, "long.wav")]
 
     async def fake_probe(_path: str) -> float:
-        return 25.0  # > 15.2s，但对这个模型没有逐条上限
+        return 25.0  # > 15.2s, but this model has no per-item cap
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
     _patch_runtime_error_enqueue(monkeypatch)
@@ -767,14 +767,14 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="cat-long",
                 references=references,
             ),
             user={"username": "admin"},
         )
 
-    # 503 = 走到了入队（被替身打回），说明时长守卫放行了。
+    # 503 = reached enqueue (bounced by the stand-in), meaning the duration guard let it through.
     assert exc.value.status_code == 503
 
 
@@ -783,7 +783,7 @@ async def test_freezone_video_omni_gen_uses_explicit_catalog_total_limit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """显式目录配置是权威值，不能再被代码里的隐藏厂商常量覆盖。"""
+    """The explicit catalog configuration is the authoritative value and must not be overridden again by a hidden vendor constant in code."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
         monkeypatch,
@@ -808,21 +808,21 @@ async def test_freezone_video_omni_gen_uses_explicit_catalog_total_limit(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="cat-wide",
                 references=references,
             ),
             user={"username": "admin"},
         )
 
-    # 503 = 通过时长校验并走到入队（测试替身故意返回 broker unavailable）。
+    # 503 = passed duration validation and reached enqueue (the test stand-in deliberately returns broker unavailable).
     assert exc.value.status_code == 503
 
 
 def test_catalog_audio_total_duration_max_rejects_non_finite() -> None:
-    """inf 不能当成上限：`inf > 0` 是 True，漏进来就等于静默关掉总时长判定。
+    """inf cannot be taken as a cap: `inf > 0` is True, and letting it through silently turns off the total-duration judgment.
 
-    写入侧 schema 已经挡了，但目录条目可能是那道校验存在之前落的库，读出来再挡一次。
+    The write-side schema already blocks it, but a catalog entry may have been stored before that validation existed, so block it once more on read.
     """
     read = freezone_routes._catalog_audio_total_duration_max
     assert read({"referenceAudioTotalMaxSeconds": 15.2}) == 15.2
@@ -836,11 +836,11 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """3 条音频必须并发探测。
+    """3 audio items must be probed concurrently.
 
-    ffprobe 单条有 20s 超时，串行 await 会把 3 条叠成最长 60s 的请求耗时。这里让每个
-    探测在返回前先 `asyncio.sleep(0)` 让出一次，只有并发调度才可能出现「3 个都进来了、
-    还没有一个返回」的时刻。
+    ffprobe has a 20s timeout per item, and serial awaits would stack 3 items into a request time of up to 60s. Here every
+    probe first yields once with `asyncio.sleep(0)` before returning, and only concurrent scheduling can produce the moment of
+    "all 3 have entered and none has returned yet".
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -873,14 +873,14 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
         await freezone_routes.freezone_video_omni_gen(
             project="58",
             body=freezone_routes.FreezoneVideoOmniGenRequest(
-                prompt="雨夜街头，人物缓慢回头。",
+                prompt="A rainy night street, the character slowly turns around.",
                 model="cat-conc",
                 references=references,
             ),
             user={"username": "admin"},
         )
 
-    assert exc.value.status_code == 503  # 9s 未超限，走到入队被替身打回
+    assert exc.value.status_code == 503  # 9s is not over the limit; it reached enqueue and was bounced by the stand-in
     assert peak == 3
 
 
@@ -888,9 +888,9 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
 async def test_probe_reference_audio_seconds_returns_none_when_probe_fails(
     tmp_path: Path,
 ) -> None:
-    """ffprobe 失败必须回 None，不能像 utils.media_io.get_audio_duration 那样返回 5.0。
+    """ffprobe failure must return None, and must not return 5.0 as utils.media_io.get_audio_duration does.
 
-    5.0 是个合法值，会让兜底变成静默放行——这个断言就是防它被顺手换掉。
+    5.0 is a legal value and would turn the fallback into a silent pass -- this assertion guards against it being swapped in casually.
     """
     broken = tmp_path / "not-audio.wav"
     broken.write_bytes(b"not audio at all")
@@ -909,7 +909,7 @@ async def test_freezone_video_start_runtime_error_is_logged(
     with pytest.raises(HTTPException) as exc:
         await freezone_routes.freezone_video_omni_gen(
             project="58",
-            body=freezone_routes.FreezoneVideoOmniGenRequest(prompt="雨夜街头，人物缓慢回头。"),
+            body=freezone_routes.FreezoneVideoOmniGenRequest(prompt="A rainy night street, the character slowly turns around."),
             user={"username": "admin"},
         )
 
@@ -975,7 +975,7 @@ async def test_freezone_video_generation_enqueues_feature_billing(
         project_dir=tmp_path / "project",
         output_dir=str(tmp_path / "output"),
         job_id="job_video",
-        prompt="雨夜街头",
+        prompt="A rainy night street",
         reference_items=[],
         aspect_ratio="16:9",
         resolution="1080p",
@@ -1046,7 +1046,7 @@ async def test_freezone_video_generation_forces_audio_off_when_model_disallows_i
         project_dir=tmp_path / "project",
         output_dir=str(tmp_path / "output"),
         job_id="job_video_no_audio",
-        prompt="静音视频",
+        prompt="Silent video",
         reference_items=[],
         aspect_ratio="16:9",
         resolution="720p",
@@ -1101,7 +1101,7 @@ async def test_freezone_video_generation_probes_reference_duration_before_billin
         project_dir=tmp_path / "project",
         output_dir=str(tmp_path / "output"),
         job_id="job_video_ref",
-        prompt="参考视频生成",
+        prompt="Generate from a reference video",
         reference_items=[
             {"type": "video", "path": "/project/a.mp4"},
             {"type": "video", "path": "/project/b.mp4"},
@@ -1162,7 +1162,7 @@ async def test_video_edit_uses_source_duration_for_output_reservation(
         project_dir=tmp_path / "project",
         output_dir=str(tmp_path / "output"),
         job_id="job_video_edit",
-        prompt="编辑源视频",
+        prompt="Edit source video",
         reference_items=[{"type": "video", "path": "/project/source.mp4"}],
         aspect_ratio="auto",
         resolution="720p",
@@ -1214,7 +1214,7 @@ async def test_freezone_video_generation_validates_catalog_video_duration_before
             project_dir=tmp_path / "project",
             output_dir=str(tmp_path / "output"),
             job_id="job_video_limit",
-            prompt="参考视频生成",
+            prompt="Generate from a reference video",
             reference_items=[
                 {"type": "video", "path": "/project/a.mp4"},
                 {"type": "video", "path": "/project/b.mp4"},
@@ -1271,13 +1271,13 @@ async def test_freezone_audio_generation_enqueues_two_feature_billings(
 
     await freezone_routes.freezone_audio_speech(
         project="58",
-        body=freezone_routes.FreezoneAudioSpeechRequest(text="她终于回来了。"),
+        body=freezone_routes.FreezoneAudioSpeechRequest(text="She has finally come back."),
         user={"username": "admin"},
     )
     await freezone_routes.freezone_audio_eleven_music(
         project="58",
         body=freezone_routes.FreezoneAudioMusicRequest(
-            input="雨夜悬疑配乐",
+            input="Rainy night suspense score",
             music_length_ms=30_500,
         ),
         user={"username": "admin"},
@@ -1288,17 +1288,17 @@ async def test_freezone_audio_generation_enqueues_two_feature_billings(
     assert speech_billing == {
         "feature_key": "freezone.audio_speech",
         "operation": "speech",
-        "billable_chars": 7,
-        "pricing_quantity": 7,
+        "billable_chars": 22,
+        "pricing_quantity": 22,
         "pricing_kind": "audio",
         "pricing_model": INDEXTTS2_RECORD_MODEL,
         "pricing_params": {},
         "pricing_metrics": {
             "call_count": 1,
             "item_count": 1,
-            "billable_chars": 7,
+            "billable_chars": 22,
         },
-        "items": 7,
+        "items": 22,
     }
 
     music_billing = captured[1]["payload"]["billing"]
@@ -1350,7 +1350,7 @@ async def test_freezone_image_reverse_prompt_enqueues_feature_billing(
         project="58",
         body=freezone_routes.FreezoneImageReversePromptRequest(
             source_url="/static/admin/58/freezone/_uploads/source.png",
-            instruction="电影感光影",
+            instruction="Cinematic lighting",
         ),
         user={"username": "admin"},
     )
@@ -1360,32 +1360,32 @@ async def test_freezone_image_reverse_prompt_enqueues_feature_billing(
     assert captured["payload"]["billing"] == {
         "feature_key": "freezone.image_reverse_prompt",
         "operation": "image_reverse_prompt",
-        "billable_chars": 5,
-        "pricing_quantity": 5,
+        "billable_chars": 17,
+        "pricing_quantity": 17,
         "pricing_kind": "text",
         "pricing_model": "freezone-vision-model",
         "pricing_params": {},
         "pricing_metrics": {
             "call_count": 1,
             "item_count": 1,
-            "billable_chars": 5,
+            "billable_chars": 17,
         },
     }
-    assert captured["payload"]["instruction"] == "电影感光影"
+    assert captured["payload"]["instruction"] == "Cinematic lighting"
 
 
 def test_infer_scene_id_from_master_path_uses_scene_folder(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
-    source = project_dir / "assets" / "scenes" / "小区" / "master.png"
+    source = project_dir / "assets" / "scenes" / "compound" / "master.png"
     _write_image(source)
 
-    assert _infer_scene_id_from_master_path(source, project_dir) == "小区"
+    assert _infer_scene_id_from_master_path(source, project_dir) == "compound"
 
 
 def test_build_scene_360_prompt_contains_scene_and_projection_rules() -> None:
-    prompt = _build_scene_360_prompt("小区")
+    prompt = _build_scene_360_prompt("compound")
 
-    assert "scene `小区`" in prompt
+    assert "scene `compound`" in prompt
     assert "2:1 panorama" in prompt
     assert "Left and right edges must connect seamlessly" in prompt
 
@@ -1400,7 +1400,7 @@ def test_freezone_ai_staging_prop_endpoint_returns_ai_prop(monkeypatch, tmp_path
             "ok": True,
             "prop": {
                 "prop_id": "horse_mount",
-                "name": "可骑的马",
+                "name": "A rideable horse",
                 "marker_color": "#7c3aed",
                 "shape_hint": "quadruped_mount",
                 "scale": [1.4, 1.25, 2.2],
@@ -1409,11 +1409,11 @@ def test_freezone_ai_staging_prop_endpoint_returns_ai_prop(monkeypatch, tmp_path
         }
 
     monkeypatch.setattr(freezone_routes, "_run_ai_staging_prop", fake_run_ai_staging_prop)
-    # 该路由自 OI-54 S2 起在请求路径上解析出网身份，而这个裸 app 不经
-    # `ensure_bootstrap()`，端口注册表是空的（`get_authz_port()` 刻意没有
-    # `PortNotRegistered` 回落——回落就等于「端口没注册就跳过身份绑定」）。
-    # 用真的 CE 单机降级实现顶上：`LocalAuthz` 产 `kind="local"` → 非组织 →
-    # 什么都不绑，本测试既有断言一字不改。seam 照 `test_p0g4c_video_egress.py:803`。
+    # Since OI-54 S2 this route resolves the egress identity on the request path, and this bare app does not go through
+    # `ensure_bootstrap()`, so the port registry is empty (`get_authz_port()` deliberately has no
+    # `PortNotRegistered` fallback -- a fallback would mean "skip identity binding if the port is not registered").
+    # Substitute the real CE single-node degraded implementation: `LocalAuthz` produces `kind="local"` -> non-organization ->
+    # binds nothing, and this test's existing assertions change not by a word. The seam follows `test_p0g4c_video_egress.py:803`.
     import novelvideo.ports as ports
     from novelvideo.ports.local import LocalAuthz
 
@@ -1429,8 +1429,8 @@ def test_freezone_ai_staging_prop_endpoint_returns_ai_prop(monkeypatch, tmp_path
     response = client.post(
         "/api/v1/projects/58/freezone/ai-staging-prop",
         json={
-            "scene_id": "面馆",
-            "user_hint": "让男青年骑一匹马",
+            "scene_id": "noodle_shop",
+            "user_hint": "Let the young man ride a horse",
             "crosshair_target": {"position": [1, 0, 2]},
             "api_key": "must-not-reach-runtime",
             "base_url": "https://bypass.example/v1",
@@ -1439,7 +1439,7 @@ def test_freezone_ai_staging_prop_endpoint_returns_ai_prop(monkeypatch, tmp_path
 
     assert response.status_code == 200
     assert response.json()["data"]["prop"]["shape_hint"] == "quadruped_mount"
-    assert captured["user_hint"] == "让男青年骑一匹马"
+    assert captured["user_hint"] == "Let the young man ride a horse"
     assert "api_key" not in captured
     assert "base_url" not in captured
 
@@ -1449,8 +1449,8 @@ def test_episode_preset_key_uses_episode_scope() -> None:
 
 
 def test_canvas_id_for_preset_is_stable_without_timestamp() -> None:
-    first = canvas_id_for_preset("asset:character:林昭::")
-    second = canvas_id_for_preset("asset:character:林昭::")
+    first = canvas_id_for_preset("asset:character:Lin_Zhao::")
+    second = canvas_id_for_preset("asset:character:Lin_Zhao::")
 
     assert first == second
     assert "20" not in first[-16:]
@@ -1498,7 +1498,7 @@ def test_restore_preset_canvas_preserves_side_candidates() -> None:
             {
                 "id": "candidate_1",
                 "data": {
-                    "displayName": "草图候选",
+                    "displayName": "Sketch candidate",
                     "mainline_context": [
                         {
                             "kind": "sketch",
@@ -1510,7 +1510,7 @@ def test_restore_preset_canvas_preserves_side_candidates() -> None:
             },
             {
                 "id": "free_upload",
-                "data": {"displayName": "自由上传"},
+                "data": {"displayName": "Free upload"},
             },
         ],
         "edges": [
@@ -1543,9 +1543,9 @@ def test_restore_preset_canvas_preserves_side_candidates() -> None:
 
 
 def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes() -> None:
-    """preset-managed 节点之间的 edge 归 preset 管。如果 preset 改了方向 / 删了边
-    (例如 Phase 1c 把 scene_360 workflow → viewer 反向),旧 edge 不能被
-    merge 残留下来,否则画布上新旧 edge 共存,出现 X 形交叉。
+    """Edges between preset-managed nodes belong to the preset. If the preset changes a direction / deletes an edge
+    (for example Phase 1c reversing scene_360 workflow -> viewer), the old edge must not be left behind by
+    the merge, otherwise old and new edges coexist on the canvas and cross in an X shape.
     """
     restored = {
         "nodes": [
@@ -1559,7 +1559,7 @@ def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes
             },
         ],
         "edges": [
-            # 新方向: workflow_a → viewer_b
+            # New direction: workflow_a -> viewer_b
             {"id": "edge_workflow_a_to_viewer_b", "source": "workflow_a", "target": "viewer_b"},
         ],
         "viewport": None,
@@ -1576,26 +1576,26 @@ def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes
             },
         ],
         "edges": [
-            # 旧方向: viewer_b → workflow_a (Phase 1c 之前的方向)
+            # Old direction: viewer_b -> workflow_a (the direction before Phase 1c)
             {"id": "edge_viewer_b_to_workflow_a", "source": "viewer_b", "target": "workflow_a"},
         ],
         "viewport": None,
     }
     merged = _merge_restored_preset_canvas(restored, existing)
     edges_by_pair = {(e["source"], e["target"]) for e in merged["edges"]}
-    assert ("workflow_a", "viewer_b") in edges_by_pair, "新方向 edge 必须保留"
+    assert ("workflow_a", "viewer_b") in edges_by_pair, "The new-direction edge must be kept"
     assert ("viewer_b", "workflow_a") not in edges_by_pair, (
-        "旧方向 edge (两端都 preset-managed) 必须被 preset 重建过程丢掉,"
-        "否则画布上出现 X 形重复连线 (用户实际遇到的 bug)"
+        "The old-direction edge (both ends preset-managed) must be dropped by the preset rebuild process, "
+        "otherwise duplicate X-shaped lines appear on the canvas (a bug the user actually hit)"
     )
 
 
 def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
-    """preset-emitted prompt 节点 (有 __freezone_source.kind=scene_prompt 等)
-    也算 preset-managed。Phase 1d 把 scene 360 prompt 从连 pano viewer 改成连
-    workflow trigger,旧的 prompt → viewer 边必须被 merge 清掉。
+    """A preset-emitted prompt node (with __freezone_source.kind=scene_prompt etc.)
+    also counts as preset-managed. Phase 1d changed the scene 360 prompt from connecting to the pano viewer to connecting to the
+    workflow trigger, and the old prompt -> viewer edge must be cleared by the merge.
 
-    覆盖用户报的实际 bug: \"提示词还连着 360 viewer\"。
+    Covers the actual bug the user reported: \"the prompt is still connected to the 360 viewer\".
     """
     restored = {
         "nodes": [
@@ -1618,12 +1618,12 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
                 "id": "ref_scene_director_pano_360_1",
                 "data": {
                     "preset_managed": True,
-                    "workflow_kind": "mainline_slot",  # viewer 节点也算 mainline_slot
+                    "workflow_kind": "mainline_slot",  # the viewer node also counts as mainline_slot
                 },
             },
         ],
         "edges": [
-            # 新方向: prompt → workflow trigger
+            # New direction: prompt -> workflow trigger
             {
                 "id": "edge_prompt_to_workflow",
                 "source": "prompt_scene_foo",
@@ -1651,7 +1651,7 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
             },
         ],
         "edges": [
-            # 旧方向 (Phase 1d 之前): prompt → pano viewer
+            # Old direction (before Phase 1d): prompt -> pano viewer
             {
                 "id": "edge_prompt_to_viewer",
                 "source": "prompt_scene_foo",
@@ -1662,10 +1662,10 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
     }
     merged = _merge_restored_preset_canvas(restored, existing)
     edges_by_pair = {(e["source"], e["target"]) for e in merged["edges"]}
-    assert ("prompt_scene_foo", "workflow_scene_foo_360") in edges_by_pair, "新方向必须保留"
+    assert ("prompt_scene_foo", "workflow_scene_foo_360") in edges_by_pair, "The new direction must be kept"
     assert ("prompt_scene_foo", "ref_scene_director_pano_360_1") not in edges_by_pair, (
-        "旧 prompt → viewer 边必须被丢 (两端都 preset-managed:prompt 通过 __freezone_source.kind, "
-        "viewer 通过 workflow_kind:mainline_slot)"
+        "The old prompt -> viewer edge must be dropped (both ends preset-managed: the prompt via __freezone_source.kind, "
+        "the viewer via workflow_kind:mainline_slot)"
     )
 
 
@@ -2022,7 +2022,7 @@ async def test_freezone_push_can_commit_selected_background_to_beat(
             "episode_number": 1,
             "beat_number": 2,
             "scene_ref": {
-                "scene_id": "兰州拉面馆",
+                "scene_id": "Lanzhou Noodle Shop",
                 "render_anchor_id": "selected_background",
                 "render_anchor_source_id": "freezone_commit",
             },
@@ -2057,9 +2057,9 @@ async def test_freezone_push_can_commit_beat_audio(
 @pytest.mark.parametrize(
     ("target", "revision_bucket", "entity_name"),
     [
-        ({"kind": "portrait", "character": "秦"}, "characters", "秦"),
-        ({"kind": "scene_master", "scene_id": "兰州拉面馆"}, "scenes", "兰州拉面馆"),
-        ({"kind": "prop_ref", "prop_id": "账单"}, "props", "账单"),
+        ({"kind": "portrait", "character": "Qin"}, "characters", "Qin"),
+        ({"kind": "scene_master", "scene_id": "Lanzhou Noodle Shop"}, "scenes", "Lanzhou Noodle Shop"),
+        ({"kind": "prop_ref", "prop_id": "bill"}, "props", "bill"),
     ],
 )
 @pytest.mark.asyncio
@@ -2147,14 +2147,14 @@ async def test_skill_auto_commit_advances_canonical_summary_revision(
                 "image_url": "freezone/_outputs/candidate.png",
                 "pushable": True,
                 "auto_commit": True,
-                "slot_target": {"kind": "scene_master", "scene_id": "兰州拉面馆"},
+                "slot_target": {"kind": "scene_master", "scene_id": "Lanzhou Noodle Shop"},
             }
         ],
         user={"username": "admin", "id": "owner_1"},
     )
 
     assert finalized[0]["committed"] is True
-    assert store.scenes == ["兰州拉面馆"]
+    assert store.scenes == ["Lanzhou Noodle Shop"]
     assert scope_calls == [False]
     assert store.closed is True
 
@@ -2305,8 +2305,8 @@ async def test_put_canvas_prunes_stale_frame_identity_edges_from_beat_context(
             "type": "beatContextNode",
             "data": {
                 "beat_edit_fields": {
-                    "detected_identities": ["女鬼_白衣时期", "秋菊_中年时期"],
-                    "detected_props": ["小衣服"],
+                    "detected_identities": ["Ghost_white_robe", "Qiuju_middle_aged"],
+                    "detected_props": ["small_clothes"],
                 },
             },
         },
@@ -2322,7 +2322,7 @@ async def test_put_canvas_prunes_stale_frame_identity_edges_from_beat_context(
                 "__freezone_source": {
                     "kind": "identity",
                     "role": "character_identity",
-                    "meta": {"identity_id": "女鬼_白衣时期"},
+                    "meta": {"identity_id": "Ghost_white_robe"},
                 }
             },
         },
@@ -2333,7 +2333,7 @@ async def test_put_canvas_prunes_stale_frame_identity_edges_from_beat_context(
                 "__freezone_source": {
                     "kind": "identity",
                     "role": "character_identity",
-                    "meta": {"identity_id": "秋菊_中年时期"},
+                    "meta": {"identity_id": "Qiuju_middle_aged"},
                 }
             },
         },
@@ -2353,55 +2353,55 @@ async def test_put_canvas_prunes_stale_frame_identity_edges_from_beat_context(
             "id": "edge_identity_keep_1",
             "source": "ref_kept_identity_1",
             "target": "skill_frame_from_context",
-            "targetHandle": "identity:女鬼_白衣时期",
+            "targetHandle": "identity:Ghost_white_robe",
             "data": {
                 "edgeKind": "role_binding",
                 "role": "identity",
-                "reference_target": {"kind": "identity", "identity_id": "女鬼_白衣时期"},
+                "reference_target": {"kind": "identity", "identity_id": "Ghost_white_robe"},
             },
         },
         {
             "id": "edge_identity_remove_1",
             "source": "ref_removed_identity_1",
             "target": "skill_frame_from_context",
-            "targetHandle": "identity:明珠_青年时期",
+            "targetHandle": "identity:Mingzhu_young_adult",
             "data": {
                 "edgeKind": "role_binding",
                 "role": "identity",
-                "reference_target": {"kind": "identity", "identity_id": "明珠_青年时期"},
+                "reference_target": {"kind": "identity", "identity_id": "Mingzhu_young_adult"},
             },
         },
         {
             "id": "edge_identity_remove_2",
             "source": "ref_removed_identity_2",
             "target": "skill_frame_from_context",
-            "targetHandle": "identity:春柳_青年时期",
+            "targetHandle": "identity:Chunliu_young_adult",
             "data": {
                 "edgeKind": "role_binding",
                 "role": "identity",
-                "reference_target": {"kind": "identity", "identity_id": "春柳_青年时期"},
+                "reference_target": {"kind": "identity", "identity_id": "Chunliu_young_adult"},
             },
         },
         {
             "id": "edge_prop_keep",
             "source": "ref_kept_prop",
             "target": "skill_frame_from_context",
-            "targetHandle": "prop:小衣服",
+            "targetHandle": "prop:small_clothes",
             "data": {
                 "edgeKind": "role_binding",
                 "role": "prop",
-                "reference_target": {"kind": "prop", "prop_id": "小衣服"},
+                "reference_target": {"kind": "prop", "prop_id": "small_clothes"},
             },
         },
         {
             "id": "edge_prop_remove",
             "source": "ref_removed_prop",
             "target": "skill_frame_from_context",
-            "targetHandle": "prop:账本",
+            "targetHandle": "prop:ledger",
             "data": {
                 "edgeKind": "role_binding",
                 "role": "prop",
-                "reference_target": {"kind": "prop", "prop_id": "账本"},
+                "reference_target": {"kind": "prop", "prop_id": "ledger"},
             },
         },
     ]
@@ -2425,7 +2425,7 @@ async def test_put_canvas_prunes_stale_frame_identity_edges_from_beat_context(
         for edge in saved["edges"]
         if (edge.get("data") or {}).get("role") == "identity"
     }
-    assert identity_handles == {"identity:女鬼_白衣时期", "identity:秋菊_中年时期"}
+    assert identity_handles == {"identity:Ghost_white_robe", "identity:Qiuju_middle_aged"}
 
 
 @pytest.mark.asyncio
@@ -2461,13 +2461,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                         "id": "edge_identity_old_only",
                         "source": "ref_character_identity_1",
                         "target": "skill_frame_from_context",
-                        "targetHandle": "identity:沈月白_青年时期",
+                        "targetHandle": "identity:ShenYuebai_young_adult",
                         "data": {
                             "edgeKind": "role_binding",
                             "role": "identity",
                             "reference_target": {
                                 "kind": "identity",
-                                "identity_id": "沈月白_青年时期",
+                                "identity_id": "ShenYuebai_young_adult",
                             },
                         },
                     }
@@ -2519,13 +2519,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                     "id": "edge_identity_1",
                     "source": "ref_character_identity_1",
                     "target": "skill_frame_from_context",
-                    "targetHandle": "identity:沈月白_青年时期",
+                    "targetHandle": "identity:ShenYuebai_young_adult",
                     "data": {
                         "edgeKind": "role_binding",
                         "role": "identity",
                         "reference_target": {
                             "kind": "identity",
-                            "identity_id": "沈月白_青年时期",
+                            "identity_id": "ShenYuebai_young_adult",
                         },
                     },
                 },
@@ -2533,13 +2533,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                     "id": "edge_identity_2",
                     "source": "ref_character_identity_2",
                     "target": "skill_frame_from_context",
-                    "targetHandle": "identity:陆辰_青年时期",
+                    "targetHandle": "identity:LuChen_young_adult",
                     "data": {
                         "edgeKind": "role_binding",
                         "role": "identity",
                         "reference_target": {
                             "kind": "identity",
-                            "identity_id": "陆辰_青年时期",
+                            "identity_id": "LuChen_young_adult",
                         },
                     },
                 },
@@ -2578,7 +2578,7 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
         for edge in data["edges"]
         if (edge.get("data") or {}).get("role") == "identity"
     }
-    assert identity_handles == {"identity:沈月白_青年时期", "identity:陆辰_青年时期"}
+    assert identity_handles == {"identity:ShenYuebai_young_adult", "identity:LuChen_young_adult"}
 
 
 @pytest.mark.asyncio
@@ -3072,13 +3072,13 @@ async def test_put_canvas_lease_lost_returns_503(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TCP-EU-C4 · 丢租约走的是同一个错误面（B2 §3.3.3）。
+    """TCP-EU-C4 · Losing the lease goes through the same error surface (B2 Section 3.3.3).
 
-    `CanvasLeaseLost` 继承 `CanvasLockBusy`，所以上面那条用例本来就会自动接住它。
-    照它的形状再写一条 lease 版本，是为了证明「路由零改动」不是巧合：
-    错误面契约（503 ＋ `canvas_lock_busy` ＋ `Retry-After: 1`）对两种失败逐字相同。
-    丢租约判 503 而不是 409：那是并发条件，不是 revision 条件 —— 客户端重试时
-    `_check_revision` 才**权威地**决定这次是 200 还是 409（B2 §3.3.3）。
+    `CanvasLeaseLost` inherits `CanvasLockBusy`, so the case above would catch it automatically anyway.
+    Writing a lease version in the same shape is to prove that "zero route changes" is not a coincidence:
+    the error-surface contract (503 + `canvas_lock_busy` + `Retry-After: 1`) is identical to the letter for both failures.
+    A lost lease is judged 503 rather than 409: it is a concurrency condition, not a revision condition -- when the client retries,
+    `_check_revision` **authoritatively** decides whether this time is a 200 or a 409 (B2 Section 3.3.3).
     """
     from novelvideo.ports.canvas_mutex import CanvasLeaseLost
 
@@ -3138,7 +3138,7 @@ async def test_get_canvas_reports_another_actor_editing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TCP-EU-C4 步 6 · O2「另一个会话正在编辑」（B2 §3.9 O2 / §6.4 步 6）。"""
+    """TCP-EU-C4 step 6 · O2 "another session is editing" (B2 Section 3.9 O2 / Section 6.4 step 6)."""
     _patch_freezone_project(monkeypatch, tmp_path)
     _write_canvas_edited_by(tmp_path, "beat_1", updated_by="bob", age_seconds=2)
 
@@ -3149,7 +3149,7 @@ async def test_get_canvas_reports_another_actor_editing(
     )
 
     assert result["editing_by"] == "bob"
-    # 契约不变（B2-6）：提示字段挂在 `data` 之外，画布载荷形状一个字节都没动。
+    # Contract unchanged (B2-6): the hint field hangs outside `data`, and the canvas payload shape is untouched by a single byte.
     assert "editing_by" not in result["data"]
 
 
@@ -3199,10 +3199,10 @@ async def test_get_canvas_editing_by_adds_no_round_trip(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """步 6 的硬要求：读路径**不许新增数据库往返**（B2 §6.4 步 6）。
+    """The hard requirement of step 6: the read path **must not add database round trips** (B2 Section 6.4 step 6).
 
-    判据落成「读路径一次都不碰画布互斥端口」—— 端口是这条路径上唯一可能通往
-    Postgres 的东西（EE 的实现走租约表，`TCP-P40`）。
+    The criterion lands as "the read path never touches the canvas mutex port even once" -- the port is the only thing on this path that could lead to
+    Postgres (the EE implementation goes through the lease table, `TCP-P40`).
     """
     from novelvideo.ports import registry as ports_registry
 
@@ -3391,14 +3391,14 @@ def test_scene_setting_sheet_prompt_lists_all_eight_blocks() -> None:
         freezone_routes.FreezoneTemplateEditRequest(
             source_url="/static/admin/59/freezone/_uploads/source.png",
             mode="scene_setting_sheet",
-            prompt="遗忘的悬浮神庙",
+            prompt="A forgotten floating temple",
         )
     )
 
     assert "libtv-style scene setting sheet" in prompt
     assert "one single landscape design sheet" in prompt
     assert "dark neutral background" in prompt
-    # 八个板块缺一不可——少一块产出就退化成普通概念图，跟角色三视图撞脸。
+    # All eight sections are indispensable -- if even one is missing, the output degrades into an ordinary concept image and looks the same as a character turnaround.
     for block in (
         "1 scene key visual",
         "2 mood concept sketches",
@@ -3412,8 +3412,8 @@ def test_scene_setting_sheet_prompt_lists_all_eight_blocks() -> None:
         assert block in prompt
     assert "short title block" in prompt
     assert "same language as the user prompt" in prompt
-    # 用户补充提示词照旧拼在模板后面。
-    assert prompt.endswith("User prompt:\n遗忘的悬浮神庙")
+    # The user supplementary prompt is still appended after the template as before.
+    assert prompt.endswith("User prompt:\nA forgotten floating temple")
 
 
 def test_template_edit_projection_prompt_requires_visible_time_change() -> None:
@@ -3468,7 +3468,7 @@ async def test_masked_redraw_uses_default_newapi_model(
     project_dir, _output_dir = _patch_freezone_project(
         monkeypatch, tmp_path, username=username, project=project
     )
-    source = project_dir / "assets" / "characters" / "陈默" / "portrait.png"
+    source = project_dir / "assets" / "characters" / "Chen_Mo" / "portrait.png"
     mask = project_dir / "freezone" / "_uploads" / "mask.png"
     _write_image(source, size=(1024, 1024))
     _write_image(mask, size=(1024, 1024))
@@ -3477,7 +3477,7 @@ async def test_masked_redraw_uses_default_newapi_model(
     _patch_celery_edit_enqueue(monkeypatch, captured)
 
     body = freezone_routes.FreezoneRedrawRequest(
-        source_url="/static/admin/525/assets/characters/陈默/portrait.png",
+        source_url="/static/admin/525/assets/characters/Chen_Mo/portrait.png",
         mask_url="/static/admin/525/freezone/_uploads/mask.png",
         prompt="",
         aspect_ratio="16:9",
@@ -3543,7 +3543,7 @@ async def test_mask_edit_job_uses_reference_edit_provider_routing(
     assert captured["reference_images"] == [str(base), str(mask)]
     assert captured["config"]["provider"] == "newapi"
     assert captured["config"]["model"] == NEWAPI_IMAGE_MODEL
-    # Image 2 = 源图 + 红色高亮标注；模型只改红色区域，且红色不进入结果。
+    # Image 2 = source image + red highlight annotation; the model changes only the red area, and the red does not enter the result.
     assert "red-highlighted region" in captured["prompt"]
     assert "must NOT appear in the output" in captured["prompt"]
 
@@ -3565,11 +3565,11 @@ def test_camera_prompt_contains_camera_body_lens_focal_and_aperture() -> None:
 
 
 def test_image_style_templates_are_short_drama_styles() -> None:
-    """端点吐出来的必须就是随包那份清单,一条不多一条不少、顺序也一致。
+    """What the endpoint emits must be exactly the manifest shipped with the package, no entry more or fewer, in the same order.
 
-    原来在这里抄了一份 24 个 id 的列表,每加一批风格就要照抄一遍,而它想验的其实是
-    「路由拿的是内置清单」。改成直接比对清单文件:既不随风格数漂移,又比数量更严。
-    数量另设下限,防止清单被截断成空壳还悄悄通过。
+    It used to copy a list of 24 ids here, which had to be copied again with every batch of styles added, while what it wants to verify is actually
+    "the route uses the built-in manifest". Changed to compare directly against the manifest file: it neither drifts with the style count and is stricter than the count.
+    The count has a separate lower bound, to prevent the manifest being truncated into an empty shell and still passing quietly.
     """
     shipped = json.loads(
         (
@@ -3589,31 +3589,31 @@ def test_image_style_templates_are_short_drama_styles() -> None:
 
 
 def test_image_style_templates_have_assets_and_prompts() -> None:
-    # 图片已迁 OSS(STYLE_GALLERY_ASSET_BASE),不随仓库发布,所以 CI 里这个目录
-    # 不存在,只能校验路径形状。本地跑过 scripts/build_style_gallery.py 的人目录
-    # 才在,那时顺带校验清单与图片对得上 —— 加风格时漏转图片就在这里拦下。
+    # Images have moved to OSS (STYLE_GALLERY_ASSET_BASE) and are not shipped with the repo, so this directory
+    # does not exist in CI and only the path shape can be validated. For those who ran scripts/build_style_gallery.py locally, the directory
+    # exists, and then the manifest and the images are cross-checked as well -- forgetting to convert images when adding a style is caught right here.
     gallery_root = Path(__file__).resolve().parents[1] / "frontend" / "public" / "style-gallery"
     check_files_exist = gallery_root.is_dir()
 
     for item in freezone_routes._get_freezone_image_style_templates():
         assert item["label"], item["id"]
-        # 类目是受控词表,不是自由文本 —— 图墙的筛选 tab 直接按它铺,多一个错别字
-        # 就多一个只有一张卡的 tab。加风格时如果确实要新类目,在这里显式登记。
+        # Categories are a controlled vocabulary, not free text -- the filter tabs of the image wall are laid out directly by it, and one typo
+        # makes a tab with only one card. If a new category is truly needed when adding a style, register it explicitly here.
         assert item["category"] in {
-            "古装",
-            "都市",
-            "年代",
-            "生活",
-            "科幻",
-            "类型",
-            "写意",
-            # 第二批素材:以画法/媒介立类。
-            "动画",
-            "绘画",
-            "神话",
+            "period",
+            "urban",
+            "era",
+            "lifestyle",
+            "scifi",
+            "genre",
+            "expressive",
+            # Second batch of assets: categories by technique/medium.
+            "animation",
+            "painting",
+            "myth",
         }, item["id"]
-        # 下限只为拦住「提示词被截成空壳/占位符」——不是质量分。第二批里 大友克洋(97)
-        # 与 埃及壁画(102) 素材本身就短,原来的 120 会把两条合法风格判死。
+        # The lower bound only guards against "the prompt being truncated into an empty shell/placeholder" -- it is not a quality score. In the second batch, Otomo (97)
+        # and Egyptian Mural (102) have short assets by nature, and the original 120 would have condemned two legitimate styles.
         assert len(item["style_prompt"]) >= 90, item["id"]
         assert "author" not in item, item["id"]
         assert len(item["samples"]) == 4, item["id"]
@@ -3628,12 +3628,12 @@ async def test_image_style_templates_route_keeps_data_a_bare_list(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """`data` 必须是裸列表 —— 这是跨仓库的前端契约，不是实现细节。
+    """`data` must be a bare list -- this is a cross-repo frontend contract, not an implementation detail.
 
-    这个端点同时服务多个仓库的前端，它们的 `apiCall` 只拆一层 `{ok, data}`、不校验
-    `data` 的形状。把 `data` 换成 `{asset_base, version, templates}` 对象曾经让所有
-    没跟进的前端一句 `templates.find(...)` 抛 `is not a function`，冒泡到根错误边界
-    变成整页「页面加载失败」。清单元信息只能挂在信封同级。
+    This endpoint serves the frontends of several repos at once; their `apiCall` unwraps only one layer of `{ok, data}` and does not validate
+    the shape of `data`. Replacing `data` with a `{asset_base, version, templates}` object once made every
+    frontend that had not followed along throw `is not a function` on a `templates.find(...)`, bubbling to the root error boundary
+    and becoming a whole-page "page failed to load". Manifest metadata may only hang beside the envelope.
     """
     _patch_freezone_project(monkeypatch, tmp_path)
     monkeypatch.setenv("STYLE_GALLERY_ASSET_BASE", "https://cdn.example.com/style")
@@ -3653,7 +3653,7 @@ async def test_image_style_templates_route_keeps_data_a_bare_list(
     assert response.status_code == 200
     payload = response.json()
     assert payload["ok"] is True
-    assert isinstance(payload["data"], list), "data 必须是裸列表，元信息挂信封同级"
+    assert isinstance(payload["data"], list), "data must be a bare list, with metadata hung beside the envelope"
     assert payload["data"] == freezone_routes._get_freezone_image_style_templates()
     assert payload["asset_base"] == "https://cdn.example.com/style"
     assert payload["version"]
@@ -3664,7 +3664,7 @@ def test_nineties_style_prompt_keeps_second_line() -> None:
     nineties = next(item for item in data if item["id"] == "nineties")
 
     assert "\n" in nineties["style_prompt"]
-    assert "构图平实自然" in nineties["style_prompt"]
+    assert "Plain and natural composition" in nineties["style_prompt"]
 
 
 def test_build_style_prompt_uses_chinese_block_without_author() -> None:
@@ -3674,8 +3674,8 @@ def test_build_style_prompt_uses_chinese_block_without_author() -> None:
         FreezoneImageStyleConfig(template_id="golden_age")
     )
 
-    assert block.startswith("风格模板:\n- 黄金时代\n- ")
-    assert "美式复古好莱坞黄金时代风格" in block
+    assert block.startswith("Style template:\n- Golden Age\n- ")
+    assert "American retro Hollywood golden-age style" in block
     assert "builtin" not in block
 
 
@@ -3692,12 +3692,12 @@ def test_unknown_style_template_does_not_break_prompt_merge() -> None:
     from novelvideo.api.schemas import FreezoneImageStyleConfig
 
     merged = freezone_routes._merge_prompt_with_style_and_camera(
-        "一个女人站在窗前",
+        "A woman stands at the window",
         FreezoneImageStyleConfig(template_id="obsolete_style"),
         None,
     )
 
-    assert merged == "一个女人站在窗前"
+    assert merged == "A woman stands at the window"
 
 
 def test_style_asset_base_defaults_to_empty(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3707,9 +3707,9 @@ def test_style_asset_base_defaults_to_empty(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_style_manifest_version_is_exposed_for_troubleshooting() -> None:
-    """图片和提示词各自可换代,接口带上清单版本才好定位是哪份在生效。
+    """Images and prompts can each change generations; having the interface carry the manifest version makes it easy to locate which one is in effect.
 
-    版本号跟着清单文件走,别在这里写死 —— 否则每改一版清单都要顺手改测试。
+    The version number follows the manifest file, so do not hard-code it here -- otherwise every manifest revision would require a test edit as well.
     """
     manifest = json.loads(
         (
@@ -3764,7 +3764,7 @@ async def test_freezone_gen_route_passes_output_dir_and_quality(
     result = await freezone_routes.freezone_gen(
         project="proj_freezone",
         body=freezone_routes.FreezoneGenRequest(
-            prompt="衣服好看点",
+            prompt="Make the clothes look better",
             aspect_ratio="16:9",
             image_size="1K",
             model="newapi_gpt_image2",
@@ -4048,13 +4048,13 @@ async def test_freezone_celery_text_runner_records_project_node_history(
     ctx = _project_ctx(tmp_path)
     project_dir = ctx.output_dir
 
-    # 普通任务不传组织身份；组织任务才由分发层注入 egress_context。
+    # Ordinary tasks do not pass an organization identity; only organization tasks have egress_context injected by the dispatch layer.
     async def fake_translate_freezone_text(
         *,
         text: str,
         node_type: str,
     ):
-        assert text == "你好"
+        assert text == "Hello"
         assert node_type == "text"
         return "hello", "zh", "en"
 
@@ -4073,7 +4073,7 @@ async def test_freezone_celery_text_runner_records_project_node_history(
             "payload": {
                 "job_id": "job_text",
                 "project_dir": str(project_dir),
-                "text": "你好",
+                "text": "Hello",
                 "node_type": "text",
                 "canvas_id": "canvas_a",
                 "node_id": "node_text",
@@ -4106,10 +4106,10 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
     ctx = _project_ctx(tmp_path)
     project_dir = ctx.output_dir
 
-    # 普通任务不传组织身份；组织任务才由分发层注入 egress_context。
+    # Ordinary tasks do not pass an organization identity; only organization tasks have egress_context injected by the dispatch layer.
     async def fake_generate_freezone_text(*, prompt: str):
-        assert prompt == "写一段雨夜重逢"
-        return "DC-freezone-text-writer-LLM", "雨夜里，他们在旧站台重逢。"
+        assert prompt == "Write a rainy night reunion"
+        return "DC-freezone-text-writer-LLM", "On a rainy night, they meet again on the old platform."
 
     class FakeTaskManager:
         def update_progress_for_project(self, *_args, **_kwargs):
@@ -4134,7 +4134,7 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
             "payload": {
                 "job_id": "job_text_generate",
                 "project_dir": str(project_dir),
-                "prompt": "写一段雨夜重逢",
+                "prompt": "Write a rainy night reunion",
                 "canvas_id": "canvas_a",
                 "node_id": "node_text",
             },
@@ -4152,16 +4152,16 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
         canvas_id="canvas_a",
         node_id="node_text",
     )
-    assert result["generated_text"] == "雨夜里，他们在旧站台重逢。"
+    assert result["generated_text"] == "On a rainy night, they meet again on the old platform."
     assert result["billing"] == {
         "operation": "text_generate",
-        "billable_chars": 13,
-        "pricing_quantity": 13,
+        "billable_chars": 44,
+        "pricing_quantity": 44,
         "quantity_source": "generated_text",
     }
     assert result["__feature_credit_reservation_id"] == "reservation_actual_text"
-    assert reservations[0]["quantity"] == 13
-    assert reservations[0]["params"]["pricing_metrics"]["billable_chars"] == 13
+    assert reservations[0]["quantity"] == 44
+    assert reservations[0]["params"]["pricing_metrics"]["billable_chars"] == 44
     assert history[-1]["task_type"] == "freezone_text_generate"
     assert history[-1]["model"] == "DC-freezone-text-writer-LLM"
 
@@ -4171,7 +4171,7 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
             "payload": {
                 "job_id": "job_text_generate_legacy",
                 "project_dir": str(project_dir),
-                "prompt": "写一段雨夜重逢",
+                "prompt": "Write a rainy night reunion",
             },
             "billing_metadata": {
                 "feature_key": "freezone.text_generate",
@@ -4482,7 +4482,7 @@ async def test_freezone_text_job_preserves_canvas_node_context_in_celery_payload
     await freezone_routes.freezone_text_translate(
         project="proj_freezone",
         body=freezone_routes.FreezoneTextTranslateRequest(
-            text="你好",
+            text="Hello",
             node_type="text",
             canvas_id="canvas_a",
             node_id="node_text",
@@ -4493,7 +4493,7 @@ async def test_freezone_text_job_preserves_canvas_node_context_in_celery_payload
     assert captured["task_type"] == "freezone_text_translate"
     assert captured["payload"]["canvas_id"] == "canvas_a"
     assert captured["payload"]["node_id"] == "node_text"
-    assert captured["payload"]["billing"] == {"billable_chars": 2}
+    assert captured["payload"]["billing"] == {"billable_chars": 5}
 
 
 @pytest.mark.asyncio
@@ -4522,7 +4522,7 @@ async def test_freezone_text_generate_job_defers_quantity_to_trusted_result(
     await freezone_routes.freezone_text_generate(
         project="proj_freezone",
         body=freezone_routes.FreezoneTextGenerateRequest(
-            prompt=" 写一段\n雨夜故事 ",
+            prompt=" Write a\nrainy night story ",
             canvas_id="canvas_a",
             node_id="node_text",
         ),
@@ -4535,7 +4535,7 @@ async def test_freezone_text_generate_job_defers_quantity_to_trusted_result(
     assert captured["payload"]["billing"] == {
         "operation": "text_generate",
         "quantity_source": "trusted_runner_result",
-        "billable_chars": 7,
+        "billable_chars": 21,
         "result_billing_version": 2,
     }
 
@@ -4566,8 +4566,8 @@ async def test_freezone_story_script_job_uses_model_visible_chars_for_billing(
     await freezone_routes.freezone_story_script_generate(
         project="proj_freezone",
         body=freezone_routes.FreezoneStoryScriptGenerateRequest(
-            source_text="第一幕 雨夜",
-            prompt="节奏 要快",
+            source_text="Act 1 Rainy Night",
+            prompt="Pace needs to be fast",
             canvas_id="canvas_a",
             node_id="node_script",
         ),
@@ -4575,7 +4575,7 @@ async def test_freezone_story_script_job_uses_model_visible_chars_for_billing(
     )
 
     assert captured["task_type"] == "freezone_story_script"
-    assert captured["payload"]["billing"] == {"billable_chars": 9}
+    assert captured["payload"]["billing"] == {"billable_chars": 31}
 
 
 @pytest.mark.asyncio
@@ -4753,12 +4753,12 @@ async def test_scene_360_endpoint_caps_mainline_image_size_to_2k(
 
     monkeypatch.setattr(freezone_routes, "_resolve_freezone_project", fake_resolve_freezone_project)
     monkeypatch.setattr(freezone_routes, "get_task_backend", lambda: SimpleNamespace(enqueue_project_task=fake_enqueue_project_task))
-    _write_image(ctx.output_dir / "assets" / "scenes" / "小区" / "master.png")
+    _write_image(ctx.output_dir / "assets" / "scenes" / "compound" / "master.png")
 
     result = await freezone_routes.freezone_scene_360(
         project="proj_freezone",
         body=freezone_routes.FreezoneScene360Request(
-            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/小区/master.png",
+            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/compound/master.png",
             image_size="4K",
             canvas_id="canvas_a",
             node_id="node_scene_360",
@@ -4768,7 +4768,7 @@ async def test_scene_360_endpoint_caps_mainline_image_size_to_2k(
     )
 
     assert result["data"]["task_type"] == "stage_asset"
-    assert captured["payload"]["scene_name"] == "小区"
+    assert captured["payload"]["scene_name"] == "compound"
     assert captured["payload"]["params"]["image_size"] == "2K"
     assert captured["payload"]["params"]["quality"] == "low"
     assert captured["payload"]["params"]["update_manifest"] is False
@@ -4784,10 +4784,10 @@ async def test_scene_360_endpoint_keeps_image_size_below_the_cap(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """低于 2K 的档位必须原样透传，并带上目录身份一起计费。
+    """A tier below 2K must be passed through as is, and billed together with the catalog identity.
 
-    画布面板按媒体模型目录里那一档报价 —— 目录只给 1K 的模型如果在这里被抬到
-    2K，报价与执行、计费口径就全对不上。
+    The canvas panel quotes by the tier in the media model catalog -- if a model for which the catalog offers only 1K is raised to
+    2K here, the quote, execution and billing conventions would all diverge.
     """
     ctx = _project_ctx(tmp_path)
     captured: dict = {}
@@ -4826,12 +4826,12 @@ async def test_scene_360_endpoint_keeps_image_size_below_the_cap(
         "get_task_backend",
         lambda: SimpleNamespace(enqueue_project_task=fake_enqueue_project_task),
     )
-    _write_image(ctx.output_dir / "assets" / "scenes" / "小区" / "master.png")
+    _write_image(ctx.output_dir / "assets" / "scenes" / "compound" / "master.png")
 
     await freezone_routes.freezone_scene_360(
         project="proj_freezone",
         body=freezone_routes.FreezoneScene360Request(
-            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/小区/master.png",
+            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/compound/master.png",
             image_size="1k",
             canvas_id="canvas_a",
             node_id="node_scene_360",
@@ -4867,7 +4867,7 @@ def test_scene_360_image_size_is_case_insensitive_and_capped(
 
 
 def _fake_media_model_catalog(entries: list[dict[str, object]]):
-    """权威（EE）图片目录的替身：非空列表 = 目录里只认这几条。"""
+    """A stand-in for the authoritative (EE) image catalog: a non-empty list = only these entries are recognized in the catalog."""
 
     async def fake_catalog(media_type: str) -> list[dict[str, object]]:
         assert media_type == "image"
@@ -4901,7 +4901,7 @@ def _patch_scene_360_enqueue(
         "get_task_backend",
         lambda: SimpleNamespace(enqueue_project_task=fake_enqueue_project_task),
     )
-    _write_image(ctx.output_dir / "assets" / "scenes" / "小区" / "master.png")
+    _write_image(ctx.output_dir / "assets" / "scenes" / "compound" / "master.png")
     return ctx
 
 
@@ -4910,10 +4910,10 @@ async def test_scene_360_takes_model_and_billing_identity_from_the_catalog(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """身份以目录条目为准，不采信 body。
+    """Identity follows the catalog entry, not the body.
 
-    body 里的 catalog_id 直接决定按哪条目录规则扣费 —— 采信它就等于允许客户端
-    报一个便宜的 catalog_id、配一个贵的 model。
+    The catalog_id in the body directly decides which catalog rule is used for billing -- trusting it would let the client
+    report a cheap catalog_id paired with an expensive model.
     """
     captured: dict = {}
     _patch_scene_360_enqueue(monkeypatch, tmp_path, captured)
@@ -4938,7 +4938,7 @@ async def test_scene_360_takes_model_and_billing_identity_from_the_catalog(
     await freezone_routes.freezone_scene_360(
         project="proj_freezone",
         body=freezone_routes.FreezoneScene360Request(
-            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/小区/master.png",
+            reference_url="/api/v1/projects/proj_freezone/media/assets/scenes/compound/master.png",
             model="real-pano-model",
             catalog_id="cat-cheap",
         ),
@@ -4976,7 +4976,7 @@ async def test_scene_360_rejects_client_model_without_catalog_authority_before_e
             project="proj_freezone",
             body=freezone_routes.FreezoneScene360Request(
                 reference_url=(
-                    "/api/v1/projects/proj_freezone/media/assets/scenes/小区/master.png"
+                    "/api/v1/projects/proj_freezone/media/assets/scenes/compound/master.png"
                 ),
                 model="attacker-controlled-model",
                 catalog_id="forged-catalog",
@@ -4994,7 +4994,7 @@ async def test_scene_360_rejects_a_model_the_catalog_does_not_have(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """目录权威时非目录模型必须被拦掉，而不是拿默认模型偷偷跑掉。"""
+    """When the catalog is authoritative, a non-catalog model must be blocked, rather than quietly run with the default model."""
     captured: dict = {}
     _patch_scene_360_enqueue(monkeypatch, tmp_path, captured)
     monkeypatch.setattr(
@@ -5008,7 +5008,7 @@ async def test_scene_360_rejects_a_model_the_catalog_does_not_have(
             project="proj_freezone",
             body=freezone_routes.FreezoneScene360Request(
                 reference_url=(
-                    "/api/v1/projects/proj_freezone/media/assets/scenes/小区/master.png"
+                    "/api/v1/projects/proj_freezone/media/assets/scenes/compound/master.png"
                 ),
                 model="not-in-catalog",
             ),
@@ -5024,10 +5024,10 @@ async def test_template_edit_takes_provider_model_and_identity_from_the_catalog(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """宫格动作与 /freezone/edit 共用同一条执行链，provider 也要跟着目录走。
+    """Grid actions share the same execution chain as /freezone/edit, and the provider must also follow the catalog.
 
-    只发裸 model 的话网关按默认 provider 路由，目录里配的 openrouter 模型会被
-    送错家。
+    If only a bare model is sent, the gateway routes by the default provider, and an openrouter model configured in the catalog would be
+    sent to the wrong house.
     """
     username = "admin"
     project = "59"
@@ -5113,10 +5113,10 @@ async def test_freezone_edit_forwards_catalog_model_params_into_task_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """带参考图的图编辑走 /freezone/edit，目录动态参数必须一路到任务负载。
+    """Image editing with reference images goes through /freezone/edit, and the catalog dynamic parameters must reach the task payload all the way.
 
-    schema 要和取值一起下发 —— runner 只有拿到 requestPath 才知道把参数写进网关
-    请求体的哪个位置，只带值等于没生效。
+    The schema must be sent together with the values -- the runner knows where in the gateway request body to write the parameter only after it gets the requestPath,
+    and carrying only the value is as good as not taking effect.
     """
     username = "admin"
     project = "58"
@@ -5157,7 +5157,7 @@ async def test_freezone_edit_forwards_catalog_model_params_into_task_payload(
     result = await freezone_routes.freezone_edit(
         project=project,
         body=freezone_routes.FreezoneEditRequest(
-            prompt="换成夜景",
+            prompt="Change to a night scene",
             base_url="/static/admin/58/freezone/_uploads/base.png",
             model="custom-edit",
             model_id="cat-edit",
@@ -5178,7 +5178,7 @@ async def test_run_freezone_edit_writes_model_params_into_gateway_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """runner 侧同 run_freezone_gen 一个口径：参数与 schema 都要落到网关 config。"""
+    """The runner side follows the same convention as run_freezone_gen: both the parameters and the schema must land in the gateway config."""
     from novelvideo import config as novelvideo_config
     from novelvideo.freezone import jobs as freezone_jobs
     from novelvideo.generators import nanobanana_grid
@@ -5209,7 +5209,7 @@ async def test_run_freezone_edit_writes_model_params_into_gateway_config(
     await freezone_jobs.run_freezone_edit(
         project_dir=tmp_path,
         job_id="job_edit",
-        prompt="换成夜景",
+        prompt="Change to a night scene",
         base_path=str(base),
         model_params={"quality": "high"},
         request_schema=schema,
@@ -5227,8 +5227,8 @@ def _skill_beat_input() -> dict:
         "beat_context": {
             "episode": 1,
             "beat": 8,
-            "scene_id": "兰州拉面馆",
-            "detected_identities": ["面馆男青年"],
+            "scene_id": "Lanzhou Noodle Shop",
+            "detected_identities": ["Noodle_Shop_YoungMan"],
         },
     }
 
@@ -5241,14 +5241,14 @@ def _standalone_skill_beat_input() -> dict:
         "beat_context": {
             "schema": "beat_context.v1",
             "source": "standalone",
-            "title": "自定义 Beat 上下文",
-            "visual_description": "雨夜里，{{Kris}}站在便利店门口回头，手里握着[[雨伞]]。",
-            "narration_segment": "她终于意识到自己被跟踪了。",
-            "scene_id": "便利店门口",
+            "title": "Custom Beat context",
+            "visual_description": "On a rainy night, {{Kris}} turns around at the convenience store entrance, holding [[umbrella]].",
+            "narration_segment": "She finally realizes she is being followed.",
+            "scene_id": "convenience store entrance",
             "detected_identities": ["Kris"],
-            "detected_props": ["雨伞"],
+            "detected_props": ["umbrella"],
             "sketch_colors": {"Kris": "#FF00FF"},
-            "prop_marker_colors": {"雨伞": "#B71C1C"},
+            "prop_marker_colors": {"umbrella": "#B71C1C"},
         },
     }
 
@@ -5256,7 +5256,7 @@ def _standalone_skill_beat_input() -> dict:
 def test_standalone_beat_context_normalizes_plain_identity_to_mainline_prompt_shape() -> None:
     beat_context = {
         "source": "standalone",
-        "visual_description": "{{Kris}}拿着[[雨伞]]。",
+        "visual_description": "{{Kris}} holds [[umbrella]].",
         "detected_identities": ["Kris"],
         "sketch_colors": {"Kris": "#FF00FF"},
     }
@@ -5277,7 +5277,7 @@ def test_standalone_beat_context_normalizes_plain_identity_to_mainline_prompt_sh
         beat_context
     )
 
-    assert prompt_beat["visual_description"] == "{{Kris_Kris}}拿着[[雨伞]]。"
+    assert prompt_beat["visual_description"] == "{{Kris_Kris}} holds [[umbrella]]."
     assert prompt_beat["detected_identities"] == ["Kris_Kris"]
     assert character_map == {
         "Kris": {
@@ -5293,18 +5293,18 @@ def test_standalone_beat_context_normalizes_plain_identity_to_mainline_prompt_sh
 def test_standalone_beat_context_character_map_uses_mainline_identity_suffix_shape() -> None:
     character_map = freezone_routes._standalone_beat_context_character_map(
         {
-            "detected_identities": ["陆辰_青年时期"],
-            "sketch_colors": {"陆辰_青年时期": "#00FFFF"},
+            "detected_identities": ["LuChen_young_adult"],
+            "sketch_colors": {"LuChen_young_adult": "#00FFFF"},
         }
     )
 
     assert character_map == {
-        "陆辰": {
-            "base_prompt": "陆辰",
+        "LuChen": {
+            "base_prompt": "LuChen",
             "reference_mode": "prompt_only",
             "sketch_color": "#00FFFF",
-            "identity_appearances": {"青年时期": "陆辰_青年时期"},
-            "identity_sketch_colors": {"青年时期": "#00FFFF"},
+            "identity_appearances": {"young_adult": "LuChen_young_adult"},
+            "identity_sketch_colors": {"young_adult": "#00FFFF"},
         }
     }
 
@@ -5599,7 +5599,7 @@ def test_skill_registry_returns_skills_with_providers_and_typed_contracts() -> N
     set_background = get_skill("freezone.set_selected_background")
     set_background_inputs = {item.role: item for item in set_background.inputs}
     assert list(set_background_inputs) == ["beat_context", "source_image"]
-    assert set_background.display_name == "设为当前背景"
+    assert set_background.display_name == "Set as current background"
     assert set_background_inputs["beat_context"].required is True
     assert set_background_inputs["source_image"].required is True
     assert set_background_inputs["source_image"].cardinality == "single"
@@ -5617,7 +5617,7 @@ def test_skill_registry_returns_skills_with_providers_and_typed_contracts() -> N
     set_director = get_skill("freezone.set_director_combined")
     set_director_inputs = {item.role: item for item in set_director.inputs}
     assert list(set_director_inputs) == ["beat_context", "source_image"]
-    assert set_director.display_name == "设为导演合成图"
+    assert set_director.display_name == "Set as director composite"
     assert set_director_inputs["beat_context"].required is True
     assert set_director_inputs["source_image"].required is True
     assert set_director_inputs["source_image"].cardinality == "single"
@@ -6140,10 +6140,10 @@ async def test_skill_run_standalone_sketch_from_context_queues_candidate_without
     assert captured["payload"]["canvas_id"] == "canvas_a"
     assert captured["payload"]["node_id"] == "skill_sketch"
     assert captured["payload"]["reference_paths"][0].endswith("/freezone/bg.png")
-    assert "雨夜里" in captured["payload"]["prompt"]
-    assert "便利店门口回头" in captured["payload"]["prompt"]
+    assert "On a rainy night" in captured["payload"]["prompt"]
+    assert "turns around at the convenience store entrance" in captured["payload"]["prompt"]
     assert "#FF00FF" in captured["payload"]["prompt"]
-    assert "便利店门口" in captured["payload"]["prompt"]
+    assert "convenience store entrance" in captured["payload"]["prompt"]
     metadata = json.loads(
         (project_dir / "freezone" / "_skill_runs" / f"{response.run_id}.json").read_text(
             encoding="utf-8"
@@ -6209,8 +6209,8 @@ async def test_skill_run_standalone_returns_run_id_and_result_outputs_without_db
     assert captured["payload"]["node_id"] == "skill_sketch"
     assert captured["payload"]["reference_paths"][0].endswith("/freezone/bg.png")
     assert captured["payload"]["aspect_ratio"] == "2:3"
-    assert "雨夜里" in captured["payload"]["prompt"]
-    assert "便利店门口回头" in captured["payload"]["prompt"]
+    assert "On a rainy night" in captured["payload"]["prompt"]
+    assert "turns around at the convenience store entrance" in captured["payload"]["prompt"]
     assert "#FF00FF" in captured["payload"]["prompt"]
     assert "#B71C1C" in captured["payload"]["prompt"]
 
@@ -6317,15 +6317,15 @@ async def test_skill_run_standalone_director_sketch_queues_candidate_without_db_
     assert captured["payload"]["reference_paths"][0].endswith("/freezone/_uploads/combined.png")
     assert captured["payload"]["aspect_ratio"] == "16:9"
     assert captured["payload"]["quality"] == "high"
-    assert "雨夜里" in captured["payload"]["prompt"]
-    assert "便利店门口回头" in captured["payload"]["prompt"]
+    assert "On a rainy night" in captured["payload"]["prompt"]
+    assert "turns around at the convenience store entrance" in captured["payload"]["prompt"]
     assert "#FF00FF" in captured["payload"]["prompt"]
     assert "#B71C1C" in captured["payload"]["prompt"]
     assert "Convert the attached 3GS director control frame" in captured["payload"]["prompt"]
     assert "CONTROL LOCK" in captured["payload"]["prompt"]
     assert "SCENE DESCRIPTIONS" in captured["payload"]["prompt"]
-    assert "根据用户自定义 Beat Context 生成一张草图候选图" not in captured["payload"]["prompt"]
-    assert "导演合成图" in captured["payload"]["source_label"]
+    assert "Generate a sketch candidate image from the user's custom Beat Context" not in captured["payload"]["prompt"]
+    assert "Director composite" in captured["payload"]["source_label"]
     metadata = json.loads(
         (project_dir / "freezone" / "_skill_runs" / f"{response.run_id}.json").read_text(
             encoding="utf-8"
@@ -6411,7 +6411,7 @@ async def test_skill_run_standalone_frame_from_context_queues_candidate_without_
                     image_url="/api/v1/projects/proj_freezone/media/assets/prop_umbrella.png",
                     slot_kind="prop",
                 )
-                | {"reference_target": {"kind": "prop", "prop_id": "雨伞"}},
+                | {"reference_target": {"kind": "prop", "prop_id": "umbrella"}},
             ],
         ),
         user={"username": "admin"},
@@ -6434,7 +6434,7 @@ async def test_skill_run_standalone_frame_from_context_queues_candidate_without_
     assert config["beats"][0]["episode_number"] == 0
     assert config["beats"][0]["beat_number"] == 0
     assert config["beats"][0]["panel_index"] == 0
-    assert config["beats"][0]["visual_description"].startswith("雨夜里")
+    assert config["beats"][0]["visual_description"].startswith("On a rainy night")
     assert config["beats"][0]["detected_identities"] == ["Kris_Kris"]
     assert config["canvas_sketch_paths"]["0"].endswith("/freezone/sketch.png")
     assert config["canvas_scene_refs"][0]["panel_index"] == 0
@@ -6443,7 +6443,7 @@ async def test_skill_run_standalone_frame_from_context_queues_candidate_without_
     assert config["canvas_identity_refs"][0]["panel_index"] == 0
     assert config["canvas_identity_refs"][0]["identity_id"] == "Kris"
     assert config["canvas_prop_refs"][0]["panel_index"] == 0
-    assert config["canvas_prop_refs"][0]["prop_id"] == "雨伞"
+    assert config["canvas_prop_refs"][0]["prop_id"] == "umbrella"
     assert config["image_quality"] == "high"
     metadata = json.loads(
         (project_dir / "freezone" / "_skill_runs" / f"{response.run_id}.json").read_text(
@@ -6676,7 +6676,7 @@ async def test_skill_run_standalone_review_frame_uses_canvas_context_without_db_
     assert result.outputs[0].text == "standalone review"
     assert "Episode: null" in prompts[0]
     assert "Beat: null" in prompts[0]
-    assert "雨夜里" in prompts[0]
+    assert "On a rainy night" in prompts[0]
 
 
 @pytest.mark.asyncio
@@ -6685,7 +6685,7 @@ async def test_skill_run_scene_360_rejects_beat_context_role(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
-    master = project_dir / "assets" / "scenes" / "小区" / "master.png"
+    master = project_dir / "assets" / "scenes" / "compound" / "master.png"
     _write_image(master)
 
     async def fake_start_edit_job(**_kwargs):
@@ -6709,7 +6709,7 @@ async def test_skill_run_scene_360_rejects_beat_context_role(
                     },
                     _skill_image_input(
                         "scene_master",
-                        image_url="/assets/scenes/小区/master.png",
+                        image_url="/assets/scenes/compound/master.png",
                         slot_kind="scene_master",
                     ),
                 ],
@@ -6782,7 +6782,7 @@ async def test_skill_run_mainline_returns_run_id_and_result_outputs(
     assert config["direct_sketch_beats"] is True
     assert config["mode_key"] == "1x1_2-3_sketch"
     assert config["beats"][0]["beat_number"] == 8
-    assert config["beats"][0]["scene_ref"]["scene_id"] == "兰州拉面馆"
+    assert config["beats"][0]["scene_ref"]["scene_id"] == "Lanzhou Noodle Shop"
     assert config["canvas_scene_refs"][0]["image_path"].endswith("/bg.png")
     assert config["canvas_scene_refs"][0]["source_level"] == "selected_background_image"
 
@@ -6855,7 +6855,7 @@ async def test_skill_run_set_selected_background_writes_beat_slot(
                 {
                     "episode_number": 1,
                     "beat_number": 8,
-                    "scene_ref": {"scene_id": "兰州拉面馆", "render_anchor_id": "master"},
+                    "scene_ref": {"scene_id": "Lanzhou Noodle Shop", "render_anchor_id": "master"},
                 }
             ]
 
@@ -6913,7 +6913,7 @@ async def test_skill_run_set_selected_background_writes_beat_slot(
             "episode_number": 1,
             "beat_number": 8,
             "scene_ref": {
-                "scene_id": "兰州拉面馆",
+                "scene_id": "Lanzhou Noodle Shop",
                 "render_anchor_id": "selected_background",
                 "render_anchor_source_id": "skill_source_image",
             },
@@ -7157,7 +7157,7 @@ async def test_skill_run_sketch_accepts_director_combined_background(
     assert captured["payload"]["control_frame_path"].endswith("/freezone/_uploads/combined.png")
     assert captured["payload"]["mode_key"] == "1x1_16-9_sketch"
     assert captured["payload"]["aspect_ratio"] == "16:9"
-    assert captured["payload"]["source_label"] == "导演合成图"
+    assert captured["payload"]["source_label"] == "Director composite"
 
 
 @pytest.mark.asyncio
@@ -7245,7 +7245,7 @@ async def test_skill_run_sketch_prefers_director_combined_over_background(
     assert captured["episode"] == 1
     assert captured["beat_num"] == 8
     assert captured["payload"]["control_frame_path"].endswith("/freezone/_uploads/combined.png")
-    assert captured["payload"]["source_label"] == "导演合成图"
+    assert captured["payload"]["source_label"] == "Director composite"
 
 
 @pytest.mark.asyncio
@@ -7295,10 +7295,10 @@ async def test_skill_run_frame_uses_resolved_identity_and_prop_references(
                     "beat_context": {
                         "episode": 1,
                         "beat": 8,
-                        "scene_id": "画布场景",
-                        "visual_description": "画布里的分镜描述",
-                        "detected_identities": ["画布身份"],
-                        "detected_props": ["画布道具"],
+                        "scene_id": "Canvas scene",
+                        "visual_description": "Storyboard description on the canvas",
+                        "detected_identities": ["Canvas identity"],
+                        "detected_props": ["Canvas prop"],
                     },
                 },
                 _skill_image_input(
@@ -7312,14 +7312,14 @@ async def test_skill_run_frame_uses_resolved_identity_and_prop_references(
                     image_url="/api/v1/projects/proj_freezone/media/assets/identity_a.png",
                     slot_kind="identity",
                 )
-                | {"reference_target": {"kind": "identity", "identity_id": "画布身份"}},
+                | {"reference_target": {"kind": "identity", "identity_id": "Canvas identity"}},
                 _skill_image_input(
                     "prop",
                     node_id="prop_b",
                     image_url="/api/v1/projects/proj_freezone/media/assets/prop_b.png",
                     slot_kind="prop",
                 )
-                | {"reference_target": {"kind": "prop", "prop_id": "画布道具"}},
+                | {"reference_target": {"kind": "prop", "prop_id": "Canvas prop"}},
             ],
         ),
         user={"username": "admin"},
@@ -7336,10 +7336,10 @@ async def test_skill_run_frame_uses_resolved_identity_and_prop_references(
     assert config["canvas_prop_refs"][0]["image_path"].endswith("/assets/prop_b.png")
     assert config["style"] == "realistic"
     assert config["ethnicity"] == "Mixed"
-    assert config["beats"][0]["visual_description"] == "画布里的分镜描述"
-    assert config["beats"][0]["detected_identities"] == ["画布身份"]
-    assert config["beats"][0]["detected_props"] == ["画布道具"]
-    assert captured["payload"]["task_label"] == "渲染分镜"
+    assert config["beats"][0]["visual_description"] == "Storyboard description on the canvas"
+    assert config["beats"][0]["detected_identities"] == ["Canvas identity"]
+    assert config["beats"][0]["detected_props"] == ["Canvas prop"]
+    assert captured["payload"]["task_label"] == "Render shots"
 
 
 @pytest.mark.asyncio
@@ -7382,9 +7382,9 @@ async def test_skill_run_frame_filters_stale_canvas_identity_refs_by_beat_contex
                     "beat_context": {
                         "episode": 1,
                         "beat": 8,
-                        "scene_id": "画布场景",
-                        "visual_description": "画布里的分镜描述",
-                        "detected_identities": ["保留身份"],
+                        "scene_id": "Canvas scene",
+                        "visual_description": "Storyboard description on the canvas",
+                        "detected_identities": ["Kept identity"],
                     },
                 },
                 _skill_image_input(
@@ -7398,21 +7398,21 @@ async def test_skill_run_frame_filters_stale_canvas_identity_refs_by_beat_contex
                     image_url="/api/v1/projects/proj_freezone/media/assets/identity_keep.png",
                     slot_kind="identity",
                 )
-                | {"reference_target": {"kind": "identity", "identity_id": "保留身份"}},
+                | {"reference_target": {"kind": "identity", "identity_id": "Kept identity"}},
                 _skill_image_input(
                     "identity",
                     node_id="identity_stale",
                     image_url="/api/v1/projects/proj_freezone/media/assets/identity_stale.png",
                     slot_kind="identity",
                 )
-                | {"reference_target": {"kind": "identity", "identity_id": "过期身份"}},
+                | {"reference_target": {"kind": "identity", "identity_id": "Stale identity"}},
             ],
         ),
         user={"username": "admin"},
     )
 
     config = captured["payload"]["config"]
-    assert [item["identity_id"] for item in config["canvas_identity_refs"]] == ["保留身份"]
+    assert [item["identity_id"] for item in config["canvas_identity_refs"]] == ["Kept identity"]
     assert config["canvas_identity_refs"][0]["image_path"].endswith("/assets/identity_keep.png")
 
 
@@ -7521,7 +7521,7 @@ async def test_skill_run_frame_rejects_beat_without_identity_detection_before_en
 
     assert exc.value.status_code == 422
     assert exc.value.detail["code"] == "render_identity_detection_required"
-    assert "AI 检测" in exc.value.detail["message"]
+    assert "AI detect" in exc.value.detail["message"]
     assert "#8" in exc.value.detail["message"]
     assert enqueued == []
 
@@ -7560,9 +7560,9 @@ async def test_skill_run_standalone_frame_rejects_missing_identities_with_node_h
     assert exc.value.status_code == 422
     assert exc.value.detail["code"] == "render_identity_detection_required"
     message = exc.value.detail["message"]
-    assert "镜头上下文" in message
-    assert "无角色出场" in message
-    assert "AI 检测" not in message
+    assert "Shot context" in message
+    assert "No characters appear" in message
+    assert "AI detect" not in message
     assert "#0" not in message
     assert enqueued == []
 
@@ -7581,7 +7581,7 @@ async def test_skill_run_standalone_frame_accepts_no_character_marker_at_beat_ze
     enqueued = _patch_frame_enqueue_recorder(monkeypatch)
     _write_image(project_dir / "freezone" / "sketch.png", size=(800, 1200))
     beat_input = _standalone_skill_beat_input()
-    beat_input["beat_context"]["visual_description"] = "雨夜便利店门口，空无一人。"
+    beat_input["beat_context"]["visual_description"] = "A convenience store entrance on a rainy night, with no one there."
     beat_input["beat_context"]["detected_identities"] = [NO_CHARACTER_MARKER]
 
     await freezone_routes.freezone_skill_run(
@@ -7624,8 +7624,8 @@ async def test_skill_run_scene_360_uses_reverse_master_and_scene_slot_target(
 
     monkeypatch.setattr(freezone_routes, "get_task_backend", lambda: SimpleNamespace(enqueue_project_task=fake_enqueue_project_task))
     monkeypatch.setattr(freezone_routes, "_new_job_id", lambda: "job_scene_360")
-    master = project_dir / "assets" / "scenes" / "小区" / "master.png"
-    reverse = project_dir / "assets" / "scenes" / "小区" / "reverse.png"
+    master = project_dir / "assets" / "scenes" / "compound" / "master.png"
+    reverse = project_dir / "assets" / "scenes" / "compound" / "reverse.png"
     _write_image(master)
     _write_image(reverse)
 
@@ -7640,20 +7640,20 @@ async def test_skill_run_scene_360_uses_reverse_master_and_scene_slot_target(
                     "role": "scene",
                     "node_id": "scene_prompt",
                     "node_type": "textAnnotationNode",
-                    "text": "画布输入的 360 场景提示词",
+                    "text": "Canvas input 360 scene prompt",
                     "media_kind": "text",
                 },
                 {
                     "role": "scene_master",
                     "node_id": "scene_master_node",
                     "node_type": "imageGenNode",
-                    "image_url": "/assets/scenes/小区/master.png",
-                    "slot_target": {"kind": "scene_master", "scene_id": "小区"},
+                    "image_url": "/assets/scenes/compound/master.png",
+                    "slot_target": {"kind": "scene_master", "scene_id": "compound"},
                 },
                 _skill_image_input(
                     "scene_reverse_master",
                     image_url=(
-                        "/api/v1/projects/proj_freezone/media/assets/scenes/小区/reverse.png"
+                        "/api/v1/projects/proj_freezone/media/assets/scenes/compound/reverse.png"
                     ),
                     slot_kind="scene_reverse_master",
                 ),
@@ -7664,7 +7664,7 @@ async def test_skill_run_scene_360_uses_reverse_master_and_scene_slot_target(
 
     assert response.run_id.startswith("stage_asset:")
     assert captured["task_type"] == "stage_asset"
-    assert captured["payload"]["scene_name"] == "小区"
+    assert captured["payload"]["scene_name"] == "compound"
     assert captured["payload"]["step"] == "pano_from_master"
     assert captured["payload"]["params"]["provider"] == "newapi"
     assert captured["payload"]["params"]["model"] == NEWAPI_IMAGE_MODEL
@@ -7674,11 +7674,11 @@ async def test_skill_run_scene_360_uses_reverse_master_and_scene_slot_target(
     ) == NEWAPI_IMAGE_MODEL
     assert captured["payload"]["params"]["image_size"] == "2K"
     assert captured["payload"]["params"]["update_manifest"] is False
-    assert captured["payload"]["params"]["master_path"].endswith("/assets/scenes/小区/master.png")
+    assert captured["payload"]["params"]["master_path"].endswith("/assets/scenes/compound/master.png")
     assert captured["payload"]["params"]["reverse_master_path"].endswith(
-        "/assets/scenes/小区/reverse.png"
+        "/assets/scenes/compound/reverse.png"
     )
-    assert "画布输入的 360 场景提示词" in captured["payload"]["params"]["description"]
+    assert "Canvas input 360 scene prompt" in captured["payload"]["params"]["description"]
 
     pano = (
         project_dir
@@ -7705,7 +7705,7 @@ async def test_skill_run_scene_360_uses_reverse_master_and_scene_slot_target(
     assert result.outputs[0].role == "scene_360_candidate"
     assert result.outputs[0].slot_target == {
         "kind": "scene_director_pano_360",
-        "scene_id": "小区",
+        "scene_id": "compound",
     }
     assert result.outputs[0].pushable is True
     assert urlsplit(result.outputs[0].image_url or "").path.endswith(
@@ -7720,7 +7720,7 @@ async def test_skill_run_scene_360_requires_scene_master_scene_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
-    master = project_dir / "assets" / "scenes" / "小区" / "master.png"
+    master = project_dir / "assets" / "scenes" / "compound" / "master.png"
     _write_image(master)
 
     async def fake_enqueue_project_task(_ctx: ProjectContext, **_kwargs):
@@ -7738,7 +7738,7 @@ async def test_skill_run_scene_360_requires_scene_master_scene_id(
                 resolved_inputs=[
                     _skill_image_input(
                         "scene_master",
-                        image_url="/assets/scenes/小区/master.png",
+                        image_url="/assets/scenes/compound/master.png",
                         slot_kind="scene_master",
                     ),
                 ],
@@ -7769,7 +7769,7 @@ async def test_skill_run_scene_360_infers_scene_id_from_mainline_context(
 
     monkeypatch.setattr(freezone_routes, "get_task_backend", lambda: SimpleNamespace(enqueue_project_task=fake_enqueue_project_task))
     monkeypatch.setattr(freezone_routes, "_new_job_id", lambda: "job_scene_360")
-    master = project_dir / "assets" / "scenes" / "小区" / "master.png"
+    master = project_dir / "assets" / "scenes" / "compound" / "master.png"
     _write_image(master)
 
     await freezone_routes.freezone_skill_run(
@@ -7783,11 +7783,11 @@ async def test_skill_run_scene_360_infers_scene_id_from_mainline_context(
                     "role": "scene_master",
                     "node_id": "scene_master_node",
                     "node_type": "imageGenNode",
-                    "image_url": "/assets/scenes/小区/master.png",
+                    "image_url": "/assets/scenes/compound/master.png",
                     "mainline_context": [
                         {
                             "kind": "scene",
-                            "sceneId": "小区",
+                            "sceneId": "compound",
                             "role": "scene_master",
                             "projectId": "proj_freezone",
                         }
@@ -7799,8 +7799,8 @@ async def test_skill_run_scene_360_infers_scene_id_from_mainline_context(
     )
 
     assert captured["task_type"] == "stage_asset"
-    assert captured["payload"]["scene_name"] == "小区"
-    assert captured["payload"]["params"]["master_path"].endswith("/assets/scenes/小区/master.png")
+    assert captured["payload"]["scene_name"] == "compound"
+    assert captured["payload"]["params"]["master_path"].endswith("/assets/scenes/compound/master.png")
 
 
 @pytest.mark.asyncio
@@ -7827,8 +7827,8 @@ async def test_preset_managed_scene_360_auto_commits_to_canonical_slot(
         "canvas_a",
         {"id": "skill_scene", "type": "skillNode", "data": {"preset_managed": True}},
     )
-    master = project_dir / "assets" / "scenes" / "小区" / "master.png"
-    reverse = project_dir / "assets" / "scenes" / "小区" / "reverse.png"
+    master = project_dir / "assets" / "scenes" / "compound" / "master.png"
+    reverse = project_dir / "assets" / "scenes" / "compound" / "reverse.png"
     _write_image(master)
     _write_image(reverse)
 
@@ -7843,15 +7843,15 @@ async def test_preset_managed_scene_360_auto_commits_to_canonical_slot(
                     "role": "scene_master",
                     "node_id": "scene_master_node",
                     "node_type": "imageGenNode",
-                    "image_url": "/assets/scenes/小区/master.png",
-                    "slot_target": {"kind": "scene_master", "scene_id": "小区"},
+                    "image_url": "/assets/scenes/compound/master.png",
+                    "slot_target": {"kind": "scene_master", "scene_id": "compound"},
                 },
                 {
                     "role": "scene_reverse_master",
                     "node_id": "scene_reverse_node",
                     "node_type": "imageGenNode",
-                    "image_url": "/assets/scenes/小区/reverse.png",
-                    "slot_target": {"kind": "scene_reverse_master", "scene_id": "小区"},
+                    "image_url": "/assets/scenes/compound/reverse.png",
+                    "slot_target": {"kind": "scene_reverse_master", "scene_id": "compound"},
                 },
             ],
         ),
@@ -7862,7 +7862,7 @@ async def test_preset_managed_scene_360_auto_commits_to_canonical_slot(
     assert captured["payload"]["params"]["update_manifest"] is True
     assert captured["payload"]["params"]["artifact_dir"] == ""
 
-    pano = project_dir / "director_worlds" / "小区" / "v1" / "pano_360.png"
+    pano = project_dir / "director_worlds" / "compound" / "v1" / "pano_360.png"
     _write_image(pano)
     get_task_manager().complete_task_for_project(
         ctx,
@@ -7880,7 +7880,7 @@ async def test_preset_managed_scene_360_auto_commits_to_canonical_slot(
     assert result.outputs[0].pushable is False
     assert result.outputs[0].committed is True
     assert unquote(urlsplit(result.outputs[0].image_url or "").path).endswith(
-        "/director_worlds/小区/v1/pano_360.png"
+        "/director_worlds/compound/v1/pano_360.png"
     )
 
 
@@ -8717,7 +8717,7 @@ async def test_disabled_or_removed_catalog_model_is_rejected_without_static_fall
         )
 
     assert exc_info.value.status_code == 409
-    assert "当前没有可用的图片模型" in str(exc_info.value.detail)
+    assert "No image model is currently available" in str(exc_info.value.detail)
 
 
 @pytest.mark.asyncio
@@ -8920,7 +8920,7 @@ async def test_freezone_upscale_resolves_original_ratio_before_model_call(
     assert captured["billing"]["feature_key"] == "freezone.image_edit"
     assert captured["billing"]["operation"] == "upscale"
     assert captured["billing"]["pricing_kind"] == "image"
-    assert "黄金时代" in captured["prompt"]
+    assert "Golden Age" in captured["prompt"]
     assert "Panavision DXL2" in captured["prompt"]
     assert "Arri Signature Prime" in captured["prompt"]
 
@@ -9235,10 +9235,10 @@ def _beat_skill_emit_payload(
     detected_props: list[str] | None = None,
 ) -> dict:
     identity_ids = (
-        detected_identities if detected_identities is not None else ["男青年_default", "男青年"]
+        detected_identities if detected_identities is not None else ["YoungMan_default", "YoungMan"]
     )
-    prop_ids = detected_props if detected_props is not None else ["账单"]
-    prop_id = prop_ids[0] if prop_ids else "账单"
+    prop_ids = detected_props if detected_props is not None else ["bill"]
+    prop_id = prop_ids[0] if prop_ids else "bill"
     context = {
         "scope": "beat",
         "username": "admin",
@@ -9250,9 +9250,9 @@ def _beat_skill_emit_payload(
         "sketch_aspect_ratio": "2:3",
         "beat_data": {
             "beat_number": 8,
-            "narration_segment": "男青年盯着桌上的账单。",
-            "visual_description": "男青年坐在拉面馆木桌前。",
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "narration_segment": "The young man stares at the bill on the table.",
+            "visual_description": "The young man sits at the wooden table of the noodle shop.",
+            "scene_ref": {"scene_id": "Lanzhou Noodle Shop"},
             "detected_identities": identity_ids,
             "detected_props": prop_ids,
         },
@@ -9260,7 +9260,7 @@ def _beat_skill_emit_payload(
             {
                 "kind": "sketch",
                 "role": "current_sketch",
-                "label": "当前草图",
+                "label": "Current sketch",
                 "rel_path": "sketches/ep001/beat_08.png",
                 "url": "/static/admin/demo/sketches/ep001/beat_08.png",
                 "exists": True,
@@ -9271,7 +9271,7 @@ def _beat_skill_emit_payload(
             {
                 "kind": "frame",
                 "role": "current_frame",
-                "label": "当前分镜",
+                "label": "Current frame",
                 "rel_path": "frames/ep001/beat_08.png",
                 "url": "/static/admin/demo/frames/ep001/beat_08.png",
                 "exists": True,
@@ -9282,7 +9282,7 @@ def _beat_skill_emit_payload(
             {
                 "kind": "director",
                 "role": "selected_background",
-                "label": "当前背景 · Beat 8",
+                "label": "Current background · Beat 8",
                 "rel_path": "director_control_frames/ep001/beat_08/selected_background.png",
                 "url": (
                     "/static/admin/demo/"
@@ -9296,7 +9296,7 @@ def _beat_skill_emit_payload(
             {
                 "kind": "director",
                 "role": "director_combined",
-                "label": "导演合成图",
+                "label": "Director composite",
                 "rel_path": "director_control_frames/ep001/beat_08/combined.png",
                 "url": "/static/admin/demo/director_control_frames/ep001/beat_08/combined.png",
                 "exists": True,
@@ -9307,24 +9307,24 @@ def _beat_skill_emit_payload(
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "男青年 identity",
-                "rel_path": "assets/characters/男青年/identities/default.png",
-                "url": "/static/admin/demo/assets/characters/男青年/identities/default.png",
+                "label": "YoungMan identity",
+                "rel_path": "assets/characters/YoungMan/identities/default.png",
+                "url": "/static/admin/demo/assets/characters/YoungMan/identities/default.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "1:1",
-                "meta": {"character": "男青年", "identity_id": "男青年_default"},
+                "meta": {"character": "YoungMan", "identity_id": "YoungMan_default"},
             },
             {
                 "kind": "identity",
                 "role": "character_portrait",
-                "label": "男青年 portrait",
-                "rel_path": "assets/characters/男青年/portrait.png",
-                "url": "/static/admin/demo/assets/characters/男青年/portrait.png",
+                "label": "YoungMan portrait",
+                "rel_path": "assets/characters/YoungMan/portrait.png",
+                "url": "/static/admin/demo/assets/characters/YoungMan/portrait.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "1:1",
-                "meta": {"character": "男青年"},
+                "meta": {"character": "YoungMan"},
             },
             {
                 "kind": "prop",
@@ -9340,35 +9340,35 @@ def _beat_skill_emit_payload(
             {
                 "kind": "scene",
                 "role": "scene_master",
-                "label": "兰州拉面馆 master",
-                "rel_path": "assets/scenes/兰州拉面馆/master.png",
-                "url": "/static/admin/demo/assets/scenes/兰州拉面馆/master.png",
+                "label": "Lanzhou Noodle Shop master",
+                "rel_path": "assets/scenes/Lanzhou Noodle Shop/master.png",
+                "url": "/static/admin/demo/assets/scenes/Lanzhou Noodle Shop/master.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "兰州拉面馆"},
+                "meta": {"scene_id": "Lanzhou Noodle Shop"},
             },
             {
                 "kind": "scene",
                 "role": "scene_reverse_master",
-                "label": "兰州拉面馆 reverse master",
-                "rel_path": "assets/scenes/兰州拉面馆/reverse_master.png",
-                "url": "/static/admin/demo/assets/scenes/兰州拉面馆/reverse_master.png",
+                "label": "Lanzhou Noodle Shop reverse master",
+                "rel_path": "assets/scenes/Lanzhou Noodle Shop/reverse_master.png",
+                "url": "/static/admin/demo/assets/scenes/Lanzhou Noodle Shop/reverse_master.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "兰州拉面馆"},
+                "meta": {"scene_id": "Lanzhou Noodle Shop"},
             },
             {
                 "kind": "scene",
                 "role": "scene_director_pano_360",
-                "label": "兰州拉面馆 360",
-                "rel_path": "director_worlds/兰州拉面馆/v1/pano_360.png",
-                "url": "/static/admin/demo/director_worlds/兰州拉面馆/v1/pano_360.png",
+                "label": "Lanzhou Noodle Shop 360",
+                "rel_path": "director_worlds/Lanzhou Noodle Shop/v1/pano_360.png",
+                "url": "/static/admin/demo/director_worlds/Lanzhou Noodle Shop/v1/pano_360.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "2:1",
-                "meta": {"scene_id": "兰州拉面馆"},
+                "meta": {"scene_id": "Lanzhou Noodle Shop"},
             },
         ],
     }
@@ -9410,10 +9410,10 @@ def test_beat_preset_set_background_skill_embeds_scene_source_urls() -> None:
     )
 
     assert skill_node["data"]["scene_source_urls"] == {
-        "scene_id": "兰州拉面馆",
-        "master_url": "/static/admin/demo/assets/scenes/兰州拉面馆/master.png",
-        "reverse_url": "/static/admin/demo/assets/scenes/兰州拉面馆/reverse_master.png",
-        "pano_360_url": "/static/admin/demo/director_worlds/兰州拉面馆/v1/pano_360.png",
+        "scene_id": "Lanzhou Noodle Shop",
+        "master_url": "/static/admin/demo/assets/scenes/Lanzhou Noodle Shop/master.png",
+        "reverse_url": "/static/admin/demo/assets/scenes/Lanzhou Noodle Shop/reverse_master.png",
+        "pano_360_url": "/static/admin/demo/director_worlds/Lanzhou Noodle Shop/v1/pano_360.png",
         "director_env_only_url": None,
         "has_3gs": False,
     }
@@ -9472,21 +9472,21 @@ def test_beat_preset_skill_role_edges_target_handle_equals_role() -> None:
             "ref_character_identity_1",
             "skill_frame_from_context",
             "identity",
-            "identity:男青年_default",
+            "identity:YoungMan_default",
         ),
-        ("ref_character_portrait_1", "skill_frame_from_context", "identity", "identity:男青年"),
-        ("ref_prop_reference_1", "skill_frame_from_context", "prop", "prop:账单"),
+        ("ref_character_portrait_1", "skill_frame_from_context", "identity", "identity:YoungMan"),
+        ("ref_prop_reference_1", "skill_frame_from_context", "prop", "prop:bill"),
     }
     edges_by_pair = {(edge["source"], edge["target"]): edge for edge in role_edges}
     assert edges_by_pair[("ref_character_identity_1", "skill_frame_from_context")]["data"][
         "reference_target"
-    ] == {"kind": "identity", "identity_id": "男青年_default"}
+    ] == {"kind": "identity", "identity_id": "YoungMan_default"}
     assert edges_by_pair[("ref_character_portrait_1", "skill_frame_from_context")]["data"][
         "reference_target"
-    ] == {"kind": "identity", "identity_id": "男青年"}
+    ] == {"kind": "identity", "identity_id": "YoungMan"}
     assert edges_by_pair[("ref_prop_reference_1", "skill_frame_from_context")]["data"][
         "reference_target"
-    ] == {"kind": "prop", "prop_id": "账单"}
+    ] == {"kind": "prop", "prop_id": "bill"}
 
 
 def test_beat_preset_does_not_duplicate_reference_skill_input_edges() -> None:
@@ -9512,14 +9512,14 @@ def test_beat_preset_does_not_duplicate_reference_skill_input_edges() -> None:
 
 
 def test_beat_preset_prefers_identity_reference_over_portrait_for_same_identity() -> None:
-    payload = _beat_skill_emit_payload(detected_identities=["男青年_default"])
+    payload = _beat_skill_emit_payload(detected_identities=["YoungMan_default"])
 
     identity_edges = [
         edge
         for edge in payload["edges"]
         if edge.get("target") == "skill_frame_from_context"
         and (edge.get("data") or {}).get("role") == "identity"
-        and edge.get("targetHandle") == "identity:男青年_default"
+        and edge.get("targetHandle") == "identity:YoungMan_default"
     ]
 
     assert len(identity_edges) == 1
@@ -9971,7 +9971,7 @@ def test_merge_preserves_pre_release_scene_source_nodes_without_explicit_flag() 
                         "kind": "scene",
                         "role": "scene_director_pano_360",
                     },
-                    "displayName": "兰州拉面馆 director pano 360",
+                    "displayName": "Lanzhou Noodle Shop director pano 360",
                 },
             },
             {
@@ -9981,7 +9981,7 @@ def test_merge_preserves_pre_release_scene_source_nodes_without_explicit_flag() 
                         "kind": "director",
                         "role": "scene_3gs_pano_ply",
                     },
-                    "displayName": "兰州拉面馆 3D 世界（360）",
+                    "displayName": "Lanzhou Noodle Shop 3D world (360)",
                 },
             },
             {
@@ -10020,7 +10020,7 @@ async def test_reverse_prompt_uses_shared_freezone_vision_model(
 
     async def fake_call_freezone_vision_model(**kwargs):
         captured.update(kwargs)
-        return "DC-freezone-vision-LLM", "白色方形主体，极简构图"
+        return "DC-freezone-vision-LLM", "A white square subject, minimal composition"
 
     monkeypatch.setattr(
         image_node,
@@ -10030,13 +10030,13 @@ async def test_reverse_prompt_uses_shared_freezone_vision_model(
 
     prompt = await image_node.reverse_prompt_from_image(
         image_path=image_path,
-        instruction="突出电影感光影",
+        instruction="Emphasize cinematic lighting",
     )
 
-    assert prompt == "白色方形主体，极简构图"
+    assert prompt == "A white square subject, minimal composition"
     assert len(captured["images"]) == 1
-    assert "用户补充要求" in captured["prompt"]
-    assert "突出电影感光影" in captured["prompt"]
+    assert "User supplementary requirements" in captured["prompt"]
+    assert "Emphasize cinematic lighting" in captured["prompt"]
     assert (
         captured["timeout_seconds"]
         == image_node.FREEZONE_IMAGE_REVERSE_PROMPT_TIMEOUT_SECONDS
@@ -10048,7 +10048,7 @@ async def test_freezone_video_generation_rejects_small_reference_image_before_bi
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """参考图小于 300px 在入队前就 400，不预扣积分、不送厂商（3060 2026-08-26 实例）。"""
+    """A reference image smaller than 300px 400s before enqueueing, without pre-deducting credits or sending to the vendor (3060 2026-08-26 instance)."""
 
     async def unexpected_enqueue(*_args, **_kwargs):
         raise AssertionError("image validation must happen before enqueue")
@@ -10071,10 +10071,10 @@ async def test_freezone_video_generation_rejects_small_reference_image_before_bi
             project_dir=tmp_path,
             output_dir=str(tmp_path / "output"),
             job_id="job_small_image",
-            prompt="参考图生成",
+            prompt="Generate from reference images",
             reference_items=[
-                {"type": "image", "path": str(ok), "role": "图片1"},
-                {"type": "image", "path": str(small), "role": "图片2"},
+                {"type": "image", "path": str(ok), "role": "image 1"},
+                {"type": "image", "path": str(small), "role": "image 2"},
             ],
             aspect_ratio="16:9",
             resolution="720p",
@@ -10100,7 +10100,7 @@ async def test_freezone_video_generation_skips_dimension_gate_for_non_seedance_b
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """300~6000px 是火山 Seedance 的规则，别的模型不能拿它凭空 400。"""
+    """300~6000px is a Volcengine Seedance rule, and other models must not be 400-ed out of thin air by it."""
     captured: dict[str, object] = {}
 
     async def fake_enqueue_project_task(_ctx: ProjectContext, **kwargs):
@@ -10126,8 +10126,8 @@ async def test_freezone_video_generation_skips_dimension_gate_for_non_seedance_b
         project_dir=tmp_path / "project",
         output_dir=str(tmp_path / "output"),
         job_id="job_other_model",
-        prompt="参考图生成",
-        reference_items=[{"type": "image", "path": str(small), "role": "图片1"}],
+        prompt="Generate from reference images",
+        reference_items=[{"type": "image", "path": str(small), "role": "image 1"}],
         aspect_ratio="16:9",
         resolution="720p",
         duration_seconds=6,
@@ -10148,7 +10148,7 @@ async def test_freezone_video_generation_reports_duplicate_last_frame_once(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """关键帧路由会把尾帧同时放进 reference_items 和 last_frame_path，预检要去重。"""
+    """The keyframe route puts the last frame into both reference_items and last_frame_path, so the pre-check must deduplicate."""
 
     async def unexpected_enqueue(*_args, **_kwargs):
         raise AssertionError("image validation must happen before enqueue")
@@ -10169,8 +10169,8 @@ async def test_freezone_video_generation_reports_duplicate_last_frame_once(
             project_dir=tmp_path,
             output_dir=str(tmp_path / "output"),
             job_id="job_dup_last_frame",
-            prompt="首尾帧生成",
-            reference_items=[{"type": "image", "path": str(small), "role": "尾帧"}],
+            prompt="First and last frame generation",
+            reference_items=[{"type": "image", "path": str(small), "role": "last frame"}],
             aspect_ratio="16:9",
             resolution="720p",
             duration_seconds=6,

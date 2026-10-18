@@ -12,7 +12,7 @@ type Releases = Record<DesktopPlatform, DesktopRelease>;
 
 let cached: Releases | null = null;
 
-/** 解析完成前的占位:按钮指向 GitHub Releases,版本字段留空由调用方决定怎么显示。 */
+/** Placeholder before resolution completes: the button points at GitHub Releases, version fields are empty and the caller decides how to display them. */
 function pending(): Releases {
   const blank: DesktopRelease = {
     url: FALLBACK_DOWNLOAD_URL,
@@ -25,9 +25,9 @@ function pending(): Releases {
 }
 
 /**
- * 挂载后解析 CDN 上的版本指针(latest*.yml),拿到当前安装包直链与版本号。
- * 模块级缓存与 useGithubStars 同款:同一次会话只解析一遍——登录页头部与
- * 下载页共用这一份缓存,两处都出现时不会重复打 CDN。
+ * After mount, resolves the version pointer on the CDN (latest*.yml) to get the current installer direct link and version.
+ * The module-level cache is the same as useGithubStars: resolved once per session - the login page header and
+ * the download page share this one cache, so the CDN is not hit twice when both appear.
  */
 export function useDesktopRelease(): Releases {
   const [releases, setReleases] = useState<Releases>(cached ?? pending());
@@ -42,12 +42,12 @@ export function useDesktopRelease(): Releases {
     ).then((entries) => {
       const next = pending();
       for (const [os, release] of entries) next[os] = release;
-      // 只缓存解析成功的结果。失败也写缓存的话,一次瞬时抖动(CDN 504、
-      // 切网)就把整个会话钉死在 GitHub 兜底上,再怎么跳页都恢复不了;
-      // 不写则下一次挂载会重试一遍。
+      // Only successful results are cached. If failures were cached too, one transient hiccup (CDN 504,
+      // a network switch) would pin the whole session to the GitHub fallback with no way to recover however many pages are visited;
+      // when not cached, the next mount retries.
       //
-      // 判据是 resolved 而不是 version:清单有版本号、却没解出安装包时
-      // version 非空但 url 已经是兜底,按 version 判会把这种半成功缓存下来。
+      // The criterion is resolved, not version: when the manifest has a version but the installer was not resolved,
+      // version is non-empty but the url is already the fallback, and judging by version would cache this partial success.
       if (Object.values(next).every((r) => r.resolved)) cached = next;
       if (active) setReleases(next);
     });

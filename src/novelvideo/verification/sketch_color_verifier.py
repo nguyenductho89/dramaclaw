@@ -1,4 +1,4 @@
-"""草图颜色交叉验证。"""
+"""Sketch color cross-validation."""
 
 import logging
 from pathlib import Path
@@ -27,7 +27,7 @@ def verify_episode_sketch_colors(
     missing_threshold: float = 0.008,
     extra_threshold: float = 0.015,
 ) -> ColorVerifyResult:
-    """对整集所有 beat 执行颜色交叉验证。"""
+    """Run color cross-validation on all beats of the whole episode."""
     beat_results: list[ColorVerifyBeatResult] = []
     passed_count = 0
     failed_count = 0

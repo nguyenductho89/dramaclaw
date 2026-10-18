@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { ImageDerivedOverlay } from "./ImageDerivedActions";
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
@@ -77,22 +78,22 @@ import { inheritMainlineFields } from '../domain/inheritMainlineFields';
 
 // Image/video nodes only need the floating action toolbar once they actually
 // have a resource to act on. While the node is empty (no upload, no generated
-// output), the toolbar entries (剪辑 / 高清 / 智能去字幕 / ...) are all no-ops,
+// output), the toolbar entries (edit / upscale / smart subtitle removal / ...) are all no-ops,
 // so we hide the toolbar entirely to keep the empty-state UI uncluttered.
 // Other node types (text / group / audio / storyboard) keep the toolbar on
 // selection because their actions don't depend on a resource.
 function nodeHasResourceForToolbar(node: CanvasNode): boolean {
-  // 360 全景查看器自带顶部截图工具栏，不需要这条只剩「删除」的 toolbar
-  // （删除仍可用 Delete / Backspace）。
+  // The 360 panorama viewer has its own top screenshot toolbar and does not need this toolbar left with only "Delete"
+  // (deleting is still available with Delete / Backspace).
   if (isPano360ViewerNode(node)) {
     return false;
   }
   if (isVideoNode(node)) {
     return Boolean(node.data.videoUrl);
   }
-  // imageGen 上传的是「参考图」，存进 referenceImageUrl 而非 imageUrl —— 但
-  // 节点画面同样显示它（previewUrl 会回退到 referenceImageUrl），所以工具栏也
-  // 应在只有参考图时出现，否则用户上传后看不到任何操作入口。
+  // imageGen uploads a "reference image", stored in referenceImageUrl rather than imageUrl - but
+  // the node picture shows it just the same (previewUrl falls back to referenceImageUrl), so the toolbar
+  // should also appear when there is only a reference image, otherwise after uploading the user sees no operation entry.
   if (isImageGenNode(node)) {
     return Boolean(
       node.data.imageUrl || node.data.previewImageUrl || node.data.referenceImageUrl,
@@ -192,12 +193,12 @@ export const SelectedNodeOverlay = memo(() => {
   const findNodePosition = useCanvasStore((state) => state.findNodePosition);
   const reactFlow = useReactFlow();
 
-  // 顶部 toolbar 触发的二级 overlay（全景 / 多维度 / 打光 / 九宫格 等）
-  // 打开时，必须把节点的 React Flow `selected` 真清掉——否则节点自身的
-  // 操作面板（ImageGenNode 等用 `selected` prop 判断显示）会和 overlay
-  // 同时露出来。`setSelectedNode(null)` 只清 store 的 `selectedNodeId`，
-  // Canvas.tsx 的同步 effect 会立刻根据 `node.selected === true` 把它
-  // 再写回去，所以必须走 onNodesChange 触发真正的 select=false。
+  // When a secondary overlay triggered by the top toolbar (panorama / multi-dimension / lighting / 3x3 grid etc.)
+  // is open, the node's React Flow `selected` must really be cleared - otherwise the node's own
+  // operation panel (ImageGenNode etc. judge display by the `selected` prop) would show
+  // together with the overlay. `setSelectedNode(null)` only clears the store's `selectedNodeId`,
+  // and Canvas.tsx's sync effect would immediately write it back from `node.selected === true`,
+  // so it must go through onNodesChange to trigger a real select=false.
   const clearFlowSelection = useCallback(() => {
     const ids = nodes.filter((n) => n.selected).map((n) => n.id);
     if (ids.length === 0) return;
@@ -353,7 +354,7 @@ export const SelectedNodeOverlay = memo(() => {
             : typeof targetNode.height === 'number'
               ? targetNode.height
               : SCENE_360_DEFAULT_NODE_HEIGHT;
-        // 组内成员的 position 是相对父组坐标；setCenter 需要绝对坐标，否则视野跳偏。
+        // A group member's position is relative to the parent group; setCenter needs absolute coordinates, otherwise the view jumps off.
         const absolute =
           reactFlow.getInternalNode(nodeId)?.internals.positionAbsolute ??
           targetNode.position;
@@ -439,10 +440,10 @@ export const SelectedNodeOverlay = memo(() => {
     [clearFlowSelection, setSelectedNode, t]
   );
 
-  // 旋转结果节点可能被用户用键盘直接删掉（绕过编辑器的关闭流程）。此时
-  // `rotateNode` 解析为 null、编辑器自然消失，但 `rotateNodeId` 仍残留一个
-  // 失效 id，会让顶部 toolbar 的 `!rotateNodeId` 判断一直为假 —— 重新选中
-  // 原图片节点也不再显示菜单。节点消失后同步清空状态，避免这种悬挂。
+  // The rotate result node may be deleted directly by the user with the keyboard (bypassing the editor's close flow). Then
+  // `rotateNode` resolves to null and the editor disappears naturally, but `rotateNodeId` still keeps a
+  // stale id, making the top toolbar's `!rotateNodeId` check always false - after re-selecting
+  // the original image node the menu would no longer show either. Clear the state in sync once the node is gone, avoiding such dangling.
   useEffect(() => {
     if (rotateNodeId && !rotateNode) {
       setRotateNodeId(null);
@@ -451,8 +452,8 @@ export const SelectedNodeOverlay = memo(() => {
 
   const handleCloseRotate = useCallback(
     (committed: boolean) => {
-      // 进入旋转时会预创建一个「旋转结果」节点。用户退出 / 按 Esc / 没做任何
-      // 变换就关闭（committed=false）时，把它删掉，否则会凭空多出一个节点。
+      // Entering rotate pre-creates a "rotate result" node. When the user exits / presses Esc / makes no
+      // transform and closes (committed=false), delete it, otherwise a node appears from nowhere.
       if (!committed && rotateNodeId) {
         discardRotateResultNode(rotateNodeId);
       }
@@ -491,12 +492,12 @@ export const SelectedNodeOverlay = memo(() => {
   }, [selectedNode]);
 
   /**
-   * 「九宫格」下拉点某一项：**只在源节点下游建一个功能节点，不提交**——节点名 =
-   * 功能名，功能 chip 落在它的提示词输入框里，用户改完提示词/参考图/比例按 ↑ 才
-   * 真正下发（与故事板详情工具条同一条交互，同一个 spawn/run）。
+   * Selecting an item in the "3x3 grid" dropdown: **only build a feature node downstream of the source node, do not submit** - node name =
+   * feature name, the feature chip lands in its prompt input box, and the user submits only by pressing the up button after editing the prompt/reference images/ratio
+   * (the same interaction as the storyboard detail toolbar, the same spawn/run).
    *
-   * 建完就选中并聚焦过去：功能节点的生成表单是跟着 React Flow 的 `selected` 渲染的，
-   * 不选中就看不见输入框，也就没地方按 ↑。
+   * After building, select and focus it: the feature node's generation form is rendered following React Flow's `selected`,
+   * and without selecting it the input box is not visible, so there is nowhere to press the up button.
    */
   const handleSpawnGridActionNode = useCallback(
     (request: GridActionRequest) => {
@@ -558,7 +559,7 @@ export const SelectedNodeOverlay = memo(() => {
             .getState()
             .nodes.some((node) => !beforeNodeIds.has(node.id));
           if (!created) {
-            publishNodeActionError(requestId, nodeId, action, "目标节点没有可用于旋转的图片");
+            publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.noRotateImage'));
             return;
           }
           publishNodeActionSuccess(requestId, nodeId, action, { openedUiAction: true });
@@ -589,12 +590,12 @@ export const SelectedNodeOverlay = memo(() => {
         const sourceNode = nodes.find((node) => node.id === nodeId) ?? null;
         const imageSource = resolveNodeSourceImageUrl(sourceNode);
         if (!sourceNode || !imageSource) {
-          publishNodeActionError(requestId, nodeId, action, "目标节点没有可用于扩图的图片");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.noOutpaintImage'));
           return;
         }
         const project = readUrl().project;
         if (!project) {
-          publishNodeActionError(requestId, nodeId, action, "当前 URL 缺少 project，无法提交生成");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.missingProject'));
           return;
         }
 
@@ -678,12 +679,12 @@ export const SelectedNodeOverlay = memo(() => {
         const sourceNode = nodes.find((node) => node.id === nodeId) ?? null;
         const imageSource = resolveNodeSourceImageUrl(sourceNode);
         if (!sourceNode || !imageSource) {
-          publishNodeActionError(requestId, nodeId, action, "目标节点没有可用于高清放大的图片");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.noUpscaleImage'));
           return;
         }
         const project = readUrl().project;
         if (!project) {
-          publishNodeActionError(requestId, nodeId, action, "当前 URL 缺少 project，无法提交生成");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.missingProject'));
           return;
         }
 
@@ -765,12 +766,12 @@ export const SelectedNodeOverlay = memo(() => {
         const sourceNode = nodes.find((node) => node.id === nodeId) ?? null;
         const imageSource = resolveNodeSourceImageUrl(sourceNode);
         if (!sourceNode || !imageSource) {
-          publishNodeActionError(requestId, nodeId, action, "目标节点没有可用于生成的图片");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.noGenerateImage'));
           return;
         }
         const project = readUrl().project;
         if (!project) {
-          publishNodeActionError(requestId, nodeId, action, "当前 URL 缺少 project，无法提交生成");
+          publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.missingProject'));
           return;
         }
 
@@ -856,12 +857,12 @@ export const SelectedNodeOverlay = memo(() => {
       const sourceNode = nodes.find((node) => node.id === nodeId) ?? null;
       const imageSource = resolveNodeSourceImageUrl(sourceNode);
       if (!sourceNode || !imageSource) {
-        publishNodeActionError(requestId, nodeId, action, "目标节点没有可用于生成的图片");
+        publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.noGenerateImage'));
         return;
       }
       const project = readUrl().project;
       if (!project) {
-        publishNodeActionError(requestId, nodeId, action, "当前 URL 缺少 project，无法提交生成");
+        publishNodeActionError(requestId, nodeId, action, i18n.t('canvas.selectedOverlay.missingProject'));
         return;
       }
 
@@ -931,10 +932,10 @@ export const SelectedNodeOverlay = memo(() => {
     });
   }, [addEdge, addNode, findNodePosition, nodes, selectAndFocusCanvasNode, t]);
 
-  // 任意二级功能浮层（全景 / 多角度 / 打光 / 重绘 / 扩图 / 旋转 / 九宫格）打开时，
-  // 记录它的目标节点 id。节点自身的 `selected` 操作面板会据此让位，避免和浮层
-  // 在节点下方重叠——功能浮层优先级更高。(放大/高清 upscale 是在新建节点上原地
-  // 展开面板，不参与此互斥。)
+  // When any secondary feature overlay (panorama / multi-angle / lighting / redraw / outpaint / rotate / 3x3 grid) is open,
+  // record its target node id. The node's own `selected` operation panel yields accordingly, avoiding overlap with the overlay
+  // below the node - feature overlays have higher priority. (Enlarge/upscale expands the panel in place on a newly created node
+  // and does not take part in this mutual exclusion.)
   const activeOverlayNodeId =
     multiAngleNodeId
     ?? activeLightEditorNodeId
@@ -947,9 +948,9 @@ export const SelectedNodeOverlay = memo(() => {
     ?? null;
 
   useEffect(() => {
-    // 只在自己有浮层时写入，清理时也只清自己注册的值——节点组件（叠卡画册）
-    // 也会往同一个 store 槽位注册，无条件写 null 会把它们的注册抹掉（工具条 /
-    // 替换素材把手 / + 派生按钮会重新叠回还开着的画册上）。
+    // Only write when it has an overlay itself, and on cleanup only clear the value it registered - node components (stacked-card album)
+    // also register into the same store slot, and unconditionally writing null would wipe their registration (the toolbar /
+    // replace-material handle / + spawn button would pile back on top of an album that is still open).
     if (!activeOverlayNodeId) return;
     setActiveOverlayNodeId(activeOverlayNodeId);
     return () => {
@@ -959,9 +960,9 @@ export const SelectedNodeOverlay = memo(() => {
     };
   }, [activeOverlayNodeId, setActiveOverlayNodeId]);
 
-  // 节点自己也可以往 store 注册 overlay（如图片节点展开叠卡画册）——这里的
-  // 本地派生值看不到它，工具条/替换素材把手要一并尊重 store 里的注册，
-  // 否则拖动画册时 React Flow 重新选中节点，工具条又会叠出来。
+  // Nodes can also register overlays into the store themselves (e.g. an image node expanding a stacked-card album) - the local
+  // derived value here cannot see them, and the toolbar/replace-material handle must also respect the store registration,
+  // otherwise when the album is dragged React Flow re-selects the node and the toolbar would pile up again.
   const externalOverlayNodeId = useCanvasStore((state) => state.activeOverlayNodeId);
   const effectiveOverlayNodeId = activeOverlayNodeId ?? externalOverlayNodeId;
 
@@ -987,8 +988,8 @@ export const SelectedNodeOverlay = memo(() => {
         && !effectiveOverlayNodeId
         && nodeHasResourceForToolbar(selectedNode) && (
         <NodeActionToolbar
-          // 按节点 id 重挂载，确保每次「激活某个节点」都重放顶部菜单的入场动画
-          // ——否则直接在两个节点间切换时组件实例复用，CSS 动画只在首次挂载时跑。
+          // Remount by node id, ensuring the entrance animation of the top menu replays each time "a node is activated"
+          // - otherwise when switching directly between two nodes the component instance is reused and the CSS animation only runs on first mount.
           key={selectedNode.id}
           node={selectedNode}
           onOpenMultiAngleEditor={handleOpenMultiAngleEditor}

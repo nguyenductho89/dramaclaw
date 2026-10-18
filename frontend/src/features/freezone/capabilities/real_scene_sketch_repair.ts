@@ -5,22 +5,22 @@ import { stringifyParamValue } from "./capabilityRegistry";
 
 const K = "canvas.capabilities.real_scene_sketch_repair";
 
-// promptLabel 会被 valuesToLabels 拼进提示词，是模型输入不是界面文案，所以留中文。
+// promptLabel is assembled into the prompt by valuesToLabels; it is model input, not UI copy.
 // i18n-exempt-start
 const PRESERVE_OPTIONS: CapabilityParamOption[] = [
-  { value: "camera", labelKey: `${K}.preserve.camera`, promptLabel: "原始机位 / 构图" },
-  { value: "layout", labelKey: `${K}.preserve.layout`, promptLabel: "桌椅 / 墙面 / 门窗位置" },
-  { value: "identity", labelKey: `${K}.preserve.identity`, promptLabel: "人物身份颜色" },
-  { value: "props", labelKey: `${K}.preserve.props`, promptLabel: "道具颜色和位置" },
-  { value: "street_mood", labelKey: `${K}.preserve.street_mood`, promptLabel: "市井氛围" },
+  { value: "camera", labelKey: `${K}.preserve.camera`, promptLabel: "original camera position / composition" },
+  { value: "layout", labelKey: `${K}.preserve.layout`, promptLabel: "positions of tables, chairs, walls, doors and windows" },
+  { value: "identity", labelKey: `${K}.preserve.identity`, promptLabel: "character identity colors" },
+  { value: "props", labelKey: `${K}.preserve.props`, promptLabel: "prop colors and positions" },
+  { value: "street_mood", labelKey: `${K}.preserve.street_mood`, promptLabel: "street-life atmosphere" },
 ];
 
 const MODIFY_OPTIONS: CapabilityParamOption[] = [
-  { value: "deblur", labelKey: `${K}.modify.deblur`, promptLabel: "修复模糊 / 糊成一片的背景" },
-  { value: "distortion", labelKey: `${K}.modify.distortion`, promptLabel: "修复 3GS 畸变 / 拉伸" },
-  { value: "furniture_detail", labelKey: `${K}.modify.furniture_detail`, promptLabel: "补清桌椅结构" },
-  { value: "actor_blocks", labelKey: `${K}.modify.actor_blocks`, promptLabel: "方块人转干净角色线稿" },
-  { value: "staging_blocks", labelKey: `${K}.modify.staging_blocks`, promptLabel: "占位块转真实物体" },
+  { value: "deblur", labelKey: `${K}.modify.deblur`, promptLabel: "fix blur / background smeared into a blob" },
+  { value: "distortion", labelKey: `${K}.modify.distortion`, promptLabel: "fix 3GS distortion / stretching" },
+  { value: "furniture_detail", labelKey: `${K}.modify.furniture_detail`, promptLabel: "clarify table and chair structure" },
+  { value: "actor_blocks", labelKey: `${K}.modify.actor_blocks`, promptLabel: "turn block figures into clean character line art" },
+  { value: "staging_blocks", labelKey: `${K}.modify.staging_blocks`, promptLabel: "turn placeholder blocks into real objects" },
 ];
 // i18n-exempt-end
 
@@ -29,7 +29,7 @@ function valuesToLabels(values: unknown, options: CapabilityParamOption[]): stri
   const labels = raw
     .map((value) => options.find((option) => option.value === value)?.promptLabel ?? String(value))
     .filter(Boolean);
-  return labels.length > 0 ? labels.join("；") : "保持当前画面核心结构"; // i18n-exempt —— 拼进提示词
+  return labels.length > 0 ? labels.join("; ") : "keep the core structure of the current image"; // i18n-exempt -- assembled into the prompt
 }
 
 function readBeatText(metadata: Record<string, unknown> | null | undefined): string {
@@ -74,14 +74,14 @@ export const realSceneSketchRepairCapability: GenerationCapability = {
       key: "shot_type",
       labelKey: `${K}.params.shot_type.label`,
       type: "enum",
-      // defaultValue / value 是拼进提示词的协议值，不跟界面语言走。
+      // defaultValue / value are protocol values assembled into the prompt and do not follow the UI language.
       // i18n-exempt-start
-      defaultValue: "中景",
+      defaultValue: "medium shot",
       options: [
-        { value: "特写", labelKey: `${K}.params.shot_type.options.closeup` },
-        { value: "近景", labelKey: `${K}.params.shot_type.options.medium_closeup` },
-        { value: "中景", labelKey: `${K}.params.shot_type.options.medium` },
-        { value: "全景", labelKey: `${K}.params.shot_type.options.wide` },
+        { value: "close-up", labelKey: `${K}.params.shot_type.options.closeup` },
+        { value: "medium close-up", labelKey: `${K}.params.shot_type.options.medium_closeup` },
+        { value: "medium shot", labelKey: `${K}.params.shot_type.options.medium` },
+        { value: "wide shot", labelKey: `${K}.params.shot_type.options.wide` },
       ],
       // i18n-exempt-end
     },
@@ -90,13 +90,13 @@ export const realSceneSketchRepairCapability: GenerationCapability = {
       labelKey: `${K}.params.angle.label`,
       type: "enum",
       // i18n-exempt-start
-      defaultValue: "平视",
+      defaultValue: "eye level",
       options: [
-        { value: "平视", labelKey: `${K}.params.angle.options.eye_level` },
-        { value: "俯拍", labelKey: `${K}.params.angle.options.high` },
-        { value: "仰拍", labelKey: `${K}.params.angle.options.low` },
-        { value: "过肩", labelKey: `${K}.params.angle.options.over_shoulder` },
-        { value: "反打", labelKey: `${K}.params.angle.options.reverse` },
+        { value: "eye level", labelKey: `${K}.params.angle.options.eye_level` },
+        { value: "high angle", labelKey: `${K}.params.angle.options.high` },
+        { value: "low angle", labelKey: `${K}.params.angle.options.low` },
+        { value: "over the shoulder", labelKey: `${K}.params.angle.options.over_shoulder` },
+        { value: "reverse shot", labelKey: `${K}.params.angle.options.reverse` },
       ],
       // i18n-exempt-end
     },
@@ -117,12 +117,12 @@ export const realSceneSketchRepairCapability: GenerationCapability = {
       labelKey: `${K}.params.lighting.label`,
       type: "enum",
       // i18n-exempt-start
-      defaultValue: "昏暗市井暖光",
+      defaultValue: "dim warm street light",
       options: [
-        { value: "昏暗市井暖光", labelKey: `${K}.params.lighting.options.dim_street_warm` },
-        { value: "冷暖混合霓虹", labelKey: `${K}.params.lighting.options.mixed_neon` },
-        { value: "自然窗光", labelKey: `${K}.params.lighting.options.window_daylight` },
-        { value: "顶灯硬光", labelKey: `${K}.params.lighting.options.hard_toplight` },
+        { value: "dim warm street light", labelKey: `${K}.params.lighting.options.dim_street_warm` },
+        { value: "mixed warm and cool neon", labelKey: `${K}.params.lighting.options.mixed_neon` },
+        { value: "natural window light", labelKey: `${K}.params.lighting.options.window_daylight` },
+        { value: "hard overhead light", labelKey: `${K}.params.lighting.options.hard_toplight` },
       ],
       // i18n-exempt-end
     },
@@ -153,11 +153,11 @@ export const realSceneSketchRepairCapability: GenerationCapability = {
     const preserve = valuesToLabels(params.preserve, PRESERVE_OPTIONS);
     const modify = valuesToLabels(params.modify, MODIFY_OPTIONS);
     const notes = stringifyParamValue(params.notes);
-    // i18n-exempt-start —— 与 options 对齐的协议默认值，会拼进提示词
-    const shotType = stringifyParamValue(params.shot_type) || "中景";
-    const angle = stringifyParamValue(params.angle) || "平视";
+    // i18n-exempt-start -- protocol defaults aligned with options, assembled into the prompt
+    const shotType = stringifyParamValue(params.shot_type) || "medium shot";
+    const angle = stringifyParamValue(params.angle) || "eye level";
     const lens = stringifyParamValue(params.lens) || "35mm";
-    const lighting = stringifyParamValue(params.lighting) || "昏暗市井暖光";
+    const lighting = stringifyParamValue(params.lighting) || "dim warm street light";
     // i18n-exempt-end
 
     const prompt = `Create a repaired real-scene storyboard sketch for the current SuperTale beat.

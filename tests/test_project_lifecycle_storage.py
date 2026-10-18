@@ -10,7 +10,7 @@ from novelvideo.project_context import ProjectContext
 
 
 def _patch_roots(monkeypatch, tmp_path) -> None:
-    """把三类数据根指向 tmp_path,让归属校验器认得测试目录。"""
+    """Point the three data roots at tmp_path so the ownership validator recognizes the test directories."""
     monkeypatch.setattr(config, "OUTPUT_DIR", tmp_path / "output")
     monkeypatch.setattr(config, "STATE_DIR", tmp_path / "state")
     monkeypatch.setattr(config, "RUNTIME_DIR", tmp_path / "runtime")
@@ -279,7 +279,7 @@ async def test_organization_purge_restores_files_when_codex_cleanup_fails(
 
 
 # --------------------------------------------------------------------------- #
-# 存储归属校验器:用户操作必须互相隔离,绝不移动/删除他人目录                     #
+# Storage ownership validator: user operations must be isolated from each other and never move/delete other people's directories #
 # --------------------------------------------------------------------------- #
 
 
@@ -531,7 +531,7 @@ def test_validator_rejects_other_users_directory(monkeypatch, tmp_path):
     )
 
     _patch_roots(monkeypatch, tmp_path)
-    # state_dir 指向 bob 的目录,owner 是 alice —— 必须拒绝。
+    # state_dir points to bob's directory while the owner is alice -- must be rejected.
     args = _valid_dirs(tmp_path)
     args["state_dir"] = str(tmp_path / "state" / "bob" / "demo")
     with pytest.raises(ProjectStorageOwnershipError):
@@ -541,11 +541,11 @@ def test_validator_rejects_other_users_directory(monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "override_key, override_value_fn",
     [
-        # 指向数据根本身
+        # Points at the data root itself
         ("output_dir", lambda t: str(t / "output")),
-        # 指向 owner 用户根(会连带删掉该用户全部项目)
+        # Points at the owner user root (would delete all of that user's projects)
         ("state_dir", lambda t: str(t / "state" / "alice")),
-        # 路径穿越到别的用户
+        # Path traversal to another user
         ("runtime_dir", lambda t: str(t / "runtime" / "alice" / ".." / "bob" / "demo")),
     ],
 )
@@ -571,7 +571,7 @@ def test_validator_rejects_symlinked_project_dir(monkeypatch, tmp_path):
     )
 
     _patch_roots(monkeypatch, tmp_path)
-    # alice 的 state 目录里放一个软链接指向 bob 的目录。
+    # Put a symlink in alice's state directory pointing to bob's directory.
     (tmp_path / "state" / "bob" / "demo").mkdir(parents=True)
     alice_state = tmp_path / "state" / "alice"
     alice_state.mkdir(parents=True)
@@ -643,7 +643,7 @@ def test_validator_rejects_nested_dirs(monkeypatch, tmp_path):
 
     _patch_roots(monkeypatch, tmp_path)
     args = _valid_dirs(tmp_path)
-    # runtime 嵌在 state 下 —— 移动/删除会互相牵连,拒绝。
+    # runtime is nested under state -- moving/deleting would affect each other, rejected.
     args["runtime_dir"] = str(tmp_path / "state" / "alice" / "demo" / "runtime")
     with pytest.raises(ProjectStorageOwnershipError):
         assert_owned_project_storage(**args)
@@ -651,12 +651,12 @@ def test_validator_rejects_nested_dirs(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_purge_refuses_when_record_points_at_other_user(monkeypatch, tmp_path):
-    """数据库记录被篡改指向别人目录时,purge 必须拒绝且不动任何文件。"""
+    """When the database record is tampered to point at someone else's directory, purge must refuse and touch no files."""
     from novelvideo.api.routes import projects
 
     _patch_roots(monkeypatch, tmp_path)
     record = _record(tmp_path, status="deleted")
-    # 篡改:把 alice 项目的 state_dir 指到 bob 的真实数据。
+    # Tamper: point the state_dir of alice's project at bob's real data.
     bob_state = tmp_path / "state" / "bob" / "demo"
     bob_state.mkdir(parents=True)
     (bob_state / "keep.txt").write_text("bob's data", encoding="utf-8")
@@ -690,7 +690,7 @@ async def test_purge_refuses_when_record_points_at_other_user(monkeypatch, tmp_p
         await projects.purge_project("01PROJECT", user={"username": "alice"})
 
     assert exc_info.value.status_code == 500
-    # bob 的数据毫发无损,alice 自己的目录也没被移动。
+    # bob's data is unharmed, and alice's own directory was not moved either.
     assert (bob_state / "keep.txt").read_text(encoding="utf-8") == "bob's data"
     assert not list(bob_state.parent.glob(".demo.purging-*"))
     for raw_path in (record.output_dir, record.runtime_dir):
@@ -698,7 +698,7 @@ async def test_purge_refuses_when_record_points_at_other_user(monkeypatch, tmp_p
 
 
 def test_restore_never_deletes_a_reoccupied_original(monkeypatch, tmp_path, caplog):
-    """恢复隔离目录时,若原位置已被并发重建占用,绝不递归删除新数据。"""
+    """When restoring the quarantine directory, if the original location was occupied by a concurrent rebuild, never recursively delete the new data."""
     from novelvideo.api.routes import projects
 
     _patch_roots(monkeypatch, tmp_path)
@@ -706,12 +706,12 @@ def test_restore_never_deletes_a_reoccupied_original(monkeypatch, tmp_path, capl
     quarantine = original.with_name(".demo.purging-x")
     quarantine.mkdir(parents=True)
     (quarantine / "old.txt").write_text("quarantined", encoding="utf-8")
-    # 原位置在隔离之后被重新创建,写入了新数据。
+    # The original location was recreated after quarantine and new data was written.
     original.mkdir(parents=True)
     (original / "new.txt").write_text("fresh", encoding="utf-8")
 
     projects._restore_quarantined_project_dirs([(original, quarantine)])
 
-    # 新数据保留,隔离目录也保留(留给人工处置),都没被删。
+    # The new data is kept, the quarantine directory is also kept (left for manual handling), and neither was deleted.
     assert (original / "new.txt").read_text(encoding="utf-8") == "fresh"
     assert (quarantine / "old.txt").read_text(encoding="utf-8") == "quarantined"

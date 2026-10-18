@@ -18,26 +18,26 @@ import { upsertAssistantMessageForTest } from "@/features/superchat/use-supercha
 
 describe("assistant success summary", () => {
   it("recognizes only the standalone generation success summary", () => {
-    expect(isGenerationSuccessSummaryText("生成成功，无失败。")).toBe(true);
-    expect(isGenerationSuccessSummaryText("生成成功, 无失败")).toBe(true);
-    expect(isGenerationSuccessSummaryText("图片生成成功，下一步生成视频。")).toBe(false);
+    expect(isGenerationSuccessSummaryText("Generated successfully, no failures.")).toBe(true);
+    expect(isGenerationSuccessSummaryText("Generated successfully, no failures")).toBe(true);
+    expect(isGenerationSuccessSummaryText("Image generated successfully, next generate the video.")).toBe(false);
   });
 
   it("classifies natural DramaClaw completion replies without requiring a checkmark", () => {
-    expect(assistantCompletionPrefix("第3集身份规划已完成。本集身份全部复用。"))
-      .toBe("第3集身份规划已完成。");
-    expect(assistantCompletionPrefix("第 3 集剧本生成完成。下一步生成草图。"))
-      .toBe("第 3 集剧本生成完成。");
-    expect(assistantCompletionPrefix("第1集成片合成完成。展示成片："))
-      .toBe("第1集成片合成完成。");
-    expect(assistantCompletionPrefix("✅ 规划身份 · ep3 已完成。你可以继续下一步。"))
-      .toBe("✅ 规划身份 · ep3 已完成。");
+    expect(assistantCompletionPrefix("Episode 3 identity planning completed. All identities in this episode are reused."))
+      .toBe("Episode 3 identity planning completed.");
+    expect(assistantCompletionPrefix("Episode 3 script generation completed. Next, generate the sketches."))
+      .toBe("Episode 3 script generation completed.");
+    expect(assistantCompletionPrefix("Episode 1 final cut composition completed. Showing the final cut:"))
+      .toBe("Episode 1 final cut composition completed.");
+    expect(assistantCompletionPrefix("✅ Plan identities · ep3 completed. You can continue to the next step."))
+      .toBe("✅ Plan identities · ep3 completed.");
   });
 
   it("does not classify negative completion status as completed", () => {
-    expect(assistantCompletionPrefix("第3集身份规划尚未完成。请稍后查看。"))
+    expect(assistantCompletionPrefix("Episode 3 identity planning has not completed yet. Please check back later."))
       .toBeNull();
-    expect(assistantCompletionPrefix("当前任务没有生成完成。"))
+    expect(assistantCompletionPrefix("The current task did not finish generating."))
       .toBeNull();
   });
 });
@@ -49,9 +49,9 @@ describe("canvas command flow placement", () => {
         id: "thought-1",
         type: "agent_thought",
         seq: 1,
-        event: { status: "completed", text: "调用画布工具" },
+        event: { status: "completed", text: "Calling canvas tools" },
       },
-      { id: "text-1", type: "text", text: "图片节点已创建。" },
+      { id: "text-1", type: "text", text: "The image node has been created." },
       {
         id: "approval-1",
         type: "canvas_approval",
@@ -74,7 +74,7 @@ describe("canvas command flow placement", () => {
 
   it("does not reorder the original Hermes canvas parts", () => {
     const parts = [
-      { id: "text-1", type: "text" as const, text: "Hermes 回复" },
+      { id: "text-1", type: "text" as const, text: "Hermes reply" },
       { id: "approval-1", type: "canvas_approval" as const, event: { surfaceOrder: 102 } },
       { id: "validation-1", type: "canvas_context" as const, event: { surfaceOrder: 101 } },
     ];
@@ -88,7 +88,7 @@ describe("canvas command flow placement", () => {
 
   it("orders Skill Studio cards with later canvas approvals in the same message", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "我会先创建 Skill 草稿，然后再创建一个示例节点。",
+      "I will create the Skill draft first, then create a sample node.",
       [
         {
           id: "approval-1",
@@ -103,11 +103,11 @@ describe("canvas command flow placement", () => {
             {
               index: 0,
               type: "create_node",
-              label: "创建图片节点",
+              label: "Create image node",
               details: [],
             },
           ],
-          anchorTextPrefix: "我会先创建 Skill 草稿，然后再创建一个示例节点。",
+          anchorTextPrefix: "I will create the Skill draft first, then create a sample node.",
           surfaceOrder: 10,
         },
       ],
@@ -128,14 +128,14 @@ describe("canvas command flow placement", () => {
 
   it("keeps stale-anchor Skill Studio draft cards after historical continuation text", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "已为「家乡文化海报」完成 Skill Studio 全流程。",
+      "Completed the full Skill Studio flow for \"Hometown Culture Poster\".",
       [],
       [],
       [],
       [
         {
           type: "skill_studio.questions",
-          anchor_text_prefix: "我先为你整理几个关键问题。",
+          anchor_text_prefix: "Let me first put together a few key questions for you.",
           skill_studio_session_id: "skill-studio-a",
           questions: [],
         },
@@ -145,20 +145,20 @@ describe("canvas command flow placement", () => {
     expect(items.map((item) => item.kind)).toEqual(["text", "skill_studio"]);
     expect(items[0]).toMatchObject({
       kind: "text",
-      text: "已为「家乡文化海报」完成 Skill Studio 全流程。",
+      text: "Completed the full Skill Studio flow for \"Hometown Culture Poster\".",
     });
   });
 
   it("keeps currently anchored Skill Studio cards after their preceding text", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "我先为你整理几个关键问题。",
+      "Let me first put together a few key questions for you.",
       [],
       [],
       [],
       [
         {
           type: "skill_studio.questions",
-          anchor_text_prefix: "我先为你整理几个关键问题。",
+          anchor_text_prefix: "Let me first put together a few key questions for you.",
           skill_studio_session_id: "skill-studio-a",
           questions: [],
         },
@@ -170,13 +170,13 @@ describe("canvas command flow placement", () => {
 
   it("keeps user-facing assistant text visible when it only mentions a canvas tool name", () => {
     expect(looksLikeCanvasExecutionNarration(
-      "如需进一步操作，可以通过 freezone_run_node_action 调用配置动作。",
+      "For further actions, you can call the configured action through freezone_run_node_action.",
     )).toBe(false);
   });
 
   it("keeps an event after the final assistant text when its saved anchor is missing", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "前置说明\n最终回复",
+      "Preface\nFinal reply",
       [],
       [
         {
@@ -189,10 +189,10 @@ describe("canvas command flow placement", () => {
               commandIndex: 0,
               type: "layout_nodes",
               status: "success",
-              label: "整理布局",
+              label: "Arrange layout",
             },
           ],
-          anchorTextPrefix: "前置说明\n过程里还没进入最终回复",
+          anchorTextPrefix: "Preface\nNot yet in the final reply during the process",
           surfaceOrder: 10,
         },
       ],
@@ -200,7 +200,7 @@ describe("canvas command flow placement", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "feedback"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "前置说明\n最终回复" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "Preface\nFinal reply" });
   });
 
   it("prefers persisted feedback anchors over duplicate in-memory feedback anchors", () => {
@@ -214,32 +214,32 @@ describe("canvas command flow placement", () => {
           commandIndex: 0,
           type: "layout_nodes",
           status: "success",
-          label: "整理布局",
+          label: "Arrange layout",
         },
       ],
-      anchorTextPrefix: "正文前半段\n",
+      anchorTextPrefix: "First half of the body\n",
       surfaceOrder: 20,
     };
     const inMemory = {
       ...persisted,
-      anchorTextPrefix: "过程中的临时文本",
+      anchorTextPrefix: "Temporary text during the process",
       surfaceOrder: 10,
     };
 
     const items = buildCanvasCommandFlowItemsForTest(
-      "正文前半段\n正文后半段",
+      "First half of the body\nSecond half of the body",
       [],
       mergeCanvasCommandFeedbacksForTest([persisted], [inMemory]),
       [],
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "feedback", "text"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "正文前半段\n" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "First half of the body\n" });
   });
 
   it("places unanchored canvas read activity before the assistant reply", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "你好！当前 Freezone 画布为空（0 个节点，0 条连线）。",
+      "Hello! The current Freezone canvas is empty (0 nodes, 0 links).",
       [],
       [],
       [
@@ -248,7 +248,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "summary",
           status: "done",
-          labels: ["画布摘要"],
+          labels: ["Canvas summary"],
           errors: [],
           surfaceOrder: 10,
         },
@@ -258,13 +258,13 @@ describe("canvas command flow placement", () => {
     expect(items.map((item) => item.kind)).toEqual(["context", "text"]);
     expect(items[1]).toMatchObject({
       kind: "text",
-      text: "你好！当前 Freezone 画布为空（0 个节点，0 条连线）。",
+      text: "Hello! The current Freezone canvas is empty (0 nodes, 0 links).",
     });
   });
 
   it("places unanchored execution feedback before assistant success text", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "已为你添加一个视频节点。\n\n已创建成功，ID 为 node-a。",
+      "I added a video node for you.\n\nCreated successfully, the ID is node-a.",
       [],
       [
         {
@@ -277,7 +277,7 @@ describe("canvas command flow placement", () => {
               commandIndex: 0,
               type: "create_node",
               status: "success",
-              label: "创建节点",
+              label: "Create node",
               createdNodeId: "node-a",
             },
           ],
@@ -290,27 +290,27 @@ describe("canvas command flow placement", () => {
     expect(items.map((item) => item.kind)).toEqual(["feedback", "text"]);
     expect(items[1]).toMatchObject({
       kind: "text",
-      text: "已为你添加一个视频节点。\n\n已创建成功，ID 为 node-a。",
+      text: "I added a video node for you.\n\nCreated successfully, the ID is node-a.",
     });
   });
 
   it("places unanchored cancelled feedback before assistant cancellation text", () => {
     const items = buildCanvasCommandFlowItemsForTest(
-      "生成请求提交超时，可能是画布连接暂时中断。请在画布上直接点击该节点的生成按钮重试，或稍后再让我帮你提交。",
+      "The generation request timed out, possibly because the canvas connection was briefly interrupted. Click the node's generate button on the canvas to retry, or ask me to submit it again later.",
       [],
       [
         {
           key: "bridge:timeout",
           applied: 0,
           openedUiActions: 0,
-          errors: ["画布操作等待超时，已自动取消"],
+          errors: ["Canvas operation timed out and was cancelled automatically"],
           commandResults: [
             {
               commandIndex: -1,
               type: "validate",
               status: "error",
-              label: "已取消",
-              error: "画布操作等待超时，已自动取消",
+              label: "Cancelled",
+              error: "Canvas operation timed out and was cancelled automatically",
             },
           ],
           cancelled: true,
@@ -334,7 +334,7 @@ describe("canvas command flow placement", () => {
         {
           id: "assistant-old",
           role: "assistant",
-          text: "上一轮回复",
+          text: "Previous turn reply",
           turnId: "turn-old",
           timestamp: 1,
         },
@@ -362,7 +362,7 @@ describe("canvas command flow placement", () => {
               type: "canvas_feedback",
               event: {
                 key: "bridge-a",
-                errors: ["节点动作完成但未产出 imageUrl。"],
+                errors: ["The node action completed but produced no imageUrl."],
                 commandResults: [],
               },
             },
@@ -370,7 +370,7 @@ describe("canvas command flow placement", () => {
         },
       ],
       "turn-a",
-      "任务执行失败：当前状态为 failed。",
+      "Task execution failed: the current status is failed.",
     );
 
     const assistant = messages.find((message) => message.id === "assistant-turn-a");
@@ -378,7 +378,7 @@ describe("canvas command flow placement", () => {
     expect(assistant?.parts?.map((part) => part.type)).toEqual(["canvas_feedback", "text"]);
     expect(assistant?.parts?.[0]).toMatchObject({
       type: "canvas_feedback",
-      event: { errors: ["节点动作完成但未产出 imageUrl。"] },
+      event: { errors: ["The node action completed but produced no imageUrl."] },
     });
   });
 
@@ -387,14 +387,14 @@ describe("canvas command flow placement", () => {
       key: "bridge:cancelled",
       applied: 0,
       openedUiActions: 0,
-      errors: ["已取消画布操作"],
+      errors: ["Canvas operation cancelled"],
       commandResults: [
         {
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "已取消",
-          error: "已取消画布操作",
+          label: "Cancelled",
+          error: "Canvas operation cancelled",
         },
       ],
     })).toBe(false);
@@ -406,22 +406,22 @@ describe("canvas command flow placement", () => {
       turnId: "turn-a",
       bridgeKey: "validation",
       status: "failed",
-      labels: ["命令校验"],
-      errors: ["命令校验失败"],
+      labels: ["Command validation"],
+      errors: ["Command validation failed"],
     })).toBe("muted");
 
     expect(canvasCommandFeedbackVisualToneForTest({
       key: "bridge:validation",
       applied: 0,
       openedUiActions: 0,
-      errors: ["画布命令无效"],
+      errors: ["Invalid canvas command"],
       commandResults: [
         {
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "画布命令无效",
-          error: "画布命令无效",
+          label: "Invalid canvas command",
+          error: "Invalid canvas command",
         },
       ],
     })).toBe("muted");
@@ -430,14 +430,14 @@ describe("canvas command flow placement", () => {
       key: "bridge:cancelled",
       applied: 0,
       openedUiActions: 0,
-      errors: ["已取消画布操作"],
+      errors: ["Canvas operation cancelled"],
       commandResults: [
         {
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "已取消",
-          error: "已取消画布操作",
+          label: "Cancelled",
+          error: "Canvas operation cancelled",
         },
       ],
       cancelled: true,
@@ -448,14 +448,14 @@ describe("canvas command flow placement", () => {
       key: "bridge:timeout",
       applied: 0,
       openedUiActions: 0,
-      errors: ["画布操作等待超时，已自动取消"],
+      errors: ["Canvas operation timed out and was cancelled automatically"],
       commandResults: [
         {
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "已取消",
-          error: "画布操作等待超时，已自动取消",
+          label: "Cancelled",
+          error: "Canvas operation timed out and was cancelled automatically",
         },
       ],
       cancelled: true,
@@ -471,7 +471,7 @@ describe("canvas command flow placement", () => {
         commandIndex: 0,
         type: "run_node_action",
         status: "pending",
-        label: "生成图片（产物待同步）",
+        label: "Generate image (output syncing)",
       }],
     })).toBe("warning");
 
@@ -479,14 +479,14 @@ describe("canvas command flow placement", () => {
       key: "bridge:execution",
       applied: 0,
       openedUiActions: 0,
-      errors: ["生成失败"],
+      errors: ["Generation failed"],
       commandResults: [
         {
           commandIndex: 0,
           type: "run_node_action",
           status: "error",
-          label: "生成图片",
-          error: "生成失败",
+          label: "Generate image",
+          error: "Generation failed",
         },
       ],
     })).toBe("destructive");
@@ -578,7 +578,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "node-detail",
           status: "done",
-          labels: ["节点参数"],
+          labels: ["Node parameters"],
           errors: [],
           anchorTextPrefix: null,
           surfaceOrder: 30,
@@ -590,9 +590,9 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "node-detail",
           status: "done",
-          labels: ["节点参数"],
+          labels: ["Node parameters"],
           errors: [],
-          anchorTextPrefix: "验证通过，现在创建节点和连接：\n",
+          anchorTextPrefix: "Validation passed, now creating nodes and connections:\n",
           surfaceOrder: 10,
         },
       ],
@@ -600,18 +600,18 @@ describe("canvas command flow placement", () => {
 
     expect(merged).toHaveLength(1);
     expect(merged[0]).toMatchObject({
-      anchorTextPrefix: "验证通过，现在创建节点和连接：\n",
+      anchorTextPrefix: "Validation passed, now creating nodes and connections:\n",
       surfaceOrder: 10,
     });
   });
 
   it("places validation and execution cards before assistant text that describes their result", () => {
     const text = [
-      "好的！我来帮你创建一个家乡文化海报的工作流。",
+      "Sure! Let me create a hometown culture poster workflow for you.",
       "",
-      "验证通过，创建节点并连接：",
+      "Validation passed, creating nodes and connecting them:",
       "",
-      "已经在画布上创建好了海报工作流。",
+      "I have created the poster workflow on the canvas.",
     ].join("\n");
 
     const items = buildCanvasCommandFlowItemsForTest(
@@ -628,7 +628,7 @@ describe("canvas command flow placement", () => {
               commandIndex: 0,
               type: "create_node",
               status: "success",
-              label: "创建节点",
+              label: "Create node",
             },
           ],
           anchorTextPrefix: text,
@@ -641,7 +641,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "validation",
           status: "done",
-          labels: ["命令校验"],
+          labels: ["Command validation"],
           errors: [],
           anchorTextPrefix: text,
           surfaceOrder: 30,
@@ -658,35 +658,35 @@ describe("canvas command flow placement", () => {
     ]);
     expect(items[0]).toMatchObject({
       kind: "text",
-      text: "好的！我来帮你创建一个家乡文化海报的工作流。\n\n",
+      text: "Sure! Let me create a hometown culture poster workflow for you.\n\n",
     });
     expect(items[2]).toMatchObject({
       kind: "text",
-      text: "验证通过，创建节点并连接：\n\n",
+      text: "Validation passed, creating nodes and connecting them:\n\n",
     });
   });
 
   it("keeps canvas cards in stream order when the final assistant text normalizes blank lines", () => {
     const text = [
-      "我需要为您创建一个图片节点。在Freezone画布中，图片节点对应的是 `imageNode` 类型。",
+      "I need to create an image node for you. In the Freezone canvas, an image node corresponds to the `imageNode` type.",
       "",
-      "让我先查看一下图片节点的创建schema，以确保使用正确的字段：",
+      "Let me look at the create schema of the image node first to make sure I use the right fields:",
       "",
-      "我看到图片节点的创建schema中，`imageNode`类型需要提供一些必要的字段。根据schema，我需要创建一个`imageNode`，并设置显示名称等基本信息。",
+      "I see that in the image node create schema, the `imageNode` type needs some required fields. According to the schema, I need to create an `imageNode` and set basic information such as the display name.",
       "",
-      "让我为您创建一个图片节点：",
+      "Let me create an image node for you:",
       "",
-      "图片节点已成功创建！我为您创建了一个名为\"图片节点\"的图片节点。",
+      "The image node was created successfully! I created an image node named \"Image node\" for you.",
     ].join("\n");
     const streamingAnchor = [
-      "我需要为您创建一个图片节点。在Freezone画布中，图片节点对应的是 `imageNode` 类型。",
+      "I need to create an image node for you. In the Freezone canvas, an image node corresponds to the `imageNode` type.",
       "",
-      "让我先查看一下图片节点的创建schema，以确保使用正确的字段：",
+      "Let me look at the create schema of the image node first to make sure I use the right fields:",
       "",
       "",
-      "我看到图片节点的创建schema中，`imageNode`类型需要提供一些必要的字段。根据schema，我需要创建一个`imageNode`，并设置显示名称等基本信息。",
+      "I see that in the image node create schema, the `imageNode` type needs some required fields. According to the schema, I need to create an `imageNode` and set basic information such as the display name.",
       "",
-      "让我为您创建一个图片节点：",
+      "Let me create an image node for you:",
       "",
     ].join("\n");
 
@@ -704,7 +704,7 @@ describe("canvas command flow placement", () => {
               commandIndex: 0,
               type: "create_node",
               status: "success",
-              label: "创建节点",
+              label: "Create node",
             },
           ],
           anchorTextPrefix: streamingAnchor,
@@ -717,7 +717,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "node-create-schema",
           status: "done",
-          labels: ["节点参数"],
+          labels: ["Node parameters"],
           errors: [],
           anchorTextPrefix: null,
           surfaceOrder: 10,
@@ -727,7 +727,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "validation",
           status: "done",
-          labels: ["命令校验"],
+          labels: ["Command validation"],
           errors: [],
           anchorTextPrefix: streamingAnchor,
           surfaceOrder: 20,
@@ -757,20 +757,20 @@ describe("canvas command flow placement", () => {
     });
     expect(items[5]).toMatchObject({
       kind: "text",
-      text: expect.stringContaining("图片节点已成功创建"),
+      text: expect.stringContaining("The image node was created successfully"),
     });
   });
 
   it("does not anchor execution cards inside the assistant request sentence", () => {
     const text = [
-      "我需要在 Freezone 画布上创建一个新的图片节点。让我使用正确的工具来完成这个任务。",
+      "I need to create a new image node on the Freezone canvas. Let me use the right tool to get this done.",
       "",
-      "我已经成功在Freezone画布上创建了一个新的图片节点。该节点的ID为 `dbc24486-07e7-4d55-9376-920a7f9a8254`。",
+      "I have successfully created a new image node on the Freezone canvas. The node ID is `dbc24486-07e7-4d55-9376-920a7f9a8254`.",
       "",
-      "这个图片节点现在可以在画布上看到，您可以进一步编辑它的属性、添加图像或与其他节点建立连接。",
+      "This image node can now be seen on the canvas; you can further edit its properties, add images, or connect it to other nodes.",
     ].join("\n");
     const anchorTextPrefix = [
-      "我需要在 Freezone 画布上创建一个新的图片节点。让我使用正确的工具来完成这个任务。",
+      "I need to create a new image node on the Freezone canvas. Let me use the right tool to get this done.",
       "",
     ].join("\n");
 
@@ -788,7 +788,7 @@ describe("canvas command flow placement", () => {
               commandIndex: 0,
               type: "create_node",
               status: "success",
-              label: "创建节点",
+              label: "Create node",
             },
           ],
           anchorTextPrefix,
@@ -805,17 +805,17 @@ describe("canvas command flow placement", () => {
     });
     expect(items[2]).toMatchObject({
       kind: "text",
-      text: expect.stringContaining("我已经成功在Freezone画布上创建"),
+      text: expect.stringContaining("I have successfully created a new image node"),
     });
   });
 
   it("keeps read-context cards next to the assistant text that requested them", () => {
     const text = [
-      "我将帮你润色当前视频节点的提示词。首先，我需要获取该节点的详细信息，以便了解其完整内容和可编辑字段。",
+      "I will help you polish the prompt of the current video node. First, I need to fetch the details of the node to understand its full content and editable fields.",
       "",
-      "现在我已经获取了视频节点的详细信息。当前的提示词是“猫吃鱼”。",
+      "I have now fetched the details of the video node. The current prompt is \"cat eating fish\".",
       "",
-      "让我为这个提示词提供几个润色选项，从基础增强到专业级：",
+      "Let me offer a few polishing options for this prompt, from basic enhancement to professional grade:",
     ].join("\n");
 
     const items = buildCanvasCommandFlowItemsForTest(
@@ -828,7 +828,7 @@ describe("canvas command flow placement", () => {
           turnId: "turn-a",
           bridgeKey: "node-detail",
           status: "done",
-          labels: ["节点详情"],
+          labels: ["Node details"],
           errors: [],
           anchorTextPrefix: null,
           surfaceOrder: 10,
@@ -839,11 +839,11 @@ describe("canvas command flow placement", () => {
     expect(items.map((item) => item.kind)).toEqual(["text", "context", "text"]);
     expect(items[0]).toMatchObject({
       kind: "text",
-      text: "我将帮你润色当前视频节点的提示词。首先，我需要获取该节点的详细信息，以便了解其完整内容和可编辑字段。\n\n",
+      text: "I will help you polish the prompt of the current video node. First, I need to fetch the details of the node to understand its full content and editable fields.\n\n",
     });
     expect(items[2]).toMatchObject({
       kind: "text",
-      text: "现在我已经获取了视频节点的详细信息。当前的提示词是“猫吃鱼”。\n\n让我为这个提示词提供几个润色选项，从基础增强到专业级：",
+      text: "I have now fetched the details of the video node. The current prompt is \"cat eating fish\".\n\nLet me offer a few polishing options for this prompt, from basic enhancement to professional grade:",
     });
   });
 });

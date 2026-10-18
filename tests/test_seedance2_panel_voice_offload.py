@@ -477,7 +477,7 @@ async def test_seedance2_panel_mutations_wait_for_media_and_preserve_both_change
                 episode=1,
                 beat=beat,
                 project_dir=tmp_path,
-                label="无字幕",
+                label="no_subtitles",
             )
         )
     await asyncio.sleep(0)
@@ -492,7 +492,7 @@ async def test_seedance2_panel_mutations_wait_for_media_and_preserve_both_change
     if mutation == "config":
         assert config["duration"] == 8
     else:
-        assert "无字幕：" in config["prompt_guidance"]
+        assert "No subtitles:" in config["prompt_guidance"]
     assert store.calls[-1]["seedance2_config_json"] == beat["seedance2_config_json"]
 
 
@@ -540,7 +540,7 @@ async def test_cancelled_seedance2_panel_mutation_waiter_does_not_write(
                     episode=1,
                     beat=beat,
                     project_dir=tmp_path,
-                    label="无字幕",
+                    label="no_subtitles",
                 )
             )
         await asyncio.sleep(0)
@@ -624,7 +624,7 @@ async def test_seedance2_panel_mutation_parse_and_dump_run_in_voice_worker(
             episode=1,
             beat=beat,
             project_dir=tmp_path,
-            label="无字幕",
+            label="no_subtitles",
         )
 
     assert helper_threads

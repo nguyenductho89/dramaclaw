@@ -22,7 +22,7 @@ const MAX_BEATS_DISPLAYED = 5;
  *
  * - Ready: green banner summarising total beats covered.
  * - Blocked: amber banner listing missing assets grouped by stage. Each line
- *   has a `[处理 →]` button that navigates to the offending stage tab and
+ *   has a `[Fix ->]` button that navigates to the offending stage tab and
  *   sets `?beat=N` + `#beat-N` so the workbench drawer auto-opens on the
  *   first missing beat for that stage. Lists at most {@link MAX_BEATS_DISPLAYED}
  *   beat numbers per stage with a "..." indicator when truncated.

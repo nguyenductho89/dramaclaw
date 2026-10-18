@@ -592,7 +592,7 @@ def test_newapi_image_call_reports_transport_exception_type(monkeypatch):
     )
 
     assert image_bytes is None
-    assert "请求异常: ReadTimeout" in error
+    assert "Request error: ReadTimeout" in error
     assert "endpoint=http://newapi.test/v1" in error
     assert "model=LingShan-G2" in error
 
@@ -672,8 +672,8 @@ def test_newapi_sketch_grid_reraises_insufficient_credit(
                 beats=[
                     {
                         "beat_number": 3,
-                        "visual_description": "女主站在竹林中回头。",
-                        "narration": "她终于察觉身后有人。",
+                        "visual_description": "The heroine stands in the bamboo grove and looks back.",
+                        "narration": "She finally senses someone behind her.",
                     }
                 ],
                 character_map={},
@@ -1074,11 +1074,11 @@ def test_newapi_identity_image_sends_portrait_then_costume_references(
             reference_image=None,
             output_path=str(output_path),
             reference_image_bytes=b"portrait-bytes",
-            reference_image_name="/project/characters/李雷/reference_portrait.jpg",
+            reference_image_name="/project/characters/Lee/reference_portrait.jpg",
             aspect_ratio="16:9",
             image_size="1K",
             additional_image_bytes=[b"costume-bytes"],
-            additional_image_names=["/project/characters/李雷/学生_costume.png"],
+            additional_image_names=["/project/characters/Lee/student_costume.png"],
         )
     )
 
@@ -1093,7 +1093,7 @@ def test_newapi_identity_image_sends_portrait_then_costume_references(
     }
     assert captured["reference_images"] == [
         ("reference_portrait.jpg", b"portrait-bytes", "image/jpeg"),
-        ("学生_costume.png", b"costume-bytes", "image/png"),
+        ("student_costume.png", b"costume-bytes", "image/png"),
     ]
 
 
@@ -1131,7 +1131,7 @@ def test_newapi_character_portrait_reraises_insufficient_credit(
     with pytest.raises(InsufficientCreditsError):
         run_async(
             generator.generate_character_portrait(
-                character_name="李雷",
+                character_name="Lee",
                 character_prompt="young man",
                 output_dir=str(tmp_path),
             )
@@ -1159,7 +1159,7 @@ def test_newapi_character_portrait_raise_on_error_preserves_provider_detail(monk
     with pytest.raises(RuntimeError, match="HTTP 504: request_id=req-123"):
         run_async(
             image_generator.generate_character_reference_unified(
-                character_name="李雷",
+                character_name="Lee",
                 appearance_prompt="young man",
                 output_dir=str(tmp_path),
                 count=1,
@@ -1194,9 +1194,9 @@ def test_newapi_scene_master_uses_text_only_nanobanana2(monkeypatch, tmp_path):
     monkeypatch.setattr(scene_reference_images, "SCENE_MASTER_IMAGE_MODEL", "LingShan-NB-2")
 
     scene = NovelScene(
-        name="古董店",
+        name="antique_shop",
         scene_type="interior",
-        environment_prompt="从店门可以直接看到收银台，周围堆放着一些古董",
+        environment_prompt="The cash register is directly visible from the shop door, with antiques piled around it",
     )
 
     output_path = run_async(
@@ -1210,7 +1210,7 @@ def test_newapi_scene_master_uses_text_only_nanobanana2(monkeypatch, tmp_path):
         )
     )
 
-    assert output_path == tmp_path / "assets" / "scenes" / "古董店" / "master.png"
+    assert output_path == tmp_path / "assets" / "scenes" / "antique_shop" / "master.png"
     assert output_path.read_bytes() == b"scene-master"
     assert captured["api_key"] == "newapi-token"
     assert captured["base_url"] == "http://newapi.test/v1"
@@ -1221,8 +1221,8 @@ def test_newapi_scene_master_uses_text_only_nanobanana2(monkeypatch, tmp_path):
         "image_size": "1K",
         "output_format": "png",
     }
-    assert "SCENE NAME: 古董店" in captured["prompt"]
-    assert "从店门可以直接看到收银台" in captured["prompt"]
+    assert "SCENE NAME: antique_shop" in captured["prompt"]
+    assert "The cash register is directly visible from the shop door" in captured["prompt"]
 
 
 @pytest.mark.asyncio
@@ -1244,7 +1244,7 @@ async def test_newapi_scene_reference_accepts_copied_file_without_image_bytes(
     monkeypatch.setattr(scene_reference_images, "SCENE_MASTER_IMAGE_PROVIDER", "newapi")
     monkeypatch.setattr(scene_reference_images, "SCENE_MASTER_IMAGE_MODEL", "LingShan-NB-2")
     monkeypatch.setattr(scene_reference_images, "_call_newapi_image_api", copied_image)
-    scene = NovelScene(name="古董店", scene_type="interior", environment_prompt="古董店室内")
+    scene = NovelScene(name="antique_shop", scene_type="interior", environment_prompt="Antique shop interior")
 
     output = await scene_reference_images.generate_scene_reference_image(
         project_dir=tmp_path,
@@ -1264,7 +1264,7 @@ def test_newapi_scene_time_plate_master_injects_time_and_base_reference(monkeypa
         captured.update(kwargs)
         return b"scene-night-master", "", ""
 
-    base_master_path = tmp_path / "assets" / "scenes" / "古董店" / "master.png"
+    base_master_path = tmp_path / "assets" / "scenes" / "antique_shop" / "master.png"
     base_master_path.parent.mkdir(parents=True)
     base_master_path.write_bytes(b"base-master-bytes")
 
@@ -1278,11 +1278,11 @@ def test_newapi_scene_time_plate_master_injects_time_and_base_reference(monkeypa
     monkeypatch.setattr(scene_reference_images, "SCENE_MASTER_IMAGE_MODEL", "LingShan-NB-2")
 
     scene = NovelScene(
-        name="古董店_夜晚",
-        base_scene_id="古董店",
-        time_of_day="夜晚",
+        name="antique_shop_night",
+        base_scene_id="antique_shop",
+        time_of_day="night",
         scene_type="interior",
-        environment_prompt="正面：收银台与古董柜\n光源：中性基础光",
+        environment_prompt="Front: cash register and antique cabinet\nLight: neutral base light",
     )
 
     output_path = run_async(
@@ -1293,13 +1293,13 @@ def test_newapi_scene_time_plate_master_injects_time_and_base_reference(monkeypa
         )
     )
 
-    assert output_path == tmp_path / "assets" / "scenes" / "古董店_夜晚" / "master.png"
+    assert output_path == tmp_path / "assets" / "scenes" / "antique_shop_night" / "master.png"
     assert output_path.read_bytes() == b"scene-night-master"
     assert captured["reference_images"] == [
         ("base_scene_master_master.png", b"base-master-bytes", "image/png")
     ]
-    assert "TARGET TIME-OF-DAY PLATE: 夜晚" in captured["prompt"]
-    assert "overall lighting must read as 夜晚" in captured["prompt"]
+    assert "TARGET TIME-OF-DAY PLATE: night" in captured["prompt"]
+    assert "overall lighting must read as night" in captured["prompt"]
     assert "Keep the same architecture" in captured["prompt"]
 
 
@@ -1313,7 +1313,7 @@ def test_newapi_scene_variant_plate_master_keeps_described_lighting(monkeypatch,
         captured.update(kwargs)
         return b"scene-variant-master", "", ""
 
-    base_master_path = tmp_path / "assets" / "scenes" / "城市街道" / "master.png"
+    base_master_path = tmp_path / "assets" / "scenes" / "city_street" / "master.png"
     base_master_path.parent.mkdir(parents=True)
     base_master_path.write_bytes(b"base-master-bytes")
 
@@ -1327,11 +1327,11 @@ def test_newapi_scene_variant_plate_master_keeps_described_lighting(monkeypatch,
     monkeypatch.setattr(scene_reference_images, "SCENE_MASTER_IMAGE_MODEL", "LingShan-NB-2")
 
     scene = NovelScene(
-        name="城市街道_雨夜版",
-        base_scene_id="城市街道",
-        variant_id="雨夜版",
+        name="city_street_rainy_night",
+        base_scene_id="city_street",
+        variant_id="rainy_night",
         scene_type="exterior",
-        environment_prompt="正面：湿漉沥青马路\n光源：路灯昏暗，积水反光，雨夜氛围",
+        environment_prompt="Front: wet asphalt road\nLight: dim street lamps, reflective puddles, rainy-night mood",
     )
 
     output_path = run_async(
@@ -1342,12 +1342,12 @@ def test_newapi_scene_variant_plate_master_keeps_described_lighting(monkeypatch,
         )
     )
 
-    assert output_path == tmp_path / "assets" / "scenes" / "城市街道_雨夜版" / "master.png"
+    assert output_path == tmp_path / "assets" / "scenes" / "city_street_rainy_night" / "master.png"
     assert captured["reference_images"] == [
         ("base_scene_master_master.png", b"base-master-bytes", "image/png")
     ]
     assert "STRUCTURED VARIANT PLATE" in captured["prompt"]
-    assert "variant_id=雨夜版" in captured["prompt"]
+    assert "variant_id=rainy_night" in captured["prompt"]
     assert "do NOT neutralize" in captured["prompt"]
     # The base-scene neutralizer must not fire for variant plates.
     assert "IGNORE mood/time-of-day phrases" not in captured["prompt"]
@@ -1364,7 +1364,7 @@ def test_newapi_reverse_master_uses_master_reference_nanobanana2(monkeypatch, tm
         captured.update(kwargs)
         return b"scene-reverse", "", ""
 
-    master_path = tmp_path / "assets" / "scenes" / "古董店" / "master.png"
+    master_path = tmp_path / "assets" / "scenes" / "antique_shop" / "master.png"
     master_path.parent.mkdir(parents=True)
     master_path.write_bytes(b"master-bytes")
 
@@ -1382,9 +1382,9 @@ def test_newapi_reverse_master_uses_master_reference_nanobanana2(monkeypatch, tm
     )
 
     scene = NovelScene(
-        name="古董店",
+        name="antique_shop",
         scene_type="interior",
-        environment_prompt="从店门可以直接看到收银台，周围堆放着一些古董",
+        environment_prompt="The cash register is directly visible from the shop door, with antiques piled around it",
     )
 
     output_path = run_async(
@@ -1398,7 +1398,7 @@ def test_newapi_reverse_master_uses_master_reference_nanobanana2(monkeypatch, tm
         )
     )
 
-    assert output_path == tmp_path / "assets" / "scenes" / "古董店" / "reverse_master.png"
+    assert output_path == tmp_path / "assets" / "scenes" / "antique_shop" / "reverse_master.png"
     assert output_path.read_bytes() == b"scene-reverse"
     assert captured["api_key"] == "newapi-token"
     assert captured["base_url"] == "http://newapi.test/v1"
@@ -1425,7 +1425,7 @@ def test_newapi_reverse_master_can_use_gpt_image2_quality_medium(monkeypatch, tm
         captured.update(kwargs)
         return b"scene-reverse", "", ""
 
-    master_path = tmp_path / "assets" / "scenes" / "古董店" / "master.png"
+    master_path = tmp_path / "assets" / "scenes" / "antique_shop" / "master.png"
     master_path.parent.mkdir(parents=True)
     master_path.write_bytes(b"master-bytes")
 
@@ -1443,9 +1443,9 @@ def test_newapi_reverse_master_can_use_gpt_image2_quality_medium(monkeypatch, tm
     )
 
     scene = NovelScene(
-        name="古董店",
+        name="antique_shop",
         scene_type="interior",
-        environment_prompt="从店门可以直接看到收银台，周围堆放着一些古董",
+        environment_prompt="The cash register is directly visible from the shop door, with antiques piled around it",
     )
 
     run_async(
@@ -1512,10 +1512,10 @@ def test_newapi_prop_reference_gpt_image2_sends_quality_medium(monkeypatch, tmp_
         lambda: {"openai_image_quality": "medium"},
     )
 
-    output_path = tmp_path / "assets" / "props" / "玉佩" / "reference_3view.png"
+    output_path = tmp_path / "assets" / "props" / "jade_pendant" / "reference_3view.png"
     result = run_async(
         nanobanana_prop.generate_prop_reference(
-            visual_prompt="青绿色玉佩，边缘有金色纹路",
+            visual_prompt="Teal-green jade pendant with golden patterns along the edge",
             output_path=str(output_path),
         )
     )
@@ -1573,10 +1573,10 @@ def test_newapi_prop_reference_nanobanana2_omits_quality(monkeypatch, tmp_path):
         lambda: {"openai_image_quality": "medium"},
     )
 
-    output_path = tmp_path / "assets" / "props" / "玉佩" / "reference_3view.png"
+    output_path = tmp_path / "assets" / "props" / "jade_pendant" / "reference_3view.png"
     result = run_async(
         nanobanana_prop.generate_prop_reference(
-            visual_prompt="青绿色玉佩，边缘有金色纹路",
+            visual_prompt="Teal-green jade pendant with golden patterns along the edge",
             output_path=str(output_path),
         )
     )
@@ -1624,7 +1624,7 @@ def test_newapi_prop_reference_reraises_insufficient_credit(
     with pytest.raises(InsufficientCreditsError):
         run_async(
             nanobanana_prop.generate_prop_reference(
-                visual_prompt="青绿色玉佩，边缘有金色纹路",
+                visual_prompt="Teal-green jade pendant with golden patterns along the edge",
                 output_path=str(tmp_path / "reference_3view.png"),
             )
         )

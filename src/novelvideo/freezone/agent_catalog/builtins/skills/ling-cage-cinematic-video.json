@@ -3,21 +3,21 @@
   "id": "ling-cage-cinematic-video",
   "version": "1.0.0",
   "enabled": true,
-  "name": "灵笼风格科幻短片",
-  "description": "把灵感、角色设定、参考素材或脚本发展成灵笼风格半写实 3D 末世科幻动画短片，按故事脚本、分镜、关键元素、逐镜视频和音频层分阶段推进。",
+  "name": "Ling Cage Style Sci-Fi Short",
+  "description": "Develops an inspiration, character settings, reference assets or a script into a Ling Cage style semi-realistic 3D post-apocalyptic sci-fi animated short, advancing in stages through the story script, storyboard, key elements, shot-by-shot video and audio layers.",
   "category": "video",
   "triggers": {
     "keywords": [
-      "灵笼风格",
-      "末世科幻",
-      "半写实3D",
-      "灯塔",
-      "地表废土",
-      "玛娜生态",
-      "噬极兽",
-      "尘民",
-      "猎荒者",
-      "末世动画短片"
+      "Ling Cage style",
+      "post-apocalyptic sci-fi",
+      "semi-realistic 3D",
+      "lighthouse",
+      "surface wasteland",
+      "Mana ecosystem",
+      "polar devourer beast",
+      "dust folk",
+      "wasteland hunter",
+      "post-apocalyptic animated short"
     ],
     "node_scopes": [
       "textGeneration",
@@ -29,61 +29,61 @@
   "input_parameters": [
     {
       "id": "total_duration",
-      "label": "目标时长",
+      "label": "Target duration",
       "type": "single_select",
       "required": true,
-      "default": "2分钟",
+      "default": "2 minutes",
       "options": [
-        "1分钟",
-        "2分钟",
-        "3分钟"
+        "1 minute",
+        "2 minutes",
+        "3 minutes"
       ]
     },
     {
       "id": "output_language",
-      "label": "输出语言",
+      "label": "Output language",
       "type": "single_select",
       "required": true,
-      "default": "中文",
+      "default": "English",
       "options": [
-        "中文",
-        "英文"
+        "English",
+        "Vietnamese"
       ]
     },
     {
       "id": "director_style",
-      "label": "导演风格",
+      "label": "Director style",
       "type": "single_select",
       "required": true,
-      "default": "纪录沉浸",
+      "default": "Documentary immersion",
       "options": [
-        "纪录沉浸",
-        "史诗悲壮",
-        "恐怖惊悚",
-        "分段混合"
+        "Documentary immersion",
+        "Epic tragedy",
+        "Horror thriller",
+        "Segmented mix"
       ]
     },
     {
       "id": "asset_mode",
-      "label": "素材方式",
+      "label": "Asset approach",
       "type": "single_select",
       "required": true,
-      "default": "优先使用已有素材",
+      "default": "Prefer existing assets",
       "options": [
-        "优先使用已有素材",
-        "缺失素材再生成",
-        "统一重制风格"
+        "Prefer existing assets",
+        "Regenerate missing assets",
+        "Unify and restyle"
       ]
     },
     {
       "id": "audio_mode",
-      "label": "背景音乐",
+      "label": "Background music",
       "type": "single_select",
       "required": true,
-      "default": "生成BGM",
+      "default": "Generate BGM",
       "options": [
-        "生成BGM",
-        "不生成BGM"
+        "Generate BGM",
+        "Do not generate BGM"
       ]
     }
   ],
@@ -95,71 +95,71 @@
     "sci-fi-survival-audio-layers"
   ],
   "planning": {
-    "planning_notes": "动态执行路径：先根据 total_duration、output_language、director_style、asset_mode、audio_mode、用户输入和画布/上传素材判断入口，并在 Skill 层锁定创意规格：默认 16:9、24fps、720p、目标时长、输出语言、导演风格、素材策略、是否生成 BGM 和视觉风格；这个规格不创建独立节点。若用户只有关键词或灵感，先产出多个故事方向供选择，再扩展逐场脚本并让故事阶段产物清晰可审阅；若用户已有完整脚本，可跳过方向选择但必须做结构化提取。故事阶段完成后生成分镜，输出 Key Elements、Shot List 和 BGM 规划，并检查每个镜头是否绑定场景、角色、动作、对白/旁白、时长和转场意图。分镜完成后进入关键元素图阶段：先根据 Key Elements 列出需要跨镜复用的独立资产，再为每项资产分别创建草稿节点。每个持续出现的角色或队伍各自独立成节点；每个主要复用场景各自独立成节点；每个怪物、机械、核心道具或需要跨镜保持外观一致的环境源各自独立成节点。角色节点生成三视图，场景节点生成 2x2 无角色四宫格，怪物/机械/道具节点生成完整结构或多角度参考；优先绑定用户素材，不匹配时按原素材重制风格。不得只创建一个笼统的“关键元素”总节点，也不得把多个可独立引用的角色、场景、怪物、机械或道具合并成一张总图；只有始终作为同一整体被下游引用的资产才可共用一个节点。关键元素完成后按 Shot List 条目或明确场景段创建单镜视频：每个 Shot List 条目必须是独立的视频 intent item 和画布节点，单镜 4-15 秒，每镜只引用实际需要的角色、场景、怪物/机械/道具元素图；对白和音效写入对应视频提示词，旁白和镜头内环境声也随镜头提示词表达，不单独创建音频节点；图片引用不超过 9 张，音频引用不超过 3 条，只在强连续时引用上一镜视频。Runner 只执行已落到画布的节点，不会从已完成脚本或分镜自动扩展后续节点，因此完整草稿必须一次性列出关键元素节点、全部单镜视频节点，并只在需要配乐时创建 BGM 音频节点。若 audio_mode 为“生成BGM”，只在需要配乐时创建 BGM 音频节点；若为“不生成BGM”，不要创建独立音频节点。最后提醒用户可在画布上进行最终合成，并询问是否需要超分；最终合成和超分由画布工具处理。",
-    "prompt_guide": "输出使用清晰中文 Markdown。核心风格为灵笼气质的半写实 3D CG 电影感末世科幻：写实级渲染、轻微动画化审美、压抑暗色、废土诗意、脏旧材质、体积光、丁达尔效应、真实皮肤和战损装备。场景方向可围绕地表废土、灯塔内部、玛娜生态、龙骨村等空间展开，并保持空间关系、光色、活动区域和环境状态连续。Shot 层禁止默认字幕；旁白和对白不得重叠；用户素材优先绑定，缺失或风格不匹配才生成/重制。",
+    "planning_notes": "Dynamic execution path: first judge the entry point from total_duration, output_language, director_style, asset_mode, audio_mode, the user input and the canvas/uploaded assets, and lock the creative specification at the Skill level: default 16:9, 24fps, 720p, target duration, output language, director style, asset strategy, whether to generate BGM, and visual style; this specification does not create a standalone node. If the user has only keywords or an inspiration, first produce several story directions to choose from, then expand into a scene-by-scene script and make the story-stage output clear and reviewable; if the user already has a complete script, the direction selection may be skipped but a structured extraction must be done. After the story stage is complete, generate the storyboard, outputting Key Elements, the Shot List and the BGM plan, and check whether every shot binds its scene, characters, action, dialogue/narration, duration and transition intent. After the storyboard is complete, enter the key element image stage: first list from the Key Elements the independent assets that need to be reused across shots, then create a separate draft node for each asset. Each recurring character or team is its own node; each main reused scene is its own node; each monster, machine, core prop, or environment source that needs a consistent appearance across shots is its own node. Character nodes generate a three-view sheet, scene nodes generate a 2x2 four-panel grid without characters, and monster/machine/prop nodes generate a complete-structure or multi-angle reference; bind the user's assets first, and when they do not match, remake the style from the original asset. Do not create just one generic \"key elements\" node, and do not merge multiple independently referenceable characters, scenes, monsters, machines or props into one overview image; only assets that are always referenced downstream as one whole may share a node. After the key elements are complete, create single-shot videos per Shot List entry or explicit scene segment: every Shot List entry must be an independent video intent item and canvas node, each shot 4-15 seconds, each shot referencing only the character, scene and monster/machine/prop element images it actually needs; dialogue and sound effects are written into the corresponding video prompt, and narration and in-shot ambient sound are likewise expressed through the shot prompt, without creating separate audio nodes; image references do not exceed 9 and audio references do not exceed 3, and the previous shot's video is referenced only when strongly continuous. The Runner executes only nodes that have landed on the canvas and will not automatically expand later nodes from a completed script or storyboard, so the complete draft must list the key element nodes and all single-shot video nodes at once, and create a BGM audio node only when a score is needed. If audio_mode is \"Generate BGM\", create a BGM audio node only when a score is needed; if it is \"Do not generate BGM\", do not create a standalone audio node. Finally, remind the user that final composition can be done on the canvas and ask whether upscaling is needed; final composition and upscaling are handled by canvas tools.",
+    "prompt_guide": "Output uses clear Markdown in the same language as the user's input. The core style is Ling Cage-flavored semi-realistic 3D CG cinematic post-apocalyptic sci-fi: realistic-grade rendering, a slightly animated aesthetic, oppressive dark tones, wasteland poetry, grimy worn materials, volumetric light, the Tyndall effect, real skin and battle-damaged gear. Scene directions can revolve around spaces such as the surface wasteland, the interior of the Lighthouse, the Mana ecosystem and Dragon Bone Village, keeping spatial relationships, light colors, activity areas and environment states continuous. Subtitles are forbidden by default at the Shot level; narration and dialogue must not overlap; user assets are bound first, and are generated/remade only when missing or stylistically mismatched.",
     "conduct_rules": [
-      "先创建完整工作流草稿；故事方向/脚本、创意规格、分镜、关键元素批、场景段视频和必要的 BGM 音频节点都必须有清晰阶段产物，实际继续、重试和执行节奏由画布工作流控制。",
-      "默认 16:9、24fps、720p；目标时长按 input total_duration，默认 1-3 分钟范围。",
-      "角色必须是半写实 3D CG，战术装备、划痕、灰尘、血污和真实材质明确；禁止日漫平涂、Q版、明亮干净和过度赛博霓虹。",
-      "场景必须区分地表废土、灯塔内部、玛娜生态、龙骨村，并标注光色、空间关系和活动区域。",
-      "分镜必须包含 scene、story beat、shot size、camera height、camera movement、character orientation、transition intent。",
-      "关键元素阶段不得只创建一个笼统的“关键元素”节点。每个持续出现的角色或队伍、每个主要复用场景、每个怪物/机械/核心道具/环境源，必须各自独立成节点；不要用一张总图替代多个独立元素。",
-      "每个 Shot List 条目必须是独立的视频 intent item 和画布节点；不得只创建一个笼统的“单镜视频”节点代替完整短片。",
-      "视频生成前逐镜检查：场景参考、角色参考、对白/旁白文本、镜头内环境声、动作音效、关键动作和图片引用 <=9；对白、旁白和镜头内音效应写入对应视频提示词。",
-      "角色伤口、装备破损和环境状态必须跨镜连续，不得自动重置。",
-      "旁白与角色对白必须错开，不能语义重复；对白密集镜头通常不加旁白；BGM 只作为独立配乐音频节点处理。",
-      "创意规格只服务规划，不创建独立节点；流程结束时只提醒用户在画布合成，并询问是否需要超分。"
+      "Create the complete workflow draft first; the story direction/script, creative specification, storyboard, key element batch, scene-segment videos and the necessary BGM audio node must each have a clear stage output, and the actual pace of continuing, retrying and executing is controlled by the canvas workflow.",
+      "Default 16:9, 24fps, 720p; the target duration follows the input total_duration, with a default range of 1-3 minutes.",
+      "Characters must be semi-realistic 3D CG, with tactical gear, scratches, dust, blood stains and real materials made explicit; Japanese-anime flat shading, chibi style, bright-and-clean looks and excessive cyber neon are forbidden.",
+      "Scenes must distinguish the surface wasteland, the interior of the Lighthouse, the Mana ecosystem and Dragon Bone Village, and annotate light colors, spatial relationships and activity areas.",
+      "The storyboard must contain scene, story beat, shot size, camera height, camera movement, character orientation and transition intent.",
+      "The key element stage must not create just one generic \"key elements\" node. Every recurring character or team, every main reused scene, and every monster/machine/core prop/environment source must be its own node; do not replace multiple independent elements with one overview image.",
+      "Every Shot List entry must be an independent video intent item and canvas node; creating just one generic \"single-shot video\" node to stand in for the complete short is not allowed.",
+      "Before video generation, check shot by shot: scene reference, character references, dialogue/narration text, in-shot ambient sound, action sound effects, key actions and image references <=9; dialogue, narration and in-shot sound effects should be written into the corresponding video prompt.",
+      "Character wounds, equipment damage and environment state must stay continuous across shots and must not reset automatically.",
+      "Narration and character dialogue must be staggered and must not repeat each other semantically; dialogue-dense shots usually get no narration; BGM is handled only as a standalone score audio node.",
+      "The creative specification serves planning only and creates no standalone node; at the end of the flow, only remind the user to compose on the canvas and ask whether upscaling is needed."
     ]
   },
   "evaluation": {
     "rating_bands": [
       {
         "score": 5,
-        "description": "流程分阶段清楚，风格锁定稳定，资产绑定完整，镜头节奏、战斗调度、情绪表演和音频错峰都明确落入产物。"
+        "description": "The stages are clearly separated, the style lock is stable, asset binding is complete, and shot rhythm, combat staging, emotional performance and audio staggering are all clearly landed in the outputs."
       },
       {
         "score": 3,
-        "description": "流程基本完整，但部分阶段缺少素材分析、关键元素绑定、逐镜检查、转场意图、音频错峰或风格禁忌。"
+        "description": "The flow is basically complete, but some stages lack asset analysis, key element binding, shot-by-shot checks, transition intent, audio staggering or style taboos."
       },
       {
         "score": 1,
-        "description": "跳过确认、使用日漫/Q版/明亮干净风格，或忽略引用数量、角色连续性和音频冲突。"
+        "description": "Confirmation is skipped, a Japanese-anime / chibi / bright-and-clean style is used, or reference counts, character continuity and audio conflicts are ignored."
       }
     ],
     "visual_review_items": [
       {
-        "name": "半写实末世风格",
+        "name": "Semi-realistic post-apocalyptic style",
         "weight": 1.5,
-        "description": "画面应是半写实 3D CG 电影感，暗色压抑、脏旧真实、体积光和废土诗意并存。"
+        "description": "The picture should be a semi-realistic 3D CG cinematic look, with oppressive dark tones, grimy real wear, volumetric light and wasteland poetry coexisting."
       },
       {
-        "name": "关键元素一致性",
+        "name": "Key element consistency",
         "weight": 1.3,
-        "description": "角色三视图、场景四宫格、怪物/道具参考必须成为跨镜外观锚点。"
+        "description": "The character three-views, scene four-panel grids and monster/prop references must become cross-shot appearance anchors."
       },
       {
-        "name": "镜头空间清晰",
+        "name": "Clear shot space",
         "weight": 1.2,
-        "description": "战斗和移动方向遵守轴线、地理关系、角色朝向和环境状态连续。"
+        "description": "Combat and movement directions obey the axis, geographic relationships, character orientation and continuity of the environment state."
       }
     ],
     "text_review_items": [
       {
-        "name": "阶段边界",
+        "name": "Stage boundaries",
         "weight": 1,
-        "description": "每个主要阶段都有明确产物、输入依赖和下一步，便于画布工作流审阅和推进。"
+        "description": "Each main stage has a clear output, input dependencies and next step, making it easy to review and advance the canvas workflow."
       },
       {
-        "name": "音频规则",
+        "name": "Audio rules",
         "weight": 1,
-        "description": "旁白、对白、BGM、SFX 的时段、职责和冲突规避必须清楚。"
+        "description": "The time ranges, responsibilities and conflict avoidance of narration, dialogue, BGM and SFX must be clear."
       }
     ],
     "quality_threshold": 4,
     "domain_constraints": [
-      "不得使用日本动画平涂、Q版怪物、明亮干净风格或魔法特效词汇。",
-      "视频镜头引用图最多 9 张，音频引用最多 3 条。",
-      "Shot 层默认 no subtitles，字幕只在后期作为可选轨道处理。"
+      "Do not use Japanese-anime flat shading, chibi monsters, bright-and-clean looks or magic-effect vocabulary.",
+      "Video shots reference at most 9 images and at most 3 audio clips.",
+      "Shot level defaults to no subtitles; subtitles are handled only as an optional track in post-production."
     ]
   }
 }

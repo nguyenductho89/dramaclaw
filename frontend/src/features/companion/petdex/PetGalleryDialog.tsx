@@ -94,9 +94,9 @@ const PIKO_ACCESSORY_FEEDBACK_KEYS: Record<PikoAccessoryDisplayId, string> = {
 
 const OFFICIAL_COMPANION_SLUGS = new Set(["zhizhi"]);
 
-// 只看 slug 会把导入项误判为官方：导入允许任意 slug（文件名或 JSON 的 id），
-// 用户传一个叫 zhizhi 的精灵图就会落进官方分组，而官方分组不给 onDelete，
-// 于是这只宠物再也删不掉。官方 = 内置且 slug 命中。
+// Looking only at the slug would misjudge an imported item as official: imports allow any slug (file name or the JSON id),
+// if the user uploads a sprite sheet named zhizhi it would fall into the official group, and the official group gets no onDelete,
+// so this pet could never be deleted again. Official = built-in and the slug matches.
 function isOfficialPet(pet: PetdexCatalogEntry): boolean {
   return !pet.imported && OFFICIAL_COMPANION_SLUGS.has(pet.slug);
 }

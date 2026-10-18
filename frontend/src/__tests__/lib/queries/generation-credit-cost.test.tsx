@@ -175,7 +175,7 @@ describe("generation credit cost query hook", () => {
         HttpResponse.json(
           {
             ok: false,
-            error: "计费规则未配置，请联系管理员设置积分规则",
+            error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
             data: {
               error_code: "BILLING_RULE_NOT_CONFIGURED",
               billing_kind: "feature",

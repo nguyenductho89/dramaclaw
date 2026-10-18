@@ -9,7 +9,7 @@ function makeItems(n: number): FreezoneNodeSuggestion[] {
   return Array.from({ length: n }, (_, i) => ({
     nodeId: `node-${i}`,
     column: "image" as const,
-    title: `节点 ${i}`,
+    title: `Node ${i}`,
     thumbnailUrl: null,
     mediaUrl: null,
     keyElementCategory: null,
@@ -19,7 +19,7 @@ function makeItems(n: number): FreezoneNodeSuggestion[] {
 const noop = () => {};
 
 beforeEach(() => {
-  // jsdom 未实现 scrollIntoView；组件挂载会调用它。
+  // jsdom does not implement scrollIntoView; the component calls it on mount.
   Element.prototype.scrollIntoView = vi.fn();
 });
 
@@ -50,8 +50,8 @@ describe("<FreezoneNodeSuggestionMenu />", () => {
         onReachEnd={noop}
       />,
     );
-    fireEvent.click(screen.getByText("节点 1"));
-    expect(onSelect).toHaveBeenCalledWith("node-1", "节点 1");
+    fireEvent.click(screen.getByText("Node 1"));
+    expect(onSelect).toHaveBeenCalledWith("node-1", "Node 1");
   });
 
   it("calls onReachEnd when scrolled near bottom and more items remain", () => {
@@ -85,12 +85,12 @@ describe("<FreezoneNodeSuggestionMenu />", () => {
         onReachEnd={noop}
       />,
     );
-    expect(screen.getByText("没有匹配的节点")).toBeInTheDocument();
+    expect(screen.getByText("No matching nodes")).toBeInTheDocument();
   });
 
   it("renders an <img> with the thumbnail src when thumbnailUrl is set", () => {
     const items: FreezoneNodeSuggestion[] = [
-      { nodeId: "node-thumb", column: "image", title: "有缩略图", thumbnailUrl: "https://x/thumb.jpg", mediaUrl: null, keyElementCategory: null },
+      { nodeId: "node-thumb", column: "image", title: "Has thumbnail", thumbnailUrl: "https://x/thumb.jpg", mediaUrl: null, keyElementCategory: null },
     ];
     const { container } = render(
       <FreezoneNodeSuggestionMenu
@@ -135,7 +135,7 @@ describe("<FreezoneNodeSuggestionMenu />", () => {
         onReachEnd={noop}
       />,
     );
-    fireEvent.mouseEnter(screen.getByText("节点 2"));
+    fireEvent.mouseEnter(screen.getByText("Node 2"));
     expect(onActiveIndexChange).toHaveBeenCalledWith(2);
   });
 });

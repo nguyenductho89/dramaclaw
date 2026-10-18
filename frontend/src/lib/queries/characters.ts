@@ -92,11 +92,11 @@ export function useUpdateCharacter(project: string, name: string) {
         .json<OkResponse<CharacterUpdateResponse>>(),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: queryKeys.characters(project) });
-      // 改名走 _cascade_character_rename，它 UPDATE beats 的
-      // detected_identities_json 和 visual_description——也就是反向引用索引的两个
-      // 来源。资产引用有自己的 project 级 key，characters 的失效碰不到它，卡片会
-      // 拿着旧 identity id 的计数继续显示。episodes 前缀顺带覆盖 beats，那些行确
-      // 实被重写了。后端用 renamed_from 明确告诉我们级联跑没跑，就按它判。
+      // Renaming goes through _cascade_character_rename, which UPDATEs beats'
+      // detected_identities_json and visual_description - the two
+      // sources of the reverse-reference index. Asset references have their own project-level key, which character invalidation does not reach, so cards would
+      // keep showing counts for the old identity id. The episodes prefix also covers beats, since those rows
+      // really were rewritten. The backend tells us via renamed_from whether the cascade ran, and we go by that.
       if (res.data?.renamed_from) {
         invalidateAssetReferences(qc, project);
         qc.invalidateQueries({ queryKey: queryKeys.episodes(project) });

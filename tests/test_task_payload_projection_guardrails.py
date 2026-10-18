@@ -39,7 +39,7 @@ def test_blacklisted_field_name_raises_on_the_delivery_side(bad_name: str) -> No
         "task_type": "mainline_frame_from_context",
         "fields": {bad_name: "x"},
     }
-    with pytest.raises(ValueError, match="敏感字段名"):
+    with pytest.raises(ValueError, match="sensitive field name"):
         assert_projection_is_deliverable(projection)
 
 
@@ -50,9 +50,9 @@ def test_blacklist_check_reaches_nested_keys() -> None:
     projection = {
         "projection_version": 1,
         "task_type": "mainline_frame_from_context",
-        "fields": {"characters": [{"name": "阿茶", "refresh_token": "x"}]},
+        "fields": {"characters": [{"name": "Acha", "refresh_token": "x"}]},
     }
-    with pytest.raises(ValueError, match="敏感字段名"):
+    with pytest.raises(ValueError, match="sensitive field name"):
         assert_projection_is_deliverable(projection)
 
 
@@ -63,7 +63,7 @@ def test_ordinary_projection_passes_the_blacklist() -> None:
         {
             "projection_version": 1,
             "task_type": "mainline_sketch_from_context",
-            "fields": {"scenes": [{"name": "皇宫·大殿", "aliases": []}]},
+            "fields": {"scenes": [{"name": "palace_hall", "aliases": []}]},
         }
     )
 
@@ -89,7 +89,7 @@ def test_oversized_projection_raises_on_the_delivery_side() -> None:
         "task_type": "mainline_sketch_from_context",
         "fields": {"scenes": ["x" * (MAX_PROJECTION_BYTES + 1)]},
     }
-    with pytest.raises(ValueError, match="超出体积上限"):
+    with pytest.raises(ValueError, match="exceeds the size limit"):
         assert_projection_is_deliverable(projection)
 
 
@@ -152,7 +152,7 @@ def test_versions_outside_the_window_raise(version: object) -> None:
             "fields": {"scenes": []},
         }
     }
-    with pytest.raises(ValueError, match="投射版本"):
+    with pytest.raises(ValueError, match="Unsupported projection version"):
         read_projection(payload)
 
 

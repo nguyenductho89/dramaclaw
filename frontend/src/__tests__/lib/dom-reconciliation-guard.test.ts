@@ -7,7 +7,7 @@ import {
   resetDomReconciliationGuardForTests,
 } from "@/lib/dom-reconciliation-guard";
 
-// 原生方法引用,用于每个用例后还原 prototype,避免污染其它测试。
+// Native method references, used to restore the prototype after each case and avoid polluting other tests.
 const nativeRemoveChild = Node.prototype.removeChild;
 const nativeInsertBefore = Node.prototype.insertBefore;
 
@@ -23,24 +23,24 @@ describe("installDomReconciliationGuard", () => {
     vi.restoreAllMocks();
   });
 
-  it("不再抛错:翻译器把文本节点搬进 <font> 后,React 删除原节点", () => {
+  it("no longer throws: after the translator moves the text node into <font>, React removes the original node", () => {
     installDomReconciliationGuard();
 
-    // 复现真实场景:<p> 里有一个文本节点,翻译插件把它移进新建的 <font>。
+    // Reproduce the real scenario: <p> has a text node, and the translation extension moves it into a newly created <font>.
     const p = document.createElement("p");
     const text = document.createTextNode("Hello ");
     p.appendChild(text);
 
     const font = document.createElement("font");
-    font.appendChild(text); // text 的 parentNode 从 <p> 变成 <font>
+    font.appendChild(text); // text's parentNode changes from <p> to <font>
 
-    // React 仍以为 text 是 <p> 的子节点,协调时会 p.removeChild(text)。
+    // React still thinks text is a child of <p>, and during reconciliation it will call p.removeChild(text).
     expect(() => p.removeChild(text)).not.toThrow();
-    // 节点没被误删,仍挂在翻译器的 <font> 下。
+    // The node was not removed by mistake, and still hangs under the translator's <font>.
     expect(text.parentNode).toBe(font);
   });
 
-  it("正常删除仍然生效", () => {
+  it("normal removal still works", () => {
     installDomReconciliationGuard();
 
     const parent = document.createElement("div");
@@ -52,19 +52,19 @@ describe("installDomReconciliationGuard", () => {
     expect(parent.childNodes.length).toBe(0);
   });
 
-  it("insertBefore 参照节点父节点错位时退化为追加,不抛错", () => {
+  it("degrades to append, without throwing, when the insertBefore reference node's parent is misplaced", () => {
     installDomReconciliationGuard();
 
     const parent = document.createElement("div");
-    const orphanRef = document.createElement("i"); // 不是 parent 的子节点
+    const orphanRef = document.createElement("i"); // not a child of parent
     const inserted = document.createElement("b");
 
     expect(() => parent.insertBefore(inserted, orphanRef)).not.toThrow();
-    // 退化为 appendChild:新节点仍进入了 parent。
+    // Degrades to appendChild: the new node still enters parent.
     expect(inserted.parentNode).toBe(parent);
   });
 
-  it("insertBefore 正常路径保持原有顺序语义", () => {
+  it("insertBefore keeps the original ordering semantics on the normal path", () => {
     installDomReconciliationGuard();
 
     const parent = document.createElement("div");

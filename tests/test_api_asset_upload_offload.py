@@ -87,12 +87,12 @@ def test_scene_image_archives_do_not_collide_within_one_second(tmp_path, monkeyp
 
 class _CharacterStore:
     def __init__(self) -> None:
-        self.character = NovelCharacter(name="秦")
+        self.character = NovelCharacter(name="Qin")
         self.character.identities = [
             CharacterIdentity(
-                identity_id="秦_少年",
-                character_name="秦",
-                identity_name="少年",
+                identity_id="Qin_teen",
+                character_name="Qin",
+                identity_name="teen",
             )
         ]
         self.touched: list[str] = []
@@ -140,19 +140,19 @@ async def test_identity_attempts_ignore_hidden_staging_files(tmp_path, monkeypat
         )
 
     monkeypatch.setattr(characters, "_resolve_character_project", resolve_project)
-    identities_dir = tmp_path / "assets" / "characters" / "秦" / "identities"
+    identities_dir = tmp_path / "assets" / "characters" / "Qin" / "identities"
     identities_dir.mkdir(parents=True)
     for filename in (
-        "秦_少年_portrait.png",
-        "秦_少年_portrait_20260831.png",
-        ".秦_少年_portrait_deadbeef.png",
+        "Qin_teen_portrait.png",
+        "Qin_teen_portrait_20260831.png",
+        ".Qin_teen_portrait_deadbeef.png",
     ):
         (identities_dir / filename).write_bytes(b"png")
 
     response = await characters.get_identity_attempts(
         project="demo",
-        name="秦",
-        identity_id="秦_少年",
+        name="Qin",
+        identity_id="Qin_teen",
         user={"username": "admin"},
     )
 
@@ -190,7 +190,7 @@ async def test_character_image_upload_encodes_off_event_loop(tmp_path, monkeypat
 
     response = await characters.upload_portrait(
         project="demo",
-        name="秦",
+        name="Qin",
         file=upload,
         user={"username": "admin"},
     )
@@ -198,23 +198,23 @@ async def test_character_image_upload_encodes_off_event_loop(tmp_path, monkeypat
     assert response["ok"] is True
     assert encoder_threads
     assert all(thread_id != event_loop_thread for thread_id in encoder_threads)
-    assert (tmp_path / "assets" / "characters" / "秦" / "portrait.png").exists()
+    assert (tmp_path / "assets" / "characters" / "Qin" / "portrait.png").exists()
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("route_name", "route_kwargs", "expected_metadata"),
     [
-        ("upload_portrait", {}, ("touch", "秦")),
-        ("upload_identity_image", {"identity_name": "少年"}, None),
+        ("upload_portrait", {}, ("touch", "Qin")),
+        ("upload_identity_image", {"identity_name": "teen"}, None),
         (
             "upload_identity_costume",
-            {"identity_id": "秦_少年"},
+            {"identity_id": "Qin_teen"},
             ("identity", "costume_image"),
         ),
         (
             "upload_identity_portrait",
-            {"identity_id": "秦_少年"},
+            {"identity_id": "Qin_teen"},
             ("identity", "portrait_image"),
         ),
     ],
@@ -255,7 +255,7 @@ async def test_cancelled_character_image_upload_finishes_required_metadata(
     task = asyncio.create_task(
         route(
             project="demo",
-            name="秦",
+            name="Qin",
             file=_png_upload(),
             user={"username": "admin"},
             **route_kwargs,
@@ -318,8 +318,8 @@ async def test_identity_costume_delete_waits_for_upload_transaction(
     upload_task = asyncio.create_task(
         characters.upload_identity_costume(
             project="demo",
-            name="秦",
-            identity_id="秦_少年",
+            name="Qin",
+            identity_id="Qin_teen",
             file=_png_upload(),
             user={"username": "admin"},
         )
@@ -328,8 +328,8 @@ async def test_identity_costume_delete_waits_for_upload_transaction(
     delete_task = asyncio.create_task(
         characters.delete_identity_costume(
             project="demo",
-            name="秦",
-            identity_id="秦_少年",
+            name="Qin",
+            identity_id="Qin_teen",
             user={"username": "admin"},
         )
     )
@@ -1612,7 +1612,7 @@ async def test_repeated_cancellation_waits_for_worker_then_finishes_route_metada
     task = asyncio.create_task(
         characters.upload_portrait(
             project="demo",
-            name="秦",
+            name="Qin",
             file=_png_upload(),
             user={"username": "admin"},
         )
@@ -1633,7 +1633,7 @@ async def test_repeated_cancellation_waits_for_worker_then_finishes_route_metada
         await task
 
     assert raised.value.args == ("first-worker-cancel",)
-    assert store.touched == ["秦"]
+    assert store.touched == ["Qin"]
     assert asset_upload_limiter().borrowed_tokens == 0
 
 
@@ -1667,7 +1667,7 @@ async def test_repeated_cancellation_waits_for_route_metadata_finalize(
     task = asyncio.create_task(
         characters.upload_portrait(
             project="demo",
-            name="秦",
+            name="Qin",
             file=_png_upload(),
             user={"username": "admin"},
         )
@@ -1687,7 +1687,7 @@ async def test_repeated_cancellation_waits_for_route_metadata_finalize(
         await task
 
     assert raised.value.args == ("first-finalize-cancel",)
-    assert store.touched == ["秦"]
+    assert store.touched == ["Qin"]
 
 
 @pytest.mark.asyncio

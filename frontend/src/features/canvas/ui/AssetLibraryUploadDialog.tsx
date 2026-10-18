@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 「上传资产」弹窗：左边挑文件，右边选保存位置（必填）和标签（可选）。
+// The "Upload asset" dialog: pick files on the left, choose the save location (required) and tags (optional) on the right.
 //
-// 保存位置 = 文件夹，标签 = 类目，两者独立——同一个文件夹里可以放不同标签的素材，
-// 顶部类目 tab 按标签筛。这里只负责收集参数，真正的上传仍由 AssetLibraryModal
-// 执行（进度条和失败重试都在那边的卡片上）。
+// Save location = folder, tag = category, and the two are independent - one folder can hold materials with different tags,
+// and the top category tab filters by tag. This only collects parameters, and the real upload is still
+// executed by AssetLibraryModal (the progress bar and failure retry are all on the cards over there).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -39,15 +39,15 @@ export interface AssetLibraryUploadPick {
 
 export interface AssetLibraryUploadDialogProps {
   open: boolean;
-  /** 可作为保存位置的文件夹（主线已被调用方剔除）。 */
+  /** Folders usable as the save location (mainline already excluded by the caller). */
   folders: AssetFolder[];
-  /** 打开时默认选中的保存位置，通常是当前正在看的文件夹。 */
+  /** The save location selected by default when opened, usually the folder currently being viewed. */
   defaultFolderKey?: AssetFolderKey | null;
-  /** 标签选项，已按 allowedMedia 过滤。 */
+  /** Tag options, already filtered by allowedMedia. */
   categories: AssetCategoryDef[];
-  /** 调用方允许的媒介，决定 accept 与提示文案。 */
+  /** The media allowed by the caller, deciding accept and the hint text. */
   allowedMedia?: AssetLibraryMedia[];
-  /** 现场新建文件夹，返回新文件夹的 key，弹窗会直接选中它。 */
+  /** Create a folder on the spot, returning the new folder's key, which the dialog selects directly. */
   onCreateFolder: (name: string) => Promise<AssetFolderKey>;
   onSubmit: (
     picks: AssetLibraryUploadPick[],
@@ -105,7 +105,7 @@ export function AssetLibraryUploadDialog({
   );
   const accept = media.map((m) => MEDIA_ACCEPT[m]).join(',');
 
-  // 每次打开都从干净状态起：保存位置带上当前正在看的文件夹，标签留空（不猜）。
+  // Start from a clean state on every open: the save location takes the folder currently being viewed, and the tag is left empty (no guessing).
   useEffect(() => {
     if (!open) return;
     setFolderKey(defaultFolderKey ?? null);
@@ -235,7 +235,7 @@ export function AssetLibraryUploadDialog({
         </div>
 
         <div className="grid grid-cols-1 gap-4 px-5 pb-4 md:grid-cols-[minmax(0,1fr)_260px]">
-          {/* ── 左：选文件 ── */}
+          {/* -- Left: pick files -- */}
           <div
             className={`ui-scrollbar flex h-[260px] min-w-0 flex-col overflow-y-auto rounded-lg border bg-[rgba(var(--bg-rgb)/0.36)] transition-[border-color,background-color] md:h-[340px] ${
               isDragging
@@ -357,7 +357,7 @@ export function AssetLibraryUploadDialog({
             ) : null}
           </div>
 
-          {/* ── 右：保存位置 + 标签 ── */}
+          {/* -- Right: save location + tags -- */}
           <div className="rounded-lg border border-[var(--ui-border-soft)] bg-[rgba(var(--bg-rgb)/0.28)] p-4">
             <h4 className="text-sm font-semibold text-foreground">{t('canvas.assetLibrary.upload.settings')}</h4>
             <p className="mt-1 text-xs text-muted-foreground">

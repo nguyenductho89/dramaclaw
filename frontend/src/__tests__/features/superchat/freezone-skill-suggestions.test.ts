@@ -21,25 +21,25 @@ describe("freezone skill slash suggestions", () => {
     const suggestions = toFreezoneSkillSuggestions([
       {
         id: "poster_design",
-        name: "海报设计",
+        name: "Poster design",
         enabled: true,
         allowed_recipe_ids: ["poster-image"],
         category: "visual",
-        description: "海报视觉风格",
-        triggers: { keywords: ["海报", { keyword: "视觉" }] },
+        description: "Poster visual style",
+        triggers: { keywords: ["poster", { keyword: "visual" }] },
       },
-      { id: "general", enabled: true, description: "没有 Recipe 边界" },
-      { id: "disabled_skill", enabled: false, description: "不展示" },
-      { enabled: true, description: "没有 id" },
+      { id: "general", enabled: true, description: "No Recipe boundary" },
+      { id: "disabled_skill", enabled: false, description: "Not shown" },
+      { enabled: true, description: "No id" },
     ]);
 
     expect(suggestions).toEqual([
       {
         id: "poster_design",
-        label: "海报设计",
+        label: "Poster design",
         category: "visual",
-        description: "海报视觉风格",
-        keywords: ["海报", "视觉"],
+        description: "Poster visual style",
+        keywords: ["poster", "visual"],
       },
     ]);
   });
@@ -50,22 +50,22 @@ describe("freezone skill slash suggestions", () => {
         id: "poster_design",
         allowed_recipe_ids: ["poster-image"],
         category: "visual",
-        description: "海报视觉风格",
-        triggers: { keywords: ["海报"] },
+        description: "Poster visual style",
+        triggers: { keywords: ["poster"] },
       },
       {
         id: "copy_plan",
         allowed_recipe_ids: ["copy-text"],
         category: "text",
-        description: "详情页文案",
-        triggers: { keywords: ["文案"] },
+        description: "Detail page copy",
+        triggers: { keywords: ["copy"] },
       },
     ]);
 
     expect(getFreezoneSkillSlashQuery("/")).toBe("");
-    expect(getFreezoneSkillSlashQuery("请用 /post")).toBe("post");
-    expect(getFreezoneSkillSlashQuery("请用 /post 继续")).toBeNull();
-    expect(filterFreezoneSkillSuggestions(suggestions, "视觉").map((item) => item.id)).toEqual([
+    expect(getFreezoneSkillSlashQuery("use /post")).toBe("post");
+    expect(getFreezoneSkillSlashQuery("use /post continue")).toBeNull();
+    expect(filterFreezoneSkillSuggestions(suggestions, "visual").map((item) => item.id)).toEqual([
       "poster_design",
     ]);
     expect(filterFreezoneSkillSuggestions(suggestions, "text").map((item) => item.id)).toEqual([
@@ -75,47 +75,47 @@ describe("freezone skill slash suggestions", () => {
 
   it("inserts the selected skill as visible prompt text without hidden metadata", () => {
     expect(insertFreezoneSkillMention("/", "poster_design")).toBe("/poster_design ");
-    expect(insertFreezoneSkillMention("帮我 /post", "poster_design")).toBe("帮我 /poster_design ");
-    expect(insertFreezoneSkillMention("第一行\n/post", "poster_design")).toBe("第一行\n/poster_design ");
-    expect(insertFreezoneSkillMention("帮我做", "poster_design")).toBe("帮我做 /poster_design ");
+    expect(insertFreezoneSkillMention("help me /post", "poster_design")).toBe("help me /poster_design ");
+    expect(insertFreezoneSkillMention("first line\n/post", "poster_design")).toBe("first line\n/poster_design ");
+    expect(insertFreezoneSkillMention("help me make", "poster_design")).toBe("help me make /poster_design ");
   });
 
   it("finds a completed skill mention wherever slash suggestions can be used", () => {
-    expect(findFreezoneSkillMention("/poster_design 做一张海报")).toMatchObject({
+    expect(findFreezoneSkillMention("/poster_design make a poster")).toMatchObject({
       skillId: "poster_design",
       start: 0,
       end: 14,
     });
-    expect(findFreezoneSkillMention("帮我 /poster_design 做一张海报")).toMatchObject({
+    expect(findFreezoneSkillMention("help me /poster_design make a poster")).toMatchObject({
       skillId: "poster_design",
-      start: 3,
-      end: 17,
+      start: 8,
+      end: 22,
     });
-    expect(findFreezoneSkillMention("第一行\n/poster_design 做一张海报")).toMatchObject({
+    expect(findFreezoneSkillMention("first line\n/poster_design make a poster")).toMatchObject({
       skillId: "poster_design",
-      start: 4,
-      end: 18,
+      start: 11,
+      end: 25,
     });
     expect(findFreezoneSkillMention("https://example.com/poster_design")).toBeNull();
   });
 
   it("removes a selected skill mention without leaving doubled spacing", () => {
-    const mention = findFreezoneSkillMention("帮我 /poster_design 做一张海报");
-    expect(removeFreezoneSkillMention("帮我 /poster_design 做一张海报", mention)).toBe("帮我 做一张海报");
-    expect(removeFreezoneSkillMention("/poster_design 做一张海报", findFreezoneSkillMention("/poster_design 做一张海报"))).toBe(
-      "做一张海报",
+    const mention = findFreezoneSkillMention("help me /poster_design make a poster");
+    expect(removeFreezoneSkillMention("help me /poster_design make a poster", mention)).toBe("help me make a poster");
+    expect(removeFreezoneSkillMention("/poster_design make a poster", findFreezoneSkillMention("/poster_design make a poster"))).toBe(
+      "make a poster",
     );
   });
 
   it("splits sent message text into normal text and skill mention parts", () => {
-    expect(splitFreezoneSkillMentionText("/poster_design 做一张海报")).toEqual([
+    expect(splitFreezoneSkillMentionText("/poster_design make a poster")).toEqual([
       { type: "skill", skillId: "poster_design" },
-      { type: "text", text: " 做一张海报" },
+      { type: "text", text: " make a poster" },
     ]);
-    expect(splitFreezoneSkillMentionText("帮我 /poster_design 做一张海报 /copy_plan")).toEqual([
-      { type: "text", text: "帮我 " },
+    expect(splitFreezoneSkillMentionText("help me /poster_design make a poster /copy_plan")).toEqual([
+      { type: "text", text: "help me " },
       { type: "skill", skillId: "poster_design" },
-      { type: "text", text: " 做一张海报 " },
+      { type: "text", text: " make a poster " },
       { type: "skill", skillId: "copy_plan" },
     ]);
   });
@@ -163,10 +163,10 @@ describe("freezone skill slash suggestions", () => {
       "create-with-agent",
     ]);
     expect(insertFreezoneSkillEmptyActionPrompt("/", FREEZONE_SKILL_EMPTY_ACTIONS[0].prompt)).toBe(
-      "把当前画布总结成一个可复用 Skill",
+      "Summarize the current canvas into a reusable Skill",
     );
-    expect(insertFreezoneSkillEmptyActionPrompt("我想 /skill", FREEZONE_SKILL_EMPTY_ACTIONS[1].prompt)).toBe(
-      "我想 帮我创建一个 Skill：",
+    expect(insertFreezoneSkillEmptyActionPrompt("Please /skill", FREEZONE_SKILL_EMPTY_ACTIONS[1].prompt)).toBe(
+      "Please Help me create a Skill:",
     );
   });
 });

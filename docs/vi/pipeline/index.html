@@ -197,7 +197,7 @@ const STEPS = [
  {id:"identity_plan", stage:2, name:"Lập identity", kind:"task", task:"identity_planner",
   one:"Quyết định nhân vật xuất hiện với ngoại hình nào trong từng tập; chạy riêng cho mỗi tập, trước khi viết kịch bản.",
   in:["chars","eps"], soft:[], out:["idents"],
-  steps:["Pass 0: đọc nội dung tập, lọc trong số nhân vật đã biết ai thực sự xuất hiện (1 lời gọi LLM, có alias/称谓 từ SQLite hoặc graph)","Pass A: với dàn đã lọc, xác định identity mặc định (visual_state, age_group) cho từng người, resolve hoặc tạo mới","Pass B: xác định thêm identity đặc biệt (cải trang, hồi tưởng, đổi tuổi...) ngoài mặc định, rồi ghi identity_ids vào tập"],
+  steps:["Pass 0: đọc nội dung tập, lọc trong số nhân vật đã biết ai thực sự xuất hiện (1 lời gọi LLM, có alias/danh xưng từ SQLite hoặc graph)","Pass A: với dàn đã lọc, xác định identity mặc định (visual_state, age_group) cho từng người, resolve hoặc tạo mới","Pass B: xác định thêm identity đặc biệt (cải trang, hồi tưởng, đổi tuổi...) ngoài mặc định, rồi ghi identity_ids vào tập"],
   need:"Có nhân vật và không có build_characters đang chạy. Tập chưa có nội dung thì bỏ qua êm, không lỗi.", done:"Tập có identity_ids.",
   api:"POST /projects/{p}/episodes/{n}/identities/plan", mcp:"dramaclaw_plan_identities",
   warn:"Pass 0 không lọc ra ai thì dừng cả bước, không tạo identity nào, để tránh làm hỏng identity đã có."},

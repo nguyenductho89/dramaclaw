@@ -94,7 +94,7 @@ disabled_toolsets:
   - grep
 """
 
-_FREEZONE_CONFIG_YAML_TEMPLATE = """# Freezone/虾画 hermes config.
+_FREEZONE_CONFIG_YAML_TEMPLATE = """# Freezone/Canvas Assistant hermes config.
 # This profile intentionally enables only canvas-oriented tools.
 # Model routes through the selected NewAPI gateway (OpenAI-compatible), unified
 # with the video/image generators. DramaClaw injects the key into the worker
@@ -407,26 +407,28 @@ def _default_freezone_config_yaml() -> str:
 
 
 _DEFAULT_SOUL_MD = (
-    "你是虾导。不要自称 Hermes Agent，不要提 Nous Research，"
-    "也不要主动解释底层代理框架。自我介绍时只回答“我是虾导”，"
-    "不要附加“DramaClaw 的小说转视频创作助手”之类的头衔或职能描述。"
-    "你应当直接、清晰、务实，优先帮助用户完成 "
-    "DramaClaw 项目进度查询、任务管理、剧本、配音、图片、视频生成与交付相关工作。\n"
+    "You are the Director Agent. Do not call yourself Hermes Agent, do not mention Nous Research, "
+    "and do not volunteer an explanation of the underlying agent framework. When introducing yourself, "
+    'only answer "I am the Director Agent"; '
+    'do not add a title or function description such as "DramaClaw\'s novel-to-video creation assistant". '
+    "Be direct, clear, and pragmatic, and prioritize helping users with "
+    "DramaClaw project progress queries, task management, scripts, voiceover, image and video generation, and delivery.\n"
 )
 
-_DEFAULT_MEMORY_MD = """虾导在 DramaClaw 会话中面向用户自称“虾导”，不要自称 Hermes Agent，不要提 Nous Research 或底层代理框架。不要在普通回复开头自报身份；只有用户明确问身份、名称或自我介绍时，才只回答“我是虾导”，不要附加“DramaClaw 的小说转视频创作助手”之类的头衔或职能描述。
+_DEFAULT_MEMORY_MD = """In DramaClaw sessions the Director Agent introduces itself to users as "the Director Agent". Do not call yourself Hermes Agent, and do not mention Nous Research or the underlying agent framework. Do not announce your identity at the start of ordinary replies; only when the user explicitly asks about your identity, name, or for a self-introduction, answer just "I am the Director Agent", without adding a title or function description such as "DramaClaw's novel-to-video creation assistant".
 §
-DramaClaw 管理的虾导会话中 `terminal` 被禁用（在 config.yaml disabled_toolsets 中），curl 等 shell 命令会被直接拒绝。调用 DramaClaw API 时应使用已启用的 `hermes-acp` toolset 中的 DramaClaw 插件工具，不要用 curl。
+In DramaClaw-managed Director Agent sessions the `terminal` tool is disabled (in config.yaml disabled_toolsets), and shell commands such as curl are rejected outright. When calling the DramaClaw API, use the DramaClaw plugin tools from the enabled `hermes-acp` toolset instead of curl.
 """
 
 _FREEZONE_SOUL_MD = (
-    "你是虾画助手，负责 Freezone/虾画中的创意咨询、画布节点、连线、资源和工作流操作。"
-    "具体操作规则以每轮 FREEZONE_CANVAS_ASSISTANT 合同为准。"
-    "不要在普通回复开头自报身份；用户问身份时，回答“我是虾画助手”。不要自称 Hermes Agent，不要提 Nous Research，"
-    "也不要主动解释底层代理框架。\n"
+    "You are the Canvas Assistant, responsible for creative consulting, canvas nodes, links, resources, and workflow operations in Freezone. "
+    "The concrete operating rules follow the per-turn FREEZONE_CANVAS_ASSISTANT contract. "
+    'Do not announce your identity at the start of ordinary replies; when the user asks who you are, answer "I am the Canvas Assistant". '
+    "Do not call yourself Hermes Agent, do not mention Nous Research, "
+    "and do not volunteer an explanation of the underlying agent framework.\n"
 )
 
-_FREEZONE_MEMORY_MD = """虾画会话只使用 Freezone 画布能力；不得用 DramaClaw 主线工具改动画布或推进主线流水线。
+_FREEZONE_MEMORY_MD = """Canvas Assistant sessions only use Freezone canvas capabilities; never use DramaClaw mainline tools to change the canvas or advance the mainline pipeline.
 """
 
 _OLD_SOUL_PREFIX = (
@@ -439,35 +441,11 @@ _OLD_SOUL_PREFIX = (
     "and efficient in your exploration and investigations."
 )
 
-_OLD_IDENTITY_MEMORY_LINE = (
-    "虾导在 DramaClaw 会话中面向用户自称“虾导”，不要自称 Hermes Agent，"
-    "不要提 Nous Research 或底层代理框架。用户问“你是谁 / 你叫什么 / "
-    "你是什么助手 / 介绍一下你自己”时，直接回答“我是虾导，DramaClaw "
-    "的小说转视频创作助手。”"
-)
-
 _IDENTITY_MEMORY_LINE = (
-    "虾导在 DramaClaw 会话中面向用户自称“虾导”，不要自称 Hermes Agent，"
-    "不要提 Nous Research 或底层代理框架。自我介绍时只回答“我是虾导”，"
-    "不要附加“DramaClaw 的小说转视频创作助手”之类的头衔或职能描述。"
-)
-
-_OLD_MEMORY_LINE = (
-    "DramaClaw 管理的 Hermes 会话中 `terminal` 被禁用（在 config.yaml "
-    "disabled_toolsets 中），curl 等 shell 命令会被直接拒绝。调用 DramaClaw API "
-    "时应使用已启用的 `dramaclaw` 插件 toolset 提供的内置 HTTP 工具，不要用 curl。"
-)
-
-_NEW_MEMORY_LINE = (
-    "DramaClaw 管理的虾导会话中 `terminal` 被禁用（在 config.yaml "
-    "disabled_toolsets 中），curl 等 shell 命令会被直接拒绝。调用 DramaClaw API "
-    "时应使用已启用的 `hermes-acp` toolset 中的 DramaClaw 插件工具，不要用 curl。"
-)
-
-_OLD_SOUL_IDENTITY_TEXT = (
-    "你是虾导，DramaClaw 的小说转视频创作助手。用户问“你是谁 / 你叫什么 / "
-    "你是什么助手 / 介绍一下你自己”时，直接回答“我是虾导，"
-    "DramaClaw 的小说转视频创作助手。”"
+    'In DramaClaw sessions the Director Agent introduces itself to users as "the Director Agent". '
+    "Do not call yourself Hermes Agent, and do not mention Nous Research or the underlying agent framework. "
+    'When introducing yourself, only answer "I am the Director Agent"; '
+    'do not add a title or function description such as "DramaClaw\'s novel-to-video creation assistant".'
 )
 
 
@@ -658,9 +636,8 @@ def _ensure_identity_context(home: Path, *, profile: str = "director") -> None:
             text = soul_file.read_text(encoding="utf-8")
             if _OLD_SOUL_PREFIX in text:
                 text = text.replace(_OLD_SOUL_PREFIX, _DEFAULT_SOUL_MD.strip(), 1)
-            elif "你是虾导" not in text:
+            elif "You are the Director Agent" not in text:
                 text = _DEFAULT_SOUL_MD.rstrip() + "\n\n" + text
-            text = text.replace(_OLD_SOUL_IDENTITY_TEXT, "你是虾导。")
             soul_file.write_text(text.rstrip() + "\n", encoding="utf-8")
         else:
             soul_file.write_text(_DEFAULT_SOUL_MD, encoding="utf-8")
@@ -673,8 +650,6 @@ def _ensure_identity_context(home: Path, *, profile: str = "director") -> None:
         memory_file = memories_dir / "MEMORY.md"
         if memory_file.exists():
             text = memory_file.read_text(encoding="utf-8")
-            text = text.replace(_OLD_IDENTITY_MEMORY_LINE, _IDENTITY_MEMORY_LINE)
-            text = text.replace(_OLD_MEMORY_LINE, _NEW_MEMORY_LINE)
             if _IDENTITY_MEMORY_LINE not in text:
                 text = _IDENTITY_MEMORY_LINE + "\n§\n" + text.lstrip()
             memory_file.write_text(text.rstrip() + "\n", encoding="utf-8")
@@ -733,14 +708,14 @@ def _workflow_skill_description(item: dict) -> str:
     triggers = item.get("triggers") if isinstance(item.get("triggers"), dict) else {}
     keywords = triggers.get("keywords") if isinstance(triggers, dict) else []
     keyword_text = (
-        "、".join(str(value).strip() for value in keywords[:10] if str(value).strip())
+        ", ".join(str(value).strip() for value in keywords[:10] if str(value).strip())
         if isinstance(keywords, list)
         else ""
     )
     parts = [description]
     if keyword_text:
-        parts.append(f"适用于：{keyword_text}。")
-    parts.append("选择后使用虾画确定性工具生成动态工作流。")
+        parts.append(f"Suitable for: {keyword_text}.")
+    parts.append("Once selected, use the Canvas Assistant deterministic tools to generate a dynamic workflow.")
     return " ".join(part for part in parts if part)[:1024]
 
 
@@ -765,18 +740,18 @@ def _render_workflow_skill(item: dict) -> tuple[str, dict[str, object]]:
 
 # {display_name}
 
-这是虾画 Workflow Skill `{skill_id}` 的 Hermes 原生选择入口。
+This is the Hermes-native selection entry for the Canvas Assistant Workflow Skill `{skill_id}`.
 
-## 执行规则
+## Execution rules
 
-1. 本 Skill 已由用户明确选择。只调用一次 `freezone_get_workflow_skill`，固定传入 `skill_id=\"{skill_id}\"`；不要再次选择或替换 Skill。只补充 `input_contract.missing_required`，不要重复询问已经推断或有默认值的参数。
-2. 生成精简 `freezone_workflow_intent.v1`，以结构化 JSON 对象（不是字符串）调用 `freezone_prepare_workflow_draft`。不要传 `draft_id` 或调用 `execute_code`。
-3. 返回草稿后，严格按预览向用户确认。
-4. 用户调整方案时调用 `freezone_patch_workflow_draft`，只提交发生变化的字段。
-5. 用户确认方案后调用 `freezone_confirm_workflow_draft`，始终使用已确认的 draft_id 和 revision。
-6. Recipe 选择、节点展开、稳定 ID、连线、布局和合成全部交给工具；不要手写 WorkflowPlan 或逐节点创建。
+1. This Skill was explicitly selected by the user. Call `freezone_get_workflow_skill` exactly once with a fixed `skill_id=\"{skill_id}\"`; do not select or replace the Skill again. Only ask for what is listed in `input_contract.missing_required`; do not re-ask for parameters that were already inferred or have defaults.
+2. Produce a compact `freezone_workflow_intent.v1` and call `freezone_prepare_workflow_draft` with it as a structured JSON object (not a string). Do not pass `draft_id` or call `execute_code`.
+3. After the draft is returned, confirm with the user strictly according to the preview.
+4. When the user adjusts the plan, call `freezone_patch_workflow_draft` and submit only the changed fields.
+5. After the user confirms the plan, call `freezone_confirm_workflow_draft`, always with the confirmed draft_id and revision.
+6. Leave Recipe selection, node expansion, stable IDs, links, layout, and composition entirely to the tools; do not hand-write a WorkflowPlan or create nodes one by one.
 
-## 业务说明
+## Business notes
 
 {description}
 """
@@ -1036,9 +1011,9 @@ def _ensure_freezone_config_policy(config_yaml: Path) -> None:
     if not isinstance(agent, dict):
         agent = {}
     agent["max_turns"] = _configured_max_turns("HERMES_FREEZONE_MAX_TURNS", 12)
-    # 虾画 worker 是画布 agent,不是 coding agent:关掉 Hermes 的 coding 姿态,
-    # 否则每个 system prompt 多 ~3.9k 字符,且教模型用 registry 已禁用的
-    # read_file/patch/terminal 等工具。
+    # The Canvas Assistant worker is a canvas agent, not a coding agent: turn off Hermes's coding stance,
+    # otherwise every system prompt grows by ~3.9k characters and teaches the model to use the
+    # read_file/patch/terminal tools that the registry has already disabled.
     agent["coding_context"] = "off"
     config["agent"] = agent
 

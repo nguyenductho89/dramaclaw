@@ -50,18 +50,18 @@ class _M03Store:
         self.project_dir = str(project_dir)
         self.episode = NovelEpisode(
             number=1,
-            title="第一集",
-            raw_content="第一章 启程\n秦王入宫。",
+            title="Episode One",
+            raw_content="Chapter 1 Departure\nThe King of Qin enters the palace.",
             beat_source_text="",
-            content_summary="旧摘要",
+            content_summary="old summary",
             identity_ids=[],
-            key_events=["入宫"],
-            character_names=["秦"],
+            key_events=["Enter palace"],
+            character_names=["Qin"],
         )
         self.episode.scene_menu = [{"scene_id": "palace", "base_scene_id": "palace"}]
         self.episode.prop_menu = [{"prop_id": "jade", "prop_type": "object"}]
         self.beats: list[dict] = []
-        self.novel_text = "第一章 启程\n秦王入宫。\n第二章 风起\n宫门起风。"
+        self.novel_text = "Chapter 1 Departure\nThe King of Qin enters the palace.\nChapter 2 Rising Wind\nWind rises at the palace gate."
 
     def get_all_episodes(self):
         return [self.episode]
@@ -90,7 +90,7 @@ class _M03Store:
     async def save_episode_content(self, episode_num: int, content: str):
         episode = self.get_episode(episode_num)
         if episode is None:
-            raise ValueError(f"剧集 {episode_num} 不存在")
+            raise ValueError(f"Episode {episode_num} does not exist")
         episode.raw_content = content
 
     async def load_adapted_content(self, episode_num: int):
@@ -100,7 +100,7 @@ class _M03Store:
     async def save_adapted_content(self, episode_num: int, content: str):
         episode = self.get_episode(episode_num)
         if episode is None:
-            raise ValueError(f"剧集 {episode_num} 不存在")
+            raise ValueError(f"Episode {episode_num} does not exist")
         episode.adapted_content = content
 
     async def load_graph_state(self):
@@ -199,7 +199,7 @@ def m03_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("ST_CONTROL_PLANE_DSN", raising=False)
     monkeypatch.setenv("ST_EDITION", "ce")
     monkeypatch.setenv("ST_LOCAL_USERNAME", "alice")
-    (tmp_path / "novel.txt").write_text("测试原文", encoding="utf-8")
+    (tmp_path / "novel.txt").write_text("test source text", encoding="utf-8")
 
     from novelvideo.api import auth as api_auth
     from novelvideo.api import deps
@@ -262,7 +262,7 @@ def m03_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(content, "get_usage_meter", NoOpUsageMeter)
 
     async def fake_rewrite_episode_content(*args, **kwargs):
-        return "改写第一行\n改写第二行"
+        return "Rewritten line one\nRewritten line two"
 
     async def fake_seedance2_prompt_for_panel(**kwargs):
         from novelvideo.seedance2_i2v.models import dump_seedance2_config
@@ -323,40 +323,40 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
     updated = client.patch(
         "/api/v1/projects/demo/episodes/1",
-        json={"summary": "新摘要", "identity_ids": ["秦_青年"]},
+        json={"summary": "new summary", "identity_ids": ["Qin_young_adult"]},
     )
     assert updated.status_code == 200
-    assert updated.json()["data"]["summary"] == "新摘要"
-    assert updated.json()["data"]["identity_ids"] == ["秦_青年"]
+    assert updated.json()["data"]["summary"] == "new summary"
+    assert updated.json()["data"]["identity_ids"] == ["Qin_young_adult"]
 
     raw_saved = client.put(
         "/api/v1/projects/demo/episodes/1/raw-content",
-        json={"content": "原文一\n原文二"},
+        json={"content": "Source one\nSource two"},
     )
     assert raw_saved.status_code == 200
-    assert raw_saved.json()["data"]["length"] == 7
+    assert raw_saved.json()["data"]["length"] == 21
 
     raw_loaded = client.get("/api/v1/projects/demo/episodes/1/raw-content")
     assert raw_loaded.status_code == 200
-    assert raw_loaded.json()["data"] == {"episode": 1, "content": "原文一\n原文二"}
+    assert raw_loaded.json()["data"] == {"episode": 1, "content": "Source one\nSource two"}
 
     adapted_saved = client.put(
         "/api/v1/projects/demo/episodes/1/adapted-content",
-        json={"content": "改写稿"},
+        json={"content": "Rewritten draft"},
     )
     assert adapted_saved.status_code == 200
-    assert adapted_saved.json()["data"]["length"] == 3
+    assert adapted_saved.json()["data"]["length"] == 15
 
     adapted_loaded = client.get("/api/v1/projects/demo/episodes/1/adapted-content")
     assert adapted_loaded.status_code == 200
-    assert adapted_loaded.json()["data"]["content"] == "改写稿"
+    assert adapted_loaded.json()["data"]["content"] == "Rewritten draft"
 
     adapted_missing = client.put(
         "/api/v1/projects/demo/episodes/99/adapted-content",
         json={"content": "missing"},
     )
     assert adapted_missing.status_code == 400
-    assert "不存在" in adapted_missing.json()["detail"]
+    assert "does not exist" in adapted_missing.json()["detail"]
 
     adapted_deleted = client.delete("/api/v1/projects/demo/episodes/1/adapted-content")
     assert adapted_deleted.status_code == 200
@@ -366,11 +366,11 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
     rewrite_empty = client.post("/api/v1/projects/demo/episodes/1/rewrite/generate", json={})
     assert rewrite_empty.status_code == 200
     assert rewrite_empty.json()["ok"] is False
-    store.episode.raw_content = "原文一"
+    store.episode.raw_content = "Source one"
     rewrite = client.post("/api/v1/projects/demo/episodes/1/rewrite/generate", json={})
     assert rewrite.status_code == 200
-    assert rewrite.json()["data"]["adapted_content"] == "改写第一行\n改写第二行"
-    assert store.episode.beat_source_text == "改写第一行\n改写第二行"
+    assert rewrite.json()["data"]["adapted_content"] == "Rewritten line one\nRewritten line two"
+    assert store.episode.beat_source_text == "Rewritten line one\nRewritten line two"
 
     missing_script = client.get("/api/v1/projects/demo/episodes/1/script")
     assert missing_script.status_code == 200
@@ -381,7 +381,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
     assert blocked.status_code == 200
     assert blocked.json()["code"] == "identity_plan_required"
 
-    store.episode.identity_ids = ["秦_青年"]
+    store.episode.identity_ids = ["Qin_young_adult"]
     generated = client.post("/api/v1/projects/demo/episodes/1/script/generate", json={})
     assert generated.status_code == 200
     assert generated.json()["task_type"] == "script_writer"
@@ -393,14 +393,14 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
             "beats": [
                 {
                     "beat_number": 1,
-                    "narration_segment": "旁白一",
-                    "visual_description": "画面一",
+                    "narration_segment": "Narration one",
+                    "visual_description": "Scene one",
                     "video_mode": "first_frame",
                 },
                 {
                     "beat_number": 2,
-                    "narration_segment": "旁白二",
-                    "visual_description": "画面二",
+                    "narration_segment": "Narration two",
+                    "visual_description": "Scene two",
                     "video_mode": "first_frame",
                 },
             ]
@@ -411,7 +411,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
     script = client.get("/api/v1/projects/demo/episodes/1/script")
     assert script.status_code == 200
-    assert script.json()["data"]["beats"][0]["narration_segment"] == "旁白一"
+    assert script.json()["data"]["beats"][0]["narration_segment"] == "Narration one"
 
     beats = client.get("/api/v1/projects/demo/episodes/1/beats")
     assert beats.status_code == 200
@@ -420,10 +420,10 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
     patched = client.patch(
         "/api/v1/projects/demo/episodes/1/beats/1",
-        json={"visual_description": "更新画面", "audio_type": "dialogue", "speaker": "秦"},
+        json={"visual_description": "Updated frame", "audio_type": "dialogue", "speaker": "Qin"},
     )
     assert patched.status_code == 200
-    assert patched.json()["data"]["visual_description"] == "更新画面"
+    assert patched.json()["data"]["visual_description"] == "Updated frame"
 
     missing_beat = client.patch(
         "/api/v1/projects/demo/episodes/1/beats/404",
@@ -447,7 +447,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
     seedance = client.post(
         "/api/v1/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
-        json={"prompt_guidance": "更紧张"},
+        json={"prompt_guidance": "More tense"},
     )
     assert seedance.status_code == 200
     assert seedance.json()["data"]["final_prompt"] == "seedance final prompt"
@@ -455,7 +455,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
     manual = client.post(
         "/api/v1/projects/demo/episodes/1/beats/insert-manual",
-        json={"after_beat_number": 1, "visual_description": "手工镜头"},
+        json={"after_beat_number": 1, "visual_description": "Manual shot"},
     )
     assert manual.status_code == 200
     assert manual.json()["data"]["is_manual_shot"] is True
@@ -470,10 +470,10 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
 
 def test_m03_routes_return_no_5xx_for_representative_requests(m03_client):
     client, store = m03_client
-    store.episode.identity_ids = ["秦_青年"]
+    store.episode.identity_ids = ["Qin_young_adult"]
     client.put(
         "/api/v1/projects/demo/episodes/1/script",
-        json={"beats": [{"beat_number": 1, "visual_description": "画面"}]},
+        json={"beats": [{"beat_number": 1, "visual_description": "Frame"}]},
     )
 
     probes = [
@@ -481,9 +481,9 @@ def test_m03_routes_return_no_5xx_for_representative_requests(m03_client):
         ("GET", "/api/v1/projects/demo/episodes", None),
         ("POST", "/api/v1/projects/demo/episodes/plan", {"target_episodes": 1}),
         ("GET", "/api/v1/projects/demo/episodes/1", None),
-        ("PATCH", "/api/v1/projects/demo/episodes/1", {"summary": "摘要"}),
+        ("PATCH", "/api/v1/projects/demo/episodes/1", {"summary": "summary"}),
         ("GET", "/api/v1/projects/demo/episodes/1/beats", None),
-        ("POST", "/api/v1/projects/demo/episodes/1/beats/insert-manual", {"visual_description": "手工"}),
+        ("POST", "/api/v1/projects/demo/episodes/1/beats/insert-manual", {"visual_description": "Manual"}),
         ("DELETE", "/api/v1/projects/demo/episodes/1/beats/404/manual-shot", None),
         ("GET", "/api/v1/projects/demo/episodes/1/script", None),
         ("POST", "/api/v1/projects/demo/episodes/1/script/generate", {}),
@@ -492,9 +492,9 @@ def test_m03_routes_return_no_5xx_for_representative_requests(m03_client):
         ("POST", "/api/v1/projects/demo/episodes/1/beats/1/seedance2-prompt/generate", {}),
         ("PUT", "/api/v1/projects/demo/episodes/1/script", {"beats": []}),
         ("GET", "/api/v1/projects/demo/episodes/1/raw-content", None),
-        ("PUT", "/api/v1/projects/demo/episodes/1/raw-content", {"content": "原文"}),
+        ("PUT", "/api/v1/projects/demo/episodes/1/raw-content", {"content": "raw text"}),
         ("GET", "/api/v1/projects/demo/episodes/1/adapted-content", None),
-        ("PUT", "/api/v1/projects/demo/episodes/1/adapted-content", {"content": "改写"}),
+        ("PUT", "/api/v1/projects/demo/episodes/1/adapted-content", {"content": "Rewrite"}),
         ("DELETE", "/api/v1/projects/demo/episodes/1/adapted-content", None),
         ("POST", "/api/v1/projects/demo/episodes/1/rewrite/generate", {}),
     ]

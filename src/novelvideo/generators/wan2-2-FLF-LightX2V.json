@@ -9,12 +9,12 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码器 (正向)"
+      "title": "CLIP Text Encode (Positive)"
     }
   },
   "7": {
     "inputs": {
-      "text": "色调艳丽，过曝，静态，场景切换,细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "text": "vivid tones, overexposed, static, scene cut, blurry details, subtitles, style, artwork, painting, picture, still, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, motionless frame, cluttered background, three legs, many people in the background, walking backward",
       "clip": [
         "38",
         0
@@ -22,7 +22,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码器 (负向)"
+      "title": "CLIP Text Encode (Negative)"
     }
   },
   "8": {
@@ -38,7 +38,7 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAE解码"
+      "title": "VAE Decode"
     }
   },
   "38": {
@@ -49,7 +49,7 @@
     },
     "class_type": "CLIPLoader",
     "_meta": {
-      "title": "CLIP加载器"
+      "title": "Load CLIP"
     }
   },
   "39": {
@@ -58,7 +58,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "VAE加载器"
+      "title": "Load VAE"
     }
   },
   "54": {
@@ -71,7 +71,7 @@
     },
     "class_type": "ModelSamplingSD3",
     "_meta": {
-      "title": "模型采样算法SD3 (高噪声)"
+      "title": "Model Sampling SD3 (High Noise)"
     }
   },
   "55": {
@@ -84,7 +84,7 @@
     },
     "class_type": "ModelSamplingSD3",
     "_meta": {
-      "title": "模型采样算法SD3 (低噪声)"
+      "title": "Model Sampling SD3 (Low Noise)"
     }
   },
   "56": {
@@ -94,7 +94,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "UNET加载器 (低噪声)"
+      "title": "Load UNET (Low Noise)"
     }
   },
   "57": {
@@ -127,7 +127,7 @@
     },
     "class_type": "KSamplerAdvanced",
     "_meta": {
-      "title": "K采样器(高级) - 高噪声"
+      "title": "KSampler (Advanced) - High Noise"
     }
   },
   "58": {
@@ -160,7 +160,7 @@
     },
     "class_type": "KSamplerAdvanced",
     "_meta": {
-      "title": "K采样器(高级) - 低噪声"
+      "title": "KSampler (Advanced) - Low Noise"
     }
   },
   "63": {
@@ -174,7 +174,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "67": {
@@ -196,7 +196,7 @@
     },
     "class_type": "VHS_VideoCombine",
     "_meta": {
-      "title": "合并为视频"
+      "title": "Create Video"
     }
   },
   "68": {
@@ -210,7 +210,7 @@
     },
     "class_type": "PathchSageAttentionKJ",
     "_meta": {
-      "title": "Patch Sage Attention KJ (低噪声)"
+      "title": "Patch Sage Attention KJ (Low Noise)"
     }
   },
   "69": {
@@ -252,7 +252,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "UNET加载器 (高噪声)"
+      "title": "Load UNET (High Noise)"
     }
   },
   "72": {
@@ -266,7 +266,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "74": {
@@ -280,7 +280,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "93": {
@@ -306,7 +306,7 @@
     },
     "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "缩放首帧图像"
+      "title": "Scale First Frame Image"
     }
   },
   "108": {
@@ -315,7 +315,7 @@
     },
     "class_type": "CLIPVisionLoader",
     "_meta": {
-      "title": "CLIP视觉加载器"
+      "title": "Load CLIP Vision"
     }
   },
   "112": {
@@ -324,7 +324,7 @@
     },
     "class_type": "INTConstant",
     "_meta": {
-      "title": "宽度"
+      "title": "Width"
     }
   },
   "114": {
@@ -333,7 +333,7 @@
     },
     "class_type": "INTConstant",
     "_meta": {
-      "title": "高度"
+      "title": "Height"
     }
   },
   "119": {
@@ -342,7 +342,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "加载首帧"
+      "title": "Load First Frame"
     }
   },
   "122": {
@@ -405,7 +405,7 @@
     },
     "class_type": "CLIPVisionEncode",
     "_meta": {
-      "title": "CLIP视觉编码 (首帧)"
+      "title": "CLIP Vision Encode (First Frame)"
     }
   },
   "124": {
@@ -422,7 +422,7 @@
     },
     "class_type": "CLIPVisionEncode",
     "_meta": {
-      "title": "CLIP视觉编码 (尾帧)"
+      "title": "CLIP Vision Encode (Last Frame)"
     }
   },
   "125": {
@@ -431,7 +431,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "加载尾帧"
+      "title": "Load Last Frame"
     }
   },
   "126": {
@@ -457,7 +457,7 @@
     },
     "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "缩放尾帧图像"
+      "title": "Scale Last Frame Image"
     }
   },
   "129": {
@@ -471,7 +471,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   }
 }

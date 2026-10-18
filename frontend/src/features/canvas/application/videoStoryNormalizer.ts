@@ -17,25 +17,25 @@ import type { VideoStoryRow } from '@/features/canvas/domain/canvasNodes';
 // motion_prompt / keyframes (array of 1-based indices into the chronologically
 // sorted frame_urls).
 
-// 下面两张别名表里的中文不是界面文案，是模型/后端返回的列名字面量，
-// 用来把返回字段对上前端字段，翻译过去就对不上了。
+// The two alias tables below are column-name literals returned by the model/backend (English only),
+// used to match returned fields to frontend fields.
 // i18n-exempt-start
 const FIELD_ALIASES: Record<Exclude<keyof VideoStoryRow, 'raw' | 'keyframeUrl'>, string[]> = {
-  shotNumber: ['shot', 'shotNumber', 'shot_number', 'shot_no', 'shot_index', 'index', 'number', '镜号', '序号'],
-  startTime: ['startTime', 'start_time', 'start', '开始时间'],
-  endTime: ['endTime', 'end_time', 'end', '结束时间'],
-  duration: ['duration', 'duration_sec', '时长'],
-  visualDescription: ['visualDescription', 'visual_description', 'visual', 'description', '画面描述', '镜头描述'],
-  narrative: ['narrative', 'narration', 'story', '叙事内容', '叙事'],
-  shotSize: ['shotSize', 'shot_size', 'shot_scale', 'scale', '景别'],
-  cameraAngle: ['cameraAngle', 'camera_angle', 'angle', '摄影机角度', '镜头角度'],
-  cameraMovement: ['cameraMovement', 'camera_movement', 'movement', '摄影机运动', '运镜'],
-  focalAndDof: ['focalAndDof', 'focal_and_dof', 'focal_dof', 'focus_depth', 'focus', 'depth_of_field', 'dof', '焦距与景深', '焦距景深', '景深'],
-  lighting: ['lighting', 'light', '光线', '光影'],
-  backgroundMusic: ['backgroundMusic', 'background_music', 'bgm', 'music', '背景音乐'],
-  voiceAndSfx: ['voiceAndSfx', 'voice_and_sfx', 'voice_sfx', 'voice_sound', 'voice', 'sfx', '人声/音效', '人声音效', '音效'],
-  imagePrompt: ['imagePrompt', 'image_prompt', 'image_gen_prompt', '图像生成提示词', '图像提示词'],
-  videoMotionPrompt: ['videoMotionPrompt', 'video_motion_prompt', 'motion_prompt', 'motionPrompt', '视频运动提示词', '视频动作提示词'],
+  shotNumber: ['shot', 'shotNumber', 'shot_number', 'shot_no', 'shot_index', 'index', 'number'],
+  startTime: ['startTime', 'start_time', 'start'],
+  endTime: ['endTime', 'end_time', 'end'],
+  duration: ['duration', 'duration_sec'],
+  visualDescription: ['visualDescription', 'visual_description', 'visual', 'description'],
+  narrative: ['narrative', 'narration', 'story'],
+  shotSize: ['shotSize', 'shot_size', 'shot_scale', 'scale'],
+  cameraAngle: ['cameraAngle', 'camera_angle', 'angle'],
+  cameraMovement: ['cameraMovement', 'camera_movement', 'movement'],
+  focalAndDof: ['focalAndDof', 'focal_and_dof', 'focal_dof', 'focus_depth', 'focus', 'depth_of_field', 'dof'],
+  lighting: ['lighting', 'light'],
+  backgroundMusic: ['backgroundMusic', 'background_music', 'bgm', 'music'],
+  voiceAndSfx: ['voiceAndSfx', 'voice_and_sfx', 'voice_sfx', 'voice_sound', 'voice', 'sfx'],
+  imagePrompt: ['imagePrompt', 'image_prompt', 'image_gen_prompt'],
+  videoMotionPrompt: ['videoMotionPrompt', 'video_motion_prompt', 'motion_prompt', 'motionPrompt'],
 };
 
 const KEYFRAME_URL_ALIASES = [
@@ -44,9 +44,6 @@ const KEYFRAME_URL_ALIASES = [
   'keyframe',
   'frame_url',
   'image_url',
-  '关键帧',
-  '关键帧URL',
-  '关键帧地址',
 ];
 
 // i18n-exempt-end

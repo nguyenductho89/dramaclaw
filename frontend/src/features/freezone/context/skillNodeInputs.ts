@@ -66,12 +66,12 @@ function groupEdgesByRole(
   return grouped;
 }
 
-// 前后端节点类型命名不一致的归一表。
-// 前端画布把「上传图 / 场景图 / 身份图 / 道具图 / 资产图 / freezone 图」统一建成同一个
-// `uploadNode`（见 assetDrag.ts），靠 __freezone_source.role / slot_target 区分语义；
-// 后端 skill 的 accepts.node_types 用的是更细的概念命名（uploadImageNode / sceneNode /
-// identityNode / ...）。这里把一个前端节点 type 映射到它在后端词表里的全部等价别名，
-// 让 node_types 门槛按语义匹配，而不是因命名差异把拖入的素材图一律拒掉。
+// A normalization table for frontend/backend node type naming mismatches.
+// The frontend canvas builds "upload image / scene image / identity image / prop image / asset image / freezone image" all as the same
+// `uploadNode` (see assetDrag.ts), distinguishing semantics by __freezone_source.role / slot_target;
+// the backend skill's accepts.node_types uses finer concept names (uploadImageNode / sceneNode /
+// identityNode / ...). Here a frontend node type is mapped to all its equivalent aliases in the backend vocabulary,
+// so the node_types gate matches by semantics instead of rejecting every dragged-in asset image because of naming differences.
 const NODE_TYPE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   uploadNode: [
     "uploadNode",

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 跨项目粘贴进来的节点，在素材拷进本项目之前 / 拷贝失败之后盖在节点上的占位遮罩
- * （withLodShell 注入，shell 档和完整组件都有）。
+ * The placeholder mask covering a node pasted across projects, before the material is copied into this project / after the copy fails
+ * (injected by withLodShell, present in both the shell tier and the full component).
  *
- * - `copying` 且迁移任务在跑：转圈 + 「素材复制中」；
- * - `failed`，或标记还是 `copying` 但任务已不在（刷新过页面、迁移意外中断）：错误占位 +
- *   「移除节点」——节点里本来就没有源项目 URL，用户删掉重贴即可。
+ * - `copying` with the migration task running: spinner + "Copying assets";
+ * - `failed`, or the marker is still `copying` but the task is gone (page refreshed, migration unexpectedly interrupted): an error placeholder +
+ *   "Remove node" - the node never had a source project URL in it, and the user just deletes it and pastes again.
  *
- * 遮罩不拦 pointerdown：占位节点照样能拖、能选、能右键删除；只吃 click / 双击，免得
- * 点穿到底下空节点的「上传 / 选图」入口，把半成品当成正常节点继续用。
+ * The mask does not block pointerdown: a placeholder node can still be dragged, selected and right-click deleted; it only eats click / double-click, so as not to
+ * click through to the "upload / pick image" entry of the empty node beneath and take a half-finished product as a normal node to keep using.
  */
 import { memo, useSyncExternalStore, type MouseEvent, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -89,7 +89,7 @@ function AssetMigrationNodeOverlayImpl({
   nodeId: string;
   state: AssetMigrationState;
 }) {
-  // 快照是 boolean，登记表变化只让在途状态真正翻转的那个节点重渲染。
+  // The snapshot is a boolean, and a registry change makes only the node whose in-flight state truly flips re-render.
   const inFlight = useSyncExternalStore(subscribeAssetMigrations, () =>
     isAssetMigrationInFlight(nodeId)
   );
@@ -100,7 +100,7 @@ function AssetMigrationNodeOverlayImpl({
 }
 
 function AssetMigrationNodeOverlayBase({ nodeId, data }: { nodeId: string; data: unknown }) {
-  // 绝大多数节点没有标记：这里不订阅任何东西、直接 null，不给每个节点多一份开销。
+  // The vast majority of nodes have no marker: subscribe to nothing here and return null directly, not adding an extra cost to every node.
   const state = readAssetMigrationState(data);
   if (!state) {
     return null;

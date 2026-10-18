@@ -1,10 +1,10 @@
 /**
- * ffmpeg.wasm 单线程转码兜底 —— 只在浏览器解不了源编码（典型：Edge 没装
- * HEVC 扩展遇到 HEVC）时由 videoTranscode.ts 动态 import。独立成模块是为了
- * 让 @ffmpeg/* 和 ~31MB 的 wasm 核心留在懒加载 chunk 里，不进主包。
+ * ffmpeg.wasm single-threaded transcoding fallback - dynamically imported by videoTranscode.ts only when the browser cannot decode the source codec (typically Edge
+ * without the HEVC extension meeting HEVC). It is its own module so that
+ * @ffmpeg/* and the ~31MB wasm core stay in a lazy-loaded chunk and out of the main bundle.
  *
- * 页面没开 COEP（无 SharedArrayBuffer），只能用单线程核心 @ffmpeg/core；
- * 速度约 0.2~0.5x 实时，调用方需要用进度 UI 兜住等待体验。
+ * The page does not enable COEP (no SharedArrayBuffer), so only the single-threaded core @ffmpeg/core can be used;
+ * the speed is about 0.2~0.5x real time, and callers need a progress UI to cushion the waiting experience.
  */
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
@@ -21,7 +21,7 @@ function loadFfmpeg(): Promise<FFmpeg> {
       await ffmpeg.load({ coreURL: coreJsUrl, wasmURL: coreWasmUrl });
       return ffmpeg;
     })();
-    // 加载失败（网络中断等）不缓存失败态，下次重试。
+    // On load failure (network interruption etc.) the failed state is not cached, and it is retried next time.
     ffmpegSingleton.catch(() => {
       ffmpegSingleton = null;
     });
@@ -39,7 +39,7 @@ export async function transcodeWithFfmpeg(
   const outputName = "output.mp4";
 
   const progressHandler = ({ progress }: { progress: number }) => {
-    // ffmpeg 偶尔会报出 >1 的瞬时值，夹一下。
+    // ffmpeg occasionally reports a transient value > 1; clamp it.
     onProgress?.(Math.min(1, Math.max(0, progress)));
   };
   ffmpeg.on("progress", progressHandler);
@@ -51,7 +51,7 @@ export async function transcodeWithFfmpeg(
       "-preset", "veryfast",
       "-crf", "23",
       "-pix_fmt", "yuv420p",
-      // H.264 4:2:0 要求偶数宽高，奇数尺寸的源向下取偶。
+      // H.264 4:2:0 requires even width and height; a source with an odd size is rounded down to even.
       "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
       "-c:a", "aac",
       "-b:a", "128k",
@@ -68,7 +68,7 @@ export async function transcodeWithFfmpeg(
     return new Blob([data.slice()], { type: "video/mp4" });
   } finally {
     ffmpeg.off("progress", progressHandler);
-    // 清掉 MEMFS 里的中间文件，转长视频时别把内存越堆越高。
+    // Clear the intermediate files in MEMFS, so memory does not pile up higher and higher when transcoding long videos.
     await ffmpeg.deleteFile(inputName).catch(() => {});
     await ffmpeg.deleteFile(outputName).catch(() => {});
   }

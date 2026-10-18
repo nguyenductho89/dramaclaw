@@ -123,7 +123,7 @@ describe("beats workbench v2-storage sketch-studio contract", () => {
     const route = read(
       "src/routes/_app/projects.$project/episodes.$episode/beats.lazy.tsx",
     );
-    const zh = read("public/locales/zh/translation.json");
+    const viLocale = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(route).toContain("const SHOW_EPISODE_FREEZONE_ENTRY = false");
@@ -132,7 +132,7 @@ describe("beats workbench v2-storage sketch-studio contract", () => {
     expect(route).toContain('scope: "episode"');
     expect(route).toContain("SHOW_EPISODE_FREEZONE_ENTRY &&");
     expect(route).not.toContain(">EP Freezone<");
-    expect(zh).toContain("episodeFreezone");
+    expect(viLocale).toContain("episodeFreezone");
     expect(en).toContain("episodeFreezone");
   });
 

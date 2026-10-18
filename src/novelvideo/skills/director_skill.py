@@ -645,11 +645,11 @@ def cmd_commit_beat_overlay(args: argparse.Namespace) -> None:
         "layer_contract": existing.get("layer_contract")
         or {
             "world_3d": (
-                "当前场景 world.json 决定固定空间和固定场景物；"
-                "本 overlay 只决定本 beat 的人物、全局资产道具和镜头。"
+                "The current scene's world.json decides the fixed space and fixed scene objects; "
+                "this overlay only decides this beat's characters, global asset props, and camera."
             ),
-            "sketch": "决定表演动作、坐姿细节、手势、表情和动作线，但不能改根位置/镜头。",
-            "render": "决定材质、上色、光照和最终美术风格，但不能改布局/动作。",
+            "sketch": "Decides acting, seated details, gestures, expressions, and action lines, but must not change root position or camera.",
+            "render": "Decides material, coloring, lighting, and final art style, but must not change layout or action.",
         },
         "notes": "Beat overlay committed from live AI Director state.",
     }
@@ -947,7 +947,7 @@ def main() -> None:
         "--seat-override",
         default="",
         help="JSON dict mapping identity_id (or actor_id) to a different seat_id, "
-        'e.g. \'{"杜晨_中年时期":"seat:4,1,15"}\'. '
+        'e.g. \'{"Du_Chen_middle_aged":"seat:4,1,15"}\'. '
         "Use when narrative requires diagonal staging that roster does not provide.",
     )
     p_place.set_defaults(func=cmd_place_actors_from_beat)

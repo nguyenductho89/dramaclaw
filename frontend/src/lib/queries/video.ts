@@ -38,7 +38,7 @@ export interface NarratorVoiceStatusData {
   reference_url?: string;
   reference_sha256?: string;
   heading: string;
-  /** 展示文案的稳定 code；前端按它查词条，heading/explanation 只作兜底。 */
+  /** Stable code for display text; the frontend looks up locale entries by it, heading/explanation are only a fallback. */
   heading_code?: string;
   detail: string;
   explanation: string;
@@ -720,7 +720,7 @@ export function useGenerateBeatVideoPrompt(project: string, episode: number) {
 export interface SingleVideoRequestBody {
   videoBackend?: string;
   use_director_render?: boolean;
-  // seedance-1.5-pro 等非 seedance2 后端的清晰度/时长（视频时长须 >= 音频，后端兜底）。
+  // Resolution/duration for non-seedance2 backends such as seedance-1.5-pro (video duration must be >= audio duration, the backend enforces it as a fallback).
   resolution?: string;
   duration?: number;
   ratio?: string;

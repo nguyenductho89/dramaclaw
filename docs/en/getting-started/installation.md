@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/getting-started/installation.md)
-
 # Installation Guide
 
 > Set up the runtime environment for DramaClaw CE on macOS / Windows / Linux. If you just want the fastest path to running it, go straight to [Quickstart](quickstart.md); this guide covers per-platform prerequisites and the two installation methods (Docker and local development).

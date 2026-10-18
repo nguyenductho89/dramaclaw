@@ -1,9 +1,9 @@
-"""Freezone 文本工具辅助逻辑。
+"""Freezone text tool helpers.
 
-当前包含：
-- 中英文提示词互译
-- 自由文本生成
-- 故事脚本生成
+Currently includes:
+- English/Vietnamese prompt translation
+- free-text generation
+- story script generation
 """
 
 from __future__ import annotations
@@ -44,12 +44,12 @@ LEGACY_FREEZONE_STORY_SCRIPT_MODEL_IDS = {
 
 FREEZONE_TRANSLATION_SYSTEM_PROMPT = """# Freezone Prompt Translator
 
-You translate prompting text between Simplified Chinese and English for creative nodes.
+You translate prompting text between English and Vietnamese for creative nodes.
 
 ## Goal
 - First determine the dominant natural language of the source text.
-- If the dominant natural language is English, translate natural-language content into Simplified Chinese.
-- If the dominant natural language is Simplified Chinese, translate natural-language content into English.
+- If the dominant natural language is English, translate natural-language content into Vietnamese.
+- If the dominant natural language is Vietnamese, translate natural-language content into English.
 - Translate accurately while preserving prompting intent.
 - Keep the output concise, directly usable as a prompt.
 - Preserve cinematic, visual, audio, and motion terminology naturally.
@@ -64,8 +64,8 @@ You translate prompting text between Simplified Chinese and English for creative
 6. For image/video/audio/text prompting, prefer natural creator-facing wording over literal textbook translation.
 7. Only return the source directly when the detected source_language is exactly the same as the target_language.
 8. If source_language and target_language differ, copying the original prose is a failure.
-9. When translating English into Chinese, keep technical tokens intact but translate every English instruction sentence, rule sentence, heading, and description into Simplified Chinese.
-10. When translating Chinese into English, keep technical tokens intact but translate every Chinese instruction sentence, rule sentence, heading, and description into English.
+9. When translating English into Vietnamese, keep technical tokens intact but translate every English instruction sentence, rule sentence, heading, and description into Vietnamese.
+10. When translating Vietnamese into English, keep technical tokens intact but translate every Vietnamese instruction sentence, rule sentence, heading, and description into English.
 11. Return structured data matching the requested schema. Do not wrap with markdown.
 """
 
@@ -98,19 +98,19 @@ You generate a structured story-script table from an uploaded script excerpt.
 1. Break the story into clear numbered shots with sequential `shot_no`, starting from 1.
 2. Each row must include all schema fields. Do not omit fields.
 3. Prefer concrete visual language over vague abstraction. Every shot should feel filmable.
-4. Dialogue should be short and only present when appropriate. If no dialogue is needed, output `无`.
-5. If a field has no meaningful content, prefer `无` instead of vague placeholders.
-6. Keep all fields in Simplified Chinese except technical tokens when naturally needed.
+4. Dialogue should be short and only present when appropriate. If no dialogue is needed, output `none`.
+5. If a field has no meaningful content, prefer `none` instead of vague placeholders.
+6. Write all fields in the same language as the source script (English if the source gives no clear language), except technical tokens when naturally needed.
 7. Output only structured data matching the schema. Do not wrap with markdown.
 
 ## Table style target
 - The result should resemble a production storyboard table, not a prose summary.
 - `visual_description` should describe one clear beat of action or state, usually in one concise sentence.
-- `shot` should use concise combinations like `近景 / 特写`, `中景 / 仰视`, `全景 / 俯视远景`.
-- `emotion` should be compact and specific, often 2-3 short phrases joined by `、`.
+- `shot` should use concise combinations like `close-up / macro`, `medium / low angle`, `wide / high-angle long shot`.
+- `emotion` should be compact and specific, often 2-3 short phrases joined by commas.
 - `scene_tags`, `lighting_mood`, `sound` should all be concrete and film-facing.
-- `character_1` should prefer a stable role identifier if inferable, such as `沈昭昭_现代` or `沈昭昭_古装`.
-- `character_description_1` should prefer bracketed character-card format, e.g. `[沈昭昭_现代: 28岁女性，面色苍白，神情疲惫，身穿现代简约职业装……]`.
+- `character_1` should prefer a stable role identifier if inferable, such as `Mia_modern` or `Mia_period`.
+- `character_description_1` should prefer bracketed character-card format, e.g. `[Mia_modern: 28-year-old woman, pale face, tired expression, wearing a simple modern business outfit...]`.
 
 ## Duration guidance
 - Default to short cinematic shots.
@@ -121,40 +121,40 @@ You generate a structured story-script table from an uploaded script excerpt.
 `shot_prompt` must be image-generation friendly and must be written as a chained bracket structure using ` + ` separators.
 
 Preferred order for `shot_prompt`:
-1. `[画面构图：景别、机位、视角、构图关系]`
-2. `[角色卡/主体描述：如果存在角色1，尽量直接复用或轻改 character_description_1 的角色卡格式；如果没有角色，则写主体/核心对象描述]`
-3. `[主体/人物空间与互动关系：谁在前景、谁在中景、谁与什么环境或道具发生关系]`
-4. `[极具体的微表情、主体状态或关键视觉信息：必须具体到眼神、嘴角、肢体紧张度、服饰状态、伤痕、汗水、血迹、视线方向等可见细节]`
-5. `[明确的场景环境元素与前景/背景道具：办公室、宫殿、屏风、龙椅、电脑蓝光、飞尘、门缝光等]`
-6. `[光影几何与大气效果：主光方向、冷暖色温、边缘光、雾气、逆光、顶光、体积光等]`
-7. `[视觉风格/质感：写实电影感、纪实感、压抑冷感、盛唐史诗感等]`
-8. `[技术参数：镜头焦段、光圈、景深、快门感、颗粒或解析度特征；这一段尽量不要省略]`
+1. `[Frame composition: shot size, camera position, viewpoint, compositional relationships]`
+2. `[Character card / subject description: if character 1 exists, reuse or lightly adapt the character-card format of character_description_1; if there is no character, describe the subject / core object]`
+3. `[Spatial and interaction relationships of subjects / characters: who is in the foreground, who is in the midground, who relates to which environment or prop]`
+4. `[Highly specific micro-expressions, subject state or key visual information: must be concrete down to visible details such as eyes, mouth corners, body tension, clothing state, wounds, sweat, blood, gaze direction]`
+5. `[Clear scene environment elements and foreground / background props: office, palace, screen, throne, blue computer glow, flying dust, light through a door gap, etc.]`
+6. `[Light-and-shadow geometry and atmospheric effects: key light direction, warm/cool color temperature, rim light, fog, backlight, top light, volumetric light, etc.]`
+7. `[Visual style / texture: realistic cinematic, documentary feel, oppressive cold feel, epic grandeur, etc.]`
+8. `[Technical parameters: lens focal length, aperture, depth of field, shutter feel, grain or resolution characteristics; try not to omit this segment]`
 
 Example style for `shot_prompt`:
-- `[画面构图：近景特写，平视机位] + [角色卡/主体描述：[沈昭昭_现代: 28岁女性，面色苍白，神情疲惫，身穿现代简约职业装]] + [主体/人物空间与互动关系：她独坐在办公桌前，电脑屏幕蓝光从侧前方打亮面部] + [极具体的微表情、主体状态或关键视觉信息：眼下发青，手指微颤，视线涣散，嘴唇微张] + [明确的场景环境元素与前景/背景道具：深夜办公室、电脑蓝光、散乱文件、冷掉的咖啡杯] + [光影几何与大气效果：冷蓝主调，屏幕侧光压住面部阴影，背景轻微灰雾感] + [视觉风格/质感：都市悬疑写实电影感] + [技术参数：85mm镜头，f/1.8，浅景深]`
+- `[Frame composition: close-up, eye-level camera] + [Character card / subject description: [Mia_modern: 28-year-old woman, pale face, tired expression, wearing a simple modern business outfit]] + [Spatial and interaction relationships: she sits alone at the desk, the blue glow of the computer screen lighting her face from the front side] + [Highly specific micro-expressions, subject state or key visual information: dark circles under the eyes, trembling fingers, unfocused gaze, lips slightly parted] + [Clear scene environment elements and props: late-night office, blue computer glow, scattered documents, a cold cup of coffee] + [Light-and-shadow geometry and atmosphere: cold blue dominant tone, screen side light pressing down facial shadows, a slight gray haze in the background] + [Visual style / texture: urban suspense, realistic cinematic] + [Technical parameters: 85mm lens, f/1.8, shallow depth of field]`
 
 `video_motion_prompt` must focus on motion and should also use a chained bracket structure.
 
 Preferred order for `video_motion_prompt`:
-1. `[明确的摄影机运镜轨迹与速度：必须写清推/拉/摇/移/跟/升/降/手持，以及快慢、力度和稳定性]`
-2. `[主体极其具体的物理动作细节或状态变化：必须写清人物或主体具体怎么动，不要只写“情绪变化”]`
-3. `[环境物理动态：风、雨、衣角、尘土、门帘、屏幕闪烁、火光、飞雪等]`
-4. `[音效与氛围描述：环境声、器物声、呼吸声、脚步声、雷声等]`
-5. `[对话台词与语气：有对白写具体台词与语气，没有就写无]`
-6. `[时长：4.0s]`
+1. `[Explicit camera movement trajectory and speed: must state push / pull / pan / truck / follow / rise / descend / handheld, plus speed, force and stability]`
+2. `[Highly specific physical action details or state changes of the subject: must state exactly how the person or subject moves; do not write only "emotional change"]`
+3. `[Environmental physical dynamics: wind, rain, clothing hems, dust, curtains, screen flicker, firelight, falling snow, etc.]`
+4. `[Sound effects and atmosphere: ambient sound, object sounds, breathing, footsteps, thunder, etc.]`
+5. `[Dialogue lines and tone: write the specific lines and tone if there is dialogue, otherwise write none]`
+6. `[Duration: 4.0s]`
 
 Example style for `video_motion_prompt`:
-- `[明确的摄影机运镜轨迹与速度：极慢速推进，镜头几乎贴着人物面部向前压近，稳定中带轻微呼吸感] + [主体极其具体的物理动作细节或状态变化：沈昭昭先是眼神失焦，随后瞳孔微缩，指尖在桌面轻轻抽动，喉结压抑地滚动一下] + [环境物理动态：屏幕冷光轻微闪烁，纸张边缘被空调风吹起，咖啡表面微微晃动] + [音效与氛围描述：急促的键盘声、连续的手机提示音、室内低频电流声] + [对话台词与语气：无] + [时长：4.0s]`
+- `[Explicit camera movement trajectory and speed: extremely slow push-in, the camera pressing almost against the face, steady with a slight breathing feel] + [Highly specific physical action details or state changes: Mia's eyes first lose focus, then her pupils contract slightly, her fingertips twitch lightly on the desk, her throat bobs in a suppressed swallow] + [Environmental physical dynamics: the cold screen light flickers slightly, the edges of the papers lift in the air-conditioning breeze, the coffee surface trembles faintly] + [Sound effects and atmosphere: hurried typing, repeated phone notifications, low-frequency electrical hum in the room] + [Dialogue lines and tone: none] + [Duration: 4.0s]`
 
 ## Quality bar
-- Avoid generic outputs like `人物站着`, `镜头推进`, `情绪复杂`.
+- Avoid generic outputs like `a person standing`, `camera pushes in`, `complex emotions`.
 - Prefer highly specific physical action, facial detail, scene detail, and camera-language wording.
 - Preserve story logic and character-state progression across rows.
 
 ## Asset fields you must NOT invent
 - `character_image_1`, `character_image_2`, `reference` are asset URL slots filled in by the
   backend after generation. Always output them as an empty string.
-- Never write `无`, a file name, or a made-up URL into those three fields.
+- Never write `none`, a file name, or a made-up URL into those three fields.
 - When two distinct characters appear in one shot, fill `character_2` /
   `character_description_2` the same way as `character_1` / `character_description_1`.
   Reuse the exact same character identifier across rows so the same person keeps one name.
@@ -195,11 +195,11 @@ lists them. There is no reference video.
 )
 
 FREEZONE_NODE_TYPE_LABELS: dict[str, str] = {
-    "generic": "通用提示词",
-    "image": "图片节点提示词",
-    "video": "视频节点提示词",
-    "audio": "音频节点提示词",
-    "text": "文本节点提示词",
+    "generic": "Generic prompt",
+    "image": "Image node prompt",
+    "video": "Video node prompt",
+    "audio": "Audio node prompt",
+    "text": "Text node prompt",
 }
 
 _translation_agent: Optional[Agent] = None
@@ -212,16 +212,16 @@ class FreezoneTranslationResult(BaseModel):
     """Structured translation result produced by the LLM."""
 
     translated_text: str = Field(description="Translated prompt text.")
-    source_language: Literal["zh", "en"] = Field(
+    source_language: Literal["en", "vi"] = Field(
         description="Dominant natural language detected from the source text."
     )
-    target_language: Literal["zh", "en"] = Field(
+    target_language: Literal["en", "vi"] = Field(
         description="Opposite target language used for translation."
     )
 
 
 def create_freezone_translation_agent() -> Agent:
-    """创建 Freezone 中英互译 Agent。"""
+    """Create the Freezone English/Vietnamese translation Agent."""
     from novelvideo.config import (
         get_newapi_structured_output_model_settings,
         get_newapi_text_pydantic_model,
@@ -243,7 +243,7 @@ def create_freezone_translation_agent() -> Agent:
 
 
 def get_freezone_translation_agent() -> Agent:
-    """获取翻译 Agent 单例。"""
+    """Get the translation Agent singleton."""
     global _translation_agent
     context = current_model_gateway_context()
     if context is not None and context.is_organization:
@@ -254,7 +254,7 @@ def get_freezone_translation_agent() -> Agent:
 
 
 def create_freezone_text_writer_agent() -> Agent:
-    """创建 Freezone 自由文本生成 Agent。"""
+    """Create the Freezone free-text generation Agent."""
     from novelvideo.config import get_newapi_text_pydantic_model
     from novelvideo.brainclaw_contract import BrainClawProfile
 
@@ -271,7 +271,7 @@ def create_freezone_text_writer_agent() -> Agent:
 
 
 def get_freezone_text_writer_agent() -> Agent:
-    """获取自由文本生成 Agent 单例。"""
+    """Get the free-text generation Agent singleton."""
     global _text_writer_agent
     if _text_writer_agent is None:
         _text_writer_agent = create_freezone_text_writer_agent()
@@ -279,7 +279,7 @@ def get_freezone_text_writer_agent() -> Agent:
 
 
 def resolve_freezone_text_writer_model() -> str:
-    """返回当前自由文本生成逻辑模型名，供结果与审计记录使用。"""
+    """Return the logical model name of the current free-text generation, for results and audit records."""
     from novelvideo.config import get_newapi_text_model_name
 
     return get_newapi_text_model_name(
@@ -302,7 +302,7 @@ def resolve_freezone_story_script_model(model: str | None) -> dict[str, str]:
 
 
 def create_freezone_story_script_agent(model: str | None = None) -> Agent:
-    """创建故事脚本生成 Agent。"""
+    """Create the story script generation Agent."""
     from novelvideo.api.schemas import FreezoneStoryScriptGenerateData
     from novelvideo.config import (
         get_newapi_structured_output_model_settings,
@@ -321,17 +321,17 @@ def create_freezone_story_script_agent(model: str | None = None) -> Agent:
         system_prompt=FREEZONE_STORY_SCRIPT_SYSTEM_PROMPT,
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=FreezoneStoryScriptGenerateData,
-        # 结构化脚本表字段多、且 shot_no/duration 是严格 int，模型偶尔会把时长写成
-        # "2-5"/"3秒" 之类而过不了校验。默认 output_retries=1 只给一次纠正机会不够，
-        # 抛 "Exceeded maximum output retries (1)"。对齐本仓其它复杂结构化 agent
-        # (episode_planner / content_rewriter)提到 3，让模型按回喂的校验错误自我修正。
+        # The structured script table has many fields, and shot_no/duration are strict ints, so the model occasionally writes the duration as
+        # "2-5"/"3 sec" and fails validation. The default output_retries=1 gives only one correction chance, which is not enough,
+        # and raises "Exceeded maximum output retries (1)". Align with the other complex structured agents in this repo
+        # (episode_planner / content_rewriter) and raise it to 3, so the model self-corrects from the validation errors fed back.
         output_retries=model_gateway_output_retries(3),
         name="Freezone Story Script Generator",
     )
 
 
 def get_freezone_story_script_agent(model: str | None = None) -> Agent:
-    """获取故事脚本生成 Agent 单例。"""
+    """Get the story script generation Agent singleton."""
     global _story_script_agent
     resolved = resolve_freezone_story_script_model(model)
     context = current_model_gateway_context()
@@ -347,14 +347,14 @@ def build_freezone_translation_task(
     text: str,
     node_type: Literal["generic", "image", "video", "audio", "text"],
 ) -> str:
-    """构建翻译任务。"""
+    """Build the translation task."""
     node_label = FREEZONE_NODE_TYPE_LABELS[node_type]
 
     parts = [
         f"Translate the following {node_label}.",
-        "You must decide whether the dominant natural language is Simplified Chinese or English.",
-        "If dominant language is English, translate into Simplified Chinese.",
-        "If dominant language is Simplified Chinese, translate into English.",
+        "You must decide whether the dominant natural language is English or Vietnamese.",
+        "If dominant language is English, translate into Vietnamese.",
+        "If dominant language is Vietnamese, translate into English.",
         "Do not copy the original prose when translating between different languages.",
         "Preserve IDs, file names, bracket tags, color codes, ratios, and model names exactly, but translate the surrounding natural-language instructions.",
         "Keep it directly usable as a creative prompt.",
@@ -368,10 +368,10 @@ async def translate_freezone_text(
     text: str,
     node_type: Literal["generic", "image", "video", "audio", "text"] = "generic",
     egress_context: TrustedEgressContext | None = None,
-) -> tuple[str, Literal["zh", "en"], Literal["zh", "en"]]:
-    """执行 Freezone 中英互译。"""
+) -> tuple[str, Literal["en", "vi"], Literal["en", "vi"]]:
+    """Run the Freezone English/Vietnamese translation."""
     if not text or not text.strip():
-        return "", "zh", "en"
+        return "", "en", "vi"
 
     task = build_freezone_translation_task(
         text=text,
@@ -382,9 +382,9 @@ async def translate_freezone_text(
     with model_gateway_request_scope(egress_context):
         response = await get_freezone_translation_agent().run(task)
     result = response.output
-    target_language: Literal["zh", "en"] = result.target_language
+    target_language: Literal["en", "vi"] = result.target_language
     if target_language == result.source_language:
-        target_language = "zh" if result.source_language == "en" else "en"
+        target_language = "vi" if result.source_language == "en" else "en"
     return (
         result.translated_text.strip(),
         result.source_language,
@@ -397,10 +397,10 @@ async def generate_freezone_text(
     prompt: str,
     egress_context: TrustedEgressContext | None = None,
 ) -> tuple[str, str]:
-    """根据用户指令生成自由文本，返回逻辑模型名与最终文本。**会出网**。
+    """Generate free text from a user instruction, returning the logical model name and the final text. **Goes out to the network**.
 
-    形参与 `model_gateway_request_scope` 都照 `translate_freezone_text` 写：
-    `runners/freezone.py:FREEZONE_LEAF_EGRESS` 判本函数为 NETWORK 的依据就是它。
+    The parameters and `model_gateway_request_scope` are written after `translate_freezone_text`:
+    `runners/freezone.py:FREEZONE_LEAF_EGRESS` classifies this function as NETWORK precisely on that basis.
     """
     clean_prompt = str(prompt or "").strip()
     if not clean_prompt:
@@ -417,55 +417,55 @@ async def generate_freezone_text(
 
 
 _STORY_SCRIPT_COMMON_RULES = (
-    "输出字段必须覆盖：镜号、时长、画面描述、角色1、角色描述1、角色图1、角色2、角色描述2、"
-    "角色图2、参考、景别、角色动作、情绪、场景标签、光影氛围、音效、对白、分镜提示词、视频运动提示词。",
-    "如果用户给了额外要求，也必须一起遵守。",
-    "请严格按照影视制片表格思路输出，不要输出散文摘要。",
-    "请让分镜提示词和视频运动提示词都采用括号分段 + 号连接的格式。",
-    "缺失对白时写 `无`。",
-    "角色图1、角色图2、参考三个字段一律输出空字符串——它们由后端回填素材 URL，"
-    "不要写 `无`，也不要编造文件名或链接。",
-    "分镜提示词必须像高质量图像生成提示词，视频运动提示词必须像高质量视频运动提示词，而不是简单一句概括。",
+    "The output fields must cover: shot number, duration, visual description, character 1, character description 1, character image 1, character 2, character description 2, "
+    "character image 2, reference, shot size, character action, emotion, scene tags, lighting mood, sound, dialogue, shot prompt, video motion prompt.",
+    "If the user gave extra requirements, follow them as well.",
+    "Follow the film production table approach strictly; do not output a prose summary.",
+    "Write both the shot prompt and the video motion prompt in the bracketed-segments format joined by +.",
+    "Write `none` when there is no dialogue.",
+    "Always output empty strings for the three fields character image 1, character image 2 and reference -- the backend backfills the asset URLs, "
+    "so do not write `none` and do not invent file names or links.",
+    "The shot prompt must read like a high-quality image-generation prompt and the video motion prompt like a high-quality video motion prompt, not a one-sentence summary.",
 )
 
 _STORY_SCRIPT_STYLE_HINT = (
-    "参考风格要点：\n"
-    "- 镜号连续递增\n"
-    "- 时长大多 2-5 秒\n"
-    "- 景别写法类似 `近景 / 特写`、`中景 / 仰视`\n"
-    "- 角色描述尽量写成 `[角色ID: ...]` 形式\n"
-    "- 同一个人物在所有行里必须用完全一致的角色名，方便回填角色参考图\n"
-    "- 一镜里出现两个角色时，第二个填进角色2 / 角色描述2\n"
-    "- 分镜提示词最好严格按 8 段写：构图、角色卡/主体描述、空间关系、微表情/状态、环境与道具、光影几何、视觉风格、技术参数\n"
-    "- 如果存在角色1，分镜提示词第二段尽量直接使用或轻改角色描述1，不要换成模糊代称\n"
-    "- 分镜提示词中的技术参数段尽量保留，不要省略\n"
-    "- 视频运动提示词最好严格按 6 段写：运镜轨迹、主体动作、环境动态、音效氛围、对白语气、时长\n"
-    "- 视频运动提示词里的主体动作必须是可见物理动作，不要只写情绪变化"
+    "Style reference points:\n"
+    "- shot numbers increase consecutively\n"
+    "- most durations are 2-5 seconds\n"
+    "- shot size is written like `close-up / macro`, `medium / low angle`\n"
+    "- write character descriptions in the form `[character ID: ...]` where possible\n"
+    "- the same person must use exactly the same character name in all rows, so the character reference image can be backfilled\n"
+    "- when two characters appear in one shot, put the second into character 2 / character description 2\n"
+    "- write the shot prompt strictly in 8 segments if possible: composition, character card / subject description, spatial relationships, micro-expression / state, environment and props, light-and-shadow geometry, visual style, technical parameters\n"
+    "- if character 1 exists, the second segment of the shot prompt should directly use or lightly adapt character description 1, not switch to a vague pronoun\n"
+    "- keep the technical parameters segment of the shot prompt, do not omit it\n"
+    "- write the video motion prompt strictly in 6 segments if possible: camera trajectory, subject action, environment dynamics, sound atmosphere, dialogue tone, duration\n"
+    "- the subject action in the video motion prompt must be a visible physical action, not just an emotional change"
 )
 
 
 def _character_ref_block(
     character_refs: Sequence[Mapping[str, Any]] | None,
 ) -> str | None:
-    """把角色参考图渲染成任务里的角色卡清单。
+    """Render the character reference images into a character-card list inside the task.
 
-    只给模型「名字 + 描述 + 定位」，不给 URL —— 图片本身通过多模态附件传，
-    URL 由后端在生成之后按角色名回填，避免模型把链接抄错或凭空编造。
+    The model is given only "name + description + role", never a URL -- the images themselves are passed as multimodal attachments,
+    and the URLs are backfilled by the backend by character name after generation, so the model cannot mis-copy or fabricate links.
     """
     if not character_refs:
         return None
     lines: list[str] = []
     for index, ref in enumerate(character_refs, start=1):
-        name = str(ref.get("name") or "").strip() or f"角色{index}"
+        name = str(ref.get("name") or "").strip() or f"Character {index}"
         description = str(ref.get("description") or "").strip()
         role = str(ref.get("role") or "").strip()
-        detail = "，".join(part for part in (role, description) if part)
-        lines.append(f"{index}. {name}" + (f"（{detail}）" if detail else ""))
+        detail = ", ".join(part for part in (role, description) if part)
+        lines.append(f"{index}. {name}" + (f" ({detail})" if detail else ""))
     return (
-        "已提供的角色参考（按顺序对应随附的角色参考图）：\n"
+        "Character references provided (in order, matching the attached character reference images):\n"
         + "\n".join(lines)
-        + "\n请在生成的角色1 / 角色2 字段里使用上面完全一致的角色名，"
-        "这样后端才能把对应的角色参考图回填进去。"
+        + "\nUse exactly the same character names as above in the character 1 / character 2 fields you generate, "
+        "so the backend can backfill the matching character reference images."
     )
 
 
@@ -475,18 +475,18 @@ def build_freezone_story_script_task(
     prompt: str,
     character_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> str:
-    """构建故事脚本生成任务。"""
+    """Build the story script generation task."""
     parts = [
-        "根据以下上传剧本内容生成一个完整的故事脚本表。",
+        "Generate a complete story script table from the uploaded script content below.",
         *_STORY_SCRIPT_COMMON_RULES,
     ]
     if prompt.strip():
-        parts.append(f"用户要求：\n{prompt.strip()}")
+        parts.append(f"User requirements:\n{prompt.strip()}")
     character_block = _character_ref_block(character_refs)
     if character_block:
         parts.append(character_block)
     parts.append(_STORY_SCRIPT_STYLE_HINT)
-    parts.append(f"源剧本内容：\n{source_text.strip()}")
+    parts.append(f"Source script content:\n{source_text.strip()}")
     return "\n\n".join(parts)
 
 
@@ -497,31 +497,31 @@ def build_freezone_video_story_script_task(
     duration_sec: float | None = None,
     character_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> str:
-    """构建「视频参考生成分镜脚本」任务。
+    """Build the "video-reference storyboard script" task.
 
-    与文本模式共用同一张输出表，区别是源素材换成了按时间顺序抽取的关键帧，
-    并要求模型给出 ``keyframe_index`` 以便后端回填每一镜的参考图。
+    It shares the same output table as text mode; the difference is that the source material is keyframes extracted in chronological order,
+    and the model is required to give ``keyframe_index`` so the backend can backfill the reference image of each shot.
     """
     duration_hint = (
-        f"该视频总时长约 {duration_sec:.2f} 秒，所有镜头时长加起来应接近这个值。"
+        f"The video lasts about {duration_sec:.2f} seconds in total, and all shot durations should add up to close to this value."
         if duration_sec and duration_sec > 0
-        else "视频总时长未知，请按关键帧的疏密给出合理时长。"
+        else "The total video duration is unknown; give reasonable durations based on the density of the keyframes."
     )
     parts = [
-        f"下面按时间顺序给你 {frame_count} 张从参考视频里抽取的关键帧，"
-        "请把这段视频拆解成一张完整的故事脚本表。",
-        "这是视频拆解任务，不是原创任务：表格内容必须如实描述这些关键帧里真实出现的"
-        "主体、场景、动作和风格。严禁套用系统提示词里的示例角色或示例场景。",
-        "先通读全部关键帧判断这究竟是什么内容（人物？动物？动画？实拍？），"
-        "再决定角色名和角色描述。主体不是人时，就照实写成该动物 / 物体 / 形象，不要替换成人物。",
+        f"Below, in chronological order, are {frame_count} keyframes extracted from the reference video. "
+        "Break this video down into a complete story script table.",
+        "This is a video breakdown task, not an original-writing task: the table content must faithfully describe the subjects, scenes, actions and style "
+        "that really appear in these keyframes. Never reuse the example characters or example scenes from the system prompt.",
+        "First read through all the keyframes to judge what this content actually is (a person? an animal? animation? live action?), "
+        "then decide the character names and descriptions. When the subject is not a person, write it as the animal / object / figure it really is; do not replace it with a person.",
         duration_hint,
-        "把连续的关键帧归纳成若干叙事镜头，不要逐帧机械罗列。",
-        "每一行都必须给出 keyframe_index：最能代表这一镜的输入关键帧序号"
-        f"（1 到 {frame_count} 之间的整数）。后端靠它回填这一镜的参考图。",
+        "Group consecutive keyframes into a few narrative shots; do not list them frame by frame mechanically.",
+        "Every row must give keyframe_index: the sequence number of the input keyframe that best represents this shot "
+        f"(an integer between 1 and {frame_count}). The backend uses it to backfill the reference image of this shot.",
         *_STORY_SCRIPT_COMMON_RULES,
     ]
     if prompt.strip():
-        parts.append(f"用户额外要求：\n{prompt.strip()}")
+        parts.append(f"Extra user requirements:\n{prompt.strip()}")
     character_block = _character_ref_block(character_refs)
     if character_block:
         parts.append(character_block)
@@ -536,29 +536,29 @@ def build_freezone_character_story_script_task(
     source_text: str = "",
     character_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> str:
-    """构建「角色参考图生成分镜脚本」任务。
+    """Build the "character-reference-image storyboard script" task.
 
-    这一路没有参考视频，只有角色参考图：剧情来自用户提示词（和可选的源剧本），
-    图片只负责钉死角色长相，所以 ``keyframe_index`` 一律为 0。
+    This path has no reference video, only character reference images: the plot comes from the user prompt (and the optional source script),
+    and the images only pin down the character looks, so ``keyframe_index`` is always 0.
     """
     parts = [
-        f"下面按顺序给你 {image_count} 张角色参考图，请据此生成一张完整的故事脚本表。",
-        "这是角色参考模式，没有参考视频：角色1 / 角色2 的外貌、服饰、年代、气质"
-        "必须照着对应的角色参考图写，不要描述图里没有的人。",
-        "剧情本身来自用户要求（以及可选的源剧本），不要凭空照搬系统提示词里的示例剧情。",
-        "每一行的 keyframe_index 一律填 0：本模式没有关键帧可以回填。",
+        f"Below, in order, are {image_count} character reference images; generate a complete story script table from them.",
+        "This is character-reference mode with no reference video: the appearance, clothing, era and temperament of character 1 / character 2 "
+        "must be written according to the corresponding character reference image; do not describe people who are not in the images.",
+        "The plot itself comes from the user requirements (and the optional source script); do not copy the example plot from the system prompt out of thin air.",
+        "Always put 0 in keyframe_index of every row: this mode has no keyframes to backfill.",
         *_STORY_SCRIPT_COMMON_RULES,
     ]
     if prompt.strip():
-        parts.append(f"用户要求：\n{prompt.strip()}")
+        parts.append(f"User requirements:\n{prompt.strip()}")
     else:
-        parts.append("用户没有额外要求，请围绕这些角色自行编排一段结构完整的短剧。")
+        parts.append("The user gave no extra requirements; compose a structurally complete short drama around these characters on your own.")
     character_block = _character_ref_block(character_refs)
     if character_block:
         parts.append(character_block)
     parts.append(_STORY_SCRIPT_STYLE_HINT)
     if source_text.strip():
-        parts.append(f"源剧本内容：\n{source_text.strip()}")
+        parts.append(f"Source script content:\n{source_text.strip()}")
     return "\n\n".join(parts)
 
 
@@ -570,7 +570,7 @@ async def generate_freezone_story_script(
     character_refs: Sequence[Mapping[str, Any]] | None = None,
     egress_context: TrustedEgressContext | None = None,
 ):
-    """执行故事脚本生成（文本 / 角色图模式）。"""
+    """Run story script generation (text / character-image mode)."""
     if not source_text or not source_text.strip():
         raise ValueError("source_text is required")
 
@@ -587,10 +587,10 @@ async def generate_freezone_story_script(
 
 
 def create_freezone_video_story_script_agent() -> Agent:
-    """创建「视频参考生成分镜脚本」的视觉 Agent。
+    """Create the vision Agent for the "video-reference storyboard script".
 
-    走 ``FREEZONE_VISION_MODEL``（``DC-freezone-vision-LLM``）而不是纯文本的
-    story-script 别名 —— 带图请求只有视觉渠道能接。
+    It uses ``FREEZONE_VISION_MODEL`` (``DC-freezone-vision-LLM``) rather than the text-only
+    story-script alias -- only a vision channel can accept requests with images.
     """
     from novelvideo.api.schemas import FreezoneStoryScriptGenerateData
     from novelvideo.config import (
@@ -614,7 +614,7 @@ def create_freezone_video_story_script_agent() -> Agent:
 
 
 def get_freezone_video_story_script_agent() -> Agent:
-    """获取视频分镜脚本 Agent 单例。"""
+    """Get the video storyboard script Agent singleton."""
     global _video_story_script_agent
     context = current_model_gateway_context()
     if context is not None and context.is_organization:
@@ -634,14 +634,14 @@ async def generate_freezone_story_script_with_vision(
     character_refs: Sequence[Mapping[str, Any]] | None = None,
     egress_context: TrustedEgressContext | None = None,
 ):
-    """带图的分镜脚本生成：视频关键帧 / 角色参考图 → 结构化脚本表。
+    """Storyboard script generation with images: video keyframes / character reference images -> structured script table.
 
-    覆盖两种入口：
+    Covers two entry points:
 
-    - 「视频参考生成分镜脚本」：``frame_paths`` 是抽出来的关键帧，走视频拆解任务书。
-    - 「角色生成分镜脚本」：只有 ``character_image_paths``，走角色参考任务书 ——
-      剧情来自 ``prompt``（和可选的 ``source_text``），角色图只负责钉死角色长相。
-      这一路不要求 ``source_text``：前端挂了素材时只会发提示词。
+    - "Video-reference storyboard script": ``frame_paths`` are the extracted keyframes, using the video breakdown task brief.
+    - "Character storyboard script": only ``character_image_paths``, using the character reference task brief --
+      the plot comes from ``prompt`` (and the optional ``source_text``), and the character images only pin down the character looks.
+    This path does not require ``source_text``: when the frontend attaches assets it sends only the prompt.
     """
     from pydantic_ai import BinaryContent
 
@@ -664,8 +664,8 @@ async def generate_freezone_story_script_with_vision(
             character_refs=character_refs,
         )
     else:
-        # 只有角色图：剧情从提示词 / 可选源剧本来，图片只钉角色长相。
-        # 这里不能要求 source_text —— 前端在挂了素材时就只发提示词。
+        # Character images only: the plot comes from the prompt / optional source script, and the images only pin down the character looks.
+        # source_text must not be required here -- when assets are attached the frontend sends only the prompt.
         task = build_freezone_character_story_script_task(
             image_count=len(character_images),
             prompt=prompt,
@@ -693,10 +693,10 @@ def bind_story_script_assets(
     frame_urls: Sequence[str] | None = None,
     character_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> Any:
-    """把关键帧 / 角色参考图的 URL 回填进生成好的脚本行。
+    """Backfill the URLs of keyframes / character reference images into the generated script rows.
 
-    模型只负责写角色名和 ``keyframe_index``，素材 URL 一律由这里补齐 ——
-    这样模型没有机会编造出 404 的链接（issue #207 里角色图列恒为空的另一半原因）。
+    The model only writes the character name and ``keyframe_index``; asset URLs are always filled in here --
+    so the model has no chance to fabricate a 404 link (the other half of why the character image column was always empty in issue #207).
     """
     frames = [url for url in (frame_urls or []) if url]
     by_name: dict[str, str] = {}
@@ -718,8 +718,8 @@ def bind_story_script_assets(
         folded = clean.casefold()
         if folded in by_name:
             return by_name[folded]
-        # 模型常把角色名写成 `沈昭昭_现代` 这类带状态后缀的稳定 ID，
-        # 精确匹配不到时退到包含匹配，仍匹配不到才放弃。
+        # The model often writes the character name as a stable ID with a state suffix such as `Mia_modern`,
+        # falls back to containment matching when an exact match fails, and gives up only when that still fails.
         for candidate, url in by_name.items():
             if candidate in folded or folded in candidate:
                 return url
@@ -728,15 +728,15 @@ def bind_story_script_assets(
     for index, row in enumerate(getattr(data, "rows", []) or []):
         keyframe_index = int(getattr(row, "keyframe_index", 0) or 0)
         if not (1 <= keyframe_index <= len(frames)):
-            # 模型没给或给错序号时退回按行号顺序取帧，保证参考列不至于整列为空。
+            # When the model gives no or a wrong index, fall back to taking frames by row order, so the reference column is not entirely empty.
             keyframe_index = index + 1 if index < len(frames) else 0
         row.reference = frames[keyframe_index - 1] if keyframe_index else ""
         row.keyframe_index = keyframe_index
 
         row.character_image_1 = _match(getattr(row, "character_1", ""))
         row.character_image_2 = _match(getattr(row, "character_2", ""))
-        # 只有一张角色图、且模型没写出可匹配的角色名时，直接绑定唯一那张，
-        # 否则「角色生成分镜脚本」在模型改写角色名后又会退化成空列。
+        # With only one character image and no matchable character name from the model, bind that single one directly,
+        # otherwise the "character storyboard script" would degrade to an empty column again after the model rewrites the character name.
         if not row.character_image_1 and len(ordered_images) == 1:
             row.character_image_1 = ordered_images[0]
 

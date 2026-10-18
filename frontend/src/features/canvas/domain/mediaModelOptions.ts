@@ -2,27 +2,27 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 媒体模型能力的统一解析入口。
+ * The unified resolution entry for media model capabilities.
  *
- * 每个模型支持哪些分辨率 / 画面比例 / 画质，都由后台「媒体模型」配置下发，
- * 经 `/freezone/image|video/models` 进入前端。画布上的所有生成 / 编辑面板都
- * 必须从这里读，不允许各自维护一份常量 —— 否则后台改了配置前端不跟随。
+ * Which resolutions / aspect ratios / quality tiers each model supports are all delivered by the backend "media models" config,
+ * entering the frontend via `/freezone/image|video/models`. All generation / editing panels on the canvas
+ * must read from here and may not each maintain a constant - otherwise the frontend would not follow when the backend changes the config.
  *
- * 这里的 FALLBACK_* 常量只在目录接口拉取失败、模型条目没有声明该项能力时兜底，
- * 不是模型能力的事实来源。
+ * The FALLBACK_* constants here are only a fallback when the catalog endpoint fails to fetch or a model entry does not declare that capability,
+ * and are not the source of truth for model capabilities.
  */
 
-/** 目录条目里与「能力」相关的字段，image 与 video 条目都满足这个形状。 */
+/** Fields related to "capabilities" in a catalog entry; both image and video entries satisfy this shape. */
 export interface MediaModelCapabilities {
   resolutionOptions?: string[] | null;
   ratioOptions?: string[] | null;
   qualityOptions?: string[] | null;
 }
 
-/** 目录未声明分辨率时的兜底档位。 */
+/** Fallback tiers when the catalog does not declare resolutions. */
 export const FALLBACK_IMAGE_SIZE_OPTIONS: readonly string[] = ['1K', '2K', '4K'];
 
-/** 目录未声明画面比例时的兜底档位。 */
+/** Fallback tiers when the catalog does not declare aspect ratios. */
 export const FALLBACK_IMAGE_ASPECT_OPTIONS: readonly string[] = [
   '1:1',
   '16:9',
@@ -34,7 +34,7 @@ export const FALLBACK_IMAGE_ASPECT_OPTIONS: readonly string[] = [
   '21:9',
 ];
 
-/** 目录未声明分辨率时的视频兜底档位。 */
+/** Video fallback tiers when the catalog does not declare resolutions. */
 export const FALLBACK_VIDEO_RESOLUTION_OPTIONS: readonly string[] = [
   '480p',
   '720p',
@@ -42,10 +42,10 @@ export const FALLBACK_VIDEO_RESOLUTION_OPTIONS: readonly string[] = [
 ];
 
 /**
- * 目录未声明画面比例时的视频兜底档位。
+ * Video fallback tiers when the catalog does not declare aspect ratios.
  *
- * 首项 `auto` 表示跟随首帧 / 参考图，是前端语义而非某个模型的能力；目录一旦
- * 声明了 ratioOptions 就完全以目录为准，不再注入 auto。
+ * The first entry `auto` means following the first frame / reference image, which is frontend semantics rather than a capability of any model; once the catalog
+ * declares ratioOptions it goes entirely by the catalog and no longer injects auto.
  */
 export const FALLBACK_VIDEO_ASPECT_OPTIONS: readonly string[] = [
   'auto',
@@ -62,10 +62,10 @@ function normalizeOptions(values: string[] | null | undefined): string[] {
 }
 
 /**
- * 分辨率在界面上一律使用小写展示。
+ * Resolutions are always displayed in lowercase in the UI.
  *
- * 只用于显示，不改变节点保存值、计费档位或提交给后端的原始值；这样也能兼容
- * 旧目录里仍然存在的 `2K` / `1080P`。
+ * For display only, not changing the value saved on the node, the billing tier, or the raw value submitted to the backend; this also stays compatible with
+ * `2K` / `1080P` that still exist in the old catalog.
  */
 export function formatResolutionLabel(value: string): string {
   return value.trim().toLowerCase();
@@ -81,7 +81,7 @@ function normalizeRatioOptions(values: string[] | null | undefined): string[] {
   ];
 }
 
-/** 选中模型支持的分辨率档位；目录没配就用兜底。 */
+/** The resolution tiers the selected model supports; falls back if the catalog has none configured. */
 export function resolveModelSizeOptions(
   model: MediaModelCapabilities | null | undefined,
   fallback: readonly string[] = FALLBACK_IMAGE_SIZE_OPTIONS,
@@ -90,7 +90,7 @@ export function resolveModelSizeOptions(
   return configured.length > 0 ? configured : [...fallback];
 }
 
-/** 选中模型支持的画面比例；目录没配就用兜底。 */
+/** The aspect ratios the selected model supports; falls back if the catalog has none configured. */
 export function resolveModelAspectOptions(
   model: MediaModelCapabilities | null | undefined,
   fallback: readonly string[] = FALLBACK_IMAGE_ASPECT_OPTIONS,
@@ -100,10 +100,10 @@ export function resolveModelAspectOptions(
 }
 
 /**
- * 选中模型支持的画质档位。
+ * The quality tiers the selected model supports.
  *
- * 与分辨率 / 比例不同，画质**没有兜底**：目录没声明就代表这个模型不接受
- * quality 参数，此时下发 quality 会被网关拒掉。
+ * Unlike resolution / ratio, quality has **no fallback**: if the catalog does not declare it, this model does not accept the
+ * quality parameter, and sending quality then would be rejected by the gateway.
  */
 export function resolveModelQualityOptions(
   model: MediaModelCapabilities | null | undefined,
@@ -112,10 +112,10 @@ export function resolveModelQualityOptions(
 }
 
 /**
- * 该模型是否接受画质参数。
+ * Whether the model accepts the quality parameter.
  *
- * 判据是目录里有没有配 `qualityOptions`，不是模型名长什么样 —— 后台新增一个
- * 支持画质的模型时，前端不需要跟着改代码。
+ * The criterion is whether `qualityOptions` is configured in the catalog, not what the model name looks like - when the backend adds a model
+ * supporting quality, the frontend does not need code changes.
  */
 export function modelSupportsQuality(
   model: MediaModelCapabilities | null | undefined,
@@ -124,10 +124,10 @@ export function modelSupportsQuality(
 }
 
 /**
- * 把已选值收敛到当前模型允许的取值范围内。
+ * Converge the selected value into the range of values the current model allows.
  *
- * 换模型后旧的选择可能已经不在新模型的档位里，此时退回首个可用档位，
- * 避免把模型不支持的值提交给后端。
+ * After switching models the old selection may no longer be among the new model's tiers, in which case fall back to the first available tier,
+ * avoiding submitting a value the model does not support to the backend.
  */
 export function pickAllowedOption(
   current: string | null | undefined,

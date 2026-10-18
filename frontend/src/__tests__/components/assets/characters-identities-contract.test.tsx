@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 打开角色 Tab 不能按角色扇出 identities。
+ * Opening the Characters tab must not fan out identities per character.
  *
- * ``/characters/{name}/identities`` 原先是每个角色一发——列表里有几个角色就几个请
- * 求，只为在侧栏上标一个身份数。现在归属关系由 ``useIdentityOwnerIndex`` 从角色列
- * 表自带的 ``identity_ids`` 一次算出，真正的身份详情只给**选中**的那个角色拉。
+ * `/characters/{name}/identities` used to fire once per character - as many requests as there were characters in the list,
+ * just to put an identity count on the sidebar. Ownership is now computed in one go by `useIdentityOwnerIndex` from the `identity_ids` the
+ * character list carries, and real identity details are only fetched for the **selected** character.
  *
- * 和 ``episodes-list-beats-contract.test.tsx`` 同一个理由渲染整页：扇出不体现在渲
- * 染结果里，它体现在"页面组合层碰巧调了哪些 hook"上，hook 单测防不住组合层把错误
- * 的调用方式重新接回去。
+ * Renders the whole page for the same reason as `episodes-list-beats-contract.test.tsx`: the fan-out does not show up in
+ * the rendered result, it shows up in "which hooks the page composition layer happens to call", and hook unit tests cannot stop the composition layer from
+ * wiring the wrong call pattern back in.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -62,10 +62,10 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({ lng: "en", fallbackLng: "en", resources: {} });
-  // jsdom 没有 matchMedia，``useMediaQuery`` 会一路退回 false，页面渲染成移动端那
-  // 套折叠 Select——角色名藏在没展开的下拉里，断言的前置检查就无从落地。这里让它
-  // 报桌面宽度，跑的是真正列出全部角色的那条分支。
-  // jsdom 不实现这两个：角色列表选中后会滚到可视区，缺了会直接把组件抛掉。
+  // jsdom has no matchMedia, so `useMediaQuery` falls all the way back to false and the page renders the mobile
+  // collapsed Select - character names hide inside a dropdown that is not expanded, and the precondition check of the assertions has nowhere to land. Here it
+  // reports a desktop width, so the branch that really lists all characters runs.
+  // jsdom does not implement these two: after a character in the list is selected it scrolls into view, and without them the component throws outright.
   Element.prototype.scrollTo = () => {};
   Element.prototype.scrollIntoView = () => {};
   Object.defineProperty(window, "matchMedia", {
@@ -89,9 +89,9 @@ beforeEach(() => {
 });
 
 const CHARACTERS = [
-  { name: "苏清晏", is_main: true, identity_ids: ["苏清晏_少女", "苏清晏_嫡女"] },
-  { name: "沈砚", is_main: false, identity_ids: ["沈砚_少年"] },
-  { name: "柳明微", is_main: false, identity_ids: [] },
+  { name: "Su Qingyan", is_main: true, identity_ids: ["Su Qingyan_teen", "Su Qingyan_legitimate_daughter"] },
+  { name: "Shen Yan", is_main: false, identity_ids: ["Shen Yan_teen"] },
+  { name: "Liu Mingwei", is_main: false, identity_ids: [] },
 ];
 
 function recordRequests(): string[] {
@@ -102,11 +102,11 @@ function recordRequests(): string[] {
       return HttpResponse.json({ ok: true, data: [] });
     }),
   );
-  // 分两次 use：``server.use`` 是 unshift，后注册的排在前面。角色列表得压过上面
-  // 那条 catch-all，否则整页拿到空数组，什么身份请求都不会发，断言空过。
+  // Registered in two use calls: `server.use` is an unshift, so what is registered later comes first. The character list must override the
+  // catch-all above, otherwise the whole page gets an empty array, no identity request is sent, and the assertions pass vacuously.
   server.use(
     http.get("http://localhost:3000/api/v1/projects/demo/characters", ({ request }) => {
-      // 专用 handler 不走 catch-all，得自己记一笔，否则这条请求不进 ``seen``。
+      // A dedicated handler does not go through the catch-all, so it has to record itself, otherwise this request does not reach `seen`.
       seen.push(new URL(request.url).pathname);
       return HttpResponse.json({ ok: true, data: CHARACTERS });
     }),
@@ -129,24 +129,24 @@ describe("the characters tab does not fan identities out per character", () => {
 
     renderWithProviders(<CharactersPage />);
 
-    // 先确认三个角色真的渲染出来了——否则页面崩在半路，下面的请求断言会因为
-    // 什么都没发而空过。
-    // 先确认三个角色真的都渲染出来了——否则页面崩在半路，下面的请求断言会因为
-    // 什么都没发而空过。首个角色同时出现在侧栏和右侧详情里，所以用 All。
-    expect((await screen.findAllByText("苏清晏")).length).toBeGreaterThan(0);
-    await waitFor(() => expect(screen.getByText("柳明微")).toBeInTheDocument());
-    expect(screen.getByText("沈砚")).toBeInTheDocument();
+    // First confirm the three characters really rendered - otherwise the page crashes halfway and the request assertions below pass vacuously
+    // because nothing was sent.
+    // First confirm all three characters really rendered - otherwise the page crashes halfway and the request assertions below pass vacuously
+    // because nothing was sent. The first character appears in both the sidebar and the right-hand detail, hence All.
+    expect((await screen.findAllByText("Su Qingyan")).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByText("Liu Mingwei")).toBeInTheDocument());
+    expect(screen.getByText("Shen Yan")).toBeInTheDocument();
 
-    // 路径里的中文是百分号编码过的，解出来比对，断言里才看得出是哪个角色。
+    // Chinese in the path is percent-encoded; decode before comparing, so the assertion shows which character it is.
     const identityRequests = seen
       .map((path) => decodeURIComponent(path))
       .filter((path) => path.endsWith("/identities"));
-    // 三个角色，一条身份请求：归属关系由 ``useIdentityOwnerIndex`` 从角色列表自带的
-    // ``identity_ids`` 算出，不额外发请求；详情只给自动选中的首个角色拉。
-    // 这里列出具体路径而不是数个数——回归的形状就是"每个角色一条"，列出来才看得
-    // 出漏的是哪几个。
-    expect(identityRequests).toEqual(["/api/v1/projects/demo/characters/苏清晏/identities"]);
-    // 资产页不再为了展示全局用量统计而扫描所有分集 beats。
+    // Three characters, one identity request: ownership is computed by `useIdentityOwnerIndex` from the `identity_ids` the character list
+    // carries, with no extra request; details are only fetched for the automatically selected first character.
+    // Specific paths are listed rather than counting - the shape of the regression is "one per character", and listing shows
+    // which ones were missed.
+    expect(identityRequests).toEqual(["/api/v1/projects/demo/characters/Su Qingyan/identities"]);
+  // The assets page no longer scans the beats of every episode just to show global usage statistics.
     expect(seen.filter((path) => path.includes("/beats"))).toEqual([]);
   });
 

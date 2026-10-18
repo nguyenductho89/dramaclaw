@@ -335,12 +335,12 @@ async def test_episode_planner_does_not_write_planned_episodes_to_cognee(
 
     plan = episode_planner.EpisodePlan(
         number=1,
-        title="危机初现",
-        content_summary="主角发现异常线索并决定追查事情真相。",
-        main_conflict="主角必须在危险逼近前找到证据",
-        cliffhanger="门外忽然传来熟悉的脚步声",
-        key_events=["发现线索"],
-        character_names=["林昭"],
+        title="The Crisis Emerges",
+        content_summary="The protagonist discovers an anomalous clue and decides to trace the truth.",
+        main_conflict="The protagonist must find evidence before the danger closes in",
+        cliffhanger="Familiar footsteps suddenly sound outside the door",
+        key_events=["Discover the clue"],
+        character_names=["Lin Zhao"],
     )
 
     class FakeAgent:
@@ -359,7 +359,7 @@ async def test_episode_planner_does_not_write_planned_episodes_to_cognee(
     planner = episode_planner.EpisodePlannerAgent(store)
     episodes = await planner.plan_episodes(
         target_episodes=1,
-        known_characters=["林昭"],
+        known_characters=["Lin Zhao"],
     )
 
     assert [episode.number for episode in episodes] == [1]
@@ -374,8 +374,8 @@ async def test_episode_runner_persists_agent_plan_only_to_sqlite(monkeypatch):
     planned = [
         NovelEpisode(
             number=1,
-            title="第一集",
-            content_summary="主角发现异常线索。",
+            title="Episode 1",
+            content_summary="The protagonist discovers an anomalous clue.",
         )
     ]
     replaced = []
@@ -394,7 +394,7 @@ async def test_episode_runner_persists_agent_plan_only_to_sqlite(monkeypatch):
         async def plan_episodes(self, **_kwargs):
             return planned
 
-    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _path: "小说正文")
+    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _path: "novel body text")
     monkeypatch.setattr(graph_build, "_load_store", lambda _ctx: _async_value(FakeStore()))
     monkeypatch.setattr(
         "novelvideo.agents.episode_planner.EpisodePlannerAgent",
@@ -435,7 +435,7 @@ async def test_episode_runner_propagates_agent_failure_without_legacy_fallback(
         async def plan_episodes(self, **_kwargs):
             raise RuntimeError("agent planning failed")
 
-    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _path: "小说正文")
+    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _path: "novel body text")
     monkeypatch.setattr(graph_build, "_load_store", lambda _ctx: _async_value(FakeStore()))
     monkeypatch.setattr(
         "novelvideo.agents.episode_planner.EpisodePlannerAgent",

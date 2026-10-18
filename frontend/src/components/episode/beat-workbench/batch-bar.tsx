@@ -54,9 +54,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// 产品决定：这两个批量入口从工具栏下线，任何 spineTemplate 下都不给。后端路由、
-// 账单口径和任务控制都原样留着（其它入口和历史任务仍要用），这里只掐掉入口。
-// 恢复时把常量翻回 true，下面原有的 spineTemplate 条件继续生效。
+// Product decision: these two batch entries are taken off the toolbar and are not offered under any spineTemplate. The backend routes,
+// billing rules and task control are all left in place (other entries and historical tasks still need them); only the entry is removed here.
+// To restore, flip the constants back to true and the existing spineTemplate conditions below take effect again.
 const SHOW_GLOBAL_OPTIMIZE_ENTRY = false;
 const SHOW_EPISODE_AUDIO_ENTRY = false;
 
@@ -352,7 +352,7 @@ export function BatchBar({
             )}
             {t("episode.workbench.batch.reassignColors")}
           </Button>
-          {/* 精品剧 (spine_template === "drama") 把解说烘进渲染视频，没有独立音频阶段 —— 隐藏「生成全集音频」 */}
+          {/* Premium drama (spine_template === "drama") bakes narration into the rendered video and has no standalone audio stage - hide "Generate whole-episode audio" */}
           {SHOW_EPISODE_AUDIO_ENTRY && spineTemplate !== "drama" && (
           <Tooltip>
             <TooltipTrigger

@@ -62,7 +62,7 @@ async def enqueue(ctx, root, username, record):
             queue_kind='default', episode=0, scope=record['id'],
             payload={'import_id': record['id'], 'username': username,
                      'name': record['name'], 'display_name': record['name'],
-                     'display_name_user_content': True, 'task_label': '外部 Skill 转换',
+                     'display_name_user_content': True, 'task_label': 'External Skill conversion',
                      'batch_id': record['batch_id']})
         # The local backend may already have started the worker; don't overwrite its state.
         latest = bind_task(root, username, record['id'], queued.task_state.task_id)

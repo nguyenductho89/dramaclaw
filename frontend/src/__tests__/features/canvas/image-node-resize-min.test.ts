@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { resolveResizeMinConstraintsByAspect } from "@/features/canvas/application/imageNodeSizing";
 
 /**
- * 缩放下限必须随图片比例换算成互相自洽的最小宽高，配合 keepAspectRatio 时短边为
- * 绑定约束；否则两个独立的 min 会把宽/竖屏图片卡成过大的最小框，导致无法缩小。
+ * The resize lower bound must be converted by the image ratio into a mutually consistent minimum width and height, so that with keepAspectRatio the short side is
+ * the binding constraint; otherwise two independent mins would force wide/portrait images into an oversized minimum box that cannot shrink.
  */
 describe("resolveResizeMinConstraintsByAspect", () => {
   it("scales a wide image's min box so the short edge is the binding floor", () => {
@@ -14,7 +14,7 @@ describe("resolveResizeMinConstraintsByAspect", () => {
       minWidth: 140,
       minHeight: 140,
     });
-    // 短边(高)=基准140，宽=140*2=280；而不是 140×140（会被 keepAspectRatio 卡到 280×140 但语义不清）
+    // Short side (height) = base 140, width = 140*2 = 280; not 140x140 (which keepAspectRatio would push to 280x140 with unclear semantics)
     expect(result.minHeight).toBe(140);
     expect(result.minWidth).toBe(280);
   });

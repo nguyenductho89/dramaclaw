@@ -118,8 +118,8 @@ function resolveDroppedMediaFile(event: DragEvent<HTMLElement>): File | null {
     return directFile;
   }
 
-  // items[].type 对 .mxf 等专业容器也是空串，先 MIME 粗筛（图片/音频），再对
-  // 文件项用扩展名兜住无 MIME 的视频容器。
+  // items[].type is also an empty string for professional containers such as .mxf, so first a coarse MIME filter (image/audio), then for
+  // file items the extension catches video containers without a MIME.
   const items = Array.from(event.dataTransfer.items || []).filter(
     (candidate) => candidate.kind === 'file',
   );
@@ -272,12 +272,12 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const convertNodeType = useCanvasStore((state) => state.convertNodeType);
   const addPanoCaptureGroup = useCanvasStore((state) => state.addPanoCaptureGroup);
-  // 只订阅连到本节点的边(useShallow 逐元素比较),避免拖动无关节点触发重渲染。
+  // Subscribe only to edges connected to this node (useShallow element-wise comparison), so dragging unrelated nodes does not trigger re-renders.
   const connectedEdges = useCanvasStore(
     useShallow((state) => state.edges.filter((edge) => edge.source === id || edge.target === id)),
   );
   const useUploadFilenameAsNodeTitle = useSettingsStore((state) => state.useUploadFilenameAsNodeTitle);
-  // 离散布尔订阅,缩放时仅在阈值翻转那帧重渲染,而非每帧。
+  // Discrete boolean subscription: when zooming, re-render only on the frame where the threshold flips, not every frame.
   const preferOriginalImage = useStore((state) => shouldUseOriginalImageByZoom(state.transform[2]));
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadSequenceRef = useRef(0);
@@ -518,8 +518,8 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
         sourceFileName: file.name,
       });
       if (!ok) return;
-      // File 走暂存、事件只是敲一下：变形后的 video 节点在低缩放档同样先以 LOD
-      // shell 挂载，晚于下面这一帧才挂上订阅（见 [[pendingExternalFiles]]）。
+      // The File goes through staging and the event is only a nudge: the morphed video node also mounts first as an LOD
+      // shell at the low-zoom tier, attaching its subscription later than the frame below (see [[pendingExternalFiles]]).
       stashExternalFile('video-node/external-file', id, file);
       requestAnimationFrame(() => {
         canvasEventBus.publish('video-node/external-file', { nodeId: id });
@@ -539,7 +539,7 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
         sourceFileName: file.name,
       });
       if (!ok) return;
-      // 同 morphToVideoWithFile：File 走暂存，事件只是敲一下。
+      // Same as morphToVideoWithFile: the File goes through staging and the event is only a nudge.
       stashExternalFile('audio-node/external-file', id, file);
       requestAnimationFrame(() => {
         canvasEventBus.publish('audio-node/external-file', { nodeId: id });
@@ -550,7 +550,7 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
 
   const handleMediaFile = useCallback(
     async (file: File) => {
-      // isVideoFile 兜住 .mxf 等 file.type 为空串的容器，避免落到最后被忽略。
+      // isVideoFile catches containers like .mxf whose file.type is an empty string, so they do not fall through to be ignored in the end.
       if (isVideoFile(file)) {
         if (imageOnly) {
           console.warn('[upload-node] image-only node: dropped video ignored');
@@ -628,8 +628,8 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
     },
     [handleMediaFile],
   );
-  // File 本体走 pendingExternalFiles 暂存、挂载时补投 —— 低缩放档下本节点先以 LOD
-  // shell 挂载，只订阅事件会漏掉投递（见 useExternalFileHandoff）。
+  // The File itself is staged in pendingExternalFiles and delivered on mount — at low zoom this node first mounts as an LOD
+  // shell, and subscribing to events alone would miss the handoff (see useExternalFileHandoff).
   useExternalFileHandoff('upload-node/external-file', id, consumeExternalFile);
 
   const handleNodeClick = useCallback(() => {
@@ -797,13 +797,13 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
     clearTransientPreview();
   }, [clearTransientPreview]);
 
-  // 已记录的原图像素尺寸；决定主体图能不能喂降采样副本（见 nodeBodyImageSrc）。
+  // The recorded original pixel size; it decides whether the main image may be fed a downsampled copy (see nodeBodyImageSrc).
   const recordedNaturalSize = useMemo(() => readNodeNaturalSize(data), [data]);
 
-  // 记录归属的是哪张图。上传节点的图会被换掉——重新上传、全景抓拍回填、导演控件
-  // 覆盖，这几条路都只改 imageUrl/previewImageUrl，不动记录。所以换图当下就先不
-  // 信任记录，这一轮退回原图重测。只认换图，不认缩放：preferOriginalImage 翻转时
-  // 下面那一支会挑到另一个字段，但那是同一个节点的两种画法。
+  // Which image the record belongs to. An upload node's image can be swapped — re-upload, panorama capture backfill, director control
+  // overwrite; these paths only change imageUrl/previewImageUrl and do not touch the record. So at the moment of an image swap the record is first
+  // distrusted, and this round falls back to the original to re-measure. It recognizes only image swaps, not zoom: when preferOriginalImage flips,
+  // the branch below picks another field, but that is two ways of drawing the same node.
   const recordSubject = useMemo(() => {
     const picked = data.previewImageUrl || data.imageUrl;
     if (!picked) return null;
@@ -817,8 +817,8 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
     height: resolvedHeight,
   });
 
-  // 本地刚选的文件用 blob: 直出，不走变体：那是本机内存里的东西，后端没有它的
-  // 副本，也马上会被上传完成的稳定图换掉（clearTransientPreview）。
+  // A freshly picked local file is served directly as blob:, bypassing variants: it lives in local memory, the backend has no copy of it,
+  // and it will soon be replaced by the stable image after the upload completes (clearTransientPreview).
   const bodyImage = useMemo(() => {
     if (transientPreviewUrl) return null;
     const picked = preferOriginalImage
@@ -826,8 +826,8 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
       : data.previewImageUrl || data.imageUrl;
     if (!picked) return null;
     const resolved = resolveImageDisplayUrl(withImageCacheBust(picked, data.committed_at));
-    // 节点主体把整幅原图解码进几百 CSS px 的盒子里；变体只在真实尺寸已知、且没
-    // 放大到细看那一档时启用，详见 nodeBodyImageSrc 的注释。
+    // The node body decodes the whole original into a box of a few hundred CSS px; the variant is enabled only when the real size is known and the view
+    // is not zoomed in to the close-inspection tier; see the comment of nodeBodyImageSrc for details.
     return nodeBodyImageSrc(resolved, recordedNaturalSize, {
       preferOriginal: preferOriginalImage || distrusted,
       requiredEdge: bodyVariantBudget,
@@ -846,19 +846,19 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
   const imageSource = transientPreviewUrl ?? bodyImage?.src ?? null;
 
   /**
-   * 把这张图的真实像素尺寸记进节点数据。
+   * Record this image's real pixel size into the node data.
    *
-   * 记录空着，主体图就只能一直喂原图（nodeBodyImageSrc 在 natural 为 null 时直接
-   * 交回原图）。上传节点此前从来没有写过这组数，于是变体对它整个是关着的——用户
-   * 拖进来的原图往往是这张画布上最大的一张。这里补上：加载完成即量、即写。
+   * With the record empty, the body image can only keep being fed the original (nodeBodyImageSrc hands back the original directly
+   * when natural is null). The upload node never wrote these numbers before, so variants were fully off for it — the original the user
+   * drags in is often the largest image on this canvas. Added here: measure and write as soon as loading completes.
    *
-   * 上传节点不跟着图的比例自动改尺寸（用户拖多大就是多大），所以没有「比例变了」
-   * 「显示尺寸对不上」这两个触发点，这次写回纯粹是补记事实，不该进撤销栈。
+   * The upload node does not auto-resize with the image's ratio (it is whatever size the user dragged), so the two trigger points
+   * "ratio changed" and "display size mismatch" do not exist; this write-back purely backfills facts and should not enter the undo stack.
    */
   const recordNaturalSize = useCallback((image: HTMLImageElement) => {
-    // 瞬时 blob: 预览：稳定图随后会把它换掉，那一轮才有变体上下文可判。
+    // Transient blob: preview: the stable image will replace it later, and only in that round is there variant context to judge.
     if (!bodyImage) return;
-    // 记录描述的不是这张图：降采样副本上量不出源图真尺寸。先退回原图重测。
+    // The record does not describe this image: the true source size cannot be measured on a downsampled copy. Fall back to the original and re-measure first.
     if (
       bodyImage.downscaled
       && !nodeBodyRecordDescribesImage(image, recordedNaturalSize, bodyImage.maxEdge ?? 0)
@@ -866,8 +866,8 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
       distrustRecord();
       return;
     }
-    // 放大档挑的是 imageUrl，那可能是与记录归属的 previewImageUrl 完全不同的另一
-    // 张图；拿它去纠正记录，是把错的换成另一个错的。
+    // The zoomed-in tier picks imageUrl, which may be an entirely different image from the previewImageUrl the record belongs to;
+    // using it to correct the record replaces one wrong value with another.
     const measuringRecordSubject = !preferOriginalImage;
     if (measuringRecordSubject) {
       trustAgain();

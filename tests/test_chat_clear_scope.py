@@ -26,8 +26,8 @@ async def test_clear_messages_preserves_other_canvas_agent_and_settings(tmp_path
         agent_id="other",
         state_dir=str(tmp_path),
     )
-    await store.append_message_async("alice", first, "user", "旧消息", turn_id="turn-1")
-    await store.append_message_async("alice", other_agent, "user", "保留消息")
+    await store.append_message_async("alice", first, "user", "old message", turn_id="turn-1")
+    await store.append_message_async("alice", other_agent, "user", "kept message")
     db = await store.connect_async("alice", first)
     try:
         await db.execute(

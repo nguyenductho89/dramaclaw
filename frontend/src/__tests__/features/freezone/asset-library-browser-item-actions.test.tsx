@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 侧栏「资产库」里单条素材的「…」菜单：发送到画布 / 下载 / 重命名 / 删除。
+// The "..." menu of a single asset in the sidebar "Asset Library": send to canvas / download / rename / delete.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -34,7 +34,7 @@ import { ConfirmDialogHost } from "@/components/confirm-dialog-host";
 
 const UPLOADED = {
   id: "item-1",
-  name: "原子朋克",
+  name: "Atompunk",
   media: "image",
   source: "upload",
   category: "other",
@@ -43,8 +43,8 @@ const UPLOADED = {
 };
 
 const FROM_MAINLINE = {
-  id: "mainline:character:林小满",
-  name: "林小满",
+  id: "mainline:character:Lin Xiaoman",
+  name: "Lin Xiaoman",
   media: "image",
   source: "character",
   category: "character",
@@ -54,7 +54,7 @@ const FROM_MAINLINE = {
 
 const VOICE_ONLY = {
   id: "item-2",
-  name: "苏贝音色",
+  name: "Su Bei voice",
   media: "audio",
   source: "upload",
   category: "audio",
@@ -64,7 +64,7 @@ const VOICE_ONLY = {
 
 const VIDEO_ONLY = {
   id: "item-3",
-  name: "分镜预览",
+  name: "Storyboard preview",
   media: "video",
   source: "upload",
   category: "other",
@@ -86,14 +86,14 @@ function renderBrowser(onSendToCanvas?: (entry: unknown) => void) {
   );
 }
 
-/** 侧栏是「先文件夹、再条目」两级，测条目得先点进去。 */
+/** The sidebar has two levels, "folder first, then items", so to test an item you must click into the folder first. */
 async function openFolder(label: string) {
-  const folder = await screen.findByLabelText(`文件夹 ${label}`);
+  const folder = await screen.findByLabelText(`Folder ${label}`);
   fireEvent.click(folder);
 }
 
 async function openItemMenu(name: string) {
-  fireEvent.click(await screen.findByLabelText(`${name} 更多操作`));
+  fireEvent.click(await screen.findByLabelText(`More actions for ${name}`));
 }
 
 describe("AssetLibraryBrowser item actions", () => {
@@ -106,10 +106,10 @@ describe("AssetLibraryBrowser item actions", () => {
     ]);
   });
 
-  // 封面口径要和弹窗一致：有图就拿第一张图当封面，纯音频文件夹回退到文件夹图标。
+  // The cover rule must match the dialog: if there is an image take the first image as the cover; a pure-audio folder falls back to the folder icon.
   it("shows a cover thumbnail on folders that hold an image", async () => {
     renderBrowser(() => {});
-    const folder = await screen.findByLabelText("文件夹 待分类资产");
+    const folder = await screen.findByLabelText("Folder Uncategorized");
 
     const cover = folder.querySelector("img");
     expect(cover).toBeTruthy();
@@ -119,7 +119,7 @@ describe("AssetLibraryBrowser item actions", () => {
   it("falls back to the folder icon when nothing inside is an image", async () => {
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue([VOICE_ONLY]);
     renderBrowser(() => {});
-    const folder = await screen.findByLabelText("文件夹 音效");
+    const folder = await screen.findByLabelText("Folder Audio");
 
     expect(folder.querySelector("img")).toBeNull();
   });
@@ -127,7 +127,7 @@ describe("AssetLibraryBrowser item actions", () => {
   it("does not preload metadata for every video in an opened folder", async () => {
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue([VIDEO_ONLY]);
     renderBrowser(() => {});
-    await openFolder("待分类资产");
+    await openFolder("Uncategorized");
 
     const video = document.querySelector("video");
     expect(video).toBeTruthy();
@@ -136,77 +136,77 @@ describe("AssetLibraryBrowser item actions", () => {
 
   it("offers the four actions on a locally uploaded asset", async () => {
     renderBrowser(() => {});
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
 
-    expect(screen.getByRole("menuitem", { name: "发送到画布" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "下载" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "重命名" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "删除" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Send to canvas" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Download" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Rename" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeTruthy();
   });
 
-  it("hides 发送到画布 when there is no canvas to send to", async () => {
+  it("hides Send to canvas when there is no canvas to send to", async () => {
     renderBrowser();
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
 
-    expect(screen.queryByRole("menuitem", { name: "发送到画布" })).toBeNull();
-    expect(screen.getByRole("menuitem", { name: "下载" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Send to canvas" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Download" })).toBeTruthy();
   });
 
-  // 主线同步来的素材改了名/删掉都会在下次同步时被覆盖回来，所以不给这两个入口。
+  // Assets synced from the mainline would be overwritten back on the next sync after being renamed/deleted, so these two entries are not offered.
   it("only offers read-only actions on mainline-synced assets", async () => {
     renderBrowser(() => {});
-    await openFolder("主线");
-    await openItemMenu("林小满");
+    await openFolder("Mainline");
+    await openItemMenu("Lin Xiaoman");
 
-    expect(screen.getByRole("menuitem", { name: "发送到画布" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "下载" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "重命名" })).toBeNull();
-    expect(screen.queryByRole("menuitem", { name: "删除" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Send to canvas" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Download" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
   });
 
   it("sends the clicked asset to the canvas", async () => {
     const onSend = vi.fn();
     renderBrowser(onSend);
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
-    fireEvent.click(screen.getByRole("menuitem", { name: "发送到画布" }));
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Send to canvas" }));
 
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(onSend.mock.calls[0][0]).toMatchObject({
       id: "item-1",
-      name: "原子朋克",
+      name: "Atompunk",
     });
   });
 
   it("downloads under the asset name plus the url's extension", async () => {
     downloadUrlAsFile.mockResolvedValue(undefined);
     renderBrowser(() => {});
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
-    fireEvent.click(screen.getByRole("menuitem", { name: "下载" }));
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Download" }));
 
     await waitFor(() => expect(downloadUrlAsFile).toHaveBeenCalledTimes(1));
-    expect(downloadUrlAsFile.mock.calls[0][1]).toBe("原子朋克.png");
+    expect(downloadUrlAsFile.mock.calls[0][1]).toBe("Atompunk.png");
   });
 
   it("renames through the shared name dialog", async () => {
     renameFreezoneVideoCharacterLibraryItem.mockResolvedValue({});
     renderBrowser(() => {});
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
-    fireEvent.click(screen.getByRole("menuitem", { name: "重命名" }));
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
 
-    const input = screen.getByLabelText(/资产名称/);
-    fireEvent.change(input, { target: { value: "赛博霓虹" } });
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    const input = screen.getByLabelText(/Asset name/);
+    fireEvent.change(input, { target: { value: "Cyber neon" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(renameFreezoneVideoCharacterLibraryItem).toHaveBeenCalledWith(
         "demo",
         "item-1",
-        "赛博霓虹",
+        "Cyber neon",
       ),
     );
   });
@@ -216,27 +216,27 @@ describe("AssetLibraryBrowser item actions", () => {
     const nativeConfirm = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     renderBrowser(() => {});
-    await openFolder("待分类资产");
-    await openItemMenu("原子朋克");
-    fireEvent.click(screen.getByRole("menuitem", { name: "删除" }));
+    await openFolder("Uncategorized");
+    await openItemMenu("Atompunk");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     const dialog = await screen.findByRole("alertdialog");
-    // 走原生 confirm 的话这个对话框根本不会出现，删除也早就发出去了。
+    // With native confirm this dialog would never appear, and the deletion would already have been sent.
     expect(nativeConfirm).not.toHaveBeenCalled();
     expect(deleteFreezoneVideoCharacterLibraryItem).not.toHaveBeenCalled();
 
-    // 取消：按文案之外的那个按钮找，免得跟着 i18n 的「取消」文案一起碎。
+    // Cancel: find it by the button other than its text, so it does not break together with the i18n "Cancel" copy.
     const cancel = within(dialog)
       .getAllByRole("button")
-      .find((button) => button.textContent !== "删除");
+      .find((button) => button.textContent !== "Delete");
     fireEvent.click(cancel as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     expect(deleteFreezoneVideoCharacterLibraryItem).not.toHaveBeenCalled();
 
-    await openItemMenu("原子朋克");
-    fireEvent.click(screen.getByRole("menuitem", { name: "删除" }));
+    await openItemMenu("Atompunk");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
     const retry = await screen.findByRole("alertdialog");
-    fireEvent.click(within(retry).getByRole("button", { name: "删除" }));
+    fireEvent.click(within(retry).getByRole("button", { name: "Delete" }));
 
     await waitFor(() =>
       expect(deleteFreezoneVideoCharacterLibraryItem).toHaveBeenCalledWith(

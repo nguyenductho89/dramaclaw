@@ -1,4 +1,4 @@
-"""项目级图片请求使用记录。"""
+"""Project-level image request usage records."""
 
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ ON image_request_usage(task_type, scope, accepted_at DESC);
 """
 
 _NON_BILLABLE_FAILURE_PATTERNS = (
-    "%未返回图像数据%",
-    "%模型未返回图像%",
+    "%returned no image data%",
+    "%model returned no image%",
 )
 
 _SCHEMA_COMPONENT = "image_request_usage"
@@ -241,12 +241,12 @@ def get_image_scope_warning(
     if next_attempt >= 5:
         return (
             "negative",
-            f"{subject} 已连续生成 {next_attempt} 次，建议先检查提示词/参考图后再继续。",
+            f"{subject} has been generated {next_attempt} times in a row; check the prompt/reference images before continuing.",
         )
     if next_attempt >= 3:
         return (
             "warning",
-            f"{subject} 已连续生成 {next_attempt} 次，请确认是否还要继续生成。",
+            f"{subject} has been generated {next_attempt} times in a row; confirm whether you want to continue.",
         )
     return None
 

@@ -49,7 +49,7 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
     beats = await _beats(scope)
     beat = next((b for b in beats if str(b.get("beat_number")) == target), None)
     if beat is None:
-        return empty(_STEP, "llm", f"找不到分镜 / Beat not found: {target}")
+        return empty(_STEP, "llm", f"Beat not found: {target}")
     num = int(beat["beat_number"])
     mode = str(beat.get("video_mode") or "first_frame")
     language = _language(scope)
@@ -65,17 +65,16 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
             target_label=label,
             parts=[
                 PromptPart("system", name, text),
-                PromptPart("image", "sketch frame", str(sketch) if sketch else "（缺少草图或首帧 / missing sketch or frame）"),
+                PromptPart("image", "sketch frame", str(sketch) if sketch else "missing sketch or frame"),
             ],
             inputs={"video_mode": mode, "language": language},
             last_sent=_stored(beat, "video_prompt"),
-            note="首帧模式：用户提示词依赖角色颜色映射，运行时拼装；这里显示系统提示词与草图。"
-            " / First-frame mode: the user prompt needs the colour map at run time; showing the system prompt and sketch.",
+            note="First-frame mode: the user prompt needs the colour map at run time; showing the system prompt and sketch.",
         )
 
     next_beat = next((b for b in beats if int(b.get("beat_number") or 0) == num + 1), None)
     if next_beat is None:
-        out = empty(_STEP, "llm", "这是最后一个 Beat，没有首尾帧过渡提示词 / Last beat: no keyframe transition prompt")
+        out = empty(_STEP, "llm", "Last beat: no keyframe transition prompt")
         out.target_label, out.last_sent = label, _stored(beat, "keyframe_prompt")
         return out
 
@@ -92,7 +91,7 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
         audio_type=audio_type,
         dialogue_line=narration if audio_type == "dialogue" else "",
     )
-    missing = "（缺少首帧或草图 / missing frame or sketch）"
+    missing = "missing frame or sketch"
     return PromptPreview(
         step=_STEP,
         model_kind="llm",
@@ -105,10 +104,9 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
         ],
         inputs={"video_mode": mode, "language": language, "has_both_frames": bool(first and last)},
         last_sent=_stored(beat, "keyframe_prompt"),
-        note="生成时语言取自界面语言，此处按原文语言预览；缺少任一帧时生成会失败。"
-        " / At generation time the language follows the UI language (preview uses the source language); generation fails if either frame is missing.",
+        note="At generation time the language follows the UI language (preview uses the source language); generation fails if either frame is missing.",
     )
 
 
-register(StepSpec(_STEP, "视频提示词 / Video prompt", "llm", needs_episode=True,
+register(StepSpec(_STEP, "Video prompt", "llm", needs_episode=True,
                   targets_fn=_targets, build_fn=_build))

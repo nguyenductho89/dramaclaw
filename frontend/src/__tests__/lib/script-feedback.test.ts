@@ -12,12 +12,12 @@ describe("script feedback helpers", () => {
     expect(
       getScriptReviewFeedback({
         review_passed: false,
-        review_summary: "第 3 行缺少画面描述",
+        review_summary: "Line 3 is missing a visual description",
       }),
     ).toEqual({
       type: "warning",
       key: "episode.script.scriptReviewFailed",
-      values: { summary: "第 3 行缺少画面描述" },
+      values: { summary: "Line 3 is missing a visual description" },
     });
   });
 
@@ -34,10 +34,10 @@ describe("script feedback helpers", () => {
   });
 
   it("deduplicates task logs while preserving order", () => {
-    expect(mergeTaskLogs(["启动", "生成第 1 行"], ["生成第 1 行", "完成"])).toEqual([
-      "启动",
-      "生成第 1 行",
-      "完成",
+    expect(mergeTaskLogs(["Start", "Generating line 1"], ["Generating line 1", "Done"])).toEqual([
+      "Start",
+      "Generating line 1",
+      "Done",
     ]);
   });
 });

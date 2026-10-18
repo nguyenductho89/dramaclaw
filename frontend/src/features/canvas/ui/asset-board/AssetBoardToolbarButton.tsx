@@ -4,17 +4,17 @@ import { Loader2, type LucideIcon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
 /**
- * 详情工具条按钮的统一样式（图片/视频/文本三条工具条 + 第二批图片操作区共用）。
+ * The unified style of detail toolbar buttons (shared by the image/video/text toolbars + the second batch of image action areas).
  *
- * 圆角收到 rounded-[6px]：本项目 --radius=1rem，rounded-md 折合 14px，在 ~29px 高
- * 的按钮上几乎等于全胶囊，和徽标 chip（rounded-full）糊在一起；收小一档区分。
+ * The corner radius is reduced to rounded-[6px]: this project's --radius=1rem, rounded-md works out to 14px, which on a ~29px-high
+ * button is almost a full pill, blurring together with the badge chips (rounded-full); shrinking one notch tells them apart.
  */
 export const DETAIL_TOOLBAR_BUTTON_CLASS =
   'inline-flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white/75 transition-colors hover:bg-white/10 hover:text-white/90 disabled:cursor-not-allowed disabled:opacity-45';
 
 /**
- * 详情工具条按钮。独立成文件（而非留在 AssetBoardDetailToolbar）以打断
- * 工具条 ↔ 第二批操作区（AssetBoardImageEditMenu）的循环 import。
+ * The detail toolbar button. It is split into its own file (rather than left in AssetBoardDetailToolbar) to break the circular import between
+ * the toolbar <-> the second batch of action areas (AssetBoardImageEditMenu).
  */
 export function DetailToolbarButton({
   icon: Icon,
@@ -29,7 +29,7 @@ export function DetailToolbarButton({
   label: string;
   onClick?: () => void;
   disabled?: boolean;
-  /** 进行中：图标换 spinner 并禁用（生成类操作的最简进行中反馈）。 */
+  /** In progress: the icon becomes a spinner and is disabled (the simplest in-progress feedback for generation-type actions). */
   busy?: boolean;
   title?: string;
   trailing?: ReactNode;

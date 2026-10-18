@@ -31,8 +31,8 @@ def _infer(text: str):
 
 
 @pytest.mark.parametrize("text,expected_episode", [
-    ("展示第 3 集草图", 3),
-    ("看看第 5 集的草图", 5),
+    ("show the sketches of episode 3", 3),
+    ("view the sketches of episode 5", 5),
 ])
 def test_inferring_a_sketch_tool_emits_episode(text, expected_episode):
     """The tool requires `episode`; a `trajectory` key would simply be rejected."""

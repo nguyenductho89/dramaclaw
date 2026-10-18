@@ -1,4 +1,4 @@
-"""验证报告格式化与持久化。"""
+"""Verification report formatting and persistence."""
 
 import json
 import logging
@@ -9,24 +9,24 @@ logger = logging.getLogger(__name__)
 
 
 def format_verification_report(result: dict, beat_num: int, verify_type: str) -> str:
-    """将 VerificationResult 格式化为 markdown 可读文本。
+    """Format a VerificationResult as human-readable markdown text.
 
     Args:
-        result: VerificationResult.model_dump() 的字典
-        beat_num: beat 编号
-        verify_type: "sketch" 或 "frame"
+        result: dict from VerificationResult.model_dump()
+        beat_num: beat number
+        verify_type: "sketch" or "frame"
     """
     passed = result.get("passed", False)
     score = result.get("score", 0.0)
-    type_label = "草图验证" if verify_type == "sketch" else "首帧验证"
+    type_label = "Sketch verification" if verify_type == "sketch" else "First-frame verification"
     icon = "✅" if passed else "❌"
-    status = "通过" if passed else "未通过"
+    status = "Passed" if passed else "Failed"
 
     lines = [f"{icon} Beat {beat_num} {type_label}{status} ({score:.1f}/10)"]
 
     issues = result.get("issues", [])
     if not issues:
-        lines.append("无事实错误")
+        lines.append("No factual errors")
     else:
         for issue in issues:
             severity = issue.get("severity", "info")
@@ -35,26 +35,26 @@ def format_verification_report(result: dict, beat_num: int, verify_type: str) ->
 
     action = result.get("suggested_action", "none")
     if action and action != "none":
-        lines.append(f"建议操作: {action}")
+        lines.append(f"Suggested action: {action}")
 
     return "\n".join(lines)
 
 
 def format_consistency_report(data: dict, episode_num: int) -> str:
-    """将 consistency verify 结果格式化为 markdown 表格。
+    """Format the consistency verify result as a markdown table.
 
     Args:
-        data: verify_consistency 返回的字典
-        episode_num: 集数
+        data: dict returned by verify_consistency
+        episode_num: episode number
     """
     characters = data.get("characters", [])
     if not characters:
-        return f"## 角色一致性报告 (EP{episode_num})\n\n无角色需要检查"
+        return f"## Character consistency report (EP{episode_num})\n\nNo characters to check"
 
     lines = [
-        f"## 角色一致性报告 (EP{episode_num})",
+        f"## Character consistency report (EP{episode_num})",
         "",
-        "| 角色 | 脸部 | 服装 | 检查Beat | 结果 |",
+        "| Character | Face | Clothing | Beats checked | Result |",
         "|------|------|------|----------|------|",
     ]
 
@@ -73,21 +73,21 @@ def format_consistency_report(data: dict, episode_num: int) -> str:
 
     total = len(characters)
     lines.append("")
-    lines.append(f"总结: {passed_count}/{total} 角色通过")
+    lines.append(f"Summary: {passed_count}/{total} characters passed")
 
     return "\n".join(lines)
 
 
 def format_color_verify_report(data: dict, episode_num: int) -> str:
-    """将颜色验证结果格式化为 markdown 表格。"""
+    """Format the color verification result as a markdown table."""
     beat_results = data.get("beat_results", [])
     if not beat_results:
-        return f"## 草图颜色验证报告 (EP{episode_num})\n\n无 beat 需要检查"
+        return f"## Sketch color verification report (EP{episode_num})\n\nNo beats to check"
 
     lines = [
-        f"## 草图颜色验证报告 (EP{episode_num})",
+        f"## Sketch color verification report (EP{episode_num})",
         "",
-        "| Beat | 状态 | 预期角色 | 检测到 | 缺失 | 多余 |",
+        "| Beat | Status | Expected characters | Detected | Missing | Extra |",
         "|------|------|----------|--------|------|------|",
     ]
     status_icons = {"pass": "✅", "fail": "❌", "warn": "⚠️"}
@@ -110,32 +110,32 @@ def format_color_verify_report(data: dict, episode_num: int) -> str:
     warned = data.get("warned_beats", 0)
     failed_nums = data.get("failed_beat_numbers", [])
     lines.append("")
-    summary_parts = [f"{passed}/{total} beats 通过"]
+    summary_parts = [f"{passed}/{total} beats passed"]
     if failed:
-        summary_parts.append(f"{failed} beats 失败 {failed_nums}")
+        summary_parts.append(f"{failed} beats failed {failed_nums}")
     if warned:
-        summary_parts.append(f"{warned} beats 警告")
-    lines.append(f"总结: {', '.join(summary_parts)}")
+        summary_parts.append(f"{warned} beats with warnings")
+    lines.append(f"Summary: {', '.join(summary_parts)}")
     return "\n".join(lines)
 
 
 def format_episode_overview_report(data: dict, episode_num: int) -> str:
-    """将整集分镜总览结果格式化为 markdown。"""
+    """Format the whole-episode storyboard overview result as markdown."""
     passed = data.get("overall_passed", False)
     total = data.get("total", 0.0)
     icon = "✅" if passed else "❌"
-    status = "通过" if passed else "未通过"
+    status = "Passed" if passed else "Failed"
 
     lines = [
-        f"## 全局分镜审片 (EP{episode_num}) {icon} {status}",
+        f"## Global storyboard review (EP{episode_num}) {icon} {status}",
         "",
-        "| 维度 | 评分 |",
+        "| Dimension | Score |",
         "|------|------|",
-        f"| 视觉节奏 | {data.get('visual_rhythm', 0):.1f} |",
-        f"| 构图多样性 | {data.get('composition_diversity', 0):.1f} |",
-        f"| 叙事弧线 | {data.get('narrative_arc', 0):.1f} |",
-        f"| 风格统一 | {data.get('style_unity', 0):.1f} |",
-        f"| **总分** | **{total:.1f}** |",
+        f"| Visual rhythm | {data.get('visual_rhythm', 0):.1f} |",
+        f"| Composition diversity | {data.get('composition_diversity', 0):.1f} |",
+        f"| Narrative arc | {data.get('narrative_arc', 0):.1f} |",
+        f"| Style unity | {data.get('style_unity', 0):.1f} |",
+        f"| **Total** | **{total:.1f}** |",
     ]
 
     issues = data.get("issues", [])
@@ -152,19 +152,19 @@ def format_episode_overview_report(data: dict, episode_num: int) -> str:
             lines.append(f"- [{severity}] Beat {beat}: {desc} → {action}{related_str}")
     else:
         lines.append("")
-        lines.append("无全局性问题")
+        lines.append("No global issues")
 
     scene_dist = data.get("scene_distribution", {})
     if scene_dist:
         lines.append("")
-        lines.append("### 场景分配")
+        lines.append("### Scene assignment")
         for scene, beat_nums in scene_dist.items():
-            lines.append(f"- {scene}: beats {beat_nums} ({len(beat_nums)} 个)")
+            lines.append(f"- {scene}: beats {beat_nums} ({len(beat_nums)} total)")
 
     summary = data.get("summary", "")
     if summary:
         lines.append("")
-        lines.append(f"总评: {summary}")
+        lines.append(f"Overall: {summary}")
     return "\n".join(lines)
 
 
@@ -175,16 +175,16 @@ def save_verify_report(
     verify_type: str,
     data: dict,
 ) -> Path:
-    """持久化报告到 verify_reports/ 目录，返回保存路径。
+    """Persist the report to the verify_reports/ directory and return the saved path.
 
-    文件只保留最新一条，覆盖写入。内部记录 timestamp 字段。
+    Only the latest file is kept and it is overwritten. A timestamp field is recorded inside.
 
     Args:
-        project_dir: 项目目录
-        episode_num: 集数
-        beat_num: beat 编号，consistency 时为 None
+        project_dir: Project directory
+        episode_num: Episode number
+        beat_num: Beat number; None for consistency
         verify_type: "sketch" | "frame" | "consistency"
-        data: 完整的响应 data 字典
+        data: Complete response data dict
     """
     reports_dir = project_dir / "verify_reports" / f"ep{episode_num:03d}"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -204,7 +204,7 @@ def save_verify_report(
 
     report_path = reports_dir / filename
 
-    # 附加 timestamp
+    # Attach timestamp
     payload = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         **data,

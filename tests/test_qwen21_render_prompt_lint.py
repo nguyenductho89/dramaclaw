@@ -168,7 +168,7 @@ def test_quoted_text_is_a_warning():
 
 def test_non_english_prose_is_a_warning():
     lint = lint_qwen21_render_prompt(
-        "替换 <image1> 的人物为 <image2>, keep unchanged, photorealistic photograph.", stage="full"
+        "Thay người trong <image1> bằng <image2>, keep unchanged, photorealistic photograph.", stage="full"
     )
     assert any(i.code == "non_english_prose" for i in lint.warnings)
 

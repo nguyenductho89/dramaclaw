@@ -3,8 +3,8 @@
 import { useCallback, useState } from 'react';
 
 /**
- * 图片查看器 Hook
- * 职责：管理图片查看器的状态
+ * Image viewer hook
+ * Responsibility: manage the state of the image viewer
  */
 export const useImageViewer = () => {
   const [isOpen, setIsOpen] = useState(false);

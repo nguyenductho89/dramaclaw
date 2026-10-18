@@ -9,8 +9,8 @@ type NodeResizeHandleProps = {
   maxHeight?: number;
   visible?: boolean;
   /**
-   * 锁定缩放时的宽高比。图片/视频等用 object-contain 显示的节点必须开启，
-   * 否则自由缩放会让节点宽高比偏离内容比例，露出容器底色形成黑边。
+   * Lock the aspect ratio when resizing. Nodes shown with object-contain such as images/videos must enable it,
+   * otherwise free resizing would let the node's aspect ratio deviate from the content ratio, showing the container background as black bars.
    */
   keepAspectRatio?: boolean;
 };

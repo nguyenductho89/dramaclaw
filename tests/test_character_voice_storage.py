@@ -23,16 +23,16 @@ from novelvideo.seedance2_i2v.character_voice_storage import (
 def test_character_voice_path_routes_default_and_age_groups(tmp_path):
     base = character_voice_path(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot=DEFAULT_SLOT,
         filename="sample.mp3",
     )
     assert base.name == "voice_default.mp3"
-    assert "characters/男主/voices" in base.as_posix()
+    assert "characters/Hero/voices" in base.as_posix()
 
     elder = character_voice_path(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="elder",
         filename="x.wav",
     )
@@ -53,7 +53,7 @@ def test_character_voice_path_rejects_unknown_slot(tmp_path):
 def test_persist_character_voice_writes_file_and_returns_metadata(tmp_path):
     rel, sha, ts = persist_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot=DEFAULT_SLOT,
         filename="upload.mp3",
         content=b"audio-bytes",
@@ -68,19 +68,19 @@ def test_persist_character_voice_writes_file_and_returns_metadata(tmp_path):
 def test_persist_character_voice_archives_prior_file(tmp_path):
     persist_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="elder",
         filename="v1.mp3",
         content=b"v1",
     )
     rel2, _sha, _ts = persist_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="elder",
         filename="v2.wav",
         content=b"v2",
     )
-    voices_dir = Path(tmp_path) / "assets" / "characters" / "男主" / "voices"
+    voices_dir = Path(tmp_path) / "assets" / "characters" / "Hero" / "voices"
     current = Path(tmp_path) / rel2
     assert current.exists() and current.read_bytes() == b"v2"
     archived = [
@@ -94,13 +94,13 @@ def test_persist_character_voice_archives_prior_file(tmp_path):
 def test_clear_character_voice_archives_existing(tmp_path):
     persist_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="youth",
         filename="v.mp3",
         content=b"v",
     )
-    assert clear_character_voice_file(project_dir=tmp_path, character_name="男主", slot="youth")
-    voices_dir = Path(tmp_path) / "assets" / "characters" / "男主" / "voices"
+    assert clear_character_voice_file(project_dir=tmp_path, character_name="Hero", slot="youth")
+    voices_dir = Path(tmp_path) / "assets" / "characters" / "Hero" / "voices"
     assert not (voices_dir / "voice_youth.mp3").exists()
     assert any(p.name.startswith("voice_youth_") for p in voices_dir.iterdir())
 
@@ -369,10 +369,10 @@ async def test_distinct_character_voice_resources_can_run_in_parallel(tmp_path):
 
     keys = [
         character_voice_storage.character_voice_resource_key(
-            project_dir=tmp_path, character_name="秦", slot="default"
+            project_dir=tmp_path, character_name="Qin", slot="default"
         ),
         character_voice_storage.character_voice_resource_key(
-            project_dir=tmp_path, character_name="楚", slot="youth"
+            project_dir=tmp_path, character_name="Chu", slot="youth"
         ),
     ]
     tasks = [
@@ -392,12 +392,12 @@ async def test_character_voice_resource_key_normalizes_path_name_and_slot(tmp_pa
 
     first = character_voice_storage.character_voice_resource_key(
         project_dir=tmp_path / ".",
-        character_name=" 王:小明 ",
+        character_name=" Wang:Xiaoming ",
         slot=" YOUTH ",
     )
     second = character_voice_storage.character_voice_resource_key(
         project_dir=tmp_path.resolve(),
-        character_name="王_小明",
+        character_name="Wang_Xiaoming",
         slot="youth",
     )
 
@@ -408,11 +408,11 @@ async def test_character_voice_resource_key_normalizes_path_name_and_slot(tmp_pa
 
 
 def test_probe_voice_sample_duration_times_out_as_value_error(monkeypatch, tmp_path):
-    """ffprobe 卡住必须限时并转成 ValueError。
+    """A stuck ffprobe must be time-limited and converted to ValueError.
 
-    这个函数现在挂在同步请求路径上（freezone omni-gen 的音频时长兜底），入参是用户
-    上传的文件。没有 timeout 的话一个畸形容器就能吊死 HTTP 请求并占死线程池 worker；
-    漏出 TimeoutExpired 则会让只 catch ValueError 的调用方变成 500 而不是「测不出」。
+    This function now sits on a synchronous request path (the audio-duration fallback of freezone omni-gen), and its input is a file
+    uploaded by the user. Without a timeout, one malformed container can hang the HTTP request and pin a thread-pool worker;
+    a leaked TimeoutExpired would turn callers that only catch ValueError into a 500 instead of "cannot measure".
     """
     import shutil
     import subprocess
@@ -432,7 +432,7 @@ def test_probe_voice_sample_duration_times_out_as_value_error(monkeypatch, tmp_p
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(ValueError, match="超时"):
+    with pytest.raises(ValueError, match="Timed out"):
         character_voice_storage.probe_voice_sample_duration_seconds(sample)
     assert seen["timeout"] == character_voice_storage.PROBE_DURATION_TIMEOUT_SECONDS
 
@@ -452,7 +452,7 @@ def test_trim_voice_sample_content_times_out_as_value_error(monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(ValueError, match="裁剪超时"):
+    with pytest.raises(ValueError, match="trimming timed out"):
         character_voice_storage.trim_voice_sample_content(
             b"audio",
             filename="sample.wav",
@@ -477,7 +477,7 @@ def test_recording_transcode_times_out_as_value_error(monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     payload = base64.b64encode(b"webm-audio").decode("ascii")
 
-    with pytest.raises(ValueError, match="转码超时"):
+    with pytest.raises(ValueError, match="transcoding timed out"):
         character_voice_storage.decode_recorded_audio_data_url(
             f"data:audio/webm;base64,{payload}"
         )
@@ -558,7 +558,7 @@ def test_trim_existing_character_voice_file_rewrites_slot_with_short_clip(tmp_pa
 
     persist_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="default",
         filename="source.wav",
         content=source.read_bytes(),
@@ -566,14 +566,14 @@ def test_trim_existing_character_voice_file_rewrites_slot_with_short_clip(tmp_pa
 
     rel_path, sha, ts = trim_existing_character_voice_file(
         project_dir=tmp_path,
-        character_name="男主",
+        character_name="Hero",
         slot="default",
-        source_path="assets/characters/男主/voices/voice_default.wav",
+        source_path="assets/characters/Hero/voices/voice_default.wav",
         start_seconds=2.0,
         duration_seconds=4.0,
     )
 
-    assert rel_path == "assets/characters/男主/voices/voice_default.mp3"
+    assert rel_path == "assets/characters/Hero/voices/voice_default.mp3"
     assert sha
     assert ts
     trimmed_path = tmp_path / rel_path

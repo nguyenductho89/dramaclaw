@@ -37,19 +37,19 @@ class _FakeStore:
 
     def __init__(self) -> None:
         self.state_dir = "/state/u/p"
-        self.characters = [_FakeCharacter("阿茶", is_main=True)]
-        self.scenes = [_FakeScene("皇宫·大殿")]
+        self.characters = [_FakeCharacter("Acha", is_main=True)]
+        self.scenes = [_FakeScene("palace_hall")]
 
     async def get_script_as_dict(self, episode_number: int) -> dict[str, Any]:
         return {
-            "beats": [{"beat_number": 1, "scene_id": "皇宫·大殿"}],
-            "sketch_colors": {"阿茶": "#ff0000"},
-            "scene_menu": ["皇宫·大殿"],
-            "prop_menu": ["折扇"],
+            "beats": [{"beat_number": 1, "scene_id": "palace_hall"}],
+            "sketch_colors": {"Acha": "#ff0000"},
+            "scene_menu": ["palace_hall"],
+            "prop_menu": ["folding_fan"],
         }
 
     def get_sketch_colors(self, episode_number: int) -> dict[str, str]:
-        return {"阿茶": "#ff0000"}
+        return {"Acha": "#ff0000"}
 
     def get_all_characters(self) -> list[_FakeCharacter]:
         return list(self.characters)
@@ -66,7 +66,7 @@ def _build_context() -> dict[str, Any]:
         "episode": 1,
         "username": "u",
         "project_name": "p",
-        "voice_ref": {"scope": "character_default", "character_name": "阿茶"},
+        "voice_ref": {"scope": "character_default", "character_name": "Acha"},
     }
 
 

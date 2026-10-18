@@ -94,11 +94,11 @@ export interface SkillRunResult {
   error?: SkillErrorEnvelope | string | null;
 }
 
-// 前端对后端 skill 注册表的「必填」覆盖：把指定 skill 的指定输入口强制为必填，
-// 让 UI 标签（必填/可选）与提交就绪判断（isSkillReadyToSubmit）都按更严格的规则生效。
-// key = skill id，value = 需要强制必填的 input role 集合。
+// The frontend's "required" override of the backend skill registry: force the specified input slot of the specified skill to required,
+// so that both the UI label (required/optional) and the submit-readiness check (isSkillReadyToSubmit) take effect by the stricter rule.
+// key = skill id, value = the set of input roles to force required.
 const REQUIRED_INPUT_OVERRIDES: Readonly<Record<string, ReadonlySet<string>>> = {
-  // 生成 360 全景图：场景提示 / 场景主图 / 场景背面图 三个输入全部必填。
+  // Generate a 360 panorama: scene hint / scene main image / scene back image, all three inputs are required.
   freezone_scene_360: new Set(["scene", "scene_master", "scene_reverse_master"]),
 };
 

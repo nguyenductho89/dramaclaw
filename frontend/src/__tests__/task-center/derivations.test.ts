@@ -13,7 +13,7 @@ import {
   taskLogLinesOf,
 } from "@/task-center/derivations";
 
-import { enT, zhT } from "../helpers/i18n-fixtures";
+import { enT } from "../helpers/i18n-fixtures";
 
 describe("isTerminal", () => {
   it("returns true for completed", () => expect(isTerminal(sampleTask({ status: "completed" }))).toBe(true));
@@ -48,13 +48,12 @@ describe("ageMs", () => {
 
 describe("displayLabel", () => {
   it.each([
-    ["freezone_agent_workflow_result", "创建工作流", "Create workflow"],
-    ["freezone_agent_recipe_result", "生成 Recipe", "Generate Recipe"],
-    ["freezone_workflow_confirm", "确认工作流", "Confirm workflow"],
-  ])("labels %s without exposing the operation scope", (task_type, zh, en) => {
+    ["freezone_agent_workflow_result", "Create workflow"],
+    ["freezone_agent_recipe_result", "Generate Recipe"],
+    ["freezone_workflow_confirm", "Confirm workflow"],
+  ])("labels %s without exposing the operation scope", (task_type, label) => {
     const task = sampleTask({ task_type, episode: 0, scope: "agent_product_123" });
-    expect(displayLabel(task, zhT)).toBe(zh);
-    expect(displayLabel(task, enT)).toBe(en);
+    expect(displayLabel(task, enT)).toBe(label);
     expect(task.scope).toBe("agent_product_123");
   });
 
@@ -64,7 +63,6 @@ describe("displayLabel", () => {
       episode: 0,
       scope: "user_admin_en845w:workflow_draft_abc:1",
     });
-    expect(displayLabel(task, zhT)).toBe("确认工作流");
     expect(displayLabel(task, enT)).toBe("Confirm workflow");
   });
 
@@ -74,24 +72,23 @@ describe("displayLabel", () => {
       episode: 0,
       scope: "043a194450664f66",
     });
-    expect(displayLabel(task, zhT)).toBe("生成自由区视频");
     expect(displayLabel(task, enT)).toBe("Generate Freezone video");
   });
 
   it("preserves a supplied workflow name without inventing one from its ID", () => {
     const task = sampleTask({
       task_type: "freezone_agent_workflow_result", episode: 0,
-      scope: "agent_product_123", metadata: { workflow_name: "雨夜机器人" },
+      scope: "agent_product_123", metadata: { workflow_name: "Rainy Night Robot" },
     });
-    expect(displayLabel(task, zhT)).toBe("创建工作流 · 雨夜机器人");
+    expect(displayLabel(task, enT)).toBe("Create workflow · Rainy Night Robot");
   });
 
-  // 用真词条表跑：后端那份中文 display_name 只是兜底，界面要显示的是词条里的那条。
-  const t = zhT as unknown as (k: string, opts?: Record<string, unknown>) => string;
+  // Run against the real locale table: the display_name the backend sends is only a fallback, and the UI must show the one from the locale entries.
+  const t = enT as unknown as (k: string, opts?: Record<string, unknown>) => string;
 
   it("localizes base task type", () => {
     expect(displayLabel(sampleTask({ task_type: "sketch_regen", episode: 3 }), t)).toBe(
-      "草图重生成 · ep3",
+      "Sketch regen · ep3",
     );
   });
   it("rebuilds the label when the backend display name is just the type + episode", () => {
@@ -100,11 +97,11 @@ describe("displayLabel", () => {
         sampleTask({
           task_type: "episode_scene_planner",
           episode: 3,
-          display_name: "规划场景 · ep3",
+          display_name: "Plan scenes · ep3",
         }),
         t,
       ),
-    ).toBe("规划场景 · ep3");
+    ).toBe("Plan scenes · ep3");
   });
   it("keeps a caller-authored display name untouched", () => {
     expect(
@@ -112,15 +109,15 @@ describe("displayLabel", () => {
         sampleTask({
           task_type: "freezone_gen",
           episode: 0,
-          display_name: "雨夜巷口 · 第二版",
+          display_name: "Rainy Alley · Version 2",
           display_name_localizable: false,
         }),
         t,
       ),
-    ).toBe("雨夜巷口 · 第二版");
+    ).toBe("Rainy Alley · Version 2");
   });
-  // review #447: 后端 freezone/scripts 传的 display_name 是写死中文（"生成草图 · EP1 / Beat 3"），
-  // 一度被当成业务内容标了 localizable=false，英文界面照样漏中文。这两条钉住重拼路径。
+  // review #447: the display_name that freezone/scripts send from the backend is fixed text ("Generate sketch · EP1 / Beat 3"),
+  // which was once marked localizable=false as business content, so other UI languages still leaked it. These two cases pin the rebuild path.
   it("rebuilds freezone display names that are hardcoded Chinese on the backend", () => {
     expect(
       displayLabel(
@@ -128,11 +125,11 @@ describe("displayLabel", () => {
           task_type: "sketch_regen",
           episode: 1,
           beat_num: 3,
-          display_name: "生成草图 · EP1 / Beat 3",
+          display_name: "Generate sketch · EP1 / Beat 3",
         }),
         t,
       ),
-    ).toBe("草图重生成 · ep1 · beat 3");
+    ).toBe("Sketch regen · ep1 · beat 3");
   });
   it("keeps scene_name when rebuilding a scene-scoped label", () => {
     expect(
@@ -140,12 +137,12 @@ describe("displayLabel", () => {
         sampleTask({
           task_type: "scene_360",
           episode: 0,
-          display_name: "生成 360 全景 · 皇宫大殿",
-          metadata: { scene_name: "皇宫大殿" },
+          display_name: "Generate 360 panorama · Palace Hall",
+          metadata: { scene_name: "Palace Hall" },
         }),
         t,
       ),
-    ).toContain("皇宫大殿");
+    ).toContain("Palace Hall");
   });
   it("composes stage asset labels from metadata", () => {
     expect(
@@ -153,12 +150,12 @@ describe("displayLabel", () => {
         sampleTask({
           task_type: "stage_asset",
           episode: 0,
-          display_name: "场景资产 · 皇宫大殿 · 单面转 SOG",
-          metadata: { scene_name: "皇宫大殿", step: "single_face_sharp" },
+          display_name: "Scene asset · Palace Hall · Single face to SOG",
+          metadata: { scene_name: "Palace Hall", step: "single_face_sharp" },
         }),
         t,
       ),
-    ).toBe("场景资产 · 皇宫大殿 · 单面转 SOG");
+    ).toBe("Scene asset · Palace Hall · Single face to SOG");
   });
   it("falls back to the backend label for task types with no entry yet", () => {
     expect(
@@ -166,20 +163,20 @@ describe("displayLabel", () => {
         sampleTask({
           task_type: "brand_new_task",
           episode: 0,
-          task_type_label: "全新任务",
+          task_type_label: "Brand new task",
         }),
         t,
       ),
-    ).toBe("全新任务");
+    ).toBe("Brand new task");
   });
   it("appends beat when present", () => {
     expect(displayLabel(sampleTask({ task_type: "single_video", episode: 3, beat_num: 7 }), t)).toBe(
-      "单镜视频 · ep3 · beat 7",
+      "Single video · ep3 · beat 7",
     );
   });
   it("appends scope when present", () => {
     expect(displayLabel(sampleTask({ task_type: "sketch_regen", episode: 3, scope: "regen__abc" }), t)).toBe(
-      "草图重生成 · ep3 · regen__abc",
+      "Sketch regen · ep3 · regen__abc",
     );
   });
   it("hides internal episode asset planner run scopes", () => {
@@ -192,7 +189,7 @@ describe("displayLabel", () => {
         }),
         t,
       ),
-    ).toBe("规划场景 · ep3");
+    ).toBe("Plan scenes · ep3");
     expect(
       displayLabel(
         sampleTask({
@@ -202,19 +199,19 @@ describe("displayLabel", () => {
         }),
         t,
       ),
-    ).toBe("规划道具 · ep3");
+    ).toBe("Plan props · ep3");
   });
 });
 
 describe("currentTaskText", () => {
-  const t = zhT as unknown as (k: string, opts?: Record<string, unknown>) => string;
+  const t = enT as unknown as (k: string, opts?: Record<string, unknown>) => string;
 
   it("replaces the backend terminal sentinel with the localized status", () => {
-    expect(currentTaskText(sampleTask({ status: "completed", current_task: "完成" }), t)).toBe(
-      "已完成",
+    expect(currentTaskText(sampleTask({ status: "completed", current_task: "Done" }), t)).toBe(
+      "Completed",
     );
     expect(currentTaskText(sampleTask({ status: "completed", current_task: "done" }), t)).toBe(
-      "已完成",
+      "Completed",
     );
   });
   it("keeps real progress text as the backend sent it", () => {
@@ -222,8 +219,8 @@ describe("currentTaskText", () => {
       currentTaskText(sampleTask({ status: "running", current_task: "Writing beats..." }), t),
     ).toBe("Writing beats...");
     expect(
-      currentTaskText(sampleTask({ status: "completed", current_task: "生成 12 个 Beat" }), t),
-    ).toBe("生成 12 个 Beat");
+      currentTaskText(sampleTask({ status: "completed", current_task: "Generating 12 Beats" }), t),
+    ).toBe("Generating 12 Beats");
   });
   it("returns empty for a blank current task", () => {
     expect(currentTaskText(sampleTask({ status: "running", current_task: "" }), t)).toBe("");
@@ -231,34 +228,34 @@ describe("currentTaskText", () => {
   it("translates via the backend code when one is present", () => {
     const task = sampleTask({
       status: "running",
-      current_task: "读取并校验原文...",
+      current_task: "Reading and validating source text...",
       current_task_code: "tasks.progress.ingest.reading",
     });
     expect(currentTaskText(task, enT as unknown as typeof t)).toBe(
       "Reading and validating source text...",
     );
-    expect(currentTaskText(task, t)).toBe("读取并校验原文...");
+    expect(currentTaskText(task, t)).toBe("Reading and validating source text...");
   });
   it("falls back to the backend text when the code has no catalog entry", () => {
-    // 后端先发新 code、前端词条还没跟上时，用户看到的是中文，不是裸 key。
+    // When the backend sends a new code before the frontend entries catch up, the user sees the backend text, not a bare key.
     const task = sampleTask({
       status: "running",
-      current_task: "某个还没翻译的进度",
+      current_task: "Some progress not translated yet",
       current_task_code: "tasks.progress.ingest.notYetTranslated",
     });
-    expect(currentTaskText(task, enT as unknown as typeof t)).toBe("某个还没翻译的进度");
+    expect(currentTaskText(task, enT as unknown as typeof t)).toBe("Some progress not translated yet");
   });
 });
 
 describe("taskLogLines", () => {
-  const t = zhT as unknown as (k: string, opts?: Record<string, unknown>) => string;
+  const t = enT as unknown as (k: string, opts?: Record<string, unknown>) => string;
 
   it("translates structured entries and interpolates their params", () => {
     expect(
       taskLogLines(
         [
           {
-            text: "文件读取完成: 1234 字符",
+            text: "File read: 1234 characters",
             code: "tasks.log.ingest.readComplete",
             params: { charCount: 1234 },
           },
@@ -268,16 +265,16 @@ describe("taskLogLines", () => {
     ).toEqual(["File read: 1234 characters"]);
   });
   it("passes plain strings through untouched", () => {
-    // 还没迁移的后端调用点直接发中文字符串，不能被丢掉。
-    expect(taskLogLines(["原文已保存", "任务已开始"], t)).toEqual(["原文已保存", "任务已开始"]);
+    // Backend call sites not migrated yet send plain strings directly, and they must not be dropped.
+    expect(taskLogLines(["Source text saved", "Task started"], t)).toEqual(["Source text saved", "Task started"]);
   });
   it("keeps structured and plain entries side by side", () => {
     expect(
       taskLogLines(
-        [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }, "任务已开始"],
+        [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }, "Task started"],
         enT as unknown as typeof t,
       ),
-    ).toEqual(["Source text saved", "任务已开始"]);
+    ).toEqual(["Source text saved", "Task started"]);
   });
   it("returns an empty array for a missing logs field", () => {
     expect(taskLogLines(undefined, t)).toEqual([]);
@@ -285,24 +282,24 @@ describe("taskLogLines", () => {
 });
 
 describe("taskLogLinesOf", () => {
-  const t = zhT as unknown as (k: string, opts?: Record<string, unknown>) => string;
+  const t = enT as unknown as (k: string, opts?: Record<string, unknown>) => string;
 
   it("prefers the structured logs_i18n field", () => {
     expect(
       taskLogLinesOf(
         {
-          logs: ["原文已保存"],
-          logs_i18n: [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }],
+          logs: ["Source text saved"],
+          logs_i18n: [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }],
         },
         enT as unknown as typeof t,
       ),
     ).toEqual(["Source text saved"]);
   });
   it("falls back to logs when the backend predates logs_i18n", () => {
-    // 滚动发布的另一半：老后端只发 `logs`，新前端照样得显示出来。
-    expect(taskLogLinesOf({ logs: ["原文已保存", "任务已开始"] }, t)).toEqual([
-      "原文已保存",
-      "任务已开始",
+    // The other half of a rolling release: an old backend only sends `logs`, and the new frontend must still display them.
+    expect(taskLogLinesOf({ logs: ["Source text saved", "Task started"] }, t)).toEqual([
+      "Source text saved",
+      "Task started",
     ]);
   });
   it("returns an empty array when neither field is present", () => {
@@ -328,10 +325,9 @@ describe("originDeepLink", () => {
 });
 
 it.each([
-  ["freezone_image_vectorize", "生成矢量图", "Generate vector image"],
-  ["freezone_image_animate_gif", "转换动态图 GIF", "Convert animated GIF"],
-])("labels %s without internal job IDs", (task_type, zh, en) => {
+  ["freezone_image_vectorize", "Generate vector image"],
+  ["freezone_image_animate_gif", "Convert animated GIF"],
+])("labels %s without internal job IDs", (task_type, label) => {
   const task = sampleTask({ task_type, scope: "opaque-job-gif" });
-  expect(displayLabel(task, zhT)).toBe(zh);
-  expect(displayLabel(task, enT)).toBe(en);
+  expect(displayLabel(task, enT)).toBe(label);
 });

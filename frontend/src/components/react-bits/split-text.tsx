@@ -122,10 +122,10 @@ export default function SplitText({
         reduceWhiteSpace: false,
         onSplit: (self) => {
           assignTargets(self);
-          // 拆分完成后每个字自带一份 background-clip:text 的绘制，父元素那份就成了
-          // 多余的第二层；而父元素这时只剩词与词之间的空白文本节点，它的文字遮罩会
-          // 在标题左上角糊出一块笔画碎片（英文标题换行数与中文不同时尤其明显）。
-          // 打个标记让样式表能把父元素那层关掉——拆分没跑成时标记不在，渐变照旧。
+          // After splitting, every character carries its own background-clip:text paint, so the parent's copy becomes a
+          // redundant second layer; and at that point the parent only has the whitespace text nodes between words left, whose text mask would
+          // smear a block of stroke fragments in the top-left of the heading (especially visible when the English heading wraps to a different number of lines than the original).
+          // A marker is set so the stylesheet can switch off the parent's layer - when splitting did not run the marker is absent, and the gradient stays as is.
           el.dataset.rbsplit = "done";
           if (initiallyHidden) {
             el.style.visibility = "visible";
@@ -147,9 +147,9 @@ export default function SplitText({
               },
               onComplete: () => {
                 animationCompletedRef.current = true;
-                // 动画结束后清除 will-change，让父元素与每个字从 GPU 合成层降回
-                // 普通渲染路径。否则在 Edge 上，background-clip:text 的元素长期处于
-                // 合成层会漏掉文字遮罩、画出图层后备纹理的垃圾（标题左侧花屏）。
+                // After the animation ends, clear will-change so the parent and each character drop from the GPU compositing layer back to the
+                // normal rendering path. Otherwise on Edge, elements with background-clip:text staying long-term on a
+                // compositing layer lose the text mask and draw garbage from the layer's backing texture (garbled screen on the left of the heading).
                 gsap.set([el, ...(targets ?? [])], { willChange: "auto" });
                 onCompleteRef.current?.();
               },
@@ -201,9 +201,9 @@ export default function SplitText({
     visibility: initiallyHidden ? "hidden" : undefined,
     whiteSpace: "normal",
     wordWrap: "break-word",
-    // 不在父元素上常驻 will-change：父元素本身不参与动画，常驻合成层反而会让
-    // background-clip:text 在 Edge 上花屏。字级的 will-change 由 tween 负责，
-    // 并在 onComplete 中清除。
+    // Do not keep will-change on the parent: the parent does not take part in the animation itself, and a permanent compositing layer would instead make
+    // background-clip:text garble on Edge. The per-character will-change is handled by the tween,
+    // and cleared in onComplete.
   };
   const classes = `split-parent ${className}`;
   return createElement(tag, { ref, style, className: classes }, text);

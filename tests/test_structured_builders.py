@@ -28,32 +28,32 @@ from novelvideo.structured_extraction import (
     verify_evidence,
 )
 
-NARRATED_TEXT = """第一章 归来
+NARRATED_TEXT = """Chapter 1 Homecoming
 
-林默回到阔别十年的故乡。街道还是老样子。
-他的母亲在门口等他。
+Lin Mo returned to his hometown after ten years away. The streets were just as before.
+His mother waited for him at the door.
 
-第二章 旧友
+Chapter 2 Old Friend
 
-林默又名小默，村里人都这么叫他。
-他在巷口遇见了苏晴。
+Lin Mo, also known as Xiao Mo. The villagers all call him that.
+He met Su Qing at the mouth of the alley.
 
-第三章 真相
+Chapter 3 The Truth
 
-苏晴告诉林默一个秘密。
-他的母亲听完沉默了很久。
+Su Qing told Lin Mo a secret.
+His mother fell silent for a long time after hearing it.
 """
 
 
 def _padded(body: str) -> str:
     """Pad a chapter past the packing target so it stays its own chunk."""
-    return body + "\n" + "闲笔叙述。" * 640 + "\n"
+    return body + "\n" + "Filler. " * 400 + "\n"
 
 
 NARRATED_MULTI = (
-    "第一章 归来\n\n" + _padded("林默回到阔别十年的故乡。他的母亲在门口等他。")
-    + "\n第二章 旧友\n\n" + _padded("林默又名小默，村里人都这么叫他。他在巷口遇见了苏晴。")
-    + "\n第三章 真相\n\n" + _padded("苏晴告诉林默一个秘密。他的母亲听完沉默了很久。")
+    "Chapter 1 Homecoming\n\n" + _padded("Lin Mo returned to his hometown after ten years away. His mother waited for him at the door.")
+    + "\nChapter 2 Old Friend\n\n" + _padded("Lin Mo, also known as Xiao Mo. The villagers all call him that. He met Su Qing at the mouth of the alley.")
+    + "\nChapter 3 The Truth\n\n" + _padded("Su Qing told Lin Mo a secret. His mother fell silent for a long time after hearing it.")
 )
 
 
@@ -62,7 +62,7 @@ def _chunk(text: str, *, chunk_id="c0", start=0) -> SourceChunk:
         chunk_id=chunk_id,
         chunk_index=0,
         section_type="chapter",
-        section_label="第一章",
+        section_label="Chapter 1",
         source_start=start,
         source_end=start + len(text),
         text=text,
@@ -95,63 +95,63 @@ def _disable_appearance_enrichment(monkeypatch) -> None:
 
 
 def test_normalize_strips_punctuation_noise_without_altering_the_name():
-    assert normalize_character_name("　林默：") == "林默"
-    assert normalize_character_name("「苏晴」") == "苏晴"
-    assert normalize_character_name("林 默") == "林 默"
+    assert normalize_character_name("\u3000Lin Mo:") == "Lin Mo"
+    assert normalize_character_name('"Su Qing"') == "Su Qing"
+    assert normalize_character_name("Lin Mo") == "Lin Mo"
 
 
 def test_titles_and_kinship_terms_are_generic():
-    for term in ("母亲", "陛下", "医生", "他", "少年"):
+    for term in ("mother", "Your Majesty", "doctor", "he", "boy"):
         assert is_generic_address(term)
-    assert not is_generic_address("林默")
+    assert not is_generic_address("Lin Mo")
 
 
 # ── evidence verification ───────────────────────────────────────────────────
 
 
 def test_evidence_resolves_to_absolute_source_offsets():
-    chunk = _chunk("林默回到故乡。", start=100)
-    span = verify_evidence("林默回到故乡。", chunk)
-    assert span == (100, 100 + len("林默回到故乡。"))
+    chunk = _chunk("Lin Mo returned to his hometown.", start=100)
+    span = verify_evidence("Lin Mo returned to his hometown.", chunk)
+    assert span == (100, 100 + len("Lin Mo returned to his hometown."))
 
 
 def test_evidence_not_present_in_the_chunk_is_rejected():
     """This check is what stops an invented character reaching the table."""
-    chunk = _chunk("林默回到故乡。")
-    assert verify_evidence("林默其实是皇帝的私生子。", chunk) is None
+    chunk = _chunk("Lin Mo returned to his hometown.")
+    assert verify_evidence("Lin Mo is actually the emperor's illegitimate son.", chunk) is None
 
 
 def test_evidence_tolerates_whitespace_the_model_normalized():
-    chunk = _chunk("林默  回到   故乡。")
-    assert verify_evidence("林默 回到 故乡。", chunk) is not None
+    chunk = _chunk("Lin Mo  returned   to his hometown.")
+    assert verify_evidence("Lin Mo returned to his hometown.", chunk) is not None
 
 
 def test_empty_quote_is_rejected():
-    assert verify_evidence("   ", _chunk("林默回到故乡。")) is None
+    assert verify_evidence("   ", _chunk("Lin Mo returned to his hometown.")) is None
 
 
 # ── explicit alias detection ────────────────────────────────────────────────
 
 
 def test_explicit_alias_statements_are_detected():
-    assert ("林默", "小默") in find_explicit_aliases(
-        "林默又名小默，村里人都这么叫他。", ["林默", "小默"]
+    assert ("Lin Mo", "Xiao Mo") in find_explicit_aliases(
+        "Lin Mo, also known as Xiao Mo. The villagers all call him that.", ["Lin Mo", "Xiao Mo"]
     )
-    assert ("萧玦", "陛下") in find_explicit_aliases("萧玦人称陛下。", ["萧玦", "陛下"])
+    assert ("Xiao Jue", "Your Majesty") in find_explicit_aliases("Xiao Jue, better known as Your Majesty.", ["Xiao Jue", "Your Majesty"])
 
 
 def test_an_alias_statement_mid_sentence_does_not_swallow_the_prose():
     """The patterns take 2-6 characters either side and cannot see where a name
     begins, so in running prose the window opens mid-sentence."""
     assert find_explicit_aliases(
-        "大家都知道林默又名小默，昨天回家。", ["林默", "小默"]
-    ) == {("林默", "小默")}
-    assert find_explicit_aliases("据说林默也叫小默。", ["林默", "小默"]) == {
-        ("林默", "小默")
+        "Everyone knows Lin Mo, also known as Xiao Mo, went home yesterday.", ["Lin Mo", "Xiao Mo"]
+    ) == {("Lin Mo", "Xiao Mo")}
+    assert find_explicit_aliases("It is said that Lin Mo is also called Xiao Mo.", ["Lin Mo", "Xiao Mo"]) == {
+        ("Lin Mo", "Xiao Mo")
     }
     # And forwards, where nothing punctuates the end of the second name.
-    assert find_explicit_aliases("林默又名小默昨天回家", ["林默", "小默"]) == {
-        ("林默", "小默")
+    assert find_explicit_aliases("Lin Mo also known as Xiao Mo went home yesterday", ["Lin Mo", "Xiao Mo"]) == {
+        ("Lin Mo", "Xiao Mo")
     }
 
 
@@ -159,10 +159,10 @@ def test_a_pair_neither_side_of_which_was_extracted_is_dropped():
     """An unresolved capture is prose, not a name.
 
     Left in, it reaches the character table as an alias the text never stated —
-    "家都知道林默" was being persisted as one.
+    "one knows Lin Mo" was being persisted as one.
     """
-    assert find_explicit_aliases("大家都知道林默又名小默。") == set()
-    assert find_explicit_aliases("大家都知道林默又名小默。", ["小默"]) == set()
+    assert find_explicit_aliases("Everyone knows Lin Mo, also known as Xiao Mo.") == set()
+    assert find_explicit_aliases("Everyone knows Lin Mo, also known as Xiao Mo.", ["Xiao Mo"]) == set()
 
 
 def test_an_invented_name_cannot_ride_in_on_a_real_quote():
@@ -171,11 +171,11 @@ def test_an_invented_name_cannot_ride_in_on_a_real_quote():
     Verifying the quote alone did not deliver that: a real sentence with a name
     attached that appears nowhere in the source was accepted.
     """
-    chunk = _chunk("林默回到了家", chunk_id="c0", start=0)
+    chunk = _chunk("Lin Mo came home", chunk_id="c0", start=0)
     invented = ChunkCharacterOutput(
         characters=[
             CharacterCandidate(
-                name="王五", evidence=[CharacterEvidence(quote="林默回到了家")]
+                name="Wang Wu", evidence=[CharacterEvidence(quote="Lin Mo came home")]
             )
         ]
     )
@@ -185,20 +185,20 @@ def test_an_invented_name_cannot_ride_in_on_a_real_quote():
 def test_a_name_the_source_writes_elsewhere_is_still_accepted():
     """Attestation is against the source, not the chunk.
 
-    A character is named once and called 她 or 郑太 for pages after; requiring
+    A character is named once and called she or Mrs. Zheng for pages after; requiring
     the name in the chunk that mentions her would drop exactly the candidates
     cross-chunk appellation resolution depends on.
     """
-    named = _chunk("郑玉琴走进客厅。", chunk_id="c0", start=0)
-    pronoun = _chunk("郑太点了点头。", chunk_id="c1", start=8)
+    named = _chunk("Zheng Yuqin walked into the living room.", chunk_id="c0", start=0)
+    pronoun = _chunk("Mrs. Zheng nodded.", chunk_id="c1", start=8)
     outcomes = [
         (
             named,
             ChunkCharacterOutput(
                 characters=[
                     CharacterCandidate(
-                        name="郑玉琴",
-                        evidence=[CharacterEvidence(quote="郑玉琴走进客厅。")],
+                        name="Zheng Yuqin",
+                        evidence=[CharacterEvidence(quote="Zheng Yuqin walked into the living room.")],
                     )
                 ]
             ),
@@ -208,27 +208,27 @@ def test_a_name_the_source_writes_elsewhere_is_still_accepted():
             ChunkCharacterOutput(
                 characters=[
                     CharacterCandidate(
-                        name="郑玉琴",
-                        evidence=[CharacterEvidence(quote="郑太点了点头。")],
+                        name="Zheng Yuqin",
+                        evidence=[CharacterEvidence(quote="Mrs. Zheng nodded.")],
                     )
                 ]
             ),
         ),
     ]
-    assert [item.name for item in merge_character_candidates(outcomes)] == ["郑玉琴"]
+    assert [item.name for item in merge_character_candidates(outcomes)] == ["Zheng Yuqin"]
 
 
 def test_a_name_only_the_scene_heading_lists_is_accepted():
-    """A screenplay names its cast in the heading; the body may only say 他."""
+    """A screenplay names its cast in the heading; the body may only say he."""
     chunk = SourceChunk(
         chunk_id="c0",
         chunk_index=0,
         section_type="scene",
-        section_label="第1场",
+        section_label="Scene 1",
         source_start=0,
         source_end=5,
-        text="他推开门。",
-        characters=["林默"],
+        text="He pushed open the door.",
+        characters=["Lin Mo"],
     )
     outcomes = [
         (
@@ -236,118 +236,118 @@ def test_a_name_only_the_scene_heading_lists_is_accepted():
             ChunkCharacterOutput(
                 characters=[
                     CharacterCandidate(
-                        name="林默", evidence=[CharacterEvidence(quote="他推开门。")]
+                        name="Lin Mo", evidence=[CharacterEvidence(quote="He pushed open the door.")]
                     )
                 ]
             ),
         )
     ]
-    assert [item.name for item in merge_character_candidates(outcomes)] == ["林默"]
+    assert [item.name for item in merge_character_candidates(outcomes)] == ["Lin Mo"]
 
 
 def test_two_names_merely_appearing_together_is_not_an_alias():
     """Co-occurrence is not identity — that is how wrong merges happen."""
-    assert find_explicit_aliases("林默看着苏晴，两人都没说话。") == set()
+    assert find_explicit_aliases("Lin Mo looked at Su Qing, and neither of them said anything.") == set()
 
 
 # ── merging ─────────────────────────────────────────────────────────────────
 
 
 def test_identical_names_across_chunks_merge():
-    text_a = "林默回到故乡。"
-    text_b = "林默走进屋子。"
+    text_a = "Lin Mo returned to his hometown."
+    text_b = "Lin Mo walked into the house."
     outcomes = [
         (
             _chunk(text_a, chunk_id="c0"),
-            ChunkCharacterOutput(characters=[_candidate("林默", quotes=[text_a])]),
+            ChunkCharacterOutput(characters=[_candidate("Lin Mo", quotes=[text_a])]),
         ),
         (
             _chunk(text_b, chunk_id="c1", start=50),
-            ChunkCharacterOutput(characters=[_candidate("林默", quotes=[text_b])]),
+            ChunkCharacterOutput(characters=[_candidate("Lin Mo", quotes=[text_b])]),
         ),
     ]
     merged = merge_character_candidates(outcomes)
-    assert [item.name for item in merged] == ["林默"]
+    assert [item.name for item in merged] == ["Lin Mo"]
     assert len(merged[0].evidence) == 2
     assert merged[0].chunk_ids == {"c0", "c1"}
 
 
 def test_candidates_without_verifiable_evidence_are_dropped():
-    text = "林默回到故乡。"
+    text = "Lin Mo returned to his hometown."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate("林默", quotes=[text]),
-                    _candidate("皇帝", quotes=["林默是皇帝的儿子。"]),
+                    _candidate("Lin Mo", quotes=[text]),
+                    _candidate("Emperor", quotes=["Lin Mo is the emperor's son."]),
                 ]
             ),
         )
     ]
     merged = merge_character_candidates(outcomes)
-    assert [item.name for item in merged] == ["林默"]
+    assert [item.name for item in merged] == ["Lin Mo"]
 
 
 def test_generic_address_terms_never_become_characters():
-    text = "他的母亲在门口等他。"
+    text = "His mother waited for him at the door."
     outcomes = [
         (
             _chunk(text),
-            ChunkCharacterOutput(characters=[_candidate("母亲", quotes=[text])]),
+            ChunkCharacterOutput(characters=[_candidate("mother", quotes=[text])]),
         )
     ]
     assert merge_character_candidates(outcomes) == []
 
 
 def test_explicitly_stated_alias_merges_into_one_character():
-    text = "林默又名小默，村里人都这么叫他。"
+    text = "Lin Mo, also known as Xiao Mo. The villagers all call him that."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate("林默", quotes=[text]),
-                    _candidate("小默", quotes=[text]),
+                    _candidate("Lin Mo", quotes=[text]),
+                    _candidate("Xiao Mo", quotes=[text]),
                 ]
             ),
         )
     ]
     merged = merge_character_candidates(outcomes)
     assert len(merged) == 1
-    assert merged[0].name == "林默"
-    assert "小默" in merged[0].aliases
+    assert merged[0].name == "Lin Mo"
+    assert "Xiao Mo" in merged[0].aliases
 
 
 def test_model_proposed_alias_without_textual_support_stays_a_suggestion():
     """A wrong merge destroys data silently; a wrong split is a visible duplicate."""
-    text = "林默看着苏晴。"
+    text = "Lin Mo looked at Su Qing."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=[text], aliases=["苏晴"])]
+                characters=[_candidate("Lin Mo", quotes=[text], aliases=["Su Qing"])]
             ),
         )
     ]
     merged = merge_character_candidates(outcomes)
     assert merged[0].aliases == set()
-    assert "苏晴" in merged[0].ambiguous_with
+    assert "Su Qing" in merged[0].ambiguous_with
 
 
 def test_same_generic_term_in_two_chunks_does_not_merge_into_one_person():
-    """"母亲" in chapter one and chapter three need not be the same woman."""
+    """"mother" in chapter one and chapter three need not be the same woman."""
     outcomes = [
         (
-            _chunk("他的母亲在门口等他。", chunk_id="c0"),
+            _chunk("His mother waited for him at the door.", chunk_id="c0"),
             ChunkCharacterOutput(
-                characters=[_candidate("母亲", quotes=["他的母亲在门口等他。"])]
+                characters=[_candidate("mother", quotes=["His mother waited for him at the door."])]
             ),
         ),
         (
-            _chunk("他的母亲听完沉默了。", chunk_id="c1", start=80),
+            _chunk("His mother fell silent after hearing it.", chunk_id="c1", start=80),
             ChunkCharacterOutput(
-                characters=[_candidate("母亲", quotes=["他的母亲听完沉默了。"])]
+                characters=[_candidate("mother", quotes=["His mother fell silent after hearing it."])]
             ),
         ),
     ]
@@ -355,28 +355,28 @@ def test_same_generic_term_in_two_chunks_does_not_merge_into_one_person():
 
 
 def test_alias_merge_keeps_the_better_evidenced_name_as_primary():
-    alias_text = "林默又名小默。"
+    alias_text = "Lin Mo, also known as Xiao Mo."
     outcomes = [
         (
             _chunk(alias_text, chunk_id="c0"),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate("小默", quotes=[alias_text]),
-                    _candidate("林默", quotes=[alias_text]),
+                    _candidate("Xiao Mo", quotes=[alias_text]),
+                    _candidate("Lin Mo", quotes=[alias_text]),
                 ]
             ),
         ),
         (
-            _chunk("林默走进屋子。", chunk_id="c1", start=60),
+            _chunk("Lin Mo walked into the house.", chunk_id="c1", start=60),
             ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默走进屋子。"])]
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo walked into the house."])]
             ),
         ),
     ]
     merged = merge_character_candidates(outcomes)
     assert len(merged) == 1
-    assert merged[0].name == "林默"
-    assert merged[0].aliases == {"小默"}
+    assert merged[0].name == "Lin Mo"
+    assert merged[0].aliases == {"Xiao Mo"}
 
 
 # ── extraction over chunks ──────────────────────────────────────────────────
@@ -409,23 +409,23 @@ async def test_extraction_runs_over_every_chunk():
     chunks = chunk_source_text(NARRATED_MULTI, "narrated")
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             ),
-            "第二章": ChunkCharacterOutput(
-                characters=[_candidate("苏晴", quotes=["他在巷口遇见了苏晴。"])]
+            "Chapter 2": ChunkCharacterOutput(
+                characters=[_candidate("Su Qing", quotes=["He met Su Qing at the mouth of the alley."])]
             ),
         }
     )
     merged, _ = await extract_characters_from_chunks(chunks, agent=agent, adjudicate=False)
-    assert {item.name for item in merged} == {"林默", "苏晴"}
+    assert {item.name for item in merged} == {"Lin Mo", "Su Qing"}
 
 
 async def test_english_extraction_requests_english_descriptions():
     chunk = _chunk("Maya opens the library door.")
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
+            "Chapter 1": ChunkCharacterOutput(
                 characters=[
                     _candidate(
                         "Maya",
@@ -454,18 +454,18 @@ async def test_one_failing_chunk_does_not_discard_the_others():
     chunks = chunk_source_text(NARRATED_MULTI, "narrated")
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             )
         },
-        fail_labels=["第二章"],
+        fail_labels=["Chapter 2"],
     )
     logs: list[str] = []
     merged, failures = await extract_characters_from_chunks(
         chunks, agent=agent, on_log=logs.append, adjudicate=False
     )
-    assert [item.name for item in merged] == ["林默"]
-    assert any("失败" in line for line in logs)
+    assert [item.name for item in merged] == ["Lin Mo"]
+    assert any("failed" in line for line in logs)
     # The failure is reported back so the caller can persist it against the run.
     assert [chunk.section_label for chunk, _ in failures]
 
@@ -487,7 +487,7 @@ async def test_extraction_is_bounded_but_not_serial():
             return SimpleNamespace(output=ChunkCharacterOutput())
 
     chunks = [
-        _chunk(f"片段{index}", chunk_id=f"c{index}", start=index * 10)
+        _chunk(f"chunk{index}", chunk_id=f"c{index}", start=index * 10)
         for index in range(12)
     ]
     await extract_characters_from_chunks(
@@ -557,7 +557,7 @@ async def test_atomic_publish_leaves_nothing_behind_on_failure(structured_store)
     try:
         with pytest.raises(RuntimeError):
             await store.add_characters_atomic(
-                [NovelCharacter(name="林默"), NovelCharacter(name="苏晴")]
+                [NovelCharacter(name="Lin Mo"), NovelCharacter(name="Su Qing")]
             )
     finally:
         db.execute = original_execute
@@ -572,16 +572,16 @@ async def test_atomic_publish_never_overwrites_an_existing_character(structured_
 
     store, _ = structured_store
     await store.add_character(
-        NovelCharacter(name="林默", description="用户编辑过的描述", face_prompt="portrait")
+        NovelCharacter(name="Lin Mo", description="user-edited description", face_prompt="portrait")
     )
 
     added = await store.add_characters_atomic(
-        [NovelCharacter(name="林默", description="重扫生成的描述"), NovelCharacter(name="苏晴")]
+        [NovelCharacter(name="Lin Mo", description="description generated by the rescan"), NovelCharacter(name="Su Qing")]
     )
 
-    assert added == ["苏晴"]
-    assert store.get_character("林默").description == "用户编辑过的描述"
-    assert store.get_character("林默").face_prompt == "portrait"
+    assert added == ["Su Qing"]
+    assert store.get_character("Lin Mo").description == "user-edited description"
+    assert store.get_character("Lin Mo").face_prompt == "portrait"
 
 
 async def test_narrated_scene_build_defers_instead_of_guessing(structured_store):
@@ -653,8 +653,8 @@ async def test_character_build_publishes_and_records_evidence(
 
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             )
         }
     )
@@ -672,15 +672,15 @@ async def test_character_build_publishes_and_records_evidence(
     )
 
     added = await structured_builders.build_characters_structured(store)
-    assert added == ["林默"]
+    assert added == ["Lin Mo"]
 
-    evidence = await store.list_entity_evidence("character", "林默")
+    evidence = await store.list_entity_evidence("character", "Lin Mo")
     assert evidence
     assert evidence[0]["run_id"] == run["run_id"]
     quoted = NARRATED_MULTI[
         evidence[0]["source_start"] : evidence[0]["source_end"]
     ]
-    assert quoted == "林默回到阔别十年的故乡。"
+    assert quoted == "Lin Mo returned to his hometown after ten years away."
 
 
 async def test_character_build_never_touches_cognee(structured_store, monkeypatch):
@@ -729,11 +729,11 @@ async def test_completed_chunks_are_replayed_instead_of_re_billed(
     await ingest_source_text_structured(store, str(source), spine_template="narrated")
 
     outputs = {
-        "第一章": ChunkCharacterOutput(
-            characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+        "Chapter 1": ChunkCharacterOutput(
+            characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
         ),
-        "第二章": ChunkCharacterOutput(
-            characters=[_candidate("苏晴", quotes=["他在巷口遇见了苏晴。"])]
+        "Chapter 2": ChunkCharacterOutput(
+            characters=[_candidate("Su Qing", quotes=["He met Su Qing at the mouth of the alley."])]
         ),
     }
     agent = FakeAgent(outputs)
@@ -749,7 +749,7 @@ async def test_completed_chunks_are_replayed_instead_of_re_billed(
     )
 
     first = await structured_builders.build_characters_structured(store)
-    assert set(first) == {"林默", "苏晴"}
+    assert set(first) == {"Lin Mo", "Su Qing"}
     first_calls = len(agent.seen)
     assert first_calls > 0
 
@@ -778,11 +778,11 @@ async def test_a_failed_chunk_leaves_the_run_partial(structured_store, monkeypat
 
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             )
         },
-        fail_labels=["第二章"],
+        fail_labels=["Chapter 2"],
     )
     real_extract = extract_characters_from_chunks
 
@@ -836,11 +836,11 @@ async def test_a_partial_run_never_stores_its_cast_as_the_final_result(
 
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             )
         },
-        fail_labels=["第二章"],
+        fail_labels=["Chapter 2"],
     )
     real_extract = extract_characters_from_chunks
 
@@ -859,7 +859,7 @@ async def test_a_partial_run_never_stores_its_cast_as_the_final_result(
 
 def test_an_oversized_chapter_is_split_further():
     """A chapter boundary says where to cut, not how big the piece may be."""
-    text = "第一章 归来\n\n" + "林默回到故乡。" * 3000 + "\n\n第二章 旧友\n\n短章节。\n"
+    text = "Chapter 1 Homecoming\n\n" + "Lin Mo returned to his hometown." * 3000 + "\n\nChapter 2 Old Friend\n\nShort chapter.\n"
     chunks = chunk_source_text(text, "narrated")
 
     assert len(chunks) > 2
@@ -870,10 +870,10 @@ def test_an_oversized_chapter_is_split_further():
 
 
 def test_oversized_parts_keep_a_recognisable_section_label():
-    text = "第一章 归来\n\n" + "林默回到故乡。" * 3000
+    text = "Chapter 1 Homecoming\n\n" + "Lin Mo returned to his hometown." * 3000
     chunks = chunk_source_text(text, "narrated")
     assert all(chunk.chunk_id.startswith("chapter-0000-p") for chunk in chunks)
-    assert all("第1章" in chunk.section_label for chunk in chunks)
+    assert all("Chapter 1" in chunk.section_label for chunk in chunks)
 
 
 def test_short_chapters_are_packed_into_one_call():
@@ -952,13 +952,13 @@ async def test_evidence_is_backfilled_when_the_characters_already_exist(
 
     # Stand in for a previous build that published the character but died
     # before its evidence landed.
-    await store.add_character(NovelCharacter(name="林默"))
-    assert await store.list_entity_evidence("character", "林默") == []
+    await store.add_character(NovelCharacter(name="Lin Mo"))
+    assert await store.list_entity_evidence("character", "Lin Mo") == []
 
     agent = FakeAgent(
         {
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             )
         }
     )
@@ -975,7 +975,7 @@ async def test_evidence_is_backfilled_when_the_characters_already_exist(
 
     added = await structured_builders.build_characters_structured(store)
     assert added == []  # nothing new to publish
-    assert await store.list_entity_evidence("character", "林默"), (
+    assert await store.list_entity_evidence("character", "Lin Mo"), (
         "evidence was never backfilled for an already-published character"
     )
 
@@ -1069,15 +1069,15 @@ class AdjudicatorAgent:
 
 
 async def test_adjudication_merges_a_nickname_into_its_character():
-    """Per-chunk extraction cannot see that 小阳 is 郑旭阳; this step can."""
+    """Per-chunk extraction cannot see that Xiaoyang is Zheng Xuyang; this step can."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑旭阳", 38), _merged("小阳", 1)]
-    agent = AdjudicatorAgent(groups=[("郑旭阳", ["小阳"])])
+    merged = [_merged("Zheng Xuyang", 38), _merged("Xiaoyang", 1)]
+    agent = AdjudicatorAgent(groups=[("Zheng Xuyang", ["Xiaoyang"])])
 
     result = await adjudicate_characters(merged, agent=agent)
-    assert [item.name for item in result] == ["郑旭阳"]
-    assert result[0].aliases == {"小阳"}
+    assert [item.name for item in result] == ["Zheng Xuyang"]
+    assert result[0].aliases == {"Xiaoyang"}
     assert len(result[0].evidence) == 39
 
 
@@ -1085,11 +1085,11 @@ async def test_adjudication_cannot_invent_a_character():
     """It may only group names it was given."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑旭阳", 38), _merged("小阳", 1)]
-    agent = AdjudicatorAgent(groups=[("查无此人", ["小阳"])])
+    merged = [_merged("Zheng Xuyang", 38), _merged("Xiaoyang", 1)]
+    agent = AdjudicatorAgent(groups=[("No Such Person", ["Xiaoyang"])])
 
     result = await adjudicate_characters(merged, agent=agent)
-    assert {item.name for item in result} == {"郑旭阳", "小阳"}
+    assert {item.name for item in result} == {"Zheng Xuyang", "Xiaoyang"}
 
 
 async def test_adjudication_never_deletes_a_candidate():
@@ -1101,98 +1101,98 @@ async def test_adjudication_never_deletes_a_candidate():
     """
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑玉琴", 96), _merged("郑家悦", 96), _merged("路人", 1)]
+    merged = [_merged("Zheng Yuqin", 96), _merged("Zheng Jiayue", 96), _merged("passerby", 1)]
     logs: list[str] = []
-    agent = AdjudicatorAgent(non_characters=["郑玉琴", "路人"])
+    agent = AdjudicatorAgent(non_characters=["Zheng Yuqin", "passerby"])
 
     result = await adjudicate_characters(merged, agent=agent, on_log=logs.append)
-    assert {item.name for item in result} == {"郑玉琴", "郑家悦", "路人"}
-    assert any("仅记录，未删除" in line for line in logs)
+    assert {item.name for item in result} == {"Zheng Yuqin", "Zheng Jiayue", "passerby"}
+    assert any("recorded only, not removed" in line for line in logs)
 
 
 async def test_adjudication_cannot_merge_two_well_attested_characters():
     """The model may not fold one lead into another, however it groups them."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑玉琴", 96), _merged("郑家悦", 96)]
-    agent = AdjudicatorAgent(groups=[("郑玉琴", ["郑家悦"])])
+    merged = [_merged("Zheng Yuqin", 96), _merged("Zheng Jiayue", 96)]
+    agent = AdjudicatorAgent(groups=[("Zheng Yuqin", ["Zheng Jiayue"])])
 
     result = await adjudicate_characters(merged, agent=agent)
-    assert {item.name for item in result} == {"郑玉琴", "郑家悦"}
+    assert {item.name for item in result} == {"Zheng Yuqin", "Zheng Jiayue"}
 
 
 async def test_a_character_named_in_a_cast_list_is_never_merged_away():
     """A cast list is authored, not inferred, so it outranks the model."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑玉琴", 96), _merged("王妈", 1)]
-    agent = AdjudicatorAgent(groups=[("郑玉琴", ["王妈"])])
+    merged = [_merged("Zheng Yuqin", 96), _merged("Auntie Wang", 1)]
+    agent = AdjudicatorAgent(groups=[("Zheng Yuqin", ["Auntie Wang"])])
 
     result = await adjudicate_characters(
-        merged, roster={"佣人王妈"}, agent=agent
+        merged, roster={"Servant Auntie Wang"}, agent=agent
     )
-    assert {item.name for item in result} == {"郑玉琴", "王妈"}
+    assert {item.name for item in result} == {"Zheng Yuqin", "Auntie Wang"}
 
 
 async def test_the_canonical_name_is_chosen_by_the_code_not_the_model():
     """Left to the model, a formal name can end up folded into a nickname."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑旭阳", 38), _merged("小阳", 1)]
+    merged = [_merged("Zheng Xuyang", 38), _merged("Xiaoyang", 1)]
     # The model nominates the nickname as canonical.
-    agent = AdjudicatorAgent(groups=[("小阳", ["郑旭阳"])])
+    agent = AdjudicatorAgent(groups=[("Xiaoyang", ["Zheng Xuyang"])])
 
     result = await adjudicate_characters(merged, agent=agent)
-    assert [item.name for item in result] == ["郑旭阳"]
-    assert result[0].aliases == {"小阳"}
+    assert [item.name for item in result] == ["Zheng Xuyang"]
+    assert result[0].aliases == {"Xiaoyang"}
 
 
 async def test_adjudication_failure_keeps_the_rule_result():
     """A degraded adjudicator must not lose the characters rules already found."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑玉琴", 96), _merged("郑太", 5)]
+    merged = [_merged("Zheng Yuqin", 96), _merged("Mrs. Zheng", 5)]
     logs: list[str] = []
 
     result = await adjudicate_characters(
         merged, agent=AdjudicatorAgent(explode=True), on_log=logs.append
     )
-    assert {item.name for item in result} == {"郑玉琴", "郑太"}
-    assert any("裁决失败" in line for line in logs)
+    assert {item.name for item in result} == {"Zheng Yuqin", "Mrs. Zheng"}
+    assert any("adjudication failed" in line.lower() for line in logs)
 
 
 async def test_rarely_seen_candidates_get_source_context():
     """A bare quote rarely proves identity; the surrounding text usually does."""
     from novelvideo.structured_extraction import adjudicate_characters
 
-    source = "▲郑旭阳走进来。郑玉琴皱眉。\n郑玉琴：小阳，你又闯祸了。\n"
-    start = source.index("小阳")
-    rare = _merged("小阳", 0)
+    source = "▲Zheng Xuyang walked in. Zheng Yuqin frowned.\nZheng Yuqin: Xiaoyang, you got into trouble again.\n"
+    start = source.index("Xiaoyang")
+    rare = _merged("Xiaoyang", 0)
     rare.evidence.append(
         {
             "chunk_id": "c0",
             "source_start": start,
             "source_end": start + 2,
             "evidence_kind": "dialogue",
-            "evidence_text": "小阳",
+            "evidence_text": "Xiaoyang",
         }
     )
     agent = AdjudicatorAgent()
 
     await adjudicate_characters(
-        [_merged("郑旭阳", 38), rare], source_text=source, agent=agent
+        [_merged("Zheng Xuyang", 38), rare], source_text=source, agent=agent
     )
-    assert "上下文" in agent.prompt
+    assert "context" in agent.prompt
     # The formal name sits next to the nickname, which is what makes the link
     # inferable at all.
-    assert "郑旭阳" in agent.prompt
+    assert "Zheng Xuyang" in agent.prompt
 
 
 async def test_a_single_candidate_needs_no_adjudication():
     from novelvideo.structured_extraction import adjudicate_characters
 
-    merged = [_merged("郑玉琴", 96)]
-    agent = AdjudicatorAgent(non_characters=["郑玉琴"])
+    merged = [_merged("Zheng Yuqin", 96)]
+    agent = AdjudicatorAgent(non_characters=["Zheng Yuqin"])
     assert await adjudicate_characters(merged, agent=agent) == merged
 
 
@@ -1231,12 +1231,12 @@ async def test_scene_adjudication_merges_spellings_of_one_location():
     """Hand-written headings spell one room several ways."""
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("郑玉琴办公室"), _scene("郑玉琴办公室内")]
-    agent = SceneAdjudicatorAgent(groups=[("郑玉琴办公室", ["郑玉琴办公室内"])])
+    scenes = [_scene("Zheng Yuqin's office"), _scene("inside Zheng Yuqin's office")]
+    agent = SceneAdjudicatorAgent(groups=[("Zheng Yuqin's office", ["inside Zheng Yuqin's office"])])
 
     result = await adjudicate_scenes(scenes, agent=agent)
-    assert [s.name for s in result] == ["郑玉琴办公室"]
-    assert "郑玉琴办公室内" in result[0].aliases
+    assert [s.name for s in result] == ["Zheng Yuqin's office"]
+    assert "inside Zheng Yuqin's office" in result[0].aliases
 
 
 async def test_scene_adjudication_never_drops_a_location():
@@ -1247,7 +1247,7 @@ async def test_scene_adjudication_never_drops_a_location():
     """
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("郑家别墅客厅"), _scene("郑家别墅餐厅"), _scene("郑家别墅外")]
+    scenes = [_scene("Zheng Villa living room"), _scene("Zheng Villa dining room"), _scene("outside the Zheng Villa")]
     result = await adjudicate_scenes(scenes, agent=SceneAdjudicatorAgent())
     assert {s.name for s in result} == {name.name for name in scenes}
 
@@ -1255,8 +1255,8 @@ async def test_scene_adjudication_never_drops_a_location():
 async def test_scene_adjudication_cannot_invent_a_location():
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("郑玉琴办公室"), _scene("郑玉琴办公室内")]
-    agent = SceneAdjudicatorAgent(groups=[("查无此地", ["郑玉琴办公室内"])])
+    scenes = [_scene("Zheng Yuqin's office"), _scene("inside Zheng Yuqin's office")]
+    agent = SceneAdjudicatorAgent(groups=[("No Such Place", ["inside Zheng Yuqin's office"])])
 
     result = await adjudicate_scenes(scenes, agent=agent)
     assert len(result) == 2
@@ -1265,40 +1265,40 @@ async def test_scene_adjudication_cannot_invent_a_location():
 async def test_scene_adjudication_failure_keeps_every_scene():
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("郑玉琴办公室"), _scene("郑玉琴办公室内")]
+    scenes = [_scene("Zheng Yuqin's office"), _scene("inside Zheng Yuqin's office")]
     logs: list[str] = []
     result = await adjudicate_scenes(
         scenes, agent=SceneAdjudicatorAgent(explode=True), on_log=logs.append
     )
     assert len(result) == 2
-    assert any("裁决失败" in line for line in logs)
+    assert any("adjudication failed" in line.lower() for line in logs)
 
 
 async def test_scene_prompt_reports_how_often_each_heading_is_used():
     """The most-used spelling is the better canonical name."""
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("主任办公室"), _scene("郑家别墅客厅")]
+    scenes = [_scene("Director's office"), _scene("Zheng Villa living room")]
     agent = SceneAdjudicatorAgent()
     await adjudicate_scenes(
-        scenes, occurrences={"主任办公室": 18, "郑家别墅客厅": 16}, agent=agent
+        scenes, occurrences={"Director's office": 18, "Zheng Villa living room": 16}, agent=agent
     )
-    assert "出现 18 场" in agent.prompt
-    assert "出现 16 场" in agent.prompt
+    assert "appears in 18 scenes" in agent.prompt
+    assert "appears in 16 scenes" in agent.prompt
 
 
 def test_scene_heading_counts_come_from_the_script():
     from novelvideo.structured_builders import _scene_heading_counts
 
     script = (
-        "第一集\n\n"
-        "1-1 林家客厅 日 内\n人物：林默\n林默推开门。\n\n"
-        "1-2 巷口 夜 外\n人物：林默\n林默走过巷口。\n\n"
-        "1-3 林家客厅 夜 内\n人物：林默\n林默坐下。\n"
+        "Episode 1\n\n"
+        "1-1 Lin family living room DAY INT\nCharacters: Lin Mo\nLin Mo pushed open the door.\n\n"
+        "1-2 Alley entrance NIGHT EXT\nCharacters: Lin Mo\nLin Mo walked past the alley entrance.\n\n"
+        "1-3 Lin family living room NIGHT INT\nCharacters: Lin Mo\nLin Mo sat down.\n"
     )
     counts = _scene_heading_counts(script)
-    assert counts.get("林家客厅") == 2
-    assert counts.get("巷口") == 1
+    assert counts.get("Lin family living room") == 2
+    assert counts.get("Alley entrance") == 1
 
 
 # ── resume after an outage, and source-change invalidation ──────────────────
@@ -1367,14 +1367,14 @@ async def test_a_chunk_that_failed_is_retried_while_others_are_not(
 
     agent = FlakyAgent(
         outputs={
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             ),
-            "第三章": ChunkCharacterOutput(
-                characters=[_candidate("苏晴", quotes=["苏晴告诉林默一个秘密。"])]
+            "Chapter 3": ChunkCharacterOutput(
+                characters=[_candidate("Su Qing", quotes=["Su Qing told Lin Mo a secret."])]
             ),
         },
-        failing=["第二章"],
+        failing=["Chapter 2"],
     )
     _patched_extract(monkeypatch, agent)
 
@@ -1388,7 +1388,7 @@ async def test_a_chunk_that_failed_is_retried_while_others_are_not(
     agent.calls.clear()
     await structured_builders.build_characters_structured(store)
 
-    assert agent.calls == ["第二章"], "a healthy chunk was paid for twice"
+    assert agent.calls == ["Chapter 2"], "a healthy chunk was paid for twice"
     assert not await store.list_analysis_chunks(run["run_id"], status="failed")
 
 
@@ -1402,8 +1402,8 @@ async def test_editing_the_source_discards_the_stored_plan(
     await _ingested(store, state_dir, NARRATED_MULTI)
 
     outputs = {
-        "第一章": ChunkCharacterOutput(
-            characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+        "Chapter 1": ChunkCharacterOutput(
+            characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
         )
     }
     agent = FlakyAgent(outputs=outputs)
@@ -1416,7 +1416,7 @@ async def test_editing_the_source_discards_the_stored_plan(
     # Rewriting novel.txt without re-importing: the hash no longer matches any
     # recorded run, so nothing may be replayed.
     (Path(store.project_dir) / "novel.txt").write_text(
-        NARRATED_MULTI + "\n第四章 结局\n\n他终于释怀。\n", encoding="utf-8"
+        NARRATED_MULTI + "\nChapter 4 Ending\n\nHe finally let go.\n", encoding="utf-8"
     )
     agent.calls.clear()
     await structured_builders.build_characters_structured(store)
@@ -1435,21 +1435,21 @@ def _candidate_with_appellations(name, quotes, appellations):
 
 def test_an_appellation_only_one_character_claims_becomes_an_alias():
     """Packed chunks hold several scenes, so nicknames surface alongside names."""
-    text = "郑玉琴走进客厅。刘管家喊了一声郑太。"
+    text = "Zheng Yuqin walked into the living room. Butler Liu called out to Mrs. Zheng."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations("郑玉琴", [text], ["郑太"]),
-                    _candidate("刘管家", quotes=[text]),
+                    _candidate_with_appellations("Zheng Yuqin", [text], ["Mrs. Zheng"]),
+                    _candidate("Butler Liu", quotes=[text]),
                 ]
             ),
         )
     ]
     merged = {m.name: m for m in merge_character_candidates(outcomes)}
-    assert merged["郑玉琴"].aliases == {"郑太"}
-    assert merged["刘管家"].aliases == set()
+    assert merged["Zheng Yuqin"].aliases == {"Mrs. Zheng"}
+    assert merged["Butler Liu"].aliases == set()
 
 
 def _claim(chunk_id, start, name, appellation, text):
@@ -1467,16 +1467,16 @@ def test_a_contested_appellation_goes_to_whoever_the_text_keeps_supporting():
     Ranking by total evidence would hand every ambiguous form to the lead,
     which is the opposite of evidence-driven.
     """
-    text = "郑玉琴走进客厅。刘管家喊了一声郑太。"
+    text = "Zheng Yuqin walked into the living room. Butler Liu called out to Mrs. Zheng."
     outcomes = [
-        _claim("c0", 0, "郑玉琴", "郑太", text),
-        _claim("c1", 60, "郑玉琴", "郑太", text),
-        _claim("c2", 120, "郑玉琴", "郑太", text),
-        _claim("c3", 180, "刘管家", "郑太", text),
+        _claim("c0", 0, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c1", 60, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c2", 120, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c3", 180, "Butler Liu", "Mrs. Zheng", text),
     ]
     merged = {m.name: m for m in merge_character_candidates(outcomes)}
-    assert merged["郑玉琴"].aliases == {"郑太"}
-    assert merged["刘管家"].aliases == set()
+    assert merged["Zheng Yuqin"].aliases == {"Mrs. Zheng"}
+    assert merged["Butler Liu"].aliases == set()
 
 
 def test_a_contested_appellation_with_a_narrow_lead_is_dropped():
@@ -1485,55 +1485,55 @@ def test_a_contested_appellation_with_a_narrow_lead_is_dropped():
     A wrong alias resolves confidently to the wrong person, while a missing one
     merely fails to resolve — so a close call is left alone.
     """
-    text = "郑玉琴走进客厅。刘管家喊了一声郑太。"
+    text = "Zheng Yuqin walked into the living room. Butler Liu called out to Mrs. Zheng."
     outcomes = [
-        _claim("c0", 0, "郑玉琴", "郑太", text),
-        _claim("c1", 60, "郑玉琴", "郑太", text),
-        _claim("c2", 120, "郑玉琴", "郑太", text),
-        _claim("c3", 180, "刘管家", "郑太", text),
-        _claim("c4", 240, "刘管家", "郑太", text),
+        _claim("c0", 0, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c1", 60, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c2", 120, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c3", 180, "Butler Liu", "Mrs. Zheng", text),
+        _claim("c4", 240, "Butler Liu", "Mrs. Zheng", text),
     ]
     for item in merge_character_candidates(outcomes):
-        assert "郑太" not in item.aliases
+        assert "Mrs. Zheng" not in item.aliases
 
 
 def test_a_contested_appellation_seen_in_only_one_chunk_is_dropped():
     """One chunk is one author's phrasing, not grounds to overrule a rival."""
-    text = "郑玉琴走进客厅。刘管家喊了一声郑太。"
+    text = "Zheng Yuqin walked into the living room. Butler Liu called out to Mrs. Zheng."
     outcomes = [
-        _claim("c0", 0, "郑玉琴", "郑太", text),
-        _claim("c1", 60, "刘管家", "郑太", text),
+        _claim("c0", 0, "Zheng Yuqin", "Mrs. Zheng", text),
+        _claim("c1", 60, "Butler Liu", "Mrs. Zheng", text),
     ]
     for item in merge_character_candidates(outcomes):
-        assert "郑太" not in item.aliases
+        assert "Mrs. Zheng" not in item.aliases
 
 
 def test_an_appellation_that_is_itself_a_character_never_becomes_an_alias():
-    text = "郑玉琴走进客厅。刘管家跟在后面。"
+    text = "Zheng Yuqin walked into the living room. Butler Liu followed behind."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations("郑玉琴", [text], ["刘管家"]),
-                    _candidate("刘管家", quotes=[text]),
+                    _candidate_with_appellations("Zheng Yuqin", [text], ["Butler Liu"]),
+                    _candidate("Butler Liu", quotes=[text]),
                 ]
             ),
         )
     ]
     merged = {m.name: m for m in merge_character_candidates(outcomes)}
-    assert "刘管家" in merged
-    assert merged["郑玉琴"].aliases == set()
+    assert "Butler Liu" in merged
+    assert merged["Zheng Yuqin"].aliases == set()
 
 
 def test_an_appellation_absent_from_the_chunk_is_rejected():
-    text = "郑玉琴走进客厅。"
+    text = "Zheng Yuqin walked into the living room."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations("郑玉琴", [text], ["女王陛下"])
+                    _candidate_with_appellations("Zheng Yuqin", [text], ["Her Majesty the Queen"])
                 ]
             ),
         )
@@ -1542,13 +1542,13 @@ def test_an_appellation_absent_from_the_chunk_is_rejected():
 
 
 def test_a_generic_appellation_is_not_recorded_as_an_alias():
-    text = "郑玉琴走进客厅。她的母亲在门口。"
+    text = "Zheng Yuqin walked into the living room. Her mother was at the door."
     outcomes = [
         (
             _chunk(text),
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations("郑玉琴", [text], ["母亲"])
+                    _candidate_with_appellations("Zheng Yuqin", [text], ["mother"])
                 ]
             ),
         )
@@ -1563,29 +1563,29 @@ async def test_a_frequently_used_location_is_never_merged_away():
     """
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("主任办公室"), _scene("郑家别墅客厅")]
-    agent = SceneAdjudicatorAgent(groups=[("主任办公室", ["郑家别墅客厅"])])
+    scenes = [_scene("Director's office"), _scene("Zheng Villa living room")]
+    agent = SceneAdjudicatorAgent(groups=[("Director's office", ["Zheng Villa living room"])])
 
     result = await adjudicate_scenes(
-        scenes, occurrences={"主任办公室": 18, "郑家别墅客厅": 16}, agent=agent
+        scenes, occurrences={"Director's office": 18, "Zheng Villa living room": 16}, agent=agent
     )
-    assert {s.name for s in result} == {"主任办公室", "郑家别墅客厅"}
+    assert {s.name for s in result} == {"Director's office", "Zheng Villa living room"}
 
 
 async def test_the_canonical_location_is_the_spelling_the_script_uses_most():
     from novelvideo.structured_extraction import adjudicate_scenes
 
-    scenes = [_scene("郑玉琴办公室"), _scene("郑玉琴办公室内")]
+    scenes = [_scene("Zheng Yuqin's office"), _scene("inside Zheng Yuqin's office")]
     # The model nominates the rarer spelling.
-    agent = SceneAdjudicatorAgent(groups=[("郑玉琴办公室内", ["郑玉琴办公室"])])
+    agent = SceneAdjudicatorAgent(groups=[("inside Zheng Yuqin's office", ["Zheng Yuqin's office"])])
 
     result = await adjudicate_scenes(
         scenes,
-        occurrences={"郑玉琴办公室": 2, "郑玉琴办公室内": 1},
+        occurrences={"Zheng Yuqin's office": 2, "inside Zheng Yuqin's office": 1},
         agent=agent,
     )
-    assert [s.name for s in result] == ["郑玉琴办公室"]
-    assert "郑玉琴办公室内" in result[0].aliases
+    assert [s.name for s in result] == ["Zheng Yuqin's office"]
+    assert "inside Zheng Yuqin's office" in result[0].aliases
 
 
 async def test_a_completed_build_replays_without_any_model_call(
@@ -1608,11 +1608,11 @@ async def test_a_completed_build_replays_without_any_model_call(
 
     extraction = FlakyAgent(
         outputs={
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             ),
-            "第二章": ChunkCharacterOutput(
-                characters=[_candidate("苏晴", quotes=["他在巷口遇见了苏晴。"])]
+            "Chapter 2": ChunkCharacterOutput(
+                characters=[_candidate("Su Qing", quotes=["He met Su Qing at the mouth of the alley."])]
             ),
         }
     )
@@ -1680,11 +1680,11 @@ async def test_replaying_a_build_cannot_split_an_alias_back_into_a_character(
 
     extraction = FlakyAgent(
         outputs={
-            "第一章": ChunkCharacterOutput(
-                characters=[_candidate("林默", quotes=["林默回到阔别十年的故乡。"])]
+            "Chapter 1": ChunkCharacterOutput(
+                characters=[_candidate("Lin Mo", quotes=["Lin Mo returned to his hometown after ten years away."])]
             ),
-            "第二章": ChunkCharacterOutput(
-                characters=[_candidate("苏晴", quotes=["他在巷口遇见了苏晴。"])]
+            "Chapter 2": ChunkCharacterOutput(
+                characters=[_candidate("Su Qing", quotes=["He met Su Qing at the mouth of the alley."])]
             ),
         }
     )
@@ -1698,7 +1698,7 @@ async def test_replaying_a_build_cannot_split_an_alias_back_into_a_character(
         async def run(self, prompt: str):
             self.calls += 1
             groups = (
-                [SamePersonGroup(canonical_name="林默", alias_names=["苏晴"])]
+                [SamePersonGroup(canonical_name="Lin Mo", alias_names=["Su Qing"])]
                 if self.calls == 1
                 else []
             )
@@ -1732,7 +1732,7 @@ async def test_replaying_a_build_cannot_split_an_alias_back_into_a_character(
     second = {c.name for c in await store.list_characters()}
 
     assert second == first, "a rebuild changed the cast for unchanged source"
-    assert "苏晴" not in second
+    assert "Su Qing" not in second
 
 
 def test_one_occurrence_in_an_overlap_counts_once():
@@ -1741,16 +1741,16 @@ def test_one_occurrence_in_an_overlap_counts_once():
     Counting chunks would let that one occurrence clear the two-to-one margin by
     itself and hand the appellation to whoever happened to sit on the seam.
     """
-    source = "郑玉琴走进客厅。刘管家喊了一声郑太。她没有回头。"
-    seam = source.index("郑太")
+    source = "Zheng Yuqin walked into the living room. Butler Liu called out to Mrs. Zheng. She did not look back."
+    seam = source.index("Mrs. Zheng")
     # Two chunks whose spans overlap across the mention, exactly as
     # _split_oversized produces them.
     left = SourceChunk(
-        chunk_id="c0", chunk_index=0, section_type="chapter", section_label="上",
+        chunk_id="c0", chunk_index=0, section_type="chapter", section_label="Part 1",
         source_start=0, source_end=seam + 6, text=source[: seam + 6],
     )
     right = SourceChunk(
-        chunk_id="c1", chunk_index=1, section_type="chapter", section_label="下",
+        chunk_id="c1", chunk_index=1, section_type="chapter", section_label="Part 2",
         source_start=seam - 4, source_end=len(source), text=source[seam - 4 :],
     )
     assert right.source_start < left.source_end, "the fixture must overlap"
@@ -1760,57 +1760,58 @@ def test_one_occurrence_in_an_overlap_counts_once():
             chunk,
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations(owner, [chunk.text], ["郑太"])
+                    _candidate_with_appellations(owner, [chunk.text], ["Mrs. Zheng"])
                 ]
             ),
         )
 
-    # 郑玉琴 is claimed twice, but both are the same mention seen from either
-    # side of the seam. 刘管家 is claimed once, elsewhere.
-    elsewhere = _chunk("刘管家看着郑太离开。", chunk_id="c2", start=400)
+    # Zheng Yuqin is claimed twice, but both are the same mention seen from either
+    # side of the seam. Butler Liu is claimed once, elsewhere.
+    elsewhere = _chunk("Butler Liu watched Mrs. Zheng leave.", chunk_id="c2", start=400)
     outcomes = [
-        claim(left, "郑玉琴"),
-        claim(right, "郑玉琴"),
-        claim(elsewhere, "刘管家"),
+        claim(left, "Zheng Yuqin"),
+        claim(right, "Zheng Yuqin"),
+        claim(elsewhere, "Butler Liu"),
     ]
 
     for item in merge_character_candidates(outcomes):
-        assert "郑太" not in item.aliases, (
+        assert "Mrs. Zheng" not in item.aliases, (
             "an overlapped mention was counted twice and won the vote"
         )
 
 
 def test_the_same_appellation_at_two_real_positions_still_wins():
     """Deduplicating by position must not silently disable voting."""
-    source = "郑玉琴走进客厅。郑太点头。稍后郑太又开口。"
-    first = _chunk(source[:12], chunk_id="c0", start=0)
-    second = _chunk(source[12:], chunk_id="c1", start=12)
+    source = "Zheng Yuqin walked into the living room. Mrs. Zheng nodded. Later Mrs. Zheng spoke again."
+    split = source.index(" Later")
+    first = _chunk(source[:split], chunk_id="c0", start=0)
+    second = _chunk(source[split:], chunk_id="c1", start=split)
 
     def claim(chunk, owner):
         return (
             chunk,
             ChunkCharacterOutput(
                 characters=[
-                    _candidate_with_appellations(owner, [chunk.text], ["郑太"])
+                    _candidate_with_appellations(owner, [chunk.text], ["Mrs. Zheng"])
                 ]
             ),
         )
 
     outcomes = [
-        claim(first, "郑玉琴"),
-        claim(second, "郑玉琴"),
-        claim(_chunk("刘管家在门口。郑太走了。", chunk_id="c2", start=400), "刘管家"),
+        claim(first, "Zheng Yuqin"),
+        claim(second, "Zheng Yuqin"),
+        claim(_chunk("Butler Liu was at the door. Mrs. Zheng left.", chunk_id="c2", start=400), "Butler Liu"),
     ]
     merged = {m.name: m for m in merge_character_candidates(outcomes)}
-    assert merged["郑玉琴"].aliases == {"郑太"}
+    assert merged["Zheng Yuqin"].aliases == {"Mrs. Zheng"}
 
 
 # ── repairing placeholder environment prompts ───────────────────────────────
 
 
 DRAMA_SCRIPT = (
-    "第一集\n\n"
-    "1-1 林家客厅 日 内\n人物：林默\n林默推开门。\n"
+    "Episode 1\n\n"
+    "1-1 Lin family living room DAY INT\nCharacters: Lin Mo\nLin Mo pushed open the door.\n"
 )
 
 
@@ -1842,7 +1843,7 @@ def _fresh_scene(name):
     return NovelScene(
         name=name,
         scene_type="interior",
-        environment_prompt="正面：主墙平整\n左侧：木门\n右侧：窗户\n背面：资料柜",
+        environment_prompt="Front: flat main wall\nLeft: wooden door\nRight: window\nBack: file cabinet",
     )
 
 
@@ -1860,15 +1861,15 @@ async def test_a_placeholder_prompt_is_replaced_on_rebuild(tmp_path, monkeypatch
     store = await _drama_project(tmp_path, DRAMA_SCRIPT)
     try:
         placeholder = _ensure_directional_environment_prompt(
-            prompt="", scene_name="林家客厅", scene_type="interior",
-            time_of_day="", context_lines=["▲林默推开门。"],
+            prompt="", scene_name="Lin family living room", scene_type="interior",
+            time_of_day="", context_lines=["▲Lin Mo pushed open the door."],
         )
         await store.add_scene(
-            NovelScene(name="林家客厅", environment_prompt=placeholder)
+            NovelScene(name="Lin family living room", environment_prompt=placeholder)
         )
 
         async def fake_extract(text, **kwargs):
-            return [_fresh_scene("林家客厅")]
+            return [_fresh_scene("Lin family living room")]
 
         monkeypatch.setattr(
             "novelvideo.cognee.pipeline.extract_scenes_from_script", fake_extract
@@ -1882,8 +1883,8 @@ async def test_a_placeholder_prompt_is_replaced_on_rebuild(tmp_path, monkeypatch
         result = await structured_builders.build_scenes_structured(store)
         assert result["repaired_scenes"] == 1
 
-        stored = await store.get_scene("林家客厅")
-        assert "主墙平整" in stored.environment_prompt
+        stored = await store.get_scene("Lin family living room")
+        assert "flat main wall" in stored.environment_prompt
     finally:
         await store.close()
 
@@ -1895,11 +1896,11 @@ async def test_a_user_written_prompt_is_never_replaced(tmp_path, monkeypatch):
 
     store = await _drama_project(tmp_path, DRAMA_SCRIPT)
     try:
-        mine = "正面：我自己写的描述\n左侧：也是我写的\n右侧：我写的\n背面：我写的"
-        await store.add_scene(NovelScene(name="林家客厅", environment_prompt=mine))
+        mine = "Front: a description I wrote myself\nLeft: also written by me\nRight: written by me\nBack: written by me"
+        await store.add_scene(NovelScene(name="Lin family living room", environment_prompt=mine))
 
         async def fake_extract(text, **kwargs):
-            return [_fresh_scene("林家客厅")]
+            return [_fresh_scene("Lin family living room")]
 
         monkeypatch.setattr(
             "novelvideo.cognee.pipeline.extract_scenes_from_script", fake_extract
@@ -1913,7 +1914,7 @@ async def test_a_user_written_prompt_is_never_replaced(tmp_path, monkeypatch):
         result = await structured_builders.build_scenes_structured(store)
         assert result["repaired_scenes"] == 0
 
-        stored = await store.get_scene("林家客厅")
+        stored = await store.get_scene("Lin family living room")
         assert stored.environment_prompt == mine
     finally:
         await store.close()
@@ -1931,7 +1932,7 @@ def _async_value(value):
 # Extraction settles who exists; this stage settles what they look like. It is
 # the half of legacy's CharacterEnrichment that structured extraction shipped
 # without, which is why every structured project's characters carried an empty
-# 面部提示词 and the portrait runner refused to draw them.
+# face prompt and the portrait runner refused to draw them.
 
 
 class FakeAppearanceAgent:
@@ -1957,13 +1958,13 @@ class FakeAppearanceAgent:
         )
 
 
-def _appearance(name, *, face="女性，二十多岁，黑色长发，杏眼", **kwargs):
+def _appearance(name, *, face="Female, in her twenties, long black hair, almond eyes", **kwargs):
     from novelvideo.structured_extraction import CharacterAppearance
 
     return CharacterAppearance(name=name, face_prompt=face, **kwargs)
 
 
-def _cast_member(name, *, gender="female", description="", quotes=("他回来了。",)):
+def _cast_member(name, *, gender="female", description="", quotes=("He came back.",)):
     from novelvideo.structured_extraction import MergedCharacter
 
     return MergedCharacter(
@@ -1998,16 +1999,16 @@ async def test_appearance_stage_fills_the_fields_extraction_cannot_quote():
 
     agent = FakeAppearanceAgent(
         {
-            "郑家悦": _appearance(
-                "郑家悦", role="主角", body_type="纤细高挑", age_group="youth"
+            "Zheng Jiayue": _appearance(
+                "Zheng Jiayue", role="protagonist", body_type="slender and tall", age_group="youth"
             )
         }
     )
-    result = await enrich_character_appearances([_cast_member("郑家悦")], agent=agent)
+    result = await enrich_character_appearances([_cast_member("Zheng Jiayue")], agent=agent)
 
-    assert result["郑家悦"].face_prompt == "女性，二十多岁，黑色长发，杏眼"
-    assert result["郑家悦"].role == "主角"
-    assert result["郑家悦"].body_type == "纤细高挑"
+    assert result["Zheng Jiayue"].face_prompt == "Female, in her twenties, long black hair, almond eyes"
+    assert result["Zheng Jiayue"].role == "protagonist"
+    assert result["Zheng Jiayue"].body_type == "slender and tall"
 
 
 async def test_english_appearance_requests_english_prose_and_keeps_the_source_name():
@@ -2056,10 +2057,10 @@ async def test_an_answer_without_a_face_is_dropped_rather_than_published():
     """An empty face prompt is a visible gap; boilerplate would be an invisible one."""
     from novelvideo.structured_extraction import enrich_character_appearances
 
-    agent = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", face="  ", role="主角")})
+    agent = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", face="  ", role="protagonist")})
     cache = RecordingCache()
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦")], agent=agent, cache=cache
+        [_cast_member("Zheng Jiayue")], agent=agent, cache=cache
     )
 
     assert result == {}
@@ -2070,41 +2071,41 @@ async def test_an_unusable_age_band_falls_back_instead_of_reaching_the_column():
     """The band drives voice selection, so an unknown value would silently disable it."""
     from novelvideo.structured_extraction import enrich_character_appearances
 
-    agent = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", age_group="middle-aged")})
-    result = await enrich_character_appearances([_cast_member("郑家悦")], agent=agent)
+    agent = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", age_group="middle-aged")})
+    result = await enrich_character_appearances([_cast_member("Zheng Jiayue")], agent=agent)
 
-    assert result["郑家悦"].age_group == "youth"
+    assert result["Zheng Jiayue"].age_group == "youth"
 
 
 async def test_a_cached_appearance_is_never_sent_to_the_model_again():
     from novelvideo.structured_extraction import enrich_character_appearances
 
     cache = RecordingCache()
-    item = _cast_member("郑家悦")
-    first = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", role="主角")})
+    item = _cast_member("Zheng Jiayue")
+    first = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", role="protagonist")})
     await enrich_character_appearances([item], agent=first, cache=cache)
     assert len(first.prompts) == 1
 
     second = FakeAppearanceAgent({})
     result = await enrich_character_appearances([item], agent=second, cache=cache)
     assert second.prompts == []
-    assert result["郑家悦"].role == "主角"
+    assert result["Zheng Jiayue"].role == "protagonist"
 
 
 async def test_a_changed_description_retires_the_cached_appearance():
     """The description is in the prompt, so a changed one is a different question."""
     from novelvideo.structured_extraction import character_appearance_cache_key
 
-    before = character_appearance_cache_key(_cast_member("郑家悦", description="遭受校园霸凌"))
-    after = character_appearance_cache_key(_cast_member("郑家悦", description="已经毕业工作"))
+    before = character_appearance_cache_key(_cast_member("Zheng Jiayue", description="suffered campus bullying"))
+    after = character_appearance_cache_key(_cast_member("Zheng Jiayue", description="has graduated and is working"))
     assert before != after
 
 
 async def test_a_changed_quote_retires_the_cached_appearance():
     from novelvideo.structured_extraction import character_appearance_cache_key
 
-    before = character_appearance_cache_key(_cast_member("郑家悦", quotes=("她低下头。",)))
-    after = character_appearance_cache_key(_cast_member("郑家悦", quotes=("她抬起头。",)))
+    before = character_appearance_cache_key(_cast_member("Zheng Jiayue", quotes=("She lowered her head.",)))
+    after = character_appearance_cache_key(_cast_member("Zheng Jiayue", quotes=("She raised her head.",)))
     assert before != after
 
 
@@ -2114,15 +2115,15 @@ async def test_only_one_narrator_survives_a_batch_split():
 
     agent = FakeAppearanceAgent(
         {
-            "郑家悦": _appearance("郑家悦", is_main=True),
-            "郑玉琴": _appearance("郑玉琴", is_main=True),
+            "Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True),
+            "Zheng Yuqin": _appearance("Zheng Yuqin", is_main=True),
         }
     )
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦"), _cast_member("郑玉琴")], agent=agent
+        [_cast_member("Zheng Jiayue"), _cast_member("Zheng Yuqin")], agent=agent
     )
 
-    assert [name for name, item in result.items() if item.is_main] == ["郑家悦"]
+    assert [name for name, item in result.items() if item.is_main] == ["Zheng Jiayue"]
 
 
 async def test_a_failed_appearance_call_still_leaves_the_cast_published(
@@ -2137,11 +2138,11 @@ async def test_a_failed_appearance_call_still_leaves_the_cast_published(
         lambda agent=None: FakeAppearanceAgent({}, fail=True),
     )
     added = await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert added == ["郑家悦"]
-    assert store.get_character("郑家悦").face_prompt == ""
+    assert added == ["Zheng Jiayue"]
+    assert store.get_character("Zheng Jiayue").face_prompt == ""
 
 
 async def test_a_new_character_is_published_with_its_face_and_voice(
@@ -2158,19 +2159,19 @@ async def test_a_new_character_is_published_with_its_face_and_voice(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", role="主角", body_type="纤细高挑")}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", role="protagonist", body_type="slender and tall")}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    character = store.get_character("郑家悦")
-    assert character.face_prompt == "女性，二十多岁，黑色长发，杏眼"
-    assert character.role == "主角"
-    assert character.body_type == "纤细高挑"
-    # "female", not "女": the structured extractor writes the English form, and
-    # a lookup that only knows the Chinese one gives every woman a male voice.
+    character = store.get_character("Zheng Jiayue")
+    assert character.face_prompt == "Female, in her twenties, long black hair, almond eyes"
+    assert character.role == "protagonist"
+    assert character.body_type == "slender and tall"
+    # "female", not a localized word: the structured extractor writes the English form, and
+    # a lookup that only knows one spelling gives every woman a male voice.
     assert character.fish_voice_id == "voice-yf"
 
 
@@ -2183,9 +2184,9 @@ async def test_a_rebuild_fills_a_face_an_existing_character_never_had(
 
     store, _ = structured_store
     await store.add_characters_atomic(
-        [NovelCharacter(name="郑家悦", gender="female")], skip_existing=False
+        [NovelCharacter(name="Zheng Jiayue", gender="female")], skip_existing=False
     )
-    assert store.get_character("郑家悦").face_prompt == ""
+    assert store.get_character("Zheng Jiayue").face_prompt == ""
 
     monkeypatch.setattr(
         "novelvideo.config.FISH_VOICE_PRESETS",
@@ -2194,17 +2195,17 @@ async def test_a_rebuild_fills_a_face_an_existing_character_never_had(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", role="主角", age_group="elder")}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", role="protagonist", age_group="elder")}
         ),
     )
     added = await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
     assert added == []
-    repaired = store.get_character("郑家悦")
-    assert repaired.face_prompt == "女性，二十多岁，黑色长发，杏眼"
-    assert repaired.role == "主角"
+    repaired = store.get_character("Zheng Jiayue")
+    assert repaired.face_prompt == "Female, in her twenties, long black hair, almond eyes"
+    assert repaired.role == "protagonist"
     assert repaired.age_group == "elder"
     assert repaired.fish_voice_id == "voice-ef"
 
@@ -2220,7 +2221,7 @@ async def test_a_rebuild_leaves_an_age_band_a_bound_voice_depends_on(
     await store.add_characters_atomic(
         [
             NovelCharacter(
-                name="郑家悦",
+                name="Zheng Jiayue",
                 gender="female",
                 age_group="youth",
                 fish_voice_id="chosen-by-hand",
@@ -2231,15 +2232,15 @@ async def test_a_rebuild_leaves_an_age_band_a_bound_voice_depends_on(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", age_group="elder")}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", age_group="elder")}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    repaired = store.get_character("郑家悦")
-    assert repaired.face_prompt == "女性，二十多岁，黑色长发，杏眼"
+    repaired = store.get_character("Zheng Jiayue")
+    assert repaired.face_prompt == "Female, in her twenties, long black hair, almond eyes"
     assert repaired.age_group == "youth"
     assert repaired.fish_voice_id == "chosen-by-hand"
 
@@ -2254,7 +2255,7 @@ async def test_a_rebuild_never_overwrites_a_face_the_user_wrote(
     await store.add_characters_atomic(
         [
             NovelCharacter(
-                name="郑家悦", gender="female", face_prompt="我自己写的脸", role="配角"
+                name="Zheng Jiayue", gender="female", face_prompt="a face I wrote myself", role="supporting"
             )
         ],
         skip_existing=False,
@@ -2262,19 +2263,19 @@ async def test_a_rebuild_never_overwrites_a_face_the_user_wrote(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", role="主角")}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", role="protagonist")}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert store.get_character("郑家悦").face_prompt == "我自己写的脸"
-    assert store.get_character("郑家悦").role == "配角"
+    assert store.get_character("Zheng Jiayue").face_prompt == "a face I wrote myself"
+    assert store.get_character("Zheng Jiayue").role == "supporting"
 
 
 def test_the_voice_lookup_reads_both_spellings_of_a_gender(monkeypatch):
-    """legacy writes 男/女, structured_v1 writes male/female; both select a voice."""
+    """legacy writes a localized gender word, structured_v1 writes male/female; both select a voice."""
     from novelvideo.config import get_fish_voice_id
 
     monkeypatch.setattr(
@@ -2282,29 +2283,29 @@ def test_the_voice_lookup_reads_both_spellings_of_a_gender(monkeypatch):
         {"youth_female": "voice-yf", "youth_male": "voice-ym"},
     )
     assert get_fish_voice_id("youth", "female") == "voice-yf"
-    assert get_fish_voice_id("youth", "女") == "voice-yf"
+    assert get_fish_voice_id("youth", "nữ") == "voice-yf"
     assert get_fish_voice_id("youth", "male") == "voice-ym"
-    assert get_fish_voice_id("youth", "男") == "voice-ym"
+    assert get_fish_voice_id("youth", "nam") == "voice-ym"
 
 
 async def test_the_character_bible_reaches_the_stage_that_writes_faces():
     """A screenplay's pre-scene block names hair and build outright; legacy sent it."""
     from novelvideo.structured_extraction import enrich_character_appearances
 
-    agent = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦")})
+    agent = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue")})
     await enrich_character_appearances(
-        [_cast_member("郑家悦")], synopsis="郑家悦：短发，清瘦。", agent=agent
+        [_cast_member("Zheng Jiayue")], synopsis="Zheng Jiayue: short hair, slim.", agent=agent
     )
 
-    assert "郑家悦：短发，清瘦。" in agent.prompts[0]
+    assert "Zheng Jiayue: short hair, slim." in agent.prompts[0]
 
 
 async def test_an_edited_character_bible_retires_every_stored_appearance():
     from novelvideo.structured_extraction import character_appearance_cache_key
 
-    item = _cast_member("郑家悦")
-    before = character_appearance_cache_key(item, "郑家悦：短发，清瘦。")
-    after = character_appearance_cache_key(item, "郑家悦：长发，圆脸。")
+    item = _cast_member("Zheng Jiayue")
+    before = character_appearance_cache_key(item, "Zheng Jiayue: short hair, slim.")
+    after = character_appearance_cache_key(item, "Zheng Jiayue: long hair, round face.")
     assert before != after
 
 
@@ -2316,42 +2317,42 @@ async def test_a_drama_build_reads_the_bible_from_the_imported_source(
 
     store, state_dir = structured_store
     (state_dir / "novel.txt").write_text(
-        "郑家悦：短发，清瘦。\n\n1-1 教室 日 内\n\n郑家悦坐下。\n", encoding="utf-8"
+        "Zheng Jiayue: short hair, slim.\n\n1-1 Classroom DAY INT\n\nZheng Jiayue sat down.\n", encoding="utf-8"
     )
-    agent = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦")})
+    agent = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue")})
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda a=None: agent,
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert "郑家悦：短发，清瘦。" in agent.prompts[0]
+    assert "Zheng Jiayue: short hair, slim." in agent.prompts[0]
 
 
 async def test_a_rebuild_marks_the_narrator_an_existing_project_never_had(
     structured_store, monkeypatch
 ):
-    """Without it, first-person narration fails with 未找到解说主角 forever."""
+    """Without it, first-person narration fails with narrator protagonist not found forever."""
     from novelvideo import structured_builders
     from novelvideo.cognee.pipeline import NovelCharacter
 
     store, _ = structured_store
     await store.add_characters_atomic(
-        [NovelCharacter(name="郑家悦", gender="female")], skip_existing=False
+        [NovelCharacter(name="Zheng Jiayue", gender="female")], skip_existing=False
     )
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", is_main=True)}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert store.get_character("郑家悦").is_main is True
+    assert store.get_character("Zheng Jiayue").is_main is True
 
 
 async def test_a_narrator_marked_by_hand_is_not_joined_by_a_second_one(
@@ -2364,23 +2365,23 @@ async def test_a_narrator_marked_by_hand_is_not_joined_by_a_second_one(
     store, _ = structured_store
     await store.add_characters_atomic(
         [
-            NovelCharacter(name="郑玉琴", gender="female", is_main=True),
-            NovelCharacter(name="郑家悦", gender="female"),
+            NovelCharacter(name="Zheng Yuqin", gender="female", is_main=True),
+            NovelCharacter(name="Zheng Jiayue", gender="female"),
         ],
         skip_existing=False,
     )
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", is_main=True)}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert store.get_character("郑家悦").is_main is False
-    assert store.get_character("郑玉琴").is_main is True
+    assert store.get_character("Zheng Jiayue").is_main is False
+    assert store.get_character("Zheng Yuqin").is_main is True
 
 
 async def test_a_face_written_by_hand_does_not_lock_out_the_other_fields(
@@ -2392,7 +2393,7 @@ async def test_a_face_written_by_hand_does_not_lock_out_the_other_fields(
 
     store, _ = structured_store
     await store.add_characters_atomic(
-        [NovelCharacter(name="郑家悦", gender="female", face_prompt="我自己写的脸")],
+        [NovelCharacter(name="Zheng Jiayue", gender="female", face_prompt="a face I wrote myself")],
         skip_existing=False,
     )
     monkeypatch.setattr(
@@ -2403,20 +2404,20 @@ async def test_a_face_written_by_hand_does_not_lock_out_the_other_fields(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
             {
-                "郑家悦": _appearance(
-                    "郑家悦", role="主角", body_type="纤细高挑", age_group="elder"
+                "Zheng Jiayue": _appearance(
+                    "Zheng Jiayue", role="protagonist", body_type="slender and tall", age_group="elder"
                 )
             }
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    repaired = store.get_character("郑家悦")
-    assert repaired.face_prompt == "我自己写的脸"
-    assert repaired.role == "主角"
-    assert repaired.body_type == "纤细高挑"
+    repaired = store.get_character("Zheng Jiayue")
+    assert repaired.face_prompt == "a face I wrote myself"
+    assert repaired.role == "protagonist"
+    assert repaired.body_type == "slender and tall"
     assert repaired.fish_voice_id == "voice-ef"
 
 
@@ -2431,12 +2432,12 @@ async def test_a_character_with_nothing_missing_is_left_untouched(
     await store.add_characters_atomic(
         [
             NovelCharacter(
-                name="郑家悦",
+                name="Zheng Jiayue",
                 gender="female",
-                face_prompt="已有的脸",
-                role="已有定位",
-                body_type="已有身形",
-                fish_voice_id="已有声音",
+                face_prompt="existing face",
+                role="existing role",
+                body_type="existing build",
+                fish_voice_id="existing voice",
             )
         ],
         skip_existing=False,
@@ -2452,11 +2453,11 @@ async def test_a_character_with_nothing_missing_is_left_untouched(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", role="主角", body_type="纤细高挑")}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", role="protagonist", body_type="slender and tall")}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
     assert writes == []
@@ -2471,21 +2472,21 @@ async def test_a_newly_discovered_character_cannot_become_a_second_narrator(
 
     store, _ = structured_store
     await store.add_characters_atomic(
-        [NovelCharacter(name="郑玉琴", gender="female", is_main=True)],
+        [NovelCharacter(name="Zheng Yuqin", gender="female", is_main=True)],
         skip_existing=False,
     )
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"林某": _appearance("林某", is_main=True)}
+            {"Lin Mou": _appearance("Lin Mou", is_main=True)}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("林某")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Lin Mou")], "", lambda *_: None, lambda *_: None
     )
 
     narrators = [c.name for c in store.get_all_characters() if c.is_main]
-    assert narrators == ["郑玉琴"]
+    assert narrators == ["Zheng Yuqin"]
 
 
 async def test_a_stale_narrator_opinion_is_not_replayed_from_the_cache():
@@ -2493,17 +2494,17 @@ async def test_a_stale_narrator_opinion_is_not_replayed_from_the_cache():
     from novelvideo.structured_extraction import enrich_character_appearances
 
     cache = RecordingCache()
-    old = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)})
-    await enrich_character_appearances([_cast_member("郑家悦")], agent=old, cache=cache)
+    old = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)})
+    await enrich_character_appearances([_cast_member("Zheng Jiayue")], agent=old, cache=cache)
 
-    # The cast changed: someone else is the narrator now, and 郑家悦's own
+    # The cast changed: someone else is the narrator now, and Zheng Jiayue's own
     # inputs are untouched, so her row is served straight from the cache.
-    new = FakeAppearanceAgent({"林某": _appearance("林某", is_main=True)})
+    new = FakeAppearanceAgent({"Lin Mou": _appearance("Lin Mou", is_main=True)})
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦"), _cast_member("林某")], agent=new, cache=cache
+        [_cast_member("Zheng Jiayue"), _cast_member("Lin Mou")], agent=new, cache=cache
     )
 
-    assert [name for name, item in result.items() if item.is_main] == ["林某"]
+    assert [name for name, item in result.items() if item.is_main] == ["Lin Mou"]
 
 
 async def test_the_build_still_seeds_a_narrator_when_the_project_has_none(
@@ -2516,14 +2517,14 @@ async def test_the_build_still_seeds_a_narrator_when_the_project_has_none(
     monkeypatch.setattr(
         "novelvideo.structured_extraction._create_character_appearance_agent",
         lambda agent=None: FakeAppearanceAgent(
-            {"郑家悦": _appearance("郑家悦", is_main=True)}
+            {"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}
         ),
     )
     await structured_builders._publish_characters(
-        store, [_cast_member("郑家悦")], "", lambda *_: None, lambda *_: None
+        store, [_cast_member("Zheng Jiayue")], "", lambda *_: None, lambda *_: None
     )
 
-    assert [c.name for c in store.get_all_characters() if c.is_main] == ["郑家悦"]
+    assert [c.name for c in store.get_all_characters() if c.is_main] == ["Zheng Jiayue"]
 
 
 async def test_a_retry_after_the_cache_landed_still_finds_its_narrator():
@@ -2531,15 +2532,15 @@ async def test_a_retry_after_the_cache_landed_still_finds_its_narrator():
     from novelvideo.structured_extraction import enrich_character_appearances
 
     cache = RecordingCache()
-    cast = [_cast_member("郑家悦"), _cast_member("林某")]
+    cast = [_cast_member("Zheng Jiayue"), _cast_member("Lin Mou")]
     agent = FakeAppearanceAgent(
         {
-            "郑家悦": _appearance("郑家悦", is_main=True),
-            "林某": _appearance("林某"),
+            "Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True),
+            "Lin Mou": _appearance("Lin Mou"),
         }
     )
     first = await enrich_character_appearances(cast, agent=agent, cache=cache)
-    assert [n for n, a in first.items() if a.is_main] == ["郑家悦"]
+    assert [n for n, a in first.items() if a.is_main] == ["Zheng Jiayue"]
 
     # The process died before _publish_characters ran: every appearance row is
     # on disk, no character is. Every character now replays as an abstention.
@@ -2547,7 +2548,7 @@ async def test_a_retry_after_the_cache_landed_still_finds_its_narrator():
     second = await enrich_character_appearances(cast, agent=replay, cache=cache)
 
     assert replay.prompts == []
-    assert [n for n, a in second.items() if a.is_main] == ["郑家悦"]
+    assert [n for n, a in second.items() if a.is_main] == ["Zheng Jiayue"]
 
 
 async def test_a_changed_cast_puts_the_narrator_question_back_to_the_model():
@@ -2556,19 +2557,19 @@ async def test_a_changed_cast_puts_the_narrator_question_back_to_the_model():
 
     cache = RecordingCache()
     await enrich_character_appearances(
-        [_cast_member("郑家悦")],
-        agent=FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)}),
+        [_cast_member("Zheng Jiayue")],
+        agent=FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}),
         cache=cache,
     )
 
-    # 林某 joins the cast and is nominated; 郑家悦 is served from her own row.
+    # Lin Mou joins the cast and is nominated; Zheng Jiayue is served from her own row.
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦"), _cast_member("林某")],
-        agent=FakeAppearanceAgent({"林某": _appearance("林某", is_main=True)}),
+        [_cast_member("Zheng Jiayue"), _cast_member("Lin Mou")],
+        agent=FakeAppearanceAgent({"Lin Mou": _appearance("Lin Mou", is_main=True)}),
         cache=cache,
     )
 
-    assert [n for n, a in result.items() if a.is_main] == ["林某"]
+    assert [n for n, a in result.items() if a.is_main] == ["Lin Mou"]
 
 
 class OrderedCache(RecordingCache):
@@ -2596,8 +2597,8 @@ async def test_a_batch_writes_its_nomination_before_the_rows_that_replay_it():
 
     cache = OrderedCache()
     await enrich_character_appearances(
-        [_cast_member("郑家悦")],
-        agent=FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)}),
+        [_cast_member("Zheng Jiayue")],
+        agent=FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}),
         cache=cache,
     )
 
@@ -2614,21 +2615,21 @@ async def test_a_crash_between_the_two_writes_leaves_the_batch_replayable():
     )
 
     cache = OrderedCache(fail_on=CHARACTER_APPEARANCE_CACHE_TYPE)
-    dying = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)})
+    dying = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)})
     await enrich_character_appearances(
-        [_cast_member("郑家悦")], agent=dying, cache=cache
+        [_cast_member("Zheng Jiayue")], agent=dying, cache=cache
     )
 
     # Nothing about that character survived, so the retry pays for it again
     # rather than replaying a row whose answer was never stored.
     cache.fail_on = None
-    retry = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)})
+    retry = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)})
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦")], agent=retry, cache=cache
+        [_cast_member("Zheng Jiayue")], agent=retry, cache=cache
     )
 
     assert retry.prompts != []
-    assert [n for n, a in result.items() if a.is_main] == ["郑家悦"]
+    assert [n for n, a in result.items() if a.is_main] == ["Zheng Jiayue"]
 
 
 async def test_an_edited_description_retires_the_cast_decision_too():
@@ -2639,10 +2640,10 @@ async def test_an_edited_description_retires_the_cast_decision_too():
     )
 
     before = character_appearance_cache_key(
-        _cast_member("郑家悦", description="遭受校园霸凌")
+        _cast_member("Zheng Jiayue", description="suffered campus bullying")
     )
     after = character_appearance_cache_key(
-        _cast_member("郑家悦", description="已经毕业工作")
+        _cast_member("Zheng Jiayue", description="has graduated and is working")
     )
     assert narrator_cache_key([before]) != narrator_cache_key([after])
 
@@ -2653,16 +2654,16 @@ async def test_a_cast_decision_is_not_replayed_across_edited_inputs():
 
     cache = RecordingCache()
     await enrich_character_appearances(
-        [_cast_member("郑家悦", description="遭受校园霸凌")],
-        agent=FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)}),
+        [_cast_member("Zheng Jiayue", description="suffered campus bullying")],
+        agent=FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)}),
         cache=cache,
     )
 
     # Same cast, same order, different description — and this time the model
     # nominates nobody. The old decision must not stand in for an answer.
     result = await enrich_character_appearances(
-        [_cast_member("郑家悦", description="已经毕业工作")],
-        agent=FakeAppearanceAgent({"郑家悦": _appearance("郑家悦")}),
+        [_cast_member("Zheng Jiayue", description="has graduated and is working")],
+        agent=FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue")}),
         cache=cache,
     )
 
@@ -2703,14 +2704,14 @@ async def test_the_recovered_narrator_is_the_one_an_uninterrupted_run_would_pick
     from novelvideo import structured_extraction
     from novelvideo.structured_extraction import enrich_character_appearances
 
-    # One character per batch, run in sequence, so 林某's batch writes last.
+    # One character per batch, run in sequence, so Lin Mou's batch writes last.
     monkeypatch.setattr(structured_extraction, "_APPEARANCE_BATCH_SIZE", 1)
     cache = CrashBeforeSettlementCache(expected_row_writes=2)
-    cast = [_cast_member("郑家悦"), _cast_member("林某")]
+    cast = [_cast_member("Zheng Jiayue"), _cast_member("Lin Mou")]
     agent = FakeAppearanceAgent(
         {
-            "郑家悦": _appearance("郑家悦", is_main=True),
-            "林某": _appearance("林某", is_main=True),
+            "Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True),
+            "Lin Mou": _appearance("Lin Mou", is_main=True),
         }
     )
     try:
@@ -2728,7 +2729,7 @@ async def test_the_recovered_narrator_is_the_one_an_uninterrupted_run_would_pick
     )
 
     assert replay.prompts == []
-    assert [n for n, a in recovered.items() if a.is_main] == ["郑家悦"]
+    assert [n for n, a in recovered.items() if a.is_main] == ["Zheng Jiayue"]
 
 
 
@@ -2746,14 +2747,14 @@ async def test_two_batches_nominating_do_not_overwrite_each_other():
     assert CHARACTER_APPEARANCE_CACHE_VERSION >= 2
     cast_key = narrator_cache_key(
         [
-            character_appearance_cache_key(_cast_member("郑家悦")),
-            character_appearance_cache_key(_cast_member("林某")),
+            character_appearance_cache_key(_cast_member("Zheng Jiayue")),
+            character_appearance_cache_key(_cast_member("Lin Mou")),
         ]
     )
     assert narrator_vote_key(
-        cast_key, character_appearance_cache_key(_cast_member("郑家悦"))
+        cast_key, character_appearance_cache_key(_cast_member("Zheng Jiayue"))
     ) != narrator_vote_key(
-        cast_key, character_appearance_cache_key(_cast_member("林某"))
+        cast_key, character_appearance_cache_key(_cast_member("Lin Mou"))
     )
 
 
@@ -2766,25 +2767,25 @@ async def test_a_resumed_build_keeps_the_narrator_the_first_attempt_nominated(
 
     monkeypatch.setattr(structured_extraction, "_APPEARANCE_BATCH_SIZE", 1)
     cache = RecordingCache()
-    cast = [_cast_member("郑家悦"), _cast_member("林某")]
+    cast = [_cast_member("Zheng Jiayue"), _cast_member("Lin Mou")]
 
-    # First attempt gets through 郑家悦 and stops before 林某 is answered.
-    stopped = FakeAppearanceAgent({"郑家悦": _appearance("郑家悦", is_main=True)})
+    # First attempt gets through Zheng Jiayue and stops before Lin Mou is answered.
+    stopped = FakeAppearanceAgent({"Zheng Jiayue": _appearance("Zheng Jiayue", is_main=True)})
     first = await enrich_character_appearances(
         cast, agent=stopped, cache=cache, concurrency=1
     )
-    assert [n for n, a in first.items() if a.is_main] == ["郑家悦"]
-    assert "林某" not in first
+    assert [n for n, a in first.items() if a.is_main] == ["Zheng Jiayue"]
+    assert "Lin Mou" not in first
 
-    # The retry replays 郑家悦 from cache — silently — and answers 林某 fresh,
+    # The retry replays Zheng Jiayue from cache — silently — and answers Lin Mou fresh,
     # who nominates himself. Cast order still decides.
-    resumed = FakeAppearanceAgent({"林某": _appearance("林某", is_main=True)})
+    resumed = FakeAppearanceAgent({"Lin Mou": _appearance("Lin Mou", is_main=True)})
     second = await enrich_character_appearances(
         cast, agent=resumed, cache=cache, concurrency=1
     )
 
-    assert set(second) == {"郑家悦", "林某"}
-    assert [n for n, a in second.items() if a.is_main] == ["郑家悦"]
+    assert set(second) == {"Zheng Jiayue", "Lin Mou"}
+    assert [n for n, a in second.items() if a.is_main] == ["Zheng Jiayue"]
 
 
 # ── structured output failures: diagnostics ────────────────────────────────
@@ -2809,7 +2810,7 @@ class ExplodingAgent:
 
 async def test_failure_log_names_the_underlying_cause():
     """'Exceeded maximum output retries' alone is useless; the cause must be logged."""
-    chunk = _chunk("林默走进屋子。")
+    chunk = _chunk("Lin Mo walked into the house.")
     primary = ExplodingAgent(cause=ValueError("characters.0.evidence: Field required"))
     logs: list[str] = []
 

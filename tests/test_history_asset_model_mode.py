@@ -1,7 +1,7 @@
-"""历史资产还原「模型 + 模式」记忆 — 记录写入层。
+"""History asset restore of the 'model + mode' memory - record write layer.
 
-生成请求显式带上注册表 model id 与生成模式，runner 原样写进 JSONL 记录顶层，
-供还原链路回填节点。缺字段时记录不含这两键（向后兼容，回退默认）。
+The generation request explicitly carries the registry model id and generation mode, and the runner writes them as-is at the top level of the JSONL record
+so the restore flow can backfill nodes. When the fields are missing, the record does not contain these two keys (backward compatible, falls back to defaults).
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ def test_video_history_persists_model_and_gen_mode(tmp_path: Path) -> None:
     payload = {
         "node_id": "video_1",
         "canvas_id": "default",
-        "prompt": "深夜古街",
+        "prompt": "Ancient street late at night",
         "model_id": "happyhouse_1_0",
         "gen_mode": "first_last_frame",
         "requested_gen_mode": "firstLastFrame",
@@ -85,9 +85,9 @@ def test_history_model_mode_extra_maps_and_omits() -> None:
     assert _history_model_mode_extra(
         {"model_id": "seedream_4_0", "gen_mode": "image_to_image"}
     ) == {"model": "seedream_4_0", "gen_mode": "image_to_image"}
-    # 缺省 → 省略（向后兼容）
+    # Missing -> omitted (backward compatible)
     assert _history_model_mode_extra({"prompt": "x"}) == {}
-    # 仅其一
+    # Only one of them
     assert _history_model_mode_extra({"model_id": "m"}) == {"model": "m"}
 
 
@@ -97,7 +97,7 @@ def test_image_history_persists_model_and_gen_mode(tmp_path: Path) -> None:
     payload = {
         "node_id": "img_1",
         "canvas_id": "default",
-        "prompt": "赛博夜景",
+        "prompt": "Cyberpunk night view",
     }
     rec = _append_node_history(
         ctx=ctx,

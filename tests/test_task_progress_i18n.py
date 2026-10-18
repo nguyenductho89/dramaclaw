@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""后端进度/日志文案的 i18n 载荷。
+"""i18n payloads of backend progress/log messages.
 
-后端仍然写中文（当兜底），同时把 i18n code/params 带出来，前端按
-`t(code, {defaultValue: text})` 渲染。这里钉住载荷形状和那条最容易踩的
-「纯字符串必须清掉上一条 code」的规则。
+The backend still writes English (as a fallback) while also carrying the i18n code/params out, and the frontend renders it with
+`t(code, {defaultValue: text})`. This pins the payload shape and the rule that is easiest to trip over:
+"a plain string must clear the previous code".
 """
 
 import json
@@ -23,7 +23,7 @@ from novelvideo.task_state import TaskState, TaskStateManager
 
 
 def _manager() -> TaskStateManager:
-    # _apply_progress_message 只碰传进来的 state，不需要真的建库。
+    # _apply_progress_message only touches the state passed in; no real DB is needed.
     return TaskStateManager.__new__(TaskStateManager)
 
 
@@ -32,77 +32,77 @@ def _state() -> TaskState:
 
 
 def test_localizable_message_carries_code_and_params():
-    msg = lmsg("tasks.log.ingest.readingFile", "读取文件: /a.docx", path="/a.docx")
-    assert message_text(msg) == "读取文件: /a.docx"
+    msg = lmsg("tasks.log.ingest.readingFile", "Reading file: /a.docx", path="/a.docx")
+    assert message_text(msg) == "Reading file: /a.docx"
     assert message_payload(msg) == {
         "code": "tasks.log.ingest.readingFile",
         "params": {"path": "/a.docx"},
     }
-    # 直接当字符串用（f-string、日志拼接）也还是那句中文。
-    assert f"{msg}" == "读取文件: /a.docx"
+    # Used directly as a string (f-string, log concatenation) it is still that fallback text.
+    assert f"{msg}" == "Reading file: /a.docx"
 
 
 def test_plain_string_has_no_payload():
-    assert message_text("任务已开始") == "任务已开始"
-    assert message_payload("任务已开始") is None
-    assert log_entry_payload("任务已开始") == "任务已开始"
+    assert message_text("Task started") == "Task started"
+    assert message_payload("Task started") is None
+    assert log_entry_payload("Task started") == "Task started"
 
 
 def test_progress_update_persists_text_and_code():
     state = _state()
-    msg = lmsg("tasks.progress.ingest.reading", "读取并校验原文...")
+    msg = lmsg("tasks.progress.ingest.reading", "Reading and validating source text...")
     _manager()._apply_progress_message(state, msg, [msg])
 
-    # 中文照旧落在原列里，老客户端不受影响。
-    assert state.current_task == "读取并校验原文..."
+    # The fallback text still lands in the original column, so old clients are unaffected.
+    assert state.current_task == "Reading and validating source text..."
     assert state.metadata["current_task_message"] == {
         "code": "tasks.progress.ingest.reading"
     }
     assert state.logs == [
-        {"text": "读取并校验原文...", "code": "tasks.progress.ingest.reading"}
+        {"text": "Reading and validating source text...", "code": "tasks.progress.ingest.reading"}
     ]
 
 
 def test_plain_string_update_clears_the_previous_code():
-    """这是最容易错的一条：不清就会拿旧 code 去翻新中文。"""
+    """The easiest one to get wrong: if it is not cleared, the old code is used to translate the new text."""
     state = _state()
     _manager()._apply_progress_message(
-        state, lmsg("tasks.progress.ingest.reading", "读取并校验原文..."), None
+        state, lmsg("tasks.progress.ingest.reading", "Reading and validating source text..."), None
     )
-    # 下一次更新来自还没迁移的调用点，只有中文。
-    _manager()._apply_progress_message(state, "任务已开始", None)
+    # The next update comes from a call site that has not been migrated yet, with text only.
+    _manager()._apply_progress_message(state, "Task started", None)
 
-    assert state.current_task == "任务已开始"
+    assert state.current_task == "Task started"
     assert state.metadata["current_task_message"] is None
 
 
 def test_merge_logs_dedupes_overlapping_tails_across_mixed_shapes():
     state = _state()
-    msg = lmsg("tasks.log.ingest.sourceSaved", "原文已保存")
-    _manager()._apply_progress_message(state, None, [msg, "任务已开始"])
-    # worker 重发了尾部那一段，加一条新的。
-    _manager()._apply_progress_message(state, None, ["任务已开始", "任务已完成"])
+    msg = lmsg("tasks.log.ingest.sourceSaved", "Source text saved")
+    _manager()._apply_progress_message(state, None, [msg, "Task started"])
+    # The worker resent the tail segment; add one new entry.
+    _manager()._apply_progress_message(state, None, ["Task started", "Task completed"])
 
     assert state.logs == [
-        {"text": "原文已保存", "code": "tasks.log.ingest.sourceSaved"},
-        "任务已开始",
-        "任务已完成",
+        {"text": "Source text saved", "code": "tasks.log.ingest.sourceSaved"},
+        "Task started",
+        "Task completed",
     ]
 
 
 def test_state_stays_json_serializable_after_a_localizable_update():
-    """LocalizableMessage 绝不能原样活到存储层。
+    """A LocalizableMessage must never live on as-is into the storage layer.
 
-    EE 的 _pg_state_params 和 CE 的 SQLite 写入都会 json.dumps(state.logs) 和
-    json.dumps(state.metadata)。只要有一处忘了转换，任务会在写库时炸
-    TypeError: Object of type LocalizableMessage is not JSON serializable，
-    而且是任务跑到一半才炸，前端只看到一条没头没尾的红字。
+    EE's _pg_state_params and CE's SQLite write both do json.dumps(state.logs) and
+    json.dumps(state.metadata). If even one place forgets to convert, the task blows up at write time with
+    TypeError: Object of type LocalizableMessage is not JSON serializable,
+    and it blows up halfway through the task run, so the frontend sees only a red line with no context.
     """
     state = _state()
     _manager()._apply_progress_message(
         state,
-        lmsg("tasks.progress.ingest.chunking", "正在切分章节...", chunkCount=3),
-        [lmsg("tasks.log.ingest.chunked", "已切分 3 段", chunkCount=3)],
+        lmsg("tasks.progress.ingest.chunking", "Splitting chapters...", chunkCount=3),
+        [lmsg("tasks.log.ingest.chunked", "Split into 3 chunks", chunkCount=3)],
     )
 
     json.dumps(state.logs)
@@ -111,26 +111,26 @@ def test_state_stays_json_serializable_after_a_localizable_update():
 
 
 def test_stored_logs_flatten_back_to_plain_strings():
-    """`logs` 的公开契约是 `string[]`，结构化条目不能从这个字段出去。"""
+    """The public contract of `logs` is `string[]`; structured entries must not leave through this field."""
     entries = [
-        "任务已开始",
-        {"text": "已切分 3 段", "code": "tasks.log.ingest.chunked", "params": {"chunkCount": 3}},
+        "Task started",
+        {"text": "Split into 3 chunks", "code": "tasks.log.ingest.chunked", "params": {"chunkCount": 3}},
     ]
 
-    assert log_lines_text(entries) == ["任务已开始", "已切分 3 段"]
-    assert log_entry_text("任务已开始") == "任务已开始"
+    assert log_lines_text(entries) == ["Task started", "Split into 3 chunks"]
+    assert log_entry_text("Task started") == "Task started"
     assert has_localizable_log(entries) is True
-    assert has_localizable_log(["任务已开始"]) is False
-    # 没有 logs（老行、刚建的任务）时不能炸。
+    assert has_localizable_log(["Task started"]) is False
+    # No logs (old rows, a just-created task) must not blow up.
     assert log_lines_text(None) == []
     assert has_localizable_log(None) is False
 
 
 def test_serialized_task_keeps_logs_as_strings_and_adds_the_i18n_field():
-    """滚动发布：新后端 + 老前端不能把日志渲染成 `[object Object]`。
+    """Rolling release: new backend + old frontend must not render logs as `[object Object]`.
 
-    老前端对 `logs` 只会 `join("\\n")` / 下载成 .log，拿到对象就直接退化。
-    结构化那份另走 `logs_i18n`，只有认识它的前端才读。
+    The old frontend only does `join("\\n")` / downloads `logs` as a .log file, and degrades immediately when it gets objects.
+    The structured copy goes separately through `logs_i18n`, which only a frontend that knows it reads.
     """
     from novelvideo.api.routes.tasks import _serialize_task
 
@@ -141,20 +141,20 @@ def test_serialized_task_keeps_logs_as_strings_and_adds_the_i18n_field():
         episode=0,
         status="running",
         logs=[
-            "任务已开始",
-            {"text": "已切分 3 段", "code": "tasks.log.ingest.chunked", "params": {"chunkCount": 3}},
+            "Task started",
+            {"text": "Split into 3 chunks", "code": "tasks.log.ingest.chunked", "params": {"chunkCount": 3}},
         ],
     )
 
     payload = _serialize_task(task)
 
-    assert payload["logs"] == ["任务已开始", "已切分 3 段"]
+    assert payload["logs"] == ["Task started", "Split into 3 chunks"]
     assert all(isinstance(line, str) for line in payload["logs"])
     assert payload["logs_i18n"][1]["code"] == "tasks.log.ingest.chunked"
 
 
 def test_serialized_task_omits_the_i18n_field_when_nothing_is_localizable():
-    """一条 code 都没有时不下发，省得每个任务白挂一份重复日志。"""
+    """When there is not a single code, do not send it, so no task carries a duplicate copy of the logs for nothing."""
     from novelvideo.api.routes.tasks import _serialize_task
 
     payload = _serialize_task(
@@ -164,22 +164,22 @@ def test_serialized_task_omits_the_i18n_field_when_nothing_is_localizable():
             project_id="proj_123",
             episode=0,
             status="running",
-            logs=["任务已开始"],
+            logs=["Task started"],
         )
     )
 
-    assert payload["logs"] == ["任务已开始"]
+    assert payload["logs"] == ["Task started"]
     assert "logs_i18n" not in payload
 
 
 # ---------------------------------------------------------------------------
-# 落库往返
+# Persistence round trip
 #
-# review #462：`TaskState.metadata` 没有自己的列，靠 `result_json.task_metadata`
-# 落库。`_apply_progress_message()` 改的是 `state.metadata`，而各调用点的手工合并
-# 大多挂在 `if metadata is not None:` 下面——调用方没顺手传 metadata 时，code 就在
-# 写库这一跳丢了，前端永远拿不到 `current_task_code`，整套本地化等于没生效。
-# 合并因此挪到了写库边界，这几条钉住的就是「经过一次真实往返之后 code 还在」。
+# review #462: `TaskState.metadata` has no column of its own and is persisted through `result_json.task_metadata`.
+# `_apply_progress_message()` changes `state.metadata`, while the manual merges at most call sites
+# sit under `if metadata is not None:` -- when the caller does not pass metadata along, the code is lost
+# at the write hop, the frontend never gets `current_task_code`, and the whole localization is as good as not taking effect.
+# The merge was therefore moved to the write boundary, and these cases pin "the code is still there after a real round trip".
 # ---------------------------------------------------------------------------
 
 
@@ -203,7 +203,7 @@ def _project_ctx(tmp_path) -> ProjectContext:
 
 
 def _reread_message(manager: TaskStateManager, ctx) -> dict | None:
-    """重新从库里读出来的 `current_task_message`。"""
+    """`current_task_message` read back from the DB again."""
     state = manager.get_task_for_project(ctx, "single_video", 1)
     assert state is not None
     return (state.metadata or {}).get("current_task_message")
@@ -219,7 +219,7 @@ def test_reserved_task_keeps_its_submitting_code_across_a_db_round_trip(tmp_path
 
 
 def test_queued_code_survives_without_the_caller_passing_metadata(tmp_path):
-    """调用方不传 metadata 是常态，不能靠它捎带把 code 写进去。"""
+    """It is normal for callers not to pass metadata; the code must not depend on it to be carried along."""
     manager = TaskStateManager()
     ctx = _project_ctx(tmp_path)
     state, _ = manager.reserve_task_for_project(ctx, "single_video", 1)
@@ -241,7 +241,7 @@ def test_progress_update_keeps_both_code_and_params_across_a_db_round_trip(tmp_p
         "single_video",
         1,
         progress=0.5,
-        current_task=lmsg("tasks.log.ingest.readingFile", "读取文件: /a.docx", path="/a.docx"),
+        current_task=lmsg("tasks.log.ingest.readingFile", "Reading file: /a.docx", path="/a.docx"),
     )
 
     assert _reread_message(manager, ctx) == {
@@ -251,7 +251,7 @@ def test_progress_update_keeps_both_code_and_params_across_a_db_round_trip(tmp_p
 
 
 def test_started_task_no_longer_carries_the_queued_code(tmp_path):
-    """begin 直接赋值 current_task 时，英文界面会把 running 显示成 "Task queued"。"""
+    """When begin assigns current_task directly, the English UI would show running as "Task queued"."""
     manager = TaskStateManager()
     ctx = _project_ctx(tmp_path)
     state, _ = manager.reserve_task_for_project(ctx, "single_video", 1)
@@ -264,7 +264,7 @@ def test_started_task_no_longer_carries_the_queued_code(tmp_path):
     )
 
     reread = manager.get_task_for_project(ctx, "single_video", 1)
-    assert reread.current_task == "任务已开始"
+    assert reread.current_task == "Task started"
     assert (reread.metadata or {}).get("current_task_message") == {
         "code": "tasks.progress.started"
     }
@@ -284,9 +284,9 @@ def test_cancelled_task_no_longer_carries_the_queued_code(tmp_path):
     assert cancelled
 
     reread = manager.get_task_for_project(ctx, "single_video", 1)
-    assert reread.current_task == "任务已取消"
+    assert reread.current_task == "Task cancelled"
     assert (reread.metadata or {}).get("current_task_message") == {
         "code": "tasks.progress.cancelled"
     }
-    # 退款判定挂在同一个 metadata 上，边界合并不能把它挤掉。
+    # The refund decision hangs off the same metadata; the boundary merge must not push it out.
     assert reread.metadata["refund_eligible"] is True

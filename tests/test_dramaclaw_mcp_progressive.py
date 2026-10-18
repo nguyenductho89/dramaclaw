@@ -223,8 +223,8 @@ def test_external_mcp_ready_draft_removes_legacy_ce_billing_metadata():
         "status": "workflow_draft_ready",
         "draft_id": "draft-b",
         "revision": 2,
-        "agent_instruction": "展示规划费用，并说明媒体节点另行计费。",
-        "billing": {"agent_credit_estimate": {"display": "约 12 积分"}},
+        "agent_instruction": "Show the planning cost and explain that media nodes are billed separately.",
+        "billing": {"agent_credit_estimate": {"display": "about 12 credits"}},
     }
 
     adapted = json.loads(
@@ -438,7 +438,7 @@ async def test_real_core_handlers_match_their_endpoint_output_contracts(monkeypa
                     "current_episode": 1,
                     "episode_status": {},
                     "next_step": "script_writer",
-                    "next_step_name": "生成脚本",
+                    "next_step_name": "Generate script",
                 },
             }
         if path.endswith("/tasks/script_writer/1"):
@@ -538,7 +538,7 @@ async def test_real_scene_images_handler_matches_its_mcp_output_contract(monkeyp
             "ok": True,
             "data": [
                 {
-                    "name": "天台",
+                    "name": "Rooftop",
                     "scene_type": "exterior",
                     "master_url": "/static/scenes/roof.png",
                 }
@@ -677,8 +677,8 @@ async def test_real_clarification_results_preserve_frontend_answers_and_retry_fi
         "questions": [
             {
                 "id": "scope",
-                "title": "主要做什么？",
-                "options": [{"id": "workflow", "label": "工作流"}],
+                "title": "What is it mainly for?",
+                "options": [{"id": "workflow", "label": "Workflow"}],
             }
         ],
     }
@@ -705,8 +705,8 @@ async def test_real_clarification_results_preserve_frontend_answers_and_retry_fi
             "questions": [
                 {
                     "id": "generation_settings",
-                    "title": "生成设置",
-                    "options": [{"id": "default", "label": "默认"}],
+                    "title": "Generation settings",
+                    "options": [{"id": "default", "label": "Default"}],
                 }
             ]
         },
@@ -751,7 +751,7 @@ async def test_real_skill_studio_results_match_mcp_contract(monkeypatch):
             "freezone_put_agent_catalog_draft_outline",
             {
                 **base,
-                "reuse_goal": "视频工作流",
+                "reuse_goal": "video workflow",
                 "catalog_checked": True,
                 "expected_recipe_count": 1,
                 "stages": [
@@ -759,7 +759,7 @@ async def test_real_skill_studio_results_match_mcp_contract(monkeypatch):
                         "id": "video-recipe",
                         "recipe_id": "video-recipe",
                         "reuse": "new",
-                        "new_recipe_craft_gap": "现有 Recipe 缺少该流程的输入输出契约。",
+                        "new_recipe_craft_gap": "The existing Recipe lacks an input/output contract for this flow.",
                     }
                 ],
             },
@@ -786,7 +786,7 @@ async def test_real_skill_studio_results_match_mcp_contract(monkeypatch):
             {
                 **base,
                 "target": "skill",
-                "patch": [{"op": "add", "path": "/description", "value": "更新"}],
+                "patch": [{"op": "add", "path": "/description", "value": "Update"}],
             },
         ),
     ]

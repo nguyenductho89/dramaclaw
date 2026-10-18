@@ -15,55 +15,55 @@ def test_seedance2_prompt_draft_keeps_request_params_out_of_prompt():
     prompt = build_seedance2_prompt_draft(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "{{陆辰_书店老板时期}}在地下室翻找旧书。",
-            "scene_ref": {"scene_id": "地下室_雨夜"},
-            "props_description": "旧书、羊皮笔记本。",
-            "video_prompt": "镜头缓慢推近，陆辰翻开旧书。",
+            "visual_description": "{{Luchen_bookstore_owner}} rummages through old books in the basement.",
+            "scene_ref": {"scene_id": "basement_rainy_night"},
+            "props_description": "Old books, a parchment notebook.",
+            "video_prompt": "The camera slowly pushes in as Luchen opens an old book.",
         },
         assets=[
             Seedance2ResolvedAsset(
                 key="first_frame",
-                label="当前 render · Beat 1",
+                label="Current render · Beat 1",
                 media_type="image",
                 path=Path("frame.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             ),
             Seedance2ResolvedAsset(
-                key="identity:陆辰_书店老板时期",
-                label="陆辰 · 书店老板时期",
+                key="identity:Luchen_bookstore_owner",
+                label="Luchen · bookstore_owner",
                 media_type="image",
                 path=Path("identity.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片2",
-                identity_id="陆辰_书店老板时期",
+                reference_label="image2",
+                identity_id="Luchen_bookstore_owner",
                 image_number=2,
             ),
         ],
         text_overlay={
             "enabled": True,
             "kind": "subtitle",
-            "content": "几天前，地下室中",
-            "placement": "画面下方居中",
-            "timing": "全片持续",
-            "style": "干净易读",
+            "content": "A few days ago, in the basement",
+            "placement": "bottom center",
+            "timing": "throughout the clip",
+            "style": "clean and readable",
         },
-        prompt_guidance="动作克制，像官方多图参考示例。",
+        prompt_guidance="Restrained action, like the official multi-image reference example.",
     )
 
-    assert "生成4秒" not in prompt
+    assert "generate 4 seconds" not in prompt
     assert "9:16" not in prompt
     assert "720p" not in prompt
-    assert "图片1作为起始状态和整体构图依据" in prompt
-    assert "图片2中的陆辰" in prompt
-    assert "环境为地下室_雨夜" in prompt
-    assert "几天前，地下室中" in prompt
-    assert "动作克制" in prompt
+    assert "Use image1 as the starting state and overall composition reference" in prompt
+    assert "keep the appearance of Luchen consistent with image2" in prompt
+    assert "The environment is basement_rainy_night" in prompt
+    assert "A few days ago, in the basement" in prompt
+    assert "Restrained action" in prompt
     assert "@" not in prompt
 
 
@@ -74,8 +74,8 @@ def test_seedance2_prompt_draft_includes_dialogue_text():
     prompt = build_seedance2_prompt_draft(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "谢铮站在雨夜的巷口。",
-            "dialogue": "谢铮低声说：“别回头，跟我走。”",
+            "visual_description": "Xie Zheng stands at the mouth of the alley on a rainy night.",
+            "dialogue": "Xie Zheng says softly: “Do not look back, follow me.”",
             "audio_type": "dialogue",
         },
         assets=[],
@@ -83,8 +83,8 @@ def test_seedance2_prompt_draft_includes_dialogue_text():
         prompt_guidance="",
     )
 
-    assert "别回头，跟我走" in prompt
-    assert "台词" in prompt
+    assert "Do not look back, follow me" in prompt
+    assert "Dialogue" in prompt
 
 
 def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_to_base():
@@ -95,19 +95,19 @@ def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_
     prompt = build_seedance2_prompt_draft(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "地面积水反光。",
-            "scene_ref": {"scene_id": "客厅", "variant_id": "漏水"},
+            "visual_description": "Standing water on the ground reflects the light.",
+            "scene_ref": {"scene_id": "living_room", "variant_id": "leak"},
         },
         assets=[
             Seedance2ResolvedAsset(
-                key="scene:客厅",
-                label="场景锚点 · 客厅",
+                key="scene:living_room",
+                label="Scene anchor · living_room",
                 media_type="image",
                 path=Path("scene.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             )
         ],
@@ -115,8 +115,8 @@ def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_
         prompt_guidance="",
     )
 
-    assert "环境为客厅" in prompt
-    assert "目标场景状态：客厅_漏水" in prompt
+    assert "The environment is living_room" in prompt
+    assert "target scene state: living_room_leak" in prompt
 
 
 def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_to_base():
@@ -127,20 +127,20 @@ def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_t
     prompt = build_seedance2_prompt_draft(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "地面积水反光。",
-            "scene_ref": {"scene_id": "客厅", "variant_id": "漏水"},
-            "time_of_day": "夜晚",
+            "visual_description": "Standing water on the ground reflects the light.",
+            "scene_ref": {"scene_id": "living_room", "variant_id": "leak"},
+            "time_of_day": "night",
         },
         assets=[
             Seedance2ResolvedAsset(
-                key="scene:客厅",
-                label="场景锚点 · 客厅",
+                key="scene:living_room",
+                label="Scene anchor · living_room",
                 media_type="image",
                 path=Path("scene.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             )
         ],
@@ -148,9 +148,9 @@ def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_t
         prompt_guidance="",
     )
 
-    assert "环境为客厅" in prompt
-    assert "目标场景状态：客厅_漏水" in prompt
-    assert "目标时间：夜晚" in prompt
+    assert "The environment is living_room" in prompt
+    assert "target scene state: living_room_leak" in prompt
+    assert "target time: night" in prompt
 
 
 def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
@@ -163,35 +163,35 @@ def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
         beat={
             "audio_type": "dialogue",
             "narration_segment": (
-                "面馆男青年（放下右手的筷子，拿起桌上的易拉罐打开，神色诧异）："
-                "现在啥事儿没有啊？"
-                "面馆女青年（抬头）：你知道研发部的主管杜晨吗？"
+                "NoodleGuy(puts down the chopsticks in his right hand, picks up the can on the table and opens it, looking surprised):"
+                "Is everything fine now?"
+                "NoodleGirl(looks up):Do you know Du Chen, the head of R&D?"
             ),
-            "visual_description": "两人在面馆桌边说话。",
+            "visual_description": "Two people talk at a table in the noodle shop.",
         },
         assets=[
             Seedance2ResolvedAsset(
-                key="voice:面馆男青年_青年时期",
-                label="面馆男青年 · 青年时期声线",
+                key="voice:NoodleGuy_young_adult",
+                label="NoodleGuy · young_adult voice",
                 media_type="audio",
                 path=Path("man.mp3"),
                 exists=True,
                 selected=True,
                 request_field="reference_audios",
-                reference_label="音频1",
-                identity_id="面馆男青年_青年时期",
+                reference_label="audio1",
+                identity_id="NoodleGuy_young_adult",
                 audio_number=1,
             ),
             Seedance2ResolvedAsset(
-                key="voice:面馆女青年_青年时期",
-                label="面馆女青年 · 青年时期声线",
+                key="voice:NoodleGirl_young_adult",
+                label="NoodleGirl · young_adult voice",
                 media_type="audio",
                 path=Path("woman.mp3"),
                 exists=True,
                 selected=True,
                 request_field="reference_audios",
-                reference_label="音频2",
-                identity_id="面馆女青年_青年时期",
+                reference_label="audio2",
+                identity_id="NoodleGirl_young_adult",
                 audio_number=2,
             ),
         ],
@@ -199,13 +199,13 @@ def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
         prompt_guidance="",
     )
 
-    assert "面馆男青年" in prompt
-    assert "参考音频1声线" in prompt
-    assert "现在啥事儿没有啊？" in prompt
-    assert "放下右手的筷子" in prompt
-    assert "面馆女青年" in prompt
-    assert "参考音频2声线" in prompt
-    assert "你知道研发部的主管杜晨吗？" in prompt
+    assert "NoodleGuy" in prompt
+    assert "uses the voice from audio1" in prompt
+    assert "Is everything fine now?" in prompt
+    assert "puts down the chopsticks in his right hand" in prompt
+    assert "NoodleGirl" in prompt
+    assert "uses the voice from audio2" in prompt
+    assert "Do you know Du Chen, the head of R&D?" in prompt
 
 
 def test_seedance2_dialogue_draft_delegates_ambiguous_prose_to_ai():
@@ -215,20 +215,20 @@ def test_seedance2_dialogue_draft_delegates_ambiguous_prose_to_ai():
 
     beat = {
         "audio_type": "dialogue",
-        "speaker": "丫鬟_青年时期",
-        "narration_segment": "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样。",
+        "speaker": "Maid_young_adult",
+        "narration_segment": "(says crisply, peeking over to tease) You look just like Little Prince Zhao.",
     }
     assets = [
         Seedance2ResolvedAsset(
-            key="voice:丫鬟_青年时期",
-            label="丫鬟 · 青年时期声线",
+            key="voice:Maid_young_adult",
+            label="Maid · young_adult voice",
             media_type="audio",
             path=Path("maid.mp3"),
             exists=True,
             selected=True,
             request_field="reference_audios",
-            reference_label="音频1",
-            identity_id="丫鬟_青年时期",
+            reference_label="audio1",
+            identity_id="Maid_young_adult",
             audio_number=1,
         )
     ]
@@ -241,11 +241,11 @@ def test_seedance2_dialogue_draft_delegates_ambiguous_prose_to_ai():
         prompt_guidance="",
     )
 
-    assert "请语义区分动作说明和实际说出的台词" in prompt
-    assert "实际台词必须逐字完整保留" in prompt
-    assert "本 Beat 说话角色为丫鬟" in prompt
-    assert "丫鬟参考音频1声线" in prompt
-    assert "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样。" in prompt
+    assert "distinguish action directions from spoken dialogue" in prompt
+    assert "preserve every spoken word verbatim" in prompt
+    assert "the speaking character in this Beat is Maid" in prompt
+    assert "Maid uses the voice from audio1" in prompt
+    assert "(says crisply, peeking over to tease) You look just like Little Prince Zhao" in prompt
 
 
 def test_seedance2_dialogue_validation_checks_explicit_lines_and_audio_labels():
@@ -254,38 +254,38 @@ def test_seedance2_dialogue_validation_checks_explicit_lines_and_audio_labels():
 
     beat = {
         "audio_type": "dialogue",
-        "narration_segment": "丫鬟（清脆出声，探头打趣）：说起来你和赵小王爷长得一模一样。",
+        "narration_segment": "Maid(says crisply, peeking over to tease):You look just like Little Prince Zhao.",
     }
     assets = [
         Seedance2ResolvedAsset(
-            key="voice:丫鬟_青年时期",
-            label="丫鬟 · 青年时期声线",
+            key="voice:Maid_young_adult",
+            label="Maid · young_adult voice",
             media_type="audio",
             path=Path("maid.mp3"),
             exists=True,
             selected=True,
             request_field="reference_audios",
-            reference_label="音频1",
-            identity_id="丫鬟_青年时期",
+            reference_label="audio1",
+            identity_id="Maid_young_adult",
             audio_number=1,
         )
     ]
 
-    with pytest.raises(ValueError, match="Seedance2 最终提示词缺少台词内容"):
+    with pytest.raises(ValueError, match="The Seedance2 final prompt is missing dialogue"):
         _validate_dialogue_final_prompt(
             beat=beat,
-            final_prompt="丫鬟（清脆出声，探头打趣，参考音频1声线）看向对方。",
+            final_prompt="Maid(says crisply, peeking over to tease, uses the voice of audio1) looks at the other person.",
             assets=assets,
         )
 
-    with pytest.raises(ValueError, match="Seedance2 最终提示词缺少参考声线"):
+    with pytest.raises(ValueError, match="The Seedance2 final prompt is missing a reference voice"):
         _validate_dialogue_final_prompt(
             beat={
                 "audio_type": "dialogue",
-                "speaker": "丫鬟_青年时期",
-                "narration_segment": "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样。",
+                "speaker": "Maid_young_adult",
+                "narration_segment": "(says crisply, peeking over to tease) You look just like Little Prince Zhao.",
             },
-            final_prompt="丫鬟说：“说起来你和赵小王爷长得一模一样。”",
+            final_prompt="Maid says: “You look just like Little Prince Zhao.”",
             assets=assets,
         )
 
@@ -296,20 +296,20 @@ def test_seedance2_dialogue_validation_keeps_plain_beat_dialogue_required():
 
     beat = {
         "audio_type": "dialogue",
-        "speaker": "丫鬟_青年时期",
-        "narration_segment": "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样。",
+        "speaker": "Maid_young_adult",
+        "narration_segment": "(says crisply, peeking over to tease) You look just like Little Prince Zhao.",
     }
     assets = [
         Seedance2ResolvedAsset(
-            key="voice:丫鬟_青年时期",
-            label="丫鬟 · 青年时期声线",
+            key="voice:Maid_young_adult",
+            label="Maid · young_adult voice",
             media_type="audio",
             path=Path("maid.mp3"),
             exists=True,
             selected=True,
             request_field="reference_audios",
-            reference_label="音频1",
-            identity_id="丫鬟_青年时期",
+            reference_label="audio1",
+            identity_id="Maid_young_adult",
             audio_number=1,
         )
     ]
@@ -317,16 +317,16 @@ def test_seedance2_dialogue_validation_keeps_plain_beat_dialogue_required():
     _validate_dialogue_final_prompt(
         beat=beat,
         final_prompt=(
-            "丫鬟（清脆出声，探头打趣，参考音频1声线）说："
-            "“说起来你和赵小王爷长得一模一样。”"
+            "Maid(says crisply, peeking over to tease, uses the voice of audio1) says: "
+            "“You look just like Little Prince Zhao.”"
         ),
         assets=assets,
     )
 
-    with pytest.raises(ValueError, match="Seedance2 最终提示词缺少台词内容"):
+    with pytest.raises(ValueError, match="The Seedance2 final prompt is missing dialogue"):
         _validate_dialogue_final_prompt(
             beat=beat,
-            final_prompt="丫鬟（清脆出声，探头打趣，参考音频1声线）看向对方。",
+            final_prompt="Maid(says crisply, peeking over to tease, uses the voice of audio1) looks at the other person.",
             assets=assets,
         )
 
@@ -340,19 +340,19 @@ def test_seedance2_prompt_draft_can_use_narration_voice_reference():
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
             "audio_type": "narration",
-            "narration_segment": "夜色里的面馆还亮着灯。",
-            "visual_description": "两人在面馆桌边说话。",
+            "narration_segment": "The noodle shop still has its lights on in the night.",
+            "visual_description": "Two people talk at a table in the noodle shop.",
         },
         assets=[
             Seedance2ResolvedAsset(
                 key="voice:narrator",
-                label="项目解说声线",
+                label="Project narrator voice",
                 media_type="audio",
                 path=Path("narrator.mp3"),
                 exists=True,
                 selected=True,
                 request_field="reference_audios",
-                reference_label="音频1",
+                reference_label="audio1",
                 identity_id="__narrator__",
                 audio_number=1,
             ),
@@ -361,9 +361,9 @@ def test_seedance2_prompt_draft_can_use_narration_voice_reference():
         prompt_guidance="",
     )
 
-    assert "夜色里的面馆还亮着灯" in prompt
-    assert "音频1" in prompt
-    assert "项目解说声线" in prompt
+    assert "The noodle shop still has its lights on in the night" in prompt
+    assert "audio1" in prompt
+    assert "Project narrator voice" in prompt
 
 
 def test_seedance2_asset_manifest_exposes_unreferenced_audio_to_ai():
@@ -374,13 +374,13 @@ def test_seedance2_asset_manifest_exposes_unreferenced_audio_to_ai():
         [
             Seedance2ResolvedAsset(
                 key="voice:narrator",
-                label="项目解说声线",
+                label="Project narrator voice",
                 media_type="audio",
                 path=Path("narrator.mp3"),
                 exists=True,
                 selected=False,
                 request_field="",
-                reference_label="音频1",
+                reference_label="audio1",
                 identity_id="__narrator__",
                 audio_number=1,
             )
@@ -389,8 +389,8 @@ def test_seedance2_asset_manifest_exposes_unreferenced_audio_to_ai():
 
     assert manifest == [
         {
-            "label": "音频1",
-            "title": "项目解说声线",
+            "label": "audio1",
+            "title": "Project narrator voice",
             "media_type": "audio",
             "request_field": "",
             "note": "",
@@ -410,25 +410,25 @@ def test_seedance2_prompt_uses_identity_text_when_reference_image_is_missing():
     assets = [
         Seedance2ResolvedAsset(
             key="first_frame",
-            label="当前 render · Beat 6",
+            label="Current render · Beat 6",
             media_type="image",
             path=Path("frame.png"),
             exists=True,
             selected=True,
             request_field="reference_images",
-            reference_label="图片1",
+            reference_label="image1",
         ),
         Seedance2ResolvedAsset(
-            key="identity:面馆男青年_青年时期",
-            label="面馆男青年 · 青年时期",
+            key="identity:NoodleGuy_young_adult",
+            label="NoodleGuy · young_adult",
             media_type="image",
             path=Path("missing.png"),
             exists=False,
             selected=False,
             request_field="",
-            reference_label="未发送",
-            identity_id="面馆男青年_青年时期",
-            fallback_text="男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽",
+            reference_label="not_sent",
+            identity_id="NoodleGuy_young_adult",
+            fallback_text="Male, early twenties, short black hair, charcoal apron, sturdy and clean-cut",
         ),
     ]
 
@@ -436,16 +436,16 @@ def test_seedance2_prompt_uses_identity_text_when_reference_image_is_missing():
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
             "beat_number": 6,
-            "visual_description": "{{面馆男青年_青年时期}}放下易拉罐。",
-            "scene_ref": {"scene_id": "面馆"},
+            "visual_description": "{{NoodleGuy_young_adult}} puts down the can.",
+            "scene_ref": {"scene_id": "noodle_shop"},
         },
         assets=assets,
         text_overlay=None,
     )
 
-    assert "面馆男青年造型按提示词生成：男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽" in prompt
+    assert "generate NoodleGuy's appearance from this description: Male, early twenties, short black hair, charcoal apron, sturdy and clean-cut" in prompt
     assert (
-        "画面呈现面馆男青年（男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽）放下易拉罐" in prompt
+        "The scene shows NoodleGuy (Male, early twenties, short black hair, charcoal apron, sturdy and clean-cut) puts down the can" in prompt
     )
 
 
@@ -458,30 +458,30 @@ def test_seedance2_prompt_binds_prop_marker_to_reference_image():
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
             "beat_number": 1,
-            "visual_description": "男青年举起[[TOKEN]]，红色代码光团在手心闪烁。",
+            "visual_description": "A young man raises [[TOKEN]], a red glowing orb of code flickering in his palm.",
             "detected_props": ["TOKEN"],
         },
         assets=[
             Seedance2ResolvedAsset(
                 key="first_frame",
-                label="当前 render · Beat 1",
+                label="Current render · Beat 1",
                 media_type="image",
                 path=Path("frame.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             ),
             Seedance2ResolvedAsset(
                 key="prop:TOKEN",
-                label="道具 · TOKEN",
+                label="Prop · TOKEN",
                 media_type="image",
                 path=Path("token.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片2",
+                reference_label="image2",
                 image_number=2,
                 prop_id="TOKEN",
             ),
@@ -490,7 +490,7 @@ def test_seedance2_prompt_binds_prop_marker_to_reference_image():
         prompt_guidance="",
     )
 
-    assert "图片2中的TOKEN道具" in prompt
+    assert "keep the shape, material, and details of the TOKEN prop consistent with image2" in prompt
     assert "[[TOKEN]]" not in prompt
 
 
@@ -503,29 +503,29 @@ def test_seedance2_prompt_uses_prop_fallback_when_reference_image_is_missing():
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
             "beat_number": 1,
-            "visual_description": "桌面上放着[[易拉罐]]。",
-            "detected_props": ["易拉罐"],
+            "visual_description": "[[can]] is on the table.",
+            "detected_props": ["can"],
         },
         assets=[
             Seedance2ResolvedAsset(
-                key="prop:易拉罐",
-                label="道具 · 易拉罐",
+                key="prop:can",
+                label="Prop · can",
                 media_type="image",
                 path=Path("missing.png"),
                 exists=False,
                 selected=False,
                 request_field="",
-                reference_label="未发送",
-                prop_id="易拉罐",
-                fallback_text="红色铝制饮料罐，表面有细小水珠和拉环结构",
+                reference_label="not_sent",
+                prop_id="can",
+                fallback_text="Red aluminum drink can with fine water droplets and a pull-tab structure",
             )
         ],
         text_overlay={},
         prompt_guidance="",
     )
 
-    assert "易拉罐道具按提示词生成：红色铝制饮料罐，表面有细小水珠和拉环结构" in prompt
-    assert "桌面上放着易拉罐（红色铝制饮料罐，表面有细小水珠和拉环结构）" in prompt
+    assert "generate the can prop from this description: Red aluminum drink can with fine water droplets and a pull-tab structure" in prompt
+    assert "The scene shows can (Red aluminum drink can with fine water droplets and a pull-tab structure) is on the table" in prompt
 
 
 def test_seedance2_prompt_composer_task_exposes_prop_assets_and_fallbacks():
@@ -536,47 +536,47 @@ def test_seedance2_prompt_composer_task_exposes_prop_assets_and_fallbacks():
     task = build_seedance2_prompt_composer_task(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "桌面上放着[[TOKEN]]和[[易拉罐]]。",
-            "detected_props": ["TOKEN", "易拉罐"],
+            "visual_description": "[[TOKEN]] and [[can]] are on the table.",
+            "detected_props": ["TOKEN", "can"],
         },
         assets=[
             Seedance2ResolvedAsset(
                 key="prop:TOKEN",
-                label="道具 · TOKEN",
+                label="Prop · TOKEN",
                 media_type="image",
                 path=Path("token.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 prop_id="TOKEN",
                 prop_scope="global",
             ),
             Seedance2ResolvedAsset(
-                key="prop:易拉罐",
-                label="道具 · 易拉罐",
+                key="prop:can",
+                label="Prop · can",
                 media_type="image",
                 path=Path("missing.png"),
                 exists=False,
                 selected=False,
                 request_field="",
-                reference_label="未发送",
-                prop_id="易拉罐",
+                reference_label="not_sent",
+                prop_id="can",
                 prop_scope="episode",
-                fallback_text="红色铝制饮料罐，表面有细小水珠",
+                fallback_text="Red aluminum drink can with fine water droplets",
             ),
         ],
         text_overlay={},
         prompt_guidance="",
-        draft_prompt="草稿。",
+        draft_prompt="Draft.",
     )
 
     assert '"prop_id": "TOKEN"' in task
     assert '"prop_scope": "global"' in task
     assert '"asset_fallbacks": [' in task
-    assert '"prop_id": "易拉罐"' in task
+    assert '"prop_id": "can"' in task
     assert '"prop_scope": "episode"' in task
-    assert "红色铝制饮料罐" in task
+    assert "Red aluminum drink can" in task
 
 
 def test_seedance2_prompt_hash_changes_when_prop_fallback_changes():
@@ -584,7 +584,7 @@ def test_seedance2_prompt_hash_changes_when_prop_fallback_changes():
     from novelvideo.seedance2_i2v.models import Seedance2I2VMode
     from novelvideo.seedance2_i2v.prompt import compute_seedance2_prompt_inputs_hash
 
-    beat = {"visual_description": "桌面上放着[[易拉罐]]。", "detected_props": ["易拉罐"]}
+    beat = {"visual_description": "[[can]] is on the table.", "detected_props": ["can"]}
 
     def make_hash(fallback_text: str) -> str:
         return compute_seedance2_prompt_inputs_hash(
@@ -592,22 +592,22 @@ def test_seedance2_prompt_hash_changes_when_prop_fallback_changes():
             beat=beat,
             assets=[
                 Seedance2ResolvedAsset(
-                    key="prop:易拉罐",
-                    label="道具 · 易拉罐",
+                    key="prop:can",
+                    label="Prop · can",
                     media_type="image",
                     path=Path("missing.png"),
                     exists=False,
                     selected=False,
                     request_field="",
-                    reference_label="未发送",
-                    prop_id="易拉罐",
+                    reference_label="not_sent",
+                    prop_id="can",
                     fallback_text=fallback_text,
                 )
             ],
             text_overlay={},
         )
 
-    assert make_hash("红色铝制饮料罐") != make_hash("蓝色玻璃瓶")
+    assert make_hash("Red aluminum drink can") != make_hash("Blue glass bottle")
 
 
 def test_seedance2_prompt_composer_task_includes_scene_ref_and_dialogue_text():
@@ -617,23 +617,23 @@ def test_seedance2_prompt_composer_task_includes_scene_ref_and_dialogue_text():
     task = build_seedance2_prompt_composer_task(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={
-            "visual_description": "谢铮站在雨夜的巷口。",
-            "scene_ref": {"scene_id": "旧巷_暴雨"},
-            "dialogue": "谢铮低声说：“别回头，跟我走。”",
+            "visual_description": "Xie Zheng stands at the mouth of the alley on a rainy night.",
+            "scene_ref": {"scene_id": "old_alley_storm"},
+            "dialogue": "Xie Zheng says softly: “Do not look back, follow me.”",
             "audio_type": "dialogue",
         },
         assets=[],
         text_overlay={},
         prompt_guidance="",
-        draft_prompt="草稿。",
+        draft_prompt="Draft.",
     )
 
     assert '"scene_ref": {' in task
-    assert '"scene_id": "旧巷_暴雨"' in task
+    assert '"scene_id": "old_alley_storm"' in task
     assert '"variant_id"' not in task
-    assert '"dialogue": "谢铮低声说：' in task
-    assert "别回头，跟我走" in task
-    assert "实际台词必须逐字完整保留" in task
+    assert '"dialogue": "Xie Zheng says softly:' in task
+    assert "Do not look back, follow me" in task
+    assert "Preserve spoken dialogue verbatim" in task
 
 
 def test_seedance2_prompt_hash_ignores_request_only_video_params():
@@ -643,19 +643,19 @@ def test_seedance2_prompt_hash_ignores_request_only_video_params():
 
     asset = Seedance2ResolvedAsset(
         key="first_frame",
-        label="当前 render · Beat 1",
+        label="Current render · Beat 1",
         media_type="image",
         path=Path("frame.png"),
         exists=True,
         selected=True,
         request_field="reference_images",
-        reference_label="图片1",
+        reference_label="image1",
         image_number=1,
     )
     beat = {
-        "visual_description": "陆辰在地下室翻书。",
-        "scene_ref": {"scene_id": "地下室"},
-        "video_prompt": "缓慢推进。",
+        "visual_description": "Luchen browses a book in the basement.",
+        "scene_ref": {"scene_id": "basement"},
+        "video_prompt": "Slow push-in.",
     }
 
     base_hash = compute_seedance2_prompt_inputs_hash(
@@ -663,50 +663,25 @@ def test_seedance2_prompt_hash_ignores_request_only_video_params():
         beat=beat,
         assets=[asset],
         text_overlay={},
-        prompt_guidance="保持悬疑感。",
+        prompt_guidance="Keep the suspense.",
     )
     same_hash_after_request_change = compute_seedance2_prompt_inputs_hash(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         beat={**beat, "duration": 10, "ratio": "16:9"},
         assets=[asset],
         text_overlay={},
-        prompt_guidance="保持悬疑感。",
+        prompt_guidance="Keep the suspense.",
     )
     changed_hash = compute_seedance2_prompt_inputs_hash(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
-        beat={**beat, "scene_ref": {"scene_id": "旧巷"}},
+        beat={**beat, "scene_ref": {"scene_id": "old_alley"}},
         assets=[asset],
         text_overlay={},
-        prompt_guidance="保持悬疑感。",
+        prompt_guidance="Keep the suspense.",
     )
 
     assert base_hash == same_hash_after_request_change
     assert base_hash != changed_hash
-
-
-def test_seedance2_prompt_hash_canonicalizes_structured_guidance_language():
-    from novelvideo.seedance2_i2v.models import Seedance2I2VMode
-    from novelvideo.seedance2_i2v.prompt import compute_seedance2_prompt_inputs_hash
-
-    common = {
-        "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE,
-        "beat": {"visual_description": "Maya opens the door."},
-        "assets": [],
-        "text_overlay": {},
-        "prompt_guidance_template_keys": ["camera"],
-        "language": "en",
-    }
-
-    chinese_ui_hash = compute_seedance2_prompt_inputs_hash(
-        **common,
-        prompt_guidance="镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
-    )
-    english_ui_hash = compute_seedance2_prompt_inputs_hash(
-        **common,
-        prompt_guidance="Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
-    )
-
-    assert chinese_ui_hash == english_ui_hash
 
 
 async def test_generate_seedance2_prompt_uses_ai_composer_before_fallback():
@@ -721,21 +696,21 @@ async def test_generate_seedance2_prompt_uses_ai_composer_before_fallback():
             "resolution": "720p",
             "ratio": "9:16",
         }
-        return "根据图片1生成官方风格视频。"
+        return "Generate an official-style video from image1."
 
     result = await generate_seedance2_prompt(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
-        beat={"visual_description": "陆辰在地下室翻书。"},
+        beat={"visual_description": "Luchen browses a book in the basement."},
         assets=[
             Seedance2ResolvedAsset(
                 key="first_frame",
-                label="当前 render · Beat 1",
+                label="Current render · Beat 1",
                 media_type="image",
                 path=Path("frame.png"),
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             )
         ],
@@ -745,7 +720,7 @@ async def test_generate_seedance2_prompt_uses_ai_composer_before_fallback():
         composer=fake_composer,
     )
 
-    assert result.prompt == "根据图片1生成官方风格视频。"
+    assert result.prompt == "Generate an official-style video from image1."
     assert result.used_ai is True
     assert result.error == ""
 
@@ -758,25 +733,25 @@ async def test_seedance2_prompt_composer_accepts_plain_text_output(monkeypatch):
 
     class FakeAgent:
         async def run(self, task):
-            assert "只输出最终 prompt" in task
-            return SimpleNamespace(output="  根据图片1生成一段电影感视频。  ")
+            assert "Output only the final prompt." in task
+            return SimpleNamespace(output="  Generate a cinematic video from image1.  ")
 
     monkeypatch.setattr(
         prompt_module,
         "create_seedance2_prompt_composer_agent",
-        lambda language="zh": FakeAgent(),
+        lambda language="en": FakeAgent(),
     )
 
     result = await prompt_module.compose_seedance2_prompt_with_agent(
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
-        beat={"visual_description": "人物转身。"},
+        beat={"visual_description": "The character turns around."},
         assets=[],
         text_overlay={},
         prompt_guidance="",
-        draft_prompt="人物转身。",
+        draft_prompt="The character turns around.",
     )
 
-    assert result == "根据图片1生成一段电影感视频。"
+    assert result == "Generate a cinematic video from image1."
 
 
 def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens():
@@ -799,7 +774,7 @@ def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens()
                 exists=True,
                 selected=True,
                 request_field="reference_images",
-                reference_label="图片1",
+                reference_label="image1",
                 image_number=1,
             )
         ],
@@ -807,10 +782,9 @@ def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens()
         language="en",
     )
 
-    assert prompt.startswith("Use 图片1 as the starting state")
+    assert prompt.startswith("Use image1 as the starting state")
     assert "The scene shows Ji-won walks through the subway corridor." in prompt
     assert "The environment is Seoul Subway Station." in prompt
-    assert "画面呈现" not in prompt
 
 
 @pytest.mark.parametrize(
@@ -820,12 +794,11 @@ def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens()
             {
                 "visual_description": "Ji-won walks through the subway corridor.",
                 "narration_segment": "She raises her phone.",
-                "video_prompt": "遗留的中文视频提示词不应改变语言。",
+                "video_prompt": "Legacy video prompt that must not change the language.",
             },
             "en",
         ),
-        ({"visual_description": "知薇穿过长廊。"}, "zh"),
-        ({"visual_description": "美咲は廊下を歩く。"}, "zh"),
+        ({"visual_description": "Cô ấy bước qua hành lang dài."}, "vi"),
     ],
 )
 def test_seedance2_language_uses_script_fields_and_ignores_generated_prompt(
@@ -855,10 +828,9 @@ async def test_seedance2_english_generation_keeps_english_fallback():
 
     assert result.used_ai is False
     assert "The scene shows Ji-won raises her phone." in result.prompt
-    assert "画面呈现" not in result.prompt
 
 
-async def test_seedance2_english_fallback_omits_chinese_freeform_guidance():
+async def test_seedance2_english_fallback_keeps_non_vietnamese_freeform_guidance():
     from novelvideo.seedance2_i2v.models import Seedance2I2VMode
     from novelvideo.seedance2_i2v.prompt import generate_seedance2_prompt
 
@@ -870,14 +842,15 @@ async def test_seedance2_english_fallback_omits_chinese_freeform_guidance():
         beat={"visual_description": "Maya opens the door."},
         assets=[],
         text_overlay={},
-        prompt_guidance="镜头：缓慢推进。",
+        prompt_guidance="Camera: move slowly forward.",
         composer=failing_composer,
         language="en",
     )
 
     assert result.used_ai is False
     assert "The scene shows Maya opens the door." in result.prompt
-    assert "镜头" not in result.prompt
+    # Non-Vietnamese text is treated as English now, so freeform guidance is kept.
+    assert "Camera: move slowly forward" in result.prompt
 
 
 async def test_seedance2_english_fallback_localizes_structured_guidance():
@@ -892,7 +865,7 @@ async def test_seedance2_english_fallback_localizes_structured_guidance():
         beat={"visual_description": "Maya opens the door."},
         assets=[],
         text_overlay={},
-        prompt_guidance="镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
+        prompt_guidance="Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
         prompt_guidance_template_keys=["camera"],
         composer=failing_composer,
         language="en",
@@ -903,7 +876,6 @@ async def test_seedance2_english_fallback_localizes_structured_guidance():
         "Camera: Specify shot size, viewpoint, movement speed, and direction "
         "so the camera move is clear and executable."
     ) in result.prompt
-    assert "镜头" not in result.prompt
 
 
 async def test_seedance2_english_composer_receives_english_language_contract(
@@ -919,12 +891,12 @@ async def test_seedance2_english_composer_receives_english_language_contract(
     class FakeAgent:
         async def run(self, task):
             seen["task"] = task
-            return SimpleNamespace(output="Use 图片1 as the first-frame reference.")
+            return SimpleNamespace(output="Use image1 as the first-frame reference.")
 
     monkeypatch.setattr(
         prompt_module,
         "create_seedance2_prompt_composer_agent",
-        lambda language="zh": FakeAgent(),
+        lambda language="en": FakeAgent(),
     )
 
     result = await prompt_module.compose_seedance2_prompt_with_agent(
@@ -937,9 +909,8 @@ async def test_seedance2_english_composer_receives_english_language_contract(
         language="en",
     )
 
-    assert result == "Use 图片1 as the first-frame reference."
+    assert result == "Use image1 as the first-frame reference."
     assert "Write every user-visible prose field in English" in seen["task"]
-    assert "最终 prompt 使用中文" not in seen["task"]
 
 
 async def test_seedance2_panel_detects_english_before_calling_generator(
@@ -957,9 +928,9 @@ async def test_seedance2_panel_detects_english_before_calling_generator(
     async def fake_generate(**kwargs):
         seen.update(kwargs)
         return Seedance2PromptGeneration(
-            prompt="Use 图片1 as the starting state.",
+            prompt="Use image1 as the starting state.",
             used_ai=True,
-            draft_prompt="Use 图片1 as the starting state.",
+            draft_prompt="Use image1 as the starting state.",
         )
 
     monkeypatch.setattr(panel_service, "build_seedance2_project_assets", lambda **_kwargs: [])
@@ -1010,7 +981,7 @@ async def test_seedance2_panel_passes_structured_guidance_keys(monkeypatch, tmp_
             "visual_description": "Maya opens the door.",
             "seedance2_config_json": json.dumps(
                 {
-                    "prompt_guidance": "镜头：缓慢推进。",
+                    "prompt_guidance": "Camera: move slowly forward.",
                     "prompt_guidance_template_keys": ["camera"],
                 }
             ),
@@ -1051,8 +1022,8 @@ async def test_seedance2_panel_uses_authoritative_screenplay_language(
         episode=1,
         beat={
             "beat_number": 1,
-            "visual_description": "修复前遗留的中文画面描述。",
-            "narration_segment": "修复前遗留的中文旁白。",
+            "visual_description": "Legacy visual description from before the fix.",
+            "narration_segment": "Legacy narration from before the fix.",
         },
         project_dir=tmp_path,
         language="en",
@@ -1088,8 +1059,8 @@ def test_seedance2_panel_state_uses_authoritative_language_for_freshness(
         episode=1,
         beat={
             "beat_number": 1,
-            "visual_description": "修复前遗留的中文画面描述。",
-            "video_prompt": "修复前遗留的中文视频提示词。",
+            "visual_description": "Legacy visual description from before the fix.",
+            "video_prompt": "Legacy video prompt from before the fix.",
         },
         state_dir=tmp_path / "state",
         language="en",

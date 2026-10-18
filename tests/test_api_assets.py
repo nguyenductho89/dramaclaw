@@ -47,7 +47,7 @@ class _SceneStore:
         return self.scenes.pop(name, None) is not None
 
     async def repair_path_unsafe_asset_names(self, kind: str, move_assets=None):
-        # 这里的名字都是干净的，list 接口上那道存量自愈是空跑。
+        # All names here are clean, so the legacy self-healing on the list endpoint is a no-op.
         return {}
 
 
@@ -80,7 +80,7 @@ class _PropStore:
         return self.props.pop(name, None) is not None
 
     async def repair_path_unsafe_asset_names(self, kind: str, move_assets=None):
-        # 这里的名字都是干净的，list 接口上那道存量自愈是空跑。
+        # All names here are clean, so the legacy self-healing on the list endpoint is a no-op.
         return {}
 
 
@@ -123,16 +123,16 @@ def test_scene_payload_effective_prompt_combines_base_prompt_for_variant(
     from novelvideo.api.routes.scenes import _scene_payload
 
     base_scene = NovelScene(
-        name="卫生间",
+        name="Bathroom",
         scene_type="interior",
-        environment_prompt="白瓷砖墙面，正面是洗手台。",
+        environment_prompt="White tiled walls, with a washbasin on the front side.",
     )
     variant_scene = NovelScene(
-        name="卫生间_漏水",
+        name="Bathroom_Leak",
         scene_type="interior",
-        base_scene_id="卫生间",
-        variant_id="漏水",
-        variant_prompt="地面积水，天花板持续滴水。",
+        base_scene_id="Bathroom",
+        variant_id="Leak",
+        variant_prompt="Water pooling on the floor, the ceiling dripping continuously.",
         environment_prompt="",
     )
 
@@ -143,8 +143,8 @@ def test_scene_payload_effective_prompt_combines_base_prompt_for_variant(
         base_scene=base_scene,
     )
 
-    assert "白瓷砖墙面" in payload["effective_environment_prompt"]
-    assert "地面积水" in payload["effective_environment_prompt"]
+    assert "White tiled walls" in payload["effective_environment_prompt"]
+    assert "Water pooling on the floor" in payload["effective_environment_prompt"]
 
 
 def _patch_project(
@@ -262,7 +262,7 @@ async def test_list_scenes_returns_master_reverse_and_pano_urls(tmp_path, monkey
     from novelvideo.director_world import stage_manifest
 
     scene = NovelScene(
-        name="Hall_雪夜",
+        name="Hall_SnowyNight",
         scene_type="interior",
         environment_prompt="wide hall",
     )
@@ -279,11 +279,11 @@ async def test_list_scenes_returns_master_reverse_and_pano_urls(tmp_path, monkey
         "make_static_url_for_context",
         lambda ctx, rel, local_path=None: f"/static/projects/{ctx.project_id}/{rel}",
     )
-    scene_dir = tmp_path / "assets" / "scenes" / "Hall_雪夜"
+    scene_dir = tmp_path / "assets" / "scenes" / "Hall_SnowyNight"
     scene_dir.mkdir(parents=True)
     (scene_dir / "master.png").write_bytes(b"master")
     (scene_dir / "reverse_master.png").write_bytes(b"reverse")
-    pano_dir = stage_manifest.stage_dir(tmp_path, "Hall_雪夜")
+    pano_dir = stage_manifest.stage_dir(tmp_path, "Hall_SnowyNight")
     pano_dir.mkdir(parents=True)
     (pano_dir / "pano_360.png").write_bytes(b"pano")
     (pano_dir / "master_sharp.ply").write_bytes(b"master ply")
@@ -291,7 +291,7 @@ async def test_list_scenes_returns_master_reverse_and_pano_urls(tmp_path, monkey
     (pano_dir / "custom.sog").write_bytes(b"custom ply")
     stage_manifest.update_manifest(
         tmp_path,
-        "Hall_雪夜",
+        "Hall_SnowyNight",
         pano_path="pano_360.png",
         ply_path="custom.sog",
         custom_scene_path="custom.sog",
@@ -305,29 +305,29 @@ async def test_list_scenes_returns_master_reverse_and_pano_urls(tmp_path, monkey
     )
 
     asset = res["data"][0]
-    assert asset["name"] == "Hall_雪夜"
+    assert asset["name"] == "Hall_SnowyNight"
     assert "base_scene" not in asset
     assert (
         asset["master_url"]
-        == "/static/projects/proj_demo/assets/scenes/Hall_雪夜/master.png"
+        == "/static/projects/proj_demo/assets/scenes/Hall_SnowyNight/master.png"
     )
     assert (
         asset["reverse_master_url"]
-        == "/static/projects/proj_demo/assets/scenes/Hall_雪夜/reverse_master.png"
+        == "/static/projects/proj_demo/assets/scenes/Hall_SnowyNight/reverse_master.png"
     )
     assert (
         asset["pano_url"]
-        == "/static/projects/proj_demo/director_worlds/Hall_雪夜/v1/pano_360.png"
+        == "/static/projects/proj_demo/director_worlds/Hall_SnowyNight/v1/pano_360.png"
     )
     assert (
         asset["custom_scene_url"]
-        == "/static/projects/proj_demo/director_worlds/Hall_雪夜/v1/custom.sog"
+        == "/static/projects/proj_demo/director_worlds/Hall_SnowyNight/v1/custom.sog"
     )
-    assert asset["stage_3gs"]["stage_dir"] == "director_worlds/Hall_雪夜/v1"
+    assert asset["stage_3gs"]["stage_dir"] == "director_worlds/Hall_SnowyNight/v1"
     assert asset["stage_3gs"]["active"]["ready"] is True
     assert (
         asset["stage_3gs"]["active"]["path"]
-        == "director_worlds/Hall_雪夜/v1/custom.sog"
+        == "director_worlds/Hall_SnowyNight/v1/custom.sog"
     )
     assert asset["stage_3gs"]["active_source"] == "custom"
     assert asset["stage_3gs"]["custom"]["ready"] is True
@@ -346,12 +346,12 @@ async def test_list_scenes_summary_never_builds_filesystem_payload(
 
     store = _SceneStore(
         [
-            NovelScene(name="故宫", environment_prompt="宫墙"),
+            NovelScene(name="Palace", environment_prompt="Palace walls"),
             NovelScene(
-                name="故宫_雪夜",
-                base_scene_id="故宫",
-                variant_id="雪夜",
-                variant_prompt="积雪",
+                name="Palace_SnowyNight",
+                base_scene_id="Palace",
+                variant_id="SnowyNight",
+                variant_prompt="Snow cover",
             ),
         ]
     )
@@ -369,13 +369,13 @@ async def test_list_scenes_summary_never_builds_filesystem_payload(
         user={"username": "admin"},
     )
 
-    assert [item["name"] for item in response["data"]] == ["故宫", "故宫_雪夜"]
-    assert response["data"][1]["derived_from_scene"] == "故宫"
+    assert [item["name"] for item in response["data"]] == ["Palace", "Palace_SnowyNight"]
+    assert response["data"][1]["derived_from_scene"] == "Palace"
     assert response["data"][1]["effective_environment_prompt"]
     assert response["data"][0]["master_url"].endswith(
         "/assets/scenes/%E6%95%85%E5%AE%AB/master.png"
     ) or response["data"][0]["master_url"].endswith(
-        "/assets/scenes/故宫/master.png"
+        "/assets/scenes/Palace/master.png"
     )
     assert "stage_3gs" not in response["data"][0]
 
@@ -386,7 +386,7 @@ async def test_list_scenes_full_payload_filters_to_requested_names(
 ):
     from novelvideo.api.routes import scenes
 
-    store = _SceneStore([NovelScene(name="大厅"), NovelScene(name="后院")])
+    store = _SceneStore([NovelScene(name="Lobby"), NovelScene(name="Backyard")])
     _patch_project(monkeypatch, scenes, tmp_path, store)
     built: list[str] = []
 
@@ -399,12 +399,12 @@ async def test_list_scenes_full_payload_filters_to_requested_names(
     response = await scenes.list_scenes(
         project="demo",
         summary=False,
-        names=["后院"],
+        names=["Backyard"],
         user={"username": "admin"},
     )
 
-    assert response["data"] == [{"name": "后院"}]
-    assert built == ["后院"]
+    assert response["data"] == [{"name": "Backyard"}]
+    assert built == ["Backyard"]
 
 
 @pytest.mark.asyncio
@@ -413,8 +413,8 @@ async def test_list_scenes_marks_derived_scene_base(tmp_path, monkeypatch):
 
     store = _SceneStore(
         [
-            NovelScene(name="故宫"),
-            NovelScene(name="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
+            NovelScene(name="Palace"),
+            NovelScene(name="Palace_Snow", base_scene_id="Palace", variant_id="Snow"),
         ]
     )
     _patch_project(monkeypatch, scenes, tmp_path, store)
@@ -425,11 +425,11 @@ async def test_list_scenes_marks_derived_scene_base(tmp_path, monkeypatch):
     )
 
     by_name = {asset["name"]: asset for asset in res["data"]}
-    assert by_name["故宫"]["derived_from_scene"] == ""
-    assert by_name["故宫_下雪"]["derived_from_scene"] == "故宫"
-    assert by_name["故宫_下雪"]["base_scene_id"] == "故宫"
-    assert by_name["故宫_下雪"]["variant_id"] == "下雪"
-    assert by_name["故宫_下雪"]["time_of_day"] == ""
+    assert by_name["Palace"]["derived_from_scene"] == ""
+    assert by_name["Palace_Snow"]["derived_from_scene"] == "Palace"
+    assert by_name["Palace_Snow"]["base_scene_id"] == "Palace"
+    assert by_name["Palace_Snow"]["variant_id"] == "Snow"
+    assert by_name["Palace_Snow"]["time_of_day"] == ""
 
 
 @pytest.mark.asyncio
@@ -438,7 +438,7 @@ async def test_list_scenes_does_not_infer_derived_base_from_underscore_name(
 ):
     from novelvideo.api.routes import scenes
 
-    store = _SceneStore([NovelScene(name="地下"), NovelScene(name="地下_主控室")])
+    store = _SceneStore([NovelScene(name="Basement"), NovelScene(name="Basement_ControlRoom")])
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.list_scenes(
@@ -447,9 +447,9 @@ async def test_list_scenes_does_not_infer_derived_base_from_underscore_name(
     )
 
     by_name = {asset["name"]: asset for asset in res["data"]}
-    assert by_name["地下_主控室"]["derived_from_scene"] == ""
-    assert by_name["地下_主控室"]["base_scene_id"] == ""
-    assert by_name["地下_主控室"]["variant_id"] == ""
+    assert by_name["Basement_ControlRoom"]["derived_from_scene"] == ""
+    assert by_name["Basement_ControlRoom"]["base_scene_id"] == ""
+    assert by_name["Basement_ControlRoom"]["variant_id"] == ""
 
 
 @pytest.mark.asyncio
@@ -457,18 +457,18 @@ async def test_derived_scene_guard_uses_structured_base_scene_id(tmp_path):
     from novelvideo.api.routes import scenes
 
     independent_store = _SceneStore(
-        [NovelScene(name="地下"), NovelScene(name="地下_主控室")]
+        [NovelScene(name="Basement"), NovelScene(name="Basement_ControlRoom")]
     )
-    assert await scenes._derived_scene_names_for(independent_store, "地下") == []
+    assert await scenes._derived_scene_names_for(independent_store, "Basement") == []
 
     derived_store = _SceneStore(
         [
-            NovelScene(name="地下"),
-            NovelScene(name="地下_主控室", base_scene_id="地下", variant_id="主控室"),
+            NovelScene(name="Basement"),
+            NovelScene(name="Basement_ControlRoom", base_scene_id="Basement", variant_id="ControlRoom"),
         ]
     )
-    assert await scenes._derived_scene_names_for(derived_store, "地下") == [
-        "地下_主控室"
+    assert await scenes._derived_scene_names_for(derived_store, "Basement") == [
+        "Basement_ControlRoom"
     ]
 
 
@@ -479,27 +479,27 @@ async def test_create_scene_composes_structured_variant_and_time_name(
     from novelvideo.api.routes import scenes
     from novelvideo.api.schemas import SceneCreate
 
-    store = _SceneStore([NovelScene(name="卫生间")])
+    store = _SceneStore([NovelScene(name="Bathroom")])
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.create_scene(
         project="demo",
         body=SceneCreate(
             name="",
-            base_scene_id="卫生间",
-            variant_id="漏水",
-            time_of_day="夜晚",
+            base_scene_id="Bathroom",
+            variant_id="Leak",
+            time_of_day="night",
             scene_type="interior",
         ),
         user={"username": "admin"},
     )
 
     assert res["ok"] is True
-    assert res["data"]["name"] == "卫生间_漏水_夜晚"
-    assert res["data"]["base_scene_id"] == "卫生间"
-    assert res["data"]["variant_id"] == "漏水"
-    assert res["data"]["time_of_day"] == "夜晚"
-    assert await store.get_scene("卫生间_漏水_夜晚") is not None
+    assert res["data"]["name"] == "Bathroom_Leak_night"
+    assert res["data"]["base_scene_id"] == "Bathroom"
+    assert res["data"]["variant_id"] == "Leak"
+    assert res["data"]["time_of_day"] == "night"
+    assert await store.get_scene("Bathroom_Leak_night") is not None
 
 
 @pytest.mark.asyncio
@@ -508,46 +508,46 @@ async def test_preview_scene_plate_explains_render_and_seedance_resolution(
 ):
     from novelvideo.api.routes import scenes
 
-    master_path = tmp_path / "assets" / "scenes" / "卫生间_漏水_夜" / "master.png"
+    master_path = tmp_path / "assets" / "scenes" / "Bathroom_Leak_night" / "master.png"
     master_path.parent.mkdir(parents=True)
     master_path.write_bytes(b"png")
     store = _SceneStore(
         [
-            NovelScene(name="卫生间"),
-            NovelScene(name="卫生间_漏水"),
-            NovelScene(name="卫生间_漏水_夜"),
+            NovelScene(name="Bathroom"),
+            NovelScene(name="Bathroom_Leak"),
+            NovelScene(name="Bathroom_Leak_night"),
         ]
     )
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.preview_scene_plate(
         project="demo",
-        scene_id="卫生间",
-        variant_id="漏水",
-        time_of_day="夜晚",
+        scene_id="Bathroom",
+        variant_id="Leak",
+        time_of_day="night",
         user={"username": "admin"},
     )
 
     assert res == {
         "ok": True,
         "data": {
-            "scene_id": "卫生间",
-            "variant_id": "漏水",
-            "time_of_day": "夜晚",
-            "resolved_scene_name": "卫生间_漏水_夜",
+            "scene_id": "Bathroom",
+            "variant_id": "Leak",
+            "time_of_day": "night",
+            "resolved_scene_name": "Bathroom_Leak_night",
             "planned_scene_name": "",
             "time_baked": True,
             "render": {
-                "resolved_scene_name": "卫生间_漏水_夜",
+                "resolved_scene_name": "Bathroom_Leak_night",
                 "planned_scene_name": "",
                 "relight": False,
                 "status": "time_baked",
-                "label": "Render：将使用 卫生间_漏水_夜，锁图光",
+                "label": "Render: will use Bathroom_Leak_night, lighting locked to the image",
             },
             "seedance2": {
-                "resolved_scene_name": "卫生间_漏水_夜",
-                "prompt_time_of_day": "夜晚",
-                "label": "Seedance2：将喂入 卫生间_漏水_夜，提示词时间：夜晚",
+                "resolved_scene_name": "Bathroom_Leak_night",
+                "prompt_time_of_day": "night",
+                "label": "Seedance2: will feed Bathroom_Leak_night, prompt time: night",
             },
         },
     }
@@ -561,11 +561,11 @@ async def test_preview_scene_plate_relights_when_planned_time_plate_has_no_image
 
     store = _SceneStore(
         [
-            NovelScene(name="卫生间"),
+            NovelScene(name="Bathroom"),
             NovelScene(
-                name="卫生间_夜晚",
-                base_scene_id="卫生间",
-                time_of_day="夜晚",
+                name="Bathroom_night",
+                base_scene_id="Bathroom",
+                time_of_day="night",
             ),
         ]
     )
@@ -573,22 +573,22 @@ async def test_preview_scene_plate_relights_when_planned_time_plate_has_no_image
 
     res = await scenes.preview_scene_plate(
         project="demo",
-        scene_id="卫生间",
+        scene_id="Bathroom",
         variant_id="",
-        time_of_day="夜晚",
+        time_of_day="night",
         user={"username": "admin"},
     )
 
     assert res["ok"] is True
-    assert res["data"]["resolved_scene_name"] == "卫生间"
-    assert res["data"]["planned_scene_name"] == "卫生间_夜晚"
+    assert res["data"]["resolved_scene_name"] == "Bathroom"
+    assert res["data"]["planned_scene_name"] == "Bathroom_night"
     assert res["data"]["time_baked"] is False
     assert res["data"]["render"] == {
-        "resolved_scene_name": "卫生间",
-        "planned_scene_name": "卫生间_夜晚",
+        "resolved_scene_name": "Bathroom",
+        "planned_scene_name": "Bathroom_night",
         "relight": True,
         "status": "planned_missing",
-        "label": "Render：已规划 卫生间_夜晚 但暂无图，将使用 卫生间，relight 到 夜晚",
+        "label": "Render: Bathroom_night is planned but has no image yet; will use Bathroom, relight to night",
     }
 
 
@@ -596,31 +596,31 @@ async def test_preview_scene_plate_relights_when_planned_time_plate_has_no_image
 async def test_preview_scene_plate_explains_relight_fallback(tmp_path, monkeypatch):
     from novelvideo.api.routes import scenes
 
-    store = _SceneStore([NovelScene(name="卫生间"), NovelScene(name="卫生间_夜")])
+    store = _SceneStore([NovelScene(name="Bathroom"), NovelScene(name="Bathroom_night")])
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.preview_scene_plate(
         project="demo",
-        scene_id="卫生间",
-        variant_id="夜",
-        time_of_day="白天",
+        scene_id="Bathroom",
+        variant_id="night",
+        time_of_day="day",
         user={"username": "admin"},
     )
 
     assert res["ok"] is True
-    assert res["data"]["resolved_scene_name"] == "卫生间"
+    assert res["data"]["resolved_scene_name"] == "Bathroom"
     assert res["data"]["time_baked"] is False
     assert res["data"]["render"] == {
-        "resolved_scene_name": "卫生间",
+        "resolved_scene_name": "Bathroom",
         "planned_scene_name": "",
         "relight": True,
         "status": "relight",
-        "label": "Render：将使用 卫生间，relight 到 白天",
+        "label": "Render: will use Bathroom, relight to day",
     }
     assert res["data"]["seedance2"] == {
-        "resolved_scene_name": "卫生间",
-        "prompt_time_of_day": "白天",
-        "label": "Seedance2：将喂入 卫生间，提示词时间：白天",
+        "resolved_scene_name": "Bathroom",
+        "prompt_time_of_day": "day",
+        "label": "Seedance2: will feed Bathroom, prompt time: day",
     }
 
 
@@ -630,29 +630,29 @@ async def test_preview_scene_plate_beat_time_overrides_scene_ref_time(
 ):
     from novelvideo.api.routes import scenes
 
-    master_path = tmp_path / "assets" / "scenes" / "卫生间_漏水_白天" / "master.png"
+    master_path = tmp_path / "assets" / "scenes" / "Bathroom_Leak_day" / "master.png"
     master_path.parent.mkdir(parents=True)
     master_path.write_bytes(b"png")
     store = _SceneStore(
         [
-            NovelScene(name="卫生间"),
-            NovelScene(name="卫生间_漏水"),
-            NovelScene(name="卫生间_漏水_夜晚"),
-            NovelScene(name="卫生间_漏水_白天"),
+            NovelScene(name="Bathroom"),
+            NovelScene(name="Bathroom_Leak"),
+            NovelScene(name="Bathroom_Leak_night"),
+            NovelScene(name="Bathroom_Leak_day"),
         ]
     )
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.preview_scene_plate(
         project="demo",
-        scene_id="卫生间",
-        variant_id="漏水",
-        time_of_day="白天",
+        scene_id="Bathroom",
+        variant_id="Leak",
+        time_of_day="day",
         user={"username": "admin"},
     )
 
     assert res["ok"] is True
-    assert res["data"]["resolved_scene_name"] == "卫生间_漏水_白天"
+    assert res["data"]["resolved_scene_name"] == "Bathroom_Leak_day"
     assert res["data"]["time_baked"] is True
     assert res["data"]["render"]["relight"] is False
 
@@ -948,7 +948,7 @@ async def test_scene_director_world_save_restores_active_source_and_snapshot(
             "sourceTransform": {"yaw": 12},
         },
         "camera": {"azim": 1},
-        "actors": [{"label": "临时演员"}],
+        "actors": [{"label": "Extra"}],
         "props": [],
         "stagings": [],
     }
@@ -1599,23 +1599,23 @@ async def test_update_scene_rejects_renaming_base_scene_with_derived_scenes(
 
     store = _SceneStore(
         [
-            NovelScene(name="故宫"),
-            NovelScene(name="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
+            NovelScene(name="Palace"),
+            NovelScene(name="Palace_Snow", base_scene_id="Palace", variant_id="Snow"),
         ]
     )
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.update_scene(
         project="demo",
-        name="故宫",
-        body=SceneUpdate(name="紫禁城"),
+        name="Palace",
+        body=SceneUpdate(name="Forbidden City"),
         user={"username": "admin"},
     )
 
     assert res["ok"] is False
-    assert "派生场景" in res["error"]
-    assert await store.get_scene("故宫") is not None
-    assert await store.get_scene("紫禁城") is None
+    assert "derived scenes" in res["error"]
+    assert await store.get_scene("Palace") is not None
+    assert await store.get_scene("Forbidden City") is None
 
 
 @pytest.mark.asyncio
@@ -1626,22 +1626,22 @@ async def test_delete_scene_rejects_base_scene_with_derived_scenes(
 
     store = _SceneStore(
         [
-            NovelScene(name="故宫"),
-            NovelScene(name="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
+            NovelScene(name="Palace"),
+            NovelScene(name="Palace_Snow", base_scene_id="Palace", variant_id="Snow"),
         ]
     )
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     res = await scenes.delete_scene(
         project="demo",
-        name="故宫",
+        name="Palace",
         user={"username": "admin"},
     )
 
     assert res["ok"] is False
-    assert "派生场景" in res["error"]
-    assert await store.get_scene("故宫") is not None
-    assert await store.get_scene("故宫_下雪") is not None
+    assert "derived scenes" in res["error"]
+    assert await store.get_scene("Palace") is not None
+    assert await store.get_scene("Palace_Snow") is not None
 
 
 @pytest.mark.asyncio
@@ -1650,11 +1650,11 @@ async def test_delete_scene_allows_leaf_scene_plate(tmp_path, monkeypatch):
 
     store = _SceneStore(
         [
-            NovelScene(name="公寓楼家门口"),
+            NovelScene(name="ApartmentDoor"),
             NovelScene(
-                name="公寓楼家门口_上午",
-                base_scene_id="公寓楼家门口",
-                time_of_day="上午",
+                name="ApartmentDoor_morning",
+                base_scene_id="ApartmentDoor",
+                time_of_day="morning",
             ),
         ]
     )
@@ -1662,14 +1662,14 @@ async def test_delete_scene_allows_leaf_scene_plate(tmp_path, monkeypatch):
 
     res = await scenes.delete_scene(
         project="demo",
-        name="公寓楼家门口_上午",
+        name="ApartmentDoor_morning",
         user={"username": "admin"},
     )
 
     assert res["ok"] is True
     assert res["data"]["deleted"] is True
-    assert await store.get_scene("公寓楼家门口") is not None
-    assert await store.get_scene("公寓楼家门口_上午") is None
+    assert await store.get_scene("ApartmentDoor") is not None
+    assert await store.get_scene("ApartmentDoor_morning") is None
 
 
 @pytest.mark.asyncio
@@ -1680,11 +1680,11 @@ async def test_build_scenes_allows_supplement_when_derived_scenes_exist(
 
     store = _SceneStore(
         [
-            NovelScene(name="故宫"),
-            NovelScene(name="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
+            NovelScene(name="Palace"),
+            NovelScene(name="Palace_Snow", base_scene_id="Palace", variant_id="Snow"),
         ]
     )
-    (tmp_path / "novel.txt").write_text("剧本文本", encoding="utf-8")
+    (tmp_path / "novel.txt").write_text("script text", encoding="utf-8")
     _patch_project(monkeypatch, scenes, tmp_path, store)
 
     async def fake_resolve_scene_project(
@@ -1718,7 +1718,7 @@ async def test_build_scenes_allows_supplement_when_derived_scenes_exist(
     assert res["ok"] is True
     assert res["task_type"] == "build_scenes"
     assert res["task_id"] == "task-scene-build"
-    assert res["message"] == "场景补充任务已进入队列"
+    assert res["message"] == "Scene supplement task queued"
 
 
 @pytest.mark.asyncio
@@ -1909,18 +1909,18 @@ async def test_asset_references_match_beat_asset_ids(monkeypatch, tmp_path):
                     beat_number=12,
                     narration="n",
                     visual_description="v",
-                    detected_identities_json='["苏清晏_少女"]',
-                    detected_props_json='["油泼辣子"]',
-                    scene_ref_json='{"scene_id": "兰州拉面馆"}',
+                    detected_identities_json='["SuQingyan_teen"]',
+                    detected_props_json='["ChiliOil"]',
+                    scene_ref_json='{"scene_id": "NoodleShop"}',
                 ),
                 NovelVisualBeat(
                     episode_number=3,
                     beat_number=4,
                     narration="n",
                     visual_description="v",
-                    detected_identities_json='["路人_青年"]',
-                    detected_props_json='["木凳"]',
-                    scene_ref_json='{"scene_id": "兰州拉面馆"}',
+                    detected_identities_json='["Passerby_young_adult"]',
+                    detected_props_json='["WoodenStool"]',
+                    scene_ref_json='{"scene_id": "NoodleShop"}',
                 ),
             ]
 
@@ -1948,7 +1948,7 @@ async def test_asset_references_match_beat_asset_ids(monkeypatch, tmp_path):
 
     async def fake_make_sqlite_store_for_context(ctx_arg, **kwargs):
         assert ctx_arg is ctx
-        # 引用查询只读 beats 表，不该带上 load_graph_state 的三次全表读。
+        # The reference query reads only the beats table and must not carry the three whole-table reads of load_graph_state.
         assert kwargs == {"load_graph_state": False}
         return Store()
 
@@ -1965,7 +1965,7 @@ async def test_asset_references_match_beat_asset_ids(monkeypatch, tmp_path):
     res = await assets.get_asset_references(
         project="proj_demo",
         asset_type="scene",
-        asset_id="兰州拉面馆",
+        asset_id="NoodleShop",
         user={"username": "admin"},
     )
 
@@ -1976,8 +1976,8 @@ async def test_asset_references_match_beat_asset_ids(monkeypatch, tmp_path):
                 {"episode": 1, "beat_number": 12},
                 {"episode": 3, "beat_number": 4},
             ],
-            "co_identities": ["苏清晏_少女", "路人_青年"],
-            "co_props": ["木凳", "油泼辣子"],
+            "co_identities": ["Passerby_young_adult", "SuQingyan_teen"],
+            "co_props": ["ChiliOil", "WoodenStool"],
         },
     }
 
@@ -2027,19 +2027,19 @@ _REFERENCE_BEATS = [
         episode_number=1,
         beat_number=12,
         narration="n",
-        visual_description="苏清晏握着[[油泼辣子]]",
-        detected_identities_json='["苏清晏_少女"]',
-        detected_props_json='["油泼辣子"]',
-        scene_ref_json='{"scene_id": "兰州拉面馆"}',
+        visual_description="SuQingyan holds [[ChiliOil]]",
+        detected_identities_json='["SuQingyan_teen"]',
+        detected_props_json='["ChiliOil"]',
+        scene_ref_json='{"scene_id": "NoodleShop"}',
     ),
     NovelVisualBeat(
         episode_number=3,
         beat_number=4,
         narration="n",
         visual_description="v",
-        detected_identities_json='["路人_青年"]',
-        detected_props_json='["木凳"]',
-        scene_ref_json='{"scene_id": "兰州拉面馆"}',
+        detected_identities_json='["Passerby_young_adult"]',
+        detected_props_json='["WoodenStool"]',
+        scene_ref_json='{"scene_id": "NoodleShop"}',
     ),
 ]
 
@@ -2070,30 +2070,30 @@ async def test_project_asset_references_returns_beat_lists_only_for_requested_id
 
     res = await assets.get_project_asset_references(
         project="proj_demo",
-        ids=["scene:兰州拉面馆", "identity:苏清晏_少女"],
+        ids=["scene:NoodleShop", "identity:SuQingyan_teen"],
         user={"username": "admin"},
     )
 
     assert res["data"]["references"] == {
-        "identity:苏清晏_少女": [{"episode": 1, "beat_number": 12}],
-        "scene:兰州拉面馆": [
+        "identity:SuQingyan_teen": [{"episode": 1, "beat_number": 12}],
+        "scene:NoodleShop": [
             {"episode": 1, "beat_number": 12},
             {"episode": 3, "beat_number": 4},
         ],
     }
-    # 共现只为被请求的场景计算。
+    # Co-occurrence is computed only for the requested scenes.
     assert res["data"]["scene_co_occurrence"] == {
-        "兰州拉面馆": {
-            "identities": ["苏清晏_少女", "路人_青年"],
-            "props": ["木凳", "油泼辣子"],
+        "NoodleShop": {
+            "identities": ["Passerby_young_adult", "SuQingyan_teen"],
+            "props": ["ChiliOil", "WoodenStool"],
         }
     }
 
 
 @pytest.mark.asyncio
 async def test_project_asset_references_finds_inline_prop_markers(monkeypatch, tmp_path):
-    # 只在 visual_description 里 [[标记]]、从未色绑到 detected_props 的道具，
-    # 也必须出现在按需引用列表里。
+    # Props that are only [[marked]] in visual_description and were never color-bound to detected_props
+    # must also appear in the on-demand reference list.
     assets, _ = _patch_asset_references(
         monkeypatch,
         tmp_path,
@@ -2102,7 +2102,7 @@ async def test_project_asset_references_finds_inline_prop_markers(monkeypatch, t
                 episode_number=2,
                 beat_number=7,
                 narration="n",
-                visual_description="桌上放着[[青瓷碗]]和[[竹筷]]",
+                visual_description="On the table are [[CeladonBowl]] and [[Chopsticks]]",
                 detected_identities_json="[]",
                 detected_props_json="[]",
                 scene_ref_json="",
@@ -2111,11 +2111,11 @@ async def test_project_asset_references_finds_inline_prop_markers(monkeypatch, t
     )
 
     res = await assets.get_project_asset_references(
-        project="proj_demo", ids=["prop:青瓷碗"], user={"username": "admin"}
+        project="proj_demo", ids=["prop:CeladonBowl"], user={"username": "admin"}
     )
 
-    assert res["data"]["references"] == {"prop:青瓷碗": [{"episode": 2, "beat_number": 7}]}
-    # 没有 scene_ref 的 beat 不该凭空造出一个空 key 的场景条目。
+    assert res["data"]["references"] == {"prop:CeladonBowl": [{"episode": 2, "beat_number": 7}]}
+    # A beat without scene_ref must not conjure up a scene entry with an empty key.
     assert res["data"]["scene_co_occurrence"] == {}
 
 
@@ -2135,12 +2135,12 @@ async def test_project_asset_references_empty_project(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_project_asset_references_skips_graph_state_hydration(monkeypatch, tmp_path):
-    # load_graph_state() 是 characters/episodes/props 三次全表读；引用索引只碰
-    # beats 表，带上它比这里的查询本身还贵。
+    # load_graph_state() is three whole-table reads of characters/episodes/props; the reference index only touches the
+    # beats table, and carrying it costs more than the query itself.
     assets, store_kwargs = _patch_asset_references(monkeypatch, tmp_path, _REFERENCE_BEATS)
 
     await assets.get_project_asset_references(
-        project="proj_demo", ids=["scene:兰州拉面馆"], user={"username": "admin"}
+        project="proj_demo", ids=["scene:NoodleShop"], user={"username": "admin"}
     )
 
     assert store_kwargs == [{"load_graph_state": False}]

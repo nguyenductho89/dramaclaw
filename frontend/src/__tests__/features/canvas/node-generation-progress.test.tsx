@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 节点生成进度曲线的行为契约。
+ * Behavior contract of the node generation progress curve.
  *
- * 旧实现是 `Math.min(elapsed / duration, 0.96)`：走到预估时长就撞硬顶，而真实
- * 生成常比预估慢一截，于是几乎每次都停在 96%。换成指数饱和曲线后，停下来的
- * 位置推到约 3.8 倍预估时长。
+ * The old implementation was `Math.min(elapsed / duration, 0.96)`: it hit a hard ceiling once the estimated duration was reached, while real
+ * generation is often a bit slower than estimated, so it stalled at 96% almost every time. After switching to an exponential saturation curve, the point where it stops
+ * moves out to about 3.8 times the estimated duration.
  *
- * 这里连「99% 之后不再变化」一起锁住——它是当前实现有意接受的代价，不是漏网
- * 的 bug；将来若改成不定式等待动效，这条用例应当被显式改掉而不是悄悄失效。
+ * "No more change after 99%" is locked down here too -- it is a cost the current implementation accepts on purpose, not a bug that slipped
+ * through; if it is ever changed to an indeterminate waiting animation, this case should be changed explicitly rather than silently going stale.
  */
 import { render, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,17 +26,17 @@ function renderProgress() {
   return () => Number(bar.getAttribute('aria-valuenow'));
 }
 
-/** 推进到「预估时长的 n 倍」这一刻。 */
+/** Advances to the moment of "n times the estimated duration". */
 function advanceToMultiple(multiple: number) {
   act(() => {
-    // 组件靠 120ms 的 interval 驱动重渲染，跑一拍即可；先退一拍再推进，
-    // 落点才正好是 multiple × 预估时长。
+    // The component re-renders driven by a 120ms interval, so one tick is enough; step back one tick and then advance,
+    // so that the landing point is exactly multiple x estimated duration.
     vi.setSystemTime(multiple * DURATION_MS - 120);
     vi.advanceTimersByTime(120);
   });
 }
 
-describe('NodeGenerationOverlay 进度曲线', () => {
+describe('NodeGenerationOverlay progress curve', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -46,19 +46,19 @@ describe('NodeGenerationOverlay 进度曲线', () => {
     vi.useRealTimers();
   });
 
-  it('预估时长内推进保守，不会提前贴到高位', () => {
+  it('progress within the estimated duration is conservative and does not stick to a high value early', () => {
     const percent = renderProgress();
     expect(percent()).toBe(0);
 
     advanceToMultiple(0.5);
     expect(percent()).toBe(50);
 
-    // 走满预估时长时约 75%，留足余量给普遍存在的超时。
+    // About 75% when the full estimated duration has elapsed, leaving ample headroom for the common overrun.
     advanceToMultiple(1);
     expect(percent()).toBe(74);
   });
 
-  it('超出预估时长后仍在推进，不像旧的线性版本那样在 1 倍时长就撞顶', () => {
+  it('keeps advancing past the estimated duration, unlike the old linear version that hit the ceiling at 1x', () => {
     const percent = renderProgress();
 
     advanceToMultiple(2);
@@ -68,7 +68,7 @@ describe('NodeGenerationOverlay 进度曲线', () => {
     expect(percent()).toBe(98);
   });
 
-  it('约 3.8 倍预估时长后定在 99%，之后不再变化', () => {
+  it('settles at 99% after about 3.8x the estimated duration and no longer changes afterwards', () => {
     const percent = renderProgress();
 
     advanceToMultiple(3.5);
@@ -77,12 +77,12 @@ describe('NodeGenerationOverlay 进度曲线', () => {
     advanceToMultiple(4);
     expect(percent()).toBe(99);
 
-    // 再等一个数量级也还是 99——这是有意的上限，不是曲线算错。
+    // Waiting another order of magnitude still gives 99 -- this is an intentional cap, not a miscalculated curve.
     advanceToMultiple(40);
     expect(percent()).toBe(99);
   });
 
-  it('永远不会显示 100%——完成由外部卸载覆盖层来体现', () => {
+  it('never shows 100% -- completion is expressed by the outside unmounting the overlay', () => {
     const percent = renderProgress();
     for (const multiple of [1, 5, 20, 100, 1000]) {
       advanceToMultiple(multiple);
@@ -90,7 +90,7 @@ describe('NodeGenerationOverlay 进度曲线', () => {
     }
   });
 
-  it('进度单调不降', () => {
+  it('progress is monotonically non-decreasing', () => {
     const percent = renderProgress();
     let previous = percent();
     for (let multiple = 0.2; multiple <= 6; multiple += 0.2) {

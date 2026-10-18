@@ -3,12 +3,12 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * 叠卡画册「应到张数」的模块级登记表（nodeId → 本次批量生成的总数）。
+ * Module-level registry of the stacked-card album's "expected count" (nodeId → total of this batch generation).
  *
- * 为什么不放组件 state：画布开了 onlyRenderVisibleElements，批量生成期间把
- * 节点平移出视口会卸载组件，回来时 useState 归零、骨架占位消失。放模块级
- * Map 可跨卸载/重挂存活；刻意不持久化——刷新后未完成任务不续传（每节点只
- * 保留第 1 个任务句柄），持久化只会留下永远转圈的占位。
+ * Why not in component state: the canvas enables onlyRenderVisibleElements, and panning a node out of the viewport during batch generation
+ * unmounts the component; on return useState resets to zero and the skeleton placeholders vanish. A module-level
+ * Map survives unmount/remount; deliberately not persisted — unfinished tasks are not resumed after refresh (each node keeps only
+ * the first task handle), and persisting would only leave placeholders that spin forever.
  */
 const totals = new Map<string, number>();
 const listeners = new Set<() => void>();

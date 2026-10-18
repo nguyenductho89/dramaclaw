@@ -1,8 +1,8 @@
-"""图谱构建任务的进度上报语义。
+"""Progress-reporting semantics of the graph-build task.
 
-图谱构建的 on_log 回调本身不带进度。早期实现用 0.0 占位调 _progress,于是
-每来一行普通日志进度都被打回 0,前端进度条呈现 10% → 0% → 80% → 0% 的反复
-倒退。日志行必须传 progress=None,让任务状态保留原有进度。
+The graph-build on_log callback itself carries no progress. An early implementation called _progress with a 0.0 placeholder, so
+every ordinary log line reset the progress to 0, and the frontend progress bar jumped back and forth between 10% -> 0% -> 80% -> 0%.
+Log lines must pass progress=None so the task state keeps its existing progress.
 """
 
 from pathlib import Path
@@ -43,16 +43,16 @@ class _RecordingTaskManager:
 
 
 class _FakeStore:
-    """按真实调用顺序交替吐进度和日志。"""
+    """Alternate progress and logs in the real call order."""
 
     def __init__(self) -> None:
         self.closed = False
 
     async def _emit(self, on_progress, on_log):
-        on_progress(0.1, "读取图谱")
-        on_log("命中缓存")
-        on_progress(0.8, "写入数据库")
-        on_log("跳过 3 条重复记录")
+        on_progress(0.1, "Read graph")
+        on_log("Cache hit")
+        on_progress(0.8, "Write to database")
+        on_log("Skipped 3 duplicate records")
         return [{"name": "a"}]
 
     async def build_scenes_from_graph(self, on_progress, on_log):
@@ -94,31 +94,31 @@ async def test_log_updates_do_not_reset_progress(
 
     assert store.closed
     assert [u["task_type"] for u in manager.updates] == [task_type] * 4
-    # 关键断言:日志行传 None(保留原进度),而不是 0.0(把进度打回原点)。
+    # Key assertion: log lines pass None (keep the existing progress), not 0.0 (which resets progress to the origin).
     assert [u["progress"] for u in manager.updates] == [0.1, None, 0.8, None]
-    # 步骤文案和日志仍照常更新。
+    # The step text and logs are still updated as usual.
     assert [u["current_task"] for u in manager.updates] == [
-        "读取图谱",
-        "命中缓存",
-        "写入数据库",
-        "跳过 3 条重复记录",
+        "Read graph",
+        "Cache hit",
+        "Write to database",
+        "Skipped 3 duplicate records",
     ]
 
 
 def test_update_progress_with_none_keeps_stored_progress(tmp_path: Path) -> None:
-    """runner 依赖的 manager 侧契约:progress=None 不动已存进度。"""
+    """Manager-side contract the runner relies on: progress=None leaves the stored progress untouched."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     manager.create_task_for_project(ctx, "build_scenes", 0)
     manager.update_progress_for_project(
-        ctx, "build_scenes", 0, progress=0.8, current_task="写入数据库"
+        ctx, "build_scenes", 0, progress=0.8, current_task="Write to database"
     )
 
     manager.update_progress_for_project(
-        ctx, "build_scenes", 0, progress=None, current_task="跳过 3 条重复记录"
+        ctx, "build_scenes", 0, progress=None, current_task="Skipped 3 duplicate records"
     )
 
     task = manager.get_task_for_project(ctx, "build_scenes", 0)
     assert task is not None
     assert task.progress == 0.8
-    assert task.current_task == "跳过 3 条重复记录"
+    assert task.current_task == "Skipped 3 duplicate records"

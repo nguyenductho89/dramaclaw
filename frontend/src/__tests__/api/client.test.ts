@@ -70,7 +70,7 @@ describe("apiCall backend errors", () => {
         new Response(
           JSON.stringify({
             ok: false,
-            error: "当前项目 default 队列任务已满，请等待已有任务完成后再提交",
+            error: "The current project's default queue is full. Wait for existing tasks to finish before submitting.",
             data: {
               project_id: "demo",
               queue_kind: "default",
@@ -91,7 +91,7 @@ describe("apiCall backend errors", () => {
       prefix: "http://localhost/api/v1",
       method: "POST",
       json: {
-        prompt: "生成一张图",
+        prompt: "Generate an image",
       },
     } as Parameters<typeof apiCall>[1]);
 
@@ -99,7 +99,7 @@ describe("apiCall backend errors", () => {
       name: "ProjectQueueLimitError",
       queueKind: "default",
       limitScope: "project",
-      message: "当前项目默认队列已满",
+      message: "The current project's default queue is full",
     });
     await expect(promise).rejects.toBeInstanceOf(ProjectQueueLimitError);
   });
@@ -111,7 +111,7 @@ describe("apiCall backend errors", () => {
         new Response(
           JSON.stringify({
             ok: false,
-            error: "你在当前项目 default 队列任务已满，请等待自己的任务完成后再提交",
+            error: "Your tasks in the current project's default queue are full. Wait for your own tasks to finish before submitting.",
             data: {
               project_id: "demo",
               requester_user_id: "user_1",
@@ -133,7 +133,7 @@ describe("apiCall backend errors", () => {
       prefix: "http://localhost/api/v1",
       method: "POST",
       json: {
-        prompt: "生成一张图",
+        prompt: "Generate an image",
       },
     } as Parameters<typeof apiCall>[1]);
 
@@ -141,15 +141,15 @@ describe("apiCall backend errors", () => {
       name: "ProjectQueueLimitError",
       queueKind: "default",
       limitScope: "user",
-      message: "你在当前默认队列的任务已达个人上限",
+      message: "You have reached your personal default queue limit",
     });
     await expect(promise).rejects.toBeInstanceOf(ProjectQueueLimitError);
   });
 
   it.each([
-    ["channel", "organization", "当前组织视频队列已满"],
-    ["platform", "platform", "平台视频队列已满"],
-    ["global_lane_queue", "node", "当前节点视频队列已满"],
+    ["channel", "organization", "The current organization's video queue is full"],
+    ["platform", "platform", "The platform video queue is full"],
+    ["global_lane_queue", "node", "The current node's video queue is full"],
   ] as const)("preserves the %s lane scope from EE", (limitScope, scopeKind, message) => {
     const error = errorFromBackendBody(
       429,
@@ -198,8 +198,8 @@ describe("apiCall backend errors", () => {
 
   it("uses i18n for project queue limit display text", () => {
     const tMock = vi.fn((key: string, options?: { queue?: string; defaultValue?: string }) => {
-      if (key === "common.projectQueueKinds.video") return "视频";
-      if (key === "common.projectQueueFull") return `当前项目${options?.queue}队列已满`;
+      if (key === "common.projectQueueKinds.video") return "video";
+      if (key === "common.projectQueueFull") return `The current project's ${options?.queue} queue is full`;
       return options?.defaultValue ?? key;
     });
     const t = tMock as unknown as TFunction;
@@ -209,12 +209,12 @@ describe("apiCall backend errors", () => {
       t,
     );
 
-    expect(message).toBe("当前项目视频队列已满");
+    expect(message).toBe("The current project's video queue is full");
     expect(tMock).toHaveBeenCalledWith("common.projectQueueKinds.video", {
       defaultValue: "video",
     });
     expect(tMock).toHaveBeenCalledWith("common.projectQueueFull", {
-      queue: "视频",
+      queue: "video",
       defaultValue: "backend message",
     });
   });
@@ -222,7 +222,7 @@ describe("apiCall backend errors", () => {
   it("uses i18n for personal queue limit display text", () => {
     const tMock = vi.fn((key: string, options?: { queue?: string; defaultValue?: string }) => {
       if (key === "common.userDefaultQueueFull") {
-        return "你在当前默认队列的任务已达个人上限";
+        return "You have reached your personal default queue limit";
       }
       return options?.defaultValue ?? key;
     });
@@ -233,19 +233,19 @@ describe("apiCall backend errors", () => {
       t,
     );
 
-    expect(message).toBe("你在当前默认队列的任务已达个人上限");
+    expect(message).toBe("You have reached your personal default queue limit");
     expect(tMock).toHaveBeenCalledWith("common.userDefaultQueueFull", {
       defaultValue: "backend message",
     });
   });
 
   it.each([
-    ["channel", "common.organizationQueueFull", "当前组织视频队列已满"],
-    ["platform", "common.platformQueueFull", "平台视频队列已满"],
-    ["global_lane_queue", "common.nodeQueueFull", "当前节点视频队列已满"],
+    ["channel", "common.organizationQueueFull", "The current organization's video queue is full"],
+    ["platform", "common.platformQueueFull", "The platform video queue is full"],
+    ["global_lane_queue", "common.nodeQueueFull", "The current node's video queue is full"],
   ] as const)("uses i18n for the %s queue pool", (limitScope, messageKey, expectedMessage) => {
     const tMock = vi.fn((key: string, options?: { queue?: string; defaultValue?: string }) => {
-      if (key === "common.projectQueueKinds.video") return "视频";
+      if (key === "common.projectQueueKinds.video") return "video";
       if (key === messageKey) return expectedMessage;
       return options?.defaultValue ?? key;
     });
@@ -258,7 +258,7 @@ describe("apiCall backend errors", () => {
 
     expect(message).toBe(expectedMessage);
     expect(tMock).toHaveBeenCalledWith(messageKey, {
-      queue: "视频",
+      queue: "video",
       defaultValue: "backend message",
     });
   });
@@ -268,7 +268,7 @@ describe("apiCall backend errors", () => {
       402,
       {
         ok: false,
-        error: "积分不足，请联系管理员充值",
+        error: "Insufficient credits. Please contact your administrator to recharge.",
         data: {
           error_code: "INSUFFICIENT_CREDITS",
           required: 6,
@@ -290,7 +290,7 @@ describe("apiCall backend errors", () => {
       "Insufficient credits. Please contact your administrator to recharge.",
     );
     expect(tMock).toHaveBeenCalledWith("common.insufficientCredits", {
-      defaultValue: "积分不足，请联系管理员充值",
+      defaultValue: "Insufficient credits. Please contact your administrator to recharge.",
     });
   });
 
@@ -321,14 +321,14 @@ describe("apiCall backend errors", () => {
     );
     const tMock = vi.fn((key: string, options?: { defaultValue?: string }) => {
       if (key === "common.insufficientCredits") {
-        return "积分不足，请联系管理员充值";
+        return "Insufficient credits. Please contact your administrator to recharge.";
       }
       return options?.defaultValue ?? key;
     });
 
     expect(error).toBeInstanceOf(InsufficientCreditsError);
     expect(backendErrorToastMessage(error, tMock as unknown as TFunction)).toBe(
-      "积分不足，请联系管理员充值",
+      "Insufficient credits. Please contact your administrator to recharge.",
     );
   });
 
@@ -362,7 +362,7 @@ describe("apiCall backend errors", () => {
       409,
       {
         ok: false,
-        error: "计费规则未配置，请联系管理员设置积分规则",
+        error: "Billing rules are not configured. Please contact your administrator to set credit rules.",
         data: {
           error_code: "BILLING_RULE_NOT_CONFIGURED",
           billing_kind: "feature",
@@ -384,7 +384,7 @@ describe("apiCall backend errors", () => {
       "Billing rule is not configured. Please contact an administrator to set credit pricing.",
     );
     expect(tMock).toHaveBeenCalledWith("common.billingRuleNotConfigured", {
-      defaultValue: "计费规则未配置，请联系管理员设置积分规则",
+      defaultValue: "Billing rules are not configured. Please contact your administrator to set credit rules.",
     });
   });
 
@@ -393,7 +393,7 @@ describe("apiCall backend errors", () => {
       409,
       {
         ok: false,
-        error: "计费规则未配置，请联系管理员设置积分规则",
+        error: "Billing rules are not configured. Please contact your administrator to set credit rules.",
         data: {
           task_id: "task_1",
           status: "failed",
@@ -408,7 +408,7 @@ describe("apiCall backend errors", () => {
     );
 
     expect(error).toBeInstanceOf(BillingRuleNotConfiguredError);
-    expect(error?.message).toBe("计费规则未配置，请联系管理员设置积分规则");
+    expect(error?.message).toBe("Billing rules are not configured. Please contact your administrator to set credit rules.");
   });
 
   it("maps FastAPI detail object missing billing rule responses to the billing rule error", () => {
@@ -417,7 +417,7 @@ describe("apiCall backend errors", () => {
       {
         detail: {
           error_code: "BILLING_RULE_NOT_CONFIGURED",
-          message: "计费规则未配置，请联系管理员设置积分规则",
+          message: "Billing rules are not configured. Please contact your administrator to set credit rules.",
           billing_kind: "feature",
           billing_key: "mainline.ingest_fast",
         },
@@ -426,7 +426,7 @@ describe("apiCall backend errors", () => {
     );
 
     expect(error).toBeInstanceOf(BillingRuleNotConfiguredError);
-    expect(error?.message).toBe("计费规则未配置，请联系管理员设置积分规则");
+    expect(error?.message).toBe("Billing rules are not configured. Please contact your administrator to set credit rules.");
   });
 });
 
@@ -447,12 +447,12 @@ describe("skill run backend errors", () => {
     stubSkillError(422, {
       code: "render_identity_detection_required",
       category: "validation",
-      message: "渲染分镜前请先在「镜头上下文」节点的「出场身份」里选择出场角色。",
+      message: "Before rendering the storyboard, choose the appearing characters in the \"Appearing identities\" of the \"Shot context\" node.",
       retryable: false,
       user_action_hint: null,
     });
 
-    // runSkill 的写法；测试环境没有 baseURL，显式给 prefix。
+    // The way runSkill does it; the test environment has no baseURL, so pass the prefix explicitly.
     const error = await jsonWithBackendError(
       apiClient("projects/demo/freezone/skills/freezone.frame_from_context/run", {
         prefix: "http://localhost/api/v1",
@@ -464,17 +464,17 @@ describe("skill run backend errors", () => {
     expect(error).toBeInstanceOf(BackendStatusError);
     expect(error).toMatchObject({
       status: 422,
-      message: "渲染分镜前请先在「镜头上下文」节点的「出场身份」里选择出场角色。",
+      message: "Before rendering the storyboard, choose the appearing characters in the \"Appearing identities\" of the \"Shot context\" node.",
     });
   });
 
   it("appends the user action hint of a structured detail", () => {
     const error = errorFromBackendBody(
       404,
-      { detail: { code: "beat_not_found", message: "镜头不存在", user_action_hint: "请重新选择镜头" } },
+      { detail: { code: "beat_not_found", message: "Shot not found", user_action_hint: "Please pick the shot again" } },
       "Not Found",
     );
 
-    expect(error).toMatchObject({ status: 404, message: "镜头不存在 请重新选择镜头" });
+    expect(error).toMatchObject({ status: 404, message: "Shot not found Please pick the shot again" });
   });
 });

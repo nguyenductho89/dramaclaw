@@ -9,12 +9,12 @@ function incomingTo(target: string) {
   return useCanvasStore.getState().edges.filter((edge) => edge.target === target);
 }
 
-describe("canvasStore.onConnect — 3D 世界节点入边唯一", () => {
+describe("canvasStore.onConnect — 3D world node accepts a single incoming edge", () => {
   beforeEach(() => {
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  it("已有上游时拒绝把第二个节点连入 3D 世界节点,保留首个上游", () => {
+  it("rejects connecting a second node into the 3D world node when an upstream exists, keeping the first upstream", () => {
     const store = useCanvasStore.getState();
     const imgA = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 0 }, { imageUrl: "a.png" });
     const imgB = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 200 }, { imageUrl: "b.png" });
@@ -28,7 +28,7 @@ describe("canvasStore.onConnect — 3D 世界节点入边唯一", () => {
     });
     expect(incomingTo(world)).toHaveLength(1);
 
-    // 第二个上游应被拒绝。
+    // The second upstream should be rejected.
     useCanvasStore.getState().onConnect({
       source: imgB,
       target: world,
@@ -40,7 +40,7 @@ describe("canvasStore.onConnect — 3D 世界节点入边唯一", () => {
     expect(incoming[0]?.source).toBe(imgA);
   });
 
-  it("非 3D 世界节点不受单上游限制(可接受多个上游)", () => {
+  it("non-3D-world nodes are not limited to a single upstream (multiple upstreams accepted)", () => {
     const store = useCanvasStore.getState();
     const imgA = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 0 }, {});
     const imgB = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 200 }, {});

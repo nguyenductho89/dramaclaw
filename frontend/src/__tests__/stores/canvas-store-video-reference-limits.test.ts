@@ -7,9 +7,9 @@ import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 import { VIDEO_REFERENCE_ENVELOPE } from "@/features/canvas/domain/videoReferenceLimits";
 import type { ModelOption } from "@/features/canvas/ui/ProviderModelPicker";
 
-// 建边校验跑在 React 之外，模型目录从 useFreezoneVideoModels 的 module-level store 读。
-// 这里替掉那个读取口就能喂进任意目录；默认空列表 = 目录还没加载，行为回落到默认包络，
-// 下面前几个用例仍按 9/3/3/12 断言。
+// Edge validation runs outside React, and the model catalog is read from useFreezoneVideoModels' module-level store.
+// Replacing that read port here lets any catalog be fed in; the default empty list = the catalog has not loaded yet, behavior falls back to the default envelope,
+// and the first few cases below still assert 9/3/3/12.
 let catalog: ModelOption[] = [];
 vi.mock("@/features/canvas/hooks/useFreezoneVideoModels", () => ({
   readFreezoneVideoModels: () => catalog,
@@ -26,16 +26,16 @@ function incomingEdges(target: string) {
   return useCanvasStore.getState().edges.filter((edge) => edge.target === target);
 }
 
-describe("canvasStore 建边入口的素材上限", () => {
+describe("canvasStore material cap at the edge creation entry", () => {
   beforeEach(() => {
     catalog = [];
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  // onConnect 只覆盖手动拖线。资产库选参考、外部文件导入(spawnExternalAssetNodes)
-  // 走的是 addEdge —— 它同样是「往一个已存在的视频节点上接素材」，漏掉就等于这条
-  // 上限只在拖线时成立，正常产品入口能直接绕过去。
-  it("addEdge 也受上限约束：满 9 张图后第 10 张连不上", () => {
+  // onConnect covers only manual line dragging. Picking a reference from the asset library and external file import (spawnExternalAssetNodes)
+  // go through addEdge -- which is likewise "attaching material to an existing video node", and missing it means this
+  // cap holds only when dragging lines and the normal product entries could bypass it directly.
+  it("addEdge is also bound by the cap: after 9 images the 10th cannot connect", () => {
     const store = useCanvasStore.getState();
     const video = store.addNode(CANVAS_NODE_TYPES.video, { x: 900, y: 0 }, {});
     const images = Array.from({ length: VIDEO_REFERENCE_ENVELOPE.image + 1 }, (_, index) =>
@@ -54,10 +54,10 @@ describe("canvasStore 建边入口的素材上限", () => {
     expect(incomingEdges(video)).toHaveLength(VIDEO_REFERENCE_ENVELOPE.image);
   });
 
-  // 外部文件导入的顺序是「先建空 Upload 并连边、再按 MIME 转成 video/audio」。
-  // 建边那一刻空 Upload 只能按图片计数，4 个视频文件因此全落在图片上限(9)内 ——
-  // 等转换完成就变成 4 条视频引用，超出视频上限(3)。所以类型确定之后必须重算。
-  it("Upload 转成视频后超出视频上限的那条边被清掉", () => {
+  // External file import goes in the order "first create an empty Upload and wire the edge, then convert it to video/audio by MIME".
+  // At the moment of edge creation an empty Upload can only be counted as an image, so 4 video files all fall within the image cap (9) --
+  // and once the conversion finishes they become 4 video references, exceeding the video cap (3). So after the type is settled it must be recomputed.
+  it("the edge exceeding the video cap after Upload converts to video is cleared", () => {
     const store = useCanvasStore.getState();
     const video = store.addNode(CANVAS_NODE_TYPES.video, { x: 900, y: 0 }, {});
     const uploads = Array.from({ length: VIDEO_REFERENCE_ENVELOPE.video + 1 }, (_, index) =>
@@ -77,16 +77,16 @@ describe("canvasStore 建边入口的素材上限", () => {
     });
 
     expect(incomingEdges(video)).toHaveLength(VIDEO_REFERENCE_ENVELOPE.video);
-    // 先来的留下、后来的被清掉，用户看到的是「最后那个没接上」而不是随机少一个。
+    // The earlier ones stay and the later one is cleared, so the user sees "the last one did not connect" rather than a random one missing.
     expect(incomingEdges(video).map((edge) => edge.source)).toEqual(
       uploads.slice(0, VIDEO_REFERENCE_ENVELOPE.video),
     );
   });
 
-  // 媒体目录允许把 referenceImageMax 配成任意非负整数，后端会照配置放行。前端要是把
-  // 默认的 9 当成所有模型的硬上限，配了 image=10 的模型在第 10 张就被本地拦掉，请求永远
-  // 到不了本来会接受它的后端。建边校验必须按**所选模型**的有效包络走。
-  it("目录配了 image=10 的模型：第 10 张图连得上", () => {
+  // The media catalog allows referenceImageMax to be configured as any non-negative integer, and the backend lets it through as configured. If the frontend treated
+  // the default 9 as a hard cap for all models, a model configured with image=10 would be blocked locally at the 10th image and the request would never
+  // reach the backend that would have accepted it. Edge validation must follow the effective envelope of the **selected model**.
+  it("a model configured with image=10 in the catalog: the 10th image connects", () => {
     catalog = [
       {
         id: "wide-model",
@@ -109,8 +109,8 @@ describe("canvasStore 建边入口的素材上限", () => {
     expect(incomingEdges(video)).toHaveLength(10);
   });
 
-  // 反过来也要成立：目录把上限配得比默认更小时，前端不能放行到 9。
-  it("目录配了 image=2 的模型：第 3 张图就拦住", () => {
+  // The reverse must also hold: when the catalog sets the cap smaller than the default, the frontend must not let it through up to 9.
+  it("a model configured with image=2 in the catalog: the 3rd image is blocked", () => {
     catalog = [
       {
         id: "narrow-model",
@@ -137,8 +137,8 @@ describe("canvasStore 建边入口的素材上限", () => {
     expect(incomingEdges(video)).toHaveLength(2);
   });
 
-  // 类型转换后的重算走的是同一把尺子：目录配 video=5 时，5 条视频引用一条都不该被清掉。
-  it("目录配了 video=5 的模型：Upload 全转成视频后 5 条边都留下", () => {
+  // Recomputation after type conversion uses the same yardstick: with video=5 configured in the catalog, none of the 5 video references should be cleared.
+  it("a model configured with video=5 in the catalog: all 5 edges stay after every Upload converts to video", () => {
     catalog = [
       {
         id: "many-video",
@@ -167,7 +167,7 @@ describe("canvasStore 建边入口的素材上限", () => {
     expect(incomingEdges(video)).toHaveLength(5);
   });
 
-  it("没超上限时转换不误伤任何边", () => {
+  it("conversion does not hurt any edge when the cap is not exceeded", () => {
     const store = useCanvasStore.getState();
     const video = store.addNode(CANVAS_NODE_TYPES.video, { x: 900, y: 0 }, {});
     const uploads = Array.from({ length: VIDEO_REFERENCE_ENVELOPE.video }, (_, index) =>

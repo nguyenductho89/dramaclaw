@@ -112,8 +112,8 @@ export function CanvasAddNodePanel({
     };
 
     const handlePointerMove = (event: PointerEvent) => {
-      // 只有停在技能行列表或右侧弹窗上才保持打开；滑到主面板里的其它菜单项
-      // (节点网格等)应当关闭弹窗，而不是因为「还在主面板内」就一直挂着。
+      // Stay open only when resting on the skill row list or the right-hand dialog; sliding onto other menu items in the main panel
+      // (the node grid etc.) should close the dialog, rather than keeping it hanging because it is "still inside the main panel".
       const insideSkillRows = isPointInside(skillRowsRef.current, event.clientX, event.clientY);
       const insideSkillPanel = isPointInside(skillPanelRef.current, event.clientX, event.clientY);
       if (insideSkillRows || insideSkillPanel) {

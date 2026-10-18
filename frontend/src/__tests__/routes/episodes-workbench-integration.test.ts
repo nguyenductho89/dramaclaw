@@ -77,8 +77,8 @@ describe("episodes workbench integration", () => {
     );
   });
 
-  // 每张卡片自己持有规划 mutation + 任务控制器，转圈天然只作用于被点的那一集；
-  // 场景/道具在 EE 下是异步任务，转圈必须跟着任务流走到任务结束。
+  // Each card holds its own planning mutation + task controller, so the spinner naturally only affects the clicked episode;
+  // scene/prop planning is an async task under EE, and the spinner must follow the task stream until the task ends.
   it("keeps list-card planning spinners running until the async task finishes", () => {
     expect(routeSource).toContain("planIdentities.isPending || identityTask.started");
     expect(routeSource).toContain('taskType: "identity_planner"');
@@ -105,6 +105,6 @@ describe("episodes workbench integration", () => {
 
   it("uses localized copy for the episode detail back action", () => {
     expect(routeSource).toContain('t("episode.list.backToEpisodes")');
-    expect(routeSource).not.toContain("返回剧集列表");
+    expect(routeSource).not.toContain("Back to episode list");
   });
 });

@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import re
 
-_USER_TURN_LABEL_RE = re.compile(r"(?im)^\s*(?:user|human|用户|我)\s*[:：]\s*")
+_USER_TURN_LABEL_RE = re.compile(r"(?im)^\s*(?:user|human)\s*:\s*")
 _ASSISTANT_TURN_LABEL_RE = re.compile(
-    r"(?i)^\s*(?:assistant|ai|助手|助理|模型)\s*[:：]\s*"
+    r"(?i)^\s*(?:assistant|ai)\s*:\s*"
 )
 _LOCAL_FILESYSTEM_PATH_RE = re.compile(
     r"(?<![\w./-])(?:~|/Users/[^\s`'\"<>)]+)(?:/[^\s`'\"<>)]+)+"
+)
+ONE_STEP_NOTICE = (
+    "The current task has started. Ask me later to check its progress, "
+    "or continue to the next step once the task finishes."
+)
+WRITE_FAILED_NOTICE = (
+    "That last step did not start a task. Fix the prerequisites based on the returned error first; "
+    "if a voiceover is missing a voice, upload or record the missing voice in the character workbench "
+    "and then continue."
 )
 _HERMES_REPLAY_HISTORY_MESSAGES = 1
 _HERMES_REPLAY_HISTORY_MAX_CHARS = 64_000
@@ -30,10 +39,7 @@ def _completion_text_or_existing(event_text: object, existing: str) -> str:
 
 
 def _is_completion_notice(text: str) -> bool:
-    return text in {
-        "当前任务已开始处理。请稍后让我查看当前任务进度，或在任务完成后再继续下一步。",
-        "刚才这一步没有成功启动任务。请先根据返回的错误补齐前置条件；如果是配音缺少声线，可以到「虾塘」上传或录制缺失声线后再继续。",
-    }
+    return text in {ONE_STEP_NOTICE, WRITE_FAILED_NOTICE}
 
 
 def _merge_stream_text(existing: str, incoming: object) -> str:
@@ -223,7 +229,7 @@ def _redact_local_filesystem_paths(content: str) -> str:
     text = str(content or "")
     if not text:
         return ""
-    return _LOCAL_FILESYSTEM_PATH_RE.sub("[本地路径]", text)
+    return _LOCAL_FILESYSTEM_PATH_RE.sub("[local path]", text)
 
 
 def _strip_media_rendering_leaks(content: str) -> str:
@@ -245,7 +251,7 @@ def _strip_media_rendering_leaks(content: str) -> str:
             continue
         if "dramaclaw_" in lower:
             continue
-        if "按规范渲染" in stripped or "UI画廊" in stripped:
+        if "rendered per the spec" in lower or "ui gallery" in lower:
             continue
         lines.append(line)
     text = _redact_local_filesystem_paths("\n".join(lines).strip())

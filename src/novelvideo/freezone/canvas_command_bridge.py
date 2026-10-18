@@ -672,7 +672,7 @@ def _canvas_command_idempotency_conflict(
             "The bridge key is already bound to a different canvas command payload."
         ],
         "message": "Canvas command idempotency key conflicts with an existing operation.",
-        "user_message": "画布操作的幂等标识与已有请求冲突，请重新发起操作。",
+        "user_message": "The canvas operation idempotency key conflicts with an existing request; please start the operation again.",
         "agent_instruction": "Do not retry this operation with the conflicting bridge key.",
     }
 

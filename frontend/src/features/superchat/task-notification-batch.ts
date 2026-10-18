@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import { isTerminal } from "@/task-center/derivations";
 import type { TaskState } from "@/task-center/types";
 
@@ -56,23 +57,34 @@ export function resolveChatTaskBatchSummary(
 }
 
 export function buildChatTaskBatchNotification(summary: ChatTaskBatchSummary): string {
-  const episodeLabel = summary.episode > 0 ? `第 ${summary.episode} 集` : "";
-  const taskLabel = summary.taskType === "single_video"
-    ? "视频"
+  const episodeLabel = summary.episode > 0
+    ? i18n.t("superchat.panel.taskBatch.episode", { episode: summary.episode })
+    : "";
+  const labelKey = summary.taskType === "single_video"
+    ? "superchat.panel.taskBatch.label.video"
     : summary.taskType === "selected_regen"
-      ? "首帧"
+      ? "superchat.panel.taskBatch.label.firstFrame"
       : summary.taskType === "sketch_grid_generation"
-        ? "草图网格"
-      : "任务";
+        ? "superchat.panel.taskBatch.label.sketchGrid"
+        : "superchat.panel.taskBatch.label.task";
   if (summary.completed === summary.total) {
-    const prefix = episodeLabel ? `${episodeLabel} ` : "";
-    return `✅ ${prefix}${summary.total} 个${taskLabel}已全部生成完成。你可以让我查看结果，或继续下一步。`;
+    const prefix = episodeLabel ? `${episodeLabel}: ` : "";
+    return i18n.t("superchat.panel.taskBatch.allDone", {
+      prefix,
+      count: summary.total,
+      label: i18n.t(labelKey, { count: summary.total }),
+    });
   }
 
   const details = [
-    `完成 ${summary.completed}/${summary.total}`,
-    summary.failed > 0 ? `失败 ${summary.failed}` : "",
-    summary.cancelled > 0 ? `取消 ${summary.cancelled}` : "",
-  ].filter(Boolean).join("，");
-  return `${episodeLabel}${taskLabel}批次已结束：${details}。请在任务中心查看详情后再继续。`;
+    i18n.t("superchat.panel.taskBatch.completedOf", { completed: summary.completed, total: summary.total }),
+    summary.failed > 0 ? i18n.t("superchat.panel.taskBatch.failedCount", { count: summary.failed }) : "",
+    summary.cancelled > 0 ? i18n.t("superchat.panel.taskBatch.cancelledCount", { count: summary.cancelled }) : "",
+  ].filter(Boolean).join(", ");
+  const prefix = episodeLabel ? `${episodeLabel}: ` : "";
+  return i18n.t("superchat.panel.taskBatch.ended", {
+    prefix,
+    label: i18n.t(labelKey, { count: 1 }),
+    details,
+  });
 }

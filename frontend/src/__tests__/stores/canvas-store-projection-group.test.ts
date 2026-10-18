@@ -99,11 +99,11 @@ describe("canvasStore projection groups", () => {
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 0, y: 0 },
           data: {
-            label: "陆辰_青年时期",
+            label: "Lu Chen_young_adult",
             __freezone_source: {
               kind: "identity",
               role: "character_identity",
-              meta: { identity_id: "陆辰_青年时期" },
+              meta: { identity_id: "Lu Chen_young_adult" },
             },
           },
         },
@@ -112,11 +112,11 @@ describe("canvasStore projection groups", () => {
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 0, y: 140 },
           data: {
-            label: "陆辰",
+            label: "Lu Chen",
             __freezone_source: {
               kind: "identity",
               role: "character_portrait",
-              meta: { character: "陆辰" },
+              meta: { character: "Lu Chen" },
             },
           },
         },
@@ -133,10 +133,10 @@ describe("canvasStore projection groups", () => {
           source: "identity_ref",
           target: "skill_frame",
           sourceHandle: "source",
-          targetHandle: "identity:陆辰_青年时期",
+          targetHandle: "identity:Lu Chen_young_adult",
           data: {
             role: "identity",
-            reference_target: { kind: "identity", identity_id: "陆辰_青年时期" },
+            reference_target: { kind: "identity", identity_id: "Lu Chen_young_adult" },
           },
         },
         {
@@ -144,10 +144,10 @@ describe("canvasStore projection groups", () => {
           source: "portrait_ref",
           target: "skill_frame",
           sourceHandle: "source",
-          targetHandle: "identity:陆辰_青年时期",
+          targetHandle: "identity:Lu Chen_young_adult",
           data: {
             role: "identity",
-            reference_target: { kind: "identity", identity_id: "陆辰_青年时期" },
+            reference_target: { kind: "identity", identity_id: "Lu Chen_young_adult" },
           },
         },
       ],
@@ -171,17 +171,17 @@ describe("canvasStore projection groups", () => {
         width: 320,
         height: 220,
         style: { width: 320, height: 220 },
-        data: { label: "导演世界" },
+        data: { label: "Director world" },
       },
     ], []);
 
     const groupId = useCanvasStore.getState().addPanoCaptureGroup(
       source,
       [
-        { dataUrl: "data:image/png;base64,a", width: 1600, height: 900, label: "导演合成图" },
-        { dataUrl: "data:image/png;base64,b", width: 1600, height: 900, label: "纯背景图" },
+        { dataUrl: "data:image/png;base64,a", width: 1600, height: 900, label: "Director composite" },
+        { dataUrl: "data:image/png;base64,b", width: 1600, height: 900, label: "Pure background" },
       ],
-      { cols: 2, groupName: "导演世界输出" }
+      { cols: 2, groupName: "Director world output" }
     );
 
     expect(groupId).not.toBeNull();
@@ -275,7 +275,7 @@ describe("canvasStore projection groups", () => {
         type: CANVAS_NODE_TYPES.group,
         position: { x: 0, y: 0 },
         style: { width: 300, height: 220 },
-        data: { label: "普通分组" },
+        data: { label: "Regular group" },
       },
       {
         id: child,
@@ -352,9 +352,9 @@ describe("canvasStore projection groups", () => {
   });
 
   /**
-   * 「主线投影 · 锁定」锁的是**拓扑**（不能解组、不能删成员），不该连几何一起锁死。
-   * 用户反馈投影组「不能调整」：整理排列只搬成员位置、不改归属，必须放开，
-   * 否则后端算出来的布局一旦不合意，用户毫无补救手段。
+   * "Mainline projection · locked" locks the **topology** (no ungrouping, no deleting members) and should not lock the geometry along with it.
+   * Users reported that a projection group "cannot be adjusted": arranging only moves member positions without changing membership, and must be allowed,
+   * otherwise once the backend-computed layout is unsatisfactory the user has no way to remedy it.
    */
   it("arranges children of a backend-managed projection group", () => {
     const group = "projection_group_beat_1_7";
@@ -402,9 +402,9 @@ describe("canvasStore projection groups", () => {
       .nodes.find((node) => node.id === scoped("beat:1:7", "member_right"));
     expect(left?.position).toEqual({ x: 20, y: 34 });
     expect(right?.position).toEqual({ x: 252, y: 34 });
-    // 只动几何：成员仍归属同一个投影组。
+    // Geometry only: members still belong to the same projection group.
     expect(right?.parentId).toBe(scoped("beat:1:7", group));
-    // 解组依旧被拦（拓扑保护不受影响）。
+    // Ungrouping is still blocked (topology protection is unaffected).
     expect(useCanvasStore.getState().ungroupNode(scoped("beat:1:7", group))).toBe(false);
   });
 
@@ -617,7 +617,7 @@ describe("canvasStore projection groups", () => {
       {
         edgeKind: "role_binding",
         role: "current_frame_candidate",
-        label: "分镜候选",
+        label: "Storyboard candidate",
         propagates: false,
       },
       {

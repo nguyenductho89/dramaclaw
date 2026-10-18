@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { insertWorkflowDraftCancellationMessages, latestWorkflowDraftId, workflowDraftIds, WorkflowDraftContinuation } from "./WorkflowDraftContinuation";
 import type { ChatMessage } from "./types";
-import translations from "../../../public/locales/zh/translation.json";
+import translations from "../../../public/locales/en/translation.json";
 
 const api = vi.hoisted(() => vi.fn());
 vi.mock("@/api/client", () => ({ apiCall: api }));
@@ -15,13 +15,13 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, valu
   return text;
 } }) }));
 const messages = (name = "dramaclaw.freezone_prepare_workflow_plan_draft", ok = true): ChatMessage[] => [{
-  id: "assistant", role: "assistant", text: "草稿准备完成", timestamp: 1,
+  id: "assistant", role: "assistant", text: "Draft ready", timestamp: 1,
   parts: [{ id: "tool", type: "tool_status", event: { id: "tool", role: "tool", text: "", timestamp: 1,
     raw: { name, output: { content: [{ type: "text", text: JSON.stringify({ ok, status: "workflow_draft_ready", draft_id: "draft-a", revision: 1 }) }] } },
   } }],
 }];
 const draft = { draft_id: "draft-a", revision: 1, status: "ready", run_after_create: false, updated_at: 2,
-  preview: { title: "文本→图片→音频→视频→合成", node_count: 5, edge_count: 5 } };
+  preview: { title: "Text > image > audio > video > compose", node_count: 5, edge_count: 5 } };
 const props = () => ({ messages: messages(), projectId: "project-a", canvasId: "canvas-a", busy: false,
   onConfirm: vi.fn().mockResolvedValue(true), onCancelled: vi.fn() });
 beforeEach(() => { api.mockReset(); api.mockResolvedValue(draft); });
@@ -30,10 +30,10 @@ afterEach(cleanup);
 describe("workflow draft continuation", () => {
   it("shows the existing source image before confirmation", async () => {
     api.mockResolvedValue({...draft, preview: {...draft.preview, external_inputs: [
-      {id: "cup", node_id: "red-cup-source", display_name: "红杯原图"},
+      {id: "cup", node_id: "red-cup-source", display_name: "Red cup source"},
     ]}});
     render(<WorkflowDraftContinuation {...props()} />);
-    expect(await screen.findByText("参考图片: 红杯原图")).toBeInTheDocument();
+    expect(await screen.findByText("Reference images: Red cup source")).toBeInTheDocument();
   });
   it("recovers a qualified MCP draft result but ignores failures and unrelated tools", () => {
     expect(latestWorkflowDraftId(messages())).toBe("draft-a");
@@ -56,7 +56,7 @@ describe("workflow draft continuation", () => {
   it("shows a real preview and confirms the exact persisted scope and revision", async () => {
     const value = props();
     render(<WorkflowDraftContinuation {...value} />);
-    fireEvent.click(await screen.findByRole("button", { name: "确认创建" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm creation" }));
     await waitFor(() => expect(value.onConfirm).toHaveBeenCalledOnce());
     expect(value.onConfirm.mock.calls[0][1]).toContain('"draft_id":"draft-a","revision":1');
     expect(value.onConfirm.mock.calls[0][1]).toContain('"canvas_id":"canvas-a"');
@@ -74,7 +74,7 @@ describe("workflow draft continuation", () => {
     });
     const value = props();
     const view = render(<WorkflowDraftContinuation {...value} />);
-    fireEvent.click(await screen.findByRole("button", { name: "取消方案" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel plan" }));
     await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
     expect(value.onCancelled).toHaveBeenCalledWith({ draftId: "draft-a", updatedAt: 2 });
     expect(api).toHaveBeenCalledWith(
@@ -90,19 +90,19 @@ describe("workflow draft continuation", () => {
   });
   it("inserts cancellation feedback by its saved time instead of appending it", () => {
     const original: ChatMessage[] = [
-      { id: "before", role: "user", text: "先做一个方案", timestamp: 1000 },
-      { id: "after", role: "user", text: "后续消息", timestamp: 3000 },
+      { id: "before", role: "user", text: "Make a plan first", timestamp: 1000 },
+      { id: "after", role: "user", text: "Later message", timestamp: 3000 },
     ];
     const sorted = insertWorkflowDraftCancellationMessages(
       original, [
         { draftId: "draft-b", updatedAt: 2.5 },
         { draftId: "draft-a", updatedAt: 2 },
-      ], "已取消工作流方案",
+      ], "Workflow plan cancelled",
     );
     expect(sorted.map((message) => message.id)).toEqual([
       "before", "workflow-draft-cancelled:draft-a", "workflow-draft-cancelled:draft-b", "after",
     ]);
-    expect(sorted[1]).toMatchObject({ role: "assistant", text: "已取消工作流方案" });
+    expect(sorted[1]).toMatchObject({ role: "assistant", text: "Workflow plan cancelled" });
   });
   it("recovers every cancelled draft in chat history", async () => {
     const history = messages();
@@ -130,9 +130,9 @@ describe("workflow draft continuation", () => {
       return draft;
     });
     render(<WorkflowDraftContinuation {...props()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "取消方案" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("未能取消方案");
-    expect(screen.getByRole("button", { name: "确认创建" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel plan" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not cancel the plan");
+    expect(screen.getByRole("button", { name: "Confirm creation" })).toBeInTheDocument();
   });
   it.each(["confirming", "submitted", "confirmed", "failed"])("does not offer repeat creation for %s", async (status) => {
     api.mockResolvedValue({ ...draft, status });
@@ -144,14 +144,14 @@ describe("workflow draft continuation", () => {
     api.mockResolvedValueOnce(draft).mockResolvedValue({ ...draft, revision: 2 });
     const value = props();
     render(<WorkflowDraftContinuation {...value} />);
-    fireEvent.click(await screen.findByRole("button", { name: "确认创建" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm creation" }));
     await screen.findByRole("alert");
     expect(value.onConfirm).not.toHaveBeenCalled();
   });
   it("keeps create-only policy and reports failed confirmation without claiming success", async () => {
     const value = props(); value.onConfirm.mockResolvedValue(false);
     render(<WorkflowDraftContinuation {...value} />);
-    fireEvent.click(await screen.findByRole("button", { name: "确认创建" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm creation" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(value.onConfirm.mock.calls[0][1]).not.toContain('"run_after_create":true');
   });
@@ -170,7 +170,7 @@ describe("workflow draft continuation", () => {
     let resolve!: (sent: boolean) => void;
     value.onConfirm.mockReturnValue(new Promise<boolean>((done) => { resolve = done; }));
     render(<WorkflowDraftContinuation {...value} />);
-    const button = await screen.findByRole("button", { name: "确认创建" });
+    const button = await screen.findByRole("button", { name: "Confirm creation" });
     fireEvent.click(button); fireEvent.click(button);
     await waitFor(() => expect(value.onConfirm).toHaveBeenCalledOnce());
     resolve(true);

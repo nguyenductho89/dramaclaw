@@ -1,29 +1,29 @@
-"""OI-58 C 层：`mark_unknown` 失败时,那行泄漏必须留下痕迹。
+"""OI-58 layer C: when `mark_unknown` fails, that leaked row must leave a trace.
 
-两条服务出网路径（relay / newapi 管理面）的收尾形状逐字相同：
+The closing shape of the two service egress paths (relay / newapi management plane) is verbatim identical:
 
     except Exception:
         try:
             await operations.mark_unknown(...)
         except Exception:
-            pass          # <- 这里
+                        pass          # <- here
         raise XxxFailed() from None
 
-那个空 `except` 是本次故障**一直没人发现**的直接原因。`mark_unknown` 在真库上抛
-P0001（服务主体拿不到跃迁授权，见 OI-58 A 层），异常被这三行吞掉，行永久停在
-`dispatching`，而日志里只剩一句笼统的 `XxxFailed`——「台账写不进去」与「上游调用失败」
-两件完全不同的事，从外面看一模一样。
+That empty `except` is the direct reason this fault went **unnoticed**. `mark_unknown` raises on the real DB
+P0001 (the service principal has no transition authorization, see OI-58 layer A); the exception is swallowed by these three lines, the row stays
+at `dispatching` forever, and the log only has a vague `XxxFailed` - "the ledger cannot be written" and "the upstream call failed"
+are two completely different things that look identical from the outside.
 
-**吞掉本身是对的，不改。** 出网已经失败了，台账写不进去不该把它变成另一种失败；
-收敛由库内收割器兜底（EE `0066_egress_operation_reaper`）。要改的是它**静默**：
-收割器要过一整个租约周期（默认 60 分钟）才会碰到那行，在那之前唯一的线索就是这条日志。
+**The swallowing itself is correct and stays.** The egress already failed; failing to write the ledger should not turn it into another kind of failure;
+convergence is backstopped by the in-DB reaper (EE `0066_egress_operation_reaper`). What must change is that it is **silent**:
+the reaper only reaches that row after a whole lease period (default 60 minutes), and until then the only clue is this log line.
 
-护栏（沿用 OI-45，`test_org_relay_failure_diagnosability.py`）：日志只出
-`operation_id` / `capability` / 异常类型名。凭条是这行的写入授权，印出来等于把锁贴在
-墙上；被吞的那个异常本体可能带签名 URL 或密钥，所以只取类型名，不取 `str(exc)`。
+Guardrail (carried over from OI-45, `test_org_relay_failure_diagnosability.py`): the log carries only
+`operation_id` / `capability` / the exception type name. The receipt is the write authorization of the row; printing it is like taping the key
+to the wall; the swallowed exception itself may carry a signed URL or a secret, so only the type name is taken, never `str(exc)`.
 
-断言落在 `caplog.text` 而不是 record 属性：默认 formatter 不打 `extra=`（全 CE 树
-只有一处用它），断言属性会在「日志实际上什么都没打出来」时照样绿。
+Assertions are on `caplog.text`, not on record attributes: the default formatter does not print `extra=` (the whole CE tree
+uses it in only one place), and asserting on attributes would stay green even when the log printed nothing at all.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ LEDGER_LOGGER = "novelvideo.ports.egress_operations"
 
 
 class _Operations:
-    """领得到、写不了终态——就是服务主体在真库上的形状（OI-58 A 层之前）。"""
+    """Claimable but unable to write a terminal state - the shape of the service principal on the real DB (before OI-58 layer A)."""
 
     def __init__(self, *, unknown_error: BaseException | None = None) -> None:
         self._unknown_error = unknown_error
@@ -85,13 +85,13 @@ class _Operations:
             version=2,
         )
 
-    async def mark_accepted(self, **kwargs):  # pragma: no cover - 本文件只走失败路径
+    async def mark_accepted(self, **kwargs):  # pragma: no cover - this file only exercises the failure path
         raise AssertionError("the invocation failed; nothing may be accepted")
 
-    async def mark_completed(self, **kwargs):  # pragma: no cover - 同上
+    async def mark_completed(self, **kwargs):  # pragma: no cover - same as above
         raise AssertionError("the invocation failed; nothing may be completed")
 
-    async def mark_rejected_before_submit(self, **kwargs):  # pragma: no cover - 同上
+    async def mark_rejected_before_submit(self, **kwargs):  # pragma: no cover - same as above
         raise AssertionError("unused")
 
 
@@ -157,8 +157,8 @@ async def _drive_newapi_admin(operations) -> None:
     )
 
 
-# `capability` 逐条写死而不是从 driver 回读：这两个串是日志里唯一能区分「哪条服务路径
-# 漏了」的东西，从被测代码回读就等于用它自己证明自己。
+# `capability` is hard-coded per case rather than read back from the driver: these two strings are the only thing in the log that tells
+# "which service path leaked" apart; reading them back from the code under test would have it prove itself.
 CALL_SITES = [
     pytest.param(
         _drive_relay, ServiceInvocationFailed, "storage.media.relay", id="relay"
@@ -177,7 +177,7 @@ CALL_SITES = [
 async def test_a_swallowed_mark_unknown_names_the_operation_it_left_behind(
     caplog, drive, expected_error, capability
 ):
-    """行停在 `dispatching` 了，日志得说清是哪一行、哪条能力、被什么挡住的。"""
+    """The row is stuck at `dispatching`; the log must say which row, which capability, and what blocked it."""
 
     operations = _Operations(
         unknown_error=RuntimeError("egress operation transition is invalid")
@@ -187,7 +187,7 @@ async def test_a_swallowed_mark_unknown_names_the_operation_it_left_behind(
         with pytest.raises(expected_error):
             await drive(operations)
 
-    assert operations.unknown_calls, "mark_unknown 必须仍被尝试——收割器不是它的替代品"
+    assert operations.unknown_calls, "mark_unknown must still be attempted - the reaper is not a replacement for it"
     assert "operation-oi58" in caplog.text
     assert capability in caplog.text
     assert "RuntimeError" in caplog.text
@@ -198,10 +198,10 @@ async def test_a_swallowed_mark_unknown_names_the_operation_it_left_behind(
 async def test_neither_the_transition_token_nor_the_upstream_message_reaches_the_log(
     caplog, drive, expected_error, capability
 ):
-    """凭条与被吞异常的正文都不出库（OI-45 护栏）。
+    """Neither the receipt nor the body of the swallowed exception leaves the process (OI-45 guardrail).
 
-    这里的 canary 同时是 `transition_token` **和** 上游异常正文里的签名 URL —— 一条
-    断言同时钉住两个泄漏面。
+    The canary here is both the `transition_token` **and** the signed URL in the upstream exception body - one
+    assertion pins both leak surfaces.
     """
 
     operations = _Operations(unknown_error=RuntimeError(f"denied for {CANARY}"))
@@ -210,7 +210,7 @@ async def test_neither_the_transition_token_nor_the_upstream_message_reaches_the
         with pytest.raises(expected_error):
             await drive(operations)
 
-    assert caplog.text, "前一条用例保证有日志；这条只管它不带密钥"
+    assert caplog.text, "the previous case guarantees there is a log; this one only checks that it carries no secret"
     assert CANARY not in caplog.text
 
 
@@ -219,7 +219,7 @@ async def test_neither_the_transition_token_nor_the_upstream_message_reaches_the
 async def test_a_mark_unknown_that_succeeded_says_nothing(
     caplog, drive, expected_error, capability
 ):
-    """收敛成功是正常路径。给它也打一条警告，就是把这条日志变成噪音。"""
+    """Successful convergence is the normal path. Warning on it too would turn this log into noise."""
 
     operations = _Operations()
 
@@ -236,10 +236,10 @@ async def test_a_mark_unknown_that_succeeded_says_nothing(
 async def test_the_swallowing_itself_is_unchanged(
     caplog, drive, expected_error, capability
 ):
-    """本次只加日志：台账写不进去，**仍然**不许改变调用方看到的失败。
+    """This change only adds logging: even if the ledger cannot be written, the failure the caller sees must **still** not change.
 
-    把这里改成向上抛，等于让一次出网失败根据「台账能不能写」分裂成两种错误，
-    而调用方对此无能为力。
+    Turning this into a re-raise would split one egress failure into two kinds of error depending on "whether the ledger could be written",
+    and the caller can do nothing about it.
     """
 
     operations = _Operations(unknown_error=RuntimeError("boom"))
@@ -247,5 +247,5 @@ async def test_the_swallowing_itself_is_unchanged(
     with pytest.raises(expected_error) as exc_info:
         await drive(operations)
 
-    # `from None`：被吞的异常不许挂在 __cause__ 上溜出去（它可能带密钥）。
+    # `from None`: the swallowed exception must not escape by hanging on __cause__ (it may carry a secret).
     assert exc_info.value.__cause__ is None

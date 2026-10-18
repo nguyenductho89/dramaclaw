@@ -8,19 +8,19 @@ metadata:
 
 # Sketch Correction Worker
 
-> **Agent 行为规范**：
-> - **默认全包完成，不中途停下**。整个 `select → prepare tasks → label → validate → execute → copy 回正式草图目录` 流程应当一口气跑完。不要在中间阶段暂停等待用户确认，只有在遇到真正无法自动处理的错误时才停下来报告。
-> - 不要向用户展示 curl 命令、API 路径、认证头等技术细节。
-> - 读取项目内 SQLite、脚本、草图、验证报告时，继续本地直读。
-> - 启动系统执行任务和查询任务状态时，优先走 `$SUPERTALE_API_URL` 提供的 API，而不是直接在 skill 里碰本地 Ray。
-> - 环境变量解析顺序：
->   - 先读真实进程环境变量
->   - 再回退到项目级 `.claude/settings.local.json` / `.claude/settings.json` 里的 `env`
-> - 项目上下文解析顺序：
->   - 必须提供 `SUPERTALE_PROJECT` / `SUPERTALE_USERNAME`
->   - 可来自真实进程环境变量，或项目级 `.claude/settings.local.json` / `.claude/settings.json`
->   - 不再从 `output/<user>/<project>` 目录结构推断项目身份
-> - 只有在这两层都没有配置 `SUPERTALE_API_URL` / `SUPERTALE_API_KEY` 时，才回退到本地脚本直调模式。
+> **Agent behavior rules**:
+> - **Complete everything by default, without stopping midway**. The whole `select → prepare tasks → label → validate → execute → copy back to the official sketch directory` flow should run in one go. Do not pause midway to wait for user confirmation; stop to report only when you hit an error that truly cannot be handled automatically.
+> - Do not show the user technical details such as curl commands, API paths and auth headers.
+> - When reading the project's SQLite, scripts, sketches and verification reports, keep reading locally and directly.
+> - When starting system execution tasks and querying task status, prefer the API provided by `$SUPERTALE_API_URL` rather than touching local Ray directly inside the skill.
+> - Environment variable resolution order:
+>   - Read the real process environment variables first
+>   - Then fall back to `env` in the project-level `.claude/settings.local.json` / `.claude/settings.json`
+> - Project context resolution order:
+>   - `SUPERTALE_PROJECT` / `SUPERTALE_USERNAME` must be provided
+>   - They may come from the real process environment variables, or the project-level `.claude/settings.local.json` / `.claude/settings.json`
+>   - The project identity is no longer inferred from the `output/<user>/<project>` directory structure
+> - Fall back to the direct local-script mode only when neither of these two layers configures `SUPERTALE_API_URL` / `SUPERTALE_API_KEY`.
 
 Use this skill when the user wants:
 - a teacher workflow to quality-check beat sketches from a project directory
@@ -177,13 +177,13 @@ Color interpretation inside this rubric:
 - absent identities are not errors; only visible identities need to be checked
 - color should be treated as a strong signal, not an absolute oracle
 - escalate color to a major problem when it swaps one named identity into another identity's color family, collapses two visible identities into the same readable color family, or makes the beat materially hard to parse
-- for timeline pairs such as `重生前` vs `重生后`, preserving the separation between their identity color families is critical; if they visually collapse into the wrong family, do not dismiss it as minor tint drift
+- for timeline pairs such as `before_rebirth` vs `after_rebirth`, preserving the separation between their identity color families is critical; if they visually collapse into the wrong family, do not dismiss it as minor tint drift
 - if a visible named identity is in the wrong readable color family, treat that as a serious storyboard failure and send it to `edit`
 - if an unnamed extra, servant, guard, passerby, or prop-side figure is color-filled like a named identity instead of staying neutral gray, treat that as a serious storyboard failure and send it to `edit`
 - do not let "the scene is otherwise readable" override a named identity-color failure
 
 Ignore or heavily downweight these during sketch `select`:
-- prose-only atmosphere wording such as `寒意`, `铁锈感`, `压抑感`
+- prose-only atmosphere wording such as `chill`, `rusty feel`, `oppressive feel`
 - missing or weak background detail by itself
 - final lighting polish
 - material realism
@@ -210,15 +210,15 @@ Allowed `reason` dimensions for `select`:
 
 Do not use prose/render vocabulary as the main reason for `select` decisions.
 In particular, do not justify `accept` / `edit` with terms like:
-- `寒意`
-- `铁锈感`
-- `压迫感`
-- `冷肃氛围`
-- `情绪强度`
-- `氛围不够`
-- `质感`
-- `光影质感`
-- `材质`
+- `chill`
+- `rusty feel`
+- `oppressive feel`
+- `stern cold atmosphere`
+- `emotional intensity`
+- `not enough atmosphere`
+- `texture`
+- `light-and-shadow texture`
+- `material`
 
 If such words appear at all, they must be secondary commentary only.
 The actual decision must be explained through the allowed storyboard dimensions above.
@@ -242,7 +242,7 @@ If none of the failures above are present, prefer `accept`.
 Anti-projection rule:
 - never describe an action, subject, or relationship in `reason` unless it is actually visible in the sketch
 - when the script says one thing and the image shows another, describe the image first, then name the mismatch
-- if you catch yourself writing script language such as `捏下巴`, `围殴`, `独角蜷缩`, etc., verify that the exact action is plainly visible in the image before keeping it in the final reason
+- if you catch yourself writing script language such as `pinching the chin`, `beating by a mob`, `curling up alone`, etc., verify that the exact action is plainly visible in the image before keeping it in the final reason
 
 ## Local-first select command
 
@@ -264,7 +264,7 @@ Read [references/select_result_schema.md](references/select_result_schema.md) be
 
 ## Actor-backed task commands
 
-**API 模式**（仅执行步骤使用）：Base URL `$SUPERTALE_API_URL/api/v1`，认证 `X-API-Key: $SUPERTALE_API_KEY`。
+**API mode** (used only by the execute step): Base URL `$SUPERTALE_API_URL/api/v1`, auth `X-API-Key: $SUPERTALE_API_KEY`.
 
 ```bash
 uv run python .hermes/skills/sketch-correction-worker/scripts/prepare_sketch_edit_tasks.py \
@@ -371,30 +371,30 @@ uv run python .hermes/skills/sketch-correction-worker/scripts/validate_sketch_ed
 - carry `execution_mode` from `tasks.jsonl` into each `labels.jsonl` row unchanged; it is compatibility metadata and should remain `polish`
 - treat every `revise` case as a constrained correction: fix the actual defect, do not redesign the shot unless the defect itself requires it
 - when the correction requires removing old content, say so explicitly:
-  - `后景只保留一个...`
-  - `删除原有第二个人形`
-  - `不要保留旧的重复主体`
+  - `Keep only one figure in the background...`
+  - `Remove the original second figure`
+  - `Do not keep the old duplicated subject`
 - when subject count matters, state the exact visible count or exclusivity:
-  - `只保留一个前世人物`
-  - `前景仅一人，背景仅一人`
+  - `Keep only one past-life figure`
+  - `Only one person in the foreground and only one in the background`
 - each panel's edit_instruction should target at most 2 named identities
 - this limits what edit_instruction can control, not what is allowed to exist in a sketch
 - repeated appearances of the same identity do not count as extra identities
 - unnamed extras may exist, but they must stay neutral / gray and must not become a third named identity target
-- do not write vague notes like `增强情绪`, `更有张力`, `优化构图`, `提升氛围`
+- do not write vague notes like `strengthen the emotion`, `more tension`, `optimize the composition`, `improve the atmosphere`
 - for `edit_instruction`, prefer this structure:
-  - `删除...`
-  - `改成...`
-  - `保留...`
-  - `不要...`
-- when old wrong content is present, put `删除...` first so the model does not over-preserve outdated figures, actions, or staging
-- inside `改成...`, focus on the defect that actually needs correction:
-  - `身份色...`
-  - `删除多余主体/肢体/手指...`
-  - `补回缺失主体...`
-  - `修正人数/关系/遮挡...`
-  - `去掉图中文字...`
-- only specify `景别 / 角度 / 构图` when the defect itself is a staging or readability problem
+  - `Remove...`
+  - `Change to...`
+  - `Keep...`
+  - `Do not...`
+- when old wrong content is present, put `Remove...` first so the model does not over-preserve outdated figures, actions, or staging
+- inside `Change to...`, focus on the defect that actually needs correction:
+  - `identity color...`
+  - `remove extra subjects/limbs/fingers...`
+  - `restore missing subjects...`
+  - `fix the subject count/relationships/occlusion...`
+  - `remove text in the image...`
+- only specify `shot size / angle / composition` when the defect itself is a staging or readability problem
 - default goal: repair the image to a usable storyboard state, not to invent a better cinematic shot
 - when a panel has 2 named identities, explicitly anchor the relationship:
   - who is left / right
@@ -402,25 +402,25 @@ uv run python .hermes/skills/sketch-correction-worker/scripts/validate_sketch_ed
   - who must remain fully readable
   - who must not block whom
   - whether there must be visible space between them
-- for feeding, confrontation, restraint, handing-over, or any other two-person interaction, do not stop at `左右对峙`
+- for feeding, confrontation, restraint, handing-over, or any other two-person interaction, do not stop at `left-right confrontation`
 - instead, state the concrete geometry:
-  - `A 在右下床沿，B 在左上床面`
-  - `A 不要挡住 B 的脸和上半身`
-  - `两人之间留出明确空隙`
-  - `勺子/手臂/道具跨过空隙递向对方`
+  - `A is at the lower-right edge of the bed, B is on the upper-left of the bed`
+  - `A must not block B's face and upper body`
+  - `leave a clear gap between the two`
+  - `the spoon/arm/prop reaches across the gap toward the other person`
 - for non-symmetric interactions such as grabbing, restraining, feeding, forcing, handing-over, or pressing, also state:
   - who is the active actor and who is passive
   - how many visible arms / hands each side should contribute
   - whether one side wraps / covers / pins the other from above, below, front, or back
   - that the passive side must not mirror, answer, or turn into an equal gesture
-  - explicit negatives such as `不要画成对称握手` or `不要双向回应` when needed
+  - explicit negatives such as `do not draw it as a symmetric handshake` or `do not make it a two-way response` when needed
 - For `select`, judge the image as a storyboard sketch, not as a final render.
 - Follow the unified sketch judgment rubric above; do not create a second competing rubric here.
 - Downweight narration-only atmosphere wording and render-finish concerns.
 - infer visible identities mainly from the sketch, the beat text, and visible color-coded relationships
 - use `sketch_colors` to verify visible identity-color alignment; absent identities are not errors
 - when identities are mentioned, use the exact identity and hex color from the task payload
-- do not use vague phrases like “粉色人物” or “橙色人物”
+- do not use vague phrases like "the pink figure" or "the orange figure"
 - The exact identity + hex requirement applies to `edit_instruction`, not to `select` acceptance thresholds
 - but for `select`, a visible named identity landing in the wrong color family is still a major error and should normally force `edit`
 - keep the teacher output concise and structured

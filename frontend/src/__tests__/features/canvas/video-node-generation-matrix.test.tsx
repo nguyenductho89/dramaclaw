@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 工作流视频节点的等价性矩阵：7 个 genMode × 5 个提交端点，外加多结果画册、
-// 任务句柄（刷新恢复）与历史刷新回调。
+// Equivalence matrix of the workflow video node: 7 genModes × 5 submit endpoints, plus the multi-result album,
+// task handle (refresh resume) and history refresh callback.
 //
-// 为什么要单独有这一份：VideoNode 的表单逻辑整体搬进了 `useVideoGenerationForm`
-// （与故事板资产板共用）。搬家前后「哪个模式打哪个接口、带什么载荷」是这次重构
-// 里最容易悄悄错位的一段——它是一条长 if/else 链，每个分支各自收集上游素材，
-// 编译通过、类型正确，但接错端点后端只会给一个 400，本地测试全绿。
+// Why this separate file: the form logic of VideoNode moved wholesale into `useVideoGenerationForm`
+// (shared with the storyboard asset board). Before and after the move, "which mode hits which endpoint with what payload" is the segment in this refactor
+// that most easily slips quietly out of place — it is a long if/else chain, with each branch collecting upstream assets on its own;
+// it compiles and types check, but hitting the wrong endpoint gives the backend only a 400, and local tests stay all green.
 //
-// 断言一律落在 ops 层的载荷与节点数据上——中间怎么重构都行，这两头必须不变。
+// Assertions always land on the ops-layer payload and the node data — refactor the middle however you like, these two ends must not change.
 //
-// 模式覆盖说明：genMode 不是纯粹的受控字段，hook 里有一整套「随上游与模型自动
-// 纠正」的 effect。所以这里的用例分两类：
-//   - 显式模式（firstFrame / firstLastFrame / allReference）：写进节点数据，
-//     并配上不会触发纠正 effect 的模型 + 上游组合；
-//   - HappyHorse 三态（imageToVideo / imageReference / videoEdit）：**不写**
-//     genMode，交给状态机按上游类型推——那正是线上真实路径。
+// Mode coverage note: genMode is not a purely controlled field; the hook has a whole set of effects that "auto-correct
+// with upstream and model". So the cases here are of two kinds:
+//   - Explicit modes (firstFrame / firstLastFrame / allReference): written into the node data,
+//     paired with a model + upstream combination that does not trigger the correcting effects;
+//   - HappyHorse three states (imageToVideo / imageReference / videoEdit): genMode is **not written**,
+//     left to the state machine to derive by upstream type — that is exactly the real online path.
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -64,11 +64,11 @@ vi.mock("@/lib/url-params", async (importOriginal) => ({
   readUrl: () => ({ project: requestScope.project, canvas: "canvas-9" }),
 }));
 
-// 提交序号：每次调用任一端点都 +1，任务 key 因此可辨认（task-1 / task-2 …），
-// 「多结果各自等各自的任务」「句柄只留第 1 条」才有东西可断言。
+// Submission counter: +1 on each call to any endpoint, so task keys are recognizable (task-1 / task-2 …),
+// giving "multiple results each wait for their own task" and "the handle keeps only the first" something to assert on.
 const submits = vi.hoisted(() => ({ seq: 0 }));
-// awaitTaskCompletion 执行时节点上的数据快照 —— 任务在途期间的状态只有在这里
-// 才看得到（整批结束后 hook 会清掉任务句柄字段）。
+// The snapshot of the node's data when awaitTaskCompletion runs — the state during task flight can only be seen
+// here (after the whole batch ends the hook clears the task handle fields).
 const inflight = vi.hoisted(() => ({ snapshots: [] as Record<string, unknown>[] }));
 
 vi.mock("@/api/ops", async (importOriginal) => {
@@ -136,7 +136,7 @@ vi.mock("@/api/tasks", async (importOriginal) => ({
         unknown
       >),
     });
-    // 每个任务回一条与自己 task_key 对应的视频，方便断言画册收齐了几条。
+    // Each task returns a video matching its own task_key, making it easy to assert how many the album collected.
     return { result: { video_url: `/static/${taskKey}.mp4` } };
   }),
 }));
@@ -155,7 +155,7 @@ function videoNode(data: Record<string, unknown> = {}): CanvasNode {
     id: "vid-1",
     type: CANVAS_NODE_TYPES.video,
     position: { x: 0, y: 0 },
-    data: { prompt: "一只猫跳上桌子", model: MODEL_SD2, ...data },
+    data: { prompt: "A cat jumps onto the table", model: MODEL_SD2, ...data },
   } as CanvasNode;
 }
 
@@ -190,7 +190,7 @@ function nodeData(): Record<string, unknown> {
     {}) as Record<string, unknown>;
 }
 
-/** 某个端点第 1 次调用时收到的载荷（五个端点各有自己的 payload 类型）。 */
+/** The payload received on the first call of an endpoint (the five endpoints each have their own payload type). */
 function payloadOf<P>(
   fn: (project: string, payload: P) => unknown,
 ): Record<string, unknown> | null {
@@ -207,7 +207,7 @@ const ALL_ENDPOINTS = [
   submitFreezoneVideoOmniGen,
 ] as const;
 
-/** 除了 `expected` 之外的四个端点都不许被碰过——分派错了必须当场暴露。 */
+/** Except for `expected`, none of the other four endpoints may have been touched — a wrong dispatch must be exposed on the spot. */
 function expectOnlyEndpointCalled(expected: (typeof ALL_ENDPOINTS)[number]) {
   for (const endpoint of ALL_ENDPOINTS) {
     if (endpoint === expected) {
@@ -218,7 +218,7 @@ function expectOnlyEndpointCalled(expected: (typeof ALL_ENDPOINTS)[number]) {
   }
 }
 
-/** 挂 hook、等就绪、提交、等落地。 */
+/** Mount the hook, wait until ready, submit, wait until landed. */
 async function submitAndSettle(options?: { onGenerationSettled?: () => void }) {
   const { result } = renderHook(() => useVideoGenerationForm("vid-1", options));
   await waitFor(() => {
@@ -239,8 +239,8 @@ beforeEach(() => {
   vi.mocked(showErrorDialog).mockClear();
 });
 
-describe("视频节点：genMode → 提交端点的分派", () => {
-  it("文生视频 → /video/gen", async () => {
+describe("video node: genMode → submit endpoint dispatch", () => {
+  it("text-to-video → /video/gen", async () => {
     useCanvasStore.getState().setCanvasData([videoNode({ genMode: "textToVideo" })], []);
 
     await submitAndSettle();
@@ -248,15 +248,15 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     expectOnlyEndpointCalled(submitFreezoneVideoGen);
     expect(payloadOf(submitFreezoneVideoGen)).toMatchObject({
       genMode: "textToVideo",
-      prompt: "一只猫跳上桌子",
-      // 提交给后端的是媒体目录 id，不是前端的展示 id。
+      prompt: "A cat jumps onto the table",
+      // What is submitted to the backend is the media catalog id, not the frontend display id.
       model: "catalog-sd2",
       canvasId: "canvas-9",
       nodeId: "vid-1",
     });
   });
 
-  it("视频延长 → /video/video-extend，保留单一源视频和提示词", async () => {
+  it("video extend → /video/video-extend, keeping the single source video and the prompt", async () => {
     useCanvasStore.getState().setCanvasData(
       [videoNode({ model: "video-extend-model", genMode: "videoExtend" }),
         upstreamVideoNode("source-1", "/static/source.mp4")],
@@ -268,13 +268,13 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     expectOnlyEndpointCalled(submitFreezoneVideoExtend);
     expect(payloadOf(submitFreezoneVideoExtend)).toMatchObject({
       genMode: "videoExtend", videoUrl: "/static/source.mp4",
-      prompt: "一只猫跳上桌子", model: "catalog-extend",
+      prompt: "A cat jumps onto the table", model: "catalog-extend",
       canvasId: "canvas-9", nodeId: "vid-1",
     });
   });
 
-  it("首帧生成视频 → /video/keyframes，只带首帧", async () => {
-    // Seedance 1.x：单图首帧是它唯一能走的路径，模式不会被任何纠正 effect 改掉。
+  it("first-frame-to-video → /video/keyframes, with the first frame only", async () => {
+    // Seedance 1.x: a single-image first frame is the only path it can take, and no correcting effect changes the mode.
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -291,13 +291,13 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     expect(payloadOf(submitFreezoneVideoKeyframes)).toMatchObject({
       genMode: "firstFrame",
       firstFrameUrl: "/static/first.png",
-      // 首帧模式下尾帧必须留空，否则后端会当首尾帧插值任务跑。
+      // In first-frame mode the last frame must stay empty, otherwise the backend would run it as a first-last-frame interpolation task.
       lastFrameUrl: null,
       model: "catalog-sd1",
     });
   });
 
-  it("首尾帧 → /video/keyframes，按连线上的槽位分首尾", async () => {
+  it("first-last-frame → /video/keyframes, splitting first and last by the slots on the edges", async () => {
     useCanvasStore.getState().setCanvasData(
       [
         videoNode({ genMode: "firstLastFrame" }),
@@ -305,8 +305,8 @@ describe("视频节点：genMode → 提交端点的分派", () => {
         uploadImageNode("img-2", "/static/head.png"),
       ],
       [
-        // 故意让「尾帧」那条边排在前面：分槽位靠的是边上的 keyframeSlot，
-        // 不是连线顺序。
+        // Deliberately put the "last frame" edge first: slots are split by the keyframeSlot on the edges,
+        // not by connection order.
         edge("e1", "img-1", { keyframeSlot: "last" }),
         edge("e2", "img-2", { keyframeSlot: "first" }),
       ],
@@ -322,7 +322,7 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     });
   });
 
-  it("图生视频（HappyHorse + 单图上游）→ /video/i2v，1 张图", async () => {
+  it("image-to-video (HappyHorse + single-image upstream) → /video/i2v, 1 image", async () => {
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -340,7 +340,7 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     });
   });
 
-  it("图片参考（HappyHorse + 多图上游）→ /video/i2v，按连线顺序带多张", async () => {
+  it("image reference (HappyHorse + multi-image upstream) → /video/i2v, carrying several in connection order", async () => {
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -356,13 +356,13 @@ describe("视频节点：genMode → 提交端点的分派", () => {
 
     expectOnlyEndpointCalled(submitFreezoneVideoI2v);
     expect(payloadOf(submitFreezoneVideoI2v)).toMatchObject({
-      // 同一个端点，靠图片张数与 genMode 在后端分流成「图片参考视频」。
+      // The same endpoint, split on the backend into "image-reference video" by image count and genMode.
       genMode: "imageReference",
       imageUrls: ["/static/a.png", "/static/b.png"],
     });
   });
 
-  it("视频编辑（HappyHorse + 视频上游）→ /video/edit，带源视频", async () => {
+  it("video edit (HappyHorse + video upstream) → /video/edit, carrying the source video", async () => {
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -385,7 +385,7 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     });
   });
 
-  it("全能参考（Seedance 2.0 + 图 + 视频）→ /video/omni-gen，按类型归类引用", async () => {
+  it("all reference (Seedance 2.0 + image + video) → /video/omni-gen, classifying references by type", async () => {
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -410,8 +410,8 @@ describe("视频节点：genMode → 提交端点的分派", () => {
     });
   });
 
-  it("全能参考撞上非 2.0 模型时拦在前端，不发任何请求", async () => {
-    // Seedance 1.x 走不了 omni-gen；放过去只会换来一个后端 400。
+  it("all reference hitting a non-2.0 model is blocked on the frontend, sending no request", async () => {
+    // Seedance 1.x cannot go through omni-gen; letting it through would only yield a backend 400.
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -433,8 +433,8 @@ describe("视频节点：genMode → 提交端点的分派", () => {
   });
 });
 
-describe("视频节点：多结果画册", () => {
-  it("生成数量 3 → 并发提交 3 次，三条全落进同一个节点的画册", async () => {
+describe("video node: multi-result album", () => {
+  it("generation count 3 → 3 concurrent submissions, all three land in the same node's album", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([videoNode({ genMode: "textToVideo", count: 3 })], []);
@@ -442,7 +442,7 @@ describe("视频节点：多结果画册", () => {
     await submitAndSettle();
 
     expect(vi.mocked(submitFreezoneVideoGen)).toHaveBeenCalledTimes(3);
-    // 不再复制兄弟节点：画布上还是只有这一个视频节点。
+    // Sibling nodes are no longer cloned: there is still only this one video node on the canvas.
     expect(
       useCanvasStore.getState().nodes.filter((n) => n.type === CANVAS_NODE_TYPES.video),
     ).toHaveLength(1);
@@ -454,11 +454,11 @@ describe("视频节点：多结果画册", () => {
       "/static/task-2.mp4",
       "/static/task-3.mp4",
     ]);
-    // 第 1 条完成的同时成为主视频。
+    // The first to finish becomes the main video at the same time.
     expect(batch).toContain(nodeData().videoUrl);
   });
 
-  it("单条时不写画册（叠卡 UI 只在多结果下出现）", async () => {
+  it("a single result writes no album (the stacked-card UI appears only with multiple results)", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([videoNode({ genMode: "textToVideo", count: 1 })], []);
@@ -471,8 +471,8 @@ describe("视频节点：多结果画册", () => {
   });
 });
 
-describe("视频节点：恢复与历史", () => {
-  it("任务在途期间节点上带着句柄（刷新页面才能续上轮询），落地后清空", async () => {
+describe("video node: resume and history", () => {
+  it("while the task is in flight the node carries the handle (so polling can resume after a page refresh), cleared after landing", async () => {
     useCanvasStore.getState().setCanvasData([videoNode({ genMode: "textToVideo" })], []);
 
     await submitAndSettle();
@@ -483,11 +483,11 @@ describe("视频节点：恢复与历史", () => {
       generationTaskType: "freezone_video_gen",
       generationTaskJobId: "job-1",
     });
-    // 整批结束后句柄必须清掉，否则下次打开画布会去轮询一个早已完成的任务。
+    // After the whole batch ends the handle must be cleared, otherwise next time the canvas opens it would poll a task long since finished.
     expect(nodeData().generationTaskKey).toBeNull();
   });
 
-  it("多条并发时只持久化第 1 条的句柄（节点上只有一份，不能被后来的覆盖）", async () => {
+  it("with concurrent runs only the first's handle is persisted (the node holds one; later ones must not overwrite it)", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([videoNode({ genMode: "textToVideo", count: 3 })], []);
@@ -497,11 +497,11 @@ describe("视频节点：恢复与历史", () => {
     expect(inflight.snapshots).toHaveLength(3);
     const seen = inflight.snapshots.map((snapshot) => snapshot.generationTaskKey);
     expect(seen).toContain("task-1");
-    // task-2 / task-3 一旦出现，说明后续任务把第 1 条的句柄覆盖掉了。
+    // Once task-2 / task-3 appear, it means later tasks overwrote the first's handle.
     expect(seen.every((key) => key == null || key === "task-1")).toBe(true);
   });
 
-  it("整批落地后回调宿主刷新历史", async () => {
+  it("after the whole batch lands, the host is called back to refresh history", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([videoNode({ genMode: "textToVideo", count: 2 })], []);

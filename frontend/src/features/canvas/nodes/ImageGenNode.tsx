@@ -122,12 +122,12 @@ const MIN_HEIGHT = 260;
 const MAX_WIDTH = 1100;
 const MAX_HEIGHT = 1000;
 
-// 面板高度。参考素材独占一行（缩略图 48px + 间距）之后，232px 只给提示词剩下两行
-// 多一点，写长一点就要在窄缝里滚——加高到给提示词留出四五行的程度。
+// Panel height. Once the reference assets take their own row (48px thumbnail + gap), 232px leaves the prompt just two lines
+// and a bit more; writing longer means scrolling in a narrow slot — raised to leave the prompt four or five lines.
 const OPERATIONS_PANEL_HEIGHT = 288;
 const OPERATIONS_PANEL_GAP = 12;
 const OPERATIONS_PANEL_MIN_WIDTH = 720;
-// 「放大」后的操作区尺寸：给提示词编辑区更舒适的高度与宽度。
+// Operations area size after "enlarge": a more comfortable height and width for the prompt editing area.
 const OPERATIONS_PANEL_EXPANDED_HEIGHT = 560;
 const OPERATIONS_PANEL_EXPANDED_MIN_WIDTH = 960;
 
@@ -138,9 +138,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const updateNodeInternals = useUpdateNodeInternals();
   const setSelectedNode = useCanvasStore((state) => state.setSelectedNode);
   const isBoxSelecting = useIsBoxSelecting();
-  // 顶部工具栏打开了二级功能浮层（全景 / 多角度 / 打光 等）时，浮层会在节点下方
-  // 展开自己的操作区。此时隐藏本节点底部的生成/历史面板，让位给浮层，避免两块
-  // 操作区重叠。
+  // When the top toolbar opens a secondary feature popover (panorama / multi-angle / lighting etc.), the popover expands its own
+  // operations area below the node. Hide this node's bottom generate/history panel to give way to it, so the two
+  // operations areas do not overlap.
   const hasActiveOverlay = useCanvasStore((state) => state.activeOverlayNodeId === id);
   const setActiveOverlayNodeId = useCanvasStore((state) => state.setActiveOverlayNodeId);
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
@@ -157,9 +157,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     refresh: refreshHistory,
   } = useNodeGenerationHistory(id, { enabled: Boolean(selected) });
 
-  // 提示词草稿（含输入法合成态）、上游文本/图片、@图片N 编号、模型/参数/算力、
-  // 翻译与提交编排全在这个 hook 里 —— 它不读 React Flow 上下文，只按 nodeId 从
-  // canvasStore 取数，所以故事板详情也能挂同一张表单。
+  // Prompt draft (including IME composition state), upstream text/images, @image1 numbering, model/params/compute cost,
+  // translation and submission orchestration all live in this hook — it does not read the React Flow context and fetches data from
+  // canvasStore by nodeId only, so the storyboard detail can mount the same form.
   const {
     formProps: imageGenerationFormProps,
     isGenerating,
@@ -174,9 +174,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     invalidateInFlightGeneration,
   } = useImageGenerationForm(id, { onGenerationSettled: refreshHistory });
 
-  // 功能节点（工具条「九宫格」下拉点某一项后建出来的那种）：输入框里多一枚可切可删
-  // 的功能 chip、功能说明当占位文案、↑ 走对应模板。与故事板详情共用同一个 hook，
-  // 两个视图的交互因此完全一致；普通图片生成节点拿到 null，渲染与从前一致。
+  // Feature node (the kind created after picking an item in the toolbar "nine-grid" dropdown): the input gets a switchable, deletable
+  // feature chip, the feature description serves as the placeholder, and ↑ goes through the matching template. It shares the same hook with the storyboard detail,
+  // so interaction in both views is identical; a plain image generation node gets null and renders as before.
   const opFormProps = useImageOpFormProps(id, { isGenerating });
 
   const generationError =
@@ -207,40 +207,40 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     }
   }, [generationError, generationErrorDetails, generationErrorRequestId]);
 
-  // 生成进行中时，点击历史记录走「非破坏性预览」：不覆写 imageUrl、不打断在途
-  // 任务，仅把这张历史图临时显示在主体上（见 isGenerating 渲染分支）。新图生成
-  // 完成后由下方 effect 自动清空，回到最新结果。非生成态恢复历史时也清掉它。
+  // While generating, clicking a history record goes through a "non-destructive preview": it does not overwrite imageUrl or interrupt the in-flight
+  // task, and only temporarily shows this history image on the body (see the isGenerating render branch). After the new image finishes,
+  // the effect below clears it automatically, returning to the latest result. It is also cleared when history is restored in the non-generating state.
   const [historyPreviewUrl, setHistoryPreviewUrl] = useState<string | null>(null);
 
   const handleRestoreHistory = useCallback(
     (record: Parameters<typeof historyRecordOutputUrl>[0]) => {
       const url = historyRecordOutputUrl(record);
       if (!url) return;
-      // 生成进行中：仅做非破坏性预览，绝不动 imageUrl，也不打断在途任务。
+      // While generating: only a non-destructive preview, never touching imageUrl and never interrupting the in-flight task.
       if (isGenerating) {
         setHistoryPreviewUrl(url);
         return;
       }
       setHistoryPreviewUrl(null);
-      // 用户挑的这张历史图作数，上一批还在结算的请求全部作废——否则它们回来会把
-      // 刚恢复的图盖掉。
+      // The history image the user picked counts, and all requests of the previous batch still settling are voided — otherwise when they return they would
+      // cover the image just restored.
       invalidateInFlightGeneration();
       updateNodeData(id, {
         imageUrl: url,
         previewImageUrl: url,
         isGenerating: false,
         generationStartedAt: null,
-        // 恢复的是单张历史结果，旧批次画册已与主图脱钩（没有任何一张会命中
-        // 「主图」标记，点画册格还会静默丢掉刚恢复的图）——一并清掉。
+        // What is restored is a single history result; the old batch album is already detached from the main image (no cell would hit the
+        // "main image" marker, and clicking an album cell would silently drop the image just restored) — clear it as well.
         generationBatch: null,
-        // 节点上已经换成历史里那张成功的图了，上一次失败的横幅不能再盖着。
+        // The node has switched to that successful image from history, so the previous failure banner must not keep covering it.
         ...GENERATION_ERROR_CLEARED_PATCH,
       });
     },
     [id, invalidateInFlightGeneration, isGenerating, updateNodeData],
   );
 
-  // 生成结束（成功/失败）后清掉临时历史预览，让主体回到最新结果。
+  // After generation ends (success/failure), clear the temporary history preview so the body returns to the latest result.
   useEffect(() => {
     if (!isGenerating) setHistoryPreviewUrl(null);
   }, [isGenerating]);
@@ -251,8 +251,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const sourceRole = typeof freezoneSource?.role === "string"
     ? freezoneSource.role
     : "";
-  // collectCandidateBindingsForNode 只关心连到 this node 的边。用 useShallow 只订阅
-  // 本节点相连的边(逐元素比较),拖动无关节点时边引用稳定,本节点不再重渲染。
+  // collectCandidateBindingsForNode only cares about edges connected to this node. useShallow subscribes only to
+  // edges connected to this node (element-wise comparison); when dragging unrelated nodes the edge references stay stable and this node no longer re-renders.
   const connectedEdges = useCanvasStore(
     useShallow((state) => state.edges.filter((edge) => edge.source === id || edge.target === id)),
   );
@@ -260,7 +260,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     () => collectCandidateBindingsForNode(connectedEdges, id).map((binding) => binding.role),
     [connectedEdges, id],
   );
-  // 节点被连线（存在入边）后：隐藏「试试」CTA，只在节点中间显示一个图标（对齐 libtv）。
+  // Once the node is connected (has incoming edges): hide the "Try" CTA and show only an icon in the middle of the node (aligned with libtv).
   const isConnected = useMemo(
     () => connectedEdges.some((edge) => edge.target === id),
     [connectedEdges, id],
@@ -272,8 +272,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   // selection, stacked to the left of this node, then wired as upstream refs so
   // they feed the multi-reference generation. Image-only here (the modal is
   // opened with allowedMedia=['image']), but we still guard on media.
-  // 编排本体抽到 shared/assetLibraryReferenceSpawn（纯 store 操作），故事板详情里
-  // 的同一份生成表单复用它，两处「资产库」chip 行为一致。
+  // The orchestration itself is extracted into shared/assetLibraryReferenceSpawn (pure store operations), reused by the same generation form inside the storyboard detail,
+  // so the "Asset library" chip behaves the same in both places.
   const handleAssetLibraryConfirm = useCallback(
     (selections: ReadonlyArray<AssetLibrarySelection>) => {
       spawnAssetLibraryReferences(id, selections);
@@ -287,7 +287,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   );
   const resolvedWidth = Math.max(MIN_WIDTH, Math.round(width ?? DEFAULT_WIDTH));
   const resolvedHeight = Math.max(MIN_HEIGHT, Math.round(height ?? DEFAULT_HEIGHT));
-  // 收起态浮动面板固定基础尺寸；放大用居中弹窗（见下方 OperationPanelShell）。
+  // The collapsed floating panel has a fixed base size; enlarge uses a centered dialog (see OperationPanelShell below).
   const [panelExpanded, setPanelExpanded] = useState(false);
   const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const panelHeight = OPERATIONS_PANEL_HEIGHT;
@@ -314,17 +314,17 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
       ? { width: w, height: h }
       : null;
   });
-  // ── 叠卡画册（count > 1 的一组生成结果）──
-  // 收拢时主图后探出 N-1 张卡片边缘；hover 出现右上角数量徽标，点开展开成
-  // 宫格画册（同一节点内，天然不可解组）。展开态可对任意一张「设为主图」
-  // （回填 imageUrl 并收拢）或单独下载。
+  // ── Stacked-card album (a group of generated results with count > 1) ──
+  // When collapsed, N-1 card edges peek out behind the main image; on hover a count badge appears at the top right, and clicking it expands into a
+  // grid album (inside the same node, so it naturally cannot be ungrouped). In the expanded state any image can be "set as main image"
+  // (backfilling imageUrl and collapsing) or downloaded individually.
   const albumRootRef = useRef<HTMLDivElement | null>(null);
-  // 画册容器 pointerdown 起点，用于区分点击与拖动（拖动节点后松手会补发 click）。
+  // pointerdown start point of the album container, used to tell a click from a drag (releasing after dragging the node re-fires a click).
   const albumPointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const [albumExpanded, setAlbumExpanded] = useState(false);
-  // 本次会话内"应到张数"：N 个接口并发、完成有先后，先完成的立即入册，
-  // 未完成的在画册里占位（骨架 + spinner）。存模块级登记表而非组件 state——
-  // onlyRenderVisibleElements 下平移出视口会卸载组件，state 会丢；见模块注释。
+  // The "expected count" within this session: N endpoints run concurrently and finish in some order; the ones finished first go into the album immediately,
+  // and the unfinished hold a place in the album (skeleton + spinner). Stored in a module-level registry rather than component state —
+  // under onlyRenderVisibleElements panning out of the viewport unmounts the component and state is lost; see the module comment.
   const albumPendingTotal = useAlbumPendingTotal(id);
   const albumUrls = useMemo(() => {
     const raw = data.generationBatch;
@@ -335,15 +335,15 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const albumPendingCount = Math.max(0, albumPendingTotal - albumUrls.length);
   const hasAlbum = albumTotalSlots > 1;
 
-  // 画册展开期间注册为本节点的 activeOverlay：拖动画册会让 React Flow 重新
-  // 选中节点（selectNodesOnDrag），单靠展开瞬间的取消选中压不住——action
-  // 工具条 / OpsPanel / 历史条 / 替换素材把手都认 activeOverlayNodeId 让位，
-  // 注册后无论选中与否都不会再叠出来。
+  // While the album is expanded, register as this node's activeOverlay: dragging the album makes React Flow re-select
+  // the node (selectNodesOnDrag), and deselecting at the moment of expansion alone cannot hold — the action
+  // toolbar / OpsPanel / history strip / replace-asset handle all defer to activeOverlayNodeId,
+  // so once registered they never stack on top regardless of selection.
   useEffect(() => {
     if (!albumExpanded) return;
     setActiveOverlayNodeId(id);
     return () => {
-      // 只清自己注册的，避免误清其它浮层（多角度/打光等）的注册。
+      // Clear only what it registered itself, to avoid wrongly clearing registrations of other popovers (multi-angle / lighting etc.).
       if (useCanvasStore.getState().activeOverlayNodeId === id) {
         setActiveOverlayNodeId(null);
       }
@@ -379,13 +379,13 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     [id, updateNodeData],
   );
 
-  // 展开画册时取消节点激活态：上方 action 工具条、下方 OpsPanel、历史记录条
-  // 都跟着 selected 走，叠在宫格上很乱——画册期间只看图。
-  // 注意必须经 onNodesChange 派发 select=false 清掉 React Flow 自身的选中
-  // 标志——只清 store 的 selectedNodeId 会被 Canvas 的选中同步 effect
-  // （RF selectedNodeIds → setSelectedNode）立刻写回来。
-  // 副作用放在 setState updater 外面：updater 必须纯（StrictMode 会双调用，
-  // 副作用入内会把 onNodesChange 派发两遍）。
+  // Deactivate the node when the album expands: the action toolbar above, the OpsPanel below and the history strip
+  // all follow selected, and stacking on the grid is messy — during the album you only look at images.
+  // Note select=false must be dispatched through onNodesChange to clear React Flow's own selection
+  // flag — clearing only the store's selectedNodeId would be written straight back by the Canvas selection sync effect
+  // (RF selectedNodeIds → setSelectedNode).
+  // The side effect goes outside the setState updater: the updater must be pure (StrictMode calls it twice,
+  // and a side effect inside would dispatch onNodesChange twice).
   const handleToggleAlbumExpanded = useCallback(() => {
     if (!albumExpanded) {
       const store = useCanvasStore.getState();
@@ -396,15 +396,15 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
         store.onNodesChange(selectionChanges);
       }
       setSelectedNode(null);
-      // 每次展开重置「应用到画布」的落点游标。
+      // Reset the "apply to canvas" drop cursor on every expansion.
       albumAppliedCountRef.current = 0;
     }
     setAlbumExpanded(!albumExpanded);
   }, [albumExpanded, setSelectedNode]);
 
-  // 「应用到画布」：把这张图作为独立图片节点放到展开宫格右侧（同构 imageGen
-  // 节点，可直接被下游引用/二次生成）。画册保持展开，方便连续应用多张——
-  // 连续应用的落点逐次向下错开，避免精确叠在同一坐标上只看得见最后一个。
+  // "Apply to canvas": place this image as an independent image node to the right of the expanded grid (an isomorphic imageGen
+  // node that downstream can reference directly / generate from again). The album stays expanded, convenient for applying several in a row —
+  // successive drop points are staggered downward so they do not stack exactly on the same coordinates with only the last visible.
   const albumAppliedCountRef = useRef(0);
   const handleApplyAlbumImageToCanvas = useCallback(
     (url: string) => {
@@ -452,10 +452,10 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
       setIsUploading(true);
       try {
         const result = await uploadFreezoneImage(projectId, file, file.name);
-        // 参考图在显示优先级里排最后（previewImageUrl → imageUrl → referenceImageUrl），
-        // 只有节点还没有生成结果时它才会顶到主体上——这时旧的失败横幅盖的是新图，得清掉。
-        // 已经有生成图时主体不变，失败信息仍然对得上那张图，保留；等用户真正重新提交，
-        // handleSubmit 自己会清。
+        // The reference image ranks last in display priority (previewImageUrl → imageUrl → referenceImageUrl),
+        // so it takes over the body only while the node has no generated result yet — then the old failure banner is covering a new image and must be cleared.
+        // When a generated image already exists the body is unchanged and the failure info still matches that image, so it is kept; once the user really resubmits,
+        // handleSubmit clears it itself.
         updateNodeData(id, {
           referenceImageUrl: result.url,
           ...(hasGeneratedResult ? {} : GENERATION_ERROR_CLEARED_PATCH),
@@ -476,9 +476,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const handleSpawnUpstreamImage = useCallback(() => {
     const self = useCanvasStore.getState().nodes.find((n) => n.id === id);
     if (!self) return;
-    // 上游图片节点本身也是 imageGen —— 用户可以直接在它里面写 prompt /
-    // 选模型 / 生成图，下游再拿它的结果当参考图。与 upload 相比好处是
-    // 自带 OpsPanel，整链路同构。
+    // The upstream image node is itself an imageGen — the user can write the prompt directly in it /
+    // pick a model / generate an image, and downstream then uses its result as a reference image. Compared with upload, the benefit is that it
+    // brings its own OpsPanel and the whole chain is isomorphic.
     const UPSTREAM_WIDTH = DEFAULT_WIDTH;
     const position = {
       x: self.position.x - UPSTREAM_WIDTH - 28,
@@ -493,8 +493,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     updateNodeInternals(id);
   }, [id, resolvedHeight, resolvedWidth, updateNodeInternals]);
 
-  // 组织成员没有发起模型任务的资格时不放行提交（节点动作、失败重试与面板按钮
-  // 都从这里拿 submitDisabled）。其余提交可用性判断已下沉到 useImageGenerationForm。
+  // Do not let submission through when an organization member is not eligible to start model tasks (node actions, failure retry and the panel button
+  // all take submitDisabled from here). The other submission-availability checks have moved down into useImageGenerationForm.
   const modelTaskAccess = useModelTaskAccess();
   const submitDisabled = formSubmitDisabled || modelTaskAccess.blocked;
 
@@ -510,13 +510,13 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     });
   }, [handleSubmit, id]);
 
-  // ===== Step B: 场景资产节点的 "用作背景源" 操作 =====
-  // scene_master / scene_reverse_master 节点上的按钮 → 打开 BackgroundCropperDialog
-  // → 用户选择截图比例和区域 → 生成当前背景候选节点 → 自动 commit 主线。
-  // 用户明确要求 \"不全用 master/reverse,要截图\" — 所以走 cropper 路径,不是
-  // 直接 PATCH anchor (旧实现已替换)。
-  // Step C: director_combined 节点上的「打开导演世界」按钮使用
-  // supertale-fe 内置同源 viewer,不跳旧外部导演台。
+  // ===== Step B: the "Use as background source" action on scene asset nodes =====
+  // button on scene_master / scene_reverse_master nodes → open BackgroundCropperDialog
+  // → the user picks the screenshot ratio and region → generate the current-background candidate node → auto-commit to the mainline.
+  // The user explicitly required "do not use all of master/reverse, take a crop" — so it goes through the cropper path, not
+  // a direct PATCH of the anchor (the old implementation has been replaced).
+  // Step C: the "Open Director World" button on director_combined nodes uses
+  // the same-origin viewer built into supertale-fe, and does not jump to the old external director console.
   const sourceMeta = (freezoneSource?.meta ?? {}) as Record<string, unknown>;
   const sourceEpisode = typeof sourceMeta.episode === "number"
     ? sourceMeta.episode
@@ -524,8 +524,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const sourceBeat = typeof sourceMeta.beat === "number"
     ? sourceMeta.beat
     : null;
-  // 平面 source: master / reverse 走 BackgroundCropperDialog (用户选择截图比例和区域)。
-  // 360 / 3GS 不走这条 — 它们统一进入 Director World，capture 入口在那里。
+  // Flat source: master / reverse go through BackgroundCropperDialog (the user picks the screenshot ratio and region).
+  // 360 / 3GS do not take this path — they all enter Director World, where the capture entry lives.
   const cropperSourceRoles = new Set(['scene_master', 'scene_reverse_master']);
   const canUseAsBackground = cropperSourceRoles.has(sourceRole);
   const canOpenDirectorStage = sourceRole === "director_combined"
@@ -535,9 +535,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const [directorStageBusy, setDirectorStageBusy] = useState(false);
   const [directorStageOpen, setDirectorStageOpen] = useState(false);
   const [directorStageManifest, setDirectorStageManifest] = useState<DirectorStageManifest | null>(null);
-  // 从 canvas metadata 拿到当前镜头的 episode/beat 定位信息 (selectedBackground 在
-  // beat preset 里 emit 时跟 beat-scope 节点同步,但本节点 (scene_master 等) 来自
-  // _add_scene_refs 没带 episode/beat meta — 从 canvas metadata.preset 兜底)。
+  // Get the current shot's episode/beat locating info from canvas metadata (selectedBackground syncs with beat-scope nodes
+  // when emitted in the beat preset, but this node (scene_master etc.) comes from
+  // _add_scene_refs without episode/beat meta — fall back to canvas metadata.preset).
   const canvasMetaForBeat = getFreezoneCanvasMetadata();
   const canvasPresetMeta = (canvasMetaForBeat?.preset as
     | { episode?: number; beat?: number }
@@ -601,11 +601,11 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     [data.director_control_bundle, effectiveEpisode, effectiveBeat, id, updateNodeData],
   );
 
-  // 视觉态从 4 个 derived flag 派生(see mainlineNodeFlags):
-  //   preset_locked      — preset_managed === true:amber 实线 + lock badge
-  //   candidate_pushable — user_spawned + slot_target:amber 虚线 + push badge
-  //   context_only       — 有 mainline_context 但无 slot_target:cyan 细线 + context chip
-  //   ordinary           — 都没有:默认白色 border
+  // The visual state is derived from 4 derived flags (see mainlineNodeFlags):
+  //   preset_locked      — preset_managed === true: amber solid line + lock badge
+  //   candidate_pushable — user_spawned + slot_target: amber dashed line + push badge
+  //   context_only       — has mainline_context but no slot_target: cyan thin line + context chip
+  //   ordinary           — none of them: default white border
   //
   const mainlineFlags = useMemo(
     () => nodeMainlineFlags({ data, id, type: 'imageGenNode', position: { x: 0, y: 0 } } as never),
@@ -626,8 +626,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
         return canvasNodeFrameClass({ selected });
     }
   })();
-  // 画册展开时一并隐藏 OpsPanel——展开瞬间已 setSelectedNode(null)，这里再兜
-  // 一道，防止展开后用户点节点重新选中时面板叠到宫格上。
+  // Hide the OpsPanel too when the album expands — setSelectedNode(null) already ran at the moment of expansion, and this adds
+  // another guard so the panel does not stack on the grid when the user clicks the node to re-select it after expansion.
   const showImageOpsPanel =
     selected && !isBoxSelecting && !hasActiveOverlay && !mainlineCanvasReadonly && !albumExpanded;
 
@@ -645,14 +645,14 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
           {t('referenceValidation.title')}
         </button>
       )}
-      {/* 叠卡画册的卡片边缘：从主图右下方探出，张数与画册一致（最多露 3 张）。
-          先渲染、被后面的主卡覆盖，只露出错位的边。 */}
+      {/* Card edges of the stacked-card album: peeking out from the lower right of the main image, with the count matching the album (at most 3 shown).
+          Rendered first and covered by the main card in front, leaving only the offset edges visible. */}
       {hasAlbum && !albumExpanded && previewUrl && (
         <>
           {Array.from({ length: Math.min(albumTotalSlots - 1, 3) }, (_, index) => {
             const step = index + 1;
             return (
-              // 点探出的卡片边也能展开画册（和点数量徽标等效）。
+              // Clicking a peeking card edge also expands the album (equivalent to clicking the count badge).
               <div
                 key={`album-deck-${index}`}
                 role="button"
@@ -664,8 +664,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
                 }}
                 className="absolute cursor-pointer rounded-[var(--node-radius)] border border-white/[0.18] bg-gradient-to-b from-[#48484d] to-[#2d2d31] shadow-[0_4px_14px_rgba(0,0,0,0.4)]"
                 style={{
-                  // 仿 TapNow：后面的卡依次上下内缩、向右探出、微旋转——
-                  // 露出的是一条条「卡片边」，而不是整块色板。
+                  // Modeled on TapNow: the cards behind inset up/down in turn, peek out to the right and rotate slightly —
+                  // what shows is a series of "card edges", not a whole color block.
                   top: step * 7,
                   bottom: step * 7,
                   left: step * 6,
@@ -692,8 +692,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
         className="!h-2 !w-2 !border-0 !bg-[rgb(148,163,184)]"
       />
 
-      {/* 画册展开时隐藏浮动标题和分辨率角标——画册容器自带「画册 · N 张」头部，
-          两者都浮在节点上沿同一位置，叠在一起显示错乱。 */}
+      {/* Hide the floating title and resolution badge when the album expands — the album container has its own "Album · N images" header,
+          and both float at the same spot on the node's upper edge, stacking into a garbled display. */}
       {!albumExpanded && (
         <>
           <NodeHeader
@@ -750,8 +750,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
 
       <div
         className={`relative flex h-full w-full items-center justify-center ${visiblePreviewUrl ? 'overflow-hidden' : 'overflow-visible'} rounded-[var(--node-radius)] border transition-colors ${visiblePreviewUrl ? CANVAS_NODE_PANEL_SURFACE_CLASS : CANVAS_NODE_INPUT_SURFACE_CLASS} ${cardToneClass} ${visiblePreviewUrl ? '' : CANVAS_NODE_INPUT_BODY_FRAME_CLASS} ${
-          // 画册展开时藏起节点本体的图片卡——半透明的画册容器盖不严，
-          // 底下的主图会透出来叠在宫格头部。
+          // Hide the node body's image card while the album is expanded — the translucent album container does not cover it completely,
+          // and the main image underneath would show through over the grid header.
           albumExpanded && hasAlbum ? 'invisible' : ''
         }`}
       >
@@ -816,7 +816,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
-            {/* 画册数量徽标：hover 节点时出现，hover 徽标时箭头下探，点击展开画册。 */}
+            {/* Album count badge: appears on node hover; the arrow dips down on badge hover; click to expand the album. */}
             {hasAlbum && (
               <button
                 type="button"
@@ -842,9 +842,9 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
             )}
           </>
         ) : isGenerating && historyPreviewUrl ? (
-          // 生成进行中，但用户点了历史记录预览：临时显示那张历史图，新图仍在
-          // 后台生成。顶部 pill 提示「生成中」，右上「返回」回到 loading 遮罩。
-          // 用原生 <img>（非 CanvasNodeImage）避免 onLoad 按预览图改节点尺寸。
+          // Generating, but the user clicked a history record preview: temporarily show that history image while the new image is still
+          // generating in the background. The top pill says "Generating", and "Back" at the top right returns to the loading mask.
+          // Use a native <img> (not CanvasNodeImage) to avoid onLoad changing the node size by the preview image.
           <div className="relative h-full w-full">
             <img
               src={resolveImageDisplayUrl(historyPreviewUrl)}
@@ -885,7 +885,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
                 <span className="text-[12px] leading-6">{t('node.imageGen.uploadingEllipsis')}</span>
               </div>
             ) : isConnected ? (
-              // 已连线：不再显示文字 CTA，只在节点中间放一个图标（对齐 libtv）。
+              // Connected: no longer show the text CTA, only put an icon in the middle of the node (aligned with libtv).
               <div className="flex w-full items-center justify-center">
                 <ImageIcon className="h-9 w-9 text-text-muted/46" aria-hidden />
               </div>
@@ -970,8 +970,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
               </div>
             )}
             <div className="mt-2 flex justify-center">
-              {/* 功能节点重试要走它自己的模板，别退回常规文生图（那样重试出来的
-                  东西跟失败的那次不是一回事）。 */}
+              {/* A feature node's retry must go through its own template, not fall back to regular text-to-image (otherwise the retried
+                  result would not be the same thing as the one that failed). */}
               <RegenerateButton
                 onClick={() => (opFormProps ? opFormProps.onSubmit() : void handleSubmit())}
                 busy={isGenerating}
@@ -982,13 +982,13 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
         )}
       </div>
 
-      {/* 展开的画册宫格：覆盖在节点位置向右下铺开，每格与节点等尺寸。
-          外层一圈「组」式轮廓（边框 + 弱底色 + 左上角标签），强调这组图是
-          一个组合。hover 单格出现「应用到画布」+ 下载；点击图片设为主图。 */}
+      {/* Expanded album grid: covers the node position and spreads to the lower right, each cell the same size as the node.
+          An outer "group"-style outline (border + faint background + top-left label) stresses that this set of images is
+          one combination. Hovering a single cell shows "Apply to canvas" + download; clicking the image sets it as the main image. */}
       {albumExpanded && hasAlbum && (
-        // 容器不带 nodrag、也不拦 pointerdown——按住画册任意处即可拖动整个节点
-        // （组合一起走）。按下时记录起点，cell 的 onClick 据此区分「点击选主图」
-        // 和「拖动后松手」（React Flow 拖完浏览器仍会补发 click）。
+        // The container has no nodrag and does not intercept pointerdown — pressing anywhere on the album drags the whole node
+        // (the group moves together). The start point is recorded on press, and the cell's onClick uses it to tell "click to pick the main image"
+        // from "release after dragging" (the browser still fires a click after React Flow finishes a drag).
         <div
           className="nowheel absolute -left-3 -top-3 z-[80] cursor-grab rounded-2xl border border-white/15 bg-white/[0.045] p-3 shadow-[0_16px_48px_rgba(0,0,0,0.4)] backdrop-blur-[2px] active:cursor-grabbing"
           style={{ width: resolvedWidth * 2 + 12 + 24 }}
@@ -1005,7 +1005,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
           {albumUrls.map((url, index) => {
             const isMain = url === data.imageUrl;
             return (
-              // 直接点击图片即设为主图并收拢画册（不再需要单独的「设为主图」按钮）。
+              // Clicking the image directly sets it as the main image and collapses the album (no separate "Set as main image" button needed).
               <div
                 key={`album-cell-${index}`}
                 role="button"
@@ -1013,7 +1013,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
                 title={t('node.imageGen.album.setAsMain')}
                 onClick={(event) => {
                   event.stopPropagation();
-                  // 拖动画册（移动节点）后松手补发的 click 不算选主图。
+                  // A click re-fired after dragging the album (moving the node) and releasing does not count as picking a main image.
                   const start = albumPointerDownPosRef.current;
                   if (
                     start
@@ -1067,7 +1067,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
               </div>
             );
           })}
-          {/* 还在生成中的槽位：占位骨架，完成一张替换一张。 */}
+          {/* Slot still generating: placeholder skeleton, replaced one by one as each finishes. */}
           {Array.from({ length: albumPendingCount }, (_, index) => (
             <div
               key={`album-pending-${index}`}
@@ -1085,11 +1085,11 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
       )}
 
       {/*
-        Step B + C: 场景资产 / 导演中间产物节点的内联 action 按钮
-        (scene_master / scene_reverse_master 加 "用作背景源" → 打开 cropper
-         dialog 选 16:9 区域 → 生成当前背景候选并自动 commit;
-         director_combined 加 "打开导演世界" → 同源 viewer dialog)。
-        button 浮在节点右下角,selected 时可见,避免占用节点 body 空间。
+        Step B + C: inline action buttons on scene-asset / director-intermediate nodes
+        (scene_master / scene_reverse_master get "Use as background source" → open the cropper
+         dialog to pick a 16:9 region → generate the current background candidate and auto-commit;
+         director_combined gets "Open Director World" → same-origin viewer dialog).
+        The button floats at the node's lower right, visible when selected, so it does not occupy the node body space.
       */}
       {selected && (canUseAsBackground || canOpenDirectorStage) && (
         <div className="nodrag absolute bottom-2 right-2 z-[6] flex gap-1">
@@ -1133,7 +1133,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
       )}
 
       {/*
-        自由 canvas 上 ImageGenNode 的全功能 ops panel (camera / model picker /
+        The full-featured ops panel of ImageGenNode on the free canvas (camera / model picker /
         free reference upload / generation count / style picker / submit ...).
         Preset-managed source nodes hide this panel; user-spawned nodes keep it.
       */}
@@ -1182,7 +1182,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
             isActive={(record) => {
               const url = historyRecordOutputUrl(record);
               if (!url) return false;
-              // 预览态下高亮正在预览的历史条，否则高亮当前主图。
+              // In preview state highlight the history entry being previewed, otherwise highlight the current main image.
               if (isGenerating && historyPreviewUrl) {
                 return url === historyPreviewUrl;
               }
@@ -1192,8 +1192,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
         </div>
       )}
 
-      {/* Step B: 平面 source (master/reverse) 的截取背景 dialog。
-          Pano360 / 3GS 不走这条 — 它们用各自 viewer 上的 capture 按钮。 */}
+      {/* Step B: the flat-source (master/reverse) crop-background dialog.
+          Pano360 / 3GS do not take this path — they use the capture button on their own viewers. */}
       {canUseAsBackground && effectiveEpisode !== null && effectiveBeat !== null && (
         <BackgroundCropperDialog
           isOpen={bgCropperOpen}

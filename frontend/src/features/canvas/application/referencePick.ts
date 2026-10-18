@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 「参考」拾取的规则层：图片 / 视频节点点开 ＋参考 后，画布上哪些节点可以被选作
- * 参考。
+ * Rules layer of the "reference" pick: after an image / video node opens + Reference, which nodes on the canvas can be chosen as
+ * a reference.
  *
- * 落地方式是一条普通的上游连线（canvasStore.addEdge(source, target)）——提示词栏
- * 的参考 chip 和提交时的参考图 / 参考视频本来就从上游边推导（见 useUpstreamContents
- * 与 extractUpstreamContent），所以这个功能不需要任何新的数据通路，只需要把「谁能
- * 连进来」说清楚。
+ * The landing is an ordinary upstream edge (canvasStore.addEdge(source, target)) - the prompt bar's
+ * reference chips and the reference images / videos at submission are derived from upstream edges anyway (see useUpstreamContents
+ * and extractUpstreamContent), so this feature needs no new data path, only a clear statement of "who can connect in".
  *
- * 类型规则仍然只有 nodeRegistry 一个事实来源：这里在它之上再叠一层「参考语义」的
- * 收窄（图片节点只收图片 / 文本），与 UPSTREAM_SPAWN_WHITELIST 收窄上游菜单是同一
- * 个道理——建边规则允许的边不一定是用户在这个入口里想要的边。
+ * Type rules still have a single source of truth, nodeRegistry: here a layer of "reference semantics" narrowing is added on top of it
+ * (image nodes accept only images / text), the same idea as UPSTREAM_SPAWN_WHITELIST narrowing the upstream menu
+ * - an edge allowed by the edge rules is not necessarily the edge the user wants through this entry.
  */
 import type { TFunction } from 'i18next';
 
@@ -31,7 +30,7 @@ import { extractUpstreamContent } from './graphContentResolver';
 export type ReferenceKind = 'text' | 'image' | 'video' | 'audio';
 
 /**
- * 目标节点类型 → 它能接受的参考素材种类。不在表里的类型没有 ＋参考 入口。
+ * Target node type -> the kinds of reference material it can accept. Types not in the table have no + Reference entry.
  */
 const ACCEPTED_REFERENCE_KINDS: Partial<
   Record<CanvasNodeType, readonly ReferenceKind[]>
@@ -41,11 +40,11 @@ const ACCEPTED_REFERENCE_KINDS: Partial<
 };
 
 /**
- * 节点还没有内容时的兜底种类，按节点类型定。
+ * The fallback kinds when a node has no content yet, decided by node type.
  *
- * 为什么不只看当前内容：空文本节点、还没生成的图片节点都应该能先连上去、之后再
- * 填内容——只看内容会让它们在拾取态里凭空消失。反过来，上传节点可以装图 / 视频 /
- * 音频，所以内容能判断出来时以内容为准。
+ * Why not look only at the current content: an empty text node or a not-yet-generated image node should be connectable first and filled in later
+ * - looking only at content would make them vanish out of thin air in the pick state. Conversely, an upload node can hold images / videos /
+ * audio, so when the content can be determined, content wins.
  */
 const DEFAULT_REFERENCE_KIND: Partial<Record<CanvasNodeType, ReferenceKind>> = {
   [CANVAS_NODE_TYPES.textAnnotation]: 'text',
@@ -59,7 +58,7 @@ const DEFAULT_REFERENCE_KIND: Partial<Record<CanvasNodeType, ReferenceKind>> = {
   [CANVAS_NODE_TYPES.audio]: 'audio',
 };
 
-/** 「视频暂不支持作为参考」这类提示里的种类名。 */
+/** The kind name in prompts such as "video is not supported as a reference for now". */
 const REFERENCE_KIND_LABEL_KEY: Record<ReferenceKind, string> = {
   text: 'canvas.referencePick.kind.text',
   image: 'canvas.referencePick.kind.image',
@@ -68,28 +67,28 @@ const REFERENCE_KIND_LABEL_KEY: Record<ReferenceKind, string> = {
 };
 
 export interface ReferencePickCandidate {
-  /** 节点在画布上显示的名字，用于「选择 xxx」提示。 */
+  /** The name the node shows on the canvas, used in the "Select xxx" prompt. */
   label: string;
   kind: ReferenceKind;
 }
 
 export interface ReferencePickTargets {
-  /** 可以点选的节点：nodeId → 候选信息。 */
+  /** Nodes that can be clicked: nodeId -> candidate info. */
   candidates: Map<string, ReferencePickCandidate>;
   /**
-   * 选不了的节点：nodeId → 不能选的原因文案。拾取态里把它们调暗、hover 出这句话。
+   * Nodes that cannot be chosen: nodeId -> the reason text why. In the pick state they are dimmed and show this sentence on hover.
    *
-   * 为什么要专门算一份而不是「不是候选就不画遮罩」：静默消失只会让用户觉得「点了
-   * 没反应」，分不清是不支持还是功能坏了——图片节点面对视频 / 音频节点尤其明显。
-   * 说清楚不能选的原因，比让人反复试要省事。
+   * Why compute a separate copy rather than "draw no mask if not a candidate": vanishing silently only makes the user feel "clicked but nothing
+   * happened", unable to tell unsupported from a broken feature - especially obvious for an image node facing video / audio nodes.
+   * Stating why it cannot be chosen is easier than making people try repeatedly.
    *
-   * 分组节点不在这里：它是容器不是素材，给它盖一层暗色等于把整个组里的内容一起
-   * 糊掉，而组里的每个子节点本来就各自带着自己的遮罩。
+   * Group nodes are not here: a group is a container, not a material, and putting a dark layer on it would blur all the content in the group together,
+   * while every child node in the group already has its own mask.
    */
   rejections: Map<string, string>;
 }
 
-/** 这个节点类型有没有 ＋参考 入口。 */
+/** Whether this node type has a + Reference entry. */
 export function supportsReferencePick(type: CanvasNodeType | undefined): boolean {
   return type !== undefined && ACCEPTED_REFERENCE_KINDS[type] !== undefined;
 }
@@ -100,7 +99,7 @@ export function acceptedReferenceKinds(
   return ACCEPTED_REFERENCE_KINDS[type] ?? null;
 }
 
-/** 一个节点当下能贡献出的参考素材种类；null 表示它贡献不了任何东西。 */
+/** The kinds of reference material a node can contribute right now; null means it can contribute nothing. */
 export function referenceKindOf(node: CanvasNode): ReferenceKind | null {
   const content = extractUpstreamContent(node);
   if (content.imageUrl) return 'image';
@@ -111,10 +110,10 @@ export function referenceKindOf(node: CanvasNode): ReferenceKind | null {
 }
 
 /**
- * 算出进入拾取态那一刻画布上每个节点的去向：可选、或可解释地不可选。
+ * Compute the destination of every node on the canvas at the moment of entering the pick state: selectable, or explainably not selectable.
  *
- * 结果是一份快照，存进 referencePickStore 后每个节点的 overlay 只做一次 Map 查询，
- * 不必在每次 store 变更时各自把 nodes 数组扫一遍（那是 O(N²)）。
+ * The result is a snapshot, stored in referencePickStore, and each node's overlay does only one Map lookup,
+ * without each scanning the nodes array on every store change (that would be O(N^2)).
  */
 export function collectReferencePickTargets(
   nodes: readonly CanvasNode[],
@@ -147,8 +146,8 @@ export function collectReferencePickTargets(
       });
       continue;
     }
-    // 说得出种类就说种类（「视频暂不支持作为参考」）；说不出的多半是风格、多版本
-    // 这类根本不承载素材的节点，给一句通用的就够了。
+    // If the kind can be named, name it ("video is not supported as a reference for now"); for ones that cannot be named, mostly nodes such as style or multi-version
+    // that hold no material at all, a generic sentence is enough.
     rejections.set(
       node.id,
       kind
@@ -159,35 +158,35 @@ export function collectReferencePickTargets(
   return { candidates, rejections };
 }
 
-/** @ 引用能指向的素材种类；文本不参与（提示词里的 @ 只指媒体素材）。 */
+/** The kinds of material an @ reference can point to; text does not take part (an @ in a prompt points only to media material). */
 export type ReferenceMediaKind = Exclude<ReferenceKind, 'text'>;
 
 export interface ReferenceMaterialOption {
   nodeId: string;
-  /** 节点在画布上显示的名字。 */
+  /** The name the node shows on the canvas. */
   label: string;
   kind: ReferenceMediaKind;
-  /** 列表行的缩略图；音频没有，靠 kind 画一个 ♪。 */
+  /** Thumbnail of the list row; audio has none, so a music note is drawn by kind. */
   imageUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
 }
 
 /**
- * 「素材引用」清单：画布上还能被这个节点引用、且当前还没引用的媒体素材。
+ * "Material reference" list: media materials on the canvas that this node can still reference and does not currently reference.
  *
- * 用在提示词里替换某个 @ 引用的选单上——那里除了在已引用的素材之间换指向，还要
- * 能直接换成画布上另一个素材（选中即建边，引用行随之多一条）。可选范围与 ＋参考
- * 拾取态完全一致，走的是同一份 collectReferencePickTargets，避免两个入口对「什么
- * 能当参考」给出不同答案。
+ * Used in the menu that replaces an @ reference in the prompt - there, besides switching the target among already referenced materials, one can
+ * directly switch to another material on the canvas (selecting it creates an edge, and the reference row gains one). The selectable range is
+ * exactly the same as the + Reference pick state, using the same collectReferencePickTargets, avoiding the two entries giving different answers about
+ * "what can serve as a reference".
  *
- * 唯一的收窄：还没有内容的节点不进这份清单。拾取态收录它们是对的（先连上、之后
- * 再生成），但这里选中一条素材的意思是「把这处 @ 换成它」，而空节点当不了 @ 的
- * 指向——列出来只会得到一次「点了没反应」。
+ * The only narrowing: nodes with no content yet do not enter this list. The pick state is right to include them (connect first, generate later),
+ * but selecting an item here means "replace this @ with it", and an empty node cannot be the target of an @ -
+ * listing it would only yield a "clicked but nothing happened".
  *
- * excludedNodeIds 请按**实际连线**给（不是按已有内容的引用行）：已经连上、但此刻
- * 还没产出内容的上游节点同样不该再出现在「还没引用」里，否则选中它只是对一条已
- * 存在的边再 addEdge 一次，界面上什么都不会发生。
+ * Please give excludedNodeIds by the **actual edges** (not by reference rows that have content): upstream nodes that are already connected but
+ * have not produced content yet also should not appear in "not yet referenced" again, otherwise selecting it would just addEdge once more on an
+ * already existing edge, and nothing would happen in the UI.
  */
 export function collectReferenceMaterials(
   nodes: readonly CanvasNode[],

@@ -2,21 +2,21 @@
   "id": "video-frame-extraction",
   "enabled": true,
   "version": 1,
-  "name": "分镜图片提取",
+  "name": "Storyboard Frame Extraction",
   "output_kind": "image",
   "action_keys": [
     "video-frame-extraction",
     "frame-extraction"
   ],
-  "system_prompt": "你是一名资深视觉导演，请把原始提示词替换为可从分镜参考中提取单个高清分镜画面的图片生成指令，必须为中文。\n\n要求增强后的 prompt 必须包含以下结构化要素：\n\n- 【镜号】：当前提取的镜头编号（如 S01）\n- 【源分镜图】：指明参考多宫格分镜图中对应的格位画面，说明是多宫格中的第几排第几个\n- 【画布锁定】：要求与多宫格中对应分镜图的画面必须保持严格一致，主体与参考图保持严格一致\n- 【技术要求】：高清 2K+分辨率，细节清晰锐利\n\n规则：\n- 输出的单张图片必须与多宫格中对应格的画面内容一致，但清晰度和细节大幅提升\n- 角色外观必须与其他镜头保持一致（参照多宫格中的同一角色）\n- 构图比例根据最终视频比例确定（16:9 横版或 9:16 竖版）\n- 禁止涉及具体分镜的画面描述\n- 禁止添加文字标注、水印或边框",
+  "system_prompt": "You are a senior visual director. Replace the original prompt with an image generation instruction that extracts a single high-definition storyboard frame from the storyboard reference; write it in the same language as the shot description.\n\nThe enhanced prompt must contain the following structured elements:\n\n- [Shot number]: the number of the shot being extracted (such as S01)\n- [Source storyboard image]: indicate the corresponding cell in the reference multi-panel storyboard image, stating which row and which cell in the grid it is\n- [Canvas lock]: require the picture to stay strictly consistent with the corresponding storyboard cell in the grid, and the subject to stay strictly consistent with the reference image\n- [Technical requirements]: high definition at 2K+ resolution, with sharp, clear details\n\nRules:\n- The single output image must match the picture content of the corresponding cell in the grid, but with greatly improved clarity and detail\n- Character appearance must stay consistent with the other shots (referring to the same character in the grid)\n- The composition ratio is determined by the final video ratio (16:9 landscape or 9:16 portrait)\n- Describing the picture content of a specific storyboard shot is forbidden\n- Do not add text labels, watermarks or borders",
   "must_have_items": [
-    "【镜号】",
-    "【源分镜图】",
-    "【画布锁定】",
-    "【技术要求】"
+    "[Shot number]",
+    "[Source storyboard image]",
+    "[Canvas lock]",
+    "[Technical requirements]"
   ],
-  "planning_prompt": "prompt 填镜号和宫格位置（如\"第2排第1个\"），系统生成单帧高清提取指令",
-  "result_summary": "从宫格分镜图中提取的单帧高清图（单张，16:9 或 9:16，2K+），与宫格中对应格内容一致但分辨率大幅提升",
+  "planning_prompt": "Put the shot number and the grid position (such as \"row 2, cell 1\") in the prompt; the system generates a single-frame high-definition extraction instruction",
+  "result_summary": "A single-frame high-definition image extracted from the multi-panel storyboard image (single, 16:9 or 9:16, 2K+), matching the content of the corresponding grid cell but at greatly improved resolution",
   "requires_source_media": true,
   "force_enhancement": false,
   "skip_detail_check": true

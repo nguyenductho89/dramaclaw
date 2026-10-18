@@ -10,7 +10,7 @@ project has verified this exact graph end-to-end on a real production beat:
 first frame + character/scene/prop reference images + a voice-timbre
 reference audio + `<d>[Vietnamese] ...</d>` dialogue + PDD 8-step
 acceleration, delivered as an R2 mp4 with the H3-generated audio muxed in
-(`movies/NgoaiTinhCongSo/_腳本/佇列/S01_t1.json`, 734s).
+(`movies/<project>/scripts/queue/S01_t1.json`, 734s).
 
 Two modes, chosen automatically from what the caller attaches:
 - **ref2va** (used whenever there is at least one image/audio reference
@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 # MiniMax H3's frame grid: length must equal 17k+5 at 24fps. 124 is the
 # shortest usable clip (~5.17s); 294 (~12.25s) is the longest verified not
 # to OOM on an A40 48GB with a ref2va graph carrying several reference
-# images (`.claude/CLAUDE.md`, `references/規則核心.md §2.2` in the
+# images (see the photoreal project's notes on reference-image limits, §2.2) in the
 # photoreal project).
 _FRAME_MIN = 124
 _FRAME_MAX = 294
@@ -624,9 +624,9 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 status=VideoGenStatus.FAILED, error="RUNPOD_H3_VIDEO_ENDPOINT_ID is missing"
             )
         if not image_path:
-            return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 需要首帧图像")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 requires a first-frame image")
         if not str(prompt or "").strip():
-            return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 prompt 为空")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 prompt is empty")
 
         import mimetypes
         from pathlib import Path
@@ -652,7 +652,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             try:
                 data = await asyncio.to_thread(_read, ref.path)
             except OSError as exc:
-                log(f"跳过无法读取的参考图 {ref.path}: {exc}")
+                log(f"Skipping unreadable reference image {ref.path}: {exc}")
                 continue
             ext = Path(ref.path).suffix or ".png"
             image_payloads.append((f"h3_ref_image_{idx}{ext}", data, mimetypes.guess_type(ref.path)[0] or "image/png"))
@@ -662,7 +662,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             try:
                 data = await asyncio.to_thread(_read, ref.path)
             except OSError as exc:
-                log(f"跳过无法读取的音色参考 {ref.path}: {exc}")
+                log(f"Skipping unreadable voice reference {ref.path}: {exc}")
                 continue
             ext = Path(ref.path).suffix or ".wav"
             audio_payloads.append((f"h3_ref_audio_{idx}{ext}", data, mimetypes.guess_type(ref.path)[0] or "audio/wav"))
@@ -674,7 +674,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 cropped = await asyncio.to_thread(_fit_canvas_bytes, raw, width, height)
                 end_frame_payload = ("h3_last_frame.png", cropped, "image/png")
             except OSError as exc:
-                log(f"跳过无法读取的尾帧 {last_frame_path}: {exc}")
+                log(f"Skipping unreadable last frame {last_frame_path}: {exc}")
 
         seed = uuid.uuid4().int & 0xFFFFFFFF
         mode = "ref2va" if (len(image_payloads) > 1 or audio_payloads) else "fl2va"
@@ -728,7 +728,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             if audio_refine:
                 parts.append("audio-refine")
             stage_note = f" [{'+'.join(parts)}]"
-        log(f"MiniMax H3 ({mode}{stage_note}, {width}x{height}, {frames}帧/{frames / _FPS:.1f}s) 提交中...")
+        log(f"MiniMax H3 ({mode}{stage_note}, {width}x{height}, {frames} frames/{frames / _FPS:.1f}s) submitting...")
 
         from novelvideo.generators.nanobanana_grid import (
             _runpod_download_output_sync,
@@ -738,7 +738,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         try:
             job_inputs = await asyncio.to_thread(_runpod_upload_inputs_sync, upload_payloads)
         except Exception as exc:  # noqa: BLE001
-            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"上传参考文件到 R2 失败: {exc}")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Failed to upload reference files to R2: {exc}")
 
         import httpx
 
@@ -756,7 +756,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                         json={"input": job_input},
                     )
                     if resp.status_code == 409 and attempt < 5:
-                        log("RunPod endpoint 刚启动 (409 ENDPOINT_PAUSED)，10秒后重试提交...")
+                        log("RunPod endpoint just started (409 ENDPOINT_PAUSED), retrying submit in 10s...")
                         await asyncio.sleep(10)
                         continue
                     resp.raise_for_status()
@@ -764,12 +764,12 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                     break
                 except httpx.HTTPError as exc:
                     if attempt >= 5:
-                        return VideoGenResult(status=VideoGenStatus.FAILED, error=f"提交 RunPod H3 任务失败: {exc}")
+                        return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Failed to submit RunPod H3 job: {exc}")
                     await asyncio.sleep(10)
         if not job_id:
-            return VideoGenResult(status=VideoGenStatus.FAILED, error="提交 RunPod H3 任务失败: 未知原因")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="Failed to submit RunPod H3 job: unknown reason")
 
-        log(f"RunPod job {job_id} 已提交，轮询中 (最长 {RUNPOD_H3_VIDEO_TIMEOUT_SECONDS:.0f}s)...")
+        log(f"RunPod job {job_id} submitted, polling (up to {RUNPOD_H3_VIDEO_TIMEOUT_SECONDS:.0f}s)...")
 
         deadline = time.monotonic() + RUNPOD_H3_VIDEO_TIMEOUT_SECONDS
         status_resp: dict = {}
@@ -797,12 +797,12 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 except httpx.HTTPError:
                     pass
                 status_note = status_resp.get("status", "IN_QUEUE")
-                poll_note = f"; 最后一次轮询错误: {last_poll_error}" if last_poll_error else ""
+                poll_note = f"; last poll error: {last_poll_error}" if last_poll_error else ""
                 return VideoGenResult(
                     status=VideoGenStatus.FAILED,
                     error=(
-                        f"RunPod H3 任务 {job_id} 超时 ({RUNPOD_H3_VIDEO_TIMEOUT_SECONDS:.0f}s)，"
-                        f"仍为 {status_note}（endpoint workers.max 可能是 0）{poll_note}"
+                        f"RunPod H3 job {job_id} timed out ({RUNPOD_H3_VIDEO_TIMEOUT_SECONDS:.0f}s), "
+                        f"still {status_note} (endpoint workers.max may be 0){poll_note}"
                     ),
                 )
 
@@ -814,9 +814,9 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         inner_status = output.get("status") if isinstance(output, dict) else None
         if status != "COMPLETED" or (isinstance(inner_status, dict) and inner_status.get("completed") is False):
             detail = json.dumps(status_resp)[:1200]
-            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"RunPod H3 任务 {status}: {detail}")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"RunPod H3 job {status}: {detail}")
         if output.get("error"):
-            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"RunPod H3 worker 错误: {output['error']}")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"RunPod H3 worker error: {output['error']}")
         if output.get("node_errors"):
             return VideoGenResult(
                 status=VideoGenStatus.FAILED,
@@ -837,21 +837,21 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             if video_item:
                 break
         if video_item is None:
-            return VideoGenResult(status=VideoGenStatus.FAILED, error="RunPod H3 任务完成但没有输出视频")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="RunPod H3 job finished but produced no output video")
 
         try:
             data = await asyncio.to_thread(_runpod_download_output_sync, video_item["r2_key"])
         except Exception as exc:  # noqa: BLE001
-            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"从 R2 下载视频失败: {exc}")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Failed to download video from R2: {exc}")
 
         sha = hashlib.sha256(data).hexdigest()
         if video_item.get("sha256") and sha != video_item["sha256"]:
-            return VideoGenResult(status=VideoGenStatus.FAILED, error="下载的视频文件 sha256 校验不匹配")
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="Downloaded video file failed the sha256 check")
 
         out_path = Path(output_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(out_path.write_bytes, data)
-        log(f"完成，已保存到 {output_path}")
+        log(f"Done, saved to {output_path}")
 
         return VideoGenResult(
             status=VideoGenStatus.DONE,

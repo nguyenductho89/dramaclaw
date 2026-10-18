@@ -8,7 +8,7 @@ import {
   type MentionCandidate,
 } from "@/features/canvas/nodes/PromptMentionEditor";
 
-// jsdom 未实现 scrollIntoView（弹层高亮行的 ref 回调会用到）。
+// jsdom does not implement scrollIntoView (used by the ref callback of the popover's highlighted row).
 beforeAll(() => {
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = vi.fn();
@@ -16,15 +16,15 @@ beforeAll(() => {
 });
 
 const candidates: MentionCandidate[] = [
-  { key: "A", name: "图片1", imageUrl: "https://example.com/a.png", index: 1 },
-  { key: "B", name: "图片2", imageUrl: "https://example.com/b.png", index: 2 },
+  { key: "A", name: "image1", imageUrl: "https://example.com/a.png", index: 1 },
+  { key: "B", name: "image2", imageUrl: "https://example.com/b.png", index: 2 },
 ];
 
-describe("PromptMentionEditor — 双击替换引用", () => {
+describe("PromptMentionEditor — double-click to replace a reference", () => {
   it("double-clicking a chip opens the candidate popover anchored at it", () => {
     const { container } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={() => {}}
         candidates={candidates}
       />,
@@ -32,21 +32,21 @@ describe("PromptMentionEditor — 双击替换引用", () => {
 
     const chip = container.querySelector(".mention-chip");
     expect(chip).not.toBeNull();
-    // 初始没有 popover。
-    expect(screen.queryByText("@图片2")).toBeNull();
+    // There is no popover initially.
+    expect(screen.queryByText("@image2")).toBeNull();
 
     fireEvent.doubleClick(chip as Element);
 
-    // popover 出现，右侧展示实际序列化 token，避免不同素材类型都显示成 @1。
-    expect(screen.getByText("@图片1")).toBeTruthy();
-    expect(screen.getByText("@图片2")).toBeTruthy();
+    // The popover appears, and the right side shows the actual serialized token, avoiding every asset type showing as @1.
+    expect(screen.getByText("@image1")).toBeTruthy();
+    expect(screen.getByText("@image2")).toBeTruthy();
   });
 
-  it("picking a different candidate replaces the chip in place (serialized to @图片2)", () => {
+  it("picking a different candidate replaces the chip in place (serialized to @image2)", () => {
     const onChange = vi.fn();
     const { container } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={onChange}
         candidates={candidates}
       />,
@@ -54,14 +54,14 @@ describe("PromptMentionEditor — 双击替换引用", () => {
 
     fireEvent.doubleClick(container.querySelector(".mention-chip") as Element);
 
-    // 选「@图片2」那一行(候选 图片2)。
-    const row = screen.getByText("@图片2").closest("button");
+    // Pick the "@image2" row (candidate image2).
+    const row = screen.getByText("@image2").closest("button");
     expect(row).not.toBeNull();
     fireEvent.mouseDown(row as Element);
 
-    // 序列化后引用从 图片1 换成 图片2(传后端的文本仍带编号)。
-    expect(onChange).toHaveBeenCalledWith("@图片2 ");
-    // 替换后 chip 仍只有一个,且指向新资源 B。
+    // After serialization the reference changes from image1 to image2 (the text sent to the backend still carries the number).
+    expect(onChange).toHaveBeenCalledWith("@image2 ");
+    // After replacement there is still just one chip, pointing to the new resource B.
     const chips = container.querySelectorAll(".mention-chip");
     expect(chips.length).toBe(1);
     expect((chips[0] as HTMLElement).dataset.mention).toBe("B");
@@ -69,23 +69,23 @@ describe("PromptMentionEditor — 双击替换引用", () => {
 
   it("does not open the popover when there are no candidates", () => {
     const { container } = render(
-      <PromptMentionEditor value="@图片1 " onChange={() => {}} candidates={[]} />,
+      <PromptMentionEditor value="@image1 " onChange={() => {}} candidates={[]} />,
     );
-    // 无候选时 rebuildDOM 不会建 chip(名单为空),双击空内容不报错、不开 popover。
+    // With no candidates rebuildDOM builds no chip (the list is empty); double-clicking empty content neither errors nor opens a popover.
     const chip = container.querySelector(".mention-chip");
-    // 没有 chip 可双击 —— 直接确认不存在 popover 文案。
+    // There is no chip to double-click — just confirm the popover copy does not exist.
     expect(chip).toBeNull();
-    expect(screen.queryByText("已引用")).toBeNull();
+    expect(screen.queryByText("Referenced")).toBeNull();
   });
 
   it("distinguishes text and image tokens that both use per-kind index one", () => {
     const mixedCandidates: MentionCandidate[] = [
-      { key: "T", name: "文本1", imageUrl: "", index: 1, displayName: "网页文案" },
-      { key: "I", name: "图片1", imageUrl: "https://example.com/image.png", index: 1 },
+      { key: "T", name: "text1", imageUrl: "", index: 1, displayName: "Web copy" },
+      { key: "I", name: "image1", imageUrl: "https://example.com/image.png", index: 1 },
     ];
     const { container } = render(
       <PromptMentionEditor
-        value="@文本1 "
+        value="@text1 "
         onChange={() => {}}
         candidates={mixedCandidates}
       />,
@@ -93,7 +93,7 @@ describe("PromptMentionEditor — 双击替换引用", () => {
 
     fireEvent.doubleClick(container.querySelector(".mention-chip") as Element);
 
-    expect(screen.getByText("@文本1")).toBeTruthy();
-    expect(screen.getByText("@图片1")).toBeTruthy();
+    expect(screen.getByText("@text1")).toBeTruthy();
+    expect(screen.getByText("@image1")).toBeTruthy();
   });
 });

@@ -141,7 +141,7 @@ function ScriptTabContent() {
     invalidateKeys: [
       queryKeys.script(project, epNum),
       queryKeys.beats(project, epNum),
-      // 拆镜改变 beat_count，分集列表的镜头数角标读它。
+      // Splitting shots changes beat_count, which the shot-count badge in the episode list reads.
       queryKeys.episodes(project),
       queryKeys.pipelineStatus(project),
     ],
@@ -267,9 +267,9 @@ function ScriptTabContent() {
     },
   });
 
-  // 场景/道具规划在 EE 下是异步任务：POST 只负责入队，请求返回时任务才刚开始。
-  // 按钮的转圈必须跟着任务流走（含刷新页面后的重连），否则会在入队瞬间就停下，
-  // 和任务中心的「生成中」对不上。
+  // Scene/prop planning is an async task under EE: the POST only enqueues, and the task has just started when the request returns.
+  // The button spinner must follow the task stream (including reconnection after a page refresh), otherwise it stops the moment the job is enqueued,
+  // out of step with the task center's "generating".
   const sceneTask = useTaskController({
     key: { taskType: TASK_TYPES.EPISODE_SCENE_PLANNER, project, episode: epNum },
     invalidateKeys: [
@@ -433,7 +433,7 @@ function ScriptTabContent() {
         toast.error(backendErrorToastMessage(res.error, t));
         return;
       }
-      // CE 走同步规划，直接返回结果；EE 只是入队，交给任务控制器跟进行中状态。
+      // CE plans synchronously and returns the result directly; EE only enqueues, handing the in-progress state to the task controller.
       if (isPlanEpisodeAssetsResult(res)) {
         toast.success(
           t("episode.script.scenePlanComplete", { count: res.data.total_count }),
@@ -693,7 +693,7 @@ function ScriptTabContent() {
                     className="inline-flex !h-6 w-[112px] shrink-0 items-center gap-1 !rounded-[6px] !border !border-white/[0.12] !bg-white/[0.04] px-2 text-[11px] font-normal text-foreground/78 shadow-none hover:!border-white/[0.2] hover:!bg-white/[0.05] hover:text-foreground focus-visible:!border-white/24 focus-visible:!ring-0 [&_svg]:!size-3"
                   >
                     {/* base-ui Select.Value renders the raw value by default — map
-                        it to the localized label so the trigger shows 中文. */}
+                        it to the localized label so the trigger shows the localized text. */}
                     <SelectValue>
                       {(value) =>
                         value === "scenes"

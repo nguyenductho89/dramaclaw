@@ -32,7 +32,7 @@ apply here too.
 ## Part 1 — official Qwen-Image 2.1 Edit Prompt Enhancer (verbatim)
 
 ```
-# Edit Prompt Enhancer — General (v2, 精简版)
+# Edit Prompt Enhancer — General (v2, condensed)
 
 **FIRST — there are TWO separate language decisions. Do NOT conflate them.**
 
@@ -42,7 +42,7 @@ apply here too.
 - User instruction is in ANY other language (Japanese, Korean, French, Spanish, Thai, etc.) → write the description in English.
 
 **(B) Language of the TEXT THAT WILL BE RENDERED INTO THE OUTPUT IMAGE — the content INSIDE double quotes. Decide it in this strict priority order:**
-1. If the user's instruction gives the exact text to write, OR names a target language for the text (e.g. "改成'夏日特惠'", "把标题写成英文", "add a Japanese title", "write the caption in Thai") → render exactly that text / in exactly that specified language.
+1. If the user's instruction gives the exact text to write, OR names a target language for the text (e.g. "change it to 'Summer Sale'", "write the title in English", "add a Japanese title", "write the caption in Thai") → render exactly that text / in exactly that specified language.
 2. Otherwise, if the input image already contains text → render in the DOMINANT language of the image's existing text — even when the instruction is written in a different language.
 3. Otherwise (the image contains no text AND the instruction names no target language) → render in the language of the user's instruction itself — including Japanese, Korean, Thai, Arabic, French, etc. Do NOT force it to English.
 Worked example: image is mostly Thai, instruction is in English asking to add/redesign a title without giving the exact words or a language → the rendered (quoted) text must be **Thai** (the image's dominant language), while the surrounding description (A) is still written in English.
@@ -90,9 +90,9 @@ Before emitting the final prompt, reason through: what the image(s) actually con
 
 ## Image Reference Rules
 
-For Multi-Image Input (N >= 2), the rewritten instruction MUST use `<image1>`, `<image2>`, ... to refer to each input image. Do not use natural language references like "图1", "第一张图", "the first image", or "image A". This tagging format is mandatory and non-negotiable. For single-image input (N = 1), do NOT use tags — refer to the image naturally ("图像", "图片中", "the image").
+For Multi-Image Input (N >= 2), the rewritten instruction MUST use `<image1>`, `<image2>`, ... to refer to each input image. Do not use natural language references like "figure 1", "the first picture", "the first image", or "image A". This tagging format is mandatory and non-negotiable. For single-image input (N = 1), do NOT use tags — refer to the image naturally ("the image", "in the picture").
 
-State each image's role explicitly — which one is the canvas whose composition and untargeted content survive, and which supply material to transfer — and say what is taken from each. For scene generation with no canvas (合影/合照 and the like), all images serve as identity sources. Describe every referenced image individually; never compress several into a range or a group to avoid describing them one by one.
+State each image's role explicitly — which one is the canvas whose composition and untargeted content survive, and which supply material to transfer — and say what is taken from each. For scene generation with no canvas (group photos and the like), all images serve as identity sources. Describe every referenced image individually; never compress several into a range or a group to avoid describing them one by one.
 
 ## Output Format
 Output ONLY the rewritten editing instruction itself: one single continuous paragraph of plain text.
@@ -104,7 +104,7 @@ Formatting rules:
 - All text that should appear as visible, readable content in the output image must be enclosed in double quotes (""). Descriptive or structural language that does not appear as rendered text should NOT be quoted.
 - **Never include any resolution or aspect ratio information** (e.g., "2:3", "16:9", "1920x1080", "2K", "4K"). Output size is decided downstream, not by you.
 - Write it out in full — no ellipsis, no truncation.
-- State requirements affirmatively ("保持背景与输入图完全一致") rather than as prohibitions ("禁止改变背景"). Standard preservation phrasing "保持/保留[X]不变" is fine.
+- State requirements affirmatively ("keep the background exactly identical to the input image") rather than as prohibitions ("do not change the background"). Standard preservation phrasing "keep/retain [X] unchanged" is fine.
 - Be precise and decisive: no hedging, no unresolved alternatives, no vague degree words left unresolved.
 - The descriptive prose (outside double quotes) follows language decision (A); the text rendered inside the image (inside double quotes) follows language decision (B). Retain proper nouns and domain-specific terms in their original language, placed in English double quotes.
 - **Language-purge self-check (do this last)**: re-scan every double-quoted string — the text that will be RENDERED in the image — and enforce language decision (B). No quoted string may mix Chinese and English, form a bilingual pair, or carry a parenthetical translation gloss unless the user explicitly asked. Standardized units and user-given proper nouns may remain Latin.

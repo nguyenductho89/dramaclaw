@@ -14,6 +14,7 @@ import {
   CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
   FREEZONE_WORKFLOW_RUN_UPDATED_EVENT,
   hasGeneratedResult,
+  SKIPPED_ACTION_PREFIX,
   isNodeActionGenerationPending,
 } from "@/features/freezone/canvasChatCommands";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -24,11 +25,10 @@ const RESUMABLE_ACTION_STATUSES = new Set(["pending", "running", "failed", "bloc
 function isSafetyReviewError(error: string | null | undefined): boolean {
   const normalized = String(error || "").toLowerCase();
   return normalized.includes("safety review")
-    || normalized.includes("内容未通过安全审核") // i18n-exempt -- backend error matching
-    || normalized.includes("内容安全审核") // i18n-exempt -- backend error matching
     || normalized.includes("sensitivecontent")
     || normalized.includes("privacyinformation")
-    || normalized.includes("moderation_blocked");
+    || normalized.includes("moderation_blocked")
+    || normalized.includes("content_moderation_blocked");
 }
 
 export function resumableWorkflowNodeIds(run: FreezoneWorkflowRun): string[] {
@@ -79,7 +79,7 @@ function recoverableWorkflowActions(
       // A downstream action blocked by a failed dependency was recorded for
       // visibility, but has never been submitted. Do not surface it as an
       // independent retry target or create another waiting progress item.
-      if (action.status === "blocked" && String(action.error || "").startsWith("跳过 ")) { // i18n-exempt -- workflow payload
+      if (action.status === "blocked" && String(action.error || "").startsWith(SKIPPED_ACTION_PREFIX)) {
         return false;
       }
       return !isNodeActionGenerationPending(action.node_id, action.action);
@@ -263,7 +263,7 @@ export function WorkflowRunRecoveryBar({
         { projectId, canvasId },
       );
       if (result.errors.length > 0) {
-        setError(result.errors[0] ?? "恢复执行失败");
+        setError(result.errors[0] ?? t("freezone.workflowRecovery.resumeFailed"));
       }
       await refresh();
     } catch (resumeError) {
@@ -293,7 +293,7 @@ export function WorkflowRunRecoveryBar({
         { projectId, canvasId },
       );
       if (result.errors.length > 0) {
-        setError(result.errors[0] ?? "节点重试失败");
+        setError(result.errors[0] ?? t("freezone.workflowRecovery.retryNodeFailed"));
       }
       await refresh();
     } catch (retryError) {
@@ -322,7 +322,7 @@ export function WorkflowRunRecoveryBar({
           node_id: action.node_id,
           action: action.action,
           status: "skipped" as const,
-          error: "用户选择跳过安全审核失败节点", // i18n-exempt -- workflow payload
+          error: "The user chose to skip the node that failed the safety review", // workflow payload
         }));
       const updated = await updateFreezoneWorkflowRun(projectId, canvasId, run.run_id, {
         action_updates: updates,
@@ -339,9 +339,9 @@ export function WorkflowRunRecoveryBar({
   return (
     <div className="pointer-events-auto absolute left-1/2 top-4 z-30 flex max-w-[calc(100%-32px)] -translate-x-1/2 items-center gap-3 rounded-md border border-border/70 bg-background/95 px-3 py-2 shadow-lg backdrop-blur">
       <div className="min-w-0 text-sm">
-        <div className="truncate font-medium">发现未完成的工作流</div>
+        <div className="truncate font-medium">{t("freezone.workflowRecovery.title")}</div>
         <div className="truncate text-xs text-muted-foreground">
-          已完成 {completedCount}/{run.actions.length}，剩余 {nodeIds.length} 个节点
+          {t("freezone.workflowRecovery.progress", { completed: completedCount, total: run.actions.length, remaining: nodeIds.length })}
         </div>
         {error && <div className="mt-1 max-w-[420px] truncate text-xs text-destructive">{error}</div>}
       </div>
@@ -349,15 +349,15 @@ export function WorkflowRunRecoveryBar({
         <>
           <div className="inline-flex items-center gap-1 text-xs text-amber-200">
             <AlertTriangle className="size-3.5" />
-            {t("freezone.workflowRecovery.safetyReviewFailed", { defaultValue: "有节点未通过安全审核" })}
+            {t("freezone.workflowRecovery.safetyReviewFailed", { defaultValue: "Some nodes did not pass safety review" })}
           </div>
           <Button type="button" variant="outline" size="sm" onClick={handleEditSafetyPrompt} disabled={busy}>
             <Pencil className="size-4" />
-            {t("freezone.workflowRecovery.editPrompt", { defaultValue: "修改提示词" })}
+            {t("freezone.workflowRecovery.editPrompt", { defaultValue: "Edit prompt" })}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => void handleSkipSafetyNodes()} disabled={busy}>
             <SkipForward className="size-4" />
-            {t("freezone.workflowRecovery.skipNode", { defaultValue: "跳过节点" })}
+            {t("freezone.workflowRecovery.skipNode", { defaultValue: "Skip node" })}
           </Button>
         </>
       )}
@@ -370,20 +370,20 @@ export function WorkflowRunRecoveryBar({
           disabled={busy}
         >
           <RotateCcw className="size-4" />
-          仅重试失败
+          {t("freezone.workflowRecovery.retryFailedOnly")}
         </Button>
       )}
       <Button type="button" size="sm" onClick={() => void handleResume()} disabled={busy}>
         {busy ? <LoaderCircle className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-        继续下游
+        {t("freezone.workflowRecovery.continueDownstream")}
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
         onClick={() => setDismissedRunId(run.run_id)}
-        aria-label="暂时忽略"
-        title="暂时忽略"
+        aria-label={t("freezone.workflowRecovery.dismiss")}
+        title={t("freezone.workflowRecovery.dismiss")}
       >
         <X className="size-4" />
       </Button>

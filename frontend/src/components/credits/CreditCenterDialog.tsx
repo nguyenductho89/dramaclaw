@@ -167,7 +167,7 @@ export function CreditCenterDialog({
   const [activeTab, setActiveTab] = useState<CreditCenterTab>(initialTab);
   const [customCredits, setCustomCredits] = useState(3000);
   const username = useAuthStore((state) => state.username) ?? t("credits.centerModal.account");
-  const language = i18n.resolvedLanguage ?? i18n.language ?? "zh";
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
   const summaryQuery = useCreditSummary(open);
   const packagesQuery = useRechargePackages(open && paymentAvailable);
   const customRechargeQuery = useCustomRechargeConfig(open && paymentAvailable);
@@ -661,7 +661,7 @@ function CustomRechargeTab({
 
 function BenefitsTab({ promotions, loading }: { promotions: Array<{ id: string; name: string; target_label: string; discount_basis_points: number; ends_at: string | null }>; loading: boolean }) {
   const { t, i18n } = useTranslation();
-  const language = i18n.resolvedLanguage ?? i18n.language ?? "zh";
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
   if (loading) return <LoadingState />;
   if (promotions.length === 0) return <EmptyState text={t("credits.centerModal.noBenefits")} />;
   return (

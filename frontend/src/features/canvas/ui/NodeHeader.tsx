@@ -129,10 +129,10 @@ export function NodeHeader({
       return;
     }
 
-    // 读 scrollWidth/clientWidth 会强制同步布局，在画布这个体量的 DOM 上单次
-    // 约 2ms。快速平移时可见性剔除每帧要挂载 3~4 个节点，每个都跑一遍，直接
-    // 把帧预算吃穿（实测拖拽 20fps）。所以画布在动、或缩得太小看不清字的时候
-    // 一律不量，等它静下来再补一次——标题淡出效果本来也只有静止时才看得见。
+    // Reading scrollWidth/clientWidth forces a synchronous layout, about 2ms once on a DOM of the canvas's
+    // size. During fast panning visibility culling mounts 3~4 nodes per frame, each running it once, which eats
+    // through the frame budget outright (measured drag at 20fps). So when the canvas is moving, or zoomed too small to read text,
+    // never measure, and measure once more after it settles - the title fade-out effect is only visible when still anyway.
     const measureOverflow = () => {
       if (isCanvasMeasurementDeferred()) {
         return;

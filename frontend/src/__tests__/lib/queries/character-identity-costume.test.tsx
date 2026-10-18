@@ -31,7 +31,7 @@ describe("identity costume query hooks", () => {
     let requestedPath = "";
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/identities/id-1/costume/delete",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/identities/id-1/costume/delete",
         ({ request }) => {
           requestedPath = new URL(request.url).pathname;
           return HttpResponse.json({
@@ -42,14 +42,14 @@ describe("identity costume query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useDeleteIdentityCostume("demo", "秦"), {
+    const { result } = renderHook(() => useDeleteIdentityCostume("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate("id-1");
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(requestedPath).toBe(
-      "/api/v1/projects/demo/characters/%E7%A7%A6/identities/id-1/costume/delete",
+      "/api/v1/projects/demo/characters/Qin/identities/id-1/costume/delete",
     );
     expect(result.current.data?.data.deleted).toBe(true);
   });

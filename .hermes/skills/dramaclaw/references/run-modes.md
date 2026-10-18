@@ -1,106 +1,106 @@
-# 运行模式（两种）
+# Run modes (two)
 
-用户在配置完成后（init.md 决策树第 5 步）选择运行模式。两种模式共用同一套
-pipeline 步骤顺序与专用工具，只是「是否每步解释并确认」不同；两种模式都不能在一轮里连续启动多个写任务。
+After configuration is complete (step 5 of the init.md decision tree), the user chooses a run mode. Both modes share the same
+pipeline step order and dedicated tools; they differ only in "whether each step is explained and confirmed". Neither mode may start multiple write tasks in a row within one turn.
 
-模式由用户本轮明确表达或外围虾导输入框的模式按钮决定，并在本会话内保持：
-- 当前消息包含 `[DRAMACLAW_RUN_MODE]` 且 `mode=episode_auto` → 用户已经通过外围虾导的“本集自动”按钮授权自动推进；不要再次询问运行模式或每步确认。任务完成后由后端自动协调器发起新的自动续跑轮次，每轮仍只执行一个写任务
-- 用户说「每步确认 / 一步步 / 手动 / 每步问我」→ **逐步确认模式**（见下）
-- 用户说「一次性 / 全自动 / 自动驾驶 / 一口气跑完 / 不用问我」→ **自动推进模式（每轮一步）**；这些说法只表示下次“继续”时不重复解释流程，不表示本轮可以跑完整集
-- 用户没说 → 默认先问一句「要我**每步确认**还是**自动推进（每轮一步）**？」，问完按回答走
+The mode is decided by what the user states explicitly this turn, or by the mode button of the outer Shrimp Director input box, and persists within this session:
+- The current message contains `[DRAMACLAW_RUN_MODE]` with `mode=episode_auto` -> the user has authorized auto-advance through the "Episode auto" button of the outer Shrimp Director; do not ask again about the run mode or per-step confirmation. After a task completes, the backend auto-coordinator starts a new auto-continue turn, and each turn still executes only one write task
+- The user says "confirm each step / step by step / manual / ask me at every step" -> **step-by-step confirmation mode** (see below)
+- The user says "all at once / fully automatic / autopilot / run it all in one go / no need to ask me" -> **auto-advance mode (one step per turn)**; these phrasings only mean that the next "continue" does not re-explain the flow, not that this turn may run the whole episode
+- The user says nothing -> by default first ask one question: "Should I **confirm every step** or **auto-advance (one step per turn)**?", then follow the answer
 
-跨阶段大任务始终遵守根 `SKILL.md` 的拆解确认协议；运行模式不能绕过该协议。
+Large cross-stage tasks always obey the decomposition-confirmation protocol of the root `SKILL.md`; the run mode cannot bypass that protocol.
 
-开启外围“本集自动”时先做声线前置预检。配音已经完成或所需声线已就绪时不增加询问；无法确认或发现缺失时，启动确认必须让用户选择“缺失声线由虾导匹配系统声线”或“到虾塘上传/录制自定义声线”。该选择作为本次自动会话的 `voice_policy` 保存：`system` 表示用户已提前明确授权，后续到 `voice_setup` 可直接调用一次系统声线准备；`custom` 表示不得替换为系统声线，届时缺失仍存在则暂停等待上传。
+When the outer "Episode auto" is turned on, first run a voice prerequisite pre-check. If dubbing is already done or the required voices are ready, add no question; if it cannot be confirmed or something is found missing, the start confirmation must let the user choose "missing voices are matched by Shrimp Director from system voices" or "upload/record custom voices in Shrimp Pond". That choice is saved as the `voice_policy` of this auto session: `system` means the user has authorized it in advance, and at `voice_setup` the system-voice preparation may be called directly once; `custom` means it must not be replaced with system voices, and if the shortage still exists at that point, pause and wait for an upload.
 
 ---
 
-## 模式一：逐步确认模式（step-by-step）
+## Mode one: step-by-step confirmation mode (step-by-step)
 
-**核心规则：一次只推进一个步骤，每步之前先停下问用户，得到确认才执行；绝不连续跳步。**
+**Core rule: advance only one step at a time; before every step stop and ask the user, and execute only after confirmation; never skip steps in a row.**
 
-### 每一步的固定动作
+### Fixed actions of each step
 
-1. **报下一步**（一句话，不展开）：
-   - 要做什么（步骤中文名）+ 会调用的工具 + 前置是否已满足
-   - 例：「下一步：分集规划（`dramaclaw_plan_episodes`，目标 10 集）。原文与角色已就绪，可执行。」
-2. **停下来问**：「执行这一步吗？（继续 / 跳过 / 调整参数 / 停）」
-   —— 然后**结束本轮输出，等用户回复**。不要自动往下做。
-3. 用户回复后：
-   - 「继续 / 执行 / 好 / 下一步」→ 先查当前任务状态；若已有 queued/running，告知后台正在生成中并停止；若没有运行中任务，调对应专用工具启动当前一步 → **立即收口**，询问稍后是否继续查看进度或执行下一步
-   - 「跳过」→ 不执行，直接报「再下一步」
-   - 「改成 N 集 / 用某风格 …」→ 按调整后的参数执行该步
-   - 「停 / 暂停」→ 停在当前步，等用户下次指令
+1. **Announce the next step** (one sentence, no elaboration):
+   - What will be done (step name) + the tool to be called + whether the prerequisites are met
+   - Example: "Next step: episode planning (`dramaclaw_plan_episodes`, target 10 episodes). The source text and characters are ready, so it can run."
+2. **Stop and ask**: "Execute this step? (continue / skip / adjust parameters / stop)"
+   -> then **end this turn's output and wait for the user's reply**. Do not keep going automatically.
+3. After the user replies:
+   - "continue / execute / ok / next step" -> first check the current task status; if a queued/running task exists, tell the user background generation is in progress and stop; if there is no running task, call the corresponding dedicated tool to start the current step -> **wrap up immediately**, and ask whether to check progress or execute the next step later
+   - "skip" -> do not execute, directly announce the "step after that"
+   - "change to N episodes / use some style ..." -> execute that step with the adjusted parameters
+   - "stop / pause" -> stay at the current step and wait for the user's next instruction
 
-### 不允许的行为
+### Behaviors not allowed
 
-- ❌ 一次确认后连跑多步（哪怕用户只说「继续」，也只推进**一步**）
-- ❌ 不问就执行写操作（plan/build/generate/compose 这类触发任务的步骤）
-- ❌ 把「报结果」和「执行下一步」合并——必须报完结果/启动状态后结束本轮，等用户下一条消息
-- ❌ 启动异步任务后继续轮询到 completed，再自动进入下一步
+- ❌ Running multiple steps in a row after a single confirmation (even if the user only says "continue", advance only **one step**)
+- ❌ Executing a write operation without asking (steps that trigger tasks such as plan/build/generate/compose)
+- ❌ Merging "report the result" and "execute the next step" - after reporting the result/start status you must end this turn and wait for the user's next message
+- ❌ Continuing to poll until completed after starting an async task and then automatically entering the next step
 
-### 步骤来源
+### Source of the steps
 
-- 当前项目准备顺序只读 `playbooks/init.md`。
-- 逐集制作顺序只读 `playbooks/episode.md`。
-- 本文件只决定执行前是否再次询问用户，不增加、删除或重排步骤。
-- 每完成一集后，询问是否继续下一集。
+- The current project preparation order is read only from `playbooks/init.md`.
+- The per-episode production order is read only from `playbooks/episode.md`.
+- This file only decides whether to ask the user again before execution, and does not add, delete or reorder steps.
+- After finishing each episode, ask whether to continue to the next episode.
 
-### 状态回执（每步执行后）
+### Status receipt (after each step is executed)
 
-- 触发后最多做一次必要的 `dramaclaw_get_task(task_type=..., episode=...)` 状态查询
-- 若状态为 queued/running：告诉用户后台正在生成中，等待完成后再继续；不要轮询到 completed
-- 成功：按下表读取或展示完成数据；不要只说“完成”
-- 失败：报 `task.error` / `error_code`，**停在该步**，不要自动重试或跳过
+- After triggering, make at most one necessary `dramaclaw_get_task(task_type=..., episode=...)` status query
+- If the status is queued/running: tell the user background generation is in progress and to continue after it completes; do not poll until completed
+- Success: read or show the completion data per the table below; do not just say "done"
+- Failure: report `task.error` / `error_code`, **stop at that step**, and do not auto-retry or skip
 
-### 完成数据展示规则
+### Completion data display rules
 
-每个步骤完成后，必须展示或汇总该步骤的真实产物。媒体类必须调用对应展示工具；文本/列表类用 markdown 表格或简短列表。没有可展示数据时，如实说明“已完成，但当前接口未返回可展示产物”，不要拼 URL、猜路径或拿旧数据充数。
+After each step completes, you must show or summarize that step's real artifacts. Media must call the corresponding display tool; text/list results use a markdown table or a short list. When there is no displayable data, honestly say "done, but the current endpoint returned no displayable artifact"; do not concatenate URLs, guess paths or pad with old data.
 
-| 步骤 | 完成后读取 / 展示 |
+| Step | Read / show after completion |
 |------|-------------------|
-| 摄入 | `dramaclaw_pipeline_status` 汇总 ingested/configured 状态；不要展示原文全文 |
-| 配置项目 | `dramaclaw_get(path="/projects/{project}")` 汇总视觉风格、叙事方式、节奏、音频/视频配置 |
-| 角色提取 | `dramaclaw_get(path="/projects/{project}/characters")` 展示角色列表 |
-| 角色 face_prompt 检查/补齐 | `dramaclaw_get(path="/projects/{project}/characters")` 检查核心角色 `face_prompt`；缺失时先补齐并展示已补角色 |
-| 分集规划 | `dramaclaw_get(path="/projects/{project}/episodes")` 展示分集列表 |
-| 角色肖像 | `dramaclaw_get_character_media(media_kind="portrait")` 展示肖像 |
-| 身份规划 | `dramaclaw_get_character_media(media_kind="identity")` 或角色 identities 接口汇总身份列表；没有身份图时只列身份 |
-| 身份图生成 | `dramaclaw_get_character_media(media_kind="identity")` 展示身份图 |
-| 脚本生成 | `dramaclaw_get_episode_script(episode=N)` 展示 beat 摘要 |
-| 场景规划 | `dramaclaw_get(path="/projects/{project}/scenes")` 展示场景列表 |
-| 道具规划 | `dramaclaw_get(path="/projects/{project}/props")` 展示道具列表 |
-| 场景参考图 | `dramaclaw_get_scene_images()` 展示场景图 |
-| 草图生成 | `dramaclaw_get_sketches(episode=N)` 展示草图 |
-| AI 检测 | `dramaclaw_get_episode_script(episode=N)` 或 beats 接口汇总每个 beat 检测到的身份/道具；不要重复调用检测 |
-| 全局视频优化 | `dramaclaw_get_episode_script(episode=N)` 或 beats 接口汇总 video_mode / video_prompt 就绪情况 |
-| 首帧生成 | `dramaclaw_get_first_frames(episode=N)` 展示首帧 |
-| 音频生成 | `dramaclaw_get_episode_media(episode=N, media_type="audio")` 展示音频 |
-| 单 beat 视频 | `dramaclaw_get_episode_media(episode=N, media_type="video")` 展示视频片段 |
-| 合成导出 | `dramaclaw_get_final_video(episode=N)` 展示最终成片 |
-| 最终成片展示 | `dramaclaw_get_final_video(episode=N)`，若不存在则只说明暂无成片 |
+| Ingest | `dramaclaw_pipeline_status` summarizes the ingested/configured status; do not show the full source text |
+| Project configuration | `dramaclaw_get(path="/projects/{project}")` summarizes visual style, narration style, rhythm, audio/video configuration |
+| Character extraction | `dramaclaw_get(path="/projects/{project}/characters")` shows the character list |
+| Character face_prompt check/fill | `dramaclaw_get(path="/projects/{project}/characters")` checks the core characters' `face_prompt`; when missing, fill in first and show the characters filled in |
+| Episode planning | `dramaclaw_get(path="/projects/{project}/episodes")` shows the episode list |
+| Character portraits | `dramaclaw_get_character_media(media_kind="portrait")` shows the portraits |
+| Identity planning | `dramaclaw_get_character_media(media_kind="identity")` or the character identities endpoint summarizes the identity list; when there are no identity images, only list the identities |
+| Identity image generation | `dramaclaw_get_character_media(media_kind="identity")` shows the identity images |
+| Script generation | `dramaclaw_get_episode_script(episode=N)` shows a beat summary |
+| Scene planning | `dramaclaw_get(path="/projects/{project}/scenes")` shows the scene list |
+| Prop planning | `dramaclaw_get(path="/projects/{project}/props")` shows the prop list |
+| Scene reference images | `dramaclaw_get_scene_images()` shows the scene images |
+| Sketch generation | `dramaclaw_get_sketches(episode=N)` shows the sketches |
+| AI detection | `dramaclaw_get_episode_script(episode=N)` or the beats endpoint summarizes the identities/props detected in each beat; do not call detection again |
+| Global video optimization | `dramaclaw_get_episode_script(episode=N)` or the beats endpoint summarizes video_mode / video_prompt readiness |
+| First-frame generation | `dramaclaw_get_first_frames(episode=N)` shows the first frames |
+| Audio generation | `dramaclaw_get_episode_media(episode=N, media_type="audio")` shows the audio |
+| Single-beat video | `dramaclaw_get_episode_media(episode=N, media_type="video")` shows the video clips |
+| Compose and export | `dramaclaw_get_final_video(episode=N)` shows the final cut |
+| Final cut display | `dramaclaw_get_final_video(episode=N)`; if it does not exist, only state that there is no final cut yet |
 
 ---
 
-## 模式二：自动推进模式（bounded auto）
+## Mode two: auto-advance mode (bounded auto)
 
-自动推进不是单轮跑完整集。为了避免聊天超时和队列拥塞，自动推进也必须遵守：
+Auto-advance does not run a whole episode in one turn. To avoid chat timeouts and queue congestion, auto-advance must also obey:
 
-- 一次用户消息最多启动 1 个写操作/异步任务。
-- 启动任务成功后立即收口，告诉用户“已进入队列/已启动”，并提示下一步等任务完成后继续。
-- 不在同一轮等待长任务完成，不继续提交下一步。
-- 任何失败、429、前置缺失、任务不存在、404 或网络错误都立即停止并反馈错误原文。
+- One user message starts at most 1 write operation / async task.
+- After a task starts successfully, wrap up immediately, tell the user it "has entered the queue / has started", and remind them to continue after the task completes.
+- Do not wait for long tasks to complete in the same turn and do not keep submitting the next step.
+- Any failure, 429, missing prerequisite, nonexistent task, 404 or network error stops immediately and reports the original error text.
 
-自动推进的含义是：按 `pipeline/status.next_step` 自动选择下一步，不需要每步重新解释流程；但每轮仍只推进一个任务。用户通过文字选择自动模式时，由用户下次说“继续”触发；消息带有 UI 注入的 `mode=episode_auto` 时，任务完成后由后端自动协调器持久化触发下一轮。
+Auto-advance means: automatically choose the next step from `pipeline/status.next_step` without re-explaining the flow at each step; but each turn still advances only one task. When the user chooses auto mode in text, the user's next "continue" triggers it; when the message carries the UI-injected `mode=episode_auto`, the backend auto-coordinator persistently triggers the next turn after a task completes.
 
-外围 UI 自动续跑仍必须在以下情况暂停并回到手动模式：一般任务失败或取消、覆盖摄入、删除或清空、声线等必要选择缺失、无法安全自动补齐的前置条件、结果不完整、存在无法安全判断的多个方案，以及最终成片完成。身份图任务明确只因某个指定角色缺少 Portrait 而失败时，后端自动协调器可授权一轮白名单恢复：仅生成该角色 Portrait，同一角色最多自动尝试一次；补图完成后再由下一轮恢复身份图流程。外围虾导不收取 Agent 积分，也不要展示虾画 Agent 积分报价。
+The outer UI auto-continue must still pause and return to manual mode in these cases: general task failure or cancellation, overwrite ingest, delete or clear, a missing required choice such as voices, a prerequisite that cannot be safely filled in automatically, incomplete results, multiple options that cannot be judged safely, and completion of the final cut. When an identity image task fails explicitly only because a specified character lacks a Portrait, the backend auto-coordinator may authorize one whitelisted recovery turn: generate only that character's Portrait, with at most one automatic attempt per character; after the image is filled in, the next turn resumes the identity image flow. The outer Shrimp Director does not charge Agent credits, and must not show Shrimp Canvas Agent credit quotes.
 
-### 自动运行中的用户消息
+### User messages during auto run
 
-- 用户可以在本集自动运行或任务生成期间继续发消息。
-- 问答、解释、查看状态和进度不改变运行模式；后端自动续跑会等待当前聊天轮结束。
-- 虾导判断消息可能要求修改、重做、替换或配置变更时，先调用 `dramaclaw_control_episode_auto(action="suspend")` 暂停后续推进，再询问确认；本轮不得执行该修改。
-- 用户否认修改、说“算了/保持原样/继续自动”等意思时，调用 `action="resume"` 恢复同一自动会话。
-- 用户确认修改时先调用 `action="pause"` 退出自动模式，再按普通单轮写入规则处理最多一个已确认修改；这样修改任务的状态与完成通知继续沿用手动模式。修改完成后再询问是否重新启用本集自动。
-- 用户明确要求停止或切换手动时调用 `action="pause"`。
-- `suspend`、`resume`、`pause` 都不取消当前 queued/running 任务。只有用户明确确认取消具体任务时，才走任务取消流程。
+- The user may keep sending messages while episode auto is running or tasks are generating.
+- Q&A, explanations, and viewing status and progress do not change the run mode; backend auto-continue waits for the current chat turn to end.
+- When Shrimp Director judges that a message may request a modification, redo, replacement or configuration change, first call `dramaclaw_control_episode_auto(action="suspend")` to pause further advancement, then ask for confirmation; this turn must not execute the change.
+- When the user denies the change, saying things like "never mind / keep it as is / continue auto", call `action="resume"` to restore the same auto session.
+- When the user confirms the change, first call `action="pause"` to leave auto mode, then handle at most one confirmed change under the ordinary single-turn write rules; this way the modification task's status and completion notification continue under manual mode. After the modification completes, ask whether to re-enable episode auto.
+- When the user explicitly asks to stop or switch to manual, call `action="pause"`.
+- `suspend`, `resume` and `pause` do not cancel currently queued/running tasks. Only when the user explicitly confirms cancelling a specific task do you go through the task cancellation flow.

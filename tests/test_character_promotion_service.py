@@ -32,11 +32,11 @@ async def test_promotes_missing_scene_header_characters_to_global():
 
     store = FakeCharacterStore()
 
-    promoted = await promote_scene_characters_to_global(store, ["陆辰"])
+    promoted = await promote_scene_characters_to_global(store, ["Luchen"])
 
-    assert promoted == ["陆辰"]
-    assert store.get_character("陆辰") is not None
-    assert store.added[0].name == "陆辰"
+    assert promoted == ["Luchen"]
+    assert store.get_character("Luchen") is not None
+    assert store.added[0].name == "Luchen"
 
 
 @pytest.mark.asyncio
@@ -46,11 +46,11 @@ async def test_skips_existing_characters_and_resolved_aliases():
     )
 
     store = FakeCharacterStore(
-        characters=[NovelCharacter(name="陆辰")],
-        aliases={"陆先生": "陆辰"},
+        characters=[NovelCharacter(name="Luchen")],
+        aliases={"Mr_Lu": "Luchen"},
     )
 
-    promoted = await promote_scene_characters_to_global(store, ["陆辰", "陆先生"])
+    promoted = await promote_scene_characters_to_global(store, ["Luchen", "Mr_Lu"])
 
     assert promoted == []
     assert store.added == []
@@ -66,8 +66,8 @@ async def test_filters_non_specific_scene_character_labels():
 
     promoted = await promote_scene_characters_to_global(
         store,
-        ["", "无", "暂无", "众人", "路人", "群众", "陆辰"],
+        ["", "none", "n/a", "everyone", "passerby", "crowd", "Luchen"],
     )
 
-    assert promoted == ["陆辰"]
-    assert [character.name for character in store.added] == ["陆辰"]
+    assert promoted == ["Luchen"]
+    assert [character.name for character in store.added] == ["Luchen"]

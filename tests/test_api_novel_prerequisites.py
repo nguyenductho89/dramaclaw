@@ -27,9 +27,9 @@ def test_imported_novel_requires_non_whitespace_content(tmp_path: Path):
     with pytest.raises(ValueError, match=f"^{NOVEL_IMPORT_REQUIRED_MESSAGE}$"):
         require_imported_novel(tmp_path)
 
-    (tmp_path / "novel.txt").write_text("小说正文", encoding="utf-8")
+    (tmp_path / "novel.txt").write_text("novel body text", encoding="utf-8")
     assert has_imported_novel(tmp_path) is True
-    assert require_imported_novel(tmp_path) == "小说正文"
+    assert require_imported_novel(tmp_path) == "novel body text"
 
 
 @pytest.mark.asyncio

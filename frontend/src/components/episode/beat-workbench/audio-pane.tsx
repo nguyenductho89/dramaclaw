@@ -50,26 +50,35 @@ function assetTabStorageKey(project: string): string {
   return `${ASSET_TAB_STORAGE_KEY_PREFIX}${encodeURIComponent(project)}`;
 }
 
-// 下面两个函数比对的都是后端报错里的原文，不是界面文案，跟着界面语言走就认不出来了。
-// i18n-exempt-start
-function audioPrereqTarget(error: string): VoiceConfigTarget | null {
+const NARRATOR_MISSING_CODE = "voice_narrator_missing";
+
+// Branch on the stable backend code (`reason_code` / `code`) when present; the English text match is only a fallback for older servers.
+function isNarratorVoiceMissing(message: string, code?: string | null): boolean {
+  if (code === NARRATOR_MISSING_CODE) return true;
+  return /voice_narrator_missing|narrator voice (?:is )?missing/i.test(message);
+}
+
+function mentionsCharacterWorkbench(message: string): boolean {
+  return /narrator protagonist|character workbench/i.test(message);
+}
+
+function audioPrereqTarget(error: string, code?: string | null): VoiceConfigTarget | null {
   const message = String(error || "").trim();
-  if (!message.includes("解说声线缺失")) return null;
-  if (message.includes("解说主角") || message.includes("角色工作台")) return "characters";
+  if (!isNarratorVoiceMissing(message, code)) return null;
+  if (mentionsCharacterWorkbench(message)) return "characters";
   return "voices";
 }
 
-function audioPrereqMessage(error: string, t: (key: string) => string): string {
+function audioPrereqMessage(error: string, t: (key: string) => string, code?: string | null): string {
   const message = String(error || "").trim();
-  if (!message.includes("解说声线缺失")) return message;
-  if (message.includes("解说主角") || message.includes("角色工作台")) {
+  if (!isNarratorVoiceMissing(message, code)) return message;
+  if (mentionsCharacterWorkbench(message)) {
     return `${message}${t("episode.workbench.audio.prereqHintCharacters")}`;
   }
   return `${message}${t("episode.workbench.audio.prereqHintVoices")}`;
 }
-// i18n-exempt-end
 
-/** 音频 sub-tab — per-beat IndexTTS2 task dispatch and playback. */
+/** Audio sub-tab - per-beat IndexTTS2 task dispatch and playback. */
 export function AudioPane({
   beat,
   project,
@@ -106,9 +115,9 @@ export function AudioPane({
   const narrationEmpty = narration.trim() === "";
   const src = beat.audio_url ? resolveMediaUrl(beat.audio_url) : null;
 
-  const showAudioError = (error: string) => {
-    const target = audioPrereqTarget(error);
-    const message = audioPrereqMessage(error, t);
+  const showAudioError = (error: string, code?: string | null) => {
+    const target = audioPrereqTarget(error, code);
+    const message = audioPrereqMessage(error, t, code);
     if (!target) {
       toast.error(message);
       return;
@@ -131,7 +140,9 @@ export function AudioPane({
     try {
       const res = await regenerate.mutateAsync(beat.beat_number);
       if (res.ok === false) {
-        showAudioError(res.error || t("episode.workbench.audio.regenFailed"));
+        const resCode = (res as { reason_code?: string; code?: string }).reason_code
+          ?? (res as { code?: string }).code;
+        showAudioError(res.error || t("episode.workbench.audio.regenFailed"), resCode);
         return;
       }
       audioTask.start({ scope: res.scope, taskId: res.task_id });

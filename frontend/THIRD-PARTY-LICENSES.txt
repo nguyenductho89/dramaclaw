@@ -5053,11 +5053,11 @@ License: MIT
 
 # dramaclaw-spec-render
 
-把扁平 JSON Spec（`{ root, elements }`）渲染为 React UI 的库。内置 6 种专用渲染器（角色展示、关键帧视频、草图画廊、剧集拆分、脚本概览、长篇故事）+ 通用树渲染兜底。
+A library that renders a flat JSON Spec (`{ root, elements }`) as a React UI. It ships 6 dedicated renderers (character showcase, keyframe video, sketch gallery, episode breakdown, script overview, long-form story) plus a generic tree renderer as a fallback.
 
-原始代码从 DramaClaw / schat 项目抽取，解耦了 store / presign / 弹窗回调，改由 Context 注入。
+The original code was extracted from the DramaClaw / schat project; the store / presign / dialog callbacks were decoupled and are now injected through Context.
 
-## 安装
+## Installation
 
 ```bash
 npm install dramaclaw-spec-render
@@ -5065,7 +5065,7 @@ npm install dramaclaw-spec-render
 npm install react react-dom framer-motion lucide-react @radix-ui/react-dialog
 ```
 
-## 最小用法
+## Minimal usage
 
 ```tsx
 import { SpecRenderer, SpecRendererProvider } from "dramaclaw-spec-render";
@@ -5074,13 +5074,13 @@ import "dramaclaw-spec-render/style.css";
 export function App() {
   return (
     <SpecRendererProvider
-      // 把内部路径（如 /static/xxx/image.png）解析为可访问 URL
+      // Resolve internal paths (such as /static/xxx/image.png) to accessible URLs
       resolveMediaUrl={async (src) => await presign(src)}
-      // 判断哪些 URL 需要解析（返回 null 表示无需处理）
+      // Decide which URLs need resolving (return null for no handling)
       parseMediaUrl={(src) => /^(?:https?:\/\/[^/]+)?\/static\//.test(src) ? src : null}
-      // 用户点候选图时的回调（可选）
-      onCandidateSelect={(candidate) => sendWs(`我选择了「${candidate.label}」的图片`)}
-      // toast 回调（可选）
+      // Callback when the user picks a candidate image (optional)
+      onCandidateSelect={(candidate) => sendWs(`I chose the image "${candidate.label}"`)}
+      // Toast callback (optional)
       onToast={(msg, level) => toast[level](msg)}
     >
       <SpecRenderer spec={spec} mediaMaxWidth={720} />
@@ -5089,56 +5089,56 @@ export function App() {
 }
 ```
 
-## 样式前置条件
+## Style prerequisites
 
-组件用了 **Tailwind class** + 一份 `jr-*` 前缀的 CSS。包内自带**预编译的
-Tailwind utilities**（扫描过组件源码，所有 `w-[148px]`、`h-[198px]` 这类
-arbitrary 值都已打进 CSS），消费端无需再配 `content` / `@source`：
+The components use **Tailwind classes** plus a CSS file with a `jr-*` prefix. The package ships
+**precompiled Tailwind utilities** (the component source was scanned, and all arbitrary values such as
+`w-[148px]` and `h-[198px]` are already in the CSS), so the consumer does not need to configure `content` / `@source`:
 
 ```ts
-import "dramaclaw-spec-render/style.css";     // jr-* 自定义样式
-import "dramaclaw-spec-render/tailwind.css";  // 预编译 Tailwind utilities
+import "dramaclaw-spec-render/style.css";     // jr-* custom styles
+import "dramaclaw-spec-render/tailwind.css";  // Precompiled Tailwind utilities
 ```
 
-预编译产物只含 `theme` + `utilities` 两层，不带 preflight/base，不会污染
-消费端。消费端自身仍然可以用 Tailwind v3 或 v4（或完全不用）。
+The precompiled output contains only the `theme` + `utilities` layers, with no preflight/base, so it does not pollute
+the consumer. The consumer may still use Tailwind v3 or v4 (or none at all).
 
-另外需要 **定义 CSS 变量**（shadcn 风格）：`--background`, `--foreground`,
+You also need to **define CSS variables** (shadcn style): `--background`, `--foreground`,
 `--border`, `--muted`, `--muted-foreground`, `--card`, `--primary`,
-`--secondary`, `--secondary-foreground`, `--radius` 等。直接用 shadcn 默认
-主题即可。
+`--secondary`, `--secondary-foreground`, `--radius`, and so on. The default shadcn
+theme works as is.
 
-> **如果你更想自己扫描包内类名**（比如要 tree-shake 或保持全局主题一致），
-> 可以跳过 `tailwind.css` 导入，改为：
+> **If you would rather scan the class names inside the package yourself** (for example to tree-shake or keep the global theme consistent),
+> skip the `tailwind.css` import and instead:
 >
-> - Tailwind v3：在 `tailwind.config.*` 的 `content` 里加
+> - Tailwind v3: add to `content` in `tailwind.config.*`
 >   `"./node_modules/dramaclaw-spec-render/dist/**/*.{js,cjs}"`
-> - Tailwind v4：在入口 CSS 加
->   `@source "../node_modules/dramaclaw-spec-render/dist";`（注意 v4 默认
->   会排除 gitignored 路径，如有遗漏可直接改扫 `src/**/*.{ts,tsx}`，或保持
->   使用自带的 `tailwind.css`）
+> - Tailwind v4: add to the entry CSS
+>   `@source "../node_modules/dramaclaw-spec-render/dist";` (note that v4 excludes
+>   gitignored paths by default; if anything is missed, scan `src/**/*.{ts,tsx}` instead, or keep
+>   using the bundled `tailwind.css`)
 
-## 导出
+## Exports
 
 ```ts
-// 入口组件
+// Entry components
 export { SpecRenderer, SpecRendererProvider, useSpecRendererContext };
 
-// 类型
+// Types
 export type { Spec, UIElement, ContentSegment };
 export type { RenderContext, RootRendererFn, ComponentFn, Props };
 export type { ImageCandidate, VideoDetailSection };
 
-// 标准化 & 提取
+// Normalization & extraction
 export { normalizeSpec, flattenNestedSpec, normalizeSpecType };
 
-// 底层渲染（可单独使用）
+// Low-level rendering (usable on its own)
 export { DefaultRootRenderer, renderElement, renderRootWithOverrides, renderElementWithOverrides };
 
-// 专用渲染器注册表
+// Registry of dedicated renderers
 export { SPEC_RENDERERS };
 
-// 内部弹窗（调用方可直接用）
+// Internal dialogs (usable directly by callers)
 export { ImageDetailModal, VideoDetailModal };
 ```
 
@@ -5151,57 +5151,57 @@ type SpecRendererContextValue = {
   onCandidateSelect?: (candidate: ImageCandidate) => void;
   onToast?: (message: string, level: "success" | "error" | "info") => void;
   /**
-   * 占位视频 URL。未传时自动使用包内打包的 loading.mp4；
-   * 传 "" 可强制回退到 CSS 闪烁。
+   * Placeholder video URL. When omitted, the loading.mp4 bundled in the package is used;
+   * pass "" to force a fallback to the CSS shimmer.
    */
   loadingVideoUrl?: string;
 };
 ```
 
-## 内置 loading 视频
+## Built-in loading video
 
-包会把 `src/assets/loading.mp4` 打包到 `dist/assets/loading.mp4`，并通过
-`new URL("./assets/loading.mp4", import.meta.url)` 模式引用。现代 bundler
-（webpack 5 / turbopack / vite）会识别这个模式，自动把 mp4 从 `node_modules`
-拷到消费端产物目录，无需手动配置。
+The package bundles `src/assets/loading.mp4` into `dist/assets/loading.mp4` and references it through the
+`new URL("./assets/loading.mp4", import.meta.url)` pattern. Modern bundlers
+(webpack 5 / turbopack / vite) recognize this pattern and automatically copy the mp4 from `node_modules`
+to the consumer's output directory, with no manual configuration.
 
-想用自己的占位视频，仍可通过 `loadingVideoUrl` 覆盖：
+To use your own placeholder video, you can still override it through `loadingVideoUrl`:
 
 ```tsx
 import { SpecRendererProvider, LOADING_VIDEO_URL } from "dramaclaw-spec-render";
 
-// 用自己的 CDN 视频
+// Use your own CDN video
 <SpecRendererProvider loadingVideoUrl="https://cdn.example.com/loading.mp4">...
-// 或者显式引用包内资源
+// Or reference the bundled asset explicitly
 <SpecRendererProvider loadingVideoUrl={LOADING_VIDEO_URL}>...
-// 关闭占位视频（回退 CSS 闪烁）
+// Turn off the placeholder video (fall back to the CSS shimmer)
 <SpecRendererProvider loadingVideoUrl="">...
 ```
 
-也可以通过 subpath 导入直接拿到 mp4 的静态 URL（需消费端 bundler 支持 `.mp4`
-import，如 Vite 的 `?url`）：
+You can also get the static URL of the mp4 directly through a subpath import (the consumer's bundler must support `.mp4`
+imports, such as Vite's `?url`):
 
 ```ts
 import loadingMp4 from "dramaclaw-spec-render/loading.mp4";
 ```
 
-## 自动类型检测
+## Automatic type detection
 
-当 `spec.type` 未指定或不在 SPEC_RENDERERS 中时，按规则自动推断：
+When `spec.type` is not specified or is not in SPEC_RENDERERS, the type is inferred by these rules:
 
 - Video ≥1 → `keyframe_video`
-- Image ≥2 + Stack 根 / overlay 属性 → `character_showcase`
+- Image ≥2 + Stack root / overlay property → `character_showcase`
 - Image ≥2 + Card ≥2 → `sketch_gallery`
 - List + Card → `episode_breakdown`
 - Card ≥3 → `script_overview`
-- Text ≥3 + 无媒体 → `longform_story`
-- 都不匹配 → `DefaultRootRenderer`（通用树渲染）
+- Text ≥3 + no media → `longform_story`
+- No match → `DefaultRootRenderer` (generic tree rendering)
 
-## 已知限制
+## Known limitations
 
-- Tailwind 强绑定，暂不支持非 Tailwind 消费方
-- `framer-motion` / `lucide-react` / `@radix-ui/react-dialog` 是 peer dep，消费端需自己安装
-- 图片裁剪/编辑 UI 依赖 shadcn CSS 变量
+- Tightly bound to Tailwind; consumers that do not use Tailwind are not supported yet
+- `framer-motion` / `lucide-react` / `@radix-ui/react-dialog` are peer deps that the consumer must install itself
+- The image crop/edit UI depends on shadcn CSS variables
 
 ==============================================================================
 end-of-stream@1.4.5

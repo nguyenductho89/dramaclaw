@@ -155,15 +155,15 @@ def test_license_inventory_covers_current_git_index() -> None:
 
 
 def test_third_party_dirs_with_license_file_not_marked_project_license() -> None:
-    """带自身 License.txt 的第三方目录,其文件不得被聚合标成 PROJECT_LICENSE。
-    防止后续一刀切重跑把上游许可(如 viewer-kit/quaternius 的 CC0-1.0)
-    覆盖回 Elastic-2.0。"""
+    """Files in third-party directories that carry their own License.txt must not be aggregated as PROJECT_LICENSE.
+    Prevents a later blanket re-run from overwriting upstream licenses (e.g. CC0-1.0 of viewer-kit/quaternius)
+    back to Elastic-2.0."""
     rows = list(csv.DictReader(Path("license-inventory.csv").open(encoding="utf-8")))
     tracked = set(generator.run_git_ls_files())
     third_party_dirs = {
         str(Path(p).parent) for p in tracked if Path(p).name == "License.txt"
     }
-    assert third_party_dirs, "预期至少有一个带 License.txt 的第三方目录"
+    assert third_party_dirs, "expected at least one third-party directory with a License.txt"
     offenders = [
         row["path"]
         for row in rows
@@ -171,7 +171,7 @@ def test_third_party_dirs_with_license_file_not_marked_project_license() -> None
         and row["license_expression"] == generator.PROJECT_LICENSE
     ]
     assert offenders == [], (
-        "第三方(带 License.txt)路径被错标为 PROJECT_LICENSE:\n" + "\n".join(offenders)
+        "third-party (with License.txt) paths wrongly labeled PROJECT_LICENSE:\n" + "\n".join(offenders)
     )
 
 

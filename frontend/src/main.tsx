@@ -76,8 +76,8 @@ declare module "@tanstack/react-router" {
 // handler can fan out a full cache purge via resetRegionState().
 setApiQueryClient(queryClient);
 installChunkLoadRecovery();
-// 抵御浏览器/webview 翻译插件改写 DOM 导致的 React removeChild 崩溃(整页「页面加载失败」)。
-// 必须在任何 React 渲染前打上补丁。见 dom-reconciliation-guard.ts。
+// Guard against React removeChild crashes caused by browser/webview translation extensions rewriting the DOM (the whole page becomes "page failed to load").
+// The patch must be applied before any React rendering. See dom-reconciliation-guard.ts.
 installDomReconciliationGuard();
 
 function AppRouterShell() {

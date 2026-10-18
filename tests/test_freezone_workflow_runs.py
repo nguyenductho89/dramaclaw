@@ -283,7 +283,7 @@ def test_browser_cannot_complete_generation_without_durable_artifact(
     [
         ("HTTP 503 upstream unavailable", "transient_upstream", True),
         ("read ECONNRESET", "transient_upstream", True),
-        ("Recipe 文本生成超时：模型未返回结果", "transient_upstream", True),
+        ("Recipe text generation timed out: the model returned no result", "transient_upstream", True),
         ("HTTP 401: Invalid token", "authentication", False),
         ("model_not_found", "model_unavailable", False),
         ("HTTP 429: token-plan quota has been exhausted", "quota_exhausted", False),
@@ -308,7 +308,7 @@ def test_workflow_error_diagnostics_extracts_request_id_and_user_message() -> No
         "retryable": False,
         "error_request_id": "02178540585944116abc",
         "error_fingerprint": "request:02178540585944116abc",
-        "user_error": "输入视频总时长超过当前模型限制，请缩短素材或拆分生成。",
+        "user_error": "The total input video duration exceeds the current model limit. Shorten the assets or split the generation.",
     }
 
 
@@ -323,8 +323,8 @@ def test_workflow_error_diagnostics_humanizes_output_safety_review() -> None:
     assert diagnostics["retryable"] is False
     assert diagnostics["error_request_id"] == "output-review-123"
     assert diagnostics["user_error"] == (
-        "内容安全审核未通过（输出视频）：模型拒绝了本次生成结果，"
-        "请调整敏感情节或画面描述后重试。"
+        "Content safety review failed (output video): the model rejected this generation result. "
+        "Adjust sensitive plot points or scene descriptions and retry."
     )
 
 
@@ -356,7 +356,7 @@ def test_failed_action_persists_normalized_error_diagnostics(tmp_path: Path) -> 
     assert action["retryable"] is True
     assert action["error_request_id"] == "req-123"
     assert action["error_fingerprint"] == "request:req-123"
-    assert action["user_error"] == "上游模型服务暂时不可用，系统可稍后重试。"
+    assert action["user_error"] == "The upstream model service is temporarily unavailable. The system may retry later."
 
     retried = update_workflow_run(
         project_dir=tmp_path,

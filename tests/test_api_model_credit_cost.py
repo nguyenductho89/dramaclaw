@@ -179,7 +179,7 @@ async def test_generation_credit_cost_route_returns_promotion_display(monkeypatc
                 display="9",
                 original_total_cost=12,
                 discount_amount=3,
-                promotion={"id": "promo_1", "name": "模型七五折"},
+                promotion={"id": "promo_1", "name": "Model 25% off"},
             )
 
     register_port("credit_quote", DiscountQuotePort())
@@ -196,7 +196,7 @@ async def test_generation_credit_cost_route_returns_promotion_display(monkeypatc
         "original_cost": 12,
         "original_display": "12",
         "discount_amount": 3,
-        "promotion": {"id": "promo_1", "name": "模型七五折"},
+        "promotion": {"id": "promo_1", "name": "Model 25% off"},
     }
 
 

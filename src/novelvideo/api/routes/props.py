@@ -167,7 +167,7 @@ async def _local_episode_prop_payloads(
 
 
 def _rename_prop_asset_dir(project_dir: Path, old_name: str, new_name: str) -> None:
-    # 见 ``move_asset_dir``：old_name 可能是库里没消毒过的脏值，直接拼路径会爬出资产根。
+    # See ``move_asset_dir``: old_name may be a dirty, unsanitized value from the database, and joining it into a path directly could climb out of the asset root.
     move_asset_dir(project_dir / "assets" / "props", old_name, new_name)
 
 
@@ -176,12 +176,12 @@ async def _require_prop(store: SQLiteStore, name: str) -> NovelProp | None:
 
 
 async def _heal_path_unsafe_prop_names(store: SQLiteStore, project_dir: Path) -> dict[str, str]:
-    """修好库里名字带斜杠的存量道具，原名转成别名。
+    """Repair legacy props in the database whose names contain slashes, turning the original name into an alias.
 
-    和场景同一个毛病：``{name}`` 路由匹配不到带斜杠的名字，那一排接口全 404。
-    详见 :mod:`novelvideo.utils.asset_names`。
+    Same defect as scenes: the ``{name}`` route cannot match a name with slashes, and that whole family of endpoints returns 404.
+    See :mod:`novelvideo.utils.asset_names` for details.
 
-    调用方要先过 ``may_run_asset_repair``：这是一次写操作，不该由只读协作者触发。
+    Callers must first pass ``may_run_asset_repair``: this is a write operation and must not be triggered by a read-only collaborator.
     """
 
     def move_assets(old_name: str, new_name: str) -> None:
@@ -244,7 +244,7 @@ async def create_prop(
         else await make_sqlite_store(resolved.username, resolved.project_name)
     )
     project_dir = resolved.project_dir
-    # 在查重之前消毒，否则两个只差斜杠的名字会双双通过查重、后写的静默覆盖先写的。
+    # Sanitize before the duplicate check; otherwise two names differing only by a slash would both pass the check and the later write would silently overwrite the earlier one.
     name = path_safe_asset_name(str(body.name or "").strip())
     if not name:
         return {"ok": False, "error": "Prop name is required"}
@@ -287,8 +287,8 @@ async def update_prop(
         return {"ok": False, "error": f"Prop '{name}' not found"}
 
     updates = body.model_dump(exclude_unset=True, exclude_none=True)
-    # 在挪目录之前消毒：store.rename_prop 里也会消毒，但目录迁移先于它执行，
-    # 不在这里统一就会出现「库里 a_b、盘上 a/b」的错位。
+    # Sanitize before moving the directory: store.rename_prop also sanitizes, but the directory migration runs before it,
+    # and without unifying here there would be a mismatch of "a_b in the database, a/b on disk".
     requested_name = path_safe_asset_name(str(updates.pop("name", "") or "").strip())
     if requested_name and requested_name != prop.name:
         if await store.get_prop(requested_name) is not None:
@@ -396,7 +396,7 @@ async def generate_prop_reference(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"道具「{prop.name}」参考图生成任务已进入队列",
+            "message": f"Prop '{prop.name}' reference image generation task queued",
         }
 
-    return {"ok": False, "error": "道具参考图生成需要 project context"}
+    return {"ok": False, "error": "Prop reference image generation requires a project context"}

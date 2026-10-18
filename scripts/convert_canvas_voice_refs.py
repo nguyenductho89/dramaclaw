@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
-"""把存量画布节点里的**项目级**音色引用一次性改写成**账号级**引用。
+"""One-time rewrite of **project-level** voice references in existing canvas nodes into **account-level** references.
 
-B2 §4 第 3 条：块二（音频节点解耦）把音色解析上移到账号级之后，已保存的画布里
-仍留着 `character_default` / `identity` / `project_narrator` 这类**钉项目**的
-`voiceRef`。它们是 B2 里唯一的存量数据改写。B2 §9 已判：**独立脚本，不进迁移**
-（量级百级）。
+B2 section 4, item 3: after block 2 (audio node decoupling) moved voice resolution up to the
+account level, saved canvases still carry `voiceRef`s such as `character_default` / `identity` /
+`project_narrator` that are **pinned to a project**. They are the only existing-data rewrite in B2.
+B2 section 9 ruled: **a standalone script, not part of a migration** (hundreds of records).
 
-它做的事，逐条：
+What it does, step by step:
 
-1. 扫 `<project_dir>/freezone/canvases/*.json` 里的活画布（跳墓碑与 `_history/`）。
-2. 每个项目级 `voiceRef`，用**现成的**解析路径 `audio_node.resolve_speech_voice`
-   落到一个具体音频文件（这一步要项目 SQLite，所以本脚本跑在家节点上）。
-3. 把那个文件登记进该用户的账号级音色库（`audio_node.create_user_audio_voice`，
-   即 `_account/freezone/audio/voices/`），**按 sha256 去重**。
-4. 把节点的 `voiceRef` 改写成 `{"scope": "user_custom", "voiceId": ...}`。
+1. Scan the live canvases in `<project_dir>/freezone/canvases/*.json` (skipping tombstones and `_history/`).
+2. For each project-level `voiceRef`, use the **existing** resolution path
+   `audio_node.resolve_speech_voice` to land on a concrete audio file (this step needs the
+   project SQLite, so the script runs on the home node).
+3. Register that file in the user's account-level voice library
+   (`audio_node.create_user_audio_voice`, i.e. `_account/freezone/audio/voices/`), **deduplicated by sha256**.
+4. Rewrite the node's `voiceRef` into `{"scope": "user_custom", "voiceId": ...}`.
 
-**可重入**：改写后的节点 scope 已是 `user_custom`，第二遍不再命中，既不解析、
-也不登记、也不落盘 —— 第二遍是 no-op（`tests/test_convert_canvas_voice_refs_script.py`
-断言之）。
+**Re-entrant**: after the rewrite the node's scope is already `user_custom`, so a second pass no
+longer matches: it neither resolves, registers, nor writes to disk -- the second pass is a no-op
+(asserted by `tests/test_convert_canvas_voice_refs_script.py`).
 
-**默认 dry-run**，`--apply` 才写。写入走 `canvas_write_lock` ——
-B2 §4 第 3 条要求本转换在块一之后做，靠互斥保证它与用户并发保存不打架。
+**Dry-run by default**; only `--apply` writes. Writes go through `canvas_write_lock` --
+B2 section 4, item 3 requires this conversion to run after block 1, and the mutual exclusion
+guarantees it does not collide with a user's concurrent save.
 
-用法::
+Usage::
 
-    python scripts/convert_canvas_voice_refs.py                    # 全量 dry-run
+    python scripts/convert_canvas_voice_refs.py                    # full dry-run
     python scripts/convert_canvas_voice_refs.py --apply
     python scripts/convert_canvas_voice_refs.py --username alice --project demo --apply
 """
@@ -50,9 +52,9 @@ from novelvideo.freezone.canvas_lock import canvas_write_lock
 from novelvideo.freezone.canvas_store import atomic_write_json, load_canvas_json
 from novelvideo.freezone.paths import canvases_dir
 
-# 前端 `AudioVoiceRef` 的 scope 全集见
-# `frontend/src/features/canvas/domain/canvasNodes.ts:445-451`；除去账号级的
-# `user_custom`，其余全部钉项目。
+# The full set of scopes of the frontend `AudioVoiceRef` is in
+# `frontend/src/features/canvas/domain/canvasNodes.ts:445-451`; apart from the account-level
+# `user_custom`, all the rest are pinned to a project.
 PROJECT_SCOPES = frozenset(
     {
         "project_narrator",
@@ -63,7 +65,7 @@ PROJECT_SCOPES = frozenset(
     }
 )
 
-# 项目级独有的键，改写成账号级引用时必须一并清掉。
+# Keys unique to the project level; they must be cleared when rewriting into an account-level reference.
 PROJECT_ONLY_KEYS = ("characterName", "identityId", "slot")
 
 
@@ -84,12 +86,12 @@ class ConversionResult:
 
 
 # ---------------------------------------------------------------------------
-# 画布 payload 侧（纯函数，不碰磁盘）
+# Canvas payload side (pure functions, no disk access)
 # ---------------------------------------------------------------------------
 
 
 def iter_voice_refs(payload: dict) -> Iterable[dict]:
-    """产出画布里所有**待改写**的 `voiceRef`（就地可改的那个 dict 本身）。"""
+    """Yield every `voiceRef` in the canvas that is **pending rewrite** (the dict itself, editable in place)."""
     for node in payload.get("nodes") or []:
         if not isinstance(node, dict):
             continue
@@ -104,7 +106,7 @@ def iter_voice_refs(payload: dict) -> Iterable[dict]:
 
 
 def voice_ref_key(voice_ref: dict) -> str:
-    """同一个项目级引用只解析一次的去重键。"""
+    """Dedup key so that the same project-level reference is resolved only once."""
     return json.dumps(
         {
             "scope": str(voice_ref.get("scope") or ""),
@@ -118,9 +120,9 @@ def voice_ref_key(voice_ref: dict) -> str:
 
 
 def backend_voice_ref(voice_ref: dict) -> dict:
-    """camelCase 画布形状 → 后端 `_resolve_voice_ref` 吃的 snake_case 形状。
+    """camelCase canvas shape -> the snake_case shape the backend `_resolve_voice_ref` consumes.
 
-    映射逐字对齐前端投递时做的那一次（`frontend/src/api/ops.ts:2074-2090`）。
+    The mapping is aligned verbatim with the one the frontend does on dispatch (`frontend/src/api/ops.ts:2074-2090`).
     """
     return {
         "scope": str(voice_ref.get("scope") or ""),
@@ -135,14 +137,14 @@ def voice_ref_label(voice_ref: dict) -> str:
     scope = str(voice_ref.get("scope") or "")
     character = str(voice_ref.get("characterName") or "").strip()
     if scope == "project_narrator":
-        return "项目解说声线"
+        return "Project narrator voice"
     if scope == "character_default":
-        return f"{character or '角色'} · 默认声线"
+        return f"{character or 'Character'} - default voice"
     if scope == "character_age_group":
         slot = str(voice_ref.get("slot") or "").strip()
-        return f"{character or '角色'} · {slot or '年龄段'}"
+        return f"{character or 'Character'} - {slot or 'age group'}"
     identity = str(voice_ref.get("identityId") or "").strip()
-    return f"{character or '角色'} · 身份 {identity or '未知'}"
+    return f"{character or 'Character'} - identity {identity or 'unknown'}"
 
 
 def convert_canvas_payload(
@@ -150,7 +152,7 @@ def convert_canvas_payload(
     *,
     resolve_account_voice_id: Callable[[dict], str],
 ) -> int:
-    """就地改写一张画布，返回改写的节点数。已是账号级的节点原样不动。"""
+    """Rewrite one canvas in place and return the number of rewritten nodes. Nodes already at account level are left untouched."""
     converted = 0
     for voice_ref in list(iter_voice_refs(payload)):
         voice_id = resolve_account_voice_id(dict(voice_ref))
@@ -162,12 +164,12 @@ def convert_canvas_payload(
 
 
 # ---------------------------------------------------------------------------
-# 磁盘侧
+# Disk side
 # ---------------------------------------------------------------------------
 
 
 def iter_canvas_files(project_dir: Path) -> list[Path]:
-    """项目里的活画布文件。跳墓碑（`*.deleted.json`）、`_history/` 与写入临时文件。"""
+    """Live canvas files in a project. Skips tombstones (`*.deleted.json`), `_history/`, and temporary write files."""
     root = canvases_dir(project_dir)
     if not root.is_dir():
         return []
@@ -191,7 +193,7 @@ def convert_project_canvases(
         payload = load_canvas_json(path)
         if not isinstance(payload, dict):
             result = replace(
-                result, errors=result.errors + (f"{path}: 不是可读的画布 JSON",)
+                result, errors=result.errors + (f"{path}: not readable canvas JSON",)
             )
             continue
         if not any(True for _ in iter_voice_refs(payload)):
@@ -200,12 +202,12 @@ def convert_project_canvases(
             pending = sum(1 for _ in iter_voice_refs(payload))
             result = replace(result, nodes_converted=result.nodes_converted + pending)
             continue
-        # 拿锁之后重读一遍，避免在扫描与写入之间被用户的保存覆盖。
+        # Re-read after taking the lock, so a user save between the scan and the write is not overwritten.
         with canvas_write_lock(project_dir, canvas_id):
             fresh = load_canvas_json(path)
             if not isinstance(fresh, dict):
                 result = replace(
-                    result, errors=result.errors + (f"{path}: 取锁后读不到画布",)
+                    result, errors=result.errors + (f"{path}: canvas unreadable after taking the lock",)
                 )
                 continue
             converted = convert_canvas_payload(
@@ -228,10 +230,11 @@ def account_voice_id_for(
     resolution: FreezoneVoiceRefResolution,
     label: str,
 ) -> str:
-    """把解析出的音频文件登记成账号级音色，按 sha256 复用已登记的那一条。
+    """Register the resolved audio file as an account-level voice, reusing the already registered entry by sha256.
 
-    去重是可重入的第二道保险：同一个源文件被多个节点引用，或转换被中断后重跑，
-    都不会在 `_account/freezone/audio/voices/` 里堆出重复条目。
+    Dedup is the second safeguard for re-entrancy: if one source file is referenced by several
+    nodes, or the conversion is interrupted and rerun, no duplicate entries pile up in
+    `_account/freezone/audio/voices/`.
     """
     sha = str(resolution.sha256 or "")
     if sha:
@@ -254,7 +257,7 @@ async def build_account_voice_map(
     project_dir: Path,
     voice_refs: dict[str, dict],
 ) -> dict[str, str]:
-    """把每个待改写的项目级引用解析并登记一次，返回 `voice_ref_key -> voice_id`。"""
+    """Resolve and register each project-level reference pending rewrite once, returning `voice_ref_key -> voice_id`."""
     from novelvideo.api.deps import make_sqlite_store
 
     mapping: dict[str, str] = {}
@@ -289,7 +292,7 @@ async def convert_project(username: str, project: str, *, apply: bool) -> Conver
         for voice_ref in iter_voice_refs(payload):
             pending.setdefault(voice_ref_key(voice_ref), dict(voice_ref))
     if not pending:
-        # 完全 no-op：连项目 store 都不开。第二遍就走这条路。
+        # Complete no-op: do not even open the project store. The second pass takes this path.
         return ConversionResult(canvases_scanned=len(files))
 
     if not apply:
@@ -306,10 +309,10 @@ async def convert_project(username: str, project: str, *, apply: bool) -> Conver
             project_dir=project_dir,
             voice_refs=pending,
         )
-    except Exception as exc:  # noqa: BLE001 - 一个项目失败不该中断整批
+    except Exception as exc:  # noqa: BLE001 - one project failing must not abort the whole batch
         return ConversionResult(
             canvases_scanned=len(files),
-            errors=(f"{username}/{project}: 音色解析失败: {exc}",),
+            errors=(f"{username}/{project}: voice resolution failed: {exc}",),
         )
     return convert_project_canvases(
         project_dir,
@@ -349,20 +352,20 @@ async def run(
         total = total.merged(result)
         if result.nodes_converted or result.errors:
             print(
-                f"{owner}/{name}: 扫描 {result.canvases_scanned} 张 · "
-                f"改写 {result.nodes_converted} 个节点 · 落盘 {result.canvases_written} 张"
+                f"{owner}/{name}: scanned {result.canvases_scanned} canvases | "
+                f"rewrote {result.nodes_converted} nodes | wrote {result.canvases_written} canvases"
             )
     return total
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--username", default=None, help="只处理该用户")
-    parser.add_argument("--project", default=None, help="只处理该项目")
+    parser.add_argument("--username", default=None, help="Only process this user")
+    parser.add_argument("--project", default=None, help="Only process this project")
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="真正写盘；不带则只报告（默认 dry-run）",
+        help="Actually write to disk; without it only report (default dry-run)",
     )
     args = parser.parse_args(argv)
 
@@ -371,8 +374,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(
-        f"[{mode}] 画布 {total.canvases_scanned} 张 · 待改写/已改写节点 "
-        f"{total.nodes_converted} 个 · 落盘 {total.canvases_written} 张"
+        f"[{mode}] canvases {total.canvases_scanned} | pending/rewritten nodes "
+        f"{total.nodes_converted} | canvases written {total.canvases_written}"
     )
     for error in total.errors:
         print(f"  ! {error}")

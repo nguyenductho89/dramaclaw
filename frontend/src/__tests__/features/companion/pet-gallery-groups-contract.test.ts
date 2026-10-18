@@ -7,7 +7,7 @@ const source = readFileSync(
   "src/features/companion/petdex/PetGalleryDialog.tsx",
   "utf8",
 );
-const zh = JSON.parse(readFileSync("public/locales/zh/translation.json", "utf8"));
+const vi = JSON.parse(readFileSync("public/locales/vi/translation.json", "utf8"));
 
 describe("pet gallery grouping contract", () => {
   it("stacks official companions before the peripheral collection", () => {
@@ -22,8 +22,8 @@ describe("pet gallery grouping contract", () => {
   });
 
   it("uses localized category labels and equal two-column cards", () => {
-    expect(zh.myBuddy.gallery.officialGroup).toBe("官方搭子");
-    expect(zh.myBuddy.gallery.peripheralGroup).toBe("周边搭子");
+    expect(vi.myBuddy.gallery.officialGroup).toBe("Bạn đồng hành chính thức");
+    expect(vi.myBuddy.gallery.peripheralGroup).toBe("Bộ sưu tập bạn đồng hành");
     expect(source.match(/grid grid-cols-2 gap-3/g)).toHaveLength(2);
     expect(source).toContain("max-w-[568px]");
     expect(source).not.toContain('className="h-px flex-1 bg-white/[0.07]"');

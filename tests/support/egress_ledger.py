@@ -24,9 +24,9 @@ from novelvideo.ports.egress_operations import (
 )
 
 
-# `0039_p0_gray_egress_operations.py:296-318` 的 SECURITY DEFINER 函数所判的前置态，
-# 逐条照抄。替身不建这台状态机，服务路径里「从 dispatching 直接 completed」这种在真
-# 库上必抛 P0001 的写法在测试里就永远看不见——OI-49 正是这么活下来的。
+# The preconditions judged by the SECURITY DEFINER function in `0039_p0_gray_egress_operations.py:296-318`,
+# copied verbatim. If the stand-in did not model this state machine, a service-path write like "dispatching straight to completed",
+# which always raises P0001 on the real DB, would never be seen in tests - that is exactly how OI-49 survived.
 TRANSITION_ALLOWED_FROM: dict[OperationState, frozenset[OperationState]] = {
     OperationState.ACCEPTED: frozenset({OperationState.DISPATCHING}),
     OperationState.COMPLETED: frozenset({OperationState.ACCEPTED}),
@@ -44,7 +44,7 @@ def assert_transition_allowed(
     expected_version: int,
     row_version: int,
 ) -> None:
-    """真 definer 的判据：前置态与乐观锁版本。不合就是 INVALID_TRANSITION。"""
+    """The real definer's criteria: precondition state and optimistic-lock version. A mismatch is INVALID_TRANSITION."""
 
     if current not in TRANSITION_ALLOWED_FROM[target]:
         raise EgressOperationError("EGRESS_OPERATION_INVALID_TRANSITION")

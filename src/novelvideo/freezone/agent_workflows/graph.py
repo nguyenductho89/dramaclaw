@@ -326,7 +326,7 @@ def build_workflow_graph_commands(args: dict[str, Any]) -> dict[str, Any]:
                     {
                         "type": "group_nodes",
                         "node_ids": group_client_node_ids[-1],
-                        "label": group.get("label") or "工作流",
+                        "label": group.get("label") or "Workflow",
                     }
                 )
     elif len(normalized_nodes) >= 2:
@@ -335,7 +335,7 @@ def build_workflow_graph_commands(args: dict[str, Any]) -> dict[str, Any]:
                 "type": "group_nodes",
                 "node_ids": [node["client_id"] for node in normalized_nodes],
                 "label": str(
-                    payload.get("workflow_type") or payload.get("title") or "工作流"
+                    payload.get("workflow_type") or payload.get("title") or "Workflow"
                 ),
             }
         )
@@ -899,7 +899,7 @@ def _groups(raw_groups: Any, layout: Any) -> list[dict[str, Any]]:
             continue
         label = raw.get("label")
         result.append(
-            {"label": str(label).strip() if label else "工作流", "node_ids": refs}
+            {"label": str(label).strip() if label else "Workflow", "node_ids": refs}
         )
     return result
 

@@ -67,11 +67,11 @@ describe("freezone style template API", () => {
 
   it("returns a bare template list unchanged", async () => {
     vi.mocked(apiCall).mockResolvedValueOnce([
-      { id: "anime", label: "动漫", style_prompt: "anime style" },
+      { id: "anime", label: "Anime", style_prompt: "anime style" },
     ]);
 
     await expect(listFreezoneStyleTemplates("proj")).resolves.toEqual([
-      { id: "anime", label: "动漫", style_prompt: "anime style" },
+      { id: "anime", label: "Anime", style_prompt: "anime style" },
     ]);
   });
 
@@ -79,11 +79,11 @@ describe("freezone style template API", () => {
     vi.mocked(apiCall).mockResolvedValueOnce({
       asset_base: "/static/style-gallery",
       version: "3",
-      templates: [{ id: "ink", label: "水墨", style_prompt: "ink wash" }],
+      templates: [{ id: "ink", label: "Ink wash", style_prompt: "ink wash" }],
     });
 
     await expect(listFreezoneStyleTemplates("proj")).resolves.toEqual([
-      { id: "ink", label: "水墨", style_prompt: "ink wash" },
+      { id: "ink", label: "Ink wash", style_prompt: "ink wash" },
     ]);
   });
 
@@ -95,13 +95,13 @@ describe("freezone style template API", () => {
 
   it("drops entries without a usable id", async () => {
     vi.mocked(apiCall).mockResolvedValueOnce([
-      { id: "ok", label: "可用", style_prompt: "fine" },
-      { label: "缺少 id", style_prompt: "broken" },
+      { id: "ok", label: "Usable", style_prompt: "fine" },
+      { label: "Missing id", style_prompt: "broken" },
       null,
     ]);
 
     await expect(listFreezoneStyleTemplates("proj")).resolves.toEqual([
-      { id: "ok", label: "可用", style_prompt: "fine" },
+      { id: "ok", label: "Usable", style_prompt: "fine" },
     ]);
   });
 });
@@ -112,15 +112,15 @@ describe("freezone recipe API", () => {
   });
 
   it("allows long-running text generation requests", async () => {
-    vi.mocked(apiCall).mockResolvedValueOnce({ content: "创意大纲" });
+    vi.mocked(apiCall).mockResolvedValueOnce({ content: "Creative outline" });
 
     const content = await generateFreezoneRecipeText({
       recipeId: "video-creative-outline",
-      nodePrompt: "生成广告创意大纲",
-      userGoal: "制作运动相机广告",
+      nodePrompt: "Generate an ad creative outline",
+      userGoal: "Make an action camera ad",
     });
 
-    expect(content).toBe("创意大纲");
+    expect(content).toBe("Creative outline");
     expect(apiCall).toHaveBeenCalledWith(
       "freezone/recipes/generate-text",
       expect.objectContaining({
@@ -132,7 +132,7 @@ describe("freezone recipe API", () => {
 
   it("allows long-running prompt compilation before media submission", async () => {
     vi.mocked(apiCall).mockResolvedValueOnce({
-      prompt: "编译后的图片提示词",
+      prompt: "Compiled image prompt",
       compile_mode: "timeout_fallback",
       recipe_ids: ["video-storyboard-grid", "cinematic-lighting"],
     });
@@ -148,12 +148,12 @@ describe("freezone recipe API", () => {
       skillVersion: "2.0.0",
       confirmedInputs: { aspect_ratio: "9:16" },
       nodeKind: "image",
-      nodePrompt: "生成多宫格分镜图",
-      userGoal: "制作运动相机广告",
+      nodePrompt: "Generate a multi-grid storyboard image",
+      userGoal: "Make an action camera ad",
       onCompileMetadata,
     });
 
-    expect(prompt).toBe("编译后的图片提示词");
+    expect(prompt).toBe("Compiled image prompt");
     expect(apiCall).toHaveBeenCalledWith(
       "freezone/recipes/compile",
       expect.objectContaining({
@@ -172,7 +172,7 @@ describe("freezone recipe API", () => {
     );
     expect(onCompileMetadata).toHaveBeenCalledWith({
       mode: "timeout_fallback",
-      prompt: "编译后的图片提示词",
+      prompt: "Compiled image prompt",
       recipeIds: ["video-storyboard-grid", "cinematic-lighting"],
     });
   });
@@ -201,13 +201,13 @@ describe("freezone recipe API", () => {
       compileFreezoneRecipePrompt({
         recipeId: "product-hero",
         nodeKind: "image",
-        nodePrompt: "商品主视觉",
+        nodePrompt: "Product key visual",
         onCompileMetadata: firstMetadata,
       }),
       compileFreezoneRecipePrompt({
         recipeId: "product-detail",
         nodeKind: "image",
-        nodePrompt: "材质细节",
+        nodePrompt: "Material details",
         onCompileMetadata: secondMetadata,
       }),
     ]);
@@ -269,12 +269,12 @@ describe("freezone recipe API", () => {
       compileFreezoneRecipePrompt({
         recipeId: "image",
         nodeKind: "image",
-        nodePrompt: "主视觉",
+        nodePrompt: "Key visual",
       }),
       compileFreezoneRecipePrompt({
         recipeId: "broken-audio",
         nodeKind: "audio",
-        nodePrompt: "背景音乐",
+        nodePrompt: "Background music",
       }),
     ]);
 
@@ -305,12 +305,12 @@ describe("freezone recipe API", () => {
       compileFreezoneRecipePrompt({
         recipeId: "first",
         nodeKind: "image",
-        nodePrompt: "第一张图",
+        nodePrompt: "First image",
       }),
       compileFreezoneRecipePrompt({
         recipeId: "second",
         nodeKind: "video",
-        nodePrompt: "第二段视频",
+        nodePrompt: "Second video",
       }),
     ]);
 

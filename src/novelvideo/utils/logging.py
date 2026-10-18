@@ -1,7 +1,7 @@
-"""工具调用日志模块。
+"""Tool-call logging module.
 
-使用 Rich Console 输出美观的工具调用日志，便于调试分析。
-支持结构化日志输出和工具调用统计。
+Uses the Rich Console to print readable tool-call logs for debugging and analysis.
+Supports structured log output and tool-call statistics.
 """
 
 import json
@@ -15,35 +15,35 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-# Rich Console 实例
+# Rich Console instance
 console = Console()
 
-# 全局 verbose 开关
+# Global verbose switch
 _VERBOSE = False
 
-# 工具调用统计
+# Tool-call statistics
 _TOOL_STATS: Dict[str, Dict[str, Any]] = {}
 
-# 结构化日志缓冲
+# Structured log buffer
 _TRACE_LOG: List[Dict[str, Any]] = []
 
-# 日志文件路径（如果设置）
+# Log file path (if set)
 _LOG_FILE_PATH: Optional[Path] = None
 
 
 def set_verbose(enabled: bool) -> None:
-    """设置 verbose 模式。"""
+    """Set verbose mode."""
     global _VERBOSE
     _VERBOSE = enabled
 
 
 def is_verbose() -> bool:
-    """检查是否开启 verbose 模式。"""
+    """Check whether verbose mode is on."""
     return _VERBOSE or os.getenv("NOVELVIDEO_VERBOSE", "0") == "1"
 
 
 def _format_value(value: Any, max_length: int = 200) -> str:
-    """格式化值，截断过长的内容。"""
+    """Format a value, truncating overly long content."""
     text = str(value)
     if len(text) > max_length:
         return text[:max_length] + "..."
@@ -58,14 +58,14 @@ def _log_tool_call(
     error: Exception = None,
     duration_ms: float = 0,
 ) -> None:
-    """打印工具调用日志并记录结构化数据。"""
+    """Print the tool-call log and record structured data."""
     timestamp = datetime.now()
     success = error is None
 
-    # 始终更新统计（无论 verbose 是否开启）
+    # Always update statistics (regardless of verbose)
     _update_stats(tool_name, duration_ms, success)
 
-    # 记录结构化日志
+    # Record the structured log
     trace = {
         "timestamp": timestamp.isoformat(),
         "tool": tool_name,
@@ -78,13 +78,13 @@ def _log_tool_call(
     }
     _record_trace(trace)
 
-    # 如果没有开启 verbose，不打印到控制台
+    # If verbose is off, do not print to the console
     if not is_verbose():
         return
 
     timestamp_str = timestamp.strftime("%H:%M:%S")
 
-    # 构建输入参数显示
+    # Build the input-parameter display
     inputs = []
     if args:
         inputs.extend(_format_value(a) for a in args)
@@ -92,7 +92,7 @@ def _log_tool_call(
         inputs.extend(f"{k}={_format_value(v)}" for k, v in kwargs.items())
     input_str = ", ".join(inputs) if inputs else "()"
 
-    # 输出颜色
+    # Output color
     if error:
         color = "red"
         status = "FAIL"
@@ -100,7 +100,7 @@ def _log_tool_call(
         color = "green"
         status = "OK"
 
-    # 打印工具调用头
+    # Print the tool-call header
     header = Text()
     header.append(f"[{timestamp_str}] ", style="dim")
     header.append(f"{tool_name}", style=f"bold {color}")
@@ -109,16 +109,16 @@ def _log_tool_call(
 
     console.print(header)
 
-    # 打印结果或错误
+    # Print the result or error
     if error:
         console.print(f"    [red]Error: {error}[/red]")
     elif result is not None:
         result_str = _format_value(result, max_length=300)
-        # 多行结果缩进显示
+        # Indent multi-line results
         lines = result_str.split("\n")
         if len(lines) > 1:
             console.print(f"    [dim]Output:[/dim]")
-            for line in lines[:5]:  # 最多显示5行
+            for line in lines[:5]:  # show at most 5 lines
                 console.print(f"      {line}")
             if len(lines) > 5:
                 console.print(f"      [dim]... ({len(lines) - 5} more lines)[/dim]")
@@ -130,14 +130,14 @@ F = TypeVar("F", bound=Callable)
 
 
 def tool_logger(tool_name: str = None) -> Callable[[F], F]:
-    """工具日志装饰器。
+    """Tool logging decorator.
 
-    用法:
+    Usage:
         @tool_logger("search_chapter")
         async def tool_search_chapter(chapter: int) -> str:
             ...
 
-    或者不带参数（自动使用函数名）:
+    Or without arguments (the function name is used automatically):
         @tool_logger()
         def tool_get_character(name: str) -> str:
             ...
@@ -145,9 +145,9 @@ def tool_logger(tool_name: str = None) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         name = tool_name or func.__name__
 
-        # 判断是否是异步函数
+        # Check whether it is an async function
         if hasattr(func, "__wrapped__"):
-            # 已经被包装过
+            # Already wrapped
             is_async = hasattr(func.__wrapped__, "__await__")
         else:
             import asyncio
@@ -186,7 +186,7 @@ def tool_logger(tool_name: str = None) -> Callable[[F], F]:
 
 
 def log_agent_start(agent_name: str, task: str = "") -> None:
-    """打印 Agent 开始执行日志。"""
+    """Print the log for an Agent starting execution."""
     if not is_verbose():
         return
 
@@ -199,7 +199,7 @@ def log_agent_start(agent_name: str, task: str = "") -> None:
 
 
 def log_agent_end(agent_name: str, success: bool = True, result: str = "") -> None:
-    """打印 Agent 执行结束日志。"""
+    """Print the log for an Agent finishing execution."""
     if not is_verbose():
         return
 
@@ -219,7 +219,7 @@ def log_agent_end(agent_name: str, success: bool = True, result: str = "") -> No
 
 
 def log_warning(message: str) -> None:
-    """打印警告日志。"""
+    """Print a warning log."""
     timestamp = datetime.now().strftime("%H:%M:%S")
     header = Text()
     header.append(f"[{timestamp}] ", style="dim")
@@ -229,7 +229,7 @@ def log_warning(message: str) -> None:
 
 
 def log_llm_call(model: str, prompt_preview: str = "", tokens: int = 0) -> None:
-    """打印 LLM 调用日志。"""
+    """Print an LLM call log."""
     if not is_verbose():
         return
 
@@ -248,15 +248,15 @@ def log_llm_call(model: str, prompt_preview: str = "", tokens: int = 0) -> None:
 
 
 # =============================================================================
-# 结构化日志和统计功能
+# Structured logging and statistics
 # =============================================================================
 
 
 def set_log_file(path: str) -> None:
-    """设置日志文件路径。
+    """Set the log file path.
 
     Args:
-        path: 日志文件路径
+        path: log file path
     """
     global _LOG_FILE_PATH
     _LOG_FILE_PATH = Path(path)
@@ -264,21 +264,21 @@ def set_log_file(path: str) -> None:
 
 
 def _record_trace(trace: Dict[str, Any]) -> None:
-    """记录结构化日志。"""
+    """Record a structured log entry."""
     global _TRACE_LOG
     _TRACE_LOG.append(trace)
 
-    # 如果设置了日志文件，追加写入
+    # If a log file is set, append to it
     if _LOG_FILE_PATH:
         try:
             with open(_LOG_FILE_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(trace, ensure_ascii=False, default=str) + "\n")
         except Exception:
-            pass  # 静默失败
+            pass  # fail silently
 
 
 def _update_stats(tool_name: str, duration_ms: float, success: bool) -> None:
-    """更新工具调用统计。"""
+    """Update tool-call statistics."""
     global _TOOL_STATS
 
     if tool_name not in _TOOL_STATS:
@@ -307,10 +307,10 @@ def _update_stats(tool_name: str, duration_ms: float, success: bool) -> None:
 
 
 def get_tool_stats() -> Dict[str, Dict[str, Any]]:
-    """获取工具调用统计。
+    """Get tool-call statistics.
 
     Returns:
-        各工具的统计信息
+        Statistics for each tool
     """
     result = {}
     for tool_name, stats in _TOOL_STATS.items():
@@ -326,32 +326,32 @@ def get_tool_stats() -> Dict[str, Dict[str, Any]]:
 
 
 def get_trace_log() -> List[Dict[str, Any]]:
-    """获取结构化日志。
+    """Get the structured log.
 
     Returns:
-        日志条目列表
+        List of log entries
     """
     return _TRACE_LOG.copy()
 
 
 def clear_stats() -> None:
-    """清空统计和日志。"""
+    """Clear statistics and logs."""
     global _TOOL_STATS, _TRACE_LOG
     _TOOL_STATS = {}
     _TRACE_LOG = []
 
 
 def print_tool_stats() -> None:
-    """打印工具调用统计摘要。"""
+    """Print a summary of tool-call statistics."""
     stats = get_tool_stats()
     if not stats:
-        console.print("[dim]暂无工具调用统计[/dim]")
+        console.print("[dim]No tool-call statistics yet[/dim]")
         return
 
-    console.print("\n[bold]工具调用统计[/bold]")
+    console.print("\n[bold]Tool-call statistics[/bold]")
     console.print("-" * 70)
 
-    # 按调用次数排序
+    # Sort by call count
     sorted_stats = sorted(stats.items(), key=lambda x: -x[1]["call_count"])
 
     for tool_name, s in sorted_stats:
@@ -360,19 +360,19 @@ def print_tool_stats() -> None:
         )
         console.print(
             f"  {tool_name:30} "
-            f"调用: {s['call_count']:3}  "
-            f"成功: {success_rate:5.1f}%  "
-            f"平均: {s['avg_duration_ms']:7.1f}ms"
+            f"calls: {s['call_count']:3}  "
+            f"success: {success_rate:5.1f}%  "
+            f"avg: {s['avg_duration_ms']:7.1f}ms"
         )
 
     console.print("-" * 70)
 
 
 def export_trace_log(path: str) -> None:
-    """导出完整日志到 JSON 文件。
+    """Export the full log to a JSON file.
 
     Args:
-        path: 输出文件路径
+        path: output file path
     """
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -386,4 +386,4 @@ def export_trace_log(path: str) -> None:
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2, default=str)
 
-    console.print(f"[green]日志已导出到: {path}[/green]")
+    console.print(f"[green]Log exported to: {path}[/green]")

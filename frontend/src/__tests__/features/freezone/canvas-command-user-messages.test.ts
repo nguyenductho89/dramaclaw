@@ -9,16 +9,16 @@ describe("canvasCommandUserMessageFromResult", () => {
   it("returns one explicit message for duplicate Recipe text timeouts", () => {
     expect(canvasCommandUserMessageFromResult(
       [
-        "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。",
-        "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。",
+        "Recipe text generation timed out: the model returned no result within the allotted time.",
+        "Recipe text generation timed out: the model returned no result within the allotted time.",
       ],
       [
         {
-          error: "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。",
+          error: "Recipe text generation timed out: the model returned no result within the allotted time.",
         },
       ],
     )).toBe(
-      "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。本轮未继续执行下游节点。",
+      "Recipe text generation timed out: the model returned no result in time. Please retry later. Downstream nodes were not executed this round.",
     );
   });
 
@@ -26,7 +26,7 @@ describe("canvasCommandUserMessageFromResult", () => {
     expect(canvasCommandUserMessageFromResult(
       ["Request timed out."],
       [],
-    )).toContain("Recipe 文本生成超时");
+    )).toContain("Recipe text generation timed out");
   });
 });
 
@@ -35,9 +35,9 @@ describe("unavailable model failures", () => {
 
   it("asks the user to pick a model instead of promising to switch it", () => {
     const message = canvasCommandUserMessageFromResult(errors, []);
-    expect(message).toContain("生成模型不可用");
-    expect(message).toContain("选择");
-    expect(message).not.toContain("我会改用");
+    expect(message).toContain("generation model is unavailable");
+    expect(message).toContain("Pick one");
+    expect(message).not.toContain("I'll use");
   });
 
   it("tells the agent not to change the model or rerun without the user's choice", () => {

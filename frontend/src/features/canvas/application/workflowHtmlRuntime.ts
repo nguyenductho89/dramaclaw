@@ -172,16 +172,16 @@ async function generateAndSave(
       ];
     });
   const references = buildHtmlReferences(upstreamNodesInEdgeOrder(store.nodes, store.edges, nodeId));
-  const media = references.filter(item => item.prefix !== '文本').map(item => ({ // i18n-exempt -- canonical @mention protocol token
+  const media = references.filter(item => item.prefix !== 'text').map(item => ({
     mention: `@${item.mention}`, node_id: item.nodeId, name: item.name,
-    kind: item.prefix === '图片' ? 'image' : item.prefix === '视频' ? 'video' : 'audio', // i18n-exempt -- canonical @mention protocol tokens
+    kind: item.prefix === 'image' ? 'image' : item.prefix === 'video' ? 'video' : 'audio',
     url: item.url,
     width: item.width,
     height: item.height,
     aspect_ratio: item.aspectRatio,
     duration_ms: item.durationMs,
   }));
-  const textReferences = references.filter(item => item.prefix === '文本').map(item => ({ // i18n-exempt -- canonical @mention protocol token
+  const textReferences = references.filter(item => item.prefix === 'text').map(item => ({
     mention: `@${item.mention}`, node_id: item.nodeId, name: item.name, text: item.text ?? '',
   }));
   const instructions =

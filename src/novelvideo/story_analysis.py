@@ -114,7 +114,7 @@ def _pack_small(chunks: list[SourceChunk]) -> list[SourceChunk]:
             first, last = group[0], group[-1]
             label = first.section_label
             if len(group) > 1:
-                label = f"{first.section_label} 等 {len(group)} 段"
+                label = f"{first.section_label} and {len(group) - 1} more"
             characters: list[str] = []
             for member in group:
                 for name in member.characters:
@@ -215,7 +215,7 @@ def _chunk_by_scene(text: str) -> list[SourceChunk]:
                 chunk_id="scene-preamble",
                 chunk_index=0,
                 section_type="scene",
-                section_label="片头",
+                section_label="Opening",
                 source_start=0,
                 source_end=starts[0],
                 text=text[: starts[0]],
@@ -227,7 +227,7 @@ def _chunk_by_scene(text: str) -> list[SourceChunk]:
         end = starts[index + 1] if index + 1 < len(starts) else len(text)
         if end <= start:
             continue
-        label = block.header_line.strip() or block.location.strip() or f"场 {index + 1}"
+        label = block.header_line.strip() or block.location.strip() or f"Scene {index + 1}"
         chunks.append(
             SourceChunk(
                 chunk_id=f"scene-{index:04d}",
@@ -283,7 +283,7 @@ def _chunk_by_chapter(text: str) -> list[SourceChunk]:
                 chunk_id="chapter-preamble",
                 chunk_index=0,
                 section_type="chapter",
-                section_label="卷首",
+                section_label="Prologue",
                 source_start=0,
                 source_end=first_start,
                 text=text[:first_start],
@@ -300,7 +300,7 @@ def _chunk_by_chapter(text: str) -> list[SourceChunk]:
                 chunk_id=f"chapter-{index:04d}",
                 chunk_index=index,
                 section_type="chapter",
-                section_label=f"第{chapter.number}章",
+                section_label=f"Chapter {chapter.number}",
                 source_start=start,
                 source_end=end,
                 text=text[start:end],
@@ -326,7 +326,7 @@ def _chunk_by_window(text: str) -> list[SourceChunk]:
                 chunk_id=f"window-{index:04d}",
                 chunk_index=index,
                 section_type="window",
-                section_label=f"片段 {index + 1}",
+                section_label=f"Segment {index + 1}",
                 source_start=start,
                 source_end=end,
                 text=text[start:end],

@@ -20,7 +20,7 @@ from novelvideo.config import OUTPUT_DIR
 # Demo defaults for standalone/manual runs. In production stage_asset_tasks
 # always passes absolute --master/--reverse/--output-dir, so these are never used.
 PROJECT_DIR = Path(OUTPUT_DIR) / "admin/xuanchuanpian"
-DEFAULT_SCENE_NAME = "公寓楼电梯间"
+DEFAULT_SCENE_NAME = "Apartment Elevator Lobby"
 DEFAULT_SCENE_DIR = PROJECT_DIR / "assets/scenes" / DEFAULT_SCENE_NAME
 DEFAULT_MASTER = DEFAULT_SCENE_DIR / "master.png"
 DEFAULT_REVERSE = DEFAULT_SCENE_DIR / "reverse_master.png"
@@ -446,8 +446,8 @@ _SIDE_JOIN_CENTER_OBJECT_MARKERS = (
     "coffee table",
     "center table",
     "central table",
-    "茶几",
-    "地毯",
+    "tea table",
+    "rug",
 )
 _SIDE_JOIN_SURFACE_MARKERS = (
     "carpet",
@@ -535,19 +535,19 @@ def _is_unique_overlap_anchor(name: str) -> bool:
     return any(
         marker in lowered
         for marker in (
-            "消防",
-            "柜",
-            "门",
-            "窗",
-            "屏",
-            "牌",
-            "招牌",
-            "菜单",
-            "椅",
-            "画",
-            "沙发",
-            "书架",
-            "书柜",
+            "fire extinguisher",
+            "fire hydrant",
+            "cabinet",
+            "door",
+            "window",
+            "screen",
+            "sign",
+            "menu",
+            "chair",
+            "painting",
+            "sofa",
+            "bookshelf",
+            "bookcase",
         )
     )
 

@@ -38,19 +38,19 @@ def _ctx(tmp_path: Path) -> ProjectContext:
 
 
 def test_context_static_url_uses_project_id_path(tmp_path: Path) -> None:
-    media = tmp_path / "assets" / "scenes" / "兰州拉面馆" / "master.png"
+    media = tmp_path / "assets" / "scenes" / "NoodleShop" / "master.png"
     media.parent.mkdir(parents=True)
     media.write_bytes(b"png")
 
     url = make_static_url_for_context(
         _ctx(tmp_path),
-        "assets/scenes/兰州拉面馆/master.png",
+        "assets/scenes/NoodleShop/master.png",
         local_path=media,
     )
 
     assert url.startswith(
         "/static/projects/01KS77361FXAQNKQF2W4EWWVCW/"
-        "assets/scenes/%E5%85%B0%E5%B7%9E%E6%8B%89%E9%9D%A2%E9%A6%86/master.png?v="
+        "assets/scenes/NoodleShop/master.png?v="
     )
 
 
@@ -137,7 +137,7 @@ def test_canvas_static_url_migration_is_field_aware_and_in_memory() -> None:
             {
                 "id": "img",
                 "data": {
-                    "imageUrl": "/static/admin/xuanchuanpian/assets/scenes/兰州/master.png?v=1",
+                    "imageUrl": "/static/admin/xuanchuanpian/assets/scenes/Lanzhou/master.png?v=1",
                     "videoUrl": "/static/admin/xuanchuanpian/videos/beats/ep001/beat_01.mp4?v=3",
                     "sourceUrl": "/static/admin/xuanchuanpian/assets/source.png?v=4",
                     "referenceImageUrl": "/static/admin/xuanchuanpian/assets/reference.png?v=5",
@@ -178,7 +178,7 @@ def test_canvas_static_url_migration_is_field_aware_and_in_memory() -> None:
 
     node_data = migrated["nodes"][0]["data"]
     assert node_data["imageUrl"] == (
-        "/static/projects/proj_123/assets/scenes/%E5%85%B0%E5%B7%9E/master.png?v=1"
+        "/static/projects/proj_123/assets/scenes/Lanzhou/master.png?v=1"
     )
     assert node_data["videoUrl"] == ("/static/projects/proj_123/videos/beats/ep001/beat_01.mp4?v=3")
     assert node_data["sourceUrl"] == "/static/projects/proj_123/assets/source.png?v=4"
@@ -289,7 +289,7 @@ def test_canvas_static_url_migration_rewrites_local_project_paths(tmp_path: Path
 
 
 def test_generation_history_sanitizes_local_project_paths_in_debug_fields(tmp_path: Path) -> None:
-    source = tmp_path / "assets" / "scenes" / "孟遥新租的屋子" / "master.png"
+    source = tmp_path / "assets" / "scenes" / "NewRentedRoom" / "master.png"
     sog = (
         tmp_path
         / "freezone"
@@ -330,7 +330,7 @@ def test_generation_history_sanitizes_local_project_paths_in_debug_fields(tmp_pa
 
     encoded = json.dumps(sanitized, ensure_ascii=False)
     assert str(tmp_path) not in encoded
-    assert "/static/projects/proj_123/assets/scenes/孟遥新租的屋子/master.png" in encoded
+    assert "/static/projects/proj_123/assets/scenes/NewRentedRoom/master.png" in encoded
     assert "/static/projects/proj_123/freezone/_outputs/freezone_image_to_3gs/job_3gs/" in encoded
 
 

@@ -6,9 +6,9 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 
 /**
- * 缩放图片节点结束后，节点框必须吸附回图片真实比例（aspectRatio），否则 object-contain
- * 显示的图片会在偏离比例的节点里露出底色形成黑边。回归断言：显式 width/height 与
- * style 必须同步更新（React Flow 渲染时显式尺寸优先于 style）。
+ * After resizing an image node, the node frame must snap back to the real image aspect ratio (aspectRatio), otherwise object-contain
+ * would expose the background color in a node with the wrong ratio and form black bars. Regression assertion: the explicit width/height and
+ * style must update together (React Flow gives the explicit size precedence over style when rendering).
  */
 describe("image node resize snaps to aspect ratio (no letterbox)", () => {
   beforeEach(() => {

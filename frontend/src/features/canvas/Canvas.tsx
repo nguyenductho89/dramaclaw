@@ -165,15 +165,14 @@ const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 const DEFAULT_EDGE_OPTIONS = { type: 'disconnectableEdge' };
 const REACT_FLOW_PRO_OPTIONS = { hideAttribution: true };
 const CANVAS_NODE_DRAG_FOCUS_CLASS = 'canvas-node-drag-focus';
-// 拖线吸附半径(px,以光标到目标 handle 的距离计)。节点的 target handle 在左边
-// 缘的一个小点上,而节点本身宽 300~400px;半径太小(默认 20 / 旧值 50)时,把线
-// 拖到节点中部就已超出 handle 的吸附范围,既不自动吸附也没有「会连上」的视觉反
-// 馈,用户只能去瞄那个小点。调大到能覆盖到节点中部,拖到节点这一大片区域内即可
-// 自动吸附连线(React Flow 原生会高亮合法 handle 并把连线吸过去);更远处落到节
-// 点本体仍有 handleConnectEnd 里的 DOM 命中兜底。
+// Connection snap radius (px, measured from the cursor to the target handle). A node's target handle is a small dot on
+// its left edge while the node itself is 300~400px wide; with a small radius (default 20 / old 50) dragging a line to the
+// middle of the node falls outside the handle's snap range, so there is no auto-snap and no "will connect" visual feedback.
+// A larger radius covers the node body, so dropping anywhere on the node snaps the connection (React Flow highlights the
+// valid handle natively). Drops further away on the node body still have the DOM hit-test fallback in handleConnectEnd.
 const CONNECTION_SNAP_RADIUS = 160;
-// 手动「+」连线时，光标离目标节点边缘多近（屏幕像素）就算进入其「可落点区域」——
-// 不必压到节点里面才触发落点高亮/建边，节点周围一圈邻域内即可吸附。
+// For the manual "+" connection: how close (screen px) the cursor must be to the target node's edge to enter its drop zone.
+// The cursor need not be inside the node to trigger drop highlight / edge creation; a neighborhood around the node suffices.
 const MANUAL_DROP_PROXIMITY_PX = 56;
 const MULTI_SELECTION_KEY_CODES = ['Control', 'Meta'];
 const PAN_ACTIVATION_KEY_CODE = 'Space';
@@ -181,11 +180,11 @@ const PAN_ACTIVATION_KEY_CODE = 'Space';
 // (button 1). Left drag (0) runs the custom marquee box-select on the empty pane;
 // right click (2) opens the canvas context menu.
 const PAN_ON_DRAG_BUTTONS = [1];
-// 抓手工具（H）下左键也平移。ReactFlow 见到数组里有 0 会给 pane 挂 .draggable，
-// 抓手光标由它自带的样式负责。
+// The left mouse button also pans under the hand tool (H). ReactFlow adds .draggable to the pane when the array contains 0;
+// the hand cursor comes from its own styles.
 const PAN_ON_DRAG_BUTTONS_HAND = [0, 1];
 const NODE_SPAWN_PLUS_HIDE_DELAY_MS = 400;
-/** 小地图 hover 离开后的收起延迟，见 setMinimapHover 处的注释。 */
+/** Delay before collapsing the minimap after hover ends; see the comment at setMinimapHover. */
 const MINIMAP_HIDE_DELAY_MS = 180;
 
 function resolveCenteredViewport(
@@ -268,8 +267,8 @@ interface ClipboardSnapshot {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   /**
-   * 复制时所在的项目 id。粘贴到不同项目时据此触发跨项目资产迁移
-   * （把媒体重新上传到目标项目）。null = 复制时不在项目路由下。
+   * Project id at copy time. When pasting into a different project this triggers cross-project asset migration
+   * (re-uploading media to the target project). null = not under a project route at copy time.
    */
   sourceProject: string | null;
 }
@@ -334,16 +333,16 @@ function getNodeSize(node: CanvasNode): { width: number; height: number } {
   };
 }
 
-// 「导演世界」源节点与它的「导演世界输出」组互为一体:拖动任意一方,另一方应按
-// 相同位移联动。两者在数据上是各自独立、仅靠连线相连的节点(源节点不是组的子节点),
-// 所以 React Flow 不会自动带动。这里从图里推导配对关系——兼容历史画布、无需迁移:
-// 组里的 capture 子节点(带 captureMetadata)由源节点连线产出,故
-// 「源节点 ←→ 子节点.parentId(组)」即为配对。返回被拖节点应联动的另一方 id。
+// The "director world" source node and its "director world output" group move together: dragging either one moves the other
+// by the same delta. They are independent nodes in the data, linked only by edges (the source is not a child of the group),
+// so React Flow does not move them together. The pairing is derived from the graph (works for legacy canvases, no migration):
+// capture children in the group (with captureMetadata) are produced by the source node via edges, so
+// "source node <-> child.parentId (group)" is the pair. Returns the id of the other side to move along.
 //
-// 仅限「两者都是顶层节点」的场景(原始诉求)。若被拖节点本身在某个组内(有 parentId),
-// 一律不联动:否则当源节点和它的 capture 子节点同处一个组时,会把「自己的父组」当成
-// partner,拖动→每帧移动父组→父组带动包括自己在内的所有子节点再移一次,双重位移互相
-// 打架,表现为卡顿/重合。组内成员的整体性已由 React Flow 的父子关系保证,无需联动。
+// Only applies when both are top-level nodes. If the dragged node itself is inside a group (has parentId), never link:
+// otherwise when the source and its capture child share a group, its own parent group would be treated as the partner, and
+// dragging would move the parent group each frame, which moves all children (including itself) again; the double
+// displacement fights itself and causes jank/overlap. Group integrity is already guaranteed by React Flow's parent/child.
 function findLinkedCapturePartnerIds(
   draggedId: string,
   nodes: CanvasNode[],
@@ -363,7 +362,7 @@ function findLinkedCapturePartnerIds(
 
   const partners = new Set<string>();
 
-  // 拖的是组:找出它的 capture 子节点,再回溯连到这些子节点的源节点。
+  // Dragging a group: find its capture children, then trace back to the source nodes connected to them.
   if (dragged.type === CANVAS_NODE_TYPES.group) {
     const childIds = new Set(
       nodes.filter((node) => node.parentId === draggedId && isCaptureChild(node)).map((node) => node.id),
@@ -383,7 +382,7 @@ function findLinkedCapturePartnerIds(
     return [...partners];
   }
 
-  // 拖的是源节点:顺着连线找它产出的 capture 子节点,取它们所属的组(顶层组)。
+  // Dragging a source node: follow edges to the capture children it produced and take their (top-level) group.
   for (const edge of edges) {
     if (edge.source !== draggedId) {
       continue;
@@ -502,8 +501,8 @@ function resolveClipboardImageFile(event: ClipboardEvent): File | null {
   return null;
 }
 
-// 从一次 OS 文件拖放里挑出图片 / 视频 / 音频文件，口径见 isSupportedMediaFile
-// （与 UploadNode 的媒体分流一致）。非媒体文件被忽略。
+// Pick image / video / audio files out of an OS file drop, using the isSupportedMediaFile rule
+// (consistent with UploadNode's media routing). Non-media files are ignored.
 function collectDroppedMediaFiles(dataTransfer: DataTransfer): File[] {
   const files = dataTransfer.files;
   if (!files || files.length === 0) {
@@ -516,15 +515,15 @@ function resolveAllowedNodeTypes(
   handleType: HandleType,
   originNodeType?: CanvasNodeType,
 ): CanvasNodeType[] {
-  // 拖线落空时弹出的「创建新节点」菜单，与 NodeSpawnPlusOverlay 的 + 菜单共用
-  // 同一份产品白名单，两侧都住在 nodeRegistry 里（连同建边规则一起，便于测试
-  // 「菜单候选 vs 建边规则」是否打架）。
+  // The "create new node" menu shown when a dragged line is dropped on empty canvas shares the same product whitelist as
+  // NodeSpawnPlusOverlay's + menu; both live in nodeRegistry (together with the edge rules, so tests can check whether
+  // "menu candidates vs edge rules" conflict).
   return handleType === 'source'
     ? getDownstreamSpawnTypes(originNodeType)
     : getUpstreamSpawnTypes(originNodeType);
 }
 
-// 3D 世界节点的目标允许的手动拖线源：任何可以承载图片或文本结果的节点。
+// Manual drag sources allowed into a 3D world node: any node that can carry an image or text result.
 const THREE_D_WORLD_MANUAL_SOURCE_TYPES = new Set<CanvasNodeType>([
   CANVAS_NODE_TYPES.upload,
   CANVAS_NODE_TYPES.exportImage,
@@ -534,7 +533,7 @@ const THREE_D_WORLD_MANUAL_SOURCE_TYPES = new Set<CanvasNodeType>([
   CANVAS_NODE_TYPES.textAnnotation,
 ]);
 
-// 360° 全景查看器的下游手动连线只允许图片类节点。
+// Manual downstream connections from the 360 panorama viewer are only allowed to image-type nodes.
 const PANO_360_DOWNSTREAM_IMAGE_TYPES = new Set<CanvasNodeType>([
   CANVAS_NODE_TYPES.upload,
   CANVAS_NODE_TYPES.imageEdit,
@@ -552,18 +551,18 @@ function canNodeTypeBeManualConnectionSource(
   if (type === CANVAS_NODE_TYPES.pano360Viewer) {
     return targetType ? PANO_360_DOWNSTREAM_IMAGE_TYPES.has(targetType) : true;
   }
-  // 受类型白名单约束的连接（音频←文本、音频→视频/视频合成）走领域层统一规则。
-  // 这里查的是「手工」建边规则：视频→音频那条溯源边由「人声/背景音分离」程序建立，
-  // 建边收口放行，但不该让用户自己拖出来。
+  // Connections constrained by the type whitelist (audio <- text, audio -> video / video compose) use the domain-layer rules.
+  // This checks the "manual" edge rule: the video -> audio provenance edge is created by the vocal/background separation
+  // procedure and is allowed by the edge-creation gate, but users must not be able to drag it out themselves.
   if (
     targetType &&
     (getAllowedUpstreamSourceTypes(targetType) || getAllowedDownstreamTargetTypes(type))
   ) {
     return isManualConnectionAllowed(type, targetType);
   }
-  // 只要 getDownstreamSpawnTypes 给这种类型留了至少一个合法下游，就允许从右侧
-  // source handle 拖线创建 —— 这样 + 菜单和拖线菜单始终对齐，新增节点类型时
-  // 只需要更新 getDownstreamSpawnTypes 一处。
+  // As long as getDownstreamSpawnTypes leaves at least one legal downstream for this type, dragging a line from the right
+  // source handle is allowed. This keeps the + menu and the drag menu aligned; adding a node type only needs
+  // an update in getDownstreamSpawnTypes.
   return getDownstreamSpawnTypes(type).length > 0;
 }
 
@@ -733,12 +732,12 @@ interface CanvasProps {
   onBlankPaneClick?: () => void;
   controlsPlacement?: 'bottom-right' | 'top-right';
   /**
-   * 故事板 overlay（AssetBoardView）等全屏视图盖在保活画布上时置 true：
-   * 屏蔽画布注册的所有 window/document 级键盘与粘贴监听，并隐藏会压在
-   * overlay 之上的悬浮控件（CanvasQuickActionBar）。否则 Delete/Tab/⌘Z/
-   * 粘贴等会穿透到隐藏画布（删节点、弹 NodeSelectionMenu、建上传节点并
-   * 持久化）。不能复用 useViewerImmersiveBody 的 body class 方案——那会把
-   * 故事板自己隐藏掉（见 src/index.css 的 viewer-immersive 规则）。
+   * Set to true when a full-screen view such as the storyboard overlay (AssetBoardView) covers the kept-alive canvas:
+   * suppresses every window/document-level keyboard and paste listener the canvas registers, and hides floating controls
+   * that would sit above the overlay (CanvasQuickActionBar). Otherwise Delete/Tab/Cmd+Z/paste would leak through to the
+   * hidden canvas (deleting nodes, opening NodeSelectionMenu, creating and persisting upload nodes). The body-class approach
+   * of useViewerImmersiveBody cannot be reused because it would hide the storyboard itself (see the viewer-immersive rule
+   * in src/index.css).
    */
   suspended?: boolean;
 }
@@ -756,8 +755,8 @@ export function Canvas({
   const nodeTypes = useMemo(() => canvasNodeTypes, []);
   const edgeTypes = useMemo(() => canvasEdgeTypes, []);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // 用 ref 镜像 suspended：各全局键盘/粘贴监听读 ref 而非闭包值，
-  // prop 变化不触发监听器重绑，切换视图零成本即时生效。
+  // Mirror suspended in a ref: global keyboard/paste listeners read the ref rather than a closed-over value,
+  // so a prop change does not rebind listeners and switching views takes effect instantly at zero cost.
   const suspendedRef = useRef(suspended);
   suspendedRef.current = suspended;
   const suppressNextPaneClickRef = useRef(false);
@@ -770,10 +769,10 @@ export function Canvas({
   const suppressNextEdgeClickRef = useRef(false);
   const hoveredNodeClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const plusConnectStartRef = useRef<PendingConnectStart | null>(null);
-  // 手动「+」拖线时，当前被高亮为合法落点的节点 DOM。手动连线走自绘预览线
-  // （非 React Flow 原生连线），RF 不会给目标 handle 挂 connectingto/valid，所以
-  // 落点动画靠这里在 dragMove 时直接给命中节点的 wrapper 加类、离开时摘掉，避免把
-  // 落点状态塞进 node.data 触发全量节点重渲染。
+  // The node DOM currently highlighted as a valid drop target during a manual "+" drag. Manual connections use a self-drawn
+  // preview line (not React Flow's native connection), so RF does not put connectingto/valid on the target handle.
+  // The drop animation therefore adds/removes a class on the hit node's wrapper directly in dragMove, avoiding putting
+  // drop state into node.data, which would re-render all nodes.
   const dropTargetElRef = useRef<HTMLElement | null>(null);
   // Source node ids waiting to be fanned into the next spawned node (batch "+").
   const batchConnectDragRef = useRef<{
@@ -784,7 +783,7 @@ export function Canvas({
   const [minimapPinned, setMinimapPinned] = useState(false);
   const [minimapHovered, setMinimapHovered] = useState(false);
   const [workflowExecutionActive, setWorkflowExecutionActive] = useState(false);
-  // 拖动小地图期间保持其挂载，否则移出区域时会中断平移。
+  // Keep the minimap mounted while it is being dragged; otherwise leaving the area would interrupt panning.
   const [minimapPanning, setMinimapPanning] = useState(false);
   const minimapVisible = minimapPinned || minimapHovered || minimapPanning;
   useEffect(() => {
@@ -805,11 +804,11 @@ export function Canvas({
     window.addEventListener(WORKFLOW_RUN_UPDATED_EVENT, handleWorkflowRunUpdated);
     return () => window.removeEventListener(WORKFLOW_RUN_UPDATED_EVENT, handleWorkflowRunUpdated);
   }, []);
-  // 小地图弹层（含上方的书签数字行）靠 hover 显示。数字行是小地图上方、隔着间隙的
-  // 独立 DOM 子树:鼠标从小地图移到数字按钮的途中会先离开小地图,若立即把
-  // minimapHovered 置 false,整个 overlay 会在点到按钮前卸载,导致「点不了」。
-  // 这里给「隐藏」加一个短延迟:离开时延迟 false,任意区域(小地图/触发按钮/数字行)
-  // 重新 hover 会取消该延迟,从而能稳定跨越间隙去点击。
+  // The minimap popover (including the bookmark number row above it) is shown on hover. The number row is a separate DOM
+  // subtree above the minimap with a gap: moving the mouse from the minimap to a number button first leaves the minimap, and
+  // setting minimapHovered to false immediately would unmount the overlay before the button is clicked ("unclickable").
+  // Hiding therefore gets a short delay: leaving delays false, and hovering any region (minimap / trigger button / number row)
+  // again cancels it, so the gap can be crossed reliably.
   const minimapHideTimerRef = useRef<number | null>(null);
   const setMinimapHover = useCallback((hovered: boolean) => {
     if (minimapHideTimerRef.current !== null) {
@@ -825,21 +824,21 @@ export function Canvas({
       }, MINIMAP_HIDE_DELAY_MS);
     }
   }, []);
-  // 小地图缓动期间，onMoveEnd 的逐帧视口提交要跳过 —— 见 handleMoveEnd 的注释。
-  // 用 ref 而不是读 minimapPanning：handleMoveEnd 每帧都跑，不该跟着状态换身份。
+  // While the minimap eases, the per-frame viewport commit in onMoveEnd must be skipped; see the comment in handleMoveEnd.
+  // Use a ref instead of reading minimapPanning: handleMoveEnd runs every frame and should not change identity with state.
   const minimapPanCommitSuppressedRef = useRef(false);
   const handleMinimapPanStart = useCallback(() => {
     minimapPanCommitSuppressedRef.current = true;
     setMinimapPanning(true);
   }, []);
-  // 这里的「结束」是 hook 保证的「松手且缓动已收敛」，不是 pointerup 那一刻，
-  // 所以可以直接解除挂载保护，不需要再赌一个固定延时（收敛耗时随剩余距离变化，
-  // 180ms 盖不住，会把缓动掐断在半路）。
+  // "End" here is guaranteed by the hook as "released and easing converged", not the pointerup instant,
+  // so the mount guard can be released directly with no fixed delay (convergence time varies with remaining distance;
+  // 180ms would not cover it and would cut the easing off midway).
   const handleMinimapPanEnd = useCallback(
     (pointerInsideMinimap: boolean) => {
       minimapPanCommitSuppressedRef.current = false;
       setMinimapPanning(false);
-      // 松手在小地图内 ⇒ 继续显示；在外 ⇒ 走 hover 的同一节奏收起。
+      // Released inside the minimap => keep showing; outside => collapse with the same timing as hover.
       setMinimapHover(pointerInsideMinimap);
     },
     [setMinimapHover],
@@ -852,8 +851,8 @@ export function Canvas({
     },
     [],
   );
-  // hover 节点 id 放在 store 里：除了喂给 NodeSpawnPlusOverlay 的「+」，
-  // NodeSideActionRail 的上传/替换按钮栏也要据此「hover 才显示」。
+  // The hovered node id lives in the store: besides feeding NodeSpawnPlusOverlay's "+", the upload/replace button rail of
+  // NodeSideActionRail also needs it to "show only on hover".
   const hoveredNodeId = useCanvasStore((state) => state.hoveredNodeId);
   const setHoveredNodeId = useCanvasStore((state) => state.setHoveredNodeId);
 
@@ -1012,18 +1011,18 @@ export function Canvas({
     copiedNodeIds: string[];
     sourceToCopyIdMap: Map<string, string>;
   } | null>(null);
-  // 正在拖动的组内成员所属的组 id 集合（libtv 式：拖动期间不动框，松手后按成员最终
-  // 落点逐组 fitGroupToChildren 重新包住）。多选拖动可能同时带上多个组的成员，所以
-  // 记数组而非单个 id。null = 当前没有组内成员在拖。
+  // Ids of the groups owning the group members currently being dragged (libtv style: boxes stay put during the drag; on release
+  // each group is re-wrapped with fitGroupToChildren according to the members' final positions). A multi-select drag can carry
+  // members of several groups, so this is an array rather than a single id. null = no group members are being dragged.
   const groupFitDragRef = useRef<{ groupIds: string[] } | null>(null);
-  // 「导演世界」源节点 ←→「导演世界输出」组联动拖动：拖动开始时记下另一方(partner)及
-  // 其起始坐标,拖动期间按相同位移把 partner 一起移动。null = 当前拖动不涉及联动。
+  // Linked drag of the "director world" source node <-> "director world output" group: at drag start, remember the other side
+  // (partner) and its starting position, and move the partner by the same delta during the drag. null = the drag involves no link.
   const linkedDragRef = useRef<{
     partnerStarts: Map<string, { x: number; y: number }>;
     draggedStart: { x: number; y: number };
   } | null>(null);
-  // 单节点拖动期间其它节点不动：缓存绝对坐标索引、父级坐标偏移和磁滞锁，避免每帧
-  // 重扫节点，也保证组内相对坐标能正确换算到统一 Flow 坐标系。
+  // While a single node is dragged other nodes stay put: cache the absolute-position index, parent offsets and the hysteresis
+  // lock to avoid rescanning nodes every frame and to convert group-relative positions to the common Flow coordinate system.
   const snapAlignSessionRef = useRef<SnapAlignDragSession | null>(null);
   const marqueeSelectionRef = useRef<{
     active: boolean;
@@ -1050,15 +1049,16 @@ export function Canvas({
 
   const nodes = useCanvasStore((state) => state.nodes);
   const edges = useCanvasStore((state) => state.edges);
-  // 连线可见性：隐藏时只给 ReactFlow 的边打 `hidden`，真实 edges 一动不动（见
-  // edgeVisibilityStore）。持久化/自动布局/导出全部照用 store 里的真实连线。
+  // Edge visibility: when hidden, only the edges handed to ReactFlow get `hidden`; the real edges are untouched (see
+  // edgeVisibilityStore). Persistence / auto layout / export all keep using the real edges in the store.
   const edgesHidden = useEdgeVisibilityStore((state) => state.hidden);
 
-  // 预取 beat-context 节点引用到的剧集 beats/episode-detail,焐热缓存。配合 BeatContextNode
-  // 里「仅选中时才查询」的门控,避免视口虚拟化下节点挂载即请求、卸载即被取消的 499 循环。
-  // 收敛成稳定字符串,使下方 effect 只在引用的剧集集合变化时才跑(而非每次拖拽重建 nodes)。
+  // Prefetch the episode beats/episode-detail referenced by beat-context nodes to warm the cache. Together with the
+  // "query only when selected" gate in BeatContextNode, this avoids a 499 loop where nodes request on mount and are cancelled
+  // on unmount under viewport virtualization.
+  // Reduced to a stable string so the effect below only runs when the set of referenced episodes changes (not on every drag rebuild of nodes).
   const queryClient = useQueryClient();
-  // 项目 ID 取自 URL,在画布生命周期内不变,memo 一次,避免在每次 store 变更的 selector 里重复解析。
+  // The project id comes from the URL and is constant during the canvas lifetime; memoize once instead of re-parsing in a store selector on every change.
   const canvasProject = useMemo(() => readUrl().project, []);
   const beatContextEpisodesKey = useCanvasStore(
     useShallow((state) => {
@@ -1084,12 +1084,12 @@ export function Canvas({
       prefetchEpisodeDetail(queryClient, project, episode);
     }
   }, [beatContextEpisodesKey, queryClient]);
-  // 触控板平移开关：开启后用 ReactFlow 的 panOnScroll（两指滑动平移、捏合缩放），
-  // 关闭则回到默认的滚轮缩放。
+  // Trackpad pan switch: when on, ReactFlow's panOnScroll is used (two-finger swipe pans, pinch zooms);
+  // when off, it reverts to default wheel zoom.
   const trackpadPanEnabled = useTrackpadPanStore((state) => state.enabled);
-  // 指针工具：抓手（H）下左键拖动 = 平移画布。
+  // Pointer tool: under the hand tool (H), left-button drag = pan the canvas.
   const handToolActive = useCanvasToolStore((state) => state.tool === 'hand');
-  // 底部任务中心面板展开时，让出底部空间——隐藏画布快捷操作栏，避免与面板重叠。
+  // When the bottom task-center panel is expanded, yield the bottom space: hide the canvas quick-action bar to avoid overlap.
   const taskPanelOpen = useAppStore((state) => state.taskPanelOpen);
   // Stable signatures of the nodes that need polling / resume, so those effects
   // only re-run when the *set* of pending generations changes — not on every
@@ -1104,9 +1104,9 @@ export function Canvas({
         .map((node) => node.id),
     ),
   );
-  // 上个会话遗留的 generationJobId（刷新前任务还没 detached）。这些节点不能进
-  // 轮询循环——gateway 的内存 Map 早空了，只会拿到 not_found 然后被写成失败，
-  // 抢在 descriptor resume 前面把恢复路径掐断。见 staleGenerationJobPatch。
+  // generationJobId left over from the previous session (the task was not detached before refresh). These nodes must not enter
+  // the polling loop: the gateway's in-memory Map is long empty, so they would only get not_found and be written as failed,
+  // cutting off the recovery path ahead of the descriptor resume. See staleGenerationJobPatch.
   const staleJobNodeKey = useCanvasStore(
     useShallow((state) =>
       state.nodes
@@ -1182,8 +1182,8 @@ export function Canvas({
     });
   }, [nodes, placementConfirmNodeId]);
 
-  // 隐藏连线时给每条边补 `hidden: true`——ReactFlow 会跳过渲染但边仍在图里，
-  // 连接、reconnect、持久化都不受影响。显示时直接透传真实 edges，零额外分配。
+  // When edges are hidden, add `hidden: true` to each edge: ReactFlow skips rendering but the edge stays in the graph, so
+  // connecting, reconnecting and persistence are unaffected. When shown, pass the real edges through with zero extra allocation.
   const renderedEdges = useMemo(() => {
     if (!edgesHidden) return edges;
     return edges.map((edge) => (edge.hidden ? edge : { ...edge, hidden: true }));
@@ -1222,8 +1222,8 @@ export function Canvas({
       clearMarqueeSelection();
     };
 
-    // keyup 不加 suspendedRef 守卫：它只把 spacePanActiveRef 复位为
-    // false（惰性状态）。若守卫,「按住空格→切故事板→松开」会让 ref 卡在 true。
+    // No suspendedRef guard on keyup: it only resets spacePanActiveRef to false (inert state). With a guard,
+    // "hold space -> switch to storyboard -> release" would leave the ref stuck at true.
     const handleKeyUp = (event: KeyboardEvent) => {
       if (!isSpacePanKey(event)) {
         return;
@@ -1284,10 +1284,10 @@ export function Canvas({
     };
   }, [openToolDialog, closeToolDialog]);
 
-  // 单一写入器:把画布缩放写进根元素的 --st-canvas-zoom CSS 变量。各浮动工具条
-  // (ZoomScaledToolbar / NodeSideActionRail)改用 CSS `scale(var(...))` 跟随缩放,
-  // 不再各自 useStore 订阅 zoom —— 把「每节点一份 zoom 订阅、缩放时全部重渲染」收敛
-  // 成一个不触发 React 重渲染的命令式订阅。
+  // Single writer: writes the canvas zoom into the --st-canvas-zoom CSS variable on the root element. Floating toolbars
+  // (ZoomScaledToolbar / NodeSideActionRail) follow zoom with CSS `scale(var(...))` instead of each subscribing to zoom
+  // via useStore, collapsing "one zoom subscription per node, all re-rendering on zoom" into one imperative
+  // subscription that triggers no React re-render.
   useEffect(() => {
     const root = document.documentElement;
     let last = NaN;
@@ -1339,9 +1339,9 @@ export function Canvas({
     scheduleCanvasPersist();
   }, [nodes, edges, history, dragHistorySnapshot, scheduleCanvasPersist]);
 
-  // 项目刚加载完时，先按用户保存的 viewport 恢复。
-  // 等节点完成测量后再判断：若节点 bbox 与当前可视区完全无交集（视图飞到空白处），
-  // 自动 fitView 回到节点集中区，避免用户找不到自己的内容。
+  // When the project has just loaded, first restore the user's saved viewport.
+  // After nodes are measured, check: if the node bbox does not intersect the visible area at all (the view flew to blank space),
+  // automatically fitView back to the node cluster so users do not lose their content.
   useEffect(() => {
     if (!initialViewportCorrectionPendingRef.current) return;
     if (!nodesInitialized) return;
@@ -1386,9 +1386,9 @@ export function Canvas({
     }
   }, [nodesInitialized, nodes, reactFlowInstance]);
 
-  // 处理外部（左侧资源面板等）发起的「聚焦节点」请求：
-  // setCenter 到节点中心，并保留当前 zoom（让用户能看清新加进来的资源）。
-  // 节点刚 add 完时 measured 还没到，回退到 DEFAULT_NODE_WIDTH / 240 估算。
+  // Handle external (e.g. left resource panel) "focus node" requests:
+  // setCenter on the node center while keeping the current zoom (so users can see the newly added resource).
+  // Right after a node is added, measured is not available yet; fall back to an estimate from DEFAULT_NODE_WIDTH / 240.
   useEffect(() => {
     if (!pendingFocusNodeId) return;
     const target = nodes.find((node) => node.id === pendingFocusNodeId);
@@ -1402,7 +1402,7 @@ export function Canvas({
     const height =
       target.measured?.height ??
       (typeof target.height === 'number' ? target.height : 240);
-    // 组内成员的 position 是相对父组坐标；setCenter 需要绝对坐标，否则聚焦会跳偏。
+    // A group member's position is relative to its parent group; setCenter needs absolute coordinates or focus would be off.
     const absolute =
       reactFlowInstance.getInternalNode(pendingFocusNodeId)?.internals
         .positionAbsolute ?? target.position;
@@ -1416,10 +1416,10 @@ export function Canvas({
     clearPendingFocus();
   }, [pendingFocusNodeId, nodes, reactFlowInstance, clearPendingFocus]);
 
-  // 低缩放档（10% 之类）下新节点在屏幕上只有几十像素、深色面板贴深色背景，
-  // 创建成功也近乎不可见，用户会以为「没创建上」。所有「凭空新建节点」的入口
-  // 都复用上面的聚焦机制：视口动画拉近到新节点（zoom 提到 ≥0.6），创建即所见、
-  // 且直接可编辑。常用工作缩放下不聚焦，避免打断用户的构图视角。
+  // At low zoom (around 10%) a new node is only tens of pixels on screen and a dark panel on a dark background is
+  // nearly invisible, so users think "it was not created". Every entry that creates a node from nothing reuses the focus
+  // mechanism above: the viewport animates in to the new node (zoom raised to >=0.6) so creation is visible and the node is
+  // directly editable. At common working zoom there is no focusing, to avoid disturbing the user's composition.
   const focusNewNodeIfLowZoom = useCallback(
     (nodeId: string) => {
       if (isLowDetailZoom(reactFlowInstance.getZoom())) {
@@ -1435,9 +1435,9 @@ export function Canvas({
         window.setTimeout(resolve, delayMs);
       });
 
-    // 先收拾上个会话遗留的 job id，再挑本次会话该轮询的。顺序要紧：清理这一步
-    // 会把带 descriptor 的节点从下面的候选集里摘掉（它的 generationJobId 被清
-    // 空），恢复交给 resumeNodeGeneration 一条路走。
+    // First clean up job ids left from the previous session, then pick the ones to poll this session. Order matters: the cleanup
+    // removes nodes with a descriptor from the candidate set below (their generationJobId is cleared),
+    // leaving recovery to resumeNodeGeneration as the only path.
     for (const node of useCanvasStore.getState().nodes) {
       if (node.type !== CANVAS_NODE_TYPES.exportImage) {
         continue;
@@ -1545,13 +1545,12 @@ export function Canvas({
             }
 
             if (status.status === 'detached') {
-              // 前端不再跟这个任务了（后端长时间查不到），但它不是失败：不写
-              // generationError，也保留 generationRequestPayload，让「重新生成」
-              // 仍然可用；只给一个中性提示，避免把可能还在跑的任务标成失败。
-              //
-              // 补丁内容见 DETACHED_GENERATION_PATCH：只放掉进程内的 jobId，
-              // isGenerating 与句柄留着，刷新后 resume 扫描才接得回来。与
-              // 擦除/重绘路径（regenerateFreezoneRedrawNode）同口径。
+              // The frontend stops following this task (the backend cannot find it for a long time), but it is not a failure: do not write
+              // generationError, and keep generationRequestPayload so "Regenerate" still works; only give a neutral hint,
+              // to avoid marking a task that may still be running as failed.
+              // See DETACHED_GENERATION_PATCH for the patch content: only release the in-process jobId;
+              // isGenerating and the handle stay so the resume scan after refresh can reattach. Same convention as the
+              // erase/redraw path (regenerateFreezoneRedrawNode).
               const detachedSessionId = typeof currentData.generationClientSessionId === 'string'
                 ? currentData.generationClientSessionId
                 : '';
@@ -1582,7 +1581,7 @@ export function Canvas({
               generationProviderId: null,
               generationClientSessionId: null,
               // Keep generationStoryboardMetadata + generationRequestPayload intact so
-              // 重新生成 can re-submit (and re-embed grid metadata) after an async failure.
+              // "Regenerate" can re-submit (and re-embed grid metadata) after an async failure.
               generationError: errorMessage,
               generationErrorDetails: status.error ?? null,
               // Surface the upstream request_id so the failure card can show it
@@ -1599,9 +1598,9 @@ export function Canvas({
     }
   }, [pendingJobNodeKey, staleJobNodeKey, t, updateNodeData]);
 
-  // Resume task_key-based generations (image / video / audio / 3D / script / 反推提示词)
+  // Resume task_key-based generations (image / video / audio / 3D / script / reverse-prompt)
   // after a page refresh. The submit flows persist a GenerationTaskDescriptor on the
-  // node; here we re-attach to the task API so the result lands and the 生成中 overlay
+  // node; here we re-attach to the task API so the result lands and the "generating" overlay
   // (driven by generationStartedAt) clears correctly.
   useEffect(() => {
     const projectId = readUrl().project;
@@ -1656,8 +1655,8 @@ export function Canvas({
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<CanvasNode>[]) => {
-      // 拖拽时 applyNodeChanges 每帧重建 nodes 数组。这里只在事件回调里「读一次」当前快照,
-      // 不把 nodes 列进依赖,避免该回调每帧重建、进而打穿下游 memo。
+      // During a drag, applyNodeChanges rebuilds the nodes array every frame. Here the current snapshot is only "read once" in the event callback
+      // and nodes is not listed as a dependency, so the callback is not rebuilt every frame and downstream memo is not defeated.
       const nodes = useCanvasStore.getState().nodes;
       const lockedNodeIds = new Set(nodes.filter(isPresetManagedNode).map((node) => node.id));
       const unlockedChanges = changes.filter((change) => {
@@ -1672,11 +1671,11 @@ export function Canvas({
       if (unlockedChanges.length === 0) {
         return;
       }
-      // 吸附对齐：仅在用户启用、且只有一个节点正在被拖动时介入；结束帧也要沿用
-      // 活动会话，否则 React Flow 的原始 pointer 坐标会覆盖已经吸附的最终位置。
-      // 多选拖动暂不做吸附 —— 各节点单独算 snap delta 会导致它们之间出现错位。
-      // alt-复制拖动也跳过：handleNodeDrag 会把 source 复位 / 把 copy 按 delta 跟上，
-      // 这里再吸附会和它打架。
+      // Snap alignment: only intervenes when the user enabled it and exactly one node is being dragged; the end frame also reuses the
+      // active session, otherwise React Flow's raw pointer coordinates would overwrite the already snapped final position.
+      // Multi-select drag does not snap for now: computing snap deltas per node would misalign them relative to each other.
+      // Alt-copy drag is also skipped: handleNodeDrag resets the source / makes the copy follow by delta,
+      // and snapping here would fight it.
       let effectiveChanges = unlockedChanges;
       const snapEnabled = useSnapAlignStore.getState().enabled;
       if (snapEnabled && !altDragCopyRef.current) {
@@ -1687,7 +1686,7 @@ export function Canvas({
           const change = snapPositionChanges[0];
           const draggedNode = nodes.find((n) => n.id === change.id);
           if (draggedNode) {
-            // 仅在新一次拖动(目标节点变化)时重建索引;同一拖动的后续帧复用。
+            // Rebuild the index only for a new drag (target node changed); later frames of the same drag reuse it.
             if (snapAlignSessionRef.current?.nodeId !== change.id) {
               const linkedPartnerIds = [
                 ...(linkedDragRef.current?.partnerStarts.keys() ?? []),
@@ -1720,7 +1719,7 @@ export function Canvas({
             );
           }
         } else if (snapPositionChanges.length > 1) {
-          // 多选拖动期间隐藏引导线，避免误导。
+          // Hide guide lines during a multi-select drag to avoid misleading.
           useSnapAlignStore.getState().clearGuides();
         }
       }
@@ -1908,27 +1907,27 @@ export function Canvas({
     [connectGraphNodes, nodes, scheduleCanvasPersist]
   );
 
-  // 3D 世界节点只用一张上游图生成 —— 入边唯一。已有上游时实时拒绝再连入(连线
-  // 落点变灰、不成边),引导用户先断开现有连线。最终 onConnect 里也有同样的硬约束
-  // 兜底拖到空白生成节点等其它路径。
+  // A 3D world node is generated from a single upstream image, so it has exactly one incoming edge. If it already has an upstream,
+  // further connections are rejected live (drop target greyed out, no edge) to guide the user to disconnect first. The final
+  // onConnect has the same hard constraint as a fallback for other paths such as dragging to blank space to create a node.
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       const targetId = connection.target;
       if (!targetId) return true;
       const targetNode = nodes.find((node) => node.id === targetId);
       if (!targetNode) return true;
-      // 类型规则：拖线过程中就把不合法的源（如音频连图片）变灰、禁止落点。刻意复用
-      // handleConnect 松手时那把尺子本身 —— 只查领域层的手工建边规则是不够的，那样
-      // 3D 世界 / 360° 全景的额外限制会漏在外面，表现成「拖过去高亮成合法、一松手
-      // 什么也没有」（视频→音频那条溯源边就是这样：建边规则放行，但不开放手工创建）。
+      // Type rule: during the drag, invalid sources (e.g. audio to image) are greyed out and drops are blocked. Deliberately reuses
+      // the same ruler handleConnect uses on release; checking only the domain-layer manual edge rules is not enough, since the extra
+      // restrictions of 3D world / 360 panorama would leak out and show as "highlighted as valid while dragging, but nothing happens
+      // on release" (the video -> audio provenance edge: allowed by the edge rules but not opened for manual creation).
       const sourceNode = connection.source
         ? nodes.find((node) => node.id === connection.source)
         : undefined;
       if (sourceNode && !canNodeTypeBeManualConnectionSource(sourceNode.type, targetNode.type)) {
         return false;
       }
-      // 视频节点的素材已经满到能力包络（图 9 / 视频 3 / 音频 3 / 总数 12）时，
-      // 拖线落点变灰、不成边。与 store 的 onConnect 收口同一把尺子。
+      // When a video node's materials already reach the capability envelope (9 images / 3 videos / 3 audios / 12 total),
+      // the drop target is greyed out and no edge is created. Same ruler as the store's onConnect gate.
       if (
         videoReferenceConnectionRejection(
           nodes,
@@ -1947,18 +1946,18 @@ export function Canvas({
     [nodes, edges]
   );
 
-  // 平移/缩放期间 onMove 每帧触发。把 currentViewport 写进 store 会让所有订阅者每帧
-  // 重跑 selector(如 BackToNodesHint 的 O(n) 可见性判断)。这里节流到 ~8fps,并在
-  // onMoveEnd 必定提交最终值,既消除每帧 store 风暴,又保证落库/可见性判断及时收敛。
+  // onMove fires every frame during pan/zoom. Writing currentViewport into the store would make all subscribers rerun their
+  // selectors every frame (e.g. BackToNodesHint's O(n) visibility check). Throttled here to ~8fps, with the final value always
+  // committed in onMoveEnd, which removes the per-frame store storm while persistence/visibility checks converge promptly.
   const lastViewportCommitRef = useRef(0);
 
-  // LOD 效果类一律走 classList 直改 DOM，不进 React state：平移期间每帧 setState
-  // 会把「省下来的光栅化时间」原样还给 render，得不偿失。
+  // LOD effect classes are all applied directly to the DOM via classList, not React state: a setState every frame during pan
+  // would hand the rasterization time saved straight back to render, a net loss.
   //
-  // lowDetailActive 是唯一的例外：它驱动 onlyRenderVisibleElements 的开关（低缩放
-  // 档全部节点都是轻量 shell，视口裁剪只剩挂载/卸载翻腾的坏处，索性关掉），必须是
-  // React state。setState 有值守卫，平移中每帧调用但值不变，不触发重渲染；只有
-  // 缩放跨过阈值那一次会让 Canvas 重渲染一遍。
+  // lowDetailActive is the only exception: it drives the onlyRenderVisibleElements switch (at low zoom all nodes are lightweight
+  // shells, so viewport culling only adds mount/unmount churn and is simply turned off), so it must be
+  // React state. setState has a value guard: it is called every frame while panning but the value is unchanged, so no re-render;
+  // only the one time zoom crosses the threshold re-renders Canvas.
   const panningReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lowDetailActive, setLowDetailActive] = useState(() =>
     isLowDetailZoom(initialViewportRef.current.zoom)
@@ -1967,12 +1966,12 @@ export function Canvas({
     const lowDetail = isLowDetailZoom(zoom);
     wrapperRef.current?.classList.toggle(CANVAS_LOW_DETAIL_CLASS, lowDetail);
     setCanvasLowDetail(lowDetail);
-    // 升档（退出低缩放）必须与 withLodShell 的 shell→full 交换落在同一次提交：
-    // 此刻裁剪若还停留在「低缩放档全量挂载」，302 个 shell 会同时换成完整组件
-    // （实测 ~960ms 冻结），随后 moveEnd 恢复裁剪又把 ~290 个刚挂上的整批卸掉
-    // （再冻 ~1s）。同一提交生效则裁剪先把可见集收窄到十几个，只有它们挂完整
-    // 组件（实测 ~90ms）。React 对同一事件里的 store 通知和 setState 统一批处理，
-    // 这里的 set 与交换必然同帧。降档方向相反——见 handleMoveEnd 的注释。
+    // Upgrading (leaving low zoom) must land in the same commit as withLodShell's shell -> full swap:
+    // if culling were still at the "mount everything at low zoom" level, 302 shells would all be swapped for full components at once
+    // (measured ~960ms freeze), and then moveEnd restoring culling would unmount ~290 just-mounted nodes in one batch
+    // (another ~1s freeze). With the same commit, culling first narrows the visible set to a dozen or so, and only those mount full
+    // components (measured ~90ms). React batches store notifications and setState in the same event,
+    // so the set here and the swap are necessarily in the same frame. Downgrading is the opposite - see the comment in handleMoveEnd.
     if (!lowDetail) {
       setLowDetailActive(false);
     }
@@ -1990,10 +1989,10 @@ export function Canvas({
   const handleMoveEnd = useCallback(
     (_event: unknown, viewport: Viewport) => {
       applyLowDetailClass(viewport.zoom);
-      // 降档（进入低缩放）的裁剪关闭只在手势结束时提交：全量挂载 ~240 个 shell 的
-      // 波放在缩放手势中途会有可感知的顿挫，推迟到松手后手势保持流畅；中途已跨档
-      // 的可见节点由 withLodShell 的 selector 先行换成 shell，不受此影响。升档方向
-      // 不能等到这里——见 applyLowDetailClass 的注释。
+      // When downgrading (entering low zoom), turning culling off is only committed when the gesture ends: mounting ~240 shells at once
+      // in the middle of a zoom gesture causes a noticeable stutter; deferring until release keeps the gesture smooth. Visible nodes that
+      // crossed the threshold mid-gesture are swapped to shells earlier by withLodShell's selector, unaffected by this. The upgrade
+      // direction cannot wait until here - see the comment in applyLowDetailClass.
       setLowDetailActive(isLowDetailZoom(viewport.zoom));
       if (panningReleaseTimerRef.current) {
         clearTimeout(panningReleaseTimerRef.current);
@@ -2003,13 +2002,12 @@ export function Canvas({
         wrapperRef.current?.classList.remove(CANVAS_PANNING_CLASS);
         setCanvasGestureActive(false);
       }, PANNING_CLASS_RELEASE_DELAY_MS);
-      // 小地图缓动是程序化平移：每帧一次 instance.setViewport，而 ReactFlow 对
-      // 每次 setViewport 都跑一遍 onMoveStart→onMove→onMoveEnd，结束事件只有
-      // panOnScroll 才有 150ms 合并（createPanZoomEndHandler 里写死
-      // `panOnScroll ? 150 : 0`）。用户关掉「触控板平移」后 panOnScroll=false，
-      // 合并消失，这里会变成每秒约 60 次 store 提交 —— 正是本次要消掉的东西。
-      // 跳过时连 lastViewportCommitRef 也不占，好让 handleMove 的 8fps 节流照常
-      // 供给可见性判断；最终值由 onViewportSettled 收敛时提交一次。
+      // Minimap easing is a programmatic pan: instance.setViewport once per frame, and ReactFlow runs
+      // onMoveStart -> onMove -> onMoveEnd for every setViewport; the end event is only coalesced (150ms) when
+      // panOnScroll is on (hard-coded in createPanZoomEndHandler as `panOnScroll ? 150 : 0`). After the user turns off
+      // "trackpad pan", panOnScroll=false, the coalescing disappears and this would become ~60 store commits per second - exactly what
+      // this change eliminates. When skipping, lastViewportCommitRef is not taken either, so handleMove's 8fps throttle still
+      // feeds visibility checks; the final value is committed once when onViewportSettled converges.
       if (minimapPanCommitSuppressedRef.current) {
         return;
       }
@@ -2021,7 +2019,7 @@ export function Canvas({
 
   const handleMove = useCallback(
     (_event: unknown, viewport: Viewport) => {
-      // 缩放跨档要立刻生效（用户能看见节点内容切换），所以不受下面的节流限制。
+      // Zoom threshold crossings must take effect immediately (users see node content switch), so they are not subject to the throttle below.
       applyLowDetailClass(viewport.zoom);
       const now = Date.now();
       if (now - lastViewportCommitRef.current < 120) {
@@ -2041,10 +2039,10 @@ export function Canvas({
     [setViewportState]
   );
 
-  // 小地图拖动走自己的实现，不用 MiniMap 的 pannable —— 内置增益会随视口拖离
-  // 内容区而复利放大。见 useSmoothMinimapPan 的文件头注释。
-  // 接线放在 handleMoveEnd/handleMinimapViewportSettled 之后，它们依赖 store 的
-  // setViewportState，声明顺序不能倒过来。
+  // Minimap dragging uses its own implementation rather than MiniMap's pannable: the built-in gain compounds as the viewport is
+  // dragged away from the content area. See the file header comment of useSmoothMinimapPan.
+  // The wiring comes after handleMoveEnd/handleMinimapViewportSettled, which depend on the store's
+  // setViewportState; the declaration order cannot be reversed.
   useSmoothMinimapPan({
     enabled: minimapVisible,
     wrapperRef,
@@ -2054,8 +2052,8 @@ export function Canvas({
     onViewportSettled: handleMinimapViewportSettled,
   });
 
-  // 换画布同样不触发 onMove/onMoveEnd（程序化 setViewport 的事件慢一拍），由
-  // hydrate 在同一个事件里直接喂过来，好让裁剪开关与节点挂载落在同一次提交。
+  // Switching canvases also does not fire onMove/onMoveEnd (events from a programmatic setViewport lag one beat); hydrate
+  // feeds it directly in the same event so the culling switch and node mounting land in the same commit.
   useEffect(
     () =>
       onCanvasHydrateViewport((zoom) => {
@@ -2065,7 +2063,7 @@ export function Canvas({
     [applyLowDetailClass]
   );
 
-  // 首屏恢复的视口不会触发 onMove/onMoveEnd，低缩放档要在这里补一次。
+  // A viewport restored on first paint does not fire onMove/onMoveEnd; the low-zoom tier must be applied once here.
   useEffect(() => {
     applyLowDetailClass(initialViewportRef.current.zoom);
     setLowDetailActive(isLowDetailZoom(initialViewportRef.current.zoom));
@@ -2074,8 +2072,8 @@ export function Canvas({
         clearTimeout(panningReleaseTimerRef.current);
         panningReleaseTimerRef.current = null;
       }
-      // 模块级信号要跟着画布一起复位，否则卸载时若正在手势中，下一次挂载会
-      // 一直以为「还在平移」而永远不测量。
+      // The module-level signal must reset along with the canvas, otherwise if a gesture is in progress at unmount, the next mount
+      // would think it is "still panning" and never measure.
       setCanvasGestureActive(false);
       setCanvasLowDetail(false);
     };
@@ -2417,7 +2415,7 @@ export function Canvas({
       }
       spacePanActiveRef.current = true;
     };
-    // keyup 不守卫,理由同上面 space-pan capture 监听:只复位为惰性状态。
+    // No guard on keyup, same reason as the space-pan capture listener above: it only resets to inert state.
     const handleKeyUp = (event: KeyboardEvent) => {
       if (event.code !== 'Space') {
         return;
@@ -2456,8 +2454,8 @@ export function Canvas({
       }
       // Space + left-drag is a pan gesture (React Flow's panActivationKeyCode).
       // Don't start a marquee on top of it, or a dashed box shows while panning.
-      // 抓手工具是同一回事，只是长按在工具上而不是空格上 —— 从 store 现读，免得
-      // 这个 effect 为了一个开关重新挂一遍 pointer 监听。
+      // The hand tool is the same thing, except the long press is on the tool instead of the space bar: read from the store on demand,
+      // so this effect does not re-attach pointer listeners for a toggle.
       if (spacePanActiveRef.current || useCanvasToolStore.getState().tool === 'hand') {
         clearMarqueeSelection();
         return;
@@ -2488,7 +2486,7 @@ export function Canvas({
       if (!gesture || event.pointerId !== gesture.pointerId) {
         return;
       }
-      // 拖到一半按下空格或 H 切到抓手：框选就地放弃，别让虚线框跟着平移一起走。
+      // Space or H pressed mid-drag to switch to the hand tool: abandon the box selection in place so the dashed box does not pan along.
       if (spacePanActiveRef.current || useCanvasToolStore.getState().tool === 'hand') {
         clearMarqueeSelection();
         return;
@@ -2530,7 +2528,7 @@ export function Canvas({
       if (!gesture || event.pointerId !== gesture.pointerId) {
         return;
       }
-      // 拖到一半按下空格或 H 切到抓手：框选就地放弃，别让虚线框跟着平移一起走。
+      // Space or H pressed mid-drag to switch to the hand tool: abandon the box selection in place so the dashed box does not pan along.
       if (spacePanActiveRef.current || useCanvasToolStore.getState().tool === 'hand') {
         clearMarqueeSelection();
         return;
@@ -2742,7 +2740,7 @@ export function Canvas({
         return;
       }
 
-      // 选中了上传节点：剪贴板里的图片直接贴进该节点（原有行为）。
+      // An upload node is selected: an image in the clipboard is pasted straight into that node (existing behavior).
       if (selectedUploadNodeId) {
         const imageFile = resolveClipboardImageFile(event);
         if (imageFile) {
@@ -2756,10 +2754,10 @@ export function Canvas({
         }
       }
 
-      // 系统剪贴板里的图片 / 视频 / 音频 → 在光标处生成上传节点。
-      // 与「粘贴节点快照」的优先级裁决靠 ⌘C 复制节点时清空系统剪贴板实现：
-      // 复制节点后剪贴板里不再有媒体文件，这里自然落空、让位给快照粘贴。
-      // clipboardData 就是 DataTransfer，直接复用文件拖放的收集与生成管线。
+      // Image / video / audio in the system clipboard -> create an upload node at the cursor.
+      // Priority against "paste node snapshot" is decided by clearing the system clipboard when nodes are copied with Cmd+C:
+      // after copying nodes there are no media files in the clipboard, so this naturally falls through and yields to snapshot paste.
+      // clipboardData is a DataTransfer, so the file drop collection and spawning pipeline is reused directly.
       const mediaFiles = event.clipboardData
         ? collectDroppedMediaFiles(event.clipboardData)
         : [];
@@ -2793,14 +2791,14 @@ export function Canvas({
           x: basePosition.x + index * 36,
           y: basePosition.y + index * 36,
         };
-        // 与文件拖放同样标记 user_spawned，见 handleCanvasDrop 的说明。
+        // Mark user_spawned the same way as file drop; see the note in handleCanvasDrop.
         const newNodeId = addNode(
           CANVAS_NODE_TYPES.upload,
           position,
           { user_spawned: true } as Partial<CanvasNodeData>,
         );
         lastNodeId = newNodeId;
-        // 与文件拖放同样先暂存再发事件，见 handleCanvasDrop 的说明。
+        // Stage first, then emit the event, same as file drop; see the note in handleCanvasDrop.
         stashExternalFile('upload-node/external-file', newNodeId, file);
         requestAnimationFrame(() => {
           canvasEventBus.publish('upload-node/external-file', { nodeId: newNodeId });
@@ -2849,8 +2847,8 @@ export function Canvas({
       if (isTypingTarget(event.target)) {
         return;
       }
-      // 沉浸式查看器(3GS 导演台全屏)打开时由它独占键盘(放置/删除 marker 等);
-      // 画布的全局快捷键(Delete 删节点 / 复制粘贴等)让位,避免「删假人却删了 3D 节点」。
+      // While the immersive viewer (3GS director stage full screen) is open it owns the keyboard exclusively (place/delete markers etc.);
+      // the canvas's global shortcuts (Delete node / copy-paste etc.) yield, avoiding "deleting the dummy deleted the 3D node".
       if (isImmersiveViewerActive()) {
         return;
       }
@@ -2883,8 +2881,8 @@ export function Canvas({
         return;
       }
 
-      // V = 移动工具，H = 抓手（Figma / liblib 同款）。必须是光秃秃的按键：带上
-      // ⌘/Ctrl 的 V 是粘贴，带 Alt 的字母多半是系统输入法在组字。
+      // V = move tool, H = hand (same as Figma / liblib). Must be bare keys: V with Cmd/Ctrl is paste,
+      // and letters with Alt are mostly the system IME composing.
       if (!commandPressed && !event.altKey && !event.shiftKey && (key === 'v' || key === 'h')) {
         event.preventDefault();
         useCanvasToolStore.getState().setTool(key === 'v' ? 'move' : 'hand');
@@ -2919,19 +2917,19 @@ export function Canvas({
         copiedSnapshotRef.current = snapshot;
         sharedNodeClipboard = snapshot;
         pasteIterationRef.current = 0;
-        // 清空系统剪贴板（写空串会整体替换剪贴板内容，旧的图片/文件随之清掉），
-        // 维持「最近一次复制赢」的标准语义——否则更早复制的系统图片会在 ⌘V 时
-        // 永远抢在节点粘贴前面。写空串而非标记文本：标记会作为字面量泄漏进任何
-        // 文本粘贴目标（站内输入框 / 外部应用）。写失败（权限/焦点）无妨，只是
-        // 退化为「剪贴板里有媒体文件就先贴文件」。
+        // Clear the system clipboard (writing an empty string replaces the whole clipboard content, wiping old images/files),
+        // keeping the standard "last copy wins" semantics; otherwise an earlier copied system image would always beat node paste
+        // on Cmd+V. An empty string rather than a marker text: a marker would leak as a literal into any
+        // text paste target (in-app inputs / external apps). A failed write (permission/focus) is harmless; it just
+        // degrades to "if the clipboard has media files, paste the files first".
         void navigator.clipboard?.writeText('').catch(() => undefined);
         return;
       }
 
       if (isPaste) {
-        // 不能在这里 preventDefault / 立即贴快照：要让 paste 事件先触发，
-        // 由它裁决系统剪贴板里的媒体文件（贴进选中的上传节点，或生成新
-        // 上传节点）。处理过则置 pasteImageHandledRef，这里就不再贴节点快照。
+        // Cannot preventDefault / paste the snapshot immediately here: the paste event must fire first and
+        // decide on the media files in the system clipboard (paste into a selected upload node, or create a new
+        // upload node). If handled, pasteImageHandledRef is set and the node snapshot is not pasted here.
         pasteImageHandledRef.current = false;
         window.setTimeout(() => {
           if (pasteImageHandledRef.current) {
@@ -2971,9 +2969,9 @@ export function Canvas({
         return;
       }
 
-      // 选中的连线也支持快捷键删除:剔除 preset-managed 锁定的连线,
-      // 与双击断开(handleEdgeDoubleClick)用同一套锁定规则。读 getState()
-      // 取最新 edges,避免 keydown 闭包里拿到陈旧的选中状态。
+      // Selected edges also support keyboard deletion: skip edges locked by preset-managed,
+      // using the same lock rule as double-click disconnect (handleEdgeDoubleClick). Read getState()
+      // for the latest edges to avoid a stale selection in the keydown closure.
       const allEdges = useCanvasStore.getState().edges;
       const deletableEdgeIds = allEdges
         .filter((edge) => edge.selected && !isPresetManagedEdge(edge))
@@ -2990,7 +2988,7 @@ export function Canvas({
       const deletableNodeIds = idsToDelete.filter((nodeId) => !lockedNodeIds.has(nodeId));
 
       if (deletableNodeIds.length === 0 && deletableEdgeIds.length === 0) {
-        // 有选中目标(哪怕全被锁定)时仍吞掉默认行为,避免退格触发浏览器返回。
+        // While there is a selected target (even if all locked), still swallow the default behavior so Backspace does not trigger browser back.
         if (idsToDelete.length > 0 || hasSelectedEdge) {
           event.preventDefault();
         }
@@ -3059,9 +3057,9 @@ export function Canvas({
     setSelectedNode,
   ]);
 
-  // 直接把图片 / 视频 / 音频文件从系统拖进画布 → 在落点生成上传节点并把文件喂给它。
-  // UploadNode 会按文件类型自行处理：图片就地上传，视频 / 音频 morph 成对应节点。
-  // 复用既有上传管道，无需在画布层重复实现上传 / 转码逻辑。
+  // Dragging image / video / audio files from the system into the canvas -> create an upload node at the drop point and feed the file to it.
+  // UploadNode handles file types itself: images upload in place, videos / audios morph into the matching node.
+  // Reuses the existing upload pipeline, so no upload / transcode logic is duplicated at the canvas layer.
   const fileDragDepthRef = useRef(0);
   const [isFileDropActive, setIsFileDropActive] = useState(false);
 
@@ -3071,7 +3069,7 @@ export function Canvas({
     []
   );
 
-  // 侧栏素材卡片拖进画布时携带的自定义 MIME(见 assetDrag.ts)。
+  // Custom MIME carried when a sidebar asset card is dragged into the canvas (see assetDrag.ts).
   const hasDraggedAsset = useCallback(
     (event: ReactDragEvent<HTMLDivElement>) =>
       Array.from(event.dataTransfer.types ?? []).includes(CANVAS_ASSET_DRAG_MIME),
@@ -3135,8 +3133,8 @@ export function Canvas({
       });
 
       // ── Sidebar asset drop path ──
-      // 侧栏素材卡片(图片 / 视频 / 音频 / 3GS)拖进来 → 在落点直接生成对应节点。
-      // 与「加入」按钮共用 spawnAssetNode,保持节点构造一致。
+      // A sidebar asset card (image / video / audio / 3GS) dragged in -> directly create the matching node at the drop point.
+      // Shares spawnAssetNode with the "Add" button to keep node construction consistent.
       const assetPayload = readAssetDragPayload(event.dataTransfer);
       if (assetPayload) {
         void (async () => {
@@ -3186,9 +3184,9 @@ export function Canvas({
           { user_spawned: true } as Partial<CanvasNodeData>,
         );
         lastNodeId = newNodeId;
-        // File 本体走暂存，事件只是敲一下已挂载的节点：低缩放档下新节点先以 LOD
-        // shell 挂载，完整组件要等升级队列放行，必然晚于下面这一帧才挂上订阅，
-        // 只发事件会被总线的无重放语义直接丢掉（见 [[pendingExternalFiles]]）。
+        // The File itself goes through staging; the event just pokes an already-mounted node: at low zoom a new node first mounts as a LOD
+        // shell and the full component waits for the upgrade queue, so it necessarily subscribes later than the frame below;
+        // emitting only the event would be dropped by the bus's no-replay semantics (see [[pendingExternalFiles]]).
         stashExternalFile('upload-node/external-file', newNodeId, file);
         requestAnimationFrame(() => {
           canvasEventBus.publish('upload-node/external-file', { nodeId: newNodeId });
@@ -3197,8 +3195,8 @@ export function Canvas({
 
       if (lastNodeId) {
         setSelectedNode(lastNodeId);
-        // 与其他「凭空新建节点」的入口一致：低缩放档下把视口拉到新节点（zoom 提到
-        // ≥0.6），否则用户在 10% 下只看到一个几十像素的灰块。
+        // Consistent with the other "create node from nothing" entries: at low zoom, pull the viewport to the new node (zoom raised to
+        // >=0.6), otherwise at 10% the user only sees a grey block of a few dozen pixels.
         focusNewNodeIfLowZoom(lastNodeId);
       }
       scheduleCanvasPersist(0);
@@ -3213,10 +3211,10 @@ export function Canvas({
     ]
   );
 
-  // 文件落在「节点」上(而非空白画布)时,由该节点自己的 onDrop 处理,且会
-  // stopPropagation —— 画布层的 handleCanvasDrop 收不到,于是「释放以添加到画布」
-  // 蒙层得不到复位,要刷新才消失。这里在 window 捕获阶段兜底复位:捕获先于任何
-  // 节点的 stopPropagation,无论 drop 落在页面哪处都能可靠清掉蒙层状态。
+  // When a file is dropped on a "node" (not blank canvas), the node's own onDrop handles it and calls
+  // stopPropagation, so the canvas-level handleCanvasDrop never receives it and the "release to add to canvas"
+  // overlay is not reset until refresh. A fallback reset in the window capture phase: capture runs before any
+  // node's stopPropagation, reliably clearing the overlay state wherever the drop lands on the page.
   useEffect(() => {
     const resetFileDrop = () => {
       fileDragDepthRef.current = 0;
@@ -3289,9 +3287,9 @@ export function Canvas({
 
   const handleNodeSelect = useCallback(
     (type: CanvasNodeType, selectionClientPosition?: { x: number; y: number }) => {
-      // 「上传资源」改成直接在画布生成一个空的上传节点；选择具体文件
-      // （图片 / 视频）由节点内部 UI 负责，并根据文件类型自行 morph 成
-      // video 节点。这样画布菜单的所有入口都保持一致：点选即生成节点。
+      // "Upload resource" now creates an empty upload node directly on the canvas; choosing the actual file
+      // (image / video) is handled by the node's own UI, which morphs into a
+      // video node by file type. This keeps all canvas menu entries consistent: click to create a node.
       let initialData: Partial<Record<string, unknown>> | undefined;
       if (pendingConnectStart && type === CANVAS_NODE_TYPES.imageEdit) {
         initialData = { generationMode: 'image_reference', requestAspectRatio: 'auto' };
@@ -3300,9 +3298,9 @@ export function Canvas({
         && pendingConnectStart.handleType === 'target'
         && type === CANVAS_NODE_TYPES.upload
       ) {
-        // 从 imageGen 的 target handle 拖出来 → 点「图片」落到 upload 节点
-        // 时，按「上传图片」语义初始化（同步 ImageGen 的 spawn-upstream-image
-        // 按钮：拒视频）。
+        // Dragged out of imageGen's target handle -> choosing "Image" lands on an upload node,
+        // initialized with "upload image" semantics (in sync with ImageGen's spawn-upstream-image
+        // button: reject video).
         const originNode = nodes.find((node) => node.id === pendingConnectStart.nodeId);
         if (originNode?.type === CANVAS_NODE_TYPES.imageGen) {
           initialData = { imageOnly: true };
@@ -3427,29 +3425,29 @@ export function Canvas({
     ],
   );
 
-  // 历史资产弹窗「使用」：把该资产作为新节点生成到视口中心（复用素材落点的 spawnAssetNode）。
-  // 批量使用时传 placement，把多个新节点在视口中心附近铺成网格，避免全部叠在同一点。
+  // History asset dialog "Use": spawn the asset as a new node at the viewport center (reusing spawnAssetNode of material drops).
+  // For bulk use, pass placement so the new nodes are laid out as a grid near the viewport center instead of stacking on one point.
   const handleUseHistoryAsset = useCallback(
     (asset: CanvasAsset, placement?: { index: number; total: number }) => {
       const payload: CanvasAssetDragPayload = {
         kind: asset.kind,
         label: asset.label ?? '',
-        // 历史记录里存的原始提示词，回填到新建视频节点的提示词框（见 spawnAssetNode）。
+        // The original prompt stored in history, backfilled into the new video node's prompt box (see spawnAssetNode).
         prompt: asset.prompt ?? undefined,
         url: asset.url,
-        // 世界模型节点用 coverUrl 当封面（previewImageUrl）；其余类型无封面。
+        // World-model nodes use coverUrl as the cover (previewImageUrl); other types have no cover.
         coverUrl: asset.kind === 'model' ? asset.previewUrl : null,
-        // 历史「使用」还原的是生成产物：图片应还原成成品「图片节点」(imageGen)——
-        // 带回提示词、展开操作区、按图自适应比例，而非只读的上传参考图节点（见 spawnAssetNode）。
+        // History "Use" restores a generated product: an image should be restored as a finished "image node" (imageGen) -
+        // bringing back the prompt, expanding the operation area and adapting the ratio to the image, not a read-only upload reference node (see spawnAssetNode).
         restoreAsGeneratedImage: true,
-        // 原始生成的注册表模型 id / 生成模式,透传给还原节点以复现原次生成配置
-        // （视频写回 data.model+data.genMode；图片写回 data.model）。旧记录为 undefined。
+        // Registry model id / generation mode of the original generation, passed through to the restored node to reproduce the original config
+        // (video writes back data.model + data.genMode; image writes back data.model). Old records are undefined.
         model: asset.model ?? undefined,
         genMode: asset.genMode ?? undefined,
         source: {},
       };
       const origin = spawnAtViewportCenter();
-      // 网格铺开：每行最多 4 个，格间距 320，整体大致以视口中心为中心。
+      // Grid layout: at most 4 per row, 320 spacing, roughly centered on the viewport center.
       const position =
         placement && placement.total > 1
           ? (() => {
@@ -3471,7 +3469,7 @@ export function Canvas({
     [scheduleCanvasPersist, setSelectedNode, spawnAtViewportCenter],
   );
 
-  // 历史资产弹窗「删除」：从画布移除该资产对应的源节点。
+  // History asset dialog "Delete": remove the source node corresponding to the asset from the canvas.
   const handleDeleteHistoryNode = useCallback(
     (nodeId: string) => {
       deleteNode(nodeId);
@@ -3483,7 +3481,7 @@ export function Canvas({
   const duplicateNodes = useCallback(
     (sourceNodeIds: string[], options: DuplicateOptions = {}) => {
       // Source is either a serialized clipboard snapshot (paste) or live nodes
-      // looked up by id (duplicate / 创建副本).
+      // looked up by id (duplicate / create copy).
       const snapshot = options.sourceSnapshot;
       const sourceNodes = snapshot
         ? snapshot.nodes
@@ -3553,11 +3551,11 @@ export function Canvas({
       const idMap = new Map<string, string>();
       const sizeMap = new Map<string, { width: number; height: number }>();
       const pastedForMigration: PastedNodeForMigration[] = [];
-      // 跨项目粘贴（来自序列化剪贴板且源项目 ≠ 当前项目）：指向源项目的媒体 URL 在入
-      // store **之前**就被扣下（withholdForeignAssetUrls），节点先以「素材复制中」占位入
-      // 画布，后端拷完才填回目标项目地址——store 与落库数据里任何时候都没有源项目 URL。
-      // 同时 hold 住当前项目的自动保存，让占位态别白白落一次库；迁移结束（成功或失败）
-      // 再 release，由 useCanvasSync 补存完整节点。hold 超时恢复保存也只会存到占位节点。
+      // Cross-project paste (from a serialized clipboard where the source project != the current project): media URLs pointing to the source project are withheld
+      // (withholdForeignAssetUrls) **before** entering the store; nodes first enter the canvas as "copying asset" placeholders,
+      // and the target project address is filled in only after the backend finishes copying - the source project URL is never in the store or persisted data.
+      // Also hold the current project's autosave so the placeholder state is not needlessly persisted once; release after migration ends (success or failure),
+      // and useCanvasSync re-saves the full nodes. If the hold times out, saving resumes and would only save placeholder nodes.
       const sourceProject = snapshot?.sourceProject ?? null;
       const currentProject = readUrl().project ?? null;
       const migrationTarget =
@@ -3674,9 +3672,9 @@ export function Canvas({
         scheduleCanvasPersist(0);
       }
 
-      // 跨项目粘贴：让后端把扣下的源项目媒体拷进当前项目，完成后填回目标地址、摘掉
-      // 占位标记。后台执行、不阻塞粘贴；失败的节点保持字段为空并标记 failed（占位遮罩
-      // 提示删除重贴）。无论成败都要 release 上面的自动保存 hold。
+      // Cross-project paste: have the backend copy the withheld source-project media into the current project; on completion, fill in the target address and remove
+      // the placeholder marker. Runs in the background without blocking paste; failed nodes keep empty fields and are marked failed (the placeholder overlay
+      // tells the user to delete and paste again). The autosave hold above must be released whether it succeeds or fails.
       if (migrationTarget && pastedForMigration.length > 0) {
         void migratePastedNodeAssets({
           nodes: pastedForMigration,
@@ -3761,8 +3759,8 @@ export function Canvas({
         return;
       }
 
-      // 拖线起点是 source handle 时，只要存在「至少一种合法的下游节点类型」就允许开拽；
-      // 实际连接合法性会在 onConnect 里按目标类型再次校验。
+      // When the drag starts from a source handle, dragging is allowed as long as "at least one legal downstream node type" exists;
+      // actual connection legality is checked again in onConnect against the target type.
       if (
         params.handleType === 'source'
         && !canNodeBeManualConnectionSource(params.nodeId, nodes)
@@ -3807,12 +3805,12 @@ export function Canvas({
   const handleNodeDragStart = useCallback(
     (event: ReactMouseEvent, node: CanvasNode, draggedNodes: CanvasNode[]) => {
       enterNodeDragFocus();
-      // 组内成员拖动：记下「所有被拖成员」（多选时第三参带全量）所属的组 id，松手时
-      // 逐组按成员最终落点 fitGroupToChildren 重新包住（libtv 式，拖动期间不动框）。
-      // 只看被抓节点会漏掉多选里其它组的成员 —— 它们没有 extent:'parent' 钳制，
-      // 拖完不 refit 就永久悬在组框外。alt 复制拖动不参与（原节点回弹）。
-      // parentId 从 store 读 —— React Flow 传给拖动回调的 node 参数是精简 drag item，
-      // 可能不带 parentId，直接用 node.parentId 会取不到。
+      // Group member drag: record the group ids of "all dragged members" (the third argument carries the full set for multi-select), and on release
+      // re-wrap each group with fitGroupToChildren by the members' final positions (libtv style, boxes stay put during the drag).
+      // Looking only at the grabbed node would miss members of other groups in a multi-select - they have no extent:'parent' clamp,
+      // and without a refit after the drag they would hang outside the group box forever. Alt-copy drag does not participate (the original node bounces back).
+      // parentId is read from the store - the node argument React Flow passes to drag callbacks is a slimmed drag item
+      // that may lack parentId, so using node.parentId directly could fail.
       groupFitDragRef.current = null;
       linkedDragRef.current = null;
       if (!event.altKey) {
@@ -3827,8 +3825,8 @@ export function Canvas({
           groupFitDragRef.current = { groupIds: [...groupIds] };
         }
 
-        // 单节点拖动时,若被拖的是「导演世界」源节点或其「导演世界输出」组,记下另一方
-        // 并准备按相同位移联动(多选/框选拖动不联动,交给用户自行摆放)。
+        // During a single-node drag, if the dragged one is the "director world" source node or its "director world output" group, record the other side
+        // and prepare to move it by the same delta (multi-select / box-select drags do not link; users arrange them by hand).
         if (!draggedNodes || draggedNodes.length <= 1) {
           const stateEdges = useCanvasStore.getState().edges;
           const partnerIds = findLinkedCapturePartnerIds(node.id, stateNodes, stateEdges);
@@ -3928,8 +3926,8 @@ export function Canvas({
 
   const handleNodeDrag = useCallback(
     (_event: ReactMouseEvent, node: CanvasNode) => {
-      // 联动拖动:把 partner(源节点或输出组)按被拖节点的位移同步移动。移动组时
-      // 其子节点(相对坐标)会自动跟随,无需额外处理。
+      // Linked drag: move the partner (source node or output group) in sync by the dragged node's delta. When a group moves,
+      // its children (relative coordinates) follow automatically, no extra handling needed.
       const linked = linkedDragRef.current;
       if (linked) {
         const linkDeltaX = node.position.x - linked.draggedStart.x;
@@ -4012,12 +4010,12 @@ export function Canvas({
       exitNodeDragFocus();
       useSnapAlignStore.getState().clearGuides();
       snapAlignSessionRef.current = null;
-      // 联动拖动收尾:partner 的最终位置已在拖动期间(dragging:true)写入,松手时
-      // React Flow 对被拖节点发出的 dragging:false 变更会统一压入同一条撤销记录,
-      // 故这里只需清掉引用,不再额外提交以免产生重复的 undo 步骤。
+      // Linked drag wrap-up: the partner's final position was already written during the drag (dragging:true); on release,
+      // the dragging:false change React Flow emits for the dragged node is pushed into the same undo record,
+      // so only the reference is cleared here, with no extra commit, to avoid a duplicate undo step.
       linkedDragRef.current = null;
-      // 组内成员拖动收尾（libtv 式）：按成员的最终落点把每个涉及的组框重新撑大包住
-      //（fitGroupToChildren 含左/上方向的整体平移）。普通组成员不带 extent，可自由落点。
+      // Group member drag wrap-up (libtv style): by each member's final position, re-expand every involved group box to wrap them
+      // (fitGroupToChildren includes translating as a whole in the left/up directions). Ordinary group members have no extent and can land freely.
       const groupFit = groupFitDragRef.current;
       groupFitDragRef.current = null;
       if (groupFit) {
@@ -4095,8 +4093,8 @@ export function Canvas({
     [applyNodesChange, exitNodeDragFocus, scheduleCanvasPersist, setSelectedNode]
   );
 
-  // 拖「选区框」整体移动多选节点时，React Flow 走 onSelectionDrag* 而非 onNodeDrag*，
-  // 组成员的 refit 同样要在这条路径上收尾，否则组成员被拖出框后无人包住。
+  // When the "selection box" is dragged to move multi-selected nodes as a whole, React Flow uses onSelectionDrag* rather than onNodeDrag*;
+  // the group member refit must also wrap up on this path, otherwise members dragged out of the box are wrapped by no one.
   const handleSelectionDragStart = useCallback(
     (_event: ReactMouseEvent, draggedNodes: CanvasNode[]) => {
       enterNodeDragFocus();
@@ -4124,9 +4122,9 @@ export function Canvas({
     }
   }, [exitNodeDragFocus]);
 
-  // 手动建边落到某个节点上时，这条边会不会把视频节点的素材撑过能力包络？非空即拒绝。
-  // 三条手动路径（React Flow 拖线松手、"+" 拖拽的落点高亮、"+" 松手建边）共用同一把
-  // 尺子——少一处就会出现「拖过去高亮成合法、一松手什么也没有」。
+  // When a manual edge lands on a node, would this edge push the video node's materials past the capability envelope? Non-empty means reject.
+  // The three manual paths (React Flow drag release, "+" drag drop highlight, "+" release edge creation) share the same
+  // ruler - missing one place would give "highlighted as valid while dragging, but nothing happens on release".
   const manualDropReferenceRejection = useCallback(
     (pending: PendingConnectStart, dropNodeId: string | null): string | null => {
       if (!dropNodeId || dropNodeId === pending.nodeId) return null;
@@ -4166,10 +4164,10 @@ export function Canvas({
       const dropNodeId = dropNodeElement?.dataset?.id ?? null;
 
       if (dropNodeId && dropNodeId !== pendingConnectStart.nodeId) {
-        // 素材撑过能力包络：这条分支是 connectionState.isValid 为 false 才走到的
-        // 补救路径，**不看** isValidConnection，必须自己拦。不拦就会一路掉进下面
-        // 「拖到空白处 → 弹新建节点菜单」，用户明明松手在节点上却弹出个菜单。
-        // 顺带 toast 出原因——落点变灰本身不解释「为什么」。
+        // Materials exceed the capability envelope: this branch is a fallback path reached when connectionState.isValid is false and
+        // **does not look at** isValidConnection, so it must block by itself. Otherwise it would fall through to
+        // "dragged to blank space -> open the new node menu", and users who released on a node would get a menu.
+        // Also toast the reason - a greyed-out drop target alone does not explain "why".
         const referenceRejection = manualDropReferenceRejection(
           pendingConnectStart,
           dropNodeId,
@@ -4359,7 +4357,7 @@ export function Canvas({
     [nodes, reactFlowInstance],
   );
 
-  // 摘掉当前落点高亮（拖线结束/离开合法节点时调用）。
+  // Remove the current drop highlight (called when the drag ends / leaves a valid node).
   const clearDropTargetHighlight = useCallback(() => {
     if (dropTargetElRef.current) {
       dropTargetElRef.current.classList.remove('canvas-node-drop-target');
@@ -4367,17 +4365,17 @@ export function Canvas({
     }
   }, []);
 
-  // 给定光标位置 + 起手信息，返回「可作为合法落点」的节点 DOM（否则 null）。
-  // 校验规则与 dragEnd/handleConnectEnd 建边时一致：非自身、类型可连、两端 handle 齐备。
-  // 命中方式：① 光标直接压在某节点上优先；② 否则在节点边缘 MANUAL_DROP_PROXIMITY_PX
-  // 邻域内挑「点到矩形」距离最近的合法节点——不必压进节点内部才触发。
+  // Given the cursor position + start info, return the node DOM that is a "valid drop target" (otherwise null).
+  // Validation rules match edge creation in dragEnd/handleConnectEnd: not itself, types connectable, both handles present.
+  // Hit rule: (1) a node directly under the cursor wins; (2) otherwise, within the MANUAL_DROP_PROXIMITY_PX neighborhood of node edges,
+  // pick the valid node with the nearest "point-to-rect" distance - the cursor need not be inside the node.
   const resolveManualDropTargetEl = useCallback(
     (clientPosition: { x: number; y: number }, pending: PendingConnectStart) => {
       const validate = (el: HTMLElement | null): HTMLElement | null => {
         const dropNodeId = el?.dataset?.id ?? null;
         if (!el || !dropNodeId || dropNodeId === pending.nodeId) return null;
-        // 素材已满的视频节点不高亮成落点（与拖线时落点变灰同一口径）；松手那一下
-        // 由 handlePlusConnectDragEnd 再 toast 出原因。
+        // A video node whose materials are full is not highlighted as a drop target (same rule as greying out the target while dragging a line); at release
+        // handlePlusConnectDragEnd toasts the reason.
         if (manualDropReferenceRejection(pending, dropNodeId)) return null;
         const sourceNode =
           pending.handleType === 'source'
@@ -4399,7 +4397,7 @@ export function Canvas({
         return null;
       };
 
-      // ① 光标直接落在某节点上。
+      // (1) The cursor is directly on a node.
       const direct = validate(
         document
           .elementFromPoint(clientPosition.x, clientPosition.y)
@@ -4407,7 +4405,7 @@ export function Canvas({
       );
       if (direct) return direct;
 
-      // ② 邻域内找「点到节点矩形」最近的合法节点。
+      // (2) Find the valid node nearest by "point-to-node-rect" within the neighborhood.
       const wrapper = wrapperRef.current;
       if (!wrapper) return null;
       let best: HTMLElement | null = null;
@@ -4507,7 +4505,7 @@ export function Canvas({
       height: containerRect.height,
     });
 
-    // 落点反馈：光标进入某个合法目标节点时高亮它（呼吸+发光），离开则摘掉。
+    // Drop feedback: when the cursor enters a valid target node, highlight it (breathing + glow); remove it when leaving.
     const dropEl = resolveManualDropTargetEl(params.clientPosition, pending);
     if (dropEl !== dropTargetElRef.current) {
       clearDropTargetHighlight();
@@ -4532,9 +4530,9 @@ export function Canvas({
         return;
       }
 
-      // 素材已满的视频节点上面 resolveManualDropTargetEl 不会认作落点（不高亮），
-      // 松手就会掉进「拖到空白处 → 弹新建节点菜单」。所以先单独看光标正下方压着
-      // 谁：确实是被素材上限挡下的，就 toast 出原因并收工，别弹那个菜单。
+      // On a video node whose materials are full, resolveManualDropTargetEl does not recognize a drop target (no highlight),
+      // and release would fall into "dragged to blank space -> open the new node menu". So first check separately
+      // what is right under the cursor: if it really is blocked by the material limit, toast the reason and finish, without opening that menu.
       const hoveredNodeId =
         (
           document
@@ -4549,7 +4547,7 @@ export function Canvas({
         return;
       }
 
-      // 与拖动高亮同一套邻域判定：松手时落在节点周围一圈邻域内即可建边，不必压进节点内部。
+      // Same neighborhood rule as drag highlight: releasing within the neighborhood around a node creates an edge, no need to be inside the node.
       const dropNodeElement = resolveManualDropTargetEl(params.clientPosition, pending);
       const dropNodeId = dropNodeElement?.dataset?.id ?? null;
 
@@ -4945,8 +4943,8 @@ export function Canvas({
         connectionRadius={CONNECTION_SNAP_RADIUS}
         minZoom={0.1}
         maxZoom={8}
-        // 抓手工具下节点既不可拖也不可选：不可拖，左键落在节点上才会交给 pane 去平移；
-        // 不可选，否则一次「拖着节点平移」松手时还会顺手把它选中。
+        // Under the hand tool nodes are neither draggable nor selectable: not draggable, so a left-click on a node is handed to the pane to pan;
+        // not selectable, otherwise releasing after a "pan while dragging a node" would select it as a side effect.
         nodesDraggable={!handToolActive}
         elementsSelectable={!handToolActive}
         nodesConnectable
@@ -4959,10 +4957,10 @@ export function Canvas({
         multiSelectionKeyCode={MULTI_SELECTION_KEY_CODES}
         selectionKeyCode={null}
         deleteKeyCode={null}
-        // 低缩放档关掉视口裁剪：此档所有节点都是轻量 shell（见 withLodShell），
-        // 全量挂载的渲染树很小；而裁剪在快速平移时每帧挂/卸边界节点，实测 4 秒
-        // 拖拽 800+ 次翻腾、p99 帧时 470ms——收益早已倒挂。高缩放档维持裁剪。
-        // 工作流执行期也要保持节点挂载，避免后台节点因裁剪中断。
+        // Turn off viewport culling at low zoom: all nodes are lightweight shells at this tier (see withLodShell),
+        // the fully mounted render tree is small; while culling mounts/unmounts boundary nodes every frame during fast pan (measured: 800+ churns
+        // in a 4-second drag, p99 frame time 470ms) - the benefit has inverted. High zoom keeps culling.
+        // Nodes must also stay mounted while a workflow runs, so background nodes are not interrupted by culling.
         onlyRenderVisibleElements={!workflowExecutionActive && !lowDetailActive}
         zoomOnDoubleClick={false}
         proOptions={REACT_FLOW_PRO_OPTIONS}
@@ -4976,8 +4974,8 @@ export function Canvas({
             style={{ pointerEvents: 'all', zIndex: 10000 }}
             nodeColor="rgba(120, 120, 120, 0.92)"
             maskColor="rgba(0, 0, 0, 0.62)"
-            // 拖动由 useSmoothMinimapPan 接管：内置 pannable 的增益含当前视口框，
-            // 视口拖出内容区后会复利放大，越拖越快。
+            // Dragging is taken over by useSmoothMinimapPan: the built-in pannable's gain includes the current viewport box,
+            // and compounds once the viewport is dragged out of the content area, getting faster the more you drag.
             pannable={false}
             zoomable
             onMouseEnter={() => setMinimapHover(true)}
@@ -5145,7 +5143,7 @@ export function Canvas({
 
       <CanvasFpsMeter />
 
-      {/* z-[130] 的「回到节点」提示会浮到故事板(z-30)之上，挂起时一并隐藏。 */}
+      {/* The z-[130] "back to nodes" hint floats above the storyboard (z-30), so hide it too when suspended. */}
       {!suspended && <BackToNodesHint />}
 
       <CanvasZoomControl
@@ -5153,8 +5151,8 @@ export function Canvas({
         placement={controlsPlacement}
       />
 
-      {/* 快捷操作条 z-[41] 高于故事板 overlay(z-30)，挂起时必须隐藏；
-          右侧 z-30 的缩放/小地图/FPS 控件与故事板同级、按 DOM 顺序被盖住，无需处理。 */}
+      {/* The quick action bar z-[41] is above the storyboard overlay (z-30), so it must be hidden when suspended;
+      the right-side z-30 zoom/minimap/FPS controls are at the same level as the storyboard and covered by DOM order, no handling needed. */}
       {!taskPanelOpen && !suspended && (
         <CanvasQuickActionBar
           placement={controlsPlacement}

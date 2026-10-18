@@ -76,7 +76,7 @@ async def test_audio_runner_fails_when_no_usable_audio_was_generated(monkeypatch
         project_name="demo",
     )
 
-    with pytest.raises(RuntimeError, match="没有生成可用结果"):
+    with pytest.raises(RuntimeError, match="no usable result was produced"):
         await audio._run_indextts2_audio(
             {"payload": {"episode": 1, "beat_numbers": [1, 2]}},
             ctx,
@@ -137,24 +137,24 @@ class FakeStore:
         reference_audio_sha256 = ""
         if self.include_dialogue_voice:
             character_voice = (
-                project_dir / "assets" / "characters" / "谢铮" / "voice_sample.wav"
+                project_dir / "assets" / "characters" / "XieZheng" / "voice_sample.wav"
             )
             character_voice.parent.mkdir(parents=True, exist_ok=True)
             character_voice.write_bytes(b"character-reference")
-            reference_audio_path = "assets/characters/谢铮/voice_sample.wav"
+            reference_audio_path = "assets/characters/XieZheng/voice_sample.wav"
             reference_audio_sha256 = "character-voice-hash"
         character = NovelCharacter(
-            name="谢铮",
-            gender="男",
+            name="XieZheng",
+            gender="male",
             is_main=True,
             reference_audio_path=reference_audio_path,
             reference_audio_sha256=reference_audio_sha256,
         )
         character.identities = [
             CharacterIdentity(
-                identity_id="谢铮_青年时期",
-                character_name="谢铮",
-                identity_name="青年时期",
+                identity_id="XieZheng_young_adult",
+                character_name="XieZheng",
+                identity_name="young_adult",
                 reference_audio_path="",
             )
         ]
@@ -167,19 +167,19 @@ def _beats():
             "beat_number": 1,
             "audio_type": "narration",
             "speaker": "",
-            "narration_segment": "旁白开场。",
+            "narration_segment": "Narration opens.",
         },
         {
             "beat_number": 2,
             "audio_type": "dialogue",
-            "speaker": "谢铮_青年时期",
-            "narration_segment": "谢铮低声说：“走。”",
+            "speaker": "XieZheng_young_adult",
+            "narration_segment": "Xie Zheng says softly: “Go.”",
         },
         {
             "beat_number": 3,
             "audio_type": "silence",
             "is_manual_shot": True,
-            "narration_segment": "手工镜头。",
+            "narration_segment": "Handheld shot.",
         },
         {
             "beat_number": 4,
@@ -195,7 +195,7 @@ def _beat_uploaded_narration(upload_path: Path) -> dict:
         "beat_number": 1,
         "audio_type": "narration",
         "speaker": "",
-        "narration_segment": "画外音响起。",
+        "narration_segment": "A voice-over begins.",
         "seedance2_config_json": json.dumps(
             {"reference_audio_paths": [str(upload_path)]}
         ),
@@ -278,7 +278,7 @@ async def test_indextts2_selected_runner_generates_narration_and_dialogue(
     assert [call["beat"] for call in generator.calls] == [1, 2]
     assert (
         generator.calls[0]["emotion_prompt"]
-        == "以第三人称旁白视角，用客观冷静的解说语气朗读"
+        == "Read as a third-person narrator, in an objective and calm narration tone"
     )
     assert (project_dir / "audio" / "ep001" / "beat_01.mp3").read_bytes() == b"audio-1"
     assert (project_dir / "audio" / "ep001" / "beat_02.mp3").read_bytes() == b"audio-2"
@@ -306,7 +306,7 @@ async def test_indextts2_selected_runner_generates_narration_and_dialogue(
             "newapi",
             "index-tts-2",
             "audio_generation_indextts2",
-            "ep001:beat_02:谢铮_青年时期",
+            "ep001:beat_02:XieZheng_young_adult",
             1,
             "completed",
         ),
@@ -334,14 +334,14 @@ async def test_indextts2_runner_generates_manual_narration_and_dialogue(
                 "is_manual_shot": True,
                 "audio_type": "narration",
                 "speaker": "",
-                "narration_segment": "补一段画外旁白。",
+                "narration_segment": "Add a voice-over narration.",
             },
             {
                 "beat_number": 42,
                 "is_manual_shot": True,
                 "audio_type": "dialogue",
-                "speaker": "谢铮_青年时期",
-                "narration_segment": "别回头。",
+                "speaker": "XieZheng_young_adult",
+                "narration_segment": "Do not look back.",
             },
             {
                 "beat_number": 43,
@@ -391,7 +391,7 @@ async def test_indextts2_runner_treats_missing_audio_type_as_narration(
                 "beat_number": 1,
                 "audio_type": "",
                 "speaker": "",
-                "narration_segment": "昏暗的街区里只有面馆的照明灯亮着。",
+                "narration_segment": "In the dim district only the noodle shop's lights are on.",
             }
         ],
     )
@@ -409,7 +409,7 @@ async def test_indextts2_runner_treats_missing_audio_type_as_narration(
 
     assert result.generated == 1
     assert result.skipped_non_dialogue == 0
-    assert generator.calls[0]["prompt"] == "昏暗的街区里只有面馆的照明灯亮着。"
+    assert generator.calls[0]["prompt"] == "In the dim district only the noodle shop's lights are on."
 
 
 @pytest.mark.asyncio
@@ -457,7 +457,7 @@ async def test_indextts2_drama_narration_uses_beat_uploaded_audio_before_project
 
     assert result.generated == 1
     assert generator.calls[0]["audio_url"] == "data://voice.wav"
-    assert generator.calls[0]["prompt"] == "画外音响起。"
+    assert generator.calls[0]["prompt"] == "A voice-over begins."
 
 
 @pytest.mark.asyncio
@@ -490,7 +490,7 @@ async def test_indextts2_narrated_project_ignores_beat_uploaded_narration_voice(
     )
 
     assert errors == [
-        "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频"
+        "Beat 01 narrator voice is missing: The project narrator voice is not configured; upload or record narrator audio"
     ]
 
 
@@ -522,7 +522,7 @@ async def test_indextts2_drama_narration_ignores_first_person_protagonist_for_fa
                 "beat_number": 1,
                 "audio_type": "narration",
                 "speaker": "",
-                "narration_segment": "画外音响起。",
+                "narration_segment": "A voice-over begins.",
             }
         ],
     )
@@ -562,7 +562,7 @@ async def test_indextts2_runner_treats_legacy_action_audio_type_as_silence(
                 "beat_number": 1,
                 "audio_type": "action",
                 "speaker": "",
-                "narration_segment": "昏暗的街区里只有面馆的照明灯亮着。",
+                "narration_segment": "In the dim district only the noodle shop's lights are on.",
             }
         ],
     )
@@ -681,10 +681,10 @@ async def test_indextts2_sync_changed_skips_current_existing_audio(
         db_path=state_dir / "data.db",
         episode_number=1,
         beat_number=2,
-        speaker="谢铮_青年时期",
+        speaker="XieZheng_young_adult",
         audio_path=existing,
         voice_sha256="character-voice-hash",
-        text_sha256=_text_sha256("走。"),
+        text_sha256=_text_sha256("Go."),
         mode="sync_changed",
         provider="fal.ai",
         model="IndexTTS2",
@@ -734,7 +734,7 @@ async def test_indextts2_runner_logs_skipped_breakdown(tmp_path, monkeypatch):
         speaker=NARRATOR_SPEAKER,
         audio_path=existing,
         voice_sha256=file_sha256(narrator_voice),
-        text_sha256=_text_sha256("旁白开场。"),
+        text_sha256=_text_sha256("Narration opens."),
         mode="sync_changed",
         provider="fal.ai",
         model="IndexTTS2",
@@ -789,10 +789,10 @@ async def test_indextts2_sync_changed_regenerates_when_text_hash_changes(
         db_path=state_dir / "data.db",
         episode_number=1,
         beat_number=2,
-        speaker="谢铮_青年时期",
+        speaker="XieZheng_young_adult",
         audio_path=existing,
         voice_sha256="character-voice-hash",
-        text_sha256=_text_sha256("旧台词"),
+        text_sha256=_text_sha256("old line"),
         mode="sync_changed",
         provider="fal.ai",
         model="IndexTTS2",
@@ -820,10 +820,10 @@ async def test_indextts2_sync_changed_regenerates_when_text_hash_changes(
         db_path=state_dir / "data.db",
         episode_number=1,
         beat_number=2,
-        speaker="谢铮_青年时期",
+        speaker="XieZheng_young_adult",
     )
     assert record is not None
-    assert record.text_sha256 == _text_sha256("走。")
+    assert record.text_sha256 == _text_sha256("Go.")
 
 
 @pytest.mark.asyncio
@@ -859,7 +859,7 @@ async def test_indextts2_selected_runner_records_missing_voice_and_continues(
     assert result.generated == 1
     assert result.generated_beats == [1]
     assert result.skipped_non_dialogue == 0
-    assert any("Beat 02" in failure and "声线" in failure for failure in result.failed)
+    assert any("Beat 02" in failure and "voice" in failure for failure in result.failed)
     assert [call["beat"] for call in generator.calls] == [1]
 
 
@@ -890,7 +890,7 @@ async def test_indextts2_voice_prereq_check_reports_missing_dialogue_before_task
         mode="redo_selected",
     )
 
-    assert errors == ["Beat 02 角色声线缺失：谢铮_青年时期"]
+    assert errors == ["Beat 02 character voice is missing: XieZheng_young_adult"]
 
 
 @pytest.mark.asyncio
@@ -919,8 +919,8 @@ async def test_indextts2_audio_plan_returns_only_billable_beats(tmp_path, monkey
     )
 
     assert plan.beat_numbers == [1]
-    assert plan.errors == ["Beat 02 角色声线缺失：谢铮_青年时期"]
-    assert plan.billable_chars == 5
+    assert plan.errors == ["Beat 02 character voice is missing: XieZheng_young_adult"]
+    assert plan.billable_chars == 15
 
 
 @pytest.mark.asyncio
@@ -953,7 +953,7 @@ async def test_indextts2_voice_prereq_check_reports_missing_narrator_before_task
     )
 
     assert errors == [
-        "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频"
+        "Beat 01 narrator voice is missing: The project narrator voice is not configured; upload or record narrator audio"
     ]
 
 
@@ -1027,7 +1027,7 @@ async def test_indextts2_selected_runner_records_generator_failure(
 
     assert rows[0][0:2] == ("ep001:beat_01:__narrator__", "completed")
     assert rows[0][2] in ("", None)
-    assert rows[1] == ("ep001:beat_02:谢铮_青年时期", "failed", "failed beat 2")
+    assert rows[1] == ("ep001:beat_02:XieZheng_young_adult", "failed", "failed beat 2")
 
 
 @pytest.mark.asyncio

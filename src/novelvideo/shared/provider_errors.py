@@ -10,33 +10,35 @@ from typing import Any
 from novelvideo.utils.error_redaction import redact_secrets
 
 CONTENT_MODERATION_FAILED_CODE = "CONTENT_MODERATION_FAILED"
-CONTENT_MODERATION_FAILED_MESSAGE = "图片生成结果未通过内容审核，请调整提示词后重试"
-INPUT_IMAGE_POLICY_FAILED_MESSAGE = "参考图片未通过版权或内容安全审核，请更换参考图后重试。"
+# Stable snake_case code the frontend branches on (alongside the legacy error_code).
+CONTENT_MODERATION_BLOCKED_CODE = "content_moderation_blocked"
+CONTENT_MODERATION_FAILED_MESSAGE = "The generated image did not pass content moderation. Adjust the prompt and try again."
+INPUT_IMAGE_POLICY_FAILED_MESSAGE = "The reference image did not pass copyright or content safety review. Replace the reference image and try again."
 OUTPUT_VIDEO_POLICY_FAILED_MESSAGE = (
-    "视频生成结果未通过版权或内容安全审核，请调整提示词或参考素材后重试。"
+    "The generated video did not pass copyright or content safety review. Adjust the prompt or reference assets and try again."
 )
 COPYRIGHT_POLICY_FAILED_MESSAGE = (
-    "生成内容可能涉及版权限制，未通过平台审核。请调整提示词或更换参考素材后重试。"
+    "The generated content may involve copyright restrictions and did not pass platform review. Adjust the prompt or replace the reference assets and try again."
 )
 OUTPUT_AUDIO_POLICY_FAILED_MESSAGE = (
-    "生成音频可能包含敏感内容，未通过平台审核。请更换音频或调整描述后重试。"
+    "The generated audio may contain sensitive content and did not pass platform review. Replace the audio or adjust the description and try again."
 )
 
-# DramaClawAPI（视频网关）在任务失败报文里给的枚举码。组织账号的出口路径会把厂商
-# 原文整个抹掉（原文里可能带签名的 relay URL），但这些枚举码本身不含秘密，必须放行，
-# 否则用户只能看到 `EGRESS_OPERATION_UNKNOWN`——2026-08-26 3060 上 338x191 的参考图
-# 被火山 HeightTooSmall 连拒 8 次，用户就是这么被蒙住的。
+# Enum codes that DramaClawAPI (the video gateway) gives in task-failure payloads. The egress path of organization accounts wipes the vendor
+# original text entirely (it may carry signed relay URLs), but these enum codes themselves contain no secrets and must be let through,
+# otherwise users only see `EGRESS_OPERATION_UNKNOWN` -- on 2026-08-26 a 338x191 reference image on 3060
+# was rejected 8 times in a row by Volcano's HeightTooSmall, and that is how users were left in the dark.
 VIDEO_MEDIA_DIMENSIONS_INVALID_CODE = "VIDEO_MEDIA_DIMENSIONS_INVALID"
 VIDEO_MEDIA_DIMENSIONS_INVALID_MESSAGE = (
-    "参考素材尺寸不符合要求：图片宽度和高度需在 300 至 6000 像素之间，"
-    "请更换参考图后重试。"
+    "Reference asset dimensions are invalid: image width and height must be between 300 and 6000 pixels. "
+    "Replace the reference image and try again."
 )
 VIDEO_CONTENT_COPYRIGHT_RESTRICTED_CODE = "VIDEO_CONTENT_COPYRIGHT_RESTRICTED"
 VIDEO_OUTPUT_AUDIO_SENSITIVE_CODE = "VIDEO_OUTPUT_AUDIO_SENSITIVE"
 
-# 只认「全大写枚举」形态的 VIDEO_* 码；任何带空格/小写/标点的东西都当自由文本拒掉。
+# Only accept VIDEO_* codes in "all-caps enum" form; anything with spaces / lowercase / punctuation is rejected as free text.
 _PROVIDER_VIDEO_ERROR_CODE_RE = re.compile(r"VIDEO_[A-Z0-9]+(?:_[A-Z0-9]+)*")
-# 网关 HTTP 错误体（JSON）或 Python repr 里的 `"code": "VIDEO_*"`。
+# `"code": "VIDEO_*"` in the gateway HTTP error body (JSON) or a Python repr.
 _PROVIDER_VIDEO_ERROR_BODY_CODE_RE = re.compile(
     r"[\"']code[\"']\s*:\s*[\"'](VIDEO_[A-Z0-9_]+)[\"']"
 )
@@ -46,7 +48,7 @@ _PROVIDER_SENSITIVE_FRAGMENT_RE = re.compile(
     r"access[_-]?key|token|secret)(?:\s*[:=]\s*|[-_/])[^\s,;]+"
 )
 _PROVIDER_ERROR_MESSAGE_MAX_LENGTH = 1000
-# 网关只给自由文本（`error_message`）时，按厂商原话里的关键字归类。
+# When the gateway only gives free text (`error_message`), classify by keywords in the vendor's original wording.
 _PROVIDER_VIDEO_ERROR_TEXT_MARKERS: tuple[tuple[str, str], ...] = (
     ("heighttoosmall", VIDEO_MEDIA_DIMENSIONS_INVALID_CODE),
     ("widthtoosmall", VIDEO_MEDIA_DIMENSIONS_INVALID_CODE),
@@ -56,8 +58,8 @@ _PROVIDER_VIDEO_ERROR_TEXT_MARKERS: tuple[tuple[str, str], ...] = (
     ("copyright restrictions", VIDEO_CONTENT_COPYRIGHT_RESTRICTED_CODE),
     ("output audio may contain sensitive", VIDEO_OUTPUT_AUDIO_SENSITIVE_CODE),
 )
-# 已知码 → 给用户看的 (error_code, message)。版权/敏感沿用前端已经认识的
-# CONTENT_MODERATION_FAILED，尺寸问题单独一个码，方便前端以后做针对性引导。
+# Known code -> (error_code, message) shown to the user. Copyright/sensitive reuse the CONTENT_MODERATION_FAILED
+# that the frontend already recognizes; the dimension problem gets its own code so the frontend can offer targeted guidance later.
 _PROVIDER_VIDEO_ERROR_PRESENTATION: dict[str, tuple[str, str]] = {
     VIDEO_MEDIA_DIMENSIONS_INVALID_CODE: (
         VIDEO_MEDIA_DIMENSIONS_INVALID_CODE,
@@ -106,6 +108,7 @@ def content_moderation_message(exc: BaseException | None = None, message: str = 
 def content_moderation_payload(exc: BaseException | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "error_code": CONTENT_MODERATION_FAILED_CODE,
+        "code": CONTENT_MODERATION_BLOCKED_CODE,
         "message": content_moderation_message(exc),
     }
     if exc is not None:
@@ -114,7 +117,7 @@ def content_moderation_payload(exc: BaseException | None = None) -> dict[str, An
 
 
 def safe_provider_video_error_code(code: object) -> str:
-    """网关给的 `code` 字段是纯枚举的 VIDEO_* 才原样返回，否则返回空串。"""
+    """Return the gateway's `code` field as-is only if it is a pure-enum VIDEO_* code, otherwise an empty string."""
     text = str(code or "").strip()
     if len(text) > 64 or not _PROVIDER_VIDEO_ERROR_CODE_RE.fullmatch(text):
         return ""
@@ -122,7 +125,7 @@ def safe_provider_video_error_code(code: object) -> str:
 
 
 def provider_video_error_code_from_text(text: str) -> str:
-    """从厂商/网关自由文本里提取安全的 VIDEO_* 码；认不出返回空串，原文绝不回传。"""
+    """Extract a safe VIDEO_* code from vendor/gateway free text; return an empty string if unrecognized, and never return the original text."""
     if not text:
         return ""
     match = _PROVIDER_VIDEO_ERROR_BODY_CODE_RE.search(text)
@@ -182,7 +185,7 @@ def _sanitize_provider_video_error_message(value: object) -> str:
     message = _PROVIDER_SENSITIVE_FRAGMENT_RE.sub("[redacted]", message)
     message = re.sub(r"\s+", " ", message).strip()
     visible = message.replace("[redacted-url]", "").replace("[redacted]", "")
-    if not visible.strip(" -:：,，.;；"):
+    if not visible.strip(" -:,.;"):
         return ""
     return message[:_PROVIDER_ERROR_MESSAGE_MAX_LENGTH]
 
@@ -218,10 +221,10 @@ def provider_video_error_message_from_text(text: str) -> str:
 
 
 def classify_provider_video_task_error(task: Mapping[str, Any]) -> str:
-    """把网关「任务失败」报文归成安全的 VIDEO_* 码，认不出返回空串。
+    """Classify a gateway "task failed" payload into a safe VIDEO_* code; return an empty string if unrecognized.
 
-    报文有两种形态：`error: {code, message}`，或只有 `error_message` 自由文本
-    （里面可能带签名的 relay URL）。只有枚举码会被返回，文本只用来识别关键字。
+    The payload has two shapes: `error: {code, message}`, or only an `error_message` free text
+    (which may carry signed relay URLs). Only enum codes are returned; the text is only used to recognize keywords.
     """
     error = task.get("error")
     if isinstance(error, Mapping):
@@ -240,19 +243,25 @@ def classify_provider_video_task_error(task: Mapping[str, Any]) -> str:
 
 
 def provider_video_error_payload(exc: BaseException) -> dict[str, Any] | None:
-    """异常文本里带已知 VIDEO_* 码时，给出结构化的用户可读失败；否则 None。"""
+    """When the exception text carries a known VIDEO_* code, return a structured user-readable failure; otherwise None."""
     match = _KNOWN_PROVIDER_VIDEO_ERROR_RE.search(str(exc))
     if not match:
         return None
     error_code, message = _PROVIDER_VIDEO_ERROR_PRESENTATION[match.group(1)]
     return {
         "error_code": error_code,
+        "code": (
+            CONTENT_MODERATION_BLOCKED_CODE
+            if error_code == CONTENT_MODERATION_FAILED_CODE
+            else error_code
+        ),
         "message": message,
         "provider_error": str(exc)[:2000],
     }
 
 
 __all__ = [
+    "CONTENT_MODERATION_BLOCKED_CODE",
     "CONTENT_MODERATION_FAILED_CODE",
     "CONTENT_MODERATION_FAILED_MESSAGE",
     "COPYRIGHT_POLICY_FAILED_MESSAGE",

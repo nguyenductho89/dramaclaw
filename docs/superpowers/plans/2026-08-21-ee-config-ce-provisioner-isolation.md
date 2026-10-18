@@ -220,7 +220,7 @@ Expected: `no leaks found`.
 
 Run: `uv run python scripts/lint_banned_words.py`
 
-Expected: `✓ 无禁用词。`
+Expected: `✓ No banned words.`
 
 - [ ] **Step 3: Commit with DCO sign-off**
 

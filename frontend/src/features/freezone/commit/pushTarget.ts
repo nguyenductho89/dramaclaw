@@ -3,7 +3,7 @@
 import type { PushTarget, PushTargetKind } from "@/api/push";
 import { coerceSlotTarget } from "@/features/canvas/domain/mainlineNodeTypes";
 
-/** 来自 `__freezone_source` / 资产 source 的来源描述。 */
+/** Description of the origin from `__freezone_source` / the asset source. */
 export type FreezoneSource = {
   kind?: string;
   role?: string;
@@ -38,7 +38,7 @@ export function isPlyOrGlbPushTargetKind(kind: PushTargetKind): boolean {
   );
 }
 
-/** 从来源推断出一个(可能不完整的)推送目标。 */
+/** Infer a (possibly incomplete) push target from the origin. */
 export function inferDefaultTarget(
   source: FreezoneSource | undefined,
 ): (Partial<PushTarget> & { kind: PushTargetKind }) | undefined {
@@ -61,8 +61,8 @@ export function inferDefaultTarget(
       };
     }
   }
-  // 音频节点 → beat_audio(后端 canonical kind)。源 kind 是媒体类型 "audio"
-  // 或资产 role 是 "current_audio",都映射到 beat 的音频 slot。
+  // Audio node -> beat_audio (the backend canonical kind). A source kind of media type "audio"
+  // or an asset role of "current_audio" both map to the beat's audio slot.
   if (kind === "audio" || kind === "beat_audio" || role === "current_audio") {
     if (typeof meta.episode === "number" && typeof meta.beat === "number") {
       return {
@@ -87,8 +87,8 @@ export function inferDefaultTarget(
           identity_id: identityId,
         };
       }
-      // 后端把角色 portrait 标成 kind=identity / role=character_portrait,但没有
-      // 具体 identity_id。这种情况下提交目标其实是角色 portrait。
+      // The backend labels a character portrait as kind=identity / role=character_portrait, but without a
+      // concrete identity_id. In that case the commit target is actually the character portrait.
       if (!identityId && role.includes("portrait")) {
         return { kind: "portrait", character: meta.character };
       }
@@ -122,14 +122,14 @@ export function inferDefaultTarget(
     if (sceneId && role === "scene_director_world") {
       return { kind: "scene_director_world", scene_id: sceneId };
     }
-    // 关键: 先做精确匹配 (isScenePushTargetKind),不然 role.includes("master")
-    // 这种 catch-all 会把 "scene_3gs_master_ply" 错误归到 "scene_master"
-    // (image slot) — 用户 commit PLY 默认到 master.png,这是 bug。
+    // Key: do the exact match first (isScenePushTargetKind), otherwise a catch-all like role.includes("master")
+    // would wrongly classify "scene_3gs_master_ply" as "scene_master"
+    // (image slot) - the user's commit of a PLY would default to master.png, which is a bug.
     const roleSceneKind = normalizeScenePushTargetKind(role);
     if (sceneId && roleSceneKind) {
       return { kind: roleSceneKind, scene_id: sceneId };
     }
-    // 模糊匹配 fallback (role 不是标准 PushTargetKind 名时兜底)。
+    // Fuzzy-match fallback (a safety net when role is not a standard PushTargetKind name).
     if (sceneId && role.includes("director_pano_360")) {
       return { kind: "scene_director_pano_360", scene_id: sceneId };
     }
@@ -139,8 +139,8 @@ export function inferDefaultTarget(
     if (sceneId && role === "scene_spatial_layout") {
       return { kind: "scene_spatial_layout", scene_id: sceneId };
     }
-    // role 单独包含 "master" 时只可能是 scene_master (其他 master 角色
-    // 例如 scene_3gs_master_ply 上面已精确匹配掉了)。
+    // When role alone contains "master" it can only be scene_master (other master roles
+    // such as scene_3gs_master_ply were already matched exactly above).
     if (sceneId && role.includes("master")) {
       return { kind: "scene_master", scene_id: sceneId };
     }
@@ -163,7 +163,7 @@ export function inferDefaultTarget(
   return undefined;
 }
 
-/** 把推断出的(部分)目标补全为可推送的完整目标;不完整则返回 null。 */
+/** Complete an inferred (partial) target into a full pushable target; return null if incomplete. */
 export function completeTarget(
   partial: (Partial<PushTarget> & { kind: PushTargetKind }) | undefined,
 ): PushTarget | null {
@@ -223,9 +223,9 @@ export function completeTarget(
 }
 
 /**
- * 把侧栏资产的 source 解析为可推送的完整目标。
- * 优先用后端直接给出的 `slot_target`(canonical,免去前端按 kind/role 猜),
- * 校验通过即用;缺失或非法时再回退到本地 role/kind 推断。
+ * Resolve a sidebar asset's source into a full pushable target.
+ * Prefer the `slot_target` given directly by the backend (canonical, sparing the frontend from guessing by kind/role);
+ * use it when it passes validation, and fall back to local role/kind inference when it is missing or invalid.
  */
 export function assetToPushTarget(
   source: Record<string, unknown> | undefined,

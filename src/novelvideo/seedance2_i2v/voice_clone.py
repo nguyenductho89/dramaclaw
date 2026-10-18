@@ -23,12 +23,12 @@ NARRATOR_SPEAKER = "__narrator__"
 DEFAULT_NARRATION_STYLE = "third_person"
 NARRATION_STYLES: dict[str, dict[str, str]] = {
     "first_person": {
-        "label": "第一人称（解说主角视角）",
-        "prompt": "以第一人称视角，用解说主角内心独白般的语气娓娓道来",
+        "label": "First person (narrator protagonist's perspective)",
+        "prompt": "Narrate in the first person, in the tone of the narrator protagonist's inner monologue",
     },
     "third_person": {
-        "label": "第三人称（旁观者视角）",
-        "prompt": "以第三人称旁白视角，用客观冷静的解说语气朗读",
+        "label": "Third person (onlooker's perspective)",
+        "prompt": "Read as a third-person narrator, in an objective and calm narration tone",
     },
 }
 
@@ -49,7 +49,6 @@ def narration_style_prompt(style: str) -> str:
 
 QUOTE_DIALOGUE_PATTERNS = (
     re.compile(r"“([^”]+)”"),
-    re.compile(r"「([^」]+)」"),
     re.compile(r'"([^"]+)"'),
 )
 
@@ -128,7 +127,7 @@ def dialogue_emotion_prompt(beat: dict) -> str:
     emotion_text = raw_text
     for pattern in QUOTE_DIALOGUE_PATTERNS:
         emotion_text = pattern.sub(" ", emotion_text)
-    emotion_text = re.sub(r"\s+", " ", emotion_text).strip(" ：:，,。.;；、 \t\r\n")
+    emotion_text = re.sub(r"\s+", " ", emotion_text).strip(" :,.;\t\r\n")
     return emotion_text
 
 
@@ -289,7 +288,7 @@ def resolve_narrator_source(
                 source="protagonist_identity",
                 audio_path=None,
                 sha256="",
-                error="未找到解说主角（is_main=True），请先在角色工作台标记解说主角",
+                error="Narrator protagonist (is_main=True) not found; mark one in the character workbench first",
             )
         audio_path, sha256, identity_id, identity_name = _narrator_main_identity_audio(
             project_dir, narrator_main
@@ -303,7 +302,7 @@ def resolve_narrator_source(
                 character_name=narrator_main.name,
                 identity_id=identity_id,
                 identity_name=identity_name,
-                error="解说主角声线缺失，请在角色工作台为解说主角配置参考音频（默认声线即可）",
+                error="The narrator protagonist has no voice; configure a reference audio for them in the character workbench (the default voice is enough)",
             )
         return NarratorResolution(
             style=style,
@@ -322,7 +321,7 @@ def resolve_narrator_source(
             source="project_narrator",
             audio_path=None,
             sha256="",
-            error="项目解说人声线未配置，请上传或录制解说人音频",
+            error="The project narrator voice is not configured; upload or record narrator audio",
         )
 
     audio_path = narrator_reference_audio_path(project_dir, stored_narrator_path)
@@ -332,7 +331,7 @@ def resolve_narrator_source(
             source="project_narrator",
             audio_path=None,
             sha256="",
-            error="项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储",
+            error="The project narrator voice is configured but the voice file cannot be read; re-upload it or check project storage",
         )
     try:
         sha256 = file_sha256(audio_path)
@@ -342,7 +341,7 @@ def resolve_narrator_source(
             source="project_narrator",
             audio_path=None,
             sha256="",
-            error="项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储",
+            error="The project narrator voice is configured but the voice file cannot be read; re-upload it or check project storage",
         )
     return NarratorResolution(
         style=style,

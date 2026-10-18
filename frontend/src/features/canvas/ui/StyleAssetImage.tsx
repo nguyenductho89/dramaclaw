@@ -6,7 +6,7 @@ import { ImageOff } from 'lucide-react';
 import { resolveStyleAssetUrl } from '@/features/canvas/nodes/styleAssetUrl';
 
 export interface StyleAssetImageProps {
-  /** 清单里的相对路径,由 resolveStyleAssetUrl 决定落到本地还是 OSS。 */
+  /** The relative path in the manifest; resolveStyleAssetUrl decides whether it lands locally or on OSS. */
   rel: string;
   assetBase: string;
   alt: string;
@@ -16,11 +16,11 @@ export interface StyleAssetImageProps {
 }
 
 /**
- * 风格封面/示例图。
+ * Style cover/example image.
  *
- * 提示词清单和图片可以分别换代(清单走 STYLE_GALLERY_MANIFEST、图片走
- * STYLE_GALLERY_ASSET_BASE),两边对不上时图会 404 —— 这里兜一个占位块,
- * 免得图墙里散落浏览器默认的碎图标。
+ * The prompt manifest and the images can be replaced in generations separately (the manifest goes through STYLE_GALLERY_MANIFEST, the images through
+ * STYLE_GALLERY_ASSET_BASE), and when the two do not match the image will 404 - here a placeholder block is the fallback,
+ * so the image wall is not littered with the browser's default broken-image icons.
  */
 export function StyleAssetImage({
   rel,
@@ -33,7 +33,7 @@ export function StyleAssetImage({
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const src = resolveStyleAssetUrl(rel, assetBase);
 
-  // 比较地址而不是存布尔:换了清单/换了前缀就自动重试一次。
+  // Compare the address rather than store a boolean: switching the manifest/prefix automatically retries once.
   if (!src || failedSrc === src) {
     return (
       <div

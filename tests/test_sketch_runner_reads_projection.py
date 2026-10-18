@@ -63,7 +63,7 @@ async def _ensure(tmp_path, *, projection, director_ref_mode="off", beats=None):
     return await sketch._ensure_scene_refs_for_beats(
         ctx=_ctx(),
         output_dir=str(tmp_path),
-        beats=beats if beats is not None else [{"beat_number": 1, "scene_id": "皇宫·大殿"}],
+        beats=beats if beats is not None else [{"beat_number": 1, "scene_id": "palace_hall"}],
         episode=1,
         director_ref_mode=director_ref_mode,
         director_ref_beat_numbers=None,
@@ -76,7 +76,7 @@ async def _ensure(tmp_path, *, projection, director_ref_mode="off", beats=None):
 async def test_scene_check_reads_no_project_data_when_projected(
     tmp_path, forbid_project_data
 ) -> None:
-    stats = await _ensure(tmp_path, projection=_projection([{"name": "皇宫·大殿", "aliases": []}]))
+    stats = await _ensure(tmp_path, projection=_projection([{"name": "palace_hall", "aliases": []}]))
 
     assert stats["requested"] == 1
     assert forbid_project_data == []
@@ -89,7 +89,7 @@ async def test_scene_check_reads_no_project_data_with_director_refs_on(
     """Director references take a second pass over the beats; it must not read either."""
     stats = await _ensure(
         tmp_path,
-        projection=_projection([{"name": "皇宫·大殿", "aliases": []}]),
+        projection=_projection([{"name": "palace_hall", "aliases": []}]),
         director_ref_mode="all",
     )
 
@@ -103,13 +103,13 @@ async def test_projected_scene_lookup_honours_aliases(tmp_path, forbid_project_d
     store must not quietly narrow it to exact names."""
     from novelvideo.utils.path_resolver import canonical_scene_master_path
 
-    master = canonical_scene_master_path(tmp_path, "皇宫·大殿")
+    master = canonical_scene_master_path(tmp_path, "palace_hall")
     master.parent.mkdir(parents=True, exist_ok=True)
     master.write_bytes(b"x")
 
     stats = await _ensure(
         tmp_path,
-        projection=_projection([{"name": "皇宫·大殿", "aliases": ["  THE Great Hall "]}]),
+        projection=_projection([{"name": "palace_hall", "aliases": ["  THE Great Hall "]}]),
         beats=[{"beat_number": 1, "scene_id": "the great hall"}],
     )
 
@@ -122,7 +122,7 @@ async def test_unknown_scene_stays_missing_rather_than_falling_back(
     tmp_path, forbid_project_data
 ) -> None:
     """A scene the projection does not name is missing, not a reason to open a store."""
-    stats = await _ensure(tmp_path, projection=_projection([{"name": "别处", "aliases": []}]))
+    stats = await _ensure(tmp_path, projection=_projection([{"name": "elsewhere", "aliases": []}]))
 
     assert stats["missing"] == 1
     assert forbid_project_data == []
@@ -160,7 +160,7 @@ async def test_without_a_projection_the_store_is_still_used(tmp_path, monkeypatc
         closed.append(True)
 
     async def one_scene(name):
-        return SimpleNamespace(name="皇宫·大殿")
+        return SimpleNamespace(name="palace_hall")
 
     monkeypatch.setattr(CogneeStore, "__init__", record)
     monkeypatch.setattr(CogneeStore, "initialize", noop)
@@ -226,7 +226,7 @@ def _sketch_envelope(*, director_ref_mode: str, with_projection: bool) -> dict:
     payload: dict = {
         "output_dir": "/nonexistent",
         "config": {
-            "beats": [{"beat_number": 1, "scene_id": "皇宫·大殿"}],
+            "beats": [{"beat_number": 1, "scene_id": "palace_hall"}],
             "direct_sketch_beats": True,
             "beat_numbers": [1],
             "mode_key": "1x1_2-3",
@@ -237,7 +237,7 @@ def _sketch_envelope(*, director_ref_mode: str, with_projection: bool) -> dict:
         payload["projection"] = {
             "task_type": "mainline_sketch_from_context",
             "projection_version": 1,
-            "fields": {"scenes": [{"name": "皇宫·大殿", "aliases": []}]},
+            "fields": {"scenes": [{"name": "palace_hall", "aliases": []}]},
         }
     return {
         "task_type": "mainline_sketch_from_context",
@@ -276,7 +276,7 @@ async def test_runner_hands_the_payload_projection_to_the_scene_check(
         )
 
     assert seen and seen[0] is not None
-    assert seen[0].require("scenes") == [{"name": "皇宫·大殿", "aliases": []}]
+    assert seen[0].require("scenes") == [{"name": "palace_hall", "aliases": []}]
 
 
 @pytest.mark.asyncio

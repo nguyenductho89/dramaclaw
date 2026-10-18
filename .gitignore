@@ -14,7 +14,7 @@ logs/
 jr_error.log
 /launchd/
 
-# 测试数据与产物，勿提交
+# Test data and artifacts; do not commit
 /data/
 /rag_storage/
 /inputs/
@@ -22,7 +22,7 @@ jr_error.log
 /*.mp3
 /*.zip
 
-# 本地参考资料（嵌入的第三方仓库，不跟踪）
+# Local reference material (embedded third-party repos, not tracked)
 /awesome-nano-banana-pro-prompts/
 /awesome-nanobanana-pro/
 
@@ -31,7 +31,7 @@ deploy/compose/windows/novelvideo.env
 deploy/compose/windows/users.json
 
 # Claude Code
-# settings.json 是本机的 worktree 开关，不是团队约定，和 local 一样不进仓。
+# settings.json is a machine-local worktree switch, not a team convention; like the local one it is not committed.
 .claude/settings.json
 .claude/settings.local.json
 .claude/skills/**/*-workspace/
@@ -44,7 +44,7 @@ frontend/.tanstack/
 scripts/incident_drills/.drill.local.env
 .obsidian/
 
-# 验收日志（证据归档在本地/CI 工件，不进 git）
+# Acceptance logs (evidence is archived in local/CI artifacts, not in git)
 /acceptance-logs/
 
 # SuperTale-only Hermes overlays must not be committed to the open-source repo.
@@ -98,16 +98,16 @@ src/novelvideo/freezone/agent_catalog/builtins/recipes/*
 !src/novelvideo/freezone/agent_catalog/builtins/recipes/jp-anime-drama-audio-layers.json
 docs/oss-split/
 
-# 内部过程文档不进公开仓（迁至 dc workspace docs）
+# Internal process docs stay out of the public repo (moved to the dc workspace docs)
 docs/changes/
 docs/adr/
 docs/compliance/
 docs/superpowers/
 
-# git worktree 统一目录(主目录永远 main)
+# Unified git worktree directory (the main checkout is always main)
 /.worktrees/
 /frontend/bun.lock
 
-# 风格图墙的图片改由 OSS 提供(后端配 STYLE_GALLERY_ASSET_BASE),不再随仓库
-# 发布。scripts/build_style_gallery.py 仍会把产物写到这里，属本地中间物。
+# Style gallery images are now served from OSS (backend sets STYLE_GALLERY_ASSET_BASE) and are no longer
+# shipped with the repo. scripts/build_style_gallery.py still writes its output here; it is a local intermediate.
 /frontend/public/style-gallery/

@@ -1,19 +1,19 @@
-"""风格配置管理服务 - Single Source of Truth.
+"""Style configuration management service - Single Source of Truth.
 
-架构：
-- 系统预设（文件，只读）：src/novelvideo/styles/presets/*.json
-- 自定义风格（项目配置文件）：project_config.json
+Architecture:
+- System presets (files, read-only): src/novelvideo/styles/presets/*.json
+- Custom styles (project config file): project_config.json
 
-使用方式：
+Usage:
     from novelvideo.services import StyleService
 
-    # 获取风格配置
+    # Get a style config
     style = StyleService.get_style("chinese_period_drama", username="alice", project="demo")
 
-    # 列出所有风格
+    # List all styles
     styles = StyleService.list_all_styles(username="alice", project="demo")
 
-    # 保存自定义风格
+    # Save a custom style
     StyleService.save_custom_style("my_style", config, username="alice", project="demo")
 """
 
@@ -35,28 +35,28 @@ from novelvideo.project_config import (
 
 
 class StyleService:
-    """风格配置管理服务。
+    """Style configuration management service.
 
-    提供统一的风格配置访问接口，支持：
-    1. 系统预设风格（从 JSON 文件加载，只读）
-    2. 自定义风格（从项目配置加载，可读写，项目隔离）
+    Provides a unified access interface for style configs and supports:
+    1. System preset styles (loaded from JSON files, read-only)
+    2. Custom styles (loaded from the project config, read/write, project-isolated)
 
-    所有风格访问都应通过此服务，确保 One Source of Truth。
+    All style access should go through this service to keep One Source of Truth.
     """
 
-    # 预设文件目录
+    # Presets directory
     PRESETS_DIR = Path(__file__).parent.parent / "styles" / "presets"
 
-    # 预设风格缓存（避免重复读取文件）
+    # Preset style cache (avoids re-reading files)
     _preset_cache: dict[str, StyleConfig] = {}
     STYLE_FAMILY_LABELS = {
-        "live_action": "真人",
-        "animation": "动画",
+        "live_action": "Live action",
+        "animation": "Animation",
     }
     ANIMATION_SUBTYPE_LABELS = {
         "2d": "2D",
         "3d": "3D",
-        "hybrid": "混合媒介",
+        "hybrid": "Hybrid media",
     }
     STYLE_PREVIEW_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
@@ -209,26 +209,26 @@ class StyleService:
 
         username, project = cls._resolve_project_context(username, project, project_dir)
         if not username or not project:
-            print("[StyleService] 保存自定义风格失败: 缺少项目上下文")
+            print("[StyleService] Failed to save custom style: missing project context")
             return False
         update_project_config_file(username, project, _apply)
         return True
 
     @classmethod
     def get_preset(cls, style_id: str) -> Optional[StyleConfig]:
-        """获取系统预设风格（从文件）。
+        """Get a system preset style (from file).
 
         Args:
-            style_id: 风格 ID，如 'chinese_period_drama'
+            style_id: style ID, e.g. 'chinese_period_drama'
 
         Returns:
-            StyleConfig 实例，如果不存在返回 None
+            A StyleConfig instance, or None if it does not exist
         """
-        # 检查缓存
+        # Check the cache
         if style_id in cls._preset_cache:
             return cls._preset_cache[style_id]
 
-        # 从文件加载
+        # Load from file
         preset_file = cls.PRESETS_DIR / f"{style_id}.json"
         if not preset_file.exists():
             return None
@@ -240,7 +240,7 @@ class StyleService:
             cls._preset_cache[style_id] = config
             return config
         except Exception as e:
-            print(f"[StyleService] 加载预设失败: {style_id}, {e}")
+            print(f"[StyleService] Failed to load preset: {style_id}, {e}")
             return None
 
     @classmethod
@@ -252,13 +252,13 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> Optional[StyleConfig]:
-        """获取自定义风格（从项目配置）。
+        """Get a custom style (from the project config).
 
         Args:
-            style_id: 风格 ID
+            style_id: style ID
 
         Returns:
-            StyleConfig 实例，如果不存在返回 None
+            A StyleConfig instance, or None if it does not exist
         """
         try:
             styles = cls._load_project_custom_style_map(
@@ -272,7 +272,7 @@ class StyleService:
                 config_data["is_preset"] = False
                 return StyleConfig(**config_data)
         except Exception as e:
-            print(f"[StyleService] 加载自定义风格失败: {style_id}, {e}")
+            print(f"[StyleService] Failed to load custom style: {style_id}, {e}")
 
         return None
 
@@ -286,17 +286,17 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> bool:
-        """保存自定义风格到项目配置。
+        """Save a custom style to the project config.
 
         Args:
-            style_id: 风格 ID
-            config: 风格配置
+            style_id: style ID
+            config: style config
 
         Returns:
-            是否保存成功
+            Whether the save succeeded
         """
         try:
-            # 确保 ID 一致
+            # Ensure the ID is consistent
             config.id = style_id
             config.is_preset = False
             if not config.created_at:
@@ -317,10 +317,10 @@ class StyleService:
             ):
                 return False
 
-            print(f"[StyleService] 自定义风格已保存: {style_id}")
+            print(f"[StyleService] Custom style saved: {style_id}")
             return True
         except Exception as e:
-            print(f"[StyleService] 保存自定义风格失败: {style_id}, {e}")
+            print(f"[StyleService] Failed to save custom style: {style_id}, {e}")
             return False
 
     @classmethod
@@ -332,13 +332,13 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> bool:
-        """删除自定义风格。
+        """Delete a custom style.
 
         Args:
-            style_id: 风格 ID
+            style_id: style ID
 
         Returns:
-            是否删除成功
+            Whether the deletion succeeded
         """
         try:
             styles = cls._load_project_custom_style_map(
@@ -360,10 +360,10 @@ class StyleService:
                 return False
             root = Path(project_dir) if project_dir else Path(OUTPUT_DIR) / str(username) / str(project)
             cls.remove_style_previews(root, style_id)
-            print(f"[StyleService] 自定义风格已删除: {style_id}")
+            print(f"[StyleService] Custom style deleted: {style_id}")
             return True
         except Exception as e:
-            print(f"[StyleService] 删除自定义风格失败: {style_id}, {e}")
+            print(f"[StyleService] Failed to delete custom style: {style_id}, {e}")
             return False
 
     @classmethod
@@ -374,10 +374,10 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> list[str]:
-        """列出所有自定义风格 ID。
+        """List all custom style IDs.
 
         Returns:
-            自定义风格 ID 列表
+            List of custom style IDs
         """
         try:
             styles = cls._load_project_custom_style_map(
@@ -388,7 +388,7 @@ class StyleService:
             )
             return sorted(styles.keys())
         except Exception as e:
-            print(f"[StyleService] 列出自定义风格失败: {e}")
+            print(f"[StyleService] Failed to list custom styles: {e}")
 
         return []
 
@@ -401,21 +401,21 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> Optional[StyleConfig]:
-        """获取风格配置（统一入口）。
+        """Get a style config (unified entry point).
 
-        查找顺序：
-        1. 先查自定义风格（Redis）
-        2. 再查系统预设（文件）
+        Lookup order:
+        1. Custom styles first (Redis)
+        2. Then system presets (files)
 
-        这样允许用户通过创建同名自定义风格来覆盖系统预设。
+        This lets users override a system preset by creating a custom style with the same name.
 
         Args:
-            style_id: 风格 ID
+            style_id: style ID
 
         Returns:
-            StyleConfig 实例，如果不存在返回 None
+            A StyleConfig instance, or None if it does not exist
         """
-        # 优先查找自定义风格（允许覆盖预设）
+        # Look up custom styles first (allows overriding presets)
         custom = cls.get_custom_style(
             style_id,
             username=username,
@@ -426,7 +426,7 @@ class StyleService:
         if custom:
             return custom
 
-        # 回退到系统预设
+        # Fall back to system presets
         preset = cls.get_preset(style_id)
         if preset:
             return preset
@@ -442,13 +442,13 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> StyleConfig:
-        """获取风格配置，如果不存在返回默认风格。
+        """Get a style config, returning the default style if it does not exist.
 
         Args:
-            style_id: 风格 ID
+            style_id: style ID
 
         Returns:
-            StyleConfig 实例（保证不为 None）
+            A StyleConfig instance (guaranteed not None)
         """
         style = cls.get_style(
             style_id,
@@ -460,20 +460,20 @@ class StyleService:
         if style:
             return style
 
-        # 返回默认风格
+        # Return the default style
         default = cls.get_preset("chinese_period_drama")
         if default:
             return default
 
-        # 兜底：返回空配置
+        # Fallback: return an empty config
         return StyleConfig(id="unknown", name="Unknown Style")
 
     @classmethod
     def list_preset_styles(cls) -> list[dict]:
-        """列出所有系统预设风格。
+        """List all system preset styles.
 
         Returns:
-            预设风格列表，每项包含 {id, name, type}
+            List of preset styles, each containing {id, name, type}
         """
         styles = []
         if cls.PRESETS_DIR.exists():
@@ -499,17 +499,17 @@ class StyleService:
         project_dir: str | Path | None = None,
         state_dir: str | Path | None = None,
     ) -> list[dict]:
-        """列出所有可用风格（预设 + 自定义）。
+        """List all available styles (presets + custom).
 
         Returns:
-            风格列表，每项包含 {id, name, label, type}
+            List of styles, each containing {id, name, label, type}
         """
         styles = []
 
-        # 系统预设
+        # System presets
         styles.extend(cls.list_preset_styles())
 
-        # 自定义风格
+        # Custom styles
         for style_id in cls.list_custom_styles(
             username=username,
             project=project,
@@ -598,7 +598,7 @@ class StyleService:
 
     @classmethod
     def format_style_family_label(cls, family: str, subtype: str = "") -> str:
-        base = cls.STYLE_FAMILY_LABELS.get(family or "live_action", "真人")
+        base = cls.STYLE_FAMILY_LABELS.get(family or "live_action", "Live action")
         subtype = (subtype or "").lower()
         if family == "animation" and subtype:
             return f"{base} · {cls.ANIMATION_SUBTYPE_LABELS.get(subtype, subtype.upper())}"
@@ -659,12 +659,12 @@ class StyleService:
         project: str | None = None,
         project_dir: str | Path | None = None,
     ) -> dict[str, str]:
-        """获取风格 ID -> 显示标签的映射。
+        """Get the style ID -> display label mapping.
 
-        用于 UI 下拉菜单等场景，兼容旧版 STYLE_LABELS 用法。
+        For UI dropdowns and similar uses; compatible with the legacy STYLE_LABELS usage.
 
         Returns:
-            {style_id: label} 字典
+            {style_id: label} dict
         """
         labels = {}
         for style in cls.list_all_styles(username=username, project=project, project_dir=project_dir):
@@ -673,7 +673,7 @@ class StyleService:
 
     @classmethod
     def clear_cache(cls):
-        """清除预设缓存（用于热重载）。"""
+        """Clear the preset cache (for hot reload)."""
         cls._preset_cache.clear()
 
     @classmethod
@@ -684,15 +684,15 @@ class StyleService:
         project: str | None = None,
         project_dir: str | Path | None = None,
     ) -> dict:
-        """获取旧版格式的风格预设（向后兼容）。
+        """Get the legacy-format style preset (backward compatible).
 
-        保持与 config.py 中 STYLE_PRESETS 相同的字典格式。
+        Keeps the same dict format as STYLE_PRESETS in config.py.
 
         Args:
-            style_id: 风格 ID
+            style_id: style ID
 
         Returns:
-            旧版格式的风格配置字典
+            A style config dict in the legacy format
         """
         config = cls.get_style_or_default(style_id, username=username, project=project, project_dir=project_dir)
         return config.to_legacy_dict()

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 低缩放档下除豁免类型外的节点都会被真卸载、换成 LodShellNode。没量过尺寸的节点
-// （首屏就在低缩放档恢复，组件从没渲染过）只能靠这张兜底表画盒子，漏登记就会拿
-// 400×300 的通用值 —— tsc 查不出来，只能靠这条棘轮。
+// At the low-zoom tier, nodes other than exempt types are truly unmounted and replaced by LodShellNode. Nodes whose size was never measured
+// (restored at first paint in the low-zoom tier, the component never rendered) can only draw their box from this fallback table, and an unregistered one gets
+// the generic 400×300 — tsc cannot catch it, only this ratchet can.
 import { describe, expect, it } from "vitest";
 
 import { LOD_SHELL_EXEMPT_TYPES } from "@/features/canvas/application/canvasLod";

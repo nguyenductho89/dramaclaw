@@ -20,7 +20,7 @@ def _payload(audio_type: str | None = None) -> dict:
     payload = {
         "speaker": "",
         "speaker_kind": "character",
-        "visual_description": "昏暗的街区里只有面馆亮着灯。",
+        "visual_description": "Only the noodle shop is lit in the dim street.",
         "scene_id": "",
     }
     if audio_type is not None:
@@ -36,18 +36,18 @@ def test_literal_beat_meta_defaults_to_silence_audio_type():
 
 
 def test_scene_ref_exposes_lightweight_variant_id():
-    ref = build_scene_ref("故宫", "下雪")
+    ref = build_scene_ref("ForbiddenCity", "snow")
 
     assert ref is not None
-    assert ref.scene_id == "故宫"
-    assert ref.variant_id == "下雪"
+    assert ref.scene_id == "ForbiddenCity"
+    assert ref.variant_id == "snow"
 
 
 def test_sync_beat_asset_refs_preserves_canonical_scene_variant():
     beat = {
         "scene_ref": {
-            "scene_id": "故宫",
-            "variant_id": "下雪",
+            "scene_id": "ForbiddenCity",
+            "variant_id": "snow",
             "render_anchor_id": "selected_background",
         }
     }
@@ -55,8 +55,8 @@ def test_sync_beat_asset_refs_preserves_canonical_scene_variant():
     sync_beat_asset_refs(beat)
 
     assert beat["scene_ref"] == {
-        "scene_id": "故宫",
-        "variant_id": "下雪",
+        "scene_id": "ForbiddenCity",
+        "variant_id": "snow",
         "render_anchor_id": "selected_background",
         "render_anchor_source_id": "",
     }
@@ -82,7 +82,7 @@ def test_literal_beat_meta_rejects_action_audio_type():
 def test_literal_workflow_leaves_silence_narration_segment_empty():
     assert (
         LiteralScriptWritingWorkflow._derive_narration_segment(
-            "△昏暗的街区中只有面馆的照明灯亮着。",
+            "Only the noodle shop's lights are on in the dim street.",
             "silence",
         )
         == ""
@@ -92,17 +92,17 @@ def test_literal_workflow_leaves_silence_narration_segment_empty():
 def test_literal_workflow_keeps_narration_and_extracts_dialogue_text():
     assert (
         LiteralScriptWritingWorkflow._derive_narration_segment(
-            "旁白：他终于找到线索。",
+            "Narrator: He finally found the clue.",
             "narration",
         )
-        == "旁白：他终于找到线索。"
+        == "Narrator: He finally found the clue."
     )
     assert (
         LiteralScriptWritingWorkflow._derive_narration_segment(
-            "谢铮：走。",
+            "Xie Zheng: Go.",
             "dialogue",
         )
-        == "走。"
+        == "Go."
     )
 
 
@@ -117,10 +117,10 @@ def test_narrated_workflow_converts_silence_to_narration():
     assert audio_type == "narration"
     assert (
         LiteralScriptWritingWorkflow._derive_narration_segment(
-            "昏暗的街区中只有面馆的照明灯亮着。",
+            "Only the noodle shop's lights are on in the dim street.",
             audio_type,
         )
-        == "昏暗的街区中只有面馆的照明灯亮着。"
+        == "Only the noodle shop's lights are on in the dim street."
     )
 
 
@@ -128,7 +128,7 @@ def test_literal_workflow_converts_non_character_dialogue_to_narration():
     audio_type, speaker = LiteralScriptWritingWorkflow._normalize_audio_metadata(
         audio_type="dialogue",
         speaker_kind="non_character",
-        speaker="中年男声",
+        speaker="middle-aged male voice",
     )
 
     assert audio_type == "narration"
@@ -140,24 +140,24 @@ def test_literal_content_filter_log_mentions_line_context_and_terms():
         content_index=8,
         total=37,
         line_ctx=SimpleNamespace(
-            raw_line="沈晚握紧匕首，指尖渗出血。",
-            scene_block=SimpleNamespace(header_line="苏鸾寝殿 夜 内", location="苏鸾寝殿"),
-            prev_window=["苏糖后退一步。"],
-            next_line="屋内灯光闪烁。",
+            raw_line="Shen Wan grips the dagger, blood seeping from her fingertips.",
+            scene_block=SimpleNamespace(header_line="Bedchamber NIGHT INT", location="Bedchamber"),
+            prev_window=["Su Tang steps back."],
+            next_line="The lights in the room flicker.",
             source_line_number=11,
         ),
         error=RuntimeError("Content filter triggered"),
     )
     joined = "\n".join(messages)
 
-    assert "第 8/37 行生成失败" in joined
-    assert "需修改行（源文本第 11 行，内容行 8/37）: 沈晚握紧匕首" in joined
-    assert "所属场次: 苏鸾寝殿 夜 内" in joined
-    assert "上一行=苏糖后退一步。" in joined
-    assert "下一行=屋内灯光闪烁。" in joined
-    assert "疑似高风险表达" in joined
-    assert "匕首" in joined
-    assert "血" in joined
+    assert "Line 8/37 generation failed" in joined
+    assert "Line to modify (Source text line 11, content line 8/37): Shen Wan grips the dagger" in joined
+    assert "Scene it belongs to: Bedchamber NIGHT INT" in joined
+    assert "previous line=Su Tang steps back." in joined
+    assert "next line=The lights in the room flicker." in joined
+    assert "Possibly risky expressions" in joined
+    assert "dagger" in joined
+    assert "blood" in joined
 
 
 def test_literal_content_filter_hint_matches_english_terms():
@@ -166,18 +166,18 @@ def test_literal_content_filter_hint_matches_english_terms():
     )
     joined = "\n".join(matches)
 
-    assert "暴力/武器" in joined
+    assert "violence/weapons" in joined
     assert "dagger" in joined
     assert "blood" in joined
-    assert "自伤/生命威胁" in joined
+    assert "self-harm/life threat" in joined
     assert "i can't die" in joined
 
 
 def test_literal_line_context_preserves_source_line_number():
     lines = [
-        "第1场 苏鸾寝殿 夜 内",
-        "△烛火摇晃。",
-        "△匕首映出少女脸。",
+        "INT. BEDCHAMBER - NIGHT",
+        "Candlelight flickers.",
+        "The dagger reflects the girl's face.",
     ]
     blocks = LiteralScriptWritingWorkflow._build_scene_blocks(lines)
     contexts = LiteralScriptWritingWorkflow._build_scene_line_contexts(
@@ -193,25 +193,25 @@ def test_literal_scene_menu_prompt_lists_scene_ids_without_variant_menu():
     workflow = LiteralScriptWritingWorkflow(cognee_store=None)
     episode = SimpleNamespace(
         scene_menu=[
-            SimpleNamespace(scene_id="故宫"),
-            SimpleNamespace(scene_id="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
+            SimpleNamespace(scene_id="ForbiddenCity"),
+            SimpleNamespace(scene_id="ForbiddenCity_snow", base_scene_id="ForbiddenCity", variant_id="snow"),
         ]
     )
 
     section = workflow._build_scene_menu_for_episode(episode)
 
-    assert "`故宫`" in section
-    assert "`故宫_下雪`" in section
-    assert "变体" not in section
+    assert "`ForbiddenCity`" in section
+    assert "`ForbiddenCity_snow`" in section
+    assert "variant" not in section
 
 
 def test_literal_scene_id_validator_clears_invalid_scene_id():
     beat = LiteralBeatMetaOutput.model_validate(
         {
             **_payload(),
-            "scene_id": "不存在",
+            "scene_id": "nonexistent",
         },
-        context={"valid_scene_ids": {"故宫", "故宫_下雪"}},
+        context={"valid_scene_ids": {"ForbiddenCity", "ForbiddenCity_snow"}},
     )
 
     assert beat.scene_id == ""
@@ -221,41 +221,41 @@ def test_literal_locked_base_allows_derived_scene_candidates():
     workflow = LiteralScriptWritingWorkflow(cognee_store=None)
     episode = SimpleNamespace(
         scene_menu=[
-            SimpleNamespace(scene_id="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
-            SimpleNamespace(scene_id="故宫"),
-            SimpleNamespace(scene_id="御花园"),
+            SimpleNamespace(scene_id="ForbiddenCity_snow", base_scene_id="ForbiddenCity", variant_id="snow"),
+            SimpleNamespace(scene_id="ForbiddenCity"),
+            SimpleNamespace(scene_id="ImperialGarden"),
         ]
     )
 
     workflow._build_scene_menu_for_episode(episode)
 
-    assert workflow._resolve_scene_id("故宫", episode) == "故宫"
-    assert workflow._allowed_scene_ids_for_block("故宫") == {"故宫", "故宫_下雪"}
+    assert workflow._resolve_scene_id("ForbiddenCity", episode) == "ForbiddenCity"
+    assert workflow._allowed_scene_ids_for_block("ForbiddenCity") == {"ForbiddenCity", "ForbiddenCity_snow"}
 
 
 def test_literal_canonical_scene_ref_uses_menu_split_not_prefix_guess():
     workflow = LiteralScriptWritingWorkflow(cognee_store=None)
     episode = SimpleNamespace(
         scene_menu=[
-            SimpleNamespace(scene_id="卫生间"),
+            SimpleNamespace(scene_id="Bathroom"),
             SimpleNamespace(
-                scene_id="卫生间_漏水",
-                base_scene_id="卫生间",
-                variant_id="漏水",
+                scene_id="Bathroom_leak",
+                base_scene_id="Bathroom",
+                variant_id="leak",
             ),
-            SimpleNamespace(scene_id="卫生间_主控室"),
+            SimpleNamespace(scene_id="Bathroom_control_room"),
         ]
     )
     workflow._build_scene_menu_for_episode(episode)
 
-    derived_ref = workflow._canonical_scene_ref_for_menu_choice("卫生间_漏水")
-    independent_ref = workflow._canonical_scene_ref_for_menu_choice("卫生间_主控室")
+    derived_ref = workflow._canonical_scene_ref_for_menu_choice("Bathroom_leak")
+    independent_ref = workflow._canonical_scene_ref_for_menu_choice("Bathroom_control_room")
 
     assert derived_ref is not None
-    assert derived_ref.scene_id == "卫生间"
-    assert derived_ref.variant_id == "漏水"
+    assert derived_ref.scene_id == "Bathroom"
+    assert derived_ref.variant_id == "leak"
     assert independent_ref is not None
-    assert independent_ref.scene_id == "卫生间_主控室"
+    assert independent_ref.scene_id == "Bathroom_control_room"
     assert independent_ref.variant_id == ""
 
 
@@ -263,16 +263,16 @@ def test_literal_locked_base_rejects_other_scene_candidate():
     workflow = LiteralScriptWritingWorkflow(cognee_store=None)
     episode = SimpleNamespace(
         scene_menu=[
-            SimpleNamespace(scene_id="故宫"),
-            SimpleNamespace(scene_id="故宫_下雪"),
-            SimpleNamespace(scene_id="御花园"),
+            SimpleNamespace(scene_id="ForbiddenCity"),
+            SimpleNamespace(scene_id="ForbiddenCity_snow"),
+            SimpleNamespace(scene_id="ImperialGarden"),
         ]
     )
 
     workflow._build_scene_menu_for_episode(episode)
 
-    allowed = workflow._allowed_scene_ids_for_block(workflow._resolve_scene_id("故宫", episode))
-    assert "御花园" not in allowed
+    allowed = workflow._allowed_scene_ids_for_block(workflow._resolve_scene_id("ForbiddenCity", episode))
+    assert "ImperialGarden" not in allowed
 
 
 def test_create_script_workflow_uses_narrated_audio_type_mode():
@@ -291,7 +291,7 @@ def test_create_script_workflow_uses_narrated_audio_type_mode():
 async def test_literal_workflow_uses_shared_episode_planning_content(monkeypatch):
     from novelvideo.workflows import literal_script_writing
 
-    episode = SimpleNamespace(number=1, title="第一集")
+    episode = SimpleNamespace(number=1, title="Episode 1")
 
     class _CogneeStore:
         async def load_graph_state(self):
@@ -319,7 +319,7 @@ async def test_literal_workflow_uses_shared_episode_planning_content(monkeypatch
         sqlite_store=_SQLiteStore(),
     )
 
-    with pytest.raises(ValueError, match="当前集原文为空"):
+    with pytest.raises(ValueError, match="source text of the current episode is empty"):
         await workflow.run(episode_num=1)
 
     assert calls == [(cognee_store, episode)]
@@ -332,7 +332,7 @@ class _LiteralRunStore:
     def __init__(self) -> None:
         self.episode = SimpleNamespace(
             number=1,
-            title="第一集",
+            title="Episode 1",
             identity_ids=[],
             identity_default_map={},
             scene_menu=[],
@@ -465,8 +465,8 @@ async def test_literal_workflow_retries_one_line_with_a_fresh_model_call(monkeyp
     agent = _SequencedLiteralAgent(
         [
             UnexpectedModelBehavior("Exceeded maximum output retries (2)"),
-            _valid_literal_output("谢铮站在门口开口说话。"),
-            _valid_literal_output("屋内烛火轻轻摇晃。"),
+            _valid_literal_output("Xie Zheng stands at the door and speaks."),
+            _valid_literal_output("Candlelight sways gently in the room."),
         ]
     )
     monkeypatch.setattr(
@@ -479,7 +479,7 @@ async def test_literal_workflow_retries_one_line_with_a_fresh_model_call(monkeyp
 
     script = await workflow.run(
         episode_num=1,
-        source_text="第1场 苏鸾寝殿 夜 内\n谢铮：走。\n△烛火摇晃。",
+        source_text="INT. BEDCHAMBER - NIGHT\nXie Zheng: Go.\nCandlelight flickers.",
         on_log=logs.append,
     )
 
@@ -487,7 +487,7 @@ async def test_literal_workflow_retries_one_line_with_a_fresh_model_call(monkeyp
     assert len(script.beats) == 2
     assert workflow.last_degraded_lines == []
     assert workflow.last_review_passed is True
-    assert any("正在重新调用模型" in message for message in logs)
+    assert any("calling the model again" in message for message in logs)
 
 
 @pytest.mark.asyncio
@@ -497,7 +497,7 @@ async def test_literal_workflow_falls_back_per_line_and_continues(monkeypatch):
         [
             UnexpectedModelBehavior("Exceeded maximum output retries (2)"),
             UnexpectedModelBehavior("Exceeded maximum output retries (2)"),
-            _valid_literal_output("屋内烛火轻轻摇晃。"),
+            _valid_literal_output("Candlelight sways gently in the room."),
         ]
     )
     monkeypatch.setattr(
@@ -510,21 +510,21 @@ async def test_literal_workflow_falls_back_per_line_and_continues(monkeypatch):
 
     script = await workflow.run(
         episode_num=1,
-        source_text="第1场 苏鸾寝殿 夜 内\n谢铮：走。\n△烛火摇晃。",
+        source_text="INT. BEDCHAMBER - NIGHT\nXie Zheng: Go.\nCandlelight flickers.",
         on_log=logs.append,
     )
 
     assert agent.calls == 3
     assert len(script.beats) == 2
     assert script.beats[0].audio_type == "dialogue"
-    assert script.beats[0].narration_segment == "走。"
-    assert script.beats[0].visual_description == "谢铮开口说话。"
-    assert script.beats[1].visual_description == "屋内烛火轻轻摇晃。"
+    assert script.beats[0].narration_segment == "Go."
+    assert script.beats[0].visual_description == "Xie Zheng speaks."
+    assert script.beats[1].visual_description == "Candlelight sways gently in the room."
     assert store.persisted is script
     assert workflow.last_degraded_lines == [1]
     assert workflow.last_review_passed is False
-    assert "1 行未能由模型正常生成" in workflow.last_review_summary
-    assert any("后续行继续处理" in message for message in logs)
+    assert "1 lines could not be generated normally by the model" in workflow.last_review_summary
+    assert any("processing continues with the following lines" in message for message in logs)
 
 
 @pytest.mark.asyncio
@@ -535,7 +535,7 @@ async def test_literal_workflow_does_not_retry_content_filter_and_uses_placehold
     agent = _SequencedLiteralAgent(
         [
             ContentFilterError("Content filter triggered"),
-            _valid_literal_output("屋内烛火轻轻摇晃。"),
+            _valid_literal_output("Candlelight sways gently in the room."),
         ]
     )
     monkeypatch.setattr(
@@ -552,7 +552,7 @@ async def test_literal_workflow_does_not_retry_content_filter_and_uses_placehold
 
     script = await workflow.run(
         episode_num=1,
-        source_text="第1场 苏鸾寝殿 夜 内\n沈晚握紧匕首。\n△烛火摇晃。",
+        source_text="INT. BEDCHAMBER - NIGHT\nShen Wan grips the dagger.\nCandlelight flickers.",
         on_log=logs.append,
     )
 
@@ -560,14 +560,14 @@ async def test_literal_workflow_does_not_retry_content_filter_and_uses_placehold
     assert len(script.beats) == 2
     assert script.beats[0].audio_type == "silence"
     assert script.beats[0].narration_segment == ""
-    assert script.beats[0].visual_description == "该行未能生成，请手动补充。"
-    assert "匕首" not in script.beats[0].model_dump_json()
-    assert script.beats[1].visual_description == "屋内烛火轻轻摇晃。"
-    assert "沈晚握紧匕首。" not in agent.prompts[1]
-    assert "[上一行因内容审核未提供]" in agent.prompts[1]
+    assert script.beats[0].visual_description == "This line could not be generated; please complete it manually."
+    assert "dagger" not in script.beats[0].model_dump_json()
+    assert script.beats[1].visual_description == "Candlelight sways gently in the room."
+    assert "Shen Wan grips the dagger." not in agent.prompts[1]
+    assert "[previous line not provided due to content moderation]" in agent.prompts[1]
     assert workflow.last_degraded_lines == [1]
     assert workflow.last_review_passed is False
-    assert any("未重试" in message for message in logs)
+    assert any("was not retried" in message for message in logs)
 
 
 @pytest.mark.asyncio
@@ -582,9 +582,9 @@ async def test_literal_workflow_does_not_send_unprocessed_next_line(monkeypatch)
         async def run(self, prompt):
             self.calls += 1
             self.prompts.append(prompt)
-            if "沈晚握紧匕首。" in prompt:
+            if "Shen Wan grips the dagger." in prompt:
                 raise ContentFilterError("Content filter triggered")
-            return SimpleNamespace(output=_valid_literal_output("屋内烛火轻轻摇晃。"))
+            return SimpleNamespace(output=_valid_literal_output("Candlelight sways gently in the room."))
 
     agent = _FilteringLiteralAgent()
     monkeypatch.setattr(
@@ -596,13 +596,13 @@ async def test_literal_workflow_does_not_send_unprocessed_next_line(monkeypatch)
 
     script = await workflow.run(
         episode_num=1,
-        source_text="第1场 苏鸾寝殿 夜 内\n△烛火摇晃。\n沈晚握紧匕首。",
+        source_text="INT. BEDCHAMBER - NIGHT\nCandlelight flickers.\nShen Wan grips the dagger.",
     )
 
     assert agent.calls == 2
-    assert "沈晚握紧匕首。" not in agent.prompts[0]
-    assert script.beats[0].visual_description == "屋内烛火轻轻摇晃。"
-    assert script.beats[1].visual_description == "该行未能生成，请手动补充。"
+    assert "Shen Wan grips the dagger." not in agent.prompts[0]
+    assert script.beats[0].visual_description == "Candlelight sways gently in the room."
+    assert script.beats[1].visual_description == "This line could not be generated; please complete it manually."
     assert workflow.last_degraded_lines == [2]
 
 
@@ -622,7 +622,7 @@ async def test_literal_workflow_does_not_degrade_gateway_403(monkeypatch):
     with pytest.raises(ModelHTTPError) as exc_info:
         await workflow.run(
             episode_num=1,
-            source_text="第1场 苏鸾寝殿 夜 内\n谢铮：走。",
+            source_text="INT. BEDCHAMBER - NIGHT\nXie Zheng: Go.",
         )
 
     assert exc_info.value.status_code == 403
@@ -648,7 +648,7 @@ async def test_literal_workflow_does_not_degrade_malformed_gateway_response(
     with pytest.raises(UnexpectedModelBehavior, match="Invalid OpenAI-compatible"):
         await workflow.run(
             episode_num=1,
-            source_text="第1场 苏鸾寝殿 夜 内\n谢铮：走。",
+            source_text="INT. BEDCHAMBER - NIGHT\nXie Zheng: Go.",
         )
 
     assert agent.calls == 1

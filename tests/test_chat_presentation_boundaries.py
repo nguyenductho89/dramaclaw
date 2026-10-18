@@ -50,6 +50,6 @@ def test_ui_mapping_reports_invalid_spec_through_injected_logger() -> None:
         '<ui-spec type="broken">{"type":"broken"}</ui-spec>',
         log_error=lambda error, body: errors.append((str(error), body)),
     )
-    assert "格式校验失败" in result
+    assert "validation failed" in result
     assert len(errors) == 1
     assert errors[0][1] == '{"type":"broken"}'

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 生成失败时节点上留下的三个字段必须各司其职：
-//   generationError        → 给用户看的、已本地化/归一化的文案
-//   generationErrorDetails → 原始后端报文，一字不动（工单要靠它）
-//   generationErrorRequestId → 从原始报文里抽出的 request id
-// 把 display 覆盖进 details 是最容易犯的回归，且 UI 上完全看不出来。
+// The three fields left on the node on generation failure must each do their own job:
+//   generationError        → the localized/normalized copy shown to the user
+//   generationErrorDetails → the raw backend payload, untouched (tickets rely on it)
+//   generationErrorRequestId → the request id extracted from the raw payload
+// Overwriting details with display is the easiest regression to make, and it is invisible in the UI.
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,8 +22,8 @@ class ResizeObserverMock {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
-// 关键：t 返回 key 而不是 defaultValue，这样「已本地化的展示文案」和「原始后端
-// 报文」天然不同，断言才能证明两者被分开存了。真实运行时也是这样（有译文）。
+// Key point: t returns the key rather than defaultValue, so the "localized display copy" and the "raw backend
+// payload" naturally differ, and the assertions can prove the two were stored separately. The real runtime is like this too (translations exist).
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => `translated:${key}` }),
 }));
@@ -48,7 +48,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-image",
       providerId: "huimeng",
       apiModel: "test_image_api",
-      label: "测试模型",
+      label: "Test model",
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -59,7 +59,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
   }),
 }));
 
-// 整批失败后会弹一次错误框，测试树里不需要它。
+// After the whole batch fails an error dialog pops up once, which the test tree does not need.
 vi.mock("@/features/canvas/application/errorDialog", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/features/canvas/application/errorDialog")
@@ -74,7 +74,7 @@ function seed() {
         id: "img-1",
         type: CANVAS_NODE_TYPES.imageGen,
         position: { x: 0, y: 0 },
-        data: { prompt: "一只在窗台上的猫", modelId: "huimeng/test-image" },
+        data: { prompt: "A cat on the windowsill", modelId: "huimeng/test-image" },
       } as CanvasNode,
     ],
     [],
@@ -121,14 +121,14 @@ describe("ImageGen error notification contract", () => {
       expect(nodeData().generationErrorDetails).toBeTruthy();
     });
 
-    // 原始报文一字不动地留在 details 里。
+    // The raw payload stays in details untouched.
     expect(nodeData().generationErrorDetails).toBe(RAW_BACKEND_ERROR);
-    // 展示文案是本地化后的，不等于原始报文。
+    // The display copy is localized, so it does not equal the raw payload.
     expect(nodeData().generationError).toBe("translated:common.insufficientCredits");
     expect(nodeData().generationError).not.toBe(RAW_BACKEND_ERROR);
-    // request id 从原始报文里抽出来，单独存一份供工单引用。
+    // The request id is extracted from the raw payload and stored separately for tickets to cite.
     expect(nodeData().generationErrorRequestId).toBe("req-abc123");
-    // 失败必须终结 loading，否则节点会一直转圈。
+    // A failure must end loading, otherwise the node keeps spinning forever.
     expect(nodeData().isGenerating).toBe(false);
   });
 });

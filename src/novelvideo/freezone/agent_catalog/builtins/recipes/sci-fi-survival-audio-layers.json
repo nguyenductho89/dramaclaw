@@ -3,24 +3,24 @@
   "id": "sci-fi-survival-audio-layers",
   "version": "1.0.0",
   "enabled": true,
-  "name": "末世科幻 BGM",
+  "name": "Post-Apocalyptic Sci-Fi BGM",
   "output_kind": "audio",
   "action_keys": [
     "sci-fi-survival-audio-layers"
   ],
-  "system_prompt": "你将把已确认的 BGM 规划、全片情绪曲线、分镜节奏和全局创作规格，转换成可直接送入 audioGeneration 节点执行的背景音乐生成提示词。重要：你的输出是一条下游节点提示词/指令，不是最终音频；只输出提示词，不要解释。\n\n本节点只负责独立 BGM/配乐音频。对白、旁白、镜头内环境声和动作音效属于各自视频节点的提示词内容，不在这里拆成独立音频。若开始前选项为“不生成BGM”，只输出不创建背景音乐节点的说明。\n\nBGM 可以是一条贯穿全片的主配乐，也可以按剧情段落规划少量分段配乐；必须写清适用镜头区间、情绪走向、节奏强弱、核心乐器或声音质感、能量峰值和收束方式。提示词不得引用知名艺术家、影视原声或受版权保护的具体曲名。\n\n输出应包含 BGM 名称、适用镜头区间、生成提示词、音量建议、淡入淡出和与对白/旁白错峰的混音建议。",
+  "system_prompt": "You will convert the confirmed BGM plan, the emotional curve of the whole film, the storyboard rhythm and the global creative specification into a background music generation prompt that can be fed directly to an audioGeneration node. Important: your output is a downstream node prompt/instruction, not the final audio; output only the prompt, with no explanation.\n\nThis node is responsible only for standalone BGM / score audio. The dialogue, the narration, in-shot ambient sound and action sound effects belong to the prompt content of their respective video nodes and are not split out as standalone audio here. If the pre-start option is \"Do not generate BGM\", output only a note that no background music node is created.\n\nThe BGM may be one main score running through the whole film, or a small number of segmented scores planned by story section; it must state the applicable shot range, emotional direction, rhythm intensity, core instruments or sound texture, energy peak and ending. The prompt must not cite well-known artists, film/TV soundtracks or specific copyrighted track titles.\n\nThe output should contain the BGM name, applicable shot range, generation prompt, volume suggestion, fade in/out, and mixing suggestions for staggering with dialogue / narration.",
   "must_have_items": [
     "BGM",
-    "适用镜头区间",
-    "情绪走向",
-    "节奏强弱",
-    "核心乐器或声音质感",
-    "音量建议",
-    "淡入淡出",
-    "与对白/旁白错峰"
+    "Applicable shot range",
+    "Emotional direction",
+    "Rhythm intensity",
+    "Core instruments or sound texture",
+    "Volume suggestion",
+    "Fade in/out",
+    "Staggering with dialogue / narration"
   ],
-  "planning_prompt": "根据全片情绪曲线和分镜节奏，生成末世科幻背景音乐提示词。",
-  "result_summary": "末世科幻 BGM 生成提示词和混音建议。",
+  "planning_prompt": "From the emotional curve of the whole film and the storyboard rhythm, generate the post-apocalyptic sci-fi background music prompt.",
+  "result_summary": "Post-apocalyptic sci-fi BGM generation prompt and mixing suggestions.",
   "requires_source_media": false,
   "force_enhancement": false,
   "skip_detail_check": false

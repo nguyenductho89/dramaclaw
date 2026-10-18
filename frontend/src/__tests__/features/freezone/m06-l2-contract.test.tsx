@@ -32,7 +32,7 @@ vi.mock("@/api/client", async (importOriginal) => {
   return {
     ...actual,
     apiCall: vi.fn(),
-    // 画布详情走整信封:`foreign_media` 挂在 `data` 同级,只解一层的 apiCall 会丢掉它。
+    // The canvas detail goes through the whole envelope: `foreign_media` sits beside `data`, and an apiCall that unwraps only one level would drop it.
     apiCallEnvelope: vi.fn(),
   };
 });
@@ -48,7 +48,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) =>
       key === "common.billingRuleNotConfigured"
-        ? "计费规则未配置，请联系管理员设置积分规则"
+        ? "Billing rules are not configured. Contact an administrator to set up credit rules."
         : (options?.defaultValue ?? key),
   }),
 }));
@@ -247,7 +247,7 @@ describe("M06 frontend L2 contract", () => {
       MockEventSource.instances[0].dispatch("failed", {
         status: "failed",
         progress: 0,
-        current_task: "功能扣费失败",
+        current_task: "Feature charge failed",
         error: "Request failed with status code 409 Conflict: POST /ingest/start",
         error_code: "BILLING_RULE_NOT_CONFIGURED",
         logs: [],
@@ -255,8 +255,8 @@ describe("M06 frontend L2 contract", () => {
     });
 
     await waitFor(() => expect(result.current.status).toBe("failed"));
-    expect(toast.error).toHaveBeenCalledWith("计费规则未配置，请联系管理员设置积分规则");
-    expect(onError).toHaveBeenCalledWith("计费规则未配置，请联系管理员设置积分规则");
+    expect(toast.error).toHaveBeenCalledWith("Billing rules are not configured. Contact an administrator to set up credit rules.");
+    expect(onError).toHaveBeenCalledWith("Billing rules are not configured. Contact an administrator to set up credit rules.");
     expect(toast.error).not.toHaveBeenCalledWith(
       expect.stringContaining("Request failed with status code 409"),
     );
@@ -391,7 +391,7 @@ describe("M06 frontend L2 contract", () => {
         },
       ],
     ]);
-    // 画布详情单独走整信封,不在 apiCall 的调用序列里。
+    // The canvas detail goes through the whole envelope separately and is not in apiCall's call sequence.
     expect(vi.mocked(apiCallEnvelope).mock.calls).toEqual([
       ["projects/demo/freezone/canvases/default", undefined],
     ]);

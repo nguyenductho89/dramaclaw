@@ -517,7 +517,7 @@ class FakeUsageMeter:
 async def test_inline_stale_authority_never_initiates_feature_credit_settlement(
     monkeypatch, tmp_path
 ):
-    """CE inline 不创建 feature reservation，拒绝路径不得伪造第二条退款通路。"""
+    """CE inline does not create a feature reservation, and the rejection path must not fabricate a second refund channel."""
     ctx = _ctx(tmp_path)
     backend = _inline_backend(authz=FakeAuthz(key_version=2))
     meter = FakeUsageMeter()
@@ -671,7 +671,7 @@ async def test_inline_authz_retry_exhaustion_fails_exact_task_without_settlement
 
 @pytest.mark.asyncio
 async def test_inline_unverified_rejection_moves_zero_credits(monkeypatch, tmp_path):
-    """签名没通过时身份不可信,不得让它驱动资金动作。"""
+    """When the signature fails the identity is untrusted and must not drive money-moving actions."""
     ctx = _ctx(tmp_path)
     backend = _inline_backend()
     meter = FakeUsageMeter()

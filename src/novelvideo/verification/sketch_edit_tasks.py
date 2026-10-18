@@ -326,11 +326,11 @@ def prepare_sketch_edit_tasks(
     output_path = output_path.expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    _notify(progress_callback, 0.05, "读取脚本")
+    _notify(progress_callback, 0.05, "Reading script")
     payload = load_script_payload(project_dir, episode_num)
     payload.setdefault("episode_number", episode_num)
 
-    _notify(progress_callback, 0.15, "读取已选草图")
+    _notify(progress_callback, 0.15, "Reading selected sketches")
     selected_map = load_selected_sketch_paths(project_dir, episode_num)
     if not selected_map:
         raise FileNotFoundError(
@@ -361,7 +361,7 @@ def prepare_sketch_edit_tasks(
     resolved_project_id = project_id or project_dir.name
     for index, beat_number in enumerate(selected_beat_numbers, start=1):
         progress = 0.25 + (index / task_total) * 0.6
-        _notify(progress_callback, progress, f"构建 beat {beat_number} edit task")
+        _notify(progress_callback, progress, f"Building edit task for beat {beat_number}")
         beat = next(
             (
                 item
@@ -382,7 +382,7 @@ def prepare_sketch_edit_tasks(
             )
         )
 
-    _notify(progress_callback, 0.9, "写入 tasks.jsonl")
+    _notify(progress_callback, 0.9, "Writing tasks.jsonl")
     with output_path.open("w", encoding="utf-8") as handle:
         for task in tasks:
             handle.write(json.dumps(task, ensure_ascii=False) + "\n")
@@ -399,6 +399,6 @@ def prepare_sketch_edit_tasks(
     summary_path = output_path.with_name(output_path.stem + "_summary.json")
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     summary["summary_json"] = str(summary_path)
-    _log(log_callback, f"已生成 {len(tasks)} 条 sketch edit tasks")
-    _notify(progress_callback, 1.0, "完成")
+    _log(log_callback, f"Generated {len(tasks)} sketch edit tasks")
+    _notify(progress_callback, 1.0, "Done")
     return summary

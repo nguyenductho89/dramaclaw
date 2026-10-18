@@ -56,7 +56,7 @@ export function getProjectCover(name: string): {
   const trimmed = name.trim();
   const paletteIndex = hashString(trimmed) % PROJECT_COVER_PALETTE.length;
   const palette = PROJECT_COVER_PALETTE[paletteIndex];
-  // Use the first rendered character (handles multi-byte chars like 中文).
+  // Use the first rendered character (handles multi-byte chars like emoji).
   const initial = Array.from(trimmed)[0]?.toUpperCase() ?? "?";
   return { gradient: palette.gradient, initial, paletteIndex, primary: palette.primary };
 }

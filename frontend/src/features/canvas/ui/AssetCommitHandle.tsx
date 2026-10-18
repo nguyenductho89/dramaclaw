@@ -17,9 +17,9 @@ import {
 } from '@/features/canvas/ui/NodeSideActionRail';
 
 /**
- * 节点左侧的「拖到素材库替换」抓手。从抓手上按住拖拽时,
- * 节点本身不会在画布上移动 —— 我们用原生 pointer 事件自行驱动,
- * 并在松手命中左侧同类型素材时触发替换。
+ * The "drag to asset library to replace" handle on the left of the node. While pressing and dragging from the handle,
+ * the node itself does not move on the canvas - we drive it ourselves with native pointer events,
+ * and trigger replacement on release when it hits a same-type material on the left.
  */
 export function AssetCommitHandle({ node }: { node: CanvasNode }) {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export function AssetCommitHandle({ node }: { node: CanvasNode }) {
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
       if (!dropInfo || !sourceUrl || event.button !== 0) return;
-      // 阻止 React Flow 接管 → 节点不会被拖动。
+      // Prevent React Flow from taking over -> the node will not be dragged.
       event.preventDefault();
       event.stopPropagation();
 
@@ -70,7 +70,7 @@ export function AssetCommitHandle({ node }: { node: CanvasNode }) {
         window.removeEventListener('pointerup', onUp);
         document.body.style.userSelect = prevUserSelect;
         document.body.style.cursor = prevCursor;
-        // 命中有效素材则生成替换请求,由侧栏消费。
+        // If a valid material is hit, generate a replace request, consumed by the sidebar.
         useAssetDropStore.getState().endDrag(true);
       };
 

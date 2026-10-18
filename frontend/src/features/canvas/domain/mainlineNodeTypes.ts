@@ -10,7 +10,7 @@
  * mirror).
  *
  * Naming reminder — do not confuse the two layers:
- *   - `PushTargetKind` (this file's domain, 19 values): slot 落点 kind.
+ *   - `PushTargetKind` (this file's domain, 19 values): slot landing kind.
  *     e.g. "sketch" / "frame" / "identity" / "scene_master" — these are the
  *     short verbs the Push route writes against.
  *   - `PresetRef.role` (preset emit domain, ~22 values): asset discovery role.
@@ -41,21 +41,21 @@ export function isSlotTarget(value: unknown): value is SlotTarget {
 }
 
 /**
- * 已废弃 / 改名的旧 slot kind → 当前 canonical kind 的迁移表。
- * 旧画布 JSON 或旧 client 持久化的节点可能仍带这些 kind。
+ * Migration table from deprecated / renamed old slot kinds -> current canonical kind.
+ * Nodes persisted by old canvas JSON or old clients may still carry these kinds.
  */
 const LEGACY_SLOT_TARGET_KIND_MAP: Readonly<Record<string, PushTargetKind>> = {
-  // 旧 2:1 panorama slot 已被 Director Pano 360 取代。
+  // The old 2:1 panorama slot has been replaced by Director Pano 360.
   scene_360: "scene_director_pano_360",
-  // 后端把 3GS「上传」slot 改名为「自定义场景」(同为 scene_id 作用域)。
+  // The backend renamed the 3GS "upload" slot to "custom scene" (both are scene_id scoped).
   scene_3gs_uploaded_ply: "scene_3gs_custom_scene",
 };
 
 /**
- * 读取(可能来自旧画布的)slot_target:先把已废弃的 legacy kind 迁移到当前
- * canonical kind,再做合法性校验,返回归一化后的 SlotTarget;非法返回 null。
- * 所有「读 node.data.slot_target / 资产 slot_target」的入口都应走这里,
- * 避免旧数据因 kind 改名而静默失去 commit 能力。
+ * Read slot_target (possibly from an old canvas): first migrate deprecated legacy kinds to the current
+ * canonical kind, then validate, returning the normalized SlotTarget; null if invalid.
+ * All entries that "read node.data.slot_target / asset slot_target" should go through here,
+ * avoiding old data silently losing commit capability because a kind was renamed.
  */
 export function coerceSlotTarget(value: unknown): SlotTarget | null {
   if (!value || typeof value !== "object") return null;

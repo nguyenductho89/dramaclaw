@@ -39,13 +39,13 @@ type StyleNodeProps = NodeProps & {
   selected?: boolean;
 };
 
-// 卡片只放封面，不再挂名字行（风格名在节点标题里）。封面是 16:9（720×405），
-// 宽度定死后高度就等于封面本身的高度，不按别的比例裁切。
+// The card holds only the cover and no longer carries a name row (the style name is in the node title). The cover is 16:9 (720×405);
+// once the width is fixed, the height equals the cover's own height, with no cropping to another ratio.
 export const STYLE_NODE_WIDTH = 220;
 export const STYLE_NODE_HEIGHT = 124;
 
-// 「查不到封面」有四种成因，卡片得说清是哪一种：说成「未选择风格」会让用户以为
-// 这个节点是空的，而那个 id 其实还在跟着生成请求走（ready 态不会走到这里）。
+// "Cover not found" has four causes and the card must say which one: saying "No style selected" would make the user think
+// the node is empty, while that id is in fact still sent along with the generation request (the ready state never reaches here).
 const STYLE_NODE_PLACEHOLDER_KEYS: Record<StyleSelectionState, string> = {
   none: 'canvas.style.placeholderNone',
   ready: '',
@@ -76,14 +76,14 @@ export const StyleNode = memo(({ id, data, selected }: StyleNodeProps) => {
     isLoading: templatesLoading,
     hasError: templatesError != null,
   });
-  // 打开图墙是明确的用户动作，顺手把上次失败的清单重拉一遍（成功态是空操作）。
+  // Opening the gallery is an explicit user action, so re-fetch the last failed manifest along the way (a no-op in the success state).
   const openGallery = useCallback(() => {
     retryTemplates();
     setGalleryOpen(true);
   }, [retryTemplates]);
 
-  // 真源是下游图片节点的 styleTemplateId —— 本节点只是它的投影，所以换风格先写
-  // 下游，再由那边的对账把本节点的数据拉齐（见 styleNodeSync 的模块注释）。
+  // The source of truth is the downstream image node's styleTemplateId — this node is only a projection of it, so changing the style writes to
+  // downstream first, and the reconciliation over there then aligns this node's data (see the module comment of styleNodeSync).
   const downstreamImageNodeIds = useCanvasStore(
     useShallow((state) => {
       const targetIds = state.edges
@@ -96,8 +96,8 @@ export const StyleNode = memo(({ id, data, selected }: StyleNodeProps) => {
   );
   const isOrphan = downstreamImageNodeIds.length === 0;
 
-  // 标题跟着选中的风格走：「风格 · 分类 · 风格名」。用户手工改过名（data.displayName
-  // 有值）就以用户的为准，别把人家改的名字覆盖回去。
+  // The title follows the selected style: "Style · Category · Style name". If the user renamed it by hand (data.displayName
+  // has a value), the user's name wins; do not overwrite their rename.
   const resolvedTitle = useMemo(() => {
     const customTitle =
       typeof data.displayName === 'string' ? data.displayName.trim() : '';
@@ -197,9 +197,9 @@ export const StyleNode = memo(({ id, data, selected }: StyleNodeProps) => {
       </div>
 
       {/*
-        整张封面点下去也能开图墙，但那是个没有任何提示的隐藏交互 —— 右上角这颗按钮
-        才是能被看见的入口。放在卡片外面当兄弟节点：卡片本身是 role="button"，按钮
-        嵌进去就成了互相嵌套的可交互元素。
+        Clicking anywhere on the cover also opens the gallery, but that is a hidden interaction with no hint — this button at the top right
+        is the visible entry. It is placed outside the card as a sibling: the card itself is role="button", and nesting the button
+        inside would produce nested interactive elements.
       */}
       {!isOrphan && (
         <button

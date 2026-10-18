@@ -22,11 +22,11 @@ pytestmark = pytest.mark.m09
 def _beat() -> dict:
     return {
         "beat_number": 1,
-        "video_prompt": "全景慢推，人物低头翻动旧书，定格在发现异常的瞬间",
-        "visual_description": "{{陆辰_书店老板时期}}在潮湿地下室旧书堆中翻找。",
-        "scene_description": "昏暗潮湿的地下室，旧书架，砖墙，小窗外暴雨。",
-        "props_description": "羊皮笔记本：厚重封面，红色衡字图腾。",
-        "narration_segment": "暴雨砸在窗外，我在地下室翻旧书。",
+        "video_prompt": "Wide slow push-in; the character lowers their head and turns the pages of an old book, freezing on the moment something odd is discovered",
+        "visual_description": "{{Lu Chen_bookstore_owner}} rummages through a pile of old books in the damp basement.",
+        "scene_description": "A dim, damp basement with old bookshelves, brick walls, and a downpour outside the small window.",
+        "props_description": "Parchment notebook: thick cover with a red balance-scale emblem.",
+        "narration_segment": "The rain pounds the window while I dig through old books in the basement.",
     }
 
 
@@ -40,7 +40,7 @@ def test_atom_prompt_renders_identity_scene_and_storyboard_reference_roles():
     )
 
     assert [atom.atom_type for atom in atoms[:3]] == ["identity", "scene", "storyboard"]
-    assert [atom.source_label for atom in atoms[:3]] == ["图片1", "图片2", "图片3"]
+    assert [atom.source_label for atom in atoms[:3]] == ["@image1", "@image2", "@image3"]
 
     prompt = render_seedance2_prompt_from_atoms(
         atoms=atoms,
@@ -49,10 +49,10 @@ def test_atom_prompt_renders_identity_scene_and_storyboard_reference_roles():
         ratio="9:16",
     )
 
-    assert "图片1：身份原子，只用于锚定陆辰“书店老板时期”的身份造型" in prompt
-    assert "图片2：场景原子，只用于地下室空间、旧书架、潮湿砖墙和冷暗光线" in prompt
-    assert "图片3：分镜原子，只用于构图、人物站位、姿势、镜头角度和画面重心" in prompt
-    assert "不要继承黑白线稿风格、草图线条或简化五官" in prompt
+    assert '@image1: identity atom, used only to anchor the identity look of Lu Chen "bookstore_owner"' in prompt
+    assert "@image2: scene atom, used only for the basement space, old bookshelves, damp brick walls, and cold dim lighting" in prompt
+    assert "@image3: storyboard atom, used only for composition, character placement, pose, camera angle, and visual center of gravity" in prompt
+    assert "do not inherit the black-and-white line-art style, sketch lines, or simplified facial features" in prompt
 
 
 def test_seedance2_prompt_binds_reference_roles():
@@ -64,13 +64,13 @@ def test_seedance2_prompt_binds_reference_roles():
         include_scene_reference=True,
     )
 
-    assert "生成 5 秒 9:16 写实悬疑短剧镜头" in prompt
-    assert "首帧：作为起始构图和人物当前位置" in prompt
-    assert "图片1：身份原子，只用于锚定陆辰“书店老板时期”的身份造型" in prompt
-    assert "图片2：场景原子，只用于地下室空间、旧书架、潮湿砖墙和冷暗光线" in prompt
-    assert "不要生成分屏、拼贴、证件照或参考图展示墙" in prompt
+    assert "Generate a 5-second 9:16 realistic suspense short-drama shot" in prompt
+    assert "First frame: use as the opening composition and the character's current position" in prompt
+    assert '@image1: identity atom, used only to anchor the identity look of Lu Chen "bookstore_owner"' in prompt
+    assert "@image2: scene atom, used only for the basement space, old bookshelves, damp brick walls, and cold dim lighting" in prompt
+    assert "Do not generate split screens, collages, ID photos, or a reference-image display wall" in prompt
     assert "[0-1s]" in prompt
-    assert "地下室环境声、雨声、纸页摩擦声" in prompt
+    assert "Basement ambience, rain, paper rustling" in prompt
 
 
 def test_build_atom_reference_experiment_maps_identity_scene_storyboard_images(tmp_path):
@@ -99,9 +99,9 @@ def test_build_atom_reference_experiment_maps_identity_scene_storyboard_images(t
     assert "image_url" not in params
     assert len(params["reference_images"]) == 3
     assert all(value.startswith("data:image/png;base64,") for value in params["reference_images"])
-    assert "图片1：身份原子" in params["prompt"]
-    assert "图片2：场景原子" in params["prompt"]
-    assert "图片3：分镜原子" in params["prompt"]
+    assert "@image1: identity atom" in params["prompt"]
+    assert "@image2: scene atom" in params["prompt"]
+    assert "@image3: storyboard atom" in params["prompt"]
 
 
 def test_build_reference_experiment_maps_reference_images(tmp_path):
@@ -129,9 +129,9 @@ def test_build_reference_experiment_maps_reference_images(tmp_path):
     assert "image_url" not in params
     assert len(params["reference_images"]) == 2
     assert all(value.startswith("data:image/png;base64,") for value in params["reference_images"])
-    assert "图片1" in params["prompt"]
-    assert "图片2" in params["prompt"]
-    assert "首帧：作为起始构图" not in params["prompt"]
+    assert "@image1" in params["prompt"]
+    assert "@image2" in params["prompt"]
+    assert "First frame: use as the opening composition" not in params["prompt"]
 
 
 def test_experiment_requests_do_not_mix_strict_frames_with_reference_images(tmp_path):
@@ -193,8 +193,8 @@ def test_build_scene_reference_experiment_uses_reference_images_without_first_fr
     assert len(params["reference_images"]) == 2
     assert params["reference_images"][0].startswith("data:image/png;base64,")
     assert params["reference_images"][1].startswith("data:image/png;base64,")
-    assert "图片1：场景原子，只用于地下室空间" in params["prompt"]
-    assert "图片2：场景补充原子，只用于旧木结构、石板路和潮湿陈旧质感" in params["prompt"]
+    assert "@image1: scene atom, used only for the basement space" in params["prompt"]
+    assert "@image2: scene supplement atom, used only for old wooden structures, the flagstone road, and damp aged texture" in params["prompt"]
 
 
 def test_build_human_review_request_sets_flag(tmp_path):

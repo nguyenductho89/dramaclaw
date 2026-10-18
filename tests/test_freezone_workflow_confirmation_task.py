@@ -17,7 +17,7 @@ def _compiled() -> dict:
         "ok": True,
         "skill_id": "video-ad",
         "edge_count": 0,
-        "plan": {"summary": "广告", "nodes": [], "edges": [], "phases": []},
+        "plan": {"summary": "ad", "nodes": [], "edges": [], "phases": []},
     }
 
 
@@ -26,7 +26,7 @@ def _claimed_task(tmp_path, *, started_at: float = 1_000) -> tuple[dict, dict]:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claimed, error = claim_workflow_draft_confirmation(

@@ -130,7 +130,7 @@ describe("credit summary query", () => {
             promotion_count: 0,
             updated_at: null,
             scope: "org_member",
-            organization: { org_id: "org-1", name: "星辰文化" },
+            organization: { org_id: "org-1", name: "Stardust Media" },
             dormant_personal_balance: 120,
           },
         }),
@@ -146,7 +146,7 @@ describe("credit summary query", () => {
     const summary = result.current.data?.data;
     expect(summary?.balance).toBe(5000);
     expect(creditScopeOf(summary)).toBe("org_member");
-    expect(creditOrgOf(summary)).toEqual({ org_id: "org-1", name: "星辰文化" });
+    expect(creditOrgOf(summary)).toEqual({ org_id: "org-1", name: "Stardust Media" });
     expect(dormantPersonalBalanceOf(summary)).toBe(120);
   });
 
@@ -239,7 +239,7 @@ describe("credit scope helpers", () => {
       updated_at: null,
       // Even if a backend leaked these onto a personal payload, the personal
       // UI must not pick them up.
-      organization: { org_id: "org-1", name: "星辰文化" },
+      organization: { org_id: "org-1", name: "Stardust Media" },
       dormant_personal_balance: 999,
     } as const;
 
@@ -257,7 +257,7 @@ describe("credit scope helpers", () => {
       promotion_count: 0,
       updated_at: null,
       scope: "org_member",
-      organization: { org_id: "org-1", name: "星辰文化" },
+      organization: { org_id: "org-1", name: "Stardust Media" },
     } as const;
 
     expect(dormantPersonalBalanceOf({ ...base })).toBeNull();

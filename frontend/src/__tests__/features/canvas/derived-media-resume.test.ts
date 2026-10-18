@@ -6,7 +6,7 @@ vi.mock('@/api/tasks', () => ({
   isTaskPollTimeoutError: () => false,
 }));
 vi.mock('@/features/canvas/application/derivedMedia', () => ({
-  completeDerivedMedia: vi.fn().mockRejectedValue(new Error('GIF 转换失败')),
+  completeDerivedMedia: vi.fn().mockRejectedValue(new Error('GIF conversion failed')),
 }));
 vi.mock('@/features/canvas/application/errorDialog', () => ({
   resolveErrorContent: (e: Error) => ({ message: e.message }),
@@ -36,7 +36,7 @@ describe('derived media refresh failure', () => {
       updateNodeData: (_, patch) => Object.assign(data, patch),
     });
     expect(data.sourceVideoUrl).toBe('/source.mp4');
-    expect(data.generationError).toBe('GIF 转换失败');
+    expect(data.generationError).toBe('GIF conversion failed');
     expect(data.isGenerating).toBe(false);
   });
 });

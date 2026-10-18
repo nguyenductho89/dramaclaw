@@ -45,7 +45,7 @@ from novelvideo.generators.nanobanana_grid import (
 # always passes absolute --output-dir/--master, so these defaults are never used.
 # PROJECT_DIR also seeds get_style_preset's project inference (relative to OUTPUT_DIR).
 PROJECT_DIR = Path(OUTPUT_DIR) / "admin/xuanchuanpian"
-SCENE_NAME = "兰州拉面馆"
+SCENE_NAME = "Lanzhou Noodle Shop"
 SCENE_DIR = PROJECT_DIR / "assets/scenes" / SCENE_NAME
 DEFAULT_MASTER = SCENE_DIR / "master.png"
 DEFAULT_OUTPUT_DIR = SCENE_DIR / "scene_360_gpt_image2_master_style_v1"
@@ -467,13 +467,14 @@ def clean_scene_description_for_360(scene_description: str) -> str:
         "directorworld",
         "actor_",
         "prop_",
-        "方块",
-        "对象颜色",
-        "颜色只代表",
-        "可编辑的 directorworld",
-        "beat 的草图工作台",
-        "不要放 actor",
-        "不要放 prop",
+        "voxel",
+        "block color",
+        "object color",
+        "colors only represent",
+        "editable directorworld",
+        "beat sketch workbench",
+        "do not place actor",
+        "do not place prop",
     )
     lines: list[str] = []
     for line in raw.splitlines():

@@ -24,8 +24,8 @@ def test_short_drama_visual_style_is_structured_and_reaches_all_standard_nodes(m
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "user_goal": "制作一段悬疑短剧",
-            "inputs": {"visual_style": "写实"},
+            "user_goal": "Make a suspense short drama",
+            "inputs": {"visual_style": "realistic"},
             "planner": {
                 "mode": "standard",
                 "item_count": 2,
@@ -36,7 +36,7 @@ def test_short_drama_visual_style_is_structured_and_reaches_all_standard_nodes(m
 
     assert result["ok"] is True, result
     plan = result["plan"]
-    assert plan["inputs"]["visual_style"] == "写实"
+    assert plan["inputs"]["visual_style"] == "realistic"
     executable_nodes = [
         node
         for node in plan["nodes"]
@@ -44,9 +44,9 @@ def test_short_drama_visual_style_is_structured_and_reaches_all_standard_nodes(m
         and node["node_type"] != "videoComposeNode"
     ]
     assert executable_nodes
-    assert all("写实" in node["data"]["prompt"] for node in executable_nodes)
+    assert all("realistic" in node["data"]["prompt"] for node in executable_nodes)
     assert all(
-        node["data"]["workflowCatalog"]["confirmedInputs"]["visual_style"] == "写实"
+        node["data"]["workflowCatalog"]["confirmedInputs"]["visual_style"] == "realistic"
         for node in executable_nodes
     )
 
@@ -57,13 +57,13 @@ def test_pixar_character_input_method_is_preserved_in_custom_anchor_prompt(monke
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "pixar-ip-ad-video",
-            "user_goal": "制作品牌角色广告",
-            "inputs": {"character_input_method": "自定义角色"},
+            "user_goal": "Make a brand character ad",
+            "inputs": {"character_input_method": "Custom character"},
             "items": [
                 {
                     "id": "character_anchor",
-                    "title": "角色锚点",
-                    "prompt": "生成角色锚点",
+                    "title": "Character anchor",
+                    "prompt": "Generate the character anchor",
                     "recipe_id": "ad-ip-character-anchor",
                     "stage": "characters",
                 }
@@ -73,9 +73,9 @@ def test_pixar_character_input_method_is_preserved_in_custom_anchor_prompt(monke
 
     assert result["ok"] is True, result
     node = next(node for node in result["plan"]["nodes"] if node["id"] == "character_anchor")
-    assert result["plan"]["inputs"]["character_input_method"] == "自定义角色"
-    assert "自定义角色" in node["data"]["prompt"]
+    assert result["plan"]["inputs"]["character_input_method"] == "Custom character"
+    assert "Custom character" in node["data"]["prompt"]
     assert (
         node["data"]["workflowCatalog"]["confirmedInputs"]["character_input_method"]
-        == "自定义角色"
+        == "Custom character"
     )

@@ -16,17 +16,17 @@ import {
 } from "./announcements";
 
 /**
- * 登录页顶栏的公告入口：图标 + 未读红点，点开是公告中心。
+ * The announcement entry in the login page top bar: icon + unread red dot; clicking opens the announcement center.
  *
- * 顶栏红点与未读状态联动。打开公告中心即视为看过当前列表；后续出现新公告时，
- * 新 ID 不在本地已读集合里，红点会自然重新出现。
+ * The top-bar red dot is tied to the unread state. Opening the announcement center counts as having seen the current list; when a new announcement appears later,
+ * its new ID is not in the locally stored read set, so the red dot naturally reappears.
  *
- * 没有公告可展示时（还没拉到 / 拉失败 / OSS 上真的是空的）喇叭照常在，只是不打红点、
- * 点开是一张空弹窗：失败不值得摆个「重新加载」让人去按 —— 刷新登录页就会重来一次。
+ * When there is no announcement to show (not fetched yet / fetch failed / the OSS really is empty) the horn is still there, just without a red dot,
+ * and opening it shows an empty dialog: a failed fetch is not worth putting a "Reload" button for people to press - refreshing the login page starts over anyway.
  *
- * 弹窗用 Base UI 的 Dialog 原语而不是手搓 portal：焦点陷阱、关闭后焦点回到触发器、
- * 背景滚动锁都由它负责。动效是 data-starting-style / data-ending-style 上的 CSS
- * 过渡，所以 prefers-reduced-motion 能真的关掉它 —— framer-motion 的 JS 动画关不掉。
+ * The dialog uses Base UI's Dialog primitive instead of a hand-rolled portal: focus trap, focus returning to the trigger after close,
+ * and background scroll lock are all handled by it. The motion is CSS
+ * transitions on data-starting-style / data-ending-style, so prefers-reduced-motion can really switch it off - framer-motion's JS animation cannot be switched off.
  */
 export function AnnouncementEntry() {
   const { t, i18n } = useTranslation();
@@ -77,7 +77,7 @@ export function AnnouncementEntry() {
           </header>
 
           <div className={styles.announcementBody}>
-            {/* 没有公告就是一张空弹窗：与其写「暂时没有公告」，不如什么都不说。 */}
+            {/* With no announcements it is just an empty dialog: better to say nothing than write "No announcements for now". */}
             <ul className={styles.announcementList}>
               {announcements.map((item) => (
                 <AnnouncementListItem
@@ -123,7 +123,7 @@ function AnnouncementListItem({
 }) {
   const { t, i18n } = useTranslation();
 
-  // 正文里的 <time>/<hl> 由文案自己标，高亮位置跟着语序走而不是写死下标。
+  // The <time>/<hl> in the body are marked by the copy itself, so the highlight position follows the word order instead of a hard-coded index.
   const tokens = useMemo(() => parseAnnouncementBody(text.body), [text.body]);
 
   return (

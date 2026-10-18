@@ -180,7 +180,7 @@ export async function generateWorkflowText(input: {
 }): Promise<string> {
   const catalog = readCatalog(input.nodeData);
   const recipeId = text(catalog?.recipeId);
-  if (!recipeId) throw new Error('文本节点缺少 Recipe');
+  if (!recipeId) throw new Error('The text node is missing a Recipe');
   const upstreamText = input.upstreamInputMode === 'connected' ? input.upstreamText ?? '' : selectWorkflowUpstreamText(
     input.nodeData,
     input.upstreamContents,

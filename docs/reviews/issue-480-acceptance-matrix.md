@@ -1,53 +1,53 @@
-# Issue #480 / PR #434 跨仓验收对照
+# Issue #480 / PR #434 Cross-Repository Acceptance Matrix
 
-基准是 PR #434 于 2026-09-04 00:35 发布的“最终实施计划”。该计划的 §10
-实际列出 18 项；本表不以测试总数代替逐项验收，也不把通用计费测试误算成
-四类 Agent 产品的真实 paired-head 验证。
+The baseline is the "final implementation plan" published by PR #434 at 2026-09-04 00:35. Its §10
+actually lists 18 items; this table does not substitute the total test count for item-by-item acceptance, nor count generic billing tests as
+real paired-head verification of the four Agent products.
 
-状态含义：
+Meaning of the statuses:
 
-- **自动覆盖**：当前代码库有直接回归测试。
-- **部分覆盖**：单仓或通用生命周期已测，仍缺真实 paired/live 证据。
-- **未覆盖**：需要后续代码或验收环境。
+- **Auto-covered**: the current codebase has direct regression tests.
+- **Partially covered**: single-repository or generic lifecycle is tested, but real paired/live evidence is still missing.
+- **Not covered**: needs follow-up code or an acceptance environment.
 
-| # | 验收项 | 状态 | 当前证据 | 后续动作 |
+| # | Acceptance item | Status | Current evidence | Follow-up action |
 |---|---|---|---|---|
-| 1 | 四个 feature 的未配置、停用、free/0、正数价格 | 部分覆盖 | SuperTale 通用严格价格测试；PR #186 注册测试 | 用最新 CE/EE heads 对四个 feature 分别跑四种价格矩阵 |
-| 2 | 未配置/余额不足在模型调用前失败且不交付结果 | 部分覆盖 | SuperTale 严格价格和余额不足测试；CE operation 先 admission 后结果 | paired test 断言模型调用计数为 0、无 result receipt |
-| 3 | started/queued/running 不最终消费 | 部分覆盖 | `tests/test_agent_product_operations.py` pending 状态；SuperTale 通用 task settlement | paired test 检查 reservation 未 confirm |
-| 4 | 模型调用未发生时退款 | 部分覆盖 | CE 无 evidence 禁止 delivered；SuperTale 通用失败退款 | paired test 检查四类 task 的退款账本 |
-| 5 | 模型成功且结果交付后只确认一次 | 自动覆盖 | `tests/test_agent_product_operations.py` 终态幂等；`tests/test_api_freezone_workflow_runs.py` Workflow result 重复提交 | paired ledger 可作为额外发布证据 |
-| 6 | provider 拒绝、无结果、取消、进程中断的退款/审查 | 部分覆盖 | `tests/test_task_timeout.py`、`tests/test_agent_product_operations.py` | 补四类 operation 的进程中断 paired test |
-| 7 | accepted/submitted 保留 reservation，重启和晚到结果收敛 | 部分覆盖 | late delivery 确认及 `awaiting_reconciliation` 测试；诊断计数 | 在真实 EE 中执行一次 timeout → restart → confirm/refund |
-| 8 | duplicate MCP、transport retry、重复 finish/save 不重复扣费 | 自动覆盖 | operation 幂等、终态 result_ref 一致性、Workflow draft 重复提交测试 | paired ledger 可作为额外发布证据 |
-| 9 | Skill-only、Recipe-only、Skill + N Recipes、仅复用 Recipe | 自动覆盖 | `tests/test_freezone_plugin.py` Skill Studio 各模式；服务端 manifest/reuse 校验 | 无 |
-| 10 | N 个新 Recipe 对应 N 个 `recipe_generate` operation | 自动覆盖 | `tests/test_freezone_plugin.py::test_freezone_plugin_recipe_only_manifest_admits_and_delivers_each_recipe`；服务端数量校验 | 无 |
-| 11 | N 个模型型 Recipe 节点对应 N 个 `recipe_result`，确定性路径免费 | 自动覆盖 | `tests/test_api_freezone_workflow_runs.py` workflow-run admission 和 deterministic compile 测试 | 无 |
-| 12 | Workflow result 收费一次，Canvas confirm/apply 不重复收费 | 自动覆盖 | `test_metered_workflow_result_is_delivered_once_before_canvas_confirmation` | paired ledger 可作为额外发布证据 |
-| 13 | CRUD、导入、复制、保存、schema validation、deterministic compile 不收费 | 部分覆盖 | CE 路由无 product operation；deterministic compile 回归 | 增加跨仓“零 ledger event”汇总测试 |
-| 14 | 大量文字按可信 `billable_chars` 额外计费 | 部分覆盖 | text runner 持久化实际输出字符并按结果创建幂等预留，任务核心只确认该预留；EE 入队仅做价格/余额预检；Workflow MCP/规划回复拒绝超过 4000 字符的正文旁路 | 用真实个人/组织价格跑 paired ledger，确认实际字符金额与单次终态 |
-| 15 | 图片/音频/视频费用不被父 operation 的 `feature_included` 抑制 | 部分覆盖 | SuperTale `feature_included` 与媒体独立 feature 通用测试 | paired workflow 同时断言父产品和媒体两条账 |
-| 16 | 部分成功按各自产物独立 confirm/refund | 部分覆盖 | 每个 Recipe 独立 operation；失败只终结对应 operation | 补混合成功/失败的 paired ledger 测试 |
-| 17 | 个人、组织、成员额度、组织覆盖价 | 部分覆盖 | SuperTale 组织计费通用测试 | 对四个新 feature 跑组织覆盖价 paired test |
-| 18 | CE 全链路可用且无本地积分账本 | 自动覆盖 | CE 使用 `NoOpUsageMeter`；不存在 `agent_billing_state.py`；CE Workflow/Skill Studio 测试 | 无 |
+| 1 | Unconfigured, disabled, free/0, and positive prices for the four features | Partially covered | SuperTale generic strict-price tests; PR #186 registration tests | Run the four-price matrix for each of the four features with the latest CE/EE heads |
+| 2 | Unconfigured / insufficient balance fails before the model call and delivers no result | Partially covered | SuperTale strict-price and insufficient-balance tests; CE operation admits first, then returns results | The paired test asserts the model call count is 0 and there is no result receipt |
+| 3 | started/queued/running are not finally consumed | Partially covered | `tests/test_agent_product_operations.py` pending state; SuperTale generic task settlement | The paired test checks that the reservation is not confirmed |
+| 4 | Refund when no model call occurred | Partially covered | CE forbids delivered without evidence; SuperTale generic failure refund | The paired test checks the refund ledger of the four kinds of tasks |
+| 5 | Confirm only once after the model succeeds and the result is delivered | Auto-covered | `tests/test_agent_product_operations.py` terminal-state idempotency; `tests/test_api_freezone_workflow_runs.py` duplicate Workflow result submission | The paired ledger can serve as extra release evidence |
+| 6 | Refund/review for provider rejection, no result, cancellation, and process interruption | Partially covered | `tests/test_task_timeout.py`, `tests/test_agent_product_operations.py` | Add process-interruption paired tests for the four kinds of operations |
+| 7 | accepted/submitted keep the reservation; restart and late results converge | Partially covered | late delivery confirmation and `awaiting_reconciliation` tests; diagnostic counters | Execute one timeout → restart → confirm/refund in a real EE |
+| 8 | Duplicate MCP, transport retry, and duplicate finish/save do not charge twice | Auto-covered | operation idempotency, terminal result_ref consistency, Workflow draft duplicate submission tests | The paired ledger can serve as extra release evidence |
+| 9 | Skill-only, Recipe-only, Skill + N Recipes, reuse-only Recipes | Auto-covered | `tests/test_freezone_plugin.py` Skill Studio modes; server-side manifest/reuse validation | None |
+| 10 | N new Recipes correspond to N `recipe_generate` operations | Auto-covered | `tests/test_freezone_plugin.py::test_freezone_plugin_recipe_only_manifest_admits_and_delivers_each_recipe`; server-side count validation | None |
+| 11 | N model-based Recipe nodes correspond to N `recipe_result`; deterministic paths are free | Auto-covered | `tests/test_api_freezone_workflow_runs.py` workflow-run admission and deterministic compile tests | None |
+| 12 | Workflow result is charged once; Canvas confirm/apply does not charge again | Auto-covered | `test_metered_workflow_result_is_delivered_once_before_canvas_confirmation` | The paired ledger can serve as extra release evidence |
+| 13 | CRUD, import, copy, save, schema validation, and deterministic compile are not charged | Partially covered | CE routes have no product operation; deterministic compile regression | Add a cross-repository "zero ledger events" summary test |
+| 14 | Large amounts of text are charged extra by trusted `billable_chars` | Partially covered | the text runner persists actual output characters and creates an idempotent reservation by the result, the task core only confirms that reservation; EE enqueue does only price/balance preflight; Workflow MCP/planning replies reject body text bypasses over 4000 characters | Run a paired ledger with real personal/organization prices to confirm the actual character amount and the single terminal state |
+| 15 | Image/audio/video costs are not suppressed by the parent operation's `feature_included` | Partially covered | SuperTale generic tests of `feature_included` and independent media features | The paired workflow asserts both the parent product ledger and the media ledger |
+| 16 | Partial success confirms/refunds independently per artifact | Partially covered | each Recipe has an independent operation; a failure terminates only the corresponding operation | Add a mixed success/failure paired ledger test |
+| 17 | Personal, organization, member quota, organization override price | Partially covered | SuperTale generic organization billing tests | Run the organization override price paired test for the four new features |
+| 18 | CE works end to end with no local credit ledger | Auto-covered | CE uses `NoOpUsageMeter`; `agent_billing_state.py` does not exist; CE Workflow/Skill Studio tests | None |
 
-## 本分支新增证据
+## Evidence added on this branch
 
-- `53e3a30e`：服务端交叉校验 manifest、outline、put 结果、operation session/kind/artifact
-  和真实可复用 Recipe；同时校验 Workflow result operation 与 `compiled.skill_id`。
-- `d2e7e3be`：诊断计数覆盖证据绑定失败、缺证据 409、进入 reconciliation、晚到结果完成。
-- 当前 A1 变更：文本任务以实际交付内容创建可信 `billable_chars` 幂等预留并确认；
-  EE 入队只做价格/余额预检；Workflow Plan/MCP 与规划回复均拒绝超过 4000 个
-  可计费字符的正文旁路。
-- 2026-09-05 paired gate：CE `2b368b2d` + PR #186 head 后续提交 `8188a7d`；
-  产品证据套件 150 passed，EE 合约套件 127 passed。
-- 全量 CE 回归：5183 passed、16 skipped、3 deselected；其中 3 项因受限沙箱的端口/联网限制
-  首次失败，在允许对应能力后单独重跑通过。
+- `53e3a30e`: the server cross-validates the manifest, outline, put result, operation session/kind/artifact
+  and the truly reusable Recipes; it also validates the Workflow result operation against `compiled.skill_id`.
+- `d2e7e3be`: diagnostic counters cover evidence binding failures, 409 for missing evidence, entering reconciliation, and late-result completion.
+- Current A1 change: the text task creates and confirms a trusted `billable_chars` idempotent reservation from the actually delivered content;
+  EE enqueue does only price/balance preflight; Workflow Plan/MCP and planning replies both reject body text bypasses over 4000
+  billable characters.
+- 2026-09-05 paired gate: CE `2b368b2d` + a follow-up commit `8188a7d` of the PR #186 head;
+  product evidence suite 150 passed, EE contract suite 127 passed.
+- Full CE regression: 5183 passed, 16 skipped, 3 deselected; 3 of them failed at first because of port/network restrictions in the restricted sandbox,
+  and passed when re-run separately after the corresponding capability was allowed.
 
-## 发布前仍需人工保存的证据
+## Evidence that still needs to be saved manually before release
 
-1. 使用当前 DramaClaw 与 SuperTale PR #186 的精确 heads 跑 paired gate。
-2. 在真实价格配置下各执行一次 Workflow result、Recipe result、Workflow generate、
-   Recipe generate，保存 reservation、model evidence、result receipt 和 terminal settlement 的关联记录。
-3. 故意制造一次 accepted/submitted 超时并重启，确认 reservation 最终收敛且诊断计数变化正确。
-4. A1 完成后，用大段文字成功与失败各跑一次，核对实际输出字符计费和失败不确认。
+1. Run the paired gate with the exact heads of the current DramaClaw and SuperTale PR #186.
+2. Under real price configuration, execute one each of Workflow result, Recipe result, Workflow generate, and
+   Recipe generate, and save the correlated records of reservation, model evidence, result receipt, and terminal settlement.
+3. Deliberately cause one accepted/submitted timeout and restart, and confirm that the reservation finally converges and the diagnostic counters change correctly.
+4. After A1 is complete, run one success and one failure with a large block of text, and check the actual output character billing and that a failure does not confirm.

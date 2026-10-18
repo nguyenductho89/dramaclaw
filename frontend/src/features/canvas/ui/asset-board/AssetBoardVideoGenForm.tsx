@@ -15,23 +15,23 @@ import { readUrl } from '@/lib/url-params';
 import { AssetBoardReferenceDropZone } from './AssetBoardReferenceDropZone';
 
 /**
- * 表单在详情里的固定高度。比图片侧（184px）再高一档：视频表单的参数行多一整排
- * （模式 / 时长 / 场景优化 / 音频 / 真人审核 / 数量），矮了会把提示词区挤成一行。
- * 从 268 收到 204（用户要求）：提示词区仍有 5 行左右，省下的高度让给上方的
- * 视频内容框——详情现在是「媒体撑满 + 生成条钉底」，表单占多高就等于内容区少多高。
+ * The fixed height of the form in the detail. One notch taller than the image side (184px): the video form's parameter rows have a whole extra row
+ * (mode / duration / scene optimization / audio / real-person review / count), and being shorter would squeeze the prompt area into one line.
+ * Cut from 268 to 204 (user request): the prompt area still has about 5 lines, and the height saved goes to the video content box above -
+ * the detail is now "media fills + generation bar pinned to the bottom", and however tall the form is, the content area is that much shorter.
  */
 const FORM_HEIGHT_PX = 204;
 
 /**
- * 故事板详情里的视频生成条：媒体区下方挂 `VideoGenerationForm`，让**空视频节点**
- * 能从零出片、已有产物的节点能改参数重生成（与工作流走同一个
- * `useVideoGenerationForm`，因此提示词/参数/引用素材三边共用节点 data，两个视图
- * 天然同步）。
+ * The video generation bar in the storyboard detail: `VideoGenerationForm` is mounted below the media area, so an **empty video node**
+ * can generate a clip from scratch and a node with existing products can change parameters and regenerate (going through the same
+ * `useVideoGenerationForm` as the workflow, so prompt/parameters/reference materials share the node data on all three sides, and the two views
+ * sync naturally).
  *
- * `onOpenCharacterLibrary` 接的是真弹窗，不是死按钮：选中的图/视频/音频会在画布上
- * 生成对应类型的上游节点并连线到本节点（编排与工作流共用
- * `spawnVideoAssetLibraryReferences`），回流后表现为表单 chips 行里的引用素材。
- * 三类媒体全开（不像图片侧只收 image）——视频的 genMode 状态机正是靠上游类型驱动的。
+ * `onOpenCharacterLibrary` is wired to a real dialog, not a dead button: the selected images/videos/audio generate upstream nodes of the matching type
+ * on the canvas and connect to this node (the orchestration is shared with the workflow via
+ * `spawnVideoAssetLibraryReferences`), and after flowing back appear as the reference materials in the form's chips row.
+ * All three media kinds are open (unlike the image side that accepts only image) - the video genMode state machine is exactly driven by upstream types.
  */
 export function AssetBoardVideoGenForm({ nodeId }: { nodeId: string }): ReactElement {
   const { formProps } = useVideoGenerationForm(nodeId);
@@ -46,15 +46,15 @@ export function AssetBoardVideoGenForm({ nodeId }: { nodeId: string }): ReactEle
 
   return (
     <div className="flex w-full flex-col">
-      {/* 参考区放置层：从左列表把图/视/音节点卡片拖进来 → addEdge 接成当前节点的上游
-          引用，回流后经表单既有 upstream 派生显示为引用素材 chip（工作流零改动）。 */}
+      {/* Reference-area drop layer: dragging image/video/audio node cards in from the left list -> addEdge connects them as upstream
+      references of the current node, and after flowing back they show as reference material chips via the form's existing upstream derivation (zero change to the workflow). */}
       <AssetBoardReferenceDropZone nodeId={nodeId}>
         <div
           className={`flex w-full flex-col rounded-[var(--node-radius)] ${CANVAS_NODE_OPS_PANEL_CLASS}`}
           style={{ height: FORM_HEIGHT_PX }}
         >
-          {/* compact：详情里没有工作流那个叠在右上角的「放大」按钮，收掉 chips 行
-              为它预留的 pr-10，否则第一行右侧凭空缺一块。 */}
+          {/* compact: the detail has no "enlarge" button stacked at the top-right as in the workflow, so drop the pr-10 the chips row
+          reserved for it, otherwise a block is missing out of nowhere on the right of the first row. */}
           <VideoGenerationForm
             {...formProps}
             compact

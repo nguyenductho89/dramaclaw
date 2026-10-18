@@ -41,17 +41,17 @@ function grant(index: number) {
 
 describe("project grant mutation refresh", () => {
   it("only resolves once the member list has caught up", async () => {
-    // 配额只有前端在数，数的就是这份名单。mutation 先结束、刷新还在路上的话，
-    // 那个窗口里 isLoading 是 false、data 还是加人之前的旧数量——照它放行，
-    // 下一次添加就可能是真的第 26 个。
+    // The quota is only counted by the frontend, and what it counts is exactly this list. If the mutation finishes first while the refresh is still in flight,
+    // in that window isLoading is false and data is still the old count from before the member was added - letting it through,
+    // the next add could really be the 26th.
     const rows = [grant(0), grant(1)];
     server.use(
       http.get("http://localhost:3000/api/v1/projects/p1/grants", () =>
         HttpResponse.json({ ok: true, data: rows }),
       ),
       http.post("http://localhost:3000/api/v1/projects/p1/grants", async () => {
-        // 幂等地加：msw + ky 在 jsdom 里会把同一个 POST 的 resolver 跑两遍
-        // （拿一次普通 ky.post 单测过），照 push 会数出多出来的一行。
+        // Add idempotently: msw + ky in jsdom run the resolver of the same POST twice
+        // (verified with a plain ky.post unit test), and a plain push would count an extra row.
         if (!rows.some((row) => row.id === "g2")) rows.push(grant(2));
         return HttpResponse.json({ ok: true, data: grant(2) });
       }),
@@ -67,8 +67,8 @@ describe("project grant mutation refresh", () => {
 
     await result.current.add.mutateAsync({ principal_username: "user2", role: "editor" });
 
-    // mutateAsync 一返回，缓存里的名单就必须是加完人之后的那份。
-    // （读缓存而不是读 hook 快照：后者还要等 React 重渲染，测的就不是这件事了。）
+    // As soon as mutateAsync returns, the list in the cache must be the one after the member was added.
+    // (Read the cache instead of the hook snapshot: the latter has to wait for React to re-render, which would not test this.)
     const cached = queryClient.getQueryData<{ data: unknown[] }>(queryKeys.projectGrants("p1"));
     expect(cached?.data).toHaveLength(3);
   });

@@ -118,11 +118,11 @@ const SEEDANCE2_REFERENCE_DRAG_TYPE =
   "application/x-supertale-seedance2-reference";
 const BEAT_VIDEO_GENERATION_FEATURE_KEY = "mainline.beat_video_generation";
 /**
- * 后端在没把某个素材当参考发出去时给的 reference_label 哨兵值。真正发出去的
- * 素材拿到的是 `图片1` / `音频2` 这种编号——那是提示词里模型认的引用 token，
- * 跟界面语言无关，所以这里比对的也只能是后端那份原文。
+ * The sentinel reference_label the backend gives when an asset is not sent as a reference. Assets that are really sent
+ * get a number such as `image1` / `audio2` - that is the reference token the model recognizes in the prompt,
+ * independent of the UI language, so only the backend's original text can be compared here.
  */
-const SEEDANCE2_UNSENT_REFERENCE_LABEL = "未发送"; // i18n-exempt —— 后端契约值
+const SEEDANCE2_UNSENT_REFERENCE_LABEL = "not_sent";
 
 /** Prompt guidance inserted by UI controls follows the current UI language. */
 const SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES = [
@@ -189,7 +189,7 @@ const SEEDANCE2_RESOLUTION_OPTIONS_BY_MODEL = {
   "seedance-2.0": ["480p", "720p", "1080p"],
   "seedance-2.0-value": ["720p", "1080p"],
   "seedance-2.0-fast-value": ["720p", "1080p"],
-  // Seedance 1.5 Pro（有声）清晰度，来源 huimengi /api/v1/models
+  // Seedance 1.5 Pro (with audio) resolution, source: huimengi /api/v1/models
   "seedance-1.5-pro": ["480p", "720p", "1080p"],
 } as const;
 
@@ -260,7 +260,7 @@ export function shouldDisableDialogueOnlyBackendForBeat(
 }
 
 /**
- * 视频 sub-tab — first-frame preview + video preview + per-beat regen.
+ * Video sub-tab - first-frame preview + video preview + per-beat regen.
  * Per-beat backend override is deferred (see v3 spec P4 follow-up).
  */
 export function VideoPane({
@@ -296,9 +296,9 @@ export function VideoPane({
       queryKeys.videoPool(project, episode),
     ],
   });
-  // Beat 视频提示词生成在 EE 下是后台任务（同步分支仅 CE 单机命中），mutateAsync
-  // 只拿到入队 ack，isPending 一闪而过。用任务控制器让 loading 覆盖真实生成过程，
-  // 并在刷新后仍能恢复；完成后 invalidate beats 会把提示词回填到文本框。
+  // Beat video prompt generation is a background task under EE (the synchronous branch is hit only on single-machine CE), and mutateAsync
+  // only gets the enqueue ack while isPending flashes by. A task controller makes loading cover the real generation process,
+  // survives a refresh, and after completion invalidating beats fills the prompt back into the textarea.
   const beatVideoPromptTask = useTaskController({
     key: {
       taskType: "beat_video_prompt",
@@ -439,7 +439,7 @@ export function VideoPane({
     () => grokVideoRatioOptionsForBackend(selectedBackend),
     [selectedBackend],
   );
-  // seedance-1.5-pro：复用清晰度/时长控件（精品剧+解说剧），但不走 seedance2 多模态那套。
+  // seedance-1.5-pro: reuses the resolution/duration controls (premium drama + narrated drama), but does not go through the seedance2 multimodal path.
   const isSd15ProConfig =
     !showSeedance2Config && isSeedance15ProBackend(defaultBackend);
   const audioFloorSeconds =
@@ -447,7 +447,7 @@ export function VideoPane({
     beat.audio_duration_seconds > 0
       ? Math.ceil(beat.audio_duration_seconds)
       : null;
-  // 时长下限 = max(模型下限, 音频时长)；视频时长须 >= 音频时长。
+  // Duration lower bound = max(model lower bound, audio duration); video duration must be >= audio duration.
   const sd15DurationBounds = useMemo<Seedance2DurationBounds>(
     () => ({
       min: Math.max(seedance2DurationBounds.min, audioFloorSeconds ?? 0),
@@ -470,7 +470,7 @@ export function VideoPane({
         ? prev
         : normalizeSeedance2Resolution(fallbackRes),
     );
-    // 默认时长 = 音频下限（视频须 >= 音频）；用户可在控件里上调。
+    // Default duration = audio lower bound (video must be >= audio); the user can raise it in the control.
     setSd15Duration(
       clampDuration(audioFloorSeconds ?? sd15DurationBounds.min, sd15DurationBounds),
     );
@@ -708,13 +708,13 @@ export function VideoPane({
     () => seedance2ReferenceOptions.map((asset) => asset.reference_label),
     [seedance2ReferenceOptions],
   );
-  // 提示词 @图片N/@音频N 与参考素材的「label↔身份(URL)」映射，用于素材增删/重排后
-  // 把提示词里的编号按素材身份重新对号（mention 始终跟着它引用的素材走）。
+  // Mapping "label <-> identity (URL)" of the prompt's @image N/@audio N and the reference assets, used so that after assets are added/removed/reordered
+  // the numbers in the prompt are re-aligned by asset identity (a mention always follows the asset it references).
   const seedance2LabelIdentity = useMemo(
     () => buildSeedance2LabelIdentityMaps(seedance2ReferenceOptions),
     [seedance2ReferenceOptions],
   );
-  // 提示词里 hover 到 @图片N 时弹出的小图预览：reference_label → 图片 URL（仅图片素材）。
+  // Small image preview shown when hovering @image N in the prompt: reference_label -> image URL (image assets only).
   const seedance2MentionPreviews = useMemo(() => {
     const map: Record<string, string> = {};
     for (const asset of seedance2ReferenceOptions) {
@@ -1106,10 +1106,10 @@ export function VideoPane({
     setSeedance2Draft(next);
   };
 
-  // 参考素材的「label↔身份(URL)」映射变化时（增删/重排导致后端重新编号），把提示词里
-  // 的 @图片N/@音频N 按素材身份重新对号、被删的移除。后端拿到的仍是图片N，生成视频时
-  // 编号已是最新位置。放在 beat 重置 effect 之后，读到的是重置后的草稿。
-  // 前提：后端在素材增删时不自行重编号提示词（当前 bug「提示词不同步」即说明如此）。
+  // When the "label <-> identity (URL)" mapping of the reference assets changes (add/remove/reorder makes the backend renumber), the
+  // @image N/@audio N in the prompt are re-aligned by asset identity, and deleted ones are removed. What the backend still receives is image N, and when generating the video
+  // the numbers are already at their latest positions. Placed after the beat-reset effect, so it reads the reset draft.
+  // Premise: the backend does not renumber the prompt itself when assets are added/removed (the current bug "prompt out of sync" shows exactly this).
   const prevSeedance2LabelIdentityRef = useRef<{
     beatNumber: number;
     maps: Seedance2LabelIdentityMaps;
@@ -1121,7 +1121,7 @@ export function VideoPane({
       beatNumber: beat.beat_number,
       maps: seedance2LabelIdentity,
     };
-    // 切 beat / 首帧：只记录基线，不重映射（避免用上一个 beat 的映射改新 beat 的词）。
+    // Switching beat / first frame: only record a baseline, do not remap (to avoid using the previous beat's mapping to alter the new beat's words).
     if (!prev || prev.beatNumber !== beat.beat_number) return;
     if (sameSeedance2LabelIdentity(prev.maps, seedance2LabelIdentity)) return;
     const current = seedance2DraftRef.current;
@@ -1141,7 +1141,7 @@ export function VideoPane({
     if (nextGuidance !== current.prompt_guidance) {
       updateSeedance2Draft("prompt_guidance", nextGuidance);
     }
-    // updateSeedance2Draft / seedance2DraftRef 为组件内稳定引用，无需进依赖。
+    // updateSeedance2Draft / seedance2DraftRef are stable references inside the component, so no need to put them in the dependency list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedance2LabelIdentity, beat.beat_number, showPromptConfig]);
   const insertSeedance2Reference = (
@@ -3383,12 +3383,10 @@ function defaultSeedance2Config(
       enabled: textOverlay.enabled === true,
       kind: normalizeSeedance2TextOverlayKind(textOverlay.kind),
       content: String(textOverlay.content ?? ""),
-      // 这三项直接进提示词里的字幕规格，模型按中文描述执行，不跟界面语言走。
-      // i18n-exempt-start
-      placement: String(textOverlay.placement ?? "画面下方居中"),
-      timing: String(textOverlay.timing ?? "全片持续"),
-      style: String(textOverlay.style ?? "干净易读"),
-      // i18n-exempt-end
+      // These three go straight into the subtitle spec inside the prompt, and the model executes from the English description; they do not follow the UI language.
+      placement: String(textOverlay.placement ?? "bottom center"),
+      timing: String(textOverlay.timing ?? "throughout the clip"),
+      style: String(textOverlay.style ?? "clean and readable"),
       speaker: String(textOverlay.speaker ?? ""),
     },
   };
@@ -3423,7 +3421,7 @@ function seedance2ModelFromBackend(value: string | null | undefined): string {
   return text;
 }
 
-// seedance-1.5-pro（有声）走非 seedance2 生成器路径，但同样需要清晰度/时长控件（精品剧+解说剧）。
+// seedance-1.5-pro (with audio) goes through the non-seedance2 generator path, but also needs the resolution/duration controls (premium drama + narrated drama).
 function isSeedance15ProBackend(value: string | null | undefined): boolean {
   const model = seedance2ModelFromBackend(value);
   return model === "seedance-1.5-pro" || model === "seedance_pro";

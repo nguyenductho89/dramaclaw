@@ -85,7 +85,7 @@ async def test_director_control_to_sketch_runner_logs_to_dedicated_task(
         "director_control_to_sketch",
     ]
     assert [update["current_task"] for update in manager.updates] == [
-        "开始 Beat 3 Direct Render 转草图...",
-        "提交图像模型生成草图...",
-        f"草图已写入: {promoted_sketch}",
+        "Starting Beat 3 Direct Render to sketch...",
+        "Submitting to the image model to generate the sketch...",
+        f"Sketch written: {promoted_sketch}",
     ]

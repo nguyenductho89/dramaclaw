@@ -10,17 +10,17 @@ import {
 const DEFAULT_NODE_HEIGHT = 320;
 const COLUMN_GAP = 80;
 const ROW_GAP = 48;
-// 同一行内两个连通分量之间的水平间距，比纵向间距略大以便视觉分隔。
+// The horizontal gap between two connected components in the same row, slightly larger than the vertical gap for visual separation.
 const COMPONENT_GAP_X = 120;
-// 不同行之间的纵向间距。
+// The vertical gap between different rows.
 const COMPONENT_GAP_Y = 96;
-// 重心法分配纵坐标后，允许保留的最大「全宽空白带」高度。超过它的空白带会被压缩到
-// 这个值——空白带指某段 Y 区间内组件里没有任何节点覆盖，压缩纯粹是把带下方所有节点
-// 统一上移，相对几何与连线走向不变，只删掉视觉上的大片空隙。
+// After assigning vertical coordinates by the barycenter method, the maximum "full-width blank band" height allowed to remain. Blank bands beyond it are compressed to
+// this value - a blank band means a Y interval in which no node of the component covers it, and compression simply shifts all nodes below the band
+// up together, keeping relative geometry and edge direction unchanged and only deleting large visual gaps.
 const MAX_VERTICAL_GAP = 120;
-// 整理后画布的目标宽高比（屏幕通常 16:9 略宽于 1，这里取 1.6:1）。
-// 用来根据总面积估算 shelf 打包的条带宽度，避免所有连通分量被堆成一条
-// 几千像素长的纵向带子（旧版行为）。
+// The target aspect ratio of the canvas after tidying (screens are usually 16:9, slightly wider than 1; 1.6:1 is taken here).
+// Used to estimate the strip width of shelf packing from the total area, avoiding all connected components being piled into one
+// vertical strip thousands of pixels long (the old behavior).
 const TARGET_PAGE_ASPECT = 16 / 9;
 
 interface NodeSize {
@@ -121,9 +121,9 @@ function computeLevels(
       queue.push(id);
     }
   }
-  // 最长路径分层；用节点总数做层级上限，避免「环 + 上游入口」时 candidate 无限增长
-  // 导致死循环（用户手动连线没有任何环检测，整理时会卡死整页）。简单路径层级不超过
-  // N-1，所以 DAG 永远碰不到这个上限、行为不变；环里的节点则在上限处停止传播。
+  // Longest-path layering; the layer cap is the total node count, to avoid candidate growing without bound when "cycle + upstream entry"
+  // causes an infinite loop (user-drawn edges have no cycle detection at all, and tidying would freeze the whole page). A simple path's depth is at most
+  // N-1, so a DAG never reaches this cap and behaves the same; nodes in a cycle stop propagating at the cap.
   const maxLevel = nodeIds.length;
   while (queue.length > 0) {
     const id = queue.shift()!;
@@ -154,7 +154,7 @@ interface LayoutComponentResult {
   height: number;
 }
 
-// 排序/坐标的迭代次数：经验上 4~8 趟即可收敛，过多收益递减。
+// Number of iterations for ordering/coordinates: empirically 4~8 passes suffice to converge, and more has diminishing returns.
 const ORDER_SWEEPS = 6;
 const COORD_SWEEPS = 8;
 
@@ -177,9 +177,9 @@ function mean(values: number[]): number {
 }
 
 /**
- * 在固定的层内顺序下，把各节点中心尽量贴近 `desired`，同时保证相邻节点不重叠
- * （间距 = 两者半高之和 + ROW_GAP）。先按顺序做一次向下挤压消重叠，再整体
- * 平移使该列中心的均值对齐 desired 的均值，避免多趟迭代后整列单向漂移。
+ * With the in-layer order fixed, bring each node's center as close as possible to `desired`, while guaranteeing adjacent nodes do not overlap
+ * (gap = sum of the two half-heights + ROW_GAP). First squeeze downward once in order to remove overlap, then translate the whole
+ * so the column center's mean aligns with desired's mean, avoiding the whole column drifting one way after multiple passes.
  */
 function resolveColumnCenters(
   orderedIds: string[],
@@ -208,10 +208,10 @@ function resolveColumnCenters(
 }
 
 /**
- * 压缩组件内的「全宽纵向空白带」。重心法可能把稀疏区域拉得很开，导致某段 Y 区间里
- * 所有列都没有节点——一条横贯的空白带。这里按节点纵向区间的并集找出这些空白带，把
- * 超过 MAX_VERTICAL_GAP 的部分整体压掉：对空白带下方的所有节点做统一上移，因此保留了
- * 相对顺序、不产生重叠、连线走向也不变，只是删掉空隙。就地修改 centerY。
+ * Compress the "full-width vertical blank bands" in a component. The barycenter method may pull sparse regions far apart, so that in some Y interval
+ * all columns have no node - a blank band running across. Here these bands are found by the union of node vertical intervals, and the part
+ * exceeding MAX_VERTICAL_GAP is pressed out as a whole: all nodes below the band are shifted up uniformly, so relative order is kept,
+ * no overlap is produced, edge direction is unchanged, and only the gaps are deleted. Modifies centerY in place.
  */
 function compactVerticalBands(
   ids: string[],
@@ -260,7 +260,7 @@ function layoutComponent(
   }
 
   const level = computeLevels(ids, outgoing, incoming);
-  // 每层节点 id 列表；初始顺序按原始位置（上→下、左→右），为后续迭代提供稳定起点。
+  // List of node ids per layer; the initial order is by original position (top -> bottom, left -> right), giving later iterations a stable starting point.
   const columns = new Map<number, string[]>();
   for (const node of componentNodes) {
     const lvl = level.get(node.id) ?? 0;
@@ -286,8 +286,8 @@ function layoutComponent(
     return map;
   };
 
-  // —— 阶段 1：中位数启发式排序，减少相邻层之间的连线交叉 ——
-  // 每趟把某层按「邻接层中相连节点的位置中位数」重排；上下交替扫描多趟收敛。
+  // -- Phase 1: median heuristic ordering, reducing edge crossings between adjacent layers --
+  // Each pass reorders a layer by "the median of the positions of connected nodes in the adjacent layer"; alternating up and down sweeps converge over several passes.
   for (let sweep = 0; sweep < ORDER_SWEEPS; sweep += 1) {
     const downward = sweep % 2 === 0;
     const order = downward ? sortedLevels.slice(1) : [...sortedLevels].reverse().slice(1);
@@ -302,7 +302,7 @@ function layoutComponent(
           .map((neighbor) => adjIndex.get(neighbor))
           .filter((value): value is number => value !== undefined)
           .sort((a, b) => a - b);
-        // 无相连邻居的节点保持原相对位置，避免被随意打散。
+        // Nodes with no connected neighbors keep their relative positions, avoiding being scattered at random.
         const key = neighborIndices.length > 0 ? median(neighborIndices) : currentIndex.get(id)!;
         return { id, key, fallback: currentIndex.get(id)! };
       });
@@ -311,7 +311,7 @@ function layoutComponent(
     }
   }
 
-  // —— 列宽 / 列 X 坐标（左→右按顺序、同层等宽居中）——
+  // -- Column width / column X coordinates (left -> right in order, equal width and centered within a layer) --
   const columnWidths = new Map<number, number>();
   for (const lvl of sortedLevels) {
     let maxWidth = 0;
@@ -327,9 +327,9 @@ function layoutComponent(
     xCursor += (columnWidths.get(lvl) ?? 0) + COLUMN_GAP;
   }
 
-  // —— 阶段 2：纵向坐标分配（重心法）——
-  // 先按顺序堆叠得到初始中心；再多趟把每个节点拉向相邻层中相连节点的平均高度，
-  // 让有连线的节点纵向对齐，长斜线/交叉显著减少。
+  // -- Phase 2: vertical coordinate assignment (barycenter method) --
+  // First stack in order to get initial centers; then over several passes pull each node toward the average height of its connected nodes in the adjacent layer,
+  // vertically aligning connected nodes and noticeably reducing long diagonals/crossings.
   const heights = new Map<string, number>();
   for (const id of ids) {
     heights.set(id, getNodeSize(nodeById.get(id)!).height);
@@ -364,10 +364,10 @@ function layoutComponent(
     }
   }
 
-  // —— 阶段 3：压缩全宽纵向空白带，去掉重心法留下的大片中间空白 ——
+  // -- Phase 3: compress full-width vertical blank bands, removing the large middle gaps left by the barycenter method --
   compactVerticalBands(ids, heights, centerY);
 
-  // —— 收尾：把中心坐标换算成左上角坐标，并归一化到组件局部 (0,0) ——
+  // -- Wrap-up: convert center coordinates to top-left coordinates and normalize to the component-local (0,0) --
   const positions = new Map<string, { x: number; y: number }>();
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
@@ -431,8 +431,8 @@ export function computeAutoLayout(
   const baseY = Number.isFinite(anchorY) ? anchorY : 0;
 
   const components = computeComponents(topLevelNodes, edgePairs);
-  // 排序仍按"原始位置左上 → 右下"，让整理后的相对顺序贴近用户的心智位置，
-  // 便于在重排后凭印象快速定位某个节点。
+  // Ordering is still by "original position top-left -> bottom-right", keeping the relative order after tidying close to the user's mental positions,
+  // making it easy to quickly locate a node from memory after the rearrangement.
   components.sort((a, b) => {
     const aMin = Math.min(...a.map((node) => node.position.y));
     const bMin = Math.min(...b.map((node) => node.position.y));
@@ -444,15 +444,15 @@ export function computeAutoLayout(
     return aX - bX;
   });
 
-  // 先对每个连通分量内部做布局，拿到各自的 bbox。
+  // First lay out inside each connected component and get their respective bboxes.
   const laidOut = components.map((component) => ({
     component,
     layout: layoutComponent(component, edgePairs),
   }));
 
-  // 估算 shelf 打包的目标条带宽度：按总面积 + 期望宽高比反推，并保证至少
-  // 能容纳最宽的单个分量。这样既能让一行塞下若干小分量，也避免大分量被
-  // 强行换行截断。
+  // Estimate the target strip width of shelf packing: derive it back from the total area + desired aspect ratio, and guarantee at least
+  // room for the widest single component. This lets one row hold several small components, while also avoiding a large component being
+  // cut off by a forced line break.
   const totalArea = laidOut.reduce(
     (acc, item) => acc + item.layout.width * item.layout.height,
     0,
@@ -466,8 +466,8 @@ export function computeAutoLayout(
     : 0;
   const stripWidth = Math.max(idealStripWidth, widestComponent);
 
-  // Shelf 打包：从左到右往当前行塞，超出 stripWidth 就换下一行。
-  // 行高 = 当行内分量的最大高度，下一行用 baseY + rowYCursor 起算。
+  // Shelf packing: fill the current row from left to right, and move to the next row when stripWidth is exceeded.
+  // Row height = the maximum height of the components in that row, and the next row counts from baseY + rowYCursor.
   const positions: Record<string, { x: number; y: number }> = {};
   let rowXCursor = 0;
   let rowYCursor = 0;

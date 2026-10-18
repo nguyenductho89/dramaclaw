@@ -11,8 +11,8 @@ const poseEditorQueryMock = vi.hoisted(() => vi.fn());
 const cropSketchMock = vi.hoisted(() => vi.fn());
 
 const SKETCH_CROP_DIALOG_TRANSLATIONS: Record<string, string> = {
-  "episode.workbench.sketch.cropTitleWithAspect": "裁剪 {{aspect}}",
-  "episode.workbench.sketch.cropDragHandle": "移动裁剪区域",
+  "episode.workbench.sketch.cropTitleWithAspect": "Crop {{aspect}}",
+  "episode.workbench.sketch.cropDragHandle": "Move crop area",
 };
 
 vi.mock("react-i18next", () => ({
@@ -88,12 +88,12 @@ describe("SketchCropDialog", () => {
       />,
     );
 
-    expect(await screen.findByText("裁剪 16:9")).toBeInTheDocument();
+    expect(await screen.findByText("Crop 16:9")).toBeInTheDocument();
     expect(screen.queryByLabelText("X")).not.toBeInTheDocument();
     expect(screen.getByAltText("B2")).toHaveClass("object-contain");
 
     await waitFor(() => {
-      expect(screen.getByLabelText("移动裁剪区域")).toHaveStyle({
+      expect(screen.getByLabelText("Move crop area")).toHaveStyle({
         left: "0%",
         top: "30.870083432657925%",
         width: "100%",
@@ -163,7 +163,7 @@ describe("SketchCropDialog", () => {
   it("shows a load error instead of an infinite spinner", () => {
     poseEditorQueryMock.mockReturnValue({
       data: undefined,
-      error: new Error("Beat 4 缺少当前草图"),
+      error: new Error("Beat 4 is missing the current sketch"),
       isError: true,
     });
 
@@ -177,7 +177,7 @@ describe("SketchCropDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Beat 4 缺少当前草图")).toBeInTheDocument();
+    expect(screen.getByText("Beat 4 is missing the current sketch")).toBeInTheDocument();
     expect(screen.queryByText("Loading")).not.toBeInTheDocument();
   });
 
@@ -210,7 +210,7 @@ describe("SketchCropDialog", () => {
       }),
     });
 
-    const cropBox = screen.getByLabelText("移动裁剪区域");
+    const cropBox = screen.getByLabelText("Move crop area");
     await waitFor(() => {
       expect(cropBox).toHaveStyle({
         left: "0.8787346221441126%",

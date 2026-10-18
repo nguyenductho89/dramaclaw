@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 
 /**
- * 关键元素：用户把画布节点手动标记成「关键元素」并归类（对标 liblib 的
- * 节点「...」→ 设置关键元素 → 人物/场景/物品/其他）。标记只写在节点 data 上
- * （data.keyElementCategory），是画布级、随节点持久化的纯展示元数据——工作流侧
- * 不读它，零影响。故事板顶部的关键元素栏据此把被标记的节点常驻展示 + 分类筛选。
+ * Key elements: users manually mark canvas nodes as "key elements" and categorize them (matching liblib's
+ * node "..." -> Set key element -> Character/Scene/Object/Other). The mark is only written on the node data
+ * (data.keyElementCategory); it is canvas-level display metadata persisted with the node - the workflow side
+ * does not read it, zero impact. The key element bar at the top of the storyboard pins marked nodes and filters by category.
  */
 export type KeyElementCategory = 'character' | 'scene' | 'object' | 'other';
 
-/** 稳定 key 顺序（人物 → 场景 → 物品 → 其他），栏内分类下拉与排序都按它。 */
+/** Stable key order (character -> scene -> object -> other); the bar's category dropdown and sorting follow it. */
 export const KEY_ELEMENT_CATEGORY_KEYS: readonly KeyElementCategory[] = [
   'character',
   'scene',
@@ -17,16 +18,17 @@ export const KEY_ELEMENT_CATEGORY_KEYS: readonly KeyElementCategory[] = [
   'other',
 ];
 
+// Getters so the label follows the active language at read time (not frozen at import).
 export const KEY_ELEMENT_CATEGORY_LABEL: Record<KeyElementCategory, string> = {
-  character: '人物',
-  scene: '场景',
-  object: '物品',
-  other: '其他',
+  get character() { return i18n.t('canvas.keyElement.character'); },
+  get scene() { return i18n.t('canvas.keyElement.scene'); },
+  get object() { return i18n.t('canvas.keyElement.object'); },
+  get other() { return i18n.t('canvas.keyElement.other'); },
 };
 
 const CATEGORY_KEY_SET = new Set<string>(KEY_ELEMENT_CATEGORY_KEYS);
 
-/** 从节点 data 读关键元素分类；未标记 / 值非法 → null。 */
+/** Read the key element category from node data; unmarked / invalid value -> null. */
 export function readKeyElementCategory(data: unknown): KeyElementCategory | null {
   if (!data || typeof data !== 'object') return null;
   const raw = (data as Record<string, unknown>).keyElementCategory;

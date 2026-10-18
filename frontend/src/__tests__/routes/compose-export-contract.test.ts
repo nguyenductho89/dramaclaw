@@ -24,7 +24,7 @@ describe("compose export API alignment", () => {
       "src/routes/_app/projects.$project/episodes.$episode/compose.lazy.tsx",
     );
 
-    // The 添加背景音乐 toggle was removed from the UI; the compose payload keeps
+    // The "Add background music" toggle was removed from the UI; the compose payload keeps
     // the flag explicitly off so the backend default never re-enables it.
     expect(compose).toContain("add_bgm: false");
     expect(compose).not.toContain("setAddBgm");
@@ -48,7 +48,7 @@ describe("compose export API alignment", () => {
     const compose = read(
       "src/routes/_app/projects.$project/episodes.$episode/compose.lazy.tsx",
     );
-    const zh = read("public/locales/zh/translation.json");
+    const viLocale = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(compose).toContain('t("episode.compose.blockerCount"');
@@ -57,7 +57,7 @@ describe("compose export API alignment", () => {
     expect(compose).toContain('t("episode.compose.beatLabel")');
     expect(compose).not.toContain(">Beat<");
 
-    for (const locale of [zh, en]) {
+    for (const locale of [viLocale, en]) {
       expect(locale).toContain('"blockerCount"');
       expect(locale).toContain('"blockerSubtitle"');
       expect(locale).toContain('"missingItemSeparator"');

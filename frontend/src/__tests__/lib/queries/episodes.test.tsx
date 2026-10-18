@@ -58,7 +58,7 @@ describe("episode identity planning", () => {
           return HttpResponse.json({
             ok: true,
             task_type: "identity_planner",
-            message: "第 1 集身份规划任务已启动",
+            message: "Episode 1 identity planning task started",
           });
         },
       ),
@@ -86,7 +86,7 @@ describe("episode identity planning", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "计费规则未配置，请联系管理员设置积分规则",
+              error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
               data: {
                 error_code: "BILLING_RULE_NOT_CONFIGURED",
                 billing_kind: "feature",
@@ -113,7 +113,7 @@ describe("episode planning", () => {
         HttpResponse.json(
           {
             ok: false,
-            error: "计费规则未配置，请联系管理员设置积分规则",
+            error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
             data: {
               error_code: "BILLING_RULE_NOT_CONFIGURED",
               billing_kind: "feature",
@@ -145,7 +145,7 @@ describe("episode planning", () => {
             HttpResponse.json(
               {
                 ok: false,
-                error: "计费规则未配置，请联系管理员设置积分规则",
+                error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
                 data: {
                   error_code: "BILLING_RULE_NOT_CONFIGURED",
                   billing_kind: "feature",
@@ -221,7 +221,7 @@ describe("pipeline status contract", () => {
           video: false,
         },
         next_step: "global_optimize_video",
-        next_step_name: "全局视频优化",
+        next_step_name: "Global video optimization",
       }),
     ).toEqual([
       {
@@ -242,15 +242,15 @@ describe("episode list stats", () => {
       deriveEpisodeStats([
         {
           number: 1,
-          title: "第一集",
-          identity_ids: ["秦_幼年", "赵_青年"],
-          key_events: ["入宫"],
+          title: "Episode One",
+          identity_ids: ["Qin_child", "Zhao_young_adult"],
+          key_events: ["enter the palace"],
         },
         {
           number: 2,
-          title: "第二集",
-          identity_ids: ["秦_青年"],
-          key_events: ["冲突", "离别"],
+          title: "Episode Two",
+          identity_ids: ["Qin_young_adult"],
+          key_events: ["conflict", "parting"],
         },
       ]),
     ).toEqual({
@@ -268,23 +268,23 @@ describe("episode list cache merging", () => {
     expect(
       mergeEpisodeIntoList(
         [
-          { number: 1, title: "第一集", identity_ids: ["陆辰_青年时期"] },
-          { number: 2, title: "第二集", identity_ids: [] },
+          { number: 1, title: "Episode One", identity_ids: ["Lu Chen_young_adult"] },
+          { number: 2, title: "Episode Two", identity_ids: [] },
         ],
         {
           number: 2,
-          title: "第二集",
-          identity_ids: ["陆辰_青年时期", "沈月白_青年时期"],
-          identity_default_map: { 陆辰: "陆辰_青年时期" },
+          title: "Episode Two",
+          identity_ids: ["Lu Chen_young_adult", "Shen Yuebai_young_adult"],
+          identity_default_map: { "Lu Chen": "Lu Chen_young_adult" },
         },
       ),
     ).toEqual([
-      { number: 1, title: "第一集", identity_ids: ["陆辰_青年时期"] },
+      { number: 1, title: "Episode One", identity_ids: ["Lu Chen_young_adult"] },
       {
         number: 2,
-        title: "第二集",
-        identity_ids: ["陆辰_青年时期", "沈月白_青年时期"],
-        identity_default_map: { 陆辰: "陆辰_青年时期" },
+        title: "Episode Two",
+        identity_ids: ["Lu Chen_young_adult", "Shen Yuebai_young_adult"],
+        identity_default_map: { "Lu Chen": "Lu Chen_young_adult" },
       },
     ]);
   });
@@ -304,9 +304,9 @@ describe("episode scene / prop planning", () => {
               kind: "scene",
               total_count: 1,
               new_count: 1,
-              scene_menu: [{ scene_id: "宫门" }],
+              scene_menu: [{ scene_id: "Palace Gate" }],
               logs: ["planned scenes"],
-              episode: { number: 1, title: "第一集", scene_menu: [{ scene_id: "宫门" }] },
+              episode: { number: 1, title: "Episode One", scene_menu: [{ scene_id: "Palace Gate" }] },
             },
           });
         },
@@ -353,7 +353,7 @@ describe("episode scene / prop planning", () => {
             backend: "celery",
             queue: "default",
             data: { target_episode: 2, asset_kind: "scene" },
-            message: "第 2 集场景规划已进入队列",
+            message: "Episode 2 scene planning queued",
           }),
       ),
     );
@@ -372,7 +372,7 @@ describe("episode scene / prop planning", () => {
     expect(result.current.data).toMatchObject({
       ok: true,
       task_type: "episode_scene_planner",
-      message: "第 2 集场景规划已进入队列",
+      message: "Episode 2 scene planning queued",
     });
     expect(result.current.isError).toBe(false);
     expect(invalidateSpy).toHaveBeenCalledWith({
@@ -392,9 +392,9 @@ describe("episode scene / prop planning", () => {
             data: {
               kind: "prop",
               total_count: 1,
-              prop_menu: [{ prop_id: "玉佩", prop_type: "object" }],
+              prop_menu: [{ prop_id: "jade pendant", prop_type: "object" }],
               logs: ["planned props"],
-              episode: { number: 1, title: "第一集", prop_menu: [{ prop_id: "玉佩" }] },
+              episode: { number: 1, title: "Episode One", prop_menu: [{ prop_id: "jade pendant" }] },
             },
           });
         },
@@ -441,20 +441,20 @@ describe("episode detail queries", () => {
             ok: true,
             data: {
               number: 1,
-              title: "第一集",
-              summary: "摘要",
-              raw_content: "原文",
-              beat_source_text: "分镜源文本",
-              content_summary: "摘要",
-              character_names: ["秦"],
-              key_events: ["入宫"],
-              cliffhanger: "悬念",
-              identity_ids: ["秦_幼年"],
-              identity_default_map: { 秦: "秦_幼年" },
-              scene_menu: [{ scene_id: "宫门" }],
+              title: "Episode One",
+              summary: "summary",
+              raw_content: "original text",
+              beat_source_text: "beat source text",
+              content_summary: "summary",
+              character_names: ["Qin"],
+              key_events: ["enter the palace"],
+              cliffhanger: "cliffhanger",
+              identity_ids: ["Qin_child"],
+              identity_default_map: { Qin: "Qin_child" },
+              scene_menu: [{ scene_id: "Palace Gate" }],
               prop_menu: [
                 {
-                  prop_id: "玉佩",
+                  prop_id: "jade pendant",
                   prop_type: "object",
                   visual_prompt: "",
                   description: "",
@@ -472,10 +472,10 @@ describe("episode detail queries", () => {
     });
 
     await waitFor(() =>
-      expect(result.current.data?.data.beat_source_text).toBe("分镜源文本"),
+      expect(result.current.data?.data.beat_source_text).toBe("beat source text"),
     );
     expect(result.current.data?.data.identity_default_map).toEqual({
-      秦: "秦_幼年",
+      Qin: "Qin_child",
     });
     expect(requestedPath).toBe("/api/v1/projects/demo/episodes/1");
   });
@@ -491,9 +491,9 @@ describe("episode detail queries", () => {
             ok: true,
             data: {
               number: 1,
-              title: "第一集",
-              beat_source_text: "新分镜源文本",
-              identity_default_map: { 秦: "秦_青年" },
+              title: "Episode One",
+              beat_source_text: "new beat source text",
+              identity_default_map: { Qin: "Qin_young_adult" },
             },
           });
         },
@@ -511,15 +511,15 @@ describe("episode detail queries", () => {
     result.current.mutate({
       episodeNum: 1,
       data: {
-        beat_source_text: "新分镜源文本",
-        identity_default_map: { 秦: "秦_青年" },
+        beat_source_text: "new beat source text",
+        identity_default_map: { Qin: "Qin_young_adult" },
       },
     });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(receivedBody).toEqual({
-      beat_source_text: "新分镜源文本",
-      identity_default_map: { 秦: "秦_青年" },
+      beat_source_text: "new beat source text",
+      identity_default_map: { Qin: "Qin_young_adult" },
     });
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.episodes("demo"),

@@ -25,7 +25,7 @@ path — platform and organization alike:
 
 The SDK's own default is 2, so ``max_retries=0`` has to be passed explicitly;
 deleting that argument silently restores retries. That is what these tests
-pin. An earlier round of review proposed a ``组织 0 / 直营 1`` split; it was
+pin. An earlier round of review proposed a ``organization 0 / platform 1`` split; it was
 retracted (dramaclaw/dramaclaw#274, 2026-08-11) because fact 1 makes the
 platform path no safer than the organization path — same gateway, same settle.
 """
@@ -249,7 +249,7 @@ def _one_message():
 
 @pytest.mark.parametrize("branch", ["request", "request_stream"])
 def test_gateway_platform_branch_disables_retry(monkeypatch, branch):
-    """直营. request_stream is a second site and drifts independently."""
+    """Platform path. request_stream is a second site and drifts independently."""
 
     from pydantic_ai.exceptions import ModelHTTPError
 

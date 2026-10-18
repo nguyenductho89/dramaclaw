@@ -9,8 +9,8 @@ SKILL_DIR = REPO_ROOT / ".hermes" / "skills" / "dramaclaw"
 def test_dramaclaw_skill_uses_progressive_disclosure() -> None:
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
 
-    assert len(skill.encode("utf-8")) < 10_000
-    assert "流程顺序以 `playbooks/` 为唯一事实源" in skill
+    assert len(skill.encode("utf-8")) < 14_000
+    assert "`playbooks/` is the single source of truth for the process order" in skill
     assert "references/step-api-reference.md" in skill
     assert "pipeline-details.md" not in skill
 
@@ -23,12 +23,12 @@ def test_dramaclaw_playbooks_own_current_step_order() -> None:
         encoding="utf-8"
     )
 
-    assert "流程顺序的唯一事实源" in init
-    assert "流程顺序的唯一事实源" in episode
-    assert "逐集生成阶段（Steps 8-16）" in episode
+    assert "single source of truth for the process order" in init
+    assert "single source of truth for the per-episode process order" in episode
+    assert "Per-episode generation stage (Steps 8-16)" in episode
     assert "Steps 8-21" not in episode
-    assert "本文件只决定执行前是否再次询问用户" in run_modes
-    assert "不拥有流程顺序决策权" in step_api
+    assert "This file only decides whether to ask the user again before execution" in run_modes
+    assert "does not own process-order decisions" in step_api
 
 
 def test_dramaclaw_media_delivery_uses_display_tools() -> None:
@@ -36,13 +36,13 @@ def test_dramaclaw_media_delivery_uses_display_tools() -> None:
         encoding="utf-8"
     )
 
-    assert "路径和 URL 只作为工具输入，不直接输出给用户" in delivery
+    assert "paths and URLs are only tool inputs and are not output to the user directly" in delivery
     assert "dramaclaw_get_character_media" in delivery
     assert "dramaclaw_get_sketches" in delivery
     assert "dramaclaw_get_first_frames" in delivery
     assert "dramaclaw_get_episode_media" in delivery
     assert "dramaclaw_get_final_video" in delivery
-    assert "直接把相对路径当结果交付" not in delivery
+    assert "deliver the relative path directly as the result" not in delivery
 
 
 def test_dramaclaw_evals_are_well_formed() -> None:

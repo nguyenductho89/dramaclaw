@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/guides/telemetry.md)
-
 # Telemetry Notes / FAQ
 
 > **In short: DramaClaw CE collects and reports no usage data by default.** No instrumentation SDK, no phone-home, no anonymous statistics. Below we describe the only optional "observability tracing," which is also off by default.
@@ -36,4 +33,4 @@ Behavior details:
 ## Related
 
 - [Configuring model providers](../getting-started/configuring-models.md) (you control the only outbound calls)
-- [Environment variable reference](../reference/environment-variables.md) ｜ [Self-hosting handbook](self-hosting.md)
+- [Environment variable reference](../reference/environment-variables.md) | [Self-hosting handbook](self-hosting.md)

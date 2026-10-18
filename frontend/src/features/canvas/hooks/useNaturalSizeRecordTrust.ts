@@ -3,27 +3,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * 节点数据里那组 imageNaturalWidth/Height，什么时候不能信。
+ * When the imageNaturalWidth/Height group in node data cannot be trusted.
  *
- * 记录存的是原图真实像素尺寸，主体图靠它决定能不能喂降采样副本。但记录没有和任
- * 何 URL 绑定，而节点的图是会被换掉的（画册选主图、从历史恢复、生成完成回填，
- * 三条路都只改 imageUrl/previewImageUrl，没人清这组数）。信着旧记录去喂副本，
- * onLoad 就会把一组属于别的图的数字当成真尺寸写回去，角标和自动尺寸一起错。
+ * The record stores the original image's real pixel size, which the body image relies on to decide whether it may be fed a downsampled copy. But the record is not bound to any
+ * URL, while the node's image can be swapped (album main-image selection, restore from history, generation completion backfill -
+ * all three paths change only imageUrl/previewImageUrl, and nobody clears this group of numbers). Trusting the old record to feed a copy,
+ * onLoad would write numbers belonging to another image back as the real size, and the badge and auto size would both be wrong.
  *
- * 光看副本认不出来这件事：副本的长边被钉死在预算上，原图有多大这个信息在降采样
- * 时就丢了，5504x3072 和 2752x1536 的 card 副本都是 1280x714。所以判据是「换图」
- * 本身，不是「副本看起来对不对」——subject 一变就当场不信任，这一轮改喂原图，量
- * 到真尺寸落库之后再回到副本。
+ * Looking at the copy alone cannot recognize this: the copy's long edge is pinned to the budget, and the information about how large the original was is lost
+ * in downsampling; the card copies of 5504x3072 and 2752x1536 are both 1280x714. So the criterion is "swapping the image"
+ * itself, not "whether the copy looks right" - once the subject changes, distrust immediately; this round feeds the original, and once the real size
+ * is measured and persisted, return to the copy.
  *
- * 每个 subject 只退这一次。退回去了也未必能落库（手动调过尺寸的节点在 onLoad 里
- * 提前 return，走不到写数据那一步），没有这道闸就成了 副本→原图→副本 的死循环。
+ * Each subject backs off only once. Even after backing off it may not be persistable (nodes whose size was manually adjusted return
+ * early in onLoad and never reach the step of writing data), and without this gate it would become a copy -> original -> copy infinite loop.
  */
 export function useNaturalSizeRecordTrust(subject: string | null): {
-  /** 这一轮要不要绕开副本、直接喂原图。 */
+  /** Whether this round should bypass the copy and feed the original directly. */
   distrusted: boolean;
-  /** 记录对不上眼下这张图；退回原图重测一次。同一个 subject 第二次调用无效。 */
+  /** The record does not match the image at hand; back off to the original and measure again. A second call for the same subject has no effect. */
   distrustRecord: () => void;
-  /** 原图已经量到，可以回到副本了。 */
+  /** The original has been measured, and it is fine to return to the copy. */
   trustAgain: () => void;
 } {
   const [distrustedSubject, setDistrustedSubject] = useState<string | null>(null);
@@ -41,16 +41,16 @@ export function useNaturalSizeRecordTrust(subject: string | null): {
   }, []);
 
   useEffect(() => {
-    // 「暂时没有图」不是换图。生成期间 ImageGenNode 明确把主体图置空
-    // （visiblePreviewUrl = null），于是典型序列是 旧图 A → 生成中 null → 新结果
-    // B。把 null 也记成「上一张」，B 到来时看到的 previous 就是 null，会被当成首
-    // 次挂载而白白信任旧记录——偏偏这一刻最需要失信。所以只记非空 subject，
-    // knownSubject 存的是「最后一张真的图」，中间藏起来多久都不影响。
+    // "Temporarily no image" is not an image swap. During generation ImageGenNode explicitly empties the body image
+    // (visiblePreviewUrl = null), so the typical sequence is old image A -> null while generating -> new result
+    // B. Recording null as "the previous one" too, B would see previous as null on arrival, be treated as a first
+    // mount and needlessly trust the old record - and this moment is exactly when distrust is most needed. So only non-empty subjects are recorded,
+    // knownSubject stores "the last real image", and how long it is hidden in between does not matter.
     if (subject === null) return;
     const previous = knownSubject.current;
     knownSubject.current = subject;
-    // 首次挂载没有「上一张」可比：记录是持久化下来的，只能先信。真存歪了还有
-    // nodeBodyRecordDescribesImage 当兜底，它认得出比例对不上的那一类。
+    // On the first mount there is no "previous one" to compare: the record is persisted, so it can only be trusted first. If it really is skewed there is still
+    // nodeBodyRecordDescribesImage as a fallback, which recognizes the kind where the ratio does not match.
     if (previous === null || previous === subject) return;
     distrustRecord();
   }, [distrustRecord, subject]);

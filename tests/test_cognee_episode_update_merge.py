@@ -33,24 +33,24 @@ async def test_update_episode_preserves_asset_menus_written_by_parallel_task(tmp
         await asset_store.sqlite_store.initialize()
         await fresh_store.sqlite_store.initialize()
 
-        await identity_store.add_episodes([NovelEpisode(number=1, title="第一集")])
+        await identity_store.add_episodes([NovelEpisode(number=1, title="Episode 1")])
         await identity_store.load_graph_state()
         await asset_store.load_graph_state()
         await asset_store.update_episode(
             1,
-            scene_menu=[{"scene_id": "京城街道", "variants": []}],
-            prop_menu=[{"prop_id": "烧鸡", "prop_type": "accessory"}],
+            scene_menu=[{"scene_id": "Capital Street", "variants": []}],
+            prop_menu=[{"prop_id": "Roast Chicken", "prop_type": "accessory"}],
         )
 
-        await identity_store.update_episode(1, identity_ids=["南珍_将军夫人时期"])
+        await identity_store.update_episode(1, identity_ids=["NanZhen_general_wife"])
 
         await fresh_store.load_graph_state()
         episode = fresh_store.get_episode(1)
         assert episode is not None
-        assert [item.scene_id for item in episode.scene_menu] == ["京城街道"]
+        assert [item.scene_id for item in episode.scene_menu] == ["Capital Street"]
         assert not hasattr(episode.scene_menu[0], "variants")
-        assert [item.prop_id for item in episode.prop_menu] == ["烧鸡"]
-        assert episode.identity_ids == ["南珍_将军夫人时期"]
+        assert [item.prop_id for item in episode.prop_menu] == ["Roast Chicken"]
+        assert episode.identity_ids == ["NanZhen_general_wife"]
     finally:
         await identity_store.close()
         await asset_store.close()

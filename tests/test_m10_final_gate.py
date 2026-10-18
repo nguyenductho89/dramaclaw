@@ -47,4 +47,4 @@ def test_foss_only_fixture_is_short_txt_for_low_cost_llm_gate() -> None:
 
     text = fixture_path.read_text(encoding="utf-8").strip()
     assert fixture_path.suffix == ".txt"
-    assert 500 <= len(text) <= 2000
+    assert 500 <= len(text) <= 3000

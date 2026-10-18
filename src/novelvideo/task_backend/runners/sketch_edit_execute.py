@@ -51,7 +51,7 @@ def run_sketch_edit_execute(
         # batch logs cannot send the task-center progress bar back to zero.
         update(None, message)
 
-    update(0.01, "启动 sketch edit execute...")
+    update(0.01, "Starting sketch edit execute...")
     result = execute_sketch_edit_batches(
         project_dir=project_dir,
         episode_num=episode,

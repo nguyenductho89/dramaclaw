@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 回归：低缩放档（zoom < LOW_DETAIL_ZOOM_THRESHOLD）从外部拖入图片，新建的 upload
- * 节点不能是个空节点。
+ * Regression: when an image is dragged in from outside at the low-zoom tier (zoom < LOW_DETAIL_ZOOM_THRESHOLD), the newly created upload
+ * node must not be an empty node.
  *
- * 现场表现是「放大后发现加进来的是一个跟拖入的图毫不相干的上传节点」。链路：
- * 投递方先 addNode、下一帧才把 File 发到 canvasEventBus，而低缩放档下新节点先以
- * LOD shell 挂载（withLodShell），完整组件要等 requestShellUpgrade 的升级队列放行，
- * 必然晚于投递那一帧 —— 总线无重放，File 当场就没了。
+ * What was seen in the field: "after zooming in, the added node is an upload node unrelated to the dragged image". The chain:
+ * the deliverer addNodes first and only on the next frame sends the File to canvasEventBus, while at the low-zoom tier the new node first mounts as an
+ * LOD shell (withLodShell), and the full component must wait for the upgrade queue of requestShellUpgrade to release it,
+ * inevitably later than the delivery frame — the bus has no replay, and the File is gone on the spot.
  *
- * 这里锁的是「File 的载体与订阅时机解耦」：投递时 stash，消费侧挂载时补投一次。
+ * This locks "the File's carrier is decoupled from subscription timing": stash on delivery, and the consumer re-delivers once on mount.
  */
 import { render, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ---- @xyflow/react：只需要 useStore 能读到 transform[2]，Handle 渲染成空节点 ----
+// ---- @xyflow/react: only useStore needs to read transform[2], and Handle renders as an empty node ----
 let currentZoom = 1;
 vi.mock('@xyflow/react', () => ({
   Handle: () => null,
@@ -23,9 +23,9 @@ vi.mock('@xyflow/react', () => ({
     selector({ transform: [0, 0, currentZoom] }),
 }));
 
-// 画布 store：只有 withLodShell 的「选中豁免」读它。这些用例里节点不被选中 ——
-// 拖入落点在空白画布时 React Flow 的选中同步会把 selectedNodeId 复位，豁免吃不到，
-// 与现场一致。
+// Canvas store: only the "selection exemption" of withLodShell reads it. In these cases the node is not selected —
+// when the drop lands on a blank canvas, React Flow's selection sync resets selectedNodeId and the exemption does not apply,
+// consistent with the field.
 vi.mock('@/stores/canvasStore', () => ({
   useCanvasStore: (selector: (state: { selectedNodeId: string | null }) => unknown) =>
     selector({ selectedNodeId: null }),
@@ -50,8 +50,8 @@ const NODE_ID = 'upload-1';
 const received: string[] = [];
 
 /**
- * 冒充 UploadNode：把收到的 File 交给 handleMediaFile 的位置，换成记一笔。
- * 接收侧用的是生产代码里的 useExternalFileHandoff，与三个节点组件同一条路径。
+ * Impersonates UploadNode: where it hands the received File to handleMediaFile, it records a note instead.
+ * The receiving side uses the production useExternalFileHandoff, the same path as the three node components.
  */
 function UploadStub({ id }: { id: string }) {
   useExternalFileHandoff('upload-node/external-file', id, (file) => {
@@ -77,7 +77,7 @@ function renderNode() {
   );
 }
 
-/** 复刻 Canvas.handleCanvasDrop 的文件分支：暂存 + 延后一帧发事件。 */
+/** Replicates the file branch of Canvas.handleCanvasDrop: stash + emit the event one frame later. */
 function dropFile(nodeId: string, name: string) {
   const file = new File(['x'], name, { type: 'image/png' });
   stashExternalFile('upload-node/external-file', nodeId, file);
@@ -86,7 +86,7 @@ function dropFile(nodeId: string, name: string) {
   });
 }
 
-/** 逐帧等待（必须串行：一次性注册 n 个 rAF 只会等到一帧）。 */
+/** Wait frame by frame (must be serial: registering n rAFs at once only waits for one frame). */
 async function nextFrames(count: number) {
   for (let i = 0; i < count; i += 1) {
     await new Promise<void>((resolve) => {
@@ -95,7 +95,7 @@ async function nextFrames(count: number) {
   }
 }
 
-describe('低缩放档拖入文件的投递', () => {
+describe('file drop delivery at the low-zoom tier', () => {
   beforeEach(() => {
     received.length = 0;
     currentZoom = 1;
@@ -107,7 +107,7 @@ describe('低缩放档拖入文件的投递', () => {
     resetPendingExternalFilesForTest();
   });
 
-  it('常用缩放下节点直接以完整组件挂载，当帧就收到 File（对照组）', async () => {
+  it('at the usual zoom the node mounts directly as the full component and receives the File in the same frame (control group)', async () => {
     const { queryByTestId } = renderNode();
     expect(queryByTestId('full-upload-node')).not.toBeNull();
 
@@ -119,20 +119,20 @@ describe('低缩放档拖入文件的投递', () => {
     expect(received).toEqual(['a.png']);
   });
 
-  it('shell 期间投递的 File 不丢：完整组件挂上来时补投', async () => {
+  it('a File delivered during the shell phase is not lost: re-delivered when the full component mounts', async () => {
     currentZoom = 0.2;
     const { queryByTestId, rerender } = renderNode();
-    // 前提：低缩放档下确实是 shell，完整组件没挂 —— 也就没有订阅者。
+    // Premise: at the low-zoom tier it is indeed a shell and the full component is not mounted — so there are no subscribers.
     expect(queryByTestId('full-upload-node')).toBeNull();
 
     await act(async () => {
       dropFile(NODE_ID, 'b.png');
       await nextFrames(2);
     });
-    // 投递已经发生过了，节点还是 shell，事件没人接。
+    // The delivery has already happened, the node is still a shell, and nobody receives the event.
     expect(received).toEqual([]);
 
-    // 放大跨过阈值：shell 经升级队列换成完整组件。
+    // Zoom in across the threshold: the shell is swapped to the full component via the upgrade queue.
     currentZoom = 1;
     await act(async () => {
       rerender(
@@ -148,8 +148,8 @@ describe('低缩放档拖入文件的投递', () => {
         />,
       );
     });
-    // 升级排队发生在 rerender 的 effect 里，必须等它落定后再推帧，否则泵会先于
-    // 入队跑掉一次。
+    // The upgrade is queued in the rerender's effect, and must settle before pushing frames, otherwise the pump runs once ahead of
+    // being enqueued.
     await act(async () => {
       await nextFrames(3);
     });
@@ -158,7 +158,7 @@ describe('低缩放档拖入文件的投递', () => {
     expect(received).toEqual(['b.png']);
   });
 
-  it('同一个 File 只会被消费一次（挂载补投与事件投递不重复）', async () => {
+  it('the same File is consumed only once (mount re-delivery and event delivery do not duplicate)', async () => {
     const { queryByTestId } = renderNode();
     expect(queryByTestId('full-upload-node')).not.toBeNull();
 
@@ -168,11 +168,11 @@ describe('低缩放档拖入文件的投递', () => {
     });
 
     expect(received).toEqual(['c.png']);
-    // 暂存已被取空，重挂载不会再处理一遍。
+    // The stash has been emptied, so a remount does not process it again.
     expect(takeExternalFile('upload-node/external-file', NODE_ID)).toBeNull();
   });
 
-  it('多文件拖入：每个新节点各拿到自己的 File', async () => {
+  it('multi-file drop: each new node gets its own File', async () => {
     currentZoom = 0.2;
     const files = ['d1.png', 'd2.png', 'd3.png'];
     files.forEach((name, index) => {

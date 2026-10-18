@@ -8,15 +8,15 @@
  *   lastRemoteNodeCount.
  * - On demand, calls `GET /freezone/canvases/{id}/history` to list snapshot
  *   versions (returns 404 on environments where the backend reliability
- *   change is not deployed yet — surfaced as "接口未上线").
- * - Per history entry: a "恢复此版本" button that POSTs to
+ *   change is not deployed yet — surfaced as "Endpoint not deployed").
+ * - Per history entry: a "Restore this version" button that POSTs to
  *   `/history/restore`, then triggers a re-hydrate.
  *
  * Strictly debug-only. The panel adds no autosave hooks of its own; it reads
  * what the hook already exposes plus issues two ad-hoc API calls.
  */
-// 这个面板只在 DEV 下挂载（而且当前在 FreezoneShell 里被 `false &&` 关着），
-// 面向的是改画布同步的人，不是产品用户；文案入词条纯属浪费，整块保留中文。
+// This panel only mounts in DEV (and is currently switched off in FreezoneShell with `false &&`),
+// aimed at people working on canvas sync, not product users; its copy is plain English and not localized.
 // i18n-exempt-start
 
 import { useState } from "react";
@@ -110,7 +110,7 @@ export function CanvasDebugPanel({
       setHistory(data);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setHistoryError("接口未上线（后端 history endpoint 还没部署）");
+        setHistoryError("Endpoint not deployed (backend history endpoint is not deployed yet)");
       } else {
         setHistoryError(formatErr(err));
       }
@@ -125,11 +125,11 @@ export function CanvasDebugPanel({
     if (!historyId) {
       console.error("[freezone:debug] history entry has no recognizable id", entry);
       window.alert(
-        "无法识别此历史项的 id（list 响应里没找到 id / history_id / filename / name 任一字段）。请看 console。",
+        "Cannot identify the id of this history entry (none of id / history_id / filename / name found in the list response). See the console.",
       );
       return;
     }
-    if (!window.confirm(`确认恢复到 ${historyId}？当前版本会先写入 history。`)) {
+    if (!window.confirm(`Restore to ${historyId}? The current version will be written to history first.`)) {
       return;
     }
     setBusyHistoryId(historyId);
@@ -157,9 +157,9 @@ export function CanvasDebugPanel({
     } catch (err) {
       const message =
         err instanceof ApiError && err.status === 404
-          ? "接口未上线（后端 canvases/{id}/restore endpoint 还没部署）"
+          ? "Endpoint not deployed (backend canvases/{id}/restore endpoint is not deployed yet)"
           : formatErr(err);
-      window.alert(`恢复失败：${message}`);
+      window.alert(`Restore failed: ${message}`);
     } finally {
       setBusyHistoryId(null);
     }
@@ -182,10 +182,10 @@ export function CanvasDebugPanel({
           type="button"
           onClick={() => onOpenChange(!open)}
           className="inline-flex h-6 items-center gap-1 rounded-full bg-white/[0.035] px-2 text-[10px] font-normal text-foreground/68 transition-colors backdrop-blur-sm hover:bg-white/[0.065] hover:text-foreground/86"
-          title="画布调试面板（仅开发用）"
+          title="Canvas debug panel (dev only)"
         >
           <Wrench className="h-2.5 w-2.5 text-foreground/64" />
-          调试
+          Debug
           {open ? (
             <ChevronUp className="h-2.5 w-2.5 text-foreground/54" />
           ) : (
@@ -231,7 +231,7 @@ export function CanvasDebugPanel({
               )}
               {!remote && !remoteLoading && !remoteError && (
                 <div className="text-foreground/58 text-[11px]">
-                  尚未拉取，点 GET 查询。
+                  Not fetched yet; click GET to query.
                 </div>
               )}
               {remoteError && (
@@ -249,7 +249,7 @@ export function CanvasDebugPanel({
                   disabled={historyLoading}
                   className="rounded border border-white/[0.16] px-1.5 py-0.5 text-[10px] text-foreground/86 hover:bg-white/[0.06] disabled:opacity-50"
                 >
-                  {historyLoading ? "..." : "拉取"}
+                  {historyLoading ? "..." : "Fetch"}
                 </button>
               </header>
               {historyError && (
@@ -258,7 +258,7 @@ export function CanvasDebugPanel({
                 </div>
               )}
               {history && history.length === 0 && (
-                <div className="text-foreground/58 text-[11px]">空（尚无历史快照）</div>
+                <div className="text-foreground/58 text-[11px]">Empty (no history snapshots yet)</div>
               )}
               {history && history.length > 0 && (
                 <ul className="space-y-1">
@@ -298,10 +298,10 @@ export function CanvasDebugPanel({
                             busyHistoryId === entryHistoryId || !entryHistoryId
                           }
                           className="shrink-0 inline-flex items-center gap-1 rounded border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 text-[10px] text-amber-100 hover:bg-amber-300/20 disabled:opacity-50"
-                          title={entryHistoryId ? "恢复此版本" : "缺少 history_id，无法恢复"}
+                          title={entryHistoryId ? "Restore this version" : "Missing history_id, cannot restore"}
                         >
                           <RotateCcw className="h-3 w-3" />
-                          {busyHistoryId === entryHistoryId ? "恢复中" : "恢复"}
+                          {busyHistoryId === entryHistoryId ? "Restoring" : "Restore"}
                         </button>
                       </li>
                     );
@@ -310,7 +310,7 @@ export function CanvasDebugPanel({
               )}
             </section>
             <footer className="border-t border-white/[0.10] px-3 py-1.5 text-[10px] text-foreground/54">
-              仅调试用 · 后端 history endpoint 未部署时这里会显示"接口未上线"
+              Debug only · shows "Endpoint not deployed" here when the backend history endpoint is not deployed
             </footer>
           </div>
         )}

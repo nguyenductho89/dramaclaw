@@ -7,9 +7,9 @@ import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 import { projectionScopedId } from "@/features/freezone/projectionGraphIds";
 
 /**
- * 拖动组内成员松手后的收尾 fitGroupToChildren（libtv 式：按成员最终落点重新包住）。
- * 重点回归断言：组尺寸必须同时更新显式 width/height 与 style —— React Flow 渲染时
- * 显式 width 优先于 style.width，只改 style 视觉上不生效（框线不动的根因）。
+ * Finishing step fitGroupToChildren after dragging a group member and releasing (libtv style: re-wrap based on the final member positions).
+ * Key regression assertion: the group size must update the explicit width/height and style together -- when React Flow renders,
+ * the explicit width takes precedence over style.width, so changing only style has no visual effect (the root cause of the frame not moving).
  */
 describe("fitGroupToChildren (drop-position refit)", () => {
   beforeEach(() => {
@@ -119,10 +119,10 @@ describe("fitGroupToChildren (drop-position refit)", () => {
   });
 
   /**
-   * 主线投影组同样要贴合成员：组框由后端按估算尺寸算出，成员实际渲染尺寸（图片
-   * 加载后、文本换行后）只有前端知道。不贴合的话成员带 extent:"parent" 会被
-   * React Flow 夹回小框里叠成一堆，用户又没法手动救——组框是只读的。
-   * 只放开「几何贴合」，拓扑保护（不能解组）仍由 ungroupNode 拦住。
+   * Mainline projection groups must also fit their members: the group frame is computed by the backend from estimated sizes, and the actual rendered member sizes (after images
+   * load, after text wraps) are known only to the frontend. Without fitting, members with extent:"parent" would be
+   * clamped back into the small frame by React Flow and pile up, and the user cannot rescue them manually -- the group frame is read-only.
+   * Only geometry fitting is allowed; topology protection (no ungrouping) is still enforced by ungroupNode.
    */
   it("also re-encloses members of a backend-managed projection group", () => {
     const groupId = "projection_group_asset_character_x";
@@ -136,7 +136,7 @@ describe("fitGroupToChildren (drop-position refit)", () => {
           height: 240,
           style: { width: 360, height: 240 },
           data: {
-            label: "林小满",
+            label: "Lin Xiaoman",
             preset_managed: true,
             projection_key: "asset:character:x",
           },
@@ -147,7 +147,7 @@ describe("fitGroupToChildren (drop-position refit)", () => {
           position: { x: 20, y: 34 },
           parentId: groupId,
           extent: "parent",
-          // 实际测得的渲染尺寸远大于后端估算，组框包不住。
+          // The measured render size is far larger than the backend estimate, so the group frame cannot wrap it.
           measured: { width: 440, height: 320 },
           data: {
             content: "profile",
@@ -159,7 +159,7 @@ describe("fitGroupToChildren (drop-position refit)", () => {
       [],
     );
 
-    // setCanvasData 会把投影节点 id 重写成 projectionScopedId(...)，用原始 id 调不到。
+    // setCanvasData rewrites projection node ids to projectionScopedId(...), so the original id cannot be used.
     const scopedGroupId = projectionScopedId("asset:character:x", groupId);
     useCanvasStore.getState().fitGroupToChildren(scopedGroupId);
 
@@ -167,7 +167,7 @@ describe("fitGroupToChildren (drop-position refit)", () => {
     const child = useCanvasStore.getState().nodes.find((n) => n.id.endsWith("profile"))!;
     expect(child.position.x + 440).toBeLessThanOrEqual(g.width as number);
     expect(child.position.y + 320).toBeLessThanOrEqual(g.height as number);
-    // 与普通组一致：显式 width/height 必须与 style 同步，否则 React Flow 不重绘。
+    // Same as a normal group: the explicit width/height must stay in sync with style, otherwise React Flow does not repaint.
     expect(g.style?.width).toBe(g.width);
     expect(g.style?.height).toBe(g.height);
   });

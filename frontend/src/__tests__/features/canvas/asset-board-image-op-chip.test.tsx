@@ -9,12 +9,6 @@ import { CANVAS_NODE_TYPES, type CanvasNode } from '@/features/canvas/domain/can
 import { AssetBoardView } from '@/features/canvas/ui/asset-board/AssetBoardView';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
-  }),
-}));
-
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
@@ -31,7 +25,7 @@ vi.mock('@/api/ops', async (importOriginal) => ({
       id: 'huimeng/test-image',
       providerId: 'huimeng',
       apiModel: 'test_image_api',
-      label: '测试模型',
+      label: 'Test model',
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -59,12 +53,12 @@ const SOURCE_NODE: CanvasNode = {
   data: {
     imageUrl: '/static/source.png',
     aspectRatio: '16:9',
-    displayName: '源图',
+    displayName: 'Source image',
   },
 };
 
 function detailPanel() {
-  return screen.getByRole('region', { name: '资产详情' });
+  return screen.getByRole('region', { name: 'Asset details' });
 }
 
 function nodeData(nodeId: string): Record<string, unknown> {
@@ -76,91 +70,91 @@ function spawnedOpNode(): CanvasNode {
   const spawned = useCanvasStore
     .getState()
     .nodes.find((candidate) => candidate.id !== SOURCE_NODE.id);
-  if (!spawned) throw new Error('功能节点没有被创建');
+  if (!spawned) throw new Error('The feature node was not created');
   return spawned;
 }
 
 function promptEditor(): HTMLElement {
   const editor = detailPanel().querySelector('.prompt-mention-editor');
-  if (!(editor instanceof HTMLElement)) throw new Error('提示词输入框没渲染出来');
+  if (!(editor instanceof HTMLElement)) throw new Error('The prompt input did not render');
   return editor;
 }
 
 function opChip(): HTMLElement {
-  return within(detailPanel()).getByTitle(/点击切换功能，退格删除/);
+  return within(detailPanel()).getByTitle(/click to switch feature, Backspace to remove/);
 }
 
-/** 把光标塌缩到 chip 正后面——用户想删掉它时手指所在的位置。 */
+/** Collapse the caret to right after the chip -- where the user's finger is when they want to delete it. */
 function putCaretAfterChip(): void {
   const host = promptEditor().querySelector('[data-lead-chip]');
-  if (!host) throw new Error('chip 宿主节点不在输入框里');
+  if (!host) throw new Error('The chip host node is not inside the input');
   const range = document.createRange();
   range.setStartAfter(host);
   range.collapse(true);
   const selection = window.getSelection();
-  if (!selection) throw new Error('环境没有 Selection');
+  if (!selection) throw new Error('The environment has no Selection');
   selection.removeAllRanges();
   selection.addRange(range);
 }
 
-/** 打开源图详情 → 展开「宫格模板」下拉 → 点某个功能。 */
+/** Open the source image detail -> expand the "Grid templates" dropdown -> click a feature. */
 async function pickGridOp(label: string) {
   const user = userEvent.setup();
   useCanvasStore.getState().setCanvasData([SOURCE_NODE], []);
   render(<AssetBoardView visible onLocateNode={() => {}} />);
-  fireEvent.click(screen.getByRole('button', { name: '源图' }));
-  await user.click(within(detailPanel()).getByRole('button', { name: '宫格模板' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Source image' }));
+  await user.click(within(detailPanel()).getByRole('button', { name: 'Grid templates' }));
   await user.click(await screen.findByRole('menuitem', { name: new RegExp(label) }));
   return user;
 }
 
-describe('故事板 · 功能 chip（点功能建节点 → 确认后生成）', () => {
+describe('Storyboard · feature chip (click a feature to create a node -> generate after confirmation)', () => {
   beforeEach(() => {
     vi.mocked(submitFreezoneTemplateEdit).mockClear();
   });
 
-  it('点功能只建节点、不提交：新节点是 imageGen、节点名=功能名、记住源图并连边', async () => {
-    await pickGridOp('多机位九宫格');
+  it('clicking a feature only creates a node without submitting: the new node is imageGen, its name = the feature name, and it remembers the source image and wires the edge', async () => {
+    await pickGridOp('Multi-Camera 3x3');
 
     const spawned = spawnedOpNode();
     expect(spawned.type).toBe(CANVAS_NODE_TYPES.imageGen);
     const data = spawned.data as Record<string, unknown>;
-    expect(data.displayName).toBe('多机位九宫格');
+    expect(data.displayName).toBe('Multi-Camera 3x3');
     expect(data.imageOpKey).toBe('multiCameraGrid');
     expect(data.imageOpSourceUrl).toBe('/static/source.png');
     expect(data.isGenerating).toBe(false);
-    // 连在源节点下游。
+    // Wired downstream of the source node.
     expect(
       useCanvasStore
         .getState()
         .edges.some((edge) => edge.source === SOURCE_NODE.id && edge.target === spawned.id),
     ).toBe(true);
-    // 关键：这一步不提交。
+    // Key point: this step does not submit.
     expect(submitFreezoneTemplateEdit).not.toHaveBeenCalled();
   });
 
-  it('chip 落在提示词输入框内部：功能说明当占位文案，且不混进 prompt', async () => {
-    await pickGridOp('角色三视图生成');
+  it('the chip sits inside the prompt input: the feature description acts as the placeholder and does not leak into the prompt', async () => {
+    await pickGridOp('Character Three-View');
     const spawnedId = spawnedOpNode().id;
 
     const editor = promptEditor();
-    // chip 是输入框里的一个内联块，不是输入框上方另起的一行控件。
+    // The chip is an inline block inside the input, not a separate control row above the input.
     expect(editor.contains(opChip())).toBe(true);
-    // 功能说明就是占位文案（接在 chip 右边同一行）。
+    // The feature description is the placeholder (on the same line, right of the chip).
     expect(editor.getAttribute('data-placeholder')).toContain(
-      '直接基于当前图像生成完整的角色三视图',
+      'Click to generate: create a complete character three-view straight from the current image; text/reference images are supported.',
     );
 
-    // chip 只是展示节点：用户打的字才是 prompt，chip 文案不会被序列化进去。
-    editor.appendChild(document.createTextNode('侧脸再清楚点'));
+    // The chip is only a display node: what the user types is the prompt, and the chip text is not serialized into it.
+    editor.appendChild(document.createTextNode('Make the side profile clearer'));
     fireEvent.input(editor);
-    expect(nodeData(spawnedId).prompt).toBe('侧脸再清楚点');
+    expect(nodeData(spawnedId).prompt).toBe('Make the side profile clearer');
   });
 
-  it('提示词留空也能提交（↑ 走对应模板，prompt 兜底用功能名）', async () => {
-    await pickGridOp('产品三视图');
+  it('an empty prompt can still be submitted (the up arrow uses the matching template, and prompt falls back to the feature name)', async () => {
+    await pickGridOp('Product Three-View');
 
-    const submit = within(detailPanel()).getByRole('button', { name: '生成' });
+    const submit = within(detailPanel()).getByRole('button', { name: 'Generate' });
     expect(submit).not.toBeDisabled();
     fireEvent.click(submit);
 
@@ -169,55 +163,55 @@ describe('故事板 · 功能 chip（点功能建节点 → 确认后生成）',
     expect(project).toBe('demo-project');
     expect(payload.sourceUrl).toBe('/static/source.png');
     expect(payload.mode).toBe('product_three_view');
-    expect(payload.prompt).toBe('产品三视图');
-    // 产物回填到功能节点自己身上，而不是再建一个结果节点。
+    expect(payload.prompt).toBe('Product Three-View');
+    // The result is filled back into the feature node itself instead of creating another result node.
     await waitFor(() => expect(nodeData(spawnedOpNode().id).imageUrl).toBe('/static/out.png'));
     expect(useCanvasStore.getState().nodes).toHaveLength(2);
   });
 
-  it('场景设定图：功能框「设定图」栏里能切到，提交走 scene_setting_sheet 模板', async () => {
-    const user = await pickGridOp('多机位九宫格');
+  it('scene setting sheet: reachable in the "Design sheets" column of the feature box, and submit goes through the scene_setting_sheet template', async () => {
+    const user = await pickGridOp('Multi-Camera 3x3');
     const spawnedId = spawnedOpNode().id;
 
     await user.click(opChip());
-    await user.click(screen.getByRole('button', { name: /^场景设定图/ }));
+    await user.click(screen.getByRole('button', { name: /^Scene Setting Sheet/ }));
     expect(nodeData(spawnedId).imageOpKey).toBe('sceneSettingSheet');
-    expect(nodeData(spawnedId).displayName).toBe('场景设定图');
+    expect(nodeData(spawnedId).displayName).toBe('Scene Setting Sheet');
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: '生成' }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: 'Generate' }));
 
     await waitFor(() => expect(submitFreezoneTemplateEdit).toHaveBeenCalled());
     const [, payload] = vi.mocked(submitFreezoneTemplateEdit).mock.calls[0];
     expect(payload.mode).toBe('scene_setting_sheet');
-    expect(payload.prompt).toBe('场景设定图');
+    expect(payload.prompt).toBe('Scene Setting Sheet');
   });
 
-  it('点 chip 展开功能框（四栏），选另一个功能 → key 与节点名一起换', async () => {
-    const user = await pickGridOp('剧情推演四宫格');
+  it('clicking the chip expands the feature box (four columns), and choosing another feature -> the key and node name change together', async () => {
+    const user = await pickGridOp('Plot Progression 2x2');
     const spawnedId = spawnedOpNode().id;
 
     await user.click(opChip());
-    for (const category of ['分镜叙事', '空间与机位', '设定图', '质感调节']) {
+    for (const category of ['Storyboard narrative', 'Space & camera', 'Design sheets', 'Texture tuning']) {
       expect(await screen.findByText(category)).toBeInTheDocument();
     }
-    // 每行是「功能名 + 一句话说明」，所以按名字前缀匹配。
-    await user.click(screen.getByRole('button', { name: /^全景/ }));
+    // Each row is "feature name + one-line description", so match by name prefix.
+    await user.click(screen.getByRole('button', { name: /^Panorama/ }));
 
     expect(nodeData(spawnedId).imageOpKey).toBe('scene360');
-    expect(nodeData(spawnedId).displayName).toBe('全景');
+    expect(nodeData(spawnedId).displayName).toBe('Panorama');
   });
 
-  it('在 chip 后面退格就能删掉它 → 退化成普通图片生成节点', async () => {
-    await pickGridOp('电影级光影校正');
+  it('Backspace right after the chip deletes it -> degrades to a regular image generation node', async () => {
+    await pickGridOp('Cinematic Light Grading');
     const spawnedId = spawnedOpNode().id;
 
     putCaretAfterChip();
     fireEvent.keyDown(promptEditor(), { key: 'Backspace' });
 
     expect(nodeData(spawnedId).imageOpKey).toBeNull();
-    expect(within(detailPanel()).queryByTitle(/点击切换功能，退格删除/)).not.toBeInTheDocument();
+    expect(within(detailPanel()).queryByTitle(/click to switch feature, Backspace to remove/)).not.toBeInTheDocument();
     expect(promptEditor().querySelector('[data-lead-chip]')).toBeNull();
-    // 退回常规文生图：空提示词重新禁用提交。
-    expect(within(detailPanel()).getByRole('button', { name: '生成' })).toBeDisabled();
+    // Back to regular text-to-image: an empty prompt disables submit again.
+    expect(within(detailPanel()).getByRole('button', { name: 'Generate' })).toBeDisabled();
   });
 });

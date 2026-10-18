@@ -3,19 +3,19 @@
 import { useEffect, useMemo, useState } from 'react';
 
 /**
- * 生成进度的时间估算（不是后端真实进度，后端目前不下发逐步进度事件）：按
- * `startedAt` + 预估 `durationMs` 做指数饱和估算，渐近 99%（真正的「完成」
- * 由调用方 `isGenerating` 变 false 触发）。120ms 轮询刷新一次。
+ * A time-based estimate of generation progress (not the backend's real progress; the backend currently sends no step-by-step progress events): by
+ * `startedAt` + the estimated `durationMs`, an exponential saturation estimate approaching 99% asymptotically (the real "done"
+ * is triggered by the caller's `isGenerating` turning false). Refreshed by polling every 120ms.
  *
- * 从 {@link ./NodeGenerationOverlay.tsx} 的内部算法原样抽出（工作流节点覆盖层
- * 的大数字），故事板卡片/详情占位复用同一套估算，避免两处实现漂移。
+ * Extracted verbatim from the internal algorithm of {@link ./NodeGenerationOverlay.tsx} (the big number of the workflow node overlay),
+ * and the storyboard card/detail placeholders reuse the same estimate, avoiding the two implementations drifting.
  *
- * @param startedAt 生成开始时间戳（epoch ms）；为空则退化为 hook 挂载时刻——
- *   与原 NodeGenerationOverlay 的 `mountedAt` 兜底同语义。
- * @param durationMs 预估生成总时长（毫秒），最短钳到 1000ms。
- * @param paused 暂停轮询（故事板被保活隐藏时传 true）。故事板隐藏后数据源整体
- *   冻结，卡片会一直停在「生成中」那一帧——不停表的话这颗 120ms 定时器在用户切回
- *   工作流干活期间永远不会停，白白每秒重渲染隐藏视图 8 次。
+ * @param startedAt generation start timestamp (epoch ms); when empty it falls back to the hook's mount moment -
+ *   the same semantics as the original NodeGenerationOverlay's `mountedAt` fallback.
+ * @param durationMs estimated total generation duration (milliseconds), clamped to at least 1000ms.
+ * @param paused pause polling (pass true when the storyboard is hidden by kept-alive). After the storyboard is hidden the data source is
+ *   frozen as a whole, and cards stay at the "generating" frame forever - without stopping the timer, this 120ms timer would never stop
+ *   while the user switches back to the workflow to work, needlessly re-rendering the hidden view 8 times a second.
  */
 export function useEstimatedProgress(
   startedAt: number | null,

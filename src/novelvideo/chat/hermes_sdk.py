@@ -90,15 +90,19 @@ REPEATED_VALIDATION_TOOL_CALL_LIMIT = max(
 TOOL_DETAIL_LIMIT = 1600
 PERMISSION_REQUEST_TIMEOUT_SECONDS = 60.0
 CONTENT_FILTER_MESSAGE = (
-    "本轮回复被模型网关的内容安全过滤拦截了，虾导没有拿到可用输出。"
-    "请把需求拆得更具体，避免一次性要求完成整集或包含敏感/违规描述；"
-    "也可以先让我只列当前制作进度和下一步。"
+    "This reply was blocked by the model gateway's content-safety filter, so the "
+    "Director Agent received no usable output. "
+    "Make the request more specific and avoid asking for a whole episode at once or "
+    "including sensitive or disallowed descriptions; "
+    "you can also ask me to list only the current production progress and the next step."
 )
 DRAMACLAW_ONE_STEP_STOP_MESSAGE = (
-    "当前任务已开始处理。请稍后让我查看当前任务进度，或在任务完成后再继续下一步。"
+    "The current task has started. Ask me later to check its progress, "
+    "or continue to the next step once the task finishes."
 )
 DRAMACLAW_WRITE_FAILED_STOP_MESSAGE = (
-    "刚才这一步没有成功启动任务，系统已阻止重复提交。请根据本轮返回的具体错误处理后再重试。"
+    "That last step did not start a task, and the system blocked a duplicate submission. "
+    "Resolve the specific error returned this turn, then retry."
 )
 
 
@@ -135,13 +139,13 @@ def _refresh_stream_idle_deadline(*, now: float, total_deadline: float) -> float
     return min(total_deadline, now + STREAM_IDLE_TIMEOUT)
 
 _TOOL_DETAIL_FIELDS = (
-    ("command", "命令"),
-    ("cmd", "命令"),
-    ("arguments", "参数"),
-    ("args", "参数"),
-    ("input", "输入"),
-    ("preview", "预览"),
-    ("content", "内容"),
+    ("command", "Command"),
+    ("cmd", "Command"),
+    ("arguments", "Arguments"),
+    ("args", "Arguments"),
+    ("input", "Input"),
+    ("preview", "Preview"),
+    ("content", "Content"),
 )
 
 
@@ -278,12 +282,14 @@ def _turn_tool_call_limit_for_tool(name: object) -> int | None:
 def _tool_call_limit_stop_message(name: object) -> str:
     if _is_freezone_tool(name):
         return (
-            "本轮操作已停止：虾画连续调用工具过多，可能在重复读取或修改 Skill Studio 草稿。"
-            "请缩小修改范围，例如只调整 Skill 元信息，或只调整某一个 Recipe。"
+            "This turn was stopped: the Canvas Agent made too many consecutive tool calls and may be "
+            "re-reading or editing the Skill Studio draft over and over. "
+            "Narrow the change, for example adjust only the Skill metadata or a single Recipe."
         )
     return (
-        "本轮操作已停止：虾导连续调用工具过多，可能在自动推进过大范围。"
-        "请缩小指令范围，例如只检查前置条件，或只启动一个具体 beat 的视频任务。"
+        "This turn was stopped: the Director Agent made too many consecutive tool calls and may be "
+        "advancing too large a scope automatically. "
+        "Narrow the instruction, for example only check prerequisites or start the video task of one specific beat."
     )
 
 
@@ -299,7 +305,7 @@ def _read_signature_input(event: ChatBackendEvent) -> object:
 
 def _tool_call_guard_reason(stop_text: object) -> str:
     """Return a machine-readable reason without coupling callers to UI copy."""
-    if "重复读取" in str(stop_text or ""):
+    if "repeatedly reading" in str(stop_text or ""):
         return "repeated_read"
     return "tool_call_limit"
 
@@ -322,8 +328,8 @@ class _TurnToolCallGuard:
                 self._failed_signature_counts[failure_signature] = failure_count
                 if failure_count >= REPEATED_FAILED_TOOL_CALL_LIMIT:
                     return (
-                        "本轮操作已停止：同一个工具以相同参数重复返回相同错误。"
-                        "请检查工具参数或等待相关状态变化后再重试。"
+                        "This turn was stopped: the same tool returned the same error repeatedly with identical arguments. "
+                        "Check the tool arguments or wait for the relevant state to change, then retry."
                     )
         call_id = str(event.call_id or "").strip()
         if call_id:
@@ -356,8 +362,8 @@ class _TurnToolCallGuard:
             self._validation_signature_counts[signature] = validation_count
             if validation_count >= REPEATED_VALIDATION_TOOL_CALL_LIMIT:
                 return (
-                    "本轮操作已停止：虾画重复校验同一批画布命令，且没有执行新的写入。"
-                    "请重新发送一条明确的继续或重试指令。"
+                    "This turn was stopped: the Canvas Agent repeatedly validated the same batch of canvas commands without performing any new write. "
+                    "Send a clear continue or retry instruction again."
                 )
         if not _is_dramaclaw_write_tool(tool_name) and not _is_freezone_canvas_write_tool(tool_name):
             if event.input is None:
@@ -384,10 +390,10 @@ class _TurnToolCallGuard:
             repeat_count = self._read_signature_counts.get(signature, 0) + 1
             self._read_signature_counts[signature] = repeat_count
             if repeat_count > REPEATED_READ_TOOL_CALL_LIMIT:
-                subject = "同一个画布节点" if _is_freezone_tool(tool_name) else "同一项状态"
+                subject = "the same canvas node" if _is_freezone_tool(tool_name) else "the same state"
                 return (
-                    f"本轮操作已停止：虾导重复读取{subject}，且没有产生新的操作。"
-                    "请重新发送一条明确的继续或重试指令。"
+                    f"This turn was stopped: the Director Agent is repeatedly reading {subject} without producing any new action. "
+                    "Send a clear continue or retry instruction again."
                 )
 
         call_limit = _turn_tool_call_limit_for_tool(tool_name)
@@ -1423,7 +1429,7 @@ class HermesSdkThread:
                 type="permission_requested",
                 thread_id=self.id,
                 turn_id=turn_id,
-                text=str(title or "需要操作授权"),
+                text=str(title or "Authorization required"),
                 request_id=request_id,
                 options=options,
                 raw=tool_call,

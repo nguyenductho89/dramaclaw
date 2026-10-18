@@ -9,8 +9,8 @@ import pytest
 from novelvideo.cognee import scene_name_migration as migration_module
 from novelvideo.cognee.scene_name_migration import migrate_scene_names
 
-DIRTY = "凤鸣皇城·苏鸾寝殿 亥时"
-CANONICAL = "凤鸣皇城·苏鸾寝殿"
+DIRTY = "Phoenix City Bedchamber night"
+CANONICAL = "Phoenix City Bedchamber"
 
 
 def _create_db(project_dir: Path) -> None:
@@ -108,7 +108,7 @@ def _fetch_beat_ref(project_dir: Path, episode: int, beat: int) -> dict:
 
 def test_dry_run_reports_changes_without_writing_db_backup_or_assets(tmp_path: Path):
     _create_db(tmp_path)
-    _insert_scene(tmp_path, DIRTY, aliases=["寝殿夜"])
+    _insert_scene(tmp_path, DIRTY, aliases=["bedchamber night alias"])
     _insert_scene(tmp_path, CANONICAL)
     _insert_beat(tmp_path, 1, 1, {"scene_id": DIRTY, "variant_id": "wide"})
     old_asset = tmp_path / "assets" / "scenes" / DIRTY / "layout.txt"
@@ -140,7 +140,7 @@ def test_apply_rename_updates_scene_alias_beat_and_copies_missing_assets(tmp_pat
     _insert_scene(
         tmp_path,
         DIRTY,
-        aliases=["寝殿夜"],
+        aliases=["bedchamber night alias"],
         environment_prompt="old prompt",
         spatial_layout_image=f"assets/scenes/{DIRTY}/nested/layout.txt",
     )
@@ -158,7 +158,7 @@ def test_apply_rename_updates_scene_alias_beat_and_copies_missing_assets(tmp_pat
     assert _fetch_scene(tmp_path, DIRTY) is None
     canonical = _fetch_scene(tmp_path, CANONICAL)
     assert canonical is not None
-    assert json.loads(canonical["aliases_json"]) == ["寝殿夜", DIRTY]
+    assert json.loads(canonical["aliases_json"]) == ["bedchamber night alias", DIRTY]
     assert canonical["environment_prompt"] == "old prompt"
     assert canonical["spatial_layout_image"] == f"assets/scenes/{CANONICAL}/nested/layout.txt"
     assert _fetch_beat_ref(tmp_path, 1, 2) == {
@@ -186,7 +186,7 @@ def test_apply_rename_supports_separate_db_and_asset_project_dirs(tmp_path: Path
     state_dir.mkdir()
     output_dir.mkdir()
     _create_db(state_dir)
-    _insert_scene(state_dir, DIRTY, aliases=["寝殿夜"])
+    _insert_scene(state_dir, DIRTY, aliases=["bedchamber night alias"])
     _insert_beat(state_dir, 1, 2, {"scene_id": DIRTY})
     old_asset = output_dir / "assets" / "scenes" / DIRTY / "layout.txt"
     old_asset.parent.mkdir(parents=True)
@@ -213,7 +213,7 @@ def test_apply_merge_deletes_old_scene_merges_aliases_fills_empty_fields_and_upd
     _insert_scene(
         tmp_path,
         CANONICAL,
-        aliases=["正殿"],
+        aliases=["Main Hall"],
         scene_type="interior",
         environment_prompt="canonical prompt",
         description="",
@@ -223,14 +223,14 @@ def test_apply_merge_deletes_old_scene_merges_aliases_fills_empty_fields_and_upd
     _insert_scene(
         tmp_path,
         DIRTY,
-        aliases=["寝殿夜"],
+        aliases=["bedchamber night alias"],
         scene_type="exterior",
         environment_prompt="old prompt",
         description="old description",
         spatial_layout_image="old-layout.png",
         notes="old notes",
     )
-    _insert_beat(tmp_path, 2, 1, {"scene_id": DIRTY, "base_id": DIRTY, "time_of_day": "亥时"})
+    _insert_beat(tmp_path, 2, 1, {"scene_id": DIRTY, "base_id": DIRTY, "time_of_day": "night"})
 
     report = asyncio.run(migrate_scene_names(tmp_path, dry_run=False))
 
@@ -238,7 +238,7 @@ def test_apply_merge_deletes_old_scene_merges_aliases_fills_empty_fields_and_upd
     assert _fetch_scene(tmp_path, DIRTY) is None
     canonical = _fetch_scene(tmp_path, CANONICAL)
     assert canonical is not None
-    assert json.loads(canonical["aliases_json"]) == ["正殿", DIRTY, "寝殿夜"]
+    assert json.loads(canonical["aliases_json"]) == ["Main Hall", DIRTY, "bedchamber night alias"]
     assert canonical["environment_prompt"] == "canonical prompt"
     assert canonical["description"] == "old description"
     assert canonical["spatial_layout_image"] == "canonical-layout.png"
@@ -250,7 +250,7 @@ def test_apply_merge_deletes_old_scene_merges_aliases_fills_empty_fields_and_upd
     assert _fetch_beat_ref(tmp_path, 2, 1) == {
         "scene_id": CANONICAL,
         "base_id": CANONICAL,
-        "time_of_day": "亥时",
+        "time_of_day": "night",
     }
 
 
@@ -278,7 +278,7 @@ def test_asset_copy_never_overwrites_existing_canonical_asset(tmp_path: Path):
 
 
 def test_asset_copy_conflict_between_dirty_sources_records_skipped_source(tmp_path: Path):
-    dirty_late = "凤鸣皇城·苏鸾寝殿 子时"
+    dirty_late = "Phoenix City Bedchamber noon"
     _create_db(tmp_path)
     _insert_scene(tmp_path, DIRTY)
     _insert_scene(tmp_path, dirty_late)
@@ -310,12 +310,12 @@ def test_asset_copy_conflict_between_dirty_sources_records_skipped_source(tmp_pa
 def test_apply_merges_multiple_dirty_scenes_into_existing_canonical_without_losing_data(
     tmp_path: Path,
 ):
-    dirty_late = "凤鸣皇城·苏鸾寝殿 子时"
+    dirty_late = "Phoenix City Bedchamber noon"
     _create_db(tmp_path)
     _insert_scene(
         tmp_path,
         CANONICAL,
-        aliases=["正殿"],
+        aliases=["Main Hall"],
         scene_type="interior",
         environment_prompt="canonical prompt",
         description="",
@@ -325,7 +325,7 @@ def test_apply_merges_multiple_dirty_scenes_into_existing_canonical_without_losi
     _insert_scene(
         tmp_path,
         DIRTY,
-        aliases=["亥时别名"],
+        aliases=["night alias"],
         scene_type="exterior",
         environment_prompt="dirty prompt",
         description="dirty description",
@@ -334,7 +334,7 @@ def test_apply_merges_multiple_dirty_scenes_into_existing_canonical_without_losi
     _insert_scene(
         tmp_path,
         dirty_late,
-        aliases=["子时别名"],
+        aliases=["noon alias"],
         scene_type="nature",
         environment_prompt="late prompt",
         description="late description",
@@ -352,7 +352,7 @@ def test_apply_merges_multiple_dirty_scenes_into_existing_canonical_without_losi
     canonical = _fetch_scene(tmp_path, CANONICAL)
     assert canonical is not None
     aliases = json.loads(canonical["aliases_json"])
-    assert aliases == ["正殿", DIRTY, "亥时别名", dirty_late, "子时别名"]
+    assert aliases == ["Main Hall", DIRTY, "night alias", dirty_late, "noon alias"]
     assert canonical["environment_prompt"] == "canonical prompt"
     assert canonical["description"] == "dirty description"
     assert canonical["spatial_layout_image"] == "canonical-layout.png"
@@ -365,7 +365,7 @@ def test_apply_merges_multiple_dirty_scenes_into_existing_canonical_without_losi
 
 
 def test_multiple_dirty_merge_records_field_conflicts_and_preserves_notes(tmp_path: Path):
-    dirty_late = "凤鸣皇城·苏鸾寝殿 子时"
+    dirty_late = "Phoenix City Bedchamber noon"
     _create_db(tmp_path)
     _insert_scene(
         tmp_path,
@@ -412,10 +412,10 @@ def test_multiple_dirty_merge_records_field_conflicts_and_preserves_notes(tmp_pa
 def test_apply_multiple_dirty_scenes_to_new_canonical_renames_one_and_merges_rest(
     tmp_path: Path,
 ):
-    dirty_late = "凤鸣皇城·苏鸾寝殿 子时"
+    dirty_late = "Phoenix City Bedchamber noon"
     _create_db(tmp_path)
-    _insert_scene(tmp_path, DIRTY, aliases=["亥时别名"], description="dirty description")
-    _insert_scene(tmp_path, dirty_late, aliases=["子时别名"], notes="late notes")
+    _insert_scene(tmp_path, DIRTY, aliases=["night alias"], description="dirty description")
+    _insert_scene(tmp_path, dirty_late, aliases=["noon alias"], notes="late notes")
     _insert_beat(tmp_path, 4, 1, {"scene_id": DIRTY})
     _insert_beat(tmp_path, 4, 2, {"scene_id": dirty_late, "base_id": dirty_late})
 
@@ -436,8 +436,8 @@ def test_apply_multiple_dirty_scenes_to_new_canonical_renames_one_and_merges_res
     aliases = json.loads(canonical["aliases_json"])
     assert DIRTY in aliases
     assert dirty_late in aliases
-    assert "亥时别名" in aliases
-    assert "子时别名" in aliases
+    assert "night alias" in aliases
+    assert "noon alias" in aliases
     assert canonical["description"] == "dirty description"
     assert canonical["notes"] == "late notes"
     assert _fetch_beat_ref(tmp_path, 4, 1)["scene_id"] == CANONICAL
@@ -445,11 +445,11 @@ def test_apply_multiple_dirty_scenes_to_new_canonical_renames_one_and_merges_res
 
 
 def test_asset_copy_rejects_scene_names_that_escape_assets_scenes_root(tmp_path: Path):
-    dirty = "../outside 亥时"
+    dirty = "../outside night"
     canonical = "../outside"
     _create_db(tmp_path)
     _insert_scene(tmp_path, dirty)
-    source = tmp_path / "assets" / "outside 亥时" / "layout.txt"
+    source = tmp_path / "assets" / "outside night" / "layout.txt"
     source.parent.mkdir(parents=True)
     source.write_text("outside", encoding="utf-8")
 

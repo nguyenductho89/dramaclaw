@@ -42,7 +42,7 @@ export function ScrollVideoScene({
         video.currentTime = 0;
       }
       void video.play().catch(() => {
-        /* 静默失败：浏览器可能在极端情况下拒绝自动播放。 */
+        /* Silent failure: the browser may refuse autoplay in extreme cases. */
       });
     } else {
       video.pause();

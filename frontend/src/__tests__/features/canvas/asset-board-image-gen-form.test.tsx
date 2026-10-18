@@ -8,18 +8,12 @@ import { CANVAS_NODE_TYPES, type CanvasNode } from '@/features/canvas/domain/can
 import { AssetBoardView } from '@/features/canvas/ui/asset-board/AssetBoardView';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
-  }),
-}));
-
-// 算力询价走 react-query，测试树里没有 QueryClientProvider —— 直接短路。
+// Compute-cost quoting goes through react-query and the test tree has no QueryClientProvider -- short-circuit it directly.
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
 
-// 提交要求 URL 里有 project（否则 handleSubmit 直接早退）。
+// Submission requires a project in the URL (otherwise handleSubmit returns early).
 vi.mock('@/lib/url-params', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/url-params')>()),
   readUrl: () => ({ project: 'demo-project', canvas: 'default' }),
@@ -32,7 +26,7 @@ vi.mock('@/api/ops', async (importOriginal) => ({
       id: 'huimeng/test-image',
       providerId: 'huimeng',
       apiModel: 'test_image_api',
-      label: '测试模型',
+      label: 'Test model',
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -67,14 +61,14 @@ function emptyImageGenNode(overrides: Partial<CanvasNode['data']> = {}): CanvasN
       prompt: '',
       aspectRatio: '16:9',
       size: '2K',
-      displayName: '图片节点 3',
+      displayName: 'Image node 3',
       ...overrides,
     },
   };
 }
 
 function detailPanel() {
-  return screen.getByRole('region', { name: '资产详情' });
+  return screen.getByRole('region', { name: 'Asset details' });
 }
 
 function openDetail(name: string) {
@@ -82,76 +76,76 @@ function openDetail(name: string) {
   fireEvent.click(screen.getByRole('button', { name }));
 }
 
-describe('故事板详情 · 图片生成表单', () => {
+describe('Storyboard detail · image generation form', () => {
   beforeEach(() => {
     vi.mocked(submitFreezoneGen).mockClear();
   });
 
-  it('空 imageGen 节点：媒体区显示「待确认后生成」占位，下方挂完整生成表单', () => {
+  it('empty imageGen node: the media area shows the "Generates after confirmation" placeholder, with the full generation form mounted below', () => {
     seed([emptyImageGenNode()]);
-    openDetail('图片节点 3');
+    openDetail('Image node 3');
 
     const detail = detailPanel();
-    // 空态占位（无大图可放大）。
-    expect(within(detail).getAllByText('待确认后生成').length).toBeGreaterThan(0);
-    expect(within(detail).queryByRole('button', { name: '放大查看' })).not.toBeInTheDocument();
-    // 生成条：风格 / 资产库 chips + 提示词输入 + 参数 + 翻译 + 提交。
-    expect(within(detail).getByRole('button', { name: '风格' })).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: /资产库/ })).toBeInTheDocument();
-    // 提示词编辑器是 contenteditable，占位走 data-placeholder + ::before。
+    // Empty-state placeholder (no large image to enlarge).
+    expect(within(detail).getAllByText('Generates after confirmation').length).toBeGreaterThan(0);
+    expect(within(detail).queryByRole('button', { name: 'View enlarged' })).not.toBeInTheDocument();
+    // Generation bar: Style / Asset library chips + prompt input + params + translate + submit.
+    expect(within(detail).getByRole('button', { name: 'Style' })).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: /Asset library/ })).toBeInTheDocument();
+    // The prompt editor is contenteditable, and its placeholder goes through data-placeholder + ::before.
     expect(
-      detail.querySelector('[data-placeholder="描述你想要生成的画面内容，@引用素材"]'),
+      detail.querySelector('[data-placeholder="Describe the image you want, use @ to reference assets"]'),
     ).not.toBeNull();
-    expect(within(detail).getByRole('button', { name: '生成' })).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: 'Generate' })).toBeInTheDocument();
   });
 
-  it('有提示词 → 点提交走真实提交链路（submitFreezoneGen 收到该 prompt）', async () => {
-    seed([emptyImageGenNode({ prompt: '一只在雪夜里发光的小猫' })]);
-    openDetail('图片节点 3');
+  it('with a prompt -> clicking submit goes through the real submission chain (submitFreezoneGen receives that prompt)', async () => {
+    seed([emptyImageGenNode({ prompt: 'A glowing kitten on a snowy night' })]);
+    openDetail('Image node 3');
 
-    const submit = within(detailPanel()).getByRole('button', { name: '生成' });
+    const submit = within(detailPanel()).getByRole('button', { name: 'Generate' });
     expect(submit).not.toBeDisabled();
     fireEvent.click(submit);
 
     await waitFor(() => expect(submitFreezoneGen).toHaveBeenCalled());
     const [project, payload] = vi.mocked(submitFreezoneGen).mock.calls[0];
     expect(project).toBe('demo-project');
-    expect(payload.prompt).toBe('一只在雪夜里发光的小猫');
+    expect(payload.prompt).toBe('A glowing kitten on a snowy night');
     expect(payload.nodeId).toBe('gen-1');
   });
 
-  it('提示词为空且无上游文本 → 提交按钮禁用', () => {
+  it('empty prompt and no upstream text -> the submit button is disabled', () => {
     seed([emptyImageGenNode()]);
-    openDetail('图片节点 3');
+    openDetail('Image node 3');
 
-    expect(within(detailPanel()).getByRole('button', { name: '生成' })).toBeDisabled();
+    expect(within(detailPanel()).getByRole('button', { name: 'Generate' })).toBeDisabled();
   });
 
-  it('已有产物的 imageGen 节点仍挂表单，且不再重复渲染只读提示词块', () => {
+  it('an imageGen node with output still mounts the form, and no longer renders the read-only prompt block twice', () => {
     seed([
       emptyImageGenNode({
         imageUrl: '/static/done.png',
-        prompt: '已经出图的提示词',
+        prompt: 'The prompt of an already generated image',
       }),
     ]);
-    openDetail('图片节点 3');
+    openDetail('Image node 3');
 
     const detail = detailPanel();
-    expect(within(detail).getByRole('button', { name: '放大查看' })).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: '生成' })).toBeInTheDocument();
-    // 只读展示块的小标题不出现——提示词只由表单里的输入框承载一份。
-    expect(within(detail).queryByText('提示词')).not.toBeInTheDocument();
-    // prompt 文本只出现一次（表单输入框里那份）。
-    expect(within(detail).getAllByText('已经出图的提示词')).toHaveLength(1);
+    expect(within(detail).getByRole('button', { name: 'View enlarged' })).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: 'Generate' })).toBeInTheDocument();
+    // The read-only block's small heading does not appear -- the prompt is carried only once, by the input in the form.
+    expect(within(detail).queryByText('Prompt')).not.toBeInTheDocument();
+    // The prompt text appears only once (the one in the form input).
+    expect(within(detail).getAllByText('The prompt of an already generated image')).toHaveLength(1);
   });
 
-  it('非图片生成节点（上传节点）详情不出现生成表单，只读提示词块照旧', () => {
+  it('a non-image-generation node (upload node) detail has no generation form, and the read-only prompt block stays as before', () => {
     seed([
       {
         id: 'up-1',
         type: CANVAS_NODE_TYPES.upload,
         position: { x: 0, y: 0 },
-        data: { imageUrl: '/static/up.png', aspectRatio: '1:1', displayName: '角色参考' },
+        data: { imageUrl: '/static/up.png', aspectRatio: '1:1', displayName: 'Character reference' },
       },
       {
         id: 'edit-1',
@@ -159,92 +153,92 @@ describe('故事板详情 · 图片生成表单', () => {
         position: { x: 200, y: 0 },
         data: {
           imageUrl: '/static/edit.png',
-          prompt: '把背景改成雪夜',
+          prompt: 'Change the background to a snowy night',
           aspectRatio: '1:1',
-          displayName: '编辑图片',
+          displayName: 'Edit image',
         },
       },
     ]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '角色参考' }));
-    expect(within(detailPanel()).queryByRole('button', { name: '生成' })).not.toBeInTheDocument();
-    expect(within(detailPanel()).queryByRole('button', { name: /资产库/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Character reference' }));
+    expect(within(detailPanel()).queryByRole('button', { name: 'Generate' })).not.toBeInTheDocument();
+    expect(within(detailPanel()).queryByRole('button', { name: /Asset library/ })).not.toBeInTheDocument();
 
-    // imageEdit 有它自己的一套表单（后续切片），本片不接：仍是只读提示词展示。
-    fireEvent.click(screen.getByRole('button', { name: '编辑图片' }));
-    expect(within(detailPanel()).queryByRole('button', { name: '生成' })).not.toBeInTheDocument();
-    expect(within(detailPanel()).getByText('提示词')).toBeInTheDocument();
-    expect(within(detailPanel()).getByText('把背景改成雪夜')).toBeInTheDocument();
+    // imageEdit has its own set of forms (a later slice), not wired in this slice: it is still a read-only prompt display.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit image' }));
+    expect(within(detailPanel()).queryByRole('button', { name: 'Generate' })).not.toBeInTheDocument();
+    expect(within(detailPanel()).getByText('Prompt')).toBeInTheDocument();
+    expect(within(detailPanel()).getByText('Change the background to a snowy night')).toBeInTheDocument();
   });
 
-  it('imageGen 自带参考图（referenceImageUrl，无上游）→ 表单区补显示自带参考 chip，不走底部只读行', () => {
+  it('imageGen own reference image (referenceImageUrl, no upstream) -> the form area additionally shows an own-reference chip, without going through the bottom read-only row', () => {
     seed([
       emptyImageGenNode({
         imageUrl: '/static/done.png',
         referenceImageUrl: '/static/own-ref.png',
-        displayName: '带参考图的节点',
+        displayName: 'Node with a reference image',
       }),
     ]);
-    openDetail('带参考图的节点');
+    openDetail('Node with a reference image');
 
     const detail = detailPanel();
-    // 生成表单在场 → 底部「参考素材」只读行被收掉（避免与表单 chip 重复）。
-    expect(within(detail).queryByRole('group', { name: '参考素材' })).not.toBeInTheDocument();
-    // 共用表单不渲自带参考图，宿主在表单区补一枚 chip（用 referenceImageUrl），
-    // 保证自带参考图不因底部行隐藏而消失。
-    const ownRef = within(detail).getByAltText('参考图');
+    // Generation form present -> the bottom "Reference assets" read-only row is dropped (avoids duplicating the form chip).
+    expect(within(detail).queryByRole('group', { name: 'Reference assets' })).not.toBeInTheDocument();
+    // The shared form does not render the own reference image, so the host adds one chip in the form area (using referenceImageUrl),
+    // making sure the own reference image does not disappear because the bottom row is hidden.
+    const ownRef = within(detail).getByAltText('Reference image');
     expect(ownRef).toHaveAttribute('src', '/static/own-ref.png');
   });
 
-  it('表单区自带参考 chip 的「移除参考图」→ 清空 referenceImageUrl，chip 消失', () => {
+  it('the "Remove reference image" of the own-reference chip in the form area -> clears referenceImageUrl, and the chip disappears', () => {
     seed([
       emptyImageGenNode({
         imageUrl: '/static/done.png',
         referenceImageUrl: '/static/own-ref.png',
-        displayName: '带参考图的节点',
+        displayName: 'Node with a reference image',
       }),
     ]);
-    openDetail('带参考图的节点');
+    openDetail('Node with a reference image');
 
     const detail = detailPanel();
-    expect(within(detail).getByAltText('参考图')).toBeInTheDocument();
-    // 移除按钮默认 hover 才显现（display:none），用 title 直接取到并点击。
-    fireEvent.click(within(detail).getByTitle('移除参考图'));
+    expect(within(detail).getByAltText('Reference image')).toBeInTheDocument();
+    // The remove button only shows on hover (display:none), so grab it directly by title and click.
+    fireEvent.click(within(detail).getByTitle('Remove reference image'));
 
-    expect(within(detail).queryByAltText('参考图')).not.toBeInTheDocument();
+    expect(within(detail).queryByAltText('Reference image')).not.toBeInTheDocument();
     const node = useCanvasStore.getState().nodes.find((candidate) => candidate.id === 'gen-1');
     expect((node?.data as { referenceImageUrl?: string | null }).referenceImageUrl).toBeNull();
   });
 
-  it('imageGen 有上游引用 → 底部只读行不出现，引用只由表单 chip 承载（不重复）', () => {
+  it('imageGen with upstream references -> the bottom read-only row does not appear, and references are carried only by form chips (no duplication)', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'up-ref',
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 0, y: 0 },
-          data: { imageUrl: '/static/up-ref.png', aspectRatio: '1:1', displayName: '上游参考' },
+          data: { imageUrl: '/static/up-ref.png', aspectRatio: '1:1', displayName: 'Upstream reference' },
         },
-        emptyImageGenNode({ imageUrl: '/static/done.png', prompt: '已出图', displayName: '图片节点 3' }),
+        emptyImageGenNode({ imageUrl: '/static/done.png', prompt: 'Generated', displayName: 'Image node 3' }),
       ],
       [{ id: 'e-up', source: 'up-ref', target: 'gen-1' }],
     );
     render(<AssetBoardView visible onLocateNode={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '图片节点 3' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Image node 3' }));
 
     const detail = detailPanel();
-    // 生成表单在场 → 无底部「参考素材」只读行。
-    expect(within(detail).queryByRole('group', { name: '参考素材' })).not.toBeInTheDocument();
-    // 上游引用作为表单引用 chip 出现（chip 容器 title="来自上游 · 上游参考"）。
-    expect(within(detail).getByTitle('来自上游 · 上游参考')).toBeInTheDocument();
+    // Generation form present -> no bottom "Reference assets" read-only row.
+    expect(within(detail).queryByRole('group', { name: 'Reference assets' })).not.toBeInTheDocument();
+    // The upstream reference appears as a form reference chip (chip container title="From upstream · Upstream reference").
+    expect(within(detail).getByTitle('From upstream · Upstream reference')).toBeInTheDocument();
   });
 
-  it('图片卡空占位文案与详情一致', () => {
+  it('the image card empty placeholder text matches the detail', () => {
     seed([emptyImageGenNode()]);
     render(<AssetBoardView visible onLocateNode={() => {}} />);
 
-    // 三栏态下图片卡的空媒体区。
-    expect(screen.getByText('待确认后生成')).toBeInTheDocument();
+    // The image card's empty media area in three-column state.
+    expect(screen.getByText('Generates after confirmation')).toBeInTheDocument();
   });
 });

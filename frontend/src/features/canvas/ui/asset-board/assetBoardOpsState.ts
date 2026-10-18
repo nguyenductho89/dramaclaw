@@ -2,42 +2,42 @@
 // Copyright (c) 2026 ClaymoreLab
 import { useSyncExternalStore } from 'react';
 
-/** 一次操作失败时，源节点工具条上红色错误文案的自动消失时长（ms）。 */
+/** When an operation fails, how long (ms) the red error text on the source node's toolbar takes to disappear automatically. */
 export const OP_FAILURE_AUTO_DISMISS_MS = 8000;
 
 export interface AssetBoardOpsRegistry<Op extends string> {
-  /** 读某个节点当前进行中的操作（跨组件重挂载存活）。 */
+  /** Read a node's operation currently in progress (survives cross-component remounts). */
   useInFlightOp: (nodeId: string) => Op | null;
-  /** 读某个节点最近一次失败文案（{@link OP_FAILURE_AUTO_DISMISS_MS} 后自动清）。 */
+  /** Read a node's most recent failure text (cleared automatically after {@link OP_FAILURE_AUTO_DISMISS_MS}). */
   useOpFailure: (nodeId: string) => string | null;
   markOpStart: (nodeId: string, op: Op) => void;
   markOpSettled: (nodeId: string) => void;
   reportOpFailure: (nodeId: string, message: string) => void;
-  /** 供测试断言的只读视图（nodeId → 进行中的操作名）。 */
+  /** A read-only view for test assertions (nodeId -> name of the operation in progress). */
   inFlight: ReadonlyMap<string, Op>;
-  /** 仅供测试：清空两张登记表，避免用例间靠固定 node id 串态。 */
+  /** For tests only: clear the two registries, avoiding cross-talk between cases via fixed node ids. */
   resetForTest: () => void;
 }
 
 /**
- * 故事板详情工具条的「进行中 / 失败反馈」登记表工厂。
+ * The factory of the "in progress / failure feedback" registries for the storyboard detail toolbars.
  *
- * 为什么是模块级 Map 而不是组件 state：详情工具条按 `key={node.id}` 整体重挂载
- * （切到别的节点再切回来时是全新实例），若 busy 态只放组件局部 state，切走再
- * 切回会把它重置为 null —— 用户能在后台任务还没 settle 时对同一节点再提交一次，
- * 造成重复计费。做法同 nodes/shared/albumPendingTotals.ts 的叠卡画册计数：
- * 模块级 Map + useSyncExternalStore，跨组件卸载/重挂存活；不持久化到
- * localStorage——刷新页面本来就不会给任务续传，留着只会显示永远转圈的假 busy 态。
+ * Why a module-level Map rather than component state: the detail toolbar remounts as a whole by `key={node.id}`
+ * (switching to another node and back gives a brand-new instance), and if the busy state lived only in component-local state, switching away and
+ * back would reset it to null - the user could submit the same node again before the background task settles,
+ * causing duplicate billing. The approach is the same as the stacked-card album counting in nodes/shared/albumPendingTotals.ts:
+ * a module-level Map + useSyncExternalStore, surviving component unmount/remount; not persisted to
+ * localStorage - a refresh does not resume tasks anyway, and keeping it would only show a fake busy state that spins forever.
  *
- * 失败反馈同理：生成类操作的失败信息目前只写到新建的**结果节点**
- * data.generationError 上，而用户此刻停留在**源节点**的详情面板，看不到那个刚
- * 建出来、大概率还没滚动到视口里的新节点——所以在源节点工具条上补一行红色文案，
- * 到点自动消失。（不用 FreezoneShell 的 setToast / canvasEventBus：两条路径都要
- * 新增 ports.ts 事件类型 + FreezoneShell 订阅者，超出这批改动的文件范围。）
+ * The same goes for failure feedback: the failure info of generation-type operations is currently written only on the newly built **result node's**
+ * data.generationError, while the user is staying on the **source node's** detail panel and cannot see that just-built
+ * node, which most likely has not scrolled into the viewport - so a red line of text is added on the source node's toolbar,
+ * disappearing automatically on schedule. (FreezoneShell's setToast / canvasEventBus are not used: both paths would need a
+ * new ports.ts event type + a FreezoneShell subscriber, beyond the file scope of this batch of changes.)
  *
- * 图片侧与视频侧各建一个实例（见 assetBoardImageOpsRegistry /
- * assetBoardVideoOpsRegistry）——一个节点不会同时是图片和视频，分开只是让各自的
- * 测试 reset 不互相牵连。
+ * The image side and the video side each build an instance (see assetBoardImageOpsRegistry /
+ * assetBoardVideoOpsRegistry) - a node is never both image and video, and separating them just keeps each side's
+ * test reset from affecting the other.
  */
 export function createAssetBoardOpsRegistry<Op extends string>(): AssetBoardOpsRegistry<Op> {
   const inFlightMap = new Map<string, Op>();

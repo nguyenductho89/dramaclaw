@@ -84,7 +84,7 @@ async def get_prompt_preview(
             step=step,
             model_kind=spec.model_kind,
             supported=False,
-            note=spec.note or "该步骤暂不支持预览 / Preview is not available for this step yet",
+            note=spec.note or "Preview is not available for this step yet",
         )
         return {"ok": True, "data": preview.to_dict()}
     if spec.needs_episode and episode is None:

@@ -6,50 +6,50 @@ import { sceneNameToRef, sceneRefToName } from "@/lib/scene-ref";
 
 describe("scene-ref helpers", () => {
   it("keeps plain scene names as base scenes", () => {
-    expect(sceneNameToRef("卫生间")).toEqual({
-      scene_id: "卫生间",
+    expect(sceneNameToRef("Bathroom")).toEqual({
+      scene_id: "Bathroom",
       variant_id: "",
       plate_time_of_day: "",
     });
   });
 
   it("splits underscore scene names into base and variant", () => {
-    expect(sceneNameToRef("卫生间_漏水")).toEqual({
-      scene_id: "卫生间",
-      variant_id: "漏水",
+    expect(sceneNameToRef("Bathroom_leak")).toEqual({
+      scene_id: "Bathroom",
+      variant_id: "leak",
       plate_time_of_day: "",
     });
   });
 
   it("splits a standard time suffix into plate metadata without composing it back", () => {
-    expect(sceneNameToRef("卫生间_漏水_夜晚")).toEqual({
-      scene_id: "卫生间",
-      variant_id: "漏水",
-      plate_time_of_day: "夜晚",
+    expect(sceneNameToRef("Bathroom_leak_night")).toEqual({
+      scene_id: "Bathroom",
+      variant_id: "leak",
+      plate_time_of_day: "night",
     });
   });
 
   it("prefers structured scene records over name parsing", () => {
     expect(
-      sceneNameToRef("卫生间_漏水_夜晚", [
+      sceneNameToRef("Bathroom_leak_night", [
         {
-          name: "卫生间_漏水_夜晚",
-          base_scene_id: "卫生间",
-          variant_id: "漏水",
-          time_of_day: "夜晚",
+          name: "Bathroom_leak_night",
+          base_scene_id: "Bathroom",
+          variant_id: "leak",
+          time_of_day: "night",
         },
       ]),
     ).toEqual({
-      scene_id: "卫生间",
-      variant_id: "漏水",
-      plate_time_of_day: "夜晚",
+      scene_id: "Bathroom",
+      variant_id: "leak",
+      plate_time_of_day: "night",
     });
   });
 
   it("composes canonical scene refs back to display names", () => {
-    expect(sceneRefToName({ scene_id: "卫生间", variant_id: "漏水" })).toBe(
-      "卫生间_漏水",
+    expect(sceneRefToName({ scene_id: "Bathroom", variant_id: "leak" })).toBe(
+      "Bathroom_leak",
     );
-    expect(sceneRefToName({ scene_id: "卫生间", variant_id: "" })).toBe("卫生间");
+    expect(sceneRefToName({ scene_id: "Bathroom", variant_id: "" })).toBe("Bathroom");
   });
 });

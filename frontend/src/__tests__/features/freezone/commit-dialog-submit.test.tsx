@@ -12,7 +12,7 @@ vi.mock("@/api/projects", async (importOriginal) => ({
   listCharacters: vi.fn(async () => []),
   listEpisodes: vi.fn(async () => []),
   listBeats: vi.fn(async () => []),
-  listScenes: vi.fn(async () => [{ name: "公寓楼电梯间" }]),
+  listScenes: vi.fn(async () => [{ name: "Apartment elevator hall" }]),
   listCharacterIdentities: vi.fn(async () => []),
 }));
 
@@ -20,7 +20,7 @@ vi.mock("@/features/freezone/commit/promoteToAsset", async (importOriginal) => (
   ...(await importOriginal<typeof import("@/features/freezone/commit/promoteToAsset")>()),
   promoteToAsset: vi.fn(),
   previewAssetImpact: vi.fn(async () => ({
-    target: { kind: "scene_3gs_reverse_ply", scene_id: "公寓楼电梯间" },
+    target: { kind: "scene_3gs_reverse_ply", scene_id: "Apartment elevator hall" },
     affected_beats: [],
     affected_count: 0,
   })),
@@ -30,7 +30,7 @@ describe("CommitDialog submit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(previewAssetImpact).mockResolvedValue({
-      target: { kind: "scene_3gs_reverse_ply", scene_id: "公寓楼电梯间" },
+      target: { kind: "scene_3gs_reverse_ply", scene_id: "Apartment elevator hall" },
       affected_beats: [],
       affected_count: 0,
     });
@@ -38,10 +38,10 @@ describe("CommitDialog submit", () => {
 
   it("returns a node patch after committing a custom 3D world to a source slot", async () => {
     const sourceUrl = "/static/admin/proj/freezone/generated/custom-world.sog";
-    const target: PushTarget = { kind: "scene_3gs_reverse_ply", scene_id: "公寓楼电梯间" };
+    const target: PushTarget = { kind: "scene_3gs_reverse_ply", scene_id: "Apartment elevator hall" };
     vi.mocked(promoteToAsset).mockResolvedValue({
-      target_path: "director_worlds/公寓楼电梯间/v1/reverse_sharp.sog",
-      target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/reverse_sharp.sog?v=2",
+      target_path: "director_worlds/Apartment elevator hall/v1/reverse_sharp.sog",
+      target_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/reverse_sharp.sog?v=2",
       backup: null,
     });
     const onSuccess = vi.fn();
@@ -70,19 +70,19 @@ describe("CommitDialog submit", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "Commit" }));
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(onSuccess.mock.calls[0]?.[2]).toEqual(target);
     expect(onSuccess.mock.calls[0]?.[3]).toMatchObject({
       slot_target: target,
-      committed_slot_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/reverse_sharp.sog?v=2",
-      committed_target_label: "公寓楼电梯间 / 背面世界",
+      committed_slot_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/reverse_sharp.sog?v=2",
+      committed_target_label: "Apartment elevator hall / Back world",
     });
   });
 
   it("keeps the manual commit open and does not report success when persistence fails", async () => {
-    const failure = new Error("主线写入失败");
+    const failure = new Error("Mainline write failed");
     vi.mocked(promoteToAsset).mockRejectedValue(failure);
     const onClose = vi.fn();
     const onSuccess = vi.fn();
@@ -97,9 +97,9 @@ describe("CommitDialog submit", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "Commit" }));
 
-    expect(await screen.findByText("主线写入失败")).toBeInTheDocument();
+    expect(await screen.findByText("Mainline write failed")).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -28,7 +29,7 @@ import {
 } from '@/features/canvas/application/assetBoardImageOps';
 import { NODE_FLOATING_PANEL_SURFACE_CLASS } from '@/features/canvas/ui/nodeControlStyles';
 
-/** 功能 → 图标。与工具条 `GRID_ACTION_DEFS` 同一套图标，换个视图不换认知。 */
+/** Feature -> icon. The same icon set as the toolbar's `GRID_ACTION_DEFS`; switching views does not change the mental model. */
 export const ASSET_BOARD_IMAGE_OP_ICONS: Record<AssetBoardImageOpKey, LucideIcon> = {
   multiCameraGrid: Grid3x3,
   plotFourGrid: Grid2x2,
@@ -44,9 +45,9 @@ export const ASSET_BOARD_IMAGE_OP_ICONS: Record<AssetBoardImageOpKey, LucideIcon
 };
 
 /**
- * 功能框的分栏：左栏「分镜叙事 + 质感调节」(4+1)、右栏「空间与机位 + 设定图」
- * (2+4)，左 5 行右 6 行（对标 liblib；加了场景设定图后右栏多出一行，面板本身
- * 可滚动，不影响可达性）。纯排版决策，故功能表里只留分类，怎么摆由这里说了算。
+ * Column split of the feature box: the left column "Storyboard narrative + Texture tuning" (4+1), the right column "Space & camera + Design sheets"
+ * (2+4), 5 rows on the left and 6 on the right (matches liblib; after adding the scene setting sheet the right column gains a row, and the panel itself
+ * scrolls, not affecting reachability). A pure layout decision, so the feature table keeps only categories, and how to arrange them is decided here.
  */
 const PANEL_COLUMNS: readonly (readonly AssetBoardImageOpCategoryKey[])[] = [
   ['narrative', 'texture'],
@@ -64,18 +65,17 @@ const PANEL_MAX_HEIGHT_PX = 460;
 const PANEL_GAP_PX = 8;
 
 /**
- * 提示词输入框**里**的功能 chip（对标 liblib 详情输入框里那颗「⬢ 角色设定图 ⇄」）。
+ * The feature chip **inside** the prompt input box (matches the "hexagon Character sheet swap" chip in the liblib detail input box).
+ * It is not a separate row of controls above the input box, but an inline atomic block inside the contenteditable
+ * (portaled in via the `leadingChip` slot of `PromptMentionEditor`), therefore:
+ * - the feature description is the input box's placeholder, following the chip on the same row;
+ * - what the user types starts flowing after the chip;
+ * - **Backspace removes it like deleting a character** (deletion is intercepted by the editor and calls back the host to clear `imageOpKey`),
+ *   so no x button is drawn here anymore.
  *
- * 它不是输入框上方另起的一行控件，而是 contenteditable 内部的一个内联原子块
- * （由 `PromptMentionEditor` 的 `leadingChip` 插槽 portal 进去），因此：
- * - 功能说明就是输入框的占位文案，接在 chip 右边同一行；
- * - 用户打的字从 chip 后面开始流动；
- * - **像删字符一样退格即可删掉它**（删除由编辑器拦截后回调宿主清 `imageOpKey`），
- *   所以这里不再画一个 × 按钮。
- *
- * 点 chip 展开功能框，按四栏（分镜叙事 / 空间与机位 / 设定图 / 质感调节）列出全部
- * 功能，选一个就地换掉当前功能（节点名跟着换）。功能框走 portal 挂 body，避免被
- * 输入框的 overflow 裁掉。
+ * Clicking the chip expands the feature box, listing all features in four columns (Storyboard narrative / Space & camera / Design sheets / Texture tuning),
+ * and choosing one swaps out the current feature in place (the node name changes along). The feature box is portaled to body, avoiding being clipped
+ * by the input box's overflow.
  */
 export function AssetBoardImageOpChip({
   nodeId,
@@ -84,7 +84,7 @@ export function AssetBoardImageOpChip({
 }: {
   nodeId: string;
   opKey: AssetBoardImageOpKey;
-  /** 生成中锁住换功能：在途任务还会回写这个节点，中途改 key 只会让人看错。 */
+  /** Lock feature switching while generating: an in-flight task still writes back to this node, and changing the key midway would only mislead people. */
   disabled?: boolean;
 }): ReactElement {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -106,13 +106,13 @@ export function AssetBoardImageOpChip({
     return () => document.removeEventListener('mousedown', onPointerDown, true);
   }, [anchor]);
 
-  // 功能被切走 / 被删掉时顺手收起面板，避免它挂在原地指向一个已经不在的 chip。
+  // When the feature is switched away / deleted, also collapse the panel along the way, avoiding it hanging in place pointing at a chip that no longer exists.
   useEffect(() => setAnchor(null), [opKey]);
 
   const def = ASSET_BOARD_IMAGE_OP_MAP[opKey];
   const Icon = ASSET_BOARD_IMAGE_OP_ICONS[opKey];
 
-  // 输入框贴在面板底部，往下弹会顶出视口 → 一律往上弹，左边缘对齐 chip 并夹在视口内。
+  // The input box hugs the bottom of the panel, and popping downward would push out of the viewport -> always pop upward, left edge aligned to the chip and clamped inside the viewport.
   const panelStyle = anchor
     ? {
         left: Math.max(8, Math.min(anchor.left, window.innerWidth - PANEL_WIDTH_PX - 8)),
@@ -127,10 +127,10 @@ export function AssetBoardImageOpChip({
       <button
         ref={triggerRef}
         type="button"
-        title={`${def.label} · 点击切换功能，退格删除`}
+        title={i18n.t('canvas.assetBoard.imageOps.chipTitle', { label: def.label })}
         disabled={disabled}
-        // 别让 mousedown 走默认行为：那会把光标挪到 chip 上（它是 contenteditable=false
-        // 的原子块），用户接着打字会落在意料之外的位置。
+        // Do not let mousedown take its default behavior: that would move the caret onto the chip (an atomic block with contenteditable=false),
+        // and the user's next typing would land somewhere unexpected.
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
           setAnchor((prev) =>
@@ -189,8 +189,8 @@ export function AssetBoardImageOpChip({
                             >
                               <OpIcon className="h-4 w-4" />
                             </span>
-                            {/* 行高固定 44px：说明行平时收起、hover/选中才出现，标题
-                                随之上移一点，整块面板不会因此跳高。 */}
+                            {/* Row height fixed at 44px: the description row is collapsed normally and appears only on hover/selection, and the title
+                            moves up a bit accordingly, so the whole panel does not jump in height. */}
                             <span className="flex min-w-0 flex-col justify-center gap-0.5">
                               <span className="truncate text-[13px] leading-tight text-white">
                                 {op.label}

@@ -1,7 +1,7 @@
-"""编排引擎：加载候选 → 调用 T1-T4 → 选择。
+"""Orchestration engine: load candidates -> run T1-T4 -> select.
 
-原子工具：对每个 beat 执行 T1 颜色预筛 → T2 事实核查 → T3 评分 → T4 对比，
-输出可操作摘要供 Agent 做重生成决策。
+Atomic tool: for each beat, run T1 color pre-screening -> T2 fact check -> T3 scoring -> T4 comparison,
+and output an actionable summary for the Agent to make regeneration decisions.
 """
 
 import logging
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class BeatSelection:
-    """单个 beat 的选择结果。"""
+    """Selection result of a single beat."""
 
     def __init__(self, beat_num: int):
         self.beat_num = beat_num
@@ -56,18 +56,18 @@ async def run_sketch_select(
     color_prefilter: bool = True,
     fact_check: bool = True,
 ) -> dict:
-    """原子工具：对整集所有 beat 执行候选择优。
+    """Atomic tool: run candidate selection for all beats of the whole episode.
 
     Args:
-        project_dir: 项目目录
-        episode_num: 集数
-        beats: beat 数据列表
-        pool_index: PoolIndex 对象
-        sketch_colors: {identity_id: "#HEX COLOR_NAME"} 颜色映射
-        quality_threshold: 得分低于此值的 beat 列入 needs_regeneration
-        score_gap_for_auto_select: top-2 分差超过此值自动选
-        color_prefilter: 是否用 T1 颜色预筛
-        fact_check: 是否用 T2 事实核查
+        project_dir: Project directory
+        episode_num: Episode number
+        beats: List of beat data
+        pool_index: PoolIndex object
+        sketch_colors: {identity_id: "#HEX COLOR_NAME"} color mapping
+        quality_threshold: Beats scoring below this value are listed in needs_regeneration
+        score_gap_for_auto_select: Auto-select when the top-2 score gap exceeds this value
+        color_prefilter: Whether to use the T1 color pre-screen
+        fact_check: Whether to use the T2 fact check
 
     Returns:
         dict: {beat_results, needs_regeneration, no_candidates, all_disqualified, summary}
@@ -81,7 +81,7 @@ async def run_sketch_select(
     comparer = SketchComparer()
     verifier = ImageVerifier() if fact_check else None
 
-    # 预计算 beat content hash（含配色）用于 stale 判断
+    # Precompute the beat content hash (including color scheme) for the stale check
     beat_hashes: dict[int, str] = {}
     for i, beat in enumerate(beats):
         bn = i + 1
@@ -90,9 +90,9 @@ async def run_sketch_select(
     beat_results: list[dict] = []
     selected_count = 0
     total_beats = len(beats)
-    needs_regeneration: list[int] = []  # 选出但得分 < threshold
-    no_candidates: list[int] = []       # 没有 fresh 候选
-    all_disqualified: list[int] = []    # 有候选但全被 T1/T2 淘汰
+    needs_regeneration: list[int] = []  # selected but score < threshold
+    no_candidates: list[int] = []       # no fresh candidates
+    all_disqualified: list[int] = []    # has candidates but all eliminated by T1/T2
     accepted_beats: list[int] = []
     provisional_beats: list[int] = []
 
@@ -102,7 +102,7 @@ async def run_sketch_select(
 
         selection = BeatSelection(beat_num)
 
-        # 获取该 beat 的所有 sketch 候选
+        # Get all sketch candidates of this beat
         pool_images = pool_index.filter_by_beat_and_type(beat_num, "sketch")
         if not pool_images:
             selection.selected_reason = "no_candidates"
@@ -111,7 +111,7 @@ async def run_sketch_select(
             beat_results.append(selection.to_dict())
             continue
 
-        # 构建候选列表（过滤 stale：与 API 使用相同的 is_pool_image_stale 逻辑）
+        # Build the candidate list (filter stale: same is_pool_image_stale logic as the API)
         candidates: list[dict] = []
         for img in pool_images:
             if is_pool_image_stale(img, beat_hashes, None):
@@ -133,7 +133,7 @@ async def run_sketch_select(
             beat_results.append(selection.to_dict())
             continue
 
-        # --- T1: 颜色预筛 ---
+        # --- T1: color pre-screen ---
         if color_prefilter and sketch_colors:
             try:
                 char_identities = extract_char_identities_from_markers(visual_desc, strict=False)
@@ -157,7 +157,7 @@ async def run_sketch_select(
                         cand["disqualified"] = True
                         cand["reason"] = f"color_missing:{','.join(sorted(missing))}"
 
-        # --- T2: 事实核查 ---
+        # --- T2: fact check ---
         if fact_check and verifier:
             named_characters = re.findall(r"\{\{([^}]+)\}\}", visual_desc)
             time_of_day = beat.get("time_of_day", "")
@@ -190,12 +190,12 @@ async def run_sketch_select(
                 except Exception as e:
                     logger.warning("Fact check failed for %s: %s", cand["pool_id"], e)
 
-        # --- 过滤出合格候选 ---
+        # --- Filter qualified candidates ---
         qualified = [c for c in candidates if not c["disqualified"]]
 
         if not qualified:
-            # 全部淘汰 → 记录到 all_disqualified，放宽标准继续选（Agent 可决定重生成）
-            # 保留原始 disqualified/reason 供 Agent 诊断，仅标记 relaxed
+            # All eliminated -> record in all_disqualified, relax the criteria and keep selecting (the Agent may decide to regenerate)
+            # Keep the original disqualified/reason for Agent diagnosis, only mark relaxed
             logger.warning("Beat %d: all candidates disqualified, using all", beat_num)
             all_disqualified.append(beat_num)
             qualified = candidates
@@ -203,7 +203,7 @@ async def run_sketch_select(
             for c in qualified:
                 c["relaxed"] = True
 
-        # --- T3: 评分 ---
+        # --- T3: scoring ---
         for cand in qualified:
             try:
                 score = await scorer.score_sketch(
@@ -220,7 +220,7 @@ async def run_sketch_select(
                 logger.warning("Score failed for %s: %s", cand["pool_id"], e)
                 cand["score"] = {"script_match": 0, "identity_clarity": 0, "total": 0}
 
-        # --- 选择 ---
+        # --- Selection ---
         scored = sorted(
             qualified,
             key=lambda c: c["score"]["total"] if c["score"] else 0,
@@ -238,7 +238,7 @@ async def run_sketch_select(
             gap = top1 - top2
 
             if gap > score_gap_for_auto_select:
-                # 分差大，自动选最高分
+                # Large score gap, auto-select the highest score
                 selection.selected_pool_id = scored[0]["pool_id"]
                 selection.selected_reason = f"score_gap={gap:.1f}"
                 selection.selection_confidence = min(
@@ -246,10 +246,10 @@ async def run_sketch_select(
                     0.7 + gap / max(score_gap_for_auto_select, 0.1) * 0.1,
                 )
             else:
-                # 分差小，用 T4 对比选择
+                # Small score gap, use T4 comparison to select
                 try:
                     compare_candidates = [
-                        (c["pool_id"], c["path"]) for c in scored[:3]  # 最多对比 top3
+                        (c["pool_id"], c["path"]) for c in scored[:3]  # compare at most top3
                     ]
                     compare_result = await comparer.compare_sketches(
                         compare_candidates,
@@ -273,7 +273,7 @@ async def run_sketch_select(
         selection.candidates = candidates
         if selection.selected_pool_id:
             selected_count += 1
-            # 检查选中的候选得分是否 < threshold
+            # Check whether the selected candidate's score is < threshold
             selected_cand = next(
                 (c for c in candidates if c["pool_id"] == selection.selected_pool_id), None
             )
@@ -301,7 +301,7 @@ async def run_sketch_select(
             selection.selected_reason,
         )
 
-    # Agent 可操作摘要（去重：一个 beat 可能同时在 all_disqualified 和 needs_regeneration）
+    # Agent-actionable summary (deduplicated: a beat may be in both all_disqualified and needs_regeneration)
     attention_beats = set(needs_regeneration) | set(no_candidates) | set(all_disqualified)
     attention_count = len(attention_beats)
     return {

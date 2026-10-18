@@ -11,7 +11,7 @@ describe("getProjectCover", () => {
   it("returns the first rendered character uppercased", () => {
     expect(getProjectCover("ko").initial).toBe("K");
     expect(getProjectCover("test").initial).toBe("T");
-    expect(getProjectCover("中文项目").initial).toBe("中");
+    expect(getProjectCover("🎬 Drama").initial).toBe("🎬");
     expect(getProjectCover("").initial).toBe("?");
   });
 

@@ -645,9 +645,9 @@ interface OpsPanelProps {
   onDetachUpstream: (nodeId: string) => void;
 }
 
-// 生成入口属于已连线的 ThreeDWorldNode：图片节点右侧 + 负责表达画布关系，
-// 本节点负责把上游图片提交成 3DGS source。这里保留引用、错误和历史信息，
-// 避免把 source 类型下拉误当成导演世界 source 选择器。
+// The generation entry belongs to a connected ThreeDWorldNode: the + on the right of the image node expresses the canvas relation,
+// and this node submits the upstream image as a 3DGS source. References, errors and history are kept here,
+// avoiding mistaking the source type dropdown for the Director World source selector.
 function OpsPanel({
   isGenerating,
   hasUpstream,
@@ -851,8 +851,8 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
       ? t('common.billingRuleNotConfiguredShort')
       : null);
   const updateNodeInternals = useUpdateNodeInternals();
-  // 入口按钮的循环动效在低缩放档下只有几十像素宽，看不出是动的，却要每帧上传
-  // 一次视频纹理。选择器返回 boolean，只在跨过阈值那一次触发重渲染。
+  // The entry button's looping animation is only a few dozen pixels wide at the low-zoom tier, where motion is invisible, yet it uploads
+  // a video texture every frame. The selector returns a boolean and triggers a re-render only once when crossing the threshold.
   const lowDetailZoom = useStore((state) => isLowDetailZoom(state.transform[2]));
   const entryMotionRef = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
@@ -900,7 +900,7 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
     () => localizeNodeDisplayName(CANVAS_NODE_TYPES.threeDWorld, data, t),
     [data, t],
   );
-  // 没改过名就显示「导演世界」这个更贴切的叫法；用户自己起的名一律照原样。
+  // If never renamed, show the more fitting "Director World"; a name the user chose is always kept as is.
   const headerTitle = isNodeUsingDefaultDisplayName(CANVAS_NODE_TYPES.threeDWorld, data)
     ? t('viewer.threeD.directorWorld')
     : resolvedTitle;
@@ -955,7 +955,7 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
 
   const { isGenerating } = useNodeGenerationTaskState(data);
 
-  // 节点未就绪时显示占位；hover/激活时整体高亮。
+  // Show a placeholder when the node is not ready; highlight the whole thing on hover/active.
   const containerStyle: CSSProperties = {
     width: resolvedWidth,
     height: resolvedHeight,
@@ -1131,8 +1131,8 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
         ...(nextPanoUrl ? { panoUrl: nextPanoUrl } : {}),
       };
     } catch (error) {
-      // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-      // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+      // A polling timeout is not a generation failure: the backend is still running and the node's task handle can still resume.
+      // Writing an error banner would mark a live task as failed and clear the handle.
       if (isTaskPollTimeoutError(error)) {
         notifyTaskStillRunning(t);
         return {};
@@ -1170,7 +1170,7 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
         void handleOpenDirector()
           .then((opened) => {
             if (!opened) {
-              publishNodeActionError(requestId, id, action, '无法打开导演世界');
+              publishNodeActionError(requestId, id, action, 'Unable to open Director World');
               return;
             }
             publishNodeActionSuccess(requestId, id, action, { openedUiAction: true });
@@ -1342,7 +1342,7 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
     [addPanoCaptureGroup, id, t, updateNodeData],
   );
 
-  // 「保存 3D 世界」:把导演台摆好的场景快照写回本节点 data.scene(useCanvasSync 自动持久化)。
+  // "Save 3D world": write the scene snapshot arranged in the director console back to this node's data.scene (useCanvasSync persists it automatically).
   const handleSaveScene = useCallback(
     async (snapshot: ThreeDSceneSnapshot, activeSourceId?: string) => {
       const snapshotSourceId = typeof snapshot.world?.activeSourceId === 'string'
@@ -1451,9 +1451,9 @@ export const ThreeDWorldNode = memo(({ id, data, selected, width, height }: Thre
         contexts={(data as { mainline_context?: unknown }).mainline_context}
       />
 
-      {/* 预览区：PLY 就绪前显示 Saturn 占位（上游内容只以「引用」形式出现在 OpsPanel
-          输入框上方）；PLY 就绪后用上游图片作为节点缩略图。生成中叠一层 spinner，
-          风格对齐 ImageNode / VideoNode。Phase 2 接 inline 3D viewer 后再替换为内嵌渲染。 */}
+      {/* Preview area: before the PLY is ready a Saturn placeholder shows (upstream content appears only as a "reference" above the OpsPanel
+          input box); once the PLY is ready the upstream image serves as the node thumbnail. While generating a spinner is overlaid,
+          styled to match ImageNode / VideoNode. To be replaced by an embedded render once the inline 3D viewer lands in Phase 2. */}
       <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[var(--node-radius)] bg-[#0f0f0f] text-text-muted/60">
         {previewThumb ? (
           <img

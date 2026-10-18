@@ -1,4 +1,4 @@
-"""Freezone 标记识别辅助逻辑。"""
+"""Freezone mark recognition helpers."""
 
 from __future__ import annotations
 
@@ -31,20 +31,20 @@ def build_mark_detection_task(
     box_height: float | None = None,
 ) -> str:
     lines = [
-        "你是一个画布节点局部元素识别助手。",
-        "我会给你一张完整图片，以及一张局部裁剪图。",
-        "请识别被点击或框选区域中最重要的可命名视觉元素。",
-        '只输出 JSON 对象，不要 markdown，不要解释，例如：{"label":"老人","note":"主体人物"}',
-        "规则：",
-        '- label 使用简短中文名词，优先 2-6 个字，例如 "老人"、"氧气管"、"病床"、"眼镜"。',
-        '- note 可为空；如有必要，只写极短补充，例如 "主体人物"、"重点保持"。',
-        "- 如果是人物，优先返回人物类别或身份外观称呼，不要写完整长句。",
+        "You are a recognition assistant for local elements of a canvas node.",
+        "I will give you a full image and a local crop of it.",
+        "Identify the most important nameable visual element in the clicked or box-selected region.",
+        'Output only a JSON object, with no markdown and no explanation, for example: {"label":"old man","note":"main character"}',
+        "Rules:",
+        '- label is a short noun, preferably 1-3 words, e.g. "old man", "oxygen tube", "hospital bed", "glasses".',
+        '- note may be empty; if needed, write only a very short addition, e.g. "main character", "keep emphasis".',
+        "- For a person, prefer returning the person category or an identity/appearance term; do not write a long sentence.",
     ]
     if point_x is not None and point_y is not None:
-        lines.append(f"点击点归一化坐标：x={point_x:.4f}, y={point_y:.4f}")
+        lines.append(f"Click point normalized coordinates: x={point_x:.4f}, y={point_y:.4f}")
     if all(v is not None for v in [box_x, box_y, box_width, box_height]):
         lines.append(
-            "框选区域归一化坐标："
+            "Box-selected region normalized coordinates: "
             f"x={float(box_x):.4f}, y={float(box_y):.4f}, "
             f"w={float(box_width):.4f}, h={float(box_height):.4f}"
         )

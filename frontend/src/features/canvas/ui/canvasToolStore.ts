@@ -3,9 +3,9 @@
 import { create } from 'zustand';
 
 /**
- * 画布指针工具。
- * - `move`：默认模式，左键框选 / 拖节点，中键或空格拖动平移画布。
- * - `hand`：抓手，左键按住直接拖动画布；节点不可拖、不可框选（拖到节点上也是平移）。
+ * The canvas pointer tool.
+ * - `move`: the default mode, left button box-selects / drags nodes, middle button or space drags to pan the canvas.
+ * - `hand`: the hand, holding the left button drags the canvas directly; nodes cannot be dragged or box-selected (dragging onto a node also pans).
  */
 export type CanvasTool = 'move' | 'hand';
 
@@ -15,11 +15,11 @@ interface CanvasToolState {
 }
 
 /**
- * 刻意不持久化：抓手是「临时换个手势」，不是偏好。上次退出时忘在抓手上，下次进来
- * 点不动任何节点，用户只会以为画布坏了。刷新一律回到移动工具。
+ * Deliberately not persisted: the hand is "temporarily switching gesture", not a preference. If it were left on the hand at last exit, on the next entry
+ * no node could be clicked, and the user would only think the canvas was broken. A refresh always returns to the move tool.
  *
- * 单独一个轻量 store（和对齐吸附 / 触控板平移开关同构），订阅它的工具条不会因画布
- * 节点变动而重渲染。
+ * A standalone lightweight store (isomorphic with the snap alignment / trackpad pan switches), so the toolbar subscribing to it does not re-render
+ * because of canvas node changes.
  */
 export const useCanvasToolStore = create<CanvasToolState>((set) => ({
   tool: 'move',

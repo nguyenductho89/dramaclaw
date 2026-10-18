@@ -10,7 +10,7 @@ import {
   resolveDesktopRelease,
 } from "./desktop-download";
 
-// 与发布流水线产出的 electron-updater 清单同形状(url 字段带版本号文件名)。
+// Same shape as the electron-updater manifest produced by the release pipeline (the url field carries a versioned file name).
 const WINDOWS_MANIFEST = `version: 1.1.0
 files:
   - url: DramaClaw-Setup-1.1.0.exe
@@ -21,7 +21,7 @@ sha512: occFiM5M3gMp2RqWdM+5Fjw==
 releaseDate: '2026-07-15T08:45:34.419Z'
 `;
 
-// macOS 清单同时列 zip(自动更新载体)与 dmg(首装载体)。
+// The macOS manifest lists both a zip (auto-update carrier) and a dmg (first-install carrier).
 const MAC_MANIFEST = `version: 1.1.0
 files:
   - url: DramaClaw-1.1.0-arm64.zip
@@ -35,7 +35,7 @@ sha512: Bw4uOHg/lIXnqAlOKsuZMw==
 releaseDate: '2026-07-15T08:45:34.419Z'
 `;
 
-// 文件名带空格的形态(electron-builder NSIS 默认 artifactName)。
+// A file name containing spaces (the electron-builder NSIS default artifactName).
 const SPACED_MANIFEST = `version: 1.1.0
 files:
   - url: DramaClaw Setup 1.1.0.exe
@@ -53,7 +53,7 @@ describe("pickInstallerFromManifest", () => {
     });
   });
 
-  // 顶层 sha512 属于顶层 path:(zip),挂到 dmg 上会让用户按错的值核验。
+  // The top-level sha512 belongs to the top-level path: (zip); attaching it to the dmg would make users verify against the wrong value.
   it("pairs the .dmg with its own sha512, not the zip's or the top-level one", () => {
     expect(pickInstallerFromManifest(MAC_MANIFEST, "mac")).toEqual({
       file: "DramaClaw-1.1.0-arm64.dmg",
@@ -72,7 +72,7 @@ describe("pickInstallerFromManifest", () => {
     ).toEqual({ file: "DramaClaw-1.0.dmg", sha512: null });
   });
 
-  // electron-builder 的 NSIS 默认 artifactName 带空格,YAML 里是裸标量。
+  // The electron-builder NSIS default artifactName contains spaces, and in YAML it is a bare scalar.
   it("keeps spaces in the filename", () => {
     expect(pickInstallerFromManifest(SPACED_MANIFEST, "windows")?.file).toBe(
       "DramaClaw Setup 1.1.0.exe",
@@ -95,7 +95,7 @@ describe("parseManifestRelease", () => {
     });
   });
 
-  // path: 那行也含版本号,但只有行首的 version: 才算数。
+  // The path: line also contains the version, but only the version: at the start of a line counts.
   it("ignores version-looking text on other lines", () => {
     expect(parseManifestRelease(MAC_MANIFEST).version).toBe("1.1.0");
   });
@@ -140,7 +140,7 @@ describe("resolveDesktopRelease", () => {
     });
   });
 
-  // 清单里已经是编码过的写法,再 encode 一次会变成 %2520。
+  // The manifest already uses the encoded form; encoding again would produce %2520.
   it("does not double-encode an already-encoded filename", async () => {
     stubManifest("files:\n  - url: DramaClaw%20Setup%201.1.0.exe\n");
     const release = await resolveDesktopRelease("windows");
@@ -167,9 +167,9 @@ describe("resolveDesktopRelease", () => {
     expect(warn).toHaveBeenCalled();
   });
 
-  // 半成功:清单读得到版本号,files: 里却没有 dmg(命名漂移、那一版只发了
-  // zip)。version 非空但 url 已经是兜底 —— 调用方要能分辨,否则会把它当
-  // 成功结果缓存一整个会话。
+  // Partial success: the manifest yields a version, but files: has no dmg (naming drift, that release only shipped a
+  // zip). The version is non-empty but the url is already the fallback; callers must be able to tell, otherwise they would treat it as a
+  // success and cache it for the whole session.
   it("reports resolved=false when the manifest has a version but no installer", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     stubManifest(

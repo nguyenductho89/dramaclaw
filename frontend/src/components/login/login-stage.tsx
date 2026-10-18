@@ -11,14 +11,14 @@ import { useGithubStars } from "@/hooks/use-github-stars";
 import { PRODUCT_MANUAL_URL } from "@/lib/product-manual";
 import styles from "./login.module.css";
 
-// 登录页右上角 GitHub 链接目标。如需指向具体仓库/主页，改这里即可。
+// GitHub link target in the top-right of the login page. To point to a specific repo/homepage, change it here.
 const GITHUB_URL = "https://github.com/dramaclaw/dramaclaw";
-// 从 GITHUB_URL 推导出 owner/repo，用于拉取 star 数。
+// Derive owner/repo from GITHUB_URL, used to fetch the star count.
 const GITHUB_REPO = "dramaclaw/dramaclaw";
 
 function formatStars(count: number): string {
   if (count < 1000) return String(count);
-  // 146.5k 形式：保留一位小数，整千去掉 .0。
+  // Format like 146.5k: keep one decimal, drop .0 for whole thousands.
   return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 }
 

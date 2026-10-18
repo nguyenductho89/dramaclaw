@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""画布媒体引用的作用域守卫。
+"""Scope guard for media references on a canvas.
 
-静态资源按 URL 里的项目 id 独立鉴权，画布保存却从来不看这个：一张画布可以存下指向
-**别的项目**的媒体地址，源项目的所有者本人打开一切正常，换个同样合法的项目成员打开
-就是整片 403 裂图——项目可共享，内部依赖不可共享。
+Static assets are authorized independently by the project id in the URL, but canvas saves never looked at it: a canvas can store media addresses that point to
+**another project**; the source project owner opens it fine, while another equally legitimate project member gets a wall of
+403 broken images -- projects can be shared, internal dependencies cannot.
 
-这里只做一件事：把画布载荷里的媒体引用扫出来，凡是 URL 里的项目 id ≠ 画布所属项目的
-就是外项目引用。判定不区分个人 / 组织，所以源项目所有者本人也绕不过去。
+This module does one thing: scan the media references out of a canvas payload; any whose project id in the URL differs from the canvas's own project
+is a foreign-project reference. The check does not distinguish personal / organization, so even the source project owner cannot bypass it.
 
-守卫按「本次新引入的」拦：库里已经躺着的历史脏引用照常放行，否则一个脏节点就能把整张
-老画布永久锁死（那些画布正是本守卫要解决的问题的受害者）。历史数据靠读取期诊断
-（`GET` 带回的引用清单）和用户手动复制收敛。
+The guard only blocks references that are newly introduced by this save: stale dirty references already in storage pass as before, otherwise one dirty node could lock an entire
+old canvas for good (those canvases are exactly the victims of the problem this guard solves). Historical data converges through read-time diagnostics
+(the reference list returned with `GET`) and manual copying by users.
 """
 
 from __future__ import annotations
@@ -25,25 +25,25 @@ from urllib.parse import urlsplit
 from novelvideo.freezone.asset_copy import parse_project_asset_url
 from novelvideo.freezone.canvas_static_urls import is_url_field_name
 
-# 浏览器取资源时既不管 scheme/host 是不是写全了，也会先把 `..` 规范化掉。`parse_project_asset_url`
-# 是 copy 接口的入口解析器，只认相对的 canonical 形式（故意的：那里不能拿外站 URL 当本地文件）。
-# 两边语义不一致，守卫就会漏：`/static/projects/target/../source/a.png` 按 target 放行，浏览器
-# 实际取的却是 source。所以扫描前先把 URL 还原成浏览器眼里的站点路径。
+# When a browser fetches a resource it does not care whether scheme/host are fully written, and it normalizes `..` first. `parse_project_asset_url`
+# is the entry parser of the copy endpoint and only accepts the relative canonical form (deliberate: external URLs must not be treated as local files there).
+# If the two sides disagree, the guard leaks: `/static/projects/target/../source/a.png` is allowed as target while the browser
+# actually fetches source. So the URL is restored to the site path as the browser sees it before scanning.
 _LOCAL_URL_SCHEMES = {"", "http", "https"}
 
 
 @dataclass(frozen=True)
 class ForeignMediaRef:
-    """一处指向别的项目的媒体引用。"""
+    """A media reference that points at another project."""
 
     node_id: str
-    """出问题的节点 id。"""
+    """Id of the offending node."""
     field: str
-    """节点 `data` 内的字段路径，例如 `cells[1].imageUrl`。"""
+    """Field path inside the node `data`, e.g. `cells[1].imageUrl`."""
     url: str
-    """载荷里的原始 URL（含查询串，前端要按原字符串回改）。"""
+    """Raw URL in the payload (including the query string; the frontend rewrites by the original string)."""
     source_project_id: str
-    """URL 指向的项目。"""
+    """Project the URL points to."""
 
     def as_dict(self) -> dict[str, str]:
         return {
@@ -55,7 +55,7 @@ class ForeignMediaRef:
 
 
 class CanvasMediaScopeError(Exception):
-    """画布想持久化本项目之外的媒体引用。"""
+    """The canvas tried to persist a media reference outside this project."""
 
     def __init__(self, refs: list[ForeignMediaRef]):
         super().__init__(f"canvas media scope mismatch: {len(refs)} foreign reference(s)")
@@ -63,7 +63,7 @@ class CanvasMediaScopeError(Exception):
 
 
 def scan_foreign_media_refs(payload: dict | None, *, project_id: str) -> list[ForeignMediaRef]:
-    """列出载荷里所有不属于 `project_id` 的媒体引用，按节点、字段顺序。"""
+    """List all media references in the payload that do not belong to `project_id`, in node and field order."""
     return list(_iter_foreign_refs(payload, project_id=project_id))
 
 
@@ -73,35 +73,35 @@ def reject_new_foreign_media_refs(
     existing: dict | None,
     project_id: str,
 ) -> None:
-    """本次保存新引入了外项目引用就抛错；库里已有的那些原样放行。"""
+    """Raise if this save newly introduces a foreign-project reference; those already in storage pass unchanged."""
     incoming = scan_foreign_media_refs(payload, project_id=project_id)
     if not incoming:
         return
     grandfathered = {
         _asset_identity(ref.url) for ref in scan_foreign_media_refs(existing, project_id=project_id)
     }
-    # 同一个文件的 `?v=` 每次读都可能被重新盖一遍，按「项目 + 项目内路径」认，别按整串认。
+    # The `?v=` of the same file may be restamped on every read, so identify by "project + project-relative path", not by the whole string.
     new_refs = [ref for ref in incoming if _asset_identity(ref.url) not in grandfathered]
     if new_refs:
         raise CanvasMediaScopeError(new_refs)
 
 
 def _site_path(url: str) -> str | None:
-    """把 URL 还原成浏览器实际会去取的站点路径；不是站点资源就回 `None`。
+    """Restore a URL to the site path the browser would actually fetch; return `None` if it is not a site resource.
 
-    只保留 path：`data:` / `blob:` 这类不是站点文件，直接不认；带 host 的完整 URL 按 path 归类
-    （代价是外站 URL 只要路径长得跟项目资源一模一样也会被当成项目资源——宁可误拦，也不放过一个
-    浏览器会当项目资源去取的地址）。
+    Only the path is kept: `data:` / `blob:` are not site files and are rejected outright; a full URL with a host is classified by its path
+    (the cost is that an external URL whose path looks exactly like a project resource is also treated as one -- better to block by mistake than to let through a
+    URL the browser would fetch as a project resource).
     """
     try:
         parts = urlsplit((url or "").strip())
     except ValueError:
-        # `http://[` 这类畸形 URL：urlsplit 自己就会炸，同样不是站点资源。
+        # Malformed URLs such as `http://[`: urlsplit itself blows up; they are not site resources either.
         return None
     if parts.scheme.lower() not in _LOCAL_URL_SCHEMES or not parts.path:
         return None
-    # `%2e%2e` 在 URL 规范里也是双点段，浏览器照样会拿它回退一层；只还原点，不整串 unquote
-    # （`%2f` 不是分隔符，整串 unquote 反而会把路径切错）。
+    # `%2e%2e` is also a dot-dot segment per the URL spec and browsers still use it to go up one level; only restore the dots, do not unquote the whole string
+    # (`%2f` is not a separator, and unquoting the whole string would split the path wrongly).
     return posixpath.normpath(re.sub("%2e", ".", parts.path, flags=re.IGNORECASE))
 
 

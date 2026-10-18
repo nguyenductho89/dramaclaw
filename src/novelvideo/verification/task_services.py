@@ -93,13 +93,13 @@ async def run_sketch_select_episode(
 ) -> dict[str, Any]:
     """Run the full sketch-select pipeline and persist its verify report."""
 
-    _notify(progress_callback, 0.05, "加载项目数据")
-    _log(log_callback, "加载 SQLiteStore 与 beats")
+    _notify(progress_callback, 0.05, "Loading project data")
+    _log(log_callback, "Loading SQLiteStore and beats")
     store = await _make_sqlite_store(username, project, output_dir)
 
     beats = await load_all_beats(project_dir, episode_num, sqlite_store=store)
 
-    _notify(progress_callback, 0.18, "加载候选池")
+    _notify(progress_callback, 0.18, "Loading candidate pool")
     from novelvideo.generators.pool_indexer import load_pool_index
 
     grids_dir = project_dir / "grids" / f"ep{episode_num:03d}"
@@ -107,11 +107,11 @@ async def run_sketch_select_episode(
     if not pool:
         raise FileNotFoundError("No pool index found. Generate sketches first.")
 
-    _notify(progress_callback, 0.28, "读取颜色映射")
+    _notify(progress_callback, 0.28, "Reading color mapping")
     sketch_colors = _load_sketch_colors(project_dir, episode_num, store)
 
-    _notify(progress_callback, 0.38, "运行草图择优")
-    _log(log_callback, f"开始草图择优: {len(beats)} beats")
+    _notify(progress_callback, 0.38, "Running sketch selection")
+    _log(log_callback, f"Starting sketch selection: {len(beats)} beats")
     from .sketch_selector import run_sketch_select
 
     data = await run_sketch_select(
@@ -128,7 +128,7 @@ async def run_sketch_select_episode(
 
     promoted = 0
     if promote_selected:
-        _notify(progress_callback, 0.84, "提升已接受草图")
+        _notify(progress_callback, 0.84, "Promoting accepted sketches")
         promoted = _promote_selected_sketches(
             project_dir=project_dir,
             episode_num=episode_num,
@@ -137,14 +137,14 @@ async def run_sketch_select_episode(
             beat_results=data.get("beat_results", []),
         )
         if promoted:
-            _log(log_callback, f"已提升 {promoted} 张 accept 草图到 sketches/")
+            _log(log_callback, f"Promoted {promoted} accepted sketches to sketches/")
 
     data["promoted_count"] = promoted
 
-    _notify(progress_callback, 0.96, "保存验证报告")
+    _notify(progress_callback, 0.96, "Saving verification report")
     report_path = save_verify_report(project_dir, episode_num, None, "sketch_select", data)
     data["report_path"] = report_path.relative_to(project_dir).as_posix()
-    _log(log_callback, f"草图择优完成，报告已保存: {data['report_path']}")
+    _log(log_callback, f"Sketch selection complete, report saved: {data['report_path']}")
 
-    _notify(progress_callback, 1.0, "完成")
+    _notify(progress_callback, 1.0, "Done")
     return data

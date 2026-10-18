@@ -22,7 +22,7 @@ import type { RenderPlan } from "@/types/render-plan";
 const mockPlan: RenderPlan = {
   plan: [
     { mode_key: "2x3_1-1", rows: 2, cols: 3, beat_numbers: [1, 2, 3, 4, 5],
-      location: "闹市街头", padding_count: 1, reasons: [], warnings: [] },
+      location: "Busy Street", padding_count: 1, reasons: [], warnings: [] },
   ],
   plan_hash: "abc123def4567890",
   input_fingerprint: "xyz789abc1234567",

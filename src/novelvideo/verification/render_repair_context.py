@@ -1,4 +1,4 @@
-"""Render repair 的本地上下文准备。"""
+"""Local context preparation for render repair."""
 
 from __future__ import annotations
 

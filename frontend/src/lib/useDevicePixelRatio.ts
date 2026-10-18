@@ -3,14 +3,14 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * 当前设备像素比，跨屏拖窗口时会跟着变。
+ * The current device pixel ratio; it changes when the window is dragged across screens.
  *
- * 只读一次 window.devicePixelRatio 是不够的：把窗口从内置 Retina 屏拖到外接 1x
- * 显示器（或反过来）不会重新挂载任何组件，而这个数正是「一格要多少像素」的乘数
- * ——读错的后果是整块画布要么一直糊，要么一直多解一倍的码。
+ * Reading window.devicePixelRatio once is not enough: dragging the window from a built-in Retina screen to an external 1x
+ * monitor (or the reverse) does not remount any component, and this number is exactly the multiplier for "pixels per cell"
+ * - reading it wrong means the whole canvas is either permanently blurry or decodes twice the data forever.
  *
- * 没有 resize 之外的事件可听，标准做法是拿当前值造一条 (resolution: Ndppx) 的
- * media query：值一变这条查询就不再匹配，change 触发，再按新值重新架一条。
+ * There is no event to listen to besides resize; the standard approach is to build a (resolution: Ndppx) media
+ * query from the current value: once the value changes the query stops matching, change fires, and a new one is built from the new value.
  */
 const listeners = new Set<() => void>();
 let watched: MediaQueryList | null = null;
@@ -48,6 +48,6 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function useDevicePixelRatio(): number {
-  // 服务端快照固定 1：那边没有屏幕，且这个值只影响挑哪一档副本。
+  // The server snapshot is fixed at 1: there is no screen there, and this value only affects which tier of copy gets picked.
   return useSyncExternalStore(subscribe, currentRatio, () => 1);
 }

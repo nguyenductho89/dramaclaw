@@ -3,9 +3,9 @@
 import type { TFunction } from "i18next";
 
 /**
- * 场景类型的 value 是协议（后端存的就是 interior/exterior/...），label 只是界面文案，
- * 所以这里只留 value → key 的映射，中文/英文由调用方带 t 进来解析。认不出的 value
- * （项目自己扩的类型）原样显示。
+ * The scene type value is the protocol (the backend stores interior/exterior/...), the label is only UI text,
+ * so only the value -> key mapping is kept here, and the caller resolves it with its own `t`. Unrecognized values
+ * (types extended by the project itself) are shown as is.
  */
 const SCENE_TYPE_LABEL_KEYS: Record<string, string> = {
   interior: "assets.scenes.types.interior",

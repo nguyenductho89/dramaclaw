@@ -622,7 +622,7 @@ def _project_task_failure_for_exception(
         timeout_seconds = int(getattr(exc, "timeout_seconds", None) or 30 * 60)
         timeout_minutes = max(round(timeout_seconds / 60), 1)
         return (
-            f"任务超过 {timeout_minutes} 分钟未完成，已自动放弃",
+            f"Task did not finish within {timeout_minutes} minutes and was abandoned automatically",
             {"error_code": "TASK_TIMEOUT", "timeout_seconds": timeout_seconds},
             True,
         )
@@ -634,7 +634,7 @@ def _project_task_failure_for_exception(
             timeout_seconds = _project_task_timeout_seconds()
             timeout_minutes = max(round(timeout_seconds / 60), 1)
             return (
-                f"任务超过 {timeout_minutes} 分钟未完成，已自动放弃",
+                f"Task did not finish within {timeout_minutes} minutes and was abandoned automatically",
                 {"error_code": "TASK_TIMEOUT", "timeout_seconds": timeout_seconds},
                 True,
             )
@@ -903,7 +903,7 @@ def run_project_task_core_sync(
             beat_num=beat_num,
             scope=scope,
             progress=0.0,
-            current_task="任务已取消",
+            current_task="Task cancelled",
             metadata=run_metadata,
             status="cancelled",
             expected_task_id=run_task_id,
@@ -985,9 +985,9 @@ def run_project_task_core_sync(
                 if deadline_monotonic is not None:
                     envelope["__deadline_monotonic"] = deadline_monotonic
                     envelope["__timeout_seconds"] = timeout_seconds
-                # 唯一派发点，绑定本次投递的身份，使闸门总有一个请求作用域的
-                # 身份可读——否则「平台任务，允许」与「调用点漏传参数」都是 None。
-                # 5 个 runner 在自己函数体内另有绑定，嵌套安全（set/reset 成对）。
+                # The single dispatch point binds the identity of this delivery, so the gate always has a request-scoped
+                # identity to read - otherwise "platform task, allow" and "the call site forgot to pass the argument" are both None.
+                # The 5 runners also bind inside their own function bodies; nesting is safe (set/reset come in pairs).
                 with model_gateway_scope_for_runner(envelope):
                     result = runner(envelope, ctx)
                 if task_type == "freezone_text_generate" and isinstance(result, dict):
@@ -1060,7 +1060,7 @@ def run_project_task_core_sync(
                             beat_num=beat_num,
                             scope=scope,
                             status="running",
-                            current_task="等待 Agent 交付工作流草稿",
+                            current_task="Waiting for the Agent to deliver the workflow draft",
                             metadata={**run_metadata, **failure_payload},
                             expected_task_id=run_task_id,
                         )
@@ -1081,7 +1081,7 @@ def run_project_task_core_sync(
                             episode,
                             beat_num=beat_num,
                             scope=scope,
-                            error="产品结果仍在等待对账",
+                            error="Product result is still awaiting reconciliation",
                             metadata={**run_metadata, **failure_payload},
                             expected_task_id=run_task_id,
                         )
@@ -1161,7 +1161,7 @@ def run_project_task_core_sync(
                         beat_num=beat_num,
                         scope=scope,
                         progress=0.0,
-                        current_task="任务已取消",
+                        current_task="Task cancelled",
                         metadata=run_metadata,
                         status="cancelled",
                         expected_task_id=run_task_id,
@@ -1205,7 +1205,7 @@ def run_project_task_core_sync(
                 raise
 
             completion_error: BaseException | None = None
-            completion_message = "完成"
+            completion_message = "Done"
             if task_type == "freezone_agent_recipe_result" and isinstance(result, dict):
                 completion_message = str(result.get("message") or completion_message)
             try:

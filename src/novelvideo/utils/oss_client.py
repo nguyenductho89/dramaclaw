@@ -215,7 +215,7 @@ _HASH_CHUNK_BYTES = 1024 * 1024
 
 
 def _head_crc64(head_result) -> int | None:
-    """OSS 整个对象的 CRC64-ECMA（`x-oss-hash-crc64ecma`），分片上传的对象也有。"""
+    """Full-object CRC64-ECMA in OSS (`x-oss-hash-crc64ecma`); multipart-uploaded objects have it too."""
     value = getattr(head_result, "_server_crc", None)
     if value is None:
         headers = getattr(head_result, "headers", {}) or {}
@@ -229,7 +229,7 @@ def _head_crc64(head_result) -> int | None:
 
 
 def _head_plain_md5(head_result) -> str | None:
-    """ETag 只有单次 PutObject 产生的对象才等于内容 MD5；分片上传的带 `-`，不能当内容用。"""
+    """The ETag equals the content MD5 only for objects created by a single PutObject; multipart ones contain `-` and cannot be used as content hashes."""
     value = getattr(head_result, "etag", None)
     if value is None:
         headers = getattr(head_result, "headers", {}) or {}
@@ -245,7 +245,7 @@ def _head_plain_md5(head_result) -> str | None:
 def _local_crc64(local_path: str | Path) -> int | None:
     try:
         from oss2.utils import Crc64
-    except Exception:  # noqa: BLE001 - 没有 SDK 就算不出来，交给调用方回退
+    except Exception:  # noqa: BLE001 - without the SDK it cannot be computed; let the caller fall back
         return None
     crc = Crc64()
     with open(local_path, "rb") as fh:
@@ -263,13 +263,13 @@ def _local_md5(local_path: str | Path) -> str:
 
 
 def object_matches_local(key: str, local_path: str | Path) -> bool:
-    """远端对象的内容是否就是本地文件的当前版本。
+    """Whether the remote object's content is the current version of the local file.
 
-    ossfs 写回有延迟：本地文件刚被原地覆盖时，OSS 上可能还是旧版本，大小一样、
-    Last-Modified 也可能只差一两秒，时间戳判不准。这里直接比内容：优先 OSS 全量
-    CRC64（分片上传也有），其次单次上传对象的 ETag（即 MD5）。拿不到 head、大小不
-    等、两种校验和都没有或对不上，一律按「不确定」返回 False，由调用方回退。
-    本地文件要读一遍算校验和；回退拷贝是读一遍再写一遍，仍然省一半。
+    ossfs write-back is delayed: right after a local file is overwritten in place, OSS may still hold the old version with the same size,
+    and Last-Modified may differ by only a second or two, so timestamps are unreliable. Compare content directly instead: prefer the full OSS
+    CRC64 (multipart uploads have it too), then the ETag (MD5) of single-upload objects. If head cannot be fetched, sizes differ,
+    neither checksum is available or they do not match, return False ("uncertain") and let the caller fall back.
+    The local file must be read once to compute the checksum; the fallback copy reads and then writes, so this still saves half the work.
     """
     bucket = get_bucket()
     if bucket is None:

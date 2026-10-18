@@ -53,9 +53,9 @@ export function GlobalErrorDialog({
     return detailText;
   }, [details, message]);
 
-  // 只有真正有东西可复制（后端技术详情 / 显式 copyText）时才显示「复制报错信息」。
-  // 纯提示类弹窗（如音频时长校验）没有可复制内容，隐藏该按钮避免多余。
-  // pending 变体不是报错，「复制报错信息」在那里只会误导。
+  // The "Copy error info" button is only shown when there is really something to copy (backend technical details / explicit copyText).
+  // Pure notice dialogs (e.g. audio duration validation) have nothing to copy, so the button is hidden to avoid clutter.
+  // The pending variant is not an error, and "Copy error info" would only mislead there.
   const isPending = variant === 'pending';
   const canCopy = !isPending && Boolean(copyText?.trim() || technicalDetails);
 

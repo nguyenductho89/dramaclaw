@@ -7,9 +7,9 @@ const IMMERSIVE_BODY_CLASS = "st-viewer-immersive-active";
 let activeImmersiveViewers = 0;
 
 /**
- * 是否有沉浸式查看器(如 3GS 导演台全屏弹窗)正打开。打开时它独占键盘
- * (放置/删除 marker 等),画布的全局快捷键(Delete 删节点 / 复制粘贴 …)应让位,
- * 否则会出现「想删 marker 却把画布 3D 世界节点删了」这类串键。
+ * Whether an immersive viewer (e.g. the 3GS director stage fullscreen dialog) is open. While open it owns the keyboard
+ * (placing/deleting markers, etc.), and the canvas global shortcuts (Delete removes nodes / copy-paste ...) should yield,
+ * otherwise there is key cross-talk like "wanted to delete a marker but deleted the canvas 3D world node".
  */
 export function isImmersiveViewerActive(): boolean {
   return activeImmersiveViewers > 0;

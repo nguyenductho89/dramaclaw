@@ -42,7 +42,7 @@ def folders_client(monkeypatch, tmp_path):
 _FOLDERS = "/api/v1/projects/proj_demo/freezone/video/asset-library/folders"
 
 
-def _new_folder(client: TestClient, name: str = "第一集素材") -> str:
+def _new_folder(client: TestClient, name: str = "Episode One Assets") -> str:
     response = client.post(_FOLDERS, json={"name": name})
     assert response.status_code == 200, response.text
     return str(response.json()["data"]["id"])
@@ -59,18 +59,18 @@ def _cover(client: TestClient, folder_id: str) -> str | None:
 
 def test_folder_cover_accepts_same_origin_asset(folders_client) -> None:
     client, project_dir = folders_client
-    asset = project_dir / "freezone" / "_uploads" / "封面.png"
+    asset = project_dir / "freezone" / "_uploads" / "cover.png"
     asset.parent.mkdir(parents=True)
     asset.write_bytes(b"png")
     folder_id = _new_folder(client)
 
     response = client.patch(
         f"{_FOLDERS}/{folder_id}",
-        json={"cover": "/freezone/_uploads/%E5%B0%81%E9%9D%A2.png"},
+        json={"cover": "/freezone/_uploads/cover.png"},
     )
 
     assert response.status_code == 200, response.text
-    assert _cover(client, folder_id) == "/freezone/_uploads/%E5%B0%81%E9%9D%A2.png"
+    assert _cover(client, folder_id) == "/freezone/_uploads/cover.png"
 
 
 @pytest.mark.parametrize(
@@ -82,10 +82,10 @@ def test_folder_cover_accepts_same_origin_asset(folders_client) -> None:
     ],
 )
 def test_folder_cover_rejects_cross_origin_url(folders_client, cover: str) -> None:
-    """封面是所有协作者的 <img src>，外链等于让别人的浏览器去访问第三方地址。
+    """The cover is the <img src> of every collaborator, and an external link makes other people's browsers visit a third-party address.
 
-    攻击者用自己上传素材的真实路径拼在外链域名后面，削出来的 path 是落在项目里
-    的——所以校验必须看整个字符串，且落库的要和校验过的是同一个值。
+    An attacker appends the real path of an asset they uploaded after an external-link domain, and the path cut out lands inside the project
+    -- so validation must look at the whole string, and the value stored must be the same one that was validated.
     """
     client, project_dir = folders_client
     decoy = project_dir / "freezone" / "_uploads" / "foo.png"

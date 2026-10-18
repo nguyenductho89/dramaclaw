@@ -1,4 +1,4 @@
-"""自动检测小说章节结构。"""
+"""Automatically detect the chapter structure of a novel."""
 import re
 from dataclasses import dataclass
 from typing import List, Optional
@@ -8,69 +8,74 @@ from novelvideo.utils.screenplay_quality import extract_screenplay_candidate_lin
 
 @dataclass
 class ChapterInfo:
-    """章节信息。"""
-    number: int           # 章节序号
-    title: Optional[str]  # 章节标题（如果有）
-    start_line: int       # 起始行号
-    end_line: int         # 结束行号
-    content: str          # 章节内容
-    is_fallback: bool = False  # 是否为“未检测到章节时自动按单章回退”
+    """Chapter information."""
+    number: int           # chapter number
+    title: Optional[str]  # chapter title (if any)
+    start_line: int       # first line index
+    end_line: int         # end line index
+    content: str          # chapter content
+    is_fallback: bool = False  # True when no chapters were detected and the text fell back to a single chapter
+
+
+_TITLE_TAIL = r"(?=$|[\s:(\[\-\u2014\u2013.])"
+_KEYWORDS = ("Chapter", "Chương", "Episode", "Tập", "Part", "Phần")
+
+
+def _build_patterns() -> List[str]:
+    prefix = r"^(?:#{1,6}\s*)?"
+    numeric = [prefix + kw + r"\s*(\d+)" + _TITLE_TAIL for kw in _KEYWORDS]
+    worded = [
+        prefix + kw + r"[ \t]+([A-Za-z]+(?:-[A-Za-z]+)?)" + _TITLE_TAIL
+        for kw in _KEYWORDS
+    ]
+    return numeric + worded
 
 
 class ChapterDetector:
-    """检测小说章节结构。
+    """Detect the chapter structure of a novel.
 
-    支持多种章节标记格式：
-    - 第X章: "第一章", "第10章", "《书名》第1章"
-    - 第X集: "第一集", "第10集"
-    - Chapter N: "Chapter 1", "Chapter 10"
+    Supported chapter marker formats:
+    - Chapter N: "Chapter 1", "Chapter 10", "Chapter One"
+    - Chương N: "Chương 1"
     - Episode N: "Episode 1"
+    - Tập N: "Tập 1"
+    - Part N / Phần N: "Part 2", "Phần 2"
 
-    使用示例:
+    Example:
         detector = ChapterDetector()
         chapters = detector.detect(novel_text)
-        print(f"检测到 {len(chapters)} 个章节")
+        print(f"Detected {len(chapters)} chapters")
         for ch in chapters:
-            print(f"第{ch.number}章: {len(ch.content)} 字")
+            print(f"Chapter {ch.number}: {len(ch.content)} chars")
     """
 
-    # 支持的章节标题模式（优先级从高到低）
-    # 只匹配标题行开头，避免把对白/旁白里的“原著第X章”误切成新章节。
-    # 标题编号后面必须是行尾、空白或常见标题分隔符；
-    # 空白后接正文句子时再用标题尾部形态排除，避免把“第一集 已经结束。”
-    # /“Episode 1 Ends here.” 这类正文句子误切成新章节。
-    PATTERNS = [
-        r"^(?:#{1,6}\s*)?(?:《[^》\n]{1,40}》\s*)?第\s*([一二三四五六七八九十百千\d]+)\s*章(?=$|[\s:：《（(【\[\-—–、.。．])",
-        r"^(?:#{1,6}\s*)?(?:《[^》\n]{1,40}》\s*)?第\s*([一二三四五六七八九十百千\d]+)\s*集(?=$|[\s:：《（(【\[\-—–、.。．])",
-        r"^(?:#{1,6}\s*)?Chapter\s*(\d+)(?=$|[\s:：(\[\-—–.。．])",
-        r"^(?:#{1,6}\s*)?Episode\s*(\d+)(?=$|[\s:：(\[\-—–.。．])",
-    ]
+    # Chapter title patterns (highest priority first).
+    # Only the beginning of a title line is matched, so "the original Chapter 3"
+    # inside dialogue/narration is not mistaken for a new chapter.
+    # The number must be followed by end-of-line, whitespace or a common title
+    # separator; after whitespace, sentence-like tails are rejected so that body
+    # sentences such as "Episode 1 Ends here." are not split as chapters.
+    PATTERNS = _build_patterns()
 
-    # 中文数字到阿拉伯数字的映射
-    CN_NUM_MAP = {
-        "零": 0, "〇": 0,
-        "一": 1, "壹": 1,
-        "二": 2, "贰": 2, "两": 2,
-        "三": 3, "叁": 3,
-        "四": 4, "肆": 4,
-        "五": 5, "伍": 5,
-        "六": 6, "陆": 6,
-        "七": 7, "柒": 7,
-        "八": 8, "捌": 8,
-        "九": 9, "玖": 9,
-        "十": 10, "拾": 10,
-        "百": 100, "佰": 100,
-        "千": 1000, "仟": 1000,
+    _UNITS = {
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+        "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+        "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+        "nineteen": 19,
+    }
+    _TENS = {
+        "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+        "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
     }
 
     def detect(self, text: str) -> List[ChapterInfo]:
-        """检测章节并返回章节列表。
+        """Detect chapters and return the chapter list.
 
         Args:
-            text: 小说全文
+            text: Full novel text
 
         Returns:
-            检测到的章节列表，按章节号排序
+            Detected chapters, in document order
         """
         lines = text.split("\n")
         chapters = []
@@ -80,7 +85,7 @@ class ChapterDetector:
         for i, line in enumerate(lines):
             chapter_num = self._match_chapter(line.strip())
             if chapter_num is not None:
-                # 保存上一章
+                # Save the previous chapter
                 if current_start is not None:
                     chapters.append(ChapterInfo(
                         number=current_num,
@@ -92,7 +97,7 @@ class ChapterDetector:
                 current_start = i
                 current_num = chapter_num
 
-        # 保存最后一章
+        # Save the last chapter
         if current_start is not None:
             chapters.append(ChapterInfo(
                 number=current_num,
@@ -107,7 +112,7 @@ class ChapterDetector:
             if fallback_content:
                 chapters.append(ChapterInfo(
                     number=1,
-                    title="第1章",
+                    title="Chapter 1",
                     start_line=0,
                     end_line=len(fallback_content.splitlines()) or len(lines),
                     content=fallback_content,
@@ -117,42 +122,44 @@ class ChapterDetector:
         return chapters
 
     def has_chapters(self, text: str, min_chapters: int = 2) -> bool:
-        """快速检测文本是否包含章节结构。
+        """Quickly check whether the text contains a chapter structure.
 
         Args:
-            text: 小说全文
-            min_chapters: 最少章节数（默认2）
+            text: Full novel text
+            min_chapters: Minimum number of chapters (default 2)
 
         Returns:
-            是否包含至少 min_chapters 个章节
+            Whether at least min_chapters chapters were found
         """
         chapters = self.detect(text)
         return len(chapters) >= min_chapters
 
     def get_chapter_count(self, text: str) -> int:
-        """获取章节数量。
+        """Return the number of chapters.
 
         Args:
-            text: 小说全文
+            text: Full novel text
 
         Returns:
-            章节数量
+            Number of chapters
         """
         return len(self.detect(text))
 
     def _match_chapter(self, line: str) -> Optional[int]:
-        """匹配章节标记，返回章节号。
+        """Match a chapter marker and return the chapter number.
 
         Args:
-            line: 去除首尾空格后的行文本
+            line: Line text with leading/trailing whitespace stripped
 
         Returns:
-            章节号，如果不是章节标记则返回 None
+            The chapter number, or None if the line is not a chapter marker
         """
         for pattern in self.PATTERNS:
             match = re.search(pattern, line, re.IGNORECASE)
             if match and self._is_valid_title_tail(line[match.end():]):
-                return self._parse_number(match.group(1))
+                number = self._parse_number(match.group(1))
+                if number is not None:
+                    return number
         return None
 
     def _is_valid_title_tail(self, tail: str) -> bool:
@@ -160,92 +167,48 @@ class ChapterDetector:
         stripped = tail.strip()
         if not stripped:
             return True
-        if stripped[0] in ".。．":
+        if stripped[0] == ".":
             return not self._looks_like_sentence_tail(stripped[1:].strip())
-        if stripped[0] in ":：《（(【[-—–、":
+        if stripped[0] in ":([-\u2014\u2013":
             return True
         return not self._looks_like_sentence_tail(stripped)
 
     def _looks_like_sentence_tail(self, tail: str) -> bool:
-        return bool(re.search(r"[。\.…]\s*$", tail))
+        return bool(re.search(r"[.\u2026]\s*$", tail))
 
-    def _parse_number(self, s: str) -> int:
-        """解析数字（支持中文数字）。
+    def _parse_number(self, s: str) -> Optional[int]:
+        """Parse a chapter number (digits or English number words).
 
-        支持的格式：
-        - 阿拉伯数字: "1", "10", "123"
-        - 简单中文数字: "一", "二", "十"
-        - 复合中文数字: "十一", "二十", "一百零一"
+        Supported formats:
+        - Digits: "1", "10", "123"
+        - English words: "one", "twelve", "twenty-one"
 
         Args:
-            s: 数字字符串
+            s: Number string
 
         Returns:
-            整数值
+            The integer value, or None if the string is not a number
         """
-        # 阿拉伯数字
         if s.isdigit():
             return int(s)
 
-        # 单个中文数字
-        if s in self.CN_NUM_MAP:
-            return self.CN_NUM_MAP[s]
-
-        # 复合中文数字
-        return self._parse_chinese_number(s)
-
-    def _parse_chinese_number(self, s: str) -> int:
-        """解析复合中文数字。
-
-        支持: 十一, 二十, 二十三, 一百, 一百零一, 一百二十三, 一千零一
-
-        Args:
-            s: 中文数字字符串
-
-        Returns:
-            整数值
-        """
-        result = 0
-        temp = 0  # 当前累积的数字
-
-        i = 0
-        while i < len(s):
-            char = s[i]
-
-            if char in self.CN_NUM_MAP:
-                num = self.CN_NUM_MAP[char]
-
-                if num == 10:  # 十
-                    if temp == 0:
-                        temp = 1  # "十" 开头表示 10
-                    result += temp * 10
-                    temp = 0
-                elif num == 100:  # 百
-                    if temp == 0:
-                        temp = 1
-                    result += temp * 100
-                    temp = 0
-                elif num == 1000:  # 千
-                    if temp == 0:
-                        temp = 1
-                    result += temp * 1000
-                    temp = 0
-                elif num == 0:  # 零
-                    # "零" 通常是占位，继续处理下一个字符
-                    pass
-                else:
-                    temp = num
-
-            i += 1
-
-        result += temp
-        return result if result > 0 else 1
+        word = s.strip().lower()
+        if word in self._UNITS:
+            return self._UNITS[word]
+        if word in self._TENS:
+            return self._TENS[word]
+        if "-" in word:
+            tens, _, unit = word.partition("-")
+            if tens in self._TENS and unit in self._UNITS and self._UNITS[unit] < 10:
+                return self._TENS[tens] + self._UNITS[unit]
+        return None
 
     def _prepare_fallback_content(self, text: str) -> str:
-        """无章节时的单章回退内容。
+        """Single-chapter fallback content when no chapters are detected.
 
-        对普通小说保持原文；对 B 档剧本优先裁掉梗概/人物小传等前言区，
-        让单章回退只保留正文。
+        Ordinary novels keep the original text; for tier-B screenplays the
+        preface (synopsis, character bios, etc.) is trimmed first so the
+        single-chapter fallback keeps only the body.
         """
         raw = (text or "").strip()
         if not raw:

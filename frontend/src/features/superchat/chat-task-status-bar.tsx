@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { useCallback, useEffect, useMemo, useState } from "react";
+import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
@@ -100,11 +101,11 @@ function aggregateChatTaskBatch(items: ChatTaskItem[]): ChatTaskItem {
       status,
       progress,
       current_task: [
-        `批次进度 ${settled}/${expected}`,
-        active.length > 0 ? `运行 ${active.length}` : "",
-        waiting > 0 ? `等待 ${waiting}` : "",
+        i18n.t("superchat.panel.batch.progress", { settled, expected }),
+        active.length > 0 ? i18n.t("superchat.panel.batch.running", { count: active.length }) : "",
+        waiting > 0 ? i18n.t("superchat.panel.batch.waiting", { count: waiting }) : "",
       ].filter(Boolean).join(" · "),
-      error: failed > 0 ? `${failed}/${expected} 个任务失败` : representative.task.error,
+      error: failed > 0 ? i18n.t("superchat.panel.batch.failed", { failed, expected }) : representative.task.error,
     },
   };
 }
@@ -777,13 +778,12 @@ export function ChatTaskStatusBar({
     );
   const cancelOneTask = async (task: TaskState) => {
     const confirmed = await confirmDialog({
-      title: t("taskCenter.cancel.title", { defaultValue: "取消生成任务" }),
+      title: t("taskCenter.cancel.title"),
       description: t("taskCenter.cancel.description", {
-        defaultValue: "确定取消“{{name}}”吗？运行中的任务取消后通常不退款。",
         name: displayLabel(task, t),
       }),
-      confirmText: t("taskCenter.cancel.confirm", { defaultValue: "确认取消" }),
-      cancelText: t("taskCenter.cancel.keep", { defaultValue: "继续生成" }),
+      confirmText: t("taskCenter.cancel.confirm"),
+      cancelText: t("taskCenter.cancel.keep"),
       confirmVariant: "destructive",
     });
     if (!confirmed) return;
@@ -797,10 +797,9 @@ export function ChatTaskStatusBar({
         scope: task.scope ?? undefined,
         confirmed: true,
       });
-      toast.success(t("taskCenter.cancel.submitted", { defaultValue: "任务已提交取消" }));
+      toast.success(t("taskCenter.cancel.submitted"));
     } catch (error) {
       toast.error(t("taskCenter.cancel.failed", {
-        defaultValue: "取消任务失败：{{error}}",
         error: error instanceof Error ? error.message : String(error),
       }));
     } finally {
@@ -813,13 +812,12 @@ export function ChatTaskStatusBar({
     const count = activeStandaloneTasks.length + (workflowActive ? 1 : 0);
     if (count === 0 || cancelling) return;
     const confirmed = await confirmDialog({
-      title: t("taskCenter.cancelAll.title", { defaultValue: "全部取消生成任务" }),
+      title: t("taskCenter.cancelAll.title"),
       description: t("taskCenter.cancelAll.description", {
-        defaultValue: "确定取消当前列表中的 {{count}} 项任务吗？运行中的任务取消后通常不退款，已完成的任务不会回滚。",
         count,
       }),
-      confirmText: t("taskCenter.cancelAll.confirm", { defaultValue: "确认全部取消" }),
-      cancelText: t("taskCenter.cancel.keep", { defaultValue: "继续生成" }),
+      confirmText: t("taskCenter.cancelAll.confirm"),
+      cancelText: t("taskCenter.cancel.keep"),
       confirmVariant: "destructive",
     });
     if (!confirmed) return;
@@ -843,16 +841,14 @@ export function ChatTaskStatusBar({
       const failed = results.filter((result) => result.status === "rejected").length;
       if (failed > 0) {
         toast.error(t("taskCenter.cancelAll.partialFailure", {
-          defaultValue: "{{count}} 项任务取消失败，请到任务中心查看",
           count: failed,
         }));
       } else {
-        toast.success(t("taskCenter.cancelAll.submitted", { defaultValue: "已提交全部取消" }));
+        toast.success(t("taskCenter.cancelAll.submitted"));
       }
       await refreshWorkflowRuns();
     } catch (error) {
       toast.error(t("taskCenter.cancel.failed", {
-        defaultValue: "取消任务失败：{{error}}",
         error: error instanceof Error ? error.message : String(error),
       }));
     } finally {
@@ -999,11 +995,11 @@ export function ChatTaskStatusBar({
               variant="ghost"
               className="h-7 shrink-0 gap-1 px-2 text-xs text-destructive hover:text-destructive"
               disabled={cancelling}
-              title={t("taskCenter.cancelAll.short", { defaultValue: "全部取消" })}
+              title={t("taskCenter.cancelAll.short")}
               onClick={() => void cancelAll()}
             >
               {cancelling ? <LoaderCircle className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
-              {t("taskCenter.cancelAll.short", { defaultValue: "全部取消" })}
+              {t("taskCenter.cancelAll.short")}
             </Button>
           ) : null}
           <Button
@@ -1083,8 +1079,8 @@ export function ChatTaskStatusBar({
                     size="icon"
                     variant="ghost"
                     className="size-7 shrink-0 text-destructive hover:text-destructive"
-                    title={t("taskCenter.cancel.short", { defaultValue: "取消任务" })}
-                    aria-label={t("taskCenter.cancel.short", { defaultValue: "取消任务" })}
+                    title={t("taskCenter.cancel.short")}
+                    aria-label={t("taskCenter.cancel.short")}
                     disabled={cancelling}
                     onClick={() => void cancelOneTask(task)}
                   >
@@ -1148,8 +1144,8 @@ export function ChatTaskStatusBar({
                     size="icon"
                     variant="ghost"
                     className="size-7 shrink-0 text-destructive hover:text-destructive"
-                    title={t("taskCenter.cancel.short", { defaultValue: "取消任务" })}
-                    aria-label={t("taskCenter.cancel.short", { defaultValue: "取消任务" })}
+                    title={t("taskCenter.cancel.short")}
+                    aria-label={t("taskCenter.cancel.short")}
                     disabled={cancelling}
                     onClick={() => void cancelOneTask(task)}
                   >

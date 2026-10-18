@@ -17,7 +17,7 @@ const STYLE_GALLERY_DETAIL_SIZE_CLASS = 'max-h-[82vh]';
 const ALL_CATEGORIES = '__all__';
 const OTHER_CATEGORY = '__other__';
 
-/** 后端 category 的出现顺序就是展示顺序,没填分类的统一落到最后的「其他」。 */
+/** The order in which backend categories appear is the display order; those without a category all land in "Other" at the end. */
 export function collectStyleCategories(
   templates: FreezoneStyleTemplate[],
   t: TFn,
@@ -53,7 +53,7 @@ export interface StyleGalleryModalProps {
   assetBase: string;
   selectedId: string | null;
   isLoading?: boolean;
-  /** 只回调,不自己关闭;关闭由调用方决定。 */
+  /** Only calls back and does not close itself; closing is decided by the caller. */
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }
@@ -79,10 +79,10 @@ export function StyleGalleryModal({
   );
 
   useEffect(() => {
-    // 冒泡阶段监听，跟画布上别的弹层一个路数（见 CanvasHistoryAssetsModal）。
-    // 早先挂在 capture 上还 stopPropagation，等于把 Esc 从整个页面手里抢走 ——
-    // 事件连 target 都到不了，别人的输入法/内嵌弹层就都失灵了。详情页先自己吃掉
-    // 一次 Esc（退回图墙），第二次才关整个弹层。
+    // Listen in the bubbling phase, the same approach as other overlays on the canvas (see CanvasHistoryAssetsModal).
+    // It used to hang on capture and also stopPropagation, which snatched Esc from the whole page -
+    // the event could not even reach its target, and others' IME / embedded overlays all stopped working. The detail page first eats
+    // one Esc itself (back to the image wall), and only the second closes the whole overlay.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.isComposing) return;
       if (detailId) setDetailId(null);
@@ -137,8 +137,8 @@ export function StyleGalleryModal({
         {detail ? (
           <div className="flex min-h-0 gap-4 overflow-hidden p-4">
             <div className="ui-scrollbar grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto">
-              {/* 同一条风格里出现两张同名示例图并非不可能（外部清单是运维自己写的），
-                  用路径当 key 会撞车，索引才是这里稳定的身份。 */}
+              {/* Two same-named example images within one style are not impossible (the external manifest is written by ops themselves),
+              and using the path as key would collide; the index is the stable identity here. */}
               {detail.samples.map((sample, index) => (
                 <StyleAssetImage
                   key={`${detail.id}-${index}`}
@@ -215,8 +215,8 @@ export function StyleGalleryModal({
                 <X className="size-4" />
               </button>
             </div>
-            {/* 空态和网格是二选一：以前两块都挂 flex-1 同时渲染，
-                「加载中」被挤到上半屏，下半屏是一片空白网格。 */}
+            {/* The empty state and the grid are an either-or: previously both took flex-1 and rendered together,
+            "Loading" got squeezed into the upper half of the screen with a blank grid in the lower half. */}
             {templates.length === 0 ? (
               <div className="flex flex-1 items-center justify-center text-xs text-text-muted">
                 {isLoading ? t('canvas.styleGallery.loading') : t('canvas.styleGallery.empty')}
@@ -235,8 +235,8 @@ export function StyleGalleryModal({
                             : 'border-white/[0.10]'
                         }`}
                       >
-                        {/* 卡片主体进详情：一张封面看不出这套风格怎么处理不同年龄性别的
-                            人物，那四张示例图才看得出来，所以详情是主路径不是彩蛋。 */}
+                        {/* The card body enters the detail: a single cover cannot show how this style handles people of different ages and genders,
+                        only the four example images can, so the detail is the main path, not an easter egg. */}
                         <button
                           type="button"
                           onClick={() => setDetailId(item.id)}
@@ -258,10 +258,10 @@ export function StyleGalleryModal({
                         {isActive && (
                           <Check className="pointer-events-none absolute right-2 top-2 size-4 text-[rgb(var(--accent-rgb))]" />
                         )}
-                        {/* 快路径：已经知道要哪套的人不该被逼着走一趟详情。常驻可见而不是
-                            hover 才出 —— opacity-0 没有 focus 变体时，键盘 Tab 聚焦上去
-                            按钮照样透明，这个入口对键盘用户等于不存在。绝对定位盖在标题行
-                            上，没嵌进上面那颗 button：button 里套 button 是非法结构。 */}
+                        {/* Fast path: someone who already knows which style they want should not be forced through a detail visit. Always visible rather than
+                        shown only on hover - with opacity-0 and no focus variant, Tab-focusing onto the
+                        button keeps it transparent, and for keyboard users this entry would not exist. Absolutely positioned over the title row,
+                        not nested in the button above: a button inside a button is an illegal structure. */}
                         <button
                           type="button"
                           onClick={() => onSelect(item.id)}
@@ -293,9 +293,9 @@ export function describeStyleSelection(
 }
 
 /**
- * 「选了风格」和「查得到这个风格」是两件事：清单还在路上、拉取失败、id 是旧画布
- * 留下的失效值，三种情况下 describeStyleSelection 都返回 null。UI 不能把它们一律
- * 当成「没选」—— 那个 id 照样会跟着生成请求发给后端。
+ * "A style is selected" and "that style can be looked up" are two different things: the list is still on its way, the fetch failed, or the id is a stale value
+ * left by an old canvas - in all three cases describeStyleSelection returns null. The UI must not treat them all
+ * as "not selected" - that id still goes along with the generation request to the backend.
  */
 export type StyleSelectionState =
   | 'none'

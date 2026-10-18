@@ -20,14 +20,14 @@ SCHEMA = {
     "parameters": [
         {
             "key": "camera_fixed",
-            "label": "固定镜头",
+            "label": "Fixed camera",
             "control": "switch",
             "requestPath": "metadata.camera_fixed",
             "default": False,
         },
         {
             "key": "steps",
-            "label": "采样步数",
+            "label": "Sampling steps",
             "control": "number",
             "requestPath": "extra_fields.steps",
             "min": 1,
@@ -147,7 +147,7 @@ def test_model_schema_can_override_numeric_video_duration_with_auto():
         "parameters": [
             {
                 "key": "duration_mode",
-                "label": "输出时长",
+                "label": "Output duration",
                 "control": "select",
                 "requestPath": "duration",
                 "options": ["auto"],
@@ -608,7 +608,7 @@ def test_validates_video_native_audio_capabilities():
 
 
 def test_validates_reference_audio_total_max_seconds():
-    """参考音频**总时长**上限：收小数（厂商口径 15.2 本身就不是整数），只拒非正数。"""
+    """Upper bound on the **total duration** of reference audio: round the fraction (the vendor's 15.2 is itself not an integer), reject only non-positive values."""
     base = {
         "supportedModes": ["all_reference"],
         "request": {"endpoint": "video/generations", "parameters": []},
@@ -616,12 +616,12 @@ def test_validates_reference_audio_total_max_seconds():
     for value in (15.2, 15, 0.5):
         config = {**base, "referenceAudioTotalMaxSeconds": value}
         assert validate_media_model_catalog_config(config, "video") is config
-    # 没配 = 走后端 15.2s 兜底，不是错误。
+    # Not configured = fall back to the backend 15.2s, not an error.
     assert validate_media_model_catalog_config({**base}, "video") is not None
 
-    # True 也要拒：`type(True) is bool`，不能让布尔当成 1 秒混进来。
-    # inf / nan 也要拒：`inf > 0` 是 True、`nan <= 0` 是 False，只写「正数」两个都会漏进来，
-    # 配成 inf 就等于把这个上限静默关掉。
+    # True must be rejected too: `type(True) is bool`; a boolean must not slip in as 1 second.
+    # inf / nan must be rejected too: `inf > 0` is True and `nan <= 0` is False, so writing only "positive number" lets both through,
+    # and configuring inf would silently turn this limit off.
     for bad in (0, -1, "15.2", True, [], float("inf"), float("nan"), float("-inf")):
         with pytest.raises(
             MediaModelSchemaError, match="referenceAudioTotalMaxSeconds"
@@ -631,7 +631,7 @@ def test_validates_reference_audio_total_max_seconds():
                 "video",
             )
 
-    # 图片模型没有参考音频这回事，配了要报「不兼容」而不是默默收下。
+    # An image model has no reference audio at all; configuring it must report "incompatible" rather than silently accepting it.
     with pytest.raises(MediaModelSchemaError, match="incompatible fields"):
         validate_media_model_catalog_config(
             {

@@ -31,8 +31,8 @@ def _patch_project_resolution(
 
 
 def test_extracted_frames_sort_by_numeric_pts_not_lexicographically() -> None:
-    # `-frame_pts true` 让文件名里的数字是 PTS 而不是计数，位数不固定：
-    # 字典序会把 scene_1000 排到 scene_900 前面，关键帧顺序和 keyframe_index 全乱。
+    # `-frame_pts true` makes the number in the file name a PTS rather than a counter, with a variable digit count:
+    # lexicographic order would put scene_1000 ahead of scene_900, scrambling the keyframe order and keyframe_index.
     out_dir = Path("/tmp/freezone_extract/job")
     paths = [
         out_dir / "scene_1000.png",
@@ -67,14 +67,14 @@ def test_extracted_frames_sort_keeps_zero_padded_even_samples_in_order() -> None
 def test_video_story_prompt_requests_libtv_story_table() -> None:
     prompt = build_video_story_analysis_prompt(frame_count=5, duration_sec=15.0)
 
-    assert "libtv 风格的“视频故事”表" in prompt
-    assert "3-12 个叙事镜头/动作段落" in prompt
-    assert "视频总时长约 15.00 秒" in prompt
+    assert 'libtv-style "video story" table' in prompt
+    assert "3-12 narrative shots/action segments" in prompt
+    assert "total video duration is about 15.00 seconds" in prompt
     assert '"visual_description"' in prompt
     assert '"narrative"' in prompt
     assert '"image_prompt"' in prompt
     assert '"motion_prompt"' in prompt
-    assert "严格输出 JSON 对象" in prompt
+    assert "Output strictly a JSON object" in prompt
 
 
 def test_freezone_analyze_request_defaults_to_shots_mode() -> None:
@@ -366,7 +366,7 @@ async def test_video_story_job_result_waits_until_task_completed(
         status = "running"
         error = None
         logs = []
-        current_task = "Vision 解析 12 帧为视频故事..."
+        current_task = "Vision parsing 12 frames into a video story..."
         result = {"task_metadata": {"job_id": job_id}}
 
     class FakeManager:
@@ -391,5 +391,5 @@ async def test_video_story_job_result_waits_until_task_completed(
     assert result["ok"] is False
     assert result["status"] == "running"
     assert result["info"] == "job result not yet available"
-    assert result["current_task"] == "Vision 解析 12 帧为视频故事..."
+    assert result["current_task"] == "Vision parsing 12 frames into a video story..."
     assert "data" not in result

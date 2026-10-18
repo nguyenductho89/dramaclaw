@@ -9,17 +9,17 @@ import { readFreezoneVideoModels } from '@/features/canvas/hooks/useFreezoneVide
 import type { ModelOption } from '@/features/canvas/ui/ProviderModelPicker';
 
 /**
- * 把一个视频节点解析成它**当前所选模型**的引用上限包络。
+ * Resolve a video node into the reference limit envelope of its **currently selected model**.
  *
- * 建边校验（Canvas 的 isValidConnection、canvasStore 的 onConnect/addEdge）跑在 React
- * 之外，拿不到 useFreezoneVideoModels 的返回值，所以这里从同一个 module-level store
- * 直接读目录。domain 层保持纯函数、只接受算好的包络，解析这件事放在 application 层。
+ * Edge validation (Canvas's isValidConnection, canvasStore's onConnect/addEdge) runs outside React
+ * and cannot get the return value of useFreezoneVideoModels, so the catalog is read here directly from the same module-level store.
+ * The domain layer stays pure functions and accepts only the computed envelope, with the resolving placed in the application layer.
  *
- * 兜底口径必须和 VideoNode 的 `selectedVideoModel` 一致：`data.model` 没存或在目录里
- * 找不到时，用列表第一个模型 —— 那正是 ProviderModelPicker 显示、提交时也会用的那个。
- * 两边不一致的话，会出现「界面显示 A 模型的上限、建边按 B 模型拦」。
+ * The fallback basis must match VideoNode's `selectedVideoModel`: when `data.model` is not stored or cannot be found in the catalog,
+ * use the first model in the list - exactly the one ProviderModelPicker shows and submission will use too.
+ * If the two sides disagree, we would get "the UI shows model A's limit while edge creation blocks by model B".
  *
- * models 参数只为测试注入目录用，生产代码不要传。
+ * The models parameter is only for tests to inject a catalog; production code should not pass it.
  */
 export function videoReferenceEnvelopeForNode(
   videoNode: CanvasNode,

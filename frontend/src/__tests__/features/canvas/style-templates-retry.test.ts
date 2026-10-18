@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 风格清单拉失败后必须还能再来一次。同族的 useFreezoneCameraOptions 是「一个 tab
-// 只拉一次」，失败就永久失败 —— 相机参数没了顶多少几个可选项，风格没了则是整墙
-// 占位块，而且已选中的风格照样会跟着生成请求走，用户完全无从补救。
+// After the style list fails to load it must be possible to try again. The sibling useFreezoneCameraOptions fetches "once per tab"
+// and a failure is permanent -- losing camera parameters costs at most a few options, but losing styles leaves a whole wall of
+// placeholder blocks, and an already selected style is still sent with generation requests, leaving the user with no remedy at all.
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,26 +16,26 @@ import { useFreezoneStyleTemplates } from "@/features/canvas/hooks/useFreezoneSt
 
 const TEMPLATE = {
   id: "golden_age",
-  label: "黄金时代",
-  category: "年代",
+  label: "Golden Age",
+  category: "Period",
   cover: "golden_age/cover.webp",
   samples: ["golden_age/female.webp"],
-  style_prompt: "黄金时代的提示词",
+  style_prompt: "Golden Age prompt",
 };
 
-// 模块级缓存按 project 分桶，每个用例换一个 project 就等于拿到一份干净状态。
+// The module-level cache is bucketed by project, so switching to a different project in each case gives a clean state.
 let seq = 0;
 function nextProject() {
   seq += 1;
   return `proj-${seq}`;
 }
 
-describe("useFreezoneStyleTemplates 的重试", () => {
+describe("useFreezoneStyleTemplates retry", () => {
   beforeEach(() => {
     fetchTemplates.mockReset();
   });
 
-  it("失败后 retry 能把清单拉回来", async () => {
+  it("retry can fetch the list back after a failure", async () => {
     const project = nextProject();
     fetchTemplates.mockRejectedValueOnce(new Error("boom"));
 
@@ -57,7 +57,7 @@ describe("useFreezoneStyleTemplates 的重试", () => {
     expect(fetchTemplates).toHaveBeenCalledTimes(2);
   });
 
-  it("成功态调用 retry 不会白白再拉一次", async () => {
+  it("calling retry in the success state does not needlessly fetch again", async () => {
     const project = nextProject();
     fetchTemplates.mockResolvedValueOnce({
       templates: [TEMPLATE],
@@ -72,7 +72,7 @@ describe("useFreezoneStyleTemplates 的重试", () => {
     expect(fetchTemplates).toHaveBeenCalledTimes(1);
   });
 
-  it("重复渲染不会自己重试 —— 那会变成失败/重渲染的死循环", async () => {
+  it("re-rendering does not retry by itself -- that would become a fail/re-render infinite loop", async () => {
     const project = nextProject();
     fetchTemplates.mockRejectedValue(new Error("boom"));
 

@@ -6,19 +6,19 @@ import type {
 } from "@/features/canvas/domain/canvasNodes";
 
 /**
- * Freezone 画布视频模型的**能力口径**——与后端 `freezone.py` 各视频端点的模型门禁
- * 一一对齐，作为 CTA / 模式可见性 / 自动推导默认 / 提交校验的**单一事实来源**，
- * 避免「把所有非 HappyHorse 模型都当作 Seedance 2.0」的假设散落在组件各处。
+ * The **capability basis** of Freezone canvas video models — aligned one to one with the model gates of each video endpoint in the backend `freezone.py`,
+ * serving as the **single source of truth** for CTAs / mode visibility / auto-derived defaults / submit validation,
+ * so the assumption "treat every non-HappyHorse model as Seedance 2.0" does not scatter across components.
  *
- * 后端事实（src/novelvideo/api/routes/freezone.py）：
- * - 全能参考 omni-gen：`is_freezone_seedance2_backend` 为假直接 400；
- * - 首尾帧 keyframes：仅 Seedance 2.0 才 append 尾帧，其余后端**静默丢弃尾帧**；
- * - 图生视频 i2v / 首尾帧 keyframes / 视频编辑 edit：均**不校验 prompt**（允许空提示词）；
- * - 视频编辑 edit：仅 HappyHorse。
+ * Backend facts (src/novelvideo/api/routes/freezone.py):
+ * - All reference omni-gen: `is_freezone_seedance2_backend` being false gives a direct 400;
+ * - First-last-frame keyframes: only Seedance 2.0 appends the last frame, the rest of the backend **silently drops the last frame**;
+ * - Image-to-video i2v / first-last-frame keyframes / video edit edit: all **do not validate the prompt** (an empty prompt is allowed);
+ * - Video edit edit: HappyHorse only.
  *
- * 模型 id / apiModel 形如 `newapi_seedance-2.0-fast` / `newapi_seedance-1.0-pro-fast`
- * / `newapi_happyhorse-1.0`（见 freezone/video_node.py）。这里统一去掉分隔符后按版本号
- * 前缀匹配，避免把 `2.0` 误命中成 `1.x`（`seedance1\d` 只吃 `seedance1` 后跟数字）。
+ * Model id / apiModel looks like `newapi_seedance-2.0-fast` / `newapi_seedance-1.0-pro-fast`
+ * / `newapi_happyhorse-1.0` (see freezone/video_node.py). Here separators are stripped uniformly and matching is by version-number
+ * prefix, avoiding `2.0` being mis-hit as `1.x` (`seedance1\d` only eats `seedance1` followed by a digit).
  */
 
 function normalizeVideoModelId(modelId: string | null | undefined): string {
@@ -35,25 +35,25 @@ export function isGrokVideoChannelModel(modelId: string | null | undefined): boo
   return normalizeVideoModelId(modelId).includes("grokvideochannel");
 }
 
-// Seedance 1 全系列（1.0 Pro Fast / 1.5 Pro / …）：版本号 `1.x` → `1x`，匹配
-// `seedance1` 后跟任意数字，避免误命中 2.0（`seedance20`）。引用素材时这些模型受限。
+// The whole Seedance 1 series (1.0 Pro Fast / 1.5 Pro / …): version `1.x` → `1x`, matching
+// `seedance1` followed by any digit, avoiding a mis-hit on 2.0 (`seedance20`). These models are restricted when referencing assets.
 export function isSeedance1xVideoModel(modelId: string | null | undefined): boolean {
   return /seedance1\d/.test(normalizeVideoModelId(modelId));
 }
 
-// Seedance 2.0 全系列（2.0 / fast / value / fast-value）：与后端
-// `is_freezone_seedance2_backend`（model.startswith("seedance-2.0")）等价。
+// The whole Seedance 2.0 series (2.0 / fast / value / fast-value): equivalent to the backend's
+// `is_freezone_seedance2_backend` (model.startswith("seedance-2.0")).
 export function isSeedance2VideoModel(modelId: string | null | undefined): boolean {
   return /seedance2/.test(normalizeVideoModelId(modelId));
 }
 
-// 基础款 Seedance 2.0（`…seedance-2.0` 本体，不含 fast / value / fast-value 变体）。
-// 归一化后以 `seedance20` 结尾即为基础款——变体都会在后面多出 `fast` / `value` 后缀。
+// The base Seedance 2.0 (`…seedance-2.0` itself, excluding the fast / value / fast-value variants).
+// After normalization, ending in `seedance20` means the base model — variants all carry an extra `fast` / `value` suffix behind it.
 function isBaseSeedance2VideoModel(modelId: string | null | undefined): boolean {
   return /seedance20$/.test(normalizeVideoModelId(modelId));
 }
 
-/** 前端模式与媒体模型目录能力的唯一映射。 */
+/** The only mapping between frontend modes and media model catalog capabilities. */
 export const GEN_MODE_TO_CATALOG_MODE: Record<VideoGenMode, string> = {
   textToVideo: "text_to_video",
   firstFrame: "first_frame",
@@ -66,8 +66,8 @@ export const GEN_MODE_TO_CATALOG_MODE: Record<VideoGenMode, string> = {
 };
 
 /**
- * 这些模式的输出画幅由输入关键帧/源视频决定，不能提交用户保存的固定比例。
- * 只计算本次请求的有效值，不覆盖节点中的比例，切回其它模式时可恢复用户选择。
+ * The output aspect of these modes is decided by the input keyframes/source video, so the user's saved fixed ratio must not be submitted.
+ * Only the effective value of this request is computed and the ratio in the node is not overwritten, so the user's choice can be restored when switching back to other modes.
  */
 export function videoModeForcesAutomaticAspectRatio(mode: VideoGenMode): boolean {
   return (
@@ -81,14 +81,13 @@ export function videoModeForcesAutomaticAspectRatio(mode: VideoGenMode): boolean
 export interface VideoKeyframeCandidate {
   url: string;
   slot?: VideoKeyframeSlot | null;
-  legacyDisplayName?: string | null;
 }
 
 /**
- * 从视频节点的上游图片中解析稳定的首帧/尾帧槽位。
+ * Resolve stable first-frame/last-frame slots from the video node's upstream images.
  *
- * 新画布以 edge.data.keyframeSlot 为准，节点名称只负责展示，用户重命名不会改变语义。
- * 旧画布没有槽位字段时才兼容“首帧/尾帧”标题，最后按连线顺序补齐未分配图片。
+ * New canvases go by edge.data.keyframeSlot; the node name is for display only, and a user rename does not change the semantics.
+ * Images without a slot field are simply assigned in connection order (first the first frame, then the last frame).
  */
 export function resolveVideoKeyframeUrls(
   candidates: readonly VideoKeyframeCandidate[],
@@ -107,15 +106,8 @@ export function resolveVideoKeyframeUrls(
       continue;
     }
 
-    const displayName = String(candidate.legacyDisplayName ?? "").trim();
-    // 老数据里的 displayName 是写死的中文槽位名，属于**存量数据格式**不是界面文案。
-    if (displayName.includes("首帧") && !firstFrameUrl) { // i18n-exempt
-      firstFrameUrl = candidate.url;
-    } else if (displayName.includes("尾帧") && !lastFrameUrl) { // i18n-exempt
-      lastFrameUrl = candidate.url;
-    } else {
-      unassigned.push(candidate.url);
-    }
+    // No slot given: join the unassigned queue below, which is filled in connection order.
+    unassigned.push(candidate.url);
   }
 
   if (!firstFrameUrl) firstFrameUrl = unassigned.shift() ?? null;
@@ -124,8 +116,8 @@ export function resolveVideoKeyframeUrls(
 }
 
 /**
- * 模型入参的统一形态：既可以只给一个 id 字符串，也可以给媒体目录下发的模型对象
- * （`supportedModes` 存在时以它为准，那是 Admin 显式配置的能力声明）。
+ * The unified shape of the model argument: either just an id string, or the model object delivered by the media catalog
+ * (when `supportedModes` exists it prevails — that is a capability declaration explicitly configured by Admin).
  */
 export type VideoModelRef =
   | string
@@ -139,7 +131,7 @@ export type VideoModelRef =
   | null
   | undefined;
 
-/** 未配置的新字段沿用旧行为：支持原生音频，且默认开启。 */
+/** New fields left unconfigured keep the old behavior: native audio is supported and on by default. */
 export function videoModelSupportsGenerateAudio(model: VideoModelRef): boolean {
   return typeof model === "string" || model?.supportsGenerateAudio !== false;
 }
@@ -148,16 +140,16 @@ export function videoModelDefaultGenerateAudio(model: VideoModelRef): boolean {
   return videoModelSupportsGenerateAudio(model);
 }
 
-/** 从模型入参里取出用于能力启发式判定的 id（优先 apiModel，它才是打给上游的名字）。 */
+/** Take from the model argument the id used for the capability heuristics (prefer apiModel, which is the name sent upstream). */
 function videoModelIdOf(model: VideoModelRef): string | null | undefined {
   return typeof model === "string" ? model : (model?.apiModel ?? model?.id);
 }
 
 /**
- * 指定模型是否支持某 genMode（与可见 tab / 切模型时是否重置残留模式口径一致）。
- * - HappyHorse：文生 / 首帧(i2v) / 图片参考(r2v) / 视频编辑。
- * - 目录未返回 supportedModes 时沿用旧启发式；视频延长没有旧默认，只有后台显式配置后
- *   才开放。
+ * Whether the given model supports a genMode (consistent with the visible tabs / whether leftover modes are reset when switching models).
+ * - HappyHorse: text-to-video / first frame (i2v) / image reference (r2v) / video edit.
+ * - When the catalog returns no supportedModes the old heuristics apply; video extend has no old default and opens only after the admin
+ *   explicitly configures it.
  */
 export function isVideoModeSupportedByModel(
   mode: VideoGenMode,
@@ -187,8 +179,8 @@ export function isVideoModeSupportedByModel(
 }
 
 /**
- * 空态 CTA 只覆盖「铺素材起步」的图片 / 首尾帧模式——文生视频无需素材、视频编辑走
- * 独立入口，都不在空态 CTA 里。与 `spawnFrameUploads` 接受的模式一一对应。
+ * The empty-state CTA covers only the image / first-last-frame modes that "start by laying out assets" — text-to-video needs no assets and video edit goes through
+ * a separate entry, so neither is in the empty-state CTA. One to one with the modes `spawnFrameUploads` accepts.
  */
 export type VideoEmptyStateCtaMode =
   | "allReference"
@@ -198,11 +190,11 @@ export type VideoEmptyStateCtaMode =
   | "firstLastFrame";
 
 /**
- * 视频节点「空态」CTA 的模式顺序——只列该模型**真正能起步**的图片 / 首尾帧模式：
- * - HappyHorse：首帧 → 图片参考；
- * - Seedance 2.0：全能参考 → 图片参考 → 首尾帧；
- * - Seedance 1.x 及其它非 2.0 非 HappyHorse：全能参考会 400、首尾帧尾帧被静默丢弃、
- *   多图参考也不支持，只给确实可用的「首帧」。
+ * Mode order of the video node "empty state" CTA — lists only the image / first-last-frame modes the model can **truly start with**:
+ * - HappyHorse: first frame → image reference;
+ * - Seedance 2.0: all reference → image reference → first-last-frame;
+ * - Seedance 1.x and other non-2.0 non-HappyHorse: all reference would 400, first-last-frame silently drops the last frame,
+ *   multi-image reference is unsupported too, so only the genuinely usable "first frame" is offered.
  */
 export function videoEmptyStateCtaModes(
   model: VideoModelRef,
@@ -228,9 +220,9 @@ export function videoEmptyStateCtaModes(
 }
 
 /**
- * 非 HappyHorse 模型「首次接入图片素材」后的默认模式：Seedance 2.0 用全能参考
- * （omni，1-9 图 + 视频 + 音频的通用入口），其余（Seedance 1.x）不支持全能参考，
- * 退到确实可用的「首帧」，避免默认推导把 1.x 顶进一个提交必 400 的模式。
+ * The default mode of non-HappyHorse models after "assets are first connected": Seedance 2.0 uses all reference
+ * (omni, the general entry for 1-9 images + video + audio), while the rest (Seedance 1.x) do not support all reference
+ * and fall back to the genuinely usable "first frame", avoiding default derivation pushing 1.x into a mode where submit is certain to 400.
  */
 export function videoUpstreamImageDefaultMode(
   model: VideoModelRef,
@@ -252,41 +244,41 @@ export function videoUpstreamImageDefaultMode(
 }
 
 /**
- * 该 genMode 是否**必须带提示词**才能提交：文生 / 全能参考 后端强校验 prompt；
- * 首帧 / 图生视频 / 图片参考 / 首尾帧 / 视频编辑允许空提示词（只要素材齐备即可提交）。
+ * Whether this genMode **must carry a prompt** to submit: text-to-video / all reference strongly validate the prompt on the backend;
+ * first frame / image-to-video / image reference / first-last-frame / video edit allow an empty prompt (assets just need to be complete).
  */
 export function videoModeRequiresPrompt(mode: VideoGenMode): boolean {
   return mode === "textToVideo" || mode === "allReference" || mode === "videoExtend";
 }
 
 /**
- * 该 genMode 是否**必须有上游素材**才能提交：只有文生视频不需要，其余模式的提交
- * 分支都会在素材为空时直接 return（见 VideoNode 的 handleSubmit）。
+ * Whether this genMode **must have upstream assets** to submit: only text-to-video does not, while the submit
+ * branches of every other mode return directly when assets are empty (see handleSubmit of VideoNode).
  *
- * 和 `videoModeRequiresPrompt` 是**并列**关系，不是二选一 —— 全能参考两条都要：
- * 后端 omni 端点强校验 prompt，而 references 为空又根本没得可发。曾经写成「要提示词
- * 的模式就只看提示词」，于是「接过图 → 又把图撤走 → 只打字」这条路上按钮看着可点、
- * 点下去却被 handleSubmit 的 `references.length === 0` 静默拦掉，表现为「点了没反应」。
- * 正常情况下 `videoNoUpstreamResetMode` 会先把模式退回文生视频，这条是兜底：上游节点
- * 还连着、里面的图却被清空时（typeCounts>0 而 counts==0）退回不触发，仍要拦住提交。
+ * It is **parallel** to `videoModeRequiresPrompt`, not either-or — all reference needs both:
+ * the backend omni endpoint strongly validates the prompt, and with empty references there is nothing to send. It was once written as "a mode that needs a prompt
+ * looks only at the prompt", so on the path "connect an image → remove the image again → only type", the button looked clickable,
+ * yet clicking was silently blocked by handleSubmit's `references.length === 0`, showing up as "clicked and nothing happened".
+ * Normally `videoNoUpstreamResetMode` first falls the mode back to text-to-video; this is the safety net: when the upstream node
+ * is still connected but its image was cleared (typeCounts>0 while counts==0) the fall-back does not trigger, and submit must still be blocked.
  */
 export function videoModeRequiresMedia(mode: VideoGenMode): boolean {
   return mode !== "textToVideo";
 }
 
 /**
- * 上游素材被全部撤走后该退回哪个模式：`"textToVideo"` = 退回文生视频，null = 不动。
+ * Which mode to fall back to once all upstream assets are removed: `"textToVideo"` = back to text-to-video, null = leave alone.
  *
- * 视频节点的模式推导原本是**单向**的：接入图片/视频/音频时有一堆 effect 把模式推进
- * 到能消费该素材的模式，却没有任何一条在素材撤空后把它推回来。于是「连一张图 → 又把
- * 图删掉」之后节点卡在全能参考上，界面上看不出异常，提交却必然被静默拦下。
- * HappyHorse 那条统一状态机早就有「无上游 → 文生视频」这一档，这里把同一条规则补给
- * 其余模型。
+ * The video node's mode derivation was originally **one-directional**: when images/videos/audio connect, a pile of effects pushes the mode
+ * to one that can consume that asset, but none pushes it back once the assets are emptied. So after "connect an image → delete
+ * the image again" the node is stuck on all reference, the UI shows nothing wrong, and submit is inevitably silently blocked.
+ * HappyHorse's unified state machine long had the "no upstream → text-to-video" tier; here the same rule is added for
+ * the other models.
  *
- * 素材计数要传**按节点类型**的口径（`upstreamTypeCounts`，空的图片节点也算），不能用
- * 「已解析 URL」的口径：空态 CTA（全能参考 / 图片参考 / 首尾帧）正是先铺一个还没出图
- * 的图片/上传节点、再把模式切过去，按 URL 口径这一瞬间素材数是 0，会被这条规则当场
- * 顶回文生视频，等于把三个 CTA 全废掉。
+ * The asset counts must be passed on the **by-node-type** basis (`upstreamTypeCounts`, where an empty image node counts too), not the
+ * "resolved URL" basis: the empty-state CTAs (all reference / image reference / first-last-frame) first lay out an image/upload node with no image yet,
+ * then switch the mode over; by the URL basis the asset count is 0 at that instant, and this rule would push it straight back
+ * to text-to-video, voiding all three CTAs.
  */
 export function videoNoUpstreamResetMode(
   mode: VideoGenMode,
@@ -297,9 +289,9 @@ export function videoNoUpstreamResetMode(
 }
 
 /**
- * 该模型的 i2v 端点是否放行多图（>1）。后端只在「非 2.0 且非 HappyHorse」时对
- * `len(source_paths) > 1` 直接 400（freezone.py），所以这两族之外的模型（Seedance
- * 1.x 等）一次只能吃一张图 —— 对它们来说换模式救不了，得换模型。
+ * Whether the model's i2v endpoint lets multiple images (>1) through. The backend returns a direct 400 for
+ * `len(source_paths) > 1` only when "not 2.0 and not HappyHorse" (freezone.py), so models outside those two families (Seedance
+ * 1.x etc.) can take only one image at a time — switching mode does not save them; the model must be switched.
  */
 export function videoModelAcceptsMultipleImages(
   model: VideoModelRef,
@@ -315,21 +307,21 @@ export function videoModelAcceptsMultipleImages(
 }
 
 /**
- * 「首帧生成视频」(imageToVideo / i2v) 接了多图时该切到哪个模式，null = 不动。
+ * Which mode to switch to when "first-frame-to-video" (imageToVideo / i2v) has multiple images connected; null = leave alone.
  *
- * 为什么必须切：后端 i2v 端点按**图片张数**分流（1 张 = 图生视频，2-9 张 = 图片
- * 参考视频），多连一张不会报错，而是悄悄变成另一种生成方式 —— 界面上模式却还写着
- * 「首帧生成视频」。用户把第二张图连上来这个动作本身就是明确意图，直接把模式导到
- * 真正在做的事情上：优先「全能参考」(omni，还能继续接视频 / 音频)，模型不支持
- * omni 时退「图片参考」。
+ * Why it must switch: the backend i2v endpoint dispatches by **image count** (1 = image-to-video, 2-9 = image
+ * reference video); connecting one more does not error but quietly turns into another way of generating — while the UI mode still says
+ * "first-frame-to-video". The user connecting a second image is itself clear intent, so steer the mode straight to
+ * what is really being done: prefer "all reference" (omni, which can keep connecting video / audio), and when the model does not support
+ * omni fall back to "image reference".
  *
- * 三种情况**不动**：
- * - HappyHorse 有自己那套完整状态机（videos>0→视频编辑 / images>1→图片参考 /
- *   images===1→首帧），在那儿统一收口，这里再插一脚只会两处来回打架；
- * - 模型压根消费不了多图（Seedance 1.x：i2v 端点 >1 图直接 400），换到哪个模式都是
- *   400。留在首帧上，让提交守卫那句「该模型单次仅支持 1 张图片」把话说清楚，别用
- *   一次模式跳变把真正的问题（该换模型）盖掉；
- * - 两个候选模式该模型都不支持 —— 宁可不动，也不要顶进一个提交必 400 的模式。
+ * Three cases **leave it alone**:
+ * - HappyHorse has its own complete state machine (videos>0→video edit / images>1→image reference /
+ *   images===1→first frame), settled uniformly there, and meddling again here would only make the two places fight;
+ * - The model cannot consume multiple images at all (Seedance 1.x: the i2v endpoint gives a direct 400 for >1 image), so any mode we switch to is a
+ *   400. Stay on first frame and let the submit guard's "this model supports only 1 image at a time" say it clearly, rather than covering
+ *   the real problem (the model should be switched) with a mode jump;
+ * - Neither candidate mode is supported by the model — better not to move than push into a mode where submit is certain to 400.
  */
 export function videoMultiImageAutoSwitchMode(
   mode: VideoGenMode,
@@ -345,29 +337,29 @@ export function videoMultiImageAutoSwitchMode(
 }
 
 /**
- * Seedance 2.0 音频引用的时长边界。厂商有**两条互相独立**的规则，都会以 400 打回：
+ * Duration bounds of Seedance 2.0 audio references. The vendor has **two mutually independent rules**, and both reject with 400:
  *
- * 1. 逐条：`[InvalidParameter.DurationTooShort] Duration must be between 1.8s and 15.2s`
- * 2. 总和：`the parameter audio total duration (seconds) specified in the request must
+ * 1. Per item: `[InvalidParameter.DurationTooShort] Duration must be between 1.8s and 15.2s`
+ * 2. Total: `the parameter audio total duration (seconds) specified in the request must
  *    be less than or equal to 15.2 for model doubao-seedance-2-0 in r2v`
  *
- * **这里曾经只卡第 1 条**，注释里还写着「厂商口径是逐条，没有一个字提到总和」「别再
- * 回到按总时长判定」。那是错的：2026-08-06 3060 环境两次任务失败
- * （freezone_video_gen/01KZ5R8ZZZY9M8T9F01H159RP7，gen_mode=allReference）实测抓到了
- * 第 2 条报文——3 条各 6s 每条都在 1.8~15.2 区间内、逐条判定必然放行，总计 18s 却被
- * 厂商直接拒。所以总时长这条**不是我们臆想的规则**，删掉它就等于把这个故障放回去。
+ * **This once checked only rule 1**, and the comments even said "the vendor basis is per item, with not a word about the total" and "do not
+ * go back to judging by total duration". That was wrong: on 2026-08-06 in the 3060 environment two task failures
+ * (freezone_video_gen/01KZ5R8ZZZY9M8T9F01H159RP7, gen_mode=allReference) captured the actual
+ * rule 2 payload — 3 clips of 6s each, every one inside 1.8~15.2 so the per-item judgment inevitably lets them through, yet the total of 18s was
+ * rejected outright by the vendor. So the total-duration rule is **not a rule we imagined**, and deleting it would put this failure back.
  *
- * 总时长上限优先读媒体模型目录的 `referenceAudioTotalMaxSeconds`（后台可配），没配才用
- * 下面这个 15.2s 的厂商兜底值。兜底值刻意与单条上限取同一个数：单条 15.2s 是厂商明确
- * 放行的，兜底若取更小（比如 15s）就会把一条合法的顶格音频误拦在本地。想留安全余量
- * 请在后台把 `referenceAudioTotalMaxSeconds` 配小，而不是改这里的常量。
+ * The total duration cap first reads the media model catalog's `referenceAudioTotalMaxSeconds` (admin-configurable), and only when it is not configured uses
+ * the 15.2s vendor fallback value below. The fallback is deliberately the same number as the per-item cap: 15.2s per item is explicitly
+ * allowed by the vendor, and a smaller fallback (say 15s) would wrongly block a legitimate maximum-length audio locally. To keep a safety margin
+ * configure `referenceAudioTotalMaxSeconds` smaller in the admin console rather than changing the constant here.
  *
- * 后端 freezone omni-gen 端点有同一套兜底（`validate_omni_reference_audio_durations`，
- * src/novelvideo/freezone/video_node.py），那层拿的是落地文件路径 + ffprobe，是本地
- * `<audio>` 探测失败时最后一道能在计费前拦下的闸门。
+ * The backend freezone omni-gen endpoint has the same fallback (`validate_omni_reference_audio_durations`,
+ * src/novelvideo/freezone/video_node.py); that layer takes the landed file path + ffprobe, and is the last gate that can block before billing
+ * when the local `<audio>` probe fails.
  *
- * 文案里的秒数一律从这些常量推（`/ 1000`），别在调用点另写一遍字面量，否则改阈值
- * 时提示会静默漂移。
+ * Seconds in the copy are always derived from these constants (`/ 1000`); do not write the literal again at call sites, otherwise the hint
+ * silently drifts when thresholds change.
  */
 export const MIN_AUDIO_REFERENCE_DURATION_MS = 1_800;
 export const MAX_AUDIO_REFERENCE_DURATION_MS = 15_200;
@@ -382,7 +374,7 @@ const COMPOSITION_TIMELINE_AUDIO_ROLES = new Set([
   "background_music",
 ]);
 const COMPOSITION_TIMELINE_AUDIO_INTENT =
-  /(?:旁白|配音|解说|背景音乐|配乐|纯音乐|(?:^|[\s_-])bgm(?:$|[\s_-])|background[_\s-]*music|voice[_\s-]*over|narration)/i;
+  /(?:voiceover|voice[_\s-]*over|narration|background[_\s-]*music|soundtrack|(?:^|[\s_-])bgm(?:$|[\s_-]))/i;
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object"
@@ -428,7 +420,7 @@ export function isCompositionTimelineAudioData(data: unknown): boolean {
   return COMPOSITION_TIMELINE_AUDIO_INTENT.test(searchable);
 }
 
-/** 媒体目录里与音频时长相关的那个字段（`ModelOption` 的子集）。 */
+/** The audio-duration-related fields in the media catalog (a subset of `ModelOption`). */
 export interface AudioDurationLimitModel {
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
@@ -469,15 +461,15 @@ export function referenceDurationLimitsMs(
 }
 
 /**
- * 所选模型的**有效**音频总时长上限（毫秒）：目录配置优先，没配才用 15.2s。
+ * The **effective** total audio duration cap (milliseconds) of the selected model: the catalog config first, and 15.2s only when it is not configured.
  *
- * 与后端 `_catalog_audio_total_duration_max`（api/routes/freezone.py）同一口径：只认
- * 有限正数，null / 0 / 负数 / NaN / Infinity 一律当作没配。允许小数——15.2 本身就不是
- * 整数，这与那几个「非负整数」的计数字段不同，别顺手套 `Number.isInteger`。
+ * On the same basis as the backend `_catalog_audio_total_duration_max` (api/routes/freezone.py): only accepts a
+ * finite positive number; null / 0 / negative / NaN / Infinity are all treated as not configured. Decimals are allowed — 15.2 itself is not
+ * an integer, unlike those "non-negative integer" count fields, so do not casually apply `Number.isInteger`.
  *
- * `vendorCapMs` = 这个模型的厂商硬顶（seedance2 传 15.2s，边界未知的模型不传）。传了
- * 就与目录值**取小**：管理员可以配得更严，但配宽了不该让厂商也跟着放行——给 seedance2
- * 配 60s 的话，3 条 6s 在本地全过、到厂商那儿照样 400，正是这套守卫要消灭的失败。
+ * `vendorCapMs` = this model's vendor hard cap (seedance2 passes 15.2s; models with unknown bounds pass nothing). When passed
+ * it is **min-ed** with the catalog value: admins may configure it stricter, but configuring it looser should not make the vendor let it through too — configuring
+ * 60s for seedance2 would let 3 clips of 6s all pass locally and still 400 at the vendor, exactly the failure this guard exists to eliminate.
  */
 export function audioReferenceTotalDurationLimitMs(
   model: AudioDurationLimitModel | null | undefined,
@@ -495,9 +487,9 @@ export function audioReferenceTotalDurationLimitMs(
 }
 
 /**
- * 三个 kind 必须各占一个联合分支：写成 `kind: "tooShort" | "tooLong"` 合并那两个的话，
- * TS 无法靠 `kind !== "tooLong"` 把整个分支从联合里剔掉，调用点的三元链就取不到
- * totalTooLong 独有的 totalMs / limitMs。
+ * The three kinds must each take one union branch: if written as `kind: "tooShort" | "tooLong"` merging those two,
+ * TS cannot rule the whole branch out of the union via `kind !== "tooLong"`, and the call site's ternary chain cannot reach
+ * totalMs / limitMs unique to totalTooLong.
  */
 export interface ReferenceDurationClip {
   label: string;
@@ -526,22 +518,22 @@ export type AudioDurationRejection =
     };
 
 /**
- * 提交前音频时长守卫。
+ * Pre-submit audio duration guard.
  *
- * `durationMs` 为 null = 探测不出时长（音频节点没渲染过波形，且 `<audio>` 探测撞上
- * CORS / 网络 / 超时）。这类一律**不参与判定**——宁可放过去让后端兜底，也不要凭空
- * 拦住一次正常提交。对总时长来说这意味着算出来的和是个**下界**，但判定方向仍然安全：
- * 漏算只会让和变小，所以「算出来超了」必定真超，不会因此误拦。
+ * `durationMs` null = duration cannot be probed (the audio node never rendered a waveform, and the `<audio>` probe hit
+ * CORS / network / timeout). Such entries **do not take part in the judgment** — better to let it pass and have the backend catch it than to
+ * block a normal submission out of thin air. For the total it means the computed sum is a **lower bound**, yet the judgment direction stays safe:
+ * a missed entry only makes the sum smaller, so "computed as over" is definitely really over and never wrongly blocks.
  *
- * 两类边界**分开授权**，与后端 `validate_omni_reference_audio_durations` 一一对应：
- *   - `perClipLimits`：逐条 1.8~15.2s，这两个数字是从 Seedance 2.0 的报文里实测出来的，
- *     只对它成立。别家模型传 `false` —— 拿 2.0 的数字去卡它，一条正常的 25s 音频会被
- *     我们凭空拦在本地。
- *   - `totalLimitMs`：总时长，优先听目录里的 `referenceAudioTotalMaxSeconds`
- *     （见 `audioReferenceTotalDurationLimitMs`），没配才落到 15.2s 兜底。
+ * The two kinds of bounds are **authorized separately**, corresponding one to one with the backend `validate_omni_reference_audio_durations`:
+ *   - `perClipLimits`: per item 1.8~15.2s; these two numbers were measured from Seedance 2.0's payloads,
+ *     and hold only for it. Other models pass `false` — blocking them with 2.0's numbers would block a normal 25s audio
+ *     locally out of thin air.
+ *   - `totalLimitMs`: the total duration, listening first to `referenceAudioTotalMaxSeconds` in the catalog
+ *     (see `audioReferenceTotalDurationLimitMs`), and falling to the 15.2s fallback only when not configured.
  *
- * 上报顺序 太短 → 单条太长 → 总和太长：前两类是「换掉这条」，最后一类是「整体裁一裁」，
- * 混在一起列用户不知道先动哪个。
+ * Reporting order: too short → single too long → total too long: the first two are "replace this item", the last is "trim the whole thing";
+ * listing them mixed together leaves the user not knowing which to touch first.
  */
 export function audioReferenceDurationRejection(
   clips: readonly ReferenceDurationClip[],
@@ -589,22 +581,22 @@ export function audioReferenceDurationRejection(
 }
 
 /**
- * 违规条目的秒数展示——**不能四舍五入到与阈值自相矛盾**。
+ * Seconds display of violating entries — **must not round into contradiction with the threshold**.
  *
- * 早先用 `toFixed(1)`，1.799s 会显示成「1.8s」、15.201s 显示成「15.2s」：用户看到
- * 的正好是合法边界值，却被告知越界，只能怀疑是我们算错了。时长本身就是整毫秒
- * （`Math.round(secs * 1000)`），所以按毫秒精度展示，再去掉无意义的尾随 0：
- * 900 → `0.9`、1799 → `1.799`、15201 → `15.201`、6000 → `6`。
+ * Early on `toFixed(1)` was used, so 1.799s showed as "1.8s" and 15.201s as "15.2s": the user saw
+ * exactly a legal boundary value yet was told it is out of bounds, and could only suspect we miscalculated. Durations are whole milliseconds
+ * (`Math.round(secs * 1000)`), so show at millisecond precision and then strip meaningless trailing 0s:
+ * 900 → `0.9`, 1799 → `1.799`, 15201 → `15.201`, 6000 → `6`.
  */
 export function formatAudioDurationSeconds(durationMs: number): string {
   return (durationMs / 1000).toFixed(3).replace(/\.?0+$/, "");
 }
 
 /**
- * 把违规条目拼成提示里的 `{{clips}}`（tooShort / tooLong / totalTooLong 共用）。
+ * Join the violating entries into the `{{clips}}` in the hint (shared by tooShort / tooLong / totalTooLong).
  *
- * 括号和分隔符都从 locale 取（zh 用全角括号 + 顿号，en 用半角括号 + 逗号），别在
- * 调用点写死——这里曾经硬编码 `（）` 和 `、`，en 用户会看到一串中文标点。
+ * The brackets and separator are taken from the locale (en uses half-width brackets + commas), so do not
+ * hard-code them at call sites — this once hard-coded full-width brackets and an ideographic comma, and en users would see a string of CJK punctuation.
  */
 export function formatAudioDurationClips(
   clips: readonly { label: string; durationMs: number }[],
@@ -621,19 +613,19 @@ export function formatAudioDurationClips(
 }
 
 /**
- * 提交前守卫：当前 (模型, 模式) 是否会**丢弃或被后端直接拒绝**已接入的上游素材。
- * 返回非空理由则应禁用提交、并把理由显示到按钮 tooltip 上，替代「静默丢素材 / 提交 400」。
+ * Pre-submit guard: whether the current (model, mode) would **drop or be directly rejected by the backend for** connected upstream assets.
+ * A non-empty reason should disable submit and show the reason in the button tooltip, replacing "silently dropping assets / submit 400".
  *
- * 规则对齐后端 freezone i2v / omni-gen 端点（src/novelvideo/api/routes/freezone.py）：
- * - 视频素材：「全能参考」「视频编辑」「视频延长」消费，其余模式静默丢弃 → 拦；
- * - 音频素材：「全能参考」消费；「视频编辑」仅在媒体目录显式配置音频上限时消费；
- *   其余模式静默丢弃 → 拦；
- * - 多图(>1)：i2v 端点仅 Seedance 2.0 / HappyHorse 放行，非 2.0 非 HappyHorse
- *   （Seedance 1.x）传 >1 图后端直接 400 → 拦。
+ * Rules are aligned with the backend freezone i2v / omni-gen endpoints (src/novelvideo/api/routes/freezone.py):
+ * - Video assets: consumed by "all reference", "video edit" and "video extend", silently dropped by other modes → block;
+ * - Audio assets: consumed by "all reference"; "video edit" consumes them only when the media catalog explicitly configures an audio cap;
+ *   silently dropped by other modes → block;
+ * - Multiple images (>1): the i2v endpoint lets only Seedance 2.0 / HappyHorse through, and for non-2.0 non-HappyHorse
+ *   (Seedance 1.x) passing >1 image gives a direct backend 400 → block.
  *
- * 未配置相应视频模式的模型接入视频/音频后，这些规则会阻止素材被静默丢弃。
+ * For models without the corresponding video mode configured, these rules prevent connected video/audio from being silently dropped.
  */
-/** 返回 i18n key（非 null 时由调用方 `t()` 出文案），不是可直接展示的句子。 */
+/** Returns an i18n key (when non-null the caller turns it into copy with `t()`), not a sentence that can be shown directly. */
 export function videoSubmitMediaRejectionReason(
   mode: VideoGenMode,
   model: VideoModelRef,
@@ -677,28 +669,28 @@ export function videoSubmitMediaRejectionReason(
 }
 
 /**
- * 模型选择器里某个候选**为什么不能选**（非 null 则置灰 + 悬浮显示这句理由）。
+ * Why a candidate in the model selector **cannot be chosen** (when non-null it is grayed out and this reason shows on hover).
  *
- * 与上面的 `videoSubmitMediaRejectionReason` 是一对：那条管「选定模型后能不能提交」，
- * 这条管「带着当前这堆上游素材，还能不能切到这个模型」。要维持的不变量是
- * **「不置灰 ⇒ 存在一个该模型支持、且提交守卫放行的模式」**——不是逐条阈值相等。
- * 逐条相等这个说法在这里不成立：HappyHorse 的多图 / 视频都由它自己的 r2v / 视频编辑
- * 路径消化，两条守卫本来就写着不同的判断；真正不能破的是「选得进去就必须走得通」，
- * 否则用户会被放进一个提交必被拦、界面上又毫无预兆的死胡同。
+ * A pair with `videoSubmitMediaRejectionReason` above: that one governs "can it be submitted after the model is chosen",
+ * this one governs "with this pile of upstream assets, can we still switch to this model". The invariant to maintain is
+ * **"not grayed out ⇒ there exists a mode the model supports and the submit guard lets through"** — not per-threshold equality.
+ * Per-item equality does not hold here: HappyHorse's multi-image / video are digested by its own r2v / video edit
+ * paths, and the two guards are written with different judgments to begin with; what must not break is "what can be selected must be workable",
+ * otherwise users would be put into a dead end where submit is certain to be blocked yet the UI gives no warning.
  *
- * 三处阈值的由来：
- * - Seedance 1.x 是 **>1 图**，不是 >0：后端 i2v 端点只在 `len(source_paths) > 1`
- *   且非 2.0 非 HappyHorse 时才 400（freezone.py），单图首帧正是 1.x 唯一能用、也是
- *   `videoEmptyStateCtaModes` 明确推荐给它的模式。写成 >0 会把「一张图 + Seedance
- *   1.5 Pro」这个完全合法的常规组合整个锁死。
- * - HappyHorse 只拦音频：音频只有全能参考(omni, 2.0)能消费，而
- *   `isVideoModeSupportedByModel` 里 HappyHorse 永远到不了 allReference——不拦的话
- *   「HappyHorse + 音频节点」就是上面说的那种死胡同（选得进去、提交必被拦）。
- *   它的多图（r2v）和视频（视频编辑）都能消化，不拦。
- * - Grok Video Channel 只支持图片。注：它当前在后端是关掉的
- *   （`FREEZONE_DISABLED_VIDEO_BACKENDS`），不会出现在选择器里，这条分支是休眠的。
+ * Origin of the three thresholds:
+ * - Seedance 1.x is **>1 image**, not >0: the backend i2v endpoint gives 400 only when `len(source_paths) > 1`
+ *   and not 2.0 and not HappyHorse (freezone.py); a single-image first frame is exactly the only thing 1.x can use, and also the mode
+ *   `videoEmptyStateCtaModes` explicitly recommends for it. Writing >0 would lock out the fully legitimate everyday combination "one image + Seedance
+ *   1.5 Pro" entirely.
+ * - HappyHorse blocks only audio: audio can be consumed only by all reference (omni, 2.0), and in
+ *   `isVideoModeSupportedByModel` HappyHorse can never reach allReference — without blocking,
+ *   "HappyHorse + audio node" is exactly the dead end described above (selectable yet submit certain to be blocked).
+ *   Its multi-image (r2v) and video (video edit) can both be digested, so no blocking.
+ * - Grok Video Channel supports only images. Note: it is currently turned off on the backend
+ *   (`FREEZONE_DISABLED_VIDEO_BACKENDS`) and does not appear in the selector, so this branch is dormant.
  */
-/** 同上：返回的是 i18n key，调用方负责 `t()`。 */
+/** Same as above: returns an i18n key, and the caller is responsible for `t()`. */
 export function videoModelReferenceDisabledReason(
   model: VideoModelRef,
   counts: { images: number; videos: number; audios: number },
@@ -758,32 +750,32 @@ export function videoModelReferenceDisabledReason(
 }
 
 export interface VideoReferenceAutoSwitch {
-  /** 目标模型的 `id`（存进 `VideoNodeData.model` 的那个值，不是 apiModel）。 */
+  /** The target model's `id` (the value stored into `VideoNodeData.model`, not apiModel). */
   modelId: string;
   genMode: VideoGenMode;
 }
 
 /**
- * 上游接入视频 / 音频时的**自动救场**：Seedance 1.x 根本消费不了这两类素材
- * （i2v 端点只收图，omni 端点非 2.0 直接 400），把用户留在 1.x 上只能得到一次
- * 必然失败的提交。用户连上视频/音频节点这个动作本身就是明确意图，所以直接替他
- * 换成能吃这些素材的 Seedance 2.0，并落到唯一能消费它们的「全能参考」。
+ * **Auto-rescue** when video / audio is connected upstream: Seedance 1.x cannot consume these two kinds of assets at all
+ * (the i2v endpoint takes only images, and the omni endpoint gives a direct 400 for non-2.0), and leaving the user on 1.x would only yield one
+ * certainly failing submission. The user connecting a video/audio node is itself clear intent, so swap them straight
+ * to a Seedance 2.0 that can eat these assets, landing on the only mode that can consume them, "all reference".
  *
- * 只管 Seedance 1.x：
- * - HappyHorse 有自己的「视频编辑」路径，能吃视频，不该被抢走；
- * - Grok Video Channel 是用户显式选的独立渠道，只支持图片，这里不替他改渠道，
- *   继续由选择器置灰 + 提交守卫兜底；
- * - 2.0 本来就支持，无需动。
+ * It handles only Seedance 1.x:
+ * - HappyHorse has its own "video edit" path that can take video, and must not be taken away;
+ * - Grok Video Channel is an independent channel the user explicitly selected and supports only images; we do not change their channel here,
+ *   and the selector graying + submit guard keep covering it;
+ * - 2.0 supports it natively and needs no change.
  *
- * 素材计数请传**按节点类型**的口径（空的视频节点也算），并且和喂给
- * `videoModelReferenceDisabledReason` 的口径保持同源 —— 否则会出现「effect 把模型
- * 切走、选择器又允许切回来」的来回打架。
+ * Pass asset counts on the **by-node-type** basis (an empty video node counts too), and keep them from the same source as what is fed to
+ * `videoModelReferenceDisabledReason` — otherwise "the effect switches the model away while the selector allows switching back"
+ * fighting back and forth would appear.
  *
- * 目标锁定**基础款 Seedance 2.0**，而不是列表里排最前的 `Seedance2.0 Fast`：fast 是
- * 提速降档的变体，替用户救场时把他悄悄放到降档模型上不合适；基础款也正是后端
- * `FreezoneVideoGenRequest.model` 的默认值。基础款不在候选列表里（接口只下发了变体）
- * 时退到任意一个 2.0——总比让他卡在必然失败的 1.x 上强；一个 2.0 都没有则返回 null，
- * 宁可不动也不要瞎切。
+ * The target locks onto the **base Seedance 2.0**, not the `Seedance2.0 Fast` listed first: fast is a
+ * speed-up, downgraded variant, and quietly putting the user on a downgraded model while rescuing them is inappropriate; the base model is also the backend
+ * default value of `FreezoneVideoGenRequest.model`. When the base model is not in the candidate list (the endpoint delivered only variants)
+ * fall back to any 2.0 — better than leaving them stuck on a certainly failing 1.x; with no 2.0 at all return null,
+ * better not to move than to switch blindly.
  */
 function pickVideoReferenceAutoSwitch(
   currentModelId: string | null | undefined,
@@ -803,33 +795,33 @@ function pickVideoReferenceAutoSwitch(
 }
 
 export type VideoReferenceAutoSwitchAction =
-  /** 什么都别做（还在加载 / 已经救过一次 / 本来就不需要换）。 */
+  /** Do nothing (still loading / already rescued once / no need to switch to begin with). */
   | { kind: "none" }
-  /** 视频音频都撤走了 —— 松开一次性闩锁，为下一次接入做准备。 */
+  /** Video and audio are both removed — release the one-shot latch to prepare for the next connection. */
   | { kind: "release" }
-  /** 写这一个 patch（模型 + 模式一次写完），并落闩。 */
+  /** Write this one patch (model + mode in one go), and set the latch. */
   | { kind: "switch"; modelId: string; genMode: VideoGenMode };
 
 /**
- * 自动救场的**完整闸门**——组件那条 effect 该调的就是这一个，除了改 ref 和发 patch
- * 之外不该再自己判断任何条件。把闸门做成纯函数是为了能整段测：异步加载时序（下面第
- * 一条）光测「该换成谁」是覆盖不到的，而它恰恰是最容易出事的地方。
+ * The **complete gate** of auto-rescue — this is the one the component effect should call, and apart from changing the ref and sending the patch
+ * it should judge no condition itself. The gate is made a pure function so the whole segment can be tested: the async loading timing (first item below)
+ * is not covered by testing only "who to switch to", and it is exactly where things most easily go wrong.
  *
- * 三道闸，顺序有讲究：
- * 1. **素材撤走优先于一切**（含加载中）——松闩只是复位一个 ref，没有任何副作用，
- *    没必要等列表；等了反而会漏掉「加载期间用户又把线拔了」这种收尾。
- * 2. **`modelsLoading` 期间一律不动**。`useFreezoneVideoModels` 在 pending 时返回的
- *    不是空数组，而是硬编码的 `VIDEO_MODELS`——照着它挑出来的 2.0 未必存在于该项目
- *    的真列表里。提前切了还落闩，真列表回来也不再纠正，节点就卡在一个后端不认识的
- *    模型上，提交直接 400。**注意只看 `isLoading`，不要连 `isFallback` 一起挡**：
- *    isFallback 在「URL 没有 project」「拉取失败」「后端返回空列表」这三种**已落定**
- *    的情况下会一直是 true，而此时选择器渲染的正是同一份 `VIDEO_MODELS`（
- *    `ProviderModelPicker` 用的就是这个 hook 的 models），2.0 就在里面、用户手动也
- *    能选中；连它一起挡等于在这些情况下永久关掉救场。
- * 3. **`alreadySwitched` 落闩后不再纠正**，避免把 undo 堵死（见组件里的注释）。
+ * Three gates, in a deliberate order:
+ * 1. **Asset removal takes priority over everything** (including loading) — releasing the latch just resets a ref with no side effects,
+ *    and there is no need to wait for the list; waiting would instead miss the wrap-up of "the user pulled the wire again while loading".
+ * 2. **Never move during `modelsLoading`**. When pending, `useFreezoneVideoModels` returns
+ *    not an empty array but the hard-coded `VIDEO_MODELS` — a 2.0 picked from it may not exist in the project's
+ *    real list. Switching early and also setting the latch means the node is not corrected again when the real list returns, and the node gets stuck on a
+ *    model the backend does not recognize, with submit giving a direct 400. **Note: look only at `isLoading`, do not block on `isFallback` as well**:
+ *    isFallback stays true in the three **settled** cases "the URL has no project", "the fetch failed", "the backend returned an empty list",
+ *    and then what the selector renders is the same `VIDEO_MODELS` (
+ *    `ProviderModelPicker` uses this hook's models), the 2.0 is in it and the user can also
+ *    select it manually; blocking on it too would permanently turn off the rescue in those cases.
+ * 3. **After `alreadySwitched` sets the latch, no more correction**, avoiding blocking undo (see the comment in the component).
  *
- * 「没切成」不落闩：列表里一个 2.0 都没有时返回 `none`，把这次跳变留着，等列表变了
- * 还有机会补救。
+ * "Not switched" does not set the latch: when there is not a single 2.0 in the list it returns `none`, keeping this transition,
+ * so there is still a chance to remedy it once the list changes.
  */
 export function videoReferenceAutoSwitchAction(input: {
   counts: { videos: number; audios: number };

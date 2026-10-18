@@ -33,7 +33,7 @@ def _normalize_single_ui_spec_block(
         spec = presentation.canonicalize_ui_spec(value)
     except ValueError as exc:
         log_error(exc, body)
-        return "（json-render 格式校验失败：模型返回的 ui-spec 不是合法 canonical JSON，已阻止展示。请重新生成。）"
+        return "(json-render validation failed: the ui-spec returned by the model is not valid canonical JSON, so it was blocked from display. Please regenerate.)"
 
     spec_type = spec.get("type") if isinstance(spec.get("type"), str) else "ui_spec"
     json_text = json.dumps(spec, ensure_ascii=False, indent=2)
@@ -217,11 +217,12 @@ def _extract_tool_chat_error(value: Any, *, redact: Callable[[str], str]) -> str
         raw = normalize_error_text(text)
         if not raw:
             return None
-        if "Render 模式需要草图" in raw or "未生成可用图片" in raw:
+        lowered_raw = raw.casefold()
+        if "requires a sketch" in lowered_raw or "no usable image" in lowered_raw:
             return (
-                "Render 任务没有生成可用图片：当前缺少必要草图前置。"
-                "请先在「虾塘」生成或确认对应 Beat 的草图后，再重新生成 Render。"
-                f"\n\n错误原因：{raw[:1200]}"
+                "The Render task did not produce a usable image: a required sketch prerequisite is missing. "
+                "Generate or confirm the sketch for the matching Beat in the character workbench, then regenerate the Render."
+                f"\n\nError details: {raw[:1200]}"
             )
         return None
 
@@ -232,7 +233,7 @@ def _extract_tool_chat_error(value: Any, *, redact: Callable[[str], str]) -> str
         lowered = raw.casefold()
         if "provider_response_id" in lowered and "content_filter" in lowered:
             return None
-        return f"任务执行失败：{raw}"
+        return f"Task failed: {raw}"
 
     def parse_jsonish(text: str) -> Any | None:
         raw = str(text or "").strip()
@@ -280,8 +281,8 @@ def _extract_tool_chat_error(value: Any, *, redact: Callable[[str], str]) -> str
                 if generic:
                     return generic
             if failed_status:
-                return f"任务执行失败：当前状态为 {status}。"
-            return "任务执行失败：接口返回 ok=false，但没有提供具体错误原因。"
+                return f"Task failed: current status is {status}."
+            return "Task failed: the API returned ok=false without a specific error."
 
         for key in ("result", "message", "content", "data", "output"):
             found = visit(node.get(key))
@@ -319,7 +320,7 @@ def _strip_freezone_tool_lifecycle_failure_text(text: str, *, tool_mode: str) ->
     if tool_mode != "freezone_canvas":
         return text
     return re.sub(
-        r"\A\s*任务执行失败：当前状态为\s+(?:failed|error|cancelled|canceled)。\s*",
+        r"\A\s*Task failed: current status is\s+(?:failed|error|cancelled|canceled)\.\s*",
         "",
         text,
         flags=re.IGNORECASE,
@@ -357,18 +358,15 @@ def _append_tool_ui_specs(
             log_error(exc, json.dumps(spec, ensure_ascii=False))
     if not blocks:
         return text
-    prefix = text or "已为你展示相关媒体。"
+    prefix = text or "Here is the related media."
     return f"{prefix}\n\n" + "\n\n".join(blocks)
 
 
 def _prompt_wants_sketch_only(prompt: str) -> bool:
     text = str(prompt or "")
-    if "草图" not in text and "sketch" not in text.casefold():
+    if "sketch" not in text.casefold():
         return False
     frame_terms = (
-        "首帧",
-        "第一帧",
-        "关键帧",
         "first frame",
         "first-frame",
         "keyframe",
@@ -394,8 +392,7 @@ def _is_frame_image_element(element: Any) -> bool:
     ]
     text = "\n".join(str(value or "") for value in fields).casefold()
     return (
-        "首帧" in text
-        or "/frames/" in text
+        "/frames/" in text
         or "first frame" in text
         or "first-frame" in text
     )
@@ -462,17 +459,9 @@ def _filter_tool_ui_specs_for_prompt(
 def _prompt_continues_video_generation_without_display(prompt: str) -> bool:
     text = str(prompt or "").strip()
     lower = text.casefold()
-    continue_terms = ("继续", "恢复", "接着", "下一步", "继续跑", "继续做")
-    video_terms = ("视频", "beat", "镜头", "成片", "生成")
+    continue_terms = ("continue", "resume", "carry on", "next step", "keep going")
+    video_terms = ("video", "beat", "shot", "final cut", "generate")
     display_terms = (
-        "展示",
-        "显示",
-        "查看",
-        "看看",
-        "看一下",
-        "播放",
-        "预览",
-        "给我看",
         "show",
         "display",
         "view",

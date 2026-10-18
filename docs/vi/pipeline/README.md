@@ -53,7 +53,7 @@ các điều kiện tiên quyết của task, mô tả ở từng chặng.
   client LLM/model được tạo theo từng request; tiến trình con chỉ nhận môi trường bị giới hạn.
 - **Verification** (`verification/`): các verifier và route kiểm tra cho sketch, frame,
   tính nhất quán và liên tục giữa các beat. Không có kiểm tra nào cho video thành phẩm.
-- **Xia Director** (`chat/`, trong code xuất hiện là 虾导): agent chat điều khiển pipeline qua
+- **Xia Director** (`chat/`): agent chat điều khiển pipeline qua
   công cụ MCP. `chat/director_auto.py` là bộ điều phối tự động theo `next_step`,
   lưu bền trong SQLite. Backend chat có adapter Claude, Codex và Hermes.
 - **MCP**: server stdio (`chat/dramaclaw_mcp.py`) bọc REST API cho agent ngoài, xem [05-mcp.md](05-mcp.md).

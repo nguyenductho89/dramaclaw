@@ -57,7 +57,7 @@ URL_FIELD_NAMES = {
 
 
 def is_url_field_name(key: str | None) -> bool:
-    """字段名看起来是不是装 URL 的（画布节点数据没有字段白名单可依）。"""
+    """Whether the field name looks like one that holds a URL (canvas node data has no field allowlist to rely on)."""
     if not key:
         return False
     return (
@@ -233,8 +233,8 @@ def sanitize_project_local_paths_in_memory(
         project_resolved = project_dir.resolve()
     except (OSError, RuntimeError):
         project_resolved = project_dir
-    # Windows 上同一个目录会以 `C:\x` 与 `C:/x` 两种写法出现在历史数据里,
-    # 前缀集合必须同时覆盖,否则只替换得掉其中一种。
+    # On Windows the same directory shows up in historical data as both `C:\x` and `C:/x`,
+    # so the prefix set must cover both, otherwise only one spelling gets replaced.
     prefix_candidates = {
         str(project_dir),
         str(project_resolved),
@@ -251,8 +251,8 @@ def sanitize_project_local_paths_in_memory(
 
     static_prefix = f"/static/projects/{quote(project_id, safe='')}"
 
-    # 只归一紧随替换前缀的路径 token(至引号/空白/分隔符止),
-    # 不碰同一字符串里的无关反斜杠(用户文本、其他盘符路径)。
+    # Only normalize the path token immediately following a replacement prefix (up to a quote/whitespace/delimiter),
+    # and leave unrelated backslashes in the same string alone (user text, other drive-letter paths).
     tail_re = re.compile(re.escape(static_prefix) + r"[^\s\"'|?#]*")
 
     def _posixify_token(match: "re.Match[str]") -> str:

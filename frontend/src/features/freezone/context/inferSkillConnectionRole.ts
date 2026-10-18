@@ -3,18 +3,18 @@
 import type { SkillInputRole } from "./skillRoles.ts";
 
 /**
- * 画布连线「落到技能节点的哪个输入口」推断。
+ * Inference of "which input port of the skill node a canvas edge lands on".
  *
- * 背景：React Flow 里用户从素材节点拖一条线到技能节点时，`targetHandle` 可能是
- * 具体输入口 role（用户精确落在某个 handle 上），也可能是空 / 通用的 `target`
- * （落在节点本体）。后者拿不到 role，连线就会被 `applySkillRoleBindingConnection`
- * 当成「找不到输入口」静默丢弃 —— 表现为「场景图连不上技能节点」。
+ * Background: in React Flow when the user drags a line from an asset node to a skill node, `targetHandle` may be
+ * a specific input role (the user landed exactly on a handle), or empty / the generic `target`
+ * (landed on the node body). The latter yields no role, and the connection is silently dropped by `applySkillRoleBindingConnection`
+ * as "input port not found" - which shows up as "the scene image cannot connect to the skill node".
  *
- * 这里只在前端做意图推断：前端最清楚用户拖的是哪个源节点、目标是哪个技能。
- * 后端只拿到 resolved_inputs，已丢失拖线意图，不适合反推 role（见后端分析报告）。
+ * Intent inference is done only on the frontend: the frontend knows best which source node the user dragged and which skill is the target.
+ * The backend only gets resolved_inputs, where the drag intent is already lost, so it is not suited to inferring the role (see the backend analysis report).
  *
- * 规则只产出一个「建议 role」，最终是否成边仍由调用方用 skillSpec.inputs +
- * accepts 校验把关；推断不出来时返回 null，调用方保持默认行为、不误判。
+ * The rule only produces a "suggested role"; whether an edge is actually formed is still checked by the caller with skillSpec.inputs +
+ * accepts; when nothing can be inferred it returns null and the caller keeps its default behavior without misjudging.
  */
 
 export interface SkillConnectionNode {
@@ -26,18 +26,18 @@ export interface SkillConnectionNode {
 export interface InferSkillConnectionRoleArgs {
   sourceNode: SkillConnectionNode | null | undefined;
   targetNode: SkillConnectionNode | null | undefined;
-  /** React Flow 给出的 targetHandle —— 可能是具体 role，也可能空 / "target"。 */
+  /** The targetHandle given by React Flow - may be a specific role, or empty / "target". */
   requestedTargetHandle?: string | null;
 }
 
-/** 用户没有精确落到某个输入口时 React Flow 会给出的「通用」handle 值。 */
+/** The "generic" handle value React Flow gives when the user did not land exactly on an input port. */
 const AMBIGUOUS_HANDLES = new Set(["", "target", "source"]);
 
 /**
- * 源资产的 role / slot kind 词表 → 技能输入口 role。
- * token 来自源节点的 `__freezone_source.role` 或 `slot_target.kind`，
- * 这两套词表与输入口 role 命名并不完全一致（如 `selected_background` → `background`、
- * `current_sketch` → `sketch`），所以需要一张显式映射表。
+ * Source asset role / slot kind vocabulary -> skill input port role.
+ * The token comes from the source node's `__freezone_source.role` or `slot_target.kind`,
+ * and these two vocabularies do not fully match the input port role names (e.g. `selected_background` -> `background`,
+ * `current_sketch` -> `sketch`), so an explicit mapping table is needed.
  */
 const SOURCE_TOKEN_TO_INPUT_ROLE: Record<string, SkillInputRole> = {
   scene_master: "scene_master",
@@ -70,7 +70,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-/** 源节点身上能用来分类的 role/slot token，按优先级（role 先于 slot）排列。 */
+/** The role/slot tokens on the source node usable for classification, in priority order (role before slot). */
 function sourceRoleTokens(node: SkillConnectionNode): string[] {
   const data = node.data ?? {};
   const tokens: string[] = [];
@@ -96,7 +96,7 @@ export function inferSkillConnectionRole({
 }: InferSkillConnectionRoleArgs): string | null {
   if (!sourceNode || !targetNode) return null;
 
-  // 用户精确落在某个输入口 handle 上 —— 尊重用户意图，不再推断。
+  // The user landed exactly on an input port handle - respect the user's intent and do not infer.
   const requested = nonEmpty(requestedTargetHandle);
   if (requested && !AMBIGUOUS_HANDLES.has(requested)) {
     return requested;
@@ -108,12 +108,12 @@ export function inferSkillConnectionRole({
     return "beat_context";
   }
 
-  // 技能特定规则：「设为当前背景」把任意图片当作 source_image。
+  // Skill-specific rule: "Set as current background" treats any image as source_image.
   if (skillId === "freezone.set_selected_background" && sourceHasImage(sourceNode)) {
     return "source_image";
   }
 
-  // 通用规则：源资产 role/slot 词表 → 输入口 role。
+  // Generic rule: source asset role/slot vocabulary -> input port role.
   for (const token of sourceRoleTokens(sourceNode)) {
     const mapped = SOURCE_TOKEN_TO_INPUT_ROLE[token];
     if (mapped) return mapped;

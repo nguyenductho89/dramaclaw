@@ -18,12 +18,12 @@ import type { GraphContentResolver, UpstreamContent } from './ports';
 import { isExecutionDependencyEdge } from '../nodes/referenceOrdering';
 
 /**
- * 通用的「下游节点 → 上游节点内容」遍历器。一跳深度，按 edges 找出所有
- * `edge.target === selfId` 的源节点，把每种节点已知的内容字段抽到统一的
- * {@link UpstreamContent} shape。
+ * A generic "downstream node -> upstream node content" traverser. One hop deep, finding all source nodes with
+ * `edge.target === selfId` by edges and extracting the known content fields of each kind of node into the unified
+ * {@link UpstreamContent} shape.
  *
- * 为什么只走一跳：UI 的语义是「我连了谁，我就拿谁的输出」。多跳会让数据
- * 来源变得不可解释，需要时再加 recursive 选项。
+ * Why only one hop: the UI semantics are "whoever I connect to, I take their output". Multiple hops would make the data
+ * source inexplicable; add a recursive option when needed.
  */
 export class DefaultGraphContentResolver implements GraphContentResolver {
   collectInputContents(
@@ -71,10 +71,10 @@ export function extractUpstreamContent(node: CanvasNode): UpstreamContent {
     return { ...base, text: nonEmpty(node.data.content) };
   }
   if (isUploadNode(node)) {
-    // 上传节点不一定装的是图：早期版本从资产库选入的视频就是 upload 节点，地址写在
-    // data.videoUrl（口径同 VideoNode.referenceVideoUrl）。所以先看 videoUrl —— 这类
-    // 节点身上常常同时挂着 previewImageUrl（海报），只看图片字段会把一段视频当成
-    // 图片派给下游：图片节点会把它当参考图收下，「素材引用」里又找不到它。
+    // An upload node does not necessarily hold an image: in early versions a video picked from the asset library is an upload node, with the address written in
+    // data.videoUrl (same basis as VideoNode.referenceVideoUrl). So look at videoUrl first - such
+    // nodes often also carry previewImageUrl (a poster) at the same time, and looking only at image fields would dispatch a video to downstream as an
+    // image: an image node would take it as a reference image, and it could not be found in "material references" either.
     const rawVideoUrl = (node.data as { videoUrl?: unknown }).videoUrl;
     const videoUrl = typeof rawVideoUrl === 'string' ? nonEmpty(rawVideoUrl) : undefined;
     if (videoUrl) return { ...base, videoUrl };
@@ -94,12 +94,12 @@ export function extractUpstreamContent(node: CanvasNode): UpstreamContent {
     };
   }
   if (isImageEditNode(node) || isImageGenNode(node)) {
-    // 下游消费要看「这个节点眼下展示的是哪张图」：优先生成结果 imageUrl，
-    // 退到 previewImageUrl / referenceImageUrl，覆盖未生成只挂参考图的情况。
+    // Downstream consumption needs "which image this node is showing right now": prefer the generation result imageUrl,
+    // falling back to previewImageUrl / referenceImageUrl, covering the case of not yet generated with only a reference image attached.
     //
-    // 不携带 `text`：图片节点的 prompt 是「生成这张图的指令」，不是要传给
-    // 下游的文本内容。下游引用图片节点时只应拿到这张图（图生图语义），
-    // 否则上游 prompt 会被混进下游 prompt（既污染输入框 chip，也污染提交）。
+    // Does not carry `text`: an image node's prompt is "the instruction that generates this image", not text content to pass to
+    // downstream. When downstream references an image node it should get only this image (image-to-image semantics),
+    // otherwise the upstream prompt would be mixed into the downstream prompt (polluting both the input box chips and the submission).
     const referenceImageUrl = isImageGenNode(node)
       ? nonEmpty(node.data.referenceImageUrl ?? undefined)
       : undefined;
@@ -119,8 +119,8 @@ export function extractUpstreamContent(node: CanvasNode): UpstreamContent {
     };
   }
   if (isVideoNode(node)) {
-    // 同图片节点：视频节点的 prompt 是它自己的生成指令，下游引用视频节点
-    // 只拿视频本身（videoUrl），不把上游 prompt 带进下游。
+    // Same as image nodes: a video node's prompt is its own generation instruction, and when downstream references a video node
+    // it takes only the video itself (videoUrl), without carrying the upstream prompt into downstream.
     return {
       ...base,
       videoUrl: nonEmpty(node.data.videoUrl),
@@ -145,8 +145,8 @@ function nonEmpty(value: string | null | undefined): string | undefined {
 }
 
 /**
- * 把上游所有 `text` 字段拼成单段 prompt 上下文，按出现顺序，空段过滤。
- * 调用方一般会把它前置到自己的 prompt 之前再发请求。
+ * Join all upstream `text` fields into a single prompt context, in order of appearance, filtering empty segments.
+ * Callers generally prepend it to their own prompt before sending the request.
  */
 export function joinUpstreamText(contents: UpstreamContent[]): string {
   return contents
@@ -156,12 +156,12 @@ export function joinUpstreamText(contents: UpstreamContent[]): string {
 }
 
 /**
- * 收集所有上游节点可作为「素材引用」的 URL — 图片和视频。
- * 后端 `reference_urls` 接受同一个数组里混合 image / video。
- * audio 不收（生图节点用不到）。
+ * Collect the URLs of all upstream nodes usable as "material references" - images and videos.
+ * The backend `reference_urls` accepts image / video mixed in the same array.
+ * Audio is not collected (image generation nodes do not use it).
  *
- * 返回顺序：先所有 imageUrl，再所有 videoUrl，按上游节点连接顺序；
- * 自带去重，避免同一 URL 被多个 resolver 重复送进去。
+ * Return order: all imageUrl first, then all videoUrl, in upstream node connection order;
+ * with built-in dedup, avoiding the same URL being fed in repeatedly by several resolvers.
  */
 export function collectUpstreamReferenceUrls(contents: UpstreamContent[]): string[] {
   const out: string[] = [];

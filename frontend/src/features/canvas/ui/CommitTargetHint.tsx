@@ -14,18 +14,18 @@ interface Props {
   className?: string;
 }
 
-// 把 workflow_default_id 映射到 (短词, commit 后晋升的节点 id)。
+// Map workflow_default_id to (short word, the node id promoted after commit).
 //
-// **必须跟 `SuperTale/src/novelvideo/freezone/presets.py` 里实际 emit 的
-// `workflow_default_id=...` 完全对齐**(line 3603/3628/3653/3678/3703 附近)。
-// 用 exact-match 字典而非前缀/后缀模糊匹配 — preset 改名时立刻 silent miss
-// 而不是误匹配到错的槽位文案。
+// **Must align exactly with the `workflow_default_id=...` actually emitted in `SuperTale/src/novelvideo/freezone/presets.py`**
+// (around line 3603/3628/3653/3678/3703).
+// Use an exact-match dictionary rather than prefix/suffix fuzzy matching - when a preset is renamed it silently misses immediately
+// rather than mismatching to the wrong slot text.
 //
-// `promotedNode` 对应 preset 里 ref 节点的 role(`_node_mainline_context_from_ref`
-// 里 `current_sketch` / `current_frame` 等),commit 后下次 canvas reload
-// 会以该 role 长出独立 asset 节点。
+// `promotedNode` corresponds to the role of the ref node in the preset (`current_sketch` / `current_frame` etc. in
+// `_node_mainline_context_from_ref`); after commit, the next canvas reload
+// grows an independent asset node with that role.
 interface SlotMapping {
-  /** 短词的词条 key —— 「草图」「分镜」这类要跟界面语言走。 */
+  /** The entry key of the short word - things like "Sketch" and "Storyboard" have to follow the UI language. */
   candidateKey: string;
   promotedNode: string;
 }
@@ -79,9 +79,9 @@ export function CommitTargetHint({
     const slotMapping = deriveSlotMapping(workflowDefaultId);
     if (beatCtx && typeof beatCtx.episode === 'number' && typeof beatCtx.beat === 'number') {
       if (slotMapping) {
-        // 关键:主线技能节点是 trigger+display 一体,产物先落在本节点 imageUrl,
-        // 没有下游的"分镜节点"。commit 之后 mainline DB 才生成 `current_xxx`
-        // 资产 — 下次打开 canvas 才会看到独立的 asset 节点。
+        // Key point: a mainline skill node is trigger+display in one, and the product first lands on this node's imageUrl,
+        // with no downstream "storyboard node". Only after commit does the mainline DB generate the `current_xxx`
+        // asset - only on the next canvas open will the independent asset node be seen.
         return {
           variant: 'typed' as const,
           text: t('canvas.commitHint.typed', {

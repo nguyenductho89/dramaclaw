@@ -19,10 +19,10 @@ export class CanvasNodeFactory implements NodeFactory {
     data: Partial<CanvasNodeData> = {}
   ): CanvasNode {
     const definition = this.nodeCatalog.getDefinition(type);
-    // createdAt 压在 ...data 之后是有意的：duplicateNodeAsSibling 会把源节点的整份
-    // data 摊进来，放前面的话复制出来的节点会继承源节点的创建时刻——而「复制三份」
-    // 恰好就是大纲要靠时刻区分的那个场景。工厂只在真正新建节点时被调用（加载画布
-    // 是直接 set(nodes)，撤销走快照），所以这里覆盖不到从服务端读回来的节点。
+    // createdAt is placed after ...data deliberately: duplicateNodeAsSibling spreads the source node's whole
+    // data in, and if placed first the duplicated node would inherit the source node's creation moment - while "duplicate three copies"
+    // is exactly the scenario where the outline needs the moment to tell them apart. The factory is only called when a node is truly newly built (loading a canvas
+    // directly does set(nodes), and undo goes through snapshots), so this override does not reach nodes read back from the server.
     const nodeData = {
       ...definition.createDefaultData(),
       ...data,

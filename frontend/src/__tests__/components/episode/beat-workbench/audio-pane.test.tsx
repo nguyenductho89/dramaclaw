@@ -19,44 +19,44 @@ const audioPrereqErrors = vi.hoisted(() => ({ current: [] as string[] }));
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      en: {
         translation: {
           common: {
-            cancel: "取消",
-            confirm: "确认",
-            error: "错误",
-            regenerate: "重新生成",
+            cancel: "Cancel",
+            confirm: "Confirm",
+            error: "Errors",
+            regenerate: "Regenerate",
           },
           episode: {
             workbench: {
               audio: {
-                narrationEmpty: "旁白为空，此 beat 无法生成音频。请先到「文案」填写。",
-                generating: "生成中...",
-                genFailed: "生成失败",
-                notGenerated: "尚未生成",
-                regenTitle: "重新生成音频？",
-                regenDesc: "将为 Beat #{{n}} 重新生成 TTS 配音。",
-                regenerated: "Beat #{{n}} 已重新生成",
-                regenFailed: "重生失败",
-                configureVoiceAction: "去配置",
-                prereqHintCharacters: "。请到「角色」中上传解说主角声线。",
-                prereqHintVoices: "。请到「资产 > 声线」上传或裁剪默认解说声线。",
+                narrationEmpty: "Narration is empty — this beat cannot generate audio. Fill in text first.",
+                generating: "Generating...",
+                genFailed: "Generation failed",
+                notGenerated: "Not generated",
+                regenTitle: "Regenerate audio?",
+                regenDesc: "Regenerate TTS voiceover for Beat #{{n}}.",
+                regenerated: "Beat #{{n}} regenerated",
+                regenFailed: "Regen failed",
+                configureVoiceAction: "Configure",
+                prereqHintCharacters: ". Go to Characters to upload the narrator voice.",
+                prereqHintVoices: ". Go to Assets > Voices to upload or trim a default narrator voice.",
               },
               video: {
-                seedance2Ready: "已配置",
-                narratorVoice: "解说声线",
-                narratorVoiceMissing: "声线缺失",
-                narratorVoiceLoading: "正在读取解说声线",
-                narratorVoiceLoadFailed: "解说声线读取失败",
-                narratorVoiceMissingDetail: "第三人称项目解说声线未配置",
-                narratorVoiceUpload: "上传",
-                narratorVoiceRecord: "录音",
-                narratorVoiceProjectAudio: "项目音频",
-                narratorVoiceDelete: "删除",
+                seedance2Ready: "Configured",
+                narratorVoice: "Narrator voice",
+                narratorVoiceMissing: "Voice missing",
+                narratorVoiceLoading: "Loading narrator voice",
+                narratorVoiceLoadFailed: "Failed to load narrator voice",
+                narratorVoiceMissingDetail: "Third-person project narrator voice is not configured",
+                narratorVoiceUpload: "Upload",
+                narratorVoiceRecord: "Record",
+                narratorVoiceProjectAudio: "Project audio",
+                narratorVoiceDelete: "Delete",
               },
             },
           },
@@ -95,9 +95,9 @@ vi.mock("@/lib/queries/video", () => ({
         source: "project_narrator",
         reference_path: "",
         reference_url: "",
-        heading: "第三人称项目解说声线",
+        heading: "Third-person project narration voice",
         detail: "",
-        explanation: "第三人称解说使用项目级声线。",
+        explanation: "Third-person narration uses the project-level voice.",
         is_first_person: false,
       },
     },
@@ -137,8 +137,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 1,
-    narration_segment: "画外音响起。",
-    visual_description: "空旷走廊",
+    narration_segment: "A voice-over sounds.",
+    visual_description: "Empty corridor",
     audio_type: "narration",
     audio_url: "",
     ...overrides,
@@ -158,7 +158,7 @@ beforeEach(() => {
 describe("AudioPane", () => {
   it("uses quote prerequisite errors to avoid submitting an invalid audio task", async () => {
     audioPrereqErrors.current = [
-      "Beat 01 解说声线缺失：项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储",
+      "Beat 01 narrator voice missing: the project narrator voice is configured but its voice file cannot be read, re-upload it or check project storage",
     ];
     const user = userEvent.setup();
 
@@ -174,14 +174,14 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("button", { name: "去配置" }));
+    await user.click(screen.getByRole("button", { name: "Configure" }));
 
     expect(mutateRegenerate).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "确认" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm" })).not.toBeInTheDocument();
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储。请到「资产 > 声线」上传或裁剪默认解说声线。",
+      "Beat 01 narrator voice missing: the project narrator voice is configured but its voice file cannot be read, re-upload it or check project storage. Go to Assets > Voices to upload or trim a default narrator voice.",
       expect.objectContaining({
-        action: expect.objectContaining({ label: "去配置" }),
+        action: expect.objectContaining({ label: "Configure" }),
       }),
     );
   });
@@ -199,9 +199,9 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("本条解说音频")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上传本条音频" })).not.toBeInTheDocument();
-    expect(screen.queryByText("解说声线")).not.toBeInTheDocument();
+    expect(screen.queryByText("This beat's narration audio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload beat audio" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator voice")).not.toBeInTheDocument();
   });
 
   it("hides beat upload and project narrator voice controls for narrated project narration", () => {
@@ -217,9 +217,9 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("本条解说音频")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上传本条音频" })).not.toBeInTheDocument();
-    expect(screen.queryByText("解说声线")).not.toBeInTheDocument();
+    expect(screen.queryByText("This beat's narration audio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload beat audio" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator voice")).not.toBeInTheDocument();
   });
 
   it("keeps voice controls out of the audio pane when narration text is empty", () => {
@@ -235,10 +235,10 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("旁白为空，此 beat 无法生成音频。请先到「文案」填写。")).toBeInTheDocument();
-    expect(screen.queryByText("本条解说音频")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上传本条音频" })).not.toBeInTheDocument();
-    expect(screen.queryByText("解说声线")).not.toBeInTheDocument();
+    expect(screen.getByText("Narration is empty — this beat cannot generate audio. Fill in text first.")).toBeInTheDocument();
+    expect(screen.queryByText("This beat's narration audio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload beat audio" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator voice")).not.toBeInTheDocument();
   });
 
   it("does not expose beat voice upload when audio_type is blank narration", () => {
@@ -254,16 +254,16 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("本条解说音频")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上传本条音频" })).not.toBeInTheDocument();
-    expect(screen.queryByText("解说声线")).not.toBeInTheDocument();
+    expect(screen.queryByText("This beat's narration audio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload beat audio" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator voice")).not.toBeInTheDocument();
   });
 
   it("offers a jump to project voice assets when beat audio generation lacks default narrator voice", async () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
       code: "voice_prereq_required",
-      error: "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频",
+      error: "Beat 01 narrator voice missing: the project narrator voice is not configured, upload or record narrator audio",
     });
     const user = userEvent.setup();
 
@@ -279,13 +279,13 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("button", { name: "重新生成" }));
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频。请到「资产 > 声线」上传或裁剪默认解说声线。",
+      "Beat 01 narrator voice missing: the project narrator voice is not configured, upload or record narrator audio. Go to Assets > Voices to upload or trim a default narrator voice.",
       expect.objectContaining({
-        action: expect.objectContaining({ label: "去配置" }),
+        action: expect.objectContaining({ label: "Configure" }),
       }),
     );
 
@@ -303,7 +303,7 @@ describe("AudioPane", () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
       code: "voice_prereq_required",
-      error: "Beat 01 解说声线缺失：解说主角声线缺失，请到角色工作台上传角色声线",
+      error: "Beat 01 narrator voice missing: the narrator protagonist voice is missing, upload a character voice in the character workbench",
     });
     const user = userEvent.setup();
 
@@ -319,13 +319,13 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("button", { name: "重新生成" }));
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：解说主角声线缺失，请到角色工作台上传角色声线。请到「角色」中上传解说主角声线。",
+      "Beat 01 narrator voice missing: the narrator protagonist voice is missing, upload a character voice in the character workbench. Go to Characters to upload the narrator voice.",
       expect.objectContaining({
-        action: expect.objectContaining({ label: "去配置" }),
+        action: expect.objectContaining({ label: "Configure" }),
       }),
     );
 
@@ -342,7 +342,7 @@ describe("AudioPane", () => {
   it("keeps regular regeneration errors as plain toasts", async () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
-      error: "TTS 服务暂不可用",
+      error: "TTS service is temporarily unavailable",
     });
     const user = userEvent.setup();
 
@@ -358,11 +358,11 @@ describe("AudioPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("button", { name: "重新生成" }));
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "TTS 服务暂不可用",
+      "TTS service is temporarily unavailable",
     );
   });
 });

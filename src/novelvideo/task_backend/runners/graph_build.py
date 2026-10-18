@@ -27,11 +27,11 @@ def _run_async(coro, envelope: dict[str, Any], task_type: str):
 def _progress(
     ctx: ProjectContext, task_type: str, progress: float | None, task: str
 ) -> None:
-    """进度/日志上报。
+    """Progress / log reporting.
 
-    `progress=None` 表示「只更新步骤文案和日志，保留原有进度」。普通日志行必须
-    走这条路径：图谱构建的 on_log 回调本身不带进度，早期用 0.0 占位会让前端进
-    度条在 10% → 0% → 80% → 0% 之间反复倒退。
+    `progress=None` means "update only the step text and logs, keeping the existing progress". Ordinary log lines must
+    take this path: the graph-build on_log callback itself carries no progress, and using 0.0 as a placeholder early on made the frontend progress
+    bar jump back and forth between 10% -> 0% -> 80% -> 0%.
     """
     get_task_manager().update_progress_for_project(
         ctx,

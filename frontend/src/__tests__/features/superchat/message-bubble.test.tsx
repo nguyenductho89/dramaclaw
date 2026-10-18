@@ -101,7 +101,7 @@ describe("MessageBubble presentation", () => {
           children: [],
           props: {
             src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
-            title: "沈月",
+            title: "Shen Yue",
           },
         },
       },

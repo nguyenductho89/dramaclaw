@@ -6,32 +6,32 @@ import { describe, expect, it } from "vitest";
 import { EpisodeStoryContext } from "@/components/episode/episode-story-context";
 
 const labels = {
-  summary: "剧情摘要",
-  noSummary: "暂无摘要",
-  keyEvents: "关键事件",
-  noKeyEvents: "暂无关键事件",
-  cliffhanger: "悬念钩子",
-  noCliffhanger: "暂无悬念",
+  summary: "Story summary",
+  noSummary: "No summary",
+  keyEvents: "Key events",
+  noKeyEvents: "No key events yet",
+  cliffhanger: "Cliffhanger",
+  noCliffhanger: "No cliffhanger",
 };
 
 describe("EpisodeStoryContext", () => {
   it("renders episode summary, key events, and cliffhanger as read-only context", () => {
     render(
       <EpisodeStoryContext
-        contentSummary="秦在雨夜进入王城。"
-        keyEvents={["入宫", "遇见旧友"]}
-        cliffhanger="城门后传来熟悉的声音。"
+        contentSummary="Qin enters the royal city on a rainy night."
+        keyEvents={["enters the palace", "meets an old friend"]}
+        cliffhanger="A familiar voice comes from behind the city gate."
         labels={labels}
       />,
     );
 
-    expect(screen.getByText("剧情摘要")).toBeInTheDocument();
-    expect(screen.getByText("秦在雨夜进入王城。")).toBeInTheDocument();
-    expect(screen.getByText("关键事件")).toBeInTheDocument();
-    expect(screen.getByText("入宫")).toBeInTheDocument();
-    expect(screen.getByText("遇见旧友")).toBeInTheDocument();
-    expect(screen.getByText("悬念钩子")).toBeInTheDocument();
-    expect(screen.getByText("城门后传来熟悉的声音。")).toBeInTheDocument();
+    expect(screen.getByText("Story summary")).toBeInTheDocument();
+    expect(screen.getByText("Qin enters the royal city on a rainy night.")).toBeInTheDocument();
+    expect(screen.getByText("Key events")).toBeInTheDocument();
+    expect(screen.getByText("enters the palace")).toBeInTheDocument();
+    expect(screen.getByText("meets an old friend")).toBeInTheDocument();
+    expect(screen.getByText("Cliffhanger")).toBeInTheDocument();
+    expect(screen.getByText("A familiar voice comes from behind the city gate.")).toBeInTheDocument();
   });
 
   it("shows explicit empty states when episode planning fields are absent", () => {
@@ -44,8 +44,8 @@ describe("EpisodeStoryContext", () => {
       />,
     );
 
-    expect(screen.getByText("暂无摘要")).toBeInTheDocument();
-    expect(screen.getByText("暂无关键事件")).toBeInTheDocument();
-    expect(screen.getByText("暂无悬念")).toBeInTheDocument();
+    expect(screen.getByText("No summary")).toBeInTheDocument();
+    expect(screen.getByText("No key events yet")).toBeInTheDocument();
+    expect(screen.getByText("No cliffhanger")).toBeInTheDocument();
   });
 });

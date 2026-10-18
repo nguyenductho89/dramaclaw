@@ -12,70 +12,70 @@ import {
 describe("mention marker helpers", () => {
   it("converts identity and prop @ mentions to backend marker syntax", () => {
     expect(
-      mentionsToProgramMarkers("@陆辰_青年 拿起 @玉佩", {
-        identities: ["陆辰_青年"],
-        props: ["玉佩"],
+      mentionsToProgramMarkers("@Lu Chen_young picks up @jade", {
+        identities: ["Lu Chen_young"],
+        props: ["jade"],
       }),
-    ).toBe("{{陆辰_青年}} 拿起 [[玉佩]]");
+    ).toBe("{{Lu Chen_young}} picks up [[jade]]");
   });
 
   it("only converts known standalone mentions", () => {
     expect(
-      mentionsToProgramMarkers("联系a@b.com，@未知 保留，@陆辰_青年 转换", {
-        identities: ["陆辰_青年"],
+      mentionsToProgramMarkers("contact a@b.com, @unknown kept, @Lu Chen_young convert", {
+        identities: ["Lu Chen_young"],
         props: [],
       }),
-    ).toBe("联系a@b.com，@未知 保留，{{陆辰_青年}} 转换");
+    ).toBe("contact a@b.com, @unknown kept, {{Lu Chen_young}} convert");
   });
 
   it("resolves a known label even without a trailing space", () => {
     expect(
-      mentionsToProgramMarkers("@青桐_少女时期哈哈哈", {
-        identities: ["青桐_少女时期"],
+      mentionsToProgramMarkers("@Qingtong_girlhoodhahaha", {
+        identities: ["Qingtong_girlhood"],
         props: [],
       }),
-    ).toBe("{{青桐_少女时期}}哈哈哈");
+    ).toBe("{{Qingtong_girlhood}}hahaha");
   });
 
   it("converts consecutive mentions that the user did not separate", () => {
     expect(
-      mentionsToProgramMarkers("@青桐_少女时期哈哈 @二夫人_中年时期heihei", {
-        identities: ["青桐_少女时期", "二夫人_中年时期"],
+      mentionsToProgramMarkers("@Qingtong_girlhoodhaha @Second Madam_middle_agedheihei", {
+        identities: ["Qingtong_girlhood", "Second Madam_middle_aged"],
         props: [],
       }),
-    ).toBe("{{青桐_少女时期}}哈哈 {{二夫人_中年时期}}heihei");
+    ).toBe("{{Qingtong_girlhood}}haha {{Second Madam_middle_aged}}heihei");
   });
 
   it("prefers the longest matching label", () => {
     expect(
-      mentionsToProgramMarkers("@青桐_少女时期X", {
-        identities: ["青桐_少女", "青桐_少女时期"],
+      mentionsToProgramMarkers("@Qingtong_girlhoodX", {
+        identities: ["Qingtong_girl", "Qingtong_girlhood"],
         props: [],
       }),
-    ).toBe("{{青桐_少女时期}}X");
+    ).toBe("{{Qingtong_girlhood}}X");
   });
 
   it("resolves adjacent mentions whose labels end in digits", () => {
-    // No look-behind on the char before `@`, so `@图片1@图片2` resolves both
-    // even though `@图片2` directly follows the digit `1`.
+    // No look-behind on the char before `@`, so `@image1@image2` resolves both
+    // even though `@image2` directly follows the digit `1`.
     expect(
-      mentionsToProgramMarkers("@图片1@图片2", {
+      mentionsToProgramMarkers("@image1@image2", {
         identities: [],
-        props: ["图片1", "图片2"],
+        props: ["image1", "image2"],
       }),
-    ).toBe("[[图片1]][[图片2]]");
+    ).toBe("[[image1]][[image2]]");
   });
 
   it("extracts unique identity and prop markers in first-seen order", () => {
-    const text = "{{陆辰_青年}}拿起[[玉佩]]，{{陆辰_青年}}看向[[录音笔]]";
+    const text = "{{Lu Chen_young}}picks up[[jade]], {{Lu Chen_young}}looks at[[recorder]]";
 
-    expect(extractIdentityMarkers(text)).toEqual(["陆辰_青年"]);
-    expect(extractPropMarkers(text)).toEqual(["玉佩", "录音笔"]);
+    expect(extractIdentityMarkers(text)).toEqual(["Lu Chen_young"]);
+    expect(extractPropMarkers(text)).toEqual(["jade", "recorder"]);
   });
 
   it("converts stored backend markers back to user-facing @ mentions", () => {
-    expect(programMarkersToMentions("{{陆辰_青年}}拿起[[玉佩]]")).toBe(
-      "@陆辰_青年拿起@玉佩",
+    expect(programMarkersToMentions("{{Lu Chen_young}}picks up[[jade]]")).toBe(
+      "@Lu Chen_youngpicks up@jade",
     );
   });
 });

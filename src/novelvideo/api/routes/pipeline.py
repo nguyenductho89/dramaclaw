@@ -1,4 +1,4 @@
-"""流水线聚合状态端点。"""
+"""Pipeline aggregate status endpoint."""
 
 import logging
 
@@ -19,23 +19,23 @@ _log = logging.getLogger(__name__)
 
 
 _STEP_MAP = {
-    "ingest": ("ingest_fast", "小说摄入"),
-    "configure": (None, "配置项目"),
-    "characters": ("build_characters", "角色提取"),
-    "episodes": ("build_episodes", "分集规划"),
-    "portraits": (None, "肖像生成"),
-    "identity_plan": (None, "身份规划"),
-    "identity_images": (None, "身份图生成"),
-    "script": ("script_writer", "脚本生成"),
-    "sketches": ("sketch_generation", "草图生成"),
-    "coloring": (None, "配色+身份/道具检测"),
-    "global_optimize": ("global_optimize_video", "全局视频优化"),
-    "first_frames": ("selected_regen", "首帧生成"),
-    "voice_setup": (None, "准备配音声线"),
-    "tts": (None, "TTS 配音"),
-    "video": ("single_video", "视频生成"),
-    "compose": ("compose_episode", "合成导出"),
-    "done": (None, "全部完成"),
+    "ingest": ("ingest_fast", "Novel ingestion"),
+    "configure": (None, "Configure project"),
+    "characters": ("build_characters", "Character extraction"),
+    "episodes": ("build_episodes", "Episode planning"),
+    "portraits": (None, "Portrait generation"),
+    "identity_plan": (None, "Identity planning"),
+    "identity_images": (None, "Identity image generation"),
+    "script": ("script_writer", "Script generation"),
+    "sketches": ("sketch_generation", "Sketch generation"),
+    "coloring": (None, "Coloring + identity/prop detection"),
+    "global_optimize": ("global_optimize_video", "Global video optimization"),
+    "first_frames": ("selected_regen", "First frame generation"),
+    "voice_setup": (None, "Prepare voiceover voices"),
+    "tts": (None, "TTS voiceover"),
+    "video": ("single_video", "Video generation"),
+    "compose": ("compose_episode", "Compose and export"),
+    "done": (None, "All done"),
 }
 
 
@@ -131,13 +131,13 @@ async def _collect_voice_prereq_errors(
             project,
             episode,
         )
-        return ["暂时无法检查配音声线，请稍后重试"]
+        return ["Unable to check voiceover voices right now. Please try again later"]
 
 
 @router.get("/projects/{project}/pipeline/status")
 async def pipeline_status(
     project: str,
-    episode: Optional[int] = Query(None, description="指定集数，不传则自动检测最新活跃集"),
+    episode: Optional[int] = Query(None, description="Episode number; if omitted, the latest active episode is detected automatically"),
     user: dict = Depends(get_api_user),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):

@@ -1,15 +1,15 @@
-"""道具三视图参考图生成器。
+"""Prop three-view reference image generator.
 
-使用 Google AI Studio (Gemini) 生成道具三视图参考图：
-正面 (FRONT) / 侧面 (SIDE) / 背面 (BACK)
+Uses Google AI Studio (Gemini) to generate three-view prop reference images:
+front (FRONT) / side (SIDE) / back (BACK)
 
-核心概念：道具独立建模
-- 产品摄影风格，白色/浅灰无缝背景
-- 展示道具细节和材质纹理
-- 下游分镜中出现道具时作为 reference，保持道具外观一致
+Core idea: model props independently
+- Product-photography style, white/light-gray seamless background
+- Show prop details and material textures
+- Used as a reference when the prop appears in downstream storyboards, keeping its appearance consistent
 
-参考资料:
-- https://www.51cto.com/article/837277.html（纳米漫剧流水线 - 道具建模）
+References:
+- https://www.51cto.com/article/837277.html (Nano comic-drama pipeline - prop modeling)
 """
 
 import asyncio
@@ -148,19 +148,19 @@ async def generate_prop_reference(
     model: str | None = None,
     egress_context: TrustedEgressContext | None = None,
 ) -> Optional[str]:
-    """生成道具三视图参考图。
+    """Generate a three-view prop reference image.
 
-    生成一张 1x3 三面板图像，包含道具的正面、侧面、背面，
-    采用产品摄影风格，用于保持道具外观一致性。
+    Generates one 1x3 three-panel image containing the prop's front, side, and back,
+    in product-photography style, to keep the prop's appearance consistent.
 
     Args:
-        visual_prompt: 道具视觉 prompt
-        output_path: 输出文件路径
-        style_keywords: 额外的风格关键词
-        style: 风格名称，默认使用全局配置
+            visual_prompt: prop visual prompt
+            output_path: output file path
+            style_keywords: extra style keywords
+            style: style name; defaults to the global config
 
     Returns:
-        生成的图片路径，失败返回 None
+            Path of the generated image; None on failure
     """
     start_time = time.time()
 
@@ -263,7 +263,7 @@ async def generate_prop_reference(
         state_dir=state_dir,
     )
 
-    print(f"[PropRefGen] 生成道具三视图: {visual_prompt[:60]}...")
+    print(f"[PropRefGen] Generating prop three-view: {visual_prompt[:60]}...")
     print(f"[PropRefGen] Provider: {provider}, Model: {model}")
 
     try:
@@ -326,16 +326,16 @@ async def generate_prop_reference(
 
         elapsed = time.time() - start_time
         if result_path:
-            print(f"[PropRefGen] 三视图已生成: {result_path}，耗时 {elapsed:.1f}s")
+            print(f"[PropRefGen] Three-view generated: {result_path}, took {elapsed:.1f}s")
         else:
-            print(f"[PropRefGen] 生成失败，耗时 {elapsed:.1f}s")
+            print(f"[PropRefGen] Generation failed, took {elapsed:.1f}s")
         return result_path
 
     except Exception as e:
         if is_fatal_billing_error(e):
             raise
         elapsed = time.time() - start_time
-        print(f"[PropRefGen] 生成异常: {e}，耗时 {elapsed:.1f}s")
+        print(f"[PropRefGen] Generation error: {e}, took {elapsed:.1f}s")
         return None
 
 
@@ -346,12 +346,12 @@ async def _generate_via_google(
     model: str,
     image_size: str | None = None,
 ) -> Optional[str]:
-    """通过 Google AI Studio 直连生成图像。"""
+    """Generate an image directly through Google AI Studio."""
     try:
         from google import genai
         from google.genai import types
     except ImportError:
-        print("[PropRefGen] 请安装 google-genai: pip install google-genai")
+        print("[PropRefGen] Please install google-genai: pip install google-genai")
         return None
 
     client = genai.Client(api_key=api_key)
@@ -386,7 +386,7 @@ async def _generate_via_openrouter(
     api_key: str,
     model: str,
 ) -> Optional[str]:
-    """通过 OpenRouter 代理生成图像。"""
+    """Generate an image through the OpenRouter proxy."""
     from novelvideo.generators.nanobanana_grid import _call_openrouter_image_api
 
     requested_size = normalize_image_size(PROP_REF_IMAGE_SIZE, provider="openrouter")
@@ -401,7 +401,7 @@ async def _generate_via_openrouter(
     )
 
     if not image_bytes and requested_size == "0.5K":
-        print("[PropRefGen] OpenRouter 0.5K 被 provider 拒绝，回退到 1K 重试")
+        print("[PropRefGen] OpenRouter 0.5K rejected by provider, falling back to 1K and retrying")
         image_bytes, _text_content, error_text = await _call_openrouter_image_api(
             api_key=api_key,
             model=model,
@@ -418,7 +418,7 @@ async def _generate_via_openrouter(
             f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] OpenRouter 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] OpenRouter generation failed: {error_text or 'No response'}")
     return None
 
 
@@ -429,7 +429,7 @@ async def _generate_via_openai(
     model: str,
     quality: str = "medium",
 ) -> Optional[str]:
-    """通过 OpenAI Image API 生成图像。"""
+    """Generate an image through the OpenAI Image API."""
 
     image_bytes, _text_content, error_text = await _call_openai_image_api(
         api_key=api_key,
@@ -449,7 +449,7 @@ async def _generate_via_openai(
             f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] OpenAI 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] OpenAI generation failed: {error_text or 'No response'}")
     return None
 
 
@@ -461,7 +461,7 @@ async def _generate_via_newapi(
     base_url: str,
     quality: str = "medium",
 ) -> Optional[str]:
-    """通过 newAPI 生成道具参考图。"""
+    """Generate a prop reference image through newAPI."""
 
     image_delivery_state: dict[str, bool] = {}
     image_bytes, _text_content, error_text = await _call_newapi_image_api(
@@ -487,7 +487,7 @@ async def _generate_via_newapi(
                 f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] DramaClawAPI 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] DramaClawAPI generation failed: {error_text or 'No response'}")
     return None
 
 
@@ -498,7 +498,7 @@ async def _generate_via_webai(
     model: str,
     base_url: str,
 ) -> Optional[str]:
-    """通过本地 Gemini WebAI 网桥生成道具三视图。"""
+    """Generate a prop three-view through the local Gemini WebAI bridge."""
 
     image_bytes, _text_content, error_text = await _call_webai_chat_image_api(
         api_key=api_key,
@@ -513,7 +513,7 @@ async def _generate_via_webai(
             f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] Gemini WebAI 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] Gemini WebAI generation failed: {error_text or 'No response'}")
     return None
 
 
@@ -524,7 +524,7 @@ async def _generate_via_qwen(
     model: str,
     image_size: str | None = None,
 ) -> Optional[str]:
-    """通过 DashScope 原生 Qwen-Image API 生成道具三视图。"""
+    """Generate a prop three-view through the native DashScope Qwen-Image API."""
 
     image_bytes, _text_content, error_text = await _call_qwen_image_api(
         api_key=api_key,
@@ -542,7 +542,7 @@ async def _generate_via_qwen(
             f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] Qwen Image 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] Qwen Image generation failed: {error_text or 'No response'}")
     return None
 
 
@@ -553,7 +553,7 @@ async def _generate_via_runpod_qwen(
     model: str,
     image_size: str | None = None,
 ) -> Optional[str]:
-    """通过 RunPod Serverless 的 Qwen-Image 2.1（ComfyUI）生成道具三视图。"""
+    """Generate a prop three-view through Qwen-Image 2.1 (ComfyUI) on RunPod Serverless."""
 
     image_bytes, _text_content, error_text = await _call_runpod_qwen_image_api(
         api_key=api_key,
@@ -571,20 +571,20 @@ async def _generate_via_runpod_qwen(
             f.write(image_bytes)
         return output_path
 
-    print(f"[PropRefGen] RunPod Qwen Image 生成失败: {error_text or 'No response'}")
+    print(f"[PropRefGen] RunPod Qwen Image generation failed: {error_text or 'No response'}")
     return None
 
 
 def _extract_and_save_image(response, output_path: str) -> Optional[str]:
-    """从 Gemini API 响应中提取图像并保存。"""
+    """Extract the image from a Gemini API response and save it."""
     if not response.candidates:
-        print(f"[PropRefGen] API 响应无 candidates")
+        print(f"[PropRefGen] API response has no candidates")
         return None
 
     candidate = response.candidates[0]
     if not candidate.content or not candidate.content.parts:
         finish_reason = getattr(candidate, "finish_reason", "unknown")
-        print(f"[PropRefGen] API 响应无 content, finish_reason={finish_reason}")
+        print(f"[PropRefGen] API response has no content, finish_reason={finish_reason}")
         return None
 
     for part in candidate.content.parts:
@@ -596,7 +596,7 @@ def _extract_and_save_image(response, output_path: str) -> Optional[str]:
             return output_path
 
         if hasattr(part, "text") and part.text:
-            print(f"[PropRefGen] API 文本响应: {part.text[:200]}")
+            print(f"[PropRefGen] API text response: {part.text[:200]}")
 
-    print("[PropRefGen] API 未返回图像数据")
+    print("[PropRefGen] API returned no image data")
     return None

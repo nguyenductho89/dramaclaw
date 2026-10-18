@@ -58,7 +58,7 @@ describe("FreezoneCanvasHost", () => {
     expect(hostContainer().className).not.toContain("invisible");
   });
 
-  it("hides and deactivates the canvas after navigating to a 虾集 sub-page", async () => {
+  it("hides and deactivates the canvas after navigating to a Mainline sub-page", async () => {
     const { router } = renderAt("/projects/p1/freezone");
     await waitFor(() => expect(screen.getByTestId("canvas-root")).toBeTruthy());
 
@@ -73,7 +73,7 @@ describe("FreezoneCanvasHost", () => {
     expect(container.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("does not mount the canvas for a project that never opened 虾画", async () => {
+  it("does not mount the canvas for a project that never opened Freezone", async () => {
     renderAt("/projects/p1/ingest");
     await waitFor(() => expect(screen.getByText("ingest")).toBeTruthy());
     expect(screen.queryByTestId("canvas-root")).toBeNull();

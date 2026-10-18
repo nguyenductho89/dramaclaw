@@ -1,17 +1,17 @@
-"""OI-57：360 全景的 newapi 调用跑在独立子进程里，出网闸门必须在起进程点装。
+"""OI-57: the newapi call of the 360 panorama runs in a separate subprocess; the egress gate must be installed at the process-spawn point.
 
-`scene_360_builder` 有自己的 `__main__`，由 `stage_asset_tasks.run_scene_360` 拼 argv 后经
-`run_project_subprocess` 起**独立 OS 进程**。`model_gateway_scope_for_runner` 绑的是
-ContextVar，跨 `asyncio.run` / `to_thread` 能活，跨 `fork/exec` 活不了——所以 OI-48 的
-ambient 回落与 OI-52 的调用点闸门对这一处都无效。
+`scene_360_builder` has its own `__main__`; `stage_asset_tasks.run_scene_360` assembles argv and then starts a **separate OS process** via
+`run_project_subprocess`. What `model_gateway_scope_for_runner` binds is a
+ContextVar, which survives `asyncio.run` / `to_thread` but not `fork/exec` - so the OI-48
+ambient fallback and the OI-52 call-site gate are both ineffective at this one place.
 
-修法的形状（用户 2026-08-12 拍板）：**身份不过进程边界，只有已解析的组织凭证过**。
-父进程 claim + 解组织凭证（复用 OI-52 的 `_prepare_organization_image_egress` /
-`_complete_organization_image_egress`），经进程局部 env 交给子进程，子进程带 mode 标记
-fail-closed、绝不回落 settings.db 的平台 Key，trace 经 manifest 回来完成 claim。
+Shape of the fix (decided by the user on 2026-08-12): **identity does not cross the process boundary; only the resolved organization credential does**.
+The parent process claims + resolves the organization credential (reusing OI-52's `_prepare_organization_image_egress` /
+`_complete_organization_image_egress`) and hands it to the subprocess through a process-local env; the subprocess carries a mode flag and
+fails closed, never falling back to the platform Key in settings.db; the trace comes back through the manifest to complete the claim.
 
-两个 OpenRouter 直连的 VLM 旁路子进程（`scene_overlap_analyzer` /
-`scene_spatial_contract`）无对应网关能力位，组织下走它们已有的跳过分支。
+The two OpenRouter-direct VLM side subprocesses (`scene_overlap_analyzer` /
+`scene_spatial_contract`) have no corresponding gateway capability bit, so under an organization they take their existing skip branch.
 """
 
 from __future__ import annotations
@@ -175,7 +175,7 @@ def _child_module(cmd: list[str]) -> str:
 
 
 class _SceneHarness:
-    """把 OI-52 已验证的假件装到 `run_scene_360` 的起进程点上。"""
+    """Install the fakes already verified in OI-52 at the spawn point of `run_scene_360`."""
 
     def __init__(
         self,
@@ -272,13 +272,13 @@ def _run_pano(tmp_path: Path, **kwargs):
     )
 
 
-# --- 组织路径：claim 在起进程之前，凭证经 env 过边界 --------------------------------
+# --- Organization path: claim before spawning the process, credential crosses the boundary via env --------
 
 
 def test_organization_pano_claims_and_injects_gateway_credential_before_launch(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """claim + 解凭证必须发生在起子进程之前，且凭证经 env 交给子进程。"""
+    """Claim + credential resolution must happen before spawning the subprocess, and the credential is handed to the subprocess via env."""
 
     context = _egress_context(kind="organization")
     harness = _SceneHarness(monkeypatch, context)
@@ -295,7 +295,7 @@ def test_organization_pano_claims_and_injects_gateway_credential_before_launch(
     assert claim.credential_version == 9
 
     env = harness.pano_launch()["env"]
-    assert env is not None, "组织路径必须传 curated env，不能让子进程继承父进程 environ"
+    assert env is not None, "the organization path must pass a curated env and must not let the subprocess inherit the parent environ"
     assert env["ST_ORG_EGRESS_MODE"] == "1"
     assert env["ST_ORG_GATEWAY_API_KEY"] == GATEWAY_KEY
     assert env["ST_ORG_GATEWAY_BASE_URL"] == GATEWAY_BASE_URL
@@ -304,10 +304,10 @@ def test_organization_pano_claims_and_injects_gateway_credential_before_launch(
 def test_platform_key_canary_never_reaches_the_child_env(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """子进程 env 必须是删过平台密钥的 curated copy。
+    """The subprocess env must be a curated copy with platform secrets removed.
 
-    今天 `run_project_subprocess` 传 `env=None`，子进程继承父进程整个 environ；
-    不删平台 Key，子进程侧的 fail-closed 就只是纸面上的——它照样解得出平台 Key。
+    Today `run_project_subprocess` passes `env=None`, so the subprocess inherits the parent's whole environ;
+    without removing the platform Key, the subprocess-side fail-closed is only on paper - it can still resolve the platform Key.
     """
 
     for name in (
@@ -342,7 +342,7 @@ def test_platform_key_canary_never_reaches_the_child_env(
 def test_organization_non_newapi_provider_denies_before_any_launch(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """组织 + 非 newapi provider 必须在起进程前被拒，零子进程、零产物。"""
+    """Organization + non-newapi provider must be rejected before spawning the process: zero subprocesses, zero artifacts."""
 
     context = _egress_context(kind="organization")
     harness = _SceneHarness(monkeypatch, context)
@@ -360,7 +360,7 @@ def test_organization_non_newapi_provider_denies_before_any_launch(
 def test_organization_completion_records_trace_and_result_ref(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """子进程写进 manifest 的 request_id 必须回到 claim 上完成账。"""
+    """The request_id the subprocess writes into the manifest must return to the claim to complete the ledger."""
 
     context = _egress_context(kind="organization")
     harness = _SceneHarness(monkeypatch, context)
@@ -377,7 +377,7 @@ def test_organization_completion_records_trace_and_result_ref(
 def test_child_failure_marks_the_operation_unknown(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """子进程非零退出时无法证明请求没发出去，claim 必须落 unknown 而非悬空。"""
+    """When the subprocess exits non-zero we cannot prove the request was not sent, so the claim must land on unknown rather than dangling."""
 
     context = _egress_context(kind="organization")
     harness = _SceneHarness(monkeypatch, context, returncode=1)
@@ -394,7 +394,7 @@ def test_child_failure_marks_the_operation_unknown(
 def test_platform_pano_launches_without_any_organization_env(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """平台/个人路径逐字节不变：不 claim、不传 env、子进程照旧继承 environ。"""
+    """Platform/personal path is byte-for-byte unchanged: no claim, no env passed, the subprocess inherits environ as before."""
 
     harness = _SceneHarness(monkeypatch, None)
 
@@ -404,7 +404,7 @@ def test_platform_pano_launches_without_any_organization_env(
     assert harness.pano_launch()["env"] is None
 
 
-# --- 两个 OpenRouter 旁路子进程：组织下走既有跳过分支 --------------------------------
+# --- Two OpenRouter side subprocesses: under an organization they take the existing skip branch --------
 
 
 def _master_pair(tmp_path: Path) -> dict[str, Path]:
@@ -420,10 +420,10 @@ def _master_pair(tmp_path: Path) -> dict[str, Path]:
 def test_organization_skips_the_openrouter_vlm_children(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """组织下即使 OPENROUTER_API_KEY 在场，两个 VLM 旁路子进程也不得启动。
+    """Under an organization, even if OPENROUTER_API_KEY is present, the two VLM side subprocesses must not start.
 
-    它们是 OpenRouter 直连、无对应网关能力位；平台上本就只在配了 Key 时才跑、
-    没配就静默跳过，组织复用这条已跑熟的分支，360 主流程照常出图。
+    They are OpenRouter-direct with no corresponding gateway capability bit; on the platform they only run when a Key is configured
+    and silently skip when not, so organizations reuse this well-worn branch and the 360 main flow still produces images as usual.
     """
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-present")
@@ -445,7 +445,7 @@ def test_organization_skips_the_openrouter_vlm_children(
 def test_platform_still_launches_the_openrouter_vlm_children(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """跳过只对组织生效——平台带 Key 时两个旁路照旧启动。"""
+    """The skip applies only to organizations - with a platform Key the two side processes start as before."""
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-present")
     pair = _master_pair(tmp_path)
@@ -464,16 +464,16 @@ def test_platform_still_launches_the_openrouter_vlm_children(
     assert "scene_360_builder" in launched
 
 
-# --- 子进程侧：fail-closed，绝不回落平台 Key ----------------------------------------
+# --- Subprocess side: fail-closed, never fall back to the platform Key --------------------
 
 
 def test_child_fails_closed_when_org_mode_lacks_a_credential(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """带 mode 标记却没拿到凭证时必须报错，不得回落 settings.db 的平台 Key。
+    """With the mode flag but no credential received it must raise an error, and not fall back to the platform Key in settings.db.
 
-    「没拿到凭证」和「这是平台任务」必须可区分——凭证本身的有无当不了标记，
-    否则就是 OI-48 那个「有形参没接住」换个位置重演。
+    "No credential received" and "this is a platform task" must be distinguishable - the presence of the credential itself cannot serve as the flag,
+    otherwise it is the OI-48 "parameter present but not picked up" replayed in another place.
     """
 
     from novelvideo.director_world import scene_360_builder
@@ -500,11 +500,11 @@ def test_child_fails_closed_when_org_mode_lacks_a_credential(
 def test_child_passes_the_injected_credential_as_an_explicit_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """必须走 `api_key_override=`，不能靠 env 名回落。
+    """It must go through `api_key_override=`, not rely on env-name fallback.
 
-    `get_newapi_runtime_credentials` 的 env 回落只在 `gateway.source == "environment"`
-    时生效（EE 是，CE 读 settings.db）。塞 `NEWAPI_API_KEY` 在 CE 下根本不会被读，
-    子进程会静默落回平台 Key——出网照发、积分照扣、平台照垫。
+    The env fallback of `get_newapi_runtime_credentials` only takes effect when `gateway.source == "environment"`
+    (true for EE; CE reads settings.db). Stuffing `NEWAPI_API_KEY` is simply never read under CE,
+    and the subprocess silently falls back to the platform Key - the egress is still sent, credits are still deducted, the platform still foots the bill.
     """
 
     from novelvideo.director_world import scene_360_builder
@@ -532,7 +532,7 @@ def test_child_passes_the_injected_credential_as_an_explicit_override(
 def test_child_without_org_mode_keeps_the_platform_resolution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """没有 mode 标记时子进程行为逐字节不变。"""
+    """Without the mode flag the subprocess behavior is byte-for-byte unchanged."""
 
     from novelvideo.director_world import scene_360_builder
 
@@ -553,7 +553,7 @@ def test_child_without_org_mode_keeps_the_platform_resolution(
     assert seen == [{}]
 
 
-# --- 参数穿透：只加形参不接实参就是假守卫（M6-P32）---------------------------------
+# --- Parameter threading: adding a parameter without wiring the argument is a fake guard (M6-P32) ---------
 
 
 class _FakeTaskManager:
@@ -600,7 +600,7 @@ def _envelope(payload: dict[str, object], context: TrustedEgressContext):
 def test_stage_asset_runner_passes_envelope_context_through(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, step: str, target: str
 ) -> None:
-    """`run_stage_asset` 的三个调用点必须把信封里的身份真正交给执行函数。"""
+    """The three call sites of `run_stage_asset` must really hand the identity in the envelope to the executing function."""
 
     from novelvideo import stage_asset_tasks
 
@@ -767,7 +767,7 @@ def test_stage_asset_runner_rejects_catalog_authority_execution_mismatch(
 def test_scene_pano_generation_runner_passes_envelope_context_through(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """计费入口 `scene_pano_generation` 同样要穿实——它才是组织真扣积分的那条。"""
+    """The billing entry `scene_pano_generation` must be wired through as well - it is the one that really deducts credits for organizations."""
 
     from novelvideo import stage_asset_tasks
 

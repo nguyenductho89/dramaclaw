@@ -111,7 +111,7 @@ export function workflowGroupState(nodes: CanvasNode[]): WorkflowGroupState {
       canContinue: false,
       canRegenerate: false,
       canStop: true,
-      primaryLabel: '运行中',
+      primaryLabel: 'Running',
     };
   }
 
@@ -125,7 +125,7 @@ export function workflowGroupState(nodes: CanvasNode[]): WorkflowGroupState {
       canContinue: true,
       canRegenerate: false,
       canStop: false,
-      primaryLabel: '运行',
+      primaryLabel: 'Run',
     };
   }
 
@@ -139,7 +139,7 @@ export function workflowGroupState(nodes: CanvasNode[]): WorkflowGroupState {
       canContinue: false,
       canRegenerate: true,
       canStop: false,
-      primaryLabel: '已完成',
+      primaryLabel: 'Completed',
     };
   }
 
@@ -152,6 +152,6 @@ export function workflowGroupState(nodes: CanvasNode[]): WorkflowGroupState {
     canContinue: true,
     canRegenerate: true,
     canStop: false,
-    primaryLabel: '继续运行',
+    primaryLabel: 'Continue',
   };
 }

@@ -21,16 +21,16 @@ def test_render_guard_blocks_beats_without_identity_detection_or_manual_mark():
     error = render_ai_detection_error(beats)
 
     assert error is not None
-    assert "AI 检测" in error
-    assert "手工标注" in error
-    assert "无角色出场" in error
+    assert "AI detect" in error
+    assert "annotate them manually" in error
+    assert "No characters appear" in error
     assert "#1, #2, #3" in error
 
 
 def test_render_guard_allows_explicit_no_character_marker():
     beats = [
         {"beat_number": 1, "detected_identities": [NO_CHARACTER_MARKER]},
-        {"beat_number": 2, "detected_identities": ["沈知薇_嫡女时期"]},
+        {"beat_number": 2, "detected_identities": ["Alice_default"]},
     ]
 
     assert render_ai_detection_error(beats) is None
@@ -43,9 +43,9 @@ def test_render_guard_standalone_message_points_to_canvas_node_not_mainline_beat
     )
 
     assert error is not None
-    assert "镜头上下文" in error
-    assert "无角色出场" in error
-    assert "AI 检测" not in error
+    assert "Shot context" in error
+    assert "No characters appear" in error
+    assert "AI detect" not in error
     assert "#0" not in error
 
 
@@ -61,7 +61,7 @@ def test_render_guard_standalone_allows_no_character_marker():
 
 def test_render_filter_drops_character_map_when_no_identity_detected():
     character_map = {
-        "沈知薇": {"reference_mode": "portrait_only", "reference_path": "/tmp/portrait.png"}
+        "Alice": {"reference_mode": "portrait_only", "reference_path": "/tmp/portrait.png"}
     }
 
     filtered = filter_character_map_by_precomputed(character_map, {0: None, 1: None})
@@ -72,7 +72,7 @@ def test_render_filter_drops_character_map_when_no_identity_detected():
 def test_render_guard_blocks_partial_unmarked_empty_beats():
     beats = [
         {"beat_number": 1, "detected_identities": [NO_CHARACTER_MARKER]},
-        {"beat_number": 2, "detected_identities": ["沈知薇_嫡女时期"]},
+        {"beat_number": 2, "detected_identities": ["Alice_default"]},
         {"beat_number": 3, "detected_identities": []},
     ]
 
@@ -101,8 +101,8 @@ async def test_generate_grid_render_without_detection_is_blocked(tmp_path):
     generator = _test_grid_generator()
 
     result = await generator.generate_grid(
-        beats=[{"beat_number": 1, "visual_description": "{{沈知薇}}"}],
-        character_map={"沈知薇": {"reference_mode": "prompt_only"}},
+        beats=[{"beat_number": 1, "visual_description": "{{Alice}}"}],
+        character_map={"Alice": {"reference_mode": "prompt_only"}},
         style="chinese_period_drama",
         output_path=str(tmp_path / "grid.png"),
         rows=1,
@@ -112,8 +112,8 @@ async def test_generate_grid_render_without_detection_is_blocked(tmp_path):
     )
 
     assert result.success is False
-    assert "AI 检测" in result.error
-    assert "无角色出场" in result.error
+    assert "AI detect" in result.error
+    assert "No characters appear" in result.error
     assert "Render reference order missing" not in result.error
 
 
@@ -121,10 +121,10 @@ async def test_generate_grid_render_without_detection_is_blocked(tmp_path):
 async def test_prepare_batch_request_render_without_detection_is_blocked(tmp_path):
     generator = _test_grid_generator()
 
-    with pytest.raises(RuntimeError, match="AI 检测") as exc_info:
+    with pytest.raises(RuntimeError, match="AI detect") as exc_info:
         await generator.prepare_batch_request(
-            beats=[{"beat_number": 1, "visual_description": "{{沈知薇}}"}],
-            character_map={"沈知薇": {"reference_mode": "prompt_only"}},
+            beats=[{"beat_number": 1, "visual_description": "{{Alice}}"}],
+            character_map={"Alice": {"reference_mode": "prompt_only"}},
             style="chinese_period_drama",
             output_path=str(tmp_path / "grid.png"),
             rows=1,
@@ -133,7 +133,7 @@ async def test_prepare_batch_request_render_without_detection_is_blocked(tmp_pat
             sketch_dir=str(tmp_path / "sketches"),
         )
 
-    assert "无角色出场" in str(exc_info.value)
+    assert "No characters appear" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -144,7 +144,7 @@ async def test_generate_grid_render_with_no_character_marker_reaches_sketch_prer
         beats=[
             {
                 "beat_number": 1,
-                "visual_description": "空镜",
+                "visual_description": "empty shot",
                 "detected_identities": [NO_CHARACTER_MARKER],
             }
         ],
@@ -158,5 +158,5 @@ async def test_generate_grid_render_with_no_character_marker_reaches_sketch_prer
     )
 
     assert result.success is False
-    assert "Render 模式需要草图" in result.error
-    assert "AI 检测" not in result.error
+    assert "Render mode requires a sketch" in result.error
+    assert "AI detect" not in result.error

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 「后台一个图片模型都没配」和「目录接口挂了」必须是两种状态。
+// "The backend has no image model configured" and "the catalog endpoint is down" must be two different states.
 //
-// 之前 useCatalogImageModels 无条件把空目录换成前端硬编码的 SHARED_MODELS，两种
-// 情况被抹平成同一种：用户在权威空目录下看到一堆能选的模型，选中、点生成，才被
-// 后端 `_resolve_catalog_request` 用 409 顶回来。失败兜底是对的（不然接口一抖用户
-// 就干不了活），把「没配」也伪装成「有」是错的。
+// Previously useCatalogImageModels unconditionally swapped an empty catalog for the frontend's hard-coded SHARED_MODELS, flattening the two
+// situations into one: under an authoritative empty catalog users saw a bunch of selectable models, picked one, clicked generate, and only then were
+// bounced back by the backend `_resolve_catalog_request` with a 409. The failure fallback is right (otherwise at the slightest endpoint hiccup the user
+// could do nothing), but disguising "not configured" as "configured" is wrong.
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,8 +16,8 @@ import { SHARED_MODELS } from "@/features/canvas/ui/ProviderModelPicker";
 
 let hookState: UseFreezoneImageModelsResult;
 
-// 只替换取数的 hook；`isAuthoritativeEmptyCatalog` 是纯函数判据，
-// `useCatalogImageModels` 正是靠它算 isEmpty，必须留真实实现。
+// Only the data-fetching hook is replaced; `isAuthoritativeEmptyCatalog` is a pure predicate,
+// which `useCatalogImageModels` uses to compute isEmpty, so the real implementation must stay.
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/features/canvas/hooks/useFreezoneImageModels")
@@ -38,8 +38,8 @@ function read(state: UseFreezoneImageModelsResult) {
   return renderHook(() => useCatalogImageModels()).result.current;
 }
 
-describe("useCatalogImageModels 的空目录语义", () => {
-  it("拉取失败：hook 已经塞了兜底列表，照常可用，不算空", () => {
+describe("empty-catalog semantics of useCatalogImageModels", () => {
+  it("fetch failure: the hook has already filled in the fallback list, it works as usual and does not count as empty", () => {
     const result = read({
       models: SHARED_MODELS,
       isLoading: false,
@@ -51,7 +51,7 @@ describe("useCatalogImageModels 的空目录语义", () => {
     expect(result.getModel(null)).toBeDefined();
   });
 
-  it("加载中：先用兜底撑住，别闪一下「无可用模型」", () => {
+  it("loading: hold on with the fallback first and do not flash \"no available model\"", () => {
     const result = read({
       models: SHARED_MODELS,
       isLoading: true,
@@ -63,7 +63,7 @@ describe("useCatalogImageModels 的空目录语义", () => {
     expect(result.models.length).toBeGreaterThan(0);
   });
 
-  it("接口成功但返回空列表：这是后台的权威答案，不许拿硬编码模型盖掉", () => {
+  it("the endpoint succeeds but returns an empty list: this is the backend's authoritative answer and must not be covered by hard-coded models", () => {
     const result = read({
       models: [],
       isLoading: false,
@@ -72,12 +72,12 @@ describe("useCatalogImageModels 的空目录语义", () => {
     });
     expect(result.isEmpty).toBe(true);
     expect(result.models).toEqual([]);
-    // 节点上存着的旧模型 id 也不能凭空复活成兜底模型。
+    // An old model id stored on the node must not be resurrected as a fallback model out of thin air either.
     expect(result.getModel("huimeng_gpt_image2")).toBeUndefined();
     expect(result.getModel(null)).toBeUndefined();
   });
 
-  it("正常目录：只出目录里的模型，不掺兜底", () => {
+  it("normal catalog: only the models in the catalog appear, with no fallback mixed in", () => {
     const result = read({
       models: [CATALOG_MODEL],
       isLoading: false,

@@ -289,7 +289,7 @@ def _required_diagnostic_inputs(skill: dict[str, Any]) -> dict[str, str]:
         if not isinstance(param, dict) or not param.get("required"):
             continue
         options = param.get("options") or []
-        inputs[str(param.get("id") or "")] = str(options[0]) if options else "未指定"
+        inputs[str(param.get("id") or "")] = str(options[0]) if options else "unspecified"
     return inputs
 
 
@@ -308,15 +308,15 @@ def _intent_for_recipe(
         items.append(
             {
                 "id": "source_anchor",
-                "title": "诊断源素材",
-                "prompt": "用于验证工作流连接的稳定源素材",
+                "title": "Diagnostic source asset",
+                "prompt": "A stable source asset used to verify workflow connections",
                 "recipe_id": str(anchor.get("id") or ""),
             }
         )
     target_item: dict[str, Any] = {
         "id": "target",
-        "title": f"诊断 {target_id}",
-        "prompt": "用于验证 Skill、Recipe、Plan 和 MCP 编译链路",
+        "title": f"Diagnose {target_id}",
+        "prompt": "Used to verify the Skill, Recipe, Plan, and MCP compile chain",
         "recipe_id": target_id,
     }
     if items:
@@ -330,12 +330,12 @@ def _intent_for_recipe(
                 *[str(item) for item in target.get("action_keys") or []],
             ]
         ).lower()
-        if any(token in searchable for token in ("music", "bgm", "音乐", "配乐")):
+        if any(token in searchable for token in ("music", "bgm")):
             target_item["audio_kind"] = "music"
             target_item["music_length_ms"] = 3000
         else:
             target_item["audio_kind"] = "speech"
-            target_item["narration"] = "这是用于验证配音工作流的朗读正文。"
+            target_item["narration"] = "This is the narration text used to verify the voice-over workflow."
             includes_speech = True
     items.append(target_item)
     if skill_id == "short-drama-quick" and target_kind == "audio" and not includes_speech:
@@ -353,7 +353,7 @@ def _intent_for_recipe(
                             *[str(item) for item in recipe.get("action_keys") or []],
                         ]
                     ).lower()
-                    for token in ("music", "bgm", "音乐", "配乐")
+                    for token in ("music", "bgm")
                 )
             ),
             None,
@@ -362,18 +362,18 @@ def _intent_for_recipe(
             items.append(
                 {
                     "id": "speech_companion",
-                    "title": "诊断短剧配音",
-                    "prompt": "用于验证短剧配音节点",
+                    "title": "Diagnose short-drama voice-over",
+                    "prompt": "Used to verify the short-drama voice-over node",
                     "recipe_id": str(speech_recipe.get("id") or ""),
                     "audio_kind": "speech",
-                    "narration": "这是用于验证配音工作流的朗读正文。",
+                    "narration": "This is the narration text used to verify the voice-over workflow.",
                 }
             )
     return (
         {
             "schema_version": "freezone_workflow_intent.v1",
             "skill_id": skill_id,
-            "user_goal": f"诊断 Recipe {target_id}",
+            "user_goal": f"Diagnose Recipe {target_id}",
             "items": items,
             "include_audio": target_kind == "audio",
             "include_compose": False,
@@ -475,7 +475,7 @@ async def _exercise_mcp(
                 package = _json_payload_from_tool(
                     await session.call_tool(
                         "workflow_skill_get",
-                        {"skill_id": skill_id, "user_goal": "诊断工作流"},
+                        {"skill_id": skill_id, "user_goal": "Diagnose workflow"},
                     )
                 )
                 report.check(package.get("ok") is True, f"Skill tool failed for {skill_id}")

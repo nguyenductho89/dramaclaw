@@ -109,7 +109,7 @@ async def test_ce_generation_submit_returns_inline_backend(monkeypatch, tmp_path
 
     ctx = _ctx(tmp_path)
     Path(ctx.output_dir).mkdir(parents=True, exist_ok=True)
-    (Path(ctx.output_dir) / "novel.txt").write_text("剧本文本", encoding="utf-8")
+    (Path(ctx.output_dir) / "novel.txt").write_text("script text", encoding="utf-8")
 
     async def fake_resolve_project_scope(project, user, *, required_role="viewer"):
         return SimpleNamespace(
@@ -222,7 +222,7 @@ async def test_task_list_and_project_stream_task_updated_share_serialized_fields
     ("status", "progress", "current_task", "expected_event"),
     [
         ("running", 0.25, "working", "running"),
-        ("completed", 1.0, "完成", "completed"),
+        ("completed", 1.0, "completed", "completed"),
         ("failed", 0.7, "failed", "failed"),
         ("cancelled", 0.2, "cancelled", "cancelled"),
     ],
@@ -346,7 +346,7 @@ async def test_clear_completed_deletes_only_effective_completed_tasks(monkeypatc
         effective.task_type,
         effective.episode,
         progress=1.0,
-        current_task="完成",
+        current_task="completed",
         expected_task_id=effective.task_id,
     )
     protected = [
@@ -501,7 +501,7 @@ def test_m07_http_coverage_exercises_task_center_routes(monkeypatch, tmp_path):
                 beat_num=task_state.beat_num,
                 scope=task_state.scope,
                 progress=task_state.progress,
-                current_task="任务已取消",
+                current_task="Task cancelled",
                 status="cancelled",
                 expected_task_id=task_state.task_id,
             )
@@ -570,7 +570,7 @@ class _FakeTaskBackend:
             beat_num=task_state.beat_num,
             scope=task_state.scope,
             progress=task_state.progress,
-            current_task="任务已取消",
+            current_task="Task cancelled",
             status="cancelled",
             expected_task_id=task_state.task_id,
         )

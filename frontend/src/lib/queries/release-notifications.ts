@@ -32,13 +32,10 @@ export interface ReleaseFeed {
 
 const RELEASE_FEED_STALE_TIME_MS = 60 * 60 * 1000;
 
-// Release notes only exist in `zh` and `en`. Anything else falls back to `en`
-// rather than `zh`: an unrecognized locale is far more likely to be a reader of
-// English than of Chinese, and this used to hand Chinese notes to every locale
-// that wasn't literally "en".
-export function normalizeReleaseLocale(locale: string | undefined): "zh" | "en" {
+// Release notes only exist in `en` and `vi`. Anything else falls back to `en`.
+export function normalizeReleaseLocale(locale: string | undefined): "en" | "vi" {
   const two = (locale ?? "").slice(0, 2).toLowerCase();
-  return two === "zh" ? "zh" : "en";
+  return two === "vi" ? "vi" : "en";
 }
 
 export function releaseNotificationsQueryOptions(localeInput: string | undefined) {

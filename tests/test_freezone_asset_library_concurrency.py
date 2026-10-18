@@ -1,7 +1,7 @@
-"""资产库并发写回归：API 多 worker 进程同时登记素材时，一条都不能丢。
+"""Asset library concurrent write-back regression: when several API worker processes register assets at once, none may be lost.
 
-早先 add_video_character_library_item 是无锁的「读整份 JSON → 追加 → 整份写回」，
-一次上传 4 张图，各 worker 读到同一份旧列表，后写的把先写的冲掉，库里只剩 1~2 张。
+Earlier add_video_character_library_item was lock-free "read the whole JSON -> append -> write the whole thing back",
+uploading 4 images at once made every worker read the same stale list, with the later write washing out the earlier one, leaving only 1-2 in the library.
 """
 
 import multiprocessing
@@ -78,9 +78,9 @@ def test_library_save_leaves_no_temp_files(tmp_path: Path) -> None:
 def test_library_write_never_proceeds_without_the_lock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """锁被别人占着时，写入必须等待直至报错，不能绕过锁直接写。
+    """When the lock is held by someone else, the write must wait until it errors, and must not bypass the lock and write directly.
 
-    早先在没有 fcntl 的平台（Windows）上 _library_lock 是空操作，多进程照样互相覆盖。
+    Earlier, on platforms without fcntl (Windows), _library_lock was a no-op, and multiple processes still overwrote one another.
     """
     monkeypatch.setattr(video_node, "_LIBRARY_LOCK_TIMEOUT_SECONDS", 0.2)
 

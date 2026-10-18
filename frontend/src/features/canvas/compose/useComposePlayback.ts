@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * 时间线预览的「主时钟」。
+ * The "master clock" of the timeline preview.
  *
- * 用 requestAnimationFrame 推进 `playheadMs`，与具体媒体元素解耦 —— 视频 / 音频
- * 元素由组件侧根据 {@link activeClipAt} 自行把 src + currentTime 对齐到这个播放头。
- * 时钟独立推进（不读 video.currentTime），所以跨片段切换时画面 src 交换造成的轻微
- * 抖动不会拖累整体进度，符合「预览非像素级精确、后端渲染才是最终结果」的取舍。
+ * Advance `playheadMs` with requestAnimationFrame, decoupled from the concrete media elements - the video / audio
+ * elements are aligned on the component side by {@link activeClipAt} to this playhead with their own src + currentTime.
+ * The clock advances independently (not reading video.currentTime), so the slight jitter caused by swapping the picture src across clip switches
+ * does not drag down the overall progress, matching the trade-off that "the preview is not pixel-exact; the backend render is the final result".
  */
 export interface ComposePlayback {
   playheadMs: number;
@@ -20,21 +20,21 @@ export interface ComposePlayback {
 }
 
 /**
- * React state 节流间隔（毫秒）。播放头的「竖线移动」走 onFrame 直接改 DOM，
- * 不受此限；这里节流的只是 React state（驱动时间读数 + 暂停态媒体镜像 + 整条
- * 时间轴重渲染）。60fps 全量重渲染那条又重又长的时间轴正是卡帧根因，降到 ~5/s
- * 即可，竖线本身仍然每帧丝滑。
+ * The React state throttle interval (milliseconds). The playhead's "line movement" goes through onFrame changing the DOM directly
+ * and is not subject to this; what is throttled here is only React state (driving the time readout + the paused-state media mirror + the whole
+ * timeline re-render). Fully re-rendering that heavy and long timeline at 60fps was exactly the root cause of dropped frames; lowering it to ~5/s
+ * is enough, and the line itself is still silky smooth every frame.
  */
 const STATE_THROTTLE_MS = 200;
 
 export function useComposePlayback(
   durationMs: number,
-  /** 每帧（及 seek/play）以最新播放头位置回调，供消费方命令式更新竖线 DOM。 */
+  /** Called back every frame (and on seek/play) with the latest playhead position, for the consumer to imperatively update the line DOM. */
   onFrame?: (ms: number) => void,
   /**
-   * 播放态的「媒体主时钟」：返回当前正在播放的视频元素换算到时间线的位置（ms），
-   * 取不到（无视频 / 缓冲 / 片段边界）时返回 null。提供它时，竖线跟随真实解码帧推进，
-   * 与画面严丝合缝（libtv 效果）；返回 null 时回落到 performance.now 墙钟，保证连续。
+   * The "media master clock" while playing: returns the position (ms) on the timeline converted from the currently playing video element,
+   * and returns null when unavailable (no video / buffering / clip boundary). When provided, the line advances following the real decoded frames,
+   * in perfect sync with the picture (libtv effect); when it returns null it falls back to the performance.now wall clock, guaranteeing continuity.
    */
   clockMs?: () => number | null,
 ): ComposePlayback {
@@ -53,11 +53,11 @@ export function useComposePlayback(
   clockMsRef.current = clockMs;
   const lastStateMsRef = useRef(0);
 
-  // force=true：立即同步 React state（seek / play / pause / 到末尾）。
-  // force=false：仅在与上次 state 值相差超过节流阈值时才 setState（rAF 推进用）。
+  // force=true: sync React state immediately (seek / play / pause / reaching the end).
+  // force=false: setState only when it differs from the last state value by more than the throttle threshold (used by rAF advance).
   const setPlayhead = useCallback((ms: number, force = true) => {
     playheadRef.current = ms;
-    // 竖线位置每帧命令式更新，绕开 React 重渲染。
+    // The line position is updated imperatively every frame, bypassing React re-rendering.
     onFrameRef.current?.(ms);
     if (force || Math.abs(ms - lastStateMsRef.current) >= STATE_THROTTLE_MS) {
       lastStateMsRef.current = ms;
@@ -79,8 +79,8 @@ export function useComposePlayback(
 
   const tick = useCallback(() => {
     const dur = durationRef.current;
-    // 优先用媒体主时钟（竖线跟真实解码帧走）；取不到时回落墙钟，并把墙钟基准对齐
-    // 到当前位置，保证下一帧若仍无媒体时钟也能从正确位置无缝接着推进。
+    // Prefer the media master clock (the line follows the real decoded frames); when unavailable fall back to the wall clock and align the wall-clock baseline
+    // to the current position, ensuring that if the next frame still has no media clock it can continue seamlessly from the correct position.
     const fromMedia = clockMsRef.current?.();
     let elapsed: number;
     if (typeof fromMedia === "number" && Number.isFinite(fromMedia)) {
@@ -113,8 +113,8 @@ export function useComposePlayback(
   const pause = useCallback(() => {
     setPlaying(false);
     stopRaf();
-    // 暂停时把 React state 对齐到真实播放头：播放期间 state 是节流的，可能落后于
-    // 竖线/画面；不对齐会出现「竖线停在 A 段、预览却是 B 段」之类的错位。
+    // When paused, align React state to the real playhead: during playback state is throttled and may lag behind the
+    // line/picture; without aligning there would be misalignments like "the line stopped on segment A while the preview shows segment B".
     lastStateMsRef.current = playheadRef.current;
     setPlayheadMs(playheadRef.current);
   }, [setPlaying, stopRaf]);
@@ -134,7 +134,7 @@ export function useComposePlayback(
     [setPlayhead],
   );
 
-  // 编辑导致总时长缩短到当前播放头之后时，把播放头收回末尾。
+  // When an edit shortens the total duration to before the current playhead, pull the playhead back to the end.
   useEffect(() => {
     if (playheadRef.current > durationMs) seek(durationMs);
   }, [durationMs, seek]);

@@ -1,4 +1,4 @@
-"""任务列表/状态/终止端点。"""
+"""Task list / status / terminate endpoints."""
 
 import asyncio
 import json
@@ -40,68 +40,68 @@ router = APIRouter()
 _SSE_REVERIFY_INTERVAL_S = 30.0
 _TASK_NOT_FOUND_GRACE_S = 10.0
 _TASK_TYPE_LABELS = {
-    "ingest_fast": "快速导入",
-    "build_characters": "构建角色",
-    "build_scenes": "构建场景",
-    "build_props": "构建道具",
-    "build_episodes": "规划剧集",
-    "identity_planner": "规划身份",
-    "script_writer": "生成剧本",
-    "beat_video_prompt": "生成提示词",
-    "literal_script_writer": "生成解说稿",
-    "director_notes": "导演说明",
-    "episode_scene_planner": "规划场景",
-    "episode_prop_planner": "规划道具",
-    "character_portrait": "角色定妆",
-    "identity_image": "身份定妆",
-    "scene_reference_asset": "场景参考图",
-    "prop_reference_asset": "道具参考图",
-    "sketch_generation": "生成草图",
-    "director_control_to_sketch": "导演台转草图",
-    "sketch_grid_generation": "生成草图网格",
-    "sketch_regen": "重生成草图",
-    "mainline_sketch_from_context": "生成草图",
-    "mainline_frame_from_context": "渲染分镜",
-    "selected_regen": "重生成选区",
-    "grid_regenerate": "重生成网格",
-    "single_video": "生成单镜视频",
-    "global_optimize_video": "全局优化视频",
-    "compose_episode": "合成剧集",
-    "audio_generation": "生成音频",
-    "indextts2_audio_generation": "生成音频",
-    "audio_generation_indextts2": "生成音频",
-    "system_voice_setup": "准备系统声线",
-    "freezone_video_gen": "自由区视频",
-    "stage_asset": "场景资产",
-    "freezone_gen": "虾画生成",
-    "freezone_edit": "虾画编辑",
-    "freezone_mask_edit": "局部编辑",
-    "freezone_extract": "视频抽帧",
-    "freezone_analyze": "视频分析",
-    "freezone_video_story": "视频解读",
-    "freezone_video_erase": "视频擦除",
-    "freezone_video_upscale": "视频放大",
-    "freezone_audio_separate": "音频分离",
-    "freezone_video_compose": "视频合成",
-    "freezone_text_translate": "字幕翻译",
-    "freezone_text_generate": "AI 文本生成",
-    "freezone_skill_import": "外部 Skill 转换",
-    "freezone_story_script": "生成故事脚本",
-    "freezone_script_to_video_plan": "脚本转视频计划",
-    "freezone_audio_speech": "生成语音",
-    "freezone_audio_eleven_music": "生成音乐",
-    "freezone_image_to_3gs": "图片转世界",
-    "freezone_image_reverse_prompt": "图片反推提示词",
+    "ingest_fast": "Fast import",
+    "build_characters": "Build characters",
+    "build_scenes": "Build scenes",
+    "build_props": "Build props",
+    "build_episodes": "Plan episodes",
+    "identity_planner": "Plan identities",
+    "script_writer": "Generate script",
+    "beat_video_prompt": "Generate prompt",
+    "literal_script_writer": "Generate narration script",
+    "director_notes": "Director notes",
+    "episode_scene_planner": "Plan scenes",
+    "episode_prop_planner": "Plan props",
+    "character_portrait": "Character portrait",
+    "identity_image": "Identity portrait",
+    "scene_reference_asset": "Scene reference image",
+    "prop_reference_asset": "Prop reference image",
+    "sketch_generation": "Generate sketch",
+    "director_control_to_sketch": "Director desk to sketch",
+    "sketch_grid_generation": "Generate sketch grid",
+    "sketch_regen": "Regenerate sketch",
+    "mainline_sketch_from_context": "Generate sketch",
+    "mainline_frame_from_context": "Render shots",
+    "selected_regen": "Regenerate selection",
+    "grid_regenerate": "Regenerate grid",
+    "single_video": "Generate single-shot video",
+    "global_optimize_video": "Global video optimization",
+    "compose_episode": "Compose episode",
+    "audio_generation": "Generate audio",
+    "indextts2_audio_generation": "Generate audio",
+    "audio_generation_indextts2": "Generate audio",
+    "system_voice_setup": "Prepare system voice",
+    "freezone_video_gen": "Freezone video",
+    "stage_asset": "Scene assets",
+    "freezone_gen": "Freezone generation",
+    "freezone_edit": "Freezone edit",
+    "freezone_mask_edit": "Local edit",
+    "freezone_extract": "Video frame extraction",
+    "freezone_analyze": "Video analysis",
+    "freezone_video_story": "Video interpretation",
+    "freezone_video_erase": "Video erase",
+    "freezone_video_upscale": "Video upscale",
+    "freezone_audio_separate": "Audio separation",
+    "freezone_video_compose": "Video composition",
+    "freezone_text_translate": "Subtitle translation",
+    "freezone_text_generate": "AI text generation",
+    "freezone_skill_import": "External Skill conversion",
+    "freezone_story_script": "Generate story script",
+    "freezone_script_to_video_plan": "Script to video plan",
+    "freezone_audio_speech": "Generate speech",
+    "freezone_audio_eleven_music": "Generate music",
+    "freezone_image_to_3gs": "Image to world",
+    "freezone_image_reverse_prompt": "Image reverse prompt",
 }
 _STAGE_ASSET_STEP_LABELS = {
-    "pano_from_master": "Master 生成全景",
-    "pano_from_text": "文生全景",
-    "pano_sharp": "全景转 SOG",
-    "single_face_sharp": "单面转 SOG",
-    "voxel_world_from_360": "全景转体素",
-    "scene_360": "生成 360 全景",
-    "upload_package": "上传场景包",
-    "splat_collision": "生成碰撞体",
+    "pano_from_master": "Panorama from Master",
+    "pano_from_text": "Text-to-panorama",
+    "pano_sharp": "Panorama to SOG",
+    "single_face_sharp": "Single face to SOG",
+    "voxel_world_from_360": "Panorama to voxels",
+    "scene_360": "Generate 360 panorama",
+    "upload_package": "Upload scene package",
+    "splat_collision": "Generate collision body",
 }
 
 
@@ -109,7 +109,7 @@ def _effective_task_status(t: TaskState) -> str:
     if (
         t.status in {"submitting", "queued", "running"}
         and t.progress >= 1.0
-        and str(t.current_task or "").strip().lower() in {"完成", "completed", "done"}
+        and str(t.current_task or "").strip().lower() in {"completed", "done"}
     ):
         return "completed"
     return t.status
@@ -229,11 +229,11 @@ def _sanitize_task_result_for_client(value: Any, *, ctx: ProjectContext | None) 
 
 
 def _current_task_message_fields(metadata: dict | None) -> dict:
-    """把 current_task 的 i18n code/params 摊平到响应顶层。
+    """Flatten the i18n code/params of current_task to the top level of the response.
 
-    存储层为了不给 CE tasks 表和 EE ee_task_states 加列，把 code/params 塞在
-    metadata 里；对外仍然给独立字段，前端不用知道这个存储细节。
-    没有 code 时不下发字段，前端直接回落到 current_task 的中文。
+    To avoid adding columns to the CE tasks table and the EE ee_task_states, the storage layer tucks code/params into
+    metadata; externally independent fields are still provided, so the frontend need not know this storage detail.
+    When there is no code the fields are not sent, and the frontend falls back directly to the English text of current_task.
     """
     if not isinstance(metadata, dict):
         return {}
@@ -247,16 +247,16 @@ def _current_task_message_fields(metadata: dict | None) -> dict:
 
 
 def _task_log_fields(entries: list | None) -> dict:
-    """`logs` 的对外形状。
+    """External shape of `logs`.
 
-    `logs` 从一开始就是 `string[]`，老前端拿到就 `logs.join("\\n")`，所以存储层的
-    `{text, code, params}` 条目**不能**从这个字段出去——滚动发布期间新后端配老前端、
-    或者用户手上还开着缓存的旧页面，日志就会显示/下载成一串 `[object Object]`。
-    这里把它压回中文字符串，结构化条目另走 `logs_i18n`，新前端优先读它，没有再回落
-    到 `logs`。这样前后端不需要原子部署，外部调用方也不会被打断。
+    `logs` has been a `string[]` from the start, and old frontends do `logs.join("\\n")` on it, so storage-layer
+    `{text, code, params}` entries **must not** leave through this field -- during a rolling release a new backend with an old frontend,
+    or a user with a cached old page still open, would see logs displayed/downloaded as a string of `[object Object]`.
+    Here they are flattened back into plain strings, and structured entries go through `logs_i18n` separately; new frontends read it first and fall back
+    to `logs`. This way frontend and backend need no atomic deployment, and external callers are not disrupted.
     """
     fields: dict = {"logs": log_lines_text(entries)}
-    # 没有任何一条带 code 时不下发这个字段，省得给每个任务白挂一份重复日志。
+    # When no entry carries a code the field is not sent, to avoid attaching a duplicate copy of the logs to every task.
     if has_localizable_log(entries):
         fields["logs_i18n"] = list(entries or [])
     return fields
@@ -307,14 +307,14 @@ def _serialize_task(t: TaskState, *, ctx: ProjectContext | None = None) -> dict:
         "task_key": key,
         "task_type_label": task_type_label,
         "display_name": display_name,
-        # display_name 一律是中文：要么这里按 task_type 拼，要么调用方
-        # (freezone / scripts 的 task_display) 传的写死中文，两者英文界面下都不能直接用，
-        # 所以默认可本地化，前端按 task_type / metadata 重拼。
+        # display_name is always English: either assembled here from task_type, or hard-coded text passed by the caller
+        # (task_display of freezone / scripts); neither can be used directly in a localized UI,
+        # so it is localizable by default and the frontend reassembles it from task_type / metadata.
         #
-        # 只有真正的用户自定义名称（画布名、素材名之类）不能翻译，那种由生产者在
-        # metadata 里显式标 `display_name_user_content: True` 退出本地化。注意
-        # task_display 全部由服务端构造、请求体注入不进来，所以这个标记必须是后端
-        # 自己打的，不能改成读客户端字段。
+        # Only genuine user-defined names (canvas names, asset names, etc.) must not be translated; those are opted out of localization by the producer
+        # explicitly marking `display_name_user_content: True` in metadata. Note that
+        # task_display is entirely constructed server-side and cannot be injected through the request body, so this marker must be set by the backend
+        # itself and must not be changed to read a client field.
         "display_name_localizable": not bool(metadata.get("display_name_user_content")),
         **_current_task_message_fields(t.metadata),
     }
@@ -328,7 +328,7 @@ def _remaining(limit: int | None, active: int) -> int | None:
 
 @router.get("/projects/{project}/tasks")
 async def list_project_tasks(project: str, user: dict = Depends(get_api_user)):
-    """列出单个项目的任务。生产多节点路径由 OpenResty 路由到项目 home node。"""
+    """List the tasks of a single project. In production multi-node paths OpenResty routes to the project's home node."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="viewer"
     )
@@ -340,7 +340,7 @@ async def list_project_tasks(project: str, user: dict = Depends(get_api_user)):
 
 @router.get("/projects/{project}/tasks/limits")
 async def get_project_task_limits(project: str, user: dict = Depends(get_api_user)):
-    """查询单个项目各队列的项目池和当前用户额度。"""
+    """Query the project pools of each queue and the current user's quota for a single project."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="viewer"
     )
@@ -378,7 +378,7 @@ async def get_project_task_limits(project: str, user: dict = Depends(get_api_use
 async def clear_project_completed_tasks(
     project: str, user: dict = Depends(get_api_user)
 ):
-    """删除单个项目的已完成任务记录。"""
+    """Delete the completed task records of a single project."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="editor"
     )
@@ -410,14 +410,14 @@ async def get_project_task(
     task_type: str,
     episode: int,
     beat_num: int = Query(
-        None, description="Beat 编号（single_video 等按 beat 区分的任务需要）"
+        None, description="Beat number (needed for per-beat tasks such as single_video)"
     ),
     scope: str | None = Query(
-        None, description="任务作用域（mode_key、grid_index 等）"
+        None, description="Task scope (mode_key, grid_index, etc.)"
     ),
     user: dict = Depends(get_api_user),
 ):
-    """查询单个项目内指定任务的状态。"""
+    """Query the status of a specified task within a single project."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="viewer"
     )
@@ -450,7 +450,7 @@ async def stream_project_tasks(
     ),
     user: dict = Depends(get_api_user_or_query),
 ):
-    """项目级 SSE 任务流。OpenResty 可按 project_id 路由到 home node。"""
+    """Project-level SSE task stream. OpenResty can route by project_id to the home node."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="viewer"
     )
@@ -538,7 +538,7 @@ async def stream_project_task(
     interval: float = Query(2.0, ge=0.5, le=10.0),
     user: dict = Depends(get_api_user_or_query),
 ):
-    """项目级单任务 SSE 端点。"""
+    """Project-level single-task SSE endpoint."""
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="viewer"
     )
@@ -632,19 +632,19 @@ async def cancel_project_task_route(
     task_type: str,
     episode: int,
     beat_num: int = Query(
-        None, description="Beat 编号（single_video 等按 beat 区分的任务需要）"
+        None, description="Beat number (needed for per-beat tasks such as single_video)"
     ),
     scope: str | None = Query(
-        None, description="任务作用域（mode_key、grid_index 等）"
+        None, description="Task scope (mode_key, grid_index, etc.)"
     ),
-    force: bool = Query(False, description="确认终止已开始执行的任务"),
-    acknowledge_no_refund: bool = Query(False, description="确认运行中终止不退积分"),
+    force: bool = Query(False, description="Confirm terminating a task that has already started executing"),
+    acknowledge_no_refund: bool = Query(False, description="Confirm that terminating while running does not refund credits"),
     user: dict = Depends(get_api_user),
 ):
-    """终止一个项目任务。
+    """Terminate a project task.
 
-    队列态任务通过原子状态迁移取消并退款。运行中任务首次请求返回 409，
-    只有再次明确确认“不退款”后才发送协作取消标记和 Celery revoke。
+    Queued tasks are cancelled with an atomic state transition and refunded. For a running task the first request returns 409,
+    and the cooperative-cancel marker and Celery revoke are sent only after the 'no refund' is explicitly confirmed again.
     """
     ctx = await resolve_project_context(
         user=user, project_id=project, required_role="editor"

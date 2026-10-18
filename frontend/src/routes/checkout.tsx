@@ -100,7 +100,7 @@ export function CheckoutPage() {
     () => sessionStorage.getItem(PAYMENT_RETURN_ORDER_ID_KEY)?.trim() || null,
     [],
   );
-  const language = i18n.resolvedLanguage ?? i18n.language ?? "zh";
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
   const username = useAuthStore((state) => state.username) ?? t("checkout.account");
   const packagesQuery = useRechargePackages();
   const customRechargeQuery = useCustomRechargeConfig(draft?.kind === "custom");

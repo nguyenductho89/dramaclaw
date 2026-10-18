@@ -10,8 +10,8 @@ def test_canvas_scene_ref_preserves_reference_mode_without_label_variant() -> No
                 {
                     "beat_number": 8,
                     "image_path": "/tmp/background.png",
-                    "base_id": "时光书屋",
-                    "label": "背景",
+                    "base_id": "time_bookshop",
+                    "label": "background",
                     "source_level": "selected_background_image",
                     "reference_mode": "material_only",
                 }
@@ -23,7 +23,7 @@ def test_canvas_scene_ref_preserves_reference_mode_without_label_variant() -> No
     ref = refs[1][0]
 
     assert ref.asset_type == "scene"
-    assert ref.base_id == "时光书屋"
+    assert ref.base_id == "time_bookshop"
     assert ref.variant_id is None
     assert ref.reference_mode == "material_only"
     assert ref.source_level == "selected_background_image"
@@ -37,8 +37,8 @@ def test_canvas_scene_ref_keeps_explicit_variant_id() -> None:
                 {
                     "panel_index": 0,
                     "image_path": "/tmp/director.png",
-                    "base_id": "时光书屋",
-                    "label": "背景",
+                    "base_id": "time_bookshop",
+                    "label": "background",
                     "variant_id": "director_env_only_b08",
                     "source_level": "selected_background_image",
                 }

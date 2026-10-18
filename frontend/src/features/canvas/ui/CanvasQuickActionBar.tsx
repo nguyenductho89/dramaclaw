@@ -16,7 +16,7 @@ import { useCanvasToolStore } from './canvasToolStore';
 
 type QuickPanel = 'add' | 'tool' | 'history' | 'shortcuts' | 'help';
 
-// 悬停即开 / 离开延迟关闭的轻量 popover 面板（区别于 history 那种 modal）。
+// A lightweight popover panel that opens on hover / closes with a delay on leave (unlike the modal of history).
 const HOVER_POPOVER_PANELS: ReadonlySet<QuickPanel> = new Set(['add']);
 const ANCHORED_POPOVER_PANELS: ReadonlySet<QuickPanel> = new Set([
   'add',
@@ -46,7 +46,7 @@ interface QuickActionDef {
 
 const ACTIONS: QuickActionDef[] = [
   { key: 'add', icon: Plus, labelKey: 'canvas.quickbar.addNode', primary: true },
-  // 指针工具。图标跟着当前工具走（见下方 resolveIcon），所以这里的 icon 只是占位。
+  // The pointer tool. The icon follows the current tool (see resolveIcon below), so the icon here is only a placeholder.
   { key: 'tool', icon: MousePointer2, labelKey: 'canvas.toolbar.toolGroupLabel' },
   {
     key: 'history',
@@ -194,10 +194,10 @@ export function CanvasQuickActionBar({
             {ACTIONS.map((action) => {
               const { key, labelKey, tooltipKey, primary } = action;
               const active = openPanel === key;
-              // 指针工具的图标就是当前工具本身 —— 收起菜单后还得一眼看出现在是抓手。
+              // The pointer tool's icon is the current tool itself - after the menu collapses you still need to see at a glance that it is now the hand.
               const Icon =
                 key === 'tool' ? (handToolActive ? Hand : MousePointer2) : action.icon;
-              // 指针工具的悬浮提示报当前工具和它的快捷键，别只报「指针工具」这个类别名。
+              // The pointer tool's hover hint reports the current tool and its shortcut, not just the category name "Pointer tool".
               const tooltip =
                 key === 'tool'
                   ? handToolActive
@@ -206,7 +206,7 @@ export function CanvasQuickActionBar({
                   : tooltipKey && t(tooltipKey);
               // The "+" is always a white primary chip; the other two only fill
               // white while their panel is open (libtv keyboard-highlight style).
-              // 指针工具多一条：抓手是「画布现在不听左键选择」的状态，菜单关了也要亮着。
+              // The pointer tool has one more entry: the hand is the state of "the canvas currently ignoring left-button selection", and it must stay lit even when the menu is closed.
               const filled = primary || active || (key === 'tool' && handToolActive);
               return (
                 <span key={key} className="group relative inline-flex">
@@ -231,7 +231,7 @@ export function CanvasQuickActionBar({
                       }`}
                     />
                   </button>
-                  {/* 面板开着就别再弹提示了：两者都锚在按钮正上方，会糊在一起。 */}
+                  {/* Do not pop a hint again while the panel is open: both anchor right above the button and would smear together. */}
                   {tooltip && !active && (
                     <span
                       className={`pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-white/[0.08] bg-[#11151d]/95 px-2 py-1 text-[11px] leading-none text-white/78 opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.32)] transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
@@ -241,7 +241,7 @@ export function CanvasQuickActionBar({
                       {tooltip}
                     </span>
                   )}
-                  {/* 挂在按钮自己的 span 上，菜单跟着按钮走，不用去算它在这一排里的偏移。 */}
+                  {/* Attached to the button's own span, so the menu follows the button without computing its offset within this row. */}
                   {key === 'tool' && active && (
                     <div className={`absolute left-0 z-20 ${popoverAnchorClass}`}>
                       <div className={popoverEnterClass}>

@@ -133,7 +133,7 @@ def build_chapter_preview(
     for chapter in chapters:
         content = getattr(chapter, "content", "") or ""
         first_line = content.splitlines()[0].strip() if content else ""
-        title = getattr(chapter, "title", None) or first_line or f"第{chapter.number}章"
+        title = getattr(chapter, "title", None) or first_line or f"Chapter {chapter.number}"
         chapter_payload = {
             "number": chapter.number,
             "title": title,

@@ -123,7 +123,7 @@ async def build_episode_zip_file(
 
     zip_dir = project_dir / "videos" / "episodes"
     zip_dir.mkdir(parents=True, exist_ok=True)
-    zip_path = zip_dir / f"{project_name}_第{episode}集.zip"
+    zip_path = zip_dir / f"{project_name}_ep{episode:02d}.zip"
 
     def _write_zip_file() -> None:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zip_file:

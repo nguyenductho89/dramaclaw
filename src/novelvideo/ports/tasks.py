@@ -15,10 +15,10 @@ class QueuedTask:
 
 
 def _selected_beat_numbers(payload: dict[str, Any]) -> list[int]:
-    """把入队 payload 里的选中 beat 号挖出来，去重保序。
+    """Extract the selected beat numbers from the enqueue payload, de-duplicated and order-preserving.
 
-    选中 Beats 再生（``sketch_regen`` / ``selected_regen``）把 beat 列表放在
-    ``payload["config"]["selected_beat_numbers"]``，个别调用方放在顶层，两处都认。
+    Selected-Beats regeneration (``sketch_regen`` / ``selected_regen``) puts the beat list in
+    ``payload["config"]["selected_beat_numbers"]``; some callers put it at the top level, and both places are honored.
     """
     for container in (payload, payload.get("config")):
         if not isinstance(container, dict):
@@ -63,9 +63,9 @@ def display_metadata_for_task(task_type: str, payload: dict[str, Any] | None) ->
         if value:
             metadata[key] = value
 
-    # 布尔标记不能进上面那个字符串循环：str(False) == "False" 是真值，
-    # 一路 strip 下来会变成字符串 "False" 存进 metadata，_serialize_task 再
-    # bool() 一下就成了 True——用户自定义名反而被判成可本地化，正好搞反。
+    # Boolean flags must not go through the string loop above: str(False) == "False" is truthy,
+    # and after strip it would be stored in metadata as the string "False"; _serialize_task would then
+    # call bool() on it and get True -- a user-defined name would be judged localizable, exactly backwards.
     if payload.get("display_name_user_content") is True:
         metadata["display_name_user_content"] = True
 
@@ -75,9 +75,9 @@ def display_metadata_for_task(task_type: str, payload: dict[str, Any] | None) ->
             if value:
                 metadata[key] = value
 
-    # 选中 Beats 再生的任务行 beat_num 是 None，scope 又是 mode_key + beats 的
-    # sha1，前端反推不出来。不留下这份名单的话，每个 beat 的草图 / 渲染图面板都会
-    # 认领同一条任务，一个 beat 在跑、整集都在转圈。
+    # The task row of a selected-Beats regeneration has beat_num None, and its scope is a sha1 of mode_key + beats,
+    # which the frontend cannot reverse. Without keeping this list, every beat's sketch / render panel would
+    # claim the same task, and one running beat would make the whole episode spin.
     beat_numbers = _selected_beat_numbers(payload)
     if beat_numbers:
         metadata["beat_numbers"] = beat_numbers

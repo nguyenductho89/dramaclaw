@@ -27,8 +27,8 @@ function basename(url: string): string {
 }
 
 /**
- * 模拟粘贴：源数据先经 withholdForeignAssetUrls 扣下外项目 URL，扣下后的数据就是
- * 进 store 的那份（这里当作 live 数据），再交给 migratePastedNodeAssets。
+ * Simulates a paste: the source data first goes through withholdForeignAssetUrls to withhold foreign project URLs, and the withheld data is
+ * the copy that enters the store (treated as live data here), which is then handed to migratePastedNodeAssets.
  */
 function paste(
   entries: Array<{ id: string; data: Record<string, unknown> }>,

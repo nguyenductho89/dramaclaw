@@ -57,7 +57,7 @@ describe("release notification query", () => {
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(seenLocale).toBe("en");
-    expect(queryKeys.releaseNotifications("zh")).not.toEqual(queryKeys.releaseNotifications("en"));
+    expect(queryKeys.releaseNotifications("vi")).not.toEqual(queryKeys.releaseNotifications("en"));
   });
 
   it("normalizes fetch locale before calling the endpoint", async () => {
@@ -69,13 +69,12 @@ describe("release notification query", () => {
       }),
     );
 
-    await fetchReleaseNotifications("zh-CN");
+    await fetchReleaseNotifications("vi-VN");
 
-    expect(seenLocale).toBe("zh");
+    expect(seenLocale).toBe("vi");
   });
 
-  // Release notes exist in zh and en only. A locale we don't publish notes for
-  // gets English, not Chinese — `vi` used to land on Chinese release notes here.
+  // Release notes exist in en and vi only. A locale we don't publish notes for gets English.
   it("defaults missing and unknown locales to en", async () => {
     const seenLocales: string[] = [];
     server.use(
@@ -87,7 +86,7 @@ describe("release notification query", () => {
 
     await fetchReleaseNotifications(undefined);
     await fetchReleaseNotifications("fr-FR");
-    await fetchReleaseNotifications("vi-VN");
+    await fetchReleaseNotifications("zh-CN");
 
     expect(seenLocales.length).toBeGreaterThanOrEqual(3);
     expect(seenLocales.every((locale) => locale === "en")).toBe(true);

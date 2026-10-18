@@ -34,7 +34,7 @@ describe('extractUpstreamContent workflow metadata', () => {
       type: CANVAS_NODE_TYPES.textAnnotation,
       position: { x: 0, y: 0 },
       data: {
-        content: '广告脚本',
+        content: 'Ad script',
         workflowCatalog: { stepId: 'ad-brief' },
       },
     } as CanvasNode;
@@ -42,7 +42,7 @@ describe('extractUpstreamContent workflow metadata', () => {
     expect(extractUpstreamContent(node)).toMatchObject({
       nodeId: 'brief-node',
       workflowStepId: 'ad-brief',
-      text: '广告脚本',
+      text: 'Ad script',
     });
   });
 });

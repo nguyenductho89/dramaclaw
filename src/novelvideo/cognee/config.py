@@ -1,9 +1,9 @@
-"""Cognee 配置工具。
+"""Cognee configuration helpers.
 
-管理 Cognee 的初始化和配置。
-自动从 .env 文件加载环境变量。
+Manages Cognee initialization and configuration.
+Automatically loads environment variables from the .env file.
 
-重要：必须在导入 cognee 之前设置环境变量，因为 Cognee 在导入时会读取。
+Important: environment variables must be set before cognee is imported, because Cognee reads them at import time.
 """
 
 import contextvars
@@ -49,11 +49,11 @@ from novelvideo.shared.billing_errors import (
 from novelvideo.shared.env_guard import preserve_st_env
 from novelvideo.shared.runtime_env import is_ce_effective, uses_local_ce_runtime
 
-# 抑制 cognee/litellm 内部的 Pydantic 序列化警告
-# （豆包等非 OpenAI provider 的 Message 字段数与 cognee 期望不同，不影响功能）
+# Suppress internal Pydantic serialization warnings from cognee/litellm
+# (non-OpenAI providers return Message objects with a different field count than cognee expects; this does not affect functionality)
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 
-# 确保加载 .env 文件（优先使用仓库根目录）
+# Make sure the .env file is loaded (prefer the repository root)
 project_root = Path(__file__).resolve().parents[3]
 load_dotenv(project_root / ".env", override=False)
 load_dotenv(override=False)
@@ -229,8 +229,8 @@ def _import_cognee_without_logging_takeover():
     return loaded
 
 
-# 在导入 cognee 之前设置环境变量（Cognee 在导入时会读取）
-# 从 .env 读取配置并设置环境变量
+# Set environment variables before importing cognee (Cognee reads them at import time)
+# Read configuration from .env and set the environment variables
 def _resolve_llm_provider(default: str = DEFAULT_COGNEE_LLM_PROVIDER) -> str:
     """Return the product transport provider.
 
@@ -262,16 +262,16 @@ def _to_cognee_provider(provider: str) -> str:
 
 
 def _normalize_llm_model(provider: str, model: str) -> str:
-    """规范化 LLM 模型名称。"""
+    """Normalize the LLM model name."""
     if provider == "gemini":
-        # Cognee 原生支持 gemini/ 前缀
+        # Cognee natively supports the gemini/ prefix
         if not model.startswith("gemini/"):
             return f"gemini/{model}"
         return model
     if _uses_newapi_gateway(provider):
-        # Cognee 底层使用 LiteLLM。裸 gemini-* 会被 LiteLLM 误判为
-        # Gemini/Vertex 直连模型，从而要求 Google ADC。这里仅给 LiteLLM
-        # 标明 OpenAI-compatible 路由；SuperTale .env 仍只暴露 newAPI 逻辑模型名。
+        # Cognee uses LiteLLM underneath. A bare gemini-* name is misjudged by LiteLLM as
+        # a direct Gemini/Vertex model and would require Google ADC. This only tells LiteLLM
+        # to use the OpenAI-compatible route; the SuperTale .env still exposes only newAPI logical model names.
         if not model.startswith(("openai/", "custom/")):
             return f"openai/{model}"
     return model
@@ -297,13 +297,13 @@ def _billing_model_name(model: str) -> str:
 
 
 def _is_openrouter_config(provider: str, model: str = "", endpoint: str = "") -> bool:
-    """判断当前配置是否指向 OpenRouter。"""
+    """Return whether the current configuration points at OpenRouter."""
     value = f"{provider} {model} {endpoint}".lower()
     return "openrouter" in value
 
 
 def _get_scoped_env(primary_key: str, fallback_key: str = "") -> str:
-    """读取 Cognee 专用配置，必要时回退到全局变量。"""
+    """Read Cognee-specific configuration, falling back to global variables when needed."""
     value = os.getenv(primary_key, "").strip()
     if value:
         return value
@@ -386,7 +386,7 @@ def _resolve_llm_api_key(llm_provider: str, llm_model: str) -> str:
 
 
 def _set_or_clear_env(key: str, value: str) -> None:
-    """设置环境变量；空值时清理，避免不同 provider 之间残留配置。"""
+    """Set an environment variable; clear it when the value is empty so no stale config lingers between providers."""
     if value:
         os.environ[key] = value
     else:
@@ -409,7 +409,7 @@ def _clear_cognee_embedding_config_cache() -> None:
 
 
 def _clear_cognee_llm_config_cache() -> None:
-    """清 Cognee get_llm_config 的 lru_cache;不清则换 key 后仍用旧凭据。"""
+    """Clear the lru_cache of Cognee get_llm_config; otherwise old credentials are still used after the key changes."""
     try:
         mod = sys.modules.get("cognee.infrastructure.llm.config")
         if mod is None:
@@ -455,7 +455,7 @@ def _install_cognee_pipeline_concurrency_on_import() -> None:
 
 
 def _patch_cognee_embedding_timeout() -> None:
-    """将 Cognee embedding 的硬编码 30s 超时提升为项目可控值。"""
+    """Raise the hard-coded 30s Cognee embedding timeout to a project-controlled value."""
     try:
         import asyncio as _asyncio
     except Exception:
@@ -1130,7 +1130,7 @@ def apply_cognee_project_storage_context(
 
 
 def _resolve_embedding_provider(llm_provider: str) -> tuple:
-    """解析 embedding 配置，返回 (provider, model, dimensions, batch_size)。"""
+    """Resolve the embedding configuration and return (provider, model, dimensions, batch_size)."""
     from novelvideo.model_gateway_settings import get_effective_cognee_embedding_config
 
     effective = get_effective_cognee_embedding_config(llm_provider=llm_provider)
@@ -1175,7 +1175,7 @@ def _apply_embedding_runtime_defaults(llm_provider: str) -> None:
 
 
 def _apply_llm_env(provider: str, model: str, api_key: str) -> None:
-    """应用 LLM 相关环境变量。"""
+    """Apply LLM-related environment variables."""
     llm_endpoint = _get_endpoint_env(provider, "COGNEE_LLM_ENDPOINT", "LLM_ENDPOINT")
     llm_api_version = _get_scoped_env("COGNEE_LLM_API_VERSION", "LLM_API_VERSION")
     cognee_provider = _to_cognee_provider(provider)
@@ -1206,7 +1206,7 @@ def _apply_llm_env(provider: str, model: str, api_key: str) -> None:
 
 
 def _apply_embedding_env(llm_provider: str, api_key: str) -> tuple[str, str, str, str]:
-    """应用 Embedding 相关环境变量。"""
+    """Apply embedding-related environment variables."""
     (
         embedding_provider,
         embedding_model,
@@ -1316,15 +1316,15 @@ if COGNEE_AVAILABLE and is_ce_effective() and api_key:
 
 
 def init_cognee() -> None:
-    """初始化 Cognee 配置。
+    """Initialize the Cognee configuration.
 
-    CE 从 settings.db 解析网关，EE 从启动环境解析网关。Cognee 本身要求
-    通过进程环境初始化第三方客户端，因此该桥接只允许在进程启动配置未变化
-    时重复执行；CE 配置变化后必须重启。
+    CE resolves the gateway from settings.db, EE from the startup environment. Cognee itself requires
+    third-party clients to be initialized through the process environment, so this bridge may only be
+    run repeatedly while the process startup configuration is unchanged; after a CE configuration change a restart is required.
 
-    重要：必须在导入 cognee 之前设置环境变量，因为 Cognee 在导入时会读取环境变量。
+    Important: environment variables must be set before cognee is imported, because Cognee reads them at import time.
 
-    EE 可使用的部署环境变量:
+    Deployment environment variables usable by EE:
         COGNEE_LLM_MODEL=DC-cognee-LLM
         NEWAPI_API_KEY=your_key
         NEWAPI_BASE_URL=https://relayclaw.cdnfg.com/v1
@@ -1335,8 +1335,8 @@ def init_cognee() -> None:
         raise ImportError("cognee is not installed. Run: pip install cognee")
     if cognee_gateway_restart_required():
         raise RuntimeError(
-            "模型网关配置已更新，Cognee 仍持有启动时的旧配置；"
-            "请重启 DramaClaw 后再使用小说知识库。"
+            "The model gateway configuration was updated, but Cognee still holds the old configuration from startup; "
+            "restart DramaClaw before using the novel knowledge base."
         )
 
     from novelvideo.model_gateway_runtime import current_model_gateway_context
@@ -1357,8 +1357,8 @@ def init_cognee() -> None:
     )
     if not api_key:
         raise ValueError(
-            "未设置 Cognee LLM Key。请配置 DramaClaw 模型网关；"
-            "CE 在设置页配置，EE 通过 NEWAPI_API_KEY 配置。"
+            "Cognee LLM key is not set. Configure the DramaClaw model gateway; "
+            "CE is configured on the settings page, EE through NEWAPI_API_KEY."
         )
 
     llm_model = _resolve_llm_model(llm_provider)
@@ -1373,7 +1373,7 @@ def init_cognee() -> None:
 
     _apply_cognee_runtime_defaults()
 
-    # 设置 cognee.config（虽然 Cognee 主要从环境变量读取，但设置 config 作为备份）
+    # Set cognee.config (Cognee mainly reads environment variables, but set config as a backup)
     cognee_llm_provider = _to_cognee_provider(llm_provider)
     cognee_provider = "gemini" if llm_provider == "gemini" else cognee_llm_provider
     cognee.config.llm_provider = cognee_provider
@@ -1413,19 +1413,19 @@ def configure_cognee(
     embedding_model: str = "text-embedding-3-small",
     api_key: Optional[str] = None,
 ) -> None:
-    """配置 Cognee（已废弃，请使用 init_cognee）。
+    """Configure Cognee (deprecated, use init_cognee).
 
     Args:
-        llm_provider: LLM 提供商（openai, anthropic, gemini）
-        llm_model: LLM 模型名称
-        embedding_model: 嵌入模型名称
-        api_key: API 密钥（默认从环境变量读取）
+        llm_provider: LLM provider (openai, anthropic, gemini)
+        llm_model: LLM model name
+        embedding_model: Embedding model name
+        api_key: API key (read from the environment by default)
     """
     init_cognee()
 
 
 def get_cognee_status() -> dict:
-    """获取 Cognee 状态信息。"""
+    """Return Cognee status information."""
     if not COGNEE_AVAILABLE:
         return {"available": False, "error": "cognee not installed"}
 

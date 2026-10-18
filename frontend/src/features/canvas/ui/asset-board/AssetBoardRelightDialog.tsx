@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { type ReactElement } from 'react';
 
 import { type CanvasNode } from '@/features/canvas/domain/canvasNodes';
@@ -9,23 +10,23 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { AssetBoardEditorDialog, useCloseOnce } from './AssetBoardEditorDialog';
 
 export interface AssetBoardRelightDialogProps {
-  /** 源图片节点。 */
+  /** The source image node. */
   node: CanvasNode;
-  /** 已解析的图源。 */
+  /** The resolved image source. */
   imageSource: string;
-  /** 关闭弹窗（提交成功后内容层也会调用）。 */
+  /** Close the dialog (the content layer also calls it after a successful submit). */
   onClose: () => void;
-  /** 提交成功回调，入参新结果节点 id（默认已请求视口预定位，这里可再叠 busy 态收尾）。 */
+  /** Submit success callback, with the new result node id as argument (viewport pre-positioning is requested by default; a busy-state wrap-up can be layered on here). */
   onSubmitted?: (nodeId: string) => void;
 }
 
 /**
- * 故事板详情的「重打光」弹窗：居中弹窗里放**工作流那套完整的打光编辑器**
- * （光球方向拖拽 + 亮度/色温 + 轮廓光 + 智能模式与预设 + 算力与提交），
- * 而不是详情内联的简化配置行。
+ * The "Relight" dialog of the storyboard detail: a centered dialog holding **the workflow's complete lighting editor**
+ * (light-ball direction drag + brightness/color temperature + rim light + smart mode and presets + compute cost and submit),
+ * rather than the simplified inline config row in the detail.
  *
- * 提交后的收尾同多角度弹窗：请求视口预定位而非选中（见
- * AssetBoardMultiAngleDialog 的说明）。
+ * The wrap-up after submission is the same as the multi-angle dialog: request viewport pre-positioning rather than selection (see the note of
+ * AssetBoardMultiAngleDialog).
  */
 export function AssetBoardRelightDialog({
   node,
@@ -33,10 +34,10 @@ export function AssetBoardRelightDialog({
   onClose,
   onSubmitted,
 }: AssetBoardRelightDialogProps): ReactElement {
-  // 外壳与内容层必须共用同一个包装后的关闭回调，见 useCloseOnce 的说明。
+  // The shell and the content layer must share the same wrapped close callback, see the note on useCloseOnce.
   const close = useCloseOnce(onClose);
   return (
-    <AssetBoardEditorDialog label="打光效果编辑器" onClose={close}>
+    <AssetBoardEditorDialog label={i18n.t('canvas.assetBoard.lightEditor')} onClose={close}>
       <LightEditorContent
         node={node}
         imageSource={imageSource}

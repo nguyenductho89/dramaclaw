@@ -41,7 +41,7 @@ describe("script generation query", () => {
           return HttpResponse.json({
             ok: false,
             code: "identity_plan_required",
-            error: "请先规划本集身份",
+            error: "Plan the identities of this episode first",
           });
         },
       ),
@@ -63,7 +63,7 @@ describe("script generation query", () => {
     expect(result.current.data).toEqual({
       ok: false,
       code: "identity_plan_required",
-      error: "请先规划本集身份",
+      error: "Plan the identities of this episode first",
     });
   });
 
@@ -75,7 +75,7 @@ describe("script generation query", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "计费规则未配置，请联系管理员设置积分规则",
+              error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
               data: {
                 error_code: "BILLING_RULE_NOT_CONFIGURED",
                 billing_kind: "feature",
@@ -119,7 +119,7 @@ describe("saving a script refreshes the episode list beat count", () => {
       http.get("http://localhost:3000/api/v1/projects/demo/episodes", () =>
         HttpResponse.json({
           ok: true,
-          data: [{ number: 1, title: "第一集", beat_count: beatCount }],
+          data: [{ number: 1, title: "Episode One", beat_count: beatCount }],
         }),
       ),
       http.put(

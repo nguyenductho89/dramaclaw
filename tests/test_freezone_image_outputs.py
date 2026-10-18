@@ -119,7 +119,7 @@ async def test_animate_uses_locked_frame_and_requests_gif(
     )
     assert captured["image_animate_gif"] is True
     assert captured["reference_items"] == [
-        {"type": "image", "path": str(source.resolve()), "role": "首帧"}
+        {"type": "image", "path": str(source.resolve()), "role": "first frame"}
     ]
     assert captured["generate_audio"] is False
     assert captured["duration_seconds"] == 4

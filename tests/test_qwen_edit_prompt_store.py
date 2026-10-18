@@ -32,7 +32,7 @@ def test_round_trip_multi_character(tmp_path):
         1,
         6,
         scene_prompt="Convert Picture 1.",
-        inpaint_prompts={"Tesla_1893": "Replace the person...", "老师": "Replace the person..."},
+        inpaint_prompts={"Tesla_1893": "Replace the person...", "teacher": "Replace the person..."},
         source="manual",
     )
     loaded = load_qwen_edit_prompts(tmp_path, 1, 6)

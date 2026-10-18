@@ -405,7 +405,7 @@ def test_generate_seedance2_prompt_requires_next_beat_for_first_last_mode(
     assert response.status_code == 200
     assert response.json() == {
         "ok": False,
-        "error": "这是最后一个 Beat，无法使用首尾帧模式",
+        "error": "This is the last Beat; first+last-frame mode cannot be used",
     }
     assert store.updates == []
 
@@ -550,7 +550,7 @@ def test_generate_beat_video_prompt_enqueues_project_task_in_celery_mode(
         "field": "video_prompt",
         "language": "en",
         "output_dir": str(tmp_path),
-        "display_name": "生成提示词 · EP1 / Beat 1",
+        "display_name": "Generate prompt · EP1 / Beat 1",
     }
     assert store.updates == []
 
@@ -626,7 +626,7 @@ def test_generate_beat_video_prompt_rejects_missing_media_before_enqueue(
     assert response.json() == {
         "ok": False,
         "code": "VIDEO_PROMPT_PREREQUISITE_REQUIRED",
-        "error": "Beat 1 缺少草图或首帧，请先生成草图或预览",
+        "error": "Beat 1 is missing a sketch or first frame. Generate a sketch or preview first",
     }
     assert enqueue_calls == 0
 
@@ -658,7 +658,7 @@ async def test_generate_beat_video_prompt_does_not_save_fallback_on_agent_failur
     monkeypatch.setattr(
         global_video_optimizer,
         "_build_color_appearance_map",
-        lambda *args, **kwargs: {"#00ff00 GREEN": {"appearance": "黑衣男子"}},
+        lambda *args, **kwargs: {"#00ff00 GREEN": {"appearance": "man in black"}},
     )
 
     store = DummySqliteStore(
@@ -667,7 +667,7 @@ async def test_generate_beat_video_prompt_does_not_save_fallback_on_agent_failur
                 "beat_number": 1,
                 "video_mode": "first_frame",
                 "video_prompt": "old prompt",
-                "visual_description": "一个人推开门向前走",
+                "visual_description": "A person pushes open the door and walks forward",
             }
         ]
     )
@@ -681,7 +681,7 @@ async def test_generate_beat_video_prompt_does_not_save_fallback_on_agent_failur
             language="en",
         )
 
-    assert captured["character_color_map"] == {"#00ff00 GREEN": {"appearance": "黑衣男子"}}
+    assert captured["character_color_map"] == {"#00ff00 GREEN": {"appearance": "man in black"}}
     assert store.beats[0]["video_prompt"] == "old prompt"
     assert store.updates == []
 
@@ -711,7 +711,7 @@ async def test_generate_beat_video_prompt_uses_superpower_single_beat_optimizer(
                 **kwargs,
             }
         )
-        return {"#00ff00 GREEN": {"appearance": "黑衣男子"}}
+        return {"#00ff00 GREEN": {"appearance": "man in black"}}
 
     class FakeOptimizer:
         async def optimize_single_beat(self, **kwargs):
@@ -734,22 +734,22 @@ async def test_generate_beat_video_prompt_uses_superpower_single_beat_optimizer(
                 "beat_number": 1,
                 "video_mode": "first_frame",
                 "video_prompt": "old prompt",
-                "visual_description": "{{男主_青年}}推开墙砖",
+                "visual_description": "{{Hero_young_adult}} pushes open the wall brick",
             },
-            {"beat_number": 2, "visual_description": "下一个镜头"},
+            {"beat_number": 2, "visual_description": "Next shot"},
         ],
         characters=[
             {
-                "name": "男主",
+                "name": "Hero",
                 "identities": [
                     {
-                        "identity_id": "男主_青年",
-                        "appearance_details": "黑衣",
+                        "identity_id": "Hero_young_adult",
+                        "appearance_details": "black clothes",
                     }
                 ],
             }
         ],
-        sketch_colors={"男主_青年": "#00ff00 GREEN"},
+        sketch_colors={"Hero_young_adult": "#00ff00 GREEN"},
     )
 
     result = await scripts._generate_and_save_beat_video_prompt(
@@ -764,7 +764,7 @@ async def test_generate_beat_video_prompt_uses_superpower_single_beat_optimizer(
     assert result["prompt"] == "superpower prompt"
     assert optimizer_seen["sketch_image_path"] == str(sketch_path)
     assert optimizer_seen["character_color_map"] == {
-        "#00ff00 GREEN": {"appearance": "黑衣男子"}
+        "#00ff00 GREEN": {"appearance": "man in black"}
     }
     assert optimizer_seen["next_beat"]["beat_number"] == 2
     assert map_seen["project"] == "demo"
@@ -849,6 +849,6 @@ def test_generate_beat_video_prompt_requires_next_beat_for_keyframe(
     assert response.status_code == 200
     assert response.json() == {
         "ok": False,
-        "error": "这是最后一个 Beat，无法生成首尾帧过渡提示词",
+        "error": "This is the last Beat; a first+last-frame transition prompt cannot be generated",
     }
     assert store.updates == []

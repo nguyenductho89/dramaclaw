@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 import { create } from 'zustand';
 import {
@@ -10,7 +10,7 @@ import {
   type CanvasNode,
 } from '@/features/canvas/domain/canvasNodes';
 
-/** 拖拽节点 → 资产时用于「同类型」匹配的媒体类型。 */
+/** The media type used for "same type" matching when dragging a node -> asset. */
 export type DropMediaType = 'image' | 'video' | 'audio' | 'model';
 
 function stringValue(value: unknown): string | null {
@@ -47,16 +47,16 @@ export function modelSourceUrlFromNodeData(data: Record<string, unknown>): strin
 }
 
 /**
- * 从画布节点推断出可用于「拖拽替换素材」的媒体类型与资源地址。
- * 仅图片/视频/音频/3GS 模型节点可参与替换,其余返回 null。
+ * Infer from a canvas node the media type and resource address usable for "drag to replace material".
+ * Only image/video/audio/3GS model nodes can take part in replacement; the rest return null.
  */
 export function deriveNodeDropInfo(node: CanvasNode): {
   mediaType: DropMediaType;
   sourceUrl: string | null;
-  /** 用于拖拽预览浮层的缩略图地址(图片本身 / 视频或模型的封面);音频无缩略图。 */
+  /** Thumbnail address for the drag preview overlay (the image itself / the cover of a video or model); audio has no thumbnail. */
   thumbUrl: string | null;
   label: string;
-  /** 若节点仍携带完整导演 bundle,提交时优先按 bundle 写回;普通图会在 commit 层打包。 */
+  /** If the node still carries the full director bundle, commit writes back by the bundle first; ordinary images are packaged at the commit layer. */
   directorControlBundle: Record<string, unknown> | null;
 } | null {
   const data = (node.data ?? {}) as Record<string, unknown>;
@@ -102,41 +102,41 @@ export function deriveNodeDropInfo(node: CanvasNode): {
 }
 
 export interface ActiveNodeDrag {
-  /** 被拖拽的画布节点 id。 */
+  /** The id of the canvas node being dragged. */
   nodeId: string;
-  /** 节点的媒体类型,用于和侧栏资产做同类型匹配。 */
+  /** The node's media type, used for same-type matching with sidebar assets. */
   mediaType: DropMediaType;
-  /** 节点当前可提交的资源地址(图片/视频/音频/模型)。 */
+  /** The resource address the node can currently submit (image/video/audio/model). */
   sourceUrl: string | null;
-  /** 拖拽预览浮层用的缩略图地址;音频等无缩略图时为 null。 */
+  /** Thumbnail address for the drag preview overlay; null when there is none, such as for audio. */
   thumbUrl: string | null;
-  /** 节点显示名,用于确认文案。 */
+  /** The node display name, used for confirmation text. */
   label: string;
   directorControlBundle: Record<string, unknown> | null;
 }
 
-/** Canvas 把节点拖到侧栏某条资产上松手后,发给侧栏的替换请求。 */
+/** The replace request sent to the sidebar after a canvas node is dragged onto a sidebar asset and released. */
 export interface PendingAssetReplace {
   assetId: string;
   nodeId: string;
   sourceUrl: string;
   label: string;
   directorControlBundle: Record<string, unknown> | null;
-  /** 单调递增的信号,确保同一组合也能重复触发。 */
+  /** A monotonically increasing signal, ensuring the same combination can trigger repeatedly. */
   token: number;
 }
 
 interface AssetDropState {
-  /** 当前正在拖拽的节点信息;非拖拽时为 null。 */
+  /** Info of the node currently being dragged; null when not dragging. */
   activeDrag: ActiveNodeDrag | null;
-  /** 当前悬停且类型匹配的资产 id;用于侧栏画虚线框。 */
+  /** The id of the asset currently hovered with a matching type; used by the sidebar to draw a dashed frame. */
   hoverAssetId: string | null;
-  /** 松手后产生的替换请求;侧栏消费后置空。 */
+  /** The replace request produced after release; the sidebar clears it after consuming. */
   pendingReplace: PendingAssetReplace | null;
 
   beginDrag: (drag: ActiveNodeDrag) => void;
   setHoverAsset: (assetId: string | null) => void;
-  /** 结束拖拽。若 commit=true 且当前悬停有效,则生成一个 pendingReplace。 */
+  /** End the drag. If commit=true and the current hover is valid, generate a pendingReplace. */
   endDrag: (commit: boolean) => void;
   clearPendingReplace: () => void;
 }

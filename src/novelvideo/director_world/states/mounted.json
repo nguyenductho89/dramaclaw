@@ -1,7 +1,7 @@
 {
   "id": "mounted",
-  "label_zh": "骑乘",
+  "label": "Mounted",
   "pose": "narrow_sit",
   "body_height_offset": -0.2,
-  "description_zh": "跨坐在 mountable 道具的 attachment point 上"
+  "description": "Straddling the attachment point of a mountable prop"
 }

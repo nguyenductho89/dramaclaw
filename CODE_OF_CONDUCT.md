@@ -1,17 +1,9 @@
-# Contributor Covenant Code of Conduct · 贡献者公约行为准则
+# Contributor Covenant Code of Conduct
 
 DramaClaw adopts the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
-本项目采用 [贡献者公约 v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)。
 
 By participating — through issues, pull requests, discussions, or any other
 channel — you agree to uphold it. Reports go to **`conduct@dramaclaw.ai`**.
-参与本项目(issue、PR、讨论或任何渠道)即表示你同意遵守本准则。举报请联系 **`conduct@dramaclaw.ai`**。
-
-> English first, 简体中文在后。两份内容一致;如有歧义以 [官方英文原文](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) 为准。
-
----
-
-## English
 
 ### Our Pledge
 
@@ -127,83 +119,3 @@ For answers to common questions about this code of conduct, see the FAQ at
 
 [homepage]: https://www.contributor-covenant.org
 
----
-
-## 简体中文
-
-### 我们的承诺
-
-为了营造一个开放、热情的环境,作为贡献者和维护者,我们承诺:无论年龄、体型、
-身体健全与否、民族、性别认同和表达、经验水平、教育程度、社会与经济地位、国籍、
-个人外貌、种族、宗教或性取向如何,参与本项目和社区的每个人都能享有不受骚扰的体验。
-
-我们承诺以有助于建立开放、友好、多元、包容和健康社区的方式行事和互动。
-
-### 我们的准则
-
-有助于营造积极环境的行为包括但不限于:
-
-- 对他人表达同理心与善意
-- 尊重不同的观点、视角与经验
-- 提出并优雅地接受建设性反馈
-- 为自己的错误承担责任并向受影响者致歉,并从中汲取经验
-- 不仅着眼于个人,更着眼于整个社区的最大利益
-
-不可接受的行为包括但不限于:
-
-- 使用带有性暗示的言语或图像,以及任何形式的性关注或挑逗
-- 挑衅、侮辱或贬损性评论,以及人身或政治攻击
-- 公开或私下的骚扰
-- 未经明确许可,公布他人的私人信息,如住址或电子邮箱
-- 其他在专业场合中可被合理认定为不当的行为
-
-### 执行责任
-
-社区维护者有责任阐明并执行我们所认可的行为准则,并对任何他们认为不当、具有威胁性、
-冒犯性或有害的行为采取适当且公正的纠正措施。
-
-社区维护者有权也有责任删除、编辑或拒绝任何不符合本行为准则的评论、提交、代码、
-wiki 编辑、issue 及其他贡献,并在适当时说明采取此类措施的理由。
-
-### 适用范围
-
-本行为准则适用于所有社区空间;当个人正式代表社区出现在公共场合时同样适用。
-代表社区的情形包括:使用官方电子邮箱、通过官方社交媒体账号发布内容,或在线上/线下
-活动中担任指定代表等。
-
-### 执行
-
-如遇辱骂、骚扰或其他不可接受的行为,可向负责执行的社区维护者举报,联系方式为
-**`conduct@dramaclaw.ai`**。所有投诉都将得到及时且公正的审查与处理。
-
-所有社区维护者都有义务尊重任何事件举报者的隐私与安全。
-
-### 执行准则
-
-社区维护者将依据以下"社区影响准则",判定其认为违反本行为准则的行为的后果:
-
-**1. 纠正** —— *社区影响:* 使用不当言语或其他被认为不专业或不受欢迎的行为。
-*后果:* 由社区维护者发出私下的书面警告,说明违规性质并解释为何该行为不当。
-可能要求公开道歉。
-
-**2. 警告** —— *社区影响:* 通过单次事件或一系列行为造成的违规。*后果:* 就持续行为
-发出警告并说明后果。在指定期限内,不得与相关人员互动,包括主动联系执行行为准则者。
-这包括避免在社区空间以及社交媒体等外部渠道的互动。违反此规定可能导致临时或永久封禁。
-
-**3. 临时封禁** —— *社区影响:* 严重违反社区准则,包括持续的不当行为。*后果:*
-在指定期限内,临时禁止与社区进行任何形式的互动或公开交流。在此期间,不允许与相关人员
-进行任何公开或私下互动,包括主动联系执行行为准则者。违反此规定可能导致永久封禁。
-
-**4. 永久封禁** —— *社区影响:* 表现出违反社区准则的行为模式,包括持续的不当行为、
-对个人的骚扰,或对某类群体的攻击或贬低。*后果:* 永久禁止在社区内进行任何形式的公开互动。
-
-### 归属
-
-本行为准则改编自 [贡献者公约][homepage] 2.1 版,原文见
-<https://www.contributor-covenant.org/version/2/1/code_of_conduct.html>。
-
-社区影响准则的灵感来自
-[Mozilla 的行为准则执行阶梯](https://github.com/mozilla/diversity)。
-
-有关本行为准则的常见问题,请参阅 <https://www.contributor-covenant.org/faq>;
-其他语言的译本见 <https://www.contributor-covenant.org/translations>。

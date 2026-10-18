@@ -19,7 +19,7 @@ interface CanvasToolMenuProps {
   onSelect?: () => void;
 }
 
-/** 快捷操作栏里「指针工具」按钮弹出的两行菜单：移动 V / 抓手工具 H。 */
+/** The two-row menu popped up by the "Pointer tool" button in the quick action bar: Move V / Hand tool H. */
 export function CanvasToolMenu({ onSelect }: CanvasToolMenuProps) {
   const { t } = useTranslation();
   const tool = useCanvasToolStore((state) => state.tool);

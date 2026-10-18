@@ -1,7 +1,7 @@
 name: dco
 
-# REPO-19：每个 PR commit 须含 Signed-off-by(DCO 签署)。缺则失败、PR 标红。
-# 贡献者签署说明见 CONTRIBUTING.md 与 DCO。
+# REPO-19: every PR commit must contain Signed-off-by (DCO sign-off). A missing one fails the check and turns the PR red.
+# For sign-off instructions see CONTRIBUTING.md and DCO.
 
 on:
   pull_request:

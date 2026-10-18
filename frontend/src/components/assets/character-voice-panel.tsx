@@ -71,7 +71,7 @@ function isErrorResponse(res: unknown): res is { ok: false; error?: string } {
 
 // getUserMedia rejects with a named DOMException. Map the common ones to
 // actionable copy so a recording failure says *why* (permission blocked, no
-// device, device busy…) instead of an opaque「录音失败」. Note: a server
+// device, device busy...) instead of an opaque "recording failed". Note: a server
 // `Permissions-Policy: microphone=()` header also surfaces here as
 // NotAllowedError — see worker/index.ts.
 function recordErrorMessageKey(error: unknown): string {

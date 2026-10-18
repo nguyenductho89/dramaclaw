@@ -31,7 +31,7 @@ from novelvideo.task_backend import run_core
 class _ForeignBillingError(BillingError):
     error_code = "FAKE_BILLING_ERROR"
     http_status = 402
-    user_message = "模拟的 typed 计费错误"
+    user_message = "Simulated typed billing error"
 
     def details(self) -> dict:
         return {"probe": "task-c"}

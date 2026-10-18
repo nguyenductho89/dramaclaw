@@ -550,19 +550,19 @@ def claim_workflow_draft_confirmation(
                 **public_workflow_draft(payload),
                 "ok": False,
                 "status": "workflow_draft_already_confirmed",
-                "message": "该工作流方案已经创建，不会重复创建节点。",
+                "message": "This workflow draft has already been created; nodes will not be created again.",
             }
         if payload["status"] in {"confirming", "submitted"}:
             return None, {
                 **public_workflow_draft(payload),
                 "ok": False,
                 "status": "workflow_draft_confirmation_in_progress",
-                "message": "该工作流方案正在创建或已经提交，不会重复创建节点。",
+                "message": "This workflow draft is being created or has already been submitted; nodes will not be created again.",
             }
         if payload["status"] != "ready":
             message = lmsg(
                 "workflowDraftContinuation.notConfirmable",
-                "该工作流方案已取消，不能再创建节点。",
+                "This workflow draft was cancelled; nodes can no longer be created.",
             )
             return None, {
                 **public_workflow_draft(payload),
@@ -718,5 +718,5 @@ def public_workflow_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "expires_at": payload.get("expires_at"),
         "task_id": payload.get("task_id") or None,
         "root_task_id": payload.get("root_task_id") or None,
-        "message": "工作流方案草稿已准备完成，可继续调整或确认创建。",
+        "message": "The workflow draft is ready. You can keep adjusting it or confirm creation.",
     }

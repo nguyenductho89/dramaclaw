@@ -26,7 +26,7 @@ def _valid_draft_compiled() -> dict:
                     "id": "brief",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
-                    "data": {"title": "广告", "content": "商品广告"},
+                    "data": {"title": "Ad", "content": "Product ad"},
                 }
             ],
             "edges": [],
@@ -1949,7 +1949,7 @@ def test_workflow_result_operation_requires_and_enforces_canvas_scope(
         "/api/v1/projects/proj_demo/freezone/canvases/canvas-b/workflow-drafts",
         json={
             "operation_id": operation_id,
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": _valid_draft_compiled(),
         },
     )
@@ -1982,7 +1982,7 @@ def test_metered_workflow_result_is_delivered_once_before_canvas_confirmation(
     base = "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts"
     draft_request = {
         "operation_id": operation["operation_id"],
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
         "compiled": _valid_draft_compiled(),
     }
 
@@ -2058,7 +2058,7 @@ def test_workflow_result_rejects_operation_for_another_compiled_skill(
         "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts",
         json={
             "operation_id": operation["operation_id"],
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": {
                 "ok": True,
                 "skill_id": "video-ad",
@@ -2097,7 +2097,7 @@ def test_workflow_draft_rejects_skill_definition_operation_with_recovery_hint(
         "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts",
         json={
             "operation_id": operation["operation_id"],
-            "intent": {"skill_id": "private-html-smoke-test", "user_goal": "咖啡网页"},
+            "intent": {"skill_id": "private-html-smoke-test", "user_goal": "coffee web page"},
             "compiled": {
                 "ok": True,
                 "skill_id": "private-html-smoke-test",
@@ -2583,7 +2583,7 @@ async def test_recipe_compile_binds_only_fresh_model_evidence(
     )
     assert result["compile_mode"] == reuse_mode
     assert result["delivery_status"] == "delivered"
-    assert "正常计费" in result["message"]
+    assert "billed normally" in result["message"]
     assert stored_cached["model_evidence"] == {}
     # A repeated compiler result cannot create another operation or overwrite delivery.
     repeated_admission = workflow_run_client.post(
@@ -2731,7 +2731,7 @@ def test_workflow_draft_does_not_require_planning_credit_confirmation_in_ce(
     response = workflow_run_client.post(
         "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts",
         json={
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": _valid_draft_compiled(),
         },
     )
@@ -2748,7 +2748,7 @@ def test_workflow_confirmation_enqueues_non_monetary_durable_task(
     created = workflow_run_client.post(
         base,
         json={
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": _valid_draft_compiled(),
         },
     ).json()["data"]
@@ -2774,7 +2774,7 @@ def test_workflow_confirmation_retry_uses_a_new_task_scope(
     draft = client.post(
         base,
         json={
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": _valid_draft_compiled(),
         },
     ).json()["data"]
@@ -2907,7 +2907,7 @@ def test_workflow_draft_api_lifecycle(workflow_run_client: TestClient) -> None:
     created_response = workflow_run_client.post(
         base,
         json={
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": compiled,
         },
     )
@@ -2923,11 +2923,11 @@ def test_workflow_draft_api_lifecycle(workflow_run_client: TestClient) -> None:
             "expected_revision": 1,
             "intent": {
                 "skill_id": "video-ad",
-                "user_goal": "广告",
-                "items": ["开场"],
+                "user_goal": "Ad",
+                "items": ["Opening"],
             },
             "compiled": compiled,
-            "last_changes": {"items": ["开场"]},
+            "last_changes": {"items": ["Opening"]},
         },
     )
     assert patched_response.status_code == 200
@@ -2962,7 +2962,7 @@ def test_workflow_draft_cancel_prevents_later_canvas_creation(
     created = workflow_run_client.post(
         base,
         json={
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
             "compiled": _valid_draft_compiled(),
         },
     ).json()["data"]
@@ -3804,7 +3804,7 @@ def test_server_workflow_prepare_revise_and_compact_query(workflow_run_client):
     assert draft["preview"]["nodes"] == [
         {
             "id": "brief",
-            "name": "广告",
+            "name": "Ad",
             "stage": "input",
             "node_type": "textAnnotationNode",
         }
@@ -3812,7 +3812,7 @@ def test_server_workflow_prepare_revise_and_compact_query(workflow_run_client):
     assert draft["preview"]["recipe_pipelines"] == []
     assert draft["preview"]["node_count"] == 1
     target = f"{base}/{draft['draft_id']}"
-    changes = {"step_updates": [{"node_id": "brief", "prompt": "新广告要求"}]}
+    changes = {"step_updates": [{"node_id": "brief", "prompt": "new ad requirements"}]}
     revised = workflow_run_client.patch(
         target,
         json={
@@ -3824,7 +3824,7 @@ def test_server_workflow_prepare_revise_and_compact_query(workflow_run_client):
     assert revised.status_code == 200, revised.text
     assert revised.json()["data"]["revision"] == 2
     full = workflow_run_client.get(target).json()["data"]
-    assert full["compiled"]["plan"]["nodes"][0]["data"]["content"] == "新广告要求"
+    assert full["compiled"]["plan"]["nodes"][0]["data"]["content"] == "new ad requirements"
     assert len(full["preview"]["nodes"]) == 1
     stale = workflow_run_client.patch(
         target, json={"expected_revision": 1, "changes": changes}
@@ -3908,10 +3908,10 @@ def runtime_workflow_source(monkeypatch):
     return {
         "intent": {
             "skill_id": "sample",
-            "user_goal": "商品图",
+            "user_goal": "product image",
             "include_compose": False,
             "inputs": {"image_model": "test-image", "image_aspect_ratio": "1:1"},
-            "items": [{"id": "hero", "title": "商品", "recipe_id": "sample-image"}],
+            "items": [{"id": "hero", "title": "Product", "recipe_id": "sample-image"}],
         }
     }
 
@@ -4254,7 +4254,7 @@ def test_shared_project_generation_session_uses_requester_private_catalog(
 def test_workflow_policy_change_persists_new_revision(workflow_run_client):
     base = "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts"
     created = workflow_run_client.post(base, json={
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "Ad"},
         "compiled": _valid_draft_compiled(), "run_after_create": False,
     }).json()["data"]
     response = workflow_run_client.patch(f"{base}/{created['draft_id']}", json={
@@ -4277,7 +4277,7 @@ def _mode_revision_plan() -> dict:
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "一段图生视频",
+            "user_goal": "an image-to-video clip",
             "inputs": {
                 "image_model": "LingShan-G2",
                 "image_aspect_ratio": "16:9",
@@ -4652,10 +4652,10 @@ def test_workflow_media_link_reports_ended_recipe_attempt(
     detail = str(raised.value.detail)
     assert classify_workflow_error(detail) == ("attempt_ended", False)
     # The runner's localized wrapper keeps the raw reason, so it stays final too.
-    wrapped = f"本次节点执行已结束，请重新运行该节点以开始新的执行（{detail}）"
+    wrapped = f"This node execution has ended. Rerun the node to start a new execution ({detail})"
     diagnostics = workflow_error_diagnostics(wrapped)
     assert diagnostics["retryable"] is False
-    assert "重新运行该节点" in diagnostics["user_error"]
+    assert "Rerun the node" in diagnostics["user_error"]
 
 
 @pytest.mark.parametrize("endpoint", ["compile", "compile-batch"])

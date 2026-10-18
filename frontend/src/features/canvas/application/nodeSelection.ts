@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 程序化「只选中这一个节点」。
+ * Programmatically "select only this one node".
  *
- * 单独调 setSelectedNode 是不够的：它只写 store 里的 selectedNodeId，而节点的操作
- * 面板门控的是 React Flow 传下来的 `selected` prop；更要命的是 Canvas 里那个
- * 「React Flow 选中态 → store」的单向同步 effect 会在下一次渲染把 selectedNodeId
- * 写回 null（因为真的没有节点是 selected 的）。所以必须先经 onNodesChange 派发
- * select 变更，再同步 store——两处都要，缺一处就等于没选中。
+ * Calling setSelectedNode alone is not enough: it only writes selectedNodeId in the store, while the node's operation
+ * panel is gated by the `selected` prop passed down from React Flow; worse, the one-way sync effect "React Flow selection -> store" in Canvas
+ * writes selectedNodeId back to null on the next render (because no node is really selected). So a select
+ * change must first be dispatched via onNodesChange and then the store synced - both are needed, and missing either amounts to not selecting.
  */
 import { useCanvasStore } from '@/stores/canvasStore';
 

@@ -1,12 +1,12 @@
-"""脚本生成入口。
+"""Script generation entry point.
 
-2.0 当前默认走“逐行剧本模式”：
-- 一行一个 beat
-- 保留原行文本
-- LLM 只补 2.0 beat 元数据
+The 2.0 default currently uses "line-by-line script mode":
+- one beat per line
+- keep the original line text
+- the LLM only fills in the 2.0 beat metadata
 
-旧的 screenplay-first 复杂链路已退出默认主路径。
-本模块保留原有导入路径，只作为 literal workflow 的兼容薄壳。
+The old screenplay-first complex pipeline has left the default main path.
+This module keeps the original import path and is only a thin compatibility shell over the literal workflow.
 """
 
 from __future__ import annotations
@@ -20,9 +20,9 @@ if TYPE_CHECKING:
 
 
 class ScriptWritingWorkflow(LiteralScriptWritingWorkflow):
-    """向后兼容的脚本工作流名称。
+    """Backward-compatible script workflow name.
 
-    现在等价于 LiteralScriptWritingWorkflow。
+    Now equivalent to LiteralScriptWritingWorkflow.
     """
 
 
@@ -33,15 +33,15 @@ def create_script_writing_workflow(
     story_setting: str = "",
     spine_template: str = "drama",
 ) -> ScriptWritingWorkflow:
-    """创建脚本生成 workflow。
+    """Create the script generation workflow.
 
-    兼容旧入口名，内部直接返回逐行剧本模式实例。
+    Compatible with the old entry name; internally it returns a line-by-line script mode instance directly.
     """
     del visual_style, genre, story_setting
     audio_type_mode = "narrated" if spine_template == "narrated" else "literal"
     return ScriptWritingWorkflow(
         cognee_store=cognee_store,
-        # 逐行模式最终要调用 persist_narration_script()，该接口在 CogneeStore 上。
+        # Line-by-line mode finally calls persist_narration_script(), which lives on CogneeStore.
         sqlite_store=cognee_store,
         output_dir=getattr(cognee_store, "output_dir", ""),
         audio_type_mode=audio_type_mode,

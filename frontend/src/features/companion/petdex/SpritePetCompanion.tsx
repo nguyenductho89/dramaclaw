@@ -14,21 +14,21 @@ import {
 } from "@/features/companion/petdex/petdex-pets";
 import "./petdex-pet.css";
 
-const FIGURE_HEIGHT_PX = 72; // 比 Piko 略大，挂在顶栏下沿（lane 不裁剪溢出）
-const FRAME_ASPECT = 192 / 208; // 单帧宽高比，保证不拉伸
+const FIGURE_HEIGHT_PX = 72; // slightly larger than Piko, hung at the bottom edge of the top bar (the lane does not clip overflow)
+const FRAME_ASPECT = 192 / 208; // aspect ratio of a single frame, guarantees no stretching
 
 type SpritePetCompanionProps = {
   pet: PetdexCatalogEntry;
   action: MyBuddyAction;
-  /** 手动覆盖当前状态（来自「状态模拟」下拉 / 点击宠物循环）；不传则按 action 映射。 */
+  /** Manually override the current state (from the "state simulation" dropdown / click-pet cycle); when not passed, map by action. */
   stateOverride?: PetdexState | null;
   className?: string;
   style?: CSSProperties;
 };
 
 /**
- * 用精灵图渲染 petdex 宠物：一个单帧大小的视口，背景图按网格放大，纵向位置选「状态
- * 行」，横向逐帧步进播放该行。状态由同一套 controller 的 action 映射而来。
+ * Render a petdex pet with a sprite sheet: a viewport the size of one frame, with the background image scaled by the grid, the vertical position choosing the "state
+ * row" and the horizontal position stepping through that row frame by frame. The state is mapped from the same controller's action.
  */
 export function SpritePetCompanion({
   pet,
@@ -43,16 +43,16 @@ export function SpritePetCompanion({
 
   const cols = pet.cols ?? PETDEX_GRID_COLS;
   const rows = pet.rows ?? PETDEX_GRID_ROWS;
-  // 动作与任务强挂钩：任务进行中/成功/失败时（taskState 非 idle）任务优先，无视手动覆盖；
-  // 仅常规(idle)态才用「状态模拟 / 点击宠物」的手动覆盖做预览。
+  // Actions are strongly tied to tasks: while a task is in progress/succeeded/failed (taskState not idle) the task takes priority and ignores the manual override;
+  // only in the normal (idle) state is the manual override of "state simulation / click pet" used for preview.
   const taskState = petdexStateForAction(action);
   const { row, frames } =
     taskState !== PETDEX_STATES.idle ? taskState : (stateOverride ?? PETDEX_STATES.idle);
   const playFrames = Math.min(frames, cols);
 
-  // 逐帧步进：直接改 ref 的 backgroundPositionX，避免每帧触发 React 重渲染。背景按
-  // cols 放大，定位分母用 (cols-1)；只在该状态的前 playFrames 帧内循环（跳过空格）。
-  // 状态变化时重置回首帧；reduced-motion 下定格首帧。
+  // Frame stepping: change the ref's backgroundPositionX directly, avoiding a React re-render per frame. The background is scaled by
+  // cols, with (cols-1) as the positioning denominator; loop only within the first playFrames frames of the state (skipping empty cells).
+  // Reset to the first frame when the state changes; freeze on the first frame under reduced-motion.
   useEffect(() => {
     const el = spriteRef.current;
     if (!el) return;
@@ -69,7 +69,7 @@ export function SpritePetCompanion({
     return () => window.clearInterval(timer);
   }, [cols, playFrames, row, reducedMotion, pet.spritesheetUrl]);
 
-  // 预校验精灵图能否加载（CDN 拦截 / 离线时不渲染，避免裂图占位）。
+  // Pre-check whether the sprite sheet can load (when blocked by CDN / offline do not render, avoiding a broken-image placeholder).
   useEffect(() => {
     setLoadFailed(false);
     const img = new Image();

@@ -102,8 +102,8 @@ describe("applySkillRoleBindingConnection", () => {
   });
 
   it("connects a dragged uploadNode image into a background input whose accepts use backend node-type names", () => {
-    // 复刻真实 freezone.sketch_from_context 的 background accepts：node_types 用的是
-    // 后端命名（uploadImageNode/sceneNode/...），不含前端真实的 uploadNode。
+    // Replicates the real freezone.sketch_from_context background accepts: node_types uses
+    // backend names (uploadImageNode/sceneNode/...), and does not include the frontend's real uploadNode.
     const realSkill: SkillDefinition = {
       id: "freezone.sketch_from_context",
       provider: "freezone_mainline",
@@ -361,7 +361,7 @@ describe("applySkillRoleBindingConnection", () => {
         data: {
           imageUrl: "/scene.png",
           __freezone_source: { role: "scene_master" },
-          slot_target: { kind: "scene_master", scene_id: "厨房" },
+          slot_target: { kind: "scene_master", scene_id: "Kitchen" },
         },
       },
       { id: "skill", type: "skillNode", position: { x: 0, y: 0 }, data: { skill_id: sceneSkill.id } },
@@ -371,7 +371,7 @@ describe("applySkillRoleBindingConnection", () => {
       nodes: sceneNodes,
       edges: [],
       skillSpec: sceneSkill,
-      // 用户落在节点本体 → targetHandle 为通用 "target"
+      // The user lands on the node body -> targetHandle is the generic "target"
       connection: {
         source: "scene",
         target: "skill",
@@ -475,12 +475,12 @@ describe("applySkillRoleBindingConnection", () => {
           __freezone_source: {
             kind: "identity",
             role: "character_identity",
-            meta: { character: "陈默", identity_id: "陈默_青年时期" },
+            meta: { character: "Chen Mo", identity_id: "Chen Mo_young_adult" },
           },
           slot_target: {
             kind: "identity",
-            character: "陈默",
-            identity_id: "陈默_青年时期",
+            character: "Chen Mo",
+            identity_id: "Chen Mo_young_adult",
           },
         },
       },
@@ -500,16 +500,16 @@ describe("applySkillRoleBindingConnection", () => {
         source: "identity",
         target: "skill",
         sourceHandle: "source",
-        targetHandle: "identity:陈默_青年时期",
+        targetHandle: "identity:Chen Mo_young_adult",
       },
     });
 
     expect(next).toHaveLength(1);
     expect(next[0]?.source).toBe("identity");
-    expect(next[0]?.targetHandle).toBe("identity:陈默_青年时期");
+    expect(next[0]?.targetHandle).toBe("identity:Chen Mo_young_adult");
     expect(next[0]?.data).toMatchObject({
       role: "identity",
-      reference_target: { kind: "identity", identity_id: "陈默_青年时期" },
+      reference_target: { kind: "identity", identity_id: "Chen Mo_young_adult" },
     });
   });
 

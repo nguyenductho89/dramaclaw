@@ -52,28 +52,26 @@ _REGISTRY: dict[str, StepSpec] = {}
 
 # Order follows api/routes/pipeline.py::_STEP_MAP. Steps without a builder stay listed as unsupported.
 STEP_ORDER: list[tuple[str, str, ModelKind, bool]] = [
-    ("characters", "角色提取 / Character extraction", "llm", False),
-    ("episodes", "分集规划 / Episode planning", "llm", False),
-    ("portraits", "肖像生成 / Portraits", "image", False),
-    ("identity_plan", "身份规划 / Identity planning", "llm", True),
-    ("identity_images", "身份图生成 / Identity images", "image", False),
-    ("script", "脚本生成 / Script", "llm", True),
-    ("sketches", "草图生成 / Sketch grids", "image", True),
-    ("coloring", "配色+身份检测 / Coloring", "llm", True),
-    ("global_optimize", "全局视频优化 / Global optimize", "llm", True),
-    ("first_frames", "首帧生成 / First frames", "image", True),
-    ("video_prompt", "视频提示词 / Video prompt", "llm", True),
-    ("tts", "TTS 配音 / TTS", "tts", True),
-    ("video", "视频生成 / Video", "video", True),
+    ("characters", "Character extraction", "llm", False),
+    ("episodes", "Episode planning", "llm", False),
+    ("portraits", "Portraits", "image", False),
+    ("identity_plan", "Identity planning", "llm", True),
+    ("identity_images", "Identity images", "image", False),
+    ("script", "Script", "llm", True),
+    ("sketches", "Sketch grids", "image", True),
+    ("coloring", "Coloring", "llm", True),
+    ("global_optimize", "Global optimize", "llm", True),
+    ("first_frames", "First frames", "image", True),
+    ("video_prompt", "Video prompt", "llm", True),
+    ("tts", "TTS", "tts", True),
+    ("video", "Video", "video", True),
 ]
 
 
 # Why a step has no preview, shown instead of a generic "not available".
 UNSUPPORTED_NOTES: dict[str, str] = {
-    "episodes": "结构化项目按章节切分集数，不调用 LLM；仅旧版 AI 规划才会发送提示词。"
-    " / Structured projects split episodes by chapter without an LLM; only the legacy AI planner sends a prompt.",
-    "coloring": "该步骤的提示词依赖草图图像与逐帧检测结果，运行时才产生。"
-    " / Its prompt depends on sketch images and per-frame detection produced at run time.",
+    "episodes": "Structured projects split episodes by chapter without an LLM; only the legacy AI planner sends a prompt.",
+    "coloring": "Its prompt depends on sketch images and per-frame detection produced at run time.",
 }
 
 

@@ -86,15 +86,15 @@ export const DEFAULT_FEATURE_MODEL_PROVIDER: FeatureModelProvider = 'ali';
 
 export interface FeatureModelEntry {
   provider: FeatureModelProvider;
-  /** 模型名；空表示走后端默认。 */
+  /** Model name; empty means going with the backend default. */
   model: string;
 }
 
 export interface FeatureProviderChannel {
   provider: FeatureModelProvider;
-  /** 上游供应商 Key（写入 NewAPI 渠道时按 provider 取）。 */
+  /** Upstream provider key (taken by provider when writing into the NewAPI channel). */
   upstreamKey: string;
-  /** 上游 Base URL 覆盖；空表示使用后端 provider preset。 */
+  /** Upstream Base URL override; empty means using the backend provider preset. */
   baseUrl: string;
   /** NewAPI channel priority. It only affects initial channel selection. */
   priority: number;
@@ -104,7 +104,7 @@ export interface FeatureProviderChannel {
 
 export interface MediaModelEntry {
   provider: FeatureModelProvider;
-  /** NewAPI model_mapping 的 value；空表示使用固定模型名自身。 */
+  /** The value of NewAPI model_mapping; empty means using the fixed model name itself. */
   upstreamModel: string;
   mediaType?: 'image' | 'video' | 'audio';
   label?: string;
@@ -121,24 +121,24 @@ export interface FeatureModelConfigMutationOptions {
 
 export interface EmbeddingModelEntry {
   provider: FeatureModelProvider;
-  /** 固定内部模型名 DC-cognee-embedding 对应的上游 embedding 模型。 */
+  /** The upstream embedding model corresponding to the fixed internal model name DC-cognee-embedding. */
   upstreamModel: string;
-  /** Cognee 本地向量库维度。 */
+  /** Dimension of Cognee's local vector store. */
   dimension: number;
-  /** Cognee embedding 单次请求文本条数；未设置表示使用环境变量或 Cognee 默认。 */
+  /** Number of texts per Cognee embedding request; unset means using the environment variable or Cognee's default. */
   batchSize?: number;
 }
 
 export interface FeatureModelSettings {
-  /** featureId -> { provider, model }。缺省表示未配置文本功能模型映射。 */
+  /** featureId -> { provider, model }. Absent means no text feature model mapping is configured. */
   featureModels: Record<string, FeatureModelEntry>;
-  /** media model name -> { provider, upstreamModel }。图片/视频固定模型只允许选择渠道和映射 value。 */
+  /** media model name -> { provider, upstreamModel }. Image/video fixed models only allow choosing the channel and the mapping value. */
   mediaModels: Record<string, MediaModelEntry>;
-  /** Cognee embedding 模型配置；undefined 表示沿用后端默认。 */
+  /** Cognee embedding model config; undefined means keeping the backend default. */
   embeddingModel?: EmbeddingModelEntry;
-  /** provider -> 上游供应商 Key。旧版字段，保留用于迁移和兼容。 */
+  /** provider -> upstream provider key. A legacy field, kept for migration and compatibility. */
   providerKeys: Record<string, string>;
-  /** provider -> 渠道级配置。 */
+  /** provider -> channel-level config. */
   providerChannels: Record<string, FeatureProviderChannel>;
 }
 
@@ -325,7 +325,7 @@ function normalizeFeatureModelSettings(
     for (const [featureId, value] of Object.entries(raw as Record<string, unknown>)) {
       const fid = featureId.trim();
       if (!fid) continue;
-      // 兼容旧结构：featureModels 旧版是 Record<string, string>（仅模型名）。
+      // Compatible with the old structure: featureModels used to be Record<string, string> (model name only).
       if (typeof value === 'string') {
         const model = value.trim();
         if (model) featureModels[fid] = { provider: DEFAULT_FEATURE_MODEL_PROVIDER, model };
@@ -333,7 +333,7 @@ function normalizeFeatureModelSettings(
         const entry = value as Partial<FeatureModelEntry>;
         const provider = normalizeFeatureModelProvider(entry.provider);
         const model = typeof entry.model === 'string' ? entry.model.trim() : '';
-        // 仅在偏离默认（provider≠ali 或有模型名）时保留，保持空状态干净。
+        // Keep only when deviating from the default (provider != ali or having a model name), keeping the empty state clean.
         if (provider !== DEFAULT_FEATURE_MODEL_PROVIDER || model) {
           featureModels[fid] = { provider, model };
         }
@@ -431,7 +431,7 @@ function normalizeFeatureModelSettings(
     }
   }
 
-  // 兼容旧版本：已有 providerKeys 但没有渠道列表时，把 key 迁移成渠道级配置。
+  // Compatible with old versions: when providerKeys exist but there is no channel list, migrate the key into channel-level config.
   for (const [provider, key] of Object.entries(providerKeys)) {
     const normalized = normalizeFeatureModelProvider(provider);
     if (!providerChannels[normalized] && key) {
@@ -663,7 +663,7 @@ export const useSettingsStore = create<SettingsState>()(
           };
           const provider = normalizeFeatureModelProvider(patch.provider ?? prev.provider);
           const model = (patch.model ?? prev.model).trim();
-          // 回到默认（ali + 空模型）时删除该条，保持空状态干净。
+          // Delete the entry when returning to the default (ali + empty model), keeping the empty state clean.
           if (provider === DEFAULT_FEATURE_MODEL_PROVIDER && !model) {
             delete nextFeatureModels[featureId];
           } else {

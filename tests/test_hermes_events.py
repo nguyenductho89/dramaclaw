@@ -161,7 +161,7 @@ def test_adapter_marks_payload_less_and_bridge_settled_failures_transient(
 
     bridge_payload = (
         '{"ok": false, "tool_call_status": "failed", "canvas_apply_status": "failed", '
-        '"user_message": "节点动作完成但未产出 imageUrl。"}'
+        '"user_message": "The node action completed but produced no imageUrl."}'
     )
     settled = _update(
         thread,
@@ -182,7 +182,7 @@ def test_adapter_marks_payload_less_and_bridge_settled_failures_transient(
             "sessionUpdate": "tool_call_update",
             "toolCallId": "tc-1",
             "status": "failed",
-            "result": {"status": "failed", "error": "前端桥接执行失败"},
+            "result": {"status": "failed", "error": "Frontend bridge execution failed"},
         },
     )
     assert business.transient_failure is False

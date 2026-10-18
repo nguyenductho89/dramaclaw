@@ -47,7 +47,7 @@ const VIEWPORT_MIN_HEIGHT_PX = 180;
 const DEFAULT_TEXT_SIZE_PERCENT = 10;
 const MIN_TEXT_SIZE_PERCENT = 1;
 const MAX_TEXT_SIZE_PERCENT = 30;
-// 图片缩放：1 = 适配视口（fit），最大放大 8 倍，便于标注小细节。
+// Image zoom: 1 = fit to the viewport (fit), at most 8x enlargement, convenient for annotating small details.
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
 const ZOOM_BUTTON_STEP = 1.25;
@@ -242,12 +242,12 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [textEditorState, setTextEditorState] = useState<TextEditorState | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  // zoom = 在「适配比例」之上的放大倍数；offset = 放大后内容相对舞台左上角的平移（px）。
+  // zoom = the magnification above the "fit ratio"; offset = the translation (px) of the content relative to the stage's top-left after enlarging.
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  // 按住空格进入「抓手」平移模式（放大后查看图片其它区域）。
+  // Holding space enters "hand" pan mode (to view other areas of the image after enlarging).
   const [spaceDown, setSpaceDown] = useState(false);
-  // 显式选中「移动」工具：直接拖拽图片调整位置（无需按空格），与绘制工具互斥。
+  // Explicitly selecting the "move" tool: drag the image directly to adjust its position (no need to press space), mutually exclusive with drawing tools.
   const [handTool, setHandTool] = useState(false);
 
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -343,7 +343,7 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
     };
   }, [image, viewportSize.height, viewportSize.width]);
 
-  // 放大后允许的平移范围：内容比舞台大多少，就能往负方向拖多少，保证边缘不留空。
+  // The allowed pan range after enlarging: however much larger the content is than the stage, that is how far it can be dragged in the negative direction, ensuring no blank is left at the edges.
   const clampOffset = useCallback(
     (next: { x: number; y: number }, nextZoom: number) => {
       const scaledWidth = stageWidth * nextZoom;
@@ -355,10 +355,10 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
     [stageHeight, stageWidth]
   );
 
-  // 实际应用到 Group 的平移：始终夹紧，避免 resize / 切图后残留越界 offset。
+  // The pan actually applied to the Group: always clamped, avoiding a leftover out-of-bounds offset after resize / switching images.
   const appliedOffset = useMemo(() => clampOffset(offset, zoom), [clampOffset, offset, zoom]);
 
-  // 以舞台坐标系中的某个点 (cx, cy) 为锚点缩放：该点对应的图片像素在缩放后停留原位。
+  // Zoom anchored at a point (cx, cy) in the stage coordinate system: the image pixel under that point stays in place after zooming.
   const zoomAtPoint = useCallback(
     (rawZoom: number, cx: number, cy: number) => {
       const nextZoom = clamp(rawZoom, MIN_ZOOM, MAX_ZOOM);
@@ -401,7 +401,7 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
     [zoom, zoomAtPoint]
   );
 
-  // 切换图片时回到适配视图，避免沿用上一张的缩放/平移。
+  // Return to the fit view when switching images, avoiding reusing the previous image's zoom/pan.
   useEffect(() => {
     resetZoom();
   }, [image, resetZoom]);
@@ -626,7 +626,7 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
   const handlePointerDown = useCallback((event: KonvaEventObject<MouseEvent | TouchEvent>) => {
     stageHostRef.current?.focus();
 
-    // 抓手平移：选中「移动」工具 / 按住空格 / 中键拖动，不进入绘制流程。
+    // Hand pan: select the "move" tool / hold space / middle-button drag, without entering the drawing flow.
     const middleButton = 'button' in event.evt && event.evt.button === 1;
     if (handTool || spaceDown || middleButton) {
       const pointer = stageRef.current?.getPointerPosition();
@@ -844,7 +844,7 @@ export function AnnotateToolEditor({ options, onOptionsChange, sourceImageUrl }:
     }
 
     if (event.code === 'Space' || event.key === ' ') {
-      // 按住空格 = 临时抓手平移；preventDefault 阻止页面滚动。
+      // Holding space = temporary hand pan; preventDefault stops the page from scrolling.
       event.preventDefault();
       setSpaceDown(true);
       return;

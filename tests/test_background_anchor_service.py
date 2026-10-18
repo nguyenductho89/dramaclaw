@@ -31,8 +31,8 @@ def _selected_background_path(project_dir):
 
 
 def test_select_background_anchor_snapshots_master_and_preserves_source(tmp_path):
-    beat = {"beat_number": 4, "scene_ref": {"scene_id": "地下室", "render_anchor_id": "master"}}
-    master = tmp_path / "assets" / "scenes" / "地下室" / "master.png"
+    beat = {"beat_number": 4, "scene_ref": {"scene_id": "basement", "render_anchor_id": "master"}}
+    master = tmp_path / "assets" / "scenes" / "basement" / "master.png"
     master.parent.mkdir(parents=True)
     master.write_bytes(b"fake master")
 
@@ -54,7 +54,7 @@ def test_select_background_anchor_snapshots_master_and_preserves_source(tmp_path
     assert beat["scene_ref"]["render_anchor_source_id"] == ANCHOR_MASTER
     assert payload["render_anchor_id"] == ANCHOR_SELECTED_BACKGROUND
     assert payload["current_source"] == ANCHOR_MASTER
-    assert payload["display_reference"]["rel_path"] == "assets/scenes/地下室/master.png"
+    assert payload["display_reference"]["rel_path"] == "assets/scenes/basement/master.png"
     assert (
         payload["render_input"]["rel_path"]
         == "director_control_frames/ep001/beat_04/selected_background.png"
@@ -64,9 +64,9 @@ def test_select_background_anchor_snapshots_master_and_preserves_source(tmp_path
 def test_build_background_anchors_payload_infers_legacy_selected_source(tmp_path):
     beat = {
         "beat_number": 4,
-        "scene_ref": {"scene_id": "地下室", "render_anchor_id": ANCHOR_SELECTED_BACKGROUND},
+        "scene_ref": {"scene_id": "basement", "render_anchor_id": ANCHOR_SELECTED_BACKGROUND},
     }
-    master = tmp_path / "assets" / "scenes" / "地下室" / "master.png"
+    master = tmp_path / "assets" / "scenes" / "basement" / "master.png"
     master.parent.mkdir(parents=True)
     master.write_bytes(b"same frozen master")
     selected = _selected_background_path(tmp_path)
@@ -94,8 +94,8 @@ def test_build_background_anchors_payload_infers_legacy_selected_source(tmp_path
 
 
 def test_crop_background_anchor_writes_selected_and_records_source(tmp_path):
-    beat = {"beat_number": 4, "scene_ref": {"scene_id": "地下室", "render_anchor_id": "master"}}
-    master = tmp_path / "assets" / "scenes" / "地下室" / "master.png"
+    beat = {"beat_number": 4, "scene_ref": {"scene_id": "basement", "render_anchor_id": "master"}}
+    master = tmp_path / "assets" / "scenes" / "basement" / "master.png"
     master.parent.mkdir(parents=True)
     Image.new("RGB", (8, 8), color=(255, 0, 0)).save(master)
 
@@ -121,7 +121,7 @@ def test_crop_background_anchor_writes_selected_and_records_source(tmp_path):
 
 
 def test_save_uploaded_background_anchor_image_writes_selected_as_external(tmp_path):
-    beat = {"beat_number": 4, "scene_ref": {"scene_id": "地下室", "render_anchor_id": "master"}}
+    beat = {"beat_number": 4, "scene_ref": {"scene_id": "basement", "render_anchor_id": "master"}}
     content = BytesIO()
     Image.new("RGB", (4, 4), color=(0, 255, 0)).save(content, format="PNG")
     content.seek(0)

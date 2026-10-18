@@ -82,7 +82,7 @@ export async function listScenes(projectId: string): Promise<SceneAsset[]> {
 
 export interface SupertaleEpisodeSummary {
   episode_num: number;
-  /** 后端实际返回的集数字段是 `number`;listEpisodes 会归一到 episode_num。 */
+  /** The episode-number field the backend actually returns is `number`; listEpisodes normalizes it to episode_num. */
   number?: number;
   title?: string;
   [key: string]: unknown;
@@ -92,9 +92,9 @@ export async function listEpisodes(projectId: string): Promise<SupertaleEpisodeS
   const episodes = await apiCall<SupertaleEpisodeSummary[]>(
     `projects/${encodeURIComponent(projectId)}/episodes`,
   );
-  // 后端集数字段名是 `number`(见 types/episode.ts 的 Episode.number),历史类型却写成
-  // `episode_num`。这里统一归一,保证 episode_num 始终是有效数字,避免下游(CommitDialog /
-  // ImportPanel)拿到 undefined → Number(undefined)=NaN → 请求 /episodes/NaN/beats。
+  // The backend's episode-number field is named `number` (see Episode.number in types/episode.ts), while the historical type wrote it as
+  // `episode_num`. Normalize uniformly here, guaranteeing episode_num is always a valid number, and avoiding downstream (CommitDialog /
+  // ImportPanel) getting undefined -> Number(undefined)=NaN -> requesting /episodes/NaN/beats.
   return episodes.map((ep) => {
     const resolved =
       typeof ep.episode_num === "number"
@@ -222,11 +222,11 @@ export interface FreezoneProjectAsset {
   mainline_context?: MainlineContext[];
   /** Director combined assets carry the complete bundle, not only combined.png. */
   director_control_bundle?: Record<string, unknown> | null;
-  /** 后端是否认为该资产可推送回主流程。 */
+  /** Whether the backend considers the asset pushable back to the main flow. */
   pushable?: boolean;
   /**
-   * 后端直接给出的 canonical 提交目标(免去前端按 kind/role 猜)。
-   * 用 `PushTarget | null`;业务层用 `isSlotTarget` 校验后再用。
+   * The canonical commit target given directly by the backend (saving the frontend from guessing by kind/role).
+   * Uses `PushTarget | null`; the business layer validates with `isSlotTarget` before use.
    */
   slot_target?: PushTarget | null;
 }

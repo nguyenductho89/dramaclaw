@@ -46,7 +46,7 @@ export function writeUrl(next: Partial<FreezoneUrl>, options: WriteUrlOptions = 
   // leaving Freezone the router already reads /characters but window.location
   // still reads /freezone. Guarding on the stale window.location would let a
   // stray canvas-sync write here navigate the user BACK to Freezone, trapping
-  // them on 虾画. Read the pathname/canvas from the router so a write that
+  // them on the freezone. Read the pathname/canvas from the router so a write that
   // fires after the route has moved off Freezone simply no-ops.
   const currentPathname = router?.state.location.pathname;
   const pathProject = currentPathname
@@ -57,8 +57,8 @@ export function writeUrl(next: Partial<FreezoneUrl>, options: WriteUrlOptions = 
   const current: FreezoneUrl = router
     ? { project: pathProject, canvas: canvasFromRouterSearch(router) }
     : readUrl();
-  // 显式区分"未传"和"传 null"：?? 会把 null 当作回退到 current，导致
-  // writeUrl({ project: null }) 这种"清空字段"的语义失效（例如返回项目列表）。
+  // Explicitly distinguish "not passed" from "passed null": ?? would treat null as a fallback to current, breaking
+  // the semantics of "clear the field" in writeUrl({ project: null }) (e.g. returning to the project list).
   const merged: FreezoneUrl = {
     project: "project" in next ? next.project ?? null : current.project,
     canvas: "canvas" in next ? next.canvas ?? null : current.canvas,

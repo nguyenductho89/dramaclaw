@@ -7,20 +7,20 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { resolveImageDisplayUrl } from './imageData';
 import { captureVideoFrameBlob } from './videoFrameBlob';
 
-/** 截帧档位：首帧 / 尾帧 / 播放器当前帧。 */
+/** Capture frame tier: first frame / last frame / the player's current frame. */
 export type VideoCaptureFrameMode = 'first' | 'last' | 'current';
 
 export { captureVideoFrameBlob };
 
 /**
- * 三档截帧对应的 seek 位置（从 VideoNode.handleCaptureFrame 抽出的纯计算）：
- * - first  → 0
- * - last   → 时长 - 0.05s；时长完全未知时给 MAX_SAFE_INTEGER，让
- *            captureVideoFrameBlob 内部按实际 duration 夹到末尾
- * - current→ 活的播放器 currentTime；拿不到就退回 0
+ * The seek position corresponding to the three capture tiers (pure computation extracted from VideoNode.handleCaptureFrame):
+ * - first  -> 0
+ * - last   -> duration - 0.05s; when the duration is entirely unknown give MAX_SAFE_INTEGER, letting
+ *            captureVideoFrameBlob clamp to the end by the actual duration internally
+ * - current-> the live player's currentTime; fall back to 0 if unavailable
  *
- * `liveDurationSec` 是详情/节点里那个正在播的 <video> 报的时长（最准），
- * `fallbackDurationSec` 是节点 data.durationMs 换算来的兜底。
+ * `liveDurationSec` is the duration reported by the <video> that is playing in the detail/node (the most accurate),
+ * `fallbackDurationSec` is the fallback converted from the node's data.durationMs.
  */
 export function resolveCaptureSeekSec(
   mode: VideoCaptureFrameMode,
@@ -47,24 +47,25 @@ export function resolveCaptureSeekSec(
 }
 
 export interface VideoCaptureFrameResult {
-  /** 新建的图片节点 id；失败时为 null。 */
+  /** The id of the newly built image node; null on failure. */
   nodeId: string | null;
-  /** 失败原因；成功时为 null。 */
+  /** Failure reason; null on success. */
   error: string | null;
 }
 
 /**
- * 截帧编排（从 VideoNode.handleCaptureFrame 原样搬出，语义零变化；节点类型
- * 后改为 exportImage，见下）：抽帧 → 上传成 png → 在源节点下游建派生图片
- * 结果节点并连边、写标题。图片比例优先取源视频的像素宽高，退到
- * data.aspectRatio，再退 16:9。
+ * Frame capture orchestration (moved verbatim out of VideoNode.handleCaptureFrame, with zero semantic change; the node type
+ * was later changed to exportImage, see below): extract the frame -> upload as png -> build a derived image
+ * result node downstream of the source node, connect an edge and write the title. The image ratio prefers the source video's pixel width and height,
+ * then data.aspectRatio, then 16:9.
  *
- * 结果节点用 addDerivedExportNode 建成 exportImage（不是 upload）：upload
- * 节点没有 target handle，下面的 addEdge 会静默失效连不上；exportImage 有
- * target handle 且不受上游白名单限制，与抠图/旋转等派生图片流一致。
+ * The result node is built with addDerivedExportNode as exportImage (not upload): an upload
+ * node has no target handle, so the addEdge below would silently fail to connect; exportImage has a
+ * target handle and is not restricted by the upstream whitelist, consistent with derived image flows such as matting/rotation.
  *
- * seek 位置由调用方用 {@link resolveCaptureSeekSec} 先算好——只有调用方能拿到
- * 那个活的 <video> 元素（工作流是节点内播放器，故事板是详情大播放器）。
+ * The seek position is computed in advance by the caller with {@link resolveCaptureSeekSec} - only the caller can get
+ * that live <video> element (the in-node player in the workflow, the large detail player in the storyboard).
+ * that live <video> element (the in-node player in the workflow, the large detail player in the storyboard).
  */
 export async function captureVideoFrameToNode(
   sourceNodeId: string,
@@ -72,7 +73,7 @@ export async function captureVideoFrameToNode(
     videoUrl: string;
     seekSec: number;
     projectId?: string | null;
-    /** 结果节点标题（首帧/尾帧/当前帧，文案由调用方按各自 i18n 决定）。 */
+    /** The title of the result node (first/last/current frame; the text is decided by the caller per its own i18n). */
     displayName: string;
   },
 ): Promise<VideoCaptureFrameResult> {
@@ -104,11 +105,11 @@ export async function captureVideoFrameToNode(
         : (typeof data.aspectRatio === 'string' && data.aspectRatio) || '16:9';
 
     const done = useCanvasStore.getState();
-    // exportImage（非 upload）：upload 节点没有 target handle（nodeRegistry.ts），
-    // 下面的 addEdge 连不上、静默失效。exportImage 有 target handle 且不在上游
-    // 白名单里，是抠图/旋转等派生图片流的统一落点。aspectRatioStrategy 取
-    // 'derivedFromSource'，与 addDerivedUploadNode 尺寸表现保持一致
-    // （两者都走 resolveDerivedAspectRatio(sourceNode, aspectRatio)）。
+    // exportImage (not upload): an upload node has no target handle (nodeRegistry.ts),
+    // so the addEdge below cannot connect and silently fails. exportImage has a target handle and is not in the upstream
+    // whitelist, the unified landing point for derived image flows such as matting/rotation. aspectRatioStrategy takes
+    // 'derivedFromSource', keeping the sizing behavior consistent with addDerivedUploadNode
+    // (both go through resolveDerivedAspectRatio(sourceNode, aspectRatio)).
     const createdNodeId = done.addDerivedExportNode(
       sourceNodeId,
       uploaded.url,

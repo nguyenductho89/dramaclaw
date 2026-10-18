@@ -59,17 +59,13 @@ _VIETNAMESE_DIACRITICS_RE = re.compile(
 def _script_guess(text: str) -> str | None:
     """Best-effort script/language guess for one `<d>` line — only used to
     flag a `<d>[Language]` tag that looks mismatched with its own content
-    (e.g. tag says `[Chinese]` but the line is plainly Vietnamese or
-    English), not to decide the real language. Returns `None` when the
+    (e.g. tag says `[English]` but the line is plainly Vietnamese), not to decide the real language. Returns `None` when the
     guess is unclear (short/mixed text) so the caller skips the check
     rather than false-flag it."""
     if not text.strip():
         return None
     if _VIETNAMESE_DIACRITICS_RE.search(text):
         return "Vietnamese"
-    han = sum(1 for ch in text if "一" <= ch <= "鿿")
-    if han:
-        return "Chinese"
     latin = sum(1 for ch in text if ch.isalpha())
     if latin >= 3:
         return "English"
@@ -135,39 +131,39 @@ def lint_minimax_h3_prompt(
     result = LintResult()
     text = prompt or ""
     if not text.strip():
-        result.issues.append(LintIssue("error", "empty", "Prompt 为空"))
+        result.issues.append(LintIssue("error", "empty", "Prompt is empty"))
         return result
 
     if len(text) > MAX_PROMPT_CHARS:
         result.issues.append(
-            LintIssue("error", "too_long", f"Prompt 超过官方单段长度上限 ({len(text)}/{MAX_PROMPT_CHARS} 字符)")
+            LintIssue("error", "too_long", f"Prompt exceeds the official single-segment length limit ({len(text)}/{MAX_PROMPT_CHARS} characters)")
         )
     elif len(text) > SOFT_LENGTH_BUDGET:
         result.issues.append(
             LintIssue(
                 "warning",
                 "long",
-                f"Prompt 偏长 ({len(text)} 字符)，5-8s 的 beat 建议贴近官方 350-500 词区间的下限",
+                f"Prompt is on the long side ({len(text)} characters); for a 5-8s beat, stay near the lower end of the official 350-500 word range",
             )
         )
 
     sections = REF_SECTIONS if mode == "ref2va" else BASE_SECTIONS
     if mode == "fl2va" and not FL2VA_ALIGNMENT_RE.search(text):
         result.issues.append(
-            LintIssue("error", "missing_alignment_line", "fl2va 缺少官方对齐句（逐字）")
+            LintIssue("error", "missing_alignment_line", "fl2va is missing the official alignment sentence (verbatim)")
         )
     missing = [name for name in sections if _section_body(text, name) is None]
     if missing:
         result.issues.append(
-            LintIssue("error", "missing_sections", f"缺少段落: {', '.join(missing)}")
+            LintIssue("error", "missing_sections", f"Missing sections: {', '.join(missing)}")
         )
     else:
         positions = [text.index(f"{name}:") for name in sections]
         if positions != sorted(positions):
-            result.issues.append(LintIssue("error", "section_order", "段落顺序不正确"))
+            result.issues.append(LintIssue("error", "section_order", "Sections are in the wrong order"))
         music_body = (_section_body(text, sections[-1]) or "").strip()
         if not music_body:
-            result.issues.append(LintIssue("error", "missing_music_field", "non_diegetic_music 段为空"))
+            result.issues.append(LintIssue("error", "missing_music_field", "The non_diegetic_music section is empty"))
 
     picture_numbers = [int(n) for n in PICTURE_TAG_RE.findall(text)]
     expected = list(range(1, max(reference_count, 1) + 1))
@@ -176,7 +172,7 @@ def lint_minimax_h3_prompt(
             LintIssue(
                 "error",
                 "picture_tags_mismatch",
-                f"<Picture N> 标签 ({sorted(set(picture_numbers))}) 与参考图数量 ({reference_count}) 不匹配",
+                f"<Picture N> tags ({sorted(set(picture_numbers))}) do not match the reference image count ({reference_count})",
             )
         )
 
@@ -186,26 +182,26 @@ def lint_minimax_h3_prompt(
             LintIssue(
                 "error",
                 "shot_marker",
-                "必须恰好出现一次 [Shot 1] 标记（官方格式字面量），检测到: "
-                f"{shot_numbers or '(无)'}",
+                "The [Shot 1] marker (official format literal) must appear exactly once; detected: "
+                f"{shot_numbers or '(none)'}",
             )
         )
 
     stripped = _strip_dialogue_spans(text)
     if '"' in stripped:
         result.issues.append(
-            LintIssue("error", "stray_quotes", "<d> 标签之外出现双引号，H3 可能把它渲染成画面文字")
+            LintIssue("error", "stray_quotes", "Double quotes appear outside <d> tags; H3 may render them as on-screen text")
         )
 
     dialogues = DIALOGUE_RE.findall(text)
     if "<d>" in text and not dialogues:
-        result.issues.append(LintIssue("error", "dialogue_missing_language_tag", "<d> 缺少语言标签，如 [Vietnamese]"))
+        result.issues.append(LintIssue("error", "dialogue_missing_language_tag", "<d> is missing a language tag, e.g. [Vietnamese]"))
     if expects_dialogue and "<d>" not in text:
         result.issues.append(
             LintIssue(
                 "error",
                 "dialogue_missing",
-                "这个 beat 应该有台词（audio_type=dialogue），但 prompt 里完全没有 <d> 标签",
+                "This beat should have dialogue (audio_type=dialogue), but the prompt has no <d> tag at all",
             )
         )
     for lang, line in dialogues:
@@ -215,7 +211,7 @@ def lint_minimax_h3_prompt(
                 LintIssue(
                     "warning",
                     "dialogue_language_mismatch",
-                    f"<d> 标的语言是 [{lang}]，但内容像是 {detected}（可能被模型翻译/替换了台词）",
+                    f"The <d> tag language is [{lang}], but the content looks like {detected} (the model may have translated or replaced the dialogue)",
                 )
             )
     for _lang, line in dialogues:
@@ -227,7 +223,7 @@ def lint_minimax_h3_prompt(
                     LintIssue(
                         "warning",
                         "dialogue_too_long",
-                        f"台词约 {syllables} 个音节，可能塞不进 {duration_seconds:.1f}s 的窗口",
+                        f"The dialogue is about {syllables} syllables and may not fit in a {duration_seconds:.1f}s window",
                     )
                 )
 
@@ -238,34 +234,34 @@ def lint_minimax_h3_prompt(
                 LintIssue(
                     "warning",
                     "timestamp_mismatch",
-                    f"最后一个时间戳 ({max(timestamps):.2f}s) 和 beat 时长 ({duration_seconds:.1f}s) 对不上",
+                    f"The last timestamp ({max(timestamps):.2f}s) does not match the beat duration ({duration_seconds:.1f}s)",
                 )
             )
 
     if BARE_EMOTION_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "bare_emotion", "出现裸情绪词（如 'she looks nervous'），应改写成可见动作")
+            LintIssue("warning", "bare_emotion", "Bare emotion words appear (e.g. 'she looks nervous'); rewrite them as visible actions")
         )
     if BANNED_SLOW_WORDS_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "slow_words", "出现 slowly/gently/gradually 等词，除非刻意安静，否则容易变成静止画面")
+            LintIssue("warning", "slow_words", "Words like slowly/gently/gradually appear; unless a quiet shot is intended, they tend to produce a static picture")
         )
     camera_moves = set(m.lower() for m in CAMERA_MOVE_RE.findall(text))
     if len(camera_moves) > 1:
         result.issues.append(
-            LintIssue("warning", "multi_camera_move", f"检测到不止一种运镜: {sorted(camera_moves)}")
+            LintIssue("warning", "multi_camera_move", f"More than one camera move detected: {sorted(camera_moves)}")
         )
     if ORBIT_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "orbit_camera", "环绕/绕后运镜在 I2V 上容易丢失角色一致性")
+            LintIssue("warning", "orbit_camera", "Orbit / around-the-back camera moves easily lose character consistency in I2V")
         )
     if ENDS_CONTINUES_RE.search(text.strip()):
         result.issues.append(
-            LintIssue("warning", "open_ending", "结尾用了 continues/keeps，没有明确的结束状态")
+            LintIssue("warning", "open_ending", "The ending uses continues/keeps and has no definite end state")
         )
     if not NO_SUBTITLE_HINT_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "missing_no_subtitle_clause", "没有明确写'无字幕/无水印'")
+            LintIssue("warning", "missing_no_subtitle_clause", "There is no explicit 'no subtitles / no watermark' clause")
         )
 
     return result

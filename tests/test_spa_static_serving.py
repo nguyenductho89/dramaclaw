@@ -1,8 +1,8 @@
-"""DRAMACLAW_FRONTEND_DIST 门控的 SPA 静态伺服契约。
+"""Contract of SPA static serving gated by DRAMACLAW_FRONTEND_DIST.
 
-Starlette StaticFiles 未命中时是 raise HTTPException(404) 而非返回 404
-响应,SPA 回落必须捕获它;深链接/刷新客户端路由要拿到 index.html,
-而缺失的静态资产(带扩展名)仍应如实 404。
+When Starlette StaticFiles misses it raises HTTPException(404) rather than returning a 404
+response; the SPA fallback must catch it. Deep links / refreshed client routes must get index.html,
+while missing static assets (with an extension) should still honestly 404.
 """
 
 from pathlib import Path

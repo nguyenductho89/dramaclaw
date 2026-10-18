@@ -18,14 +18,14 @@ vi.mock('@/api/tasks', async (importOriginal) => ({
 
 import { runVideoSubtitleErase } from '@/features/canvas/application/videoSubtitleErase';
 
-describe('runVideoSubtitleErase（去字幕提交核心，从 VideoNode 抽出）', () => {
+describe('runVideoSubtitleErase (subtitle erase submission core, extracted from VideoNode)', () => {
   beforeEach(() => {
     submitFreezoneVideoErase.mockReset();
     fetchFreezoneJobResult.mockReset();
     awaitTaskCompletion.mockReset();
   });
 
-  it('smart 档：提交 → 等完成 → 取 job result（含产物 url）', async () => {
+  it('smart tier: submit -> wait for completion -> fetch the job result (with the output url)', async () => {
     submitFreezoneVideoErase.mockResolvedValue({
       task_key: 'tk-e',
       task_type: 'freezone_video_erase',
@@ -54,7 +54,7 @@ describe('runVideoSubtitleErase（去字幕提交核心，从 VideoNode 抽出�
     expect(result.url).toBe('/static/no-sub.mp4');
   });
 
-  it('提交失败向上抛（UI 状态由调用方收拾）', async () => {
+  it('submit failure is thrown upward (UI state is cleaned up by the caller)', async () => {
     submitFreezoneVideoErase.mockRejectedValue(new Error('erase failed'));
     await expect(
       runVideoSubtitleErase('proj-1', {

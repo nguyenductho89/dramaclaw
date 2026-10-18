@@ -213,7 +213,7 @@ def test_hermes_worker_defaults_to_ce_edition(tmp_path: Path, monkeypatch: pytes
     from novelvideo.chat import hermes_pool
 
     monkeypatch.delenv("ST_EDITION", raising=False)
-    # 即便宿主进程有控制面 DSN,也绝不能泄漏进 worker 子进程环境。
+    # Even if the host process has a control-plane DSN, it must never leak into the worker child-process environment.
     monkeypatch.setenv("ST_CONTROL_PLANE_DSN", "postgres://cp/db")
     monkeypatch.setattr(hermes_pool, "effective_gateway_credentials", lambda: ("", ""))
     token = AgentSessionToken(

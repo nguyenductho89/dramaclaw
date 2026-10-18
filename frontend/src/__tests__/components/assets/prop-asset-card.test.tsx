@@ -12,33 +12,33 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     resources: {
-      zh: {
+      en: {
         translation: {
           assets: {
             common: {
-              edit: "编辑",
-              delete: "删除",
-              generated: "已生成",
-              missing: "未生成",
+              edit: "Edit",
+              delete: "Delete",
+              generated: "Ready",
+              missing: "Not generated",
             },
             props: {
-              reference: "参考图",
-              noReference: "未生成参考图",
-              noDescription: "暂无描述",
-              generateReference: "生成参考图",
-              generatingReference: "生成中...",
-              regenerateReference: "重生参考图",
-              owner: "所属角色",
+              reference: "Reference image",
+              noReference: "Reference image missing",
+              noDescription: "No description",
+              generateReference: "Generate reference",
+              generatingReference: "Generating...",
+              regenerateReference: "Regenerate reference",
+              owner: "Owner",
               types: {
-                weapon: "武器",
-                accessory: "饰品",
-                artifact: "神器/法器",
-                document: "文书",
-                furniture: "家具",
-                object: "其他物件",
+                weapon: "Weapon",
+                accessory: "Accessory",
+                artifact: "Artifact",
+                document: "Document",
+                furniture: "Furniture",
+                object: "Other object",
               },
             },
           },
@@ -69,72 +69,72 @@ function renderCard(prop: PropAsset, overrides = {}) {
 describe("PropAssetCard", () => {
   it("renders reference image and generate action", () => {
     const handlers = renderCard({
-      name: "七星剑",
+      name: "Seven Star Sword",
       aliases: [],
       prop_type: "weapon",
-      visual_prompt: "古铜剑柄，剑身刻七星纹",
+      visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
       description: "",
-      owner: "李青",
+      owner: "Li Qing",
       notes: "",
       reference_url: "/static/u/p/assets/props/seven-star-sword/reference.png",
     });
 
-    expect(screen.getByText("七星剑")).toBeInTheDocument();
-    expect(screen.getByText("武器")).toBeInTheDocument();
-    expect(screen.getByText("所属角色：李青")).toBeInTheDocument();
-    expect(screen.getByText("参考图 已生成")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重生参考图" })).toBeInTheDocument();
+    expect(screen.getByText("Seven Star Sword")).toBeInTheDocument();
+    expect(screen.getByText("Weapon")).toBeInTheDocument();
+    expect(screen.getByText("Owner: Li Qing")).toBeInTheDocument();
+    expect(screen.getByText("Reference image Ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate reference" })).toBeInTheDocument();
 
-    expect(screen.queryByRole("button", { name: /上传/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /删除参考图/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Upload/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete reference image/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "重生参考图" }));
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate reference" }));
     expect(handlers.onGenerateReference).toHaveBeenCalledTimes(1);
   });
 
   it("renders empty reference state", () => {
     renderCard({
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
     });
 
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
   });
 
   it("falls back when a convention URL points at a missing file", () => {
     renderCard({
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
-      reference_url: "/static/projects/demo/assets/props/密信/reference_3view.png",
+      reference_url: "/static/projects/demo/assets/props/Secret Letter/reference_3view.png",
     });
 
-    fireEvent.error(screen.getByAltText("密信 参考图"));
+    fireEvent.error(screen.getByAltText("Secret Letter Reference image"));
 
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
   });
 
   it("retries the convention URL after an upload finishes", () => {
     const prop: PropAsset = {
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
-      reference_url: "/static/projects/demo/assets/props/密信/reference_3view.png",
+      reference_url: "/static/projects/demo/assets/props/Secret Letter/reference_3view.png",
     };
     const handlers = {
       onEdit: vi.fn(),
@@ -149,8 +149,8 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    fireEvent.error(screen.getByAltText("密信 参考图"));
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
+    fireEvent.error(screen.getByAltText("Secret Letter Reference image"));
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
 
     view.rerender(
       <I18nextProvider i18n={i18n}>
@@ -158,7 +158,7 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByAltText("密信 参考图")).toBeInTheDocument();
+    expect(screen.getByAltText("Secret Letter Reference image")).toBeInTheDocument();
   });
 
   it("renders NiceGUI prop type labels instead of raw prop type codes", () => {
@@ -166,13 +166,13 @@ describe("PropAssetCard", () => {
       name: "TOKEN",
       aliases: [],
       prop_type: "artifact",
-      visual_prompt: "红色数字、二进制代码和方块粒子构成的发光团",
+      visual_prompt: "A glowing cluster made of red digits, binary code and block particles",
       description: "",
       owner: "",
       notes: "",
     });
 
-    expect(screen.getByText("神器/法器")).toBeInTheDocument();
+    expect(screen.getByText("Artifact")).toBeInTheDocument();
     expect(screen.queryByText("artifact")).not.toBeInTheDocument();
   });
 
@@ -181,44 +181,44 @@ describe("PropAssetCard", () => {
       name: "TOKEN",
       aliases: [],
       prop_type: "artifact",
-      visual_prompt: "红色数字、二进制代码和方块粒子构成的发光团",
+      visual_prompt: "A glowing cluster made of red digits, binary code and block particles",
       description: "",
       owner: "",
       notes: "",
     });
 
-    expect(screen.getByRole("button", { name: "编辑" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
   it("opens a reference image preview from the card image", () => {
     renderCard({
-      name: "七星剑",
+      name: "Seven Star Sword",
       aliases: [],
       prop_type: "weapon",
-      visual_prompt: "古铜剑柄，剑身刻七星纹",
+      visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
       description: "",
       owner: "",
       notes: "",
       reference_url: "/static/u/p/assets/props/seven-star-sword/reference.png",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "七星剑 参考图" }));
+    fireEvent.click(screen.getByRole("button", { name: "Seven Star Sword Reference image" }));
 
     expect(
       screen.getByRole("link", { name: "Download image" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByAltText("七星剑 参考图")).toHaveLength(2);
+    expect(screen.getAllByAltText("Seven Star Sword Reference image")).toHaveLength(2);
   });
 
   it("shows the NiceGUI generating label for single prop reference generation", () => {
     renderCard(
       {
-        name: "七星剑",
+        name: "Seven Star Sword",
         aliases: [],
         prop_type: "weapon",
-        visual_prompt: "古铜剑柄，剑身刻七星纹",
+        visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
         description: "",
         owner: "",
         notes: "",
@@ -227,7 +227,7 @@ describe("PropAssetCard", () => {
       { generating: true },
     );
 
-    expect(screen.getByRole("button", { name: "生成中..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generating..." })).toBeDisabled();
   });
 
   it("renders the NiceGUI empty description fallback", () => {
@@ -241,6 +241,6 @@ describe("PropAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByText("暂无描述")).toBeInTheDocument();
+    expect(screen.getByText("No description")).toBeInTheDocument();
   });
 });

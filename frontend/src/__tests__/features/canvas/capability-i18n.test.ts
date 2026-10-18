@@ -17,11 +17,11 @@ function lookup(translations: Record<string, unknown>, key: string): unknown {
 }
 
 /**
- * 能力表的展示文案全在词条里，源码只留 key。漏配词条时界面会直接显示裸 key，
- * 而不是回退到中文——所以这里把每个 key 都对着两份 locale 查一遍。
+ * The capability table's display text lives entirely in locale entries, and the source keeps only keys. When an entry is missing the UI shows the bare key directly,
+ * rather than falling back to another language -- so every key is checked here against both locales.
  */
 describe("capability copy is fully translated", () => {
-  const locales = ["zh", "en"].map((language) => ({
+  const locales = ["en", "vi"].map((language) => ({
     language,
     translations: JSON.parse(
       readFileSync(`public/locales/${language}/translation.json`, "utf8"),

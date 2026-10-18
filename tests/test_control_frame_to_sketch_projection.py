@@ -78,11 +78,11 @@ def _projection(**overrides) -> Any:
     from novelvideo.task_backend.projection import ProjectProjection
 
     fields: dict[str, Any] = {
-        "beats": [{"beat_number": 1, "visual_description": "殿前"}],
-        "scene_menu": [{"name": "皇宫·大殿"}],
-        "prop_menu": [{"name": "玉玺"}],
+        "beats": [{"beat_number": 1, "visual_description": "In front of the hall"}],
+        "scene_menu": [{"name": "palace_hall"}],
+        "prop_menu": [{"name": "jade_seal"}],
         "sketch_colors": {"1": "#ff0000"},
-        "characters": [{"name": "阿离", "identities": []}],
+        "characters": [{"name": "Ali", "identities": []}],
         "visual_style": "ink_wash",
         "sketch_image_selection": "some-model",
     }
@@ -139,8 +139,8 @@ async def test_projected_values_are_the_ones_actually_used(
 
     assert stub_generation["style"] == "ink_wash"
     assert stub_generation["sketch_colors"] == {"1": "#ff0000"}
-    assert stub_generation["scene_menu"] == [{"name": "皇宫·大殿"}]
-    assert stub_generation["prop_menu"] == [{"name": "玉玺"}]
+    assert stub_generation["scene_menu"] == [{"name": "palace_hall"}]
+    assert stub_generation["prop_menu"] == [{"name": "jade_seal"}]
     assert stub_generation["beats"][0]["beat_number"] == 1
     assert stub_generation["generator_config"]["selection_override"] == "some-model"
 
@@ -163,7 +163,7 @@ async def test_character_portrait_paths_are_rebuilt_from_the_project_dir(
     await _convert(tmp_path, _projection())
 
     assert captured[0][0]["portrait_path"] == str(
-        tmp_path / "assets" / "characters" / "阿离" / "portrait.png"
+        tmp_path / "assets" / "characters" / "Ali" / "portrait.png"
     )
 
 

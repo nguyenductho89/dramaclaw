@@ -24,7 +24,7 @@ Use the same executable row shape as sketch edit execute:
     "decision": "revise",
     "main_problem": "staging_unclear",
     "reasoning": "1-3 concise sentences.",
-    "edit_instruction": "删除... 改成... 保留... 不要...",
+    "edit_instruction": "Remove... Change to... Keep... Do not...",
     "confidence": 0.88
   },
   "raw_text": ""
@@ -70,11 +70,11 @@ Use `edit_instruction` to direct:
 - beat-to-beat shot variation
 
 Preferred structure:
-- `删除...`
-- `改成...`
-- `保留...`
-- `不要...`
+- `Remove...`
+- `Change to...`
+- `Keep...`
+- `Do not...`
 
 Good examples:
-- `删除当前过远的双人中景。改成更近的中近景，主角在左前，晚翠在右后，保留递银动作。保留两人身份色和单床场景。不要新增第三人，不要遮住手部动作。`
-- `删除当前与上一拍重复的平视站姿。改成略俯视机位，让主体右上/左下分离，保留两人对话关系。不要改身份色，不要新增彩色配角。`
+- `Remove the current overly distant two-person medium shot. Change to a closer medium close-up, with the protagonist front-left and Wancui back-right, keeping the silver-handing action. Keep both people's identity colors and the single-bed scene. Do not add a third person, and do not block the hand action.`
+- `Remove the current eye-level standing pose that repeats the previous beat. Change to a slightly high camera position, separating the subjects upper-right/lower-left and keeping the two people's dialogue relationship. Do not change identity colors, and do not add colored supporting characters.`

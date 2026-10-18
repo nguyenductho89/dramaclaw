@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 图片 / 视频节点提示词栏上的「＋参考」入口。
+ * The "+ Reference" entry on the prompt bar of image / video nodes.
  *
- * 两种参考在用户眼里是一回事——「给这次生成一个参照物」——只是素材从哪来不同：
- * 画布上已有的节点，或者本地文件。所以它们合并成同一颗 chip，点开是个二选一的
- * 下拉；顶排 chip 也因此少一颗，给输入区腾出横向空间。
+ * In the user's eyes the two kinds of reference are one thing — "give this generation a reference" — only the source of the asset differs:
+ * an existing node on the canvas, or a local file. So they merge into one chip, and clicking opens a two-way
+ * dropdown; the top row also has one fewer chip, freeing horizontal space for the input area.
  *
- * 「画布参考」走拾取态：用户直接在画布上点一个节点，选中的结果就是一条上游连线，
- * 参考 chip 与提交载荷都由既有的上游推导链路自动跟上（见 [[referencePick]]）。
- * 「外部参考」把文件选择交回宿主节点（各节点接受的文件类型不一样）。
+ * "Canvas reference" enters pick mode: the user clicks a node directly on the canvas, and the selected result is one upstream edge,
+ * with the reference chip and the submit payload both followed automatically by the existing upstream derivation chain (see [[referencePick]]).
+ * "External reference" hands file selection back to the host node (each node accepts different file types).
  *
- * 没有传 onPickExternal 的节点（如图片生成节点，它本来就没有外部素材入口）保持
- * 单击直接进拾取态，不平白多一层菜单。
+ * Nodes that do not pass onPickExternal (such as the image generation node, which never had an external asset entry) keep
+ * a single click that goes straight into pick mode, with no needless extra menu layer.
  */
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -34,17 +34,17 @@ import {
 
 const MENU_WIDTH = 208;
 const MENU_GAP = 6;
-/** 两条固定菜单项撑满时的高度，用来判断下方放不放得下。 */
+/** Height when the two fixed menu items fill the menu, used to judge whether there is room below. */
 const MENU_HEIGHT = 108;
 
 /**
- * 进入画布拾取态。可选目标为空时不进入——拾取态下整张画布都会变样，
- * 进去了却一个能点的都没有，只会让用户以为功能坏了。
+ * Enter canvas pick mode. Do not enter when the pickable targets are empty — in pick mode the whole canvas changes look,
+ * and entering with nothing clickable would only make the user think the feature is broken.
  */
 function startCanvasPick(nodeId: string, nodeType: CanvasNodeType, t: TFunction): void {
-  // 视口从 store 读而不是 useReactFlow()：这个 chip 活在节点组件里，节点组件的
-  // 单测普遍只 mock 了 @xyflow/react 的一小撮导出，多要一个 hook 就会把它们全部
-  // 拖下水；currentViewport 本来就是 store 维护的（见 BackToNodesHint）。
+  // The viewport is read from the store rather than useReactFlow(): this chip lives inside node components, whose
+  // unit tests generally mock only a handful of @xyflow/react exports, and requiring one more hook would drag them all
+  // down; currentViewport is maintained by the store anyway (see BackToNodesHint).
   const { nodes, currentViewport } = useCanvasStore.getState();
   const { candidates, rejections } = collectReferencePickTargets(nodes, nodeId, nodeType, t);
   if (candidates.size === 0) {
@@ -95,7 +95,7 @@ export function ReferencePickChip({
 }: {
   nodeId: string;
   nodeType: CanvasNodeType;
-  /** 选择「外部参考」时的回调；不传则本 chip 单击直接进画布拾取态。 */
+  /** Callback when "External reference" is chosen; if not passed, a single click on this chip goes straight into canvas pick mode. */
   onPickExternal?: () => void;
 }) {
   const { t } = useTranslation();
@@ -108,9 +108,9 @@ export function ReferencePickChip({
     maxHeight: number;
   } | null>(null);
 
-  // 菜单走 portal + fixed，理由同 CameraMovementChip：chip 所在的那行是
-  // overflow-x-auto（纵向也会跟着裁），而且节点自带 transform 会把 absolute 浮层
-  // 关进它自己的层叠上下文里，盖不过画布上的其它东西。
+  // The menu uses portal + fixed, for the same reason as CameraMovementChip: the row this chip sits in is
+  // overflow-x-auto (which also clips vertically), and the node's own transform locks an absolute popover
+  // into its own stacking context, so it cannot cover other things on the canvas.
   useEffect(() => {
     if (!anchor) return;
     const close = (event: globalThis.MouseEvent) => {
@@ -129,8 +129,8 @@ export function ReferencePickChip({
   const openMenu = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // 操作面板常年贴在视口下沿，这颗 chip 离底边往往只剩几十像素：只往下开会把整个
-    // 菜单顶到视口外，看起来就像点了没反应。见 [[placeAnchoredMenu]]。
+    // The operations panel perpetually hugs the bottom edge of the viewport, and this chip is often only a few dozen pixels from the bottom: opening only downward pushes the whole
+    // menu out of the viewport, which looks like a click that did nothing. See [[placeAnchoredMenu]].
     const { top, left, maxHeight } = placeAnchoredMenu({
       anchorRect: rect,
       width: MENU_WIDTH,
@@ -142,7 +142,7 @@ export function ReferencePickChip({
 
   const handleClick = (event: MouseEvent) => {
     event.stopPropagation();
-    // 已经在拾取态：这一下是「算了，不选了」，不该再弹菜单。
+    // Already in pick mode: this click means "never mind, don't pick", and the menu must not pop up again.
     if (active) {
       useReferencePickStore.getState().stop();
       return;

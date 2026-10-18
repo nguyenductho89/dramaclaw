@@ -36,7 +36,7 @@ BACKGROUND_ANCHORS = (
 BACKGROUND_ANCHOR_LABELS = {
     ANCHOR_MASTER: "master",
     ANCHOR_REVERSE: "reverse",
-    ANCHOR_SELECTED_BACKGROUND: "外部参考",
+    ANCHOR_SELECTED_BACKGROUND: "external reference",
     ANCHOR_DIRECTOR_ENV_ONLY: "director env_only",
 }
 

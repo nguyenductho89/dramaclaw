@@ -75,32 +75,32 @@ describe("ComposerWaitingStatus", () => {
     render(
       <ComposerWaitingStatus
         label="Waiting"
-        activityLabel="正在读取画布资产"
+        activityLabel="Reading canvas assets"
         visible
       />,
     );
 
     act(() => vi.advanceTimersByTime(100));
 
-    expect(screen.getByLabelText("正在读取画布资产")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reading canvas assets")).toBeInTheDocument();
     expect(screen.queryByText("Understanding the request")).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(10_000));
-    expect(screen.getByLabelText("正在读取画布资产 · 10s")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reading canvas assets · 10s")).toBeInTheDocument();
   });
 
   it("makes a long-running live activity explicit instead of looking frozen", () => {
     render(
       <ComposerWaitingStatus
         label="Waiting"
-        activityLabel="正在调用项目工具"
+        activityLabel="Calling project tools"
         visible
       />,
     );
 
     act(() => vi.advanceTimersByTime(45_000));
 
-    expect(screen.getByLabelText("Still working: 调用项目工具 · 45s")).toBeInTheDocument();
+    expect(screen.getByLabelText("Still working: Calling project tools · 45s")).toBeInTheDocument();
   });
 
   it("settles on the long-wait label without changing the wave speed", () => {

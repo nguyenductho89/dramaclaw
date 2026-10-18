@@ -137,7 +137,7 @@ def session_target_name(value: str) -> str:
 
 
 def fs_url(path: Path) -> str:
-    """Vite /@fs URL:posix 化并保证根斜杠(Windows 盘符 C:/ 前需补 /)。"""
+    """Vite /@fs URL: posix-ify and guarantee a leading slash (a Windows drive letter like C:/ needs a / prefix)."""
     posix = Path(path).resolve().as_posix()
     if not posix.startswith("/"):
         posix = "/" + posix

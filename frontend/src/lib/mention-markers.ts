@@ -22,14 +22,14 @@ function escapeRegExp(value: string): string {
 }
 
 // Build a global regex that matches `@<label>` against the *known* candidate
-// dictionary — longest label first (so e.g. "青桐_少女时期" wins over
-// "青桐_少女"), with the label captured in group 1. Matching is purely
+// dictionary - longest label first (so e.g. "Mia_teen" wins over
+// "Mia"), with the label captured in group 1. Matching is purely
 // dictionary-driven: only `@` immediately followed by a known label matches, so
 // `a@b.com` stays literal without needing a boundary guard. Crucially there is
 // NO look-behind on the char before `@`, so adjacent mentions resolve even when
-// labels end in digits — `@图片1@图片2` yields both. Because we never "grab up
+// labels end in digits - `@image1@image2` yields both. Because we never "grab up
 // to the next space", a trailing space is never required:
-// `@青桐_少女时期哈哈哈` resolves to `青桐_少女时期` + `哈哈哈`. Returns null when
+// `@Mia_teenhaha` resolves to `Mia_teen` + `haha`. Returns null when
 // there are no labels. Shared by the highlight layer (mention-textarea) and the
 // parse layer so both stay in lock-step (WYSIWYG).
 export function buildMentionRegex(labels: string[]): RegExp | null {

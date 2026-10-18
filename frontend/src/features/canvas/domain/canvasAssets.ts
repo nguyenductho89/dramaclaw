@@ -21,12 +21,12 @@ export interface CanvasAsset {
    * Generation prompt recorded on this asset. Only populated in the
    * generation-history source (where each record carries the exact prompt that
    * produced it); left undefined for live-canvas assets whose `label` is a node
-   * display name, not a prompt. Used to seed a new node's prompt box on 使用.
+   * display name, not a prompt. Used to seed a new node's prompt box on Use.
    */
   prompt?: string | null;
-  /** 原始生成的注册表模型 id（还原用）。旧记录为 undefined。 */
+  /** Registry model id of the original generation (for restoration). undefined for old records. */
   model?: string | null;
-  /** 原始生成模式（还原用）。旧记录为 undefined。 */
+  /** Original generation mode (for restoration). undefined for old records. */
   genMode?: string | null;
   /** Best-effort creation time in ms epoch; null when the node carries none. */
   timestamp: number | null;
@@ -42,13 +42,13 @@ export interface CanvasAssetBuckets {
 }
 
 /**
- * 逐字段做大小写不敏感子串匹配。刻意逐字段 `.some()` 而不是把 prompt/label 拼成一个串:
- * 拼接会让「上一字段结尾 + 下一字段开头」凑出并不存在的命中(如 prompt「小猫」+ label
- * 「鱼缸」被「猫鱼」命中),而且生成历史里 prompt 与 label 往往是同一段提示词,拼接等于
- * 把每个资产的扫描量翻倍。
+ * Case-insensitive substring matching field by field. Deliberately `.some()` per field rather than concatenating prompt/label into one string:
+ * concatenation would produce hits that do not exist out of "end of the previous field + start of the next" (e.g. prompt "kit" + label
+ * "ten" hit by "kitten"), and in generation history prompt and label are often the same prompt text, so concatenation doubles
+ * the scan volume of every asset.
  *
- * 与 `filterBySearch`(components/assets/asset-search-box.tsx)同语义,但这里不 import 它
- * ——那是个 .tsx 组件模块,domain 层引它会把 React/shadcn 整条图拖进来。
+ * The same semantics as `filterBySearch` (components/assets/asset-search-box.tsx), but it is not imported here
+ * - that is a .tsx component module, and importing it in the domain layer would drag in the whole React/shadcn graph.
  */
 function matchesNeedle(asset: CanvasAsset, needle: string): boolean {
   return [asset.prompt, asset.label].some(
@@ -57,15 +57,15 @@ function matchesNeedle(asset: CanvasAsset, needle: string): boolean {
 }
 
 /**
- * 关键词搜索命中判定(issue #175):匹配资产的提示词与展示名。
+ * Keyword search hit check (issue #175): match the asset's prompt and display name.
  *
- * 各来源的字段含义不同:生成历史里 prompt/label 都是那次生成的提示词(世界记录的 label
- * 会回退成上游节点名);live-canvas 取图时 prompt 恒为空、label 是节点名/文件名(见
- * `CanvasAsset.prompt` 注释)——所以那条路径上只有名字可搜,调用方的 placeholder 要相应
- * 改口,别承诺「搜提示词」。
+ * The field meanings differ by source: in generation history prompt/label are both that generation's prompt (a world record's label
+ * falls back to the upstream node name); for live-canvas picking prompt is always empty and label is the node name/file name (see the
+ * `CanvasAsset.prompt` note) - so on that path only names are searchable, and the caller's placeholder should change its wording accordingly,
+ * without promising "search prompts".
  *
- * query 两端会被 trim、大小写不敏感;这里对查询词也 normalize 一次,不把「必须预先小写」
- * 当隐式前置条件(否则调用方直接传用户原文时,大写输入会静默零命中)。
+ * Both ends of query are trimmed and it is case-insensitive; the query term is also normalized once here, so "must be lowercased in advance" is not
+ * an implicit precondition (otherwise when callers pass the user's raw text directly, uppercase input would silently hit zero).
  */
 export function assetMatchesQuery(asset: CanvasAsset, query: string): boolean {
   const needle = query.trim().toLowerCase();
@@ -74,9 +74,9 @@ export function assetMatchesQuery(asset: CanvasAsset, query: string): boolean {
 }
 
 /**
- * 按关键词过滤四个资产桶。空查询原样返回同一个对象(不复制)。四个桶都过滤(而非只过滤
- * 当前 tab),这样各 tab 的计数直接反映命中数,用户能看出该去哪个 tab 找。needle 只
- * normalize 一次,不在每个资产上重算。
+ * Filter the four asset buckets by keyword. An empty query returns the same object as is (no copy). All four buckets are filtered (not just
+ * the current tab), so each tab's count directly reflects hits and the user can see which tab to look in. needle is normalized
+ * only once, not recomputed on every asset.
  */
 export function filterAssetBuckets(
   buckets: CanvasAssetBuckets,
@@ -139,25 +139,25 @@ function labelOf(data: Record<string, unknown>): string | null {
   return firstStr(data.displayName, data.sourceFileName);
 }
 
-/** 一个节点身上的一件原始资产（未经 `resolveMediaUrl` 归一）。 */
+/** A raw asset on a node (not normalized by `resolveMediaUrl`). */
 export interface CanvasNodeAsset {
   kind: CanvasAssetKind;
-  /** 原件地址 —— 下载要拿的就是它，不是封面。 */
+  /** Original file address - what a download should fetch, not the cover. */
   url: string;
-  /** 卡片/缩略图用的封面；视频、3D 世界这类没有静帧的资产才有值。 */
+  /** Cover used for cards/thumbnails; only has a value for assets without a still frame such as videos and 3D worlds. */
   previewUrl: string | null;
-  /** 同一节点有多件时的区分位（分格图）。 */
+  /** Discriminator when the same node has several (grid cells). */
   suffix?: string;
 }
 
 /**
- * 一个节点身上有哪些**原始**资产。这是「节点 → 可下载文件」的单一事实来源：资产
- * 库（{@link extractCanvasAssets}）与侧栏画布大纲都读它。
+ * Which **raw** assets a node carries. This is the single source of truth for "node -> downloadable files": the asset
+ * library ({@link extractCanvasAssets}) and the sidebar canvas outline both read it.
  *
- * 单独抽出来是因为这张表极易漏：视频合成的成片在 `resultVideoUrl`、视频故事的源
- * 片在 `sourceVideoUrl`、3D 世界的包在 `plyUrl`，而这三种节点身上同时挂着
- * `previewImageUrl`。谁自己写一版「取 videoUrl，否则回落到封面」，谁就会把海报当
- * 成片下载给用户。封面与原件在这里是两个字段，语义上分开。
+ * It is extracted separately because this table is very easy to miss: the finished video of a video compose is in `resultVideoUrl`, the source
+ * clip of a video story is in `sourceVideoUrl`, and a 3D world's package is in `plyUrl`, while all three kinds of nodes also carry
+ * `previewImageUrl`. Anyone who writes their own version of "take videoUrl, otherwise fall back to the cover" would hand the poster to the user as
+ * the finished video. The cover and the original are two fields here, kept semantically apart.
  */
 export function resolveNodeAssets(node: CanvasNode): CanvasNodeAsset[] {
   const data = asRecord(node.data);
@@ -174,7 +174,7 @@ export function resolveNodeAssets(node: CanvasNode): CanvasNodeAsset[] {
     case CANVAS_NODE_TYPES.exportImage:
       return one('image', firstStr(data.imageUrl, data.committed_slot_url, data.previewImageUrl));
     case CANVAS_NODE_TYPES.pano360Viewer:
-      // 全景查看器承载的就是那张球面贴图本身，原件即 imageUrl。
+      // The panorama viewer carries that spherical texture itself, so the original is imageUrl.
       return one('image', firstStr(data.imageUrl, data.previewImageUrl));
     case CANVAS_NODE_TYPES.storyboardSplit:
     case CANVAS_NODE_TYPES.storyboardGen: {
@@ -208,8 +208,8 @@ export function resolveNodeAssets(node: CanvasNode): CanvasNodeAsset[] {
 }
 
 /**
- * 节点的主资产 —— 一个节点只允许一件「下载它」时该拿到的东西。分格类节点有多张图，
- * 取第一张（整个节点的批量下载由调用方自己遍历 {@link resolveNodeAssets}）。
+ * A node's primary asset - what "download it" should get when only one item is allowed per node. Grid-type nodes have several images,
+ * and the first is taken (bulk download of a whole node is traversed by the caller itself with {@link resolveNodeAssets}).
  */
 export function resolveNodePrimaryAsset(node: CanvasNode): CanvasNodeAsset | null {
   return resolveNodeAssets(node)[0] ?? null;

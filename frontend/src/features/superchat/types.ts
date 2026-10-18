@@ -337,7 +337,7 @@ export type ServerFrame =
       voice_policy?: "system" | "custom" | null;
     }
   | { type: "project.created"; project: string }
-  | { type: "error"; message: string; turn_id?: string }
+  | { type: "error"; message: string; turn_id?: string; code?: string }
   | { type: string; [key: string]: unknown };
 
 export type ChatRole = "user" | "assistant" | "system" | "tool";

@@ -23,5 +23,5 @@ def test_init_cognee_rejects_gateway_change_until_restart(monkeypatch):
     monkeypatch.setattr(nv_config, "_current_gateway_fingerprint", lambda: "new")
 
     assert nv_config.cognee_gateway_restart_required() is True
-    with pytest.raises(RuntimeError, match="请重启 DramaClaw"):
+    with pytest.raises(RuntimeError, match="restart DramaClaw"):
         nv_config.init_cognee()

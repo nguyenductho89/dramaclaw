@@ -26,7 +26,7 @@ _PROVIDER = os.environ.get("VOXEL_VLM_PROVIDER", "openrouter")
 _MODEL = os.environ.get("VOXEL_VLM_MODEL", "openai/gpt-5.5")
 
 
-SYSTEM_PROMPT = """You are an expert 3D voxel scene designer for a comic-drama (漫剧) production pipeline.
+SYSTEM_PROMPT = """You are an expert 3D voxel scene designer for a comic-drama production pipeline.
 
 GOAL
 ====

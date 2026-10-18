@@ -6,13 +6,13 @@ import {
 } from "@/features/canvas/application/imageData";
 
 /**
- * 视频「胶片条」抽帧 —— 给时间线片段铺满采样帧（libtv 风格）。
+ * Video "filmstrip" frame extraction - fill timeline clips with sampled frames (libtv style).
  *
- * 每个源视频只抽一次帧并按 url 缓存：抽帧覆盖整段源时长，渲染时按片段的裁剪
- * 窗口（trimStart..trimEnd）挑最近帧平铺。这样拖 trim 手柄只是换显示的帧、
- * 不重新抽帧，开销极低。跨域 CDN 媒体（线上的绝对 http(s) 地址）以
- * crossOrigin='anonymous' 加载，否则画到 canvas 会污染、导出失败；本地 `/static`
- * 代理同源则不设（与 VideoClipPanel.captureFrames 一致）。
+ * Frames are extracted only once per source video and cached by url: the extraction covers the whole source duration, and at render time the nearest frames are tiled by the
+ * clip's trim window (trimStart..trimEnd). So dragging the trim handles only swaps the displayed frames,
+ * with no re-extraction and very low cost. Cross-origin CDN media (online absolute http(s) addresses) are loaded with
+ * crossOrigin='anonymous', otherwise drawing them into a canvas taints it and the export fails; the local `/static`
+ * proxy is same-origin so it is not set (consistent with VideoClipPanel.captureFrames).
  */
 export interface FilmstripFrame {
   timeMs: number;

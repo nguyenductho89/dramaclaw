@@ -1,7 +1,7 @@
-"""NovelVideo 服务模块。
+"""NovelVideo services module.
 
-包含：
-- StyleService: 风格配置管理服务（One Source of Truth）
+Contains:
+- StyleService: style configuration management service (One Source of Truth)
 """
 
 from novelvideo.services.style_service import StyleService

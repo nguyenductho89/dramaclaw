@@ -1,4 +1,4 @@
-"""画面/网格/视频生成端点。"""
+"""Frame / grid / video generation endpoints."""
 
 import json
 import io
@@ -44,7 +44,6 @@ from novelvideo.api.schemas import (
     SegmentVideosGenerateRequest,
     RenderReviewRequest,
     QwenEditPromptGenerateRequest,
-    QwenEditPrompts,
     PoolSelectRequest,
     VideoPoolSelectRequest,
     GridCutRequest,
@@ -63,7 +62,11 @@ from novelvideo.api.schemas import (
     Seedance2AssetCropRequest,
     Seedance2AssetDeleteRequest,
 )
-from novelvideo.utils.source_language import detect_episode_asset_language
+from novelvideo.utils.source_language import (
+    detect_asset_language,
+    detect_episode_asset_language,
+    language_name,
+)
 from novelvideo.api.viewer_manifests import (
     build_director_stage_manifest,
     build_pano_viewer_manifest,
@@ -485,11 +488,11 @@ _FanoutLimitError = (
 
 
 def _task_limit_reason(exc: _FanoutLimitError) -> str:
-    """撞闸异常 → 作用域词。
+    """Limit-hit exception -> scope word.
 
-    分支必须与 ``api/app.py`` 的 ``limit_scope`` 逐字同源（``:226`` 渠道闸 /
-    ``:206`` 与 ``:271`` 人闸）—— 两侧同算法是跨 EU 的漂移探测器，故三处扇出
-    循环共用这一个 helper，而不是各自内联一份。
+    The branches must be derived verbatim from the ``limit_scope`` in ``api/app.py`` (``:226`` channel limit /
+    ``:206`` and ``:271`` person limit) -- the same algorithm on both sides is a drift detector across EUs, so the three fan-out
+    loops share this one helper instead of each inlining a copy.
     """
     if isinstance(exc, ProjectTaskLimitExceeded):
         return "project"
@@ -502,16 +505,16 @@ def _task_limit_reason(exc: _FanoutLimitError) -> str:
 
 
 def _log_partial_dispatch_rejection(exc: _FanoutLimitError) -> None:
-    """已投出 k > 0 个后撞闸：异常就地被吞、响应是 200，走不到 ``api/app.py``
-    的 handler，日志得在这里补 —— 否则「投了一半撞闸」在面板上不存在。
+    """Limit hit after k > 0 were dispatched: the exception is swallowed in place and the response is 200, so it never reaches the handler in ``api/app.py``,
+    and the log must be added here -- otherwise "limit hit halfway through dispatch" does not exist on the dashboard.
 
-    一次撞闸记一行（按捕获到的那个异常），不按后面合成的每条 ``rejected`` 记。
+    One log line per limit hit (for the exception actually caught), not per synthesized ``rejected`` entry afterwards.
     """
     log_task_limit_rejection(exc, limit_scope=_task_limit_reason(exc))
 
 
 def _task_limit_rejection(scope: str, exc: _FanoutLimitError) -> dict[str, Any]:
-    """把撞闸异常翻成扇出响应里的一条 ``rejected``（M8 §8.2 冻结形状）。"""
+    """Translate a limit-hit exception into one ``rejected`` entry of the fan-out response (frozen shape of M8 §8.2)."""
     return {
         "scope": scope,
         "reason": _task_limit_reason(exc),
@@ -692,7 +695,7 @@ async def _build_character_map(
     episode_num: int | None = None,
     use_detected_identities: bool = False,
 ):
-    """构建角色映射。"""
+    """Build the character map."""
     from novelvideo.services.character_ref_service import build_character_map_for_grid
 
     project_dir = get_user_base_dir(username) / project
@@ -735,7 +738,7 @@ async def _build_character_map(
             }
         )
 
-    # 优先从 SQLite 读取 sketch_colors；若缺失则按当前 beats 重新分配并写回 SQLite。
+    # Prefer reading sketch_colors from SQLite; if missing, reassign according to the current beats and write back to SQLite.
     _sc = None
     if episode_num:
         _sc = store.get_sketch_colors(episode_num) or None
@@ -764,7 +767,7 @@ async def _build_character_map(
 
 
 def _validate_seedance_pro_dialogue_only(beats: list[dict], video_backend: str) -> str | None:
-    """Seedance 1.5 有声仅允许 dialogue beat。"""
+    """Seedance 1.5 with audio is only allowed for dialogue beats."""
     if video_backend not in {"seedance_pro", "newapi_seedance-1.5-pro"}:
         return None
 
@@ -776,9 +779,9 @@ def _validate_seedance_pro_dialogue_only(beats: list[dict], video_backend: str) 
     if not non_dialogue:
         return None
 
-    preview = "、".join(str(num) for num in non_dialogue[:8])
-    suffix = " 等" if len(non_dialogue) > 8 else ""
-    return f"Seedance 1.5 有声只允许用于 dialogue beat；当前包含非 dialogue Beat: {preview}{suffix}"
+    preview = ", ".join(str(num) for num in non_dialogue[:8])
+    suffix = " etc." if len(non_dialogue) > 8 else ""
+    return f"Seedance 1.5 with audio is only allowed for dialogue beats; non-dialogue Beats are included: {preview}{suffix}"
 
 
 def _is_seedance2_backend(video_backend: str | None) -> bool:
@@ -830,7 +833,7 @@ SEEDANCE2_RESOLUTION_OPTIONS_BY_MODEL = {
     "seedance-2.0": ("480p", "720p", "1080p"),
     "seedance-2.0-value": ("720p", "1080p"),
     "seedance-2.0-fast-value": ("720p", "1080p"),
-    # Seedance 1.5 Pro（有声）清晰度，来源 huimengi /api/v1/models（480p/720p/1080p）
+    # Seedance 1.5 Pro (with audio) resolutions, from huimengi /api/v1/models (480p/720p/1080p)
     "seedance-1.5-pro": ("480p", "720p", "1080p"),
 }
 SEEDANCE2_DEFAULT_RESOLUTION_OPTIONS = ("480p", "720p")
@@ -906,7 +909,7 @@ def _legacy_video_prompt_for_mode(beat: dict[str, Any], video_mode: str) -> str:
 
 
 def _missing_video_prompt_error(beat_num: int) -> str:
-    return f"Beat {beat_num} 缺少视频提示词，请先点击“生成本 Beat 提示词”。"
+    return f"Beat {beat_num} has no video prompt. Click 'Generate this Beat's prompt' first."
 
 
 SEEDANCE2_SINGLE_VIDEO_CONFIG_FIELDS = {
@@ -1030,8 +1033,8 @@ async def _prepare_seedance2_api_beat(
     )
     if not str(prepared.prompt or "").strip():
         raise ValueError(
-            f"Beat {beat_num} Seedance 2.0 最终提示词为空，"
-            "请先填写 Seedance2.0主体提示词或点击“AI 优化”。"
+            f"Beat {beat_num} Seedance 2.0 final prompt is empty. "
+            "Fill in the Seedance 2.0 subject prompt or click 'AI optimize' first."
         )
 
     beat["seedance2_config_json"] = prepared.seedance2_config_json
@@ -1073,13 +1076,13 @@ async def _prepare_happyhorse_api_beat(
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     mode = config.mode
     if mode == Seedance2I2VMode.FIRST_LAST_FRAME or video_mode == "keyframe":
-        raise ValueError("HappyHorse 1.0 不支持首尾帧模式，请改用首帧模式或多参模式")
+        raise ValueError("HappyHorse 1.0 does not support first+last-frame mode. Use first-frame mode or multi-reference mode instead")
 
     final_prompt = str(config.final_prompt or prompt or "").strip()
     if not final_prompt:
         beat_num = int(beat.get("beat_number") or 0)
         prefix = f"Beat {beat_num} " if beat_num else ""
-        raise ValueError(f"{prefix}缺少视频提示词，请先生成或填写视频提示词")
+        raise ValueError(f"{prefix} has no video prompt. Generate or fill in the video prompt first")
 
     target_duration = int(config.duration or duration or 0)
     config.duration = target_duration
@@ -1111,7 +1114,7 @@ async def _prepare_happyhorse_api_beat(
         config.reference_image_paths = list(dict.fromkeys(image_paths))[:9]
         config.reference_audio_paths = []
         references = [
-            {"type": "image", "path": path, "role": f"图片{index}"}
+            {"type": "image", "path": path, "role": f"image{index}"}
             for index, path in enumerate(config.reference_image_paths, 1)
         ]
 
@@ -1155,13 +1158,13 @@ async def _prepare_grok_video_api_beat(
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     mode = config.mode
     if mode == Seedance2I2VMode.FIRST_LAST_FRAME or video_mode == "keyframe":
-        raise ValueError("Grok Video 不支持首尾帧模式，请改用首帧模式或多参模式")
+        raise ValueError("Grok Video does not support first+last-frame mode. Use first-frame mode or multi-reference mode instead")
 
     final_prompt = str(config.final_prompt or prompt or "").strip()
     if not final_prompt:
         beat_num = int(beat.get("beat_number") or 0)
         prefix = f"Beat {beat_num} " if beat_num else ""
-        raise ValueError(f"{prefix}缺少视频提示词，请先生成或填写视频提示词")
+        raise ValueError(f"{prefix} has no video prompt. Generate or fill in the video prompt first")
 
     target_duration = int(config.duration or duration or 0)
     config.duration = target_duration
@@ -1193,7 +1196,7 @@ async def _prepare_grok_video_api_beat(
         config.reference_image_paths = list(dict.fromkeys(image_paths))[:7]
         config.reference_audio_paths = []
         references = [
-            {"type": "image", "path": path, "role": f"图片{index}"}
+            {"type": "image", "path": path, "role": f"image{index}"}
             for index, path in enumerate(config.reference_image_paths, 1)
         ]
 
@@ -1301,12 +1304,12 @@ def _seedance2_returned_last_frame_status_payload(
         rel_path = str(path)
     return {
         "key": "returned_last_frame",
-        "label": f"返回尾帧 · Beat {int(beat_num)}",
+        "label": f"Return last frame · Beat {int(beat_num)}",
         "media_type": "image",
         "selected": False,
         "exists": True,
-        "reference_label": "尾帧",
-        "note": "Seedance2 返回尾帧",
+        "reference_label": "last frame",
+        "note": "Seedance2 returns the last frame",
         "identity_id": "",
         "prop_id": "",
         "prop_scope": "",
@@ -1334,8 +1337,8 @@ def _seedance2_voice_status_payload(
         return {
             "required": False,
             "ready": True,
-            "label": "无音频",
-            "detail": "静音 Beat 不生成音频",
+            "label": "No audio",
+            "detail": "Silent Beats generate no audio",
             "speaker": "",
         }
     if audio_type == "dialogue":
@@ -1354,8 +1357,8 @@ def _seedance2_voice_status_payload(
         return {
             "required": True,
             "ready": ready,
-            "label": "声线就绪" if ready else "声线缺失",
-            "detail": "、".join(names) if names else "未指定 speaker",
+            "label": "Voice ready" if ready else "Voice missing",
+            "detail": ", ".join(names) if names else "No speaker specified",
             "speaker": str(beat.get("speaker") or ""),
         }
 
@@ -1371,8 +1374,9 @@ def _seedance2_voice_status_payload(
     return {
         "required": True,
         "ready": bool(status.active_reference_path),
-        "label": "声线就绪" if status.active_reference_path else "声线缺失",
-        "detail": str(status.detail or status.error or "第三人称项目解说声线未配置"),
+        "label": "Voice ready" if status.active_reference_path else "Voice missing",
+        "code": None if status.active_reference_path else "voice_narrator_missing",
+        "detail": str(status.detail or status.error or "Third-person project narrator voice is not configured"),
         "speaker": "NARRATOR",
     }
 
@@ -2010,10 +2014,10 @@ def _image_generation_guard_payload(attempt_count: int, subject: str) -> dict:
     next_attempt = attempt_count + 1
     if next_attempt >= 5:
         level = "locked"
-        message = f"{subject} 已连续生成 {next_attempt} 次，请输入管理员密码继续本次生成。"
+        message = f"{subject} has been generated {next_attempt} times in a row. Enter the administrator password to continue this generation."
     elif next_attempt >= 3:
         level = "confirm"
-        message = f"{subject} 已连续生成 {next_attempt} 次，确认继续生成吗？"
+        message = f"{subject} has been generated {next_attempt} times in a row. Continue generating?"
     else:
         level = "none"
         message = ""
@@ -2031,7 +2035,7 @@ async def get_image_generation_guard(
     episode_num: int,
     task_type: str = Query(...),
     scope: str = Query(...),
-    subject: str = Query("当前生成任务"),
+    subject: str = Query("current generation task"),
     user: dict = Depends(get_api_user),
 ):
     """Return per-scope image generation guard status used before dispatch."""
@@ -2074,7 +2078,7 @@ async def compose_video(
     body: VideoComposeRequest,
     user: dict = Depends(get_api_user),
 ):
-    """合成成片。"""
+    """Compose the final video."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -2116,10 +2120,10 @@ async def compose_video(
             "task_key": project_task_state_key("compose_episode", ctx.project_id, episode_num),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集成片合成已进入队列",
+            "message": f"Episode {episode_num} final video composition queued",
         }
 
-    return {"ok": False, "error": "成片合成需要 project context"}
+    return {"ok": False, "error": "Final video composition requires a project context"}
 
 
 @router.get("/projects/{project}/episodes/{episode_num}/final")
@@ -2128,7 +2132,7 @@ async def get_final_video(
     episode_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """读取 episode 成片状态，供 supertale-fe compose 页刷新 hydration。"""
+    """Read the episode final-video status, for supertale-fe compose page refresh hydration."""
     resolved = await _resolve_generation_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     filename = f"ep{episode_num:03d}_final.mp4"
@@ -2143,7 +2147,7 @@ async def get_final_video(
     return {"ok": True, "data": data}
 
 
-# ── TTS 语音 ──────────────────────────────────────────────────────────────────
+# ── TTS speech ──────────────────────────────────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/tts/generate")
@@ -2185,7 +2189,7 @@ async def list_tts_voices(project: str, user: dict = Depends(get_api_user)):
     )
 
 
-# ── 草图 ──────────────────────────────────────────────────────────────────────
+# ── Sketch ──────────────────────────────────────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/sketches/generate")
@@ -2195,7 +2199,7 @@ async def generate_sketches(
     body: SketchGenerateRequest,
     user: dict = Depends(require_scope("tasks:submit")),
 ):
-    """生成草图。"""
+    """Generate sketches."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -2215,7 +2219,7 @@ async def generate_sketches(
     if not beats:
         return {"ok": False, "error": f"No beats found for episode {episode_num}"}
 
-    # 提前验证 grid_index，避免异步任务内才报错
+    # Validate grid_index up front so errors are not raised only inside the async task
     from novelvideo.generators.nanobanana_grid import (
         get_sketch_nxn_modes,
         sketch_grid_split,
@@ -2242,9 +2246,9 @@ async def generate_sketches(
         return {
             "ok": False,
             "error": (
-                f"grid_index={body.grid_index} 超出范围。"
-                f"共 {len(beats)} 个 beats，分割方案: {grid_labels}，"
-                f"有效 grid_index: 0~{len(grid_plan) - 1}"
+                f"grid_index={body.grid_index} is out of range. "
+                f"{len(beats)} beats in total, split plan: {grid_labels}, "
+                f"valid grid_index: 0~{len(grid_plan) - 1}"
             ),
         }
 
@@ -2261,7 +2265,7 @@ async def generate_sketches(
         for info in character_map.values()
     )
     if not has_colors:
-        return {"ok": False, "error": "未检测到颜色分配，请先调用 assign-colors 接口"}
+        return {"ok": False, "error": "No color assignment detected. Call the assign-colors endpoint first"}
 
     from novelvideo.utils.path_resolver import PathResolver
 
@@ -2318,7 +2322,7 @@ async def generate_sketches(
                             {
                                 "batch_id": batch_id,
                                 "batch_size": batch_size,
-                                "display_name": f"第 {episode_num} 集草图批次",
+                                "display_name": f"Episode {episode_num} sketch batch",
                             }
                             if batch_id
                             else {}
@@ -2327,14 +2331,14 @@ async def generate_sketches(
                 )
             except _FANOUT_ACTIVE_LIMIT_ERRORS as exc:
                 if not queued_tasks:
-                    # 一个都没投出去＝纯粹超限：裸抛，交 api/app.py 的 handler
-                    # 渲染 429 ＋ 正确的 limit_scope（M8 不变量 7）。
+                    # Not a single one was dispatched = a pure over-limit: raise bare and let the handler in api/app.py
+                    # render 429 + the correct limit_scope (M8 invariant 7).
                     raise
                 _log_partial_dispatch_rejection(exc)
-                # 闸是全局的，后面每一个都必然被拒 —— 所以**只投这一次**（break），
-                # 但要把「当前这条 ＋ 后面还没尝试的」全部如实记进 rejected：
-                # 契约要 N−k 条（M8 :722 / :755），下游按尾段长度对齐
-                # （render-plan-dialog.tsx:265 断言 entries.length == rejected.length）。
+                # The gate is global and every later one will necessarily be rejected -- so **dispatch only this once** (break),
+                # but record "the current one + all not-yet-attempted ones" faithfully into rejected:
+                # the contract wants N-k entries (M8 :722 / :755), and downstream aligns by tail length
+                # (render-plan-dialog.tsx:265 asserts entries.length == rejected.length).
                 for pending_index in dispatch_grid_indices[position:]:
                     rejected.append(
                         _task_limit_rejection(f"grid_{pending_index}", exc)
@@ -2362,13 +2366,13 @@ async def generate_sketches(
                 "task_type": "sketch_grid_generation",
                 "backend": queued_tasks[0]["backend"] if queued_tasks else "inline",
                 "data": {
-                    # 实投数，不是意图数（M8 不变量 17）。
+                    # Actual dispatched count, not intended count (M8 invariant 17).
                     "dispatched": len(queued_tasks),
                     "tasks": queued_tasks,
                     "scopes": [item["scope"] for item in queued_tasks],
                     "rejected": rejected,
                 },
-                "message": f"第 {episode_num} 集全集草图生成已进入队列 ({grid_labels})",
+                "message": f"Episode {episode_num} full-episode sketch generation queued ({grid_labels})",
             }
 
         return {
@@ -2378,13 +2382,13 @@ async def generate_sketches(
             "task_id": queued_tasks[0]["task_id"],
             "task_key": queued_tasks[0]["task_key"],
             "queue": queued_tasks[0]["queue"],
-            "message": f"第 {episode_num} 集草图生成已进入队列 (网格 {body.grid_index})",
+            "message": f"Episode {episode_num} sketch generation queued (grid {body.grid_index})",
         }
 
-    return {"ok": False, "error": "草图生成需要 project context"}
+    return {"ok": False, "error": "Sketch generation requires a project context"}
 
 
-# ── 语音生成 ──────────────────────────────────────────────────────────────────
+# ── Voice generation ────────────────────────────────────────────────────────
 
 
 async def _collect_audio_prereq_errors(
@@ -2495,13 +2499,19 @@ def _audio_billing_payload(
 
 
 def _voice_prereq_error_response(errors: list[str]) -> dict:
-    preview = "；".join(errors[:5])
+    preview = "; ".join(errors[:5])
     suffix = " ..." if len(errors) > 5 else ""
-    return {
+    response: dict = {
         "ok": False,
         "code": "voice_prereq_required",
         "error": f"{preview}{suffix}",
     }
+    if any(
+        "narrator" in str(error).lower() and "voice" in str(error).lower()
+        for error in errors
+    ):
+        response["reason_code"] = "voice_narrator_missing"
+    return response
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/audio/system-voices/prepare")
@@ -2520,7 +2530,7 @@ async def prepare_system_voices_for_agent(
         return {
             "ok": False,
             "code": "system_voice_confirmation_required",
-            "error": "使用系统声线前需要用户明确确认",
+            "error": "Explicit user confirmation is required before using system voices",
         }
 
     resolved = await _resolve_generation_project(project, user, required_role="editor")
@@ -2529,7 +2539,7 @@ async def prepare_system_voices_for_agent(
         return {
             "ok": False,
             "code": "project_context_required",
-            "error": "系统声线准备需要 project context",
+            "error": "System voice preparation requires a project context",
         }
 
     queued = await get_task_backend().enqueue_project_task(
@@ -2553,7 +2563,7 @@ async def prepare_system_voices_for_agent(
         ),
         "backend": queued.backend,
         "queue": queued.queue,
-        "message": f"第 {episode_num} 集系统声线准备已进入队列",
+        "message": f"Episode {episode_num} system voice preparation queued",
     }
 
 
@@ -2636,7 +2646,7 @@ async def generate_audio(
     body: TTSGenerateRequest = TTSGenerateRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """批量生成语音（IndexTTS2）。"""
+    """Batch-generate speech (IndexTTS2)."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -2668,7 +2678,7 @@ async def generate_audio(
         return {
             "ok": False,
             "code": "audio_generation_not_required",
-            "error": "没有需要生成的音频",
+            "error": "There is no audio to generate",
         }
 
     if ctx is not None:
@@ -2699,16 +2709,16 @@ async def generate_audio(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集语音批量生成已进入队列",
+            "message": f"Episode {episode_num} batch speech generation queued",
         }
 
     return {
         "ok": False,
-        "error": "音频生成需要 project context",
+        "error": "Audio generation requires a project context",
     }
 
 
-# ── 视频优化 ──────────────────────────────────────────────────────────────────
+# ── Video optimization ──────────────────────────────────────────────────────
 
 
 def _global_optimize_billable_beat_numbers(
@@ -2806,9 +2816,9 @@ async def global_optimize_video(
     body: GlobalOptimizeRequest = GlobalOptimizeRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """全局视频提示词优化（草图 → AI 自由决策每个 beat 的 i2v/k2v 模式）。
+    """Global video prompt optimization (sketch -> AI freely decides the i2v/k2v mode of each beat).
 
-    输出语言由作者保存的当前剧本文本决定，不受界面语言影响。
+    The output language is determined by the author's saved current script text and is not affected by the UI language.
     """
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
@@ -2836,7 +2846,7 @@ async def global_optimize_video(
         ),
     )
 
-    # 预检和报价必须使用同一统计口径。
+    # Pre-check and quote must use the same statistics basis.
     billable_beat_numbers = _global_optimize_billable_beat_numbers(
         output_dir=output_dir,
         episode_num=episode_num,
@@ -2844,7 +2854,7 @@ async def global_optimize_video(
     )
     billable_beat_count = len(billable_beat_numbers)
     if billable_beat_count <= 0:
-        return {"ok": False, "error": "没有草图，请先生成草图再执行全局优化"}
+        return {"ok": False, "error": "No sketches. Generate sketches before running global optimization"}
 
     characters = store.get_all_characters()
     char_list = [
@@ -2892,13 +2902,13 @@ async def global_optimize_video(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集全局视频优化已进入队列",
+            "message": f"Episode {episode_num} global video optimization queued",
         }
 
-    return {"ok": False, "error": "全局视频优化需要 project context"}
+    return {"ok": False, "error": "Global video optimization requires a project context"}
 
 
-# ── 再生 ──────────────────────────────────────────────────────────────────────
+# ── Regeneration ────────────────────────────────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/grids/{grid_index}/regenerate")
@@ -2909,7 +2919,7 @@ async def regenerate_grid(
     body: GridRegenerateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """重新生成单个网格。"""
+    """Regenerate a single grid."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -2933,7 +2943,7 @@ async def regenerate_grid(
     if not beats:
         return {"ok": False, "error": f"No beats found for episode {episode_num}"}
 
-    # 验证 grid_index 范围
+    # Validate grid_index range
     character_map = await _build_character_map(
         store,
         beats,
@@ -2955,9 +2965,9 @@ async def regenerate_grid(
             return {
                 "ok": False,
                 "error": (
-                    f"grid_index={grid_index} 超出范围。"
-                    f"角色分组方案: {grid_labels}，"
-                    f"有效 grid_index: 0~{max_grids - 1}"
+                    f"grid_index={grid_index} is out of range. "
+                    f"Character grouping plan: {grid_labels}, "
+                    f"valid grid_index: 0~{max_grids - 1}"
                 ),
             }
         selected_beat_numbers = [int(beat) for beat in char_plan[grid_index].get("beat_numbers", [])]
@@ -2972,9 +2982,9 @@ async def regenerate_grid(
             return {
                 "ok": False,
                 "error": (
-                    f"grid_index={grid_index} 超出范围。"
-                    f"场景分组方案: {grid_labels}，"
-                    f"有效 grid_index: 0~{max_grids - 1}"
+                    f"grid_index={grid_index} is out of range. "
+                    f"Scene grouping plan: {grid_labels}, "
+                    f"valid grid_index: 0~{max_grids - 1}"
                 ),
             }
         selected_beat_numbers = [int(beat) for beat in loc_plan[grid_index].get("beat_numbers", [])]
@@ -2991,9 +3001,9 @@ async def regenerate_grid(
             return {
                 "ok": False,
                 "error": (
-                    f"grid_index={grid_index} 超出范围。"
-                    f"共 {len(beats)} 个 beats，分割方案: {grid_labels}，"
-                    f"有效 grid_index: 0~{len(grid_plan) - 1}"
+                    f"grid_index={grid_index} is out of range. "
+                    f"{len(beats)} beats in total, split plan: {grid_labels}, "
+                    f"valid grid_index: 0~{len(grid_plan) - 1}"
                 ),
             }
         start_offset = sum(_RMC[mk]["capacity"] for mk in grid_plan[:grid_index])
@@ -3057,10 +3067,10 @@ async def regenerate_grid(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集网格 {grid_index} 重新生成已进入队列",
+            "message": f"Episode {episode_num} grid {grid_index} regeneration queued",
         }
 
-    return {"ok": False, "error": "网格重新生成需要 project context"}
+    return {"ok": False, "error": "Grid regeneration requires a project context"}
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/render/plan")
@@ -3368,10 +3378,10 @@ async def render_execute(
                 )
             except _FANOUT_ACTIVE_LIMIT_ERRORS as exc:
                 if not dispatched_task_ids:
-                    # k == 0：裸抛交 handler 渲染 429（M8 不变量 7）。
+                    # k == 0: raise bare and let the handler render 429 (M8 invariant 7).
                     raise
                 _log_partial_dispatch_rejection(exc)
-                # 只投这一次，但把未投的尾段逐条如实上报（N−k 条，M8 :722 / :755）。
+                # Dispatch only this once, but report the undispatched tail one by one faithfully (N-k entries, M8 :722 / :755).
                 for pending in execution_plan[position:]:
                     pending_beats = [int(beat) for beat in pending.beat_numbers]
                     rejected.append(
@@ -3384,10 +3394,10 @@ async def render_execute(
     else:
         return {
             "ok": False,
-            "error": "渲染计划执行需要 project context",
+            "error": "Render plan execution requires a project context",
             "data": RenderPlanExecuteResponse(
                 task_type="render_plan",
-                message="渲染计划未启动",
+                message="Render plan not started",
                 scope=scope,
                 resolved_grids=[PlanEntryOut(**entry) for entry in _plan_to_dicts(execution_plan)],
             ).model_dump(),
@@ -3397,7 +3407,7 @@ async def render_execute(
         "ok": True,
         "data": RenderPlanExecuteResponse(
             task_type="render_plan",
-            message=f"渲染已启动 ({len(execution_plan)} 个网格)",
+            message=f"Render started ({len(execution_plan)} grids)",
             scope=scope,
             resolved_grids=[PlanEntryOut(**entry) for entry in _plan_to_dicts(execution_plan)],
         ).model_dump()
@@ -3413,7 +3423,7 @@ async def regenerate_beats(
     body: BeatsRegenerateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """选中 Beats 再生画面。"""
+    """Regenerate frames for selected Beats."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -3436,15 +3446,15 @@ async def regenerate_beats(
     if not beats:
         return {"ok": False, "error": f"No beats found for episode {episode_num}"}
 
-    # 验证 beat_indices
+    # Validate beat_indices
     if not body.beat_indices:
-        return {"ok": False, "error": "beat_indices 不能为空"}
+        return {"ok": False, "error": "beat_indices must not be empty"}
     total_beats = len(beats)
     invalid = [i for i in body.beat_indices if i < 1 or i > total_beats]
     if invalid:
         return {
             "ok": False,
-            "error": f"beat_indices {invalid} 超出范围（共 {total_beats} 个 beats，有效: 1~{total_beats}）",
+            "error": f"beat_indices {invalid} out of range ({total_beats} beats in total, valid: 1~{total_beats})",
         }
 
     selected_beats = pick_beats_by_number(beats, body.beat_indices)
@@ -3467,7 +3477,7 @@ async def regenerate_beats(
             missing_labels = ", ".join(f"#{beat_num}" for beat_num in missing_sketches)
             raise HTTPException(
                 422,
-                f"Render 前请先为 beat {missing_labels} 生成或上传草图。",
+                f"Before Render, generate or upload sketches for beat {missing_labels}.",
             )
 
     character_map = await _build_character_map(
@@ -3506,7 +3516,7 @@ async def regenerate_beats(
                 return {
                     "ok": False,
                     "error": "input_stale",
-                    "message": "提交前的草图/参考图已变化，请重新打开预览确认。",
+                    "message": "The sketch/reference images have changed since before submission. Reopen the preview to confirm.",
                 }
         if body.qwen_edit_prompts is not None:
             overrides = body.qwen_edit_prompts.model_dump()
@@ -3596,10 +3606,10 @@ async def regenerate_beats(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集选中 Beats 画面再生已进入队列",
+            "message": f"Episode {episode_num} selected-Beats frame regeneration queued",
         }
 
-    return {"ok": False, "error": "选中 Beats 画面再生需要 project context"}
+    return {"ok": False, "error": "Selected-Beats frame regeneration requires a project context"}
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/sketches/regenerate")
@@ -3609,7 +3619,7 @@ async def regenerate_sketches(
     body: SketchRegenerateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """选中 Beats 再生草图。"""
+    """Regenerate sketches for selected Beats."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -3628,15 +3638,15 @@ async def regenerate_sketches(
     if not beats:
         return {"ok": False, "error": f"No beats found for episode {episode_num}"}
 
-    # 验证 beat_indices
+    # Validate beat_indices
     if not body.beat_indices:
-        return {"ok": False, "error": "beat_indices 不能为空"}
+        return {"ok": False, "error": "beat_indices must not be empty"}
     total_beats = len(beats)
     invalid = [i for i in body.beat_indices if i < 1 or i > total_beats]
     if invalid:
         return {
             "ok": False,
-            "error": f"beat_indices {invalid} 超出范围（共 {total_beats} 个 beats，有效: 1~{total_beats}）",
+            "error": f"beat_indices {invalid} out of range ({total_beats} beats in total, valid: 1~{total_beats})",
         }
 
     character_map = await _build_character_map(
@@ -3697,10 +3707,10 @@ async def regenerate_sketches(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集选中 Beats 草图再生已进入队列",
+            "message": f"Episode {episode_num} selected-Beats sketch regeneration queued",
         }
 
-    return {"ok": False, "error": "选中 Beats 草图再生需要 project context"}
+    return {"ok": False, "error": "Selected-Beats sketch regeneration requires a project context"}
 
 
 def _canonical_sketch_path(project_dir: Path, episode_num: int, beat_num: int) -> Path:
@@ -4045,7 +4055,7 @@ async def get_beat_pano_background_manifest(
     try:
         scene_name = _beat_scene_name(beat)
         if not scene_name:
-            return {"ok": False, "error": "当前 Beat 没有关联场景"}
+            return {"ok": False, "error": "The current Beat has no associated scene"}
         manifest = build_pano_viewer_manifest(
             ctx=resolved.ctx,
             project_dir=project_dir,
@@ -4056,7 +4066,7 @@ async def get_beat_pano_background_manifest(
             beat=beat,
         )
         if manifest is None:
-            return {"ok": False, "error": "当前场景没有 360 全景资产"}
+            return {"ok": False, "error": "The current scene has no 360 panorama asset"}
         return {"ok": True, "data": manifest.model_dump(exclude_none=True)}
     finally:
         close = getattr(store, "close", None)
@@ -4088,7 +4098,7 @@ async def get_beat_director_stage_manifest(
     try:
         scene_name = _beat_scene_name(beat)
         if not scene_name:
-            return {"ok": False, "error": "当前 Beat 没有关联场景"}
+            return {"ok": False, "error": "The current Beat has no associated scene"}
         beats = await store.get_beats_as_dicts(int(episode_num))
         sketch_colors = {}
         get_sketch_colors = getattr(store, "get_sketch_colors", None)
@@ -4108,7 +4118,7 @@ async def get_beat_director_stage_manifest(
             prop_marker_colors=_prop_marker_colors_from_menu(prop_menu),
         )
         if manifest is None:
-            return {"ok": False, "error": "当前场景没有 3GS 资产"}
+            return {"ok": False, "error": "The current scene has no 3GS asset"}
         return {"ok": True, "data": manifest.model_dump(exclude_none=True)}
     finally:
         close = getattr(store, "close", None)
@@ -4130,7 +4140,7 @@ async def get_beat_director_stage_overlay(
     try:
         scene_name = _beat_scene_name(beat)
         if not scene_name:
-            return {"ok": False, "error": "当前 Beat 没有关联场景"}
+            return {"ok": False, "error": "The current Beat has no associated scene"}
         beats = await store.get_beats_as_dicts(int(episode_num))
         return {
             "ok": True,
@@ -4163,7 +4173,7 @@ async def save_beat_director_stage_overlay(
     try:
         scene_name = _beat_scene_name(beat)
         if not scene_name:
-            return {"ok": False, "error": "当前 Beat 没有关联场景"}
+            return {"ok": False, "error": "The current Beat has no associated scene"}
         payload = _director_overlay_payload(
             episode_num=int(episode_num),
             beat_num=int(beat_num),
@@ -4227,7 +4237,7 @@ async def export_beat_director_stage_control_frame(
     try:
         scene_name = _beat_scene_name(beat)
         if not scene_name:
-            return {"ok": False, "error": "当前 Beat 没有关联场景"}
+            return {"ok": False, "error": "The current Beat has no associated scene"}
         try:
             payload = _director_control_frame_export_payload(
                 ctx=resolved.ctx,
@@ -4360,10 +4370,10 @@ async def crop_beat_background_anchor(
         except (TypeError, ValueError):
             return JSONResponse(
                 status_code=400,
-                content={"ok": False, "error": "裁剪参数无效"},
+                content={"ok": False, "error": "Invalid crop parameters"},
             )
         except Exception as exc:
-            return {"ok": False, "error": f"裁剪 Render 背景参考失败: {exc}"}
+            return {"ok": False, "error": f"Failed to crop the Render background reference: {exc}"}
 
         if hasattr(store, "update_beat_asset"):
             await store.update_beat_asset(
@@ -4389,7 +4399,7 @@ async def upload_beat_background_anchor(
 ):
     """Upload an external render-background reference for a single Beat.
 
-    This mirrors NiceGUI's Render 背景参考 upload path: the image is stored in
+    This mirrors NiceGUI's Render background reference upload path: the image is stored in
     the beat-owned selected_background.png slot and the beat scene_ref persists
     render_anchor_id=selected_background plus render_anchor_source_id for UI.
     It is a compatibility API for React; render generation still consumes the
@@ -4404,7 +4414,7 @@ async def upload_beat_background_anchor(
         try:
             image = await _read_uploaded_rgb_image(file)
         except Exception as exc:
-            return {"ok": False, "error": f"上传外部参考图失败: {exc}"}
+            return {"ok": False, "error": f"Failed to upload the external reference image: {exc}"}
 
         try:
             payload = save_uploaded_background_anchor_image(
@@ -4479,7 +4489,7 @@ async def director_control_to_sketch(
     if not payload["ready"]:
         return {
             "ok": False,
-            "error": f"Beat {int(beat_num)} 缺少 Direct Render combined.png，请先从 3GS / Freezone 导出",
+            "error": f"Beat {int(beat_num)} is missing Direct Render combined.png. Export it from 3GS / Freezone first",
             "data": payload,
         }
 
@@ -4521,7 +4531,7 @@ async def director_control_to_sketch(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"Beat {int(beat_num)} Direct Render 转草图任务已进入队列",
+            "message": f"Beat {int(beat_num)} Direct Render to sketch task queued",
             "data": payload,
         }
 
@@ -4530,7 +4540,7 @@ async def director_control_to_sketch(
         if start_fn is None:
             return {
                 "ok": False,
-                "error": "Direct Render 转草图需要 project context",
+                "error": "Direct Render to sketch requires a project context",
                 "data": payload,
             }
 
@@ -4550,7 +4560,7 @@ async def director_control_to_sketch(
         "ok": True,
         "task_type": "director_control_to_sketch",
         "scope": payload["scope"],
-        "message": f"Beat {int(beat_num)} Direct Render 转草图任务已启动",
+        "message": f"Beat {int(beat_num)} Direct Render to sketch task started",
         "data": payload,
     }
 
@@ -4580,7 +4590,7 @@ async def get_sketch_pose_editor(
     if not sketch_path.exists():
         return JSONResponse(
             status_code=404,
-            content={"ok": False, "error": f"Beat {beat_num} 缺少当前草图"},
+            content={"ok": False, "error": f"Beat {beat_num} has no current sketch"},
         )
 
     store = (
@@ -4593,7 +4603,7 @@ async def get_sketch_pose_editor(
     if beat is None:
         return JSONResponse(
             status_code=404,
-            content={"ok": False, "error": f"Beat {beat_num} 不存在"},
+            content={"ok": False, "error": f"Beat {beat_num} does not exist"},
         )
 
     sketch_colors = store.get_sketch_colors(episode_num) or {}
@@ -4601,7 +4611,7 @@ async def get_sketch_pose_editor(
     if not candidates:
         candidates = build_all_episode_candidates(sketch_colors)
     if not candidates:
-        return {"ok": False, "error": "本集没有分配颜色的身份，请先重新配色"}
+        return {"ok": False, "error": "No identities with assigned colors in this episode. Re-assign colors first"}
 
     with Image.open(sketch_path) as image:
         width, height = image.size
@@ -4669,7 +4679,7 @@ async def save_sketch_pose_editor(
     if not sketch_path.exists():
         return JSONResponse(
             status_code=404,
-            content={"ok": False, "error": f"Beat {beat_num} 缺少当前草图"},
+            content={"ok": False, "error": f"Beat {beat_num} has no current sketch"},
         )
 
     try:
@@ -4677,7 +4687,7 @@ async def save_sketch_pose_editor(
     except Exception as exc:
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": f"保存草图编辑失败: {exc}"},
+            content={"ok": False, "error": f"Failed to save the sketch edit: {exc}"},
         )
 
     return {
@@ -4706,7 +4716,7 @@ async def crop_current_sketch(
     if not sketch_path.exists():
         return JSONResponse(
             status_code=404,
-            content={"ok": False, "error": f"Beat {beat_num} 缺少当前草图"},
+            content={"ok": False, "error": f"Beat {beat_num} has no current sketch"},
         )
 
     try:
@@ -4717,12 +4727,12 @@ async def crop_current_sketch(
     except (TypeError, ValueError):
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": "裁剪参数无效"},
+            content={"ok": False, "error": "Invalid crop parameters"},
         )
     if width <= 0 or height <= 0:
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": "裁剪宽高必须大于 0"},
+            content={"ok": False, "error": "Crop width and height must be greater than 0"},
         )
 
     with Image.open(sketch_path).convert("RGBA") as image:
@@ -4778,7 +4788,7 @@ async def generate_missing_manual_sketches(
     )
     beats = await store.get_beats_as_dicts(episode_num)
     if not beats:
-        return {"ok": False, "error": f"第 {episode_num} 集没有 beats"}
+        return {"ok": False, "error": f"Episode {episode_num} has no beats"}
 
     storyboard_beats = storyboard_beats_for_manual_sketches(beats)
     segments = missing_manual_shot_segments(storyboard_beats, sketches_dir)
@@ -4786,7 +4796,7 @@ async def generate_missing_manual_sketches(
         return {
             "ok": True,
             "data": {"dispatched": 0, "scopes": [], "segments": []},
-            "message": "没有缺草图的手工分镜",
+            "message": "No manual shots are missing sketches",
         }
 
     proj_config = load_project_config(username, project_name)
@@ -4837,10 +4847,10 @@ async def generate_missing_manual_sketches(
                 )
             except _FANOUT_ACTIVE_LIMIT_ERRORS as exc:
                 if not dispatched_scopes:
-                    # k == 0：裸抛交 handler 渲染 429（M8 不变量 7）。
+                    # k == 0: raise bare and let the handler render 429 (M8 invariant 7).
                     raise
                 _log_partial_dispatch_rejection(exc)
-                # 只投这一次，但把未投的尾段逐条如实上报（N−k 条，M8 :722 / :755）。
+                # Dispatch only this once, but report the undispatched tail one by one faithfully (N-k entries, M8 :722 / :755).
                 for pending in segments[position:]:
                     pending_beats = [int(n) for n in pending]
                     pending_mode_key = choose_manual_sketch_mode_key(len(pending_beats))
@@ -4856,7 +4866,7 @@ async def generate_missing_manual_sketches(
 
         return {
             "ok": False,
-            "error": f"分段 {beat_indices} 派发失败: 需要 project context",
+            "error": f"Segment {beat_indices} dispatch failed: project context required",
             "data": {
                 "dispatched": len(dispatched_scopes),
                 "scopes": dispatched_scopes,
@@ -4873,7 +4883,7 @@ async def generate_missing_manual_sketches(
             "segments": dispatched_segments,
             "rejected": rejected,
         },
-        "message": f"已启动 {len(dispatched_segments)} 组新增分镜草图生成",
+        "message": f"Started {len(dispatched_segments)} groups of new-shot sketch generation",
     }
 
 
@@ -4885,7 +4895,7 @@ async def generate_single_video(
     body: SingleVideoRequest,
     user: dict = Depends(get_api_user),
 ):
-    """单 Beat 视频再生。"""
+    """Regenerate the video of a single Beat."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -4897,7 +4907,7 @@ async def generate_single_video(
         else await make_sqlite_store(username, project_name)
     )
 
-    # 加载 beat 数据
+    # Load beat data
     beats = await store.get_beats_as_dicts(episode_num)
     beat = next((b for b in beats if b.get("beat_number") == beat_num), None)
     if not beat:
@@ -4910,7 +4920,7 @@ async def generate_single_video(
     is_grok_video = _is_grok_video_backend(body.video_backend)
     is_runpod_h3 = _is_runpod_h3_backend(body.video_backend)
 
-    # 首帧路径
+    # First frame path
     from novelvideo.utils.path_resolver import PathResolver
 
     paths = PathResolver(output_dir, episode_num)
@@ -4919,19 +4929,19 @@ async def generate_single_video(
         use_director_render=bool(body.use_director_render),
     )
     if not frame_path.exists():
-        return {"ok": False, "error": f"Beat {beat_num} 首帧不存在，请先生成预览"}
+        return {"ok": False, "error": f"Beat {beat_num} first frame does not exist. Generate a preview first"}
 
-    # 视频模式与提示词
+    # Video mode and prompt
     video_mode = beat.get("video_mode", "first_frame")
     prompt = _legacy_video_prompt_for_mode(beat, video_mode)
 
-    # 音频时长
+    # Audio duration
     from novelvideo.manual_shots import resolve_target_video_duration
 
     audio_duration = await _api_audio_duration_seconds(output_dir, episode_num, beat_num)
     video_duration = resolve_target_video_duration(beat, audio_duration)
 
-    # 尾帧路径 (keyframe 模式)
+    # Last frame path (keyframe mode)
     last_frame_path = None
     if video_mode == "keyframe":
         next_frame = paths.first_frame_for_video(
@@ -4941,7 +4951,7 @@ async def generate_single_video(
         if next_frame.exists():
             last_frame_path = str(next_frame)
         else:
-            video_mode = "first_frame"  # 回退
+            video_mode = "first_frame"  # fallback
             prompt = _legacy_video_prompt_for_mode(beat, video_mode)
 
     seedance2_config_json = None
@@ -5110,7 +5120,7 @@ async def generate_single_video(
         if not prompt.strip():
             return {
                 "ok": False,
-                "error": f"Beat {beat_num} 缺少 MiniMax H3 提示词，请先在视频预览里生成/编辑。",
+                "error": f"Beat {beat_num} is missing the MiniMax H3 prompt. Generate/edit it in the video preview first.",
             }
         if body.review_fingerprint:
             character_map = await _build_character_map(
@@ -5132,7 +5142,7 @@ async def generate_single_video(
                 return {
                     "ok": False,
                     "error": "input_stale",
-                    "message": "提交前的输入已变化（首帧/参考图/提示词），请重新打开预览确认。",
+                    "message": "The inputs have changed since before submission (first frame / reference images / prompt). Reopen the preview to confirm.",
                 }
         if hasattr(store, "update_beat_asset"):
             await store.update_beat_asset(
@@ -5145,9 +5155,9 @@ async def generate_single_video(
     else:
         if not prompt.strip():
             return {"ok": False, "error": _missing_video_prompt_error(beat_num)}
-        # 非 seedance2 后端（含 seedance-1.5-pro）：透传用户选择的时长/清晰度，
-        # 并保证视频时长不短于音频（与 1.0 的 duration_floor 行为一致；
-        # 生成器侧再按模型上限 4-12 夹紧并向上取整）。
+        # Non-seedance2 backends (including seedance-1.5-pro): pass through the user's chosen duration/resolution,
+        # and ensure the video duration is not shorter than the audio (consistent with the duration_floor behavior of 1.0;
+        # the generator side then clamps to the model's 4-12 limit and rounds up).
         import math
 
         if body.duration is not None:
@@ -5195,10 +5205,10 @@ async def generate_single_video(
     if is_runpod_h3:
         config["ratio"] = h3_config.ratio or "9:16"
         config["references"] = [
-            {"type": "image", "path": p, "role": "角色/场景/道具参考"}
+            {"type": "image", "path": p, "role": "character/scene/prop reference"}
             for p in h3_config.reference_image_paths
         ] + [
-            {"type": "audio", "path": p, "role": "音色参考"}
+            {"type": "audio", "path": p, "role": "voice reference"}
             for p in h3_config.reference_audio_paths
         ]
         if body.h3_profile:
@@ -5246,17 +5256,10 @@ async def generate_single_video(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集 Beat {beat_num} 视频生成已入队",
+            "message": f"Episode {episode_num} Beat {beat_num} video generation queued",
         }
 
-    return {"ok": False, "error": "单条视频生成需要 project context"}
-
-
-_VIETNAMESE_DIACRITICS_RE = re.compile(
-    "[ăâđêôơưĂÂĐÊÔƠƯ]|"
-    "[àáạảãằắặẳẵầấậẩẫèéẹẻẽềếệểễìíịỉĩòóọỏõồốộổỗờớợởỡùúụủũừứựửữỳýỵỷỹ]",
-    re.IGNORECASE,
-)
+    return {"ok": False, "error": "Single video generation requires a project context"}
 
 
 _H3_IDENTITY_MARKER_RE = re.compile(r"\{\{([^}]+)\}\}\s*")
@@ -5264,7 +5267,7 @@ _H3_IDENTITY_MARKER_RE = re.compile(r"\{\{([^}]+)\}\}\s*")
 
 def _h3_replace_identity_markers(text: str, character_map: dict) -> str:
     """Replace every `{{identity_id}}` marker in `text` with that
-    character's plain display name (e.g. `{{Nam_幼年时期}}` -> `Nam`) — the
+    character's plain display name (e.g. `{{Nam_child}}` -> `Nam`) — the
     H3 prompt refers to characters by name/`<Subject N>`, not by the
     sketch-color marker syntax other pipeline steps use. Any marker whose
     identity isn't in `character_map` is left as the bare identity id
@@ -5336,8 +5339,7 @@ def _h3_parse_dialogue_segment(
     `"{{Nam_...}} line one\\n{{Ryan_...}} line two"`) and leave
     `beat.speaker` empty — in that shape, `{{...}}` markers must be
     stripped and the lines re-attributed here, for two reasons: (1) a
-    period-label identity id like `Nam_幼年时期` contains CJK characters
-    that would otherwise corrupt language detection on an all-English
+    period-label identity id like `Nam_child` would otherwise pollute language detection on an all-English
     line, and (2) the LLM needs a clean "Name: line" turn per speaker
     rather than a raw, unparsed `{{...}}` token to transcribe verbatim.
     """
@@ -5365,23 +5367,15 @@ def _h3_parse_dialogue_segment(
 
 
 def _detect_h3_dialogue_language(text: str) -> str:
-    """Best-effort language tag for a MiniMax H3 `<d>[Language] ...</d>`
-    line. This repo's general asset-language contract
-    (`utils/source_language.detect_asset_language`) only distinguishes
-    zh/en, but H3's dialogue tag needs the actual spoken language name
-    (e.g. a Vietnamese short drama with Chinese-language source
-    narration/dialogue still needs `[Chinese]`, not `[Vietnamese]`) — so
-    this checks script/diacritics directly instead of reusing that
-    contract."""
+    """Language name for a MiniMax H3 `<d>[Language] ...</d>` line.
+
+    Uses the shared asset-language contract (English / Vietnamese); empty
+    dialogue keeps the historical Vietnamese default.
+    """
     sample = str(text or "")
     if not sample.strip():
         return "Vietnamese"
-    if _VIETNAMESE_DIACRITICS_RE.search(sample):
-        return "Vietnamese"
-    han = sum(1 for ch in sample if "一" <= ch <= "鿿")
-    if han:
-        return "Chinese"
-    return "English"
+    return language_name(detect_asset_language(sample))
 
 
 def _h3_char_name_for_identity(identity_id: str, character_map: dict) -> str:
@@ -5696,7 +5690,8 @@ async def _generate_h3_prompt_result(
                 "severity": "warning",
                 "code": "fallback_template",
                 "message": (
-                    f"AI 生成失败（{last_exc}），已用基础模板代替，建议检查后再确认或重试。"
+                    f"AI generation failed ({last_exc}); the basic template was used instead. "
+                    "Please review and confirm or retry."
                 ),
             },
         )
@@ -5776,7 +5771,7 @@ async def generate_minimax_h3_prompt(
         # just surfaced here too since this route can be called on its own.
         return {
             "ok": False,
-            "error": f"Beat {beat_num} 首帧不存在，请先生成预览再写 MiniMax H3 提示词。",
+            "error": f"Beat {beat_num} first frame does not exist. Generate a preview before writing the MiniMax H3 prompt.",
         }
     if body.duration is not None:
         video_duration = float(body.duration)
@@ -7007,7 +7002,7 @@ async def _qwen_edit_review_setup(
         return {
             "error": {
                 "ok": False,
-                "error": f"Beat {beat_num} 还没有草图，请先生成草图再 Render。",
+                "error": f"Beat {beat_num} has no sketch yet. Generate a sketch before Render.",
             }
         }
 
@@ -7347,7 +7342,7 @@ async def generate_qwen_edit_render_prompt(
     return {"ok": True, "prompts": prompts_out, "lint": lint_issues}
 
 
-# ── 视频池查看 & 选择 ─────────────────────────────────────────────────────────
+# ── Video pool view & selection ─────────────────────────────────────────────
 
 
 @router.get("/projects/{project}/episodes/{episode_num}/video-pool")
@@ -7426,12 +7421,12 @@ async def select_video_pool(
     }
 
 
-# ── 图片池查看 & 选择 ─────────────────────────────────────────────────────────
+# ── Image pool view & selection ─────────────────────────────────────────────
 
 
 @router.get("/projects/{project}/episodes/{episode_num}/grids")
 async def list_grids(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """查看网格预览和图片池。"""
+    """View grid previews and the image pool."""
     resolved = await _resolve_generation_project(project, user, required_role="viewer")
     username = resolved.username
     project_name = resolved.project_name
@@ -7648,7 +7643,7 @@ async def select_pool_image(
     body: PoolSelectRequest,
     user: dict = Depends(get_api_user),
 ):
-    """选择 pool 图片，按类型设为 beat 首帧或草图。"""
+    """Select a pool image and set it as the beat's first frame or sketch by type."""
     import shutil
 
     resolved = await _resolve_generation_project(project, user, required_role="editor")
@@ -7692,14 +7687,14 @@ async def select_pool_image(
             return {
                 "ok": False,
                 "stale": True,
-                "error": "该草图已过期，请先重新生成。如确认仍要使用，请传 force=true。",
+                "error": "This sketch has expired. Regenerate it first. If you are sure you still want to use it, pass force=true.",
             }
 
     cell_path = pool_img.cell_path
     if not cell_path:
         return {"ok": False, "error": f"Pool ID '{body.pool_id}' not found in pool index"}
 
-    # 完整路径
+    # Full path
     cell_full = grids_dir / cell_path
     if not cell_full.exists():
         return {"ok": False, "error": f"Cell image not found at {cell_path}"}
@@ -7827,7 +7822,7 @@ async def upload_beat_render(
     }
 
 
-# ── 单 Beat 音频重生 ─────────────────────────────────────────────────────────
+# ── Single-Beat audio regeneration ──────────────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/beats/{beat_num}/audio")
@@ -7837,7 +7832,7 @@ async def regenerate_beat_audio(
     beat_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """重新生成单个 beat 的 IndexTTS2 语音。"""
+    """Regenerate the IndexTTS2 speech of a single beat."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     ctx = resolved.ctx
     username = resolved.username
@@ -7853,7 +7848,7 @@ async def regenerate_beat_audio(
 
     beat = next((b for b in beats if b.get("beat_number") == beat_num), None)
     if not beat:
-        # 按索引回退
+        # Fall back by index
         if 1 <= beat_num <= len(beats):
             beat = beats[beat_num - 1]
         else:
@@ -7873,7 +7868,7 @@ async def regenerate_beat_audio(
         return {
             "ok": False,
             "code": "audio_generation_not_required",
-            "error": "当前 Beat 没有需要生成的音频",
+            "error": "The current Beat has no audio to generate",
         }
 
     if ctx is not None:
@@ -7904,27 +7899,27 @@ async def regenerate_beat_audio(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集 Beat {beat_num} 语音生成已进入队列",
+            "message": f"Episode {episode_num} Beat {beat_num} speech generation queued",
         }
 
     return {
         "ok": False,
-        "error": "音频生成需要 project context",
+        "error": "Audio generation requires a project context",
     }
 
 
-# ── SRT 字幕导出 ─────────────────────────────────────────────────────────────
+# ── SRT subtitle export ─────────────────────────────────────────────────────
 
 
 @router.get("/projects/{project}/episodes/{episode_num}/export/srt")
 async def export_srt(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """导出 SRT 字幕文件。"""
+    """Export an SRT subtitle file."""
     from fastapi.responses import PlainTextResponse
 
     resolved = await _resolve_generation_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
 
-    # 从图谱读取 beats
+    # Read beats from the graph
     store = (
         await make_sqlite_store_for_context(resolved.ctx)
         if resolved.ctx
@@ -7972,7 +7967,7 @@ async def export_final_video(
     )
 
 
-# ── 网格上传 / Prompt 导出 / 切割 ─────────────────────────────────────────────
+# ── Grid upload / Prompt export / splitting ─────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/grids/{grid_index}/upload")
@@ -7986,7 +7981,7 @@ async def upload_grid(
     beat_numbers: str = Form(""),
     user: dict = Depends(get_api_user),
 ):
-    """上传单张网格整图并更新 pool index 中同 scope 的 grid_path。"""
+    """Upload a single whole grid image and update the grid_path of the same scope in the pool index."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     project_dir = resolved.project_dir
 
@@ -8060,7 +8055,7 @@ async def export_grid_prompt(
     beat_numbers: str = Query(""),
     user: dict = Depends(get_api_user),
 ):
-    """读取 pool index 中记录的单张网格 prompt 文本。"""
+    """Read the grid prompt text recorded in the pool index."""
     resolved = await _resolve_generation_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     grid_type = grid_type.strip() or "render"
@@ -8209,7 +8204,7 @@ async def cut_grid(
     body: GridCutRequest,
     user: dict = Depends(get_api_user),
 ):
-    """将网格切割为单个 beat 图片入池。"""
+    """Split a grid into individual beat images and put them into the pool."""
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     project_dir = resolved.project_dir
 
@@ -8245,7 +8240,7 @@ async def cut_grid(
             grid_image_path = str(entry_path)
 
     if grid_image_path is None:
-        # 兼容旧版根目录 grid_XX.png / jpg 文件。
+        # Compatible with legacy root-directory grid_XX.png / jpg files.
         grid_files = sorted(episode_grids_dir.glob("*.png")) + sorted(
             episode_grids_dir.glob("*.jpg")
         )
@@ -8286,12 +8281,12 @@ async def cut_grid(
     }
 
 
-# ── ZIP 导出 ─────────────────────────────────────────────────────────────────
+# ── ZIP export ──────────────────────────────────────────────────────────────
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/export/zip")
 async def export_zip(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """打包指定集的所有资源为 ZIP 文件下载。"""
+    """Package all resources of the specified episode into a ZIP file for download."""
     import asyncio
     import zipfile
     import tempfile
@@ -8382,7 +8377,7 @@ async def export_zip(project: str, episode_num: int, user: dict = Depends(get_ap
 
 
 # ---------------------------------------------------------------------------
-# 草图配色 + AI 颜色检测
+# Sketch coloring + AI color detection
 # ---------------------------------------------------------------------------
 
 
@@ -8392,7 +8387,7 @@ async def assign_sketch_colors(
     episode_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """为本集出场身份和全局道具分配共享颜色。"""
+    """Assign shared colors to the identities and global props appearing in this episode."""
     from novelvideo.generators.episode_optimizer import EpisodeOptimizer
     from novelvideo.generators.nanobanana_grid import _global_prop_marker_colors
 
@@ -8497,7 +8492,7 @@ async def detect_sketch_identities(
     episode_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """AI 视觉识别草图中出现的身份/道具颜色标记。"""
+    """AI vision recognition of identity/prop color markers appearing in the sketch."""
     from novelvideo.agents.global_video_optimizer import detect_identities_by_ai
     from novelvideo.generators.grid_splitter import combine_to_grid
     from novelvideo.generators.nanobanana_grid import _global_prop_marker_colors
@@ -8549,11 +8544,11 @@ async def detect_sketch_identities(
         sketch_colors=color_map,
     )
 
-    # 反转: "#HEX COLOR_NAME" → marker_id
+    # Invert: "#HEX COLOR_NAME" -> marker_id
     color_identity_map = {v: k for k, v in color_map.items()}
     color_identity_map.update({v: k for k, v in prop_color_map.items()})
 
-    # 收集草图文件
+    # Collect sketch files
     project_dir = resolved.project_dir
     sketches_dir = project_dir / "sketches" / f"ep{episode_num:03d}"
     frame_items: list[tuple[int, str]] = []
@@ -8672,7 +8667,7 @@ async def detect_sketch_identities(
             identity_detections[beat_number] = det_ids or [NO_CHARACTER_MARKER]
             prop_detections[beat_number] = det_props or [NO_PROP_MARKER]
 
-        # 持久化
+        # Persist
         await store.set_beat_detected_identities(episode_num, identity_detections)
         await store.set_beat_detected_props(episode_num, prop_detections)
 
@@ -8720,7 +8715,7 @@ async def detect_sketch_identities(
                 "AI identity detection succeeded but credit confirmation remains pending"
             )
 
-    # 转换 key 为字符串（JSON 兼容）
+    # Convert keys to strings (JSON compatible)
     str_identity_detections = {str(k): v for k, v in identity_detections.items()}
     str_prop_detections = {str(k): v for k, v in prop_detections.items()}
     total_ids = sum(len(real_detected_identities(v)) for v in identity_detections.values())
@@ -8736,8 +8731,8 @@ async def detect_sketch_identities(
             "total_identities": total_ids,
             "total_props": total_props,
             "review_message": (
-                "AI 已完成出场身份/道具识别，请核对每个 beat；"
-                "漏识别可在“更多”的出场身份/出场道具中补选。"
+                "AI has finished recognizing on-screen identities/props. Please review each beat; "
+                "missed detections can be added under 'More' > on-screen identities / on-screen props."
             ),
         },
     }

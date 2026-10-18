@@ -29,8 +29,8 @@ export function ContextPromptPaletteButton({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  // 弹层用 portal 渲染到 body（position: fixed），避免被外层工具栏的 overflow-x-auto
-  // 等裁剪上下文截断（视频节点工具栏会横向滚动，overflow-y 随之被算成 auto）。
+  // The popover is rendered into body via a portal (position: fixed), avoiding being clipped by the outer toolbar's overflow-x-auto
+  // and similar clipping contexts (the video node toolbar scrolls horizontally, so overflow-y is computed as auto too).
   const [popoverPos, setPopoverPos] = useState<{ left: number; top: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -38,9 +38,9 @@ export function ContextPromptPaletteButton({
       setPopoverPos(null);
       return;
     }
-    // rAF 循环跟随触发按钮：React Flow 的平移/缩放用 CSS transform，不触发
-    // window 的 scroll/resize 事件，单靠事件监听会让 fixed 弹层与按钮错位。rAF
-    // 每帧读 rect、仅在坐标变化时 setState，关闭时停止——只在面板打开期间运行。
+    // An rAF loop follows the trigger button: React Flow's pan/zoom uses CSS transform and does not fire
+    // the window scroll/resize events, so relying on events alone would misalign the fixed popover from the button. rAF
+    // reads the rect every frame and calls setState only when coordinates change; it stops on close — it runs only while the panel is open.
     let raf = 0;
     let last = "";
     const tick = () => {
@@ -133,9 +133,9 @@ export function ContextPromptPaletteButton({
 }
 
 /**
- * 节点用的调色盘按钮：把「订阅全量 nodes/edges 构建 palette」的逻辑下沉到这个叶子
- * 组件，宿主节点（VideoNode / ImageGenNode 等重组件）就不必为了调色盘订阅整图、
- * 从而避免任意节点拖动都重渲染整个宿主节点——只让这个小按钮重渲染。
+ * Palette button for nodes: moves the logic of "subscribe to all nodes/edges to build the palette" down into this leaf
+ * component, so host nodes (heavy components such as VideoNode / ImageGenNode) need not subscribe to the whole graph for the palette,
+ * avoiding re-rendering the entire host node whenever any node is dragged — only this small button re-renders.
  */
 export function NodeContextPromptPaletteButton({
   nodeId,

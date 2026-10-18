@@ -1,6 +1,6 @@
-"""NovelVideo Studio - REST API 模块。
+"""NovelVideo Studio - REST API module.
 
-提供 /api/v1/ 端点，供 OpenClaw 等外部 Agent 调用。
+Provides /api/v1/ endpoints for external agents such as OpenClaw.
 """
 
 import logging
@@ -73,28 +73,28 @@ from novelvideo.api.routes import (  # noqa: E402
 api_router = APIRouter(prefix="/api/v1")
 
 OPENAPI_TAGS = [
-    {"name": "freezone-bootstrap", "description": "Freezone 启动、初始化与 provider 能力发现。"},
-    {"name": "freezone-media", "description": "Freezone 候选媒体输入，如上传与外部文件导入。"},
+    {"name": "freezone-bootstrap", "description": "Freezone startup, initialization, and provider capability discovery."},
+    {"name": "freezone-media", "description": "Freezone candidate media inputs, such as uploads and external file imports."},
     {
         "name": "freezone-audio",
-        "description": "Freezone 音频节点接口，包括参考音频和文生语音。",
+        "description": "Freezone audio node endpoints, including reference audio and text-to-speech.",
     },
     {
         "name": "freezone-image",
-        "description": "Freezone 图片节点接口，包括生成、编辑、扩图、重绘、反推提示词等。",
+        "description": "Freezone image node endpoints, including generation, editing, outpainting, inpainting, and prompt reverse-engineering.",
     },
     {
         "name": "freezone-video",
-        "description": "Freezone 视频节点接口，包括文生视频、图生视频、运镜模板、角色库等。",
+        "description": "Freezone video node endpoints, including text-to-video, image-to-video, camera-move templates, and character library.",
     },
-    {"name": "freezone-text", "description": "Freezone 文本节点接口，包括翻译与故事脚本生成。"},
-    {"name": "freezone-canvas", "description": "Freezone 画布文档接口。"},
-    {"name": "freezone-assets", "description": "Freezone canonical 资产与上下文接口。"},
+    {"name": "freezone-text", "description": "Freezone text node endpoints, including translation and story script generation."},
+    {"name": "freezone-canvas", "description": "Freezone canvas document endpoints."},
+    {"name": "freezone-assets", "description": "Freezone canonical asset and context endpoints."},
     {
         "name": "freezone-commit",
-        "description": "Freezone candidate 写回 canonical asset slot 的相关接口。",
+        "description": "Endpoints that write a Freezone candidate back to a canonical asset slot.",
     },
-    {"name": "freezone-jobs", "description": "Freezone 异步任务结果查询接口。"},
+    {"name": "freezone-jobs", "description": "Freezone async job result query endpoints."},
 ]
 
 api_router.include_router(auth.router, tags=["auth"])
@@ -131,7 +131,7 @@ _verification_routes_registered = False
 
 
 def register_verification_routes():
-    """延迟注册验证路由，避免循环导入。"""
+    """Lazily register the verification routes to avoid circular imports."""
     global _verification_routes_registered
     if _verification_routes_registered:
         return

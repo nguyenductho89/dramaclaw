@@ -38,12 +38,12 @@ export function findReferenceTokens(text: string, maxImageCount?: number): Refer
   const maxReferenceNumber = resolveMaxReferenceNumber(maxImageCount);
 
   for (let index = 0; index < text.length; index += 1) {
-    // `@图N` 是写进提示词、模型认的引用 token，跟界面语言无关。
-    if (text[index] !== '@' || text[index + 1] !== '图') { // i18n-exempt —— 提示词 token
+    // `@imageN` is the reference token written into the prompt and recognized by the model, independent of the UI language.
+    if (text[index] !== '@' || !text.startsWith('@image', index)) { // i18n-exempt -- prompt token
       continue;
     }
 
-    const digitsStart = index + 2;
+    const digitsStart = index + '@image'.length;
     if (!isAsciiDigit(text[digitsStart] ?? '')) {
       continue;
     }
@@ -98,8 +98,8 @@ export function findReferenceTokens(text: string, maxImageCount?: number): Refer
 }
 
 /**
- * 找出与 [selectionStart, selectionEnd] 选区重叠的 `@图N` token —— 双击 textarea 时
- * 浏览器会选中 token 里的某个「词」，据此定位用户双击的是哪个引用 token。无命中返回 null。
+ * Find the `@imageN` tokens overlapping the [selectionStart, selectionEnd] selection - when double-clicking a textarea
+ * the browser selects some "word" inside the token, and this locates which reference token the user double-clicked. Returns null when there is no hit.
  */
 export function findReferenceTokenAtSelection(
   text: string,
@@ -114,7 +114,7 @@ export function findReferenceTokenAtSelection(
   );
 }
 
-/** 把 [range.start, range.end) 段整体替换成 `marker`，返回新文本与替换后光标位置。 */
+/** Replace the [range.start, range.end) segment as a whole with `marker`, returning the new text and the cursor position after replacement. */
 export function replaceReferenceToken(
   text: string,
   range: TextRange,

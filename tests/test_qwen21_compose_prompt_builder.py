@@ -15,14 +15,14 @@ def _beat(visual_description: str) -> dict:
 
 def test_two_identities_one_prop_has_correct_tag_range_and_lints_clean():
     beat = _beat(
-        "{{Nam_幼年时期}} stands in the park facing {{Ryan_幼年时期}}, holding up a "
+        "{{Nam_child}} stands in the park facing {{Ryan_child}}, holding up a "
         "[[bucket]] toward him, her expression mocking as she speaks."
     )
     prompt = build_qwen21_compose_prompt(
         beat,
-        identity_images=[("Nam_幼年时期", "Nam"), ("Ryan_幼年时期", "Ryan")],
+        identity_images=[("Nam_child", "Nam"), ("Ryan_child", "Ryan")],
         prop_images=[("bucket", "bucket")],
-        identity_names={"Nam_幼年时期": "Nam", "Ryan_幼年时期": "Ryan"},
+        identity_names={"Nam_child": "Nam", "Ryan_child": "Ryan"},
         prop_names={"bucket": "bucket"},
     )
     for tag in ("<image1>", "<image2>", "<image3>", "<image4>"):
@@ -170,14 +170,14 @@ def test_n_equals_1_background_only_uses_no_tags_at_all():
 
 
 def test_chinese_identity_marker_resolves_to_plain_name():
-    beat = _beat("{{Nam_幼年时期}} stands in the park.")
+    beat = _beat("{{Nam_child}} stands in the park.")
     prompt = build_qwen21_compose_prompt(
         beat,
-        identity_images=[("Nam_幼年时期", "Nam")],
+        identity_images=[("Nam_child", "Nam")],
         prop_images=[],
-        identity_names={"Nam_幼年时期": "Nam"},
+        identity_names={"Nam_child": "Nam"},
     )
-    assert "Nam_幼年时期" not in prompt
+    assert "Nam_child" not in prompt
     assert "Nam" in prompt
 
 

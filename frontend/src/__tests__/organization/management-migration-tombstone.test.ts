@@ -168,11 +168,11 @@ describe("organization administration migration tombstone", () => {
 
   it("retains access-only copy while removing management and invitation copy", () => {
     const en = JSON.parse(source("public/locales/en/translation.json")) as Record<string, unknown>;
-    const zh = JSON.parse(source("public/locales/zh/translation.json")) as Record<string, unknown>;
+    const vi = JSON.parse(source("public/locales/vi/translation.json")) as Record<string, unknown>;
 
     expect(en).toHaveProperty("organization.access");
-    expect(zh).toHaveProperty("organization.access");
-    for (const locale of [en, zh]) {
+    expect(vi).toHaveProperty("organization.access");
+    for (const locale of [en, vi]) {
       expect(locale).not.toHaveProperty("invite");
       expect(locale).not.toHaveProperty("organization.members");
       expect(locale).not.toHaveProperty("organization.invites");

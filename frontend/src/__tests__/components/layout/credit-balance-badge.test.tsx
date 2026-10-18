@@ -39,9 +39,9 @@ vi.mock("@/lib/queries/product-surfaces", () => ({
         items: [
           {
             surface_code: "payment",
-            label: "积分充值",
+            label: "Credit recharge",
             available: productSurfaceState.paymentAvailable,
-            unavailable_message: "积分充值暂未开放",
+            unavailable_message: "Credit top-up is not available yet",
           },
         ],
       },
@@ -107,7 +107,7 @@ vi.mock("@/components/credits/CreditCenterDialog", () => ({
     open: boolean;
     initialTab?: string;
     paymentAvailable: boolean;
-  }) => (open ? <div role="dialog">积分中心弹窗:{initialTab}</div> : null),
+  }) => (open ? <div role="dialog">Credit center dialog:{initialTab}</div> : null),
 }));
 
 // The real dictionary, not a hand-copied one: which wallet this popover claims
@@ -116,7 +116,7 @@ vi.mock("@/components/credits/CreditCenterDialog", () => ({
 vi.mock("react-i18next", async () => {
   const { readFileSync } = await import("node:fs");
   const dictionary = JSON.parse(
-    readFileSync("public/locales/zh/translation.json", "utf8"),
+    readFileSync("public/locales/en/translation.json", "utf8"),
   ) as Record<string, unknown>;
   const translate = (key: string, vars?: Record<string, unknown>) => {
     const raw = key
@@ -136,7 +136,7 @@ vi.mock("react-i18next", async () => {
   return {
     useTranslation: () => ({
       t: translate,
-      i18n: { resolvedLanguage: "zh", language: "zh" },
+      i18n: { resolvedLanguage: "en", language: "en" },
     }),
   };
 });
@@ -168,20 +168,20 @@ describe("CreditBalanceBadge", () => {
     renderBadge();
 
     expect(screen.getAllByText("1,234")).toHaveLength(2);
-    expect(screen.getByText("可用积分余额")).toBeInTheDocument();
-    expect(screen.getByText("当前有 2 项可能适用的优惠")).toBeInTheDocument();
+    expect(screen.getByText("Available credit balance")).toBeInTheDocument();
+    expect(screen.getByText("2 potentially applicable promotions")).toBeInTheDocument();
   });
 
   it("hides recharge while keeping details and the lightweight summary cards", () => {
     renderBadge();
 
-    expect(screen.queryByRole("button", { name: "充值积分" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看明细" })).toHaveClass(
+    expect(screen.queryByRole("button", { name: "Custom recharge" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View details" })).toHaveClass(
       "focus-visible:ring-0",
     );
-    expect(screen.getByText("可用积分余额")).toHaveClass("text-xs");
-    expect(screen.queryByText("查看积分明细")).not.toBeInTheDocument();
-    for (const label of ["已获得", "已消费", "已退款"]) {
+    expect(screen.getByText("Available credit balance")).toHaveClass("text-xs");
+    expect(screen.queryByText("View credit activity")).not.toBeInTheDocument();
+    for (const label of ["Earned", "Spent", "Refunded"]) {
       expect(screen.getByText(label).parentElement).toHaveClass("rounded-sm", "bg-white/[0.075]");
       expect(screen.getByText(label).parentElement).not.toHaveClass("border");
     }
@@ -190,18 +190,18 @@ describe("CreditBalanceBadge", () => {
   it("opens the usage dashboard from the details entry", () => {
     renderBadge();
 
-    fireEvent.click(screen.getByRole("button", { name: "查看明细" }));
+    fireEvent.click(screen.getByRole("button", { name: "View details" }));
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:usage");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:usage");
   });
 
   it("opens custom recharge from the recharge entry", () => {
     productSurfaceState.paymentAvailable = true;
     renderBadge();
 
-    fireEvent.click(screen.getByRole("button", { name: "充值积分" }));
+    fireEvent.click(screen.getByRole("button", { name: "Custom recharge" }));
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:custom");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:custom");
   });
 
   it("opens billing history after returning from payment", () => {
@@ -211,7 +211,7 @@ describe("CreditBalanceBadge", () => {
 
     renderBadge();
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:orders");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:orders");
     expect(sessionStorage.getItem("dramaclaw-open-credit-center")).toBeNull();
     expect(sessionStorage.getItem("dramaclaw-credit-center-tab")).toBeNull();
   });
@@ -221,10 +221,10 @@ describe("CreditBalanceBadge", () => {
 
     renderBadge();
 
-    expect(screen.getByText("可用积分余额")).toBeInTheDocument();
-    expect(screen.queryByText("组织分配给你的额度")).not.toBeInTheDocument();
-    expect(screen.queryByText("可用余额")).not.toBeInTheDocument();
-    expect(screen.queryByText("个人积分账户")).not.toBeInTheDocument();
+    expect(screen.getByText("Available credit balance")).toBeInTheDocument();
+    expect(screen.queryByText("Credits allocated to you")).not.toBeInTheDocument();
+    expect(screen.queryByText("Available balance")).not.toBeInTheDocument();
+    expect(screen.queryByText("Personal credit account")).not.toBeInTheDocument();
   });
 
   // A backend that predates the scope contract omits the key entirely, and an
@@ -235,8 +235,8 @@ describe("CreditBalanceBadge", () => {
 
       const { unmount } = renderBadge();
 
-      expect(screen.getByText("可用积分余额")).toBeInTheDocument();
-      expect(screen.queryByText("组织分配给你的额度")).not.toBeInTheDocument();
+      expect(screen.getByText("Available credit balance")).toBeInTheDocument();
+      expect(screen.queryByText("Credits allocated to you")).not.toBeInTheDocument();
       unmount();
     }
   });

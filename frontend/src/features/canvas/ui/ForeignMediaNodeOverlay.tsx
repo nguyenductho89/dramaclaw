@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 「素材属于其他项目」节点遮罩（withLodShell 注入，shell 档和完整组件都有）。
+ * The "material belongs to another project" node mask (injected by withLodShell, present in both the shell tier and the full component).
  *
- * 守卫上线之前存下的画布里，有些媒体 URL 指向别的项目。静态资源按 URL 里的项目 id
- * 独立鉴权，所以源项目成员看着一切正常，换个同样合法的本项目成员打开就是一片 403 裂图
- * （SuperTale#192）。后端读取画布时会把这些引用报出来（`foreign_media`），这里把它变成
- * 一句解释 + 一键「复制到本项目」——修复只动节点数据，随下一次自动保存落库。
+ * In canvases saved before the guard went live, some media URLs point to other projects. Static resources are authorized independently by the project id in the URL,
+ * so members of the source project see everything normal, while another equally valid member of this project who opens it gets a whole page of 403 broken images
+ * (SuperTale#192). The backend reports these references when reading the canvas (`foreign_media`), and here that is turned into
+ * one explanation + a one-click "Copy to this project" - the repair only touches node data and lands in the database with the next autosave.
  *
- * 和 `AssetMigrationNodeOverlay` 的分工：那个管**新粘贴进来**、URL 从没进过 store 的
- * 占位节点；这个管**已经存进画布**的历史脏引用。
+ * Division of labor with `AssetMigrationNodeOverlay`: that one handles **newly pasted** placeholder nodes whose URLs never entered the store;
+ * this one handles historical dirty references **already saved into the canvas**.
  */
 import { useCallback, useState, useSyncExternalStore, type MouseEvent, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,7 @@ const PILL_CLASS =
 function ForeignMediaNodeOverlayImpl({ nodeId }: { nodeId: string }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
-  // 失败时给出的那句解释（i18n key）；什么都不显示的话按钮看着就是坏的，用户只会反复点。
+  // The explanation shown on failure (an i18n key); if nothing is shown the button looks broken and users only click repeatedly.
   const [hint, setHint] = useState<string | null>(null);
 
   const handleRepair = useCallback(
@@ -58,20 +58,20 @@ function ForeignMediaNodeOverlayImpl({ nodeId }: { nodeId: string }) {
             (useCanvasStore.getState().nodes.find((node) => node.id === id)?.data ??
               null) as never,
           updateNodeData: (id, patch) => {
-            // 修复历史数据,不是用户的编辑动作:不进撤销栈。
+            // Repairing historical data is not a user edit action: it does not enter the undo stack.
             useCanvasStore.getState().updateNodeData(id, patch, { recordHistory: false });
           },
-          // 拷不动就原样留着:这份数据后端已经放行,修不成也不该顺手删掉用户仅剩的线索。
+          // If it cannot be copied, leave it as is: the backend already lets this data through, and when it cannot be repaired the user's last remaining clue should not be deleted in passing.
           blankOnFailure: false,
         });
         if (retryable) {
-          // 这一趟根本没走通(网络/5xx),一个字段都没动。说清楚是"再试一次"而不是
-          // "没权限",否则用户会跑去要一个他其实已经有的权限。
+          // This round did not go through at all (network/5xx), and not a single field was touched. Make clear it is "try again"
+          // rather than "no permission", otherwise the user would go ask for a permission they actually already have.
           setHint('canvas.crossProjectAssets.foreignMediaCopyRetryable');
           return;
         }
         resolveForeignMediaRefs(nodeId, urlMap.keys());
-        // 拷不动通常就是对源项目没权限。把原因说出来,他才知道该去要权限而不是重试。
+        // Failing to copy is usually a lack of permission on the source project. Stating the reason lets them know to ask for permission rather than retry.
         setHint(failedUrls.size > 0 ? 'canvas.crossProjectAssets.foreignMediaCopyFailed' : null);
       } finally {
         setBusy(false);
@@ -115,7 +115,7 @@ function ForeignMediaNodeOverlayImpl({ nodeId }: { nodeId: string }) {
 }
 
 export function ForeignMediaNodeOverlay({ nodeId }: { nodeId: string }) {
-  // 快照是稳定引用（干净节点共用同一个空数组），登记表变化只让真正受影响的节点重渲染。
+  // The snapshot is a stable reference (clean nodes share the same empty array), and a registry change makes only the truly affected nodes re-render.
   const refs = useSyncExternalStore(subscribeForeignMediaRefs, () =>
     readForeignMediaRefsForNode(nodeId),
   );

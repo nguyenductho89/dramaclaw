@@ -19,7 +19,7 @@ pytestmark = pytest.mark.m09
 def _scene_ref(
     source_level: str,
     *,
-    base_id: str = "兰州拉面馆",
+    base_id: str = "ramen_shop",
     variant_id: str | None = None,
     path: str = "/tmp/scene.png",
     reference_mode: str = "prompt_only",
@@ -37,7 +37,7 @@ def _scene_ref(
     )
 
 
-def _prop_ref(prop_id: str = "纸箱") -> ResolvedAssetRef:
+def _prop_ref(prop_id: str = "carton") -> ResolvedAssetRef:
     return ResolvedAssetRef(
         asset_type="prop",
         base_id=prop_id,
@@ -57,10 +57,10 @@ def _render_context(
     beats = [
         {
             "beat_number": 1,
-            "visual_description": "面馆内三人吃面交谈。",
+            "visual_description": "Three people eat noodles and chat in the shop.",
             "detected_identities": [],
-            "detected_props": ["纸箱"] if prop_refs else [],
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "detected_props": ["carton"] if prop_refs else [],
+            "scene_ref": {"scene_id": "ramen_shop"},
         }
     ]
     return PromptContext(
@@ -89,7 +89,7 @@ def test_render_treats_pano_or_reverse_as_plain_scene_anchor() -> None:
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
     assert "Image 1 = SKETCH TO COLORIZE" in prompt
-    assert 'Image 2 = Scene "兰州拉面馆": environment reference asset' in prompt
+    assert 'Image 2 = Scene "ramen_shop": environment reference asset' in prompt
     assert "Use it only to match that location's architecture" in prompt
     assert "SCENE ANCHOR RULE" in prompt
     assert "Scene anchors do NOT define time-of-day lighting" in prompt
@@ -158,24 +158,24 @@ def test_render_material_only_scene_ref_does_not_trigger_rough_3dgs_repair() -> 
 
 def test_render_scene_anchor_image_suppresses_environment_text_but_keeps_time() -> None:
     ref = _scene_ref("base_image", path="/tmp/master.png")
-    ref.text_description = "完整环境提示词不应该在有图锚点时进入 render panel roster"
+    ref.text_description = "The full environment prompt should not enter the render panel roster when an image anchor exists"
     ctx = _render_context(scene_refs=[ref])
-    ctx.beats[0]["time_of_day"] = "夜"
+    ctx.beats[0]["time_of_day"] = "night"
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
-    assert "完整环境提示词不应该" not in prompt
-    assert "Scene: 兰州拉面馆" in prompt
+    assert "The full environment prompt should not" not in prompt
+    assert "Scene: ramen_shop" in prompt
     assert "SCENE ANCHOR RULE" in prompt
     assert "TIME-OF-DAY RULE" in prompt
-    assert "Time of day: 夜" in prompt
+    assert "Time of day: night" in prompt
     assert "Apply the panel's time-of-day lighting state" in prompt
 
 
 def test_render_time_baked_scene_anchor_keeps_anchor_lighting() -> None:
-    ref = _scene_ref("base_image", base_id="兰州拉面馆_夜", path="/tmp/night.png", time_baked=True)
+    ref = _scene_ref("base_image", base_id="ramen_shop_night", path="/tmp/night.png", time_baked=True)
     ctx = _render_context(scene_refs=[ref])
-    ctx.beats[0]["time_of_day"] = "夜"
+    ctx.beats[0]["time_of_day"] = "night"
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
@@ -210,17 +210,17 @@ def test_render_keeps_different_beat_background_anchors_for_same_scene() -> None
     ctx.beats = [
         {
             "beat_number": 1,
-            "visual_description": "面馆正面。",
+            "visual_description": "Front of the shop.",
             "detected_identities": [],
             "detected_props": [],
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "scene_ref": {"scene_id": "ramen_shop"},
         },
         {
             "beat_number": 2,
-            "visual_description": "面馆背面。",
+            "visual_description": "Back of the shop.",
             "detected_identities": [],
             "detected_props": [],
-            "scene_ref": {"scene_id": "兰州拉面馆_reverse"},
+            "scene_ref": {"scene_id": "ramen_shop_reverse"},
         },
     ]
     ctx.scene_refs = {1: [beat_1_master], 2: [beat_2_reverse]}
@@ -242,13 +242,13 @@ def test_render_keeps_different_beat_background_anchors_for_same_scene() -> None
 def test_render_keeps_prop_colorization_as_incremental_reference() -> None:
     ctx = _render_context(
         scene_refs=[_scene_ref("base_image", path="/tmp/master.png")],
-        prop_refs=[_prop_ref("纸箱")],
-        prop_marker_colors={"纸箱": "#00a2ff ELECTRIC AZURE"},
+        prop_refs=[_prop_ref("carton")],
+        prop_marker_colors={"carton": "#00a2ff ELECTRIC AZURE"},
     )
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
-    assert 'Prop "纸箱" prop identity reference' in prompt
+    assert 'Prop "carton" prop identity reference' in prompt
     assert "PROP COLORIZATION" in prompt
     assert "PROP COLOR IDENTIFICATION" in prompt
     assert "ELECTRIC AZURE (#00a2ff) tint = named prop" in prompt
@@ -258,35 +258,35 @@ def test_render_keeps_prop_colorization_as_incremental_reference() -> None:
 def test_render_reference_map_keeps_sketch_as_first_image() -> None:
     ctx = _render_context(
         scene_refs=[_scene_ref("base_image", path="/tmp/master.png")],
-        prop_refs=[_prop_ref("纸箱")],
-        prop_marker_colors={"纸箱": "#0D47A1 ROYAL BLUE"},
+        prop_refs=[_prop_ref("carton")],
+        prop_marker_colors={"carton": "#0D47A1 ROYAL BLUE"},
     )
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
     assert "Colorize this 1×1 storyboard SKETCH (first attached image / Image 1)" in prompt
     assert "Image 1 = SKETCH TO COLORIZE" in prompt
-    assert 'Image 2 = Scene "兰州拉面馆": environment reference asset' in prompt
-    assert 'Image 3 = Prop "纸箱" prop identity reference' in prompt
+    assert 'Image 2 = Scene "ramen_shop": environment reference asset' in prompt
+    assert 'Image 3 = Prop "carton" prop identity reference' in prompt
     assert "LAST attached image" not in prompt
 
 
 def test_single_beat_render_includes_visual_description_as_reference_only() -> None:
     ctx = _render_context(
         scene_refs=[_scene_ref("base_image", path="/tmp/master.png")],
-        prop_refs=[_prop_ref("纸箱")],
-        prop_marker_colors={"纸箱": "#0D47A1 ROYAL BLUE"},
+        prop_refs=[_prop_ref("carton")],
+        prop_marker_colors={"carton": "#0D47A1 ROYAL BLUE"},
     )
-    ctx.beats[0]["visual_description"] = "杜晨抱起[[纸箱]]，转身从兰州拉面馆跨步走出。"
-    ctx.beats[0]["time_of_day"] = "夜"
+    ctx.beats[0]["visual_description"] = "Alex picks up the [[carton]], turns, and strides out of the ramen shop."
+    ctx.beats[0]["time_of_day"] = "night"
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
     assert "SINGLE-BEAT VISUAL DESCRIPTION REFERENCE" in prompt
-    assert "Visual description: 杜晨抱起纸箱" in prompt
-    assert "转身从兰州拉面馆跨步走出" in prompt
-    assert "- Scene: 兰州拉面馆" in prompt
-    assert "- Time of day: 夜" in prompt
+    assert "Visual description: Alex picks up the carton" in prompt
+    assert "turns, and strides out of the ramen shop" in prompt
+    assert "- Scene: ramen_shop" in prompt
+    assert "- Time of day: night" in prompt
     assert "Do NOT use this text to redraw, reframe, move, add, remove, or restage" in prompt
     assert "Image 1 / SKETCH" in prompt
 
@@ -297,22 +297,22 @@ def test_multi_panel_render_does_not_reintroduce_full_visual_descriptions() -> N
     ctx.beats = [
         {
             "beat_number": 1,
-            "visual_description": "第一格详细动作不应该进入多格 render。",
+            "visual_description": "First-panel detailed action should not enter multi-panel render.",
             "detected_identities": [],
             "detected_props": [],
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "scene_ref": {"scene_id": "ramen_shop"},
         },
         {
             "beat_number": 2,
-            "visual_description": "第二格详细动作也不应该进入多格 render。",
+            "visual_description": "Second-panel detailed action should not enter multi-panel render either.",
             "detected_identities": [],
             "detected_props": [],
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "scene_ref": {"scene_id": "ramen_shop"},
         },
     ]
 
     prompt = RenderModeStrategy().build(ctx, PromptComponents())
 
     assert "SINGLE-BEAT VISUAL DESCRIPTION REFERENCE" not in prompt
-    assert "第一格详细动作" not in prompt
-    assert "第二格详细动作" not in prompt
+    assert "First-panel detailed action" not in prompt
+    assert "Second-panel detailed action" not in prompt

@@ -15,22 +15,22 @@ import {
 import type { SkillDefinition } from "@/features/freezone/context/skillRoles";
 
 const translations: Record<string, string> = {
-  "viewer.threeD.skillDefinitions.freezone_sketch_from_context.name": "从当前背景生成草图",
-  "viewer.threeD.skillDefinitions.freezone_sketch_from_context.description": "从镜头上下文和当前背景生成主线草图候选。",
-  "viewer.threeD.skillDefinitions.freezone_frame_from_context.name": "从镜头上下文生成分镜",
-  "viewer.threeD.skillDefinitions.freezone_frame_from_context.description": "从镜头上下文、草图和参考图生成主线分镜候选。",
-  "viewer.threeD.skillInputLabels.beat_context": "镜头上下文",
-  "viewer.threeD.skillOutputLabels.current_frame_candidate": "分镜候选",
-  "viewer.threeD.skillParameterLabels.freezone_sketch_from_context.aspect_ratio": "比例",
-  "viewer.threeD.skillParameterOptions.freezone_sketch_from_context.aspect_ratio.2_3": "竖幅 2:3",
-  "viewer.threeD.skillParameterOptions.freezone_sketch_from_context.aspect_ratio.16_9": "横幅 16:9",
-  "viewer.threeD.skillParameterLabels.freezone_frame_from_context.background_reference_mode": "背景参考模式",
-  "viewer.threeD.skillParameterOptions.freezone_frame_from_context.background_reference_mode.material_only": "仅外观",
-  "viewer.threeD.skillParameterOptions.freezone_frame_from_context.background_reference_mode.scene_anchor": "场景锚点",
-  "viewer.threeD.skillRequirement.required": "必填",
-  "viewer.threeD.skillRequirement.optional": "可选",
-  "viewer.threeD.skillCardinality.single": "单个",
-  "viewer.threeD.skillCardinality.multi": "多个",
+  "viewer.threeD.skillDefinitions.freezone_sketch_from_context.name": "Generate sketch from current background",
+  "viewer.threeD.skillDefinitions.freezone_sketch_from_context.description": "Generate mainline sketch candidates from the shot context and the current background.",
+  "viewer.threeD.skillDefinitions.freezone_frame_from_context.name": "Generate storyboard frame from shot context",
+  "viewer.threeD.skillDefinitions.freezone_frame_from_context.description": "Generate mainline storyboard frame candidates from the shot context, sketch and reference images.",
+  "viewer.threeD.skillInputLabels.beat_context": "Shot context",
+  "viewer.threeD.skillOutputLabels.current_frame_candidate": "Storyboard frame candidate",
+  "viewer.threeD.skillParameterLabels.freezone_sketch_from_context.aspect_ratio": "Ratio",
+  "viewer.threeD.skillParameterOptions.freezone_sketch_from_context.aspect_ratio.2_3": "Portrait 2:3",
+  "viewer.threeD.skillParameterOptions.freezone_sketch_from_context.aspect_ratio.16_9": "Landscape 16:9",
+  "viewer.threeD.skillParameterLabels.freezone_frame_from_context.background_reference_mode": "Background reference mode",
+  "viewer.threeD.skillParameterOptions.freezone_frame_from_context.background_reference_mode.material_only": "Appearance only",
+  "viewer.threeD.skillParameterOptions.freezone_frame_from_context.background_reference_mode.scene_anchor": "Scene anchor",
+  "viewer.threeD.skillRequirement.required": "Required",
+  "viewer.threeD.skillRequirement.optional": "Optional",
+  "viewer.threeD.skillCardinality.single": "Single",
+  "viewer.threeD.skillCardinality.multi": "Multiple",
 };
 
 const t = ((key: string) => translations[key] ?? key) as never;
@@ -43,13 +43,13 @@ describe("mainline skill i18n", () => {
       description: "Generate a mainline sketch candidate from beat context and selected background.",
     } as SkillDefinition;
 
-    expect(translateSkillName(skill, t)).toBe("从当前背景生成草图");
-    expect(translateSkillDescription(skill, t)).toBe("从镜头上下文和当前背景生成主线草图候选。");
+    expect(translateSkillName(skill, t)).toBe("Generate sketch from current background");
+    expect(translateSkillDescription(skill, t)).toBe("Generate mainline sketch candidates from the shot context and the current background.");
   });
 
   it("keeps skill node input/output labels in Chinese", () => {
-    expect(translateSkillInputLabel("beat_context", "Beat context", t)).toBe("镜头上下文");
-    expect(translateSkillOutputLabel("current_frame_candidate", "Current frame candidate", t)).toBe("分镜候选");
+    expect(translateSkillInputLabel("beat_context", "Beat context", t)).toBe("Shot context");
+    expect(translateSkillOutputLabel("current_frame_candidate", "Current frame candidate", t)).toBe("Storyboard frame candidate");
   });
 
   it("translates skill parameter labels and option values", () => {
@@ -60,7 +60,7 @@ describe("mainline skill i18n", () => {
         "Aspect ratio",
         t,
       ),
-    ).toBe("比例");
+    ).toBe("Ratio");
     expect(
       translateSkillParameterOption(
         "freezone.sketch_from_context",
@@ -68,7 +68,7 @@ describe("mainline skill i18n", () => {
         "2:3",
         t,
       ),
-    ).toBe("竖幅 2:3");
+    ).toBe("Portrait 2:3");
     expect(
       translateSkillParameterOption(
         "freezone.sketch_from_context",
@@ -76,7 +76,7 @@ describe("mainline skill i18n", () => {
         "16:9",
         t,
       ),
-    ).toBe("横幅 16:9");
+    ).toBe("Landscape 16:9");
     expect(
       translateSkillParameterLabel(
         "freezone.frame_from_context",
@@ -84,7 +84,7 @@ describe("mainline skill i18n", () => {
         "Background reference mode",
         t,
       ),
-    ).toBe("背景参考模式");
+    ).toBe("Background reference mode");
     expect(
       translateSkillParameterOption(
         "freezone.frame_from_context",
@@ -92,7 +92,7 @@ describe("mainline skill i18n", () => {
         "material_only",
         t,
       ),
-    ).toBe("仅外观");
+    ).toBe("Appearance only");
     expect(
       translateSkillParameterOption(
         "freezone.frame_from_context",
@@ -100,13 +100,13 @@ describe("mainline skill i18n", () => {
         "scene_anchor",
         t,
       ),
-    ).toBe("场景锚点");
+    ).toBe("Scene anchor");
   });
 
   it("translates requirement and cardinality labels", () => {
-    expect(translateSkillRequirement(true, t)).toBe("必填");
-    expect(translateSkillRequirement(false, t)).toBe("可选");
-    expect(translateSkillCardinality("single", t)).toBe("单个");
-    expect(translateSkillCardinality("multi", t)).toBe("多个");
+    expect(translateSkillRequirement(true, t)).toBe("Required");
+    expect(translateSkillRequirement(false, t)).toBe("Optional");
+    expect(translateSkillCardinality("single", t)).toBe("Single");
+    expect(translateSkillCardinality("multi", t)).toBe("Multiple");
   });
 });

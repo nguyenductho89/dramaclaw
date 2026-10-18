@@ -55,8 +55,8 @@ vi.mock("@xyflow/react", () => ({
     children ?? null,
   Position: { Left: "left", Right: "right" },
   useUpdateNodeInternals: () => vi.fn(),
-  // 节点按 transform[2] 决定主体图喂原图还是降采样副本；这里固定在缩放 1，
-  // 即「不是在细看单张图」那一档。
+  // The node decides by transform[2] whether the body image is fed the original or a downsampled copy; here it is fixed at zoom 1,
+  // i.e. the tier of "not inspecting a single image closely".
   useStore: (selector: (state: { transform: [number, number, number] }) => unknown) =>
     selector({ transform: [0, 0, 1] }),
 }));
@@ -163,9 +163,9 @@ function read(relativePath: string): string {
 }
 
 /**
- * 抓出 `updateNodeData(<目标>, { ... })` 里那对花括号的完整内容（按嵌套配平，
- * 因为 slot_target / generationBatch 这些字段本身就是对象字面量）。
- * 目标写法各文件不同：节点自己用 `id`，编辑器浮层用 `nodeId` / `node.id`。
+ * Grabs the full content of the brace pair in `updateNodeData(<target>, { ... })` (balanced by nesting,
+ * since fields like slot_target / generationBatch are themselves object literals).
+ * The target is written differently per file: the node itself uses `id`, editor popovers use `nodeId` / `node.id`.
  */
 function updateNodeDataPatches(source: string): string[] {
   const patches: string[] = [];
@@ -188,7 +188,7 @@ function updateNodeDataPatches(source: string): string[] {
   return patches;
 }
 
-/** 只管「装上一张新图」的写入；清空（`: null`）不会露出图，无所谓。 */
+/** Only covers writes that "install a new image"; clearing (`: null`) does not reveal an image, so it does not matter. */
 function installsImage(patch: string): boolean {
   return [
     ...patch.matchAll(
@@ -209,7 +209,7 @@ function staleErrorOffenders(source: string): string[] {
 describe("stale generation-error banner", () => {
   it("removes the rendered failure banner when a history image is restored", () => {
     canvasStoreMock.reset({
-      displayName: "图片",
+      displayName: "Image",
       imageUrl: "https://example.test/failed.png",
       previewImageUrl: "https://example.test/failed.png",
       generationError: "provider failed",
@@ -262,7 +262,7 @@ describe("stale generation-error banner", () => {
   });
 
   it("clears every field the failure overlay reads", () => {
-    // 浮层读这三个字段（文案 / 详情 / 请求 ID），少清一个就会留下残影。
+    // The popover reads these three fields (copy / details / request ID); missing to clear any one would leave a ghost.
     expect(Object.keys(GENERATION_ERROR_CLEARED_PATCH).sort()).toEqual([
       "generationError",
       "generationErrorDetails",
@@ -281,15 +281,15 @@ describe("stale generation-error banner", () => {
   it("clears the failure state on every in-place image write in ImageGenNode", () => {
     const source = read("src/features/canvas/nodes/ImageGenNode.tsx");
 
-    // 失败横幅是 absolute 盖在图上的，只要节点换了新图却没清错误字段，
-    // 上一次的「生成失败」就会糊在新图上面。
+    // The failure banner is absolute-positioned over the image; as long as the node got a new image without clearing the error fields,
+    // the previous "generation failed" would smear over the new image.
     expect(source).toContain("{!isGenerating && generationError && (");
 
     expect(staleErrorOffenders(source)).toEqual([]);
   });
 
-  // 提交编排（handleSubmit / 产物回填）住在共用 hook 里，工作流与故事板两个视图
-  // 共用同一份。写图路径搬过去了，扫描器也得跟过去，否则这条护栏会空跑。
+  // The submit orchestration (handleSubmit / result backfill) lives in the shared hook, shared by the workflow and storyboard
+  // views. The image-writing paths moved there, so the scanner must follow, otherwise this guardrail would run empty.
   it("clears the failure state on every image write in the shared image form hook", () => {
     expect(
       staleErrorOffenders(
@@ -298,9 +298,9 @@ describe("stale generation-error banner", () => {
     ).toEqual([]);
   });
 
-  // 四个编辑器浮层都会往节点上写一张新图。超分是唯一原地改写源节点的
-  // （其余三个都 addNode 建新结果节点），所以只有它会真的留下上一轮的失败残影；
-  // 另外三个一并纳入，是为了挡住「以后被改成原地写」时悄悄退化。
+  // All four editor popovers write a new image onto the node. Upscale is the only one that rewrites the source node in place
+  // (the other three addNode a new result node), so only it genuinely leaves the previous round's failure ghost;
+  // the other three are included too, to block silent regression if they are changed to in-place writes later.
   it.each([
     "src/features/canvas/ui/UpscaleEditorOverlay.tsx",
     "src/features/canvas/ui/EraseOverlay.tsx",
@@ -310,8 +310,8 @@ describe("stale generation-error banner", () => {
     expect(staleErrorOffenders(read(path))).toEqual([]);
   });
 
-  // 超分原地复用源节点，所以「开一轮新的」本身就得把上一轮的请求 ID 清掉，
-  // 不能等回填成功——中途失败时横幅会挂着上一次的请求 ID。
+  // Upscale reuses the source node in place, so "starting a new round" itself must clear the previous round's request ID,
+  // without waiting for backfill success — on a mid-way failure the banner would hang on the previous request ID.
   it("clears the previous failure when an in-place upscale starts", () => {
     const source = read("src/features/canvas/ui/UpscaleEditorOverlay.tsx");
     const startPatch = updateNodeDataPatches(source).find((patch) =>
@@ -322,8 +322,8 @@ describe("stale generation-error banner", () => {
     expect(startPatch).toContain("GENERATION_ERROR_CLEARED_PATCH");
   });
 
-  // 参考图排在显示优先级最后：已有生成图时它顶不到主体，失败信息仍然对得上那张
-  // 旧图，不能一上传就清掉。
+  // The reference image ranks last in display priority: when a generated image exists it cannot take over the body, and the failure info still matches that
+  // old image, so it must not be cleared the moment one is uploaded.
   it("only clears the banner on reference upload when nothing was generated yet", () => {
     const source = read("src/features/canvas/nodes/ImageGenNode.tsx");
     const uploadPatch = updateNodeDataPatches(source).find((patch) =>
@@ -348,14 +348,14 @@ describe("stale generation-error banner", () => {
     expect(successPatch).toContain("generationErrorRequestId: null,");
   });
 
-  // 计数器住在共用 hook（handleSubmit 在那里），作废动作由宿主的换图路径触发，
-  // 两边靠 invalidateInFlightGeneration 接上；断言拆成两段就是为了盯住这个接缝。
+  // The counter lives in the shared hook (handleSubmit is there), and the voiding is triggered by the host's image-swap paths;
+  // the two sides connect via invalidateInFlightGeneration; the assertion is split in two precisely to watch this seam.
   it("invalidates late batch writes when a history image replaces the result", () => {
     const host = read("src/features/canvas/nodes/ImageGenNode.tsx");
     const restoreStart = host.indexOf(
       "const handleRestoreHistory = useCallback",
     );
-    const restoreEnd = host.indexOf("// 生成结束（成功/失败）", restoreStart);
+    const restoreEnd = host.indexOf("// After generation ends (success/failure)", restoreStart);
     const restoreHandler = host.slice(restoreStart, restoreEnd);
     expect(restoreHandler).toContain("invalidateInFlightGeneration()");
 

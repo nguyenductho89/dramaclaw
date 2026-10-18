@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 用户自带 petdex 宠物的本地存储：把 spritesheet.webp（Blob）+ pet.json 元数据存进
-// 浏览器 IndexedDB，跨刷新持久。渲染时用 object URL（blob:）—— 生产 CSP 的
-// img-src 含 blob:，所以同样能显示，且完全不依赖网络/CDN。
+// Local storage for user-supplied petdex pets: spritesheet.webp (Blob) + pet.json metadata are stored into
+// the browser's IndexedDB, persisting across refreshes. Rendering uses an object URL (blob:) - the production CSP's
+// img-src includes blob:, so it displays the same way and does not depend on the network/CDN at all.
 
 const DB_NAME = "supertale-petdex";
 const DB_VERSION = 1;
@@ -14,7 +14,7 @@ export interface StoredPetRecord {
   submittedBy?: string;
   cols?: number;
   rows?: number;
-  /** 精灵图原始文件。 */
+  /** Original sprite sheet file. */
   blob: Blob;
   addedAt: number;
 }
@@ -88,14 +88,14 @@ export interface ImportedPetEntry {
   submittedBy?: string;
   cols?: number;
   rows?: number;
-  /** 本会话有效的 object URL（blob:）。 */
+  /** Object URL (blob:) valid for this session. */
   spritesheetUrl: string;
   imported: true;
 }
 
 /**
- * 读取所有已导入宠物，并为每只创建一个 object URL 供渲染。object URL 仅当前会话有效，
- * 由调用方在替换/卸载时自行 revoke（原型里交给页面生命周期，量很小）。
+ * Read all imported pets and create an object URL for each for rendering. Object URLs are valid only for the current session,
+ * and the caller revokes them on replace/unmount (in the prototype this is left to the page lifecycle; the amount is tiny).
  */
 export async function loadImportedPets(): Promise<ImportedPetEntry[]> {
   const records = await getAllPetRecords();

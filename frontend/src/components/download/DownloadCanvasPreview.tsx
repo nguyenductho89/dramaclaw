@@ -5,13 +5,13 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import styles from "./download.module.css";
 
 /**
- * 桌面端画布界面示意图。
+ * Schematic of the desktop canvas UI.
  *
- * 目前是手绘 SVG 而非真实截屏 —— 换成截屏时把整个 <svg> 换成 <img
- * className={styles.shotBody}>,外层窗口框和标题栏都能原样留用。
+ * Currently a hand-drawn SVG rather than a real screenshot - when switching to a screenshot, replace the whole <svg> with <img
+ * className={styles.shotBody}>; the outer window frame and title bar can be kept as is.
  *
- * 两处 SMIL 动画(连线流动、渲染中转圈)在 prefers-reduced-motion 下不渲染:
- * SMIL 不受 CSS 的 `animation: none` 管辖,只能在这里显式摘掉。
+ * The two SMIL animations (flowing connector, spinning render indicator) are not rendered under prefers-reduced-motion:
+ * SMIL is not governed by CSS `animation: none`, so it has to be removed explicitly here.
  */
 export function DownloadCanvasPreview() {
   const { t } = useTranslation();
@@ -32,7 +32,7 @@ export function DownloadCanvasPreview() {
 
       <rect width="1200" height="660" fill="#0b0c0f" />
 
-      {/* 剧集 tab 条 */}
+      {/* Episode tab strip */}
       <rect x="0" y="0" width="1200" height="38" fill="#15181c" />
       <line x1="0" y1="38" x2="1200" y2="38" stroke="#22272d" strokeWidth="1" />
       <rect x="16" y="8" width="104" height="24" rx="5" fill="#23282f" />
@@ -42,7 +42,7 @@ export function DownloadCanvasPreview() {
       <rect x="232" y="8" width="92" height="24" rx="5" fill="#191d22" />
       <rect x="244" y="17" width="46" height="6" rx="3" fill="#4e565e" />
 
-      {/* 左:分镜大纲 */}
+      {/* Left: storyboard outline */}
       <rect x="0" y="38" width="228" height="622" fill="#121519" />
       <line x1="228" y1="38" x2="228" y2="660" stroke="#22272d" strokeWidth="1" />
       <rect x="20" y="62" width="58" height="7" rx="3.5" fill="#4e565e" />
@@ -81,7 +81,7 @@ export function DownloadCanvasPreview() {
       <rect x="70" y="351" width="98" height="6" rx="3" fill="#5c646d" />
       <rect x="70" y="365" width="90" height="5" rx="2.5" fill="#363d44" />
 
-      {/* 中:节点画布 */}
+      {/* Middle: node canvas */}
       <rect x="229" y="38" width="691" height="622" fill="url(#dcDownloadCanvasDots)" />
 
       <g fill="none" stroke="#39424b" strokeWidth="1.6">
@@ -91,7 +91,7 @@ export function DownloadCanvasPreview() {
         <path d="M700 400 C 748 400, 748 330, 796 330" />
       </g>
 
-      {/* 通往「渲染中」节点的那条线在流动,标出任务正在推进 */}
+      {/* The line leading to the "rendering" node flows, showing the task is progressing */}
       {!reducedMotion && (
         <path
           d="M430 168 C 478 168, 478 262, 526 262"
@@ -109,7 +109,7 @@ export function DownloadCanvasPreview() {
         </path>
       )}
 
-      {/* 节点:剧本 */}
+      {/* Node: script */}
       <rect x="290" y="122" width="140" height="92" rx="8" fill="#1a1e23" stroke="#2c333a" />
       <rect x="290" y="122" width="140" height="24" rx="8" fill="#20262c" />
       <rect x="290" y="138" width="140" height="8" fill="#20262c" />
@@ -118,7 +118,7 @@ export function DownloadCanvasPreview() {
       <rect x="302" y="174" width="96" height="5" rx="2.5" fill="#3a424a" />
       <rect x="302" y="188" width="104" height="5" rx="2.5" fill="#2f363d" />
 
-      {/* 节点:首帧(渲染中) */}
+      {/* Node: first frame (rendering) */}
       <rect
         x="526"
         y="212"
@@ -153,19 +153,19 @@ export function DownloadCanvasPreview() {
       <rect x="538" y="292" width="62" height="6" rx="3" fill="#d9603a" />
       <rect x="606" y="292" width="34" height="6" rx="3" fill="#3a424a" />
 
-      {/* 节点:参考图 */}
+      {/* Node: reference image */}
       <rect x="526" y="352" width="174" height="96" rx="8" fill="#1a1e23" stroke="#2c333a" />
       <rect x="538" y="364" width="70" height="52" rx="5" fill="#2a3138" />
       <rect x="614" y="364" width="74" height="52" rx="5" fill="#232930" />
       <rect x="538" y="426" width="88" height="6" rx="3" fill="#3a424a" />
 
-      {/* 节点:视频 */}
+      {/* Node: video */}
       <rect x="796" y="272" width="106" height="118" rx="8" fill="#1a1e23" stroke="#2c333a" />
       <rect x="808" y="284" width="82" height="72" rx="5" fill="#252b32" />
       <path d="M840 308 l20 12 -20 12 z" fill="#6e7880" />
       <rect x="808" y="366" width="54" height="6" rx="3" fill="#3a424a" />
 
-      {/* 右:参数面板 */}
+      {/* Right: parameter panel */}
       <rect x="920" y="38" width="280" height="622" fill="#121519" />
       <line x1="920" y1="38" x2="920" y2="660" stroke="#22272d" strokeWidth="1" />
       <rect x="944" y="66" width="72" height="7" rx="3.5" fill="#98a3ad" />

@@ -58,7 +58,7 @@ function seedTextNode(extraData: Record<string, unknown> = {}) {
       id: 'txt-1',
       type: CANVAS_NODE_TYPES.textAnnotation,
       position: { x: 400, y: 200 },
-      data: { content: '雨夜旧车站', ...extraData },
+      data: { content: 'Old train station on a rainy night', ...extraData },
     } as CanvasNode,
   ];
   useCanvasStore.getState().setCanvasData(nodes, []);
@@ -70,20 +70,20 @@ beforeEach(() => {
   seedTextNode();
 });
 
-describe('textNodeModes（文本节点能力派生）', () => {
-  it('textToVideo：切 mode + 下游建视频节点并连边，正文带进 prompt', () => {
+describe('textNodeModes (text node capability derivation)', () => {
+  it('textToVideo: switches mode + creates a downstream video node and wires the edge, carrying the body into the prompt', () => {
     const result = applyTextNodeMode('txt-1', 'textToVideo');
 
     expect(result.enterEdit).toBe(false);
     expect(nodeById('txt-1')?.data.mode).toBe('textToVideo');
     expect(nodeById(result.spawnedNodeId)).toMatchObject({
       type: CANVAS_NODE_TYPES.video,
-      data: expect.objectContaining({ genMode: 'textToVideo', prompt: '雨夜旧车站' }),
+      data: expect.objectContaining({ genMode: 'textToVideo', prompt: 'Old train station on a rainy night' }),
     });
     expect(hasEdge('txt-1', result.spawnedNodeId)).toBe(true);
   });
 
-  it('imageToPrompt：上游建仅收图片的上传节点，连边方向是 上传 → 文本', () => {
+  it('imageToPrompt: creates an image-only upload node upstream, with the edge directed upload -> text', () => {
     const result = applyTextNodeMode('txt-1', 'imageToPrompt');
 
     expect(nodeById('txt-1')?.data.mode).toBe('imageToPrompt');
@@ -91,12 +91,12 @@ describe('textNodeModes（文本节点能力派生）', () => {
       type: CANVAS_NODE_TYPES.upload,
       data: expect.objectContaining({ imageOnly: true }),
     });
-    // 上游落在文本节点左侧（x 更小），方向与下游派生相反。
+    // The upstream lands left of the text node (smaller x), the opposite direction from downstream derivation.
     expect(nodeById(result.spawnedNodeId)!.position.x).toBeLessThan(400);
     expect(hasEdge(result.spawnedNodeId!, 'txt-1')).toBe(true);
   });
 
-  it('textToMusic / textToMusicGen：派生音频节点，音乐档还会把本节点切回 writing 并预填描述', () => {
+  it('textToMusic / textToMusicGen: derives an audio node, and the music tier also switches this node back to writing and prefills the description', () => {
     const speech = applyTextNodeMode('txt-1', 'textToMusic');
     expect(nodeById(speech.spawnedNodeId)).toMatchObject({
       type: CANVAS_NODE_TYPES.audio,
@@ -108,7 +108,7 @@ describe('textNodeModes（文本节点能力派生）', () => {
     const music = applyTextNodeMode('txt-1', 'textToMusicGen');
     expect(music.enterEdit).toBe(true);
     expect(nodeById(music.spawnedNodeId)?.data.audioKind).toBe('music');
-    // 派生在前、回写在后：文本节点回到 writing + 关 picker + 预填默认音乐描述。
+    // Derive first, write back after: the text node returns to writing + closes the picker + prefills the default music description.
     expect(nodeById('txt-1')?.data).toMatchObject({
       mode: 'writing',
       pickerDismissed: true,
@@ -116,7 +116,7 @@ describe('textNodeModes（文本节点能力派生）', () => {
     });
   });
 
-  it('writing：只切 mode，不派生任何节点', () => {
+  it('writing: only switches mode and derives no node', () => {
     const before = useCanvasStore.getState().nodes.length;
     const result = applyTextNodeMode('txt-1', 'writing');
 
@@ -125,8 +125,8 @@ describe('textNodeModes（文本节点能力派生）', () => {
   });
 });
 
-describe('textImageToPrompt（图片反推提示词）', () => {
-  it('resolveUpstreamImageUrl 回退顺序：imageUrl → previewImageUrl → referenceImageUrl', () => {
+describe('textImageToPrompt (reverse an image into a prompt)', () => {
+  it('resolveUpstreamImageUrl fallback order: imageUrl -> previewImageUrl -> referenceImageUrl', () => {
     expect(resolveUpstreamImageUrl({ imageUrl: 'a', previewImageUrl: 'b' })).toBe('a');
     expect(resolveUpstreamImageUrl({ previewImageUrl: 'b', referenceImageUrl: 'c' })).toBe('b');
     expect(resolveUpstreamImageUrl({ referenceImageUrl: 'c' })).toBe('c');
@@ -134,7 +134,7 @@ describe('textImageToPrompt（图片反推提示词）', () => {
     expect(resolveUpstreamImageUrl(undefined)).toBeNull();
   });
 
-  it('提交成功 → 反推结果回填到文本节点自己的 content（不建新节点）', async () => {
+  it('successful submit -> the reversed result is filled back into the text node\'s own content (no new node)', async () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
@@ -161,30 +161,30 @@ describe('textImageToPrompt（图片反推提示词）', () => {
       job_id: 'job-1',
     });
     awaitTaskCompletion.mockResolvedValue({ result: {} });
-    fetchFreezoneReversePromptResult.mockResolvedValue({ prompt: '一张雨夜照片' });
+    fetchFreezoneReversePromptResult.mockResolvedValue({ prompt: 'A rainy-night photo' });
 
     const before = useCanvasStore.getState().nodes.length;
     const result = await runTextImageToPrompt('txt-1');
 
-    expect(result).toEqual({ prompt: '一张雨夜照片', error: null });
+    expect(result).toEqual({ prompt: 'A rainy-night photo', error: null });
     expect(useCanvasStore.getState().nodes).toHaveLength(before);
     expect(nodeById('txt-1')?.data).toMatchObject({
-      content: '一张雨夜照片',
+      content: 'A rainy-night photo',
       isGenerating: false,
       generationStartedAt: null,
     });
   });
 
-  it('无上游图 → 直接报错，不提交也不置 loading 态', async () => {
+  it('no upstream image -> errors directly, with no submit and no loading state', async () => {
     const result = await runTextImageToPrompt('txt-1');
 
-    expect(result.error).toBe('上游没有可反推的图片');
+    expect(result.error).toBe('No upstream image to reverse into a prompt');
     expect(submitFreezoneReversePrompt).not.toHaveBeenCalled();
     expect(nodeById('txt-1')?.data.isGenerating).not.toBe(true);
   });
 });
 
-describe('textToVideoSubmit（文生视频提交）', () => {
+describe('textToVideoSubmit (text-to-video submission)', () => {
   function seedTextToVideoGraph(videoData: Record<string, unknown> = {}) {
     useCanvasStore.getState().setCanvasData(
       [
@@ -192,7 +192,7 @@ describe('textToVideoSubmit（文生视频提交）', () => {
           id: 'txt-1',
           type: CANVAS_NODE_TYPES.textAnnotation,
           position: { x: 0, y: 0 },
-          data: { mode: 'textToVideo', content: '雨夜旧车站' },
+          data: { mode: 'textToVideo', content: 'Old train station on a rainy night' },
         } as CanvasNode,
         {
           id: 'vid-1',
@@ -205,7 +205,7 @@ describe('textToVideoSubmit（文生视频提交）', () => {
     );
   }
 
-  it('参数读自下游视频节点，产物回填该节点', async () => {
+  it('parameters are read from the downstream video node, and the result is filled back into that node', async () => {
     seedTextToVideoGraph({
       aspectRatio: '9:16',
       quality: '1080P',
@@ -221,13 +221,13 @@ describe('textToVideoSubmit（文生视频提交）', () => {
     awaitTaskCompletion.mockResolvedValue({ result: { video_url: '/static/out.mp4' } });
 
     const result = await submitTextToVideo('txt-1', {
-      content: '雨夜旧车站',
+      content: 'Old train station on a rainy night',
       fallbackModelId: 'fallback-model',
     });
 
     expect(result).toEqual({ nodeIds: ['vid-1'], error: null });
     expect(submitFreezoneVideoGen.mock.calls[0][1]).toMatchObject({
-      prompt: '雨夜旧车站',
+      prompt: 'Old train station on a rainy night',
       aspectRatio: '9:16',
       resolution: '1080p',
       durationSeconds: 8,
@@ -241,8 +241,8 @@ describe('textToVideoSubmit（文生视频提交）', () => {
     });
   });
 
-  it('视频节点没选模型 → 用调用方给的兜底 id；缺省画幅/画质走 16:9 / 720p', async () => {
-    // model 显式置空串（节点默认值会填一个模型 id，不清掉走不到兜底分支）。
+  it('a video node with no model selected -> uses the caller\'s fallback id; default aspect/quality fall back to 16:9 / 720p', async () => {
+    // model is explicitly set to an empty string (the node default would fill a model id, and without clearing it the fallback branch is never reached).
     seedTextToVideoGraph({ model: '' });
     submitFreezoneVideoGen.mockResolvedValue({
       task_key: 'tk',
@@ -252,7 +252,7 @@ describe('textToVideoSubmit（文生视频提交）', () => {
     awaitTaskCompletion.mockResolvedValue({ result: { url: '/static/out.mp4' } });
 
     await submitTextToVideo('txt-1', {
-      content: '雨夜旧车站',
+      content: 'Old train station on a rainy night',
       fallbackModelId: 'fallback-model',
     });
 
@@ -264,7 +264,7 @@ describe('textToVideoSubmit（文生视频提交）', () => {
     });
   });
 
-  it('空正文不提交；下游没有视频节点 → 报错不提交', async () => {
+  it('an empty body is not submitted; no downstream video node -> errors without submitting', async () => {
     seedTextToVideoGraph();
     expect(
       await submitTextToVideo('txt-1', { content: '   ', fallbackModelId: 'm' }),
@@ -272,20 +272,20 @@ describe('textToVideoSubmit（文生视频提交）', () => {
 
     seedTextNode({ mode: 'textToVideo' });
     const orphan = await submitTextToVideo('txt-1', { content: 'x', fallbackModelId: 'm' });
-    expect(orphan.error).toBe('下游没有可承载产物的视频节点');
+    expect(orphan.error).toBe('No downstream video node to hold the result');
     expect(submitFreezoneVideoGen).not.toHaveBeenCalled();
   });
 
-  it('提交失败 → 清 loading 态并把首个错误原因带回调用方', async () => {
+  it('submit failure -> clears the loading state and returns the first error reason to the caller', async () => {
     seedTextToVideoGraph();
-    submitFreezoneVideoGen.mockRejectedValue(new Error('额度不足'));
+    submitFreezoneVideoGen.mockRejectedValue(new Error('Insufficient credits'));
 
     const result = await submitTextToVideo('txt-1', {
-      content: '雨夜旧车站',
+      content: 'Old train station on a rainy night',
       fallbackModelId: 'm',
     });
 
-    expect(result.error).toBe('额度不足');
+    expect(result.error).toBe('Insufficient credits');
     expect(nodeById('vid-1')?.data).toMatchObject({
       isGenerating: false,
       generationStartedAt: null,
@@ -293,7 +293,7 @@ describe('textToVideoSubmit（文生视频提交）', () => {
   });
 });
 
-describe('reanalyzeVideoStory（视频故事重新解析）', () => {
+describe('reanalyzeVideoStory (re-analyze a video story)', () => {
   function seedStoryNode(data: Record<string, unknown> = {}) {
     useCanvasStore.getState().setCanvasData(
       [
@@ -303,7 +303,7 @@ describe('reanalyzeVideoStory（视频故事重新解析）', () => {
           position: { x: 0, y: 0 },
           data: {
             sourceVideoUrl: '/static/src.mp4',
-            rows: [{ shotNumber: 1, visualDescription: '旧的' }],
+            rows: [{ shotNumber: 1, visualDescription: 'Old' }],
             ...data,
           },
         } as CanvasNode,
@@ -312,20 +312,20 @@ describe('reanalyzeVideoStory（视频故事重新解析）', () => {
     );
   }
 
-  it('复用当前故事节点：不建新节点、不连新边，结果原地覆盖', async () => {
+  it('reuses the current story node: no new node, no new edge, and the result overwrites in place', async () => {
     seedStoryNode();
     submitFreezoneAnalyzeVideoStory.mockResolvedValue({
       task_key: 'tk',
       job_id: 'job-1',
     });
     awaitTaskCompletion.mockResolvedValue({
-      result: { shots: [{ shot_number: 1, visual_description: '新的' }] },
+      result: { shots: [{ shot_number: 1, visual_description: 'New' }] },
     });
 
     const before = useCanvasStore.getState().nodes.length;
     const result = reanalyzeVideoStory('story-1');
     expect(result?.nodeId).toBe('story-1');
-    // 同步阶段就该置成解析中（详情按钮据此转 spinner）。
+    // It should be set to analyzing in the synchronous phase (the detail button turns into a spinner accordingly).
     expect(nodeById('story-1')?.data.isAnalyzing).toBe(true);
     await result?.completion;
 
@@ -341,23 +341,23 @@ describe('reanalyzeVideoStory（视频故事重新解析）', () => {
     expect((nodeById('story-1')?.data.rows as unknown[]).length).toBeGreaterThan(0);
   });
 
-  it('节点没记住片源 → 返回 null，不提交', () => {
+  it('the node did not remember the source clip -> returns null without submitting', () => {
     seedStoryNode({ sourceVideoUrl: null });
 
     expect(reanalyzeVideoStory('story-1')).toBeNull();
     expect(submitFreezoneAnalyzeVideoStory).not.toHaveBeenCalled();
   });
 
-  it('失败 → 错误写回故事节点自身并清 loading 态', async () => {
+  it('failure -> the error is written back to the story node itself and the loading state is cleared', async () => {
     seedStoryNode();
-    submitFreezoneAnalyzeVideoStory.mockRejectedValue(new Error('解析服务不可用'));
+    submitFreezoneAnalyzeVideoStory.mockRejectedValue(new Error('Analysis service unavailable'));
 
     const result = reanalyzeVideoStory('story-1');
     await result?.completion;
 
     expect(nodeById('story-1')?.data).toMatchObject({
       isAnalyzing: false,
-      analysisError: '解析服务不可用',
+      analysisError: 'Analysis service unavailable',
     });
   });
 });

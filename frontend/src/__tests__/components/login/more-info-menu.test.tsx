@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const runtimeState = vi.hoisted(() => ({ isCe: false }));
-const translationState = vi.hoisted(() => ({ language: "zh" }));
+const translationState = vi.hoisted(() => ({ language: "en" }));
 
 vi.mock("@/lib/runtime-config", () => ({
   isCeRuntime: () => runtimeState.isCe,
@@ -13,7 +13,7 @@ vi.mock("@/lib/runtime-config", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: () =>
-      translationState.language === "en" ? "More information" : "更多信息",
+      translationState.language === "en" ? "More information" : "More information",
     i18n: { language: translationState.language },
   }),
 }));
@@ -23,9 +23,9 @@ import { MoreInfoMenu } from "@/components/login/cinematic/MoreInfoMenu";
 const validItems = [
   {
     id: "guide",
-    title: "使用说明",
+    title: "Usage guide",
     content_type: "markdown",
-    content: "## 使用说明",
+    content: "## Usage guide",
     url: "",
     panel_width: 360,
     panel_height: 440,
@@ -34,7 +34,7 @@ const validItems = [
   },
   {
     id: "poster",
-    title: "活动海报",
+    title: "Event poster",
     content_type: "image",
     content: "https://example.com/poster.png",
     url: "",
@@ -45,7 +45,7 @@ const validItems = [
   },
   {
     id: "docs",
-    title: "帮助中心",
+    title: "Help Center",
     content_type: "link",
     content: "",
     url: "https://example.com/docs",
@@ -69,7 +69,7 @@ function mockResponse(body: unknown, ok = true) {
 describe("MoreInfoMenu", () => {
   beforeEach(() => {
     runtimeState.isCe = false;
-    translationState.language = "zh";
+    translationState.language = "en";
     vi.unstubAllGlobals();
   });
 
@@ -88,17 +88,17 @@ describe("MoreInfoMenu", () => {
     mockResponse({ ok: true, items: validItems });
     render(<MoreInfoMenu />);
 
-    const trigger = await screen.findByRole("button", { name: "更多信息" });
+    const trigger = await screen.findByRole("button", { name: "More information" });
     fireEvent.focus(trigger);
-    const helpItem = screen.getByRole("menuitem", { name: "帮助中心" });
+    const helpItem = screen.getByRole("menuitem", { name: "Help Center" });
     expect(helpItem.tagName).toBe("A");
     expect(helpItem).toHaveAttribute("href", "https://example.com/docs");
 
-    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "使用说明" }));
-    expect(await screen.findByRole("heading", { name: "使用说明" })).toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Usage guide" }));
+    expect(await screen.findByRole("heading", { name: "Usage guide" })).toBeInTheDocument();
 
-    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "活动海报" }));
-    expect(await screen.findByRole("img", { name: "活动海报" })).toHaveAttribute(
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Event poster" }));
+    expect(await screen.findByRole("img", { name: "Event poster" })).toHaveAttribute(
       "src",
       "https://example.com/poster.png",
     );
@@ -130,7 +130,7 @@ describe("MoreInfoMenu", () => {
   it("updates the trigger and menu label when the language changes", async () => {
     mockResponse({ ok: true, items: validItems });
     const { rerender } = render(<MoreInfoMenu />);
-    const trigger = await screen.findByRole("button", { name: "更多信息" });
+    const trigger = await screen.findByRole("button", { name: "More information" });
     fireEvent.focus(trigger);
 
     translationState.language = "en";

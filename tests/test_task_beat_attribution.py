@@ -1,9 +1,9 @@
-"""选中 Beats 再生的任务行要能说清自己覆盖了哪些 beat。
+"""Task rows of selected-Beats regeneration must be able to say which beats they cover.
 
-``sketch_regen`` / ``selected_regen`` 的任务行 ``beat_num`` 是 None，``scope`` 是
-``mode_key__sha1(beats)``，前端从这两样都反推不出 beat 号。结果是每个 beat 的草图 /
-渲染图面板都认领同一条任务，一个 beat 在跑、其他 beat 也跟着显示「生成中」。
-入队时把 beat 名单落进 task metadata，前端就能按 beat 归属显示进度。
+The task row of ``sketch_regen`` / ``selected_regen`` has ``beat_num`` None and ``scope`` is
+``mode_key__sha1(beats)``, from neither of which can the frontend recover the beat numbers. As a result every beat's sketch /
+render panel claims the same task, and while one beat is running the other beats also show "generating".
+At enqueue time the beat list is stored in the task metadata, so the frontend can show progress by beat attribution.
 """
 
 import pytest
@@ -48,18 +48,18 @@ def test_beat_numbers_are_deduped_in_order():
     ],
 )
 def test_no_beat_numbers_key_when_payload_has_none(payload):
-    """没名单就别写这个键——前端把「缺失」读成「覆盖全部」，写个空列表会把真在跑的
-    beat 藏掉。"""
+    """Without a list, do not write this key -- the frontend reads "missing" as "covers all", and writing an empty list would hide
+    beats that are really running."""
     assert "beat_numbers" not in display_metadata_for_task("sketch_regen", payload)
 
 
 def test_existing_display_metadata_is_untouched():
     metadata = display_metadata_for_task(
         "stage_asset",
-        {"scene_name": "家中客厅", "step": "pano", "display_name": "舞台资产"},
+        {"scene_name": "LivingRoom", "step": "pano", "display_name": "Stage assets"},
     )
 
-    assert metadata["scene_name"] == "家中客厅"
+    assert metadata["scene_name"] == "LivingRoom"
     assert metadata["step"] == "pano"
-    assert metadata["display_name"] == "舞台资产"
+    assert metadata["display_name"] == "Stage assets"
     assert "beat_numbers" not in metadata

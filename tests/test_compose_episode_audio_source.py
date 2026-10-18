@@ -60,7 +60,7 @@ def test_compose_episode_preserves_embedded_audio_when_no_external_mp3(
     assert clip_cmd[clip_cmd.index("-map") + 1] == "0:v:0"
     assert "0:a:0" in clip_cmd
     assert any(
-        "使用视频内置音轨" in line
+        "uses the video's built-in audio track" in line
         for _args, kwargs in manager.updates
         for line in kwargs.get("logs", [])
     )

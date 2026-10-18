@@ -11,7 +11,7 @@ export interface TaskResponse {
   task_id?: string;
   task_key?: string;
   message: string;
-  /** message 的 i18n 词条 key；还没迁移的接口没有这个字段，前端回落到 message 的中文。 */
+  /** i18n key of message; endpoints not yet migrated lack this field, and the frontend falls back to the message text. */
   message_code?: string;
   message_params?: Record<string, unknown>;
   /**

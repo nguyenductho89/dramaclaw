@@ -141,12 +141,12 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * 非 hook 的读取口：store / 建边校验这类跑在 React 之外的代码要按当前模型算能力
- * （比如引用上限）时用。读的是同一个 module-level store，所以和组件看到的是同一份
- * 目录；还没加载出来时回落到硬编码的 VIDEO_MODELS，与 hook 的初始状态一致。
+ * A non-hook read entry: for code running outside React such as the store / edge validation that has to compute capabilities by the current model
+ * (such as reference limits). It reads the same module-level store, so it sees the same catalog as components;
+ * before it has loaded it falls back to the hard-coded VIDEO_MODELS, consistent with the hook's initial state.
  *
- * 不在这里触发 ensureLoaded —— 建边是同步路径，等不到网络回来，而且这个函数会被
- * 高频调用。目录的加载由 FreezoneShell 的 prefetch 和各视频节点的 hook 负责。
+ * ensureLoaded is not triggered here - edge creation is a synchronous path that cannot wait for the network to come back, and this function is called
+ * at high frequency. Loading the catalog is the duty of FreezoneShell's prefetch and each video node's hook.
  */
 export function readFreezoneVideoModels(
   projectOverride?: string | null,

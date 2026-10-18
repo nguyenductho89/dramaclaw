@@ -25,12 +25,12 @@ export const VIDEO_UPSCALE_RESOLUTION_LABEL: Record<FreezoneVideoUpscaleResoluti
 };
 
 /**
- * 在源视频下游建「高清」结果节点（payload 与 NodeActionToolbar.handleVideoUpscale
- * 一致：复用 video 节点的播放器/角标/尺寸，打 isUpscaleNode 标记）。不切换选中态——
- * 工作流入口选中新节点是为了展开 VideoUpscaleEditorOverlay 配置面板；故事板详情的
- * 配置在详情内完成后直接提交，无需该面板。
+ * Build the "upscale" result node downstream of the source video (the payload matches NodeActionToolbar.handleVideoUpscale:
+ * reusing the video node's player/badge/size, with the isUpscaleNode marker). Selection is not switched -
+ * the workflow entry selects the new node to expand the VideoUpscaleEditorOverlay config panel; the storyboard detail's
+ * config is submitted directly after being completed in the detail, with no need for that panel.
  *
- * @returns 新建结果节点 id；源节点已不存在时返回 null。
+ * @returns the new result node id; null when the source node no longer exists.
  */
 export function createVideoUpscaleResultNode(
   sourceNodeId: string,
@@ -68,10 +68,10 @@ export function createVideoUpscaleResultNode(
 }
 
 /**
- * 视频高清提交编排（从 VideoUpscaleEditorOverlay.handleSubmit 原样搬出，语义零变化）：
- * 对 isUpscaleNode 结果节点置 isGenerating → 提交 /freezone/video/upscale →
- * 等任务完成（output_url 缺失时回退 job result）→ 把产物 videoUrl 回填到该节点；
- * 失败把错误写到该节点。project/canvasId 取自当前 URL。
+ * Video upscale submission orchestration (moved verbatim out of VideoUpscaleEditorOverlay.handleSubmit, with zero semantic change):
+ * set isGenerating on the isUpscaleNode result node -> submit /freezone/video/upscale ->
+ * wait for the task to complete (falling back to the job result when output_url is missing) -> backfill the product videoUrl into that node;
+ * on failure write the error to that node. project/canvasId are taken from the current URL.
  */
 export async function submitVideoUpscale(
   nodeId: string,

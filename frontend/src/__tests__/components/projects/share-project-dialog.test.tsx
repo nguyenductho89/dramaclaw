@@ -11,37 +11,37 @@ import { MAX_PROJECT_GRANTS } from "@/lib/limits";
 import type { ProjectSummary } from "@/types/project";
 
 const SHARE_DIALOG_ZH: Record<string, string> = {
-  "project.shareDialog.title": "共享项目",
+  "project.shareDialog.title": "Share project",
   "project.shareDialog.descriptionWithOwner": "{{name}} · {{owner}}",
-  "project.shareDialog.descriptionFallback": "管理项目成员",
-  "project.shareDialog.currentUserFallback": "当前用户",
-  "project.shareDialog.addMember": "添加成员",
-  "project.shareDialog.addMemberHint": "输入用户名，选择权限后加入项目。",
-  "project.shareDialog.copyLink": "复制链接",
-  "project.shareDialog.searchPlaceholder": "搜索用户名",
-  "project.shareDialog.alreadyInProject": "已在项目中",
-  "project.shareDialog.add": "添加",
-  "project.shareDialog.members": "成员",
-  "project.shareDialog.owner": "所有者",
-  "project.shareDialog.projectOwner": "项目所有者",
-  "project.shareDialog.loadingMembers": "加载成员",
-  "project.shareDialog.removeMember": "移除成员",
-  "project.shareDialog.roleViewer": "只读查看",
-  "project.shareDialog.roleEditor": "可编辑与运行任务",
-  "project.shareDialog.roleAdmin": "可管理共享成员",
-  "project.shareDialog.inactive": "已失效",
-  "project.shareDialog.inactiveAccessChanged": "用户当前无法访问此项目",
-  "project.shareDialog.limitReached": "最多只能分享给 {{limit}} 人",
-  "project.shareDialog.limitTitle": "分享人数已达上限",
-  "project.shareDialog.noShareableUser": "未找到可分享的用户，该用户可能不在本项目的可分享范围内",
-  "project.shareDialog.quotaUnknownTitle": "还确认不了成员数量",
-  "project.shareDialog.quotaUnknown": "成员列表还没加载出来，等它加载完再添加",
+  "project.shareDialog.descriptionFallback": "Manage project members",
+  "project.shareDialog.currentUserFallback": "current user",
+  "project.shareDialog.addMember": "Add member",
+  "project.shareDialog.addMemberHint": "Enter a username, choose a role, then add them to the project.",
+  "project.shareDialog.copyLink": "Copy link",
+  "project.shareDialog.searchPlaceholder": "Search username",
+  "project.shareDialog.alreadyInProject": "Already in project",
+  "project.shareDialog.add": "Add",
+  "project.shareDialog.members": "Members",
+  "project.shareDialog.owner": "Owner",
+  "project.shareDialog.projectOwner": "Project owner",
+  "project.shareDialog.loadingMembers": "Loading members",
+  "project.shareDialog.removeMember": "Remove member",
+  "project.shareDialog.roleViewer": "View only",
+  "project.shareDialog.roleEditor": "Can edit and run tasks",
+  "project.shareDialog.roleAdmin": "Can manage shared members",
+  "project.shareDialog.inactive": "Inactive",
+  "project.shareDialog.inactiveAccessChanged": "User currently cannot access this project",
+  "project.shareDialog.limitReached": "You can share with at most {{limit}} people",
+  "project.shareDialog.limitTitle": "Share limit reached",
+  "project.shareDialog.noShareableUser": "No shareable user found. This user may be outside this project's sharing scope.",
+  "project.shareDialog.quotaUnknownTitle": "Member count not available yet",
+  "project.shareDialog.quotaUnknown": "The member list is still loading. Try again once it finishes.",
   "project.shareDialog.memberCount": "{{count}}/{{limit}}",
-  "project.shareDialog.toastMemberUpdated": "已更新共享成员",
-  "project.shareDialog.toastShareFailed": "共享失败，请确认用户存在且你有权限",
-  "project.shareDialog.toastUserNotFound": "未找到该用户",
-  "project.shareDialog.toastUserOutOfScope": "该用户不在本项目的可分享范围内",
-  "common.close": "关闭",
+  "project.shareDialog.toastMemberUpdated": "Shared member updated",
+  "project.shareDialog.toastShareFailed": "Share failed. Confirm the user exists and you have permission.",
+  "project.shareDialog.toastUserNotFound": "User not found",
+  "project.shareDialog.toastUserOutOfScope": "This user is outside this project's sharing scope.",
+  "common.close": "Close",
 };
 
 vi.mock("react-i18next", () => ({
@@ -100,7 +100,7 @@ vi.mock("@/lib/queries/projects", () => ({
       : {
           data: { data: queryMocks.grants },
           isLoading: false,
-          // 刷新失败时 React Query 把上一份名单留着，status 走到 error。
+          // When a refresh fails React Query keeps the previous list, and status goes to error.
           isError: queryMocks.grantsError,
         },
   useUserSearch: (...args: unknown[]) => {
@@ -132,7 +132,7 @@ function renderDialog() {
 }
 
 async function selectSearchResult(username = "huangjiao") {
-  await userEvent.type(screen.getByPlaceholderText("搜索用户名"), username);
+  await userEvent.type(screen.getByPlaceholderText("Search username"), username);
   await userEvent.click(screen.getByRole("button", { name: username }));
 }
 
@@ -182,7 +182,7 @@ describe("ShareProjectDialog (edition gating)", () => {
 
   it("renders the share dialog in EE runtime", () => {
     renderDialog();
-    expect(screen.getByText("共享项目")).toBeInTheDocument();
+    expect(screen.getByText("Share project")).toBeInTheDocument();
     expect(queryMocks.useUserSearch).toHaveBeenCalledWith("p1", "");
   });
 
@@ -190,7 +190,7 @@ describe("ShareProjectDialog (edition gating)", () => {
     runtimeState.isCeRuntime = true;
     const { container } = renderDialog();
     expect(container.firstChild).toBeNull();
-    expect(screen.queryByText("共享项目")).not.toBeInTheDocument();
+    expect(screen.queryByText("Share project")).not.toBeInTheDocument();
   });
 
   it("marks ineffective grants inactive while keeping removal available", () => {
@@ -209,13 +209,13 @@ describe("ShareProjectDialog (edition gating)", () => {
 
     renderDialog();
 
-    expect(screen.getByText("已失效")).toBeInTheDocument();
-    expect(screen.getByText("用户当前无法访问此项目")).toBeInTheDocument();
+    expect(screen.getByText("Inactive")).toBeInTheDocument();
+    expect(screen.getByText("User currently cannot access this project")).toBeInTheDocument();
     const memberRow = screen.getByText("dev09").parentElement?.parentElement;
     expect(memberRow).toBeInstanceOf(HTMLElement);
     expect(within(memberRow as HTMLElement).getByRole("combobox")).toBeDisabled();
     expect(
-      within(memberRow as HTMLElement).getByRole("button", { name: "移除成员" }),
+      within(memberRow as HTMLElement).getByRole("button", { name: "Remove member" }),
     ).toBeEnabled();
   });
 
@@ -233,7 +233,7 @@ describe("ShareProjectDialog (edition gating)", () => {
 
     renderDialog();
 
-    expect(screen.queryByText("已失效")).not.toBeInTheDocument();
+    expect(screen.queryByText("Inactive")).not.toBeInTheDocument();
     const memberRow = screen.getByText("dev09").parentElement?.parentElement;
     expect(memberRow).toBeInstanceOf(HTMLElement);
     expect(within(memberRow as HTMLElement).getByRole("combobox")).toBeEnabled();
@@ -249,10 +249,10 @@ describe("ShareProjectDialog (user selection)", () => {
     queryMocks.userSearchSuccess = true;
     renderDialog();
 
-    await userEvent.type(screen.getByPlaceholderText("搜索用户名"), "nobody");
+    await userEvent.type(screen.getByPlaceholderText("Search username"), "nobody");
 
-    expect(screen.getByText("未找到可分享的用户，该用户可能不在本项目的可分享范围内")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /添加/ })).toBeDisabled();
+    expect(screen.getByText("No shareable user found. This user may be outside this project's sharing scope.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add/ })).toBeDisabled();
     expect(addGrantMock).not.toHaveBeenCalled();
   });
 
@@ -261,7 +261,7 @@ describe("ShareProjectDialog (user selection)", () => {
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     expect(addGrantMock).toHaveBeenCalledWith({ principal_username: "huangjiao", role: "editor" });
   });
@@ -276,12 +276,12 @@ describe("ShareProjectDialog (user selection)", () => {
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("该用户不在本项目的可分享范围内");
+      expect(toast.error).toHaveBeenCalledWith("This user is outside this project's sharing scope.");
     });
-    expect(toast.error).not.toHaveBeenCalledWith("共享失败，请确认用户存在且你有权限");
+    expect(toast.error).not.toHaveBeenCalledWith("Share failed. Confirm the user exists and you have permission.");
   });
 
   it("clears a selected user when switching projects without unmounting", async () => {
@@ -295,14 +295,14 @@ describe("ShareProjectDialog (user selection)", () => {
     const { rerender } = renderDialog();
 
     await selectSearchResult();
-    expect(screen.getByPlaceholderText("搜索用户名")).toHaveValue("huangjiao");
-    expect(screen.getByRole("button", { name: /添加/ })).toBeEnabled();
+    expect(screen.getByPlaceholderText("Search username")).toHaveValue("huangjiao");
+    expect(screen.getByRole("button", { name: /Add/ })).toBeEnabled();
 
     rerender(<ShareProjectDialog project={projectB} open onOpenChange={() => {}} />);
 
-    expect(screen.getByPlaceholderText("搜索用户名")).toHaveValue("");
-    expect(screen.getByRole("button", { name: /添加/ })).toBeDisabled();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    expect(screen.getByPlaceholderText("Search username")).toHaveValue("");
+    expect(screen.getByRole("button", { name: /Add/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
     expect(addGrantMock).not.toHaveBeenCalled();
   });
 
@@ -312,10 +312,10 @@ describe("ShareProjectDialog (user selection)", () => {
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("未找到该用户");
+      expect(toast.error).toHaveBeenCalledWith("User not found");
     });
   });
 
@@ -325,10 +325,10 @@ describe("ShareProjectDialog (user selection)", () => {
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("共享失败，请确认用户存在且你有权限");
+      expect(toast.error).toHaveBeenCalledWith("Share failed. Confirm the user exists and you have permission.");
     });
   });
 });
@@ -354,8 +354,8 @@ describe("ShareProjectDialog (share quota)", () => {
 
     await selectSearchResult();
 
-    expect(screen.getByRole("button", { name: /添加/ })).toBeEnabled();
-    expect(screen.queryByText(`最多只能分享给 ${MAX_PROJECT_GRANTS} 人`)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add/ })).toBeEnabled();
+    expect(screen.queryByText(`You can share with at most ${MAX_PROJECT_GRANTS} people`)).not.toBeInTheDocument();
   });
 
   it("keeps the add button clickable at the limit and explains itself in a dialog", async () => {
@@ -364,53 +364,53 @@ describe("ShareProjectDialog (share quota)", () => {
     renderDialog();
 
     await selectSearchResult();
-    const addButton = screen.getByRole("button", { name: /添加/ });
+    const addButton = screen.getByRole("button", { name: /Add/ });
 
-    // 死按钮说不出理由，点得动才有地方解释。
+    // A dead button cannot explain itself; a clickable one gives a place to explain.
     expect(addButton).toBeEnabled();
     await userEvent.click(addButton);
 
     expect(addGrantMock).not.toHaveBeenCalled();
     expect(alertDialogMock).toHaveBeenCalledTimes(1);
     expect(alertDialogMock.mock.calls[0][0]).toMatchObject({
-      title: "分享人数已达上限",
-      description: `最多只能分享给 ${MAX_PROJECT_GRANTS} 人`,
+      title: "Share limit reached",
+      description: `You can share with at most ${MAX_PROJECT_GRANTS} people`,
     });
-    expect(screen.getByText(`最多只能分享给 ${MAX_PROJECT_GRANTS} 人`)).toBeInTheDocument();
+    expect(screen.getByText(`You can share with at most ${MAX_PROJECT_GRANTS} people`)).toBeInTheDocument();
   });
 
   it("refuses to add while the member list is still loading", async () => {
-    // 名单没回来时手上是空的，按它放行等于把「不知道几个人」当成「一个都没有」。
-    // grants 端点不数人头，这一下加进去的就是真的第 26 个。
+    // When the list has not come back it is empty, and letting it through treats "unknown how many" as "none at all".
+    // The grants endpoint does not count heads, so this add would really be the 26th.
     queryMocks.grantsLoading = true;
     queryMocks.searchResults = [{ id: "u99", username: "huangjiao" }];
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     expect(addGrantMock).not.toHaveBeenCalled();
     expect(alertDialogMock).toHaveBeenCalledTimes(1);
     expect(alertDialogMock.mock.calls[0][0]).toMatchObject({
-      title: "还确认不了成员数量",
-      description: "成员列表还没加载出来，等它加载完再添加",
+      title: "Member count not available yet",
+      description: "The member list is still loading. Try again once it finishes.",
     });
   });
 
   it("refuses to add when the last member refresh failed", async () => {
-    // 刷新失败时旧名单还在（React Query 保留 data，status 走到 error）。
-    // 拿这份可能已经过期的人数继续放行，加进去的就可能是第 26 个。
+    // When a refresh fails the old list is still there (React Query keeps data, status goes to error).
+    // Continuing to let things through on this possibly stale count could make the added member the 26th.
     queryMocks.grants = grantRows(MAX_PROJECT_GRANTS - 1);
     queryMocks.grantsError = true;
     queryMocks.searchResults = [{ id: "u99", username: "huangjiao" }];
     renderDialog();
 
     await selectSearchResult();
-    await userEvent.click(screen.getByRole("button", { name: /添加/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     expect(addGrantMock).not.toHaveBeenCalled();
     expect(alertDialogMock).toHaveBeenCalledTimes(1);
-    expect(alertDialogMock.mock.calls[0][0]).toMatchObject({ title: "还确认不了成员数量" });
+    expect(alertDialogMock.mock.calls[0][0]).toMatchObject({ title: "Member count not available yet" });
   });
 
   it("shows how many of the allowed slots are used", () => {

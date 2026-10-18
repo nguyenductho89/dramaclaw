@@ -40,7 +40,7 @@ def _description(prop: dict[str, Any]) -> str:
         _safe_text(prop.get("semantic_label")),
         _safe_text(prop.get("shape_hint")),
     ]
-    return "；".join(part for part in parts if part)
+    return "; ".join(part for part in parts if part)
 
 
 def _visual_prompt(prop: dict[str, Any], prop_id: str) -> str:

@@ -25,9 +25,9 @@ async def test_update_beat_asset_persists_seedance2_config_json(tmp_path):
     ok = await store.update_beat_asset(
         episode_number=1,
         beat_number=1,
-        seedance2_config_json='{"final_prompt":"参考图片1生成视频。"}',
+        seedance2_config_json='{"final_prompt":"Generate the video from @image1."}',
     )
     beats = await store.get_beats_as_dicts(1)
 
     assert ok is True
-    assert beats[0]["seedance2_config_json"] == '{"final_prompt":"参考图片1生成视频。"}'
+    assert beats[0]["seedance2_config_json"] == '{"final_prompt":"Generate the video from @image1."}'

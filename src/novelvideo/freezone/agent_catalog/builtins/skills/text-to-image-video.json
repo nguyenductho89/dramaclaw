@@ -1,16 +1,16 @@
 {
   "id": "text-to-image-video",
-  "name": "文生图生视频（动态）",
+  "name": "Text to Image to Video (Dynamic)",
   "enabled": true,
   "version": 2,
-  "description": "从文字创意动态展开多个镜头，先生成关键图，再逐镜头生成视频并自动合成。",
+  "description": "Dynamically expand multiple shots from a text idea, generate key images first, then generate a video for each shot and compose automatically.",
   "category": "creation",
   "triggers": {
     "keywords": [
-      "文生图生视频",
-      "文生视频",
-      "文字生成视频",
-      "文本生成视频"
+      "text to image to video",
+      "text to video",
+      "generate video from text",
+      "generate video from a text prompt"
     ],
     "node_scopes": [
       "textGeneration",
@@ -19,12 +19,12 @@
     ]
   },
   "planning": {
-    "planning_notes": "根据用户描述和时长动态确定镜头数；每个计划项对应一张关键图和一段视频。",
-    "prompt_guide": "镜头之间保持主体、场景和视觉风格连续，单个计划项只描述一个镜头。",
+    "planning_notes": "Decide the number of shots dynamically from the user description and duration; each plan item corresponds to one key image and one video clip.",
+    "prompt_guide": "Keep the subject, scene and visual style continuous across shots; each plan item describes only one shot.",
     "conduct_rules": [
-      "根据用户目标动态决定节点数量和依赖关系",
-      "仅使用 allowed_recipe_ids 中声明的能力",
-      "创建画布节点前先生成并确认动态计划"
+      "Dynamically decide the number of nodes and their dependencies from the user goal",
+      "Use only the capabilities declared in allowed_recipe_ids",
+      "Generate and confirm the dynamic plan before creating canvas nodes"
     ]
   },
   "schema_version": "dramaclaw.workflow-skill.v1",
@@ -41,22 +41,22 @@
     "rating_bands": [
       {
         "score": 10,
-        "description": "完整满足用户目标且工作流可以执行"
+        "description": "Fully meets the user goal and the workflow can be executed"
       },
       {
         "score": 7,
-        "description": "核心流程完整，允许少量非关键调整"
+        "description": "Core flow is complete; a few non-critical adjustments are allowed"
       },
       {
         "score": 4,
-        "description": "缺少关键阶段或依赖关系不完整"
+        "description": "Missing key stages or incomplete dependencies"
       }
     ],
     "visual_review_items": [],
     "text_review_items": [],
     "quality_threshold": 7,
     "domain_constraints": [
-      "工作流必须符合用户目标并保持输入素材一致性"
+      "The workflow must match the user goal and keep the input assets consistent"
     ]
   }
 }

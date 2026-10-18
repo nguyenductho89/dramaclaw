@@ -1,6 +1,6 @@
-"""NovelVideo 数据模型。
+"""NovelVideo data models.
 
-扩展 SuperScript 的图谱模型，添加视频生成专用节点。
+Extends the SuperScript graph models with video-generation-specific nodes.
 """
 
 import json
@@ -95,10 +95,10 @@ def complete_detected_refs_from_visual_description(
 def extract_char_identities_from_markers(
     visual_desc: str, *, strict: bool = True
 ) -> dict[str, str]:
-    """从 visual_description 的 {{}} marker 提取 {角色名: identity_id}。
+    """Extract {character name: identity_id} from the {{}} markers of visual_description.
 
     Args:
-        strict: True 时遇到无身份后缀的 marker 抛 ValueError
+        strict: when True, raise ValueError for a marker without an identity suffix
     """
     result = {}
     for marker in re.findall(r"\{\{([^}]+)\}\}", visual_desc):
@@ -107,20 +107,20 @@ def extract_char_identities_from_markers(
             result[char_name] = marker
         elif strict:
             raise ValueError(
-                f"marker '{{{{{marker}}}}}' 缺少身份后缀，" f"应为 '{{{{{marker}_身份名}}}}' 格式"
+                f"marker '{{{{{marker}}}}}' is missing an identity suffix, " f"expected the format '{{{{{marker}_identityName}}}}'"
             )
     return result
 
 
 def extract_prop_ids_from_markers(visual_desc: str, *, strict: bool = False) -> list[str]:
-    """从 visual_description 的 [[prop_id]] marker 提取 prop_id 列表。"""
+    """Extract the list of prop_ids from the [[prop_id]] markers of visual_description."""
     result: list[str] = []
     seen: set[str] = set()
     for marker in re.findall(r"\[\[([^\]]+)\]\]", visual_desc):
         prop_id = str(marker or "").strip()
         if not prop_id:
             if strict:
-                raise ValueError("marker '[[ ]]' 不能为空")
+                raise ValueError("marker '[[ ]]' must not be empty")
             continue
         if prop_id in seen:
             continue
@@ -130,38 +130,38 @@ def extract_prop_ids_from_markers(visual_desc: str, *, strict: bool = False) -> 
 
 
 class SceneRef(BaseModel):
-    """Beat 内引用的场景资产。"""
+    """Scene asset referenced inside a Beat."""
 
-    scene_id: str = Field(default="", description="场景 ID")
-    variant_id: str = Field(default="", description="场景外观/状态选择器；为空表示基础场景")
+    scene_id: str = Field(default="", description="Scene ID")
+    variant_id: str = Field(default="", description="Scene look/state selector; empty means the base scene")
     render_anchor_id: str = Field(
         default="",
-        description="Beat 实际 render 背景槽位；为空表示默认场景图，selected_background 表示使用 beat 冻结背景",
+        description="Background slot the Beat actually renders with; empty means the default scene image, selected_background means the beat's frozen background",
     )
     render_anchor_source_id: str = Field(
         default="",
-        description="当 render_anchor_id=selected_background 时记录截图来源，如 master/reverse/director_env_only",
+        description="Records the screenshot source when render_anchor_id=selected_background, e.g. master/reverse/director_env_only",
     )
 
 
 class SceneMenuItem(BaseModel):
-    """Episode 级场景菜单项。"""
+    """Episode-level scene menu item."""
 
-    scene_id: str = Field(default="", description="场景菜单项 ID；派生场景可为完整派生场景名")
-    base_scene_id: str = Field(default="", description="派生场景所属基础场景 ID；基础场景为空")
-    variant_id: str = Field(default="", description="派生场景外观/状态标签；基础场景为空")
-    time_of_day: str = Field(default="", description="派生场景时间标签；基础场景或非时间版为空")
+    scene_id: str = Field(default="", description="Scene menu item ID; a derived scene may use the full derived scene name")
+    base_scene_id: str = Field(default="", description="ID of the base scene a derived scene belongs to; empty for base scenes")
+    variant_id: str = Field(default="", description="Look/state label of a derived scene; empty for base scenes")
+    time_of_day: str = Field(default="", description="Time-of-day label of a derived scene; empty for base scenes or non-time variants")
 
 
 class PropMenuItem(BaseModel):
-    """Episode 级道具菜单项。"""
+    """Episode-level prop menu item."""
 
-    prop_id: str = Field(default="", description="基础道具 ID")
-    prop_type: str = Field(default="object", description="道具类型")
-    visual_prompt: str = Field(default="", description="本集道具视觉提示词")
-    description: str = Field(default="", description="本集道具叙述描述")
-    owner_identity_id: str = Field(default="", description="所属角色身份 ID，可为空")
-    marker_color: str = Field(default="", description="草图阶段道具身份标记颜色")
+    prop_id: str = Field(default="", description="Base prop ID")
+    prop_type: str = Field(default="object", description="Prop type")
+    visual_prompt: str = Field(default="", description="Visual prompt of the prop in this episode")
+    description: str = Field(default="", description="Narrative description of the prop in this episode")
+    owner_identity_id: str = Field(default="", description="ID of the owning character identity; may be empty")
+    marker_color: str = Field(default="", description="Identity marker color of the prop in the sketch stage")
 
 
 def _coerce_scene_ref(value: Any) -> SceneRef | None:
@@ -438,9 +438,9 @@ def resolve_scene_plate_from_records(
 
 
 def collect_prop_marker_ids_from_beat(value: Any) -> list[str]:
-    """从单个 beat 收集出场道具 marker key。
+    """Collect the on-screen prop marker keys from a single beat.
 
-    道具锚点和身份锚点保持一致：只读取 visual_description 里的 [[prop_id]]。
+    Prop anchors and identity anchors stay consistent: only the [[prop_id]] in visual_description is read.
     """
     if isinstance(value, dict):
         visual_desc = str(value.get("visual_description", "") or "")
@@ -455,11 +455,11 @@ def split_detected_marker_keys(
     characters: list[Any],
     allowed_prop_ids: set[str] | list[str] | tuple[str, ...] | None = None,
 ) -> tuple[list[str], list[str]]:
-    """按本集合法 marker 集合拆分 AI/颜色检测结果。
+    """Split AI/color detection results by the legal marker set of this episode.
 
-    `[[prop]]` 是语义锚点，不一定有颜色 marker。只有传入
-    `allowed_prop_ids` 的道具才会被归类为 detected_props；调用方应传入
-    已分配 marker color 的全局道具集合。
+    `[[prop]]` is a semantic anchor and does not necessarily have a color marker. Only props passed in
+    `allowed_prop_ids` are classified as detected_props; callers should pass the set of
+    global props that already have a marker color assigned.
 
     Returns:
         (detected_identities, prop_marker_ids)
@@ -607,12 +607,12 @@ def build_prop_menu(
 
 
 def sync_beat_asset_refs(beat: dict[str, Any]) -> dict[str, Any]:
-    """规范化 beat 中的场景引用字段。
+    """Normalize the scene reference fields in a beat.
 
-    规范结构：
-    - scene_ref.scene_id: 场景 ID
-    - scene_ref.render_anchor_id: Beat 实际 render 背景槽位；空或 selected_background
-    - scene_ref.render_anchor_source_id: selected_background 的来源，仅用于 UI 显示/追踪
+    Canonical structure:
+    - scene_ref.scene_id: scene ID
+    - scene_ref.render_anchor_id: background slot the Beat actually renders with; empty or selected_background
+    - scene_ref.render_anchor_source_id: source of selected_background, used only for UI display/tracking
     """
 
     scene_ref = _coerce_scene_ref(beat.get("scene_ref"))
@@ -625,64 +625,64 @@ def sync_beat_asset_refs(beat: dict[str, Any]) -> dict[str, Any]:
 
 
 # =============================================================================
-# 风格配置模型
+# Style configuration model
 # =============================================================================
 
 
 class StyleConfig(BaseModel):
-    """风格配置模型 - One Source of Truth for style settings.
+    """Style configuration model - One Source of Truth for style settings.
 
-    支持系统预设（从 JSON 文件加载）和自定义风格（从 Redis 加载）。
+    Supports system presets (loaded from JSON files) and custom styles (loaded from Redis).
 
-    字段说明：
-    - style_instructions / avoid_instructions: 所有图像模型共用的项目风格指令
-    - style_tag: Render 模式注入每个 panel 的短标签
+    Field notes:
+    - style_instructions / avoid_instructions: project style instructions shared by all image models
+    - style_tag: short tag injected into every panel in Render mode
     """
 
-    id: str = Field(description="风格唯一标识，如 'chinese_period_drama'")
-    name: str = Field(description="显示名称，如 '写实古装剧'")
+    id: str = Field(description="Unique style identifier, e.g. 'realistic_period_drama'")
+    name: str = Field(description="Display name, e.g. 'Realistic Period Drama'")
     base: Optional[str] = Field(
         default=None,
-        description="继承自哪个预设风格（可选，用于自定义风格继承）",
+        description="Which preset style this inherits from (optional, for custom style inheritance)",
     )
 
     style_instructions: str = Field(
         default="",
-        description="通用风格指令，如 'Create a cinematic scene...'",
+        description="General style instructions, e.g. 'Create a cinematic scene...'",
     )
     avoid_instructions: str = Field(
         default="",
-        description="通用避免指令，如 'Do not create anime style...'",
+        description="General avoid instructions, e.g. 'Do not create anime style...'",
     )
     style_tag: str = Field(
         default="",
-        description="per-panel 短标签，如 'PHOTOREALISTIC LIVE-ACTION'，用于 Render 模式注入每个 Panel",
+        description="Per-panel short tag, e.g. 'PHOTOREALISTIC LIVE-ACTION', injected into every Panel in Render mode",
     )
 
-    # 通用字段
+    # Common fields
     label: str = Field(
         default="",
-        description="UI 显示标签，如 '写实古装剧'",
+        description="UI display label, e.g. 'Realistic Period Drama'",
     )
     style_family: str = Field(
         default="live_action",
-        description="风格大类：live_action | animation",
+        description="Style category: live_action | animation",
     )
     animation_subtype: str = Field(
         default="",
-        description="动画子类：2d | 3d | hybrid；真人风格为空",
+        description="Animation subtype: 2d | 3d | hybrid; empty for live-action styles",
     )
 
-    # 元数据
+    # Metadata
     is_preset: bool = Field(
         default=False,
-        description="是否为系统预设（True=不可删除，False=自定义风格）",
+        description="Whether this is a system preset (True = cannot be deleted, False = custom style)",
     )
-    created_at: Optional[datetime] = Field(default=None, description="创建时间（仅自定义风格）")
-    created_by: Optional[str] = Field(default=None, description="创建者（仅自定义风格）")
+    created_at: Optional[datetime] = Field(default=None, description="Creation time (custom styles only)")
+    created_by: Optional[str] = Field(default=None, description="Creator (custom styles only)")
     preview_path: Optional[str] = Field(
         default=None,
-        description="自定义风格参考图相对于项目目录的路径；预设风格为空",
+        description="Path of the custom style reference image relative to the project directory; empty for preset styles",
     )
 
     def to_legacy_dict(self) -> dict:
@@ -700,15 +700,15 @@ class StyleConfig(BaseModel):
 
     @classmethod
     def from_legacy_dict(cls, style_id: str, data: dict, name: str = "") -> "StyleConfig":
-        """从旧版 STYLE_PRESETS 格式创建 StyleConfig。
+        """Create a StyleConfig from the legacy STYLE_PRESETS format.
 
         Args:
-            style_id: 风格 ID
-            data: 旧版配置字典
-            name: 显示名称
+            style_id: style ID
+            data: legacy config dict
+            name: display name
 
         Returns:
-            StyleConfig 实例
+            StyleConfig instance
         """
         return cls(
             id=style_id,
@@ -724,35 +724,35 @@ class StyleConfig(BaseModel):
 
 
 # =============================================================================
-# 节点类型枚举
+# Node type enum
 # =============================================================================
 
 
 class NodeType(str, Enum):
-    """NovelVideo 节点类型。"""
+    """NovelVideo node types."""
 
-    # 核心实体
+    # Core entities
     CHARACTER = "character"
     LOCATION = "location"
     PROP = "prop"
     EVENT = "event"
 
-    # 小说结构
+    # Novel structure
     CHAPTER = "chapter"
     EPISODE = "episode"
 
-    # 视频生成专用
+    # Video generation specific
     CHARACTER_ASSET = "character_asset"
 
-    # 约束
+    # Constraints
     WORLD_RULE = "world_rule"
     GENRE_STYLE = "genre_style"
 
 
 class RelationType(str, Enum):
-    """关系类型。"""
+    """Relationship types."""
 
-    # 角色关系
+    # Character relationships
     FAMILY_OF = "FAMILY_OF"
     LOVER_OF = "LOVER_OF"
     FRIEND_OF = "FRIEND_OF"
@@ -760,44 +760,44 @@ class RelationType(str, Enum):
     MENTOR_OF = "MENTOR_OF"
     SUBORDINATE_OF = "SUBORDINATE_OF"
 
-    # 事件关系
+    # Event relationships
     PARTICIPATES_IN = "PARTICIPATES_IN"
     CAUSES = "CAUSES"
     HAPPENS_AT = "HAPPENS_AT"
 
-    # 结构关系
+    # Structural relationships
     BELONGS_TO_CHAPTER = "BELONGS_TO_CHAPTER"
     BELONGS_TO_EPISODE = "BELONGS_TO_EPISODE"
 
-    # 资产关系
+    # Asset relationships
     HAS_ASSET = "HAS_ASSET"
     REFERENCED_IN = "REFERENCED_IN"
 
 
 # =============================================================================
-# 剧集相关
+# Episode related
 # =============================================================================
 
 
 class EpisodeNode(BaseModel):
-    """视频集节点。"""
+    """Video episode node."""
 
-    number: int = Field(description="集数")
-    title: str = Field(default="", description="标题")
+    number: int = Field(description="Episode number")
+    title: str = Field(default="", description="Title")
 
-    # 内容范围
-    chapter_start: int = Field(default=1, description="起始章节")
-    chapter_end: int = Field(default=1, description="结束章节")
+    # Content range
+    chapter_start: int = Field(default=1, description="Starting chapter")
+    chapter_end: int = Field(default=1, description="Ending chapter")
 
-    # 核心内容
-    summary: str = Field(default="", description="内容摘要")
-    key_events: list[str] = Field(default_factory=list, description="关键事件")
-    characters: list[str] = Field(default_factory=list, description="出场角色")
+    # Core content
+    summary: str = Field(default="", description="Content summary")
+    key_events: list[str] = Field(default_factory=list, description="Key events")
+    characters: list[str] = Field(default_factory=list, description="Appearing characters")
 
-    # 悬念
-    cliffhanger: str = Field(default="", description="结尾悬念")
+    # Cliffhanger
+    cliffhanger: str = Field(default="", description="Ending cliffhanger")
 
-    # 生成状态
+    # Generation status
     script_generated: bool = Field(default=False)
     images_generated: bool = Field(default=False)
     audio_generated: bool = Field(default=False)
@@ -805,122 +805,122 @@ class EpisodeNode(BaseModel):
 
 
 class NarrationScript(BaseModel):
-    """解说脚本 - 扁平化结构。
+    """Narration script - flat structure.
 
-    beats 是核心单位（扁平列表），shots 是轻量分组（分镜宫格，用于视频生成规划）。
+    beats are the core unit (a flat list); shots are a lightweight grouping (storyboard grids, used for video generation planning).
     """
 
     episode_number: int
     title: str = ""
 
-    # 核心：扁平 beats 列表
-    beats: list["VisualBeat"] = Field(default_factory=list, description="视觉节拍列表")
+    # Core: flat beats list
+    beats: list["VisualBeat"] = Field(default_factory=list, description="List of visual beats")
 
-    # 元数据
-    total_duration_seconds: float = Field(default=120.0, description="预估总时长（秒）")
+    # Metadata
+    total_duration_seconds: float = Field(default=120.0, description="Estimated total duration (seconds)")
     created_at: datetime = Field(default_factory=datetime.now)
 
     def get_total_duration(self) -> float:
-        """获取所有 beats 的总时长。"""
+        """Get the total duration of all beats."""
         return sum(b.estimated_duration for b in self.beats)
 
 
 class VisualBeat(BaseModel):
-    """视觉节拍 - 解说词的一个片段及对应的画面。
+    """Visual beat - one segment of narration and its matching picture.
 
-    每个 VisualBeat 代表一句解说词 + 对应的画面描述，
-    实现画面和解说词的精确同步。
+    Each VisualBeat represents one line of narration plus its matching picture description,
+    keeping picture and narration precisely in sync.
 
-    时长约束（小说旁白风格）：
-    - 每个 beat 的字数由节奏预设（rhythm）决定（对应 4-6 秒 TTS 时长）
-    - 即梦API固定生成5秒视频，会根据实际TTS时长裁剪/拼接
-    - 风格要求：像讲故事一样娓娓道来，禁止使用语气词
+    Duration constraints (novel narration style):
+    - The word count of each beat is determined by the rhythm preset (corresponding to 4-6 seconds of TTS)
+    - The Jimeng API always generates 5-second videos, which are trimmed/concatenated to the actual TTS duration
+    - Style requirement: tell the story in a flowing manner, and do not use interjections
     """
 
-    beat_number: int = Field(description="节拍序号（从1开始）")
-    narration_segment: str = Field(description="这段解说词（中文）")
-    visual_description: str = Field(description="对应画面描述（中文，创意意图描述）")
+    beat_number: int = Field(description="Beat number (starting from 1)")
+    narration_segment: str = Field(description="This segment of narration")
+    visual_description: str = Field(description="Matching picture description (creative intent description)")
 
     time_of_day: str = Field(
         default="",
-        description="时间段（清晨/上午/正午/午后/白天/黄昏/夜晚）；独立时间条件，不拼进 scene 名称",
+        description="Time of day (dawn/morning/noon/afternoon/day/dusk/night); an independent time condition, not appended to the scene name",
     )
     scene_ref: Optional[SceneRef] = Field(
         default=None,
-        description="规范化场景引用；新流程主要使用 scene_id",
+        description="Normalized scene reference; the new flow mainly uses scene_id",
     )
-    # 对话支持
+    # Dialogue support
     audio_type: str = Field(
         default="narration",
-        description="silence=无朗读画面 beat / narration=旁白解说 / dialogue=角色台词",
+        description="silence = picture beat with no spoken audio / narration = voice-over narration / dialogue = character line",
     )
     speaker: str = Field(
-        default="", description="说话人标签（主角色可用 identity_id，群众/路人可用普通标签）"
+        default="", description="Speaker label (main characters may use identity_id; crowd/passersby may use a plain label)"
     )
     speaker_kind: str = Field(
         default="character",
-        description="speaker 类型：character=物理角色或普通角色，non_character=广播/画外音/字幕/屏幕文字等非角色发声源",
+        description="speaker type: character = physical or ordinary character, non_character = non-character sound source such as broadcast/voice-over/subtitle/on-screen text",
     )
 
-    # 时长信息（生成时按字数估算，不持久化到 DB）
-    estimated_duration: float = Field(default=0.0, description="预估时长（秒），按字数计算")
+    # Duration info (estimated from word count at generation time, not persisted to the DB)
+    estimated_duration: float = Field(default=0.0, description="Estimated duration (seconds), computed from word count")
 
-    # 手工分镜插入支持
+    # Manual shot insertion support
     shot_order: Optional[int] = Field(
-        default=None, description="显示/叙事顺序（fractional ordering）"
+        default=None, description="Display/narrative order (fractional ordering)"
     )
-    duration_seconds: Optional[float] = Field(default=None, description="用户指定目标时长（秒）")
-    is_manual_shot: bool = Field(default=False, description="是否为用户手工插入的分镜")
+    duration_seconds: Optional[float] = Field(default=None, description="User-specified target duration (seconds)")
+    is_manual_shot: bool = Field(default=False, description="Whether this is a shot manually inserted by the user")
 
     # ==========================================================================
-    # 资产生成状态（Phase 5 新增）
+    # Asset generation status (added in Phase 5)
     # ==========================================================================
 
-    # 首帧选图 ID
+    # First-frame selected image ID
     frame_pool_id: Optional[str] = Field(
         default=None,
-        description="选中的池图片 ID，格式: {mode}_{grid_idx:02d}_{cell_idx:02d}，如 '3x3_01_05'",
+        description="Selected pool image ID, format: {mode}_{grid_idx:02d}_{cell_idx:02d}, e.g. '3x3_01_05'",
     )
 
-    # 视频历史版本
-    video_versions: list[str] = Field(default_factory=list, description="历史版本路径列表")
+    # Video version history
+    video_versions: list[str] = Field(default_factory=list, description="List of historical version paths")
 
-    # 视频池条目 ID
-    video_pool_id: Optional[str] = Field(default=None, description="选中的视频池条目 ID")
+    # Video pool entry ID
+    video_pool_id: Optional[str] = Field(default=None, description="Selected video pool entry ID")
 
-    # 视频生成模式（与持久化层 NovelVisualBeat / DB beats.video_mode 对齐）
+    # Video generation mode (aligned with the persistence layer NovelVisualBeat / DB beats.video_mode)
     video_mode: str = Field(
         default="first_frame",
         description=(
-            "视频生成模式："
-            "first_frame=普通 I2V（只需首帧）"
-            " | keyframe=首尾帧过渡"
-            "（未来可加 text_to_video / extend / loop 等）"
+            "Video generation mode: "
+            "first_frame = plain I2V (first frame only)"
+            " | keyframe = first/last frame transition"
+            " (text_to_video / extend / loop etc. may be added in the future)"
         ),
     )
 
-    # 视频提示词（First Frame 模式使用）
+    # Video prompt (used in First Frame mode)
     video_prompt: Optional[str] = Field(
         default=None,
-        description="视频运动提示词（描述视频中的动作和运动）",
+        description="Video motion prompt (describes the action and motion in the video)",
     )
 
-    # 首尾帧过渡提示词（Keyframe 模式使用）
+    # First/last frame transition prompt (used in Keyframe mode)
     keyframe_prompt: Optional[str] = Field(
         default=None,
-        description="首尾帧过渡提示词（描述首尾帧之间的变化过程）",
+        description="First/last frame transition prompt (describes the change between the first and last frames)",
     )
-    # 注：尾帧路径不需要存储，动态获取下一个 beat 的 frame_path
+    # Note: the last-frame path need not be stored; the next beat's frame_path is fetched dynamically
 
     # ==========================================================================
-    # Action Beat 专属字段（2.0 短剧模式）
+    # Action Beat specific fields (2.0 short-drama mode)
     # ==========================================================================
 
     action_description: str = Field(
         default="",
-        description="原始动作描述（action beat 专用，方便 UI 展示和重新生成草图）",
+        description="Original action description (action beats only, for UI display and sketch regeneration)",
     )
-    # action 网格/面板路径 + 选中状态均由 PathResolver 按约定计算，不存储
+    # action grid/panel paths and selection state are all computed by PathResolver by convention, not stored
 
     @model_validator(mode="after")
     def sync_asset_refs(self) -> "VisualBeat":
@@ -937,9 +937,9 @@ class VisualBeat(BaseModel):
 
 
 def format_beat_narration(audio_type: str, speaker: str, narration: str) -> str:
-    """统一格式化 beat 的 narration 显示文本。
+    """Uniformly format the narration display text of a beat.
 
-    dialogue beat → 【台词·{speaker}】{narration}
+    dialogue beat → [Dialogue: {speaker}] {narration}
     narration beat → {narration}
     silence/action beat → ""
     """
@@ -947,107 +947,107 @@ def format_beat_narration(audio_type: str, speaker: str, narration: str) -> str:
         return ""
     if audio_type == "dialogue" and narration:
         if speaker:
-            return f"【台词·{speaker}】{narration}"
-        return f"【台词】{narration}"
+            return f"[Dialogue: {speaker}] {narration}"
+        return f"[Dialogue] {narration}"
     return narration
 
 
 # =============================================================================
-# Cognee 业务实体（从 cognee/pipeline.py 迁出）
+# Cognee business entities (moved out of cognee/pipeline.py)
 # =============================================================================
 
 
 class CharacterIdentity(BaseModel):
-    """角色身份 - 代表角色的一个特定形态。
+    """Character identity - represents one specific form of a character.
 
-    核心理念：身份才是本质。同一角色可以有多个身份，
-    每个身份有独立的外貌、服装、Prompt、参考图。
+    Core idea: the identity is the essence. One character can have several identities,
+    each with its own appearance, outfit, prompt and reference images.
 
-    例如：
-    - 谢铮的"和尚"身份：光头、僧袍、佛珠
-    - 谢铮的"皇帝"身份：龙袍、高冠、帝王威仪
+    For example:
+    - Xie Zheng's "monk" identity: shaved head, monk's robe, prayer beads
+    - Xie Zheng's "emperor" identity: dragon robe, tall crown, imperial bearing
     """
 
-    identity_id: str = Field(..., description="身份唯一ID，如 谢铮_皇帝、谢铮_和尚")
-    character_name: str = Field(..., description="关联的主角色名")
-    identity_name: str = Field(..., description="身份名称，如 '皇帝'、'和尚'")
+    identity_id: str = Field(..., description="Unique identity ID, e.g. Xie Zheng_emperor, Xie Zheng_monk")
+    character_name: str = Field(..., description="Associated main character name")
+    identity_name: str = Field(..., description="Identity name, e.g. 'emperor', 'monk'")
 
-    # 角色唯一短标签（用于 Nano Banana Pro Identity Locking）
+    # Unique short character tag (used for Nano Banana Pro Identity Locking)
     character_tag: str = Field(
         default="",
-        description="角色唯一短标签，如 '[JiangSN]'、'[XieZ]'，用于 Prompt 中的身份锁定",
+        description="Unique short character tag, e.g. '[JiangSN]', '[XieZ]', used for identity locking in prompts",
     )
 
-    # 服装描述（该身份特有）
+    # Outfit description (specific to this identity)
     appearance_details: str = Field(
         default="",
-        description="该身份的服装、配饰、发型造型（不含动作和表情）",
+        description="Outfit, accessories and hairstyle of this identity (no actions or expressions)",
     )
 
-    # 参考图（该身份独有）
+    # Reference images (specific to this identity)
     reference_images: List[str] = Field(
         default_factory=list,
-        description="该身份的参考图路径列表",
+        description="List of reference image paths for this identity",
     )
 
-    # 面部特征（年龄变体等需要不同脸的身份）
+    # Facial features (identities such as age variants that need a different face)
     face_prompt: str = Field(
         default="",
-        description="身份级面部特征（用于幼年/老年等面部差异大的身份），fallback 到角色级 face_prompt",
+        description="Identity-level facial features (for identities whose faces differ a lot, such as childhood/old age), falling back to the character-level face_prompt",
     )
 
-    # 年龄段（仅年龄变体身份填写，用于自动映射声音预设）
+    # Age group (filled only for age-variant identities, used to map voice presets automatically)
     age_group: str = Field(
         default="",
-        description="该身份的年龄段: child/youth/middle/elder（仅年龄变体填写）",
+        description="Age group of this identity: child/youth/middle/elder (filled only for age variants)",
     )
 
-    # 体型（年龄变体等需要不同体型的身份）
+    # Body type (identities such as age variants that need a different body type)
     body_type: str = Field(
         default="",
-        description="身份级体型描述（用于幼年/老年等体型差异大的身份），fallback 到角色级 body_type",
+        description="Identity-level body type description (for identities whose build differs a lot, such as childhood/old age), falling back to the character-level body_type",
     )
 
-    # 声音（用户手动指定，优先级最高）
+    # Voice (manually specified by the user, highest priority)
     fish_voice_id: str = Field(
         default="",
         description="DEPRECATED — Fish Audio voice ID. IndexTTS2 cutover uses reference_audio_path instead; field retained until magnetic data migration completes.",
     )
     reference_audio_path: str = Field(
         default="",
-        description="身份级 IndexTTS2 参考音频路径（项目相对路径），优先级高于角色级 reference_audio_path",
+        description="Identity-level IndexTTS2 reference audio path (project-relative), takes priority over the character-level reference_audio_path",
     )
     reference_audio_updated_at: str = Field(
         default="",
-        description="身份级声线最后一次内容变化时间 ISO 字符串",
+        description="ISO string of the last content change of the identity-level voice",
     )
     reference_audio_sha256: str = Field(
         default="",
-        description="身份级参考音频内容 SHA256，用于 IndexTTS2 voice provenance 校验",
+        description="SHA256 of the identity-level reference audio content, used for IndexTTS2 voice provenance checks",
     )
 
-    # 身份级 portrait（用户上传或 AI 生成）
+    # Identity-level portrait (uploaded by the user or AI-generated)
     portrait_image: str = Field(
         default="",
-        description="身份级脸部参考图路径（当 face_prompt 非空时使用）",
+        description="Identity-level face reference image path (used when face_prompt is non-empty)",
     )
 
-    # 服装参考图（用户上传，生成四视图时用于服装锚定）
+    # Outfit reference image (uploaded by the user, used to anchor the outfit when generating four views)
     costume_image: str = Field(
         default="",
-        description="服装参考图路径（用户上传，生成四视图时用于服装锚定）",
+        description="Outfit reference image path (uploaded by the user, used to anchor the outfit when generating four views)",
     )
 
-    # 来源
+    # Source
     source: str = Field(
         default="extracted",
-        description="来源: 'extracted'（小说提取）或 'user_created'（手动创建）",
+        description="Source: 'extracted' (extracted from the novel) or 'user_created' (created manually)",
     )
-    updated_at: str = Field(default="", description="身份资产最后一次内容变化时间 ISO 字符串")
+    updated_at: str = Field(default="", description="ISO string of the last content change of the identity asset")
 
     @model_validator(mode="after")
     def sanitize_names(self):
-        """清理身份名称中的文件系统不安全字符。"""
+        """Remove filesystem-unsafe characters from an identity name."""
         self.identity_name = re.sub(r'[/\\:*?"<>|]', "_", self.identity_name)
         self.identity_id = re.sub(r'[/\\:*?"<>|]', "_", self.identity_id)
         return self
@@ -1055,7 +1055,7 @@ class CharacterIdentity(BaseModel):
     @field_validator("age_group", mode="before")
     @classmethod
     def normalize_age_group(cls, value):
-        """兼容历史 null，并统一为字符串。"""
+        """Tolerate legacy null and normalize to a string."""
         if value is None:
             return ""
         return str(value)
@@ -1067,79 +1067,79 @@ class CharacterIdentity(BaseModel):
 
 
 class NovelCharacter(BaseModel):
-    """小说角色实体。
+    """Novel character entity.
 
-    双层参考架构（Portrait + Identity）：
-    - 第一层 Portrait（必需）：纯面部特写，中性背景，用于锁定面部身份
-    - 第二层 Identity（可选）：完整角色图含服装，用于固定服装
+    Two-layer reference architecture (Portrait + Identity):
+    - Layer 1 Portrait (required): a pure face close-up on a neutral background, used to lock the facial identity
+    - Layer 2 Identity (optional): a full character image including outfit, used to fix the outfit
 
-    使用策略：
-    - 有激活的 identity → 双参考模式（锁脸 + 锁服装）
-    - 无激活的 identity → 单参考模式（锁脸，服装由文字描述控制）
+    Usage strategy:
+    - With an active identity → dual-reference mode (lock face + lock outfit)
+    - Without an active identity → single-reference mode (lock face; the outfit is controlled by text description)
 
-    核心理念（Prompt 分离）：
-    - face_prompt: 纯面部特征（发型、眼睛、肤色），用于 Portrait 生成
-    - identity.appearance_details: 服装造型，用于 Identity 生成
-    - 默认所有身份共用同一个 face_prompt，确保面部一致性
-    - 年龄变体（幼年/老年等）可通过 identity.face_prompt 提供独立面部特征
+    Core idea (prompt separation):
+    - face_prompt: pure facial features (hairstyle, eyes, skin tone), used for Portrait generation
+    - identity.appearance_details: outfit and styling, used for Identity generation
+    - By default all identities share one face_prompt, to keep the face consistent
+    - Age variants (childhood/old age etc.) can provide separate facial features through identity.face_prompt
 
-    identities 存储为 JSON 字符串。
-    使用 get_identities() / set_identities() 方法访问。
+    identities is stored as a JSON string.
+    Use the get_identities() / set_identities() methods to access it.
     """
 
-    name: str = Field(..., description="角色全名")
-    aliases: List[str] = Field(default_factory=list, description="别名列表")
-    role: str = Field(default="", description="角色定位（主角/配角/反派）")
-    is_main: bool = Field(default=False, description="是否为主角/核心角色")
-    gender: str = Field(default="", description="性别")
-    age_group: str = Field(default="youth", description="年龄段: child/youth/middle/elder")
-    body_type: str = Field(default="", description="体型描述，如'纤细高挑'、'健壮魁梧'")
+    name: str = Field(..., description="Full character name")
+    aliases: List[str] = Field(default_factory=list, description="List of aliases")
+    role: str = Field(default="", description="Character role (protagonist/supporting/antagonist)")
+    is_main: bool = Field(default=False, description="Whether this is the protagonist / core character")
+    gender: str = Field(default="", description="Gender: male | female | other")
+    age_group: str = Field(default="youth", description="Age group: child/youth/middle/elder")
+    body_type: str = Field(default="", description="Body type description, e.g. 'slender and tall', 'sturdy and muscular'")
     fish_voice_id: str = Field(
         default="",
         description="DEPRECATED — Fish Audio voice ID. IndexTTS2 cutover uses reference_audio_path / voice_samples_by_age_group instead; field retained until magnetic data migration completes.",
     )
     reference_audio_path: str = Field(
         default="",
-        description="角色级 IndexTTS2 参考音频路径（项目相对路径，default slot）",
+        description="Character-level IndexTTS2 reference audio path (project-relative, default slot)",
     )
     reference_audio_sha256: str = Field(
         default="",
-        description="角色级参考音频内容 SHA256",
+        description="SHA256 of the character-level reference audio content",
     )
     reference_audio_updated_at: str = Field(
         default="",
-        description="角色级默认声线最后一次内容变化时间 ISO 字符串",
+        description="ISO string of the last content change of the character-level default voice",
     )
     voice_samples_by_age_group_json: str = Field(
         default="{}",
-        description="按年龄段（child/youth/middle/elder）划分的 IndexTTS2 声线样本 JSON：{slot: {path, sha256, updated_at}}",
+        description="IndexTTS2 voice samples per age group (child/youth/middle/elder) as JSON: {slot: {path, sha256, updated_at}}",
     )
-    description: str = Field(default="", description="角色描述")
+    description: str = Field(default="", description="Character description")
 
     # ============================================================
-    # 第一层：Portrait（必需）- 纯面部特写
+    # Layer 1: Portrait (required) - pure face close-up
     # ============================================================
 
-    # 纯面部特征（用于 Portrait 生成）
+    # Pure facial features (used for Portrait generation)
     face_prompt: str = Field(
         default="",
-        description="纯面部特征描述（发型、眼睛、肤色、骨骼轮廓），用于 Portrait 生成",
+        description="Pure facial feature description (hairstyle, eyes, skin tone, bone structure), used for Portrait generation",
     )
 
     appearance_details: str = Field(
         default="",
-        description="默认服装描述（文字），当无激活身份时使用",
+        description="Default outfit description (text), used when there is no active identity",
     )
 
     # ============================================================
-    # 第二层：Identity（可选）- 完整角色图（含服装）
+    # Layer 2: Identity (optional) - full character image (including outfit)
     # ============================================================
-    # 身份系统 - 存储为 JSON 字符串以兼容 Neo4j
+    # Identity system - stored as a JSON string for Neo4j compatibility
     identities_json: str = Field(
         default="[]",
-        description="身份列表的 JSON 字符串",
+        description="JSON string of the identity list",
     )
-    updated_at: str = Field(default="", description="角色资产最后一次内容变化时间 ISO 字符串")
+    updated_at: str = Field(default="", description="ISO string of the last content change of the character asset")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -1166,18 +1166,18 @@ class NovelCharacter(BaseModel):
 
     @model_validator(mode="after")
     def sanitize_name(self):
-        """清理角色名称中的文件系统不安全字符。
+        """Remove filesystem-unsafe characters from a character name.
 
-        字符集定义在 :mod:`novelvideo.utils.asset_names`，路由层查重用的是同一个函数——
-        两边各写一份正则的话，窄的那边会放过一个宽的那边要改写的名字，``ON CONFLICT``
-        随即静默覆盖同名行。
+        The character set is defined in :mod:`novelvideo.utils.asset_names`, and the route layer uses the same function for duplicate checks --
+        if each side wrote its own regex, the narrower side would let through a name the wider side would rewrite, and ``ON CONFLICT``
+        would then silently overwrite the same-named row.
         """
         self.name = path_safe_asset_name(self.name, kind="character")
         return self
 
     @property
     def identities(self) -> List[CharacterIdentity]:
-        """获取身份列表（从 JSON 解析，不使用缓存）。"""
+        """Get the identity list (parsed from JSON, no caching)."""
         if not self.identities_json or self.identities_json == "[]":
             return []
 
@@ -1191,7 +1191,7 @@ class NovelCharacter(BaseModel):
 
     @property
     def voice_samples_by_age_group(self) -> dict[str, dict]:
-        """按年龄段划分的 IndexTTS2 声线样本（dict 视图，从 JSON 字段解析）。"""
+        """IndexTTS2 voice samples per age group (dict view, parsed from the JSON field)."""
         if not self.voice_samples_by_age_group_json:
             return {}
         import json
@@ -1210,7 +1210,7 @@ class NovelCharacter(BaseModel):
 
     @identities.setter
     def identities(self, value: List[CharacterIdentity]):
-        """设置身份列表（序列化为 JSON）。"""
+        """Set the identity list (serialized to JSON)."""
         import json
 
         if not value:
@@ -1222,31 +1222,31 @@ class NovelCharacter(BaseModel):
             )
 
     def get_identity(self, identity_name: str) -> Optional[CharacterIdentity]:
-        """按身份名称获取身份。"""
+        """Get an identity by identity name."""
         for identity in self.identities:
             if identity.identity_name == identity_name:
                 return identity
         return None
 
     def migrate_to_identity_format(self) -> None:
-        """将旧格式数据迁移到身份格式。"""
+        """Migrate legacy-format data to the identity format."""
         if self.identities:
             return
 
         from novelvideo.utils.identity_resolver import compute_char_tag
 
-        default_id = f"{self.name}_默认"
+        default_id = f"{self.name}_default"
         default_identity = CharacterIdentity(
             identity_id=default_id,
             character_name=self.name,
-            identity_name="默认",
+            identity_name="default",
             character_tag=compute_char_tag(self.name, identity_id=default_id),
             appearance_details=self.appearance_details or self.description,
         )
         self.identities = [default_identity]
 
     def ensure_tag(self) -> None:
-        """确保每个 identity 有独立的 tag。"""
+        """Ensure every identity has its own tag."""
         from novelvideo.utils.identity_resolver import compute_char_tag
 
         identities = self.identities
@@ -1261,52 +1261,52 @@ class NovelCharacter(BaseModel):
 
 
 class NovelEvent(BaseModel):
-    """小说事件（场景级）。"""
+    """Novel event (scene level)."""
 
-    event_id: str = Field(..., description="唯一ID，如 ch1_e1")
-    chapter_num: int = Field(..., description="所属章节")
-    description: str = Field(..., description="事件描述（20字以内）")
-    location: str = Field(default="", description="地点")
-    time_marker: str = Field(default="", description="时间标记（如：傍晚、第二天）")
-    characters: List[str] = Field(default_factory=list, description="参与角色")
-    text_start: int = Field(default=0, description="原文起始位置（字符偏移）")
-    text_end: int = Field(default=0, description="原文结束位置")
-    content: str = Field(default="", description="事件对应的原文")
-    causes: List[str] = Field(default_factory=list, description="因果关系（前置事件ID）")
+    event_id: str = Field(..., description="Unique ID, e.g. ch1_e1")
+    chapter_num: int = Field(..., description="Chapter it belongs to")
+    description: str = Field(..., description="Event description (within 20 words)")
+    location: str = Field(default="", description="Location")
+    time_marker: str = Field(default="", description="Time marker (e.g. evening, the next day)")
+    characters: List[str] = Field(default_factory=list, description="Participating characters")
+    text_start: int = Field(default=0, description="Start position in the source text (character offset)")
+    text_end: int = Field(default=0, description="End position in the source text")
+    content: str = Field(default="", description="Source text corresponding to the event")
+    causes: List[str] = Field(default_factory=list, description="Causal relations (IDs of preceding events)")
 
 
 class NovelEpisode(BaseModel):
-    """剧集实体。"""
+    """Episode entity."""
 
-    number: int = Field(..., description="集数")
-    title: str = Field(..., description="标题")
-    chapter_start: int = Field(default=0, description="起始章节")
-    chapter_end: int = Field(default=0, description="结束章节")
-    raw_content: str = Field(default="", description="本集原文")
-    adapted_content: str = Field(default="", description="改写后的工作副本")
-    beat_source_text: str = Field(default="", description="逐行分镜生成使用的工作文本")
-    content_summary: str = Field(default="", description="内容摘要")
-    main_conflict: str = Field(default="", description="主要冲突")
-    cliffhanger: str = Field(default="", description="悬念/钩子")
-    key_events: List[str] = Field(default_factory=list, description="关键事件")
-    character_names: List[str] = Field(default_factory=list, description="出场角色名称")
+    number: int = Field(..., description="Episode number")
+    title: str = Field(..., description="Title")
+    chapter_start: int = Field(default=0, description="Starting chapter")
+    chapter_end: int = Field(default=0, description="Ending chapter")
+    raw_content: str = Field(default="", description="Source text of this episode")
+    adapted_content: str = Field(default="", description="Rewritten working copy")
+    beat_source_text: str = Field(default="", description="Working text used for line-by-line storyboard generation")
+    content_summary: str = Field(default="", description="Content summary")
+    main_conflict: str = Field(default="", description="Main conflict")
+    cliffhanger: str = Field(default="", description="Cliffhanger / hook")
+    key_events: List[str] = Field(default_factory=list, description="Key events")
+    character_names: List[str] = Field(default_factory=list, description="Names of appearing characters")
     identity_ids: List[str] = Field(
-        default_factory=list, description="本集规划的身份ID列表，如 ['苏清晏_嫡女日常']"
+        default_factory=list, description="List of identity IDs planned for this episode, e.g. ['Su Qingyan_daily']"
     )
     sketch_colors_json: str = Field(
         default="{}",
-        description='草图颜色映射 JSON 字符串，如 {"苏清晏_嫡女日常": "red"}',
+        description='Sketch color mapping as a JSON string, e.g. {"Su Qingyan_daily": "red"}',
     )
 
-    # 事件级规划支持（AI 规划模式）
-    event_ids: List[str] = Field(default_factory=list, description="关联的事件ID列表")
-    scene_menu_json: str = Field(default="[]", description="JSON: SceneMenuItem 列表")
-    prop_menu_json: str = Field(default="[]", description="JSON: PropMenuItem 列表")
+    # Event-level planning support (AI planning mode)
+    event_ids: List[str] = Field(default_factory=list, description="List of associated event IDs")
+    scene_menu_json: str = Field(default="[]", description="JSON: list of SceneMenuItem")
+    prop_menu_json: str = Field(default="[]", description="JSON: list of PropMenuItem")
     identity_default_map_json: str = Field(
         default="{}",
-        description='JSON: 本集角色默认身份映射，如 {"杜晨": "杜晨_中年时期"}',
+        description='JSON: default identity mapping of the characters in this episode, e.g. {"Du Chen": "Du Chen_middle_aged"}',
     )
-    updated_at: str = Field(default="", description="剧集规划最后一次内容变化时间 ISO 字符串")
+    updated_at: str = Field(default="", description="ISO string of the last content change of the episode plan")
 
     @model_validator(mode="before")
     @classmethod
@@ -1412,54 +1412,54 @@ class NovelEpisode(BaseModel):
 
 
 class NovelVisualBeat(BaseModel):
-    """视觉节拍实体。"""
+    """Visual beat entity."""
 
-    beat_number: int = Field(..., description="节拍序号（1-based）")
-    episode_number: int = Field(..., description="所属集数")
-    narration: str = Field(default="", description="TTS 文本（旁白或台词，用于嵌入索引）")
-    visual_description: str = Field(default="", description="画面描述（创意意图）")
+    beat_number: int = Field(..., description="Beat number (1-based)")
+    episode_number: int = Field(..., description="Episode it belongs to")
+    narration: str = Field(default="", description="TTS text (narration or dialogue, used for embedding index)")
+    visual_description: str = Field(default="", description="Picture description (creative intent)")
 
     time_of_day: str = Field(
         default="",
-        description="时间段（清晨/上午/正午/午后/白天/黄昏/夜晚）；为空表示不指定",
+        description="Time of day (dawn/morning/noon/afternoon/day/dusk/night); empty means unspecified",
     )
 
-    # 草图颜色检测
+    # Sketch color detection
     detected_identities_json: str = Field(
-        default="[]", description="草图颜色检测到的出场身份ID列表（JSON 序列化）"
+        default="[]", description="List of on-screen identity IDs detected by sketch color (JSON serialized)"
     )
     detected_props_json: str = Field(
-        default="[]", description="草图颜色检测到的出场全局道具ID列表（JSON 序列化）"
+        default="[]", description="List of on-screen global prop IDs detected by sketch color (JSON serialized)"
     )
     scene_ref_json: str = Field(
         default="",
-        description="当前 beat 的规范化场景引用 JSON",
+        description="Normalized scene reference JSON of the current beat",
     )
-    # 视频生成参数（Beat 层）
+    # Video generation parameters (Beat level)
     video_mode: str = Field(default="first_frame", description="first_frame / keyframe")
-    video_prompt: str = Field(default="", description="视频运动提示词")
-    keyframe_prompt: str = Field(default="", description="首尾帧过渡提示词")
+    video_prompt: str = Field(default="", description="Video motion prompt")
+    keyframe_prompt: str = Field(default="", description="First/last frame transition prompt")
 
     # Seedance 2.0 per-beat config overrides (Stage B; Stage A persists '{}' default)
     seedance2_config_json: str = Field(
         default="{}",
-        description="Seedance 2.0 per-beat 覆写 JSON（Stage B 真正使用，Stage A 仅落库占位）",
+        description="Seedance 2.0 per-beat override JSON (actually used in Stage B; Stage A only persists a placeholder)",
     )
 
-    # 对话支持
+    # Dialogue support
     audio_type: str = Field(default="narration", description="silence/narration/dialogue")
-    speaker: str = Field(default="", description="说话人标签")
+    speaker: str = Field(default="", description="Speaker label")
     speaker_kind: str = Field(
         default="character",
-        description="speaker 类型：character/non_character",
+        description="speaker type: character/non_character",
     )
 
-    # 手工分镜插入支持
+    # Manual shot insertion support
     shot_order: Optional[int] = Field(
-        default=None, description="显示/叙事顺序（fractional ordering）"
+        default=None, description="Display/narrative order (fractional ordering)"
     )
-    duration_seconds: Optional[float] = Field(default=None, description="用户指定目标时长（秒）")
-    is_manual_shot: bool = Field(default=False, description="是否为用户手工插入的分镜")
+    duration_seconds: Optional[float] = Field(default=None, description="User-specified target duration (seconds)")
+    is_manual_shot: bool = Field(default=False, description="Whether this is a shot manually inserted by the user")
 
     # MiniMax H3 Multishot support (2026-10-19): a non-empty, user-chosen
     # opaque string groups N CONSECUTIVE beats (by shot_order) into one
@@ -1477,7 +1477,7 @@ class NovelVisualBeat(BaseModel):
 
     @model_validator(mode="after")
     def ensure_fields_not_empty(self) -> "NovelVisualBeat":
-        """确保关键字段不为空。"""
+        """Ensure key fields are not empty."""
         scene_ref = None
         if self.scene_ref_json:
             try:
@@ -1493,7 +1493,7 @@ class NovelVisualBeat(BaseModel):
                 self.narration = "(empty)"
         if not self.visual_description or not self.visual_description.strip():
             if not self.is_manual_shot:
-                self.visual_description = f"场景画面：{self.narration[:50]}"
+                self.visual_description = f"Scene picture: {self.narration[:50]}"
         return self
 
     @property
@@ -1507,29 +1507,29 @@ class NovelVisualBeat(BaseModel):
 
 
 class NovelScene(BaseModel):
-    """场景实体 — 故事中的地点/环境。"""
+    """Scene entity -- a location/environment in the story."""
 
-    name: str = Field(description="场景名称，如 '皇宫·大殿'")
-    aliases: List[str] = Field(default_factory=list, description="别名")
+    name: str = Field(description="Scene name, e.g. 'Imperial Palace · Great Hall'")
+    aliases: List[str] = Field(default_factory=list, description="Aliases")
     scene_type: str = Field(default="interior", description="interior/exterior/nature")
-    base_scene_id: str = Field(default="", description="派生场景所属基础场景 ID；基础场景为空")
-    variant_id: str = Field(default="", description="派生场景状态/外观标签；基础场景为空")
-    time_of_day: str = Field(default="", description="场景参考图自身时间；为空表示通用时间")
+    base_scene_id: str = Field(default="", description="ID of the base scene a derived scene belongs to; empty for base scenes")
+    variant_id: str = Field(default="", description="State/look label of a derived scene; empty for base scenes")
+    time_of_day: str = Field(default="", description="Time of day of the scene reference image itself; empty means generic time")
 
-    environment_prompt: str = Field(default="", description="环境描述 prompt（用于生成参考图）")
-    variant_prompt: str = Field(default="", description="派生场景相对基础场景的增量视觉描述")
-    description: str = Field(default="", description="场景叙述性描述")
-    spatial_layout_image: str = Field(default="", description="场景级空间布局参考图路径")
+    environment_prompt: str = Field(default="", description="Environment description prompt (used to generate the reference image)")
+    variant_prompt: str = Field(default="", description="Incremental visual description of a derived scene relative to the base scene")
+    description: str = Field(default="", description="Narrative description of the scene")
+    spatial_layout_image: str = Field(default="", description="Scene-level spatial layout reference image path")
     notes: str = Field(default="")
-    updated_at: str = Field(default="", description="场景资产最后一次内容变化时间 ISO 字符串")
+    updated_at: str = Field(default="", description="ISO string of the last content change of the scene asset")
 
     @model_validator(mode="after")
     def sanitize_name(self):
-        """清理场景名称中的路径不安全字符，原名留作别名。
+        """Remove path-unsafe characters from a scene name, keeping the original name as an alias.
 
-        场景名同时是 SQLite 主键、REST 路径段和磁盘目录名，混进斜杠会让这个场景的
-        ``{name}`` 接口整排 404（详见 :mod:`novelvideo.utils.asset_names`）。
-        ``NovelCharacter.sanitize_name`` 早就这么做了，场景 / 道具补齐同一道闸。
+        A scene name is at the same time a SQLite primary key, a REST path segment and a disk directory name; a slash would make the whole row of this scene's
+        ``{name}`` endpoints 404 (see :mod:`novelvideo.utils.asset_names`).
+        ``NovelCharacter.sanitize_name`` has long done this; scenes / props now get the same gate.
         """
         self.name, self.aliases = coerce_path_safe_asset_name(self.name, self.aliases)
         return self
@@ -1576,7 +1576,7 @@ def build_scene_effective_prompt(scene: NovelScene, base_scene: NovelScene | Non
             [
                 "",
                 "[Time-of-Day Plate]",
-                f"整体光照为{time_of_day}时段；未声明改变的结构、陈设和材质继承基础场景。",
+                f"Overall lighting is for the {time_of_day} period; structure, furnishings and materials not declared as changed are inherited from the base scene.",
             ]
         )
     if own_prompt and own_prompt != base_prompt and not variant_prompt:
@@ -1585,171 +1585,171 @@ def build_scene_effective_prompt(scene: NovelScene, base_scene: NovelScene | Non
 
 
 class NovelProp(BaseModel):
-    """道具实体 — 故事中的重要物件/武器/信物。"""
+    """Prop entity -- an important object/weapon/token in the story."""
 
-    name: str = Field(description="道具名称，如 '七星剑'")
-    aliases: List[str] = Field(default_factory=list, description="别名")
+    name: str = Field(description="Prop name, e.g. 'Seven-Star Sword'")
+    aliases: List[str] = Field(default_factory=list, description="Aliases")
     prop_type: str = Field(
         default="object", description="weapon/accessory/artifact/document/furniture"
     )
 
-    visual_prompt: str = Field(default="", description="道具视觉 prompt（用于生成参考图）")
-    description: str = Field(default="", description="道具叙述性描述（材质、尺寸、用途）")
+    visual_prompt: str = Field(default="", description="Prop visual prompt (used to generate the reference image)")
+    description: str = Field(default="", description="Narrative description of the prop (material, size, use)")
 
-    owner: str = Field(default="", description="所属角色名")
+    owner: str = Field(default="", description="Owning character name")
     notes: str = Field(default="")
-    updated_at: str = Field(default="", description="道具资产最后一次内容变化时间 ISO 字符串")
+    updated_at: str = Field(default="", description="ISO string of the last content change of the prop asset")
 
     @model_validator(mode="after")
     def sanitize_name(self):
-        """清理道具名称中的路径不安全字符，原名留作别名。见 NovelScene.sanitize_name。"""
+        """Remove path-unsafe characters from a prop name, keeping the original name as an alias. See NovelScene.sanitize_name."""
         self.name, self.aliases = coerce_path_safe_asset_name(self.name, self.aliases)
         return self
 
 
 # =============================================================================
-# 首帧生成上下文
+# First-frame generation context
 # =============================================================================
 
 
 # =============================================================================
-# 类型风格
+# Genre style
 # =============================================================================
 
 
 class GenreStyle(BaseModel):
-    """类型风格定义。"""
+    """Genre style definition."""
 
-    genre: str = Field(description="类型，如'言情', '玄幻', '悬疑', '都市'")
+    genre: str = Field(description="Genre, e.g. 'romance', 'fantasy', 'suspense', 'urban'")
 
-    # 视觉风格（默认：写实古装剧风格）
+    # Visual style (default: realistic period drama style)
     art_style: str = Field(
-        default="写实古装剧风格", description="画风，如'写实古装剧风格', '少女漫画风', '热血漫画风'"
+        default="realistic period drama style", description="Art style, e.g. 'realistic period drama style', 'shoujo manga style', 'shonen manga style'"
     )
-    color_palette: list[str] = Field(default_factory=list, description="主色调列表")
+    color_palette: list[str] = Field(default_factory=list, description="List of main colors")
 
-    # 角色外貌默认风格
-    default_appearance_style: str = Field(default="精致写实")
+    # Default character appearance style
+    default_appearance_style: str = Field(default="refined realism")
 
-    # 场景风格
-    background_style: str = Field(default="古典宫廷")
+    # Scene style
+    background_style: str = Field(default="classical imperial palace")
 
-    # 叙事风格
-    narration_tone: str = Field(default="温柔抒情", description="解说语气")
-    pacing: str = Field(default="舒缓细腻", description="节奏")
+    # Narrative style
+    narration_tone: str = Field(default="gentle and lyrical", description="Narration tone")
+    pacing: str = Field(default="slow and delicate", description="Pacing")
 
 
 # =============================================================================
-# 图片池相关
+# Image pool related
 # =============================================================================
 
 
 class GridEntry(BaseModel):
-    """网格图片元数据 - 追踪整图的 3 要素 (type + mode_key + beat_nums)。
+    """Grid image metadata - tracks the 3 elements of a whole image (type + mode_key + beat_nums).
 
-    文件名模式: {type}_{mode_key}_{beats_str}_grid_{ts}.png
-    例如: render_3x3_1-2-3-4-5-6-7-8-9_grid_20260227143052.png
+    File name pattern: {type}_{mode_key}_{beats_str}_grid_{ts}.png
+    Example: render_3x3_1-2-3-4-5-6-7-8-9_grid_20260227143052.png
     """
 
-    type: str = Field(description="图片类型：render 或 sketch")
-    mode_key: str = Field(description="生成模式，如 3x3, 1x1_9-16, 2x2_1-1")
-    beat_nums: list[int] = Field(description="包含的 beat 编号列表")
-    preset: str = Field(default="scene", description="preset 分组：scene / char / loc / custom")
-    grid_path: str = Field(description="整图文件相对路径")
-    prompt_path: str = Field(default="", description="提示词文件相对路径")
-    generated_at: Optional[datetime] = Field(default=None, description="生成时间")
+    type: str = Field(description="Image type: render or sketch")
+    mode_key: str = Field(description="Generation mode, e.g. 3x3, 1x1_9-16, 2x2_1-1")
+    beat_nums: list[int] = Field(description="List of included beat numbers")
+    preset: str = Field(default="scene", description="preset group: scene / char / loc / custom")
+    grid_path: str = Field(description="Relative path of the whole image file")
+    prompt_path: str = Field(default="", description="Relative path of the prompt file")
+    generated_at: Optional[datetime] = Field(default=None, description="Generation time")
 
     @property
     def beats_str(self) -> str:
-        """beat 编号的 - 分隔字符串。"""
+        """Hyphen-separated string of beat numbers."""
         return "-".join(str(b) for b in self.beat_nums)
 
 
 class PoolImage(BaseModel):
-    """图片池条目 - 用于灵活的图片选择系统。
+    """Image pool entry - used by the flexible image selection system.
 
-    所有生成的图片（1x1, 3x3, 5x5 等）统一进入图片池，
-    用户可以从池中自由选择任意图片分配给任意 beat。
+    All generated images (1x1, 3x3, 5x5, etc.) go into one image pool,
+    and the user can freely pick any image from the pool and assign it to any beat.
 
-    支持两种类型：
-    - render: 渲染图（高清成品图）
-    - sketch: 草图（构图参考）
+    Two types are supported:
+    - render: rendered image (high-definition final image)
+    - sketch: sketch (composition reference)
 
-    版本管理：
-    - cell 文件统一存入 cells/ 目录，使用 beat 中心命名: cells/beat_01_t20260213143052.png
-    - generated_at 记录生成时间，用于版本排序
+    Version management:
+    - cell files are all stored in the cells/ directory, with beat-centered names: cells/beat_01_t20260213143052.png
+    - generated_at records the generation time, used for version ordering
     """
 
-    id: str = Field(description="唯一标识，格式: beat_{NN}_t{timestamp}[_render|_sketch]")
-    mode: str = Field(description="生成模式：1x1, 3x3, 5x5, regen 等")
-    grid_index: int = Field(description="所属网格的索引（从1开始）")
-    cell_index: int = Field(description="在网格中的单元格索引（从1开始，按行优先）")
-    grid_path: str = Field(description="原始网格图片路径")
-    cell_path: Optional[str] = Field(default=None, description="切割后的单元格图片路径")
-    row: int = Field(description="在网格中的行号（从0开始）")
-    col: int = Field(description="在网格中的列号（从0开始）")
-    original_beat: int = Field(description="原始生成时对应的 beat 编号")
-    generated_at: Optional[datetime] = Field(default=None, description="生成时间（用于版本管理）")
-    type: str = Field(default="render", description="图片类型：render（渲染图）或 sketch（草图）")
-    content_hash: Optional[str] = Field(default=None, description="内容哈希（用于去重）")
+    id: str = Field(description="Unique identifier, format: beat_{NN}_t{timestamp}[_render|_sketch]")
+    mode: str = Field(description="Generation mode: 1x1, 3x3, 5x5, regen, etc.")
+    grid_index: int = Field(description="Index of the grid it belongs to (starting from 1)")
+    cell_index: int = Field(description="Cell index within the grid (starting from 1, row-major)")
+    grid_path: str = Field(description="Original grid image path")
+    cell_path: Optional[str] = Field(default=None, description="Path of the cell image after cutting")
+    row: int = Field(description="Row number within the grid (starting from 0)")
+    col: int = Field(description="Column number within the grid (starting from 0)")
+    original_beat: int = Field(description="Beat number it corresponded to at original generation")
+    generated_at: Optional[datetime] = Field(default=None, description="Generation time (used for version management)")
+    type: str = Field(default="render", description="Image type: render (rendered image) or sketch (sketch)")
+    content_hash: Optional[str] = Field(default=None, description="Content hash (used for de-duplication)")
     beat_content_hash: Optional[str] = Field(
-        default=None, description="生成时 beat 内容的 SHA256（用于 stale 判断）"
+        default=None, description="SHA256 of the beat content at generation time (used for stale detection)"
     )
 
 
 class PoolIndex(BaseModel):
-    """图片池索引 - 管理一个集数的所有图片池条目。"""
+    """Image pool index - manages all image pool entries of one episode."""
 
-    episode: int = Field(description="集数")
-    generated_at: datetime = Field(default_factory=datetime.now, description="生成时间")
-    version: int = Field(default=2, description="索引版本：1=旧格式, 2=新格式")
+    episode: int = Field(description="Episode number")
+    generated_at: datetime = Field(default_factory=datetime.now, description="Generation time")
+    version: int = Field(default=2, description="Index version: 1 = old format, 2 = new format")
     modes: dict[str, dict] = Field(
         default_factory=dict,
-        description="各模式统计，如 {'3x3': {'total_grids': 3, 'total_cells': 27}}",
+        description="Statistics per mode, e.g. {'3x3': {'total_grids': 3, 'total_cells': 27}}",
     )
-    grids: list[GridEntry] = Field(default_factory=list, description="所有整图元数据")
-    images: list[PoolImage] = Field(default_factory=list, description="所有图片池条目")
+    grids: list[GridEntry] = Field(default_factory=list, description="Metadata of all whole images")
+    images: list[PoolImage] = Field(default_factory=list, description="All image pool entries")
     beat_assignments: dict[str, str] = Field(
         default_factory=dict,
-        description="beat → render cell 映射，如 {'1': '3x3_g01_c01', '2': '3x3_g01_c02'}",
+        description="beat → render cell mapping, e.g. {'1': '3x3_g01_c01', '2': '3x3_g01_c02'}",
     )
 
     def get_cell_path(self, pool_id: str) -> Optional[str]:
-        """根据 pool_id 获取单元格路径。"""
+        """Get the cell path by pool_id."""
         for img in self.images:
             if img.id == pool_id:
                 return img.cell_path
         return None
 
     def get_image(self, pool_id: str) -> Optional[PoolImage]:
-        """根据 pool_id 获取图片条目。"""
+        """Get the image entry by pool_id."""
         for img in self.images:
             if img.id == pool_id:
                 return img
         return None
 
     def filter_by_mode(self, mode: str) -> list[PoolImage]:
-        """按模式筛选图片。"""
+        """Filter images by mode."""
         return [img for img in self.images if img.mode == mode]
 
     def filter_by_beat(self, beat: int) -> list[PoolImage]:
-        """按原始 beat 筛选图片。"""
+        """Filter images by original beat."""
         return [img for img in self.images if img.original_beat == beat]
 
     def get_recommended_for_beat(self, beat: int) -> list[PoolImage]:
-        """获取某个 beat 的推荐图片（来自不同模式）。"""
+        """Get the recommended images of a beat (from different modes)."""
         return self.filter_by_beat(beat)
 
     def filter_by_type(self, img_type: str) -> list[PoolImage]:
-        """按类型筛选图片（render 或 sketch）。"""
+        """Filter images by type (render or sketch)."""
         return [img for img in self.images if img.type == img_type]
 
     def filter_by_beat_and_type(self, beat: int, img_type: str) -> list[PoolImage]:
-        """按 beat 和类型筛选图片。"""
+        """Filter images by beat and type."""
         return [img for img in self.images if img.original_beat == beat and img.type == img_type]
 
     def find_grid(self, grid_type: str, mode_key: str, beat_nums: list[int]) -> Optional[GridEntry]:
-        """按 3 要素查找整图。"""
+        """Find a whole image by its 3 elements."""
         beat_set = set(beat_nums)
         for g in self.grids:
             if g.type == grid_type and g.mode_key == mode_key and set(g.beat_nums) == beat_set:
@@ -1757,11 +1757,11 @@ class PoolIndex(BaseModel):
         return None
 
     def add_grid(self, entry: GridEntry) -> None:
-        """添加整图元数据。"""
+        """Add whole-image metadata."""
         self.grids.append(entry)
 
     def has_duplicate_cell(self, beat_num: int, content_hash: str) -> bool:
-        """检查池中是否已存在相同 beat 且内容一致的图片。"""
+        """Check whether the pool already has an image of the same beat with identical content."""
         for img in self.images:
             if img.original_beat == beat_num and img.content_hash == content_hash:
                 return True
@@ -1769,16 +1769,16 @@ class PoolIndex(BaseModel):
 
 
 # =============================================================================
-# 视频池模型
+# Video pool model
 # =============================================================================
 
 
 class VideoPoolEntry(BaseModel):
-    """视频池条目。"""
+    """Video pool entry."""
 
     id: str  # "beat_01_20260226_143052"
     beat_num: int
-    video_path: str  # pool 内相对路径 "beat_01_20260226_143052.mp4"
+    video_path: str  # relative path inside the pool "beat_01_20260226_143052.mp4"
     generated_at: datetime
     duration: float = 5.0
     video_mode: str = "first_frame"
@@ -1787,7 +1787,7 @@ class VideoPoolEntry(BaseModel):
 
 
 class VideoPoolIndex(BaseModel):
-    """视频池索引。"""
+    """Video pool index."""
 
     episode: int
     generated_at: datetime = Field(default_factory=datetime.now)
@@ -1795,18 +1795,18 @@ class VideoPoolIndex(BaseModel):
     beat_assignments: dict[str, str] = Field(default_factory=dict)
 
     def get_entry(self, pool_id: str) -> Optional[VideoPoolEntry]:
-        """根据 pool_id 获取视频条目。"""
+        """Get the video entry by pool_id."""
         for v in self.videos:
             if v.id == pool_id:
                 return v
         return None
 
     def filter_by_beat(self, beat_num: int) -> list[VideoPoolEntry]:
-        """按 beat 编号筛选视频。"""
+        """Filter videos by beat number."""
         return [v for v in self.videos if v.beat_num == beat_num]
 
     def get_latest_for_beat(self, beat_num: int) -> Optional[VideoPoolEntry]:
-        """获取某个 beat 的最新视频。"""
+        """Get the latest video of a beat."""
         entries = self.filter_by_beat(beat_num)
         if not entries:
             return None

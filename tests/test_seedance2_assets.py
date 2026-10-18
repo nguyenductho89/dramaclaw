@@ -27,8 +27,8 @@ def test_multimodal_assets_use_scene_ref_identity_and_audio(tmp_path, monkeypatc
     monkeypatch.setattr(pc, "OUTPUT_DIR", tmp_path / "state")
     project_dir = tmp_path / "output" / "alice" / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    identity = project_dir / "assets" / "characters" / "秦" / "identities" / "青年.png"
-    scene = project_dir / "assets" / "scenes" / "客厅_夜" / "master.png"
+    identity = project_dir / "assets" / "characters" / "Qin" / "identities" / "young.png"
+    scene = project_dir / "assets" / "scenes" / "living_room_night" / "master.png"
     audio = project_dir / "assets" / "narrator" / "voice.mp3"
     for image_path in (frame, identity, scene):
         _write_png(image_path)
@@ -48,9 +48,9 @@ def test_multimodal_assets_use_scene_ref_identity_and_audio(tmp_path, monkeypatc
         episode=1,
         beat={
             "beat_number": 1,
-            "detected_identities": ["秦_青年"],
-            "scene_ref": {"scene_id": "客厅_夜"},
-            "location": "旧场景字段不应优先",
+            "detected_identities": ["Qin_young"],
+            "scene_ref": {"scene_id": "living_room_night"},
+            "location": "legacy scene field must not take priority",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -61,7 +61,7 @@ def test_multimodal_assets_use_scene_ref_identity_and_audio(tmp_path, monkeypatc
         str(scene),
     ]
     assert selected_reference_paths(assets, "reference_audios") == [str(audio)]
-    scene_asset = next(asset for asset in assets if asset.key == "scene:客厅_夜")
+    scene_asset = next(asset for asset in assets if asset.key == "scene:living_room_night")
     assert scene_asset.path == scene
     assert scene_asset.selected is True
 
@@ -74,8 +74,8 @@ def test_multimodal_assets_resolve_scene_variant_to_derived_scene_master(tmp_pat
 
     project_dir = tmp_path / "output" / "alice" / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    base_scene = project_dir / "assets" / "scenes" / "客厅" / "master.png"
-    derived_scene = project_dir / "assets" / "scenes" / "客厅_漏水" / "master.png"
+    base_scene = project_dir / "assets" / "scenes" / "living_room" / "master.png"
+    derived_scene = project_dir / "assets" / "scenes" / "living_room_leak" / "master.png"
     for image_path in (frame, base_scene, derived_scene):
         _write_png(image_path)
 
@@ -85,7 +85,7 @@ def test_multimodal_assets_resolve_scene_variant_to_derived_scene_master(tmp_pat
         episode=1,
         beat={
             "beat_number": 1,
-            "scene_ref": {"scene_id": "客厅", "variant_id": "漏水"},
+            "scene_ref": {"scene_id": "living_room", "variant_id": "leak"},
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -95,8 +95,8 @@ def test_multimodal_assets_resolve_scene_variant_to_derived_scene_master(tmp_pat
         str(derived_scene),
     ]
     scene_asset = next(asset for asset in assets if asset.key.startswith("scene:"))
-    assert scene_asset.key == "scene:客厅_漏水"
-    assert scene_asset.label == "场景锚点 · 客厅_漏水"
+    assert scene_asset.key == "scene:living_room_leak"
+    assert scene_asset.label == "Scene anchor · living_room_leak"
 
 
 def test_multimodal_assets_resolve_time_of_day_to_time_plate(tmp_path):
@@ -107,8 +107,8 @@ def test_multimodal_assets_resolve_time_of_day_to_time_plate(tmp_path):
 
     project_dir = tmp_path / "output" / "alice" / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    base_scene = project_dir / "assets" / "scenes" / "客厅" / "master.png"
-    night_scene = project_dir / "assets" / "scenes" / "客厅_夜" / "master.png"
+    base_scene = project_dir / "assets" / "scenes" / "living_room" / "master.png"
+    night_scene = project_dir / "assets" / "scenes" / "living_room_night" / "master.png"
     for image_path in (frame, base_scene, night_scene):
         _write_png(image_path)
 
@@ -118,8 +118,8 @@ def test_multimodal_assets_resolve_time_of_day_to_time_plate(tmp_path):
         episode=1,
         beat={
             "beat_number": 1,
-            "scene_ref": {"scene_id": "客厅"},
-            "time_of_day": "夜晚",
+            "scene_ref": {"scene_id": "living_room"},
+            "time_of_day": "night",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -129,8 +129,8 @@ def test_multimodal_assets_resolve_time_of_day_to_time_plate(tmp_path):
         str(night_scene),
     ]
     scene_asset = next(asset for asset in assets if asset.key.startswith("scene:"))
-    assert scene_asset.key == "scene:客厅_夜"
-    assert scene_asset.label == "场景锚点 · 客厅_夜"
+    assert scene_asset.key == "scene:living_room_night"
+    assert scene_asset.label == "Scene anchor · living_room_night"
 
 
 def test_multimodal_assets_resolve_variant_time_to_variant_time_plate(tmp_path):
@@ -141,10 +141,10 @@ def test_multimodal_assets_resolve_variant_time_to_variant_time_plate(tmp_path):
 
     project_dir = tmp_path / "output" / "alice" / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    base_scene = project_dir / "assets" / "scenes" / "客厅" / "master.png"
-    base_night_scene = project_dir / "assets" / "scenes" / "客厅_夜" / "master.png"
-    variant_scene = project_dir / "assets" / "scenes" / "客厅_漏水" / "master.png"
-    variant_night_scene = project_dir / "assets" / "scenes" / "客厅_漏水_夜" / "master.png"
+    base_scene = project_dir / "assets" / "scenes" / "living_room" / "master.png"
+    base_night_scene = project_dir / "assets" / "scenes" / "living_room_night" / "master.png"
+    variant_scene = project_dir / "assets" / "scenes" / "living_room_leak" / "master.png"
+    variant_night_scene = project_dir / "assets" / "scenes" / "living_room_leak_night" / "master.png"
     for image_path in (frame, base_scene, base_night_scene, variant_scene, variant_night_scene):
         _write_png(image_path)
 
@@ -154,8 +154,8 @@ def test_multimodal_assets_resolve_variant_time_to_variant_time_plate(tmp_path):
         episode=1,
         beat={
             "beat_number": 1,
-            "scene_ref": {"scene_id": "客厅", "variant_id": "漏水"},
-            "time_of_day": "夜晚",
+            "scene_ref": {"scene_id": "living_room", "variant_id": "leak"},
+            "time_of_day": "night",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -165,8 +165,8 @@ def test_multimodal_assets_resolve_variant_time_to_variant_time_plate(tmp_path):
         str(variant_night_scene),
     ]
     scene_asset = next(asset for asset in assets if asset.key.startswith("scene:"))
-    assert scene_asset.key == "scene:客厅_漏水_夜"
-    assert scene_asset.label == "场景锚点 · 客厅_漏水_夜"
+    assert scene_asset.key == "scene:living_room_leak_night"
+    assert scene_asset.label == "Scene anchor · living_room_leak_night"
 
 
 def test_multimodal_assets_fall_back_to_base_scene_master_when_variant_image_missing(
@@ -179,8 +179,8 @@ def test_multimodal_assets_fall_back_to_base_scene_master_when_variant_image_mis
 
     project_dir = tmp_path / "output" / "alice" / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    base_scene = project_dir / "assets" / "scenes" / "客厅" / "master.png"
-    derived_scene_dir = project_dir / "assets" / "scenes" / "客厅_漏水"
+    base_scene = project_dir / "assets" / "scenes" / "living_room" / "master.png"
+    derived_scene_dir = project_dir / "assets" / "scenes" / "living_room_leak"
     derived_scene_dir.mkdir(parents=True)
     for image_path in (frame, base_scene):
         _write_png(image_path)
@@ -191,7 +191,7 @@ def test_multimodal_assets_fall_back_to_base_scene_master_when_variant_image_mis
         episode=1,
         beat={
             "beat_number": 1,
-            "scene_ref": {"scene_id": "客厅", "variant_id": "漏水"},
+            "scene_ref": {"scene_id": "living_room", "variant_id": "leak"},
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -201,8 +201,8 @@ def test_multimodal_assets_fall_back_to_base_scene_master_when_variant_image_mis
         str(base_scene),
     ]
     scene_asset = next(asset for asset in assets if asset.key.startswith("scene:"))
-    assert scene_asset.key == "scene:客厅"
-    assert scene_asset.label == "场景锚点 · 客厅"
+    assert scene_asset.key == "scene:living_room"
+    assert scene_asset.label == "Scene anchor · living_room"
     assert scene_asset.path == base_scene
 
 
@@ -224,7 +224,7 @@ async def test_prepare_seedance2_generation_inputs_preserves_config_duration(tmp
                 {
                     "mode": Seedance2I2VMode.FIRST_FRAME.value,
                     "duration": 8,
-                    "final_prompt": "参考图片1生成视频。",
+                    "final_prompt": "Generate the video with reference to image1.",
                 }
             ),
         },
@@ -249,16 +249,16 @@ def test_multimodal_assets_merge_detected_identities_with_visual_markers(tmp_pat
         episode=1,
         beat={
             "beat_number": 29,
-            "visual_description": "{{沈月白_青年时期}}紧紧盯着{{陆辰_青年时期}}。",
-            "detected_identities": ["沈月白_青年时期"],
+            "visual_description": "{{ShenYuebai_young_adult}} stares at {{Luchen_young_adult}}.",
+            "detected_identities": ["ShenYuebai_young_adult"],
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
 
     identity_keys = [asset.key for asset in assets if asset.key.startswith("identity:")]
     assert identity_keys == [
-        "identity:沈月白_青年时期",
-        "identity:陆辰_青年时期",
+        "identity:ShenYuebai_young_adult",
+        "identity:Luchen_young_adult",
     ]
 
 
@@ -271,10 +271,10 @@ def test_multimodal_dialogue_assets_use_character_voice_reference_not_beat_audio
     project_dir = tmp_path / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
     identity_image = (
-        project_dir / "assets" / "characters" / "面馆男青年" / "identities" / "青年时期.png"
+        project_dir / "assets" / "characters" / "NoodleGuy" / "identities" / "young_adult.png"
     )
-    scene = project_dir / "assets" / "scenes" / "兰州拉面馆" / "master.png"
-    voice = project_dir / "assets" / "characters" / "面馆男青年" / "voices" / "voice_default.mp3"
+    scene = project_dir / "assets" / "scenes" / "noodle_shop" / "master.png"
+    voice = project_dir / "assets" / "characters" / "NoodleGuy" / "voices" / "voice_default.mp3"
     stale_beat_audio = project_dir / "audio" / "ep001" / "beat_01.mp3"
     for image_path in (frame, identity_image, scene):
         _write_png(image_path)
@@ -283,14 +283,14 @@ def test_multimodal_dialogue_assets_use_character_voice_reference_not_beat_audio
     stale_beat_audio.parent.mkdir(parents=True)
     stale_beat_audio.write_bytes(b"stale generated beat audio")
     character = NovelCharacter(
-        name="面馆男青年",
-        reference_audio_path="assets/characters/面馆男青年/voices/voice_default.mp3",
+        name="NoodleGuy",
+        reference_audio_path="assets/characters/NoodleGuy/voices/voice_default.mp3",
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="面馆男青年_青年时期",
-            character_name="面馆男青年",
-            identity_name="青年时期",
+            identity_id="NoodleGuy_young_adult",
+            character_name="NoodleGuy",
+            identity_name="young_adult",
         )
     ]
 
@@ -301,10 +301,10 @@ def test_multimodal_dialogue_assets_use_character_voice_reference_not_beat_audio
         beat={
             "beat_number": 1,
             "audio_type": "dialogue",
-            "speaker": "面馆男青年_青年时期",
-            "detected_identities": ["面馆男青年_青年时期"],
-            "scene_ref": {"scene_id": "兰州拉面馆"},
-            "narration_segment": "面馆男青年（神色诧异）：现在啥事儿没有啊？",
+            "speaker": "NoodleGuy_young_adult",
+            "detected_identities": ["NoodleGuy_young_adult"],
+            "scene_ref": {"scene_id": "noodle_shop"},
+            "narration_segment": "NoodleGuy(looking surprised):Is everything fine now?",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         characters=[character],
@@ -312,9 +312,9 @@ def test_multimodal_dialogue_assets_use_character_voice_reference_not_beat_audio
 
     assert selected_reference_paths(assets, "reference_audios") == [str(voice)]
     audio_asset = next(asset for asset in assets if asset.media_type == "audio")
-    assert audio_asset.key == "voice:面馆男青年_青年时期"
-    assert audio_asset.identity_id == "面馆男青年_青年时期"
-    assert audio_asset.label == "面馆男青年 · 青年时期声线"
+    assert audio_asset.key == "voice:NoodleGuy_young_adult"
+    assert audio_asset.identity_id == "NoodleGuy_young_adult"
+    assert audio_asset.label == "NoodleGuy · young_adult voice"
 
 
 def test_multimodal_dialogue_assets_follow_multi_speaker_text_order(tmp_path):
@@ -325,23 +325,23 @@ def test_multimodal_dialogue_assets_follow_multi_speaker_text_order(tmp_path):
 
     project_dir = tmp_path / "project"
     _write_png(project_dir / "frames" / "ep001" / "beat_01.png")
-    _write_png(project_dir / "assets" / "scenes" / "兰州拉面馆" / "master.png")
+    _write_png(project_dir / "assets" / "scenes" / "noodle_shop" / "master.png")
     man_voice = (
-        project_dir / "assets" / "characters" / "面馆男青年" / "voices" / "voice_default.mp3"
+        project_dir / "assets" / "characters" / "NoodleGuy" / "voices" / "voice_default.mp3"
     )
     woman_voice = (
-        project_dir / "assets" / "characters" / "面馆女青年" / "voices" / "voice_default.mp3"
+        project_dir / "assets" / "characters" / "NoodleGirl" / "voices" / "voice_default.mp3"
     )
     for path in (man_voice, woman_voice):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(path.name.encode())
     man = NovelCharacter(
-        name="面馆男青年",
-        reference_audio_path="assets/characters/面馆男青年/voices/voice_default.mp3",
+        name="NoodleGuy",
+        reference_audio_path="assets/characters/NoodleGuy/voices/voice_default.mp3",
     )
     woman = NovelCharacter(
-        name="面馆女青年",
-        reference_audio_path="assets/characters/面馆女青年/voices/voice_default.mp3",
+        name="NoodleGirl",
+        reference_audio_path="assets/characters/NoodleGirl/voices/voice_default.mp3",
     )
 
     assets = build_seedance2_project_assets(
@@ -351,9 +351,9 @@ def test_multimodal_dialogue_assets_follow_multi_speaker_text_order(tmp_path):
         beat={
             "beat_number": 1,
             "audio_type": "dialogue",
-            "scene_ref": {"scene_id": "兰州拉面馆"},
+            "scene_ref": {"scene_id": "noodle_shop"},
             "narration_segment": (
-                "面馆男青年（打开易拉罐）：现在啥事儿没有啊？" "面馆女青年（抬头）：你知道杜晨吗？"
+                "NoodleGuy(opens the can):Is everything fine now?" "NoodleGirl(looks up):Do you know Du Chen?"
             ),
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
@@ -378,7 +378,7 @@ def test_multimodal_narration_assets_use_project_narrator_voice_not_beat_audio(
     monkeypatch.setattr(pc, "OUTPUT_DIR", tmp_path / "state")
     project_dir = tmp_path / "output" / "alice" / "project"
     _write_png(project_dir / "frames" / "ep001" / "beat_01.png")
-    _write_png(project_dir / "assets" / "scenes" / "兰州拉面馆" / "master.png")
+    _write_png(project_dir / "assets" / "scenes" / "noodle_shop" / "master.png")
     narrator_voice = project_dir / "assets" / "narrator" / "voice.mp3"
     narrator_voice.parent.mkdir(parents=True, exist_ok=True)
     narrator_voice.write_bytes(b"narrator voice")
@@ -400,8 +400,8 @@ def test_multimodal_narration_assets_use_project_narrator_voice_not_beat_audio(
         beat={
             "beat_number": 1,
             "audio_type": "narration",
-            "scene_ref": {"scene_id": "兰州拉面馆"},
-            "narration_segment": "夜色里的面馆还亮着灯。",
+            "scene_ref": {"scene_id": "noodle_shop"},
+            "narration_segment": "The noodle shop still has its lights on in the night.",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -410,7 +410,7 @@ def test_multimodal_narration_assets_use_project_narrator_voice_not_beat_audio(
     audio_asset = next(asset for asset in assets if asset.media_type == "audio")
     assert audio_asset.key == "voice:narrator"
     assert audio_asset.identity_id == "__narrator__"
-    assert audio_asset.label == "项目解说声线"
+    assert audio_asset.label == "Project narrator voice"
 
 
 def test_multimodal_narration_keeps_project_narrator_mentionable_when_duration_needs_trim(
@@ -445,7 +445,7 @@ def test_multimodal_narration_keeps_project_narrator_mentionable_when_duration_n
         beat={
             "beat_number": 1,
             "audio_type": "narration",
-            "narration_segment": "夜色里的面馆还亮着灯。",
+            "narration_segment": "The noodle shop still has its lights on in the night.",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -453,9 +453,9 @@ def test_multimodal_narration_keeps_project_narrator_mentionable_when_duration_n
     assert selected_reference_paths(assets, "reference_audios") == [str(narrator_voice)]
     audio_asset = next(asset for asset in assets if asset.key == "voice:narrator")
     assert audio_asset.selected is True
-    assert audio_asset.reference_label == "音频1"
+    assert audio_asset.reference_label == "audio1"
     assert audio_asset.validation_error == ""
-    assert "建议裁剪到 3-5 秒" in audio_asset.note
+    assert "trimming to 3-5 seconds is recommended" in audio_asset.note
 
 
 def test_prompt_audio_selection_sends_only_referenced_audio(tmp_path):
@@ -481,7 +481,7 @@ def test_prompt_audio_selection_sends_only_referenced_audio(tmp_path):
         beat={
             "beat_number": 1,
             "audio_type": "narration",
-            "narration_segment": "夜色里的面馆还亮着灯。",
+            "narration_segment": "The noodle shop still has its lights on in the night.",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -491,12 +491,12 @@ def test_prompt_audio_selection_sends_only_referenced_audio(tmp_path):
         reference_audio_paths=[str(second_audio)],
     )
 
-    selected = apply_prompt_audio_selection(assets, "画面参考图片1，不使用音频。")
+    selected = apply_prompt_audio_selection(assets, "Visual reference image1, do not use audio.")
     assert selected_reference_paths(selected, "reference_audios") == []
     audio_assets = [asset for asset in selected if asset.media_type == "audio"]
-    assert [asset.reference_label for asset in audio_assets] == ["音频1", "音频2"]
+    assert [asset.reference_label for asset in audio_assets] == ["audio1", "audio2"]
 
-    selected = apply_prompt_audio_selection(assets, "参考@音频2声线生成。")
+    selected = apply_prompt_audio_selection(assets, "Generate with reference to the @audio2 voice.")
     assert selected_reference_paths(selected, "reference_audios") == [str(second_audio)]
 
 
@@ -510,8 +510,8 @@ def test_drama_narration_assets_ignore_first_person_protagonist_voice(tmp_path, 
     monkeypatch.setattr(pc, "OUTPUT_DIR", tmp_path / "state")
     project_dir = tmp_path / "output" / "alice" / "project"
     _write_png(project_dir / "frames" / "ep001" / "beat_01.png")
-    _write_png(project_dir / "assets" / "scenes" / "旧书店" / "master.png")
-    protagonist_voice = project_dir / "assets" / "characters" / "陆辰" / "voice_sample.wav"
+    _write_png(project_dir / "assets" / "scenes" / "old_bookstore" / "master.png")
+    protagonist_voice = project_dir / "assets" / "characters" / "Luchen" / "voice_sample.wav"
     protagonist_voice.parent.mkdir(parents=True, exist_ok=True)
     protagonist_voice.write_bytes(b"protagonist voice")
     narrator_voice = project_dir / "assets" / "narrator" / "voice.mp3"
@@ -532,16 +532,16 @@ def test_drama_narration_assets_ignore_first_person_protagonist_voice(tmp_path, 
         updated_at="2026-05-29T00:00:00+00:00",
     )
     character = NovelCharacter(
-        name="陆辰",
+        name="Luchen",
         is_main=True,
-        reference_audio_path="assets/characters/陆辰/voice_sample.wav",
+        reference_audio_path="assets/characters/Luchen/voice_sample.wav",
         reference_audio_sha256="protagonist-sha",
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="陆辰_青年时期",
-            character_name="陆辰",
-            identity_name="青年时期",
+            identity_id="Luchen_young_adult",
+            character_name="Luchen",
+            identity_name="young_adult",
         )
     ]
 
@@ -552,8 +552,8 @@ def test_drama_narration_assets_ignore_first_person_protagonist_voice(tmp_path, 
         beat={
             "beat_number": 1,
             "audio_type": "narration",
-            "scene_ref": {"scene_id": "旧书店"},
-            "narration_segment": "画外音响起。",
+            "scene_ref": {"scene_id": "old_bookstore"},
+            "narration_segment": "A voice-over begins.",
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
         characters=[character],
@@ -563,7 +563,7 @@ def test_drama_narration_assets_ignore_first_person_protagonist_voice(tmp_path, 
     audio_asset = next(asset for asset in assets if asset.media_type == "audio")
     assert audio_asset.key == "voice:narrator"
     assert audio_asset.identity_id == "__narrator__"
-    assert audio_asset.label == "项目解说声线"
+    assert audio_asset.label == "Project narrator voice"
 
 
 def test_multimodal_assets_skip_auto_audio_for_silence_beat(tmp_path):
@@ -574,7 +574,7 @@ def test_multimodal_assets_skip_auto_audio_for_silence_beat(tmp_path):
 
     project_dir = tmp_path / "project"
     frame = project_dir / "frames" / "ep001" / "beat_01.png"
-    scene = project_dir / "assets" / "scenes" / "客厅_夜" / "master.png"
+    scene = project_dir / "assets" / "scenes" / "living_room_night" / "master.png"
     audio = project_dir / "audio" / "ep001" / "beat_01.mp3"
     for image_path in (frame, scene):
         _write_png(image_path)
@@ -588,7 +588,7 @@ def test_multimodal_assets_skip_auto_audio_for_silence_beat(tmp_path):
         beat={
             "beat_number": 1,
             "audio_type": "silence",
-            "scene_ref": {"scene_id": "客厅_夜"},
+            "scene_ref": {"scene_id": "living_room_night"},
         },
         mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
     )
@@ -638,7 +638,7 @@ def test_first_frame_mode_only_sends_current_frame(tmp_path):
         project_output=project_dir,
         state_dir=tmp_path / "state" / "alice" / "project",
         episode=1,
-        beat={"beat_number": 2, "detected_identities": ["秦_青年"]},
+        beat={"beat_number": 2, "detected_identities": ["Qin_young"]},
         mode=Seedance2I2VMode.FIRST_FRAME,
     )
 
@@ -791,10 +791,10 @@ async def test_crop_seedance2_asset_to_first_frame_writes_video_input_override(
 
 
 def test_validate_reference_audio_request_rejects_out_of_range_clips(monkeypatch):
-    """beat 流水线的音频时长守卫：逐条 1.8~15.2s + 总和 15s，与画布同一套判定。
+    """Audio duration guard of the beat pipeline: 1.8-15.2s per clip + a 15s total, judged by the same rules as the canvas.
 
-    早先这里只判总和、没有下界，一条 0.5s 的声线会被我们放到厂商那儿吃
-    `InvalidParameter.DurationTooShort`——白跑一轮才知道。
+    Earlier this only judged the total with no lower bound, so a 0.5s voice would be sent to the vendor and hit
+    `InvalidParameter.DurationTooShort` - a wasted round trip before we find out.
     """
     from novelvideo.seedance2_i2v import pipeline
 
@@ -805,7 +805,7 @@ def test_validate_reference_audio_request_rejects_out_of_range_clips(monkeypatch
         lambda path: durations[Path(path).name],
     )
 
-    with pytest.raises(ValueError, match="音频1"):
+    with pytest.raises(ValueError, match="audio1"):
         pipeline._validate_reference_audio_request(["a.wav", "b.wav"])
 
     durations["a.wav"] = 6.0
@@ -813,16 +813,16 @@ def test_validate_reference_audio_request_rejects_out_of_range_clips(monkeypatch
 
 
 def test_validate_reference_audio_request_total_bound_and_probe_failures(monkeypatch):
-    """总和超限要报中文 + 具体条目；测不出的条目不参与判定（放行给厂商）。"""
+    """An over-limit total must report a message + the specific entries; entries that cannot be measured do not take part in the judgment (passed through to the vendor)."""
     from novelvideo.seedance2_i2v import pipeline
 
     monkeypatch.setattr(
         pipeline, "probe_voice_sample_duration_seconds", lambda _path: 6.0
     )
-    with pytest.raises(ValueError, match="请回到角色工作台"):
+    with pytest.raises(ValueError, match="go back to the character workbench"):
         pipeline._validate_reference_audio_request(["a.wav", "b.wav", "c.wav"])
 
-    # 1.8+8.3+4.9 == 15.000000000000002：裸浮点比较会把正好顶格 15s 的一组误判成超限。
+    # 1.8+8.3+4.9 == 15.000000000000002: a naive float comparison would misjudge a set that is exactly at the 15s limit as over the limit.
     exact = {"a.wav": 1.8, "b.wav": 8.3, "c.wav": 4.9}
     monkeypatch.setattr(
         pipeline,
@@ -832,7 +832,7 @@ def test_validate_reference_audio_request_total_bound_and_probe_failures(monkeyp
     pipeline._validate_reference_audio_request(["a.wav", "b.wav", "c.wav"])
 
     def boom(_path):
-        raise ValueError("ffprobe 挂了")
+        raise ValueError("ffprobe crashed")
 
     monkeypatch.setattr(pipeline, "probe_voice_sample_duration_seconds", boom)
     pipeline._validate_reference_audio_request(["a.wav", "b.wav", "c.wav"])

@@ -133,7 +133,7 @@ def _codex_freezone_write_result_error(event: Any) -> str:
             if isinstance(errors, list):
                 messages = [str(item).strip() for item in errors if str(item).strip()]
                 if messages:
-                    return "；".join(messages[:3])[:1000]
+                    return "; ".join(messages[:3])[:1000]
             message = payload.get("message")
             if isinstance(message, str) and message.strip():
                 return message.strip()[:1000]

@@ -121,9 +121,9 @@ function extractConfig(style: Style | undefined | null): StyleConfig {
 /** Build a POST /styles payload preserving any extra unknown fields the
  * server returned (so we don't drop `base`, `created_by`, etc on save).
  *
- * `presetLabel` 是内置 preset 在当前语言下的显示名。表单里 label 显示的是它，但
- * 用户没动过就得写回原始 label —— 否则在英文界面按一次保存，就把项目里这条 style
- * 的中文标签覆盖成英文，中文界面跟着一起变。 */
+ * `presetLabel` is the display name of a built-in preset in the current language. The form's label shows it, but
+ * if the user did not touch it the original label must be written back - otherwise pressing save once in the English UI
+ * would overwrite this project's style label with the English one, and the other UI language would change along with it. */
 function buildSavePayload(
   fields: StyleConfig,
   original: Style | null,
@@ -166,9 +166,9 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-3.5">
-      {/* 输入框套在 <label> 里做隐式关联：这里六处 Field 包的都是单个 Input/Textarea，
-          原来 Label 只是块文字，读屏念到输入框时没有名字。hint 留在 label 外，
-          否则会被拼进无障碍名。 */}
+      {/* The input is wrapped in a <label> for implicit association: all six Fields here wrap a single Input/Textarea,
+          and previously the Label was just block text, so screen readers read the input without a name. The hint stays outside the label,
+          otherwise it would be spliced into the accessible name. */}
       <Label className="flex flex-col items-stretch gap-3.5 text-xs font-medium leading-4 text-muted-foreground">
         <span>{label}</span>
         {children}
@@ -399,10 +399,10 @@ function StyleDetailPanel({
   const updateProject = useUpdateProject(project);
 
   const preset = isPreset(style);
-  // 内置 preset 的 label 是中文单语（src/novelvideo/styles/presets/*.json）。左侧
-  // 列表早就按 id 查 i18n 了（见 StyleListItem），详情页这个输入框却还在显示原始
-  // 中文，英文界面里就成了「UI Label: 动漫风格」。这里也走 i18n，保存时再由
-  // buildSavePayload 换回原始 label。
+  // The built-in preset label is Chinese-only (src/novelvideo/styles/presets/*.json). The left-side
+  // list already looks up i18n by id (see StyleListItem), while this input on the detail page still showed the raw
+  // Chinese, which in the English UI became "UI Label: <Chinese>". It goes through i18n here too, and on save
+  // buildSavePayload swaps back to the original label.
   const presetLabelKey = preset ? BUILTIN_STYLE_LABEL_KEYS[style.id] : undefined;
   const presetLabel = presetLabelKey ? t(presetLabelKey) : "";
   const stored = useMemo(() => extractConfig(style), [style]);

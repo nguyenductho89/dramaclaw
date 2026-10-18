@@ -35,7 +35,7 @@ export const POSES: PoseName[] = [
   'sword',
 ];
 
-/** 姿势名的界面文案：只存 key，渲染时由调用方带着 t 解析（POSES 才是协议值）。 */
+/** UI copy of pose names: store only the key, resolved at render time by the caller with t (POSES holds the protocol values). */
 export const POSE_LABEL_KEYS: Record<PoseName, string> = {
   standing: 'viewer.threeD.poses.standing',
   talking: 'viewer.threeD.poses.talking',

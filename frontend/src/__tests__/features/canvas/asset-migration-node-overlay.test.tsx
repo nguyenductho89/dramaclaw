@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 跨项目粘贴占位遮罩：复制中转圈、失败（或标记残留但任务已不在）出错误占位 + 移除。
+ * Cross-project paste placeholder overlay: a spinner while copying, and an error placeholder + removal on failure (or when the marker lingers but the task is gone).
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -46,14 +46,14 @@ describe('AssetMigrationNodeOverlay', () => {
     const pending = migratePastedNodeAssets({
       nodes: [{ id: 'n1', withheld: [{ path: ['imageUrl'], url: SOURCE }] }],
       targetProject: 'projB',
-      // 节点在拷贝期间被删掉了：填回步骤跳过，store 里（这个测试用静态 data 模拟）标记残留。
+      // The node was deleted during the copy: the fill-back step is skipped, and the marker lingers in the store (simulated with static data in this test).
       getLiveNodeData: () => null,
       updateNodeData: () => undefined,
     });
 
     render(<AssetMigrationNodeOverlay nodeId="n1" data={{ imageUrl: null, assetMigration: 'copying' }} />);
     expect(screen.getByTestId('asset-migration-copying')).toBeInTheDocument();
-    expect(screen.getByText('素材复制中…')).toBeInTheDocument();
+    expect(screen.getByText('Copying assets…')).toBeInTheDocument();
     expect(screen.queryByTestId('asset-migration-failed')).toBeNull();
 
     await act(async () => {
@@ -61,7 +61,7 @@ describe('AssetMigrationNodeOverlay', () => {
       await pending;
     });
 
-    // 任务结束而标记还是 copying（刷新后落库的残留、或节点已不在填回名单里）→ 按失败占位。
+    // The task ended while the marker is still copying (a leftover persisted after a refresh, or the node is no longer on the fill-back list) -> treated as a failure placeholder.
     expect(screen.queryByTestId('asset-migration-copying')).toBeNull();
     expect(screen.getByTestId('asset-migration-failed')).toBeInTheDocument();
   });
@@ -69,12 +69,12 @@ describe('AssetMigrationNodeOverlay', () => {
   it('treats a persisted copying marker with no running migration as failed (after a reload)', () => {
     render(<AssetMigrationNodeOverlay nodeId="stale" data={{ imageUrl: null, assetMigration: 'copying' }} />);
     expect(screen.getByTestId('asset-migration-failed')).toBeInTheDocument();
-    expect(screen.getByText('素材复制失败，请删除后重新粘贴')).toBeInTheDocument();
+    expect(screen.getByText('Asset copy failed. Delete this node and paste again.')).toBeInTheDocument();
   });
 
   it('lets the user remove a failed placeholder node', () => {
     render(<AssetMigrationNodeOverlay nodeId="n9" data={{ imageUrl: null, assetMigration: 'failed' }} />);
-    fireEvent.click(screen.getByRole('button', { name: '移除节点' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove node' }));
     expect(deleteNode).toHaveBeenCalledWith('n9');
   });
 });

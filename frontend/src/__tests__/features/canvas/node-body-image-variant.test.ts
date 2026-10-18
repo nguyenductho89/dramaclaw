@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 节点主体图什么时候可以喂降采样副本。规则本身很短，但它护着两件容易一起坏掉的
-// 事：分辨率角标 / 自动尺寸读到的必须是原图尺寸，全屏查看器拿到的必须是原图。
+// When a node body image may be fed a downscaled copy. The rule itself is short, but it protects two things that easily break together:
+// the resolution badge / auto size must read the original image size, and the fullscreen viewer must receive the original image.
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -54,8 +54,8 @@ describe("nodeBodyImageSrc", () => {
     });
   });
 
-  // 这一次加载还担着「测量」的职责：从降采样副本上读 naturalWidth 会把错的尺寸
-  // 写进节点数据。尺寸未知时必须原图，测量落库后下次挂载自然就用上变体。
+  // This load also carries the "measurement" duty: reading naturalWidth from a downscaled copy would write the wrong size
+  // into the node data. When the size is unknown the original must be used, and once the measurement is persisted the next mount naturally uses the variant.
   it("stays on the original while the real size is still unknown", () => {
     expect(nodeBodyImageSrc(URL, null)).toEqual({
       src: URL,
@@ -82,8 +82,8 @@ describe("nodeBodyImageSrc", () => {
     expect(nodeBodyImageSrc(URL, { width: edge + 1, height: 100 }).downscaled).toBe(true);
   });
 
-  // 放大到细看这一档时节点比变体还宽；这条线与 previewImageUrl/imageUrl 的切换
-  // 线（shouldUseOriginalImageByZoom）是同一条。
+  // At the close-inspection zoom level the node is wider than the variant; this line is the same as the switch line between previewImageUrl/imageUrl
+  // (shouldUseOriginalImageByZoom).
   it("hands back the original when the caller is zoomed in for detail", () => {
     expect(nodeBodyImageSrc(URL, BIG, { preferOriginal: true })).toEqual({
       src: URL,
@@ -112,51 +112,51 @@ describe("nodeBodyImageSrc", () => {
   });
 });
 
-// 记录里的尺寸没有和任何 URL 绑定,而节点的图是会被换掉的(画册选主图、从历史
-// 恢复、生成完成回填),换的时候没人清 imageNaturalWidth/Height。这时候如果还
-// 无条件信任记录,测量就被永久毒化:元素报的是新图的真实尺寸,我们却按旧记录
-// 写回去,而写回去的比例又恰好等于 data.aspectRatio,更新分支被跳过,永远不会
-// 自愈。改动前元素自己就是真相来源,这一幕根本不存在。
-describe("nodeBodyImageMeasurement 对不上记录时不能信记录", () => {
+// The size in the record is not bound to any URL, while a node's image can be swapped (picking the main image in an album, restoring from history,
+// a generation finishing and backfilling), and nobody clears imageNaturalWidth/Height when it is swapped. If the record were still
+// trusted unconditionally, the measurement would be permanently poisoned: the element reports the new image's real size, yet we write back by the old record,
+// and the written-back ratio happens to equal data.aspectRatio, so the update branch is skipped and it never
+// self-heals. Before the change the element itself was the source of truth, so this scene did not exist.
+describe("nodeBodyImageMeasurement must not trust the record when it does not match", () => {
   const RECORD = { width: 5504, height: 3072 };
   const downscaled = { src: "x", original: "x", downscaled: true, maxEdge: 1280 };
 
-  it("忠实降采样的副本:长边正好卡在预算上,按记录测量", () => {
+  it("a faithfully downscaled copy: the long edge sits exactly on the budget, measure by the record", () => {
     // 5504x3072 -> card(1280) = 1280x714
     expect(nodeBodyImageMeasurement({ naturalWidth: 1280, naturalHeight: 714 }, downscaled, RECORD))
       .toEqual(RECORD);
   });
 
-  it("换成了一张更小的方图:元素只有 1024,记录不可能描述它", () => {
+  it("swapped to a smaller square image: the element is only 1024, so the record cannot describe it", () => {
     expect(
       nodeBodyImageMeasurement({ naturalWidth: 1024, naturalHeight: 1024 }, downscaled, RECORD),
     ).toEqual({ width: 1024, height: 1024 });
   });
 
-  it("换成了一张同样大但比例不同的图:长边对得上,短边对不上", () => {
-    // 2000x2000 -> card = 1280x1280,而按记录的比例短边应当是 714。
+  it("swapped to an equally large image with a different ratio: the long edge matches, the short edge does not", () => {
+    // 2000x2000 -> card = 1280x1280, while by the record's ratio the short edge should be 714.
     expect(
       nodeBodyImageMeasurement({ naturalWidth: 1280, naturalHeight: 1280 }, downscaled, RECORD),
     ).toEqual({ width: 1280, height: 1280 });
   });
 
-  // 盲区,记在这里以免下次有人以为它管得住换图:副本的长边被钉死在预算上,原图
-  // 有多大这个信息在降采样时就丢了,所以同比例的另一张图看起来完全合规。真正堵
-  // 住这一幕的是换图当下就不信任记录(useNaturalSizeRecordTrust),这里只兜底管
-  // 挂载时就已经存歪了的旧数据。
-  it("同比例换图看不出来:2752x1536 的副本与 5504x3072 的逐像素相同", () => {
+  // A blind spot, noted here so nobody next time thinks it can catch an image swap: the copy's long edge is pinned to the budget, and how big
+  // the original is gets lost at downscale time, so another image of the same ratio looks perfectly compliant. What really blocks
+  // this scene is distrusting the record the moment the image is swapped (useNaturalSizeRecordTrust); this only covers
+  // old data that was already stored skewed at mount time.
+  it("a same-ratio swap is undetectable: a 2752x1536 copy is pixel-identical to a 5504x3072 one", () => {
     expect(
       nodeBodyImageMeasurement({ naturalWidth: 1280, naturalHeight: 714 }, downscaled, RECORD),
     ).toEqual(RECORD);
   });
 
-  it("横竖颠倒:方向就对不上", () => {
+  it("swapped orientation: the direction does not match", () => {
     expect(
       nodeBodyImageMeasurement({ naturalWidth: 714, naturalHeight: 1280 }, downscaled, RECORD),
     ).toEqual({ width: 714, height: 1280 });
   });
 
-  it("后端拒绝了这次降采样、直接给了原图:元素与记录逐像素相同,仍然算对得上", () => {
+  it("the backend refused this downscale and returned the original: the element is pixel-identical to the record and still counts as matching", () => {
     expect(
       nodeBodyImageMeasurement({ naturalWidth: 5504, naturalHeight: 3072 }, downscaled, RECORD),
     ).toEqual(RECORD);
@@ -164,11 +164,11 @@ describe("nodeBodyImageMeasurement 对不上记录时不能信记录", () => {
 });
 
 describe("nodeBodyImageMeasurement", () => {
-  // 5504x3072 忠实降采样到 card(1280) 就是 1280x714,与 BIG 对得上。
+  // 5504x3072 faithfully downscaled to card(1280) is 1280x714, which matches BIG.
   const element = { naturalWidth: 1280, naturalHeight: 714 };
 
-  // 关键不是「跳过测量」，而是换一个测量来源：后续的比例/尺寸/角标计算与喂原图
-  // 时逐字节一致。
+  // The point is not to "skip measurement" but to switch the measurement source: the subsequent ratio/size/badge calculations are byte-for-byte identical to
+  // feeding the original.
   it("measures from the record when the element holds a downscaled copy", () => {
     expect(
       nodeBodyImageMeasurement(element, { src: "x", original: "x", downscaled: true, maxEdge: 1280 }, BIG),
@@ -181,7 +181,7 @@ describe("nodeBodyImageMeasurement", () => {
     ).toEqual({ width: 1280, height: 714 });
   });
 
-  // downscaled 只可能在有记录时为 true，但真到了这里也不能返回一个空尺寸。
+  // downscaled can only be true when there is a record, but even if we really get here an empty size must not be returned.
   it("falls back to the element when there is no record to trust", () => {
     expect(
       nodeBodyImageMeasurement(element, { src: "x", original: "x", downscaled: true, maxEdge: 1280 }, null),
@@ -189,22 +189,22 @@ describe("nodeBodyImageMeasurement", () => {
   });
 });
 
-// 固定档位挡不住这一幕：同一张 1280px 副本，画进 580 CSS px 的默认节点里绰绰有余，
-// 画进用户拉到 1600px 的节点里就是放大糊；Retina 上这两个数还要各乘 2。所以档位
-// 必须从「这一格要多少设备像素」倒推。
-describe("按显示尺寸 x zoom x DPR 挑档", () => {
-  it("nodeBodyRequiredEdge 三个因子都算进去，取长边", () => {
+// Fixed tiers cannot stop this scene: the same 1280px copy is more than enough in a default 580 CSS px node,
+// but blurry when scaled up inside a node the user stretched to 1600px; on Retina both numbers are doubled. So the tier
+// must be derived backwards from "how many device pixels this slot needs".
+describe("picks the tier by display size x zoom x DPR", () => {
+  it("nodeBodyRequiredEdge counts all three factors and takes the long edge", () => {
     expect(nodeBodyRequiredEdge({ width: 580, height: 326 }, 1, 1)).toBe(580);
     expect(nodeBodyRequiredEdge({ width: 580, height: 326 }, 1, 2)).toBe(1160);
     expect(nodeBodyRequiredEdge({ width: 900, height: 900 }, 0.35, 2)).toBe(630);
     expect(nodeBodyRequiredEdge({ width: 326, height: 580 }, 1, 1)).toBe(580);
   });
 
-  it("坏值退回 1 倍，不至于挑出个荒唐档位", () => {
+  it("bad values fall back to 1x so no absurd tier is picked", () => {
     expect(nodeBodyRequiredEdge({ width: 580, height: 326 }, Number.NaN, 0)).toBe(580);
   });
 
-  it("pickMediaVariant 只保留 thumb，超过 320px 就回原图", () => {
+  it("pickMediaVariant keeps only thumb and returns to the original beyond 320px", () => {
     expect(pickMediaVariant(315)).toBe("thumb");
     expect(pickMediaVariant(320)).toBe("thumb");
     expect(pickMediaVariant(321)).toBeNull();
@@ -213,14 +213,14 @@ describe("按显示尺寸 x zoom x DPR 挑档", () => {
     expect(pickMediaVariant(1280)).toBeNull();
   });
 
-  // 放大糊是唯一不能接受的结果：宁可付原图的解码，也不给一张要放大 2.5 倍的副本。
-  it("一档都盖不住时回原图", () => {
+  // Blurry upscaling is the only unacceptable outcome: better to pay for decoding the original than hand over a copy that must be enlarged 2.5x.
+  it("returns the original when no tier covers it", () => {
     expect(pickMediaVariant(1281)).toBeNull();
     expect(pickMediaVariant(Number.POSITIVE_INFINITY)).toBeNull();
   });
 
-  // 评审给的那个例子：ImageNode 可以拉到 1600px，DPR=1 / zoom=1 也已经不够。
-  it("拉大的节点拿原图，而不是被放大的 1280 副本", () => {
+  // The example from the review: an ImageNode can be stretched to 1600px, and DPR=1 / zoom=1 is already not enough.
+  it("a stretched node gets the original instead of an enlarged 1280 copy", () => {
     const required = nodeBodyRequiredEdge({ width: 1600, height: 900 }, 1, 1);
     expect(nodeBodyImageSrc(URL, BIG, { requiredEdge: required })).toEqual({
       src: URL,
@@ -230,24 +230,24 @@ describe("按显示尺寸 x zoom x DPR 挑档", () => {
     });
   });
 
-  it("默认尺寸的节点在 Retina 上直接使用原图", () => {
+  it("a default-size node uses the original directly on Retina", () => {
     const required = nodeBodyRequiredEdge({ width: 580, height: 326 }, 1, 2);
     expect(nodeBodyImageSrc(URL, BIG, { requiredEdge: required }).src).toBe(URL);
   });
 
-  it("LOD 外壳只有 1x 尺寸落在 thumb 预算内", () => {
+  it("the LOD shell only has the 1x size within the thumb budget", () => {
     const shell = { width: 900, height: 900 };
     expect(pickMediaVariant(nodeBodyRequiredEdge(shell, 0.35, 1))).toBe("thumb");
     expect(pickMediaVariant(nodeBodyRequiredEdge(shell, 0.35, 2))).toBeNull();
   });
 
-  it("挑到的那一档不比源图小时仍然回原图", () => {
+  it("still returns the original when the picked tier is not smaller than the source", () => {
     expect(
       nodeBodyImageSrc(URL, { width: 600, height: 400 }, { requiredEdge: 630 }).downscaled,
     ).toBe(false);
   });
 
-  it("不传 requiredEdge 时只使用 thumb 预算", () => {
+  it("uses only the thumb budget when requiredEdge is not passed", () => {
     expect(nodeBodyImageSrc(URL, BIG).maxEdge).toBe(NODE_BODY_VARIANT_MAX_EDGE);
     expect(nodeBodyImageSrc(URL, BIG).maxEdge).toBe(320);
   });

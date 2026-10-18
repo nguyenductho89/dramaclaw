@@ -3,9 +3,9 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 /**
- * 这条路由本身不再渲染画布。画布由 FreezoneCanvasHost 挂在 _app.tsx 的路由动画
- * 容器之外，好让顶栏在「虾画 / 虾集」之间切换时不把它整棵卸载重建；这里只保留
- * 路由本身，作为「当前在虾画」的地址标记 —— 宿主正是靠 pathname 判断显示与激活。
+ * This route itself no longer renders the canvas. The canvas is mounted by FreezoneCanvasHost outside the _app.tsx route animation
+ * container, so that switching between "Freezone / Mainline" in the top bar does not unmount and rebuild the whole tree; only
+ * the route itself is kept here, as the address marker for "currently on the freezone" - the host decides visibility and activation by pathname.
  */
 function FreezoneProjectRoute() {
   return null;

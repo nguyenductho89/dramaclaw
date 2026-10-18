@@ -18,16 +18,16 @@ import { readLastCanvas, writeUrl } from "@/lib/url-params";
 import { useAuthStore } from "@/stores/auth-store";
 
 type FreezoneCanvasRootProps = {
-  /** `/projects/$project` 路由参数。经 canonicalProjectRouteParam 保证是项目 id。 */
+  /** The `/projects/$project` route param. Guaranteed to be a project id via canonicalProjectRouteParam. */
   project: string;
-  /** 画布是否是当前正在看的页面；false 表示被 FreezoneCanvasHost 保活在后台。 */
+  /** Whether the canvas is the page currently in view; false means it is kept alive in the background by FreezoneCanvasHost. */
   active: boolean;
 };
 
 /**
- * 虾画路由的实际内容。从 routes/_app/projects.$project/freezone.lazy.tsx 搬出来，
- * 是因为它现在的宿主不是那条路由，而是 FreezoneCanvasHost —— 只有挂在路由之外，
- * 才能在切到虾集时不被卸载。
+ * The actual content of the Canvas route. Moved out of routes/_app/projects.$project/freezone.lazy.tsx
+ * because its host is no longer that route but FreezoneCanvasHost - only by mounting outside the route
+ * can it avoid being unmounted when switching to Market.
  */
 export default function FreezoneCanvasRoot({
   project,
@@ -71,10 +71,10 @@ export default function FreezoneCanvasRoot({
     [freezoneProjects, project],
   );
 
-  // 保活期间地址栏是虾集的，`?canvas=` 已经没了。照常算的话 canvasId 会掉回
-  // 默认值，FreezoneShell 会当成「切换了画布」重新 hydrate 一遍 —— 正是保活要
-  // 省掉的开销，还会把用户当前打开的画布换掉。所以只在激活时更新，其余时候
-  // 把上一次的值钉住。
+  // During keep-alive the address bar belongs to Market and `?canvas=` is gone. Computing as usual would drop canvasId back to the
+  // default, and FreezoneShell would treat it as "the canvas switched" and hydrate again - exactly the cost keep-alive is meant to
+  // save, and it would also replace the canvas the user currently has open. So only update while active, and pin
+  // the previous value the rest of the time.
   const liveCanvasId = matchedProject
     ? canvasIdForFreezoneEntry({
         explicitCanvasId: canvasParam ?? readLastCanvas(matchedProject.id),
@@ -87,9 +87,9 @@ export default function FreezoneCanvasRoot({
   }
   const canvasId = active ? liveCanvasId : pinnedCanvasIdRef.current;
 
-  // 项目列表还没到手就先转圈。少了这一支，请求失败（projects 是 undefined 但
-  // 已经不在 pending）会直接掉进下面的「项目未找到」，把一次网络错误说成这个
-  // 项目不存在。
+  // Show the spinner while the project list has not arrived. Without this branch, a failed request (projects is undefined but
+  // no longer pending) would fall straight into "project not found" below, describing a network error as the
+  // project not existing.
   if (projectsLoading || !projects) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-bg-dark text-text-muted">

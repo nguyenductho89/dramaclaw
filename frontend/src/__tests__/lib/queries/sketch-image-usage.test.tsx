@@ -64,7 +64,7 @@ describe("sketch image usage queries", () => {
               attempt_count: 3,
               next_attempt: 4,
               level: "confirm",
-              message: "Beat 3 已连续生成 4 次，确认继续生成吗？",
+              message: "Beat 3 has been generated 4 times in a row, continue generating?",
             },
           });
         },

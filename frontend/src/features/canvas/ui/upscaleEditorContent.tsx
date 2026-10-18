@@ -30,20 +30,20 @@ import {
 import { useCanvasStore } from '@/stores/canvasStore';
 
 /**
- * 「高清放大」编辑器的**外壳无关**内容层：状态机 + 那张配置卡片。
+ * The **shell-agnostic** content layer of the "Upscale" editor: state machine + that configuration card.
  *
- * 抽出来的理由同 rotateEditorContent：一套交互要挂在两种外壳上——工作流把它塞进
- * 节点下方的 `ReactFlowNodeToolbar`（UpscaleEditorOverlay），故事板则把它挂在详情
- * 面板媒体区下方当生成表单（AssetBoardUpscaleForm）。两边共用这里的 hook 与卡片，
- * 参数含义与提交语义才不会各长各的。
+ * The reason for extracting it is the same as rotateEditorContent: one interaction has to be mounted on two shells - the workflow stuffs it into
+ * the `ReactFlowNodeToolbar` below the node (UpscaleEditorOverlay), while the storyboard mounts it below the detail
+ * panel's media area as the generation form (AssetBoardUpscaleForm). Both sides share the hook and card here,
+ * so parameter meanings and submission semantics do not each grow their own way.
  *
- * 卡片上**不显示算力**（用户拍板）：这里的活价查询走的是 image_selection 口径，
- * 对放大任务本来就对不上号，报个对不上的数字不如不报。连带把 useGenerationCreditCost
- * 一起摘掉，省一次没人看的请求。
+ * The card **does not show compute cost** (user decision): the live price query here goes through the image_selection basis,
+ * which never matches an upscale task, and reporting a mismatched number is worse than reporting none. useGenerationCreditCost is also
+ * removed along with it, saving a request nobody looks at.
  *
- * 配置**持久化在节点 data 上**（upscaleModelId / upscaleImageSize /
- * upscaleScaleFactor），不是组件局部 state——面板会随选中/详情切换反复挂卸，落在
- * 组件里的话切走再切回参数就丢了。
+ * The configuration is **persisted on node data** (upscaleModelId / upscaleImageSize /
+ * upscaleScaleFactor), not component-local state - the panel mounts and unmounts repeatedly with selection/detail switching, and if it lived
+ * in the component the parameters would be lost after switching away and back.
  */
 
 interface UpscalePersistedFields {
@@ -61,17 +61,17 @@ export interface UpscaleEditorController {
   onModelChange: (modelId: string) => void;
   onImageSizeChange: (size: UpscaleImageSize) => void;
   onScaleFactorChange: (factor: FreezoneUpscaleScaleFactor) => void;
-  /** 未提供时卡片不渲染「取消」（故事板详情用头部的返回/删除，不需要这一颗）。 */
+  /** When not provided, the card does not render "Cancel" (the storyboard detail uses the header's back/delete and does not need this one). */
   onCancel?: () => void;
   onSubmit: () => void;
 }
 
 export interface UseUpscaleEditorOptions {
-  /** 高清结果节点（resultKind:'upscale' 的 exportImage 占位节点）。 */
+  /** The upscale result node (the exportImage placeholder node with resultKind:'upscale'). */
   node: CanvasNode;
   /**
-   * 「取消」的落地方式由外壳给：工作流是删节点 + 取消选中；故事板详情不给取消
-   * （不传即可，卡片上那颗按钮随之消失）。
+   * How "Cancel" lands is given by the shell: the workflow deletes the node + deselects; the storyboard detail gives no cancel
+   * (just do not pass it, and that button on the card disappears accordingly).
    */
   onCancel?: () => void;
 }
@@ -139,10 +139,10 @@ export function useUpscaleEditor({ node, onCancel }: UseUpscaleEditorOptions): U
 }
 
 /**
- * 高清放大配置卡片：标题（+ 可选取消）· 模型选择 · 画质 · 放大倍数 · ↑ 提交。
+ * Upscale configuration card: title (+ optional cancel) · model selection · quality · scale factor · up button submit.
  *
- * @param className 外壳给的根节点类（工作流是 `w-[400px] p-4` 的浮层卡片，故事板是
- *   铺满详情面板的表单容器），内容与行结构两边完全一致。
+ * @param className the root node class given by the shell (the workflow is a `w-[400px] p-4` floating card, the storyboard is a form container
+ *   filling the detail panel), with the content and row structure exactly the same on both sides.
  */
 export function UpscaleEditorPanel({
   controller,
@@ -189,7 +189,7 @@ export function UpscaleEditorPanel({
         </PanelRow>
       </div>
 
-      {/* 只剩提交键——算力胶囊按用户要求撤掉了。 */}
+      {/* Only the submit key remains - the compute pill was removed at the user's request. */}
       <div className="mt-4 flex items-center justify-end border-t border-white/10 pt-3">
         <button
           type="button"

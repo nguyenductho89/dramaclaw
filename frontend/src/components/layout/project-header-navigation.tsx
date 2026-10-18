@@ -168,8 +168,8 @@ export function ProjectSwitcher({ current }: { current: string }) {
 }
 
 /**
- * 「虾集」子页菜单，作为 header 的第二行渲染 —— 它必须在文档流里占真实高度，
- * 而不是浮在内容之上：内容区是独立滚动容器，任何浮层都会被滚上来的内容穿过。
+ * The "Mainline" sub-page menu, rendered as the second row of the header - it must occupy real height in the document flow,
+ * not float above the content: the content area is an independent scroll container, and any floating layer would be crossed by content scrolled up.
  */
 export function ProjectXiajiMenu({ project }: { project: string }) {
   const { t } = useTranslation();
@@ -199,8 +199,8 @@ export function ProjectXiajiMenu({ project }: { project: string }) {
             "rememberKey" in item && rememberedEpisodeLocation
               ? normalizeLastEpisodeLocation(project, rememberedEpisodeLocation) ?? item.to
               : item.to;
-          // 高亮按栏目自身的路由判断：target 可能是带 ?query 的剧集深链，
-          // 拿它比 pathname 永远不相等（虾镜里就不会高亮）。
+          // The highlight is judged by the tab's own route: target may be an episode deep link with ?query,
+          // and comparing it with pathname is never equal (so the storyboard would never be highlighted).
           const sectionPath = item.to.replace("$project", encodeURIComponent(project));
           const active = pathname === sectionPath || pathname.startsWith(`${sectionPath}/`);
           return (
@@ -213,9 +213,9 @@ export function ProjectXiajiMenu({ project }: { project: string }) {
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
-              // 保留 <Link> 是为了留住 href（中键 / ⌘ 点开新标签页、右键复制链接），
-              // 只把普通左键那一条接管过来，先亮 loading 再跳 —— 换页是同步长任务，
-              // 不这样切一刀的话中间一帧都画不出来。
+              // The <Link> is kept to preserve the href (middle click / Cmd-click opens a new tab, right click copies the link),
+              // and only the plain left click is taken over, lighting up loading first and then navigating - a page switch is a synchronous long task,
+              // and without splitting it like this not a single frame could be painted in between.
               onClick={(event) => {
                 if (active || event.defaultPrevented) return;
                 if (
@@ -264,7 +264,7 @@ export function ProjectHeaderNavigation({ project }: { project: string }) {
   const freezoneAvailable =
     surfaceAccess(productSurfaces.data, "freezone")?.available ?? productSurfaces.isPending;
 
-  // 记住当前停留的区块（虾画 / 虾集子页），进项目和切「虾集」时按此恢复。
+  // Remember the section the user is on (Freezone / Mainline sub-page), restored when entering a project and when switching to "Mainline".
   useEffect(() => {
     const section = projectSectionFromPath(pathname);
     if (isRememberedSection(section)) {
@@ -294,7 +294,7 @@ export function ProjectHeaderNavigation({ project }: { project: string }) {
       );
       return;
     }
-    // 切「虾集」时回到上次停留的子页（默认虾料）；上次在虾镜且有剧集深链则直达。
+    // When switching to "Mainline", return to the sub-page last visited (default: asset library); if last on the storyboard with an episode deep link, go straight there.
     let target: string = lastXiajiSection
       ? PROJECT_SECTION_ROUTES[lastXiajiSection]
       : XIAJI_DEFAULT_ROUTE;

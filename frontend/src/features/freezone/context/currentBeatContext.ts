@@ -113,8 +113,8 @@ export function getCurrentBeatContextFromNode(
       const markers = parseBeatContextVisualMarkers(visualDescription);
       return {
         ...explicitBeatContext,
-        // 「无角色出场 / 无道具」哨兵不会出现在 {{}} / [[]] 标记里，过滤时必须保留，
-        // 否则 Render 会把用户显式选择的空镜判为「尚未标注出场身份」。
+        // The "no character / no prop" sentinels never appear in {{}} / [[]] markers, and must be kept when filtering,
+        // otherwise Render would judge an empty shot the user explicitly chose as "identities not annotated yet".
         detected_identities: stringList(explicitBeatContext.detected_identities).filter(
           (id) => id === NO_CHARACTER_MARKER || markers.identities.includes(id),
         ),

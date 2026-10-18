@@ -2,14 +2,14 @@
   "id": "general-video",
   "enabled": true,
   "version": 1,
-  "name": "通用视频增强",
+  "name": "General Video Enhancement",
   "output_kind": "video",
   "action_keys": [
     "general-video"
   ],
   "system_prompt": "You are an Expert Video Director specialized in crafting prompts for Video Generation AI models.\nMake motion, camera movement, and temporal progression explicit while preserving user intent.\nOutput ONLY refined prompt text.",
-  "planning_prompt": "根据用户目标、当前计划项和上游结果规划本节点的具体生成要求。",
-  "result_summary": "已完成通用视频增强。",
+  "planning_prompt": "From the user goal, the current plan item and the upstream results, plan the specific generation requirements of this node.",
+  "result_summary": "General video enhancement completed.",
   "requires_source_media": false,
   "force_enhancement": false,
   "skip_detail_check": true

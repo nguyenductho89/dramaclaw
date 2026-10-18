@@ -42,7 +42,7 @@ def items_client(monkeypatch, tmp_path):
 _LIBRARY = "/api/v1/projects/proj_demo/freezone/video/character-library"
 
 
-def _new_item(client: TestClient, project_dir, name: str = "原子朋克") -> str:
+def _new_item(client: TestClient, project_dir, name: str = "AtomPunk") -> str:
     asset = project_dir / "freezone" / "_uploads" / "ref.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     asset.write_bytes(b"png")
@@ -65,27 +65,27 @@ def test_rename_item_changes_only_the_name(items_client) -> None:
     item_id = _new_item(client, project_dir)
     before = _items(client)[0]
 
-    response = client.patch(f"{_LIBRARY}/{item_id}", json={"name": "  赛博霓虹  "})
+    response = client.patch(f"{_LIBRARY}/{item_id}", json={"name": "  CyberNeon  "})
 
     assert response.status_code == 200, response.text
     after = response.json()["data"]
-    assert after["name"] == "赛博霓虹"
-    # 改名只动名字：地址、类目、保存位置都得原样留着，否则画布上引用该素材的节点会裂图。
+    assert after["name"] == "CyberNeon"
+    # Renaming changes only the name: URL, category, and save location must stay as they were, otherwise canvas nodes referencing the asset show broken images.
     assert after["image_urls"] == before["image_urls"]
     assert after["category"] == before["category"]
     assert after["folder"] == before["folder"]
-    assert [entry["name"] for entry in _items(client)] == ["赛博霓虹"]
+    assert [entry["name"] for entry in _items(client)] == ["CyberNeon"]
 
 
 def test_rename_missing_item_is_404(items_client) -> None:
     client, _project_dir = items_client
 
-    response = client.patch(f"{_LIBRARY}/nope", json={"name": "赛博霓虹"})
+    response = client.patch(f"{_LIBRARY}/nope", json={"name": "CyberNeon"})
 
     assert response.status_code == 404
 
 
-@pytest.mark.parametrize("name", ["", "   ", "长" * 61])
+@pytest.mark.parametrize("name", ["", "   ", "x" * 61])
 def test_rename_rejects_empty_and_overlong_names(items_client, name: str) -> None:
     client, project_dir = items_client
     item_id = _new_item(client, project_dir)
@@ -93,4 +93,4 @@ def test_rename_rejects_empty_and_overlong_names(items_client, name: str) -> Non
     response = client.patch(f"{_LIBRARY}/{item_id}", json={"name": name})
 
     assert response.status_code == 400, response.text
-    assert [entry["name"] for entry in _items(client)] == ["原子朋克"]
+    assert [entry["name"] for entry in _items(client)] == ["AtomPunk"]

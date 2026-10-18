@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 图片生成的计费契约——**行为断言**，不是源码 grep。
+// Billing contract of image generation — **behavioral assertions**, not source grep.
 //
-// 询价与提交禁用条件住在 `useImageGenerationForm` 里，工作流的 ImageGenNode 和
-// 故事板的 AssetBoardImageGenForm 都挂它，所以对着 hook 断言就同时覆盖了两个视图。
-// 这份文件取代了原来 readFileSync + toContain 的版本：那种写法在重构把代码搬进新
-// 文件后，只要字符串跟着搬过去就照样「通过」，验证力为零。
+// Quote and submit-disabled conditions live in `useImageGenerationForm`, and the workflow ImageGenNode and
+// the storyboard AssetBoardImageGenForm both mount it, so asserting against the hook covers both views at once.
+// This file replaces the old readFileSync + toContain version: after a refactor moved the code into a new
+// file, that style still "passed" as long as the string moved along, with zero verification power.
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,7 +33,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-// 只替换 hook，保留真的 BillingRuleNotConfiguredError —— 断言依赖 instanceof。
+// Replace only the hook, keeping the real BillingRuleNotConfiguredError — the assertions depend on instanceof.
 vi.mock("@/lib/queries/generation-credit-cost", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/queries/generation-credit-cost")>()),
   useGenerationCreditCost: vi.fn(() => ({ data: undefined, error: null })),
@@ -51,7 +51,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-image",
       providerId: "huimeng",
       apiModel: "test_image_api",
-      label: "测试模型",
+      label: "Test model",
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -80,7 +80,7 @@ function imageNode(data: Record<string, unknown> = {}): CanvasNode {
     type: CANVAS_NODE_TYPES.imageGen,
     position: { x: 0, y: 0 },
     data: {
-      prompt: "一只在窗台上的猫",
+      prompt: "A cat on the windowsill",
       modelId: "huimeng/test-image",
       ...data,
     },
@@ -124,7 +124,7 @@ describe("canvas image generation credit contract", () => {
     const [, , options] = latestProbe()!;
     expect(options).toMatchObject({
       surface: "canvas",
-      // 张数同时进 pricing_quantity 和 quantity —— 少一处价格就按 1 张算。
+      // The count goes into both pricing_quantity and quantity — missing either makes the price count as 1.
       quantity: 3,
       params: expect.objectContaining({ pricing_quantity: 3 }),
     });
@@ -146,7 +146,7 @@ describe("canvas image generation credit contract", () => {
     await result.current.submit();
 
     expect(submitFreezoneGen).not.toHaveBeenCalled();
-    expect(String(nodeData().generationError)).toContain("计费规则未配置");
+    expect(String(nodeData().generationError)).toContain("billing rules are not configured");
     expect(nodeData().generationErrorDetails).toBe(nodeData().generationError);
     expect(nodeData().isGenerating).toBe(false);
   });

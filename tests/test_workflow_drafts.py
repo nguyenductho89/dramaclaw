@@ -14,24 +14,24 @@ def test_plan_preview_explains_ordered_recipe_pipeline():
             "skill_id": "video-ad",
             "edge_count": 1,
             "plan": {
-                "summary": "运动相机广告",
+                "summary": "Action camera ad",
                 "phases": ["visual"],
                 "inputs": {},
                 "nodes": [
                     {
                         "id": "hero",
-                        "name": "商品英雄镜头",
+                        "name": "Hero product shot",
                         "stage": "visual",
                         "node_type": "imageGenNode",
                         "data": {
                             "workflowCatalog": {
                                 "recipeId": "product-hero",
-                                "recipeName": "商品首图",
+                                "recipeName": "Product main image",
                                 "recipeVersion": "1",
                                 "recipePipeline": [
                                     {
                                         "id": "cinematic-lighting",
-                                        "name": "电影灯光",
+                                        "name": "Cinematic lighting",
                                         "version": "2",
                                     }
                                 ],
@@ -46,18 +46,18 @@ def test_plan_preview_explains_ordered_recipe_pipeline():
     assert preview["recipe_pipelines"] == [
         {
             "node_id": "hero",
-            "node_name": "商品英雄镜头",
+            "node_name": "Hero product shot",
             "steps": [
                 {
                     "role": "primary",
                     "id": "product-hero",
-                    "name": "商品首图",
+                    "name": "Product main image",
                     "version": "1",
                 },
                 {
                     "role": "supplemental",
                     "id": "cinematic-lighting",
-                    "name": "电影灯光",
+                    "name": "Cinematic lighting",
                     "version": "2",
                 },
             ],
@@ -81,7 +81,7 @@ def test_late_timeout_result_does_not_downgrade_confirmed_draft(tmp_path):
             "ok": True,
             "skill_id": "video-ad",
             "edge_count": 0,
-            "plan": {"summary": "广告", "nodes": [], "edges": []},
+            "plan": {"summary": "ad", "nodes": [], "edges": []},
         },
     )
     claimed, error = claim_workflow_draft_confirmation(

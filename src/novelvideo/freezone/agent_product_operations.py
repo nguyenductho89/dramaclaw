@@ -31,14 +31,14 @@ AGENT_PRODUCT_PRICE_REFERENCE = tuple(
         "key": f"freezone.agent.{kind}",
         "label": label,
         "billing": "admin_configured",
-        "reference_display": "由管理员配置，可显式设为免费",
+        "reference_display": "Configured by the administrator; may be explicitly set to free",
         "charge_timing": "delivered_result",
     }
     for kind, label in (
-        ("workflow_result", "Workflow 结果"),
-        ("recipe_result", "Recipe 节点结果"),
-        ("workflow_generate", "Workflow Skill 定义生成"),
-        ("recipe_generate", "Recipe 定义生成"),
+        ("workflow_result", "Workflow result"),
+        ("recipe_result", "Recipe node result"),
+        ("workflow_generate", "Workflow Skill definition generation"),
+        ("recipe_generate", "Recipe definition generation"),
     )
 )
 PENDING_STATUSES = {"admitting", "reserved", "running", "accepted", "submitted"}
@@ -47,10 +47,10 @@ OPERATION_ID_RE = re.compile(r"^agent_product_[a-zA-Z0-9_-]{1,96}$")
 
 
 RECIPE_COMPILE_MESSAGES = {
-    "timeout_fallback": "Recipe 提示词优化超时，已使用备用提示词；本次 Recipe 正常计费",
-    "memory_cache": "Recipe 已复用缓存提示词；本次 Recipe 正常计费",
-    "persistent_cache": "Recipe 已复用缓存提示词；本次 Recipe 正常计费",
-    "deterministic": "Recipe 已使用模板提示词；本次 Recipe 正常计费",
+    "timeout_fallback": "Recipe prompt optimization timed out and a fallback prompt was used; this Recipe is billed normally",
+    "memory_cache": "Recipe reused a cached prompt; this Recipe is billed normally",
+    "persistent_cache": "Recipe reused a cached prompt; this Recipe is billed normally",
+    "deterministic": "Recipe used a template prompt; this Recipe is billed normally",
 }
 
 DIRECT_VOICE_RECIPE_ID = "drama-shot-voice"

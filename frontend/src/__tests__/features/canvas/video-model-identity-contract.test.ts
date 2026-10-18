@@ -15,12 +15,12 @@ const videoFormSource = readFileSync(
 );
 
 /**
- * EE 的模型目录行（media_model_catalog）——`id` / `catalogId` 是 ULID 主键，真正的
- * 模型名只在 `apiModel`(gateway_model) 里。CE 的兜底列表恰好 `id === apiModel`，
- * 所以任何「拿 .id 做家族判定」的写法在 CE 一切正常、进了 EE 全线失灵。
+ * A model catalog row of EE (media_model_catalog) — `id` / `catalogId` is a ULID primary key, and the real
+ * model name is only in `apiModel`(gateway_model). The CE fallback list happens to have `id === apiModel`,
+ * so any "use .id for family detection" code works fine in CE and fails across the board in EE.
  */
-// 模型名一律走具名常量，别写成内联的 `apiModel: "…"`：gitleaks 的 generic-api-key
-// 规则见到含 `api` 的键被赋一个有熵的字面量就报密钥（同款写法已让 secret-scan 挂过一次）。
+// Always route model names through named constants, and do not write inline `apiModel: "…"`: gitleaks' generic-api-key
+// rule reports a secret when a key containing `api` is assigned a high-entropy literal (the same pattern already broke secret-scan once).
 const EE_CATALOG_ULID = "01KZ58VSE52RFFDASY2T9SY4NC";
 const SEEDANCE2_GATEWAY_MODEL = "seedance-2.0";
 const HAPPYHORSE_GATEWAY_MODEL = "happyhorse-1.0";
@@ -33,16 +33,16 @@ const EE_SEEDANCE2_ROW = {
 };
 
 describe("video model family detection against EE catalog rows", () => {
-  it("EE 的 catalog id 里不含模型名——只有 apiModel 能判出家族", () => {
+  it("EE catalog ids contain no model name — only apiModel can identify the family", () => {
     expect(isSeedance2VideoModel(EE_SEEDANCE2_ROW.id)).toBe(false);
     expect(isSeedance2VideoModel(EE_SEEDANCE2_ROW.apiModel)).toBe(true);
   });
 
-  it("apiModel 优先、id 兜底的解析口径在两种目录下都判对", () => {
+  it("the apiModel-first, id-fallback resolution is judged correctly under both catalogs", () => {
     const resolve = (model: { id: string; apiModel?: string }) =>
       model.apiModel ?? model.id;
     expect(isSeedance2VideoModel(resolve(EE_SEEDANCE2_ROW))).toBe(true);
-    // CE 兜底列表：apiModel 缺省时退回 id 仍然判得对。
+    // CE fallback list: when apiModel is absent, falling back to id still judges correctly.
     expect(isSeedance2VideoModel(resolve({ id: CE_SEEDANCE2_ID }))).toBe(true);
     expect(
       isHappyHorseVideoModel(
@@ -53,28 +53,28 @@ describe("video model family detection against EE catalog rows", () => {
 });
 
 /**
- * VideoNode 里有两个模型标识：`modelId`(= selectedVideoModel.id，EE 下是 ULID，只用于
- * 提交时给 catalogId 兜底) 和 `selectedVideoModelId`(= apiModel ?? id)。**所有能力判定
- * 必须走后者**——用前者会让 EE 下的 Seedance 2.0 被判成非 2.0，全能参考提交时被前置
- * 守卫拦下（「全能参考仅支持 Seedance 2.0 模型」），视频/音频上游也不再自动切模式。
+ * VideoNode has two model identifiers: `modelId`(= selectedVideoModel.id, a ULID under EE, used only as the
+ * fallback for catalogId on submit) and `selectedVideoModelId`(= apiModel ?? id). **All capability checks
+ * must go through the latter** — using the former makes Seedance 2.0 under EE be judged non-2.0, the all-reference submit gets blocked by the front guard
+ * ("All reference supports only Seedance 2.0 models"), and video/audio upstreams no longer auto-switch the mode.
  */
 describe("VideoNode feeds capability helpers the api model, not the catalog id", () => {
-  it("isSeedance20Model 走 selectedVideoModelId", () => {
+  it("isSeedance20Model goes through selectedVideoModelId", () => {
     expect(videoFormSource).toContain(
       "const isSeedance20Model = isSeedance2VideoModel(selectedVideoModelId);",
     );
-    // 组件作用域里 `modelId` 就是那个 ULID，喂给家族判定必然判错。
-    // （文件里其它作用域的同名 `modelId` 是 apiModel-first 的局部/入参，不在此列。）
+    // In the component scope `modelId` is that ULID, and feeding it to the family check is bound to misjudge.
+    // (Same-named `modelId` in other scopes of the file is an apiModel-first local/argument and is not included.)
     expect(videoFormSource).not.toContain("isSeedance2VideoModel(modelId)");
   });
 
-  it("isHappyHorseModel 同样走 selectedVideoModelId", () => {
+  it("isHappyHorseModel likewise goes through selectedVideoModelId", () => {
     expect(videoFormSource).toContain(
       "const isHappyHorseModel = isHappyHorseVideoModel(selectedVideoModelId);",
     );
   });
 
-  it("modelId 只作为 catalogId 的兜底出现在提交参数里", () => {
+  it("modelId appears in the submit params only as the fallback for catalogId", () => {
     expect(videoFormSource).toContain("selectedVideoModel?.catalogId ?? modelId");
   });
 });

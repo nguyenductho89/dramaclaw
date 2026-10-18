@@ -26,7 +26,7 @@ describe("freezone projection helpers", () => {
 
   it("creates a stable ascii-safe personal canvas id", () => {
     expect(personalCanvasIdForUsername("eric@example.com")).toBe("user_eric_example_com_1m9fjbn");
-    expect(personalCanvasIdForUsername("林知微")).toBe("user_u_klqmat");
+    expect(personalCanvasIdForUsername("Lin Zhiwei")).toBe("user_lin_zhiwei_1575fos");
   });
 
   it("creates deterministic projection keys", () => {
@@ -38,8 +38,8 @@ describe("freezone projection helpers", () => {
   });
 
   it("keeps non-ascii projection scoped ids distinct after ascii sanitization", () => {
-    expect(scoped("asset:character:陈默", "projection_group_asset_character")).not.toBe(
-      scoped("asset:character:林小满", "projection_group_asset_character"),
+    expect(scoped("asset:character:Борис", "projection_group_asset_character")).not.toBe(
+      scoped("asset:character:Анна", "projection_group_asset_character"),
     );
   });
 
@@ -348,14 +348,14 @@ describe("freezone projection helpers", () => {
   });
 
   /**
-   * 一个人物一个主线投影组。中文角色名被 projectionIdPrefix 的
-   * [^a-zA-Z0-9_-] 清洗后只剩 "asset_character"，两个角色的 scope 前缀塌成同一个，
-   * 后端又对两个角色产出同名的原始 id（组 id 同样由 projection_key 清洗而来）——
-   * 于是第二个角色的组直接顶掉第一个角色的组：组名被换、两个角色的节点挤进同一个组。
+   * One person, one mainline projection group. A non-Latin character name is stripped by projectionIdPrefix's
+   * [^a-zA-Z0-9_-] cleaning to just "asset_character", so the scope prefixes of two characters collapse into one,
+   * and the backend also produces the same raw id for the two characters (the group id is likewise cleaned from projection_key) -
+   * so the second character's group displaces the first's: the group name is swapped and both characters' nodes get squeezed into the same group.
    */
   it("keeps one projection group per character when raw ids collide across keys", () => {
-    const linKey = "asset:character:林小满";
-    const guKey = "asset:character:顾南城";
+    const linKey = "asset:character:Анна";
+    const guKey = "asset:character:Ольга";
     const remoteFor = (key: string, label: string) =>
       [
         {
@@ -374,14 +374,14 @@ describe("freezone projection helpers", () => {
       ] as any[];
 
     const first = mergeProjectedCanvasWithLocalCanvas(
-      remoteFor(linKey, "林小满"),
+      remoteFor(linKey, "Анна"),
       [],
       [],
       [],
       linKey,
     );
     const next = mergeProjectedCanvasWithLocalCanvas(
-      remoteFor(guKey, "顾南城"),
+      remoteFor(guKey, "Ольга"),
       [],
       first.nodes,
       first.edges,
@@ -390,8 +390,8 @@ describe("freezone projection helpers", () => {
 
     const groups = next.nodes.filter((node) => node.type === "groupNode");
     expect(groups.map((node) => (node.data as { label?: string }).label)).toEqual([
-      "林小满",
-      "顾南城",
+      "Анна",
+      "Ольга",
     ]);
     const linChild = next.nodes.find(
       (node) => node.id === scoped(linKey, "character_profile"),
@@ -405,9 +405,9 @@ describe("freezone projection helpers", () => {
   });
 
   it("re-adopts orphaned projection members back into the rebuilt group", () => {
-    const key = "asset:character:林小满";
-    // 组丢了之后的残局：成员留在画布上、parentId 被 detachMissingParents 摘掉，
-    // 位置也已经变成画布绝对坐标。
+    const key = "asset:character:Анна";
+    // The aftermath once the group is lost: members stay on the canvas, parentId is removed by detachMissingParents,
+    // and the position has already become absolute canvas coordinates.
     const localNodes = [
       {
         id: scoped(key, "ref_identity_costume_1"),
@@ -421,7 +421,7 @@ describe("freezone projection helpers", () => {
         id: "projection_group_asset_character_abc",
         type: "groupNode",
         position: { x: 0, y: 0 },
-        data: { preset_managed: true, projection_key: key, label: "林小满" },
+        data: { preset_managed: true, projection_key: key, label: "Анна" },
       },
       {
         id: "ref_identity_costume_1",
@@ -440,19 +440,19 @@ describe("freezone projection helpers", () => {
     );
     expect(child?.parentId).toBe(scoped(key, "projection_group_asset_character_abc"));
     expect(child?.extent).toBe("parent");
-    // 认了新爹就得用新爹的相对坐标，否则会被 extent:"parent" 夹到组外边缘。
+    // Once it adopts the new parent it must use the new parent's relative coordinates, otherwise extent:"parent" clamps it to the group's outer edge.
     expect(child?.position).toEqual({ x: 20, y: 34 });
   });
 
   it("keeps the local layout when the member is still in its group", () => {
-    const key = "asset:character:林小满";
+    const key = "asset:character:Анна";
     const groupId = scoped(key, "projection_group_asset_character_abc");
     const localNodes = [
       {
         id: groupId,
         type: "groupNode",
         position: { x: 0, y: 0 },
-        data: { preset_managed: true, projection_key: key, label: "林小满" },
+        data: { preset_managed: true, projection_key: key, label: "Анна" },
       },
       {
         id: scoped(key, "ref_identity_costume_1"),
@@ -468,7 +468,7 @@ describe("freezone projection helpers", () => {
         id: "projection_group_asset_character_abc",
         type: "groupNode",
         position: { x: 0, y: 0 },
-        data: { preset_managed: true, projection_key: key, label: "林小满" },
+        data: { preset_managed: true, projection_key: key, label: "Анна" },
       },
       {
         id: "ref_identity_costume_1",

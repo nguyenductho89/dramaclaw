@@ -351,36 +351,36 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
         [
             {
                 "beat_number": 2,
-                "visual_description": "{{大厅路人_default}}端起[[茶杯]]。",
-                "scene_ref": {"scene_id": "大厅"},
-                "detected_identities": ["大厅路人_default"],
-                "detected_props": ["茶杯"],
+                "visual_description": "{{LobbyPasserby_default}} picks up [[Teacup]].",
+                "scene_ref": {"scene_id": "Lobby"},
+                "detected_identities": ["LobbyPasserby_default"],
+                "detected_props": ["Teacup"],
             },
             {
                 "beat_number": 4,
-                "visual_description": "{{青年_default}}拿着[[账单]]看向吧台",
-                "scene_ref": {"scene_id": "地下室"},
-                "detected_identities": ["青年_错误检测"],
-                "detected_props": ["错误账单"],
+                "visual_description": "{{Youth_default}} holds [[Bill]] and looks toward the bar",
+                "scene_ref": {"scene_id": "Basement"},
+                "detected_identities": ["Youth_wrongdetect"],
+                "detected_props": ["WrongBill"],
             },
             {
                 "beat_number": 5,
-                "visual_description": "{{老板_default}}把[[手机]]递给青年",
-                "scene_ref": {"scene_id": "地下室"},
-                "detected_identities": ["老板_错误检测"],
-                "detected_props": ["错误手机"],
+                "visual_description": "{{Boss_default}} hands [[Phone]] to the youth",
+                "scene_ref": {"scene_id": "Basement"},
+                "detected_identities": ["Boss_wrongdetect"],
+                "detected_props": ["WrongPhone"],
             },
         ],
         sketch_colors={
-            "青年_default": "#ff00ff FLUORESCENT MAGENTA",
-            "老板_default": "#00ffff FLUORESCENT CYAN",
-            "配色额外身份_default": "#ccff00 FLUORESCENT LIME",
+            "Youth_default": "#ff00ff FLUORESCENT MAGENTA",
+            "Boss_default": "#00ffff FLUORESCENT CYAN",
+            "ColorExtraIdentity_default": "#ccff00 FLUORESCENT LIME",
         },
         episode=_FakeEpisode(
             prop_menu=[
-                {"prop_id": "账单", "marker_color": "#0d47a1 ROYAL BLUE"},
-                {"prop_id": "手机", "marker_color": "#b71c1c DEEP CRIMSON"},
-                {"prop_id": "配色额外道具", "marker_color": "#1b5e20 FOREST GREEN"},
+                {"prop_id": "Bill", "marker_color": "#0d47a1 ROYAL BLUE"},
+                {"prop_id": "Phone", "marker_color": "#b71c1c DEEP CRIMSON"},
+                {"prop_id": "ColorExtraProp", "marker_color": "#1b5e20 FOREST GREEN"},
             ]
         ),
     )
@@ -412,7 +412,7 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
         lambda ctx, rel, local_path=None: f"/static/projects/{ctx.project_id}/{rel}",
     )
 
-    stage_dir = stage_manifest.stage_dir(tmp_path, "地下室")
+    stage_dir = stage_manifest.stage_dir(tmp_path, "Basement")
     stage_dir.mkdir(parents=True)
     (stage_dir / "pano_360.png").write_bytes(b"pano")
     (stage_dir / "master_sharp.ply").write_bytes(b"ply")
@@ -421,7 +421,7 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
     (stage_dir / "pano_depth.sog").write_bytes(b"pano sog")
     stage_manifest.update_manifest(
         tmp_path,
-        "地下室",
+        "Basement",
         pano_path="pano_360.png",
         ply_path="master_sharp.ply",
         master_ply_path="master_sharp.ply",
@@ -438,7 +438,7 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
     assert pano["viewer_kind"] == "pano360"
     assert pano["mode"] == "beat"
     assert (
-        pano["source"]["url"] == "/static/projects/proj_demo/director_worlds/地下室/v1/pano_360.png"
+        pano["source"]["url"] == "/static/projects/proj_demo/director_worlds/Basement/v1/pano_360.png"
     )
     assert pano["beat_context"]["episode"] == 1
     assert pano["beat_context"]["beat"] == 4
@@ -454,11 +454,11 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
     assert stage["mode"] == "beat"
     assert (
         stage["source"]["ply_url"]
-        == "/static/projects/proj_demo/director_worlds/地下室/v1/master_sharp.sog"
+        == "/static/projects/proj_demo/director_worlds/Basement/v1/master_sharp.sog"
     )
     assert (
         stage["source"]["splat_url"]
-        == "/static/projects/proj_demo/director_worlds/地下室/v1/master_sharp.sog"
+        == "/static/projects/proj_demo/director_worlds/Basement/v1/master_sharp.sog"
     )
     assert stage["source"]["splat_format"] == "sog"
     assert stage["source"]["source_kind"] == "master"
@@ -474,20 +474,20 @@ def test_beat_viewer_manifests_include_context_and_destinations(monkeypatch, tmp
     assert pano360["source_type"] == "pano360"
     assert pano360["pano_url"].endswith("/pano_360.png")
     assert pano360["slot_kind"] == "scene_director_pano_360"
-    assert stage["beat_context"]["detected_identities"] == ["青年_错误检测"]
-    assert stage["beat_context"]["detected_props"] == ["错误账单"]
+    assert stage["beat_context"]["detected_identities"] == ["Youth_wrongdetect"]
+    assert stage["beat_context"]["detected_props"] == ["WrongBill"]
     assert stage["blockings_dir_fs"].endswith("/director_blockings/ep001")
     assert stage["control_frames_dir_fs"].endswith("/director_control_frames")
     assert stage["slate_beat"] == 4
     assert stage["palette"]["actors"] == [
-        {"identity_id": "青年_default", "label": "青年_default", "color": "#ff00ff"},
-        {"identity_id": "老板_default", "label": "老板_default", "color": "#00ffff"},
-        {"identity_id": "配色额外身份_default", "label": "配色额外身份_default", "color": "#ccff00"},
+        {"identity_id": "Youth_default", "label": "Youth_default", "color": "#ff00ff"},
+        {"identity_id": "Boss_default", "label": "Boss_default", "color": "#00ffff"},
+        {"identity_id": "ColorExtraIdentity_default", "label": "ColorExtraIdentity_default", "color": "#ccff00"},
     ]
     assert stage["palette"]["props"] == [
-        {"prop_id": "账单", "label": "账单", "color": "#0d47a1"},
-        {"prop_id": "手机", "label": "手机", "color": "#b71c1c"},
-        {"prop_id": "配色额外道具", "label": "配色额外道具", "color": "#1b5e20"},
+        {"prop_id": "Bill", "label": "Bill", "color": "#0d47a1"},
+        {"prop_id": "Phone", "label": "Phone", "color": "#b71c1c"},
+        {"prop_id": "ColorExtraProp", "label": "ColorExtraProp", "color": "#1b5e20"},
     ]
     assert stage["palette"]["anonymous_colors"] == []
     assert stage["palette"]["anonymous_prop_colors"] == [
@@ -517,18 +517,18 @@ def test_director_stage_overlay_loads_inherits_and_saves(monkeypatch, tmp_path):
     client, _saved = _client(monkeypatch, tmp_path)
     store = _FakeBeatStore(
         [
-            {"beat_number": 2, "scene_ref": {"scene_id": "大厅"}},
+            {"beat_number": 2, "scene_ref": {"scene_id": "Lobby"}},
             {
                 "beat_number": 3,
-                "scene_ref": {"scene_id": "地下室"},
-                "detected_identities": ["陆辰_default"],
-                "detected_props": ["账单"],
+                "scene_ref": {"scene_id": "Basement"},
+                "detected_identities": ["LuChen_default"],
+                "detected_props": ["Bill"],
             },
             {
                 "beat_number": 4,
-                "scene_ref": {"scene_id": "地下室"},
-                "detected_identities": ["陆辰_default"],
-                "detected_props": ["账单", "手机"],
+                "scene_ref": {"scene_id": "Basement"},
+                "detected_identities": ["LuChen_default"],
+                "detected_props": ["Bill", "Phone"],
             },
         ]
     )
@@ -552,7 +552,7 @@ def test_director_stage_overlay_loads_inherits_and_saves(monkeypatch, tmp_path):
 
     inherited_payload = {
         "schema_version": "director_stage_overlay_v1",
-        "scene_id": "地下室",
+        "scene_id": "Basement",
         "episode": 1,
         "beat": 3,
         "frame_aspect": "16:9",
@@ -580,15 +580,15 @@ def test_director_stage_overlay_loads_inherits_and_saves(monkeypatch, tmp_path):
                 "savedAt": 2,
                 "world": {"activeSourceId": "legacy:pano:pano360:/static/demo/pano_360.png"},
                 "camera": {"azim": 1, "elev": 2, "distance": 3, "focalPoint": [0, 0, 0]},
-                "actors": [{"label": "陆辰", "color": "#38bdf8"}],
-                "props": [{"label": "手机", "color": "#a78bfa"}],
+                "actors": [{"label": "LuChen", "color": "#38bdf8"}],
+                "props": [{"label": "Phone", "color": "#a78bfa"}],
                 "stagings": [],
             },
             "source": {
                 "source_id": "legacy:pano:pano360:/static/demo/pano_360.png",
                 "source_type": "pano360",
                 "source_kind": "pano",
-                "label": "360 图",
+                "label": "360 image",
                 "pano_url": "/static/demo/pano_360.png",
             },
             "frame_meta": {
@@ -597,17 +597,17 @@ def test_director_stage_overlay_loads_inherits_and_saves(monkeypatch, tmp_path):
                     "source_id": "legacy:pano:pano360:/static/demo/pano_360.png",
                     "source_type": "pano360",
                     "source_kind": "pano",
-                    "label": "360 图",
+                    "label": "360 image",
                     "pano_url": "/static/demo/pano_360.png",
                 },
                 "camera": {"mode": "pano", "frame_aspect": "2:3", "state": {"azim": 1}},
                 "layer": {"source_id": "legacy:pano:pano360:/static/demo/pano_360.png"},
             },
-            "actors": [{"identity_id": "陆辰_default", "name": "陆辰", "marker_color": "#38bdf8"}],
-            "props": [{"prop_id": "手机", "name": "手机", "type": "prop_hero"}],
-            "stagings": [{"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"}],
+            "actors": [{"identity_id": "LuChen_default", "name": "LuChen", "marker_color": "#38bdf8"}],
+            "props": [{"prop_id": "Phone", "name": "Phone", "type": "prop_hero"}],
+            "stagings": [{"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"}],
             "command_log": [{"kind": "save_overlay"}],
-            "deleted_keys": ["prop:账单"],
+            "deleted_keys": ["prop:Bill"],
         },
     )
 
@@ -623,19 +623,19 @@ def test_director_stage_overlay_loads_inherits_and_saves(monkeypatch, tmp_path):
     assert saved["data"]["overlay"]["frame_meta"]["source"]["source_id"] == "legacy:pano:pano360:/static/demo/pano_360.png"
     assert saved["data"]["overlay"]["snapshot"]["world"]["activeSourceId"] == "legacy:pano:pano360:/static/demo/pano_360.png"
     assert saved["data"]["overlay"]["actors"] == [
-        {"identity_id": "陆辰_default", "name": "陆辰", "marker_color": "#38bdf8"}
+        {"identity_id": "LuChen_default", "name": "LuChen", "marker_color": "#38bdf8"}
     ]
     assert saved["data"]["overlay"]["props"] == [
-        {"prop_id": "手机", "name": "手机", "type": "prop_hero"},
-        {"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"},
+        {"prop_id": "Phone", "name": "Phone", "type": "prop_hero"},
+        {"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"},
     ]
     assert saved["data"]["overlay"]["stagings"] == [
-        {"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"}
+        {"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"}
     ]
-    assert saved["data"]["overlay"]["beat_context"]["detected_identities"] == ["陆辰_default"]
-    assert saved["data"]["overlay"]["beat_context"]["detected_props"] == ["账单", "手机"]
-    assert saved["data"]["overlay"]["deleted_keys"] == ["prop:账单"]
-    assert store.updates[-1]["detected_props"] == ["账单", "手机"]
+    assert saved["data"]["overlay"]["beat_context"]["detected_identities"] == ["LuChen_default"]
+    assert saved["data"]["overlay"]["beat_context"]["detected_props"] == ["Bill", "Phone"]
+    assert saved["data"]["overlay"]["deleted_keys"] == ["prop:Bill"]
+    assert store.updates[-1]["detected_props"] == ["Bill", "Phone"]
 
     current_response = client.get("/api/v1/projects/demo/episodes/1/beats/4/director-stage/overlay")
     assert current_response.json()["data"]["status"] == "current"
@@ -652,9 +652,9 @@ def test_director_stage_control_frame_export_writes_images_and_meta(monkeypatch,
         [
             {
                 "beat_number": 4,
-                "scene_ref": {"scene_id": "地下室"},
-                "detected_identities": ["陆辰_default"],
-                "detected_props": ["账单"],
+                "scene_ref": {"scene_id": "Basement"},
+                "detected_identities": ["LuChen_default"],
+                "detected_props": ["Bill"],
             },
         ]
     )
@@ -707,7 +707,7 @@ def test_director_stage_control_frame_export_writes_images_and_meta(monkeypatch,
                         {
                             "kind": "actor",
                             "id": "actor_1",
-                            "label": "陆辰",
+                            "label": "LuChen",
                             "color": "#38bdf8",
                             "scale": [1, 1, 1],
                             "placement": {
@@ -725,12 +725,12 @@ def test_director_stage_control_frame_export_writes_images_and_meta(monkeypatch,
             },
             "snapshot": {
                 "camera": {"azim": 1},
-                "actors": [{"label": "陆辰"}],
-                "props": [{"label": "账单"}],
+                "actors": [{"label": "LuChen"}],
+                "props": [{"label": "Bill"}],
             },
-            "actors": [{"identity_id": "陆辰_default", "name": "陆辰"}],
-            "props": [{"prop_id": "账单", "name": "账单", "type": "prop_hero"}],
-            "stagings": [{"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"}],
+            "actors": [{"identity_id": "LuChen_default", "name": "LuChen"}],
+            "props": [{"prop_id": "Bill", "name": "Bill", "type": "prop_hero"}],
+            "stagings": [{"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"}],
         },
     )
 
@@ -763,16 +763,16 @@ def test_director_stage_control_frame_export_writes_images_and_meta(monkeypatch,
         "position": [0, 0, 0],
         "yaw_deg": 0,
     }
-    assert meta["scene_id"] == "地下室"
+    assert meta["scene_id"] == "Basement"
     assert meta["episode"] == 1
     assert meta["beat"] == 4
     assert meta["frame_aspect"] == "16:9"
-    assert meta["actors"] == [{"identity_id": "陆辰_default", "name": "陆辰"}]
+    assert meta["actors"] == [{"identity_id": "LuChen_default", "name": "LuChen"}]
     assert meta["props"] == [
-        {"prop_id": "账单", "name": "账单", "type": "prop_hero"},
-        {"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"},
+        {"prop_id": "Bill", "name": "Bill", "type": "prop_hero"},
+        {"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"},
     ]
-    assert meta["stagings"] == [{"prop_id": "纸箱堆", "name": "纸箱堆", "type": "prop_staging"}]
+    assert meta["stagings"] == [{"prop_id": "BoxPile", "name": "BoxPile", "type": "prop_staging"}]
     assert meta["paths"]["combined"] == "director_control_frames/ep001/beat_04/combined.png"
 
 
@@ -782,7 +782,7 @@ def test_director_stage_control_frame_export_requires_complete_bundle(monkeypatc
         [
             {
                 "beat_number": 4,
-                "scene_ref": {"scene_id": "地下室"},
+                "scene_ref": {"scene_id": "Basement"},
             },
         ]
     )
@@ -824,7 +824,7 @@ def test_beat_background_anchor_lists_and_snapshots_master(monkeypatch, tmp_path
     client, _saved = _client(monkeypatch, tmp_path)
     store = _FakeBeatStore(
         [
-            {"beat_number": 4, "scene_ref": {"scene_id": "地下室", "render_anchor_id": "master"}},
+            {"beat_number": 4, "scene_ref": {"scene_id": "Basement", "render_anchor_id": "master"}},
         ]
     )
 
@@ -835,7 +835,7 @@ def test_beat_background_anchor_lists_and_snapshots_master(monkeypatch, tmp_path
 
     monkeypatch.setattr(generation, "make_sqlite_store", fake_make_sqlite_store)
 
-    master = tmp_path / "assets" / "scenes" / "地下室" / "master.png"
+    master = tmp_path / "assets" / "scenes" / "Basement" / "master.png"
     master.parent.mkdir(parents=True)
     master.write_bytes(b"fake master")
 
@@ -860,12 +860,12 @@ def test_beat_background_anchor_lists_and_snapshots_master(monkeypatch, tmp_path
     assert body["data"]["current_anchor"] == "master"
     assert body["data"]["current_source"] == "master"
     assert body["data"]["current_reference"]["label"] == "master"
-    assert body["data"]["current_reference"]["rel_path"] == "assets/scenes/地下室/master.png"
+    assert body["data"]["current_reference"]["rel_path"] == "assets/scenes/Basement/master.png"
     assert body["data"]["current_reference"]["url"].startswith(
         "/static/projects/proj_demo/assets/scenes/"
     )
     assert body["data"]["display_reference"]["id"] == "master"
-    assert body["data"]["display_reference"]["rel_path"] == "assets/scenes/地下室/master.png"
+    assert body["data"]["display_reference"]["rel_path"] == "assets/scenes/Basement/master.png"
     assert body["data"]["render_input"]["id"] == "selected_background"
     assert (
         body["data"]["render_input"]["rel_path"]
@@ -887,7 +887,7 @@ def test_beat_background_anchor_infers_legacy_selected_source(monkeypatch, tmp_p
             {
                 "beat_number": 4,
                 "scene_ref": {
-                    "scene_id": "地下室",
+                    "scene_id": "Basement",
                     "render_anchor_id": "selected_background",
                 },
             },
@@ -901,7 +901,7 @@ def test_beat_background_anchor_infers_legacy_selected_source(monkeypatch, tmp_p
 
     monkeypatch.setattr(generation, "make_sqlite_store", fake_make_sqlite_store)
 
-    master = tmp_path / "assets" / "scenes" / "地下室" / "master.png"
+    master = tmp_path / "assets" / "scenes" / "Basement" / "master.png"
     master.parent.mkdir(parents=True)
     master.write_bytes(b"same frozen master")
     selected = _selected_background_path(tmp_path)
@@ -917,7 +917,7 @@ def test_beat_background_anchor_infers_legacy_selected_source(monkeypatch, tmp_p
     assert body["data"]["current_anchor"] == "master"
     assert body["data"]["current_source"] == "master"
     assert body["data"]["current_reference"]["label"] == "master"
-    assert body["data"]["current_reference"]["rel_path"] == "assets/scenes/地下室/master.png"
+    assert body["data"]["current_reference"]["rel_path"] == "assets/scenes/Basement/master.png"
     assert body["data"]["current_reference"]["url"].startswith(
         "/static/projects/proj_demo/assets/scenes/"
     )
@@ -935,7 +935,7 @@ def test_beat_background_anchor_upload_writes_selected_background(monkeypatch, t
     client, _saved = _client(monkeypatch, tmp_path)
     store = _FakeBeatStore(
         [
-            {"beat_number": 4, "scene_ref": {"scene_id": "地下室", "render_anchor_id": "master"}},
+            {"beat_number": 4, "scene_ref": {"scene_id": "Basement", "render_anchor_id": "master"}},
         ]
     )
 
@@ -1033,7 +1033,7 @@ def test_sketch_regen_queue_migrates_react_items_out_of_nicegui_legacy_key(
                         "modeKey": "1x2_4-3_sketch",
                         "modeLabel": "1×2_4:3 Sketch",
                         "beatNumbers": [2, 3],
-                        "sceneIds": ["地下室"],
+                        "sceneIds": ["Basement"],
                         "createdAt": "2026-05-19T02:39:21.704Z",
                         "taskScope": "1x2_4-3_sketch__c0e3a7e07213",
                     }
@@ -1142,7 +1142,7 @@ def test_image_generation_guard_password_verification_matches_nicegui(monkeypatc
     assert body["ok"] is True
     assert body["data"]["next_attempt"] == 5
     assert body["data"]["level"] == "locked"
-    assert "密码" in body["data"]["message"]
+    assert "password" in body["data"]["message"]
 
     response = client.post(
         "/api/v1/projects/demo/episodes/1/image-generation-guard/verify-password",

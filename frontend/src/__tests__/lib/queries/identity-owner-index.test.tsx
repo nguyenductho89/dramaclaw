@@ -58,9 +58,9 @@ describe("useIdentityOwnerIndex", () => {
           return HttpResponse.json({
             ok: true,
             data: [
-              { name: "林昭", identity_ids: ["林昭_青年", "林昭_少年"] },
-              { name: "苏清晏", identity_ids: ["苏清晏_少女"] },
-              { name: "路人", identity_ids: [] },
+              { name: "Lin Zhao", identity_ids: ["Lin Zhao_young_adult", "Lin Zhao_teen"] },
+              { name: "Su Qingyan", identity_ids: ["Su Qingyan_teen"] },
+              { name: "Passerby", identity_ids: [] },
             ],
           });
         },
@@ -80,9 +80,9 @@ describe("useIdentityOwnerIndex", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.ownerOf("林昭_少年")).toBe("林昭");
-    expect(result.current.ownerOf("苏清晏_少女")).toBe("苏清晏");
-    expect(result.current.ownerOf("不存在的身份")).toBeNull();
+    expect(result.current.ownerOf("Lin Zhao_teen")).toBe("Lin Zhao");
+    expect(result.current.ownerOf("Su Qingyan_teen")).toBe("Su Qingyan");
+    expect(result.current.ownerOf("nonexistent identity")).toBeNull();
     // The whole point: the owner index costs the character list and nothing else.
     expect(identityPaths).toEqual([]);
     expect(characterUrls.map((url) => url.searchParams.get("summary"))).toEqual([
@@ -99,7 +99,7 @@ describe("useIdentityOwnerIndex", () => {
           summaryValues.push(new URL(request.url).searchParams.get("summary"));
           return HttpResponse.json({
             ok: true,
-            data: [{ name: "林昭", identity_ids: ["林昭_青年"] }],
+            data: [{ name: "Lin Zhao", identity_ids: ["Lin Zhao_young_adult"] }],
           });
         },
       ),
@@ -126,7 +126,7 @@ describe("useIdentityOwnerIndex", () => {
     await waitFor(() => expect(summaryValues.length).toBe(2));
 
     expect(summaryValues).toEqual(["true", "true"]);
-    expect(result.current.index.ownerOf("林昭_青年")).toBe("林昭");
+    expect(result.current.index.ownerOf("Lin Zhao_young_adult")).toBe("Lin Zhao");
   });
 
   it("reports no owner while the character list is still loading", async () => {
@@ -140,9 +140,9 @@ describe("useIdentityOwnerIndex", () => {
       wrapper,
     });
 
-    expect(result.current.ownerOf("林昭_青年")).toBeNull();
+    expect(result.current.ownerOf("Lin Zhao_young_adult")).toBeNull();
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.ownerOf("林昭_青年")).toBeNull();
+    expect(result.current.ownerOf("Lin Zhao_young_adult")).toBeNull();
   });
 
   // Older backends predate `identity_ids`; a missing field must degrade to
@@ -150,7 +150,7 @@ describe("useIdentityOwnerIndex", () => {
   it("tolerates a character list without identity_ids", async () => {
     server.use(
       http.get("http://localhost:3000/api/v1/projects/demo/characters", () =>
-        HttpResponse.json({ ok: true, data: [{ name: "林昭" }] }),
+        HttpResponse.json({ ok: true, data: [{ name: "Lin Zhao" }] }),
       ),
     );
 
@@ -159,7 +159,7 @@ describe("useIdentityOwnerIndex", () => {
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.ownerOf("林昭_青年")).toBeNull();
+    expect(result.current.ownerOf("Lin Zhao_young_adult")).toBeNull();
   });
 });
 
@@ -330,7 +330,7 @@ describe("owner index freshness across identity mutations", () => {
     await act(async () => {
       await result.current.update.mutateAsync({
         identityId: "lin_young",
-        data: { appearance_details: "换了件外套" },
+        data: { appearance_details: "changed into a jacket" },
       });
     });
 

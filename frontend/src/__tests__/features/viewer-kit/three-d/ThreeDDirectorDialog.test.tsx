@@ -72,7 +72,7 @@ const viewerMock = vi.hoisted(() => ({
     listener({
       kind: "actor",
       index: 0,
-      label: "陆辰",
+      label: "LuChen",
       position: [1, 2, 3],
       pose: "standing",
       actionPlaying: true,
@@ -140,7 +140,7 @@ vi.mock("@/features/viewer-kit/three-d/ThreeDStageCanvas", () => ({
         />
         {!interactionActive && (
           <button type="button" onClick={() => onInteractionActiveChange?.(true)}>
-            点击进入导演世界
+            Click to enter Director World
           </button>
         )}
       </div>
@@ -216,7 +216,7 @@ vi.mock("@/api/viewerManifests", () => ({
   generateAiStagingProp: vi.fn(async () => ({
     prop: {
       prop_id: "horse_mount",
-      name: "可骑的马",
+      name: "Rideable horse",
       marker_color: "#7c3aed",
       shape_hint: "quadruped_mount",
       scale: [1.4, 1.25, 2.2],
@@ -227,13 +227,13 @@ vi.mock("@/api/viewerManifests", () => ({
     status: "missing",
     overlay: null,
     path: "/tmp/director_blockings/ep001/beat_03.json",
-    same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "地下室" }],
+    same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "Basement" }],
   })),
   saveBeatDirectorStageOverlay: vi.fn(async (_project, _episode, beat, payload) => ({
     status: "saved",
     overlay: payload,
     path: `/tmp/director_blockings/ep001/beat_${String(beat).padStart(2, "0")}.json`,
-    same_scene_beats: [{ beat, label: `Beat ${beat}`, scene_id: "地下室" }],
+    same_scene_beats: [{ beat, label: `Beat ${beat}`, scene_id: "Basement" }],
   })),
   saveBeatDirectorControlFrame: vi.fn(async () => ({
     dir: "/tmp/director_control_frames/ep001/beat_03",
@@ -264,8 +264,8 @@ const manifest: DirectorStageManifest = {
   viewer_kind: "three_d_director",
   mode: "beat",
   project: "demo",
-  scene_id: "地下室",
-  display_name: "地下室",
+  scene_id: "Basement",
+  display_name: "Basement",
   source: {
     ply_url: "/static/demo/world.sog",
     source_kind: "master",
@@ -308,7 +308,7 @@ describe("ThreeDDirectorDialog", () => {
       status: "missing",
       overlay: null,
       path: "/tmp/director_blockings/ep001/beat_03.json",
-      same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "地下室" }],
+      same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "Basement" }],
     });
     viewerMock.captureScreenshot.mockReturnValue(
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
@@ -358,8 +358,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(1);
   });
 
   it("opens a blank Director World when the Director World manifest is missing", async () => {
@@ -369,15 +368,15 @@ describe("ThreeDDirectorDialog", () => {
         open
         onOpenChange={onOpenChange}
         manifest={null}
-        title="Beat 3 导演世界"
-        description="同源加载 Beat 导演世界。"
+        title="Beat 3 Director World"
+        description="Loads the Beat Director World from the same origin."
       />,
     );
 
-    expect(screen.getAllByText("Beat 3 导演世界").length).toBeGreaterThan(0);
-    expect(screen.queryByText("暂无导演世界 manifest")).not.toBeInTheDocument();
-    expect(screen.queryByText(/还没有可用的导演世界资产/)).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /emptySource|无来源/ })).toBeInTheDocument();
+    expect(screen.getAllByText("Beat 3 Director World").length).toBeGreaterThan(0);
+    expect(screen.queryByText("No Director World manifest available")).not.toBeInTheDocument();
+    expect(screen.queryByText(/No Director World assets are available yet/)).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /emptySource|No source/ })).toBeInTheDocument();
   });
 
   it("blocks beat actor and prop creation when assigned colors are missing", async () => {
@@ -388,8 +387,8 @@ describe("ThreeDDirectorDialog", () => {
       beat_context: {
         episode: 1,
         beat: 3,
-        detected_identities: ["陆辰"],
-        detected_props: ["手电筒"],
+        detected_identities: ["LuChen"],
+        detected_props: ["Flashlight"],
       },
       palette: {
         actors: [],
@@ -407,21 +406,21 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByText("没有拿到已分配的人物颜色，不能创建人物。请先在主线镜头里完成颜色分配。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "把人物放到准星" })).toBeDisabled();
+    expect(screen.getByText("Assigned actor colors are missing, so actors cannot be created. Assign colors in the mainline Beat first.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Place actor at crosshair" })).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: /道具/ }));
-    expect(screen.getByText("没有拿到已分配的道具颜色，不能创建道具。请先在主线镜头里完成颜色分配。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "把人物放到准星" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /Prop/ }));
+    expect(screen.getByText("Assigned prop colors are missing, so props cannot be created. Assign colors in the mainline Beat first.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Place actor at crosshair" })).toBeDisabled();
     expect(viewerMock.placeMarker).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: /AI 占位/ }));
+    await user.click(screen.getByRole("button", { name: /AI Staging/ }));
     await user.click(screen.getByRole("button", { name: "#6D4C41" }));
-    await user.type(screen.getByLabelText("占位名"), "雨棚");
-    await user.click(screen.getByRole("button", { name: "本地占位" }));
+    await user.type(screen.getByLabelText("Staging name"), "Awning");
+    await user.click(screen.getByRole("button", { name: "Local placeholder" }));
     expect(viewerMock.placeMarker).toHaveBeenLastCalledWith("staging", {
       color: "#6D4C41",
-      label: "雨棚",
+      label: "Awning",
     });
   });
 
@@ -493,14 +492,14 @@ describe("ThreeDDirectorDialog", () => {
       status: "current",
       overlay: {
         schema_version: "director_stage_overlay_v1",
-        scene_id: "地下室",
+        scene_id: "Basement",
         episode: 1,
         beat: 99,
         frame_aspect: "2:3",
         snapshot: {
           schemaVersion: 1,
           savedAt: 2,
-          actors: [{ label: "陆辰", color: "#38bdf8", position: [1, 0, 2], yawDeg: 0, scale: [1, 1, 1] }],
+          actors: [{ label: "LuChen", color: "#38bdf8", position: [1, 0, 2], yawDeg: 0, scale: [1, 1, 1] }],
           props: [],
           stagings: [],
           camera: { azim: 1, elev: 2, distance: 3, focalPoint: [0, 0, 0] },
@@ -508,8 +507,8 @@ describe("ThreeDDirectorDialog", () => {
       },
       path: "/tmp/director_blockings/ep001/beat_03.json",
       same_scene_beats: [
-        { beat: 1, label: "Beat 1", scene_id: "地下室" },
-        { beat: 3, label: "Beat 3", scene_id: "地下室" },
+        { beat: 1, label: "Beat 1", scene_id: "Basement" },
+        { beat: 3, label: "Beat 3", scene_id: "Basement" },
       ],
     });
 
@@ -525,7 +524,7 @@ describe("ThreeDDirectorDialog", () => {
       expect(getBeatDirectorStageOverlay).toHaveBeenCalledWith("demo", 1, 3);
       expect(viewerMock.loadSceneSnapshot).toHaveBeenCalledWith(
         expect.objectContaining({
-          actors: expect.arrayContaining([expect.objectContaining({ label: "陆辰" })]),
+          actors: expect.arrayContaining([expect.objectContaining({ label: "LuChen" })]),
         }),
       );
       expect(viewerMock.loadSceneSnapshot.mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -538,7 +537,7 @@ describe("ThreeDDirectorDialog", () => {
       status: "current",
       overlay: {
         schema_version: "director_stage_overlay_v1",
-        scene_id: "地下室",
+        scene_id: "Basement",
         episode: 1,
         beat: 3,
         frame_aspect: "16:9",
@@ -558,7 +557,7 @@ describe("ThreeDDirectorDialog", () => {
         },
       },
       path: "/tmp/director_blockings/ep001/beat_03.json",
-      same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "地下室" }],
+      same_scene_beats: [{ beat: 3, label: "Beat 3", scene_id: "Basement" }],
     });
 
     render(
@@ -612,9 +611,9 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "保存此镜头导演状态" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "保存导演世界" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "清空保存" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save this shot director state" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save Director World" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear saved scene" })).not.toBeInTheDocument();
   });
 
   it("lets scene users switch explicit 3GS source without showing active alias", async () => {
@@ -647,11 +646,11 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("option", { name: "正面世界" })).toHaveProperty("selected", true);
+    expect(screen.getByRole("option", { name: "Master world" })).toHaveProperty("selected", true);
     expect(screen.queryByRole("option", { name: "active" })).not.toBeInTheDocument();
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "背面世界" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "Reverse world" }),
     );
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute(
       "data-splat-url",
@@ -702,9 +701,9 @@ describe("ThreeDDirectorDialog", () => {
     );
 
     const options = Array.from(
-      screen.getByLabelText("世界来源").querySelectorAll("option"),
+      screen.getByLabelText("World Source").querySelectorAll("option"),
     ).map((option) => option.textContent);
-    expect(options).toEqual(["正面世界", "360 世界", "360 · 360图", "无来源"]);
+    expect(options).toEqual(["Master world", "360 world", "360 · 360 image", "No source"]);
   });
 
   it("offers an empty Director World source with no splat or pano URL", async () => {
@@ -717,12 +716,12 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    const picker = screen.getByLabelText("世界来源");
-    expect(screen.getByRole("option", { name: "无来源" })).toBeInTheDocument();
+    const picker = screen.getByLabelText("World Source");
+    expect(screen.getByRole("option", { name: "No source" })).toBeInTheDocument();
 
     await user.selectOptions(
       picker,
-      screen.getByRole("option", { name: "无来源" }),
+      screen.getByRole("option", { name: "No source" }),
     );
 
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute("data-splat-url", "");
@@ -754,10 +753,10 @@ describe("ThreeDDirectorDialog", () => {
 
     expect(screen.getByTestId("director-world-panel-title")).toBeInTheDocument();
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "背面世界" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "Reverse world" }),
     );
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
     expect(viewerMock.captureScreenshot).toHaveBeenCalledWith(expect.objectContaining({ renderMode: "combined", frameAspect: "16:9" }));
@@ -793,7 +792,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    const outputButton = screen.getByRole("button", { name: "输出到画布节点" });
+    const outputButton = screen.getByRole("button", { name: "Output to canvas node" });
     fireEvent.click(outputButton);
     fireEvent.click(outputButton);
 
@@ -819,7 +818,7 @@ describe("ThreeDDirectorDialog", () => {
       savedAt: 1,
       actors: [
         {
-          label: "陆辰",
+          label: "LuChen",
           color: "#38bdf8",
           position: [1, 0, 2],
           yawDeg: 15,
@@ -830,7 +829,7 @@ describe("ThreeDDirectorDialog", () => {
       ],
       props: [
         {
-          label: "手电筒",
+          label: "Flashlight",
           color: "#ffd34d",
           position: [2, 0.5, 3],
           yawDeg: 30,
@@ -840,7 +839,7 @@ describe("ThreeDDirectorDialog", () => {
       ],
       stagings: [
         {
-          label: "门口光",
+          label: "Doorway light",
           color: "#4587ff",
           position: [0, 0, 4],
           yawDeg: 0,
@@ -861,7 +860,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     await waitFor(() => {
       expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
@@ -877,7 +876,7 @@ describe("ThreeDDirectorDialog", () => {
       },
       layer: {
         actors: [expect.objectContaining({ pose: "standing", action_playing: true })],
-        props: [expect.objectContaining({ label: "手电筒" })],
+        props: [expect.objectContaining({ label: "Flashlight" })],
         stagings: [expect.objectContaining({ shape_hint: "generic_large" })],
       },
     });
@@ -894,30 +893,30 @@ describe("ThreeDDirectorDialog", () => {
     expect(heroProp).toMatchObject({
       type: "prop_hero",
       category: "hero",
-      semantic_label: "手电筒",
+      semantic_label: "Flashlight",
     });
     expect(heroProp).not.toHaveProperty("shape_hint");
     expect(frameMeta?.layer.stagings[0]).not.toHaveProperty("pose");
     expect(frameMeta?.layer.stagings[0]).not.toHaveProperty("action_playing");
     expect(frameMeta?.layer.stagings[0]).not.toHaveProperty("shapeHint");
     expect(frameMeta?.layer.stagings[0]).toMatchObject({
-      name: "门口光",
-      label: "门口光",
+      name: "Doorway light",
+      label: "Doorway light",
       marker_color: "#4587ff",
-      semantic_label: "门口光",
+      semantic_label: "Doorway light",
     });
     expect(frameMeta?.layer.stagings[0].placement).toMatchObject({ yaw_deg: 0 });
     expect(frameMeta?.stagings?.[0]).toMatchObject({
-      name: "门口光",
-      label: "门口光",
+      name: "Doorway light",
+      label: "Doorway light",
       type: "prop_staging",
       category: "staging",
       marker_color: "#4587ff",
-      semantic_label: "门口光",
+      semantic_label: "Doorway light",
     });
     expect(frameMeta?.props?.some((item: DirectorFrameMetaProp) => (
       item.type === "prop_staging"
-        && item.semantic_label === "门口光"
+        && item.semantic_label === "Doorway light"
         && item.marker_color === "#4587ff"
     ))).toBe(true);
   });
@@ -936,7 +935,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "用纯背景作背景" }));
+    await user.click(screen.getByRole("button", { name: "Use env_only as background" }));
 
     await waitFor(() => {
       expect(onCaptureSelectedBackground).toHaveBeenCalledTimes(1);
@@ -968,7 +967,7 @@ describe("ThreeDDirectorDialog", () => {
       savedAt: 1,
       actors: [
         {
-          label: "陆辰",
+          label: "LuChen",
           color: "#38bdf8",
           position: [0, 0, 0],
           yawDeg: 0,
@@ -992,7 +991,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     await waitFor(() => {
       expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
@@ -1037,8 +1036,8 @@ describe("ThreeDDirectorDialog", () => {
     );
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "director pano · 360图" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "director pano · 360 image" }),
     );
 
     expect(screen.queryByTestId("pano-capture-surface")).not.toBeInTheDocument();
@@ -1047,9 +1046,9 @@ describe("ThreeDDirectorDialog", () => {
       "/static/demo/pano_360.png",
     );
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute("data-splat-url", "");
-    expect(screen.getByRole("button", { name: /^人物/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Actor/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     await waitFor(() => {
       expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
@@ -1112,15 +1111,15 @@ describe("ThreeDDirectorDialog", () => {
     );
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "director pano · 360图" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "director pano · 360 image" }),
     );
-    await user.click(screen.getByRole("button", { name: /高级校准/ }));
+    await user.click(screen.getByRole("button", { name: /Advanced calibration/ }));
 
-    const xOffset = screen.getByRole("slider", { name: /左右/ });
-    const yOffset = screen.getByRole("slider", { name: /高度/ });
-    const zOffset = screen.getByRole("slider", { name: /前后/ });
-    const scale = screen.getByRole("slider", { name: /世界比例/ });
+    const xOffset = screen.getByRole("slider", { name: /Left \/ right/ });
+    const yOffset = screen.getByRole("slider", { name: /Height/ });
+    const zOffset = screen.getByRole("slider", { name: /Front \/ back/ });
+    const scale = screen.getByRole("slider", { name: /World scale/ });
 
     expect(xOffset).toHaveAttribute("min", "-240");
     expect(xOffset).toHaveAttribute("max", "240");
@@ -1177,7 +1176,7 @@ describe("ThreeDDirectorDialog", () => {
       actors: [
         {
           id: "actor-1",
-          label: "杜晨",
+          label: "DuChen",
           color: "#00aaff",
           position: [0, 0, 0] as [number, number, number],
           yawDeg: 0,
@@ -1240,7 +1239,7 @@ describe("ThreeDDirectorDialog", () => {
       actors: [
         {
           id: "actor-1",
-          label: "杜晨",
+          label: "DuChen",
           color: "#00aaff",
           position: [0, 0, 0] as [number, number, number],
           yawDeg: 0,
@@ -1322,7 +1321,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "保存导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Save Director World" }));
 
     expect(onSaveScene).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1406,7 +1405,7 @@ describe("ThreeDDirectorDialog", () => {
         },
         {
           kind: "pano",
-          label: "360 图",
+          label: "360 image",
           source_type: "pano360",
           pano_url: "/static/demo/hall_360.png",
           slot_kind: "scene_director_pano_360",
@@ -1460,24 +1459,24 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /AI 占位/ }));
-    expect(screen.getByRole("button", { name: "AI 占位" })).toBeDisabled();
-    await user.type(screen.getByLabelText("占位名"), "马");
-    await user.click(screen.getByRole("button", { name: "AI 占位" }));
+    await user.click(screen.getByRole("button", { name: /AI Staging/ }));
+    expect(screen.getByRole("button", { name: /AI placeholder/ })).toBeDisabled();
+    await user.type(screen.getByLabelText("Staging name"), "Horse");
+    await user.click(screen.getByRole("button", { name: /AI placeholder/ }));
 
     await waitFor(() => {
       expect(generateAiStagingProp).toHaveBeenCalledWith(
         "demo",
         expect.objectContaining({
-          scene_id: "地下室",
-          user_hint: "马",
+          scene_id: "Basement",
+          user_hint: "Horse",
           renderer_backend: "playcanvas_3gs",
         }),
       );
     });
     expect(viewerMock.placeMarker).toHaveBeenCalledWith("staging", {
       color: "#B71C1C",
-      label: "可骑的马",
+      label: "Rideable horse",
       scale: [1.4, 1.25, 2.2],
       position: [1, 0, 2],
       shapeHint: "quadruped_mount",
@@ -1509,24 +1508,24 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /道具/ }));
+    await user.click(screen.getByRole("button", { name: /Prop/ }));
     await user.click(screen.getByRole("button", { name: "#6D4C41" }));
     expect(screen.queryByLabelText("viewer.threeD.propName")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "把人物放到准星" }));
+    await user.click(screen.getByRole("button", { name: "Place actor at crosshair" }));
     expect(viewerMock.placeMarker).toHaveBeenLastCalledWith("prop", {
       color: "#6D4C41",
-      label: "匿名道具 1",
+      label: "Anonymous prop 1",
     });
 
-    await user.click(screen.getByRole("button", { name: /AI 占位/ }));
+    await user.click(screen.getByRole("button", { name: /AI Staging/ }));
     await user.click(screen.getByRole("button", { name: "#B71C1C" }));
-    expect(screen.getByRole("button", { name: "本地占位" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "把人物放到准星" })).toBeDisabled();
-    await user.type(screen.getByLabelText("占位名"), "马");
-    await user.click(screen.getByRole("button", { name: "本地占位" }));
+    expect(screen.getByRole("button", { name: "Local placeholder" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Place actor at crosshair" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Staging name"), "Horse");
+    await user.click(screen.getByRole("button", { name: "Local placeholder" }));
     expect(viewerMock.placeMarker).toHaveBeenLastCalledWith("staging", {
       color: "#B71C1C",
-      label: "马",
+      label: "Horse",
     });
   });
 
@@ -1536,7 +1535,7 @@ describe("ThreeDDirectorDialog", () => {
       listener({
         kind: "staging",
         index: 0,
-        label: "旧占位",
+        label: "Old staging",
         position: [1, 2, 3],
         pose: null,
         actionPlaying: null,
@@ -1553,10 +1552,10 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.clear(screen.getByLabelText("选中占位名"));
-    await user.type(screen.getByLabelText("选中占位名"), "新占位");
+    await user.clear(screen.getByLabelText("Selected staging name"));
+    await user.type(screen.getByLabelText("Selected staging name"), "New staging");
 
-    expect(viewerMock.setSelectedLabel).toHaveBeenLastCalledWith("新占位");
+    expect(viewerMock.setSelectedLabel).toHaveBeenLastCalledWith("New staging");
   });
 
   it("passes the active source id when clearing the saved Director World scene", async () => {
@@ -1598,7 +1597,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "清空保存" }));
+    await user.click(screen.getByRole("button", { name: "Clear saved scene" }));
 
     expect(viewerMock.clearMarkers).toHaveBeenCalled();
     expect(onClearScene).toHaveBeenCalledWith("director_pano");
@@ -1654,12 +1653,12 @@ describe("ThreeDDirectorDialog", () => {
     viewerMock.loadSceneSnapshot.mockClear();
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
+      screen.getByLabelText("World Source"),
       screen.getByRole("option", { name: "Master SOG" }),
     );
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "Director Pano · 360图" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "Director Pano · 360 image" }),
     );
 
     await waitFor(() => {
@@ -1694,7 +1693,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "用纯背景作背景" }));
+    await user.click(screen.getByRole("button", { name: "Use env_only as background" }));
 
     await waitFor(() => {
       expect(onCaptureSelectedBackground).toHaveBeenCalledTimes(1);
@@ -1738,7 +1737,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "用纯背景作背景" }));
+    await user.click(screen.getByRole("button", { name: "Use env_only as background" }));
 
     await waitFor(() => {
       expect(onCaptureSelectedBackground).toHaveBeenCalledTimes(1);
@@ -1772,7 +1771,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     await waitFor(() => {
       expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
@@ -1834,7 +1833,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("option", { name: "Director Pano · 360图" })).toHaveProperty(
+    expect(screen.getByRole("option", { name: "Director Pano · 360 image" })).toHaveProperty(
       "selected",
       true,
     );
@@ -1847,7 +1846,7 @@ describe("ThreeDDirectorDialog", () => {
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute("data-splat-url", "");
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
+      screen.getByLabelText("World Source"),
       screen.getByRole("option", { name: "Master SOG" }),
     );
 
@@ -1861,7 +1860,7 @@ describe("ThreeDDirectorDialog", () => {
     );
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
+      screen.getByLabelText("World Source"),
       screen.getByRole("option", { name: "No Collision SOG" }),
     );
 
@@ -1884,7 +1883,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     expect(viewerMock.captureScreenshot).toHaveBeenCalledWith(expect.objectContaining({ renderMode: "combined", frameAspect: "16:9" }));
     expect(viewerMock.captureScreenshot).toHaveBeenCalledWith(expect.objectContaining({ renderMode: "env_only", frameAspect: "16:9" }));
@@ -1908,15 +1907,15 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "提交当前取景为导演合成图" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "输出到画布节点" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "用纯背景作背景" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "提交当前取景为背景" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "写入镜头控制图" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "快捷操作" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "写入" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit current view as Director combined" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Output to canvas node" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use env_only as background" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit current view as background" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Export control layer" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quick Actions" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "提交当前取景为导演合成图" }));
+    await user.click(screen.getByRole("button", { name: "Submit current view as Director combined" }));
 
     await waitFor(() => {
       expect(saveBeatDirectorControlFrame).toHaveBeenCalledTimes(1);
@@ -1947,9 +1946,9 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "输出当前取景为导演合成图" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Output current view as Director combined" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "输出当前取景为导演合成图" }));
+    await user.click(screen.getByRole("button", { name: "Output current view as Director combined" }));
 
     await waitFor(() => {
       expect(onSubmitDirectorCombined).toHaveBeenCalledTimes(1);
@@ -1958,7 +1957,7 @@ describe("ThreeDDirectorDialog", () => {
     expect(onCaptureCanvasNode).not.toHaveBeenCalled();
     expect(onSubmitDirectorCombined.mock.calls[0][1].captureBundle).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "输出到画布节点" }));
+    await user.click(screen.getByRole("button", { name: "Output to canvas node" }));
 
     await waitFor(() => {
       expect(onCaptureCanvasNode).toHaveBeenCalledTimes(1);
@@ -1980,8 +1979,8 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "快捷操作" }));
-    await user.click(screen.getByRole("button", { name: "写入" }));
+    await user.click(screen.getByRole("button", { name: "Quick Actions" }));
+    await user.click(screen.getByRole("button", { name: "Export" }));
 
     await waitFor(() => {
       expect(saveBeatDirectorControlFrame).toHaveBeenCalledTimes(1);
@@ -2003,7 +2002,7 @@ describe("ThreeDDirectorDialog", () => {
       savedAt: 1,
       actors: [
         {
-          label: "陆辰",
+          label: "LuChen",
           color: "#38bdf8",
           position: [0, 0, 0],
           yawDeg: 0,
@@ -2014,7 +2013,7 @@ describe("ThreeDDirectorDialog", () => {
       ],
       props: [
         {
-          label: "马",
+          label: "Horse",
           color: "#ffd34d",
           position: [1, 0.6, 0],
           yawDeg: 10,
@@ -2024,7 +2023,7 @@ describe("ThreeDDirectorDialog", () => {
       ],
       stagings: [
         {
-          label: "纸箱堆",
+          label: "Stack of boxes",
           color: "#4587ff",
           position: [2, 0.3, 0],
           yawDeg: 0,
@@ -2043,7 +2042,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "保存此镜头导演状态" }));
+    await user.click(screen.getByRole("button", { name: "Save this shot director state" }));
 
     await waitFor(() => {
       expect(saveBeatDirectorStageOverlay).toHaveBeenCalled();
@@ -2103,7 +2102,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "保存此镜头导演状态" }));
+    await user.click(screen.getByRole("button", { name: "Save this shot director state" }));
 
     await waitFor(() => {
       expect(saveBeatDirectorStageOverlay).toHaveBeenCalled();
@@ -2161,10 +2160,10 @@ describe("ThreeDDirectorDialog", () => {
     );
 
     await user.selectOptions(
-      screen.getByLabelText("世界来源"),
-      screen.getByRole("option", { name: "Director Pano · 360图" }),
+      screen.getByLabelText("World Source"),
+      screen.getByRole("option", { name: "Director Pano · 360 image" }),
     );
-    await user.click(screen.getByRole("button", { name: "保存此镜头导演状态" }));
+    await user.click(screen.getByRole("button", { name: "Save this shot director state" }));
 
     await waitFor(() => {
       expect(saveBeatDirectorStageOverlay).toHaveBeenCalled();
@@ -2194,7 +2193,7 @@ describe("ThreeDDirectorDialog", () => {
       listener({
         kind: "staging",
         index: 0,
-        label: "马",
+        label: "Horse",
         position: [1, 0.6, 0],
         pose: null,
         actionPlaying: null,
@@ -2211,7 +2210,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText("占位形状"), "quadruped_mount");
+    await user.selectOptions(screen.getByLabelText("Staging shape"), "quadruped_mount");
 
     expect(viewerMock.setSelectedShapeHint).toHaveBeenCalledWith("quadruped_mount");
     expect(viewerMock.setSelectedPose).not.toHaveBeenCalledWith("quadruped_mount");
@@ -2227,13 +2226,13 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "俯看全场" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "看向人物" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Overview" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Look at actor" })).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("人物姿势"), "running");
+    await user.selectOptions(screen.getByLabelText("Actor pose"), "running");
     expect(viewerMock.setSelectedPose).toHaveBeenCalledWith("running");
 
-    await user.click(screen.getByRole("button", { name: "删除选中" }));
+    await user.click(screen.getByRole("button", { name: "Delete selected" }));
     expect(viewerMock.deleteSelected).toHaveBeenCalled();
   });
 
@@ -2247,7 +2246,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     await user.keyboard("f");
 
     expect(viewerMock.moveSelectedToCrosshair).toHaveBeenCalled();
@@ -2263,7 +2262,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     await user.keyboard("{ArrowUp}{ArrowDown}{ArrowLeft}{ArrowRight}");
 
     expect(viewerMock.nudgeSelected).toHaveBeenNthCalledWith(1, 0, 0, -0.1);
@@ -2282,7 +2281,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     await user.keyboard("{Delete}");
     await user.keyboard("x");
 
@@ -2299,7 +2298,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     await user.keyboard("{Shift>}{Delete}{/Shift}");
 
     expect(viewerMock.deleteSelected).toHaveBeenCalledTimes(1);
@@ -2315,17 +2314,17 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    expect(screen.queryByText("导演世界快捷键")).not.toBeInTheDocument();
+    expect(screen.queryByText("Director World shortcuts")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "?", code: "Slash", shiftKey: true, bubbles: true }),
       );
     });
 
-    expect(screen.getByText("导演世界快捷键")).toBeInTheDocument();
-    expect(screen.getByText("删除选中对象（防误删）")).toBeInTheDocument();
+    expect(screen.getByText("Director World shortcuts")).toBeInTheDocument();
+    expect(screen.getByText("Delete selected object safely")).toBeInTheDocument();
   });
 
   it("uses P to save the current beat director state", async () => {
@@ -2338,7 +2337,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "p", code: "KeyP", bubbles: true }),
@@ -2373,7 +2372,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "p", code: "KeyP", bubbles: true }),
@@ -2383,7 +2382,7 @@ describe("ThreeDDirectorDialog", () => {
     await waitFor(() => {
       expect(onSaveScene).toHaveBeenCalled();
     });
-    expect(toast.success).toHaveBeenCalledWith("已保存导演世界场景");
+    expect(toast.success).toHaveBeenCalledWith("Director World scene saved");
   });
 
   it("calibrates world rotation through the direction ball", async () => {
@@ -2395,7 +2394,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    const ball = screen.getByRole("slider", { name: "方向球" });
+    const ball = screen.getByRole("slider", { name: "Direction ball" });
     vi.spyOn(ball, "getBoundingClientRect").mockReturnValue({
       x: 0,
       y: 0,
@@ -2426,7 +2425,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    const ball = screen.getByRole("slider", { name: "方向球" });
+    const ball = screen.getByRole("slider", { name: "Direction ball" });
     vi.spyOn(ball, "getBoundingClientRect").mockReturnValue({
       x: 0,
       y: 0,
@@ -2458,7 +2457,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "U", code: "KeyU", shiftKey: true, bubbles: true }));
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "O", code: "KeyO", shiftKey: true, bubbles: true }));
@@ -2477,10 +2476,10 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute("data-active", "true");
 
-    await user.click(screen.getByRole("button", { name: /道具/ }));
+    await user.click(screen.getByRole("button", { name: /Prop/ }));
     expect(screen.getByTestId("stage-canvas")).toHaveAttribute("data-active", "true");
   });
 
@@ -2495,7 +2494,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }),
@@ -2504,7 +2503,7 @@ describe("ThreeDDirectorDialog", () => {
 
     expect(viewerMock.clearSelection).toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false, expect.anything());
-    expect(screen.getByRole("button", { name: "点击进入导演世界" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Click to enter Director World" })).toBeInTheDocument();
   });
 
   it("uses BuilderGPT physical key semantics for F", async () => {
@@ -2517,7 +2516,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "а", code: "KeyF", bubbles: true }),
@@ -2537,7 +2536,7 @@ describe("ThreeDDirectorDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "点击进入导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Click to enter Director World" }));
     act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", { key: "h", code: "KeyH", bubbles: true }),

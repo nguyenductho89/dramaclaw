@@ -1,8 +1,8 @@
 name: frontend
 
-# 前端 CI。与 frontend/Dockerfile 一致：pnpm（packageManager 锁 11.5.0）+ node 22。
-# 跑「编译 + 类型检查」(pnpm build = tsc -b && vite build) 与单元测试 (vitest)。
-# 仅在前端相关文件变更时触发，避免无关改动空跑。
+# Frontend CI. Consistent with frontend/Dockerfile: pnpm (packageManager pinned to 11.5.0) + node 22.
+# Runs "build + type check" (pnpm build = tsc -b && vite build) and unit tests (vitest).
+# Triggered only when frontend-related files change, to avoid empty runs for unrelated changes.
 
 on:
   push:
@@ -24,9 +24,9 @@ defaults:
     working-directory: frontend
 
 jobs:
-  # 硬编码中文棘轮。存量已清零，所以没有 allowlist 文件（缺文件等于空 allowlist），
-  # 任何新命中都直接失败。确需保留中文的行加 `// i18n-exempt`，整块协议值表用
-  # `// i18n-exempt-start` / `// i18n-exempt-end`。
+  # Hard-coded non-English text ratchet. Existing violations are cleared, so there is no allowlist file (a missing file equals an empty allowlist),
+  # and any new hit fails directly. Lines that must keep such text get `// i18n-exempt`, and whole protocol value tables use
+  # `// i18n-exempt-start` / `// i18n-exempt-end`.
   i18n-hardcoded-copy:
     runs-on: ubuntu-latest
     defaults:

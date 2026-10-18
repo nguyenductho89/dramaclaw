@@ -8,7 +8,7 @@ import { TaskStatusBar } from "@/components/task-center/status-bar";
 import { useTaskCenterStore } from "@/task-center/store";
 import { sampleTask } from "@/__mocks__/msw/handlers/tasks";
 import enTranslation from "../../../../public/locales/en/translation.json";
-import zhTranslation from "../../../../public/locales/zh/translation.json";
+import viTranslation from "../../../../public/locales/vi/translation.json";
 
 function renderBar(onOpenPikoStation?: () => void) {
   return render(
@@ -27,12 +27,12 @@ beforeAll(async () => {
       fallbackLng: "en",
       resources: {
         en: { translation: enTranslation },
-        zh: { translation: zhTranslation },
+        vi: { translation: viTranslation },
       },
     });
   }
   i18n.addResourceBundle("en", "translation", enTranslation, true, true);
-  i18n.addResourceBundle("zh", "translation", zhTranslation, true, true);
+  i18n.addResourceBundle("vi", "translation", viTranslation, true, true);
   await i18n.changeLanguage("en");
 });
 
@@ -43,7 +43,7 @@ beforeEach(() => {
 describe("TaskStatusBar", () => {
   it("renders idle when store is empty", () => {
     renderBar();
-    expect(screen.getByText(/idle|空闲/i)).toBeInTheDocument();
+    expect(screen.getByText(/idle/i)).toBeInTheDocument();
   });
 
   it("shows running count when any task is running", () => {
@@ -88,7 +88,7 @@ describe("TaskStatusBar", () => {
     useTaskCenterStore.getState().setHealth("reconnecting");
     renderBar();
     // Both the sr-only and the visible label exist; we just assert at least one match.
-    const matches = screen.getAllByText(/reconnecting|重新连接/i);
+    const matches = screen.getAllByText(/reconnecting/i);
     expect(matches.length).toBeGreaterThan(0);
   });
 

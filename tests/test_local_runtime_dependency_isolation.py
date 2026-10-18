@@ -35,7 +35,6 @@ def test_source_startup_docs_use_supported_local_launcher():
     documented_paths = (
         ROOT / "README.md",
         ROOT / "docs" / "en" / "getting-started" / "installation.md",
-        ROOT / "docs" / "zh" / "getting-started" / "installation.md",
     )
 
     for path in documented_paths:

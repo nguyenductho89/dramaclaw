@@ -26,13 +26,13 @@ function makeTemplate(
       `${id}/male.webp`,
       `${id}/elder.webp`,
     ],
-    style_prompt: `${label}的提示词第一行\n${label}的提示词第二行`,
+    style_prompt: `${label} prompt line one\n${label} prompt line two`,
   };
 }
 
 const TEMPLATES: FreezoneStyleTemplate[] = [
-  makeTemplate("golden_age", "黄金时代", "年代"),
-  makeTemplate("wuxia", "武侠江湖", "古装"),
+  makeTemplate("golden_age", "Golden Age", "Period"),
+  makeTemplate("wuxia", "Wuxia World", "Costume"),
 ];
 
 describe("StyleGalleryModal", () => {
@@ -47,9 +47,9 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    expect(screen.getByText("黄金时代")).toBeInTheDocument();
-    expect(screen.getByText("武侠江湖")).toBeInTheDocument();
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByText("Golden Age")).toBeInTheDocument();
+    expect(screen.getByText("Wuxia World")).toBeInTheDocument();
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "/style-gallery/golden_age/cover.webp",
     );
@@ -66,7 +66,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "https://cdn.example.com/styles/golden_age/cover.webp",
     );
@@ -83,7 +83,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    const cover = screen.getByAltText("黄金时代");
+    const cover = screen.getByAltText("Golden Age");
     const card = cover.closest("button")?.parentElement;
     expect(cover).toHaveClass("origin-top", "group-hover:scale-[1.02]");
     expect(card).toHaveClass("transition-[border-color,box-shadow]");
@@ -104,14 +104,14 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "查看黄金时代详情" }));
+    await user.click(screen.getByRole("button", { name: "View Golden Age details" }));
 
-    // 一张封面判断不了这套风格怎么处理不同人物,所以点卡片是「先看看」而不是「就它了」。
+    // A single cover cannot show how this style treats different characters, so clicking a card means "take a look" rather than "this is the one".
     expect(onSelect).not.toHaveBeenCalled();
-    expect(screen.getByAltText("黄金时代 示例 1")).toBeInTheDocument();
+    expect(screen.getByAltText("Golden Age sample 1")).toBeInTheDocument();
   });
 
-  it("the always-visible 使用 button selects without a detour", async () => {
+  it("the always-visible Use button selects without a detour", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
 
@@ -125,8 +125,8 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    // 快路径不能藏在 hover 后面 —— 键盘用户 Tab 得到它,才算这个入口存在。
-    const quickUse = screen.getByRole("button", { name: "使用黄金时代" });
+    // The quick path must not hide behind hover -- the entry only counts as existing if keyboard users can reach it with Tab.
+    const quickUse = screen.getByRole("button", { name: "Use Golden Age" });
     expect(quickUse.className).not.toContain("opacity-0");
 
     await user.click(quickUse);
@@ -148,7 +148,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "清除风格" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear style" })).toBeNull();
 
     rerender(
       <StyleGalleryModal
@@ -160,7 +160,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "清除风格" }));
+    await user.click(screen.getByRole("button", { name: "Clear style" }));
 
     expect(onSelect).toHaveBeenCalledWith(null);
   });
@@ -178,19 +178,19 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "查看黄金时代详情" }));
+    await user.click(screen.getByRole("button", { name: "View Golden Age details" }));
 
-    expect(screen.getByAltText("黄金时代 示例 1")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age sample 1")).toHaveAttribute(
       "src",
       "/style-gallery/golden_age/female.webp",
     );
-    expect(screen.getByAltText("黄金时代 示例 4")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age sample 4")).toHaveAttribute(
       "src",
       "/style-gallery/golden_age/elder.webp",
     );
     expect(
-      screen.getByText(/黄金时代的提示词第一行/),
-    ).toHaveTextContent("黄金时代的提示词第二行");
+      screen.getByText(/Golden Age prompt line one/),
+    ).toHaveTextContent("Golden Age prompt line two");
   });
 
   it("fits the detail dialog height to its content", async () => {
@@ -206,10 +206,10 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    const dialog = screen.getByRole("dialog", { name: "风格图墙" });
+    const dialog = screen.getByRole("dialog", { name: "Style gallery" });
     expect(dialog).toHaveClass("h-[min(720px,82vh)]");
 
-    await user.click(screen.getByRole("button", { name: "查看黄金时代详情" }));
+    await user.click(screen.getByRole("button", { name: "View Golden Age details" }));
 
     expect(dialog).not.toHaveClass("h-[min(720px,82vh)]");
     expect(dialog).toHaveClass("max-h-[82vh]");
@@ -229,8 +229,8 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "查看武侠江湖详情" }));
-    await user.click(screen.getByRole("button", { name: "使用" }));
+    await user.click(screen.getByRole("button", { name: "View Wuxia World details" }));
+    await user.click(screen.getByRole("button", { name: "Use" }));
 
     expect(onSelect).toHaveBeenCalledWith("wuxia");
   });
@@ -248,17 +248,17 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "古装" }));
+    await user.click(screen.getByRole("button", { name: "Costume" }));
 
     expect(
-      screen.getByRole("button", { name: "查看武侠江湖详情" }),
+      screen.getByRole("button", { name: "View Wuxia World details" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "查看黄金时代详情" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "View Golden Age details" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "全部" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
 
     expect(
-      screen.getByRole("button", { name: "查看黄金时代详情" }),
+      screen.getByRole("button", { name: "View Golden Age details" }),
     ).toBeInTheDocument();
   });
 
@@ -274,7 +274,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    expect(screen.getByText("加载中…")).toBeInTheDocument();
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
 
     rerender(
       <StyleGalleryModal
@@ -286,7 +286,7 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    expect(screen.getByText("暂无风格模板")).toBeInTheDocument();
+    expect(screen.getByText("No style templates yet")).toBeInTheDocument();
   });
 
   it("returns from the detail view to the gallery", async () => {
@@ -302,13 +302,13 @@ describe("StyleGalleryModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "查看黄金时代详情" }));
-    expect(screen.queryByRole("button", { name: "查看武侠江湖详情" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "View Golden Age details" }));
+    expect(screen.queryByRole("button", { name: "View Wuxia World details" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "返回" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
 
     expect(
-      screen.getByRole("button", { name: "查看武侠江湖详情" }),
+      screen.getByRole("button", { name: "View Wuxia World details" }),
     ).toBeInTheDocument();
   });
 });
@@ -316,7 +316,7 @@ describe("StyleGalleryModal", () => {
 describe("resolveStyleSelectionState", () => {
   const template = TEMPLATES[0];
 
-  it("没选就是没选", () => {
+  it("no selection stays no selection", () => {
     expect(
       resolveStyleSelectionState(null, null, {
         isLoading: false,
@@ -325,7 +325,7 @@ describe("resolveStyleSelectionState", () => {
     ).toBe("none");
   });
 
-  it("选了且查得到才是 ready", () => {
+  it("selected and found is ready", () => {
     expect(
       resolveStyleSelectionState("golden_age", template, {
         isLoading: false,
@@ -334,9 +334,9 @@ describe("resolveStyleSelectionState", () => {
     ).toBe("ready");
   });
 
-  // 下面三种都会让 describeStyleSelection 返回 null，但成因完全不同，
-  // UI 不能一律显示成「未选择风格」—— 那个 id 还在跟着生成请求走。
-  it("清单还在路上是 loading", () => {
+  // All three below make describeStyleSelection return null, but for completely different reasons,
+  // and the UI must not always show "no style selected" -- that id is still being sent with the generation request.
+  it("a list still on its way is loading", () => {
     expect(
       resolveStyleSelectionState("golden_age", null, {
         isLoading: true,
@@ -345,7 +345,7 @@ describe("resolveStyleSelectionState", () => {
     ).toBe("loading");
   });
 
-  it("清单拉取失败是 failed", () => {
+  it("a failed list fetch is failed", () => {
     expect(
       resolveStyleSelectionState("golden_age", null, {
         isLoading: false,
@@ -354,7 +354,7 @@ describe("resolveStyleSelectionState", () => {
     ).toBe("failed");
   });
 
-  it("清单到了但 id 不在里面是 missing", () => {
+  it("a list that arrived without the id is missing", () => {
     expect(
       resolveStyleSelectionState("three_oclock_2300", null, {
         isLoading: false,

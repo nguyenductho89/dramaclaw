@@ -4,12 +4,12 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { DownloadPage } from "@/components/download/DownloadPage";
 
 /**
- * 桌面客户端下载页。与 /login 一样挂在根路由下(不进 _app),
- * 因此不需要登录也能打开 —— 这是一张对外的落地页。
+ * Desktop client download page. Like /login it is mounted under the root route (not in _app),
+ * so it can be opened without logging in - it is a public landing page.
  *
- * 走 lazy route:这一页(页面 + 手绘预览 SVG + 独立那套 CSS)只有访问 /download
- * 的人用得上,静态 import 会把它整个焊进主 chunk,登录页和项目页的用户白付一份
- * 下载与解析成本。
+ * It uses a lazy route: this page (page + hand-drawn preview SVG + its own CSS) is only needed by people who visit /download,
+ * and a static import would weld it all into the main chunk, making login page and project page users pay for
+ * download and parse cost for nothing.
  */
 export const Route = createLazyFileRoute("/download")({
   component: DownloadPage,

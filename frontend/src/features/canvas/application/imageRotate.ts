@@ -18,12 +18,12 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { loadImageElement } from './imageData';
 
 /**
- * 预建「旋转结果」节点（从 SelectedNodeOverlay.handleOpenRotate 原样搬出，语义
- * 零变化）：在源图片节点下游建一个以源图为预览的 exportImage 节点并连边——旋转
- * 是对这个新节点原地写回（RotateEditorOverlay / 详情平面行随后对它调
- * {@link rotateImageInPlace}），源图保持不动。
+ * Pre-build the "rotate result" node (moved verbatim out of SelectedNodeOverlay.handleOpenRotate, with zero
+ * semantic change): build an exportImage node downstream of the source image node previewing the source image and connect an edge - rotation
+ * writes back in place onto this new node (RotateEditorOverlay / the detail flat row then calls
+ * {@link rotateImageInPlace} on it), and the source image stays untouched.
  *
- * @returns 新建结果节点 id；源节点不存在 / 类型不支持 / 无图源时返回 null。
+ * @returns the new result node id; null when the source node does not exist / the type is unsupported / there is no image source.
  */
 export function createRotateResultNode(
   sourceNodeId: string,
@@ -73,32 +73,32 @@ export function createRotateResultNode(
 }
 
 /**
- * 丢弃预建的「旋转结果」节点（预建 / 取消删除生命周期的函数化）：用户退出 /
- * 按 Esc / 未做任何变换就关闭时调用，否则会凭空多出一个节点。
+ * Discard the pre-built "rotate result" node (functionalizing the pre-build / cancel-delete lifecycle): called when the user exits /
+ * presses Esc / closes without any transform, otherwise a node would appear from nowhere.
  */
 export function discardRotateResultNode(nodeId: string): void {
   useCanvasStore.getState().deleteNode(nodeId);
 }
 
 export interface RotateTransform {
-  /** 旋转角度（度，0-360，顺时针）。 */
+  /** Rotation angle (degrees, 0-360, clockwise). */
   angleDeg: number;
   mirrorH: boolean;
   mirrorV: boolean;
 }
 
-/** 无任何变换（角度 0 且无镜像）——调用方据此走「未提交」关闭路径。 */
+/** No transform at all (angle 0 and no mirroring) - the caller takes the "not committed" close path accordingly. */
 export function isIdentityRotateTransform(transform: RotateTransform): boolean {
   return transform.angleDeg === 0 && !transform.mirrorH && !transform.mirrorV;
 }
 
 /**
- * 旋转 / 镜像并原地写回（从 RotateEditorOverlay.handleSave 原样搬出，语义零变化）：
- * 本地 canvas 旋转（画布扩大到能容纳任意角度的四角）→ 上传 PNG →
- * 把新 url / 新 aspectRatio 原地写回该节点；失败把错误写到该节点。
+ * Rotate / mirror and write back in place (moved verbatim out of RotateEditorOverlay.handleSave, with zero semantic change):
+ * local canvas rotation (the canvas is enlarged to hold the four corners at any angle) -> upload PNG ->
+ * write the new url / new aspectRatio back to that node in place; on failure write the error to that node.
  *
- * @returns 后台链 settle 时 resolve 的 Promise（不 reject）；缺 project 时不落
- *   任何状态、返回 null（调用方可据此保留编辑态或回收预建节点）。
+ * @returns a Promise that resolves when the background chain settles (never rejects); when project is missing it lands no
+ *   state and returns null (the caller can use this to keep the editing state or reclaim the pre-built node).
  */
 export function rotateImageInPlace(
   nodeId: string,
@@ -124,7 +124,7 @@ export function rotateImageInPlace(
       const sw = image.naturalWidth;
       const sh = image.naturalHeight;
 
-      // 旋转后的画布需要包含图片所有四角（任意角度）。
+      // The rotated canvas must contain all four corners of the image (at any angle).
       const rad = (transform.angleDeg * Math.PI) / 180;
       const cos = Math.abs(Math.cos(rad));
       const sin = Math.abs(Math.sin(rad));

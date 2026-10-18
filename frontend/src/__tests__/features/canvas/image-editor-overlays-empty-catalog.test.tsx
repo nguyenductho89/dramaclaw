@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 超分 / 重绘两个面板：后台一个图片模型都没配时必须禁用提交。
+// The upscale / repaint panels: submit must be disabled when the backend has no image model configured.
 //
-// 这两个面板原来都在选模型的尾巴上挂了 `?? SHARED_MODELS.find(...)`：目录明明
-// 是空的（接口成功返回空列表 = 后台的权威答案），面板却拿前端硬编码的模型顶上
-// 去，界面显示一切正常，用户点下去才被后端 `_resolve_catalog_request` 用 409 顶
-// 回来。拉取失败时的兜底是对的（不然接口一抖用户就干不了活），把「没配」伪装成
-// 「有」是错的。
+// Both panels used to tail their model selection with `?? SHARED_MODELS.find(...)`: the catalog was clearly
+// empty (the endpoint returned an empty list successfully = the backend's authoritative answer), yet the panel propped itself up with a frontend hard-coded model,
+// the UI looked perfectly normal, and only when the user clicked was it bounced back by the backend `_resolve_catalog_request` with a 409.
+// The fallback on fetch failure is right (otherwise the user could do nothing at the slightest endpoint hiccup), but disguising "not configured" as
+// "configured" is wrong.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,7 +14,7 @@ import { UpscaleEditorOverlay } from "@/features/canvas/ui/UpscaleEditorOverlay"
 import { RedrawOverlay } from "@/features/canvas/ui/RedrawOverlay";
 import type { CanvasNode } from "@/features/canvas/domain/canvasNodes";
 
-// NodeToolbar 要挂在真的 ReactFlow store 上才渲染内容，这里只关心工具条里的按钮。
+// NodeToolbar renders content only when mounted on a real ReactFlow store; here only the buttons in the toolbar matter.
 vi.mock("@xyflow/react", () => ({
   NodeToolbar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Position: { Top: "top", Bottom: "bottom" },
@@ -57,8 +57,8 @@ const EMPTY_CATALOG: ImageCatalogState = {
 
 let imageCatalogState: ImageCatalogState = LOADED_CATALOG;
 
-// 只替换取数的 hook；`isAuthoritativeEmptyCatalog` 是纯函数判据，面板正是
-// 靠它决定禁不禁用提交，必须留真实实现。
+// Only the data-fetching hook is replaced; `isAuthoritativeEmptyCatalog` is a pure predicate that the panel
+// uses to decide whether to disable submit, so the real implementation must stay.
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/features/canvas/hooks/useFreezoneImageModels")
@@ -127,8 +127,8 @@ beforeEach(() => {
   useGenerationCreditCost.mockReturnValue({ data: undefined, error: null });
 });
 
-describe("超分面板", () => {
-  it("后台一个图片模型都没配时禁用提交，点了也不发请求", () => {
+describe("upscale panel", () => {
+  it("disables submit and sends no request when the backend has no image model configured", () => {
     imageCatalogState = EMPTY_CATALOG;
     render(<UpscaleEditorOverlay node={UPSCALE_NODE} />);
 
@@ -138,7 +138,7 @@ describe("超分面板", () => {
     expect(submitFreezoneUpscale).not.toHaveBeenCalled();
   });
 
-  it("拉取失败回落到兜底列表时照常可提交", async () => {
+  it("submit still works when a fetch failure falls back to the fallback list", async () => {
     imageCatalogState = {
       models: [CATALOG_MODEL],
       isLoading: false,
@@ -152,8 +152,8 @@ describe("超分面板", () => {
   });
 });
 
-describe("重绘面板", () => {
-  it("后台一个图片模型都没配时禁用提交", () => {
+describe("repaint panel", () => {
+  it("disables submit when the backend has no image model configured", () => {
     imageCatalogState = EMPTY_CATALOG;
     render(
       <RedrawOverlay

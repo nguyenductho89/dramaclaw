@@ -73,7 +73,7 @@ export function CanvasZoomControl({
     [zoomTo],
   );
 
-  // ⌘/Ctrl + (=) 放大、- 缩小、0 适合屏幕。preventDefault 拦掉浏览器自身的页面缩放。
+  // Cmd/Ctrl + (=) zoom in, - zoom out, 0 fit to screen. preventDefault blocks the browser's own page zoom.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
@@ -93,7 +93,7 @@ export function CanvasZoomControl({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleFitView, handleZoomIn, handleZoomOut]);
 
-  // 点击菜单外部关闭。
+  // Click outside the menu to close.
   useEffect(() => {
     if (!menuOpen) return;
     const handlePointerDown = (event: PointerEvent) => {

@@ -12,13 +12,13 @@ def test_identity_runner_result_includes_auto_promoted_characters():
         resolved_count=3,
         identities=[
             {
-                "character_name": "陆辰",
-                "identity_id": "陆辰_默认",
-                "identity_name": "默认",
+                "character_name": "Luke",
+                "identity_id": "Luke_default",
+                "identity_name": "default",
                 "appearance_details": "",
             }
         ],
-        auto_promoted_characters=["陆辰"],
+        auto_promoted_characters=["Luke"],
     )
 
     assert result == {
@@ -27,13 +27,13 @@ def test_identity_runner_result_includes_auto_promoted_characters():
         "resolved_count": 3,
         "identities": [
             {
-                "character_name": "陆辰",
-                "identity_id": "陆辰_默认",
-                "identity_name": "默认",
+                "character_name": "Luke",
+                "identity_id": "Luke_default",
+                "identity_name": "default",
                 "appearance_details": "",
             }
         ],
-        "auto_promoted_characters": ["陆辰"],
+        "auto_promoted_characters": ["Luke"],
     }
 
 
@@ -74,7 +74,7 @@ async def test_identity_runner_preserves_task_billing_context(monkeypatch):
                 identities=[
                     SimpleNamespace(
                         identity_id="hero_default",
-                        identity_name="默认",
+                        identity_name="default",
                         appearance_details="black coat",
                     )
                 ],

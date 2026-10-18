@@ -66,14 +66,14 @@ import {
 const OUTPAINT_NUM_IMAGES = [1, 2, 3, 4] as const;
 type OutpaintNumImages = (typeof OUTPAINT_NUM_IMAGES)[number];
 
-// 数量 > 1 时多个结果节点纵向错开摆放的间距。
+// Spacing by which multiple result nodes are staggered vertically when count > 1.
 const RESULT_STACK_GAP = 24;
 
 /**
- * 扩图比例的展示元数据（图标 / 文案 / 用于画裁剪框的数值比）。
+ * Display metadata of outpaint ratios (icon / text / numeric ratio used to draw the crop frame).
  *
- * 这里只描述「某个比例长什么样」，**哪些比例可选**由后台对所选模型配置的
- * ratioOptions 决定 —— 见 `useOutpaintAspectOptions`。
+ * This only describes "what a ratio looks like", while **which ratios are selectable** is decided by the ratioOptions the backend configures for the selected model
+ * - see `useOutpaintAspectOptions`.
  */
 const OUTPAINT_ASPECT_META: {
   value: FreezoneOutpaintAspectRatio;
@@ -111,16 +111,16 @@ export const OutpaintEditorOverlay = memo(
     const [modelId, setModelId] = useState<string>(DEFAULT_SHARED_MODEL_ID);
     const imageCatalog = useFreezoneImageModels();
     const availableModels = imageCatalog.models;
-    // 后台确实一个图片模型都没配时禁止提交：后端 `_resolve_catalog_request`
-    // 对空目录直接 409，让用户点一下再收报错是最糟的体验。
+    // Submission is forbidden when the backend has really configured not a single image model: the backend `_resolve_catalog_request`
+    // returns 409 straight away for an empty catalog, and making the user click once only to receive an error is the worst experience.
     const catalogIsEmpty = isAuthoritativeEmptyCatalog(imageCatalog);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // 目录为空时故意让 selectedModel 保持 undefined。原来这里尾巴上还挂着
-    // `?? SHARED_MODELS.find(...)`，等于把前端硬编码的模型当成可用模型复活，
-    // 正是「后台没配模型，界面照样显示能用」的来源。
+    // When the catalog is empty, deliberately leave selectedModel undefined. There used to be a trailing
+    // `?? SHARED_MODELS.find(...)` here, which revives the frontend hard-coded model as an available one -
+    // exactly the source of "the backend configured no model yet the UI still looks usable".
     const selectedModel =
       availableModels.find((m) => m.id === modelId) ?? availableModels[0];
-    // 分辨率 / 比例 / 画质都跟随后台对该模型的配置，换模型时把越界的旧选择收回。
+    // Resolution / ratio / quality all follow the backend's config for that model, and out-of-range old selections are pulled back when the model changes.
     const sizeOptions = useMemo(
       () => resolveModelSizeOptions(selectedModel),
       [selectedModel],
@@ -129,7 +129,7 @@ export const OutpaintEditorOverlay = memo(
       () =>
         OUTPAINT_ASPECT_META.filter(
           (option) =>
-            // original 是扩图接口自带的「保持原图比例」语义，恒定可选。
+            // original is the "keep the original aspect ratio" semantics built into the outpaint endpoint, and is always selectable.
             option.value === 'original'
             || resolveModelAspectOptions(selectedModel).includes(option.value),
         ),
@@ -200,7 +200,7 @@ export const OutpaintEditorOverlay = memo(
     const horizontalExtension = Math.max(0, (frame.width - nodeWidth) / 2);
     const bottomToolbarOffset = verticalExtension + 12;
 
-    // 建一个 loading 结果节点并连边，立即返回节点 id（同步，不等待生成）。
+    // Build a loading result node and connect an edge, returning the node id immediately (synchronous, not waiting for generation).
     const createOutpaintNode = useCallback(
       (sourceAspectRatio: string, position: { x: number; y: number }) => {
         const generationStartedAt = Date.now();
@@ -231,7 +231,7 @@ export const OutpaintEditorOverlay = memo(
       [addEdge, addNode, effectiveAspectRatio, node, t],
     );
 
-    // 针对已建好的节点提交单图扩图（num_images=1）→ 轮询 → 回填。
+    // Submit a single-image outpaint (num_images=1) for the already built node -> poll -> backfill.
     const runOutpaintGeneration = useCallback(
       async (project: string, nodeId: string, apiModel: string) => {
         try {
@@ -239,11 +239,11 @@ export const OutpaintEditorOverlay = memo(
             sourceUrl: imageSource.split('?')[0],
             targetAspectRatio: effectiveAspectRatio,
             numImages: 1,
-            // 必须是 effectiveImageSize：`imageSize` 是用户上一次挑的原始档位，换模型后
-            // 后台可能根本不给这一档（sizeOptions 里没有），UI 上显示的、报价用的都是
-            // 收敛后的 effectiveImageSize，只有提交带着越界的旧值——报价与执行对不上，
-            // 后端还会按目录 schema 判非法。而且 deps 里本来就只有 effectiveImageSize，
-            // 这里读 imageSize 连闭包都是旧的。
+            // It must be effectiveImageSize: `imageSize` is the raw tier the user picked last time, and after switching models
+            // the backend may not offer that tier at all (not in sizeOptions); what the UI shows and the quote uses are both the converged
+            // effectiveImageSize, and only the submission would carry the stale out-of-range value - the quote and the execution would not match,
+            // and the backend would also judge it illegal per the catalog schema. And deps only has effectiveImageSize,
+            // so reading imageSize here would even be a stale closure.
             imageSize: effectiveImageSize,
             model: apiModel,
           });
@@ -263,8 +263,8 @@ export const OutpaintEditorOverlay = memo(
             ...GENERATION_ERROR_CLEARED_PATCH,
           });
         } catch (err) {
-          // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-          // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+          // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+          // Writing an error banner would mark a live task as failed and clear the handle.
           if (isTaskPollTimeoutError(err)) {
             notifyTaskStillRunning(t);
             return;
@@ -282,7 +282,7 @@ export const OutpaintEditorOverlay = memo(
     );
 
     const handleSubmit = useCallback(async () => {
-      // 按钮已经禁用，这里再挡一道：没有可用模型就绝不该发出请求。
+      // The button is already disabled, so block once more here: with no available model a request must never be sent.
       if (isSubmitting || catalogIsEmpty) return;
       const project = readUrl().project;
       if (!project) {
@@ -303,8 +303,8 @@ export const OutpaintEditorOverlay = memo(
 
       setIsSubmitting(true);
       try {
-        // 后端 outpaint 单次仅出 1 张：选了 N 张就建 N 个 loading 节点（纵向错开）
-        // 并发起 N 次单图请求，每个节点各自独立轮询/回填/报错。
+        // The backend outpaint produces only 1 image at a time: choosing N images builds N loading nodes (staggered vertically)
+        // and launches N single-image requests, each node polling/backfilling/reporting errors independently.
         const count = Math.max(1, numImages);
         const nodeIds = Array.from({ length: count }, (_unused, i) =>
           createOutpaintNode(sourceAspectRatio, {
@@ -458,7 +458,7 @@ OutpaintEditorOverlay.displayName = 'OutpaintEditorOverlay';
 
 interface AspectRatioPickerProps {
   value: FreezoneOutpaintAspectRatio;
-  /** 当前模型允许的比例（已按后台配置筛过），不再由本文件写死。 */
+  /** The ratios the current model allows (already filtered by the backend config), no longer hard-coded in this file. */
   options: typeof OUTPAINT_ASPECT_META;
   onChange: (next: FreezoneOutpaintAspectRatio) => void;
 }

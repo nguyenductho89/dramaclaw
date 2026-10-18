@@ -10,53 +10,53 @@ import pytest
 from novelvideo.knowledge_pipeline import KNOWLEDGE_PIPELINE_KEY, KNOWLEDGE_PIPELINE_STRUCTURED
 from novelvideo.story_analysis import chunk_source_text, source_sha256
 
-DRAMA_TEXT = """第一集
+DRAMA_TEXT = """EPISODE 1
 
-1-1 林家客厅 日 内
-人物：林默、林母
-林默推开门。
-林母抬头看他。
+1-1 Lin family living room DAY INT
+Characters: Lin Mo, Mother Lin
+Lin Mo pushed open the door.
+Mother Lin looked up at him.
 
-1-2 巷口 夜 外
-人物：林默
-林默独自走过巷口。
+1-2 Alley entrance NIGHT EXT
+Characters: Lin Mo
+Lin Mo walked past the alley entrance alone.
 
-1-3 林家客厅 夜 内
-人物：林默
-林默坐在沙发上发呆。
+1-3 Lin family living room NIGHT INT
+Characters: Lin Mo
+Lin Mo sat on the sofa, spacing out.
 """
 
-NARRATED_TEXT = """第一章 归来
+NARRATED_TEXT = """Chapter 1 Homecoming
 
-林默回到阔别十年的故乡。
-街道还是老样子。
+Lin Mo returned to his hometown after ten years away.
+The streets were just as before.
 
-第二章 旧友
+Chapter 2 Old Friend
 
-他在巷口遇见了旧友。
+He met an old friend at the mouth of the alley.
 
-第三章 真相
+Chapter 3 The Truth
 
-旧友告诉他一个秘密。
+The old friend told him a secret.
 """
 
 
 def _padded(body: str) -> str:
     """Pad a section past the packing target so it stays its own chunk."""
-    return body + "\n" + "闲笔叙述。" * 640 + "\n"
+    return body + "\n" + "Filler. " * 640 + "\n"
 
 
 DRAMA_LONG = (
-    "第一集\n\n"
-    + "1-1 林家客厅 日 内\n人物：林默、林母\n" + _padded("林默推开门。林母抬头看他。")
-    + "\n1-2 巷口 夜 外\n人物：林默\n" + _padded("林默独自走过巷口。")
-    + "\n1-3 林家客厅 夜 内\n人物：林默\n" + _padded("林默坐在沙发上发呆。")
+    "EPISODE 1\n\n"
+    + "1-1 Lin family living room DAY INT\nCharacters: Lin Mo, Mother Lin\n" + _padded("Lin Mo pushed open the door. Mother Lin looked up at him.")
+    + "\n1-2 Alley entrance NIGHT EXT\nCharacters: Lin Mo\n" + _padded("Lin Mo walked past the alley entrance alone.")
+    + "\n1-3 Lin family living room NIGHT INT\nCharacters: Lin Mo\n" + _padded("Lin Mo sat on the sofa, spacing out.")
 )
 
 NARRATED_LONG = (
-    "第一章 归来\n\n" + _padded("林默回到阔别十年的故乡。街道还是老样子。")
-    + "\n第二章 旧友\n\n" + _padded("他在巷口遇见了旧友。")
-    + "\n第三章 真相\n\n" + _padded("旧友告诉他一个秘密。")
+    "Chapter 1 Homecoming\n\n" + _padded("Lin Mo returned to his hometown after ten years away. The streets were just as before.")
+    + "\nChapter 2 Old Friend\n\n" + _padded("He met an old friend at the mouth of the alley.")
+    + "\nChapter 3 The Truth\n\n" + _padded("The old friend told him a secret.")
 )
 
 
@@ -98,8 +98,8 @@ def test_drama_chunks_are_ordered_and_non_overlapping():
 def test_drama_chunk_keeps_its_scene_body():
     chunks = chunk_source_text(DRAMA_LONG, "drama")
     joined = [chunk.text for chunk in chunks]
-    assert any("林母抬头看他" in text for text in joined)
-    assert any("林默独自走过巷口" in text for text in joined)
+    assert any("Mother Lin looked up at him" in text for text in joined)
+    assert any("Lin Mo walked past the alley entrance alone" in text for text in joined)
 
 
 def test_narrated_chunks_split_on_chapters():
@@ -111,14 +111,14 @@ def test_narrated_chunks_split_on_chapters():
 
 def test_narrated_chapter_offsets_land_on_chapter_starts():
     chunks = chunk_source_text(NARRATED_LONG, "narrated")
-    assert chunks[0].text.startswith("第一章")
-    assert chunks[1].text.startswith("第二章")
-    assert "旧友告诉他一个秘密" in chunks[2].text
+    assert chunks[0].text.startswith("Chapter 1")
+    assert chunks[1].text.startswith("Chapter 2")
+    assert "The old friend told him a secret" in chunks[2].text
 
 
 def test_prose_without_chapter_markers_falls_back_to_windows():
     """A malformed import must still produce analysable chunks."""
-    text = "没有任何章节标记的长文。" * 2000
+    text = "A long text without any chapter markers. " * 2000
     chunks = chunk_source_text(text, "narrated")
     assert chunks
     assert all(chunk.section_type == "window" for chunk in chunks)
@@ -127,7 +127,7 @@ def test_prose_without_chapter_markers_falls_back_to_windows():
 
 
 def test_window_fallback_overlaps_so_boundaries_are_not_lost():
-    text = "甲" * 20000
+    text = "A" * 20000
     chunks = chunk_source_text(text, "narrated")
     assert len(chunks) > 1
     for earlier, later in zip(chunks, chunks[1:]):
@@ -253,7 +253,7 @@ async def test_reimporting_identical_text_reuses_the_run(structured_project, tmp
     )
     chunks = await store.list_analysis_chunks(first["run_id"])
     await store.mark_analysis_chunk_done(
-        first["run_id"], chunks[0]["chunk_id"], json.dumps({"characters": ["林默"]})
+        first["run_id"], chunks[0]["chunk_id"], json.dumps({"characters": ["Lin Mo"]})
     )
 
     second = await ingest_source_text_structured(
@@ -264,7 +264,7 @@ async def test_reimporting_identical_text_reuses_the_run(structured_project, tmp
     after = await store.list_analysis_chunks(first["run_id"])
     done = [chunk for chunk in after if chunk["status"] == "done"]
     assert len(done) == 1
-    assert json.loads(done[0]["result_json"]) == {"characters": ["林默"]}
+    assert json.loads(done[0]["result_json"]) == {"characters": ["Lin Mo"]}
 
 
 async def test_pre_language_analysis_run_is_retained_but_not_reused(
@@ -316,7 +316,7 @@ async def test_changing_the_text_starts_a_new_run(structured_project, tmp_path):
         store, str(novel), spine_template="narrated"
     )
 
-    novel.write_text(NARRATED_LONG + "\n第四章 结局\n\n" + _padded("他终于释怀。"), encoding="utf-8")
+    novel.write_text(NARRATED_LONG + "\nChapter 4 Ending\n\n" + _padded("He finally let go."), encoding="utf-8")
     second = await ingest_source_text_structured(
         store, str(novel), spine_template="narrated"
     )
@@ -331,7 +331,7 @@ async def test_novel_txt_is_not_written_when_import_fails(structured_project, tm
 
     store, state_dir = structured_project
     novel = tmp_path / "script.txt"
-    novel.write_text("这是一段没有任何场景头的正文。\n", encoding="utf-8")
+    novel.write_text("This is body text without any scene headings.\n", encoding="utf-8")
 
     with pytest.raises(ValueError):
         await ingest_source_text_structured(store, str(novel), spine_template="drama")
@@ -382,20 +382,20 @@ async def test_entity_evidence_round_trips(structured_project, tmp_path):
     await store.replace_entity_evidence(
         result["run_id"],
         "character",
-        "林默",
+        "Lin Mo",
         [
             {
                 "chunk_id": "chapter-0000",
                 "source_start": 0,
                 "source_end": 10,
                 "evidence_kind": "mention",
-                "evidence_text": "林默回到阔别十年的故乡",
+                "evidence_text": "Lin Mo returned to his hometown after ten years away",
             }
         ],
     )
-    rows = await store.list_entity_evidence("character", "林默")
+    rows = await store.list_entity_evidence("character", "Lin Mo")
     assert len(rows) == 1
-    assert rows[0]["evidence_text"] == "林默回到阔别十年的故乡"
+    assert rows[0]["evidence_text"] == "Lin Mo returned to his hometown after ten years away"
 
 
 async def test_replacing_evidence_does_not_accumulate_duplicates(
@@ -417,13 +417,13 @@ async def test_replacing_evidence_does_not_accumulate_duplicates(
             "source_start": 0,
             "source_end": 10,
             "evidence_kind": "mention",
-            "evidence_text": "林默",
+            "evidence_text": "Lin Mo",
         }
     ]
-    await store.replace_entity_evidence(result["run_id"], "character", "林默", evidence)
-    await store.replace_entity_evidence(result["run_id"], "character", "林默", evidence)
+    await store.replace_entity_evidence(result["run_id"], "character", "Lin Mo", evidence)
+    await store.replace_entity_evidence(result["run_id"], "character", "Lin Mo", evidence)
 
-    assert len(await store.list_entity_evidence("character", "林默")) == 1
+    assert len(await store.list_entity_evidence("character", "Lin Mo")) == 1
 
 
 # ── AI planning rejection ───────────────────────────────────────────────────
@@ -582,12 +582,12 @@ def test_short_neighbouring_sections_are_packed_into_one_chunk():
     assert chunks[0].source_start == 0
     assert chunks[0].text == DRAMA_TEXT
     # Everyone named across the packed scenes is still carried.
-    assert "林母" in chunks[0].characters
+    assert "Mother Lin" in chunks[0].characters
 
 
 def test_packing_stops_at_the_target_size():
     chunks = chunk_source_text(DRAMA_LONG, "drama")
-    # The "第一集" line before the first scene heading is its own preamble chunk.
+    # The "EPISODE 1" line before the first scene heading is its own preamble chunk.
     assert len(chunks) == 4
     for chunk in chunks:
         assert DRAMA_LONG[chunk.source_start : chunk.source_end] == chunk.text
@@ -605,12 +605,12 @@ def test_packing_never_loses_or_duplicates_source():
 def test_text_before_the_first_scene_heading_is_still_analysed():
     """A synopsis or cast list is the densest description a script has."""
     script = (
-        "《测试剧》\n\n人物小传：\n【林默】：22岁，性格沉静。\n\n"
-        "1-1 林家客厅 日 内\n人物：林默\n林默推开门。\n"
+        "<Test Drama>\n\nCharacter Bios:\n[Lin Mo]: 22 years old, calm personality.\n\n"
+        "1-1 Lin family living room DAY INT\nCharacters: Lin Mo\nLin Mo pushed open the door.\n"
     )
     chunks = chunk_source_text(script, "drama")
     assert chunks[0].source_start == 0
-    assert "人物小传" in "".join(c.text for c in chunks)
+    assert "Character Bios" in "".join(c.text for c in chunks)
 
 
 def test_text_before_the_first_chapter_marker_is_still_analysed():
@@ -620,19 +620,19 @@ def test_text_before_the_first_chapter_marker_is_still_analysed():
     it is exactly the passage that names and describes the cast.
     """
     novel = (
-        "《测试小说》\n\n人物小传：\n【林默】：22岁，性格沉静。\n\n"
+        "<Test Novel>\n\nCharacter Bios:\n[Lin Mo]: 22 years old, calm personality.\n\n"
         + NARRATED_LONG
     )
     chunks = chunk_source_text(novel, "narrated")
     assert chunks[0].source_start == 0
-    assert "人物小传" in chunks[0].text
+    assert "Character Bios" in chunks[0].text
 
 
 def test_every_spine_covers_the_whole_source_without_gaps():
     """Nothing may fall between two chunks, whichever way the source is cut."""
     for text, spine in (
-        ("《剧》\n\n人物小传：\n【林默】\n\n" + DRAMA_LONG, "drama"),
-        ("《书》\n\n人物小传：\n【林默】\n\n" + NARRATED_LONG, "narrated"),
+        ("<Drama>\n\nCharacter Bios:\n[Lin Mo]\n\n" + DRAMA_LONG, "drama"),
+        ("<Book>\n\nCharacter Bios:\n[Lin Mo]\n\n" + NARRATED_LONG, "narrated"),
     ):
         chunks = chunk_source_text(text, spine)
         assert chunks[0].source_start == 0

@@ -33,13 +33,13 @@ def test_subject_body_hints_resolve_from_identity_level_body_type():
             "body_type": "fallback character-level build",
             "identities": [
                 {
-                    "identity_name": "幼年时期",
+                    "identity_name": "child",
                     "body_type": "Small, soft toddler build with round cheeks",
                 }
             ],
         }
     }
-    beat = {"detected_identities": ["Nam_幼年时期"]}
+    beat = {"detected_identities": ["Nam_child"]}
     hints = grid.qwen_edit_subject_body_hints(character_map, beat)
     assert hints == ["Small, soft toddler build with round cheeks"]
 

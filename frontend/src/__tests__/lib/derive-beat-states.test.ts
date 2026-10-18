@@ -128,7 +128,7 @@ describe("deriveBeatStates", () => {
           beat_number: 3,
           narration_segment: "",
           audio_type: "silence",
-          visual_description: "海棠花开满墙头",
+          visual_description: "Crabapple blossoms cover the wall",
         }),
       ],
       [],

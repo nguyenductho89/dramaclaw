@@ -15,8 +15,8 @@
 //   - if no '/' → entire string treated as model, provider left as null
 //     (backend falls back to NANOBANANA_PROVIDER env)
 //   - extraParams.quality is forwarded for openai gpt-image-2
-//   - payload.modelParams is forwarded verbatim as `model_params` (媒体模型目录
-//     声明的动态参数，后端按目录 schema 校验)
+//   - payload.modelParams is forwarded verbatim as `model_params` (dynamic parameters declared by the media model
+//     catalog, validated by the backend against the catalog schema)
 
 import {
   fetchFreezoneJobResult,
@@ -147,7 +147,7 @@ async function submitJob(
   //      is the per-node override.
   //   2. Merge with canvas-level shot metadata (per-node wins on conflict).
   //   3. Strip the inline block from the prompt body, then append rendered
-  //      metadata so the model sees a single uniform "[镜头参数]" block.
+  //      metadata so the model sees a single uniform "[Camera parameters]" block.
   const { cleaned: afterShotClean, override: nodeShot } = parseInlineShotBlock(
     effectivePrompt,
   );
@@ -168,9 +168,9 @@ async function submitJob(
 
   const finalPrompt = `${cleanedPrompt}${shotSuffix}${roleSuffix}`;
 
-  // 模式兜底：调用方没给模式时按「有没有参考图」推导 —— 下面正是按这一条分流去
-  // /freezone/gen 还是 /freezone/edit，所以这个推导与实际走的路由天然一致。
-  // 后端按模式过滤目录参数，模式为空等于把声明了 modes 的 model_params 全丢掉。
+  // Mode fallback: when the caller gives no mode, derive it by "whether there is a reference image" - the code below branches on exactly this to go to
+  // /freezone/gen or /freezone/edit, so this derivation is naturally consistent with the route actually taken.
+  // The backend filters catalog parameters by mode, and an empty mode amounts to dropping all model_params that declare modes.
   const genMode = payload.generationMode
     ?? (refs.length === 0 ? "text_to_image" : "image_to_image");
 
@@ -186,8 +186,8 @@ async function submitJob(
       modelId: payload.modelId,
       genMode,
       quality,
-      // 目录声明的动态参数（model_params）。之前这里没带，节点上填的目录参数
-      // 一路收集到提交前被整个丢掉——用户改了没有任何效果，也没有任何提示。
+      // Dynamic parameters declared by the catalog (model_params). They were not carried here before; the catalog parameters filled in on the node
+      // were collected all the way to before submission and then dropped entirely - the user's changes had no effect and no hint either.
       modelParams: payload.modelParams,
       canvasId,
       nodeId: payload.nodeId,
@@ -251,8 +251,8 @@ export const freezoneAiGateway: AiGateway = {
         const rec = jobs.get(ref.job_id);
         if (rec) {
           if (isTaskPollTimeoutError(err)) {
-            // 脱离监听 ≠ 失败：后端可能仍在跑，报 failed 会让调用方写红色错误
-            // 并清掉节点状态。标成 detached，由调用方给中性提示。
+            // Detaching from listening != failure: the backend may still be running, and reporting failed would make the caller write a red error
+            // and clear the node state. Mark it detached, and the caller gives a neutral hint.
             rec.status = "detached";
             rec.error = undefined;
           } else {
@@ -263,8 +263,8 @@ export const freezoneAiGateway: AiGateway = {
         throw err;
       });
     jobs.set(ref.job_id, { ref, projectId, promise, status: "running" });
-    // ref 一并回给调用方:jobs 是模块级 Map,刷新就没了,只有把后端句柄落到
-    // 节点上,脱离监听后才接得回来（见 SubmittedImageJob 注释）。
+    // The ref is also passed back to the caller: jobs is a module-level Map and is gone on refresh, and only by landing the backend handle
+    // on the node can it be picked up again after detaching from listening (see the SubmittedImageJob note).
     return { jobId: ref.job_id, ref };
   },
 

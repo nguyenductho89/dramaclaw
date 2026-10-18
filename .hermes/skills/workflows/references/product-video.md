@@ -1,22 +1,22 @@
 # Product Video Workflow
 
-用于产品视频、商品演示、功能讲解、使用场景。
+For product videos, product demos, feature explanations and usage scenarios.
 
-## 材料要求
+## Material requirements
 
-- 必需其一：产品图片、商品图、产品说明、功能列表、说明书、使用手册，或用户在聊天里描述的产品。
-- 推荐：核心功能、目标用户、使用场景、演示重点、规格参数、品牌风格、成片时长。
-- 可选：竞品对比、实拍素材、参考视频、禁用说法、口播风格、目标比例、字幕语言。
+- One of the following is required: product images, product photos, a product description, a feature list, a manual, a user guide, or a product the user describes in chat.
+- Recommended: core features, target users, usage scenarios, demo focus, specifications, brand style, final duration.
+- Optional: competitor comparison, live-action footage, reference videos, banned claims, voiceover style, target aspect ratio, subtitle language.
 
-如果只有产品图，也可以开始规划；先创建产品输入、结构/功能识别、使用场景和演示路径节点。
+With only a product image you can also start planning; first create the product input, structure/feature recognition, usage scenario and demo path nodes.
 
-## 生产链路
+## Production chain
 
-`产品输入 -> 功能拆解 -> 使用场景 -> 演示路径 -> 讲解脚本 -> 镜头规划 -> 资产生成 -> 视频片段 -> 口播/音乐 -> 成片合成 -> 质检修复`
+`product input -> feature breakdown -> usage scenarios -> demo path -> explanation script -> shot planning -> asset generation -> video clips -> voiceover/music -> final composition -> QA and repair`
 
-## 动态展开
+## Dynamic expansion
 
-- 核心功能单独节点；次要功能合并到功能池。
-- 使用场景按用户、场景、痛点或任务拆分。
-- 演示视频重点是可信、清楚、连续，不要默认拆成广告 A/B 版本。
-- 如果用户目标是转化投放，可借用广告工作流的 Hook/CTA 分支。
+- Each core feature gets its own node; secondary features are merged into a feature pool.
+- Usage scenarios are split by user, scene, pain point or task.
+- The focus of a demo video is credible, clear and continuous; do not split it into ad A/B versions by default.
+- If the user's goal is conversion-oriented delivery, you may borrow the Hook/CTA branches of the ad workflow.

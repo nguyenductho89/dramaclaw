@@ -202,19 +202,18 @@ def _prompt_only_text_recipe(recipe: dict) -> bool:
     return bool(
         re.search(r'(?:^|[.!?]\s+)output\s+only\s+(?:the\s+)?(?:refined|rewritten|optimized|improved)\s+prompt(?:\s+text)?\b',
                   instruction, re.IGNORECASE)
-        or re.search(r'(?:^|[。！？!?]\s*)(?:只|仅)输出(?:优化后|改写后|润色后|精炼后)?的?提示词', instruction)
     )
 
 
 def _final_document_task(task: dict) -> bool:
     title = f"{task.get('id', '')} {task.get('title', '')}".lower()
-    document_terms = ('文档', '报告', '规格', '剧本', '分镜', 'document', 'spec', 'report', 'storyboard', 'script')
-    if '提示词' in title or 'prompt' in title:
+    document_terms = ('document', 'spec', 'report', 'storyboard', 'script')
+    if 'prompt' in title:
         return False
     if any(term in title for term in document_terms):
         return True
     requirements = ' '.join(map(str, task.get('requirements', []))).lower()
-    if '提示词' in requirements or 'prompt' in requirements:
+    if 'prompt' in requirements:
         return False
     return any(term in requirements for term in document_terms)
 

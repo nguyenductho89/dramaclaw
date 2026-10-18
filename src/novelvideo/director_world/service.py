@@ -239,16 +239,16 @@ class DirectorWorldService:
             ),
             "user": user,
             "project": project,
-            # 资产
+            # Assets
             "scene_3gs_ply_fs": fs_url(ply_path),
             "ply_source": "master",
-            # beat 级状态：让 PlayCanvas 能 load/save 当前 beat
+            # Beat-level state: lets PlayCanvas load/save the current beat
             "blockings_dir_fs": fs_url(blockings),
-            # 控制图保存目标（Sprint C 用，PlayCanvas 拼具体 .png 文件名）
+            # Control frame save target (used by Sprint C; PlayCanvas builds the concrete .png file name)
             "control_frames_dir_fs": fs_url(control_frames_dir),
             "sketch_mode_key": "1x1_2-3_sketch",
             "sketch_aspect_ratio": "2:3",
-            # 给 stage 用：shape_hint / actor_state registry 沿用 voxel stage 的位置
+            # For the stage: the shape_hint / actor_state registries keep the voxel stage locations
             "shape_hint_registry_fs": fs_url(shape_hint_registry_path()),
             "shape_hints_dir_fs": fs_url(shape_hints_dir()),
             "actor_state_registry_fs": fs_url(actor_state_registry_path()),
@@ -259,11 +259,11 @@ class DirectorWorldService:
             params["scene_collision_glb_fs"] = fs_url(collision_path)
         if slate_beat is not None:
             params["slate_beat"] = str(int(slate_beat))
-            params["beat"] = str(int(slate_beat))  # 兼容 PlayCanvas 已有 beat 参数
+            params["beat"] = str(int(slate_beat))  # compatible with the existing PlayCanvas beat parameter
             sketch_ref = PathResolver(str(self.project_dir), int(episode)).sketch(int(slate_beat))
             if sketch_ref.exists():
                 params["beat_sketch_ref_fs"] = fs_url(sketch_ref)
-                params["beat_sketch_ref_label"] = f"Beat {int(slate_beat)} 自由草图"
+                params["beat_sketch_ref_label"] = f"Beat {int(slate_beat)} free sketch"
         beats = _scene_beat_numbers(user, project, episode, scene_id)
         if beats:
             params["slate_beats"] = ",".join(str(b) for b in beats)

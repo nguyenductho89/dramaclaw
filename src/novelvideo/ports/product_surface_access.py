@@ -8,30 +8,30 @@ from typing import Any, Final
 SURFACE_DEFINITIONS: Final[tuple[dict[str, Any], ...]] = (
     {
         "surface_code": "mainline",
-        "label": "主线",
+        "label": "Mainline",
         "default_available": True,
-        "default_unavailable_message": "主线功能暂未开放",
+        "default_unavailable_message": "The mainline feature is not available yet",
         "sort_order": 10,
     },
     {
         "surface_code": "freezone",
-        "label": "虾画",
+        "label": "Freezone",
         "default_available": True,
-        "default_unavailable_message": "虾画功能暂未开放",
+        "default_unavailable_message": "The Freezone feature is not available yet",
         "sort_order": 20,
     },
     {
         "surface_code": "assistant",
-        "label": "虾导",
+        "label": "Assistant",
         "default_available": False,
-        "default_unavailable_message": "虾导功能暂未开放",
+        "default_unavailable_message": "The assistant feature is not available yet",
         "sort_order": 30,
     },
     {
         "surface_code": "freezone_assistant",
-        "label": "虾画中的虾导",
+        "label": "Freezone Assistant",
         "default_available": False,
-        "default_unavailable_message": "虾画中的虾导暂未开放",
+        "default_unavailable_message": "The Freezone assistant is not available yet",
         "sort_order": 40,
     },
 )

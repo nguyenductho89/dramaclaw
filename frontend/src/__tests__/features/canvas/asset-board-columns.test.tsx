@@ -13,12 +13,7 @@ import {
 } from '@/features/canvas/ui/asset-board/useAssetBoardColumnFractions';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-// AssetBoardView 内常驻挂载的 ImageViewerModal / 生成表单用到 useTranslation 与 react-query。
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
-  }),
-}));
+// The ImageViewerModal / generation form permanently mounted inside AssetBoardView use useTranslation and react-query.
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
@@ -29,19 +24,19 @@ function seedBoard() {
       id: 'text-1',
       type: CANVAS_NODE_TYPES.textAnnotation,
       position: { x: 0, y: 0 },
-      data: { content: '# 项目信息', displayName: '锚点清单' },
+      data: { content: '# Project info', displayName: 'Anchor list' },
     },
     {
       id: 'img-1',
       type: CANVAS_NODE_TYPES.imageEdit,
       position: { x: 0, y: 100 },
-      data: { imageUrl: '/static/img1.png', aspectRatio: '1:1', displayName: '分镜草图' },
+      data: { imageUrl: '/static/img1.png', aspectRatio: '1:1', displayName: 'Storyboard sketch' },
     },
     {
       id: 'vid-1',
       type: CANVAS_NODE_TYPES.video,
       position: { x: 0, y: 300 },
-      data: { videoUrl: '/static/v.mp4', aspectRatio: '16:9', displayName: '成片视频' },
+      data: { videoUrl: '/static/v.mp4', aspectRatio: '16:9', displayName: 'Final video' },
     },
   ];
   const edges: CanvasEdge[] = [];
@@ -52,7 +47,7 @@ function renderBoard() {
   render(<AssetBoardView visible onLocateNode={vi.fn()} />);
 }
 
-/** 三栏容器的 getBoundingClientRect 在 jsdom 下恒为 0 宽——桩一个固定宽度供换算。 */
+/** The three-column container's getBoundingClientRect is always 0 wide under jsdom -- stub a fixed width for the conversion. */
 function stubContainerWidth(width: number): HTMLElement {
   const container = screen.getByTestId('asset-board-columns');
   vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
@@ -73,33 +68,33 @@ function grow(testid: string): number {
   return Number(screen.getByTestId(testid).style.flexGrow);
 }
 
-describe('AssetBoard 三栏可拖拽调宽', () => {
+describe('AssetBoard three-column drag-to-resize', () => {
   beforeEach(() => {
     window.localStorage.clear();
     seedBoard();
   });
 
-  it('默认等宽：三栏 flexGrow 均为 1/3', () => {
+  it('equal widths by default: all three columns have flexGrow 1/3', () => {
     renderBoard();
     expect(grow('asset-board-column-wrapper-text')).toBeCloseTo(1 / 3, 5);
     expect(grow('asset-board-column-wrapper-image')).toBeCloseTo(1 / 3, 5);
     expect(grow('asset-board-column-wrapper-video')).toBeCloseTo(1 / 3, 5);
   });
 
-  it('拖动文本/图片分隔条：向右加宽文本、收窄图片（flexGrow 变化，视频不动）', () => {
+  it('dragging the text/image divider: right widens text and narrows images (flexGrow changes, video unchanged)', () => {
     renderBoard();
     stubContainerWidth(900);
     const resizer = screen.getByTestId('asset-board-resizer-0');
 
     fireEvent.pointerDown(resizer, { clientX: 300, pointerId: 1 });
-    fireEvent.pointerMove(resizer, { clientX: 390, pointerId: 1 }); // +90px → +0.1 份额
+    fireEvent.pointerMove(resizer, { clientX: 390, pointerId: 1 }); // +90px -> +0.1 share
 
     expect(grow('asset-board-column-wrapper-text')).toBeCloseTo(1 / 3 + 0.1, 4);
     expect(grow('asset-board-column-wrapper-image')).toBeCloseTo(1 / 3 - 0.1, 4);
     expect(grow('asset-board-column-wrapper-video')).toBeCloseTo(1 / 3, 4);
   });
 
-  it('拖动图片/视频分隔条：只在图片与视频间转移份额（文本不动）', () => {
+  it('dragging the image/video divider: shares move only between images and video (text unchanged)', () => {
     renderBoard();
     stubContainerWidth(900);
     const resizer = screen.getByTestId('asset-board-resizer-1');
@@ -112,14 +107,14 @@ describe('AssetBoard 三栏可拖拽调宽', () => {
     expect(grow('asset-board-column-wrapper-video')).toBeCloseTo(1 / 3 - 0.1, 4);
   });
 
-  it('松手落库：pointerUp 后比例写入 localStorage（和为 1，反映拖拽结果）', () => {
+  it('persist on release: after pointerUp the ratios are written to localStorage (sum is 1, reflecting the drag result)', () => {
     renderBoard();
     stubContainerWidth(900);
     const resizer = screen.getByTestId('asset-board-resizer-0');
 
     fireEvent.pointerDown(resizer, { clientX: 300, pointerId: 1 });
     fireEvent.pointerMove(resizer, { clientX: 390, pointerId: 1 });
-    // 落库前 localStorage 仍为空（只有松手才写）。
+    // Before persisting, localStorage is still empty (written only on release).
     expect(window.localStorage.getItem(ASSET_BOARD_COLUMN_FRACTIONS_KEY)).toBeNull();
 
     fireEvent.pointerUp(resizer, { clientX: 390, pointerId: 1 });
@@ -130,7 +125,7 @@ describe('AssetBoard 三栏可拖拽调宽', () => {
     expect(stored[1]).toBeCloseTo(1 / 3 - 0.1, 4);
   });
 
-  it('刷新恢复：预置 localStorage → 初始 flexGrow 反映存储比例', () => {
+  it('restore on refresh: pre-seeded localStorage -> initial flexGrow reflects the stored ratios', () => {
     window.localStorage.setItem(ASSET_BOARD_COLUMN_FRACTIONS_KEY, JSON.stringify([0.5, 0.3, 0.2]));
     renderBoard();
     expect(grow('asset-board-column-wrapper-text')).toBeCloseTo(0.5, 5);
@@ -138,7 +133,7 @@ describe('AssetBoard 三栏可拖拽调宽', () => {
     expect(grow('asset-board-column-wrapper-video')).toBeCloseTo(0.2, 5);
   });
 
-  it('脏值回落等宽：非法 JSON / 结构 / 数值 → 三栏各 1/3', () => {
+  it('dirty values fall back to equal widths: invalid JSON / structure / numbers -> each column 1/3', () => {
     for (const dirty of ['not-json', '[0.5,0.5]', '[1,2,"x"]', '[-1,1,1]', '[0,1,1]', '{"a":1}']) {
       window.localStorage.setItem(ASSET_BOARD_COLUMN_FRACTIONS_KEY, dirty);
       const stored = readStoredFractions();
@@ -148,38 +143,38 @@ describe('AssetBoard 三栏可拖拽调宽', () => {
     }
   });
 
-  it('最小宽度：向左拖到底，图片栏不塌陷（保持 >= 200/900 份额），文本收到最小', () => {
+  it('minimum width: dragging all the way left, the image column does not collapse (stays >= 200/900 share), and text shrinks to the minimum', () => {
     renderBoard();
     stubContainerWidth(900);
     const resizer = screen.getByTestId('asset-board-resizer-0');
 
     fireEvent.pointerDown(resizer, { clientX: 300, pointerId: 1 });
-    // 向左狂拖 500px，远超可用空间。
+    // Drag far left by 500px, well beyond the available space.
     fireEvent.pointerMove(resizer, { clientX: -200, pointerId: 1 });
 
     const minFrac = 200 / 900;
     expect(grow('asset-board-column-wrapper-text')).toBeCloseTo(minFrac, 4);
-    // 份额从文本转给图片，图片增大而非塌陷。
+    // Share moves from text to images: images grow rather than collapse.
     expect(grow('asset-board-column-wrapper-image')).toBeGreaterThan(1 / 3);
   });
 
-  it('详情态隔离：进详情后三栏容器整体卸载（fractions 不生效于详情布局）', () => {
+  it('detail-state isolation: entering the detail unmounts the whole three-column container (fractions do not apply to the detail layout)', () => {
     window.localStorage.setItem(ASSET_BOARD_COLUMN_FRACTIONS_KEY, JSON.stringify([0.5, 0.3, 0.2]));
     renderBoard();
     expect(screen.getByTestId('asset-board-columns')).toBeInTheDocument();
 
-    // 点开图片卡进详情。
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
+    // Click an image card to enter the detail.
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
     expect(screen.queryByTestId('asset-board-columns')).not.toBeInTheDocument();
 
-    // 退回总览 → 重挂载并从 localStorage 恢复比例。
-    fireEvent.click(screen.getByRole('button', { name: '关闭详情' }));
+    // Back to the overview -> remount and restore the ratios from localStorage.
+    fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
     expect(screen.getByTestId('asset-board-columns')).toBeInTheDocument();
     expect(grow('asset-board-column-wrapper-text')).toBeCloseTo(0.5, 5);
   });
 });
 
-describe('视频栏筛选下拉', () => {
+describe('video column filter dropdown', () => {
   beforeEach(() => {
     window.localStorage.clear();
     useCanvasStore.getState().setCanvasData(
@@ -188,136 +183,136 @@ describe('视频栏筛选下拉', () => {
           id: 'vid-final',
           type: CANVAS_NODE_TYPES.videoCompose,
           position: { x: 0, y: 0 },
-          data: { videoUrl: '/static/final.mp4', displayName: '成片一号' },
+          data: { videoUrl: '/static/final.mp4', displayName: 'Final one' },
         },
         {
           id: 'vid-clip',
           type: CANVAS_NODE_TYPES.video,
           position: { x: 0, y: 200 },
-          data: { videoUrl: '/static/clip.mp4', displayName: '片段一号' },
+          data: { videoUrl: '/static/clip.mp4', displayName: 'Clip one' },
         },
       ],
       [],
     );
   });
 
-  it('默认「全部」：两类视频都在列表里，展开菜单时「全部」打勾', () => {
+  it('default "All": both kinds of video are in the list, and "All" is checked when the menu expands', () => {
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    expect(screen.getByRole('button', { name: '成片一号' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '片段一号' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Final one' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clip one' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /全部/ }));
-    const menu = screen.getByRole('menu', { name: '筛选视频' });
-    expect(within(menu).getByRole('menuitemradio', { name: '全部' })).toHaveAttribute(
+    fireEvent.click(screen.getByRole('button', { name: /All/ }));
+    const menu = screen.getByRole('menu', { name: 'Filter videos' });
+    expect(within(menu).getByRole('menuitemradio', { name: 'All' })).toHaveAttribute(
       'aria-checked',
       'true',
     );
   });
 
-  it('选「成片」→ 只留成片，触发器文案跟着变；再选回「全部」恢复', () => {
+  it('choosing "Final" -> keeps only finals and the trigger text follows; choosing "All" again restores', () => {
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /全部/ }));
+    fireEvent.click(screen.getByRole('button', { name: /All/ }));
     fireEvent.click(
-      within(screen.getByRole('menu', { name: '筛选视频' })).getByRole('menuitemradio', {
-        name: '成片',
+      within(screen.getByRole('menu', { name: 'Filter videos' })).getByRole('menuitemradio', {
+        name: 'Final',
       }),
     );
-    expect(screen.getByRole('button', { name: '成片一号' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '片段一号' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Final one' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clip one' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /成片$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Final$/ }));
     fireEvent.click(
-      within(screen.getByRole('menu', { name: '筛选视频' })).getByRole('menuitemradio', {
-        name: '全部',
+      within(screen.getByRole('menu', { name: 'Filter videos' })).getByRole('menuitemradio', {
+        name: 'All',
       }),
     );
-    expect(screen.getByRole('button', { name: '片段一号' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clip one' })).toBeInTheDocument();
   });
 });
 
-describe('图片/视频栏放大', () => {
+describe('image/video column expand', () => {
   beforeEach(() => {
     window.localStorage.clear();
     seedBoard();
   });
 
-  it('点图片栏「放大」→ 三栏收成「左列 + 图片宽幅网格」，再点「收起」还原', () => {
+  it('clicking "Expand" on the image column -> three columns collapse into "left column + wide image grid", and "Collapse" restores', () => {
     renderBoard();
-    // 三栏态：图片与视频栏各有一颗放大按钮。
-    expect(screen.getAllByRole('button', { name: '放大' })).toHaveLength(2);
+    // Three-column state: the image and video columns each have an expand button.
+    expect(screen.getAllByRole('button', { name: 'Expand' })).toHaveLength(2);
 
-    fireEvent.click(screen.getAllByRole('button', { name: '放大' })[0]);
-    // 放大后三栏容器让位；右侧只剩被放大的那栏（收起按钮唯一）。
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0]);
+    // After expanding the three-column container yields; only the expanded column remains on the right (the Collapse button is unique).
     expect(screen.queryByTestId('asset-board-columns')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '收起' })).toBeInTheDocument();
-    // 网格里照常能看到该栏条目，左边保留文本栏。
-    expect(screen.getByRole('button', { name: '分镜草图' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '锚点清单' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
+    // The grid shows that column's items as usual, and the text column stays on the left.
+    expect(screen.getByRole('button', { name: 'Storyboard sketch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anchor list' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '收起' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
     expect(screen.getByTestId('asset-board-columns')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '放大' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Expand' })).toHaveLength(2);
   });
 
-  it('详情态左窄列表不出「放大」按钮（那里点了不会有任何变化）', () => {
+  it('the narrow left list in detail state has no "Expand" button (clicking it would change nothing)', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
 
-    // 左列此刻是图片栏（详情所在栏），但放大在详情态无意义 → 不该渲染这颗按钮，
-    // 否则点了没反应，且关掉详情后会突然跳进放大态。
-    expect(screen.queryByRole('button', { name: '放大' })).not.toBeInTheDocument();
+    // The left column is the image column right now (the column the detail is in), but expanding is meaningless in detail state -> do not render this button,
+    // otherwise clicking does nothing, and closing the detail would suddenly jump into the expanded state.
+    expect(screen.queryByRole('button', { name: 'Expand' })).not.toBeInTheDocument();
   });
 
-  it('放大态左列（文本栏）也不出「放大」按钮', () => {
+  it('the left column (text column) in expanded state has no "Expand" button either', () => {
     renderBoard();
-    fireEvent.click(screen.getAllByRole('button', { name: '放大' })[0]);
-    // 只剩被放大那栏的「收起」，左列文本栏本来就没有放大入口。
-    expect(screen.queryByRole('button', { name: '放大' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '收起' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0]);
+    // Only the expanded column\'s "Collapse" remains; the left text column never had an expand entry.
+    expect(screen.queryByRole('button', { name: 'Expand' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
   });
 
-  it('放大态点卡片开详情；关掉详情回到放大态而不是三栏', () => {
+  it('in expanded state clicking a card opens the detail; closing the detail returns to the expanded state rather than three columns', () => {
     renderBoard();
-    fireEvent.click(screen.getAllByRole('button', { name: '放大' })[0]);
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
 
-    const detail = screen.getByRole('region', { name: '资产详情' });
+    const detail = screen.getByRole('region', { name: 'Asset details' });
     expect(detail).toBeInTheDocument();
 
-    fireEvent.click(within(detail).getByRole('button', { name: '关闭详情' }));
-    expect(screen.getByRole('button', { name: '收起' })).toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole('button', { name: 'Close details' }));
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
     expect(screen.queryByTestId('asset-board-columns')).not.toBeInTheDocument();
   });
 });
 
-describe('AssetBoardColumn 条目分割线', () => {
-  it('dividedItems：N 个条目之间插 N-1 条分割线（不在首尾多画）', () => {
+describe('AssetBoardColumn item dividers', () => {
+  it('dividedItems: N items get N-1 dividers between them (none drawn at the ends)', () => {
     render(
-      <AssetBoardColumn title="图片" count={3} emptyText="空" dividedItems>
-        <div>卡片1</div>
-        <div>卡片2</div>
-        <div>卡片3</div>
+      <AssetBoardColumn title="Images" count={3} emptyText="Empty" dividedItems>
+        <div>Card 1</div>
+        <div>Card 2</div>
+        <div>Card 3</div>
       </AssetBoardColumn>,
     );
     expect(screen.getAllByTestId('asset-board-item-divider')).toHaveLength(2);
   });
 
-  it('不传 dividedItems（文本栏）→ 一条分割线都不画', () => {
+  it('without dividedItems (text column) -> no divider is drawn at all', () => {
     render(
-      <AssetBoardColumn title="文本" count={2} emptyText="空">
-        <div>文本1</div>
-        <div>文本2</div>
+      <AssetBoardColumn title="Text" count={2} emptyText="Empty">
+        <div>Text 1</div>
+        <div>Text 2</div>
       </AssetBoardColumn>,
     );
     expect(screen.queryByTestId('asset-board-item-divider')).not.toBeInTheDocument();
   });
 
-  it('分割线是独立元素、自带底色——不靠卡片边框（卡片 border-transparent 会把 divide-* 刷没）', () => {
+  it('dividers are independent elements with their own background -- not relying on card borders (a card\'s border-transparent would wipe out divide-*)', () => {
     render(
-      <AssetBoardColumn title="图片" count={2} emptyText="空" dividedItems>
-        <div className="border border-transparent">卡片1</div>
-        <div className="border border-transparent">卡片2</div>
+      <AssetBoardColumn title="Images" count={2} emptyText="Empty" dividedItems>
+        <div className="border border-transparent">Card 1</div>
+        <div className="border border-transparent">Card 2</div>
       </AssetBoardColumn>,
     );
     const divider = screen.getByTestId('asset-board-item-divider');
@@ -325,10 +320,10 @@ describe('AssetBoardColumn 条目分割线', () => {
   });
 });
 
-describe('applyColumnResize 纯函数', () => {
+describe('applyColumnResize pure function', () => {
   const start = [1 / 3, 1 / 3, 1 / 3] as const;
 
-  it('相邻两栏转移份额、其余不动、和恒为 1', () => {
+  it('adjacent columns transfer share, the rest stay put, and the sum is always 1', () => {
     const next = applyColumnResize(start, 0, 90, 900, 200);
     expect(next[0]).toBeCloseTo(1 / 3 + 0.1, 5);
     expect(next[1]).toBeCloseTo(1 / 3 - 0.1, 5);
@@ -336,14 +331,14 @@ describe('applyColumnResize 纯函数', () => {
     expect(next[0] + next[1] + next[2]).toBeCloseTo(1, 5);
   });
 
-  it('钳制最小宽度：两栏都不低于 minPx/width', () => {
+  it('clamps minimum width: neither column goes below minPx/width', () => {
     const next = applyColumnResize(start, 1, 100000, 900, 200);
     const minFrac = 200 / 900;
     expect(next[2]).toBeCloseTo(minFrac, 5);
     expect(next[1]).toBeGreaterThan(1 / 3);
   });
 
-  it('零宽兜底：width<=0 时不位移', () => {
+  it('zero-width fallback: no displacement when width<=0', () => {
     const next = applyColumnResize(start, 0, 90, 0, 200);
     expect(next[0]).toBeCloseTo(1 / 3, 5);
     expect(next[1]).toBeCloseTo(1 / 3, 5);

@@ -88,7 +88,7 @@ describe("resolveInputsForSkill", () => {
             __freezone_source: {
               kind: "identity",
               role: "character_identity",
-              meta: { identity_id: "陆辰_青年时期" },
+              meta: { identity_id: "LuChen_young_adult" },
             },
           },
         },
@@ -104,7 +104,7 @@ describe("resolveInputsForSkill", () => {
             __freezone_source: {
               kind: "identity",
               role: "character_portrait",
-              meta: { character: "陆辰" },
+              meta: { character: "LuChen" },
             },
           },
         },
@@ -127,20 +127,20 @@ describe("resolveInputsForSkill", () => {
           id: "edge_identity_ref",
           source: "identity_ref",
           target: "skill_frame",
-          targetHandle: "identity:陆辰_青年时期",
+          targetHandle: "identity:LuChen_young_adult",
           data: {
             role: "identity",
-            reference_target: { kind: "identity", identity_id: "陆辰_青年时期" },
+            reference_target: { kind: "identity", identity_id: "LuChen_young_adult" },
           },
         },
         {
           id: "edge_portrait_ref",
           source: "portrait_ref",
           target: "skill_frame",
-          targetHandle: "identity:陆辰_青年时期",
+          targetHandle: "identity:LuChen_young_adult",
           data: {
             role: "identity",
-            reference_target: { kind: "identity", identity_id: "陆辰_青年时期" },
+            reference_target: { kind: "identity", identity_id: "LuChen_young_adult" },
           },
         },
       ],
@@ -207,16 +207,16 @@ describe("resolveInputsForSkill", () => {
             projectId: "demo",
             episode: 1,
             beat: 4,
-            content: "DB 旧画面",
+            content: "DB old frame",
             snapshot: {
-              visualDescription: "本地当前画面",
-              detectedIdentities: ["面馆男青年_青年时期"],
-              detectedProps: ["纸箱"],
+              visualDescription: "Local current frame",
+              detectedIdentities: ["NoodleGuy_young_adult"],
+              detectedProps: ["Cardboard box"],
             },
             beat_edit_fields: {
-              visual_description: "本地当前画面",
-              detected_identities: ["面馆女青年_青年时期"],
-              detected_props: ["纸箱", "天线电视"],
+              visual_description: "Local current frame",
+              detected_identities: ["NoodleGirl_young_adult"],
+              detected_props: ["Cardboard box", "Antenna TV"],
             },
           },
         },
@@ -250,23 +250,23 @@ describe("resolveInputsForSkill", () => {
     expect(inputs[0].beat_context).toEqual({
       episode: 1,
       beat: 4,
-      visual_description: "本地当前画面",
-      detected_identities: ["面馆女青年_青年时期", "面馆男青年_青年时期"],
-      detected_props: ["纸箱", "天线电视"],
+      visual_description: "Local current frame",
+      detected_identities: ["NoodleGirl_young_adult", "NoodleGuy_young_adult"],
+      detected_props: ["Cardboard box", "Antenna TV"],
     });
   });
   it("uses standalone BeatContextNode beat_context without mainline provenance", () => {
     const standaloneContext = {
       schema: "beat_context.v1",
       source: "standalone",
-      title: "自定义镜头",
-      visual_description: "雨夜里，{{女主_雨衣}} 站在便利店门口拿着 [[红伞]] 回头。",
-      narration_segment: "她终于意识到，这不是偶遇。",
-      scene_id: "便利店门口",
-      detected_identities: ["女主_雨衣"],
-      detected_props: ["红伞"],
-      sketch_colors: { "女主_雨衣": "#FF00FF MAGENTA" },
-      prop_marker_colors: { "红伞": "#D32F2F RED" },
+      title: "Custom shot",
+      visual_description: "On a rainy night, {{Heroine_raincoat}} stands outside the convenience store holding [[Red umbrella]] and looks back.",
+      narration_segment: "She finally realizes this was no chance encounter.",
+      scene_id: "Outside the convenience store",
+      detected_identities: ["Heroine_raincoat"],
+      detected_props: ["Red umbrella"],
+      sketch_colors: { "Heroine_raincoat": "#FF00FF MAGENTA" },
+      prop_marker_colors: { "Red umbrella": "#D32F2F RED" },
     };
     const nodes = new Map([
       [
@@ -278,7 +278,7 @@ describe("resolveInputsForSkill", () => {
             context_scope: "standalone",
             beat_context: standaloneContext,
             snapshot: {
-              visualDescription: "旧 snapshot 不应覆盖标准上下文",
+              visualDescription: "Old snapshot must not override the standard context",
             },
           },
         },
@@ -316,17 +316,17 @@ describe("resolveInputsForSkill", () => {
 
   it("keeps mainline and standalone BeatContextNode payloads aligned except provenance", () => {
     const common = {
-      visual_description: "{{Kris}} 拿着一把 [[雨伞]]",
-      narration_segment: "她终于意识到，这不是偶遇。",
+      visual_description: "{{Kris}} holds an [[Umbrella]]",
+      narration_segment: "She finally realizes this was no chance encounter.",
       detected_identities: ["Kris"],
-      detected_props: ["雨伞"],
+      detected_props: ["Umbrella"],
       sketch_colors: { Kris: "#FF00FF" },
-      prop_marker_colors: { "雨伞": "#B71C1C" },
+      prop_marker_colors: { "Umbrella": "#B71C1C" },
     };
     const standaloneContext = {
       schema: "beat_context.v1",
       source: "standalone",
-      title: "自定义镜头上下文",
+      title: "Custom shot context",
       ...common,
     };
     const nodes = new Map([
@@ -440,7 +440,7 @@ describe("resolveInputsForSkill", () => {
             beat_context: {
               schema: "beat_context.v1",
               source: "standalone",
-              title: "自定义镜头上下文",
+              title: "Custom shot context",
               visual_description: "",
               narration_segment: "",
               detected_identities: [],
@@ -452,11 +452,11 @@ describe("resolveInputsForSkill", () => {
             episode: 1,
             beat: 3,
             snapshot: {
-              visualDescription: "主线画面",
-              narrationSegment: "主线旁白",
-              sceneId: "主线场景",
-              detectedIdentities: ["主线角色"],
-              detectedProps: ["主线道具"],
+              visualDescription: "Mainline frame",
+              narrationSegment: "Mainline narration",
+              sceneId: "Mainline scene",
+              detectedIdentities: ["Mainline character"],
+              detectedProps: ["Mainline prop"],
             },
             mainline_context: [
               {
@@ -497,11 +497,11 @@ describe("resolveInputsForSkill", () => {
     expect(inputs[0].beat_context).toMatchObject({
       episode: 1,
       beat: 3,
-      scene_id: "主线场景",
-      visual_description: "主线画面",
-      narration_segment: "主线旁白",
-      detected_identities: ["主线角色"],
-      detected_props: ["主线道具"],
+      scene_id: "Mainline scene",
+      visual_description: "Mainline frame",
+      narration_segment: "Mainline narration",
+      detected_identities: ["Mainline character"],
+      detected_props: ["Mainline prop"],
     });
     expect(inputs[0].beat_context).not.toHaveProperty("source", "standalone");
     expect(inputs[0]).toHaveProperty("mainline_context");

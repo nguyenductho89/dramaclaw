@@ -16,7 +16,7 @@ import {
   shouldAutoShowCurrentRelease,
 } from "@/lib/release-notification-state";
 
-/** 更新弹窗顶部的头图视频。走 CDN 域名（OSS 默认域名会强制下载，播不了）。 */
+/** Header video at the top of the update dialog. Uses the CDN domain (the OSS default domain forces a download and cannot play). */
 const UPDATE_HERO_VIDEO_URL =
   "https://nfg-web-assets.cdnfg.com/dramaclaw/update/version-update-2026-06-22.mp4";
 

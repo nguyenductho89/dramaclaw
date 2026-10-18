@@ -222,8 +222,8 @@ const mocks = vi.hoisted(() => ({
     status: string;
     created_at?: string;
   }[],
-  // 模拟 React Query 的 isFetchedAfterMount：默认 true（已挂载后刷到新数据）；
-  // stale-cache 竞态用例把它设为 false，表示当前 data 还是挂载前的旧缓存。
+  // Simulates React Query's isFetchedAfterMount: defaults to true (fresh data fetched after mount);
+  // the stale-cache race case sets it to false, meaning the current data is still the old cache from before mount.
   ingestTasksFetchedAfterMount: true,
   refetchKnowledgeGraph: vi.fn(),
   taskStreamOnError: null as ((error: string) => void) | null,
@@ -311,14 +311,14 @@ vi.mock("@/lib/queries/ingest", () => ({
             nodes: [
               {
                 id: "node-1",
-                label: "林昭",
+                label: "Lin Zhao",
                 type: "Entity",
                 degree: 1,
-                properties: { description: "雨巷少年" },
+                properties: { description: "a boy of the rainy alley" },
               },
               {
                 id: "node-2",
-                label: "雨巷",
+                label: "Rainy Alley",
                 type: "Entity",
                 degree: 1,
                 properties: {},
@@ -447,9 +447,9 @@ describe("IngestPage settings save", () => {
     );
 
     expect(screen.getByText("Premium drama format")).toBeInTheDocument();
-    // 这个 Wrapper 跑在 lng: "en"：样例要给英文用户能照着抄的 Fountain 格式，
-    // 给中文制片格式等于没给。逐字对齐的解析断言在
-    // tests/test_screenplay_scene_parser.py::test_documented_english_format_example_parses_as_standard。
+    // This Wrapper runs with lng: "en": the samples must give English users a Fountain format they can copy,
+    // giving them a Chinese production format would be no help. The verbatim-aligned parse assertion is in
+    // tests/test_screenplay_scene_parser.py::test_documented_english_format_example_parses_as_standard.
     expect(
       screen.getAllByText(
         (_content, element) =>
@@ -464,7 +464,7 @@ describe("IngestPage settings save", () => {
           element.textContent?.includes("SCENE 1 - SEOUL SUBWAY STATION") === true,
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/苏鸾寝殿/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/GA TÀU ĐIỆN NGẦM/)).not.toBeInTheDocument();
   });
 
   it("saves project settings without uploading or starting ingest", async () => {
@@ -557,7 +557,7 @@ describe("IngestPage settings save", () => {
         total_chars: 10,
         count: 1,
         source_filename: "original-novel.txt",
-        chapters: [{ number: 1, title: "第一章", char_count: 10 }],
+        chapters: [{ number: 1, title: "Chapter One", char_count: 10 }],
       },
     };
 
@@ -568,7 +568,7 @@ describe("IngestPage settings save", () => {
     );
 
     // The imported summary is shown (file card + preview)...
-    expect(screen.getByText("第一章")).toBeInTheDocument();
+    expect(screen.getByText("Chapter One")).toBeInTheDocument();
     // ...and users may intentionally rebuild it, without exposing destructive delete.
     expect(screen.getByRole("button", { name: "Re-import" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
@@ -582,7 +582,7 @@ describe("IngestPage settings save", () => {
         total_chars: 10,
         count: 1,
         source_filename: "original-novel.txt",
-        chapters: [{ number: 1, title: "第一章", char_count: 10 }],
+        chapters: [{ number: 1, title: "Chapter One", char_count: 10 }],
       },
     };
     mocks.startIngest.mockResolvedValue({
@@ -619,7 +619,7 @@ describe("IngestPage settings save", () => {
         total_chars: 10,
         count: 1,
         source_filename: "original-novel.txt",
-        chapters: [{ number: 1, title: "第一章", char_count: 10 }],
+        chapters: [{ number: 1, title: "Chapter One", char_count: 10 }],
       },
     };
     mocks.startIngest.mockResolvedValue({
@@ -663,7 +663,7 @@ describe("IngestPage settings save", () => {
       data: {
         total_chars: 10,
         count: 1,
-        chapters: [{ number: 1, title: "第一章", char_count: 10 }],
+        chapters: [{ number: 1, title: "Chapter One", char_count: 10 }],
       },
     };
 
@@ -677,8 +677,8 @@ describe("IngestPage settings save", () => {
       screen.getByRole("heading", { name: "Knowledge Graph" }),
     ).toBeInTheDocument();
     expect(screen.getByText("2 nodes · 1 relationships")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "林昭, Entity" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "雨巷, Entity" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lin Zhao, Entity" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rainy Alley, Entity" })).toBeInTheDocument();
   });
 
   it("does not request or show the graph for an upload-only chapter preview", () => {
@@ -688,7 +688,7 @@ describe("IngestPage settings save", () => {
         total_chars: 10,
         count: 1,
         preview_only: true,
-        chapters: [{ number: 1, title: "第一章", char_count: 10 }],
+        chapters: [{ number: 1, title: "Chapter One", char_count: 10 }],
       },
     };
 
@@ -713,12 +713,12 @@ describe("IngestPage settings save", () => {
           {
             number: 1,
             title: null,
-            content: "第一章 启程\n秦王入宫。",
+            content: "Chapter One The Journey\nThe King of Qin enters the palace.",
             word_count: 12,
           },
           {
             number: 2,
-            title: "第二章 风起",
+            title: "Chapter Two Wind Rises",
             char_count: 12,
           },
         ],
@@ -731,8 +731,8 @@ describe("IngestPage settings save", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("第一章 启程")).toBeInTheDocument();
-    expect(screen.getByText("第二章 风起")).toBeInTheDocument();
+    expect(screen.getByText("Chapter One The Journey")).toBeInTheDocument();
+    expect(screen.getByText("Chapter Two Wind Rises")).toBeInTheDocument();
     expect(screen.getAllByText("12").length).toBeGreaterThanOrEqual(2);
   });
 
@@ -749,7 +749,7 @@ describe("IngestPage settings save", () => {
           chapters: [
             {
               number: 1,
-              title: "第一章 初遇",
+              title: "Chapter One First Meeting",
               char_count: 12,
               scene_blocks: [],
             },
@@ -778,16 +778,16 @@ describe("IngestPage settings save", () => {
     );
     await user.upload(
       initialInput!,
-      new File(["第一章 初遇"], "novel.txt", { type: "text/plain" }),
+      new File(["Chapter One First Meeting"], "novel.txt", { type: "text/plain" }),
     );
 
-    expect(screen.getByText("第一章 初遇")).toBeInTheDocument();
+    expect(screen.getByText("Chapter One First Meeting")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reupload" }));
 
     // Cancelling the native picker emits no change event. The existing file
     // and parsed chapter preview must therefore remain untouched.
     expect(screen.getAllByText("novel.txt")).toHaveLength(2);
-    expect(screen.getByText("第一章 初遇")).toBeInTheDocument();
+    expect(screen.getByText("Chapter One First Meeting")).toBeInTheDocument();
     expect(mocks.uploadNovel).toHaveBeenCalledTimes(1);
   });
 
@@ -796,11 +796,11 @@ describe("IngestPage settings save", () => {
     mocks.uploadNovel.mockImplementation(
       async ({ file }: { file: File; spineTemplate: string }) => {
         const title =
-          file.name === "replacement.txt" ? "第一章 新内容" : "第一章 旧内容";
+          file.name === "replacement.txt" ? "Chapter One New Content" : "Chapter One Old Content";
         const chapters = [{
           number: 1,
           title,
-          content: `${title}\n正文。`,
+          content: `${title}\nBody text.`,
           char_count: 8,
           scene_blocks: [],
         }];
@@ -837,19 +837,19 @@ describe("IngestPage settings save", () => {
     );
     await user.upload(
       initialInput!,
-      new File(["第一章 旧内容"], "novel.txt", { type: "text/plain" }),
+      new File(["Chapter One Old Content"], "novel.txt", { type: "text/plain" }),
     );
-    expect(screen.getByText("第一章 旧内容")).toBeInTheDocument();
+    expect(screen.getByText("Chapter One Old Content")).toBeInTheDocument();
 
     await user.upload(
       screen.getByLabelText("Reupload"),
-      new File(["第一章 新内容"], "replacement.txt", { type: "text/plain" }),
+      new File(["Chapter One New Content"], "replacement.txt", { type: "text/plain" }),
     );
 
     await waitFor(() =>
-      expect(screen.getByText("第一章 新内容")).toBeInTheDocument(),
+      expect(screen.getByText("Chapter One New Content")).toBeInTheDocument(),
     );
-    expect(screen.queryByText("第一章 旧内容")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chapter One Old Content")).not.toBeInTheDocument();
     expect(mocks.uploadNovel).toHaveBeenLastCalledWith(
       expect.objectContaining({ spineTemplate: "drama" }),
     );
@@ -866,18 +866,18 @@ describe("IngestPage settings save", () => {
         chapters: [
           {
             number: 1,
-            title: "第一集 初遇",
+            title: "Episode One First Meeting",
             char_count: 36,
             content:
-              "第一集 初遇\r1-1 雨巷 夜 外\r人物：林昭、苏然\r△ 林昭停在屋檐下。",
+              "Episode One First Meeting\r1-1 Rainy Alley NIGHT EXT\rCharacters: Lin Zhao, Su Ran\r△ Lin Zhao stops under the eaves.",
             scene_blocks: [
               {
-                header: "1-1 雨巷 夜 外",
+                header: "1-1 Rainy Alley NIGHT EXT",
                 scene_no: "1",
-                location: "雨巷",
-                time_of_day: "夜",
-                interior_exterior: "外",
-                characters: ["林昭", "苏然"],
+                location: "Rainy Alley",
+                time_of_day: "night",
+                interior_exterior: "ext",
+                characters: ["Lin Zhao", "Su Ran"],
                 content_start_line: 3,
                 content_end_line: 4,
               },
@@ -896,22 +896,22 @@ describe("IngestPage settings save", () => {
     expect(screen.getByText("1 scene")).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", {
-        name: "View scenes for 第一集 初遇",
+        name: "View scenes for Episode One First Meeting",
       }),
     );
 
     expect(screen.getAllByText("1 scene")).toHaveLength(2);
     expect(screen.getByText("Scene 1")).toBeInTheDocument();
-    expect(screen.getAllByText("雨巷").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Rainy Alley").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText((_content, element) =>
         element?.tagName === "P"
-          ? element.textContent?.includes("林昭, 苏然") ?? false
+          ? element.textContent?.includes("Lin Zhao, Su Ran") ?? false
           : false,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("1-1 雨巷 夜 外")).toBeInTheDocument();
-    expect(screen.getByText("△ 林昭停在屋檐下。")).toBeInTheDocument();
+    expect(screen.getByText("1-1 Rainy Alley NIGHT EXT")).toBeInTheDocument();
+    expect(screen.getByText("△ Lin Zhao stops under the eaves.")).toBeInTheDocument();
     expect(screen.queryByTestId("chapter-body")).not.toBeInTheDocument();
   });
 
@@ -924,9 +924,9 @@ describe("IngestPage settings save", () => {
         count: 1,
         chapters: [{
           number: 1,
-          title: "第一集 待修复",
+          title: "Episode One Needs Repair",
           char_count: 20,
-          content: "第一集 待修复\n这段原文没有可识别的场景头。",
+          content: "Episode One Needs Repair\nThis passage has no recognizable scene heading.",
           scene_blocks: [],
         }],
       },
@@ -939,12 +939,12 @@ describe("IngestPage settings save", () => {
     );
     await user.click(
       screen.getByRole("button", {
-        name: "View scenes for 第一集 待修复",
+        name: "View scenes for Episode One Needs Repair",
       }),
     );
 
     expect(screen.getByTestId("chapter-body")).toHaveTextContent(
-      "第一集 待修复 这段原文没有可识别的场景头。",
+      "Episode One Needs Repair This passage has no recognizable scene heading.",
     );
   });
 
@@ -962,9 +962,9 @@ describe("IngestPage settings save", () => {
         chapters: [
           {
             number: 1,
-            title: "第一章 山雨",
+            title: "Chapter One Mountain Rain",
             char_count: 24,
-            content: "第一章 山雨\n雨从傍晚一直下到深夜。",
+            content: "Chapter One Mountain Rain\nThe rain fell from dusk until late at night.",
           },
         ],
       },
@@ -978,13 +978,13 @@ describe("IngestPage settings save", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "View the text of 第一章 山雨",
+        name: "View the text of Chapter One Mountain Rain",
       }),
     );
 
     expect(screen.getByText("Chapter text preview")).toBeInTheDocument();
     expect(screen.getByTestId("chapter-body")).toHaveTextContent(
-      "第一章 山雨 雨从傍晚一直下到深夜。",
+      "Chapter One Mountain Rain The rain fell from dusk until late at night.",
     );
     expect(screen.queryByText("Scenes")).not.toBeInTheDocument();
   });
@@ -1211,7 +1211,7 @@ describe("IngestPage settings save", () => {
 
   it("shows the backend upload error instead of a generic failure", async () => {
     const user = userEvent.setup();
-    mocks.uploadNovel.mockRejectedValue(new Error("解析章节失败: 文件编码不支持"));
+    mocks.uploadNovel.mockRejectedValue(new Error("Failed to parse chapters: unsupported file encoding"));
 
     const { container } = render(
       <Wrapper>
@@ -1229,7 +1229,7 @@ describe("IngestPage settings save", () => {
     );
 
     await waitFor(() =>
-      expect(mocks.toastError).toHaveBeenCalledWith("解析章节失败: 文件编码不支持"),
+      expect(mocks.toastError).toHaveBeenCalledWith("Failed to parse chapters: unsupported file encoding"),
     );
   });
 
@@ -1239,7 +1239,7 @@ describe("IngestPage settings save", () => {
       ok: true,
       data: { filename: "novel.txt", size: 12 },
     });
-    mocks.startIngest.mockRejectedValue(new Error("知识图谱构建失败: provider error"));
+    mocks.startIngest.mockRejectedValue(new Error("Knowledge graph build failed: provider error"));
 
     const { container } = render(
       <Wrapper>
@@ -1259,9 +1259,9 @@ describe("IngestPage settings save", () => {
     await user.click(screen.getByRole("button", { name: /start import/i }));
 
     expect(
-      await screen.findByText("知识图谱构建失败: provider error"),
+      await screen.findByText("Knowledge graph build failed: provider error"),
     ).toBeInTheDocument();
-    expect(mocks.toastError).toHaveBeenCalledWith("知识图谱构建失败: provider error");
+    expect(mocks.toastError).toHaveBeenCalledWith("Knowledge graph build failed: provider error");
   });
 
   it("allows retrying the same upload after an asynchronous ingest failure", async () => {
@@ -1387,10 +1387,10 @@ describe("IngestPage settings save", () => {
   });
 
   it("waits for tasks fetched after mount before reconciling (ignores stale cache)", async () => {
-    // Stale-cache 竞态：tasks(project) 缓存全局共享(不含 episode、staleTime=0)，
-    // 挂载时 React Query 会先同步吐旧缓存再后台 refetch。若拿挂载前的旧数据对账
-    // 一次就把状态锁死，等真数据回来时已早退 → 恢复被永久错过。修复用
-    // isFetchedAfterMount 只认本次挂载后刷到的新数据。
+    // Stale-cache race: the tasks(project) cache is globally shared (no episode, staleTime=0),
+    // and on mount React Query first synchronously emits the old cache and then refetches in the background. Reconciling once against the stale data from before mount
+    // would lock the state, and when the real data arrives it would exit early -> recovery is permanently missed. The fix uses
+    // isFetchedAfterMount to accept only the fresh data fetched after this mount.
     mocks.ingestTasks = [
       { task_type: "ingest_fast", episode: 0, status: "running" },
     ];
@@ -1402,13 +1402,13 @@ describe("IngestPage settings save", () => {
       </Wrapper>,
     );
 
-    // 数据还是挂载前旧缓存 → 不得对账，仍停在上传区。
+    // Data is still the old cache from before mount -> must not reconcile, stay on the upload area.
     expect(
       screen.getByText(SUPPORTED_FORMATS_LABEL),
     ).toBeInTheDocument();
     expect(screen.queryByText("Importing")).not.toBeInTheDocument();
 
-    // 挂载后的新鲜数据到位 → 这时才允许对账并恢复进度视图。
+    // Fresh data after mount has arrived -> only now is reconciling and restoring the progress view allowed.
     mocks.ingestTasksFetchedAfterMount = true;
     rerender(
       <Wrapper>
@@ -1419,9 +1419,9 @@ describe("IngestPage settings save", () => {
   });
 
   it("re-reconciles when the project changes (per-project reconcile state)", async () => {
-    // reconcile 状态按 project 记账：组件跨项目复用时，切到有活跃导入的新项目要
-    // 重新对账，不能被上一个项目的「已对账」布尔状态卡死。
-    mocks.ingestTasks = []; // demo：无活跃任务
+    // Reconcile state is tracked per project: when the component is reused across projects, switching to a new project with an active import must
+    // reconcile again, and must not be stuck by the previous project's boolean "already reconciled" state.
+    mocks.ingestTasks = []; // demo: no active task
 
     const { rerender } = render(
       <Wrapper>
@@ -1432,7 +1432,7 @@ describe("IngestPage settings save", () => {
       screen.getByText(SUPPORTED_FORMATS_LABEL),
     ).toBeInTheDocument();
 
-    // 切到 other 项目，且它有活跃 ingest_fast。
+    // Switch to the other project, and it has an active ingest_fast.
     mocks.ingestTasks = [
       { task_type: "ingest_fast", episode: 0, status: "running" },
     ];
@@ -1445,10 +1445,10 @@ describe("IngestPage settings save", () => {
   });
 
   it("clears leaked progress state when switching to a project without active ingest", async () => {
-    // 反方向对账：组件跨项目复用时，A(活跃导入)→B(无活跃 ingest_fast) 必须清掉
-    // A 残留的进度视图状态，否则 B 会错显「Importing」卡片并让 useTaskStream 去
-    // 连一个不存在的 SSE。正常路由下父级会按 project remount 兜底，这里直接换
-    // project prop 复现「被复用」的场景，验证 else 分支的防御性清理。
+    // Reverse reconcile: when the component is reused across projects, A (active import) -> B (no active ingest_fast) must clear
+    // the progress view state left over from A, otherwise B would wrongly show an "Importing" card and make useTaskStream
+    // connect to an SSE that does not exist. Under a normal route the parent remounts per project as a fallback; here the
+    // project prop is swapped directly to reproduce the "reused" scenario and verify the defensive cleanup of the else branch.
     mocks.ingestTasks = [
       { task_type: "ingest_fast", episode: 0, status: "running" },
     ];
@@ -1458,10 +1458,10 @@ describe("IngestPage settings save", () => {
         <IngestPageContent project="demo" />
       </Wrapper>,
     );
-    // demo：活跃导入 → 进度视图恢复。
+    // demo: active import -> progress view restored.
     expect(await screen.findByText("Importing")).toBeInTheDocument();
 
-    // 切到 other 项目，且它没有活跃任务。
+    // Switch to the other project, which has no active task.
     mocks.ingestTasks = [];
     rerender(
       <Wrapper>
@@ -1469,7 +1469,7 @@ describe("IngestPage settings save", () => {
       </Wrapper>,
     );
 
-    // 残留的「Importing」必须被清掉，退回上传区。
+    // The leftover "Importing" must be cleared and fall back to the upload area.
     expect(
       await screen.findByText(SUPPORTED_FORMATS_LABEL),
     ).toBeInTheDocument();

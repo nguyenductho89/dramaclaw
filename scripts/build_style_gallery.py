@@ -1,24 +1,28 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""把飞书导出的短剧风格素材转成 style-gallery 静态资源 + 风格清单。
+"""Convert the short-drama style assets exported from Feishu into style-gallery static assets plus a style manifest.
 
-用法:
+Usage:
 
     .venv/bin/python scripts/build_style_gallery.py \\
-        --source ~/Downloads/飞书20260806-171116/黄金时代 \\
-        --source ~/Downloads/飞书20260806-174825/原子朋克 \\
-        --source ~/Downloads/风格2 \\
+        --source ~/Downloads/feishu-export-1/golden_age \\
+        --source ~/Downloads/feishu-export-2/atompunk \\
+        --source ~/Downloads/styles-batch-2 \\
         --out frontend/public/style-gallery \\
         --emit-manifest src/novelvideo/freezone/style_templates.json
 
---source 可重复传入,每个都必须直接包含若干风格子目录,子目录内有 提示词.txt。
-飞书导出目录顶层的文件夹互为完整重复拷贝,每批任取其一即可;后来直接给的素材包
-(风格2)则本身就是那一层。
-STYLE_META 里的每个风格会在所有 --source 里按名字查找,找不到即报错退出。
+--source may be passed multiple times; each must directly contain several style subfolders
+(named after the style ids in STYLE_META), and each subfolder holds a prompt.txt.
+The top-level folders of a Feishu export are complete duplicate copies of each other, so
+pick any one of them per batch; an asset pack handed over later (styles-batch-2) is already
+that level itself.
+Every style in STYLE_META is looked up by id across all --source directories; a missing
+one aborts with an error.
 
-产物是「图片目录 + 一份 JSON 清单」这一对:图片可以整个目录传 OSS(后端配
-`STYLE_GALLERY_ASSET_BASE`),清单换代时覆盖内置那份、或另存一处再用
-`STYLE_GALLERY_MANIFEST` 指过去,两边都不需要改代码。
+The output is a pair: an image directory plus one JSON manifest. The whole image directory
+can be uploaded to OSS (set `STYLE_GALLERY_ASSET_BASE` on the backend); when the manifest is
+regenerated, overwrite the built-in one, or save it elsewhere and point
+`STYLE_GALLERY_MANIFEST` at it. Neither side needs a code change.
 """
 
 from __future__ import annotations
@@ -31,81 +35,86 @@ from pathlib import Path
 
 from PIL import Image
 
-# 悬空标点:出现在提示词结尾时无意义,清洗掉。句号不在其列,它是正常句末。
-TRAILING_PUNCTUATION = "，,；;、 \t　"
+# Dangling punctuation: meaningless at the end of a prompt, so strip it. The full stop is
+# not in the list; it is a normal sentence ending.
+TRAILING_PUNCTUATION = ",;\uff0c\uff1b\u3001 \t\u3000"
 
 COVER_MAX_EDGE = 720
 COVER_QUALITY = 78
-# 风格数从 11 涨到 24 后示例图翻倍,规格比第一版设计略降;详情视图里单张实际显示
-# 约 350px,1120 长边在 2 倍屏下仍有富余。
+# After the style count grew from 11 to 24 the sample images doubled, so the spec is a bit
+# lower than the first design; a single image shows at about 350px in the detail view, and
+# a 1120 long edge still has headroom on 2x screens.
 SAMPLE_MAX_EDGE = 1120
 SAMPLE_QUALITY = 74
 
-# 顺序即图墙卡片顺序,按题材分组排列。
+# Order is the card order on the image wall, grouped by genre. Each style's source folder
+# is named after its `id` (rename the folders of the external Feishu export to these ids).
+# The second batch is organized by technique/medium: styles that fit an existing category
+# follow that category, and the three new categories (animation/painting/myth) come last.
 STYLE_META: list[dict[str, str]] = [
-    {"src": "古装偶像", "id": "period_idol", "category": "古装"},
-    {"src": "宫廷权谋", "id": "palace_intrigue", "category": "古装"},
-    {"src": "武侠江湖", "id": "wuxia", "category": "古装"},
-    {"src": "国产都市", "id": "cn_urban", "category": "都市"},
-    {"src": "都市情感", "id": "urban_romance", "category": "都市"},
-    {"src": "现实悬疑", "id": "crime_suspense", "category": "都市"},
-    {"src": "韩国冷淡", "id": "korean_muted", "category": "都市"},
-    {"src": "90年代", "id": "nineties", "category": "年代"},
-    {"src": "黄金时代", "id": "golden_age", "category": "年代"},
-    {"src": "纪实写实", "id": "documentary_realism", "category": "年代"},
-    {"src": "复古叙事", "id": "retro_narrative", "category": "年代"},
-    {"src": "美式90", "id": "american_nineties", "category": "年代"},
-    {"src": "昭和黑白", "id": "showa_monochrome", "category": "年代"},
-    {"src": "老式工业", "id": "vintage_industrial", "category": "年代"},
-    {"src": "60海报", "id": "sixties_poster", "category": "年代"},
-    {"src": "复古港片", "id": "hk_retro", "category": "年代"},
-    {"src": "复古胶片", "id": "retro_film", "category": "年代"},
-    {"src": "生活治愈", "id": "healing_life", "category": "生活"},
-    {"src": "青春胶片", "id": "youth_film", "category": "生活"},
-    {"src": "原子朋克", "id": "atompunk", "category": "科幻"},
-    {"src": "霓虹朋克", "id": "neon_punk", "category": "科幻"},
-    {"src": "硬核科幻", "id": "hard_scifi", "category": "科幻"},
-    {"src": "蒸汽朋克", "id": "steampunk", "category": "科幻"},
-    {"src": "血肉朋克", "id": "biopunk", "category": "科幻"},
-    {"src": "心理恐怖", "id": "psychological_horror", "category": "类型"},
-    {"src": "邪典cult", "id": "cult_film", "category": "类型"},
-    {"src": "现代战争", "id": "modern_warfare", "category": "类型"},
-    {"src": "荒野公路", "id": "wasteland_road", "category": "类型"},
-    {"src": "西部牛仔", "id": "western_cowboy", "category": "类型"},
-    {"src": "新兴中式", "id": "neo_chinese", "category": "写意"},
-    {"src": "高调荒诞", "id": "high_key_absurd", "category": "写意"},
-    # 第二批(~/Downloads/风格2):以画法/媒介立类,插进已有类目的接着原类目排,
-    # 三个新类目(动画/绘画/神话)排在最后。
-    {"src": "上美动漫", "id": "shanghai_animation", "category": "动画"},
-    {"src": "大友克洋", "id": "otomo_akira", "category": "动画"},
-    {"src": "定格动画", "id": "stop_motion", "category": "动画"},
-    {"src": "黏土动画", "id": "claymation", "category": "动画"},
-    {"src": "中式水墨", "id": "chinese_ink", "category": "绘画"},
-    {"src": "浮世绘风", "id": "ukiyo_e", "category": "绘画"},
-    {"src": "传统皮影", "id": "shadow_puppet", "category": "绘画"},
-    {"src": "埃及壁画", "id": "egyptian_mural", "category": "绘画"},
-    {"src": "简约插画", "id": "minimal_illustration", "category": "绘画"},
-    {"src": "荒诞达利", "id": "dali_surreal", "category": "绘画"},
-    {"src": "游戏概念", "id": "game_concept", "category": "绘画"},
-    {"src": "传统神话", "id": "chinese_myth", "category": "神话"},
-    {"src": "希腊神话", "id": "greek_myth", "category": "神话"},
-    {"src": "西式魔幻", "id": "western_fantasy", "category": "神话"},
+    {"src": "period_idol", "id": "period_idol", "label": "Period Idol", "category": "period"},
+    {"src": "palace_intrigue", "id": "palace_intrigue", "label": "Palace Intrigue", "category": "period"},
+    {"src": "wuxia", "id": "wuxia", "label": "Wuxia", "category": "period"},
+    {"src": "cn_urban", "id": "cn_urban", "label": "Chinese Urban", "category": "urban"},
+    {"src": "urban_romance", "id": "urban_romance", "label": "Urban Romance", "category": "urban"},
+    {"src": "crime_suspense", "id": "crime_suspense", "label": "Crime Suspense", "category": "urban"},
+    {"src": "korean_muted", "id": "korean_muted", "label": "Korean Muted", "category": "urban"},
+    {"src": "nineties", "id": "nineties", "label": "The Nineties", "category": "era"},
+    {"src": "golden_age", "id": "golden_age", "label": "Golden Age", "category": "era"},
+    {"src": "documentary_realism", "id": "documentary_realism", "label": "Documentary Realism", "category": "era"},
+    {"src": "retro_narrative", "id": "retro_narrative", "label": "Retro Narrative", "category": "era"},
+    {"src": "american_nineties", "id": "american_nineties", "label": "American Nineties", "category": "era"},
+    {"src": "showa_monochrome", "id": "showa_monochrome", "label": "Showa Monochrome", "category": "era"},
+    {"src": "vintage_industrial", "id": "vintage_industrial", "label": "Vintage Industrial", "category": "era"},
+    {"src": "sixties_poster", "id": "sixties_poster", "label": "Sixties Poster", "category": "era"},
+    {"src": "hk_retro", "id": "hk_retro", "label": "Retro Hong Kong Cinema", "category": "era"},
+    {"src": "retro_film", "id": "retro_film", "label": "Retro Film", "category": "era"},
+    {"src": "healing_life", "id": "healing_life", "label": "Healing Life", "category": "lifestyle"},
+    {"src": "youth_film", "id": "youth_film", "label": "Youth Film", "category": "lifestyle"},
+    {"src": "atompunk", "id": "atompunk", "label": "Atompunk", "category": "scifi"},
+    {"src": "neon_punk", "id": "neon_punk", "label": "Neon Punk", "category": "scifi"},
+    {"src": "hard_scifi", "id": "hard_scifi", "label": "Hard Sci-Fi", "category": "scifi"},
+    {"src": "steampunk", "id": "steampunk", "label": "Steampunk", "category": "scifi"},
+    {"src": "biopunk", "id": "biopunk", "label": "Biopunk", "category": "scifi"},
+    {"src": "psychological_horror", "id": "psychological_horror", "label": "Psychological Horror", "category": "genre"},
+    {"src": "cult_film", "id": "cult_film", "label": "Cult Film", "category": "genre"},
+    {"src": "modern_warfare", "id": "modern_warfare", "label": "Modern Warfare", "category": "genre"},
+    {"src": "wasteland_road", "id": "wasteland_road", "label": "Wasteland Road", "category": "genre"},
+    {"src": "western_cowboy", "id": "western_cowboy", "label": "Western Cowboy", "category": "genre"},
+    {"src": "neo_chinese", "id": "neo_chinese", "label": "Neo-Chinese", "category": "expressive"},
+    {"src": "high_key_absurd", "id": "high_key_absurd", "label": "High-Key Absurd", "category": "expressive"},
+    {"src": "shanghai_animation", "id": "shanghai_animation", "label": "Shanghai Animation", "category": "animation"},
+    {"src": "otomo_akira", "id": "otomo_akira", "label": "Otomo Akira", "category": "animation"},
+    {"src": "stop_motion", "id": "stop_motion", "label": "Stop Motion", "category": "animation"},
+    {"src": "claymation", "id": "claymation", "label": "Claymation", "category": "animation"},
+    {"src": "chinese_ink", "id": "chinese_ink", "label": "Chinese Ink", "category": "painting"},
+    {"src": "ukiyo_e", "id": "ukiyo_e", "label": "Ukiyo-e", "category": "painting"},
+    {"src": "shadow_puppet", "id": "shadow_puppet", "label": "Shadow Puppet", "category": "painting"},
+    {"src": "egyptian_mural", "id": "egyptian_mural", "label": "Egyptian Mural", "category": "painting"},
+    {"src": "minimal_illustration", "id": "minimal_illustration", "label": "Minimal Illustration", "category": "painting"},
+    {"src": "dali_surreal", "id": "dali_surreal", "label": "Dali Surreal", "category": "painting"},
+    {"src": "game_concept", "id": "game_concept", "label": "Game Concept", "category": "painting"},
+    {"src": "chinese_myth", "id": "chinese_myth", "label": "Chinese Mythology", "category": "myth"},
+    {"src": "greek_myth", "id": "greek_myth", "label": "Greek Mythology", "category": "myth"},
+    {"src": "western_fantasy", "id": "western_fantasy", "label": "Western Fantasy", "category": "myth"},
 ]
 
-# 素材文件名 -> 输出文件名。两批素材的人物图命名不同(第一批「女/男」,第二批
-# 「女青年/男青年」),同一个位置给多个候选名,按顺序取第一个存在的。
+# Source file name -> output file name. The two batches name the character images differently
+# (batch 1: female/male, batch 2: female_young/male_young), so each slot lists several candidate
+# names and the first one that exists is used.
 SAMPLE_FILES: list[tuple[tuple[str, ...], str]] = [
-    (("女.png", "女青年.png"), "female.webp"),
-    (("少.png",), "youth.webp"),
-    (("男.png", "男青年.png"), "male.webp"),
-    (("老.png",), "elder.webp"),
+    (("female.png", "female_young.png"), "female.webp"),
+    (("youth.png",), "youth.webp"),
+    (("male.png", "male_young.png"), "male.webp"),
+    (("elder.png",), "elder.webp"),
 ]
-# locate_cover 靠「排除人物图后剩下的唯一一张 PNG」兜底,所以候选名要全。
+# locate_cover falls back to "the only PNG left after excluding the character images", so
+# the candidate names must be complete.
 SAMPLE_SOURCE_NAMES = {name for names, _ in SAMPLE_FILES for name in names}
 
 
 def clean_style_prompt(raw: str) -> str:
-    """提示词只做两件事:去首尾空白、去结尾悬空标点。其余一字不动。"""
+    """Do only two things to a prompt: strip surrounding whitespace and trailing dangling punctuation. Leave everything else untouched."""
     lines = [line.strip() for line in raw.strip().splitlines()]
     text = "\n".join(line for line in lines if line)
     return text.rstrip(TRAILING_PUNCTUATION)
@@ -125,22 +134,23 @@ def convert_image(src: Path, dst: Path, *, max_edge: int, quality: int) -> None:
 
 
 def locate_style_dir(sources: list[Path], name: str) -> Path:
-    """在所有 --source 目录里按风格名找素材目录。"""
+    """Find the asset folder by style id across all --source directories."""
     for source in sources:
         candidate = source / name
         if candidate.is_dir():
             return candidate
-    raise SystemExit(f"素材目录缺失: {name}(已查找 {[str(s) for s in sources]})")
+    raise SystemExit(f"Asset folder missing: {name} (searched {[str(s) for s in sources]})")
 
 
 def locate_cover(style_dir: Path, name: str) -> Path:
-    """找封面图。
+    """Find the cover image.
 
-    正常叫 `<风格名>.png`。但飞书导出里 `纪实写实` 的封面被误命名成了
-    `复古叙事.png`(内容确实是纪实写实的封面,与另一批真正的 复古叙事 封面
-    md5 不同);第二批素材更是普遍取了简称(`60海报/海报.png`、`上美动漫/
-    上美.png`、`大友克洋/阿基拉.png`)。所以退一步取目录里唯一一张非人物
-    示例的 PNG。有多张候选时宁可报错也不猜。
+    Normally it is named `<style id>.png`. But in the Feishu export the cover of
+    `documentary_realism` was mistakenly named `retro_narrative.png` (the content really is the
+    documentary_realism cover, and its md5 differs from the real retro_narrative cover in the
+    other batch); the second batch commonly used short names too (`sixties_poster/poster.png`,
+    `shanghai_animation/shanghai.png`, `otomo_akira/akira.png`). So fall back to the only
+    non-character-sample PNG in the folder. With several candidates, error out rather than guess.
     """
     expected = style_dir / f"{name}.png"
     if expected.is_file():
@@ -152,7 +162,7 @@ def locate_cover(style_dir: Path, name: str) -> Path:
     if len(candidates) == 1:
         return candidates[0]
     raise SystemExit(
-        f"封面无法确定: {style_dir}(候选 {[path.name for path in candidates]})"
+        f"Cannot determine cover: {style_dir} (candidates {[path.name for path in candidates]})"
     )
 
 
@@ -161,9 +171,9 @@ def build(sources: list[Path], out: Path) -> list[dict[str, object]]:
     for meta in STYLE_META:
         style_dir = locate_style_dir(sources, meta["src"])
 
-        prompt_file = style_dir / "提示词.txt"
+        prompt_file = style_dir / "prompt.txt"
         if not prompt_file.is_file():
-            raise SystemExit(f"提示词缺失: {prompt_file}")
+            raise SystemExit(f"Prompt missing: {prompt_file}")
 
         cover_src = locate_cover(style_dir, meta["src"])
 
@@ -183,7 +193,7 @@ def build(sources: list[Path], out: Path) -> list[dict[str, object]]:
             )
             if sample_src is None:
                 raise SystemExit(
-                    f"示例图缺失: {style_dir} 里找不到 {' / '.join(src_names)}"
+                    f"Sample image missing: none of {' / '.join(src_names)} found in {style_dir}"
                 )
             convert_image(
                 sample_src,
@@ -196,7 +206,7 @@ def build(sources: list[Path], out: Path) -> list[dict[str, object]]:
         entries.append(
             {
                 "id": meta["id"],
-                "label": meta["src"],
+                "label": meta["label"],
                 "category": meta["category"],
                 "cover": f"{meta['id']}/cover.webp",
                 "samples": samples,
@@ -209,7 +219,7 @@ def build(sources: list[Path], out: Path) -> list[dict[str, object]]:
 
 
 def render_manifest(entries: list[dict[str, object]], version: str) -> str:
-    """清单格式与 `novelvideo.freezone.style_templates` 的加载器一一对应。"""
+    """The manifest format maps one-to-one to the loader in `novelvideo.freezone.style_templates`."""
     manifest = {"version": version, "templates": entries}
     return json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
 
@@ -221,18 +231,18 @@ def main() -> None:
         required=True,
         action="append",
         type=Path,
-        help="素材目录,可重复传入(两批素材各给一次)",
+        help="Asset directory; may be passed multiple times (once per asset batch)",
     )
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument(
         "--emit-manifest",
         type=Path,
-        help="把风格清单 JSON 写到该文件;不给则打印到 stdout",
+        help="Write the style manifest JSON to this file; print to stdout if omitted",
     )
     parser.add_argument(
         "--manifest-version",
         default=date.today().isoformat(),
-        help="写进清单的版本号,默认取当天日期",
+        help="Version string written into the manifest; defaults to today's date",
     )
     args = parser.parse_args()
 
@@ -242,10 +252,10 @@ def main() -> None:
     manifest = render_manifest(entries, args.manifest_version)
     if args.emit_manifest:
         args.emit_manifest.write_text(manifest, encoding="utf-8")
-        print(f"清单已写入 {args.emit_manifest}", file=sys.stderr)
+        print(f"Manifest written to {args.emit_manifest}", file=sys.stderr)
     else:
         print(manifest)
-    print(f"共处理 {len(entries)} 套风格", file=sys.stderr)
+    print(f"Processed {len(entries)} styles", file=sys.stderr)
 
 
 if __name__ == "__main__":

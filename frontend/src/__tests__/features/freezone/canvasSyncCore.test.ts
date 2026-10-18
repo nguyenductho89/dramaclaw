@@ -14,7 +14,7 @@ import {
   type SaveSnapshot,
 } from "@/features/freezone/canvasSyncCore";
 import type { CanvasMutationSource } from "@/stores/canvasStore";
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 // Helper to build a snapshot with sensible defaults; tests override only what
 // they care about so the intent of each case is obvious from the diff.
@@ -391,9 +391,9 @@ describe("buildSavePayload", () => {
 
 describe("classifySaveError", () => {
   it("maps 409 to conflict with the canonical message", () => {
-    expect(classifySaveError(409, {}, "fallback", zhT)).toMatchObject({
+    expect(classifySaveError(409, {}, "fallback", enT)).toMatchObject({
       kind: "conflict",
-      message: "画布已被其他窗口或用户修改",
+      message: "This canvas was modified by another window or user.",
     });
   });
 
@@ -404,11 +404,11 @@ describe("classifySaveError", () => {
       409,
       { detail: { code: "canvas_idempotency_conflict" } },
       "fallback",
-      zhT,
+      enT,
     );
     expect(outcome).toMatchObject({ kind: "conflict" });
     expect((outcome as { message: string }).message).not.toBe(
-      "画布已被其他窗口或用户修改",
+      "This canvas was modified by another window or user.",
     );
   });
 
@@ -418,11 +418,11 @@ describe("classifySaveError", () => {
         409,
         { detail: { code: "canvas_revision_conflict" } },
         "fallback",
-        zhT,
+        enT,
       ),
     ).toMatchObject({
       kind: "conflict",
-      message: "画布已被其他窗口或用户修改",
+      message: "This canvas was modified by another window or user.",
     });
   });
 
@@ -431,7 +431,7 @@ describe("classifySaveError", () => {
       400,
       { detail: { code: "dangerous_empty_canvas_overwrite" } },
       "fallback",
-      zhT,
+      enT,
     );
     expect(outcome.kind).toBe("dangerous_empty");
   });
@@ -442,7 +442,7 @@ describe("classifySaveError", () => {
         503,
         { detail: { code: "canvas_lock_busy" } },
         "fallback",
-        zhT,
+        enT,
       ),
     ).toEqual({
       kind: "retry",
@@ -456,7 +456,7 @@ describe("classifySaveError", () => {
       503,
       { detail: { code: "canvas_backup_pending" } },
       "fallback",
-      zhT,
+      enT,
     );
     expect(outcome.kind).toBe("ok_with_warning");
     if (outcome.kind === "ok_with_warning") {
@@ -470,7 +470,7 @@ describe("classifySaveError", () => {
         422,
         { detail: { code: "canvas_payload_too_large" } },
         "fallback",
-        zhT,
+        enT,
       ).kind,
     ).toBe("fatal");
   });
@@ -481,20 +481,20 @@ describe("classifySaveError", () => {
         500,
         { detail: { code: "canvas_needs_migration" } },
         "fallback",
-        zhT,
+        enT,
       ).kind,
     ).toBe("fatal");
   });
 
   it("falls back to a generic error for unknown codes", () => {
-    expect(classifySaveError(418, {}, "I am a teapot", zhT)).toEqual({
+    expect(classifySaveError(418, {}, "I am a teapot", enT)).toEqual({
       kind: "error",
       message: "I am a teapot",
     });
   });
 
   it("treats bare 413 as fatal payload_too_large even without detail.code", () => {
-    const outcome = classifySaveError(413, undefined, "fallback", zhT);
+    const outcome = classifySaveError(413, undefined, "fallback", enT);
     expect(outcome.kind).toBe("fatal");
     if (outcome.kind === "fatal") {
       expect(outcome.code).toBe("canvas_payload_too_large");
@@ -506,12 +506,12 @@ describe("classifySaveError", () => {
       500,
       { detail: { code: "canvas_backup_failed" } },
       "fallback",
-      zhT,
+      enT,
     );
     expect(outcome.kind).toBe("fatal");
     if (outcome.kind === "fatal") {
       expect(outcome.code).toBe("canvas_backup_failed");
-      expect(outcome.message).toContain("云端备份");
+      expect(outcome.message).toContain("Cloud backup");
     }
   });
 });
@@ -561,24 +561,24 @@ describe("checkPayloadLimits", () => {
 });
 
 describe("describePayloadViolation", () => {
-  it("uses 节点 wording for the nodes field", () => {
+  it("uses node wording for the nodes field", () => {
     expect(
       describePayloadViolation({
         field: "nodes",
         actual: MAX_NODES + 5,
         limit: MAX_NODES,
-      }, zhT),
-    ).toMatch(/节点数量/);
+      }, enT),
+    ).toMatch(/Node count/);
   });
 
-  it("uses 连线 wording for the edges field", () => {
+  it("uses connection wording for the edges field", () => {
     expect(
       describePayloadViolation({
         field: "edges",
         actual: MAX_EDGES + 5,
         limit: MAX_EDGES,
-      }, zhT),
-    ).toMatch(/连线数量/);
+      }, enT),
+    ).toMatch(/Edge count/);
   });
 
   it("renders body size in KB for readability", () => {
@@ -586,9 +586,9 @@ describe("describePayloadViolation", () => {
       field: "body",
       actual: 6 * 1024 * 1024,
       limit: MAX_BODY_BYTES,
-    }, zhT);
+    }, enT);
     expect(message).toMatch(/KB/);
-    expect(message).toMatch(/暂停保存/);
+    expect(message).toMatch(/Saving is paused/);
   });
 });
 

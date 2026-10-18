@@ -52,8 +52,8 @@ export type SnapAlignPositionChange = Extract<
 };
 
 /**
- * 拖动中的位置帧始终参与吸附；松手帧仅在已有同节点会话时参与，防止 React Flow
- * 用原始指针坐标覆盖刚刚写入的吸附坐标。
+ * Position frames during dragging always take part in snapping; the release frame takes part only when a session for the same node already exists, preventing React Flow
+ * from overwriting the just-written snapped coordinates with the raw pointer coordinates.
  */
 export function isSnapAlignPositionChange(
   change: NodeChange<CanvasNode>,
@@ -65,8 +65,8 @@ export function isSnapAlignPositionChange(
 }
 
 /**
- * 构建一次拖动会话。分组本身也是可见画布对象，应参与吸附；只排除被拖对象、
- * 联动对象及其上下级，避免节点吸附到自身容器或自己的子节点。
+ * Build a drag session. Groups themselves are visible canvas objects and should take part in snapping; only the dragged object,
+ * linked objects and their ancestors/descendants are excluded, avoiding a node snapping to its own container or its own children.
  */
 export function createSnapAlignDragSession({
   nodes,
@@ -121,7 +121,7 @@ export function createSnapAlignDragSession({
   };
 }
 
-/** 将 React Flow 的相对拖动位置转换为绝对坐标吸附，再还原为节点坐标。 */
+/** Convert React Flow's relative drag position to absolute coordinates for snapping, then restore to node coordinates. */
 export function resolveSnapAlignDragMove({
   draggedNode,
   proposedPosition,

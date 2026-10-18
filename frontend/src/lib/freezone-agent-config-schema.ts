@@ -33,11 +33,11 @@ function validateFreezoneSkillPayload(payload: FreezoneAgentConfigPayload): Vali
   const triggers = getRecord(payload.triggers);
   const keywords = readKeywordList(triggers.keywords);
   if (keywords.length === 0) {
-    return invalid("triggers.keywords 至少需要 1 项");
+    return invalid("triggers.keywords needs at least 1 item");
   }
   const nodeScopes = readStringArray(triggers.node_scopes);
   if (nodeScopes.some((scope) => !NODE_SCOPES.has(scope))) {
-    return invalid("triggers.node_scopes 包含不支持的节点类型");
+    return invalid("triggers.node_scopes contains an unsupported node type");
   }
 
   const allowedRecipeIds = readStringArray(payload.allowed_recipe_ids);
@@ -46,10 +46,10 @@ function validateFreezoneSkillPayload(payload: FreezoneAgentConfigPayload): Vali
     if (!result.ok) return result;
   }
   if (allowedRecipeIds.length === 0) {
-    return invalid("动态 Skill 的 allowed_recipe_ids 至少需要一个");
+    return invalid("A dynamic Skill needs at least one allowed_recipe_ids entry");
   }
   if (Array.isArray(payload.workflow_templates) && payload.workflow_templates.length > 0) {
-    return invalid("不支持固定 workflow_templates");
+    return invalid("Fixed workflow_templates are not supported");
   }
 
   const inputParameters = Array.isArray(payload.input_parameters)
@@ -65,27 +65,27 @@ function validateFreezoneSkillPayload(payload: FreezoneAgentConfigPayload): Vali
   if (!planningNotes.ok) return planningNotes;
   const conductRules = readStringArray(planning.conduct_rules);
   if (conductRules.length === 0) {
-    return invalid("planning.conduct_rules 至少需要 1 项");
+    return invalid("planning.conduct_rules needs at least 1 item");
   }
 
   const evaluation = getRecord(payload.evaluation);
   const ratingBands = Array.isArray(evaluation.rating_bands) ? evaluation.rating_bands : [];
   if (ratingBands.length === 0) {
-    return invalid("evaluation.rating_bands 至少需要 1 项");
+    return invalid("evaluation.rating_bands needs at least 1 item");
   }
   for (const item of ratingBands) {
     const record = getRecord(item);
     const result = requireNonEmptyString(record.description, "evaluation.rating_bands.description");
     if (!result.ok) return result;
     if (!isFiniteNumber(record.score)) {
-      return invalid("evaluation.rating_bands.score 必须是数字");
+      return invalid("evaluation.rating_bands.score must be a number");
     }
   }
   if (!isFiniteNumber(evaluation.quality_threshold)) {
-    return invalid("evaluation.quality_threshold 必须是数字");
+    return invalid("evaluation.quality_threshold must be a number");
   }
   if (readStringArray(evaluation.domain_constraints).length === 0) {
-    return invalid("evaluation.domain_constraints 至少需要 1 项");
+    return invalid("evaluation.domain_constraints needs at least 1 item");
   }
   return { ok: true };
 }
@@ -96,11 +96,11 @@ function validateFreezoneRecipePayload(payload: FreezoneAgentConfigPayload): Val
   const nameResult = requireNonEmptyString(payload.name, "name");
   if (!nameResult.ok) return nameResult;
   if (!RECIPE_OUTPUT_KINDS.has(readString(payload.output_kind))) {
-    return invalid("output_kind 必须是 text / image / video / audio");
+    return invalid("output_kind must be text / image / video / audio");
   }
   const actionKeys = readStringArray(payload.action_keys);
   if (actionKeys.length === 0) {
-    return invalid("action_keys 至少需要 1 项");
+    return invalid("action_keys needs at least 1 item");
   }
   for (const actionKey of actionKeys) {
     const result = validateId(actionKey, "action_keys");
@@ -121,19 +121,19 @@ function validateInputParameter(value: unknown): ValidationResult {
   if (!labelResult.ok) return labelResult;
   const type = readString(item.type);
   if (!INPUT_PARAMETER_TYPES.has(type)) {
-    return invalid("input_parameters.type 不支持");
+    return invalid("input_parameters.type is not supported");
   }
   if (typeof item.required !== "boolean") {
-    return invalid("input_parameters.required 必须是布尔值");
+    return invalid("input_parameters.required must be a boolean");
   }
   const options = readStringArray(item.options);
   if ((type === "single_select" || type === "multi_select") && options.length === 0) {
-    return invalid("input_parameters.options 至少需要 1 项");
+    return invalid("input_parameters.options needs at least 1 item");
   }
   if (type === "single_select" && item.default !== undefined) {
     const defaultValue = readString(item.default);
     if (!options.includes(defaultValue)) {
-      return invalid("input_parameters.default 必须在 options 中");
+      return invalid("input_parameters.default must be one of options");
     }
   }
   return { ok: true };
@@ -142,14 +142,14 @@ function validateInputParameter(value: unknown): ValidationResult {
 function validateId(value: unknown, field: string): ValidationResult {
   const id = readString(value);
   if (!SAFE_AGENT_CONFIG_ID.test(id)) {
-    return invalid(`${field} 只能包含小写字母、数字、-、_，并且必须以字母或数字开头`);
+    return invalid(`${field} may only contain lowercase letters, digits, - and _, and must start with a letter or digit`);
   }
   return { ok: true };
 }
 
 function requireNonEmptyString(value: unknown, field: string): ValidationResult {
   if (!readString(value)) {
-    return invalid(`${field} 不能为空`);
+    return invalid(`${field} must not be empty`);
   }
   return { ok: true };
 }

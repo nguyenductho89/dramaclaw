@@ -78,9 +78,9 @@ export interface Character {
   history_url?: string;
   restore_url?: string;
   /**
-   * 该角色名下所有身份的 id，由角色列表接口一次带出（身份详情仍走
-   * `/characters/{name}/identities` 按需拉）。用于把 `?type=identity&id=` 深链
-   * 解析到拥有它的角色，不必逐个角色去拉身份列表。
+   * Ids of all identities under this character, returned in one go by the character list endpoint (identity details still go through
+   * `/characters/{name}/identities` on demand). Used to resolve a `?type=identity&id=` deep link
+   * to the character that owns it, without fetching the identity list character by character.
    */
   identity_ids?: string[];
 }

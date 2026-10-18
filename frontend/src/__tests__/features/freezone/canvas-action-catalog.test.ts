@@ -150,7 +150,7 @@ describe("canvas action catalog", () => {
       id: "upload-a",
       type: CANVAS_NODE_TYPES.upload,
       data: {
-        displayName: "上传资源",
+        displayName: "Upload asset",
       },
     });
 
@@ -177,7 +177,7 @@ describe("canvas action catalog", () => {
       data: {
         preset_managed: true,
         projection_key: "asset:scene:master",
-        title: "主线场景",
+        title: "Mainline scene",
       },
     });
 
@@ -196,7 +196,7 @@ describe("canvas action catalog", () => {
       type: CANVAS_NODE_TYPES.audio,
       data: {
         audioKind: "speech",
-        text: "广告词",
+        text: "Ad copy",
       },
     });
 
@@ -222,7 +222,7 @@ describe("canvas action catalog", () => {
       data: {
         audioKind: "speech",
         audioUrl: "/static/projects/demo/freezone/_uploads/reference.mp3",
-        text: "请生成新的口播音频",
+        text: "Please generate new voice-over audio",
       },
     });
 
@@ -243,7 +243,7 @@ describe("canvas action catalog", () => {
       type: CANVAS_NODE_TYPES.audio,
       data: {
         audioKind: "speech",
-        text: "广告词",
+        text: "Ad copy",
       },
     });
     const musicAudio = node({
@@ -251,7 +251,7 @@ describe("canvas action catalog", () => {
       type: CANVAS_NODE_TYPES.audio,
       data: {
         audioKind: "music",
-        text: "温暖的背景音乐",
+        text: "Warm background music",
       },
     });
 
@@ -350,7 +350,7 @@ describe("canvas action catalog", () => {
           action: "run_scene360_tool",
           execution: "frontend_node",
           command_type: "run_node_action",
-          description: expect.stringContaining("全景"),
+          description: expect.stringContaining("Panorama"),
         }),
       ]),
     );
@@ -364,7 +364,7 @@ describe("canvas action catalog", () => {
       id: "video-aspect-a",
       type: CANVAS_NODE_TYPES.video,
       data: {
-        prompt: "公益广告短片",
+        prompt: "Public-service ad short",
         genMode: "imageToVideo",
         model: "newapi_seedance-2.0-fast",
         aspectRatio: "9:16",
@@ -395,8 +395,8 @@ describe("canvas action catalog", () => {
       current_value: "imageToVideo",
       options: expect.arrayContaining(["textToVideo", "imageToVideo", "allReference"]),
       option_labels: expect.objectContaining({
-        textToVideo: "文生视频",
-        imageToVideo: "图生视频",
+        textToVideo: "Text to Video",
+        imageToVideo: "Image to Video",
       }),
     });
     expect(catalog.editable_schema.aspectRatio).toMatchObject({
@@ -427,12 +427,12 @@ describe("canvas action catalog", () => {
 
     expect(imagePrompt.description).toContain("combined with upstream prompt_for text");
     expect(imagePrompt.description).toContain("avoid duplicating");
-    expect(imagePrompt.description).toContain("@图片1");
+    expect(imagePrompt.description).toContain("@image1");
     expect(imagePrompt.description).toContain("top reference thumbnails");
     expect(imagePrompt.description).toContain("declare each referenced image's role");
     expect(videoPrompt.description).toContain("combined with upstream prompt_for text");
     expect(videoPrompt.description).toContain("avoid duplicating");
-    expect(videoPrompt.description).toContain("@图片1");
+    expect(videoPrompt.description).toContain("@image1");
     expect(videoPrompt.description).toContain("top reference thumbnails");
     expect(videoPrompt.description).toContain("declare each referenced image's role");
   });
@@ -441,12 +441,12 @@ describe("canvas action catalog", () => {
     const image = node({
       id: "image-action-a",
       type: CANVAS_NODE_TYPES.imageGen,
-      data: { prompt: "@图片1 作为构图参考" },
+      data: { prompt: "@image1 as the composition reference" },
     });
     const video = node({
       id: "video-action-a",
       type: CANVAS_NODE_TYPES.video,
-      data: { prompt: "@图片1 作为角色参考", genMode: "imageReference" },
+      data: { prompt: "@image1 as the character reference", genMode: "imageReference" },
     });
 
     const imageAction = buildCanvasNodeActionCatalog(image).actions.find(
@@ -456,9 +456,9 @@ describe("canvas action catalog", () => {
       (action) => action.action === "generate_video",
     );
 
-    expect(imageAction?.description).toContain("@图片N");
+    expect(imageAction?.description).toContain("@imageN");
     expect(imageAction?.description).toContain("Before running");
-    expect(videoAction?.description).toContain("@图片N");
+    expect(videoAction?.description).toContain("@imageN");
     expect(videoAction?.description).toContain("imageReference");
     expect(videoAction?.description).toContain("Before running");
   });
@@ -528,7 +528,7 @@ describe("canvas action catalog", () => {
       id: "compose-a",
       type: CANVAS_NODE_TYPES.videoCompose,
       data: {
-        displayName: "合成视频",
+        displayName: "Composed video",
       },
     });
 
@@ -561,7 +561,7 @@ describe("canvas action catalog", () => {
       id: "world-a",
       type: CANVAS_NODE_TYPES.threeDWorld,
       data: {
-        displayName: "导演世界",
+        displayName: "Director world",
       },
     });
 
@@ -597,7 +597,7 @@ describe("canvas action catalog", () => {
       id: "world-a",
       type: CANVAS_NODE_TYPES.threeDWorld,
       data: {
-        displayName: "导演世界",
+        displayName: "Director world",
       },
     });
 
@@ -621,7 +621,7 @@ describe("canvas action catalog", () => {
       id: "skill-sketch-a",
       type: CANVAS_NODE_TYPES.skill,
       data: {
-        displayName: "根据当前背景生成草图",
+        displayName: "Generate sketch from current background",
         skill_id: "freezone.sketch_from_context",
         parameters: { style: "rough" },
       },
@@ -645,7 +645,7 @@ describe("canvas action catalog", () => {
       id: "beat-a",
       type: CANVAS_NODE_TYPES.beatContext,
       data: {
-        displayName: "镜头上下文",
+        displayName: "Shot context",
         beat_context: { episode: 1, beat: 2 },
       },
     });
@@ -653,7 +653,7 @@ describe("canvas action catalog", () => {
       id: "background-a",
       type: CANVAS_NODE_TYPES.imageGen,
       data: {
-        displayName: "背景",
+        displayName: "Background",
         imageUrl: "/static/background.png",
       },
     });
@@ -661,7 +661,7 @@ describe("canvas action catalog", () => {
       id: "skill-sketch-a",
       type: CANVAS_NODE_TYPES.skill,
       data: {
-        displayName: "根据当前背景生成草图",
+        displayName: "Generate sketch from current background",
         skill_id: "freezone.sketch_from_context",
       },
     });
@@ -708,7 +708,7 @@ describe("canvas action catalog", () => {
       id: "beat-a",
       type: CANVAS_NODE_TYPES.beatContext,
       data: {
-        displayName: "镜头上下文",
+        displayName: "Shot context",
         beat_context: { episode: 1, beat: 2 },
       },
     });
@@ -716,14 +716,14 @@ describe("canvas action catalog", () => {
       id: "sketch-a",
       type: CANVAS_NODE_TYPES.imageGen,
       data: {
-        displayName: "正在生成的草图",
+        displayName: "Sketch being generated",
       },
     });
     const skill = node({
       id: "skill-frame-a",
       type: CANVAS_NODE_TYPES.skill,
       data: {
-        displayName: "根据草图生成分镜",
+        displayName: "Generate storyboard from sketch",
         skill_id: "freezone.frame_from_context",
       },
     });
@@ -753,8 +753,8 @@ describe("canvas action catalog", () => {
         action: "run_skill",
         command_type: "run_node_action",
         can_run_now: false,
-        blocked_reasons: ["sketch 输入尚未就绪：上游草图节点缺少 imageUrl。"],
-        instruction: expect.stringContaining("不要 emit run_node_action"),
+        blocked_reasons: ["Input sketch is not ready: the upstream sketch node is missing imageUrl."],
+        instruction: expect.stringContaining("do not emit run_node_action"),
         preconditions: [
           expect.objectContaining({
             type: "required_upstream_output",
@@ -773,7 +773,7 @@ describe("canvas action catalog", () => {
       id: "skill-review-a",
       type: CANVAS_NODE_TYPES.skill,
       data: {
-        displayName: "审核分镜",
+        displayName: "Review storyboard",
         skill_id: "agent.review_frame",
       },
     });
@@ -781,7 +781,7 @@ describe("canvas action catalog", () => {
       id: "skill-unknown-a",
       type: CANVAS_NODE_TYPES.skill,
       data: {
-        displayName: "未知技能",
+        displayName: "Unknown skill",
         skill_id: "custom.unknown",
       },
     });
@@ -798,7 +798,7 @@ describe("canvas action catalog", () => {
       id: "pano-a",
       type: CANVAS_NODE_TYPES.pano360Viewer,
       data: {
-        displayName: "360 全景",
+        displayName: "360 panorama",
         imageUrl: "/static/projects/demo/freezone/pano.png",
       },
     });
@@ -806,7 +806,7 @@ describe("canvas action catalog", () => {
       id: "pano-empty",
       type: CANVAS_NODE_TYPES.pano360Viewer,
       data: {
-        displayName: "空 360 全景",
+        displayName: "Empty 360 panorama",
       },
     });
 
@@ -873,13 +873,13 @@ describe("canvas action catalog", () => {
     expect(splitAction).toMatchObject({
       execution: "manual_ui",
       command_type: "run_node_action",
-      description: expect.stringContaining("分格抽取"),
+      description: expect.stringContaining("panel-extraction"),
       parameters: {
         node_id: "image-a",
         tool_type: "split-storyboard",
       },
     });
-    expect(serialStoryboardAction?.description).toContain("不是分格抽取");
+    expect(serialStoryboardAction?.description).toContain("This is not panel extraction");
   });
 
   it("combines frontend UI command capabilities with business action capabilities", () => {
@@ -903,7 +903,7 @@ describe("canvas action catalog", () => {
       id: "audio-a",
       type: CANVAS_NODE_TYPES.audio,
       data: {
-        text: "月光下的街道",
+        text: "Street in the moonlight",
         audioKind: "speech",
       },
     });
@@ -911,7 +911,7 @@ describe("canvas action catalog", () => {
       id: "text-a",
       type: CANVAS_NODE_TYPES.textAnnotation,
       data: {
-        content: "一段需要翻译的文案",
+        content: "A piece of copy to translate",
         mode: "writing",
       },
     });
@@ -919,14 +919,14 @@ describe("canvas action catalog", () => {
       id: "script-a",
       type: CANVAS_NODE_TYPES.script,
       data: {
-        prompt: "生成一个广告短片脚本",
+        prompt: "Generate an ad short script",
       },
     });
     const world = node({
       id: "world-a",
       type: CANVAS_NODE_TYPES.threeDWorld,
       data: {
-        displayName: "导演世界",
+        displayName: "Director world",
       },
     });
 
@@ -1018,8 +1018,8 @@ describe("canvas action catalog", () => {
     const mattingCapability = catalog.frontend_command_catalog.find(
       (item) => item.id === "ui.run_matting_tool",
     );
-    expect(mattingCapability?.frontend_mapping?.description).toContain("去背景");
-    expect(mattingCapability?.frontend_mapping?.description).toContain("透明背景");
+    expect(mattingCapability?.frontend_mapping?.description).toContain("background removal");
+    expect(mattingCapability?.frontend_mapping?.description).toContain("transparent background");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.run_grid_product_three_view");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.generate_video");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.generate_audio");
@@ -1114,17 +1114,17 @@ describe("canvas action catalog", () => {
       }),
     });
     expect(catalog.canvas_action_catalog.find((item) => item.id === "ui.open_multi_angle_tool")).toMatchObject({
-      display_name: expect.stringContaining("多维度"),
+      display_name: expect.stringContaining("Multi-angle"),
       frontend_mapping: expect.objectContaining({
-        description: expect.stringContaining("多维度"),
+        description: expect.stringContaining("Multi-angle"),
       }),
     });
     expect(catalog.canvas_action_catalog.find((item) => item.id === "ui.run_scene360_tool")).toMatchObject({
-      display_name: expect.stringContaining("全景"),
+      display_name: expect.stringContaining("panorama"),
       execution: "frontend_node",
       frontend_mapping: expect.objectContaining({
         action: "run_scene360_tool",
-        description: expect.stringContaining("全景"),
+        description: expect.stringContaining("Panorama"),
       }),
     });
     expect(catalog.canvas_action_catalog.find((item) => item.id === "freezone.image.to_3gs")).toMatchObject({

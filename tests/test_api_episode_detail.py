@@ -42,8 +42,8 @@ class _EpisodeStore:
         self.beat_counts = beat_counts or {}
         self.count_calls = 0
         self.count_error = count_error
-        # 真 SQLiteStore 背后是一条 aiosqlite 连接加一个后台线程，路由漏关就是漏一条。
-        # 这里记账，下面的用例据此断言"路由确实收口了"，而不是只断言返回码。
+        # Behind a real SQLiteStore is an aiosqlite connection plus a background thread, and a route that forgets to close leaks one.
+        # Bookkeeping happens here, so the cases below can assert that "the route really closed it" rather than only asserting the status code.
         self.close_calls = 0
 
     async def count_beats_by_episode(self):
@@ -95,13 +95,13 @@ class _CogneeEpisodeStore:
         return [self.episode]
 
     def get_all_characters(self):
-        character = NovelCharacter(name="秦")
+        character = NovelCharacter(name="Qin")
         character.identities = [
             CharacterIdentity(
-                character_name="秦",
-                identity_id="秦_青年",
-                identity_name="青年",
-                appearance_details="青衣",
+                character_name="Qin",
+                identity_id="Qin_young_adult",
+                identity_name="young_adult",
+                appearance_details="blue robe",
             )
         ]
         return [character]
@@ -130,14 +130,14 @@ class _FakeAssetCompiler:
     async def compile_episode_scenes(self, episode, on_log=None):
         if on_log:
             on_log("planned scenes")
-        scene_menu = [{"scene_id": "宫门"}]
+        scene_menu = [{"scene_id": "PalaceGate"}]
         self.store.episode.scene_menu = scene_menu
         return self.store.episode.scene_menu, 1
 
     async def compile_episode_props(self, episode, on_log=None):
         if on_log:
             on_log("planned props")
-        prop_menu = [{"prop_id": "玉佩", "prop_type": "object"}]
+        prop_menu = [{"prop_id": "JadePendant", "prop_type": "object"}]
         self.store.episode.prop_menu = prop_menu
         return self.store.episode.prop_menu
 
@@ -149,9 +149,9 @@ class _FakeIdentityPlanner:
     async def plan_single_episode(self, episode, on_log=None):
         if on_log:
             on_log("planned identity")
-        self.store.episode.identity_ids = ["秦_青年"]
-        self.store.episode.character_names = ["秦"]
-        self.store.episode.identity_default_map = {"秦": "秦_青年"}
+        self.store.episode.identity_ids = ["Qin_young_adult"]
+        self.store.episode.character_names = ["Qin"]
+        self.store.episode.identity_default_map = {"Qin": "Qin_young_adult"}
         return 0, 1
 
 
@@ -179,10 +179,10 @@ def _patch_project_and_store(
 
     monkeypatch.setattr(module, "resolve_project_scope", resolve_project_scope)
     monkeypatch.setattr(module, "make_sqlite_store", make_store)
-    # 走 scope 的路由（``list_episodes``）拿到的是 ``deps.sqlite_store_scope``——它在
-    # 导入期就被 ``asynccontextmanager`` 包好了，内部按模块全局查 ``make_sqlite_store``。
-    # 只打路由模块那份名字，scope 会绕过假货去开真库。两处都打，且 scope 的
-    # ``try/finally`` 仍是真代码在跑，``close_calls`` 断言才作数。
+    # The scoped route (``list_episodes``) gets ``deps.sqlite_store_scope`` -- which is
+    # wrapped by ``asynccontextmanager`` at import time and looks up ``make_sqlite_store`` through module globals internally.
+    # Patching only the name in the route module lets the scope bypass the fake and open the real database. Patch both, so the scope's
+    # ``try/finally`` is still real code running and the ``close_calls`` assertions count.
     monkeypatch.setattr(deps, "make_sqlite_store", make_store)
 
 
@@ -261,17 +261,17 @@ async def test_get_episode_detail_returns_nicegui_fields(tmp_path, monkeypatch):
 
     episode = NovelEpisode(
         number=1,
-        title="第一集",
-        raw_content="原文",
-        beat_source_text="分镜源文本",
-        content_summary="摘要",
-        character_names=["秦"],
-        key_events=["入宫"],
-        cliffhanger="悬念",
-        identity_ids=["秦_幼年"],
-        identity_default_map={"秦": "秦_幼年"},
-        scene_menu=[{"scene_id": "宫门", "scene_name": "宫门"}],
-        prop_menu=[{"prop_id": "玉佩", "prop_name": "玉佩"}],
+        title="Episode One",
+        raw_content="raw text",
+        beat_source_text="beat source text",
+        content_summary="summary",
+        character_names=["Qin"],
+        key_events=["Enter palace"],
+        cliffhanger="cliffhanger",
+        identity_ids=["Qin_child"],
+        identity_default_map={"Qin": "Qin_child"},
+        scene_menu=[{"scene_id": "PalaceGate", "scene_name": "PalaceGate"}],
+        prop_menu=[{"prop_id": "JadePendant", "prop_name": "JadePendant"}],
     )
     _patch_project_and_store(
         monkeypatch,
@@ -289,19 +289,19 @@ async def test_get_episode_detail_returns_nicegui_fields(tmp_path, monkeypatch):
     assert response["ok"] is True
     assert response["data"] == {
         "number": 1,
-        "title": "第一集",
-        "summary": "摘要",
-        "raw_content": "原文",
-        "beat_source_text": "分镜源文本",
-        "content_summary": "摘要",
-        "character_names": ["秦"],
-        "key_events": ["入宫"],
-        "cliffhanger": "悬念",
-        "identity_ids": ["秦_幼年"],
-        "identity_default_map": {"秦": "秦_幼年"},
+        "title": "Episode One",
+        "summary": "summary",
+        "raw_content": "raw text",
+        "beat_source_text": "beat source text",
+        "content_summary": "summary",
+        "character_names": ["Qin"],
+        "key_events": ["Enter palace"],
+        "cliffhanger": "cliffhanger",
+        "identity_ids": ["Qin_child"],
+        "identity_default_map": {"Qin": "Qin_child"},
         "scene_menu": [
             {
-                "scene_id": "宫门",
+                "scene_id": "PalaceGate",
                 "base_scene_id": "",
                 "variant_id": "",
                 "time_of_day": "",
@@ -309,7 +309,7 @@ async def test_get_episode_detail_returns_nicegui_fields(tmp_path, monkeypatch):
         ],
         "prop_menu": [
             {
-                "prop_id": "玉佩",
+                "prop_id": "JadePendant",
                 "prop_type": "object",
                 "visual_prompt": "",
                 "description": "",
@@ -326,12 +326,12 @@ async def test_list_episodes_returns_fields_needed_by_react_workbench(tmp_path, 
 
     episode = NovelEpisode(
         number=1,
-        title="第一集",
-        content_summary="摘要",
-        identity_ids=["秦_幼年", "赵_青年"],
-        key_events=["入宫", "交锋"],
-        scene_menu=[{"scene_id": "宫门"}],
-        prop_menu=[{"prop_id": "玉佩", "prop_type": "object"}],
+        title="Episode One",
+        content_summary="summary",
+        identity_ids=["Qin_child", "Zhao_young_adult"],
+        key_events=["Enter palace", "Confrontation"],
+        scene_menu=[{"scene_id": "PalaceGate"}],
+        prop_menu=[{"prop_id": "JadePendant", "prop_type": "object"}],
     )
     _patch_project_and_store(
         monkeypatch,
@@ -349,13 +349,13 @@ async def test_list_episodes_returns_fields_needed_by_react_workbench(tmp_path, 
     assert response["data"] == [
         {
             "number": 1,
-            "title": "第一集",
-            "summary": "摘要",
-            "identity_ids": ["秦_幼年", "赵_青年"],
-            "key_events": ["入宫", "交锋"],
+            "title": "Episode One",
+            "summary": "summary",
+            "identity_ids": ["Qin_child", "Zhao_young_adult"],
+            "key_events": ["Enter palace", "Confrontation"],
             "scene_menu": [
                 {
-                    "scene_id": "宫门",
+                    "scene_id": "PalaceGate",
                     "base_scene_id": "",
                     "variant_id": "",
                     "time_of_day": "",
@@ -363,7 +363,7 @@ async def test_list_episodes_returns_fields_needed_by_react_workbench(tmp_path, 
             ],
             "prop_menu": [
                 {
-                    "prop_id": "玉佩",
+                    "prop_id": "JadePendant",
                     "prop_type": "object",
                     "visual_prompt": "",
                     "description": "",
@@ -378,31 +378,31 @@ async def test_list_episodes_returns_fields_needed_by_react_workbench(tmp_path, 
 
 @pytest.mark.asyncio
 async def test_list_episodes_carries_beat_count_from_one_grouped_query(tmp_path, monkeypatch):
-    """分集列表自带镜头数，前端不必逐集去拉完整 beats 再取长度。
+    """The episode list carries the shot count itself, so the frontend need not pull the full beats of each episode to take the length.
 
-    这是分集页扇出的根因：列表有几集，前端就发几个
-    ``GET /episodes/{n}/beats``，每个都要解析项目上下文、开库、给每个 beat 拼
-    sketch/frame/video URL 并对每条音频 fork 一次 ffprobe——只为了拿一个整数。
+    This was the root cause of the episode page fan-out: for as many episodes as the list had, the frontend sent as many
+    ``GET /episodes/{n}/beats`` requests, each resolving the project context, opening the database, assembling
+    sketch/frame/video URLs for every beat and forking ffprobe once per audio -- just to get one integer.
     """
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集")
+    episode = NovelEpisode(number=1, title="Episode One")
     store = _EpisodeStore(episode, beat_counts={1: 7})
     _patch_project_and_store(monkeypatch, episodes, tmp_path, store)
 
     response = await episodes.list_episodes(project="demo", user={"username": "admin"})
 
     assert response["data"][0]["beat_count"] == 7
-    # 一次分组查询覆盖整张列表，不是每集一次。
+    # One grouped query covers the whole list, not one per episode.
     assert store.count_calls == 1
 
 
 @pytest.mark.asyncio
 async def test_list_episodes_reports_zero_for_unsplit_episode(tmp_path, monkeypatch):
-    """还没拆镜的集要报 0，而不是缺字段——角标读到 undefined 就不渲染了。"""
+    """An episode not yet split into shots must report 0 rather than a missing field -- the badge reads undefined and does not render."""
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=2, title="第二集")
+    episode = NovelEpisode(number=2, title="Episode Two")
     store = _EpisodeStore(episode, beat_counts={1: 7})
     _patch_project_and_store(monkeypatch, episodes, tmp_path, store)
 
@@ -413,14 +413,14 @@ async def test_list_episodes_reports_zero_for_unsplit_episode(tmp_path, monkeypa
 
 @pytest.mark.asyncio
 async def test_list_episodes_closes_the_store_on_the_normal_path(tmp_path, monkeypatch):
-    """分集列表是进虾镜的必经一跳，漏关连接的代价按访问次数累积。
+    """The episode list is a mandatory hop into the shot view, and the cost of a leaked connection accumulates per visit.
 
-    这里断言的是 ``close()`` 被调用了一次，不是返回码——裸 factory 的版本返回码
-    一样是 200，只是每回都留下一条 aiosqlite 连接和一个后台线程。
+    What is asserted here is that ``close()`` was called once, not the status code -- the bare factory version returns the same status code
+    200, it just leaves behind an aiosqlite connection and a background thread each time.
     """
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集")
+    episode = NovelEpisode(number=1, title="Episode One")
     store = _EpisodeStore(episode, beat_counts={1: 7})
     _patch_project_and_store(monkeypatch, episodes, tmp_path, store)
 
@@ -432,14 +432,14 @@ async def test_list_episodes_closes_the_store_on_the_normal_path(tmp_path, monke
 
 @pytest.mark.asyncio
 async def test_list_episodes_closes_the_store_when_the_query_raises(tmp_path, monkeypatch):
-    """异常路径才是裸 factory 最疼的地方：报错还照样泄漏。
+    """The error path is where the bare factory hurts most: it leaks even on errors.
 
-    ``count_beats_by_episode`` 是本 PR 新加的那次查询，也是这个路由里最可能抛的一
-    步（库锁、schema 没迁移）。它抛出去时连接必须还是关掉的。
+    ``count_beats_by_episode`` is the query newly added in this PR and the step in this route most likely to
+    raise (database lock, schema not migrated). When it raises, the connection must still be closed.
     """
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集")
+    episode = NovelEpisode(number=1, title="Episode One")
     boom = RuntimeError("database is locked")
     store = _EpisodeStore(episode, count_error=boom)
     _patch_project_and_store(monkeypatch, episodes, tmp_path, store)
@@ -452,11 +452,11 @@ async def test_list_episodes_closes_the_store_when_the_query_raises(tmp_path, mo
 
 @pytest.mark.asyncio
 async def test_list_episodes_closes_the_store_on_the_context_branch(tmp_path, monkeypatch):
-    """``resolved.ctx`` 非空时走的是另一条 scope，别只覆盖 CE 那半边。"""
+    """When ``resolved.ctx`` is non-empty a different scope is used; do not cover only the CE half."""
     from novelvideo.api import deps
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集")
+    episode = NovelEpisode(number=1, title="Episode One")
     store = _EpisodeStore(episode, beat_counts={1: 3})
     ctx = SimpleNamespace(project_id="proj_demo", output_dir=tmp_path, is_home_node=True)
 
@@ -487,7 +487,7 @@ async def test_list_episodes_closes_the_store_on_the_context_branch(tmp_path, mo
 async def test_patch_episode_source_fields_persists_and_returns_detail(tmp_path, monkeypatch):
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集")
+    episode = NovelEpisode(number=1, title="Episode One")
     store = _EpisodeStore(episode)
     _patch_project_and_store(monkeypatch, episodes, tmp_path, store)
 
@@ -495,21 +495,21 @@ async def test_patch_episode_source_fields_persists_and_returns_detail(tmp_path,
         project="demo",
         episode_num=1,
         body=EpisodeUpdate(
-            beat_source_text="新分镜源文本",
-            identity_default_map={"秦": "秦_青年"},
+            beat_source_text="new beat source text",
+            identity_default_map={"Qin": "Qin_young_adult"},
         ),
         user={"username": "admin"},
     )
 
     assert response["ok"] is True
-    assert response["data"]["beat_source_text"] == "新分镜源文本"
-    assert response["data"]["identity_default_map"] == {"秦": "秦_青年"}
+    assert response["data"]["beat_source_text"] == "new beat source text"
+    assert response["data"]["identity_default_map"] == {"Qin": "Qin_young_adult"}
     assert store.updates == [
         (
             1,
             {
-                "beat_source_text": "新分镜源文本",
-                "identity_default_map": {"秦": "秦_青年"},
+                "beat_source_text": "new beat source text",
+                "identity_default_map": {"Qin": "Qin_young_adult"},
             },
         )
     ]
@@ -545,7 +545,7 @@ async def test_plan_episode_identities_enqueues_celery_task(monkeypatch):
         raise AssertionError("identity planning API must enqueue a Celery task")
     class ReadyCharacterStore:
         def get_all_characters(self):
-            return [SimpleNamespace(name="秦")]
+            return [SimpleNamespace(name="Qin")]
 
         async def close(self):
             pass
@@ -707,7 +707,7 @@ async def test_plan_episode_identities_rejects_active_character_build_before_enq
 async def test_plan_episode_scenes_returns_updated_episode_detail(tmp_path, monkeypatch):
     from novelvideo.api.routes import episodes
 
-    episode = NovelEpisode(number=1, title="第一集", beat_source_text="第一行")
+    episode = NovelEpisode(number=1, title="Episode One", beat_source_text="First line")
     store = _CogneeEpisodeStore(episode)
     _patch_project_and_cognee_store(monkeypatch, episodes, tmp_path, store)
 
@@ -723,7 +723,7 @@ async def test_plan_episode_scenes_returns_updated_episode_detail(tmp_path, monk
     assert response["data"]["new_count"] == 1
     assert response["data"]["total_count"] == 1
     expected_menu_item = {
-        "scene_id": "宫门",
+        "scene_id": "PalaceGate",
         "base_scene_id": "",
         "variant_id": "",
         "time_of_day": "",
@@ -754,7 +754,7 @@ async def test_plan_episode_scenes_enqueues_celery_task(monkeypatch):
         "backend": "celery",
         "queue": "node.node_a.default",
         "data": {"target_episode": 4, "asset_kind": "scene"},
-        "message": "第 4 集场景规划已进入队列",
+        "message": "Episode 4 scene planning queued",
     }
     assert calls == [
         {
@@ -807,7 +807,7 @@ async def test_plan_episode_scenes_rejects_active_scene_build_before_enqueue(
 @pytest.mark.asyncio
 async def test_plan_episode_props_returns_updated_episode_detail(tmp_path, monkeypatch):
     from novelvideo.api.routes import episodes
-    episode = NovelEpisode(number=1, title="第一集", beat_source_text="第一行")
+    episode = NovelEpisode(number=1, title="Episode One", beat_source_text="First line")
     store = _CogneeEpisodeStore(episode)
     _patch_project_and_cognee_store(monkeypatch, episodes, tmp_path, store)
 
@@ -823,7 +823,7 @@ async def test_plan_episode_props_returns_updated_episode_detail(tmp_path, monke
     assert response["data"]["total_count"] == 1
     assert response["data"]["prop_menu"] == [
         {
-            "prop_id": "玉佩",
+            "prop_id": "JadePendant",
             "prop_type": "object",
             "visual_prompt": "",
             "description": "",
@@ -833,7 +833,7 @@ async def test_plan_episode_props_returns_updated_episode_detail(tmp_path, monke
     ]
     assert response["data"]["episode"]["prop_menu"] == [
         {
-            "prop_id": "玉佩",
+            "prop_id": "JadePendant",
             "prop_type": "object",
             "visual_prompt": "",
             "description": "",
@@ -842,9 +842,9 @@ async def test_plan_episode_props_returns_updated_episode_detail(tmp_path, monke
         }
     ]
     assert response["data"]["logs"] == ["planned props"]
-    assert [prop.name for prop in store.sqlite_store.added_props] == ["玉佩"]
-    assert store.sqlite_store.cached_props["玉佩"].prop_type == "object"
-    assert store.get_cached_prop("玉佩") is not None
+    assert [prop.name for prop in store.sqlite_store.added_props] == ["JadePendant"]
+    assert store.sqlite_store.cached_props["JadePendant"].prop_type == "object"
+    assert store.get_cached_prop("JadePendant") is not None
 
 
 @pytest.mark.asyncio
@@ -868,7 +868,7 @@ async def test_plan_episode_props_enqueues_celery_task(monkeypatch):
         "backend": "celery",
         "queue": "node.node_a.default",
         "data": {"target_episode": 4, "asset_kind": "prop"},
-        "message": "第 4 集道具规划已进入队列",
+        "message": "Episode 4 prop planning queued",
     }
     assert calls == [
         {

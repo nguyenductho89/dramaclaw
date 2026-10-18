@@ -23,7 +23,7 @@ class ScopedVoiceStore:
                 "beat_number": 1,
                 "audio_type": "narration",
                 "speaker": "",
-                "narration_segment": "第一人称解说。",
+                "narration_segment": "First-person narration.",
             }
         ]
 
@@ -34,16 +34,16 @@ class ScopedVoiceStore:
 def _main_character_with_identity_voice(project_dir: Path):
     from novelvideo.models import CharacterIdentity, NovelCharacter
 
-    voice_path = project_dir / "assets" / "characters" / "林夏" / "identity.wav"
+    voice_path = project_dir / "assets" / "characters" / "LinXia" / "identity.wav"
     voice_path.parent.mkdir(parents=True, exist_ok=True)
     voice_path.write_bytes(b"identity-voice")
-    character = NovelCharacter(name="林夏", gender="女", is_main=True)
+    character = NovelCharacter(name="LinXia", gender="female", is_main=True)
     character.identities = [
         CharacterIdentity(
-            identity_id="林夏_成年",
-            character_name="林夏",
-            identity_name="成年",
-            reference_audio_path="assets/characters/林夏/identity.wav",
+            identity_id="LinXia_adult",
+            character_name="LinXia",
+            identity_name="adult",
+            reference_audio_path="assets/characters/LinXia/identity.wav",
             reference_audio_sha256="identity-sha",
         )
     ]
@@ -224,7 +224,7 @@ async def test_org_scoped_missing_voice_is_not_swallowed_as_attribute_error(
     )
 
     assert errors
-    assert "项目解说人声线未配置" in errors[0]
+    assert "project narrator voice is not configured" in errors[0]
 
 
 def test_seedance2_narrator_status_reads_store_state_dir(tmp_path: Path) -> None:
@@ -358,7 +358,7 @@ async def test_seedance2_prepare_uses_org_state_dir_when_personal_config_conflic
         beat={
             "beat_number": 1,
             "audio_type": "narration",
-            "seedance2_config_json": '{"final_prompt":"使用@音频1"}',
+            "seedance2_config_json": '{"final_prompt":"Use @audio1"}',
         },
         video_mode="first_frame",
         prompt="unused",

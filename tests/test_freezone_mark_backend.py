@@ -14,7 +14,7 @@ def test_build_mark_detection_task_includes_point() -> None:
         point_x=0.2,
         point_y=0.45,
     )
-    assert "点击点归一化坐标" in task
+    assert "Click point normalized coordinates" in task
 
 
 def test_build_mark_detection_task_includes_box() -> None:
@@ -24,7 +24,7 @@ def test_build_mark_detection_task_includes_box() -> None:
         box_width=0.3,
         box_height=0.25,
     )
-    assert "框选区域归一化坐标" in task
+    assert "Box-selected region normalized coordinates" in task
 
 
 def test_crop_mark_focus_image_returns_png_bytes(tmp_path) -> None:
@@ -44,7 +44,7 @@ async def test_mark_detection_uses_shared_freezone_vision_model(
 
     async def fake_call_freezone_vision_model(**kwargs):
         captured.update(kwargs)
-        return "DC-freezone-vision-LLM", '{"label":"老人","note":"主体人物"}'
+        return "DC-freezone-vision-LLM", '{"label":"old man","note":"main character"}'
 
     monkeypatch.setattr(
         mark_node,
@@ -59,8 +59,8 @@ async def test_mark_detection_uses_shared_freezone_vision_model(
     )
 
     assert result == {
-        "label": "老人",
-        "note": "主体人物",
+        "label": "old man",
+        "note": "main character",
         "provider": "newapi",
         "model": "DC-freezone-vision-LLM",
     }
@@ -78,7 +78,7 @@ async def test_mark_detection_preserves_source_image_media_type(
 
     async def fake_call_freezone_vision_model(**kwargs):
         captured.update(kwargs)
-        return "DC-freezone-vision-LLM", '{"label":"老人","note":""}'
+        return "DC-freezone-vision-LLM", '{"label":"old man","note":""}'
 
     monkeypatch.setattr(
         mark_node,
@@ -129,8 +129,8 @@ async def test_mark_detection_route_reserves_and_confirms_feature_credit(
 
     async def fake_detect(**_kwargs):
         return {
-            "label": "老人",
-            "note": "主体人物",
+            "label": "old man",
+            "note": "main character",
             "provider": "newapi",
             "model": "DC-freezone-vision-LLM",
         }
@@ -139,11 +139,11 @@ async def test_mark_detection_route_reserves_and_confirms_feature_credit(
     monkeypatch.setattr(freezone_routes, "_resolve_url_list", lambda *_args: [str(path)])
     monkeypatch.setattr(freezone_routes, "detect_freezone_mark", fake_detect)
     monkeypatch.setattr(freezone_routes, "get_usage_meter", lambda: FakeMeter())
-    # 路由现在在积分预留之前解析出网身份（OI-54 S1），而 `get_authz_port()` 刻意
-    # 没有 PortNotRegistered 回落——有回落即 fail-open。直调路由函数的用例本就未
-    # bootstrap 端口（生产由 `api/app.py:311` / `cli.py:55` 无条件执行）。写法照
-    # `tests/test_p0g4c_video_egress.py:803`：打 `ports` 模块属性换真实实现。
-    # `LocalAuthz` 产 kind="local" → 非组织 → 什么都不绑，平台路径逐字节不变。
+    # The route now resolves the egress identity before credit reservation (OI-54 S1), and `get_authz_port()` deliberately
+    # has no PortNotRegistered fallback -- a fallback would be fail-open. Cases that call the route function directly never
+    # bootstrapped the port (production does it unconditionally in `api/app.py:311` / `cli.py:55`). Written after
+    # `tests/test_p0g4c_video_egress.py:803`: patch the `ports` module attribute with a real implementation.
+    # `LocalAuthz` produces kind="local" -> non-organization -> binds nothing, so the platform path is byte-for-byte unchanged.
     monkeypatch.setattr(ports, "get_authz_port", lambda: LocalAuthz())
 
     result = await freezone_routes.freezone_mark_detect(
@@ -227,11 +227,11 @@ async def test_mark_detection_route_refunds_feature_credit_on_failure(
     monkeypatch.setattr(freezone_routes, "_resolve_url_list", lambda *_args: [str(path)])
     monkeypatch.setattr(freezone_routes, "detect_freezone_mark", failing_detect)
     monkeypatch.setattr(freezone_routes, "get_usage_meter", lambda: FakeMeter())
-    # 路由现在在积分预留之前解析出网身份（OI-54 S1），而 `get_authz_port()` 刻意
-    # 没有 PortNotRegistered 回落——有回落即 fail-open。直调路由函数的用例本就未
-    # bootstrap 端口（生产由 `api/app.py:311` / `cli.py:55` 无条件执行）。写法照
-    # `tests/test_p0g4c_video_egress.py:803`：打 `ports` 模块属性换真实实现。
-    # `LocalAuthz` 产 kind="local" → 非组织 → 什么都不绑，平台路径逐字节不变。
+    # The route now resolves the egress identity before credit reservation (OI-54 S1), and `get_authz_port()` deliberately
+    # has no PortNotRegistered fallback -- a fallback would be fail-open. Cases that call the route function directly never
+    # bootstrapped the port (production does it unconditionally in `api/app.py:311` / `cli.py:55`). Written after
+    # `tests/test_p0g4c_video_egress.py:803`: patch the `ports` module attribute with a real implementation.
+    # `LocalAuthz` produces kind="local" -> non-organization -> binds nothing, so the platform path is byte-for-byte unchanged.
     monkeypatch.setattr(ports, "get_authz_port", lambda: LocalAuthz())
 
     with pytest.raises(freezone_routes.HTTPException) as exc_info:

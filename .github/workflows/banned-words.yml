@@ -1,7 +1,7 @@
 name: banned-words
 
-# REPO-07：发布前禁用词 lint。对外文本含「开源 / open source」即 exit 1。
-# dramaclaw-ce 为 ELv2 source-available，不是开源。
+# REPO-07: pre-release banned-words lint. External text containing "open source" (or its Chinese equivalent) exits 1.
+# dramaclaw-ce is ELv2 source-available, not open source.
 
 on:
   push:

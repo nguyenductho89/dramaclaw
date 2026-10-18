@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { FileText, Image as ImageIcon, Music, Play, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssetBoardColumn } from "@/features/canvas/domain/assetBoard";
 import type { FreezoneNodeSuggestion } from "./freezone-node-suggestions";
 
-// 与 AssetBoardCard/AssetBoardDetail 的列图标保持一致（video 用 Play，非 Film）。
+// Keep consistent with the column icons of AssetBoardCard/AssetBoardDetail (video uses Play, not Film).
 const COLUMN_ICON: Record<AssetBoardColumn, LucideIcon> = {
   text: FileText,
   image: ImageIcon,
@@ -15,14 +16,14 @@ const COLUMN_ICON: Record<AssetBoardColumn, LucideIcon> = {
 };
 
 export type FreezoneNodeSuggestionMenuProps = {
-  /** 已按查询过滤后的完整候选列表（未截断）。 */
+  /** Full candidate list already filtered by the query (not truncated). */
   items: FreezoneNodeSuggestion[];
-  /** 当前可见（已渲染）条数；滚动/键盘越界时由父组件增加。 */
+  /** Number of currently visible (rendered) items; the parent increases it on scroll / keyboard overflow. */
   visibleCount: number;
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
   onSelect: (nodeId: string, title: string) => void;
-  /** 滚到底且仍有更多结果时触发（父组件据此加载下一页）。 */
+  /** Fires when scrolled to the bottom with more results remaining (the parent loads the next page). */
   onReachEnd: () => void;
 };
 
@@ -34,6 +35,7 @@ export function FreezoneNodeSuggestionMenu({
   onSelect,
   onReachEnd,
 }: FreezoneNodeSuggestionMenuProps) {
+  const { t } = useTranslation();
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const visible = items.slice(0, visibleCount);
   itemRefs.current.length = visible.length;
@@ -44,7 +46,7 @@ export function FreezoneNodeSuggestionMenu({
 
   return (
     <div className="border-b border-white/10 bg-black/20 px-3 py-2.5">
-      <div className="mb-1.5 px-0.5 text-xs text-muted-foreground/85">节点</div>
+      <div className="mb-1.5 px-0.5 text-xs text-muted-foreground/85">{t("superchat.panel.nodeMenu.title")}</div>
       {visible.length > 0 ? (
         <div
           className="max-h-64 overflow-y-auto pr-1"
@@ -97,7 +99,7 @@ export function FreezoneNodeSuggestionMenu({
           })}
         </div>
       ) : (
-        <div className="px-0.5 pb-1 pt-0.5 text-xs text-muted-foreground/65">没有匹配的节点</div>
+        <div className="px-0.5 pb-1 pt-0.5 text-xs text-muted-foreground/65">{t("superchat.panel.nodeMenu.empty")}</div>
       )}
     </div>
   );

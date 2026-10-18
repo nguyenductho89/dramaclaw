@@ -141,21 +141,21 @@ async def test_frame_skill_render_uses_canvas_sketch_input_without_mainline_sket
                             "episode_number": 1,
                             "beat_number": 3,
                             "scene_ref": {"scene_id": "S"},
-                            "detected_identities": ["杜晨_孩童时期"],
-                            "detected_props": ["纸箱"],
+                            "detected_identities": ["DuChen_child"],
+                            "detected_props": ["cardboard_box"],
                         }
                     ],
-                    "character_map": {"杜晨": {"reference_mode": "prompt_only"}},
+                    "character_map": {"DuChen": {"reference_mode": "prompt_only"}},
                     "canvas_sketch_paths": {"3": str(canvas_sketch_path)},
                     "canvas_identity_refs": [
                         {
                             "beat_number": 3,
-                            "identity_id": "杜晨_孩童时期",
+                            "identity_id": "DuChen_child",
                             "image_path": str(identity_path),
                         }
                     ],
                     "canvas_prop_refs": [
-                        {"beat_number": 3, "prop_id": "纸箱", "image_path": str(prop_path)}
+                        {"beat_number": 3, "prop_id": "cardboard_box", "image_path": str(prop_path)}
                     ],
                     "promote_selected_regen": False,
                 },
@@ -167,8 +167,8 @@ async def test_frame_skill_render_uses_canvas_sketch_input_without_mainline_sket
 
     assert captured["sketch_dir"].endswith("grids/ep001/sketch")
     assert captured["beat_sketch_paths_override"] == {3: str(canvas_sketch_path)}
-    assert captured["character_map"]["杜晨"]["ref_path"] == str(identity_path)
-    assert captured["prop_refs_override"][1][0].base_id == "纸箱"
+    assert captured["character_map"]["DuChen"]["ref_path"] == str(identity_path)
+    assert captured["prop_refs_override"][1][0].base_id == "cardboard_box"
     assert captured["prop_refs_override"][1][0].image_paths == [str(prop_path)]
     assert result["updated_beats"] == [3]
 
@@ -248,15 +248,15 @@ async def test_standalone_frame_skill_render_uses_zero_based_local_panel(
                             "beat_number": 0,
                             "panel_index": 0,
                             "scene_ref": {"scene_id": ""},
-                            "visual_description": "用户自定义分镜",
+                            "visual_description": "User-defined storyboard",
                             "detected_identities": ["Kris_Kris"],
-                            "detected_props": ["雨伞"],
+                            "detected_props": ["umbrella"],
                         }
                     ],
                     "character_map": {"Kris": {"reference_mode": "prompt_only"}},
                     "canvas_sketch_paths": {"0": str(canvas_sketch_path)},
                     "canvas_scene_refs": [
-                        {"panel_index": 0, "image_path": str(background_path), "base_id": "背景"}
+                        {"panel_index": 0, "image_path": str(background_path), "base_id": "background"}
                     ],
                     "canvas_identity_refs": [
                         {
@@ -266,7 +266,7 @@ async def test_standalone_frame_skill_render_uses_zero_based_local_panel(
                         }
                     ],
                     "canvas_prop_refs": [
-                        {"panel_index": 0, "prop_id": "雨伞", "image_path": str(prop_path)}
+                        {"panel_index": 0, "prop_id": "umbrella", "image_path": str(prop_path)}
                     ],
                     "promote_selected_regen": False,
                 },
@@ -352,7 +352,7 @@ async def test_standalone_frame_skill_render_normalizes_legacy_local_panel_paylo
                             "episode_number": None,
                             "beat_number": None,
                             "scene_ref": {"scene_id": ""},
-                            "visual_description": "用户自定义分镜",
+                            "visual_description": "User-defined storyboard",
                             "detected_identities": ["__NO_CHARACTER__"],
                         }
                     ],
@@ -414,7 +414,7 @@ async def test_standalone_frame_skill_render_without_identities_fails_typed_befo
                                 "episode_number": 0,
                                 "beat_number": 0,
                                 "panel_index": 0,
-                                "visual_description": "用户自定义分镜",
+                                "visual_description": "User-defined storyboard",
                                 "detected_identities": [],
                             }
                         ],
@@ -429,7 +429,7 @@ async def test_standalone_frame_skill_render_without_identities_fails_typed_befo
         )
 
     assert calls == []
-    assert "镜头上下文" in str(exc_info.value)
+    assert "Shot context" in str(exc_info.value)
     error, payload, handled = run_core._project_task_failure_for_exception(exc_info.value)
     assert handled is True
     assert payload == {"error_code": "RENDER_IDENTITY_DETECTION_REQUIRED"}
@@ -486,7 +486,7 @@ async def test_sketch_runner_accepts_missing_generation_time(
                             "episode_number": 1,
                             "beat_number": 1,
                             "scene_ref": {"scene_id": "S"},
-                            "visual_description": "测试草图",
+                            "visual_description": "Test sketch",
                         }
                     ],
                     "character_map": {},
@@ -537,7 +537,7 @@ async def test_regenerate_selected_beats_preserves_standalone_zero_beat_number(
                 "episode_number": 0,
                 "beat_number": 0,
                 "panel_index": 0,
-                "visual_description": "用户自定义分镜",
+                "visual_description": "User-defined storyboard",
             }
         ],
         mode_key="1x1_16-9",
@@ -654,7 +654,7 @@ async def test_generate_grid_render_accepts_standalone_zero_sketch_override(
                 "episode_number": 0,
                 "beat_number": 0,
                 "panel_index": 0,
-                "visual_description": "用户自定义分镜",
+                "visual_description": "User-defined storyboard",
                 "detected_identities": ["Kris_Kris"],
                 "detected_props": [],
             }

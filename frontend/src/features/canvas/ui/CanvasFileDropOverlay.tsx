@@ -10,18 +10,18 @@ const MEDIA_TYPES = [
 ] as const;
 
 /**
- * 画布接收到可用拖拽载荷时的居中落点提示。
+ * The centered drop hint when the canvas receives a usable drag payload.
  *
- * 为了做淡入淡出，本组件常驻挂载、只切透明度——但卡片带 `backdrop-blur-lg` 和大
- * 面积投影，而它是 `.dc-canvas` 的直接子节点，**不在** `.react-flow__viewport` 里，
- * 所以 LOD 那两条降级规则（`.dc-canvas--panning/-low-detail .react-flow__viewport *`
- * 关 backdrop-filter/box-shadow，见 index.css「画布 LOD」段）一条都命中不了它。
- * 单靠 `opacity: 0` 不保证浏览器跳过绘制：backdrop-filter 会强制建独立合成层，
- * 每帧重采样背景的成本可能照付，正好是 #241 实测里最贵的那一项。
+ * To do fade in/out this component stays mounted and only toggles opacity - but the card carries `backdrop-blur-lg` and a large
+ * area shadow, and it is a direct child of `.dc-canvas`, **not inside** `.react-flow__viewport`,
+ * so neither of the LOD degradation rules (`.dc-canvas--panning/-low-detail .react-flow__viewport *`
+ * turning off backdrop-filter/box-shadow, see the "canvas LOD" section of index.css) can hit it.
+ * `opacity: 0` alone does not guarantee the browser skips painting: backdrop-filter forces an independent compositing layer,
+ * and the cost of resampling the background every frame may still be paid, exactly the most expensive item in the #241 measurements.
  *
- * 因此隐藏态额外挂 `visibility: hidden` —— 该状态下元素完全不参与绘制，合成层
- * 不成立。visibility 的插值规则天然配合淡出：hidden→visible 立刻生效（淡入正常
- * 起步），visible→hidden 要等整段 transition 结束才翻转（淡出不会被截断）。
+ * So the hidden state additionally carries `visibility: hidden` - in that state the element takes no part in painting at all, and the compositing layer
+ * is not established. The interpolation rule of visibility works naturally with the fade-out: hidden->visible takes effect immediately (the fade-in
+ * starts normally), while visible->hidden flips only after the whole transition ends (the fade-out is not cut off).
  */
 export function CanvasFileDropOverlay({ isVisible }: { isVisible: boolean }) {
   const { t } = useTranslation();

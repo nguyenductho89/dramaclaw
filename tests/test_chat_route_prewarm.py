@@ -151,7 +151,7 @@ async def test_codex_cancel_without_turn_identity_fails_closed_and_keeps_lock(
         with pytest.raises(chat_route.HTTPException) as missing:
             await chat_route.cancel_chat_turn({"username": "alice"})
         assert missing.value.status_code == 400
-        with pytest.raises(RuntimeError, match="正在处理中"):
+        with pytest.raises(RuntimeError, match="already has an AI chat in progress"):
             chat_service._acquire_chat_run_lock("alice", "")
     finally:
         chat_service._release_chat_run_lock("alice", "", original_lock)
@@ -359,12 +359,12 @@ def test_canvas_command_tool_result_prefers_user_message_and_agent_hint(
                 "commandIndex": -1,
                 "type": "validate",
                 "status": "error",
-                "label": "校验画布命令",
+                "label": "Validate canvas command",
                 "error": "Expected source role input_text for link_type prompt_for",
             }
         ],
         message="Frontend executor failed to apply the canvas command.",
-        user_message="当前文本需要先作为生成提示词连接到图片节点，我会按可执行的提示词来源来处理。",
+        user_message="The current text must first be connected to the image node as a generation prompt; I will proceed from an executable prompt source.",
         agent_hint="Do not mention raw protocol details such as planning_text or prompt_for.",
     )
 
@@ -495,7 +495,7 @@ async def test_late_canvas_result_completes_durable_workflow_draft(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="canvas-a",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "Ad"},
         compiled={
             "ok": True,
             "skill_id": "video-ad",
@@ -600,7 +600,7 @@ async def test_old_canvas_receipt_cannot_complete_a_retried_confirmation(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="canvas-a",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "Ad"},
         compiled={
             "ok": True,
             "skill_id": "video-ad",
@@ -703,7 +703,7 @@ async def test_canvas_receipt_accepts_pre_upgrade_confirmation_scope(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="canvas-a",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "Ad"},
         compiled={
             "ok": True,
             "skill_id": "video-ad",
@@ -1150,8 +1150,8 @@ async def test_watch_pending_skill_studio_events_emits_freezone_bridge_event(
     event = {
         "type": "skill_studio.questions",
         "skill_studio_session_id": "skill_studio_01",
-        "title": "确定方向",
-        "questions": [{"id": "scope", "title": "主要做什么？", "options": []}],
+        "title": "Confirm direction",
+        "questions": [{"id": "scope", "title": "What is the main goal?", "options": []}],
     }
     put_pending_skill_studio_event(
         key="skill-key-1",
@@ -1170,7 +1170,7 @@ async def test_watch_pending_skill_studio_events_emits_freezone_bridge_event(
         agent_id="agent-1",
     )
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "创建一个 Skill", turn_id="turn-a"
+        "admin", scope, "user", "Create a Skill", turn_id="turn-a"
     )
 
     await chat_route._watch_pending_skill_studio_events(
@@ -1230,7 +1230,7 @@ async def test_watch_pending_skill_studio_events_emits_status_progress_event(
         "type": "skill_studio.status",
         "skill_studio_session_id": "skill_studio_01",
         "status": "draft_recipe_ready",
-        "message": "已生成 Recipe 1 / 2",
+        "message": "Generated Recipe 1 / 2",
     }
     put_pending_skill_studio_event(
         key="skill-status-1",
@@ -1248,7 +1248,7 @@ async def test_watch_pending_skill_studio_events_emits_status_progress_event(
         agent_id="agent-1",
     )
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "创建一个 Skill", turn_id="turn-a"
+        "admin", scope, "user", "Create a Skill", turn_id="turn-a"
     )
 
     await chat_route._watch_pending_skill_studio_events(
@@ -1266,7 +1266,7 @@ async def test_watch_pending_skill_studio_events_emits_status_progress_event(
     assert websocket.sent[0]["event"] == event
     messages = chat_route.chat_store.list_messages("admin", scope)
     assert messages[-1]["ui_events"][0]["type"] == "skill_studio.status"
-    assert messages[-1]["ui_events"][0]["message"] == "已生成 Recipe 1 / 2"
+    assert messages[-1]["ui_events"][0]["message"] == "Generated Recipe 1 / 2"
 
 
 def test_skill_studio_status_frame_uses_backend_intent_detection() -> None:
@@ -1281,7 +1281,7 @@ def test_skill_studio_status_frame_uses_backend_intent_detection() -> None:
     frame = chat_route._skill_studio_status_frame(
         scope=scope,
         turn_id="turn-a",
-        text="我想创建一个宣传家乡文化的海报 skill",
+        text="I want to create a poster skill promoting my hometown culture",
     )
 
     assert frame == {
@@ -1295,13 +1295,13 @@ def test_skill_studio_status_frame_uses_backend_intent_detection() -> None:
         },
         "turn_id": "turn-a",
         "status": "routing",
-        "message": "正在整理 Skill 方向...",
+        "message": "Organizing the Skill direction...",
     }
     assert (
         chat_route._skill_studio_status_frame(
             scope=scope,
             turn_id="turn-b",
-            text="帮我加一个视频节点",
+            text="Add a video node for me",
         )
         is None
     )
@@ -1317,7 +1317,7 @@ def test_skill_studio_status_frame_uses_user_text_not_canvas_context() -> None:
     )
 
     enhanced_text = (
-        "查看下当前节点详情然后返回ok\n\n"
+        "Check the details of the current node and then return ok\n\n"
         "[SUPERTALE_CANVAS_NODE_REFERENCES]\n"
         "node_type: skillNode\n"
         "available_actions: add_next_node, run_skill\n"
@@ -1329,7 +1329,7 @@ def test_skill_studio_status_frame_uses_user_text_not_canvas_context() -> None:
             scope=scope,
             turn_id="turn-node-detail",
             text=enhanced_text,
-            user_text="查看下当前节点详情然后返回ok",
+            user_text="Check the details of the current node and then return ok",
         )
         is None
     )
@@ -1350,7 +1350,7 @@ def test_resolve_skill_studio_tool_result_writes_bridge_result(
         skill_studio_status="answered",
         action="submit",
         selections={"scope": "planning"},
-        message="用户已提交选择",
+        message="The user submitted a choice",
     )
 
     resolved = chat_route._resolve_skill_studio_tool_result_payload(
@@ -1403,7 +1403,7 @@ def test_resolve_saved_skill_studio_tool_result_tells_agent_catalog_is_formal(
             "skill": {"id": "home-culture-poster"},
             "recipes": [{"id": "home-culture-poster-image"}],
         },
-        message="已保存为正式 Skill / Recipe",
+        message="Saved as an official Skill / Recipe",
     )
 
     resolved = chat_route._resolve_skill_studio_tool_result_payload(
@@ -1423,7 +1423,7 @@ def test_resolve_saved_skill_studio_tool_result_tells_agent_catalog_is_formal(
         in resolved["agent_instruction"]
     )
     assert "Do not ask the user to save it again" in resolved["agent_instruction"]
-    assert "Reply briefly in Chinese only" in resolved["agent_instruction"]
+    assert "Reply briefly in English only" in resolved["agent_instruction"]
     assert saved_items == [
         ("recipes", {"id": "home-culture-poster-image"}),
         ("skills", {"id": "home-culture-poster"}),
@@ -1478,7 +1478,7 @@ def test_resolve_saved_skill_studio_tool_result_saves_new_recipes_before_skill(
             },
             "recipes": [{"id": "home-culture-poster-image"}],
         },
-        message="已保存为正式 Skill / Recipe",
+        message="Saved as an official Skill / Recipe",
     )
 
     resolved = chat_route._resolve_skill_studio_tool_result_payload(
@@ -1512,7 +1512,7 @@ def test_resolve_cancelled_skill_studio_tool_result_stops_flow(
         skill_studio_status="catalog_cancelled",
         action="cancel",
         draft={"skill": {"id": "home-culture-poster"}, "recipes": []},
-        message="用户已取消 Skill Studio 草稿保存。",
+        message="The user cancelled saving the Skill Studio draft.",
     )
 
     resolved = chat_route._resolve_skill_studio_tool_result_payload(
@@ -1568,11 +1568,11 @@ def test_resolve_revision_skill_studio_tool_result_starts_question_flow(
         skill_studio_status="revision_started",
         action="start_revision",
         draft={
-            "skill": {"id": "home-culture-poster", "description": "当前草稿"},
+            "skill": {"id": "home-culture-poster", "description": "Current draft"},
             "recipes": [],
         },
         draft_ref={"skill_id": "home-culture-poster", "recipe_count": 0},
-        message="用户已启动 Skill Studio 草稿修改会话。",
+        message="The user started a Skill Studio draft editing session.",
     )
 
     resolved = chat_route._resolve_skill_studio_tool_result_payload(
@@ -1623,7 +1623,7 @@ async def test_resolve_skill_studio_tool_result_persists_submitted_ui_event(
         agent_id="agent-1",
     )
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "创建一个 Skill", turn_id="turn-a"
+        "admin", scope, "user", "Create a Skill", turn_id="turn-a"
     )
     chat_route.chat_store.append_ui_event(
         "admin",
@@ -1647,7 +1647,7 @@ async def test_resolve_skill_studio_tool_result_persists_submitted_ui_event(
             skill_studio_status="answered",
             action="submit",
             selections={"scope": {"option_ids": ["planning"], "custom_text": ""}},
-            message="用户已提交选择",
+            message="The user submitted a choice",
         ),
         user={"username": "admin"},
     )
@@ -1687,12 +1687,12 @@ async def test_resolve_skill_studio_draft_tool_result_persists_submitted_ui_even
         agent_id="agent-1",
     )
     draft = {
-        "skill": {"id": "edited-skill", "description": "编辑后的草稿"},
+        "skill": {"id": "edited-skill", "description": "Edited draft"},
         "recipes": [],
-        "summary": "草稿已编辑",
+        "summary": "Draft edited",
     }
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "创建一个 Skill", turn_id="turn-a"
+        "admin", scope, "user", "Create a Skill", turn_id="turn-a"
     )
     chat_route.chat_store.append_ui_event(
         "admin",
@@ -1717,7 +1717,7 @@ async def test_resolve_skill_studio_draft_tool_result_persists_submitted_ui_even
             skill_studio_status="draft_submitted",
             action="submit_draft",
             draft=draft,
-            message="用户已提交草稿",
+            message="The user submitted the draft",
         ),
         user={"username": "admin"},
     )
@@ -1827,7 +1827,7 @@ async def test_receive_bridge_results_during_turn_resolves_clarification_result(
                     "clarification_status": "answered",
                     "action": "submit",
                     "answers": {"scope": {"option_ids": ["locals"], "custom_text": ""}},
-                    "message": "用户已完成选择，请结合当前上下文继续。",
+                    "message": "The user finished choosing; continue with the current context.",
                 }
             ]
 
@@ -1889,8 +1889,8 @@ async def test_watch_pending_clarification_events_emits_freezone_bridge_event(
     event = {
         "type": "assistant.clarification.request",
         "clarification_id": "clarify_01",
-        "title": "先确认方向",
-        "questions": [{"id": "scope", "title": "主要做什么？", "options": []}],
+        "title": "Confirm the direction first",
+        "questions": [{"id": "scope", "title": "What is the main goal?", "options": []}],
     }
     put_pending_clarification_event(
         key="clarify-key-1",
@@ -1909,7 +1909,7 @@ async def test_watch_pending_clarification_events_emits_freezone_bridge_event(
         agent_id="agent-1",
     )
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "创建一个 Skill", turn_id="turn-a"
+        "admin", scope, "user", "Create a Skill", turn_id="turn-a"
     )
 
     await chat_route._watch_pending_clarification_events(
@@ -2039,8 +2039,8 @@ def test_resolve_clarification_tool_result_writes_bridge_result(
         agent_id="agent-1",
         clarification_status="answered",
         action="submit",
-        answers={"scope": {"option_ids": ["workflow"], "custom_text": "偏海报"}},
-        message="用户已提交补充信息",
+        answers={"scope": {"option_ids": ["workflow"], "custom_text": "Leaning toward posters"}},
+        message="The user submitted additional information",
     )
 
     resolved = chat_route._resolve_clarification_tool_result_payload(
@@ -2083,7 +2083,7 @@ async def test_resolve_clarification_tool_result_persists_submitted_ui_event(
         agent_id="agent-1",
     )
     chat_route.chat_store.append_message(
-        "admin", scope, "user", "需要补充信息", turn_id="turn-a"
+        "admin", scope, "user", "Additional information needed", turn_id="turn-a"
     )
     chat_route.chat_store.append_ui_event(
         "admin",
@@ -2107,7 +2107,7 @@ async def test_resolve_clarification_tool_result_persists_submitted_ui_event(
             clarification_status="answered",
             action="submit",
             answers={"scope": {"option_ids": ["user"], "custom_text": ""}},
-            message="用户已提交补充信息",
+            message="The user submitted additional information",
         ),
         user={"username": "admin"},
     )
@@ -2184,7 +2184,7 @@ async def test_freezone_assistant_rejects_hidden_surface_before_credit_check(
                 {
                     "surface_code": "freezone_assistant",
                     "available": False,
-                    "unavailable_message": "虾导功能暂未开放",
+                    "unavailable_message": "The assistant feature is not available yet",
                 }
             ]
 
@@ -2216,7 +2216,7 @@ async def test_freezone_assistant_rejects_hidden_surface_before_credit_check(
         )
 
     assert exc_info.value.status_code == 403
-    assert exc_info.value.detail == "虾导功能暂未开放"
+    assert exc_info.value.detail == "The assistant feature is not available yet"
     assert credit_checked is False
 
 
@@ -2365,7 +2365,7 @@ def test_catalog_save_error_overrides_frontend_success(
         saved_skill_ids=["invented"],
         saved_recipe_ids=["invented"],
         draft={"skill": {"id": "skill-a"}, "recipes": [{"id": "recipe-a"}]},
-        message="已保存为正式 Skill / Recipe，可立即使用",
+        message="Saved as an official Skill / Recipe, ready to use immediately",
     )
 
     result = chat_route._resolve_skill_studio_tool_result_payload(
@@ -2380,11 +2380,11 @@ def test_catalog_save_error_overrides_frontend_success(
     )
     assert result["saved_skill_ids"] == []
     assert result["saved_recipe_ids"] == (["recipe-a"] if partial else [])
-    assert "可立即使用" not in result["message"]
+    assert "ready to use immediately" not in result["message"]
     assert (
-        ("部分" in result["message"])
+        ("partially saved" in result["message"])
         if partial
-        else ("未保存任何" in result["message"])
+        else ("no entries were saved" in result["message"])
     )
     assert result["draft"] == payload.draft
     assert result["errors"]

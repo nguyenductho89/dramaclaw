@@ -1,4 +1,4 @@
-"""Freezone 图片节点辅助逻辑。"""
+"""Freezone image node helpers."""
 
 from __future__ import annotations
 
@@ -14,24 +14,24 @@ from novelvideo.egress_context import TrustedEgressContext
 from novelvideo.official_defaults import DEFAULT_FREEZONE_VISION_MODEL
 
 DEFAULT_IMAGE_REVERSE_PROMPT_INSTRUCTION = (
-    "根据图片生成结构化中文提示词，包括主体描述、环境、光影、镜头语言、风格关键词。"
+    "Generate a structured prompt from the image, including subject description, environment, lighting, camera language and style keywords."
 )
 
 
 def build_image_reverse_prompt_task(instruction: str = "") -> str:
     lines = [
-            "你是一个图片节点提示词反推助手。",
-            "我会给你一张图片，请根据图片内容反推出一段直接可用于文生图或图生图的中文提示词。",
-            "要求：",
-            "- 只输出最终提示词，不要解释，不要 markdown，不要引号。",
-            "- 提示词应包含：主体、场景、构图/景别、光线、色调、材质/细节、氛围、风格。",
-            "- 用创作者写提示词的自然表达，不要写成分析报告。",
-            "- 不要编造图片里没有的关键主体或剧情动作。",
-            "- 保持精炼但信息密度高，适合直接粘贴给图片模型。",
+            "You are an image-node prompt reverse-engineering assistant.",
+            "I will give you an image. Reverse-engineer from its content a prompt that can be used directly for text-to-image or image-to-image generation, written in the same language as the user's supplementary requirements (English if none are given).",
+            "Requirements:",
+            "- Output only the final prompt: no explanation, no markdown, no quotation marks.",
+            "- The prompt should cover: subject, scene, composition/shot size, lighting, color tone, material/detail, atmosphere, style.",
+            "- Write it the way a creator naturally writes prompts, not like an analysis report.",
+            "- Do not invent key subjects or plot actions that are not in the image.",
+            "- Keep it concise but information-dense, suitable for pasting directly into an image model.",
     ]
     clean_instruction = str(instruction or "").strip()
     if clean_instruction:
-        lines.extend(["用户补充要求：", clean_instruction])
+        lines.extend(["User supplementary requirements:", clean_instruction])
     return "\n".join(lines)
 
 

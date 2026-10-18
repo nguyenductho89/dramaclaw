@@ -10,7 +10,7 @@ import type { ErrorResponse, OkResponse } from "@/types/api";
 export type GatewayMode = "official" | "custom" | "hybrid";
 export type CustomLlmMode = "relayclaw_brainclaw" | "advanced";
 
-/** 通用的「端点预览」：服务端只回 key 预览，绝不回完整 key。 */
+/** Generic "endpoint preview": the server only returns a key preview, never the full key. */
 export interface GatewayEndpointPreview {
   baseUrl: string;
   apiKeyPreview: string;
@@ -18,9 +18,9 @@ export interface GatewayEndpointPreview {
 }
 
 export interface OfficialGatewayConfig extends GatewayEndpointPreview {
-  /** "database" | "env" 等，标识官方配置来源。 */
+  /** "database" | "env" etc., identifying the official config source. */
   source: string;
-  /** .env 里的官方默认（回退用）。 */
+  /** The official default from .env (used as a fallback). */
   environment: GatewayEndpointPreview;
 }
 
@@ -32,7 +32,7 @@ export interface CustomGatewayConfig extends GatewayEndpointPreview {
 }
 
 export interface EffectiveGatewayConfig {
-  /** "official" | "custom"。 */
+  /** "official" | "custom". */
   source: string;
   baseUrl: string;
   apiKeyPreview: string;
@@ -165,7 +165,7 @@ export interface NewApiDatabaseConfigInput {
 }
 
 export interface InitCustomNewApiInput {
-  /** 可选；不传则后端用 NEWAPI_BASE_URL 环境变量。 */
+  /** Optional; if omitted the backend uses the NEWAPI_BASE_URL env var. */
   newApiBaseUrl?: string;
   database?: NewApiDatabaseConfigInput;
   setupUsername?: string;
@@ -195,21 +195,21 @@ export interface FastApiErrorResponse {
   ok?: false;
 }
 
-/** 一个 NewAPI 渠道：provider + 上游 Key + DC 模型名→上游模型名映射。 */
+/** One NewAPI channel: provider + upstream key + mapping from DC model names to upstream model names. */
 export interface CustomChannelInput {
   provider: string;
   type?: number;
-  /** 渠道名，可选；不填后端自动生成。 */
+  /** Channel name, optional; generated automatically by the backend if omitted. */
   name?: string;
   upstreamKey: string;
-  /** DC 内部模型名 -> 真实上游模型名。 */
+  /** DC internal model name -> real upstream model name. */
   modelMapping: Record<string, string>;
   group: string;
   priority: number;
   weight: number;
-  /** 可选；仅自定义 provider 或覆盖默认地址时填。 */
+  /** Optional; only filled in for a custom provider or when overriding the default address. */
   baseUrl: string;
-  /** 可选；不填后端用 modelMapping 第一个 key。 */
+  /** Optional; if omitted the backend uses the first key of modelMapping. */
   testModel: string;
   settings?: Record<string, unknown>;
 }
@@ -274,7 +274,7 @@ export interface CustomChannelWriteResult {
   ok?: boolean;
   channelId?: number | string;
   error?: string;
-  /** 后端已 mask，不含完整 key。 */
+  /** Already masked by the backend, does not contain the full key. */
   upstreamKey?: string;
   [key: string]: unknown;
 }
@@ -510,7 +510,7 @@ export function useSetCustomLlmMode() {
 export function useInitCustomNewApi() {
   const qc = useQueryClient();
   return useMutation({
-    // 初始化要连 NewAPI、建 token、写库，耗时较长，放宽超时。
+    // Initialization connects to NewAPI, creates a token and writes to the DB, which takes long, so the timeout is relaxed.
     mutationFn: (input: InitCustomNewApiInput) =>
       api
         .post("api/v1/model-gateway/custom/newapi/init", {
@@ -528,7 +528,7 @@ export function useInitCustomNewApi() {
 }
 
 
-/** 保存供应商渠道级配置。 */
+/** Saves the provider channel-level config. */
 export function useSaveProviderChannels() {
   const qc = useQueryClient();
   return useMutation({
@@ -580,7 +580,7 @@ export function useSaveProviderChannels() {
   });
 }
 
-/** 删除 CE 本地及 NewAPI 中的 ComfyUI 渠道和媒体模型映射。 */
+/** Deletes the ComfyUI channel and media model mappings in CE local and NewAPI. */
 export function useClearComfyUIConfig() {
   const qc = useQueryClient();
   return useMutation({
@@ -599,7 +599,7 @@ export function useClearComfyUIConfig() {
   });
 }
 
-/** 更新 NewAPI 中已存在的供应商渠道 key / Base URL，不改模型映射。 */
+/** Updates the key / Base URL of an existing NewAPI provider channel without changing model mappings. */
 export function useSyncProviderChannel() {
   const qc = useQueryClient();
   return useMutation({
@@ -619,7 +619,7 @@ export function useSyncProviderChannel() {
   });
 }
 
-/** 写入单个 NewAPI 渠道。 */
+/** Writes a single NewAPI channel. */
 export function useSaveCustomChannel() {
   const qc = useQueryClient();
   return useMutation({
@@ -636,7 +636,7 @@ export function useSaveCustomChannel() {
   });
 }
 
-/** 保存图片 / 视频固定模型映射。 */
+/** Saves the fixed image / video model mappings. */
 export function useSaveMediaModels() {
   const qc = useQueryClient();
   return useMutation({
@@ -653,7 +653,7 @@ export function useSaveMediaModels() {
   });
 }
 
-/** 保存 Cognee embedding 模型映射；维度只保存到 CE 本地配置。 */
+/** Saves the Cognee embedding model mapping; the dimension is only stored in the CE local config. */
 export function useSaveEmbeddingModel() {
   const qc = useQueryClient();
   return useMutation({
@@ -670,7 +670,7 @@ export function useSaveEmbeddingModel() {
   });
 }
 
-/** 保存 NewAPI 参考媒体 relay 配置。 */
+/** Saves the NewAPI reference-media relay config. */
 export function useSaveMediaRelayConfig() {
   const qc = useQueryClient();
   return useMutation({
@@ -687,7 +687,7 @@ export function useSaveMediaRelayConfig() {
   });
 }
 
-/** 批量写入 NewAPI 渠道（功能模型映射保存）。后端支持部分成功。 */
+/** Writes NewAPI channels in batch (saving the feature-model mapping). The backend supports partial success. */
 export function useSaveCustomChannelsBatch() {
   const qc = useQueryClient();
   return useMutation({

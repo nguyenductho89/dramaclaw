@@ -12,27 +12,27 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      en: {
         translation: {
           episode: {
             beat: {
-              sectionSketch: "草图",
-              sectionRender: "渲染",
+              sectionSketch: "Sketch",
+              sectionRender: "Render",
             },
             workbench: {
               view: {
-                selectAll: "全选",
-                selectedCount: "已选 {{count}}",
-                clear: "清除",
-                totalShots: "共{{count}}个镜头",
+                selectAll: "Select all",
+                selectedCount: "{{count}} selected",
+                clear: "Clear",
+                totalShots: "{{count}} shots",
                 activeBeat: "Beat {{n}}",
-                selectionHint: "选择beat可进行草图、渲染图重抽",
-                batchRegenSketch: "重抽草图",
-                batchRegenRender: "重抽渲染图",
+                selectionHint: "Select beats to batch regen sketches and renders",
+                batchRegenSketch: "Regen Sketch",
+                batchRegenRender: "Regen Render",
               },
             },
           },
@@ -64,18 +64,18 @@ describe("ViewToggles", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "全选" })).not.toBeInTheDocument();
-    expect(screen.getByText("已选 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重抽草图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重抽渲染图" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regen Sketch" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regen Render" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "重抽草图" }));
-    await user.click(screen.getByRole("button", { name: "重抽渲染图" }));
+    await user.click(screen.getByRole("button", { name: "Regen Sketch" }));
+    await user.click(screen.getByRole("button", { name: "Regen Render" }));
 
     expect(onBatchRegenSketch).toHaveBeenCalledTimes(1);
     expect(onBatchRegenRender).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole("button", { name: "清除" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
 
     expect(onClearSelection).toHaveBeenCalledTimes(1);
   });
@@ -95,8 +95,8 @@ describe("ViewToggles", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("选择beat可进行草图、渲染图重抽")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "重抽草图" })).not.toBeInTheDocument();
+    expect(screen.getByText("Select beats to batch regen sketches and renders")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Regen Sketch" })).not.toBeInTheDocument();
   });
 
   it("keeps redraw actions hidden for single-beat selection", () => {
@@ -114,8 +114,8 @@ describe("ViewToggles", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("选择beat可进行草图、渲染图重抽")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "重抽草图" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "重抽渲染图" })).not.toBeInTheDocument();
+    expect(screen.getByText("Select beats to batch regen sketches and renders")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Regen Sketch" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Regen Render" })).not.toBeInTheDocument();
   });
 });

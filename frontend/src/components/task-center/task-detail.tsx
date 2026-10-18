@@ -152,7 +152,7 @@ export function TaskDetail() {
   }
   const providerId = providerTaskId(task);
   const displayResult = task.result ? sanitizeResultForDisplay(task.result) : null;
-  // 后端这两个标签是 freezone 写死的中文，英文界面下要按词条渲染（见 lib/task-io-label.ts）。
+  // These two backend labels are fixed English strings written by freezone, and must be rendered through locale entries (see lib/task-io-label.ts).
   const sourceLabel = taskIoLabel(metadataField(task, "source_label"), t);
   const targetLabel = taskIoLabel(metadataField(task, "target_label"), t);
   const jobId = metadataField(task, "job_id") || metadataField(task, "scope") || task.scope || "";

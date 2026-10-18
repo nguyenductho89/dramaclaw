@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/concepts/architecture.md)
-
 # Architecture
 
 DramaClaw Community Edition (CE) is a **single-machine** "novel → finished video" pipeline: one FastAPI service hosts every creative capability, tasks run in-process, data lands locally, and models are reached through an OpenAI-compatible gateway. **No PostgreSQL / Redis required.**

@@ -67,11 +67,11 @@ function canvasToPng(canvas: HTMLCanvasElement): string {
   return canvas.toDataURL('image/png');
 }
 
-// 大画布(如 4096px 的合并宫格)编码 PNG 时,同步的 `toDataURL` 会把主线程卡死几
-// 百 ms~数秒,并产出多 MB 的 base64 串(后续进 state / 上传解码 / 渲染都重复背
-// 这串)。改用异步 `toBlob`:编码不阻塞主线程,且返回轻量 `blob:` 对象 URL。
-// 下游 `loadImageElement` / `uploadLocalImageToBackend`(fetch 分支)/ 预览渲染都
-// 兼容 blob: URL。toBlob 不可用或返回空时退回同步 toDataURL。
+// When a large canvas (e.g. a merged 4096px grid) is encoded as PNG, the synchronous `toDataURL` freezes the main thread for several
+// hundred ms to several seconds and produces a multi-MB base64 string (which later state / upload decoding / rendering all carry
+// around). Use the asynchronous `toBlob` instead: encoding does not block the main thread and it returns a lightweight `blob:` object URL.
+// Downstream `loadImageElement` / `uploadLocalImageToBackend` (fetch branch) / preview rendering all
+// support blob: URLs. Falls back to the synchronous toDataURL when toBlob is unavailable or returns empty.
 async function canvasToPngObjectUrl(canvas: HTMLCanvasElement): Promise<string> {
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((result) => resolve(result), 'image/png');

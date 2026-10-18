@@ -2,9 +2,9 @@
 // Copyright (c) 2026 ClaymoreLab
 import { useEffect, useState } from "react";
 
-// GitHub 匿名 API 限速 60 次/小时/IP，登录页在共享出口 IP 下极易被限流（403）。
-// 把上次成功拿到的 star 数落地 localStorage：请求失败/限速时用本地值兜底，
-// 成功时刷新显示并写回本地，徽标不再因为一次 403 就消失。
+// The GitHub anonymous API is limited to 60 requests/hour/IP, so the login page is easily rate-limited (403) behind a shared egress IP.
+// The last successfully fetched star count is persisted to localStorage: when a request fails / is rate-limited the local value is the fallback,
+// and on success the display is refreshed and written back, so the badge no longer vanishes because of one 403.
 const STARS_STORAGE_KEY = "dramaclaw.login.githubStars";
 
 function readStoredStars(): number | null {
@@ -14,7 +14,7 @@ function readStoredStars(): number | null {
     const value = Number.parseInt(raw, 10);
     return Number.isFinite(value) && value >= 0 ? value : null;
   } catch {
-    // localStorage 在隐私模式/受限环境可能不可用。
+    // localStorage may be unavailable in private mode / restricted environments.
     return null;
   }
 }
@@ -23,15 +23,15 @@ function writeStoredStars(count: number): void {
   try {
     window.localStorage.setItem(STARS_STORAGE_KEY, String(count));
   } catch {
-    // 写入失败无所谓，star 数仅为锦上添花。
+    // A failed write does not matter; the star count is only a nicety.
   }
 }
 
 /**
- * 拉取目标仓库的 star 数，值持久化到 localStorage。
- * - 首帧同步返回上次成功落地的值（没有则为 null）。
- * - 请求成功：更新显示并写回 localStorage。
- * - 请求失败/限速：静默保留上次落地的值，不隐藏徽标。
+ * Fetches the star count of the target repo and persists the value to localStorage.
+ * - First frame: synchronously returns the last successfully persisted value (null if none).
+ * - Request succeeds: updates the display and writes back to localStorage.
+ * - Request fails / rate-limited: silently keeps the last persisted value and does not hide the badge.
  */
 export function useGithubStars(repo: string): number | null {
   const [stars, setStars] = useState<number | null>(() => readStoredStars());
@@ -49,7 +49,7 @@ export function useGithubStars(repo: string): number | null {
         if (active) setStars(count);
       })
       .catch(() => {
-        /* 静默失败：保留上次落地的 star 数 */
+        /* Silent failure: keep the last persisted star count */
       });
     return () => {
       active = false;

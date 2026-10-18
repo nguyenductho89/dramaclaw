@@ -72,13 +72,13 @@ def resolve_static_url_to_path(url: str, project_dir: Path) -> Path:
     escapes `project_dir`.
     """
     parts = urlsplit(url)
-    # 只接受同源引用。带 scheme/netloc 的外链在下一行会被削成 path，攻击者只要把
-    # 自己上传素材的真实路径拼在自己的域名后面，削出来的 path 就落在项目里、校验
-    # 照过——而调用方放行后存/回显的是原始字符串（文件夹封面、素材 URL 都是这样），
-    # 于是外链就进了所有协作者的 <img src>。所以要校验整个字符串，不是削剩的 path。
+    # Only same-origin references are accepted. An external link with a scheme/netloc would be trimmed to a path on the next line; an attacker only needs to append the real path of an
+    # asset they uploaded themselves to their own domain, and the trimmed path would land inside the project and pass
+    # validation -- while the caller stores/echoes the original string after letting it through (folder covers and asset URLs both work this way),
+    # so the external link would end up in every collaborator's <img src>. Hence the whole string is validated, not the trimmed path.
     if parts.scheme or parts.netloc:
         raise ValueError(f"url must be a same-origin path: {url!r}")
-    # 浏览器把 `/\host` 和 `\\host` 等同于协议相对外链，urlsplit 却当普通 path。
+    # Browsers treat `/\host` and `\\host` as protocol-relative external links, while urlsplit treats them as a plain path.
     if "\\" in url:
         raise ValueError(f"url must be a same-origin path: {url!r}")
     # Strip query string + fragment — frontend cache-busters like `?v=<ts>`

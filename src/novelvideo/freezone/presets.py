@@ -146,11 +146,11 @@ async def abandon_freezone_vision_egress(
     *,
     submitted: bool,
 ) -> None:
-    """出网失败时给 claim 一个终态，别让它停在 `dispatching`。
+    """Give the claim a terminal state when egress fails, so it does not stay in `dispatching`.
 
-    `submitted` 为真表示请求已经交出去、结果不明——落 `unknown`，与 EE `0066`
-    收割器同一口径；为假表示确未提交，落 `rejected`。形状对齐
-    `audio_node.py:665-675`。
+    `submitted` true means the request has been handed off with an unknown outcome -- record `unknown`, the same convention as the EE `0066`
+    reaper; false means it was definitely not submitted, record `rejected`. The shape is aligned with
+    `audio_node.py:665-675`.
     """
     if state is None:
         return
@@ -757,7 +757,7 @@ def _add_selected_background_ref(
         project_dir=project_dir,
         kind="director",
         role="selected_background",
-        label=f"当前背景 · Beat {beat}",
+        label=f"Current background · Beat {beat}",
         rel_path=f"director_control_frames/{ep_dir}/{beat_dir}/selected_background.png",
         meta={"episode": episode, "beat": beat, "scene_id": scene_id},
     )
@@ -811,9 +811,9 @@ def _add_scene_refs(
             ) or (stage_manifest.stage_dir(project_dir, scene_name) / "pano_360.png")
             seen_ply_paths: set[str] = set()
             for ply_kind, role, label in [
-                ("master", "scene_3gs_master_ply", f"{scene_name} 3D 世界（正面）"),
-                ("reverse", "scene_3gs_reverse_ply", f"{scene_name} 3D 世界（背面）"),
-                ("pano", "scene_3gs_pano_ply", f"{scene_name} 3D 世界（360）"),
+                ("master", "scene_3gs_master_ply", f"{scene_name} 3D world (front)"),
+                ("reverse", "scene_3gs_reverse_ply", f"{scene_name} 3D world (back)"),
+                ("pano", "scene_3gs_pano_ply", f"{scene_name} 3D world (360)"),
             ]:
                 path = stage_manifest.resolve_ply_path(project_dir, scene_name, ply_kind=ply_kind)
                 if path is None:
@@ -1033,16 +1033,16 @@ async def build_beat_preset_context(
 
     canonical_sketch_path = paths.sketch(beat)
     for rel_path, kind, role, label in [
-        (_project_rel(canonical_sketch_path), "sketch", "current_sketch", "当前草图"),
-        (_project_rel(paths.frame(beat)), "frame", "current_frame", "当前分镜"),
+        (_project_rel(canonical_sketch_path), "sketch", "current_sketch", "Current sketch"),
+        (_project_rel(paths.frame(beat)), "frame", "current_frame", "Current frame"),
         (
             _project_rel(paths.video(beat)),
             "video",
             "current_video",
-            "当前视频",
+            "Current video",
         ),
-        (_project_rel(paths.audio(beat)), "audio", "current_audio", "当前音频"),
-        (f"{control_base}/combined.png", "director", "director_combined", "导演合成图"),
+        (_project_rel(paths.audio(beat)), "audio", "current_audio", "Current audio"),
+        (f"{control_base}/combined.png", "director", "director_combined", "Director composite image"),
     ]:
         _add_file_ref(
             refs,
@@ -1059,10 +1059,10 @@ async def build_beat_preset_context(
 
     scene_name = _normalize_scene_name(target.get("scene_ref"))
 
-    # selected_background 不走 _add_file_ref(那个函数会在文件缺失时直接跳过) ——
-    # 这个 slot 必须有站位节点,用户才知道往哪 commit 选定背景图。文件存在时
-    # 走正常 asset node 渲染;缺失时 emit 一个 url=None 的 placeholder ref,
-    # 让画布上 generic ref loop 给它建一个空 imageGenNode 占位。
+    # selected_background does not go through _add_file_ref (that function skips outright when the file is missing) --
+    # this slot must have a placeholder node so the user knows where to commit the selected background image. When the file exists,
+    # it renders as a normal asset node; when missing, emit a placeholder ref with url=None,
+    # so the generic ref loop on the canvas creates an empty imageGenNode placeholder for it.
     selected_bg_rel = f"{control_base}/selected_background.png"
     selected_bg_path = project_dir / selected_bg_rel
     selected_bg_exists = selected_bg_path.exists()
@@ -1093,7 +1093,7 @@ async def build_beat_preset_context(
         PresetRef(
             kind="director",
             role="selected_background",
-            label=f"当前背景 · Beat {beat}",
+            label=f"Current background · Beat {beat}",
             rel_path=selected_bg_rel,
             url=(
                 _make_url(project_id, project_dir, preview_bg_rel)
@@ -1319,9 +1319,9 @@ async def build_episode_preset_context(
 
     refs: list[PresetRef] = []
     for item in identity_items:
-        # EP canvas:不走 portrait/reference_front fallback。canonical identity
-        # 缺失就不发 ref(用户看不到 portrait 替身,避免被误读为"该 identity 已生成")。
-        # Beat 工作台保留 fallback(default include_portrait_fallback=True)。
+        # EP canvas: no portrait/reference_front fallback. If the canonical identity
+        # is missing, no ref is emitted (the user does not see a portrait stand-in, which could be misread as "this identity has been generated").
+        # The Beat workbench keeps the fallback (default include_portrait_fallback=True).
         _add_mainline_identity_ref(
             refs,
             project_id=project_id,
@@ -1413,7 +1413,7 @@ def _beat_target_placeholder_ref(
         return {
             "kind": "sketch",
             "role": role,
-            "label": "当前草图",
+            "label": "Current sketch",
             "rel_path": f"sketches/{ep_dir}/beat_{beat_num:02d}.png",
             "url": None,
             "exists": False,
@@ -1425,7 +1425,7 @@ def _beat_target_placeholder_ref(
         return {
             "kind": "frame",
             "role": role,
-            "label": "当前分镜",
+            "label": "Current frame",
             "rel_path": f"frames/{ep_dir}/beat_{beat_num:02d}.png",
             "url": None,
             "exists": False,
@@ -1434,14 +1434,14 @@ def _beat_target_placeholder_ref(
             "meta": base_meta,
         }
     if role == "selected_background":
-        # selected_background 总是有站位 — 没文件时也画个 placeholder 节点,
-        # 用户才知道往哪 commit 背景(否则 canvas 上完全找不到目标 slot)。
-        # 16:9 跟导演阶段产出对齐,不走 beat sketch 的 2:3。
+        # selected_background always has a placeholder -- even when there is no file, draw a placeholder node,
+        # so the user knows where to commit the background (otherwise the target slot cannot be found on the canvas at all).
+        # 16:9 is aligned with the director stage output, not the 2:3 of the beat sketch.
         beat_dir = f"beat_{beat_num:02d}"
         return {
             "kind": "director",
             "role": role,
-            "label": f"当前背景 · Beat {beat_num}",
+            "label": f"Current background · Beat {beat_num}",
             "rel_path": f"director_control_frames/{ep_dir}/{beat_dir}/selected_background.png",
             "url": None,
             "exists": False,
@@ -1718,7 +1718,7 @@ def _director_world_node(
         None,
     )
     data: dict[str, Any] = {
-        "displayName": f"{scene_id} 导演世界",
+        "displayName": f"{scene_id} director world",
         "sources": sources,
         "activeSourceId": active_source.get("id") if active_source else None,
         "plyUrl": (
@@ -1963,9 +1963,9 @@ SCENE_PLY_INPUT_ROLES = {
 }
 
 SCENE_PLY_WORKFLOW_ROLES = {
-    "scene_3gs_master_ply": ("master", "scene_master", "3D 世界（正面）"),
-    "scene_3gs_reverse_ply": ("reverse", "scene_reverse_master", "3D 世界（背面）"),
-    "scene_3gs_pano_ply": ("pano", "scene_director_pano_360", "3D 世界（360）"),
+    "scene_3gs_master_ply": ("master", "scene_master", "3D world (front)"),
+    "scene_3gs_reverse_ply": ("reverse", "scene_reverse_master", "3D world (back)"),
+    "scene_3gs_pano_ply": ("pano", "scene_director_pano_360", "3D world (360)"),
 }
 
 DIRECTOR_CAPTURE_IMAGE_ROLES = (
@@ -2262,8 +2262,8 @@ def _append_scene_asset_workflow(
                 role for role in ("scene_director_pano_360", "scene_360") if role in role_to_node
             ]
             for idx, role in enumerate(pano_roles):
-                # Pano viewer 从 x=620 右移到 x=1240,腾出左边空间给
-                # scene_director_pano_360 workflow trigger 表达数据流方向。
+                # The Pano viewer moves right from x=620 to x=1240, freeing the left side for
+                # the scene_director_pano_360 workflow trigger to express the data-flow direction.
                 _set_scene_node_position(role_to_node.get(role), 1240, 500 + scene_y + idx * 320)
 
             ply_roles = [
@@ -2434,12 +2434,12 @@ def _append_scene_asset_workflow(
         for ref, node_id in items:
             role = str(ref.get("role") or "")
             if prompt_id and role in generic_roles:
-                # 资产画布 (layout_style=="default") 下,scene_director_pano_360 /
-                # scene_360 viewer 旁会有独立的 workflow_scene_director_pano_360
-                # trigger;prompt 应该连到 trigger 而非 viewer。这条 edge 在 asset
-                # preset Phase 1d 阶段单独 emit。
-                # Beat 画布 (layout_style=="beat" / "sketch") 下,pano viewer 是
-                # 信息性参考节点 (没独立 trigger),prompt → pano viewer 仍有意义。
+                # On the asset canvas (layout_style=="default"), scene_director_pano_360 /
+                # the scene_360 viewer has a separate workflow_scene_director_pano_360
+                # trigger next to it; the prompt should connect to the trigger rather than the viewer. This edge is emitted separately
+                # in asset preset Phase 1d.
+                # On the Beat canvas (layout_style=="beat" / "sketch"), the pano viewer is an
+                # informational reference node (no separate trigger), so prompt -> pano viewer still makes sense.
                 if layout_style == "default" and role in {"scene_director_pano_360", "scene_360"}:
                     continue
                 edges.append(
@@ -2680,21 +2680,21 @@ def _character_profile_content(profile: dict[str, Any]) -> str:
 
     aliases = [_text(alias) for alias in (profile.get("aliases") or []) if _text(alias)]
     lines = [
-        f"名称: {_text(profile.get('name')) or '(未填写)'}",
-        f"性别: {_text(profile.get('gender')) or '(未填写)'}",
-        f"角色定位: {_text(profile.get('role')) or '(未填写)'}",
-        f"别名: {', '.join(aliases) if aliases else '(未填写)'}",
-        f"年龄段: {_text(profile.get('age_group')) or '(未填写)'}",
+        f"Name: {_text(profile.get('name')) or '(not set)'}",
+        f"Gender: {_text(profile.get('gender')) or '(not set)'}",
+        f"Role: {_text(profile.get('role')) or '(not set)'}",
+        f"Aliases: {', '.join(aliases) if aliases else '(not set)'}",
+        f"Age group: {_text(profile.get('age_group')) or '(not set)'}",
     ]
     body_type = _text(profile.get("body_type"))
     if body_type:
-        lines.append(f"体型: {body_type}")
+        lines.append(f"Body type: {body_type}")
     description = _text(profile.get("description"))
     if description:
-        lines.extend(["", "描述:", description])
+        lines.extend(["", "Description:", description])
     face_prompt = _text(profile.get("face_prompt"))
     if face_prompt:
-        lines.extend(["", "面部特征（face_prompt，不含服装）:", face_prompt])
+        lines.extend(["", "Face features (face_prompt, no clothing):", face_prompt])
     return "\n".join(lines)
 
 
@@ -2704,31 +2704,31 @@ def _prop_profile_content(profile: dict[str, Any]) -> str:
 
     aliases = [str(item).strip() for item in profile.get("aliases") or [] if str(item).strip()]
     lines = [
-        f"名称: {_text(profile.get('name'))}",
-        f"类型: {_text(profile.get('prop_type')) or 'object'}",
+        f"Name: {_text(profile.get('name'))}",
+        f"Type: {_text(profile.get('prop_type')) or 'object'}",
     ]
     if aliases:
-        lines.append(f"别名: {'、'.join(aliases)}")
+        lines.append(f"Aliases: {', '.join(aliases)}")
     owner = _text(profile.get("owner"))
     if owner:
-        lines.append(f"所属角色: {owner}")
+        lines.append(f"Owner character: {owner}")
     description = _text(profile.get("description"))
     if description:
-        lines.extend(["", "描述:", description])
+        lines.extend(["", "Description:", description])
     visual_prompt = _text(profile.get("visual_prompt"))
     if visual_prompt:
-        lines.extend(["", "视觉 Prompt:", visual_prompt])
+        lines.extend(["", "Visual prompt:", visual_prompt])
     notes = _text(profile.get("notes"))
     if notes:
-        lines.extend(["", "备注:", notes])
+        lines.extend(["", "Notes:", notes])
     return "\n".join(lines)
 
 
 def _gender_label(value: str) -> str:
     normalized = str(value or "").strip().lower()
-    if normalized in {"男", "男性", "male", "m"}:
+    if normalized in {"male", "m"}:
         return "MALE"
-    if normalized in {"女", "女性", "female", "f"}:
+    if normalized in {"female", "f"}:
         return "FEMALE"
     return str(value or "").strip()
 
@@ -3795,9 +3795,9 @@ def build_canvas_payload_from_context(
     default_push_target: dict[str, Any],
     created_at: str | None = None,
 ) -> dict[str, Any]:
-    # 默认丢掉文件不存在的 ref(画布只显示已生成的资产),但是
-    # 部分 canonical slots 缺文件时也要显示 placeholder,否则用户无法在
-    # Freezone 里生成并 commit 回主线。
+    # By default refs whose files do not exist are dropped (the canvas only shows generated assets), but
+    # when some canonical slots are missing files a placeholder must still be shown, otherwise the user cannot generate in
+    # Freezone and commit back to the mainline.
     _always_keep_roles = {
         "selected_background",
         "character_identity",
@@ -4144,7 +4144,7 @@ def build_canvas_payload_from_context(
                 "Beat sketch prompt" if is_sketch_primary else "Beat render prompt",
                 _display_prompt_text(
                     render_prompt,
-                    fallback_note="（当前 Beat 没有视觉描述或关键帧提示词）",
+                    fallback_note="(The current Beat has no visual description or keyframe prompt)",
                 ),
                 source_meta={
                     "kind": "beat_prompt",
@@ -4435,7 +4435,7 @@ def build_canvas_payload_from_context(
                     -1560,
                     -1240,
                     skill_id="freezone.set_selected_background",
-                    display_name="设为当前背景",
+                    display_name="Set as current background",
                     extra_data={"scene_source_urls": _beat_scene_source_urls(context)},
                 ),
                 _skill_node(
@@ -4443,7 +4443,7 @@ def build_canvas_payload_from_context(
                     -1560,
                     -620,
                     skill_id="freezone.set_director_combined",
-                    display_name="设为导演合成图",
+                    display_name="Set as director composite",
                     extra_data={"scene_source_urls": _beat_scene_source_urls(context)},
                 ),
                 _skill_node(
@@ -4459,7 +4459,7 @@ def build_canvas_payload_from_context(
                     -360,
                     -360,
                     skill_id="freezone.sketch_from_director_combined",
-                    display_name="从导演合成图生成草图",
+                    display_name="Generate sketch from director composite",
                     extra_data={"parameters": {"aspect_ratio": "2:3"}},
                 ),
             ]
@@ -4526,7 +4526,7 @@ def build_canvas_payload_from_context(
                         "edgeKind": "mainline_data",
                         "propagates": True,
                         "role": "selected_background",
-                        "label": "当前背景",
+                        "label": "Current background",
                     },
                     source_handle="selected_background",
                 )
@@ -4541,7 +4541,7 @@ def build_canvas_payload_from_context(
                         "edgeKind": "mainline_data",
                         "propagates": True,
                         "role": "director_combined",
-                        "label": "导演合成图",
+                        "label": "Director composite image",
                     },
                     source_handle="director_combined",
                 )
@@ -4566,7 +4566,7 @@ def build_canvas_payload_from_context(
             director_combined_id,
             skill_director_sketch_id,
             role="director_combined",
-            label="导演合成图",
+            label="Director composite image",
         )
         if not is_sketch_primary:
             _append_skill_input_edge(
@@ -4822,7 +4822,7 @@ def build_canvas_payload_from_context(
             portrait_prompt_id = "prompt_character_portrait"
             portrait_prompt_text = _display_prompt_text(
                 portrait_prompt,
-                fallback_note="（当前没有可复用的 Portrait 提示词）",
+                fallback_note="(There is currently no reusable Portrait prompt)",
             )
             nodes.append(
                 _prompt_text_node(
@@ -4912,7 +4912,7 @@ def build_canvas_payload_from_context(
             lane_y = 260 + idx * 520
             prompt_text = _display_prompt_text(
                 prompt,
-                fallback_note="（当前生成主要依赖参考图，无额外提示词）",
+                fallback_note="(The current generation mainly relies on reference images; there is no extra prompt)",
             )
             nodes.append(
                 _prompt_text_node(
@@ -4996,11 +4996,11 @@ def build_canvas_payload_from_context(
                     "autoCommitOnGenerate": True,
                 },
             )
-            # Age variant identity 没自己 identity_portrait 时,不 fallback 主
-            # character portrait —— 主 portrait 是 youth 形态,拿来当中年/老年
-            # 变体的视觉参考会误导(用户以为这个 age 变体已经有 portrait)。
-            # 没参考就走 prompt-only 生成(portrait_flow_id),让用户先把该
-            # 变体的专属 portrait 生成出来。
+            # When an Age variant identity has no identity_portrait of its own, do not fall back to the main
+            # character portrait -- the main portrait is the youth form, and using it as the visual reference for a middle-aged/elderly
+            # variant would mislead (the user would think this age variant already has a portrait).
+            # Without a reference, go prompt-only generation (portrait_flow_id), letting the user first generate that
+            # variant's own portrait.
             is_age_variant = bool(identity_ctx.get("is_age_variant"))
             portrait_source_id = identity_portrait_ref_id or (
                 (portrait_ref_id if not is_age_variant else None) or portrait_flow_id
@@ -5145,22 +5145,22 @@ def build_canvas_payload_from_context(
             )
 
         # Scene master/reverse slots keep commit metadata for candidate push/default target.
-        # scene_director_pano_360 — 该 ref 由 _add_scene_refs 渲染成 pano360ViewerNode
-        # (sphere viewer, 不是 imageGenNode),所以额外 emit 一个 imageGenNode
-        # canonical source placeholder (workflow_scene_360)。两个节点共享同一 slot 文件:
-        #   - pano360 viewer:展示当前 canonical 文件
+        # scene_director_pano_360 -- this ref is rendered as a pano360ViewerNode by _add_scene_refs
+        # (sphere viewer, not an imageGenNode), so an extra imageGenNode
+        # canonical source placeholder (workflow_scene_360) is emitted. Both nodes share the same slot file:
+        #   - pano360 viewer: shows the current canonical file
         #   - workflow trigger: candidate preview + Push target metadata
         #
-        # 注:旧 \"scene_360\" role 已 deprecate (presets.py:703-710 注释),asset
-        # preset 实际只 emit scene_director_pano_360。所以这里只查后者。
+        # Note: the old "scene_360" role is deprecated (see the comment at presets.py:703-710); the asset
+        # preset actually only emits scene_director_pano_360. So only the latter is looked up here.
         scene_master_node_id = _find_ref_node_id(role="scene_master", kind="scene")
         scene_reverse_node_id = _find_ref_node_id(role="scene_reverse_master", kind="scene")
         scene_pano_viewer_node_id = _find_ref_node_id(
             role="scene_director_pano_360",
             kind="scene",
         ) or _find_ref_node_id(role="scene_360", kind="scene")
-        # scene_id 来源: asset_id (scene preset_key 把它放 asset_id);兼容老路径
-        # 也接 identity_id / character (有些 fixture 没分清)。
+        # scene_id source: asset_id (the scene preset_key puts it in asset_id); for compatibility with legacy paths
+        # identity_id / character are also accepted (some fixtures do not tell them apart).
         scene_name_for_target = str(
             context.get("asset_id") or context.get("identity_id") or context.get("character") or ""
         ).strip()
@@ -5201,9 +5201,9 @@ def build_canvas_payload_from_context(
                 },
             )
         if scene_pano_viewer_node_id and scene_name_for_target:
-            # scene_director_pano_360 是复杂 workflow (master + reverse +
-            # prompt → 360 panorama),应该由显式 SkillNode 表达组合技能:
-            # master/reverse/prompt → SkillNode → readonly canonical viewer。
+            # scene_director_pano_360 is a complex workflow (master + reverse +
+            # prompt -> 360 panorama) and should express the composed skill through an explicit SkillNode:
+            # master/reverse/prompt -> SkillNode -> readonly canonical viewer.
             pano_viewer_pos = (1480, 460)
             pano_viewer_url: Any = None
             for node in nodes:

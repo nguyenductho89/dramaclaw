@@ -124,12 +124,12 @@ async def test_english_identity_appearance_explicitly_requires_english(monkeypat
     planner = IdentityPlanner(_Store())
 
     await planner._generate_appearance(
-        "Han Ji-won", "青年时期", "", "当前时间线", output_language="en"
+        "Han Ji-won", "young_adult", "", "current timeline", output_language="en"
     )
 
     prompt_text = "\n".join(captured)
     assert "Write every user-visible prose field in English" in prompt_text
-    assert "使用中文" not in prompt_text
+    assert "Write in Chinese" not in prompt_text
 
 
 @pytest.mark.asyncio
@@ -149,8 +149,8 @@ async def test_resolve_threads_screenplay_language_into_appearance_recovery(monk
             requirements=[
                 IdentityRequirement(
                     character_name="Han Ji-won",
-                    visual_state="青年时期",
-                    reason="修复前生成的中文身份标签",
+                    visual_state="young_adult",
+                    reason="Chinese identity label generated before the fix",
                 )
             ]
         ),

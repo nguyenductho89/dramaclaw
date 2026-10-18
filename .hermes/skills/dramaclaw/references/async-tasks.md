@@ -1,84 +1,84 @@
 # Async Tasks
 
-异步任务的目标是：**按用户要求启动、观察或继续任务，并用最小必要状态对外汇报。**
+The goal of async tasks: **start, observe or continue a task as the user requests, and report to the outside with the minimum necessary state.**
 
-## 适用场景
+## Applicable scenarios
 
-- 启动某个异步任务
-- 看下当前进度
-- 持续跟踪直到完成
-- 从断点继续等待
+- Starting an async task
+- Checking the current progress
+- Tracking continuously until completion
+- Resuming a wait from a breakpoint
 
-## 默认策略
+## Default policy
 
-- 用户只说“启动并看下当前进度”时，做 one-shot 状态检查，不自动升级成持续跟踪。
-- 用户明确要求“持续看 / 实时跟 / 一直盯到完成”时，也只允许观察当前任务状态，不允许在任务完成后继续启动下一步。
-- 当前状态不是 `completed` 时，明确告诉用户当前状态，不要压缩成“已完成”。
-- 长任务最终回复默认只保留“已完成什么 / 当前状态 / 下一步”，不把阶段性排查过程串成对外日志。
-- 任何异步任务处于 `queued` / `running` / `pending` 时，本轮只反馈“后台正在生成中”和当前任务状态；不得启动依赖它的下一步。
+- When the user only says "start it and check the current progress", do a one-shot status check and do not automatically escalate to continuous tracking.
+- When the user explicitly asks to "keep watching / follow live / watch until done", still only observe the current task status; never start the next step after the task completes.
+- When the current status is not `completed`, tell the user the current status clearly; do not compress it into "done".
+- The final reply of a long task keeps by default only "what was done / current status / next step", and does not string interim troubleshooting steps into an external log.
+- Whenever any async task is `queued` / `running` / `pending`, this turn only reports "background generation is in progress" and the current task status; never start the next step that depends on it.
 
-## one-shot 状态查询
+## One-shot status query
 
-默认输出只保留：
+The default output keeps only:
 
-1. 是否已启动
-2. 当前状态/进度
-3. 必要时的一句下一步建议
+1. Whether it has started
+2. Current status/progress
+3. One sentence of next-step advice when necessary
 
-不要把准备动作、接口确认、重试判断过程串成面向用户的日志。
+Do not string preparation actions, endpoint confirmations and retry deliberation into a user-facing log.
 
-### one-shot 默认路径
+### One-shot default path
 
-- 启动前先看是否已有同类或依赖任务处于 queued/running/pending；如果有，直接反馈任务进行中并停止
-- 没有运行中任务时，才启动当前请求对应的一个任务
-- 如果启动接口返回 `ok:false`、HTTP 非 2xx、或响应里有明确 `error`，立即把该错误原文摘要反馈给用户，不要说“已启动”
-- 再查一次对应 task 状态
-- 如果这一次查询返回的仍是 `queued` / `running` / `pending`，就按当前状态收口，不继续循环轮询到完成，也不启动下一步
-- 如果这一次查询返回 `failed` / `cancelled`，必须把 `task.error`、`error_code` 或 `logs` 中最直接的一句失败原因反馈给用户，不要压缩成“已启动”或“已重做”
-- 如果 task 状态已经足够，就直接据此回复
-- 只有 task 状态不足以解释当前阶段时，才补一次全局状态说明
-- 对任务取消/清理这类 task-management 请求：状态确认只使用 `GET /api/v1/projects/{project}/tasks`、`GET /api/v1/projects/{project}/tasks/{type}/{episode}`，必要时最多补一次 `GET /api/v1/projects/{project}/pipeline/status`
-- 不要探测 `GET /api/v1/projects/{project}/status`，这不是当前可用的任务状态路由
-- **任务状态路由统一在 `/api/v1/projects/{project}/tasks/` 下**；不要探测顶层 `/api/v1/tasks/...`，当前后端没有该路由。
+- Before starting, check whether a task of the same kind or a dependent task is queued/running/pending; if so, report that the task is in progress and stop
+- Only when there is no running task, start the one task corresponding to the current request
+- If the start endpoint returns `ok:false`, a non-2xx HTTP status, or an explicit `error` in the response, immediately report a summary of that error text to the user and do not say "started"
+- Query the corresponding task status once more
+- If this query still returns `queued` / `running` / `pending`, wrap up with the current status; do not keep polling until completion and do not start the next step
+- If this query returns `failed` / `cancelled`, you must report the most direct one-sentence failure reason from `task.error`, `error_code` or `logs` to the user; do not compress it into "started" or "redone"
+- If the task status is already sufficient, reply directly from it
+- Only when the task status is not enough to explain the current stage, add one global status explanation
+- For task-management requests such as cancel/clean up: confirm the status using only `GET /api/v1/projects/{project}/tasks` and `GET /api/v1/projects/{project}/tasks/{type}/{episode}`, and at most one extra `GET /api/v1/projects/{project}/pipeline/status` if necessary
+- Do not probe `GET /api/v1/projects/{project}/status`; it is not a currently available task status route
+- **Task status routes are all under `/api/v1/projects/{project}/tasks/`**; do not probe the top-level `/api/v1/tasks/...`, the current backend has no such route.
 
-### one-shot 输出模板
+### One-shot output template
 
-- `已启动 <任务名>。`
-- `当前状态：<queued/running/completed/failed/cancelled>`，必要时补一句进度或限制
-- 失败时：`失败原因：<task.error 或接口 error>`
-- `如果你要，稍后我可以继续查看进度；等当前任务完成后再执行下一步。`
+- `Started <task name>.`
+- `Current status: <queued/running/completed/failed/cancelled>`, with one sentence about progress or limitations when necessary
+- On failure: `Failure reason: <task.error or endpoint error>`
+- `If you like, I can check the progress again later; execute the next step after the current task completes.`
 
-## 持续观察
+## Continuous observation
 
-- 仅在用户明确要求持续跟踪时使用
-- 持续观察时，单轮最多 4 次状态查询；一旦拿到 `completed` / `failed` / `cancelled` 就立即停止
-- 面向用户只展示自然语言进度，不展示原始 JSON
-- 任务完成后收口到结果状态，不继续复述整个观察过程，不启动下一步
-- 状态查询只使用 DramaClaw 插件工具，不调用 shell、curl 或本地脚本解析响应。
+- Use only when the user explicitly asks for continuous tracking
+- During continuous observation, at most 4 status queries per turn; stop immediately once `completed` / `failed` / `cancelled` is obtained
+- Toward the user, show only natural-language progress, not raw JSON
+- After the task completes, wrap up with the result status; do not recount the whole observation process and do not start the next step
+- Status queries use only the DramaClaw plugin tools; do not call shell, curl or local scripts to parse responses.
 
-## 恢复与冲突
+## Recovery and conflicts
 
-- 已有项目恢复：优先看 `playbooks/resume.md`
-- 任务冲突：先查当前状态，再决定等待、恢复或重试
-- 没有新事实前，不要盲目重试
-- 对 one-shot 请求，不要为了“更稳”反复混用多条状态线，也不要先去看 API 文档页做二次确认
+- Recovering an existing project: see `playbooks/resume.md` first
+- Task conflicts: query the current status first, then decide whether to wait, resume or retry
+- Without new facts, do not retry blindly
+- For one-shot requests, do not repeatedly mix multiple status lines "to be safer", and do not go read the API documentation page for a second confirmation
 
-## 单 beat 任务完成后的边界
+## Boundaries after a single-beat task completes
 
-- **单 beat 视频重做** (`single_video`)：同一用户请求里同一 beat 的重做 POST 只发一次。POST 返回 2xx 且 `ok`/`generated: true` 后，直接按已启动或当前查询到的任务状态收口；不要因为任务查询返回 `Task not found`、任务状态缺失或没有 `result.video_path` 再 POST 一次。**如果随后查到同一 `single_video` 任务为 `failed` / `cancelled`，必须反馈失败原因（例如积分不足、上游拒绝、下载失败），不能说成已完成/已重做。**不要为了获取视频文件而触发整集 compose/generate/optimize，也不要猜测文件下载路径。
-- 如果 `single_video` 状态没有返回 `result.video_path`，不要探测 `/files`，不要探测 `/api/v1/projects/{project}/files`，只能按已启动或当前状态收口。
-- **单 beat 音频重做**：同步返回，直接告知完成即可。
-- 原则：单 beat 操作的范围就是那个 beat，不要升级为整集操作。
-- **场景锚图生成**：**不是异步任务**。当前后端没有 `/scenes/{name}/anchor-image/*` 路由，也没有 `scene_anchor` task type；不要调用锚图生成或查询路径。
+- **Single-beat video redo** (`single_video`): within one user request, send the redo POST for the same beat only once. After POST returns 2xx and `ok`/`generated: true`, wrap up directly with the started or currently queried task status; do not POST again because the task query returns `Task not found`, a missing task status or no `result.video_path`. **If the same `single_video` task is later found `failed` / `cancelled`, you must report the failure reason (for example insufficient credits, upstream rejection, download failure), and must not say it is done/redone.** Do not trigger whole-episode compose/generate/optimize just to get the video file, and do not guess file download paths.
+- If the `single_video` status does not return `result.video_path`, do not probe `/files` and do not probe `/api/v1/projects/{project}/files`; wrap up only according to started / current status.
+- **Single-beat audio redo**: returns synchronously; just tell the user it is done.
+- Principle: the scope of a single-beat operation is that beat; do not escalate it to a whole-episode operation.
+- **Scene anchor image generation**: **not an async task**. The current backend has no `/scenes/{name}/anchor-image/*` route and no `scene_anchor` task type; do not call anchor-image generation or query paths.
 
-## 检查点异常处理
+## Checkpoint exception handling
 
-- 如果异步任务状态显示 `completed`，但检查点应交付的核心产物仍为空：
-  - 先把它当成**异常断点**
-  - 直接向用户汇报“任务完成但产物为空/不可审阅”
-  - 默认停在当前检查点
-- 在同一轮 continuation / checkpoint 请求里：
-  - 不自动重触发同一步生成
-  - 不手工补写本应由生成步骤产出的核心内容
-  - 不把异常断点伪装成“已正常到达检查点”
-- 只有用户明确要求继续补救、重跑或改为手工方案时，才进入下一轮补救动作
+- If the async task status shows `completed`, but the core artifact the checkpoint should deliver is still empty:
+  - First treat it as an **abnormal breakpoint**
+  - Directly report to the user "the task completed but the artifact is empty / not reviewable"
+  - By default stop at the current checkpoint
+- Within the same continuation / checkpoint request:
+  - Do not automatically re-trigger the same generation step
+  - Do not manually fill in the core content that the generation step should have produced
+  - Do not disguise the abnormal breakpoint as "the checkpoint was reached normally"
+- Only when the user explicitly asks to continue remediation, rerun, or switch to a manual plan do you enter the next remediation action in a later turn

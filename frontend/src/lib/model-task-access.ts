@@ -28,7 +28,7 @@ function messageKey(reason: OrgAccessDenialReason | null): string {
  * `/org/me` already decides whether the signed-in member may start model
  * tasks — a tenant with no gateway key bound comes back with
  * `start_model_tasks: false` — but no canvas node read that decision, so the
- * member pressed 生成 and met a server-side denial instead of a disabled
+ * member pressed Generate and met a server-side denial instead of a disabled
  * button (OI-44).
  *
  * Fail-closed: an unreadable or still-loading snapshot blocks. The endpoint is

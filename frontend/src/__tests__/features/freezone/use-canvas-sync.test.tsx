@@ -61,9 +61,9 @@ describe("useCanvasSync hydrate lifecycle", () => {
     useShotMetadataStore.getState().hydrate({});
   });
 
-  // Canvas 现在跨项目常驻（_app.tsx 不再按项目重挂 freezone），所以 hydrate 必须
-  // 显式落相机 —— 新建画布存的就是 viewport: null，不落位就沿用上一张画布的坐标
-  // 和缩放，节点可能整个飘出屏幕，lowDetail 档也是错的。
+  // Canvas now stays resident across projects (_app.tsx no longer remounts freezone per project), so hydrate must
+  // place the camera explicitly - a new canvas stores viewport: null, and without placement it keeps using the previous canvas's coordinates
+  // and zoom, nodes may drift entirely off screen, and the lowDetail tier is wrong too.
   it("resets the camera to the default when the canvas has no saved viewport", async () => {
     vi.mocked(getFreezoneCanvas).mockResolvedValue({
       nodes: [],
@@ -2150,8 +2150,8 @@ describe("useCanvasSync hydrate lifecycle", () => {
     hook.unmount();
   });
 
-  // 跨项目粘贴：节点先带着源项目的媒体 URL 进 store，后端拷完素材才改写成目标项目
-  // 的地址。hold 期间只写草稿不发 PUT，release 后补一次保存——源项目 URL 不会先入库。
+  // Cross-project paste: nodes enter the store carrying the source project's media URLs, and are rewritten to the target project's
+  // addresses only after the backend finishes copying assets. During the hold only drafts are written and no PUT is sent; one save is made after release - the source project's URL is never stored first.
   it("holds the content PUT while the project's autosave is held and saves once released", async () => {
     vi.useFakeTimers();
     vi.mocked(getFreezoneCanvas).mockResolvedValue({

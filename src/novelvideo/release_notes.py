@@ -11,10 +11,10 @@ from packaging.version import InvalidVersion, Version
 
 Attention = Literal["low", "medium", "high"]
 
-_HIGHLIGHTS_RE = re.compile(r"^user-facing highlights(?:\s*\((zh|en)\))?$", re.I)
+_HIGHLIGHTS_RE = re.compile(r"^user-facing highlights(?:\s*\((vi|en)\))?$", re.I)
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _BULLET_RE = re.compile(r"^\s{0,3}[-*]\s+(.+?)\s*$")
-_BOLD_TITLE_RE = re.compile(r"^\*\*(.*?)\*\*\s*[:：]?\s*(.*)$")
+_BOLD_TITLE_RE = re.compile(r"^\*\*(.*?)\*\*\s*[:]?\s*(.*)$")
 _FRONT_MATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
 
 
@@ -156,14 +156,14 @@ def _select_section(
     locale: str,
     allow_locale_fallback: bool,
 ) -> _Section | None:
-    normalized_locale = "zh" if locale.lower().startswith("zh") else "en"
+    normalized_locale = "vi" if locale.lower().startswith("vi") else "en"
     for section in sections:
         if section.locale == normalized_locale:
             return section
     if not allow_locale_fallback:
         return None
     for section in sections:
-        if section.locale in {"zh", "en"} and section.locale != normalized_locale:
+        if section.locale in {"vi", "en"} and section.locale != normalized_locale:
             return section
     for section in sections:
         if section.locale is None:
@@ -189,7 +189,7 @@ def parse(
     body: str,
     tag: str | None,
     *,
-    locale: str = "zh",
+    locale: str = "en",
     allow_locale_fallback: bool = True,
 ) -> ParsedReleaseNotes:
     attention = _attention(body)
@@ -230,7 +230,7 @@ def parse(
         if not bullet:
             continue
         title, item_body = _split_bullet(bullet.group(1))
-        if not title or not title.strip(":："):
+        if not title or not title.strip(":"):
             continue
         items.append(
             ReleaseNoteItem(

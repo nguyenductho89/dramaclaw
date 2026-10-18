@@ -19,19 +19,19 @@ import {
 import { CANVAS_NODE_TOOLBAR_PILL_CLASS } from './nodeFrameStyles';
 
 /**
- * 「旋转与镜像」编辑器的**外壳无关**内容层：状态机 + 那条控制条。
+ * The **shell-agnostic** content layer of the "Rotate and mirror" editor: state machine + that control bar.
  *
- * 抽出来是因为同一套交互要挂在两种外壳上：工作流把它塞进节点上方的
- * `ReactFlowNodeToolbar`（RotateEditorOverlay），故事板详情没有 React Flow，走
- * portal 到 body 的全屏弹窗（AssetBoardRotateDialog）。两边共用这里的 hook 与
- * 控制条，行为/视觉才不会各长各的。
+ * It is extracted because the same interaction has to be mounted on two shells: the workflow stuffs it into the
+ * `ReactFlowNodeToolbar` above the node (RotateEditorOverlay), while the storyboard detail has no React Flow and goes through
+ * a full-screen dialog portaled to body (AssetBoardRotateDialog). Both sides share the hook and
+ * control bar here, so behavior/visuals do not each grow their own way.
  *
- * 预览图不在这里：两个外壳的取景框差太多（工作流按节点尺寸裁切，故事板是大图
- * 居中），各自渲染 `<img style={{ transform }}>` 即可，transform 由 hook 给。
+ * The preview image is not here: the framing boxes of the two shells differ too much (the workflow crops by node size, the storyboard has a large image
+ * centered), and each just renders `<img style={{ transform }}>`, with the transform given by the hook.
  */
 
-// 旋转锚点：用户每次点击"顺时针 90°"都从角度滑块的当前值上加 90°，
-// 而镜像则是布尔切换（再次按下会取消），与 libtv 行为一致。
+// Rotation anchor: every click of "clockwise 90 degrees" adds 90 degrees onto the angle slider's current value,
+// while mirroring is a boolean toggle (pressing again cancels it), consistent with libtv behavior.
 function normalizeAngle(angle: number): number {
   const n = angle % 360;
   return n < 0 ? n + 360 : n;
@@ -42,7 +42,7 @@ export interface RotateEditorController {
   mirrorH: boolean;
   mirrorV: boolean;
   isSaving: boolean;
-  /** 实时预览用的 CSS transform（旋转 + 双向镜像）。 */
+  /** The CSS transform for live preview (rotation + two-way mirroring). */
   transform: string;
   onAngleChange: (value: number) => void;
   onRotate90: () => void;
@@ -53,20 +53,20 @@ export interface RotateEditorController {
 }
 
 export interface UseRotateEditorOptions {
-  /** 旋转写回的目标节点（调用方进入编辑器前预建的「旋转结果」节点）。 */
+  /** The target node the rotation is written back to (the "rotate result" node pre-built by the caller before entering the editor). */
   nodeId: string;
   imageSource: string;
   /**
-   * 关闭编辑器。`committed` 表示是否真正提交了一次旋转（开始写回节点）：
-   *   - `false`：用户退出 / 按 Esc / 无任何变换直接关闭 —— 调用方应把进入旋转时
-   *     预创建的「旋转结果」节点删掉，避免凭空多出一个节点。
-   *   - `true` ：已开始把旋转结果写回该节点，调用方保留它。
+   * Close the editor. `committed` indicates whether a rotation was really committed (write-back to the node has started):
+   *   - `false`: the user exits / presses Esc / closes with no transform at all - the caller should delete the "rotate result"
+   *     node pre-created when entering rotation, avoiding a node appearing from nowhere.
+   *   - `true`: the rotation result has started being written back to that node, and the caller keeps it.
    */
   onClose: (committed: boolean) => void;
   /**
-   * 提交成功、写回任务已起飞时把它的 completion 交给宿主，在 `onClose(true)` 之前
-   * 触发。故事板拿它挂 busy 态与失败反馈（源节点详情面板上那行红字）；工作流不需要，
-   * 不传即可。
+   * When submission succeeds and the write-back task has taken off, hand its completion to the host, triggered before `onClose(true)`.
+   * The storyboard uses it to attach the busy state and failure feedback (the red line on the source node's detail panel); the workflow does not need it,
+   * so it can be omitted.
    */
   onCommitted?: (completion: Promise<void>) => void;
 }
@@ -105,21 +105,21 @@ export function useRotateEditor({
   const onSave = useCallback(() => {
     if (isSaving) return;
     const rotateTransform = { angleDeg: angle, mirrorH, mirrorV };
-    // 没有任何变换时直接关闭，不必上传重写。视作「未提交」，让调用方把预创建
-    // 的结果节点删掉（等同退出）。
+    // With no transform at all, close directly, with no need to upload and rewrite. Treated as "not committed", so the caller deletes
+    // the pre-created result node (equivalent to exit).
     if (isIdentityRotateTransform(rotateTransform)) {
       onClose(false);
       return;
     }
 
-    // isGenerating 置位与后续写回都在 application 函数内完成；缺 project 时返回
-    // null，此处不改变编辑态（与原「直接 return、不关闭」行为一致）。
+    // Setting isGenerating and the later write-back are all done inside the application function; when project is missing it returns
+    // null, and the editing state is not changed here (consistent with the original behavior of "just return, do not close").
     const completion = rotateImageInPlace(nodeId, imageSource, rotateTransform);
     if (!completion) return;
 
     setIsSaving(true);
     onCommitted?.(completion);
-    // 已开始写回旋转结果到该节点 —— 标记为已提交，调用方保留节点。
+    // The rotation result has started being written back to that node - mark it as committed, and the caller keeps the node.
     onClose(true);
     void completion.finally(() => setIsSaving(false));
   }, [
@@ -162,11 +162,11 @@ const ICON_BUTTON_CLASS =
   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-dark transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
- * 控制条：退出 · 角度 · 顺时针 90° · 水平/垂直镜像 · 保存。
+ * Control bar: exit · angle · clockwise 90 degrees · horizontal/vertical mirror · save.
  *
- * @param showTitle 是否在退出钮右边显示「旋转与镜像」标题。工作流那条挂在节点正
- *   上方、宽度跟着节点走，加标题会顶出节点边界，所以默认关；故事板浮在大图上方，
- *   空间充裕且需要说明当前处于哪个编辑器，开着。
+ * @param showTitle whether to show the "Rotate and mirror" title to the right of the exit button. The one in the workflow sits directly above the node,
+ *   its width follows the node, and adding a title would push past the node boundary, so it is off by default; the storyboard floats above a large image,
+ *   with ample space and a need to say which editor is current, so it is on.
  */
 export function RotateEditorToolbar({
   controller,
@@ -204,8 +204,8 @@ export function RotateEditorToolbar({
       )}
 
       <div className="flex shrink-0 items-center gap-2 px-2" title={t('rotateEditor.angleLabel')}>
-        {/* 已经有「旋转与镜像」标题时不再重复一遍「旋转角度」，只留输入框（无障碍名
-            由 input 自己的 aria-label 提供），与 libtv 那条控制条一致。 */}
+        {/* When the "Rotate and mirror" title is already there, "Rotation angle" is not repeated, leaving only the input box (the accessible name
+        is provided by the input's own aria-label), consistent with libtv's control bar. */}
         {!showTitle && (
           <span className="shrink-0 text-[11px] text-text-dark/90">
             {t('rotateEditor.angleLabel')}

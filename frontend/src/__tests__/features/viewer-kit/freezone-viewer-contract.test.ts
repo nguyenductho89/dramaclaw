@@ -29,11 +29,11 @@ describe("freezone viewer contracts", () => {
     expect(node).toContain("snap4x3");
     expect(node).toContain("sphere_correction_deg");
     expect(node).toContain("selected_background");
-    // 文案搬进 i18n 之后，节点文件里只剩 key，中文落在词条表里 —— 两头都钉住，
-    // 免得改了其中一边契约就悄悄断掉。
+    // After the copy moved into i18n, the node file holds only the key and the text lives in the locale tables - pin both ends,
+    // so the contract does not silently break when one side changes.
     expect(node).toContain("node.pano360.metaViewer");
-    expect(read("public/locales/zh/translation.json")).toContain(
-      '"metaViewer": "360 自由画布查看器"',
+    expect(read("public/locales/vi/translation.json")).toContain(
+      '"metaViewer": "Trình xem tự do 360°"',
     );
     expect(node).not.toContain("PanoCaptureDialog");
     expect(canvasNodes).toContain("pano360Viewer");
@@ -121,7 +121,7 @@ describe("freezone viewer contracts", () => {
   it("exposes a director world camera reset without clearing saved scene data", () => {
     const dialog = read("src/features/viewer-kit/three-d/ThreeDDirectorDialog.tsx");
     const viewerApp = read("src/features/viewer-kit/three-d/engine/viewerApp.ts");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
     const outputSectionIndex = dialog.indexOf('t("viewer.threeD.sections.output")');
     const sourceCalibrationResetIndex = dialog.indexOf('t("viewer.threeD.sourceCalibration.reset")');
@@ -142,13 +142,13 @@ describe("freezone viewer contracts", () => {
     expect(beatOverlaySection).not.toContain('t("viewer.threeD.resetCamera")');
     expect(outputSection).not.toContain('t("viewer.threeD.resetCamera")');
     expect(dialog).not.toContain("onClearScene?.() && viewer.resetCamera()");
-    expect(zh).toContain('"resetCamera": "重置镜头"');
+    expect(vi).toContain('"resetCamera": "Đặt lại camera"');
     expect(en).toContain('"resetCamera": "Reset camera"');
   });
 
   it("copies a selected beat overlay into the current beat explicitly", () => {
     const dialog = read("src/features/viewer-kit/three-d/ThreeDDirectorDialog.tsx");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(dialog).toContain("const sourceBeatNumber = Number(selectedOverlayBeat);");
@@ -157,11 +157,11 @@ describe("freezone viewer contracts", () => {
     expect(dialog).toContain("beat: targetBeatNumber");
     expect(dialog).toContain("applyOverlayStatus(next, targetBeatNumber)");
     expect(dialog).toContain('t("viewer.threeD.beatOverlay.copyFlow"');
-    expect(zh).toContain('"inheritedFromBeat": "当前未保存，临时沿用镜头 {{beat}}"');
+    expect(vi).toContain('"inheritedFromBeat": "Chưa lưu; đang tạm dùng cú máy {{beat}}"');
     expect(en).toContain('"inheritedFromBeat": "Not saved yet; temporarily using shot {{beat}}"');
     expect(dialog).not.toContain("const loaded = await loadOverlay(beatNumber);");
-    expect(zh).toContain('"copyFlow": "复制来源：镜头 {{sourceBeat}} → 当前镜头 {{targetBeat}}"');
-    expect(zh).toContain('"copySelected": "复制来源到当前镜头"');
+    expect(vi).toContain('"copyFlow": "Nguồn sao chép: cú máy {{sourceBeat}} -> cú máy hiện tại {{targetBeat}}"');
+    expect(vi).toContain('"copySelected": "Sao chép nguồn vào cú máy hiện tại"');
     expect(en).toContain('"copyFlow": "Copy source: shot {{sourceBeat}} -> current shot {{targetBeat}}"');
     expect(en).toContain('"copySelected": "Copy source into current shot"');
   });
@@ -172,7 +172,7 @@ describe("freezone viewer contracts", () => {
     const worldNode = read("src/features/canvas/nodes/ThreeDWorldNode.tsx");
     const viewerManifestsApi = read("src/api/viewerManifests.ts");
     const skillNode = read("src/features/canvas/nodes/SkillNode.tsx");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(manifest).toContain("anonymous_prop_colors: string[];");
@@ -222,11 +222,11 @@ describe("freezone viewer contracts", () => {
     expect(dialog).toContain('t("viewer.threeD.stagingShapeHint")');
     expect(dialog).toContain('t("viewer.threeD.nextAnonymousActor"');
     expect(dialog).toContain('t("viewer.threeD.nextAnonymousProp"');
-    expect(zh).toContain('"nextAnonymousActor": "下一个人物：{{label}} · {{color}}"');
-    expect(zh).toContain('"nextAnonymousProp": "下一个道具：{{label}} · {{color}}"');
-    expect(zh).toContain('"propColor": "道具颜色"');
-    expect(zh).toContain('"stagingColor": "占位颜色"');
-    expect(zh).toContain('"stagingShapeHint": "占位形状"');
+    expect(vi).toContain('"nextAnonymousActor": "Diễn viên tiếp theo: {{label}} · {{color}}"');
+    expect(vi).toContain('"nextAnonymousProp": "Đạo cụ tiếp theo: {{label}} · {{color}}"');
+    expect(vi).toContain('"propColor": "Màu đạo cụ"');
+    expect(vi).toContain('"stagingColor": "Màu dàn cảnh"');
+    expect(vi).toContain('"stagingShapeHint": "Hình khối dàn cảnh"');
     expect(en).toContain('"nextAnonymousActor": "Next actor: {{label}} · {{color}}"');
     expect(en).toContain('"nextAnonymousProp": "Next prop: {{label}} · {{color}}"');
     expect(en).toContain('"propColor": "Prop color"');
@@ -237,7 +237,7 @@ describe("freezone viewer contracts", () => {
   it("uses shape hints to build visible prop and staging proxy silhouettes", () => {
     const viewerApp = read("src/features/viewer-kit/three-d/engine/viewerApp.ts");
     const shapeHints = read("src/features/viewer-kit/three-d/engine/shapeHints.ts");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(shapeHints).toContain("sports_car");
@@ -252,7 +252,7 @@ describe("freezone viewer contracts", () => {
     expect(viewerApp).toContain("const ground = pos.y + s.y * proxyLocalBottomForHint(hint)");
     expect(viewerApp).toContain("pos.x, ground - next.y * proxyLocalBottomForHint(hint), pos.z");
     expect(viewerApp).not.toContain("entity.addComponent('render', { type: 'box' });\n      const mat = makeMaterial(color);");
-    expect(zh).toContain('"sports_car": "跑车"');
+    expect(vi).toContain('"sports_car": "Xe thể thao"');
     expect(en).toContain('"sports_car": "Sports car"');
   });
 
@@ -270,7 +270,7 @@ describe("freezone viewer contracts", () => {
   it("documents that F only moves the selection to the crosshair", () => {
     const dialog = read("src/features/viewer-kit/three-d/ThreeDDirectorDialog.tsx");
     const viewerApp = read("src/features/viewer-kit/three-d/engine/viewerApp.ts");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(dialog).toContain('case "KeyF":');
@@ -278,8 +278,8 @@ describe("freezone viewer contracts", () => {
     expect(dialog).toContain('case "KeyM":');
     expect(dialog).toContain("viewerApp.mountSelectedAtCrosshair()");
     expect(viewerApp).not.toContain("if (mountSelectedAtCrosshair()) return true;");
-    expect(zh).toContain("F 移到准星");
-    expect(zh).toContain("M 挂到准星");
+    expect(vi).toContain("F dời tới tâm ngắm");
+    expect(vi).toContain("M gắn vào tâm ngắm");
     expect(en).toContain("F move to crosshair");
     expect(en).toContain("M mount to crosshair");
   });
@@ -287,7 +287,7 @@ describe("freezone viewer contracts", () => {
   it("restores explicit actor mount relationships without making F auto-mount", () => {
     const viewerApp = read("src/features/viewer-kit/three-d/engine/viewerApp.ts");
     const dialog = read("src/features/viewer-kit/three-d/ThreeDDirectorDialog.tsx");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(viewerApp).toContain("mount?: { kind: 'prop' | 'staging'; index: number; attachPointId: string };");
@@ -304,8 +304,8 @@ describe("freezone viewer contracts", () => {
     expect(dialog).toContain("viewer.mountSelectedAtCrosshair()");
     expect(dialog).toContain("viewer.unmountSelected()");
     expect(dialog).toContain("selection.mounted");
-    expect(zh).toContain('"mountSelected": "挂到准星目标"');
-    expect(zh).toContain('"unmountSelected": "解除挂载"');
+    expect(vi).toContain('"mountSelected": "Gắn vào mục tiêu ở tâm ngắm"');
+    expect(vi).toContain('"unmountSelected": "Tháo gắn kết"');
     expect(en).toContain('"mountSelected": "Mount to crosshair target"');
     expect(en).toContain('"unmountSelected": "Unmount"');
   });
@@ -425,7 +425,7 @@ describe("freezone viewer contracts", () => {
     const toolbar = read("src/features/canvas/ui/NodeActionToolbar.tsx");
     const overlay = read("src/features/canvas/ui/SelectedNodeOverlay.tsx");
     const worldNode = read("src/features/canvas/nodes/ThreeDWorldNode.tsx");
-    const zh = read("public/locales/zh/translation.json");
+    const vi = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(toolbar).not.toContain("nodeToolbar.generateDirectorWorld");
@@ -450,7 +450,7 @@ describe("freezone viewer contracts", () => {
     expect(worldNode).toContain("NODE_CREDIT_PILL_FLAT_CLASS");
     expect(worldNode).toContain("NODE_GENERATE_BUTTON_BASE_CLASS");
     expect(worldNode).toContain('<ArrowUp className="h-4 w-4" />');
-    expect(zh).toContain('"generateDirectorWorld": "生成3DGS世界"');
+    expect(vi).toContain('"generateDirectorWorld": "Tạo thế giới 3DGS"');
     expect(en).toContain('"generateDirectorWorld": "Generate 3DGS World"');
   });
 
@@ -473,9 +473,9 @@ describe("freezone viewer contracts", () => {
   });
 
   it("auto-commits present image generation nodes when requested by the preset", () => {
-    // 生成编排住在共用 hook 里：工作流的 ImageGenNode 和故事板的
-    // AssetBoardImageGenForm 都挂它，自动落库一处口径两个视图同行为。
-    // 扫宿主只会扫到一个 spread，扫不到真正的自动提交逻辑。
+    // Generation orchestration lives in a shared hook: the workflow's ImageGenNode and the storyboard's
+    // AssetBoardImageGenForm both attach to it, so auto-persisting has one rule and both views behave the same.
+    // Scanning the host would only find a spread, not the real auto-submit logic.
     const imageGenForm = read(
       "src/features/canvas/nodes/shared/useImageGenerationForm.ts",
     );
@@ -504,7 +504,7 @@ describe("freezone viewer contracts", () => {
     expect(shell).toContain("clearCanvasProjectionStatuses()");
     expect(groupNode).toContain("useCanvasProjectionStatus(projectionKey)");
     expect(groupNode).toContain("projection-stale-frame");
-    // 主线投影组不管新不新都得有黄色呼吸边框——它是身份标识。
+    // A mainline projection group must have the yellow breathing border whether new or not - it is an identity marker.
     expect(groupNode).toContain("projection-frame");
     expect(groupNode).toContain("projection-stale-banner");
     expect(groupNode).toContain("freezone.projections.staleBadge");

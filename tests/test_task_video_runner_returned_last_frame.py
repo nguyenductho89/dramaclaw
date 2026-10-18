@@ -68,13 +68,13 @@ async def test_omni_video_edit_parameter_error_has_actionable_task_message(
         lambda **kwargs: history_errors.append(kwargs["error"]),
     )
 
-    with pytest.raises(RuntimeError, match="视频编辑") as exc_info:
+    with pytest.raises(RuntimeError, match="video editing") as exc_info:
         await video_runner._run_freezone_video_gen_async(
             {
                 "payload": {
                     "job_id": "job-1",
                     "project_dir": str(tmp_path),
-                    "prompt": "保持镜头，只替换人物",
+                    "prompt": "Keep the shot, only replace the character",
                     "reference_items": [{"type": "video", "path": "source.mp4"}],
                     "aspect_ratio": "16:9",
                     "duration_seconds": 5,
@@ -85,8 +85,8 @@ async def test_omni_video_edit_parameter_error_has_actionable_task_message(
             _ctx(tmp_path),
         )
 
-    assert "改用「视频编辑」模式" in str(exc_info.value)
-    assert "改写提示词" in str(exc_info.value)
+    assert 'Switch to "Video editing" mode' in str(exc_info.value)
+    assert "rewrite the prompt" in str(exc_info.value)
     assert history_errors == [str(exc_info.value)]
     assert len(attempts) == 1
 
@@ -296,7 +296,7 @@ async def test_single_video_runner_passes_happyhorse_references_and_audio_settin
                         {
                             "type": "image",
                             "path": "https://example.com/ref.png",
-                            "role": "图片1",
+                            "role": "image1",
                         }
                     ],
                 }
@@ -310,5 +310,5 @@ async def test_single_video_runner_passes_happyhorse_references_and_audio_settin
     assert generate_calls[0]["aspect_ratio"] == "1:1"
     assert generate_calls[0]["audio_setting"] == "origin"
     assert generate_calls[0]["references"] == [
-        ShotReference("image", "https://example.com/ref.png", "图片1")
+        ShotReference("image", "https://example.com/ref.png", "image1")
     ]

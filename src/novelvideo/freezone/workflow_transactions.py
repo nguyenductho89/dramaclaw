@@ -231,7 +231,7 @@ def bind_workflow_inputs(plan: dict, bindings: Any) -> dict:
                 "node_type": "textAnnotationNode",
                 "stage": "input",
                 "data": {
-                    "title": "生成提示词",
+                    "title": "Generate prompt",
                     "content": prompt,
                     "semanticOutputRole": "input_text",
                 },

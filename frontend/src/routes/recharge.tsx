@@ -62,7 +62,7 @@ function RechargePage() {
   const quoteQuery = usePaymentQuote(selectedPackageItem?.amount_cents ?? 0, authenticated && selectedPaymentMethod === "dodo");
   const quote = quoteQuery.data?.data;
   const quoteReady = selectedPaymentMethod !== "dodo" || (Boolean(quote) && !quoteQuery.isFetching && !quoteQuery.isError);
-  const language = i18n.resolvedLanguage ?? i18n.language ?? "zh";
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
 
   useEffect(() => {
     if (window.location.search) {

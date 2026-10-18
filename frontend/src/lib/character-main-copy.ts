@@ -11,8 +11,8 @@ export type CharacterMainCopy = {
 };
 
 /**
- * 「主角 / 解说主角」这组文案随 spine_template 变，是界面文案不是协议值，所以这里
- * 只存 key，由调用方带着 t 进来在渲染时解析。
+ * The "protagonist / narrator protagonist" copy varies with spine_template; it is UI text, not a protocol value, so only
+ * the key is stored here and the caller resolves it with its own `t` at render time.
  */
 const MAIN_COPY_KEY_PREFIX = {
   drama: "character.main.drama",

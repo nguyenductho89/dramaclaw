@@ -60,6 +60,7 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown, { type Components as MarkdownComponents } from "react-markdown";
+import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useParams } from "@tanstack/react-router";
@@ -108,6 +109,7 @@ import {
   useSuperChat,
 } from "@/features/superchat/use-superchat";
 import { buildChatTaskLabel } from "@/features/superchat/task-notification-label";
+import { emptyAgentReplyText } from "@/features/superchat/message";
 import { resolveMessagePresentation } from "@/features/superchat/message-presentation";
 import {
   buildChatTaskBatchNotification,
@@ -365,141 +367,58 @@ function isHistoricalToolMessage(message: ChatMessage): boolean {
   return raw.role === "trace";
 }
 
-const FREEZONE_TOOL_DISPLAY: Record<string, { title: string; description: string }> = {
-  freezone_emit_canvas_command: {
-    title: "准备画布操作",
-    description: "生成可执行的画布修改命令",
-  },
-  freezone_create_node: {
-    title: "创建节点",
-    description: "准备创建一个画布节点",
-  },
-  freezone_add_next_node: {
-    title: "追加节点",
-    description: "准备在节点后创建下游节点",
-  },
-  freezone_update_node_data: {
-    title: "更新节点",
-    description: "准备修改节点数据",
-  },
-  freezone_create_edge: {
-    title: "创建连线",
-    description: "准备连接两个画布节点",
-  },
-  freezone_delete_nodes: {
-    title: "删除节点",
-    description: "准备删除画布节点",
-  },
-  freezone_clear_canvas: {
-    title: "清空画布",
-    description: "准备清空普通画布节点和连接",
-  },
-  freezone_delete_edges: {
-    title: "断开连线",
-    description: "准备断开画布连线",
-  },
-  freezone_move_nodes: {
-    title: "移动节点",
-    description: "准备移动画布节点",
-  },
-  freezone_layout_nodes: {
-    title: "整理布局",
-    description: "准备整理画布节点布局",
-  },
-  freezone_group_nodes: {
-    title: "创建分组",
-    description: "准备把节点放入视觉分组",
-  },
-  freezone_select_nodes: {
-    title: "选择节点",
-    description: "准备选中或聚焦画布节点",
-  },
-  freezone_run_node_action: {
-    title: "运行节点动作",
-    description: "准备运行节点前端动作",
-  },
-  freezone_get_canvas_ontology: {
-    title: "读取画布 Ontology",
-    description: "获取当前画布详细 ontology",
-  },
-  freezone_get_canvas_snapshot: {
-    title: "读取画布",
-    description: "获取当前画布节点和连线信息",
-  },
-  freezone_get_selection: {
-    title: "读取选择",
-    description: "获取当前选中的画布节点",
-  },
-  freezone_get_node_detail: {
-    title: "读取节点",
-    description: "获取单个节点详情",
-  },
-  freezone_get_neighbor_graph: {
-    title: "读取上下游",
-    description: "获取节点邻近关系",
-  },
-  freezone_get_node_action_catalog: {
-    title: "读取节点能力",
-    description: "获取单个节点可用动作",
-  },
-  freezone_get_node_create_schema: {
-    title: "读取创建参数",
-    description: "获取节点创建参数",
-  },
-  freezone_get_audio_voice_options: {
-    title: "读取音色",
-    description: "获取音频节点音色选项",
-  },
-  freezone_get_slot_candidates: {
-    title: "读取槽位",
-    description: "获取当前可提交槽位",
-  },
-  freezone_get_mainline_projection_assets: {
-    title: "读取主线资产",
-    description: "获取可映射到画布的主线资产",
-  },
-  freezone_get_canvas_action_catalog: {
-    title: "查询画布能力",
-    description: "获取画布级 action catalog",
-  },
-  freezone_get_canvas_command_catalog: {
-    title: "读取命令规则",
-    description: "获取批量画布命令字段规则",
-  },
-  freezone_get_link_type_catalog: {
-    title: "读取连线类型",
-    description: "获取普通节点连线类型",
-  },
-  freezone_validate_canvas_commands: {
-    title: "校验画布命令",
-    description: "预校验 canvas_chat_commands",
-  },
-  freezone_summarize_canvas: {
-    title: "总结画布",
-    description: "整理当前画布结构摘要",
-  },
-};
+const FREEZONE_TOOL_NAMES = new Set<string>([
+  "freezone_emit_canvas_command",
+  "freezone_create_node",
+  "freezone_add_next_node",
+  "freezone_update_node_data",
+  "freezone_create_edge",
+  "freezone_delete_nodes",
+  "freezone_clear_canvas",
+  "freezone_delete_edges",
+  "freezone_move_nodes",
+  "freezone_layout_nodes",
+  "freezone_group_nodes",
+  "freezone_select_nodes",
+  "freezone_run_node_action",
+  "freezone_get_canvas_ontology",
+  "freezone_get_canvas_snapshot",
+  "freezone_get_selection",
+  "freezone_get_node_detail",
+  "freezone_get_neighbor_graph",
+  "freezone_get_node_action_catalog",
+  "freezone_get_node_create_schema",
+  "freezone_get_audio_voice_options",
+  "freezone_get_slot_candidates",
+  "freezone_get_mainline_projection_assets",
+  "freezone_get_canvas_action_catalog",
+  "freezone_get_canvas_command_catalog",
+  "freezone_get_link_type_catalog",
+  "freezone_validate_canvas_commands",
+  "freezone_summarize_canvas",
+]);
 
+// Maps a normalized tool name to the i18n key suffix under superchat.panel.toolTitles.
 const AGENT_TOOL_TITLE_OVERRIDES: Record<string, string> = {
-  skill: "加载 Skill",
-  list_workflows: "读取可用工作流",
-  "list workflows": "读取可用工作流",
-  freezone_get_workflow_skill: "加载 Workflow Skill",
-  get_workflow_skill: "加载 Workflow Skill",
-  "get workflow skill": "加载 Workflow Skill",
-  freezone_prepare_workflow_draft: "生成工作流草稿",
-  freezone_prepare_workflow_plan_draft: "生成工作流草稿",
-  freezone_confirm_workflow_draft: "提交到画布",
-  freezone_request_user_clarification: "确认生成参数",
-  freezone_list_agent_catalog: "读取 Skill / Recipe 列表",
-  freezone_get_saved_skill: "读取 Skill 配置",
-  freezone_get_saved_recipe: "读取 Recipe 配置",
-  freezone_put_agent_catalog_draft_outline: "整理 Skill 方案",
-  freezone_begin_agent_catalog_draft: "创建 Skill 草稿",
-  freezone_put_agent_catalog_skill: "生成 Skill 配置",
-  freezone_put_agent_catalog_recipe: "生成 Recipe 配置",
-  freezone_patch_agent_catalog_draft: "调整 Skill 草稿",
-  freezone_finish_agent_catalog_draft: "展示 Skill 草稿",
+  skill: "skill",
+  list_workflows: "list_workflows",
+  "list workflows": "list_workflows",
+  freezone_get_workflow_skill: "freezone_get_workflow_skill",
+  get_workflow_skill: "freezone_get_workflow_skill",
+  "get workflow skill": "freezone_get_workflow_skill",
+  freezone_prepare_workflow_draft: "freezone_prepare_workflow_draft",
+  freezone_prepare_workflow_plan_draft: "freezone_prepare_workflow_draft",
+  freezone_confirm_workflow_draft: "freezone_confirm_workflow_draft",
+  freezone_request_user_clarification: "freezone_request_user_clarification",
+  freezone_list_agent_catalog: "freezone_list_agent_catalog",
+  freezone_get_saved_skill: "freezone_get_saved_skill",
+  freezone_get_saved_recipe: "freezone_get_saved_recipe",
+  freezone_put_agent_catalog_draft_outline: "freezone_put_agent_catalog_draft_outline",
+  freezone_begin_agent_catalog_draft: "freezone_begin_agent_catalog_draft",
+  freezone_put_agent_catalog_skill: "freezone_put_agent_catalog_skill",
+  freezone_put_agent_catalog_recipe: "freezone_put_agent_catalog_recipe",
+  freezone_patch_agent_catalog_draft: "freezone_patch_agent_catalog_draft",
+  freezone_finish_agent_catalog_draft: "freezone_finish_agent_catalog_draft",
 };
 
 function toolRawRecord(message: ChatMessage): Record<string, unknown> | null {
@@ -574,9 +493,9 @@ function freezoneToolName(message: ChatMessage): string {
     raw?.functionName,
   ];
   for (const candidate of candidates) {
-    if (typeof candidate === "string" && FREEZONE_TOOL_DISPLAY[candidate]) return candidate;
+    if (typeof candidate === "string" && FREEZONE_TOOL_NAMES.has(candidate)) return candidate;
   }
-  for (const name of Object.keys(FREEZONE_TOOL_DISPLAY)) {
+  for (const name of FREEZONE_TOOL_NAMES) {
     if (message.text.includes(name)) return name;
   }
   return "";
@@ -584,7 +503,11 @@ function freezoneToolName(message: ChatMessage): string {
 
 function freezoneToolDisplay(message: ChatMessage): { title: string; description: string } | null {
   const name = freezoneToolName(message);
-  return FREEZONE_TOOL_DISPLAY[name] ?? null;
+  if (!name) return null;
+  return {
+    title: i18n.t(`superchat.panel.tools.${name}.title`),
+    description: i18n.t(`superchat.panel.tools.${name}.description`),
+  };
 }
 
 function freezoneToolStatus(message: ChatMessage): "running" | "done" | "failed" {
@@ -618,24 +541,24 @@ function freezoneToolMeta(message: ChatMessage): string[] {
   const data = result?.data && typeof result.data === "object" ? result.data as Record<string, unknown> : null;
   const project = input?.project_id ?? input?.project ?? rawInput?.project_id ?? rawInput?.project ?? data?.project;
   const canvas = input?.canvas_id ?? input?.canvasId ?? rawInput?.canvas_id ?? rawInput?.canvasId ?? data?.canvas_id;
-  if (typeof project === "string" && project.trim()) values.push(`项目：${project}`);
-  if (typeof canvas === "string" && canvas.trim()) values.push(`画布：${canvas}`);
-  if (Array.isArray(data?.objects)) values.push(`节点：${data.objects.length}`);
-  if (Array.isArray(data?.links)) values.push(`连线：${data.links.length}`);
-  if (toolName === "freezone_get_canvas_ontology") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.canvas_ontology}`);
-  if (toolName === "freezone_summarize_canvas") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.canvas_summary}`);
-  if (toolName === "freezone_get_canvas_action_catalog") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.canvas_action_catalog}`);
-  if (toolName === "freezone_get_canvas_command_catalog") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.canvas_command_catalog}`);
-  if (toolName === "freezone_get_link_type_catalog") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.link_type_catalog}`);
-  if (toolName === "freezone_get_selection") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.selection_detail}`);
-  if (toolName === "freezone_get_node_detail") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.node_detail}`);
-  if (toolName === "freezone_get_neighbor_graph") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.neighbor_graph}`);
-  if (toolName === "freezone_get_node_action_catalog") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.node_action_catalog}`);
-  if (toolName === "freezone_get_node_create_schema") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.node_create_schema}`);
-  if (toolName === "freezone_get_audio_voice_options") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.audio_voice_options}`);
-  if (toolName === "freezone_get_slot_candidates") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.slot_candidates}`);
-  if (toolName === "freezone_get_mainline_projection_assets") values.push(`读取：${CANVAS_CONTEXT_REQUEST_LABELS.mainline_projection_assets}`);
-  if (toolName === "freezone_validate_canvas_commands") values.push(`校验：${CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands}`);
+  if (typeof project === "string" && project.trim()) values.push(i18n.t("superchat.panel.toolMeta.entry", { name: i18n.t("superchat.panel.toolMeta.project"), value: project }));
+  if (typeof canvas === "string" && canvas.trim()) values.push(i18n.t("superchat.panel.toolMeta.entry", { name: i18n.t("superchat.panel.toolMeta.canvas"), value: canvas }));
+  if (Array.isArray(data?.objects)) values.push(i18n.t("superchat.panel.toolMeta.entry", { name: i18n.t("superchat.panel.toolMeta.nodes"), value: data.objects.length }));
+  if (Array.isArray(data?.links)) values.push(i18n.t("superchat.panel.toolMeta.entry", { name: i18n.t("superchat.panel.toolMeta.links"), value: data.links.length }));
+  if (toolName === "freezone_get_canvas_ontology") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.canvas_ontology }));
+  if (toolName === "freezone_summarize_canvas") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.canvas_summary }));
+  if (toolName === "freezone_get_canvas_action_catalog") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.canvas_action_catalog }));
+  if (toolName === "freezone_get_canvas_command_catalog") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.canvas_command_catalog }));
+  if (toolName === "freezone_get_link_type_catalog") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.link_type_catalog }));
+  if (toolName === "freezone_get_selection") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.selection_detail }));
+  if (toolName === "freezone_get_node_detail") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.node_detail }));
+  if (toolName === "freezone_get_neighbor_graph") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.neighbor_graph }));
+  if (toolName === "freezone_get_node_action_catalog") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.node_action_catalog }));
+  if (toolName === "freezone_get_node_create_schema") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.node_create_schema }));
+  if (toolName === "freezone_get_audio_voice_options") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.audio_voice_options }));
+  if (toolName === "freezone_get_slot_candidates") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.slot_candidates }));
+  if (toolName === "freezone_get_mainline_projection_assets") values.push(i18n.t("superchat.panel.toolMeta.read", { label: CANVAS_CONTEXT_REQUEST_LABELS.mainline_projection_assets }));
+  if (toolName === "freezone_validate_canvas_commands") values.push(i18n.t("superchat.panel.toolMeta.validate", { label: CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands }));
   return values.slice(0, 4);
 }
 
@@ -643,14 +566,15 @@ function normalizeMessageText(text: string): string {
   return text.trim().replace(/\n{3,}/g, "\n\n");
 }
 
-// 这两个必须是模块级常量：react-markdown 会把 components 里的函数当组件类型用，
-// 每渲染一次就新建一份的话 React 认不出是同一个类型，会把整棵 markdown 子树卸载重挂。
-// 消息列表一有重渲染（任务流 30s 看门狗、流式输出……）整列消息就会重建 DOM 闪一下，
-// 而输入框压在上面带 backdrop-blur，背景重采样会让框内跟着闪。
+// These two must be module-level constants: react-markdown uses the functions in `components` as component types,
+// and if a new copy were created on every render React would not recognize them as the same type and would unmount and
+// remount the entire markdown subtree. Whenever the message list re-renders (the 30s task-stream watchdog, streaming output, ...)
+// the whole column of messages would rebuild its DOM and flash, and since the composer sits on top of it with backdrop-blur,
+// the background resampling would make the box flash as well.
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkBreaks];
 
 export function isGenerationSuccessSummaryText(text: string): boolean {
-  return /^生成成功[，,]\s*无失败[。.]?$/.test(text.trim());
+  return /^(?:generation succeeded|generated successfully)[,.]?\s*no failures[.]?$/i.test(text.trim());
 }
 
 function markdownChildrenText(children: ReactNode): string {
@@ -686,8 +610,8 @@ const MARKDOWN_COMPONENTS: MarkdownComponents = {
       <strong
         className={cn(
           "font-semibold text-foreground",
-          label === "系统声线" && "text-cyan-300",
-          label === "自定义声线" && "text-violet-300",
+          /^(?:system voice|giọng hệ thống)$/i.test(label) && "text-cyan-300",
+          /^(?:custom voice|giọng tùy chỉnh)$/i.test(label) && "text-violet-300",
         )}
       >
         {children}
@@ -826,18 +750,17 @@ function FreezoneUserMessageText({
 }
 
 const ASSISTANT_ERROR_TEXT_PATTERNS: RegExp[] = [
-  /模型内容安全过滤拦截/u,
-  /Render 任务没有生成可用图片/u,
-  /错误原因：.+/u,
-  /生成.+失败/u,
-  /任务.+失败/u,
-  /没有成功启动/u,
-  /请先根据返回的错误/u,
+  /blocked by the model content safety filter/i,
+  /Render task did not produce a usable image/i,
+  /Error reason:.+/i,
+  /(?:generation|task) .{1,60}failed/i,
+  /did not start successfully/i,
+  /fix the returned error first/i,
+  /(?:tạo|tác vụ).{1,60}thất bại/iu,
   /content filter triggered/i,
   /finish reason:\s*['"]?content_filter/i,
   /returned no content/i,
-  /未返回(?:任何)?内容/u,
-  /failed[:：]/i,
+  /failed:/i,
 ];
 
 function isAssistantErrorReply(message: ChatMessage): boolean {
@@ -848,9 +771,9 @@ function isAssistantErrorReply(message: ChatMessage): boolean {
 }
 
 export function assistantCompletionPrefix(text: string): string | null {
-  const match = /^\s*(?:✅\s*)?[^。\n！？]{1,100}?(?:已完成|生成完成|合成完成)[。！]/u.exec(text);
+  const match = /^\s*(?:✅\s*)?[^.\n!?]{1,100}?(?:completed|finished generating|hoàn tất|đã hoàn thành)[.!]/iu.exec(text);
   if (!match) return null;
-  if (/(?:尚未|仍未|并未|未能|没有)[^。\n！？]{0,8}(?:已完成|生成完成|合成完成)/u.test(match[0])) {
+  if (/(?:\bnot\b|n't|chưa|không)[^.\n!?]{0,12}(?:completed|finished|hoàn tất|hoàn thành)/iu.test(match[0])) {
     return null;
   }
   return match[0];
@@ -868,10 +791,10 @@ function errorTextRanges(text: string): Array<[number, number]> {
     if (!match || match.index < 0) continue;
     const start = match.index;
     let end = start + match[0].length;
-    while (end < text.length && !/[。！？\n]/u.test(text[end])) {
+    while (end < text.length && !/[.!?\n]/u.test(text[end])) {
       end += 1;
     }
-    if (end < text.length && /[。！？]/u.test(text[end])) {
+    if (end < text.length && /[.!?]/u.test(text[end])) {
       end += 1;
     }
     ranges.push([start, end]);
@@ -1528,8 +1451,8 @@ function StructuredRenderer({
                 size="icon-xs"
                 onClick={() => {
                   void writeClipboardText(JSON.stringify(block.value, null, 2)).then((ok) => {
-                    if (ok) toast.success("已复制");
-                    else toast.error("复制失败");
+                    if (ok) toast.success(i18n.t("superchat.panel.copied"));
+                    else toast.error(i18n.t("superchat.panel.copyFailed"));
                   });
                 }}
                 aria-label="Copy JSON"
@@ -1699,23 +1622,23 @@ function CanvasContextActivityCard({ activity }: { activity: CanvasContextActivi
   const failed = activity.status === "failed";
   const running = activity.status === "running";
   const visualTone = canvasContextActivityVisualTone(activity);
-  const label = activity.labels.length > 0 ? activity.labels.join("、") : "画布上下文";
+  const label = activity.labels.length > 0 ? activity.labels.join(", ") : i18n.t("superchat.panel.canvasContext.fallback");
   const isThinking = activity.labels.includes(CANVAS_CONTEXT_THINKING_LABEL);
   const isValidation = canvasContextActivityIsValidation(activity);
   const hasErrors = activity.errors.length > 0;
   const statusText = isThinking
-    ? CANVAS_CONTEXT_THINKING_LABEL
+    ? i18n.t("superchat.panel.canvasContext.thinking")
     : isValidation
       ? running
-        ? "正在校验画布命令"
+        ? i18n.t("superchat.panel.canvasContext.validating")
         : failed
-          ? "画布命令校验失败"
-          : "已校验画布命令"
+          ? i18n.t("superchat.panel.canvasContext.validateFailed")
+          : i18n.t("superchat.panel.canvasContext.validated")
       : running
-        ? `正在读取${label}`
+        ? i18n.t("superchat.panel.canvasContext.reading", { label })
         : failed
-          ? `读取${label}失败`
-          : `已读取${label}`;
+          ? i18n.t("superchat.panel.canvasContext.readFailed", { label })
+          : i18n.t("superchat.panel.canvasContext.readDone", { label });
   const repeatText = activity.repeatCount && activity.repeatCount > 1 ? ` × ${activity.repeatCount}` : "";
   return (
     <div className={cn("mt-2 w-fit max-w-full rounded-md px-0 py-1 text-xs", visualTone === "warning" ? "text-amber-300/90" : "text-muted-foreground")}>
@@ -1763,7 +1686,7 @@ function FreezoneToolActivityCard({ message }: { message: ChatMessage }) {
         )}
         <span className="font-medium">{display.title}</span>
         <span className="text-xs text-muted-foreground">
-          {status === "running" ? "进行中" : status === "failed" ? "失败" : "完成"}
+          {status === "running" ? i18n.t("superchat.panel.status.running") : status === "failed" ? i18n.t("superchat.panel.status.failed") : i18n.t("superchat.panel.status.done")}
         </span>
       </div>
       <div className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -1785,8 +1708,8 @@ function genericToolTitle(message: ChatMessage): string {
   const name = typeof raw?.name === "string" ? raw.name.trim() : "";
   const normalizedName = name.toLowerCase().split(".").pop() ?? "";
   const override = AGENT_TOOL_TITLE_OVERRIDES[normalizedName];
-  if (override) return override;
-  if (!name) return "执行工具";
+  if (override) return i18n.t(`superchat.panel.toolTitles.${override}`);
+  if (!name) return i18n.t("superchat.panel.toolTitles.fallback");
   return name
     .replace(/^freezone_/u, "")
     .replace(/[_-]+/gu, " ")
@@ -1843,7 +1766,7 @@ function AgentToolActivityCard({ message }: { message: ChatMessage }) {
         )}
         <span className="font-medium">{genericToolTitle(message)}</span>
         <span className="text-xs text-muted-foreground">
-          {status === "running" ? "进行中" : status === "failed" ? "失败" : "完成"}
+          {status === "running" ? i18n.t("superchat.panel.status.running") : status === "failed" ? i18n.t("superchat.panel.status.failed") : i18n.t("superchat.panel.status.done")}
         </span>
       </div>
       {detail && <div className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</div>}
@@ -1913,9 +1836,9 @@ function agentUsageSummaryFromMessage(message: ChatMessage): AgentUsageSummary |
     .map(([key, value]) => [key, String(value)] as [string, string]);
   if (entries.length === 0) return null;
 
-  const label = "上下文用量";
+  const label = i18n.t("superchat.panel.contextUsage");
   const titleLines = [
-    "上下文用量",
+    i18n.t("superchat.panel.contextUsage"),
     ...entries.map(([key, value]) => `${key}: ${value}`),
   ];
 
@@ -2103,15 +2026,15 @@ function toolStatusRuntimeText(params: {
   const { status, title, toolMessage } = params;
   const raw = toolRawRecord(toolMessage);
   const businessStatus = toolBusinessStatus(toolMessage);
-  if (businessStatus === "clarification_required") return "等待选择生成参数";
-  if (businessStatus === "clarification_frontend_timeout") return "等待回答已暂停";
+  if (businessStatus === "clarification_required") return i18n.t("superchat.panel.toolRuntime.clarificationRequired");
+  if (businessStatus === "clarification_frontend_timeout") return i18n.t("superchat.panel.toolRuntime.clarificationPaused");
   if (
     status === "failed" &&
     (raw?.name === "freezone_put_agent_catalog_draft_outline" ||
       raw?.tool_name === "freezone_put_agent_catalog_draft_outline" ||
       raw?.toolName === "freezone_put_agent_catalog_draft_outline")
   ) {
-    return "待重新整理 Skill 方案";
+    return i18n.t("superchat.panel.toolRuntime.retryOutline");
   }
   if (
     status === "failed" &&
@@ -2119,11 +2042,11 @@ function toolStatusRuntimeText(params: {
       raw?.tool_name === "freezone_prepare_workflow_draft" ||
       raw?.toolName === "freezone_prepare_workflow_draft")
   ) {
-    return "待重新生成工作流草稿";
+    return i18n.t("superchat.panel.toolRuntime.retryWorkflowDraft");
   }
-  if (status === "running") return `正在${title}`;
-  if (status === "failed") return `${title}失败`;
-  return `已${title}`;
+  if (status === "running") return i18n.t("superchat.panel.toolRuntime.running", { title });
+  if (status === "failed") return i18n.t("superchat.panel.toolRuntime.failed", { title });
+  return i18n.t("superchat.panel.toolRuntime.done", { title });
 }
 
 export const toolStatusRuntimeTextForTest = toolStatusRuntimeText;
@@ -2175,7 +2098,7 @@ function agentThoughtRuntimePresentation(
   const running = event.status === "running";
   const active = options.streaming && running;
   return {
-    label: active ? "思考中" : "思考过程",
+    label: active ? i18n.t("superchat.panel.thinking.active") : i18n.t("superchat.panel.thinking.done"),
     initiallyExpanded: active,
     running,
   };
@@ -2341,14 +2264,14 @@ function AgentRuntimeTimeline({
             <details key={part.id} className="group py-0.5">
               <summary className="flex min-h-5 cursor-pointer list-none items-center gap-2 text-left [&::-webkit-details-marker]:hidden">
                 <ListTree className="size-3.5 shrink-0 text-primary" />
-                <span className="min-w-0 flex-1 truncate font-medium text-foreground/90">执行计划</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-foreground/90">{i18n.t("superchat.panel.executionPlan")}</span>
                 <span className="shrink-0 text-[11px] text-muted-foreground/80">{completed}/{entries.length}</span>
                 <ChevronRight className="size-3 shrink-0 transition-transform group-open:rotate-90" />
               </summary>
               <div className="mt-1 space-y-1 border-l border-white/10 pl-4 ml-1.5">
                 {entries.map((entry, index) => {
                   const status = typeof entry.status === "string" ? entry.status : "pending";
-                  const content = typeof entry.content === "string" ? entry.content : `步骤 ${index + 1}`;
+                  const content = typeof entry.content === "string" ? entry.content : i18n.t("superchat.panel.stepN", { index: index + 1 });
                   return (
                     <div key={`${index}-${content}`} className="flex items-start gap-2 leading-5">
                       {status === "completed" ? (
@@ -2384,7 +2307,7 @@ function agentActivityLabelFromMessage(message: ChatMessage | undefined): string
       const toolMessage = part.event as ChatMessage;
       if (shouldHideInternalToolMessage(toolMessage)) continue;
       if (freezoneToolStatus(toolMessage) !== "running") continue;
-      return `正在${freezoneToolDisplay(toolMessage)?.title ?? genericToolTitle(toolMessage)}`;
+      return i18n.t("superchat.panel.toolRuntime.running", { title: freezoneToolDisplay(toolMessage)?.title ?? genericToolTitle(toolMessage) });
     }
     if (part.type === "agent_plan" && part.event && typeof part.event === "object" && !Array.isArray(part.event)) {
       const entries = (part.event as Record<string, unknown>).entries;
@@ -2393,12 +2316,12 @@ function agentActivityLabelFromMessage(message: ChatMessage | undefined): string
         Boolean(entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).status === "in_progress"),
       );
       if (active && typeof (active as Record<string, unknown>).content === "string") {
-        return `正在${String((active as Record<string, unknown>).content)}`;
+        return i18n.t("superchat.panel.toolRuntime.running", { title: String((active as Record<string, unknown>).content) });
       }
     }
     if (part.type === "agent_thought" && part.event && typeof part.event === "object" && !Array.isArray(part.event)) {
       const status = (part.event as Record<string, unknown>).status;
-      if (status === "running") return "正在分析当前信息";
+      if (status === "running") return i18n.t("superchat.panel.analyzing");
     }
   }
   return null;
@@ -2426,7 +2349,7 @@ function CanvasCommandPlanList({ plans }: { plans: CanvasCommandPlan[] | undefin
           )}
         </div>
       ))}
-      {plans.length > 6 && <div className="px-1 text-[11px] text-muted-foreground">还有 {plans.length - 6} 个操作将在确认后一起执行</div>}
+      {plans.length > 6 && <div className="px-1 text-[11px] text-muted-foreground">{i18n.t("superchat.panel.moreOperations", { count: plans.length - 6 })}</div>}
     </div>
   );
 }
@@ -2483,8 +2406,8 @@ function generationCommandNodeIds(
       ) {
         nodeIds.add(command.client_id);
       }
-      // add_next_node 同样会在 run_workflow 里被执行；省略 node_type 时按执行器的
-      // 规则从源节点推断类型，否则参数审批卡不会出现。
+      // add_next_node is also executed inside run_workflow; when node_type is omitted the type is inferred
+      // from the source node by the executor's rules, otherwise the parameter approval card would not appear.
       if (hasWorkflowRun && command.type === "add_next_node" && command.client_id) {
         const nodeType = approvalCommandNodeType(
           envelopes,
@@ -2685,8 +2608,8 @@ function approvalNodeData(
     : {};
   for (const envelope of approval.envelopes) {
     for (const command of envelope.commands) {
-      // add_next_node 与 create_node 一样新建节点并携带 data；漏掉它会让确认卡
-      // 读不到 Agent 给的比例/分辨率而回落默认值，确认时再把默认值写回节点（#685）。
+      // add_next_node creates a node and carries data just like create_node; missing it would make the confirmation card
+      // unable to read the ratio/resolution given by the Agent and fall back to defaults, which are then written back to the node on confirm (#685).
       if (
         (command.type === "create_node" || command.type === "add_next_node")
         && command.client_id === nodeId
@@ -2703,11 +2626,11 @@ function approvalNodeData(
 }
 
 /**
- * 解析审批批次里某个节点（画布已有节点或本批 client_id）的节点类型。
+ * Resolves the node type of a node in an approval batch (an existing canvas node or a client_id from this batch).
  *
- * add_next_node 可以省略 node_type，执行器按源节点推断（canvasChatCommands 的
- * chooseNextNodeType：取源节点类型的第一个下游可生成类型）；审批阶段节点还没建出来，
- * 这里按同一规则推断，源节点本身也可能是本批新建的节点，所以递归解析。
+ * add_next_node may omit node_type, and the executor infers it from the source node (canvasChatCommands'
+ * chooseNextNodeType: take the first downstream-generatable type of the source node type); during approval the node has not been created yet,
+ * so the same rule is applied here, and the source node itself may also be newly created in this batch, hence the recursive resolution.
  */
 function approvalCommandNodeType(
   envelopes: CanvasChatCommandEnvelope[],
@@ -2906,7 +2829,7 @@ function textApprovalInitialParams(
       ? catalog.recipeLabel.trim()
       : typeof catalog?.recipeId === "string" && catalog.recipeId.trim()
         ? catalog.recipeId.trim()
-        : "工作流文案 Recipe",
+        : i18n.t("superchat.panel.approval.defaultRecipeLabel"),
   };
 }
 
@@ -2929,7 +2852,7 @@ function audioApprovalInitialParams(
         : "Serena",
       voiceLabel: typeof nodeData.voiceLabel === "string" && nodeData.voiceLabel.trim()
         ? nodeData.voiceLabel.trim()
-        : "项目默认声线",
+        : i18n.t("superchat.panel.approval.defaultVoiceLabel"),
       voiceRef: nodeData.voiceRef && typeof nodeData.voiceRef === "object"
         ? nodeData.voiceRef as AudioVoiceRef
         : null,
@@ -3035,8 +2958,8 @@ function amendCanvasApprovalWithGenerationData(
     envelopes: approval.envelopes.map((envelope) => ({
       ...envelope,
       commands: envelope.commands.map((command) => {
-        // 同一批里 Agent 对该节点的 update_node_data 会在创建之后执行；确认值也要
-        // 合并进去，否则后续更新会把用户在审批卡上确认的参数覆盖回旧值。
+        // Within the same batch, the Agent's update_node_data for this node runs after creation; the confirmed values must also
+        // be merged in, otherwise the later update would overwrite the parameters the user confirmed on the approval card with old values.
         if (command.type === "update_node_data" && targets.has(command.node_id)) {
           return {
             ...command,
@@ -3151,7 +3074,7 @@ function amendCanvasApprovalWithAudioParams(
         : {
           voiceRef: null,
           voiceAvailable: false,
-          voiceLabel: "未选择自定义声线", // i18n-exempt -- node data payload
+          voiceLabel: "No custom voice selected", // i18n-exempt -- node data payload
           voiceLanguage: "",
         }),
     };
@@ -3351,7 +3274,7 @@ function CanvasApprovalVideoConfigChip({
         ref={triggerRef}
         type="button"
         disabled={disabled}
-        aria-label={`视频参数：${params.aspectRatio} · ${params.quality} · ${params.durationSec}s · ${audioLabel}`}
+        aria-label={i18n.t("superchat.panel.approval.videoParams", { aspectRatio: params.aspectRatio, quality: params.quality, duration: params.durationSec, audio: audioLabel })}
         onClick={() => setIsOpen((prev) => !prev)}
         className="inline-flex h-6 max-w-full items-center gap-1 rounded-full bg-transparent px-0 text-[11px] font-medium text-foreground outline-none transition-colors hover:text-foreground disabled:opacity-60"
       >
@@ -3375,7 +3298,7 @@ function CanvasApprovalVideoConfigChip({
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">比例</div>
+          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{i18n.t("superchat.panel.approval.aspectRatio")}</div>
           <div className="mb-3 grid grid-cols-4 gap-1.5">
             {aspectOptions.map((ratio) => {
               const isActive = params.aspectRatio === ratio;
@@ -3397,7 +3320,7 @@ function CanvasApprovalVideoConfigChip({
             })}
           </div>
 
-          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">清晰度</div>
+          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{i18n.t("superchat.panel.approval.quality")}</div>
           <div className="mb-3 grid grid-cols-3 gap-1.5">
             {qualityOptions.map((quality) => {
               const isActive = params.quality === quality;
@@ -3420,11 +3343,11 @@ function CanvasApprovalVideoConfigChip({
           </div>
 
           <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-            <span>视频时长</span>
+            <span>{i18n.t("superchat.panel.approval.videoDuration")}</span>
             <span className="text-foreground">{params.durationSec}s</span>
           </div>
           <input
-            aria-label="视频时长"
+            aria-label={i18n.t("superchat.panel.approval.videoDuration")}
             type="range"
             min={durationBounds.min}
             max={durationBounds.max}
@@ -3678,44 +3601,42 @@ function CanvasCommandApprovalCard({
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-foreground">
             {isExecuting
-              ? t("freezone.chat.canvasExecuting", { defaultValue: "执行中..." })
+              ? t("freezone.chat.canvasExecuting")
               : approval.requiresUserChoice
-              ? t("freezone.chat.audioApproval.chooseVoiceTitle", { defaultValue: "请选择旁白声线" })
-              : "待确认的画布操作"}
+              ? t("freezone.chat.audioApproval.chooseVoiceTitle")
+              : i18n.t("superchat.panel.approval.pendingTitle")}
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {isExecuting
               ? t("freezone.chat.canvasConfirmedExecuting")
               : approval.requiresUserChoice
-              ? t("freezone.chat.audioApproval.chooseVoiceDescription", {
-                  defaultValue: "请选择自定义声线；如果暂不选择，本次将跳过旁白生成。",
-                })
-              : `Agent 计划执行 ${approval.commandCount} 个操作，确认后才会应用到画布。`}
+              ? t("freezone.chat.audioApproval.chooseVoiceDescription")
+              : i18n.t("superchat.panel.approval.planSummary", { count: approval.commandCount })}
           </p>
         </div>
-        <Badge variant="outline" className="rounded-md uppercase">{isExecuting ? "执行中" : "确认"}</Badge>
+        <Badge variant="outline" className="rounded-md uppercase">{isExecuting ? i18n.t("superchat.panel.approval.badgeExecuting") : i18n.t("superchat.panel.approval.badgeConfirm")}</Badge>
       </div>
       <CanvasCommandPlanList plans={approval.plans} />
       {(imageParams.length > 0 || videoParams.length > 0 || audioParams.length > 0) && (
         <div className="flex items-center gap-2 border-t border-amber-400/10 bg-white/[0.025] px-3 py-1.5 text-[11px] font-medium text-foreground/90">
           <SlidersHorizontal className="size-3.5 text-muted-foreground" />
-          生成设置
-          <span className="ml-auto text-[10px] font-normal text-muted-foreground">确认后统一写入节点</span>
+          {i18n.t("superchat.panel.approval.generationSettings")}
+          <span className="ml-auto text-[10px] font-normal text-muted-foreground">{i18n.t("superchat.panel.approval.writtenAfterConfirm")}</span>
         </div>
       )}
       {humanReviewNodeIds.length > 0 && (
         <div className="flex items-center justify-between gap-3 border-t border-amber-400/10 bg-amber-400/10 px-3 py-2">
           <div className="min-w-0">
-            <div className="text-xs font-medium text-foreground">输入图片可能包含真人</div>
+            <div className="text-xs font-medium text-foreground">{i18n.t("superchat.panel.approval.humanReviewTitle")}</div>
             <div className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-              检测到 {humanReviewNodeIds.length} 个图片转视频节点，确认后将在模型支持时开启真人审核。
+              {i18n.t("superchat.panel.approval.humanReviewDesc", { count: humanReviewNodeIds.length })}
             </div>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={humanReviewEnabled}
-            aria-label="真人审核"
+            aria-label={i18n.t("superchat.panel.approval.humanReview")}
             disabled={isExecuting}
             onClick={() => setHumanReviewEnabled((enabled) => !enabled)}
             className={cn(
@@ -3749,12 +3670,12 @@ function CanvasCommandApprovalCard({
           <div key={`${imageParam.nodeId}:${imageParam.model}`} className="border-t border-amber-400/10 px-3 py-1.5">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground">
-              <Image className="size-3" />图片
+              <Image className="size-3" />{i18n.t("superchat.panel.approval.image")}
               {(imageParam.nodeIds?.length ?? 1) > 1 ? ` ×${imageParam.nodeIds?.length}` : ""}
             </span>
             <span className="h-4 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="图片模型"
+              ariaLabel={i18n.t("superchat.panel.approval.imageModel")}
               disabled={isExecuting}
               value={imageParam.model}
               onChange={(value) => updateImageParams(imageParamIndex, { model: value })}
@@ -3762,18 +3683,18 @@ function CanvasCommandApprovalCard({
             />
             <span className="h-4 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="图片比例"
+              ariaLabel={i18n.t("superchat.panel.approval.imageAspect")}
               disabled={isExecuting}
               value={imageParam.aspectRatio}
               onChange={(value) => updateImageParams(imageParamIndex, { aspectRatio: value })}
               options={imageAspectOptions.map((option) => ({
                 value: option,
-                label: option === "auto" ? "自动比例" : option,
+                label: option === "auto" ? i18n.t("superchat.panel.approval.autoAspect") : option,
               }))}
             />
             <span className="h-4 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="图片分辨率"
+              ariaLabel={i18n.t("superchat.panel.approval.imageResolution")}
               disabled={isExecuting}
               value={imageParam.size}
               onChange={(value) => updateImageParams(imageParamIndex, { size: value })}
@@ -3793,11 +3714,11 @@ function CanvasCommandApprovalCard({
             ) : null}
             <span className="h-4 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="图片数量"
+              ariaLabel={i18n.t("superchat.panel.approval.imageCount")}
               disabled={isExecuting}
               value={String(imageParam.count)}
               onChange={(value) => updateImageParams(imageParamIndex, { count: Number(value) })}
-              options={CANVAS_APPROVAL_IMAGE_COUNT_OPTIONS.map((option) => ({ value: String(option), label: `${option} 张` }))}
+              options={CANVAS_APPROVAL_IMAGE_COUNT_OPTIONS.map((option) => ({ value: String(option), label: i18n.t("superchat.panel.approval.imageCountOption", { count: option }) }))}
             />
             </div>
           </div>
@@ -3816,12 +3737,12 @@ function CanvasCommandApprovalCard({
         <div key={`${videoParam.nodeId}:${videoParam.model}`} className="border-t border-amber-400/10 px-3 py-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground">
-              <Play className="size-3" />视频
+              <Play className="size-3" />{i18n.t("superchat.panel.approval.video")}
               {(videoParam.nodeIds?.length ?? 1) > 1 ? ` ×${videoParam.nodeIds?.length}` : ""}
             </span>
             <span className="h-3.5 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="视频模型"
+              ariaLabel={i18n.t("superchat.panel.approval.videoModel")}
               disabled={isExecuting}
               value={videoParam.model}
               onChange={(value) => updateVideoParams(videoParamIndex, { model: value })}
@@ -3839,11 +3760,11 @@ function CanvasCommandApprovalCard({
             />
             <span className="h-3.5 w-px bg-white/[0.12]" />
             <CanvasApprovalImageParamSelect
-              ariaLabel="视频数量"
+              ariaLabel={i18n.t("superchat.panel.approval.videoCount")}
               disabled={isExecuting}
               value={String(videoParam.count)}
               onChange={(value) => updateVideoParams(videoParamIndex, { count: Number(value) as 1 | 2 | 4 })}
-              options={CANVAS_APPROVAL_VIDEO_COUNT_OPTIONS.map((option) => ({ value: String(option), label: `${option} 个` }))}
+              options={CANVAS_APPROVAL_VIDEO_COUNT_OPTIONS.map((option) => ({ value: String(option), label: i18n.t("superchat.panel.approval.videoCountOption", { count: option }) }))}
             />
           </div>
         </div>
@@ -3853,7 +3774,7 @@ function CanvasCommandApprovalCard({
         <div className="border-t border-amber-400/10 px-3 py-1.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <CanvasApprovalImageParamSelect
-              ariaLabel="高清分辨率"
+              ariaLabel={i18n.t("superchat.panel.approval.upscaleResolution")}
               disabled={isExecuting}
               value={videoUpscaleParams.resolution}
               onChange={(value) => updateVideoUpscaleParams({
@@ -3873,8 +3794,8 @@ function CanvasCommandApprovalCard({
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground">
               <Volume2 className="size-3" />
               {audioParam.audioKind === "music"
-                ? t("freezone.chat.audioApproval.music", { defaultValue: "音乐" })
-                : t("freezone.chat.audioApproval.narration", { defaultValue: "旁白" })}
+                ? t("freezone.chat.audioApproval.music")
+                : t("freezone.chat.audioApproval.narration")}
               {(audioParam.nodeIds?.length ?? 1) > 1 ? ` ×${audioParam.nodeIds?.length}` : ""}
             </span>
             <span className="h-4 w-px bg-white/[0.12]" />
@@ -3887,31 +3808,26 @@ function CanvasCommandApprovalCard({
                   className="inline-flex h-7 items-center rounded-full border border-white/[0.16] bg-white/[0.065] px-2.5 text-[11px] font-medium text-foreground hover:border-white/30 hover:bg-white/[0.1] disabled:opacity-60"
                 >
                   {audioParam.voiceAvailable === true
-                    ? t("freezone.chat.audioApproval.changeVoice", { defaultValue: "更换自定义声线" })
-                    : t("freezone.chat.audioApproval.chooseVoice", { defaultValue: "选择自定义声线" })}
+                    ? t("freezone.chat.audioApproval.changeVoice")
+                    : t("freezone.chat.audioApproval.chooseVoice")}
                 </button>
                 <span className="text-[10px] text-muted-foreground">
                   {audioParam.voiceAvailable === true
                     ? t("freezone.chat.audioApproval.selectedVoice", {
-                        defaultValue: "已选择：{{voice}}",
                         voice: audioParam.voiceLabel.trim() || t(
                           "freezone.chat.audioApproval.customVoice",
-                          { defaultValue: "自定义声线" },
                         ),
                       })
-                    : t("freezone.chat.audioApproval.noVoiceSkip", {
-                        defaultValue: "未选择，本次将跳过旁白生成",
-                      })}
+                    : t("freezone.chat.audioApproval.noVoiceSkip")}
                 </span>
               </>
             ) : (
               <span className="text-[10px] text-muted-foreground">
                 {t("freezone.chat.audioApproval.musicSummary", {
-                  defaultValue: "{{seconds}} 秒 · {{mode}}",
                   seconds: audioParam.musicLengthSec,
                   mode: audioParam.forceInstrumental
-                    ? t("freezone.chat.audioApproval.instrumental", { defaultValue: "纯音乐" })
-                    : t("freezone.chat.audioApproval.vocalsAllowed", { defaultValue: "允许人声" }),
+                    ? t("freezone.chat.audioApproval.instrumental")
+                    : t("freezone.chat.audioApproval.vocalsAllowed"),
                 })}
               </span>
             )}
@@ -3921,20 +3837,20 @@ function CanvasCommandApprovalCard({
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-amber-400/15 px-3 py-2.5">
         {remaining !== null && !isExecuting ? (
           <span className="mr-auto text-[11px] leading-4 text-amber-500">
-            {remaining}s 后自动取消
+            {i18n.t("superchat.panel.approval.autoCancelIn", { seconds: remaining })}
           </span>
         ) : null}
-        <Button size="xs" variant="outline" disabled={isExecuting} onClick={() => onCancel(approval)}>取消</Button>
+        <Button size="xs" variant="outline" disabled={isExecuting} onClick={() => onCancel(approval)}>{i18n.t("superchat.panel.approval.cancel")}</Button>
         <Button
           size="xs"
           disabled={isExecuting}
           onClick={() => onApply(amendedApproval)}
         >
           {isExecuting
-            ? t("freezone.chat.canvasExecuting", { defaultValue: "执行中..." })
+            ? t("freezone.chat.canvasExecuting")
             : approval.requiresUserChoice
-              ? t("freezone.chat.audioApproval.continue", { defaultValue: "使用所选声线继续" })
-              : t("freezone.chat.canvasConfirmExecution", { defaultValue: "确认执行" })}
+              ? t("freezone.chat.audioApproval.continue")
+              : t("freezone.chat.canvasConfirmExecution")}
         </Button>
       </div>
       {voicePickerAudioParams && (
@@ -3976,7 +3892,7 @@ function canvasCommandFeedbackReconciliationPending(feedback: CanvasCommandFeedb
 }
 
 function canvasCommandFeedbackIsInvalidCommand(feedback: CanvasCommandFeedback): boolean {
-  return (feedback.commandResults ?? []).some((step) => step.label === "画布命令无效");
+  return (feedback.commandResults ?? []).some((step) => step.label === i18n.t("freezone.shell.invalidCanvasCommand"));
 }
 
 function canvasCommandFeedbackIsUserCancelled(feedback: CanvasCommandFeedback): boolean {
@@ -3988,8 +3904,6 @@ function canvasCommandFeedbackIsTimeoutCancelled(feedback: CanvasCommandFeedback
 }
 
 type CanvasFeedbackVisualTone = "muted" | "warning" | "destructive" | "success";
-
-const EMPTY_AGENT_REPLY_TEXT = "这轮操作没有收到虾导的有效回复，请稍后重试。";
 
 function canvasContextActivityVisualTone(activity: CanvasContextActivity): CanvasFeedbackVisualTone {
   if (activity.status === "failed") {
@@ -4014,20 +3928,20 @@ export const canvasCommandFeedbackVisualToneForTest = canvasCommandFeedbackVisua
 function canvasCommandFeedbackCompactTitle(feedback: CanvasCommandFeedback, t: TFunction): string {
   const firstFailedStep = (feedback.commandResults ?? []).find((step) => step.status !== "success");
   const firstPlan = feedback.plans?.[0];
-  if (canvasCommandFeedbackIsTimeoutCancelled(feedback)) return "画布操作已过期";
-  if (firstFailedStep?.label === "已取消" || canvasCommandFeedbackIsUserCancelled(feedback)) return "画布操作已取消";
+  if (canvasCommandFeedbackIsTimeoutCancelled(feedback)) return i18n.t("superchat.panel.canvas.expired");
+  if (firstFailedStep?.label === i18n.t("superchat.panel.canvas.cancelledStep") || canvasCommandFeedbackIsUserCancelled(feedback)) return i18n.t("superchat.panel.canvas.cancelled");
   if (canvasCommandFeedbackHasPending(feedback)) return canvasCommandFeedbackReconciliationPending(feedback)
-    ? t("freezone.chat.workflowReconciliationPendingLabel", { defaultValue: "对账中" })
-    : t("freezone.chat.workflowOutputSyncPendingLabel", { defaultValue: "产物待同步" });
-  if (firstPlan?.type === "run_node_action" && firstPlan.label.includes("生成图片")) return "生成图片失败";
-  if (firstPlan?.type === "run_node_action" && firstPlan.label.includes("生成视频")) return "生成视频失败";
+    ? t("freezone.chat.workflowReconciliationPendingLabel")
+    : t("freezone.chat.workflowOutputSyncPendingLabel");
+  if (firstPlan?.type === "run_node_action" && firstPlan.code === "plan_label_generate_image") return i18n.t("superchat.panel.canvas.generateImageFailed");
+  if (firstPlan?.type === "run_node_action" && firstPlan.code === "plan_label_generate_video") return i18n.t("superchat.panel.canvas.generateVideoFailed");
   if (firstFailedStep?.label) return firstFailedStep.label;
-  return "画布操作失败";
+  return i18n.t("superchat.panel.canvas.failed");
 }
 
 function expiredCanvasApprovalFeedback(approval: PendingCanvasCommandApproval): CanvasCommandFeedback | null {
   if (!approval.autoExpires || !approval.expiresAt || approval.expiresAt > Date.now()) return null;
-  const error = "画布操作等待超时，已自动取消";
+  const error = i18n.t("superchat.panel.canvas.timeoutAutoCancelled");
   return {
     applied: 0,
     openedUiActions: 0,
@@ -4037,7 +3951,7 @@ function expiredCanvasApprovalFeedback(approval: PendingCanvasCommandApproval): 
         commandIndex: -1,
         type: "validate",
         status: "error",
-        label: "已取消",
+        label: i18n.t("superchat.panel.canvas.cancelledStep"),
         error,
       },
     ],
@@ -4076,22 +3990,14 @@ function CanvasCommandFeedbackCard({
   const compactTitle = canvasCommandFeedbackCompactTitle(feedback, t);
   const canRetry = feedback.cancelled && feedback.envelopes && feedback.envelopes.length > 0;
   const cancellationMessage = canvasCommandFeedbackIsTimeoutCancelled(feedback)
-    ? t("freezone.chat.canvasTimeoutCancelled", {
-        defaultValue: "画布操作因等待超时已取消，没有应用到画布。",
-      })
+    ? t("freezone.chat.canvasTimeoutCancelled")
     : canvasCommandFeedbackIsUserCancelled(feedback)
-      ? t("freezone.chat.canvasManuallyCancelled", {
-          defaultValue: "画布操作已手动取消，没有应用到画布。",
-        })
+      ? t("freezone.chat.canvasManuallyCancelled")
       : null;
   const userFailureMessage = pending
     ? canvasCommandFeedbackReconciliationPending(feedback)
-      ? t("freezone.chat.workflowReconciliationPendingMessage", {
-          defaultValue: "画布产物已生成，服务端仍在核对任务产物；请稍后检查运行状态，暂勿重复生成。",
-        })
-      : t("freezone.chat.workflowOutputSyncPendingMessage", {
-          defaultValue: "工作流已完成，画布节点产物待同步；请稍后刷新画布核对结果，暂勿重复生成。",
-        })
+      ? t("freezone.chat.workflowReconciliationPendingMessage")
+      : t("freezone.chat.workflowOutputSyncPendingMessage")
     : failed
     ? cancellationMessage ?? canvasCommandUserMessageFromResult(
         feedback.errors,
@@ -4117,7 +4023,7 @@ function CanvasCommandFeedbackCard({
                 : "text-destructive/90 hover:text-destructive",
         )}
       >
-        <span className="truncate">{collapseSuccessfulDetails ? `画布执行完成，已执行 ${successfulCount} 项` : compactTitle}</span>
+        <span className="truncate">{collapseSuccessfulDetails ? i18n.t("superchat.panel.canvas.executionDone", { count: successfulCount }) : compactTitle}</span>
         <ChevronRight className="size-3.5 shrink-0" />
       </button>
     );
@@ -4140,11 +4046,11 @@ function CanvasCommandFeedbackCard({
     >
       <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2 text-foreground/90">
         <Wrench className="size-3.5" />
-        <span className="font-medium">画布执行</span>
+        <span className="font-medium">{i18n.t("superchat.panel.canvas.execution")}</span>
         {(initiallyCompact || collapseSuccessfulDetails) && (
-          <button type="button" onClick={() => setExpanded(false)} className="ml-auto rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">收起</button>
+          <button type="button" onClick={() => setExpanded(false)} className="ml-auto rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">{i18n.t("superchat.panel.canvas.collapse")}</button>
         )}
-        {successfulCount > 0 && !pending && <span className={cn("text-[11px] text-muted-foreground", !initiallyCompact && "ml-auto")}>已执行 {successfulCount} 项</span>}
+        {successfulCount > 0 && !pending && <span className={cn("text-[11px] text-muted-foreground", !initiallyCompact && "ml-auto")}>{i18n.t("superchat.panel.canvas.executedCount", { count: successfulCount })}</span>}
       </div>
       {expanded && <CanvasCommandPlanList plans={feedback.plans} />}
       <div className="space-y-1 px-3 py-2">
@@ -4170,9 +4076,9 @@ function CanvasCommandFeedbackCard({
                 {ok && <HtmlArtifactResultCard output={step.output}/>}
                 {(step.createdNodeId || step.nodeId || step.action || step.error) && (
                   <div className="mt-0.5 space-y-0.5 break-words text-[11px] text-muted-foreground">
-                    {step.createdNodeId && <div>新节点：{step.createdNodeId}</div>}
-                    {!step.createdNodeId && step.nodeId && <div>节点：{step.nodeId}</div>}
-                    {step.action && <div>动作：{step.action}</div>}
+                    {step.createdNodeId && <div>{i18n.t("superchat.panel.canvas.newNode", { id: step.createdNodeId })}</div>}
+                    {!step.createdNodeId && step.nodeId && <div>{i18n.t("superchat.panel.canvas.node", { id: step.nodeId })}</div>}
+                    {step.action && <div>{i18n.t("superchat.panel.canvas.action", { action: step.action })}</div>}
                     {step.error && ok && <div className={invalidCommand || warningFailure ? "text-amber-200/80" : "text-destructive"}>{step.error}</div>}
                   </div>
                 )}
@@ -4183,7 +4089,7 @@ function CanvasCommandFeedbackCard({
         {steps.length === 0 && successfulCount > 0 && (
           <div className="flex items-center gap-2 text-foreground/90">
             <CheckCircle2 className="size-3.5 text-emerald-400" />
-            <span>已应用 {successfulCount} 个画布操作</span>
+            <span>{i18n.t("superchat.panel.canvas.appliedCount", { count: successfulCount })}</span>
           </div>
         )}
         {feedback.errors.length > 0 && steps.length === 0 && !userFailureMessage && (
@@ -4199,7 +4105,7 @@ function CanvasCommandFeedbackCard({
             onClick={() => onRetry(feedback)}
           >
             <RefreshCw className="mr-1.5 size-3.5 text-amber-300" />
-            重新执行
+            {i18n.t("superchat.panel.canvas.rerun")}
           </Button>
         </div>
       ) : null}
@@ -5215,31 +5121,31 @@ const skillStudioDraftFieldLabels = {
     id: "ID",
     category: "Category",
     description: "Description",
-    keywords: "触发关键词",
-    inputParameters: "开始前选项",
-    node_scopes: "节点类型",
-    metaPlanningHints: "规划器提示词",
-    promptStyleGuide: "风格指引",
-    behaviorRules: "行为规则",
-    passingScore: "通过分数线",
-    domainRules: "领域规则",
-    ratingBands: "评分档位",
-    visualReviewItems: "视觉评审项",
-    textReviewItems: "文案评审项",
+    get keywords() { return i18n.t("superchat.panel.skillFields.skill.keywords"); },
+    get inputParameters() { return i18n.t("superchat.panel.skillFields.skill.inputParameters"); },
+    get node_scopes() { return i18n.t("superchat.panel.skillFields.skill.node_scopes"); },
+    get metaPlanningHints() { return i18n.t("superchat.panel.skillFields.skill.metaPlanningHints"); },
+    get promptStyleGuide() { return i18n.t("superchat.panel.skillFields.skill.promptStyleGuide"); },
+    get behaviorRules() { return i18n.t("superchat.panel.skillFields.skill.behaviorRules"); },
+    get passingScore() { return i18n.t("superchat.panel.skillFields.skill.passingScore"); },
+    get domainRules() { return i18n.t("superchat.panel.skillFields.skill.domainRules"); },
+    get ratingBands() { return i18n.t("superchat.panel.skillFields.skill.ratingBands"); },
+    get visualReviewItems() { return i18n.t("superchat.panel.skillFields.skill.visualReviewItems"); },
+    get textReviewItems() { return i18n.t("superchat.panel.skillFields.skill.textReviewItems"); },
   },
   recipe: {
     id: "ID",
-    name: "名称",
-    output_kind: "生成类型",
-    action_keys: "操作类型",
+    get name() { return i18n.t("superchat.panel.skillFields.recipe.name"); },
+    get output_kind() { return i18n.t("superchat.panel.skillFields.recipe.output_kind"); },
+    get action_keys() { return i18n.t("superchat.panel.skillFields.recipe.action_keys"); },
     system_prompt: "System Prompt",
-    must_have_items: "必需元素",
-    planning_prompt: "规划器提示词",
-    result_summary: "输出概述",
-    requires_source_media: "依赖上游多模态输入",
-    enabled: "启用",
-    force_enhancement: "强制增强",
-    skip_detail_check: "跳过细节检查",
+    get must_have_items() { return i18n.t("superchat.panel.skillFields.recipe.must_have_items"); },
+    get planning_prompt() { return i18n.t("superchat.panel.skillFields.recipe.planning_prompt"); },
+    get result_summary() { return i18n.t("superchat.panel.skillFields.recipe.result_summary"); },
+    get requires_source_media() { return i18n.t("superchat.panel.skillFields.recipe.requires_source_media"); },
+    get enabled() { return i18n.t("superchat.panel.skillFields.recipe.enabled"); },
+    get force_enhancement() { return i18n.t("superchat.panel.skillFields.recipe.force_enhancement"); },
+    get skip_detail_check() { return i18n.t("superchat.panel.skillFields.recipe.skip_detail_check"); },
   },
 };
 
@@ -5447,17 +5353,17 @@ function prettyJson(value: unknown): string {
 
 function parseListText(value: string): string[] {
   return value
-    .split(/[,，、\n]/u)
+    .split(/[,\n]/u)
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
 function listText(value: unknown): string {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item ?? "").trim()).filter(Boolean).join("、");
+    return value.map((item) => String(item ?? "").trim()).filter(Boolean).join(", ");
   }
   if (typeof value === "string") {
-    return parseListText(value).join("、") || value.trim();
+    return parseListText(value).join(", ") || value.trim();
   }
   return "";
 }
@@ -5465,17 +5371,17 @@ function listText(value: unknown): string {
 function skillStudioInputParameterTypeLabel(value: unknown): string {
   switch (value) {
     case "single_select":
-      return "单选";
+      return i18n.t("superchat.panel.inputType.single")
     case "multi_select":
-      return "多选";
+      return i18n.t("superchat.panel.inputType.multi")
     case "number":
-      return "数字";
+      return i18n.t("superchat.panel.inputType.number")
     case "boolean":
-      return "开关";
+      return i18n.t("superchat.panel.inputType.boolean")
     case "text":
-      return "文本";
+      return i18n.t("superchat.panel.inputType.text")
     default:
-      return textField(value) || "参数";
+      return textField(value) || i18n.t("superchat.panel.inputType.fallback");
   }
 }
 
@@ -5484,7 +5390,7 @@ function skillStudioInputParameterValueLabel(value: unknown): string {
   if (value === false) return "false";
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value === "string") return value.trim();
-  if (Array.isArray(value)) return value.map((item) => String(item ?? "").trim()).filter(Boolean).join("、");
+  if (Array.isArray(value)) return value.map((item) => String(item ?? "").trim()).filter(Boolean).join(", ");
   return "";
 }
 
@@ -5560,7 +5466,7 @@ function skillStudioRatingBandList(value: unknown): string[] {
         ? String(item.score)
         : textField(item.score);
       const description = textField(item.description);
-      if (score && description) return `${score}：${description}`;
+      if (score && description) return `${score}: ${description}`;
       return description || score;
     })
     .filter(Boolean);
@@ -5568,8 +5474,8 @@ function skillStudioRatingBandList(value: unknown): string[] {
 
 function parseSkillStudioRatingBandList(value: string[]): Array<Record<string, unknown>> {
   return value.map((item) => {
-    const [scoreText, ...descriptionParts] = item.split(/[：:]/u);
-    const description = descriptionParts.join("：").trim();
+    const [scoreText, ...descriptionParts] = item.split(":");
+    const description = descriptionParts.join(":").trim();
     const score = Number(scoreText.trim());
     if (Number.isFinite(score) && description) {
       return { score, description };
@@ -5586,8 +5492,8 @@ function skillStudioReviewItemList(value: unknown): string[] {
         ? String(item.weight)
         : textField(item.weight);
       const description = textField(item.description);
-      const prefix = weight ? `${name}（${weight}）` : name;
-      if (prefix && description) return `${prefix}：${description}`;
+      const prefix = weight ? `${name} (${weight})` : name;
+      if (prefix && description) return `${prefix}: ${description}`;
       return description || prefix;
     })
     .filter(Boolean);
@@ -5595,9 +5501,9 @@ function skillStudioReviewItemList(value: unknown): string[] {
 
 function parseSkillStudioReviewItemList(value: string[]): Array<Record<string, unknown>> {
   return value.map((item) => {
-    const [nameAndWeight, ...descriptionParts] = item.split(/[：:]/u);
-    const description = descriptionParts.join("：").trim();
-    const weightMatch = nameAndWeight.match(/^(.*?)（([^）]+)）$/u);
+    const [nameAndWeight, ...descriptionParts] = item.split(":");
+    const description = descriptionParts.join(":").trim();
+    const weightMatch = nameAndWeight.match(/^(.*?)\s*\(([^)]+)\)$/u);
     const name = (weightMatch?.[1] ?? nameAndWeight).trim();
     const weight = weightMatch ? Number(weightMatch[2].trim()) : undefined;
     return {
@@ -5809,7 +5715,7 @@ function SkillStudioListField({
             {editingIndex === index ? (
               <input
                 ref={editInputRef}
-                aria-label={`编辑 ${item}`}
+                aria-label={i18n.t("superchat.panel.skillDraft.editItem", { item })}
                 value={editingDraft}
                 onChange={(event) => setEditingDraft(event.target.value)}
                 onBlur={commitEditItem}
@@ -5833,7 +5739,7 @@ function SkillStudioListField({
             ) : (
               <button
                 type="button"
-                aria-label={`编辑 ${item}`}
+                aria-label={i18n.t("superchat.panel.skillDraft.editItem", { item })}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => beginEditItem(index, item)}
                 className="min-w-0 rounded-sm text-left whitespace-normal break-words leading-4 transition-colors hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/30"
@@ -5844,7 +5750,7 @@ function SkillStudioListField({
             {!disabled && (
               <button
                 type="button"
-                aria-label={`删除 ${item}`}
+                aria-label={i18n.t("superchat.panel.skillDraft.deleteItem", { item })}
                 onClick={() => removeItem(index)}
                 className="grid size-3.5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:text-foreground"
               >
@@ -5858,7 +5764,7 @@ function SkillStudioListField({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === "," || event.key === "，") {
+              if (event.key === "Enter" || event.key === ",") {
                 event.preventDefault();
                 addDraft();
                 return;
@@ -6042,9 +5948,9 @@ function skillStudioSelectionForMode(
 }
 
 function formatSkillStudioOption(option: SkillStudioQuestionOption): string {
-  const label = option.label?.trim() || option.id?.trim() || "未命名选项";
+  const label = option.label?.trim() || option.id?.trim() || i18n.t("superchat.panel.skillDraft.unnamedOption");
   const description = option.description?.trim();
-  return description ? `${label}（${description}）` : label;
+  return description ? `${label} (${description})` : label;
 }
 
 function selectedSkillStudioOptionLabel(
@@ -6060,8 +5966,8 @@ function selectedSkillStudioOptionLabel(
     })
     .filter(Boolean);
   const customText = selection.customText.trim();
-  const parts = [...selectedLabels, ...(customText ? [`补充：${customText}`] : [])];
-  return parts.length > 0 ? parts.join("；") : "未选择";
+  const parts = [...selectedLabels, ...(customText ? [i18n.t("superchat.panel.skillDraft.supplement", { text: customText })] : [])];
+  return parts.length > 0 ? parts.join("; ") : i18n.t("superchat.panel.skillDraft.notSelected");
 }
 
 type SkillStudioQuestionTimelineItem = {
@@ -6072,8 +5978,8 @@ type SkillStudioQuestionTimelineItem = {
 };
 
 function skillStudioQuestionActionSummary(action: string | undefined): string | null {
-  if (action === "skip") return "已跳过";
-  if (action === "recommended") return "已用推荐配置";
+  if (action === "skip") return i18n.t("superchat.panel.skillDraft.skipped");
+  if (action === "recommended") return i18n.t("superchat.panel.skillDraft.usedRecommended");
   return null;
 }
 
@@ -6091,8 +5997,8 @@ function buildSkillStudioQuestionTimelineItems(
       const hasAnswer = skillStudioSelectionHasAnswer(selections[key]);
       return {
         key,
-        title: question.title || question.question || `问题 ${index + 1}`,
-        summary: hasAnswer ? selectedSkillStudioOptionLabel(question, index, selections) : actionSummary ?? "未选择",
+        title: question.title || question.question || i18n.t("superchat.panel.skillDraft.questionN", { index: index + 1 }),
+        summary: hasAnswer ? selectedSkillStudioOptionLabel(question, index, selections) : actionSummary ?? i18n.t("superchat.panel.skillDraft.notSelected"),
         answered: hasAnswer || Boolean(actionSummary),
       };
     });
@@ -6117,7 +6023,7 @@ function visibleAssistantClarificationTimelineItems(
     )
     .map(({ question, index }) => ({
       key: skillStudioQuestionKey(question, index),
-      title: question.title || question.question || `问题 ${index + 1}`,
+      title: question.title || question.question || i18n.t("superchat.panel.skillDraft.questionN", { index: index + 1 }),
       summary: selectedSkillStudioOptionLabel(question, index, answers),
       answered: true,
     }));
@@ -6131,23 +6037,23 @@ export function buildSkillStudioQuestionResponseForTest(
   selections: SkillStudioQuestionSelections,
 ): string {
   const lines = [
-    "我已在 Skill Studio 问题卡片中完成选择。",
-    event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-    event.title ? `卡片：${event.title}` : "",
+    "I have finished my selections on the Skill Studio question card.",
+    event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+    event.title ? `Card: ${event.title}` : "",
   ].filter(Boolean);
 
   const answers = (event.questions ?? [])
     .map((question, index) => ({ question, index }))
     .filter(({ question }) => (question.options ?? []).length > 0)
     .map(({ question, index }) =>
-      `- ${question.title || question.question || `问题 ${index + 1}`}：${selectedSkillStudioOptionLabel(question, index, selections)}`,
+      `- ${question.title || question.question || i18n.t("superchat.panel.skillDraft.questionN", { index: index + 1 })}: ${selectedSkillStudioOptionLabel(question, index, selections)}`,
     );
 
   return [
     ...lines,
-    "选择如下：",
+    "My selections:",
     ...answers,
-    "用户已完成选择，请结合当前上下文继续。",
+    "The user has finished selecting; continue with the current context.",
   ].join("\n");
 }
 
@@ -6179,9 +6085,9 @@ export function buildAssistantClarificationResponseForTest(
   answers: AssistantClarificationAnswers,
 ): string {
   const lines = [
-    "我已完成补充信息选择。",
-    event.clarification_id ? `Clarification：${event.clarification_id}` : "",
-    event.title ? `卡片：${event.title}` : "",
+    "I have finished providing the additional information.",
+    event.clarification_id ? `Clarification: ${event.clarification_id}` : "",
+    event.title ? `Card: ${event.title}` : "",
   ].filter(Boolean);
 
   const answerLines = (event.questions ?? [])
@@ -6190,14 +6096,14 @@ export function buildAssistantClarificationResponseForTest(
       skillStudioSelectionHasAnswer(answers[skillStudioQuestionKey(question, index)]),
     )
     .map(({ question, index }) =>
-      `${question.title || question.question || `问题 ${index + 1}`}\n${selectedSkillStudioOptionLabel(question, index, answers)}`,
+      `${question.title || question.question || i18n.t("superchat.panel.skillDraft.questionN", { index: index + 1 })}\n${selectedSkillStudioOptionLabel(question, index, answers)}`,
     );
 
   return [
     ...lines,
-    "回答如下：",
+    "My answers:",
     ...answerLines,
-    "请根据以上补充信息执行下一步。",
+    "Proceed with the next step based on the information above.",
   ].join("\n");
 }
 
@@ -6213,13 +6119,13 @@ export function buildAssistantClarificationToolResultForTest(
     buildAssistantClarificationResponseForTest(event, safeAnswers),
     options.skillStudioRevision
       ? [
-          "当前处于 Skill Studio 草稿修订流程。",
-          "只允许把本次回答中的明确选择或补充文本当作修改方向；不要从当前草稿内容、Recipe 结构或你自己的优化判断里推断用户想改什么。",
-          "如果本次回答只是选择了泛泛分类，例如基本信息、输入参数、能力模块内容、约束规则、质量标准、执行流程等，仍然不算具体修改方向；下一步必须继续调用 freezone_request_user_clarification 追问一个更具体的问题。",
-          "只有用户明确给出了具体目标和改法时，下一步才可以调用 freezone_patch_agent_catalog_draft 更新草稿，或用分片草稿工具替换较大的 Skill / Recipe 内容。",
-          "更新后必须调用 freezone_finish_agent_catalog_draft 展示新的可编辑草稿卡。",
-          "不要只回复普通文本，不要只总结修改意图，不要询问是否保存，也不要展示未修改的旧草稿。",
-          "只有修改方向仍不明确时，才再调用 freezone_request_user_clarification 追问一个问题。",
+          "You are currently in the Skill Studio draft revision flow.",
+          "Only treat the explicit selections or additional text in this answer as the direction of change; do not infer what the user wants changed from the current draft content, the Recipe structure, or your own optimization judgment.",
+          "If this answer only picks a broad category, such as basic information, input parameters, capability module content, constraint rules, quality standards, or execution flow, it is still not a concrete direction of change; the next step must be to call freezone_request_user_clarification again with a more specific question.",
+          "Only when the user has explicitly given a concrete goal and how to change it may the next step call freezone_patch_agent_catalog_draft to update the draft, or use the chunked draft tools to replace larger Skill / Recipe content.",
+          "After updating, you must call freezone_finish_agent_catalog_draft to show the new editable draft card.",
+          "Do not reply with plain text only, do not merely summarize the intended change, do not ask whether to save, and do not show the old unmodified draft.",
+          "Only when the direction of change is still unclear, call freezone_request_user_clarification again to ask one question.",
         ].join("\n")
       : "",
   ].filter(Boolean).join("\n\n");
@@ -6353,8 +6259,7 @@ function normalizeSkillStudioDraftForCatalog(draft: Record<string, unknown>): Re
         const defaultValue = normalized.default.trim();
         const matchingOption = options.find((option) =>
           option === defaultValue ||
-          option.startsWith(`${defaultValue} `) ||
-          option.startsWith(`${defaultValue}　`),
+          option.startsWith(`${defaultValue} `),
         );
         if (matchingOption) {
           normalized.default = matchingOption;
@@ -6403,11 +6308,11 @@ export function buildSkillStudioDraftToolResultForTest(
     saved_recipe_ids: savedRecipeIds,
     draft: { summary, skill, recipes: dedupedRecipes, warnings },
     message: [
-      "我已在 Skill Studio 草稿卡片中确认添加，已保存为正式 Skill / Recipe。",
-      event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-      textField(skill.id) ? `Skill：${textField(skill.id)}` : "",
-      savedRecipeIds.length > 0 ? `Recipes：${savedRecipeIds.join("、")}` : "",
-      "该 Skill / Recipe 已写入虾画配置，可立即使用。请不要再要求用户保存为正式能力。",
+      "I confirmed the addition on the Skill Studio draft card; it has been saved as an official Skill / Recipe.",
+      event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+      textField(skill.id) ? `Skill: ${textField(skill.id)}` : "",
+      savedRecipeIds.length > 0 ? `Recipes: ${savedRecipeIds.join(", ")}` : "",
+      "This Skill / Recipe has been written to the Shrimp Canvas configuration and can be used immediately. Do not ask the user to save it as an official capability again.",
     ].filter(Boolean).join("\n"),
   };
 }
@@ -6440,11 +6345,11 @@ export function buildSkillStudioDraftCancelToolResultForTest(
     saved_skill_ids: [],
     saved_recipe_ids: [],
     message: [
-      "用户已取消 Skill Studio 草稿保存。",
-      event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-      "本次草稿不会写入虾画配置。",
-      "这是用户点击取消按钮，不是修改请求，也不是重新提交请求。",
-      "请只确认取消结果，不要重新提交、重新展示、保存或修改这个草稿。",
+      "The user cancelled saving the Skill Studio draft.",
+      event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+      "This draft will not be written to the Shrimp Canvas configuration.",
+      "This is the user clicking the cancel button; it is not a modification request and not a resubmission request.",
+      "Only acknowledge the cancellation result; do not resubmit, re-show, save, or modify this draft.",
     ].filter(Boolean).join("\n"),
     agent_instruction: [
       "The user clicked Cancel on the Skill Studio draft.",
@@ -6486,21 +6391,21 @@ export function buildSkillStudioDraftRevisionToolResultForTest(
     draft,
     draft_ref: draftRef,
     message: [
-      "用户已启动 Skill Studio 草稿修改会话。",
-      event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-      textField(skill.id) ? `当前草稿：${textField(skill.name) || textField(skill.id)}` : "",
-      "用户已经明确表示需要调整当前草稿，不要再询问是否需要调整。",
-      "不要询问是否保存当前版本，也不要提供 save_now / save_current / confirm_save 这类选项；保存只由页面草稿卡的确认按钮处理。",
-      "这不是继续完成原草稿，也不是要求重新展示当前草稿。",
-      "本次回执提供当前完整 draft，draft 只用于理解被修改对象和后续局部 patch；不要把 draft 内容当成用户修改意图。",
-      "用户还没有提供具体修改方向；下一步必须调用 freezone_request_user_clarification 追问修改方向、范围或偏好。",
-      "这次 clarification 的 questions 数组必须只有一个问题，问题要直接问用户想改哪里或怎么改。",
-      "在用户回答修改方向之前，禁止调用 freezone_begin_agent_catalog_draft / freezone_put_agent_catalog_skill / freezone_put_agent_catalog_recipe / freezone_finish_agent_catalog_draft。",
-      "在用户回答修改方向之前，也禁止调用 freezone_patch_agent_catalog_draft。",
-      "禁止调用 freezone_finish_agent_catalog_draft 原样展示当前草稿。",
-      "用户回答修改方向后，如果回答仍是泛泛分类，继续追问；只有回答包含具体目标和改法时，才基于当前完整草稿进行局部 patch 或分片输出更新草稿。",
-      "不要在单个 tool_call 里传完整 Skill / Recipe catalog。",
-      "不要用普通文本总结修改结果；不要只说明改了什么；未输出更新草稿前不要让用户保存。",
+      "The user started a Skill Studio draft revision session.",
+      event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+      textField(skill.id) ? `Current draft: ${textField(skill.name) || textField(skill.id)}` : "",
+      "The user has explicitly said the current draft needs adjusting; do not ask again whether adjustments are needed.",
+      "Do not ask whether to save the current version and do not offer options such as save_now / save_current / confirm_save; saving is handled only by the confirm button on the page draft card.",
+      "This is not about continuing to finish the original draft, nor a request to show the current draft again.",
+      "This receipt provides the full current draft; the draft is only for understanding the object being modified and for later partial patches; do not treat the draft content as the user's intent to modify.",
+      "The user has not provided a concrete direction of change yet; the next step must call freezone_request_user_clarification to ask about the direction, scope, or preferences of the change.",
+      "The questions array of this clarification must contain exactly one question, and it must directly ask the user what to change or how to change it.",
+      "Before the user answers the direction of change, do not call freezone_begin_agent_catalog_draft / freezone_put_agent_catalog_skill / freezone_put_agent_catalog_recipe / freezone_finish_agent_catalog_draft.",
+      "Before the user answers the direction of change, also do not call freezone_patch_agent_catalog_draft.",
+      "Do not call freezone_finish_agent_catalog_draft to show the current draft unchanged.",
+      "After the user answers the direction of change, if the answer is still a broad category, keep asking; only when the answer contains a concrete goal and how to change it, apply a partial patch or output the updated draft in chunks based on the full current draft.",
+      "Do not pass the full Skill / Recipe catalog in a single tool_call.",
+      "Do not summarize the modification result in plain text; do not merely state what changed; do not let the user save before the updated draft is output.",
     ].filter(Boolean).join("\n"),
   };
 }
@@ -6514,29 +6419,29 @@ function skillStudioDraftFooterText({
   cancelled: boolean;
   revisionPending: boolean;
 }): string {
-  if (submitted) return "已添加到虾画 Skills / Recipes";
-  if (cancelled) return "已取消，本草稿不会保存";
-  if (revisionPending) return "AI 调整中，请按后续问题补充修改方向";
-  return "保存前可展开各项继续微调";
+  if (submitted) return i18n.t("superchat.panel.skillDraft.footer.submitted");
+  if (cancelled) return i18n.t("superchat.panel.skillDraft.footer.cancelled");
+  if (revisionPending) return i18n.t("superchat.panel.skillDraft.footer.revisionPending");
+  return i18n.t("superchat.panel.skillDraft.footer.default");
 }
 
 export const skillStudioDraftFooterTextForTest = skillStudioDraftFooterText;
 
 function buildSkillStudioRecommendedResponse(event: Extract<SkillStudioUiEvent, { type: "skill_studio.questions" }>): string {
   return [
-    "请使用推荐配置继续 Skill Studio 流程。",
-    event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-    event.title ? `卡片：${event.title}` : "",
-    "请基于当前目标直接生成一个可编辑的 Skill / Recipe 草稿。",
+    "Use the recommended configuration to continue the Skill Studio flow.",
+    event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+    event.title ? `Card: ${event.title}` : "",
+    "Based on the current goal, directly generate an editable Skill / Recipe draft.",
   ].filter(Boolean).join("\n");
 }
 
 function buildSkillStudioSkipResponse(event: Extract<SkillStudioUiEvent, { type: "skill_studio.questions" }>): string {
   return [
-    "我选择跳过问题卡片，直接进入 Skill Studio 草稿生成。",
-    event.skill_studio_session_id ? `Skill Studio 会话：${event.skill_studio_session_id}` : "",
-    event.title ? `卡片：${event.title}` : "",
-    "请根据已有上下文生成 Skill / Recipe 草稿。",
+    "I chose to skip the question card and go straight to Skill Studio draft generation.",
+    event.skill_studio_session_id ? `Skill Studio session: ${event.skill_studio_session_id}` : "",
+    event.title ? `Card: ${event.title}` : "",
+    "Generate a Skill / Recipe draft from the existing context.",
   ].filter(Boolean).join("\n");
 }
 
@@ -6595,7 +6500,7 @@ function SkillStudioQuestionsCard({
   );
   const submittedSummary = submitted
     ? skillStudioQuestionActionSummary(event.action)
-      ?? `已提交回答 · ${answeredCount} / ${selectableQuestions.length || timelineItems.length} 个`
+      ?? i18n.t("superchat.panel.skillDraft.answerSubmitted", { answered: answeredCount, total: selectableQuestions.length || timelineItems.length })
     : "";
   const goToQuestion = useCallback((position: number) => {
     if (selectableQuestions.length === 0) return;
@@ -6658,14 +6563,14 @@ function SkillStudioQuestionsCard({
               <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-400/10 text-emerald-100/85">
                 <CheckCircle2 className="size-3.5" />
               </span>
-              <span className="truncate font-medium tracking-normal">{event.title || "Skill Studio 选择"}</span>
+              <span className="truncate font-medium tracking-normal">{event.title || i18n.t("superchat.panel.skillDraft.studioChoice")}</span>
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               {submittedSummary}
             </div>
           </div>
           <span className="shrink-0 rounded-full border border-emerald-300/15 bg-emerald-400/[0.08] px-2 py-0.5 text-[11px] text-emerald-100/75">
-            {skillStudioQuestionActionSummary(event.action) ?? "已提交"}
+            {skillStudioQuestionActionSummary(event.action) ?? i18n.t("superchat.panel.skillDraft.submitted")}
           </span>
         </div>
         <div className="relative ml-2.5 space-y-0.5">
@@ -6699,7 +6604,7 @@ function SkillStudioQuestionsCard({
           ))}
           {timelineItems.length === 0 && (
             <div className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2 text-xs text-muted-foreground">
-              已提交，未包含可展示的问题配置。
+              {i18n.t("superchat.panel.questions.submittedNoConfig")}
             </div>
           )}
         </div>
@@ -6715,7 +6620,7 @@ function SkillStudioQuestionsCard({
   const activeSelectedCount = activeSelection.optionIds.length + (activeSelection.customText.trim() ? 1 : 0);
   const hasPrevious = activeQuestionPosition > 0;
   const hasNext = activeQuestionPosition < selectableQuestions.length - 1;
-  const continueLabel = hasNext ? "下一题" : allQuestionsAnswered ? "提交选择" : "用当前选择继续";
+  const continueLabel = hasNext ? i18n.t("superchat.panel.questions.next") : allQuestionsAnswered ? i18n.t("superchat.panel.questions.submitChoices") : i18n.t("superchat.panel.questions.continueWithCurrent");
   const continueAction = () => {
     if (hasNext) {
       goToQuestion(activeQuestionPosition + 1);
@@ -6729,7 +6634,7 @@ function SkillStudioQuestionsCard({
 	      <div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
 	        <div className="min-w-0">
 	          <div className="line-clamp-2 break-words text-sm font-medium leading-5 text-foreground">
-	            {activeQuestion?.title || activeQuestion?.question || event.title || "需要你补充一点信息"}
+	            {activeQuestion?.title || activeQuestion?.question || event.title || i18n.t("superchat.panel.questions.needInfo")}
 	          </div>
 	          {event.description && (
 	            <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
@@ -6744,7 +6649,7 @@ function SkillStudioQuestionsCard({
               disabled={!hasPrevious}
               className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
               onClick={() => goToQuestion(activeQuestionPosition - 1)}
-              aria-label="上一题"
+              aria-label={i18n.t("superchat.panel.questions.previous")}
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -6754,7 +6659,7 @@ function SkillStudioQuestionsCard({
               disabled={!hasNext}
               className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
               onClick={() => goToQuestion(activeQuestionPosition + 1)}
-              aria-label="下一题"
+              aria-label={i18n.t("superchat.panel.questions.next")}
             >
               <ChevronRight className="size-4" />
             </button>
@@ -6765,10 +6670,10 @@ function SkillStudioQuestionsCard({
         {activeQuestion ? (
           <div className="overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-white/[0.07]">
           <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-muted-foreground/80">
-            <span>{activeSelectionMode === "multiple" ? "可多选，也可以补充" : "选择一个方向，也可以补充"}</span>
+            <span>{activeSelectionMode === "multiple" ? i18n.t("superchat.panel.questions.hintMultiple") : i18n.t("superchat.panel.questions.hintSingle")}</span>
             {activeSelectionMode === "multiple" && (
               <span className="shrink-0 rounded-full bg-white/[0.05] px-2 py-1 text-[11px] text-muted-foreground">
-                多选
+                {i18n.t("superchat.panel.questions.multiple")}
               </span>
             )}
           </div>
@@ -6791,7 +6696,7 @@ function SkillStudioQuestionsCard({
 	                  <QuestionOptionSelectionMark selected={selected} mode={activeSelectionMode} />
 	                  <span className="min-w-0 flex-1">
                     <span className="block break-words text-sm leading-5 text-foreground/88">
-                      {option.label || option.id || `选项 ${optionIndex + 1}`}
+                      {option.label || option.id || i18n.t("superchat.panel.questions.optionN", { index: optionIndex + 1 })}
                     </span>
                     {option.description && (
                       <span className="mt-0.5 block line-clamp-2 break-words text-xs leading-4 text-muted-foreground">
@@ -6808,7 +6713,7 @@ function SkillStudioQuestionsCard({
                 <Textarea
                   value={activeSelection.customText}
                   onChange={(changeEvent) => updateCustomText(activeQuestion, activeQuestionIndex, changeEvent.target.value)}
-                  placeholder="其他补充..."
+                  placeholder={i18n.t("superchat.panel.questions.otherPlaceholder")}
                   className="min-h-11 resize-none rounded-xl border-0 bg-white/[0.05] px-3 py-2 text-sm leading-5 shadow-none placeholder:text-muted-foreground/65 focus-visible:ring-1 focus-visible:ring-white/15"
                 />
               </div>
@@ -6817,13 +6722,13 @@ function SkillStudioQuestionsCard({
           </div>
         ) : (
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-3 py-6 text-center text-xs text-muted-foreground">
-            暂无可选择的问题
+            {i18n.t("superchat.panel.questions.noQuestions")}
           </div>
         )}
       </div>
       <div className="mt-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-2.5">
         <div className="text-xs text-muted-foreground/80">
-          已选择 {activeSelectedCount} 项 · {answeredCount} / {selectableQuestions.length}
+          {i18n.t("superchat.panel.questions.selectedCount", { selected: activeSelectedCount, answered: answeredCount, total: selectableQuestions.length })}
         </div>
         <div className="flex items-center gap-2">
           {event.allow_skip && (
@@ -6839,7 +6744,7 @@ function SkillStudioQuestionsCard({
                 });
               }}
             >
-              跳过
+              {i18n.t("superchat.panel.questions.skip")}
             </Button>
           )}
           {event.allow_recommended && (
@@ -6855,7 +6760,7 @@ function SkillStudioQuestionsCard({
                 });
               }}
             >
-              使用推荐配置
+              {i18n.t("superchat.panel.questions.useRecommended")}
             </Button>
           )}
           <Button
@@ -6898,7 +6803,7 @@ function AssistantClarificationSummaryCard({ event }: { event: AssistantClarific
             <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-400/10 text-emerald-100/85">
               <CheckCircle2 className="size-3.5" />
             </span>
-            <span className="truncate font-medium tracking-normal">{event.title || "问题回答"}</span>
+            <span className="truncate font-medium tracking-normal">{event.title || i18n.t("superchat.panel.questions.answerTitle")}</span>
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
             {countLabel}
@@ -7074,10 +6979,10 @@ function AssistantClarificationInputCard({
   const hasNext = activeQuestionPosition < selectableQuestions.length - 1;
   const activeSelectedCount = activeSelection.optionIds.length + (activeSelection.customText.trim() ? 1 : 0);
   const continueLabel = hasNext
-    ? "下一题"
+    ? i18n.t("superchat.panel.questions.next")
     : allQuestionsAnswered
-      ? "提交选择"
-      : isGenerationCard ? "请完成所有选择" : "用当前选择继续";
+      ? i18n.t("superchat.panel.questions.submitChoices")
+      : isGenerationCard ? i18n.t("superchat.panel.questions.completeAll") : i18n.t("superchat.panel.questions.continueWithCurrent");
   const continueAction = () => {
     if (hasNext) {
       goToQuestion(activeQuestionPosition + 1);
@@ -7091,7 +6996,7 @@ function AssistantClarificationInputCard({
 	      <div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
 	        <div className="min-w-0">
 	          <div className="line-clamp-2 break-words text-sm font-medium leading-5 text-foreground">
-	            {activeQuestion?.title || activeQuestion?.question || event.title || "需要你补充一点信息"}
+	            {activeQuestion?.title || activeQuestion?.question || event.title || i18n.t("superchat.panel.questions.needInfo")}
 	          </div>
 	          {event.description && (
 	            <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
@@ -7106,7 +7011,7 @@ function AssistantClarificationInputCard({
               disabled={!hasPrevious}
               className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
               onClick={() => goToQuestion(activeQuestionPosition - 1)}
-              aria-label="上一题"
+              aria-label={i18n.t("superchat.panel.questions.previous")}
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -7116,7 +7021,7 @@ function AssistantClarificationInputCard({
               disabled={!hasNext}
               className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
               onClick={() => goToQuestion(activeQuestionPosition + 1)}
-              aria-label="下一题"
+              aria-label={i18n.t("superchat.panel.questions.next")}
             >
               <ChevronRight className="size-4" />
             </button>
@@ -7126,10 +7031,10 @@ function AssistantClarificationInputCard({
       {activeQuestion ? (
         <div className="overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-white/[0.07]">
           <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-muted-foreground/80">
-            <span>{activeSelectionMode === "multiple" ? "可多选，也可以补充" : "选择一个方向，也可以补充"}</span>
+            <span>{activeSelectionMode === "multiple" ? i18n.t("superchat.panel.questions.hintMultiple") : i18n.t("superchat.panel.questions.hintSingle")}</span>
             {activeSelectionMode === "multiple" && (
               <span className="shrink-0 rounded-full bg-white/[0.05] px-2 py-1 text-[11px] text-muted-foreground">
-                多选
+                {i18n.t("superchat.panel.questions.multiple")}
               </span>
             )}
           </div>
@@ -7152,7 +7057,7 @@ function AssistantClarificationInputCard({
 	                  <QuestionOptionSelectionMark selected={selected} mode={activeSelectionMode} />
 	                  <span className="min-w-0 flex-1">
                     <span className="block break-words text-sm leading-5 text-foreground/88">
-                      {option.label || option.id || `选项 ${optionIndex + 1}`}
+                      {option.label || option.id || i18n.t("superchat.panel.questions.optionN", { index: optionIndex + 1 })}
                     </span>
                     {option.description && (
                       <span className="mt-0.5 block line-clamp-2 break-words text-xs leading-4 text-muted-foreground">
@@ -7169,7 +7074,7 @@ function AssistantClarificationInputCard({
                 <Textarea
                   value={activeSelection.customText}
                   onChange={(changeEvent) => updateCustomText(activeQuestion, activeQuestionIndex, changeEvent.target.value)}
-                  placeholder="其他补充..."
+                  placeholder={i18n.t("superchat.panel.questions.otherPlaceholder")}
                   className="min-h-11 resize-none rounded-xl border-0 bg-white/[0.05] px-3 py-2 text-sm leading-5 shadow-none placeholder:text-muted-foreground/65 focus-visible:ring-1 focus-visible:ring-white/15"
                 />
               </div>
@@ -7178,7 +7083,7 @@ function AssistantClarificationInputCard({
         </div>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-3 py-6 text-center text-xs text-muted-foreground">
-          暂无可选择的问题
+          {i18n.t("superchat.panel.questions.noQuestions")}
         </div>
       )}
       {generationCatalogIssue && (
@@ -7188,7 +7093,7 @@ function AssistantClarificationInputCard({
       )}
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground/80">
-          已选择 {activeSelectedCount} 项 · {answeredCount} / {selectableQuestions.length}
+          {i18n.t("superchat.panel.questions.selectedCount", { selected: activeSelectedCount, answered: answeredCount, total: selectableQuestions.length })}
         </div>
         <div className="flex items-center gap-2">
           {event.allow_skip && (
@@ -7201,7 +7106,7 @@ function AssistantClarificationInputCard({
                 void onSubmit?.(event, { __action: "skip" });
               }}
             >
-              跳过
+              {i18n.t("superchat.panel.questions.skip")}
             </Button>
           )}
           {!generationCatalogIssue && assistantClarificationShowsRecommended(
@@ -7216,7 +7121,7 @@ function AssistantClarificationInputCard({
                 void onSubmit?.(event, { ...recommendedAnswers, __action: "recommended" });
               }}
             >
-              使用推荐配置
+              {i18n.t("superchat.panel.questions.useRecommended")}
             </Button>
           )}
           <Button
@@ -7344,11 +7249,11 @@ function SkillStudioDraftCard({
     try {
       parsed = JSON.parse(draftText);
     } catch {
-      setJsonError("JSON 格式不正确，请检查后再提交");
+      setJsonError(i18n.t("superchat.panel.questions.jsonInvalidSubmit"));
       return;
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      setJsonError("草稿必须是 JSON 对象");
+      setJsonError(i18n.t("superchat.panel.questions.jsonMustBeObject"));
       return;
     }
     setJsonError(null);
@@ -7368,11 +7273,11 @@ function SkillStudioDraftCard({
     try {
       parsed = JSON.parse(draftText);
     } catch {
-      setJsonError("JSON 格式不正确，请检查后再调整");
+      setJsonError(i18n.t("superchat.panel.questions.jsonInvalidAdjust"));
       return;
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      setJsonError("草稿必须是 JSON 对象");
+      setJsonError(i18n.t("superchat.panel.questions.jsonMustBeObject"));
       return;
     }
     setJsonError(null);
@@ -7404,10 +7309,10 @@ function SkillStudioDraftCard({
         <span className="flex size-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.04] text-emerald-100/90">
           <Package className="size-3.5" />
         </span>
-        <span className="font-medium">{incomplete ? "Skill 草稿未完成" : "Skill / Recipe 草稿"}</span>
+        <span className="font-medium">{incomplete ? i18n.t("superchat.panel.skillDraft.incompleteSummary") : i18n.t("superchat.panel.questions.draftTitle")}</span>
         {event.mode && (
           <Badge variant="outline" className="h-5 rounded-md border-white/[0.1] px-1.5 text-[10px] text-muted-foreground">
-            {event.mode === "edit" ? "编辑" : "新建"}
+            {event.mode === "edit" ? i18n.t("superchat.panel.questions.modeEdit") : i18n.t("superchat.panel.questions.modeNew")}
           </Badge>
         )}
       </div>
@@ -7416,12 +7321,12 @@ function SkillStudioDraftCard({
       )}
       {incomplete && (
         <div className="mb-3 rounded-lg border border-amber-300/20 bg-amber-300/[0.055] px-3 py-2 text-xs leading-5 text-amber-50/85">
-          <div>Agent 已提交了一部分内容，但本轮对话已结束，草稿还不能保存。</div>
+          <div>{i18n.t("superchat.panel.skillDraft.partial")}</div>
           {(completedItems.length > 0 || missingItems.length > 0) && (
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {completedItems.length > 0 && (
                 <div>
-                  <div className="text-amber-50/60">已完成</div>
+                  <div className="text-amber-50/60">{i18n.t("superchat.panel.questions.completed")}</div>
                   <ul className="mt-1 space-y-0.5">
                     {completedItems.map((item) => <li key={item}>{item}</li>)}
                   </ul>
@@ -7429,7 +7334,7 @@ function SkillStudioDraftCard({
               )}
               {missingItems.length > 0 && (
                 <div>
-                  <div className="text-amber-50/60">缺少</div>
+                  <div className="text-amber-50/60">{i18n.t("superchat.panel.questions.missing")}</div>
                   <ul className="mt-1 space-y-0.5">
                     {missingItems.map((item) => <li key={item}>{item}</li>)}
                   </ul>
@@ -7437,7 +7342,7 @@ function SkillStudioDraftCard({
               )}
             </div>
           )}
-          <div className="mt-2 text-amber-50/65">继续对话后，Agent 可以基于当前草稿补全缺失部分。</div>
+          <div className="mt-2 text-amber-50/65">{i18n.t("superchat.panel.questions.continueChat")}</div>
         </div>
       )}
       <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.045]">
@@ -7457,7 +7362,7 @@ function SkillStudioDraftCard({
             )}
           </div>
           <p className="mt-1.5 line-clamp-3 text-xs leading-5 text-muted-foreground">
-            {textField(skill.description) || "暂无描述"}
+            {textField(skill.description) || i18n.t("superchat.panel.questions.noDescription")}
           </p>
         </div>
 
@@ -7466,7 +7371,7 @@ function SkillStudioDraftCard({
             <span className="flex min-w-0 items-center gap-2 text-foreground/85">
               <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               <Braces className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>基础信息</span>
+              <span>{i18n.t("superchat.panel.questions.basicInfo")}</span>
             </span>
           </summary>
           <div className="space-y-2 border-t border-white/[0.06] px-3 pb-3 pt-2">
@@ -7516,7 +7421,7 @@ function SkillStudioDraftCard({
 	              value={stringListField(triggers.keywords)}
 	              disabled={readOnly}
 	              onChange={(value) => updateNestedSkillField("triggers", "keywords", value)}
-	              placeholder="输入关键词后按 Enter"
+	              placeholder={i18n.t("superchat.panel.questions.keywordPlaceholder")}
 	            />
 	          </div>
 	        </details>
@@ -7530,13 +7435,13 @@ function SkillStudioDraftCard({
                 <span>{skillStudioDraftFieldLabels.skill.inputParameters}</span>
               </span>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-2 py-0.5 text-[10px] text-cyan-100/80">
-                {inputParameters.length} 个选项
+                {i18n.t("superchat.panel.questions.optionCount", { count: inputParameters.length })}
               </span>
             </summary>
             <div className="space-y-2 border-t border-white/[0.06] px-3 pb-3 pt-2">
               {inputParameters.map((parameter, parameterIndex) => {
                 const parameterId = textField(parameter.id);
-                const label = textField(parameter.label) || parameterId || `选项 ${parameterIndex + 1}`;
+                const label = textField(parameter.label) || parameterId || i18n.t("superchat.panel.questions.optionN", { index: parameterIndex + 1 });
                 const options = cleanStringArray(parameter.options);
                 const defaultValue = skillStudioInputParameterValueLabel(parameter.default);
                 return (
@@ -7554,17 +7459,17 @@ function SkillStudioDraftCard({
                         </span>
                         {defaultValue && (
                           <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            默认 {defaultValue}
+                            {i18n.t("superchat.panel.questions.defaultValue", { value: defaultValue })}
                           </span>
                         )}
                         {options.length > 0 && (
                           <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            {options.length} 个选项
+                            {i18n.t("superchat.panel.questions.optionCount", { count: options.length })}
                           </span>
                         )}
                         {parameter.required === true && (
                           <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-200">
-                            必填
+                            {i18n.t("superchat.panel.questions.required")}
                           </span>
                         )}
                       </div>
@@ -7591,7 +7496,7 @@ function SkillStudioDraftCard({
             <span className="flex min-w-0 items-center gap-2 text-foreground/85">
               <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               <ListTree className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>规划策略</span>
+              <span>{i18n.t("superchat.panel.questions.planningStrategy")}</span>
             </span>
           </summary>
           <div className="space-y-2 border-t border-white/[0.06] px-3 pb-3 pt-2">
@@ -7620,7 +7525,7 @@ function SkillStudioDraftCard({
 	              value={stringListField(planning.conduct_rules, planning.behaviorRules)}
 	              disabled={readOnly}
 	              onChange={(value) => updateNestedSkillField("planning", "conduct_rules", value, ["behaviorRules"])}
-	              placeholder="输入规则后按 Enter"
+	              placeholder={i18n.t("superchat.panel.questions.rulePlaceholder")}
 	            />
 	          </div>
 	        </details>
@@ -7630,7 +7535,7 @@ function SkillStudioDraftCard({
             <span className="flex min-w-0 items-center gap-2 text-foreground/85">
               <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               <CheckCircle2 className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>评估标准</span>
+              <span>{i18n.t("superchat.panel.questions.evaluationCriteria")}</span>
             </span>
           </summary>
           <div className="grid gap-2 border-t border-white/[0.06] px-3 pb-3 pt-2 md:grid-cols-[120px_1fr]">
@@ -7649,7 +7554,7 @@ function SkillStudioDraftCard({
 	                value={listText(evaluationFields.domainConstraints)}
 	                disabled={readOnly}
 	                onChange={(changeEvent) => updateNestedSkillField("evaluation", "domain_constraints", parseListText(changeEvent.target.value))}
-	                placeholder="用顿号、逗号或换行分隔"
+	                placeholder={i18n.t("superchat.panel.questions.listPlaceholder")}
 	                className={fieldClass}
 	              />
             </label>
@@ -7659,7 +7564,7 @@ function SkillStudioDraftCard({
                 value={evaluationFields.ratingBands}
                 disabled={readOnly}
                 onChange={(value) => updateNestedSkillField("evaluation", "rating_bands", parseSkillStudioRatingBandList(value))}
-                placeholder="如：8：风格统一且文化元素准确"
+                placeholder={i18n.t("superchat.panel.questions.scorePlaceholder")}
               />
             </div>
             <div className="md:col-span-2">
@@ -7668,7 +7573,7 @@ function SkillStudioDraftCard({
                 value={evaluationFields.visualReviewItems}
                 disabled={readOnly}
                 onChange={(value) => updateNestedSkillField("evaluation", "visual_review_items", parseSkillStudioReviewItemList(value))}
-                placeholder="如：风格一致性（0.35）：是否符合视觉风格"
+                placeholder={i18n.t("superchat.panel.questions.visualItemPlaceholder")}
               />
             </div>
             <div className="md:col-span-2">
@@ -7677,7 +7582,7 @@ function SkillStudioDraftCard({
                 value={evaluationFields.textReviewItems}
                 disabled={readOnly}
                 onChange={(value) => updateNestedSkillField("evaluation", "text_review_items", parseSkillStudioReviewItemList(value))}
-                placeholder="如：文案传播力（0.4）：标题是否有记忆点"
+                placeholder={i18n.t("superchat.panel.questions.textItemPlaceholder")}
               />
             </div>
           </div>
@@ -7688,10 +7593,10 @@ function SkillStudioDraftCard({
           <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             <span className="flex min-w-0 items-center gap-2">
               <ListTree className="size-3.5 shrink-0" />
-              <span>复用 Recipes ({referencedRecipes.length})</span>
+              <span>{i18n.t("superchat.panel.questions.reusedRecipes", { count: referencedRecipes.length })}</span>
             </span>
             <span className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
-              只读
+              {i18n.t("superchat.panel.questions.readOnly")}
             </span>
           </div>
           <div>
@@ -7706,7 +7611,7 @@ function SkillStudioDraftCard({
                         ? "border-amber-300/25 bg-amber-300/[0.08] text-amber-100/85"
                         : "border-white/[0.08] bg-white/[0.04] text-muted-foreground",
                     )}>
-                      {recipe.missing ? "未找到" : recipe.outputKind === "html" ? "HTML 网页" : recipe.outputKind || "类型"}
+                      {recipe.missing ? i18n.t("superchat.panel.questions.notFound") : recipe.outputKind === "html" ? i18n.t("superchat.panel.questions.htmlPage") : recipe.outputKind || i18n.t("superchat.panel.questions.type")}
                     </span>
                     <span className="min-w-0 truncate text-foreground/85">
                       {recipe.name || recipe.id}
@@ -7716,7 +7621,7 @@ function SkillStudioDraftCard({
                 <div className="space-y-2 border-t border-white/[0.06] px-3 pb-3 pt-2">
                   {recipe.missing && (
                     <div className="rounded-md border border-amber-400/20 bg-amber-400/[0.05] px-2 py-1.5 text-xs text-amber-100/90">
-                      当前本地 Recipe 列表里没有找到这个 ID，保存前需要确认配置是否存在。
+                      {i18n.t("superchat.panel.questions.recipeIdMissing")}
                     </div>
                   )}
                   <div className="grid gap-2 md:grid-cols-2">
@@ -7735,7 +7640,7 @@ function SkillStudioDraftCard({
                         value={recipe.name}
                         disabled
                         readOnly
-                        placeholder="未匹配到名称"
+                        placeholder={i18n.t("superchat.panel.questions.noName")}
                         className={fieldClass}
                       />
                     </label>
@@ -7744,10 +7649,10 @@ function SkillStudioDraftCard({
                     <label>
                       <span className={labelClass}>{skillStudioDraftFieldLabels.recipe.output_kind}</span>
                       <Input
-                        value={recipe.outputKind === "html" ? "HTML 网页" : recipe.outputKind}
+                        value={recipe.outputKind === "html" ? i18n.t("superchat.panel.questions.htmlPage") : recipe.outputKind}
                         disabled
                         readOnly
-                        placeholder="未匹配到类型"
+                        placeholder={i18n.t("superchat.panel.questions.noType")}
                         className={fieldClass}
                       />
                     </label>
@@ -7756,7 +7661,7 @@ function SkillStudioDraftCard({
                       value={recipe.actionKeys}
                       disabled
                       onChange={() => undefined}
-                      placeholder="未匹配到动作类型"
+                      placeholder={i18n.t("superchat.panel.questions.noActionType")}
                     />
                   </div>
                   <label className="block">
@@ -7765,7 +7670,7 @@ function SkillStudioDraftCard({
                       value={recipe.systemPrompt}
                       disabled
                       readOnly
-                      placeholder="未匹配到系统提示词"
+                      placeholder={i18n.t("superchat.panel.questions.noSystemPrompt")}
                       className={cn(textAreaClass, "min-h-24")}
                     />
                   </label>
@@ -7775,7 +7680,7 @@ function SkillStudioDraftCard({
                       value={recipe.mustHaveItems}
                       disabled
                       onChange={() => undefined}
-                      placeholder="未匹配到必含项"
+                      placeholder={i18n.t("superchat.panel.questions.noMustHave")}
                     />
                     <label>
                       <span className={labelClass}>{skillStudioDraftFieldLabels.recipe.requires_source_media}</span>
@@ -7808,7 +7713,7 @@ function SkillStudioDraftCard({
                         value={recipe.planningPrompt}
                         disabled
                         readOnly
-                        placeholder="未匹配到规划提示"
+                        placeholder={i18n.t("superchat.panel.questions.noPlanningPrompt")}
                         className={textAreaClass}
                       />
                     </label>
@@ -7818,7 +7723,7 @@ function SkillStudioDraftCard({
                         value={recipe.resultSummary}
                         disabled
                         readOnly
-                        placeholder="未匹配到结果摘要"
+                        placeholder={i18n.t("superchat.panel.questions.noResultSummary")}
                         className={textAreaClass}
                       />
                     </label>
@@ -7841,7 +7746,7 @@ function SkillStudioDraftCard({
                 <span className="flex min-w-0 items-center gap-2">
                   <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                   <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    {recipeOutputChoice(recipe) === "html" ? "HTML 网页" : textField(recipe.output_kind) || "类型"}
+                    {recipeOutputChoice(recipe) === "html" ? i18n.t("superchat.panel.questions.htmlPage") : textField(recipe.output_kind) || i18n.t("superchat.panel.questions.type")}
                   </span>
                   <span className="truncate text-foreground/85">{textField(recipe.name) || textField(recipe.id) || `Recipe ${index + 1}`}</span>
                 </span>
@@ -7876,7 +7781,7 @@ function SkillStudioDraftCard({
                       onChange={(changeEvent) => updateRecipeField(index, "output_kind", changeEvent.target.value)}
                       className={fieldClass}
                     >
-                      {RECIPE_OUTPUT_CHOICES.map(choice => <option key={choice} value={choice}>{({image:"图片",video:"视频",audio:"音频",text:"文本",html:"HTML 网页"})[choice]}</option>)}
+                      {RECIPE_OUTPUT_CHOICES.map(choice => <option key={choice} value={choice}>{({image:i18n.t("superchat.panel.mentionType.image"),video:i18n.t("superchat.panel.mentionType.video"),audio:i18n.t("superchat.panel.mentionType.audio"),text:i18n.t("superchat.panel.mentionType.text"),html:i18n.t("superchat.panel.questions.htmlPage")})[choice]}</option>)}
                     </select>
                   </label>
                   <SkillStudioListField
@@ -7884,7 +7789,7 @@ function SkillStudioDraftCard({
                     value={stringListField(recipe.action_keys)}
                     disabled={readOnly}
                     onChange={(value) => updateRecipeField(index, "action_keys", value)}
-                    placeholder="输入类型后按 Enter"
+                    placeholder={i18n.t("superchat.panel.questions.typePlaceholder")}
                   />
                 </div>
                 <label className="block">
@@ -7902,7 +7807,7 @@ function SkillStudioDraftCard({
                     value={stringListField(recipe.must_have_items)}
                     disabled={readOnly}
                     onChange={(value) => updateRecipeField(index, "must_have_items", value)}
-                    placeholder="输入元素后按 Enter"
+                    placeholder={i18n.t("superchat.panel.questions.elementPlaceholder")}
                   />
                   <label>
                     <span className={labelClass}>{skillStudioDraftFieldLabels.recipe.requires_source_media}</span>
@@ -7974,7 +7879,7 @@ function SkillStudioDraftCard({
       )}
       {Array.isArray(event.warnings) && event.warnings.length > 0 && (
         <div className="mt-2 rounded-md border border-amber-400/20 bg-amber-400/[0.05] px-2 py-1.5 text-xs text-amber-100/90">
-          {event.warnings.map((warning) => String(warning)).join("；")}
+          {event.warnings.map((warning) => String(warning)).join("; ")}
         </div>
       )}
       <details className="group mt-2 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.035]">
@@ -7982,7 +7887,7 @@ function SkillStudioDraftCard({
           <span className="flex items-center gap-2 text-muted-foreground">
             <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
             <Braces className="size-3.5" />
-            查看原始 JSON
+            {i18n.t("superchat.panel.questions.viewRawJson")}
           </span>
           {readOnly && (
             <span className={cn(
@@ -7990,7 +7895,7 @@ function SkillStudioDraftCard({
               cancelled ? "text-muted-foreground" : "text-emerald-100/80",
             )}>
               {cancelled ? <X className="size-3" /> : <CheckCircle2 className="size-3" />}
-              {cancelled ? "已取消" : "已提交"}
+              {cancelled ? i18n.t("superchat.panel.canvas.cancelledStep") : i18n.t("superchat.panel.skillDraft.submitted")}
             </span>
           )}
         </summary>
@@ -8021,7 +7926,7 @@ function SkillStudioDraftCard({
       {jsonError && <div className="mt-2 text-xs text-amber-200">{jsonError}</div>}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[11px] text-muted-foreground">
-          {incomplete ? "草稿未完成，本轮不会保存" : skillStudioDraftFooterText({ submitted, cancelled, revisionPending })}
+          {incomplete ? i18n.t("superchat.panel.questions.incompleteNotSaved") : skillStudioDraftFooterText({ submitted, cancelled, revisionPending })}
         </div>
         {!incomplete && (
           <div className="flex flex-wrap items-center gap-2">
@@ -8033,7 +7938,7 @@ function SkillStudioDraftCard({
               disabled={!onStartRevision || readOnly}
               onClick={startRevision}
             >
-              让 AI 调整
+              {i18n.t("superchat.panel.questions.aiAdjust")}
             </Button>
             <Button
               type="button"
@@ -8043,7 +7948,7 @@ function SkillStudioDraftCard({
               disabled={readOnly}
               onClick={cancelDraft}
             >
-              取消
+              {i18n.t("superchat.panel.approval.cancel")}
             </Button>
             <Button
               type="button"
@@ -8052,7 +7957,7 @@ function SkillStudioDraftCard({
               disabled={!onSubmit || readOnly}
               onClick={submitDraft}
             >
-              确认添加
+              {i18n.t("superchat.panel.questions.confirmAdd")}
             </Button>
           </div>
         )}
@@ -8065,7 +7970,7 @@ function SkillStudioStatusCard({ event }: { event: Extract<SkillStudioUiEvent, {
   return (
     <div className="flex items-center gap-2 px-1 py-1 text-xs text-muted-foreground">
       <ListTree className="size-3.5 shrink-0 text-cyan-100/70" />
-      <span>{event.message || "正在进入 Skill Studio..."}</span>
+      <span>{event.message || i18n.t("superchat.panel.questions.enteringStudio")}</span>
       <DotsIndicator />
     </div>
   );
@@ -8256,7 +8161,7 @@ export const MessageBubble = memo(function MessageBubble({
     && (visibleCanvasCommandFeedbacks.length > 0 || canvasCommandApprovals.length > 0)
     && (
       looksLikeCanvasExecutionNarration(message.text)
-      || displayText.trim() === EMPTY_AGENT_REPLY_TEXT
+      || displayText.trim() === emptyAgentReplyText()
     );
   const hasCanvasCommandSurface =
     visibleCanvasCommandFeedbacks.length > 0
@@ -8308,8 +8213,8 @@ export const MessageBubble = memo(function MessageBubble({
 
   const copyText = async () => {
     const ok = await writeClipboardText(message.text);
-    if (ok) toast.success("已复制");
-    else toast.error("复制失败");
+    if (ok) toast.success(i18n.t("superchat.panel.copied"));
+    else toast.error(i18n.t("superchat.panel.copyFailed"));
   };
   const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
   const speak = () => {
@@ -8780,7 +8685,7 @@ export const MessageBubble = memo(function MessageBubble({
                 ) : waitingForUserReply ? (
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs text-muted-foreground">
                       <ListTree className="size-3.5" />
-                      <span>正在等待您的回复</span>
+                      <span>{i18n.t("superchat.panel.waitingForReply")}</span>
                     </div>
                 ) : null}
               </div>
@@ -9567,9 +9472,9 @@ function createSpeechRecognition(): SpeechRecognitionLike | null {
 }
 
 const VIDEO_CREATION_RE =
-  /(生成|创建|制作|开始|做|转|剪|出).{0,12}(视频|短剧|短片|成片|影片)|(?:视频|短剧|短片|成片|影片).{0,12}(生成|创建|制作|开始|做|转)|create.{0,16}video|make.{0,16}video|generate.{0,16}video|story.{0,12}video/i;
+  /(?:create|make|generate|produce|start|turn|edit|render).{0,16}(?:video|short drama|short film|final cut)|(?:video|short drama|short film|final cut).{0,12}(?:generate|create|make|start|render)|story.{0,12}video|(?:tạo|làm|sản xuất|bắt đầu|dựng).{0,16}(?:video|phim ngắn|phim)|(?:video|phim ngắn).{0,12}(?:tạo|làm|bắt đầu)/i;
 const UPLOADED_FILES_QUERY_RE =
-  /(当前|现在|刚才|我)?\s*(上传|传了|传过|已上传).{0,12}(哪些|什么|列表|文件|剧本|小说)|(?:what|which|list|show).{0,20}uploaded.{0,10}(files?|scripts?)/i;
+  /(?:what|which|list|show).{0,20}uploaded.{0,10}(?:files?|scripts?|novels?)|(?:tệp|tập tin|file|kịch bản|tiểu thuyết).{0,12}(?:đã tải lên|đã upload)|(?:đã tải lên|đã upload).{0,12}(?:những gì|gì|danh sách|tệp|file|kịch bản|tiểu thuyết)/i;
 
 const NOVEL_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md", ".doc", ".docx"]);
 const INLINE_TEXT_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md"]);
@@ -9663,11 +9568,11 @@ function shouldReportUploadedFiles(text: string): boolean {
 }
 
 function isOverwriteChoice(text: string): boolean {
-  return /^覆盖[。.!！?？\s]*$/.test(text.trim());
+  return /^(?:overwrite|replace|ghi đè)[.!?\s]*$/i.test(text.trim());
 }
 
 function isFinalOverwriteConfirmation(text: string): boolean {
-  return /^(确定|继续)[。.!！?？\s]*$/.test(text.trim());
+  return /^(?:confirm|continue|yes|ok|xác nhận|tiếp tục|đồng ý)[.!?\s]*$/i.test(text.trim());
 }
 
 function uploadedFileFromPrepared(item: PreparedIngestAttachment): UploadedIngestFile | null {
@@ -9722,7 +9627,7 @@ function buildReingestConfirmationContext(
     `filename: ${pending.filename}`,
     pending.stage === "choose_overwrite"
       ? "The current project has already ingested a script. Do not call ingest/start yet. Tell the user the current project is not empty and ask only whether they want to overwrite this project. Do not recommend creating a new project, and do not offer to create another project from the current project flow."
-      : "The user chose overwrite. Do not call ingest/start yet. Ask the second confirmation and warn that overwrite/rebuild will clear existing characters, episodes, scripts, sketches, audio, videos, and other pipeline outputs. Only an exact user reply of 确定 or 继续 may proceed.",
+      : "The user chose overwrite. Do not call ingest/start yet. Ask the second confirmation and warn that overwrite/rebuild will clear existing characters, episodes, scripts, sketches, audio, videos, and other pipeline outputs. Only an exact user reply of Confirm or Continue may proceed.",
     "[/DRAMACLAW_REINGEST_CONFIRMATION]",
   ].join("\n");
 }
@@ -10281,7 +10186,7 @@ function CanvasNodeReferenceThumb({
       <button
         type="button"
         className="absolute right-0.5 top-0.5 z-20 flex size-4 items-center justify-center rounded-full bg-black/70 text-white/75 opacity-0 shadow-sm backdrop-blur transition hover:bg-black/85 hover:text-white group-hover:opacity-100 group-focus-within:opacity-100"
-        aria-label="移除画布引用"
+        aria-label={i18n.t("superchat.panel.removeCanvasReference")}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -10524,7 +10429,7 @@ const FREEZONE_NODE_CHIP_GLYPH: Record<AssetBoardColumn, string> = {
   audio: "♪",
 };
 
-/** 草稿无节点提及时复用的空查表，避免每帧新建 Map 触发编辑器重渲染。 */
+/** Shared empty lookup for drafts with no node mentions, avoiding a new Map every frame that would re-render the editor. */
 const EMPTY_FREEZONE_NODE_MENTION_LOOKUP: FreezoneNodeMentionLookup = new Map();
 
 function buildFreezoneNodeChipElement(
@@ -10537,7 +10442,7 @@ function buildFreezoneNodeChipElement(
   chip.dataset.freezoneNodeLabel = label;
   chip.contentEditable = "false";
   chip.className = FREEZONE_CHIP_CLASS;
-  // 不挂原生 title：hover 走下方 React 富预览浮层，两者并存会同时冒两个提示。
+  // No native title: hover uses the React rich preview overlay below, and having both would pop up two tooltips at once.
   chip.setAttribute("aria-label", label);
 
   if (meta?.thumbnailUrl) {
@@ -10548,7 +10453,7 @@ function buildFreezoneNodeChipElement(
     thumb.className = "size-4 shrink-0 rounded-[3px] object-cover";
     chip.appendChild(thumb);
   } else if (meta?.column === "video" && meta.mediaUrl) {
-    // 视频没记封面：拿片源取首帧当缩略图（对齐故事板 VideoThumb 的 #t=0.1 兜底）。
+    // Video with no stored cover: take the first frame from the media source as the thumbnail (matches the storyboard VideoThumb #t=0.1 fallback).
     const thumb = document.createElement("video");
     thumb.src = `${meta.mediaUrl}#t=0.1`;
     thumb.muted = true;
@@ -10609,7 +10514,7 @@ function renderFreezoneSkillEditorContent(
 
   let cursor = 0;
   for (const mention of mentions) {
-    if (mention.start < cursor) continue; // 防御：token 不重叠
+    if (mention.start < cursor) continue; // defensive: tokens do not overlap
     if (mention.start > cursor) {
       root.appendChild(document.createTextNode(value.slice(cursor, mention.start)));
     }
@@ -10686,7 +10591,7 @@ function FreezoneSkillInlineEditor({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const lastEmittedValueRef = useRef(value);
   const lastRenderedSuggestionsKeyRef = useRef("");
-  // 悬浮预览：hover 引用 chip 时在其上方（空间不足则下方）浮出放大缩略图 + 名称/类型卡。
+  // Hover preview: when hovering a reference chip, an enlarged thumbnail + name/type card pops up above it (below if there is not enough room).
   const [mentionPreview, setMentionPreview] = useState<
     (FreezoneNodePreviewInfo & { left: number; top: number; placement: "above" | "below" }) | null
   >(null);
@@ -10743,9 +10648,9 @@ function FreezoneSkillInlineEditor({
     onKeyDown(event);
   }, [onChange, onKeyDown]);
 
-  // 事件委托：chip 是命令式注入的动态 DOM，逐个挂 mouseenter 会随每次重渲染丢失，
-  // 故在稳定的编辑器根上用冒泡的 mouseover 判定「当前指到哪个引用 chip」。指到非 chip
-  // 处（正文/空白）同样走这里清空，离开编辑器再由 mouseleave 兜底。
+  // Event delegation: chips are imperatively injected dynamic DOM, and attaching mouseenter to each one would be lost on every re-render,
+  // so a bubbling mouseover on the stable editor root decides "which reference chip is currently pointed at". Pointing at a non-chip
+  // spot (body text / blank) also clears it here, and leaving the editor is covered by mouseleave as a fallback.
   const handleEditorMouseOver = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const editor = editorRef.current;
@@ -10763,7 +10668,7 @@ function FreezoneSkillInlineEditor({
       const info = buildFreezoneNodePreviewInfo(label, nodeLookup.get(nodeId) ?? null);
       const rect = chip.getBoundingClientRect();
       const left = Math.min(Math.max((rect.left + rect.right) / 2, 16), window.innerWidth - 16);
-      // 输入框贴着面板底部，上方基本恒有空间；仅在贴近视口顶端（放不下卡片）时翻到下方。
+      // The composer sits against the bottom of the panel so there is almost always room above; only flip below when close to the top of the viewport (the card would not fit).
       const placement: "above" | "below" = rect.top >= 240 ? "above" : "below";
       setMentionPreview({
         ...info,
@@ -10816,8 +10721,8 @@ function FreezoneSkillInlineEditor({
                 />
               ) : (
                 mentionPreview.videoPosterUrl && (
-                  // 视频引用：hover 预览时自动循环播放（静音+内联满足浏览器自动播放策略），
-                  // 不再停在首帧。key 绑片源，切到另一个视频 chip 时重挂 <video> 从头播。
+                  // Video reference: auto-loop on hover preview (muted + inline satisfies browser autoplay policies),
+                  // no longer stuck on the first frame. The key is bound to the media source so switching to another video chip remounts <video> from the start.
                   <video
                     key={mentionPreview.videoPosterUrl}
                     src={mentionPreview.videoPosterUrl}
@@ -10850,24 +10755,24 @@ function FreezoneSkillInlineEditor({
 }
 
 const CANVAS_CONTEXT_REQUEST_LABELS: Record<string, string> = {
-  canvas_ontology: "画布 Ontology",
-  canvas_summary: "画布摘要",
-  canvas_action_catalog: "画布能力",
-  canvas_command_catalog: "命令规则",
-  node_detail: "节点详情",
-  neighbor_graph: "上下游关系",
-  node_action_catalog: "节点能力",
-  action_catalog: "节点能力",
-  action_catalog_by_id: "能力详情",
-  node_create_schema: "节点参数",
-  audio_voice_options: "音色选项",
-  slot_candidates: "可提交槽位",
-  mainline_projection_assets: "主线资产",
-  selection_detail: "当前选择",
-  link_type_catalog: "连线类型",
-  validate_canvas_commands: "命令校验",
+  get canvas_ontology() { return i18n.t("superchat.panel.contextLabels.canvas_ontology"); },
+  get canvas_summary() { return i18n.t("superchat.panel.contextLabels.canvas_summary"); },
+  get canvas_action_catalog() { return i18n.t("superchat.panel.contextLabels.canvas_action_catalog"); },
+  get canvas_command_catalog() { return i18n.t("superchat.panel.contextLabels.canvas_command_catalog"); },
+  get node_detail() { return i18n.t("superchat.panel.contextLabels.node_detail"); },
+  get neighbor_graph() { return i18n.t("superchat.panel.contextLabels.neighbor_graph"); },
+  get node_action_catalog() { return i18n.t("superchat.panel.contextLabels.node_action_catalog"); },
+  get action_catalog() { return i18n.t("superchat.panel.contextLabels.action_catalog"); },
+  get action_catalog_by_id() { return i18n.t("superchat.panel.contextLabels.action_catalog_by_id"); },
+  get node_create_schema() { return i18n.t("superchat.panel.contextLabels.node_create_schema"); },
+  get audio_voice_options() { return i18n.t("superchat.panel.contextLabels.audio_voice_options"); },
+  get slot_candidates() { return i18n.t("superchat.panel.contextLabels.slot_candidates"); },
+  get mainline_projection_assets() { return i18n.t("superchat.panel.contextLabels.mainline_projection_assets"); },
+  get selection_detail() { return i18n.t("superchat.panel.contextLabels.selection_detail"); },
+  get link_type_catalog() { return i18n.t("superchat.panel.contextLabels.link_type_catalog"); },
+  get validate_canvas_commands() { return i18n.t("superchat.panel.contextLabels.validate_canvas_commands"); },
 };
-const CANVAS_CONTEXT_THINKING_LABEL = "正在思考中";
+const CANVAS_CONTEXT_THINKING_LABEL = "Thinking...";
 type CanvasContextActivity = {
   key: string;
   turnId: string | null;
@@ -10885,6 +10790,8 @@ type CanvasCommandPlan = {
   index: number;
   type: CanvasChatCommand["type"];
   label: string;
+  /** Stable machine code for the plan label (e.g. plan_label_generate_image). */
+  code?: string;
   primary?: string;
   details: string[];
   destructive?: boolean;
@@ -11059,14 +10966,14 @@ const DIRECTOR_RUN_MODE_OPTIONS: ReadonlyArray<{
   {
     value: "manual_confirm",
     icon: ShieldAlert,
-    label: "手动模式",
-    description: "每个生成步骤执行前由你确认",
+    get label() { return i18n.t("superchat.panel.runMode.manual.label"); },
+    get description() { return i18n.t("superchat.panel.runMode.manual.description"); },
   },
   {
     value: "episode_auto",
     icon: Gauge,
-    label: "本集自动",
-    description: "二次确认后自动推进本集，失败或成片完成时停止",
+    get label() { return i18n.t("superchat.panel.runMode.auto.label"); },
+    get description() { return i18n.t("superchat.panel.runMode.auto.description"); },
   },
 ];
 
@@ -11147,7 +11054,7 @@ async function getDirectorAutoServer(project: string): Promise<DirectorAutoServe
   return response.data;
 }
 
-/** 输入框左下角那颗「手动确认 / 自动生成」下拉里的两档。 */
+/** The two options in the "Manual confirm / Auto generate" dropdown at the bottom-left of the composer. */
 const CANVAS_COMMAND_EXECUTION_MODE_OPTIONS: ReadonlyArray<{
   value: CanvasCommandExecutionMode;
   icon: LucideIcon;
@@ -11157,14 +11064,14 @@ const CANVAS_COMMAND_EXECUTION_MODE_OPTIONS: ReadonlyArray<{
   {
     value: "manual_confirm",
     icon: ShieldAlert,
-    label: "手动确认",
-    description: "Agent 在执行画布命令前都会请求确认",
+    get label() { return i18n.t("superchat.panel.execMode.manual.label"); },
+    get description() { return i18n.t("superchat.panel.execMode.manual.description"); },
   },
   {
     value: "auto_execute",
     icon: Wrench,
-    label: "自动生成",
-    description: "Agent 会自动执行安全命令并反馈结果",
+    get label() { return i18n.t("superchat.panel.execMode.auto.label"); },
+    get description() { return i18n.t("superchat.panel.execMode.auto.description"); },
   },
 ];
 
@@ -11199,55 +11106,66 @@ function compactJsonValue(value: unknown): string {
 }
 
 function nodeTypeLabel(nodeType: string | undefined): string {
-  if (!nodeType) return "节点";
-  if (nodeType === "imageGenNode") return "图片节点";
-  if (nodeType === "videoNode") return "视频节点";
-  if (nodeType === "textAnnotationNode") return "文本节点";
-  if (nodeType === "audioNode") return "音频节点";
-  if (nodeType === "scriptNode") return "脚本节点";
-  return nodeType;
+  if (!nodeType) return i18n.t("superchat.panel.plan.nodeType.node");
+  const keys: Record<string, string> = {
+    imageGenNode: "image",
+    videoNode: "video",
+    textAnnotationNode: "text",
+    audioNode: "audio",
+    scriptNode: "script",
+  };
+  const key = keys[nodeType];
+  return key ? i18n.t(`superchat.panel.plan.nodeType.${key}`) : nodeType;
+}
+
+function canvasCommandPlanCode(command: CanvasChatCommand): string | undefined {
+  if (command.type === "run_node_action") {
+    if (command.action === "generate_image") return "plan_label_generate_image";
+    if (command.action === "generate_video") return "plan_label_generate_video";
+  }
+  return undefined;
 }
 
 function canvasCommandPlanLabel(command: CanvasChatCommand): string {
   switch (command.type) {
     case "create_node":
-      return `创建${nodeTypeLabel(command.node_type)}`;
+      return i18n.t("superchat.panel.plan.createNode", { type: nodeTypeLabel(command.node_type) });
     case "add_next_node":
-      return `添加下游${nodeTypeLabel(command.node_type)}`;
+      return i18n.t("superchat.panel.plan.addNextNode", { type: nodeTypeLabel(command.node_type) });
     case "update_node_data":
-      return "更新节点参数";
+      return i18n.t("superchat.panel.plan.updateNodeData");
     case "delete_nodes":
-      return "删除节点";
+      return i18n.t("superchat.panel.plan.deleteNodes");
     case "delete_edges":
-      return "断开连接";
+      return i18n.t("superchat.panel.plan.deleteEdges");
     case "create_edge":
-      return "创建连接";
+      return i18n.t("superchat.panel.plan.createEdge");
     case "layout_nodes":
-      return "整理布局";
+      return i18n.t("superchat.panel.plan.layoutNodes");
     case "group_nodes":
-      return "创建普通组";
+      return i18n.t("superchat.panel.plan.groupNodes");
     case "move_nodes":
-      return "移动节点";
+      return i18n.t("superchat.panel.plan.moveNodes");
     case "select_nodes":
-      return "选中节点";
+      return i18n.t("superchat.panel.plan.selectNodes");
     case "run_node_action":
-      if (command.action === "generate_image") return "生成图片";
-      if (command.action === "generate_video") return "生成视频";
-      if (command.action === "open_video_compose_modal") return "打开视频合成";
-      if (command.action === "auto_compose_video") return "自动合成视频";
-      if (command.action === "open_video_viewer") return "打开视频";
-      return "执行节点动作";
+      if (command.action === "generate_image") return i18n.t("superchat.panel.plan.generateImage");
+      if (command.action === "generate_video") return i18n.t("superchat.panel.plan.generateVideo");
+      if (command.action === "open_video_compose_modal") return i18n.t("superchat.panel.plan.openVideoCompose");
+      if (command.action === "auto_compose_video") return i18n.t("superchat.panel.plan.autoComposeVideo");
+      if (command.action === "open_video_viewer") return i18n.t("superchat.panel.plan.openVideoViewer");
+      return i18n.t("superchat.panel.plan.runNodeAction");
     case "open_mainline_projection":
-      return "打开主线虾画";
+      return i18n.t("superchat.panel.plan.openMainline");
     default:
-      return "画布操作";
+      return i18n.t("superchat.panel.plan.canvasOperation");
   }
 }
 
 function canvasCommandPlanPrimary(command: CanvasChatCommand): string | undefined {
   switch (command.type) {
     case "create_node":
-      // 规范化补的合成 client_id 只是内部标识，不展示给用户。
+      // The synthetic client_id added by normalization is only an internal identifier and is not shown to the user.
       return isGeneratedCanvasClientId(command.client_id) ? undefined : command.client_id;
     case "add_next_node":
       return command.source_node_id;
@@ -11257,13 +11175,13 @@ function canvasCommandPlanPrimary(command: CanvasChatCommand): string | undefine
     case "open_mainline_projection":
       if (command.request.scope === "beat") return `EP${command.request.episode ?? ""} / Beat ${command.request.beat ?? ""}`;
       if (command.request.scope === "episode") return `EP${command.request.episode ?? ""}`;
-      return command.request.asset_id ?? command.request.identity_id ?? command.request.character ?? command.request.asset_kind ?? "主线素材";
+      return command.request.asset_id ?? command.request.identity_id ?? command.request.character ?? command.request.asset_kind ?? i18n.t("superchat.panel.plan.primary.mainlineAsset");
     case "delete_nodes":
     case "select_nodes":
     case "group_nodes":
       return command.node_ids.join(", ");
     case "layout_nodes":
-      return command.node_ids?.length ? command.node_ids.join(", ") : "当前画布";
+      return command.node_ids?.length ? command.node_ids.join(", ") : i18n.t("superchat.panel.plan.primary.currentCanvas");
     case "create_edge":
       return `${command.source} -> ${command.target}`;
     case "delete_edges":
@@ -11283,46 +11201,46 @@ function canvasCommandPlanDetails(command: CanvasChatCommand): string[] {
   const details: string[] = [];
   if (command.type === "create_node" || command.type === "add_next_node") {
     if (command.type === "create_node" && command.position) {
-      details.push(`位置：${Math.round(command.position.x)}, ${Math.round(command.position.y)}`);
+      details.push(i18n.t("superchat.panel.plan.detail.position", { x: Math.round(command.position.x), y: Math.round(command.position.y) }));
     }
     if (command.type === "add_next_node") {
-      details.push(`上游：${command.source_node_id}`);
-      if (command.connect) details.push("自动连线");
+      details.push(i18n.t("superchat.panel.plan.detail.upstream", { id: command.source_node_id }));
+      if (command.connect) details.push(i18n.t("superchat.panel.plan.detail.autoConnect"));
     }
     for (const key of ["displayName", "title", "content", "text", "prompt", "model", "size", "requestAspectRatio", "aspectRatio", "count"] as const) {
       const value = command.data?.[key as keyof typeof command.data];
-      if (value !== undefined && value !== "") details.push(`${key}：${compactJsonValue(value)}`);
+      if (value !== undefined && value !== "") details.push(i18n.t("superchat.panel.plan.detail.kv", { key, value: compactJsonValue(value) }));
     }
   } else if (command.type === "update_node_data") {
     for (const [key, value] of Object.entries(command.data)) {
       if (value !== undefined && value !== "") details.push(`${key} -> ${compactJsonValue(value)}`);
     }
   } else if (command.type === "run_node_action") {
-    details.push(`动作：${command.action}`);
+    details.push(i18n.t("superchat.panel.plan.detail.action", { action: command.action }));
   } else if (command.type === "open_mainline_projection") {
-    details.push(`范围：${command.request.scope}`);
-    if (typeof command.request.episode === "number") details.push(`集数：${command.request.episode}`);
-    if (typeof command.request.beat === "number") details.push(`Beat：${command.request.beat}`);
-    if (command.request.primary_slot) details.push(`目标：${command.request.primary_slot}`);
-    if (command.request.asset_kind) details.push(`素材类型：${command.request.asset_kind}`);
+    details.push(i18n.t("superchat.panel.plan.detail.scope", { scope: command.request.scope }));
+    if (typeof command.request.episode === "number") details.push(i18n.t("superchat.panel.plan.detail.episode", { episode: command.request.episode }));
+    if (typeof command.request.beat === "number") details.push(`Beat: ${command.request.beat}`);
+    if (command.request.primary_slot) details.push(i18n.t("superchat.panel.plan.detail.target", { target: command.request.primary_slot }));
+    if (command.request.asset_kind) details.push(i18n.t("superchat.panel.plan.detail.assetKind", { kind: command.request.asset_kind }));
   } else if (command.type === "create_edge") {
-    details.push(`link_type：${command.link_type}`);
+    details.push(`link_type: ${command.link_type}`);
   } else if (command.type === "layout_nodes") {
-    details.push(`模式：${command.mode}`);
-    details.push(command.node_ids?.length ? `数量：${command.node_ids.length}` : "范围：当前画布全部节点");
+    details.push(i18n.t("superchat.panel.plan.detail.mode", { mode: command.mode }));
+    details.push(command.node_ids?.length ? i18n.t("superchat.panel.plan.detail.count", { count: command.node_ids.length }) : i18n.t("superchat.panel.plan.detail.allNodes"));
   } else if (command.type === "group_nodes") {
-    details.push(`数量：${command.node_ids.length}`);
-    if (command.label) details.push(`名称：${command.label}`);
+    details.push(i18n.t("superchat.panel.plan.detail.count", { count: command.node_ids.length }));
+    if (command.label) details.push(i18n.t("superchat.panel.plan.detail.name", { name: command.label }));
   } else if (command.type === "move_nodes") {
     const moveCount = new Set([
       ...Object.keys(command.positions ?? {}),
       ...Object.keys(command.deltas ?? {}),
     ]).size;
-    details.push(`数量：${moveCount}`);
+    details.push(i18n.t("superchat.panel.plan.detail.count", { count: moveCount }));
   } else if (command.type === "delete_nodes") {
-    details.push(`数量：${command.node_ids.length}`);
+    details.push(i18n.t("superchat.panel.plan.detail.count", { count: command.node_ids.length }));
   } else if (command.type === "delete_edges") {
-    details.push(`数量：${(command.edge_ids?.length ?? 0) + (command.pairs?.length ?? 0)}`);
+    details.push(i18n.t("superchat.panel.plan.detail.count", { count: (command.edge_ids?.length ?? 0) + (command.pairs?.length ?? 0) }));
   }
   return details;
 }
@@ -11341,6 +11259,7 @@ function canvasCommandPlansFromEnvelopes(envelopes: CanvasChatCommandEnvelope[] 
         index,
         type: command.type,
         label: canvasCommandPlanLabel(command),
+        code: canvasCommandPlanCode(command),
         primary: canvasCommandPlanPrimary(command),
         details: canvasCommandPlanDetails(command),
         destructive: canvasCommandIsDestructive(command),
@@ -11466,7 +11385,7 @@ function createThinkingCanvasContextActivity(turnId: string): CanvasContextActiv
 }
 
 function canvasContextActivityIsValidation(activity: CanvasContextActivity): boolean {
-  return activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands) || activity.labels.includes("命令校验");
+  return activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands);
 }
 
 function canvasCommandAnchorEndIndex(text: string, anchorTextPrefix?: string | null): number {
@@ -11495,8 +11414,9 @@ function relaxedCanvasCommandAnchorEndIndex(text: string, anchorTextPrefix: stri
 
 function firstCanvasCommandSemanticMarkerIndex(text: string, markers: string[]): number | null {
   let best: number | null = null;
+  const lowerText = text.toLowerCase();
   for (const marker of markers) {
-    const index = text.indexOf(marker);
+    const index = lowerText.indexOf(marker.toLowerCase());
     if (index < 0) continue;
     best = best == null ? index : Math.min(best, index);
   }
@@ -11508,17 +11428,18 @@ function canvasCommandSemanticAnchorIndex(text: string, event: CanvasCommandSurf
   if (
     event.kind === "context" &&
     (
-      event.activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands) ||
-      event.activity.labels.includes("命令校验")
+      event.activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands)
     )
   ) {
     return firstCanvasCommandSemanticMarkerIndex(text, [
-      "验证通过",
-      "校验通过",
-      "验证失败",
-      "校验失败",
-      "命令验证",
-      "命令校验",
+      "validation passed",
+      "validated successfully",
+      "validation failed",
+      "command validation",
+      "validating the command",
+      "kiểm tra thành công",
+      "kiểm tra thất bại",
+      "kiểm tra lệnh",
     ]);
   }
   if (event.kind === "context") {
@@ -11527,39 +11448,43 @@ function canvasCommandSemanticAnchorIndex(text: string, event: CanvasCommandSurf
   }
   if (event.kind === "feedback" && event.feedback.applied + event.feedback.openedUiActions > 0) {
     return firstCanvasCommandSemanticMarkerIndex(text, [
-      "已经在画布上",
-      "已在画布上",
-      "已成功创建",
-      "成功创建",
-      "已经成功",
-      "我已经成功",
-      "已创建",
-      "创建好了",
-      "搭建好了",
+      "is now on the canvas",
+      "are now on the canvas",
+      "successfully created",
+      "i have created",
+      "i've created",
+      "has been created",
+      "have been created",
+      "đã được tạo",
+      "đã tạo thành công",
+      "đã có trên canvas",
     ]);
   }
   return null;
 }
 
 function canvasContextReadSemanticAnchorIndex(text: string, activity: CanvasContextActivity): number | null {
-  if (!activity.labels.some((label) => label !== CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands && label !== "命令校验")) {
+  if (!activity.labels.some((label) => label !== CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands)) {
     return null;
   }
   const requestMarkers = [
-    "我需要获取",
-    "我需要读取",
-    "我先获取",
-    "我先读取",
-    "先获取",
-    "先读取",
-    "让我先查看",
-    "让我查看",
-    "查看一下",
-    "创建schema",
-    "获取该节点的详细信息",
-    "读取节点详情",
-    "检查当前",
-    "确认当前",
+    "i need to fetch",
+    "i need to read",
+    "i'll fetch",
+    "i'll read",
+    "let me first fetch",
+    "let me first read",
+    "let me check",
+    "let me look at",
+    "create schema",
+    "get the details of the node",
+    "read the node details",
+    "check the current",
+    "confirm the current",
+    "tôi cần lấy",
+    "tôi cần đọc",
+    "để tôi xem",
+    "để tôi kiểm tra",
   ];
   const requestIndex = firstCanvasCommandSemanticMarkerIndex(text, requestMarkers);
   if (requestIndex != null) {
@@ -11567,12 +11492,15 @@ function canvasContextReadSemanticAnchorIndex(text: string, activity: CanvasCont
     return paragraphEnd < 0 ? text.length : paragraphEnd + 2;
   }
   return firstCanvasCommandSemanticMarkerIndex(text, [
-    "现在我已经获取",
-    "现在我已获取",
-    "已经获取",
-    "已获取",
-    "已经读取",
-    "已读取",
+    "i have now fetched",
+    "i've now fetched",
+    "already fetched",
+    "have fetched",
+    "already read",
+    "have read",
+    "tôi đã lấy",
+    "tôi đã đọc",
+    "đã lấy được",
   ]);
 }
 
@@ -12009,8 +11937,8 @@ function canvasCommandFeedbackIsValidationOnly(feedback: CanvasCommandFeedback):
     feedback.applied === 0 &&
     feedback.openedUiActions === 0 &&
     steps.length > 0 &&
-    !steps.some((step) => step.label === "已取消") &&
-    steps.every((step) => step.type === "validate" || step.label === "校验画布命令")
+    !steps.some((step) => step.label === i18n.t("superchat.panel.canvas.cancelledStep")) &&
+    steps.every((step) => step.type === "validate" || step.label === i18n.t("freezone.cmd.validateCanvasCommand"))
   );
 }
 
@@ -12294,7 +12222,7 @@ interface SuperChatPanelProps {
   currentCanvasOntologyContext?: CanvasOntologyContext | null;
   pendingAttachments?: ChatAttachment[];
   onPendingAttachmentsConsumed?: () => void;
-  /** 「添加到对话」落地：一批 nodeId,面板挂载后 drain 成 draft 里的行内 mention chip。 */
+  /** "Add to chat" landing: a batch of nodeIds that, once the panel mounts, are drained into inline mention chips in the draft. */
   pendingNodeMentions?: string[];
   onPendingNodeMentionsConsumed?: () => void;
   onRequestClose?: () => void;
@@ -12408,7 +12336,7 @@ export function SuperChatPanel({
     void apiCall<AgentCapabilityPriceReference>("chat/agent-capability-price-reference")
       .then(setAgentBillingReference)
       .catch(() => {
-        toast.error("暂时无法加载虾导计费说明");
+        toast.error(i18n.t("superchat.panel.billing.loadFailed"));
       });
   }, [agentBillingReference, isFreezoneLayout]);
   const shouldStickToBottomRef = useRef(true);
@@ -12529,7 +12457,7 @@ export function SuperChatPanel({
     () => (nodeAtQuery === null ? [] : filterFreezoneNodeSuggestions(allNodeSuggestions, nodeAtQuery)),
     [allNodeSuggestions, nodeAtQuery],
   );
-  // 仅当草稿里已含节点 token 时才建查表；避免无引用时每帧重算 buildAssetBoard。
+  // Only build the lookup when the draft already contains node tokens; avoids recomputing buildAssetBoard every frame when there are no references.
   const hasNodeMentionDraft = isFreezoneLayout && draft.includes("@[");
   const nodeMentionLookup = useMemo(
     () =>
@@ -12699,7 +12627,7 @@ export function SuperChatPanel({
     params.project,
     selectedFreezoneNodes,
   ]);
-  // 正文里 @ 提及的节点 → 结构化附件（与「当前选中」附件并行，提交时合并去重）。
+  // @-mentioned nodes in the body -> structured attachments (parallel to the "currently selected" attachments, merged and deduplicated on submit).
   const mentionedNodeReferenceAttachment = useMemo(() => {
     if (!isFreezoneLayout) return null;
     const ids = freezoneNodeMentionIds(draft);
@@ -12907,15 +12835,15 @@ export function SuperChatPanel({
           episode: detail.episode ?? current.episode ?? 1,
           voicePolicy: detail.voicePolicy ?? current.voicePolicy,
         });
-        toast.info("本集自动已暂停后续推进，等待你确认是否修改", { duration: 10000 });
+        toast.info(i18n.t("superchat.panel.auto.pausedAwaitingConfirm"), { duration: 10000 });
         return;
       }
       if (detail?.status === "paused" || detail?.status === "completed") {
         updateDirectorRunState(defaultDirectorRunState());
         if (detail.status === "completed") {
-          toast.success(`第 ${detail.episode ?? "当前"} 集自动制作已完成`);
-        } else if (detail.message && detail.message !== "用户切换为手动模式") {
-          toast.error("本集自动已暂停");
+          toast.success(i18n.t("superchat.panel.auto.episodeDone", { episode: detail.episode ?? i18n.t("superchat.panel.auto.currentEpisode") }));
+        } else if (detail.message && !/switched to manual mode/i.test(detail.message)) {
+          toast.error(i18n.t("superchat.panel.auto.paused"));
         }
       }
     };
@@ -12926,7 +12854,7 @@ export function SuperChatPanel({
   const setDirectorExecutionMode = useCallback((mode: DirectorRunMode) => {
     if (mode === "episode_auto") {
       updateDirectorRunState(activateDirectorEpisodeAuto());
-      toast.success("已选择本集自动；发送开始指令后，还需再次确认才会执行", {
+      toast.success(i18n.t("superchat.panel.auto.selected"), {
         duration: 10000,
       });
     } else {
@@ -12934,7 +12862,7 @@ export function SuperChatPanel({
       const project = params.project?.trim();
       if (project) {
         void pauseDirectorAutoServer(project).catch(() => {
-          toast.error("已切换为手动模式，但后端自动任务暂停请求未送达");
+          toast.error(i18n.t("superchat.panel.auto.manualPauseFailed"));
         });
       }
     }
@@ -13012,8 +12940,8 @@ export function SuperChatPanel({
       const label = buildChatTaskLabel(event.task, t);
       const text =
         event.type === "task_complete"
-          ? `✅ ${label}已完成。你可以让我查看结果，或继续下一步。`
-          : `${label}失败：${event.task.error || event.task.current_task || "未提供具体错误原因"}\n请根据错误处理前置条件后再继续。`;
+          ? i18n.t("superchat.panel.taskNotice.completed", { label })
+          : i18n.t("superchat.panel.taskNotice.failed", { label, error: event.task.error || event.task.current_task || i18n.t("superchat.panel.taskNotice.noReason") });
       void chat.appendNotification(text);
     });
   }, [chat.appendNotification, params.project, t, taskEventBus, variant]);
@@ -13571,7 +13499,7 @@ export function SuperChatPanel({
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          const errorMessage = `画布命令执行异常：${message}`;
+          const errorMessage = i18n.t("superchat.panel.canvas.executionError", { message });
           result = {
             applied: 0,
             openedUiActions: 0,
@@ -13582,7 +13510,7 @@ export function SuperChatPanel({
                 commandIndex: -1,
                 type: "validate",
                 status: "error",
-                label: "画布执行异常",
+                label: i18n.t("superchat.panel.canvas.executionErrorLabel"),
                 error: errorMessage,
               },
             ],
@@ -13675,7 +13603,7 @@ export function SuperChatPanel({
       );
     }
     const receivedAt = Date.now();
-    const cancelMessage = reason === "timeout" ? "画布操作等待超时，已自动取消" : t("freezone.chat.canvasCommandsCancelled");
+    const cancelMessage = reason === "timeout" ? i18n.t("superchat.panel.canvas.timeoutAutoCancelled") : t("freezone.chat.canvasCommandsCancelled");
     const result: CanvasChatCommandApplyResult = {
       applied: 0,
       openedUiActions: 0,
@@ -13686,7 +13614,7 @@ export function SuperChatPanel({
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "已取消",
+          label: i18n.t("superchat.panel.canvas.cancelledStep"),
           error: cancelMessage,
         },
       ],
@@ -13784,8 +13712,8 @@ export function SuperChatPanel({
     if (canvasCommandExecutionMode !== "auto_execute") return;
     for (const approval of pendingCanvasCommandApprovals) {
       if (approval.requiresUserChoice) continue;
-      // manual_ui 动作必须由用户主动确认。自动模式不能把“重试生成”擅自
-      // 解释成“打开声线选择并改用自定义声线”。
+      // manual_ui actions must be confirmed by the user. Auto mode must not arbitrarily interpret "retry generation"
+      // as "open the voice picker and switch to a custom voice".
       if (canvasApprovalRequiresManualUiAction(approval)) continue;
       if (canvasApprovalRequiresAudioVoiceChoice(approval, canvasNodes)) continue;
       if (
@@ -14246,8 +14174,8 @@ export function SuperChatPanel({
     restoreDraftFocusRef.current = true;
   }, [existingCanvasNodeIds, onPendingAttachmentsConsumed, pendingAttachments]);
 
-  // 「添加到对话」：把待处理的 nodeId drain 成 draft 里的行内 mention chip，
-  // 标题从画布节点解析（与 @ 菜单同源）。挂载后 pendingNodeMentions 已就位即抽干。
+  // "Add to chat": drain pending nodeIds into inline mention chips in the draft,
+  // with titles resolved from canvas nodes (same source as the @ menu). Drained as soon as pendingNodeMentions is in place after mount.
   useEffect(() => {
     if (pendingNodeMentions.length === 0) {
       consumedPendingNodeMentionsKeyRef.current = null;
@@ -14556,13 +14484,13 @@ export function SuperChatPanel({
             await startDirectorAutoServer(project, state.episode ?? 1, voicePolicy);
           } catch (error) {
             toast.error(
-              `无法启动本集自动：${error instanceof Error ? error.message : "后端请求失败"}`,
+              i18n.t("superchat.panel.auto.startFailed", { error: error instanceof Error ? error.message : i18n.t("superchat.panel.auto.requestFailed") }),
             );
             return false;
           }
           const confirmed = confirmDirectorEpisodeAuto({ ...state, voicePolicy });
           updateDirectorRunState(confirmed);
-          toast.success("本集自动已启动，正在检查当前进度", { duration: 10000 });
+          toast.success(i18n.t("superchat.panel.auto.started"), { duration: 10000 });
           nextText = directorAutoRunTransportText(nextText);
         } else if (state.confirmationStage === "awaiting_intervention") {
           nextText = directorAutoInterventionTransportText(nextText);
@@ -14670,7 +14598,7 @@ export function SuperChatPanel({
       setClearDialogOpen(true);
       return;
     }
-    // 双轨附件：画布「当前选中」+ 正文 @ 提及，各自可能为 null，合并去重。
+    // Dual-track attachments: canvas "currently selected" + @-mentions in the body; each may be null, merged and deduplicated.
     const canvasRefAttachments = [
       selectedFreezoneNodeAttachment,
       mentionedNodeReferenceAttachment,
@@ -14678,7 +14606,7 @@ export function SuperChatPanel({
     const messageAttachments = canvasRefAttachments.length > 0
       ? mergeCanvasNodeReferenceAttachments([...attachments, ...canvasRefAttachments])
       : attachments;
-    // 发给 agent 的正文把 @[名](id) 还原成可读的 [名]，nodeId 交由附件精确定位。
+    // The body sent to the agent restores @[name](id) to a readable [name]; the nodeId is left to the attachments for precise targeting.
     const readableDraft = freezoneNodeMentionText(draft).trim();
     const hasCurrentContent = readableDraft.length > 0 || messageAttachments.length > 0;
     if (!hasCurrentContent || preparingSend) return;
@@ -14762,7 +14690,7 @@ export function SuperChatPanel({
     if (showNodeSuggestions && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       const cap = Math.min(nodeSuggestionVisibleCount, filteredNodeSuggestions.length);
-      // 已在已渲染末项且仍有更多结果：先加载下一页再前移，让键盘也能走到窗口外的节点。
+      // Already on the last rendered item with more results: load the next page before moving forward so the keyboard can reach nodes beyond the window.
       if (
         event.key === "ArrowDown"
         && activeNodeSuggestionIndex >= cap - 1
@@ -14792,7 +14720,7 @@ export function SuperChatPanel({
       return;
     }
     if (showNodeSuggestions && event.key === "Escape") {
-      // Esc 收起菜单：仅抹掉正在输入的 @token，保留其余正文，并恢复输入框焦点。
+      // Esc closes the menu: only erase the @token being typed, keep the rest of the body, and restore input focus.
       event.preventDefault();
       setDraft((current) => stripFreezoneNodeAtQuery(current));
       restoreDraftFocusRef.current = true;
@@ -14862,11 +14790,11 @@ export function SuperChatPanel({
     selections: SkillStudioQuestionSelections,
   ): Promise<boolean> => {
     if (!chat.busy || !event.turn_id || event.turn_id !== chat.activeTurnId) {
-      toast.error("这轮对话已结束，不能继续提交这个问题");
+      toast.error(i18n.t("superchat.panel.toast.turnEnded"));
       return false;
     }
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -14892,7 +14820,7 @@ export function SuperChatPanel({
               : buildSkillStudioQuestionResponseForTest(event, selections),
       };
       if (!chat.submitSkillStudioResult(payload)) {
-        toast.error("Skill Studio 连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
         return false;
       }
       if (event.turn_id) {
@@ -14929,7 +14857,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] skill studio result submit failed", error);
-      toast.error("提交 Skill Studio 选择失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.submitSelectionFailed"));
       return false;
     }
   }, [chat, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, updateChatUiEvent]);
@@ -14939,11 +14867,11 @@ export function SuperChatPanel({
     answers: AssistantClarificationAnswers,
   ): Promise<boolean> => {
     if (!chat.busy || !event.turn_id || event.turn_id !== chat.activeTurnId) {
-      toast.error("这轮对话已结束，不能继续提交这个问题");
+      toast.error(i18n.t("superchat.panel.toast.turnEnded"));
       return false;
     }
     if (!event.bridge_key) {
-      toast.error("补充信息桥接缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.clarificationBridgeMissing"));
       return false;
     }
     try {
@@ -14955,7 +14883,7 @@ export function SuperChatPanel({
       if (action === "recommended" && !assistantClarificationCanSubmitRecommended(
         event, answers,
       )) {
-        toast.error("推荐配置缺少有效参数，请重新选择或刷新后重试");
+        toast.error(i18n.t("superchat.panel.toast.recommendedInvalid"));
         return false;
       }
       const skillStudioRevision = activeAssistantClarificationIsSkillStudioRevision(visibleMessages, event);
@@ -14967,7 +14895,7 @@ export function SuperChatPanel({
 	        used_recommended: action === "recommended",
 	      };
       if (!chat.submitAssistantClarificationResult(payload)) {
-        toast.error("补充信息连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.clarificationConnectionNotReady"));
         return false;
       }
       if (event.turn_id) {
@@ -15010,7 +14938,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] clarification result submit failed", error);
-      toast.error("提交补充信息失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.submitClarificationFailed"));
       return false;
     }
 	  }, [chat, params.project, effectiveFreezoneCanvasId, effectiveFreezoneAgentId, persistSkillStudioUiEvent, updateChatUiEvent, visibleMessages]);
@@ -15020,7 +14948,7 @@ export function SuperChatPanel({
     draftPayload: Record<string, unknown>,
   ): Promise<boolean> => {
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -15046,9 +14974,9 @@ export function SuperChatPanel({
         json: payload,
       });
       if (!result.ok || !result.saved_to_catalog) {
-        const errorText = result.errors?.find(Boolean) || result.message || "后端没有确认保存成功";
+        const errorText = result.errors?.find(Boolean) || result.message || i18n.t("superchat.panel.toast.saveNotConfirmed");
         const partiallySaved = Boolean(result.saved_skill_ids?.length || result.saved_recipe_ids?.length);
-        toast.error(partiallySaved && result.message ? result.message : `添加 Skill / Recipe 失败：${errorText}`);
+        toast.error(partiallySaved && result.message ? result.message : i18n.t("superchat.panel.toast.addFailedWithReason", { error: errorText }));
         return false;
       }
       payload.saved_skill_ids = result.saved_skill_ids ?? payload.saved_skill_ids;
@@ -15108,11 +15036,11 @@ export function SuperChatPanel({
           );
         persistSkillStudioUiEvent(event.turn_id, persistedEvent);
       }
-      toast.success("已添加到虾画 Skills / Recipes");
+      toast.success(i18n.t("superchat.panel.skillDraft.footer.submitted"));
       return true;
     } catch (error) {
       console.error("[superchat] skill studio draft submit failed", error);
-      toast.error("添加 Skill / Recipe 失败，请检查必填字段后重试");
+      toast.error(i18n.t("superchat.panel.toast.addFailed"));
       return false;
     }
   }, [chat.activeTurnId, chat.busy, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, queryClient, updateChatUiEvent]);
@@ -15153,7 +15081,7 @@ export function SuperChatPanel({
   ): Promise<boolean> => {
     if (!event.turn_id) return false;
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -15165,7 +15093,7 @@ export function SuperChatPanel({
         }),
       };
       if (!chat.submitSkillStudioResult(payload)) {
-        toast.error("Skill Studio 连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
         return false;
       }
       const receivedAt = uiEventFirstReceivedAt(event);
@@ -15200,7 +15128,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] skill studio draft revision submit failed", error);
-      toast.error("启动草稿调整失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.startRevisionFailed"));
       return false;
     }
   }, [chat, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, updateChatUiEvent]);
@@ -15211,7 +15139,7 @@ export function SuperChatPanel({
   ) => {
     if (!event.turn_id) return;
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return;
     }
     const payload = {
@@ -15222,7 +15150,7 @@ export function SuperChatPanel({
       }),
     };
     if (!chat.submitSkillStudioResult(payload)) {
-      toast.error("Skill Studio 连接未就绪，请重试");
+      toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
       return;
     }
     const receivedAt = uiEventFirstReceivedAt(event);
@@ -15393,7 +15321,7 @@ export function SuperChatPanel({
     if (!recognition) return;
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "zh-CN";
+    recognition.lang = i18n.language?.startsWith("vi") ? "vi-VN" : "en-US";
     recognition.onresult = (event) => {
       let text = "";
       for (let i = 0; i < event.results.length; i += 1) {
@@ -15418,7 +15346,7 @@ export function SuperChatPanel({
       )}
       <section className="relative z-10 flex min-w-0 flex-1 flex-col">
         {isFreezoneLayout && (
-          // data-freezone-chat-drag-handle：虾导切成浮窗时，宿主靠它认出「按住这里拖窗」。
+          // data-freezone-chat-drag-handle: when Shrimp Director is turned into a floating window, the host uses it to recognize "press here to drag the window".
           <div
             data-freezone-chat-drag-handle=""
             className="flex min-h-9 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-black/[0.16] px-3 py-1 backdrop-blur-xl"
@@ -15449,8 +15377,8 @@ export function SuperChatPanel({
               variant="ghost"
               size="icon-sm"
               onClick={() => setAgentBillingOpen(true)}
-              aria-label="虾导计费说明"
-              title="虾导计费说明"
+              aria-label={i18n.t("superchat.panel.billing.title")}
+              title={i18n.t("superchat.panel.billing.title")}
               className="text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
             >
               <Gauge className="size-4" />
@@ -15724,8 +15652,8 @@ export function SuperChatPanel({
                 "absolute bottom-4 left-1/2 z-30 h-9 w-9 -translate-x-1/2 rounded-full border border-white/12 bg-background/88 text-foreground shadow-lg backdrop-blur transition hover:bg-background",
                 isFreezoneLayout && "bottom-3",
               )}
-              title="回到底部"
-              aria-label="回到底部"
+              title={i18n.t("superchat.panel.backToBottom")}
+              aria-label={i18n.t("superchat.panel.backToBottom")}
               onClick={() => scrollToChatBottom("auto", { force: true })}
             >
               <ArrowDown className="h-4 w-4" />
@@ -15747,7 +15675,7 @@ export function SuperChatPanel({
                   aria-live="polite"
                 >
                   <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-success" />
-                  <span>本集自动正在运行，将按任务状态继续推进</span>
+                  <span>{i18n.t("superchat.panel.auto.running")}</span>
                 </div>
               ) : (
                 <ComposerWaitingStatus
@@ -15830,7 +15758,7 @@ export function SuperChatPanel({
             {!hasActiveComposerPrompt && showFreezoneSkillSuggestions && !showClearCommandSuggestion && !freezoneSkillMenuExplicitOpen && (
               <div className="border-b border-white/10 bg-black/20 px-3 py-2.5">
                 <div className="mb-1.5 px-0.5 text-xs text-muted-foreground/85">
-                  技能
+                  {i18n.t("superchat.panel.skills.title")}
                 </div>
                 <div className="max-h-52 overflow-y-auto pr-1">
                   {visibleFreezoneSkillSuggestions.length > 0 ? (
@@ -15867,10 +15795,10 @@ export function SuperChatPanel({
                   ) : (
                     <div className="px-0.5 pb-2 pt-0.5 text-xs leading-5 text-muted-foreground/65">
                       <div className="font-normal text-muted-foreground/72">
-                        还没有可用技能
+                        {i18n.t("superchat.panel.skills.none")}
                       </div>
                       <div className="mt-1 max-w-[30rem] text-[11px] leading-4 text-muted-foreground/45">
-                        可以让 Agent 把当前画布总结成 Skill，也可以直接描述你的工作流，让它帮你创建专属技能。
+                        {i18n.t("superchat.panel.skills.noneHint")}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {FREEZONE_SKILL_EMPTY_ACTIONS.map((action) => (
@@ -15976,17 +15904,17 @@ export function SuperChatPanel({
             {!hasActiveComposerPrompt && isFreezoneLayout && selectedFreezoneNodes.length > 0 && (
               <div className={cn("px-4", visibleComposerAttachments.length > 0 ? "pt-2" : "pt-3")}>
                 <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>当前选中</span>
+                  <span>{i18n.t("superchat.panel.selection.current")}</span>
                   <div className="flex items-center gap-2">
-                    <span>本轮会使用</span>
+                    <span>{i18n.t("superchat.panel.selection.usedThisTurn")}</span>
                     {selectedFreezoneNodes.length > 1 && (
                       <button
                         type="button"
                         onClick={deselectAllSelectedFreezoneNodeReferences}
                         className="rounded-sm px-1.5 py-0.5 text-[11px] font-medium text-destructive transition hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="取消全部画布引用"
+                        aria-label={i18n.t("superchat.panel.selection.deselectAll")}
                       >
-                        全部取消
+                        {i18n.t("superchat.panel.selection.cancelAll")}
                       </button>
                     )}
                   </div>
@@ -16068,15 +15996,15 @@ export function SuperChatPanel({
                             <>
                               <Gauge className="size-3.5" />
                               {directorRunState.confirmationStage === "confirmed"
-                                ? "本集自动 · 运行中"
+                                ? i18n.t("superchat.panel.auto.badgeRunning")
                                 : directorRunState.confirmationStage === "awaiting_intervention"
-                                  ? "本集自动 · 待修改确认"
-                                : "本集自动 · 待确认"}
+                                  ? i18n.t("superchat.panel.auto.badgeAwaitingChange")
+                                : i18n.t("superchat.panel.auto.badgeAwaitingConfirm")}
                             </>
                           ) : (
                             <>
                               <ShieldAlert className="size-3.5" />
-                              手动模式
+                              {i18n.t("superchat.panel.runMode.manual.label")}
                             </>
                           )}
                         </DropdownMenuTrigger>
@@ -16134,32 +16062,32 @@ export function SuperChatPanel({
                             {canvasCommandExecutionMode === "manual_confirm" ? (
                               <>
                                 <ShieldAlert className="size-3.5" />
-                                手动确认
+                                {i18n.t("superchat.panel.execMode.manual.label")}
                               </>
                             ) : (
                               <>
                                 <Wrench className="size-3.5" />
-                                自动生成
+                                {i18n.t("superchat.panel.execMode.auto.label")}
                               </>
                             )}
                           </DropdownMenuTrigger>
-                          {/* 两档执行模式：语义上就是一组单选，交给 shadcn 的
-                              DropdownMenuRadioGroup —— 定位、外点关闭、Esc、方向键
-                              与选中标记都由组件给，不再手搓 portal + getBoundingClientRect。 */}
+                          {/* Two execution modes: semantically just a single-choice group, handed to shadcn's
+                              DropdownMenuRadioGroup; positioning, outside-click close, Esc, arrow keys
+                              and the selected marker are all provided by the component, no more hand-rolled portal + getBoundingClientRect. */}
                           <DropdownMenuContent
                             side="top"
                             align="start"
                             sideOffset={8}
-                            // 圆角收到 rounded-md（用户要求「别太大」）；底色跟画布
-                            // 工具条一套中性灰，别用带蓝调的 popover token——抽屉是
-                            // 中性 #212121，蓝灰浮层压上去会发闷。
-                            // p-2 + 加宽：hover 高亮原来几乎顶满外框、两档还贴在一起，
-                            // 看着糊成一坨；外框放大留出 8px 内边距，高亮四周就有了呼吸位
-                            // （用户要求）。300px 是让两行说明各自一行放得下、不再吊出
-                            // 「确认」「果」这种一两个字的孤行。
+                            // Corners tightened to rounded-md (the user asked for "not too big"); the background follows the canvas
+                            // toolbar's neutral gray, avoid the blue-tinted popover token: the drawer is
+                            // neutral #212121 and a blue-gray overlay on top of it would look muddy.
+                            // p-2 + wider: the hover highlight used to fill nearly the whole frame and the two options sat right next to each other,
+                            // looking like a blob; the enlarged frame leaves 8px of padding so the highlight gets breathing room all around
+                            // (user request). 300px lets each description fit on one line and stops one- or two-character
+                            // orphan lines from hanging below.
                             className="w-[300px] rounded-md bg-[#2a2a2c] p-2 shadow-lg ring-white/12"
                           >
-                            {/* space-y-1：两档之间留 4px，hover 高亮不再首尾相接。 */}
+                            {/* space-y-1: 4px between the two options so the hover highlights no longer touch end to end. */}
                             <DropdownMenuRadioGroup
                               className="space-y-1"
                               value={canvasCommandExecutionMode}
@@ -16171,8 +16099,8 @@ export function SuperChatPanel({
                                 <DropdownMenuRadioItem
                                   key={option.value}
                                   value={option.value}
-                                  // pr-8 得留着：选中标记是绝对定位在右侧的，收窄右
-                                  // 内边距会让它压到描述文字上。
+                                  // pr-8 must stay: the selected marker is absolutely positioned on the right, and narrowing the right
+                                  // padding would make it overlap the description text.
                                   className="items-start gap-2.5 rounded-md py-2 pl-2 pr-8 focus:bg-white/[0.075] data-checked:bg-white/[0.05] data-checked:focus:bg-white/[0.075]"
                                 >
                                   <option.icon className="mt-0.5 shrink-0 text-muted-foreground" />
@@ -16209,8 +16137,8 @@ export function SuperChatPanel({
                             setActiveFreezoneSkillSuggestionIndex(0);
                             restoreDraftFocusRef.current = true;
                           }}
-                          aria-label="选择 Skill"
-                          title="选择 Skill"
+                          aria-label={i18n.t("superchat.panel.skills.pick")}
+                          title={i18n.t("superchat.panel.skills.pick")}
                           aria-expanded={showFreezoneSkillSuggestions}
                         >
                           <Package className="size-4" />
@@ -16295,8 +16223,8 @@ export function SuperChatPanel({
       {isFreezoneLayout && freezoneSkillMenuExplicitOpen && freezoneSkillMenuPosition && createPortal(
         <div
           data-freezone-skill-menu="true"
-          // 圆角一律写死 px：本项目把 --radius 调到了 1rem，rounded-lg/xl 实际是
-          // 16/20px，比 tailwind 默认大一圈，用语义档位会不知不觉又变圆（用户要求收小）。
+          // Corner radii are hard-coded in px: this project sets --radius to 1rem, so rounded-lg/xl are actually
+          // 16/20px, a size larger than tailwind defaults; using semantic tiers would quietly make things round again (the user asked for tighter).
           className="fixed z-[1000] w-[min(380px,calc(100vw-16px))] overflow-hidden rounded-[10px] border border-white/[0.12] bg-[#18191d]/95 p-3 text-foreground shadow-[0_18px_48px_rgba(0,0,0,0.52)] backdrop-blur-xl"
           style={{
             left: freezoneSkillMenuPosition.left,
@@ -16323,7 +16251,7 @@ export function SuperChatPanel({
                   aria-expanded={freezoneSkillCreateMenuOpen}
                 >
                   <Plus className="size-3.5" />
-                  创建
+                  {i18n.t("superchat.panel.skills.create")}
                   <ChevronDown className={cn("size-3 transition", freezoneSkillCreateMenuOpen && "rotate-180")} />
                 </button>
                 {freezoneSkillCreateMenuOpen && (
@@ -16390,7 +16318,7 @@ export function SuperChatPanel({
                   );
                 }
               }}
-              placeholder="搜索 Skill"
+              placeholder={i18n.t("superchat.panel.skills.search")}
               className="h-9 w-full rounded-[8px] border border-white/[0.08] bg-white/[0.06] pl-8 pr-3 text-sm text-foreground outline-none placeholder:text-white/32 transition focus:border-white/[0.18] focus:bg-white/[0.08]"
             />
           </label>
@@ -16428,12 +16356,12 @@ export function SuperChatPanel({
             ) : (
               <div className="px-1 pb-1 pt-0.5 text-xs leading-5 text-muted-foreground/78">
                 <div className="font-medium text-foreground/78">
-                  {freezoneSkillMenuSearch.trim() ? "没有匹配的 Skill" : "这里暂时没有 Skill"}
+                  {freezoneSkillMenuSearch.trim() ? i18n.t("superchat.panel.skills.noMatch") : i18n.t("superchat.panel.skills.noneHere")}
                 </div>
                 {!freezoneSkillMenuSearch.trim() && (
                   <>
                     <div className="mt-1 text-muted-foreground/62">
-                      可以让 Agent 把当前画布总结成 Skill，也可以描述你的工作流来创建专属技能。
+                      {i18n.t("superchat.panel.skills.noneHint2")}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {FREEZONE_SKILL_EMPTY_ACTIONS.map((action) => (
@@ -16475,10 +16403,10 @@ export function SuperChatPanel({
         <Dialog open={agentBillingOpen} onOpenChange={setAgentBillingOpen}>
           <DialogContent className="w-[calc(100vw-2rem)] border-white/10 bg-background/95 p-0 backdrop-blur-xl sm:max-w-[min(46.08rem,calc(100vw-3rem))]">
             <div className="border-b border-white/10 px-5 py-4">
-              <DialogTitle>虾导 Agent 积分参考</DialogTitle>
+              <DialogTitle>{i18n.t("superchat.panel.billing.dialogTitle")}</DialogTitle>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {agentBillingReference?.note
-                  ?? "普通聊天和画布操作免费；仅高级 Agent 能力交付计费。"}
+                  ?? i18n.t("superchat.panel.billing.defaultNote")}
               </p>
             </div>
             <div className="max-h-[65vh] overflow-auto px-5 py-4">
@@ -16486,9 +16414,9 @@ export function SuperChatPanel({
                 <table className="w-full min-w-[640px] table-fixed text-left text-xs">
                   <thead className="bg-white/[0.05] text-muted-foreground">
                     <tr>
-                      <th className="w-[24%] px-3 py-2.5 font-medium">任务</th>
-                      <th className="w-[54%] px-3 py-2.5 font-medium">包含内容</th>
-                      <th className="w-[22%] px-3 py-2.5 font-medium">Agent 计费</th>
+                      <th className="w-[24%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colTask")}</th>
+                      <th className="w-[54%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colIncludes")}</th>
+                      <th className="w-[22%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colBilling")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.07]">
@@ -16508,7 +16436,7 @@ export function SuperChatPanel({
                     {!agentBillingReference && (
                       <tr>
                         <td colSpan={3} className="px-3 py-8 text-center text-muted-foreground">
-                          正在加载计费参考…
+                          {i18n.t("superchat.panel.billing.loading")}
                         </td>
                       </tr>
                     )}
@@ -16516,9 +16444,7 @@ export function SuperChatPanel({
                 </table>
               </div>
               <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
-                表中区间用于提前了解消耗量级，最终以系统配置的功能价格和实际成功交付数量为准。
-                图片、音频和视频等模型生成费用不包含在本表中，仍由 NewAPI 按原有规则独立结算。
-                工具重试和内部多步调用不会重复收取 Agent 交付费用。
+                {i18n.t("superchat.panel.billing.footnote")}
               </p>
             </div>
           </DialogContent>

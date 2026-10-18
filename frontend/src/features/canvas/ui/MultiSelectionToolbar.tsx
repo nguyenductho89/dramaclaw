@@ -39,7 +39,7 @@ import {
 import { toast } from 'sonner';
 import { collectDuplicableIds } from '@/features/canvas/domain/groupSelectionDuplicate';
 
-// 合并分镜组只接受图片类节点。
+// Merging a storyboard group accepts only image-type nodes.
 const STORYBOARD_IMAGE_NODE_TYPES = new Set<string>([
   CANVAS_NODE_TYPES.upload,
   CANVAS_NODE_TYPES.imageEdit,
@@ -129,7 +129,7 @@ export const MultiSelectionToolbar = memo(({
     [selectedNodes],
   );
 
-  // 合并分镜组：仅图片节点、且数量不超过上限。
+  // Merge storyboard group: only image nodes, and the count must not exceed the limit.
   const canMergeStoryboard = useMemo(
     () =>
       selectedNodes.length <= STORYBOARD_MAX_NODES &&
@@ -202,7 +202,7 @@ export const MultiSelectionToolbar = memo(({
           cursorY += item.size.height + ARRANGE_GAP;
         }
       } else if (mode === 'grid') {
-        // 与 Hermes 以及分组工具条一致：宫格是几何布局，不受节点连线影响。
+        // Consistent with Hermes and the group toolbar: a grid is a geometric layout, unaffected by node connections.
         const columns = Math.max(1, Math.ceil(Math.sqrt(items.length)));
         const cellWidth = Math.max(...items.map((item) => item.size.width)) + ARRANGE_GAP;
         const cellHeight = Math.max(...items.map((item) => item.size.height)) + ARRANGE_GAP;
@@ -213,11 +213,11 @@ export const MultiSelectionToolbar = memo(({
           });
         });
       } else {
-        // 按连线排列：复用画布「整理」用的 Sugiyama 分层算法（computeAutoLayout），
-        // 但只喂选中的这批节点 + 它们之间的连线，让父→子沿边方向左→右分层、纵向
-        // 按重心对齐。喂进去的是「绝对坐标 + 清空 parentId」的克隆，这样即便选区
-        // 跨越不同分组也能在同一坐标系里布局；computeAutoLayout 会把结果锚定在选区
-        // 左上角（min 绝对坐标 = minX/minY），与其它模式一致、选区不会整体漂走。
+        // Arrange by edges: reuses the Sugiyama layering algorithm used by the canvas "tidy" (computeAutoLayout),
+        // but feeds only the selected nodes + the edges between them, so parent -> child layers left -> right along edge direction and vertically
+        // aligns by barycenter. What is fed in is a clone with "absolute coordinates + cleared parentId", so even if the selection
+        // spans different groups it can be laid out in one coordinate system; computeAutoLayout anchors the result at the selection's
+        // top-left corner (min absolute coordinates = minX/minY), consistent with other modes, so the selection does not drift as a whole.
         const selectedIdSet = new Set(items.map((item) => item.node.id));
         const layoutNodes = items.map((item) => ({
           ...item.node,
@@ -277,8 +277,8 @@ export const MultiSelectionToolbar = memo(({
 
   useEffect(() => cancelArrangeMenuClose, [cancelArrangeMenuClose]);
 
-  // 框选整组时组本身不在 selected 里（marquee 剔除祖先，见 collectDuplicableIds），
-  // 直接把 selectedIds 递进去会让成员各自散开、各自加后缀、再塞回原组。
+  // When box-selecting a whole group the group itself is not in selected (marquee drops ancestors, see collectDuplicableIds),
+  // and passing selectedIds in directly would make members scatter on their own, each get a suffix, and be stuffed back into the original group.
   const handleDuplicate = useCallback(() => {
     if (selectedIds.length === 0) {
       return;
@@ -312,13 +312,13 @@ export const MultiSelectionToolbar = memo(({
         { projectId, canvasId },
       );
       if (result.errors.length > 0) {
-        toast.error(result.errors[0] ?? '工作流执行失败');
+        toast.error(result.errors[0] ?? t('canvas.nodeToolbar.workflowRunFailed'));
         return;
       }
       if (result.openedUiActions > 0 || result.applied > 0) {
-        toast.success('已开始运行工作流');
+        toast.success(t('canvas.nodeToolbar.workflowStarted'));
       } else {
-        toast.info('所选工作流没有需要继续执行的节点');
+        toast.info(t('canvas.nodeToolbar.selectedNothingToRun'));
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -330,7 +330,7 @@ export const MultiSelectionToolbar = memo(({
   const handleStopWorkflow = useCallback(() => {
     cancelCanvasWorkflowExecution(canvasId);
     setWorkflowStopRequested(true);
-    toast.info('已停止启动后续节点');
+    toast.info(t('canvas.nodeToolbar.workflowStopped'));
   }, [canvasId]);
 
   useEffect(() => {
@@ -440,9 +440,9 @@ export const MultiSelectionToolbar = memo(({
       align="start"
       offset={32}
     >
-      {/* counter 模式：抵消画布缩放，让批量菜单保持恒定的屏幕尺寸——画布缩得越小，
-          菜单相对越大越清晰，不再像 follow 模式那样跟着一起缩到看不清。counterMax
-          与通用节点工具栏(NodeActionToolbar)一致封在 1，避免放大画布时反而变大。 */}
+      {/* counter mode: offsets the canvas zoom so the bulk menu keeps a constant on-screen size - the more the canvas is zoomed out,
+      the relatively larger and clearer the menu, no longer shrinking to unreadable along with it like follow mode. counterMax
+      is capped at 1, consistent with the generic node toolbar (NodeActionToolbar), avoiding growing larger when the canvas is zoomed in. */}
       <ZoomScaledToolbar origin="bottom left" mode="counter" counterMax={1}>
       <div ref={arrangeMenuRef} className="relative" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center gap-1.5 rounded-[18px] border border-white/10 bg-[#242426]/95 px-2 py-1.5 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-2xl [&_svg]:h-4 [&_svg]:w-4">
@@ -454,28 +454,28 @@ export const MultiSelectionToolbar = memo(({
                     type="button"
                     disabled
                     className={`${MULTI_TOOLBAR_BUTTON_CLASS} cursor-not-allowed opacity-70`}
-                    title="工作流正在运行"
+                    title={t('canvas.nodeToolbar.workflowRunningTitle')}
                   >
                     {workflowStopRequested ? (
                       <CirclePause className="h-4 w-4 text-text-muted" />
                     ) : (
                       <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
                     )}
-                    <span>{workflowStopRequested ? '已停止后续' : '运行中'}</span>
+                    <span>{workflowStopRequested ? t('canvas.nodeToolbar.followupStopped') : t('canvas.nodeToolbar.running')}</span>
                   </button>
                   <button
                     type="button"
                     disabled={workflowStopRequested}
                     className={`${MULTI_TOOLBAR_BUTTON_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
                     onClick={handleStopWorkflow}
-                    title="停止启动后续工作流节点"
+                    title={t('canvas.nodeToolbar.stopFollowupTitle')}
                   >
                     {workflowStopRequested ? (
                       <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
                     ) : (
                       <CirclePause className="h-4 w-4 text-text-muted" />
                     )}
-                    <span>{workflowStopRequested ? '等待当前节点' : '停止后续'}</span>
+                    <span>{workflowStopRequested ? t('canvas.nodeToolbar.waitingForCurrent') : t('canvas.nodeToolbar.stopFollowup')}</span>
                   </button>
                 </>
               ) : (
@@ -485,14 +485,14 @@ export const MultiSelectionToolbar = memo(({
                     disabled={isRunningWorkflow || !workflowState.canContinue}
                     className={`${MULTI_TOOLBAR_BUTTON_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
                     onClick={() => void handleRunWorkflow(false)}
-                    title={workflowState.status === 'completed' ? '工作流已完成' : '运行工作流'}
+                    title={workflowState.status === 'completed' ? t('canvas.nodeToolbar.workflowCompleted') : t('canvas.nodeToolbar.runWorkflow')}
                   >
                     {isRunningWorkflow ? (
                       <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
                     ) : (
                       <Workflow className="h-4 w-4 text-text-muted" />
                     )}
-                    <span>{isRunningWorkflow ? '运行中' : workflowState.primaryLabel}</span>
+                    <span>{isRunningWorkflow ? t('canvas.nodeToolbar.running') : workflowState.primaryLabel}</span>
                   </button>
                   {workflowState.canRegenerate && (
                     <button
@@ -500,10 +500,10 @@ export const MultiSelectionToolbar = memo(({
                       disabled={isRunningWorkflow}
                       className={`${MULTI_TOOLBAR_BUTTON_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
                       onClick={() => void handleRunWorkflow(true)}
-                      title="重新运行全部工作流节点"
+                      title={t('canvas.nodeToolbar.rerunAllTitle')}
                     >
                       <RefreshCw className="h-4 w-4 text-text-muted" />
-                      <span>重新运行全部</span>
+                      <span>{t('canvas.nodeToolbar.rerunAll')}</span>
                     </button>
                   )}
                 </>
@@ -631,7 +631,7 @@ export const MultiSelectionToolbar = memo(({
               onClick={() => handleArrange('grid')}
             >
               <LayoutGrid className="h-4 w-4 text-text-muted" />
-              <span>宫格排列</span>
+              <span>{t('canvas.multiSelect.arrangeGrid')}</span>
             </button>
             <button
               type="button"

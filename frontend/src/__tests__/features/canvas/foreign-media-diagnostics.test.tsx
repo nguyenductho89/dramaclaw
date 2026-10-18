@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 读取期诊断：后端在 GET 里报出画布仍在服务的外项目引用，前端据此把那些节点标出来
- * 并给一键修复，而不是留给用户一片没有解释的裂图。
+ * Read-time diagnostics: the backend reports in GET the foreign-project references the canvas is still serving, and the frontend uses this to mark those nodes
+ * and offer a one-click fix, instead of leaving the user with a field of unexplained broken images.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,7 +78,7 @@ describe('ForeignMediaNodeOverlay', () => {
   it('explains why the media is broken instead of leaving a bare cracked image', () => {
     publishForeignMediaRefs('projB', 'default', [REF]);
     render(<ForeignMediaNodeOverlay nodeId="n1" />);
-    expect(screen.getByText('素材属于其他项目')).toBeInTheDocument();
+    expect(screen.getByText('Media belongs to another project')).toBeInTheDocument();
   });
 
   it('copies the media into this project when the user asks, then clears the marker', async () => {
@@ -87,13 +87,13 @@ describe('ForeignMediaNodeOverlay', () => {
     render(<ForeignMediaNodeOverlay nodeId="n1" />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '复制到本项目' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Copy into this project' }));
     });
 
     expect(copyFreezoneAssets).toHaveBeenCalledWith('projB', [FOREIGN]);
     expect(updateNodeData).toHaveBeenCalledWith('n1', { imageUrl: COPIED }, { recordHistory: false });
     expect(readForeignMediaRefsForNode('n1')).toEqual([]);
-    expect(screen.queryByText('素材属于其他项目')).toBeNull();
+    expect(screen.queryByText('Media belongs to another project')).toBeNull();
   });
 
   it('keeps the marker when the copy fails so the user is not told it worked', async () => {
@@ -105,15 +105,15 @@ describe('ForeignMediaNodeOverlay', () => {
     render(<ForeignMediaNodeOverlay nodeId="n1" />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '复制到本项目' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Copy into this project' }));
     });
 
     expect(readForeignMediaRefsForNode('n1')).toEqual([REF]);
   });
 
   it('says why the copy failed instead of looking like a dead button', async () => {
-    // 拷贝失败最常见的原因就是对源项目没权限——正是 #192 那批画布的处境。
-    // 静默不动会让用户以为按钮坏了，一直点。
+    // The most common reason a copy fails is having no permission on the source project -- exactly the situation of the #192 canvases.
+    // Silently doing nothing would make the user think the button is broken and keep clicking it.
     copyFreezoneAssets.mockResolvedValue({
       mapping: {},
       failed: [{ source: FOREIGN, reason: 'forbidden' }],
@@ -122,9 +122,9 @@ describe('ForeignMediaNodeOverlay', () => {
     render(<ForeignMediaNodeOverlay nodeId="n1" />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '复制到本项目' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Copy into this project' }));
     });
 
-    expect(screen.getByText('复制失败，可能没有源项目的访问权限')).toBeInTheDocument();
+    expect(screen.getByText('Copy failed — you may not have access to the source project')).toBeInTheDocument();
   });
 });

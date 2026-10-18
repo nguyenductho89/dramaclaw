@@ -12,12 +12,12 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAE解码"
+      "title": "VAE Decode"
     }
   },
   "3": {
     "inputs": {
-      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走, censored, mosaic censoring, bar censor, pixelated, glowing, bloom, blurry, day, out of focus, low detail, bad anatomy, ugly, overexposed, underexposed, distorted face, extra limbs, cartoonish, 3d render artifacts, duplicate people, unnatural lighting, bad composition, missing shadows, low resolution, poorly textured, glitch, noise, grain, static, motionless, still frame, overall grayish, worst quality, low quality, JPEG compression artifacts, subtitles, stylized, artwork, painting, illustration, cluttered background, many people in background, three legs, walking backward, zoom out, zoom in, mouth speaking, moving mouth, talking, speaking, mute speaking, unnatural skin tone, discolored eyelid, red eyelids, red upper eyelids, no red eyeshadow, closed eyes, no wide-open innocent eyes, poorly drawn hands, extra fingers, fused fingers, poorly drawn face, deformed, disfigured, malformed limbs, thighs, fog, mist, voluminous eyelashes, blush,",
+      "text": "vivid tones, overexposed, static, blurry details, subtitles, style, artwork, painting, picture, still, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, motionless frame, cluttered background, three legs, many people in the background, walking backward, censored, mosaic censoring, bar censor, pixelated, glowing, bloom, blurry, day, out of focus, low detail, bad anatomy, ugly, overexposed, underexposed, distorted face, extra limbs, cartoonish, 3d render artifacts, duplicate people, unnatural lighting, bad composition, missing shadows, low resolution, poorly textured, glitch, noise, grain, static, motionless, still frame, overall grayish, worst quality, low quality, JPEG compression artifacts, subtitles, stylized, artwork, painting, illustration, cluttered background, many people in background, three legs, walking backward, zoom out, zoom in, mouth speaking, moving mouth, talking, speaking, mute speaking, unnatural skin tone, discolored eyelid, red eyelids, red upper eyelids, no red eyeshadow, closed eyes, no wide-open innocent eyes, poorly drawn hands, extra fingers, fused fingers, poorly drawn face, deformed, disfigured, malformed limbs, thighs, fog, mist, voluminous eyelashes, blush,",
       "clip": [
         "25",
         0
@@ -25,7 +25,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码器 (负向)"
+      "title": "CLIP Text Encode (Negative)"
     }
   },
   "4": {
@@ -39,7 +39,7 @@
     },
     "class_type": "PathchSageAttentionKJ",
     "_meta": {
-      "title": "高噪声-Patch Sage Attention KJ"
+      "title": "High Noise - Patch Sage Attention KJ"
     }
   },
   "5": {
@@ -53,7 +53,7 @@
     },
     "class_type": "PathchSageAttentionKJ",
     "_meta": {
-      "title": "低噪声-Patch Sage Attention KJ"
+      "title": "Low Noise - Patch Sage Attention KJ"
     }
   },
   "6": {
@@ -88,7 +88,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "VAE加载器"
+      "title": "Load VAE"
     }
   },
   "19": {
@@ -110,7 +110,7 @@
     },
     "class_type": "VHS_VideoCombine",
     "_meta": {
-      "title": "合并为视频"
+      "title": "Create Video"
     }
   },
   "20": {
@@ -119,7 +119,7 @@
     },
     "class_type": "Int",
     "_meta": {
-      "title": "帧数"
+      "title": "Frame Count"
     }
   },
   "21": {
@@ -167,7 +167,7 @@
     },
     "class_type": "CLIPLoader",
     "_meta": {
-      "title": "CLIP加载器"
+      "title": "Load CLIP"
     }
   },
   "26": {
@@ -176,7 +176,7 @@
     },
     "class_type": "INTConstant",
     "_meta": {
-      "title": "采样步数"
+      "title": "Sampling Steps"
     }
   },
   "27": {
@@ -186,7 +186,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "UNET加载器 (高噪声)"
+      "title": "Load UNET (High Noise)"
     }
   },
   "28": {
@@ -196,7 +196,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "UNET加载器 (低噪声)"
+      "title": "Load UNET (Low Noise)"
     }
   },
   "29": {
@@ -209,7 +209,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码器 (正向)"
+      "title": "CLIP Text Encode (Positive)"
     }
   },
   "30": {
@@ -218,7 +218,7 @@
     },
     "class_type": "Int",
     "_meta": {
-      "title": "缩放长边"
+      "title": "Scale Long Edge"
     }
   },
   "32": {
@@ -251,7 +251,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "加载图像"
+      "title": "Load Image"
     }
   },
   "36": {
@@ -265,7 +265,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "62": {
@@ -279,7 +279,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "63": {
@@ -293,7 +293,7 @@
     },
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "LoRA加载器(仅模型)"
+      "title": "Load LoRA (Model Only)"
     }
   },
   "93": {
@@ -306,7 +306,7 @@
     },
     "class_type": "ModelSamplingSD3",
     "_meta": {
-      "title": "模型采样算法SD3 (低噪声)"
+      "title": "Model Sampling SD3 (Low Noise)"
     }
   },
   "94": {
@@ -345,7 +345,7 @@
     },
     "class_type": "KSamplerAdvanced",
     "_meta": {
-      "title": "K采样器(高级) - 高噪声"
+      "title": "KSampler (Advanced) - High Noise"
     }
   },
   "95": {
@@ -358,7 +358,7 @@
     },
     "class_type": "ModelSamplingSD3",
     "_meta": {
-      "title": "模型采样算法SD3 (高噪声)"
+      "title": "Model Sampling SD3 (High Noise)"
     }
   },
   "96": {
@@ -397,7 +397,7 @@
     },
     "class_type": "KSamplerAdvanced",
     "_meta": {
-      "title": "K采样器(高级) - 低噪声"
+      "title": "KSampler (Advanced) - Low Noise"
     }
   },
   "97": {
@@ -406,7 +406,7 @@
     },
     "class_type": "INTConstant",
     "_meta": {
-      "title": "高噪声步数"
+      "title": "High Noise Steps"
     }
   },
   "369": {
@@ -430,7 +430,7 @@
     },
     "class_type": "LayerUtility: ImageScaleByAspectRatio V2",
     "_meta": {
-      "title": "按宽高比缩放_V2"
+      "title": "Scale by Aspect Ratio_V2"
     }
   }
 }

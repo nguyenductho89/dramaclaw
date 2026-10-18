@@ -21,8 +21,8 @@ MODULE_ORDER = [
     "M07",
     "M08",
     "M09",
-    "横切/M10",
-    "未分类",
+    "cross-cutting/M10",
+    "unclassified",
 ]
 
 
@@ -45,7 +45,7 @@ def classify_path(path: str) -> str:
     first = parts[0] if parts else ""
 
     if path == "/healthz" or first == "generation-credit-cost":
-        return "横切/M10"
+        return "cross-cutting/M10"
     if first in {"auth", "users"}:
         return "M01"
     if first in {"agent", "chat"}:
@@ -56,7 +56,7 @@ def classify_path(path: str) -> str:
         return "M06"
 
     if first != "projects":
-        return "未分类"
+        return "unclassified"
 
     if len(parts) == 1:
         return "M02"
@@ -65,7 +65,7 @@ def classify_path(path: str) -> str:
     if len(parts) >= 2 and parts[1] == "summaries":
         return "M03"
     if len(parts) < 3 or not _is_param(parts[1]):
-        return "未分类"
+        return "unclassified"
 
     domain = parts[2]
     if domain in {"grants", "archive", "unarchive", "delete", "purge", "restore", "files"}:
@@ -85,7 +85,7 @@ def classify_path(path: str) -> str:
         return "M07"
     if domain in {"media", "render-settings", "video-backends", "assets"}:
         return "M09"
-    return "未分类"
+    return "unclassified"
 
 
 def _load_baseline_paths(path: Path) -> list[str]:
@@ -175,12 +175,12 @@ def _overview_lines(
 ) -> list[str]:
     covered = sum(1 for path in baseline_paths if path in hits)
     lines = [
-        "## 总览",
+        "## Overview",
         "",
-        f"覆盖 {covered}/{len(baseline_paths)}",
-        f"归一化命中数 {normalized_hits}",
+        f"Covered {covered}/{len(baseline_paths)}",
+        f"Normalized hits {normalized_hits}",
         "",
-        "| 模块 | 路径数 | 覆盖 | 覆盖率 |",
+        "| Module | Paths | Covered | Coverage |",
         "|---|---:|---:|---:|",
     ]
     for module in MODULE_ORDER:
@@ -198,9 +198,9 @@ def _overview_lines(
 def _format_tests(tests: Iterable[str]) -> str:
     clean_tests = sorted(test for test in tests if test)
     if not clean_tests:
-        return "未命中"
+        return "not hit"
     visible = clean_tests[:5]
-    suffix = "" if len(clean_tests) <= 5 else f" ...（共 {len(clean_tests)} 个）"
+    suffix = "" if len(clean_tests) <= 5 else f" ... ({len(clean_tests)} in total)"
     return ", ".join(f"`{test}`" for test in visible) + suffix
 
 
@@ -216,19 +216,19 @@ def build_report_markdown(
         by_module[classify_path(path)].append(path)
 
     overview_lines = _overview_lines(baseline_paths, hits, by_module, normalized_hits)
-    unclassified = by_module.get("未分类", [])
+    unclassified = by_module.get("unclassified", [])
     baseline_external_paths = sorted(baseline_external)
     uncovered = sorted(path for path in baseline_paths if path not in hits)
     covered = len(baseline_paths) - len(uncovered)
 
-    lines: list[str] = ["# API 覆盖对照表", ""]
+    lines: list[str] = ["# API Coverage Report", ""]
     if unclassified:
         lines.append(
-            f"> 告警：{len(unclassified)} 条基线路径未匹配模块前缀，已归入“未分类”。"
+            f"> Warning: {len(unclassified)} baseline path(s) matched no module prefix and were put under \"unclassified\"."
         )
         lines.append("")
     lines.extend(overview_lines)
-    lines.extend(["", "## 逐模块", ""])
+    lines.extend(["", "## By module", ""])
 
     for module in MODULE_ORDER:
         paths = by_module.get(module, [])
@@ -239,16 +239,16 @@ def build_report_markdown(
             lines.append(f"- `{path}` -> {_format_tests(hits.get(path, set()))}")
         lines.append("")
 
-    lines.extend(["## 零覆盖红名单", ""])
+    lines.extend(["## Zero-coverage red list", ""])
     if uncovered:
         lines.extend(f"- `{path}`" for path in uncovered)
     else:
-        lines.append("无")
-    lines.extend(["", "## 基线外路径告警", ""])
+        lines.append("None")
+    lines.extend(["", "## Out-of-baseline path warnings", ""])
     if baseline_external_paths:
         lines.extend(f"- `{path}`" for path in baseline_external_paths)
     else:
-        lines.append("无")
+        lines.append("None")
     lines.append("")
 
     return "\n".join(lines), "\n".join(overview_lines), covered, len(baseline_paths)

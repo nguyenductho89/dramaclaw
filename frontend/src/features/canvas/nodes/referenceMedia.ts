@@ -10,17 +10,17 @@ import {
 } from '@/features/canvas/domain/canvasNodes';
 
 /**
- * 上游「图片引用」的取图规则（原 VideoNode 私有 helper，抽到共享模块供故事板
- * 详情的 @图片N chip 复用——编号与取图必须与工作流同一份规则，否则 chip 会指到
- * 另一张图）。
+ * Rule for picking images from upstream "image references" (formerly a private VideoNode helper, extracted to a shared module so the @imageN chips
+ * in storyboard details reuse it — numbering and image picking must follow the same rule as the workflow, otherwise a chip would point to
+ * a different image).
  */
 export function referenceImageUrl(node: CanvasNode | undefined | null): string | null {
   if (!node) return null;
   if (isImageGenNode(node)) {
     const data = node.data;
-    // imageGen 上传给生图用的「参考图」会写到 data.referenceImageUrl；
-    // 在 imageGen 自身还没生成结果之前，它就是该节点对外呈现的图片，
-    // 视频节点也应该把它当成上游图引用。
+    // The "reference image" an imageGen node uploads for generation is written to data.referenceImageUrl;
+    // until the imageGen node has its own result it is the image the node presents,
+    // so a video node should treat it as an upstream image reference as well.
     const ref =
       typeof data.referenceImageUrl === 'string' && data.referenceImageUrl.length > 0
         ? data.referenceImageUrl
@@ -40,10 +40,10 @@ export function referenceImageUrl(node: CanvasNode | undefined | null): string |
 }
 
 /**
- * 上游「视频引用」：视频节点自带 videoUrl，但从资产库选入的视频是 upload 节点，
- * 地址同样写在 data.videoUrl。所以「是不是视频上游」应按「存在非空 data.videoUrl」
- * 判定，而非节点类型——否则资产库视频会被漏认（HappyHorse 不自动切 videoEdit、
- * 提交找不到 videoUrl），还会被 referenceImageUrl / isUploadNode 误当图片。
+ * Upstream "video references": a video node carries its own videoUrl, but a video picked from the asset library is an upload node
+ * whose address is likewise stored in data.videoUrl. So "is this a video upstream" should be decided by
+ * "a non-empty data.videoUrl exists", not by node type — otherwise library videos are missed (HappyHorse does not auto-switch to videoEdit,
+ * submission finds no videoUrl), and they get mistaken for images by referenceImageUrl / isUploadNode.
  */
 export function referenceVideoUrl(node: CanvasNode | undefined | null): string | null {
   if (!node) return null;

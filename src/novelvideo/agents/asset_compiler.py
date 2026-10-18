@@ -1,4 +1,4 @@
-"""Asset Compiler — 以 SceneBlock 为单位编译本集场景和道具资产。"""
+"""Asset Compiler — compiles the episode scene and prop assets, one SceneBlock at a time."""
 
 from __future__ import annotations
 
@@ -36,52 +36,60 @@ from novelvideo.workflows.literal_script_writing import (
 
 
 class DerivedSceneRequirement(BaseModel):
-    label: str = Field(description="派生场景后缀，如 '雪景'、'战后版'、'蒸汽弥漫'")
+    label: str = Field(
+        description="Derived-scene suffix, e.g. 'snow scene', 'post-battle', 'steam-filled'"
+    )
     description: str = Field(
         default="",
-        description="派生场景的简短视觉说明，描述区别于基础场景的稳定视觉特征",
+        description="Short visual note for the derived scene, describing the stable visual features that set it apart from the base scene",
     )
-    lighting: str = Field(default="", description="派生场景特有的光照条件；没有就留空")
+    lighting: str = Field(
+        default="",
+        description="Lighting conditions specific to the derived scene; leave empty if none",
+    )
     atmosphere: str = Field(
-        default="", description="派生场景特有的氛围/天气/空气感；没有就留空"
+        default="",
+        description="Atmosphere / weather / air quality specific to the derived scene; leave empty if none",
     )
 
 
 PROP_OUTPUT_SCHEMA_HINT = (
-    "道具规划结构化输出校验失败: requirements 必须是对象数组，每项必须包含 "
-    "prop_name 和 visual_prompt；不能是字符串数组；prop_name 必须逐字来自当前场景块文本或候选道具"
+    "Prop planning structured output validation failed: requirements must be an array of objects, "
+    "each containing prop_name and visual_prompt; it must not be an array of strings; "
+    "prop_name must come verbatim from the current scene block text or the candidate props"
 )
 
 
 class PropRequirement(BaseModel):
     prop_name: str = Field(
-        description="道具名称，必须逐字复制自当前场景块文本或候选道具，如 '七星剑'、'玉佩'；不要改写或同义词替换"
+        description="Prop name; must be copied verbatim from the current scene block text or the candidate props, e.g. 'seven-star sword', 'jade pendant'; do not rewrite or substitute synonyms"
     )
     prop_type: str = Field(
         default="",
-        description="道具类型: weapon / accessory / artifact / document / furniture",
+        description="Prop type: weapon / accessory / artifact / document / furniture",
     )
-    owner: str = Field(default="", description="所属角色名（如有）")
+    owner: str = Field(default="", description="Owning character name (if any)")
     visual_prompt: str = Field(
         default="",
-        description="用于生成参考图的视觉提示词，必须写清形状、材质、颜色、可识别细节，80字内",
+        description="Visual prompt used to generate the reference image; must state shape, material, color and recognizable details, within 80 words",
     )
     description: str = Field(
-        default="", description="一句话叙述描述（用途/剧情关系，50字内）"
+        default="",
+        description="One-sentence narrative description (purpose / story relevance, within 50 words)",
     )
 
 
 class BlockDerivedSceneOutput(BaseModel):
     derived_scenes: list[DerivedSceneRequirement] = Field(
         default_factory=list,
-        description="当前场景块需要提升为独立场景的稳定视觉状态",
+        description="Stable visual states in the current scene block that should be promoted to independent scenes",
     )
 
 
 class BlockPropRequirements(BaseModel):
     requirements: list[PropRequirement] = Field(
         default_factory=list,
-        description="当前场景块中有情节意义的道具对象数组；每项必须是对象，不能是字符串列表",
+        description="Array of plot-relevant prop objects in the current scene block; every item must be an object, not a string list",
     )
 
     @model_validator(mode="after")
@@ -99,7 +107,9 @@ class BlockPropRequirements(BaseModel):
             if not prop_name or prop_name in seen:
                 continue
             if prop_name not in allowed_existing_names and prop_name not in block_text:
-                raise ValueError(f"道具名 '{prop_name}' 未在当前场景块文本中出现")
+                raise ValueError(
+                    f"Prop name '{prop_name}' does not appear in the current scene block text"
+                )
             seen.add(prop_name)
             normalized.append(req)
         self.requirements = normalized
@@ -107,16 +117,22 @@ class BlockPropRequirements(BaseModel):
 
 
 class NarratedSceneRequirement(BaseModel):
-    scene_name: str = Field(description="基础场景名，必须是可复用的物理地点")
+    scene_name: str = Field(
+        description="Base scene name; must be a reusable physical location"
+    )
     scene_type: str = Field(
         default="interior", description="interior / exterior / nature"
     )
     aliases: list[str] = Field(
-        default_factory=list, description="原文中出现过的自然别名"
+        default_factory=list,
+        description="Natural aliases that appear in the source text",
     )
-    description: str = Field(default="", description="一句话说明该地点在本集中的作用")
+    description: str = Field(
+        default="",
+        description="One sentence on the role of this location in the episode",
+    )
     evidence_lines: list[str] = Field(
-        default_factory=list, description="支持该场景的原文证据"
+        default_factory=list, description="Source-text evidence supporting this scene"
     )
 
     @model_validator(mode="after")
@@ -147,30 +163,42 @@ class NarratedSceneRequirement(BaseModel):
         ):
             tokens = [self.scene_name, *self.aliases]
             if not any(token and token in source_text for token in tokens):
-                raise ValueError(f"场景名 '{self.scene_name}' 未在本集文本中出现")
+                raise ValueError(
+                    f"Scene name '{self.scene_name}' does not appear in the episode text"
+                )
         return self
 
 
 class NarratedScenePlanOutput(BaseModel):
     scenes: list[NarratedSceneRequirement] = Field(
         default_factory=list,
-        description="本集解说稿/小说段落中需要进入 2.0 场景资产库的稳定物理场景",
+        description="Stable physical scenes from the narration draft / novel passages of this episode that should enter the 2.0 scene asset library",
     )
 
 
 class BaseSceneReconcileDecision(BaseModel):
     action: str = Field(description="reuse / create / ignore")
-    scene_name: str = Field(default="", description="需要创建或引用的基础场景名")
-    matched_existing_name: str = Field(default="", description="复用已有基础场景时填写")
+    scene_name: str = Field(
+        default="", description="Base scene name to create or reference"
+    )
+    matched_existing_name: str = Field(
+        default="", description="Fill in when reusing an existing base scene"
+    )
     scene_type: str = Field(
         default="interior", description="interior / exterior / nature"
     )
-    aliases: list[str] = Field(default_factory=list, description="原文中出现的自然别名")
-    description: str = Field(default="", description="一句话说明该物理地点")
-    evidence_lines: list[str] = Field(
-        default_factory=list, description="支持该决策的原文证据"
+    aliases: list[str] = Field(
+        default_factory=list,
+        description="Natural aliases that appear in the source text",
     )
-    confidence: float = Field(default=0.0, description="0-1 置信度")
+    description: str = Field(
+        default="", description="One sentence describing this physical location"
+    )
+    evidence_lines: list[str] = Field(
+        default_factory=list,
+        description="Source-text evidence supporting this decision",
+    )
+    confidence: float = Field(default=0.0, description="Confidence from 0 to 1")
 
     @model_validator(mode="after")
     def normalize_action_and_type(self) -> "BaseSceneReconcileDecision":
@@ -197,179 +225,174 @@ class BaseSceneReconcileDecision(BaseModel):
 class EpisodeBaseSceneReconcileOutput(BaseModel):
     scenes: list[BaseSceneReconcileDecision] = Field(
         default_factory=list,
-        description="本集文本中的基础场景复用/新建/忽略决策",
+        description="Reuse / create / ignore decisions for the base scenes in the episode text",
     )
 
 
-BASE_SCENE_RECONCILE_PROMPT = """# 你是影视项目基础场景资产校对员
+BASE_SCENE_RECONCILE_PROMPT = """# You are the base-scene asset reconciler for a film/TV project
 
-任务：根据本集文本和已有基础场景表，判断文本中出现的物理地点是否应复用已有基础场景、创建新基础场景，或忽略。
+Task: given the episode text and the table of existing base scenes, decide whether each physical location in the text should reuse an existing base scene, create a new base scene, or be ignored.
 
-规则：
-- 你必须优先复用已有基础场景及其别名；不要因为描述、时段、天气、状态变化创建新基础场景。
-- 基础场景名必须是中性的物理地点，如“公寓楼电梯间”“城市街道”“医院走廊”。
-- 不要把“雨夜/白天/黄昏/漏水/爆炸后/凌乱/雪景”等时间、天气、状态写进基础场景名；这些交给后续 plate/变体规划。
-- 英文的具体钟点和时段也不能写进基础场景名，例如 `11:47 PM`、`DAY`、`NIGHT`、`daytime`、`evening`。
-- 只有明确是可复用物理地点、且有原文证据时，才输出 create。
-- “室内”“外景”“本集主场景”“路边”等泛称一律 ignore。
-- evidence_lines 必须引用原文中的短句。
-- 输出结构化结果；不要输出解释性散文。
+Rules:
+- Prefer reusing existing base scenes and their aliases. Do not create a new base scene because of changes in description, time of day, weather or condition.
+- A base scene name must be a neutral physical location, such as "apartment building elevator lobby", "city street", "hospital corridor".
+- Never put time of day, weather or condition (rainy night / daytime / dusk / leaking / after the explosion / messy / snow) into a base scene name; those are handled later by plate/variant planning.
+- Concrete clock times and day-part words must not appear in a base scene name either, for example `11:47 PM`, `DAY`, `NIGHT`, `daytime`, `evening`.
+- Only output create when the location is clearly a reusable physical place AND there is evidence in the source text.
+- Generic terms such as "indoors", "exterior", "main scene of this episode", "roadside" are always ignore.
+- evidence_lines must quote short sentences from the source text.
+- Output structured results only; do not output explanatory prose.
 """
 
 
-DERIVED_SCENE_PROMPT = """# 你是派生场景分析师
+DERIVED_SCENE_PROMPT = """# You are a derived-scene analyst
 
-任务：基于当前场景块文本，判断该基础场景在本集是否出现了稳定、可复用、应提升为独立场景的视觉状态。
+Task: based on the current scene block text, decide whether the base scene shows a stable, reusable visual state in this episode that should be promoted to its own scene.
 
-规则：
-- 只输出稳定视觉状态，不要把普通时间、镜头、景别、机位写成独立场景
-- 普通“白天/夜晚/黄昏”只属于 time_of_day，不要机械派生
-- 但如果光线/天气/损坏/陈设变化是需要审批、跨镜头复用、会作为视频参考图的稳定 plate，可以输出派生场景
-- 正确示例：蒸汽弥漫、雪景、战后版、凌乱版、节日装饰版
-- 正确示例：暴雨夜霓虹版、停电手电筒版、漏水冷光版
-- 错误示例：白天、夜晚、俯拍、特写、黑屏、第一人称
-- 没有就输出空列表
+Rules:
+- Only output stable visual states. Do not turn ordinary time of day, camera, shot size or camera position into separate scenes.
+- Ordinary "day / night / dusk" belongs to time_of_day only; do not derive mechanically.
+- However, if a change in lighting / weather / damage / furnishing is a stable plate that needs approval, is reused across shots, or serves as a video reference image, a derived scene may be output.
+- Correct examples: steam-filled, snow scene, post-battle version, messy version, festival-decorated version
+- Correct examples: rainstorm neon night version, blackout flashlight version, leaking cold-light version
+- Incorrect examples: daytime, night, high angle, close-up, black screen, first person
+- If there is none, output an empty list.
 """
 
 
-BLOCK_PROP_PROMPT = """# 你是场景块关键道具分析师
+BLOCK_PROP_PROMPT = """# You are a key-prop analyst for scene blocks
 
-任务：只基于当前场景块文本，提取需要在多个镜头中被当作"同一个对象"持续追踪的道具。
+Task: based only on the current scene block text, extract the props that must be tracked as "the same object" across multiple shots.
 
-## 核心判断标准
-一个物体值得列为道具，当且仅当：
-- 它是一个**独立的、可移动的物理实体**
-- 它在**多个镜头/多行描写中反复出现**，或者**被角色拿取、递交、操作**
-- 后续镜头需要画出"同一个东西"来保持视觉连续性
+## Core criteria
+An object is worth listing as a prop if and only if:
+- It is an **independent, movable physical object**
+- It **appears repeatedly across multiple shots / description lines**, or **is picked up, handed over or operated by a character**
+- Later shots need to draw "the same thing" to keep visual continuity
 
-## 不是道具的东西
-- **场景固定设施**：门、窗、墙、灯、巨幕、大屏、广告牌、招牌、门锁、挂钟、
-  数字显示屏 — 这些是场景的一部分
-- **环境陈设**：桌子、椅子、凳子、沙发、床、柜子、栏杆 — 除非被角色明确拿起或操作
-- **屏幕显示内容**：电影字幕、LOGO、弹窗、提示字、广告文案 — 这是画面内容，不是物理实体
-- **回忆/电视/幻象中一闪而过的物品**：试卷、画笔、折断的画笔 — 除非在现实场景中也作为实体出场
-- **特效/虚拟元素**：透明的手、光效、数字粒子 — 除非它是被角色物理操作的实体
-- **食品/一次性消耗品**：易拉罐、面碗、筷子、餐巾纸 — 吃完就没了，不需要跨镜头追踪
+## What is NOT a prop
+- **Fixed scene installations**: doors, windows, walls, lamps, giant screens, big displays, billboards, signboards, door locks, wall clocks,
+  digital displays — these are part of the scene
+- **Environment furnishings**: tables, chairs, stools, sofas, beds, cabinets, railings — unless a character explicitly picks them up or operates them
+- **On-screen content**: movie subtitles, LOGOs, popups, prompt text, ad copy — this is picture content, not a physical object
+- **Items that flash by in memories / TV / hallucinations**: test papers, paintbrushes, a broken paintbrush — unless they also appear as physical objects in the real scene
+- **Effects / virtual elements**: a transparent hand, light effects, digital particles — unless it is an entity physically operated by a character
+- **Food / disposable items**: cans, noodle bowls, chopsticks, napkins — gone once eaten, no cross-shot tracking needed
 
-## 复用规则
-- 优先复用已有道具名和本集前面已选的道具
-- 道具名必须来自当前场景块文本或给定的候选道具列表
+## Reuse rules
+- Prefer reusing existing prop names and props already selected earlier in this episode
+- A prop name must come from the current scene block text or the given candidate prop list
 
-## 输出规则
-- requirements 必须是对象数组，每个元素必须包含 prop_name / visual_prompt；不能是字符串数组
-- 禁止输出 `{{"requirements":["强光手电"]}}`
-- 正确输出示例：
+## Output rules
+- requirements must be an array of objects; every element must contain prop_name / visual_prompt; it must not be an array of strings
+- Never output `{{"requirements":["flashlight"]}}`
+- Correct output example:
   `{{
     "requirements": [
       {{
-        "prop_name": "强光手电",
+        "prop_name": "tactical flashlight",
         "prop_type": "object",
-        "owner": "陆辰",
-        "visual_prompt": "黑色金属强光手电，冷白光束，筒身有磨损划痕",
-        "description": "陆辰在地下室照明并寻找暗格"
+        "owner": "Luke",
+        "visual_prompt": "black metal tactical flashlight, cold white beam, scratches and wear along the barrel",
+        "description": "Luke uses it to light the basement and look for a hidden compartment"
       }}
     ]
   }}`
-- 每个道具必须给出 visual_prompt；不要只写用途，要写可画出来的外观
-- description 写剧情用途；如果没有明确用途，可以留空
-- prop_name 必须从当前场景块文本或候选道具中逐字复制；不要改写、泛化、补同义词。原文是“强光手电”，不要写“手电筒”
+- Every prop must have a visual_prompt; do not just state its use, write an appearance that can be drawn
+- description states the story purpose; it may be left empty if there is no clear purpose
+- prop_name must be copied verbatim from the current scene block text or the candidate props; do not rewrite, generalize or add synonyms. If the source says "tactical flashlight", do not write "torch"
 """
 
 
-NARRATED_SCENE_PROMPT = """# 你是解说剧场景资产规划师
+NARRATED_SCENE_PROMPT = """# You are a scene-asset planner for narrated dramas
 
-任务：从一集小说原文或逐行解说工作稿中提取需要进入项目资产库的稳定物理场景。
+Task: from one episode of novel source text or a line-by-line narration working draft, extract the stable physical scenes that should enter the project asset library.
 
-规则：
-- 只提取可复用的地点/空间，如医院走廊、出租屋客厅、山路、城门口
-- 不要把情绪、镜头、事件、人物关系提成场景
-- 不要输出“本集主场景”“室内”“外景”等泛化名称
-- 同一物理地点只输出一次，名称尽量保留原文具体锚点
-- scene_type 只能用 interior / exterior / nature
-- evidence_lines 只放原文中支持该场景的短句
-- 输出的是 2.0 NovelScene 概念，不涉及旧版 scene_registry 或 anchor.png
+Rules:
+- Only extract reusable places / spaces, such as a hospital corridor, a rented-room living room, a mountain road, a city gate
+- Do not turn emotions, camera work, events or character relationships into scenes
+- Do not output generic names such as "main scene of this episode", "indoors", "exterior"
+- Output each physical location only once; keep the concrete anchor of the original name where possible
+- scene_type may only be interior / exterior / nature
+- evidence_lines should contain only short sentences from the source text that support the scene
+- The output is the 2.0 NovelScene concept; it does not involve the legacy scene_registry or anchor.png
 """
 
 
 BACKGROUND_PROP_DENYLIST = {
-    # 环境陈设
-    "桌子",
-    "椅子",
-    "凳子",
-    "门",
-    "窗",
-    "窗户",
-    "灯",
-    "墙",
-    "墙壁",
-    "地板",
-    "天花板",
-    "沙发",
-    "床",
-    "柜子",
-    "架子",
-    "楼梯",
-    "栏杆",
-    "屏风",
-    "书架",
-    "货架",
-    # 场景固定设施
-    "挂钟",
-    "门锁",
-    "门铃",
-    "电梯",
-    "数字显示屏",
-    "显示屏",
-    "路灯",
-    "广告牌",
-    "招牌",
-    "3D巨幕",
-    "大屏",
-    "巨幕",
-    "3D大屏",
-    # 食品/一次性消耗品
-    "易拉罐",
-    "面碗",
-    "碗",
-    "筷子",
-    "杯子",
-    "茶杯",
-    "餐巾纸",
-    "餐巾纸盒",
-    "盘子",
-    # 屏幕显示内容
-    "电影字幕",
-    "LOGO",
-    "字幕",
+    # Environment furnishings
+    "table",
+    "chair",
+    "stool",
+    "door",
+    "window",
+    "lamp",
+    "wall",
+    "floor",
+    "ceiling",
+    "sofa",
+    "bed",
+    "cabinet",
+    "shelf",
+    "stairs",
+    "railing",
+    "folding screen",
+    "bookshelf",
+    "rack",
+    # Fixed scene installations
+    "wall clock",
+    "door lock",
+    "doorbell",
+    "elevator",
+    "digital display",
+    "display",
+    "street lamp",
+    "billboard",
+    "signboard",
+    "sign",
+    "3d screen",
+    "big screen",
+    "giant screen",
+    # Food / disposable items
+    "can",
+    "bowl",
+    "chopsticks",
+    "cup",
+    "teacup",
+    "napkin",
+    "napkin box",
+    "plate",
+    # On-screen content
+    "movie subtitles",
     "logo",
-    "字样",
-    "标语",
-    # 回忆/幻象中的一次性画面元素
-    "折断的画笔",
-    "画笔",
-    "试卷",
-    # 特效/虚拟元素
-    "透明的手",
+    "subtitles",
+    "caption",
+    "slogan",
+    # One-off elements from memories / hallucinations
+    "broken paintbrush",
+    "paintbrush",
+    "test paper",
+    # Effects / virtual elements
+    "transparent hand",
 }
 
 NON_PROP_KEYWORDS = (
-    "字幕",
+    "subtitle",
     "logo",
-    "LOGO",
-    "字样",
-    "标语",
-    "提示字",
-    "广告文案",
-    "弹窗",
-    "巨幕",
-    "大屏",
-    "显示屏",
-    "屏幕内容",
-    "招牌",
-    "广告牌",
-    "透明的手",
-    "光效",
-    "粒子",
+    "caption",
+    "slogan",
+    "prompt text",
+    "ad copy",
+    "popup",
+    "giant screen",
+    "big screen",
+    "display",
+    "screen content",
+    "signboard",
+    "billboard",
+    "transparent hand",
+    "light effect",
+    "particle",
 )
 
 
@@ -382,41 +405,37 @@ async def enrich_scene_environment_from_context(**kwargs) -> NovelScene:
 
 
 INTERACTION_VERBS = (
-    "拿",
-    "递",
-    "看",
-    "开",
-    "关",
-    "摔",
-    "抱",
-    "拖",
-    "抽",
-    "打开",
-    "放下",
-    "捡起",
-    "拿起",
-    "接过",
-    "交给",
-    "扔",
-    "掷",
-    "举",
-    "按",
-    "推",
-    "拉",
-    "操作",
-    "注视",
-    "盯着",
-    "指着",
-    "握着",
-    "攥着",
-    "递给",
-    "塞给",
-    "捧着",
+    "take",
+    "hand",
+    "look",
+    "open",
+    "close",
+    "throw",
+    "hold",
+    "carry",
+    "drag",
+    "pull",
+    "push",
+    "grab",
+    "pick up",
+    "put down",
+    "pass",
+    "give",
+    "operate",
+    "stare",
+    "point",
+    "grip",
+    "clutch",
+    "toss",
+    "lift",
+    "press",
+    "slam",
+    "hug",
 )
 
 
 class AssetCompiler:
-    """以 SceneBlock 为单位编译本集场景和道具资产。"""
+    """Compile the episode scene and prop assets, one SceneBlock at a time."""
 
     def __init__(self, cognee_store: Any):
         self.cognee_store = cognee_store
@@ -446,7 +465,7 @@ class AssetCompiler:
         on_log: Optional[Callable[[str], None]] = None,
         on_progress: Optional[Callable[[float, str], None]] = None,
     ) -> tuple[list[SceneMenuItem], list[PropMenuItem], int]:
-        """兼容旧入口：一次性编译场景和道具。新 UI 应优先调用拆分入口。"""
+        """Legacy entry point: compile scenes and props in one go. New UI should prefer the split entry points."""
 
         def log(message: str) -> None:
             if on_log:
@@ -458,38 +477,42 @@ class AssetCompiler:
 
         source_text = await self._load_source_text(episode)
         if not source_text.strip():
-            raise ValueError("当前集原文为空，无法编译资产")
+            raise ValueError(
+                "The current episode source text is empty; cannot compile assets"
+            )
 
         lines = split_literal_source_text(source_text)
         if not lines:
-            raise ValueError("原文无法切分出有效行")
+            raise ValueError("The source text cannot be split into valid lines")
 
         scene_blocks = LiteralScriptWritingWorkflow._build_scene_blocks(lines)
         if not scene_blocks:
-            raise ValueError("原文无法切分出有效场景块")
+            raise ValueError("The source text cannot be split into valid scene blocks")
 
-        report(0.05, "解析场景块...")
-        log(f"[AssetCompiler] 共识别 {len(scene_blocks)} 个场景块")
+        report(0.05, "Parsing scene blocks...")
+        log(f"[AssetCompiler] Identified {len(scene_blocks)} scene blocks")
 
-        report(0.12, "AI校对基础场景...")
+        report(0.12, "AI reconciling base scenes...")
         await self._reconcile_base_scenes_from_text(source_text, episode, log)
 
-        report(0.2, "编译场景资产...")
+        report(0.2, "Compiling scene assets...")
         scene_menu, pending_scenes = await self._compile_scenes(
             scene_blocks, episode, log
         )
         if not scene_menu:
-            report(0.3, "从解说稿规划场景资产...")
+            report(0.3, "Planning scene assets from the narration draft...")
             scene_menu, pending_scenes = await self._compile_narrated_scenes(
                 source_text, episode, log
             )
         if not scene_menu:
-            raise ValueError("未识别到任何场景，请先生成逐行解说工作稿或补充场次地点")
+            raise ValueError(
+                "No scenes were identified; generate the line-by-line narration draft first or add scene locations"
+            )
 
-        report(0.55, "编译道具资产...")
+        report(0.55, "Compiling prop assets...")
         prop_menu = await self._compile_props(scene_blocks, episode, log)
 
-        report(0.9, "写入本集资产...")
+        report(0.9, "Writing episode assets...")
         for scene in pending_scenes:
             await self.store.add_scene(scene)
         await self._write_menus(
@@ -498,7 +521,7 @@ class AssetCompiler:
             prop_menu=prop_menu,
         )
 
-        report(1.0, "完成")
+        report(1.0, "Done")
         return scene_menu, prop_menu, len(pending_scenes)
 
     async def compile_episode_scenes(
@@ -507,7 +530,7 @@ class AssetCompiler:
         on_log: Optional[Callable[[str], None]] = None,
         on_progress: Optional[Callable[[float, str], None]] = None,
     ) -> tuple[list[SceneMenuItem], int]:
-        """只编译并写入本集 scene_menu，不覆盖 prop_menu。"""
+        """Compile and write only this episode's scene_menu without overwriting prop_menu."""
 
         def log(message: str) -> None:
             if on_log:
@@ -519,50 +542,52 @@ class AssetCompiler:
 
         source_text = await self._load_source_text(episode)
         if str(self.spine_template or "drama").strip() == "narrated":
-            report(0.2, "从解说稿规划场景资产...")
+            report(0.2, "Planning scene assets from the narration draft...")
             scene_menu, pending_scenes = await self._compile_narrated_scenes(
                 source_text, episode, log
             )
         else:
-            report(0.08, "解析本集剧本场景...")
+            report(0.08, "Parsing episode script scenes...")
             scene_blocks = await self._load_scene_blocks(episode)
             has_scene_headers = any(
                 str(block.header_line or "").strip() for block in scene_blocks
             )
             if not has_scene_headers:
                 log(
-                    "[AssetCompiler] 当前精品剧未识别到有效场景头，"
-                    "已回退为正文语义场景规划；项目类型仍保持精品剧。"
+                    "[AssetCompiler] No valid scene headers were found in this drama episode; "
+                    "falling back to semantic scene planning from the body text; the project type stays drama."
                 )
-                report(0.2, "从正文语义规划场景资产...")
+                report(0.2, "Planning scene assets semantically from the body text...")
                 scene_menu, pending_scenes = await self._compile_narrated_scenes(
                     source_text, episode, log
                 )
             else:
-                report(0.1, "AI 逐场校对场景元数据...")
+                report(0.1, "AI verifying scene metadata scene by scene...")
                 scene_blocks = await self._normalize_scene_block_headers(
                     scene_blocks, log
                 )
-                log(f"[AssetCompiler] 共识别 {len(scene_blocks)} 个场景块")
+                log(f"[AssetCompiler] Identified {len(scene_blocks)} scene blocks")
 
-                report(0.18, "AI校对基础场景...")
+                report(0.18, "AI reconciling base scenes...")
                 await self._reconcile_base_scenes_from_text(source_text, episode, log)
 
-                report(0.25, "编译场景资产...")
+                report(0.25, "Compiling scene assets...")
                 scene_menu, pending_scenes = await self._compile_scenes(
                     scene_blocks,
                     episode,
                     log,
                 )
         if not scene_menu:
-            raise ValueError("未识别到任何场景，请先生成逐行解说工作稿或补充场次地点")
+            raise ValueError(
+                "No scenes were identified; generate the line-by-line narration draft first or add scene locations"
+            )
 
-        report(0.85, "写入本集场景规划...")
+        report(0.85, "Writing episode scene plan...")
         for scene in pending_scenes:
             await self.store.add_scene(scene)
         await self._write_menus(episode.number, scene_menu=scene_menu)
 
-        report(1.0, "完成")
+        report(1.0, "Done")
         return scene_menu, len(pending_scenes)
 
     async def _normalize_scene_block_headers(
@@ -586,11 +611,13 @@ class AssetCompiler:
                     context_lines=block.lines,
                 )
             except Exception as exc:
-                log(f"  第 {index} 个场景头 AI 规范化失败: {exc}")
-                raise ValueError(f"第 {index} 个场景头 AI 规范化失败，请重试") from exc
+                log(f"  AI normalization of scene header #{index} failed: {exc}")
+                raise ValueError(
+                    f"AI normalization of scene header #{index} failed; please retry"
+                ) from exc
             if not normalized:
                 raise ValueError(
-                    f"AI 未识别到第 {index} 个有效场景头，请检查本集剧本内容后重试"
+                    f"AI did not recognize a valid scene header for scene #{index}; check the episode script and retry"
                 )
             normalized_blocks.append(
                 SceneBlock(
@@ -603,7 +630,9 @@ class AssetCompiler:
                 )
             )
         if not normalized_blocks:
-            raise ValueError("AI 未识别到有效场景，请检查本集剧本内容后重试")
+            raise ValueError(
+                "AI did not recognize any valid scene; check the episode script and retry"
+            )
         return normalized_blocks
 
     async def compile_episode_props(
@@ -612,7 +641,7 @@ class AssetCompiler:
         on_log: Optional[Callable[[str], None]] = None,
         on_progress: Optional[Callable[[float, str], None]] = None,
     ) -> list[PropMenuItem]:
-        """只编译并写入本集 prop_menu，不覆盖 scene_menu。"""
+        """Compile and write only this episode's prop_menu without overwriting scene_menu."""
 
         def log(message: str) -> None:
             if on_log:
@@ -623,16 +652,16 @@ class AssetCompiler:
                 on_progress(progress, task)
 
         scene_blocks = await self._load_scene_blocks(episode)
-        report(0.1, "解析场景块...")
-        log(f"[AssetCompiler] 共识别 {len(scene_blocks)} 个场景块")
+        report(0.1, "Parsing scene blocks...")
+        log(f"[AssetCompiler] Identified {len(scene_blocks)} scene blocks")
 
-        report(0.25, "编译道具资产...")
+        report(0.25, "Compiling prop assets...")
         prop_menu = await self._compile_props(scene_blocks, episode, log)
 
-        report(0.9, "写入本集道具规划...")
+        report(0.9, "Writing episode prop plan...")
         await self._write_menus(episode.number, prop_menu=prop_menu)
 
-        report(1.0, "完成")
+        report(1.0, "Done")
         return prop_menu
 
     async def _reconcile_base_scenes_from_text(
@@ -652,7 +681,7 @@ class AssetCompiler:
         ]
         existing_lines: list[str] = []
         for scene in base_scenes:
-            aliases = "、".join(getattr(scene, "aliases", []) or [])
+            aliases = ", ".join(getattr(scene, "aliases", []) or [])
             prompt = str(
                 getattr(scene, "environment_prompt", "")
                 or getattr(scene, "description", "")
@@ -660,13 +689,13 @@ class AssetCompiler:
             ).strip()
             parts = [str(getattr(scene, "name", "") or "").strip()]
             if aliases:
-                parts.append(f"别名: {aliases}")
+                parts.append(f"aliases: {aliases}")
             scene_type = str(getattr(scene, "scene_type", "") or "").strip()
             if scene_type:
-                parts.append(f"类型: {scene_type}")
+                parts.append(f"type: {scene_type}")
             if prompt:
-                parts.append(f"描述: {prompt[:120]}")
-            existing_lines.append("；".join(part for part in parts if part))
+                parts.append(f"description: {prompt[:120]}")
+            existing_lines.append("; ".join(part for part in parts if part))
 
         agent = Agent(
             get_newapi_text_pydantic_model(
@@ -678,12 +707,12 @@ class AssetCompiler:
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=EpisodeBaseSceneReconcileOutput,
             output_retries=model_gateway_output_retries(2),
-            name="基础场景资产校对员",
+            name="Base scene asset reconciler",
         )
-        result = await agent.run(f"""## 已有基础场景
-{chr(10).join(existing_lines) if existing_lines else "（无）"}
+        result = await agent.run(f"""## Existing base scenes
+{chr(10).join(existing_lines) if existing_lines else "(none)"}
 
-## 第 {episode.number} 集文本
+## Episode {episode.number} text
 {source_text}
 """)
         return await self._apply_base_scene_reconcile_output(
@@ -698,12 +727,21 @@ class AssetCompiler:
         log: Callable[[str], None],
     ) -> list[str]:
         created: list[str] = []
-        generic_names = {"室内", "外景", "内景", "路边", "街边", "本集主场景", "主场景"}
+        generic_names = {
+            "interior",
+            "indoors",
+            "exterior",
+            "outdoors",
+            "roadside",
+            "street side",
+            "main scene",
+            "main scene of this episode",
+        }
         for decision in output.scenes:
             if decision.action != "create":
                 continue
             scene_name, _ = clean_scene_name_and_time(decision.scene_name)
-            if not scene_name or scene_name in generic_names:
+            if not scene_name or scene_name.lower() in generic_names:
                 continue
             if await self._find_existing_base_scene_by_name_or_alias(
                 [scene_name, decision.matched_existing_name, *(decision.aliases or [])]
@@ -733,10 +771,12 @@ class AssetCompiler:
             )
             if decision.description and not str(scene.description or "").strip():
                 scene.description = decision.description
-            scene.notes = f"由 AssetCompiler AI 校对创建 (ep{episode.number})"
+            scene.notes = (
+                f"Created by AssetCompiler AI reconciliation (ep{episode.number})"
+            )
             await self.store.add_scene(scene)
             created.append(scene.name)
-            log(f"  AI补全基础场景: {scene.name}")
+            log(f"  AI completed base scene: {scene.name}")
         return created
 
     async def _find_existing_base_scene_by_name_or_alias(
@@ -772,15 +812,17 @@ class AssetCompiler:
     async def _load_scene_blocks(self, episode: Any) -> list[SceneBlock]:
         source_text = await self._load_source_text(episode)
         if not source_text.strip():
-            raise ValueError("当前集原文为空，无法编译资产")
+            raise ValueError(
+                "The current episode source text is empty; cannot compile assets"
+            )
 
         lines = split_literal_source_text(source_text)
         if not lines:
-            raise ValueError("原文无法切分出有效行")
+            raise ValueError("The source text cannot be split into valid lines")
 
         scene_blocks = LiteralScriptWritingWorkflow._build_scene_blocks(lines)
         if not scene_blocks:
-            raise ValueError("原文无法切分出有效场景块")
+            raise ValueError("The source text cannot be split into valid scene blocks")
 
         return scene_blocks
 
@@ -808,7 +850,9 @@ class AssetCompiler:
                 location
             ) or await self._find_matching_scene(location)
             if not existing:
-                log(f"  跳过缺失基础场景: {location}（AI校对未创建或未复用）")
+                log(
+                    f"  Skipping missing base scene: {location} (AI reconciliation neither created nor reused it)"
+                )
                 continue
             else:
                 existing = await self._enrich_scene_prompt_from_block(
@@ -859,9 +903,11 @@ class AssetCompiler:
                     variant_id=requirement.label,
                 )
             extra = (
-                f" ({len(normalized_derived)} 派生场景)" if normalized_derived else ""
+                f" ({len(normalized_derived)} derived scenes)"
+                if normalized_derived
+                else ""
             )
-            log(f"  场景: {existing.name}{extra}")
+            log(f"  Scene: {existing.name}{extra}")
 
         return scene_menu, pending_scenes
 
@@ -894,13 +940,15 @@ class AssetCompiler:
                         environment_prompt=scene.environment_prompt,
                         description=scene.description or existing.description,
                     )
-                    log(f"  补齐解说场景环境描述: {existing.name}")
+                    log(
+                        f"  Filled in narrated scene environment description: {existing.name}"
+                    )
             else:
                 pending_scenes.append(scene)
                 pending_scene_map[scene.name] = scene
-                log(f"  新建解说场景: {scene.name}")
+                log(f"  Created narrated scene: {scene.name}")
             self._add_to_scene_menu(canonical_name, scene_menu, seen_scene_ids)
-            log(f"  场景: {canonical_name}")
+            log(f"  Scene: {canonical_name}")
 
         return scene_menu, pending_scenes
 
@@ -949,7 +997,7 @@ class AssetCompiler:
                 enriched.description = str(req.description or "").strip()
             enriched.notes = (
                 str(enriched.notes or "").strip()
-                or f"由 AssetCompiler 从解说稿自动创建 (ep{episode.number})"
+                or f"Auto-created by AssetCompiler from the narration draft (ep{episode.number})"
             )
             scenes.append(enriched)
 
@@ -968,15 +1016,15 @@ class AssetCompiler:
             if str(getattr(scene, "name", "") or "").strip()
         }
         excerpt = source_text[:12000]
-        task = f"""请为当前集规划 2.0 场景资产。
+        task = f"""Plan the 2.0 scene assets for the current episode.
 
-## 集数
-第 {getattr(episode, "number", "")} 集 {getattr(episode, "title", "") or ""}
+## Episode
+Episode {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
 
-## 已有场景资产
-{", ".join(sorted(existing_scene_names)) if existing_scene_names else "（无）"}
+## Existing scene assets
+{", ".join(sorted(existing_scene_names)) if existing_scene_names else "(none)"}
 
-## 本集文本
+## Episode text
 {excerpt}
 """
         agent = Agent(
@@ -993,13 +1041,13 @@ class AssetCompiler:
                 "source_text": source_text,
                 "existing_scene_names": existing_scene_names,
             },
-            name="解说剧场景资产规划师",
+            name="Narrated-drama scene asset planner",
         )
         try:
             result = await agent.run(task)
             return list(result.output.scenes or [])
         except Exception as exc:
-            log(f"  解说场景分析失败，改用文本规则兜底: {exc}")
+            log(f"  Narrated scene analysis failed; falling back to text rules: {exc}")
             return []
 
     async def _enrich_scene_prompt_from_block(
@@ -1019,7 +1067,7 @@ class AssetCompiler:
             aliases=scene.aliases,
             scene_type=scene.scene_type,
             time_of_day=str(getattr(block, "time_of_day", "") or ""),
-            interior=str(getattr(block, "interior_exterior", "") or "内") != "外",
+            interior=str(getattr(block, "interior_exterior", "") or "int") != "ext",
             episodes=[int(getattr(episode, "number", 1) or 1)],
             characters=list(getattr(block, "characters", []) or []),
             context_lines=list(getattr(block, "lines", []) or []),
@@ -1036,7 +1084,7 @@ class AssetCompiler:
                 environment_prompt=scene.environment_prompt,
                 description=scene.description,
             )
-            log(f"  补齐场景环境描述: {scene.name}")
+            log(f"  Filled in scene environment description: {scene.name}")
 
         return scene
 
@@ -1054,12 +1102,12 @@ class AssetCompiler:
         block_text = "\n".join(content_lines)
         if not block_text:
             return []
-        task = f"""分析场景 `{scene_name}` 在当前场景块里的视觉状态。
+        task = f"""Analyze the visual states of scene `{scene_name}` in the current scene block.
 
-## 场次头
-{block.header_line or "无"}
+## Scene header
+{block.header_line or "none"}
 
-## 当前场景块文本
+## Current scene block text
 {block_text}
 """
         agent = Agent(
@@ -1072,7 +1120,7 @@ class AssetCompiler:
             model_settings=get_newapi_structured_output_model_settings(),
             output_type=BlockDerivedSceneOutput,
             output_retries=model_gateway_output_retries(2),
-            name="派生场景分析师",
+            name="Derived scene analyst",
         )
         result = await agent.run(task)
         return result.output.derived_scenes
@@ -1113,26 +1161,26 @@ class AssetCompiler:
                         sorted(set(episode_selected_props.values())),
                     )
                 except ValueError as exc:
-                    log(f"  道具[{block_index + 1}]: {exc}")
+                    log(f"  Prop [{block_index + 1}]: {exc}")
                     raise
             requirements = self._filter_background_props(requirements, block_text)
             for req in requirements:
                 existing = await self._find_matching_prop(req.prop_name)
                 if existing:
                     prop_id = existing.name
-                    source = "复用"
+                    source = "reused"
                 else:
                     prop_id = self._match_selected_prop(
                         req.prop_name, episode_selected_props
                     )
-                    source = "本集复用" if prop_id else "本集局部"
+                    source = "episode-reused" if prop_id else "episode-local"
                 prop_id = prop_id or str(req.prop_name or "").strip()
                 if not prop_id:
                     continue
                 episode_selected_props[str(req.prop_name or "").strip()] = prop_id
                 episode_selected_props[prop_id] = prop_id
                 self._add_to_prop_menu(prop_id, prop_menu, seen_prop_ids, existing, req)
-                log(f"  道具[{block_index + 1}]: {prop_id} [{source}]")
+                log(f"  Prop [{block_index + 1}]: {prop_id} [{source}]")
 
         return prop_menu
 
@@ -1230,23 +1278,25 @@ class AssetCompiler:
                 if alias_text:
                     allowed_existing_names.add(alias_text)
         if prior_selected_prop_ids:
-            candidate_lines.append("## 本集前面已选道具")
+            candidate_lines.append("## Props already selected earlier in this episode")
             for prop_id in prior_selected_prop_ids:
                 candidate_lines.append(f"- {prop_id}")
                 allowed_existing_names.add(str(prop_id or "").strip())
 
         candidate_section = (
-            "\n".join(candidate_lines) if candidate_lines else "（无预筛候选）"
+            "\n".join(candidate_lines)
+            if candidate_lines
+            else "(no pre-screened candidates)"
         )
-        task = f"""分析当前场景块中的关键道具。
+        task = f"""Analyze the key props in the current scene block.
 
-## 场次头
-{block.header_line or "无"}
+## Scene header
+{block.header_line or "none"}
 
-## 当前场景块文本
+## Current scene block text
 {block_text}
 
-## 预筛命中的已有道具
+## Pre-screened matching existing props
 {candidate_section}
 """
         agent = Agent(
@@ -1263,12 +1313,14 @@ class AssetCompiler:
                 "block_text": block_text,
                 "allowed_existing_names": allowed_existing_names,
             },
-            name="场景块道具分析师",
+            name="Scene block prop analyst",
         )
         try:
             result = await agent.run(task)
         except (UnexpectedModelBehavior, ValidationError) as exc:
-            raise ValueError(f"{PROP_OUTPUT_SCHEMA_HINT}；原始错误: {exc}") from exc
+            raise ValueError(
+                f"{PROP_OUTPUT_SCHEMA_HINT}; original error: {exc}"
+            ) from exc
         return result.output.requirements
 
     @classmethod
@@ -1283,11 +1335,19 @@ class AssetCompiler:
         ]
         for line in lines:
             for verb in INTERACTION_VERBS:
-                if f"{name}{verb}" in line or f"{verb}{name}" in line:
+                escaped_name = re.escape(name)
+                escaped_verb = re.escape(verb)
+                if re.search(
+                    rf"{escaped_name}.{{0,40}}\b{escaped_verb}\w*",
+                    line,
+                    re.IGNORECASE,
+                ):
                     return True
-                if re.search(rf"{re.escape(name)}.{{0,12}}{re.escape(verb)}", line):
-                    return True
-                if re.search(rf"{re.escape(verb)}.{{0,12}}{re.escape(name)}", line):
+                if re.search(
+                    rf"\b{escaped_verb}\w*.{{0,40}}{escaped_name}",
+                    line,
+                    re.IGNORECASE,
+                ):
                     return True
         return False
 
@@ -1302,10 +1362,11 @@ class AssetCompiler:
             name = str(req.prop_name or "").strip()
             if not name:
                 continue
-            if any(token in name for token in NON_PROP_KEYWORDS):
+            if any(token in name.lower() for token in NON_PROP_KEYWORDS):
                 continue
-            if name in BACKGROUND_PROP_DENYLIST and not cls._has_interaction_evidence(
-                name, block_text
+            if (
+                name.lower() in BACKGROUND_PROP_DENYLIST
+                and not cls._has_interaction_evidence(name, block_text)
             ):
                 continue
             filtered.append(req)
@@ -1342,19 +1403,40 @@ class AssetCompiler:
     @staticmethod
     def _normalize_scene_type(value: str) -> str:
         normalized = str(value or "").strip().lower()
-        if normalized in {"exterior", "外", "室外", "外景"}:
+        if normalized in {"exterior", "ext", "outdoor", "outdoors", "outside"}:
             return "exterior"
-        if normalized in {"nature", "自然", "自然环境", "山林", "野外"}:
+        if normalized in {"nature", "natural", "wilderness", "outdoors nature"}:
             return "nature"
         return "interior"
 
     @classmethod
     def _guess_scene_type_from_name(cls, name: str) -> str:
-        if any(token in name for token in ("山", "林", "河", "湖", "海", "谷", "荒野")):
+        lowered = str(name or "").lower()
+        if any(
+            token in lowered
+            for token in (
+                "mountain",
+                "forest",
+                "river",
+                "lake",
+                "sea",
+                "valley",
+                "wilderness",
+            )
+        ):
             return "nature"
         if any(
-            token in name
-            for token in ("街", "路", "巷", "广场", "码头", "城门", "山路")
+            token in lowered
+            for token in (
+                "street",
+                "road",
+                "alley",
+                "square",
+                "plaza",
+                "dock",
+                "city gate",
+                "highway",
+            )
         ):
             return "exterior"
         return "interior"
@@ -1365,47 +1447,53 @@ class AssetCompiler:
         source_text: str,
     ) -> list[NarratedSceneRequirement]:
         suffixes = (
-            "护士站",
-            "急诊室",
-            "会议室",
-            "办公室",
-            "电梯间",
-            "出租屋",
-            "咖啡馆",
-            "走廊",
-            "楼道",
-            "客厅",
-            "卧室",
-            "书房",
-            "厨房",
-            "病房",
-            "门口",
-            "街口",
-            "小巷",
-            "山路",
-            "公路",
-            "庭院",
-            "大殿",
-            "广场",
-            "码头",
-            "车站",
-            "机场",
-            "酒吧",
-            "餐厅",
-            "天台",
-            "学校",
-            "医院",
-            "警局",
-            "公司",
-            "别墅",
-            "王府",
-            "城门",
-            "山谷",
-            "森林",
-            "河边",
+            "nurses station",
+            "emergency room",
+            "meeting room",
+            "office",
+            "elevator lobby",
+            "apartment",
+            "cafe",
+            "hallway",
+            "corridor",
+            "stairwell",
+            "living room",
+            "bedroom",
+            "study",
+            "kitchen",
+            "hospital ward",
+            "doorway",
+            "street corner",
+            "alley",
+            "mountain road",
+            "highway",
+            "courtyard",
+            "great hall",
+            "square",
+            "plaza",
+            "dock",
+            "train station",
+            "airport",
+            "bar",
+            "restaurant",
+            "rooftop",
+            "school",
+            "hospital",
+            "police station",
+            "villa",
+            "palace",
+            "city gate",
+            "valley",
+            "forest",
+            "riverbank",
         )
-        suffix_pattern = "|".join(re.escape(suffix) for suffix in suffixes)
-        pattern = re.compile(rf"[\u4e00-\u9fff]{{1,10}}(?:{suffix_pattern})")
+        suffix_pattern = "|".join(
+            re.escape(suffix) for suffix in sorted(suffixes, key=len, reverse=True)
+        )
+        pattern = re.compile(
+            rf"\b(?:[A-Za-z][A-Za-z'\-]*\s+){{0,2}}(?:{suffix_pattern})(?:\s+(?:{suffix_pattern}))?\b",
+            re.IGNORECASE,
+        )
         seen: set[str] = set()
         requirements: list[NarratedSceneRequirement] = []
         for line in split_literal_source_text(source_text):
@@ -1413,15 +1501,16 @@ class AssetCompiler:
             if not text:
                 continue
             for match in pattern.finditer(text):
-                name = match.group(0).strip("，。！？；：、,.!?;: ")
+                name = match.group(0).strip(",.!?;: ")
                 name = re.sub(
-                    r"^.*(?:冲进|走进|进入|来到|回到|赶到|站在|穿过|转入|在|到|进)",
+                    r"^(?:.*\s)?(?:into|to|at|in|through|from|the|a|an)\s+",
                     "",
                     name,
-                ).strip("，。！？；：、,.!?;: ")
-                if len(name) < 2 or name in seen:
+                    flags=re.IGNORECASE,
+                ).strip(",.!?;: ")
+                if len(name) < 2 or name.lower() in seen:
                     continue
-                seen.add(name)
+                seen.add(name.lower())
                 requirements.append(
                     NarratedSceneRequirement(
                         scene_name=name,
@@ -1517,7 +1606,7 @@ class AssetCompiler:
             environment_prompt="",
             variant_prompt=variant_prompt,
             description=description,
-            notes=f"由 AssetCompiler 从场景 {parent_scene.name} 派生",
+            notes=f"Derived by AssetCompiler from scene {parent_scene.name}",
         )
 
     @staticmethod
@@ -1551,7 +1640,7 @@ class AssetCompiler:
             time_of_day=scene_time,
             environment_prompt="",
             description="",
-            notes=f"由 AssetCompiler 从场景 {parent_scene.name} 创建的空 plate 槽位 (ep{episode.number})",
+            notes=f"Empty plate slot created by AssetCompiler from scene {parent_scene.name} (ep{episode.number})",
         )
 
     @staticmethod
@@ -1559,48 +1648,65 @@ class AssetCompiler:
         derived_scenes: list[DerivedSceneRequirement],
     ) -> list[DerivedSceneRequirement]:
         forbidden_exact = {
-            "日",
-            "夜",
-            "晨",
-            "晚",
-            "午",
-            "清晨",
-            "上午",
-            "正午",
-            "午后",
-            "黄昏",
-            "傍晚",
-            "夜晚",
-            "白天",
-            "晚上",
-            "内",
-            "外",
-            "室内",
-            "室外",
-            "第一人称",
-            "POV",
-            "黑屏",
-            "空镜",
-            "特写",
-            "近景",
-            "中景",
-            "远景",
-            "全景",
-            "俯拍",
-            "仰拍",
-            "平视",
-            "过肩",
+            "day",
+            "night",
+            "morning",
+            "evening",
+            "noon",
+            "afternoon",
+            "dawn",
+            "dusk",
+            "int",
+            "ext",
+            "interior",
+            "exterior",
+            "indoor",
+            "outdoor",
+            "indoors",
+            "outdoors",
+            "pov",
+            "first person",
+            "first-person",
+            "black screen",
+            "black",
+            "empty shot",
+            "empty",
+            "close up",
+            "close-up",
+            "close_up",
+            "medium close",
+            "medium_close",
+            "medium shot",
+            "medium",
+            "long shot",
+            "long",
+            "wide shot",
+            "wide",
+            "high angle",
+            "high_angle",
+            "low angle",
+            "low_angle",
+            "eye level",
+            "eye_level",
+            "over the shoulder",
+            "over_shoulder",
         }
-        forbidden_contains = ("内景", "外景", "第一人称", "POV")
+        forbidden_contains = (
+            "interior",
+            "exterior",
+            "first person",
+            "first-person",
+            "pov",
+        )
         normalized: list[DerivedSceneRequirement] = []
         seen: set[str] = set()
         for raw in derived_scenes or []:
             label = str(getattr(raw, "label", "") or "").strip()
             if not label:
                 continue
-            if label in forbidden_exact:
+            if label.lower() in forbidden_exact:
                 continue
-            if any(token in label for token in forbidden_contains):
+            if any(token in label.lower() for token in forbidden_contains):
                 continue
             if label in seen:
                 continue

@@ -12,10 +12,6 @@ _RECOMMENDED_GENERATION_MODEL_VALUES = {
     "default",
     "recommend",
     "recommended",
-    "推荐",
-    "推荐模型",
-    "默认",
-    "自动",
 }
 
 # Product defaults are preferences, never catalog ids. Resolve them only against
@@ -416,7 +412,7 @@ def generation_clarification_request(preflight: dict[str, Any]) -> dict[str, Any
         "media_types": sorted(required_choices),
         "missing_parameters": missing,
         "required_choices": required_choices,
-        "clarification": {"title": "确认图片和视频生成参数", "allow_skip": False},
+        "clarification": {"title": "Confirm image and video generation parameters", "allow_skip": False},
     }
 
 

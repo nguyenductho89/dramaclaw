@@ -16,13 +16,13 @@ beforeAll(() => {
 });
 
 const referenced: MentionCandidate[] = [
-  { key: 'A', name: '图片1', imageUrl: 'https://example.com/a.png', index: 1 },
+  { key: 'A', name: 'image1', imageUrl: 'https://example.com/a.png', index: 1 },
 ];
 
 const materials: ReferenceMaterialOption[] = [
-  { nodeId: 'N1', label: '场景设定图', kind: 'image', imageUrl: 'https://example.com/n1.png' },
-  { nodeId: 'N2', label: '角色设定图', kind: 'image', imageUrl: 'https://example.com/n2.png' },
-  { nodeId: 'N3', label: '空镜', kind: 'video', videoUrl: 'https://example.com/n3.mp4' },
+  { nodeId: 'N1', label: 'Scene sheet', kind: 'image', imageUrl: 'https://example.com/n1.png' },
+  { nodeId: 'N2', label: 'Character sheet', kind: 'image', imageUrl: 'https://example.com/n2.png' },
+  { nodeId: 'N3', label: 'Empty shot', kind: 'video', videoUrl: 'https://example.com/n3.mp4' },
 ];
 
 function openReplaceMenu(container: HTMLElement) {
@@ -31,11 +31,11 @@ function openReplaceMenu(container: HTMLElement) {
   fireEvent.click(swap as Element);
 }
 
-describe('PromptMentionEditor — 替换引用选单', () => {
-  it('chip 上的替换图标打开选单，分「已引用」和按种类分组的「素材引用」', () => {
+describe('PromptMentionEditor — replace reference menu', () => {
+  it('the replace icon on a chip opens the menu, split into "Referenced" and kind-grouped "Canvas assets"', () => {
     const { container } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={() => {}}
         candidates={referenced}
         getMaterials={() => materials}
@@ -43,40 +43,21 @@ describe('PromptMentionEditor — 替换引用选单', () => {
       />,
     );
 
-    expect(screen.queryByText('已引用')).toBeNull();
+    expect(screen.queryByText('Referenced')).toBeNull();
     openReplaceMenu(container);
 
-    expect(screen.getByText('已引用')).toBeTruthy();
-    expect(screen.getByText('素材引用')).toBeTruthy();
-    // 分组行按种类聚合，画布素材不直接铺开。
-    expect(screen.getByLabelText('图片素材')).toBeTruthy();
-    expect(screen.getByLabelText('视频素材')).toBeTruthy();
-    expect(screen.queryByText('场景设定图')).toBeNull();
+    expect(screen.getByText('Referenced')).toBeTruthy();
+    expect(screen.getByText('Canvas assets')).toBeTruthy();
+    // Group rows aggregate by kind; canvas assets are not spread out directly.
+    expect(screen.getByLabelText('Image assets')).toBeTruthy();
+    expect(screen.getByLabelText('Video assets')).toBeTruthy();
+    expect(screen.queryByText('Scene sheet')).toBeNull();
   });
 
-  it('悬停种类分组展开右侧清单', () => {
+  it('hovering a kind group expands the list on the right', () => {
     const { container } = render(
       <PromptMentionEditor
-        value="@图片1 "
-        onChange={() => {}}
-        candidates={referenced}
-        getMaterials={() => materials}
-        onAttachMaterial={() => true}
-      />,
-    );
-    openReplaceMenu(container);
-
-    fireEvent.mouseEnter(screen.getByLabelText('图片素材'));
-    expect(screen.getByText('场景设定图')).toBeTruthy();
-    expect(screen.getByText('角色设定图')).toBeTruthy();
-    // 展开的是「图片」那组，视频素材不该混进来。
-    expect(screen.queryByText('空镜')).toBeNull();
-  });
-
-  it('搜索时拉平成一个列表，跨已引用和画布素材一起筛', () => {
-    const { container } = render(
-      <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={() => {}}
         candidates={referenced}
         getMaterials={() => materials}
@@ -85,20 +66,39 @@ describe('PromptMentionEditor — 替换引用选单', () => {
     );
     openReplaceMenu(container);
 
-    fireEvent.change(screen.getByPlaceholderText('搜索'), { target: { value: '角色' } });
-
-    expect(screen.getByText('角色设定图')).toBeTruthy();
-    expect(screen.queryByText('场景设定图')).toBeNull();
-    // 已引用的「图片」对不上「角色」，整段消失。
-    expect(screen.queryByText('已引用')).toBeNull();
+    fireEvent.mouseEnter(screen.getByLabelText('Image assets'));
+    expect(screen.getByText('Scene sheet')).toBeTruthy();
+    expect(screen.getByText('Character sheet')).toBeTruthy();
+    // What expands is the "image" group; video assets must not be mixed in.
+    expect(screen.queryByText('Empty shot')).toBeNull();
   });
 
-  it('选画布素材：先请宿主建引用，等它带编号进候选后才替换 @', () => {
+  it('searching flattens into one list, filtering across referenced and canvas assets together', () => {
+    const { container } = render(
+      <PromptMentionEditor
+        value="@image1 "
+        onChange={() => {}}
+        candidates={referenced}
+        getMaterials={() => materials}
+        onAttachMaterial={() => true}
+      />,
+    );
+    openReplaceMenu(container);
+
+    fireEvent.change(screen.getByPlaceholderText('Search'), { target: { value: 'Character' } });
+
+    expect(screen.getByText('Character sheet')).toBeTruthy();
+    expect(screen.queryByText('Scene sheet')).toBeNull();
+    // The referenced "image" does not match "Character", so the whole section disappears.
+    expect(screen.queryByText('Referenced')).toBeNull();
+  });
+
+  it('selecting a canvas asset: first ask the host to create the reference, and replace the @ only after it enters the candidates with a number', () => {
     const onAttachMaterial = vi.fn(() => true);
     const onChange = vi.fn();
     const { container, rerender } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={onChange}
         candidates={referenced}
         getMaterials={() => materials}
@@ -106,52 +106,52 @@ describe('PromptMentionEditor — 替换引用选单', () => {
       />,
     );
     openReplaceMenu(container);
-    fireEvent.mouseEnter(screen.getByLabelText('图片素材'));
-    fireEvent.mouseDown(screen.getByText('场景设定图').closest('button') as Element);
+    fireEvent.mouseEnter(screen.getByLabelText('Image assets'));
+    fireEvent.mouseDown(screen.getByText('Scene sheet').closest('button') as Element);
 
     expect(onAttachMaterial).toHaveBeenCalledWith('N1');
-    // 建边还没回流，此刻还不知道新引用的编号，chip 保持不动。
+    // The edge creation has not flowed back yet, so the new reference's number is not known at this moment, and the chip stays put.
     expect(onChange).not.toHaveBeenCalled();
     expect(
       (container.querySelector('.mention-chip') as HTMLElement).dataset.mention,
     ).toBe('A');
 
-    // 宿主连好线，新引用作为「图片2」进入候选。
+    // The host has connected the edge, and the new reference enters the candidates as "image2".
     rerender(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={onChange}
         candidates={[
           ...referenced,
-          { key: 'N1', name: '图片2', imageUrl: 'https://example.com/n1.png', index: 2 },
+          { key: 'N1', name: 'image2', imageUrl: 'https://example.com/n1.png', index: 2 },
         ]}
         getMaterials={() => materials.filter((item) => item.nodeId !== 'N1')}
         onAttachMaterial={onAttachMaterial}
       />,
     );
 
-    expect(onChange).toHaveBeenCalledWith('@图片2 ');
+    expect(onChange).toHaveBeenCalledWith('@image2 ');
     const chips = container.querySelectorAll('.mention-chip');
     expect(chips.length).toBe(1);
     expect((chips[0] as HTMLElement).dataset.mention).toBe('N1');
   });
 
-  it('没有 onAttachMaterial 的宿主只显示「已引用」', () => {
+  it('a host without onAttachMaterial shows only "Referenced"', () => {
     const { container } = render(
-      <PromptMentionEditor value="@图片1 " onChange={() => {}} candidates={referenced} />,
+      <PromptMentionEditor value="@image1 " onChange={() => {}} candidates={referenced} />,
     );
     openReplaceMenu(container);
 
-    expect(screen.getByText('已引用')).toBeTruthy();
-    expect(screen.queryByText('素材引用')).toBeNull();
+    expect(screen.getByText('Referenced')).toBeTruthy();
+    expect(screen.queryByText('Canvas assets')).toBeNull();
   });
 
-  it('建引用被宿主拒绝时不留悬而未决的替换：后来同名候选出现也不动 chip', () => {
+  it('when the host rejects creating the reference no dangling replacement is left: a same-name candidate appearing later does not move the chip', () => {
     const onChange = vi.fn();
     const reject = vi.fn(() => false);
     const { container, rerender } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={onChange}
         candidates={referenced}
         getMaterials={() => materials}
@@ -159,18 +159,18 @@ describe('PromptMentionEditor — 替换引用选单', () => {
       />,
     );
     openReplaceMenu(container);
-    fireEvent.mouseEnter(screen.getByLabelText('图片素材'));
-    fireEvent.mouseDown(screen.getByText('场景设定图').closest('button') as Element);
+    fireEvent.mouseEnter(screen.getByLabelText('Image assets'));
+    fireEvent.mouseDown(screen.getByText('Scene sheet').closest('button') as Element);
 
     expect(reject).toHaveBeenCalledWith('N1');
-    // 用户过后从别的入口把同一个节点连上——那次的候选变化不该回头改这颗 chip。
+    // The user later connects the same node via another entry — that candidate change must not come back and alter this chip.
     rerender(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={onChange}
         candidates={[
           ...referenced,
-          { key: 'N1', name: '图片2', imageUrl: 'https://example.com/n1.png', index: 2 },
+          { key: 'N1', name: 'image2', imageUrl: 'https://example.com/n1.png', index: 2 },
         ]}
         getMaterials={() => materials}
         onAttachMaterial={reject}
@@ -183,10 +183,10 @@ describe('PromptMentionEditor — 替换引用选单', () => {
     ).toBe('A');
   });
 
-  it('Escape 关掉替换选单（焦点在选单自己的搜索框上）', () => {
+  it('Escape closes the replace menu (focus is on the menu\'s own search box)', () => {
     const { container } = render(
       <PromptMentionEditor
-        value="@图片1 "
+        value="@image1 "
         onChange={() => {}}
         candidates={referenced}
         getMaterials={() => materials}
@@ -194,10 +194,10 @@ describe('PromptMentionEditor — 替换引用选单', () => {
       />,
     );
     openReplaceMenu(container);
-    expect(screen.getByText('已引用')).toBeTruthy();
+    expect(screen.getByText('Referenced')).toBeTruthy();
 
-    fireEvent.keyDown(screen.getByPlaceholderText('搜索'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByPlaceholderText('Search'), { key: 'Escape' });
 
-    expect(screen.queryByText('已引用')).toBeNull();
+    expect(screen.queryByText('Referenced')).toBeNull();
   });
 });

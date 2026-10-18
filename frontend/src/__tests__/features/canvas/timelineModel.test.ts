@@ -69,7 +69,7 @@ describe("timelineModel", () => {
     const laid = layoutTrack(track);
     expect(laid.map((l) => l.clip.id)).toEqual(["a", "b"]);
     expect(laid[1]).toMatchObject({ timelineStartMs: 3000, timelineEndMs: 5000 });
-    // 落在间隙（2000–3000）→ 无命中
+    // Lands in the gap (2000-3000) -> no hit
     expect(activeClipAt(track, 2500)).toBeNull();
   });
 
@@ -90,7 +90,7 @@ describe("timelineModel", () => {
       clip({ id: "b", timelineStartMs: 50, trimStartMs: 0, trimEndMs: 3000 }), // 3000ms
       clip({ id: "c", timelineStartMs: 0, trimStartMs: 0, trimEndMs: 1000 }), // 1000ms
     ]);
-    // 保持数组顺序，timelineStartMs 依次累加，整条无缝
+    // Keeps the array order with timelineStartMs accumulating in turn, seamless along the whole track
     expect(packed.map((c) => [c.id, c.timelineStartMs])).toEqual([
       ["a", 0],
       ["b", 2000],
@@ -107,22 +107,22 @@ describe("timelineModel", () => {
   });
 
   it("reorderIndexForDrag picks insertion slot by dragged-clip center", () => {
-    // 已无缝排布的 siblings：a[0,2000) b[2000,5000) c[5000,6000)
+    // Siblings already laid out seamlessly: a[0,2000) b[2000,5000) c[5000,6000)
     const siblings = [
       clip({ id: "a", trimStartMs: 0, trimEndMs: 2000 }),
       clip({ id: "b", trimStartMs: 0, trimEndMs: 3000 }),
       clip({ id: "c", trimStartMs: 0, trimEndMs: 1000 }),
     ];
     const draggedLen = 1000;
-    // 中心 = left + 500。落在 a 中心(1000)左侧 → 排到最前
+    // Center = left + 500. Landing left of a's center (1000) -> placed first
     expect(reorderIndexForDrag(siblings, 0, draggedLen)).toBe(0);
-    // 中心越过 a 中心(1000)、未到 b 中心(3500) → 插到 a 与 b 之间
+    // Center past a's center (1000) but not yet b's center (3500) -> inserted between a and b
     expect(reorderIndexForDrag(siblings, 1000, draggedLen)).toBe(1);
-    // 中心越过 b 中心(3500)、未到 c 中心(5500) → 插到 b 与 c 之间
+    // Center past b's center (3500) but not yet c's center (5500) -> inserted between b and c
     expect(reorderIndexForDrag(siblings, 3500, draggedLen)).toBe(2);
-    // 中心越过所有 → 追加到末尾
+    // Center past all of them -> appended to the end
     expect(reorderIndexForDrag(siblings, 6000, draggedLen)).toBe(3);
-    // 负的左缘按 0 处理 → 最前
+    // A negative left edge is treated as 0 -> first
     expect(reorderIndexForDrag(siblings, -500, draggedLen)).toBe(0);
   });
 
@@ -134,13 +134,13 @@ describe("timelineModel", () => {
           id: "track_video",
           kind: "video",
           clips: [
-            // 中间有空隙 + 乱序，应按时间顺序无缝补位
+            // With gaps in between + out of order, it should be filled in seamlessly by time order
             clip({ id: "b", timelineStartMs: 5000, trimStartMs: 0, trimEndMs: 3000 }),
             clip({ id: "a", timelineStartMs: 0, trimStartMs: 0, trimEndMs: 2000 }),
           ],
         },
         {
-          // 附加视频轨自由定位：用户摆在 10s 的片段不能被吸回 0（否则与主轨重叠）
+          // Extra video tracks are freely positioned: a clip the user placed at 10s must not be snapped back to 0 (otherwise it overlaps the main track)
           id: "track_extra",
           kind: "video",
           clips: [
@@ -151,7 +151,7 @@ describe("timelineModel", () => {
           id: "track_audio",
           kind: "audio",
           clips: [
-            // 音频自由定位：故意留空隙，应原样不动
+            // Audio is freely positioned: a gap is left on purpose and should stay untouched
             clip({ id: "m", kind: "audio", timelineStartMs: 4000, trimStartMs: 0, trimEndMs: 1000 }),
           ],
         },
@@ -163,9 +163,9 @@ describe("timelineModel", () => {
       ["a", 0],
       ["b", 2000],
     ]);
-    // 附加视频轨未被触碰（保持自由定位）
+    // The extra video track was not touched (stays freely positioned)
     expect(out.tracks[1].clips[0].timelineStartMs).toBe(10000);
-    // 音频轨未被触碰
+    // The audio track was not touched
     expect(out.tracks[2].clips[0].timelineStartMs).toBe(4000);
   });
 
@@ -253,7 +253,7 @@ describe("timelineModel", () => {
 
   it("hasOverlappingVideoClips detects video time-overlap across tracks (audio ignored)", () => {
     const a = clip({ id: "a", kind: "video", timelineStartMs: 0, trimEndMs: 4000 }); // 0–4000
-    // 同一时间另一条视频轨上的片段 → 重叠
+    // A clip on another video track at the same time -> overlap
     const b = clip({ id: "b", kind: "video", timelineStartMs: 2000, trimEndMs: 4000 }); // 2000–6000
     const overlap: ComposeTimelineState = {
       resolution: "1080p",
@@ -264,7 +264,7 @@ describe("timelineModel", () => {
     };
     expect(hasOverlappingVideoClips(overlap)).toBe(true);
 
-    // 错开后不重叠
+    // No overlap once staggered
     const ok: ComposeTimelineState = {
       resolution: "1080p",
       tracks: [
@@ -274,7 +274,7 @@ describe("timelineModel", () => {
     };
     expect(hasOverlappingVideoClips(ok)).toBe(false);
 
-    // 音频重叠不算
+    // Audio overlap does not count
     const audioOverlap: ComposeTimelineState = {
       resolution: "1080p",
       tracks: [
@@ -314,7 +314,7 @@ describe("timelineModel", () => {
   });
 
   it("applyProbedDurations widens fallback trims and ripples the main video track", () => {
-    // 两段 10s 源：a 已知时长，b 未知（按 5s 兜底排在 10s 处）。
+    // Two 10s sources: a has a known duration, b is unknown (falls back to 5s and is placed at 10s).
     const state: ComposeTimelineState = {
       resolution: "1080p",
       tracks: [

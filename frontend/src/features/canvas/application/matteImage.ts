@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { uploadFreezoneImage } from '@/api/ops';
 import {
   CANVAS_NODE_TYPES,
@@ -13,23 +14,23 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { matteInWorker } from './matteClient';
 
 export interface MatteImageResult {
-  /** 新建的 exportImage 结果节点 id。 */
+  /** The id of the newly built exportImage result node. */
   nodeId: string;
-  /** 后台去背链（fetch → worker → 上传 → 回填/写错）settle 时 resolve（不 reject）。 */
+  /** Resolves when the background matting chain (fetch -> worker -> upload -> backfill/write error) settles (never rejects). */
   completion: Promise<void>;
 }
 
 /**
- * 抠图编排（从 NodeActionToolbar.handleMatteImage 原样搬出，语义零变化）：
- * 立即在源节点下游建一个 isGenerating 的 exportImage 结果节点并连边/选中，然后
- * 在自建 Worker 里去背 → 上传 → 把结果 url 回填到结果节点；失败把错误写到该节点。
- * 工作流节点工具栏与故事板详情工具条共用这一条路径。
+ * Matting orchestration (moved verbatim out of NodeActionToolbar.handleMatteImage, with zero semantic change):
+ * immediately build an isGenerating exportImage result node downstream of the source node, connect the edge and select it, then
+ * matte in the self-built Worker -> upload -> backfill the result url into the result node; on failure write the error to that node.
+ * The workflow node toolbar and the storyboard detail toolbar share this one path.
  *
- * @param nodeId 源图片节点 id（用于取 aspectRatio / 主线继承字段与摆位）。
- * @param imageSource 源图片 url（调用方已用 resolveNodeSourceImageUrl 解析）。
- * @param options.displayName 结果节点标题（工作流传 t('nodeToolbar.matting')）。
- * @returns 结果节点 id + 后台链 completion（详情工具条用它收 busy 态）；
- *   缺 project 或源节点已不存在时返回 null。
+ * @param nodeId the source image node id (used to take aspectRatio / mainline inherited fields and positioning).
+ * @param imageSource the source image url (already resolved by the caller with resolveNodeSourceImageUrl).
+ * @param options.displayName the result node title (the workflow passes t('nodeToolbar.matting')).
+ * @returns the result node id + the background chain completion (the detail toolbar uses it to collect the busy state);
+ *   returns null when project is missing or the source node no longer exists.
  */
 export function matteImage(
   nodeId: string,
@@ -64,7 +65,7 @@ export function matteImage(
   const matteInitialData = inheritMainlineFields(
     { data: node.data as Record<string, unknown> },
     {
-      displayName: options?.displayName ?? '抠图',
+      displayName: options?.displayName ?? i18n.t('canvas.matte.defaultTitle'),
       imageUrl: null,
       previewImageUrl: null,
       aspectRatio: sourceAspectRatio,
@@ -90,8 +91,8 @@ export function matteImage(
         throw new Error(`fetch source failed: ${sourceResp.status}`);
       }
       const sourceBlob = await sourceResp.blob();
-      // 整段去背在自建 Worker 内执行(见 matteClient / matteWorker):无论 WebGPU
-      // 是否可用,主线程都不阻塞,点击抠图后画布保持流畅。
+      // The whole matting runs inside the self-built Worker (see matteClient / matteWorker): whether or not WebGPU
+      // is available, the main thread is not blocked, and the canvas stays smooth after clicking matting.
       const mattedBlob = await matteInWorker(sourceBlob);
       const filename = `matte-${node.id}-${Date.now()}.png`;
       const uploaded = await uploadFreezoneImage(projectId, mattedBlob, filename);

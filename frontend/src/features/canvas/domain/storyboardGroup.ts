@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// Pure layout math for "分镜组" (storyboard groups) created via 合并分镜组.
-// Members are packed into a uniform 宫格 grid of equal cells, in reading order
+// Pure layout math for "storyboard groups" created via Merge storyboard group.
+// Members are packed into a uniform grid of equal cells, in reading order
 // (row by row). Kept free of React / store imports so it can be unit-tested and
 // reused by both the store action and the toolbar re-layout.
 //

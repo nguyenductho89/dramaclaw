@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""DCO check（REPO-19）：PR 范围内每个 commit 都必须带 Signed-off-by trailer。
+"""DCO check (REPO-19): every commit in the PR range must carry a Signed-off-by trailer.
 
-用法：
+Usage:
     python scripts/check_dco.py <base>..<head> [--not <trusted-ref>]
-    python scripts/check_dco.py                   # 默认 origin/main..HEAD
+    python scripts/check_dco.py                   # defaults to origin/main..HEAD
 
-合并提交（merge）跳过。任一 commit 缺 `Signed-off-by:` → 退出码 1。
-贡献者签署说明见 CONTRIBUTING.md 与 DCO。
+Merge commits are skipped. Any commit missing `Signed-off-by:` -> exit code 1.
+See CONTRIBUTING.md and DCO for contributor sign-off instructions.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-# 形如：Signed-off-by: Jane Doe <jane@example.com>
+# Of the form: Signed-off-by: Jane Doe <jane@example.com>
 SIGNOFF = re.compile(r"^\s*Signed-off-by: .+ <.+@.+>\s*$", re.MULTILINE)
 
 
@@ -25,7 +25,7 @@ def _git(*args: str) -> str:
 
 
 def commit_shas(revisions: list[str]) -> list[str]:
-    # --no-merges 跳过合并提交（其作者非贡献者本人）
+    # --no-merges skips merge commits (their author is not the contributor)
     return _git("log", "--no-merges", "--format=%H", *revisions).split()
 
 
@@ -39,18 +39,18 @@ def main(argv: list[str]) -> int:
             offenders.append(f"{sha[:12]} {subject}")
     if offenders:
         print(
-            "✖ 以下 commit 缺少 Signed-off-by(DCO 签署):",
+            "✖ The following commits lack Signed-off-by (DCO sign-off):",
             file=sys.stderr,
         )
         for line in offenders:
             print(f"  {line}", file=sys.stderr)
         print(
-            "\n每个 commit 须含 `Signed-off-by: Your Name <email>`——提交时加 `-s`"
-            "(`git commit -s`),补签历史用 `git rebase --signoff <base>`。详见 CONTRIBUTING.md。",
+            "\nEvery commit must contain `Signed-off-by: Your Name <email>` -- add `-s` when committing "
+            "(`git commit -s`); to sign off existing history use `git rebase --signoff <base>`. See CONTRIBUTING.md.",
             file=sys.stderr,
         )
         return 1
-    print("✓ 所有 commit 均已 DCO 签署。")
+    print("✓ All commits are DCO signed off.")
     return 0
 
 

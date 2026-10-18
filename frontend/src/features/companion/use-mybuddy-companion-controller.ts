@@ -20,14 +20,14 @@ import {
 } from "@/features/companion/piko-festivals";
 
 const INTRO_ACTION_MS = 5200;
-/** 任务成功/失败的动画时长，也复用为 petdex 气泡的可见时长，让气泡与动作同步收尾。 */
+/** Animation duration of task success/failure, also reused as the visible duration of the petdex bubble, so the bubble and the action wrap up together. */
 export const SUCCESS_ACTION_MS = 2600;
 export const FAILURE_ACTION_MS = 3600;
 const IDLE_PATROL_DURATION_MS = 15000;
 const IDLE_SAFE_WINDOW_MS = 5000;
 const IDLE_DELAY_CYCLE_COUNT = 2;
 const IDLE_ACTION_LOOP_COUNT = 3;
-/** 气泡默认可见时长 + 淡出时长，petdex 气泡与 Piko 气泡共用同一组节奏。 */
+/** Default bubble visible duration + fade-out duration; the petdex bubble and the Piko bubble share the same rhythm. */
 export const BUBBLE_VISIBLE_MS = 3500;
 export const BUBBLE_FADE_OUT_MS = 220;
 const IDLE_BUBBLE_MIN_DELAY_MS = 25000;

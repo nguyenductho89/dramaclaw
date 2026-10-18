@@ -166,11 +166,11 @@ export function useTaskController(
     episode: key.episode,
   });
 
-  // `coversBeat` 把「跟哪一条 run」从任务行的 beat_num 列换成它的 beat 名单：
-  // selection-scoped 的 sketch_regen / selected_regen 行 beat_num 恒为 null,
-  // 名单落在 metadata.beat_numbers 里(见 ports/tasks.display_metadata_for_task)。
-  // 没名单的行是「覆盖范围未知」,按 covers() 一样的口径当作命中,宁可多显示进度
-  // 也不要把真在跑的 beat 藏掉。
+  // `coversBeat` swaps "which run to follow" from the task row's beat_num column to its beat list:
+  // beat_num of selection-scoped sketch_regen / selected_regen rows is always null,
+  // and the list lives in metadata.beat_numbers (see ports/tasks.display_metadata_for_task).
+  // A row without a list means "coverage unknown" and is treated as a hit, the same as covers(); better to show too much progress
+  // than to hide a beat that is really running.
   const coversBeat = key.coversBeat;
   const matchesCoverage = useCallback(
     (task: { beat_num?: number | null; metadata?: Record<string, unknown> | null }) => {

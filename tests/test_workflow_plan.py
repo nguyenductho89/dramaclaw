@@ -17,9 +17,9 @@ from novelvideo.freezone.workflow_schema import (
 
 _MINIMAL_ECOMMERCE_SKILL = {
     "id": "ecommerce-product",
-    "name": "电商产品图",
+    "name": "E-commerce Product Image",
     "version": 6,
-    "description": "测试用电商产品图 Skill",
+    "description": "E-commerce product image Skill for testing",
     "enabled": True,
     "triggers": {"node_scopes": ["imageGeneration"]},
     "allowed_recipe_ids": [
@@ -32,7 +32,7 @@ _MINIMAL_ECOMMERCE_SKILL = {
 _MINIMAL_ECOMMERCE_RECIPES = [
     {
         "id": "ecommerce-ad-image",
-        "name": "电商广告图",
+        "name": "E-commerce Ad Image",
         "version": 5,
         "enabled": True,
         "output_kind": "image",
@@ -40,7 +40,7 @@ _MINIMAL_ECOMMERCE_RECIPES = [
     },
     {
         "id": "general-image",
-        "name": "通用图片",
+        "name": "General Image",
         "version": 1,
         "enabled": True,
         "output_kind": "image",
@@ -48,7 +48,7 @@ _MINIMAL_ECOMMERCE_RECIPES = [
     },
     {
         "id": "general-video",
-        "name": "通用视频",
+        "name": "General Video",
         "version": 1,
         "enabled": True,
         "output_kind": "video",
@@ -56,7 +56,7 @@ _MINIMAL_ECOMMERCE_RECIPES = [
     },
     {
         "id": "custom-shot-image",
-        "name": "自定义分镜图",
+        "name": "Custom Storyboard Image",
         "version": 1,
         "enabled": True,
         "output_kind": "image",
@@ -105,7 +105,7 @@ def test_standard_ecommerce_image_planner_omits_audio_video_and_compose(monkeypa
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-ad",
-            "user_goal": "生成三张黑色运动相机电商图",
+            "user_goal": "Generate three e-commerce images of a black action camera",
             "planner": {
                 "mode": "standard",
                 "deliverable": "images",
@@ -130,7 +130,7 @@ def test_social_content_campaign_builtin_skill_is_loadable(monkeypatch):
     package = catalog.get_workflow_skill(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "制作小红书配图",
+            "user_goal": "Make Xiaohongshu images",
         }
     )
 
@@ -153,11 +153,11 @@ def test_social_content_image_count_controls_nodes_not_variants(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "制作三张社交媒体配图",
+            "user_goal": "Make three social media images",
             "items": [
                 {
                     "id": f"social_image_{index}",
-                    "title": f"社交配图 {index}",
+                    "title": f"Social image {index}",
                     "recipe_id": "social-content-image",
                 }
                 for index in range(1, 4)
@@ -186,16 +186,16 @@ def test_social_agent_plan_rejects_skill_defaults_that_contradict_its_nodes(monk
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "制作两张社交配图",
+            "user_goal": "Make two social images",
             "inputs": {
-                "platforms": ["微博/微信", "Instagram"],
+                "platforms": ["Weibo/WeChat", "Instagram"],
                 "image_count": 2,
                 "aspect_ratio": "1:1",
                 "image_aspect_ratio": "1:1",
             },
             "items": [
-                {"id": "weibo", "title": "微博版", "recipe_id": "social-weibo-wechat-image"},
-                {"id": "ig", "title": "Instagram 版", "recipe_id": "social-ig-post"},
+                {"id": "weibo", "title": "Weibo version", "recipe_id": "social-weibo-wechat-image"},
+                {"id": "ig", "title": "Instagram version", "recipe_id": "social-ig-post"},
             ],
             "include_compose": False,
         }
@@ -218,19 +218,19 @@ def test_social_agent_plan_rejects_skill_defaults_that_contradict_its_nodes(monk
     assert plan["inputs"] == {"image_aspect_ratio": "1:1"}
 
     plan["inputs"] = {
-        "platforms": ["微博/微信", "Instagram"],
+        "platforms": ["Weibo/WeChat", "Instagram"],
         "image_count": 2,
         "aspect_ratio": "1:1",
         "image_aspect_ratio": "1:1",
     }
     accepted = catalog.validate_agent_workflow_plan(plan)
     assert accepted["ok"] is True, accepted
-    assert accepted["resolved_inputs"]["platforms"] == ["微博/微信", "Instagram"]
+    assert accepted["resolved_inputs"]["platforms"] == ["Weibo/WeChat", "Instagram"]
     assert accepted["resolved_inputs"]["image_count"] == 2
     assert accepted["resolved_inputs"]["aspect_ratio"] == "1:1"
 
     for parameter_id, conflicting_value in (
-        ("platforms", ["小红书"]),
+        ("platforms", ["Xiaohongshu"]),
         ("image_count", 3),
         ("aspect_ratio", "3:4"),
     ):
@@ -249,11 +249,11 @@ def test_social_agent_plan_can_keep_unspecified_skill_defaults(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "制作三张社交媒体配图",
+            "user_goal": "Make three social media images",
             "items": [
                 {
                     "id": f"social_image_{index}",
-                    "title": f"社交配图 {index}",
+                    "title": f"Social image {index}",
                     "recipe_id": "social-content-image",
                 }
                 for index in range(1, 4)
@@ -270,7 +270,7 @@ def test_social_agent_plan_can_keep_unspecified_skill_defaults(monkeypatch):
     accepted = catalog.validate_agent_workflow_plan(plan)
 
     assert accepted["ok"] is True, accepted
-    assert accepted["resolved_inputs"]["platforms"] == ["小红书"]
+    assert accepted["resolved_inputs"]["platforms"] == ["Xiaohongshu"]
     assert accepted["resolved_inputs"]["image_count"] == 3
     assert accepted["resolved_inputs"]["aspect_ratio"] == "3:4"
 
@@ -282,9 +282,9 @@ def test_social_intent_compiler_keeps_single_recipe_compile_contract(monkeypatch
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "编译一个通用社交图片计划项",
+            "user_goal": "Compile a general social image plan item",
             "items": [
-                {"id": "image", "title": "配图", "recipe_id": "social-content-image"}
+                {"id": "image", "title": "Image", "recipe_id": "social-content-image"}
             ],
             "include_compose": False,
         }
@@ -299,9 +299,9 @@ def test_social_intent_compiler_keeps_single_recipe_compile_contract(monkeypatch
     platform_compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "social-content-campaign",
-            "user_goal": "编译一个 Instagram 图片计划项",
+            "user_goal": "Compile an Instagram image plan item",
             "items": [
-                {"id": "image", "title": "配图", "recipe_id": "social-ig-post"}
+                {"id": "image", "title": "Image", "recipe_id": "social-ig-post"}
             ],
             "include_compose": False,
         }
@@ -315,9 +315,9 @@ def test_social_explicit_platform_rejects_generic_recipe(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "social-content-campaign", "user_goal": "Instagram 配图",
+        "skill_id": "social-content-campaign", "user_goal": "Instagram image",
         "inputs": {"platforms": ["Instagram"], "image_count": 1},
-        "items": [{"id": "image", "title": "配图", "recipe_id": "social-content-image"}],
+        "items": [{"id": "image", "title": "Image", "recipe_id": "social-content-image"}],
         "include_compose": False,
     })
     assert result["ok"] is False
@@ -328,12 +328,12 @@ def test_social_rejects_mixed_image_ratios(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "social-content-campaign", "user_goal": "两平台配图",
-        "inputs": {"platforms": ["微博/微信", "Instagram"], "image_count": 2,
+        "skill_id": "social-content-campaign", "user_goal": "Two-platform images",
+        "inputs": {"platforms": ["Weibo/WeChat", "Instagram"], "image_count": 2,
                    "aspect_ratio": "1:1"},
         "items": [
-            {"id": "weibo", "title": "微博版", "recipe_id": "social-weibo-wechat-image"},
-            {"id": "ig", "title": "IG版", "recipe_id": "social-ig-post"},
+            {"id": "weibo", "title": "Weibo version", "recipe_id": "social-weibo-wechat-image"},
+            {"id": "ig", "title": "IG version", "recipe_id": "social-ig-post"},
         ],
         "include_compose": False,
     })
@@ -350,8 +350,8 @@ def test_social_single_instagram_recipe_uses_compatible_default_ratio(monkeypatc
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "social-content-campaign", "user_goal": "Instagram 配图",
-        "items": [{"id": "ig", "title": "IG版", "recipe_id": "social-ig-post"}],
+        "skill_id": "social-content-campaign", "user_goal": "Instagram image",
+        "items": [{"id": "ig", "title": "IG version", "recipe_id": "social-ig-post"}],
         "include_compose": False,
     })
     assert result["ok"] is True, result
@@ -371,10 +371,10 @@ def test_social_incompatible_platform_recipes_use_native_ratios_without_global_c
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "social-content-campaign", "user_goal": "小红书和 Instagram 配图",
+        "skill_id": "social-content-campaign", "user_goal": "Xiaohongshu and Instagram images",
         "items": [
-            {"id": "xhs", "title": "小红书版", "recipe_id": "social-xiaohongshu-image"},
-            {"id": "ig", "title": "IG版", "recipe_id": "social-ig-post"},
+            {"id": "xhs", "title": "Xiaohongshu version", "recipe_id": "social-xiaohongshu-image"},
+            {"id": "ig", "title": "IG version", "recipe_id": "social-ig-post"},
         ],
         "include_compose": False,
     })
@@ -399,10 +399,10 @@ def test_pixar_custom_anchor_rejects_default_character_source(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "pixar-ip-ad-video", "user_goal": "角色广告",
-        "inputs": {"character_input_method": "自定义角色"},
-        "items": [{"id": "character", "title": "角色锚点", "recipe_id": "ad-ip-character-anchor",
-                   "stage": "characters", "prompt": "按自定义角色设计主角"}],
+        "skill_id": "pixar-ip-ad-video", "user_goal": "Character ad",
+        "inputs": {"character_input_method": "Custom character"},
+        "items": [{"id": "character", "title": "Character anchor", "recipe_id": "ad-ip-character-anchor",
+                   "stage": "characters", "prompt": "Design the protagonist as a custom character"}],
     })
     assert result["ok"] is True, result
     plan = copy.deepcopy(result["plan"])
@@ -421,7 +421,7 @@ def test_standard_video_planner_distributes_target_duration_across_clips(monkeyp
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-ad",
-            "user_goal": "制作一条 30 秒竖屏香水广告",
+            "user_goal": "Make a 30-second vertical perfume ad",
             "planner": {
                 "mode": "standard",
                 "deliverable": "video",
@@ -429,7 +429,7 @@ def test_standard_video_planner_distributes_target_duration_across_clips(monkeyp
                 "total_duration_seconds": 30,
                 "include_audio": False,
                 "units": [
-                    {"title": f"镜头 {index}", "prompt": f"香水镜头 {index}"}
+                    {"title": f"Shot {index}", "prompt": f"Perfume shot {index}"}
                     for index in range(1, 6)
                 ],
             },
@@ -451,7 +451,7 @@ def test_standard_video_planner_builds_sequential_clip_dependencies(monkeypatch)
 
     intent = {
         "skill_id": "text-to-image-video",
-        "user_goal": "创建五段按顺序执行的视频，只创建节点和连线",
+        "user_goal": "Create five videos executed in order, creating only nodes and edges",
         "inputs": {"video_generation_mode": "textToVideo"},
         "planner": {
             "mode": "standard",
@@ -513,7 +513,7 @@ def test_standard_image_to_video_keeps_frame_as_media_input(monkeypatch):
 
     result = catalog.compile_workflow_intent({
         "skill_id": "text-to-image-video",
-        "user_goal": "先生成关键图，再用关键图生成视频",
+        "user_goal": "First generate key images, then use the key images to generate videos",
         "inputs": {"video_generation_mode": "imageReference"},
         "planner": {
             "mode": "standard",
@@ -538,7 +538,7 @@ def test_standard_image_planner_rejects_sequential_video_dependency(monkeypatch)
 
     result = catalog.compile_workflow_intent({
         "skill_id": "ecommerce-ad",
-        "user_goal": "创建三张商品图",
+        "user_goal": "Create three product images",
         "planner": {
             "mode": "standard",
             "deliverable": "images",
@@ -557,12 +557,12 @@ def test_standard_tutorial_frames_consume_the_generated_outline(monkeypatch):
 
     result = catalog.compile_workflow_intent({
         "skill_id": "video-tutorial",
-        "user_goal": "制作三步咖啡教程：15克粉、92摄氏度水、30克预浸30秒、总水量240克",
+        "user_goal": "Make a three-step coffee tutorial: 15 g of coffee, water at 92 degrees Celsius, 30 g pre-infusion for 30 seconds, 240 g of water in total",
         "planner": {
             "mode": "standard", "deliverable": "video", "item_count": 3,
             "include_audio": False, "total_duration_seconds": 18,
             "units": [
-                {"title": f"步骤{i}", "prompt": f"展示教程步骤{i}"}
+                {"title": f"Step {i}", "prompt": f"Show tutorial step {i}"}
                 for i in range(1, 4)
             ],
         },
@@ -584,21 +584,21 @@ def test_standard_tutorial_outline_keeps_facts_supplied_in_units(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
-        "skill_id": "video-tutorial", "user_goal": "三步手冲咖啡教程",
+        "skill_id": "video-tutorial", "user_goal": "Three-step pour-over coffee tutorial",
         "planner": {"mode": "standard", "deliverable": "video", "item_count": 3,
                     "include_audio": False, "total_duration_seconds": 18,
                     "units": [
-                        {"title": "准备", "prompt": "使用15克咖啡粉"},
-                        {"title": "预浸", "prompt": "92摄氏度水注入30克，等待30秒"},
-                        {"title": "完成", "prompt": "继续注水至240克"},
+                        {"title": "Prepare", "prompt": "Use 15 g of coffee"},
+                        {"title": "Pre-infuse", "prompt": "Pour in 30 g of 92 degrees Celsius water and wait 30 seconds"},
+                        {"title": "Finish", "prompt": "Keep pouring up to 240 g"},
                     ]},
     })
     assert result["ok"] is True, result
     outline = next(node for node in result["plan"]["nodes"] if node["id"] == "outline")
     assert all(fact in outline["data"]["prompt"] for fact in (
-        "15克", "92摄氏度", "30克", "30秒", "240克",
+        "15 g", "92 degrees Celsius", "30 g", "30 seconds", "240 g",
     ))
-    assert "牛奶" not in outline["data"]["prompt"]
+    assert "milk" not in outline["data"]["prompt"]
 
 
 def test_standard_tutorial_recommends_and_verifies_a_missing_video_model(monkeypatch):
@@ -607,12 +607,12 @@ def test_standard_tutorial_recommends_and_verifies_a_missing_video_model(monkeyp
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     compiled = catalog.compile_workflow_intent({
-        "skill_id": "video-tutorial", "user_goal": "制作一段咖啡教程",
+        "skill_id": "video-tutorial", "user_goal": "Make a coffee tutorial",
         "inputs": {"image_model": "image-model", "video_generation_mode": "imageToVideo",
                    "video_duration_seconds": 6},
         "planner": {"mode": "standard", "deliverable": "video", "item_count": 1,
                     "include_audio": False, "units": [
-                        {"title": "步骤一", "prompt": "展示咖啡冲泡步骤"},
+                        {"title": "Step one", "prompt": "Show the coffee brewing steps"},
                     ]},
     })
     assert compiled["ok"] is True, compiled
@@ -642,12 +642,12 @@ def test_quick_drama_rejects_untitled_video_shots(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     compiled = catalog.compile_workflow_intent({
-        "skill_id": "short-drama-quick", "user_goal": "两镜头短剧",
-        "inputs": {"visual_style": "未指定"},
+        "skill_id": "short-drama-quick", "user_goal": "Two-shot short drama",
+        "inputs": {"visual_style": "unspecified"},
         "planner": {"mode": "standard", "deliverable": "video", "item_count": 2,
                     "include_audio": False, "units": [
-                        {"title": "开场", "prompt": "主人公进门"},
-                        {"title": "收尾", "prompt": "主人公留下"},
+                        {"title": "Opening", "prompt": "The protagonist walks in"},
+                        {"title": "Ending", "prompt": "The protagonist stays"},
                     ]},
     })
     assert compiled["ok"] is True, compiled
@@ -671,26 +671,26 @@ def test_custom_video_item_keeps_structured_or_prompt_duration(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-ad",
-            "user_goal": "制作一条 30 秒竖屏香水广告",
+            "user_goal": "Make a 30-second vertical perfume ad",
             "items": [
                 {
                     "id": "product_anchor",
-                    "title": "商品参考图",
-                    "prompt": "透明玻璃香水瓶",
+                    "title": "Product reference image",
+                    "prompt": "A transparent glass perfume bottle",
                     "recipe_id": "general-image",
                 },
                 {
                     "id": "clip_explicit",
-                    "title": "商品特写",
-                    "prompt": "镜头缓慢推近香水瓶",
+                    "title": "Product close-up",
+                    "prompt": "The camera slowly pushes in on the perfume bottle",
                     "duration_seconds": 7,
                     "recipe_id": "video-clip-generation",
                     "depends_on": ["product_anchor"],
                 },
                 {
                     "id": "clip_legacy",
-                    "title": "品牌收尾",
-                    "prompt": "香水瓶缓缓旋转，6秒，9:16竖屏",
+                    "title": "Brand ending",
+                    "prompt": "The perfume bottle rotates slowly, 6 seconds, 9:16 vertical",
                     "recipe_id": "video-clip-generation",
                     "depends_on": ["product_anchor"],
                 },
@@ -722,7 +722,7 @@ def test_dynamic_text_dependencies_gate_media_without_becoming_prompts(monkeypat
     recipes.append(
         {
             "id": "general-text",
-            "name": "通用文本",
+            "name": "General Text",
             "version": 1,
             "enabled": True,
             "output_kind": "text",
@@ -746,28 +746,28 @@ def test_dynamic_text_dependencies_gate_media_without_becoming_prompts(monkeypat
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "先写商品 Brief，再生成商品主图",
+            "user_goal": "First write the product Brief, then generate the product main image",
             "items": [
                 {
                     "id": "brief",
-                    "title": "商品 Brief",
+                    "title": "Product Brief",
                     "recipe_id": "general-text",
                 },
                 {
                     "id": "outline",
-                    "title": "商品大纲",
+                    "title": "Product outline",
                     "recipe_id": "general-text",
                     "depends_on": ["brief"],
                 },
                 {
                     "id": "hero-image",
-                    "title": "商品主图",
+                    "title": "Product main image",
                     "recipe_id": "general-image",
                     "depends_on": ["outline"],
                 },
                 {
                     "id": "hero-video",
-                    "title": "商品视频",
+                    "title": "Product video",
                     "recipe_id": "general-video",
                     "depends_on": ["hero-image"],
                 },
@@ -790,7 +790,7 @@ def test_standard_skill_planners_expand_without_agent_authored_topology(monkeypa
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     skill_package = catalog.get_workflow_skill(
-        {"skill_id": "ecommerce-ad", "user_goal": "生成电商广告"}
+        {"skill_id": "ecommerce-ad", "user_goal": "Generate an e-commerce ad"}
     )
     planning_contract = skill_package["planning_contract"]
     assert planning_contract["topology_modes"] == ["standard_planner", "custom_items"]
@@ -809,22 +809,22 @@ def test_standard_skill_planners_expand_without_agent_authored_topology(monkeypa
         result = catalog.compile_workflow_intent(
             {
                 "skill_id": skill_id,
-                "user_goal": "生成一个两段式竖屏测试视频",
-                **({"inputs": {"visual_style": "未指定"}}
+                "user_goal": "Generate a two-part vertical test video",
+                **({"inputs": {"visual_style": "unspecified"}}
                    if skill_id == "short-drama-quick" else {}),
                 "planner": {
                     "mode": "standard",
                     "item_count": 2,
                     "units": [
                         {
-                            "title": "开场",
-                            "prompt": "快速建立主题",
-                            "narration": "先看核心内容。",
+                            "title": "Opening",
+                            "prompt": "Quickly establish the theme",
+                            "narration": "First, the core content.",
                         },
                         {
-                            "title": "收尾",
-                            "prompt": "完成信息收束",
-                            "narration": "以上就是全部内容。",
+                            "title": "Ending",
+                            "prompt": "Wrap up the information",
+                            "narration": "That is everything.",
                         },
                     ],
                 },
@@ -855,7 +855,7 @@ def test_text_to_image_video_standard_plan_feeds_outline_into_each_image(monkeyp
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "先规划两幅画面，再依次生成图片和视频",
+            "user_goal": "First plan two pictures, then generate the images and videos in turn",
             "planner": {"mode": "standard", "item_count": 2},
         }
     )
@@ -877,7 +877,7 @@ def test_ecommerce_standard_plan_feeds_creative_outline_into_product_reference(m
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-ad",
-            "user_goal": "规划一条商品广告，再生成参考图、场景图和视频",
+            "user_goal": "Plan a product ad, then generate the reference image, scene images and videos",
             "planner": {"mode": "standard", "item_count": 1},
             "include_audio": False,
         }
@@ -918,7 +918,7 @@ def _raw_plan_from_standard(catalog, intent: dict, *, deviate: bool = True) -> d
     Without it the plan restates the template and is rerouted.
     """
     if intent.get("skill_id") == "short-drama-quick":
-        intent = {**intent, "inputs": {"visual_style": "未指定", **intent.get("inputs", {})}}
+        intent = {**intent, "inputs": {"visual_style": "unspecified", **intent.get("inputs", {})}}
     compiled = catalog.compile_workflow_intent(intent)
     assert compiled["ok"] is True, compiled
     plan = copy.deepcopy(compiled["plan"])
@@ -937,7 +937,7 @@ def test_agent_authored_plan_backfills_runtime_fields_from_skill_inputs(monkeypa
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "生成一段赛博城市文生图生视频"}
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Generate a cyber city text-to-image-to-video clip"}
     )
     video_nodes = [node for node in plan["nodes"] if node["node_type"] == "videoNode"]
     assert video_nodes
@@ -983,7 +983,7 @@ def test_agent_authored_per_shot_duration_alias_cannot_be_masked_by_global_defau
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "两镜头依次 8 秒和 7 秒"}
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Two shots of 8 seconds and 7 seconds in turn"}
     )
     videos = [node for node in plan["nodes"] if node["node_type"] == "videoNode"]
     assert len(videos) >= 2
@@ -1020,7 +1020,7 @@ def test_agent_authored_per_shot_duration_alias_cannot_be_masked_by_global_defau
 def _mode_plan(catalog, node_mode, *, deviate=True, shared_mode="imageToVideo"):
     plan = _raw_plan_from_standard(
         catalog,
-        {"skill_id": "text-to-image-video", "user_goal": "两段图生视频"},
+        {"skill_id": "text-to-image-video", "user_goal": "Two image-to-video clips"},
         deviate=deviate,
     )
     for node in plan["nodes"]:
@@ -1143,21 +1143,21 @@ def test_plan_video_mode_matching_requested_mode_stays_consistent(monkeypatch, n
 
 def test_intent_video_item_carries_explicit_embedded_audio_requirement():
     item = {
-        "id": "shot-1", "title": "对白镜头", "recipe_id": "general-video",
-        "prompt": "人物说出对白", "duration_seconds": 7,
+        "id": "shot-1", "title": "Dialogue shot", "recipe_id": "general-video",
+        "prompt": "The character speaks the dialogue", "duration_seconds": 7,
         "requires_generated_audio": True,
     }
     Draft202012Validator(workflow_intent_json_schema()).validate({
-        "skill_id": "video-ad", "user_goal": "对白短片", "items": [item],
+        "skill_id": "video-ad", "user_goal": "Dialogue short", "items": [item],
     })
     catalog = _load_catalog_module()
     parsed_item = catalog._intent_items({"items": [item]})[0]
     assert parsed_item["requires_generated_audio"] is True
     node = catalog._intent_item_node(
         skill={"id": "video-ad", "version": 1},
-        recipe={"id": "general-video", "name": "视频", "version": 1},
+        recipe={"id": "general-video", "name": "Video", "version": 1},
         node_type="videoNode", item_id="shot-1", item=parsed_item,
-        user_goal="对白短片", resolved_inputs={}, recipe_pipeline=[],
+        user_goal="Dialogue short", resolved_inputs={}, recipe_pipeline=[],
     )
 
     assert node["data"]["workflowCatalog"]["requiresGeneratedAudio"] is True
@@ -1185,17 +1185,17 @@ def test_builtin_voiced_shot_recipe_blocks_silent_agent_plan(
         items.append(
             {
                 "id": "anchor",
-                "title": "角色参考",
+                "title": "Character reference",
                 "recipe_id": anchor_recipe_id,
-                "prompt": "角色参考图",
+                "prompt": "Character reference image",
             }
         )
     items.append(
         {
             "id": "shot",
-            "title": "对白镜头",
+            "title": "Dialogue shot",
             "recipe_id": shot_recipe_id,
-            "prompt": "有对白和环境声的单镜",
+            "prompt": "A single shot with dialogue and ambient sound",
             "duration_seconds": 5,
             **({"depends_on": ["anchor"]} if anchor_recipe_id else {}),
         }
@@ -1203,7 +1203,7 @@ def test_builtin_voiced_shot_recipe_blocks_silent_agent_plan(
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": skill_id,
-            "user_goal": "制作有对白且不生成 BGM 的短片",
+            "user_goal": "Make a short with dialogue and without BGM",
             "items": items,
         }
     )
@@ -1243,11 +1243,11 @@ def test_builtin_voiced_shot_recipe_blocks_silent_agent_plan(
 def test_workflow_intent_schema_rejects_recipe_discovery_metadata():
     intent = {
         "skill_id": "video-ad",
-        "user_goal": "生成广告图",
+        "user_goal": "Generate an ad image",
         "items": [
             {
                 "id": "image-1",
-                "title": "广告图",
+                "title": "Ad image",
                 "recipe_id": "general-image",
                 "requires_source_media": False,
             }
@@ -1265,7 +1265,7 @@ def test_workflow_intent_schema_accepts_first_frame_video_mode():
     Draft202012Validator(workflow_intent_json_schema()).validate(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "根据首帧生成视频",
+            "user_goal": "Generate a video from the first frame",
             "inputs": {"video_generation_mode": "firstFrame"},
         }
     )
@@ -1277,7 +1277,7 @@ def test_agent_authored_plan_backfills_model_and_generic_aspect_ratio(monkeypatc
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "生成一段赛博城市文生图生视频"}
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Generate a cyber city text-to-image-to-video clip"}
     )
     for node in plan["nodes"]:
         if node["node_type"] in {"imageGenNode", "videoNode"}:
@@ -1317,7 +1317,7 @@ def test_exact_plan_validation_records_agent_authored_planner(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "生成一段赛博城市文生图生视频"}
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Generate a cyber city text-to-image-to-video clip"}
     )
     for node in plan["nodes"]:
         if node["node_type"] == "videoNode":
@@ -1347,14 +1347,14 @@ def test_exact_plan_restating_the_template_is_compiled_by_the_standard_planner(m
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
         catalog,
-        {"skill_id": "text-to-image-video", "user_goal": "生成一段赛博城市文生图生视频",
+        {"skill_id": "text-to-image-video", "user_goal": "Generate a cyber city text-to-image-to-video clip",
          "planner": {"mode": "standard", "item_count": 2}},
         deviate=False,
     )
     # The agent rewrote the briefs and dropped the compose node it did not think of.
     plan["nodes"] = [n for n in plan["nodes"] if n["node_type"] != "videoComposeNode"]
     plan["edges"] = [e for e in plan["edges"] if e["target"] != "final_compose"]
-    briefs = {"1": "霓虹雨夜的街道推镜", "2": "天台俯瞰全城"}
+    briefs = {"1": "A push-in shot of a neon rainy-night street", "2": "A rooftop overlooking the whole city"}
     for node in plan["nodes"]:
         for suffix, brief in briefs.items():
             if node["id"] in {f"frame_{suffix}", f"clip_{suffix}"}:
@@ -1378,14 +1378,14 @@ def test_exact_plan_restating_the_template_is_compiled_by_the_standard_planner(m
     assert validated["plan"]["planner"]["mode"] == "deterministic_standard"
     nodes = {node["id"]: node for node in validated["plan"]["nodes"]}
     assert "final_compose" in nodes
-    assert nodes["clip_1"]["data"]["prompt"] == "霓虹雨夜的街道推镜"
-    assert nodes["frame_1"]["data"]["prompt"] == "霓虹雨夜的街道推镜"
+    assert nodes["clip_1"]["data"]["prompt"] == "A push-in shot of a neon rainy-night street"
+    assert nodes["frame_1"]["data"]["prompt"] == "A push-in shot of a neon rainy-night street"
     assert nodes["clip_1"]["data"]["durationSec"] == 4
-    assert nodes["clip_2"]["data"]["prompt"] == "天台俯瞰全城"
+    assert nodes["clip_2"]["data"]["prompt"] == "A rooftop overlooking the whole city"
     assert validated["preflight"]["blockers"] == []
     # The same fields every validated plan carries.
     assert set(validated) >= {"resolved_inputs", "execution_mode", "recommended_run_after_create"}
-    assert validated["plan"]["summary"] == "生成一段赛博城市文生图生视频"
+    assert validated["plan"]["summary"] == "Generate a cyber city text-to-image-to-video clip"
 
 
 def test_short_drama_restatement_recovers_narration_and_audio(monkeypatch):
@@ -1393,10 +1393,10 @@ def test_short_drama_restatement_recovers_narration_and_audio(monkeypatch):
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
         catalog,
-        {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
+        {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
          "planner": {"mode": "standard", "item_count": 2, "units": [
-             {"title": "开场", "prompt": "两人对峙", "narration": "今晚只能有一个人站着离开。"},
-             {"title": "反转", "prompt": "灯光骤暗", "narration": "他没想到，对手是自己的影子。"},
+             {"title": "Opening", "prompt": "The two face off", "narration": "Only one of us walks out standing tonight."},
+             {"title": "Twist", "prompt": "The lights suddenly dim", "narration": "He never expected the opponent to be his own shadow."},
          ]}},
         deviate=False,
     )
@@ -1408,7 +1408,7 @@ def test_short_drama_restatement_recovers_narration_and_audio(monkeypatch):
     assert validated["planner"]["item_count"] == 2
     voices = {n["id"]: n["data"]["text"] for n in validated["plan"]["nodes"]
               if n["node_type"] == "audioNode" and n["data"].get("audioKind") == "speech"}
-    assert voices == {"voice_1": "今晚只能有一个人站着离开。", "voice_2": "他没想到，对手是自己的影子。"}
+    assert voices == {"voice_1": "Only one of us walks out standing tonight.", "voice_2": "He never expected the opponent to be his own shadow."}
     assert any(n["node_type"] == "videoComposeNode" for n in validated["plan"]["nodes"])
     assert any(n["id"] == "background_music" for n in validated["plan"]["nodes"])
 
@@ -1421,9 +1421,9 @@ def test_template_restatement_that_the_standard_planner_rejects_stays_agent_auth
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
         catalog,
-        {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
+        {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
          "planner": {"mode": "standard", "item_count": 1, "units": [
-             {"title": "开场", "prompt": "两人对峙", "narration": "今晚只能有一个人站着离开。"},
+             {"title": "Opening", "prompt": "The two face off", "narration": "Only one of us walks out standing tonight."},
          ]}},
         deviate=False,
     )
@@ -1431,7 +1431,7 @@ def test_template_restatement_that_the_standard_planner_rejects_stays_agent_auth
         if node["id"] == "voice_1":
             for key in ("text", "prompt", "content"):
                 node["data"].pop(key, None)
-            node["data"]["title"] = "开场旁白"
+            node["data"]["title"] = "Opening narration"
 
     validated = catalog.validate_agent_workflow_plan(plan)
 
@@ -1447,7 +1447,7 @@ def test_reroute_never_rewrites_what_the_plan_says(monkeypatch):
     agent's plan stands and the record names the node or edge that differs."""
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 2}}
 
     def validated_planner(plan):
@@ -1470,16 +1470,16 @@ def test_reroute_never_rewrites_what_the_plan_says(monkeypatch):
     two_briefs = _raw_plan_from_standard(catalog, tutorial, deviate=False)
     for node in two_briefs["nodes"]:
         if node["id"] == "frame_1":
-            node["data"]["prompt"] = node["data"]["content"] = "只画建筑轮廓"
+            node["data"]["prompt"] = node["data"]["content"] = "Draw only the building outlines"
     planner = validated_planner(two_briefs)
     assert planner["mode"] == "agent_authored"
     assert planner["template_match"]["reason"] == "not_expressible:node:frame_1"
 
-    drama = {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
-    "inputs": {"visual_style": "未指定"},
+    drama = {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
+    "inputs": {"visual_style": "unspecified"},
              "planner": {"mode": "standard", "item_count": 2, "units": [
-                 {"title": "开场", "prompt": "两人对峙", "narration": "今晚只能有一个人站着离开。"},
-                 {"title": "反转", "prompt": "灯光骤暗", "narration": "他没想到，对手是自己的影子。"},
+                 {"title": "Opening", "prompt": "The two face off", "narration": "Only one of us walks out standing tonight."},
+                 {"title": "Twist", "prompt": "The lights suddenly dim", "narration": "He never expected the opponent to be his own shadow."},
              ]}}
     # 3. Background music without voice-over: the planner cannot say music-only.
     music_only = _raw_plan_from_standard(catalog, drama, deviate=False)
@@ -1509,10 +1509,10 @@ def test_reroute_never_rewrites_what_the_plan_says(monkeypatch):
         e["target"]: e["source"] for e in validated["plan"]["edges"]
         if e["target"].startswith("voice_")
     }
-    assert nodes[fed_by["voice_1"]]["data"]["prompt"] == "两人对峙"
-    assert nodes["voice_1"]["data"]["text"] == "今晚只能有一个人站着离开。"
-    assert nodes[fed_by["voice_2"]]["data"]["prompt"] == "灯光骤暗"
-    assert nodes["voice_2"]["data"]["text"] == "他没想到，对手是自己的影子。"
+    assert nodes[fed_by["voice_1"]]["data"]["prompt"] == "The two face off"
+    assert nodes["voice_1"]["data"]["text"] == "Only one of us walks out standing tonight."
+    assert nodes[fed_by["voice_2"]]["data"]["prompt"] == "The lights suddenly dim"
+    assert nodes["voice_2"]["data"]["text"] == "He never expected the opponent to be his own shadow."
 
 
 def test_reroute_maps_nodes_by_identity_and_keeps_execution_parameters(monkeypatch):
@@ -1528,10 +1528,10 @@ def test_reroute_maps_nodes_by_identity_and_keeps_execution_parameters(monkeypat
         return validated["planner"]
 
     # 1. Two frames with the same brief and settings; both clips read frame_1.
-    same_units = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    same_units = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                   "planner": {"mode": "standard", "item_count": 2, "units": [
-                      {"title": "镜头", "prompt": "霓虹街道"},
-                      {"title": "镜头", "prompt": "霓虹街道"},
+                      {"title": "Shot", "prompt": "Neon street"},
+                      {"title": "Shot", "prompt": "Neon street"},
                   ]}}
     shared = _raw_plan_from_standard(catalog, same_units, deviate=False)
     frames = [n for n in shared["nodes"] if n["node_type"] == "imageGenNode"]
@@ -1551,7 +1551,7 @@ def test_reroute_maps_nodes_by_identity_and_keeps_execution_parameters(monkeypat
 
     # 2. The agent chose a different recipe for the frames.
     grid = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                   "planner": {"mode": "standard", "item_count": 1}}, deviate=False,
     )
     for node in grid["nodes"]:
@@ -1563,9 +1563,9 @@ def test_reroute_maps_nodes_by_identity_and_keeps_execution_parameters(monkeypat
 
     # 3. A custom voice on the speech node.
     voiced = _raw_plan_from_standard(
-        catalog, {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
+        catalog, {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
                   "planner": {"mode": "standard", "item_count": 1, "units": [
-                      {"title": "开场", "prompt": "两人对峙", "narration": "今晚只能有一个人站着离开。"},
+                      {"title": "Opening", "prompt": "The two face off", "narration": "Only one of us walks out standing tonight."},
                   ]}}, deviate=False,
     )
     for node in voiced["nodes"]:
@@ -1585,7 +1585,7 @@ def test_reroute_keeps_user_material_compose_order_and_stays_fast(monkeypatch):
 
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 2}}
 
     def validated_planner(plan):
@@ -1610,7 +1610,7 @@ def test_reroute_keeps_user_material_compose_order_and_stays_fast(monkeypatch):
     noted = _raw_plan_from_standard(catalog, tutorial, deviate=False)
     noted["nodes"].append({
         "id": "reference_notes", "node_type": "textAnnotationNode", "stage": "resource",
-        "data": {"title": "参考", "content": "霓虹偏冷色"},
+        "data": {"title": "Reference", "content": "Neon leaning cool"},
     })
     noted["edges"].append(
         {"source": "reference_notes", "target": "outline", "link_type": "context_for"}
@@ -1623,9 +1623,9 @@ def test_reroute_keeps_user_material_compose_order_and_stays_fast(monkeypatch):
 
     # 3. Ten look-alike units with one shared frame: rejected quickly, not by
     #    permuting every frame.
-    lookalike = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    lookalike = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                  "planner": {"mode": "standard", "item_count": 10,
-                             "units": [{"title": "镜头", "prompt": "霓虹街道"}] * 10}}
+                             "units": [{"title": "Shot", "prompt": "Neon street"}] * 10}}
     crowded = _raw_plan_from_standard(catalog, lookalike, deviate=False)
     crowded["edges"] = [
         {**e, "source": "frame_1"} if e["source"] == "frame_2" and e["target"] == "clip_2"
@@ -1651,7 +1651,7 @@ def test_reroute_keeps_workflow_catalog_execution_fields(monkeypatch):
     version); a value the standard planner would not write blocks the reroute."""
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 1}}
 
     def reason_for(node_id: str, **catalog_fields):
@@ -1685,10 +1685,10 @@ def test_reroute_carries_the_agent_nodes_over_verbatim(monkeypatch):
     know about, such as promptBuilder.planItem.audio_kind, cannot be reset."""
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    drama = {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
+    drama = {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
              "planner": {"mode": "standard", "item_count": 2, "units": [
-                 {"title": "开场", "prompt": "两人对峙", "narration": "今晚只能有一个人站着离开。"},
-                 {"title": "反转", "prompt": "灯光骤暗", "narration": "他没想到，对手是自己的影子。"},
+                 {"title": "Opening", "prompt": "The two face off", "narration": "Only one of us walks out standing tonight."},
+                 {"title": "Twist", "prompt": "The lights suddenly dim", "narration": "He never expected the opponent to be his own shadow."},
              ]}}
     plan = _raw_plan_from_standard(catalog, drama, deviate=False)
     voice = next(n for n in plan["nodes"] if n["id"] == "voice_1")
@@ -1728,7 +1728,7 @@ def test_reroute_keeps_the_agent_link_types(monkeypatch):
     and only adds the planner's edges to the nodes the planner added."""
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 2}}
     plan = _raw_plan_from_standard(catalog, tutorial, deviate=False)
     plan["nodes"] = [n for n in plan["nodes"] if n["node_type"] != "videoComposeNode"]
@@ -1755,7 +1755,7 @@ def test_reroute_keeps_the_agent_link_types(monkeypatch):
 def test_reroute_carries_agent_ids_and_wiring_for_renamed_nodes(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 2}}
     plan = _raw_plan_from_standard(catalog, tutorial, deviate=False)
     renames = {"frame_1": "shot_a_frame", "clip_1": "shot_a_clip"}
@@ -1786,12 +1786,12 @@ def test_reroute_carries_agent_ids_and_wiring_for_renamed_nodes(monkeypatch):
 def test_reroute_keeps_plan_summary_and_assumptions(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    tutorial = {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+    tutorial = {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
                 "planner": {"mode": "standard", "item_count": 1}}
     # A summary the agent wrote as the draft title is not the planner's to rename.
     retitled = _raw_plan_from_standard(catalog, tutorial, deviate=False)
-    assert retitled["summary"] == "赛博城市"
-    retitled["summary"] = "赛博城市三镜头样片"
+    assert retitled["summary"] == "Cyber city"
+    retitled["summary"] = "Cyber city three-shot sample"
     validated = catalog.validate_agent_workflow_plan(retitled)
     assert validated["planner"]["mode"] == "agent_authored"
     # The summary is also where a raw plan states its goal, so the planner's
@@ -1803,13 +1803,13 @@ def test_reroute_keeps_plan_summary_and_assumptions(monkeypatch):
     titled = _raw_plan_from_standard(catalog, tutorial, deviate=False)
     validated = catalog.validate_agent_workflow_plan(titled)
     assert validated["planner"]["selected_by"] == "template_isomorphic"
-    assert validated["plan"]["summary"] == "赛博城市"
+    assert validated["plan"]["summary"] == "Cyber city"
     # Plan assumptions ride along into the standard compilation.
     assumed = _raw_plan_from_standard(catalog, tutorial, deviate=False)
-    assumed["assumptions"] = ["夜景为主", "无对白"]
+    assumed["assumptions"] = ["Mainly night scenes", "No dialogue"]
     validated = catalog.validate_agent_workflow_plan(assumed)
     assert validated["planner"]["selected_by"] == "template_isomorphic"
-    assert validated["plan"]["assumptions"] == ["夜景为主", "无对白"]
+    assert validated["plan"]["assumptions"] == ["Mainly night scenes", "No dialogue"]
 
 
 def test_plan_node_matching_gives_up_within_budget():
@@ -1844,15 +1844,15 @@ def test_intent_items_with_a_custom_recipe_stay_agent_authored(monkeypatch):
     _install_real_builtin_catalog(monkeypatch, catalog)
     result = catalog.compile_workflow_intent({
         "skill_id": "text-to-image-video",
-        "user_goal": "赛博城市",
+        "user_goal": "Cyber city",
         "planner": {"mode": "standard"},
         "items": [
-            {"id": "outline", "title": "大纲", "prompt": "赛博城市",
+            {"id": "outline", "title": "Outline", "prompt": "Cyber city",
              "recipe_id": "video-creative-outline"},
-            {"id": "frame_1", "title": "分镜格", "prompt": "霓虹街道",
+            {"id": "frame_1", "title": "Storyboard cell", "prompt": "Neon street",
              "recipe_id": "video-storyboard-grid", "depends_on": ["outline"],
              "reference_inputs": ["outline"]},
-            {"id": "clip_1", "title": "镜头", "prompt": "霓虹街道",
+            {"id": "clip_1", "title": "Shot", "prompt": "Neon street",
              "recipe_id": "general-video", "depends_on": ["frame_1"], "duration_seconds": 5},
         ],
     })
@@ -1909,7 +1909,7 @@ def test_narrations_follow_their_attachment_not_list_order():
 def test_template_isomorphism_reports_the_first_deviation(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    intent = {"skill_id": "short-drama-quick", "user_goal": "舞台对决",
+    intent = {"skill_id": "short-drama-quick", "user_goal": "Stage duel",
               "planner": {"mode": "standard", "item_count": 1, "include_audio": False}}
     plan = _raw_plan_from_standard(catalog, intent, deviate=False)
     assert catalog.template_isomorphism("short-drama-quick", plan)["isomorphic"] is True
@@ -1920,7 +1920,7 @@ def test_template_isomorphism_reports_the_first_deviation(monkeypatch):
     outside = copy.deepcopy(plan)
     outside["nodes"].append({
         "id": "extra_html", "node_type": "htmlArtifactNode",
-        "data": {"prompt": "额外页面", "workflowCatalog": {"recipeId": "html"}},
+        "data": {"prompt": "Extra page", "workflowCatalog": {"recipeId": "html"}},
     })
     assert catalog.template_isomorphism("short-drama-quick", outside)["reason"] == (
         "node_outside_template:extra_html"
@@ -1950,7 +1950,7 @@ def test_agent_authored_plan_without_preferences_is_left_untouched(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _raw_plan_from_standard(
-        catalog, {"skill_id": "text-to-image-video", "user_goal": "生成一段赛博城市文生图生视频"}
+        catalog, {"skill_id": "text-to-image-video", "user_goal": "Generate a cyber city text-to-image-to-video clip"}
     )
     before = copy.deepcopy(plan["nodes"])
 
@@ -1984,7 +1984,7 @@ def test_standard_skill_planner_uses_defaults_for_minimal_intent(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "生成一段赛博城市文生图生视频",
+            "user_goal": "Generate a cyber city text-to-image-to-video clip",
         }
     )
 
@@ -2001,8 +2001,8 @@ def test_standard_audio_planner_rejects_placeholder_narration(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "user_goal": "制作短剧",
-            "inputs": {"visual_style": "未指定"},
+            "user_goal": "Make a short drama",
+            "inputs": {"visual_style": "unspecified"},
             "include_audio": True,
             "planner": {
                 "mode": "standard",
@@ -2010,9 +2010,9 @@ def test_standard_audio_planner_rejects_placeholder_narration(monkeypatch):
                 "include_audio": True,
                 "units": [
                     {
-                        "title": "开场",
-                        "prompt": "建立故事场景",
-                        "narration": "这是短剧的第一段旁白。",
+                        "title": "Opening",
+                        "prompt": "Establish the story scene",
+                        "narration": "This is the narration for the first segment of the short drama.",
                     }
                 ],
             },
@@ -2032,14 +2032,14 @@ def test_short_drama_standard_planner_defers_missing_narration_to_shot_output(mo
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "inputs": {"visual_style": "未指定"},
-            "user_goal": "制作短剧，先生成剧本和分镜，再生成逐镜头配音",
+            "inputs": {"visual_style": "unspecified"},
+            "user_goal": "Make a short drama: first generate the script and storyboard, then the shot-by-shot voiceover",
             "include_audio": True,
             "planner": {
                 "mode": "standard",
                 "item_count": 1,
                 "include_audio": True,
-                "units": [{"title": "开场", "prompt": "建立故事场景"}],
+                "units": [{"title": "Opening", "prompt": "Establish the story scene"}],
             },
         }
     )
@@ -2063,22 +2063,22 @@ def test_video_tutorial_standard_outline_consumes_unit_facts(monkeypatch):
 
     result = catalog.compile_workflow_intent({
         "skill_id": "video-tutorial",
-        "user_goal": "准备三步手冲教程 Draft。",
+        "user_goal": "Prepare a three-step pour-over tutorial Draft.",
         "planner": {
             "mode": "standard",
             "item_count": 2,
             "include_audio": True,
             "units": [
                 {
-                    "title": "准备滤杯",
-                    "prompt": "使用15克咖啡粉和透明V60滤杯。",
-                    "narration": "先放入十五克咖啡粉。",
+                    "title": "Prepare the filter",
+                    "prompt": "Use 15 g of coffee and a transparent V60 filter.",
+                    "narration": "First put in fifteen grams of coffee.",
                     "duration_seconds": 6,
                 },
                 {
-                    "title": "闷蒸",
-                    "prompt": "用92摄氏度热水注入30克并等待30秒。",
-                    "narration": "注入三十克热水，等待三十秒。",
+                    "title": "Bloom",
+                    "prompt": "Pour in 30 g of 92 degrees Celsius water and wait 30 seconds.",
+                    "narration": "Pour in thirty grams of hot water and wait thirty seconds.",
                     "duration_seconds": 6,
                 },
             ],
@@ -2088,11 +2088,11 @@ def test_video_tutorial_standard_outline_consumes_unit_facts(monkeypatch):
     assert result["ok"] is True, result
     outline = next(node for node in result["plan"]["nodes"] if node["id"] == "outline")
     prompt = outline["data"]["prompt"]
-    assert "15克" in prompt
-    assert "92摄氏度" in prompt
-    assert "30克" in prompt
-    assert "30秒" in prompt
-    assert "十五克咖啡粉" in prompt
+    assert "15 g" in prompt
+    assert "92 degrees Celsius" in prompt
+    assert "30 g" in prompt
+    assert "30 seconds" in prompt
+    assert "fifteen grams of coffee" in prompt
 
 
 def test_non_screenplay_planner_still_requires_literal_narration(monkeypatch):
@@ -2102,13 +2102,13 @@ def test_non_screenplay_planner_still_requires_literal_narration(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作教程",
+            "user_goal": "Make a tutorial",
             "include_audio": True,
             "planner": {
                 "mode": "standard",
                 "item_count": 1,
                 "include_audio": True,
-                "units": [{"title": "第一步", "prompt": "展示第一步"}],
+                "units": [{"title": "First step", "prompt": "Show the first step"}],
             },
         }
     )
@@ -2124,8 +2124,8 @@ def test_standard_planner_rejects_conflicting_audio_policy(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "inputs": {"visual_style": "未指定"},
-            "user_goal": "制作短剧",
+            "inputs": {"visual_style": "unspecified"},
+            "user_goal": "Make a short drama",
             "include_audio": True,
             "planner": {"mode": "standard", "include_audio": False},
         }
@@ -2143,14 +2143,14 @@ def test_custom_items_take_precedence_over_standard_planner(monkeypatch):
     result = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-ad",
-            "user_goal": "只生成一张自定义商品图",
+            "user_goal": "Generate only one custom product image",
             "planner": {"mode": "standard", "item_count": 6},
             "include_compose": False,
             "items": [
                 {
                     "id": "custom_image",
-                    "title": "自定义商品图",
-                    "prompt": "极简背景中的商品",
+                    "title": "Custom product image",
+                    "prompt": "A product on a minimal background",
                     "recipe_id": "general-image",
                 }
             ],
@@ -2185,23 +2185,23 @@ def test_intent_items_restating_the_template_use_the_standard_planner(monkeypatc
 
     intent = {
         "skill_id": "video-tutorial",
-        "user_goal": "三步教你手冲咖啡",
+        "user_goal": "Three steps to pour-over coffee",
         "planner": {"mode": "standard"},
         "inputs": {"video_duration_seconds": 5},
         "items": [
-            {"id": "outline", "title": "教程大纲", "prompt": "三步教你手冲咖啡",
+            {"id": "outline", "title": "Tutorial outline", "prompt": "Three steps to pour-over coffee",
              "recipe_id": "general-text"},
-            {"id": "frame_1", "title": "步骤一画面", "prompt": "研磨咖啡豆的特写",
+            {"id": "frame_1", "title": "Step one picture", "prompt": "A close-up of grinding coffee beans",
              "recipe_id": "general-image", "depends_on": ["outline"],
              "reference_inputs": ["outline"]},
-            {"id": "clip_1", "title": "步骤一视频", "prompt": "研磨咖啡豆的特写",
+            {"id": "clip_1", "title": "Step one video", "prompt": "A close-up of grinding coffee beans",
              "recipe_id": "general-video", "depends_on": ["frame_1"],
              "model": "recommended",
              "timeline_role": "visual"},
-            {"id": "frame_2", "title": "步骤二画面", "prompt": "注水闷蒸的慢镜头",
+            {"id": "frame_2", "title": "Step two picture", "prompt": "A slow-motion shot of pouring and blooming",
              "recipe_id": "general-image", "depends_on": ["outline"],
              "reference_inputs": ["outline"]},
-            {"id": "clip_2", "title": "步骤二视频", "prompt": "注水闷蒸的慢镜头",
+            {"id": "clip_2", "title": "Step two video", "prompt": "A slow-motion shot of pouring and blooming",
              "recipe_id": "general-video", "depends_on": ["frame_2"],
              "model": "recommended",
              "timeline_role": "visual"},
@@ -2219,7 +2219,7 @@ def test_intent_items_restating_the_template_use_the_standard_planner(monkeypatc
     assert planner["include_audio"] is False
     assert planner["template_match"] == {"isomorphic": True, "unit_count": 2}
     nodes = {node["id"]: node for node in result["plan"]["nodes"]}
-    assert nodes["clip_2"]["data"]["prompt"] == "注水闷蒸的慢镜头"
+    assert nodes["clip_2"]["data"]["prompt"] == "A slow-motion shot of pouring and blooming"
     assert nodes["clip_2"]["data"]["durationSec"] == 5
     assert "final_compose" in nodes
     assert result["preflight"]["blockers"] == []
@@ -2244,15 +2244,15 @@ def test_intent_items_the_standard_planner_cannot_reproduce_stay_agent_authored(
 
     result = catalog.compile_workflow_intent({
         "skill_id": "video-tutorial",
-        "user_goal": "三步教你手冲咖啡",
+        "user_goal": "Three steps to pour-over coffee",
         "planner": {"mode": "standard"},
         "items": [
-            {"id": "outline", "title": "教程大纲", "prompt": "三步教你手冲咖啡",
+            {"id": "outline", "title": "Tutorial outline", "prompt": "Three steps to pour-over coffee",
              "recipe_id": "general-text"},
-            {"id": "frame_1", "title": "步骤一画面", "prompt": "研磨咖啡豆",
+            {"id": "frame_1", "title": "Step one picture", "prompt": "Grind coffee beans",
              "recipe_id": "general-image", "depends_on": ["outline"],
              "reference_inputs": ["outline"]},
-            {"id": "clip_1", "title": "步骤一视频", "prompt": "研磨咖啡豆的特写",
+            {"id": "clip_1", "title": "Step one video", "prompt": "A close-up of grinding coffee beans",
              "recipe_id": "general-video", "depends_on": ["frame_1"],
              "duration_seconds": 5},
         ],
@@ -2266,8 +2266,8 @@ def test_intent_items_the_standard_planner_cannot_reproduce_stay_agent_authored(
 
 
 _STAGE_LOCK_UNITS = [
-    {"title": "开场", "prompt": "快速建立主题", "narration": "先看核心内容。"},
-    {"title": "收尾", "prompt": "完成信息收束", "narration": "以上就是全部内容。"},
+    {"title": "Opening", "prompt": "Quickly establish the theme", "narration": "First, the core content."},
+    {"title": "Ending", "prompt": "Wrap up the information", "narration": "That is everything."},
 ]
 
 
@@ -2286,8 +2286,8 @@ def test_standard_skill_stage_templates_are_locked_to_the_planner_output(monkeyp
             for include_audio in (True, False):
                 result = catalog.compile_workflow_intent({
                     "skill_id": skill_id,
-                    "user_goal": "生成一个两段式竖屏测试视频",
-                    **({"inputs": {"visual_style": "未指定"}}
+                    "user_goal": "Generate a two-part vertical test video",
+                    **({"inputs": {"visual_style": "unspecified"}}
                        if skill_id == "short-drama-quick" else {}),
                     "planner": {
                         "mode": "standard",
@@ -2340,7 +2340,7 @@ def test_standard_skill_stage_templates_are_locked_to_the_planner_output(monkeyp
         )
         assert profile["edges"], skill_id
         # The template is what the agent sees in the planning contract.
-        package = catalog.get_workflow_skill({"skill_id": skill_id, "user_goal": "测试"})
+        package = catalog.get_workflow_skill({"skill_id": skill_id, "user_goal": "test"})
         assert package["planning_contract"]["standard_planner"]["stages"] == profile["stages"]
         assert package["planning_contract"]["standard_planner"]["edges"] == profile["edges"]
 
@@ -2348,8 +2348,8 @@ def test_standard_skill_stage_templates_are_locked_to_the_planner_output(monkeyp
 def _short_drama_plan_without_shot_planning(catalog) -> dict:
     compiled = catalog.compile_workflow_intent({
         "skill_id": "short-drama-quick",
-        "user_goal": "舞台对决",
-        "inputs": {"visual_style": "未指定"},
+        "user_goal": "Stage duel",
+        "inputs": {"visual_style": "unspecified"},
         "planner": {"mode": "standard", "item_count": 2, "include_audio": False},
     })
     assert compiled["ok"] is True, compiled
@@ -2369,7 +2369,7 @@ def _short_drama_plan_without_shot_planning(catalog) -> dict:
 
 
 def test_exact_plan_without_a_required_stage_is_a_preflight_blocker(monkeypatch):
-    """Issue #677 (舞台对决): a raw plan that skips the Skill's shot-planning stage
+    """Issue #677 (Stage duel): a raw plan that skips the Skill's shot-planning stage
     validates but its preflight is blocked instead of ready."""
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
@@ -2397,7 +2397,7 @@ def test_exact_plan_without_a_required_stage_is_a_preflight_blocker(monkeypatch)
         """Add a shot-planning node under the outline; optionally connect the
         first frames to it with ``link_type`` (the standard planner uses prompt_for)."""
         revised = copy.deepcopy(plan)
-        revised["nodes"].append({**node, "id": "shot_design", "prompt": "拆解每个镜头"})
+        revised["nodes"].append({**node, "id": "shot_design", "prompt": "Break down every shot"})
         revised["edges"].append(
             {"source": "outline", "target": "shot_design", "link_type": "context_for"}
         )
@@ -2489,13 +2489,13 @@ def test_agent_authored_tutorial_draft_blocks_order_only_outline(monkeypatch):
     _install_real_builtin_catalog(monkeypatch, catalog)
     intent = {
         "skill_id": "video-tutorial",
-        "user_goal": "制作两步操作教程",
+        "user_goal": "Make a two-step operation tutorial",
         "items": [
-            {"id": "outline", "title": "教程文案", "prompt": "列出两个步骤",
+            {"id": "outline", "title": "Tutorial copy", "prompt": "List two steps",
              "recipe_id": "general-text"},
-            {"id": "frame", "title": "步骤图", "prompt": "展示第一步",
+            {"id": "frame", "title": "Step image", "prompt": "Show the first step",
              "recipe_id": "general-image", "depends_on": ["outline"]},
-            {"id": "clip", "title": "步骤视频", "prompt": "展示步骤图",
+            {"id": "clip", "title": "Step video", "prompt": "Show the step image",
              "recipe_id": "general-video", "depends_on": ["frame"],
              "duration_seconds": 5},
         ],
@@ -2520,12 +2520,12 @@ def test_intent_items_without_a_required_stage_are_a_preflight_blocker(monkeypat
 
     result = catalog.compile_workflow_intent({
         "skill_id": "video-tutorial",
-        "user_goal": "三步教你泡咖啡",
+        "user_goal": "Three steps to brew coffee",
         "include_compose": False,
         "items": [
-            {"id": "outline", "title": "教程大纲", "prompt": "列出三个步骤",
+            {"id": "outline", "title": "Tutorial outline", "prompt": "List three steps",
              "recipe_id": "general-text"},
-            {"id": "clip_1", "title": "步骤一", "prompt": "研磨咖啡豆",
+            {"id": "clip_1", "title": "Step one", "prompt": "Grind coffee beans",
              "recipe_id": "general-video", "depends_on": ["outline"],
              "duration_seconds": 5},
         ],
@@ -2631,7 +2631,7 @@ def _dynamic_plan(*, image_count: int = 1) -> dict:
             "id": "brief",
             "node_type": "textAnnotationNode",
             "stage": "input",
-            "data": {"displayName": "用户需求", "content": "运动鞋电商图"},
+            "data": {"displayName": "User request", "content": "Sneaker e-commerce images"},
         }
     ]
     edges = []
@@ -2643,7 +2643,7 @@ def _dynamic_plan(*, image_count: int = 1) -> dict:
                 "node_type": "imageGenNode",
                 "stage": "image",
                 "data": {
-                    "displayName": f"商品图 {index + 1}",
+                    "displayName": f"Product image {index + 1}",
                     "referenceImageUrl": "/static/product.png",
                     "workflowCatalog": {
                         "skillId": "ecommerce-product",
@@ -2658,7 +2658,7 @@ def _dynamic_plan(*, image_count: int = 1) -> dict:
         "schema_version": "freezone_workflow_plan.v1",
         "workflow_type": "dynamic.ecommerce-product",
         "skill": {"id": "ecommerce-product", "version": 6},
-        "summary": f"{image_count} 张运动鞋电商图",
+        "summary": f"{image_count} sneaker e-commerce images",
         "nodes": nodes,
         "edges": edges,
         "layout": {"direction": "left_to_right", "groups": []},
@@ -2676,39 +2676,39 @@ def _use_parameterized_catalog(monkeypatch, catalog):
                     "input_parameters": [
                         {
                             "id": "duration",
-                            "label": "成片时长",
+                            "label": "Final cut duration",
                             "type": "single_select",
                             "required": True,
                             "default": "60",
                             "options": [
-                                {"value": "60", "label": "60秒"},
-                                {"value": "90", "label": "90秒"},
+                                {"value": "60", "label": "60 seconds"},
+                                {"value": "90", "label": "90 seconds"},
                             ],
                         },
                         {
                             "id": "execution_mode",
-                            "label": "执行模式",
+                            "label": "Execution mode",
                             "type": "single_select",
                             "required": True,
                             "default": "auto",
                             "options": [
-                                {"value": "auto", "label": "全自动"},
-                                {"value": "manual", "label": "只创建画布"},
+                                {"value": "auto", "label": "Fully automatic"},
+                                {"value": "manual", "label": "Canvas only"},
                             ],
                         },
                         {
                             "id": "aspect_ratio",
-                            "label": "画幅比例",
+                            "label": "Aspect ratio",
                             "type": "single_select",
                             "required": False,
                             "default": "16:9",
                             "options": [
-                                {"value": "16:9", "label": "16:9 横屏"},
-                                {"value": "9:16", "label": "9:16 竖屏"},
+                                {"value": "16:9", "label": "16:9 landscape"},
+                                {"value": "9:16", "label": "9:16 portrait"},
                             ],
                         },
                     ],
-                    "planning": {"planning_notes": "动态规划电影短片"},
+                    "planning": {"planning_notes": "Dynamically plan a cinematic short"},
                 }
             ]
         if kind == "recipes":
@@ -2717,7 +2717,7 @@ def _use_parameterized_catalog(monkeypatch, catalog):
                     "id": "general-text",
                     "version": 1,
                     "output_kind": "text",
-                    "system_prompt": "生成文本",
+                    "system_prompt": "Generate text",
                 }
             ]
         raise AssertionError(kind)
@@ -2736,9 +2736,9 @@ def test_workflow_skill_package_supports_skill_without_template(monkeypatch):
             return [
                 {
                     "id": "director-method",
-                    "description": "没有固定模板的导演方法",
+                    "description": "A director method without a fixed template",
                     "triggers": {"node_scopes": ["imageGeneration"]},
-                    "planning": {"planning_notes": "根据用户要求动态规划镜头"},
+                    "planning": {"planning_notes": "Dynamically plan shots from the user's request"},
                     "allowed_recipe_ids": ["director-frame"],
                 }
             ]
@@ -2746,11 +2746,11 @@ def test_workflow_skill_package_supports_skill_without_template(monkeypatch):
             return [
                 {
                     "id": "director-frame",
-                    "name": "导演关键帧",
+                    "name": "Director keyframes",
                     "version": 2,
                     "output_kind": "image",
-                    "planning_prompt": "生成关键帧",
-                    "result_summary": "关键帧图片",
+                    "planning_prompt": "Generate keyframes",
+                    "result_summary": "Keyframe images",
                 }
             ]
         raise AssertionError(kind)
@@ -2761,7 +2761,7 @@ def test_workflow_skill_package_supports_skill_without_template(monkeypatch):
     monkeypatch.setattr(catalog, "_catalog_username", lambda: "local")
 
     package = catalog.get_workflow_skill(
-        {"skill_id": "director-method", "user_goal": "规划 8 个镜头"}
+        {"skill_id": "director-method", "user_goal": "Plan 8 shots"}
     )
 
     assert package["ok"] is True
@@ -2778,11 +2778,11 @@ def test_dynamic_item_supports_ordered_recipe_pipeline(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "先按通用构图，再按自定义分镜方法生成商品图",
+            "user_goal": "First use the general composition, then generate the product image with the custom storyboard method",
             "items": [
                 {
                     "id": "hero-shot",
-                    "title": "商品英雄镜头",
+                    "title": "Hero product shot",
                     "recipe_id": "general-image",
                     "recipe_pipeline": ["custom-shot-image", "general-image"],
                 }
@@ -2794,9 +2794,9 @@ def test_dynamic_item_supports_ordered_recipe_pipeline(monkeypatch):
     assert compiled["ok"] is True
     workflow_catalog = compiled["plan"]["nodes"][1]["data"]["workflowCatalog"]
     assert workflow_catalog["recipeId"] == "general-image"
-    assert workflow_catalog["recipeName"] == "通用图片"
+    assert workflow_catalog["recipeName"] == "General Image"
     assert workflow_catalog["recipePipeline"] == [
-        {"id": "custom-shot-image", "name": "自定义分镜图", "version": 1}
+        {"id": "custom-shot-image", "name": "Custom Storyboard Image", "version": 1}
     ]
 
 
@@ -2807,7 +2807,7 @@ def test_compiler_propagates_portable_image_generation_inputs(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "生成商品主图",
+            "user_goal": "Generate the product main image",
             "inputs": {
                 "image_model": "image-model",
                 "image_aspect_ratio": "16:9",
@@ -2819,7 +2819,7 @@ def test_compiler_propagates_portable_image_generation_inputs(monkeypatch):
             "items": [
                 {
                     "id": "hero",
-                    "title": "商品主图",
+                    "title": "Product main image",
                     "recipe_id": "general-image",
                 }
             ],
@@ -2865,7 +2865,7 @@ def test_compiler_defers_model_dependent_generation_values_to_live_schema(
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "生成模型能力测试工作流",
+            "user_goal": "Generate a model capability test workflow",
             "inputs": {parameter_id: value},
         }
     )
@@ -2891,7 +2891,7 @@ def test_compiler_propagates_first_frame_video_mode(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "text-to-image-video",
-            "user_goal": "根据首帧生成视频",
+            "user_goal": "Generate a video from the first frame",
             "inputs": {"video_generation_mode": "firstFrame"},
         }
     )
@@ -2939,12 +2939,12 @@ def test_compiler_rejects_invalid_portable_generation_inputs(
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "生成商品主图",
+            "user_goal": "Generate the product main image",
             "inputs": {parameter_id: value},
             "items": [
                 {
                     "id": "hero",
-                    "title": "商品主图",
+                    "title": "Product main image",
                     "recipe_id": "general-image",
                 }
             ],
@@ -3034,16 +3034,16 @@ def test_dynamic_item_auto_connects_unique_generated_source_anchor(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "先生成商品锚点，再生成广告图",
+            "user_goal": "First generate the product anchor, then the ad image",
             "items": [
                 {
                     "id": "product-anchor",
-                    "title": "商品锚点",
+                    "title": "Product anchor",
                     "recipe_id": "general-image",
                 },
                 {
                     "id": "hero-shot",
-                    "title": "商品广告图",
+                    "title": "Product ad image",
                     "recipe_id": "ecommerce-ad-image",
                 },
             ],
@@ -3080,11 +3080,11 @@ def test_dynamic_item_rejects_conflicting_recipe_pipeline(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "ecommerce-product",
-            "user_goal": "生成商品图",
+            "user_goal": "Generate a product image",
             "items": [
                 {
                     "id": "hero",
-                    "title": "商品图",
+                    "title": "Product image",
                     "recipe_id": "general-image",
                     "recipe_pipeline": ["custom-shot-image"],
                 }
@@ -3106,7 +3106,7 @@ def test_user_agent_config_merges_with_builtin_catalog(monkeypatch):
             return [
                 {
                     "id": "director-method",
-                    "description": "用户自定义导演方法",
+                    "description": "User-defined director method",
                     "triggers": {"node_scopes": ["imageGeneration"]},
                     "allowed_recipe_ids": ["director-frame"],
                 }
@@ -3115,7 +3115,7 @@ def test_user_agent_config_merges_with_builtin_catalog(monkeypatch):
             return [
                 {
                     "id": "director-frame",
-                    "name": "导演关键帧",
+                    "name": "Director keyframes",
                     "version": 1,
                     "output_kind": "image",
                 }
@@ -3167,26 +3167,26 @@ def test_compact_dynamic_intent_compiles_recipe_items_to_valid_plan(monkeypatch)
         {
             "schema_version": "freezone_workflow_intent.v1",
             "skill_id": "pixar-ip-ad-video",
-            "user_goal": "为黑色运动相机制作 15 秒 9:16 竖屏广告",
+            "user_goal": "Make a 15-second 9:16 vertical ad for a black action camera",
             "inputs": {"aspect_ratio": "9:16", "duration": "15"},
             "items": [
                 {
                     "id": "character_anchor",
-                    "title": "角色锚点",
-                    "prompt": "设计品牌动画角色",
+                    "title": "Character anchor",
+                    "prompt": "Design the brand animation character",
                     "recipe_id": "ad-ip-character-anchor",
                 },
                 {
                     "id": "storyboard",
-                    "title": "广告分镜",
-                    "prompt": "生成五镜头广告分镜",
+                    "title": "Ad storyboard",
+                    "prompt": "Generate a five-shot ad storyboard",
                     "recipe_id": "storyboard-plan",
                     "depends_on": ["character_anchor"],
                 },
                 {
                     "id": "video_clip",
-                    "title": "广告视频",
-                    "prompt": "生成品牌广告视频",
+                    "title": "Ad video",
+                    "prompt": "Generate the brand ad video",
                     "recipe_id": "storyboard-shot-video",
                     "depends_on": ["storyboard", "character_anchor"],
                 },
@@ -3322,18 +3322,18 @@ def test_compiler_uses_explicit_anchor_and_skips_audio_only_compose(monkeypatch)
     ecommerce = catalog.compile_workflow_intent(
         {
             "skill_id": "pixar-ip-ad-video",
-            "user_goal": "为一款新产品制作动画广告",
+            "user_goal": "Make an animated ad for a new product",
             "items": [
                 {
                     "id": "anchor",
-                    "title": "角色锚点",
-                    "prompt": "生成品牌角色",
+                    "title": "Character anchor",
+                    "prompt": "Generate the brand character",
                     "recipe_id": "ad-ip-character-anchor",
                 },
                 {
                     "id": "video",
-                    "title": "广告视频",
-                    "prompt": "生成品牌广告视频",
+                    "title": "Ad video",
+                    "prompt": "Generate the brand ad video",
                     "recipe_id": "storyboard-shot-video",
                     "depends_on": ["anchor"],
                 },
@@ -3343,13 +3343,13 @@ def test_compiler_uses_explicit_anchor_and_skips_audio_only_compose(monkeypatch)
     audio = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "把欢迎使用转换成中文语音",
+            "user_goal": "Turn Welcome into speech",
             "items": [
                 {
                     "id": "audio",
-                    "title": "广告音频",
-                    "prompt": "欢迎使用",
-                    "narration": "欢迎使用",
+                    "title": "Ad audio",
+                    "prompt": "Welcome",
+                    "narration": "Welcome",
                     "recipe_id": "general-audio",
                 }
             ],
@@ -3375,12 +3375,12 @@ def test_compiler_routes_general_audio_bgm_to_music_generation(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作一条 15 秒广告",
+            "user_goal": "Make a 15-second ad",
             "items": [
                 {
                     "id": "bgm",
-                    "title": "背景音乐",
-                    "prompt": "为 15 秒广告创作轻柔背景音乐",
+                    "title": "Background music",
+                    "prompt": "Compose gentle background music for a 15-second ad",
                     "recipe_id": "general-audio",
                 }
             ],
@@ -3404,34 +3404,34 @@ def test_compiler_keeps_timeline_audio_out_of_video_references(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作一条 30 秒中文教程视频",
+            "user_goal": "Make a 30-second tutorial video",
             "items": [
                 {
                     "id": "frame",
-                    "title": "教程画面",
-                    "prompt": "教程主画面",
+                    "title": "Tutorial picture",
+                    "prompt": "Main tutorial picture",
                     "recipe_id": "general-image",
                 },
                 {
                     "id": "voice",
-                    "title": "中文女声旁白",
-                    "prompt": "欢迎观看本期教程",
-                    "narration": "欢迎观看本期教程",
+                    "title": "Female voice narration",
+                    "prompt": "Welcome to this tutorial",
+                    "narration": "Welcome to this tutorial",
                     "recipe_id": "general-audio",
                     "timeline_role": "voiceover",
                 },
                 {
                     "id": "bgm",
-                    "title": "30秒背景音乐",
-                    "prompt": "轻快的纯音乐",
+                    "title": "30-second background music",
+                    "prompt": "Light instrumental music",
                     "recipe_id": "general-audio",
                     "audio_kind": "music",
                     "timeline_role": "music",
                 },
                 {
                     "id": "clip",
-                    "title": "教程视频",
-                    "prompt": "生成教程视频片段",
+                    "title": "Tutorial video",
+                    "prompt": "Generate the tutorial video clip",
                     "recipe_id": "general-video",
                     "depends_on": ["frame", "voice", "bgm"],
                 },
@@ -3463,19 +3463,19 @@ def test_compiler_uses_execution_only_edge_between_generated_video_steps(monkeyp
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作两个连续教程镜头",
+            "user_goal": "Make two consecutive tutorial shots",
             "items": [
                 {
                     "id": "clip_1",
-                    "title": "镜头一",
-                    "prompt": "展示操作入口",
+                    "title": "Shot one",
+                    "prompt": "Show the operation entry",
                     "recipe_id": "general-video",
                     "timeline_role": "visual",
                 },
                 {
                     "id": "clip_2",
-                    "title": "镜头二",
-                    "prompt": "展示操作结果",
+                    "title": "Shot two",
+                    "prompt": "Show the operation result",
                     "recipe_id": "general-video",
                     "depends_on": ["clip_1"],
                     "timeline_role": "visual",
@@ -3502,7 +3502,7 @@ def test_compiler_propagates_portable_video_generation_inputs(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "生成教程视频",
+            "user_goal": "Generate a tutorial video",
             "inputs": {
                 "video_model": "video-model",
                 "video_aspect_ratio": "9:16",
@@ -3515,7 +3515,7 @@ def test_compiler_propagates_portable_video_generation_inputs(monkeypatch):
             "items": [
                 {
                     "id": "clip",
-                    "title": "教程镜头",
+                    "title": "Tutorial shot",
                     "recipe_id": "general-video",
                 }
             ],
@@ -3558,7 +3558,7 @@ def test_schema_rejects_singular_group_alias():
             }
         ],
         "edges": [],
-        "group": {"label": "测试工作流", "nodes": ["prompt", "missing"]},
+        "group": {"label": "Test workflow", "nodes": ["prompt", "missing"]},
     }
 
     with pytest.raises(ValidationError):
@@ -3598,18 +3598,18 @@ def test_compiler_keeps_explicit_video_reference_as_media_input(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "参考动作视频生成新镜头",
+            "user_goal": "Generate a new shot from a motion reference video",
             "items": [
                 {
                     "id": "motion_reference",
-                    "title": "动作参考",
-                    "prompt": "参考动作",
+                    "title": "Motion reference",
+                    "prompt": "Reference the motion",
                     "recipe_id": "general-video",
                 },
                 {
                     "id": "clip",
-                    "title": "新镜头",
-                    "prompt": "沿用动作节奏",
+                    "title": "New shot",
+                    "prompt": "Keep the motion rhythm",
                     "recipe_id": "general-video",
                     "reference_inputs": ["motion_reference"],
                 },
@@ -3635,18 +3635,18 @@ def test_compiler_maps_explicit_text_reference_to_prompt_input(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "根据文字提示生成首帧",
+            "user_goal": "Generate the first frame from a text prompt",
             "items": [
                 {
                     "id": "prompt",
-                    "title": "画面提示词",
-                    "prompt": "雨夜未来城市，霓虹灯倒映在路面",
+                    "title": "Picture prompt",
+                    "prompt": "A future city on a rainy night, neon lights reflected on the road",
                     "recipe_id": "general-text",
                 },
                 {
                     "id": "frame",
-                    "title": "城市首帧",
-                    "prompt": "生成城市首帧",
+                    "title": "City first frame",
+                    "prompt": "Generate the city first frame",
                     "recipe_id": "general-image",
                     "reference_inputs": ["prompt"],
                 },
@@ -3674,18 +3674,18 @@ def test_compiler_replaces_recipe_backed_final_compose_with_compose_node(monkeyp
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作教程并合成成片",
+            "user_goal": "Make a tutorial and compose the final cut",
             "items": [
                 *[{
                     "id": "clip" if index == 0 else "clip-two",
-                    "title": "教程镜头",
-                    "prompt": "展示操作",
+                    "title": "Tutorial shot",
+                    "prompt": "Show the operation",
                     "recipe_id": "general-video",
                 } for index in range(clip_count)],
                 {
                     "id": "final-compose",
-                    "title": "最终合成",
-                    "prompt": "合成全部镜头和音频",
+                    "title": "Final composition",
+                    "prompt": "Compose all shots and audio",
                     "recipe_id": "general-video",
                     "depends_on": ["clip"],
                 },
@@ -3708,12 +3708,12 @@ def test_compiler_respects_explicit_audio_kind_for_ambiguous_general_audio(monke
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作一条广告",
+            "user_goal": "Make an ad",
             "items": [
                 {
                     "id": "soundtrack",
-                    "title": "广告声音",
-                    "prompt": "轻柔钢琴",
+                    "title": "Ad sound",
+                    "prompt": "Gentle piano",
                     "audio_kind": "music",
                     "recipe_id": "general-audio",
                 }
@@ -3734,12 +3734,12 @@ def test_compiler_rejects_speech_instruction_without_literal_narration(monkeypat
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "video-tutorial",
-            "user_goal": "制作一条广告",
+            "user_goal": "Make an ad",
             "items": [
                 {
                     "id": "narration",
-                    "title": "旁白配音",
-                    "prompt": "根据广告脚本中的旁白文案，生成女声旁白配音",
+                    "title": "Narration voiceover",
+                    "prompt": "Based on the narration copy in the ad script, generate a female-voice narration voiceover",
                     "audio_kind": "speech",
                     "recipe_id": "general-audio",
                 }
@@ -3758,7 +3758,7 @@ def test_parameterized_skill_uses_stateless_input_contract(monkeypatch):
     package = catalog.get_workflow_skill(
         {
             "skill_id": "cinematic-short",
-            "user_goal": "生成一支竖屏电影感短片",
+            "user_goal": "Generate a vertical cinematic short",
             "inputs": {"duration": "90"},
         }
     )
@@ -3791,7 +3791,7 @@ def test_explicit_skill_inputs_override_deterministic_inference(monkeypatch):
     package = catalog.get_workflow_skill(
         {
             "skill_id": "cinematic-short",
-            "user_goal": "生成一支 90 秒竖屏短片并自动执行",
+            "user_goal": "Generate a 90-second vertical short and execute automatically",
             "inputs": {
                 "duration": "60",
                 "aspect_ratio": "16:9",
@@ -3915,7 +3915,7 @@ def test_workflow_plan_rejects_invalid_runtime_catalog_shapes_before_canvas_appl
 
 def test_workflow_plan_rejects_large_text_hidden_in_mcp_plan_fields():
     plan = _dynamic_plan()
-    plan["nodes"][0]["data"]["content"] = "正文" * 2_001
+    plan["nodes"][0]["data"]["content"] = "body" * 2_001
 
     result = validate_workflow_plan(plan)
 
@@ -3931,9 +3931,9 @@ def test_workflow_plan_rejects_large_text_split_across_small_fields():
     plan = _dynamic_plan(image_count=3)
     plan["nodes"][0]["data"].update(
         {
-            "content": "甲" * 1_500,
-            "text": "乙" * 1_500,
-            "description": "丙" * 1_500,
+            "content": "a" * 1_500,
+            "text": "b" * 1_500,
+            "description": "c" * 1_500,
         }
     )
 
@@ -3986,16 +3986,16 @@ def test_standard_short_drama_planner_supports_25_beats_and_full_asset_chain(mon
     units = [
         {
             "title": f"Beat {index:02d}",
-            "prompt": f"第 {index} 个剧情 Beat 的具体动作与画面目标",
-            "narration": f"这是第 {index} 个 Beat 的实际朗读台词。",
+            "prompt": f"Concrete action and picture goal of plot Beat {index}",
+            "narration": f"These are the lines actually read for Beat {index}.",
         }
         for index in range(1, 26)
     ]
     intent = {
         "schema_version": "freezone_workflow_intent.v1",
         "skill_id": "short-drama-quick",
-        "inputs": {"visual_style": "未指定"},
-        "user_goal": "三集短剧大纲，并制作第一集 25 个 Beat",
+        "inputs": {"visual_style": "unspecified"},
+        "user_goal": "Outline of a three-episode short drama, and make 25 Beats for the first episode",
         "planner": {
             "mode": "standard",
             "item_count": 25,
@@ -4023,26 +4023,26 @@ def test_standard_short_drama_planner_supports_25_beats_and_full_asset_chain(mon
     assert sum(command["type"] == "create_node" for command in graph["commands"]) == 110
 
 
-def _quick_drama_visual_style_plan(style="写实"):
+def _quick_drama_visual_style_plan(style="realistic"):
     return {
         "schema_version": "freezone_workflow_plan.v1",
-        "summary": "双镜短剧",
+        "summary": "Two-shot short drama",
         "skill": {"id": "short-drama-quick"},
         "inputs": {"visual_style": style},
         "nodes": [
             {"id": "story", "node_type": "textAnnotationNode", "stage": "story", "data": {
-                "displayName": "故事设定",
-                "content": "写实的短剧故事" if style == "写实" else "短剧故事",
+                "displayName": "Story setting",
+                "content": "A realistic short drama story" if style == "realistic" else "A short drama story",
                 "workflowCatalog": {"skillId": "short-drama-quick", "recipeId": "drama-plot-outline"},
             }},
             {"id": "portrait", "node_type": "imageGenNode", "stage": "image", "data": {
-                "displayName": "角色形象", "prompt": "人物站在街边",
+                "displayName": "Character appearance", "prompt": "A person stands on the street",
                 "workflowCatalog": {
                     "skillId": "short-drama-quick", "recipeId": "drama-character-turnaround",
                 },
             }},
             {"id": "clip", "node_type": "videoNode", "stage": "video", "data": {
-                "displayName": "开场镜头", "prompt": "人物走进店里", "durationSec": 7,
+                "displayName": "Opening shot", "prompt": "The person walks into the shop", "durationSec": 7,
                 "workflowCatalog": {"skillId": "short-drama-quick", "recipeId": "general-video"},
             }},
         ],
@@ -4056,7 +4056,7 @@ def _quick_drama_visual_style_plan(style="写实"):
 def test_quick_drama_requires_explicit_visual_style_decision(monkeypatch):
     catalog = _load_catalog_module()
     _install_real_builtin_catalog(monkeypatch, catalog)
-    package = catalog.get_workflow_skill({"skill_id": "short-drama-quick", "user_goal": "短剧"})
+    package = catalog.get_workflow_skill({"skill_id": "short-drama-quick", "user_goal": "short drama"})
 
     assert "visual_style" in package["input_contract"]["missing_required"]
     missing = _quick_drama_visual_style_plan()
@@ -4065,14 +4065,14 @@ def test_quick_drama_requires_explicit_visual_style_decision(monkeypatch):
     assert rejected["ok"] is False
     assert rejected["errors"][0]["path"] == "inputs.visual_style"
 
-    unspecified = _quick_drama_visual_style_plan("未指定")
+    unspecified = _quick_drama_visual_style_plan("unspecified")
     accepted = catalog.validate_agent_workflow_plan(unspecified)
     assert accepted["ok"] is True, accepted
     assert not any(
         blocker["code"] == "confirmed_visual_style_missing"
         for blocker in accepted["preflight"]["blockers"]
     )
-    assert "写实" not in str(accepted["plan"]["nodes"])
+    assert "realistic" not in str(accepted["plan"]["nodes"])
 
 
 def test_quick_drama_confirmed_style_reaches_every_visual_task(monkeypatch):
@@ -4090,7 +4090,7 @@ def test_quick_drama_confirmed_style_reaches_every_visual_task(monkeypatch):
     assert [blocker["node_id"] for blocker in style_blockers] == ["clip"]
 
     # A title or catalog metadata is not prompt context consumed by the model.
-    plan["nodes"][-1]["data"]["displayName"] = "写实开场镜头"
+    plan["nodes"][-1]["data"]["displayName"] = "Realistic opening shot"
     titled = catalog.validate_agent_workflow_plan(plan)
     assert any(
         blocker["code"] == "confirmed_visual_style_missing"
@@ -4107,7 +4107,7 @@ def test_quick_drama_confirmed_style_reaches_every_visual_task(monkeypatch):
     )
 
     plan["edges"].pop()
-    plan["nodes"][-1]["data"]["prompt"] += "，写实摄影风格"
+    plan["nodes"][-1]["data"]["prompt"] += ", realistic photography style"
     direct = catalog.validate_agent_workflow_plan(plan)
     assert not any(
         blocker["code"] == "confirmed_visual_style_missing"
@@ -4120,9 +4120,9 @@ def test_quick_drama_ignores_stale_style_in_noncanonical_fields(monkeypatch):
     _install_real_builtin_catalog(monkeypatch, catalog)
     plan = _quick_drama_visual_style_plan()
     story, portrait, clip = plan["nodes"]
-    story["data"].update(content="短剧故事", prompt="写实的旧故事提示")
-    portrait["data"].update(content="写实的旧图片提示", text="写实的旧图片文本")
-    clip["data"].update(content="写实的旧视频提示", text="写实的旧视频文本")
+    story["data"].update(content="A short drama story", prompt="A realistic old story prompt")
+    portrait["data"].update(content="A realistic old image prompt", text="A realistic old image text")
+    clip["data"].update(content="A realistic old video prompt", text="A realistic old video text")
     plan["edges"].append({"source": "story", "target": "clip", "link_type": "prompt_for"})
 
     result = catalog.validate_agent_workflow_plan(plan)
@@ -4144,14 +4144,14 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
             "id": "request",
             "node_type": "textAnnotationNode",
             "stage": "input",
-            "data": {"displayName": "用户需求", "content": "固定生成24个视觉Beat"},
+            "data": {"displayName": "User request", "content": "Always generate 24 visual Beats"},
         },
         {
             "id": "script",
             "node_type": "textAnnotationNode",
             "stage": "story",
             "data": {
-                "displayName": "第1集完整分集剧本",
+                "displayName": "Episode 1 complete script",
                 "content": "Beat 01—Beat 24",
                 "workflowCatalog": {
                     "skillId": skill_id,
@@ -4172,7 +4172,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
                     "node_type": "imageGenNode",
                     "stage": "image",
                     "data": {
-                        "displayName": f"Beat {suffix} 首帧",
+                        "displayName": f"Beat {suffix} first frame",
                         "workflowCatalog": {
                             "skillId": skill_id,
                             "recipeId": "general-image",
@@ -4184,7 +4184,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
                     "node_type": "videoNode",
                     "stage": "video",
                     "data": {
-                        "displayName": f"Beat {suffix} 视频",
+                        "displayName": f"Beat {suffix} video",
                         "workflowCatalog": {
                             "skillId": skill_id,
                             "recipeId": "general-video",
@@ -4211,7 +4211,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
                 "node_type": "audioNode",
                 "stage": "audio",
                 "data": {
-                    "displayName": "第1集旁白",
+                    "displayName": "Episode 1 narration",
                     "audioKind": "speech",
                     "workflowCatalog": {
                         "skillId": skill_id,
@@ -4224,7 +4224,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
                 "node_type": "audioNode",
                 "stage": "audio",
                 "data": {
-                    "displayName": "第1集背景音乐",
+                    "displayName": "Episode 1 background music",
                     "audioKind": "music",
                     "workflowCatalog": {
                         "skillId": skill_id,
@@ -4236,7 +4236,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
                 "id": "final_compose",
                 "node_type": "videoComposeNode",
                 "stage": "compose",
-                "data": {"displayName": "第1集最终成片"},
+                "data": {"displayName": "Episode 1 final cut"},
             },
         ]
     )
@@ -4273,7 +4273,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
         "schema_version": "freezone_workflow_plan.v1",
         "workflow_type": "dynamic.short-drama-episode",
         "skill": {"id": skill_id, "version": 2},
-        "inputs": {"visual_style": "未指定"},
+        "inputs": {"visual_style": "unspecified"},
         "expected_node_count": 53,
         "expected_node_counts": {
             "textAnnotationNode": 2,
@@ -4284,7 +4284,7 @@ def test_exact_short_drama_plan_supports_24_beats_and_exact_count_guards(monkeyp
         },
         "nodes": nodes,
         "edges": edges,
-        "group": {"label": "第1集制作工作流", "node_ids": node_ids},
+        "group": {"label": "Episode 1 production workflow", "node_ids": node_ids},
         "layout": {"mode": "grid", "direction": "left_to_right"},
     }
 
@@ -4468,7 +4468,7 @@ def test_dynamic_workflow_plan_validates_skill_inputs(monkeypatch):
                 "node_type": "textAnnotationNode",
                 "stage": "story",
                 "data": {
-                    "prompt": "生成电影短片概念",
+                    "prompt": "Generate a cinematic short concept",
                     "workflowCatalog": {
                         "skillId": "cinematic-short",
                         "recipeId": "general-text",
@@ -4628,7 +4628,7 @@ def test_catalog_validation_requires_real_or_generated_source_media(monkeypatch)
         "node_type": "imageGenNode",
         "stage": "asset",
         "data": {
-            "prompt": "中性背景的运动鞋产品基准图",
+            "prompt": "A baseline product image of sneakers on a neutral background",
             "workflowCatalog": {
                 "skillId": "ecommerce-product",
                 "recipeId": "general-image",
@@ -4660,16 +4660,16 @@ def test_project_catalog_uses_canonical_pixar_skill_and_recipes(monkeypatch):
         for item in catalog._load_agent_config_items("recipes", catalog._RECIPES_DIR)
     }
 
-    assert skills["ecommerce-ad"]["name"] == "电商广告"
-    assert skills["video-tutorial"]["name"] == "视频解说教程"
-    assert skills["text-to-image-video"]["name"] == "文生图生视频（动态）"
-    assert skills["short-drama-quick"]["name"] == "短剧（快速测试）"
-    assert skills["pixar-ip-ad-video"]["name"] == "皮克斯 IP 品牌广告短片"
-    assert skills["lego-minifigure-animation-video"]["name"] == "乐高小人动画短片"
-    assert skills["retro-hong-kong-kungfu-comedy-video"]["name"] == "港风功夫萌宠短片"
-    assert skills["outdoor-stage-duel-video"]["name"] == "户外舞台双人能力秀"
-    assert skills["ling-cage-cinematic-video"]["name"] == "灵笼风格科幻短片"
-    assert skills["japanese-anime-drama-video"]["name"] == "日系漫剧梦工坊"
+    assert skills["ecommerce-ad"]["name"] == "E-commerce Ad"
+    assert skills["video-tutorial"]["name"] == "Video Explainer Tutorial"
+    assert skills["text-to-image-video"]["name"] == "Text to Image to Video (Dynamic)"
+    assert skills["short-drama-quick"]["name"] == "Short Drama (Quick Test)"
+    assert skills["pixar-ip-ad-video"]["name"] == "Pixar-Style IP Brand Ad Short"
+    assert skills["lego-minifigure-animation-video"]["name"] == "LEGO Minifigure Animation Short"
+    assert skills["retro-hong-kong-kungfu-comedy-video"]["name"] == "Retro Hong Kong Kung Fu Pet Short"
+    assert skills["outdoor-stage-duel-video"]["name"] == "Outdoor Stage Two-Person Ability Show"
+    assert skills["ling-cage-cinematic-video"]["name"] == "Ling Cage Style Sci-Fi Short"
+    assert skills["japanese-anime-drama-video"]["name"] == "Japanese Anime Drama Studio"
     assert all(
         parameter.get("id") != "execution_mode"
         for skill in skills.values()
@@ -4795,18 +4795,18 @@ def test_pixar_skill_keeps_methodology_while_recipes_stay_stage_focused(monkeypa
     planning_notes = pixar_skill["planning"]["planning_notes"]
     prompt_guide = pixar_skill["planning"]["prompt_guide"]
 
-    assert "闸门 1" in planning_text
-    assert "角色属性表" in planning_text
-    assert "产品道具" in planning_text
-    assert "角色关联道具" in planning_text
-    assert "15 秒广告 = 9 个面板" in planning_text
-    assert "15 秒广告通常拆分为 4 个视频片段" in planning_text
-    assert "角色锚点" in planning_text and "分镜" in planning_text
+    assert "Gate 1" in planning_text
+    assert "character attribute table" in planning_text
+    assert "product props" in planning_text
+    assert "character-related props" in planning_text
+    assert "15-second ad = 9 panels" in planning_text
+    assert "A 15-second ad is usually split into 4 video clips" in planning_text
+    assert "character anchor" in planning_text and "storyboard" in planning_text
     assert "Sequence → Shot Group → Shot" in planning_text
-    assert "皮克斯 3D 卡通渲染" in prompt_guide
+    assert "Pixar 3D cartoon rendering" in prompt_guide
     assert "C4D + Octane" in prompt_guide
-    assert "【执行路径】" not in prompt_guide
-    assert "【皮克斯视觉方向】" not in planning_notes
+    assert "[Execution path]" not in prompt_guide
+    assert "[Pixar visual direction]" not in planning_notes
     assert "input_parameters" not in planning_text
     assert "videoCompose" not in planning_text
     assert "storyboard-sketch" not in planning_text
@@ -4833,9 +4833,9 @@ def test_pixar_skill_keeps_methodology_while_recipes_stay_stage_focused(monkeypa
             "\n".join(recipes[recipe_id]["must_have_items"]),
         ]
     )
-    assert "自创风格" not in recipe_text
-    assert "覆盖 Skill" not in recipe_text
-    assert "Recipe 内" not in recipe_text
+    assert "self-invented style" not in recipe_text
+    assert "overrides the Skill" not in recipe_text
+    assert "within the Recipe" not in recipe_text
 
     character_anchor = recipes["ad-ip-character-anchor"]
     character_text = "\n".join(
@@ -4847,10 +4847,10 @@ def test_pixar_skill_keeps_methodology_while_recipes_stay_stage_focused(monkeypa
             "\n".join(character_anchor["must_have_items"]),
         ]
     )
-    assert "广告 IP 角色锚点" in character_text
-    assert "身体附属结构" in character_text
-    assert "品牌、Logo、产品卖点和产品外观留给道具锚点阶段" in character_text
-    assert "尾巴状态必须明确" not in character_text
+    assert "ad IP character anchor" in character_text
+    assert "body appendages" in character_text
+    assert "brand, logo, product selling points and product appearance are left to the prop anchor stage" in character_text
+    assert "tail state must be explicit" not in character_text
     assert "no tail / tailless" not in character_text
 
 
@@ -4875,15 +4875,15 @@ def test_lego_skill_keeps_style_while_recipes_are_shared_workflow_stages(monkeyp
     )
 
     assert "LEGO Minifigure animation" in planning["prompt_guide"]
-    assert "ABS 塑料材质" in planning["prompt_guide"]
+    assert "ABS plastic material" in planning["prompt_guide"]
     assert "LEGO building logic" in planning["prompt_guide"]
-    assert "开始前" in planning["planning_notes"]
-    assert "已确认信息" in planning["planning_notes"]
-    assert "剧本大纲" in planning["planning_notes"]
-    assert "三层分镜" in planning["planning_notes"]
-    assert "视觉关键元素" in planning["planning_notes"]
-    assert "视频片段" in planning["planning_notes"]
-    assert "最终剪辑" in planning["planning_notes"]
+    assert "Before starting" in planning["planning_notes"]
+    assert "confirmed information" in planning["planning_notes"]
+    assert "script outline" in planning["planning_notes"]
+    assert "three-level" in planning["planning_notes"]
+    assert "visual key element" in planning["planning_notes"]
+    assert "video clips" in planning["planning_notes"]
+    assert "Final editing" in planning["planning_notes"]
     assert "Final_Video_Spec" not in planning_text
     assert "input_parameters" not in planning_text
     assert "planning.prompt_guide" not in planning_text
@@ -5027,19 +5027,19 @@ def test_retro_kungfu_skill_keeps_style_while_recipes_stay_stage_focused(monkeyp
         ]
     )
 
-    assert "1980s 复古香港功夫喜剧" in planning["prompt_guide"]
-    assert "35mm 旧胶片颗粒" in planning["prompt_guide"]
-    assert "每个视频节点都必须针对当前镜头的每个核心动作逐项写出预备、运动、完成三段" in planning["prompt_guide"]
-    assert "港式普通话口音" in planning["prompt_guide"]
-    assert "剧本大纲" in planning["planning_notes"]
-    assert "分镜规划" in planning["planning_notes"]
-    assert "拟人功夫关键元素图" in planning["planning_notes"]
-    assert "拟人功夫单段视频" in planning["planning_notes"]
-    assert "视频音频层" in planning["planning_notes"]
-    assert "独立关键元素节点" in planning["planning_notes"]
-    assert "不得把多个主体合并为一个关键元素节点" in planning["planning_notes"]
-    assert "默认并行" in planning["planning_notes"]
-    assert "真实连续性输入" in planning["planning_notes"]
+    assert "1980s retro Hong Kong kung fu comedy" in planning["prompt_guide"]
+    assert "35mm old film grain" in planning["prompt_guide"]
+    assert "Every video node must write out, for each core action of the current shot, the three phases of preparation, motion and completion" in planning["prompt_guide"]
+    assert "Hong Kong-flavored accent" in planning["prompt_guide"]
+    assert "script outline" in planning["planning_notes"]
+    assert "the storyboard plan" in planning["planning_notes"]
+    assert "anthropomorphic kung fu key element image" in planning["planning_notes"]
+    assert "anthropomorphic kung fu single-clip video" in planning["planning_notes"]
+    assert "video audio layer" in planning["planning_notes"]
+    assert "independent key element nodes" in planning["planning_notes"]
+    assert "Do not merge multiple subjects into one key element node" in planning["planning_notes"]
+    assert "By default each shot runs in parallel" in planning["planning_notes"]
+    assert "real continuity input" in planning["planning_notes"]
     assert "Final_Video_Spec" not in planning_text
     assert "retro-kungfu" not in planning_text
     assert "four-act-comedy-story-outline" not in planning_text
@@ -5057,18 +5057,18 @@ def test_retro_kungfu_skill_keeps_style_while_recipes_stay_stage_focused(monkeyp
             "\n".join(recipe["must_have_items"]),
         ]
     )
-    assert "拟人功夫" in recipe_text
-    assert "参考来源" in recipe_text
-    assert "后续引用方式" in recipe_text
+    assert "anthropomorphic kung fu" in recipe_text
+    assert "Reference source" in recipe_text
+    assert "How it is referenced later" in recipe_text
     assert "35mm" not in recipe_text
-    assert "港风" not in recipe_text
-    assert "香港" not in recipe_text
+    assert "Hong Kong style" not in recipe_text
+    assert "Hong Kong" not in recipe_text
     assert "80s" not in recipe_text
-    assert "旧胶片" not in recipe_text
+    assert "old film" not in recipe_text
     assert "Final_Video_Spec" not in recipe_text
-    assert "Skill 输入参数" not in recipe_text
-    assert "覆盖 Skill" not in recipe_text
-    assert "Recipe 内" not in recipe_text
+    assert "Skill input parameters" not in recipe_text
+    assert "overrides the Skill" not in recipe_text
+    assert "within the Recipe" not in recipe_text
 
     story_recipe = recipes["four-act-comedy-story-outline"]
     story_text = "\n".join(
@@ -5080,11 +5080,11 @@ def test_retro_kungfu_skill_keeps_style_while_recipes_stay_stage_focused(monkeyp
             "\n".join(story_recipe["must_have_items"]),
         ]
     )
-    assert "四幕" in story_text
-    assert "喜剧反差" in story_text
-    assert "三幕结构" not in story_text
-    assert "港风" not in story_text
-    assert "香港" not in story_text
+    assert "four-act" in story_text
+    assert "Comic contrast" in story_text
+    assert "three-act structure" not in story_text
+    assert "Hong Kong style" not in story_text
+    assert "Hong Kong" not in story_text
 
     shot_recipe = recipes["anthropomorphic-kungfu-shot-video"]
     shot_text = "\n".join(
@@ -5099,13 +5099,13 @@ def test_retro_kungfu_skill_keeps_style_while_recipes_stay_stage_focused(monkeyp
     assert "Anticipation" in shot_text
     assert "Movement" in shot_text
     assert "Completion" in shot_text
-    assert "动物本能" in shot_text
+    assert "Animal instinct" in shot_text
     assert "no background music" in shot_text
     assert "35mm" not in shot_text
-    assert "港风" not in shot_text
-    assert "香港" not in shot_text
+    assert "Hong Kong style" not in shot_text
+    assert "Hong Kong" not in shot_text
     assert "80s" not in shot_text
-    assert "旧胶片" not in shot_text
+    assert "old film" not in shot_text
 
 
 def test_outdoor_stage_duel_skill_keeps_global_spec_in_skill(monkeypatch):
@@ -5128,13 +5128,13 @@ def test_outdoor_stage_duel_skill_keeps_global_spec_in_skill(monkeypatch):
         ]
     )
 
-    assert "观众第一人称" in planning["prompt_guide"]
-    assert "双角色 A/B" in planning["planning_notes"]
-    assert "这个规格不创建独立节点" in planning["planning_notes"]
-    assert "分镜" in planning["planning_notes"]
-    assert "关键元素" in planning["planning_notes"]
-    assert "单镜视频" in planning["planning_notes"]
-    assert "音频层" in planning["planning_notes"]
+    assert "audience first-person" in planning["prompt_guide"]
+    assert "two characters A/B" in planning["planning_notes"]
+    assert "this specification creates no standalone node" in planning["planning_notes"]
+    assert "storyboard" in planning["planning_notes"]
+    assert "key element" in planning["planning_notes"]
+    assert "single-shot video" in planning["planning_notes"]
+    assert "audio layer" in planning["planning_notes"]
     assert "Final_Video_Spec" not in planning_text
     assert "outdoor-stage-duel-video-spec" not in planning_text
 
@@ -5185,33 +5185,33 @@ def test_ling_cage_skill_keeps_style_while_recipes_are_survival_sci_fi_stages(
         ]
     )
 
-    assert "灵笼气质" in planning["prompt_guide"]
-    assert "半写实 3D CG" in planning_text
+    assert "Ling Cage-flavored" in planning["prompt_guide"]
+    assert "semi-realistic 3D CG" in planning_text
     assert "GPT Image 2" not in planning_text
     assert "Seedance 2.0" not in planning_text
-    assert "同模型失败自动重试一次" not in planning_text
-    assert "这个规格不创建独立节点" in planning["planning_notes"]
-    assert "故事方向" in planning["planning_notes"]
-    assert "分镜" in planning["planning_notes"]
-    assert "关键元素图" in planning["planning_notes"]
-    assert "不得只创建一个笼统的“关键元素”总节点" in planning_text
-    assert "每个持续出现的角色或队伍各自独立成节点" in planning_text
-    assert "每个主要复用场景各自独立成节点" in planning_text
-    assert "每个 Shot List 条目必须是独立的视频 intent item" in planning_text
-    assert "单镜视频" in planning["planning_notes"]
-    assert "音频" in planning["planning_notes"]
+    assert "auto-retry once on the same model failure" not in planning_text
+    assert "this specification does not create a standalone node" in planning["planning_notes"]
+    assert "story direction" in planning["planning_notes"]
+    assert "storyboard" in planning["planning_notes"]
+    assert "key element image" in planning["planning_notes"]
+    assert 'Do not create just one generic "key elements" node' in planning_text
+    assert "Each recurring character or team is its own node" in planning_text
+    assert "each main reused scene is its own node" in planning_text
+    assert "every Shot List entry must be an independent video intent item" in planning_text
+    assert "single-shot video" in planning["planning_notes"]
+    assert "audio" in planning["planning_notes"]
     audio_mode = next(
         parameter
         for parameter in skill["input_parameters"]
         if parameter["id"] == "audio_mode"
     )
-    assert audio_mode["label"] == "背景音乐"
-    assert audio_mode["default"] == "生成BGM"
-    assert audio_mode["options"] == ["生成BGM", "不生成BGM"]
-    assert "对白旁白音效和BGM" not in planning_text
-    assert "仅音效和BGM" not in planning_text
-    assert "对白和音效写入对应视频提示词" in planning_text
-    assert "只在需要配乐时创建 BGM 音频节点" in planning_text
+    assert audio_mode["label"] == "Background music"
+    assert audio_mode["default"] == "Generate BGM"
+    assert audio_mode["options"] == ["Generate BGM", "Do not generate BGM"]
+    assert "dialogue narration sound effects and BGM" not in planning_text
+    assert "only sound effects and BGM" not in planning_text
+    assert "dialogue and sound effects are written into the corresponding video prompt" in planning_text
+    assert "create a BGM audio node only when a score is needed" in planning_text
     assert "Final_Video_Spec" not in planning_text
     assert "ling-cage-video-spec" not in planning_text
     assert "sci-fi-survival-story-script" not in planning_text
@@ -5237,15 +5237,15 @@ def test_ling_cage_skill_keeps_style_while_recipes_are_survival_sci_fi_stages(
             "\n".join(recipes[recipe_id]["must_have_items"]),
         ]
     )
-    assert "末世科幻" in recipe_text
+    assert "Post-Apocalyptic Sci-Fi" in recipe_text
     assert "Final_Video_Spec" not in recipe_text
-    assert "灵笼" not in recipe_text
-    assert "玛娜" not in recipe_text
-    assert "灯塔" not in recipe_text
-    assert "龙骨村" not in recipe_text
-    assert "噬极兽" not in recipe_text
-    assert "覆盖 Skill" not in recipe_text
-    assert "Recipe 内" not in recipe_text
+    assert "Ling Cage" not in recipe_text
+    assert "Mana" not in recipe_text
+    assert "Lighthouse" not in recipe_text
+    assert "Dragon Bone Village" not in recipe_text
+    assert "polar devourer beast" not in recipe_text
+    assert "overrides the Skill" not in recipe_text
+    assert "within the Recipe" not in recipe_text
 
     audio_layer = recipes["sci-fi-survival-audio-layers"]
     audio_layer_text = "\n".join(
@@ -5275,10 +5275,10 @@ def test_ling_cage_skill_keeps_style_while_recipes_are_survival_sci_fi_stages(
             "\n".join(key_elements["must_have_items"]),
         ]
     )
-    assert "全身三视图" in key_text
-    assert "2x2 无角色四宫格" in key_text
-    assert "完整结构或多角度" in key_text
-    assert "后续视频引用锚点" in key_text
+    assert "full-body three-view" in key_text
+    assert "2x2 four-panel grid without characters" in key_text
+    assert "Complete structure or multi-angle" in key_text
+    assert "Anchors for later video references" in key_text
 
     shot_text = "\n".join(
         [
@@ -5286,8 +5286,8 @@ def test_ling_cage_skill_keeps_style_while_recipes_are_survival_sci_fi_stages(
             "\n".join(recipes["sci-fi-survival-shot-video"]["must_have_items"]),
         ]
     )
-    assert "image_infos 最多 9" in shot_text
-    assert "audio_infos 最多 3" in shot_text
+    assert "image_infos at most 9" in shot_text
+    assert "audio_infos at most 3" in shot_text
     assert "reference_video" in shot_text
     assert "back to camera" in shot_text
     assert "micro-shake" in shot_text
@@ -5320,40 +5320,40 @@ def test_japanese_anime_drama_skill_locks_language_and_continuity(monkeypatch):
         ]
     )
 
-    assert "日式写实动漫" in planning["prompt_guide"]
-    assert "语言与口音风格" in planning_text
-    assert "台湾华语" in planning_text
+    assert "Japanese realistic anime" in planning["prompt_guide"]
+    assert "language and accent style" in planning_text
+    assert "Vietnamese" in planning_text
     assert "16:9" in planning_text
     assert "24fps" in planning_text
-    assert "无 BGM" in planning_text
-    assert "无字幕" in planning_text
-    assert "无屏幕文字" in planning_text
-    assert "1.5 秒" in planning_text
-    assert "30° 规则" in planning_text
-    assert "这个规格不创建独立节点" in planning["planning_notes"]
-    assert "故事脚本" in planning["planning_notes"]
-    assert "分镜" in planning["planning_notes"]
-    assert "关键元素" in planning["planning_notes"]
-    assert "dependency_for 只控制执行顺序" in planning_text
-    assert "不会消费上游产物" in planning_text
-    assert "故事脚本到分镜必须使用 context_for" in planning_text
-    assert "分镜文本到图片或视频节点必须使用 prompt_for" in planning_text
-    assert "视觉资产到视频节点必须使用 media_input_for" in planning_text
-    assert "不得只创建一个笼统的“关键元素”总节点" in planning_text
-    assert "每个持续出现的角色各自独立成节点" in planning_text
-    assert "每个主要复用场景各自独立成节点" in planning_text
-    assert "每个需要跨镜保持外观一致的核心道具" in planning_text
-    assert "样片" in planning["planning_notes"]
-    assert "声音参考素材" in planning["planning_notes"]
-    assert "口型" in planning["planning_notes"]
-    assert "默认不创建独立音频节点" in planning_text
-    assert "用户指定已上传或画布中的音频/视频作为声音参考" in planning_text
-    assert "用 @音频N 或 @视频N 说明声音、口型、语气或节奏用途" in planning_text
+    assert "no BGM" in planning_text
+    assert "no subtitles" in planning_text
+    assert "no on-screen text" in planning_text
+    assert "1.5 seconds" in planning_text
+    assert "30-degree rule" in planning_text
+    assert "this specification creates no standalone node" in planning["planning_notes"]
+    assert "story script" in planning["planning_notes"]
+    assert "storyboard" in planning["planning_notes"]
+    assert "key element" in planning["planning_notes"]
+    assert "dependency_for only controls execution order" in planning_text
+    assert "does not consume the upstream output" in planning_text
+    assert "Story script to storyboard must use context_for" in planning_text
+    assert "storyboard text to image or video nodes must use prompt_for" in planning_text
+    assert "visual assets to video nodes must use media_input_for" in planning_text
+    assert 'Do not create just one generic "key elements" node' in planning_text
+    assert "Each recurring character is its own node" in planning_text
+    assert "each main reused scene is its own node" in planning_text
+    assert "each core prop, vehicle or environment object that needs a consistent appearance across shots" in planning_text
+    assert "sample" in planning["planning_notes"]
+    assert "voice reference assets" in planning["planning_notes"]
+    assert "lip-sync" in planning["planning_notes"]
+    assert "No standalone audio node is created by default" in planning_text
+    assert "the user designates an uploaded or on-canvas audio/video as a voice reference" in planning_text
+    assert "@audioN or @videoN is used in the video prompt to explain the voice, lip-sync, tone or rhythm purpose" in planning_text
     assert "voiceRef" not in planning_text
     assert "speechMode" not in planning_text
-    assert "音频节点连接关系" not in planning_text
+    assert "audio node connection relationships" not in planning_text
     assert (
-        "最终组装、混音、4K 超分和导出交给画布合成节点处理"
+        "final assembly, mixing, 4K upscaling and export are handled by the canvas compose node"
         in planning["planning_notes"]
     )
     assert "<<<image_" not in planning_text
@@ -5361,7 +5361,7 @@ def test_japanese_anime_drama_skill_locks_language_and_continuity(monkeypatch):
     assert "<<<audio_" not in planning_text
     assert "image_infos" not in planning_text
     assert "audio_infos" not in planning_text
-    assert "当前节点所选模型和生成模式" in planning_text
+    assert "the model and generation mode selected on the current node" in planning_text
     for recipe_id in recipe_ids:
         assert recipe_id not in planning_text
 
@@ -5376,7 +5376,7 @@ def test_japanese_anime_drama_skill_locks_language_and_continuity(monkeypatch):
             "\n".join(recipes[recipe_id]["must_have_items"]),
         ]
     )
-    assert "日系漫剧" not in recipe_text
+    assert "Japanese anime drama" not in recipe_text
     for supplier in ("Seedance", "Kling", "Nano Banana", "Gemini", "GPT Image"):
         assert supplier not in planning_text
         assert supplier not in recipe_text
@@ -5387,10 +5387,10 @@ def test_japanese_anime_drama_skill_locks_language_and_continuity(monkeypatch):
             "\n".join(recipes["visual-key-elements"]["must_have_items"]),
         ]
     )
-    assert "角色、场景、道具" in key_text
-    assert "多角度/表情表" in key_text
-    assert "后续镜头的一致性锚点" in key_text
-    assert "已确认角色、场景或道具设定" in key_text
+    assert "character, scene and prop" in key_text
+    assert "Multi-angle or expression sheet" in key_text
+    assert "consistency anchor for later shots" in key_text
+    assert "confirmed character, scene or prop settings" in key_text
 
     shot_text = "\n".join(
         [
@@ -5398,19 +5398,19 @@ def test_japanese_anime_drama_skill_locks_language_and_continuity(monkeypatch):
             "\n".join(recipes["dialogue-continuity-shot-video"]["must_have_items"]),
         ]
     )
-    assert "@图片N" in shot_text
-    assert "@视频N" in shot_text
-    assert "@音频N" in shot_text
-    assert "当前节点已连接" in shot_text
-    assert "当前节点所选模型和生成模式" in shot_text
+    assert "@imageN" in shot_text
+    assert "@videoN" in shot_text
+    assert "@audioN" in shot_text
+    assert "connected to the current node" in shot_text
+    assert "the model and generation mode selected on the current node" in shot_text
     assert "<<<image_" not in shot_text
     assert "<<<video_" not in shot_text
     assert "<<<audio_" not in shot_text
     assert "image_infos" not in shot_text
     assert "audio_infos" not in shot_text
-    assert "手持呼吸感" in shot_text
-    assert "偏转 15°" in shot_text
-    assert "全局创作规格" in shot_text
+    assert "handheld breathing feel" in shot_text
+    assert "offset by at least 15 degrees" in shot_text
+    assert "global creative specification" in shot_text
 
 
 def test_project_catalog_skills_compile_dynamic_multi_item_workflows(monkeypatch):
@@ -5445,8 +5445,8 @@ def test_project_catalog_skills_compile_dynamic_multi_item_workflows(monkeypatch
             [
                 {
                     "id": "anchor",
-                    "title": "素材锚点",
-                    "prompt": "生成一致性素材锚点",
+                    "title": "Asset anchor",
+                    "prompt": "Generate the consistency asset anchor",
                     "recipe_id": anchor_recipe_id,
                 }
             ]
@@ -5457,15 +5457,15 @@ def test_project_catalog_skills_compile_dynamic_multi_item_workflows(monkeypatch
             {
                 "schema_version": "freezone_workflow_intent.v1",
                 "skill_id": skill_id,
-                "user_goal": f"测试 {skill_id}",
-                **({"inputs": {"visual_style": "未指定"}}
+                "user_goal": f"Test {skill_id}",
+                **({"inputs": {"visual_style": "unspecified"}}
                    if skill_id == "short-drama-quick" else {}),
                 "items": anchor_items
                 + [
                     {
                         "id": f"shot_{index}",
-                        "title": f"镜头 {index}",
-                        "prompt": f"测试镜头 {index}",
+                        "title": f"Shot {index}",
+                        "prompt": f"Test shot {index}",
                         "recipe_id": recipe_id,
                         **({"depends_on": ["anchor"]} if anchor_recipe_id else {}),
                     }
@@ -5487,43 +5487,43 @@ def test_short_drama_quick_expands_shot_voice_and_background_music(monkeypatch):
         {
             "schema_version": "freezone_workflow_intent.v1",
             "skill_id": "short-drama-quick",
-            "user_goal": "制作两镜头悬疑短剧",
-            "inputs": {"visual_style": "未指定"},
+            "user_goal": "Make a two-shot suspense short drama",
+            "inputs": {"visual_style": "unspecified"},
             "items": [
                 {
                     "id": "clip_1",
-                    "title": "镜头一",
-                    "prompt": "便利店外景",
+                    "title": "Shot one",
+                    "prompt": "Convenience store exterior",
                     "recipe_id": "general-video",
                 },
                 {
                     "id": "clip_2",
-                    "title": "镜头二",
-                    "prompt": "店员看向监控",
+                    "title": "Shot two",
+                    "prompt": "The clerk looks at the monitor",
                     "recipe_id": "general-video",
                 },
                 {
                     "id": "voice_1",
-                    "title": "镜头一旁白",
-                    "prompt": "深夜的便利店，只有他一个人。",
-                    "narration": "深夜的便利店，只有他一个人。",
+                    "title": "Shot one narration",
+                    "prompt": "The convenience store at midnight, with only him inside.",
+                    "narration": "The convenience store at midnight, with only him inside.",
                     "recipe_id": "drama-shot-voice",
                     "depends_on": ["clip_1"],
                     "timeline_role": "shot_voice",
                 },
                 {
                     "id": "voice_2",
-                    "title": "镜头二旁白",
-                    "prompt": "监控里的自己，为什么没有同步动作？",
-                    "narration": "监控里的自己，为什么没有同步动作？",
+                    "title": "Shot two narration",
+                    "prompt": "Why doesn't the self on the monitor move in sync?",
+                    "narration": "Why doesn't the self on the monitor move in sync?",
                     "recipe_id": "drama-shot-voice",
                     "depends_on": ["clip_2"],
                     "timeline_role": "shot_voice",
                 },
                 {
                     "id": "background_music",
-                    "title": "背景音乐",
-                    "prompt": "悬疑氛围纯音乐",
+                    "title": "Background music",
+                    "prompt": "Suspense instrumental music",
                     "recipe_id": "drama-background-music",
                     "timeline_role": "background_music",
                 },
@@ -5545,8 +5545,8 @@ def test_short_drama_quick_expands_shot_voice_and_background_music(monkeypatch):
         == "background_music"
     ]
     assert [node["data"]["text"] for node in voice_nodes] == [
-        "深夜的便利店，只有他一个人。",
-        "监控里的自己，为什么没有同步动作？",
+        "The convenience store at midnight, with only him inside.",
+        "Why doesn't the self on the monitor move in sync?",
     ]
     assert all(node["data"]["audioKind"] == "speech" for node in voice_nodes)
     assert all(
@@ -5573,21 +5573,21 @@ def test_custom_short_drama_speech_can_consume_upstream_script_text(monkeypatch)
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "inputs": {"visual_style": "未指定"},
-            "user_goal": "先生成镜头文本，再生成配音",
+            "inputs": {"visual_style": "unspecified"},
+            "user_goal": "First generate the shot text, then the voiceover",
             "include_audio": True,
             "include_compose": False,
             "items": [
                 {
                     "id": "shot",
-                    "title": "镜头文本",
-                    "prompt": "输出镜头画面、动作和实际对白",
+                    "title": "Shot text",
+                    "prompt": "Output the shot picture, action and actual dialogue",
                     "recipe_id": "drama-shot-group-detail",
                 },
                 {
                     "id": "voice",
-                    "title": "镜头配音",
-                    "prompt": "只朗读上游镜头文本中的 narration 或 dialogue 正文",
+                    "title": "Shot voiceover",
+                    "prompt": "Read aloud only the narration or dialogue body in the upstream shot text",
                     "recipe_id": "drama-shot-voice",
                     "depends_on": ["shot"],
                     "reference_inputs": ["shot"],
@@ -5613,20 +5613,20 @@ def test_custom_short_drama_cannot_drop_requested_voiceover(monkeypatch):
     compiled = catalog.compile_workflow_intent(
         {
             "skill_id": "short-drama-quick",
-            "inputs": {"visual_style": "未指定"},
-            "user_goal": "制作带配音的短剧",
+            "inputs": {"visual_style": "unspecified"},
+            "user_goal": "Make a short drama with voiceover",
             "include_audio": True,
             "items": [
                 {
                     "id": "outline",
-                    "title": "剧情大纲",
-                    "prompt": "生成剧情大纲",
+                    "title": "Plot outline",
+                    "prompt": "Generate the plot outline",
                     "recipe_id": "drama-plot-outline",
                 },
                 {
                     "id": "music",
-                    "title": "背景音乐",
-                    "prompt": "生成悬疑纯音乐",
+                    "title": "Background music",
+                    "prompt": "Generate suspense instrumental music",
                     "recipe_id": "drama-background-music",
                     "depends_on": ["outline"],
                 },

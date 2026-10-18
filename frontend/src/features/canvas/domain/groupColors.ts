@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 组节点背景色预设（参考 libtv 的组配色）。value 为基础色，渲染时叠加低透明度做底色。
+// Group node background color presets (matching libtv's group palette). value is the base color, with low opacity overlaid at render time as the background.
 export interface GroupColorPreset {
   key: string;
-  /** 无障碍/title 用的颜色名词条 key——这张表跟着界面语言走，源码里只留 key。 */
+  /** The entry key of the color name for accessibility/title - this table follows the UI language, and only the key is left in source. */
   labelKey: string;
-  /** 基础色 hex。 */
+  /** Base color hex. */
   value: string;
 }
 
@@ -21,13 +21,13 @@ export const GROUP_COLOR_PRESETS: ReadonlyArray<GroupColorPreset> = [
   { key: 'gray', labelKey: 'canvas.groupColor.gray', value: '#6b7280' },
 ];
 
-/** 把组背景色基础 hex 叠加固定透明度，得到组卡片底色 / 边框色（8 位 hex）。 */
+/** Overlay a fixed opacity on the group background base hex to get the group card background / border color (8-digit hex). */
 export function groupColorBackground(color: string | null | undefined): string | undefined {
   if (!color) return undefined;
-  return `${color}1f`; // ≈ 12% 透明度的底色
+  return `${color}1f`; // Background of ~12% opacity
 }
 
 export function groupColorBorder(color: string | null | undefined): string | undefined {
   if (!color) return undefined;
-  return `${color}66`; // ≈ 40% 透明度的边框
+  return `${color}66`; // Border of ~40% opacity
 }

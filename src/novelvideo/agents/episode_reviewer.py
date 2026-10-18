@@ -1,7 +1,7 @@
-"""分集规划质量审核 Agent。
+"""Episode plan quality review Agent.
 
-使用 LLM 评估分集规划的叙事质量、节奏控制、人物弧线等。
-同时保留规则检查作为基础验证。
+Uses an LLM to evaluate the narrative quality, pacing, character arcs, etc. of the episode plan.
+Rule-based checks are kept as the baseline validation.
 """
 
 from enum import Enum
@@ -17,14 +17,14 @@ from novelvideo.config import (
 
 
 # =============================================================================
-# 数据模型
+# Data models
 # =============================================================================
 
 
 class EpisodePlanIssueType(str, Enum):
-    """分集规划问题类型。
+    """Episode plan issue types.
 
-    注：以下检查项已前置到 Pydantic 模型验证层（EpisodePlan 生成阶段自动校验）：
+    Note: the following checks have been moved up into the Pydantic model validation layer (validated automatically when an EpisodePlan is generated):
     - missing_title → Field(min_length=2)
     - missing_summary → Field(min_length=10)
     - missing_cliffhanger → Field(min_length=5)
@@ -32,15 +32,15 @@ class EpisodePlanIssueType(str, Enum):
     - empty_characters → Field(min_length=1)
     """
 
-    # 章节问题 (critical)
+    # Chapter issues (critical)
     CHAPTER_GAP = "chapter_gap"
     CHAPTER_OVERLAP = "chapter_overlap"
     CHAPTER_OUT_OF_RANGE = "chapter_out_of_range"
 
-    # 角色问题 (warning)
+    # Character issues (warning)
     INVALID_CHARACTER = "invalid_character"
 
-    # 叙事问题 (LLM 评估)
+    # Narrative issues (LLM evaluation)
     NARRATIVE_DISCONTINUITY = "narrative_discontinuity"
     PACING_ISSUE = "pacing_issue"
     CHARACTER_ARC_BROKEN = "character_arc_broken"
@@ -49,61 +49,61 @@ class EpisodePlanIssueType(str, Enum):
 
 
 class EpisodePlanIssue(BaseModel):
-    """分集规划问题。"""
+    """Episode plan issue."""
 
     issue_type: EpisodePlanIssueType
     severity: str = Field(
         default="warning",
-        description="问题严重程度: critical/warning/info",
+        description="Issue severity: critical/warning/info",
     )
     episode_number: Optional[Union[int, list[int]]] = Field(
         default=None,
-        description="相关集数（单个整数或整数列表）",
+        description="Related episode number(s) (a single integer or a list of integers)",
     )
-    message: str = Field(description="问题描述")
-    suggestion: str = Field(default="", description="修复建议")
+    message: str = Field(description="Issue description")
+    suggestion: str = Field(default="", description="Fix suggestion")
 
 
 class EpisodePlanReport(BaseModel):
-    """分集规划质量报告。"""
+    """Episode plan quality report."""
 
-    score: float = Field(ge=0, le=10, description="质量得分 0-10")
+    score: float = Field(ge=0, le=10, description="Quality score 0-10")
     issues: list[EpisodePlanIssue] = Field(default_factory=list)
-    summary: str = Field(default="", description="总结")
+    summary: str = Field(default="", description="Summary")
 
-    # 统计信息
+    # Statistics
     total_episodes: int = Field(default=0)
     chapter_coverage: str = Field(default="")
     covered_chapters: int = Field(default=0)
     missing_chapters: list[int] = Field(default_factory=list)
 
-    # LLM 评估维度得分 - 新增
-    narrative_score: float = Field(default=0.0, description="叙事连贯性得分 0-10")
-    pacing_score: float = Field(default=0.0, description="节奏控制得分 0-10")
-    character_arc_score: float = Field(default=0.0, description="人物弧线得分 0-10")
-    cliffhanger_score: float = Field(default=0.0, description="悬念设置得分 0-10")
+    # LLM evaluation dimension scores - new
+    narrative_score: float = Field(default=0.0, description="Narrative coherence score 0-10")
+    pacing_score: float = Field(default=0.0, description="Pacing score 0-10")
+    character_arc_score: float = Field(default=0.0, description="Character arc score 0-10")
+    cliffhanger_score: float = Field(default=0.0, description="Suspense score 0-10")
 
     @property
     def passed(self) -> bool:
-        """是否通过质量检查。
+        """Whether the quality check passes.
 
-        通过条件：
-        1. 无 critical 问题（必须全部修复）
-        2. 分数 >= 8.0（整体质量达标）
+        Pass conditions:
+        1. No critical issues (all must be fixed)
+        2. Score >= 8.0 (overall quality meets the bar)
 
-        info 问题不影响通过判定。
+        info issues do not affect the pass decision.
         """
         has_critical = any(i.severity == "critical" for i in self.issues)
         return self.score >= 8.0 and not has_critical
 
     @property
     def critical_issues(self) -> list[EpisodePlanIssue]:
-        """获取严重问题。"""
+        """Get the critical issues."""
         return [i for i in self.issues if i.severity == "critical"]
 
     @property
     def warnings(self) -> list[EpisodePlanIssue]:
-        """获取警告。"""
+        """Get the warnings."""
         return [i for i in self.issues if i.severity == "warning"]
 
 
@@ -112,100 +112,100 @@ class EpisodePlanReport(BaseModel):
 # =============================================================================
 
 
-EPISODE_REVIEWER_PROMPT = """# 你是专业的短视频分集规划审核员
+EPISODE_REVIEWER_PROMPT = """# You are a professional short-video episode plan reviewer
 
-## 评估维度（按权重排序）
+## Evaluation dimensions (ordered by weight)
 
-| 维度 | 权重 | 说明 |
-|------|------|------|
-| 叙事连贯性 | 30% | 故事线是否流畅？情节转折是否合理？ |
-| 节奏控制 | 25% | 每集是否张弛有度？高潮位置是否恰当？ |
-| 人物弧线 | 20% | 角色发展是否连贯？动机是否清晰？ |
-| 悬念设置 | 15% | 结尾悬念是否吸引人？能否留住观众？ |
-| 格式规范 | 10% | 章节范围是否连续？角色名是否有效？ |
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| Narrative coherence | 30% | Does the storyline flow? Are plot turns reasonable? |
+| Pacing | 25% | Does each episode balance tension and release? Are climaxes well placed? |
+| Character arcs | 20% | Is character development coherent? Are motivations clear? |
+| Suspense | 15% | Are the ending cliffhangers engaging? Can they retain the audience? |
+| Format | 10% | Are chapter ranges contiguous? Are character names valid? |
 
-## 工具使用
+## Tool usage
 
-在审核过程中，你可以调用以下工具获取更多上下文：
+During the review you may call the following tools for more context:
 
-| 工具 | 用途 |
-|------|------|
-| `get_character_evolution(name)` | 查询角色在小说中的发展变化 |
-| `get_chapter_content(start, end)` | 获取指定章节的内容摘要 |
-| `get_novel_themes()` | 获取小说的主题和核心冲突 |
-| `check_plot_continuity(ep1, ep2)` | 检查两集之间的情节连贯性 |
+| Tool | Purpose |
+|------|---------|
+| `get_character_evolution(name)` | Look up a character's development across the novel |
+| `get_chapter_content(start, end)` | Get a content summary of the specified chapters |
+| `get_novel_themes()` | Get the novel's themes and core conflicts |
+| `check_plot_continuity(ep1, ep2)` | Check plot continuity between two episodes |
 
-## 审核检查清单
+## Review checklist
 
-### 1. 叙事连贯性检查
-- [ ] 各集之间情节是否自然过渡？
-- [ ] 是否有情节跳跃或断裂？
-- [ ] 因果关系是否清晰？
+### 1. Narrative coherence check
+- [ ] Does the plot transition naturally between episodes?
+- [ ] Are there plot jumps or breaks?
+- [ ] Is causality clear?
 
-### 2. 节奏控制检查
-- [ ] 每集是否有起承转合？
-- [ ] 高潮/冲突是否分布合理？
-- [ ] 是否有连续多集平淡无高潮？
+### 2. Pacing check
+- [ ] Does each episode have setup, development, turn and resolution?
+- [ ] Are climaxes/conflicts well distributed?
+- [ ] Are there several consecutive bland episodes without a climax?
 
-### 3. 人物弧线检查
-- [ ] 主要角色是否有发展变化？
-- [ ] 角色动机是否清晰一致？
-- [ ] 角色出场是否符合剧情需要？
+### 3. Character arc check
+- [ ] Do the main characters develop and change?
+- [ ] Are character motivations clear and consistent?
+- [ ] Do character appearances fit the plot needs?
 
-### 4. 悬念设置检查
-- [ ] 每集结尾是否留有悬念？
-- [ ] 悬念是否足够吸引人？
-- [ ] 悬念是否在后续集中得到回应？
+### 4. Suspense check
+- [ ] Does each episode end with a cliffhanger?
+- [ ] Is the cliffhanger engaging enough?
+- [ ] Is the cliffhanger answered in later episodes?
 
-### 5. 格式规范检查
-- [ ] 章节范围是否连续无间隔？
-- [ ] 角色名是否使用已分析的有效名称？
-- [ ] 标题是否具有吸引力？
+### 5. Format check
+- [ ] Are chapter ranges contiguous without gaps?
+- [ ] Are the analyzed, valid character names used?
+- [ ] Are the titles attractive?
 
-## 评分标准
+## Scoring standard
 
-| 分数 | 等级 | 说明 |
-|------|------|------|
-| 9-10 | 优秀 | 叙事流畅，节奏紧凑，悬念设置巧妙 |
-| 8-8.9 | 良好 | 整体不错，有少量可优化之处 |
-| 7-7.9 | 合格 | 基本可用，但有明显问题需修复 |
-| 6-6.9 | 及格 | 问题较多，需要较大修改 |
-| <6 | 不合格 | 存在严重问题，需要重新规划 |
+| Score | Grade | Description |
+|-------|-------|-------------|
+| 9-10 | Excellent | Fluent narrative, tight pacing, clever suspense |
+| 8-8.9 | Good | Good overall, with minor points to optimize |
+| 7-7.9 | Acceptable | Basically usable, but with clear problems to fix |
+| 6-6.9 | Passing | Quite a few problems; substantial changes needed |
+| <6 | Failing | Serious problems; needs re-planning |
 
-## 问题严重程度
+## Issue severity
 
-- **critical**: 必须修复，否则无法使用（如章节间隔、角色无法出场）
-- **warning**: 应该修复，影响质量（如叙事断裂、节奏问题）
-- **info**: 建议优化（如标题可更吸引人）
+- **critical**: must be fixed or the plan cannot be used (e.g. chapter gaps, characters that cannot appear)
+- **warning**: should be fixed, affects quality (e.g. narrative breaks, pacing problems)
+- **info**: suggested optimization (e.g. the title could be more engaging)
 
-## 输出要求
+## Output requirements
 
-请输出 EpisodePlanReport，包含：
-1. score: 综合得分 (0-10)
-2. issues: 发现的问题列表
-3. summary: 审核总结
-4. 各维度得分: narrative_score, pacing_score, character_arc_score, cliffhanger_score
+Output an EpisodePlanReport containing:
+1. score: overall score (0-10)
+2. issues: list of issues found
+3. summary: review summary
+4. Per-dimension scores: narrative_score, pacing_score, character_arc_score, cliffhanger_score
 
-**重要**: 在给出问题和建议时，请确保：
-1. 调用工具验证你的判断
-2. 给出具体的集数和内容
-3. 提供可操作的修复建议
+**Important**: when giving issues and suggestions, make sure to:
+1. Call tools to verify your judgment
+2. Give specific episode numbers and content
+3. Provide actionable fix suggestions
 """
 
 
 # =============================================================================
-# LLM Agent 创建
+# LLM Agent creation
 # =============================================================================
 
 
 def create_episode_reviewer_agent(tools: Optional[list[Callable]] = None) -> Agent:
-    """创建分集规划审核 Agent。
+    """Create the episode plan review Agent.
 
     Args:
-        tools: 审核工具函数列表
+        tools: List of review tool functions
 
     Returns:
-        配置好的 Agent
+        A configured Agent
     """
     return Agent(
         get_pydantic_model(),
@@ -213,20 +213,20 @@ def create_episode_reviewer_agent(tools: Optional[list[Callable]] = None) -> Age
         output_type=EpisodePlanReport,
         model_settings=get_newapi_structured_output_model_settings(),
         tools=tools or [],
-        name="分集规划审核员",
+        name="Episode plan reviewer",
     )
 
 
 # =============================================================================
-# 规则检查器（保留，用于基础验证）
+# Rule-based checker (kept, used for baseline validation)
 # =============================================================================
 
 
 class EpisodePlanReviewer:
-    """分集规划规则检查器。
+    """Rule-based episode plan checker.
 
-    提供基础的规则验证，作为 LLM 审核的补充。
-    主要检查：章节连续性、角色名有效性、结构完整性。
+    Provides baseline rule validation, complementing the LLM review.
+    Main checks: chapter continuity, character name validity, structural integrity.
     """
 
     WEIGHTS = {
@@ -242,12 +242,12 @@ class EpisodePlanReviewer:
         available_characters: set[str],
         total_chapters: int,
     ) -> EpisodePlanReport:
-        """规则审核分集规划。
+        """Rule-based review of the episode plan.
 
         Args:
-            plan: 待审核的分集规划
-            available_characters: 已分析的角色名集合
-            total_chapters: 小说总章节数
+            plan: The episode plan to review
+            available_characters: Set of analyzed character names
+            total_chapters: Total number of chapters in the novel
 
         Returns:
             EpisodePlanReport
@@ -255,37 +255,37 @@ class EpisodePlanReviewer:
         issues: list[EpisodePlanIssue] = []
         scores: dict[str, float] = {}
 
-        # 1. 检查章节连续性
+        # 1. Check chapter continuity
         cont_score, cont_issues, coverage_info = self._check_chapter_continuity(
             plan, total_chapters
         )
         scores["chapter_continuity"] = cont_score
         issues.extend(cont_issues)
 
-        # 2. 检查章节覆盖完整性
+        # 2. Check chapter coverage completeness
         cov_score, cov_issues = self._check_chapter_coverage(
             plan, total_chapters, coverage_info
         )
         scores["chapter_coverage"] = cov_score
         issues.extend(cov_issues)
 
-        # 3. 检查角色名一致性
+        # 3. Check character name consistency
         char_score, char_issues = self._check_character_names(plan, available_characters)
         scores["character_validity"] = char_score
         issues.extend(char_issues)
 
-        # 4. 检查结构完整性
+        # 4. Check structural integrity
         struct_score, struct_issues = self._check_structure(plan)
         scores["structure"] = struct_score
         issues.extend(struct_issues)
 
-        # 计算加权得分
+        # Compute the weighted score
         final_score = sum(scores[k] * self.WEIGHTS[k] for k in self.WEIGHTS)
 
-        # 生成章节覆盖描述
+        # Generate the chapter coverage description
         chapter_coverage_str = self._format_chapter_coverage(coverage_info, total_chapters)
 
-        # 生成总结
+        # Generate the summary
         summary = self._generate_summary(scores, issues)
 
         return EpisodePlanReport(
@@ -303,7 +303,7 @@ class EpisodePlanReviewer:
         plan: "SeriesPlan",
         total_chapters: int,
     ) -> tuple[float, list[EpisodePlanIssue], dict]:
-        """检查章节连续性。"""
+        """Check chapter continuity."""
         issues = []
         coverage_info: dict = {"covered": set(), "missing": [], "covered_count": 0}
 
@@ -312,8 +312,8 @@ class EpisodePlanReviewer:
                 EpisodePlanIssue(
                     issue_type=EpisodePlanIssueType.CHAPTER_GAP,
                     severity="critical",
-                    message="分集规划为空",
-                    suggestion="需要生成分集规划",
+                    message="The episode plan is empty",
+                    suggestion="An episode plan needs to be generated",
                 )
             ], coverage_info
 
@@ -330,8 +330,8 @@ class EpisodePlanReviewer:
                         issue_type=EpisodePlanIssueType.CHAPTER_GAP,
                         severity="critical",
                         episode_number=ep.number,
-                        message=f"第 {ep.number} 集章节范围无效: {ep.chapter_start}-{ep.chapter_end}",
-                        suggestion="chapter_start 应该 <= chapter_end",
+                        message=f"Episode {ep.number} has an invalid chapter range: {ep.chapter_start}-{ep.chapter_end}",
+                        suggestion="chapter_start should be <= chapter_end",
                     )
                 )
                 penalty += 2.0
@@ -342,8 +342,8 @@ class EpisodePlanReviewer:
                         issue_type=EpisodePlanIssueType.CHAPTER_OUT_OF_RANGE,
                         severity="critical",
                         episode_number=ep.number,
-                        message=f"第 {ep.number} 集结束章节 {ep.chapter_end} 超出总章节数 {total_chapters}",
-                        suggestion=f"调整章节范围不超过 {total_chapters}",
+                        message=f"Episode {ep.number} ends at chapter {ep.chapter_end}, beyond the total of {total_chapters} chapters",
+                        suggestion=f"Adjust the chapter range to not exceed {total_chapters}",
                     )
                 )
                 penalty += 1.5
@@ -354,8 +354,8 @@ class EpisodePlanReviewer:
                         issue_type=EpisodePlanIssueType.CHAPTER_OUT_OF_RANGE,
                         severity="critical",
                         episode_number=ep.number,
-                        message=f"第 {ep.number} 集起始章节 {ep.chapter_start} 小于 1",
-                        suggestion="章节编号从 1 开始",
+                        message=f"Episode {ep.number} starts at chapter {ep.chapter_start}, which is less than 1",
+                        suggestion="Chapter numbering starts at 1",
                     )
                 )
                 penalty += 1.5
@@ -371,8 +371,8 @@ class EpisodePlanReviewer:
                             issue_type=EpisodePlanIssueType.CHAPTER_GAP,
                             severity="critical",
                             episode_number=ep.number,
-                            message=f"第 {ep.number} 集和第 {next_ep.number} 集之间缺少第 {gap_start}-{gap_end} 章",
-                            suggestion="扩展相邻剧集的章节范围",
+                            message=f"Chapters {gap_start}-{gap_end} are missing between episode {ep.number} and episode {next_ep.number}",
+                            suggestion="Extend the chapter range of the adjacent episodes",
                         )
                     )
                     penalty += 2.0
@@ -383,8 +383,8 @@ class EpisodePlanReviewer:
                             issue_type=EpisodePlanIssueType.CHAPTER_OVERLAP,
                             severity="critical",
                             episode_number=ep.number,
-                            message=f"第 {ep.number} 集和第 {next_ep.number} 集章节重叠",
-                            suggestion="调整章节边界，避免重叠",
+                            message=f"Episode {ep.number} and episode {next_ep.number} have overlapping chapters",
+                            suggestion="Adjust the chapter boundaries to avoid overlap",
                         )
                     )
                     penalty += 2.0
@@ -402,7 +402,7 @@ class EpisodePlanReviewer:
         total_chapters: int,
         coverage_info: dict,
     ) -> tuple[float, list[EpisodePlanIssue]]:
-        """检查章节覆盖完整性。"""
+        """Check chapter coverage completeness."""
         issues = []
 
         covered = coverage_info.get("covered_count", 0)
@@ -420,8 +420,8 @@ class EpisodePlanReviewer:
                 EpisodePlanIssue(
                     issue_type=EpisodePlanIssueType.CHAPTER_GAP,
                     severity=severity,
-                    message=f"缺少 {len(missing)} 章内容: {missing_ranges}",
-                    suggestion="扩展相邻剧集的章节范围以覆盖缺失章节",
+                    message=f"Missing {len(missing)} chapters of content: {missing_ranges}",
+                    suggestion="Extend the chapter range of the adjacent episodes to cover the missing chapters",
                 )
             )
 
@@ -433,7 +433,7 @@ class EpisodePlanReviewer:
         plan: "SeriesPlan",
         available_characters: set[str],
     ) -> tuple[float, list[EpisodePlanIssue]]:
-        """检查角色名一致性。"""
+        """Check character name consistency."""
         issues = []
 
         if not available_characters:
@@ -461,8 +461,8 @@ class EpisodePlanReviewer:
                 EpisodePlanIssue(
                     issue_type=EpisodePlanIssueType.INVALID_CHARACTER,
                     severity="warning",
-                    message=f"角色 '{char}' 不在已分析的角色列表中 (出现在第 {episodes_str} 集)",
-                    suggestion="使用已分析的角色名",
+                    message=f"Character '{char}' is not in the analyzed character list (appears in episode(s) {episodes_str})",
+                    suggestion="Use the analyzed character names",
                 )
             )
 
@@ -476,16 +476,16 @@ class EpisodePlanReviewer:
         self,
         plan: "SeriesPlan",
     ) -> tuple[float, list[EpisodePlanIssue]]:
-        """检查结构完整性。
+        """Check structural integrity.
 
-        注：title/summary/cliffhanger/key_events/characters 的非空检查
-        已前置到 EpisodePlan 的 Pydantic Field 约束中，此处不再重复检查。
+        Note: the non-empty checks for title/summary/cliffhanger/key_events/characters
+        have been moved up into the Pydantic Field constraints of EpisodePlan and are not repeated here.
         """
-        # 结构检查已全部前置到 Pydantic 模型验证层
+        # All structure checks have been moved up into the Pydantic model validation layer
         return 10.0, []
 
     def _ranges_to_str(self, numbers: list[int]) -> str:
-        """将数字列表转换为范围字符串。"""
+        """Convert a list of numbers into a range string."""
         if not numbers:
             return ""
 
@@ -515,12 +515,12 @@ class EpisodePlanReviewer:
         coverage_info: dict,
         total_chapters: int,
     ) -> str:
-        """格式化章节覆盖描述。"""
+        """Format the chapter coverage description."""
         covered = coverage_info.get("covered", set())
         missing = coverage_info.get("missing", [])
 
         if not covered:
-            return "无覆盖"
+            return "no coverage"
 
         min_ch = min(covered)
         max_ch = max(covered)
@@ -529,14 +529,14 @@ class EpisodePlanReviewer:
             return f"{min_ch}-{max_ch}"
         else:
             missing_str = self._ranges_to_str(missing)
-            return f"{min_ch}-{max_ch} (缺 {missing_str})"
+            return f"{min_ch}-{max_ch} (missing {missing_str})"
 
     def _generate_summary(
         self,
         scores: dict[str, float],
         issues: list[EpisodePlanIssue],
     ) -> str:
-        """生成审核总结。"""
+        """Generate the review summary."""
         critical_count = len([i for i in issues if i.severity == "critical"])
         warning_count = len([i for i in issues if i.severity == "warning"])
 
@@ -544,22 +544,22 @@ class EpisodePlanReviewer:
 
         avg_score = sum(scores.values()) / len(scores) if scores else 0
         if avg_score >= 8:
-            parts.append("规则检查通过")
+            parts.append("Rule checks passed")
         elif avg_score >= 6:
-            parts.append("规则检查一般")
+            parts.append("Rule checks fair")
         else:
-            parts.append("规则检查较差")
+            parts.append("Rule checks poor")
 
         if critical_count > 0:
-            parts.append(f"{critical_count} 个严重问题")
+            parts.append(f"{critical_count} critical issue(s)")
         if warning_count > 0:
-            parts.append(f"{warning_count} 个警告")
+            parts.append(f"{warning_count} warning(s)")
 
-        return "，".join(parts) + "。" if parts else "审核完成。"
+        return ", ".join(parts) + "." if parts else "Review complete."
 
 
 def create_episode_plan_reviewer() -> EpisodePlanReviewer:
-    """创建分集规划规则检查器。"""
+    """Create the rule-based episode plan checker."""
     return EpisodePlanReviewer()
 
 

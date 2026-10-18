@@ -15,7 +15,7 @@ interface AssetLibraryPreviewDialogProps {
   onDelete?: () => void;
 }
 
-/** 管理态的单项落点：预览内容，并集中承接下载、发送和可选的删除操作。 */
+/** The single-item landing point in manage mode: preview content, and centrally host download, send and the optional delete actions. */
 export function AssetLibraryPreviewDialog({
   entry,
   onClose,

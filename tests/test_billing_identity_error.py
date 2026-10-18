@@ -20,7 +20,7 @@ def test_feature_billing_identity_error_contract() -> None:
     assert error.error_code == "FEATURE_BILLING_IDENTITY_INVALID"
     assert error.http_status == 409
     assert error.user_message == FEATURE_BILLING_IDENTITY_INVALID_MESSAGE
-    assert error.user_message == "计费身份无效或无法确定，请联系管理员"
+    assert error.user_message == "Billing identity is invalid or cannot be determined. Please contact your administrator."
 
 
 def test_feature_billing_identity_payload_redacts_internal_reason() -> None:

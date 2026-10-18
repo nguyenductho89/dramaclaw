@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 export const DEFAULT_FREEZONE_AGENT_ID = "main";
-export const DEFAULT_FREEZONE_AGENT_NAME = "新对话";
+export const DEFAULT_FREEZONE_AGENT_NAME = "New chat";
 
 export type FreezoneCanvasAgent = {
   id: string;
@@ -41,7 +41,7 @@ export function shouldKeepFreezoneChatPanelMounted({
 }
 
 const STORAGE_PREFIX = "freezone:canvas-agents:v1:";
-const GENERATED_AGENT_NAME_RE = /^(Agent(?: \d+)?|新对话)$/;
+const GENERATED_AGENT_NAME_RE = /^(Agent(?: \d+)?|New chat)$/;
 const MAX_AGENT_TITLE_LENGTH = 32;
 
 function storageKey(projectId: string, canvasId: string): string {

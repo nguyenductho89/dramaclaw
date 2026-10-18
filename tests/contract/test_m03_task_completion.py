@@ -60,7 +60,7 @@ def _completion_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     runtime_dir = tmp_path / "runtime" / "alice" / "m03_completion"
     for path in (output_dir, state_dir, runtime_dir):
         path.mkdir(parents=True, exist_ok=True)
-    (output_dir / "novel.txt").write_text("测试原文", encoding="utf-8")
+    (output_dir / "novel.txt").write_text("test source text", encoding="utf-8")
     return ProjectContext(
         project_id="proj_m03_completion",
         project_name="m03_completion",
@@ -113,13 +113,13 @@ def m03_completion_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             await store.add_episode(
                 NovelEpisode(
                     number=1,
-                    title="第一集",
-                    raw_content="第一章 启程\n秦王入宫。",
-                    beat_source_text="第一章 启程\n秦王入宫。",
-                    content_summary="确定性规划",
-                    identity_ids=["秦_青年"],
-                    key_events=["入宫"],
-                    character_names=["秦"],
+                    title="Episode One",
+                    raw_content="Chapter 1 Departure\nThe King of Qin enters the palace.",
+                    beat_source_text="Chapter 1 Departure\nThe King of Qin enters the palace.",
+                    content_summary="deterministic plan",
+                    identity_ids=["Qin_young_adult"],
+                    key_events=["Enter palace"],
+                    character_names=["Qin"],
                 )
             )
             return len(store.get_all_episodes())
@@ -138,22 +138,22 @@ def m03_completion_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
                         episode_number=1,
                         beat_number=3,
                         shot_order=20,
-                        narration="旁白三",
-                        visual_description="画面三",
+                        narration="Narration three",
+                        visual_description="Scene three",
                     ),
                     NovelVisualBeat(
                         episode_number=1,
                         beat_number=1,
                         shot_order=10,
-                        narration="旁白一",
-                        visual_description="画面一",
+                        narration="Narration one",
+                        visual_description="Scene one",
                     ),
                     NovelVisualBeat(
                         episode_number=1,
                         beat_number=2,
                         shot_order=20,
-                        narration="旁白二",
-                        visual_description="画面二",
+                        narration="Narration two",
+                        visual_description="Scene two",
                     ),
                 ]
             )
@@ -419,7 +419,7 @@ def test_seedance2_prompt_does_not_create_media_side_effects(m03_completion_clie
     }
     response = client.post(
         "/api/v1/projects/proj_m03_completion/episodes/1/beats/1/seedance2-prompt/generate",
-        json={"prompt_guidance": "固定提示"},
+        json={"prompt_guidance": "Fixed hint"},
     )
     assert response.status_code == 200
     assert response.json()["ok"] is True

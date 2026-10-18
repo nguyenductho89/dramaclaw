@@ -18,13 +18,13 @@ describe("ConfirmDialogHost", () => {
     render(<ConfirmDialogHost />);
 
     const pending = confirmDialog({
-      title: "终止任务",
-      description: "终止不会退还积分",
-      confirmText: "确认终止",
-      cancelText: "继续执行",
+      title: "Stop task",
+      description: "Terminating does not refund credits",
+      confirmText: "Stop task",
+      cancelText: "Keep running",
     });
 
-    await user.click(await screen.findByRole("button", { name: "确认终止" }));
+    await user.click(await screen.findByRole("button", { name: "Stop task" }));
 
     await expect(pending).resolves.toBe(true);
   });
@@ -33,9 +33,9 @@ describe("ConfirmDialogHost", () => {
     const user = userEvent.setup();
     render(<ConfirmDialogHost />);
 
-    const pending = confirmDialog({ description: "终止不会退还积分" });
+    const pending = confirmDialog({ description: "Terminating does not refund credits" });
 
-    expect(await screen.findByText("终止不会退还积分")).toBeInTheDocument();
+    expect(await screen.findByText("Terminating does not refund credits")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "common.cancel" }));
 
     await expect(pending).resolves.toBe(false);
@@ -44,12 +44,12 @@ describe("ConfirmDialogHost", () => {
   it("supersedes an unanswered request by resolving it as declined", async () => {
     render(<ConfirmDialogHost />);
 
-    const first = confirmDialog({ description: "第一个请求" });
-    const second = confirmDialog({ description: "第二个请求" });
+    const first = confirmDialog({ description: "First request" });
+    const second = confirmDialog({ description: "Second request" });
 
     await expect(first).resolves.toBe(false);
     await waitFor(() =>
-      expect(screen.getByText("第二个请求")).toBeInTheDocument(),
+      expect(screen.getByText("Second request")).toBeInTheDocument(),
     );
 
     const user = userEvent.setup();
@@ -61,42 +61,42 @@ describe("ConfirmDialogHost", () => {
     const user = userEvent.setup();
     render(<ConfirmDialogHost />);
 
-    const pending = alertDialog({ title: "画布已达上限", description: "删掉一些再新建" });
+    const pending = alertDialog({ title: "Canvas limit reached", description: "Delete some before creating a new one" });
 
-    expect(await screen.findByText("删掉一些再新建")).toBeInTheDocument();
-    // 没有第二条路可选，留个「取消」只会让人以为还能反悔。
+    expect(await screen.findByText("Delete some before creating a new one")).toBeInTheDocument();
+    // With no second option, leaving a "Cancel" would only make people think they can still back out.
     expect(screen.queryByRole("button", { name: "common.cancel" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "common.ok" }));
 
     await expect(pending).resolves.toBeUndefined();
   });
 
-  // 回归位：确认框曾经停在 shadcn 原版的 z-50，而素材库弹窗是 z-[300]、画布书签菜单
-  // 是 z-[10010]。结果是从素材库里点「删除」，确认框弹在弹窗背后——删不掉也退不出。
-  // jsdom 量不了层叠顺序（Tailwind 的类没编译成 CSS），所以这里直接把类名里的 z 值
-  // 抠出来跟已知最高层比大小；换算法可以，压不住整个浮层栈不行。
+  // Regression marker: the confirm dialog used to sit at shadcn's original z-50, while the asset library dialog is z-[300] and the canvas bookmark menu
+  // is z-[10010]. The result was that clicking "Delete" from the asset library showed the confirm dialog behind the popup - it could be neither confirmed nor dismissed.
+  // jsdom cannot measure stacking order (Tailwind classes are not compiled into CSS), so the z value is pulled straight out of the class name here
+  // and compared with the known highest layer; changing the algorithm is fine, failing to cover the whole overlay stack is not.
   it("renders above the canvas overlay stack so in-modal confirms stay reachable", async () => {
-    const HIGHEST_OVERLAY_Z = 10010; // CanvasBookmarkContextMenu，全仓最高的一层
+    const HIGHEST_OVERLAY_Z = 10010; // CanvasBookmarkContextMenu, the highest layer in the whole repo
 
     render(<ConfirmDialogHost />);
-    void confirmDialog({ description: "确定要删除「封面」？" });
+    void confirmDialog({ description: "Are you sure you want to delete \"Cover\"?" });
 
-    await screen.findByText("确定要删除「封面」？");
+    await screen.findByText("Are you sure you want to delete \"Cover\"?");
 
     for (const slot of ["alert-dialog-overlay", "alert-dialog-content"]) {
       const el = document.querySelector(`[data-slot="${slot}"]`);
-      expect(el, `${slot} 没渲染出来`).not.toBeNull();
+      expect(el, `${slot} was not rendered`).not.toBeNull();
       const match = /z-\[(\d+)\]/.exec(el!.className);
-      expect(match, `${slot} 身上没有 z-[N]，很可能被改回了 z-50`).not.toBeNull();
+      expect(match, `${slot} has no z-[N], it was probably changed back to z-50`).not.toBeNull();
       expect(Number(match![1])).toBeGreaterThan(HIGHEST_OVERLAY_Z);
     }
   });
 
   it("keeps confirmation dialogs vertically centered", async () => {
     render(<ConfirmDialogHost />);
-    void confirmDialog({ description: "删除画布？" });
+    void confirmDialog({ description: "Delete canvas?" });
 
-    await screen.findByText("删除画布？");
+    await screen.findByText("Delete canvas?");
     const content = document.querySelector('[data-slot="alert-dialog-content"]');
 
     expect(content).toHaveClass("top-1/2", "-translate-y-1/2");

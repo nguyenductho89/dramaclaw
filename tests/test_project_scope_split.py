@@ -1,8 +1,8 @@
-"""P0-3: 项目生命周期/永久删除必须与 projects:write 拆分为独立 scope。
+"""P0-3: project lifecycle / permanent deletion must be split from projects:write into an independent scope.
 
-安全目标:Hermes / 外部 agent 默认只持有读写与任务 scope,永不持有
-``projects:lifecycle`` 或 ``projects:purge``。因此 agent 请求归档/删除/恢复/
-purge 时必须收到明确的 403,而浏览器用户(无 scopes)照常放行。
+Security goal: Hermes / external agents by default hold only read-write and task scopes and never hold
+``projects:lifecycle`` or ``projects:purge``. Therefore when an agent requests archive/delete/restore/
+purge it must receive an explicit 403, while browser users (without scopes) pass as usual.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ def _agent_user(*scopes: str) -> dict:
 
 
 def _browser_user() -> dict:
-    # 浏览器会话不带 scopes 字段,由常规项目访问校验授权。
+    # Browser sessions carry no scopes field and are authorized by the regular project access check.
     return {"credential_kind": "browser", "username": "alice"}
 
 
@@ -57,7 +57,7 @@ async def test_browser_session_passes_lifecycle_and_purge(scope: str) -> None:
 
 @pytest.mark.asyncio
 async def test_lifecycle_scope_does_not_imply_purge() -> None:
-    # 持有 lifecycle 的 token 仍不能 purge:两个 scope 相互独立。
+    # A token holding lifecycle still cannot purge: the two scopes are independent of each other.
     user = _agent_user("projects:read", "projects:write", LIFECYCLE_SCOPE)
     with pytest.raises(HTTPException) as excinfo:
         await _run(PURGE_SCOPE, user)
@@ -153,7 +153,7 @@ def test_default_agent_scope_lists_exclude_lifecycle_and_purge() -> None:
 
 
 def test_lifecycle_and_purge_routes_use_split_scopes() -> None:
-    # 直接从路由依赖里读回 scope,防止有人把守卫改回 projects:write。
+    # Read the scope back directly from the route dependency, to prevent anyone changing the guard back to projects:write.
     from novelvideo.api.routes import projects as projects_routes
 
     wanted = {

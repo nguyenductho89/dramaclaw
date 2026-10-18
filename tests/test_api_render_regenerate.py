@@ -232,7 +232,7 @@ def test_render_regen_rejects_missing_selected_sketch_before_enqueue(monkeypatch
 
     assert response.status_code == 422
     assert "#2" in response.json()["detail"]
-    assert "草图" in response.json()["detail"]
+    assert "sketch" in response.json()["detail"]
     assert calls == []
 
 

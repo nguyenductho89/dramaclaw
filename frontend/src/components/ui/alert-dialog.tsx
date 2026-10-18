@@ -23,11 +23,11 @@ function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
 }
 
 /**
- * 这一层是全局最后一道拦截：`confirmDialog()` 弹的删除确认要能压住任何东西。
- * shadcn 原版给的 z-50 在这个项目里不够用——画布的浮层栈已经排到 z-[10010]
- * （素材库弹窗 z-[300]、模型选择器 z-[10001]、书签菜单 z-[10010]），确认框停在
- * z-50 就会被盖在下面：用户点了「删除」，对话框在弹窗背后，删不掉也退不出。
- * 背板和弹层必须一起抬，只抬弹层的话遮罩会漏在下面，弹窗照样是亮的。
+ * This layer is the last global interception: the delete confirmation shown by `confirmDialog()` must cover anything.
+ * The z-50 from the original shadcn is not enough in this project - the canvas overlay stack has already reached z-[10010]
+ * (asset library dialog z-[300], model picker z-[10001], bookmark menu z-[10010]), and a confirmation sitting at
+ * z-50 would be covered: the user clicks "Delete", the dialog is behind the popup, and can neither be confirmed nor dismissed.
+ * The backdrop and the popup layer must be raised together; raising only the popup would leave the overlay leaking underneath and the popup still lit.
  */
 function AlertDialogOverlay({
   className,

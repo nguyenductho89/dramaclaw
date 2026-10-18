@@ -7,38 +7,38 @@ import type { DirectorWorldSource } from "@/features/viewer-kit/three-d/director
 import type { ThreeDSceneSnapshot } from "@/features/viewer-kit/three-d/engine/viewerApp";
 
 /**
- * 自定义拖拽 MIME —— 侧栏素材卡片拖进画布时通过 dataTransfer 携带的 payload 类型。
- * 用专属类型而非 text/plain，避免和系统文件拖放 / 文本拖放互相误伤。
+ * Custom drag MIME - the payload type carried through dataTransfer when a sidebar asset card is dragged into the canvas.
+ * A dedicated type rather than text/plain, to avoid mis-triggering with system file drops / text drops.
  */
 export const CANVAS_ASSET_DRAG_MIME = "application/x-freezone-asset";
 
 export type CanvasAssetDragKind = "image" | "video" | "audio" | "model";
 
 /**
- * 侧栏素材拖进画布时序列化的最小描述。所有字段都是纯数据(可 JSON 序列化),
- * 落点后由 {@link spawnAssetNode} 还原成对应类型的画布节点。
+ * The minimal description serialized when a sidebar asset is dragged into the canvas. All fields are plain data (JSON-serializable),
+ * and after landing {@link spawnAssetNode} restores it into a canvas node of the matching type.
  */
 export interface CanvasAssetDragPayload {
   kind: CanvasAssetDragKind;
   label: string;
   /**
-   * 生成型节点(视频 / 图片)的提示词。历史「使用」流程从对应记录带过来,用于回填
-   * 新节点的提示词框;侧栏拖拽 / live-canvas 复制不带此字段(label 是显示名非提示词)。
+   * The prompt of a generation-type node (video / image). Brought over from the matching record by the history "Use" flow, used to backfill
+   * the new node's prompt box; sidebar drags / live-canvas copies do not carry this field (label is a display name, not a prompt).
    */
   prompt?: string;
   /**
-   * 仅历史「使用」置真:表示这是一张「生成产物」而非上传参考图。图片据此还原成
-   * 成品「图片节点」(imageGen)——带回提示词、按图自适应比例、显示分辨率角标;
-   * 不置(普通拖拽 / 素材库参考图)则仍建 upload 节点(替换素材)。
+   * Set true only by history "Use": indicates this is a "generation product" rather than an uploaded reference image. Images are restored accordingly into
+   * a finished "image node" (imageGen) - bringing back the prompt, adapting the ratio to the image, and showing the resolution badge;
+   * when unset (ordinary drag / asset library reference image) an upload node is still built (replace material).
    */
   restoreAsGeneratedImage?: boolean;
-  /** 原始生成注册表模型 id（还原用）。 */
+  /** Registry model id of the original generation (for restoration). */
   model?: string;
-  /** 原始生成模式（还原用）。 */
+  /** Original generation mode (for restoration). */
   genMode?: string;
   url: string;
   aspectRatio?: string;
-  /** 3GS 借用同 scene 的封面图;其余类型为空。 */
+  /** 3GS borrows the cover image of the same scene; empty for other types. */
   coverUrl?: string | null;
   /** Director World source list for scene assets that aggregate pano + SOG sources. */
   modelSources?: DirectorWorldSource[];
@@ -47,20 +47,20 @@ export interface CanvasAssetDragPayload {
   panoUrl?: string | null;
   scene?: ThreeDSceneSnapshot | null;
   scenesBySourceId?: Record<string, ThreeDSceneSnapshot>;
-  /** 3GS 源文件名(从 rel_path 推导);其余类型回落到 label。 */
+  /** 3GS source file name (derived from rel_path); other types fall back to label. */
   sourceFileName?: string;
-  /** 透传给节点的 __freezone_source(用于 commit / 替换溯源)。 */
+  /** __freezone_source passed through to the node (for commit / replace provenance). */
   source: Record<string, unknown>;
-  /** mainline_context 数组(可选)。 */
+  /** The mainline_context array (optional). */
   mainlineContext?: unknown[];
 }
 
 type CanvasStore = ReturnType<typeof useCanvasStore.getState>;
 
 /**
- * 在指定坐标按 payload 类型生成画布节点,返回新节点 id。
- * 「加入」按钮(视口中心)与拖拽落点共用同一套节点构造,避免两处分叉。
- * 注意:此函数只负责建节点,聚焦 / 选中由调用方决定(按钮聚焦、拖放选中)。
+ * Generate a canvas node at the given coordinates by payload type, returning the new node id.
+ * The "Add" button (viewport center) and the drag drop point share the same node construction, avoiding a fork in the two places.
+ * Note: this function only builds the node; focusing / selecting is decided by the caller (the button focuses, a drop selects).
  */
 export function spawnAssetNode(
   store: CanvasStore,
@@ -128,11 +128,11 @@ export function spawnAssetNode(
           previewImageUrl: null,
           aspectRatio: payload.aspectRatio,
           sourceFileName: payload.label,
-          // 历史「使用」带来了该记录的原始提示词时,回填到视频节点的提示词框;
-          // 无提示词(拖拽/live-canvas)则不写,保持占位符。
+          // When history "Use" brings the record's original prompt, backfill it into the video node's prompt box;
+          // with no prompt (drag/live-canvas) do not write it, keeping the placeholder.
           ...(payload.prompt ? { prompt: payload.prompt } : {}),
-          // 历史「使用」带来了原始注册表模型 / 生成模式时回填,让还原的视频节点与原次
-          // 生成一致(VideoNode 读 data.model / data.genMode);缺省则不写,走节点默认。
+          // When history "Use" brings the original registry model / generation mode, backfill them so the restored video node is consistent with
+          // the original generation (VideoNode reads data.model / data.genMode); when absent do not write, using the node default.
           ...(payload.model ? { model: payload.model } : {}),
           ...(payload.genMode ? { genMode: payload.genMode } : {}),
           __freezone_source: sourceMeta,
@@ -159,10 +159,10 @@ export function spawnAssetNode(
       );
     case "image":
     default:
-      // 历史「使用」还原生成产物 → 建成品「图片节点」(imageGen):带回提示词与操作区,
-      // onLoad 按图片自然尺寸自适应比例并显示分辨率角标(见 ImageGenNode)。写入
-      // committed_* 使其与生成完成后落地的节点字段一致(成品图直接展示、可继续再生成)。
-      // 普通拖拽 / 素材库参考图(无此标记)仍建 upload 节点(替换素材)。
+      // History "Use" restoring a generation product -> build a finished "image node" (imageGen): bringing back the prompt and the operation area,
+      // with onLoad adapting the ratio to the image's natural size and showing the resolution badge (see ImageGenNode). Writing
+      // committed_* makes it consistent with the node fields that land after generation completes (the finished image is shown directly and can be regenerated).
+      // Ordinary drags / asset library reference images (without this marker) still build upload nodes (replace material).
       if (payload.restoreAsGeneratedImage) {
         return store.addNode(
           CANVAS_NODE_TYPES.imageGen,
@@ -174,8 +174,8 @@ export function spawnAssetNode(
             committed_at: new Date().toISOString(),
             committed_slot_url: payload.url,
             ...(payload.prompt ? { prompt: payload.prompt } : {}),
-            // 历史「使用」带来原始注册表模型 id 时回填,让还原的成品图片节点与原次生成
-            // 同模型(ImageGenNode 读 data.model);缺省则不写,节点自行 seed 默认模型。
+            // When history "Use" brings the original registry model id, backfill it so the restored finished image node uses the same
+            // model as the original generation (ImageGenNode reads data.model); when absent do not write, and the node seeds its default model itself.
             ...(payload.model ? { model: payload.model } : {}),
             __freezone_source: sourceMeta,
             ...candidateData,
@@ -204,7 +204,7 @@ export function spawnAssetNode(
   }
 }
 
-/** 从 dataTransfer 解析素材拖拽 payload;非素材拖拽返回 null。 */
+/** Parse the asset drag payload from dataTransfer; returns null for a non-asset drag. */
 export function readAssetDragPayload(
   dataTransfer: DataTransfer,
 ): CanvasAssetDragPayload | null {

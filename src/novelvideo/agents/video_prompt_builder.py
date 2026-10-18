@@ -1,7 +1,7 @@
-"""Wan2.2 视频提示词生成 Agent。
+"""Wan2.2 video prompt generation Agent.
 
-将 Beat 信息转换为 Wan I2V 优化的运动描述提示词。
-支持多模态输入：可直接分析首帧图片理解实际构图。
+Converts Beat information into motion-description prompts optimized for Wan I2V.
+Supports multimodal input: can analyze the first-frame image directly to understand the actual composition.
 """
 
 import io
@@ -16,7 +16,7 @@ from novelvideo.utils.debug_context import (
     create_debug_context,
     validate_episode_consistency,
 )
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import asset_language_instruction, language_name
 
 
 VIDEO_PROMPT_BUILDER_INSTRUCTIONS_EN = """# I2V Motion Director (SuperPower)
@@ -74,8 +74,8 @@ Output the motion prompt directly. No explanation. No markdown.
 """
 
 
-def create_video_prompt_builder_agent(language: str = "zh") -> Agent:
-    """创建视频提示词生成 Agent。"""
+def create_video_prompt_builder_agent(language: str = "en") -> Agent:
+    """Create the video prompt generation Agent."""
     from novelvideo.config import get_superpower_pydantic_model
 
     model = get_superpower_pydantic_model(
@@ -94,42 +94,42 @@ def create_video_prompt_builder_agent(language: str = "zh") -> Agent:
 
 
 class VideoPromptBuilder:
-    """视频提示词构建器。
+    """Video prompt builder.
 
-    使用 AI Agent 将 Beat 信息转换为视频运动描述提示词。
+    Uses an AI Agent to convert Beat information into video motion-description prompts.
 
-    示例:
+    Example:
         >>> builder = VideoPromptBuilder()
         >>> prompt = await builder.build(
-        ...     frame_prompt="女孩缓缓转身，月光洒在她的侧颜上",
+        ...     frame_prompt="The girl slowly turns, moonlight falling across her profile",
         ...     duration=5.0,
         ... )
     """
 
     def __init__(self):
-        self._agents: dict[str, Agent] = {}  # 按语言缓存 agent
-        self._last_context: str = ""  # 存储上一次生成的上下文
+        self._agents: dict[str, Agent] = {}  # agents cached per language
+        self._last_context: str = ""  # stores the context of the last generation
 
     @property
     def last_context(self) -> str:
-        """返回上一次生成视频提示词时使用的上下文。"""
+        """Return the context used the last time a video prompt was generated."""
         return self._last_context
 
-    def _get_agent(self, language: str = "zh") -> Agent:
-        """获取指定语言的 Agent（懒加载）。"""
+    def _get_agent(self, language: str = "en") -> Agent:
+        """Get the Agent for the given language (lazily loaded)."""
         if language not in self._agents:
             self._agents[language] = create_video_prompt_builder_agent(language)
         return self._agents[language]
 
     def _compress_image(self, image_path: str, compress_quality: int = 60) -> bytes:
-        """压缩图片并返回 bytes。
+        """Compress the image and return bytes.
 
         Args:
-            image_path: 图片文件路径
-            compress_quality: JPEG 压缩质量 (1-100)
+            image_path: image file path
+            compress_quality: JPEG compression quality (1-100)
 
         Returns:
-            压缩后的图片字节
+            The compressed image bytes
         """
         img = PILImage.open(image_path)
         original_size = os.path.getsize(image_path)
@@ -143,9 +143,9 @@ class VideoPromptBuilder:
 
         compressed_size = len(image_bytes)
         ratio = (1 - compressed_size / original_size) * 100
-        print(f"[VideoPromptBuilder] 压缩图片: {os.path.basename(image_path)}: "
+        print(f"[VideoPromptBuilder] Compressed image: {os.path.basename(image_path)}: "
               f"{original_size/1024:.0f}KB → {compressed_size/1024:.0f}KB "
-              f"({ratio:.0f}% 压缩)")
+              f"({ratio:.0f}% smaller)")
 
         return image_bytes
 
@@ -153,34 +153,34 @@ class VideoPromptBuilder:
         self,
         duration: float = 5.0,
         frame_prompt: str = "",
-        language: str = "zh",
+        language: str = "en",
         frame_image_path: Optional[str] = None,
         beat_number: int | None = None,
         episode_number: int | None = None,
-        # 预留参数（不影响当前 prompt 构建）
+        # Reserved parameters (do not affect the current prompt construction)
         narration: str = "",
         character_appearances: dict[str, str] | None = None,
         color_map_text: str = "",
         audio_type: str = "narration",
         dialogue_line: str = "",
     ) -> str:
-        """构建视频运动提示词。
+        """Build the video motion prompt.
 
         Args:
-            duration: 视频时长（秒），用于调整动作丰富度
-            frame_prompt: 首帧提示词（已包含完整视觉描述：场景、光影、角色外貌等）
-            language: 输出语言，"en" 英文，其他值按中文处理
-            frame_image_path: 首帧图片路径（可选），用于多模态分析实际构图
-            beat_number: beat 编号（用于调试验证）
-            episode_number: episode 编号（用于调试验证）
+            duration: video duration (seconds), used to adjust motion richness
+            frame_prompt: first-frame prompt (already contains the full visual description: scene, lighting, character appearance, etc.)
+            language: output language ("en" or "vi")
+            frame_image_path: first-frame image path (optional), used for multimodal analysis of the actual composition
+            beat_number: beat number (for debug verification)
+            episode_number: episode number (for debug verification)
 
         Returns:
-            运动描述提示词
+            The motion-description prompt
         """
-        # 创建调试上下文
+        # Create the debug context
         debug = create_debug_context("video_prompt_builder")
 
-        # 记录输入参数
+        # Record the input parameters
         debug.add_section("input_params", {
             "episode_number": episode_number,
             "beat_number": beat_number,
@@ -194,7 +194,7 @@ class VideoPromptBuilder:
             "frame_prompt": frame_prompt[:200] + "..." if len(frame_prompt) > 200 else frame_prompt,
         })
 
-        # 验证 episode 号一致性
+        # Verify episode number consistency
         if frame_image_path and episode_number:
             is_valid, warning = validate_episode_consistency(
                 frame_image_path, episode_number, "VideoPromptBuilder"
@@ -202,7 +202,7 @@ class VideoPromptBuilder:
             if not is_valid and warning:
                 debug.add_warning(warning)
 
-        # 检测是否有首帧图片
+        # Detect whether there is a first-frame image
         has_image = frame_image_path and os.path.exists(frame_image_path)
 
         task = self._build_task_en(
@@ -216,30 +216,30 @@ class VideoPromptBuilder:
             language=language,
         )
 
-        language_label = "English" if language == "en" else "中文"
+        language_label = language_name(language)
         log_agent_start(
-            "视频提示词生成师",
-            f"生成运动描述 ({duration:.1f}秒, {language_label})",
+            "Video prompt builder",
+            f"Generating motion description ({duration:.1f}s, {language_label})",
         )
 
-        # 存储上下文供调试和优化
+        # Store the context for debugging and optimization
         self._last_context = task
 
-        # 使用 DebugContext 保存完整上下文（新机制）
+        # Use DebugContext to save the full context (new mechanism)
         debug.add("task_prompt", task)
         debug.save()
         debug.print_summary()
 
-        # 准备图片用于多模态分析（如果提供了首帧图片）
+        # Prepare the image for multimodal analysis (if a first-frame image was provided)
         images = None
         if frame_image_path and os.path.exists(frame_image_path):
             try:
                 image_bytes = self._compress_image(frame_image_path)
                 images = [BinaryContent(data=image_bytes, media_type='image/jpeg')]
-                label = "草图" if color_map_text else "首帧"
-                print(f"[VideoPromptBuilder] 使用多模态分析{label}: {os.path.basename(frame_image_path)}")
+                label = "sketch" if color_map_text else "first frame"
+                print(f"[VideoPromptBuilder] Using multimodal analysis of the {label}: {os.path.basename(frame_image_path)}")
             except Exception as e:
-                print(f"[VideoPromptBuilder] 加载首帧图片失败，回退到纯文本模式: {e}")
+                print(f"[VideoPromptBuilder] Failed to load the first-frame image, falling back to text-only mode: {e}")
                 images = None
 
         try:
@@ -250,18 +250,20 @@ class VideoPromptBuilder:
             else:
                 response = await agent.run(task)
 
-            # 提取运动描述
+            # Extract the motion description
             if response.output:
                 result = response.output.strip()
             else:
-                raise RuntimeError("AI 返回空内容")
+                raise RuntimeError("AI returned empty content")
 
-            # 长度校验：英文更长，放宽到 500 字符
-            max_len = 500 if language == "en" else 200
+            # Length check: English runs longer, so allow up to 500 characters
+            max_len = 500
             if len(result) > max_len:
-                raise RuntimeError(f"AI 返回内容过长 ({len(result)}字)，可能解析异常")
+                raise RuntimeError(
+                    f"AI returned content that is too long ({len(result)} characters); it may have been parsed incorrectly"
+                )
 
-            # 检测错误响应（API 失败时可能返回错误对象而非抛出异常）
+            # Detect error responses (on API failure an error object may be returned instead of raising)
             error_indicators = [
                 "ClientResponse",
                 "Service Unavailable",
@@ -271,20 +273,17 @@ class VideoPromptBuilder:
                 "overloaded",
             ]
             if any(indicator in result for indicator in error_indicators):
-                raise RuntimeError(f"API 返回错误响应: {result[:200]}")
+                raise RuntimeError(f"API returned an error response: {result[:200]}")
 
-            log_agent_end("视频提示词生成师", success=True, result=f"{len(result)}字")
-            # dialogue beat：追加台词内容
+            log_agent_end("Video prompt builder", success=True, result=f"{len(result)} characters")
+            # dialogue beat: append the dialogue line
             if audio_type == "dialogue" and dialogue_line:
-                if language == "en":
-                    result = f'{result} Says: "{dialogue_line}"'
-                else:
-                    result = f"{result}，说：{dialogue_line}"
+                result = f'{result} Says: "{dialogue_line}"'
             return result
 
         except Exception as e:
-            log_agent_end("视频提示词生成师", success=False, result=str(e))
-            # 失败时回退到规则映射
+            log_agent_end("Video prompt builder", success=False, result=str(e))
+            # On failure fall back to the rule-based mapping
             return self._fallback_build(duration, language)
 
     def _build_task_en(
@@ -297,27 +296,17 @@ class VideoPromptBuilder:
         narration,
         audio_type,
         dialogue_line,
-        language="zh",
+        language="en",
     ) -> str:
-        """构建英文 task 模板 (SuperPower)。"""
-        if language == "en":
-            output_label = "English"
-            sentence_target = "4-6 sentences"
-            if duration <= 4:
-                word_target = "35-50 words"
-            elif duration <= 6:
-                word_target = "50-75 words"
-            else:
-                word_target = "65-90 words"
+        """Build the English task template (SuperPower)."""
+        output_label = language_name(language)
+        sentence_target = "4-6 sentences"
+        if duration <= 4:
+            word_target = "35-50 words"
+        elif duration <= 6:
+            word_target = "50-75 words"
         else:
-            output_label = "Chinese (中文)"
-            sentence_target = "4-6 句"
-            if duration <= 4:
-                word_target = "50-60字"
-            elif duration <= 6:
-                word_target = "60-75字"
-            else:
-                word_target = "75-90字"
+            word_target = "65-90 words"
         language_instruction = asset_language_instruction(language)
 
         dialogue_hint = ""
@@ -398,20 +387,18 @@ Output the motion prompt in {output_label} directly. No explanation.
     def _fallback_build(
         self,
         duration: float,
-        language: str = "zh",
+        language: str = "en",
     ) -> str:
-        """回退方案：根据规则生成默认运动提示词。"""
-        if language == "en":
-            return "The character moves naturally as the camera follows the action."
-        return "角色自然动作，姿态变化，自然镜头运动"
+        """Fallback: generate a default motion prompt from rules."""
+        return "The character moves naturally as the camera follows the action."
 
 
-# 模块级单例
+# Module-level singleton
 _video_prompt_builder: Optional[VideoPromptBuilder] = None
 
 
 def get_video_prompt_builder() -> VideoPromptBuilder:
-    """获取 VideoPromptBuilder 单例。"""
+    """Get the VideoPromptBuilder singleton."""
     global _video_prompt_builder
     if _video_prompt_builder is None:
         _video_prompt_builder = VideoPromptBuilder()
@@ -419,5 +406,5 @@ def get_video_prompt_builder() -> VideoPromptBuilder:
 
 
 # =============================================================================
-# v2.0 Shot Prompt Builder — Seedance 2.0 @素材引用模式
+# v2.0 Shot Prompt Builder — Seedance 2.0 @asset-reference mode
 # =============================================================================

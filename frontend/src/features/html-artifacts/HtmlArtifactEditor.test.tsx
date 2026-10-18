@@ -11,11 +11,11 @@ it('retains unsaved source on a version conflict and uses the version read as ba
   vi.mocked(api.saveHtmlArtifact).mockRejectedValue(new Error('Version conflict'));
   render(<HtmlArtifactEditor projectId="p" artifactId="a" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.click(screen.getByRole('button',{name:'代码'}));
-  fireEvent.change(screen.getByLabelText('HTML 源码'),{target:{value:'<h1>Edited</h1>'}});
-  fireEvent.click(screen.getByRole('button',{name:'保存'}));
+  fireEvent.click(screen.getByRole('button',{name:'Code'}));
+  fireEvent.change(screen.getByLabelText('HTML source'),{target:{value:'<h1>Edited</h1>'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save'}));
   await screen.findByText('Version conflict');
-  expect(screen.getByLabelText('HTML 源码')).toHaveValue('<h1>Edited</h1>');
+  expect(screen.getByLabelText('HTML source')).toHaveValue('<h1>Edited</h1>');
   expect(api.saveHtmlArtifact).toHaveBeenCalledWith('p','a','Brand','<h1>Edited</h1>',1,undefined);
 });
 it('uses opaque-origin script sandbox and does not silently close a dirty editor',async()=>{
@@ -23,8 +23,8 @@ it('uses opaque-origin script sandbox and does not silently close a dirty editor
   const {container}=render(<HtmlArtifactEditor projectId="p" artifactId="a" onClose={onClose} />);
   await waitFor(()=>expect(container.querySelector('iframe')).toBeTruthy());
   expect(container.querySelector('iframe')).toHaveAttribute('sandbox','allow-scripts');
-  fireEvent.change(screen.getByLabelText('网页名称'),{target:{value:'Changed'}});
-  fireEvent.click(screen.getByRole('button',{name:'返回画布'}));
+  fireEvent.change(screen.getByLabelText('Webpage name'),{target:{value:'Changed'}});
+  fireEvent.click(screen.getByRole('button',{name:'Back to canvas'}));
   expect(onClose).not.toHaveBeenCalled(); confirm.mockRestore();
 });
 it('renders the exact revision that was read, avoiding mixed-version previews',async()=>{
@@ -34,13 +34,13 @@ it('renders the exact revision that was read, avoiding mixed-version previews',a
 it('retains a source draft when navigating away and reopening the artifact',async()=>{
   const first=render(<HtmlArtifactEditor projectId="navigation" artifactId="a" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.click(screen.getByRole('button',{name:'代码'}));
-  fireEvent.change(screen.getByLabelText('HTML 源码'),{target:{value:'draft after navigation'}});
+  fireEvent.click(screen.getByRole('button',{name:'Code'}));
+  fireEvent.change(screen.getByLabelText('HTML source'),{target:{value:'draft after navigation'}});
   first.unmount();
   render(<HtmlArtifactEditor projectId="navigation" artifactId="a" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.click(screen.getByRole('button',{name:'代码'}));
-  expect(screen.getByLabelText('HTML 源码')).toHaveValue('draft after navigation');
+  fireEvent.click(screen.getByRole('button',{name:'Code'}));
+  expect(screen.getByLabelText('HTML source')).toHaveValue('draft after navigation');
 });
 it('remounts a credentialless frame only after explicit interactive opt-in',async()=>{
  Object.defineProperty(HTMLIFrameElement.prototype,'credentialless',{configurable:true,value:false});
@@ -49,25 +49,25 @@ it('remounts a credentialless frame only after explicit interactive opt-in',asyn
   await screen.findByDisplayValue('Brand');
   const staticFrame=container.querySelector('iframe');
   expect(staticFrame).not.toHaveAttribute('credentialless');
-  fireEvent.click(screen.getByRole('button',{name:'运行网页脚本'}));
+  fireEvent.click(screen.getByRole('button',{name:'Run page scripts'}));
   const interactiveFrame=container.querySelector('iframe');
   expect(interactiveFrame).not.toBe(staticFrame);
   expect(interactiveFrame).toHaveAttribute('credentialless','');
-  fireEvent.click(screen.getByRole('button',{name:'停止网页脚本'}));
+  fireEvent.click(screen.getByRole('button',{name:'Stop page scripts'}));
   expect(container.querySelector('iframe')).not.toBe(interactiveFrame);
  }finally{delete (HTMLIFrameElement.prototype as unknown as Record<string,unknown>).credentialless;}
 });
 it('keeps interactive mode disabled when credential isolation is unavailable',async()=>{
  render(<HtmlArtifactEditor projectId="unsupported" artifactId="a" onClose={()=>{}} />);
  await screen.findByDisplayValue('Brand');
- expect(screen.getByRole('button',{name:'运行网页脚本'})).toBeDisabled();
+ expect(screen.getByRole('button',{name:'Run page scripts'})).toBeDisabled();
 });
 it('requires a fresh interactive opt-in after a saved revision changes',async()=>{
  Object.defineProperty(HTMLIFrameElement.prototype,'credentialless',{configurable:true,value:false});
  try{
   const {container}=render(<HtmlArtifactEditor projectId="revision" artifactId="a" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.click(screen.getByRole('button',{name:'运行网页脚本'}));
+  fireEvent.click(screen.getByRole('button',{name:'Run page scripts'}));
   vi.mocked(api.readHtmlArtifact).mockResolvedValue({...artifact,version:2,html:'<h1>Second</h1>'});
   vi.mocked(api.readHtmlPreview).mockResolvedValue({html:'<h1>Second</h1>',warnings:[],media:[],release:vi.fn()});
   window.dispatchEvent(new CustomEvent(api.HTML_ARTIFACT_UPDATED_EVENT,{detail:{projectId:'revision',artifact:{...artifact,version:2}}}));
@@ -83,15 +83,15 @@ it('opens the requested historical version and saves against the head observed a
   render(<HtmlArtifactEditor projectId="historical" artifactId="a" version={1} nodeId="n" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
   expect(api.readHtmlArtifact).toHaveBeenCalledWith('historical','a',1);
-  fireEvent.change(screen.getByLabelText('网页名称'),{target:{value:'Based on old version'}});
-  fireEvent.click(screen.getByRole('button',{name:'保存'}));
+  fireEvent.change(screen.getByLabelText('Webpage name'),{target:{value:'Based on old version'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save'}));
   await screen.findByText('Version conflict');
   expect(api.saveHtmlArtifact).toHaveBeenCalledWith('historical','a','Based on old version',artifact.html,3,undefined);
 });
 it('using a historical version only switches the selected node reference',async()=>{
   render(<HtmlArtifactEditor projectId="select-history" artifactId="a" version={1} nodeId="node" onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.click(screen.getByRole('button',{name:'使用此版本'}));
+  fireEvent.click(screen.getByRole('button',{name:'Use this version'}));
   expect(canvasStore.updateNodeData).toHaveBeenCalledWith('node',expect.objectContaining({
     artifactId:'a', artifactVersion:1, displayName:'Brand', htmlSelectionToken:expect.any(String),
   }));
@@ -102,13 +102,13 @@ it('does not advance a saved draft conflict base when reopened after another edi
   vi.mocked(api.listHtmlVersions).mockResolvedValue({versions:[{version:2,title:'New',created_at:'now'}]});
   const first=render(<HtmlArtifactEditor projectId="stale-draft" artifactId="a" version={1} onClose={()=>{}} />);
   await screen.findByDisplayValue('Brand');
-  fireEvent.change(screen.getByLabelText('网页名称'),{target:{value:'Draft'}});
+  fireEvent.change(screen.getByLabelText('Webpage name'),{target:{value:'Draft'}});
   first.unmount();
   vi.mocked(api.listHtmlVersions).mockResolvedValue({versions:[{version:3,title:'Newer',created_at:'now'}]});
   vi.mocked(api.saveHtmlArtifact).mockRejectedValue(new Error('Version conflict'));
   render(<HtmlArtifactEditor projectId="stale-draft" artifactId="a" version={1} onClose={()=>{}} />);
   await screen.findByDisplayValue('Draft');
-  fireEvent.click(screen.getByRole('button',{name:'保存'}));
+  fireEvent.click(screen.getByRole('button',{name:'Save'}));
   await screen.findByText('Version conflict');
   expect(api.saveHtmlArtifact).toHaveBeenCalledWith('stale-draft','a','Draft',artifact.html,2,undefined);
 });
@@ -126,13 +126,13 @@ it('sends preview media URLs into the opaque iframe after load',async()=>{
 it('edits selected text into source and saves through the version API',async()=>{
  const {container}=render(<HtmlArtifactEditor projectId="manual" artifactId="a" onClose={()=>{}}/>);
  await screen.findByDisplayValue('Brand');
- fireEvent.click(screen.getByRole('button',{name:'选择元素'}));
+ fireEvent.click(screen.getByRole('button',{name:'Select element'}));
  const iframe=container.querySelector('iframe')!;
  const doc=new DOMParser().parseFromString(iframe.srcdoc,'text/html');
  const token=doc.querySelector('script[nonce]')!.getAttribute('nonce');
  fireEvent(window,new MessageEvent('message',{source:iframe.contentWindow,data:{type:'html-artifact-selection',token,selector:'body > h1:nth-of-type(1)',text:'Original'}}));
- fireEvent.change(await screen.findByLabelText('文字内容'),{target:{value:'New heading'}});
+ fireEvent.change(await screen.findByLabelText('Text content'),{target:{value:'New heading'}});
  expect(container.querySelector('iframe')!.srcdoc).toContain('New heading');
- fireEvent.click(screen.getByRole('button',{name:'保存'}));
+ fireEvent.click(screen.getByRole('button',{name:'Save'}));
  await waitFor(()=>expect(api.saveHtmlArtifact).toHaveBeenCalledWith('manual','a','Brand',expect.stringContaining('<h1>New heading</h1>'),1,undefined));
 });

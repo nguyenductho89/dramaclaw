@@ -1,8 +1,8 @@
-"""TaskStateManager 单例的注入接缝。
+"""Injection seam of the TaskStateManager singleton.
 
-EE 用一个继承式 store 覆写 *_for_project 一族,legacy 半边原样继承;
-58 个 _for_project 调用点全都是在 get_task_manager() 返回的对象上调方法,
-所以 CE 侧只需要在单例旁开一个注入点,不需要端口/Protocol。
+EE overrides the *_for_project family with an inheriting store, while the legacy half is inherited as is;
+all 58 _for_project call sites call methods on the object returned by get_task_manager(),
+so the CE side only needs an injection point beside the singleton, not a port/Protocol.
 """
 
 import pytest
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.m07
 
 @pytest.fixture(autouse=True)
 def _restore_singleton():
-    """接缝改的是模块级单例,用例之间必须复原,否则污染同进程后续测试。"""
+    """The seam changes a module-level singleton, so it must be restored between cases, otherwise it pollutes later tests in the same process."""
     original = task_state_module._task_manager
     yield
     task_state_module._task_manager = original
@@ -46,5 +46,5 @@ def test_reset_falls_back_to_the_default_singleton() -> None:
     restored = get_task_manager()
     assert restored is not stub
     assert type(restored) is TaskStateManager
-    # 复位后仍是单例,不是每次调用新建一个。
+    # After the reset it is still a singleton, not newly created on every call.
     assert get_task_manager() is restored

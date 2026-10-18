@@ -112,8 +112,8 @@ export function useFreezoneProjectAssets(
 }
 
 /**
- * 资产库（项目级素材库）的列表。写操作都走裸调用，改完各自 invalidate 这个 key
- * 把列表刷新（AssetLibraryModal 的上传/同步、侧栏条目菜单的改名/删除）。
+ * The list of the asset library (project-level material library). Writes all use bare calls and invalidate this key themselves,
+ * to refresh the list (AssetLibraryModal upload/sync, rename/delete from the sidebar item menu).
  */
 export function useFreezoneAssetLibrary(
   project: string | null | undefined,
@@ -137,9 +137,9 @@ export function useFreezoneAssetLibrary(
 }
 
 /**
- * 用户自建的资产库文件夹。系统文件夹（主线 / 待分类资产 / 类目同名目录）不落盘，
- * 由 buildAssetFolders 直接生成，所以这个查询只补自建的那部分。老后端没有该路由
- * 时按空列表处理，浏览侧照常显示系统文件夹。
+ * User-created asset library folders. System folders (mainline / unclassified assets / category-named directories) are not persisted,
+ * and are generated directly by buildAssetFolders, so this query only supplies the user-created part. Old backends have no such route,
+ * so an empty list is assumed and the browse side still shows the system folders.
  */
 export function useFreezoneAssetLibraryFolders(
   project: string | null | undefined,

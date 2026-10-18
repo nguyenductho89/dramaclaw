@@ -3,11 +3,11 @@
 /**
  * Desktop installer downloads offered on the login hero.
  *
- * 安装包文件名带版本号(如 DramaClaw-Setup-1.1.0.exe),写死必随发版腐烂。
- * 发布流水线维护着一对"当前版本指针"—— electron-updater 的 latest.yml /
- * latest-mac.yml(CDN 对 *.yml 零缓存,即发即新)。这里按需解析指针拿到
- * 当前安装包的真实文件名;文件名从清单的 url: 字段取,绝不自拼版本号,
- * 将来命名模式变化时本文件无需跟改。
+ * Installer file names carry a version (e.g. DramaClaw-Setup-1.1.0.exe); hard-coding them is guaranteed to rot with releases.
+ * The release pipeline maintains a pair of "current version pointers": electron-updater's latest.yml /
+ * latest-mac.yml (the CDN does not cache *.yml, so changes are visible immediately). They are resolved on demand here to get
+ * the real file name of the current installer; the file name is taken from the manifest's url: field and never
+ * assembled from a version number, so this file needs no change if the naming pattern changes.
  */
 export type DesktopPlatform = "mac" | "windows";
 
@@ -18,65 +18,65 @@ const MANIFEST: Record<DesktopPlatform, string> = {
   windows: "latest.yml",
 };
 
-// latest-mac.yml 同时列出 zip(自动更新的载体)与 dmg(首次安装的载体),
-// 官网必须发 dmg;Windows 清单里只有 exe。
+// latest-mac.yml lists both a zip (the auto-update carrier) and a dmg (the first-install carrier);
+// the website must serve the dmg; the Windows manifest only has an exe.
 const INSTALLER_EXT: Record<DesktopPlatform, string> = {
   mac: ".dmg",
   windows: ".exe",
 };
 
 /**
- * 指针解析失败(断网、CDN 故障、清单格式漂移)时的兜底:GitHub Releases
- * 页含全部平台资产,慢但可达,按钮永远不会点了没反应。
+ * Fallback when pointer resolution fails (offline, CDN outage, manifest format drift): the GitHub Releases
+ * page contains the assets for every platform; slower but reachable, so the button never does nothing.
  */
 export const FALLBACK_DOWNLOAD_URL =
   "https://github.com/dramaclaw/dramaclaw/releases/latest";
 
-/** 一个平台的当前发布:安装包直链 + 清单里自报的版本与发布日期。 */
+/** The current release for one platform: direct installer link + the version and release date the manifest reports. */
 export type DesktopRelease = {
-  /** 安装包直链;解析失败时退到 GitHub Releases 兜底页,按钮永远可点。 */
+  /** Direct installer link; falls back to the GitHub Releases page when resolution fails, so the button is always clickable. */
   url: string;
   /**
-   * 是否真的从清单里解出了安装包直链。
+   * Whether a direct installer link was actually resolved from the manifest.
    *
-   * 不能拿 `version !== null` 当"解析成功"的判据:清单有版本号、`files:` 里却
-   * 没有目标后缀(命名模式漂移、mac 那次只发了 zip)时,version 照样解得出来,
-   * url 已经退回 GitHub 兜底 —— 调用方按 version 判定就会把这种半成功当成功
-   * 缓存下来,整个会话钉死在兜底链接上。
+   * Do not use `version !== null` as the success criterion: when the manifest has a version but `files:` has no
+   * target suffix (naming pattern drift, or a mac release that only shipped a zip), the version still resolves,
+   * but the url has already fallen back to GitHub; callers deciding by version would treat this partial success as success and
+   * cache it, pinning the whole session to the fallback link.
    */
   resolved: boolean;
-  /** 清单里的版本号(如 "1.3.2");字段缺失或格式漂移时为 null。 */
+  /** The version in the manifest (e.g. "1.3.2"); null when the field is missing or the format drifted. */
   version: string | null;
-  /** 清单里的发布日期,截到 YYYY-MM-DD;解析不出时为 null。 */
+  /** The release date in the manifest, truncated to YYYY-MM-DD; null when it cannot be parsed. */
   releaseDate: string | null;
   /**
-   * 这一个安装包自己的 sha512(base64,electron-builder 的原样格式),
-   * 供用户下载后核验完整性。清单缺字段时为 null。
+   * This installer's own sha512 (base64, in the exact electron-builder format),
+   * for users to verify integrity after downloading. null when the manifest lacks the field.
    */
   sha512: string | null;
 };
 
-/** 清单 `files:` 列表里的一条:安装包文件名 + 它自己的校验和。 */
+/** One entry of the manifest `files:` list: installer file name + its own checksum. */
 export type ManifestInstaller = {
   file: string;
   sha512: string | null;
 };
 
-/** 去掉 YAML 标量两侧的引号(值含 `:`、`#` 等特殊字符时 js-yaml 会加)。 */
+/** Strips the quotes around a YAML scalar (js-yaml adds them when the value contains special characters such as `:` or `#`). */
 function unquote(value: string): string {
   return value.trim().replace(/^(['"])(.*)\1$/, "$2");
 }
 
 /**
- * 从 electron-updater 清单文本里挑出目标平台的安装包 —— 文件名与校验和。
+ * Picks the target platform's installer from the electron-updater manifest text: file name and checksum.
  *
- * 逐行扫而不是一把正则,因为 sha512 必须**跟着它所属的那条 files: 条目**走:
- * 清单末尾还有一份顶层 sha512,对应的是顶层 path:(mac 上那是自动更新用的
- * zip),挂到 dmg 上会让用户按错的值去核验,比不显示更糟。
+ * Scans line by line instead of using one regex, because the sha512 must **follow the files: entry it belongs to**:
+ * the manifest also ends with a top-level sha512 that matches the top-level path: (on mac that is the zip used
+ * for auto-update); attaching it to the dmg would make users verify against the wrong value, which is worse than showing nothing.
  *
- * 文件名取到行尾再 trim,不用 `\S+`:electron-builder 的 NSIS 默认
- * artifactName 会产出带空格的文件名(`DramaClaw Setup 1.3.2.exe`),YAML 里
- * 就是不加引号的裸标量,`\S+` 会在第一个空格处截断,拼出必然 404 的直链。
+ * The file name is taken to the end of the line and trimmed instead of using `\S+`: electron-builder's NSIS default
+ * artifactName produces file names with spaces (`DramaClaw Setup 1.3.2.exe`), which in YAML
+ * are unquoted bare scalars; `\S+` would cut at the first space and build a link that is guaranteed to 404.
  */
 export function pickInstallerFromManifest(
   manifest: string,
@@ -86,7 +86,7 @@ export function pickInstallerFromManifest(
   let open: ManifestInstaller | null = null;
 
   for (const line of manifest.split("\n")) {
-    // 零缩进且非列表项的行(version:/path:/releaseDate:)结束当前条目。
+    // A line with zero indentation that is not a list item (version:/path:/releaseDate:) ends the current entry.
     if (/^\S/.test(line)) {
       if (open?.file.endsWith(ext)) return open;
       open = null;
@@ -105,26 +105,26 @@ export function pickInstallerFromManifest(
 }
 
 /**
- * 文件名转成 URL 里的一个路径段。
+ * Converts a file name into a single URL path segment.
  *
- * 清单里的 url 有时已经是编码过的(空格写成 %20),直接再 encode 会变成
- * %2520 —— 链接照样 404。所以先 decode 一次再统一编码,两种写法都归一。
- * encodeURIComponent 本身是安全边界,别去掉:它把文件名钉死成路径末节,
- * `../` 穿越和 `//evil.com` 这类开放重定向都拼不出来。
+ * The url in the manifest is sometimes already encoded (spaces written as %20); encoding it again would give
+ * %2520, and the link would still 404. So decode once first and then encode uniformly, which normalizes both forms.
+ * encodeURIComponent is itself the security boundary, do not remove it: it pins the file name to the last path segment,
+ * so `../` traversal and open redirects like `//evil.com` cannot be built.
  */
 function encodeInstallerPath(file: string): string {
   let decoded = file;
   try {
     decoded = decodeURIComponent(file);
   } catch {
-    // 非法转义序列(比如文件名里有裸 %),按原样编码即可。
+    // Invalid escape sequence (e.g. a bare % in the file name): just encode as is.
   }
   return encodeURIComponent(decoded);
 }
 
 /**
- * 从清单里读版本号与发布日期。下载页拿它当"当前版本"的唯一事实来源 ——
- * 写死在文案里的版本号必随发版腐烂,而这份清单就是发布流水线自己写的。
+ * Reads the version and release date from the manifest. The download page uses this as the single source of truth for the "current version" -
+ * a version hard-coded in the copy is guaranteed to rot with releases, while this manifest is written by the release pipeline itself.
  */
 export function parseManifestRelease(manifest: string): {
   version: string | null;
@@ -137,7 +137,7 @@ export function parseManifestRelease(manifest: string): {
   };
 }
 
-/** 解析当前发布;任何一步失败都退到兜底(url 保底可点,版本字段留空)。 */
+/** Resolves the current release; any failed step falls back (the url is always clickable, version fields stay empty). */
 export async function resolveDesktopRelease(
   platform: DesktopPlatform,
 ): Promise<DesktopRelease> {
@@ -168,22 +168,20 @@ export async function resolveDesktopRelease(
       ...parseManifestRelease(manifest),
     };
   } catch (err) {
-    // CSP 拦截、CORS、断网在页面上是同一副样子(都退成 GitHub 兜底按钮),
-    // 不留一行日志就没法区分"CDN 挂了"和"nginx 少放行一个域名"。
+    // CSP blocks, CORS and being offline look the same on the page (all fall back to the GitHub button),
+    // so without a log line there is no way to tell "the CDN is down" from "nginx is missing one allowed domain".
     warnUnresolved(platform, err);
     return fallback;
   }
 }
 
 function warnUnresolved(platform: DesktopPlatform, cause: unknown): void {
-  // 开发日志，不是界面文案。
-  // i18n-exempt-start
+  // Developer log, not UI text.
   console.warn(
-    `[desktop-download] ${platform} 版本指针解析失败,退到 GitHub Releases 兜底。` +
-      ` 若为网络错误,先查 CSP connect-src 是否放行 ${DOWNLOAD_BASE}`,
+    `[desktop-download] ${platform} version pointer resolution failed, falling back to GitHub Releases.` +
+      ` If this is a network error, first check whether CSP connect-src allows ${DOWNLOAD_BASE}`,
     cause,
   );
-  // i18n-exempt-end
 }
 
 /**

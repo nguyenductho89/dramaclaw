@@ -20,9 +20,9 @@ from novelvideo.knowledge_pipeline import (
 )
 
 CHAPTERED = (
-    "第一章 归来\n\n林默回到阔别十年的故乡。\n\n"
-    "第二章 旧友\n\n他在巷口遇见了陈舟。\n\n"
-    "第三章 对峙\n\n两人在旧屋前争执起来。\n"
+    "Chapter 1 Homecoming\n\nLin Mo returned to his hometown after ten years away.\n\n"
+    "Chapter 2 Old Friend\n\nHe met Chen Zhou at the mouth of the alley.\n\n"
+    "Chapter 3 Standoff\n\nThe two argued in front of the old house.\n"
 )
 
 
@@ -66,7 +66,7 @@ async def test_chapter_mapping_works_on_the_sqlite_store(structured_store):
     episodes = await structured_store.build_episodes_from_chapters()
 
     assert [episode.number for episode in episodes] == [1, 2, 3]
-    assert [episode.title for episode in episodes] == ["第1集", "第2集", "第3集"]
+    assert [episode.title for episode in episodes] == ["Episode 1", "Episode 2", "Episode 3"]
 
 
 async def test_the_episodes_are_actually_persisted(structured_store, tmp_path):
@@ -77,7 +77,7 @@ async def test_the_episodes_are_actually_persisted(structured_store, tmp_path):
     try:
         stored = await reopened.get_episode_from_graph(2)
         assert stored is not None
-        assert "陈舟" in await reopened.load_episode_content(2)
+        assert "Chen Zhou" in await reopened.load_episode_content(2)
     finally:
         await reopened.close()
 
@@ -86,13 +86,13 @@ async def test_planned_assets_survive_a_remap(structured_store):
     """Re-running chapter mapping must not discard planning already done."""
     await structured_store.build_episodes_from_chapters()
     await structured_store.patch_episode(
-        2, identity_ids=["林默:default"], scene_menu=[{"scene_id": "巷口"}]
+        2, identity_ids=["Lin Mo:default"], scene_menu=[{"scene_id": "alley entrance"}]
     )
 
     await structured_store.build_episodes_from_chapters()
 
     episode = await structured_store.get_episode_from_graph(2)
-    assert episode.identity_ids == ["林默:default"]
+    assert episode.identity_ids == ["Lin Mo:default"]
     assert episode.scene_menu
 
 
@@ -167,7 +167,7 @@ async def test_legacy_keeps_the_method_and_its_cache(tmp_path):
         # The in-memory cache the facade keeps must reflect the write, or the
         # next reader on this instance sees the pre-mapping world.
         assert store.get_episode(3) is not None
-        assert store.get_episode(3).title == "第3集"
+        assert store.get_episode(3).title == "Episode 3"
     finally:
         await sqlite.close()
 
@@ -184,7 +184,7 @@ async def test_a_failed_publish_leaves_the_previous_mapping_intact(
     or metadata that did not match the text under it.
     """
     await structured_store.build_episodes_from_chapters()
-    await structured_store.patch_episode(2, identity_ids=["林默:default"])
+    await structured_store.patch_episode(2, identity_ids=["Lin Mo:default"])
 
     real_upsert = structured_store._upsert_episodes
 
@@ -195,7 +195,7 @@ async def test_a_failed_publish_leaves_the_previous_mapping_intact(
     monkeypatch.setattr(structured_store, "_upsert_episodes", fail_midway)
     with pytest.raises(RuntimeError):
         await structured_store.build_episodes_from_chapters(
-            novel_text="第一章 别的\n\n完全不同的正文。\n"
+            novel_text="Chapter 1 Something Else\n\nCompletely different body text.\n"
         )
 
     # Nothing of the failed run survives: same three episodes, same bodies, and
@@ -204,15 +204,15 @@ async def test_a_failed_publish_leaves_the_previous_mapping_intact(
         await structured_store.get_episode_from_graph(n) for n in (1, 2, 3)
     ]
     assert [episode.number for episode in episodes] == [1, 2, 3]
-    assert episodes[1].identity_ids == ["林默:default"]
-    assert "陈舟" in await structured_store.load_episode_content(2)
+    assert episodes[1].identity_ids == ["Lin Mo:default"]
+    assert "Chen Zhou" in await structured_store.load_episode_content(2)
 
 
 async def test_a_remap_to_fewer_chapters_drops_the_extras(structured_store):
     await structured_store.build_episodes_from_chapters()
 
     await structured_store.build_episodes_from_chapters(
-        novel_text="第一章 归来\n\n林默回到阔别十年的故乡。\n"
+        novel_text="Chapter 1 Homecoming\n\nLin Mo returned to his hometown after ten years away.\n"
     )
 
     assert await structured_store.get_episode_from_graph(1) is not None
@@ -226,7 +226,7 @@ async def test_the_body_lands_with_the_row_that_describes_it(structured_store):
 
     reopened = await _sqlite_store(Path(structured_store.state_dir))
     try:
-        for number, marker in ((1, "林默"), (2, "陈舟"), (3, "争执")):
+        for number, marker in ((1, "Lin Mo"), (2, "Chen Zhou"), (3, "argued")):
             episode = await reopened.get_episode_from_graph(number)
             assert episode is not None
             assert marker in await reopened.load_episode_content(number)
@@ -279,7 +279,7 @@ async def test_legacy_gets_the_same_atomic_publish(tmp_path, monkeypatch):
     try:
         store.save_novel_content(CHAPTERED)
         await store.build_episodes_from_chapters()
-        await sqlite.patch_episode(2, identity_ids=["林默:default"])
+        await sqlite.patch_episode(2, identity_ids=["Lin Mo:default"])
 
         real_upsert = sqlite._upsert_episodes
 
@@ -290,7 +290,7 @@ async def test_legacy_gets_the_same_atomic_publish(tmp_path, monkeypatch):
         monkeypatch.setattr(sqlite, "_upsert_episodes", fail_midway)
         with pytest.raises(RuntimeError):
             await store.build_episodes_from_chapters(
-                novel_text="第一章 别的\n\n完全不同的正文。\n"
+                novel_text="Chapter 1 Something Else\n\nCompletely different body text.\n"
             )
 
         # Same three episodes, same bodies, planning intact — a legacy project
@@ -299,8 +299,8 @@ async def test_legacy_gets_the_same_atomic_publish(tmp_path, monkeypatch):
             (await sqlite.get_episode_from_graph(n)).number for n in (1, 2, 3)
         ] == [1, 2, 3]
         assert (await sqlite.get_episode_from_graph(2)).identity_ids == [
-            "林默:default"
+            "Lin Mo:default"
         ]
-        assert "陈舟" in await sqlite.load_episode_content(2)
+        assert "Chen Zhou" in await sqlite.load_episode_content(2)
     finally:
         await sqlite.close()

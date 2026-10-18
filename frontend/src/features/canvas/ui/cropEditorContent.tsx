@@ -25,20 +25,20 @@ import {
 import { CANVAS_NODE_TOOLBAR_PILL_CLASS } from './nodeFrameStyles';
 
 /**
- * 「裁剪」编辑器的**外壳无关**内容层：状态机 + 取景框 + 那条控制条。
+ * The **shell-agnostic** content layer of the "Crop" editor: state machine + crop frame + that control bar.
  *
- * 抽出来的理由同 rotateEditorContent：同一套交互要能挂在两种外壳上（工作流的
- * NodeToolbar / 故事板详情 portal 到 body 的全屏弹窗）。眼下只有故事板在用，但取景
- * 框的坐标换算与比例锁定逻辑不该长在弹窗外壳里。
+ * The reason for extracting it is the same as rotateEditorContent: the same interaction has to be mountable on two shells (the workflow's
+ * NodeToolbar / the storyboard detail's full-screen dialog portaled to body). Currently only the storyboard uses it, but the crop
+ * frame's coordinate conversion and ratio-lock logic should not live inside the dialog shell.
  *
- * 坐标系：取景框 {@link CropRect} 一律存**源图自然像素**，渲染时按百分比落到显示盒
- * 上。因为图片是 object-contain，显示盒与自然尺寸严格同比，百分比两边通用——于是
- * 布局尺寸变化（窗口缩放）不需要重算 rect，只有指针位移要按比例尺换算回自然像素。
+ * Coordinate system: the crop frame {@link CropRect} is always stored in **source image natural pixels**, and placed by percentage onto the display box when rendering.
+ * Because the image is object-contain, the display box is strictly proportional to the natural size, so percentages work on both sides - hence
+ * layout size changes (window resize) need no recomputation of the rect, and only pointer displacement is converted back to natural pixels by the scale.
  */
 
 export type CropHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
-/** 取景框最小边长（自然像素），防止拖成一条线甚至 0 宽。 */
+/** Minimum edge length of the crop frame (natural pixels), preventing it from being dragged into a line or even 0 width. */
 const MIN_CROP_PX = 24;
 
 function clamp(value: number, min: number, max: number): number {
@@ -46,10 +46,10 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * 按手柄拖拽算出新的取景框（锁定 `ratio`，坐标全是自然像素）。
+ * Compute the new crop frame from a handle drag (locking `ratio`, coordinates all in natural pixels).
  *
- * 规则：被拖的对边固定不动（拖右边就锁左边），纯上下/左右手柄则保持另一轴居中；
- * 角手柄同时吃两个方向的位移，取两者换算出的宽度均值，斜着拖才跟手。
+ * Rules: the opposite edge of the dragged one stays fixed (dragging the right edge locks the left), and pure top/bottom or left/right handles keep the other axis centered;
+ * corner handles take displacement in both directions at once, using the mean of the widths derived from the two, so diagonal dragging follows the hand.
  */
 export function resizeCropRect(
   start: CropRect,
@@ -68,15 +68,15 @@ export function resizeCropRect(
   let height = start.height + (south ? dy : north ? -dy : 0);
 
   if (east || west) {
-    // 角手柄：宽度取「横向拖出来的宽」与「纵向拖出来的高换算成的宽」的均值。
+    // Corner handle: the width is the mean of "the width dragged horizontally" and "the width converted from the height dragged vertically".
     width = north || south ? (width + height * ratio) / 2 : width;
     height = width / ratio;
   } else {
     width = height * ratio;
   }
 
-  // 各方向的可用余量：锚定边到图边的距离；无锚定边（纯上下/左右手柄）时按中心
-  // 对称展开，余量是到最近图边距离的两倍。
+  // The available margin in each direction: the distance from the anchored edge to the image edge; with no anchored edge (pure top/bottom or left/right handles) expansion is symmetric
+  // about the center, and the margin is twice the distance to the nearest image edge.
   const centerX = start.x + start.width / 2;
   const centerY = start.y + start.height / 2;
   const maxWidth = east
@@ -90,7 +90,7 @@ export function resizeCropRect(
       ? start.y + start.height
       : 2 * Math.min(centerY, natural.height - centerY);
 
-  // 先按高收口再按宽收口（两次都只会变小，不会把对方顶回去）。
+  // First close by height and then by width (both only shrink, and never push the other back).
   if (height > maxHeight) {
     height = maxHeight;
     width = height * ratio;
@@ -119,13 +119,13 @@ export function resizeCropRect(
 
 export interface CropEditorController {
   aspect: CropAspectOption;
-  /** 取景框（自然像素）；图片还没加载出来时为 null。 */
+  /** The crop frame (natural pixels); null while the image has not loaded yet. */
   rect: CropRect | null;
-  /** 源图自然尺寸；未加载时为 null。 */
+  /** The natural size of the source image; null when not loaded. */
   natural: { width: number; height: number } | null;
   isSaving: boolean;
   onAspectChange: (next: CropAspectOption) => void;
-  /** 图片 onLoad 时把自然尺寸交进来，顺手把取景框铺满整图。 */
+  /** On image onLoad, hand in the natural size and fill the crop frame to the whole image along the way. */
   onImageLoad: (image: HTMLImageElement) => void;
   setRect: (next: CropRect) => void;
   onExit: () => void;
@@ -133,17 +133,17 @@ export interface CropEditorController {
 }
 
 export interface UseCropEditorOptions {
-  /** 裁剪写回的目标节点（调用方进入编辑器前预建的「裁剪结果」节点）。 */
+  /** The target node the crop is written back to (the "crop result" node pre-built by the caller before entering the editor). */
   nodeId: string;
   imageSource: string;
   /**
-   * 关闭编辑器。`committed` 表示是否真正提交了一次裁剪（开始写回节点）：
-   *   - `false`：退出 / Esc / 取景框还是整张图 —— 调用方应把预建的「裁剪结果」
-   *     节点删掉，避免凭空多出一个节点。
-   *   - `true` ：已开始把裁剪结果写回该节点，调用方保留它。
+   * Close the editor. `committed` indicates whether a crop was really committed (write-back to the node has started):
+   *   - `false`: exit / Esc / the crop frame is still the whole image - the caller should delete the pre-built "crop result"
+   *     node, avoiding a node appearing from nowhere.
+   *   - `true`: the crop result has started being written back to that node, and the caller keeps it.
    */
   onClose: (committed: boolean) => void;
-  /** 提交起飞后把 completion 交给宿主挂 busy 态与失败反馈（同 useRotateEditor）。 */
+  /** After the submit takes off, hand the completion to the host to attach the busy state and failure feedback (same as useRotateEditor). */
   onCommitted?: (completion: Promise<void>) => void;
 }
 
@@ -169,7 +169,7 @@ export function useCropEditor({
     [aspect],
   );
 
-  // 换比例 = 取景框复位成该比例下的最大居中矩形（同 liblib：不保留上一次的框）。
+  // Changing the ratio = reset the crop frame to the largest centered rectangle at that ratio (same as liblib: the previous frame is not kept).
   const onAspectChange = useCallback(
     (next: CropAspectOption) => {
       setAspect(next);
@@ -184,15 +184,15 @@ export function useCropEditor({
 
   const onSave = useCallback(() => {
     if (isSaving) return;
-    // 没框选（图还没加载）或取景框就是整张图 → 没什么可裁的，按「未提交」关闭，
-    // 让调用方回收预建节点（等同退出）。
+    // No selection (the image has not loaded) or the crop frame is the whole image -> nothing to crop, close as "not committed",
+    // so the caller reclaims the pre-built node (equivalent to exit).
     if (!rect || !natural || isFullFrameCrop(rect, natural)) {
       onClose(false);
       return;
     }
 
     const completion = cropImageInPlace(nodeId, imageSource, rect);
-    // 缺 project 时返回 null：不改变编辑态，保留用户框好的取景框。
+    // Return null when project is missing: do not change the editing state, keeping the crop frame the user framed.
     if (!completion) return;
 
     setIsSaving(true);
@@ -228,7 +228,7 @@ interface DragState {
   mode: 'move' | CropHandle;
   startX: number;
   startY: number;
-  /** 显示像素 → 自然像素的比例尺。 */
+  /** Scale from display pixels to natural pixels. */
   scale: number;
   startRect: CropRect;
   ratio: number;
@@ -248,12 +248,12 @@ const HANDLE_STYLE: Record<CropHandle, { position: string; shape: string; cursor
 const CROP_HANDLES = Object.keys(HANDLE_STYLE) as CropHandle[];
 
 /**
- * 取景界面：原图 + 框外压暗 + 三分线 + 八个手柄，整块可拖动。
+ * The framing UI: original image + dimming outside the frame + rule-of-thirds lines + eight handles, the whole block draggable.
  *
- * 根节点 `inline-block` 是刻意的——它必须**收窄到图片实际渲染尺寸**，取景框才能用
- * 百分比直接落位；换成铺满的块级盒，object-contain 留出的空白会把百分比算歪。
+ * The root node being `inline-block` is deliberate - it must **shrink to the image's actually rendered size** so the crop frame can be placed
+ * directly by percentage; swapping in a full-width block box, the blank left by object-contain would throw the percentages off.
  *
- * @param className 加在图片上的尺寸约束（外壳决定图多大，如 `max-h-[78vh]`）。
+ * @param className size constraints added on the image (the shell decides how large the image is, e.g. `max-h-[78vh]`).
  */
 export function CropEditorSurface({
   controller,
@@ -283,7 +283,7 @@ export function CropEditorSurface({
         startRect: rect,
         ratio: rect.width / rect.height,
       };
-      // jsdom 没有指针捕获，缺了也不影响逻辑，只是拖出元素外会断——故可选调用。
+      // jsdom has no pointer capture; its absence does not affect the logic, only dragging outside the element would break - hence an optional call.
       (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     },
     [controller.isSaving, natural, rect],
@@ -339,8 +339,8 @@ export function CropEditorSurface({
 
       {frameStyle && (
         <>
-          {/* 框外压暗：超大 spread 的 box-shadow 一把铺满，外层 overflow-hidden 把它
-              裁回图片范围内——图片以外是弹窗自己的遮罩，不该再叠一层。 */}
+          {/* Dimming outside the frame: one oversized-spread box-shadow fills it all, and the outer overflow-hidden
+          crops it back to the image bounds - outside the image is the dialog's own mask, and no extra layer should be stacked. */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div
               className="absolute"
@@ -348,14 +348,14 @@ export function CropEditorSurface({
             />
           </div>
 
-          {/* 交互层与压暗层分开：压暗层要被裁进图内，而贴着图边的手柄不能被裁掉。 */}
+          {/* The interaction layer is separate from the dimming layer: the dimming layer must be clipped into the image, while the handles hugging the image edge must not be clipped. */}
           <div className="absolute inset-0" onPointerMove={onPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
             <div
               className="absolute cursor-move touch-none border border-white/90"
               style={frameStyle}
               onPointerDown={(event) => beginDrag(event, 'move')}
             >
-              {/* 三分线（构图参考，不参与命中）。 */}
+              {/* Rule-of-thirds lines (composition reference, not part of hit-testing). */}
               <span className="pointer-events-none absolute inset-y-0 left-1/3 w-px bg-white/25" aria-hidden />
               <span className="pointer-events-none absolute inset-y-0 left-2/3 w-px bg-white/25" aria-hidden />
               <span className="pointer-events-none absolute inset-x-0 top-1/3 h-px bg-white/25" aria-hidden />
@@ -381,7 +381,7 @@ export function CropEditorSurface({
   );
 }
 
-/** 比例小图标：按比例画一个描边矩形，让下拉里一眼看出是横是竖。 */
+/** Ratio mini-icon: draws an outlined rectangle by ratio so the dropdown shows landscape or portrait at a glance. */
 function AspectIcon({ ratio }: { ratio: number | null }): ReactElement {
   const safe = ratio && Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
   const width = safe >= 1 ? 13 : 13 * safe;
@@ -393,7 +393,7 @@ function AspectIcon({ ratio }: { ratio: number | null }): ReactElement {
   );
 }
 
-/** 比例下拉：原图比例 / 1:1 / 4:3 / 3:4 / 16:9 / 9:16（顺序对齐 liblib）。 */
+/** Ratio dropdown: original ratio / 1:1 / 4:3 / 3:4 / 16:9 / 9:16 (order aligned with liblib). */
 function AspectPicker({ controller }: { controller: CropEditorController }): ReactElement {
   const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -472,9 +472,9 @@ function AspectPicker({ controller }: { controller: CropEditorController }): Rea
 }
 
 /**
- * 控制条：退出 · 比例选择 · 确认（对齐 liblib 那条浮在取景框上方的胶囊）。
+ * Control bar: exit · ratio selection · confirm (matches the capsule floating above the crop frame in liblib).
  *
- * @param showTitle 是否在退出钮右边显示「裁剪」标题，语义同 RotateEditorToolbar。
+ * @param showTitle whether to show the "Crop" title to the right of the exit button, same semantics as RotateEditorToolbar.
  */
 export function CropEditorToolbar({
   controller,

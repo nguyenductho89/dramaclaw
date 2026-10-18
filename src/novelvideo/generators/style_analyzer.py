@@ -1,4 +1,4 @@
-"""风格分析器 - 从参考图片自动提取风格预设。"""
+"""Style analyzer - automatically extracts a style preset from reference images."""
 
 import asyncio
 import io
@@ -12,7 +12,7 @@ from novelvideo.brainclaw_contract import BrainClawProfile
 
 
 class StyleAnalysisResult(BaseModel):
-    """结构化风格分析结果。"""
+    """Structured style analysis result."""
 
     style_instructions: str = Field(
         description="Positive prompt for reproducing the visual style."
@@ -22,11 +22,11 @@ class StyleAnalysisResult(BaseModel):
     )
     style_tag: str = Field(description="Short uppercase medium/finish tag.")
     suggested_name: str = Field(description="Concise English style name.")
-    suggested_label: str = Field(description="Chinese display label.")
+    suggested_label: str = Field(description="English display label.")
 
 
 class StyleAnalyzer:
-    """分析参考图片，自动提取风格预设。"""
+    """Analyze reference images and automatically extract a style preset."""
 
     ANALYSIS_PROMPT = """You are a visual style analyst for an AI image generation system.
 
@@ -45,12 +45,12 @@ Analyze this image's visual style and generate two sets of prompts for reproduci
    Describe ONLY the medium and the grade/finish (lens feel, color grade, rendering quality).
    It must NOT carry era, period, location, wardrobe, ethnicity, or any story content — those
    come from the beat/scene/character/prop, and a per-panel tag would silently override them.
-   FORBIDDEN words: PERIOD, REPUBLICAN, ERA, DYNASTY, MODERN, ANCIENT, DRAMA, 古装, 民国.
+   FORBIDDEN words: PERIOD, REPUBLICAN, ERA, DYNASTY, MODERN, ANCIENT, DRAMA.
    Good examples: "CINEMATIC FILMIC REALISM", "NATURAL PHOTOREALISTIC, CLEAN GRADE", "3D GUOMAN FANTASY".
 
 4. **suggested_name**: A concise English name for this style (e.g. "Watercolor Fantasy").
 
-5. **suggested_label**: A Chinese display label (e.g. "水彩幻想风").
+5. **suggested_label**: A short English display label (e.g. "Watercolor Fantasy").
 
 Return ONLY valid JSON with no markdown formatting:
 {
@@ -84,18 +84,18 @@ Return ONLY valid JSON with no markdown formatting:
         )
 
     async def analyze(self, image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
-        """分析图片，返回风格预设字段。
+        """Analyze an image and return the style preset fields.
 
         Args:
-            image_bytes: 图片二进制数据
-            mime_type: MIME 类型
+            image_bytes: raw image data
+            mime_type: MIME type
 
         Returns:
-            包含风格字段的字典
+            Dict containing the style fields
         """
         from novelvideo.storage.media_relay import upload_image_bytes
 
-        # 压缩图片以减少 token 消耗
+        # Compress the image to reduce token usage
         compressed_bytes, _compressed_mime = self._compress_image(image_bytes)
         image_url = await asyncio.to_thread(
             upload_image_bytes, compressed_bytes, ext="jpg"
@@ -113,24 +113,24 @@ Return ONLY valid JSON with no markdown formatting:
     def _compress_image(
         image_bytes: bytes, max_size: int = 1024, quality: int = 60
     ) -> tuple[bytes, str]:
-        """压缩图片用于 API 调用。
+        """Compress an image for API calls.
 
         Args:
-            image_bytes: 原始图片数据
-            max_size: 最大边长（像素）
-            quality: JPEG 质量（默认 60，与项目其他 Gemini 调用一致）
+            image_bytes: original image data
+            max_size: maximum edge length (pixels)
+            quality: JPEG quality (default 60, consistent with other Gemini calls in the project)
 
         Returns:
-            (压缩后数据, MIME 类型)
+            (compressed data, MIME type)
         """
         img = Image.open(io.BytesIO(image_bytes))
         original_size = len(image_bytes)
 
-        # 缩放到合理尺寸
+        # Scale to a reasonable size
         if max(img.size) > max_size:
             img.thumbnail((max_size, max_size), Image.LANCZOS)
 
-        # 转为 JPEG
+        # Convert to JPEG
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
 
@@ -141,9 +141,9 @@ Return ONLY valid JSON with no markdown formatting:
         compressed_size = len(compressed_data)
         ratio = (1 - compressed_size / original_size) * 100
         print(
-            f"[StyleAnalyzer压缩] "
+            f"[StyleAnalyzer compress] "
             f"{original_size / 1024:.0f}KB → {compressed_size / 1024:.0f}KB "
-            f"({ratio:.0f}% 压缩)"
+            f"({ratio:.0f}% compression)"
         )
 
         return compressed_data, "image/jpeg"

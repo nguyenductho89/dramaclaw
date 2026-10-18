@@ -11,15 +11,15 @@ import { MAX_USER_CREATED_CANVASES_PER_PROJECT } from "@/lib/limits";
 import { useAuthStore } from "@/stores/auth-store";
 
 const CANVASES_ZH: Record<string, string> = {
-  "freezone.canvases.createTitle": "新建项目画布",
-  "freezone.canvases.createLimitTitle": "画布已达上限",
-  "freezone.canvases.createQuotaUnknownTitle": "还确认不了画布数量",
-  "freezone.canvases.createQuotaUnknown": "画布列表还没加载出来，等一下再新建",
-  "freezone.canvases.createLimitReached": "每人在一个项目里最多创建 {{limit}} 张画布，删掉一些再新建",
-  "freezone.canvases.createPlaceholder": "新画布名称",
-  "freezone.canvases.create": "创建",
-  "freezone.canvases.createBusy": "创建中",
-  "freezone.canvases.switcher": "切换画布",
+  "freezone.canvases.createTitle": "New project canvas",
+  "freezone.canvases.createLimitTitle": "Canvas limit reached",
+  "freezone.canvases.createQuotaUnknownTitle": "Cannot confirm the canvas count yet",
+  "freezone.canvases.createQuotaUnknown": "The canvas list has not loaded yet; wait a moment before creating",
+  "freezone.canvases.createLimitReached": "Each person may create at most {{limit}} canvases per project; delete some before creating",
+  "freezone.canvases.createPlaceholder": "New canvas name",
+  "freezone.canvases.create": "Create",
+  "freezone.canvases.createBusy": "Creating",
+  "freezone.canvases.switcher": "Switch canvas",
 };
 
 vi.mock("react-i18next", () => ({
@@ -68,7 +68,7 @@ function myCanvas(index: number): FreezoneCanvasSummary {
     size: 1,
     metadata: {
       canvas_origin: "user_created",
-      display_name: `我的画布 ${index}`,
+      display_name: `My canvas ${index}`,
       creator_username: "admin",
     },
   } as FreezoneCanvasSummary;
@@ -76,7 +76,7 @@ function myCanvas(index: number): FreezoneCanvasSummary {
 
 async function openCanvasMenu() {
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "切换画布" }));
+  await user.click(await screen.findByRole("button", { name: "Switch canvas" }));
   return user;
 }
 
@@ -101,17 +101,17 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     const user = await openCanvasMenu();
-    // 入口不置灰：用户点得到，才有地方把「为什么不行」说出来。
-    const createItem = await screen.findByText("新建项目画布");
+    // The entry is not greyed out: the user can click it, so there is a place to say "why not".
+    const createItem = await screen.findByText("New project canvas");
     await user.click(createItem);
 
     expect(alertDialog).toHaveBeenCalledTimes(1);
     expect(alertDialog.mock.calls[0][0]).toMatchObject({
-      title: "画布已达上限",
-      description: `每人在一个项目里最多创建 ${MAX_USER_CREATED_CANVASES_PER_PROJECT} 张画布，删掉一些再新建`,
+      title: "Canvas limit reached",
+      description: `Each person may create at most ${MAX_USER_CREATED_CANVASES_PER_PROJECT} canvases per project; delete some before creating`,
     });
-    // 弹窗代替表单：没到上限之前不该看到输入框。
-    expect(screen.queryByPlaceholderText("新画布名称")).toBeNull();
+    // A dialog replaces the form: the input must not be visible before reaching the limit.
+    expect(screen.queryByPlaceholderText("New canvas name")).toBeNull();
   });
 
   it("keeps the bottom actions out of the scrolling canvas list", async () => {
@@ -125,14 +125,14 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     await openCanvasMenu();
-    const createItem = await screen.findByText("新建项目画布");
+    const createItem = await screen.findByText("New project canvas");
     const scroller = document.querySelector<HTMLElement>(
       '[data-slot="dropdown-menu-content"] .overflow-y-auto',
     );
 
-    // 画布多到要滚时，滚的只能是列表本身；动作跟着列表滚就等于每次都要先拖到底。
+    // When there are so many canvases that scrolling is needed, only the list itself may scroll; if the actions scrolled with the list, every use would require dragging to the bottom first.
     expect(scroller).not.toBeNull();
-    // 25 张自建 + 1 张个人画布投影，整份列表都在滚动区里。
+    // 25 self-created + 1 personal canvas projection, the whole list is inside the scroll area.
     expect(scroller!.querySelectorAll('[data-slot="dropdown-menu-item"]').length).toBe(
       MAX_USER_CREATED_CANVASES_PER_PROJECT + 1,
     );
@@ -140,8 +140,8 @@ describe("CanvasesTab canvas quota", () => {
   });
 
   it("refuses to create while the canvas list is still loading", async () => {
-    // 列表没回来之前手上是空数组。按它放行，用户就能在这个窗口里多建一张——
-    // 后端不数个数，多出来的那张是真的。
+    // Before the list comes back the code holds an empty array. Letting it through would allow creating one extra canvas in this window -
+    // the backend does not count, and that extra one is real.
     listFreezoneCanvases.mockReturnValue(new Promise(() => {}));
 
     render(
@@ -150,20 +150,20 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     const user = await openCanvasMenu();
-    await user.click(await screen.findByText("新建项目画布"));
+    await user.click(await screen.findByText("New project canvas"));
 
-    expect(screen.queryByPlaceholderText("新画布名称")).toBeNull();
+    expect(screen.queryByPlaceholderText("New canvas name")).toBeNull();
     expect(createBlankFreezoneCanvas).not.toHaveBeenCalled();
     expect(alertDialog).toHaveBeenCalledTimes(1);
     expect(alertDialog.mock.calls[0][0]).toMatchObject({
-      title: "还确认不了画布数量",
-      description: "画布列表还没加载出来，等一下再新建",
+      title: "Cannot confirm the canvas count yet",
+      description: "The canvas list has not loaded yet; wait a moment before creating",
     });
   });
 
   it("refuses to create before the username has been restored", async () => {
-    // 身份没恢复时数出来的是匿名桶，既拦不住真作者，也不能当成还有余量；
-    // 真放过去，这张画布会带着 creatorUsername: null 落库，谁的配额都不算。
+    // When identity is not restored, what gets counted is the anonymous bucket, which can neither block the real author nor be treated as having room left;
+    // if really let through, this canvas would be stored with creatorUsername: null and count toward nobody's quota.
     useAuthStore.setState({ username: null, role: null });
     listFreezoneCanvases.mockResolvedValue([myCanvas(0)]);
 
@@ -173,18 +173,18 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     const user = await openCanvasMenu();
-    await user.click(await screen.findByText("新建项目画布"));
+    await user.click(await screen.findByText("New project canvas"));
 
-    expect(screen.queryByPlaceholderText("新画布名称")).toBeNull();
+    expect(screen.queryByPlaceholderText("New canvas name")).toBeNull();
     expect(createBlankFreezoneCanvas).not.toHaveBeenCalled();
     expect(alertDialog).toHaveBeenCalledTimes(1);
-    expect(alertDialog.mock.calls[0][0]).toMatchObject({ title: "还确认不了画布数量" });
+    expect(alertDialog.mock.calls[0][0]).toMatchObject({ title: "Cannot confirm the canvas count yet" });
   });
 
   it("stops trusting the old count when the post-create refresh fails", async () => {
-    // 建到第 25 张之后列表刷新失败：React Query 会把上一份 24 张的数据留着，
-    // refetch() 本身也不抛。照着这份旧数据算，第 26 张就能建出来——后端不数
-    // 个数，多出来的那张是真的。刷不动的时候只能当成「不知道」。
+    // After creating the 25th, the list refresh fails: React Query keeps the previous 24-item data,
+    // and refetch() itself does not throw. Counting from this old data would let the 26th be created - the backend does not
+    // count; that extra one is real. When the refresh cannot proceed it can only be treated as "unknown".
     const below = Array.from(
       { length: MAX_USER_CREATED_CANVASES_PER_PROJECT - 1 },
       (_unused, i) => myCanvas(i),
@@ -198,22 +198,22 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     const user = await openCanvasMenu();
-    await user.click(await screen.findByText("新建项目画布"));
-    await user.type(await screen.findByPlaceholderText("新画布名称"), "第二十五张");
-    await user.click(screen.getByRole("button", { name: "创建" }));
+    await user.click(await screen.findByText("New project canvas"));
+    await user.type(await screen.findByPlaceholderText("New canvas name"), "Twenty-fifth");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(createBlankFreezoneCanvas).toHaveBeenCalledTimes(1));
-    // 刷新失败，手上还是那份 24 张的旧列表。
+    // The refresh failed, and what is held is still that old 24-item list.
     await waitFor(() => expect(listFreezoneCanvases.mock.calls.length).toBeGreaterThan(1));
 
     alertDialog.mockClear();
     const user2 = await openCanvasMenu();
-    await user2.click(await screen.findByText("新建项目画布"));
+    await user2.click(await screen.findByText("New project canvas"));
 
-    expect(screen.queryByPlaceholderText("新画布名称")).toBeNull();
+    expect(screen.queryByPlaceholderText("New canvas name")).toBeNull();
     expect(createBlankFreezoneCanvas).toHaveBeenCalledTimes(1);
     expect(alertDialog).toHaveBeenCalledTimes(1);
-    expect(alertDialog.mock.calls[0][0]).toMatchObject({ title: "还确认不了画布数量" });
+    expect(alertDialog.mock.calls[0][0]).toMatchObject({ title: "Cannot confirm the canvas count yet" });
   });
 
   it("opens the create form without a dialog below the quota", async () => {
@@ -229,9 +229,9 @@ describe("CanvasesTab canvas quota", () => {
     );
 
     const user = await openCanvasMenu();
-    await user.click(await screen.findByText("新建项目画布"));
+    await user.click(await screen.findByText("New project canvas"));
 
     expect(alertDialog).not.toHaveBeenCalled();
-    expect(await screen.findByPlaceholderText("新画布名称")).toBeTruthy();
+    expect(await screen.findByPlaceholderText("New canvas name")).toBeTruthy();
   });
 });

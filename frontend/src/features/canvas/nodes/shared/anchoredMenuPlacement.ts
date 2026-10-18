@@ -1,40 +1,40 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 贴着某个触发元素弹出的浮层（portal + fixed）的落点计算。
+ * Placement computation for popovers (portal + fixed) that pop up against a trigger element.
  *
- * 只横向夹取、纵向恒定 `rect.bottom + gap` 是个反复出现的坑：节点操作面板本来就
- * 常年贴在视口下沿，提示词栏上的 chip 离底边只有几十像素，菜单整个落到视口外面，
- * 用户看到的是「点了没反应」。CameraMovementChip 早就自己写过一版上下翻转，这里
- * 把那套策略抽出来，让「＋参考」菜单和 @ 替换选单共用同一个口径。
+ * Clamping only horizontally with the vertical position constantly `rect.bottom + gap` is a recurring pitfall: the node operations panel already
+ * perpetually hugs the bottom edge of the viewport, and a chip on the prompt bar is only a few dozen pixels from the bottom, so the menu lands entirely outside the viewport,
+ * and the user sees "clicked and nothing happened". CameraMovementChip wrote its own up/down flip long ago; here
+ * that strategy is extracted so the "+ Reference" menu and the @ replace menu share the same basis.
  *
- * 空间不够时不只翻转，还会把可用高度一并算出来：贴边的那一侧留多少就给多少，浮层
- * 自己内部滚动，而不是硬撑出视口。
+ * When space is insufficient it does not only flip but also computes the available height: the side against the edge gets whatever it has left, and the popover
+ * scrolls internally rather than forcing itself out of the viewport.
  */
 
-/** 浮层至少要露出这么高，否则翻转过去也只是换个地方看不见。 */
+/** The popover must show at least this much height, otherwise flipping over merely moves it to another place where it cannot be seen. */
 const MIN_VISIBLE_HEIGHT = 96;
 
 export interface AnchoredMenuGeometry {
   top: number;
   left: number;
-  /** 实际可用高度；浮层应当把它设成 maxHeight 并允许内部滚动。 */
+  /** Actual available height; the popover should set it as maxHeight and allow internal scrolling. */
   maxHeight: number;
-  /** 最终落在触发元素的下方还是上方。 */
+  /** Whether it finally lands below or above the trigger element. */
   placement: 'below' | 'above';
 }
 
 export interface AnchoredMenuInput {
-  /** 触发元素的位置，取 getBoundingClientRect()。 */
+  /** Position of the trigger element, taken from getBoundingClientRect(). */
   anchorRect: Pick<DOMRect, 'top' | 'bottom' | 'left'>;
   width: number;
-  /** 内容撑满时的高度上限。空间够就按它给，不够则收缩。 */
+  /** Height cap when content fills it. Given as is when space is enough, shrunk otherwise. */
   preferredHeight: number;
-  /** 浮层与触发元素之间的间距。 */
+  /** Gap between the popover and the trigger element. */
   gap?: number;
-  /** 浮层与视口边缘之间的最小留白。 */
+  /** Minimum margin between the popover and the viewport edge. */
   edgeGap?: number;
-  /** 便于单测注入；缺省读 window。 */
+  /** Easy to inject in unit tests; defaults to window. */
   viewportWidth?: number;
   viewportHeight?: number;
 }
@@ -55,11 +55,11 @@ export function placeAnchoredMenu({
   const roomBelow = Math.max(0, vh - anchorRect.bottom - gap - edgeGap);
   const roomAbove = Math.max(0, anchorRect.top - gap - edgeGap);
 
-  // 下方放得下就放下方；放不下时，只有当上方确实更宽裕才翻转——两边都逼仄的时候
-  // 来回翻只会让菜单忽上忽下，不如稳定地留在下方。
+  // Put it below if it fits; when it does not, flip only if above is really roomier — when both sides are cramped,
+  // flipping back and forth only makes the menu jump up and down, so staying stably below is better.
   if (roomBelow >= preferredHeight || roomBelow >= roomAbove) {
     const maxHeight = Math.max(MIN_VISIBLE_HEIGHT, Math.min(preferredHeight, roomBelow));
-    // 两边都不够时（极窄视口）宁可盖住触发元素，也不能整个掉到视口外。
+    // When neither side is enough (an extremely narrow viewport) we would rather cover the trigger element than let it fall entirely outside the viewport.
     const top = Math.max(edgeGap, Math.min(anchorRect.bottom + gap, vh - edgeGap - maxHeight));
     return { top, left, maxHeight, placement: 'below' };
   }

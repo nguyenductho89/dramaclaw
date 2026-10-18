@@ -12,19 +12,13 @@ import { AssetBoardCard } from '@/features/canvas/ui/asset-board/AssetBoardCard'
 import { AssetBoardView } from '@/features/canvas/ui/asset-board/AssetBoardView';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-// ImageViewerModal（AssetBoardView 内常驻挂载）用到 useTranslation。
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
-  }),
-}));
-
-// 宫格活价用了 react-query，测试树没有 QueryClientProvider —— mock 掉。
+// ImageViewerModal (permanently mounted inside AssetBoardView) uses useTranslation.
+// Grid live pricing uses react-query and the test tree has no QueryClientProvider -- mock it out.
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
 
-/** 收集本次点击 publish 出来的 freezone/add-nodes-to-chat 载荷。 */
+/** Collects the freezone/add-nodes-to-chat payloads published by this click. */
 function captureEvents(run: () => void): string[][] {
   const seen: string[][] = [];
   const unsubscribe = canvasEventBus.subscribe('freezone/add-nodes-to-chat', ({ nodeIds }) => {
@@ -42,7 +36,7 @@ function boardItem(overrides: Partial<AssetBoardItem> = {}): AssetBoardItem {
   return {
     nodeId: 'n1',
     column: 'video',
-    title: '测试卡片',
+    title: 'Test card',
     mediaUrl: null,
     thumbnailUrl: null,
     textPreview: null,
@@ -61,8 +55,8 @@ function boardItem(overrides: Partial<AssetBoardItem> = {}): AssetBoardItem {
   };
 }
 
-describe('添加到对话（画布节点 / 故事板共用入口）', () => {
-  it('画布节点右上角按钮 publish 事件，且不冒泡到节点根（根的 onClick 会把选中收成单选）', () => {
+describe('Add to chat (shared entry for canvas nodes / the storyboard)', () => {
+  it('the top-right button of a canvas node publishes the event and does not bubble to the node root (the root onClick would collapse the selection to a single one)', () => {
     const onRootClick = vi.fn();
     render(
       <div onClick={onRootClick}>
@@ -70,25 +64,25 @@ describe('添加到对话（画布节点 / 故事板共用入口）', () => {
       </div>,
     );
     const events = captureEvents(() => {
-      fireEvent.click(screen.getByRole('button', { name: '添加到对话' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add to chat' }));
     });
     expect(events).toEqual([['img-1']]);
     expect(onRootClick).not.toHaveBeenCalled();
   });
 
-  // 文字提示走 shadcn Tooltip 而不是原生 title（原生的要悬停约一秒才出，且样式
-  // 和产品其它悬浮说明不统一）——回归点：别哪次重构又退回 title。
-  it('hover 时弹出「添加到对话」文字提示，且不再挂原生 title', async () => {
+  // The text hint goes through the shadcn Tooltip rather than the native title (the native one takes about a second of hovering to appear, and its style
+  // is inconsistent with the product's other hover explanations) -- the regression point: a later refactor must not fall back to title.
+  it('hovering pops up the "Add to chat" text hint and no longer carries the native title', async () => {
     const user = userEvent.setup();
     render(<AddNodeToChatButton nodeId="img-1" />);
-    const button = screen.getByRole('button', { name: '添加到对话' });
+    const button = screen.getByRole('button', { name: 'Add to chat' });
     expect(button).not.toHaveAttribute('title');
 
     await user.hover(button);
-    expect(await screen.findByText('添加到对话')).toBeInTheDocument();
+    expect(await screen.findByText('Add to chat')).toBeInTheDocument();
   });
 
-  it('故事板卡片右上角按钮走同一条事件，且不触发「打开详情」「在画布中定位」', () => {
+  it('the top-right button of a storyboard card goes through the same event and does not trigger "open details" or "locate on canvas"', () => {
     const onOpen = vi.fn();
     const onLocate = vi.fn();
     render(
@@ -100,38 +94,38 @@ describe('添加到对话（画布节点 / 故事板共用入口）', () => {
       />,
     );
     const events = captureEvents(() => {
-      fireEvent.click(screen.getByRole('button', { name: '添加到对话' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add to chat' }));
     });
     expect(events).toEqual([['vid-7']]);
     expect(onOpen).not.toHaveBeenCalled();
     expect(onLocate).not.toHaveBeenCalled();
   });
 
-  // 落地半边（事件 → 虾导 draft 追加 @[名](id) 行内 chip）改由
-  // freezone-node-suggestions.test.ts 的 appendFreezoneNodeMentions 单测覆盖。
+  // The landing half (event -> the Xiadao draft appends an inline @[name](id) chip) is now covered by the
+  // appendFreezoneNodeMentions unit test in freezone-node-suggestions.test.ts.
 
-  describe('故事板详情头部', () => {
+  describe('storyboard detail header', () => {
     beforeEach(() => {
       const nodes: CanvasNode[] = [
         {
           id: 'text-1',
           type: CANVAS_NODE_TYPES.textAnnotation,
           position: { x: 0, y: 0 },
-          data: { content: '# 项目信息', displayName: '锚点清单' },
+          data: { content: '# Project info', displayName: 'Anchor list' },
         },
       ];
       const edges: CanvasEdge[] = [];
       useCanvasStore.getState().setCanvasData(nodes, edges);
     });
 
-    // 挂头部而不是媒体工具条：文本栏根本没有工具条，空节点的工具条也整条不渲染，
-    // 但这两种节点一样可以被引用进对话。
-    it('文本详情（没有媒体工具条）也能「添加到对话」，带的是当前详情节点 id', () => {
+    // It hangs on the header rather than the media toolbar: the text column has no toolbar at all, and an empty node's toolbar does not render either,
+    // yet both kinds of node can be referenced into the chat all the same.
+    it('a text detail (with no media toolbar) can also be "added to chat", carrying the current detail node id', () => {
       render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-      fireEvent.click(screen.getByRole('button', { name: '锚点清单' }));
-      const detail = screen.getByRole('region', { name: '资产详情' });
+      fireEvent.click(screen.getByRole('button', { name: 'Anchor list' }));
+      const detail = screen.getByRole('region', { name: 'Asset details' });
       const events = captureEvents(() => {
-        fireEvent.click(within(detail).getByRole('button', { name: '添加到对话' }));
+        fireEvent.click(within(detail).getByRole('button', { name: 'Add to chat' }));
       });
       expect(events).toEqual([['text-1']]);
     });

@@ -167,7 +167,7 @@ def test_fallback_fails_closed_in_production(monkeypatch):
 
 
 def test_fallback_fails_closed_when_control_plane_connected(monkeypatch):
-    # EE 多租户:连了控制面即使没设 production,也必须拒绝裸跑。
+    # EE multi-tenant: even without production set, being connected to the control plane must refuse to run bare.
     _clear_sandbox_env(monkeypatch)
     monkeypatch.setenv("ST_CONTROL_PLANE_DSN", "postgres://cp/db")
     with pytest.raises(RuntimeError, match="sandbox required"):
@@ -175,7 +175,7 @@ def test_fallback_fails_closed_when_control_plane_connected(monkeypatch):
 
 
 def test_fallback_fails_closed_in_dev_without_optin(monkeypatch):
-    # 本地 CE 开发默认也 fail-close,除非显式开开关。
+    # Local CE development also fail-closes by default, unless the switch is explicitly turned on.
     _clear_sandbox_env(monkeypatch)
     with pytest.raises(RuntimeError, match="SUPERTALE_ALLOW_UNSANDBOXED"):
         _fallback_or_raise(["hermes"], "no backend")
@@ -190,7 +190,7 @@ def test_fallback_allows_dev_with_explicit_optin(monkeypatch):
 
 
 def test_dev_optin_cannot_override_required_sandbox(monkeypatch):
-    # 开关只对本地开发生效;生产/EE 下即便设了也必须拒绝。
+    # The switch takes effect only for local development; under production/EE it must be refused even if set.
     _clear_sandbox_env(monkeypatch)
     monkeypatch.setenv("SUPERTALE_ALLOW_UNSANDBOXED", "1")
     monkeypatch.setenv("ST_CONTROL_PLANE_DSN", "postgres://cp/db")

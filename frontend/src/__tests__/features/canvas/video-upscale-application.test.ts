@@ -47,7 +47,7 @@ function seedVideoNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('videoUpscale application（高清结果节点 + 提交编排）', () => {
+describe('videoUpscale application (upscale result node + submission orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneVideoUpscale.mockReset();
@@ -56,10 +56,10 @@ describe('videoUpscale application（高清结果节点 + 提交编排）', () =
     seedVideoNode();
   });
 
-  it('createVideoUpscaleResultNode：建 isUpscaleNode 视频节点并连边（继承封面/画幅）', () => {
+  it('createVideoUpscaleResultNode: builds an isUpscaleNode video node and wires the edge (inheriting cover/aspect)', () => {
     const upscaleId = createVideoUpscaleResultNode('vid-1', {
       sourceUrl: '/static/v.mp4',
-      displayName: '高清（2K）',
+      displayName: 'Upscale (2K)',
       resolution: '2k',
     });
 
@@ -67,7 +67,7 @@ describe('videoUpscale application（高清结果节点 + 提交编排）', () =
     const created = state.nodes.find((node) => node.id === upscaleId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.video);
     expect(created?.data).toMatchObject({
-      displayName: '高清（2K）',
+      displayName: 'Upscale (2K)',
       videoUrl: null,
       previewImageUrl: '/static/poster.png',
       aspectRatio: '9:16',
@@ -81,10 +81,10 @@ describe('videoUpscale application（高清结果节点 + 提交编排）', () =
     ).toBe(true);
   });
 
-  it('submitVideoUpscale：置 isGenerating → 提交（去 query 源 url + canvas/node 上下文）→ 回填 videoUrl', async () => {
+  it('submitVideoUpscale: sets isGenerating -> submits (query-stripped source url + canvas/node context) -> fills videoUrl back', async () => {
     const upscaleId = createVideoUpscaleResultNode('vid-1', {
       sourceUrl: '/static/v.mp4',
-      displayName: '高清（1080P）',
+      displayName: 'Upscale (1080P)',
       resolution: '1080p',
     }) as string;
     submitFreezoneVideoUpscale.mockResolvedValue(JOB_REF);
@@ -118,10 +118,10 @@ describe('videoUpscale application（高清结果节点 + 提交编排）', () =
     });
   });
 
-  it('submitVideoUpscale 失败 → 错误写回节点', async () => {
+  it('submitVideoUpscale failure -> the error is written back to the node', async () => {
     const upscaleId = createVideoUpscaleResultNode('vid-1', {
       sourceUrl: '/static/v.mp4',
-      displayName: '高清（4K）',
+      displayName: 'Upscale (4K)',
       resolution: '4k',
     }) as string;
     submitFreezoneVideoUpscale.mockRejectedValue(new Error('backend down'));

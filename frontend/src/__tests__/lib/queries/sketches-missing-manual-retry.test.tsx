@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// TCP-EU-B4b 第 2 节 —— `/sketches/generate-missing-manual` 的尽力投递半边。
+// TCP-EU-B4b section 2 - the best-effort delivery half of `/sketches/generate-missing-manual`.
 //
-// 这个端点**自愈**：后端每次都重算还缺哪些手动镜头段（CE
-// `src/novelvideo/api/routes/generation.py:4425` `missing_manual_shot_segments`），
-// 所以「只重投被拒的那部分」在这里的正确形状就是**逐字再调一次同一个请求**：
-// 没有 body、没有 scope、没有任何新参数。本文件把这条钉死，防止后来人往
-// 重投里塞「把被拒的 scope 回传」这种会双计费的自由发挥。
+// This endpoint is **self-healing**: the backend recomputes which manual shot segments are still missing every time (CE
+// `src/novelvideo/api/routes/generation.py:4425` `missing_manual_shot_segments`),
+// so the correct shape of "resubmit only the rejected part" here is **call the same request again verbatim**:
+// no body, no scope, no new parameters. This file pins that down, to stop later people from
+// sneaking "pass the rejected scope back" style improvisations that double-bill into the resubmit.
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -16,7 +16,7 @@ import { http, HttpResponse } from "msw";
 import ky from "ky";
 import type { ReactNode } from "react";
 
-// 同 `src/__tests__/lib/queries/render-plan.test.tsx:11-17` 的既有处方。
+// Same as the existing prescription at `src/__tests__/lib/queries/render-plan.test.tsx:11-17`.
 vi.mock("@/lib/api", () => ({
   api: ky.create({ baseUrl: "http://localhost:3000/" }),
   handleSessionExpired: vi.fn(),
@@ -67,8 +67,8 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-describe("useGenerateMissingManualSketches — 尽力投递后的重投", () => {
-  it("重投＝逐字同一个请求（无 body、无 scope、无新参数）", async () => {
+describe("useGenerateMissingManualSketches - resubmit after best-effort delivery", () => {
+  it("resubmit = the same request verbatim (no body, no scope, no new parameters)", async () => {
     const { result } = renderHook(() => useGenerateMissingManualSketches("demo", 1), {
       wrapper,
     });
@@ -85,7 +85,7 @@ describe("useGenerateMissingManualSketches — 尽力投递后的重投", () => 
     );
   });
 
-  it("响应里的 `rejected` 被类型承认，且不再被注释说成 diagnostics", async () => {
+  it("`rejected` in the response is acknowledged by the type, and no longer described as diagnostics in a comment", async () => {
     const { result } = renderHook(() => useGenerateMissingManualSketches("demo", 1), {
       wrapper,
     });
@@ -96,9 +96,9 @@ describe("useGenerateMissingManualSketches — 尽力投递后的重投", () => 
       { scope: "c", reason: "channel", limit: 12, active: 12 },
     ]);
 
-    // 形制先例：`src/__tests__/routes/beats-sketch-render-contract.test.ts` 就是
-    // 在源码字符串层面钉契约。这里钉的是「注释别再骗人」：`rejected` 要驱动重投，
-    // 不是只给人看的诊断字段。
+    // Precedent: `src/__tests__/routes/beats-sketch-render-contract.test.ts` pins the contract
+    // at the source-string level. What is pinned here is "comments must stop lying": `rejected` drives
+    // the resubmit, and is not a diagnostics field only for humans.
     const source = readFileSync("src/lib/queries/sketches.ts", "utf8");
     expect(source).toContain("rejected");
     expect(source).not.toContain("surfaced for diagnostics only");

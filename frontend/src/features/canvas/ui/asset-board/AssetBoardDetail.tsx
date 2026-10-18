@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useEffect, useRef, type ReactElement, type RefObject } from 'react';
 import { ChevronLeft, Copy, ImageIcon, Loader2, Music, Play, Trash2, X } from 'lucide-react';
 
@@ -23,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/stores/canvasStore';
 
 import { AssetBoardAudioGenForm } from './AssetBoardAudioGenForm';
-import { Chip, EMPTY_MEDIA_PLACEHOLDER_TEXT, estimatedGenerationDurationMs } from './AssetBoardCard';
+import { Chip, emptyMediaPlaceholderText, estimatedGenerationDurationMs } from './AssetBoardCard';
 import {
   AssetBoardImageDetailToolbar,
   AssetBoardVideoDetailToolbar,
@@ -40,25 +41,25 @@ import { AssetBoardPromptText } from './AssetBoardPromptText';
 import { AssetBoardReferenceThumbMenu } from './AssetBoardReferenceThumbMenu';
 
 interface AssetBoardDetailProps {
-  /** 故事板整体可见性：false 时冻结 store 订阅并暂停详情内的视频播放（保活挂载）。 */
+  /** Overall storyboard visibility: when false, freeze store subscriptions and pause video playback in the detail (kept-alive mount). */
   visible: boolean;
-  /** 当前详情的画布节点 id（原始节点直接从 store 取，不经 AssetBoardItem 扩字段）。 */
+  /** Canvas node id of the current detail (the raw node is read straight from the store, without extending AssetBoardItem with fields). */
   nodeId: string;
-  /** 对应的故事板条目（徽标/参考/媒体地址已由 buildAssetBoard 解析）；null → 节点已不存在。 */
+  /** The matching storyboard entry (badges/references/media addresses already resolved by buildAssetBoard); null -> the node no longer exists. */
   item: AssetBoardItem | null;
-  /** ← 返回：详情栈非空时弹栈回上一个详情，否则关闭（由 AssetBoardView 决定）。 */
+  /** Back: when the detail stack is non-empty pop to the previous detail, otherwise close (decided by AssetBoardView). */
   onBack: () => void;
-  /** × 关闭：清空详情栈回三栏。 */
+  /** Close: clear the detail stack and return to the three columns. */
   onClose: () => void;
-  /** 参考素材菜单「编辑」→ 跨栏 push 该节点详情（无详情可开时由父级退化为灯箱）。 */
+  /** Reference material menu "Edit" -> push that node's detail across columns (the parent falls back to a lightbox when there is no detail to open). */
   onOpenReference: (ref: AssetBoardReference) => void;
-  /** 参考素材菜单「定位」→ 把故事板列表滚到该被引用节点的卡片处并高亮（非画布定位）。 */
+  /** Reference material menu "Locate" -> scroll the storyboard list to the referenced node's card and highlight it (not canvas positioning). */
   onLocateReference: (nodeId: string) => void;
-  /** 点击大图 → 打开 ImageViewerModal 缩放查看。 */
+  /** Click the large image -> open ImageViewerModal for zoomed viewing. */
   onZoomImage: (url: string) => void;
   /**
-   * 「创建副本」建好新节点后把详情切过去。栏由这里给（副本与源同类型 → 同栏），
-   * 父级不查表——刚建的节点还没进上一帧的索引。
+   * After "Create copy" builds the new node, switch the detail to it. The column is given here (a copy has the same type as the source -> same column),
+   * the parent does not look it up - a just-created node is not in the previous frame's index yet.
    */
   onOpenNode: (nodeId: string, column: AssetBoardColumn) => void;
 }
@@ -74,7 +75,7 @@ function promptOf(node: CanvasNode): string | null {
   return null;
 }
 
-/** 图片高清结果节点：「编辑 → 高清」预建出来的 resultKind:'upscale' 占位/结果节点。 */
+/** Image upscale result node: the resultKind:'upscale' placeholder/result node pre-created by "Edit -> Upscale". */
 function isImageUpscaleNode(node: CanvasNode): boolean {
   return (
     isExportImageNode(node)
@@ -83,15 +84,15 @@ function isImageUpscaleNode(node: CanvasNode): boolean {
 }
 
 /**
- * 详情媒体区下方要挂哪种生成表单（null = 不挂，走只读展示）。
+ * Which generation form to mount below the detail media area (null = none, read-only display).
  *
- * 图片高清结果节点挂的是高清编辑器（模型/画质/放大倍数 + ↑），不是常规图片生成
- * 表单——它没有提示词，参数也持久化在自己的 node.data 上。
+ * An image upscale result node mounts the upscale editor (model/quality/scale + up button), not the regular image generation
+ * form - it has no prompt, and its params are persisted on its own node.data.
  *
- * 视频侧的排除项与工作流 VideoNode 的 `showVideoOpsPanel` 同口径：
- * - `videoCompose` 走剪辑合成，不是生成节点（isVideoNode 只认 video，天然不命中）；
- * - `referenceOnly`：资产库选进来的引用素材，本身不生成；
- * - `isUpscaleNode`：视频高清节点有自己的配置面板，不走常规生成表单。
+ * The video-side exclusions match the workflow VideoNode's `showVideoOpsPanel`:
+ * - `videoCompose` goes through edit/compose, not a generation node (isVideoNode only recognizes video, so it never matches);
+ * - `referenceOnly`: a reference asset pulled in from the asset library, which does not generate itself;
+ * - `isUpscaleNode`: a video upscale node has its own config panel and does not use the regular generation form.
  */
 function generationFormKindOf(node: CanvasNode): 'image' | 'video' | 'upscale' | null {
   if (isImageGenNode(node)) return 'image';
@@ -112,23 +113,23 @@ function ReferencesRow({
   onLocateReference: (nodeId: string) => void;
 }) {
   if (references.length === 0) return null;
-  // role=group + aria-label：给这一组一个可定位的容器，让「点参考缩略图」的
-  // 编辑/定位交互有明确落点。底部行现在只在「无生成表单」的只读详情里渲染
-  // （见 MediaBody 的 !showGenerationForm 守卫），不会再与生成表单的引用 chip
-  // 并存，因此也不会出现同名缩略图两处歧义的问题。
+  // role=group + aria-label: gives this group a locatable container so the "click reference thumbnail"
+  // edit/locate interaction has a clear landing point. The bottom row is now only rendered in read-only details with "no generation form"
+  // (see the !showGenerationForm guard in MediaBody), so it no longer coexists with the form's reference chips,
+  // and there is no ambiguity of same-named thumbnails in two places.
   return (
-    <div role="group" aria-label="参考素材" className="flex flex-col gap-1.5">
-      <span className="text-[12px] text-white/40">参考素材</span>
+    <div role="group" aria-label={i18n.t('canvas.assetBoard.detail.referenceAssets')} className="flex flex-col gap-1.5">
+    <span className="text-[12px] text-white/40">{i18n.t('canvas.assetBoard.detail.referenceAssets')}</span>
       <div className="flex flex-wrap gap-2">
         {references.map((ref) => {
           const refNodeId = ref.nodeId;
           return (
             <AssetBoardReferenceThumbMenu
-              // 自带参考图 nodeId=null（无上游节点），用 url 兜底 key；同一节点最多一张自带图，不会撞。
+              // A built-in reference image has nodeId=null (no upstream node), so use the url as a fallback key; one node has at most one built-in image, so no collision.
               key={refNodeId ?? `own:${ref.thumbnailUrl}`}
               reference={ref}
               onEdit={() => onOpenReference(ref)}
-              // 自带图无处可定位（无对应画布节点/卡片）→ 不给「定位」项，而不是给一个点了没反应的。
+              // A built-in image has nowhere to locate (no matching canvas node/card) -> no "Locate" item, rather than one that does nothing on click.
               onLocate={refNodeId ? () => onLocateReference(refNodeId) : null}
             />
           );
@@ -138,7 +139,7 @@ function ReferencesRow({
   );
 }
 
-/** 图片/视频详情正文：大媒体 + 胶囊徽标 + 提示词 + 参考素材。 */
+/** Image/video detail body: large media + pill badges + prompt + reference assets. */
 function MediaBody({
   item,
   node,
@@ -150,27 +151,27 @@ function MediaBody({
 }: {
   item: AssetBoardItem;
   node: CanvasNode;
-  /** 视频元素引用：故事板隐藏时由 AssetBoardDetail 强制 pause（保活挂载）。 */
+  /** Video element ref: forced to pause by AssetBoardDetail when the storyboard is hidden (kept-alive mount). */
   videoRef: RefObject<HTMLVideoElement | null>;
-  /** 媒体撑满剩余高度、生成条钉底、整块不滚（见 AssetBoardDetail 的 mediaFillsBody）。 */
+  /** The media fills the remaining height, the generation bar is pinned to the bottom, and the whole block does not scroll (see mediaFillsBody in AssetBoardDetail). */
   fill: boolean;
   onOpenReference: (ref: AssetBoardReference) => void;
   onLocateReference: (nodeId: string) => void;
   onZoomImage: (url: string) => void;
 }): ReactElement {
   const prompt = promptOf(node);
-  // 图片/视频生成节点在详情里挂完整生成表单（空节点直接出图出片 / 已有产物改参数
-  // 重生成）。表单自带提示词输入框，因此这类节点不再另渲染只读提示词块——同一段
-  // prompt 出现两次（一个能编辑一个不能）会让人以为是两份数据。其余节点类型维持
-  // 只读展示。
+  // Image/video generation nodes mount the full generation form in the detail (empty nodes generate directly / existing outputs get params changed and
+  // regenerated). The form has its own prompt input, so these nodes no longer render a separate read-only prompt block - the same
+  // prompt appearing twice (one editable, one not) would make people think there are two copies of data. Other node types stay
+  // read-only.
   const generationFormKind = generationFormKindOf(node);
   const showGenerationForm = generationFormKind !== null;
-  // 时长/分辨率徽标只给没有生成表单的节点（上传视频、成片等）——挂了表单的节点，
-  // 表单底部那行本来就写着「模型 · 16:9 · 720P · 4s」，正文再挂一个「4秒」是同一
-  // 信息的第二份，且位置在表单下方更像是漏掉的碎片（用户要求去掉）。
+  // The duration/resolution badges are only for nodes without a generation form (uploaded videos, finished videos etc.) - for nodes with the form mounted,
+  // the row at the bottom of the form already says "model · 16:9 · 720P · 4s"; repeating "4s" in the body is a second copy of the same
+  // information and, sitting below the form, looks like a stray fragment (user asked to remove it).
   const badges: ReactElement[] = [];
   if (!showGenerationForm) {
-    if (item.durationSec !== null) badges.push(<Chip key="dur">{`${item.durationSec}秒`}</Chip>);
+    if (item.durationSec !== null) badges.push(<Chip key="dur">{i18n.t('canvas.assetBoard.detail.durationSec', { count: item.durationSec })}</Chip>);
     if (item.widthPx !== null && item.heightPx !== null) {
       badges.push(<Chip key="dim">{`${item.widthPx} × ${item.heightPx}`}</Chip>);
     }
@@ -180,19 +181,19 @@ function MediaBody({
     <div
       className={cn(
         'mx-auto flex w-full max-w-3xl flex-col gap-4',
-        // fill：不再限宽居中——媒体与生成条一起铺满面板（用户要求输入框占满面板，
-        // 富余空间给内容区）；min-h-full 让内容超高时能被父级滚动兜住。
+        // fill: no longer width-limited and centered - the media and the generation bar fill the panel together (user wants the input box to fill the panel,
+        // extra space goes to the content area); min-h-full lets the parent scroll as a fallback when the content is too tall.
         fill && 'min-h-full max-w-none gap-3',
       )}
     >
-      {/* 生成中：已有媒体（重新生成原地保留旧 url）只叠遮罩不换占位——用户正看
-          的图不该在点「重新生成」的瞬间消失；仅首次生成（无 mediaUrl）用全占位。 */}
+      {/* Generating: existing media (regeneration keeps the old url in place) only gets an overlay, not a placeholder swap - the image the user is
+      looking at should not vanish the instant "Regenerate" is clicked; only the first generation (no mediaUrl) uses the full placeholder. */}
       <div
         className={cn(
           'flex items-center justify-center',
-          // 媒体区吃掉剩余高度；min-h 是下限，矮视口下不会被生成条压没
-          // （压到下限后由父级滚动兜底）。媒体自身按比例定宽、居中留边——生成条
-          // 铺满面板，内容框不铺满（用户要求）。
+          // The media area takes the remaining height; min-h is the lower bound so a short viewport does not squash it under the generation bar
+          // (after hitting the lower bound the parent scrolls as a fallback). The media itself is sized by ratio and centered with margins - the generation bar
+          // fills the panel while the content box does not (user request).
           fill && 'min-h-[180px] flex-1',
         )}
       >
@@ -205,8 +206,8 @@ function MediaBody({
                 poster={item.thumbnailUrl ?? undefined}
                 controls={!item.isGenerating}
                 playsInline
-                // fill：高度吃满这块区域，宽度由片子自身比例决定（w-auto + max-w-full
-                // → 内容框不铺满面板、左右自然留边）；非 fill：正文可滚，用 62vh 兜高。
+                // fill: the height fills this area, and the width follows the clip's own ratio (w-auto + max-w-full
+                // -> the content box does not fill the panel, leaving natural side margins); non-fill: the body scrolls, with 62vh as the height cap.
                 className={cn(
                   'rounded-lg bg-black object-contain',
                   fill ? 'h-full w-auto max-w-full' : 'max-h-[62vh] w-full',
@@ -221,8 +222,8 @@ function MediaBody({
           <div className={cn('relative', fill && 'h-full')}>
             <button
               type="button"
-              aria-label="放大查看"
-              title="放大查看"
+              aria-label={i18n.t('canvas.assetBoard.detail.zoomView')}
+              title={i18n.t('canvas.assetBoard.detail.zoomView')}
               disabled={item.isGenerating}
               onClick={() => onZoomImage(item.mediaUrl as string)}
               className={cn('cursor-zoom-in disabled:cursor-not-allowed', fill && 'block h-full')}
@@ -243,12 +244,12 @@ function MediaBody({
         )}
       </div>
 
-      {/* key={node.id}：切换详情项时强制换实例——表单持有 prompt 草稿 / 输入法合成态，
-          复用同位实例会把 A 的草稿带进 B。
-          与头部那条视频工具条（剪辑/高清/下载/全屏）分工明确：工具条只处理「已有片子」
-          的后期操作，挂在头部；生成表单负责「再出一条」，挂在媒体区下方，两者不重叠。 */}
-      {/* fill 布局下表单钉底不压缩：高度不够时先让上面的媒体区缩（shrink），
-          而不是把生成条挤变形。 */}
+      {/* key={node.id}: force a new instance when switching detail items - the form holds the prompt draft / IME composition state,
+      and reusing the same-position instance would carry A's draft into B.
+      Clear division of labor with the video toolbar in the header (edit/upscale/download/fullscreen): the toolbar only handles post-production on "an existing clip"
+      and sits in the header; the generation form handles "make another one" and sits below the media area, with no overlap. */}
+      {/* In the fill layout the form is pinned to the bottom and not compressed: when height is short, first shrink the media area above,
+      instead of squeezing the generation bar out of shape. */}
       {generationFormKind === 'image' && (
         <div className={cn(fill && 'shrink-0')}>
           <AssetBoardImageGenForm key={node.id} nodeId={node.id} />
@@ -259,9 +260,9 @@ function MediaBody({
           <AssetBoardVideoGenForm key={node.id} nodeId={node.id} />
         </div>
       )}
-      {/* 高清结果节点：下方挂高清编辑器——「编辑 → 高清」建好节点就把详情切到这里，
-          选完模型/画质/倍数按 ↑ 才提交（对标 liblib）。提交前媒体区是「待确认后生成」
-          空态，不拿待放大的源图充数（见 isPendingUpscaleNode）。 */}
+      {/* Upscale result node: the upscale editor is mounted below - after "Edit -> Upscale" creates the node the detail switches here,
+      and it only submits when the model/quality/scale is chosen and the up button is pressed (matches liblib). Before submit the media area is the "generate after confirmation"
+      empty state, not filled with the source image to be enlarged (see isPendingUpscaleNode). */}
       {generationFormKind === 'upscale' && (
         <div className={cn(fill && 'shrink-0')}>
           <AssetBoardUpscaleForm key={node.id} nodeId={node.id} />
@@ -272,9 +273,9 @@ function MediaBody({
 
       {prompt && !showGenerationForm && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] text-white/40">提示词</span>
-          {/* @图片N / @视频N / @音频N 渲染成带缩略图的只读 chip（hover 出大图），
-              编号复用工作流那份映射；解析不到的引用原样留作纯文本。 */}
+          <span className="text-[12px] text-white/40">{i18n.t('canvas.assetBoard.detail.prompt')}</span>
+          {/* @image1 / @video1 / @audio1 render as read-only chips with thumbnails (large image on hover),
+          numbering reuses the workflow's mapping; references that cannot be resolved stay as plain text. */}
           <AssetBoardPromptText
             node={node}
             prompt={prompt}
@@ -290,12 +291,12 @@ function MediaBody({
         </div>
       )}
 
-      {/* 底部「参考素材」只读行只在无生成表单的详情里渲染（upload / imageEdit /
-          exportImage / videoCompose 等只读节点——它们没有表单 chip 承载引用）。
-          imageGen / video 生成节点的引用已由表单 chips 呈现：上游连线引用 → 表单
-          chip；imageGen 自带 referenceImageUrl → 宿主 AssetBoardImageGenForm 里补的
-          自带参考 chip。这里再渲一遍会与表单 chip 重复（image-cache/64、65 的重复
-          即此），故用 !showGenerationForm 守卫收掉。 */}
+      {/* The bottom "Reference assets" read-only row is only rendered in details without a generation form (read-only nodes such as upload / imageEdit /
+      exportImage / videoCompose - they have no form chips to carry references).
+      References of imageGen / video generation nodes are already shown by the form chips: upstream edge references -> form
+      chips; imageGen's own referenceImageUrl -> the built-in reference chip added in the host AssetBoardImageGenForm.
+      Rendering them again here would duplicate the form chips (image-cache/64, 65 duplicates were exactly this), so the
+      !showGenerationForm guard removes it. */}
       {!showGenerationForm && (
         <ReferencesRow
           references={item.references}
@@ -308,13 +309,13 @@ function MediaBody({
 }
 
 /**
- * 音频详情正文：中间大波形播放器（AudioWaveformPlayer）+ 下方音频生成表单
- * （AssetBoardAudioGenForm）。空音频节点（无 audioUrl）中间显示占位、
- * 下方照旧挂表单，可从零生成，对齐图片/视频空节点体验。
+ * Audio detail body: a large waveform player (AudioWaveformPlayer) in the middle + the audio generation form
+ * (AssetBoardAudioGenForm) below. An empty audio node (no audioUrl) shows a placeholder in the middle
+ * and still mounts the form below, so generation from scratch is possible, matching the image/video empty node experience.
  *
- * 波形不走 GeneratingOverlay + 已有 url 保留的那套（图片/视频「重新生成原地保留旧
- * 图」）：音频重生成拿到新 url 前旧音频仍能播，遮罩挡住播放反而更差；生成中反馈由
- * 表单自身的 spinner 承载。
+ * The waveform does not use the GeneratingOverlay + keep-existing-url scheme (image/video "regenerate keeps the old
+ * image in place"): when regenerating audio the old audio can still play until the new url arrives, and an overlay blocking playback would be worse; the in-progress feedback is
+ * carried by the form's own spinner.
  */
 function AudioBody({
   item,
@@ -324,53 +325,53 @@ function AudioBody({
 }: {
   item: AssetBoardItem;
   node: CanvasNode;
-  /** 故事板整体可见性：false 时命令波形播放器暂停（保活隐藏，与视频同款处理）。 */
+  /** Overall storyboard visibility: when false, tell the waveform player to pause (kept-alive hidden, handled the same as video). */
   visible: boolean;
-  /** 内容区撑满剩余高度、生成条钉底铺满、整块不滚（与图片/视频详情同款）。 */
+  /** The content area fills the remaining height, the generation bar is pinned to the bottom and fills the width, and the whole block does not scroll (same as image/video detail). */
   fill: boolean;
 }): ReactElement {
   const data = node.data as AudioNodeData;
   const audioUrl = item.mediaUrl;
   const durationMs =
     typeof data.durationMs === 'number' && data.durationMs > 0 ? data.durationMs : null;
-  // 内容框：撑满剩余高度但宽度只占 3/4 居中（与视频详情一致——生成条铺满面板，
-  // 内容框不铺满）。非 fill 时退回原来的固定 200px。
+  // Content box: fills the remaining height but only takes 3/4 of the width, centered (consistent with video detail - the generation bar fills the panel,
+  // the content box does not). When not fill, fall back to the original fixed 200px.
   const mediaBoxClass = cn(
     'mx-auto flex w-3/4 items-center justify-center overflow-hidden rounded-lg bg-[#141414]',
     fill ? 'min-h-[180px] flex-1' : 'h-[200px]',
   );
 
   return (
-    // 播放器/占位在上、生成表单在下（与图片/视频详情同款「媒体 + 生成条」结构）。
-    // fill：不再限宽居中，表单铺满面板；min-h-full 让内容超高时被父级滚动兜住。
+    // Player/placeholder on top, generation form below (the same "media + generation bar" structure as image/video detail).
+    // fill: no longer width-limited and centered, the form fills the panel; min-h-full lets the parent scroll as a fallback when the content is too tall.
     <div className={cn('mx-auto flex w-full max-w-5xl flex-col gap-4', fill && 'min-h-full max-w-none gap-3')}>
       {audioUrl ? (
         <div className={mediaBoxClass}>
           <AudioWaveformPlayer
-            // key={node.id}：切换详情项时强制换实例——播放器自持 <audio> 与 isPlaying
-            // 状态，A→B 复用同实例时换 src 不触发 pause 事件，会让 isPlaying 卡在 true
-            // （暂停图标点了反而开始播 B）。与本文件其它子组件同款隔离。
+            // key={node.id}: force a new instance when switching detail items - the player owns the <audio> and isPlaying
+            // state; reusing the instance from A to B only changes src and does not fire a pause event, leaving isPlaying stuck at true
+            // (clicking the pause icon would start playing B). Same isolation as the other subcomponents in this file.
             key={node.id}
             src={audioUrl}
             durationMs={durationMs}
-            // 保活隐藏（点「在画布中定位」切回工作流）时停掉音频，与视频侧 videoRef
-            // 强制 pause 同款——播放器自持 <audio>，隐藏后无法再手动停。
+            // When hidden by the kept-alive mount (clicking "Locate on canvas" switches back to the workflow) stop the audio, same as the video side's videoRef
+            // forced pause - the player owns the <audio> and cannot be stopped manually once hidden.
             paused={!visible}
-            // 刻意不把解出的时长回写节点：updateNodeData 会推撤销快照并标脏，而「打开
-            // 详情」不是一次编辑——回写会污染用户的撤销栈、触发无意义的自动保存。
-            // chip 侧要显示时长时自己探测（AssetBoardAudioChip 的 probedSec），同口径。
+            // Deliberately do not write the decoded duration back to the node: updateNodeData pushes an undo snapshot and marks dirty, while "opening
+            // the detail" is not an edit - writing back would pollute the user's undo stack and trigger a pointless autosave.
+            // When the chip side needs to show a duration it probes by itself (probedSec of AssetBoardAudioChip), the same convention.
           />
         </div>
       ) : (
         <AudioPlaceholder item={item} className={mediaBoxClass} />
       )}
 
-      {/* 生成表单常挂（与图片/视频详情一致）：空节点从零生成；已有音频则可编辑合成文本、
-          换声线/音色、改音乐设置后「重新生成」（按钮语义见 AssetBoardAudioGenForm 的
-          hasAudio 分支）。对齐 liblib——音频详情底部同样是一条可编辑的生成条。
-          fill 时钉底不压缩：高度不够先让上面的内容区缩。
-          key={node.id}：切换详情项时强制换实例——表单持有草稿/输入法合成态，复用同位
-          实例会把 A 的草稿带进 B。防重复提交登记表是模块级的，跨重挂存活。 */}
+      {/* The generation form is always mounted (consistent with image/video detail): an empty node generates from scratch; existing audio can edit the synthesized text,
+      switch the voice/timbre, change music settings and "Regenerate" (button semantics see the
+      hasAudio branch of AssetBoardAudioGenForm). Matches liblib - the bottom of audio detail is also an editable generation bar.
+      When fill, pinned to the bottom and not compressed: when height is short shrink the content area above first.
+      key={node.id}: force a new instance when switching detail items - the form holds drafts/IME composition state, and reusing the same-position
+      instance would carry A's draft into B. The duplicate-submit registry is module-level and survives remounts. */}
       <div className={cn(fill && 'shrink-0')}>
         <AssetBoardAudioGenForm key={node.id} nodeId={node.id} data={data} />
       </div>
@@ -379,19 +380,19 @@ function AudioBody({
 }
 
 /**
- * 生成中占位的百分比文案：与卡片同款「生成中 X%...」（时间估算，非后端真实
- * 进度，算法/预估时长表见 useEstimatedProgress / estimatedGenerationDurationMs）。
- * 拆成独立子组件，让 120ms 轮询定时器只在真正生成中的占位上才挂载。
+ * The percentage text of the generating placeholder: the same "Generating X%..." as the card (a time estimate, not the backend's real
+ * progress; see useEstimatedProgress / estimatedGenerationDurationMs for the algorithm/estimated duration table).
+ * Split into its own subcomponent so the 120ms polling timer only mounts on placeholders that are really generating.
  */
 function GeneratingPlaceholderLabel({ item }: { item: AssetBoardItem }) {
   const percent = useEstimatedProgress(item.generationStartedAt, estimatedGenerationDurationMs(item.column));
-  return <span className="text-[12px] text-muted-foreground">{`生成中 ${percent}%...`}</span>;
+  return <span className="text-[12px] text-muted-foreground">{i18n.t('canvas.assetBoard.detail.generatingPercent', { percent })}</span>;
 }
 
 function AudioPlaceholder({ item, className }: { item: AssetBoardItem; className: string }) {
   return (
-    // 尺寸与播放器框完全同款（见 AudioBody 的 mediaBoxClass）：内容区不跟着铺满
-    // 面板的生成条一起拉宽。
+    // Same size as the player box (see mediaBoxClass of AudioBody): the content area does not stretch along with the generation bar
+    // that fills the panel.
     <div className={cn(className, 'flex-col gap-2')}>
       {item.isGenerating ? (
         <>
@@ -401,7 +402,7 @@ function AudioPlaceholder({ item, className }: { item: AssetBoardItem; className
       ) : (
         <>
           <Music className="h-8 w-8 text-muted-foreground" />
-          <span className="text-[12px] text-muted-foreground">{EMPTY_MEDIA_PLACEHOLDER_TEXT}</span>
+          <span className="text-[12px] text-muted-foreground">{emptyMediaPlaceholderText()}</span>
         </>
       )}
     </div>
@@ -415,17 +416,17 @@ function MediaPlaceholder({
 }: {
   kind: 'image' | 'video';
   item: AssetBoardItem;
-  /** 撑满父级剩余高度（详情挂了生成表单时）；否则按 16:9 占位。 */
+  /** Fill the parent's remaining height (when the detail has a generation form mounted); otherwise a 16:9 placeholder. */
   fill?: boolean;
 }) {
   const Icon = kind === 'video' ? Play : ImageIcon;
   return (
-    // 空节点（还没出图/出片）媒体区用纯黑底，与已有媒体的黑背景一致、留白更干净。
+    // An empty node (no image/video yet) uses a pure black background for the media area, consistent with the black background of existing media, with cleaner margins.
     <div
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-lg bg-black',
-        // fill：高度吃满、按 16:9 定宽（空节点没有真实媒体比例），左右自然留边；
-        // 否则按容器宽度走 16:9。
+        // fill: the height fills, width fixed at 16:9 (an empty node has no real media ratio), with natural side margins;
+        // otherwise 16:9 by container width.
         fill ? 'aspect-video h-full max-w-full' : 'aspect-video w-full',
       )}
     >
@@ -437,21 +438,21 @@ function MediaPlaceholder({
       ) : (
         <>
           <Icon className="h-8 w-8 text-muted-foreground" />
-          {/* 空态明说「还没出图/出片、确认参数后才生成」（对齐 liblib 空节点），
-              而不是一个没有说明的灰图标；下方的生成表单就是那个确认入口。 */}
-          <span className="text-[12px] text-muted-foreground">{EMPTY_MEDIA_PLACEHOLDER_TEXT}</span>
+          {/* The empty state says plainly "no image/video yet, generates after you confirm the params" (matches liblib empty nodes),
+          instead of an unexplained gray icon; the generation form below is that confirmation entry. */}
+          <span className="text-[12px] text-muted-foreground">{emptyMediaPlaceholderText()}</span>
         </>
       )}
     </div>
   );
 }
 
-/** 已有媒体上的生成中遮罩：半透明 + 居中 spinner，同时挡掉下层交互（放大/播放器）。 */
+/** Generating overlay on existing media: semi-transparent + centered spinner, also blocking interaction beneath (zoom/player). */
 function GeneratingOverlay() {
   return (
     <span
       role="status"
-      aria-label="生成中"
+      aria-label={i18n.t('canvas.assetBoard.detail.generating')}
       className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/40"
     >
       <Loader2 className="h-6 w-6 animate-spin text-white" />
@@ -460,9 +461,9 @@ function GeneratingOverlay() {
 }
 
 /**
- * 故事板主从布局的右侧详情面板（只读展示，对齐 liblib 参考图）。
- * 头部 ←/标题/×；正文按被点栏分派：文本 → Markdown 阅读页/行表（左上对齐），
- * 图片/视频 → 大媒体 + 徽标 + 提示词 + 参考素材。
+ * The right-hand detail panel of the storyboard master-detail layout (read-only display, matches the liblib reference image).
+ * Header back/title/close; the body dispatches by the clicked column: text -> Markdown reading page/row table (top-left aligned),
+ * image/video -> large media + badges + prompt + reference assets.
  */
 export function AssetBoardDetail({
   visible,
@@ -475,21 +476,21 @@ export function AssetBoardDetail({
   onZoomImage,
   onOpenNode,
 }: AssetBoardDetailProps): ReactElement {
-  // 直接从 store 取原始节点（详情要渲染完整内容，AssetBoardItem 只有卡片摘要字段）。
-  // 隐藏时 selector 恒返回 undefined（Object.is 相等）→ 冻结重渲染，与 AssetBoardView
-  // 的 liveNodes 冻结模式一致；undefined=冻结、null=可见但节点已被删除。
+  // Read the raw node straight from the store (the detail renders the full content, while AssetBoardItem only has card summary fields).
+  // While hidden the selector always returns undefined (Object.is equal) -> re-rendering frozen, consistent with AssetBoardView's
+  // liveNodes frozen mode; undefined = frozen, null = visible but the node was deleted.
   const liveNode = useCanvasStore((state) =>
     visible ? (state.nodes.find((candidate) => candidate.id === nodeId) ?? null) : undefined,
   );
-  // 渲染期直接写 ref：幂等的最近非冻结缓存（同 AssetBoardView dataRef 的说明）。
+  // Write the ref during render: an idempotent latest non-frozen cache (see the note on AssetBoardView dataRef).
   const nodeRef = useRef<CanvasNode | null>(null);
   if (liveNode !== undefined && nodeRef.current !== liveNode) {
     nodeRef.current = liveNode;
   }
   const node = nodeRef.current;
 
-  // 保活挂载下故事板被 visibility 隐藏后，<video controls> 仍会继续播放出声
-  // （点卡片/音频条的「在画布中定位」切回工作流即触发）→ 隐藏瞬间强制暂停。
+  // With the kept-alive mount, after the storyboard is hidden by visibility, <video controls> would still keep playing sound
+  // (triggered by clicking "Locate on canvas" on a card/audio bar to switch back to the workflow) -> force pause the instant it is hidden.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (!visible) {
@@ -497,20 +498,20 @@ export function AssetBoardDetail({
     }
   }, [visible]);
 
-  // 头部「...」菜单要用的节点级动作（关键元素标记 / 创建副本 / 删除）。
+  // Node-level actions for the header "..." menu (key element mark / create copy / delete).
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const duplicateNodeAsSibling = useCanvasStore((state) => state.duplicateNodeAsSibling);
   const deleteNode = useCanvasStore((state) => state.deleteNode);
 
   const missing = !item || !node;
-  // 文本详情标题走正文里的大标题（对齐 liblib 阅读页），头部只留 ←/×。
+  // Text detail titles use the large heading in the body (matches the liblib reading page); the header keeps only back/close.
   const showHeaderTitle = !missing && item.column !== 'text';
-  // 「媒体撑满 + 生成条钉底」布局：挂了生成表单的图片/视频详情不滚动——媒体区吃掉
-  // 剩余高度（按比例缩放，不裁切），表单固定在下方。原来整块正文是滚动的，媒体用
-  // max-h-62vh，加上表单就超过一屏：用户想去下面写提示词时得往下滚，视频区被推出
-  // 视野一截（用户反馈）。对标 liblib 的详情页同样是「上图下生成条、整页不滚」。
-  // 音频详情的生成表单是常挂的（空节点从零合成、已有音频改参数重生成），所以整栏
-  // 一律走这套布局，与图片/视频详情同一个观感（用户要求「风格跟视频一样」）。
+  // "Media fills + generation bar pinned to the bottom" layout: image/video details with a generation form mounted do not scroll - the media area takes the
+  // remaining height (scaled by ratio, not cropped) and the form is fixed below. The whole body used to scroll with the media at
+  // max-h-62vh, and adding the form exceeded one screen: users who wanted to write a prompt below had to scroll down, pushing part of the video area out of
+  // view (user feedback). liblib's detail page is likewise "image on top, generation bar below, whole page not scrolling".
+  // The audio detail's generation form is always mounted (empty node synthesizes from scratch, existing audio changes params and regenerates), so the whole column
+  // always uses this layout, with the same look as image/video detail (user asked for "same style as video").
   const mediaFillsBody =
     !missing &&
     (item.column === 'audio' ||
@@ -518,23 +519,23 @@ export function AssetBoardDetail({
 
   return (
     <section
-      aria-label="资产详情"
-      // group/detail：头部那条视频工具条「hover 到详情才浮现」的悬停源。**具名** group
-      // 是必须的——详情子树里已经有一堆匿名 group-hover 的消费者（图片操作 chip、音频
-      // 条、卡片……），挂匿名 group 会让它们在鼠标进详情任意位置时一起误触发。
+      aria-label={i18n.t('canvas.assetBoard.detail.assetDetail')}
+      // group/detail: the hover source for the header's video toolbar "appears when hovering the detail". A **named** group
+      // is required - the detail subtree already has many anonymous group-hover consumers (image action chips, audio
+      // bar, cards...), and an anonymous group would trigger them all by mistake whenever the mouse enters anywhere in the detail.
       className="group/detail flex min-h-0 min-w-0 flex-1 flex-col rounded-lg rounded-b-none border border-white/5 bg-[#262626]"
     >
       <header className="flex shrink-0 items-center gap-1.5 px-3 py-2.5">
-        <button type="button" aria-label="返回" title="返回" onClick={onBack} className={HEADER_ICON_BUTTON_CLASS}>
+        <button type="button" aria-label={i18n.t('canvas.assetBoard.detail.back')} title={i18n.t('canvas.assetBoard.detail.back')} onClick={onBack} className={HEADER_ICON_BUTTON_CLASS}>
           <ChevronLeft className="h-4 w-4" />
         </button>
         {showHeaderTitle && (
           <h3 className="min-w-0 truncate text-sm font-medium text-foreground">{item.title}</h3>
         )}
-        {/* 视频那四颗操作（剪辑/高清/下载/全屏）落在头部标题与右侧图标之间这段空白里，
-            而不是压在画面上——浮在播放器上方会把视频挡掉一截（用户反馈）。
-            key={node.id}：左列切换详情项时强制换实例——工具条持有本地 state（高清参数、
-            busy 态），复用同位实例会把 A 的状态带到 B。 */}
+        {/* The four video actions (edit/upscale/download/fullscreen) sit in the blank between the header title and the right icons,
+        rather than over the picture - floating above the player would block part of the video (user feedback).
+        key={node.id}: force a new instance when the left column switches detail items - the toolbar holds local state (upscale params,
+        busy state), and reusing the same-position instance would carry A's state into B. */}
         {!missing && item.column === 'video' && hasVideoDetailActions(node) ? (
           <div className="flex min-w-0 flex-1 justify-center px-2">
             <AssetBoardVideoDetailToolbar key={node.id} node={node} playerRef={videoRef} />
@@ -542,35 +543,35 @@ export function AssetBoardDetail({
         ) : (
           <div className="flex-1" />
         )}
-        {/* 「添加到对话」：与卡片右上角、画布节点同一个入口（只发事件，选中 + 展开
-            聊天由 FreezoneShell 统一落地）。挂头部而不是下面那条工具条——四栏一视
-            同仁，且引用一个空节点也成立，不该被「有没有出图出片」的门槛挡掉。 */}
+        {/* "Add to chat": the same entry as the card's top-right and the canvas node (only emits an event; selecting + expanding the
+        chat is handled by FreezoneShell). Mounted in the header rather than the toolbar below - all four columns are treated alike,
+        and referencing an empty node is valid too, so it should not be blocked by the "has an image/video yet" threshold. */}
         {!missing && (
-          // side=bottom：按钮贴着详情面板顶边，提示朝上会被面板裁掉。
+          // side=bottom: the button hugs the top edge of the detail panel, and a tooltip pointing up would be clipped by the panel.
           <AddNodeToChatIconButton
             nodeId={node.id}
             className={HEADER_ICON_BUTTON_CLASS}
             side="bottom"
           />
         )}
-        {/* 节点级操作（对标 liblib 详情右上角的「...」）：设置关键元素 / 创建副本 /
-            删除。四栏（文本/图片/视频/音频）一视同仁——这三项与「有没有出图出片」
-            无关，所以挂在头部而不是那条要素材才成立的工具条上，空节点同样点得到。
-            图片侧的「设置关键元素」已从工具条那颗「...」里收掉，统一走这里。 */}
+        {/* Node-level actions (matches the "..." at the top-right of liblib detail): set key element / create copy /
+        delete. All four columns (text/image/video/audio) are treated alike - these three have nothing to do with "whether there is an image/video yet",
+        so they are mounted in the header rather than on the toolbar that needs materials to exist, and are clickable on empty nodes too.
+        The image side's "Set key element" was removed from the toolbar's "..." and now goes through here uniformly. */}
         {!missing && (
           <DetailMoreMenu
             key={node.id}
             triggerClassName={HEADER_ICON_BUTTON_CLASS}
-            triggerLabel="节点操作"
+            triggerLabel={i18n.t('canvas.assetBoard.detail.nodeActions')}
             entries={[
               keyElementMenuEntry(node, updateNodeData),
               {
                 kind: 'action',
                 key: 'duplicate',
                 icon: Copy,
-                label: '创建副本',
-                // 复制到源节点下方一格并克隆上游连线（与工作流多选工具条同一个 store
-                // 动作）；建好直接把详情切到副本，否则用户看不出发生了什么。
+                label: i18n.t('canvas.assetBoard.detail.duplicate'),
+                // Copy one slot below the source node and clone the upstream edges (the same store action
+                // as the workflow multi-select toolbar); after creating, switch the detail to the copy, otherwise users cannot tell what happened.
                 onSelect: () => {
                   const cloneId = duplicateNodeAsSibling(node.id, 1);
                   if (cloneId) onOpenNode(cloneId, item.column);
@@ -580,8 +581,8 @@ export function AssetBoardDetail({
                 kind: 'action',
                 key: 'delete',
                 icon: Trash2,
-                label: '删除',
-                // 节点没了详情也就没了对象——先关详情再删，避免详情闪一下「节点已不存在」。
+                label: i18n.t('canvas.assetBoard.detail.delete'),
+                // Once the node is gone the detail has no object - close the detail first and then delete, avoiding the detail flashing "node no longer exists".
                 onSelect: () => {
                   onClose();
                   deleteNode(node.id);
@@ -592,16 +593,16 @@ export function AssetBoardDetail({
         )}
         <button
           type="button"
-          aria-label="关闭详情"
-          title="关闭详情"
+          aria-label={i18n.t('canvas.assetBoard.detail.closeDetail')}
+          title={i18n.t('canvas.assetBoard.detail.closeDetail')}
           onClick={onClose}
           className={HEADER_ICON_BUTTON_CLASS}
         >
           <X className="h-4 w-4" />
         </button>
       </header>
-      {/* 失败横条：节点带失败原因且不在重试中时，头部下方（工具条上方）常驻展示——
-          此前失败原因只写在节点 data 上，切到故事板就看不到（质量审查 I2）。 */}
+      {/* Failure banner: when a node has a failure reason and is not retrying, it is shown persistently below the header (above the toolbar) -
+      previously the failure reason was only written on the node data and could not be seen from the storyboard (quality review I2). */}
       {!missing && !item.isGenerating && item.generationError && (
         <div className="shrink-0 px-4 pb-2">
           <div className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-[12px] text-red-400">
@@ -609,18 +610,18 @@ export function AssetBoardDetail({
           </div>
         </div>
       )}
-      {/* 操作工具条：详情头部下方一条操作链（对标 liblib）；文本详情的操作在正文
-          分派组件里（只读阅读页，见 AssetBoardDetailTextSection）。
-          key={node.id}：左列切换详情项时强制换实例——工具条/编辑器持有本地
-          state（编辑草稿、busy 态），复用同位实例会把 A 的草稿/spinner 带到 B
-          （最坏路径：blur 把 A 草稿写进 B 的 content）。代价是同节点切走再切回
-          丢 busy 展示（在途任务仍正确回写节点），第二批考虑在途态落 node data。 */}
-      {/* 空内容节点（还没出图/出片）整条工具条不渲染——上面的操作全都要素材才
-          成立，一排灰按钮只是噪音（用户要求）。判定见 has*DetailActions。 */}
+      {/* Action toolbar: an action chain below the detail header (matches liblib); text detail actions live in the body
+      dispatch component (read-only reading page, see AssetBoardDetailTextSection).
+      key={node.id}: force a new instance when the left column switches detail items - the toolbar/editor holds local
+      state (edit draft, busy state), and reusing the same-position instance would carry A's draft/spinner into B
+      (worst path: blur writes A's draft into B's content). The cost is that switching away from the same node and back
+      loses the busy display (the in-flight task still writes back to the node correctly); a second batch will consider storing the in-flight state in node data. */}
+      {/* An empty-content node (no image/video yet) renders no toolbar at all - every action above needs materials to exist,
+      and a row of gray buttons is just noise (user request). See has*DetailActions for the check. */}
       {!missing && item.column === 'image' && hasImageDetailActions(node) && (
         <div className="shrink-0 px-4 pb-2">
-          {/* onOpenNode：宫格模板点完会建一个空的功能节点，详情要跟着切过去
-              （同「创建副本」的处理）——新节点一定落在图片栏。 */}
+          {/* onOpenNode: after a grid template click an empty feature node is created, and the detail must switch to it
+          (same handling as "Create copy") - the new node always lands in the image column. */}
           <AssetBoardImageDetailToolbar
             key={node.id}
             node={node}
@@ -628,23 +629,23 @@ export function AssetBoardDetail({
           />
         </div>
       )}
-      {/* 视频没有这条槽位：它那四颗操作（剪辑/高清/下载/全屏）已改成浮在播放器
-          上方、hover 才出现的胶囊，挂在正文的媒体区里（见 MediaBody）。 */}
+      {/* Video has no such slot: its four actions (edit/upscale/download/fullscreen) became a pill floating above the player
+      that only appears on hover, mounted in the body's media area (see MediaBody). */}
       <div
         className={cn(
           'min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-2',
-          // 媒体撑满布局：正文变 flex 列，媒体区吃掉剩余高度、生成条钉底。仍留
-          // overflow-y-auto 作兜底——矮视口下媒体缩到下限后总高会超出，这时宁可
-          // 滚动也不能把生成条裁掉（overflow-hidden 会让提交按钮点不到）。
+          // Media-fills layout: the body becomes a flex column, the media area takes the remaining height, and the generation bar is pinned to the bottom. overflow-y-auto stays
+          // as a fallback - on a short viewport the total height exceeds after the media shrinks to its lower bound, and then scrolling is preferred
+          // to clipping the generation bar (overflow-hidden would make the submit button unclickable).
           mediaFillsBody && 'flex flex-col',
         )}
       >
         {missing ? (
-          <p className="py-16 text-center text-[13px] text-muted-foreground">节点已不存在</p>
+          <p className="py-16 text-center text-[13px] text-muted-foreground">{i18n.t('canvas.assetBoard.detail.nodeGone')}</p>
         ) : item.column === 'text' ? (
-          // 左对齐、顶起：正文从详情区左上角开始（对齐 liblib 阅读页），不再水平居中。
-          // 正文占面板 90% 宽（原来卡在 max-w-3xl=768px，面板一宽就只用了半边，
-          // 一行没几个字就折行）。留 10% 是不让文字直接贴到面板边缘。
+          // Left-aligned, top-aligned: the body starts at the top-left of the detail area (matches the liblib reading page), no longer horizontally centered.
+          // The body takes 90% of the panel width (it used to be capped at max-w-3xl=768px, using only half of a wide panel,
+          // with few characters per line before wrapping). The remaining 10% keeps text from touching the panel edge directly.
           <div className="flex w-[90%] flex-col gap-4">
             <AssetBoardDetailTextSection key={node.id} node={node} title={item.title} />
           </div>

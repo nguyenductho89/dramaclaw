@@ -47,17 +47,16 @@ afterAll(() => server.close());
 
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
-import { zhTranslation } from "./helpers/i18n-fixtures";
+import { enTranslation } from "./helpers/i18n-fixtures";
 
-// 组件单测断言的是用户看见的中文。默认 i18next 实例不初始化的话 t() 只回显 key，
-// 凡是搬进 i18n 的文案在测试里都会变成 "node.audioNode.empty" 这种，断言全挂。
-// 这里直接拿线上那份 zh/translation.json 初始化：断言照旧写中文，key 打错了也会
-// 当场露馅（渲染出 key 而不是文案）。自带 I18nextProvider 的测试用的是各自的
-// createInstance()，不受这里影响。
+// Component tests assert the English text users see. Without an initialised default
+// i18next instance t() only echoes the key. Initialise from the shipped
+// en/translation.json so a mistyped key shows up as a raw key in the render.
+// Tests that bring their own I18nextProvider use their own createInstance().
 void i18next.use(initReactI18next).init({
-  lng: "zh",
-  fallbackLng: "zh",
-  resources: { zh: { translation: zhTranslation } },
+  lng: "en",
+  fallbackLng: "en",
+  resources: { en: { translation: enTranslation } },
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
 });

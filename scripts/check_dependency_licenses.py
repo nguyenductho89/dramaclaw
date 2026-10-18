@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
-"""依赖许可证准入门（DEP-11，硬零）。
+"""Dependency license admission gate (DEP-11, hard zero).
 
-本仓以 Elastic-2.0 闭源分发，依赖树中不得引入强 copyleft 许可证
-（GPL / AGPL / SSPL——传染范围会波及整仓分发）。弱 copyleft（LGPL / MPL）
-以「动态导入、不静态链接、不改源」方式使用，允许并列出提示。
+This repo is distributed under Elastic-2.0 (closed distribution), so the dependency tree must not
+introduce strong copyleft licenses (GPL / AGPL / SSPL -- their reach would extend to the whole
+distribution). Weak copyleft (LGPL / MPL) used via "dynamic import, no static linking, no source
+modification" is allowed and listed as a notice.
 
-扫描对象是**当前环境已安装的全部发行版**（importlib.metadata）：CI 先
-`uv sync --frozen` 把环境装成与 uv.lock 完全一致，故等价于审计锁文件全树，
-不依赖 GitHub Dependency Graph 的清单索引能力。与之互补的 PR 增量审查见
-.github/workflows/dependency-review.yml（GitHub dependency-review-action）。
+The scan target is **all distributions installed in the current environment** (importlib.metadata):
+CI first runs `uv sync --frozen` to make the environment match uv.lock exactly, so this is
+equivalent to auditing the whole lockfile tree, without depending on GitHub Dependency Graph's
+manifest indexing. The complementary PR-incremental review is in
+.github/workflows/dependency-review.yml (GitHub dependency-review-action).
 
-许可证判定顺序：License-Expression（PEP 639）→ License 分类器 → License 字段。
-三者皆缺 → UNKNOWN，同样阻断（防「无元数据」成为绕过口），除非列入 EXEMPT。
+License resolution order: License-Expression (PEP 639) -> License classifiers -> License field.
+If all three are missing -> UNKNOWN, which also blocks (so "no metadata" cannot become a bypass),
+unless listed in EXEMPT.
 
-豁免：EXEMPT 按「发行版名 → 理由」收口在本文件（与 pyproject 冻结 ruff 规则
-同一哲学：改豁免必须走 PR）。豁免包若已不在依赖树中 → 视为腐烂豁免，同样失败。
+Exemptions: EXEMPT is consolidated in this file as "distribution name -> reason" (the same
+philosophy as the frozen ruff rules in pyproject: changing an exemption must go through a PR).
+An exempt package that is no longer in the dependency tree counts as a rotten exemption and also fails.
 
-用法：
+Usage:
     uv run python scripts/check_dependency_licenses.py
 
-命中强 copyleft / 无豁免的 UNKNOWN / 腐烂豁免 → 退出码 1。
+Strong copyleft / UNKNOWN without exemption / rotten exemption -> exit code 1.
 """
 from __future__ import annotations
 
@@ -27,15 +31,16 @@ import importlib.metadata as importlib_metadata
 import re
 import sys
 
-# 豁免（发行版名小写 → 理由）。仅限：a) 元数据缺失但真实许可已人工核明；
-# b) 多许可（OR）可选出非传染分支。理由必须写明真实许可与依据。
+# Exemptions (lowercase distribution name -> reason). Limited to: a) metadata is missing but the
+# real license has been verified by hand; b) multi-license (OR) where a non-viral branch can be chosen.
+# The reason must state the real license and the evidence.
 EXEMPT: dict[str, str] = {
-    "tiktoken": "MIT——wheel 未写 License 元数据；见 github.com/openai/tiktoken 根 LICENSE",
-    "wordninja": "MIT——发行包未写 License 元数据；见 github.com/keredson/wordninja 根 LICENSE",
+    "tiktoken": "MIT -- the wheel has no License metadata; see the root LICENSE at github.com/openai/tiktoken",
+    "wordninja": "MIT -- the distribution has no License metadata; see the root LICENSE at github.com/keredson/wordninja",
 }
 
-# 强 copyleft：命中即阻断。注意 LGPL/Lesser/Library 属弱 copyleft，须先排除，
-# 否则 "GPL" 子串会把 LGPL 一并误杀。
+# Strong copyleft: a hit blocks. Note that LGPL/Lesser/Library are weak copyleft and must be
+# excluded first, otherwise the "GPL" substring would wrongly kill LGPL too.
 _DENY = re.compile(r"\bAGPL|\bSSPL|Affero", re.IGNORECASE)
 _GPL = re.compile(r"GPL", re.IGNORECASE)
 _WEAK = re.compile(r"LGPL|Lesser|Library", re.IGNORECASE)
@@ -45,7 +50,7 @@ UNKNOWN = "UNKNOWN"
 
 
 def license_of(dist: importlib_metadata.Distribution) -> str:
-    """从发行版元数据解析许可证描述（找不到返回 UNKNOWN）。"""
+    """Resolve the license description from distribution metadata (return UNKNOWN if not found)."""
     md = dist.metadata
     expr = md.get("License-Expression")
     if expr:
@@ -58,21 +63,21 @@ def license_of(dist: importlib_metadata.Distribution) -> str:
     if classifiers:
         return " / ".join(classifiers)
     lic = (md.get("License") or "").strip()
-    # 有些包把整份许可证全文塞进 License 字段——只认短标识
+    # Some packages stuff the entire license text into the License field -- only accept short identifiers
     if lic and "\n" not in lic and len(lic) <= 80:
         return lic
     return UNKNOWN
 
 
 def classify(license_text: str) -> str:
-    """归类：denied（强 copyleft）/ unknown / notice（弱 copyleft）/ ok。"""
+    """Classify: denied (strong copyleft) / unknown / notice (weak copyleft) / ok."""
     if license_text == UNKNOWN:
         return "unknown"
     if _DENY.search(license_text):
         return "denied"
-    # GPL 命中且整串不含任何弱 copyleft 词 → 强 copyleft。
-    # （"LGPL-3.0-only" 含 GPL 子串但属弱；"GPL-3.0 / LGPL" 这类混排按弱放行，
-    #   真实双许可取舍走 EXEMPT 显式豁免。）
+    # GPL hit and the whole string contains no weak-copyleft word -> strong copyleft.
+    # ("LGPL-3.0-only" contains the GPL substring but is weak; mixed forms like "GPL-3.0 / LGPL"
+    #  are let through as weak, and a real dual-license choice goes through an explicit EXEMPT entry.)
     if _GPL.search(license_text) and not _WEAK.search(license_text):
         return "denied"
     if _NOTICE.search(license_text):
@@ -81,7 +86,7 @@ def classify(license_text: str) -> str:
 
 
 def audit() -> tuple[list[str], list[str], list[str]]:
-    """扫描当前环境。返回 (violations, notices, rotten_exempts)。"""
+    """Scan the current environment. Returns (violations, notices, rotten_exempts)."""
     violations: list[str] = []
     notices: list[str] = []
     seen: set[str] = set()
@@ -94,16 +99,16 @@ def audit() -> tuple[list[str], list[str], list[str]]:
         kind = classify(lic)
         if name.lower() in EXEMPT:
             if kind in ("denied", "unknown"):
-                continue  # 已人工核明，放行
-            # 包元数据已修好 → 豁免失去存在理由，按腐烂处理（见下）
+                continue  # verified by hand, let through
+            # Package metadata has been fixed -> the exemption has lost its reason and counts as rotten (see below)
         if kind == "denied":
-            violations.append(f"{name}: 强 copyleft「{lic}」")
+            violations.append(f"{name}: strong copyleft \"{lic}\"")
         elif kind == "unknown":
-            violations.append(f"{name}: 无许可证元数据（UNKNOWN）")
+            violations.append(f"{name}: no license metadata (UNKNOWN)")
         elif kind == "notice":
             notices.append(f"{name}: {lic}")
     rotten = [
-        f"{pkg}: 豁免已无必要（包不在依赖树，或元数据已可正常判定）——请从 EXEMPT 移除"
+        f"{pkg}: exemption no longer needed (the package is not in the dependency tree, or its metadata can now be resolved) -- remove it from EXEMPT"
         for pkg in EXEMPT
         if pkg not in seen or classify(license_of_by_name(pkg)) not in ("denied", "unknown")
     ]
@@ -120,20 +125,20 @@ def license_of_by_name(pkg: str) -> str:
 def main() -> int:
     violations, notices, rotten = audit()
     for line in notices:
-        print(f"ℹ 弱 copyleft（动态导入使用，放行）：{line}")
+        print(f"ℹ weak copyleft (used via dynamic import, allowed): {line}")
     for line in rotten:
-        print(f"✖ 腐烂豁免 {line}", file=sys.stderr)
+        print(f"✖ rotten exemption {line}", file=sys.stderr)
     for line in violations:
         print(f"✖ {line}", file=sys.stderr)
     if violations or rotten:
         print(
-            f"\n✖ 依赖许可证门未过（{len(violations)} 违规 / {len(rotten)} 腐烂豁免）。\n"
-            "  强 copyleft 依赖与 Elastic-2.0 分发冲突：换替代库，或确属误判/"
-            "双许可时在 scripts/check_dependency_licenses.py 的 EXEMPT 写明理由豁免。",
+            f"\n✖ Dependency license gate failed ({len(violations)} violation(s) / {len(rotten)} rotten exemption(s)).\n"
+            "  A strong copyleft dependency conflicts with Elastic-2.0 distribution: swap in an alternative library, or, if it is a "
+            "genuine misjudgment / dual license, exempt it with a stated reason in EXEMPT in scripts/check_dependency_licenses.py.",
             file=sys.stderr,
         )
         return 1
-    print(f"✓ 依赖许可证门通过（弱 copyleft 提示 {len(notices)} 项，豁免 {len(EXEMPT)} 项）。")
+    print(f"✓ Dependency license gate passed ({len(notices)} weak-copyleft notice(s), {len(EXEMPT)} exemption(s)).")
     return 0
 
 

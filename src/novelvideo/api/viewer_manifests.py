@@ -209,7 +209,7 @@ def _director_source_options(
         options.append(
             DirectorStageSourceOption(
                 kind="pano",
-                label="360 图",
+                label="360 image",
                 source_type="pano360",
                 pano_url=pano_url,
                 slot_kind="scene_director_pano_360",
@@ -382,7 +382,7 @@ def build_director_stage_manifest(
             source_options=[
                 DirectorStageSourceOption(
                     kind="pano",
-                    label="360 图",
+                    label="360 image",
                     source_type="pano360",
                     pano_url=pano_url,
                     slot_kind="scene_director_pano_360",

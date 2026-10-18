@@ -91,8 +91,6 @@ def test_style_tags_do_not_encode_era_content():
         "ANCIENT",
         "DRAMA",
         "FANTASY",
-        "民国",
-        "古装",
     }
 
     for path in Path("src/novelvideo/styles/presets").glob("*.json"):

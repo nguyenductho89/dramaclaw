@@ -119,9 +119,9 @@ export default defineConfig(({ mode }) => {
       format: "es",
     },
     optimizeDeps: {
-      // @ffmpeg/ffmpeg 内部用 `new Worker(new URL("./worker.js", import.meta.url))`
-      // 起 worker；被 esbuild 预打包后 import.meta.url 指向合并产物，worker.js
-      // 404，load() 永远挂起（仅 dev 受影响，prod 走 Rollup 正常）。排除预打包。
+      // @ffmpeg/ffmpeg internally starts its worker with `new Worker(new URL("./worker.js", import.meta.url))`;
+      // after esbuild pre-bundling, import.meta.url points at the merged output and worker.js
+      // 404s, so load() hangs forever (only dev is affected, prod goes through Rollup fine). Exclude it from pre-bundling.
       exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
     },
     server: {
@@ -147,12 +147,12 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           changeOrigin: true,
           ws: true,
-          // 当 VITE_API_URL 指向 HTTPS 后端、而本地 dev server 走 HTTP 时，
-          // 后端下发的会话 cookie 多半带 `Secure`（HTTPS + HSTS 部署的常态），
-          // 浏览器会拒绝在非安全连接上写入它 —— 于是登录拿到 200/username 后
-          // cookie 却没存住，紧接着 /auth/me 401，被守卫弹回 /login。
-          // 这里在回程改写 Set-Cookie：去掉 Secure、把 SameSite=None 降为 Lax、
-          // 去掉 Domain（让 cookie 落到 dev host），使 HTTP dev 也能持有会话。
+          // When VITE_API_URL points to an HTTPS backend while the local dev server runs over HTTP,
+          // the session cookie issued by the backend usually carries `Secure` (the norm for HTTPS + HSTS deployments),
+          // and the browser refuses to store it over an insecure connection - so login gets 200/username
+          // but the cookie is not kept, then /auth/me returns 401 and the guard bounces back to /login.
+          // Here Set-Cookie is rewritten on the way back: drop Secure, downgrade SameSite=None to Lax,
+          // and drop Domain (so the cookie lands on the dev host), letting HTTP dev hold the session.
           configure: (proxy) => {
             proxy.on("proxyRes", (proxyRes) => {
               const setCookie = proxyRes.headers["set-cookie"];

@@ -40,27 +40,27 @@ describe("hydrateAssetDragPayload", () => {
       viewer_kind: "three_d_director",
       mode: "scene",
       project: "demo",
-      scene_id: "公寓楼电梯间",
-      display_name: "公寓楼电梯间 / 导演世界",
+      scene_id: "Apartment elevator lobby",
+      display_name: "Apartment elevator lobby / Director world",
       source: {
         source_type: "sog",
         source_kind: "master",
-        ply_url: "/static/demo/director_worlds/公寓楼电梯间/v1/master.sog",
+        ply_url: "/static/demo/director_worlds/apartment_elevator_lobby/v1/master.sog",
       },
       sources: [
         {
           id: "front",
-          label: "正面世界",
+          label: "Front world",
           source_type: "sog",
           source_kind: "master",
-          ply_url: "/static/demo/director_worlds/公寓楼电梯间/v1/master.sog",
+          ply_url: "/static/demo/director_worlds/apartment_elevator_lobby/v1/master.sog",
         },
         {
           id: "reverse",
-          label: "背面世界",
+          label: "Back world",
           source_type: "sog",
           source_kind: "reverse",
-          ply_url: "/static/demo/director_worlds/公寓楼电梯间/v1/reverse.sog",
+          ply_url: "/static/demo/director_worlds/apartment_elevator_lobby/v1/reverse.sog",
         },
       ],
       active_source_id: "reverse",
@@ -76,33 +76,33 @@ describe("hydrateAssetDragPayload", () => {
 
     const payload = {
       kind: "model",
-      label: "公寓楼电梯间 / 导演世界",
-      url: "/static/demo/director_worlds/公寓楼电梯间/v1/reverse.sog",
+      label: "Apartment elevator lobby / Director world",
+      url: "/static/demo/director_worlds/apartment_elevator_lobby/v1/reverse.sog",
       mainlineContext: [
         {
           kind: "scene",
           projectId: "demo",
-          sceneId: "公寓楼电梯间",
+          sceneId: "Apartment elevator lobby",
           role: "scene_director_world",
-          label: "公寓楼电梯间 / 导演世界",
+          label: "Apartment elevator lobby / Director world",
         },
       ],
       source: {
         kind: "scene",
         role: "scene_director_world",
         projectId: "demo",
-        meta: { scene_id: "公寓楼电梯间" },
+        meta: { scene_id: "Apartment elevator lobby" },
       },
     } satisfies CanvasAssetDragPayload;
 
     const hydrated = await hydrateAssetDragPayload(payload);
 
-    expect(getSceneDirectorStageManifest).toHaveBeenCalledWith("demo", "公寓楼电梯间");
+    expect(getSceneDirectorStageManifest).toHaveBeenCalledWith("demo", "Apartment elevator lobby");
     expect(hydrated.activeSourceId).toBe("reverse");
-    expect(hydrated.plyUrl).toBe("/static/demo/director_worlds/公寓楼电梯间/v1/reverse.sog");
+    expect(hydrated.plyUrl).toBe("/static/demo/director_worlds/apartment_elevator_lobby/v1/reverse.sog");
     expect(hydrated.modelSources).toEqual([
-      expect.objectContaining({ id: "front", label: "正面世界" }),
-      expect.objectContaining({ id: "reverse", label: "背面世界" }),
+      expect.objectContaining({ id: "front", label: "Front world" }),
+      expect.objectContaining({ id: "reverse", label: "Back world" }),
     ]);
     expect(hydrated.scene).toBe(scene);
     expect(hydrated.scenesBySourceId).toEqual({ reverse: scene });
@@ -111,7 +111,7 @@ describe("hydrateAssetDragPayload", () => {
   it("leaves non scene-director-world payloads untouched", async () => {
     const payload = {
       kind: "model",
-      label: "自定义 3D",
+      label: "Custom 3D",
       url: "/static/demo/custom-world.sog",
       source: { kind: "scene", role: "scene_3gs_master_ply", projectId: "demo" },
     } satisfies CanvasAssetDragPayload;
@@ -121,9 +121,9 @@ describe("hydrateAssetDragPayload", () => {
   });
 });
 
-describe("spawnAssetNode — 还原链路 model/genMode", () => {
-  // 最小假 store：捕获每次 addNode(type, position, data)，返回稳定 id。spawnAssetNode
-  // 只用到 store.addNode，其余方法用不到。
+describe("spawnAssetNode — restore chain model/genMode", () => {
+  // Minimal fake store: captures every addNode(type, position, data) and returns a stable id. spawnAssetNode
+  // uses only store.addNode, and the other methods are unused.
   function fakeStore() {
     const created: Array<{ type: string; data: Record<string, unknown> }> = [];
     const store = {
@@ -139,7 +139,7 @@ describe("spawnAssetNode — 还原链路 model/genMode", () => {
     return { store, created };
   }
 
-  it("视频：payload 带 model/genMode → 节点 data.model / data.genMode 写回", () => {
+  it("video: payload carries model/genMode -> node data.model / data.genMode are written back", () => {
     const { store, created } = fakeStore();
     const payload = {
       kind: "video",
@@ -157,7 +157,7 @@ describe("spawnAssetNode — 还原链路 model/genMode", () => {
     expect(created[0]?.data.genMode).toBe("firstLastFrame");
   });
 
-  it("视频：payload 无 model → data.model 不写(undefined)", () => {
+  it("video: payload has no model -> data.model is not written (undefined)", () => {
     const { store, created } = fakeStore();
     const payload = {
       kind: "video",
@@ -172,7 +172,7 @@ describe("spawnAssetNode — 还原链路 model/genMode", () => {
     expect(created[0]?.data.genMode).toBeUndefined();
   });
 
-  it("图片：restoreAsGeneratedImage + model → 还原成成品图片节点(imageGen)且带回底图与 model", () => {
+  it("image: restoreAsGeneratedImage + model -> restored as a finished image node (imageGen) carrying back the base image and model", () => {
     const { store, created } = fakeStore();
     const payload = {
       kind: "image",
@@ -185,8 +185,8 @@ describe("spawnAssetNode — 还原链路 model/genMode", () => {
 
     spawnAssetNode(store, payload, { x: 0, y: 0 });
 
-    // imageEdit('imageNode') 是纯生成编辑器,不渲染 data.imageUrl,还原会空白 —— 故成品图
-    // 还原走 imageGen('imageGenNode'):它读 data.imageUrl 直接展示、可编辑、带 data.model。
+    // imageEdit('imageNode') is a pure generation editor that does not render data.imageUrl, so restoring would be blank -- hence finished-image
+    // restoration goes through imageGen('imageGenNode'): it reads data.imageUrl for direct display, is editable, and carries data.model.
     expect(created[0]?.type).toBe(CANVAS_NODE_TYPES.imageGen);
     expect(created[0]?.data.imageUrl).toBe("/static/p/i.png");
     expect(created[0]?.data.model).toBe("seedream_4_0");

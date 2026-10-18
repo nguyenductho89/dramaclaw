@@ -103,7 +103,7 @@ def test_ensure_bootstrap_rejects_dsn_and_ce_conflict(monkeypatch) -> None:
     monkeypatch.setenv("ST_CONTROL_PLANE_DSN", "postgresql://example")
     monkeypatch.setenv("ST_EDITION", "ce")
 
-    with pytest.raises(RuntimeError, match="矛盾配置"):
+    with pytest.raises(RuntimeError, match="contradictory configuration"):
         registry.ensure_bootstrap()
 
 

@@ -1,11 +1,11 @@
-"""T0-7 特征化基线之一：auth legacy-dict 键集快照。
+"""T0-7 one of the characterization baselines: auth legacy-dict key-set snapshot.
 
-技术方案点名的热路径契约——全代码库几十处按键名读取 auth 返回的用户 dict。
-T4 新建 FileAuthPort 时这个键集最容易悄悄变形，本测试把"拆分前"的形状钉死：
-两种实现（control_plane 的 EE 实现 / 将来的 FileAuthPort）都必须产出同样的键集。
+The hot-path contract named by the technical plan -- dozens of places across the codebase read the user dict returned by auth by key name.
+When T4 creates the new FileAuthPort this key set is the easiest thing to silently deform, so this test pins down the "before the split" shape:
+both implementations (the EE implementation of control_plane / the future FileAuthPort) must produce the same key set.
 
-注意：T2 把 auth DTO 迁出到引擎侧 auth_contract 后，本文件的 import 路径
-随之更新（行为断言不变）。
+Note: after T2 moved the auth DTOs out to the engine-side auth_contract, the import paths of this file
+were updated accordingly (behavior assertions unchanged).
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import pytest
 
 pytestmark = pytest.mark.m01
 
-# 拆分前实测（2026-06-11，HEAD 4f9481a4）的契约，不许漂移：
+# Contract measured before the split (2026-06-11, HEAD 4f9481a4); must not drift:
 BROWSER_LEGACY_KEYS = {"id", "user_id", "username", "role"}
 AGENT_LEGACY_KEYS = BROWSER_LEGACY_KEYS | {
     "credential_kind",
@@ -39,7 +39,7 @@ def test_browser_legacy_dict_key_set() -> None:
     user = AuthenticatedUser(id="u1", username="alice", role="owner")
     data = user.to_legacy_dict()
     assert set(data) == BROWSER_LEGACY_KEYS
-    assert data["id"] == data["user_id"], "id 与 user_id 必须是同值别名"
+    assert data["id"] == data["user_id"], "id and user_id must be aliases with the same value"
 
 
 def test_agent_legacy_dict_key_set() -> None:
@@ -53,5 +53,5 @@ def test_agent_legacy_dict_key_set() -> None:
     data = user.to_legacy_dict()
     assert set(data) == AGENT_LEGACY_KEYS
     assert data["credential_kind"] == "agent_session"
-    assert isinstance(data["scopes"], list), "scopes 必须序列化为 list"
-    assert data["current_scope_kind"] == "home", "默认 scope kind 为 home"
+    assert isinstance(data["scopes"], list), "scopes must be serialized as a list"
+    assert data["current_scope_kind"] == "home", "default scope kind is home"

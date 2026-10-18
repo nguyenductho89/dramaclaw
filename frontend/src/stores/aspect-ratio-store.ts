@@ -13,7 +13,7 @@ import {
 } from "@/lib/aspect-ratio";
 
 /**
- * Per-project画幅 (aspect ratio) orientation — the single global source of
+ * Per-project aspect ratio orientation — the single global source of
  * truth that the whole UI follows.
  *
  * Scoped per project so switching between projects never pollutes the other's

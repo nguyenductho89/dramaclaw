@@ -115,9 +115,9 @@ export function useSaveScript(project: string, episode: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.script(project, episode) });
       invalidateAssetReferences(qc, project);
-      // PUT /script 覆盖整集 beats，条数会变（响应里就带着 beats_count）。
-      // 分集列表卡片上的 beat_count 读的是 episodes，不失效就一直显示旧值。
-      // 前缀同时覆盖 queryKeys.beats(project, ep)，本集内容也确实变了。
+      // PUT /script overwrites all beats of the episode, so the count changes (the response carries beats_count).
+      // The beat_count on the episode list card is read from episodes; without invalidation it keeps showing the old value.
+      // The prefix also covers queryKeys.beats(project, ep), and this episode's content really did change.
       qc.invalidateQueries({ queryKey: queryKeys.episodes(project) });
     },
   });

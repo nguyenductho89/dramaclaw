@@ -8,7 +8,7 @@ export type ToolOptions = Record<string, ToolOptionPrimitive>;
 
 interface ToolFieldBase {
   key: string;
-  /** 展示名的词条 key——工具 schema 里只留 key，文案跟着界面语言走。 */
+  /** The entry key of the display name - only the key is left in the tool schema, and the text follows the UI language. */
   labelKey: string;
 }
 
@@ -28,9 +28,9 @@ export interface ToolSelectField extends ToolFieldBase {
   type: 'select';
   options: Array<{
     value: string;
-    /** 词条 key。与 `label` 二选一，两者都在时以它为准。 */
+    /** Entry key. Mutually exclusive with `label`; when both are present it takes precedence. */
     labelKey?: string;
-    /** 「16:9」这类跟语言无关的字面量，直接照原样显示。 */
+    /** Language-independent literals such as "16:9" are displayed as is. */
     label?: string;
   }>;
 }

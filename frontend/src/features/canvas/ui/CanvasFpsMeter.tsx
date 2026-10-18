@@ -11,9 +11,9 @@ import {
 } from './canvasControlStyles';
 
 /**
- * 画布右上角的 FPS 计量器:点击按钮开启后,用 requestAnimationFrame 实时统计帧率
- * 并显示;关闭时停止 rAF 循环,不产生任何开销。帧率按区间着色(绿/黄/红),便于
- * 排查画布卡顿。
+ * The FPS meter at the top-right of the canvas: after the button turns it on, requestAnimationFrame is used to count the frame rate live
+ * and display it; when off, the rAF loop stops, with no overhead at all. The frame rate is colored by range (green/yellow/red), convenient for
+ * troubleshooting canvas stutter.
  */
 export function CanvasFpsMeter() {
   const { t } = useTranslation();
@@ -31,7 +31,7 @@ export function CanvasFpsMeter() {
     const tick = (now: number) => {
       frames += 1;
       const elapsed = now - windowStart;
-      // 每 ~500ms 结算一次,兼顾刷新及时与读数稳定。
+      // Settle once every ~500ms, balancing timely refresh and a stable reading.
       if (elapsed >= 500) {
         setFps(Math.round((frames * 1000) / elapsed));
         frames = 0;

@@ -2,11 +2,11 @@
 // Copyright (c) 2026 ClaymoreLab
 import { create } from 'zustand';
 
-// 连线可见性：仅控制画布是否**渲染**节点之间的连线。连线数据始终保留在
-// canvas store 里（隐藏时给 ReactFlow 的边打 `hidden` 标记，不动真实 edges），
-// 所以隐藏纯粹是视觉层面的，切回来连线原样还在、持久化/导出也不受影响。
-// 独立成一个轻量 store，避免和 canvas 内容 store 混在一起——订阅它的按钮与
-// Canvas 派生逻辑不会因节点/边的内容变动而额外重渲染。
+// Edge visibility: only controls whether the canvas **renders** the edges between nodes. Edge data always stays in
+// the canvas store (when hidden, a `hidden` marker is put on the edges handed to ReactFlow, leaving the real edges untouched),
+// so hiding is purely visual, and after switching back the edges are still there as they were, with persistence/export unaffected.
+// It is its own lightweight store, avoiding mixing with the canvas content store - the button and
+// the Canvas derivation logic subscribing to it do not re-render extra because of node/edge content changes.
 
 const STORAGE_KEY = 'canvas.edges.hidden';
 
@@ -24,7 +24,7 @@ function persistHidden(value: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, value ? '1' : '0');
   } catch {
-    // localStorage 写不进去就算了，下次进来从默认值开始。
+    // If localStorage cannot be written, so be it; next time start from the default value.
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "id": "wheeled_artillery",
-  "label_zh": "带轮炮械",
+  "label": "Wheeled artillery",
   "default_scale": [1.4, 1.0, 2.4],
   "default_affordances": ["operable", "aimable", "blocking_mass"],
   "default_attachment_points": [
@@ -10,8 +10,8 @@
       "offset": [-1.2, 0, -0.8],
       "facing_delta": 0,
       "actor_state": "operating",
-      "description_zh": "操作位"
+      "description": "Operator position"
     }
   ],
-  "sketch_description_zh": "带轮炮械类 staging 轮廓，真实物件由 semantic_label 决定。"
+  "sketch_description": "Wheeled-artillery staging silhouette; the real object is decided by semantic_label."
 }

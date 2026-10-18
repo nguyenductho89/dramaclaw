@@ -5,7 +5,7 @@ def test_import_novel_closes_store_after_success(monkeypatch, tmp_path: Path) ->
     from novelvideo import cli
 
     novel = tmp_path / "novel.txt"
-    novel.write_text("林昭走进钟楼。", encoding="utf-8")
+    novel.write_text("Lin Zhao walked into the bell tower.", encoding="utf-8")
     calls: list[str] = []
 
     class FakeStore:
@@ -39,7 +39,7 @@ def test_cognee_ingest_closes_store_after_success(monkeypatch, tmp_path: Path) -
     from novelvideo import cli
 
     novel = tmp_path / "novel.txt"
-    novel.write_text("林昭走进钟楼。", encoding="utf-8")
+    novel.write_text("Lin Zhao walked into the bell tower.", encoding="utf-8")
     calls: list[str] = []
 
     class FakeStore:

@@ -15,66 +15,66 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      en: {
         translation: {
           common: {
-            cancel: "取消",
-            confirm: "确认",
-            download: "下载",
-            forceUse: "强制使用",
+            cancel: "Cancel",
+            confirm: "Confirm",
+            download: "Download",
+            forceUse: "Force use",
             new: "NEW",
-            regenerate: "重新生成",
-            upload: "上传",
+            regenerate: "Regenerate",
+            upload: "Upload",
             loading: "Loading",
-            close: "关闭",
+            close: "Close",
           },
           episode: {
-            beat: { noRender: "暂无 Render" },
+            beat: { noRender: "No Render yet" },
             workbench: {
               render: {
-                backgroundTitle: "Render 背景参考",
-                backgroundCurrent: "当前：{{label}}",
-                backgroundHint: "只给草图上色/材质，不改构图。",
-                backgroundMissing: "未找到参考图",
-                backgroundOpen360: "打开导演世界",
-                backgroundNo360: "无 360",
+                backgroundTitle: "Render background reference",
+                backgroundCurrent: "Current: {{label}}",
+                backgroundHint: "Applies color/material to the sketch without changing composition.",
+                backgroundMissing: "No reference image found",
+                backgroundOpen360: "Open Director World",
+                backgroundNo360: "No 360",
                 backgroundAnchorLabels: {
-                  master: "场景正面",
-                  reverse: "场景背面",
-                  directorEnvOnly: "导演世界场景截图",
+                  master: "Scene front",
+                  reverse: "Scene back",
+                  directorEnvOnly: "Director world scene screenshot",
                 },
-                backgroundCropAction: "截图 {{label}}",
-                backgroundCropTitle: "{{label}} 裁剪截图",
-                backgroundCropFallbackTitle: "裁剪截图",
-                backgroundUpload: "上传外部参考",
-                backgroundUploaded: "背景已上传",
-                backgroundUploadFailed: "背景上传失败",
-                backgroundSaved: "背景已切换",
-                backgroundSaveFailed: "背景切换失败",
-                backgroundCropSave: "保存截图",
-                backgroundCropTitleWithAspect: "裁剪 {{aspect}}",
-                backgroundCropDragHandle: "移动裁剪区域",
-                relightLabel: "Relight 到 {{timeOfDay}}",
-                relightLabelDefaultTime: "指定时间",
-                relightTooltip: "Relight：按 beat 时间重新打光，不改变场景结构。",
-                lockedLightTooltip: "锁图光：使用场景图自带光线，不重新打光。",
-                lockedLightLabel: "锁图光",
-                renderCurrentSketch: "Render 当前草图",
-                sketchRequired: "请先生成或上传草图",
-                regenDesc: "重生 Beat #{{n}}",
-                regenFailed: "重生失败",
-                regenStarted: "已启动重生",
-                regenTitle: "重新生成？",
-                switchFailed: "切换失败",
-                switched: "已切换",
-                forceFailed: "强制失败",
-                forcedUse: "已强制使用",
-                versionMismatch: "版本不匹配",
-                versionMismatchDesc: "确定使用旧图？",
+                backgroundCropAction: "Crop {{label}}",
+                backgroundCropTitle: "{{label}} crop screenshot",
+                backgroundCropFallbackTitle: "Crop screenshot",
+                backgroundUpload: "Upload external reference",
+                backgroundUploaded: "Render background reference uploaded",
+                backgroundUploadFailed: "Failed to upload render background reference",
+                backgroundSaved: "Render background reference switched",
+                backgroundSaveFailed: "Failed to save render background reference",
+                backgroundCropSave: "Save crop",
+                backgroundCropTitleWithAspect: "Crop {{aspect}}",
+                backgroundCropDragHandle: "Move crop area",
+                relightLabel: "Relight to {{timeOfDay}}",
+                relightLabelDefaultTime: "specified time",
+                relightTooltip: "Relight: re-lights the shot for the beat's time of day without changing the scene structure.",
+                lockedLightTooltip: "Locked lighting: uses the scene image's own lighting; no relight.",
+                lockedLightLabel: "Locked lighting",
+                renderCurrentSketch: "Render current sketch",
+                sketchRequired: "Generate or upload a sketch first",
+                regenDesc: "Regenerate render for Beat #{{n}}. New render enters candidate pool.",
+                regenFailed: "Regen failed",
+                regenStarted: "Regeneration started",
+                regenTitle: "Regenerate render?",
+                switchFailed: "Switch failed",
+                switched: "Render switched",
+                forceFailed: "Force failed",
+                forcedUse: "Force-applied this render",
+                versionMismatch: "Render version mismatch",
+                versionMismatchDesc: "This render was generated from an older script. Content may be inconsistent. Force use anyway?",
               },
             },
           },
@@ -116,8 +116,8 @@ vi.mock("@/lib/queries/sketches", async (importOriginal) => {
           viewer_kind: "three_d_director",
           mode: "beat",
           project: "demo",
-          scene_id: "地下室",
-          display_name: "地下室",
+          scene_id: "Basement",
+          display_name: "Basement",
           source: {
             ply_url: "/static/director_worlds/scene/master_sharp.ply",
             source_kind: "master",
@@ -242,8 +242,8 @@ const beat = {
   beat_number: 5,
   narration_segment: "beat text",
   sketch_url: "/static/current-sketch.png",
-  scene_ref: { scene_id: "卫生间", variant_id: "夜" },
-  time_of_day: "白天",
+  scene_ref: { scene_id: "Bathroom", variant_id: "night" },
+  time_of_day: "Daytime",
   frame_url: "/static/current-render.png",
 } as Beat;
 
@@ -303,7 +303,7 @@ beforeEach(() => {
       data: {
         episode: 1,
         beat_num: 5,
-        scene_id: "地下室",
+        scene_id: "Basement",
         can_choose: true,
         current_anchor: "master",
         render_anchor_id: "selected_background",
@@ -340,7 +340,7 @@ beforeEach(() => {
           },
           {
             id: "selected_background",
-            label: "截图/上传",
+            label: "Capture/Upload",
             current: true,
             exists: true,
             url: "/static/selected-background.png",
@@ -383,8 +383,8 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByRole("button", { name: /重新生成/ })).toBeDisabled();
-    expect(screen.getByText("请先生成或上传草图")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Regenerate/ })).toBeDisabled();
+    expect(screen.getByText("Generate or upload a sketch first")).toBeInTheDocument();
   });
 
   it("does not expose removed render detail or bad-image analysis actions", () => {
@@ -400,8 +400,8 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "详情" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "坏图分析" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bad image analysis" })).not.toBeInTheDocument();
   });
 
   it("shows render relight state next to render actions", () => {
@@ -409,7 +409,7 @@ describe("RenderSection", () => {
       render: {
         relight: true,
         status: "relight",
-        label: "Render：将使用 卫生间_夜，relight 到 白天",
+        label: "Render: will use Bathroom_night, relight to day",
       },
     };
 
@@ -425,8 +425,8 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Relight 到 白天")).toBeInTheDocument();
-    expect(screen.getByTitle("Relight：按 beat 时间重新打光，不改变场景结构。")).toBeInTheDocument();
+    expect(screen.getByText("Relight to day")).toBeInTheDocument();
+    expect(screen.getByTitle("Relight: re-lights the shot for the beat's time of day without changing the scene structure.")).toBeInTheDocument();
     expect(screen.queryByText(/Seedance2/)).not.toBeInTheDocument();
   });
 
@@ -435,7 +435,7 @@ describe("RenderSection", () => {
       render: {
         relight: false,
         status: "time_baked",
-        label: "Render：将使用 卫生间_夜，锁图光",
+        label: "Render: will use Bathroom_night, locked lighting",
       },
     };
 
@@ -451,7 +451,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("锁图光")).toBeInTheDocument();
+    expect(screen.getByText("Locked lighting")).toBeInTheDocument();
   });
 
   it("resolves current render assignments stored as cell paths and previews canonical frame", async () => {
@@ -487,7 +487,7 @@ describe("RenderSection", () => {
         data: {
           episode: 1,
           beat_num: 5,
-          scene_id: "地下室",
+          scene_id: "Basement",
           can_choose: true,
           current_anchor: "",
           render_anchor_id: "",
@@ -519,8 +519,8 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: /重新生成/ }));
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: /Regenerate/ }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(updateBackgroundAnchorMock).toHaveBeenCalledWith({ anchorId: "master" });
     expect(regenerateMock).toHaveBeenCalledWith({
@@ -561,8 +561,8 @@ describe("RenderSection", () => {
       },
     );
 
-    await user.click(screen.getByRole("button", { name: /重新生成/ }));
-    await user.click(screen.getByRole("button", { name: "确认" }));
+    await user.click(screen.getByRole("button", { name: /Regenerate/ }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(regenerateMock).toHaveBeenCalledWith({
       beatIndices: [5],
@@ -612,8 +612,8 @@ describe("RenderSection", () => {
         ),
       );
 
-      await user.click(screen.getByRole("button", { name: /重新生成/ }));
-      await user.click(screen.getByRole("button", { name: "确认" }));
+      await user.click(screen.getByRole("button", { name: /Regenerate/ }));
+      await user.click(screen.getByRole("button", { name: "Confirm" }));
 
       expect(regenerateMock).toHaveBeenCalledWith({
         beatIndices: [5],
@@ -640,37 +640,37 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Render 背景参考")).toBeInTheDocument();
+    expect(screen.getByText("Render background reference")).toBeInTheDocument();
     expect(screen.getByAltText("Beat 5 render").parentElement).toHaveStyle({
       aspectRatio: "2 / 3",
     });
-    expect(screen.getByText("当前：场景正面")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "无 360" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "导演世界场景截图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "场景正面" })).toHaveClass("bg-primary/[0.075]");
-    expect(screen.getByRole("button", { name: "场景正面" })).toHaveClass("border-primary/45");
-    const reverseButton = screen.getByRole("button", { name: "场景背面" });
-    const uploadButton = screen.getByRole("button", { name: "上传外部参考" });
+    expect(screen.getByText("Current: Scene front")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "No 360" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Director world scene screenshot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("bg-primary/[0.075]");
+    expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("border-primary/45");
+    const reverseButton = screen.getByRole("button", { name: "Scene back" });
+    const uploadButton = screen.getByRole("button", { name: "Upload external reference" });
     const anchorRow = reverseButton.parentElement?.parentElement;
     expect(anchorRow).toContainElement(uploadButton);
     expect(
       reverseButton.compareDocumentPosition(uploadButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "截图/上传" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "打开导演世界" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Capture/Upload" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Director World" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "打开导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Open Director World" }));
     expect(screen.getByTestId("render-director-world-dialog")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "场景背面" }));
+    await user.click(screen.getByRole("button", { name: "Scene back" }));
     expect(updateBackgroundAnchorMock).toHaveBeenCalledWith({ anchorId: "reverse" });
 
-    await user.click(screen.getByRole("button", { name: "截图 场景正面" }));
-    expect(screen.getByRole("heading", { name: "场景正面 裁剪截图" })).toBeInTheDocument();
-    expect(screen.getByText("裁剪 2:3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crop Scene front" }));
+    expect(screen.getByRole("heading", { name: "Scene front crop screenshot" })).toBeInTheDocument();
+    expect(screen.getByText("Crop 2:3")).toBeInTheDocument();
     expect(cropBackgroundAnchorMock).not.toHaveBeenCalled();
 
-    const cropImage = screen.getByAltText("场景正面 裁剪截图");
+    const cropImage = screen.getByAltText("Scene front crop screenshot");
     Object.defineProperty(cropImage, "naturalWidth", {
       configurable: true,
       value: 1200,
@@ -695,18 +695,18 @@ describe("RenderSection", () => {
       }),
     });
 
-    const cropBox = screen.getByLabelText("移动裁剪区域");
+    const cropBox = screen.getByLabelText("Move crop area");
     fireEvent.pointerDown(cropBox, { pointerId: 1, clientX: 600, clientY: 450 });
     fireEvent.pointerMove(cropBox, { pointerId: 1, clientX: 660, clientY: 450 });
     fireEvent.pointerUp(cropBox, { pointerId: 1 });
 
-    await user.click(screen.getByRole("button", { name: "保存截图" }));
+    await user.click(screen.getByRole("button", { name: "Save crop" }));
     expect(cropBackgroundAnchorMock).toHaveBeenCalledWith({
       anchorId: "master",
       crop: { x: 360, y: 0, width: 600, height: 900 },
     });
 
-    expect(screen.queryByRole("button", { name: "Render 当前草图" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Render current sketch" })).not.toBeInTheDocument();
     expect(regenerateMock).not.toHaveBeenCalled();
     expect(taskStartMock).not.toHaveBeenCalled();
   });
@@ -727,9 +727,9 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "截图 场景正面" }));
+    await user.click(screen.getByRole("button", { name: "Crop Scene front" }));
 
-    expect(screen.getByText("裁剪 16:9")).toBeInTheDocument();
+    expect(screen.getByText("Crop 16:9")).toBeInTheDocument();
   });
 
   it("uses current source instead of selected background slot for active render background", () => {
@@ -740,14 +740,14 @@ describe("RenderSection", () => {
         data: {
           episode: 1,
           beat_num: 5,
-          scene_id: "地下室",
+          scene_id: "Basement",
           can_choose: true,
           current_anchor: "selected_background",
           current_source: "master",
           render_anchor_id: "selected_background",
           current_reference: {
             id: "selected_background",
-            label: "截图/上传",
+            label: "Capture/Upload",
             url: "/static/selected-background.png",
             path: "/tmp/selected-background.png",
           },
@@ -774,7 +774,7 @@ describe("RenderSection", () => {
             },
             {
               id: "selected_background",
-              label: "截图/上传",
+              label: "Capture/Upload",
               current: true,
               exists: true,
               url: "/static/selected-background.png",
@@ -798,10 +798,10 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("当前：场景正面")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "场景正面" })).toHaveClass("bg-primary/[0.075]");
-    expect(screen.getByRole("button", { name: "场景正面" })).toHaveClass("border-primary/45");
-    expect(screen.queryByRole("button", { name: "截图/上传" })).not.toBeInTheDocument();
+    expect(screen.getByText("Current: Scene front")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("bg-primary/[0.075]");
+    expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("border-primary/45");
+    expect(screen.queryByRole("button", { name: "Capture/Upload" })).not.toBeInTheDocument();
   });
 
   it("refreshes the shared director control frame query after committing from render", async () => {
@@ -819,7 +819,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "打开导演世界" }));
+    await user.click(screen.getByRole("button", { name: "Open Director World" }));
     await user.click(screen.getByRole("button", { name: "mock submit director combined" }));
 
     await waitFor(() => {

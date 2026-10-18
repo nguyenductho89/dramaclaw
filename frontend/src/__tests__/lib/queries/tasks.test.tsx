@@ -133,7 +133,7 @@ describe("useCancelTask running confirmation", () => {
             status: "running",
             requires_confirmation: true,
             refund_eligible: false,
-            message: "终止不会退还积分",
+            message: "Terminating does not refund credits",
           },
           { status: 409 },
         );
@@ -167,7 +167,7 @@ describe("useCancelTask running confirmation", () => {
               status: "running",
               requires_confirmation: true,
               refund_eligible: false,
-              message: "终止不会退还积分",
+              message: "Terminating does not refund credits",
             },
             { status: 409 },
           );

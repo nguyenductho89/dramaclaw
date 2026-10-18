@@ -28,7 +28,7 @@ const server = setupServer();
 beforeAll(() => server.listen());
 afterEach(() => {
   server.resetHandlers();
-  useAppStore.setState({ language: "zh" });
+  useAppStore.setState({ language: "en" });
 });
 afterAll(() => server.close());
 
@@ -132,7 +132,7 @@ describe("Seedance2 prompt generation query", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "计费规则未配置，请联系管理员设置积分规则",
+              error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
               data: {
                 error_code: "BILLING_RULE_NOT_CONFIGURED",
                 billing_kind: "feature",
@@ -236,7 +236,7 @@ describe("1.x beat video prompt generation query", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "计费规则未配置，请联系管理员设置积分规则",
+              error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
               data: {
                 error_code: "BILLING_RULE_NOT_CONFIGURED",
                 billing_kind: "feature",
@@ -266,7 +266,7 @@ describe("1.x beat video prompt generation query", () => {
             {
               ok: false,
               code: "VIDEO_PROMPT_PREREQUISITE_REQUIRED",
-              error: "Beat 2 缺少草图或首帧，请先生成草图或预览",
+              error: "Beat 2 is missing a sketch or first frame, generate a sketch or preview first",
             },
             { status: 409 },
           ),
@@ -281,7 +281,7 @@ describe("1.x beat video prompt generation query", () => {
     await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.error).toBeInstanceOf(BackendStatusError);
     expect(result.current.error?.message).toBe(
-      "Beat 2 缺少草图或首帧，请先生成草图或预览",
+      "Beat 2 is missing a sketch or first frame, generate a sketch or preview first",
     );
   });
 });

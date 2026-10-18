@@ -197,7 +197,7 @@ def current_beat_speaker_options(beat: dict) -> tuple[dict[str, str], str]:
     candidates = detected_identities or ([current_speaker] if current_speaker else [])
     options = {identity_id: _identity_display_label(identity_id) for identity_id in candidates}
     if not options:
-        return {"": "未指定"}, ""
+        return {"": "Unspecified"}, ""
     value = current_speaker if current_speaker in options else next(iter(options))
     return options, value
 
@@ -217,21 +217,21 @@ def _status_from_resolution(style: str, resolution: NarratorResolution) -> Narra
 
 def _narrator_identity_detail(status: NarratorReferenceStatus) -> str:
     if not status.character_name:
-        return "未配置解说主角"
+        return "Narrator protagonist not configured"
     if status.identity_name:
-        return f"{status.character_name}（{status.identity_name}）"
+        return f"{status.character_name} ({status.identity_name})"
     if status.identity_id:
-        return f"{status.character_name}（{_identity_display_label(status.identity_id)}）"
+        return f"{status.character_name} ({_identity_display_label(status.identity_id)})"
     return status.character_name
 
 
 def _identity_display_label(identity_id: str) -> str:
     value = str(identity_id or "").strip()
     if not value:
-        return "未指定"
+        return "Unspecified"
     character, separator, identity = value.partition("_")
     if separator and character and identity:
-        return f"{character}（{identity}）"
+        return f"{character} ({identity})"
     return value
 
 

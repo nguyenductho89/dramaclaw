@@ -39,16 +39,16 @@ def _characters():
     from novelvideo.models import CharacterIdentity, NovelCharacter
 
     character = NovelCharacter(
-        name="谢铮",
-        gender="男",
-        reference_audio_path="assets/characters/谢铮/voice_sample.wav",
+        name="XieZheng",
+        gender="male",
+        reference_audio_path="assets/characters/XieZheng/voice_sample.wav",
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="谢铮_幼年时期",
-            character_name="谢铮",
-            identity_name="幼年时期",
-            reference_audio_path="assets/characters/谢铮/identities/幼年时期_voice.wav",
+            identity_id="XieZheng_child",
+            character_name="XieZheng",
+            identity_name="child",
+            reference_audio_path="assets/characters/XieZheng/identities/child_voice.wav",
         )
     ]
     return [character]
@@ -58,15 +58,15 @@ def test_dialogue_text_extracts_spoken_quote_from_attribution():
     from novelvideo.seedance2_i2v.voice_clone import dialogue_text
 
     assert (
-        dialogue_text({"narration_segment": "李婶哭着喊：“陆老板，您是救命恩人！”"})
-        == "陆老板，您是救命恩人！"
+        dialogue_text({"narration_segment": "Aunt Li cried out: “Boss Lu, you are our savior!”"})
+        == "Boss Lu, you are our savior!"
     )
 
 
 def test_dialogue_text_keeps_plain_dialogue_without_quotes():
     from novelvideo.seedance2_i2v.voice_clone import dialogue_text
 
-    assert dialogue_text({"narration_segment": "你终于来了。"}) == "你终于来了。"
+    assert dialogue_text({"narration_segment": "You finally came."}) == "You finally came."
 
 
 def test_dialogue_emotion_prompt_extracts_attribution_outside_quote():
@@ -74,9 +74,9 @@ def test_dialogue_emotion_prompt_extracts_attribution_outside_quote():
 
     assert (
         dialogue_emotion_prompt(
-            {"narration_segment": "李婶哭着喊：“陆老板，您是救命恩人！”"}
+            {"narration_segment": "Aunt Li cried out: “Boss Lu, you are our savior!”"}
         )
-        == "李婶哭着喊"
+        == "Aunt Li cried out"
     )
 
 
@@ -84,15 +84,15 @@ def test_dialogue_emotion_prompt_extracts_trailing_attribution():
     from novelvideo.seedance2_i2v.voice_clone import dialogue_emotion_prompt
 
     assert (
-        dialogue_emotion_prompt({"narration_segment": "“别走！”她哽咽着说。"})
-        == "她哽咽着说"
+        dialogue_emotion_prompt({"narration_segment": "“Do not go!” she said, choking up."})
+        == "she said, choking up"
     )
 
 
 def test_dialogue_emotion_prompt_ignores_plain_dialogue_without_quotes():
     from novelvideo.seedance2_i2v.voice_clone import dialogue_emotion_prompt
 
-    assert dialogue_emotion_prompt({"narration_segment": "你终于来了。"}) == ""
+    assert dialogue_emotion_prompt({"narration_segment": "You finally came."}) == ""
 
 
 def test_seedance2_audio_type_normalizes_legacy_action_to_silence():
@@ -116,11 +116,11 @@ async def test_seedance2_voice_clone_uses_identity_reference_before_character(tm
         project_dir
         / "assets"
         / "characters"
-        / "谢铮"
+        / "XieZheng"
         / "identities"
-        / "幼年时期_voice.wav"
+        / "child_voice.wav"
     )
-    character_reference = project_dir / "assets" / "characters" / "谢铮" / "voice_sample.wav"
+    character_reference = project_dir / "assets" / "characters" / "XieZheng" / "voice_sample.wav"
     identity_reference.parent.mkdir(parents=True)
     character_reference.parent.mkdir(parents=True, exist_ok=True)
     identity_reference.write_bytes(b"identity")
@@ -128,7 +128,7 @@ async def test_seedance2_voice_clone_uses_identity_reference_before_character(tm
 
     generator = _FakeGenerator()
     result = await generate_seedance2_dialogue_audio(
-        beat={"speaker": "谢铮_幼年时期", "narration_segment": "你终于来了。"},
+        beat={"speaker": "XieZheng_child", "narration_segment": "You finally came."},
         episode=1,
         beat_num=3,
         store=_FakeStore(project_dir, _characters()),
@@ -139,8 +139,8 @@ async def test_seedance2_voice_clone_uses_identity_reference_before_character(tm
     assert result.success is True
     assert generator.calls == [
         {
-            "prompt": "你终于来了。",
-            "audio_url": "data://幼年时期_voice.wav",
+            "prompt": "You finally came.",
+            "audio_url": "data://child_voice.wav",
             "output_path": str(project_dir / "audio" / "ep001" / "beat_03.mp3"),
             "emotion_prompt": "",
         }
@@ -157,9 +157,9 @@ async def test_seedance2_voice_clone_sends_only_spoken_text_to_fal(tmp_path):
         project_dir
         / "assets"
         / "characters"
-        / "谢铮"
+        / "XieZheng"
         / "identities"
-        / "幼年时期_voice.wav"
+        / "child_voice.wav"
     )
     identity_reference.parent.mkdir(parents=True)
     identity_reference.write_bytes(b"identity")
@@ -167,8 +167,8 @@ async def test_seedance2_voice_clone_sends_only_spoken_text_to_fal(tmp_path):
     generator = _FakeGenerator()
     result = await generate_seedance2_dialogue_audio(
         beat={
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "谢铮压低声音说：“你终于来了。”",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Xie Zheng lowers his voice: “You finally came.”",
         },
         episode=1,
         beat_num=3,
@@ -178,37 +178,37 @@ async def test_seedance2_voice_clone_sends_only_spoken_text_to_fal(tmp_path):
     )
 
     assert result.success is True
-    assert generator.calls[0]["prompt"] == "你终于来了。"
-    assert generator.calls[0]["emotion_prompt"] == "谢铮压低声音说"
+    assert generator.calls[0]["prompt"] == "You finally came."
+    assert generator.calls[0]["emotion_prompt"] == "Xie Zheng lowers his voice"
 
 
 @pytest.mark.asyncio
 async def test_seedance2_voice_clone_falls_back_to_character_default(tmp_path):
-    """L3: 当变体没有覆盖、没有匹配的时期预设时，应使用角色默认声线。"""
+    """L3: when the variant has no override and no matching period preset, the character's default voice is used."""
     from novelvideo.models import CharacterIdentity, NovelCharacter
     from novelvideo.seedance2_i2v.voice_clone import generate_seedance2_dialogue_audio
 
     project_dir = tmp_path / "project"
-    character_reference = project_dir / "assets" / "characters" / "谢铮" / "voice_sample.wav"
+    character_reference = project_dir / "assets" / "characters" / "XieZheng" / "voice_sample.wav"
     character_reference.parent.mkdir(parents=True)
     character_reference.write_bytes(b"character")
     character = NovelCharacter(
-        name="谢铮",
-        gender="男",
-        reference_audio_path="assets/characters/谢铮/voice_sample.wav",
+        name="XieZheng",
+        gender="male",
+        reference_audio_path="assets/characters/XieZheng/voice_sample.wav",
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="谢铮_幼年时期",
-            character_name="谢铮",
-            identity_name="幼年时期",
+            identity_id="XieZheng_child",
+            character_name="XieZheng",
+            identity_name="child",
             reference_audio_path="",
         )
     ]
     generator = _FakeGenerator()
 
     result = await generate_seedance2_dialogue_audio(
-        beat={"speaker": "谢铮_幼年时期", "narration_segment": "你终于来了。"},
+        beat={"speaker": "XieZheng_child", "narration_segment": "You finally came."},
         episode=1,
         beat_num=3,
         store=_FakeStore(project_dir, [character]),
@@ -232,25 +232,25 @@ async def test_seedance2_voice_clone_loads_default_identity_voice_file_when_path
         project_dir
         / "assets"
         / "characters"
-        / "谢铮"
+        / "XieZheng"
         / "identities"
-        / "幼年时期_voice.mp3"
+        / "child_voice.mp3"
     )
     identity_reference.parent.mkdir(parents=True)
     identity_reference.write_bytes(b"identity")
-    character = NovelCharacter(name="谢铮", gender="男")
+    character = NovelCharacter(name="XieZheng", gender="male")
     character.identities = [
         CharacterIdentity(
-            identity_id="谢铮_幼年时期",
-            character_name="谢铮",
-            identity_name="幼年时期",
+            identity_id="XieZheng_child",
+            character_name="XieZheng",
+            identity_name="child",
             reference_audio_path="",
         )
     ]
     generator = _FakeGenerator()
 
     result = await generate_seedance2_dialogue_audio(
-        beat={"speaker": "谢铮_幼年时期", "narration_segment": "你终于来了。"},
+        beat={"speaker": "XieZheng_child", "narration_segment": "You finally came."},
         episode=1,
         beat_num=3,
         store=_FakeStore(project_dir, [character]),
@@ -259,12 +259,12 @@ async def test_seedance2_voice_clone_loads_default_identity_voice_file_when_path
     )
 
     assert result.success is True
-    assert generator.calls[0]["audio_url"] == "data://幼年时期_voice.mp3"
+    assert generator.calls[0]["audio_url"] == "data://child_voice.mp3"
 
 
 @pytest.mark.asyncio
 async def test_seedance2_voice_clone_uses_age_group_preset(tmp_path):
-    """L2: 当变体有 age_group 且角色有对应时期声线时，应使用该声线（非角色默认）。"""
+    """L2: when the variant has an age_group and the character has a voice for that period, that voice is used (not the character default)."""
     from novelvideo.models import CharacterIdentity, NovelCharacter
     from novelvideo.seedance2_i2v.voice_clone import generate_seedance2_dialogue_audio
 
@@ -276,8 +276,8 @@ async def test_seedance2_voice_clone_uses_age_group_preset(tmp_path):
     elder_audio.write_bytes(b"elder")
 
     character = NovelCharacter(
-        name="男主",
-        gender="男",
+        name="Hero",
+        gender="male",
         age_group="youth",
         reference_audio_path="audio/default.wav",
         voice_samples_by_age_group={
@@ -286,16 +286,16 @@ async def test_seedance2_voice_clone_uses_age_group_preset(tmp_path):
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="男主_老年时期",
-            character_name="男主",
-            identity_name="老年时期",
+            identity_id="Hero_elderly",
+            character_name="Hero",
+            identity_name="elderly",
             age_group="elder",
         )
     ]
     generator = _FakeGenerator()
 
     result = await generate_seedance2_dialogue_audio(
-        beat={"speaker": "男主_老年时期", "narration_segment": "我老了。"},
+        beat={"speaker": "Hero_elderly", "narration_segment": "I have grown old."},
         episode=1,
         beat_num=1,
         store=_FakeStore(project_dir, [character]),
@@ -309,7 +309,7 @@ async def test_seedance2_voice_clone_uses_age_group_preset(tmp_path):
 
 @pytest.mark.asyncio
 async def test_seedance2_voice_clone_styling_variant_uses_character_default(tmp_path):
-    """无 age_group 的造型变体（总裁/家居）应共用角色默认声线。"""
+    """Outfit variants without an age_group (CEO/home) share the character's default voice."""
     from novelvideo.models import CharacterIdentity, NovelCharacter
     from novelvideo.seedance2_i2v.voice_clone import generate_seedance2_dialogue_audio
 
@@ -319,22 +319,22 @@ async def test_seedance2_voice_clone_styling_variant_uses_character_default(tmp_
     default_audio.write_bytes(b"default")
 
     character = NovelCharacter(
-        name="男主",
-        gender="男",
+        name="Hero",
+        gender="male",
         age_group="youth",
         reference_audio_path="audio/default.wav",
     )
     character.identities = [
         CharacterIdentity(
-            identity_id="男主_总裁时期",
-            character_name="男主",
-            identity_name="总裁时期",
+            identity_id="Hero_ceo",
+            character_name="Hero",
+            identity_name="ceo",
         )
     ]
     generator = _FakeGenerator()
 
     result = await generate_seedance2_dialogue_audio(
-        beat={"speaker": "男主_总裁时期", "narration_segment": "签字。"},
+        beat={"speaker": "Hero_ceo", "narration_segment": "Sign."},
         episode=1,
         beat_num=1,
         store=_FakeStore(project_dir, [character]),
@@ -351,7 +351,7 @@ async def test_seedance2_voice_clone_returns_none_for_narration_beat(tmp_path):
     from novelvideo.seedance2_i2v.voice_clone import generate_seedance2_dialogue_audio
 
     result = await generate_seedance2_dialogue_audio(
-        beat={"audio_type": "narration", "speaker": "", "narration_segment": "旁白"},
+        beat={"audio_type": "narration", "speaker": "", "narration_segment": "Narration"},
         episode=1,
         beat_num=1,
         store=_FakeStore(tmp_path, _characters()),
@@ -369,30 +369,30 @@ def test_seedance2_same_voice_beats_group_by_identity_speaker():
         {
             "beat_number": 1,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "你终于来了。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "You finally came.",
         },
         {
             "beat_number": 2,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "我们快走。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Let us go quickly.",
         },
         {
             "beat_number": 3,
             "audio_type": "dialogue",
-            "speaker": "谢铮_成年时期",
-            "narration_segment": "别回头。",
+            "speaker": "XieZheng_adult",
+            "narration_segment": "Do not look back.",
         },
         {
             "beat_number": 4,
             "audio_type": "narration",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "旁白。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Narration.",
         },
     ]
 
-    grouped = same_voice_dialogue_beats(beats, "谢铮_幼年时期")
+    grouped = same_voice_dialogue_beats(beats, "XieZheng_child")
 
     assert [beat_num for beat_num, _beat in grouped] == [1, 2]
 
@@ -409,9 +409,9 @@ async def test_seedance2_voice_batch_generates_only_missing_same_identity_beats(
         project_dir
         / "assets"
         / "characters"
-        / "谢铮"
+        / "XieZheng"
         / "identities"
-        / "幼年时期_voice.wav"
+        / "child_voice.wav"
     )
     identity_reference.parent.mkdir(parents=True)
     identity_reference.write_bytes(b"identity")
@@ -423,27 +423,27 @@ async def test_seedance2_voice_batch_generates_only_missing_same_identity_beats(
         {
             "beat_number": 1,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "你终于来了。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "You finally came.",
         },
         {
             "beat_number": 2,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "我们快走。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Let us go quickly.",
         },
         {
             "beat_number": 3,
             "audio_type": "dialogue",
-            "speaker": "谢铮_成年时期",
-            "narration_segment": "别回头。",
+            "speaker": "XieZheng_adult",
+            "narration_segment": "Do not look back.",
         },
     ]
 
     generator = _FakeGenerator()
     result = await generate_seedance2_dialogue_audio_for_voice(
         beats=beats,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         episode=1,
         store=_FakeStore(project_dir, _characters()),
         generator=generator,
@@ -454,7 +454,7 @@ async def test_seedance2_voice_batch_generates_only_missing_same_identity_beats(
     assert result.generated == 1
     assert result.skipped_existing == 1
     assert result.failed == []
-    assert [call["prompt"] for call in generator.calls] == ["我们快走。"]
+    assert [call["prompt"] for call in generator.calls] == ["Let us go quickly."]
     assert existing_audio.read_bytes() == b"existing"
     assert beat_audio_path(project_dir, 1, 2).read_bytes() == b"beat-audio"
 
@@ -463,18 +463,18 @@ def _protagonist_characters(project_dir: Path, *, with_identity_audio: bool = Tr
     from novelvideo.models import CharacterIdentity, NovelCharacter
 
     identity = CharacterIdentity(
-        identity_id="林思望_常装",
-        character_name="林思望",
-        identity_name="常装",
-        reference_audio_path="assets/characters/林思望/identities/常装_voice.wav",
+        identity_id="LinSiwang_casual",
+        character_name="LinSiwang",
+        identity_name="casual",
+        reference_audio_path="assets/characters/LinSiwang/identities/casual_voice.wav",
     )
     if with_identity_audio:
         audio_path = project_dir / identity.reference_audio_path
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         audio_path.write_bytes(b"protagonist-voice")
-    protagonist = NovelCharacter(name="林思望", gender="男", is_main=True)
+    protagonist = NovelCharacter(name="LinSiwang", gender="male", is_main=True)
     protagonist.identities = [identity]
-    supporting = NovelCharacter(name="苏曼", gender="女", is_main=False)
+    supporting = NovelCharacter(name="SuMan", gender="female", is_main=False)
     return [supporting, protagonist]
 
 
@@ -493,8 +493,8 @@ def test_resolve_narrator_source_first_person_uses_narrator_main_identity(tmp_pa
 
     assert resolution.style == "first_person"
     assert resolution.source == "protagonist_identity"
-    assert resolution.character_name == "林思望"
-    assert resolution.identity_id == "林思望_常装"
+    assert resolution.character_name == "LinSiwang"
+    assert resolution.identity_id == "LinSiwang_casual"
     assert resolution.audio_path is not None and resolution.audio_path.exists()
     assert resolution.sha256
     assert resolution.error == ""
@@ -518,7 +518,7 @@ def test_resolve_narrator_source_first_person_missing_narrator_main_audio(tmp_pa
 
     assert resolution.audio_path is None
     assert resolution.sha256 == ""
-    assert "解说主角声线缺失" in resolution.error
+    assert "The narrator protagonist has no voice" in resolution.error
 
 
 def test_resolve_narrator_source_first_person_falls_back_to_character_default(tmp_path):
@@ -528,22 +528,22 @@ def test_resolve_narrator_source_first_person_falls_back_to_character_default(tm
 
     project_dir = tmp_path / "proj"
     project_dir.mkdir()
-    default_audio = project_dir / "assets" / "characters" / "陆辰" / "voices" / "voice_default.mp3"
+    default_audio = project_dir / "assets" / "characters" / "Luchen" / "voices" / "voice_default.mp3"
     default_audio.parent.mkdir(parents=True, exist_ok=True)
     default_audio.write_bytes(b"character-default-voice")
 
     identity = CharacterIdentity(
-        identity_id="陆辰_书店老板时期",
-        character_name="陆辰",
-        identity_name="书店老板时期",
+        identity_id="Luchen_bookstore_owner",
+        character_name="Luchen",
+        identity_name="bookstore_owner",
         age_group="youth",
         reference_audio_path="",
     )
     protagonist = NovelCharacter(
-        name="陆辰",
-        gender="男",
+        name="Luchen",
+        gender="male",
         is_main=True,
-        reference_audio_path="assets/characters/陆辰/voices/voice_default.mp3",
+        reference_audio_path="assets/characters/Luchen/voices/voice_default.mp3",
     )
     protagonist.identities = [identity]
 
@@ -558,8 +558,8 @@ def test_resolve_narrator_source_first_person_falls_back_to_character_default(tm
     assert resolution.audio_path == default_audio
     assert resolution.sha256
     assert resolution.error == ""
-    assert resolution.character_name == "陆辰"
-    assert resolution.identity_name == "书店老板时期"
+    assert resolution.character_name == "Luchen"
+    assert resolution.identity_name == "bookstore_owner"
 
 
 def test_resolve_narrator_source_first_person_missing_narrator_main(tmp_path):
@@ -568,7 +568,7 @@ def test_resolve_narrator_source_first_person_missing_narrator_main(tmp_path):
 
     project_dir = tmp_path / "proj"
     project_dir.mkdir()
-    store = _FakeStore(project_dir, [NovelCharacter(name="苏曼", gender="女", is_main=False)])
+    store = _FakeStore(project_dir, [NovelCharacter(name="SuMan", gender="female", is_main=False)])
 
     resolution = resolve_narrator_source(
         store=store,
@@ -577,7 +577,7 @@ def test_resolve_narrator_source_first_person_missing_narrator_main(tmp_path):
     )
 
     assert resolution.audio_path is None
-    assert "未找到解说主角" in resolution.error
+    assert "Narrator protagonist (is_main=True) not found" in resolution.error
 
 
 def test_resolve_narrator_source_third_person_uses_project_narrator(tmp_path):
@@ -617,7 +617,7 @@ def test_resolve_narrator_source_third_person_reports_unconfigured_voice(tmp_pat
     )
 
     assert resolution.audio_path is None
-    assert resolution.error == "项目解说人声线未配置，请上传或录制解说人音频"
+    assert resolution.error == "The project narrator voice is not configured; upload or record narrator audio"
 
 
 def test_resolve_narrator_source_third_person_reports_missing_configured_file(tmp_path):
@@ -635,7 +635,7 @@ def test_resolve_narrator_source_third_person_reports_missing_configured_file(tm
 
     assert resolution.audio_path is None
     assert resolution.error == (
-        "项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储"
+        "The project narrator voice is configured but the voice file cannot be read; re-upload it or check project storage"
     )
 
 
@@ -654,7 +654,7 @@ def test_resolve_narrator_source_third_person_rejects_configured_directory(tmp_p
     )
 
     assert resolution.audio_path is None
-    assert "声线文件无法读取" in resolution.error
+    assert "voice file cannot be read" in resolution.error
 
 
 def test_resolve_narrator_source_third_person_reports_hash_read_failure(
@@ -680,4 +680,4 @@ def test_resolve_narrator_source_third_person_reports_hash_read_failure(
     )
 
     assert resolution.audio_path is None
-    assert "声线文件无法读取" in resolution.error
+    assert "voice file cannot be read" in resolution.error

@@ -1,11 +1,11 @@
-"""Cognee 工具函数。
+"""Cognee tool functions.
 
-为仍使用图谱检索的规划和审核 Agent 提供查询能力。
-Agent 在任务运行器中运行，工具直接使用 async def，复用当前 event loop。
+Provide query capabilities for planning and review agents that still use graph retrieval.
+Agents run inside the task runner, and the tools are plain async def, reusing the current event loop.
 
-工具集：
-- create_episode_planner_tools: 剧集规划 Agent 工具
-- create_reviewer_tools: 脚本审核/修复 Agent 工具（用于身份验证）
+Tool sets:
+- create_episode_planner_tools: episode planning agent tools
+- create_reviewer_tools: script review/fix agent tools (for identity validation)
 """
 
 from typing import Callable, List
@@ -21,84 +21,84 @@ from novelvideo.utils.logging import tool_logger
 # client. Structured-v2 projects must not enter this path.
 # These tools all run cognee.search() and therefore require an embedding index.
 def create_episode_planner_tools(store: CogneeStore) -> List[Callable]:
-    """创建 EpisodePlanner 的 Cognee 工具集。
+    """Create the Cognee tool set for EpisodePlanner.
 
-    为剧集规划 Agent 提供图谱搜索能力，用于：
-    - 识别情节高潮点和转折点
-    - 查找角色关系变化节点
-    - 按时间顺序获取事件
-    - 获取角色列表
+    Give the episode planning agent graph search capability, used to:
+    - identify plot climaxes and turning points
+    - find character relationship change points
+    - get events in chronological order
+    - get the character list
 
-    所有工具都是 async def，直接复用当前 event loop。
+    All tools are async def and reuse the current event loop directly.
     """
 
     @tool_logger("search_plot_points")
     async def tool_search_plot_points(query: str) -> str:
-        """搜索情节转折点、高潮点。
+        """Search for plot turning points and climaxes.
 
-        用于识别故事中的关键情节节点，如：
-        - 重大冲突爆发
-        - 角色命运转折
-        - 悬念揭示
-        - 情感高潮
+        Used to identify key plot nodes in the story, such as:
+        - major conflict outbreaks
+        - turning points in a character's fate
+        - suspense reveals
+        - emotional climaxes
 
         Args:
-            query: 情节查询，如"主要的冲突事件"、"角色命运的转折点"
+            query: Plot query, e.g. "the main conflict events", "turning points in a character's fate"
         """
-        enhanced_query = f"故事中的重要转折点和高潮：{query}"
+        enhanced_query = f"Important turning points and climaxes in the story: {query}"
         return await store.search(enhanced_query, mode="graph")
 
     @tool_logger("search_character_arcs")
     async def tool_search_character_arcs(character_name: str) -> str:
-        """搜索角色的成长弧线和关键变化。
+        """Search for a character's growth arc and key changes.
 
-        查找角色在故事中的主要变化节点，如：
-        - 身份变化
-        - 性格转变
-        - 关系变化
-        - 命运转折
+        Find the main change points of a character in the story, such as:
+        - identity changes
+        - personality shifts
+        - relationship changes
+        - fate turning points
 
         Args:
-            character_name: 角色名称
+            character_name: Character name
         """
-        query = f"{character_name}在故事中的主要变化和成长节点，包括身份变化、重要决定、关系转变"
+        query = f"The main changes and growth points of {character_name} in the story, including identity changes, important decisions and relationship shifts"
         return await store.search(query, mode="triplet")
 
     @tool_logger("search_relationship_changes")
     async def tool_search_relationship_changes(query: str) -> str:
-        """搜索角色关系变化。
+        """Search for character relationship changes.
 
-        查找角色之间关系的重大变化，如：
-        - 敌对转友好
-        - 背叛
-        - 结盟
-        - 分离
+        Find major changes in relationships between characters, such as:
+        - from hostile to friendly
+        - betrayal
+        - alliance
+        - separation
 
         Args:
-            query: 关系查询，如"主角与反派的关系变化"
+            query: Relationship query, e.g. "how the protagonist's relationship with the antagonist changes"
         """
         return await store.search(query, mode="triplet")
 
     @tool_logger("get_story_structure")
     async def tool_get_story_structure() -> str:
-        """获取故事整体结构概览。
+        """Get an overview of the overall story structure.
 
-        返回故事的起承转合、主要冲突、角色阵营等宏观信息。
+        Return high-level information such as the story's setup, development, turn and resolution, main conflicts and character factions.
         """
-        query = "故事的整体结构，包括开端、发展、高潮、结局，以及主要冲突和角色阵营"
+        query = "The overall structure of the story, including beginning, development, climax and ending, as well as the main conflicts and character factions"
         return await store.search(query, mode="summaries")
 
     @tool_logger("get_all_characters_for_planning")
     async def tool_get_all_characters_for_planning() -> str:
-        """获取所有角色列表（用于剧集规划）。
+        """Get the list of all characters (for episode planning).
 
-        返回角色名称、定位、重要性等信息。
+        Return the character name, role, importance and other information.
         """
         characters = await store.list_characters()
         if not characters:
-            return "暂无角色信息"
+            return "No character information yet"
 
-        lines = ["## 角色列表（剧集规划用）"]
+        lines = ["## Character list (for episode planning)"]
         for char in characters:
             role_info = f"({char.role})" if char.role else ""
             lines.append(
@@ -110,34 +110,34 @@ def create_episode_planner_tools(store: CogneeStore) -> List[Callable]:
 
     @tool_logger("search_chapter_summary")
     async def tool_search_chapter_summary(chapter_range: str) -> str:
-        """获取指定章节范围的摘要。
+        """Get a summary of the specified chapter range.
 
         Args:
-            chapter_range: 章节范围，如"1-10"、"前5章"、"中期章节"
+            chapter_range: Chapter range, e.g. "1-10", "first 5 chapters", "middle chapters"
         """
-        query = f"第{chapter_range}章的主要情节、冲突和角色表现"
+        query = f"The main plot, conflicts and character performance of chapters {chapter_range}"
         return await store.search(query, mode="summaries")
 
     @tool_logger("search_conflict_events")
     async def tool_search_conflict_events(query: str) -> str:
-        """搜索冲突事件。
+        """Search for conflict events.
 
-        查找故事中的冲突、对抗、矛盾事件。
+        Find conflicts, confrontations and contradictions in the story.
 
         Args:
-            query: 冲突查询，如"皇后与妃嫔的冲突"、"朝堂斗争"
+            query: Conflict query, e.g. "the conflict between the queen and the concubines", "court power struggles"
         """
-        enhanced_query = f"冲突和对抗：{query}"
+        enhanced_query = f"Conflicts and confrontations: {query}"
         return await store.search(enhanced_query, mode="graph_cot")
 
     @tool_logger("search_cliffhanger_candidates")
     async def tool_search_cliffhanger_candidates(context: str) -> str:
-        """搜索适合作为剧集结尾悬念的情节点。
+        """Search for plot points suitable as a cliffhanger at the end of an episode.
 
         Args:
-            context: 当前剧集的上下文，用于找到合适的悬念点
+            context: Context of the current episode, used to find a suitable cliffhanger point
         """
-        query = f"在{context}之后，什么事件可以作为悬念或钩子让观众期待下一集"
+        query = f"After {context}, which events can serve as a cliffhanger or hook that makes the audience look forward to the next episode"
         return await store.search(query, mode="context_ext")
 
     return [
@@ -153,61 +153,61 @@ def create_episode_planner_tools(store: CogneeStore) -> List[Callable]:
 
 
 def create_reviewer_tools(store: CogneeStore) -> List[Callable]:
-    """创建 ScriptReviewer/ScriptFixer 专用工具集。
+    """Create the tool set dedicated to ScriptReviewer/ScriptFixer.
 
-    为审核员和修复员提供角色身份查询和验证能力，
-    解决 Reviewer/Fixer "盲人摸象"问题 - 无法访问身份元数据。
+    Give the reviewer and fixer character identity lookup and validation capabilities,
+    solving the "blind men and the elephant" problem of Reviewer/Fixer - being unable to access identity metadata.
 
-    工具列表:
-    - tool_get_character: 查询角色详情和所有身份
-    - tool_validate_identity: 验证身份 ID 是否有效
-    - tool_list_all_identities: 列出所有角色的身份列表
+    Tool list:
+    - tool_get_character: look up character details and all identities
+    - tool_validate_identity: validate whether an identity ID is valid
+    - tool_list_all_identities: list the identities of all characters
     """
 
     @tool_logger("get_character")
     async def tool_get_character(name: str) -> str:
-        """查询角色的所有身份信息。
+        """Look up all identity information of a character.
 
-        返回角色的详细信息，包括所有可用身份及其外观描述。
-        用于验证脚本中使用的身份 ID 是否正确。
+        Return the detailed information of the character, including all available identities and their appearance descriptions.
+        Used to verify that the identity IDs used in the script are correct.
 
         Args:
-            name: 角色名称（支持别名解析）
+            name: Character name (aliases are resolved)
 
         Returns:
-            角色详情字符串，包含身份列表
+            Character details string, including the identity list
         """
-        # 解析别名
+        # Resolve aliases
         resolved_name = store.resolve_name(name)
         char = await store.get_character_from_graph(resolved_name)
         if not char:
-            return f"未找到角色: {name}"
+            return f"Character not found: {name}"
         return store.format_character_context(char)
 
     @tool_logger("validate_identity")
     async def tool_validate_identity(identity_id: str) -> str:
-        """验证身份 ID 是否有效。
+        """Validate whether an identity ID is valid.
 
-        检查给定的身份 ID 是否存在于系统中，
-        如果无效则返回该角色的所有可用身份列表。
+        Check whether the given identity ID exists in the system;
+        if it is invalid, return all available identities of that character.
 
         Args:
-            identity_id: 身份ID，格式为 "角色名_身份名"
+            identity_id: Identity ID, in the format "character_name_identity_name"
 
         Returns:
-            验证结果：
-            - 有效：返回身份外观描述
-            - 无效：返回可用身份列表
+            Validation result:
+            - valid: returns the identity appearance description
+            - invalid: returns the list of available identities
         """
         if "_" not in identity_id:
-            return f"❌ 无效格式: {identity_id}，应为 '角色名_身份名'"
+            return f"❌ Invalid format: {identity_id}, expected 'character_name_identity_name'"
 
-        # 尝试解析角色名（可能包含多个下划线）
+        # Try to resolve the character name (it may contain several underscores)
         parts = identity_id.split("_")
         char = None
         char_name = None
 
-        # 从长到短尝试匹配角色名
+        # Try to match the character name from longest to shortest
         for i in range(len(parts) - 1, 0, -1):
             candidate_name = "_".join(parts[:i])
             resolved = store.resolve_name(candidate_name)
@@ -218,43 +218,43 @@ def create_reviewer_tools(store: CogneeStore) -> List[Callable]:
                 break
 
         if not char:
-            # 使用第一个下划线前的部分作为角色名
+            # Use the part before the first underscore as the character name
             char_name = parts[0]
             resolved = store.resolve_name(char_name)
             char = await store.get_character_from_graph(resolved)
 
         if not char:
-            return f"❌ 未找到角色: {char_name}"
+            return f"❌ Character not found: {char_name}"
 
-        # 检查身份是否有效
+        # Check whether the identity is valid
         for identity in char.identities:
             if identity.identity_id == identity_id:
                 desc = (
                     identity.appearance_details[:100]
                     if identity.appearance_details
-                    else "无外观描述"
+                    else "No appearance description"
                 )
-                return f"✅ 有效身份: {identity_id}\n外观: {desc}"
+                return f"✅ Valid identity: {identity_id}\nAppearance: {desc}"
 
-        # 身份无效，返回可用列表
+        # Identity is invalid; return the available list
         valid_ids = [i.identity_id for i in char.identities]
-        return f"❌ 无效身份: {identity_id}\n可用身份: {', '.join(valid_ids)}"
+        return f"❌ Invalid identity: {identity_id}\nAvailable identities: {', '.join(valid_ids)}"
 
     @tool_logger("list_all_identities")
     async def tool_list_all_identities() -> str:
-        """列出所有角色的身份列表。
+        """List the identities of all characters.
 
-        返回系统中所有角色及其身份的完整列表，
-        用于审核员查表验证身份选择是否正确。
+        Return the complete list of all characters in the system and their identities,
+        so the reviewer can check by lookup whether the identity choice is correct.
 
         Returns:
-            格式化的角色身份列表
+            Formatted character identity list
         """
         characters = await store.list_characters()
         if not characters:
-            return "暂无角色信息"
+            return "No character information yet"
 
-        lines = ["## 所有角色身份"]
+        lines = ["## All character identities"]
         for char in characters:
             if char.identities:
                 lines.append(f"\n### {char.name}")
@@ -263,40 +263,40 @@ def create_reviewer_tools(store: CogneeStore) -> List[Callable]:
                     if desc:
                         desc = desc[:60] + "..." if len(desc) > 60 else desc
                     else:
-                        desc = "无外观描述"
+                        desc = "No appearance description"
                     lines.append(f"- {identity.identity_id}: {desc}")
 
         return "\n".join(lines)
 
     @tool_logger("search_plot_context")
     async def tool_search_plot_context(query: str) -> str:
-        """搜索原文情节，验证叙述是否符合原著。
+        """Search the source plot to verify that the narration matches the original work.
 
-        用于审核脚本时查证情节细节、角色互动是否符合原文。
+        Used when reviewing a script to verify plot details and character interactions against the source text.
 
         Args:
-            query: 情节查询，如"主角在第3集做了什么"、"角色A和B的关系"
+            query: Plot query, e.g. "what the protagonist did in episode 3", "the relationship between characters A and B"
         """
         return await store.search(query, mode="graph")
 
     @tool_logger("search_background")
     async def tool_search_background(query: str) -> str:
-        """扩展上下文搜索，获取修复所需的剧情背景。
+        """Extended context search to get the story background needed for fixes.
 
-        自动关联相关实体和事件，提供更丰富的上下文。
-        用于修复脚本时理解角色背景和情节上下文。
+        Automatically link related entities and events to provide richer context.
+        Used when fixing a script to understand character background and plot context.
 
         Args:
-            query: 背景查询，如"角色的成长经历"、"事件的前因后果"
+            query: Background query, e.g. "a character's growth experience", "the causes and effects of an event"
         """
         return await store.search(query, mode="context_ext")
 
     return [
-        # 身份验证
+        # Identity validation
         tool_get_character,
         tool_validate_identity,
         tool_list_all_identities,
-        # 图谱搜索
+        # Graph search
         tool_search_plot_context,
         tool_search_background,
     ]

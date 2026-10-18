@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 拾取参考时盖在节点上的遮罩，三种形态：
- * - 可选：hover 出「选择 xxx」，已经连上的出「取消选择」；
- * - 连得上但种类不收（图片节点面对视频 / 音频节点）：整块调暗、光标 not-allowed，
- *   hover 出原因，让「点了没反应」变成「为什么不能点」；
- * - 其余节点（没有输出桩、系统专用边）：不画遮罩，否则整张画布糊成一片。
+ * The mask covering a node while picking a reference, in three forms:
+ * - Selectable: hover shows "Select xxx", and already connected ones show "Deselect";
+ * - Connectable but the kind is not accepted (an image node facing video / audio nodes): the whole thing is dimmed, cursor not-allowed,
+ *   and hover shows the reason, turning "clicked and nothing happened" into "why it cannot be clicked";
+ * - Other nodes (no output port, system-only edges): no mask is drawn, otherwise the whole canvas blurs into one.
  *
- * 为什么盖在节点里（withLodShell 注入）而不是画布层的绝对定位：节点可能在分组
- * 里、可能任意缩放，画布层要自己算 positionAbsolute × zoom 才能对齐；而
- * `.react-flow__node` 本身就是定位元素，`inset-0` 天然就是这个节点的盒子。
+ * Why it covers inside the node (injected by withLodShell) rather than an absolutely positioned canvas layer: a node may be inside a group
+ * and at any zoom, and a canvas layer would have to compute positionAbsolute x zoom itself to align; whereas
+ * `.react-flow__node` is itself a positioned element, and `inset-0` is naturally this node's box.
  *
- * 遮罩吃掉指针事件也是有意的：拾取态下点节点就是「选它」，不该顺手触发节点内部
- * 的按钮，也不该把节点拖走。
+ * The mask swallowing pointer events is also deliberate: in the pick state clicking a node means "select it", and should not incidentally trigger buttons
+ * inside the node, nor drag the node away.
  */
 import { memo, type MouseEvent, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,7 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { attachReferenceEdge } from '@/features/canvas/application/attachReference';
 import { useReferencePickStore } from '@/features/canvas/application/referencePickStore';
 
-/** 遮罩中央那颗提示胶囊，可选态和不可选态共用一套样式。 */
+/** The hint capsule in the center of the mask, sharing one style between the selectable and non-selectable states. */
 function OverlayHint({ text, always }: { text: string; always: boolean }) {
   return (
     <span
@@ -90,9 +90,9 @@ function ActiveReferencePickOverlay({
   );
 }
 
-// 不可选的节点：调暗 + hover 出原因。
-// 只吃 click / 双击 / 右键，按下不拦、也不加 nopan——拾取态下画布上大半节点都盖着
-// 这层遮罩，再把拖动吞掉的话用户就没法拖着画布去找要参考的那个节点了。
+// Non-selectable node: dim + hover shows the reason.
+// Only swallow click / double-click / right-click, do not block press and do not add nopan - in the pick state most nodes on the canvas are covered by
+// this mask, and swallowing dragging too would leave the user unable to drag the canvas to find the node to reference.
 function BlockedReferencePickOverlay({ reason }: { reason: string }) {
   return (
     <div
@@ -108,8 +108,8 @@ function BlockedReferencePickOverlay({ reason }: { reason: string }) {
 }
 
 function ReferencePickNodeOverlayImpl({ nodeId }: { nodeId: string }) {
-  // 三个 selector 都返回原始值：不在拾取态时它们恒为 null，画布内容怎么变都不会
-  // 让任何一个节点因为这个遮罩重渲染。
+  // All three selectors return primitive values: outside the pick state they are always null, and however the canvas content changes
+  // no node re-renders because of this mask.
   const targetNodeId = useReferencePickStore((state) =>
     state.request && state.request.targetNodeId !== nodeId ? state.request.targetNodeId : null
   );

@@ -49,8 +49,8 @@ describe("SkillNode director world entry", () => {
   it("uses translation keys for selected-background source labels", () => {
     expect(source).toContain("t('viewer.threeD.currentBackgroundSource')");
     expect(source).toContain("t('viewer.threeD.savedEnvOnlyBackground')");
-    expect(source).not.toContain(">当前背景来源<");
-    expect(source).not.toContain(">下游当前背景<");
+    expect(source).not.toContain(">Current background source<");
+    expect(source).not.toContain(">Downstream current background<");
   });
 
   it("injects the scene pano source into contextual director-world manifests", () => {

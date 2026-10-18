@@ -1,6 +1,6 @@
-"""通用 AI 调用上下文调试工具。
+"""General-purpose debugging helper for AI call context.
 
-用于记录 AI 调用的完整上下文，方便调试和排查问题。
+Records the full context of an AI call to make debugging and troubleshooting easier.
 """
 
 import json
@@ -9,17 +9,17 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any, Optional
 
-# 默认调试输出目录
+# Default debug output directory
 DEBUG_OUTPUT_DIR = Path("/tmp/novelvideo_debug")
 
-# 全局开关
+# Global switch
 DEBUG_ENABLED = True
 
 
 class DebugContext:
-    """记录 AI 调用的完整上下文，用于调试和排查。
+    """Records the full context of an AI call for debugging and troubleshooting.
 
-    使用示例:
+    Usage example:
         debug = create_debug_context("video_prompt_builder")
         debug.add("episode_number", 5)
         debug.add("beat_number", 3)
@@ -36,29 +36,29 @@ class DebugContext:
         self.warnings: list[str] = []
 
     def add(self, key: str, value: Any) -> "DebugContext":
-        """添加上下文数据。"""
+        """Add context data."""
         if self.enabled:
             self.data[key] = value
         return self
 
     def add_section(self, section: str, data: dict) -> "DebugContext":
-        """添加一个数据段。"""
+        """Add a data section."""
         if self.enabled:
             self.data[section] = data
         return self
 
     def add_warning(self, warning: str) -> "DebugContext":
-        """添加警告信息。"""
+        """Add a warning message."""
         if self.enabled:
             self.warnings.append(warning)
             print(f"[DebugContext] ⚠️ {warning}")
         return self
 
     def save(self, filename: Optional[str] = None) -> Optional[Path]:
-        """保存上下文到文件。
+        """Save the context to a file.
 
         Returns:
-            保存的文件路径，或 None（如果禁用）
+            Path of the saved file, or None (if disabled)
         """
         if not self.enabled:
             return None
@@ -66,13 +66,13 @@ class DebugContext:
         DEBUG_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         if filename is None:
-            # 使用时间戳生成唯一文件名
+            # Use a timestamp to generate a unique file name
             ts = self.timestamp.replace(":", "-").replace(".", "-")
             filename = f"{self.name}_{ts}.json"
 
         output_path = DEBUG_OUTPUT_DIR / filename
 
-        # 同时保存为固定名称（方便快速查看最新的）
+        # Also save under a fixed name (for quickly viewing the latest)
         latest_path = DEBUG_OUTPUT_DIR / f"{self.name}_latest.json"
 
         content = {
@@ -82,7 +82,7 @@ class DebugContext:
             "data": self.data,
         }
 
-        # 自定义序列化器处理 Path 等类型
+        # Custom serializer handling Path and similar types
         def default_serializer(obj):
             if isinstance(obj, Path):
                 return str(obj)
@@ -95,26 +95,26 @@ class DebugContext:
             with open(latest_path, "w", encoding="utf-8") as f:
                 json.dump(content, f, ensure_ascii=False, indent=2, default=default_serializer)
 
-            print(f"[DebugContext] {self.name} 上下文已保存到: {latest_path}")
+            print(f"[DebugContext] {self.name} context saved to: {latest_path}")
             return latest_path
         except Exception as e:
-            print(f"[DebugContext] 保存失败: {e}")
+            print(f"[DebugContext] save failed: {e}")
             return None
 
     def print_summary(self):
-        """打印关键信息摘要。"""
+        """Print a summary of the key information."""
         if not self.enabled:
             return
 
         print(f"\n=== {self.name} Debug Summary ===")
 
-        # 先打印警告
+        # Print warnings first
         if self.warnings:
             print("⚠️ WARNINGS:")
             for w in self.warnings:
                 print(f"  - {w}")
 
-        # 打印数据摘要
+        # Print a data summary
         for key, value in self.data.items():
             if isinstance(value, dict):
                 print(f"{key}:")
@@ -128,39 +128,39 @@ class DebugContext:
 
 
 def create_debug_context(name: str) -> DebugContext:
-    """创建调试上下文实例。
+    """Create a debug context instance.
 
     Args:
-        name: 上下文名称（如 "video_prompt_builder"）
+        name: context name (e.g. "video_prompt_builder")
 
     Returns:
-        DebugContext 实例
+        DebugContext instance
     """
     return DebugContext(name, enabled=DEBUG_ENABLED)
 
 
 def extract_episode_from_path(path: str) -> Optional[int]:
-    """从路径中提取 episode 号。
+    """Extract the episode number from a path.
 
-    支持的格式:
-    - ep001, ep005 等
-    - episode_1, episode_5 等
+    Supported formats:
+    - ep001, ep005, etc.
+    - episode_1, episode_5, etc.
 
     Args:
-        path: 文件路径字符串
+        path: file path string
 
     Returns:
-        episode 号，或 None（如果无法提取）
+        Episode number, or None (if it cannot be extracted)
     """
     if not path:
         return None
 
-    # 匹配 ep001, ep005 等格式
+    # Match formats such as ep001, ep005
     match = re.search(r'ep(\d{3})', path)
     if match:
         return int(match.group(1))
 
-    # 匹配 episode_1, episode_5 等格式
+    # Match formats such as episode_1, episode_5
     match = re.search(r'episode[_-]?(\d+)', path, re.IGNORECASE)
     if match:
         return int(match.group(1))
@@ -173,24 +173,24 @@ def validate_episode_consistency(
     episode_number: int,
     context_name: str = "unknown",
 ) -> tuple[bool, Optional[str]]:
-    """验证图片路径与 episode 号是否一致。
+    """Validate that the image path is consistent with the episode number.
 
     Args:
-        frame_image_path: 图片文件路径
-        episode_number: 预期的 episode 号
-        context_name: 调用上下文名称（用于日志）
+        frame_image_path: image file path
+        episode_number: expected episode number
+        context_name: name of the calling context (for logging)
 
     Returns:
-        (is_valid, warning_message) 元组
-        - is_valid: 是否一致
-        - warning_message: 不一致时的警告信息，一致时为 None
+        (is_valid, warning_message) tuple
+        - is_valid: whether they are consistent
+        - warning_message: warning text when inconsistent, None when consistent
     """
     if not frame_image_path or not episode_number:
         return True, None
 
     path_episode = extract_episode_from_path(frame_image_path)
     if path_episode is None:
-        return True, None  # 无法从路径提取 episode，跳过验证
+        return True, None  # Episode cannot be extracted from the path; skip validation
 
     if path_episode != episode_number:
         warning = (

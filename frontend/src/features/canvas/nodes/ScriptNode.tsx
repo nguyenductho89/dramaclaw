@@ -104,7 +104,7 @@ type ScriptNodeProps = NodeProps & {
 
 const DEFAULT_WIDTH = 480;
 const DEFAULT_HEIGHT = 320;
-// 出现表格后默认放大到 libtv 同款尺寸（800x400）。
+// After a table appears, enlarge by default to the libtv-equivalent size (800x400).
 const DEFAULT_WIDTH_WITH_RESULT = 800;
 const DEFAULT_HEIGHT_WITH_RESULT = 400;
 const MIN_WIDTH = 360;
@@ -115,13 +115,13 @@ const PANEL_GAP_PX = 12;
 const PANEL_OVERHANG_PX = 60;
 const TEXT_TRANSLATE_FEATURE_KEY = 'freezone.text_translate';
 const STORY_SCRIPT_FEATURE_KEY = 'freezone.story_script';
-// 「放大」后的输入面板尺寸：给提示词编辑区更舒适的高度与宽度（与 ImageGenNode 同款体验）。
+// Input panel size after "enlarge": a more comfortable height and width for the prompt editing area (same experience as ImageGenNode).
 const OPS_PANEL_EXPANDED_WIDTH = 880;
 const OPS_PANEL_EXPANDED_HEIGHT = 560;
 
-// 上游节点的预估尺寸（与各自节点 DEFAULT_WIDTH / DEFAULT_HEIGHT 对齐），
-// 用于把生成的 text / video / upload 节点放到脚本节点左侧时计算坐标。
-// 注：addNode 实际尺寸由 canvasNodeFactory 决定，这里只是布局用近似值。
+// Estimated sizes of upstream nodes (aligned with each node's DEFAULT_WIDTH / DEFAULT_HEIGHT),
+// used to compute coordinates when placing generated text / video / upload nodes to the left of the script node.
+// Note: the actual size of addNode is decided by canvasNodeFactory; these are only approximations for layout.
 const SPAWN_TEXT_WIDTH = 440;
 const SPAWN_TEXT_HEIGHT = 320;
 const SPAWN_VIDEO_WIDTH = 580;
@@ -131,8 +131,8 @@ const SPAWN_UPLOAD_HEIGHT = 350;
 const SPAWN_GAP_X = 40;
 const SPAWN_GAP_Y = 24;
 
-// 后端 freezone/text/story-script 接口未来会调整，模型参数暂不前端控制，
-// 也不在 UI 里暴露选择器；提交时不传 model，由后端默认行为决定。
+// The backend freezone/text/story-script endpoint will change in the future; model params are not controlled by the frontend for now
+// and no selector is exposed in the UI; no model is passed on submit, and the backend default behavior decides.
 
 interface ScriptActionDef {
   key: ScriptGenAction;
@@ -158,16 +158,16 @@ const SCRIPT_ACTIONS: ScriptActionDef[] = [
   },
 ];
 
-// 与 libtv 脚本表格列对齐：19 列、宽度按像素硬性给定，整体 min-width 由 tailwind 继承。
-// key 必须和后端 FreezoneStoryScriptRow 的字段名逐字一致 —— 之前 character /
-// character_desc_1 / action 三个 key 后端从来没发过，于是这三列永远显示 "-"（issue #207）。
+// Aligned with the libtv script table columns: 19 columns, widths hard-set in pixels, with the overall min-width inherited from tailwind.
+// The keys must match the field names of the backend FreezoneStoryScriptRow verbatim — previously the backend never sent the character /
+// character_desc_1 / action keys, so those three columns always showed "-" (issue #207).
 type ScriptCellRender = 'text' | 'image';
 
 interface ScriptColumnDef {
   key: string;
-  /** 表头是界面文案，模块级常量取不到 t，所以存 key、渲染时再翻。 */
+  /** Header labels are UI copy and a module-level constant cannot reach t, so keys are stored and translated at render. */
   labelKey: string;
-  /** 像素宽度（既作为 min-width 也作为 width，避免列在长文本下抖动）。 */
+  /** Pixel width (used as both min-width and width, so columns do not jitter under long text). */
   widthPx: number;
   render?: ScriptCellRender;
 }
@@ -210,15 +210,15 @@ type ScriptReferenceKind = 'text' | 'image' | 'video' | 'audio';
 interface ScriptReference {
   nodeId: string;
   kind: ScriptReferenceKind;
-  /** 用作 chip / 预览的图片（image / video 首帧）；text 节点不需要。 */
+  /** Image used for the chip / preview (image / video first frame); not needed by text nodes. */
   thumbUrl?: string | null;
-  /** text 节点的内容（提交时拼接到 source_text）；其它节点不需要。 */
+  /** Content of a text node (concatenated into source_text on submit); not needed by other nodes. */
   text?: string | null;
-  /** video 节点：视频源 URL，用于 hover 预览的 <video>。 */
+  /** Video node: video source URL, used for the hover-preview <video>. */
   videoUrl?: string | null;
-  /** video 节点：视频总时长（秒），提交时作为 duration_sec 提升时间戳精度。 */
+  /** Video node: total video duration (seconds), raising timestamp precision as duration_sec on submit. */
   durationSec?: number | null;
-  /** 节点显示名（chip tooltip 用 / 角色名）。 */
+  /** Node display name (for the chip tooltip / character name). */
   displayName?: string | null;
 }
 
@@ -284,8 +284,8 @@ function classifyUpstreamNode(node: CanvasNode): ScriptReference | null {
   return null;
 }
 
-// 提交逻辑抽成共享 hook：节点本体的「重试」按钮与底部操作面板的「生成」按钮共用同一条
-// 提交路径。错误统一写进 data.generationError（渲染在节点本体上），不再用面板本地 state。
+// The submission logic is extracted into a shared hook: the node body's "Retry" button and the bottom operations panel's "Generate" button share one
+// submission path. Errors are uniformly written to data.generationError (rendered on the node body), no longer using the panel's local state.
 function useScriptStorySubmit(
   nodeId: string,
   references: ScriptReference[],
@@ -306,12 +306,12 @@ function useScriptStorySubmit(
       return;
     }
 
-    // 同一个 story-script 接口支持三种输入，按上游连线类型分流（后端默认 newapi，
-    // 前端不传 / 不展示 provider/model）：
-    //  - 文本节点  → source_text
-    //  - 视频节点  → video_url (+ duration_sec)
-    //  - 角色图节点 → character_refs[]（image_url + 角色名）
-    // 文本框内容：有任一素材时作为 steering prompt；否则作为 source_text 主输入。
+    // The same story-script endpoint supports three kinds of input, dispatched by the upstream connection type (the backend defaults to newapi,
+    // and the frontend neither passes nor shows provider/model):
+    //  - text node       → source_text
+    //  - video node      → video_url (+ duration_sec)
+    //  - character image → character_refs[] (image_url + character name)
+    // Text box content: with any asset it is the steering prompt; otherwise it is the main source_text input.
     const { sourceText, steeringPrompt, hasMedia } = resolveStoryScriptTextInput(
       references,
       prompt,
@@ -325,10 +325,10 @@ function useScriptStorySubmit(
         name: ref.displayName?.trim() || undefined,
       }));
 
-    // 视频 / 角色图现在是真正的主输入：后端会对视频抽帧、把关键帧和角色图一起送进
-    // 视觉模型（issue #207 之前它们被 Pydantic 静默丢弃，模型只能照着系统提示词编）。
-    // 所以只有在没有任何素材时，才把输入框内容当 source_text 兜底；有素材时它一律是
-    // steering prompt，不再被冒充成剧本正文。
+    // Videos / character images are now real main inputs: the backend extracts frames from videos and sends key frames and character images together to
+    // the vision model (before issue #207 they were silently dropped by Pydantic and the model could only invent from the system prompt).
+    // So only when there is no asset at all is the text box content used as the source_text fallback; with assets it is always the
+    // steering prompt and no longer passed off as the script body.
     if (!hasMedia && sourceText.length === 0) {
       updateNodeData(nodeId, {
         generationError: t('node.scriptNode.error.missingInput'),
@@ -397,9 +397,9 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
   const rows = scriptResult?.rows ?? [];
   const hasResult = rows.length > 0;
 
-  // 表格单元格编辑：把编辑过的值写回 data.scriptResult.rows[idx][colKey]。
-  // 整个 scriptResult 是 store 持有的 single source of truth，节点表格 +
-  // 全屏表格都共享同一个 onCommit，确保两处编辑都能落盘。
+  // Table cell editing: write the edited value back to data.scriptResult.rows[idx][colKey].
+  // The whole scriptResult is the single source of truth held by the store; the node table +
+  // the fullscreen table share the same onCommit, ensuring edits in both places are persisted.
   const handleCellCommit = useCallback(
     (rowIndex: number, colKey: string, nextValue: string) => {
       if (!scriptResult) return;
@@ -418,7 +418,7 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
     },
     [id, scriptResult, updateNodeData],
   );
-  // 出现表格后默认尺寸切到 800x400；用户已 resize 过的节点尊重原宽高。
+  // After a table appears the default size switches to 800x400; nodes the user already resized keep their width and height.
   const fallbackWidth = hasResult ? DEFAULT_WIDTH_WITH_RESULT : DEFAULT_WIDTH;
   const fallbackHeight = hasResult ? DEFAULT_HEIGHT_WITH_RESULT : DEFAULT_HEIGHT;
   const resolvedWidth = Math.max(MIN_WIDTH, Math.round(width ?? fallbackWidth));
@@ -426,7 +426,7 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
 
   const headerSubtitle = scriptResult?.title?.trim() || data.scriptTitle?.trim() || '';
 
-  // 上游节点 → references；用于隐藏「尝试」入口、生成 chip、提交时拼 source_text。
+  // Upstream nodes → references; used to hide the "Try" entry, generate chips, and concatenate source_text on submit.
   const references = useMemo<ScriptReference[]>(() => {
     const upstream = [...upstreamNodes];
     upstream.sort((a, b) => (a.position?.y ?? 0) - (b.position?.y ?? 0));
@@ -438,8 +438,8 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
   const isNodeSelected = Boolean(selected) || selectedNodeId === id;
   const promptText = typeof data.prompt === 'string' ? data.prompt : '';
   // Per-node story-script history; fetched only while the node is selected.
-  // 提到节点本体这一层：本体「重试」与面板「生成」共用下面同一个提交实例，任何
-  // 一条提交路径 settle 都会刷新历史（拆成两个实例时重试路径不刷新，历史会缺新记录）。
+  // Lifted to the node body level: the body's "Retry" and the panel's "Generate" share the one submission instance below, so whichever
+  // submission path settles refreshes the history (with two instances the retry path would not refresh and history would miss new records).
   const {
     records: historyRecords,
     isLoading: historyLoading,
@@ -457,7 +457,7 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
     updateNodeInternals(id);
   }, [id, resolvedHeight, resolvedWidth, updateNodeInternals]);
 
-  // Esc 关闭全屏。
+  // Esc closes fullscreen.
   useEffect(() => {
     if (!isFullscreen) return;
     const handleKey = (event: KeyboardEvent) => {
@@ -469,10 +469,10 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
 
   const cardToneClass = canvasNodeFrameClass({ selected: isNodeSelected });
 
-  // 三个快捷动作：在脚本节点左侧创建对应类型的上游节点并连边。
-  // - fromScript     → 1 个 text 节点
-  // - fromVideoRef   → 1 个 video 节点
-  // - fromCharacter  → 2 个 upload 节点（垂直堆叠）
+  // Three quick actions: create the matching upstream node to the left of the script node and connect the edge.
+  // - fromScript     → 1 text node
+  // - fromVideoRef   → 1 video node
+  // - fromCharacter  → 2 upload nodes (stacked vertically)
   const handlePickAction = useCallback(
     (action: ScriptActionDef) => {
       const state = useCanvasStore.getState();
@@ -577,7 +577,7 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
       };
 
       if (action.key === 'fromScript') {
-        // 上游 text 节点只用作内容输入：referenceOnly 关掉 mode 列表 / 模型 / 提交。
+        // An upstream text node is used only as content input: referenceOnly turns off the mode list / model / submit.
         const newId = spawn(CANVAS_NODE_TYPES.textAnnotation, SPAWN_TEXT_WIDTH, SPAWN_TEXT_HEIGHT, 0, {
           referenceOnly: true,
           displayName: t('node.scriptNode.spawn.screenplay'),
@@ -586,8 +586,8 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
           label: t('node.scriptNode.actionGroup', { action: t(action.labelKey) }),
         });
       } else if (action.key === 'fromVideoRef') {
-        // 上游 video 节点只用作素材引用：referenceOnly 关掉底部生成操作面板，
-        // 顶部 toolbar（剪辑/高清/解析/智能去字幕/...）保持可用。
+        // An upstream video node is used only as an asset reference: referenceOnly turns off the bottom generation operations panel,
+        // while the top toolbar (edit / upscale / analyze / smart subtitle removal / ...) stays available.
         const newId = spawn(CANVAS_NODE_TYPES.video, SPAWN_VIDEO_WIDTH, SPAWN_VIDEO_HEIGHT, 0, {
           referenceOnly: true,
         });
@@ -663,8 +663,8 @@ export const ScriptNode = memo(({ id, data, selected, width, height }: ScriptNod
               title={headerSubtitle}
               onFullscreen={() => setIsFullscreen(true)}
             />
-            {/* 已有结果时重新生成失败：表格上方横幅提示 + 重试，
-                否则失败只写进 data.generationError、界面毫无反应。 */}
+            {/* Regeneration failed when a result already exists: a banner above the table with retry,
+                otherwise the failure is only written to data.generationError and the UI shows no reaction at all. */}
             {data.generationError && !isGenerating && (
               <div className="flex items-center gap-2 border-b border-red-500/25 bg-red-500/10 px-3 py-2">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-300" />
@@ -801,7 +801,7 @@ function ScriptResultHeader({ title, onFullscreen }: ScriptResultHeaderProps) {
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {/* 「脚本视图」目前只有一种视图，先放占位下拉，后续接其它视图（卡片视图等）。 */}
+        {/* The "script view" has only one view for now, so a placeholder dropdown is put in, to be hooked up to other views later (card view etc.). */}
         <button
           type="button"
           className="inline-flex h-6 items-center gap-1 rounded border border-[rgba(255,255,255,0.18)] bg-bg-dark/60 px-2 text-[11px] text-text-dark hover:border-[rgba(255,255,255,0.32)]"
@@ -831,9 +831,9 @@ interface ScriptResultTableProps {
   onCellCommit?: (rowIndex: number, colKey: string, nextValue: string) => void;
 }
 
-// 镜号 / 时长这类短数字列居中、等宽数字，便于扫读。
+// Short numeric columns such as shot number / duration are centered with tabular figures, easier to scan.
 const NUMERIC_COLUMN_KEYS = new Set(['shot_no', 'duration']);
-// 单格内容过多时在格内出现滚动条，避免把整行撑得很高。
+// When a single cell has too much content a scrollbar appears inside the cell, avoiding stretching the whole row very tall.
 const CELL_MAX_HEIGHT_PX = 196;
 
 function ScriptResultTable({ rows, onCellCommit }: ScriptResultTableProps) {
@@ -912,8 +912,8 @@ function ScriptResultCell({ row, col, onCommit }: ScriptResultCellProps) {
   const raw = row[col.key];
 
   if (col.render === 'image') {
-    // 角色图/参考由后端回填，但模型偶尔仍会写进 `无` 之类的非 URL 文本，
-    // 只有真正的图片来源才渲染 <img>，否则回退到「点击上传」占位（避免 404 裂图）。
+    // Character image / reference are backfilled by the backend, but the model occasionally still writes non-URL text such as `none`,
+    // so <img> renders only for a real image source, otherwise fall back to the "click to upload" placeholder (avoiding a 404 broken image).
     const url = typeof raw === 'string' && isRenderableImageSrc(raw) ? raw : null;
     return <ScriptImageCell url={url} onCommit={onCommit} />;
   }
@@ -926,7 +926,7 @@ function ScriptResultCell({ row, col, onCommit }: ScriptResultCellProps) {
         : JSON.stringify(raw);
 
   if (!onCommit) {
-    // 没传 onCommit 视为只读，保留旧渲染。
+    // Without onCommit it is treated as read-only, keeping the old rendering.
     if (initialText.length === 0) {
       return <span className="text-text-muted/50">-</span>;
     }
@@ -940,13 +940,13 @@ function ScriptResultCell({ row, col, onCommit }: ScriptResultCellProps) {
 
 interface ScriptImageCellProps {
   url: string | null;
-  /** 传了才可编辑：上传/替换/删除都通过它写回 scriptResult.rows[i][key]。 */
+  /** Editable only when passed: upload/replace/delete all write back to scriptResult.rows[i][key] through it. */
   onCommit?: (nextValue: string) => void;
 }
 
 /**
- * 表格里的图片格：空位可点击上传，已有图可预览 / 替换 / 删除。
- * 生成结果里角色图和参考图经常需要人工补一张（issue #207：以前这里是纯只读的）。
+ * The image cell in the table: an empty slot is clickable to upload, an existing image can be previewed / replaced / deleted.
+ * In generated results the character and reference images often need a manual fill-in (issue #207: this used to be purely read-only).
  */
 function ScriptImageCell({ url, onCommit }: ScriptImageCellProps) {
   const { t } = useTranslation();
@@ -959,7 +959,7 @@ function ScriptImageCell({ url, onCommit }: ScriptImageCellProps) {
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      // 立刻清空，保证连续选同一个文件也能触发 change。
+      // Clear immediately, so choosing the same file again in a row still triggers change.
       event.target.value = '';
       if (!file || !onCommit) return;
       const project = readUrl().project;
@@ -1101,7 +1101,7 @@ interface ScriptOperationsPanelProps {
   nodeId: string;
   data: ScriptNodeData;
   references: ScriptReference[];
-  /** 与节点本体「重试」共用的提交实例 + 历史（见 ScriptNode 里的 hook 调用）。 */
+  /** The submission instance + history shared with the node body's "Retry" (see the hook call in ScriptNode). */
   onSubmit: () => Promise<void>;
   isGenerating: boolean;
   historyRecords: FreezoneGenerationHistoryRecord[];
@@ -1122,7 +1122,7 @@ function ScriptOperationsPanel({
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const { t } = useTranslation();
   const [isTranslating, setIsTranslating] = useState(false);
-  // 收起态是节点下方的浮动面板；点右上角「放大」后改为居中弹窗展示同一份内容。
+  // The collapsed state is a floating panel below the node; clicking "enlarge" at the top right switches to a centered dialog showing the same content.
   const [panelExpanded, setPanelExpanded] = useState(false);
   const prompt = typeof data.prompt === 'string' ? data.prompt : '';
   const storyInput = resolveStoryScriptTextInput(references, prompt);
@@ -1182,7 +1182,7 @@ function ScriptOperationsPanel({
     }
   }, [isGenerating, isTranslating, nodeId, prompt, updateNodeData, t]);
 
-  // 文本 / 视频 / 角色图任一有内容即可提交（与 useScriptStorySubmit 的分流一致）。
+  // Submit is allowed once any of text / video / character image has content (consistent with the dispatch in useScriptStorySubmit).
   const hasContent =
     prompt.trim().length > 0 ||
     references.some(
@@ -1363,7 +1363,7 @@ function ScriptReferenceChip({ reference, index }: ScriptReferenceChipProps) {
   const PREVIEW_W = 240;
   const PREVIEW_OFFSET = 10;
 
-  // 仅 image / video 有可视预览；text / audio chip 不弹大图。
+  // Only image / video have a visual preview; text / audio chips do not pop up a large image.
   const hasPreview =
     (reference.kind === 'image' && Boolean(reference.thumbUrl)) ||
     (reference.kind === 'video' && Boolean(reference.videoUrl || reference.thumbUrl));
@@ -1388,7 +1388,7 @@ function ScriptReferenceChip({ reference, index }: ScriptReferenceChipProps) {
     ? reference.displayName.trim()
     : t('node.scriptNode.referenceFallback', { index: index + 1 });
 
-  // chip 视觉：image 用缩略图，video 用首帧（fallback 视频元素），text 用 T 字标，audio 用 A。
+  // Chip visuals: image uses a thumbnail, video uses the first frame (fallback video element), text uses a T mark, audio uses A.
   const chipBody = (() => {
     if (reference.kind === 'image' && reference.thumbUrl) {
       return (

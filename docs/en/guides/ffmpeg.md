@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/guides/ffmpeg.md)
-
 # ffmpeg Guide
 
 > DramaClaw uses `ffmpeg` / `ffprobe` for media probing, extraction, composition, transcoding, and final-cut validation. This page covers how to install it, how to let the program find it, and your licensing obligations.
@@ -51,4 +48,4 @@ CE neither chooses the build for you nor guarantees its license status.
 
 ## Related
 
-- [Installation Guide](../getting-started/installation.md) ｜ [Self-Hosting Handbook](self-hosting.md) ｜ [Troubleshooting](troubleshooting.md)
+- [Installation Guide](../getting-started/installation.md) | [Self-Hosting Handbook](self-hosting.md) | [Troubleshooting](troubleshooting.md)

@@ -1,28 +1,28 @@
-"""M8 步 9（G3）· 扇出端点的部分投递（TCP-EU-B4a）。
+"""M8 step 9 (G3) · partial dispatch of fan-out endpoints (TCP-EU-B4a).
 
-三个扇出循环（``api/routes/generation.py`` 的 ``:2124`` / ``:3078`` / ``:4448``）撞闸时必须
-**停在撞点、如实上报已投与被拒**，而不是「前 k−1 个已扣算力、客户端只拿到一个 429」。
+When the three fan-out loops (``:2124`` / ``:3078`` / ``:4448`` of ``api/routes/generation.py``) hit a limit, they must
+**stop at the hit point and faithfully report what was dispatched and what was rejected**, rather than "the first k-1 already consumed compute and the client only gets a single 429".
 
-本文件逐循环钉死 M8 §8.2 冻结的契约：
+This file pins the contract frozen in M8 §8.2 loop by loop:
 
-1. **只捕四个 active 闸异常**（渠道／用户／项目／项目用户）→ 记账后
-   **``break``**；别的异常照旧穿透（宽捕 ``Exception`` 就是 ``TCP-P44`` 刚堵上的那条
-   503 复发路径）。
-2. **k == 0 必须裸抛** —— 交 ``api/app.py`` 的 handler 渲染 429 ＋ 正确的 ``limit_scope``
-   （M8 不变量 7）；循环 1 的单格分支 ``:2178`` 直接读 ``queued_tasks[0]``，k=0 时必崩。
-3. 响应体加 ``rejected: [{scope, reason, limit, active}]``，**恰 N−k 条**
-   （M8 ``:722``；验证矩阵 ``:755`` 的 cap=3 / N=5 → ``rejected`` 恰 2 条）：撞点那条
-   **以及它后面所有还没尝试的**条目，各带自己的 scope、顺序与计划一致。
-   「只投一次」与「上报 N−k 条」不矛盾 —— ``break`` 省的是**投递**，不是**上报**。
-   下游 ``TCP-EU-B4b``（``render-plan-dialog.tsx:265``）按
-   ``entries.length === rejected.length`` 对齐未投尾段，少报一条就整个降级成不自动补投。
-4. 把 ``:2166`` 的 ``dispatched`` 从**意图数**改成**实投数**（M8 不变量 17）。
+1. **Catch only the four active limit exceptions** (channel / user / project / project-user) -> record, then
+   **``break``**; other exceptions still propagate (a broad catch of ``Exception`` is the very
+   503 recurrence path that ``TCP-P44`` just plugged).
+2. **k == 0 must raise bare** -- hand it to the handler in ``api/app.py`` to render 429 + the correct ``limit_scope``
+   (M8 invariant 7); the single-grid branch ``:2178`` of loop 1 reads ``queued_tasks[0]`` directly and would crash at k=0.
+3. The response body gains ``rejected: [{scope, reason, limit, active}]``, **exactly N-k entries**
+   (M8 ``:722``; verification matrix ``:755`` has cap=3 / N=5 -> ``rejected`` exactly 2 entries): the hit-point entry
+   **and every not-yet-attempted entry after it**, each with its own scope and in plan order.
+   "Dispatch only once" and "report N-k entries" do not contradict -- ``break`` saves **dispatch**, not **reporting**.
+   Downstream ``TCP-EU-B4b`` (``render-plan-dialog.tsx:265``) aligns the undispatched tail by
+   ``entries.length === rejected.length``; under-reporting by one degrades the whole thing to no auto re-dispatch.
+4. Change ``dispatched`` at ``:2166`` from the **intended count** to the **actual dispatched count** (M8 invariant 17).
 
-``reason`` 的算法与 ``api/app.py`` 的 ``limit_scope`` **是同一组分支**
-（``:183-185`` 渠道闸 / ``:209`` 人闸）—— 两侧同算法即跨 EU（``TCP-EU-B2``）漂移探测器，
-故本文件四种 ``reason`` 全落到，并另有一条用例把两侧逐字对上。
+The algorithm of ``reason`` and the ``limit_scope`` of ``api/app.py`` **are the same set of branches**
+(``:183-185`` channel limit / ``:209`` person limit) -- the same algorithm on both sides is the cross-EU (``TCP-EU-B2``) drift detector,
+so this file hits all four ``reason`` values, and one more case matches the two sides verbatim.
 
-真闸在 EE（``TCP-EU-B1`` 的 ``ee_reserve_task()``），故此处一律**手工注入异常**取证。
+The real limit lives in EE (``ee_reserve_task()`` of ``TCP-EU-B1``), so exceptions are **injected by hand** here for evidence.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from novelvideo.task_backend.limits import (
 from novelvideo.task_identity import selection_scope
 
 # ---------------------------------------------------------------------------
-# 共用：注入闸异常的假 task backend
+# Shared: fake task backend that injects limit exceptions
 # ---------------------------------------------------------------------------
 
 _CHANNEL_GATE = ChannelTaskLimitExceeded(
@@ -71,7 +71,7 @@ _GLOBAL_QUEUE_GATE = GlobalLaneQueueLimitExceeded(
     project_id="project_7", queue_kind="default", limit=8, queued=8
 )
 
-# (异常, 期望的 rejected.reason, 期望的 429 limit_scope)
+# (exception, expected rejected.reason, expected 429 limit_scope)
 _GATE_CASES = [
     (_CHANNEL_GATE, "channel", "channel"),
     (_PLATFORM_GATE, "platform", "platform"),
@@ -83,13 +83,13 @@ _GATE_IDS = ["channel", "platform", "user", "project", "project-user"]
 
 
 class _GateBackend:
-    """第 ``fail_from`` 次调用起抛 ``exc``；``fail_from=None`` 则永不抛。"""
+    """Raise ``exc`` from the ``fail_from``-th call on; ``fail_from=None`` never raises."""
 
     def __init__(self, exc: Exception | None = None, fail_from: int | None = None):
         self.exc = exc
         self.fail_from = fail_from
         self.calls: list[dict] = []
-        # 真正进了队列的那几个（M8 :755 的「Celery 里恰 3 个任务」）。
+        # The tasks that really entered the queue (M8 :755's "exactly 3 tasks in Celery").
         self.succeeded: list[dict] = []
 
     async def enqueue_project_task(self, ctx, **kwargs):
@@ -106,10 +106,10 @@ class _GateBackend:
 
 
 def _app_with_production_handlers(router) -> FastAPI:
-    """借生产 app 的 exception handlers，把路由挂在干净 app 上。
+    """Borrow the production app's exception handlers and mount the route on a clean app.
 
-    形制逐字照 ``tests/test_channel_task_limit_error_surface.py:307-310``
-    （``TCP-EU-B2`` 落的），k==0 的裸抛要经过真 handler 才能断言 429 与 ``limit_scope``。
+    The form follows ``tests/test_channel_task_limit_error_surface.py:307-310`` verbatim
+    (laid down by ``TCP-EU-B2``); the bare raise at k==0 must pass through the real handler for 429 and ``limit_scope`` to be asserted.
     """
     production_app = create_app()
     app = FastAPI()
@@ -119,8 +119,8 @@ def _app_with_production_handlers(router) -> FastAPI:
 
 
 # ---------------------------------------------------------------------------
-# 循环 1：generate_sketches（:2124 for grid_index in dispatch_grid_indices）
-#   harness 照 tests/test_api_generation_sketches.py:29-116
+# Loop 1: generate_sketches (:2124 for grid_index in dispatch_grid_indices)
+#   harness follows tests/test_api_generation_sketches.py:29-116
 # ---------------------------------------------------------------------------
 
 _SKETCH_BEATS = [
@@ -219,9 +219,9 @@ def _post_sketches(client: TestClient, grid_index: int = -1):
 def test_loop1_partial_dispatch_reports_dispatched_and_rejected(
     monkeypatch, tmp_path, exc, reason, _scope
 ) -> None:
-    """N=6 第 4 个撞闸：前 3 个仍已投递，dispatched==3，rejected 恰 N−k==3 条。
+    """N=6, the 4th hits the limit: the first 3 are still dispatched, dispatched==3, rejected exactly N-k==3 entries.
 
-    被拒的三条＝撞点那条 ＋ 它后面两条还没尝试的，各带自己的 scope、顺序与计划一致。
+    The three rejected = the hit-point entry + the two after it not yet attempted, each with its own scope and in plan order.
     """
     backend = _GateBackend(exc, fail_from=4)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=6))
@@ -238,7 +238,7 @@ def test_loop1_partial_dispatch_reports_dispatched_and_rejected(
 
 
 def test_loop1_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
-    """M8 验证矩阵 :755 那一行逐字：cap=3、N=5 → 200、dispatched=3、rejected 恰 2 条。"""
+    """The M8 verification matrix :755 row verbatim: cap=3, N=5 -> 200, dispatched=3, rejected exactly 2 entries."""
     backend = _GateBackend(_CHANNEL_GATE, fail_from=4)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=5))
 
@@ -247,7 +247,7 @@ def test_loop1_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
     assert data["dispatched"] == 3
     assert len(data["rejected"]) == 2
     assert [item["scope"] for item in data["rejected"]] == ["grid_3", "grid_4"]
-    # 「Celery 里恰 3 个任务」：真正入队的只有 3 个（第 4 次调用撞闸，第 5 个根本没试）。
+    # "Exactly 3 tasks in Celery": only 3 really entered the queue (the 4th call hit the limit, the 5th was never tried).
     assert len(backend.succeeded) == 3
     assert len(backend.calls) == 4
 
@@ -255,10 +255,10 @@ def test_loop1_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
 def test_loop1_stops_at_the_gate_instead_of_retrying_every_remaining_item(
     monkeypatch, tmp_path
 ) -> None:
-    """撞点即停：后端只被调 3 次（2 成 + 1 撞），不是 N=6 次 —— 但仍报满 4 条。
+    """Stop at the hit point: the backend is called only 3 times (2 succeed + 1 hit), not N=6 -- yet all 4 are still reported.
 
-    这条是「break 省的是投递、不是上报」的钉子：rejected 有 4 条，后端却没为后 3 条
-    各发一次投递。
+    This is the nail for "break saves dispatch, not reporting": rejected has 4 entries, yet the backend did not dispatch
+    once for each of the last 3.
     """
     backend = _GateBackend(_CHANNEL_GATE, fail_from=3)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=6))
@@ -280,7 +280,7 @@ def test_loop1_stops_at_the_gate_instead_of_retrying_every_remaining_item(
 def test_loop1_k_zero_raises_bare_and_renders_429(
     monkeypatch, tmp_path, exc, _reason, scope
 ) -> None:
-    """一个都没投出去 → 429 ＋ 正确 limit_scope，不是 200 ＋ 空 rejected。"""
+    """Not a single one dispatched -> 429 + the correct limit_scope, not 200 + empty rejected."""
     backend = _GateBackend(exc, fail_from=1)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=4))
 
@@ -294,7 +294,7 @@ def test_loop1_k_zero_raises_bare_and_renders_429(
 def test_loop1_single_grid_path_still_429s_instead_of_indexerror(
     monkeypatch, tmp_path
 ) -> None:
-    """单格分支 N=1：撞闸必落 k==0 → 429（:2178 的 queued_tasks[0] 不得 IndexError）。"""
+    """Single-grid branch N=1: a limit hit always falls on k==0 -> 429 (queued_tasks[0] at :2178 must not raise IndexError)."""
     backend = _GateBackend(_USER_GATE, fail_from=1)
     response = _post_sketches(
         _sketch_client(monkeypatch, tmp_path, backend, grids=4), grid_index=1
@@ -305,7 +305,7 @@ def test_loop1_single_grid_path_still_429s_instead_of_indexerror(
 
 
 def test_loop1_non_gate_exception_is_not_swallowed(monkeypatch, tmp_path) -> None:
-    """普通 RuntimeError 原样向上：不进 rejected、不 break 成 200。"""
+    """A plain RuntimeError propagates as-is: not put into rejected, not broken into a 200."""
     backend = _GateBackend(RuntimeError("boom"), fail_from=3)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=6))
 
@@ -316,7 +316,7 @@ def test_loop1_non_gate_exception_is_not_swallowed(monkeypatch, tmp_path) -> Non
 def test_loop1_global_queue_limit_is_not_treated_as_active_limit(
     monkeypatch, tmp_path
 ) -> None:
-    """TCP-P99：queued 不是 active；CE-2 不得把队深异常塞进 rejected。"""
+    """TCP-P99: queued is not active; CE-2 must not stuff queue-depth exceptions into rejected."""
     backend = _GateBackend(_GLOBAL_QUEUE_GATE, fail_from=4)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=6))
 
@@ -334,7 +334,7 @@ def test_loop1_global_queue_limit_is_not_treated_as_active_limit(
 def test_loop1_dispatched_is_the_real_count_not_the_intended_one(
     monkeypatch, tmp_path
 ) -> None:
-    """:2166 那句谎：投出 3 个、被拒 1 个 → dispatched==3（改前会是 4）。"""
+    """The lie at :2166: 3 dispatched, 1 rejected -> dispatched==3 (it would have been 4 before the change)."""
     backend = _GateBackend(_CHANNEL_GATE, fail_from=4)
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=4))
 
@@ -346,7 +346,7 @@ def test_loop1_dispatched_is_the_real_count_not_the_intended_one(
 def test_loop1_happy_path_body_is_unchanged_plus_empty_rejected(
     monkeypatch, tmp_path
 ) -> None:
-    """不撞闸时：既有键逐字未变，rejected 为空列表（本 EU 选「恒出现」，在此钉死）。"""
+    """Without a limit hit: existing keys verbatim unchanged, rejected is an empty list (this EU chooses "always present", pinned here)."""
     backend = _GateBackend()
     response = _post_sketches(_sketch_client(monkeypatch, tmp_path, backend, grids=4))
 
@@ -366,7 +366,7 @@ def test_loop1_happy_path_body_is_unchanged_plus_empty_rejected(
 def test_loop1_single_grid_happy_path_body_has_no_rejected_key(
     monkeypatch, tmp_path
 ) -> None:
-    """单格分支的响应体逐字未变（N=1 无扇出，不挂 rejected）。"""
+    """The single-grid branch response body is verbatim unchanged (N=1 has no fan-out, no rejected attached)."""
     backend = _GateBackend()
     response = _post_sketches(
         _sketch_client(monkeypatch, tmp_path, backend, grids=4), grid_index=1
@@ -387,8 +387,8 @@ def test_loop1_single_grid_happy_path_body_has_no_rejected_key(
 
 
 # ---------------------------------------------------------------------------
-# 循环 2：render_execute（:3078 for entry in execution_plan）
-#   harness 照 tests/test_api_render_regenerate.py:32-104
+# Loop 2: render_execute (:3078 for entry in execution_plan)
+#   harness follows tests/test_api_render_regenerate.py:32-104
 # ---------------------------------------------------------------------------
 
 _RENDER_BEATS = [
@@ -456,7 +456,7 @@ def _render_client(monkeypatch, tmp_path, backend: _GateBackend):
 
 
 def _render_execute(client: TestClient, beat_indices: list[int]):
-    """两步：/render/plan 拿指纹，再 /render/execute（force_one_by_one → 一 beat 一格）。"""
+    """Two steps: /render/plan gets the fingerprint, then /render/execute (force_one_by_one -> one beat per grid)."""
     plan_response = client.post(
         "/api/v1/projects/demo/episodes/2/render/plan",
         json={
@@ -515,7 +515,7 @@ def test_loop2_partial_dispatch_reports_task_ids_and_rejected(
 
 
 def test_loop2_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
-    """M8 :755：cap=3、N=5 → 200、实投 3（task_ids 3 条）、rejected 恰 2 条。"""
+    """M8 :755: cap=3, N=5 -> 200, actually dispatched 3 (3 task_ids), rejected exactly 2 entries."""
     backend = _GateBackend(_CHANNEL_GATE, fail_from=4)
     plan, response = _render_execute(
         _render_client(monkeypatch, tmp_path, backend), [1, 2, 3, 4, 5]
@@ -531,7 +531,7 @@ def test_loop2_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
 
 
 def test_loop2_stops_at_the_gate(monkeypatch, tmp_path) -> None:
-    """只投 3 次（2 成 + 1 撞），但未投的尾段 4 条全数上报。"""
+    """Only 3 dispatches (2 succeed + 1 hit), but all 4 undispatched tail entries are reported."""
     backend = _GateBackend(_PLATFORM_GATE, fail_from=3)
     plan, response = _render_execute(
         _render_client(monkeypatch, tmp_path, backend), [1, 2, 3, 4, 5, 6]
@@ -548,11 +548,11 @@ def test_loop2_stops_at_the_gate(monkeypatch, tmp_path) -> None:
 def test_loop2_rejected_length_matches_the_untried_tail_the_frontend_slices(
     monkeypatch, tmp_path
 ) -> None:
-    """下游对齐：``resolved_grids[len(task_ids):]`` 的长度必须等于 ``rejected`` 的长度。
+    """Downstream alignment: the length of ``resolved_grids[len(task_ids):]`` must equal the length of ``rejected``.
 
-    这正是 ``TCP-EU-B4b`` 的 ``render-plan-dialog.tsx:265``
-    （``entries = grids.slice(taskIds.length)``；``shapeOk: entries.length ===
-    rejected.length``）—— 对不上前端就不自动补投，且横幅上的失败数会少报。
+    This is exactly ``render-plan-dialog.tsx:265`` of ``TCP-EU-B4b``
+    (``entries = grids.slice(taskIds.length)``; ``shapeOk: entries.length ===
+    rejected.length``) -- if they do not match the frontend does not auto re-dispatch, and the failure count on the banner is under-reported.
     """
     backend = _GateBackend(_USER_GATE, fail_from=3)
     _plan, response = _render_execute(
@@ -594,7 +594,7 @@ def test_loop2_non_gate_exception_is_not_swallowed(monkeypatch, tmp_path) -> Non
 def test_loop2_global_queue_limit_is_not_treated_as_active_limit(
     monkeypatch, tmp_path
 ) -> None:
-    """TCP-P99：render execute 也必须保留 queued 形状，留给后续契约修复。"""
+    """TCP-P99: render execute must also keep the queued shape, left for a later contract fix."""
     backend = _GateBackend(_GLOBAL_QUEUE_GATE, fail_from=4)
     _plan, response = _render_execute(
         _render_client(monkeypatch, tmp_path, backend), [1, 2, 3, 4, 5, 6]
@@ -609,7 +609,7 @@ def test_loop2_global_queue_limit_is_not_treated_as_active_limit(
 def test_loop2_happy_path_body_is_unchanged_and_has_no_rejected_key(
     monkeypatch, tmp_path
 ) -> None:
-    """不撞闸时逐字未变：``rejected`` 只在非空时出现（照既有 ``task_ids`` 的挂法）。"""
+    """Verbatim unchanged without a limit hit: ``rejected`` appears only when non-empty (attached the way the existing ``task_ids`` is)."""
     backend = _GateBackend()
     plan, response = _render_execute(
         _render_client(monkeypatch, tmp_path, backend), [1, 2, 3, 4]
@@ -634,7 +634,7 @@ def test_loop2_happy_path_body_is_unchanged_and_has_no_rejected_key(
 
 
 def test_loop2_response_model_field_set_is_unchanged() -> None:
-    """RenderPlanExecuteResponse 一个字段都没加（rejected 只挂在外层 dict）。"""
+    """RenderPlanExecuteResponse gained not a single field (rejected is attached only to the outer dict)."""
     from novelvideo.api.schemas import RenderPlanExecuteResponse
 
     assert set(RenderPlanExecuteResponse.model_fields) == {
@@ -646,7 +646,7 @@ def test_loop2_response_model_field_set_is_unchanged() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 循环 3：generate_missing_manual_sketches（:4448 for beat_numbers in segments）
+# Loop 3: generate_missing_manual_sketches (:4448 for beat_numbers in segments)
 # ---------------------------------------------------------------------------
 
 
@@ -746,7 +746,7 @@ def test_loop3_partial_dispatch_reports_dispatched_and_rejected(
 
 
 def test_loop3_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
-    """M8 :755：cap=3、N=5 → 200、dispatched=3、rejected 恰 2 条。"""
+    """M8 :755: cap=3, N=5 -> 200, dispatched=3, rejected exactly 2 entries."""
     backend = _GateBackend(_CHANNEL_GATE, fail_from=4)
     segments = [[1], [2], [3], [4], [5]]
     response = _post_missing_manual(
@@ -765,7 +765,7 @@ def test_loop3_m8_755_cap3_n5(monkeypatch, tmp_path) -> None:
 
 
 def test_loop3_stops_at_the_gate(monkeypatch, tmp_path) -> None:
-    """只投 3 次（2 成 + 1 撞），未投的尾段 4 条全数上报。"""
+    """Only 3 dispatches (2 succeed + 1 hit), the 4 undispatched tail entries are all reported."""
     backend = _GateBackend(_USER_GATE, fail_from=3)
     segments = [[1], [2], [3], [4], [5], [6]]
     response = _post_missing_manual(
@@ -808,7 +808,7 @@ def test_loop3_non_gate_exception_is_not_swallowed(monkeypatch, tmp_path) -> Non
 def test_loop3_global_queue_limit_is_not_treated_as_active_limit(
     monkeypatch, tmp_path
 ) -> None:
-    """TCP-P99：missing-manual 扇出不许把 queued 冒充 active。"""
+    """TCP-P99: the missing-manual fan-out must not pass queued off as active."""
     backend = _GateBackend(_GLOBAL_QUEUE_GATE, fail_from=4)
     response = _post_missing_manual(
         _manual_client(
@@ -826,7 +826,7 @@ def test_loop3_global_queue_limit_is_not_treated_as_active_limit(
 
 
 def test_loop3_happy_path_keeps_its_existing_shape(monkeypatch, tmp_path) -> None:
-    """dispatched / scopes / segments 三键语义逐字未变，rejected 为空列表。"""
+    """The semantics of the dispatched / scopes / segments keys are verbatim unchanged, and rejected is an empty list."""
     backend = _GateBackend()
     segments = [[1], [2], [3]]
     response = _post_missing_manual(
@@ -837,7 +837,7 @@ def test_loop3_happy_path_keeps_its_existing_shape(monkeypatch, tmp_path) -> Non
     body = response.json()
     assert set(body) == {"ok", "task_type", "data", "message"}
     assert body["task_type"] == "sketch_regen"
-    assert body["message"] == "已启动 3 组新增分镜草图生成"
+    assert body["message"] == "Started 3 groups of new-shot sketch generation"
     assert set(body["data"]) == {"dispatched", "scopes", "segments", "rejected"}
     assert body["data"]["dispatched"] == 3
     assert body["data"]["segments"] == segments
@@ -846,7 +846,7 @@ def test_loop3_happy_path_keeps_its_existing_shape(monkeypatch, tmp_path) -> Non
 
 
 def test_loop3_empty_segments_early_return_is_untouched(monkeypatch, tmp_path) -> None:
-    """空集早返回（:4426-4430）不受影响：三键逐字未变、不长出 rejected。"""
+    """The early return for an empty set (:4426-4430) is unaffected: the three keys verbatim unchanged, no rejected grown."""
     backend = _GateBackend()
     response = _post_missing_manual(_manual_client(monkeypatch, tmp_path, backend, []))
 
@@ -854,12 +854,12 @@ def test_loop3_empty_segments_early_return_is_untouched(monkeypatch, tmp_path) -
     body = response.json()
     assert body["ok"] is True
     assert body["data"] == {"dispatched": 0, "scopes": [], "segments": []}
-    assert body["message"] == "没有缺草图的手工分镜"
+    assert body["message"] == "No manual shots are missing sketches"
     assert backend.calls == []
 
 
 # ---------------------------------------------------------------------------
-# 跨 EU 漂移探测器：rejected.reason 与 api/app.py 的 limit_scope 同算法
+# Cross-EU drift detector: rejected.reason uses the same algorithm as limit_scope in api/app.py
 # ---------------------------------------------------------------------------
 
 
@@ -867,10 +867,10 @@ def test_loop3_empty_segments_early_return_is_untouched(monkeypatch, tmp_path) -
 def test_rejected_reason_matches_the_handler_limit_scope_verbatim(
     monkeypatch, tmp_path, exc, reason, scope
 ) -> None:
-    """同一个异常：``rejected[0]["reason"]`` 与 429 的 ``limit_scope`` 必须相等。
+    """Same exception: ``rejected[0]["reason"]`` and the 429 ``limit_scope`` must be equal.
 
-    两侧同算法是 ``TCP-EU-B4a`` 与 ``TCP-EU-B2`` 之间唯一的漂移探测器
-    （``api/app.py:183-185`` / ``:209``）。
+    The same algorithm on both sides is the only drift detector between ``TCP-EU-B4a`` and ``TCP-EU-B2``
+    (``api/app.py:183-185`` / ``:209``).
     """
     assert reason == scope
 
@@ -890,10 +890,10 @@ def test_rejected_reason_matches_the_handler_limit_scope_verbatim(
 
 
 # ---------------------------------------------------------------------------
-# 部分投递撞闸也要留下可归因日志
-#   k > 0 时异常被本地吞掉、响应是 200 ＋ ``rejected``，永远走不到 ``api/app.py``
-#   的 handler。日志若只挂在 handler 上，漏掉的恰是「投了一半撞闸」这类线上事件 ——
-#   用户拿到 200、面板上一条记录都没有。
+# A partial-dispatch limit hit must also leave an attributable log
+#   When k > 0 the exception is swallowed locally, the response is 200 + ``rejected``, and it never reaches the handler in ``api/app.py``.
+#   If the log hangs only on the handler, what is missed is exactly the "limit hit halfway through dispatch" online event --
+#   the user gets a 200 and there is not a single record on the dashboard.
 # ---------------------------------------------------------------------------
 
 _LIMIT_LOGGER = "novelvideo.task_backend.limit_logging"
@@ -912,7 +912,7 @@ def _assert_single_rejection_log(
     caplog: pytest.LogCaptureFixture, exc, reason: str
 ) -> None:
     records = _limit_log_records(caplog)
-    assert len(records) == 1, "按捕获到的那一个异常记一次，不按 rejected 逐条刷屏"
+    assert len(records) == 1, "Log once for the one exception actually caught, rather than flooding per rejected entry"
     message = records[0].getMessage()
     assert records[0].levelno == logging.WARNING
     assert f"limit_scope={reason}" in message
@@ -970,7 +970,7 @@ def test_loop3_partial_dispatch_logs_one_attributable_rejection(
 def test_partial_dispatch_log_carries_the_gate_identity_not_the_tail_length(
     caplog, monkeypatch, tmp_path
 ) -> None:
-    """一次撞闸一行，字段来自异常本身（org_id / active），与 ``rejected`` 条数无关。"""
+    """One line per limit hit, fields from the exception itself (org_id / active), independent of the number of ``rejected`` entries."""
     caplog.set_level(logging.WARNING, logger=_LIMIT_LOGGER)
     backend = _GateBackend(_CHANNEL_GATE, fail_from=2)
 
@@ -991,7 +991,7 @@ def test_partial_dispatch_log_carries_the_gate_identity_not_the_tail_length(
 def test_k_zero_still_logs_exactly_once_through_the_handler(
     caplog, monkeypatch, tmp_path, exc, _reason, scope
 ) -> None:
-    """k == 0 走裸抛：只有 handler 记那一次，扇出侧不得抢在 ``raise`` 前重复记。"""
+    """k == 0 raises bare: only the handler logs that once; the fan-out side must not log it again before the ``raise``."""
     caplog.set_level(logging.WARNING, logger=_LIMIT_LOGGER)
     backend = _GateBackend(exc, fail_from=1)
 
@@ -999,5 +999,5 @@ def test_k_zero_still_logs_exactly_once_through_the_handler(
 
     assert response.status_code == 429
     records = _limit_log_records(caplog)
-    assert len(records) == 1, "裸抛路径只该由 handler 记一次"
+    assert len(records) == 1, "The bare-raise path should be logged only once, by the handler"
     assert f"limit_scope={scope}" in records[0].getMessage()

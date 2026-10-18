@@ -53,11 +53,11 @@ describe("resetRegionState", () => {
   });
 
   it("localStorage sweep preserves supertale-app and i18nextLng", () => {
-    localStorage.setItem("supertale-app", JSON.stringify({ state: { language: "zh" } }));
-    localStorage.setItem("i18nextLng", "zh");
+    localStorage.setItem("supertale-app", JSON.stringify({ state: { language: "vi" } }));
+    localStorage.setItem("i18nextLng", "vi");
     resetRegionState({ queryClient: new QueryClient() });
     expect(localStorage.getItem("supertale-app")).not.toBeNull();
-    expect(localStorage.getItem("i18nextLng")).toBe("zh");
+    expect(localStorage.getItem("i18nextLng")).toBe("vi");
   });
 });
 
@@ -67,10 +67,10 @@ describe("resetUserSessionState", () => {
   });
 
   it("clears queryClient cache so the next account never sees stale data", () => {
-    // 回归用例：手动退出登录只清了 auth store，React Query 缓存原样留在内存里；
-    // 换账号登录后 projectSummaries 还在 staleTime 内，B 直接看到 A 的项目列表。
+    // Regression case: manual logout only cleared the auth store, and the React Query cache stayed in memory as is;
+    // after logging in as another account projectSummaries was still within staleTime, and B saw A's project list directly.
     const qc = new QueryClient();
-    qc.setQueryData(["projectSummaries"], ["A 的项目"]);
+    qc.setQueryData(["projectSummaries"], ["A's project"]);
     qc.setQueryData(["org", "me"], { organization: { org_id: "org-a" } });
     qc.setQueryData(["org", "members"], [{ user_id: "user-a" }]);
     resetUserSessionState({ queryClient: qc });
@@ -90,11 +90,11 @@ describe("resetUserSessionState", () => {
   it("preserves the region selection — logout must not force a region re-pick", () => {
     localStorage.setItem("supertale-region", JSON.stringify({ state: { selectedRegionId: "cn-1" } }));
     localStorage.setItem("supertale-app", "keep");
-    localStorage.setItem("i18nextLng", "zh");
+    localStorage.setItem("i18nextLng", "vi");
     resetUserSessionState({ queryClient: new QueryClient() });
     expect(localStorage.getItem("supertale-region")).not.toBeNull();
     expect(localStorage.getItem("supertale-app")).toBe("keep");
-    expect(localStorage.getItem("i18nextLng")).toBe("zh");
+    expect(localStorage.getItem("i18nextLng")).toBe("vi");
   });
 
   it("resetRegionState still sweeps the region key (region-switch behavior unchanged)", () => {

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 点提示词里某个 @ 引用上的替换图标后弹出的选单：把这处 @ 改指到别的素材。
+ * The menu that pops up after clicking the replace icon on an @ reference in the prompt: re-point this @ to another asset.
  *
- * 分两段，因为「换成什么」有两种来源，代价不一样：
- * - 已引用：本节点当前就连着的素材，换过去只改这处 @ 的指向，引用行不动；
- * - 素材引用：画布上还没连过来的素材，选中会先把它连成上游（引用行多一条），
- *   再把这处 @ 换成它。用户拿到的是「换了指向，且新素材也进了参考」。
+ * It has two sections because "replace with what" has two sources with different costs:
+ * - Already referenced: assets this node is currently connected to; switching only changes where this @ points, the reference row is untouched;
+ * - Asset references: assets on the canvas not yet connected; selecting one first connects it as upstream (the reference row gains an entry),
+ *   then replaces this @ with it. The user gets "re-pointed, and the new asset also entered the references".
  *
- * 素材按图片 / 视频 / 音频分组、悬停展开右侧列表：画布大了以后这份清单可以有几十
- * 条，一次全铺开会把选单拉成一根长条，而用户心里通常已经知道自己要找的是哪一类。
- * 一旦开始搜索就拉平成一个列表——搜的时候按种类翻反而碍事。
+ * Assets are grouped by image / video / audio with a right-hand list expanding on hover: on a big canvas this list can have dozens
+ * of entries, and spreading them all out at once would stretch the menu into a long strip, while the user usually already knows which kind they want.
+ * Once searching starts it flattens into a single list — flipping through kinds while searching just gets in the way.
  */
 import { useTranslation } from 'react-i18next';
 import {
@@ -36,11 +36,11 @@ const LIST_MAX_HEIGHT = 268;
 const SUBMENU_MAX_HEIGHT = 300;
 const EDGE_GAP = 8;
 const ANCHOR_GAP = 4;
-/** 搜索框那一行（含选单自身的 padding 与它下方的间距）占掉的高度。 */
+/** Height taken by the search row (including the menu's own padding and the gap below it). */
 const SEARCH_ROW_HEIGHT = 46;
 
 const KIND_ORDER: readonly ReferenceMediaKind[] = ['image', 'video', 'audio'];
-/** 三类素材的展示名跟资产库共用一套词条，源码里只留 key。 */
+/** The display names of the three asset kinds share one set of entries with the asset library; only keys remain in the source. */
 const KIND_LABEL_KEYS: Record<ReferenceMediaKind, string> = {
   image: 'canvas.assetLibrary.media.image',
   video: 'canvas.assetLibrary.media.video',
@@ -48,21 +48,21 @@ const KIND_LABEL_KEYS: Record<ReferenceMediaKind, string> = {
 };
 
 export interface MentionReplacePopoverProps {
-  /** 被点击的那颗 chip 的位置，选单贴着它下沿展开。 */
+  /** Position of the clicked chip; the menu expands against its lower edge. */
   anchorRect: DOMRect;
-  /** 「已引用」段：本节点当前的引用素材。 */
+  /** The "already referenced" section: this node's current reference assets. */
   referenced: readonly MentionCandidate[];
-  /** 「素材引用」段：画布上还没被引用的素材。 */
+  /** The "asset references" section: assets on the canvas not yet referenced. */
   materials: readonly ReferenceMaterialOption[];
   onPickReferenced: (candidate: MentionCandidate) => void;
   onPickMaterial: (material: ReferenceMaterialOption) => void;
-  /** Escape 关闭。选单一打开焦点就在搜索框上，编辑器那边收不到这颗键。 */
+  /** Escape closes. Focus is on the search box as soon as the menu opens, so the editor never receives this key. */
   onClose: () => void;
 }
 
 /**
- * 行首的方形缩略图。取不到图时按 kind 画占位图标——早先一律画 ♪，结果是「还没
- * 出图的图片素材」顶着一个音符，连它所在的分组行都被带偏。
+ * The square thumbnail at the start of a row. When no image is available, a placeholder icon is drawn by kind — it used to always draw ♪, so
+ * "image assets with no image yet" wore a musical note, misleading even the group row they sit in.
  */
 function RowThumb({
   imageUrl,
@@ -133,7 +133,7 @@ export function MentionReplacePopover({
 }: MentionReplacePopoverProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  // 展开中的种类分组 + 它那一行的位置（右侧列表用 fixed 定位，避开选单自身的滚动裁切）。
+  // The expanded kind group + the position of its row (the right-hand list uses fixed positioning to avoid the menu's own scroll clipping).
   const [openGroup, setOpenGroup] = useState<{
     kind: ReferenceMediaKind;
     top: number;
@@ -146,13 +146,13 @@ export function MentionReplacePopover({
   }, []);
 
   const handleKeyDown = (event: ReactKeyboardEvent) => {
-    // 选单自己消化键盘事件：它是 portal 出去的兄弟节点，冒泡上去也到不了编辑器，
-    // 而编辑器的方向键 / Enter 候选导航更不该被这里的输入喂到。
+    // The menu consumes keyboard events itself: it is a portal-ed sibling, so bubbling up would not reach the editor either,
+    // and the editor's arrow keys / Enter candidate navigation should not be fed by input here.
     event.stopPropagation();
     if (event.key !== 'Escape') return;
     event.preventDefault();
     if (openGroup) {
-      // 先收起展开的种类列表，再按一次才关整个选单。
+      // First collapse the expanded kind list; a second press closes the whole menu.
       setOpenGroup(null);
       return;
     }
@@ -180,11 +180,11 @@ export function MentionReplacePopover({
     [matchedMaterials],
   );
 
-  // 搜索时不再分组：这时用户是在按名字找一个具体的东西，多一层展开只是挡路。
+  // No grouping while searching: the user is looking for a specific thing by name, and an extra expansion layer just gets in the way.
   const flattenMaterials = q.length > 0;
 
-  // chip 常常就在贴着视口下沿的操作面板里：只往下开的话整个选单落到屏幕外，用户
-  // 看到的是「点了替换没反应」。空间不够就翻到 chip 上方，仍然不够就收缩内部滚动。
+  // The chip is often inside an operations panel hugging the bottom edge of the viewport: opening only downward puts the whole menu off screen, and the user
+  // sees "clicked replace and nothing happened". When there is not enough space, flip above the chip; if still not enough, shrink the inner scroll.
   const { top, left, maxHeight } = placeAnchoredMenu({
     anchorRect,
     width: POPOVER_WIDTH,
@@ -215,8 +215,8 @@ export function MentionReplacePopover({
               setQuery(event.target.value);
               setOpenGroup(null);
             }}
-            // 编辑器把方向键 / Enter 用于候选导航，别让这里的输入冒泡上去。
-            // Escape 例外：焦点在这颗输入框上，不在这儿处理就没人处理了。
+            // The editor uses arrow keys / Enter for candidate navigation; do not let input here bubble up.
+            // Escape is the exception: focus is on this input, and if it is not handled here nobody will.
             onKeyDown={handleKeyDown}
             placeholder={t('common.search')}
             className="min-w-0 flex-1 bg-transparent text-xs text-text-dark outline-none placeholder:text-text-muted/60"
@@ -246,7 +246,7 @@ export function MentionReplacePopover({
                   <RowThumb
                     imageUrl={candidate.imageUrl || undefined}
                     videoUrl={candidate.videoUrl}
-                    isText={candidate.name.startsWith('文本') /* i18n-exempt -- canonical @mention protocol token */}
+                    isText={candidate.name.startsWith('text')}
                   />
                   <span className="flex-1 truncate">{mentionChipLabel(candidate)}</span>
                   <span className="text-[10px] text-text-muted/70">@{candidate.name}</span>
@@ -282,8 +282,8 @@ export function MentionReplacePopover({
                     <button
                       key={group.kind}
                       type="button"
-                      // 行内文字只有「图片」，和已引用段里同名的引用标签分不开；
-                      // 给个明确的可读名，读屏和测试都能指到这一行。
+                      // The inline text is only "Image", indistinguishable from the same-named reference label in the already-referenced section;
+                      // give a clear readable name so screen readers and tests can point to this row.
                       aria-label={t('canvas.mentionReplace.kindMaterialsAria', {
                         kind: t(KIND_LABEL_KEYS[group.kind]),
                       })}

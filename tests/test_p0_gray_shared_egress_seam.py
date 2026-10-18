@@ -12,7 +12,7 @@ from novelvideo.project_context import ProjectContext
 from novelvideo.task_backend.consumer import VerifiedTaskDelivery
 from novelvideo.task_backend.envelope import InvalidTaskEnvelope
 
-# 「这个关键字压根没传进来」的哨兵——与「传了但值是 None」是两件事。
+# A sentinel for "this keyword was not passed at all" -- a different thing from "passed but the value is None".
 _NOT_PASSED = object()
 
 
@@ -145,7 +145,7 @@ def trusted_runner_envelope(monkeypatch: pytest.MonkeyPatch):
                 "job_id": "job-1",
                 "prompt": "prompt",
                 "input": "music",
-                "text": "你好",
+                "text": "Hello",
                 "node_type": "text",
                 "source_path": "source.mp4",
             }
@@ -181,13 +181,13 @@ def test_run_core_constructs_immutable_secret_free_context_from_verified_deliver
 def test_run_core_binds_gateway_scope_for_every_runner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """派发点中心绑定：runner 自己不绑定，也必须能读到本次投递的身份。
+    """Central binding at the dispatch point: even if the runner does not bind by itself, it must be able to read the identity of this delivery.
 
-    `egress_context` 是可选参数，缺省即放行——于是「平台任务，允许」和「调用点
-    忘了穿参数」被压成同一个 `None`。闸门要能区分这两者，前提是**总有**一个
-    请求作用域的身份可读。绑定原先只在 5 个 runner 自己函数体内做，其余 runner
-    （render / sketch / video / audio / freezone）读到的恒为 None；现在派发点
-    统一绑定，与那 5 处嵌套安全（set/reset 成对）。
+    `egress_context` is an optional parameter and the default lets things through -- so "platform task, allowed" and "the call site
+    forgot to pass the parameter" get flattened into the same `None`. For the gate to tell these two apart, the premise is that there is **always** a
+    request-scoped identity to read. The binding used to be done only inside the function bodies of 5 runners, and the other runners
+    (render / sketch / video / audio / freezone) always read None; now the dispatch point
+    binds uniformly, nesting safely with those 5 places (set/reset in pairs).
     """
 
     from novelvideo import model_gateway_runtime as runtime
@@ -211,11 +211,11 @@ def test_run_core_binds_gateway_scope_for_every_runner(
 
 
 def test_dispatch_refuses_an_envelope_that_carries_no_identity() -> None:
-    """失效关闭落在派发点：没有身份的信任信封根本到不了 runner。
+    """Fail-closed lands at the dispatch point: a trusted envelope without an identity never reaches the runner at all.
 
-    这是 OI-48 「缺省即放行」的中心收口。逐个闸门改成「无身份即报错」做不到
-    同样的事——CLI 与内部工具本就合法地没有身份，那样只会把它们一并拒掉；
-    而组织身份只在通过校验的投递里存在，派发点是它唯一的入口。
+    This is the central closure of OI-48's "default lets through". Changing the gates one by one into "error when there is no identity" cannot do
+    the same thing -- the CLI and internal tools legitimately have no identity, and that would only reject them along with it;
+    while an organization identity exists only in validated deliveries, and the dispatch point is its only entry.
     """
 
     from novelvideo.egress_context import (
@@ -230,7 +230,7 @@ def test_dispatch_refuses_an_envelope_that_carries_no_identity() -> None:
         ):
             pass
 
-    # 普通 dict 冒充信任信封同样进不来。
+    # A plain dict posing as a trusted envelope cannot get in either.
     with pytest.raises(TypeError):
         with model_gateway_scope_for_runner({TRUSTED_EGRESS_CONTEXT_KEY: None}):
             pass
@@ -356,7 +356,7 @@ async def test_freezone_representative_leaves_receive_same_trusted_context(
         received.append(("text", egress_context))
         return "hello", "zh", "en"
 
-    # 视频增强现已包含网关模型调用，必须和其它出网 leaf 一样收到可信 context。
+    # Video enhancement now includes gateway model calls and must receive a trusted context like the other egress leaves.
     async def video_leaf(*, egress_context, **_kwargs):
         received.append(("video", egress_context))
         path = project_dir / "video.mp4"

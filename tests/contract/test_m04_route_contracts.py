@@ -15,10 +15,10 @@ pytestmark = pytest.mark.m04
 
 
 _PROJECT = "demo"
-_CHARACTER = "林昭"
-_IDENTITY_ID = "林昭_青年"
-_IDENTITY_NAME = "青年"
-_PROP = "玉佩"
+_CHARACTER = "LinZhao"
+_IDENTITY_ID = "LinZhao_young_adult"
+_IDENTITY_NAME = "young_adult"
+_PROP = "JadePendant"
 
 
 def _png_bytes() -> bytes:
@@ -38,26 +38,26 @@ class _M04Store:
             identity_id=_IDENTITY_ID,
             character_name=_CHARACTER,
             identity_name=_IDENTITY_NAME,
-            appearance_details="青衣佩剑",
+            appearance_details="blue robe and sword",
             face_prompt="clear eyes",
             age_group="youth",
         )
         character = NovelCharacter(
             name=_CHARACTER,
-            role="主角",
+            role="protagonist",
             is_main=True,
             face_prompt="sharp eyes",
-            description="少年侠客",
+            description="young swordsman",
         )
         character.identities = [identity]
         self.characters = {character.name: character}
         self.props = {
             _PROP: NovelProp(
                 name=_PROP,
-                aliases=["玉坠"],
+                aliases=["jade pendant"],
                 prop_type="artifact",
                 visual_prompt="warm jade pendant",
-                description="通透玉佩",
+                description="translucent jade pendant",
                 owner=_CHARACTER,
             )
         }
@@ -69,7 +69,7 @@ class _M04Store:
         return list(self.characters.values())
 
     async def repair_path_unsafe_asset_names(self, kind: str, move_assets=None):
-        # 这里的名字都是干净的，list 接口上那道存量自愈是空跑。
+        # All names here are clean, so the legacy self-healing on the list endpoint is a no-op.
         return {}
 
     def get_character(self, name: str):
@@ -155,7 +155,7 @@ class _M04Store:
                 "beat_number": 1,
                 "audio_type": "narration",
                 "speaker": "",
-                "narration_segment": "风起。",
+                "narration_segment": "The wind rises.",
             }
         ]
 
@@ -180,8 +180,8 @@ class _FakeTaskBackend:
 def m04_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     from novelvideo import project_config
     from novelvideo.api import auth as api_auth
-    # 在函数里 import：``test_m01_auth`` 会把 ``novelvideo.api.*`` 整片从
-    # ``sys.modules`` 弹掉以 CE 模式重建 app，模块级绑定到那时是死对象，打上去会落空。
+    # Import inside the function: ``test_m01_auth`` pops ``novelvideo.api.*`` wholesale from
+    # ``sys.modules`` and rebuilds the app in CE mode, so module-level bindings are dead objects by then and a patch applied to them would miss.
     from novelvideo.api import deps
     from novelvideo.api.deps import ProjectResolution
     from novelvideo.api.routes import characters, generation, projects, props, styles
@@ -193,7 +193,7 @@ def m04_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     runtime_dir = tmp_path / "runtime" / "alice" / _PROJECT
     for path in (project_dir, state_dir, runtime_dir):
         path.mkdir(parents=True, exist_ok=True)
-    (project_dir / "novel.txt").write_text("测试原文", encoding="utf-8")
+    (project_dir / "novel.txt").write_text("test source text", encoding="utf-8")
     store.project_dir = str(project_dir)
     (project_dir / "assets" / "characters" / _CHARACTER).mkdir(parents=True, exist_ok=True)
     portrait = project_dir / "assets" / "characters" / _CHARACTER / "portrait.png"
@@ -266,9 +266,9 @@ def m04_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(generation, "_resolve_generation_project", resolve_project_scope)
     monkeypatch.setattr(characters, "_resolve_character_project", resolve_character_project)
     monkeypatch.setattr(characters, "make_sqlite_store_for_context", make_store_for_context)
-    # 打在 ``deps`` 上：角色列表 / identities 走 ``_character_project_scope``，里头的
-    # ``sqlite_store_for_context_scope`` 是按 ``deps`` 模块全局解析工厂的，打 route
-    # 模块够不着——同时也把 scope 的 ``finally: close()`` 纳进了这条合同的覆盖面。
+    # Patch on ``deps``: the character list / identities go through ``_character_project_scope``, whose inner
+    # ``sqlite_store_for_context_scope`` resolves the factory via ``deps`` module globals, which patching the route
+    # module cannot reach -- and this also brings the scope's ``finally: close()`` into the coverage of this contract.
     monkeypatch.setattr(deps, "make_sqlite_store_for_context", make_store_for_context)
     monkeypatch.setattr(props, "make_sqlite_store_for_context", make_store_for_context)
     monkeypatch.setattr(props, "make_sqlite_store", make_store)
@@ -286,7 +286,7 @@ def m04_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         characters,
         "trim_existing_character_voice_file",
-        lambda **_: ("assets/characters/林昭/voice/default.mp3", "sha-trim", "2026-01-01T00:00:00"),
+        lambda **_: ("assets/characters/LinZhao/voice/default.mp3", "sha-trim", "2026-01-01T00:00:00"),
     )
     monkeypatch.setattr(
         projects,
@@ -318,8 +318,8 @@ def m04_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     custom_style = StyleConfig(
         id="custom_drama",
-        name="自定义剧集风格",
-        label="自定义剧集风格",
+        name="Custom Series Style",
+        label="Custom Series Style",
         style_instructions="cinematic",
         avoid_instructions="flat",
         style_tag="LIVE",
@@ -407,7 +407,7 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
     voice_data_url = f"data:audio/wav;base64,{base64.b64encode(b'voice').decode('ascii')}"
 
     _assert_ok(client.get(f"/api/v1/projects/{_PROJECT}/characters"))
-    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters", json={"name": "秦昭"}))
+    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters", json={"name": "QinZhao"}))
     _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters/build"))
     _assert_ok(client.get(f"/api/v1/projects/{_PROJECT}/character-image-selection"))
     _assert_ok(
@@ -436,7 +436,7 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
             json={"description": "updated"},
         )
     )
-    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters/秦昭/delete"))
+    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters/QinZhao/delete"))
     _assert_ok(client.get(f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/voice-samples"))
     _assert_ok(
         client.post(
@@ -454,7 +454,7 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
         client.post(
             f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/voice-samples/default/trim",
             json={
-                "source_path": "assets/characters/林昭/voice/default.wav",
+                "source_path": "assets/characters/LinZhao/voice/default.wav",
                 "start_seconds": 0,
                 "duration_seconds": 1,
             },
@@ -468,17 +468,17 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
     _assert_ok(
         client.post(
             f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/identities",
-            json={"identity_name": "少年", "appearance_details": "短衣"},
+            json={"identity_name": "teen", "appearance_details": "short tunic"},
         )
     )
     _assert_ok(
         client.patch(
-            f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/identities/林昭_少年",
-            json={"appearance_details": "短衣劲装"},
+            f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/identities/LinZhao_teen",
+            json={"appearance_details": "short tunic outfit"},
         )
     )
     _assert_ok(
-        client.delete(f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/identities/林昭_少年")
+        client.delete(f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/identities/LinZhao_teen")
     )
     _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/characters/{_CHARACTER}/portrait-async"))
     _assert_ok(
@@ -548,17 +548,17 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
     _assert_ok(
         client.post(
             f"/api/v1/projects/{_PROJECT}/props",
-            json={"name": "令牌", "visual_prompt": "bronze token"},
+            json={"name": "Token", "visual_prompt": "bronze token"},
         )
     )
-    (project_dir / "assets" / "props" / "令牌").mkdir(parents=True, exist_ok=True)
+    (project_dir / "assets" / "props" / "Token").mkdir(parents=True, exist_ok=True)
     _assert_ok(
         client.patch(
-            f"/api/v1/projects/{_PROJECT}/props/令牌",
-            json={"name": "铜令", "description": "updated"},
+            f"/api/v1/projects/{_PROJECT}/props/Token",
+            json={"name": "BronzeToken", "description": "updated"},
         )
     )
-    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/props/铜令/delete"))
+    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/props/BronzeToken/delete"))
     _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/props/{_PROP}/reference/generate-async"))
 
     _assert_ok(client.get("/api/v1/styles", params={"project": _PROJECT}))
@@ -572,7 +572,7 @@ def test_m04_l2_exercises_all_57_endpoint_contracts(m04_client_factory):
             "/api/v1/styles",
             json={
                 "id": "fresh_style",
-                "name": "新风格",
+                "name": "New Style",
                 "project": _PROJECT,
                 "config": {"style_instructions": "cinematic"},
             },

@@ -67,7 +67,7 @@ function convertCurrency(amount: number, from: PriceCurrency, to: PriceCurrency,
 }
 
 function formatCurrency(amount: number, currency: PriceCurrency, language: string): string {
-  const locale = language.startsWith('zh') ? 'zh-CN' : 'en-US';
+  const locale = language.startsWith('vi') ? 'vi-VN' : 'en-US';
 
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -89,7 +89,8 @@ export function resolvePriceDisplayCurrency(
     return 'USD';
   }
 
-  return language.startsWith('zh') ? 'CNY' : 'USD';
+  void language;
+  return 'USD';
 }
 
 export function getGrsaiCreditTier(
@@ -212,7 +213,7 @@ export function resolveModelPriceDisplay(
     displayCurrency,
     pricingSettings.usdToCnyRate
   );
-  const perRunSuffix = options.language.startsWith('zh') ? '/次' : '/run'; // i18n-exempt —— 已按语言分支
+  const perRunSuffix = '/run';
   const nativeLabel =
     quote.currency === displayCurrency
       ? undefined

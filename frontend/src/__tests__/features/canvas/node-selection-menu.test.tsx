@@ -6,23 +6,23 @@ import { describe, expect, it, vi } from "vitest";
 import { NodeSelectionMenu } from "@/features/canvas/NodeSelectionMenu";
 
 const translations: Record<string, string> = {
-  "node.menu.sectionAddNode": "添加节点",
-  "node.menu.sectionAddResource": "添加资源",
-  "node.menu.sectionSkillNode": "技能节点",
-  "node.menu.uploadImage": "上传资源",
-  "node.menu.image": "图片",
-  "node.menu.aiImageGeneration": "AI 图片",
-  "node.menu.storyboard": "分格抽取结果",
-  "node.menu.storyboardGen": "多版本宫格",
-  "node.menu.beatContext": "镜头上下文",
-  "node.menu.textAnnotation": "文本",
-  "node.menu.video": "视频",
-  "node.menu.audio": "音频",
-  "node.menu.videoStory": "视频故事",
-  "node.menu.videoCompose": "视频合成",
-  "node.menu.script": "脚本",
-  "node.menu.pano360Viewer": "360° 全景",
-  "node.menu.threeDWorld": "3D 世界",
+  "node.menu.sectionAddNode": "Add node",
+  "node.menu.sectionAddResource": "Add resource",
+  "node.menu.sectionSkillNode": "Skill node",
+  "node.menu.uploadImage": "Upload resource",
+  "node.menu.image": "Image",
+  "node.menu.aiImageGeneration": "AI Image",
+  "node.menu.storyboard": "Cell extraction result",
+  "node.menu.storyboardGen": "Multi-version grid",
+  "node.menu.beatContext": "Shot context",
+  "node.menu.textAnnotation": "Text",
+  "node.menu.video": "Video",
+  "node.menu.audio": "Audio",
+  "node.menu.videoStory": "Video story",
+  "node.menu.videoCompose": "Video compose",
+  "node.menu.script": "Script",
+  "node.menu.pano360Viewer": "360° Panorama",
+  "node.menu.threeDWorld": "3D World",
 };
 
 vi.mock("react-i18next", () => ({
@@ -41,6 +41,6 @@ describe("NodeSelectionMenu", () => {
       />,
     );
 
-    expect(screen.getByText("镜头上下文")).toBeInTheDocument();
+    expect(screen.getByText("Shot context")).toBeInTheDocument();
   });
 });

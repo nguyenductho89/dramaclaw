@@ -15,8 +15,8 @@ pytestmark = pytest.mark.m05
 
 
 _PROJECT = "demo"
-_SCENE = "中庭"
-_DERIVED_SCENE = "中庭_雨夜"
+_SCENE = "Courtyard"
+_DERIVED_SCENE = "Courtyard_RainyNight"
 
 M05_EXPECTED_OPERATIONS = {
     ("GET", "/api/v1/projects/{project}/scenes"),
@@ -171,14 +171,14 @@ class _M05Store:
             _SCENE: NovelScene(
                 name=_SCENE,
                 scene_type="exterior",
-                environment_prompt="青石中庭，雨后积水。",
-                description="庭院",
+                environment_prompt="A bluestone courtyard with puddles after rain.",
+                description="Yard",
             ),
             _DERIVED_SCENE: NovelScene(
                 name=_DERIVED_SCENE,
                 scene_type="exterior",
                 base_scene_id=_SCENE,
-                variant_id="雨夜",
+                variant_id="RainyNight",
                 environment_prompt="",
             ),
         }
@@ -187,29 +187,29 @@ class _M05Store:
             {
                 "beat_number": 1,
                 "episode_number": 1,
-                "narration_segment": "雨落中庭。",
-                "visual_description": "空镜，中庭雨水泛光。",
+                "narration_segment": "Rain falls on the courtyard.",
+                "visual_description": "Empty shot, rainwater glimmers in the courtyard.",
                 "detected_identities": [NO_CHARACTER_MARKER],
                 "scene_ref": {"scene_id": _SCENE},
                 "location": _SCENE,
-                "time_of_day": "夜晚",
+                "time_of_day": "night",
                 "is_manual_shot": False,
             },
             {
                 "beat_number": 2,
                 "episode_number": 1,
-                "narration_segment": "补拍雨声。",
-                "visual_description": "手工补拍镜头。",
+                "narration_segment": "Retake of the rain sound.",
+                "visual_description": "Manual retake shot.",
                 "detected_identities": [NO_CHARACTER_MARKER],
                 "scene_ref": {"scene_id": _SCENE},
                 "location": _SCENE,
-                "time_of_day": "夜晚",
+                "time_of_day": "night",
                 "is_manual_shot": True,
             },
         ]
 
     async def repair_path_unsafe_asset_names(self, kind: str, move_assets=None):
-        # 这里的名字都是干净的，list 接口上那道存量自愈是空跑。
+        # All names here are clean, so the legacy self-healing on the list endpoint is a no-op.
         return {}
 
     async def list_scenes(self):
@@ -307,7 +307,7 @@ def m05_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     runtime_dir = tmp_path / "runtime" / "alice" / _PROJECT
     for path in (project_dir, state_dir, runtime_dir):
         path.mkdir(parents=True, exist_ok=True)
-    (project_dir / "novel.txt").write_text("测试原文", encoding="utf-8")
+    (project_dir / "novel.txt").write_text("test source text", encoding="utf-8")
 
     ctx = ProjectContext(
         project_id="proj_m05",
@@ -363,12 +363,12 @@ def m05_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     async def build_character_map(*_args, **_kwargs):
         return {
-            "林昭": {
-                "identity_sketch_colors": {"青年": "#3366FF"},
+            "LinZhao": {
+                "identity_sketch_colors": {"young_adult": "#3366FF"},
                 "sketch_color": "#3366FF",
             },
-            "林昭_青年": {
-                "identity_sketch_colors": {"青年": "#3366FF"},
+            "LinZhao_young_adult": {
+                "identity_sketch_colors": {"young_adult": "#3366FF"},
                 "sketch_color": "#3366FF",
             },
         }
@@ -533,7 +533,7 @@ def _seed_labels(project_dir: Path) -> None:
         "result": {
             "decision": "revise",
             "main_problem": "composition_weak",
-            "reasoning": "需要强化构图。",
+            "reasoning": "Composition needs strengthening.",
             "edit_instruction": "Tighten the courtyard composition.",
             "confidence": 0.8,
         },
@@ -677,15 +677,15 @@ def test_m05_l2_exercises_happy_path_route_contracts(m05_client_factory):
     _assert_ok(
         client.post(
             f"/api/v1/projects/{_PROJECT}/scenes",
-            json={"name": "廊下", "environment_prompt": "木质长廊"},
+            json={"name": "Corridor", "environment_prompt": "Wooden corridor"},
         )
     )
     _assert_ok(
         client.patch(
-            f"/api/v1/projects/{_PROJECT}/scenes/廊下", json={"notes": "updated"}
+            f"/api/v1/projects/{_PROJECT}/scenes/Corridor", json={"notes": "updated"}
         )
     )
-    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/scenes/廊下/delete"))
+    _assert_ok(client.post(f"/api/v1/projects/{_PROJECT}/scenes/Corridor/delete"))
     _assert_task_shape(
         client.post(f"/api/v1/projects/{_PROJECT}/scenes/build").json(),
         backend="inline",
@@ -1007,7 +1007,7 @@ def test_m05_negative_blocks_base_scene_delete_when_derived_scene_exists(
     assert response.status_code == 200
     payload = response.json()
     assert payload["ok"] is False
-    assert "派生场景" in payload["error"]
+    assert "derived scenes" in payload["error"]
 
 
 def test_m05_ce_exposes_scene_director_world_openapi_and_http(m05_client_factory):
@@ -1053,14 +1053,14 @@ def test_m05_scene_director_world_missing_scene_uses_ok_false_not_404(
     client, _backend, _project_dir, _store = m05_client_factory("inline")
 
     save = client.post(
-        f"/api/v1/projects/{_PROJECT}/scenes/不存在/director-stage/world",
+        f"/api/v1/projects/{_PROJECT}/scenes/Nonexistent/director-stage/world",
         json={
             "active_source_id": "uploaded_360",
             "snapshot": {"world": {"activeSourceId": "uploaded_360"}},
         },
     )
     clear = client.post(
-        f"/api/v1/projects/{_PROJECT}/scenes/不存在/director-stage/world/clear"
+        f"/api/v1/projects/{_PROJECT}/scenes/Nonexistent/director-stage/world/clear"
     )
 
     for response in (save, clear):
@@ -1181,8 +1181,8 @@ def test_m05_acceptance_script_keeps_world_split_and_ee_assertions() -> None:
 
     assert "director-stage/world" in script
     assert "director-stage/world/clear" in script
-    assert "CE OpenAPI 暴露 scene director-stage world/clear" in script
-    assert "OpenAPI 暴露 M05 §1.5 实测 60 个 method/path 操作" in script
+    assert "CE OpenAPI exposes scene director-stage world/clear" in script
+    assert "OpenAPI exposes the 60 method/path operations measured in M05 section 1.5" in script
     assert "episode_scene_planner" in script
     assert (
         '"backend"] == ("inline" if os.environ["MODE"] == "ce" else "celery")' in script

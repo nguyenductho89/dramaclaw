@@ -92,7 +92,7 @@ def start_sketch_edit_execute_job(
     scope = task_config_scope("edit_execute", config)
     return {
         "ok": False,
-        "error": "sketch edit execute 需要 project task backend（当前 runner: Celery）",
+        "error": "sketch edit execute requires the project task backend (current runner: Celery)",
         "task_type": "sketch_edit_execute",
         "username": username,
         "project": project,

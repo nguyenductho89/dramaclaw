@@ -2,7 +2,7 @@
 // Copyright (c) 2026 ClaymoreLab
 import { createLazyFileRoute, Navigate } from "@tanstack/react-router";
 
-// Legacy redirect — overview content moved to 脚本's SourcePanel.
+// Legacy redirect - overview content moved to the Script tab's SourcePanel.
 // File kept so existing /overview bookmarks still match a route and hop to /script.
 //
 // Uses <Navigate /> rather than a `loader`/`beforeLoad` because `createLazyFileRoute`

@@ -61,19 +61,19 @@ class FakeProjectStore:
             Path(self.project_dir)
             / "assets"
             / "characters"
-            / "陆辰"
+            / "Lu_Chen"
             / "identities"
-            / "青年_voice.wav"
+            / "young_adult_voice.wav"
         )
         reference.parent.mkdir(parents=True, exist_ok=True)
         reference.write_bytes(b"main-character-reference")
-        character = NovelCharacter(name="陆辰", gender="男", is_main=True)
+        character = NovelCharacter(name="Lu_Chen", gender="male", is_main=True)
         character.identities = [
             CharacterIdentity(
-                identity_id="陆辰_青年",
-                character_name="陆辰",
-                identity_name="青年",
-                reference_audio_path="assets/characters/陆辰/identities/青年_voice.wav",
+                identity_id="Lu_Chen_young_adult",
+                character_name="Lu_Chen",
+                identity_name="young_adult",
+                reference_audio_path="assets/characters/Lu_Chen/identities/young_adult_voice.wav",
                 reference_audio_sha256="main-character-hash",
             )
         ]
@@ -89,7 +89,7 @@ def test_user_audio_voice_is_account_scoped_and_resolvable(
 
     created = create_user_audio_voice(
         username="admin",
-        name="  我的音色  ",
+        name="  My voice  ",
         filename="sample.mp3",
         content=b"fake-audio-bytes",
         mime_type="audio/mpeg",
@@ -97,7 +97,7 @@ def test_user_audio_voice_is_account_scoped_and_resolvable(
 
     assert created["scope"] == USER_VOICE_SCOPE
     assert created["voice_id"].startswith("fv_")
-    assert created["name"] == "我的音色"
+    assert created["name"] == "My voice"
     assert created["duration_ms"] == 1234
     assert created["exists"] is True
     assert created["path"].startswith("_account/freezone/audio/voices/")
@@ -215,20 +215,20 @@ def test_freezone_audio_ref_payload_never_trusts_external_paths(tmp_path: Path) 
         project_id="proj_demo",
         project_dir=project_dir,
         scope="identity",
-        label="身份声线",
+        label="Identity voice",
         path=str(external),
-        identity_id="林小满_青年",
+        identity_id="Lin_Xiaoman_young_adult",
     )
 
     assert payload["path"] == str(external)
     assert payload["url"] == ""
     assert payload["exists"] is False
-    assert payload["identity_id"] == "林小满_青年"
+    assert payload["identity_id"] == "Lin_Xiaoman_young_adult"
 
 
 def test_freezone_audio_ref_payload_builds_project_static_url(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
-    audio = project_dir / "assets" / "characters" / "林小满" / "voices" / "voice_default.mp3"
+    audio = project_dir / "assets" / "characters" / "Lin_Xiaoman" / "voices" / "voice_default.mp3"
     audio.parent.mkdir(parents=True)
     audio.write_bytes(b"audio")
 
@@ -238,17 +238,17 @@ def test_freezone_audio_ref_payload_builds_project_static_url(tmp_path: Path) ->
         project_id="proj_demo",
         project_dir=project_dir,
         scope="character_default",
-        label="林小满 · 默认声线",
-        path="assets/characters/林小满/voices/voice_default.mp3",
-        character_name="林小满",
+        label="Lin_Xiaoman · Default voice",
+        path="assets/characters/Lin_Xiaoman/voices/voice_default.mp3",
+        character_name="Lin_Xiaoman",
         slot="default",
     )
 
     assert payload["exists"] is True
     assert payload["url"].startswith(
-        "/static/projects/proj_demo/assets/characters/%E6%9E%97%E5%B0%8F%E6%BB%A1/voices/voice_default.mp3"
+        "/static/projects/proj_demo/assets/characters/Lin_Xiaoman/voices/voice_default.mp3"
     )
-    assert payload["character_name"] == "林小满"
+    assert payload["character_name"] == "Lin_Xiaoman"
     assert payload["slot"] == "default"
 
 
@@ -432,7 +432,7 @@ async def test_user_voice_media_resolves_off_loop_and_hides_read_error(
         )
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "声线文件无法读取，请重新选择或检查文件是否完整"
+    assert exc_info.value.detail == "The voice file cannot be read; reselect it or check that the file is intact"
     assert str(leaked_path) not in str(exc_info.value.detail)
     assert resolver_threads
     assert all(thread_id != event_loop_thread for thread_id in resolver_threads)
@@ -464,7 +464,7 @@ async def test_resolve_speech_voice_reports_missing_project_narrator(
         )
 
     assert caught.value.error_code == "voice_prereq_required"
-    assert str(caught.value) == "项目解说人声线未配置，请上传或录制解说人音频"
+    assert str(caught.value) == "The project narrator voice is not configured; upload or record narrator audio"
 
 
 @pytest.mark.asyncio
@@ -492,7 +492,7 @@ async def test_resolve_speech_voice_reports_unreadable_project_narrator(
             voice_ref={"scope": "project_narrator"},
         )
 
-    assert str(caught.value) == "解说人声线文件无法读取，请检查文件是否完整"
+    assert str(caught.value) == "The narrator voice file cannot be read; check that the file is intact"
 
 
 @pytest.mark.asyncio
@@ -567,17 +567,17 @@ async def test_freezone_audio_speech_drama_first_person_uses_project_narrator(
         project="demo",
         project_dir=project_dir,
         job_id="job-1",
-        text="画外音响起。",
+        text="A voice-over begins.",
     )
 
     assert result.voice_source == "project_narrator"
     assert result.voice_sha256 == narrator_sha
     assert FakeTTSGenerator.calls == [
         {
-            "prompt": "画外音响起。",
+            "prompt": "A voice-over begins.",
             "audio_url": "data://voice.wav",
             "output_path": freezone_audio_speech_output_path(project_dir, "job-1"),
-            "emotion_prompt": "以第三人称旁白视角，用客观冷静的解说语气朗读",
+            "emotion_prompt": "Read as a third-person narrator, in an objective and calm narration tone",
         }
     ]
 
@@ -605,8 +605,8 @@ async def test_freezone_audio_preset_speech_does_not_require_reference_voice(
         project="demo",
         project_dir=tmp_path,
         job_id="speech-preset-1",
-        text="欢迎使用运动相机。",
-        emotion_prompt="自然、有活力",
+        text="Welcome to the action camera.",
+        emotion_prompt="Natural and energetic",
         speech_mode="preset",
         # Previously generated workflows may still carry this retired default.
         preset_model="qwen3-tts-flash",
@@ -621,8 +621,8 @@ async def test_freezone_audio_preset_speech_does_not_require_reference_voice(
     assert calls == [
         {
             "output_path": freezone_audio_speech_output_path(tmp_path, "speech-preset-1"),
-            "input_text": "欢迎使用运动相机。",
-            "voice": "zh-CN-XiaoxiaoNeural",
+            "input_text": "Welcome to the action camera.",
+            "voice": "en-US-AriaNeural",
             "egress_context": local_egress_context,
         }
     ]
@@ -650,13 +650,13 @@ async def test_edge_preset_writer_forwards_egress_context(
 
     await audio_node._write_edge_tts_speech(
         output_path=tmp_path / "speech.mp3",
-        input_text="测试旁白。",
-        voice="zh-CN-XiaoxiaoNeural",
+        input_text="Test narration.",
+        voice="en-US-AriaNeural",
         egress_context=local_egress_context,
     )
 
     assert captured == {
-        "voice": "zh-CN-XiaoxiaoNeural",
+        "voice": "en-US-AriaNeural",
         "egress_context": local_egress_context,
     }
 

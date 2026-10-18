@@ -107,9 +107,9 @@ export function resolveResizeMinConstraintsByAspect(
   aspectRatio: string,
   constraints: ImageNodeMinSize
 ): ImageNodeMinSize {
-  // 把基准 min 当作「最小短边」，按图片比例换算出互相自洽的最小宽高。配合
-  // keepAspectRatio：宽屏图片高为绑定约束、竖屏图片宽为绑定约束，节点能缩到一个
-  // 一致的小框，而不是被两个独立的 min 卡成过大的最小框。
+  // Treat the base min as the "minimum short side" and compute mutually consistent minimum width and height by the image ratio. Together with
+  // keepAspectRatio: for a landscape image the height is the binding constraint, for a portrait image the width is, and the node can shrink to a
+  // consistent small box, rather than being stuck at an overly large minimum box by two independent mins.
   const fitted = resolveMinEdgeFittedSize(aspectRatio, constraints);
   return { minWidth: fitted.width, minHeight: fitted.height };
 }

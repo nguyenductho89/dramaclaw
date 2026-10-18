@@ -9,10 +9,10 @@ import {
 import { awaitTaskCompletion } from '@/api/tasks';
 
 /**
- * 视频去字幕提交核心（从 VideoNode.handleEraseSubmit 原样抽出，语义零变化）：
- * 提交 /freezone/video/erase → 等任务完成 → 取 job result（产物 url 在 result.url）。
- * UI 状态（isErasing、subtitleEraseMode 清理、videoUrl 回写）由调用方自持——
- * 工作流节点的去字幕面板与故事板详情的「智能去字幕」共用这一条提交路径。
+ * The video subtitle removal submission core (extracted verbatim from VideoNode.handleEraseSubmit, with zero semantic change):
+ * submit /freezone/video/erase -> wait for the task to complete -> take the job result (the product url is in result.url).
+ * UI state (isErasing, subtitleEraseMode cleanup, videoUrl write-back) is held by the caller -
+ * the workflow node's subtitle removal panel and the storyboard detail's "Smart subtitle removal" share this one submission path.
  */
 export async function runVideoSubtitleErase(
   project: string,

@@ -82,12 +82,12 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
   const setSelectedNode = useCanvasStore((state) => state.setSelectedNode);
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const updateNodeSize = useCanvasStore((state) => state.updateNodeSize);
-  // 只订阅连到本节点的边(useShallow 逐元素比较),避免拖动无关节点触发重渲染。
+  // Subscribe only to edges connected to this node (useShallow element-wise comparison), so dragging unrelated nodes does not trigger re-renders.
   const connectedEdges = useCanvasStore(
     useShallow((state) => state.edges.filter((edge) => edge.source === id || edge.target === id)),
   );
-  // 只订阅「是否该用原图」这个离散布尔(在 zoom 阈值处翻转),而非连续 zoom 值 ——
-  // 缩放过程中本节点只在跨过阈值的那一帧重渲染,而非每一帧。
+  // Subscribe only to the discrete boolean "should use the original image" (flipping at the zoom threshold) rather than the continuous zoom value —
+  // during zooming this node re-renders only on the frame that crosses the threshold, not every frame.
   const preferOriginalImage = useStore((state) => shouldUseOriginalImageByZoom(state.transform[2]));
   const [now, setNow] = useState(() => Date.now());
   const isExportResultNode = type === CANVAS_NODE_TYPES.exportImage;
@@ -120,7 +120,7 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
   const resizeMinHeight = resizeConstraints.minHeight;
   const resolvedWidth = resolveNodeDimension(width, compactSize.width);
   const resolvedHeight = resolveNodeDimension(height, compactSize.height);
-  // 这一格要多少设备像素，决定挑哪一档副本（拉大的节点会一路挑到原图）。
+  // How many device pixels this cell needs, which decides which tier of copy to pick (an enlarged node goes all the way to the original).
   const bodyVariantBudget = useNodeBodyVariantBudget({
     width: resolvedWidth,
     height: resolvedHeight,
@@ -176,12 +176,12 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
     return t('node.imageNode.waitingResultDelayed', { minutes: waitedMinutes });
   }, [isExportResultNode, isGenerating, t, waitedMinutes]);
 
-  // 已记录的原图像素尺寸；决定主体图能不能喂降采样副本，也是角标的初值。
-  // 跟着 data 的引用走（与下面的 imageSource 同一节奏），避免每次渲染都换新对象。
+  // The recorded original pixel size; it decides whether the main image may be fed a downsampled copy, and is also the initial value of the badge.
+  // It follows the reference of data (same cadence as imageSource below), avoiding a new object on every render.
   const recordedNaturalSize = useMemo(() => readNodeNaturalSize(data), [data]);
 
-  // 记录归属的是哪张图。只认「换图」，不认缩放：preferOriginalImage 翻转时下面
-  // 那一支会挑到另一个字段，但那是同一个节点的两种画法，不该当成换了图。
+  // Which image the record belongs to. It only recognizes "image swapped", not zoom: when preferOriginalImage flips, the branch below
+  // picks another field, but that is two ways of drawing the same node and must not count as an image swap.
   const recordSubject = useMemo(() => {
     const picked = data.previewImageUrl || data.imageUrl;
     if (!picked) return null;
@@ -199,8 +199,8 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
     const resolved = resolveImageDisplayUrl(
       withImageCacheBust(picked, (data as { committed_at?: unknown }).committed_at as string | undefined),
     );
-    // 节点主体把整幅原图解码进几百 CSS px 的盒子里；变体只在真实尺寸已知、
-    // 且没放大到细看那一档时启用，详见 nodeBodyImageSrc 的注释。
+    // The node body decodes the whole original into a box of a few hundred CSS px; the variant is enabled only when the real size is known
+    // and the view is not zoomed in to the close-inspection tier; see the comment of nodeBodyImageSrc for details.
     return nodeBodyImageSrc(resolved, recordedNaturalSize, {
       preferOriginal: preferOriginalImage || distrusted,
       requiredEdge: bodyVariantBudget,
@@ -216,7 +216,7 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
   ]);
   const imageSource = bodyImage?.src ?? null;
 
-  // 获取原图 URL 用于查看器
+  // Get the original image URL for the viewer
   const originalImageUrl = useMemo(() => {
     if (!data.imageUrl) return null;
     return resolveImageDisplayUrl(data.imageUrl);
@@ -276,10 +276,10 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
             alt={isExportResultNode ? t('node.imageNode.resultAlt') : t('node.imageNode.generatedAlt')}
             viewerSourceUrl={originalImageUrl}
             onLoad={(event) => {
-              // 记录描述的不是这张图：降采样副本上量不出源图真尺寸。第一次退回
-              // 原图重测（preferOriginal 会让下一轮 downscaled 为 false，不会来回
-              // 抖）；已经退过一次还是对不上，就什么都不写——记录和副本都不是真
-              // 相，保留旧值好过写一个确定错误的尺寸。
+              // The record does not describe this image: the true source size cannot be measured on a downsampled copy. The first time, fall back to
+              // re-measuring the original (preferOriginal makes the next round's downscaled false, so there is no flip-flopping);
+              // if after one fallback it still does not match, write nothing — neither the record nor the copy is the
+              // truth, and keeping the old value beats writing a definitely wrong size.
               if (
                 bodyImage?.downscaled &&
                 !nodeBodyRecordDescribesImage(
@@ -291,17 +291,17 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
                 distrustRecord();
                 return;
               }
-              // 眼下加载的是不是记录归属的那张图。放大档挑的是 imageUrl，那可能
-              // 是完全另一张图——旋转、补光、多视角都把结果写进 previewImageUrl，
-              // 两者尺寸不必相同。拿它去纠正记录就是把错的换成另一个错的。
+              // Whether what is loaded now is the image the record belongs to. The zoomed-in tier picks imageUrl, which may be
+              // an entirely different image — rotate, relight and multi-angle all write results into previewImageUrl,
+              // and the two need not share dimensions. Using it to correct the record replaces one wrong value with another.
               const measuringRecordSubject = !preferOriginalImage;
-              // 为纠正记录才退回来的那一轮，真尺寸这就量到了：解除不信任，下一轮
-              // 回到副本。这张图已经纠正过，钩子记着，不会再退第二次。
+              // In the round that fell back only to correct the record, the true size is measured now: lift the distrust, and the next round
+              // goes back to the copy. This image has been corrected already, the hook remembers it, and it will not fall back a second time.
               if (measuringRecordSubject) {
                 trustAgain();
               }
-              // 喂的是降采样副本时元素上的 naturalWidth 是变体的尺寸，改用记录里的
-              // 真实尺寸——下面的角标、比例、自动尺寸因此与喂原图时完全一致。
+              // When a downsampled copy is fed, naturalWidth on the element is the variant's size; use the real size in the record instead
+              // — so the badge, ratio and auto size below are exactly the same as when the original is fed.
               const measured = bodyImage
                 ? nodeBodyImageMeasurement(event.currentTarget, bodyImage, recordedNaturalSize)
                 : { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight };
@@ -313,9 +313,9 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
                 );
               }
               const forceNaturalSize = shouldForceNaturalImageSize(data as Record<string, unknown>);
-              // 用户拖定过尺寸：屏幕上的尺寸归他。但记录归事实——这里原本直接
-              // return，于是换图之后真实尺寸永远写不回去，重新挂载读到的还是
-              // 旧记录，同比例换图时副本校验那层也认不出来。
+              // The user dragged the size: the on-screen size is theirs. But the record belongs to the facts — this used to
+              // return directly, so after an image swap the real size could never be written back, a remount read
+              // the old record, and with a same-ratio swap the copy-validation layer could not recognize it either.
               const sizeLockedByUser = data.isSizeManuallyAdjusted === true && !forceNaturalSize;
               const nextAspectRatio = aspectRatioFromImageDimensions(
                 measured.width,
@@ -331,9 +331,9 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
               const displaySizeMismatch =
                 Math.abs(resolvedWidth - nextSize.width) > 1 ||
                 Math.abs(resolvedHeight - nextSize.height) > 1;
-              // 记录空着、或者和刚量到的真相对不上，都得写回去——比例和显示尺寸
-              // 这两个条件盖不住它们（同比例换图、老项目里早就贴合的节点）。哪些
-              // 算用户可撤销的改动、哪些只是补记事实，见 planNaturalSizeRecordWrite。
+              // Write back when the record is empty or does not match the truth just measured — the ratio and display-size
+              // conditions do not cover these (same-ratio image swaps, nodes that already fit in old projects). Which
+              // count as user-undoable changes and which merely backfill facts, see planNaturalSizeRecordWrite.
               const recordWrite = planNaturalSizeRecordWrite({
                 aspectRatioChanged: nextAspectRatio !== data.aspectRatio,
                 displaySizeMismatch,
@@ -345,7 +345,7 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
               if (!recordWrite.persist) {
                 return;
               }
-              // 只是补记事实那一类：不碰节点尺寸，也不碰比例。
+              // The "just backfill facts" category: touches neither the node size nor the ratio.
               if (!recordWrite.applySize) {
                 updateNodeData(
                   id,
@@ -399,8 +399,8 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
             )}
           </div>
         ) : isGenerating ? (
-          // 生成中只保留 NodeGenerationOverlay 的「蒙层 + 进度」，不再渲染占位
-          // 图标 / 等待文案，避免它们透出在百分比下方重叠成杂乱内容。
+          // While generating, keep only the NodeGenerationOverlay "mask + progress", and no longer render the placeholder
+          // icon / waiting text, so they do not show through and overlap under the percentage into clutter.
           <div className="h-full w-full" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-text-muted/85">

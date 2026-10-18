@@ -1,35 +1,35 @@
-# 发版指南 / Releasing
+# Releasing
 
-面向维护者的发版 runbook。发布内容会被 Release Feed（`GET /api/v1/release-notifications`）解析并展示给自部署用户，**格式写歪不会报错，只会静默不显示**，因此请严格按本文模板撰写。
+A release runbook for maintainers. The release content is parsed by the Release Feed (`GET /api/v1/release-notifications`) and shown to self-hosted users. **A malformed format does not raise an error; it is just silently not shown**, so follow the template in this document strictly.
 
-## 发版 checklist
+## Release checklist
 
-按顺序执行：
+Run in order:
 
-1. **Bump 版本**：改 `pyproject.toml` 的 `version = "X.Y.Z"`（版本唯一真源，SSOT），并同步 `tests/test_release_feed.py::test_project_version_is_single_source_of_truth` 中钉死的版本字面量；第 3 步重装后 `uv.lock` 会随之更新，记得一并提交。
-2. **重写包内 release notes**：整体替换 `src/novelvideo/release-notes.md` 为新版本内容（用下方模板）。front-matter 的 `version:` 必须与 `pyproject.toml` 一致，否则解析门断言失败（F8）。
-3. **本地验证**：
+1. **Bump the version**: change `version = "X.Y.Z"` in `pyproject.toml` (the single source of truth, SSOT), and sync the pinned version literal in `tests/test_release_feed.py::test_project_version_is_single_source_of_truth`; after the reinstall in step 3, `uv.lock` is updated accordingly, so remember to commit it too.
+2. **Rewrite the in-package release notes**: replace `src/novelvideo/release-notes.md` entirely with the new version's content (use the template below). The `version:` in the front-matter must match `pyproject.toml`, otherwise the parser gate assertion fails (F8).
+3. **Verify locally**:
    ```bash
-   uv pip install -e .            # 重装使新版本号生效
+   uv pip install -e .            # reinstall so the new version takes effect
    uv run pytest tests/test_release_feed.py
-   # 或起后端后：curl 'http://localhost:8780/api/v1/release-notifications?locale=zh'
-   # 确认 current_version == 新版本、current_items 非空
+   # or after starting the backend: curl 'http://localhost:8780/api/v1/release-notifications?locale=en'
+   # confirm current_version == the new version and current_items is non-empty
    ```
-4. **合入 main**，打 tag `vX.Y.Z`（tag 前缀固定小写 `v`）：
+4. **Merge into main** and create the tag `vX.Y.Z` (the tag prefix is a fixed lowercase `v`):
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
-   ⚠️ **只打 tag 不产生任何效果**：没有 release 页、应用内不提示升级（(B) 拉的是 `releases/latest` API）、Docker 镜像也不构建（workflow 触发条件是 `release: published`）。必须走第 5 步。
-5. **发 GitHub Release**：先按下方「GitHub Release 页面结构」写好人工部分（zh/en Highlights + New Features / Bug Fixes 等分类节）存为 `body.md`，然后一条命令发布：
+   ⚠️ **Pushing only a tag has no effect**: there is no release page, the app does not prompt for an upgrade ((B) pulls the `releases/latest` API), and the Docker images are not built (the workflow trigger is `release: published`). You must do step 5.
+5. **Publish a GitHub Release**: first write the manual part per "GitHub Release page structure" below (vi/en Highlights + sections such as New Features / Bug Fixes) and save it as `body.md`, then publish with one command:
    ```bash
    gh release create vX.Y.Z --title "vX.Y.Z" --notes-file body.md --generate-notes
    ```
-   `--generate-notes` 会把自动生成的 What's Changed / New Contributors / Full Changelog **追加在 body.md 内容之后**，正好构成完整标准结构（网页操作等价：贴入人工部分后点 "Generate release notes" 按钮）。front-matter 中 `version:` 可省；想让已部署旧版用户的铃铛红点亮起，需写 `attention: medium` 或 `high`，见下。
-6. 发布后 `.github/workflows/release-images.yml` 会在 `release: published` 时自动构建并推送 Docker 镜像，无需手动操作。
+   `--generate-notes` **appends** the auto-generated What's Changed / New Contributors / Full Changelog **after the content of body.md**, which forms the complete standard structure (web UI equivalent: paste the manual part, then click the "Generate release notes" button). `version:` in the front-matter may be omitted; to light up the bell red dot for users on deployed older versions, write `attention: medium` or `high`, see below.
+6. After publishing, `.github/workflows/release-images.yml` automatically builds and pushes the Docker images on `release: published`; no manual action is needed.
 
-## Release body / 包内 notes 共用模板
+## Shared template for the release body / in-package notes
 
-包内 `src/novelvideo/release-notes.md` 与 GitHub Release body 用**同一解析器**，核心部分（front-matter + Highlights 两节）直接复制以下模板；GitHub Release body 在此基础上还需追加 issue/bugfix 等章节，见下节「GitHub Release 页面结构（标准）」：
+The in-package `src/novelvideo/release-notes.md` and the GitHub Release body use the **same parser**. Copy the following template directly for the core part (front-matter + the two Highlights sections); the GitHub Release body additionally needs issue/bugfix sections appended, see the next section "GitHub Release page structure (standard)":
 
 ```markdown
 ---
@@ -38,10 +38,10 @@ attention: low
 ---
 # vX.Y.Z
 
-## User-facing Highlights (zh)
+## User-facing Highlights (vi)
 
-- **功能标题**: 面向用户的一句话描述。
-- **另一个功能**: 描述。
+- **Tiêu đề tính năng**: Mô tả một câu hướng đến người dùng.
+- **Tính năng khác**: Mô tả.
 
 ## User-facing Highlights (en)
 
@@ -50,69 +50,69 @@ attention: low
 
 ## Fixes
 
-- 包内 notes 里内部修复、重构等写在这里，不会被解析进用户通知（解析器只读 Highlights 章节）。
+- Internal fixes, refactors, and the like in the in-package notes go here and are not parsed into user notifications (the parser reads only the Highlights sections).
 ```
 
-## GitHub Release 页面结构（标准）
+## GitHub Release page structure (standard)
 
-每个 release 的发布页**必须**按以下结构撰写。parser 只读 Highlights 两节，Highlights 之后的章节不影响应用内通知：
+The publishing page of every release **must** be written in the following structure. The parser reads only the two Highlights sections, and sections after Highlights do not affect in-app notifications:
 
 ```markdown
 ---
-attention: low        # 仅需 medium/high 提醒时才写这段 front-matter；low 直接整段省略，页面更干净
+attention: low        # write this front-matter only when a medium/high reminder is needed; for low, omit the whole block for a cleaner page
 ---
 # vX.Y.Z
 
-## User-facing Highlights (zh)
+## User-facing Highlights (vi)
 
-- **功能标题**: 面向用户的一句话描述。（应用内通知的数据源，两节必须放最前，写法同上方模板）
+- **Tiêu đề tính năng**: Mô tả một câu hướng đến người dùng. (The data source of in-app notifications; the two sections must come first, written as in the template above)
 
 ## User-facing Highlights (en)
 
 - **Feature title**: One-line user-facing description.
 
 ## New Features
-- 本次新增功能，逐条带 PR/issue 号，如 `- 新增 XXX (#40)`
+- New features in this release, one per line with the PR/issue number, e.g. `- Added XXX (#40)`
 
 ## Bug Fixes
-- 本次修复，逐条带 issue 号，如 `- 修复画布 21:9 误吸附 (#52)`；有对应 issue 的写 `Fixes #NN`
+- Fixes in this release, one per line with the issue number, e.g. `- Fixed wrong snapping on a 21:9 canvas (#52)`; write `Fixes #NN` where there is a corresponding issue
 
 ## Improvements
-- 体验/性能改进（无则省略本节）
+- Experience/performance improvements (omit this section if none)
 
 ## What's Changed
-（发布时点 GitHub 的 "Generate release notes" 按钮自动生成：PR 列表 + New Contributors + Full Changelog 链接，不要手写）
+(Auto-generated by clicking GitHub's "Generate release notes" button at publish time: PR list + New Contributors + Full Changelog link; do not write it by hand)
 ```
 
-要求：
+Requirements:
 
-- **New Features / Bug Fixes / Improvements 是人工撰写的精选**，面向用户口吻、每条带相关 issue/PR 编号；不是把 commit log 原样抄上来。无内容的节省略。
-- **What's Changed 一律用 GitHub 自动生成**（Generate release notes 按钮），保证 PR 列表、新贡献者、Full Changelog 对比链接完整且不遗漏。
-- `attention: low` 是默认值，日常发版**省略整段 front-matter**（GitHub 会把它按原样渲染出来，略难看）；只在需要点亮旧版用户红点（`medium`/`high`）时才加。
+- **New Features / Bug Fixes / Improvements are hand-written selections**, in a user-facing tone, each with the related issue/PR number; do not copy the commit log verbatim. Omit sections with no content.
+- **What's Changed is always auto-generated by GitHub** (the Generate release notes button), ensuring the PR list, new contributors, and Full Changelog comparison link are complete and nothing is missed.
+- `attention: low` is the default; for routine releases **omit the whole front-matter** (GitHub renders it as is, which looks a bit ugly); add it only when the red dot for older-version users needs to be lit (`medium`/`high`).
 
-front-matter 字段：
+Front-matter fields:
 
-| 字段 | 包内 notes | GitHub body | 说明 |
+| Field | In-package notes | GitHub body | Notes |
 |---|---|---|---|
-| `version` | **必填**，须 == `pyproject.version` | 可省（版本取自 release tag） | 防「bump 版本忘改 notes」（CI 门 F8） |
-| `attention` | 可省，默认 `low` | 建议按需写 | `low`/`medium`/`high`；**仅 `medium`/`high` 会点亮旧版用户的铃铛红点**（主动提醒升级），`low` 只静躺通知中心列表。日常发版用 `low`，重要更新/安全修复用 `medium`/`high` |
+| `version` | **Required**, must == `pyproject.version` | Optional (the version is taken from the release tag) | Prevents "bumped the version but forgot to change the notes" (CI gate F8) |
+| `attention` | Optional, default `low` | Write as needed | `low`/`medium`/`high`; **only `medium`/`high` light up the bell red dot of older-version users** (a proactive upgrade reminder), while `low` just sits quietly in the notification center list. Use `low` for routine releases and `medium`/`high` for important updates/security fixes |
 
-## 格式硬规则（解析器行为，来自 `src/novelvideo/release_notes.py`）
+## Hard format rules (parser behavior, from `src/novelvideo/release_notes.py`)
 
-- `## User-facing Highlights (zh)` 与 `(en)` **两节都必须存在且各 ≥1 条**——CI 对包内 notes 严格断言（F1），缺任一节即红。标题大小写不敏感、heading 级别不限，但 locale 后缀必须是 `(zh)`/`(en)`。
-- 条目用一级 bullet `- **标题**: 描述`（`*` 也可）；无粗体标题时整行作标题。标题为空的行会被丢弃。
-- 章节扫到下一个同级或更高级标题即截止（如 `## Fixes`）；代码围栏内的 `#`/`-` 不会被误认。
-- `attention` **只认 front-matter**，写在正文里无效。
-- 前端不解析 Markdown，条目内不要依赖行内格式（链接、加粗描述等会按纯文本显示）。
+- `## User-facing Highlights (vi)` and `(en)` **must both exist, each with at least 1 item**: CI strictly asserts this for the in-package notes (F1), and a missing section turns it red. The title is case-insensitive and the heading level is unrestricted, but the locale suffix must be `(vi)`/`(en)`.
+- Items use a top-level bullet `- **Title**: description` (`*` also works); without a bold title the whole line is the title. Lines with an empty title are discarded.
+- A section ends at the next heading of the same or higher level (such as `## Fixes`); `#`/`-` inside code fences are not misrecognized.
+- `attention` is **recognized only in the front-matter**; writing it in the body has no effect.
+- The frontend does not parse Markdown, so do not rely on inline formatting inside items (links, bold descriptions, etc. are shown as plain text).
 
-## 用户会看到什么（两个承载面）
+## What users will see (two surfaces)
 
-- **(B) 升级前**（旧版运行中，上游出了新版）：通知中心（header 铃铛抽屉）出现一条「有新版本 vX.Y.Z 可用」，含「去更新」（跳转 release 页）与「跳过此版本」。铃铛红点仅当该 release 的 `attention ∈ {medium, high}` 才点亮；打开抽屉即记已读、红点熄灭。离线/限流时此提示静默消失，不影响 (A)。
-- **(A) 升级后**（拉取新版并重启）：自动弹「新功能已上线」What's New 弹窗，内容来自新包内 `release-notes.md` 的 Highlights（按界面语言选 zh/en 节），每个版本只自动弹一次；点搭子可随时手动重看。notes 缺失或为空时显示「当前版本暂无更新说明」，不报错。
+- **(B) Before upgrading** (an older version is running and upstream has released a new one): the notification center (the header bell drawer) shows an entry "A new version vX.Y.Z is available", with "Update" (jumps to the release page) and "Skip this version". The bell red dot lights up only when the release has `attention ∈ {medium, high}`; opening the drawer marks it read and the red dot goes out. When offline or rate-limited, this prompt silently disappears and does not affect (A).
+- **(A) After upgrading** (pull the new version and restart): a "New features are live" What's New dialog pops up automatically, with content from the Highlights of the new package's `release-notes.md` (the vi/en section is chosen by UI language); it auto-pops only once per version, and can be reopened manually at any time. When the notes are missing or empty, it shows "No release notes for the current version" and raises no error.
 
-## 相关配置
+## Related configuration
 
-| env | 默认 | 作用 |
+| env | Default | Effect |
 |---|---|---|
-| `RELEASE_NOTIFICATIONS_ENABLED` | `true` | Release Feed 总开关（关=零外呼、零解析） |
-| `RELEASE_NOTIFICATIONS_GITHUB_TOKEN` | 空 | 提升 GitHub API 限流额度（匿名 60 次/时；有 6h 缓存，通常无需配置） |
+| `RELEASE_NOTIFICATIONS_ENABLED` | `true` | Master switch of the Release Feed (off = zero outbound calls, zero parsing) |
+| `RELEASE_NOTIFICATIONS_GITHUB_TOKEN` | empty | Raises the GitHub API rate limit (anonymous 60 requests/hour; there is a 6h cache, so it is usually not needed) |

@@ -135,11 +135,11 @@ export function ShareProjectDialog({
     () => new Set(grantRows.map((grant) => grant.principal_id)),
     [grantRows],
   );
-  // 项目最多分享给固定人数（所有者不占名额）。后端不数人头，这里是唯一拦截点。
-  // 名单没回来之前 `grantRows` 是空的，那不是「零个人」而是「不知道几个人」——
-  // 按它放行，这一下加进去的可能就是真的第 26 个。
-  // 刷新失败时 React Query 会把上一份名单留着（status 走到 error、data 不清空），
-  // 那份数字已经不能拿来放行了——同样归到「不知道几个人」。
+  // A project can be shared with a fixed maximum number of people (the owner does not take a slot). The backend does not count heads, so this is the only checkpoint.
+  // Before the list comes back `grantRows` is empty, which is not "zero people" but "unknown how many" -
+  // letting that through could mean this add is actually the 26th.
+  // When a refresh fails React Query keeps the previous list (status goes to error, data is not cleared),
+  // and that number can no longer be used to let anything through - it also counts as "unknown how many".
   const grantsReady = !grants.isLoading && !grants.isError && grants.data !== undefined;
   const shareLimitReached = grantsReady && grantRows.length >= MAX_PROJECT_GRANTS;
   const shareLimitHint = t("project.shareDialog.limitReached", { limit: MAX_PROJECT_GRANTS });
@@ -149,7 +149,7 @@ export function ShareProjectDialog({
   const handleAdd = async () => {
     const username = selectedUser?.username;
     if (!username) return;
-    // 选中用户后，按钮不因配额置灰：点得到，才有地方把「为什么加不进去」说清楚。
+    // After a user is selected the button is not greyed out by quota: it stays clickable, so there is somewhere to explain "why it cannot be added".
     if (!grantsReady) {
       void alertDialog({
         title: t("project.shareDialog.quotaUnknownTitle"),
@@ -204,8 +204,8 @@ export function ShareProjectDialog({
     }
   };
 
-  // EE-only 入口：CE 运行时直接不渲染（防御性兜底，主门控在 canManageProjectGrants）。
-  // 守卫放在所有 hooks 之后，避免违反 Rules of Hooks。
+  // EE-only entry: not rendered at all in the CE runtime (defensive fallback; the main gate is canManageProjectGrants).
+  // The guard is placed after all hooks, to avoid violating the Rules of Hooks.
   if (isCeRuntime()) return null;
 
   return (
@@ -315,7 +315,7 @@ export function ShareProjectDialog({
               <span className="text-sm font-medium text-foreground">
                 {t("project.shareDialog.members")}
               </span>
-              {/* 名单没回来之前不报数：显示 0/25 等于给了一个假的余量。 */}
+              {/* Do not report a count before the list comes back: showing 0/25 would be a false margin. */}
               {grantsReady && (
                 <span
                   className={cn(

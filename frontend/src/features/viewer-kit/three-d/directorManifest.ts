@@ -298,7 +298,7 @@ const THREE_GS_EXT_RE = /\.(ply|sog|splat|ksplat|spz)(\?|#|$)/i;
 
 /**
  * Build a minimal scene-mode director manifest from just a world asset URL.
- * Used by the「历史资产」world-model tab to open 虾境 straight off a generation
+ * Used by the "History assets" world-model tab to open the director world straight off a generation
  * record, which only carries the output url — no node `sources` / scene edits /
  * layers. URLs ending in a 3GS extension load as a `sog` source; everything else
  * is treated as a `pano360` background. Returns null for an empty url.
@@ -318,8 +318,8 @@ export function buildStandaloneWorldManifest(params: {
     mode: "scene",
     project: params.project,
     scene_id: "freezone-3gs",
-    // 写进 manifest 的规范名，跨语言要保持一致。
-    display_name: params.displayName?.trim() || "导演世界", // i18n-exempt —— 规范值
+    // The canonical name written into the manifest; it must stay consistent across languages.
+    display_name: params.displayName?.trim() || "Director world", // i18n-exempt -- canonical value
     source: {
       source_type: sourceType,
       ply_url: isPly ? url : undefined,

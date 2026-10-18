@@ -39,9 +39,9 @@ describe("ViewportLazyImage", () => {
   });
 
   it("does not expose src until the image intersects the viewport", () => {
-    render(<ViewportLazyImage src="/portrait.png" alt="郑家悦" />);
+    render(<ViewportLazyImage src="/portrait.png" alt="Zheng Jiayue" />);
 
-    const image = screen.getByRole("img", { name: "郑家悦" });
+    const image = screen.getByRole("img", { name: "Zheng Jiayue" });
     expect(image).not.toHaveAttribute("src");
     expect(observe).toHaveBeenCalledWith(image);
     expect(options).toEqual({
@@ -82,7 +82,7 @@ describe("ViewportLazyImage", () => {
 
   it("does not leak a replacement src before it intersects", () => {
     const view = render(
-      <ViewportLazyImage src="/portrait-v1.png" alt="郑家悦" />,
+      <ViewportLazyImage src="/portrait-v1.png" alt="Zheng Jiayue" />,
     );
     act(() => {
       callback(
@@ -101,7 +101,7 @@ describe("ViewportLazyImage", () => {
     );
 
     view.rerender(
-      <ViewportLazyImage src="/portrait-v2.png" alt="郑家悦" />,
+      <ViewportLazyImage src="/portrait-v2.png" alt="Zheng Jiayue" />,
     );
 
     expect(screen.getByRole("img")).not.toHaveAttribute("src");
@@ -110,7 +110,7 @@ describe("ViewportLazyImage", () => {
   it("falls back to native lazy loading when observers are unavailable", () => {
     vi.stubGlobal("IntersectionObserver", undefined);
 
-    render(<ViewportLazyImage src="/portrait.png" alt="郑家悦" />);
+    render(<ViewportLazyImage src="/portrait.png" alt="Zheng Jiayue" />);
 
     expect(screen.getByRole("img")).toHaveAttribute("src", "/portrait.png");
     expect(screen.getByRole("img")).toHaveAttribute("loading", "lazy");

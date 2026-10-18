@@ -31,11 +31,11 @@ i18n
     load: "languageOnly",
     defaultNS: "translation",
     backend: {
-      // 翻译 JSON 是静态文件、会被浏览器/CDN 长期缓存。不带版本号时，发版后新增的
-      // key 在老用户那里仍读旧缓存 → 直接显示成原始 key（如 ingest.reuploadConfirm.*）。
-      // 按 BUILD_ID 加 query 破缓存：每次构建 URL 变化拉到新文件，同一构建内仍走缓存。
-      // 用 BUILD_ID 而非 APP_VERSION —— 后者在 CI 不注入时是个固定默认值，两次发版
-      // 长得一样，缓存就破不掉了。
+      // Translation JSON files are static and cached long-term by browsers/CDNs. Without a
+      // version, keys added in a release would still read the old cache for existing users
+      // and render as raw keys (e.g. ingest.reuploadConfirm.*). Adding a BUILD_ID query busts
+      // the cache: the URL changes on every build while staying cacheable within one build.
+      // BUILD_ID rather than APP_VERSION: the latter is a fixed default when CI does not inject it, so two releases would look identical and the cache would never be busted.
       loadPath: `/locales/{{lng}}/{{ns}}.json?v=${encodeURIComponent(BUILD_ID)}`,
     },
     interpolation: {

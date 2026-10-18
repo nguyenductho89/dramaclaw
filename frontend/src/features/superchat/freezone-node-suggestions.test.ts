@@ -38,10 +38,10 @@ function item(partial: Partial<AssetBoardItem> & Pick<AssetBoardItem, "nodeId" |
 }
 
 const board: AssetBoardData = {
-  text: [item({ nodeId: "t1", column: "text", title: "分镜表" })],
-  image: [item({ nodeId: "i1", column: "image", title: "多角度", thumbnailUrl: "https://x/i1.jpg" })],
-  video: [item({ nodeId: "v1", column: "video", title: "视频节点5", mediaUrl: "https://x/v1.mp4" })],
-  audio: [item({ nodeId: "a1", column: "audio", title: "背景音乐" })],
+  text: [item({ nodeId: "t1", column: "text", title: "Storyboard" })],
+  image: [item({ nodeId: "i1", column: "image", title: "Multi-angle", thumbnailUrl: "https://x/i1.jpg" })],
+  video: [item({ nodeId: "v1", column: "video", title: "Video node 5", mediaUrl: "https://x/v1.mp4" })],
+  audio: [item({ nodeId: "a1", column: "audio", title: "Background music" })],
 };
 
 describe("getFreezoneNodeAtQuery", () => {
@@ -49,22 +49,22 @@ describe("getFreezoneNodeAtQuery", () => {
     expect(getFreezoneNodeAtQuery("@")).toBe("");
   });
   it("returns the query at end of string", () => {
-    expect(getFreezoneNodeAtQuery("帮我 @多角")).toBe("多角");
+    expect(getFreezoneNodeAtQuery("help @multi")).toBe("multi");
   });
   it("returns query when @ is at the very start", () => {
-    expect(getFreezoneNodeAtQuery("@多角")).toBe("多角");
+    expect(getFreezoneNodeAtQuery("@multi")).toBe("multi");
   });
   it("does NOT match @ glued to a preceding non-space char (email-safe)", () => {
     expect(getFreezoneNodeAtQuery("a@b.com")).toBeNull();
-    expect(getFreezoneNodeAtQuery("帮我@多角")).toBeNull();
+    expect(getFreezoneNodeAtQuery("help me@multi")).toBeNull();
   });
   it("closes (null) once a space follows the query", () => {
-    expect(getFreezoneNodeAtQuery("@多角 ")).toBeNull();
+    expect(getFreezoneNodeAtQuery("@multi ")).toBeNull();
   });
   it("with multiple @ tokens, only the trailing one counts", () => {
-    // 第一个 @张三 后面跟着空白+非 @ 文本（"说 "），第二个 @多角 才是贴着串尾的 token；
-    // 正则要求 $ 收尾，逐位左扫时只有从第二个 @ 前的空白开始才能匹配到串尾，故取"多角"。
-    expect(getFreezoneNodeAtQuery("@张三 说 @多角")).toBe("多角");
+    // The first @alice is followed by whitespace + non-@ text ("said "); only the second @multi is the token touching the end of the string;
+    // The regex is anchored with $; scanning left to right only the whitespace before the second @ can match through to the end, hence "multi".
+    expect(getFreezoneNodeAtQuery("@alice said @multi")).toBe("multi");
   });
 });
 
@@ -75,7 +75,7 @@ describe("buildFreezoneNodeSuggestions", () => {
     expect(result[1]).toEqual({
       nodeId: "i1",
       column: "image",
-      title: "多角度",
+      title: "Multi-angle",
       thumbnailUrl: "https://x/i1.jpg",
       mediaUrl: null,
       keyElementCategory: null,
@@ -83,25 +83,25 @@ describe("buildFreezoneNodeSuggestions", () => {
   });
 
   it("floats key-element nodes to the top, ordered by category (character→scene→object→other)", () => {
-    // 关键元素散落在不同栏目、且乱序标记；期望按分类顺序置顶，未标记的保持栏目顺序垫底。
+    // Key elements are scattered across columns and marked out of order; expect them pinned in category order, with unmarked ones keeping column order at the bottom.
     const tagged: AssetBoardData = {
       text: [
-        item({ nodeId: "t-scene", column: "text", title: "场景卡", keyElementCategory: "scene" }),
-        item({ nodeId: "t-plain", column: "text", title: "普通文本" }),
+        item({ nodeId: "t-scene", column: "text", title: "Scene card", keyElementCategory: "scene" }),
+        item({ nodeId: "t-plain", column: "text", title: "Plain text" }),
       ],
-      image: [item({ nodeId: "i-other", column: "image", title: "其他图", keyElementCategory: "other" })],
-      video: [item({ nodeId: "v-char", column: "video", title: "主角视频", keyElementCategory: "character" })],
-      audio: [item({ nodeId: "a-plain", column: "audio", title: "配乐" })],
+      image: [item({ nodeId: "i-other", column: "image", title: "Other image", keyElementCategory: "other" })],
+      video: [item({ nodeId: "v-char", column: "video", title: "Hero video", keyElementCategory: "character" })],
+      audio: [item({ nodeId: "a-plain", column: "audio", title: "Score" })],
     };
     const result = buildFreezoneNodeSuggestions(tagged);
     expect(result.map((r) => r.nodeId)).toEqual(["v-char", "t-scene", "i-other", "t-plain", "a-plain"]);
   });
 
   it("keeps column order stable among nodes sharing the same category", () => {
-    // 同一分类内不重排：按扁平化栏目顺序（文本→图片→视频→音频）保持稳定。
+    // No reordering within the same category: stable by flattened column order (text > image > video > audio).
     const sameCategory: AssetBoardData = {
-      text: [item({ nodeId: "t-char", column: "text", title: "人物文本", keyElementCategory: "character" })],
-      image: [item({ nodeId: "i-char", column: "image", title: "人物图片", keyElementCategory: "character" })],
+      text: [item({ nodeId: "t-char", column: "text", title: "Character text", keyElementCategory: "character" })],
+      image: [item({ nodeId: "i-char", column: "image", title: "Character image", keyElementCategory: "character" })],
       video: [],
       audio: [],
     };
@@ -117,25 +117,25 @@ describe("filterFreezoneNodeSuggestions", () => {
   });
   it("filters by case-insensitive title substring", () => {
     const all = buildFreezoneNodeSuggestions(board);
-    expect(filterFreezoneNodeSuggestions(all, "多角").map((r) => r.nodeId)).toEqual(["i1"]);
+    expect(filterFreezoneNodeSuggestions(all, "multi").map((r) => r.nodeId)).toEqual(["i1"]);
   });
 });
 
 describe("stripFreezoneNodeAtQuery", () => {
   it("removes a leading @token entirely", () => {
-    expect(stripFreezoneNodeAtQuery("@多角")).toBe("");
+    expect(stripFreezoneNodeAtQuery("@multi")).toBe("");
   });
   it("keeps preceding text and its space", () => {
-    expect(stripFreezoneNodeAtQuery("帮我 @多角")).toBe("帮我 ");
+    expect(stripFreezoneNodeAtQuery("help @multi")).toBe("help ");
   });
   it("leaves text without an @token unchanged", () => {
-    expect(stripFreezoneNodeAtQuery("帮我合成视频")).toBe("帮我合成视频");
+    expect(stripFreezoneNodeAtQuery("help me merge videos")).toBe("help me merge videos");
   });
 });
 
 describe("sanitizeFreezoneNodeLabel", () => {
   it("strips bracket/paren/newline chars and collapses whitespace", () => {
-    expect(sanitizeFreezoneNodeLabel("图片[节点](50)\n多角")).toBe("图片 节点 50 多角");
+    expect(sanitizeFreezoneNodeLabel("Image[Node](50)\nmulti")).toBe("Image Node 50 multi");
   });
   it("trims and returns empty string for whitespace-only", () => {
     expect(sanitizeFreezoneNodeLabel("   ")).toBe("");
@@ -144,54 +144,54 @@ describe("sanitizeFreezoneNodeLabel", () => {
 
 describe("insertFreezoneNodeMention", () => {
   it("replaces the trailing @query with a @[label](nodeId) token + trailing space", () => {
-    expect(insertFreezoneNodeMention("帮我在 @多角", "node50", "图片节点50")).toBe(
-      "帮我在 @[图片节点50](node50) ",
+    expect(insertFreezoneNodeMention("help me with @multi", "node50", "Image node 50")).toBe(
+      "help me with @[Image node 50](node50) ",
     );
   });
   it("replaces a leading @query", () => {
-    expect(insertFreezoneNodeMention("@", "n1", "分镜表")).toBe("@[分镜表](n1) ");
+    expect(insertFreezoneNodeMention("@", "n1", "Storyboard")).toBe("@[Storyboard](n1) ");
   });
   it("sanitizes the label before embedding", () => {
-    expect(insertFreezoneNodeMention("@x", "n1", "有(括号)的名字")).toBe("@[有 括号 的名字](n1) ");
+    expect(insertFreezoneNodeMention("@x", "n1", "Name (with parens)")).toBe("@[Name with parens](n1) ");
   });
   it("falls back to nodeId when label sanitizes to empty", () => {
     expect(insertFreezoneNodeMention("@x", "n1", "()")).toBe("@[n1](n1) ");
   });
   it("appends with a leading space when there is no active @query", () => {
-    expect(insertFreezoneNodeMention("已有文字", "n1", "名字")).toBe("已有文字 @[名字](n1) ");
+    expect(insertFreezoneNodeMention("Existing text", "n1", "Name")).toBe("Existing text @[Name](n1) ");
   });
 });
 
 describe("parseFreezoneNodeMentions", () => {
   it("parses multiple tokens with correct nodeId/label/positions", () => {
-    const value = "看 @[图片节点50](node50) 和 @[分镜表](t1) 对比";
+    const value = "See @[Image node 50](node50) and @[Storyboard](t1) compare";
     const parsed = parseFreezoneNodeMentions(value);
     expect(parsed.map((m) => m.nodeId)).toEqual(["node50", "t1"]);
-    expect(parsed.map((m) => m.label)).toEqual(["图片节点50", "分镜表"]);
-    expect(value.slice(parsed[0].start, parsed[0].end)).toBe("@[图片节点50](node50)");
+    expect(parsed.map((m) => m.label)).toEqual(["Image node 50", "Storyboard"]);
+    expect(value.slice(parsed[0].start, parsed[0].end)).toBe("@[Image node 50](node50)");
   });
   it("returns empty for text without a node token", () => {
-    expect(parseFreezoneNodeMentions("普通文本 @多角")).toEqual([]);
+    expect(parseFreezoneNodeMentions("Plain text @multi")).toEqual([]);
   });
 });
 
 describe("freezoneNodeMentionIds", () => {
   it("collects nodeIds deduped and order-preserving", () => {
-    expect(freezoneNodeMentionIds("@[A](n1) @[B](n2) 再 @[A2](n1)")).toEqual(["n1", "n2"]);
+    expect(freezoneNodeMentionIds("@[A](n1) @[B](n2) again @[A2](n1)")).toEqual(["n1", "n2"]);
   });
 });
 
 describe("freezoneNodeMentionText", () => {
   it("rewrites @[label](id) tokens to readable [label] and keeps the rest", () => {
-    expect(freezoneNodeMentionText("帮我在 @[图片节点50](node50) 上生成小猫")).toBe(
-      "帮我在 [图片节点50] 上生成小猫",
+    expect(freezoneNodeMentionText("help me with @[Image node 50](node50) generate a kitten on it")).toBe(
+      "help me with [Image node 50] generate a kitten on it",
     );
   });
   it("keeps leading whitespace before a token", () => {
     expect(freezoneNodeMentionText("a @[X](n1) b")).toBe("a [X] b");
   });
   it("leaves text without tokens unchanged", () => {
-    expect(freezoneNodeMentionText("没有引用的文本")).toBe("没有引用的文本");
+    expect(freezoneNodeMentionText("Text without references")).toBe("Text without references");
   });
 });
 
@@ -217,19 +217,19 @@ describe("buildFreezoneNodeMentionLookup", () => {
 
 describe("appendFreezoneNodeMentions", () => {
   const titles = new Map([
-    ["node50", "图片节点50"],
-    ["t1", "分镜表"],
+    ["node50", "Image node 50"],
+    ["t1", "Storyboard"],
   ]);
 
   it("appends a single mention resolving its title from the lookup", () => {
-    expect(appendFreezoneNodeMentions("帮我处理", ["node50"], titles)).toBe(
-      "帮我处理 @[图片节点50](node50) ",
+    expect(appendFreezoneNodeMentions("Handle this", ["node50"], titles)).toBe(
+      "Handle this @[Image node 50](node50) ",
     );
   });
 
   it("appends multiple ids in order", () => {
-    expect(appendFreezoneNodeMentions("看", ["node50", "t1"], titles)).toBe(
-      "看 @[图片节点50](node50) @[分镜表](t1) ",
+    expect(appendFreezoneNodeMentions("See", ["node50", "t1"], titles)).toBe(
+      "See @[Image node 50](node50) @[Storyboard](t1) ",
     );
   });
 
@@ -238,85 +238,85 @@ describe("appendFreezoneNodeMentions", () => {
   });
 
   it("skips ids already mentioned in the draft", () => {
-    expect(appendFreezoneNodeMentions("已有 @[分镜表](t1) ", ["t1"], titles)).toBe(
-      "已有 @[分镜表](t1) ",
+    expect(appendFreezoneNodeMentions("Existing @[Storyboard](t1) ", ["t1"], titles)).toBe(
+      "Existing @[Storyboard](t1) ",
     );
   });
 
   it("dedupes repeated ids within the same batch", () => {
-    expect(appendFreezoneNodeMentions("", ["t1", "t1"], titles)).toBe("@[分镜表](t1) ");
+    expect(appendFreezoneNodeMentions("", ["t1", "t1"], titles)).toBe("@[Storyboard](t1) ");
   });
 
   it("leaves the draft unchanged for an empty batch", () => {
-    expect(appendFreezoneNodeMentions("原样", [], titles)).toBe("原样");
+    expect(appendFreezoneNodeMentions("As is", [], titles)).toBe("As is");
   });
 });
 
 describe("buildFreezoneNodePreviewInfo", () => {
-  it("keeps the thumbnail and maps image column to 图片", () => {
+  it("keeps the thumbnail and maps image column to Image", () => {
     expect(
-      buildFreezoneNodePreviewInfo("多角度", { thumbnailUrl: "https://x/i1.jpg", mediaUrl: null, column: "image" }),
+      buildFreezoneNodePreviewInfo("Multi-angle", { thumbnailUrl: "https://x/i1.jpg", mediaUrl: null, column: "image" }),
     ).toEqual({
-      label: "多角度",
+      label: "Multi-angle",
       thumbnailUrl: "https://x/i1.jpg",
       videoPosterUrl: null,
-      typeLabel: "图片",
+      typeLabel: "Image",
     });
   });
 
   it("prefers a video's poster thumbnail (no first-frame fallback needed)", () => {
     expect(
-      buildFreezoneNodePreviewInfo("片段5", {
+      buildFreezoneNodePreviewInfo("Clip 5", {
         thumbnailUrl: "https://x/v1.jpg",
         mediaUrl: "https://x/v1.mp4",
         column: "video",
       }),
     ).toEqual({
-      label: "片段5",
+      label: "Clip 5",
       thumbnailUrl: "https://x/v1.jpg",
       videoPosterUrl: null,
-      typeLabel: "视频",
+      typeLabel: "Video",
     });
   });
 
   it("falls back to the video mediaUrl for a first-frame poster when it has no thumbnail", () => {
     expect(
-      buildFreezoneNodePreviewInfo("无封面视频", { thumbnailUrl: null, mediaUrl: "https://x/v1.mp4", column: "video" }),
+      buildFreezoneNodePreviewInfo("Video without cover", { thumbnailUrl: null, mediaUrl: "https://x/v1.mp4", column: "video" }),
     ).toEqual({
-      label: "无封面视频",
+      label: "Video without cover",
       thumbnailUrl: null,
       videoPosterUrl: "https://x/v1.mp4",
-      typeLabel: "视频",
+      typeLabel: "Video",
     });
   });
 
   it("does NOT use mediaUrl as a poster for non-video columns (audio has a media url too)", () => {
-    // 音频也有 mediaUrl，但预览不该拿它当 <video> 首帧——只有视频列才走首帧兜底。
+    // Audio also has a mediaUrl, but the preview must not use it as a <video> first frame; only the video column gets the first-frame fallback.
     expect(
-      buildFreezoneNodePreviewInfo("配乐", { thumbnailUrl: null, mediaUrl: "https://x/bg.mp3", column: "audio" }),
+      buildFreezoneNodePreviewInfo("Score", { thumbnailUrl: null, mediaUrl: "https://x/bg.mp3", column: "audio" }),
     ).toEqual({
-      label: "配乐",
+      label: "Score",
       thumbnailUrl: null,
       videoPosterUrl: null,
-      typeLabel: "音频",
+      typeLabel: "Audio",
     });
   });
 
   it("has no thumbnail for text nodes but still labels the type", () => {
-    expect(buildFreezoneNodePreviewInfo("分镜表", { thumbnailUrl: null, mediaUrl: null, column: "text" })).toEqual({
-      label: "分镜表",
+    expect(buildFreezoneNodePreviewInfo("Storyboard", { thumbnailUrl: null, mediaUrl: null, column: "text" })).toEqual({
+      label: "Storyboard",
       thumbnailUrl: null,
       videoPosterUrl: null,
-      typeLabel: "文本",
+      typeLabel: "Text",
     });
   });
 
-  it("falls back to 引用 when the node is no longer on canvas (meta missing)", () => {
-    expect(buildFreezoneNodePreviewInfo("旧引用", null)).toEqual({
-      label: "旧引用",
+  it("falls back to Reference when the node is no longer on canvas (meta missing)", () => {
+    expect(buildFreezoneNodePreviewInfo("Old reference", null)).toEqual({
+      label: "Old reference",
       thumbnailUrl: null,
       videoPosterUrl: null,
-      typeLabel: "引用",
+      typeLabel: "Reference",
     });
   });
 });

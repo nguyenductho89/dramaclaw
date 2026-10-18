@@ -36,7 +36,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
+describe('matteImage (cutout orchestration, extracted from NodeActionToolbar)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     uploadFreezoneImage.mockReset();
@@ -52,11 +52,11 @@ describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
     vi.unstubAllGlobals();
   });
 
-  it('同步建 isGenerating 的 exportImage 结果节点并连边/选中，完成后回填 url', async () => {
+  it('synchronously builds an isGenerating exportImage result node, wires/selects it, and fills the url back on completion', async () => {
     matteInWorker.mockResolvedValue(new Blob(['matted']));
     uploadFreezoneImage.mockResolvedValue({ url: '/static/matted.png' });
 
-    const result = matteImage('src-1', '/static/src.png', { displayName: '抠图' });
+    const result = matteImage('src-1', '/static/src.png', { displayName: 'Cutout' });
 
     expect(result).not.toBeNull();
     const resultId = result?.nodeId;
@@ -64,7 +64,7 @@ describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
     const created = state.nodes.find((node) => node.id === resultId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '抠图',
+      displayName: 'Cutout',
       aspectRatio: '16:9',
       resultKind: 'matte',
       isGenerating: true,
@@ -75,9 +75,9 @@ describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
     expect(state.selectedNodeId).toBe(resultId);
     expect(state.pendingFocusNodeId).toBe(resultId);
 
-    // completion 在后台链（fetch → worker → 上传 → 回填）settle 后 resolve。
+    // completion resolves after the background chain (fetch -> worker -> upload -> fill back) settles.
     await result?.completion;
-    // 调用序：fetch 源图 → worker 去背 → 上传 → 回填。
+    // Call order: fetch the source image -> worker background removal -> upload -> fill back.
     expect(matteInWorker).toHaveBeenCalledTimes(1);
     expect(uploadFreezoneImage).toHaveBeenCalledTimes(1);
     expect(uploadFreezoneImage.mock.calls[0][0]).toBe('proj-1');
@@ -90,7 +90,7 @@ describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
     });
   });
 
-  it('去背失败 → 把错误写到结果节点并清 isGenerating', async () => {
+  it('background removal failure -> writes the error to the result node and clears isGenerating', async () => {
     matteInWorker.mockRejectedValue(new Error('worker boom'));
 
     const result = matteImage('src-1', '/static/src.png');
@@ -107,7 +107,7 @@ describe('matteImage（抠图编排，从 NodeActionToolbar 抽出）', () => {
     expect(uploadFreezoneImage).not.toHaveBeenCalled();
   });
 
-  it('缺 project → 不建节点直接返回 null', () => {
+  it('missing project -> returns null directly without creating a node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(matteImage('src-1', '/static/src.png')).toBeNull();

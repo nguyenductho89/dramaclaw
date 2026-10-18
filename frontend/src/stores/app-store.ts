@@ -35,13 +35,13 @@ interface AppState {
   aiAssistantOpen: boolean;
   aiAssistantWidth: number;
   /**
-   * 顶部陪伴形象：'piko'（默认，CSS 像素小人）或某只 petdex 宠物的 slug。
-   * 属全局 UI 偏好（region-agnostic），随 supertale-app 持久化、不随区域切换清除。
+   * Top companion avatar: 'piko' (default, a CSS pixel character) or the slug of a petdex pet.
+   * A global UI preference (region-agnostic); persisted with supertale-app and not cleared on region switch.
    */
   companionKind: string;
   /**
-   * 选中的 petdex 宠物（来自全量 manifest，含同源反代精灵图地址）。companionKind 非
-   * 'piko' 时据此渲染——manifest 宠物不在内置精选表里，必须把地址一并持久化。
+   * The selected petdex pet (from the full manifest, including the same-origin proxied spritesheet URL). Used for rendering when companionKind is not
+   * 'piko': manifest pets are not in the built-in curated table, so the URL must be persisted too.
    */
   companionPet: {
     slug: string;
@@ -50,18 +50,18 @@ interface AppState {
     submittedBy?: string;
     cols?: number;
     rows?: number;
-    /** 导入宠物（IndexedDB）。spritesheetUrl 是会话级 blob，刷新后按 slug 重解析。 */
+    /** Imported pet (IndexedDB). spritesheetUrl is a session-level blob and is re-resolved by slug after refresh. */
     imported?: boolean;
   } | null;
-  /** Piko 专属道具选择；petdex 宠物不挂道具。 */
+  /** Piko-only accessory selection; petdex pets carry no accessories. */
   pikoAccessory: PikoAccessoryDisplayId;
   /**
-   * 陪伴形象在视口中的位置（占视口宽/高的百分比 0–100），可在整页任意拖动。
-   * null = 未拖动过，用默认落点。拖动后写入并持久化。属全局 UI 偏好。
+   * Position of the companion in the viewport (percent of viewport width/height, 0-100); draggable anywhere on the page.
+   * null = never dragged, use the default spot. Written and persisted after dragging. A global UI preference.
    */
   companionXPercent: number | null;
   companionYPercent: number | null;
-  /** 是否隐藏陪伴形象（workbuddy）。true = 全局隐藏。属全局 UI 偏好，持久化。 */
+  /** Whether the companion (workbuddy) is hidden. true = hidden globally. A global UI preference, persisted. */
   companionHidden: boolean;
   toggleAiAssistant: () => void;
   setLanguage: (lang: string) => void;
@@ -72,7 +72,7 @@ interface AppState {
   setTaskPanelHeight: (h: number) => void;
   setAiAssistantOpen: (open: boolean) => void;
   setAiAssistantWidth: (w: number) => void;
-  /** 选 Piko 传 'piko'+null；选宠物传 slug + 宠物信息。 */
+  /** For Piko pass 'piko'+null; for a pet pass the slug + pet info. */
   setCompanion: (kind: string, pet: AppState["companionPet"]) => void;
   setPikoAccessory: (accessory: PikoAccessoryDisplayId) => void;
   setCompanionPosition: (xPercent: number, yPercent: number) => void;

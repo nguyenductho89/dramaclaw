@@ -189,8 +189,8 @@ function ComposeTabContent() {
   const durationLabel = formatDuration(totalDurationSec);
 
   // De-dup: trust the episode title when present, else fall back to the
-  // "第 N 集" header. Previous layout rendered both, which produced the
-  // "第 1 集 · 第1集" double-up when the title itself follows that pattern.
+  // "Episode N" header. Previous layout rendered both, which produced the
+  // "Episode 1 · Episode 1" double-up when the title itself follows that pattern.
   const rawTitle = episodeRes.data?.data?.title?.trim();
   const displayTitle =
     rawTitle && rawTitle.length > 0

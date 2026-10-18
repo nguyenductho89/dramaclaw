@@ -8,21 +8,21 @@ import { isVideoFile } from './videoFileTypes';
 import { ensureWebSafeVideo } from './videoTranscode';
 
 export interface VideoReplaceUploadResult {
-  /** 上传后的产物地址；未成功时为 null。 */
+  /** The product address after upload; null when unsuccessful. */
   url: string | null;
-  /** 失败原因；成功或「不是视频文件 / 缺 project」时为 null（后者只记 error 日志）。 */
+  /** Failure reason; null on success or "not a video file / project missing" (the latter only logs an error). */
   error: string | null;
 }
 
 /**
- * 替换（重传）节点视频的编排（从 VideoNode.processFile 原样搬出，语义零变化）：
- * 校验是视频 → 置 isUploading 并写 sourceFileName → HEVC 等 Web 不兼容编码先在
- * 浏览器内转成 H.264（见 videoTranscode.ts）→ 上传 → 回写 videoUrl 并清掉预览图；
- * 失败清掉 isUploading。
+ * Orchestration of replacing (re-uploading) a node's video (moved verbatim out of VideoNode.processFile, with zero semantic change):
+ * validate it is a video -> set isUploading and write sourceFileName -> encodings Web cannot handle such as HEVC are first converted
+ * to H.264 in the browser (see videoTranscode.ts) -> upload -> write back videoUrl and clear the preview image;
+ * on failure clear isUploading.
  *
- * 本地 objectURL 预览完全留给调用方（工作流节点用它做「上传中先看到本地画面」，
- * 故事板详情同理）：`onTranscodedPreview` 只在真的发生转码时回调一次——源编码在
- * 本浏览器可能根本解不了（Edge + HEVC），此时本地预览也得换成转码产物。
+ * The local objectURL preview is left entirely to the caller (the workflow node uses it for "see the local picture first while uploading",
+ * and the storyboard detail likewise): `onTranscodedPreview` is called back only once when transcoding really happens - the source codec
+ * may not be decodable by this browser at all (Edge + HEVC), in which case the local preview must also be swapped for the transcoded product.
  */
 export async function replaceNodeVideo(
   nodeId: string,
@@ -38,9 +38,9 @@ export async function replaceNodeVideo(
   const store = useCanvasStore.getState();
   store.updateNodeData(nodeId, { sourceFileName: file.name, isUploading: true });
   try {
-    // HEVC（飞书录屏/iPhone）等 Web 不兼容编码先在浏览器内转成 H.264 再上传，
-    // 否则 Edge 等无对应解码器的浏览器只有声音没画面。见 videoTranscode.ts。
-    // 转码期间 UI 统一走「上传中」loading，不单独显示转码进度。
+    // Encodings Web cannot handle such as HEVC (Feishu screen recordings/iPhone) are first converted to H.264 in the browser and then uploaded,
+    // otherwise browsers without a matching decoder such as Edge give only sound and no picture. See videoTranscode.ts.
+    // During transcoding the UI uniformly shows the "uploading" loading and shows no separate transcoding progress.
     const prepared = await ensureWebSafeVideo(file);
     if (prepared.transcoded) {
       hooks?.onTranscodedPreview?.(prepared.file);

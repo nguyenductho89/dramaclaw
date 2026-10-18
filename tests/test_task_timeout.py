@@ -477,7 +477,7 @@ def test_recipe_delivery_confirms_original_reservation_without_refund(
         assert result["model_evidence"] == {}
     else:
         assert result["compile_mode"] == compile_mode
-        assert "正常计费" in manager.completed[0]["current_task"]
+        assert "billed normally" in manager.completed[0]["current_task"]
 
 
 def test_run_project_task_core_rejects_raw_dict_before_side_effects():
@@ -669,7 +669,7 @@ def test_text_generation_settlement_uses_actual_delivered_output_chars(monkeypat
 
     def fake_runner(_envelope, _ctx):
         return {
-            "generated_text": " 雨 夜\n重逢 ",
+            "generated_text": " Rainy night\nReunion ",
             "__feature_credit_reservation_id": "reservation_actual_text",
         }
 
@@ -704,7 +704,7 @@ def test_text_generation_settlement_uses_actual_delivered_output_chars(monkeypat
         run_task_id="task_1",
     )
 
-    assert result == {"generated_text": " 雨 夜\n重逢 "}
+    assert result == {"generated_text": " Rainy night\nReunion "}
     assert settlements == [
         (
             "reservation_actual_text",
@@ -713,12 +713,12 @@ def test_text_generation_settlement_uses_actual_delivered_output_chars(monkeypat
             "business_outcome": "delivered",
             "actual_billing": {
                 "operation": "text_generate",
-                "billable_chars": 4,
-                "pricing_quantity": 4,
+                "billable_chars": 17,
+                "pricing_quantity": 17,
                 "pricing_metrics": {
                     "call_count": 1,
                     "item_count": 1,
-                    "billable_chars": 4,
+                    "billable_chars": 17,
                 },
                 "quantity_source": "trusted_runner_result",
             },

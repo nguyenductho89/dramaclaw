@@ -3,21 +3,21 @@
   "id": "outdoor-stage-duel-video",
   "version": "1.0.0",
   "enabled": true,
-  "name": "户外舞台双人能力秀",
-  "description": "把角色描述、能力类型、舞台场景或高潮结构发展成观众第一视角的户外舞台双人能力对决短片，按创意规格、分镜、关键元素、单镜视频和音频层分阶段推进。",
+  "name": "Outdoor Stage Two-Person Ability Show",
+  "description": "Develops a character description, ability type, stage scene or climax structure into an audience first-person outdoor stage two-person ability duel short, advancing in stages through the creative specification, storyboard, key elements, single-shot video and audio layers.",
   "category": "video",
   "triggers": {
     "keywords": [
-      "舞台对决",
-      "双人能力秀",
-      "户外舞台",
-      "观众视角",
-      "现场演出",
-      "能力对抗",
-      "特摄舞台",
-      "主题公园剧场",
-      "漫展户外舞台",
-      "一镜到底"
+      "stage duel",
+      "two-person ability show",
+      "outdoor stage",
+      "audience perspective",
+      "live performance",
+      "ability clash",
+      "tokusatsu stage",
+      "theme park theater",
+      "convention outdoor stage",
+      "single continuous take"
     ],
     "node_scopes": [
       "textGeneration",
@@ -29,7 +29,7 @@
   "input_parameters": [
     {
       "id": "aspect_ratio",
-      "label": "画幅",
+      "label": "Aspect ratio",
       "type": "single_select",
       "required": true,
       "default": "16:9",
@@ -40,7 +40,7 @@
     },
     {
       "id": "resolution",
-      "label": "清晰度",
+      "label": "Resolution",
       "type": "single_select",
       "required": true,
       "default": "720p",
@@ -51,29 +51,29 @@
     },
     {
       "id": "venue_type",
-      "label": "舞台场景",
+      "label": "Stage setting",
       "type": "single_select",
       "required": true,
-      "default": "户外主题公园剧场",
+      "default": "Outdoor theme park theater",
       "options": [
-        "户外主题公园剧场",
-        "露天广场舞台",
-        "节庆舞台",
-        "漫展户外区",
-        "夜间舞台"
+        "Outdoor theme park theater",
+        "Open-air plaza stage",
+        "Festival stage",
+        "Convention outdoor area",
+        "Night stage"
       ]
     },
     {
       "id": "vo_language",
-      "label": "旁白语言",
+      "label": "Narration language",
       "type": "single_select",
       "required": true,
-      "default": "日语短句",
+      "default": "Short Japanese lines",
       "options": [
-        "日语短句",
-        "中文短句",
-        "英文短句",
-        "无旁白"
+        "Short Japanese lines",
+        "Short Vietnamese lines",
+        "Short English lines",
+        "No narration"
       ]
     }
   ],
@@ -84,74 +84,74 @@
     "outdoor-stage-duel-audio-layers"
   ],
   "planning": {
-    "planning_notes": "动态执行路径：先根据 aspect_ratio、resolution、venue_type、vo_language、用户角色/能力描述和画布素材判断入口。正式生成节点前先在 Skill 层整理创意规格，锁定每条视频 15 秒、一个视频对应一个 shot、双角色 A/B、双方能力、舞台站位、冲突关系、画幅、清晰度、户外舞台真实感和旁白语言；这个规格不创建独立节点。若用户只给一个角色，必须先补全或提出第二个原创对手/搭档，不得直接做单人能力展示。规格整理后创建分镜：每条视频只设计 1 个 shot，用 Beat 1 → Beat 2 → Beat 3 → Beat 4 → Final beat 写一镜到底内部升级，不用秒数和硬切。分镜完成后创建关键元素阶段，并按可独立引用的资产分别创建独立关键元素节点：Character A、Character B、完整户外舞台/剧场空间、关键道具、双方能力效果源；不创建 audience POV 资产。不得把多个主体合并成一张关键元素总图，只有始终作为同一整体被下游引用的资产才可共用一个节点。关键元素完成后创建单镜视频，每条 15 秒视频引用已确认 Character A、Character B、舞台/场景和必要道具/效果源；先只生成视觉，不生成 VO/BGM。视觉视频完成后创建音频层，一次生成 VO 和 BGM 提示。最后自动创建成片合成节点，将所有单镜视频和音频层按播放顺序接入；BGM 默认 0.7、VO 默认 1.0，每条视频末尾淡出 2 秒。",
-    "prompt_guide": "核心是观众第一人称看户外舞台上的双人超自然演出/对决。镜头像观众眼睛或手机镜头，但不能出现手机机身、录制界面、屏中屏或居中的大手机。默认不是专业机位、无人机、广播机位或第三人称电影镜头。每条 15 秒视频是一条连续手持长镜头，内部节奏只写 narrative beats，不写时间戳、不写 hard cut/switch angle/new shot。角色必须像真实舞台演员/特技演员，真实人体比例、布料褶皱、皮革/金属/护甲质感、道具有重量；能力效果必须翻译成舞台灯光、烟雾、火圈、LED 光幕、光柱、冲击波、投影和现场后期增强。",
+    "planning_notes": "Dynamic execution path: first judge the entry point from aspect_ratio, resolution, venue_type, vo_language, the user's character/ability description and the canvas assets. Before any generation node, organize the creative specification at the Skill level, locking each video at 15 seconds, one video corresponding to one shot, the two characters A/B, both sides' abilities, stage positioning, the conflict relationship, aspect ratio, resolution, outdoor stage realism and narration language; this specification creates no standalone node. If the user gives only one character, you must first complete or propose a second original opponent/partner, and must not directly make a solo ability showcase. After the specification is organized, create the storyboard: design only 1 shot per video, using Beat 1 → Beat 2 → Beat 3 → Beat 4 → Final beat to write the internal escalation of a single take, without seconds or hard cuts. After the storyboard is complete, create the key element stage, and create independent key element nodes separately for independently referenceable assets: Character A, Character B, the complete outdoor stage / theater space, key props, and both sides' ability effect sources; do not create an audience POV asset. Do not merge multiple subjects into one key element overview image; only assets that are always referenced downstream as one whole may share a node. After the key elements are complete, create the single-shot videos, where each 15-second video references the confirmed Character A, Character B, the stage/scene and the necessary props/effect sources; generate only visuals first, without VO/BGM. After the visual videos are complete, create the audio layers, generating the VO and BGM prompts at once. Finally, automatically create the final composition node, wiring all single-shot videos and audio layers in playback order; BGM defaults to 0.7, VO defaults to 1.0, and each video fades out for 2 seconds at its end.",
+    "prompt_guide": "The core is an audience first-person view of a two-person supernatural performance/duel on an outdoor stage. The camera is like the viewer's eyes or a phone lens, but no phone body, recording interface, screen-in-screen or large centered phone may appear. By default it is not a professional camera position, drone, broadcast camera position or third-person cinematic shot. Each 15-second video is one continuous handheld long take, whose internal rhythm is written only as narrative beats, with no timestamps and no hard cut/switch angle/new shot. The characters must look like real stage performers / stunt performers, with real human proportions, cloth wrinkles, leather/metal/armor texture and props with weight; ability effects must be translated into stage lighting, smoke, fire rings, LED light curtains, light beams, shockwaves, projections and live post-enhancement.",
     "conduct_rules": [
-      "默认双角色 A/B；用户只给一个角色时必须补全或询问第二个原创对手/搭档，不得默认单人能力秀。",
-      "如果用户提到知名动漫/游戏角色，只能当灵感；不得在分镜或提示词里写官方角色名、作品名、招式名、组织名、村名、标志台词、徽章或图案。",
-      "每条 15 秒视频只对应 1 个 shot；内部升级用 Beat 1/2/3/4/Final beat，不用秒数，不拆多个 shot。",
-      "关键元素阶段必须拆成多个独立节点，至少包含 Element_Character_A、Element_Character_B 和完整舞台空间；双方能力效果源、核心道具或特殊舞台装置如需跨镜引用，也必须各自独立成节点。观众 POV 是 shot 约束，不是单独资产。",
-      "Shot 必须采用三层构图：前景观众头肩/手臂/少量边缘手机，中景舞台与双角色，背景户外剧场建筑/灯架/旗帜/天空/烟层。",
-      "每个 Beat 都必须保留另一名角色作为目标、防守者、反应者或空间锚点，不能变成两个独立 showcase。",
-      "命中反馈必须具体到重心、脚步、护脸、滑步、弯膝、支撑和恢复平衡；特效不能代替身体反应。",
-      "观众反应要按阵营变化：A 占优时 A 支持者欢呼，B 反击时另一侧观众起身、举手、手机晃动。",
-      "视频提示词默认 no music、no subtitles；VO 和 BGM 只在视觉视频完成后单独生成。"
+      "Default to two characters A/B; when the user gives only one character, a second original opponent/partner must be completed or asked for, and a solo ability show must not be the default.",
+      "If the user mentions a well-known anime/game character, it may only serve as inspiration; official character names, work titles, move names, organization names, village names, signature lines, emblems or patterns must not be written in the storyboard or prompts.",
+      "Each 15-second video corresponds to only 1 shot; internal escalation uses Beat 1/2/3/4/Final beat, not seconds, and is not split into multiple shots.",
+      "The key element stage must be split into multiple independent nodes, containing at least Element_Character_A, Element_Character_B and the complete stage space; if both sides' ability effect sources, core props or special stage devices need to be referenced across shots, they must also each be their own node. The audience POV is a shot constraint, not a separate asset.",
+      "The Shot must use a three-layer composition: foreground audience heads/shoulders/arms/a few edge phones, midground stage and the two characters, background outdoor theater buildings/lighting rigs/banners/sky/smoke layers.",
+      "Every Beat must keep the other character as a target, defender, reactor or spatial anchor, and must not become two independent showcases.",
+      "Hit feedback must be specific to center of gravity, footwork, shielding the face, slide steps, bent knees, bracing and regaining balance; effects cannot replace the body reaction.",
+      "Audience reactions change by faction: when A has the upper hand, A's supporters cheer; when B counterattacks, the audience on the other side stands up, raises hands and shakes phones.",
+      "Video prompts default to no music and no subtitles; VO and BGM are generated separately only after the visual videos are complete."
     ]
   },
   "evaluation": {
     "rating_bands": [
       {
         "score": 5,
-        "description": "双角色舞台关系清楚，观众 POV 长镜头稳定，三层构图、IP 规避、舞台特效、命中反馈、阵营观众反应和阶段边界都完整。"
+        "description": "The two-character stage relationship is clear, the audience POV long take is stable, and the three-layer composition, IP avoidance, stage effects, hit feedback, faction audience reactions and stage boundaries are all complete."
       },
       {
         "score": 3,
-        "description": "基本符合舞台对决，但角色 B、前景观众、真实舞台质感、命中反馈、IP 改写或音频分阶段处理有缺漏。"
+        "description": "Basically fits a stage duel, but character B, the foreground audience, real stage texture, hit feedback, IP rewriting or staged audio handling has gaps."
       },
       {
         "score": 1,
-        "description": "做成单人能力展示、专业电影机位、第三人称镜头、硬切多镜、官方 IP 直写、居中手机屏录或纯 CG 竞技场。"
+        "description": "Made into a solo ability showcase, a professional cinematic camera position, a third-person shot, hard-cut multiple shots, direct use of official IP, a centered phone screen recording, or a pure CG arena."
       }
     ],
     "visual_review_items": [
       {
-        "name": "观众 POV",
+        "name": "Audience POV",
         "weight": 1.5,
-        "description": "镜头必须像观众眼睛/手机镜头的现场长镜头，但不能显示录制设备或界面。"
+        "description": "The shot must be a live long take like the viewer's eyes / phone lens, but must not show the recording device or interface."
       },
       {
-        "name": "双角色关系",
+        "name": "Two-character relationship",
         "weight": 1.4,
-        "description": "A/B 必须同处一个舞台坐标系，攻防、反应和高潮发生在两者之间。"
+        "description": "A/B must share one stage coordinate system, with attack, defense, reaction and the climax happening between the two."
       },
       {
-        "name": "现场真实感",
+        "name": "Live realism",
         "weight": 1.2,
-        "description": "前景观众、舞台建筑、灯光烟雾、道具材质和身体受力反馈都要可信。"
+        "description": "The foreground audience, stage buildings, lighting and smoke, prop materials and body impact feedback must all be believable."
       }
     ],
     "text_review_items": [
       {
-        "name": "单镜规则",
+        "name": "Single-shot rule",
         "weight": 1,
-        "description": "每条 15 秒视频只对应 1 个 shot，内部用 narrative beats，不写时间戳或硬切。"
+        "description": "Each 15-second video corresponds to only 1 shot, using narrative beats internally, with no timestamps or hard cuts."
       },
       {
-        "name": "IP 规避",
+        "name": "IP avoidance",
         "weight": 1,
-        "description": "知名角色必须改成原创舞台演员设定，删除官方名称、标志和招式。"
+        "description": "Well-known characters must be turned into original stage performer settings, with official names, emblems and moves removed."
       },
       {
-        "name": "音频分离",
+        "name": "Audio separation",
         "weight": 1,
-        "description": "视频阶段不生成 VO/BGM；视觉视频完成后再生成短 VO 和纯器乐/音效 BGM。"
+        "description": "The video stage does not generate VO/BGM; a short VO and an instrumental / sound-effect BGM are generated after the visual videos are complete."
       }
     ],
     "quality_threshold": 4,
     "domain_constraints": [
-      "不得创建 audience POV key element。",
-      "不得使用官方动漫/游戏角色名、招式名、组织名、徽章或标志台词。",
-      "不得出现居中大手机、录制 UI、屏中屏、第三人称电影机位、无人机镜头、硬切或多 shot 切换。"
+      "Do not create an audience POV key element.",
+      "Do not use official anime/game character names, move names, organization names, emblems or signature lines.",
+      "Do not show a large centered phone, recording UI, screen-in-screen, third-person cinematic camera position, drone shots, hard cuts or multi-shot switching."
     ]
   }
 }

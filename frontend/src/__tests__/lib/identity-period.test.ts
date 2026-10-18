@@ -4,49 +4,55 @@ import { describe, expect, it } from "vitest";
 
 import { identityPeriodLabel, identityRefLabel } from "@/lib/identity-period";
 
-// 假 t：把 key 原样回显，够看出「查到词条了没」。
+// Fake t: echoes the key as is, enough to tell "was a locale entry found".
 const t = ((key: string) => key) as never;
 
 describe("identityPeriodLabel", () => {
-  it("认得的时期名走词条", () => {
-    expect(identityPeriodLabel("青年时期", t)).toBe(
+  it("known period slugs go through locale entries", () => {
+    expect(identityPeriodLabel("young_adult", t)).toBe(
       "characters.identityPeriods.youngAdult",
+    );
+    expect(identityPeriodLabel("default", t)).toBe(
+      "characters.identityPeriods.default",
     );
   });
 
-  it("认不得的自造名原样回显", () => {
-    expect(identityPeriodLabel("大厂时期", t)).toBe("大厂时期");
+  it("unknown made-up names are echoed as is", () => {
+    expect(identityPeriodLabel("1893_chicago", t)).toBe("1893_chicago");
     expect(identityPeriodLabel("", t)).toBe("");
     expect(identityPeriodLabel(null, t)).toBe("");
   });
 });
 
 describe("identityRefLabel", () => {
-  it("只本地化下划线后的时期名，角色名原样保留", () => {
-    expect(identityRefLabel("沈晚_青年时期", t)).toBe(
-      "沈晚_characters.identityPeriods.youngAdult",
+  it("only localizes the period slug after the underscore, the character name stays as is", () => {
+    expect(identityRefLabel("Shen Wan_young_adult", t)).toBe(
+      "Shen Wan_characters.identityPeriods.youngAdult",
     );
   });
 
-  it("角色名自带下划线时按最后一个下划线切", () => {
-    expect(identityRefLabel("沈_晚_中年时期", t)).toBe(
-      "沈_晚_characters.identityPeriods.middleAge",
+  it("a character name that contains an underscore is still split correctly", () => {
+    expect(identityRefLabel("Shen_Wan_middle_aged", t)).toBe(
+      "Shen_Wan_characters.identityPeriods.middleAge",
+    );
+    expect(identityRefLabel("Shen_Wan_default", t)).toBe(
+      "Shen_Wan_characters.identityPeriods.default",
     );
   });
 
-  it("时期名认不得就整串原样回显，不做半截替换", () => {
-    expect(identityRefLabel("沈晚_大厂时期", t)).toBe("沈晚_大厂时期");
+  it("an unknown period echoes the whole string, with no partial replacement", () => {
+    expect(identityRefLabel("Shen Wan_big_tech_era", t)).toBe("Shen Wan_big_tech_era");
   });
 
-  it("没有下划线时按纯时期名处理", () => {
-    expect(identityRefLabel("老年时期", t)).toBe(
+  it("without an underscore it is treated as a bare period slug", () => {
+    expect(identityRefLabel("elderly", t)).toBe(
       "characters.identityPeriods.laterYears",
     );
-    expect(identityRefLabel("路人甲", t)).toBe("路人甲");
+    expect(identityRefLabel("passerby", t)).toBe("passerby");
   });
 
-  it("下划线在首尾这类畸形值不崩", () => {
-    expect(identityRefLabel("_青年时期", t)).toBe("_青年时期");
-    expect(identityRefLabel("沈晚_", t)).toBe("沈晚_");
+  it("malformed values with a leading or trailing underscore do not crash", () => {
+    expect(identityRefLabel("_default", t)).toBe("_default");
+    expect(identityRefLabel("Shen Wan_", t)).toBe("Shen Wan_");
   });
 });

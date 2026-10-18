@@ -366,8 +366,8 @@ const FrameCard = memo(
   }: FrameCardProps) => {
     const { t } = useTranslation();
     const updateStoryboardFrame = useCanvasStore((state) => state.updateStoryboardFrame);
-    // 离散布尔订阅:每个格子原本各订阅一份连续 zoom(N×N 板就有 N² 个),缩放时全部
-    // 每帧重渲染。改订阅阈值布尔后,仅在跨过阈值那一帧重渲染。
+    // Discrete boolean subscription: each cell used to subscribe to a continuous zoom (an NxN board has N² of them), all
+    // re-rendering every frame while zooming. Subscribing to a threshold boolean re-renders only on the frame that crosses the threshold.
     const preferOriginalImage = useStore((state) =>
       shouldUseOriginalImageByZoom(state.transform[2])
     );

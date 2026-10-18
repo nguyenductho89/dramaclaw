@@ -19,7 +19,7 @@ const RELEASES_URL = "https://github.com/dramaclaw/dramaclaw/releases";
 const RELEASES_LATEST_URL = `${RELEASES_URL}/latest`;
 const FALLBACK_GITHUB_STARS = 574;
 
-/** 校准条在进入视口时推到的落点。纯观感取值,不代表任何进度。 */
+/** Where the calibration bar is pushed when it enters the viewport. Purely visual, does not represent any progress. */
 const STRIP_FILL = "38%";
 
 const PLATFORM_MARKS: Record<DesktopPlatform, () => ReactElement> = {
@@ -35,9 +35,9 @@ const CAPABILITIES = [
 ] as const;
 
 /**
- * 更新日志。每条对应 main 上一次真实发版 —— 版本号、日期与摘要都取自
- * `src/novelvideo/release-notes.md` 的历史版本,不写还没发布的东西。
- * 文案在 i18n 的 downloadPage.changelog.<id> 下。
+ * Changelog. Each entry corresponds to a real release on main - version, date and summary are all taken from the
+ * historical versions in `src/novelvideo/release-notes.md`; nothing unreleased is written here.
+ * The copy lives under i18n downloadPage.changelog.<id>.
  */
 const CHANGELOG = [
   { id: "v132", version: "1.3.2", date: "2026-08-07" },
@@ -47,7 +47,7 @@ const CHANGELOG = [
   { id: "v120", version: "1.2.0", date: "2026-07-31" },
 ] as const;
 
-/** FAQ 顺序即展示顺序;带 link 的条目会在答案末尾追加一个外链。 */
+/** FAQ order is display order; entries with a link get an external link appended to the answer. */
 const FAQ = [
   { id: "macGatekeeper" },
   { id: "winSmartScreen" },
@@ -62,18 +62,18 @@ function formatStars(count: number): string {
   return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 }
 
-/** 把 2026-08-07 显示成 08-07 —— 同年内日期,年份是噪音。 */
+/** Shows 2026-08-07 as 08-07 - for dates within the same year the year is noise. */
 function formatLogDate(iso: string): string {
   return iso.slice(5);
 }
 
 /**
- * 安装包校验和。值取自清单里**这一个文件**自己的 sha512(不是顶层那个,
- * 那属于自动更新用的包),整段可见不截断 —— 核验时要能原样比对。
+ * Installer checksum. The value is taken from **this one file's** own sha512 in the manifest (not the top-level one,
+ * which belongs to the auto-update package), fully visible without truncation - verification needs an exact comparison.
  *
- * 每个平台各出一条并在标题里点名平台:页面上两个平台的下载按钮是并排的,
- * 只放"当前系统"那一条的话,Windows 用户点旁边那颗 macOS 按钮,底下显示的
- * 仍是 EXE 的校验和 —— 拿它去核验必然对不上,比不显示更糟。
+ * One entry per platform, with the platform named in the title: the two platform download buttons sit side by side on the page,
+ * and if only the "current system" one were shown, a Windows user clicking the macOS button next to it would still see
+ * the EXE checksum underneath - verifying against it can never match, which is worse than showing nothing.
  */
 function ChecksumRow({
   platform,
@@ -85,7 +85,7 @@ function ChecksumRow({
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
-  // 复制成功的反馈自己退回去;组件卸载时清掉定时器,避免对已卸载组件 setState。
+  // The copy-success feedback reverts by itself; the timer is cleared on unmount to avoid setState on an unmounted component.
   useEffect(() => {
     if (!copied) return;
     const timer = window.setTimeout(() => setCopied(false), 1600);
@@ -98,7 +98,7 @@ function ChecksumRow({
       await navigator.clipboard.writeText(sha512);
       setCopied(true);
     } catch {
-      // 无剪贴板权限(非安全上下文等)时不弹错:值本来就明文可选中手动复制。
+      // Without clipboard permission (non-secure context etc.) do not show an error: the value is plain text and can be selected and copied manually.
     }
   }
 
@@ -135,7 +135,7 @@ export function DownloadPage() {
   const pageRef = useRef<HTMLDivElement | null>(null);
   const stripRef = useRef<HTMLDivElement | null>(null);
 
-  // 挂载后再探测,避免预渲染的外壳把错误的平台顺序烤进 HTML。
+  // Probe after mount, so the pre-rendered shell does not bake the wrong platform order into the HTML.
   const [platform, setPlatform] = useState<DesktopPlatform>("mac");
   useEffect(() => {
     setPlatform(detectDesktopPlatform());
@@ -144,12 +144,12 @@ export function DownloadPage() {
   const ordered: DesktopPlatform[] =
     platform === "windows" ? ["windows", "mac"] : ["mac", "windows"];
 
-  // 版本号/发布日期取当前系统那一档(两个平台同版发布,取哪个都一样);
-  // 校验和不能这么取 —— 它是逐安装包的,见 ChecksumRow。
+  // The version / release date come from the current system's tier (both platforms release the same version, so either would do);
+  // the checksum cannot be taken this way - it is per installer, see ChecksumRow.
   const current = releases[platform];
 
-  // 滚动进场。这里直接操作 DOM 而不是给每个元素挂 state:要露出的元素有二十来个,
-  // 逐个上 hook 会违反 hooks 规则,单个 observer 扫 [data-reveal] 更省也更好读。
+  // Scroll reveal. The DOM is manipulated directly here instead of hanging state on every element: there are twenty or so elements to reveal,
+  // and putting a hook on each would violate the hooks rules; a single observer scanning [data-reveal] is cheaper and more readable.
   useEffect(() => {
     const root = pageRef.current;
     if (!root) return;
@@ -177,7 +177,7 @@ export function DownloadPage() {
     );
     for (const el of targets) observer.observe(el);
 
-    // 校准条只推一次,不做循环动画。
+    // The calibration bar is only pushed once, no looping animation.
     const strip = stripRef.current;
     let stripObserver: IntersectionObserver | undefined;
     if (strip) {
@@ -233,7 +233,7 @@ export function DownloadPage() {
                 alt="DramaClaw"
               />
 
-              {/* slogan 与登录页共用同一批 auth.stage.* 键,两处永远同步。 */}
+              {/* The slogan shares the same auth.stage.* keys as the login page, so the two always stay in sync. */}
               <h1 className={clsx(styles.heroTitle, styles.rise)} data-reveal="">
                 {t("auth.stage.headlines.createUniverse")}
               </h1>

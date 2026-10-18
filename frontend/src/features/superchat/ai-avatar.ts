@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 
 /**
- * AI 头像视频(`/video/ai-avatar.mp4`)在每条 assistant 消息上都会渲染一个
- * `<video>`,过去每个元素各发一次请求(即便命中 304 也是一串网络往返,调试噪音大)。
+ * The AI avatar video (`/video/ai-avatar.mp4`) is rendered as a `<video>` on every assistant message,
+ * and each element used to issue its own request (even a 304 hit is a burst of round trips and debugging noise).
  *
- * 这里把它做成「整会话只取一次」:首次 fetch 后把视频 blob 存进 IndexedDB,并在内存
- * 里共享一个 `blob:` 对象 URL。所有头像复用同一个 URL —— blob: 不走网络,所以多少条
- * 消息都只有一次(甚至零次)请求;重载后直接从 IndexedDB 读,不再 fetch。
- * IndexedDB 不可用(隐私模式等)时回退到原始路径,退化为旧行为,功能不受影响。
+ * This makes it "fetched once per session": after the first fetch the video blob is stored in IndexedDB, and one
+ * `blob:` object URL is shared in memory. All avatars reuse that URL; blob: does not hit the network, so no matter how many
+ * messages there are, there is only one request (or none); after a reload it is read straight from IndexedDB without fetching.
+ * When IndexedDB is unavailable (private mode etc.) it falls back to the original path, i.e. the old behavior, with no functional impact.
  */
 
 const AVATAR_PATH = "/video/ai-avatar.mp4";

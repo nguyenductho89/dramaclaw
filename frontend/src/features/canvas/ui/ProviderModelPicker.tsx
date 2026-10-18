@@ -68,7 +68,7 @@ export interface ModelOption {
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;
-  /** 参考音频总时长上限（秒，可为小数）；没配时前端按 15.2s 兜底。 */
+  /** Upper limit of total reference audio duration (seconds, may be fractional); when not configured the frontend falls back to 15.2s. */
   referenceAudioTotalMaxSeconds?: number | null;
   referenceVideoMinSeconds?: number | null;
   referenceVideoMaxSeconds?: number | null;
@@ -77,19 +77,19 @@ export interface ModelOption {
   request?: MediaModelRequestSchema;
 }
 
-// 服务商品牌名，不跟界面语言走。
+// Provider brand names do not follow the UI language.
 // i18n-exempt-start
 export const SHARED_PROVIDERS: ProviderOption[] = [
   { id: 'newapi', label: 'DramaClawAPI' },
-  { id: 'huimeng', label: '绘梦 / HuiMeng' },
+  { id: 'huimeng', label: 'HuiMeng' },
 // i18n-exempt-end
   { id: 'openrouter', label: 'OpenRouter' },
   { id: 'openai', label: 'OpenAI' },
 ];
 
-// 兜底模型列表。仅在 /freezone/image/models 拉取失败时顶上 —— 正常路径下模型
-// 及其能力全部来自后台「媒体模型」配置。这里的能力字段跟着一起给，是为了让
-// 兜底状态下的尺寸 / 比例选择器仍有可用档位，而不是散落回各个面板里去硬编码。
+// Fallback model list. Only fills in when fetching /freezone/image/models fails - on the normal path the models
+// and their capabilities all come from the backend "media models" config. The capability fields are given here as well, so that
+// the size / ratio selectors in the fallback state still have usable tiers, rather than being scattered back into each panel as hard-coded values.
 export const SHARED_MODELS: ModelOption[] = [
   {
     id: 'newapi_gpt_image2',
@@ -137,11 +137,11 @@ export const DEFAULT_UPSCALE_MODEL_ID = 'newapi_gpt_image2';
 // /freezone/video/gen so we don't need a separate apiModel mapping.
 export const VIDEO_PROVIDERS: ProviderOption[] = [
   { id: 'seedance', label: 'Seedance' },
-  { id: 'huimeng', label: '绘梦 / HuiMeng' }, // i18n-exempt —— 服务商品牌名
+  { id: 'huimeng', label: 'HuiMeng' }, // i18n-exempt -- provider brand name
 ];
 
-// 兜底视频模型列表。同 SHARED_MODELS：仅在 /freezone/video/models 拉取失败时
-// 顶上，能力字段随行以保证兜底状态下参数面板仍有档位可选。
+// Fallback video model list. Same as SHARED_MODELS: only fills in when fetching /freezone/video/models fails,
+// with capability fields along so the parameter panel still has tiers to choose from in the fallback state.
 export const VIDEO_MODELS: ModelOption[] = [
   {
     id: 'newapi_seedance-2.0-fast',
@@ -259,9 +259,9 @@ export function ProviderModelPicker({
   const videoHook = useFreezoneVideoModels(domain === 'video' ? skipFetch : null);
   const apiHook = domain === 'video' ? videoHook : imageHook;
   const effectiveModels = models ?? apiHook.models;
-  // 后台**确实**一个模型都没配（接口成功返回空列表，不是拉取失败兜底、也不是
-  // 还在加载）。此时触发器上原来会直接显示 `selectedModelId` —— 一个前端硬编码
-  // 的默认 id，看着像有个模型可用，点开却是空列表。
+  // The backend has **really** not configured a single model (the endpoint succeeded and returned an empty list; not a fetch-failure fallback, nor
+  // still loading). At this point the trigger would directly show `selectedModelId` - a frontend hard-coded
+  // default id, looking like a model is available, yet opening it shows an empty list.
   const catalogIsEmpty = !models && isAuthoritativeEmptyCatalog(apiHook);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -270,8 +270,8 @@ export function ProviderModelPicker({
     left: number;
     top: number;
   } | null>(null);
-  // 禁用项的 hover 提示。自渲染成一个 z 高于弹窗(z-[10001] > z-[10000])的浮层,
-  // 锚定到当前项的右下角并 portal 到 body,避免被弹窗遮挡 / 被列表 overflow 裁剪。
+  // Hover hint of a disabled item. Self-rendered as an overlay with a z higher than the dialog (z-[10001] > z-[10000]),
+  // anchored to the bottom-right of the current item and portaled to body, avoiding being covered by the dialog / clipped by the list's overflow.
   const [disabledTooltip, setDisabledTooltip] = useState<{
     reason: string;
     left: number;
@@ -380,7 +380,7 @@ export function ProviderModelPicker({
                       const rect = event.currentTarget.getBoundingClientRect();
                       setDisabledTooltip({
                         reason: disabledReason,
-                        // 锚定到当前项的右下角:水平从图标右侧起,垂直略压住项底边。
+                        // Anchored to the bottom-right of the current item: horizontally from the right of the icon, vertically slightly overlapping the item's bottom edge.
                         left: rect.left + 36,
                         top: rect.bottom - 6,
                       });

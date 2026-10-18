@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import i18n from "i18next";
 import type {
   ApprovalDecision,
   ApprovalRequest,
@@ -100,11 +101,12 @@ const MESSAGE_CACHE_LIMIT = 50;
 // blobs (one per conversation) can't accumulate forever and exhaust the quota.
 const MESSAGE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTIVE_TURN_TTL_MS = 60 * 60 * 1000;
-// 点「停止生成」后等服务端终态帧的宽限期。取消在协议上是一个**请求**（codex
-// app-server 的 `turn_interrupt` 同样只回 ack），这一轮什么时候结束只有服务端的
-// 终态帧说得准，所以客户端必须等。服务端自己的打断宽限是
-// `CODEX_INTERRUPT_GRACE_TIMEOUT = 5s`（`chat/backend_sdk.py`），客户端等得比它
-// 短就等于在服务端还在正常收尾的时候把连接掐了，因此在 5s 上再留 3s 余量。
+// Grace period for the server's terminal frame after clicking "Stop generating". Cancellation is a
+// **request** at the protocol level (the codex app-server's `turn_interrupt` also only returns an ack);
+// only the server's terminal frame can say precisely when this turn ends, so the client has to wait.
+// The server's own interrupt grace is `CODEX_INTERRUPT_GRACE_TIMEOUT = 5s` (`chat/backend_sdk.py`);
+// if the client waited less than that it would cut the connection while the server is still
+// wrapping up normally, so we leave 3s of margin on top of the 5s.
 const ABORT_TERMINAL_GRACE_MS = 8000;
 export const abortTerminalGraceMsForTest = () => ABORT_TERMINAL_GRACE_MS;
 
@@ -1385,33 +1387,33 @@ function incompleteSkillStudioDraftEvent(chunks: PendingSkillStudioDraftChunks):
   const expected = Math.max(0, chunks.expectedRecipeCount ?? recipes.length);
   const missingRecipeCount = Math.max(0, expected - recipes.length);
   const warnings = [
-    "Agent 已提交了一部分内容，但本轮对话已结束，草稿还不能保存。",
-    chunks.skill ? "已生成 Skill 基础配置。" : "缺少 Skill 基础配置。",
+    i18n.t("superchat.panel.skillDraft.partial"),
+    chunks.skill ? i18n.t("superchat.panel.skillDraft.skillReady") : i18n.t("superchat.panel.skillDraft.skillMissing"),
     expected > 0
-      ? `Recipe 已生成 ${recipes.length} / ${expected}，缺少 ${missingRecipeCount} 个。`
+      ? i18n.t("superchat.panel.skillDraft.recipesPartial", { count: recipes.length, expected, missing: missingRecipeCount })
       : recipes.length > 0
-        ? `Recipe 已生成 ${recipes.length} 个。`
-        : "本轮未提交新 Recipe。",
-    "缺少最终草稿整理。",
+        ? i18n.t("superchat.panel.skillDraft.recipesReady", { count: recipes.length })
+        : i18n.t("superchat.panel.skillDraft.recipesNone"),
+    i18n.t("superchat.panel.skillDraft.finalMissing"),
   ];
   return {
     type: "skill_studio.draft",
     bridge_key: `incomplete:${chunks.sessionId}`,
     skill_studio_session_id: chunks.sessionId,
     mode: chunks.mode ?? "create",
-    summary: chunks.summary || "Skill 草稿未完成",
+    summary: chunks.summary || i18n.t("superchat.panel.skillDraft.incompleteSummary"),
     skill: chunks.skill ?? {},
     recipes,
     warnings,
     incomplete: true,
     read_only: true,
     missing_items: [
-      ...(chunks.skill ? [] : ["Skill 基础配置"]),
+      ...(chunks.skill ? [] : [i18n.t("superchat.panel.skillDraft.skillConfig")]),
       ...(missingRecipeCount > 0 ? [`Recipe ${recipes.length + 1} / ${expected}`] : []),
-      "最终草稿整理",
+      i18n.t("superchat.panel.skillDraft.finalTidy"),
     ],
     completed_items: [
-      ...(chunks.skill ? ["Skill 基础配置"] : []),
+      ...(chunks.skill ? [i18n.t("superchat.panel.skillDraft.skillConfig")] : []),
       ...(recipes.length > 0 ? [`Recipe ${recipes.length} / ${expected || recipes.length}`] : []),
     ],
   };
@@ -2500,7 +2502,7 @@ export function useSuperChat({
             ? frame.text
             : typeof toolCall.title === "string" && toolCall.title.trim()
               ? toolCall.title
-              : "需要操作授权",
+              : i18n.t("superchat.panel.approval.required"),
           command,
           description,
           requestId,
@@ -2684,7 +2686,7 @@ export function useSuperChat({
           upsertAssistantUiEvent(current, turnId, {
             type: "skill_studio.status",
             status: typeof frame.status === "string" ? frame.status : "routing",
-            message: typeof frame.message === "string" ? frame.message : "正在整理 Skill 方向...",
+            message: typeof frame.message === "string" ? frame.message : i18n.t("superchat.panel.skillDraft.routing"),
             turn_id: turnId,
           }),
         );
@@ -2766,10 +2768,8 @@ export function useSuperChat({
             ? frame.message.trim()
             : "Unknown chat error";
           setError(errorMessage);
-          // 比对的是后端报错原文，不是界面文案。
-          // i18n-exempt-start
-          if (errorMessage.includes("当前用户已有 AI 对话正在处理中")) {
-          // i18n-exempt-end
+          // Branch on the stable backend `code`; the English text match is only a fallback for older servers.
+          if (frame.code === "user_chat_busy" || /already has an AI chat in progress/i.test(errorMessage)) {
             setBusy(true);
             break;
           }
@@ -2778,7 +2778,7 @@ export function useSuperChat({
             ?? activeTurnIdRef.current
             ?? pendingClientTurnIdRef.current
             ?? `turn-${Date.now()}`;
-          const persistedErrorText = `本轮处理失败：${errorMessage}\n\n请根据错误提示处理后重试。`;
+          const persistedErrorText = i18n.t("superchat.panel.turnFailed", { error: errorMessage });
           setMessages((current) => {
             const next = upsertAssistantMessage(current, failedTurnId, persistedErrorText);
             saveCachedMessages(scopeKey, next);
@@ -3105,11 +3105,12 @@ export function useSuperChat({
       }).catch(() => undefined);
     }
     markTurnInactive(turnId);
-    // 刻意不在这里关连接。服务端在几十毫秒内就会把
-    // `agent.turn.completed disposition=cancelled` + `chat.done` 发到**这条**连接上，
-    // 立刻 close 会让这两帧打进一个已经关掉的 socket——后端
-    // `_send_json_best_effort` 把发送失败整个吞掉，于是终态对任何客户端都不可观测，
-    // 界面只能靠重连后的历史反推。留着连接让这一轮按正常终态收尾。
+    // Deliberately do not close the connection here. Within tens of milliseconds the server sends
+    // `agent.turn.completed disposition=cancelled` + `chat.done` on **this** connection;
+    // closing immediately would make those two frames hit an already-closed socket, and the backend's
+    // `_send_json_best_effort` swallows the send failure entirely, so the terminal state would be
+    // unobservable to any client and the UI could only infer it from history after reconnecting.
+    // Keep the connection so this turn finishes with its normal terminal state.
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     clearAbortGrace();
@@ -3117,8 +3118,8 @@ export function useSuperChat({
       abortGraceRef.current = null;
       const current = wsRef.current;
       if (current && current.readyState === WebSocket.OPEN) {
-        // 兜底自救：服务端一直不给终态帧就关掉，`onclose` 会重连，再用
-        // `scope.changed` 带回的历史对账。
+        // Fallback self-rescue: if the server never sends a terminal frame, close; `onclose` reconnects
+        // and the history returned by `scope.changed` is reconciled.
         current.close(4000, "client abort");
       }
     }, ABORT_TERMINAL_GRACE_MS);
@@ -3131,7 +3132,7 @@ export function useSuperChat({
     }
     const optionId = approvalOptionId(approval, decision);
     if (!optionId) {
-      setError("Agent 没有提供可用的授权选项");
+      setError(i18n.t("superchat.panel.approval.noOption"));
       return;
     }
     void api.post("api/v1/chat/permission-result", {
@@ -3143,7 +3144,7 @@ export function useSuperChat({
     }).then(() => {
       setApprovals((current) => current.filter((item) => item.id !== approval.id));
     }).catch(() => {
-      setError("授权请求已失效，请让虾导重新执行该操作");
+      setError(i18n.t("superchat.panel.approval.expired"));
     });
   }, []);
 

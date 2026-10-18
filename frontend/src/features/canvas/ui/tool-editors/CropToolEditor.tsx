@@ -96,9 +96,9 @@ function buildDefaultCrop(width: number, height: number, aspect: number | undefi
     return { unit: 'px', x: 0, y: 0, width, height };
   }
 
-  // 默认：高度吃满图片高度，宽度按 aspect 算。
-  // 唯一例外：当 aspect 太横、按这个算出的宽度超出图片宽度时，clamp 回宽度吃满，
-  // 高度反算 —— 否则框会溢出图的边界。
+  // Default: the height fills the image height, and the width is computed from aspect.
+  // The only exception: when aspect is so wide that the width computed this way exceeds the image width, clamp back to the width filling,
+  // and derive the height back - otherwise the frame would overflow the image's boundary.
   let cropHeight = height;
   let cropWidth = cropHeight * aspect;
   if (cropWidth > width) {

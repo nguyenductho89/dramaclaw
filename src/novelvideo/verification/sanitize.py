@@ -1,54 +1,57 @@
-"""Prompt 输入消毒工具 — 移除可能的注入指令。"""
+"""Prompt input sanitizer - removes possible injected instructions."""
 
 import re
 
 
-# 常见注入模式
+# Common injection patterns
 _INJECTION_PATTERNS = [
-    # 系统/角色指令覆盖（英文）
+    # System/role instruction override (English)
     re.compile(r"\[?\s*(SYSTEM|ASSISTANT|USER|HUMAN)\s*[:\]]\s*", re.IGNORECASE),
-    # 常见注入指令（英文）
+    # Common injected instructions (English)
     re.compile(
         r"(?:ignore|disregard|forget|override|bypass)\s+"
         r"(?:(?:all|previous|above|prior|earlier)\s+)+"
         r"(?:instructions?|rules?|prompts?|constraints?)",
         re.IGNORECASE,
     ),
-    # XML-style 标签注入
+    # XML-style tag injection
     re.compile(r"<\s*/?\s*(?:system|instruction|prompt|role)\s*>", re.IGNORECASE),
-    # 中文注入指令：忽略/无视/跳过 + 指令/规则/审核/检查
+    # Vietnamese injected instructions: ignore/skip/override + instructions/rules/review/checks
     re.compile(
-        r"(?:请|你应该|你必须|立即|直接)?"
-        r"(?:忽略|无视|跳过|绕过|覆盖|放弃)"
-        r"(?:之前|以上|上面|前面|所有|全部|一切)?"
-        r"(?:的)?"
-        r"(?:指令|规则|提示|约束|审核|检查|要求|限制)",
+        r"(?:hãy\s+|vui lòng\s+|bạn phải\s+)?"
+        r"(?:bỏ qua|phớt lờ|lờ đi|bỏ qua hết|vượt qua|ghi đè)\s+"
+        r"(?:(?:tất cả|mọi|toàn bộ|các|những|trước đó|ở trên|phía trên)\s+)*"
+        r"(?:hướng dẫn|chỉ dẫn|chỉ thị|quy tắc|luật|ràng buộc|yêu cầu|giới hạn|kiểm tra|kiểm duyệt)",
+        re.IGNORECASE,
     ),
-    # 中文注入：直接输出/返回 passed/true/通过
+    # Vietnamese injection: directly output/return passed/true/pass
     re.compile(
-        r"(?:请|你应该|你必须|立即)?"
-        r"(?:直接|强制|无条件)"
-        r"(?:输出|返回|回复|报告)"
+        r"(?:hãy\s+|vui lòng\s+|bạn phải\s+)?"
+        r"(?:trực tiếp|bắt buộc|vô điều kiện)\s+"
+        r"(?:xuất|trả về|trả lời|báo cáo|in ra)"
         r".*?"
-        r"(?:passed|true|通过|合格|满分|10分)",
+        r"(?:passed|true|đạt|hợp lệ|điểm tối đa|10 điểm)",
+        re.IGNORECASE,
     ),
 ]
 
 
 def sanitize_prompt_input(text: str | None) -> str:
-    """移除用户可控文本中的潜在注入指令。
+    """Remove potentially injected instructions from user-controlled text.
 
-    对 visual_description、scene_id、time_of_day、visual_style、
-    appearance_details 等拼入 LLM prompt 的字段进行基本消毒。
+    Applies basic sanitization to fields spliced into LLM prompts, such as
+    visual_description, scene_id, time_of_day, visual_style and
+    appearance_details.
 
-    注意：这是一道防线而非银弹。核心防护依赖于 LLM 的 system prompt
-    中的结构化输出约束和 output_type 强制解析。
+    Note: this is a line of defense, not a silver bullet. The core protection
+    relies on the structured-output constraints in the LLM system prompt and
+    the forced parsing of output_type.
 
     Args:
-        text: 原始文本（可能为 None）
+        text: Raw text (may be None)
 
     Returns:
-        消毒后的文本
+        The sanitized text
     """
     if not text:
         return ""

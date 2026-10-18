@@ -38,7 +38,7 @@ import {
 import { ZoomScaledToolbar } from '@/features/canvas/ui/ZoomScaledToolbar';
 
 const PANEL_CLASS =
-  // 与 NodeActionToolbar 一致的入场动画：激活时从节点上沿淡入+轻微上滑浮现。
+  // The same entrance animation as NodeActionToolbar: when activated, fades in from the node's top edge with a slight upward slide.
   'flex animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 items-center gap-1.5 rounded-[18px] !border-white/10 !bg-[#242426]/95 px-2 py-1.5 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-2xl duration-200 ease-out motion-reduce:animate-none [&_svg]:h-4 [&_svg]:w-4';
 const CHIP_CLASS =
   'h-9 gap-1.5 rounded-[12px] !border-transparent !bg-transparent px-3 text-sm text-text-dark hover:!bg-[rgba(255,255,255,0.075)] focus:!border-transparent focus:!shadow-none focus-visible:!ring-0';
@@ -47,7 +47,7 @@ const MENU_CONTENT_CLASS =
 const MENU_ITEM_CLASS =
   'gap-2 rounded-[10px] text-text-dark focus:bg-[rgba(255,255,255,0.075)] focus:text-text-dark';
 
-// Max columns offered in the 宫格 picker — beyond this the cells get too small.
+// Max columns offered in the grid picker — beyond this the cells get too small.
 const MAX_GRID_COLS = 6;
 
 interface StoryboardGroupToolbarProps {
@@ -55,7 +55,7 @@ interface StoryboardGroupToolbarProps {
 }
 
 /**
- * Top toolbar shown when a single 分镜组 (storyboard group) node is selected.
+ * Top toolbar shown when a single storyboard group node is selected.
  * Mirrors the libtv reference: cell aspect, grid columns, index toggle, stitch
  * (placeholder), convert-to-plain, and ungroup. Rendered in place of the generic
  * NodeActionToolbar (which early-returns to this for storyboard groups).

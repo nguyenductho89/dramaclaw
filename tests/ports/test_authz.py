@@ -75,7 +75,7 @@ def test_authz_service_failures_have_safe_fixed_public_contract(
     assert exc.code == "ORG_AUTHZ_UNAVAILABLE"
     assert exc.failure_kind == failure_kind
     assert exc.http_status == 503
-    assert exc.user_message == "授权服务暂时不可用，请稍后重试"
+    assert exc.user_message == "The authorization service is temporarily unavailable. Please try again later"
     assert str(exc) == "organization authorization service is unavailable"
     assert "postgres" not in repr(exc).lower()
 

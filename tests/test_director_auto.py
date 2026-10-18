@@ -209,8 +209,8 @@ async def test_agent_continuation_is_pinned_to_the_auto_run_episode(
     wrote = await coordinator._agent_continue(run)
 
     assert wrote is False
-    assert "只继续第 2 集的下一步" in prompts[0]
-    assert "不得启动、修改或推进其他集" in prompts[0]
+    assert "Only continue with the next step of episode 2" in prompts[0]
+    assert "Do not start, modify, or advance other episodes" in prompts[0]
 
 
 @pytest.mark.asyncio
@@ -297,7 +297,7 @@ async def test_completed_task_notifies_and_triggers_one_server_continuation(
     await asyncio.sleep(0.08)
 
     assert coordinator.continuations == 1
-    assert coordinator.notifications == ["✅ 角色身份图已完成。本集自动正在继续下一步。"]
+    assert coordinator.notifications == ["✅ Character identity image completed. Episode auto is continuing to the next step."]
     saved = store.get("alice", "project-1")
     assert saved is not None
     assert saved.handled_task_ids == ("new-complete",)
@@ -368,17 +368,17 @@ def test_missing_portrait_recovery_only_matches_exact_identity_failure() -> None
     recoverable = task(
         "identity-failed",
         "failed",
-        error="请先为角色「锦绣」生成 Portrait（面部特写）",
+        error='Generate a Portrait (face close-up) for character "Jinxiu" first',
     )
     unrelated_task = task(
         "portrait-failed",
         "failed",
         task_type="character_portrait",
-        error="请先为角色「锦绣」生成 Portrait（面部特写）",
+        error='Generate a Portrait (face close-up) for character "Jinxiu" first',
     )
-    unrelated_error = task("other-failed", "failed", error="模型调用失败")
+    unrelated_error = task("other-failed", "failed", error="Model call failed")
 
-    assert director_auto._missing_character_portrait(recoverable) == "锦绣"
+    assert director_auto._missing_character_portrait(recoverable) == "Jinxiu"
     assert director_auto._missing_character_portrait(unrelated_task) is None
     assert director_auto._missing_character_portrait(unrelated_error) is None
 
@@ -391,7 +391,7 @@ async def test_missing_portrait_is_repaired_once_without_pausing_auto_mode(
     failed = task(
         "identity-failed",
         "failed",
-        error="请先为角色「锦绣」生成 Portrait（面部特写）",
+        error='Generate a Portrait (face close-up) for character "Jinxiu" first',
     )
     portrait = task("portrait-running", "running", task_type="character_portrait")
 
@@ -434,11 +434,11 @@ async def test_missing_portrait_is_repaired_once_without_pausing_auto_mode(
     saved = store.get("alice", "project-1")
     assert saved is not None and saved.status == "running"
     assert saved.handled_task_ids == ("identity-failed",)
-    assert saved.recovery_keys == ("missing-character-portrait:锦绣",)
+    assert saved.recovery_keys == ("missing-character-portrait:Jinxiu",)
     assert len(coordinator.instructions) == 1
-    assert "仅启动该角色的一个 Portrait" in coordinator.instructions[0]
+    assert "start exactly one Portrait generation task for that character" in coordinator.instructions[0]
     assert coordinator.notifications == [
-        "检测到角色身份图缺少前置肖像，正在自动补生成「锦绣」肖像。"
+        'Detected that Character identity image is missing its prerequisite portrait; automatically generating the portrait for "Jinxiu".'
     ]
     await coordinator.shutdown()
 
@@ -451,7 +451,7 @@ async def test_repeated_missing_portrait_failure_pauses_instead_of_looping(
     failed = task(
         "identity-failed-again",
         "failed",
-        error="请先为角色「锦绣」生成 Portrait（面部特写）",
+        error='Generate a Portrait (face close-up) for character "Jinxiu" first',
     )
 
     class Manager:
@@ -477,7 +477,7 @@ async def test_repeated_missing_portrait_failure_pauses_instead_of_looping(
     monkeypatch.setattr(director_auto, "POLL_SECONDS", 0.01)
     store = DirectorAutoStore(tmp_path / "director-auto.db")
     store.upsert(
-        run_record(tmp_path, recovery_keys=("missing-character-portrait:锦绣",))
+        run_record(tmp_path, recovery_keys=("missing-character-portrait:Jinxiu",))
     )
     coordinator = RecordingCoordinator(store)
 
@@ -508,7 +508,7 @@ async def test_suspend_and_resume_preserve_the_same_auto_run(tmp_path: Path) -> 
     original = run_record(
         tmp_path,
         handled_task_ids=("task-already-finished",),
-        recovery_keys=("missing-character-portrait:锦绣",),
+        recovery_keys=("missing-character-portrait:Jinxiu",),
     )
     store.upsert(original)
     coordinator = RecordingCoordinator(store)
@@ -516,7 +516,7 @@ async def test_suspend_and_resume_preserve_the_same_auto_run(tmp_path: Path) -> 
     suspended = await coordinator.suspend_for_confirmation(
         username="alice",
         project_id="project-1",
-        reason="用户可能要修改镜头",
+        reason="The user may want to modify the shot",
     )
     assert suspended is not None
     assert suspended.status == "awaiting_confirmation"
@@ -538,8 +538,8 @@ async def test_suspend_and_resume_preserve_the_same_auto_run(tmp_path: Path) -> 
 @pytest.mark.asyncio
 async def test_hard_paused_auto_run_cannot_be_resumed_as_declined_change(tmp_path: Path) -> None:
     store = DirectorAutoStore(tmp_path / "director-auto.db")
-    store.upsert(run_record(tmp_path, status="paused", last_error="生成失败"))
+    store.upsert(run_record(tmp_path, status="paused", last_error="Generation failed"))
     coordinator = DirectorAutoCoordinator(store)
 
-    with pytest.raises(ValueError, match="只有等待修改确认"):
+    with pytest.raises(ValueError, match="Only an episode auto run that is awaiting modification confirmation"):
         await coordinator.resume_suspended(username="alice", project_id="project-1")

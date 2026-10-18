@@ -1,22 +1,22 @@
 """Canvas write mutex port.
 
-一张画布同一时刻只能有一个写者。今天这条互斥由 `freezone/canvas_lock.py` 的
-`flock` 提供，它在**一台机器**上成立：单机部署里这就是全部答案，而多 Pod 部署里
-两个进程各自 `flock` 各自那份挂载视图，谁也拦不住谁——两次保存各写各的临时文件、
-各自 `os.replace`，后 rename 的赢，前一次更新静默消失。
+A canvas may have only one writer at any moment. Today this mutual exclusion is provided by the `flock` in `freezone/canvas_lock.py`,
+which holds on **a single machine**: in a single-machine deployment that is the whole answer, but in a multi-pod deployment
+two processes each `flock` their own mounted view and neither can stop the other -- two saves each write their own temp file and
+each `os.replace`, the later rename wins, and the earlier update silently disappears.
 
-于是「用什么做互斥」是**部署问题**，不是运行时问题：装文件锁就得到今天的行为，
-装一个跨机器成立的实现（EE 的 Postgres 短事务租约）就得到跨机器的互斥。所以它是
-一个端口，而且**必须保留 `PortNotRegistered` 回退**、**不许进 `_EE_REQUIRED_PORTS`**：
-「不注入」就是回滚动作，它得一直是合法状态。
+So "what to use for mutual exclusion" is a **deployment question**, not a runtime question: installing the file lock gives today's behavior,
+and installing an implementation that holds across machines (EE's Postgres short-transaction lease) gives cross-machine mutual exclusion. Hence it is
+a port, and it **must keep the `PortNotRegistered` fallback** and **must not enter `_EE_REQUIRED_PORTS`**:
+"not injected" is the rollback action, and it must always remain a legal state.
 
-## 为什么守卫上多一个 `reassert`
+## Why the guard has an extra `reassert`
 
-文件锁不会中途丢：进程活着，`flock` 就在。租约会——它有 TTL，超时之后别人可以
-就地接管。所以关键区里存在一个文件锁没有的状态：**「我以为我还持有，其实已经不是
-我的了」**。`reassert()` 是那道落盘围栏（B2-11），挂在「临时文件已 fsync、
-`os.replace` 还没发生」之间：过了这一点写入就不可逆，过不了就什么也没发生。
-CE 的实现里它是空操作——没有可丢的东西，也就没有什么要复验。
+A file lock does not get lost midway: as long as the process is alive, the `flock` is there. A lease can -- it has a TTL, and after it expires someone else
+can take over in place. So the critical section has a state a file lock does not: **"I think I still hold it, but it is no longer
+mine"**. `reassert()` is that on-disk fence (B2-11), placed between "temp file fsynced,
+`os.replace` not yet happened": past that point the write is irreversible, and if it cannot pass, nothing has happened.
+In the CE implementation it is a no-op -- there is nothing to lose, hence nothing to re-verify.
 """
 
 from __future__ import annotations
@@ -28,26 +28,26 @@ from novelvideo.freezone.canvas_lock import CanvasLockBusy
 
 
 class CanvasLeaseLost(CanvasLockBusy):
-    """租约在关键区中途不再属于我们（取不到，或写到一半被接管）。
+    """The lease no longer belongs to us midway through the critical section (could not be acquired, or was taken over mid-write).
 
-    继承 `CanvasLockBusy` 是有意的：对调用方来说这两件事的**处置完全一样**——
-    这次写没发生，重试即可。于是 `api/routes/freezone.py` 的错误面一行不用改，
-    既有的 503 + `canvas_lock_busy` + `Retry-After: 1` 自动接住它。
+    Inheriting `CanvasLockBusy` is intentional: for callers the **handling of these two cases is exactly the same** --
+    this write did not happen, just retry. So the error surface of `api/routes/freezone.py` needs no changes,
+    and the existing 503 + `canvas_lock_busy` + `Retry-After: 1` picks it up automatically.
 
-    类型上仍然可分，日志与用例要能把「等不到」和「写到一半丢了」分开统计。
+    They remain distinguishable by type, so logs and test cases can count "could not wait" and "lost mid-write" separately.
     """
 
     def __init__(self, canvas_id: str):
-        # 绕开 `CanvasLockBusy.__init__` 的文案，但保留它的 `canvas_id` 契约。
+        # Bypass the message of `CanvasLockBusy.__init__`, but keep its `canvas_id` contract.
         RuntimeError.__init__(self, f"canvas write lease lost: {canvas_id}")
         self.canvas_id = canvas_id
 
 
 class CanvasWriteGuard(Protocol):
     def reassert(self) -> None:
-        """确认互斥此刻仍然属于我们，否则抛 `CanvasLeaseLost`。
+        """Confirm the mutex still belongs to us right now, otherwise raise `CanvasLeaseLost`.
 
-        调用点是不可逆落盘的**前一行**。实现可以是空操作（文件锁）。
+        The call site is the line **right before** the irreversible write to disk. An implementation may be a no-op (file lock).
         """
         ...
 
@@ -61,9 +61,9 @@ class CanvasWriteMutex(Protocol):
         actor: str | None = None,
         timeout_seconds: float | None = None,
     ) -> ContextManager[CanvasWriteGuard]:
-        """独占这张画布的写权限，超时抛 `CanvasLockBusy` / `CanvasLeaseLost`。
+        """Take exclusive write access to this canvas; raise `CanvasLockBusy` / `CanvasLeaseLost` on timeout.
 
-        `timeout_seconds=None` 表示用实现自己的默认等待上限——CE 与 EE 的默认值
-        不同（文件锁 3.0s vs `CANVAS_LOCK_WAIT_SECONDS`），调用方不该替它们选。
+        `timeout_seconds=None` means use the implementation's own default wait cap -- the defaults of CE and EE
+        differ (file lock 3.0s vs `CANVAS_LOCK_WAIT_SECONDS`), and callers should not choose for them.
         """
         ...

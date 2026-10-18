@@ -1,15 +1,16 @@
-"""B2 §4 第 3 条：存量画布节点里的项目级音色引用一次性改写成账号级。
+"""B2 section 4, item 3: one-time rewrite of project-level voice references in existing canvas nodes into account-level ones.
 
-依据：
-- B2 §4 第 3 条「已保存的画布里引用了项目级音色的节点，需要一次性重写成账号级引用。
-  这是 B2 里**唯一的存量数据改写**」。
-- B2 §9 已判：**独立脚本，不进迁移**（量级百级）。
-- 任务书 C1：「转换脚本：**可重入** —— 同一批存量节点跑两遍，第二遍是 no-op，断言之。」
+Basis:
+- B2 section 4, item 3: "Nodes in saved canvases that reference project-level voices need to be
+  rewritten once into account-level references. This is the **only existing-data rewrite in B2**."
+- B2 section 9 ruled: **a standalone script, not part of a migration** (hundreds of records).
+- Task brief C1: "Conversion script: **re-entrant** -- running the same batch of existing nodes
+  twice, the second pass is a no-op; assert it."
 
-节点里的 `voiceRef` 是前端形状（camelCase，见
-`frontend/src/features/canvas/domain/canvasNodes.ts:444-456`），
-账号级引用即 `{"scope": "user_custom", "voiceId": ...}`
-（`freezone/audio_node.py:42` `USER_VOICE_SCOPE`）。
+The `voiceRef` in a node is the frontend shape (camelCase, see
+`frontend/src/features/canvas/domain/canvasNodes.ts:444-456`),
+an account-level reference is `{"scope": "user_custom", "voiceId": ...}`
+(`freezone/audio_node.py:42` `USER_VOICE_SCOPE`).
 """
 
 from __future__ import annotations
@@ -50,7 +51,7 @@ def _audio_node(node_id: str, voice_ref: dict | None) -> dict:
         "id": node_id,
         "type": "audioOperations",
         "position": {"x": 0, "y": 0},
-        "data": {"label": "配音", "voiceRef": voice_ref},
+        "data": {"label": "Voice-over", "voiceRef": voice_ref},
     }
 
 
@@ -63,16 +64,16 @@ def _stub_resolver(counter: list[str]):
 
 
 # --------------------------------------------------------------------------
-# 纯 payload 改写
+# Pure payload rewrite
 # --------------------------------------------------------------------------
 
 
 def test_converts_every_project_level_scope() -> None:
     payload = _canvas_payload(
         [
-            _audio_node("n1", {"scope": "character_default", "characterName": "小明"}),
+            _audio_node("n1", {"scope": "character_default", "characterName": "Xiao Ming"}),
             _audio_node(
-                "n2", {"scope": "character_age_group", "characterName": "小明", "slot": "young"}
+                "n2", {"scope": "character_age_group", "characterName": "Xiao Ming", "slot": "young"}
             ),
             _audio_node("n3", {"scope": "identity", "identityId": "id_1"}),
             _audio_node("n4", {"scope": "identity_resolved", "identityId": "id_1"}),
@@ -96,7 +97,7 @@ def test_converts_every_project_level_scope() -> None:
     for node in payload["nodes"]:
         assert node["data"]["voiceRef"]["scope"] == "user_custom"
         assert node["data"]["voiceRef"]["voiceId"].startswith("fv_stub_")
-        # 项目级键必须清掉，否则改写完还留着钉项目的字段。
+        # The project-level keys must be cleared, otherwise fields pinned to the project remain after the rewrite.
         assert "characterName" not in node["data"]["voiceRef"]
         assert "identityId" not in node["data"]["voiceRef"]
         assert "slot" not in node["data"]["voiceRef"]
@@ -107,7 +108,7 @@ def test_leaves_account_level_and_voiceless_nodes_alone() -> None:
         [
             _audio_node("n1", {"scope": "user_custom", "voiceId": "fv_existing"}),
             _audio_node("n2", None),
-            {"id": "n3", "type": "imageOperations", "data": {"label": "出图"}},
+            {"id": "n3", "type": "imageOperations", "data": {"label": "Image output"}},
         ]
     )
     seen: list[str] = []
@@ -126,7 +127,7 @@ def test_leaves_account_level_and_voiceless_nodes_alone() -> None:
 
 def test_payload_conversion_is_reentrant() -> None:
     payload = _canvas_payload(
-        [_audio_node("n1", {"scope": "character_default", "characterName": "小明"})]
+        [_audio_node("n1", {"scope": "character_default", "characterName": "Xiao Ming"})]
     )
     seen: list[str] = []
     resolver = _stub_resolver(seen)
@@ -140,7 +141,7 @@ def test_payload_conversion_is_reentrant() -> None:
 
 
 # --------------------------------------------------------------------------
-# 落盘：跑两遍，第二遍是 no-op
+# On disk: run twice, the second pass is a no-op
 # --------------------------------------------------------------------------
 
 
@@ -157,7 +158,7 @@ def test_convert_project_canvases_second_run_is_a_noop(tmp_path: Path) -> None:
         project_dir,
         "default",
         _canvas_payload(
-            [_audio_node("n1", {"scope": "character_default", "characterName": "小明"})]
+            [_audio_node("n1", {"scope": "character_default", "characterName": "Xiao Ming"})]
         ),
     )
     _write_canvas(
@@ -201,7 +202,7 @@ def test_dry_run_reports_without_writing(tmp_path: Path) -> None:
         project_dir,
         "default",
         _canvas_payload(
-            [_audio_node("n1", {"scope": "character_default", "characterName": "小明"})]
+            [_audio_node("n1", {"scope": "character_default", "characterName": "Xiao Ming"})]
         ),
     )
     before = path.read_bytes()
@@ -229,7 +230,7 @@ def test_scan_skips_deleted_tombstones_and_history(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------
-# 账号级音色登记：同一个源文件不重复登记
+# Account-level voice registration: the same source file is not registered twice
 # --------------------------------------------------------------------------
 
 
@@ -244,10 +245,10 @@ def test_account_voice_is_reused_by_sha256(tmp_path: Path, monkeypatch: pytest.M
     )
 
     first = converter.account_voice_id_for(
-        "alice", resolution=resolution, label="小明 · 默认声线"
+        "alice", resolution=resolution, label="Xiao Ming - default voice"
     )
     second = converter.account_voice_id_for(
-        "alice", resolution=resolution, label="小明 · 默认声线"
+        "alice", resolution=resolution, label="Xiao Ming - default voice"
     )
 
     assert first.startswith("fv_")

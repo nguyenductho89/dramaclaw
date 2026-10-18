@@ -39,7 +39,7 @@ def _compose_generator() -> grid.NanoBananaGridGenerator:
 def _patch_scene_prop_refs(monkeypatch, scene_path: str, prop_path: str | None = None):
     scene_ref = ResolvedAssetRef(
         asset_type="scene",
-        base_id="公园",
+        base_id="park",
         variant_id=None,
         image_paths=[scene_path],
         text_description="",
@@ -215,4 +215,4 @@ async def test_existing_runpod_qwen21_render_still_requires_sketch(tmp_path):
         mode_key="1x1_2-3",
     )
     assert result.success is False
-    assert "草图" in (result.error or "") or "sketch" in (result.error or "").lower()
+    assert "sketch" in (result.error or "").lower()

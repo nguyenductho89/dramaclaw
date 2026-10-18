@@ -39,7 +39,7 @@ describe("ImageGenNode director combined world entry", () => {
     expect(source).toContain("onCaptureCanvasNode={handleDirectorOutputCanvasNode}");
     expect(source).not.toContain("autoCommitDirectorCombined");
     expect(source).toContain("meta.captureBundle");
-    // 文案已搬进词条，源码里只剩 key；措辞本身对着 locale 查（见下一个用例）。
+    // The copy has moved into the locale entries and only keys remain in the source; the wording itself is checked against the locale (see the next case).
     expect(source).toContain("label: t('node.threeDWorld.combinedLabel')");
     expect(source).toContain("label: t('node.threeDWorld.envOnlyLabel')");
     expect(source).toContain("addPanoCaptureGroup");
@@ -54,14 +54,14 @@ describe("ImageGenNode director combined world entry", () => {
     );
 
     expect(source).toContain("meta.captureBundle");
-    // 文案已搬进词条，源码里只剩 key；措辞本身对着 locale 查。
+    // The copy has moved into the locale entries and only keys remain in the source; the wording itself is checked against the locale.
     expect(source).toContain("label: t('node.threeDWorld.combinedLabel')");
     expect(source).toContain("label: t('node.threeDWorld.envOnlyLabel')");
-    const zh = JSON.parse(
-      readFileSync(resolve(process.cwd(), "public/locales/zh/translation.json"), "utf8"),
+    const en = JSON.parse(
+      readFileSync(resolve(process.cwd(), "public/locales/en/translation.json"), "utf8"),
     );
-    expect(zh.node.threeDWorld.combinedLabel).toBe("导演合成图");
-    expect(zh.node.threeDWorld.envOnlyLabel).toBe("纯背景图");
+    expect(en.node.threeDWorld.combinedLabel).toBe("Director composite");
+    expect(en.node.threeDWorld.envOnlyLabel).toBe("Background only");
     expect(source).toContain("director_control_bundle");
   });
 

@@ -473,9 +473,9 @@ async def relay_tenant_image_bytes(
             operations, claim=claim, capability="storage.media.relay"
         )
         raise ServiceInvocationFailed() from None
-    # `completed` 只能来自 `accepted`（`0039:294-338` 的 definer 如此判），先前从
-    # `dispatching` 直接跳 completed 在真库上必抛 P0001；之所以一直是绿的，只因替身
-    # 没有状态机。expected_version 要跟着 accepted 的返回走：版本已经 +1。
+    # `completed` can only come from `accepted` (the definer at `0039:294-338` judges it that way); previously
+    # jumping straight from `dispatching` to completed always raised P0001 on a real database; it only stayed green because the stand-in
+    # had no state machine. expected_version must follow the value returned by accepted: the version has already been incremented by 1.
     accepted = await operations.mark_accepted(
         operation_id=claim.operation.operation_id,
         transition_token=claim.transition_token,

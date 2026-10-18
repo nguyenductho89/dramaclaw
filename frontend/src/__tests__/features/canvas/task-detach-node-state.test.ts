@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 脱离监听 ≠ 生成失败。后端还在跑，节点上的任务句柄（generationTaskKey /
-// TaskType / TaskJobId）是刷新后 resumeNodeGeneration 找回结果的唯一线索——
-// 这里锁住「脱离时保留句柄、不写错误」和「真失败时清句柄、写错误」两条相反的路径。
+// Detaching the listener != generation failure. The backend is still running, and the task handles on the node (generationTaskKey /
+// TaskType / TaskJobId) are the only clue resumeNodeGeneration uses to find the result after a refresh --
+// this locks down the two opposite paths "keep the handles and write no error on detach" and "clear the handles and write an error on real failure".
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TaskPollTimeoutError } from "@/api/tasks";
@@ -16,7 +16,7 @@ const awaitTaskCompletion = vi.fn();
 const fetchFreezoneJobResult = vi.fn();
 const submitGenerateImageJob = vi.fn();
 
-// 只替 gateway，其余（canvasNodeFactory 等）走真身，否则 store.addNode 会炸。
+// Only the gateway is replaced and the rest (canvasNodeFactory etc.) stay real, otherwise store.addNode would blow up.
 vi.mock("@/features/canvas/application/canvasServices", async (importOriginal) => {
   const actual = await importOriginal<
     typeof import("@/features/canvas/application/canvasServices")
@@ -88,8 +88,8 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-describe("重绘节点：轮询脱离后的节点状态", () => {
-  it("脱离时保留 isGenerating 与任务句柄，且不写错误横幅", async () => {
+describe("repaint node: node state after polling detaches", () => {
+  it("on detach keeps isGenerating and the task handles, and writes no error banner", async () => {
     const nodeId = seedRedrawNode();
     awaitTaskCompletion.mockRejectedValue(
       new TaskPollTimeoutError(JOB_REF.task_key, 40 * 60 * 1000, 35 * 60 * 1000, "running"),
@@ -98,16 +98,16 @@ describe("重绘节点：轮询脱离后的节点状态", () => {
     await regenerateExportImageNode(nodeId);
 
     const data = nodeData(nodeId);
-    // 任务还活着：横幅不能写，转圈不能停。
+    // The task is still alive: the banner must not be written and the spinner must not stop.
     expect(data.generationError ?? null).toBeNull();
     expect(data.isGenerating).toBe(true);
-    // 句柄三件套完整保留，刷新后才接得回来。
+    // The three handles are fully kept so that it can be picked back up after a refresh.
     expect(data.generationTaskKey).toBe(JOB_REF.task_key);
     expect(data.generationTaskType).toBe(JOB_REF.task_type);
     expect(data.generationTaskJobId).toBe(JOB_REF.job_id);
   });
 
-  it("真失败时照旧写错误并清掉句柄", async () => {
+  it("on real failure still writes the error and clears the handles as before", async () => {
     const nodeId = seedRedrawNode();
     awaitTaskCompletion.mockRejectedValue(new Error("redraw exploded"));
 
@@ -121,7 +121,7 @@ describe("重绘节点：轮询脱离后的节点状态", () => {
     expect(data.generationTaskJobId).toBeNull();
   });
 
-  it("图片任务提交后同样落句柄——脱离时才有东西可留", async () => {
+  it("image tasks also persist the handles after submission -- so there is something to keep on detach", async () => {
     const store = useCanvasStore.getState();
     store.setCanvasData([], []);
     const nodeId = useCanvasStore.getState().addNode(
@@ -134,15 +134,15 @@ describe("重绘节点：轮询脱离后的节点状态", () => {
     await regenerateExportImageNode(nodeId);
 
     const data = nodeData(nodeId);
-    // gateway 的内存 job id 只服务本次会话的轮询循环……
+    // The gateway's in-memory job id serves only this session's polling loop...
     expect(data.generationJobId).toBe(IMAGE_JOB_REF.job_id);
-    // ……真正能跨刷新的是这三件套。以前这条路径只存 jobId，脱离后无从找回。
+    // ...what really survives a refresh is these three handles. Previously this path stored only the jobId, leaving nothing to recover after detaching.
     expect(data.generationTaskKey).toBe(IMAGE_JOB_REF.task_key);
     expect(data.generationTaskType).toBe(IMAGE_JOB_REF.task_type);
     expect(data.generationTaskJobId).toBe(IMAGE_JOB_REF.job_id);
   });
 
-  it("脱离后的节点状态，下次加载确实会被 resume 扫描捡起来", async () => {
+  it("the node state after detaching is really picked up by the resume scan on the next load", async () => {
     const store = useCanvasStore.getState();
     store.setCanvasData([], []);
     const nodeId = useCanvasStore.getState().addNode(
@@ -153,16 +153,16 @@ describe("重绘节点：轮询脱离后的节点状态", () => {
     submitGenerateImageJob.mockResolvedValue({ jobId: IMAGE_JOB_REF.job_id, ref: IMAGE_JOB_REF });
     await regenerateExportImageNode(nodeId);
 
-    // 用 Canvas.tsx detached 分支真正写下去的那个补丁，别手抄——手抄的话谁在
-    // Canvas.tsx 里补回一句 isGenerating: false，这条用例照样绿。
+    // Use the patch that the Canvas.tsx detached branch really writes, not a hand copy -- with a hand copy, whoever
+    // adds back an isGenerating: false in Canvas.tsx would still see this case stay green.
     useCanvasStore.getState().updateNodeData(nodeId, DETACHED_GENERATION_PATCH);
 
     const detached = useCanvasStore.getState().nodes.find((n) => n.id === nodeId)!;
     expect((detached.data as Record<string, unknown>).isGenerating).toBe(true);
     expect((detached.data as Record<string, unknown>).generationError ?? null).toBeNull();
 
-    // 重新加载模块 = 模拟刷新：sessionOwnedTaskKeys 是空的，扫描不再跳过它。
-    // 这一步是提示语「稍后刷新页面查看结果」能否兑现的判定点。
+    // Reloading the module = simulating a refresh: sessionOwnedTaskKeys is empty, so the scan no longer skips it.
+    // This step is the decision point for whether the hint "refresh the page later to see the result" can be honored.
     vi.resetModules();
     const { nodeNeedsGenerationResume } = await import(
       "@/features/canvas/application/resumeGeneration"
@@ -170,7 +170,7 @@ describe("重绘节点：轮询脱离后的节点状态", () => {
     expect(nodeNeedsGenerationResume(detached)).toBe(true);
   });
 
-  it("成功时落图并清掉句柄", async () => {
+  it("on success persists the image and clears the handles", async () => {
     const nodeId = seedRedrawNode();
     awaitTaskCompletion.mockResolvedValue({
       task_key: JOB_REF.task_key,

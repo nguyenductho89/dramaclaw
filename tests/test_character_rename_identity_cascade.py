@@ -1,23 +1,23 @@
-"""角色改名后，散在库里各处的角色名 / identity_id 引用必须跟着改。
+"""After a character rename, character-name / identity_id references scattered across the DB must follow.
 
-``identity_id`` 的格式是 ``<角色名>_<身份名>``，所以角色一改名，所有存下来的
-identity_id 就同时失效。引用的完整清单在
-``novelvideo.utils.identity_refs`` 的模块 docstring 里（那是把建表 SQL 逐列过了一遍数
-出来的），这里逐个覆盖：
+The format of ``identity_id`` is ``<character name>_<identity name>``, so as soon as a character is renamed, every stored
+identity_id becomes invalid at once. The full list of references is in the module docstring of
+``novelvideo.utils.identity_refs`` (produced by going through every column of the CREATE TABLE SQL),
+and each of them is covered here:
 
-* ``episodes.character_names``         —— 角色名
-* ``episodes.identity_ids``            —— 本集出场的身份
-* ``episodes.identity_default_map_json`` —— ``{角色名: identity_id}``，键和值都带角色名
-* ``episodes.sketch_colors_json``      —— ``{identity_id: 颜色}``
-* ``episodes.prop_menu_json``          —— 每项的 ``owner_identity_id``
-* ``beats.detected_identities_json``   —— 本 beat 检出的身份
-* ``beats.visual_description``         —— ``{{角色名_身份名}}`` 文本 marker
-* ``beats.speaker``                    —— identity_id（裸角色名是存量兼容）
-* ``props.owner``                      —— 角色名**或** identity_id，两种格式都在用
-* ``seedance2_voice_audio_records.speaker`` —— identity_id，且是主键的一部分
+* ``episodes.character_names``         -- character names
+* ``episodes.identity_ids``            -- identities appearing in the episode
+* ``episodes.identity_default_map_json`` -- ``{character name: identity_id}``, with the character name in both key and value
+* ``episodes.sketch_colors_json``      -- ``{identity_id: color}``
+* ``episodes.prop_menu_json``          -- the ``owner_identity_id`` of each item
+* ``beats.detected_identities_json``   -- identities detected in this beat
+* ``beats.visual_description``         -- ``{{character name_identity name}}`` text markers
+* ``beats.speaker``                    -- identity_id (a bare character name is legacy compatibility)
+* ``props.owner``                      -- a character name **or** an identity_id; both formats are in use
+* ``seedance2_voice_audio_records.speaker`` -- identity_id, and part of the primary key
 
-漏掉任何一处，身份图和颜色分配就断链：``rename_character`` 是手动触发的低频操作，
-存量名字自愈却是用户一打开角色列表就自动跑的，断链会一次性铺开。
+Missing any one of them breaks the chain for identity images and color assignment: ``rename_character`` is a low-frequency manual operation,
+while legacy-name self-healing runs automatically as soon as the user opens the character list, so a broken chain would spread all at once.
 """
 
 import json
@@ -44,7 +44,7 @@ async def store(tmp_path):
 
 
 def _seed_episode_and_beat(project_dir, char_name: str) -> None:
-    """直接写库，绕开模型层的消毒，模拟旧角色名下的存量引用。"""
+    """Write to the DB directly, bypassing the sanitization of the model layer, to simulate legacy references under the old character name."""
     identity_id = f"{char_name}_casual"
     conn = sqlite3.connect(project_dir / "data.db")
     try:
@@ -54,7 +54,7 @@ def _seed_episode_and_beat(project_dir, char_name: str) -> None:
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 1,
-                "第一集",
+                "Episode One",
                 json.dumps([char_name], ensure_ascii=False),
                 json.dumps([identity_id], ensure_ascii=False),
                 json.dumps({char_name: identity_id}, ensure_ascii=False),
@@ -62,27 +62,27 @@ def _seed_episode_and_beat(project_dir, char_name: str) -> None:
                 json.dumps(
                     [
                         {
-                            "prop_id": "怀表",
+                            "prop_id": "Pocket Watch",
                             "prop_type": "object",
                             "owner_identity_id": identity_id,
                         },
-                        # 没主人的道具项：不该被动，也不该让整份菜单被判成「有变化」。
-                        {"prop_id": "路灯", "prop_type": "object", "owner_identity_id": ""},
+                        # A prop item with no owner: it must not be touched, nor make the whole menu be judged "changed".
+                        {"prop_id": "Street Lamp", "prop_type": "object", "owner_identity_id": ""},
                     ],
                     ensure_ascii=False,
                 ),
             ),
         )
-        # props.owner 两种格式都得覆盖：``怀表`` 走 prop_promotion_service 提升，owner 里
-        # 存的是 identity_id；``钥匙`` 走 API 手填，存的是角色名。
+        # props.owner must cover both formats: ``Pocket Watch`` is promoted via prop_promotion_service, so the owner
+        # holds an identity_id; ``Key`` is filled in by hand through the API, so it holds the character name.
         conn.execute(
-            "INSERT INTO props (name, owner) VALUES (?, ?)", ("怀表", identity_id)
+            "INSERT INTO props (name, owner) VALUES (?, ?)", ("Pocket Watch", identity_id)
         )
-        conn.execute("INSERT INTO props (name, owner) VALUES (?, ?)", ("钥匙", char_name))
-        conn.execute("INSERT INTO props (name, owner) VALUES (?, ?)", ("路灯", ""))
-        # speaker 存的是 identity_id，不是角色名——``BeatUpdate.speaker`` 标的是「说话人
-        # 身份ID」，配音解析按 ``identity.identity_id == speaker`` 精确配。voice record
-        # 的 speaker 又是从 beat 传下来的，同一个契约。
+        conn.execute("INSERT INTO props (name, owner) VALUES (?, ?)", ("Key", char_name))
+        conn.execute("INSERT INTO props (name, owner) VALUES (?, ?)", ("Street Lamp", ""))
+        # speaker stores an identity_id, not a character name -- ``BeatUpdate.speaker`` is documented as "speaker
+        # identity ID", and voice resolution matches exactly by ``identity.identity_id == speaker``. The speaker of a voice record
+        # is in turn passed down from the beat, the same contract.
         conn.execute(
             "INSERT INTO seedance2_voice_audio_records (episode_number, beat_number, "
             "speaker, audio_path, voice_sha256, mode, provider, model, generated_at, "
@@ -95,7 +95,7 @@ def _seed_episode_and_beat(project_dir, char_name: str) -> None:
             (
                 1,
                 1,
-                f"{{{{{identity_id}}}}} 走进客厅",
+                f"{{{{{identity_id}}}}} walked into the living room",
                 json.dumps([identity_id], ensure_ascii=False),
                 identity_id,
             ),
@@ -148,31 +148,31 @@ def _assert_remapped_to(refs: dict, new_name: str) -> None:
     assert refs["identity_default_map"] == {new_name: identity_id}
     assert refs["sketch_colors"] == {identity_id: "#ff0000"}
     assert refs["detected_identities"] == [identity_id]
-    assert refs["visual_description"] == f"{{{{{identity_id}}}}} 走进客厅"
+    assert refs["visual_description"] == f"{{{{{identity_id}}}}} walked into the living room"
     assert refs["speaker"] == identity_id
     assert refs["prop_menu"] == [
-        {"prop_id": "怀表", "prop_type": "object", "owner_identity_id": identity_id},
-        {"prop_id": "路灯", "prop_type": "object", "owner_identity_id": ""},
+        {"prop_id": "Pocket Watch", "prop_type": "object", "owner_identity_id": identity_id},
+        {"prop_id": "Street Lamp", "prop_type": "object", "owner_identity_id": ""},
     ]
-    assert refs["prop_owners"] == {"怀表": identity_id, "钥匙": new_name, "路灯": ""}
+    assert refs["prop_owners"] == {"Pocket Watch": identity_id, "Key": new_name, "Street Lamp": ""}
     assert refs["voice_speakers"] == [identity_id]
 
 
 @pytest.mark.asyncio
 async def test_rename_character_cascades_identity_refs(store, tmp_path):
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
-    _seed_episode_and_beat(project_dir, "林小满")
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
+    _seed_episode_and_beat(project_dir, "Lin Xiaoman")
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
 
-    _assert_remapped_to(_read_refs(project_dir), "林满")
+    _assert_remapped_to(_read_refs(project_dir), "Lin Man")
 
 
 @pytest.mark.asyncio
 async def test_path_repair_cascades_identity_refs(store, tmp_path):
-    """自愈走的是裸 SQL，级联不能只挂在 rename_character 上。"""
+    """Self-healing runs raw SQL, so the cascade cannot hang only off rename_character."""
     from novelvideo.api.routes.characters import _heal_path_unsafe_character_names
 
     project_dir = tmp_path / "user" / "project"
@@ -181,13 +181,13 @@ async def test_path_repair_cascades_identity_refs(store, tmp_path):
         conn.execute(
             "INSERT INTO characters (name, identities_json) VALUES (?, ?)",
             (
-                "林/小满",
+                "Lin/Xiaoman",
                 json.dumps(
                     [
                         {
-                            "character_name": "林/小满",
+                            "character_name": "Lin/Xiaoman",
                             "identity_name": "casual",
-                            "identity_id": "林/小满_casual",
+                            "identity_id": "Lin/Xiaoman_casual",
                         }
                     ],
                     ensure_ascii=False,
@@ -197,19 +197,19 @@ async def test_path_repair_cascades_identity_refs(store, tmp_path):
         conn.commit()
     finally:
         conn.close()
-    _seed_episode_and_beat(project_dir, "林/小满")
+    _seed_episode_and_beat(project_dir, "Lin/Xiaoman")
 
     await _heal_path_unsafe_character_names(store, project_dir)
 
-    _assert_remapped_to(_read_refs(project_dir), "林_小满")
+    _assert_remapped_to(_read_refs(project_dir), "Lin_Xiaoman")
 
 
 @pytest.mark.asyncio
 async def test_cascade_leaves_other_characters_alone(store, tmp_path):
-    """``林小满_casual`` 改名时不能顺手改掉 ``林小满月_casual``。"""
+    """Renaming ``Lin Xiaoman_casual`` must not also rewrite ``Lin Xiaomanyue_casual`` along the way."""
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
-    await store.add_character(NovelCharacter(name="林小满月"))
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
+    await store.add_character(NovelCharacter(name="Lin Xiaomanyue"))
     conn = sqlite3.connect(project_dir / "data.db")
     try:
         conn.execute(
@@ -217,9 +217,9 @@ async def test_cascade_leaves_other_characters_alone(store, tmp_path):
             "VALUES (?, ?, ?)",
             (
                 1,
-                json.dumps(["林小满_casual", "林小满月_casual"], ensure_ascii=False),
+                json.dumps(["Lin Xiaoman_casual", "Lin Xiaomanyue_casual"], ensure_ascii=False),
                 json.dumps(
-                    {"林小满": "林小满_casual", "林小满月": "林小满月_casual"},
+                    {"Lin Xiaoman": "Lin Xiaoman_casual", "Lin Xiaomanyue": "Lin Xiaomanyue_casual"},
                     ensure_ascii=False,
                 ),
             ),
@@ -229,55 +229,55 @@ async def test_cascade_leaves_other_characters_alone(store, tmp_path):
         conn.close()
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
 
     refs = _read_refs(project_dir)
-    assert refs["identity_ids"] == ["林满_casual", "林小满月_casual"]
+    assert refs["identity_ids"] == ["Lin Man_casual", "Lin Xiaomanyue_casual"]
     assert refs["identity_default_map"] == {
-        "林满": "林满_casual",
-        "林小满月": "林小满月_casual",
+        "Lin Man": "Lin Man_casual",
+        "Lin Xiaomanyue": "Lin Xiaomanyue_casual",
     }
 
 
 @pytest.mark.asyncio
 async def test_cascade_survives_reload(store, tmp_path):
-    """改完要能从库里读回来，别只改了内存。"""
+    """After the change it must be readable back from the DB; do not change only the memory."""
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
-    _seed_episode_and_beat(project_dir, "林小满")
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
+    _seed_episode_and_beat(project_dir, "Lin Xiaoman")
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
     await store.load_graph_state()
 
     episode = store.get_episode(1)
     assert episode is not None
-    assert episode.identity_ids == ["林满_casual"]
+    assert episode.identity_ids == ["Lin Man_casual"]
 
 
 @pytest.mark.asyncio
 async def test_bare_character_name_speaker_still_remaps(store, tmp_path):
-    """speaker 的契约是 identity_id，但存量数据里有裸角色名，两种都得迁。"""
+    """The speaker contract is identity_id, but legacy data holds bare character names, and both must be migrated."""
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
     conn = sqlite3.connect(project_dir / "data.db")
     try:
         conn.execute(
             "INSERT INTO beats (episode_number, beat_number, speaker) VALUES (?, ?, ?)",
-            (1, 1, "林小满"),
+            (1, 1, "Lin Xiaoman"),
         )
         conn.execute(
             "INSERT INTO seedance2_voice_audio_records (episode_number, beat_number, "
             "speaker, audio_path, voice_sha256, mode, provider, model, generated_at, "
             "status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (1, 1, "林小满", "a.wav", "sha", "clone", "indextts2", "m", "now", "ok"),
+            (1, 1, "Lin Xiaoman", "a.wav", "sha", "clone", "indextts2", "m", "now", "ok"),
         )
         conn.commit()
     finally:
         conn.close()
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
 
     conn = sqlite3.connect(project_dir / "data.db")
     try:
@@ -287,45 +287,45 @@ async def test_bare_character_name_speaker_still_remaps(store, tmp_path):
         ).fetchone()[0]
     finally:
         conn.close()
-    assert speaker == "林满"
-    assert voice == "林满"
+    assert speaker == "Lin Man"
+    assert voice == "Lin Man"
 
 
 @pytest.mark.asyncio
 async def test_non_character_speaker_is_left_alone(store, tmp_path):
-    """广播 / 画外音的 speaker 不是角色，别顺手改了。"""
+    """The speaker of broadcasts / voice-overs is not a character; do not change it along the way."""
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
     conn = sqlite3.connect(project_dir / "data.db")
     try:
         conn.execute(
             "INSERT INTO beats (episode_number, beat_number, speaker, speaker_kind) "
             "VALUES (?, ?, ?, ?)",
-            (1, 1, "林小满_广播", "non_character"),
+            (1, 1, "Lin Xiaoman_broadcast", "non_character"),
         )
         conn.commit()
     finally:
         conn.close()
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
 
     conn = sqlite3.connect(project_dir / "data.db")
     try:
         speaker = conn.execute("SELECT speaker FROM beats").fetchone()[0]
     finally:
         conn.close()
-    assert speaker == "林小满_广播"
+    assert speaker == "Lin Xiaoman_broadcast"
 
 
 @pytest.mark.asyncio
 async def test_voice_record_conflict_drops_the_stale_row(store, tmp_path):
-    """speaker 在主键里，撞上了不能炸，也不能反过来盖掉新名字下已有的那条。"""
+    """speaker is in the primary key; a collision must neither blow up nor overwrite the row already under the new name."""
     project_dir = tmp_path / "user" / "project"
-    await store.add_character(NovelCharacter(name="林小满"))
+    await store.add_character(NovelCharacter(name="Lin Xiaoman"))
     conn = sqlite3.connect(project_dir / "data.db")
     try:
-        for speaker, audio in (("林小满_casual", "old.wav"), ("林满_casual", "new.wav")):
+        for speaker, audio in (("Lin Xiaoman_casual", "old.wav"), ("Lin Man_casual", "new.wav")):
             conn.execute(
                 "INSERT INTO seedance2_voice_audio_records (episode_number, "
                 "beat_number, speaker, audio_path, voice_sha256, mode, provider, "
@@ -337,7 +337,7 @@ async def test_voice_record_conflict_drops_the_stale_row(store, tmp_path):
         conn.close()
     await store.load_graph_state()
 
-    await store.rename_character("林小满", "林满")
+    await store.rename_character("Lin Xiaoman", "Lin Man")
 
     conn = sqlite3.connect(project_dir / "data.db")
     try:
@@ -346,5 +346,5 @@ async def test_voice_record_conflict_drops_the_stale_row(store, tmp_path):
         ).fetchall()
     finally:
         conn.close()
-    # 新名字下已有的那条留着，旧的丢掉——不是反过来。
-    assert rows == [("林满_casual", "new.wav")]
+    # The row already under the new name stays and the old one is dropped -- not the other way round.
+    assert rows == [("Lin Man_casual", "new.wav")]

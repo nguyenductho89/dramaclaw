@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import type { ChatAttachment } from "@/features/superchat/types";
 import {
   CANVAS_NODE_TYPES,
@@ -248,7 +249,7 @@ function buildAgentCanvasNodeActionCatalog(
       (action) => action.action !== "add_next_node",
     ),
     instruction:
-      "这是镜头上下文节点。agent 可以修改的参数只有 node_detail.parameters 中的 visual_description、scene_ref、time_of_day；不要修改出场身份或出场道具。修改这些字段时使用 update_node_data。写回主线只能由用户使用界面中的手动入口。",
+      "This is a shot context node. The only parameters the agent may modify are visual_description, scene_ref and time_of_day in node_detail.parameters; do not modify the appearing identities or props. Use update_node_data to modify these fields. Writing back to the mainline can only be done by the user through the manual entry in the UI.",
   };
 }
 
@@ -449,9 +450,9 @@ function referenceMentionForMediaType(
   mediaType: CanvasNodeReferenceMediaItem["media_type"],
   index: number,
 ): string {
-  if (mediaType === "video") return `@视频${index}`;
-  if (mediaType === "audio") return `@音频${index}`;
-  return `@图片${index}`;
+  if (mediaType === "video") return `@video${index}`;
+  if (mediaType === "audio") return `@audio${index}`;
+  return `@image${index}`;
 }
 
 function nodeReferenceMedia(
@@ -749,17 +750,17 @@ export function shouldIncludeCanvasSummary(
   if (options.hasFocusedNodeContext) return false;
   if (options.hasCanvasContent === false) return false;
 
-  // i18n-exempt-start -- Chinese tokens are intent-matching protocol values, not UI copy.
+  // i18n-exempt-start -- intent-matching words are protocol values, not UI copy.
   const mentionsExistingCanvas =
-    /(?:当前|现有|已有|整个|整张|全部|全局|this|current|existing|whole|entire)[^。！？!?\n]{0,20}(?:画布|流程|工作流|节点|连线|依赖|拓扑|canvas|workflow|flow|nodes?|edges?|topology)/i.test(
+    /(?:this|current|existing|whole|entire|all|global|hiện tại|hiện có|toàn bộ|cả|tất cả)[^.!?\n]{0,20}(?:canvas|workflow|flow|nodes?|edges?|topology|dependenc(?:y|ies)|luồng|quy trình|nút|kết nối|phụ thuộc)/i.test(
       trimmed,
     ) ||
-    /(?:画布|流程|工作流|节点|连线|依赖|拓扑|canvas|workflow|flow|nodes?|edges?|topology)[^。！？!?\n]{0,20}(?:当前|现有|已有|整个|整张|全部|全局|this|current|existing|whole|entire)/i.test(
+    /(?:canvas|workflow|flow|nodes?|edges?|topology|dependenc(?:y|ies)|luồng|quy trình|nút|kết nối|phụ thuộc)[^.!?\n]{0,20}(?:this|current|existing|whole|entire|all|global|hiện tại|hiện có|toàn bộ|cả|tất cả)/i.test(
       trimmed,
     );
   if (!mentionsExistingCanvas) return false;
 
-  return /(?:基于|根据|参照|结合|读取|查看|分析|总结|梳理|整理|布局|重排|重构|优化|调整|修改|连接|连线|依赖|拓扑|分组|检查|诊断|based\s+on|using|inspect|review|analy[sz]e|summari[sz]e|organize|layout|rearrange|refactor|optimi[sz]e|adjust|modify|connect|dependency|topology|group)/i.test(
+  return /(?:based\s+on|using|inspect|review|analy[sz]e|summari[sz]e|organize|layout|rearrange|refactor|optimi[sz]e|adjust|modify|connect|dependency|topology|group|diagnos|check|dựa trên|căn cứ|tham khảo|đọc|xem|phân tích|tóm tắt|sắp xếp|bố cục|tái cấu trúc|tối ưu|điều chỉnh|chỉnh sửa|kết nối|phụ thuộc|nhóm|kiểm tra|chẩn đoán)/i.test(
     trimmed,
   );
   // i18n-exempt-end
@@ -1056,13 +1057,13 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
       allowed_node_types: AGENT_CREATABLE_CANVAS_NODE_TYPES,
       invalid_example: {
         command: "create_node",
-        data: { nodeType: "textAnnotationNode", title: "旧格式" },
+        data: { nodeType: "textAnnotationNode", title: "Old format" },
       },
       example: {
         type: "create_node",
         client_id: "brief_1",
         node_type: CANVAS_NODE_TYPES.textAnnotation,
-        data: { displayName: "Brief", content: "广告创意方向" },
+        data: { displayName: "Brief", content: "Ad creative direction" },
         position: { x: 120, y: 160 },
       },
       image_node_example: {
@@ -1070,8 +1071,8 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
         client_id: "poster_1",
         node_type: CANVAS_NODE_TYPES.imageGen,
         data: {
-          displayName: "海报图",
-          prompt: "成都文化主题海报，国潮水墨风",
+          displayName: "Poster image",
+          prompt: "A Chengdu culture themed poster in a Chinese-style ink-wash look",
           quality: "high",
           aspectRatio: "2:3",
         },
@@ -1095,7 +1096,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
         source_node_id: "brief_1",
         client_id: "image_1",
         node_type: CANVAS_NODE_TYPES.imageGen,
-        data: { prompt: "公益短片海报" },
+        data: { prompt: "Poster for a public-service short film" },
       },
     },
     {
@@ -1110,7 +1111,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
       example: {
         type: "update_node_data",
         node_id: "brief_1",
-        data: { title: "公益广告简报" },
+        data: { title: "Public-service ad brief" },
       },
     },
     {
@@ -1138,7 +1139,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
       optional: [],
       field_notes: {
         node_ids:
-          "必须先读取当前画布节点并填写实际节点 id；不能为空。删除全部节点时逐个列出可删除节点，不能用空数组代替清空画布。",
+          "You must first read the current canvas nodes and fill in actual node ids; it cannot be empty. When deleting all nodes, list each deletable node one by one; an empty array cannot replace clearing the canvas.",
       },
       example: { type: "delete_nodes", node_ids: ["node_a", "node_b"] },
     },
@@ -1148,7 +1149,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
       required: ["type"],
       optional: [],
       description:
-        "清空当前画布中的普通节点和连接。必须走审批；不要把‘清空画布’转换为空的 delete_nodes。主线投影/系统管理节点会保留并明确报告。",
+        "Clear the ordinary nodes and connections in the current canvas. Approval is required; do not turn 'clear canvas' into an empty delete_nodes. Mainline projection / system-managed nodes are kept and explicitly reported.",
       example: { type: "clear_canvas" },
     },
     {
@@ -1196,7 +1197,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
       example: {
         type: "group_nodes",
         node_ids: ["brief_1", "image_1"],
-        label: "海报生成流程",
+        label: "Poster generation flow",
       },
     },
     {
@@ -1231,12 +1232,12 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
             optional: ["project_id"],
             field_notes: {
               request:
-                "Open an episode/beat/asset mainline preset in the user's personal Freezone canvas through the same frontend path as the 虾画 toolbar button. Requires user confirmation before execution.",
+                "Open an episode/beat/asset mainline preset in the user's personal Freezone canvas through the same frontend path as the Canvas toolbar button. Requires user confirmation before execution.",
               "request.scope": "episode, beat, or asset.",
               "request.episode": "Required for episode and beat scopes.",
               "request.beat": "Required for beat scope.",
               "request.primary_slot":
-                "For beat scope, use sketch or frame when the user specifies 草图 or 分镜.",
+                "For beat scope, use sketch or frame when the user specifies sketch or storyboard frame.",
               "request.asset_kind":
                 "Required for asset scope. Examples: character, identity, portrait, scene, prop.",
               "request.character":
@@ -1264,7 +1265,7 @@ function buildCanvasCommandCatalog(canvasId: string): Record<string, unknown> {
                 request: {
                   scope: "asset",
                   asset_kind: "character",
-                  character: "陈默",
+                  character: "Chen Mo",
                 },
               },
             ],
@@ -1460,19 +1461,19 @@ function audioVoiceOptionLabel(
     return item.label.trim();
   switch (ref.scope) {
     case "project_narrator":
-      return "项目解说人";
+      return i18next.t("freezone.voiceLabel.projectNarrator");
     case "user_custom":
-      return ref.voiceId ?? "自定义音色";
+      return ref.voiceId ?? i18next.t("freezone.voiceLabel.customVoice");
     case "character_default":
-      return `${ref.characterName ?? "角色"}（默认声线）`;
+      return i18next.t("freezone.voiceLabel.characterDefault", { name: ref.characterName ?? i18next.t("freezone.voiceLabel.character") });
     case "character_age_group":
-      return `${ref.characterName ?? "角色"}（${ref.slot ?? "年龄段"}）`;
+      return `${ref.characterName ?? i18next.t("freezone.voiceLabel.character")} (${ref.slot ?? i18next.t("freezone.voiceLabel.ageGroup")})`;
     case "identity":
-      return `${ref.identityId ?? "身份"}（自有声线）`;
+      return i18next.t("freezone.voiceLabel.identityOwn", { name: ref.identityId ?? i18next.t("freezone.voiceLabel.identity") });
     case "identity_resolved":
-      return `${ref.identityId ?? ref.characterName ?? "身份"}（已解析声线）`;
+      return i18next.t("freezone.voiceLabel.identityResolved", { name: ref.identityId ?? ref.characterName ?? i18next.t("freezone.voiceLabel.identity") });
     default:
-      return "音色";
+      return i18next.t("freezone.voiceLabel.voice");
   }
 }
 
@@ -2402,7 +2403,7 @@ function buildCompactCanvasNodeDetailPayload(
     }),
     edges: Array.isArray(payload.edges) ? payload.edges : [],
     instruction:
-      "This is compact node detail. workflow_identity means the node belongs to a persisted workflow; a one-node workflow is still a workflow and run/continue/resume must use freezone_run_workflow, never freezone_run_node_action. Use node.parameters only for editable node data fields, current values, and enum options. Node parameters are not toolbar/action/tool parameters. If the user asks about an action or panel such as HD/upscale, crop, matting, split, lighting, rotate, or download, call freezone_get_node_action_catalog with node_id and action before answering. If a node includes reference_media, use mention values such as @图片1 in prompt edits; numbering matches the node's top reference thumbnails from left to right. For a group child that needs inspection, call freezone_get_node_detail with that child node_id.",
+      "This is compact node detail. workflow_identity means the node belongs to a persisted workflow; a one-node workflow is still a workflow and run/continue/resume must use freezone_run_workflow, never freezone_run_node_action. Use node.parameters only for editable node data fields, current values, and enum options. Node parameters are not toolbar/action/tool parameters. If the user asks about an action or panel such as HD/upscale, crop, matting, split, lighting, rotate, or download, call freezone_get_node_action_catalog with node_id and action before answering. If a node includes reference_media, use mention values such as @image1 in prompt edits; numbering matches the node's top reference thumbnails from left to right. For a group child that needs inspection, call freezone_get_node_detail with that child node_id.",
   };
 }
 

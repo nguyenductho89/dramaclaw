@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-NOVEL_IMPORT_REQUIRED_MESSAGE = "请先导入小说"
+NOVEL_IMPORT_REQUIRED_MESSAGE = "Import a novel first"
 NOVEL_IMPORT_REQUIRED_CODE = "NOVEL_IMPORT_REQUIRED"
 
 

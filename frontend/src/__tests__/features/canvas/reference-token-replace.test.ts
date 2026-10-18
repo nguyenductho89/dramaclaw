@@ -8,19 +8,19 @@ import {
 } from "@/features/canvas/application/referenceTokenEditing";
 
 describe("findReferenceTokenAtSelection", () => {
-  const text = "让 @图1 和 @图2 同框"; // @图1 在 [2,5)，@图2 在 [8,11)
+  const text = "Put @image1 and @image2 together"; // @image1 is at [4,11), @image2 at [16,23)
 
   it("finds the token whose range overlaps the double-click selection", () => {
-    // 双击「图1」大致选中 [3,5)（@ 之后），应命中第一个 token。
-    const hit = findReferenceTokenAtSelection(text, 3, 5, 2);
-    expect(hit?.token).toBe("@图1");
-    expect(hit?.start).toBe(2);
-    expect(hit?.end).toBe(5);
+    // Double-clicking "image1" selects roughly [5,11) (after the @), which should hit the first token.
+    const hit = findReferenceTokenAtSelection(text, 5, 11, 2);
+    expect(hit?.token).toBe("@image1");
+    expect(hit?.start).toBe(4);
+    expect(hit?.end).toBe(11);
   });
 
-  it("finds the second token when the selection is on 图2", () => {
-    const hit = findReferenceTokenAtSelection(text, 9, 11, 2);
-    expect(hit?.token).toBe("@图2");
+  it("finds the second token when the selection is on image2", () => {
+    const hit = findReferenceTokenAtSelection(text, 17, 23, 2);
+    expect(hit?.token).toBe("@image2");
   });
 
   it("returns null when the selection is on plain text", () => {
@@ -28,27 +28,27 @@ describe("findReferenceTokenAtSelection", () => {
   });
 
   it("matches a collapsed caret sitting inside the token", () => {
-    // 选区塌缩在 token 内部（图 与 1 之间）也应命中。
-    const hit = findReferenceTokenAtSelection(text, 4, 4, 2);
-    expect(hit?.token).toBe("@图1");
+    // A selection collapsed inside the token (between "image" and "1") should also hit.
+    const hit = findReferenceTokenAtSelection(text, 10, 10, 2);
+    expect(hit?.token).toBe("@image1");
   });
 });
 
 describe("replaceReferenceToken", () => {
   it("replaces the token range with the new marker and returns the caret after it", () => {
-    const text = "让 @图1 动起来";
-    // @图1 在 [2,5)
+    const text = "Animate @image1 now";
+    // @image1 is at [8,15)
     const { nextText, nextCursor } = replaceReferenceToken(
       text,
-      { start: 2, end: 5 },
-      "@图2",
+      { start: 8, end: 15 },
+      "@image2",
     );
-    expect(nextText).toBe("让 @图2 动起来");
-    expect(nextCursor).toBe(2 + "@图2".length);
+    expect(nextText).toBe("Animate @image2 now");
+    expect(nextCursor).toBe(8 + "@image2".length);
   });
 
   it("works for multi-digit markers", () => {
-    const { nextText } = replaceReferenceToken("a @图1 b", { start: 2, end: 5 }, "@图10");
-    expect(nextText).toBe("a @图10 b");
+    const { nextText } = replaceReferenceToken("a @image1 b", { start: 2, end: 9 }, "@image10");
+    expect(nextText).toBe("a @image10 b");
   });
 });

@@ -1,9 +1,9 @@
 name: ce-import-lint
 
-# REPO-08：导入守栏（import-lint，硬零）。src/ 或 pyproject 出现对
-# novelvideo_ee / supertale_admin / novelvideo.control_plane 的导入即 exit 1。
-# 相关能力只能经 novelvideo.ports.* 抽象消费，不得直接 import。
-# 纯标准库（ast/tomllib），无需安装依赖。
+# REPO-08: import guard (import-lint, hard zero). Any import of
+# novelvideo_ee / supertale_admin / novelvideo.control_plane in src/ or pyproject exits 1.
+# Those capabilities may only be consumed through the novelvideo.ports.* abstraction, never imported directly.
+# Pure standard library (ast/tomllib); no dependencies to install.
 
 on:
   push:

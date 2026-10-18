@@ -1,7 +1,7 @@
-"""轻量 SQLite 存储。
+"""Lightweight SQLite store.
 
-只提供项目级 SQLite 读写能力，不导入 Cognee / 图谱搜索依赖。
-适用于只需要读取角色/剧集/beats 或写回 beat 字段的 API/UI/Actor。
+Provides only project-level SQLite read/write; it does not import Cognee / graph-search dependencies.
+Suited to API/UI/Actor code that only needs to read characters/episodes/beats or write back beat fields.
 """
 
 from __future__ import annotations
@@ -64,21 +64,21 @@ from novelvideo.utils.path_resolver import compute_identity_path
 console = Console()
 logger = logging.getLogger(__name__)
 
-# 存量名字自愈的「每种资产只跑一次、并且串行」必须记在**进程**上，不能记在 store 实例上：
-# store 是按请求新建的（``api/deps.py`` 的 ``make_sqlite_store`` / ``make_sqlite_store_for_context``），
-# 实例级的锁谁也拦不住谁——两个并发的列表请求各拿各的锁双双进到迁移里，一个搬走目录、
-# 另一个的 ``shutil.move`` 抛异常被吞掉，那一行就停在「盘上已改名、库里还是旧名」的错位
-# 状态。记在进程上顺带也免掉「每个请求都做一次全表扫描」。
+# The "run once per asset kind, and serially" bookkeeping for self-healing legacy names must be kept on the **process**, not on a store instance:
+# the store is created per request (``make_sqlite_store`` / ``make_sqlite_store_for_context`` in ``api/deps.py``),
+# so an instance-level lock cannot stop anyone -- two concurrent list requests each take their own lock and both enter the migration; one moves the directory,
+# the other's ``shutil.move`` raises and is swallowed, and that row is stuck in the inconsistent state "renamed on disk, still the old name in the DB".
+# Keeping it on the process also avoids "a full-table scan on every request".
 #
-# key 用 ``(db_path, kind)``：一个进程可能同时服务很多项目，别让 A 项目的自愈把 B 项目的
-# 记成已完成。锁连着创建它的 event loop 一起存——跨 loop 复用 ``asyncio.Lock`` 会炸，测试
-# 里每个用例一个 loop。
+# The key is ``(db_path, kind)``: a process may serve many projects, and project A's self-healing must not mark project B
+# as done. The lock is stored together with the event loop that created it -- reusing an ``asyncio.Lock`` across loops blows up, and tests
+# use one loop per case.
 _PATH_REPAIR_LOCKS: Dict[tuple[str, str], tuple[Any, asyncio.Lock]] = {}
 _PATH_REPAIR_DONE: set[tuple[str, str]] = set()
 
 
 def reset_path_repair_state() -> None:
-    """清空进程级的自愈记账。测试用。"""
+    """Clear the process-level self-healing bookkeeping. For tests."""
 
     _PATH_REPAIR_LOCKS.clear()
     _PATH_REPAIR_DONE.clear()
@@ -452,7 +452,7 @@ def _auto_lease_public_async_methods(cls):
 
 @_auto_lease_public_async_methods
 class SQLiteStore:
-    """只负责 SQLite 数据读写的轻量存储。
+    """Lightweight store responsible only for SQLite data reads and writes.
 
     Store instances are one-shot lifecycle objects: after close(), create a new
     SQLiteStore instead of calling initialize() again.
@@ -619,7 +619,7 @@ class SQLiteStore:
 
     async def initialize(self) -> None:
         await self._ensure_db()
-        console.print(f"[dim]SQLite 存储已初始化 (db: {self.db_path})[/dim]")
+        console.print(f"[dim]SQLite store initialized (db: {self.db_path})[/dim]")
 
     def is_closed(self) -> bool:
         return self._closing or self._closed
@@ -732,7 +732,7 @@ class SQLiteStore:
             (content, ep_num),
         )
         if cursor.rowcount == 0:
-            raise ValueError(f"剧集 {ep_num} 不存在，无法保存改写稿")
+            raise ValueError(f"Episode {ep_num} does not exist; cannot save the rewritten draft")
         await db.commit()
         episode = self._episodes.get(ep_num)
         if episode is not None:
@@ -796,7 +796,7 @@ class SQLiteStore:
             await db.commit()
             return True
         except Exception as e:
-            console.print(f"[red]更新角色字段失败: {e}[/red]")
+            console.print(f"[red]Failed to update character field: {e}[/red]")
             return False
 
     async def add_character(self, character: NovelCharacter) -> None:
@@ -911,7 +911,7 @@ class SQLiteStore:
     async def update_character(self, name: str, **updates) -> None:
         char = self.get_character(name)
         if not char:
-            raise ValueError(f"角色 {name} 不存在")
+            raise ValueError(f"Character {name} does not exist")
         for key, value in updates.items():
             if hasattr(char, key):
                 setattr(char, key, value)
@@ -922,7 +922,7 @@ class SQLiteStore:
             for alias in char.aliases:
                 self._alias_index[alias] = name
         await self.add_character(char)
-        console.print(f"[green]已更新角色: {name}[/green]")
+        console.print(f"[green]Character updated: {name}[/green]")
 
     async def set_character_main(self, name: str, is_main: bool) -> bool:
         """Update only the narrator-main flag without requiring the graph cache.
@@ -958,24 +958,24 @@ class SQLiteStore:
             self._characters.clear()
             self._alias_index.clear()
             deleted = cursor.rowcount
-            console.print(f"[dim]已删除 {deleted} 个旧角色[/dim]")
+            console.print(f"[dim]Deleted {deleted} old characters[/dim]")
             return deleted
         except Exception as e:
-            console.print(f"[yellow]删除旧角色失败: {e}[/yellow]")
+            console.print(f"[yellow]Failed to delete old characters: {e}[/yellow]")
             return 0
 
     async def rename_character(self, old_name: str, new_name: str) -> None:
-        # 必须用角色口径：下面是 `char.name = new_name` 直接赋值，绕过了模型校验器，
-        # 窄口径放过的 `王:小明` 会原样写进主键，而每次读出来都被改写成 `王_小明`——
-        # 又是一行删不掉的记录。
+        # The character-level rule must be used: below is a direct assignment `char.name = new_name`, which bypasses the model validators,
+        # and a name the narrow rule lets through, such as `Wang:Xiaoming`, would be written to the primary key as-is, then rewritten to `Wang_Xiaoming` on every read --
+        # yet another row that cannot be deleted.
         new_name = path_safe_asset_name(new_name, kind="character")
         char = self.get_character(old_name)
         if not char:
-            raise ValueError(f"角色 {old_name} 不存在")
+            raise ValueError(f"Character {old_name} does not exist")
         if old_name == new_name:
             return
         if self.get_character(new_name):
-            raise ValueError(f"角色 {new_name} 已存在")
+            raise ValueError(f"Character {new_name} already exists")
         db = await self._ensure_db()
         await db.execute("DELETE FROM characters WHERE name = ?", (old_name,))
         identities = char.identities
@@ -997,14 +997,14 @@ class SQLiteStore:
         new_dir = Path(self.project_dir) / "assets" / "characters" / new_name
         if old_dir.exists() and not new_dir.exists():
             old_dir.replace(new_dir)
-        # 级联走的是裸 SQL，内存里的 episodes / beats 还是旧引用，重载一次对齐。
+        # The cascade runs raw SQL, so the in-memory episodes / beats still hold the old references; reload once to realign.
         await self.load_graph_state()
-        console.print(f"[green]已重命名角色: {old_name} → {new_name}[/green]")
+        console.print(f"[green]Character renamed: {old_name} → {new_name}[/green]")
 
     async def delete_character(self, name: str) -> None:
         char = self.get_character(name)
         if not char:
-            console.print(f"[yellow]角色 {name} 不存在[/yellow]")
+            console.print(f"[yellow]Character {name} does not exist[/yellow]")
             return
         db = await self._ensure_db()
         await db.execute("DELETE FROM characters WHERE name = ?", (name,))
@@ -1013,23 +1013,23 @@ class SQLiteStore:
         remove_keys = [k for k, v in self._alias_index.items() if v == name]
         for key in remove_keys:
             self._alias_index.pop(key, None)
-        console.print(f"[green]已删除角色: {name}[/green]")
+        console.print(f"[green]Character deleted: {name}[/green]")
 
     async def _cascade_character_rename(self, old_name: str, new_name: str) -> None:
-        """角色改名后，把散在库里各处的角色名 / identity_id 引用一起改掉。
+        """After a character rename, update every character-name / identity_id reference scattered through the DB.
 
-        ``identity_id`` 是 ``<角色名>_<身份名>`` 拼出来的，改名等于让所有落库的
-        identity_id 一起失效：身份图按 identity_id 找不到文件，sketch 颜色分配的键对不
-        上，分镜 marker 检出的身份不在身份表里，道具找不到所属身份。
+        ``identity_id`` is built as ``<character name>_<identity name>``, so renaming invalidates every persisted
+        identity_id at once: identity images cannot be found by identity_id, the keys of the sketch color assignment no longer match,
+        identities detected from storyboard markers are not in the identity table, and props cannot find their owning identity.
 
-        **要改这个方法，先去 ``novelvideo.utils.identity_refs`` 的模块 docstring 核对那
-        份列清单**——那是把 ``SQLITE_SCHEMA_SQL`` 每一列过了一遍数出来的。凭直觉补会漏。
+        **Before changing this method, check the list in the module docstring of ``novelvideo.utils.identity_refs``**
+        -- it was produced by going through every column of ``SQLITE_SCHEMA_SQL``. Filling it in from intuition will miss some.
 
-        走裸 SQL 而不是模型层：存量名字自愈本身就必须绕开模型（模型读的时候会把斜杠抹
-        平，看不见坏名字），级联跟着走同一条路，两个调用点才能共用这一份实现。
+        It uses raw SQL rather than the model layer: self-healing of legacy names must itself bypass the model (the model erases slashes on read,
+        so it cannot see the bad name), and the cascade follows the same path so the two call sites can share this one implementation.
 
-        ``rename_character`` 和 ``_repair_path_unsafe_asset_names`` 都调它——前者是用户
-        手动改名的低频操作，后者是打开资产页就跑的自愈，只补一边等于没补。
+        Both ``rename_character`` and ``_repair_path_unsafe_asset_names`` call it -- the former is a low-frequency manual rename by the user,
+        the latter is the self-healing that runs when an asset page is opened; patching only one side is as good as not patching.
         """
 
         if not old_name or old_name == new_name:
@@ -1060,14 +1060,14 @@ class SQLiteStore:
             )
             if colors is not None:
                 updates["sketch_colors_json"] = colors
-            # PropMenuItem.owner_identity_id 是身份 ID，道具「属于谁」全靠它。
+            # PropMenuItem.owner_identity_id is an identity ID; "who a prop belongs to" depends entirely on it.
             prop_menu = remap_object_field(
                 row["prop_menu_json"], "owner_identity_id", old_name, new_name
             )
             if prop_menu is not None:
                 updates["prop_menu_json"] = prop_menu
             if not updates:
-                # 没引用过这个角色的集不写库，免得平白刷 updated_at。
+                # Episodes that never referenced this character are not written, to avoid needlessly bumping updated_at.
                 continue
             assignments = ", ".join(f"{column} = ?" for column in updates)
             await db.execute(
@@ -1093,15 +1093,15 @@ class SQLiteStore:
             )
             if description is not None:
                 updates["visual_description"] = description
-            # speaker 存的是 **identity_id**，不是角色名：``BeatUpdate.speaker`` 标的是
-            # 「说话人身份ID」，``resolve_dialogue_reference_audio`` 和
-            # ``indextts2_beat_audio_task`` 都是 ``speaker.startswith(角色名)`` 之后再
-            # ``identity.identity_id == speaker`` 精确配。所以这里必须走
-            # ``remap_identity_id``（裸角色名的历史值它也照顾得到），拿 ``== old_name``
-            # 比会把 ``林/小满_casual`` 整个漏掉，配音解析就找不到身份了。
+            # speaker stores an **identity_id**, not a character name: ``BeatUpdate.speaker`` is documented as
+            # "speaker identity ID", and ``resolve_dialogue_reference_audio`` and
+            # ``indextts2_beat_audio_task`` both do ``speaker.startswith(character name)`` and then match
+            # ``identity.identity_id == speaker`` exactly. So this must go through
+            # ``remap_identity_id`` (which also handles historical bare-character-name values); comparing with ``== old_name``
+            # would miss ``Lin/Xiaoman_casual`` entirely and voice resolution would no longer find the identity.
             #
-            # ``speaker_kind`` 只有 character / non_character 两种，广播、画外音那类
-            # non_character 的 speaker 不是角色，不能动。
+            # ``speaker_kind`` has only two values, character / non_character; the speaker of broadcasts, voice-overs and similar
+            # non_character kinds is not a character and must not be touched.
             speaker = str(row["speaker"] or "")
             if str(row["speaker_kind"] or "character") == "character":
                 remapped_speaker = remap_identity_id(speaker, old_name, new_name)
@@ -1116,11 +1116,11 @@ class SQLiteStore:
                 (*updates.values(), row["episode_number"], row["beat_number"]),
             )
 
-        # props.owner 两种格式混着存：字段声明写的是「所属角色名」，而
-        # ``prop_promotion_service`` 把菜单项提升成全局道具时，是把
-        # ``owner_identity_id`` 原样抄进来的（``owner=str(item.owner_identity_id ...)``）。
-        # ``remap_identity_id`` 对两种都成立：等于旧角色名就换成新的，``旧角色名_`` 开头
-        # 就换前缀，其余不动。
+        # props.owner is stored in two mixed formats: the field declaration says "owning character name", while
+        # ``prop_promotion_service`` copies ``owner_identity_id`` verbatim when promoting a menu item to a global prop
+        # (``owner=str(item.owner_identity_id ...)``).
+        # ``remap_identity_id`` works for both: equal to the old character name -> replace with the new one, starting with ``old character name_``
+        # -> replace the prefix, everything else untouched.
         async with db.execute("SELECT name, owner FROM props") as cursor:
             props = await cursor.fetchall()
         for row in props:
@@ -1140,22 +1140,22 @@ class SQLiteStore:
     async def _cascade_voice_record_speaker(
         self, db: Any, old_name: str, new_name: str
     ) -> None:
-        """``seedance2_voice_audio_records.speaker`` 跟着改。
+        """``seedance2_voice_audio_records.speaker`` follows the rename.
 
-        这里的 speaker 是从 beat 的 speaker 传下来的（``voice_audio_task`` 一路带着走），
-        所以和 ``beats.speaker`` 同一个契约：**identity_id**。旁白那条走
-        ``NARRATOR_SPEAKER`` 哨兵，不带角色名前缀，``remap_identity_id`` 天然不碰。
+        The speaker here is passed down from the beat's speaker (``voice_audio_task`` carries it all the way),
+        so it shares the contract of ``beats.speaker``: **identity_id**. The narrator entry uses the
+        ``NARRATOR_SPEAKER`` sentinel, which carries no character-name prefix, so ``remap_identity_id`` naturally leaves it alone.
 
-        这张表是音频复用的凭证（``classify_seedance2_voice_audio`` 按
-        ``(episode, beat, speaker)`` 精确查）。不改的话改名后每一条都查不中，被当成
-        missing 重新生成一遍——不会产出错内容，就是白烧一遍配音。
+        This table is the credential for audio reuse (``classify_seedance2_voice_audio`` looks up exactly by
+        ``(episode, beat, speaker)``). If it is not updated, after a rename every lookup misses and is treated as
+        missing and regenerated -- it never produces wrong content, it just burns voice generation for nothing.
 
-        speaker 是主键的一部分，逐条处理冲突：目标主键已经有行了，说明那条是在新名字下
-        写的、比手上这条旧的更可信，删掉旧的即可。整批 ``UPDATE OR REPLACE`` 也能不炸，
-        但那是闷头覆盖新行，方向反了。
+        speaker is part of the primary key, so conflicts are handled row by row: if the target primary key already has a row, it was written
+        under the new name and is more trustworthy than the old one in hand, so just delete the old one. A batch ``UPDATE OR REPLACE`` would not blow up either,
+        but it silently overwrites the new row, which is the wrong direction.
 
-        建表 SQL 里有这张表，但老库可能在它加进来之前就记下了 schema 版本、跳过了初始化，
-        所以先确认表在不在。
+        The CREATE TABLE SQL contains this table, but an old DB may have recorded its schema version before it was added and skipped initialization,
+        so first confirm that the table exists.
         """
 
         table = "seedance2_voice_audio_records"
@@ -1200,22 +1200,22 @@ class SQLiteStore:
         kind: str,
         move_assets: Optional[Callable[[str, str], None]] = None,
     ) -> Dict[str, str]:
-        """把库里名字带斜杠的存量资产改名归位，原名转成别名，返回 ``{旧名: 新名}``。
+        """Rename legacy assets whose names contain a slash back into place, turning the original name into an alias; returns ``{old name: new name}``.
 
-        写入口的消毒（``NovelScene.sanitize_name`` 等）只管新数据，这道闸加上之前落库的
-        ``家中客厅/哥哥卧室`` 还躺在表里：它的 ``{name}`` 接口全是 404，删不掉也生不出图。
+        Write-entry sanitization (``NovelScene.sanitize_name`` etc.) only covers new data; with that gate in place, previously persisted
+        ``living room/older brother's bedroom`` still sits in the table: all its ``{name}`` endpoints return 404, and it can neither be deleted nor have images generated.
 
-        **必须走裸 SQL，不能走模型**：模型的 ``sanitize_name`` 会在读出来那一刻就把斜杠
-        抹平，模型层根本看不见坏名字，可主键里那个斜杠还在——``DELETE ... WHERE name = ?``
-        于是一行都删不掉，表现就是用户报的「点了删除，刷新还在」。
+        **It must use raw SQL, not the model**: the model's ``sanitize_name`` erases the slash the moment it is read,
+        so the model layer cannot see the bad name at all, yet the slash in the primary key is still there -- ``DELETE ... WHERE name = ?``
+        then deletes not a single row, which shows up as the user report "I clicked delete and it is still there after refresh".
 
-        ``move_assets(old, new)`` 由调用方提供，负责搬 ``assets/<kind>s/<name>`` 那棵目录树；
-        它抛异常就跳过这一条不改名——宁可留着坏名字，也不能让记录指向别人的图。
+        ``move_assets(old, new)`` is supplied by the caller and moves the ``assets/<kind>s/<name>`` directory tree;
+        if it raises, that entry is skipped and not renamed -- better to keep a bad name than to let a record point at someone else's image.
 
-        名字都干净时只做一次 SELECT，不写库也不碰磁盘。
+        When all names are clean it performs a single SELECT, with no DB writes and no disk access.
 
-        每种 kind 每个项目**每个进程**只跑一次，且串行——列表接口是并发入口，而 store 是
-        按请求新建的，记在实例上等于没记，见模块顶上 ``_PATH_REPAIR_DONE`` 的说明。
+        Each kind runs only once **per process** per project, and serially -- the list endpoint is a concurrent entry point and the store is
+        created per request, so recording it on the instance is as good as not recording it; see the note on ``_PATH_REPAIR_DONE`` at the top of the module.
         """
 
         key = (self.db_path, kind)
@@ -1234,8 +1234,8 @@ class SQLiteStore:
         move_assets: Optional[Callable[[str, str], None]] = None,
     ) -> Dict[str, str]:
         table = _PATH_UNSAFE_REPAIR_TABLES[kind]
-        # 角色的身份记录把角色名嵌进了 character_name 和 identity_id，改名后不跟着改，
-        # 身份图的落盘路径就指向一个不存在的目录（rename_character 一直在做这件事）。
+        # A character's identity records embed the character name in character_name and identity_id; if they are not renamed along with it,
+        # the on-disk path of identity images points to a directory that does not exist (rename_character has always done this).
         columns = "name, aliases_json, identities_json" if kind == "character" else "name, aliases_json"
         db = await self._ensure_db()
         async with db.execute(f"SELECT {columns} FROM {table}") as cursor:
@@ -1260,7 +1260,7 @@ class SQLiteStore:
                     move_assets(old_name, new_name)
                 except (OSError, ValueError):
                     logger.warning(
-                        "资产目录迁移失败，跳过改名: %s → %s", old_name, new_name, exc_info=True
+                        "Asset directory migration failed, skipping rename: %s → %s", old_name, new_name, exc_info=True
                     )
                     taken.add(old_name)
                     continue
@@ -1286,8 +1286,8 @@ class SQLiteStore:
                         old_name,
                     ),
                 )
-                # identity_id 把角色名嵌在里面，散在 episodes / beats 里的引用要一起改。
-                # 和上面的改名同一个事务（下面统一 commit），不能只改一半。
+                # identity_id embeds the character name, so references scattered through episodes / beats must be changed together.
+                # Same transaction as the rename above (committed together below); it must not be half done.
                 await self._cascade_character_rename(old_name, new_name)
             else:
                 await db.execute(
@@ -1296,17 +1296,17 @@ class SQLiteStore:
                     (new_name, json.dumps(aliases, ensure_ascii=False), old_name),
                 )
             if kind == "scene":
-                # 派生场景按名字挂在母场景上，母场景改名后这些指针要跟着走，否则分组会
-                # 散架。必须和上面的改名同一个事务：一旦这一行提交了，名字就已经安全，
-                # 下次启动的自愈不会再看这一行，落下的 base_scene_id 就永远不会被补。
+                # Derived scenes hang off their parent scene by name; after the parent is renamed these pointers must follow, otherwise grouping
+                # falls apart. It must be in the same transaction as the rename above: once that row is committed, the name is already safe,
+                # the next startup's self-healing will not look at this row again, and a missed base_scene_id would never be filled in.
                 await db.execute(
                     "UPDATE scenes SET base_scene_id = ?, updated_at = datetime('now') "
                     "WHERE base_scene_id = ?",
                     (new_name, old_name),
                 )
-            # 逐行提交：目录已经搬到新名下了，这一行的改名必须立刻落库。攒到最后一次性
-            # 提交的话，中途任何一行抛异常都会让「盘上新名、库里旧名」这批错位留在磁盘
-            # 上——正是上面那句「宁可留着坏名字」要避免的状态，只是方向反过来。
+            # Commit row by row: the directory has already been moved to the new name, so this row's rename must be persisted immediately. Accumulating
+            # and committing at the end would let any row that raises midway leave this batch in the "new name on disk, old name in the DB"
+            # state -- exactly the state the "better to keep a bad name" principle above avoids, only in the opposite direction.
             await db.commit()
             taken.add(new_name)
             renamed[old_name] = new_name
@@ -1314,19 +1314,19 @@ class SQLiteStore:
         if not renamed:
             return {}
 
-        # 两种 kind 都走 load_graph_state：`_props.clear()` 只清不填，而 list_props()
-        # 直接读 SQLite、不回填缓存，本次请求剩下的 get_cached_prop() 会对每个道具都
-        # 返回 None。
+        # Both kinds go through load_graph_state: `_props.clear()` only clears without refilling, and list_props()
+        # reads SQLite directly without backfilling the cache, so the rest of this request's get_cached_prop() would
+        # return None for every prop.
         await self.load_graph_state()
         return renamed
 
     @staticmethod
     def _normalize_alias_lookup(value: str) -> str:
-        """统一别名查找键，降低空格/大小写差异导致的失配。"""
+        """Unify alias lookup keys to reduce mismatches caused by whitespace/case differences."""
         return " ".join((value or "").replace("\u3000", " ").strip().lower().split())
 
     async def add_scene(self, scene: NovelScene) -> None:
-        """添加或更新场景。"""
+        """Add or update a scene."""
         db = await self._ensure_db()
         await db.execute(
             """INSERT INTO scenes (name, aliases_json, scene_type,
@@ -1362,7 +1362,7 @@ class SQLiteStore:
         await db.commit()
 
     async def get_scene(self, name: str) -> Optional[NovelScene]:
-        """获取场景（支持别名查找）。"""
+        """Get a scene (alias lookup supported)."""
         db = await self._ensure_db()
         async with db.execute("SELECT * FROM scenes WHERE name = ?", (name,)) as cursor:
             row = await cursor.fetchone()
@@ -1379,14 +1379,14 @@ class SQLiteStore:
         return None
 
     async def list_scenes(self) -> List[NovelScene]:
-        """列出所有场景。"""
+        """List all scenes."""
         db = await self._ensure_db()
         async with db.execute("SELECT * FROM scenes ORDER BY name") as cursor:
             rows = await cursor.fetchall()
         return [self._row_to_scene(row) for row in rows]
 
     async def update_scene(self, name: str, **updates) -> bool:
-        """更新场景字段。"""
+        """Update scene fields."""
         allowed = {
             "aliases",
             "scene_type",
@@ -1435,7 +1435,7 @@ class SQLiteStore:
         return (cursor.rowcount or 0) > 0
 
     async def rename_scene(self, old_name: str, new_name: str) -> bool:
-        """重命名场景记录。资源目录迁移由调用方处理。"""
+        """Rename a scene record. Resource directory migration is handled by the caller."""
         old_name = str(old_name or "").strip()
         new_name = path_safe_asset_name(new_name)
         if not old_name or not new_name or old_name == new_name:
@@ -1451,7 +1451,7 @@ class SQLiteStore:
         return (cursor.rowcount or 0) > 0
 
     async def delete_scene(self, name: str) -> bool:
-        """删除场景。"""
+        """Delete a scene."""
         db = await self._ensure_db()
         cursor = await db.execute("DELETE FROM scenes WHERE name = ?", (name,))
         await db.commit()
@@ -1478,7 +1478,7 @@ class SQLiteStore:
         )
 
     async def add_prop(self, prop: NovelProp) -> None:
-        """添加或更新道具。"""
+        """Add or update a prop."""
         db = await self._ensure_db()
         await db.execute(
             """INSERT INTO props (name, aliases_json, prop_type, visual_prompt,
@@ -1506,7 +1506,7 @@ class SQLiteStore:
         self._props[prop.name] = prop
 
     async def get_prop(self, name: str) -> Optional[NovelProp]:
-        """获取道具（支持别名查找）。"""
+        """Get a prop (alias lookup supported)."""
         db = await self._ensure_db()
         async with db.execute("SELECT * FROM props WHERE name = ?", (name,)) as cursor:
             row = await cursor.fetchone()
@@ -1523,14 +1523,14 @@ class SQLiteStore:
         return None
 
     async def list_props(self) -> List[NovelProp]:
-        """列出所有道具。"""
+        """List all props."""
         db = await self._ensure_db()
         async with db.execute("SELECT * FROM props ORDER BY name") as cursor:
             rows = await cursor.fetchall()
         return [self._row_to_prop(row) for row in rows]
 
     async def update_prop(self, name: str, **updates) -> bool:
-        """更新道具字段。"""
+        """Update prop fields."""
         allowed = {
             "aliases",
             "prop_type",
@@ -1582,7 +1582,7 @@ class SQLiteStore:
         return (cursor.rowcount or 0) > 0
 
     async def rename_prop(self, old_name: str, new_name: str) -> bool:
-        """重命名道具记录。资源目录迁移由调用方处理。"""
+        """Rename a prop record. Resource directory migration is handled by the caller."""
         old_name = str(old_name or "").strip()
         new_name = path_safe_asset_name(new_name)
         if not old_name or not new_name or old_name == new_name:
@@ -1603,7 +1603,7 @@ class SQLiteStore:
         return (cursor.rowcount or 0) > 0
 
     async def delete_prop(self, name: str) -> bool:
-        """删除道具。"""
+        """Delete a prop."""
         db = await self._ensure_db()
         cursor = await db.execute("DELETE FROM props WHERE name = ?", (name,))
         await db.commit()
@@ -1628,18 +1628,18 @@ class SQLiteStore:
     ) -> None:
         char = self.get_character(character_name)
         if not char:
-            raise ValueError(f"角色 {character_name} 不存在")
+            raise ValueError(f"Character {character_name} does not exist")
         identity.character_name = char.name
         if not identity.identity_id:
             identity.identity_id = f"{char.name}_{identity.identity_name}"
         for existing in char.identities:
             if existing.identity_id == identity.identity_id:
-                raise ValueError(f"身份 {identity.identity_id} 已存在")
+                raise ValueError(f"Identity {identity.identity_id} already exists")
         identities = char.identities
         identities.append(identity)
         char.identities = identities
         await self._update_character_field(char.name, "identities_json", char.identities_json)
-        console.print(f"[green]已为 {char.name} 添加身份: {identity.identity_name}[/green]")
+        console.print(f"[green]Added identity for {char.name}: {identity.identity_name}[/green]")
 
     async def _cascade_identity_change(self, old_id: str, new_id: str | None = None) -> None:
         for ep in self._episodes.values():
@@ -1662,7 +1662,7 @@ class SQLiteStore:
     ) -> None:
         char = self.get_character(character_name)
         if not char:
-            raise ValueError(f"角色 {character_name} 不存在")
+            raise ValueError(f"Character {character_name} does not exist")
         identities = char.identities
         target_identity = None
         for identity in identities:
@@ -1670,7 +1670,7 @@ class SQLiteStore:
                 target_identity = identity
                 break
         if not target_identity:
-            raise ValueError(f"身份 {identity_id} 不存在")
+            raise ValueError(f"Identity {identity_id} does not exist")
         for key, value in updates.items():
             if hasattr(target_identity, key):
                 setattr(target_identity, key, value)
@@ -1707,12 +1707,12 @@ class SQLiteStore:
             if old_id != new_id:
                 await self._cascade_identity_change(old_id, new_id)
         await self._update_character_field(char.name, "identities_json", char.identities_json)
-        console.print(f"[green]已更新 {char.name} 的身份: {target_identity.identity_id}[/green]")
+        console.print(f"[green]Updated identity of {char.name}: {target_identity.identity_id}[/green]")
 
     async def delete_character_identity(self, character_name: str, identity_id: str) -> None:
         char = self.get_character(character_name)
         if not char:
-            raise ValueError(f"角色 {character_name} 不存在")
+            raise ValueError(f"Character {character_name} does not exist")
         identities = char.identities
         target_identity = None
         for i, identity in enumerate(identities):
@@ -1720,31 +1720,31 @@ class SQLiteStore:
                 target_identity = identities.pop(i)
                 break
         if not target_identity:
-            raise ValueError(f"身份 {identity_id} 不存在")
+            raise ValueError(f"Identity {identity_id} does not exist")
         char.identities = identities
         await self._cascade_identity_change(identity_id, None)
         await self._update_character_field(char.name, "identities_json", char.identities_json)
-        console.print(f"[green]已删除 {char.name} 的身份: {identity_id}[/green]")
+        console.print(f"[green]Deleted identity of {char.name}: {identity_id}[/green]")
 
     async def delete_identity_image(self, character_name: str, identity_id: str) -> bool:
         char = self.get_character(character_name)
         if not char:
-            raise ValueError(f"角色 {character_name} 不存在")
+            raise ValueError(f"Character {character_name} does not exist")
         target_identity = next((i for i in char.identities if i.identity_id == identity_id), None)
         if not target_identity:
-            raise ValueError(f"身份 {identity_id} 不存在")
+            raise ValueError(f"Identity {identity_id} does not exist")
         image_path = compute_identity_path(
             Path(self.project_dir), character_name, target_identity.identity_name
         )
         if not image_path:
-            console.print(f"[yellow]身份 {identity_id} 没有图片[/yellow]")
+            console.print(f"[yellow]Identity {identity_id} has no image[/yellow]")
             return False
         image_file = Path(image_path)
         if image_file.exists():
             image_file.unlink()
-            console.print(f"[green]已删除图片文件: {image_path}[/green]")
+            console.print(f"[green]Image file deleted: {image_path}[/green]")
             return True
-        console.print(f"[yellow]图片文件不存在: {image_path}[/yellow]")
+        console.print(f"[yellow]Image file does not exist: {image_path}[/yellow]")
         return False
 
     async def _upsert_episodes(
@@ -1811,7 +1811,7 @@ class SQLiteStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelEpisode]:
-        """从小说章节结构创建剧集（章节映射模式）。
+        """Create episodes from the novel's chapter structure (chapter-mapping mode).
 
         Deterministic: chapter markers in the source text become episodes, one
         per chapter. It reads the imported novel and writes SQLite and touches
@@ -1830,14 +1830,14 @@ class SQLiteStore:
                 on_log(message)
             console.print(f"[dim]{message}[/dim]")
 
-        # 获取小说原文
+        # Get the novel source text
         if novel_text is None:
-            log(lmsg("tasks.log.source.loading", "从文件加载原文..."))
+            log(lmsg("tasks.log.source.loading", "Loading source text from file..."))
             novel_text = require_imported_novel(self.project_dir)
             log(
                 lmsg(
                     "tasks.log.source.loaded",
-                    f"原文加载完成: {len(novel_text)} 字符",
+                    f"Source text loaded: {len(novel_text)} characters",
                     charCount=len(novel_text),
                 )
             )
@@ -1849,37 +1849,37 @@ class SQLiteStore:
         # worker could leave a project with every episode blank, or half its
         # episodes mapped, or metadata that did not match the text under it.
 
-        # P1: 检测章节
-        report(0.1, "检测章节结构...")
-        log("检测章节结构...")
+        # P1: detect chapters
+        report(0.1, "Detecting chapter structure...")
+        log("Detecting chapter structure...")
         detector = ChapterDetector()
         chapters = detector.detect(novel_text)
 
         if not chapters:
-            raise ValueError("未检测到章节标记，请使用 AI 规划模式")
+            raise ValueError("No chapter markers detected; use AI planning mode")
 
-        log(f"检测到 {len(chapters)} 个章节")
+        log(f"Detected {len(chapters)} chapters")
 
         episodes = []
-        chapter_contents = {}  # 收集章节内容，最后统一写入
+        chapter_contents = {}  # collect chapter contents and write them all at the end
         total = len(chapters)
 
         for i, chapter in enumerate(chapters):
             progress = 0.1 + (i / total) * 0.7
-            report(progress, f"处理第 {chapter.number} 章...")
+            report(progress, f"Processing chapter {chapter.number}...")
 
-            # 收集章节内容（稍后写入，避免与 _delete_old_episodes 冲突）
+            # Collect chapter contents (written later, to avoid conflicts with _delete_old_episodes)
             chapter_contents[chapter.number] = chapter.content
 
             if generate_metadata:
-                log(f"为第 {chapter.number} 章生成元数据...")
+                log(f"Generating metadata for chapter {chapter.number}...")
                 metadata = await self._generate_episode_metadata(chapter.number, chapter.content)
             else:
                 summary = chapter.content[:200].strip()
                 if len(chapter.content) > 200:
                     summary += "..."
                 metadata = {
-                    "title": f"第{chapter.number}集",
+                    "title": f"Episode {chapter.number}",
                     "summary": summary,
                     "conflict": "",
                     "cliffhanger": "",
@@ -1889,7 +1889,7 @@ class SQLiteStore:
 
             episode = NovelEpisode(
                 number=chapter.number,
-                title=metadata.get("title", f"第{chapter.number}集"),
+                title=metadata.get("title", f"Episode {chapter.number}"),
                 chapter_start=chapter.number,
                 chapter_end=chapter.number,
                 content_summary=metadata.get("summary", ""),
@@ -1900,9 +1900,9 @@ class SQLiteStore:
             )
             episodes.append(episode)
 
-        # P2: 合并剧集（保留已有的已规划资产字段）
-        report(0.82, "合并剧集数据...")
-        log("合并剧集数据（保留身份、场景、道具和颜色）...")
+        # P2: merge episodes (keeping already-planned asset fields)
+        report(0.82, "Merging episode data...")
+        log("Merging episode data (keeping identities, scenes, props and colors)...")
         new_numbers = {ep.number for ep in episodes}
         for ep in episodes:
             old = self._episodes.get(ep.number)
@@ -1917,9 +1917,9 @@ class SQLiteStore:
 
         removed = set(self._episodes.keys()) - new_numbers
 
-        # P3: 单事务发布
-        report(0.88, "保存到数据库...")
-        log("保存剧集到数据库...")
+        # P3: publish in a single transaction
+        report(0.88, "Saving to the database...")
+        log("Saving episodes to the database...")
         db = await self._ensure_db()
         try:
             if removed:
@@ -1934,20 +1934,20 @@ class SQLiteStore:
             await asyncio.shield(db.rollback())
             raise
         if removed:
-            log(f"已删除 {len(removed)} 个旧剧集")
+            log(f"Deleted {len(removed)} old episodes")
 
-        # P4: 更新内存缓存，只在写入确实落盘之后
+        # P4: update the in-memory cache, only after the write has really hit disk
         self._episodes.clear()
         for ep in episodes:
             self._episodes[ep.number] = ep
 
-        report(1.0, "章节映射完成")
-        log(f"章节映射完成: {len(episodes)} 集")
+        report(1.0, "Chapter mapping complete")
+        log(f"Chapter mapping complete: {len(episodes)} episodes")
 
         return episodes
 
     async def _generate_episode_metadata(self, episode_num: int, content: str) -> dict:
-        """使用 LLM 生成剧集元数据。"""
+        """Generate episode metadata with an LLM."""
         try:
             import litellm
 
@@ -1957,22 +1957,22 @@ class SQLiteStore:
 
             truncated = content[:8000] if len(content) > 8000 else content
 
-            prompt = f"""请分析以下章节内容，提取关键信息。
+            prompt = f"""Analyze the following chapter content and extract the key information.
 
-章节内容：
+Chapter content:
 {truncated}
 
-请用 JSON 格式返回以下信息：
+Return the following information in JSON format:
 {{
-    "title": "一个吸引人的标题（10字以内）",
-    "summary": "内容摘要（50-100字）",
-    "conflict": "主要冲突或矛盾",
-    "cliffhanger": "结尾悬念（如果有）",
-    "key_events": ["关键事件1", "关键事件2"],
-    "characters": ["出场角色1", "出场角色2"]
+    "title": "A catchy title (within 10 words)",
+    "summary": "Content summary (50-100 words)",
+    "conflict": "The main conflict or contradiction",
+    "cliffhanger": "Ending cliffhanger (if any)",
+    "key_events": ["Key event 1", "Key event 2"],
+    "characters": ["Character 1 appearing", "Character 2 appearing"]
 }}
 
-只返回 JSON，不要有其他内容。"""
+Return JSON only, with nothing else."""
 
             response = await litellm.acompletion(
                 model=os.environ.get("LLM_MODEL", "").strip()
@@ -1989,9 +1989,9 @@ class SQLiteStore:
             return result
 
         except Exception as e:
-            console.print(f"[yellow]元数据生成失败: {e}，使用默认值[/yellow]")
+            console.print(f"[yellow]Metadata generation failed: {e}; using defaults[/yellow]")
             return {
-                "title": f"第{episode_num}集",
+                "title": f"Episode {episode_num}",
                 "summary": content[:200] + "..." if len(content) > 200 else content,
                 "conflict": "",
                 "cliffhanger": "",
@@ -2022,7 +2022,7 @@ class SQLiteStore:
     async def update_episode(self, episode_number: int, **updates) -> None:
         episode = self.get_episode(episode_number)
         if not episode:
-            raise ValueError(f"剧集 {episode_number} 不存在")
+            raise ValueError(f"Episode {episode_number} does not exist")
         old_number = episode.number
         for key, value in updates.items():
             if key == "scene_menu":
@@ -2036,7 +2036,7 @@ class SQLiteStore:
             self._episodes.pop(old_number, None)
             self._episodes[new_number] = episode
         await self.add_episodes([episode])
-        console.print(f"[green]已更新剧集: 第{episode.number}集[/green]")
+        console.print(f"[green]Episode updated: Episode {episode.number}[/green]")
 
     # Episode fields the column-level patch understands, and how each is
     # serialised. ``number`` is deliberately absent: renaming an episode moves
@@ -2124,7 +2124,7 @@ class SQLiteStore:
             params,
         )
         if not cursor.rowcount:
-            raise ValueError(f"剧集 {episode_number} 不存在")
+            raise ValueError(f"Episode {episode_number} does not exist")
         await db.commit()
 
         refreshed = await self.get_episode_from_graph(episode_number)
@@ -2140,7 +2140,7 @@ class SQLiteStore:
     async def _normalize_scene_menu_items(
         self, scene_menu: Iterable[Any] | None
     ) -> list[SceneMenuItem]:
-        """将 episode scene_menu 规范化为资产库标准 scene_id。"""
+        """Normalize the episode scene_menu to the standard asset-library scene_id."""
         normalized_items = build_scene_menu(scene_menu=list(scene_menu or []))
         canonical_items: list[SceneMenuItem] = []
         all_scenes = await self.list_scenes()
@@ -2169,7 +2169,7 @@ class SQLiteStore:
         return build_scene_menu(scene_menu=canonical_items)
 
     def _normalize_prop_menu_items(self, prop_menu: Iterable[Any] | None) -> list[PropMenuItem]:
-        """将 episode prop_menu 规范化为资产库标准 prop_id。"""
+        """Normalize the episode prop_menu to the standard asset-library prop_id."""
         normalized_items = build_prop_menu(prop_menu=list(prop_menu or []))
         canonical_items: list[PropMenuItem] = []
         for item in normalized_items:
@@ -2205,14 +2205,14 @@ class SQLiteStore:
             await db.commit()
             self._episodes.clear()
             deleted = cursor.rowcount
-            console.print(f"[dim]已删除 {deleted} 个旧剧集[/dim]")
+            console.print(f"[dim]Deleted {deleted} old episodes[/dim]")
             return deleted
         except Exception as e:
-            console.print(f"[yellow]删除旧剧集失败: {e}[/yellow]")
+            console.print(f"[yellow]Failed to delete old episodes: {e}[/yellow]")
             return 0
 
     async def delete_episodes_by_numbers(self, episode_numbers: set[int] | list[int]) -> int:
-        """按集数删除剧集。"""
+        """Delete an episode by number."""
         numbers = sorted({int(num) for num in episode_numbers if int(num) > 0})
         if not numbers:
             return 0
@@ -2456,12 +2456,12 @@ class SQLiteStore:
         return [self._row_to_visual_beat(row) for row in rows]
 
     async def list_beat_asset_refs(self) -> List[BeatAssetRefRow]:
-        """每个 beat 的资产引用字段，只取用得上的六列。
+        """Asset-reference fields of each beat; only the six columns that are actually needed.
 
-        资产反向索引要扫全项目的 beats。走 ``list_visual_beats()`` 的话，每行都是
-        ``SELECT *`` 出约 20 列、再构造一个完整 ``NovelVisualBeat``——那个 pydantic
-        validator 还会把 ``scene_ref_json`` 反序列化再序列化回去、给 narration 和
-        visual_description 填默认值。这些结果扫描一个都不读。
+        The asset reverse index has to scan the beats of the whole project. Going through ``list_visual_beats()`` means every row is
+        ``SELECT *`` with about 20 columns and then a full ``NovelVisualBeat`` is built -- that pydantic
+        validator also deserializes ``scene_ref_json`` and serializes it back, and fills defaults for narration and
+        visual_description. The scan reads none of those results.
         """
         db = await self._ensure_db()
         async with db.execute(
@@ -2483,12 +2483,12 @@ class SQLiteStore:
         ]
 
     async def count_beats_by_episode(self) -> Dict[int, int]:
-        """每集的 beat 数，一次分组查询。
+        """Beat count per episode, in one grouped query.
 
-        分集列表要在每张卡片上显示镜头数。前端此前是逐集调
-        ``GET /episodes/{n}/beats`` 再取 ``len()``——有几集就发几个请求，每个都要
-        解析项目上下文、开库、构造完整 beat 载荷（含 sketch/frame/video URL 与
-        每条音频一次 ffprobe），只为了拿一个整数。
+        The episode list shows the shot count on every card. The frontend used to call
+        ``GET /episodes/{n}/beats`` per episode and take ``len()`` -- as many requests as there are episodes, each of which has to
+        resolve the project context, open the DB, and build the full beat payload (including sketch/frame/video URLs and
+        one ffprobe per audio) just to obtain a single integer.
         """
         db = await self._ensure_db()
         async with db.execute(
@@ -2655,11 +2655,11 @@ class SQLiteStore:
             await db.commit()
             return True
         except Exception as e:
-            console.print(f"[red]更新 Beat 资源字段失败: {e}[/red]")
+            console.print(f"[red]Failed to update Beat resource fields: {e}[/red]")
             return False
 
     async def add_visual_beats(self, beats: List[NovelVisualBeat]) -> None:
-        """添加视觉节拍到 SQLite。"""
+        """Add a visual beat to SQLite."""
         db = await self._ensure_db()
         for b in beats:
             await db.execute(
@@ -2707,7 +2707,7 @@ class SQLiteStore:
         await db.commit()
 
     async def delete_manual_beat(self, episode_number: int, beat_number: int) -> bool:
-        """删除单个手工分镜 beat（仅当 is_manual_shot=1）。"""
+        """Delete a single manual shot beat (only when is_manual_shot=1)."""
         try:
             db = await self._ensure_db()
             cursor = await db.execute(
@@ -2717,7 +2717,7 @@ class SQLiteStore:
             await db.commit()
             return cursor.rowcount > 0
         except Exception as e:
-            console.print(f"[red]删除手工分镜失败: {e}[/red]")
+            console.print(f"[red]Failed to delete manual shot: {e}[/red]")
             return False
 
     async def get_beat_prompts(
@@ -2748,7 +2748,7 @@ class SQLiteStore:
         except StoreClosedError:
             raise
         except Exception as e:
-            console.print(f"[red]获取 Beat 提示词失败: {e}[/red]")
+            console.print(f"[red]Failed to get Beat prompt: {e}[/red]")
             return {
                 "video_prompt": None,
                 "video_mode": "first_frame",
@@ -2756,7 +2756,7 @@ class SQLiteStore:
             }
 
     async def delete_project_data(self) -> None:
-        """删除当前项目的所有 SQLite 项目事实。"""
+        """Delete all SQLite project facts of the current project."""
         try:
             db = await self._ensure_db()
             await db.execute("DELETE FROM beats")
@@ -2781,7 +2781,7 @@ class SQLiteStore:
         episode_number: int,
         detections: dict[int, list[str]],
     ) -> int:
-        """批量写入 per-beat 检测身份。"""
+        """Batch-write per-beat detected identities."""
         if not detections:
             return 0
         db = await self._ensure_db()
@@ -2805,7 +2805,7 @@ class SQLiteStore:
         episode_number: int,
         detections: dict[int, list[str]],
     ) -> int:
-        """批量写入 per-beat 检测道具。"""
+        """Batch-write per-beat detected props."""
         if not detections:
             return 0
         db = await self._ensure_db()
@@ -2825,7 +2825,7 @@ class SQLiteStore:
         return count
 
     async def delete_beats_for_episode(self, episode_number: int) -> int:
-        """删除指定剧集的所有 beat。"""
+        """Delete all beats of the given episode."""
         db = await self._ensure_db()
         cursor = await db.execute(
             "DELETE FROM beats WHERE episode_number = ?",
@@ -2835,7 +2835,7 @@ class SQLiteStore:
         return cursor.rowcount or 0
 
     async def delete_beats_except(self, episode_number: int, keep_numbers: set[int]) -> int:
-        """删除指定剧集中不在 keep_numbers 里的 beat。"""
+        """Delete beats of the given episode that are not in keep_numbers."""
         keep_numbers = {int(num) for num in keep_numbers if int(num) > 0}
         if not keep_numbers:
             return await self.delete_beats_for_episode(episode_number)
@@ -2853,7 +2853,7 @@ class SQLiteStore:
         episode_number: int,
         beats_data: list[dict],
     ) -> int:
-        """只补写从旧 JSON 同步来的静态字段。"""
+        """Only backfill the static fields synced from the legacy JSON."""
         updated_count = 0
         db = await self._ensure_db()
         for beat in beats_data:
@@ -2875,14 +2875,14 @@ class SQLiteStore:
         return updated_count
 
     async def delete_all_scenes(self) -> int:
-        """删除所有场景。"""
+        """Delete all scenes."""
         db = await self._ensure_db()
         cursor = await db.execute("DELETE FROM scenes")
         await db.commit()
         return cursor.rowcount or 0
 
     # ============================================================
-    # structured_v1 分析 run / chunk / 证据
+    # structured_v1 analysis run / chunk / evidence
     # ============================================================
 
     async def get_reusable_analysis_run(
@@ -3160,7 +3160,7 @@ class SQLiteStore:
         return [dict(row) for row in rows]
 
     async def delete_all_props(self) -> int:
-        """删除所有道具。"""
+        """Delete all props."""
         db = await self._ensure_db()
         cursor = await db.execute("DELETE FROM props")
         await db.commit()

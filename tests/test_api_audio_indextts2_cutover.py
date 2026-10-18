@@ -18,9 +18,9 @@ class _FakeStore:
             {
                 "beat_number": 2,
                 "audio_type": "dialogue",
-                "narration_segment": "走。",
-                "video_prompt": "镜头从角色正面缓慢推近。",
-                "seedance2_config_json": '{"final_prompt": "参考图片1，镜头从角色正面缓慢推近。"}',
+                "narration_segment": "Go",
+                "video_prompt": "The camera slowly pushes in on the character from the front.",
+                "seedance2_config_json": '{"final_prompt": "Reference @image1, the camera slowly pushes in on the character from the front."}',
             }
         ]
 
@@ -212,8 +212,8 @@ async def test_audio_generate_route_does_not_enqueue_when_voice_file_is_missing(
         return (
             [],
             [
-                "Beat 02 解说声线缺失：项目解说人声线已配置，"
-                "但声线文件无法读取，请重新上传或检查项目存储"
+                "Beat 02 narrator voice is missing: the project narrator voice is configured, "
+                "but the voice file cannot be read; re-upload it or check project storage"
             ],
             0,
         )
@@ -235,9 +235,10 @@ async def test_audio_generate_route_does_not_enqueue_when_voice_file_is_missing(
     assert response == {
         "ok": False,
         "code": "voice_prereq_required",
+        "reason_code": "voice_narrator_missing",
         "error": (
-            "Beat 02 解说声线缺失：项目解说人声线已配置，"
-            "但声线文件无法读取，请重新上传或检查项目存储"
+            "Beat 02 narrator voice is missing: the project narrator voice is configured, "
+            "but the voice file cannot be read; re-upload it or check project storage"
         ),
     }
     assert calls == []
@@ -269,7 +270,7 @@ def test_audio_generate_http_route_dispatches_indextts2(monkeypatch, tmp_path):
     body = response.json()
     assert body["ok"] is True
     assert body["task_type"] == "audio_generation_indextts2"
-    assert body["message"] == "第 3 集语音批量生成已进入队列"
+    assert body["message"] == "Episode 3 batch speech generation queued"
     assert calls[0]["task_type"] == "audio_generation_indextts2"
     assert calls[0]["payload"] == {
         "episode": 3,
@@ -310,7 +311,7 @@ async def test_audio_billing_quote_uses_server_planned_quantity(monkeypatch, tmp
                 discount_amount=1,
                 promotion={
                     "id": "promo_audio",
-                    "name": "配音优惠",
+                    "name": "Voiceover Promo",
                     "discount_basis_points": 8000,
                 },
             )
@@ -363,7 +364,7 @@ async def test_single_beat_audio_route_dispatches_indextts2(monkeypatch, tmp_pat
 
     assert response["ok"] is True
     assert response["task_type"] == "audio_generation_indextts2"
-    assert response["message"] == "第 3 集 Beat 2 语音生成已进入队列"
+    assert response["message"] == "Episode 3 Beat 2 speech generation queued"
     assert calls == [
         {
             "ctx": ctx,
@@ -564,7 +565,7 @@ async def test_single_video_normalizes_duration_before_billing_and_enqueue(
             {
                 "beat_number": 2,
                 "video_mode": "first_frame",
-                "video_prompt": "镜头从角色正面缓慢推近。",
+                "video_prompt": "The camera slowly pushes in on the character from the front.",
             }
         ]
     )
@@ -800,7 +801,7 @@ async def test_happyhorse_single_video_enqueues_prepared_references(
                 {
                     "type": "image",
                     "path": "https://example.com/ref.png",
-                    "role": "图片1",
+                    "role": "image1",
                 }
             ],
             "config_json": '{"final_prompt":"happyhorse prompt","ratio":"1:1"}',
@@ -847,7 +848,7 @@ async def test_happyhorse_single_video_enqueues_prepared_references(
     assert config["resolution"] == "1080p"
     assert config["ratio"] == "1:1"
     assert config["references"] == [
-        {"type": "image", "path": "https://example.com/ref.png", "role": "图片1"}
+        {"type": "image", "path": "https://example.com/ref.png", "role": "image1"}
     ]
     assert config["audio_setting"] == "origin"
     assert (
@@ -890,7 +891,7 @@ async def test_single_video_rejects_empty_1x_video_prompt(monkeypatch, tmp_path)
 
     assert response == {
         "ok": False,
-        "error": "Beat 2 缺少视频提示词，请先点击“生成本 Beat 提示词”。",
+        "error": "Beat 2 has no video prompt. Click 'Generate this Beat's prompt' first.",
     }
 
 
@@ -930,7 +931,7 @@ async def test_single_video_rejects_empty_1x_keyframe_prompt(monkeypatch, tmp_pa
 
     assert response == {
         "ok": False,
-        "error": "Beat 2 缺少视频提示词，请先点击“生成本 Beat 提示词”。",
+        "error": "Beat 2 has no video prompt. Click 'Generate this Beat's prompt' first.",
     }
 
 
@@ -985,7 +986,7 @@ async def test_seedance2_single_video_rejects_empty_final_prompt(monkeypatch, tm
     )
 
     assert response["ok"] is False
-    assert "Seedance 2.0 最终提示词为空" in response["error"]
+    assert "Seedance 2.0 final prompt is empty" in response["error"]
 
 
 @pytest.mark.asyncio

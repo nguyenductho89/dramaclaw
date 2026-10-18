@@ -12,45 +12,45 @@ import {
 // stops matching and loading state is lost on refresh.
 describe("task-scope hashing matches the backend", () => {
   it("scene_reference_asset_scope", () => {
-    expect(sceneReferenceAssetScope("大学宿舍", "master")).toBe(
-      "scene_ref__f126561a8bba",
+    expect(sceneReferenceAssetScope("Dorm Room", "master")).toBe(
+      "scene_ref__5e2a446c54b1",
     );
-    // `reverse_master` is the kind the BE uses for the 背面 image (not "reverse").
-    expect(sceneReferenceAssetScope("大学宿舍", "reverse_master")).toBe(
-      "scene_ref__02e6e3b31892",
+    // `reverse_master` is the kind the BE uses for the back-side image (not "reverse").
+    expect(sceneReferenceAssetScope("Dorm Room", "reverse_master")).toBe(
+      "scene_ref__527ff7959ca2",
     );
-    expect(sceneReferenceAssetScope("苏鸢寝殿", "master")).toBe(
-      "scene_ref__d902739345bd",
+    expect(sceneReferenceAssetScope("Quán Trà", "master")).toBe(
+      "scene_ref__9060b8ad0651",
     );
-    expect(sceneReferenceAssetScope("苏鸢寝殿", "reverse_master")).toBe(
-      "scene_ref__c99c0228dd85",
+    expect(sceneReferenceAssetScope("Quán Trà", "reverse_master")).toBe(
+      "scene_ref__4dcd6be9237c",
     );
   });
 
   it("stage_asset_scope", () => {
-    expect(stageAssetScope("大学宿舍", "pano_from_master")).toBe(
-      "stage_asset__0060da8d52de",
+    expect(stageAssetScope("Dorm Room", "pano_from_master")).toBe(
+      "stage_asset__bf7b8ef4bcac",
     );
-    expect(stageAssetScope("大学宿舍", "pano_from_text")).toBe(
-      "stage_asset__03118b334715",
+    expect(stageAssetScope("Dorm Room", "pano_from_text")).toBe(
+      "stage_asset__43103904df52",
     );
-    expect(stageAssetScope("大学宿舍", "single_face_sharp")).toBe(
-      "stage_asset__a1b352c6307b",
+    expect(stageAssetScope("Dorm Room", "single_face_sharp")).toBe(
+      "stage_asset__af27a14e9741",
     );
-    expect(stageAssetScope("大学宿舍", "pano_sharp")).toBe(
-      "stage_asset__f3813dfc19bc",
+    expect(stageAssetScope("Dorm Room", "pano_sharp")).toBe(
+      "stage_asset__fb4bf220c6e9",
     );
-    expect(stageAssetScope("苏鸢寝殿", "pano_from_master")).toBe(
-      "stage_asset__f70b565fb943",
+    expect(stageAssetScope("Quán Trà", "pano_from_master")).toBe(
+      "stage_asset__06fbb3d5e473",
     );
-    expect(stageAssetScope("苏鸢寝殿", "pano_sharp")).toBe(
-      "stage_asset__d81c1edae22e",
+    expect(stageAssetScope("Quán Trà", "pano_sharp")).toBe(
+      "stage_asset__1f3c17bd0c58",
     );
   });
 
   it("prop_reference_asset_scope", () => {
-    expect(propReferenceAssetScope("道具A")).toBe("prop_ref__a6d6813f7e52");
+    expect(propReferenceAssetScope("Prop A")).toBe("prop_ref__d4545b4a4d60");
     expect(propReferenceAssetScope("sword")).toBe("prop_ref__d36303bf3afe");
-    expect(propReferenceAssetScope("宝剑")).toBe("prop_ref__a87302d6d2cc");
+    expect(propReferenceAssetScope("Bảo Kiếm")).toBe("prop_ref__59459218f466");
   });
 });

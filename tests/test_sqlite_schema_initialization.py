@@ -377,7 +377,7 @@ def test_project_usage_components_share_one_db_without_schema_races(
             db_path=db_path,
             episode_number=1,
             beat_number=1,
-            speaker="林昭",
+            speaker="LinZhao",
             audio_path="voice.wav",
             voice_sha256="sha",
             mode="reference",

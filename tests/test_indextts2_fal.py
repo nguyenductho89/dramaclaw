@@ -123,10 +123,10 @@ async def test_indextts2_newapi_posts_audio_speech_schema(monkeypatch, tmp_path)
         timeout_seconds=12,
     )
     result = await client.generate(
-        prompt="你终于来了。",
+        prompt="You finally came.",
         audio_url="data:audio/wav;base64,abc",
         output_path=output_path,
-        emotion_prompt="压低声音，克制但急切",
+        emotion_prompt="lower voice, restrained but urgent",
     )
 
     assert result.success is True
@@ -151,11 +151,11 @@ async def test_indextts2_newapi_posts_audio_speech_schema(monkeypatch, tmp_path)
             },
             {
                 "model": "index-tts-2",
-                "input": "你终于来了。",
+                "input": "You finally came.",
                 "metadata": {
                     "audio_url": "data:audio/wav;base64,abc",
                     "should_use_prompt_for_emotion": True,
-                    "emotion_prompt": "压低声音，克制但急切",
+                    "emotion_prompt": "lower voice, restrained but urgent",
                 },
             },
         )
@@ -195,7 +195,7 @@ async def test_indextts2_newapi_does_not_retry_transient_connection_reset(
         endpoint="http://newapi.test/v1",
         model="index-tts-2",
     ).generate(
-        prompt="测试重试",
+        prompt="test retry",
         audio_url="data:audio/wav;base64,abc",
         output_path=output_path,
     )
@@ -245,10 +245,10 @@ async def test_indextts2_fal_posts_schema_and_downloads_audio(monkeypatch, tmp_p
     _FakeAsyncClient.get_response = _FakeResponse(content=b"generated-mp3")
     client = IndexTTS2FalClient(provider="fal", api_key="fal-test-key", timeout_seconds=12)
     result = await client.generate(
-        prompt="你终于来了。",
+        prompt="You finally came.",
         audio_url="https://example.com/reference.wav",
         output_path=output_path,
-        emotion_prompt="压低声音，克制但急切",
+        emotion_prompt="lower voice, restrained but urgent",
     )
 
     assert result.success is True
@@ -268,9 +268,9 @@ async def test_indextts2_fal_posts_schema_and_downloads_audio(monkeypatch, tmp_p
     assert post_call[2]["Authorization"] == "Key fal-test-key"
     assert post_call[3] == {
         "audio_url": "https://example.com/reference.wav",
-        "prompt": "你终于来了。",
+        "prompt": "You finally came.",
         "should_use_prompt_for_emotion": True,
-        "emotion_prompt": "压低声音，克制但急切",
+        "emotion_prompt": "lower voice, restrained but urgent",
     }
     assert _FakeAsyncClient.calls[1] == (
         "get",
@@ -323,7 +323,7 @@ async def test_indextts2_refunds_reserved_credit_on_generation_failure(monkeypat
         timeout_seconds=12,
     )
     result = await client.generate(
-        prompt="测试",
+        prompt="test",
         audio_url="data:audio/wav;base64,abc",
         output_path=tmp_path / "beat_03.mp3",
     )
@@ -370,7 +370,7 @@ async def test_indextts2_reraises_insufficient_credit(
 
     with pytest.raises(InsufficientCreditsError):
         await client.generate(
-            prompt="测试",
+            prompt="test",
             audio_url="data:audio/wav;base64,abc",
             output_path=tmp_path / "beat_03.mp3",
         )
@@ -381,7 +381,7 @@ async def test_indextts2_fal_returns_failure_without_api_key(tmp_path):
     from novelvideo.generators.indextts2_fal import IndexTTS2FalClient
 
     result = await IndexTTS2FalClient(provider="fal", api_key="").generate(
-        prompt="测试",
+        prompt="test",
         audio_url="https://example.com/reference.wav",
         output_path=Path(tmp_path / "out.mp3"),
     )

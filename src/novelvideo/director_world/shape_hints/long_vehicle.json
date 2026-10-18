@@ -1,6 +1,6 @@
 {
   "id": "long_vehicle",
-  "label_zh": "长载具",
+  "label": "Long vehicle",
   "default_scale": [1.2, 1.4, 3.6],
   "default_affordances": ["seatable", "blocking_mass"],
   "default_attachment_points": [
@@ -10,7 +10,7 @@
       "offset": [0, 0.7, 0.8],
       "facing_delta": 0,
       "actor_state": "sitting",
-      "description_zh": "前座"
+      "description": "Front seat"
     },
     {
       "id": "passenger_back",
@@ -18,8 +18,8 @@
       "offset": [0, 0.7, -0.8],
       "facing_delta": 0,
       "actor_state": "sitting",
-      "description_zh": "后座"
+      "description": "Rear seat"
     }
   ],
-  "sketch_description_zh": "长形载具或轿类 staging 轮廓，真实物件由 semantic_label 决定。"
+  "sketch_description": "Long vehicle or sedan-type staging silhouette; the real object is decided by semantic_label."
 }

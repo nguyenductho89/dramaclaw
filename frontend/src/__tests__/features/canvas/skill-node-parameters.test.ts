@@ -19,13 +19,13 @@ const skill: SkillDefinition = {
   parameters: {
     quality: {
       type: 'enum',
-      label: '质量',
+      label: 'Quality',
       default: 'medium',
       options: ['low', 'medium', 'high'],
     },
     background_reference_mode: {
       type: 'enum',
-      label: '背景参考模式',
+      label: 'Background reference mode',
       default: 'material_only',
       options: ['material_only', 'scene_anchor'],
     },

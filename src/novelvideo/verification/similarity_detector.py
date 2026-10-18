@@ -1,4 +1,4 @@
-"""像素级草图相似度检测。"""
+"""Pixel-level sketch similarity detection."""
 
 import logging
 from pathlib import Path
@@ -35,7 +35,7 @@ async def detect_similarity(
     similarity_threshold: float = 0.85,
     sqlite_store=None,
 ) -> SimilarityResult:
-    """检测整集选定草图的相似度。"""
+    """Detect the similarity of the selected sketches of the whole episode."""
     project_dir = Path(project_dir)
     beats = await load_all_beats(project_dir, episode_num, sqlite_store=sqlite_store)
 

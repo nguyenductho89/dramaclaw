@@ -5,15 +5,15 @@ import { useEffect, useRef } from 'react';
 interface EditableTableCellProps {
   value: string;
   onCommit: (nextValue: string) => void;
-  /** 占位符（cell 为空时显示，跟只读模式的「-」对齐）。 */
+  /** Placeholder (shown when the cell is empty, aligned with the "-" of read-only mode). */
   emptyPlaceholder?: string;
 }
 
 /**
- * 分镜 / 脚本类表格里的单格 inline 编辑器。uncontrolled contentEditable
- * —— 输入时不要 re-render，外部 value 变化（重新生成 / 别处编辑）才同步
- * 回 DOM；blur 时 commit；Esc 取消；paste 强制纯文本；keydown 阻止冒泡，
- * 防 React Flow 用 Backspace/Delete 误删节点。
+ * A single-cell inline editor in storyboard / script-type tables. An uncontrolled contentEditable
+ * - it does not re-render while typing, and syncs back to the DOM only when the external value changes (regenerate / edited elsewhere);
+ * commit on blur; Esc cancels; paste forces plain text; keydown stops bubbling,
+ * preventing React Flow from accidentally deleting the node with Backspace/Delete.
  */
 export function EditableTableCell({ value, onCommit, emptyPlaceholder = '-' }: EditableTableCellProps) {
   const ref = useRef<HTMLDivElement>(null);

@@ -51,14 +51,14 @@ describe("pano capture camera math", () => {
         pano: "basement",
         pano_url: "/tmp/pano.png",
         pano_fs: "/Users/demo/pano.png",
-        display_name: "地下室",
+        display_name: "Basement",
       }),
     ).toMatchObject({
       viewer_kind: "pano360",
       mode: "scene",
       project: "demo",
       scene_id: "basement",
-      display_name: "地下室",
+      display_name: "Basement",
       source: {
         slot_kind: "scene_director_pano_360",
         url: "/tmp/pano.png",

@@ -169,7 +169,7 @@ def build_lanzhou_noodle_shop() -> dict:
     return {
         "schema_version": "minecraft_scene_spec_v0",
         "scene_id": "lanzhou_noodle_shop",
-        "display_name": "兰州拉面馆 - 手写测试场景",
+        "display_name": "Lanzhou Noodle Shop - handwritten test scene",
         "generator": "novelvideo.director_world.supertale_lanzhou_demo",
         "grid": {
             "block_size_m": 0.45,
@@ -183,28 +183,28 @@ def build_lanzhou_noodle_shop() -> dict:
         "camera_presets": [
             {
                 "id": "front_dining_to_counter",
-                "label": "前场看向柜台",
+                "label": "Front of house toward the counter",
                 "position": [0, 5, -11],
                 "target": [0, 2.5, 4],
                 "fov": 58,
             },
             {
                 "id": "window_table_reverse",
-                "label": "靠窗桌反打",
+                "label": "Reverse shot at the window table",
                 "position": [-9, 4, 0],
                 "target": [-4, 2.5, 3],
                 "fov": 60,
             },
             {
                 "id": "entrance_checkout",
-                "label": "入口收银机位",
+                "label": "Entrance cash register",
                 "position": [13, 4, -8],
                 "target": [7, 2, -4],
                 "fov": 58,
             },
             {
                 "id": "top_down",
-                "label": "俯视布局",
+                "label": "Top-down layout",
                 "position": [0, 20, 0],
                 "target": [0, 0, 0],
                 "fov": 45,

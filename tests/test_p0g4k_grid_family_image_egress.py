@@ -1,15 +1,15 @@
-"""OI-52：grid 家族 6 个 newapi 图像调用点必须经过出网闸门。
+"""OI-52: the 6 newapi image call sites of the grid family must go through the egress gate.
 
-`nanobanana_grid.py` 里 `_call_newapi_image_api` 的调用点中有 6 个既不传 `trace=`
-也不传 `egress_context=`，也不经过任何闸门——组织流量在这些路径上无 claim、无组织
-凭证解析、无重放保护，平台 Key 替组织垫真实算力。
+Six of the call sites of `_call_newapi_image_api` in `nanobanana_grid.py` neither pass `trace=`
+nor `egress_context=`, nor go through any gate -- organization traffic on these paths has no claim, no organization
+credential resolution, and no replay protection, so the platform Key fronts real compute for the organization.
 
-唯一正确的调用点在 `_generate_image` 内，它的形状（`_prepare_organization_image_egress`
-→ 换凭证 → 调叶子 → `_complete_organization_image_egress`）已由
-`tests/test_p0g4b_image_egress.py` 钉住。本文件把同一形状钉到 grid 家族的 6 个入口上。
+The only correct call site is inside `_generate_image`; its shape (`_prepare_organization_image_egress`
+-> swap credentials -> call the leaf -> `_complete_organization_image_egress`) is already pinned by
+`tests/test_p0g4b_image_egress.py`. This file pins the same shape onto the 6 entry points of the grid family.
 
-这 6 个入口里只有 `generate_grid` / `reformat_sketch` 当前有活调用者，另 4 个零调用者
-——它们照样要有断言，否则复活时会静默重新漏。
+Of these 6 entry points only `generate_grid` / `reformat_sketch` currently have live callers; the other 4 have none
+-- they still need assertions, otherwise they would silently leak again when revived.
 """
 
 from __future__ import annotations
@@ -166,7 +166,7 @@ def _png_bytes() -> bytes:
 
 
 class _Harness:
-    """把 test_p0g4b_image_egress.py 已验证的假件装到 grid 家族入口上。"""
+    """Install the fakes verified in test_p0g4b_image_egress.py onto the grid family entry points."""
 
     def __init__(self, monkeypatch, context: TrustedEgressContext) -> None:
         import httpx
@@ -246,14 +246,14 @@ class _Harness:
         )
 
 
-# --- 块 ①：provider 收窄提前到构造点 -------------------------------------------------
+# --- Block 1: provider narrowing moved up to the construction point ----------------------
 
 
 def test_organization_grid_generator_denies_direct_provider_at_construction() -> None:
-    """组织 + 非 newapi provider 必须在构造点就被拒。
+    """An organization + a non-newapi provider must be rejected at the construction point.
 
-    `_prepare_organization_image_egress:141-142` 已有这条判决，但 grid 家族的 6 个
-    调用点根本不经过它，于是 EG-09b 的 `org-denied` 契约对它们从未生效。
+    `_prepare_organization_image_egress:141-142` already has this verdict, but the 6 call sites of the grid family
+    never go through it, so the `org-denied` contract of EG-09b never took effect for them.
     """
 
     from novelvideo.generators.nanobanana_grid import NanoBananaGridGenerator
@@ -269,7 +269,7 @@ def test_organization_grid_generator_denies_direct_provider_at_construction() ->
 
 
 def test_platform_grid_generator_keeps_direct_providers() -> None:
-    """平台/个人身份下 direct provider 行为零变化——deny 只对组织生效。"""
+    """Under platform/personal identities the direct provider behavior is unchanged -- deny only applies to organizations."""
 
     from novelvideo.generators.nanobanana_grid import NanoBananaGridGenerator
 
@@ -284,7 +284,7 @@ def test_platform_grid_generator_keeps_direct_providers() -> None:
     assert bare.provider == "google"
 
 
-# --- 块 ②③④：6 个入口都要 claim / 换凭证 / complete ---------------------------------
+# --- Blocks 2/3/4: all 6 entry points must claim / swap credentials / complete ------------
 
 
 async def _drive_generate_grid(generator, tmp_path):
@@ -292,7 +292,7 @@ async def _drive_generate_grid(generator, tmp_path):
         beats=[
             {
                 "beat_number": 1,
-                "visual_description": "空镜",
+                "visual_description": "empty shot",
                 "detected_identities": ["__NO_CHARACTER__"],
             }
         ],
@@ -318,7 +318,7 @@ async def _drive_reformat_sketch(generator, tmp_path):
 
 async def _drive_generate_action_grid(generator, tmp_path):
     return await generator.generate_action_grid(
-        action_description="一段连续动作",
+        action_description="A continuous action",
         character_map={},
         style="chinese_period_drama",
         output_path=str(tmp_path / "action.png"),
@@ -330,7 +330,7 @@ async def _drive_render_single_panel(generator, tmp_path):
     sketch.write_bytes(_png_bytes())
     return await generator._render_single_panel_gemini(
         sketch_path=str(sketch),
-        prompt="渲染这一格",
+        prompt="Render this panel",
         output_path=str(tmp_path / "panel.png"),
     )
 
@@ -341,16 +341,16 @@ async def _drive_upscale(generator, tmp_path):
     return await generator.upscale_with_nanobanana(
         input_path=str(source),
         output_path=str(tmp_path / "upscaled.png"),
-        original_prompt="原始提示词",
+        original_prompt="Original prompt",
     )
 
 
 async def _drive_single_preview(generator, tmp_path):
     return await generator.generate_single_preview(
-        prompt="风格实验",
+        prompt="Style experiment",
         style_config={
-            "style_instructions": "水墨",
-            "avoid_instructions": "避免文字",
+            "style_instructions": "ink wash",
+            "avoid_instructions": "avoid text",
         },
         output_path=str(tmp_path / "preview.png"),
     )
@@ -406,17 +406,17 @@ async def test_grid_family_organization_call_claims_resolves_and_completes(
     assert harness.operation_port.completed_refs[0].startswith("image:sha256:")
 
 
-# --- 块 ②：平台分支必须逐字节透传 ---------------------------------------------------
+# --- Block 2: the platform branch must pass through byte for byte ---------------------------
 
 
 @pytest.mark.asyncio
 async def test_platform_grid_call_passes_through_the_leaf_unchanged(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """无组织身份时，叶子收到的实参必须与改动前一致——不传 trace、不传 egress_context。
+    """Without an organization identity, the arguments received by the leaf must be identical to before -- no trace, no egress_context.
 
-    `tests/test_newapi_image_gateway.py` 有 13 处直调叶子且没注册 egress 端口，
-    这条断言保证包装函数不会把它们拖下水。
+    `tests/test_newapi_image_gateway.py` calls the leaf directly in 13 places without registering an egress port;
+    this assertion guarantees the wrapper does not drag them in.
     """
 
     from novelvideo.generators import nanobanana_grid
@@ -441,16 +441,16 @@ async def test_platform_grid_call_passes_through_the_leaf_unchanged(
     assert captured[0]["base_url"] == "https://poison.invalid/v1"
 
 
-# --- 块 ③：同 envelope 内两次同 capability 不得撞键 -----------------------------------
+# --- Block 3: two calls with the same capability in one envelope must not collide ----------
 
 
 @pytest.mark.asyncio
 async def test_two_calls_in_one_envelope_do_not_collide(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """`business_task_id` 硬编码成 `envelope_id` 时，同 envelope 的第二次调用会撞键。
+    """When `business_task_id` is hardcoded to `envelope_id`, the second call in the same envelope collides on the key.
 
-    `_render_single_panel_gemini` 用 `asyncio.gather` 扇出 N 路，正踩这个。
+    `_render_single_panel_gemini` fans out N paths with `asyncio.gather`, which hits exactly this.
     """
 
     context = _egress_context(kind="organization")
@@ -467,17 +467,17 @@ async def test_two_calls_in_one_envelope_do_not_collide(
     assert len(harness.operation_port.completed_refs) == 2
 
 
-# --- 块 ⑤：`_generate_image` 的 ambient 漏洞 -----------------------------------------
+# --- Block 5: the ambient hole in `_generate_image` -------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_generate_image_forwards_ambient_organization_context_to_the_leaf(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """只有 ambient 组织身份时，转发给叶子的 `egress_context=` 不能是 None。
+    """With only an ambient organization identity, the `egress_context=` forwarded to the leaf must not be None.
 
-    否则参考图中继静默走平台分支，而不是 `relay_tenant_image_bytes_from_context`。
-    claim 本身没漏（`_prepare_organization_image_egress` 内部自己回落），漏的是中继身份。
+    Otherwise the reference-image relay silently takes the platform branch instead of `relay_tenant_image_bytes_from_context`.
+    The claim itself does not leak (`_prepare_organization_image_egress` falls back internally); what leaks is the relay identity.
     """
 
     from novelvideo.generators import nanobanana_grid

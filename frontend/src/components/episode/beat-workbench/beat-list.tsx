@@ -14,7 +14,7 @@ interface BeatListProps {
   onSelect: (beatNum: number) => void;
 }
 
-/** Left-column beat list. Master-detail navigator for 镜头 tab. */
+/** Left-column beat list. Master-detail navigator for the Shots tab. */
 export function BeatList({ beats, states, selected, onSelect }: BeatListProps) {
   const { t } = useTranslation();
   return (

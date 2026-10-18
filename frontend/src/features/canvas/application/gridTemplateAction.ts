@@ -3,9 +3,9 @@
 import { type FreezoneTemplateEditMode } from '@/api/ops';
 
 /**
- * 宫格模板动作 key。两个视图共用：工作流工具条「九宫格」下拉、故事板详情工具条
- * 「宫格模板」下拉，选中后都走同一条「先建功能节点 → ↑ 才提交」的交互
- * （见 {@link ../application/assetBoardImageOps#spawnAssetBoardImageOpNode}）。
+ * Grid template action key. Shared by the two views: the workflow toolbar's "3x3 grid" dropdown and the storyboard detail toolbar's
+ * "Grid templates" dropdown; after selection both go through the same "build a feature node first -> only submit with the up button" interaction
+ * (see {@link ../application/assetBoardImageOps#spawnAssetBoardImageOpNode}).
  */
 export type GridActionKey =
   | 'multiCameraGrid'
@@ -32,7 +32,7 @@ export const GRID_ACTION_MODE_MAP: Record<GridActionKey, FreezoneTemplateEditMod
   frameProjection5sEarlier: 'image_projection_before_5s',
 };
 
-/** 是否该图片模型支持 quality 参数（宫格活价查询需要按模型带上正确的 params）。 */
+/** Whether the image model supports the quality parameter (the grid live-price query needs to carry the right params per model). */
 export function imageModelSupportsQuality(apiModel: string | null | undefined): boolean {
   const normalized = String(apiModel ?? '').trim().toLowerCase();
   return (

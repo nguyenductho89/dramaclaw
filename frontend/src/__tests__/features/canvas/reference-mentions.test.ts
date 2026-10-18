@@ -8,74 +8,74 @@ import {
 } from "@/features/canvas/nodes/referenceMentions";
 
 const imageFamily = (prevIds: string[], nextIds: string[]) => ({
-  prefix: "图片",
+  prefix: "image",
   prevIds,
   nextIds,
 });
 
 describe("remapReferenceMentions", () => {
   it("renumbers a mention when an earlier reference is removed", () => {
-    // 回归用例:引用 [A, B],prompt 里 @图片2(→B);删掉 A 后 B 变图片1,
-    // @图片2 应跟着变成 @图片1。
-    const out = remapReferenceMentions("让 @图片2 动起来", [
+    // Regression case: references [A, B], the prompt has @image2 (→B); after A is deleted B becomes image1,
+    // and @image2 should follow and become @image1.
+    const out = remapReferenceMentions("make @image2 move", [
       imageFamily(["A", "B"], ["B"]),
     ]);
-    expect(out).toBe("让 @图片1 动起来");
+    expect(out).toBe("make @image1 move");
   });
 
   it("drops a mention whose referenced node was removed (with trailing space)", () => {
-    const out = remapReferenceMentions("先 @图片1 再 @图片2 收尾", [
+    const out = remapReferenceMentions("first @image1 then @image2 finish", [
       imageFamily(["A", "B"], ["B"]),
     ]);
-    // A(图片1) 被删 → 去掉「@图片1 」;B 从图片2 变图片1。
-    expect(out).toBe("先 再 @图片1 收尾");
+    // A (image1) is deleted → remove "@image1 "; B goes from image2 to image1.
+    expect(out).toBe("first then @image1 finish");
   });
 
   it("follows nodes through a manual reorder", () => {
-    const out = remapReferenceMentions("@图片1 和 @图片2", [
+    const out = remapReferenceMentions("@image1 and @image2", [
       imageFamily(["A", "B"], ["B", "A"]),
     ]);
-    // A: 图片1→图片2;B: 图片2→图片1。
-    expect(out).toBe("@图片2 和 @图片1");
+    // A: image1→image2; B: image2→image1.
+    expect(out).toBe("@image2 and @image1");
   });
 
   it("leaves mentions untouched when a new reference is appended", () => {
-    const out = remapReferenceMentions("用 @图片1", [
+    const out = remapReferenceMentions("use @image1", [
       imageFamily(["A"], ["A", "C"]),
     ]);
-    expect(out).toBe("用 @图片1");
+    expect(out).toBe("use @image1");
   });
 
   it("handles multi-digit numbering without cross-token collisions", () => {
     const prev = ["n1", "n2", "n3"];
-    const next = ["n3", "n1", "n2"]; // 每个都右移一位、首位回到第一
-    const out = remapReferenceMentions("@图片1 @图片2 @图片3", [
+    const next = ["n3", "n1", "n2"]; // each shifts right by one, the last returns to first
+    const out = remapReferenceMentions("@image1 @image2 @image3", [
       imageFamily(prev, next),
     ]);
     // n1:1→2, n2:2→3, n3:3→1
-    expect(out).toBe("@图片2 @图片3 @图片1");
+    expect(out).toBe("@image2 @image3 @image1");
   });
 
   it("remaps image and audio families independently", () => {
-    const out = remapReferenceMentions("看 @图片2 听 @音频2", [
+    const out = remapReferenceMentions("look @image2 listen @audio2", [
       imageFamily(["i1", "i2"], ["i2"]),
-      { prefix: "音频", prevIds: ["a1", "a2"], nextIds: ["a2"] },
+      { prefix: "audio", prevIds: ["a1", "a2"], nextIds: ["a2"] },
     ]);
-    expect(out).toBe("看 @图片1 听 @音频1");
+    expect(out).toBe("look @image1 listen @audio1");
   });
 
   it("leaves out-of-range / untracked numbers as-is", () => {
-    const out = remapReferenceMentions("@图片9 保留", [
+    const out = remapReferenceMentions("@image9 keep", [
       imageFamily(["A", "B"], ["B"]),
     ]);
-    expect(out).toBe("@图片9 保留");
+    expect(out).toBe("@image9 keep");
   });
 
   it("returns prompt unchanged when order did not change", () => {
-    const out = remapReferenceMentions("@图片1 @图片2", [
+    const out = remapReferenceMentions("@image1 @image2", [
       imageFamily(["A", "B"], ["A", "B"]),
     ]);
-    expect(out).toBe("@图片1 @图片2");
+    expect(out).toBe("@image1 @image2");
   });
 });
 

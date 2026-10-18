@@ -174,19 +174,17 @@ const AGE_GROUP_OPTIONS = [
   { value: "elder", labelKey: "characters.ageGroups.elder" },
 ] as const;
 
-// value 是存进角色档案、后端和提示词都认的原值，只有 labelKey 跟界面语言走。
-// i18n-exempt-start
+// value is the raw value stored in the character profile and understood by the backend and prompts; only labelKey follows the UI language.
 const GENDER_OPTIONS = [
-  { value: "男", labelKey: "characters.genders.male" },
-  { value: "女", labelKey: "characters.genders.female" },
+  { value: "male", labelKey: "characters.genders.male" },
+  { value: "female", labelKey: "characters.genders.female" },
+  { value: "other", labelKey: "characters.genders.other" },
 ] as const;
 
 const ROLE_OPTIONS = [
-  { value: "主角", labelKey: "characters.roles.lead" },
-  { value: "配角", labelKey: "characters.roles.supporting" },
-  { value: "反派", labelKey: "characters.roles.villain" },
+  { value: "protagonist", labelKey: "characters.roles.lead" },
+  { value: "supporting", labelKey: "characters.roles.supporting" },
 ] as const;
-// i18n-exempt-end
 
 const ATTEMPT_WARN_THRESHOLD = 3;
 const CHARACTER_SELECT_CONTENT_CLASS =
@@ -818,15 +816,13 @@ function CharacterHeaderRow({
   return (
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1 flex flex-wrap items-center gap-2">
-        {/* 比的是档案里存的原值，见 GENDER_OPTIONS。 */}
-        {/* i18n-exempt-start */}
-        {character.gender === "男" && (
+        {/* Compares the raw value stored in the profile, see GENDER_OPTIONS. */}
+        {character.gender === "male" && (
           <Mars className="size-4 text-sky-400" aria-hidden />
         )}
-        {character.gender === "女" && (
+        {character.gender === "female" && (
           <Venus className="size-4 text-pink-400" aria-hidden />
         )}
-        {/* i18n-exempt-end */}
         <h2 className="truncate text-[19px] font-semibold tracking-tight text-foreground">
           {character.name}
         </h2>
@@ -1253,7 +1249,7 @@ function DetailsFormCard({
               value={aliases}
               onChange={(e) => setAliases(e.target.value)}
               onBlur={handleBlurAliases}
-              placeholder={`${t("characters.aliasesPlaceholder")}，${t(
+              placeholder={`${t("characters.aliasesPlaceholder")}, ${t(
                 "characters.basics.aliasesHint",
               )}`}
               className={CHARACTER_INPUT_CLASS}
@@ -2279,7 +2275,7 @@ function IdentityCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Rename identity (编辑 identity_name) */}
+      {/* Rename identity (edit identity_name) */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent
           className={cn(CHARACTER_DIALOG_CONTENT_CLASS, "sm:max-w-md")}
@@ -2909,7 +2905,7 @@ function AddCharacterDialog({
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-/** 角色提取的展示态：活跃与否取自任务中心，进度/步骤文案优先取自 SSE。 */
+/** Display state of character extraction: whether it is active comes from the task center, progress/step text preferably from SSE. */
 interface ExtractionState {
   active: boolean;
   progress: number;
@@ -3170,7 +3166,7 @@ function CharactersPageContent() {
       : null);
 
   const [selectedName, setSelectedName] = useState<string | null>(null);
-  // loading 绑任务中心而不是组件本地 state：刷新后后台还在跑的提取任务仍能认出来。
+  // Loading is bound to the task center rather than component-local state: extraction tasks still running in the background are recognized after a refresh.
   const buildActivity = useTaskActivity("build_characters", { episode: 0 });
   const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -3180,7 +3176,7 @@ function CharactersPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [imageModel, setImageModel] = useState("");
 
-  // SSE 只用来拿细粒度进度/步骤文案；活跃与否由任务中心裁决。
+  // SSE is only used for fine-grained progress/step text; whether it is active is decided by the task center.
   const taskStream = useTaskStream({
     taskType: "build_characters",
     project,
@@ -3191,12 +3187,12 @@ function CharactersPageContent() {
 
   const extraction: ExtractionState = {
     active: buildActivity.isActive,
-    // SSE 还没吐出第一帧时退回任务中心记录的进度，避免刷新后进度条从 0 重来。
+    // Before the first SSE frame arrives, fall back to the progress recorded by the task center, so the progress bar does not restart from 0 after a refresh.
     progress: taskStream.status === "idle" ? buildActivity.progress : taskStream.progress,
     label: taskStream.currentTask || buildActivity.currentTask,
   };
-  // 补水完成前 isActive 还不可信，按钮先禁用，避免硬刷新后重复入队。
-  // 提取中的进度条/空态不看这个标志，否则补水那一瞬会闪一下假的「提取中」。
+  // Before hydration finishes isActive is not trustworthy yet, so the button is disabled first to avoid duplicate enqueues after a hard refresh.
+  // The extraction progress bar / empty state do not look at this flag, otherwise a false "extracting" would flash during hydration.
   const rebuildDisabled =
     buildChars.isPending || buildActivity.isActive || buildActivity.isRestoring;
 
@@ -3402,9 +3398,9 @@ function CharactersPageContent() {
   );
 }
 
-// 导出只为页面级网络合同测试（``characters-identities-contract.test.tsx``）：那条断言
-// 要的是"整页渲染出来一共发了哪些请求"，hook 单测覆盖不到组合层重新接回全角色
-// identities 扇出的情况。路由本身仍只用下面那个 ``Route``。
+// Exported only for the page-level network contract test (``characters-identities-contract.test.tsx``): that assertion
+// wants "which requests the whole rendered page sends in total", which hook unit tests cannot cover when the composition layer
+// re-wires the all-character identities fan-out. The route itself still only uses the ``Route`` below.
 export function CharactersPage() {
   const { project } = Route.useParams();
   // `TaskControllerProvider` wraps the page so `useTaskController` on

@@ -22,9 +22,9 @@ CANVAS_HISTORY_TS_FORMAT = "%Y%m%d_%H%M%S_%f"
 HISTORY_RETENTION_LIMIT = 100
 IDEMPOTENCY_LIMIT = 50
 IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
-# 「最近有别人写过这张画布」的提示窗口(秒)。取值与 EE 的租约 TTL 对齐:一个写者
-# 持有租约期间他的 `updated_at` 一定落在这个窗口里,所以窗口口径 ≈「他还持着」,
-# 而窗口过后提示自然消失,不需要任何一次额外查询(§3.9 O2 要求零额外往返)。
+# Window (seconds) for the "someone else recently wrote this canvas" hint. The value is aligned with the EE lease TTL: while a writer
+# holds the lease, his `updated_at` always falls inside this window, so the window approximates "he is still holding it",
+# and once the window passes the hint disappears on its own, without any extra query (Section 3.9 O2 requires zero extra round trips).
 CANVAS_EDITING_HINT_WINDOW_SECONDS = 60
 CANVAS_PAYLOAD_SIZE_LIMIT_BYTES = int(
     os.environ.get("FREEZONE_CANVAS_PAYLOAD_LIMIT_BYTES") or 5 * 1024 * 1024
@@ -62,14 +62,14 @@ def canvas_editing_hint(
     viewer_id: str,
     now: datetime | None = None,
 ) -> str | None:
-    """「最近 N 秒内有另一个人写过这张画布」——没有就返回 `None`（§3.9 O2）。
+    """Return a hint if another person wrote this canvas within the last N seconds, else `None` (Section 3.9 O2).
 
-    读路径**不许新增数据库往返**,所以这条提示只用读画布时已经在手里的东西:
-    载荷自己的 `updated_by` / `updated_at`。它回答的是「谁刚写过」而不是
-    「谁此刻持着写锁」——两者在 CE(没有租约表)与 EE 里是同一段代码、同一个口径,
-    代价是提示的消失点从「释放锁」变成「窗口过去」(TCP-P40)。
+    The read path **must not add database round trips**, so this hint only uses what is already in hand when the canvas is read:
+    the payload's own `updated_by` / `updated_at`. It answers "who just wrote" rather than
+    "who holds the write lock right now" -- the two are the same code and the same semantics in CE (no lease table) and EE,
+    and the cost is that the hint disappears when the window passes instead of when the lock is released (TCP-P40).
 
-    看不懂的时间戳一律当成「没有提示」:这是个 UI 提示,不是判据,宁可不显示。
+    Unparseable timestamps always count as "no hint": this is a UI hint, not a criterion, and it is better not to show it.
     """
 
     if not isinstance(payload, dict):
@@ -85,8 +85,8 @@ def canvas_editing_hint(
     except ValueError:
         return None
     reference = now or datetime.now(timezone.utc)
-    # 多 Pod 之间的时钟偏移可以让 `updated_at` 落在「未来」几秒。用绝对值兜住,
-    # 否则一台机器快两秒就再也不会给出提示了。
+    # Clock skew between pods can put `updated_at` a few seconds in the "future". Cover it with the absolute value,
+    # otherwise a machine two seconds fast would never produce the hint again.
     age = abs((reference - updated_at).total_seconds())
     if age > CANVAS_EDITING_HINT_WINDOW_SECONDS:
         return None
@@ -237,15 +237,15 @@ def atomic_write_json(
     *,
     fence: Callable[[], None] | None = None,
 ) -> None:
-    """写临时文件 → fsync → rename。`fence` 挂在 rename 之前的最后一刻。
+    """Write a temp file -> fsync -> rename. `fence` is hooked in at the last moment before the rename.
 
-    `os.replace` 是这条路径上唯一不可逆的一步:过了它,别人的内容就被覆盖了,
-    而且覆盖是原子的、没有中间态可以回退。所以「我此刻是否仍然独占这张画布」
-    这个问题必须在**它的前一行**问,而不是函数开头(那时距离落盘还有一整段
-    可能跑几百毫秒的 I/O)、也不是它之后(那时问了也没用)。
+    `os.replace` is the only irreversible step on this path: once past it, someone else's content has been overwritten,
+    and the overwrite is atomic with no intermediate state to roll back to. So the question "am I still the exclusive owner of this canvas right now"
+    must be asked on **the line right before it**, not at the start of the function (a whole stretch of I/O that may take hundreds of
+    milliseconds remains before the data hits disk), and not after it (asking then is useless).
 
-    `fence` 抛异常 = 这次写没有发生:正式文件一个字节没动,临时文件由 `finally`
-    清掉。调用方拿到的是与「一开始就没拿到锁」完全同类的失败(§3.3.3)。
+    If `fence` raises, this write did not happen: the real file is untouched by a single byte and the temp file is
+    cleaned up by `finally`. The caller gets a failure of exactly the same kind as "never got the lock in the first place" (Section 3.3.3).
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
@@ -791,13 +791,13 @@ def save_canvas(
 
 
 async def save_canvas_async(*args, **kwargs) -> CanvasSaveResult:
-    """在线程中执行同步画布保存，避免阻塞调用方的事件循环。
+    """Run the synchronous canvas save in a thread to avoid blocking the caller's event loop.
 
-    `save_canvas` 会等待当前配置的画布写互斥，并执行同步文件 I/O；互斥的等待
-    策略及作用范围由注入的 `CanvasWriteMutex` 实现决定。
+    `save_canvas` waits for the currently configured canvas write mutex and performs synchronous file I/O; the mutex wait
+    policy and scope are determined by the injected `CanvasWriteMutex` implementation.
 
-    参数、返回值和异常均由 `save_canvas` 透传。事件循环上的调用方应 await
-    本函数；同步调用方可直接调用 `save_canvas`。
+    Arguments, return value and exceptions are all passed through from `save_canvas`. Callers on an event loop should await
+    this function; synchronous callers can call `save_canvas` directly.
     """
 
     return await call_blocking(save_canvas, *args, **kwargs)
@@ -843,10 +843,10 @@ def soft_delete_canvas(
         deleted_dir = canvas_deleted_dir_for_path(path)
         deleted_dir.mkdir(parents=True, exist_ok=True)
         target = deleted_dir / canvas_deleted_filename(existing)
-        # 这一次落盘不走 `atomic_write_json`,所以围栏要在这里**显式**再挂一道:
-        # `path.replace(target)` 同样是不可逆的一步(§3.3.3)。下面的墓碑跟在它
-        # 之后,已经过了不可逆点,再挂围栏只会把「删成了但没写墓碑」变成
-        # 「删成了且抛异常」,所以那一处故意不挂。
+        # This write does not go through `atomic_write_json`, so the fence must be hooked in here **explicitly** as well:
+        # `path.replace(target)` is likewise an irreversible step (Section 3.3.3). The tombstone below follows it,
+        # having already passed the irreversible point; hooking a fence there would only turn "deleted but tombstone not written" into
+        # "deleted and raised", so that spot is deliberately left unfenced.
         guard.reassert()
         path.replace(target)
         tombstone = path.with_name(f"{path.stem}.deleted.json")

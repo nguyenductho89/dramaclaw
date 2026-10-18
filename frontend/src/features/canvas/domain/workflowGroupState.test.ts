@@ -27,7 +27,7 @@ describe('workflowGroupState', () => {
     ]);
 
     expect(state.status).toBe('not_started');
-    expect(state.primaryLabel).toBe('运行');
+    expect(state.primaryLabel).toBe('Run');
     expect(state.completedCount).toBe(0);
     expect(state.totalCount).toBe(2);
     expect(state.canContinue).toBe(true);
@@ -41,7 +41,7 @@ describe('workflowGroupState', () => {
     ]);
 
     expect(state.status).toBe('partial');
-    expect(state.primaryLabel).toBe('继续运行');
+    expect(state.primaryLabel).toBe('Continue');
     expect(state.completedCount).toBe(1);
     expect(state.totalCount).toBe(2);
     expect(state.canContinue).toBe(true);
@@ -55,7 +55,7 @@ describe('workflowGroupState', () => {
     ]);
 
     expect(state.status).toBe('completed');
-    expect(state.primaryLabel).toBe('已完成');
+    expect(state.primaryLabel).toBe('Completed');
     expect(state.completedCount).toBe(2);
     expect(state.totalCount).toBe(2);
     expect(state.canContinue).toBe(false);
@@ -69,7 +69,7 @@ describe('workflowGroupState', () => {
     ]);
 
     expect(state.status).toBe('running');
-    expect(state.primaryLabel).toBe('运行中');
+    expect(state.primaryLabel).toBe('Running');
     expect(state.canStop).toBe(true);
     expect(state.canContinue).toBe(false);
     expect(state.canRegenerate).toBe(false);
@@ -111,7 +111,7 @@ describe('workflowGroupState', () => {
       node('input', CANVAS_NODE_TYPES.textAnnotation, {
         workflowCatalog: undefined,
         workflowCatalogRole: 'user_input',
-        content: '用户输入',
+        content: 'User input',
       }),
     ]);
 

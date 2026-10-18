@@ -13,11 +13,11 @@ describe('freezone view mode persistence', () => {
     window.localStorage.clear();
   });
 
-  it('默认返回 workflow', () => {
+  it('returns workflow by default', () => {
     expect(readStoredViewMode()).toBe('workflow');
   });
 
-  it('写入 board 后能读回；写入 workflow 亦然', () => {
+  it('reads back after writing board; the same for workflow', () => {
     writeStoredViewMode('board');
     expect(window.localStorage.getItem(FREEZONE_VIEW_MODE_KEY)).toBe('board');
     expect(readStoredViewMode()).toBe('board');
@@ -25,7 +25,7 @@ describe('freezone view mode persistence', () => {
     expect(readStoredViewMode()).toBe('workflow');
   });
 
-  it('localStorage 里是脏值时回落 workflow', () => {
+  it('falls back to workflow when localStorage holds a dirty value', () => {
     window.localStorage.setItem(FREEZONE_VIEW_MODE_KEY, 'banana');
     expect(readStoredViewMode()).toBe('workflow');
   });

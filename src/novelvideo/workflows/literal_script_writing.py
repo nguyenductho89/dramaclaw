@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -37,23 +38,19 @@ from novelvideo.utils.source_language import (
     detect_asset_language,
 )
 
-DIALOGUE_RE = re.compile(r"^(?P<speaker>[^：:]{1,24})[：:](?P<speech>.+)$")
+_ALTERNATIVE_RE = re.compile(r"\b(?:either|or|hoặc)\b", re.IGNORECASE)
+DIALOGUE_RE = re.compile(r"^(?P<speaker>[^:]{1,24}):(?P<speech>.+)$")
 
 CONTENT_FILTER_HINT_TERMS: dict[str, tuple[str, ...]] = {
-    "暴力/武器": (
-        "血",
-        "流血",
-        "滴血",
-        "鲜血",
-        "尸体",
-        "死亡",
-        "杀",
-        "刺",
-        "捅",
-        "刀",
-        "匕首",
-        "枪",
-        "爆炸",
+    "violence/weapons": (
+        "máu",
+        "chảy máu",
+        "xác chết",
+        "giết",
+        "đâm",
+        "dao găm",
+        "súng",
+        "vụ nổ",
         "blood",
         "bloody",
         "bleeding",
@@ -71,11 +68,10 @@ CONTENT_FILTER_HINT_TERMS: dict[str, tuple[str, ...]] = {
         "shot",
         "explosion",
     ),
-    "自伤/生命威胁": (
-        "自杀",
-        "我不能死",
-        "不想死",
-        "去死",
+    "self-harm/life threat": (
+        "tự tử",
+        "không muốn chết",
+        "đi chết đi",
         "suicide",
         "kill myself",
         "i can't die",
@@ -84,14 +80,12 @@ CONTENT_FILTER_HINT_TERMS: dict[str, tuple[str, ...]] = {
         "do not want to die",
         "go die",
     ),
-    "胁迫/虐待": (
-        "清除",
-        "处决",
-        "强迫",
-        "强喂",
-        "掐住",
-        "压制",
-        "虐待",
+    "coercion/abuse": (
+        "ép buộc",
+        "bóp cổ",
+        "tra tấn",
+        "hành quyết",
+        "ngược đãi",
         "force",
         "forced",
         "coerce",
@@ -105,10 +99,10 @@ CONTENT_FILTER_HINT_TERMS: dict[str, tuple[str, ...]] = {
         "execute",
         "execution",
     ),
-    "性/裸露": (
-        "性侵",
-        "裸露",
-        "裸体",
+    "sexual/nudity": (
+        "xâm hại tình dục",
+        "khỏa thân",
+        "hiếp dâm",
         "nude",
         "naked",
         "sexual assault",
@@ -134,7 +128,7 @@ def _content_filter_hint_matches(text: str) -> list[str]:
             if normalized and normalized in haystack:
                 category_matches.append(term)
         if category_matches:
-            matches.append(f"{category}: " + "、".join(dict.fromkeys(category_matches)))
+            matches.append(f"{category}: " + ", ".join(dict.fromkeys(category_matches)))
     return matches
 
 
@@ -159,7 +153,7 @@ class SceneBlock:
 
 @dataclass
 class SceneBlockContext:
-    """场景块级预编译候选集。"""
+    """Block-level precompiled candidate set for a scene block."""
 
     candidate_identity_ids: set[str] = field(default_factory=set)
     candidate_prop_ids: set[str] = field(default_factory=set)
@@ -178,27 +172,27 @@ class SceneLineContext:
 
 
 class LiteralBeatMetaOutput(BaseModel):
-    """逐行剧本模式的 LLM 输出。"""
+    """LLM output of the line-by-line script mode."""
 
     audio_type: str = Field(
         default="silence",
-        description="当前行对应的音频类型；silence=无朗读画面 beat，narration=解说/旁白，dialogue=明确说话人台词",
+        description="Audio type of the current line; silence = picture beat with no spoken audio, narration = commentary/voice-over, dialogue = line with an explicit speaker",
     )
     speaker: str = Field(
         default="",
-        description="当前行说话人标签；仅 dialogue 时填写。角色可填 identity_id 或剧本里的角色标签，非角色发声源也可保留原标签",
+        description="Speaker label of the current line; fill only for dialogue. For characters use an identity_id or the character label in the script; non-character sound sources may keep the original label",
     )
     speaker_kind: str = Field(
         default="character",
-        description="speaker 类型；character=物理角色或普通角色，non_character=广播/画外音/字幕/屏幕等非角色发声源",
+        description="Speaker type; character = physical or ordinary character, non_character = non-character sound source such as broadcast/voice-over/subtitle/screen",
     )
     visual_description: str = Field(
         min_length=5,
-        description="只描述当前这一行对应的可见画面，尽量忠实保留原行的画面性质",
+        description="Describe only the visible picture of the current line, keeping the nature of the original line as faithfully as possible",
     )
     scene_id: str = Field(
         default="",
-        description="兜底 scene_id：仅在系统未锁定当前场次 scene_id 时使用。必须从本集场景菜单中精确选择（字符串完全相等），否则留空。",
+        description="Fallback scene_id: use only when the system has not locked the scene_id of the current scene. It must be chosen exactly (string-equal) from this episode's scene menu, otherwise leave it empty.",
     )
 
     @field_validator("scene_id")
@@ -218,9 +212,9 @@ class LiteralBeatMetaOutput(BaseModel):
         visual_description = cls._validate_marked_text(
             value, info, field_name="visual_description"
         )
-        if "或者" in visual_description or "二选一" in visual_description:
+        if _ALTERNATIVE_RE.search(visual_description):
             raise ValueError(
-                "visual_description 必须是确定画面，不能出现“或者 / 二选一”等备选表达"
+                "visual_description must be one definite picture and must not contain alternatives such as 'or / either'"
             )
         return visual_description
 
@@ -247,7 +241,7 @@ class LiteralBeatMetaOutput(BaseModel):
             )
             if invalid_identity_ids:
                 raise ValueError(
-                    f"{field_name} 出现非法角色标记: {invalid_identity_ids}；{{{{}}}} 只能用于身份菜单中的 identity_id"
+                    f"{field_name} contains illegal character markers: {invalid_identity_ids}; {{{{}}}} may only be used for identity_ids in the identity menu"
                 )
 
         prop_marker_ids = extract_prop_ids_from_markers(text, strict=True)
@@ -257,13 +251,13 @@ class LiteralBeatMetaOutput(BaseModel):
             )
             if invalid_prop_ids:
                 raise ValueError(
-                    f"{field_name} 出现非法道具标记: {invalid_prop_ids}；[[ ]] 只能用于道具菜单中的 prop_id"
+                    f"{field_name} contains illegal prop markers: {invalid_prop_ids}; [[ ]] may only be used for prop_ids in the prop menu"
                 )
 
         for identity_id in sorted(valid_identity_ids):
             if identity_id in text and f"{{{{{identity_id}}}}}" not in text:
                 raise ValueError(
-                    f"{field_name} 中出现裸 identity_id '{identity_id}'，必须用 {{{{{identity_id}}}}} 包裹"
+                    f"{field_name} contains a bare identity_id '{identity_id}'; it must be wrapped as {{{{{identity_id}}}}}"
                 )
 
         return text
@@ -273,7 +267,7 @@ class LiteralBeatMetaOutput(BaseModel):
     def validate_audio_type(cls, value: str) -> str:
         audio_type = (value or "").strip()
         if audio_type not in {"silence", "narration", "dialogue"}:
-            raise ValueError("audio_type 必须是 silence/narration/dialogue")
+            raise ValueError("audio_type must be silence/narration/dialogue")
         return audio_type
 
     @field_validator("speaker_kind")
@@ -281,87 +275,87 @@ class LiteralBeatMetaOutput(BaseModel):
     def validate_speaker_kind(cls, value: str) -> str:
         speaker_kind = (value or "").strip()
         if speaker_kind not in {"character", "non_character"}:
-            raise ValueError("speaker_kind 只能是 character 或 non_character")
+            raise ValueError("speaker_kind must be character or non_character")
         return speaker_kind
 
     @model_validator(mode="after")
     def validate_dialogue_speaker(self) -> "LiteralBeatMetaOutput":
         if self.audio_type == "dialogue" and not (self.speaker or "").strip():
-            raise ValueError("audio_type=dialogue 时必须填写 speaker")
+            raise ValueError("speaker must be filled in when audio_type=dialogue")
         if self.audio_type in {"silence", "narration"}:
             self.speaker = ""
             self.speaker_kind = "character"
         return self
 
 
-LITERAL_SCRIPT_PROMPT = """# 你是短剧剧本逐行分镜标注师
+LITERAL_SCRIPT_PROMPT = """# You are a line-by-line storyboard annotator for short-drama screenplays
 
-你的任务不是改写整集，而是严格围绕“当前这一行剧本”补全 2.0 beat 元数据。
+Your task is not to rewrite the whole episode, but to complete the 2.0 beat metadata strictly around "the current line of the script".
 
-## 核心原则
-- 一行对应一个 beat
-- 不改写原行，不合并多行，不总结剧情
-- 你需要同时判断并输出 `audio_type` / `speaker` / `speaker_kind`；这些判断必须严格服从原行文字，不允许凭常识脑补
-- `visual_description` 的职责是最大限度还原当前这一行剧本已经给出的可见画面信息，不替后续分镜阶段做导演决策
-- 优先忠实保留原行的画面性质：如果原行本身就是复合画面、屏幕画面、回忆叠化、分屏直播、监控视角等表达，不要为了“统一成单镜头”而强行改写
-- 如果一行前缀是镜头/机位/画面提示，不要把它误判成 speaker；只有明确“人物名：台词内容”时才判为 dialogue
-- 只在必要时把原行补成更可画的身体动作、姿态、空间关系；不要擅自把原行扩写成新的镜头设计
-- 当前 beat 的场景和时间由当前场次头确定；不要改写场景，不要切换到别的 scene_id
-- 只有物理出场、被拿着、被操作、被看的具名道具，才在 `visual_description` 中用 `[[prop_id]]` 标记
+## Core principles
+- One line = one beat
+- Do not rewrite the original line, do not merge lines, do not summarize the plot
+- You must judge and output `audio_type` / `speaker` / `speaker_kind` together; these judgments must strictly follow the text of the original line and must not be filled in from common sense
+- The job of `visual_description` is to reproduce, as fully as possible, the visible picture information the current line already gives, without making directorial decisions for the later storyboard stage
+- Prefer to faithfully keep the nature of the original line's picture: if the line itself is a composite picture, screen picture, memory dissolve, split-screen live stream, surveillance viewpoint, etc., do not force it into a "single shot" by rewriting
+- If a line starts with a shot/camera-position/picture cue, do not misjudge it as a speaker; judge it as dialogue only when it is clearly "character name: spoken line"
+- Only when necessary, flesh out the original line into more drawable body actions, postures and spatial relationships; do not arbitrarily expand the original line into a new shot design
+- The scene and time of the current beat are determined by the current scene heading; do not rewrite the scene and do not switch to another scene_id
+- Only named props that physically appear, are held, are operated or are looked at are marked with `[[prop_id]]` in `visual_description`
 
-## visual_description 规则
-- 只描述当前行这一拍真正可见的画面
-- 如果 `audio_type=dialogue`，默认画面主体优先是说话者的说话姿态、表情或动作；只有当原行明确指出另一方反应/动作才是重点时，才转向对方
-- 如果当前行明确写了 `【特写】` / `【第一人称画面】` / `俯拍` / `仰拍` / `空镜` / `黑屏` 等画面提示，`visual_description` 必须原样保留这些提示，不要遗漏，也不要改写成解释性句子
-- 如果原行本身包含复合画面装置或复合表达，可以直接保留这种画面性质，不要强行压成单一镜头
-- visual_description 必须是唯一确定画面；不要写“或者 / 可选 / 二选一 / A 或 B”这类备选表达
-- 不要把多行内容压进这一拍，不要主动补出原行没有的新时间切换、新空间切换或新的镜头编排
-- 不要因为候选菜单里有某个道具/资产，就提前把它写进当前 beat；只有当前行文本明确出现或明确可见时才能写入
-- 对 `抓住/按住/强喂/递交/掐住/扶住/压制` 这类非对称互动，必须写清主动方/被动方和手部几何
-- 如果字段应留空，就直接留空；不要写“理论上应为”“原行未注，留空”这类解释性文字
-- 如果对白行原文只有对白内容、没有括号动作，不要额外发明肢体动作；最多保留“说话 / 看向对方 / 开口”的最低限度说话状态
+## visual_description rules
+- Describe only the picture that is really visible in this beat of the current line
+- If `audio_type=dialogue`, the default subject of the picture is the speaker's speaking posture, expression or action; turn to the other party only when the original line explicitly says the other party's reaction/action is the focus
+- If the current line explicitly contains picture cues such as `[close_up]` / `[first_person]` / `[high_angle]` / `[low_angle]` / `[empty]` / `[black]`, `visual_description` must keep these cues verbatim; do not drop them and do not rewrite them into explanatory sentences
+- If the original line itself contains a composite picture device or composite expression, keep that picture nature directly and do not force it into a single shot
+- visual_description must be one definite picture; do not write alternatives such as "or / optional / either-or / A or B"
+- Do not compress the content of multiple lines into this beat, and do not proactively add new time switches, new space switches or new shot arrangements that the original line does not have
+- Do not write a prop/asset into the current beat early just because it is in the candidate menu; write it only when the current line text explicitly mentions it or it is explicitly visible
+- For asymmetric interactions such as grab / hold down / force-feed / hand over / choke / support / restrain, you must state clearly the active party/passive party and the hand geometry
+- If a field should be left empty, leave it empty directly; do not write explanatory text such as "should theoretically be" or "not noted in the original line, left empty"
+- If a dialogue line contains only the spoken content and no parenthesized action, do not invent additional body actions; at most keep the minimal speaking state of "speaking / looking at the other party / opening the mouth"
 
-## 角色标记规则
-- `visual_description` 中的角色标记使用 `{{identity_id}}`，且优先只给“物理可见且在身份菜单中”的角色
-- 角色标记优先级：
-  1. `dialogue` beat 的 speaker 优先使用 `{{identity_id}}`
-  2. 其余物理可见且在身份菜单中的角色，也应优先使用 `{{identity_id}}`
-  3. 当前动作核心角色优先级高于不重要陪衬角色
-- 如果画面里出现了身份菜单中的已知角色，并且该角色物理可见，`visual_description` 应优先使用 `{{identity_id}}`
-- 背景中清晰可见、但不是主体的已知角色，也应优先使用 `{{identity_id}}`
-- 屏幕、电视、照片、回忆画面中如果呈现的是清晰可见的具体人物，并且上下文能识别为身份菜单里的角色年龄身份，也要使用 `{{identity_id}}`
-- 菜单外角色、路人、泛称角色、只是被提及/想起但没有实际可见画面的人物，不要使用 `{{identity_id}}`
-- `{{}}` 只能用于角色 identity_id；场景名和道具名都不要写进 `{{}}`
+## Character marker rules
+- Character markers in `visual_description` use `{{identity_id}}`, and are given preferentially only to characters who are "physically visible and in the identity menu"
+- Character marker priority:
+    1. The speaker of a `dialogue` beat preferably uses `{{identity_id}}`
+    2. Other physically visible characters in the identity menu should also preferably use `{{identity_id}}`
+    3. Characters at the core of the current action take priority over unimportant supporting characters
+- If a known character from the identity menu appears in the picture and is physically visible, `visual_description` should preferably use `{{identity_id}}`
+- Known characters clearly visible in the background but not the subject should also preferably use `{{identity_id}}`
+- If a screen, TV, photo or memory image shows a clearly visible specific person and the context identifies them as a character age-identity in the identity menu, `{{identity_id}}` must also be used
+- Do not use `{{identity_id}}` for characters outside the menu, passers-by, generic characters, or people who are only mentioned/recalled without an actual visible picture
+- `{{}}` may only be used for character identity_ids; do not put scene names or prop names in `{{}}`
 
-## 道具标记规则
-- `visual_description` 中物理可见、被拿着、被操作、被观看的已知道具，优先使用 `[[prop_id]]`
-- `[[ ]]` 只能用于道具菜单中的 prop_id
-- 不要把角色写进 `[[ ]]`，也不要把道具写进 `{{}}`
-- 道具的状态、摆放关系、谁在拿它，都写进 `visual_description`
+## Prop marker rules
+- Known props that are physically visible, held, operated or watched in `visual_description` preferably use `[[prop_id]]`
+- `[[ ]]` may only be used for prop_ids in the prop menu
+- Do not put characters in `[[ ]]`, and do not put props in `{{}}`
+- The state of a prop, its placement and who is holding it all go into `visual_description`
 
-## audio / speaker 规则
-- 只有明确“已知角色/物理出场人物：台词内容”或等价的明确角色发声表达，才使用 `audio_type=dialogue`
-- 如果原行明确是旁白、解说、画外音、广播、监控室声音、屏幕外发声、非角色发声且需要朗读，使用 `audio_type=narration`，不要输出 `dialogue`
-- 如果是动作描写、环境描写、空镜、画面说明、时间字幕、镜头提示、舞台说明，即使带冒号，也优先判为 `audio_type=silence`
-- `audio_type=dialogue` 时必须填写 `speaker`
-- 如果 `dialogue` 的 speaker 对应身份菜单中的已知角色，`speaker` 优先直接输出对应的 `identity_id`，不要只输出裸角色名
-- `audio_type=narration` 时 `speaker` 留空；广播/画外音/屏幕发声/非角色发声也应归入 narration 并留空 speaker
-- `speaker_kind=non_character` 只用于广播、画外音、字幕、屏幕文字、系统播报等非物理角色发声源
+## audio / speaker rules
+- Use `audio_type=dialogue` only for an explicit "known character / physically present person: spoken line" or an equivalent explicit character utterance
+- If the original line is clearly narration, commentary, voice-over, broadcast, a surveillance-room voice, off-screen sound or a non-character sound source that needs to be read aloud, use `audio_type=narration` and do not output `dialogue`
+- Action descriptions, environment descriptions, empty shots, picture notes, time captions, shot cues and stage directions should preferably be judged as `audio_type=silence` even when they contain a colon
+- `speaker` must be filled in when `audio_type=dialogue`
+- If the speaker of a `dialogue` corresponds to a known character in the identity menu, `speaker` should preferably output the corresponding `identity_id` directly, not just the bare character name
+- When `audio_type=narration`, leave `speaker` empty; broadcast/voice-over/screen sound/non-character sound should also be classified as narration with `speaker` left empty
+- `speaker_kind=non_character` is used only for non-physical-character sound sources such as broadcasts, voice-overs, subtitles, on-screen text and system announcements
 
-## scene / prop 规则
-- 道具只通过 `visual_description` 的 `[[prop_id]]` 表达；`[[prop_id]]` 只能从候选道具菜单里选择
-- 不要编造新 prop_id 或新的 scene_id
+## scene / prop rules
+- Props are expressed only through `[[prop_id]]` in `visual_description`; `[[prop_id]]` may only be chosen from the candidate prop menu
+- Do not invent new prop_ids or new scene_ids
 
-## scene_id 兜底规则（仅在系统未锁定 scene_id 时使用）
-- 系统通常会从“当前场次头”里解析出 scene_id 并在上下文中给出。当“当前 scene_id”已锁定时，`scene_id` 字段必须留空，不要重复输出。
-- 仅当“当前 scene_id: 未锁定”时，你才需要从“本集场景菜单”中**精确**选择一个 scene_id 填入 `scene_id` 字段。
-- 选择依据：当前场次头的地点字段、场次原始标签、当前行 visual_description 的可见空间线索（家门口/电梯/街道/面馆/家中/赛博空间/3D 大屏…）。
-- 必须与本集场景菜单中的某个 scene_id **字符串完全相等**；不要编造新名字、不要做模糊缩写。
-- 如果当前行明确发生在虚空/黑屏/无场景，且菜单里没有对应条目，留空。
+## scene_id fallback rules (use only when the system has not locked the scene_id)
+- The system normally parses the scene_id from the "current scene heading" and gives it in the context. When the "current scene_id" is locked, the `scene_id` field must be left empty; do not output it again.
+- Only when "current scene_id: not locked" do you need to **exactly** choose one scene_id from the "scene menu of this episode" and fill it into the `scene_id` field.
+- Basis for choosing: the location field of the current scene heading, the raw label of the scene, and the visible spatial clues in the current line's visual_description (front door / elevator / street / noodle shop / home / cyberspace / 3D big screen...).
+- It must be **string-equal** to a scene_id in the scene menu of this episode; do not invent new names and do not abbreviate loosely.
+- If the current line explicitly takes place in a void / black screen / no scene and the menu has no matching entry, leave it empty.
 
-## 输出
-- 只输出当前这一行的结构化元数据
-- 不要解释，不要复述原行
+## Output
+- Output only the structured metadata of the current line
+- Do not explain and do not restate the original line
 """
 
 
@@ -381,7 +375,7 @@ def _parse_scene_block_location(location_text: str) -> tuple[str, str, str]:
 
 
 class LiteralScriptWritingWorkflow:
-    """适配 2.0 beat schema 的逐行剧本工作流。"""
+    """Line-by-line script workflow adapted to the 2.0 beat schema."""
 
     def __init__(
         self,
@@ -405,9 +399,9 @@ class LiteralScriptWritingWorkflow:
         self._identity_section = ""
         self._scene_section = ""
         self._prop_section = ""
-        self._output_language: AssetLanguage = "zh"
+        self._output_language: AssetLanguage = "en"
         self.last_review_passed = True
-        self.last_review_summary = "逐行剧本模式"
+        self.last_review_summary = "Line-by-line script mode"
         self.last_degraded_lines: list[int] = []
 
     @property
@@ -431,7 +425,7 @@ class LiteralScriptWritingWorkflow:
                     "valid_scene_ids": self._valid_scene_ids,
                     "valid_prop_ids": self._valid_prop_ids,
                 },
-                name="逐行剧本分镜标注师",
+                name="Line-by-line script storyboard annotator",
             )
         return self._agent
 
@@ -464,13 +458,13 @@ class LiteralScriptWritingWorkflow:
         self._scene_section = ""
         self._prop_section = ""
         self.last_review_passed = True
-        self.last_review_summary = "逐行剧本模式"
+        self.last_review_summary = "Line-by-line script mode"
         self.last_degraded_lines = []
 
         await self.cognee_store.load_graph_state()
         episode = await self.sqlite_store.get_episode_from_graph(episode_num)
         if not episode:
-            raise ValueError(f"未找到第 {episode_num} 集规划")
+            raise ValueError(f"No plan found for episode {episode_num}")
 
         if source_text is None:
             source_text = await load_episode_planning_content(
@@ -478,7 +472,7 @@ class LiteralScriptWritingWorkflow:
                 episode,
             )
         if not source_text.strip():
-            raise ValueError("当前集原文为空，无法逐行生成脚本")
+            raise ValueError("The source text of the current episode is empty; cannot generate the script line by line")
         self._output_language = detect_asset_language(source_text)
 
         quality_report = check_screenplay_import_quality(source_text)
@@ -489,8 +483,8 @@ class LiteralScriptWritingWorkflow:
         for issue in quality_report.warnings:
             log(f"[Literal][Quality][warning] {issue.code}: {issue.message}")
 
-        # 这些调用当前主要用于填充 episode 级合法集合（_valid_*），
-        # block compiler 和 fallback 仍依赖这些全集真值；返回的 *_section 文本仅保留作调试遗留。
+        # These calls are currently used mainly to populate the episode-level valid sets (_valid_*),
+        # the block compiler and fallback still depend on these full-set truths; the returned *_section text is kept only as a debugging leftover.
         self._identity_section, self._valid_identity_ids = (
             self._build_identity_menu_for_episode(episode_num)
         )
@@ -506,7 +500,7 @@ class LiteralScriptWritingWorkflow:
 
         lines = split_literal_source_text(source_text)
         if not lines:
-            raise ValueError("原文无法切分出有效行")
+            raise ValueError("The source text could not be split into valid lines")
 
         scene_blocks = self._build_scene_blocks(lines)
         for block_index, block in enumerate(scene_blocks):
@@ -525,10 +519,10 @@ class LiteralScriptWritingWorkflow:
             scene_blocks, source_lines=lines
         )
         if not line_contexts:
-            raise ValueError("原文无法切分出有效场次内容")
+            raise ValueError("The source text could not be split into valid scene content")
 
-        report_progress(0.05, "按行切分剧本...")
-        log(f"[Literal] 共切分出 {len(lines)} 行，识别 {len(scene_blocks)} 个场次块")
+        report_progress(0.05, "Splitting the script by line...")
+        log(f"[Literal] Split into {len(lines)} lines, identified {len(scene_blocks)} scene blocks")
 
         beats: list[VisualBeat] = []
         total = max(1, len(line_contexts))
@@ -576,7 +570,7 @@ class LiteralScriptWritingWorkflow:
 
             report_progress(
                 0.08 + ((content_index - 1) / total) * 0.82,
-                f"生成第 {content_index}/{total} 行...",
+                f"Generating line {content_index}/{total}...",
             )
 
             block_ctx = block.context
@@ -591,24 +585,24 @@ class LiteralScriptWritingWorkflow:
             block_menu_text = (
                 "\n\n".join(block_menu_sections)
                 if block_menu_sections
-                else "（无候选资产，回退到本集菜单）"
+                else "(no candidate assets, falling back to the episode menu)"
             )
 
             scene_id_fallback_section = ""
             if current_scene_id and current_allowed_scene_ids:
                 scene_id_fallback_section = (
-                    "\n\n## 当前场次 scene_id 候选\n"
-                    f"当前基础 scene_id 已锁定为 `{current_scene_id}`；"
-                    "只能从下列 scene_id 中精确选择一个，或留空让系统回落基础场景。\n"
+                    "\n\n## Current scene scene_id candidates\n"
+                    f"The current base scene_id is locked to `{current_scene_id}`; "
+                    "choose exactly one of the scene_ids below, or leave it empty to let the system fall back to the base scene.\n"
                     + "\n".join(
                         f"- `{sid}`" for sid in sorted(current_allowed_scene_ids)
                     )
                 )
             elif self._valid_scene_ids:
                 scene_id_fallback_section = (
-                    "\n\n## 本集场景菜单（scene_id 兜底候选）\n"
-                    "当前 scene_id 未锁定，请从下列 scene_id 中精确选择一个填入 `scene_id` 字段；"
-                    "没有合适匹配则留空。\n"
+                    "\n\n## Scene menu of this episode (scene_id fallback candidates)\n"
+                    "The current scene_id is not locked; choose exactly one of the scene_ids below and fill it into the `scene_id` field; "
+                    "leave it empty if nothing matches.\n"
                     + "\n".join(f"- `{sid}`" for sid in sorted(self._valid_scene_ids))
                 )
 
@@ -623,11 +617,11 @@ class LiteralScriptWritingWorkflow:
                 )
                 anchor_parts = []
                 if prev_identities:
-                    anchor_parts.append(f"身份: {', '.join(prev_identities)}")
+                    anchor_parts.append(f"Identities: {', '.join(prev_identities)}")
                 if prev_props:
-                    anchor_parts.append(f"道具: {', '.join(prev_props)}")
+                    anchor_parts.append(f"Props: {', '.join(prev_props)}")
                 if anchor_parts:
-                    prev_beat_anchor = "- 上一 beat 已选: " + " | ".join(anchor_parts)
+                    prev_beat_anchor = "- Previous beat selected: " + " | ".join(anchor_parts)
 
             sticky_lines = []
             if block_sticky_identities:
@@ -636,46 +630,46 @@ class LiteralScriptWritingWorkflow:
             sticky_section = ""
             if sticky_lines:
                 sticky_section = (
-                    "- 当前场次已锁定结果（除非有强证据应切换，否则沿用）:\n"
+                    "- Results already locked for the current scene (keep using them unless there is strong evidence to switch):\n"
                     + "\n".join(sticky_lines)
                 )
 
             prompt = f"""{asset_language_instruction(self._output_language)}
 
-请为第 {episode_num} 集当前这一行剧本补全 beat 元数据。
+Complete the beat metadata for the current line of the script of episode {episode_num}.
 
-## 本集信息
-- 标题: {episode.title}
-- 视觉风格配置: {visual_style}
+## Episode information
+- Title: {episode.title}
+- Visual style config: {visual_style}
 
-## 当前场次候选菜单
+## Current scene candidate menu
 {block_menu_text}{scene_id_fallback_section}
 
-## 当前场次上下文
-- 当前场次头原文: {block.header_line or "无"}
-- 当前场次原始标签: {current_scene_label or "未锁定"}
-- 当前 scene_id: {current_scene_id or "未锁定"}
-- 当前 time_of_day: {current_time_of_day or "未锁定"}
-- 当前场次出场人物: {", ".join(block.characters) if block.characters else "未标注"}
-- 当前场次前文（最多 2 行）:
-{chr(10).join(f"  - {item}" for item in safe_prompt_history) if safe_prompt_history else "  - 无"}
-{prev_beat_anchor or "- 上一 beat 已选: 无"}
-{sticky_section or "- 当前场次已锁定结果: 无"}
-## 当前行
-- 行序号: {content_index}/{total}
-- 上一行: {safe_prompt_history[-1] if safe_prompt_history else "无"}
-- 当前行: {raw_line}
-## 约束
-- narration_segment 由系统根据 audio_type 定型：dialogue 提取台词，narration 保留解说文本，silence 留空；你不要输出 narration_segment
+## Current scene context
+- Raw text of the current scene heading: {block.header_line or "none"}
+- Raw label of the current scene: {current_scene_label or "not locked"}
+- Current scene_id: {current_scene_id or "not locked"}
+- Current time_of_day: {current_time_of_day or "not locked"}
+- Characters present in the current scene: {", ".join(block.characters) if block.characters else "not annotated"}
+- Preceding lines of the current scene (at most 2 lines):
+{chr(10).join(f"  - {item}" for item in safe_prompt_history) if safe_prompt_history else "  - none"}
+{prev_beat_anchor or "- Previous beat selected: none"}
+{sticky_section or "- Results already locked for the current scene: none"}
+## Current line
+- Line index: {content_index}/{total}
+- Previous line: {safe_prompt_history[-1] if safe_prompt_history else "none"}
+- Current line: {raw_line}
+## Constraints
+- narration_segment is shaped by the system from audio_type: dialogue extracts the spoken line, narration keeps the commentary text, silence leaves it empty; do not output narration_segment
 {self._audio_type_mode_instruction()}
-- 当前 beat 的 scene_id 与 time_of_day 已由当前场次锁定，不要改写
-- 当前行可见的道具用 `[[prop_id]]` 标在 visual_description 里
-- 同一场次块内同一角色默认沿用已锁定 identity_id，只有当前行有强证据时才切换
-- 如果原行含 `【特写】` / `【第一人称画面】` / `俯拍` / `仰拍` / `空镜` / `黑屏` 等提示，必须直接保留到 visual_description
-- 角色只用 `{{identity_id}}` 标记，道具只用 `[[prop_id]]` 标记
-- visual_description 必须选择一个确定画面，不要输出“或者 / 可选 / 二选一”
-- 候选资产菜单不是当前行可见清单；当前行没明确出现的道具/资产，不要提前写入 visual_description
-- `scene_id` 字段：当前 scene_id {"基础已锁定，只能留空或从当前场次 scene_id 候选中精确选择" if current_scene_id else "未锁定，请从本集场景菜单中精确选一个 scene_id 填入；没有合适匹配则留空"}
+- The scene_id and time_of_day of the current beat are already locked by the current scene; do not rewrite them
+- Props visible in the current line are marked with `[[prop_id]]` in visual_description
+- Within the same scene block the same character keeps using the locked identity_id by default; switch only when the current line has strong evidence
+- If the original line contains cues such as `[close_up]` / `[first_person]` / `[high_angle]` / `[low_angle]` / `[empty]` / `[black]`, they must be kept directly in visual_description
+- Characters are marked only with `{{identity_id}}`, props only with `[[prop_id]]`
+- visual_description must pick one definite picture; do not output "or / optional / either-or"
+- The candidate asset menu is not a list of what is visible in the current line; do not write props/assets that do not explicitly appear in the current line into visual_description early
+- `scene_id` field: current scene_id {"is already locked as a base; leave it empty or choose exactly from the current scene scene_id candidates" if current_scene_id else "is not locked; choose exactly one scene_id from the scene menu of this episode and fill it in; leave it empty if nothing matches"}
 """
 
             try:
@@ -695,8 +689,8 @@ class LiteralScriptWritingWorkflow:
                 ):
                     log(message)
                 log(
-                    f"[Literal][WARN] 第 {content_index}/{total} 行未重试，"
-                    "已使用安全占位 Beat，后续行继续处理。"
+                    f"[Literal][WARN] Line {content_index}/{total} was not retried, "
+                    "a safe placeholder Beat was used and processing continues with the following lines."
                 )
                 output = self._build_placeholder_line_metadata()
                 degraded = True
@@ -712,19 +706,19 @@ class LiteralScriptWritingWorkflow:
                 elif llm_scene_id and llm_scene_id != current_scene_id:
                     log(
                         f"[Literal][WARN] beat {len(beats) + 1} scene_id `{llm_scene_id}` "
-                        f"不属于当前场次候选，回落 `{current_scene_id}`"
+                        f"is not among the current scene candidates, falling back to `{current_scene_id}`"
                     )
             else:
                 if llm_scene_id and llm_scene_id in self._valid_scene_ids:
                     resolved_scene_id = llm_scene_id
                     log(
-                        f"[Literal] beat {len(beats) + 1} scene_id 字符串匹配失败，"
-                        f"LLM 兜底选用 `{llm_scene_id}`（block.location={current_scene_label!r}）"
+                        f"[Literal] beat {len(beats) + 1} scene_id string match failed, "
+                        f"LLM fallback chose `{llm_scene_id}` (block.location={current_scene_label!r})"
                     )
                 else:
                     log(
-                        f"[Literal][WARN] beat {len(beats) + 1} scene_id 留空 "
-                        f"(block.location={current_scene_label!r}, LLM 输出={llm_scene_id!r})"
+                        f"[Literal][WARN] beat {len(beats) + 1} scene_id left empty "
+                        f"(block.location={current_scene_label!r}, LLM output={llm_scene_id!r})"
                     )
             time_of_day = (current_time_of_day or "").strip()
             visual_description = output.visual_description.strip()
@@ -776,17 +770,17 @@ class LiteralScriptWritingWorkflow:
                 if char_name and char_name not in episode_sticky_identities:
                     episode_sticky_identities[char_name] = identity_id
             safe_prompt_history.append(
-                "[上一行因内容审核未提供]" if content_filtered else raw_line
+                "[previous line not provided due to content moderation]" if content_filtered else raw_line
             )
             safe_prompt_history = safe_prompt_history[-2:]
-            log(f"[Literal] 行 {content_index}/{total} -> {audio_type}")
+            log(f"[Literal] line {content_index}/{total} -> {audio_type}")
 
         if self.last_degraded_lines:
             self.last_review_passed = False
             degraded_text = ", ".join(str(index) for index in self.last_degraded_lines)
             self.last_review_summary = (
-                f"逐行剧本已完成；{len(self.last_degraded_lines)} 行未能由模型正常生成，"
-                f"已使用降级 Beat（内容行: {degraded_text}），建议复核后按需单独重试。"
+                f"Line-by-line script completed; {len(self.last_degraded_lines)} lines could not be generated normally by the model, "
+                f"a degraded Beat was used (content lines: {degraded_text}); review them and retry individually if needed."
             )
 
         self._valid_identity_ids.clear()
@@ -796,13 +790,13 @@ class LiteralScriptWritingWorkflow:
 
         script = NarrationScript(
             episode_number=episode_num,
-            title=getattr(episode, "title", f"第 {episode_num} 集"),
+            title=getattr(episode, "title", f"Episode {episode_num}"),
             beats=beats,
             total_duration_seconds=0.0,
         )
-        report_progress(0.93, "保存脚本...")
+        report_progress(0.93, "Saving the script...")
         await self.cognee_store.persist_narration_script(script)
-        report_progress(1.0, "完成")
+        report_progress(1.0, "Done")
         return script
 
     async def _run_line_metadata_with_resilience(
@@ -825,8 +819,8 @@ class LiteralScriptWritingWorkflow:
             if not _is_output_retry_exhaustion(first_error):
                 raise
             log(
-                f"[Literal][WARN] 第 {content_index}/{total} 行结构化输出失败，"
-                f"正在重新调用模型: {_short_log_text(str(first_error), limit=180)}"
+                f"[Literal][WARN] Line {content_index}/{total} structured output failed, "
+                f"calling the model again: {_short_log_text(str(first_error), limit=180)}"
             )
 
         try:
@@ -838,11 +832,11 @@ class LiteralScriptWritingWorkflow:
             if not _is_output_retry_exhaustion(second_error):
                 raise
             log(
-                f"[Literal][WARN] 第 {content_index}/{total} 行重试仍失败，"
-                "已使用原文生成本地兜底 Beat，后续行继续处理。"
+                f"[Literal][WARN] Line {content_index}/{total} still failed after retry, "
+                "a local fallback Beat was generated from the source text and processing continues with the following lines."
             )
             log(
-                f"[Literal][WARN] 第 {content_index}/{total} 行最终模型错误: "
+                f"[Literal][WARN] Line {content_index}/{total} final model error: "
                 f"{_short_log_text(str(second_error), limit=180)}"
             )
             return self._build_fallback_line_metadata(raw_line), True
@@ -854,11 +848,7 @@ class LiteralScriptWritingWorkflow:
             audio_type="silence",
             speaker="",
             speaker_kind="character",
-            visual_description=(
-                "This line could not be generated; please complete it manually."
-                if self._output_language == "en"
-                else "该行未能生成，请手动补充。"
-            ),
+            visual_description="This line could not be generated; please complete it manually.",
             scene_id="",
         )
 
@@ -867,18 +857,29 @@ class LiteralScriptWritingWorkflow:
 
         line = (raw_line or "").strip()
         speaker, speech = self._split_dialogue_line(line)
-        non_character_tokens = ("旁白", "解说", "画外音", "广播", "系统播报", "字幕")
+        non_character_tokens = (
+            "narrator",
+            "narration",
+            "voice-over",
+            "voiceover",
+            "off-screen",
+            "broadcast",
+            "announcement",
+            "subtitle",
+            "caption",
+            "lời dẫn",
+            "người dẫn chuyện",
+            "giọng ngoài khung hình",
+            "phát thanh",
+            "phụ đề",
+        )
         is_non_character = bool(
-            speaker and any(token in speaker for token in non_character_tokens)
+            speaker and any(token in speaker.lower() for token in non_character_tokens)
         )
         if speaker and not is_non_character:
             audio_type = "dialogue"
             fallback_speaker = speaker
-            visual_description = (
-                f"{speaker} speaks."
-                if self._output_language == "en"
-                else f"{speaker}开口说话。"
-            )
+            visual_description = f"{speaker} speaks."
         elif speaker and is_non_character:
             audio_type = "narration"
             fallback_speaker = ""
@@ -890,7 +891,7 @@ class LiteralScriptWritingWorkflow:
             fallback_speaker = ""
             visual_description = line
 
-        # 不让未经校验的资产标记进入后续生成，但保留原文语义。
+        # Keep unvalidated asset markers out of later generation, but keep the source semantics.
         visual_description = (
             visual_description.replace("{{", "")
             .replace("}}", "")
@@ -901,8 +902,6 @@ class LiteralScriptWritingWorkflow:
         if len(visual_description) < 5:
             visual_description = (
                 f"Visual source line: {visual_description or 'blank line'}"
-                if self._output_language == "en"
-                else f"画面保留原文：{visual_description or '空白行'}"
             )
 
         return LiteralBeatMetaOutput.model_construct(
@@ -930,7 +929,7 @@ class LiteralScriptWritingWorkflow:
         if not ep_identity_ids:
             return "", set()
 
-        lines = ["\n## 本集可用身份菜单"]
+        lines = ["\n## Identity menu available for this episode"]
         valid_ids: set[str] = set()
         by_character: dict[str, list[str]] = {}
         for identity_id in sorted(ep_identity_ids):
@@ -965,8 +964,8 @@ class LiteralScriptWritingWorkflow:
                     time_of_day,
                 )
         if not scene_menu:
-            return "\n## 本集可用场景菜单\n- 无\n"
-        lines = ["\n## 本集可用场景菜单"]
+            return "\n## Scene menu available for this episode\n- none\n"
+        lines = ["\n## Scene menu available for this episode"]
         for item in scene_menu:
             lines.append(f"- `{item.scene_id}`")
         return "\n".join(lines) + "\n"
@@ -1007,8 +1006,8 @@ class LiteralScriptWritingWorkflow:
         self._valid_prop_ids.clear()
         self._valid_prop_ids.update(item.prop_id for item in prop_menu if item.prop_id)
         if not prop_menu:
-            return "\n## 本集可用道具菜单\n- 无\n"
-        lines = ["\n## 本集可用道具菜单"]
+            return "\n## Prop menu available for this episode\n- none\n"
+        lines = ["\n## Prop menu available for this episode"]
         for item in prop_menu:
             scope = str(getattr(item, "scope", "") or "episode").strip()
             description = str(getattr(item, "description", "") or "").strip()
@@ -1024,7 +1023,7 @@ class LiteralScriptWritingWorkflow:
     def _normalize_match_text(value: str) -> str:
         text = str(value or "").strip()
         return re.sub(
-            r"[\s\u3000·•．。,:：，、／/（）()\\\-_\[\]{}]+", "", text
+            r"[\s\u3000\u00b7\u2022.,:/()\\\-_\[\]{}]+", "", text
         ).lower()
 
     @classmethod
@@ -1087,7 +1086,7 @@ class LiteralScriptWritingWorkflow:
     ) -> str:
         if not candidate_identity_ids:
             return ""
-        lines = ["## 当前场次候选身份"]
+        lines = ["## Candidate identities of the current scene"]
         grouped: dict[str, list[str]] = {}
         for identity_id in sorted(candidate_identity_ids):
             character_name = (
@@ -1097,14 +1096,14 @@ class LiteralScriptWritingWorkflow:
         for character_name in sorted(grouped):
             lines.append(f"### {character_name}")
             for identity_id in grouped[character_name]:
-                marker = "" if identity_id in episode_identity_ids else "（非本集身份）"
+                marker = "" if identity_id in episode_identity_ids else " (not an identity of this episode)"
                 lines.append(f"- `{identity_id}`{marker}")
         return "\n".join(lines)
 
     def _format_prop_section(self, candidate_prop_ids: set[str]) -> str:
         if not candidate_prop_ids:
             return ""
-        lines = ["## 当前场次候选道具"]
+        lines = ["## Candidate props of the current scene"]
         for prop_id in sorted(candidate_prop_ids):
             lines.append(f"- `{prop_id}`")
         return "\n".join(lines)
@@ -1193,20 +1192,20 @@ class LiteralScriptWritingWorkflow:
                     candidate_identity_ids.add(default_identity_id)
                     if on_log:
                         on_log(
-                            f"[Literal Block] 默认身份回退: "
+                            f"[Literal Block] Default identity fallback: "
                             f"{character_name} -> {default_identity_id}"
                         )
                 else:
                     candidate_identity_ids.update(identity_ids)
                     if on_log:
                         on_log(
-                            f"[Literal Block] 身份无法区分（无 identity_name 文本证据）: "
+                            f"[Literal Block] Identity cannot be distinguished (no identity_name text evidence): "
                             f"{character_name} -> {', '.join(sorted(identity_ids))}"
                         )
 
         identity_fallback_reason = ""
         if not candidate_identity_ids and explicit_character_tokens:
-            identity_fallback_reason = "身份候选为空，回退本集身份池: " + ", ".join(
+            identity_fallback_reason = "Identity candidates are empty, falling back to the episode identity pool: " + ", ".join(
                 sorted(explicit_character_tokens)
             )
 
@@ -1315,7 +1314,7 @@ class LiteralScriptWritingWorkflow:
         match = DIALOGUE_RE.match((line or "").strip())
         if not match:
             return "", ""
-        speaker = re.sub(r"[（(].*?[）)]", "", match.group("speaker")).strip()
+        speaker = re.sub(r"\(.*?\)", "", match.group("speaker")).strip()
         speech = (match.group("speech") or "").strip()
         return speaker, speech
 
@@ -1366,63 +1365,63 @@ class LiteralScriptWritingWorkflow:
         source_line_number = int(getattr(line_ctx, "source_line_number", 0) or 0)
         block = line_ctx.scene_block
         source_line_label = (
-            f"源文本第 {source_line_number} 行，" if source_line_number > 0 else ""
+            f"Source text line {source_line_number}, " if source_line_number > 0 else ""
         )
         context_text = "\n".join([prev_line, current_line, next_line])
         hint_matches = _content_filter_hint_matches(context_text)
         messages = [
             (
-                f"[Literal][ERROR] 第 {content_index}/{total} 行生成失败："
-                "上游文本模型触发内容安全过滤(content_filter)，未返回可解析剧本内容。"
+                f"[Literal][ERROR] Line {content_index}/{total} generation failed: "
+                "the upstream text model triggered the content safety filter (content_filter) and returned no parseable script content."
             ),
             (
-                f"[Literal][ERROR] 需修改行（{source_line_label}内容行 {content_index}/{total}）: "
+                f"[Literal][ERROR] Line to modify ({source_line_label}content line {content_index}/{total}): "
                 f"{_short_log_text(current_line, limit=300)}"
             ),
         ]
         if block.header_line or block.location:
             messages.append(
-                "[Literal][ERROR] 所属场次: "
+                "[Literal][ERROR] Scene it belongs to: "
                 f"{_short_log_text(block.header_line or block.location, limit=180)}"
             )
         if prev_line or next_line:
             messages.append(
-                "[Literal][ERROR] 前后文: "
-                f"上一行={_short_log_text(prev_line, limit=180) or '无'}；"
-                f"下一行={_short_log_text(next_line, limit=180) or '无'}"
+                "[Literal][ERROR] Context: "
+                f"previous line={_short_log_text(prev_line, limit=180) or 'none'}; "
+                f"next line={_short_log_text(next_line, limit=180) or 'none'}"
             )
         if hint_matches:
             messages.append(
-                f"[Literal][ERROR] 第 {content_index}/{total} 行附近包含疑似高风险表达: "
-                + "；".join(hint_matches)
+                f"[Literal][ERROR] Possibly risky expressions found near line {content_index}/{total}: "
+                + "; ".join(hint_matches)
             )
         else:
             messages.append(
-                f"[Literal][ERROR] 第 {content_index}/{total} 行附近未识别到明确疑似词，"
-                "但模型仍判定输入或潜在输出不符合安全策略。"
+                f"[Literal][ERROR] No clearly suspicious terms identified near line {content_index}/{total}, "
+                "but the model still judged the input or potential output to violate the safety policy."
             )
         messages.append(
-            "[Literal][ERROR] 建议：弱化该行及前后文中的血腥、暴力、胁迫、裸露等表达，"
-            "或在 RelayClaw 中将该内部文本模型切换到更适合剧本创作的上游模型后重试。"
+            "[Literal][ERROR] Suggestion: tone down the bloody, violent, coercive, nudity and similar expressions in this line and its surrounding lines, "
+            "or switch this internal text model in RelayClaw to an upstream model better suited to screenplay writing and retry."
         )
         messages.append(
-            "[Literal][ERROR] 说明：上游模型不会返回精确违规规则；以上行号和疑似表达"
-            "是 Dramaclaw 根据本次请求上下文本地定位，供修改剧本时参考。"
+            "[Literal][ERROR] Note: the upstream model does not return the exact violated rule; the line numbers and suspected expressions above "
+            "are located locally by Dramaclaw from the context of this request, for reference when editing the script."
         )
         messages.append(
-            f"[Literal][ERROR] 原始模型错误: {_short_log_text(str(error), limit=180)}"
+            f"[Literal][ERROR] Original model error: {_short_log_text(str(error), limit=180)}"
         )
         return messages
 
     def _audio_type_mode_instruction(self) -> str:
         if self.audio_type_mode != "narrated":
             return (
-                "- 当前项目使用 2.0 短剧逐行模式："
-                "可按原行性质输出 silence / narration / dialogue。"
+                "- The current project uses the 2.0 short-drama line-by-line mode: "
+                "you may output silence / narration / dialogue according to the nature of the original line."
             )
         return (
-            "- 当前项目是解说剧：沿用 1.0 音频口径，audio_type 只能是 narration / dialogue，"
-            "不要输出 silence；非明确角色对白的解说稿行一律输出 narration。"
+            "- The current project is a narrated drama: keep the 1.0 audio convention, audio_type may only be narration / dialogue, "
+            "do not output silence; narration-script lines that are not explicit character dialogue must always output narration."
         )
 
     def _resolve_scene_id(self, location_label: str, episode: Any) -> str:
@@ -1444,7 +1443,7 @@ class LiteralScriptWritingWorkflow:
         return ""
 
     def _resolve_unit_speaker_label(self, speaker: str) -> str:
-        normalized = re.sub(r"[（(].*?[）)]", "", (speaker or "")).strip()
+        normalized = re.sub(r"\(.*?\)", "", (speaker or "")).strip()
         if not normalized:
             return ""
         if normalized in self._valid_identity_ids:
@@ -1456,7 +1455,7 @@ class LiteralScriptWritingWorkflow:
         ]
         if exact_base:
             for candidate in exact_base:
-                if candidate.endswith("_默认"):
+                if candidate.endswith("_default"):
                     return candidate
             return exact_base[0]
         return normalized

@@ -5,70 +5,76 @@
 const NON_SPEECH_LABELS = new Set([
   'bgm',
   'sfx',
-  '持续时间',
-  '负向约束',
-  '环境音',
-  '节奏',
-  '配乐',
-  '情绪',
-  '制作要求',
-  '时长',
-  '时长匹配',
-  '说明',
-  '音乐',
-  '音频类型',
-  '音效',
-  '音色',
-  '语气',
-  '语速',
-  '语言',
-  '声音质感',
-  '是否纯音乐',
-  '内容约束',
+  'duration',
+  'targetduration',
+  'negativeconstraints',
+  'negativeconstraint',
+  'ambientsound',
+  'ambience',
+  'rhythm',
+  'tempo',
+  'soundtrack',
+  'emotion',
+  'mood',
+  'productionrequirements',
+  'durationmatch',
+  'note',
+  'notes',
+  'music',
+  'audiotype',
+  'soundeffects',
+  'soundeffect',
+  'voicetimbre',
+  'timbre',
+  'tone',
+  'speechrate',
+  'pace',
+  'language',
+  'soundtexture',
+  'instrumentalonly',
+  'contentconstraints',
 ]);
 const SPEECH_LABELS = new Set([
-  '朗读文本',
-  '配音文本',
-  '旁白文本',
-  '对白文本',
-  '台词文本',
-  '旁白',
-  '对白',
-  '台词',
-  '解说',
-  'narration',
-  'narrationtext',
-  'voiceover',
+  'readingtext',
   'voiceovertext',
+  'dubbingtext',
+  'narrationtext',
+  'dialoguetext',
+  'linestext',
+  'narration',
+  'dialogue',
+  'lines',
+  'commentary',
   'speechtext',
+  'voiceover',
 ]);
 const UNLABELLED_SPEECH_RECIPE_IDS = new Set(['drama-shot-voice']);
 const STRUCTURED_SPEECH_RECIPE_IDS = new Set(['general-audio']);
 
-const BRACKETED_LABEL = /^\s*[【\[]\s*([^】\]]+?)\s*[】\]]\s*(.*)$/;
+const BRACKETED_LABEL = /^\s*[\[]\s*([^\]]+?)\s*[\]]\s*(.*)$/;
 const CONTROL_LINE =
-  /^\s*(?:[-*#]\s*)?(?:目标)?(?:时长|持续时间|情绪|节奏|语气|语速|语言|声音质感|是否纯音乐|内容约束|音频类型|负向约束)\s*[:：]\s*.*$/i;
+  /^\s*(?:[-*#]\s*)?(?:target\s+)?(?:duration|mood|emotion|rhythm|tempo|tone|speech\s+rate|pace|language|sound\s+texture|instrumental\s+only|content\s+constraints|audio\s+type|negative\s+constraints?)\s*:\s*.*$/i;
 const STRONG_SPEECH_FIELD =
-  /(?:【|\[)?(?:朗读文本|配音文本|旁白文本|对白文本|台词文本|narration\s+text|voiceover\s+text|speech\s+text)(?:】|\])?\s*[:：]\s*/i;
+  /(?:\[)?(?:reading\s+text|voiceover\s+text|dubbing\s+text|narration\s+text|dialogue\s+text|lines\s+text|speech\s+text)(?:\])?\s*:\s*/i;
 const PLAIN_SPEECH_FIELD =
-  /^\s*(?:[-*#]\s*)?(?:旁白|对白|台词|解说|narration|voiceover)\s*[:：]\s*(.*)$/i;
+  /^\s*(?:[-*#]\s*)?(?:narration|dialogue|lines|commentary|voiceover)\s*:\s*(.*)$/i;
 const PLAIN_FIELD_LINE =
-  /^\s*(?:[-*#]\s*)?([^，。！？,!?;；:：\n]{1,24})\s*[:：]\s*.*$/;
+  /^\s*(?:[-*#]\s*)?([^,.!?;:\n]{1,24})\s*:\s*.*$/;
 const SPEECH_BLOCK = /<speech_text>\s*([\s\S]*?)\s*<\/speech_text>/i;
 const SPEECH_BLOCK_MARKER = /<\/?speech_text>/i;
 const TRAILING_CONTROL_FIELD =
-  /[。；;]\s*(?:时长|持续时间|情绪|节奏|语气|语速|语言|声音质感|是否纯音乐|内容约束|音频类型|负向约束)\s*[:：]/i;
+  /[.;]\s*(?:duration|mood|emotion|rhythm|tempo|tone|speech\s+rate|pace|language|sound\s+texture|instrumental\s+only|content\s+constraints|audio\s+type|negative\s+constraints?)\s*:/i;
 // i18n-exempt-end
-const BARE_DURATION = /^\s*\d+(?:\.\d+)?\s*(?:s|秒|seconds?)\s*$/i;
+const BARE_DURATION = /^\s*\d+(?:\.\d+)?\s*(?:s|seconds?)\s*$/i;
 const TIMELINE_PREFIX =
-  /^\s*(?:\[\s*)?(?:(?:\d{1,2}:)?\d{1,2}(?:\.\d+)?)\s*(?:-|–|—|~|至|→)\s*(?:(?:\d{1,2}:)?\d{1,2}(?:\.\d+)?)\s*(?:s|秒)?(?:\s*\])?\s*[:：-]?\s*/i;
-const LEADING_STAGE_DIRECTIONS = /^(?:\s*[（(][^()（）\n]{1,80}[）)])+\s*/;
+  /^\s*(?:\[\s*)?(?:(?:\d{1,2}:)?\d{1,2}(?:\.\d+)?)\s*(?:-|–|—|~|to|→)\s*(?:(?:\d{1,2}:)?\d{1,2}(?:\.\d+)?)\s*(?:s)?(?:\s*\])?\s*[:-]?\s*/i;
+const LEADING_STAGE_DIRECTIONS = /^(?:\s*\([^()\n]{1,80}\))+\s*/;
 const MUSIC_INTENT =
-  /(?:^|[\s_-])bgm(?:$|[\s_-])|background[_\s-]*music|背景音乐|配乐|纯音乐/i;
+  /(?:^|[\s_-])bgm(?:$|[\s_-])|background[_\s-]*music|soundtrack|instrumental/i;
 const SPEECH_GENERATION_INSTRUCTION =
-  /(?:根据|基于|使用|提取|将).{0,40}(?:旁白|文案|脚本|广告词).{0,40}(?:生成|制作|转换|合成).{0,12}(?:旁白|配音|语音|音频)|(?:生成|制作).{0,20}(?:旁白配音|语音音频)/i;
+  /(?:based\s+on|using|extract|convert|from)\b.{0,40}(?:narration|copy|script|ad\s+copy).{0,40}(?:generate|produce|create|convert|synthesi[sz]e).{0,12}(?:narration|voiceover|speech|audio)|(?:generate|produce|create)\b.{0,20}(?:narration\s+voiceover|speech\s+audio)/i;
 const PLACEHOLDER_SPEECH_TEXT =
-  /^(?:这是|本段(?:是|为)?|该段(?:是|为)?|this\s+is\s+)?(?:短剧|视频|广告)?(?:的\s*)?(?:第\s*(?:\d+|[一二三四五六七八九十]+)\s*(?:段|条|句)\s*)?(?:(?:the\s+)?(?:first|second|third)\s+)?(?:旁白|配音|解说|narration|voiceover)(?:内容|文本)?[。.!！]?$/i; // i18n-exempt -- parser vocabulary
+  /^(?:this\s+is\s+)?(?:the\s+)?(?:short\s+drama|video|ad)?(?:'s\s*)?(?:(?:the\s+)?(?:first|second|third|\d+(?:st|nd|rd|th))\s+)?(?:(?:segment|line|part)\s*)?(?:narration|voiceover|dubbing|commentary)(?:\s+(?:content|text))?[.!]?$/i; // i18n-exempt -- parser vocabulary
 
 type AudioKindSource = {
   audioKind?: 'speech' | 'music';
@@ -112,9 +118,9 @@ export function isSpeechGenerationInstruction(value: string): boolean {
 
 function parseDurationMs(value: string): number | null {
   const text = String(value || '').toLowerCase();
-  const minutes = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min(?:ute)?s?)/i);
+  const minutes = text.match(/(\d+(?:\.\d+)?)\s*(?:min(?:ute)?s?)/i);
   if (minutes) return Number(minutes[1]) * 60_000;
-  const seconds = text.match(/(\d+(?:\.\d+)?)\s*(?:秒|s(?:ec(?:ond)?s?)?)/i);
+  const seconds = text.match(/(\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)/i);
   return seconds ? Number(seconds[1]) * 1000 : null;
 }
 

@@ -22,10 +22,10 @@ pytestmark = pytest.mark.m06
 _PROJECT = "demo"
 _PROJECT_ID = "proj_m06"
 _USER = "alice"
-_CHARACTER = "林昭"
-_IDENTITY_ID = "林昭_青年"
-_SCENE = "雨巷"
-_PROP = "旧伞"
+_CHARACTER = "LinZhao"
+_IDENTITY_ID = "LinZhao_young_adult"
+_SCENE = "RainyAlley"
+_PROP = "OldUmbrella"
 
 
 def _png_bytes() -> bytes:
@@ -34,8 +34,8 @@ def _png_bytes() -> bytes:
     from PIL import Image
 
     buf = io.BytesIO()
-    # 占位图要满足厂商真实约束（Seedance 参考图边长 >= 300px），否则入队前的
-    # 尺寸校验会先于本测试关心的响应形状把请求 400 掉。
+    # The placeholder image must satisfy the vendor's real constraint (Seedance reference image side >= 300px), otherwise the pre-enqueue
+    # size validation would reject the request with 400 before the response shape this test cares about.
     Image.new("RGB", (320, 320), color=(90, 120, 150)).save(buf, format="PNG")
     return buf.getvalue()
 
@@ -60,7 +60,7 @@ def _graph_snapshot_payload() -> dict:
                 "label": _CHARACTER,
                 "type": "Entity",
                 "degree": 1,
-                "properties": {"description": "雨巷少年"},
+                "properties": {"description": "Rainy alley youth"},
             },
             {
                 "id": "scene-1",
@@ -90,25 +90,25 @@ class _M06Store:
         identity = CharacterIdentity(
             identity_id=_IDENTITY_ID,
             character_name=_CHARACTER,
-            identity_name="青年",
-            appearance_details="青衣短打",
+            identity_name="young_adult",
+            appearance_details="blue short jacket outfit",
             face_prompt="clear eyes",
             age_group="youth",
         )
         character = NovelCharacter(
             name=_CHARACTER,
-            role="主角",
+            role="protagonist",
             is_main=True,
             face_prompt="sharp eyes",
-            description="雨巷少年",
+            description="Rainy alley youth",
         )
         character.identities = [identity]
         self._characters = {character.name: character}
         self._episodes = {
             1: NovelEpisode(
                 number=1,
-                title="雨巷初遇",
-                raw_content="第一章 雨巷初遇\n林昭撑伞走进雨巷。",
+                title="Meeting in the Rainy Alley",
+                raw_content="Chapter 1 Meeting in the Rainy Alley\nLinZhao walks into the rainy alley holding an umbrella.",
             )
         }
         self._scenes = {
@@ -116,7 +116,7 @@ class _M06Store:
                 name=_SCENE,
                 scene_type="exterior",
                 environment_prompt="wet stone alley",
-                description="雨夜石板巷",
+                description="Rainy night stone alley",
             )
         }
         self._props = {
@@ -124,7 +124,7 @@ class _M06Store:
                 name=_PROP,
                 prop_type="artifact",
                 visual_prompt="old oil-paper umbrella",
-                description="旧油纸伞",
+                description="Old oil-paper umbrella",
                 owner=_CHARACTER,
             )
         }
@@ -170,8 +170,8 @@ class _M06Store:
             {
                 "beat_number": 1,
                 "episode_number": 1,
-                "visual_description": "林昭在{{林昭_青年}}身旁撑起[[旧伞]]。",
-                "narration_segment": "雨声压低了脚步。",
+                "visual_description": "LinZhao raises [[OldUmbrella]] beside {{LinZhao_young_adult}}.",
+                "narration_segment": "The sound of rain muffles the footsteps.",
                 "scene_id": _SCENE,
                 "detected_identities": [_IDENTITY_ID],
                 "detected_props": [_PROP],
@@ -249,7 +249,7 @@ def m06_client_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     for path in (project_dir, state_dir, runtime_dir):
         path.mkdir(parents=True, exist_ok=True)
     write_graph_preview(state_dir, _graph_snapshot_payload())
-    (project_dir / "novel.txt").write_text("已导入小说", encoding="utf-8")
+    (project_dir / "novel.txt").write_text("imported novel", encoding="utf-8")
 
     source_image = _write_png(uploads_dir(project_dir) / "source.png")
     mask_image = _write_png(uploads_dir(project_dir) / "mask.png")
@@ -450,7 +450,7 @@ def test_m06_ingest_upload_preview_and_unsupported_format(m06_client_factory):
         files={
             "file": (
                 "novel.txt",
-                "第一章 雨巷\n林昭撑伞。\n\n第二章 归途\n雨停了。",
+                "Chapter 1 Rainy Alley\nLinZhao holds an umbrella.\n\nChapter 2 The Way Home\nThe rain has stopped.",
                 "text/plain",
             )
         },
@@ -518,7 +518,7 @@ def test_m06_a_missing_graph_preview_reads_as_empty(
         "inline"
     )
     delete_graph_preview(assets.ctx.state_dir)
-    (project_dir / "novel.txt").write_text("已导入小说", encoding="utf-8")
+    (project_dir / "novel.txt").write_text("imported novel", encoding="utf-8")
 
     assert not hasattr(ingest, "make_cognee_store_for_context"), (
         "the graph route must not be able to construct a Cognee store"
@@ -539,7 +539,7 @@ def test_m06_a_written_graph_preview_is_served_from_the_sidecar(
     client, _backend, _task_manager, project_dir, assets, _store = m06_client_factory(
         "inline"
     )
-    (project_dir / "novel.txt").write_text("已导入小说", encoding="utf-8")
+    (project_dir / "novel.txt").write_text("imported novel", encoding="utf-8")
     write_graph_preview(assets.ctx.state_dir, _graph_snapshot_payload())
 
     payload = _assert_ok(client.get(f"/api/v1/projects/{_PROJECT}/ingest/graph"))
@@ -555,7 +555,7 @@ def test_m06_ingest_start_task_shape_is_ce_ee_isomorphic(m06_client_factory, bac
     upload = project_dir / "uploads" / "novel.txt"
     upload.parent.mkdir(parents=True, exist_ok=True)
     upload.write_text(
-        "第一章 雨巷\n1-1 雨巷 日 外\n林昭撑伞。",
+        "Chapter 1 Rainy Alley\n1-1 Rainy Alley DAY EXT\nLinZhao holds an umbrella.",
         encoding="utf-8",
     )
 
@@ -773,21 +773,21 @@ def _freezone_task_cases(client: TestClient, assets: SimpleNamespace):
             "freezone_text_generate",
             client.post(
                 f"/api/v1/projects/{p}/freezone/text/generate",
-                json={"prompt": "写一段雨夜重逢的短故事"},
+                json={"prompt": "Write a short story about a reunion on a rainy night"},
             ),
         ),
         (
             "freezone_story_script",
             client.post(
                 f"/api/v1/projects/{p}/freezone/text/story-script",
-                json={"source_text": "雨巷里，林昭撑伞。"},
+                json={"source_text": "In the rainy alley, LinZhao holds an umbrella."},
             ),
         ),
         (
             "freezone_audio_speech",
             client.post(
                 f"/api/v1/projects/{p}/freezone/audio/speech",
-                json={"text": "雨声压低了脚步。"},
+                json={"text": "The sound of rain muffles the footsteps."},
             ),
         ),
         (
@@ -827,7 +827,7 @@ def test_m06_freezone_task_backend_responses_are_ce_ee_isomorphic(
                     "beat_context": {
                         "episode": 1,
                         "beat": 1,
-                        "visual_description": "林昭在雨巷中。",
+                        "visual_description": "LinZhao is in the rainy alley.",
                     },
                 },
                 {
@@ -1088,13 +1088,13 @@ def test_m06_freezone_assets_are_m06_scoped_and_identity_creation_works(m06_clie
             json={
                 "source_url": assets.image_url,
                 "character": _CHARACTER,
-                "identity_name": "雨夜",
-                "appearance_details": "湿发青衣",
+                "identity_name": "RainyNight",
+                "appearance_details": "wet hair and blue robe",
             },
         )
     )
-    assert created["data"]["identity_id"] == f"{_CHARACTER}_雨夜"
-    assert any(i.identity_id == f"{_CHARACTER}_雨夜" for i in store.get_character(_CHARACTER).identities)
+    assert created["data"]["identity_id"] == f"{_CHARACTER}_RainyNight"
+    assert any(i.identity_id == f"{_CHARACTER}_RainyNight" for i in store.get_character(_CHARACTER).identities)
 
 
 def test_m06_freezone_push_impact_writes_canonical_backup_and_stale_count(

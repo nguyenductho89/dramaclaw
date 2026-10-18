@@ -32,7 +32,7 @@ const JOB_REF = { task_key: 'tk-mv', task_type: 'freezone_multi_view', job_id: '
 function payload(overrides: Partial<MultiAngleSubmitPayload> = {}): MultiAngleSubmitPayload {
   return {
     prompt: '',
-    displayName: '多维度',
+    displayName: 'Multi-dimension',
     preset: 'tilted',
     horizontalDeg: 200,
     verticalDeg: -30,
@@ -57,7 +57,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('imageMultiAngle application（多维度生成编排）', () => {
+describe('imageMultiAngle application (multi-dimension generation orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneMultiView.mockReset();
@@ -66,7 +66,7 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
     seedSourceNode();
   });
 
-  it('建结果节点并连边 → 提交（预设映射 + yaw 归一化）→ 回填 url', async () => {
+  it('builds the result node and wires the edge -> submits (preset mapping + yaw normalization) -> fills the url back', async () => {
     submitFreezoneMultiView.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/mv.png' } });
 
@@ -78,7 +78,7 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
     const created = state.nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '多维度',
+      displayName: 'Multi-dimension',
       aspectRatio: '3:4',
       resultKind: 'generic',
       isGenerating: true,
@@ -90,9 +90,9 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
     await result?.completion;
     expect(submitFreezoneMultiView).toHaveBeenCalledWith('proj-1', {
       sourceUrl: '/static/src.png',
-      // tilted → oblique（面板 key 到后端枚举的映射）。
+      // tilted -> oblique (the mapping from panel key to backend enum).
       preset: 'oblique',
-      // 200° 归一化到 [-180, 180)。
+      // 200 degrees normalizes to [-180, 180).
       yawDegrees: -160,
       pitchDegrees: -30,
       shotSize: 'medium',
@@ -108,7 +108,7 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
     });
   });
 
-  it('promptOverride 为 null → 提交空提示词', async () => {
+  it('promptOverride is null -> submits an empty prompt', async () => {
     submitFreezoneMultiView.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: {} });
     fetchFreezoneJobResult.mockResolvedValue({ url: '/static/mv.png' });
@@ -125,7 +125,7 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
       yawDegrees: 0,
       prompt: '',
     });
-    // output_url 缺失 → 回退 job result。
+    // output_url missing -> falls back to the job result.
     expect(fetchFreezoneJobResult).toHaveBeenCalledWith(
       'proj-1',
       'freezone_multi_view',
@@ -133,14 +133,14 @@ describe('imageMultiAngle application（多维度生成编排）', () => {
     );
   });
 
-  it('缺 project → 返回 null，不建节点', () => {
+  it('missing project -> returns null and creates no node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(multiAngleImage('src-1', '/static/src.png', payload())).toBeNull();
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('提交失败 → 错误写回结果节点', async () => {
+  it('submit failure -> the error is written back to the result node', async () => {
     submitFreezoneMultiView.mockRejectedValue(new Error('mv boom'));
 
     const result = multiAngleImage('src-1', '/static/src.png', payload());

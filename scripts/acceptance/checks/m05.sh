@@ -1,5 +1,5 @@
-# M05 场景/草图/首帧 · curl 冒烟（被 run.sh source；可用 $MODE/$PORT/check/log）
-# 对应 docs/oss-split/modules/M05 §1.5 的 M05 端点归属清单与 §4 API/落盘检查。
+# M05 scene/sketch/first-frame curl smoke checks (sourced by run.sh; $MODE/$PORT/check/log are available)
+# Corresponds to the M05 endpoint ownership list in docs/oss-split/modules/M05 section 1.5 and the section 4 API/on-disk checks.
 
 M05_TMP="acceptance-logs/m05-${MODE}-$$"
 M05_COOKIE_FILE="${M05_TMP}-cookie.txt"
@@ -11,7 +11,7 @@ M05_PROJECT_NAME="m05_accept_${MODE}_$$"
 M05_OPENAPI_JSON="${M05_TMP}-openapi.json"
 : > "$M05_COOKIE_JAR"
 
-check "OpenAPI 暴露 M05 §1.5 实测 60 个 method/path 操作" \
+check "OpenAPI exposes the 60 method/path operations measured in M05 section 1.5" \
   bash -c "curl -sS 'localhost:$PORT/openapi.json' -o '$M05_OPENAPI_JSON' && uv run python - <<'PY'
 import json
 
@@ -92,7 +92,7 @@ print('M05 operations OK', len(expected))
 PY"
 
 if [ "$MODE" = ce ]; then
-  check "CE OpenAPI 暴露 scene director-stage world/clear" \
+  check "CE OpenAPI exposes scene director-stage world/clear" \
     bash -c "curl -sS 'localhost:$PORT/openapi.json' -o '$M05_OPENAPI_JSON' && uv run python - <<'PY'
 import json
 paths = json.load(open('$M05_OPENAPI_JSON', encoding='utf-8'))['paths']
@@ -103,14 +103,14 @@ PY"
 fi
 
 if [ "$MODE" = ee ]; then
-  check "EE 登录取得 st_session" \
+  check "EE login obtains st_session" \
     bash -c "curl -sS -c '$M05_COOKIE_JAR' -D '$M05_COOKIE_FILE.headers' -o '$M05_COOKIE_FILE.body' -X POST 'localhost:$PORT/api/v1/auth/login' -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"admin123\"}' >/dev/null && grep -q 'st_session' '$M05_COOKIE_JAR'"
 fi
 
-check "setup 创建临时项目" \
+check "setup creates a temporary project" \
   bash -c "code=\$(curl -sS -o '$M05_CREATE_JSON' -w '%{http_code}' -X POST 'localhost:$PORT/api/v1/projects' -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"name\":\"$M05_PROJECT_NAME\"}'); test \"\$code\" = 200 && uv run python -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"data\"][\"id\"])' '$M05_CREATE_JSON' > '$M05_PROJECT_FILE'"
 
-check "setup 种子写入 M05 场景/角色/episode/beat/文件" \
+check "setup seeds M05 scenes/characters/episode/beats/files" \
   bash -c "PROJECT_ID=\$(cat '$M05_PROJECT_FILE'); PROJECT_ID=\"\$PROJECT_ID\" uv run python - <<'PY' > '$M05_PROJECT_DIR_FILE'
 import asyncio
 import json
@@ -145,68 +145,68 @@ async def main():
     try:
         await store.initialize()
         identity = CharacterIdentity(
-            identity_id='林昭_青年',
-            character_name='林昭',
-            identity_name='青年',
-            appearance_details='青衣青年',
+            identity_id='LinZhao_young',
+            character_name='LinZhao',
+            identity_name='young',
+            appearance_details='young man in blue',
             face_prompt='clear eyes',
         )
         character = NovelCharacter(
-            name='林昭',
-            role='主角',
+            name='LinZhao',
+            role='protagonist',
             is_main=True,
             face_prompt='clear eyes',
-            description='少年侠客',
+            description='young swordsman',
         )
         character.identities = [identity]
         await store.add_character(character)
-        await store.add_scene(NovelScene(name='中庭', scene_type='exterior', environment_prompt='青石中庭'))
+        await store.add_scene(NovelScene(name='courtyard', scene_type='exterior', environment_prompt='bluestone courtyard'))
         await store.add_scene(
             NovelScene(
-                name='中庭_雨夜',
+                name='courtyard_rainy_night',
                 scene_type='exterior',
-                base_scene_id='中庭',
-                variant_id='雨夜',
+                base_scene_id='courtyard',
+                variant_id='rainy_night',
             )
         )
         await store.add_episodes([
-            NovelEpisode(number=1, title='第一集', raw_content='雨夜', beat_source_text='雨夜')
+            NovelEpisode(number=1, title='Episode 1', raw_content='rainy night', beat_source_text='rainy night')
         ])
         await store.add_visual_beats([
             NovelVisualBeat(
                 episode_number=1,
                 beat_number=1,
                 shot_order=10,
-                narration='雨落中庭。',
-                visual_description='{{林昭_青年}}站在中庭。',
-                scene_ref_json=json.dumps({'scene_id': '中庭'}, ensure_ascii=False),
-                detected_identities_json=json.dumps(['林昭_青年'], ensure_ascii=False),
+                narration='Rain falls on the courtyard.',
+                visual_description='{{LinZhao_young}} stands in the courtyard.',
+                scene_ref_json=json.dumps({'scene_id': 'courtyard'}, ensure_ascii=False),
+                detected_identities_json=json.dumps(['LinZhao_young'], ensure_ascii=False),
             ),
             NovelVisualBeat(
                 episode_number=1,
                 beat_number=2,
                 shot_order=20,
-                narration='补拍雨声。',
-                visual_description='{{林昭_青年}}回头。',
-                scene_ref_json=json.dumps({'scene_id': '中庭'}, ensure_ascii=False),
-                detected_identities_json=json.dumps(['林昭_青年'], ensure_ascii=False),
+                narration='Rain pickup shot.',
+                visual_description='{{LinZhao_young}} turns around.',
+                scene_ref_json=json.dumps({'scene_id': 'courtyard'}, ensure_ascii=False),
+                detected_identities_json=json.dumps(['LinZhao_young'], ensure_ascii=False),
                 is_manual_shot=True,
             ),
         ])
-        await store.set_sketch_colors(1, {'林昭_青年': '#3366FF'})
+        await store.set_sketch_colors(1, {'LinZhao_young': '#3366FF'})
     finally:
         await store.close()
 
-    png(project_dir / 'assets' / 'characters' / '林昭' / 'identities' / '青年.png')
-    png(project_dir / 'assets' / 'scenes' / '中庭' / 'master.png')
-    png(project_dir / 'assets' / 'scenes' / '中庭' / 'reverse_master.png')
-    world_dir = stage_manifest.stage_dir(project_dir, '中庭')
+    png(project_dir / 'assets' / 'characters' / 'LinZhao' / 'identities' / 'young.png')
+    png(project_dir / 'assets' / 'scenes' / 'courtyard' / 'master.png')
+    png(project_dir / 'assets' / 'scenes' / 'courtyard' / 'reverse_master.png')
+    world_dir = stage_manifest.stage_dir(project_dir, 'courtyard')
     png(world_dir / 'pano_360.png', size=(4, 2))
     for name in ('master_sharp.ply', 'reverse_sharp.ply', 'pano_depth.ply'):
         (world_dir / name).write_bytes(b'ply')
     stage_manifest.update_manifest(
         project_dir,
-        '中庭',
+        'courtyard',
         source='uploaded_360',
         pano_path='pano_360.png',
         ply_path='master_sharp.ply',
@@ -227,7 +227,7 @@ async def main():
         'result': {
             'decision': 'revise',
             'main_problem': 'composition_weak',
-            'reasoning': '需要强化构图。',
+            'reasoning': 'The composition needs strengthening.',
             'edit_instruction': 'Tighten the courtyard composition.',
             'confidence': 0.8,
         },
@@ -244,7 +244,7 @@ async def main():
 asyncio.run(main())
 PY"
 
-check "M05 任务链路、读写往返与落盘断言" \
+check "M05 task chain, read/write round trip, and on-disk assertions" \
   bash -c "set -e; PROJECT_ID=\$(cat '$M05_PROJECT_FILE'); BASE='localhost:$PORT/api/v1/projects/'\"\$PROJECT_ID\"; FIXTURE_DIR=\$(tail -n 1 '$M05_PROJECT_DIR_FILE')/_acceptance_fixtures; IMG=\"\$FIXTURE_DIR/tiny.png\"; RENDER_IMG=\"\$FIXTURE_DIR/render.png\"; PANO=\"\$FIXTURE_DIR/pano.png\"; PLY=\"\$FIXTURE_DIR/scene.sog\";
 wait_lane_slot() {
   lane_name=\"\$1\"
@@ -275,7 +275,7 @@ curl -sS \"\$BASE/scenes/plate-preview?scene_id=%E4%B8%AD%E5%BA%AD\" -b '$M05_CO
 curl -sS \"\$BASE/scenes/%E4%B8%AD%E5%BA%AD/pano/manifest\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-pano-manifest.json';
 curl -sS -X PATCH \"\$BASE/scenes/%E4%B8%AD%E5%BA%AD/pano/correction\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"front_yaw_deg\":12,\"sphere_correction_deg\":{\"yaw\":1,\"pitch\":0,\"roll\":0}}' -o '$M05_TMP-pano-correction.json';
 curl -sS \"\$BASE/scenes/%E4%B8%AD%E5%BA%AD/director-stage/manifest\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-stage-manifest.json';
-curl -sS -X POST \"\$BASE/scenes\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"name\":\"廊下\",\"environment_prompt\":\"木质长廊\"}' -o '$M05_TMP-scene-create.json';
+curl -sS -X POST \"\$BASE/scenes\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"name\":\"corridor\",\"environment_prompt\":\"wooden corridor\"}' -o '$M05_TMP-scene-create.json';
 curl -sS -X PATCH \"\$BASE/scenes/%E5%BB%8A%E4%B8%8B\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"notes\":\"updated\"}' -o '$M05_TMP-scene-patch.json';
 curl -sS -X POST \"\$BASE/scenes/%E5%BB%8A%E4%B8%8B/delete\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-scene-delete.json';
 wait_default_slot; curl -sS -X POST \"\$BASE/scenes/build\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-scenes-build.json';
@@ -293,7 +293,7 @@ curl -sS -X POST \"\$BASE/scenes/%E4%B8%AD%E5%BA%AD/master/upload\" -b '$M05_COO
 wait_default_slot; curl -sS -X POST \"\$BASE/episodes/1/scenes/plan\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-scenes-plan.json';
 curl -sS \"\$BASE/sketch-settings\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-sketch-settings-get.json';
 curl -sS -X PATCH \"\$BASE/sketch-settings\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{}' -o '$M05_TMP-sketch-settings-patch.json';
-curl -sS -X PUT \"\$BASE/episodes/1/sketch-regen-queue\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"items\":[{\"id\":\"q1\",\"modeKey\":\"1x1_2-3\",\"modeLabel\":\"1x1\",\"beatNumbers\":[1],\"sceneIds\":[\"中庭\"],\"createdAt\":\"2026-06-17T00:00:00Z\"}]}' -o '$M05_TMP-queue-put.json';
+curl -sS -X PUT \"\$BASE/episodes/1/sketch-regen-queue\" -b '$M05_COOKIE_JAR' -H 'Content-Type: application/json' -d '{\"items\":[{\"id\":\"q1\",\"modeKey\":\"1x1_2-3\",\"modeLabel\":\"1x1\",\"beatNumbers\":[1],\"sceneIds\":[\"courtyard\"],\"createdAt\":\"2026-06-17T00:00:00Z\"}]}' -o '$M05_TMP-queue-put.json';
 curl -sS \"\$BASE/episodes/1/sketch-regen-queue\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-queue-get.json';
 curl -sS \"\$BASE/episodes/1/sketch-image-usage\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-sketch-usage.json';
 curl -sS \"\$BASE/episodes/1/image-generation-guard?task_type=sketch_grid&scope=grid_0\" -b '$M05_COOKIE_JAR' -o '$M05_TMP-image-guard.json';
@@ -418,6 +418,6 @@ assert (project_dir / 'sketches' / 'ep001' / 'beat_01.png').exists()
 assert (project_dir / 'frames' / 'ep001' / 'beat_01.png').exists()
 assert (project_dir / 'director_control_frames' / 'ep001' / 'beat_01' / 'selected_background.png').exists()
 assert (project_dir / 'director_control_frames' / 'ep001' / 'beat_01' / 'combined.png').exists()
-assert (project_dir / 'assets' / 'scenes' / '中庭' / 'master.png').exists()
+assert (project_dir / 'assets' / 'scenes' / 'courtyard' / 'master.png').exists()
 print('M05 chain and disk assertions OK', expected_backend)
 PY"

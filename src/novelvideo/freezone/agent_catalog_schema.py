@@ -32,17 +32,17 @@ RecipeOutputKind = Literal["text", "image", "video", "audio"]
 
 SAFE_AGENT_CONFIG_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,127}$")
 TEXT_RECIPE_SECOND_STAGE_MARKERS = (
-    "另一个 LLM",
-    "下游节点提示词",
-    "下游文本节点提示词",
-    "将被送入下游 textGeneration",
-    "让下游节点输出",
-    "不是最终",
-    "非最终",
-    "只输出提示词",
-    "只输出能指导 LLM",
-    "不要自己生成最终",
-    "不要自己编写",
+    "another LLM",
+    "downstream node prompt",
+    "downstream text node prompt",
+    "will be fed into downstream textGeneration",
+    "have the downstream node output",
+    "not the final deliverable",
+    "non-final",
+    "output the prompt only",
+    "output only prompts that guide the LLM",
+    "do not generate the final deliverable yourself",
+    "do not write it yourself",
 )
 
 

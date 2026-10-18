@@ -9,7 +9,7 @@ import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { Canvas } from "@/features/canvas/Canvas";
 
-// Canvas 用 useQueryClient()(beats/episodeDetail 预取),渲染需包 QueryClientProvider。
+// Canvas uses useQueryClient() (beats/episodeDetail prefetch), so rendering needs a QueryClientProvider wrapper.
 function renderCanvas() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -400,21 +400,21 @@ describe("Canvas manual skill connections", () => {
   });
 });
 
-// 拖线时的落点校验(isValidConnection)和松手时的建边判定(onConnect)是两处独立代码,
-// 一旦口径不一致,用户看到的是「拖过去高亮成合法、一松手什么也没有」。这里不去断言
-// 某个具体规则,而是断言这两处**对同一对节点给出同一个答案** —— 规则以后怎么改都行,
-// 两边一起改就行。
-describe("Canvas 拖线落点校验与建边判定对齐", () => {
+// The drop-target validation while dragging a line (isValidConnection) and the edge-creation decision on release (onConnect) are two independent pieces of code,
+// and once their rules disagree, the user sees "the drop target highlights as valid, but nothing happens on release". Here we do not assert
+// a specific rule, but that the two places **give the same answer for the same pair of nodes** -- the rules can change any way later,
+// as long as both sides change together.
+describe("Canvas drag-line drop validation and edge-creation decision are aligned", () => {
   const NODES = [
     { id: "html", type: CANVAS_NODE_TYPES.htmlArtifact, data: {} },
-    { id: "text", type: CANVAS_NODE_TYPES.textAnnotation, data: { text: "旁白" } },
+    { id: "text", type: CANVAS_NODE_TYPES.textAnnotation, data: { text: "Narration" } },
     { id: "audio", type: CANVAS_NODE_TYPES.audio, data: { audioUrl: "/a.mp3" } },
     { id: "image", type: CANVAS_NODE_TYPES.imageGen, data: { imageUrl: "/i.png" } },
     { id: "video", type: CANVAS_NODE_TYPES.video, data: { videoUrl: "/v.mp4" } },
   ];
 
-  // 至少要覆盖到一对「建边规则放行、但不开放手工创建」的边(视频→音频那条溯源边),
-  // 否则两处都用宽松规则也能让测试全绿。
+  // At least one pair of edges "allowed by the edge rules but not open to manual creation" must be covered (the video->audio provenance edge),
+  // otherwise using the lenient rules in both places could also keep the test fully green.
   const PAIRS: { source: string; target: string; expected: boolean }[] = [
     { source: "text", target: "html", expected: true },
     { source: "image", target: "html", expected: true },
@@ -441,7 +441,7 @@ describe("Canvas 拖线落点校验与建边判定对齐", () => {
     resetCanvas();
   });
 
-  it("两处判定对每一对节点给出同一个答案", async () => {
+  it("both decisions give the same answer for every pair of nodes", async () => {
     renderCanvas();
     await waitFor(() => expect(capturedOnConnect).toBeTruthy());
 
@@ -477,10 +477,10 @@ describe("Canvas 拖线落点校验与建边判定对齐", () => {
   });
 });
 
-// 素材上限(videoReferenceLimits)是后加的一条规则,同样必须两处同源:只在 onConnect
-// 里拦,用户会看见落点高亮成合法、松手却什么也没建;只在 isValidConnection 里拦,
-// 其它建边路径(资产拖入、菜单新建)照样能把第 10 张图连上去。
-describe("Canvas 素材上限在落点校验与建边判定上对齐", () => {
+// The material cap (videoReferenceLimits) is a later-added rule and must likewise share one source in both places: if it only blocked in onConnect,
+// the user would see the drop target highlight as valid and nothing created on release; if it only blocked in isValidConnection,
+// other edge-creation paths (asset drag-in, menu creation) could still connect the 10th image.
+describe("Canvas material cap is aligned between drop validation and edge-creation decision", () => {
   const IMAGE_CAP = 9;
 
   function setupSaturatedVideo() {
@@ -496,7 +496,7 @@ describe("Canvas 素材上限在落点校验与建边判定上对齐", () => {
       data: { videoUrl: "/v.mp4" },
       position: { x: 0, y: 800 },
     };
-    // 前 9 张已连上,第 10 张(image-9)是这次要拖的。
+    // The first 9 are already connected, and the 10th (image-9) is the one being dragged this time.
     useCanvasStore.getState().setCanvasData(
       [...images, video],
       images.slice(0, IMAGE_CAP).map((node) => ({
@@ -516,7 +516,7 @@ describe("Canvas 素材上限在落点校验与建边判定上对齐", () => {
     setupSaturatedVideo();
   });
 
-  it(`已连满 ${IMAGE_CAP} 张图时,第 ${IMAGE_CAP + 1} 张两处都拒绝`, async () => {
+  it(`when ${IMAGE_CAP} images are already connected, both places reject image ${IMAGE_CAP + 1}`, async () => {
     renderCanvas();
     await waitFor(() => expect(capturedOnConnect).toBeTruthy());
 
@@ -542,13 +542,13 @@ describe("Canvas 素材上限在落点校验与建边判定上对齐", () => {
       highlightedAsValid: false,
       edgeCreated: false,
     });
-    // 已有的 9 条不能被这次拒绝顺手带走。
+    // The existing 9 edges must not be swept away by this rejection.
     expect(
       useCanvasStore.getState().edges.filter((edge) => edge.target === "video"),
     ).toHaveLength(IMAGE_CAP);
   });
 
-  it(`没连满时(${IMAGE_CAP - 1} 张)两处都放行`, async () => {
+  it(`when not full (${IMAGE_CAP - 1} images) both places allow it`, async () => {
     act(() => {
       useCanvasStore.setState((state) => ({
         edges: state.edges.filter((edge) => edge.source !== `image-${IMAGE_CAP - 1}`),

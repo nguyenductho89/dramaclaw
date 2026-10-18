@@ -209,7 +209,7 @@ _CODEX_DEVELOPER_INSTRUCTIONS = (
     "local file editing, web search, or other external tools."
 )
 _CODEX_FREEZONE_DEVELOPER_INSTRUCTIONS = (
-    "You are the DramaClaw creative assistant inside the Xi画/Freezone canvas. "
+    "You are the DramaClaw creative assistant inside the Freezone canvas. "
     "A successful freezone_begin_agent_product_generation is admission, not delivery. "
     "For product_kind=workflow_result, continue authoring the complete intent or plan and "
     "submit it through the matching freezone_prepare_workflow_draft or "
@@ -411,7 +411,7 @@ def _codex_developer_instructions(tool_mode: str | None) -> str:
             " " + CANVAS_FINAL_RESPONSE_INSTRUCTIONS +
             " Your final response MUST be a JSON object, not plain text or Markdown. "
             "This applies even to greetings and ordinary conversation. "
-            'For a greeting, return {"message":"你好！有什么我可以帮你的吗？",'
+            'For a greeting, return {"message":"Hello! How can I help you?",'
             '"mode":"read_only","canvas_receipts":[]}. '
             "Use mode=read_only for explanations, checks, proposals, clarification answers, "
             "and catalog-only Skill saves, with canvas_receipts=[]. Never claim a canvas "
@@ -446,87 +446,89 @@ _DRAMACLAW_INGEST_AUTOMATION_RE = re.compile(
     r"\[DRAMACLAW_(?:INGEST_AUTOMATION|REINGEST_CONFIRMATION|UPLOADED_FILES)\]",
 )
 _SCRIPT_CREATION_REQUEST_RE = re.compile(
-    r"(?:帮我|给我|请|想要|我要|创建|生成|写|做|制作|创作|起草|来一个|出一个)"
-    r"[\s\S]{0,40}(?:剧本|短剧|短片剧本|短视频剧本|网剧)",
+    r"(?:help me|for me|please|i want|i need|create|generate|write|make|compose|draft|come up with)"
+    r"[\s\S]{0,40}(?:script|screenplay|short drama|short film|web series|short video script)",
     re.IGNORECASE,
 )
 _STYLE_SHORT_DRAMA_REQUEST_RE = re.compile(
-    r"(?:[\w\u4e00-\u9fff]+风格|主题|题材|赛博朋克|末世|复仇|女总裁|玄幻|都市|悬疑)"
-    r"[\s\S]{0,30}(?:短剧|短片剧本|短视频剧本|网剧)",
+    r"(?:\w+[- ]style|theme|genre|cyberpunk|post-apocalyptic|revenge|female ceo|fantasy|urban|suspense)"
+    r"[\s\S]{0,30}(?:short drama|short film script|short video script|web series)",
     re.IGNORECASE,
 )
 _CONTINUE_PIPELINE_RE = re.compile(
-    r"(?:继续|恢复|接着|下一步|当前|已有|已上传|刚才上传)"
+    r"(?:continue|resume|carry on|next step|current|existing|uploaded)",
+    re.IGNORECASE,
 )
 _EXPLICIT_PIPELINE_CONTINUATION_RE = re.compile(
-    r"(?:继续|恢复|接着(?:做|生成|制作)?|下一步|继续跑|继续做)",
+    r"(?:continue|resume|carry on|next step|keep going|keep running)",
     re.IGNORECASE,
 )
 _PIPELINE_CONTINUATION_QUESTION_RE = re.compile(
-    r"(?:为什么|为何|怎么|如何|能否|是否|可不可以|不能|失败|报错|什么情况|什么意思)"
+    r"(?:\bwhy\b|\bhow\b|\bcan\b|\bcould\b|\bwhether\b|\bfail(?:ed|s|ure)?\b|\berror\b|\bwhat(?:'s| is| does)\b)",
+    re.IGNORECASE,
 )
 _DRAMACLAW_CONTINUATION_INSTRUCTIONS = """[DRAMACLAW_CONTINUATION]
 The user explicitly authorizes continuing the bound mainline project from its current breakpoint.
 Read the episode pipeline status at most once and read active tasks at most once. If an active task
 exists, report it and stop. If no task is active, use next_step to start exactly one matching write
-task in this same turn, then stop. Do not reread identical status, ask the user to repeat "继续",
+task in this same turn, then stop. Do not reread identical status, ask the user to repeat "continue",
 or reopen run-mode selection. For next_step=selected_regen, call dramaclaw_render_first_frames once
 without beat_indices so it selects the next missing batch.
 [/DRAMACLAW_CONTINUATION]"""
 _DRAMACLAW_SCRIPT_UPLOAD_MODEL_REPLY_INSTRUCTIONS = """[DRAMACLAW_SCRIPT_UPLOAD_GUIDANCE]
-用户正在请求创建、生成或编写剧本/短剧，但当前消息没有上传剧本文档。
+The user is asking to create, generate, or write a script / short drama, but this message does not upload a script document.
 
-你必须只用自然中文回复用户，不要调用任何工具，不要创建项目，不要生成剧本，不要构造基础脚本，不要启动摄入或流水线。
+Reply to the user in natural language only. Do not call any tools, do not create a project, do not generate a script, do not build a base script, and do not start ingest or the pipeline.
 
-回复目标：
-- 语气自然，不要像系统错误提示。
-- 明确表达：虾导不提供生成剧本功能。
-- 引导用户去“虾料”上传已有剧本文档。
-- 说明上传后你可以继续帮他推进分集、画面、配音、成片等后续制作。
-- 只回复 1-2 句，不要列步骤，不要输出 markdown 标题。
+Reply goals:
+- Keep a natural tone; do not sound like a system error.
+- State clearly that the Director Agent does not provide script generation.
+- Guide the user to upload an existing script document in the materials area.
+- Explain that once it is uploaded you can keep moving the later production forward: episodes, visuals, voiceover, and the final cut.
+- Reply in 1-2 sentences only; do not list steps and do not output markdown headings.
 [/DRAMACLAW_SCRIPT_UPLOAD_GUIDANCE]
 """
 _JSON_RENDER_CHAT_INSTRUCTIONS = """[RENDERING_CONTRACT]
-这是硬性输出合同，优先级高于普通叙述习惯。违反时必须自我修正后再回复。
+This is a hard output contract and takes priority over ordinary narration habits. If you violate it, correct yourself before replying.
 
-触发条件：
-- 只有在回复需要展示图片、肖像、身份图、草图、首帧、视频、音频等可视/可播放媒体时，才需要调用对应的 DramaClaw 展示工具。
-- 角色列表、剧集规划、项目进度、任务状态、脚本/beat 摘要、表格、长篇正文、普通结构化说明默认使用 markdown；如果没有图片/视频/音频媒体，不要使用媒体展示工具。
-- 用户说“继续生成视频”“恢复”“接着做”“下一步”时，只推进未完成任务并汇报本轮状态。
-- 除非用户同时明确要求展示、查看、播放或预览，否则不要读取或展示此前已经生成的 beat 视频。
-  最终成片在本轮完成时仍按成片交付规则主动展示。
+Triggers:
+- Only call the matching DramaClaw display tool when the reply needs to show visual or playable media such as images, portraits, identity images, sketches, first frames, video, or audio.
+- Character lists, episode plans, project progress, task status, script/beat summaries, tables, long-form text, and ordinary structured explanations default to markdown; if there is no image/video/audio media, do not use the media display tools.
+- When the user says "continue generating video", "resume", "carry on", or "next step", only advance unfinished tasks and report this turn's status.
+- Unless the user also explicitly asks to show, view, play, or preview, do not read or show beat videos that were generated earlier.
+  The final cut is still shown proactively under the final-cut delivery rule when it completes in this turn.
 
-禁止事项：
-- 不要向用户解释内部渲染格式、渲染机制、工具调用过程或工具名；只给业务结果和必要的下一步提示。
-- 不要为纯文本、进度、脚本、表格、角色/剧集清单调用媒体展示工具；这些内容使用 markdown。
-- 用户要求查看图片、肖像、身份图、草图、首帧、视频、音频时，不要用文字列表、文件名列表、Beat 名称列表或 URL 列表替代媒体展示；必须调用对应展示工具。若没有工具返回的可展示媒体，只说明当前暂无可展示媒体。
-- 一旦本轮调用了媒体展示工具，最终自然语言回复只能是简短说明，绝对禁止输出 markdown 图片语法（例如 ![标题](url)）、纯文本媒体 URL、任何 http/https 链接、/static 路径、HTML <img>/<video>/<audio> 标签或聊天附件 media_json。
-- 不要猜测、拼接或改写静态资源路径，尤其禁止自行编造 /static/projects/{project_id}/...、/static/admin/{slug}/...、localhost URL 或下载地址。
+Prohibitions:
+- Do not explain internal rendering formats, rendering mechanics, the tool-calling process, or tool names to the user; give only business results and any necessary next-step hint.
+- Do not call media display tools for plain text, progress, scripts, tables, or character/episode lists; use markdown for those.
+- When the user asks to view images, portraits, identity images, sketches, first frames, video, or audio, do not replace the media display with a text list, a file-name list, a Beat-name list, or a URL list; you must call the matching display tool. If no displayable media was returned by a tool, only say there is currently no displayable media.
+- Once a media display tool has been called this turn, the final natural-language reply must be a brief explanation only. It is strictly forbidden to output markdown image syntax (for example ![title](url)), plain-text media URLs, any http/https link, /static paths, HTML <img>/<video>/<audio> tags, or chat-attachment media_json.
+- Do not guess, concatenate, or rewrite static resource paths; in particular never invent /static/projects/{project_id}/..., /static/admin/{slug}/..., localhost URLs, or download addresses yourself.
 
-资源 URL 规则：
-- 展示工具会读取 API 返回的可访问 URL 字段（portrait_url、image_url、sketch_url、frame_url、video_url、audio_url、url）并准备可展示媒体。
-- 如果工具/API 只返回本地文件路径或你不确定 URL 是否可访问，必须先调用相应 DramaClaw 展示工具；不能自己按经验拼 /static 路径。
-- 如果没有正式结果 URL、URL 为空、或资源尚未生成，只说明当前状态，不要伪造媒体展示。
-- 如果工具/API 返回多个候选字段，优先使用明确的 *_url 字段；不要使用 *_path 作为 src，除非 API 明确说明该 path 已是浏览器可访问 URL。
+Resource URL rules:
+- Display tools read the accessible URL fields returned by the API (portrait_url, image_url, sketch_url, frame_url, video_url, audio_url, url) and prepare displayable media.
+- If a tool/API returns only a local file path, or you are unsure whether a URL is accessible, you must first call the matching DramaClaw display tool; never assemble a /static path from experience.
+- If there is no official result URL, the URL is empty, or the resource has not been generated yet, only describe the current status and do not fake a media display.
+- If a tool/API returns several candidate fields, prefer the explicit *_url field; do not use a *_path as src unless the API explicitly says that path is already a browser-accessible URL.
 
-展示工具选择：
-- 角色肖像/身份图：调用 dramaclaw_get_character_media。
-- 当前草图：调用 dramaclaw_get_sketches，只展示正式 sketch_url。草图候选池：调用 dramaclaw_get_sketch_candidates，只展示 grids/epNNN/sketch/beat_XX_t* 候选。首帧：调用 dramaclaw_get_first_frames，只展示首帧。
-- 场景图：调用 dramaclaw_get_scene_images。
-- 视频预览、beat 视频、最终成片：调用 dramaclaw_get_episode_media(media_type="video") 或对应最终视频读取工具。
-- 配音/TTS/音乐：调用 dramaclaw_get_episode_media(media_type="audio") 或对应音频读取工具。
-- 指定人物肖像：调用 dramaclaw_get_character_media(media_kind="portrait", name="角色名或名称片段")；name 只匹配角色名/别名，不要混入身份图。
-- 指定身份图：调用 dramaclaw_get_character_media(media_kind="identity", name="角色名或身份名片段")；不要混入角色肖像。name 匹配角色名/别名/身份名/身份 ID；只有用户明确按描述内容查找时才用 query="..."。
-- 指定当前草图：调用 dramaclaw_get_sketches(episode=N, beat=M)；该工具只展示正式 sketch_url/current sketch，不展示 grids/epNNN/sketch/beat_XX_t* 草图池候选。不要用草图池或首帧替代当前草图。指定草图候选/图池/备选草图：调用 dramaclaw_get_sketch_candidates(episode=N, beat=M)。指定首帧：调用 dramaclaw_get_first_frames(episode=N, beat=M)。多个正式草图用 beat_indices=[...]；分页用 offset + limit。
-- 指定场景图：调用 dramaclaw_get_scene_images(name="场景名或名称片段")；名称按包含关系模糊匹配；多个关键词用 names=[...]；按第几个场景用 index=N 或 scene_indices=[...]；按类型筛选用 scene_type="..."；分页用 offset + limit。
-- 指定视频：调用 dramaclaw_get_episode_media(episode=N, media_type="video", beat=M)；按内容片段查视频用 query="..."，匹配 beat 标题、画面描述、解说/对白、说话人、角色、场景；多个 beat 用 beat_indices=[...]；分页用 offset + limit。
-- 指定音频/配音/TTS：调用 dramaclaw_get_episode_media(episode=N, media_type="audio", beat=M)；按内容片段查音频用 query="..."，匹配 beat 标题、解说/对白、说话人、角色、场景；多个 beat 用 beat_indices=[...]；分页用 offset + limit。
+Display tool selection:
+- Character portraits / identity images: call dramaclaw_get_character_media.
+- Current sketches: call dramaclaw_get_sketches and show only the official sketch_url. Sketch candidate pool: call dramaclaw_get_sketch_candidates and show only the grids/epNNN/sketch/beat_XX_t* candidates. First frames: call dramaclaw_get_first_frames and show only first frames.
+- Scene images: call dramaclaw_get_scene_images.
+- Video preview, beat video, final cut: call dramaclaw_get_episode_media(media_type="video") or the matching final-video reader tool.
+- Voiceover / TTS / music: call dramaclaw_get_episode_media(media_type="audio") or the matching audio reader tool.
+- A specific character portrait: call dramaclaw_get_character_media(media_kind="portrait", name="character name or name fragment"); name matches only character names/aliases, never mix in identity images.
+- A specific identity image: call dramaclaw_get_character_media(media_kind="identity", name="character name or identity name fragment"); do not mix in character portraits. name matches character name/alias/identity name/identity ID; use query="..." only when the user explicitly searches by description content.
+- A specific current sketch: call dramaclaw_get_sketches(episode=N, beat=M); this tool shows only the official sketch_url/current sketch and not the grids/epNNN/sketch/beat_XX_t* sketch-pool candidates. Do not substitute the sketch pool or a first frame for the current sketch. For sketch candidates / the image pool / alternative sketches: call dramaclaw_get_sketch_candidates(episode=N, beat=M). For a first frame: call dramaclaw_get_first_frames(episode=N, beat=M). Use beat_indices=[...] for several official sketches; paginate with offset + limit.
+- A specific scene image: call dramaclaw_get_scene_images(name="scene name or name fragment"); names are fuzzy-matched by containment; use names=[...] for several keywords; use index=N or scene_indices=[...] to pick the Nth scene; filter by type with scene_type="..."; paginate with offset + limit.
+- A specific video: call dramaclaw_get_episode_media(episode=N, media_type="video", beat=M); to find a video by content fragment use query="...", which matches beat title, visual description, narration/dialogue, speaker, character, and scene; use beat_indices=[...] for several beats; paginate with offset + limit.
+- A specific audio / voiceover / TTS: call dramaclaw_get_episode_media(episode=N, media_type="audio", beat=M); to find audio by content fragment use query="...", which matches beat title, narration/dialogue, speaker, character, and scene; use beat_indices=[...] for several beats; paginate with offset + limit.
 
-发送前自检：
-1. 本回复是否展示图片/视频/音频媒体？如果是，是否调用了对应展示工具？
-2. 是否避免暴露内部渲染格式、渲染机制、工具调用过程或工具名？
-3. 如果不展示图片/视频/音频，是否使用 markdown？
-4. 如果任一答案是否，先修正再回复。
+Pre-send self-check:
+1. Does this reply show image/video/audio media? If so, did you call the matching display tool?
+2. Did you avoid exposing internal rendering formats, rendering mechanics, the tool-calling process, or tool names?
+3. If you are not showing image/video/audio, did you use markdown?
+4. If any answer is no, correct it before replying.
 [/RENDERING_CONTRACT]"""
 
 
@@ -585,7 +587,7 @@ def _json_render_error_log_path() -> Path:
 
 
 _FREEZONE_CANVAS_ASSISTANT_INSTRUCTIONS = """[FREEZONE_CANVAS_ASSISTANT]
-This chat turn is running inside the Xi画/Freezone canvas.
+This chat turn is running inside the Freezone canvas.
 
 Scope:
 - Inspect project assets, tasks, skill runs, and canvas data; answer explanations naturally.
@@ -663,7 +665,7 @@ Canvas write contract:
   user asks about status.
 - Never claim any canvas change succeeded without a successful same-turn frontend write result. If
   it fails or is absent, say the change could not be confirmed.
-- Never submit reduced sample, smoke-test, or placeholder nodes such as A/B, T1/T2, or “测试节点” to
+- Never submit reduced sample, smoke-test, or placeholder nodes such as A/B, T1/T2, or “test node” to
   the user's canvas while recovering from a workflow error. Use the read-only workflow compiler
   only with that same complete graph, preserving all nodes, edges, groups, and exact counts. Never
   compile reduced probe nodes or use edges=[] for a multi-node plan. Correct the same complete plan
@@ -672,13 +674,13 @@ Canvas write contract:
   retries after a restart, perform one same-turn write with the complete plan. Never declare the
   current adapter blocked unless the same failure is returned by that current-turn write.
 - The user's explicit request to create or run is authorization to submit the protected canvas write
-  and show its approval card. Do not ask for a second “创建并运行” confirmation and do not say the
+  and show its approval card. Do not ask for a second “create and run” confirmation and do not say the
   environment cannot display the card; the write tool creates it. In auto_execute, submit the write
   immediately after required media parameters are known and let the frontend apply the approval.
 - For structured clarification, call the MCP tool freezone_request_user_clarification only. Never
   use the host's built-in request_user_input, update_plan, or create_goal tools for canvas work.
-- In interactive Xi画 chat, never set auto_apply_after_mcp_approval; canvas writes must produce an
-  approval card. Use clear_canvas for “清空画布/全部删除”, and never encode that intent as an empty
+- In interactive Freezone chat, never set auto_apply_after_mcp_approval; canvas writes must produce an
+  approval card. Use clear_canvas for “clear the canvas / delete everything”, and never encode that intent as an empty
   delete_nodes command.
 - Complete short videos with canvas video/audio/composition nodes. videoComposeNode is terminal:
   connect video/audio outputs as composition inputs; never connect planning text or prompts to it.
@@ -690,48 +692,38 @@ Skill Studio continuation:
 [/FREEZONE_CANVAS_ASSISTANT]"""
 
 _FREEZONE_CANVAS_WRITE_ACTION_RE = re.compile(
-    r"(?:创建|新建|添加|插入|删除|移除|清空|修改|更新|连接|连线|移动|向[上下左右]移|再移|布局|选择|打开|运行|执行|生成|制作|做|"
-    r"create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|run|execute|generate)",
+    r"(?:create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|run|execute|generate|make)",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_WRITE_OBJECT_RE = re.compile(
-    r"(?:节点|画布|工作流|连线|边|合成节点|"
-    r"node|canvas|workflow|edge|compose\s+node)",
+    r"(?:node|canvas|workflow|edge|compose\s+node)",
     re.IGNORECASE,
 )
 _FREEZONE_DIRECT_MEDIA_WRITE_RE = re.compile(
     r"(?:"
-    r"(?:生成|创建|新建|添加|制作|做|运行|执行|用|根据|按照|基于)"
-    r"[^。！？!?\n]{0,32}"
-    r"(?:图片|图像|图|视频|音频|音乐|配音|旁白|成片)"
-    r"|(?:generate|create|add|make|run|execute)\s+(?:an?\s+|some\s+)?"
-    r"(?:image|video|audio|music|voiceover|composition)"
+    r"(?:generate|create|add|make|run|execute)\s+[^.!?\n]{0,32}?"
+    r"(?:image|picture|video|audio|music|voiceover|composition)"
     r")",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_KNOWLEDGE_QUESTION_RE = re.compile(
-    r"(?:如何|怎么|为什么|为何|是什么|教程|方法|步骤|是否支持|支不支持|"
-    r"\bwhat\b|\bwhy\b|\bhow\b|\bcan\s+i\b)",
+    r"(?:\bwhat\b|\bwhy\b|\bhow\b|\bcan\s+i\b|\btutorial\b|\bsteps?\b|\bsupport(?:s|ed)?\b)",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_NO_WRITE_FAILURE_RE = re.compile(
-    r"(?:未能|无法|失败|找不到|不可用|未创建|没有创建|未执行|没有执行|不能)",
+    r"(?:unable\s+to|cannot|can't|failed|not\s+found|unavailable|not\s+created|not\s+executed)",
     re.IGNORECASE,
 )
 _FREEZONE_TEXT_ONLY_REQUEST_RE = re.compile(
-    r"(?:生成|创建|编写|撰写|整理|generate|create|write|draft)"
+    r"(?:generate|create|write|draft)"
     r"(?:(?!\n).){0,40}"
-    r"(?:剧本|脚本|文案|提示词|解说词|screenplay|script|copy|copywriting|prompt)"
-    r"\s*[。！？!?．.]?\s*$",
+    r"(?:screenplay|script|copy|copywriting|prompt)"
+    r"\s*[!?.]?\s*$",
     re.IGNORECASE,
 )
 _FREEZONE_SKILL_RUNTIME_NEGATION_RE = re.compile(
     r"(?:"
-    r"(?:暂不|暂时不|先不|不要|无需|不用|不再|不会|不)\s*"
-    r"(?:直接|立即|马上|继续|再)?\s*"
-    r"(?:运行|执行|应用|使用|用|生成|制作|创建|写入|添加|删除|移除|清空|修改|更新|"
-    r"连接|连线|移动|布局|选择|打开)"
-    r"|(?:do\s+not|don't|not|without)\s+"
+    r"(?:do\s+not|don't|not|without)\s+"
     r"(?:(?:directly|immediately|then)\s+)?"
     r"(?:run|execute|apply|use|generate|make|create|write|add|delete|remove|clear|"
     r"update|connect|move|layout|select|open)"
@@ -740,62 +732,46 @@ _FREEZONE_SKILL_RUNTIME_NEGATION_RE = re.compile(
 )
 _FREEZONE_INDEPENDENT_CANVAS_WRITE_RE = re.compile(
     r"(?:"
-    r"(?:创建|新建|添加|插入|删除|移除|清空|修改|更新|连接|连线|移动|向[上下左右]移|"
-    r"再移|布局|选择|打开|运行|执行|"
-    r"create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|"
+    r"(?:create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|"
     r"run|execute)"
-    r"(?:(?!(?:Skill|Recipe|技能|配方))[^。！？!?，,；;\n]){0,32}"
-    r"(?:节点|画布|连线|边|node|canvas|edge)"
-    r"|(?:节点|画布|连线|边|node|canvas|edge)"
-    r"(?:(?!(?:Skill|Recipe|技能|配方))[^。！？!?，,；;\n]){0,32}"
-    r"(?:创建|新建|添加|插入|删除|移除|清空|修改|更新|连接|连线|移动|布局|选择|打开|"
-    r"运行|执行|create|add|insert|delete|remove|clear|update|connect|move|layout|"
+    r"(?:(?!(?:Skill|Recipe))[^.!?\n,;]){0,32}"
+    r"(?:node|canvas|edge)"
+    r"|(?:node|canvas|edge)"
+    r"(?:(?!(?:Skill|Recipe))[^.!?\n,;]){0,32}"
+    r"(?:create|add|insert|delete|remove|clear|update|connect|move|layout|"
     r"select|open|run|execute)"
     r")",
     re.IGNORECASE,
 )
 _FREEZONE_SKILL_CAPABILITY_RE = re.compile(
     r"(?:"
-    r"(?:用于|用来|功能是|作用是|设计为|会|可以|能够|可)\s*"
-    r"(?:使用|用|创建|新建|添加|插入|删除|移除|清空|修改|更新|连接|连线|移动|布局|选择|打开|"
-    r"运行|执行)"
-    r"[^。！？!?，,；;\n]{0,24}(?:节点|画布|连线|边|Skill|Recipe|技能|配方)"
-    r"|(?:使用|用|创建|新建|添加|插入|删除|移除|清空|修改|更新|连接|连线|移动|布局|选择|"
-    r"打开|运行|执行)"
-    r"[^。！？!?，,；;\n]{0,24}(?:节点|画布|连线|边|Skill|Recipe|技能|配方)"
-    r"[^。！？!?，,；;\n]{0,12}的\s*(?:Skill|Recipe|技能|配方)"
-    r"|(?:Skill|Recipe)\s+"
+    r"(?:Skill|Recipe)\s+"
     r"(?:for|to|capable\s+of|(?:that|which)(?:\s+can)?|"
     r"(?:designed|built|intended|meant|created|able)\s+to)\s+"
     r"(?:us(?:e|es|ing)|creat(?:e|es|ing)|add(?:s|ing)?|insert(?:s|ing)?|delet(?:e|es|ing)|"
     r"remov(?:e|es|ing)|clear(?:s|ing)?|updat(?:e|es|ing)|connect(?:s|ing)?|"
     r"mov(?:e|es|ing)|layout|select(?:s|ing)?|open(?:s|ing)?|run(?:s|ning)?|execut(?:e|es|ing))"
-    r"[^。！？!?，,；;\n]{0,24}(?:node|canvas|edge|skill|recipe)s?"
+    r"[^.!?\n,;]{0,24}(?:node|canvas|edge|skill|recipe)s?"
     r")",
     re.IGNORECASE,
 )
 _FREEZONE_SKILL_RUNTIME_REQUEST_RE = re.compile(
     r"(?:"
-    r"(?:用(?!于|来)|使用|应用|运行|执行|use|apply|run|execute)"
-    r"[^。！？!?\n]{0,24}"
-    r"(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes|技能|配方)"
-    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes|技能|配方)"
-    r"[^。！？!?\n]{0,40}"
-    r"(?:并|然后|再|随后|接着|同时|完成后|保存后|确认后|后|and\s+then|then)"
-    r"[^。！？!?\n]{0,24}"
-    r"(?:运行|执行|应用|run|execute|apply)"
-    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes|技能|配方)"
-    r"[^。！？!?\n]{0,24}"
-    r"(?:添加到|放到|写入|加入|add\s+to|put\s+(?:it\s+)?on)"
-    r"[^。！？!?\n]{0,12}"
-    r"(?:画布|节点|canvas|node)"
-    r"|(?:运行|执行|应用|使用|用)\s*(?:它|这个|该(?:Skill|Recipe|技能|配方)?)"
-    r"|(?:让|由|请)\s*(?:它|这个\s*(?:Skill|Recipe|技能|配方)?|"
-    r"该\s*(?:Skill|Recipe|技能|配方)?)"
-    r"\s*(?:来)?\s*"
-    r"(?:运行|执行|应用|生成|制作|创建)"
+    r"(?:use|apply|run|execute)"
+    r"[^.!?\n]{0,24}"
+    r"(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes)"
+    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes)"
+    r"[^.!?\n]{0,40}"
+    r"(?:and\s+then|then)"
+    r"[^.!?\n]{0,24}"
+    r"(?:run|execute|apply)"
+    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes)"
+    r"[^.!?\n]{0,24}"
+    r"(?:add\s+to|put\s+(?:it\s+)?on)"
+    r"[^.!?\n]{0,12}"
+    r"(?:canvas|node)"
     r"|(?:run|execute|apply|use)\s+(?:it|this(?:\s+(?:skill|recipe))?)"
-    r"|(?:generate|make|create)\s+[^。！？!?，,；;\n]{0,32}\s+"
+    r"|(?:generate|make|create)\s+[^.!?\n,;]{0,32}\s+"
     r"(?:with|using)\s+(?:it|this\s+(?:skill|recipe))"
     r"|(?:have|let|ask|make)\s+(?:it|this\s+(?:skill|recipe))\s+(?:to\s+)?"
     r"(?:run|execute|apply|generate|make|create)"
@@ -815,11 +791,11 @@ def _freezone_canvas_write_requested(prompt: str | None) -> bool:
     has_canvas_object = bool(_FREEZONE_CANVAS_WRITE_OBJECT_RE.search(user_text))
     has_direct_media_write = bool(_FREEZONE_DIRECT_MEDIA_WRITE_RE.search(user_text))
     has_node_reference = "[SUPERTALE_CANVAS_NODE_REFERENCES]" in raw_prompt
-    standalone_clear = bool(re.search(r"(?:清空|clear)", user_text, re.IGNORECASE))
+    standalone_clear = bool(re.search(r"\bclear\b", user_text, re.IGNORECASE))
     if _FREEZONE_CANVAS_KNOWLEDGE_QUESTION_RE.search(user_text):
         return False
     # Skill Studio authors catalog configuration. Media words inside a Skill
-    # description (for example, “创建图片转线稿 Skill”) do not authorize or
+    # description (for example, “create an image-to-line-art Skill”) do not authorize or
     # require a canvas mutation. Keep the canvas receipt guard only when the
     # same request explicitly asks to use/run the Skill, add it to canvas, or
     # perform another independent canvas mutation.
@@ -830,23 +806,23 @@ def _freezone_canvas_write_requested(prompt: str | None) -> bool:
             _FREEZONE_SKILL_RUNTIME_REQUEST_RE.search(intent_text)
             or _FREEZONE_INDEPENDENT_CANVAS_WRITE_RE.search(intent_text)
         )
-    # A text artifact request such as “生成一个视频脚本” or “create an image
+    # A text artifact request such as “write a video script” or “create an image
     # prompt” must remain a chat response unless the user explicitly names a
     # canvas/node mutation. Otherwise the post-turn adapter may replace the
     # generated text with a misleading canvas-write failure.
     # Only suppress an explicit text-artifact request.  Media requests may
-    # legitimately contain the same words (for example “根据这个提示词生成
-    # 一张图” or “生成一张带文案的图片”), so do not use a broad keyword
+    # legitimately contain the same words (for example “generate an
+    # image from this prompt” or “generate a picture with a caption”), so do not use a broad keyword
     # exclusion here.
     if (
         _FREEZONE_TEXT_ONLY_REQUEST_RE.search(user_text)
         and not re.search(
-            r"(?:根据|用|按照|基于|带|包含|from|using|based\s+on|with)",
+            r"(?:from|using|based\s+on|with|containing|including)",
             user_text,
             re.IGNORECASE,
         )
         and not re.search(
-            r"(?:节点|画布|连线|node|canvas|edge)", user_text, re.IGNORECASE
+            r"(?:node|canvas|edge)", user_text, re.IGNORECASE
         )
     ):
         return False
@@ -981,19 +957,18 @@ async def _bind_server_observed_agent_product_execution(
 
 _FREEZONE_SKILL_STUDIO_TRIGGER_RE = re.compile(
     r"(?:"
-    r"(?:创建|新建|新增|生成|做|制作|编辑|修改|更新|保存|沉淀|整理|总结|抽成|转成|变成|"
-    r"\b(?:create|add|generate|make|edit|modify|update|save|distill|summarize|turn)\b)"
-    r"[\s\S]{0,24}(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes|技能|配方)"
-    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes|技能|配方)"
-    r"[\s\S]{0,24}(?:创建|新建|新增|生成|编辑|修改|更新|保存|沉淀|整理|总结|"
-    r"\b(?:create|add|generate|make|edit|modify|update|save|distill|summarize|turn)\b)"
-    r"|(?:保存|沉淀|整理|总结|抽成|转成|变成)[\s\S]{0,18}(?:模板|可复用能力|复用能力)"
+    r"\b(?:create|add|generate|make|edit|modify|update|save|distill|summarize|turn)\b"
+    r"[\s\S]{0,24}(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes)"
+    r"|(?:Skill|Skills|Recipe|Recipes|skill|skills|recipe|recipes)"
+    r"[\s\S]{0,24}"
+    r"\b(?:create|add|generate|make|edit|modify|update|save|distill|summarize|turn)\b"
+    r"|\b(?:save|distill|summarize|turn)\b[\s\S]{0,18}(?:template|reusable\s+(?:capability|ability))"
     r")",
     re.IGNORECASE,
 )
 
 _FREEZONE_SKILL_STUDIO_INSTRUCTIONS = """[FREEZONE_SKILL_STUDIO]
-This block is present only when the user explicitly wants to create, edit, save, or distill Xi画 Skills / Recipes.
+This block is present only when the user explicitly wants to create, edit, save, or distill Freezone Skills / Recipes.
 
 Routing:
 - Skill Studio creates catalog configuration drafts. It is not a canvas write operation.
@@ -1012,16 +987,16 @@ Routing:
 - For distill_from_canvas/current-flow/selected-node workflow distillation, perform an internal canvas_workflow_analysis before asking or drafting. This analysis must be based on freezone_get_canvas_ontology evidence or key node detail evidence, not on the user's short request or canvas summary.
 - Do not call freezone_request_user_clarification for canvas distillation until you have canvas evidence from ontology or a small set of key node details. Do not read every node detail one by one; only fetch individual node detail for a small number of key nodes when ontology is missing fields needed for the draft or for evidence-backed questions.
 - Summary-flow confirmation questions should be grounded in the current canvas evidence. Before asking, build an internal decision matrix with these distinct layers: production_method (what this workflow makes and how), visual_language (only evidence-backed visual style, not a generic noun), case_variables (brand, character, product, one-off story), reusable_protocol (stage order, anchors, review gates, inheritance rules), hard_constraints (rules that must not be broken), start_options (choices the user should set each time), and applicability_scope (where this Skill can be used). Do not merge these layers into one question.
-- Do not over-infer visual style from node names, product categories, or a single word such as 光影. If the evidence is thin, say internally that visual evidence is insufficient and ask the user which visual direction to preserve. Never present a vague phrase such as "光影风格广告" as the recognized core style unless the canvas evidence explicitly supports it.
+- Do not over-infer visual style from node names, product categories, or a single word such as "lighting". If the evidence is thin, say internally that visual evidence is insufficient and ask the user which visual direction to preserve. Never present a vague phrase such as "lighting-style ad" as the recognized core style unless the canvas evidence explicitly supports it.
 - Ask about applicability_scope only after production_method, reusable_protocol, and case_variables are clear. The first question for canvas distillation should usually be about what workflow method to preserve, not which product category it applies to.
 - Each confirmation question must ask one decision only. Do not pack style rules, workflow steps, and final composition constraints into one option. If a hard-rule option becomes a long sentence, split it into separate choices or a multi-select question.
-- The questions and options must mention recognized workflow evidence in the user's language, for example "主体锚点 + 参考资产 + 分镜草图 + 逐段生成", rather than generic "当前案例". Only mention a concrete visual style when it is actually supported by canvas prompt/media evidence.
-- Before showing a clarification card, briefly state the canvas evidence in plain user language, for example: "我看到这张画布像是一个广告短片流程：先固定角色和道具，再做分镜，再生成逐镜视频，最后加音频并合成。" This evidence sentence should be concise and should not expose ontology/schema/tool names.
+- The questions and options must mention recognized workflow evidence in the user's language, for example "subject anchor + reference assets + storyboard sketches + shot-by-shot generation", rather than a generic "current case". Only mention a concrete visual style when it is actually supported by canvas prompt/media evidence.
+- Before showing a clarification card, briefly state the canvas evidence in plain user language, for example: "This canvas looks like an ad-film workflow: first lock the character and props, then build the storyboard, then generate the video shot by shot, and finally add audio and compose." This evidence sentence should be concise and should not expose ontology/schema/tool names.
 - Summary-flow confirmation questions should focus on user-facing abstraction choices: what to reuse next time, what can be replaced next time, what style or quality rules must stay, how detailed the reusable steps should be, and what choices the user wants to confirm each time. Do not always ask the same two questions.
-- Translate internal analysis labels into user-facing question titles. Do not use question titles like "硬约束与开始前选项", "完整保留全链路", "作为默认风格写进 Skill", or "变成每次可替换的输入". Prefer titles such as "下次主要复用什么？", "下次可以替换哪些内容？", "哪些效果必须保持？", "每次开始前要确认什么？".
-- Option text should describe the effect of choosing it, not the implementation. Prefer "下次换产品时，角色和道具可以重新指定，但分镜到成片的流程保持一致" over "case_variables become input_parameters". Keep each option short enough for a user to scan quickly.
-- In user-facing questions, do not expose internal terms such as Recipe, Recipes, 配方, allowed_recipe_ids, workflow_templates, videoCompose, schema, or tool fields. Use product language such as "复用方式", "能力模块", "执行步骤", "工作流细致程度", or "细粒度复用".
-- If you need to ask about internal Recipe granularity, phrase it as a user-facing reuse choice. For example, ask "复用方式" with options like "细粒度复用（推荐）：把角色、道具、分镜、视频、音频等步骤分别沉淀，之后更容易单独复用和调整" and "简化复用：合并成较少步骤，配置更轻，但后续单独调整某一步的灵活性较弱".
+- Translate internal analysis labels into user-facing question titles. Do not use question titles like "Hard constraints and pre-start options", "Keep the whole pipeline intact", "Write it into the Skill as the default style", or "Turn it into a replaceable input each time". Prefer titles such as "What should be reused next time?", "What can be replaced next time?", "Which effects must stay the same?", "What should be confirmed before each start?".
+- Option text should describe the effect of choosing it, not the implementation. Prefer "When you switch products next time, the character and props can be re-specified, but the flow from storyboard to final cut stays the same" over "case_variables become input_parameters". Keep each option short enough for a user to scan quickly.
+- In user-facing questions, do not expose internal terms such as Recipe, Recipes, allowed_recipe_ids, workflow_templates, videoCompose, schema, or tool fields. Use product language such as "reuse mode", "capability module", "execution step", "workflow level of detail", or "fine-grained reuse".
+- If you need to ask about internal Recipe granularity, phrase it as a user-facing reuse choice. For example, ask "Reuse mode" with options like "Fine-grained reuse (recommended): save the character, props, storyboard, video, audio, and other steps separately, so they are easier to reuse and adjust individually later" and "Simplified reuse: merge into fewer steps with lighter configuration, but less flexibility to adjust a single step later".
 - Do not present videoCompose, final media composition, or final synthesis as a user-facing granularity option, and do not count the terminal composition step in the user-facing step count.
 - Do not ask for Skill name, category, or fixed topology as the first summary-flow questions. Prefer concrete case vs reusable Skill, user-facing reuse mode, and hard constraint preservation.
 - Skip those summary-flow questions only when the user explicitly says to skip confirmation, use recommended/default settings, or already gives equivalent preferences.
@@ -1132,13 +1107,13 @@ Draft rules:
   - For image/video/audio Recipes, the current LLM transforms upstream inputs into one complete
     downstream generation prompt. The system_prompt describes how to write that prompt, not a fixed prompt.
     Its output is a prompt for the corresponding imageGeneration, videoGeneration, or audioGeneration node.
-- Recipe system_prompt must include concrete structured sections: 【角色设定】, 【输入来源】,
-  【任务目标】, 【输出结构要求】, 【质量标准】, and 【禁止事项/约束】.
+- Recipe system_prompt must include concrete structured sections: [Role Definition], [Input Sources],
+  [Task Goal], [Output Structure Requirements], [Quality Standards], and [Prohibitions/Constraints].
   For text Recipes, output structure and must_have_items describe the final text itself.
   For image/video/audio Recipes, they describe the downstream generation prompt, such as subject,
   scene, composition, style, continuity, and negative constraints.
-- Recipe planning_prompt must be non-empty and describe this node's work in one short business sentence, usually "根据 X，生成/提取/改写 Y。". Do not explain scheduling mechanics, downstream nodes, workflow internals, or "when to schedule this Recipe" in this field.
-- Recipe result_summary must be non-empty and describe this node's business output in one short phrase or sentence, such as "3:4 竖版数码产品科技感详情图" or "家乡文化海报图片生成指令". Do not mention downstream execution, imageGeneration handoff, planner behavior, or workflow mechanics in this field.
+- Recipe planning_prompt must be non-empty and describe this node's work in one short business sentence, usually "Based on X, generate/extract/rewrite Y.". Do not explain scheduling mechanics, downstream nodes, workflow internals, or "when to schedule this Recipe" in this field.
+- Recipe result_summary must be non-empty and describe this node's business output in one short phrase or sentence, such as "3:4 vertical tech-style detail image for a digital product" or "image generation instruction for a hometown culture poster". Do not mention downstream execution, imageGeneration handoff, planner behavior, or workflow mechanics in this field.
 - For multi-step Skills, split planning/prompt-writing Recipes from terminal image/video generation Recipes when useful.
 - If the request is ambiguous, ask 3-5 high-level option questions instead of field-by-field questions.
 - Manual card edits are the source of truth after the draft is shown; later natural-language changes must be based on the current draft.
@@ -1990,8 +1965,8 @@ def _bounded_workflow_planning_reply(text: str, *, draft_ready: bool) -> str:
     ):
         return text
     return (
-        "工作流草稿已准备完成，但规划回复包含大段正文，已拒绝直接交付。"
-        "请把正文改为 text Recipe 节点生成，以便按实际输出字符计量。"
+        "The workflow draft is ready, but the planning reply contains a large body of text and was refused for direct delivery. "
+        "Generate that text through a text Recipe node instead so it is metered by actual output characters."
     )
 
 
@@ -3589,12 +3564,12 @@ def _frontend_context_reply(prompt: str) -> str | None:
         body = confirmation.group(1)
         if re.search(r"(?m)^\s*stage:\s*confirm_clear\s*$", body):
             return (
-                "覆盖会清空/重建当前项目已有角色、分集、脚本、草图、音频、视频等"
-                "流水线结果。是否继续？\n\n请回复 `确定` 或 `继续` 后才会开始覆盖。"
+                "Overwriting will clear and rebuild the existing characters, episodes, scripts, sketches, audio, video, "
+                "and other pipeline results of the current project. Continue?\n\nReply `confirm` or `continue` and the overwrite will start."
             )
         return (
-            "当前项目已有摄入内容，继续会覆盖现有项目。是否要覆盖当前项目？\n\n"
-            "请回复 `覆盖` 进入下一步确认。"
+            "The current project already has ingested content, and continuing will overwrite the existing project. Do you want to overwrite the current project?\n\n"
+            "Reply `overwrite` to go to the next confirmation step."
         )
 
     return None
@@ -3607,9 +3582,10 @@ def _script_creation_model_reply_prompt(
 ) -> str | None:
     if not prompt:
         return None
-    # 虾画的动态工作流可以把一句创意展开成短视频脚本、广告文案和分镜文本节点。
-    # “必须从虾料上传剧本”的限制只属于主线 NovelVideo 摄入流程，不能在进入
-    # Freezone workflow Skill 前把合法的画布创作请求提前拦截。
+    # Freezone dynamic workflows can expand a one-line idea into short-video scripts, ad copy,
+    # and storyboard text nodes. The "scripts must be uploaded in the materials area" restriction
+    # belongs only to the mainline NovelVideo ingest flow and must not intercept a legitimate
+    # canvas creation request before it enters a Freezone workflow Skill.
     if tool_mode == "freezone_canvas":
         return None
     if _DRAMACLAW_INGEST_AUTOMATION_RE.search(prompt):
@@ -3625,7 +3601,7 @@ def _script_creation_model_reply_prompt(
     ):
         return (
             f"{_DRAMACLAW_SCRIPT_UPLOAD_MODEL_REPLY_INSTRUCTIONS}"
-            f"\n\n用户原话：{text}"
+            f"\n\nUser's original message: {text}"
         )
     return None
 
@@ -3704,33 +3680,36 @@ async def authorize_hermes_launch(
 ):
     """Turn this request's trusted egress context into a one-shot launch authorization.
 
-    请求路径上 project 态与 home 态是两条独立实现（home 的流式循环在
-    `api/routes/chat.py` 里，完全绕开本模块），但「怎么换取 authorization」
-    必须只有一份。抽在这里而不是 `hermes_egress.py`：后者刻意用依赖注入收
-    `credential_resolver` / `operation_port`，把端口查找塞进去会破坏那个设计。
+    On the request path the project scope and the home scope are two independent implementations
+    (the home streaming loop lives in `api/routes/chat.py` and bypasses this module entirely), but
+    "how to exchange for an authorization" must exist in exactly one place. It is extracted here
+    rather than into `hermes_egress.py`: the latter deliberately takes `credential_resolver` /
+    `operation_port` through dependency injection, and putting port lookup inside it would break
+    that design.
 
-    `egress_context` 为 `None`（平台／个人／CE local／灰度未开）时返回 `None`，
-    调用方照传给 `get_for_user`，平台路径逐字节不变。
+    When `egress_context` is `None` (platform / personal / CE local / gray rollout off) this returns
+    `None`, the caller passes it straight to `get_for_user`, and the platform path stays
+    byte-for-byte unchanged.
 
-    `egress_project_id` 是**出网身份**，不是会话身份：project 态传真实 project id，
-    home 态传 `HOME_SCOPE_EGRESS_PROJECT_ID` 哨兵。它必须与绑定时
-    `request_egress_scope(project_id=...)` 用的值一致——`_strict_admission` 在
-    `authorize_credentialed_hermes` 与 `build_hermes_child_env` 两处各比一次。
+    `egress_project_id` is the **egress identity**, not the session identity: project scope passes the
+    real project id, home scope passes the `HOME_SCOPE_EGRESS_PROJECT_ID` sentinel. It must match the
+    value used when binding with `request_egress_scope(project_id=...)`: `_strict_admission` compares
+    it once in `authorize_credentialed_hermes` and once in `build_hermes_child_env`.
     """
 
     if egress_context is None:
         return None
 
-    # 函数内局部导入：规避循环导入（本模块被 `hermes_pool` 一侧间接引用）。
-    # 这是抽 helper 之前就有的写法，原样保留，不提到模块顶层。
+    # Function-local import to avoid a circular import (this module is indirectly referenced from the `hermes_pool` side).
+    # This is how it was written before the helper was extracted; kept as-is rather than hoisted to module level.
     from novelvideo.chat.hermes_egress import (
         EgressBoundaryError,
         authorize_credentialed_hermes,
     )
     from novelvideo.ports import get_egress_operation_port, get_model_credentials
 
-    # 身份判定只认 user_id。缺了就拒，不得回落成登录名 username——
-    # 那是两个不同的值，回落会把坏口径固化成"看起来能用"。
+    # Identity is decided by user_id only. Reject if it is missing; never fall back to the login name username -
+    # they are two different values, and falling back would harden a wrong basis into something that "looks like it works".
     if not requester_user_id:
         raise EgressBoundaryError("TASK_ENVELOPE_INVALID")
     return await authorize_credentialed_hermes(
@@ -3835,9 +3814,9 @@ async def _stream_assistant_reply_hermes(
         project_id=project or None,
         surface=surface,
         canvas_id=canvas_id,
-        # 出网身份与会话身份分开传。这两个必须来自调用方，不得从
-        # `authorization.context` 自己取——那样 `build_hermes_child_env` 里的
-        # 身份复核就退化成自证。home 态的出网 project 哨兵是 S5 的事，本片不碰。
+        # The egress identity and the session identity are passed separately. Both must come from the caller and must not be
+        # taken from `authorization.context` itself - otherwise the identity re-check in `build_hermes_child_env`
+        # degenerates into self-attestation. The home-scope egress project sentinel is S5's job and is not touched in this slice.
         egress_project_id=project or None,
         requester_user_id=requester_user_id,
         authorization=authorization,
@@ -3981,12 +3960,12 @@ async def _stream_assistant_reply_hermes(
                         stream_prompt = agent_prompt + """
 
 [FREEZONE_AUTOMATIC_RECOVERY]
-上一次执行因重复读取同一份 Skill、画布上下文或节点状态而被内部守卫中止。不要要求用户改写或重发请求。
-复用上一次已经获得的信息，不要再次重复读取同一项；确有必要时，同一项最多读取一次。
-如果用户原始请求是创建或更新动态工作流，必须继续遵守已选 Workflow Skill 的草稿流程：
-报价查询、Skill 规划包读取和工作流草稿准备各最多调用一次；不得使用 freezone_emit_canvas_command
-或逐节点创建来绕过工作流草稿、用户确认与确定性校验。若仍缺少决定性信息，只询问一个有针对性的问题。
-完成用户原始请求后再回复结果。
+The previous run was aborted by an internal guard because it kept re-reading the same Skill, canvas context, or node state. Do not ask the user to rewrite or resend the request.
+Reuse the information you already obtained and do not re-read the same item again; if truly necessary, read the same item at most once.
+If the user's original request is to create or update a dynamic workflow, you must keep following the draft flow of the selected Workflow Skill:
+call the quote lookup, the Skill planning-package read, and the workflow draft preparation at most once each; do not use freezone_emit_canvas_command
+or per-node creation to bypass the workflow draft, user confirmation, and deterministic validation. If decisive information is still missing, ask only one targeted question.
+Reply with the result after completing the user's original request.
 [/FREEZONE_AUTOMATIC_RECOVERY]"""
                         guard_retried = True
                         restart_stream = True
@@ -4222,7 +4201,7 @@ async def _stream_assistant_reply_hermes(
                     {
                         "type": "permission_requested",
                         "request_id": event.request_id,
-                        "text": str(event.text or "需要操作授权"),
+                        "text": str(event.text or "Authorization required"),
                         "options": event.options or [],
                         "tool_call": event.raw,
                     },
@@ -4360,7 +4339,7 @@ async def _stream_assistant_reply_hermes(
             tool_mode=tool_mode,
         )
         if not assistant_text.strip():
-            assistant_text = "这轮操作没有收到虾导的有效回复，请稍后重试。"
+            assistant_text = "No valid reply was received from the Director Agent for this turn; please try again later."
         if (
             _allows_mainline_media_ui_specs(tool_mode)
             and not tool_ui_specs
@@ -4398,7 +4377,7 @@ async def _stream_assistant_reply_hermes(
                     username,
                     store_scope,
                     "assistant",
-                    "这轮操作没有收到虾导的有效回复，请稍后重试。",
+                    "No valid reply was received from the Director Agent for this turn; please try again later.",
                     media=[],
                     turn_id=turn_id,
                     idempotency_key=f"assistant:{turn_id}" if turn_id else None,
@@ -4408,7 +4387,7 @@ async def _stream_assistant_reply_hermes(
                     add_assistant_message,
                     username,
                     project,
-                    "这轮操作没有收到虾导的有效回复，请稍后重试。",
+                    "No valid reply was received from the Director Agent for this turn; please try again later.",
                     [],
                     project_dir=project_dir,
                     project_state_dir=project_state_dir,
@@ -4515,7 +4494,7 @@ async def _stream_assistant_reply_claude(
                     event.text, assistant_text
                 )
 
-        assistant_text = assistant_text.strip() or "已执行，但没有返回正文。"
+        assistant_text = assistant_text.strip() or "Executed, but no body text was returned."
         assistant_text = _normalize_json_render_reply(assistant_text)
         if tool_text.strip():
             await asyncio.to_thread(
@@ -4951,7 +4930,7 @@ async def _stream_assistant_reply_codex(
     if structured_canvas_reply and turn_disposition == "cancelled":
         # Interrupted turns can complete with partial structured JSON. None of
         # that unvalidated payload may reach presentation or persisted history.
-        assistant_text = "已取消本轮请求。"
+        assistant_text = "This turn's request was cancelled."
     elif structured_canvas_reply and canvas_postcondition_applies:
         assistant_text = finalize_canvas_reply(
             assistant_text,
@@ -4967,7 +4946,7 @@ async def _stream_assistant_reply_codex(
             ),
             draft_ready=ready_workflow_draft is not None,
         )
-    assistant_text = assistant_text.strip() or "已执行，但没有返回正文。"
+    assistant_text = assistant_text.strip() or "Executed, but no body text was returned."
     assistant_text = _bounded_workflow_planning_reply(
         assistant_text,
         draft_ready=ready_workflow_draft is not None,

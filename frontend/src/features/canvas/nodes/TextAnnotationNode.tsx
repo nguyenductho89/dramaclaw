@@ -108,32 +108,28 @@ const COMPACT_OPS_PANEL_MIN_WIDTH = 480;
 
 const COMPACT_MODES = new Set<TextNodeMode>(['textToVideo', 'imageToPrompt']);
 
-// 预填进文本节点、原样发给模型的反推指令。跟着界面语言走会换掉出词的语言，锁中文。
-// i18n-exempt-start
+// The reverse-prompt instruction prefilled into the text node and sent to the model as is.
 const IMAGE_TO_PROMPT_DEFAULT_CONTENT =
-  '根据图片生成结构化中文提示词，包括主体描述、环境、光影、镜头语言、风格关键词。';
-// i18n-exempt-end
+  'Generate a structured English prompt from the image, including subject description, environment, lighting, camera language and style keywords.';
 
 function countBillableTextChars(text: string): number {
   return text.replace(/[\s\u3000]+/gu, '').length;
 }
 
-// 「文字生成音乐」的默认音乐描述——点击后预填进文本节点，用户可在此基础上改。
-// 同样是原样发给模型的提示词，锁中文。
-// i18n-exempt-start
+// Default music description for "text to music" — prefilled into the text node on click, and the user can edit from there.
+// Likewise a prompt sent to the model as is.
 const TEXT_TO_MUSIC_DEFAULT_CONTENT =
-  '生成一首现代品牌电子音乐（约 110 BPM），干净有力的低频贝斯，清晰电子鼓点，整体风格高级、未来感强。开场节奏型贝斯与简洁合成器音色建立律动。主段加入稳定鼓点，节奏清晰，保持克制的张力。强化段加入更丰富的音层，合成器音色提升，律动增强但不过度拥挤。结尾鼓点减弱，仅保留低频与氛围音渐出，干净利落收尾。';
-// i18n-exempt-end
+  'Generate a modern branded electronic track (about 110 BPM) with a clean, powerful low-end bass, crisp electronic drums, and an overall premium, futuristic feel. The intro builds a groove with a rhythmic bass and a simple synth tone. The main section adds a steady drum beat with clear rhythm and restrained tension. The build section adds richer layers, a lifted synth tone and a stronger groove without getting overcrowded. The ending softens the drums, leaving only the low end and ambient sound fading out for a clean, crisp finish.';
 
 const SPAWN_UPLOAD_WIDTH = 320;
 
-/** 反推提示词通常十几秒返回，用它给 loading 覆盖层估算进度推进。 */
+/** A reverse prompt usually returns in ten-odd seconds; used to estimate progress advancement for the loading overlay. */
 const REVERSE_PROMPT_DURATION_MS = 15000;
 
 /**
- * 解析上游图片节点「眼下展示的那张图」的 URL。和 graphContentResolver 的图片分支
- * 保持同一套回退顺序：生成结果 imageUrl → previewImageUrl → referenceImageUrl，
- * 这样图生节点只挂了参考图（还没生成）时也能被识别为可引用素材。
+ * Resolve the URL of "the image the upstream image node is currently showing". Keeps the same fallback order as the image branch of graphContentResolver:
+ * generated result imageUrl → previewImageUrl → referenceImageUrl,
+ * so an image-generation node that only has a reference image attached (not generated yet) is also recognized as a referenceable asset.
  */
 function resolveUpstreamImageUrl(data: unknown): string | null {
   const d = data as
@@ -189,7 +185,7 @@ export const TextAnnotationNode = memo(({
   const upstreamTextJoined = joinUpstreamText(upstreamContents);
   const instruction = typeof data.instruction === 'string' ? data.instruction : '';
   const mode: TextNodeMode = data.mode && REAL_MODES.has(data.mode) ? data.mode : 'writing';
-  // 已从能力 picker 选过一次(如「文字生成音乐」)：恒为纯文本编辑区,空内容也不再弹「试试」。
+  // Already chosen once from the capability picker (e.g. "text to music"): always a plain text editing area, and empty content no longer pops up "Try".
   const pickerDismissed = Boolean(data.pickerDismissed);
   const modelId = typeof data.model === 'string' && data.model.length > 0
     ? data.model
@@ -247,8 +243,8 @@ export const TextAnnotationNode = memo(({
       : null);
   const { isGenerating } = useNodeGenerationTaskState(data);
   const [isTranslating, setIsTranslating] = useState(false);
-  // referenceOnly: 节点被作为上游引用素材使用（脚本节点 spawn 出来的）。
-  // 复用 compact 视图（只渲染编辑卡片），同时 selected ops panel 也不显示。
+  // referenceOnly: the node is used as an upstream reference asset (spawned by a script node).
+  // Reuses the compact view (renders only the editing card), and the selected ops panel is not shown either.
   const isReferenceOnly = Boolean(data.referenceOnly);
   const isSystemManaged = isSystemManagedNodeData(data);
   const isCompactView = isReferenceOnly || COMPACT_MODES.has(mode);
@@ -269,8 +265,8 @@ export const TextAnnotationNode = memo(({
     return resolveUpstreamImageUrl(node?.data);
   });
 
-  // 取消关联上游参考图：删掉指向本节点的那根连线（缩略图只在该边的源带图时
-  // 才显示，所以这里删第一条 target===id 的边即对应当前展示的素材）。
+  // Remove the link to the upstream reference image: delete the edge pointing to this node (the thumbnail shows only when that edge's source has an image,
+  // so deleting the first edge with target===id matches the asset currently shown).
   const handleDetachUpstreamImage = useCallback(() => {
     const state = useCanvasStore.getState();
     const edge = state.edges.find((e) => e.target === id);
@@ -287,9 +283,9 @@ export const TextAnnotationNode = memo(({
     if (node) {
       const w = (node.measured?.width ?? width ?? DEFAULT_WIDTH);
       const h = (node.measured?.height ?? height ?? DEFAULT_HEIGHT);
-      // 组内成员的 node.position 是「相对父组」的坐标，而 setCenter 需要绝对画布坐标。
-      // 用 internalNode 的 positionAbsolute（无父组时等于 position），否则双击组里的
-      // 节点会把视野按组原点的偏移量平移到别处。
+      // A group member's node.position is relative to the parent group, while setCenter needs absolute canvas coordinates.
+      // Use internalNode's positionAbsolute (equal to position when there is no parent group); otherwise double-clicking a node
+      // inside a group would pan the view elsewhere by the group origin's offset.
       const absolute =
         reactFlow.getInternalNode(id)?.internals.positionAbsolute ?? node.position;
       const cx = absolute.x + w / 2;
@@ -318,8 +314,8 @@ export const TextAnnotationNode = memo(({
 
   const spawnVideoNode = useCallback(() => {
     const position = findNodePosition(id, 580, 680);
-    // 文本内容由连线实时提供给下游。不要在这里复制到 video.prompt；该字段只用于
-    // 视频节点自己的补充指令，否则上游文本更新后会留下过期快照。
+    // The text content is provided live to downstream through edges. Do not copy it to video.prompt here; that field is only for
+    // the video node's own supplementary instructions, otherwise stale snapshots remain after the upstream text updates.
     const seedData: Partial<VideoNodeData> = {
       genMode: 'textToVideo',
     };
@@ -340,8 +336,8 @@ export const TextAnnotationNode = memo(({
       x: sourceX - SPAWN_UPLOAD_WIDTH - 60,
       y: sourceY,
     };
-    // 反推提示词只能吃图片，限制上传节点仅接受图片类型（标题变「上传图片」、
-    // 文件选择器 accept=image/*、拖入视频/音频会被拒）。
+    // Reverse prompt only accepts images, so restrict the upload node to image types (title becomes "Upload image",
+    // file picker accept=image/*, dragging in video/audio is rejected).
     const seedData: Partial<UploadImageNodeData> = { imageOnly: true };
     const newNodeId = addNode(CANVAS_NODE_TYPES.upload, position, seedData);
     addEdge(newNodeId, id);
@@ -350,9 +346,9 @@ export const TextAnnotationNode = memo(({
       .autoGroupSpawn(id, [newNodeId], { label: t('node.textNode.group.imageToPrompt') });
   }, [addEdge, addNode, id, t]);
 
-  // 克隆音频 / 文字生成音乐：在文本节点下游派生一个音频节点并连边（文本 → 音频），
-  // 与「文生视频」派生视频节点同构。音频节点默认尺寸 480×180。
-  // audioKind 决定下游音频节点走语音克隆(speech) 还是文本生成音乐(music)。
+  // Clone audio / text to music: derive an audio node downstream of the text node and connect the edge (text → audio),
+  // isomorphic with the video node derived by "text to video". The audio node's default size is 480×180.
+  // audioKind decides whether the downstream audio node does voice cloning (speech) or text-to-music (music).
   const spawnAudioNode = useCallback((audioKind: 'speech' | 'music') => {
     const position = findNodePosition(id, 480, 180);
     const newNodeId = addNode(CANVAS_NODE_TYPES.audio, position, { audioKind });
@@ -366,15 +362,15 @@ export const TextAnnotationNode = memo(({
 
   const handlePickMode = useCallback((nextMode: TextNodeMode) => {
     if (nextMode === 'writing') {
-      // 先打开 AI 创作面板；节点正文仍可通过单击占位区 / 双击已有内容手工编辑。
+      // First open the AI creation panel; the node body can still be edited by hand by clicking the placeholder area / double-clicking existing content.
       updateNodeData(id, { mode: nextMode, pickerDismissed: true });
       return;
     }
-    // 文字生成音乐：派生下游音乐音频节点后，左侧文本节点回到纯文本编辑态
-    // (writing)——音乐描述在这里输入并同步给下游音频节点，不再显示能力 picker。
+    // Text to music: after deriving the downstream music audio node, the text node on the left returns to plain-text editing
+    // (writing) — the music description is typed here and synced to the downstream audio node, and the capability picker is no longer shown.
     if (nextMode === 'textToMusicGen') {
       spawnAudioNode('music');
-      // 文本节点回到纯文本编辑态、关闭能力 picker,并预填默认音乐描述(同步给下游音频节点)。
+      // The text node returns to plain-text editing, the capability picker closes, and the default music description is prefilled (synced to the downstream audio node).
       updateNodeData(id, {
         mode: 'writing',
         pickerDismissed: true,
@@ -554,7 +550,7 @@ export const TextAnnotationNode = memo(({
       updateNodeData(id, {
         isGenerating: false,
         generationStartedAt: null,
-        generationError: error instanceof Error ? error.message : '文本生成失败',
+        generationError: error instanceof Error ? error.message : 'Text generation failed',
       });
       throw error;
     }
@@ -817,8 +813,8 @@ export const TextAnnotationNode = memo(({
                 className={`ui-scrollbar nodrag nowheel min-h-0 w-full flex-1 resize-none border-none bg-transparent px-3 pt-3 text-sm leading-6 text-text-dark outline-none ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`}
               />
               <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
-                {/* 文生视频的视频模型由下游视频节点管理；反推提示词接口不接收模型。
-                    因此这两种模式均不在文本节点显示模型选择器。 */}
+                {/* The video model for text-to-video is managed by the downstream video node; the reverse prompt endpoint takes no model.
+                    So neither of these two modes shows a model selector on the text node. */}
                 {mode === 'textToVideo' || mode === 'imageToPrompt' ? (
                   <span />
                 ) : (
@@ -896,11 +892,11 @@ export const TextAnnotationNode = memo(({
           )}
         </>
       ) : (
-        // 默认视图（writing / textToMusic）：节点本体即文本编辑区——有内容
-        // 时直接渲染 markdown，双击进入编辑；空内容时退回到 capability
-        // picker（让用户选下一步要做什么 / 切到其它模式）。底部那条原本
-        // 的 prompt + send 面板已移除——writing/textToMusic 的 submit
-        // 之前就是 stub，留着只会和正文重复编辑同一个 content 字段。
+        // Default view (writing / textToMusic): the node body is itself the text editing area — with content
+        // markdown renders directly and double-click enters editing; with empty content it falls back to the capability
+        // picker (letting the user choose what to do next / switch to another mode). The prompt + send panel at the bottom
+        // has been removed — the submit for writing/textToMusic
+        // was a stub before, and keeping it would only duplicate editing the same content field as the body.
         <div
           className={`relative flex h-full w-full flex-col rounded-[var(--node-radius)] border transition-colors ${inputBodyToneClass}`}
           onDoubleClick={(event) => {
@@ -962,7 +958,7 @@ export const TextAnnotationNode = memo(({
               <AlignJustify className="h-12 w-12 stroke-[1.5] text-text-muted/40" />
             </div>
           ) : pickerDismissed ? (
-            // 已选过模式的纯文本节点：空内容时显示占位文案、点击进入编辑，不再显示 picker。
+            // A plain-text node that has already chosen a mode: with empty content shows the placeholder, click to edit, and the picker is no longer shown.
             <div
               className={`flex min-h-0 flex-1 cursor-text items-start px-4 py-4 text-sm leading-6 ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`}
               onClick={(event) => {

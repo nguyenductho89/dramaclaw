@@ -59,7 +59,7 @@ function node(overrides: Partial<CanvasNode> = {}): CanvasNode {
     type: "imageGen",
     position: { x: 0, y: 0 },
     data: {
-      displayName: "商品主图",
+      displayName: "Product main image",
       generationTaskKey: "task-1",
     },
     ...overrides,
@@ -94,7 +94,7 @@ describe("selectChatTaskItems", () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       nodeId: "node-1",
-      nodeLabel: "商品主图",
+      nodeLabel: "Product main image",
     });
   });
 
@@ -218,7 +218,7 @@ describe("selectChatTaskItems", () => {
     expect(result[0].task).toMatchObject({
       status: "running",
       progress: 0.75,
-      current_task: "批次进度 1/2 · 运行 1",
+      current_task: "Batch progress 1/2 · 1 running",
     });
   });
 
@@ -236,9 +236,9 @@ describe("selectChatTaskItems", () => {
     const result = aggregateChatTaskBatchItems(items);
 
     expect(result).toHaveLength(1);
-    expect(result[0].task.current_task).toBe("批次进度 0/9 · 运行 3 · 等待 6");
+    expect(result[0].task.current_task).toBe("Batch progress 0/9 · 3 running · 6 waiting");
     expect(chatTaskBatchStatusSummary(result)).toBe(
-      "批次进度 0/9 · 运行 3 · 等待 6",
+      "Batch progress 0/9 · 3 running · 6 waiting",
     );
     expect(chatTaskBatchWaitingItems(items)).toMatchObject([{
       batchId: "first-frame-batch",
@@ -613,11 +613,11 @@ describe("selectWorkflowActivityLabels", () => {
         node({
           id: "node-2",
           type: CANVAS_NODE_TYPES.video,
-          data: { displayName: "等待中的视频" },
+          data: { displayName: "Waiting video" },
         }),
       ],
       (label, phase) => `${phase}:${label}`,
-    )).toEqual(["generating:商品主图"]);
+    )).toEqual(["generating:Product main image"]);
   });
 
   it("uses a running task linked by the persisted workflow task key after refresh", () => {
@@ -643,10 +643,10 @@ describe("selectWorkflowActivityLabels", () => {
 
     expect(selectWorkflowActivityLabels(
       actions,
-      [node({ data: { displayName: "刷新后仍在生成" } })],
+      [node({ data: { displayName: "Still generating after refresh" } })],
       (label, phase) => `${phase}:${label}`,
       tasks,
-    )).toEqual(["waiting_capacity:刷新后仍在生成"]);
+    )).toEqual(["waiting_capacity:Still generating after refresh"]);
     expect(workflowStatusCounts(actions, tasks)).toMatchObject({
       inProgress: 1,
       waiting: 0,

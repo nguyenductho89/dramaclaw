@@ -1,23 +1,23 @@
 # MV Workflow
 
-用于 MV、音乐视频、歌词视觉化、节奏镜头。
+For MVs, music videos, lyric visualization and rhythm shots.
 
-## 材料要求
+## Material requirements
 
-- 必需其一：音频、歌曲、歌词、音乐风格描述、节奏参考，或用户在聊天里给出的 MV brief。
-- 推荐：歌词文本、歌曲结构、BPM/节奏感、视觉风格、参考 MV、主视觉角色/场景、成片时长。
-- 可选：字幕样式、歌手/角色设定、舞美/场景参考图、镜头节奏、目标比例、平台。
+- One of the following is required: audio, a song, lyrics, a music style description, a rhythm reference, or an MV brief given by the user in chat.
+- Recommended: lyric text, song structure, BPM/rhythm feel, visual style, reference MVs, main visual characters/scenes, final duration.
+- Optional: subtitle style, singer/character settings, stage design/scene reference images, shot rhythm, target aspect ratio, platform.
 
-如果只有歌词没有音频，可以先按歌词段落规划视觉和镜头；如果只有音频没有歌词，可以先按音乐段落和情绪规划。
+With only lyrics and no audio, you can first plan visuals and shots by lyric paragraphs; with only audio and no lyrics, you can first plan by music sections and mood.
 
-## 生产链路
+## Production chain
 
-`音频/歌词输入 -> 段落分析 -> 节奏点 -> 视觉风格 -> 镜头段落 -> 视觉资产 -> 视频片段 -> 歌词/字幕 -> 成片合成 -> 节奏质检`
+`audio/lyrics input -> section analysis -> rhythm points -> visual style -> shot sections -> visual assets -> video clips -> lyrics/subtitles -> final composition -> rhythm QA`
 
-## 动态展开
+## Dynamic expansion
 
-- 有音频时，从 `audio_input` 开始。
-- 有歌词时，从 `lyrics_input` 开始。
-- 按 intro / verse / chorus / bridge / outro 或用户给出的时间段拆 production units。
-- 副歌和高能段落可以单独拆镜头和视觉资产。
-- 不要套用产品卖点或广告 CTA，除非用户明确要求商业 MV。
+- When there is audio, start from `audio_input`.
+- When there are lyrics, start from `lyrics_input`.
+- Split production units by intro / verse / chorus / bridge / outro or the time ranges given by the user.
+- The chorus and high-energy sections can have shots and visual assets split out separately.
+- Do not apply product selling points or ad CTAs unless the user explicitly asks for a commercial MV.

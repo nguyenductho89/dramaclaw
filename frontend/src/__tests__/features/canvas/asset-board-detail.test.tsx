@@ -7,22 +7,13 @@ import { CANVAS_NODE_TYPES, type CanvasEdge, type CanvasNode } from '@/features/
 import { AssetBoardView } from '@/features/canvas/ui/asset-board/AssetBoardView';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-// ImageViewerModal（AssetBoardView 内常驻挂载）用到 useTranslation。
+// Model-task access is mocked: the test tree has no auth/query providers.
 vi.mock('@/lib/model-task-access', () => ({
   useModelTaskAccess: () => ({ blocked: false, denialReason: null, message: null }),
 }));
 
-vi.mock('react-i18next', () => ({
-  // 第二参数可能是插值对象（如 t(key, { count })，视频生成表单的「生成数量」用到），
-  // 只有字符串才当默认文案；否则会把对象当 React 子节点渲染而炸掉整棵树。
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
-  }),
-}));
-
-// 宫格活价（M2）用了 react-query 的 useGenerationCreditCost，测试树没有
-// QueryClientProvider —— 直接 mock 掉，让组件退回硬编码 cost 兜底展示。
+// Grid live pricing (M2) uses react-query's useGenerationCreditCost, and the test tree has no
+// QueryClientProvider -- mock it out so the component falls back to the hard-coded cost display.
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
@@ -33,7 +24,7 @@ function seedBoard() {
       id: 'text-1',
       type: CANVAS_NODE_TYPES.textAnnotation,
       position: { x: 0, y: 0 },
-      data: { content: '# 项目信息\n\n品牌：光影', displayName: '锚点清单' },
+      data: { content: '# Project info\n\nBrand: Light & Shadow', displayName: 'Anchor list' },
     },
     {
       id: 'img-1',
@@ -41,11 +32,11 @@ function seedBoard() {
       position: { x: 0, y: 100 },
       data: {
         imageUrl: '/static/img1.png',
-        prompt: '九宫格铅笔线稿分镜草图',
+      prompt: 'Nine-grid pencil line-art storyboard sketch',
         model: 'test-model',
         size: '1K',
         aspectRatio: '1:1',
-        displayName: '分镜草图',
+      displayName: 'Storyboard sketch',
       },
     },
     {
@@ -58,19 +49,19 @@ function seedBoard() {
         model: 'test-model',
         size: '1K',
         aspectRatio: '1:1',
-        displayName: '第二张图',
+      displayName: 'Second image',
       },
     },
     {
       id: 'ref-1',
       type: CANVAS_NODE_TYPES.upload,
       position: { x: 400, y: 100 },
-      data: { imageUrl: '/static/ref.png', aspectRatio: '1:1', displayName: '角色参考' },
+      data: { imageUrl: '/static/ref.png', aspectRatio: '1:1', displayName: 'Character reference' },
     },
     {
-      // videoCompose（成片/合成）是无生成表单的只读视频节点：其详情底部仍渲染
-      // 「参考素材」只读行（下面几条跨栏「编辑/定位」用例依赖它）。普通 video
-      // 生成节点有表单、底部行被 !showGenerationForm 收掉，另起用例覆盖。
+  // videoCompose (final cut / composition) is a read-only video node with no generation form: its detail still renders
+  // the read-only "Reference assets" row at the bottom (the cross-column "edit/locate" cases below rely on it). A regular video
+  // generation node has a form and the bottom row is dropped by !showGenerationForm; a separate case covers that.
       id: 'vid-1',
       type: CANVAS_NODE_TYPES.videoCompose,
       position: { x: 0, y: 300 },
@@ -81,11 +72,11 @@ function seedBoard() {
         durationSec: 5,
         widthPx: 1280,
         heightPx: 720,
-        displayName: '成片视频',
+      displayName: 'Final video',
       },
     },
     {
-      // 普通 video 生成节点：详情挂生成表单，时长/分辨率由表单底部那行承载。
+  // Regular video generation node: the detail mounts the generation form, and duration/resolution live in the form's bottom row.
       id: 'vid-gen',
       type: CANVAS_NODE_TYPES.video,
       position: { x: 200, y: 300 },
@@ -95,11 +86,11 @@ function seedBoard() {
         durationSec: 4,
         widthPx: 1280,
         heightPx: 720,
-        displayName: '生成视频',
+      displayName: 'Generated video',
       },
     },
   ];
-  // 角色参考(上传图) → 成片视频：视频卡/详情的「参考素材」来源。
+  // Character reference (uploaded image) -> final video: the source of the video card/detail "Reference assets".
   const edges: CanvasEdge[] = [{ id: 'e1', source: 'ref-1', target: 'vid-1' }];
   useCanvasStore.getState().setCanvasData(nodes, edges);
 }
@@ -111,260 +102,260 @@ function renderBoard() {
 }
 
 function detailPanel() {
-  return screen.getByRole('region', { name: '资产详情' });
+  return screen.getByRole('region', { name: 'Asset details' });
 }
 
-// jsdom 未实现 scrollIntoView：参考素材「定位」会在被引用卡片上调用它，
-// 挂一个共享 mock 到原型，既避免报错也能断言「定位」触发了滚动。
+// jsdom does not implement scrollIntoView: locating a reference asset calls it on the referenced card,
+// so attach a shared mock to the prototype to avoid errors and to assert that "Locate" triggered scrolling.
 const scrollIntoViewMock = vi.fn();
 
-describe('AssetBoard 主从详情', () => {
+describe('AssetBoard master-detail', () => {
   beforeEach(() => {
     scrollIntoViewMock.mockClear();
     Element.prototype.scrollIntoView = scrollIntoViewMock;
     seedBoard();
   });
 
-  it('点击图片卡 → 详情面板出现，另外两栏隐藏、只留被点栏窄列表', () => {
+  it('clicking an image card -> detail panel appears, the other two columns hide, only the clicked column keeps a narrow list', () => {
     renderBoard();
-    expect(screen.getByText('文本')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
 
     const detail = detailPanel();
-    expect(within(detail).getByText('分镜草图')).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: '放大查看' })).toBeInTheDocument();
-    expect(within(detail).getByText('九宫格铅笔线稿分镜草图')).toBeInTheDocument();
-    // 详情面板不再提供「在画布中定位」入口（定位改走卡片 hover / 引用跳转）。
-    expect(within(detail).queryByRole('button', { name: /在画布中定位/ })).not.toBeInTheDocument();
-    // 图片栏窄列表保留，文本/视频栏消失。
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.queryByText('文本')).not.toBeInTheDocument();
-    expect(screen.queryByText('视频')).not.toBeInTheDocument();
+    expect(within(detail).getByText('Storyboard sketch')).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: 'View enlarged' })).toBeInTheDocument();
+    expect(within(detail).getByText('Nine-grid pencil line-art storyboard sketch')).toBeInTheDocument();
+    // The detail panel no longer offers a "Locate on canvas" entry (locating goes through card hover / reference jumps).
+    expect(within(detail).queryByRole('button', { name: /Locate on canvas/ })).not.toBeInTheDocument();
+    // The image column's narrow list stays; the text/video columns disappear.
+    expect(screen.getByText('Images')).toBeInTheDocument();
+    expect(screen.queryByText('Text')).not.toBeInTheDocument();
+    expect(screen.queryByText('Videos')).not.toBeInTheDocument();
   });
 
-  it('左栏点另一项 → 详情切换到该项', () => {
+  it('clicking another item in the left column -> detail switches to that item', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    expect(within(detailPanel()).getByText('分镜草图')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    expect(within(detailPanel()).getByText('Storyboard sketch')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '第二张图' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Second image' }));
 
     const detail = detailPanel();
-    expect(within(detail).getByText('第二张图')).toBeInTheDocument();
-    expect(within(detail).queryByText('分镜草图')).not.toBeInTheDocument();
+    expect(within(detail).getByText('Second image')).toBeInTheDocument();
+    expect(within(detail).queryByText('Storyboard sketch')).not.toBeInTheDocument();
   });
 
-  it('× 关闭详情 → 回三栏布局', () => {
+  it('x close details -> back to the three-column layout', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    expect(screen.queryByText('文本')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    expect(screen.queryByText('Text')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '关闭详情' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
 
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('文本')).toBeInTheDocument();
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
+    expect(screen.getByText('Images')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
   });
 
-  it('Esc 关闭详情 → 回三栏布局', () => {
+  it('Esc closes details -> back to the three-column layout', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    expect(screen.queryByRole('region', { name: '资产详情' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    expect(screen.queryByRole('region', { name: 'Asset details' })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'Escape' });
 
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
   });
 
-  it('文本卡点击 → 详情渲染完整文本内容（Markdown）', () => {
+  it('clicking a text card -> detail renders the full text content (Markdown)', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '锚点清单' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anchor list' }));
 
     const detail = detailPanel();
-    // 阅读页大标题 + markdown 渲染的标题/正文。
-    expect(within(detail).getByRole('heading', { name: '锚点清单' })).toBeInTheDocument();
-    expect(within(detail).getByRole('heading', { name: '项目信息' })).toBeInTheDocument();
-    expect(within(detail).getByText('品牌：光影')).toBeInTheDocument();
+    // Reading-page title + the heading/body rendered from markdown.
+    expect(within(detail).getByRole('heading', { name: 'Anchor list' })).toBeInTheDocument();
+    expect(within(detail).getByRole('heading', { name: 'Project info' })).toBeInTheDocument();
+    expect(within(detail).getByText('Brand: Light & Shadow')).toBeInTheDocument();
   });
 
-  it('参考素材缩略图展开菜单 → 出现「编辑」「定位」两项', () => {
+  it('expanding the reference thumbnail menu -> shows the "Edit" and "Locate" items', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
 
-    const referencesGroup = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    // 展开前无菜单项。
-    expect(within(referencesGroup).queryByRole('menuitem', { name: '编辑' })).not.toBeInTheDocument();
-    // 点击缩略图展开小菜单（hover 同源，走同一开合逻辑）。
-    fireEvent.click(within(referencesGroup).getByRole('button', { name: '角色参考' }));
-    expect(within(referencesGroup).getByRole('menuitem', { name: '编辑' })).toBeInTheDocument();
-    expect(within(referencesGroup).getByRole('menuitem', { name: '定位' })).toBeInTheDocument();
+    const referencesGroup = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    // No menu items before expanding.
+    expect(within(referencesGroup).queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    // Clicking the thumbnail opens the small menu (same open/close logic as hover).
+    fireEvent.click(within(referencesGroup).getByRole('button', { name: 'Character reference' }));
+    expect(within(referencesGroup).getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(within(referencesGroup).getByRole('menuitem', { name: 'Locate' })).toBeInTheDocument();
   });
 
-  it('参考素材菜单「编辑」→ 跨栏 push 被引用节点详情，← 返回原详情', () => {
+  it('reference menu "Edit" -> cross-column push of the referenced node detail, Back returns to the original detail', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
-    expect(screen.getByText('视频')).toBeInTheDocument();
-    expect(within(detailPanel()).getByText('成片视频')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
+    expect(screen.getByText('Videos')).toBeInTheDocument();
+    expect(within(detailPanel()).getByText('Final video')).toBeInTheDocument();
 
-    // 参考素材缩略图展开菜单 →「编辑」→ push 被引用节点（上传图，图片栏）的详情。
-    // 限定在「参考素材」这一组里找该缩略图（防御性作用域，避免与卡片内联缩略图重名）。
-    const referencesGroup = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(referencesGroup).getByRole('button', { name: '角色参考' }));
-    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: '编辑' }));
-    expect(within(detailPanel()).getByText('角色参考')).toBeInTheDocument();
-    // 左栏自动切到对应模块列表（视频 → 图片）。
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.queryByText('视频')).not.toBeInTheDocument();
+    // Reference thumbnail menu -> "Edit" -> push the referenced node (uploaded image, image column) detail.
+    // Look the thumbnail up inside the "Reference assets" group only (defensive scope, avoids clashing with the card's inline thumbnails).
+    const referencesGroup = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(referencesGroup).getByRole('button', { name: 'Character reference' }));
+    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: 'Edit' }));
+    expect(within(detailPanel()).getByText('Character reference')).toBeInTheDocument();
+    // The left column auto-switches to the matching module list (videos -> images).
+    expect(screen.getByText('Images')).toBeInTheDocument();
+    expect(screen.queryByText('Videos')).not.toBeInTheDocument();
 
-    // ← 弹栈回上一个详情。
-    fireEvent.click(screen.getByRole('button', { name: '返回' }));
-    expect(within(detailPanel()).getByText('成片视频')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    // Back pops the stack to the previous detail.
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(within(detailPanel()).getByText('Final video')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
   });
 
-  it('参考素材菜单「定位」（跨栏）→ 退回三栏总览并滚到被引用图片卡片', () => {
+  it('reference menu "Locate" (cross-column) -> back to the three-column overview and scroll to the referenced image card', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
-    // 视频详情态：左侧只留视频窄列表，图片/文本栏不在。
-    expect(screen.queryByText('图片')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
+    // Video detail state: the left side keeps only the narrow video list; the image/text columns are absent.
+    expect(screen.queryByText('Images')).not.toBeInTheDocument();
 
-    const referencesGroup = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(referencesGroup).getByRole('button', { name: '角色参考' }));
-    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: '定位' }));
+    const referencesGroup = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(referencesGroup).getByRole('button', { name: 'Character reference' }));
+    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: 'Locate' }));
 
-    // 跨栏（视频 → 图片）→ 详情关闭、回三栏总览，且被引用卡片滚进视野。
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    // Cross-column (videos -> images) -> detail closes, back to the three-column overview, and the referenced card scrolls into view.
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Images')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
     expect(scrollIntoViewMock).toHaveBeenCalled();
   });
 
-  it('视频生成节点有上游引用 → 底部「参考素材」只读行不出现（引用改由视频表单 chip 承载）', () => {
+  it('video generation node with an upstream reference -> the bottom read-only "Reference assets" row does not appear (references are carried by the video form chips)', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'v-ref',
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 0, y: 0 },
-          data: { imageUrl: '/static/v-ref.png', aspectRatio: '1:1', displayName: '视频参考图' },
+          data: { imageUrl: '/static/v-ref.png', aspectRatio: '1:1', displayName: 'Video reference image' },
         },
         {
-          // 普通 video 节点有生成表单 → !showGenerationForm 收掉底部只读行。
+          // A regular video node has a generation form -> !showGenerationForm drops the bottom read-only row.
           id: 'v-gen',
           type: CANVAS_NODE_TYPES.video,
           position: { x: 0, y: 200 },
-          data: { videoUrl: '/static/v-gen.mp4', aspectRatio: '16:9', displayName: '生成视频' },
+          data: { videoUrl: '/static/v-gen.mp4', aspectRatio: '16:9', displayName: 'Generated video' },
         },
       ],
       [{ id: 'e-vref', source: 'v-ref', target: 'v-gen' }],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '生成视频' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generated video' }));
 
-    // 生成表单在场 → 无底部只读「参考素材」组（引用只由表单里的引用 chip 呈现，不重复）。
-    expect(within(detailPanel()).queryByRole('group', { name: '参考素材' })).not.toBeInTheDocument();
+    // Generation form present -> no bottom read-only "Reference assets" group (references are shown only by the form's reference chips, not duplicated).
+    expect(within(detailPanel()).queryByRole('group', { name: 'Reference assets' })).not.toBeInTheDocument();
   });
 
-  it('参考素材菜单「定位」（同栏）→ 保留详情，滚动窄列表到被引用卡片', () => {
+  it('reference menu "Locate" (same column) -> keeps the detail, scrolls the narrow list to the referenced card', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'loc-a',
           type: CANVAS_NODE_TYPES.imageEdit,
           position: { x: 0, y: 0 },
-          data: { imageUrl: '/static/loc-a.png', aspectRatio: '1:1', displayName: '定位图A' },
+          data: { imageUrl: '/static/loc-a.png', aspectRatio: '1:1', displayName: 'Locate image A' },
         },
         {
           id: 'loc-b',
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 200, y: 0 },
-          data: { imageUrl: '/static/loc-b.png', aspectRatio: '1:1', displayName: '定位图B' },
+          data: { imageUrl: '/static/loc-b.png', aspectRatio: '1:1', displayName: 'Locate image B' },
         },
       ],
-      // 图B（上传）→ 图A：图A 详情的「参考素材」来源，与图A 同在图片栏。
+      // Image B (upload) -> image A: the source of image A's detail "Reference assets", in the same image column as image A.
       [{ id: 'e-b-a', source: 'loc-b', target: 'loc-a' }],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '定位图A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Locate image A' }));
 
-    const referencesGroup = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(referencesGroup).getByRole('button', { name: '定位图B' }));
-    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: '定位' }));
+    const referencesGroup = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(referencesGroup).getByRole('button', { name: 'Locate image B' }));
+    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: 'Locate' }));
 
-    // 同栏（图片 → 图片）→ 详情保持打开，窄列表里的被引用卡片滚进视野。
-    expect(screen.getByRole('region', { name: '资产详情' })).toBeInTheDocument();
-    expect(within(detailPanel()).getByText('定位图A')).toBeInTheDocument();
+    // Same column (images -> images) -> detail stays open, and the referenced card in the narrow list scrolls into view.
+    expect(screen.getByRole('region', { name: 'Asset details' })).toBeInTheDocument();
+    expect(within(detailPanel()).getByText('Locate image A')).toBeInTheDocument();
     expect(scrollIntoViewMock).toHaveBeenCalled();
   });
 
-  it('A→B→A 互相引用 → 详情栈按 (column, nodeId) 去重收敛为深度 1，← 直接关闭', () => {
+  it('A->B->A mutual references -> detail stack dedups by (column, nodeId) down to depth 1, Back closes directly', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'mut-a',
           type: CANVAS_NODE_TYPES.imageEdit,
           position: { x: 0, y: 0 },
-          data: { imageUrl: '/static/a.png', aspectRatio: '1:1', displayName: '互引A' },
+          data: { imageUrl: '/static/a.png', aspectRatio: '1:1', displayName: 'Mutual ref A' },
         },
         {
           id: 'mut-b',
           type: CANVAS_NODE_TYPES.imageEdit,
           position: { x: 200, y: 0 },
-          data: { imageUrl: '/static/b.png', aspectRatio: '1:1', displayName: '互引B' },
+          data: { imageUrl: '/static/b.png', aspectRatio: '1:1', displayName: 'Mutual ref B' },
         },
       ],
       [
-        // A 的「参考素材」来自其上游 B；B 的「参考素材」来自其上游 A —— 互相引用。
+        // A's "Reference assets" come from its upstream B; B's "Reference assets" come from its upstream A -- mutual references.
         { id: 'e-b-to-a', source: 'mut-b', target: 'mut-a' },
         { id: 'e-a-to-b', source: 'mut-a', target: 'mut-b' },
       ],
     );
     renderBoard();
-    // 卡片本身也会内联展示参考素材缩略图（AssetBoardCard），互相引用时 B 卡片上
-    // 会出现一个 aria-label="互引A" 的参考缩略图按钮，与 A 卡片标题按钮同名——
-    // 用 getByText 精确定位标题按钮（纯文本子节点），避开这个按钮级重名。
-    fireEvent.click(screen.getByText('互引A'));
-    expect(within(detailPanel()).getByText('互引A')).toBeInTheDocument();
+    // The card itself also inlines reference thumbnails (AssetBoardCard); with mutual references the B card
+    // shows a reference thumbnail button with aria-label="Mutual ref A", sharing its name with A's card title button --
+    // use getByText to locate the title button precisely (plain-text child) and avoid this button-level name clash.
+    fireEvent.click(screen.getByText('Mutual ref A'));
+    expect(within(detailPanel()).getByText('Mutual ref A')).toBeInTheDocument();
 
-    // A → B：参考素材菜单「编辑」→ push，栈深变 2。
-    const groupA = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(groupA).getByRole('button', { name: '互引B' }));
-    fireEvent.click(within(groupA).getByRole('menuitem', { name: '编辑' }));
-    expect(within(detailPanel()).getByText('互引B')).toBeInTheDocument();
+    // A -> B: reference menu "Edit" -> push, stack depth becomes 2.
+    const groupA = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(groupA).getByRole('button', { name: 'Mutual ref B' }));
+    fireEvent.click(within(groupA).getByRole('menuitem', { name: 'Edit' }));
+    expect(within(detailPanel()).getByText('Mutual ref B')).toBeInTheDocument();
 
-    // B → A：A 已经在栈里出现过（栈底那一层）→ 截断回那一层，而不是再 push 一层。
-    const groupB = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(groupB).getByRole('button', { name: '互引A' }));
-    fireEvent.click(within(groupB).getByRole('menuitem', { name: '编辑' }));
-    expect(within(detailPanel()).getByText('互引A')).toBeInTheDocument();
+    // B -> A: A has already appeared in the stack (bottom layer) -> truncate back to that layer instead of pushing another.
+    const groupB = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(groupB).getByRole('button', { name: 'Mutual ref A' }));
+    fireEvent.click(within(groupB).getByRole('menuitem', { name: 'Edit' }));
+    expect(within(detailPanel()).getByText('Mutual ref A')).toBeInTheDocument();
 
-    // 栈深已收敛为 1：← 直接关闭详情回三栏（不会先弹回 B）。
-    fireEvent.click(screen.getByRole('button', { name: '返回' }));
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('图片')).toBeInTheDocument();
+    // Stack depth has converged to 1: Back closes the detail straight to three columns (does not pop back to B first).
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Images')).toBeInTheDocument();
   });
 
-  it('← 在栈深 1 时关闭详情 → 回三栏布局', () => {
+  it('Back at stack depth 1 closes the detail -> back to the three-column layout', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    expect(screen.queryByRole('region', { name: '资产详情' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    expect(screen.queryByRole('region', { name: 'Asset details' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('文本')).toBeInTheDocument();
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
+    expect(screen.getByText('Images')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
   });
 
-  it('详情打开期间节点被删除 → 显示「节点已不存在」空态', () => {
+  it('node deleted while the detail is open -> shows the "This node no longer exists" empty state', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    expect(within(detailPanel()).getByText('分镜草图')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    expect(within(detailPanel()).getByText('Storyboard sketch')).toBeInTheDocument();
 
     act(() => {
       const state = useCanvasStore.getState();
@@ -374,40 +365,40 @@ describe('AssetBoard 主从详情', () => {
       );
     });
 
-    expect(within(detailPanel()).getByText('节点已不存在')).toBeInTheDocument();
-    expect(within(detailPanel()).queryByText('分镜草图')).not.toBeInTheDocument();
+    expect(within(detailPanel()).getByText('This node no longer exists')).toBeInTheDocument();
+    expect(within(detailPanel()).queryByText('Storyboard sketch')).not.toBeInTheDocument();
   });
 
-  it('生成中节点 → 详情媒体区显示生成中占位（不渲染大图）', () => {
+  it('generating node -> detail media area shows the generating placeholder (no large image rendered)', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'gen-1',
           type: CANVAS_NODE_TYPES.imageEdit,
           position: { x: 0, y: 0 },
-          // generationTaskKey：setCanvasData 会把没有可恢复句柄的 isGenerating 归零
-          //（防中断任务永转），带上任务句柄才能保留生成中态。
+          // generationTaskKey: setCanvasData zeroes isGenerating when there is no recoverable handle
+          // (to stop interrupted tasks spinning forever); carry a task handle to keep the generating state.
           data: {
             imageUrl: null,
             isGenerating: true,
             generationTaskKey: 'task-1',
             aspectRatio: '1:1',
-            displayName: '生成中图片',
+            displayName: 'Generating image',
           },
         },
       ],
       [],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '生成中图片' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generating image' }));
 
     const detail = detailPanel();
-    // 未给 generationStartedAt → 估算 hook 退化为「从挂载时刻计时」，渲染瞬间 0%。
-    expect(within(detail).getByText('生成中 0%...')).toBeInTheDocument();
-    expect(within(detail).queryByRole('button', { name: '放大查看' })).not.toBeInTheDocument();
+    // generationStartedAt not given -> the estimate hook degrades to "time from mount", so it renders 0% at the first instant.
+    expect(within(detail).getByText('Generating 0%...')).toBeInTheDocument();
+    expect(within(detail).queryByRole('button', { name: 'View enlarged' })).not.toBeInTheDocument();
   });
 
-  it('生成中且已有媒体（重新生成）→ 保留原图渲染并叠加生成中遮罩', () => {
+  it('generating with existing media (regeneration) -> keeps the original image and overlays the generating mask', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
@@ -419,27 +410,27 @@ describe('AssetBoard 主从详情', () => {
             isGenerating: true,
             generationTaskKey: 'task-2',
             aspectRatio: '1:1',
-            displayName: '重生成图片',
+            displayName: 'Regenerated image',
           },
         },
       ],
       [],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '重生成图片' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerated image' }));
 
     const detail = detailPanel();
-    // 旧图不被生成中态顶掉（重新生成原地保留旧 url），遮罩叠加其上。
-    expect(within(detail).getByAltText('重生成图片')).toBeInTheDocument();
-    expect(within(detail).getByRole('status', { name: '生成中' })).toBeInTheDocument();
-    // 重新生成走 GeneratingOverlay（纯 spinner，不带百分比文案）——占位分支的
-    // 「生成中 X%...」文案不会跟遮罩一起出现。
-    expect(within(detail).queryByText(/^生成中 \d+%\.\.\.$/)).not.toBeInTheDocument();
-    // 生成中禁止放大查看（键盘路径也一并挡住，而不只是视觉上盖一层遮罩）。
-    expect(within(detail).getByRole('button', { name: '放大查看' })).toBeDisabled();
+    // The old image is not displaced by the generating state (regeneration keeps the old url in place); the mask overlays it.
+    expect(within(detail).getByAltText('Regenerated image')).toBeInTheDocument();
+    expect(within(detail).getByRole('status', { name: 'Generating' })).toBeInTheDocument();
+    // Regeneration goes through GeneratingOverlay (pure spinner, no percentage text) -- the placeholder branch's
+    // "Generating X%..." text does not appear together with the mask.
+    expect(within(detail).queryByText(/^Generating \d+%\.\.\.$/)).not.toBeInTheDocument();
+    // Enlarged view is blocked while generating (the keyboard path is blocked too, not just a visual mask on top).
+    expect(within(detail).getByRole('button', { name: 'View enlarged' })).toBeDisabled();
   });
 
-  it('失败节点 → 详情头部下方显示红色错误条', () => {
+  it('failed node -> a red error bar appears below the detail header', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
@@ -448,33 +439,33 @@ describe('AssetBoard 主从详情', () => {
           position: { x: 0, y: 0 },
           data: {
             imageUrl: '/static/err.png',
-            generationError: '算力不足，生成失败',
+            generationError: 'Insufficient compute, generation failed',
             aspectRatio: '1:1',
-            displayName: '失败图片',
+            displayName: 'Failed image',
           },
         },
       ],
       [],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '失败图片' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Failed image' }));
 
-    expect(within(detailPanel()).getByText('算力不足，生成失败')).toBeInTheDocument();
+    expect(within(detailPanel()).getByText('Insufficient compute, generation failed')).toBeInTheDocument();
   });
 
-  it('点击卡片不触发 onLocateNode；详情面板不再提供「在画布中定位」入口', () => {
+  it('clicking a card does not trigger onLocateNode; the detail panel no longer offers a "Locate on canvas" entry', () => {
     const { onLocateNode } = renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '锚点清单' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anchor list' }));
     expect(onLocateNode).not.toHaveBeenCalled();
 
-    // 定位按钮已从详情面板整体移除（四类详情：文本/图片/视频/音频）；
-    // 定位改走卡片 hover 的准星按钮，与本详情面板无关。
-    expect(within(detailPanel()).queryByRole('button', { name: /在画布中定位/ })).not.toBeInTheDocument();
+    // The locate button has been removed from the detail panel entirely (four detail kinds: text/image/video/audio);
+    // locating now goes through the card-hover crosshair button and is unrelated to this detail panel.
+    expect(within(detailPanel()).queryByRole('button', { name: /Locate on canvas/ })).not.toBeInTheDocument();
     expect(onLocateNode).not.toHaveBeenCalled();
   });
 });
 
-describe('AssetBoard 详情态左窄列表切栏下拉', () => {
+describe('AssetBoard detail-state narrow left list column-switch dropdown', () => {
   beforeEach(() => {
     scrollIntoViewMock.mockClear();
     Element.prototype.scrollIntoView = scrollIntoViewMock;
@@ -482,117 +473,118 @@ describe('AssetBoard 详情态左窄列表切栏下拉', () => {
   });
 
   function openSwitcher(currentLabel: string): HTMLElement {
-    // 头部下拉触发器 = 当前栏中文名（button，无 aria-label→可名字定位）。
+    // The header dropdown trigger = the current column's name (a button without aria-label, so findable by name).
     fireEvent.click(screen.getByRole('button', { name: currentLabel }));
-    return screen.getByRole('menu', { name: '切换栏目' });
+    return screen.getByRole('menu', { name: 'Switch column' });
   }
 
-  it('图片详情左列表头部是切栏下拉：展开出「文本/图片/视频」三项，当前「图片」打勾', () => {
+  it('image detail left-list header is a column-switch dropdown: expands to "Text/Images/Videos", with the current "Images" checked', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
 
-    const trigger = screen.getByRole('button', { name: '图片' });
+    const trigger = screen.getByRole('button', { name: 'Images' });
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
-    // 展开前无菜单项。
+    // No menu items before expanding.
     expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
 
-    const menu = openSwitcher('图片');
-    expect(within(menu).getByRole('menuitemradio', { name: '文本' })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitemradio', { name: '图片' })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitemradio', { name: '视频' })).toBeInTheDocument();
-    // 当前显示的栏（图片）打勾（✓），其余不打勾。
-    expect(within(menu).getByRole('menuitemradio', { name: '图片', checked: true })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitemradio', { name: '文本', checked: false })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitemradio', { name: '视频', checked: false })).toBeInTheDocument();
+    const menu = openSwitcher('Images');
+    expect(within(menu).getByRole('menuitemradio', { name: 'Text' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitemradio', { name: 'Images' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitemradio', { name: 'Videos' })).toBeInTheDocument();
+    // The column currently shown (Images) is checked, the others are not.
+    expect(within(menu).getByRole('menuitemradio', { name: 'Images', checked: true })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitemradio', { name: 'Text', checked: false })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitemradio', { name: 'Videos', checked: false })).toBeInTheDocument();
   });
 
-  it('切到「视频」→ 左列表换成视频卡片，右侧详情仍是原图片（不随切栏而变）', () => {
+  it('switching to "Videos" -> left list becomes video cards, the right detail stays the original image (does not change with the column switch)', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    // 右侧详情 = 分镜草图；左列表当前是图片栏（有另一张图片卡）。
-    expect(within(detailPanel()).getByText('分镜草图')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '第二张图' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    // Right detail = Storyboard sketch; the left list is currently the image column (with another image card).
+    expect(within(detailPanel()).getByText('Storyboard sketch')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Second image' })).toBeInTheDocument();
 
-    fireEvent.click(within(openSwitcher('图片')).getByRole('menuitemradio', { name: '视频' }));
+    fireEvent.click(within(openSwitcher('Images')).getByRole('menuitemradio', { name: 'Videos' }));
 
-    // 左列表换成视频卡片，图片卡消失，触发器变「视频」。
-    expect(screen.getByRole('button', { name: '成片视频' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '第二张图' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '视频' })).toBeInTheDocument();
-    // 右侧详情不变（切栏只改左侧浏览的列表）。
-    expect(within(detailPanel()).getByText('分镜草图')).toBeInTheDocument();
+    // The left list becomes video cards, the image card disappears, and the trigger becomes "Videos".
+    expect(screen.getByRole('button', { name: 'Final video' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Second image' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument();
+    // The right detail is unchanged (switching columns only changes the list browsed on the left).
+    expect(within(detailPanel()).getByText('Storyboard sketch')).toBeInTheDocument();
   });
 
-  it('切栏后点左列表某卡 → 打开该节点详情，左列表跟随到该卡所在栏', () => {
+  it('after switching columns, clicking a card in the left list -> opens that node detail and the left list follows to that card\'s column', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '分镜草图' }));
-    // 在图片详情里把左列表切到视频浏览。
-    fireEvent.click(within(openSwitcher('图片')).getByRole('menuitemradio', { name: '视频' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Storyboard sketch' }));
+    // In the image detail, switch the left list to browse videos.
+    fireEvent.click(within(openSwitcher('Images')).getByRole('menuitemradio', { name: 'Videos' }));
 
-    // 点左列表的视频卡 → 打开该视频详情。
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
-    expect(within(detailPanel()).getByText('成片视频')).toBeInTheDocument();
-    // 「点了哪栏的卡片，左列表就是哪栏」：仍是视频栏（触发器「视频」+ 视频卡在左列表）。
-    expect(screen.getByRole('button', { name: '视频' })).toBeInTheDocument();
+    // Click a video card in the left list -> opens that video detail.
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
+    expect(within(detailPanel()).getByText('Final video')).toBeInTheDocument();
+    // "The column of the clicked card is the column of the left list": still the video column (trigger "Videos" + video card in the left list).
+    expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument();
   });
 
-  it('切栏后从右侧参考跳转 push 新详情 → 左列表重置为新详情所在栏', () => {
+  it('after switching columns, a reference jump on the right pushes a new detail -> left list resets to the new detail\'s column', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
-    // 手动把左列表从「视频」切到「文本」浏览。
-    fireEvent.click(within(openSwitcher('视频')).getByRole('menuitemradio', { name: '文本' }));
-    expect(screen.getByRole('button', { name: '文本' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '锚点清单' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
+    // Manually switch the left list from "Videos" to "Text".
+    fireEvent.click(within(openSwitcher('Videos')).getByRole('menuitemradio', { name: 'Text' }));
+    expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anchor list' })).toBeInTheDocument();
 
-    // 右侧视频详情的参考素材「编辑」→ push 被引用图片（角色参考）的详情。
-    const referencesGroup = within(detailPanel()).getByRole('group', { name: '参考素材' });
-    fireEvent.click(within(referencesGroup).getByRole('button', { name: '角色参考' }));
-    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: '编辑' }));
+    // The right-hand video detail's reference assets "Edit" -> push the referenced image (Character reference) detail.
+    const referencesGroup = within(detailPanel()).getByRole('group', { name: 'Reference assets' });
+    fireEvent.click(within(referencesGroup).getByRole('button', { name: 'Character reference' }));
+    fireEvent.click(within(referencesGroup).getByRole('menuitem', { name: 'Edit' }));
 
-    // 新详情 = 角色参考（图片栏）→ 左列表重置为图片（不再停留在用户之前选的文本）。
-    expect(within(detailPanel()).getByText('角色参考')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '图片' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '锚点清单' })).not.toBeInTheDocument();
+    // New detail = Character reference (image column) -> left list resets to images (no longer stays on the text the user picked before).
+    expect(within(detailPanel()).getByText('Character reference')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Images' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Anchor list' })).not.toBeInTheDocument();
   });
 
-  it('空态：切到无卡片的栏显示该栏空态文案', () => {
-    // 只有图片节点：切到文本/视频栏应显示对应空态。
+  it('empty state: switching to a column with no cards shows that column\'s empty-state copy', () => {
+    // Only image nodes: switching to the text/video column should show the matching empty state.
     useCanvasStore.getState().setCanvasData(
       [
         {
           id: 'only-img',
           type: CANVAS_NODE_TYPES.imageEdit,
           position: { x: 0, y: 0 },
-          data: { imageUrl: '/static/only.png', aspectRatio: '1:1', displayName: '唯一图片' },
+          data: { imageUrl: '/static/only.png', aspectRatio: '1:1', displayName: 'Only image' },
         },
       ],
       [],
     );
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '唯一图片' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Only image' }));
 
-    fireEvent.click(within(openSwitcher('图片')).getByRole('menuitemradio', { name: '视频' }));
-    expect(screen.getByText('画布中还没有视频节点')).toBeInTheDocument();
+    fireEvent.click(within(openSwitcher('Images')).getByRole('menuitemradio', { name: 'Videos' }));
+    expect(screen.getByText('No video nodes on the canvas yet')).toBeInTheDocument();
 
-    fireEvent.click(within(openSwitcher('视频')).getByRole('menuitemradio', { name: '文本' }));
-    expect(screen.getByText('画布中还没有文本类节点')).toBeInTheDocument();
+    fireEvent.click(within(openSwitcher('Videos')).getByRole('menuitemradio', { name: 'Text' }));
+    expect(screen.getByText('No text nodes on the canvas yet')).toBeInTheDocument();
   });
 
-  it('挂了生成表单的视频详情不再重复渲染时长/分辨率徽标（表单底部那行已经写了）', () => {
+  it('video detail with a generation form no longer renders duplicate duration/resolution badges (the form\'s bottom row already has them)', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '生成视频' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generated video' }));
 
     const detail = detailPanel();
-    expect(within(detail).queryByText('4秒')).not.toBeInTheDocument();
+    // Only the form's own bottom row shows the duration; the detail header badge must not duplicate it.
+    expect(within(detail).queryAllByText('4s')).toHaveLength(1);
     expect(within(detail).queryByText('1280 × 720')).not.toBeInTheDocument();
   });
 
-  it('无生成表单的视频详情（成片）仍显示时长/分辨率徽标——那里是唯一出处', () => {
+  it('video detail without a generation form (final cut) still shows the duration/resolution badges -- the only place they appear', () => {
     renderBoard();
-    fireEvent.click(screen.getByRole('button', { name: '成片视频' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Final video' }));
 
     const detail = detailPanel();
-    expect(within(detail).getByText('5秒')).toBeInTheDocument();
+    expect(within(detail).getByText('5s')).toBeInTheDocument();
     expect(within(detail).getByText('1280 × 720')).toBeInTheDocument();
   });
 });

@@ -127,7 +127,7 @@ export interface TaskControllerSnapshot {
   /**
    * Beats the currently-tracked run covers, or `null` when unknown.
    *
-   * Per-beat panels (草图 / 渲染图) all subscribe to one episode-wide entry
+   * Per-beat panels (Sketch / Render) all subscribe to one episode-wide entry
    * because selection-scoped runs carry `beat_num = null` and an opaque scope
    * hash — without this field every panel would render the same spinner and a
    * single regen would look like the whole episode was generating.

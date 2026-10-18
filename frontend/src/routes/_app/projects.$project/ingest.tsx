@@ -235,8 +235,8 @@ function hasIngestSettingsChanges(
   config: ProjectConfig | undefined,
 ): boolean {
   return INGEST_SETTING_FIELDS.some((field) => {
-    // 精品剧不消费 narration_style（隐藏入口 + 保存时剥离），其差异不应点亮
-    // 「保存设置」按钮，否则会出现按钮可点但点了无事发生的割裂。
+    // Premium drama does not consume narration_style (entry hidden + stripped on save), and its difference should not light up
+    // the "Save settings" button, otherwise the button would be clickable but nothing happens when clicked.
     if (field === "narration_style" && settings.spine_template !== "narrated") {
       return false;
     }
@@ -253,7 +253,7 @@ type IngestFileStatus =
   | "stopped"
   | "failed";
 
-// 一个 ingest_fast 任务处于这些状态 = 导入尚在进行，切走再回来要恢复进度视图。
+// An ingest_fast task in these states = import still in progress; leaving and coming back must restore the progress view.
 const ACTIVE_INGEST_STATUSES = new Set([
   "submitting",
   "queued",
@@ -300,8 +300,8 @@ function resolveFormatCheckForSpineTemplate(
   spineTemplate: IngestSettingsValues["spine_template"],
   t: TFunction,
 ): FormatCheck | null {
-  // 先把后端的中文 summary/message/fix 换成当前语言，再走 spine_template 的裁剪，
-  // 否则英文界面下这些字段会原样漏出中文。
+  // First convert the backend's summary/message/fix to the current language, then apply the spine_template trimming,
+  // otherwise these fields leak untranslated into the English UI.
   const formatCheck = localizeFormatCheck(rawFormatCheck, t);
   if (!formatCheck) return null;
 
@@ -470,9 +470,9 @@ function UploadZone({
   );
 }
 
-// 全屏上传遮罩：网络慢时上传还在飞、用户一切菜单就卸载本页，upload 的 onSuccess
-// 便写不进 chapters 缓存，回来「刚上传的小说」就消失了。用 fixed inset-0 z-[1000]
-// 盖住整屏（含顶部菜单），上传期间挡住导航，逼用户等上传落地再离开。
+// Full-screen upload overlay: on a slow network the upload is still in flight and the user switches menu, unmounting this page; the upload's onSuccess
+// then cannot write into the chapters cache, and on return the "just uploaded novel" is gone. Use fixed inset-0 z-[1000]
+// to cover the whole screen (including the top menu), blocking navigation during the upload and forcing the user to wait until the upload lands before leaving.
 function UploadingOverlay() {
   const { t } = useTranslation();
   return (
@@ -509,8 +509,8 @@ function UploadingOverlay() {
   );
 }
 
-// 格式风险常驻提示：warning 仅提示且允许导入，blocking 使用红色并阻止导入。
-// boxed = 富卡片提示条；plain = 上传表单提示行里的一行轻量文字。
+// Persistent format-risk notice: warning only notifies and allows import, blocking uses red and prevents import.
+// boxed = rich card notice bar; plain = a one-line light text in the upload form's hint row.
 function FormatCheckWarning({
   formatCheck,
   onViewDetails,
@@ -626,7 +626,7 @@ function UploadedFileCard({
 }) {
   const { t } = useTranslation();
   const percent = Math.round(progress * 100);
-  // 导入完成后风险提示已无行动价值，只在导入前/失败/中止时常驻展示。
+  // After import completes the risk notice has no actionable value, so it is shown persistently only before import / on failure / on abort.
   const showFormatWarning =
     formatCheck?.level !== "ok" && status !== "completed";
   const statusStyles: Record<IngestFileStatus, string> = {
@@ -727,8 +727,8 @@ function UploadedFileCard({
                   />
                 </Button>
               )}
-              {/* 已锁定的重导入源只允许原文件重试；普通临时上传在失败或停止后
-                  仍允许换文件。删除只针对尚未完成导入的临时上传。 */}
+              {/* A locked re-import source only allows retrying with the original file; a normal temporary upload
+                  may still switch files after failure or stop. Delete only applies to temporary uploads whose import has not completed. */}
               {!sourceLocked && (
                 <Button
                   variant="ghost"
@@ -1109,9 +1109,9 @@ export function IngestPageContent({ project }: { project: string }) {
     enabled: ingestStarted,
     invalidateKeys: [queryKeys.chapters(project)],
     onComplete: async () => {
-      // 显式补一条收尾日志：SSE 的最终「完成」行会被 ingestStarted 门控 + 标量
-      // currentTask 覆盖的竞态吞掉（见下方日志收集 effect），导致面板定格在
-      // 「Step 3/3…」像卡住。这里不依赖那条会丢的 SSE 行，主动收尾。 (#72)
+      // Explicitly add a closing log line: the final "done" line from SSE gets swallowed by the race of the ingestStarted gate + scalar
+      // currentTask override (see the log-collection effect below), leaving the panel frozen at
+      // "Step 3/3..." as if stuck. Here we do not depend on that SSE line which can be lost, and close out actively. (#72)
       setIngestLogs((prev) => {
         const done = t("ingest.logCompleted");
         return prev[prev.length - 1] === done ? prev : [...prev, done];
@@ -1131,13 +1131,13 @@ export function IngestPageContent({ project }: { project: string }) {
     },
     onError: async (error) => {
       setIngestStarted(false);
-      // 任务失败后允许直接用当前上传文件重试。上传文件由独立上传接口持久化，
-      // 不应因为 Cognee 的 LLM/Embedding 阶段失败而要求用户重新上传。
+      // After a task fails, allow retrying directly with the currently uploaded file. The uploaded file is persisted by a separate upload endpoint,
+      // and the user should not have to re-upload because the Cognee LLM/Embedding stage failed.
       setIngestSubmitted(false);
       setIngestFileStatus("failed");
       setIngestError(error);
-      // rebuild 已让后端旧 novel.txt 失效；立即与服务端重新对账，避免旧
-      // chapters / graph 缓存继续把失败项目显示成“已导入”。
+      // rebuild has invalidated the backend's old novel.txt; reconcile with the server immediately, to avoid the old
+      // chapters / graph caches continuing to show the failed project as "imported".
       await queryClient.refetchQueries({
         queryKey: queryKeys.chapters(project),
         type: "active",
@@ -1148,25 +1148,25 @@ export function IngestPageContent({ project }: { project: string }) {
     },
   });
 
-  // Mount reconcile：导入实际在服务端(celery)跑。用户导入中切走再回来，本地
-  // 的 ingestStarted/ingestSubmitted 全部重置、SSE 也不重连，而此时章节尚未
-  // 持久化(chapters 为空)，页面便退回空上传页——「导入中的虾料不见了」。
-  // 挂载时与服务端任务列表对账一次：若 ingest_fast 仍活跃，就重开进度视图，
-  // 让 useTaskStream 重连(后端会在连接时补发运行进度)。
+  // Mount reconcile: the import actually runs on the server (celery). If the user leaves during import and comes back, the local
+  // ingestStarted/ingestSubmitted are all reset and the SSE is not reconnected, while chapters are not yet
+  // persisted (chapters is empty), so the page falls back to the empty upload page - "the importing asset library vanished".
+  // On mount, reconcile once with the server task list: if ingest_fast is still active, reopen the progress view
+  // so useTaskStream reconnects (the backend replays running progress on connect).
   //
-  // 两个坑：
-  //  1. tasks(project) 缓存是全局共享的(不含 episode、staleTime=0)，挂载时
-  //     React Query 会先同步吐旧缓存(可能是导入前的空列表)再后台 refetch。
-  //     必须用 isFetchedAfterMount 只认「本次挂载后刷到的新数据」，否则会拿旧
-  //     空列表对账一次就把 ref 锁死，等真数据回来时已早退，恢复被永久错过。
-  //  2. 按 project 记账(而非布尔 ref)，这样跨项目复用组件时切到新项目会重新
-  //     对账，不会被上一个项目的「已对账」状态卡住。
+  // Two pitfalls:
+  //  1. The tasks(project) cache is globally shared (no episode, staleTime=0), and on mount
+  //     React Query first synchronously emits the old cache (possibly the empty list from before the import) and then refetches in the background.
+  //     isFetchedAfterMount must be used to accept only "fresh data fetched after this mount", otherwise reconciling once against the old
+  //     empty list would lock the ref, and when the real data arrives it would exit early and the recovery is permanently missed.
+  //  2. Bookkeeping per project (rather than a boolean ref), so that when the component is reused across projects, switching to a new project reconciles again
+  //     and is not stuck by the previous project's "already reconciled" state.
   //
-  // 对账两个方向都要落地：活跃项目开进度视图；切到「无活跃 ingest_fast」的项目
-  // 则清掉可能从上一个项目残留的进度视图状态(ingestSubmitted/ingestStarted/
-  // ingestFileStatus)，否则组件被跨项目复用时会错显「Importing」卡片并让
-  // useTaskStream 去连一个不存在的 SSE。正常路由下父级会按 project remount 兜底，
-  // 单次挂载时 else 分支是无副作用的幂等重置(状态本就是初值)——纯防御。
+  // Reconcile has to land in both directions: for an active project open the progress view; when switching to a project with "no active ingest_fast"
+  // clear progress view state that may remain from the previous project (ingestSubmitted/ingestStarted/
+  // ingestFileStatus), otherwise when the component is reused across projects a wrong "Importing" card would show and
+  // useTaskStream would connect to an SSE that does not exist. Under a normal route the parent remounts per project as a fallback,
+  // on a single mount the else branch is a side-effect-free idempotent reset (the state is already the initial value) - purely defensive.
   const {
     data: ingestTasksRes,
     isFetchedAfterMount: ingestTasksFetchedAfterMount,
@@ -1261,9 +1261,9 @@ export function IngestPageContent({ project }: { project: string }) {
   const visualStyleOptions = useMemo(() => {
     const styles = stylesRes?.data ?? [];
     if (styles.length > 0) {
-      // 内置 preset 的 `label` 是中文单语（见 src/novelvideo/styles/presets/*.json），
-      // 直接用会让英文界面出现「写实古装剧」。preset id 与 i18n key 一一对应，先查
-      // i18n；用户自建的风格查不到 key，再退回后端的 name/label。
+      // The built-in preset `label` is Chinese-only (see src/novelvideo/styles/presets/*.json),
+      // and using it directly would show it untranslated in the English UI. The preset id maps one-to-one to an i18n key, so look up
+      // i18n first; user-created styles have no key to look up, then fall back to the backend's name/label.
       return styles.map((style) => ({
         value: style.id,
         label:
@@ -1298,8 +1298,8 @@ export function IngestPageContent({ project }: { project: string }) {
     SPINE_TEMPLATE_OPTIONS.find((opt) => opt.value === settingsValues.spine_template)
       ?.labelKey ?? "ingest.projectTypes.drama";
   const spineTemplateLocked = ingestStarted || (hasImportedContent && !reimporting);
-  // 解说风格（第一/第三人称）只对解说剧（narrated）有意义；精品剧（drama）不存在
-  // 解说主角/旁白的人称概念，切到精品剧时隐藏入口并在保存时不落库该字段。
+  // Narration style (first/third person) only makes sense for narrated drama; premium drama (drama) has no
+  // concept of narrator protagonist / voice-over person, so the entry is hidden when switching to premium drama and the field is not persisted on save.
   const showNarrationStyle = settingsValues.spine_template === "narrated";
 
   const handleFieldChange = useCallback(
@@ -1343,7 +1343,7 @@ export function IngestPageContent({ project }: { project: string }) {
         setIngestFileStatus("uploaded");
         setIngestError(null);
         toast.success(`${t("common.upload")} ✓ — ${result.data.filename}`);
-        // 格式风险不再走 toast：SelectedFileCard 内有常驻警告条,文件在则警告在。
+        // Format risk no longer goes through a toast: SelectedFileCard has a persistent warning bar, present as long as the file is.
         return true;
       } catch (error) {
         toast.error(backendErrorToastMessage(error, t));
@@ -1378,18 +1378,18 @@ export function IngestPageContent({ project }: { project: string }) {
     setUploadedFile(null);
     setUploadedFileSource(null);
     setIngestSubmitted(false);
-    // 不要复位 reimporting：若用户正在「重新导入」已导入内容（此时 reimporting=true
-    // 才让精品剧/解说剧类型可改），删掉刚选的文件只是想换一个文件、仍处于重新导入流程。
-    // 复位成 false 会让 spineTemplateLocked 重新把类型选择器锁死，而提示却让人「重新导入」。
+    // Do not reset reimporting: if the user is "re-importing" already imported content (reimporting=true at that point
+    // is what makes the premium/narrated type changeable), deleting the file they just chose only means they want to pick another file and are still in the re-import flow.
+    // Resetting to false would make spineTemplateLocked lock the type selector again, while the hint tells people to "re-import".
     setHideImportedPreview(true);
     writeHiddenImportedPreview(project, true);
     setIngestFileStatus("uploaded");
     setIngestError(null);
     setIngestLogs([]);
-    // 上传接口（useUploadNovel.onSuccess）会把「预览章节」直接写进 chapters 缓存，使
-    // hasImportedContent 变 true、进而锁住类型选择器。但这只是预览、并未真正导入；删文件后
-    // 必须让缓存与后端重新同步，否则全新项目里删完文件类型仍被锁死（要刷新才解锁）。重拉后：
-    // 全新项目 → 后端返回空 → 解锁；已真正导入的项目 → 后端仍有章节 → 维持原状（由 reimporting 决定是否可改）。
+    // The upload endpoint (useUploadNovel.onSuccess) writes the "preview chapters" straight into the chapters cache, making
+    // hasImportedContent true and in turn locking the type selector. But this is only a preview and nothing was really imported; after deleting the file
+    // the cache must be re-synced with the backend, otherwise in a brand-new project the type stays locked after the file is deleted (a refresh is needed to unlock). After refetching:
+    // brand-new project -> backend returns empty -> unlocked; project with really imported content -> backend still has chapters -> unchanged (reimporting decides whether it can be changed).
     queryClient.invalidateQueries({ queryKey: queryKeys.chapters(project) });
     toast.success(t("ingest.fileDeleted"));
   }, [project, queryClient, t]);
@@ -1432,8 +1432,8 @@ export function IngestPageContent({ project }: { project: string }) {
       defaults,
     );
     const payload = toProjectSettingsPayload(currentSettings);
-    // 精品剧（非 narrated）没有解说人称概念，绝不落库 narration_style，
-    // 避免给后续流程（如人物声线的「第一人称解说声线」判断）留下误导性的脏值。
+    // Premium drama (non-narrated) has no narrator-person concept and never persists narration_style,
+    // to avoid leaving a misleading dirty value for later flows (such as the character voice "first-person narrator voice" check).
     if (currentSettings.spine_template !== "narrated") {
       delete payload.narration_style;
     }
@@ -1712,7 +1712,7 @@ export function IngestPageContent({ project }: { project: string }) {
               {inputMode === "upload" && (
                 <div className="mt-1.5 min-h-4 px-1 text-xs leading-4 text-muted-foreground/70">
                   {displayedFormatCheck && displayedFormatCheck.level !== "ok" ? (
-                    // 格式风险常驻在提示行（紧邻「开始导入」决策区），替代一闪而过的 toast。
+                    // Format risk stays in the hint row (right next to the "Start import" decision area), replacing a fleeting toast.
                     <FormatCheckWarning
                       formatCheck={displayedFormatCheck}
                       variant="plain"
@@ -1728,9 +1728,9 @@ export function IngestPageContent({ project }: { project: string }) {
                   )}
                 </div>
               )}
-              {/* 这排控件除本段切换外全是 shrink-0 / min-w-max，行放不下时只有它会被压缩，
-                  英文标签下「Paste Text」就被压出圆角边框外（按钮自己是 md:flex-none 不跟着缩）。
-                  给它 shrink-0，并让整行在 md+ 允许换行，多出来的控件掉到第二行而不是溢出裁切。 */}
+              {/* Apart from this segmented toggle, every control in this row is shrink-0 / min-w-max, so when the row cannot fit only it gets compressed,
+                  and with English labels "Paste Text" is squeezed out past the rounded border (the button itself is md:flex-none and does not shrink with it).
+                  Give it shrink-0 and let the whole row wrap at md+, so extra controls drop to a second line instead of overflowing and getting clipped. */}
               <div className="mt-2.5 grid grid-cols-2 gap-2.5 px-1 md:flex md:flex-wrap md:items-center md:gap-3">
                 <InputModeToggle
                   value={inputMode}
@@ -1879,7 +1879,7 @@ export function IngestPageContent({ project }: { project: string }) {
                   </SelectContent>
                 </Select>
 
-                {/* 导入标准格式只对精品剧成立，解说剧走的是另一套解析。 */}
+                {/* The standard import format only applies to premium drama; narrated drama goes through a different parser. */}
                 {settingsValues.spine_template === "drama" && (
                   <button
                     type="button"

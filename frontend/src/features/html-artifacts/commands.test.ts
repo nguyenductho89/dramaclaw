@@ -108,7 +108,7 @@ describe('director HTML commands',()=>{
   expect(result.errors).toEqual([]);
   expect(useCanvasStore.getState().nodes).toHaveLength(1);
   expect(useCanvasStore.getState().nodes[0]).toMatchObject({id,data:{artifactId:'a1',artifactVersion:1}});
-  expect(result.commandResults[0]).toMatchObject({action:'update_source',status:'success',label:'保存网页源码',nodeId:id,output:{html_artifact:{id:'a1',version:1}}});
+  expect(result.commandResults[0]).toMatchObject({action:'update_source',status:'success',label:'Save webpage source',nodeId:id,output:{html_artifact:{id:'a1',version:1}}});
  });
  it('does not accept source or artifact identity through generic node creation data',async()=>{
   const envelopes=extractCanvasChatCommandEnvelopes([envelope({
@@ -148,7 +148,7 @@ describe('director HTML commands',()=>{
   expect(api.saveHtmlArtifact).not.toHaveBeenCalled();
   expect(api.restoreHtmlVersion).not.toHaveBeenCalled();
   expect(useCanvasStore.getState().nodes[0].data.artifactVersion).toBe(2);
-  expect(result.commandResults[0]).toMatchObject({action:'select_version',label:'选择网页版本',output:{artifact_id:'a1',selected_version:2}});
+  expect(result.commandResults[0]).toMatchObject({action:'select_version',label:'Select webpage version',output:{artifact_id:'a1',selected_version:2}});
  });
  it('waits for upstream image completion before running the prepared HTML workflow step',async()=>{
   const imageId=useCanvasStore.getState().addNode('imageGenNode',{x:0,y:0},{prompt:'Create image'});

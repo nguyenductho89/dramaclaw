@@ -9,7 +9,7 @@ describe("isVideoFile", () => {
   });
 
   it("accepts .mxf and other no-MIME containers by extension", () => {
-    // 浏览器给 .mxf 的 file.type 是空串——正是要靠扩展名兜住的场景。
+    // The browser gives .mxf an empty file.type -- exactly the scenario the extension has to cover.
     expect(isVideoFile({ type: "", name: "shot001.mxf" })).toBe(true);
     expect(isVideoFile({ type: "", name: "SHOT001.MXF" })).toBe(true);
     expect(isVideoFile({ type: "", name: "raw.avi" })).toBe(true);
@@ -20,7 +20,7 @@ describe("isVideoFile", () => {
     expect(isVideoFile({ type: "image/png", name: "poster.png" })).toBe(false);
     expect(isVideoFile({ type: "audio/mpeg", name: "voice.mp3" })).toBe(false);
     expect(isVideoFile({ type: "", name: "notes.txt" })).toBe(false);
-    // 扩展名出现在中间但结尾不是视频容器：不误判。
+    // The extension appears in the middle but the ending is not a video container: no misjudgment.
     expect(isVideoFile({ type: "", name: "my.mxf.txt" })).toBe(false);
   });
 

@@ -18,11 +18,11 @@ from support.egress_ledger import assert_transition_allowed
 
 
 class FakeOperations:
-    """带状态机的替身。
+    """A stand-in with a state machine.
 
-    原先它连 `mark_accepted` 都没有，`mark_completed` 也不看前置态，于是服务路径
-    「从 dispatching 直跳 completed」——真库上必抛 P0001——在这里一路绿灯。替身不建
-    状态机，DB 侧的约束就是摆设，见 OI-49。
+    It used to lack even `mark_accepted`, and `mark_completed` ignored the precondition state, so the service path
+    "jump from dispatching straight to completed" - which always raises P0001 on a real database - stayed green here. If the stand-in does not model
+    the state machine, the DB-side constraint is decoration; see OI-49.
     """
 
     def __init__(
@@ -383,7 +383,7 @@ async def test_c1_eg21_context_facade_transitions_in_claim_relay_terminal_order(
         assert events == ["claim", "relay", "unknown"]
     else:
         assert await call == "https://relay.example/signed-secret-url"
-        # `completed` 只能来自 `accepted`（`0039:302-307`），中继因此多一步 accept。
+        # `completed` can only come from `accepted` (`0039:302-307`), so the relay gains an accept step.
         assert events == ["claim", "relay", "accepted", "completed"]
 
 
@@ -607,9 +607,9 @@ async def test_c1_eg22_pos_allows_only_newapi_admin_service_identity():
     assert result == {"ok": True}
     assert network_calls == ["called"]
     assert len(operations.claims) == 1
-    # 这条路径没有上游作业号、也没有结果引用（HandleKind.NONE），两列就该是 NULL。
-    # 原先它断言的是占位串 `"service-operation-completed"` ——把「能骗过非空检查的
-    # 字符串」钉成了期望值，DB 约束、写入点、用例三方互相背书，见 OI-49。
+    # This path has neither an upstream job id nor a result reference (HandleKind.NONE), so both columns should be NULL.
+    # It used to assert the placeholder string `"service-operation-completed"` - pinning a "string that fools
+    # the non-empty check" as the expected value, so the DB constraint, the write site, and the test all vouched for each other; see OI-49.
     assert operations.claims[0].handle_kind is HandleKind.NONE
     assert operations.accepted[0]["provider_job_id"] is None
     assert operations.completed[0]["result_ref"] is None

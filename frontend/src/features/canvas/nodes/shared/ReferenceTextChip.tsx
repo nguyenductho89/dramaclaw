@@ -7,30 +7,30 @@ import { FileText } from 'lucide-react';
 import { ReferenceDetachButton } from './ReferenceDetachButton';
 
 interface ReferenceTextChipProps {
-  /** 上游文本节点 id（连线的 source） */
+  /** Upstream text node id (the edge's source) */
   nodeId: string;
-  /** 被引用的文本内容 */
+  /** The referenced text content */
   text: string;
-  /** 来源标签（displayName / nodeType），展示在预览浮层标题处 */
+  /** Source label (displayName / nodeType), shown at the title of the preview popover */
   sourceLabel?: string;
-  /** 取消引用回调 */
+  /** Detach-reference callback */
   onDetach: (nodeId: string) => void;
-  /** 点击 chip 时聚焦上游节点（可选，仅部分节点需要） */
+  /** Focus the upstream node when the chip is clicked (optional, needed only by some nodes) */
   onFocus?: (nodeId: string) => void;
-  /** 双击 chip 时把视口跳到上游节点所在位置（可选） */
+  /** Jump the viewport to the upstream node's position when the chip is double-clicked (optional) */
   onJump?: (nodeId: string) => void;
-  /** 覆盖触发器方块的样式（默认 h-9 w-9 圆角方块） */
+  /** Override the style of the trigger square (default h-9 w-9 rounded square) */
   triggerClassName?: string;
 }
 
 /**
- * 引用文本的统一展示：一个文本图标方块，hover 时在上方浮出完整文本预览。
+ * Unified display of referenced text: a text-icon square, with the full text preview floating above on hover.
  *
- * 取代之前各处「图标 + 截断文字 + 原生 title」的 chip——只露图标，省横向空间，
- * 完整内容靠样式化的 hover 浮层呈现（参考音乐节点的引用预览）。
+ * Replaces the previous chips "icon + truncated text + native title" everywhere — only the icon shows, saving horizontal space,
+ * and the full content is presented by a styled hover popover (modeled on the music node's reference preview).
  *
- * 预览浮层用 portal + fixed 定位渲染到 body：节点工具条普遍带 `overflow-x-auto`
- * （会一并裁掉纵向溢出），若用 absolute 浮层会被裁切看不见，portal 可绕开。
+ * The preview popover is rendered into body with portal + fixed positioning: node toolbars generally carry `overflow-x-auto`
+ * (which also clips vertical overflow), so an absolute popover would be clipped and invisible; a portal avoids it.
  */
 export function ReferenceTextChip({
   nodeId,
@@ -49,7 +49,7 @@ export function ReferenceTextChip({
     if (trimmed.length === 0) return;
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // 贴着图标上沿，留 8px 间距；浮层自身用 translateY(-100%) 上移。
+    // Hug the top edge of the icon with an 8px gap; the popover itself moves up with translateY(-100%).
     setPreviewAnchor({ top: rect.top - 8, left: rect.left });
   };
   const hidePreview = () => setPreviewAnchor(null);
@@ -71,7 +71,7 @@ export function ReferenceTextChip({
         }}
         onDoubleClick={(event) => {
           event.stopPropagation();
-          // 跳走之后这颗 chip 连同整个面板都不在视口里了，浮层留着会飘在半空。
+          // After jumping away, this chip and the whole panel are out of the viewport, and a leftover popover would float in mid-air.
           hidePreview();
           onJump?.(nodeId);
         }}

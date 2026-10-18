@@ -280,7 +280,7 @@ def test_narrator_voice_sources_and_copy(monkeypatch, tmp_path):
     assert sources.status_code == 200
     assert sources.json()["data"]["options"] == [
         {
-            "label": "已生成音频 · beat_01.mp3",
+            "label": "Generated audio · beat_01.mp3",
             "path": str(source),
             "rel_path": "audio/ep001/beat_01.mp3",
         }

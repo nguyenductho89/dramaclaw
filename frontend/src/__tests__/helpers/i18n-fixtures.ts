@@ -5,12 +5,10 @@ import { readFileSync } from "node:fs";
 import type { TFunction } from "i18next";
 
 /**
- * 单测用的 t：按中文词条真解一次。
+ * Test-side `t`: resolves keys against the shipped locale JSON.
  *
- * 文案搬进 i18n 之后，纯函数（大纲、参考拾取…）都改成收一个 t。单测如果传个回显
- * key 的假 t，断言就只能钉 key，读起来看不出用户看见的是什么，key 打错了也照样绿。
- * 这里直接读 zh 的 translation.json，断言仍然对着中文文案写，顺带把「key 存在」也
- * 一起钉住了。
+ * Pure functions that take a `t` can be asserted against the text users actually
+ * see, and a missing key fails loudly instead of silently echoing the key.
  */
 function loadLocale(lng: string): Record<string, unknown> {
   return JSON.parse(readFileSync(`public/locales/${lng}/translation.json`, "utf8")) as Record<
@@ -19,8 +17,8 @@ function loadLocale(lng: string): Record<string, unknown> {
   >;
 }
 
-export const zhTranslation = loadLocale("zh");
 export const enTranslation = loadLocale("en");
+export const viTranslation = loadLocale("vi");
 
 function lookup(table: unknown, key: string): string | undefined {
   let cursor: unknown = table;
@@ -31,14 +29,14 @@ function lookup(table: unknown, key: string): string | undefined {
   return typeof cursor === "string" ? cursor : undefined;
 }
 
-function makeT(lang: "zh" | "en", table: unknown) {
+function makeT(lang: "vi" | "en", table: unknown) {
   return ((key: string, options?: Record<string, unknown>) => {
     const template = lookup(table, key);
     if (template === undefined) {
-      // 动态拼出来的 key（比如 `sourceKinds.${kind}`）本来就允许落空，跟 i18next 一样
-      // 退回 defaultValue；真正没写词条又没兜底的，才是要当场喊出来的漏翻。
+      // Dynamically built keys may legitimately miss; fall back to defaultValue like
+      // i18next does. A key with neither an entry nor a default is a missing translation.
       if (options && typeof options.defaultValue === "string") return options.defaultValue;
-      throw new Error(`${lang} translation.json 里没有这个 key：${key}`);
+      throw new Error(`${lang} translation.json has no key: ${key}`);
     }
     return template.replace(/\{\{(\w+)\}\}/g, (whole, name: string) =>
       options && name in options ? String(options[name]) : whole,
@@ -46,6 +44,5 @@ function makeT(lang: "zh" | "en", table: unknown) {
   }) as unknown as TFunction;
 }
 
-export const zhT = makeT("zh", zhTranslation);
-/** 英文界面的渲染结果要能直接断言，别只验「不等于中文」。 */
 export const enT = makeT("en", enTranslation);
+export const viT = makeT("vi", viTranslation);

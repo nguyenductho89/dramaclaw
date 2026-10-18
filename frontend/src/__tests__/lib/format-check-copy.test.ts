@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { localizeFormatCheck } from "@/lib/format-check-copy";
 import type { FormatCheck } from "@/lib/queries/ingest";
 
-const CJK = /[一-鿿、。“”]/;
+const CJK = /[\u4e00-\u9fff\u3001\u3002]/;
 const BACKEND_SOURCE = "../src/novelvideo/utils/screenplay_quality.py";
 
 function loadLocale(language: string): Record<string, unknown> {
@@ -17,7 +17,7 @@ function loadLocale(language: string): Record<string, unknown> {
 
 let instance: ReturnType<typeof i18next.createInstance>;
 let en: TFunction;
-let zh: TFunction;
+let vi: TFunction;
 
 beforeAll(async () => {
   instance = i18next.createInstance();
@@ -26,20 +26,20 @@ beforeAll(async () => {
     fallbackLng: false,
     resources: {
       en: { translation: loadLocale("en") },
-      zh: { translation: loadLocale("zh") },
+      vi: { translation: loadLocale("vi") },
     },
     interpolation: { escapeValue: false },
   });
   en = instance.getFixedT("en");
-  zh = instance.getFixedT("zh");
+  vi = instance.getFixedT("vi");
 });
 
-// 后端 screenplay_quality.py 只产中文，前端按 code 查 i18n。这份样例覆盖了它能发出
-// 的每种 issue 形态：报告级（params 为空）、行级场景头（params.header 决定共用 key）、
-// 章节结构（带数字/标题插值）。
+// The backend screenplay_quality.py emits one fixed text per code, and the frontend looks up i18n by code. This sample covers
+// every issue shape it can emit: report-level (empty params), row-level scene headers (params.header decides the shared key),
+// and chapter structure (with number/title interpolation).
 const PAYLOAD: FormatCheck = {
   level: "warning",
-  summary: "上传成功，但检测到 3 个格式风险，可能影响场景识别。",
+  summary: "Upload succeeded, but 3 format risks were detected that may affect scene recognition.",
   summary_code: "format_risks",
   summary_params: { count: 3 },
   issues: [
@@ -47,19 +47,19 @@ const PAYLOAD: FormatCheck = {
       code: "scene_headers_missing_time",
       line: null,
       message:
-        "检测到缺少明确时间锚点的场景头/场次头；后续 time_of_day 与 scene variant 继承可能不稳定。",
-      fix: "建议在场景头中补充明确时间，如“日/夜/深夜”；系统仍会保留场景边界并在后续规范化。",
+        "Detected scene headings with no explicit time anchor; later time_of_day and scene variant inheritance may be unstable.",
+      fix: "Add an explicit time to the scene heading, such as DAY/NIGHT; the system still keeps the scene boundary and normalizes it later.",
       params: {},
     },
     {
       code: "incomplete_scene_header",
       line: 12,
-      message: "场景头“1-1 城市咖啡馆”缺少时间、内/外。",
-      fix: "请按实际场景补充，可参考“1-1 城市咖啡馆 [日/夜] [内/外]”。",
+      message: "Scene heading “1-1 City Cafe” is missing a time and INT/EXT.",
+      fix: "Fill in the missing values from the actual scene, for example “1-1 City Cafe [DAY/NIGHT] [INT/EXT]”.",
       params: {
-        header: "1-1 城市咖啡馆",
+        header: "1-1 City Cafe",
         missing_slots: ["time", "interior_exterior"],
-        location: "城市咖啡馆",
+        location: "City Cafe",
         time_of_day: "",
         interior_exterior: "",
         labeled_form: false,
@@ -68,8 +68,8 @@ const PAYLOAD: FormatCheck = {
     {
       code: "duplicate_chapter_number",
       line: 40,
-      message: "检测到重复章节序号 3：未命名章节。",
-      fix: "建议检查正文中疑似章节标题的句子，避免同一章节号被切成多个章节。",
+      message: "Duplicate chapter number 3 detected: Untitled chapter.",
+      fix: "Check the sentences in the body that look like chapter titles, so the same chapter number is not split into several chapters.",
       params: { number: 3, title: "" },
     },
   ],
@@ -83,20 +83,20 @@ describe("localizeFormatCheck", () => {
     expect(localizeFormatCheck(undefined, en)).toBeNull();
   });
 
-  it("leaves no backend Chinese in the English rendering", () => {
+  it("renders the English copy from the locale entries", () => {
     const localized = localizeFormatCheck(PAYLOAD, en)!;
 
     expect(localized.summary).toBe(
       "Upload succeeded, but 3 formatting risks were detected that may affect scene recognition.",
     );
-    // 用户原文（场景头、地点）本来就可能是中文，只断言我们自己产的句式部分。
+    // The user's original text (scene heading, location) may be in any language, so only the sentence frames we produce are asserted.
     expect(localized.issues![0].message).not.toMatch(CJK);
     expect(localized.issues![0].fix).not.toMatch(CJK);
     expect(localized.issues![1].message).toBe(
-      "Scene heading “1-1 城市咖啡馆” is missing a time of day, an INT/EXT marker.",
+      "Scene heading “1-1 City Cafe” is missing a time of day, an INT/EXT marker.",
     );
     expect(localized.issues![1].fix).toBe(
-      "Fill in the missing values from the actual scene — for example “1-1 城市咖啡馆 [DAY/NIGHT] [INT/EXT]”.",
+      "Fill in the missing values from the actual scene — for example “1-1 City Cafe [DAY/NIGHT] [INT/EXT]”.",
     );
     expect(localized.issues![2].message).toBe("Duplicate chapter number 3: Untitled chapter.");
     expect(localized.issues![2].fix).not.toMatch(CJK);
@@ -119,12 +119,12 @@ describe("localizeFormatCheck", () => {
           {
             code: "incomplete_scene_header",
             line: 7,
-            message: "场景头“场次 1”缺少时间、内/外。",
-            fix: "请按实际场景补充。",
+            message: "Scene heading “Scene 1” is missing a time and INT/EXT.",
+            fix: "Fill in the missing values from the actual scene.",
             params: {
-              header: "场次 1",
+              header: "Scene 1",
               missing_slots: ["time", "interior_exterior"],
-              location: "咖啡馆",
+              location: "Cafe",
               time_of_day: "",
               interior_exterior: "",
               labeled_form: true,
@@ -136,17 +136,18 @@ describe("localizeFormatCheck", () => {
     )!;
 
     expect(localized.issues![0].fix).toContain(
-      "场次 1; Location: 咖啡馆, [DAY/NIGHT], [INT/EXT]",
+      "Scene 1; Location: Cafe, [DAY/NIGHT], [INT/EXT]",
     );
   });
 
-  it("reproduces the backend copy verbatim in Chinese", () => {
-    const localized = localizeFormatCheck(PAYLOAD, zh)!;
+  it("renders the Vietnamese copy from the locale entries", () => {
+    const localized = localizeFormatCheck(PAYLOAD, vi)!;
 
-    expect(localized.summary).toBe(PAYLOAD.summary);
-    expect(localized.issues![1].message).toBe(PAYLOAD.issues![1].message);
-    expect(localized.issues![1].fix).toBe(PAYLOAD.issues![1].fix);
-    expect(localized.issues![2].message).toBe(PAYLOAD.issues![2].message);
+    expect(localized.summary).not.toBe(PAYLOAD.summary);
+    expect(localized.summary).not.toMatch(/^ingest\./);
+    expect(localized.issues![1].message).toContain("1-1 City Cafe");
+    expect(localized.issues![1].message).not.toBe(PAYLOAD.issues![1].message);
+    expect(localized.issues![2].message).not.toBe(PAYLOAD.issues![2].message);
   });
 
   it("falls back to the backend copy for a code the frontend has no key for", () => {
@@ -158,8 +159,8 @@ describe("localizeFormatCheck", () => {
           {
             code: "brand_new_issue",
             line: null,
-            message: "后端刚加的问题。",
-            fix: "后端刚加的建议。",
+            message: "A problem the backend just added.",
+            fix: "A suggestion the backend just added.",
             params: {},
           },
         ],
@@ -168,14 +169,14 @@ describe("localizeFormatCheck", () => {
     )!;
 
     expect(localized.summary).toBe(PAYLOAD.summary);
-    expect(localized.issues![0].message).toBe("后端刚加的问题。");
+    expect(localized.issues![0].message).toBe("A problem the backend just added.");
   });
 });
 
-// 棘轮：后端新增 issue code 却没补 en/zh key 时，英文界面会静默漏中文（defaultValue
-// 兜底不会报错）。这里直接从 Python 源码里抠出 code 常量来对账。
+// Ratchet: when the backend adds an issue code without adding the en/vi key, the UI silently shows the backend text
+// (the defaultValue fallback does not raise). The code constants are extracted straight from the Python source to reconcile.
 describe("format check codes stay covered by the locale files", () => {
-  // 行级场景头的三个 code 共用 sceneHeaderMissingSlots，由 params.header 路由。
+  // The three row-level scene header codes share sceneHeaderMissingSlots, routed by params.header.
   const HEADER_ROUTED = new Set([
     "incomplete_scene_header",
     "scene_headers_missing_time",
@@ -213,7 +214,7 @@ describe("format check codes stay covered by the locale files", () => {
     const missing = [...codes]
       .filter((code) => {
         const camel = code.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
-        // 复数键在 i18next 里存成 _one/_other，exists 对裸键会落空。
+        // Plural keys are stored as _one/_other in i18next, so exists() misses the bare key.
         return (
           !instance.exists(`ingest.formatCheck.summary.${camel}`, { lng: "en" }) &&
           !instance.exists(`ingest.formatCheck.summary.${camel}_other`, { lng: "en" })

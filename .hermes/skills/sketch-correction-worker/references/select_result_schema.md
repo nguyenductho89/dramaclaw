@@ -17,9 +17,9 @@ Each line is one JSON object:
   "beat_number": 1,
   "selected_pool_id": "current_selected",
   "keepability_score": 0.82,
-  "observed_image_summary": "图中只有一名橙色人物被四名灰色家丁围住殴打。",
-  "mismatch_summary": "当前图缺失地面的洋红受害者，也没有捏下巴动作，实际画面更像围殴场景。",
-  "reason": "当前候选缺失关键主体关系和动作，画面本体信息已经读错，需要进入 edit。",
+  "observed_image_summary": "Only one orange figure is in the image, surrounded and beaten by four gray servants.",
+  "mismatch_summary": "The current image lacks the magenta victim on the ground and has no chin-pinching action; the actual picture looks more like a mob-beating scene.",
+  "reason": "The current candidate lacks the key subject relationship and action, the core information of the picture has been misread, and it needs to go to edit.",
   "recommended_action": "edit",
   "edit_mode": "polish"
 }
@@ -93,7 +93,7 @@ Use this color interpretation standard:
 - pale / washed-out / desaturated tint variants still count when the intended identity remains readable
 - small within-family hue shifts are acceptable only when they stay inside the intended identity's readable color family
 - color becomes a major problem when it swaps a named identity into another identity's color family, creates ambiguity between visible identities, or materially hurts beat readability
-- timeline-separated identities such as `重生前` / `重生后` should remain visually distinguishable by color family; if they collapse, treat that as a serious problem
+- timeline-separated identities such as `before_rebirth` / `after_rebirth` should remain visually distinguishable by color family; if they collapse, treat that as a serious problem
 - if a visible named character is read in the wrong identity color family, default to `edit`
 - do not `accept` a beat that clearly swaps one visible named identity into another named identity's color family
 

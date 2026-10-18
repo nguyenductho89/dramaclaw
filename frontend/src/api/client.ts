@@ -115,15 +115,15 @@ export async function apiCall<T>(
 }
 
 /**
- * 同 {@link apiCall}，但把**整个信封**交给调用方。
+ * Same as {@link apiCall}, but hands the **whole envelope** to the caller.
  *
- * 少数端点会在 `data` 之外挂元信息（风格清单的 `asset_base` / `version` 就是这么放
- * 的：`data` 得留给裸列表，否则只解一层信封的老客户端会当场崩）。这些端点的调用方
- * 需要读到同级字段，所以不能走只回 `data` 的 `apiCall`。
+ * A few endpoints hang meta info beside `data` (the style catalog's `asset_base` / `version` are placed this way:
+ * `data` has to stay for the bare list, otherwise old clients that unwrap only one envelope layer would crash on the spot). The callers of these endpoints
+ * need to read the sibling fields, so they cannot go through `apiCall`, which returns only `data`.
  *
- * 返回值刻意是 `ApiEnvelope<T> & Record<string, unknown>`：同级字段没有静态类型，
- * 调用方必须自己做运行时判定 —— 这正是我们想要的，编译期的类型断言在跨仓库契约上
- * 是纯粹的谎言。
+ * The return value is deliberately `ApiEnvelope<T> & Record<string, unknown>`: the sibling fields have no static type,
+ * and the caller must do its own runtime judgment - exactly what we want, since a compile-time type assertion on a cross-repo contract
+ * is a pure lie.
  */
 export async function apiCallEnvelope<T>(
   path: string,

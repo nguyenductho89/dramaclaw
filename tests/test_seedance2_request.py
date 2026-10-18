@@ -73,7 +73,7 @@ def test_build_seedance2_first_frame_request_normalizes_prompt_mentions():
     params = build_seedance2_huimeng_params(
         {
             "mode": Seedance2I2VMode.FIRST_FRAME.value,
-            "final_prompt": "以 @图片1 生成视频，不要输出 @ 符号。",
+            "final_prompt": "Generate the video with @image1, do not output the @ symbol.",
             "duration": 6,
             "human_review": False,
             "human_review_user_set": True,
@@ -81,7 +81,7 @@ def test_build_seedance2_first_frame_request_normalizes_prompt_mentions():
         first_frame="data:image/png;base64,abc",
     )
 
-    assert params["prompt"] == "以 图片1 生成视频，不要输出 @ 符号。"
+    assert params["prompt"] == "Generate the video with image1, do not output the @ symbol."
     assert params["duration"] == 6
     assert params["image_url"] == "data:image/png;base64,abc"
     assert "human_review" not in params
@@ -95,7 +95,7 @@ def test_build_seedance2_multimodal_request_limits_reference_counts():
         build_seedance2_huimeng_params(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "human_review": False,
                 "human_review_user_set": True,
             },
@@ -107,11 +107,11 @@ def test_build_seedance2_multimodal_request_validates_prompt_reference_numbers()
     from novelvideo.seedance2_i2v.models import Seedance2I2VMode
     from novelvideo.seedance2_i2v.request import build_seedance2_huimeng_params
 
-    with pytest.raises(ValueError, match="图片3"):
+    with pytest.raises(ValueError, match="image3"):
         build_seedance2_huimeng_params(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片3和音频1生成视频。",
+                "final_prompt": "Generate the video with reference to image3 and audio1.",
                 "human_review": False,
                 "human_review_user_set": True,
             },
@@ -128,7 +128,7 @@ def test_human_review_requires_http_media_urls():
         build_seedance2_huimeng_params(
             {
                 "mode": Seedance2I2VMode.FIRST_FRAME.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "human_review": True,
             },
             first_frame="data:image/png;base64,abc",
@@ -143,7 +143,7 @@ def test_first_last_frame_request_requires_both_frames():
         build_seedance2_huimeng_params(
             {
                 "mode": Seedance2I2VMode.FIRST_LAST_FRAME.value,
-                "final_prompt": "从图片1自然过渡到图片2。",
+                "final_prompt": "Transition naturally from image1 to image2.",
                 "human_review": False,
                 "human_review_user_set": True,
             },
@@ -158,7 +158,7 @@ def test_build_seedance2_request_passes_scene_optimize():
     params = build_seedance2_huimeng_params(
         {
             "mode": Seedance2I2VMode.FIRST_FRAME.value,
-            "final_prompt": "参考图片1生成视频。",
+            "final_prompt": "Generate the video with reference to image1.",
             "scene_optimize": " anime ",
             "human_review": False,
             "human_review_user_set": True,
@@ -186,11 +186,11 @@ async def test_huimeng_seedance2_generator_uses_seedance2_request_builder(tmp_pa
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考 @图片1 和 @音频1，人物轻轻抬头。",
+        prompt="Refer to @image1 and @audio1, the character raises their head gently.",
         output_path=str(tmp_path / "out.mp4"),
         references=[
-            ShotReference("image", "https://example.com/ref.png", "角色参考"),
-            ShotReference("audio", "https://example.com/ref.mp3", "音频参考"),
+            ShotReference("image", "https://example.com/ref.png", "Character reference"),
+            ShotReference("audio", "https://example.com/ref.mp3", "Audio reference"),
         ],
         duration=6,
         aspect_ratio="9:16",
@@ -202,7 +202,7 @@ async def test_huimeng_seedance2_generator_uses_seedance2_request_builder(tmp_pa
     assert client.submitted is not None
     model, params = client.submitted
     assert model == "seedance-2.0-fast"
-    assert params["prompt"] == "参考 图片1 和 音频1，人物轻轻抬头。"
+    assert params["prompt"] == "Refer to image1 and audio1, the character raises their head gently."
     assert params["reference_images"] == ["https://example.com/ref.png"]
     assert params["reference_audios"] == ["https://example.com/ref.mp3"]
     assert params["generate_audio"] is True
@@ -230,9 +230,9 @@ async def test_huimeng_seedance2_generator_preserves_seedance2_config_switches(t
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片1生成视频。",
+        prompt="Generate the video with reference to image1.",
         output_path=str(tmp_path / "out.mp4"),
-        references=[ShotReference("image", "https://example.com/ref.png", "角色参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -240,7 +240,7 @@ async def test_huimeng_seedance2_generator_preserves_seedance2_config_switches(t
         seedance2_config=json.dumps(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "generate_audio": True,
                 "generate_audio_user_set": True,
                 "return_last_frame": True,
@@ -279,9 +279,9 @@ async def test_huimeng_seedance2_generator_downloads_returned_last_frame(tmp_pat
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片1生成视频。",
+        prompt="Generate the video with reference to image1.",
         output_path=str(tmp_path / "videos" / "beats" / "ep001" / "beat_01.mp4"),
-        references=[ShotReference("image", "https://example.com/ref.png", "角色参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -289,7 +289,7 @@ async def test_huimeng_seedance2_generator_downloads_returned_last_frame(tmp_pat
         seedance2_config=json.dumps(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "generate_audio": False,
                 "generate_audio_user_set": True,
                 "return_last_frame": True,
@@ -339,9 +339,9 @@ async def test_huimeng_seedance2_generator_reads_returned_last_frame_from_task_p
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片1生成视频。",
+        prompt="Generate the video with reference to image1.",
         output_path=str(tmp_path / "videos" / "beats" / "ep001" / "beat_01.mp4"),
-        references=[ShotReference("image", "https://example.com/ref.png", "角色参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -349,7 +349,7 @@ async def test_huimeng_seedance2_generator_reads_returned_last_frame_from_task_p
         seedance2_config=json.dumps(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "generate_audio": False,
                 "generate_audio_user_set": True,
                 "return_last_frame": True,
@@ -399,9 +399,9 @@ async def test_huimeng_seedance2_generator_preserves_disabled_seedance2_config_s
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片1生成视频。",
+        prompt="Generate the video with reference to image1.",
         output_path=str(tmp_path / "out.mp4"),
-        references=[ShotReference("image", "https://example.com/ref.png", "角色参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -409,7 +409,7 @@ async def test_huimeng_seedance2_generator_preserves_disabled_seedance2_config_s
         seedance2_config=json.dumps(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "generate_audio": False,
                 "generate_audio_user_set": True,
                 "return_last_frame": False,
@@ -476,9 +476,9 @@ async def test_huimeng_seedance2_generator_presigns_local_media_for_human_review
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片1生成视频。",
+        prompt="Generate the video with reference to image1.",
         output_path=str(tmp_path / "out.mp4"),
-        references=[ShotReference("image", str(local_ref), "角色参考")],
+        references=[ShotReference("image", str(local_ref), "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -486,7 +486,7 @@ async def test_huimeng_seedance2_generator_presigns_local_media_for_human_review
         seedance2_config=json.dumps(
             {
                 "mode": Seedance2I2VMode.MULTIMODAL_REFERENCE.value,
-                "final_prompt": "参考图片1生成视频。",
+                "final_prompt": "Generate the video with reference to image1.",
                 "human_review": True,
                 "human_review_user_set": True,
             },
@@ -519,9 +519,9 @@ async def test_huimeng_seedance2_generator_rejects_invalid_reference_numbers(tmp
 
     result = await generator.generate(
         image_path=None,
-        prompt="参考图片2生成视频。",
+        prompt="Generate the video with reference to image2.",
         output_path=str(tmp_path / "out.mp4"),
-        references=[ShotReference("image", "https://example.com/ref.png", "角色参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Character reference")],
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
@@ -529,7 +529,7 @@ async def test_huimeng_seedance2_generator_rejects_invalid_reference_numbers(tmp
     )
 
     assert result.status == VideoGenStatus.FAILED
-    assert "图片2" in (result.error or "")
+    assert "image2" in (result.error or "")
     assert client.submitted is None
 
 
@@ -584,7 +584,7 @@ async def test_newapi_seedance2_generator_preserves_config_resolution_and_scene_
 
     result = await generator.generate(
         image_path="https://example.com/first.png",
-        prompt="人物抬头，镜头缓慢推进。",
+        prompt="The character looks up as the camera slowly pushes in.",
         output_path=str(tmp_path / "out.mp4"),
         duration=6,
         aspect_ratio="9:16",
@@ -664,7 +664,7 @@ async def test_newapi_video_generator_handles_wrapped_failure_status(
 
     result = await generator.generate(
         image_path=None,
-        prompt="测试视频",
+        prompt="Test video",
         output_path=str(tmp_path / "out.mp4"),
         poll_interval=0,
         max_polls=2,
@@ -705,7 +705,7 @@ async def test_newapi_seedance1_generator_normalizes_adaptive_ratio_to_auto(
 
     await generator.generate(
         image_path="https://example.com/first.png",
-        prompt="人物缓慢抬头。",
+        prompt="The character slowly raises their head.",
         output_path=str(tmp_path / "out.mp4"),
         aspect_ratio="adaptive",
     )
@@ -838,7 +838,7 @@ def test_newapi_video_payload_uses_real_dimensions_and_lowercase_resolution():
     metadata = {"resolution": "4K", "ratio": "16:9"}
     payload = {
         "model": "seedance-2.0",
-        "prompt": "海边日落。",
+        "prompt": "Sunset at the beach.",
         "seconds": "5",
         "metadata": metadata,
     }
@@ -857,7 +857,7 @@ def test_newapi_video_payload_preserves_auto_duration_and_ratio():
     metadata = {"resolution": "720P", "ratio": "adaptive"}
     payload = {
         "model": "seedance-2.5",
-        "prompt": "自动决定画幅和时长。",
+        "prompt": "Decide the aspect ratio and duration automatically.",
         "seconds": "auto",
         "metadata": metadata,
     }
@@ -882,7 +882,7 @@ def test_newapi_seedance15_payload_preserves_480p_21_9_semantics():
     }
     payload = {
         "model": "seedance-1.5-pro",
-        "prompt": "人物缓慢转身。",
+        "prompt": "The character slowly turns around.",
         "seconds": "5",
         "metadata": metadata,
     }
@@ -1028,7 +1028,7 @@ async def test_newapi_happyhorse_video_generator_uses_happyhorse_payload(tmp_pat
 
     result = await generator.generate(
         image_path="https://example.com/first.png",
-        prompt="一只猫在海滩上漫步",
+        prompt="A cat walks along the beach",
         output_path=str(tmp_path / "out.mp4"),
         duration=6,
         aspect_ratio="9:16",
@@ -1036,8 +1036,8 @@ async def test_newapi_happyhorse_video_generator_uses_happyhorse_payload(tmp_pat
         max_polls=1,
         audio_setting="origin",
         references=[
-            ShotReference("image", "https://example.com/ref.png", "角色参考"),
-            ShotReference("video", "https://example.com/input.mp4", "视频参考"),
+            ShotReference("image", "https://example.com/ref.png", "Character reference"),
+            ShotReference("video", "https://example.com/input.mp4", "Video reference"),
         ],
     )
 
@@ -1049,9 +1049,9 @@ async def test_newapi_happyhorse_video_generator_uses_happyhorse_payload(tmp_pat
     assert payload["model"] == "happyhorse-1.0"
     assert payload["duration"] == 6
     assert "seconds" not in payload
-    # 参考优先：一旦带了参考图/参考视频，首帧(image_url/i2v)与 reference_images/video_url
-    # 互斥（同时下发会触发上游 INVALID_PARAMS）。首帧降级为 reference_images 首位，
-    # 不再单独发 images/image_url；画幅由输入媒体决定，故 ratio 也被移除。
+    # Reference first: once reference images/videos are included, the first frame (image_url/i2v) and reference_images/video_url
+    # are mutually exclusive (sending both triggers an upstream INVALID_PARAMS). The first frame is demoted to the first reference_images entry,
+    # and images/image_url are no longer sent separately; the aspect ratio is decided by the input media, so ratio is removed as well.
     assert "images" not in payload
     assert "image" not in payload
     assert "image_url" not in metadata
@@ -1118,7 +1118,7 @@ async def test_newapi_happyhorse_11_uses_canonical_catalog_driven_protocol(
     monkeypatch.setattr(generator, "_get_json", fake_get_json)
     monkeypatch.setattr(generator, "_download_video", fake_download_video)
 
-    prompt = "镜头环绕" * 1300
+    prompt = "The camera circles around. " * 700
     result = await generator.generate(
         image_path="",
         prompt=prompt,
@@ -1129,8 +1129,8 @@ async def test_newapi_happyhorse_11_uses_canonical_catalog_driven_protocol(
         max_polls=1,
         gen_mode="image_reference",
         references=[
-            ShotReference("image", "https://example.com/a.png", "图片参考"),
-            ShotReference("image", "https://example.com/b.png", "图片参考"),
+            ShotReference("image", "https://example.com/a.png", "Image reference"),
+            ShotReference("image", "https://example.com/b.png", "Image reference"),
         ],
     )
 
@@ -1208,15 +1208,15 @@ async def test_newapi_grok_video_channel_uses_relayclaw_video_payload(tmp_path, 
 
     result = await generator.generate(
         image_path="https://example.com/first.png",
-        prompt="一只猫在海滩上漫步",
+        prompt="A cat walks along the beach",
         output_path=str(tmp_path / "out.mp4"),
         duration=6,
         aspect_ratio="9:16",
         poll_interval=0,
         max_polls=1,
         references=[
-            ShotReference("image", "https://example.com/ref.png", "角色参考"),
-            ShotReference("video", "https://example.com/input.mp4", "视频参考"),
+            ShotReference("image", "https://example.com/ref.png", "Character reference"),
+            ShotReference("video", "https://example.com/input.mp4", "Video reference"),
         ],
     )
 
@@ -1224,7 +1224,7 @@ async def test_newapi_grok_video_channel_uses_relayclaw_video_payload(tmp_path, 
     payload = captured["payload"]
     assert isinstance(payload, dict)
     assert payload["model"] == "grok-video-channel"
-    assert payload["prompt"] == "一只猫在海滩上漫步"
+    assert payload["prompt"] == "A cat walks along the beach"
     assert payload["duration"] == 6
     assert "seconds" not in payload
     assert payload["image"] == "https://example.com/first.png"
@@ -1257,9 +1257,9 @@ async def test_newapi_catalog_model_builds_huimeng_protocol_multimedia_reference
         image_path="",
         last_frame_path=None,
         references=[
-            ShotReference("image", "https://example.com/ref.png", "角色参考"),
-            ShotReference("video", "https://example.com/input.mp4", "视频编辑源"),
-            ShotReference("audio", "https://example.com/input.mp3", "音频参考"),
+            ShotReference("image", "https://example.com/ref.png", "Character reference"),
+            ShotReference("video", "https://example.com/input.mp4", "Video editing source"),
+            ShotReference("audio", "https://example.com/input.mp3", "Audio reference"),
         ],
         log=lambda _message: None,
     )
@@ -1306,7 +1306,7 @@ async def test_newapi_catalog_model_builds_file_and_link_references(
         mode="all_reference",
         image_path="",
         last_frame_path=None,
-        references=[ShotReference(reference_type, reference_url, "参考素材")],
+        references=[ShotReference(reference_type, reference_url, "Reference material")],
         log=lambda _message: None,
     )
 
@@ -1329,8 +1329,8 @@ async def test_newapi_video_edit_keeps_independent_audio_reference():
         image_path="",
         last_frame_path=None,
         references=[
-            ShotReference("video", "https://example.com/source.mp4", "视频编辑源"),
-            ShotReference("audio", "https://example.com/music.mp3", "配乐参考"),
+            ShotReference("video", "https://example.com/source.mp4", "Video editing source"),
+            ShotReference("audio", "https://example.com/music.mp3", "Soundtrack reference"),
         ],
         log=lambda _message: None,
     )
@@ -1356,7 +1356,7 @@ async def test_newapi_image_to_video_uses_single_reference_image_not_first_frame
         mode="imageToVideo",
         image_path="https://example.com/ref.png",
         last_frame_path=None,
-        references=[ShotReference("image", "https://example.com/ref.png", "图片参考")],
+        references=[ShotReference("image", "https://example.com/ref.png", "Image reference")],
         log=lambda _message: None,
     )
 
@@ -1510,9 +1510,9 @@ async def test_newapi_video_seedance2_references_normalize_only_image_refs(
 
     params = await generator._relay_seedance2_references(
         [
-            ShotReference("image", str(image_path), "图片参考"),
-            ShotReference("video", str(video_path), "视频参考"),
-            ShotReference("audio", str(audio_path), "音频参考"),
+            ShotReference("image", str(image_path), "Image reference"),
+            ShotReference("video", str(video_path), "Video reference"),
+            ShotReference("audio", str(audio_path), "Audio reference"),
         ],
         log=lambda _message: None,
     )

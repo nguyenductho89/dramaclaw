@@ -35,10 +35,10 @@ interface LightEditorOverlayProps {
 }
 
 /**
- * 打光编辑器的**工作流外壳**：把内容层（LightEditorContent）挂到画布节点下方并
- * 跟随画布缩放。编辑器本体与提交编排都在内容层，这里只剩定位 +
- * 「提交后选中新结果节点」——与拆分前等价（onSubmitted=setSelectedNode，
- * 内容层在其后调 onClose，顺序同旧 handleSubmit）。
+ * The **workflow shell** of the lighting editor: hangs the content layer (LightEditorContent) below the canvas node and
+ * follows the canvas zoom. The editor itself and the submission orchestration are both in the content layer, and only positioning +
+ * "select the new result node after submission" remain here - equivalent to before the split (onSubmitted=setSelectedNode,
+ * the content layer calls onClose after it, in the same order as the old handleSubmit).
  */
 export const LightEditorOverlay = memo(
   ({ node, imageSource, onClose }: LightEditorOverlayProps) => {
@@ -53,7 +53,7 @@ export const LightEditorOverlay = memo(
         offset={16}
         className={NODE_TOOLBAR_CLASS}
       >
-        {/* 操作区跟随画布缩放（align=start → 锚点左上角，贴节点底边）。 */}
+        {/* The operation area follows the canvas zoom (align=start -> anchor at the top-left corner, hugging the node's bottom edge). */}
         <ZoomScaledToolbar origin="top left">
           <LightEditorContent
             node={node}

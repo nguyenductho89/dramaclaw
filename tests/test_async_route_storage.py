@@ -17,14 +17,14 @@ async def test_chat_notification_uses_async_storage(monkeypatch) -> None:
 
     async def fake_append_message(*args, **kwargs):
         seen.append((args, kwargs))
-        return {"id": "message-1", "content": "通知"}
+        return {"id": "message-1", "content": "Notice"}
 
     monkeypatch.setattr(chat.chat_store, "append_message_async", fake_append_message)
 
     response = await chat.append_chat_notification(
         chat.ChatNotificationIn(
             scope=chat.ChatScopePayload(kind="home"),
-            text="通知",
+            text="Notice",
         ),
         user={"username": "alice"},
     )
@@ -46,7 +46,7 @@ async def test_chat_assistant_turn_is_idempotent(monkeypatch, tmp_path) -> None:
             "alice",
             scope,
             "assistant",
-            "完成",
+            "Done",
             turn_id="turn-1",
             idempotency_key="assistant:turn-1",
         ),
@@ -54,7 +54,7 @@ async def test_chat_assistant_turn_is_idempotent(monkeypatch, tmp_path) -> None:
             "alice",
             scope,
             "assistant",
-            "完成",
+            "Done",
             turn_id="turn-1",
             idempotency_key="assistant:turn-1",
         ),
@@ -63,7 +63,7 @@ async def test_chat_assistant_turn_is_idempotent(monkeypatch, tmp_path) -> None:
     messages = await store.list_messages_async("alice", scope)
     assert first["id"] == second["id"]
     assert [(item["role"], item["content"]) for item in messages] == [
-        ("assistant", "完成")
+        ("assistant", "Done")
     ]
 
 

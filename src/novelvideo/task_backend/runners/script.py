@@ -66,7 +66,7 @@ async def _run_beat_video_prompt(
         0.05,
         lmsg(
             "tasks.progress.script.beatVideoPromptStart",
-            f"开始生成 Beat {beat_num} 视频提示词",
+            f"Starting video prompt generation for Beat {beat_num}",
             beatNum=beat_num,
         ),
     )
@@ -84,7 +84,7 @@ async def _run_beat_video_prompt(
             0.95,
             lmsg(
                 "tasks.progress.script.beatVideoPromptSaved",
-                f"已保存 Beat {beat_num} 视频提示词",
+                f"Saved video prompt for Beat {beat_num}",
                 beatNum=beat_num,
             ),
         )
@@ -132,7 +132,7 @@ async def _run_script_writer_scoped(
 
     update_progress(
         0.02,
-        lmsg("tasks.progress.script.start", "开始生成脚本..."),
+        lmsg("tasks.progress.script.start", "Starting script generation..."),
     )
 
     store = CogneeStore(
@@ -173,7 +173,7 @@ async def _run_script_writer_scoped(
                 ctx,
                 "script_writer",
                 episode,
-                logs=[f"已清理 {deleted} 个旧草图文件"],
+                logs=[f"Cleaned up {deleted} old sketch file(s)"],
             )
 
         try:
@@ -190,14 +190,14 @@ async def _run_script_writer_scoped(
                     ctx,
                     "script_writer",
                     episode,
-                    logs=[f"已分配 {len(colors)} 个身份配色"],
+                    logs=[f"Assigned colors to {len(colors)} identity(ies)"],
                 )
         except Exception as exc:  # noqa: BLE001
             manager.update_progress_for_project(
                 ctx,
                 "script_writer",
                 episode,
-                logs=[f"自动配色失败（不影响脚本）: {exc}"],
+                logs=[f"Automatic color assignment failed (does not affect the script): {exc}"],
             )
 
         result = {

@@ -4,16 +4,16 @@ import { CANVAS_NODE_TYPES, type CanvasNode } from "./canvasNodes";
 import { isPresetManagedNode } from "./mainlineNodeFlags";
 
 /**
- * 批量删除时,「所选节点」实际可删的 id 集合。
+ * The set of ids actually deletable among "the selected nodes" in bulk deletion.
  *
- * 为什么不能直接用 selected 节点:画布的框选(见 Canvas 的自定义 marquee)会把
- * 「包住其它命中节点的组」从选择里剔除——这样拖动多选时父子不会双重位移。代价是
- * 用户框选整个组时,组本身的 `selected` 始终为假,只有组内子节点被选中。若批量删除
- * 只删 selected,就会把子节点删光、留下空组框(#62 后续 bug)。
+ * Why `selected` nodes cannot be used directly: the canvas box selection (see Canvas's custom marquee) removes "groups that enclose other hit nodes"
+ * from the selection - so that when dragging a multi-selection parent and child are not displaced twice. The cost is that when the user box-selects a whole group,
+ * the group's own `selected` is always false and only the children in the group are selected. If bulk delete deleted only selected, it would delete all the children
+ * and leave an empty group frame (a follow-up bug of #62).
  *
- * 这里补回那些「即将被清空」的组:某个组的每个子节点都在选择内 ⇒ 删除会清空它 ⇒
- * 把这个空壳组也一并删掉。preset/主线锁定的组(及含锁定子节点、无法真正清空的组)
- * 保持排除。store 的 deleteNodes 会自动级联删除后代,故只需把组 id 补进来即可。
+ * Here the groups that "are about to be emptied" are added back: if every child of a group is within the selection => deletion would empty it =>
+ * delete this empty shell group as well. Preset/mainline-locked groups (and groups containing locked children that cannot truly be emptied)
+ * stay excluded. The store's deleteNodes cascades to delete descendants automatically, so only the group id needs to be added.
  */
 export function collectBatchDeletableIds(
   nodes: CanvasNode[],
@@ -28,7 +28,7 @@ export function collectBatchDeletableIds(
     }
   }
 
-  // 一次遍历统计每个父节点的子节点总数 / 已选数 / 是否含锁定子节点。
+  // One pass to count each parent node's total children / selected count / whether it contains locked children.
   const childTally = new Map<
     string,
     { total: number; selected: number; hasLocked: boolean }
@@ -49,7 +49,7 @@ export function collectBatchDeletableIds(
     childTally.set(node.parentId, tally);
   }
 
-  // 补回会被清空的普通组:全部子节点都被选中、无锁定子节点、组本身未锁定。
+  // Add back ordinary groups that would be emptied: all children selected, no locked children, and the group itself not locked.
   for (const node of nodes) {
     if (node.type !== CANVAS_NODE_TYPES.group) {
       continue;

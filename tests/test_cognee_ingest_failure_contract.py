@@ -21,8 +21,8 @@ def test_cognee_pipeline_error_result_raises_runtime_error():
         payload="LLM provider rejected the request",
     )
 
-    with pytest.raises(RuntimeError, match="知识图谱构建失败"):
-        CogneeStore._ensure_pipeline_run_succeeded(result, "知识图谱构建")
+    with pytest.raises(RuntimeError, match="Knowledge graph build failed"):
+        CogneeStore._ensure_pipeline_run_succeeded(result, "Knowledge graph build")
 
 
 @pytest.mark.asyncio
@@ -30,7 +30,7 @@ async def test_worker_rejects_headerless_drama_before_rebuild(tmp_path, monkeypa
     from novelvideo.cognee.store import CogneeStore
 
     novel = tmp_path / "novel.txt"
-    novel.write_text("第一集\n孙悟空走进寝房。", encoding="utf-8")
+    novel.write_text("Episode 1\nSun Wukong walks into the bedchamber.", encoding="utf-8")
     store = object.__new__(CogneeStore)
     store.state_dir = str(tmp_path)
     store.project_dir = str(tmp_path)
@@ -42,7 +42,7 @@ async def test_worker_rejects_headerless_drama_before_rebuild(tmp_path, monkeypa
 
     monkeypatch.setattr(store, "_prune_cognee_only", record_prune)
 
-    with pytest.raises(ValueError, match="精品剧必须包含场景头"):
+    with pytest.raises(ValueError, match="must include scene headings"):
         await store._ingest_novel_fast_locked(
             str(novel),
             rebuild=True,
@@ -60,7 +60,7 @@ async def test_worker_rejects_prose_ending_in_outside_before_rebuild(
 
     novel = tmp_path / "novel.txt"
     novel.write_text(
-        "第一集\n孙悟空快步走到门外\n他发现师父已经离开。",
+        "Episode 1\nSun Wukong hurried out to the gate outside\nHe found that his master had already left.",
         encoding="utf-8",
     )
     store = object.__new__(CogneeStore)
@@ -74,7 +74,7 @@ async def test_worker_rejects_prose_ending_in_outside_before_rebuild(
 
     monkeypatch.setattr(store, "_prune_cognee_only", record_prune)
 
-    with pytest.raises(ValueError, match="精品剧必须包含场景头"):
+    with pytest.raises(ValueError, match="must include scene headings"):
         await store._ingest_novel_fast_locked(
             str(novel),
             rebuild=True,
@@ -101,10 +101,10 @@ def test_cognee_pipeline_error_includes_nested_data_item_error():
     )
 
     with pytest.raises(RuntimeError) as exc_info:
-        CogneeStore._ensure_pipeline_run_succeeded(result, "知识图谱构建")
+        CogneeStore._ensure_pipeline_run_succeeded(result, "Knowledge graph build")
 
     message = str(exc_info.value)
-    assert "知识图谱构建失败" in message
+    assert "Knowledge graph build failed" in message
     assert "Provider rejected chunk 7" in message
 
 
@@ -126,7 +126,7 @@ def test_cognee_pipeline_completed_parent_still_rejects_nested_error():
     }
 
     with pytest.raises(RuntimeError, match="Embedding provider returned 429"):
-        CogneeStore._ensure_pipeline_run_succeeded(result, "知识图谱构建")
+        CogneeStore._ensure_pipeline_run_succeeded(result, "Knowledge graph build")
 
 
 def test_cognee_pipeline_completed_parent_rejects_nested_non_terminal_run():
@@ -147,7 +147,7 @@ def test_cognee_pipeline_completed_parent_rejects_nested_non_terminal_run():
     }
 
     with pytest.raises(RuntimeError, match="PipelineRunStarted"):
-        CogneeStore._ensure_pipeline_run_succeeded(result, "知识图谱构建")
+        CogneeStore._ensure_pipeline_run_succeeded(result, "Knowledge graph build")
 
 
 @pytest.mark.parametrize(
@@ -164,7 +164,7 @@ def test_cognee_pipeline_accepts_known_completed_statuses(status):
 
     CogneeStore._ensure_pipeline_run_succeeded(
         SimpleNamespace(status=status, payload=None),
-        "知识图谱构建",
+        "Knowledge graph build",
     )
 
 
@@ -180,8 +180,8 @@ def test_cognee_pipeline_accepts_known_completed_statuses(status):
 def test_cognee_pipeline_rejects_empty_or_non_terminal_result(result):
     from novelvideo.cognee.store import CogneeStore
 
-    with pytest.raises(RuntimeError, match="知识图谱构建失败"):
-        CogneeStore._ensure_pipeline_run_succeeded(result, "知识图谱构建")
+    with pytest.raises(RuntimeError, match="Knowledge graph build failed"):
+        CogneeStore._ensure_pipeline_run_succeeded(result, "Knowledge graph build")
 
 
 @pytest.mark.asyncio
@@ -190,12 +190,12 @@ async def test_failed_graph_build_leaves_project_unimported(tmp_path, monkeypatc
 
     Regression: novel content was saved at Step 1 (before the graph build that
     can fail), so a failed cognify still left ``load_novel_content()`` returning
-    text — and the UI inferred "导入完成" from that. A failure must leave the
+    text — and the UI inferred "import complete" from that. A failure must leave the
     project un-imported so the user can retry.
     """
     from novelvideo.cognee.store import CogneeStore
     novel = tmp_path / "novel.txt"
-    novel.write_text("第一章\n春深不见旧门红，内容内容内容。\n", encoding="utf-8")
+    novel.write_text("Chapter 1\nThe red door still stands as the spring deepens, filler filler filler.\n", encoding="utf-8")
 
     store = object.__new__(CogneeStore)
     store.dataset_name = "test_ds"
@@ -209,13 +209,13 @@ async def test_failed_graph_build_leaves_project_unimported(tmp_path, monkeypatc
     monkeypatch.setenv("LLM_API_KEY", "test-key")
 
     async def fail_graph(*, stage_name, **kwargs):
-        if stage_name == "知识图谱构建":
-            raise RuntimeError("知识图谱构建失败(PipelineRunErrored)")
+        if stage_name == "Knowledge graph build":
+            raise RuntimeError("Knowledge graph build failed (PipelineRunErrored)")
         return SimpleNamespace(status=_FakeCompletedPipelineStatus())
 
     monkeypatch.setattr(store, "_run_cognee_pipeline_with_retry", fail_graph)
 
-    with pytest.raises(RuntimeError, match="知识图谱构建失败"):
+    with pytest.raises(RuntimeError, match="Knowledge graph build failed"):
         await store.ingest_novel_fast(str(novel), rebuild=False)
 
     assert store.load_novel_content() is None
@@ -223,9 +223,9 @@ async def test_failed_graph_build_leaves_project_unimported(tmp_path, monkeypatc
 
 @pytest.mark.asyncio
 async def test_successful_ingest_persists_novel_content(tmp_path, monkeypatch):
-    """A successful ingest must persist novel content (导入完成)."""
+    """A successful ingest must persist novel content (import complete)."""
     from novelvideo.cognee.store import CogneeStore
-    text = "第一章\n春深不见旧门红，内容内容内容。\n"
+    text = "Chapter 1\nThe red door still stands as the spring deepens, filler filler filler.\n"
     novel = tmp_path / "novel.txt"
     novel.write_text(text, encoding="utf-8")
 
@@ -267,7 +267,7 @@ async def test_preview_failure_does_not_mark_ingest_successful(tmp_path, monkeyp
     from novelvideo.cognee.store import CogneeStore
 
     novel = tmp_path / "novel.txt"
-    novel.write_text("第一章\n内容内容内容。\n", encoding="utf-8")
+    novel.write_text("Chapter 1\nFiller filler filler.\n", encoding="utf-8")
     store = object.__new__(CogneeStore)
     store.dataset_name = "test_ds"
     store.state_dir = str(tmp_path)
@@ -317,7 +317,7 @@ async def test_empty_preview_does_not_mark_ingest_successful(tmp_path, monkeypat
         ),
     )
 
-    with pytest.raises(RuntimeError, match="未读取到任何图谱节点"):
+    with pytest.raises(RuntimeError, match="no graph nodes were read"):
         await store.materialize_graph_preview()
 
 
@@ -326,7 +326,7 @@ async def test_empty_graph_is_not_reported_as_success(tmp_path, monkeypatch):
     from novelvideo.cognee.store import CogneeStore
 
     novel = tmp_path / "source.txt"
-    novel.write_text("第一章\n内容内容内容。\n", encoding="utf-8")
+    novel.write_text("Chapter 1\nFiller filler filler.\n", encoding="utf-8")
 
     store = object.__new__(CogneeStore)
     store.dataset_name = "test_ds"
@@ -347,7 +347,7 @@ async def test_empty_graph_is_not_reported_as_success(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "_run_cognee_pipeline_with_retry", ok_stage)
     monkeypatch.setattr(store, "_dataset_graph_has_nodes", empty_graph)
 
-    with pytest.raises(RuntimeError, match="未生成任何图谱节点"):
+    with pytest.raises(RuntimeError, match="no graph nodes were generated"):
         await store.ingest_novel_fast(str(novel), rebuild=False)
 
     assert "content" not in saved
@@ -362,10 +362,10 @@ async def test_failed_rebuild_invalidates_old_import_but_keeps_upload(
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     imported_marker = project_dir / "novel.txt"
-    imported_marker.write_text("旧小说", encoding="utf-8")
+    imported_marker.write_text("old novel", encoding="utf-8")
     upload = tmp_path / "uploads" / "new.txt"
     upload.parent.mkdir()
-    upload.write_text("第一章\n新小说内容。\n", encoding="utf-8")
+    upload.write_text("Chapter 1\nNew novel content.\n", encoding="utf-8")
 
     store = object.__new__(CogneeStore)
     store.dataset_name = "test_ds"
@@ -379,12 +379,12 @@ async def test_failed_rebuild_invalidates_old_import_but_keeps_upload(
         return None
 
     async def fail_add(*, stage_name, **kwargs):
-        raise RuntimeError(f"{stage_name}失败")
+        raise RuntimeError(f"{stage_name} failed")
 
     monkeypatch.setattr(store, "_prune_cognee_only", prune)
     monkeypatch.setattr(store, "_run_cognee_pipeline_with_retry", fail_add)
 
-    with pytest.raises(RuntimeError, match="原文导入失败"):
+    with pytest.raises(RuntimeError, match="Source import failed"):
         await store.ingest_novel_fast(str(upload), rebuild=True)
 
     assert not imported_marker.exists()
@@ -410,13 +410,13 @@ async def test_cognee_pipeline_retry_succeeds_after_one_pipeline_error(monkeypat
         return result
 
     await store._run_cognee_pipeline_with_retry(
-        stage_name="知识图谱构建",
+        stage_name="Knowledge graph build",
         operation=operation,
         log=logs.append,
     )
 
     assert attempts == 2
-    assert any("知识图谱构建失败，准备重试" in item for item in logs)
+    assert any("Knowledge graph build failed, preparing to retry" in item for item in logs)
 
 
 @pytest.mark.asyncio
@@ -434,11 +434,11 @@ async def test_cognee_pipeline_retry_raises_after_second_pipeline_error(monkeypa
 
     with pytest.raises(RuntimeError) as exc_info:
         await store._run_cognee_pipeline_with_retry(
-            stage_name="知识图谱构建",
+            stage_name="Knowledge graph build",
             operation=operation,
             log=logs.append,
         )
 
     assert attempts == 2
     assert "provider error 2" in str(exc_info.value)
-    assert any("知识图谱构建失败，准备重试" in item for item in logs)
+    assert any("Knowledge graph build failed, preparing to retry" in item for item in logs)

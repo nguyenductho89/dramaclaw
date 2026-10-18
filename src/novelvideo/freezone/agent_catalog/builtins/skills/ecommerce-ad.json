@@ -1,17 +1,17 @@
 {
   "id": "ecommerce-ad",
-  "name": "电商广告",
+  "name": "E-commerce Ad",
   "enabled": true,
   "version": 1,
-  "description": "根据商品与卖点动态规划广告镜头，生成商品锚点、广告画面、视频片段、配音并自动合成。",
+  "description": "Dynamically plan ad shots from the product and its selling points, generate product anchors, ad visuals, video clips and voiceover, and compose them automatically.",
   "category": "ecommerce",
   "triggers": {
     "keywords": [
-      "电商广告",
-      "商品广告",
-      "带货视频",
-      "产品广告",
-      "商品宣传片"
+      "E-commerce Ad",
+      "product ad",
+      "shoppable video",
+      "product advertisement",
+      "product promo video"
     ],
     "node_scopes": [
       "textGeneration",
@@ -21,12 +21,12 @@
     ]
   },
   "planning": {
-    "planning_notes": "根据用户目标动态确定镜头数量；没有商品图时先生成商品锚点，有商品图时把它作为一致性参考。",
-    "prompt_guide": "突出商品卖点、使用场景、品牌调性和明确行动引导，所有镜头保持商品外观一致。",
+    "planning_notes": "Decide the number of shots dynamically from the user goal; generate a product anchor first when there is no product image, and use the product image as the consistency reference when there is one.",
+    "prompt_guide": "Highlight the product selling points, usage scenarios, brand tone and a clear call to action, keeping the product appearance consistent across all shots.",
     "conduct_rules": [
-      "根据用户目标动态决定节点数量和依赖关系",
-      "仅使用 allowed_recipe_ids 中声明的能力",
-      "创建画布节点前先生成并确认动态计划"
+      "Dynamically decide the number of nodes and their dependencies from the user goal",
+      "Use only the capabilities declared in allowed_recipe_ids",
+      "Generate and confirm the dynamic plan before creating canvas nodes"
     ]
   },
   "schema_version": "dramaclaw.workflow-skill.v1",
@@ -51,22 +51,22 @@
     "rating_bands": [
       {
         "score": 10,
-        "description": "完整满足用户目标且工作流可以执行"
+        "description": "Fully meets the user goal and the workflow can be executed"
       },
       {
         "score": 7,
-        "description": "核心流程完整，允许少量非关键调整"
+        "description": "Core flow is complete; a few non-critical adjustments are allowed"
       },
       {
         "score": 4,
-        "description": "缺少关键阶段或依赖关系不完整"
+        "description": "Missing key stages or incomplete dependencies"
       }
     ],
     "visual_review_items": [],
     "text_review_items": [],
     "quality_threshold": 7,
     "domain_constraints": [
-      "工作流必须符合用户目标并保持输入素材一致性"
+      "The workflow must match the user goal and keep the input assets consistent"
     ]
   }
 }

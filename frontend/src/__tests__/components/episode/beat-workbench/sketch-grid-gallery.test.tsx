@@ -13,42 +13,42 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      en: {
         translation: {
           common: {
-            copy: "复制",
-            download: "下载",
-            regenerate: "重新生成",
-            stop: "停止",
-            billingRuleNotConfiguredShort: "需配置",
+            copy: "Copy",
+            download: "Download",
+            regenerate: "Regenerate",
+            stop: "Stop",
+            billingRuleNotConfiguredShort: "Configure",
           },
           episode: {
             workbench: {
               sketchGrid: {
                 title: "Sketch Grid",
                 titleWithCount: "Sketch Grid ({{count}} grids)",
-                gridCount: "{{count}} 个 grid",
+                gridCount: "{{count}} grids",
                 gridLabel: "Grid #{{n}}",
-                cellCount: "{{count}} 格",
-                noPreview: "无预览",
-                generateGrid: "生成/重生",
-                regenStarted: "Grid #{{n}} 已启动",
-                regenFailed: "Grid 生成失败",
-                cut: "切割入池",
-                cutSuccess: "Grid #{{n}} 已切割",
-                cutFailed: "Grid 切割失败",
-                uploadGrid: "上传 grid",
-                uploadSuccess: "Grid #{{n}} 已上传",
-                uploadFailed: "Grid 上传失败",
-                exportPrompt: "导出 prompt",
+                cellCount: "{{count}} cells",
+                noPreview: "No preview",
+                generateGrid: "Generate/Regen",
+                regenStarted: "Grid #{{n}} started",
+                regenFailed: "Grid generation failed",
+                cut: "Cut to pool",
+                cutSuccess: "Grid #{{n}} cut",
+                cutFailed: "Grid cut failed",
+                uploadGrid: "Upload grid",
+                uploadSuccess: "Grid #{{n}} uploaded",
+                uploadFailed: "Grid upload failed",
+                exportPrompt: "Export prompt",
                 promptTitle: "Grid #{{n}} prompt",
-                promptContent: "Prompt 内容",
-                promptFailed: "Prompt 导出失败",
-                copySuccess: "Prompt 已复制",
+                promptContent: "Prompt content",
+                promptFailed: "Prompt export failed",
+                copySuccess: "Prompt copied",
               },
             },
           },
@@ -212,9 +212,9 @@ describe("SketchGridGallery", () => {
     expect(screen.getByText(/Sketch Grid/)).toBeInTheDocument();
     expect(screen.getByText("Grid #0")).toBeInTheDocument();
     expect(screen.getByText(/B1-2/)).toBeInTheDocument();
-    expect(screen.getByText("无预览")).toBeInTheDocument();
+    expect(screen.getByText("No preview")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "生成/重生" }));
+    await user.click(screen.getByRole("button", { name: "Generate/Regen" }));
 
     expect(generateSketchesMock).toHaveBeenCalledWith({
       grid_index: 0,
@@ -251,7 +251,7 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByText("无预览")).not.toBeInTheDocument();
+    expect(screen.queryByText("No preview")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Grid #0")).toBeInTheDocument();
     expect(container.querySelector('img[src="/static/beat-1-sketch.png"]')).toBeInTheDocument();
     expect(container.querySelector('img[src="/static/beat-2-sketch.png"]')).toBeInTheDocument();
@@ -313,7 +313,7 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByText("无预览")).not.toBeInTheDocument();
+    expect(screen.queryByText("No preview")).not.toBeInTheDocument();
     expect(container.querySelector('img[src="/static/pool-beat-7.png"]')).toBeInTheDocument();
     expect(container.querySelector('img[src="/static/pool-beat-8.png"]')).toBeInTheDocument();
   });
@@ -357,7 +357,7 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByText("无预览")).not.toBeInTheDocument();
+    expect(screen.queryByText("No preview")).not.toBeInTheDocument();
     expect(screen.getByAltText("Grid #0")).toHaveAttribute(
       "src",
       "/static/generated-sketch-preview.jpg",
@@ -455,7 +455,7 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "生成/重生" }));
+    await user.click(screen.getByRole("button", { name: "Generate/Regen" }));
 
     expect(generateSketchesMock).toHaveBeenCalledWith({
       grid_index: 0,
@@ -475,13 +475,13 @@ describe("SketchGridGallery", () => {
 
     expect(screen.getByText(/Sketch Grid/)).toBeInTheDocument();
     expect(screen.getByText("Grid #4")).toBeInTheDocument();
-    expect(screen.getByText(/2 格/)).toBeInTheDocument();
+    expect(screen.getByText(/2 cells/)).toBeInTheDocument();
     expect(screen.getByAltText("Grid #4")).toHaveAttribute(
       "src",
       "/static/sketch-grid-4.png",
     );
 
-    await user.click(screen.getByRole("button", { name: "生成/重生" }));
+    await user.click(screen.getByRole("button", { name: "Generate/Regen" }));
 
     expect(generateSketchesMock).toHaveBeenCalledWith({
       grid_index: 4,
@@ -546,8 +546,8 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText(/1 格/)).toBeInTheDocument();
-    expect(screen.queryByText(/3 格/)).not.toBeInTheDocument();
+    expect(screen.getByText(/1 cells/)).toBeInTheDocument();
+    expect(screen.queryByText(/3 cells/)).not.toBeInTheDocument();
     expect(screen.getByAltText("Grid #0")).toHaveAttribute(
       "src",
       "/static/new-grid.png",
@@ -583,10 +583,10 @@ describe("SketchGridGallery", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "切割入池" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cut to pool" })).not.toBeInTheDocument();
     expect(cutGridMock).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "导出 prompt" }));
+    await user.click(screen.getByRole("button", { name: "Export prompt" }));
     expect(exportGridPromptMock).toHaveBeenCalledWith({
       gridIndex: 4,
       gridType: "sketch",

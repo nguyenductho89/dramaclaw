@@ -23,7 +23,7 @@ vi.mock('@/lib/url-params', async (importOriginal) => ({
 
 import { translateNodeText } from '@/features/canvas/application/translateText';
 
-describe('translateNodeText（共享翻译核心，原 5 处节点内联实现）', () => {
+describe('translateNodeText (shared translation core, formerly 5 inline node implementations)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneTextTranslate.mockReset();
@@ -31,7 +31,7 @@ describe('translateNodeText（共享翻译核心，原 5 处节点内联实现�
     awaitTaskCompletion.mockReset();
   });
 
-  it('提交（带 canvasId/nodeId 上下文）→ 等完成 → 返回译文', async () => {
+  it('submits (with canvasId/nodeId context) -> waits for completion -> returns the translation', async () => {
     submitFreezoneTextTranslate.mockResolvedValue({
       task_key: 'tk-t',
       task_type: 'freezone_text_translate',
@@ -46,13 +46,13 @@ describe('translateNodeText（共享翻译核心，原 5 处节点内联实现�
     });
 
     const translated = await translateNodeText('proj-1', {
-      text: '一个电影感镜头',
+      text: 'A cinematic shot',
       nodeId: 'vid-1',
       nodeType: 'video',
     });
 
     expect(submitFreezoneTextTranslate).toHaveBeenCalledWith('proj-1', {
-      text: '一个电影感镜头',
+      text: 'A cinematic shot',
       nodeType: 'video',
       canvasId: 'canvas-1',
       nodeId: 'vid-1',
@@ -62,7 +62,7 @@ describe('translateNodeText（共享翻译核心，原 5 处节点内联实现�
     expect(translated).toBe('a cinematic shot');
   });
 
-  it('canvasId 缺省回退 default（与原实现一致）', async () => {
+  it('a missing canvasId falls back to default (consistent with the original implementation)', async () => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: null });
     submitFreezoneTextTranslate.mockResolvedValue({
       task_key: 'tk',
@@ -78,7 +78,7 @@ describe('translateNodeText（共享翻译核心，原 5 处节点内联实现�
     });
   });
 
-  it('失败向上抛（加载态/回写由调用方自持）', async () => {
+  it('failure is thrown upward (loading state / write-back are owned by the caller)', async () => {
     submitFreezoneTextTranslate.mockRejectedValue(new Error('translate down'));
     await expect(
       translateNodeText('proj-1', { text: 'hi', nodeId: 'n1', nodeType: 'text' }),

@@ -24,10 +24,10 @@ const providerMap = new Map<string, ModelProviderDefinition>(
   providers.map((provider) => [provider.id, provider])
 );
 
-// 图片模型清单本身来自后台「媒体模型」配置（`/freezone/image/models`），前端不再
-// 维护静态注册表；见 `domain/catalogImageModels.ts`。这里只留下两类东西：
-//   1. 供应商的展示名 —— 目录只下发 providerId，没有展示名；
-//   2. 历史 model id 的别名 —— 老画布节点上存着已经不存在的 id。
+// The image model list itself comes from the backend "media models" config (`/freezone/image/models`), and the frontend no longer
+// maintains a static registry; see `domain/catalogImageModels.ts`. Only two kinds of things are kept here:
+//   1. The display names of providers - the catalog sends only providerId, with no display name;
+//   2. Aliases of historical model ids - old canvas nodes store ids that no longer exist.
 export const DEFAULT_IMAGE_MODEL_ID = 'openrouter/default';
 
 const imageModelAliasMap = new Map<string, string>([
@@ -44,7 +44,7 @@ const imageModelAliasMap = new Map<string, string>([
   ['grsai/nano-banana-pro', DEFAULT_IMAGE_MODEL_ID],
 ]);
 
-/** 把历史节点上存的 model id 归一到当前 id；未知 id 原样返回。 */
+/** Normalize the model id stored on historical nodes to the current id; unknown ids are returned as is. */
 export function normalizeImageModelId(modelId: string): string {
   return imageModelAliasMap.get(modelId) ?? modelId;
 }
@@ -86,8 +86,8 @@ export function getModelProvider(providerId: string): ModelProviderDefinition {
   return (
     providerMap.get(providerId) ?? {
       id: providerId || 'unknown',
-      // 后台新配了一个前端还不认识的供应商时，直接把 id 当展示名，
-      // 而不是显示 "Unknown Provider"。
+      // When the backend newly configures a provider the frontend does not recognize yet, use the id directly as the display name,
+      // rather than showing "Unknown Provider".
       name: providerId || 'Unknown Provider',
       label: providerId || 'Unknown',
     }

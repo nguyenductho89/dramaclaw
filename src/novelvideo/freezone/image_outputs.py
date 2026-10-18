@@ -13,7 +13,7 @@ async def _convert(
     command: list[str], output: Path, *, timeout: float, max_bytes: int
 ) -> Path:
     if not shutil.which(command[0]):
-        raise RuntimeError("本地转换服务暂不可用，请稍后重试。")
+        raise RuntimeError("The local conversion service is temporarily unavailable. Please try again later.")
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(output.stem + ".partial" + output.suffix)
     command = [str(temporary) if item == str(output) else item for item in command]
@@ -27,7 +27,7 @@ async def _convert(
             or not temporary.is_file()
             or not 0 < temporary.stat().st_size <= max_bytes
         ):
-            raise RuntimeError("素材转换失败或结果过大，请尝试更简单的素材。")
+            raise RuntimeError("Asset conversion failed or the result is too large. Please try a simpler asset.")
         temporary.replace(output)
         return output
     except BaseException:
@@ -40,7 +40,7 @@ async def _convert(
 
 async def transcode_gif(source: Path, output: Path) -> Path:
     if not source.is_file() or source.stat().st_size > 200 * 1024 * 1024:
-        raise ValueError("视频不存在或超过转换大小限制。")
+        raise ValueError("The video does not exist or exceeds the conversion size limit.")
     filters = "fps=12,scale=480:-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3"
     try:
         return await _convert(
@@ -67,19 +67,19 @@ async def transcode_gif(source: Path, output: Path) -> Path:
             max_bytes=30 * 1024 * 1024,
         )
     except asyncio.TimeoutError as exc:
-        raise ValueError("GIF 转换超时，请重试。") from exc
+        raise ValueError("GIF conversion timed out. Please try again.") from exc
 
 
 async def vectorize_image(source: Path, output: Path) -> Path:
     if not source.is_file() or source.stat().st_size > 20 * 1024 * 1024:
-        raise ValueError("图片不存在或超过转换大小限制。")
+        raise ValueError("The image does not exist or exceeds the conversion size limit.")
     try:
         with Image.open(source) as image:
             width, height = image.size
             if width * height > 24_000_000:
-                raise ValueError("图片过大，请使用较小的图片。")
+                raise ValueError("The image is too large. Please use a smaller image.")
     except (OSError, UnidentifiedImageError) as exc:
-        raise ValueError("无法读取图片。") from exc
+        raise ValueError("Unable to read the image.") from exc
     try:
         return await _convert(
             [
@@ -96,4 +96,4 @@ async def vectorize_image(source: Path, output: Path) -> Path:
             max_bytes=12 * 1024 * 1024,
         )
     except asyncio.TimeoutError as exc:
-        raise ValueError("图片细节过于复杂，转换超时，请使用更简单的图片。") from exc
+        raise ValueError("The image is too detailed and conversion timed out. Please use a simpler image.") from exc

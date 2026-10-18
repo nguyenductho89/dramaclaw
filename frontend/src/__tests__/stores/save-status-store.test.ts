@@ -185,7 +185,7 @@ describe("saveScopes helpers", () => {
 
   it("url-encodes path segments to avoid delimiter collisions", () => {
     // Character names / project ids with dots or spaces should not leak.
-    const scope = saveScopes.characterDetails("proj", "陈.锋");
+    const scope = saveScopes.characterDetails("proj", "Chen.Feng");
     expect(scope.endsWith(".details")).toBe(true);
     // The encoded name must not contain a raw "." — otherwise the prefix
     // match in deriveSaveState would treat the dotted halves as distinct

@@ -53,9 +53,9 @@ describe("narrator voice query hooks", () => {
             reference_path: "assets/narrator/voice.wav",
             reference_url: "/static/demo/assets/narrator/voice.wav",
             reference_sha256: "sha",
-            heading: "第三人称项目解说声线",
+            heading: "Third-person project narrator voice",
             detail: "assets/narrator/voice.wav",
-            explanation: "第三人称解说使用项目级声线",
+            explanation: "Third-person narration uses the project-level voice",
             is_first_person: false,
           },
         });
@@ -81,7 +81,7 @@ describe("narrator voice query hooks", () => {
             data: {
               options: [
                 {
-                  label: "已生成音频 · beat_01.mp3",
+                  label: "Audio generated · beat_01.mp3",
                   path: "/project/audio/ep001/beat_01.mp3",
                   rel_path: "audio/ep001/beat_01.mp3",
                 },

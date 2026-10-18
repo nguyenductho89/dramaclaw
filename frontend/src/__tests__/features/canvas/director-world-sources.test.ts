@@ -28,7 +28,7 @@ describe("directorWorldSources", () => {
       node(CANVAS_NODE_TYPES.pano360Viewer, {
         id: "pano-viewer-1",
         imageUrl: "/static/demo/pano.png",
-        displayName: "老 360 查看器",
+        displayName: "Old 360 viewer",
       }),
     );
 
@@ -36,7 +36,7 @@ describe("directorWorldSources", () => {
       id: "upstream-pano:pano-viewer-1",
       source_type: "pano360",
       source_kind: "pano",
-      label: "老 360 查看器",
+      label: "Old 360 viewer",
       pano_url: "/static/demo/pano.png",
       slot_kind: "scene_director_pano_360",
     });
@@ -50,7 +50,7 @@ describe("directorWorldSources", () => {
         output_role: "scene_360_candidate",
         media_kind: "pano360",
         aspectRatio: "2:1",
-        displayName: "生成 360",
+        displayName: "Generate 360",
       }),
     );
 
@@ -192,7 +192,7 @@ describe("directorWorldSources", () => {
       {
         id: "task-source",
         sourceKind: "pano",
-        label: "360 生成世界",
+        label: "360 generated world",
       },
     );
 
@@ -200,7 +200,7 @@ describe("directorWorldSources", () => {
       id: "task-source",
       source_type: "sog",
       source_kind: "pano",
-      label: "360 生成世界",
+      label: "360 generated world",
       ply_url: "/static/demo/world.sog",
       url: "/static/demo/world.sog",
       current: true,
@@ -213,7 +213,7 @@ describe("directorWorldSources", () => {
       mode: "beat",
       project: "demo",
       scene_id: "scene-1",
-      display_name: "导演世界",
+      display_name: "Director world",
       source: {
         source_type: "sog",
         source_kind: "master",
@@ -228,7 +228,7 @@ describe("directorWorldSources", () => {
         id: "upstream-pano:pano-1",
         source_type: "pano360",
         source_kind: "pano",
-        label: "360 图",
+        label: "360 image",
         pano_url: "/static/demo/pano.png",
       },
     ]);
@@ -386,7 +386,7 @@ describe("directorWorldSources", () => {
     const manifestScene = {
       schemaVersion: 1,
       savedAt: 1,
-      actors: [{ id: "actor-1", label: "杜晨" }],
+      actors: [{ id: "actor-1", label: "Du Chen" }],
       props: [],
       stagings: [],
       world: { activeSourceId: "legacy:master:sog:/static/demo/master.sog" },

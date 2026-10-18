@@ -60,7 +60,7 @@ describe("extractStructuredBlocks", () => {
 
   it("recovers when prose mentions ui-spec before the real tag", () => {
     const result = extractStructuredBlocks({
-      text: `当前环境支持 <ui-spec> JSON 块。真正内容：<ui-spec>${specBody}</ui-spec>`,
+      text: `This environment supports <ui-spec> JSON blocks. Actual content: <ui-spec>${specBody}</ui-spec>`,
       raw: null,
     });
 

@@ -24,13 +24,13 @@ def _compiled(*, item_count: int = 1) -> dict:
         "skill_id": "video-ad",
         "edge_count": max(item_count - 1, 0),
         "plan": {
-            "summary": "广告",
+            "summary": "ad",
             "inputs": {},
-            "phases": ["视频"],
+            "phases": ["video"],
             "nodes": [
                 {
                     "id": f"shot-{index + 1}",
-                    "name": f"镜头 {index + 1}",
+                    "name": f"Shot {index + 1}",
                     "node_type": "videoNode",
                     "stage": "video",
                 }
@@ -46,7 +46,7 @@ def test_workflow_draft_lifecycle_uses_project_database(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告", "items": ["开场"]},
+        intent={"skill_id": "video-ad", "user_goal": "ad", "items": ["opening"]},
         compiled=_compiled(),
         run_after_create=True,
     )
@@ -58,11 +58,11 @@ def test_workflow_draft_lifecycle_uses_project_database(tmp_path: Path) -> None:
         expected_revision=1,
         intent={
             "skill_id": "video-ad",
-            "user_goal": "广告",
-            "items": ["开场", "收尾"],
+            "user_goal": "ad",
+            "items": ["opening", "ending"],
         },
         compiled=_compiled(item_count=2),
-        last_changes={"items": ["开场", "收尾"]},
+        last_changes={"items": ["opening", "ending"]},
     )
 
     assert error is None
@@ -106,7 +106,7 @@ def test_workflow_draft_rejects_stale_patch(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
 
@@ -204,7 +204,7 @@ def test_workflow_draft_confirmation_is_atomic(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
 
@@ -234,7 +234,7 @@ def test_submitted_workflow_draft_is_not_claimed_again(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claim_workflow_draft_confirmation(
@@ -267,7 +267,7 @@ def test_confirmed_workflow_draft_is_not_claimed_twice(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claim_workflow_draft_confirmation(
@@ -318,7 +318,7 @@ def test_confirmation_is_not_reclaimed_by_elapsed_time(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claimed, error = claim_workflow_draft_confirmation(
@@ -351,7 +351,7 @@ def test_expiry_prune_preserves_draft_with_active_durable_task(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claim_workflow_draft_confirmation(
@@ -392,7 +392,7 @@ def test_stale_confirmation_with_task_stays_in_progress(
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claim_workflow_draft_confirmation(
@@ -428,7 +428,7 @@ def test_workflow_draft_rejects_task_identity_rebinding(tmp_path: Path) -> None:
         project_dir=tmp_path,
         project_id="project-a",
         canvas_id="default",
-        intent={"skill_id": "video-ad", "user_goal": "广告"},
+        intent={"skill_id": "video-ad", "user_goal": "ad"},
         compiled=_compiled(),
     )
     claim_workflow_draft_confirmation(

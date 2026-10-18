@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from "i18next";
 import type { AssetBoardColumn, AssetBoardData } from "@/features/canvas/domain/assetBoard";
 import { KEY_ELEMENT_CATEGORY_KEYS, type KeyElementCategory } from "@/features/canvas/domain/keyElements";
 
-/** 每页渲染多少个候选（滚动到底/键盘越界时再加载一页）。 */
+/** How many candidates to render per page (load another page on scroll-to-bottom / keyboard overflow). */
 export const FREEZONE_NODE_SUGGESTION_PAGE = 24;
 
 export type FreezoneNodeSuggestion = {
@@ -11,23 +12,23 @@ export type FreezoneNodeSuggestion = {
   column: AssetBoardColumn;
   title: string;
   thumbnailUrl: string | null;
-  /** 片源地址（视频/音频/图片本体）。给「没记封面的视频」取首帧兜底用。 */
+  /** Media source URL (the video/audio/image itself). Used as a first-frame fallback for videos with no stored cover. */
   mediaUrl: string | null;
-  /** 关键元素分类（用户标记）；未标记为 null。默认排序据此把关键元素置顶。 */
+  /** Key-element category (user-marked); null when unmarked. The default sort pins key elements to the top by it. */
   keyElementCategory: KeyElementCategory | null;
 };
 
 /**
- * 匹配光标处正在输入的 `@查询词`：`@` 需在串首或空白之后，token 内不含空白/@。
- * 与 `/技能` 的 getFreezoneSkillSlashQuery 同构——要求前置边界可避免邮箱 a@b 误触。
- * 返回 null 表示当前不在输入 @（菜单应关闭）。
+ * Matches the `@query` being typed at the cursor: `@` must be at the string start or after whitespace; the token contains no whitespace/@.
+ * Isomorphic to getFreezoneSkillSlashQuery for `/skill`; requiring a leading boundary avoids false triggers on emails like a@b.
+ * Returns null when the cursor is not in an @ query (the menu should close).
  */
 export function getFreezoneNodeAtQuery(value: string): string | null {
   const match = value.match(/(?:^|\s)@([^\s@]*)$/u);
   return match ? match[1].trim().toLowerCase() : null;
 }
 
-/** 未标记关键元素的排序档位（排在四个分类之后）。 */
+/** Sort tier for nodes without a key-element mark (after the four categories). */
 const NON_KEY_ELEMENT_RANK = KEY_ELEMENT_CATEGORY_KEYS.length;
 
 function keyElementRank(category: KeyElementCategory | null): number {
@@ -35,9 +36,9 @@ function keyElementRank(category: KeyElementCategory | null): number {
 }
 
 /**
- * 把故事板四栏拍平成候选列表。默认排序：被标记为关键元素的节点按分类顺序
- * （人物→场景→物品→其他，对齐 KeyElementsBar）置顶，其余节点保持栏目顺序
- * （文本→图片→视频→音频）。同档内保持稳定顺序。
+ * Flattens the four storyboard columns into a candidate list. Default order: nodes marked as key elements are pinned
+ * to the top in category order (character > scene > prop > other, matching KeyElementsBar); the rest keep column order
+ * (text > image > video > audio). Order is stable within the same tier.
  */
 export function buildFreezoneNodeSuggestions(board: AssetBoardData): FreezoneNodeSuggestion[] {
   const flattened = [...board.text, ...board.image, ...board.video, ...board.audio].map((item) => ({
@@ -58,7 +59,7 @@ export function buildFreezoneNodeSuggestions(board: AssetBoardData): FreezoneNod
     .map((entry) => entry.item);
 }
 
-/** 按标题做大小写不敏感子串过滤；空查询返回全部。 */
+/** Case-insensitive substring filter on the title; an empty query returns everything. */
 export function filterFreezoneNodeSuggestions(
   items: FreezoneNodeSuggestion[],
   query: string,
@@ -68,7 +69,7 @@ export function filterFreezoneNodeSuggestions(
   return items.filter((item) => item.title.toLowerCase().includes(normalized));
 }
 
-/** 抹掉光标处正在输入的 `@查询词` token，保留其余正文与前置空白。 */
+/** Erases the `@query` token being typed at the cursor, keeping the remaining text and leading whitespace. */
 export function stripFreezoneNodeAtQuery(value: string): string {
   const match = value.match(/(?:^|\s)@([^\s@]*)$/u);
   if (!match || match.index === undefined) return value;
@@ -77,35 +78,35 @@ export function stripFreezoneNodeAtQuery(value: string): string {
   return value.slice(0, tokenStart);
 }
 
-/** 节点 token 语法 `@[节点名](nodeId)`。节点名不含 `]`/换行，nodeId 不含 `)`/空白。前置边界与 @ 检测一致。 */
+/** Node token syntax `@[nodeName](nodeId)`. The name contains no `]`/newline, the nodeId no `)`/whitespace. The leading boundary matches @ detection. */
 const NODE_MENTION_PATTERN = /(?:^|\s)@\[([^\]\n]+)\]\(([^)\s]+)\)/gu;
 
 export type FreezoneNodeMention = {
   nodeId: string;
   label: string;
-  /** token 在字符串中的起点（指向 `@`）。 */
+  /** Start of the token in the string (points at `@`). */
   start: number;
-  /** token 结束位置（右括号之后）。 */
+  /** End position of the token (after the closing parenthesis). */
   end: number;
 };
 
 /**
- * 供编辑器 chip / 悬浮预览展示的节点查表：nodeId → 缩略图/片源/列。label 以 token 自带为准。
- * mediaUrl 是给「没记封面的视频」取首帧兜底用的（与故事板 VideoThumb 同口径）。
+ * Node lookup for the editor chip / hover preview: nodeId -> thumbnail/media source/column. The label comes from the token itself.
+ * mediaUrl is the first-frame fallback for videos with no stored cover (same as the storyboard VideoThumb).
  */
 export type FreezoneNodeMentionLookup = Map<
   string,
   { thumbnailUrl: string | null; mediaUrl: string | null; column: AssetBoardColumn }
 >;
 
-/** 节点名进 token 前清洗：去掉会破坏 `@[名](id)` 语法的字符，折叠空白。 */
+/** Sanitizes a node name before it goes into a token: strips characters that would break the `@[name](id)` syntax and collapses whitespace. */
 export function sanitizeFreezoneNodeLabel(title: string): string {
   return title.replace(/[[\]()\n\r]/gu, " ").replace(/\s+/gu, " ").trim();
 }
 
 /**
- * 把光标处正在输入的 `@查询词` 替换为节点 token `@[名](nodeId) `（尾部空格便于续输）。
- * 若当前没有 `@查询词`，则在末尾追加。对齐 insertFreezoneSkillMention。
+ * Replaces the `@query` being typed at the cursor with a node token `@[name](nodeId) ` (trailing space makes it easy to keep typing).
+ * If there is no `@query`, appends at the end. Mirrors insertFreezoneSkillMention.
  */
 export function insertFreezoneNodeMention(value: string, nodeId: string, title: string): string {
   const label = sanitizeFreezoneNodeLabel(title) || nodeId;
@@ -119,7 +120,7 @@ export function insertFreezoneNodeMention(value: string, nodeId: string, title: 
   return `${value.slice(0, tokenStart)}${token}`;
 }
 
-/** 解析全部节点 token（含重复），返回 nodeId/label/位置。 */
+/** Parses all node tokens (including duplicates), returning nodeId/label/position. */
 export function parseFreezoneNodeMentions(value: string): FreezoneNodeMention[] {
   const out: FreezoneNodeMention[] = [];
   for (const match of value.matchAll(NODE_MENTION_PATTERN)) {
@@ -134,7 +135,7 @@ export function parseFreezoneNodeMentions(value: string): FreezoneNodeMention[] 
   return out;
 }
 
-/** 收集正文里被提及的 nodeId（去重、保序）。 */
+/** Collects the nodeIds mentioned in the text (deduplicated, order preserved). */
 export function freezoneNodeMentionIds(value: string): string[] {
   const ids: string[] = [];
   const seen = new Set<string>();
@@ -146,7 +147,7 @@ export function freezoneNodeMentionIds(value: string): string[] {
   return ids;
 }
 
-/** 提交时把 `@[名](id)` 改写为可读的 `[名]`（保留前置空白），作为发给 agent 的正文。 */
+/** On submit, rewrites `@[name](id)` into a readable `[name]` (keeping leading whitespace) as the body sent to the agent. */
 export function freezoneNodeMentionText(value: string): string {
   return value.replace(NODE_MENTION_PATTERN, (matched: string, label: string) => {
     const lead = matched.startsWith("@") ? "" : matched.slice(0, 1);
@@ -154,7 +155,7 @@ export function freezoneNodeMentionText(value: string): string {
   });
 }
 
-/** 从候选列表建 nodeId → 缩略图/片源/列 查表，供编辑器 chip 渲染缩略图与首帧兜底。 */
+/** Builds a nodeId -> thumbnail/media source/column lookup from the candidate list, so editor chips can render thumbnails and the first-frame fallback. */
 export function buildFreezoneNodeMentionLookup(
   items: FreezoneNodeSuggestion[],
 ): FreezoneNodeMentionLookup {
@@ -167,10 +168,10 @@ export function buildFreezoneNodeMentionLookup(
 }
 
 /**
- * 「添加到对话」落地：把一批 nodeId 追加成 draft 里的行内 mention chip。
- * - titleLookup 无该 id（节点已不在画布上）→ 跳过；
- * - draft 已提及 or 同批重复 → 跳过，避免重复 chip。
- * 逐个复用 insertFreezoneNodeMention（无尾随 @query 时即在末尾追加）。
+ * "Add to chat": appends a batch of nodeIds as inline mention chips in the draft.
+ * - titleLookup lacks the id (node is no longer on the canvas) -> skip;
+ * - draft already mentions it or duplicate within the batch -> skip, avoiding duplicate chips.
+ * Reuses insertFreezoneNodeMention one by one (appends at the end when there is no trailing @query).
  */
 export function appendFreezoneNodeMentions(
   draft: string,
@@ -189,33 +190,33 @@ export function appendFreezoneNodeMentions(
   return result;
 }
 
-/** 栏目 → 悬浮预览里显示的中文类型标签。 */
-const FREEZONE_NODE_COLUMN_LABEL: Record<AssetBoardColumn, string> = {
-  text: "文本",
-  image: "图片",
-  video: "视频",
-  audio: "音频",
+/** Column -> type label shown in the hover preview. */
+const FREEZONE_NODE_COLUMN_LABEL_KEY: Record<AssetBoardColumn, string> = {
+  text: "superchat.panel.mentionType.text",
+  image: "superchat.panel.mentionType.image",
+  video: "superchat.panel.mentionType.video",
+  audio: "superchat.panel.mentionType.audio",
 };
 
 /**
- * 输入框里引用 chip 的悬浮预览内容。
- * - thumbnailUrl 有值 → 直接 <img>（图片本体 / 视频封面）；
- * - thumbnailUrl 为空但 videoPosterUrl 有值 → 用片源取首帧 <video>（视频没记封面时的兜底）；
- * - 两者都空 → 文本/音频等，走类型占位。
+ * Hover preview content for a reference chip in the input box.
+ * - thumbnailUrl set -> render <img> directly (image itself / video cover);
+ * - thumbnailUrl empty but videoPosterUrl set -> use the media source to grab a first-frame <video> (fallback for videos with no stored cover);
+ * - both empty -> text/audio etc., use the type placeholder.
  */
 export type FreezoneNodePreviewInfo = {
   label: string;
   thumbnailUrl: string | null;
-  /** 无封面的视频 → 用片源取首帧的兜底源；非视频或已有封面为 null。 */
+  /** Video without a cover -> fallback source for grabbing the first frame; null for non-videos or when a cover exists. */
   videoPosterUrl: string | null;
   typeLabel: string;
 };
 
 /**
- * 从 chip 自带的 label 与查表 meta 组出预览卡内容：
- * - 图片/视频有缩略图 → 放大展示；视频没记封面 → 用 mediaUrl 取首帧兜底（对齐故事板 VideoThumb）；
- * - 文本/音频等无图 → 只给类型占位；
- * - meta 缺失（节点已不在画布上）→ 类型回落成「引用」，仍展示 label。
+ * Builds the preview card content from the chip's own label and the lookup meta:
+ * - image/video with a thumbnail -> shown enlarged; video with no stored cover -> first-frame fallback from mediaUrl (matches the storyboard VideoThumb);
+ * - text/audio etc. with no image -> type placeholder only;
+ * - meta missing (node is no longer on the canvas) -> type falls back to "Reference", the label is still shown.
  */
 export function buildFreezoneNodePreviewInfo(
   label: string,
@@ -228,6 +229,8 @@ export function buildFreezoneNodePreviewInfo(
     label,
     thumbnailUrl,
     videoPosterUrl,
-    typeLabel: meta ? FREEZONE_NODE_COLUMN_LABEL[meta.column] : "引用",
+    typeLabel: meta
+      ? i18n.t(FREEZONE_NODE_COLUMN_LABEL_KEY[meta.column])
+      : i18n.t("superchat.panel.mentionType.reference"),
   };
 }

@@ -8,6 +8,6 @@ describe("image generation prompt helpers", () => {
   it("treats blank prompt text as no manual override", () => {
     expect(hasImageGenPromptOverride("")).toBe(false);
     expect(hasImageGenPromptOverride("   \n\t")).toBe(false);
-    expect(hasImageGenPromptOverride("补充一点暖光")).toBe(true);
+    expect(hasImageGenPromptOverride("add a bit of warm light")).toBe(true);
   });
 });

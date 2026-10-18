@@ -2,10 +2,10 @@
 version: alpha
 name: DramaClaw
 description: >-
-  DramaClaw AIGC 视频引擎的视觉规范：暗色优先、信息密集的工作台。
-  token 逐值对齐 frontend/src/index.css；以暗色为准，亮色值以 light-* 前缀并行。
+  Visual specification of the DramaClaw AIGC video engine: a dark-first, information-dense workbench.
+  Tokens are aligned value by value with frontend/src/index.css; dark is authoritative, with light values in parallel under the light-* prefix.
 colors:
-  # ── 画布 / freezone 表面（来源：index.css 的 --*-rgb，.dark 块）──
+  # ── canvas / freezone surfaces (source: --*-rgb in index.css, .dark block) ──
   background: "#0a0c12"
   surface: "#15161d"
   surface-panel: "#13141b"
@@ -17,7 +17,7 @@ colors:
   text: "#e8eaf0"
   text-muted: "#6f7079"
   accent: "#5ba0ff"
-  # ── shadcn 语义层（来源：.dark 块的 oklch 值）──
+  # ── shadcn semantic layer (source: oklch values of the .dark block) ──
   primary: "#00bdcf"
   primary-foreground: "#111b21"
   secondary: "#0e333c"
@@ -35,7 +35,7 @@ colors:
   chart-3: "#31a7cd"
   chart-4: "#34b7f1"
   chart-5: "#51bf6f"
-  # ── 亮色主题（来源：:root 块）——角色相同，取值更亮 ──
+  # ── light theme (source: :root block): same roles, brighter values ──
   light-background: "#ffffff"
   light-surface: "#f5f5f5"
   light-border: "#e0e0e0"
@@ -217,7 +217,7 @@ components:
     typography: "{typography.body-md}"
     rounded: "{rounded.sm}"
     padding: "{spacing.sm}"
-  # ── 亮色变体（无 `.dark` 时）。组件相同，改引 light-* token。──
+  # ── light variants (without `.dark`). Same components, referencing light-* tokens. ──
   panel-light:
     backgroundColor: "{colors.light-card}"
     textColor: "{colors.light-foreground}"
@@ -259,247 +259,248 @@ components:
 
 # DramaClaw DESIGN.md
 
-本文件是 `frontend/src/index.css` 的机读镜像。CSS 变量一改，本文件必须同 commit 更新——
-靠 `npx @google/design.md diff` 跟上一版比对，才能抓出视觉回归。
+This file is a machine-readable mirror of `frontend/src/index.css`. Whenever a CSS variable changes, this file must be updated in the same commit.
+Diffing against the previous version with `npx @google/design.md diff` is how visual regressions are caught.
 
-> 章节标题保持英文（Overview / Colors / …），因为 DESIGN.md 规范按英文标题解析章节，
-> 改成中文会被 linter 判为「缺失章节」。token 名、CSS 变量名、类名、属性名、色值同理保持原文。
+> Section headings stay in English (Overview / Colors / ...), because the DESIGN.md spec parses sections by English headings,
+> and renaming them would make the linter report "missing sections". Token names, CSS variable names, class names, property names, and color values likewise stay verbatim.
 
 ## Overview
 
-DramaClaw（虾导）是一个专业 AIGC 视频工作台：节点画布、故事板、生成队列、长任务面板。
-用户是会把工具开一整天的创作者，所以 UI 定性为**暗色优先、信息密集、克制**——
-`theme: 'dark'` 是持久化的默认值，亮色是受支持的备选，不是主战场。
+DramaClaw (the director agent) is a professional AIGC video workbench: node canvas, storyboard, generation queue, and long-running task panel.
+Its users are creators who keep the tool open all day, so the UI is defined as **dark-first, information-dense, and restrained**:
+`theme: 'dark'` is the persisted default, and light is a supported alternative, not the main battlefield.
 
-调性是「仪表盘，不是海报」。界面外壳退到近黑的半透明玻璃里；一屏之内唯一的高饱和色，
-只属于用户正在操作的那个东西。密集是刻意的：12px 是主力字号，4–8px 是主力间距。
-动效短促且减速——表面是「落定」，绝不回弹。
+The tone is "a dashboard, not a poster". The interface shell recedes into near-black translucent glass; the only highly saturated color on a screen
+belongs to the thing the user is currently operating. Density is deliberate: 12px is the workhorse font size, and 4-8px the workhorse spacing.
+Motion is short and decelerating: surfaces "settle" and never bounce.
 
-明确不要的东西：营销感渐变、装饰性插画、俏皮的回弹缓动、同一表面上出现第二种强调色。
+Explicitly unwanted: marketing-style gradients, decorative illustration, playful bouncy easing, and a second accent color on the same surface.
 
-以上以及本文件其余全部规则，适用范围是**登录之后的产品界面**。未登录就能访问的对外落地页
-（下载页、登录页）是一小块有意划出的例外，边界写在 Scope & Exceptions 里。
+The above, and all the remaining rules in this file, apply to the **product interface after login**. The public landing pages reachable without logging in
+(the download page and the login page) are a small, deliberately carved-out exception, whose boundary is written in Scope & Exceptions.
 
 ## Colors
 
-两套色板共存，但**同一个表面上不得混用**：
+Two palettes coexist, but **must not be mixed on the same surface**:
 
-- **画布色板**（`background` #0a0c12 → `surface` #15161d → `border` #22232c，
-  文字 `text` #e8eaf0 / `text-muted` #6f7079，强调色 `accent` #5ba0ff）。
-  驱动 freezone 画布、节点主体、悬浮工具条，以及所有 `.tap-*` / `.ui-*` 类。
-  取值以空格分隔的 RGB 三元组形式存放（`--bg-rgb`），便于叠加 alpha：
-  `rgb(var(--accent-rgb) / 0.22)`。
-- **shadcn 语义色板**（`primary` #00bdcf 电光青、`card` #1f2c34、
-  `muted-foreground` #8696a0、`ui-border` #2a3942，外加 `destructive` / `success` /
-  `warning`）。驱动 shadcn 原语——弹窗、下拉、Tab、表单——用 `oklch()` 书写以保证
-  感知均匀。
+- **The canvas palette** (`background` #0a0c12 -> `surface` #15161d -> `border` #22232c,
+  text `text` #e8eaf0 / `text-muted` #6f7079, accent `accent` #5ba0ff).
+  It drives the freezone canvas, node bodies, floating toolbars, and all `.tap-*` / `.ui-*` classes.
+  Values are stored as space-separated RGB triplets (`--bg-rgb`) so alpha can be layered on:
+  `rgb(var(--accent-rgb) / 0.22)`.
+- **The shadcn semantic palette** (`primary` #00bdcf electric cyan, `card` #1f2c34,
+  `muted-foreground` #8696a0, `ui-border` #2a3942, plus `destructive` / `success` /
+  `warning`). It drives the shadcn primitives (dialogs, dropdowns, tabs, forms), written in `oklch()` to guarantee
+  perceptual uniformity.
 
-规则：
+Rules:
 
-- 语义状态色两套色板共用：`destructive` #ea4335 表示危险与失败，`success` #51bf6f
-  表示完成，`warning` #efa831 表示降级或额度受限。**不要再造第二个红。**
-- `accent`（蓝）和 `primary`（青）是**历史遗留的两个强调色**，不是设计决策。
-  画布表面用蓝，shadcn 表面用青。按「表面归属哪套色板」来选，不要按品味选，
-  另见 Do's and Don'ts。
-- 静止表面上彩度必须低。shadcn 的 `secondary` / `accent` 是带青调的灰
-  （暗色 #0e333c、亮色 #def6fa），正是为了让下拉和 Tab 的 hover 态足够安静。
-- 亮色模式把 `background` 翻成纯白、`text` 翻成纯黑，强调色换 `light-accent` #3b82f6；
-  `card` 变纯白，衬在 #f0f2f5 的页面底上。
-- `chart-1` … `chart-5` 是唯一批准的数据序列色，走「青 → 蓝绿 → 天蓝 → 湖蓝 → 绿」，
-  保证同一色系不重复出现。
+- Semantic status colors are shared by both palettes: `destructive` #ea4335 means danger and failure, `success` #51bf6f
+  means completion, and `warning` #efa831 means degraded or quota-limited. **Do not invent a second red.**
+- `accent` (blue) and `primary` (cyan) are **two historical accent colors**, not a design decision.
+  Canvas surfaces use blue and shadcn surfaces use cyan. Choose by "which palette the surface belongs to", not by taste;
+  see also Do's and Don'ts.
+- Chroma must be low on resting surfaces. shadcn's `secondary` / `accent` are cyan-tinted grays
+  (dark #0e333c, light #def6fa), precisely so that the hover state of dropdowns and tabs stays quiet enough.
+- Light mode flips `background` to pure white and `text` to pure black, and swaps the accent for `light-accent` #3b82f6;
+  `card` becomes pure white, set against a #f0f2f5 page background.
+- `chart-1` ... `chart-5` are the only approved data series colors, running "cyan -> teal -> sky blue -> lake blue -> green",
+  so that the same hue family never repeats.
 
 ## Typography
 
-拉丁字形用 **Inter**，CJK 依次回退 `Noto Sans SC` → `PingFang SC` → `Microsoft YaHei`
-（见 `--font-family-ui-default`；macOS 走更短的 `--font-family-ui-macos`）。
-产品文案以中文为主，因此：
+Latin glyphs use **Inter**, with CJK falling back in turn to `Noto Sans SC` -> `PingFang SC` -> `Microsoft YaHei`
+(see `--font-family-ui-default`; macOS uses the shorter `--font-family-ui-macos`).
+Product copy is English and Vietnamese, so:
 
-- **CJK 正文永远不要设 `letterSpacing`**。对 Inter 好看的字距会破坏汉字的字面间距。
-  负字距只保留给 `display-lg`。
-- 同样 px 下 CJK 字形看起来比拉丁小约一档。中英混排的标签优先用 `body-md`（14px），
-  而不是 `body-sm`（12px）。
-- `line-height` 一律用无单位数值，这样能随 CJK 回退字体更大的 x-height 一起缩放。
+- **Never set `letterSpacing` on CJK body text.** Letter spacing that looks good with Inter breaks the natural spacing of Han glyphs.
+  Negative letter spacing is reserved for `display-lg`.
+- At the same px, CJK glyphs look about one step smaller than Latin ones. Labels mixing scripts should prefer `body-md` (14px)
+  over `body-sm` (12px).
+- Always use a unitless `line-height`, so it scales with the larger x-height of the CJK fallback fonts.
+- Vietnamese text uses stacked diacritics, so do not tighten `line-height` below the values defined in the tokens.
 
-实际层级分工：`body-sm`（12px）和 `body-md`（14px）承担约 90% 的产品文本——
-属性面板行、节点标签、任务列表。`label-md`（12px/500）用于 chip、按钮、工具条控件。
-`headline-*` 每个面板标题只出现一次。`display-lg` 只留给空状态和弹窗标题。
-`mono-sm` 仅用于 ID、路径、seed、时间码。`counter-pixel`（方舟像素数字子集）
-只作用于 Piko 小游戏倒计时，不得外泄到产品界面。
+The practical division of the hierarchy: `body-sm` (12px) and `body-md` (14px) carry about 90% of product text:
+property panel rows, node labels, and task lists. `label-md` (12px/500) is for chips, buttons, and toolbar controls.
+`headline-*` appears only once per panel title. `display-lg` is reserved for empty states and dialog titles.
+`mono-sm` is used only for IDs, paths, seeds, and timecodes. `counter-pixel` (a pixel-digit subset)
+applies only to the Piko mini-game countdown and must not leak into the product interface.
 
 ## Layout & Spacing
 
-**4px 基准单位**（`--spacing: 0.25rem`），之上叠 8/12/16 的节奏。这是密集型工具：
-代码里出现最多的两个间距是 `gap-1`（4px）和 `gap-2`（8px），面板内边距是 8–12px，
-不是 24px。
+**A 4px base unit** (`--spacing: 0.25rem`), with an 8/12/16 rhythm layered on top. This is a dense tool:
+the two most common spacings in the code are `gap-1` (4px) and `gap-2` (8px), and panel padding is 8-12px,
+not 24px.
 
-- 外壳：固定左侧栏 + 流式工作区。画布满幅铺开；面板浮在它上面，而不是把它挤变形。
-- 悬浮面板（工具条、属性面板、popover）用 `position: fixed`、12px 内边距，
-  并以 16px 安全边距被夹在视口内。
-- 节点内部用 12px 的沟槽，元素间 8px 堆叠。属性面板行间距 4px；组之间用 12px 分隔，
-  绝不用分割线。
-- 列表和网格在 `.ui-scrollbar` 内滚动（7px 细滑块，`rgba(148,163,184,0.5)`）。
-  横向滚动条通过 `.ui-scrollbar-vertical` 隐藏，但仍可用手势滚动。
-- 页面 body 永不横向滚动。宽内容自带 `overflow-x: auto` 容器。
+- Shell: a fixed left sidebar + a fluid workspace. The canvas spreads full-bleed; panels float over it instead of squeezing it out of shape.
+- Floating panels (toolbars, property panels, popovers) use `position: fixed`, 12px padding,
+  and are clamped within the viewport with a 16px safe margin.
+- Node interiors use a 12px gutter and 8px stacking between elements. Property panel rows are spaced 4px; groups are separated by 12px,
+  never by divider lines.
+- Lists and grids scroll inside `.ui-scrollbar` (a 7px thin thumb, `rgba(148,163,184,0.5)`).
+  The horizontal scrollbar is hidden through `.ui-scrollbar-vertical`, but gesture scrolling still works.
+- The page body never scrolls horizontally. Wide content brings its own `overflow-x: auto` container.
 
 ## Elevation & Depth
 
-层次来自**近黑底上的半透明玻璃**，不是靠堆阴影。每个悬浮表面都是：
-半透明填充 + 1px 细边 + 一层柔和阴影。
+Depth comes from **translucent glass on a near-black base**, not from stacking shadows. Every floating surface is:
+a translucent fill + a 1px thin border + one soft shadow.
 
-- **Level 0 — 底场：** `background` #0a0c12。不透明，永不模糊。
-- **Level 1 — 节点 / 内联表面：** `surface-panel`，细边 `border-soft`
-  （`rgba(255,255,255,0.05)`），不加模糊。
-- **Level 2 — 悬浮面板**（`.tap-panel` / `.ui-panel`）：
-  `background: rgba(21,22,29,0.78)`、`border-soft`，以及
-  `--ui-shadow-panel` = `0 14px 34px rgba(0,0,0,0.5)` 加一道
-  `0 1px 0 rgba(255,255,255,0.03) inset` 顶部高光。压在画布上时配 `.backdrop-blur-tap`
-  （`saturate(180%) blur(18px)`）。
-- **Level 3 — 弹窗 / popover：** 产品工作台里的决策弹窗使用中性
-  `surface-modal` #1b1c23 配 `ui-border`；通用 shadcn popover 继续使用 `card`。
-  模态不模糊——它是要你做决定的。
-- **焦点与选中用发光，不用阴影：** hover-primary 用 `--ui-glow-accent` =
-  `0 0 24px rgb(var(--accent-rgb) / 0.25)`；聚焦输入框用
-  `0 0 0 3px rgb(var(--accent-rgb) / 0.12)` 的 ring。
-- 亮色模式把同样三层换成 #f0f2f5 上的不透明白卡片，阴影柔和得多
-  （`0 2px 10px rgba(0,0,0,0.10)`）；玻璃隐喻在那边是刻意弱化的。
+- **Level 0 - base field:** `background` #0a0c12. Opaque, never blurred.
+- **Level 1 - node / inline surface:** `surface-panel`, with the thin border `border-soft`
+  (`rgba(255,255,255,0.05)`), no blur.
+- **Level 2 - floating panel** (`.tap-panel` / `.ui-panel`):
+  `background: rgba(21,22,29,0.78)`, `border-soft`, and
+  `--ui-shadow-panel` = `0 14px 34px rgba(0,0,0,0.5)` plus a
+  `0 1px 0 rgba(255,255,255,0.03) inset` top highlight. When over the canvas, pair with `.backdrop-blur-tap`
+  (`saturate(180%) blur(18px)`).
+- **Level 3 - dialog / popover:** decision dialogs in the product workbench use the neutral
+  `surface-modal` #1b1c23 with `ui-border`; generic shadcn popovers keep using `card`.
+  Modals are not blurred: they ask you to make a decision.
+- **Focus and selection use glow, not shadow:** hover-primary uses `--ui-glow-accent` =
+  `0 0 24px rgb(var(--accent-rgb) / 0.25)`; a focused input uses a
+  `0 0 0 3px rgb(var(--accent-rgb) / 0.12)` ring.
+- Light mode swaps the same three levels for opaque white cards on #f0f2f5, with much softer shadows
+  (`0 2px 10px rgba(0,0,0,0.10)`); the glass metaphor is deliberately downplayed there.
 
-动效 token 也是层次的一部分：`--duration-fast` 150ms 用于 hover 和变色，
-`--duration-base` 220ms 用于面板入场，`--duration-slow` 320ms 用于布局位移，
-一律搭配 `--ease-out-quint` `cubic-bezier(0.22,1,0.36,1)` 或 `--ease-standard`。
-**绝不用 bounce / elastic**——真实物体只会平滑减速。
+Motion tokens are part of depth too: `--duration-fast` 150ms is for hover and color changes,
+`--duration-base` 220ms for panel entry, and `--duration-slow` 320ms for layout shifts,
+always paired with `--ease-out-quint` `cubic-bezier(0.22,1,0.36,1)` or `--ease-standard`.
+**Never use bounce / elastic**: real objects only decelerate smoothly.
 
 ## Shapes
 
-两套圆角家族，相对小字号都偏大：
+Two corner families, both large relative to small type:
 
-- **胶囊**（`rounded.full`，9999px）用于一切「可点但不是提交」的东西：安静按钮、
-  chip、筛选器、标签。这是签名形状——`rounded-full` 是代码里用得最多的圆角。
-- **柔和矩形**用于容器：输入框 `field` 12px，画布节点 `node` 14px，
-  悬浮面板 `panel` 16px，大抽屉 `xl` 20px。
+- **Pill** (`rounded.full`, 9999px) is for everything "clickable but not a submit": quiet buttons,
+  chips, filters, and tags. This is the signature shape: `rounded-full` is the most used radius in the code.
+- **Soft rectangles** are for containers: input `field` 12px, canvas node `node` 14px,
+  floating panel `panel` 16px, large drawer `xl` 20px.
 
-`--radius` 是 1rem，shadcn 的档位由它推导（`sm` 12px → `xl` 20px），所以这个项目里
-Tailwind 的 `rounded-md` 是 14px，不是 6px。不要写死圆角，引用这些 token。
-图标 1.5–2px 描边、圆头端点，尺寸取 14/16/20px，与 `label-md` 保持同一视觉基线。
+`--radius` is 1rem and shadcn's steps derive from it (`sm` 12px -> `xl` 20px), so in this project
+Tailwind's `rounded-md` is 14px, not 6px. Do not hard-code radii; reference these tokens.
+Icons use a 1.5-2px stroke with round caps, at sizes 14/16/20px, sharing the same visual baseline as `label-md`.
 
 ## Components
 
-**安静按钮**（`.tap-button`）是默认的操作控件：胶囊、4px/11px 内边距、12px 标签、
-细边框、半透明填充。它在 hover 之前不宣示任何存在感；hover 时边框加强、填充升到
-`surface`/0.88。它的主操作变体（`.tap-button-quiet-primary`）只把**文字**染成 `accent`
-并加上强调色发光——它仍然是一个安静按钮。禁用态是 `opacity: 0.4` 加
-`cursor: not-allowed`；不要再单独把标签置灰。
+The **quiet button** (`.tap-button`) is the default action control: pill, 4px/11px padding, 12px label,
+thin border, translucent fill. It announces nothing until hover; on hover the border strengthens and the fill rises to
+`surface`/0.88. Its primary-action variant (`.tap-button-quiet-primary`) only tints the **text** with `accent`
+and adds an accent glow: it is still a quiet button. The disabled state is `opacity: 0.4` plus
+`cursor: not-allowed`; do not additionally gray out the label.
 
-**实心按钮**（shadcn `button-primary`，近黑底上的青）每屏最多一个：表单或弹窗的提交动作。
-画布上优先用安静主操作按钮。
+The **solid button** (shadcn `button-primary`, cyan on a near-black base) appears at most once per screen: the submit action of a form or dialog.
+On the canvas, prefer the quiet primary-action button.
 
-**Chip**（`.tap-chip`）是带弱化文字的胶囊；`data-state="active"` 时文字翻成 `accent`，
-底色变 `accent`/0.22 填充并加 1px 强调色 ring。激活状态由 `data-state` 承载，不用类名开关，
-这样 React Flow 的 portal 也能被样式命中。
+A **chip** (`.tap-chip`) is a pill with muted text; with `data-state="active"` the text flips to `accent`,
+the background becomes an `accent`/0.22 fill, and a 1px accent ring is added. The active state is carried by `data-state` rather than a class toggle,
+so that React Flow portals can also be hit by the styles.
 
-**输入框**（`.tap-field` / `.ui-field`）是 `surface-field` 上 12px 圆角的输入，静止态无可见描边；
-聚焦时加 0.5 alpha 的强调色边框和 3px 强调色 ring。占位符和辅助文字有专属 token
-（`--canvas-node-input-placeholder`、`--canvas-node-input-helper`），
-让节点输入压在玻璃上仍然可读——用它们，不要用 `text-muted`。
+The **input** (`.tap-field` / `.ui-field`) is a 12px-radius input on `surface-field`, with no visible outline at rest;
+on focus it gets a 0.5-alpha accent border and a 3px accent ring. Placeholder and helper text have dedicated tokens
+(`--canvas-node-input-placeholder`, `--canvas-node-input-helper`),
+so that node inputs stay readable on glass: use them, not `text-muted`.
 
-**画布节点**是 Level 1 表面，14px 圆角、12px 沟槽。选中态是强调色 ring 加强调色标题；
-绝不用投影——那读起来像正在拖拽。
+A **canvas node** is a Level 1 surface with a 14px radius and a 12px gutter. The selected state is an accent ring plus an accent title;
+never a drop shadow, which reads as being dragged.
 
-**Popover / 下拉 / tooltip** 用不透明的 `card` 表面配 `ui-border`、16px 圆角，
-hover 行用 shadcn 的 `accent`（#0e333c）——刻意不用画布的蓝强调色，
-因为它们渲染在语义色板里。
+**Popovers / dropdowns / tooltips** use the opaque `card` surface with `ui-border` and a 16px radius,
+with hover rows using shadcn's `accent` (#0e333c), deliberately not the canvas blue accent,
+because they render within the semantic palette.
 
 ## Do's and Don'ts
 
-- **要**从 `frontend/src/index.css` 的 CSS 变量里读颜色、圆角、间距、动效。
-  **不要**在组件里写死 hex、px 圆角或 ms 时长——写死字面量正是两套色板开始漂移的方式。
-- **要**按「表面归属哪套色板」决定用蓝还是青（画布 → `accent` 蓝，shadcn 原语 →
-  `primary` 青）。**不要**引入第三个强调色，也**不要**只改一侧表面去「对齐」另一侧。
-  统一这两个色相是已知的待决事项，必须作为一次跨两套色板的有意改动落地。
-- **要**保证一屏只有一个高饱和元素。**不要**把实心主按钮、激活 chip、发光节点堆在一起——
-  眼睛会找不到主体。
-- **要**用 `rgb(var(--x-rgb) / a)` 合成半透明，这样一条声明同时适配两种主题。
-  **不要**在组件里手写 `rgba(255,255,255,0.05)`；用 `--ui-border-soft` /
-  `--ui-border-strong`。
-- **要**在压住画布的半透明面板上配 `.backdrop-blur-tap`。**不要**给全屏模态加模糊，
-  也不要嵌两层模糊——第二层模糊要付一次全视口合成的代价，却看不出差别。
-- **要**让任何用户必须读的文字满足 WCAG AA（4.5:1）。有四处**已知欠账**已经实测记录，
-  它们是债务而不是先例——不要把这些比值抄进新组件：
-  - `chip` 静止态标签，`text-muted` 压在 chip 填充上——**3.83:1**
-    （「未激活就安静」的意图，但对必读标签而言低于 AA）
-  - `status-failed`，`destructive` #ea4335 压在 `muted` 上——**4.12:1**
-    （暗色下的错误文字；修法是文字改用更亮的红，填充保留 #ea4335）
-  - `button-quiet-primary-light`，`light-accent` #3b82f6 压在 `light-surface` 上——
-    **3.37:1**（亮色模式最薄弱的一环）
-  - `badge-muted-light`，`light-muted-foreground` 压在 `light-muted` 上——**4.14:1**
-- **要**放心用 `body-sm`（12px）承载元信息，中英混排一律用 `body-md`（14px）。
-  **不要**低于 12px，也不要在同一个面板里用超过两种字重。
-- **要**把 hover 反馈控制在 150ms 内、面板入场 220ms 并配 `ease-out-quint`。
-  **不要**在画布表面上动画 `width`/`height`/`top`/`left`——只动 transform 和 opacity。
-- **要**在收工前验两套主题：给 `<html>` 切 `.dark`，重点看玻璃表面——它们是亮色下
-  最先崩的东西。
+- **Do** read colors, radii, spacing, and motion from the CSS variables in `frontend/src/index.css`.
+  **Don't** hard-code hex values, px radii, or ms durations in components: hard-coded literals are exactly how the two palettes start to drift.
+- **Do** choose blue or cyan by "which palette the surface belongs to" (canvas -> `accent` blue, shadcn primitives ->
+  `primary` cyan). **Don't** introduce a third accent color, and **don't** change only one side's surfaces to "align" with the other.
+  Unifying the two hues is a known open item, and must land as a deliberate change across both palettes.
+- **Do** keep a single highly saturated element per screen. **Don't** pile up a solid primary button, an active chip, and a glowing node,
+  or the eye cannot find the subject.
+- **Do** composite translucency with `rgb(var(--x-rgb) / a)`, so that one declaration fits both themes.
+  **Don't** hand-write `rgba(255,255,255,0.05)` in components; use `--ui-border-soft` /
+  `--ui-border-strong`.
+- **Do** pair `.backdrop-blur-tap` on translucent panels that sit over the canvas. **Don't** blur full-screen modals,
+  and don't nest two blurs: the second blur pays for one more full-viewport composite with no visible difference.
+- **Do** make any text users must read meet WCAG AA (4.5:1). Four **known debts** have been measured and recorded;
+  they are debts, not precedents, so do not copy these ratios into new components:
+  - `chip` resting-state label, `text-muted` on the chip fill: **3.83:1**
+    (the intent of "quiet when inactive", but below AA for a must-read label)
+  - `status-failed`, `destructive` #ea4335 on `muted`: **4.12:1**
+    (error text in dark; the fix is to use a brighter red for the text and keep #ea4335 for the fill)
+  - `button-quiet-primary-light`, `light-accent` #3b82f6 on `light-surface`:
+    **3.37:1** (the weakest link of light mode)
+  - `badge-muted-light`, `light-muted-foreground` on `light-muted`: **4.14:1**
+- **Do** use `body-sm` (12px) freely for meta information, and always use `body-md` (14px) for mixed-script labels.
+  **Don't** go below 12px, and don't use more than two font weights in the same panel.
+- **Do** keep hover feedback within 150ms and panel entry at 220ms with `ease-out-quint`.
+  **Don't** animate `width`/`height`/`top`/`left` on canvas surfaces: animate only transform and opacity.
+- **Do** verify both themes before wrapping up: toggle `.dark` on `<html>` and look closely at glass surfaces, which are
+  the first things to break in light mode.
 
 ## Scope & Exceptions
 
-本文件默认约束的是**登录之后的产品界面**——画布、面板、列表、弹窗，一切用户开一整天的东西。
-未登录就能访问的**对外落地页**是唯一的例外区，因为它们的任务不同：产品界面要让人忘记界面本身，
-落地页要在十秒内说服一个还没有账号的人。用工作台的 token 去做落地页，结果是一张没人会转发的
-说明书。
+This file by default governs the **product interface after login**: canvas, panels, lists, dialogs, everything users keep open all day.
+The **public landing pages** reachable without logging in are the only exception zone, because their job is different: the product interface should make people forget the interface itself,
+while a landing page must persuade, within ten seconds, someone who has no account yet. Building a landing page with workbench tokens yields an instruction
+manual nobody would forward.
 
-例外仅限以下两处，**是白名单，不是「凡是新页面都能声明例外」**：
+The exceptions are limited to the following two, **an allowlist, not "any new page may declare an exception"**:
 
-- `/download` — `src/components/download/download.module.css`、`DownloadCanvasPreview.tsx`
-- `/login` — `src/components/login/login.module.css`、`poster-wall.module.css`、`light-rays.css`
+- `/download` - `src/components/download/download.module.css`, `DownloadCanvasPreview.tsx`
+- `/login` - `src/components/login/login.module.css`, `poster-wall.module.css`, `light-rays.css`
 
-新增落地页要进这份白名单，必须同 commit 更新本节。任何登录后可达的界面一律不在其中，
-包括从落地页跳进去的第一屏。
+Adding a landing page to this allowlist requires updating this section in the same commit. Any interface reachable after login is never in it,
+including the first screen entered from a landing page.
 
-### 例外区内允许的偏离
+### Deviations allowed inside the exception zone
 
-- **自带色板，不引 `index.css` 的 token。** 下载页取自品牌 DC 标的材质——镀锌钢
-  （`--zinc` #a8b4be）加锈蚀氧化（`--rust` #d9603a / `--rust-hot` #ee7549）。
-  这确实是第三个强调色，只在例外区内成立：**`rust` 一族不得出现在任何产品界面里**，
-  且在页内继续守「一屏一个主导高饱和元素」——静止态的锈橙只给 hero 的 `DC` 字样、
-  「你的系统」标记、主下载按钮、hero 底部校准条，以及预览 SVG 里正在渲染的那个节点；
-  其余出现的地方只能是焦点环和 hover 反馈。
-- **拉丁字形用 Geist Variable**（`@fontsource-variable/geist`），CJK 回退链不变。
-  字体只能随落地页的 lazy chunk 加载；一旦它出现在主 chunk 里，例外就失效了。
-- **元信息层可以低到 10px，包括中文标签。** 落地页是海报式排版，行宽和留白都远大于工作台，
-  等宽刻度字压到 10–11.5px 才有仪器感：眉标（`.eyebrow` 11px）、规格表键名（`.spec dl` 11.5px）、
-  校验和值与说明（10.5 / 11px）、更新日志时间（11.5px）。边界：**这一档只给「扫一眼就够、
-  不需要逐字读」的标签**——凡是需要读完的段落，字号仍守住产品的 12px 下限
-  （落地页实测 12.5–17px：`.heroNote` 12.5px、`.capabilityCell p` / `.changelog p` 13.5px、
-  `.faqAnswer` 14px、hero 正文 16–17px）。中文在 11px 是有代价的，别把这一档扩大到正文。
-- **进场与装饰动效可以超过 320ms。** 区块进场 700ms、hero 校准条推进 1400ms，都配
-  `cubic-bezier(0.16,1,0.3,1)` 减速，且只允许动 `opacity` / `transform` / `width`。
-  交互反馈也放宽了一档：hover / 焦点 / 展开走 140–240ms，而不是产品界面的 150ms 上限——
-  落地页的元素更大、位移更长，150ms 会显得生硬。边界：**交互反馈的上限仍是产品的 320ms
-  `--duration-slow`**，超过 320ms 的只能是一次性进场和装饰动画；依然禁 bounce / elastic。
-- **允许营销渐变与装饰图形。** hero 与卡片底纹用 radial / linear 渐变，画布预览是一张内联 SVG。
+- **Its own palette, without the `index.css` tokens.** The download page takes its material from the brand DC mark: galvanized steel
+  (`--zinc` #a8b4be) plus rusty oxide (`--rust` #d9603a / `--rust-hot` #ee7549).
+  This is indeed a third accent color, valid only inside the exception zone: **the `rust` family must not appear in any product interface**,
+  and within the page the rule "one dominant highly saturated element per screen" still holds: at rest, rust orange goes only to the hero's `DC` lettering,
+  the "your system" marker, the main download button, the hero's bottom calibration bar, and the node being rendered in the preview SVG;
+  everywhere else it may only be a focus ring or hover feedback.
+- **Latin glyphs use Geist Variable** (`@fontsource-variable/geist`), and the CJK fallback chain is unchanged.
+  The font may only load with the landing page's lazy chunk; once it appears in the main chunk, the exception is void.
+- **The meta-information layer may go as low as 10px.** A landing page uses poster-style typography with much larger line widths and whitespace than the workbench,
+  and monospaced scale text only feels like an instrument at 10-11.5px: eyebrow (`.eyebrow` 11px), spec-table keys (`.spec dl` 11.5px),
+  checksum values and notes (10.5 / 11px), changelog time (11.5px). Boundary: **this tier is only for labels that "a glance is enough for,
+  and need not be read word by word"**; any paragraph that must be read through still holds the product's 12px floor
+  (measured on the landing page at 12.5-17px: `.heroNote` 12.5px, `.capabilityCell p` / `.changelog p` 13.5px,
+  `.faqAnswer` 14px, hero body 16-17px). Small text at 11px has a cost for CJK scripts, so do not widen this tier to body text.
+- **Entry and decorative motion may exceed 320ms.** Section entry 700ms and the hero calibration bar advance 1400ms, both paired with
+  `cubic-bezier(0.16,1,0.3,1)` deceleration, and only `opacity` / `transform` / `width` may animate.
+  Interaction feedback is also relaxed by a notch: hover / focus / expand run 140-240ms, not the product interface's 150ms cap,
+  because landing page elements are larger and travel farther, and 150ms would look abrupt. Boundary: **the upper limit of interaction feedback is still the product's 320ms
+  `--duration-slow`**, and only one-off entries and decorative animations may exceed 320ms; bounce / elastic remain forbidden.
+- **Marketing gradients and decorative graphics are allowed.** The hero and card textures use radial / linear gradients, and the canvas preview is an inline SVG.
 
-### 例外区内依然不许违反的
+### What must still not be violated inside the exception zone
 
-- 暗色优先。落地页锁死深色，不提供亮色变体。
-- 用户必须读的文字满足 WCAG AA（4.5:1）。
-- body 永不横向滚动；宽内容自带 `overflow-x: auto`。
-- `@media (prefers-reduced-motion: reduce)` 必须把动画关掉——超长动效正是这条不能省的原因。
-- 例外区的样式必须收在自己的样式文件里（优先 CSS Module；`light-rays.css` 这类页面私有全局
-  CSS 要保证类名带页面前缀）。**不得反向修改 `index.css` 的全局变量**，也不得把落地页的类名
-  泄漏到产品界面。
+- Dark first. Landing pages are locked to dark and offer no light variant.
+- Text users must read meets WCAG AA (4.5:1).
+- The body never scrolls horizontally; wide content brings its own `overflow-x: auto`.
+- `@media (prefers-reduced-motion: reduce)` must turn animations off; overly long motion is exactly why this rule cannot be skipped.
+- Styles of the exception zone must live in their own style files (CSS Modules preferred; page-private global
+  CSS such as `light-rays.css` must make sure class names carry a page prefix). **Global variables of `index.css` must not be modified in reverse**, and landing page class names must not
+  leak into the product interface.
 
-`design.md lint` 只校验本文件自身，不读 CSS，所以这一节是靠 review 执行的约定，不是靠工具。
-评审落地页时看这一节；评审其余界面时，这一节不适用。
+`design.md lint` validates only this file itself and does not read CSS, so this section is a convention enforced by review, not by tooling.
+Consult this section when reviewing landing pages; it does not apply when reviewing other interfaces.
 
 ## Linting
 
 ```bash
-npx @google/design.md lint DESIGN.md          # 0 errors 是准入线
-npx @google/design.md diff old.md DESIGN.md   # token 级视觉回归
-npx @google/design.md export DESIGN.md --format css-vars   # 或 tailwind | dtcg
+npx @google/design.md lint DESIGN.md          # 0 errors is the admission line
+npx @google/design.md diff old.md DESIGN.md   # token-level visual regression
+npx @google/design.md export DESIGN.md --format css-vars   # or tailwind | dtcg
 ```
 
-预期基线：**0 errors，15 warnings。** 其中 4 条是上面列出的实测对比度欠账；
-11 条是 `orphaned-tokens`，落在 `border` / `border-soft` / `border-strong` /
-`ui-border` / `light-border` / `light-ui-border` / `chart-1..5` 上——
-alpha 版规范既没有 border 属性也没有图表序列概念，这些 token 无法被 component 引用。
-**不要为了消警告删掉它们**，它们在 `index.css` 里是承重的。
-出现任何**新的 error**，或 warning 数超过 15，都意味着回归。
+Expected baseline: **0 errors, 15 warnings.** Of these, 4 are the measured contrast debts listed above;
+11 are `orphaned-tokens`, falling on `border` / `border-soft` / `border-strong` /
+`ui-border` / `light-border` / `light-ui-border` / `chart-1..5`:
+the alpha version of the spec has neither a border property nor the concept of chart series, so these tokens cannot be referenced by a component.
+**Do not delete them to silence warnings**; they are load-bearing in `index.css`.
+Any **new error**, or a warning count above 15, means a regression.

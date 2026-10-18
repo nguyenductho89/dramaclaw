@@ -22,8 +22,8 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-// 询价走 react-query，测试树里没有 QueryClientProvider —— 短路成 spy，
-// 只看它被喂了什么 value（null = 不发请求）。
+// Quoting goes through react-query and there is no QueryClientProvider in the test tree — short-circuited to a spy,
+// which only watches what value it is fed (null = no request sent).
 vi.mock("@/lib/queries/generation-credit-cost", () => ({
   useGenerationCreditCost: vi.fn(() => ({ data: undefined, error: null })),
   BillingRuleNotConfiguredError: class BillingRuleNotConfiguredError extends Error {},
@@ -41,7 +41,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-video",
       providerId: "huimeng",
       apiModel: "test_video_api",
-      label: "测试视频模型",
+      label: "Test video model",
     },
   ]),
   fetchFreezoneVideoCameraTemplates: vi.fn(async () => []),
@@ -56,7 +56,7 @@ function videoNode(data: Record<string, unknown> = {}): CanvasNode {
     type: CANVAS_NODE_TYPES.video,
     position: { x: 0, y: 0 },
     data: {
-      prompt: "一只猫跳上桌子",
+      prompt: "A cat jumps onto the table",
       modelId: "huimeng/test-video",
       genMode: "textToVideo",
       ...data,
@@ -64,7 +64,7 @@ function videoNode(data: Record<string, unknown> = {}): CanvasNode {
   } as CanvasNode;
 }
 
-/** 取询价 hook 最近一次拿到的 feature key（null 表示这一轮不发请求）。 */
+/** The feature key the quote hook most recently received (null means no request this round). */
 function latestProbeValue(): string | null {
   const calls = vi.mocked(useGenerationCreditCost).mock.calls;
   if (calls.length === 0) return null;
@@ -99,7 +99,7 @@ describe("video generation cost probe scope", () => {
       useVideoGenerationForm("vid-1", { costProbeEnabled: false }),
     );
 
-    // 让模型列表落地并把所有 debounce 走完，确认没有任何一轮偷偷开了询价。
+    // Let the model list land and run all debounces to completion, confirming no round secretly enabled the quote.
     await waitFor(() => {
       expect(vi.mocked(useGenerationCreditCost).mock.calls.length).toBeGreaterThan(1);
     });
@@ -110,7 +110,7 @@ describe("video generation cost probe scope", () => {
     useCanvasStore
       .getState()
       .setCanvasData(
-        [videoNode({ generationError: "上游服务超时", isGenerating: false })],
+        [videoNode({ generationError: "Upstream service timed out", isGenerating: false })],
         [],
       );
 

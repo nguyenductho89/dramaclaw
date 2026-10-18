@@ -71,7 +71,7 @@ async def _run_identity_planner(
             logs=[log] if log else None,
         )
 
-    update(0.05, "加载项目数据...")
+    update(0.05, "Loading project data...")
     sqlite_store = SQLiteStore(
         ctx.owner_project_label,
         output_dir=str(ctx.output_dir),
@@ -107,7 +107,7 @@ async def _run_identity_planner(
     if episode_obj is None:
         raise ValueError(f"Episode {episode} not found")
 
-    update(0.10, "分析身份需求...")
+    update(0.10, "Analyzing identity requirements...")
     planner = IdentityPlanner(cognee_store)
 
     def on_log(message: str) -> None:
@@ -137,7 +137,7 @@ async def _run_identity_planner(
             )
 
     update(
-        0.95, "身份规划完成", f"新增 {new_count} 个身份，复用 {resolved_count} 个身份"
+        0.95, "Identity planning complete", f"{new_count} new identity(ies), {resolved_count} reused"
     )
     return _build_identity_planner_result(
         episode=episode,

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 import { create } from 'zustand';
 import {
@@ -58,8 +58,8 @@ import {
 } from '@/features/canvas/domain/nodeDisplay';
 
 /**
- * 副本发号：源节点用的还是默认名（含带序号的「文本1」）→ 丢掉标题重新发号，避免
- * 副本与源节点同名；用户已自定义过标题则原样保留（复制出来同名是预期行为）。
+ * Copy numbering: if the source node still uses the default name (including numbered ones such as "Text 1") -> drop the title and number it again, to avoid
+ * the copy having the same name as the source; if the user has customized the title it is kept as is (a copy with the same name is expected).
  */
 function withAutoTitleIndexForClone(
   type: CanvasNodeType,
@@ -171,21 +171,21 @@ interface CanvasState {
   pendingClearIntent: boolean;
   selectedNodeId: string | null;
   /**
-   * 当前由顶部工具栏打开了二级功能浮层（全景 / 多角度 / 打光 / 重绘 / 扩图 /
-   * 旋转 / 九宫格）的目标节点 id。浮层打开时，节点自身依赖 `selected` 显示的
-   * 操作面板（如 ImageGenNode 底部的生成面板）必须让位给浮层——否则两块操作区
-   * 会在节点下方重叠。功能浮层优先级更高。
+   * The target node id for which the top toolbar opened a secondary feature overlay (panorama / multi-angle / lighting / redraw / outpaint /
+   * rotate / 3x3 grid). While an overlay is open, the operation panel a node shows by itself via `selected`
+   * (such as the generation panel at the bottom of ImageGenNode) must yield to the overlay - otherwise the two operation areas
+   * would overlap below the node. The feature overlay has higher priority.
    */
   activeOverlayNodeId: string | null;
-  /** 当前打开的打光编辑器目标节点 id。独立于节点选中态，点击聊天面板时不应关闭。 */
+  /** Target node id of the currently open lighting editor. Independent of node selection; clicking the chat panel should not close it. */
   activeLightEditorNodeId: string | null;
   /**
-   * 当前鼠标悬停的节点 id（由 Canvas 的 onNodeMouseEnter/Leave 维护，离开带短
-   * 延迟，避免鼠标移到节点上方的浮动按钮栏时按钮提前消失）。供 NodeSpawnPlusOverlay
-   * 的「+」、NodeSideActionRail 的上传/替换按钮栏等「hover 才显示」的浮层读取。
+   * The node id currently hovered by the mouse (maintained by Canvas's onNodeMouseEnter/Leave, with a short delay on leave so
+   * the buttons do not vanish early when the mouse moves to the floating button bar above the node). Read by "hover to show" overlays such as
+   * NodeSpawnPlusOverlay's "+" and NodeSideActionRail's upload/replace button bar.
    */
   hoveredNodeId: string | null;
-  /** 一次性的视口聚焦请求：Canvas 监听到后会 setCenter 然后清掉。 */
+  /** A one-shot viewport focus request: Canvas calls setCenter after seeing it and then clears it. */
   pendingFocusNodeId: string | null;
   activeToolDialog: ActiveToolDialog | null;
   history: CanvasHistoryState;
@@ -261,8 +261,8 @@ interface CanvasState {
   /**
    * Clone a node as a result sibling: same type, same params (data merged with
    * `dataOverrides`), and the same upstream connections as the source. Stacked
-   * `index` slots below the source. Used by 图片/视频生成 to fan out N results
-   * when the user picks 生成数量 > 1 (each generation is its own API call).
+   * `index` slots below the source. Used by image/video generation to fan out N results
+   * when the user picks generation count > 1 (each generation is its own API call).
    */
   duplicateNodeAsSibling: (
     sourceNodeId: string,
@@ -271,8 +271,8 @@ interface CanvasState {
   ) => string | null;
   /**
    * Batch-duplicate several nodes at once (used by the multi-selection toolbar's
-   * 「创建副本」). Each clone is stacked one slot below its source, keeps the
-   * source's upstream connections, and gets a "- 副本" suffix on its display
+   * "Create copy"). Each clone is stacked one slot below its source, keeps the
+   * source's upstream connections, and gets a "- Copy" suffix on its display
    * name. The whole batch is a single undo step, and the new clones become the
    * active selection. Returns the created node ids.
    */
@@ -303,7 +303,7 @@ interface CanvasState {
   updateNodeData: (
     nodeId: string,
     data: Partial<CanvasNodeData>,
-    /** 见 updateNodeSize 的同名参数。 */
+    /** See the parameter of the same name in updateNodeSize. */
     options?: { recordHistory?: boolean },
   ) => void;
   updateNodeSize: (
@@ -313,13 +313,13 @@ interface CanvasState {
       lockManualSize?: boolean;
       data?: Partial<CanvasNodeData>;
       /**
-       * 默认 true：这是一次用户可撤销的改动。
+       * Default true: this is a user-undoable change.
        *
-       * 传 false 用于「把画布刚测出来的事实补记下来」这类写入（节点主体图的
-       * imageNaturalWidth/Height，见 planNaturalSizeRecordWrite）：屏幕上不变一
-       * 个像素，撤销它没有任何意义，而打开一个老项目会一次触发几十笔——真进了
-       * 撤销栈，用户按下 Ctrl+Z 得到的是「忘掉一张图的尺寸」，重做栈还被清空。
-       * 仍然算一次编辑（trackEdit），因为这笔数据要存到服务端去。
+       * Pass false for writes that "record a fact the canvas just measured" (the node's main image
+       * imageNaturalWidth/Height, see planNaturalSizeRecordWrite): not a single pixel changes on screen, so undoing it
+       * is meaningless, and opening an old project triggers dozens at once - if they entered the undo stack,
+       * Ctrl+Z would give the user "forget an image's size" and the redo stack would be cleared.
+       * It still counts as an edit (trackEdit), because the data has to be saved to the server.
        */
       recordHistory?: boolean;
     },
@@ -361,9 +361,9 @@ interface CanvasState {
     }
   ) => string | null;
   /**
-   * 快捷派生（spawn）后的自动打组：源节点未在组内 → 与新节点一起新建组；已在
-   * 普通组内 → 把新节点并入该组并撑大边界；在分镜组/投影保护组内 → 不打组。
-   * opts.label 作为新建组的名字（如「图片反推提示词组」）。返回组 id。
+   * Auto-grouping after a quick spawn: the source node is not in a group -> create a new group together with the new node; already in
+   * a plain group -> merge the new node into that group and grow its bounds; in a storyboard group/projection-protected group -> no grouping.
+   * opts.label is the name of the newly created group (e.g. "Image reverse-prompt group"). Returns the group id.
    */
   autoGroupSpawn: (
     sourceNodeId: string,
@@ -371,8 +371,8 @@ interface CanvasState {
     opts?: { label?: string }
   ) => string | null;
   /**
-   * 合并分镜组: group nodes into a "分镜组" whose members are packed into a
-   * uniform 宫格 grid (reading order). Returns the new group id, or null.
+   * Merge storyboard group: group nodes into a "storyboard group" whose members are packed into a
+   * uniform grid (reading order). Returns the new group id, or null.
    */
   mergeStoryboardGroup: (nodeIds: string[]) => string | null;
   /** Re-configure a storyboard group's grid (aspect / columns / index badge). */
@@ -396,7 +396,7 @@ interface CanvasState {
    * box already fits. Pure layout: no history / autosave churn.
    */
   fitGroupToChildren: (groupNodeId: string) => void;
-  /** 把组内子节点按指定方式重新排列（横向 / 纵向 / 网格），并收紧组框。 */
+  /** Rearrange the child nodes in a group in the specified way (horizontal / vertical / grid) and tighten the group frame. */
   arrangeGroupChildren: (
     groupNodeId: string,
     mode: 'horizontal' | 'vertical' | 'grid',
@@ -407,7 +407,7 @@ interface CanvasState {
   setActiveOverlayNodeId: (nodeId: string | null) => void;
   setActiveLightEditorNodeId: (nodeId: string | null) => void;
   setHoveredNodeId: (nodeId: string | null) => void;
-  /** 请求将视口聚焦到目标节点；Canvas 处理完会通过 clearPendingFocus 复位。 */
+  /** Request that the viewport focus on the target node; Canvas resets it through clearPendingFocus when done. */
   requestFocusNode: (nodeId: string) => void;
   clearPendingFocus: () => void;
 
@@ -626,7 +626,7 @@ function normalizeEdgesWithNodes(rawEdges: CanvasEdge[], nodes: CanvasNode[]): C
       if (!nodeHasSourceHandle(sourceNode.type) || !nodeHasTargetHandle(targetNode.type)) {
         return false;
       }
-      // 丢弃违反上游类型规则的历史遗留边（如音频←非文本）。
+      // Drop legacy edges that violate the upstream type rules (e.g. audio <- non-text).
       return isUpstreamConnectionAllowed(sourceNode.type, targetNode.type);
     })
     .map((edge) => ({
@@ -888,9 +888,9 @@ function collectNodeIdsWithDescendants(nodes: CanvasNode[], seedIds: string[]): 
   return deleteSet;
 }
 
-// 未测量且未显式设尺寸的节点（刚 spawn、尚未渲染）按类型的设计尺寸估算，数值与
-// 各节点组件内的 DEFAULT_WIDTH/HEIGHT 对齐。否则 groupNodes / fitGroupToChildren
-// 会按 320×200 低估大节点（如视频节点 580×380），算出的组边界包不住成员。
+// Nodes that are unmeasured and have no explicit size (just spawned, not yet rendered) are estimated with the per-type design size, aligned with
+// DEFAULT_WIDTH/HEIGHT inside each node component. Otherwise groupNodes / fitGroupToChildren
+// would underestimate large nodes (e.g. the 580x380 video node) as 320x200, and the computed group bounds could not wrap the members.
 const FALLBACK_NODE_SIZES: Partial<Record<string, { width: number; height: number }>> = {
   [CANVAS_NODE_TYPES.video]: { width: 580, height: 380 },
   [CANVAS_NODE_TYPES.textAnnotation]: { width: 440, height: 320 },
@@ -930,9 +930,9 @@ function withManualSizeLock(node: CanvasNode): CanvasNode {
     aspectRatio?: string;
   };
 
-  // 缩放结束时把节点框吸附回图片真实比例：图片用 object-contain 显示，一旦节点
-  // 宽高比偏离图片比例（自由缩放、或历史上被拉歪并保存的旧节点）就会露出容器
-  // 底色形成黑边。按「在缩放后的框内、保持图片比例的最大尺寸」吸附即可消除黑边。
+  // When resizing ends, snap the node frame back to the image's true ratio: images are shown with object-contain, and once the node's
+  // aspect ratio deviates from the image ratio (free resize, or old nodes historically stretched and saved) the container
+  // background shows as black bars. Snapping to "the largest size keeping the image ratio within the resized frame" removes them.
   const aspectRatio = typeof nodeData.aspectRatio === 'string' ? nodeData.aspectRatio : '';
   const currentWidth =
     (typeof node.width === 'number' ? node.width : null)
@@ -1101,9 +1101,9 @@ function maybeApplyImageAutoResize(node: CanvasNode, patch: Partial<CanvasNodeDa
     isSizeManuallyAdjusted?: boolean;
   };
 
-  // 视频以 widthPx/heightPx/aspectRatio 作为触发点 —— 这些只有在 <video> 元素
-  // 拿到 metadata 后才会更新，避免拿到 videoUrl 但 metadata 未就绪时就用默认
-  // aspectRatio 错误地 resize 一次。
+  // Video uses widthPx/heightPx/aspectRatio as triggers - these only update after the <video> element
+  // gets its metadata, avoiding a wrong resize with the default aspectRatio
+  // when videoUrl exists but the metadata is not ready.
   const hasImageRelatedChange = isVideo
     ? ('aspectRatio' in patchData || 'widthPx' in patchData || 'heightPx' in patchData)
     : ('imageUrl' in patchData || 'previewImageUrl' in patchData || 'aspectRatio' in patchData);
@@ -1116,7 +1116,7 @@ function maybeApplyImageAutoResize(node: CanvasNode, patch: Partial<CanvasNodeDa
     return node;
   }
 
-  // 没有实际媒体内容时不要乱改尺寸 —— 视频以 videoUrl、图片以 imageUrl 作为「已加载」信号。
+  // Do not change the size without real media content - videoUrl for video and imageUrl for image serve as the "loaded" signal.
   const nextAssetUrl = isVideo
     ? (patchData.videoUrl ?? nodeData.videoUrl)
     : (patchData.imageUrl ?? nodeData.imageUrl);
@@ -1124,10 +1124,10 @@ function maybeApplyImageAutoResize(node: CanvasNode, patch: Partial<CanvasNodeDa
     return node;
   }
 
-  // 视频节点的展示比例应跟随视频真实像素（widthPx/heightPx），而不是生成预设
-  // aspectRatio（那只是「下一次生成」想要的比例，可能与既有视频本身的像素比
-  // 不一致——例如 9:16 的素材视频，预设却是 16:9，否则节点会被撑成 16:9 给视频
-  // 加黑边）。拿不到像素时再回退到预设 aspectRatio。
+  // The display ratio of a video node should follow the video's real pixels (widthPx/heightPx), not the generation preset
+  // aspectRatio (which is only the ratio wanted for "the next generation" and may differ from the pixel ratio of the existing video
+  // - e.g. a 9:16 source video with a 16:9 preset, otherwise the node would be stretched to 16:9 and give the video
+  // black bars). Fall back to the preset aspectRatio when pixels are unavailable.
   const presetAspectRatio = patchData.aspectRatio ?? nodeData.aspectRatio ?? DEFAULT_ASPECT_RATIO;
   const videoPixelAspectRatio = isVideo
     ? (() => {
@@ -1139,9 +1139,9 @@ function maybeApplyImageAutoResize(node: CanvasNode, patch: Partial<CanvasNodeDa
       })()
     : null;
   const nextAspectRatio = videoPixelAspectRatio ?? presetAspectRatio;
-  // 各节点类型的内部 MIN_WIDTH / MIN_HEIGHT 决定了 React Flow 给它的 width /
-  // height 会不会被 clamp 掉 —— 这里直接对齐节点自己的下限，否则 store 算
-  // 出来的尺寸会被节点 component 再 clamp 一次，比例又被拉成方块。
+  // Each node type's internal MIN_WIDTH / MIN_HEIGHT decides whether the width /
+  // height React Flow gives it will be clamped - align directly with the node's own lower bound here, otherwise the size the store computes
+  // would be clamped again by the node component and the ratio stretched into a square.
   const resizeMins = (() => {
     if (node.type === CANVAS_NODE_TYPES.exportImage) {
       return { minWidth: EXPORT_RESULT_NODE_MIN_WIDTH, minHeight: EXPORT_RESULT_NODE_MIN_HEIGHT };
@@ -1467,8 +1467,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const sourceHandle = normalizeHandleId(connection.sourceHandle) ?? 'source';
     const targetHandle = normalizeHandleId(connection.targetHandle) ?? 'target';
     set((state) => {
-      // 3D 世界节点只用一张上游图生成，因此入边唯一：已有其它上游时拒绝新连接。
-      // 这是所有连线路径(手动拖线 / 拖到空白生成节点)的共同收口处。
+      // A 3D world node is generated from a single upstream image, so it has exactly one incoming edge: reject new connections when another upstream exists.
+      // This is the common gate for all connection paths (manual drag / drag to blank space to generate a node).
       const targetNode = state.nodes.find((node) => node.id === connection.target);
       if (
         targetNode?.type === CANVAS_NODE_TYPES.threeDWorld &&
@@ -1479,7 +1479,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ) {
         return {};
       }
-      // 上游类型规则收口：挡掉任何绕过 UI 校验的连接（如音频←非文本）。
+      // Upstream type rule gate: block any connection that bypasses UI validation (e.g. audio <- non-text).
       const sourceNode = state.nodes.find((node) => node.id === connection.source);
       if (
         sourceNode &&
@@ -1488,9 +1488,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ) {
         return {};
       }
-      // 视频节点素材上限收口：素材已满到能力包络（图 9 / 视频 3 / 音频 3 /
-      // 总数 12）时拒绝新连接。手动拖线在 isValidConnection 就变灰了，这里兜住
-      // 拖到空白生成节点等其它建边路径。
+      // Video node material limit gate: reject new connections once materials reach the capability envelope (9 images / 3 videos / 3 audios /
+      // 12 total). Manual drags are already greyed out in isValidConnection; this catches
+      // other edge creation paths such as dragging to blank space to generate a node.
       if (
         videoReferenceConnectionRejection(
           state.nodes,
@@ -1535,8 +1535,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   setCanvasData: (nodes, edges, history) => {
-    // 换画布/清空后，上一份画布留下的风格对账记账必须作废，否则重新 hydrate
-    // 出来的图片节点会被当成「同一个节点接着算」，该补建的判成用户删了节点。
+    // After switching canvases/clearing, the style reconciliation bookkeeping left by the previous canvas must be invalidated, otherwise re-hydrated
+    // image nodes would be treated as "the same node continuing", and ones that should be re-created would be judged as nodes the user deleted.
     resetStyleNodeSyncStates();
     const normalizedCanvas = normalizeCanvasData(nodes, edges);
 
@@ -1581,8 +1581,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   hydrateCanvasDraft: (draft) => {
-    // 换画布/清空后，上一份画布留下的风格对账记账必须作废，否则重新 hydrate
-    // 出来的图片节点会被当成「同一个节点接着算」，该补建的判成用户删了节点。
+    // After switching canvases/clearing, the style reconciliation bookkeeping left by the previous canvas must be invalidated, otherwise re-hydrated
+    // image nodes would be treated as "the same node continuing", and ones that should be re-created would be judged as nodes the user deleted.
     resetStyleNodeSyncStates();
     const normalizedCanvas = normalizeCanvasData(draft.nodes, draft.edges);
 
@@ -1679,13 +1679,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   addNode: (type, position, data = {}) => {
     const state = get();
-    // 没带标题的新节点补一个自动序号，标题写成「文本1」「图片节点2」这样，避免同类型
-    // 节点重名分不清（带了 displayName 的——如各类结果节点——不动）。
+    // Give a new node without a title an auto sequence number, writing the title like "Text 1" or "Image node 2", to avoid same-type
+    // nodes with the same name being indistinguishable (nodes with a displayName - such as the various result nodes - are left alone).
     //
-    // 注意 displayName 必须一起写：各节点定义的 createDefaultData() 本来就把默认名
-    // 预填进 displayName 了，只塞 autoTitleIndex 不会改变渲染结果。同时写入 index 是
-    // 为了让 getDefaultNodeDisplayName 也算出带序号的默认名——isNodeUsingDefaultDisplayName
-    // 据此仍判定为「用的是默认名」（UploadNode 的自动改名依赖这一点）。
+    // Note that displayName must be written together: each node definition's createDefaultData() already prefills the default name
+    // into displayName, so stuffing only autoTitleIndex would not change the rendering. Writing the index as well is
+    // so getDefaultNodeDisplayName also computes the numbered default name - isNodeUsingDefaultDisplayName
+    // still judges it as "using the default name" accordingly (UploadNode's auto rename depends on this).
     const dataWithAutoTitle = withAutoTitleIndex(type, data, state.nodes);
     const createdNode = maybeApplyImageAutoResize(
       canvasNodeFactory.createNode(type, position, dataWithAutoTitle),
@@ -1721,7 +1721,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       x: source.position.x,
       y: source.position.y + (sourceHeight + 24) * index,
     };
-    // 副本不能沿用源节点的标题/序号（会重号）：源节点用的是默认名时给副本重新发号。
+    // A copy cannot reuse the source node's title/number (it would duplicate numbers): when the source uses the default name, number the copy again.
     const clonedData = withAutoTitleIndexForClone(
       source.type,
       { ...(source.data as Partial<CanvasNodeData>), ...dataOverrides },
@@ -1730,8 +1730,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const newNode = canvasNodeFactory.createNode(source.type, position, clonedData);
 
     // Mirror the source's upstream connections so the clone resolves the same
-    // references (上游图/文本) as the original generation. 风格节点除外 ——
-    // 见下面 duplicateNodesAsSiblings 里的同一处说明。
+    // references (upstream images/text) as the original generation. Style nodes are excluded —
+    // see the same note in duplicateNodesAsSiblings below.
     const styleNodeIds = new Set(
       state.nodes.filter((node) => isStyleNode(node)).map((node) => node.id),
     );
@@ -1774,8 +1774,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       const source = state.nodes.find((n) => n.id === sourceNodeId);
       if (!source) continue;
 
-      // 复制一整个组时成员也在 nodeIds 里。成员坐标是相对父组的，跟着父组的克隆
-      // 走即可；只有「根」(父不在这次复制里) 才需要往下让开一个身位。
+      // When copying a whole group, its members are also in nodeIds. Member coordinates are relative to the parent group and follow the parent group's clone;
+      // only "roots" (whose parent is not in this copy) need to be moved down one slot.
       const parentIsCloned = Boolean(source.parentId && sourceSet.has(source.parentId));
       const sourceHeight =
         source.measured?.height ??
@@ -1787,9 +1787,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             y: source.position.y + sourceHeight + 24,
           };
 
-      // Append a "- 副本" suffix to whichever name fields the node carries so
+      // Append a "- Copy" suffix to whichever name fields the node carries so
       // the clone is visually distinguishable (matches the reference design).
-      // 组内成员不加后缀——只有被直接复制的那个对象需要区分。
+      // Group members get no suffix - only the object copied directly needs to be distinguished.
       const sourceData = source.data as Record<string, unknown>;
       const nameOverrides: Record<string, unknown> = {};
       if (!parentIsCloned) {
@@ -1801,20 +1801,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         }
       }
 
-      // 这条路径上面已经把标题改成「… - 副本」，天然不会与源节点重名，无需重新发号。
+      // This path has already changed the title above to "... - Copy", which naturally cannot duplicate the source node's name, so no renumbering is needed.
       const newNode = canvasNodeFactory.createNode(source.type, position, {
         ...(source.data as Partial<CanvasNodeData>),
         ...(nameOverrides as Partial<CanvasNodeData>),
       });
-      // 组框的尺寸是节点级字段，createNode 不会带过来，得手动搬。
+      // The group frame size is a node-level field that createNode does not carry over, so it has to be moved by hand.
       if (isGroupNode(source)) {
         newNode.width = source.width;
         newNode.height = source.height;
         newNode.style = source.style ? { ...source.style } : undefined;
       }
       // Keep the clone inside the same group (if any) so its position stays
-      // anchored to the original's coordinate space. 父组本身也在复制里时，
-      // 指向父组的克隆，否则成员会被塞回原来那个组。
+      // anchored to the original's coordinate space. When the parent group is itself in the copy, point to
+      // the parent group's clone, otherwise members would be put back into the original group.
       if (source.parentId) {
         newNode.parentId = idMap.get(source.parentId) ?? source.parentId;
         newNode.extent = source.extent;
@@ -1842,10 +1842,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       if (!newTarget) {
         continue;
       }
-      // 风格节点没跟着一起复制时，这条边会克隆成「同一个风格节点 → 两个图片节点」。
-      // 那是 styleNodeSync 全部规则的前提被打破：两个下游各按自己的选择去改同一个
-      // 节点，互相触发对方的 effect，谁也收敛不了，React 到 50 层直接把画布抛挂。
-      // 副本自己的对账会走补建那一支给它配一个新的，所以这里丢掉正好。
+      // If the style node is not copied along, this edge would be cloned into "the same style node -> two image nodes".
+      // That breaks the premise of all styleNodeSync rules: two downstream nodes each modify the same node by their own choice,
+      // triggering each other's effects with neither converging, until React throws the canvas at 50 levels deep.
+      // The copy's own reconciliation takes the re-create branch and assigns it a new one, so dropping it here is exactly right.
       if (styleNodeIds.has(edge.source) && !idMap.has(edge.source)) {
         continue;
       }
@@ -1902,7 +1902,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return `${Math.round(w / divisor)}:${Math.round(h / divisor)}`;
     };
 
-    // Single capture (截当前): no group — just one connected image node to the
+    // Single capture (capture current): no group — just one connected image node to the
     // right of the source.
     if (captures.length === 1) {
       const only = captures[0];
@@ -1911,9 +1911,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         80,
         Math.round((NODE_WIDTH * only.height) / Math.max(1, only.width))
       );
-      // 优先用上传后的后端 URL（含 previewImageUrl）——base64 dataUrl 持久化时
-      // 会被 sanitizePreviewImageUrls 剥掉并告警，且下游生成也需要真实 URL。
-      // 仅在上传缺失（uploadedUrl 为空/空串）时才回退到本地 dataUrl 兜底显示。
+      // Prefer the backend URL after upload (including previewImageUrl) - a base64 dataUrl is stripped by
+      // sanitizePreviewImageUrls on persist with a warning, and downstream generation also needs a real URL.
+      // Fall back to the local dataUrl for display only when the upload is missing (uploadedUrl empty/blank).
       const onlyDisplayUrl =
         typeof only.uploadedUrl === 'string' && only.uploadedUrl.length > 0
           ? only.uploadedUrl
@@ -2015,8 +2015,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         x: SIDE_PADDING + col * (CELL_WIDTH + CELL_GAP),
         y: TOP_PADDING + row * (cellHeight + CELL_GAP),
       };
-      // 同单图分支：previewImageUrl 也优先用上传后的后端 URL，避免持久化 base64
-      // 触发 sanitize 告警；仅上传缺失时回退本地 dataUrl。
+      // Same as the single-image branch: previewImageUrl also prefers the backend URL after upload, avoiding persisted base64
+      // triggering the sanitize warning; fall back to the local dataUrl only when the upload is missing.
       const childDisplayUrl =
         typeof capture.uploadedUrl === 'string' && capture.uploadedUrl.length > 0
           ? capture.uploadedUrl
@@ -2089,13 +2089,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!nodeHasSourceHandle(sourceNode.type) || !nodeHasTargetHandle(targetNode.type)) {
       return null;
     }
-    // 上游类型规则收口（如音频←非文本）。
+    // Upstream type rule gate (e.g. audio <- non-text).
     if (!isUpstreamConnectionAllowed(sourceNode.type, targetNode.type)) {
       return null;
     }
-    // 素材上限同样要收口在这里：资产库选参考、外部文件导入
-    // （spawnExternalAssetNodes）都是往一个**已存在**的视频节点上接素材，走的正是
-    // addEdge。只在 onConnect 拦等于这条上限只在手动拖线时成立。
+    // The material limit must also be gated here: picking references from the asset library and importing external files
+    // (spawnExternalAssetNodes) both attach materials to an **existing** video node, and exactly go through
+    // addEdge. Intercepting only in onConnect would mean this limit holds only for manual drags.
     if (
       videoReferenceConnectionRejection(
         state.nodes,
@@ -2140,13 +2140,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!nodeHasSourceHandle(sourceNode.type) || !nodeHasTargetHandle(targetNode.type)) {
       return null;
     }
-    // 上游类型规则收口（如音频←非文本）。
+    // Upstream type rule gate (e.g. audio <- non-text).
     if (!isUpstreamConnectionAllowed(sourceNode.type, targetNode.type)) {
       return null;
     }
-    // 与 addEdge 同一把尺子：目前这条路径的 target 都是刚建出来的新节点（技能输出、
-    // 背景候选），够不到上限；放在这里是为了「所有公开建边入口口径一致」，将来谁把
-    // 带数据的边接到已有视频节点上也不会漏。
+    // The same ruler as addEdge: currently the targets on this path are all newly created nodes (skill outputs,
+    // background candidates), which cannot reach the limit; it is placed here so that "all public edge creation entries are consistent",
+    // and nobody connecting an edge with data to an existing video node in the future will slip through.
     if (
       videoReferenceConnectionRejection(
         state.nodes,
@@ -2514,10 +2514,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           } as CanvasNode)
         : node
     );
-    // 换了类型，原本合法的关联边可能不再合法：空 Upload 先连到图片节点，之后
-    // 上传音频转成 Audio —— audio → 图片就不再放行了。不在这里清掉，那条边会一直
-    // 留在画布上（还能提交生成），直到下次加载被规范化静默删除。口径与加载规范化
-    // 那道过滤保持一致：handle 有无 + 建边类型规则。
+    // After a type change, a previously legal associated edge may no longer be legal: an empty Upload first connects to an image node, then
+    // uploading audio converts it to Audio - audio -> image is no longer allowed. If not cleared here, that edge would stay
+    // on the canvas (and could still submit generation) until the next load normalizes it away silently. The rule stays consistent with that load normalization
+    // filter: handle presence + edge type rules.
     const nextNodeTypeById = new Map(nextNodes.map((node) => [node.id, node.type]));
     const nextEdges = state.edges.filter((edge) => {
       if (edge.source !== nodeId && edge.target !== nodeId) {
@@ -2534,9 +2534,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return isUpstreamConnectionAllowed(sourceType, targetType);
     });
 
-    // 类型变了，素材归类也跟着变：空 Upload 建边时按图片算，转成 video/audio 之后
-    // 可能把下游视频节点顶出视频/音频上限（外部文件导入正是「先连边、后按 MIME
-    // 转换」）。建边时的校验管不到这一刻，只能在类型确定之后重算一遍。
+    // When the type changes, the material classification changes too: an empty Upload counts as an image when creating the edge, and after converting to video/audio
+    // it may push a downstream video node past the video/audio limits (external file import is exactly "connect first, convert by MIME
+    // later"). The validation at edge creation cannot cover this moment, so it can only be recomputed once the type is determined.
     const affectedVideoTargets = new Set(
       nextEdges.filter((edge) => edge.source === nodeId).map((edge) => edge.target),
     );
@@ -2676,8 +2676,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       }
 
       if (options?.recordHistory === false) {
-        // 历史与 dragHistorySnapshot 都不碰：这笔写入不是用户的改动，既不该能被
-        // 撤销，也不该把正在进行的拖拽的那份快照顶掉。
+        // Neither history nor dragHistorySnapshot is touched: this write is not a user change, so it should neither be
+        // undoable nor push out the snapshot of a drag in progress.
         return { nodes: nextNodes, ...trackEdit(state) };
       }
 
@@ -3031,9 +3031,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       updatedMemberMap.set(node.id, {
         ...node,
         parentId: groupNode.id,
-        // 不设 extent:'parent'：普通组成员不被钳在框内，可自由拖动；拖动时由
-        // onNodeDrag 实时撑大组框（libtv 式），松手后 fitGroupToChildren 收尾包住。
-        // （投影组 / 分镜组各有自己的约束，不走这里。）
+        // No extent:'parent': plain group members are not clamped inside the frame and can drag freely; during the drag
+        // onNodeDrag grows the group frame live (libtv style), and after release fitGroupToChildren finishes by wrapping them.
+        // (Projection groups / storyboard groups have their own constraints and do not go through here.)
         extent: undefined,
         position: {
           x: Math.round(absolute.x - groupX),
@@ -3097,13 +3097,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const nodeMap = new Map(state.nodes.map((node) => [node.id, node] as const));
     const source = nodeMap.get(sourceNodeId);
     if (!source) return null;
-    // 只收编「自由」的新节点；已有归属的不抢。
+    // Only adopt "free" new nodes; ones that already belong somewhere are not taken.
     const spawned = spawnedNodeIds
       .map((nodeId) => nodeMap.get(nodeId))
       .filter((node): node is CanvasNode => Boolean(node && !node.parentId));
     if (spawned.length === 0) return null;
 
-    // 源节点最近的祖先组。
+    // The nearest ancestor group of the source node.
     let enclosing: CanvasNode | null = null;
     let parentId = source.parentId;
     const visited = new Set<string>();
@@ -3119,26 +3119,26 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }
 
     if (!enclosing) {
-      // 自动组比手动 Ctrl+G 的边界更宽松些，给成员四周多留 20px 呼吸感。
+      // Auto groups have looser bounds than manual Ctrl+G, leaving an extra 20px of breathing room around members.
       return get().groupNodes([sourceNodeId, ...spawned.map((node) => node.id)], {
         label: opts?.label,
         extraPadding: 20,
       });
     }
-    // 在谓词检查前先取 id（isStoryboardGroupNode 等共享 isGroupNode 的类型谓词，
-    // 检查后 enclosing 会被 TS 收窄成 never，同 fitGroupToChildren 的注释）。
+    // Take the id before predicate checks (isStoryboardGroupNode etc. share isGroupNode's type predicate;
+    // after the check, enclosing would be narrowed by TS to never, same as the comment in fitGroupToChildren).
     const groupId = enclosing.id;
-    // 分镜组按宫格自排版、投影组受保护——都不往里塞成员，也不能把被保护的源节点
-    // 挪出来一起编组。但也不能就地放弃：派生节点是在「源节点坐标系」下摆放的
-    // （调用方按 source.position 算落位），源在组内时该坐标系是组内相对坐标，而这些
-    // 新节点留在根层（无 parentId）会被当成绝对坐标——不修正就会落到画布原点附近 /
-    // 视野外（见 spawnExternalAssets / spawnCharacterLibraryReferences 均依赖本函数
-    // 收编）。分两步收尾：① 先把它们平移回真正的绝对坐标，让素材出现在源节点身边；
-    // ② 再把这些已在正确坐标上的素材单独编成一个根层素材组（源节点不入组，仍留在它
-    // 的投影 / 分镜组里），与其它调用路径「自动编成素材组」的承诺保持一致。
+    // Storyboard groups self-layout as a grid and projection groups are protected - neither takes members, and the protected source node cannot be
+    // moved out to be grouped together. But we also cannot just give up here: derived nodes are placed in the "source node's coordinate system"
+    // (the caller computes placement from source.position); when the source is in a group that system is group-relative coordinates, while these
+    // new nodes stay at root level (no parentId) and would be taken as absolute coordinates - without correction they would land near the canvas origin /
+    // out of view (spawnExternalAssets / spawnCharacterLibraryReferences both rely on this function
+    // to adopt). Finish in two steps: (1) first translate them back to true absolute coordinates so the assets appear next to the source node;
+    // (2) then group these already correctly positioned assets into a root-level asset group on their own (the source node does not join the group and stays in its
+    // projection / storyboard group), consistent with the "auto-grouped into an asset group" promise of other call paths.
     if (isStoryboardGroupNode(enclosing) || isProtectedProjectionGroupNode(enclosing)) {
-      // 偏移 = 源的绝对坐标 − 源的原始 position，即源所有祖先的累计位移，对任意嵌套
-      // 深度都成立。组恰好落在画布原点时 offset 为 0，派生坐标本就是绝对坐标，跳过平移。
+      // offset = the source's absolute coordinates - the source's original position, i.e. the cumulative displacement of all the source's ancestors, valid for any nesting
+      // depth. When the group is exactly at the canvas origin the offset is 0, the derived coordinates are already absolute, and the translation is skipped.
       const sourceAbsolute = resolveAbsolutePosition(source, nodeMap);
       const offsetX = sourceAbsolute.x - source.position.x;
       const offsetY = sourceAbsolute.y - source.position.y;
@@ -3165,21 +3165,21 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           ...trackEdit(state),
         });
       }
-      // groupNodes 读取最新 store（已平移的绝对坐标），把素材编成根层组并返回组 id。
-      // 它要求 ≥2 个成员：单个素材成不了组、保持独立根节点（已在正确坐标上）即可，
-      // 此时返回 null——与调用方「忽略返回值、素材已连边」的既有约定一致。
+      // groupNodes reads the latest store (already translated absolute coordinates), groups the assets into a root-level group and returns the group id.
+      // It requires >= 2 members: a single asset cannot form a group and stays a standalone root node (already at correct coordinates),
+      // in which case it returns null - consistent with the existing convention that callers "ignore the return value, the asset is already connected".
       return get().groupNodes(
         spawned.map((node) => node.id),
         { label: opts?.label, extraPadding: 20 },
       );
     }
 
-    // 派生位置全部基于源节点的「原始 position」计算（findNodePosition 与各节点的
-    // 手写布局都不解析 parentId）。源在组内时该基准本就是组内相对坐标，因此新节点
-    // 的 position 可直接当作组内相对坐标使用，无需绝对↔相对换算。
+    // Derived positions are all computed from the source node's "original position" (findNodePosition and each node's
+    // hand-written layout do not resolve parentId). When the source is in a group that base is group-relative coordinates, so the new node's
+    // position can be used directly as group-relative coordinates, with no absolute <-> relative conversion.
     const spawnedSet = new Set(spawned.map((node) => node.id));
     const nextNodes = state.nodes.map((node) =>
-      // 不设 extent:'parent'：普通组成员可自由拖动，拖动时实时撑大组框（同 groupNodes）。
+      // No extent:'parent': plain group members can drag freely and the group frame grows live while dragging (same as groupNodes).
       spawnedSet.has(node.id)
         ? { ...node, parentId: groupId, extent: undefined }
         : node,
@@ -3194,7 +3194,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       dragHistorySnapshot: null,
       ...trackEdit(state),
     });
-    // 新成员通常落在组边界外（spawn 习惯放在源节点左/右侧），撑大组以容纳。
+    // New members usually land outside the group bounds (spawn tends to place on the left/right of the source node), so grow the group to contain them.
     get().fitGroupToChildren(groupId);
     return groupId;
   },
@@ -3417,8 +3417,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       }
       return {
         ...node,
-        // width/height 与 style 同步更新：React Flow 渲染时显式 width 优先于
-        // style.width（getNodeInlineStyleDimensions），只改 style 视觉上不生效。
+        // Update width/height in sync with style: when React Flow renders, explicit width takes priority over
+        // style.width (getNodeInlineStyleDimensions); changing only style has no visual effect.
         width: board.groupWidth,
         height: board.groupHeight,
         style: { ...(node.style ?? {}), width: board.groupWidth, height: board.groupHeight },
@@ -3579,7 +3579,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       if (node.id === groupNodeId) {
         return {
           ...node,
-          // 同步显式 width/height（React Flow 渲染优先级高于 style，见 arrange 注释）。
+          // Sync explicit width/height (React Flow's render priority is higher than style, see the arrange comment).
           width: board.groupWidth,
           height: board.groupHeight,
           style: { ...(node.style ?? {}), width: board.groupWidth, height: board.groupHeight },
@@ -3642,7 +3642,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           ...node,
           // Plain group again → draggable anywhere, no header-only handle.
           dragHandle: undefined,
-          // 同步显式 width/height（React Flow 渲染优先级高于 style）。
+          // Sync explicit width/height (React Flow's render priority is higher than style).
           width: groupWidth,
           height: groupHeight,
           style: { ...(node.style ?? {}), width: groupWidth, height: groupHeight },
@@ -3687,10 +3687,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const groupStyle = group.style;
     const groupWidth = group.width;
     const groupHeight = group.height;
-    // 主线投影组也要贴合：组框由后端按估算尺寸算出，成员的实际渲染尺寸（图片加载
-    // 后、文本换行后）只有前端知道。不贴合的话成员带 extent:"parent" 会被 React
-    // Flow 夹回小框里叠成一堆。这里只放开「几何贴合」——拓扑保护（不能解组）仍由
-    // ungroupNode 拦住。
+    // Mainline projection groups must fit too: the group frame is computed by the backend from estimated sizes, while the members' actual rendered sizes (after images
+    // load, after text wraps) are only known to the frontend. Without fitting, members with extent:"parent" would be clamped by React
+    // Flow into the small frame and pile up. Only "geometric fitting" is opened up here - topology protection (cannot ungroup) is still blocked by
+    // ungroupNode.
     if (isStoryboardGroupNode(group)) {
       return;
     }
@@ -3722,9 +3722,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     // Push members inward only when they spill past the top/left edge.
     const shiftX = Math.max(0, Math.round(SIDE_PAD - minX));
     const shiftY = Math.max(0, Math.round(TOP_PAD - minY));
-    // 手动缩放走 React Flow 的 dimensions change，只写显式 width/height 不写
-    // style；后端下发的投影组反过来只带 style。两边都读，否则 grow-only 会把另一
-    // 侧当成 0、把用户刚拉大的组又缩回内容尺寸。
+    // Manual resizing goes through React Flow's dimensions change, writing only explicit width/height and not
+    // style; projection groups pushed by the backend carry only style conversely. Read both, otherwise grow-only would treat the other
+    // side as 0 and shrink the group the user just enlarged back to the content size.
     const curWidth = Math.max(
       typeof groupStyle?.width === 'number' ? groupStyle.width : 0,
       typeof groupWidth === 'number' ? groupWidth : 0
@@ -3749,8 +3749,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         return {
           ...node,
           position: { x: node.position.x - shiftX, y: node.position.y - shiftY },
-          // width/height 必须与 style 同步：React Flow 渲染时显式 width 优先于
-          // style.width（getNodeInlineStyleDimensions），只改 style 视觉上不生效。
+          // width/height must be in sync with style: when React Flow renders, explicit width takes priority over
+          // style.width (getNodeInlineStyleDimensions); changing only style has no visual effect.
           width: nextWidth,
           height: nextHeight,
           style: { ...(node.style ?? {}), width: nextWidth, height: nextHeight },
@@ -3773,20 +3773,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   arrangeGroupChildren: (groupNodeId, mode) => {
     const state = get();
     const group = state.nodes.find((node) => node.id === groupNodeId);
-    // 主线投影组同样可以整理排列：「主线投影 · 锁定」锁的是拓扑（解组 / 删成员），
-    // 排列只搬成员位置、不改归属，而后端算出来的布局不合意时用户需要有补救手段。
-    // 分镜板的位置由缩略图板自己算，成员还是隐藏的，仍然不参与。
+    // Mainline projection groups can also be arranged: "Mainline projection · locked" locks the topology (ungroup / delete members),
+    // while arranging only moves member positions and does not change membership, and the user needs a remedy when the backend-computed layout is unsatisfactory.
+    // The position of the storyboard board is computed by the thumbnail board itself, and its members are still hidden, so it still does not take part.
     if (!isGroupNode(group) || isStoryboardGroupNode(group)) {
       return;
     }
     const children = state.nodes.filter((node) => node.parentId === groupNodeId);
     if (children.length < 2) return;
 
-    // 与 groupNodes / fitGroupToChildren 一致的内边距（TOP_PAD 给浮动标题留位）。
+    // The same padding as groupNodes / fitGroupToChildren (TOP_PAD leaves room for the floating title).
     const SIDE_PAD = 20;
     const TOP_PAD = 34;
     const GAP = 32;
-    // 按当前位置（行优先）确定排列顺序，保持用户的相对先后直觉。
+    // Determine the arrangement order by current position (row-major), preserving the user's intuition of relative order.
     const ordered = children
       .map((node) => ({ node, size: getNodeSize(node) }))
       .sort(
@@ -3809,8 +3809,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         cursorY += item.size.height + GAP;
       }
     } else {
-      // 与 Hermes 的 grid 语义保持一致：按节点数量取接近平方的列数，再按行优先
-      // 放入等宽、等高单元格。连线只描述工作流关系，不应把「宫格」退化成单行。
+      // Consistent with Hermes's grid semantics: take a near-square column count by node count, then place into equal-width,
+      // equal-height cells row-major. Edges only describe workflow relations and should not degrade the "grid" to a single row.
       const columns = Math.max(1, Math.ceil(Math.sqrt(ordered.length)));
       const cellWidth = Math.max(...ordered.map((item) => item.size.width)) + GAP;
       const cellHeight = Math.max(...ordered.map((item) => item.size.height)) + GAP;
@@ -3822,7 +3822,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       });
     }
 
-    // 收紧组框到刚好包住排列后的子节点。
+    // Tighten the group frame to just wrap the arranged children.
     let maxX = 0;
     let maxY = 0;
     for (const item of ordered) {
@@ -3838,7 +3838,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       if (node.id === groupNodeId) {
         return {
           ...node,
-          // 同步显式 width/height（React Flow 渲染优先级高于 style，见 fit 注释）。
+          // Sync explicit width/height (React Flow's render priority is higher than style, see the fit comment).
           width: nextWidth,
           height: nextHeight,
           style: { ...(node.style ?? {}), width: nextWidth, height: nextHeight },
@@ -3853,8 +3853,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
     set({
       nodes: nextNodes,
-      // 用户从工具栏主动触发的重排会永久移动子节点（不像 fitGroupToChildren 那样可
-      // 重新推导），必须入 undo 历史，否则排乱后 ⌘Z 无法还原。
+      // A re-arrangement actively triggered by the user from the toolbar permanently moves child nodes (unlike fitGroupToChildren, it cannot be
+      // re-derived), so it must enter the undo history, otherwise Cmd+Z cannot restore after a messy arrangement.
       history: {
         past: pushSnapshot(state.history.past, createSnapshot(state.nodes, state.edges)),
         future: [],
@@ -3972,7 +3972,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   requestFocusNode: (nodeId) => {
-    // 用「重新指向」的策略而不是去重：哪怕是同一个 id，连续点也会触发新的聚焦。
+    // Use a "re-point" strategy rather than dedup: even for the same id, repeated clicks trigger a new focus.
     set({ pendingFocusNodeId: nodeId });
   },
 
@@ -4057,8 +4057,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   clearCanvas: () => {
-    // 换画布/清空后，上一份画布留下的风格对账记账必须作废，否则重新 hydrate
-    // 出来的图片节点会被当成「同一个节点接着算」，该补建的判成用户删了节点。
+    // After switching canvases/clearing, the style reconciliation bookkeeping left by the previous canvas must be invalidated, otherwise re-hydrated
+    // image nodes would be treated as "the same node continuing", and ones that should be re-created would be judged as nodes the user deleted.
     resetStyleNodeSyncStates();
     set((state) => {
       if (state.nodes.length === 0 && state.edges.length === 0) {

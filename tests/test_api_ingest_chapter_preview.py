@@ -17,15 +17,15 @@ from novelvideo.api.schemas import IngestStart
 
 pytestmark = pytest.mark.m03
 
-NOVEL_TEXT = "第一章 启程\n秦王入宫。\n第二章 风起\n宫门起风。"
+NOVEL_TEXT = "Chapter 1 Departure\nThe King of Qin enters the palace.\nChapter 2 Rising Wind\nWind rises at the palace gate."
 FANTASY_META_TEXT = (
-    "第一章 穿书\n"
-    "苏糖睁开眼，发现自己站在陌生宫殿里。\n"
-    "苏糖 OS：原著第九章，北线兵假队遭遇伏击，损兵三十。\n"
-    "他低声说：我记得第七章不是这样写的。\n"
-    "第二章 破局\n"
-    "苏糖决定亲自改写命运。\n"
-    "旁白：这一幕其实发生在原书第十八章之前。\n"
+    "Chapter 1 Transmigration\n"
+    "Su Tang opens her eyes and finds herself in an unfamiliar palace.\n"
+    "Su Tang OS: In the original book, chapter 9, the northern fake squad is ambushed, losing thirty.\n"
+    "He says softly: I remember chapter 7 was not written like this.\n"
+    "Chapter 2 Breaking the Deadlock\n"
+    "Su Tang decides to rewrite her fate herself.\n"
+    "Narrator: This scene actually happens before chapter 18 of the original book.\n"
 )
 
 
@@ -111,8 +111,8 @@ def test_chapter_preview_ignores_embedded_chapter_references():
 
     assert data["count"] == 2
     assert [chapter["number"] for chapter in data["chapters"]] == [1, 2]
-    assert "原著第九章" in data["chapters"][0]["content"]
-    assert "原书第十八章" in data["chapters"][1]["content"]
+    assert "In the original book, chapter 9" in data["chapters"][0]["content"]
+    assert "chapter 18 of the original book" in data["chapters"][1]["content"]
 
 
 def test_chapter_preview_does_not_split_episode_end_sentence():
@@ -120,15 +120,15 @@ def test_chapter_preview_does_not_split_episode_end_sentence():
 
     text = "\n".join(
         [
-            "# 第一集",
-            "开场就是高潮。",
-            "第一集结束。",
-            "第一集 结束。",
-            "第一集 已经结束。",
-            "第一集 至此结束。",
+            "# Episode 1",
+            "The opening is the climax.",
+            "Episode 1 ends.",
+            "Episode 1 End.",
+            "Episode 1 has already ended.",
+            "Episode 1 ends here.",
             "---",
-            "# 第二集",
-            "林远回家。",
+            "# Episode 2",
+            "Lin Yuan goes home.",
         ]
     )
 
@@ -136,9 +136,9 @@ def test_chapter_preview_does_not_split_episode_end_sentence():
 
     assert data["count"] == 2
     assert [chapter["number"] for chapter in data["chapters"]] == [1, 2]
-    assert "第一集结束。" in data["chapters"][0]["content"]
-    assert "第一集 已经结束。" in data["chapters"][0]["content"]
-    assert "第一集 至此结束。" in data["chapters"][0]["content"]
+    assert "Episode 1 ends." in data["chapters"][0]["content"]
+    assert "Episode 1 has already ended." in data["chapters"][0]["content"]
+    assert "Episode 1 ends here." in data["chapters"][0]["content"]
 
 
 def test_chapter_preview_does_not_split_english_episode_end_sentence():
@@ -191,14 +191,14 @@ def test_chapter_preview_keeps_valid_titles_after_marker():
 
     text = "\n".join(
         [
-            "第一集 完美计划",
-            "林远开始布局。",
-            "第二集 完整线索",
-            "线索浮出水面。",
-            "第三集 谁是凶手？",
-            "疑问浮出水面。",
-            "第四集 他回来了！",
-            "门被推开。",
+            "Episode 1 The Perfect Plan",
+            "Lin Yuan begins to plan.",
+            "Episode 2 The Complete Clue",
+            "The clue surfaces.",
+            "Episode 3 Who Is the Killer?",
+            "The question surfaces.",
+            "Episode 4 He's Back!",
+            "The door is pushed open.",
             "Episode 5 the reset",
             "The reset begins.",
             "Chapter6 What Happens Next?",
@@ -212,9 +212,9 @@ def test_chapter_preview_keeps_valid_titles_after_marker():
 
     assert data["count"] == 7
     assert [chapter["number"] for chapter in data["chapters"]] == [1, 2, 3, 4, 5, 6, 7]
-    assert data["chapters"][0]["title"] == "第一集 完美计划"
-    assert data["chapters"][2]["title"] == "第三集 谁是凶手？"
-    assert data["chapters"][3]["title"] == "第四集 他回来了！"
+    assert data["chapters"][0]["title"] == "Episode 1 The Perfect Plan"
+    assert data["chapters"][2]["title"] == "Episode 3 Who Is the Killer?"
+    assert data["chapters"][3]["title"] == "Episode 4 He's Back!"
     assert data["chapters"][4]["title"] == "Episode 5 the reset"
     assert data["chapters"][5]["title"] == "Chapter6 What Happens Next?"
     assert data["chapters"][6]["title"] == "Chapter7 The Return!"
@@ -225,17 +225,17 @@ def test_chapter_preview_includes_scene_blocks_within_each_episode():
 
     text = "\n".join(
         [
-            "第一集 初遇",
-            "1-1 雨巷 夜 外",
-            "人物：林昭、苏然",
-            "△ 林昭停在屋檐下。",
-            "1-2 茶馆 日 内",
-            "人物：苏然",
-            "△ 苏然推门而入。",
-            "第二集 重逢",
-            "2-1 码头 黄昏 外",
-            "人物：林昭",
-            "△ 渡轮靠岸。",
+            "Episode 1: First Meeting",
+            "1-1 Rainy Alley NIGHT EXT",
+            "Characters: Lin Zhao, Su Ran",
+            "△ Lin Zhao stops under the eaves.",
+            "1-2 Tea House DAY INT",
+            "Characters: Su Ran",
+            "△ Su Ran pushes the door open.",
+            "Episode 2: Reunion",
+            "2-1 Pier DUSK EXT",
+            "Characters: Lin Zhao",
+            "△ The ferry docks.",
         ]
     )
 
@@ -246,12 +246,12 @@ def test_chapter_preview_includes_scene_blocks_within_each_episode():
     second_scenes = data["chapters"][1]["scene_blocks"]
     assert [scene["scene_no"] for scene in first_scenes] == ["1", "2"]
     assert first_scenes[0] == {
-        "header": "1-1 雨巷 夜 外",
+        "header": "1-1 Rainy Alley NIGHT EXT",
         "scene_no": "1",
-        "location": "雨巷",
-        "time_of_day": "夜",
-        "interior_exterior": "外",
-        "characters": ["林昭", "苏然"],
+        "location": "Rainy Alley",
+        "time_of_day": "night",
+        "interior_exterior": "ext",
+        "characters": ["Lin Zhao", "Su Ran"],
         "content_start_line": 3,
         "content_end_line": 4,
     }
@@ -260,9 +260,9 @@ def test_chapter_preview_includes_scene_blocks_within_each_episode():
             first_scenes[0]["content_start_line"]
             : first_scenes[0]["content_end_line"]
         ]
-        == ["△ 林昭停在屋檐下。"]
+        == ["△ Lin Zhao stops under the eaves."]
     )
-    assert [scene["location"] for scene in second_scenes] == ["码头"]
+    assert [scene["location"] for scene in second_scenes] == ["Pier"]
 
 
 def test_chapter_preview_skips_scene_parsing_unless_requested(monkeypatch):
@@ -274,7 +274,7 @@ def test_chapter_preview_skips_scene_parsing_unless_requested(monkeypatch):
         lambda _content: pytest.fail("scene parsing should be skipped"),
     )
 
-    data = chapter_preview.build_chapter_preview("第一章 初遇\n正文")
+    data = chapter_preview.build_chapter_preview("Chapter 1 First Meeting\nbody text")
 
     assert "scene_blocks" not in data["chapters"][0]
 
@@ -284,11 +284,11 @@ def test_chapter_preview_keeps_text_before_first_scene_header():
 
     text = "\n".join(
         [
-            "第一集 初遇",
-            "这段说明还没有归入任何场景。",
-            "1-1 雨巷 夜 外",
-            "人物：林昭",
-            "△ 林昭停在屋檐下。",
+            "Episode 1: First Meeting",
+            "This note is not yet assigned to any scene.",
+            "1-1 Rainy Alley NIGHT EXT",
+            "Characters: Lin Zhao",
+            "△ Lin Zhao stops under the eaves.",
         ]
     )
 
@@ -298,7 +298,7 @@ def test_chapter_preview_keeps_text_before_first_scene_header():
     start = chapter["unparsed_content_start_line"]
     end = chapter["unparsed_content_end_line"]
     assert _preview_lines(chapter["content"])[start:end] == [
-        "这段说明还没有归入任何场景。"
+        "This note is not yet assigned to any scene."
     ]
 
 
@@ -307,12 +307,12 @@ def test_chapter_preview_scene_ranges_keep_blank_lines():
 
     text = "\n".join(
         [
-            "第一集 初遇",
-            "1-1 雨巷 夜 外",
-            "人物：林昭",
-            "△ 林昭停在屋檐下。",
+            "Episode 1: First Meeting",
+            "1-1 Rainy Alley NIGHT EXT",
+            "Characters: Lin Zhao",
+            "△ Lin Zhao stops under the eaves.",
             "",
-            "林昭：雨还没有停。",
+            "Lin Zhao: The rain has not stopped.",
         ]
     )
 
@@ -322,7 +322,7 @@ def test_chapter_preview_scene_ranges_keep_blank_lines():
     scene = chapter["scene_blocks"][0]
     assert _preview_lines(chapter["content"])[
         scene["content_start_line"] : scene["content_end_line"]
-    ] == ["△ 林昭停在屋檐下。", "", "林昭：雨还没有停。"]
+    ] == ["△ Lin Zhao stops under the eaves.", "", "Lin Zhao: The rain has not stopped."]
 
 
 @pytest.mark.asyncio
@@ -352,8 +352,8 @@ async def test_upload_novel_returns_nicegui_chapter_preview(tmp_path, monkeypatc
     assert data["billable_chars"] == len("".join(NOVEL_TEXT.split()))
     assert data["count"] == 2
     assert data["chapters"][0]["number"] == 1
-    assert data["chapters"][0]["title"] == "第一章 启程"
-    assert data["chapters"][0]["content"].startswith("第一章")
+    assert data["chapters"][0]["title"] == "Chapter 1 Departure"
+    assert data["chapters"][0]["content"].startswith("Chapter")
     assert data["chapters"][0]["word_count"] == len(data["chapters"][0]["content"])
     uploads_dir = tmp_path / "uploads"
     assert (uploads_dir / "novel.txt").read_bytes() == raw
@@ -564,7 +564,7 @@ async def test_upload_novel_preserves_existing_file_mode(tmp_path, monkeypatch):
     uploads_dir = tmp_path / "uploads"
     uploads_dir.mkdir()
     existing = uploads_dir / "novel.txt"
-    existing.write_text("第一章 旧内容\n旧内容。", encoding="utf-8")
+    existing.write_text("Chapter 1 Old content\nOld content.", encoding="utf-8")
     existing.chmod(0o640)
     monkeypatch.setattr(
         ingest,
@@ -594,7 +594,7 @@ async def test_upload_narrated_novel_skips_scene_preview(tmp_path, monkeypatch):
         _project_scope_resolver(tmp_path),
     )
     raw = (
-        "第一章 初遇\n1-1 雨巷 夜 外\n人物：林昭\n△ 林昭停在屋檐下。"
+        "Chapter 1 First Meeting\n1-1 Rainy Alley NIGHT EXT\nCharacters: Lin Zhao\n△ Lin Zhao stops under the eaves."
     ).encode()
 
     response = await ingest.upload_novel(
@@ -618,7 +618,7 @@ async def test_upload_novel_returns_chapter_preview_for_docx(tmp_path, monkeypat
         _project_scope_resolver(tmp_path),
     )
 
-    raw = _docx_bytes(["第一章 启程", "秦王入宫。", "第二章 风起", "宫门起风。"])
+    raw = _docx_bytes(["Chapter 1 Departure", "The King of Qin enters the palace.", "Chapter 2 Rising Wind", "Wind rises at the palace gate."])
     upload = UploadFile(file=io.BytesIO(raw), filename="novel.docx")
 
     response = await ingest.upload_novel(
@@ -631,9 +631,9 @@ async def test_upload_novel_returns_chapter_preview_for_docx(tmp_path, monkeypat
     data = response["data"]
     assert data["filename"] == "novel.docx"
     assert data["count"] == 2
-    assert data["chapters"][0]["title"] == "第一章 启程"
-    assert data["chapters"][0]["content"] == "第一章 启程\n\n秦王入宫。\n"
-    assert data["chapters"][1]["content"].startswith("第二章 风起")
+    assert data["chapters"][0]["title"] == "Chapter 1 Departure"
+    assert data["chapters"][0]["content"] == "Chapter 1 Departure\n\nThe King of Qin enters the palace.\n"
+    assert data["chapters"][1]["content"].startswith("Chapter 2 Rising Wind")
 
 
 @pytest.mark.asyncio
@@ -655,7 +655,7 @@ async def test_upload_novel_rejects_unsupported_extension(tmp_path, monkeypatch)
     )
 
     assert response["ok"] is False
-    assert "不支持" in response["error"]
+    assert "Unsupported" in response["error"]
     assert not (tmp_path / "uploads" / "novel.pdf").exists()
 
 
@@ -679,7 +679,7 @@ async def test_upload_novel_rejects_preview_decode_failure(tmp_path, monkeypatch
     )
 
     assert response["ok"] is False
-    assert "解析" in response["error"]
+    assert "parse" in response["error"]
 
 
 @pytest.mark.asyncio
@@ -727,7 +727,7 @@ async def test_upload_novel_text_too_large_preserves_existing_same_name(
         _project_scope_resolver(tmp_path),
     )
 
-    replacement = "第一章 超长正文\n" + "字" * 100_001
+    replacement = "Chapter 1\n" + "x" * 100_000
     upload = UploadFile(
         file=io.BytesIO(replacement.encode("utf-8")),
         filename="novel.txt",
@@ -745,8 +745,8 @@ async def test_upload_novel_text_too_large_preserves_existing_same_name(
         "limit_chars": 100_000,
         "actual_chars": 100_008,
     }
-    assert "100,008 字" in response["error"]
-    assert "100,000 字" in response["error"]
+    assert "100,008 characters" in response["error"]
+    assert "100,000 characters" in response["error"]
     assert existing.read_text(encoding="utf-8") == NOVEL_TEXT
     assert list((uploads_dir / ".staging").glob("upload-*")) == []
 
@@ -779,7 +779,7 @@ async def test_upload_novel_file_too_large_preserves_existing_same_name(
 
     assert response == {
         "ok": False,
-        "error": "文件超过 512KB 上限，请压缩文件或拆分正文后重新上传。",
+        "error": "The file exceeds the 512KB limit. Compress the file or split the body text and upload again.",
         "error_type": "file_too_large",
         "data": {"limit_bytes": 512 * 1024},
     }
@@ -806,7 +806,7 @@ async def test_upload_novel_rejects_empty_preview(tmp_path, monkeypatch):
     )
 
     assert response["ok"] is False
-    assert "章节" in response["error"]
+    assert "chapter" in response["error"]
 
 
 @pytest.mark.asyncio
@@ -829,7 +829,7 @@ async def test_start_ingest_rejects_unsupported_extension_before_ray(tmp_path, m
     )
 
     assert response["ok"] is False
-    assert "不支持" in response["error"]
+    assert "Unsupported" in response["error"]
 
 
 @pytest.mark.asyncio
@@ -840,7 +840,7 @@ async def test_start_ingest_rejects_existing_file_over_character_limit(
 
     uploads_dir = tmp_path / "uploads"
     uploads_dir.mkdir()
-    oversized_text = "第一章\n" + "字" * 100_001
+    oversized_text = "Chapter\n" + "x" * 99_997
     (uploads_dir / "novel.txt").write_text(oversized_text, encoding="utf-8")
     monkeypatch.setattr(
         ingest,
@@ -903,7 +903,7 @@ async def test_start_ingest_rejects_existing_file_over_size_limit_before_parse(
 
     assert response == {
         "ok": False,
-        "error": "文件超过 1MB 上限，请压缩文件或拆分正文后重新上传。",
+        "error": "The file exceeds the 1MB limit. Compress the file or split the body text and upload again.",
         "error_type": "file_too_large",
         "data": {"limit_bytes": 1024 * 1024},
     }
@@ -934,8 +934,8 @@ async def test_detect_chapters_returns_content_and_total_chars(tmp_path, monkeyp
     assert data["total_chars"] == len(NOVEL_TEXT)
     assert data["count"] == 2
     assert data["chapters"][1]["number"] == 2
-    assert data["chapters"][1]["title"] == "第二章 风起"
-    assert data["chapters"][1]["content"].startswith("第二章")
+    assert data["chapters"][1]["title"] == "Chapter 2 Rising Wind"
+    assert data["chapters"][1]["content"].startswith("Chapter")
     assert data["chapters"][1]["word_count"] == len(data["chapters"][1]["content"])
     assert data["source_filename"] == "novel.txt"
 
@@ -946,7 +946,7 @@ async def test_detect_chapters_skips_scene_preview_for_narrated_project(
 ):
     from novelvideo.api.routes import episodes
 
-    screenplay = "第一章 初遇\n1-1 雨巷 夜 外\n人物：林昭\n△ 林昭停在屋檐下。"
+    screenplay = "Chapter 1 First Meeting\n1-1 Rainy Alley NIGHT EXT\nCharacters: Lin Zhao\n△ Lin Zhao stops under the eaves."
     monkeypatch.setattr(
         episodes,
         "resolve_project_scope",
@@ -978,7 +978,7 @@ async def test_detect_chapters_query_template_overrides_saved_project_type(
 ):
     from novelvideo.api.routes import episodes
 
-    screenplay = "第一章 初遇\n1-1 雨巷 夜 外\n人物：林昭\n△ 林昭停在屋檐下。"
+    screenplay = "Chapter 1 First Meeting\n1-1 Rainy Alley NIGHT EXT\nCharacters: Lin Zhao\n△ Lin Zhao stops under the eaves."
     monkeypatch.setattr(
         episodes,
         "resolve_project_scope",
@@ -1002,7 +1002,7 @@ async def test_detect_chapters_query_template_overrides_saved_project_type(
     )
 
     assert response["ok"] is True
-    assert response["data"]["chapters"][0]["scene_blocks"][0]["location"] == "雨巷"
+    assert response["data"]["chapters"][0]["scene_blocks"][0]["location"] == "Rainy Alley"
 
 
 @pytest.mark.asyncio

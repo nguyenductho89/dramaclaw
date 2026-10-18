@@ -35,7 +35,7 @@ export interface Episode {
   identity_default_map?: Record<string, string>;
   scene_menu?: EpisodeSceneMenuItem[];
   prop_menu?: EpisodePropMenuItem[];
-  /** 该集已拆出的镜头数，由列表接口一次分组查询带出。未拆镜为 0。 */
+  /** Number of beats already split out for this episode, returned by a single grouped query in the list endpoint. 0 when not yet split. */
   beat_count?: number;
 }
 
@@ -96,7 +96,7 @@ export interface Beat {
   frame_url?: string | null;
   video_url?: string | null;
   audio_url?: string | null;
-  /** 实测音频时长（秒）；视频时长须 >= 此值，用作时长控件默认值/下限。 */
+  /** Measured audio duration (seconds); the video duration must be >= this value, used as the default/lower bound of the duration control. */
   audio_duration_seconds?: number | null;
 }
 

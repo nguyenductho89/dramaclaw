@@ -15,16 +15,16 @@ from check_ce_port_closure import _classify  # noqa: E402
 
 
 def test_ce_port_closure_passes() -> None:
-    """纯 CE 模式下 11 个端口须全部由 novelvideo.ports.local.* 满足、无 EE 依赖。
-    用子进程跑，隔离 ensure_bootstrap() 对模块级 _BOOTSTRAPPED/_PORTS 的改动，
-    避免污染同进程内其他测试。CI 同步守门见 .github/workflows/ci.yml。"""
+    """In pure CE mode all 11 ports must be satisfied by novelvideo.ports.local.* with no EE dependency.
+    Run in a subprocess to isolate ensure_bootstrap()'s changes to the module-level _BOOTSTRAPPED/_PORTS
+    so other tests in the same process are not polluted. The CI gate is in .github/workflows/ci.yml."""
     proc = subprocess.run(
         [sys.executable, str(SCRIPT)],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
     )
-    assert proc.returncode == 0, f"CE 端口闭合失败：\n{proc.stdout}\n{proc.stderr}"
+    assert proc.returncode == 0, f"CE port closure failed:\n{proc.stdout}\n{proc.stderr}"
 
 
 @pytest.mark.parametrize(
@@ -33,7 +33,7 @@ def test_ce_port_closure_passes() -> None:
         "novelvideo_ee.auth_service",
         "supertale_admin.main",
         "novelvideo.control_plane.auth",
-        "novelvideo.services.foo",  # 非 local 前缀也算违规
+        "novelvideo.services.foo",  # a non-local prefix also counts as a violation
     ],
 )
 def test_classify_flags_non_ce_impl(module: str) -> None:

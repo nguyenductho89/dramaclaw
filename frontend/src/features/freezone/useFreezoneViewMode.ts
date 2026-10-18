@@ -2,12 +2,12 @@
 // Copyright (c) 2026 ClaymoreLab
 import { useCallback, useState } from 'react';
 
-/** 画布视图模式：工作流（React Flow 画布）或 故事板（AssetBoard 三栏投影）。 */
+/** Canvas view mode: Workflow (React Flow canvas) or Storyboard (AssetBoard three-column projection). */
 export type FreezoneViewMode = 'workflow' | 'board';
 
-// 沿用 lib/url-params.ts 的 "supertale.freezone." localStorage 命名空间。
-// 视图模式刻意不进 URL（对标 liblib：asset_board_mode 存 localStorage），
-// 避免触碰 tanstack 路由节流队列（见 no-raw-window-history 约定）。
+// Follows the "supertale.freezone." localStorage namespace of lib/url-params.ts.
+// The view mode deliberately stays out of the URL (like liblib: asset_board_mode lives in localStorage),
+// to avoid touching the tanstack router throttle queue (see the no-raw-window-history convention).
 export const FREEZONE_VIEW_MODE_KEY = 'supertale.freezone.viewMode';
 
 export function readStoredViewMode(): FreezoneViewMode {
@@ -28,9 +28,9 @@ export function writeStoredViewMode(mode: FreezoneViewMode): void {
 }
 
 /**
- * 画布视图模式 state + localStorage 写穿。
- * 单调用点约定：目前仅 FreezoneShell 使用；若第二个组件需要读写此状态，
- * 请升级为共享 store（参照 edgeVisibilityStore 的 Zustand 模式）避免多副本失步。
+ * Canvas view mode state + localStorage write-through.
+ * Single call site convention: currently only FreezoneShell uses it; if a second component needs to read/write this state,
+ * upgrade it to a shared store (following the Zustand pattern of edgeVisibilityStore) to avoid copies drifting out of sync.
  */
 export function useFreezoneViewMode(): [FreezoneViewMode, (mode: FreezoneViewMode) => void] {
   const [mode, setMode] = useState<FreezoneViewMode>(readStoredViewMode);

@@ -401,13 +401,13 @@ def execute_sketch_edit_batches(
     episode_grids_dir.mkdir(parents=True, exist_ok=True)
     edit_dir.mkdir(parents=True, exist_ok=True)
 
-    _notify(progress_callback, 0.03, "校验 labels.jsonl")
+    _notify(progress_callback, 0.03, "Validating labels.jsonl")
     try:
         validate_labels_jsonl(labels_path)
     except LabelsValidationError as exc:
         raise ValueError(str(exc)) from exc
 
-    _notify(progress_callback, 0.05, "读取 labels.jsonl")
+    _notify(progress_callback, 0.05, "Reading labels.jsonl")
     rows = _read_jsonl(labels_path)
     revise_rows = [
         row for row in rows
@@ -416,7 +416,7 @@ def execute_sketch_edit_batches(
     if not revise_rows:
         raise ValueError(f"No revise rows found in {labels_path}")
     sketch_aspect_ratio = _resolve_sketch_aspect_ratio(project_dir, episode_num, revise_rows)
-    _notify(progress_callback, 0.12, "拆分 edit batches")
+    _notify(progress_callback, 0.12, "Splitting edit batches")
     batches: list[dict[str, Any]] = []
     for batch in _chunk_revise_rows(revise_rows, sketch_aspect_ratio):
         batches.append(batch)
@@ -604,7 +604,7 @@ def execute_sketch_edit_batches(
         rel_cell_paths = [
             _rel_posix(str(cell_path), project_dir) for cell_path in cell_paths_abs
         ]
-        batch_logs.append(f"完成 batch {batch_index}: {rel_path}")
+        batch_logs.append(f"Completed batch {batch_index}: {rel_path}")
         _log(log_callback, batch_logs[-1])
 
         # Stage 2.5: write per-beat output artifact onto each trace row.
@@ -679,7 +679,7 @@ def execute_sketch_edit_batches(
         )
         updated_beats.extend(beat_numbers)
 
-    _notify(progress_callback, 0.94, "写入 edit 执行摘要")
+    _notify(progress_callback, 0.94, "Writing edit execution summary")
     summary = {
         "project_dir": str(project_dir),
         "episode_num": episode_num,
@@ -697,5 +697,5 @@ def execute_sketch_edit_batches(
     summary_path = reports_dir / summary_name
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     summary["summary_json"] = str(summary_path)
-    _notify(progress_callback, 1.0, "完成")
+    _notify(progress_callback, 1.0, "Done")
     return summary

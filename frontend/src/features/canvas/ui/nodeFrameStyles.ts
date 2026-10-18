@@ -19,15 +19,15 @@ export const CANVAS_NODE_INPUT_PLACEHOLDER_CLASS =
 
 // Chrome for a node's floating operation area — the prompt / controls panel that
 // floats below (or, when expanded, replaces) a selected node. Single source of
-// truth so every node's 操作区 shares the text node's neutral surface + border
+// truth so every node's operation area shares the text node's neutral surface + border
 // (CANVAS_NODE_INPUT_SURFACE_CLASS + CANVAS_NODE_INPUT_FRAME_CLASS) instead of the
 // bluish `bg-surface-dark/95`. Already includes the `border` width/style keyword,
 // so apply it as a drop-in replacement for `border ... bg-surface-dark/95 shadow-*`.
 export const CANVAS_NODE_OPS_PANEL_CLASS = `canvas-node-transient-ui border ${CANVAS_NODE_INPUT_SURFACE_CLASS} ${CANVAS_NODE_INPUT_FRAME_CLASS}`;
 export const CANVAS_NODE_TOOLBAR_SURFACE_CLASS = CANVAS_NODE_OPS_PANEL_CLASS;
-// 圆角 12px 而不是 rounded-full：这些工具条有 36~40px 高，全胶囊的两头圆得过分
-// （用户反馈「圆角太大了」，裁剪 / 旋转 / 视频详情三处同一个观感问题）。
-// 12px 落在 --radius-sm 上，读起来是「圆角矩形」而不是药丸。
+// Corner radius 12px rather than rounded-full: these toolbars are 36~40px tall, and a full pill's rounded ends are overdone
+// (user feedback "the corners are too round", the same look problem in crop / rotate / video detail).
+// 12px lands on --radius-sm, reading as a "rounded rectangle" rather than a pill.
 export const CANVAS_NODE_TOOLBAR_PILL_CLASS =
   `rounded-[12px] ${CANVAS_NODE_TOOLBAR_SURFACE_CLASS} p-1.5`;
 export const CANVAS_NODE_TOOLBAR_CARD_CLASS =

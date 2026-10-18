@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 真正进入某一集时，只能请求当前这一集的 beats。
+ * When really entering one episode, only the beats of the current episode may be requested.
  *
- * ``/episodes/{n}/beats`` 是全项目最贵的路由：开库、给每个 beat 拼四个资产 URL、
- * 对每条音频 fork 一次 ffprobe。分集列表已经不碰它了（见
- * ``episodes-list-beats-contract.test.tsx``），剩下的合同是——点进第 3 集就只拉第
- * 3 集，不能顺手把别的集也带出来。
+ * `/episodes/{n}/beats` is the most expensive route in the whole project: it opens the DB, builds four asset URLs for every beat,
+ * and forks an ffprobe for every audio. The episode list no longer touches it (see
+ * `episodes-list-beats-contract.test.tsx`), so what remains of the contract is - clicking into episode 3 pulls only
+ * episode 3, and must not take other episodes along.
  *
- * 和另外两个合同测试同一个理由渲染整页：多拉一集从来不体现在渲染结果里，它体现在
- * "页面组合层碰巧调了哪些 hook"上。
+ * Renders the whole page for the same reason as the other two contract tests: pulling one more episode never shows up in the rendered result, it shows up in
+ * "which hooks the page composition layer happens to call".
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -63,13 +63,13 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({ lng: "en", fallbackLng: "en", resources: {} });
-  // jsdom 不实现这几个，缺了组件会直接抛掉。
+  // jsdom does not implement these; the component throws outright without them.
   Element.prototype.scrollTo = () => {};
   Element.prototype.scrollIntoView = () => {};
-  // ``BeatCardGrid`` 经 ``useResponsiveColumns`` 用到；jsdom 没有实现，构造函数会抛在
-  // effect 里，整棵子树被 React 卸载，页面一片空白——请求断言反而会因为"什么都没发"
-  // 而空过。空壳够用：该 hook 在建 observer 之前已经先 ``measure()`` 过一次，jsdom 里
-  // 宽度恒为 0，列数取哪个分支都不影响这里要断言的请求面。
+  // `BeatCardGrid` uses it via `useResponsiveColumns`; jsdom does not implement it, and the constructor throws inside an
+  // effect, the whole subtree is unmounted by React and the page is blank - the request assertions then pass vacuously
+  // because "nothing was sent". A stub is enough: the hook already called `measure()` once before building the observer, and in jsdom the
+  // width is always 0, so whichever branch the column count takes does not affect the request surface asserted here.
   globalThis.ResizeObserver ??= class {
     observe() {}
     unobserve() {}
@@ -99,19 +99,19 @@ function recordRequests(): string[] {
       return HttpResponse.json({ ok: true, data: [] });
     }),
   );
-  // 分两次 use：``server.use`` 是 unshift，后注册的排在前面，本集 beats 得压过上面
-  // 那条 catch-all，页面才有东西渲染，断言才不会空过。
+  // Registered in two use calls: `server.use` is an unshift, so what is registered later comes first, and this episode's beats must override the
+  // catch-all above so the page has something to render and the assertions do not pass vacuously.
   server.use(
     http.get("http://localhost:3000/api/v1/projects/demo/episodes/3/beats", ({ request }) => {
-      // 专用 handler 不走 catch-all，得自己记一笔，否则这条请求不进 ``seen``。
+      // A dedicated handler does not go through the catch-all, so it has to record itself, otherwise this request does not reach `seen`.
       seen.push(new URL(request.url).pathname);
       return HttpResponse.json({
         ok: true,
-        // 按 ``types/episode.ts`` 的 ``Beat`` 给字段：``beat_number`` 是 ``BeatCardGrid``
-        // 的 React key，缺了它两张卡会同 key 折成一张，"渲染出两张"的前置断言就失真。
+        // Fields follow `Beat` in `types/episode.ts`: `beat_number` is the React key of `BeatCardGrid`,
+        // and without it the two cards would fold into one with the same key, which would distort the "two rendered" precondition assertion.
         data: [
-          { beat_number: 1, narration_segment: "第三集第一拍", visual_description: "" },
-          { beat_number: 2, narration_segment: "第三集第二拍", visual_description: "" },
+          { beat_number: 1, narration_segment: "Episode three, first beat", visual_description: "" },
+          { beat_number: 2, narration_segment: "Episode three, second beat", visual_description: "" },
         ],
       });
     }),
@@ -120,18 +120,18 @@ function recordRequests(): string[] {
 }
 
 function renderWithProviders(ui: ReactNode) {
-  // ``staleTime`` 要跟 ``main.tsx`` 的 30s 对齐，不能用库默认的 0。这一页有两个
-  // observer 订同一把 beats key（页面自己一个，``useBeatStates`` 里一个），
-  // staleTime=0 时后挂上来的那个会再取一次——production 里不会发生，测试里却会让
-  // "只请求当前集一次"变成两条。对齐之后这条断言量的才是真实请求面。
+  // `staleTime` must align with the 30s in `main.tsx`, not the library default of 0. This page has two
+  // observers subscribing to the same beats key (one from the page itself, one inside `useBeatStates`),
+  // and with staleTime=0 the one mounted later fetches again - it does not happen in production, but in the test it would turn
+  // "request the current episode only once" into two. After aligning, what this assertion measures is the real request surface.
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
   });
   return render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={qc}>
-        {/* 页面里的 ``useEpisodeImageTaskInvalidation`` 要订阅任务事件总线，
-            没有这个 Provider 会直接抛。用真的而不是空壳，省得把订阅逻辑一起 mock 掉。 */}
+        {/* `useEpisodeImageTaskInvalidation` in the page subscribes to the task event bus,
+            and throws without this Provider. The real one is used instead of a stub, to avoid mocking out the subscription logic too. */}
         <TaskCenterProvider projectId="demo">{ui}</TaskCenterProvider>
       </QueryClientProvider>
     </I18nextProvider>,
@@ -144,17 +144,17 @@ describe("entering one episode reads only that episode's beats", () => {
 
     renderWithProviders(<BeatsTabContent />);
 
-    // 先确认本集内容真的渲染出来了——否则页面崩在半路，下面的请求断言会因为什么
-    // 都没发而空过。
+    // First confirm this episode's content really rendered - otherwise the page crashes halfway and the request assertions below pass vacuously because
+    // nothing was sent.
     //
-    // 认卡片而不是认台词：默认视图 ``BeatCardGrid`` 铺的是图片卡，narration 只进编辑
-    // 面板，不在卡面上。每张卡有一个勾选按钮，i18n 资源为空时 ``t()`` 原样返回 key，
-    // 数它就等于数卡片。
+    // Recognize cards rather than dialogue: the default view `BeatCardGrid` lays out image cards, and narration only goes into the edit
+    // panel, not on the card face. Each card has a checkbox button, and when the i18n resources are empty `t()` returns the key as is,
+    // so counting them equals counting cards.
     await waitFor(() =>
       expect(screen.getAllByLabelText("episode.beat.select")).toHaveLength(2),
     );
 
-    // 列出具体路径而不是数个数——回归的形状是"顺手多拉了第几集"，列出来才看得出。
+    // Specific paths are listed rather than counting - the shape of the regression is "pulled which other episode along", and listing shows it.
     expect(seen.filter((path) => path.includes("/beats"))).toEqual([
       "/api/v1/projects/demo/episodes/3/beats",
     ]);

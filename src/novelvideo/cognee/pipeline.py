@@ -1,12 +1,13 @@
-"""NovelVideo 自定义 Cognee Pipeline。
+"""NovelVideo custom Cognee Pipeline.
 
-实现小说知识图谱的检索与结构化提取：
-- 原始小说由 Cognee 构建知识图谱
-- 角色、剧集、场景和道具等产品数据由 SQLite 持久化
-- 规划和提取流程只读取 Cognee，不把派生产品数据回写图谱
+Implements retrieval and structured extraction over the novel knowledge graph:
+- The knowledge graph of the raw novel is built by Cognee
+- Product data such as characters, episodes, scenes and props is persisted in SQLite
+- Planning and extraction flows only read from Cognee and never write derived product data back to the graph
 """
 
 from __future__ import annotations
+
 
 import hashlib
 import json
@@ -41,15 +42,15 @@ from novelvideo.cognee.screenplay_normalizer import (
 )
 from novelvideo.time_of_day import LlmTimeOfDay
 
-# 重要：必须先导入 config，在 cognee 被导入之前设置环境变量
+# Important: config must be imported first so env vars are set before cognee is imported
 from . import config as _cognee_config  # noqa: F401
 from .ladybug_access import ladybug_graph_access
 
-# cognee 重量级模块延迟导入（避免 reload 时拉起整个初始化链）
+# Heavy cognee modules are imported lazily (avoids pulling in the whole init chain on reload)
 # LLMGateway, Task, run_pipeline, setup
-# 在各函数内部按需 import
+# Imported on demand inside each function
 
-# 业务模型已迁移到 novelvideo.models
+# Business models have moved to novelvideo.models
 from novelvideo.models import (
     CharacterIdentity,
     NovelCharacter,
@@ -61,18 +62,18 @@ from novelvideo.models import (
 )
 
 # ============================================================
-# LLM 输出容器
+# LLM output containers
 # ============================================================
 
 
 class CharacterList(BaseModel):
-    """角色列表容器。"""
+    """Character list container."""
 
     characters: List[NovelCharacter]
 
 
 class EpisodeList(BaseModel):
-    """剧集列表容器。"""
+    """Episode list container."""
 
     episodes: List[NovelEpisode]
 
@@ -117,7 +118,7 @@ def _stringify_search_fragment(value) -> str:
 
 
 def _clean_aliases(primary_name: str, aliases: List[str]) -> List[str]:
-    """规范化 alias：strip、去重、去掉与主名等价的项。"""
+    """Normalize aliases: strip, deduplicate, and drop entries equivalent to the primary name."""
     primary = (primary_name or "").strip()
     cleaned: List[str] = []
     seen: set[str] = set()
@@ -131,7 +132,7 @@ def _clean_aliases(primary_name: str, aliases: List[str]) -> List[str]:
 
 
 # ============================================================
-# 自定义提取 Tasks
+# Custom extraction tasks
 # ============================================================
 
 
@@ -139,24 +140,24 @@ async def extract_episodes_from_text(
     text: str,
     target_episodes: int = 10,
 ) -> List[NovelEpisode]:
-    """从小说文本中规划剧集。"""
+    """Plan episodes from the novel text."""
     with preserve_st_env():
         from cognee.infrastructure.llm.LLMGateway import LLMGateway
 
-    system_prompt = f"""你是一个专业的剧集规划师。将小说内容规划为 {target_episodes} 集。
+    system_prompt = f"""You are a professional episode planner. Plan the novel content into {target_episodes} episodes.
 
-对于每集，生成：
-1. number: 集数
-2. title: 吸引人的标题
-3. content_summary: 内容摘要（50字以内）
-4. main_conflict: 主要冲突
-5. cliffhanger: 结尾悬念（让观众想看下一集）
-6. key_events: 关键事件列表
+For each episode, generate:
+1. number: episode number
+2. title: an attractive title
+3. content_summary: content summary (within 50 words)
+4. main_conflict: the main conflict
+5. cliffhanger: an ending cliffhanger (makes the audience want to watch the next episode)
+6. key_events: list of key events
 
-规则：
-- 每集要有明确的冲突和悬念
-- 情节连贯，前后呼应
-- 高潮放在中后期"""
+Rules:
+- Every episode must have a clear conflict and cliffhanger
+- The plot must be coherent, with setups and payoffs
+- Put the climax in the middle-to-late part"""
 
     result = await LLMGateway.acreate_structured_output(
         text,
@@ -170,41 +171,41 @@ async def extract_episodes_from_text(
 async def generate_visual_prompts(
     characters: List[NovelCharacter],
 ) -> List[NovelCharacter]:
-    """为角色生成/优化 face_prompt。
+    """Generate/optimize face_prompt for characters.
 
-    注意：不添加风格前缀，风格在图像生成时动态添加。
+    Note: no style prefix is added; the style is added dynamically at image generation time.
     """
-    # 如果已有 face_prompt，跳过
+    # Skip if face_prompt already exists
     for char in characters:
         if not char.face_prompt and char.description:
-            # 从描述中生成纯面部特征（简单回退）
-            char.face_prompt = f"{char.name}，{char.gender}，{char.description}"
+            # Generate pure facial features from the description (simple fallback)
+            char.face_prompt = f"{char.name}, {char.gender}, {char.description}"
     return characters
 
 
 # ============================================================
-# 统一 Pipeline
+# Unified Pipeline
 # ============================================================
 
 
 async def _attach_character_metadata(
     characters: List[NovelCharacter],
-    project_name: str = "",  # 保留参数用于向后兼容，但不再使用
+    project_name: str = "",  # kept for backward compatibility, no longer used
 ) -> List[NovelCharacter]:
-    """为角色附加元数据。
+    """Attach metadata to characters.
 
-    注意：由于使用数据库级别隔离，不再需要 project_name。
+    Note: project_name is no longer needed because of database-level isolation.
     """
     return characters
 
 
 async def _attach_episode_metadata(
     episodes: List[NovelEpisode],
-    project_name: str = "",  # 保留参数用于向后兼容，但不再使用
+    project_name: str = "",  # kept for backward compatibility, no longer used
 ) -> List[NovelEpisode]:
-    """为剧集附加元数据。
+    """Attach metadata to episodes.
 
-    注意：由于使用数据库级别隔离，不再需要 project_name。
+    Note: project_name is no longer needed because of database-level isolation.
     """
     return episodes
 
@@ -214,13 +215,13 @@ async def run_character_extraction_pipeline(
     dataset_name: str = "novel",
     project_name: str = "",
 ) -> List[NovelCharacter]:
-    """运行角色提取 Pipeline（已废弃）。
+    """Run the character extraction pipeline (deprecated).
 
-    文本提取已移除，请改用 build_characters_from_graph() 从图谱提取角色。
+    Text extraction has been removed; use build_characters_from_graph() to extract characters from the graph instead.
     """
     raise NotImplementedError(
-        "extract_characters_from_text 已移除。"
-        "请使用 CogneeStore.build_characters_from_graph() 从图谱提取角色。"
+        "extract_characters_from_text has been removed. "
+        "Use CogneeStore.build_characters_from_graph() to extract characters from the graph."
     )
 
 
@@ -230,7 +231,7 @@ async def run_episode_planning_pipeline(
     dataset_name: str = "novel",
     project_name: str = "",
 ) -> List[NovelEpisode]:
-    """运行剧集规划 Pipeline。"""
+    """Run the episode planning pipeline."""
     with preserve_st_env():
         from cognee.modules.pipelines import Task, run_pipeline
         from cognee.modules.engine.operations.setup import setup
@@ -243,7 +244,7 @@ async def run_episode_planning_pipeline(
     async def attach_metadata(episodes: List[NovelEpisode]) -> List[NovelEpisode]:
         return await _attach_episode_metadata(episodes, project_name)
 
-    # 用于捕获中间结果的包装函数
+    # Wrapper function used to capture intermediate results
     captured_episodes: List[NovelEpisode] = []
 
     async def capture_episodes(episodes: List[NovelEpisode]) -> List[NovelEpisode]:
@@ -259,7 +260,7 @@ async def run_episode_planning_pipeline(
     ]
 
     async for result in run_pipeline(tasks=tasks, data=text, datasets=[dataset_name]):
-        # 尝试从结果中获取剧集
+        # Try to get the episodes from the result
         if isinstance(result, list) and result and isinstance(result[0], NovelEpisode):
             captured_episodes = result
 
@@ -267,33 +268,33 @@ async def run_episode_planning_pipeline(
 
 
 # ============================================================
-# 分阶段构建：从图谱提取角色
+# Staged build: extract characters from the graph
 # ============================================================
 
 
 class CharacterEnrichment(BaseModel):
-    """LLM 补充的角色信息（不含身份，身份由 IdentityPlanner 按集规划）。"""
+    """Character information supplemented by the LLM (no identities; identities are planned per episode by IdentityPlanner)."""
 
-    name: str = Field(..., description="角色主名称")
+    name: str = Field(..., description="Primary character name")
     aliases: List[str] = Field(
-        default_factory=list, description="原文中真实出现过的稳定别名/昵称/固定称呼"
+        default_factory=list, description="Stable aliases/nicknames/fixed forms of address that actually appear in the source text"
     )
-    role: str = Field(default="", description="角色定位")
-    is_main: bool = Field(default=False, description="是否为主角/核心角色")
-    gender: str = Field(default="", description="性别")
+    role: str = Field(default="", description="Character role")
+    is_main: bool = Field(default=False, description="Whether this is the protagonist/core character")
+    gender: str = Field(default="", description="Gender: male/female/other")
     age_group: Literal["child", "youth", "middle", "elder"] = Field(
-        default="youth", description="年龄段: child/youth/middle/elder"
+        default="youth", description="Age group: child/youth/middle/elder"
     )
-    body_type: str = Field(default="", description="体型描述")
-    description: str = Field(default="", description="外貌描述")
+    body_type: str = Field(default="", description="Body type description")
+    description: str = Field(default="", description="Appearance description")
     face_prompt: str = Field(
         default="",
-        description="纯面部特征描述（发型、眼睛、肤色），不含服装",
+        description="Pure facial feature description (hairstyle, eyes, skin tone), without clothing",
     )
 
 
 class CharacterEnrichmentList(BaseModel):
-    """角色补充信息列表。"""
+    """List of supplemental character information."""
 
     characters: List[CharacterEnrichment]
 
@@ -307,23 +308,23 @@ async def extract_characters_from_graph(
     on_progress: Optional[Any] = None,
     on_log: Optional[Any] = None,
 ) -> List[NovelCharacter]:
-    """从 cognee 图谱中提取角色（分阶段架构）。
+    """Extract characters from the cognee graph (staged architecture).
 
-    流程：
-    1. 通过 cognee.search(only_context=True) 获取图谱上下文（人物+关系的摘要）
-    2. 用 LLM 结构化输出提取角色信息
-    3. 后处理去重
-    4. 返回调用方，由 SQLite 持久化
+    Flow:
+    1. Get the graph context (summary of people + relationships) via cognee.search(only_context=True)
+    2. Extract character information with LLM structured output
+    3. Post-process and deduplicate
+    4. Return to the caller, which persists to SQLite
 
     Args:
-        dataset_name: Cognee 数据集名称
-        project_name: 项目名称
-        project_dir: 项目目录（用于备用全文提取）
-        on_progress: 进度回调
-        on_log: 日志回调
+        dataset_name: Cognee dataset name
+        project_name: Project name
+        project_dir: Project directory (used for fallback full-text extraction)
+        on_progress: Progress callback
+        on_log: Log callback
 
     Returns:
-        提取的角色列表
+        List of extracted characters
     """
     with preserve_st_env():
         import cognee
@@ -337,16 +338,16 @@ async def extract_characters_from_graph(
     def log(message: MessageLike):
         print(f"[extract_characters] {message}")
 
-    # Step 1: 通过 cognee.search 获取图谱上下文
-    report(0.1, "通过图谱检索人物信息...")
-    log("使用 cognee.search(only_context=True) 获取图谱上下文...")
+    # Step 1: get the graph context via cognee.search
+    report(0.1, "Retrieving character information through the graph...")
+    log("Using cognee.search(only_context=True) to get the graph context...")
 
     context_text = ""
     try:
         results = await _run_graph_read(
             state_dir,
             lambda: cognee.search(
-                query_text="列出小说中所有人物角色，包括他们的关系、别名、身份特征和外貌描述",
+                query_text="List all characters in the novel, including their relationships, aliases, identity traits and appearance descriptions",
                 query_type=SearchType.GRAPH_COMPLETION,
                 datasets=[dataset_name],
                 only_context=True,
@@ -363,62 +364,62 @@ async def extract_characters_from_graph(
                 else:
                     parts.append(_stringify_search_fragment(item))
             context_text = "\n".join(parts)
-            log(f"图谱上下文获取成功: {len(context_text)} 字符")
+            log(f"Graph context retrieved: {len(context_text)} chars")
     except Exception as e:
         import logging
 
-        logging.warning(f"cognee.search 失败: {e}")
-        log(f"cognee.search 失败: {e}")
-        raise RuntimeError("Cognee 图谱角色搜索失败") from e
+        logging.warning(f"cognee.search failed: {e}")
+        log(f"cognee.search failed: {e}")
+        raise RuntimeError("Cognee graph character search failed") from e
 
     if not context_text.strip():
-        log("⚠️ 图谱搜索无数据，请先构建图谱（cognify）")
+        log("⚠️ Graph search returned no data; build the graph first (cognify)")
         return []
 
-    # 注入人物设定上下文（辅助图谱，不替代）
+    # Inject the character setting context (supplements the graph, does not replace it)
     if novel_text:
         from .script_parser import extract_synopsis
 
         synopsis = extract_synopsis(novel_text)
         if synopsis:
-            context_text += f"\n\n【剧本人物设定原文】\n{synopsis}"
-            log(f"已注入人物设定上下文: {len(synopsis)} 字符")
+            context_text += f"\n\n[Original screenplay character settings]\n{synopsis}"
+            log(f"Injected character setting context: {len(synopsis)} chars")
 
-    # Step 2: LLM 结构化提取
-    report(0.3, "LLM 结构化提取角色...")
-    log("使用图谱上下文进行 LLM 结构化提取...")
+    # Step 2: LLM structured extraction
+    report(0.3, "Extracting characters with LLM structured output...")
+    log("Running LLM structured extraction with the graph context...")
 
-    system_prompt = f"""你是小说角色分析专家。以下是从知识图谱中提取的人物角色信息和关系。
-请基于图谱上下文提取所有人物角色。
+    system_prompt = f"""You are a novel character analysis expert. Below are the characters and relationships extracted from the knowledge graph.
+Extract all characters based on the graph context.
 
-⚠️ 核心规则：
-1. **只提取人类角色**（男性、女性角色）
-2. **不要提取**：动物、宠物、神兽、怪物、精灵、机器人等非人类实体
-3. 图谱中的别名/称谓（如"陛下"→萧玦、"靖王"→某人）应合并到同一角色
-4. **不要提取身份/服装信息** — 身份由后续流程单独规划
-5. **年龄变体是同一角色**：同一人物的幼年/少年/青年/中年/老年形态必须合并为一个角色，age_group 取角色在故事中**最主要的时期**对应的年龄段。不同年龄的外貌差异由后续身份系统处理，不在此步骤拆分。例如：小说中出现"小谢铮"（幼年回忆）和"谢铮"（成年主线），应合并为一个角色"谢铮"，age_group="youth"，aliases 中包含"小谢铮"
+⚠️ Core rules:
+1. **Extract human characters only** (male and female characters)
+2. **Do not extract**: animals, pets, divine beasts, monsters, spirits, robots or other non-human entities
+3. Aliases/forms of address in the graph (e.g. "Your Majesty" -> Xiao Jue, "Prince Jing" -> some person) must be merged into the same character
+4. **Do not extract identity/costume information** — identities are planned separately by a later step
+5. **Age variants are the same character**: the childhood/teen/young adult/middle-aged/elderly forms of the same person must be merged into a single character, and age_group is the age group of the character's **dominant period** in the story. Appearance differences at different ages are handled by the later identity system and are not split in this step. For example: if the novel contains "Little Xie Zheng" (childhood flashback) and "Xie Zheng" (adult main storyline), merge them into one character "Xie Zheng", age_group="youth", with "Little Xie Zheng" in aliases
 
-对于每个角色，生成：
-1. name: 角色主名称（最正式的称呼）
-2. aliases: 该角色在原文中真实出现过的其他称呼/头衔/昵称（利用图谱关系发现的稳定别名）
-3. role: 角色定位（如：主角、闺蜜、前男友、皇后）
-4. is_main: 是否为解说主角/第一人称叙述者（整部小说只能有 1 个 is_main=True）
-5. gender: 性别（男/女）
-6. age_group: 年龄段分类，必须是以下四个值之一: child（儿童）/ youth（青年）/ middle（中年）/ elder（老年）
-7. body_type: 体型描述（如：纤细高挑、健壮魁梧、娇小玲珑）
-8. description: 外貌和性格特征
+For each character, generate:
+1. name: the primary character name (the most formal form of address)
+2. aliases: other forms of address/titles/nicknames that actually appear in the source text for this character (stable aliases discovered through graph relations)
+3. role: character role (e.g. protagonist, best friend, ex-boyfriend, queen)
+4. is_main: whether this is the narrating protagonist/first-person narrator (only 1 character in the whole novel may have is_main=True)
+5. gender: gender (male/female/other)
+6. age_group: age group classification, must be one of: child / youth / middle / elder
+7. body_type: body type description (e.g. slender and tall, sturdy and muscular, petite and delicate)
+8. description: appearance and personality traits
 
-9. **face_prompt**: 纯面部特征描述（⚠️ 关键！不含服装！）
-   格式：[性别]，[年龄段]，[发型发色]，[眼睛特征]，[肤色]，[脸型/骨骼]
-   示例："女性，二十多岁，黑色长发马尾，黑色杏眼，小麦肤色，瓜子脸"
-   ⚠️ 不要在 face_prompt 中描述服装！
+9. **face_prompt**: pure facial feature description (⚠️ critical! no clothing!)
+      Format: [gender], [age range], [hairstyle and hair color], [eye features], [skin tone], [face shape/bone structure]
+      Example: "Female, in her twenties, long black ponytail, black almond eyes, wheat-toned skin, oval face"
+      ⚠️ Do not describe clothing in face_prompt!
 
-规则：
-- face_prompt 必须是纯面部特征，绝对不能包含服装描述
-- 图谱中同一人物的不同称呼要合并（利用 is_alias_of、same_as 等关系）
-- aliases 只保留原文里真实出现过、且能稳定指向该角色的称呼
-- 不要把过于泛化、依赖上下文才成立的称谓塞进 aliases，例如“男人 / 女人 / 老板 / 爸爸 / 女儿 / 店员”这类高歧义称呼默认不要收，除非图谱上下文已经明确它稳定指向同一角色
-- 如果信息不足，只允许对 role / body_type / description 做保守推测；不要为 aliases 编造原文未出现的称呼"""
+Rules:
+- face_prompt must be pure facial features and must never contain clothing descriptions
+- Different forms of address for the same person in the graph must be merged (use relations such as is_alias_of and same_as)
+- aliases only keep forms of address that actually appear in the source text and stably point to this character
+- Do not put overly generic, context-dependent forms of address into aliases, e.g. highly ambiguous terms such as "the man / the woman / the boss / dad / the daughter / the clerk" should not be included by default, unless the graph context clearly shows that it stably refers to the same character
+- If information is insufficient, you may only make conservative guesses for role / body_type / description; do not invent forms of address for aliases that do not appear in the source"""
 
     try:
         result = await LLMGateway.acreate_structured_output(
@@ -429,7 +430,7 @@ async def extract_characters_from_graph(
         )
         characters = []
         for enriched in result.characters:
-            # 自动映射 Fish Audio voice ID
+            # Automatically map the Fish Audio voice ID
             from novelvideo.config import get_fish_voice_id
 
             fish_voice_id = get_fish_voice_id(enriched.age_group, enriched.gender)
@@ -458,23 +459,23 @@ async def extract_characters_from_graph(
                 else:
                     found_first = True
             narrator_main = next((c.name for c in characters if c.is_main), "")
-            log(f"⚠️ LLM 返回 {main_count} 个解说主角，已只保留第一个: {narrator_main}")
-        log(f"LLM 结构化提取完成: {len(characters)} 个角色")
+            log(f"⚠️ LLM returned {main_count} narrator protagonists; kept only the first: {narrator_main}")
+        log(f"LLM structured extraction complete: {len(characters)} characters")
     except Exception as e:
         import logging
 
-        logging.error(f"LLM 结构化提取失败: {e}")
-        log(f"⚠️ LLM 结构化提取失败: {e}")
-        raise RuntimeError("LLM 图谱角色提取失败") from e
+        logging.error(f"LLM structured extraction failed: {e}")
+        log(f"⚠️ LLM structured extraction failed: {e}")
+        raise RuntimeError("LLM graph character extraction failed") from e
 
-    report(0.9, "提取完成")
+    report(0.9, "Extraction complete")
 
-    report(1.0, "完成")
+    report(1.0, "Done")
     return characters
 
 
 # ============================================================
-# 分阶段构建：增强的剧集规划
+# Staged build: enhanced episode planning
 # ============================================================
 
 
@@ -489,130 +490,130 @@ async def extract_episodes_with_characters(
     project_name: str = "",
     on_log: Optional[Any] = None,
 ) -> List[NovelEpisode]:
-    """规划剧集（支持已知角色列表）。
+    """Plan episodes (supports a known character list).
 
-    与 extract_episodes_from_text 的区别：
-    - 接受已确认的角色列表，确保剧集中引用的角色一致
-    - 会将角色列表注入到 Prompt 中
+    Differences from extract_episodes_from_text:
+    - Accepts a confirmed character list so the characters referenced in episodes stay consistent
+    - Injects the character list into the prompt
 
     Args:
-        text: 小说全文
-        target_episodes: 目标剧集数
-        known_characters: 已确认的角色名称列表
-        dataset_name: 数据集名称
-        project_name: 项目名称
-        on_log: 日志回调函数
+        text: Full novel text
+        target_episodes: Target number of episodes
+        known_characters: List of confirmed character names
+        dataset_name: Dataset name
+        project_name: Project name
+        on_log: Log callback
 
     Returns:
-        规划的剧集列表
+        List of planned episodes
     """
     with preserve_st_env():
         from cognee.infrastructure.llm.LLMGateway import LLMGateway
         from cognee.modules.engine.operations.setup import setup
 
     def log(message: MessageLike):
-        # 只打印到控制台，不调用 on_log（由 store.py 统一管理日志回调）
+        # Only print to the console; do not call on_log (log callbacks are managed centrally by store.py)
         print(f"[extract_episodes] {message}")
 
     await setup()
-    log(f"开始规划 {target_episodes} 集...")
+    log(f"Planning {target_episodes} episodes...")
 
     character_hint = ""
     if known_characters:
         character_hint = f"""
-已确认的角色列表：
+Confirmed character list:
 {', '.join(known_characters)}
 
-⚠️ 重要：character_names 字段只能从上述列表中选择，不要添加新角色名。
+⚠️ Important: the character_names field may only be chosen from the list above; do not add new character names.
 """
-        log(f"已知角色: {len(known_characters)} 个")
+        log(f"Known characters: {len(known_characters)}")
 
-    system_prompt = f"""你是一个专业的剧集规划师。将小说内容规划为 {target_episodes} 集。
+    system_prompt = f"""You are a professional episode planner. Plan the novel content into {target_episodes} episodes.
 {character_hint}
-对于每集，生成：
-1. number: 集数
-2. title: 吸引人的标题
-3. chapter_start: 对应的起始章节（估计值）
-4. chapter_end: 对应的结束章节（估计值）
-5. content_summary: 内容摘要（50字以内）
-6. main_conflict: 主要冲突
-7. cliffhanger: 结尾悬念（让观众想看下一集）
-8. key_events: 关键事件列表（3-5个）
-9. character_names: 本集出场角色（从已确认角色中选择）
+For each episode, generate:
+1. number: episode number
+2. title: an attractive title
+3. chapter_start: the corresponding start chapter (estimate)
+4. chapter_end: the corresponding end chapter (estimate)
+5. content_summary: content summary (within 50 words)
+6. main_conflict: the main conflict
+7. cliffhanger: an ending cliffhanger (makes the audience want to watch the next episode)
+8. key_events: list of key events (3-5)
+9. character_names: characters appearing in this episode (chosen from the confirmed characters)
 
-规则：
-- 每集要有明确的冲突和悬念
-- 情节连贯，前后呼应
-- 高潮放在中后期
-- 确保角色名称与已确认列表一致"""
+Rules:
+- Every episode must have a clear conflict and cliffhanger
+- The plot must be coherent, with setups and payoffs
+- Put the climax in the middle-to-late part
+- Make sure character names match the confirmed list"""
 
-    log("调用 LLM 规划剧集...")
+    log("Calling LLM to plan episodes...")
     result = await LLMGateway.acreate_structured_output(
         text,
         system_prompt,
         EpisodeList,
         **get_newapi_structured_output_litellm_kwargs(),
     )
-    log(f"LLM 返回 {len(result.episodes)} 集")
+    log(f"LLM returned {len(result.episodes)} episodes")
 
-    # 验证剧集编号
+    # Validate the episode numbers
     episode_numbers = [ep.number for ep in result.episodes]
-    log(f"剧集编号: {episode_numbers}")
+    log(f"Episode numbers: {episode_numbers}")
 
     if len(result.episodes) < target_episodes:
         log(
-            f"⚠️ 警告：LLM 返回的集数 ({len(result.episodes)}) 少于目标 ({target_episodes})"
+            f"⚠️ Warning: LLM returned fewer episodes ({len(result.episodes)}) than the target ({target_episodes})"
         )
 
-    # 检查是否从 1 开始，如果不是则自动修正
+    # Check whether numbering starts at 1; if not, fix it automatically
     if episode_numbers and min(episode_numbers) != 1:
         log(
-            f"⚠️ 警告：剧集编号不是从 1 开始，最小编号: {min(episode_numbers)}，正在自动修正..."
+            f"⚠️ Warning: episode numbering does not start at 1, smallest number: {min(episode_numbers)}, fixing automatically..."
         )
         result.episodes.sort(key=lambda ep: ep.number)
         for i, ep in enumerate(result.episodes, start=1):
             if ep.number != i:
-                log(f"  修正剧集编号: {ep.number} → {i}")
+                log(f"  Fixed episode number: {ep.number} -> {i}")
                 ep.number = i
 
-    # 检查编号是否连续
+    # Check whether the numbers are contiguous
     sorted_numbers = sorted(episode_numbers)
     expected_numbers = list(range(1, len(result.episodes) + 1))
     if sorted_numbers != expected_numbers:
-        log(f"⚠️ 警告：剧集编号不连续，正在自动修正...")
+        log("⚠️ Warning: episode numbers are not contiguous, fixing automatically...")
         result.episodes.sort(key=lambda ep: ep.number)
         for i, ep in enumerate(result.episodes, start=1):
             if ep.number != i:
-                log(f"  修正剧集编号: {ep.number} → {i}")
+                log(f"  Fixed episode number: {ep.number} -> {i}")
                 ep.number = i
 
     log(
-        f"剧集规划完成: {len(result.episodes)} 集，编号: {[ep.number for ep in result.episodes]}"
+        f"Episode planning complete: {len(result.episodes)} episodes, numbers: {[ep.number for ep in result.episodes]}"
     )
 
     return result.episodes
 
 
 # ============================================================
-# 场景提取 Pipeline
+# Scene extraction Pipeline
 # ============================================================
 
 
 class SceneEnrichment(BaseModel):
-    """LLM 补充的场景信息。"""
+    """Scene information supplemented by the LLM."""
 
-    name: str = Field(..., description="场景主名称")
-    aliases: List[str] = Field(default_factory=list, description="别名列表")
+    name: str = Field(..., description="Primary scene name")
+    aliases: List[str] = Field(default_factory=list, description="Alias list")
     scene_type: str = Field(default="interior", description="interior/exterior/nature")
     environment_prompt: str = Field(
         default="",
-        description="场景空间视觉描述（按方位描述空间布局、光源方向、建筑风格、材质纹理，150-200字，不含人物）",
+        description="Spatial visual description of the scene (describe layout by direction, light source direction, architectural style and material texture, 80-120 words, no people)",
     )
-    description: str = Field(default="", description="场景叙述性描述")
+    description: str = Field(default="", description="Narrative description of the scene")
 
 
 class SceneEnrichmentList(BaseModel):
-    """场景补充信息列表。"""
+    """List of supplemental scene information."""
 
     scenes: List[SceneEnrichment]
 
@@ -621,13 +622,13 @@ class GraphSceneCandidate(BaseModel):
     """Stable physical scene discovered from Cognee graph context."""
 
     name: str = Field(
-        ..., description="稳定物理地点名称，不包含时间、人物、事件或镜头词"
+        ..., description="Stable physical location name, without time, characters, events or camera words"
     )
-    aliases: List[str] = Field(default_factory=list, description="图谱中出现的地点别名")
+    aliases: List[str] = Field(default_factory=list, description="Location aliases that appear in the graph")
     scene_type: str = Field(default="interior", description="interior/exterior/nature")
     evidence_lines: List[str] = Field(
         default_factory=list,
-        description="图谱上下文中支持该地点存在及其固定环境特征的短句",
+        description="Short sentences in the graph context that support the existence of this location and its fixed environmental features",
     )
 
 
@@ -637,55 +638,51 @@ class GraphSceneCandidateList(BaseModel):
     scenes: List[GraphSceneCandidate] = Field(default_factory=list)
 
 
-SCENE_ENVIRONMENT_REQUIRED_HEADINGS = ("正面", "左侧", "右侧", "背面")
+SCENE_ENVIRONMENT_REQUIRED_HEADINGS = ("Front", "Left", "Right", "Back")
 
 
-SCENE_ENRICHMENT_SYSTEM_PROMPT = """你是场景环境设计专家。
-根据提供的场景名称和剧本原文，生成该场景的视觉环境描述。
+SCENE_ENRICHMENT_SYSTEM_PROMPT = """You are a scene environment design expert.
+Based on the provided scene name and screenplay source text, generate a visual environment description of the scene.
 
-生成：
-1. name: 直接使用提供的场景名称（原样返回）
-2. aliases: 空列表
-3. scene_type: 根据场景判断 interior/exterior/nature
-4. environment_prompt: 必须输出“完整 360 空间合同”，使用以下固定标题，不得省略、改名或合并：
-   正面：
-   左侧：
-   右侧：
-   背面：
-   光源：
-   材质/风格：
-   禁止元素：
+Generate:
+1. name: use the provided scene name directly (return it unchanged)
+2. aliases: empty list
+3. scene_type: judge interior/exterior/nature from the scene
+4. environment_prompt: you must output a "complete 360 spatial contract" using the fixed headings below, without omitting, renaming or merging any of them:
+   Front:
+   Left:
+   Right:
+   Back:
+   Lighting:
+   Material/Style:
+   Forbidden elements:
 
-environment_prompt 规则：
-- 正面/左侧/右侧/背面必须分别说明该方向的固定空间、墙体/边界、门窗/入口、固定陈设或外部延展。
-- 正面是 master 图要看的主方向；背面是 reverse 图要看的方向；左右侧是两者边缘需要连续拼接的空间。
-- 如果剧本没有明确某一方向，必须基于场景类型和原文证据合理补全，不能留空，不能写“未提及”。
-- 描述中性默认状态；不要把临时剧情动作、天气、人物情绪当成固定环境。
-- 不含人物，不含临时剧情道具，不含镜头调度。
-- 总长度约 220-320 字，可超过 200 字以保证四向完整。
-5. description: 场景叙述性描述（使用本次指定的输出语言，简短，不超过约 50 字）"""
+environment_prompt rules:
+- Front/Left/Right/Back must each describe the fixed space in that direction, walls/boundaries, doors/windows/entrances, fixed furnishings or exterior extension.
+- Front is the main direction seen by the master image; Back is the direction seen by the reverse image; Left and Right are the spaces at the edges of both that must stitch together continuously.
+- If the screenplay does not state a direction explicitly, you must reasonably fill it in based on the scene type and source evidence; never leave it empty and never write "not mentioned".
+- Describe the neutral default state; do not treat temporary plot actions, weather or character emotions as the fixed environment.
+- No people, no temporary plot props, no camera direction.
+- Total length about 150-220 words, exceeding 130 words if needed so all four directions are complete.
+5. description: narrative description of the scene (in the output language specified for this request, short, no more than about 30 words)"""
 
 
 # Every heading the contract may carry, in the order they must appear.
 SCENE_ENVIRONMENT_ALL_HEADINGS = (
-    "正面", "左侧", "右侧", "背面", "光源", "材质/风格", "禁止元素",
+    "Front", "Left", "Right", "Back", "Lighting", "Material/Style", "Forbidden elements",
 )
 
 # A heading may open the text or follow a newline or a sentence break. Models
 # routinely emit the whole contract on one line, and rejecting that discards a
 # perfectly good description in favour of boilerplate.
 _SCENE_HEADING_RE = re.compile(
-    r"(?:^|[\n。；;])\s*(" + "|".join(re.escape(h) for h in SCENE_ENVIRONMENT_ALL_HEADINGS) + r")\s*[:：]"
+    r"(?:^|[\n.;])\s*(" + "|".join(re.escape(h) for h in SCENE_ENVIRONMENT_ALL_HEADINGS) + r")\s*:"
 )
 
 # The first line of the generated fallback. Distinctive enough to recognise a
 # prompt the system wrote when it could not use the model's.
-SCENE_FALLBACK_FINGERPRINT = "最能代表地点身份的主入口、主墙面、主装置或主要活动面作为正面"
 SCENE_FALLBACK_FINGERPRINT_EN = "Use the main entrance, main wall, main fixture, or primary activity area"
-SCENE_FALLBACK_FINGERPRINTS = (
-    SCENE_FALLBACK_FINGERPRINT,
-    SCENE_FALLBACK_FINGERPRINT_EN,
-)
+SCENE_FALLBACK_FINGERPRINTS = (SCENE_FALLBACK_FINGERPRINT_EN,)
 
 
 def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
@@ -705,7 +702,7 @@ def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
     sections: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        body = text[match.end() : end].strip().strip("。；;")
+        body = text[match.end() : end].strip().strip(".;")
         sections.append((match.group(1), body))
     return sections
 
@@ -713,7 +710,7 @@ def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
 def _has_required_scene_environment_headings(prompt: str) -> bool:
     """Whether the text is a usable 360 contract.
 
-    Presence alone is not enough: a body that merely mentions "左侧：" in passing
+    Presence alone is not enough: a body that merely mentions "Left:" in passing
     would pass a substring test. The four directions must each open a section,
     appear in order, and actually say something.
     """
@@ -741,7 +738,7 @@ def normalize_scene_environment_prompt(prompt: str) -> str:
     sections = parse_scene_environment_sections(prompt)
     if not sections:
         return str(prompt or "").strip()
-    return "\n".join(f"{heading}：{body}" for heading, body in sections if body)
+    return "\n".join(f"{heading}: {body}" for heading, body in sections if body)
 
 
 def should_repair_scene_placeholder(existing_prompt: str, new_prompt: str) -> bool:
@@ -785,44 +782,28 @@ def _ensure_directional_environment_prompt(
     scene_type: str,
     time_of_day: str,
     context_lines: list[str],
-    output_language: AssetLanguage = "zh",
+    output_language: AssetLanguage = "en",
 ) -> str:
     """Ensure graph-built scene prompts are usable as a 360 spatial contract."""
     text = str(prompt or "").strip()
     if _has_required_scene_environment_headings(text):
         return normalize_scene_environment_prompt(text)
     # Evidence comes from the script, never from the prompt that just failed
-    # validation. Quoting a rejected description back as "原文证据" produced a
+    # validation. Quoting a rejected description back as "source evidence" produced a
     # self-referential contract that cited itself as its own source.
     evidence = _compact_scene_context(context_lines)
     if not evidence:
-        evidence = (
-            f"{scene_name}, {scene_type or 'interior'} scene"
-            if output_language == "en"
-            else f"{scene_name}，{scene_type or 'interior'} 场景"
-        )
+        evidence = f"{scene_name}, {scene_type or 'interior'} scene"
     type_label = scene_type or "interior"
-    if output_language == "en":
-        return "\n".join(
-            [
-                f"正面：Use the main entrance, main wall, main fixture, or primary activity area that best identifies \"{scene_name}\" as the front view; use the source evidence \"{evidence}\" to define fixed structures and visual anchors.",
-                f"左侧：From the front-facing view, extend left into side walls, passages, doors, windows, fixed furnishings, or exterior boundaries appropriate to \"{scene_name}\"; keep materials, scale, and depth continuous with the front and include no people.",
-                "右侧：From the front-facing view, extend right into the opposing side space, wall corners, corridors, streets, adjoining rooms, or fixed facilities; maintain spatial continuity without duplicating the front subject.",
-                "背面：Show the rear half of the location when facing away from the front, such as the reverse side of an entrance, a corridor end, courtyard, rear wall, windows, street continuation, or secondary functional area; close the full 360-degree space consistently.",
-                "光源：Use stable, neutral environmental lighting from fixed lamps, windows, skylight, or ceiling fixtures; do not bake a temporary story time or mood into the reusable environment.",
-                f"材质/风格：Keep the fixed architectural style, surfaces, door and window structure, furnishing materials, and wear level appropriate to an {type_label} scene; describe only the reusable environment and no character actions.",
-                "禁止元素：No people, temporary story props, subtitles, watermarks, UI, or historical, modern, or science-fiction elements that conflict with the location name and source evidence.",
-            ]
-        )
     return "\n".join(
         [
-            f"正面：以“{scene_name}”最能代表地点身份的主入口、主墙面、主装置或主要活动面作为正面；根据原文证据“{evidence}”确定固定结构和主要视觉锚点。",
-            f"左侧：从正面视角向左延伸，布置与“{scene_name}”功能一致的侧墙、通道、门窗、固定陈设或外部边界；保持与正面材质、尺度和空间深度连续，不放人物。",
-            f"右侧：从正面视角向右延伸，布置与左侧相对的侧向空间、墙体转角、走廊/街道/房间延展或固定设施；不要复制正面主体，只做合理连续补全。",
-            f"背面：背对正面时看到该地点的后半空间，可为入口反向、走廊尽端、外院、后墙、窗面、街道延伸或次要功能区；必须和正面/左右侧构成完整 360 度闭合空间。",
-            "光源：使用中性默认状态的稳定环境光；光源方向来自场景固定灯具、窗户、天光或室内顶灯，避免把剧情时间或临时情绪当成唯一照明。",
-            f"材质/风格：保持{type_label}场景的固定建筑风格、墙地顶材质、门窗结构、家具/设施质感和旧化程度；只描述可复用环境，不描述人物动作。",
-            "禁止元素：不出现人物、临时剧情道具、字幕、水印、UI、现代/古代/科幻等与场景名和原文证据冲突的元素。",
+            f"Front: Use the main entrance, main wall, main fixture, or primary activity area that best identifies \"{scene_name}\" as the front view; use the source evidence \"{evidence}\" to define fixed structures and visual anchors.",
+            f"Left: From the front-facing view, extend left into side walls, passages, doors, windows, fixed furnishings, or exterior boundaries appropriate to \"{scene_name}\"; keep materials, scale, and depth continuous with the front and include no people.",
+            "Right: From the front-facing view, extend right into the opposing side space, wall corners, corridors, streets, adjoining rooms, or fixed facilities; maintain spatial continuity without duplicating the front subject.",
+            "Back: Show the rear half of the location when facing away from the front, such as the reverse side of an entrance, a corridor end, courtyard, rear wall, windows, street continuation, or secondary functional area; close the full 360-degree space consistently.",
+            "Lighting: Use stable, neutral environmental lighting from fixed lamps, windows, skylight, or ceiling fixtures; do not bake a temporary story time or mood into the reusable environment.",
+            f"Material/Style: Keep the fixed architectural style, surfaces, door and window structure, furnishing materials, and wear level appropriate to an {type_label} scene; describe only the reusable environment and no character actions.",
+            "Forbidden elements: No people, temporary story props, subtitles, watermarks, UI, or historical, modern, or science-fiction elements that conflict with the location name and source evidence.",
         ]
     )
 
@@ -893,16 +874,16 @@ async def enrich_scene_environment_from_context(
         "Scene Build Enricher",
     )
     context = "\n".join(context_lines[:50])
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
+    synopsis_section = f"\n\n[Story synopsis and character settings]\n{synopsis}" if synopsis else ""
     user_text = f"""{asset_language_instruction(language)}
 
-场景名称：{scene_name}
-出现时间线索：{time_of_day or "无"}（只用于理解剧情出现时段，不要把白天、夜晚、黄昏、月光等时段光照烘焙进基础场景）
-室内外：{"内" if interior else "外"}
-出现集数：{episodes}
-出场人物：{", ".join(characters) if characters else "无"}
+Scene name: {scene_name}
+Time-of-day hint: {time_of_day or "none"} (only for understanding when the scene occurs in the plot; do not bake daytime, night, dusk, moonlight or other time-of-day lighting into the base scene)
+Interior/exterior: {"interior" if interior else "exterior"}
+Episodes it appears in: {episodes}
+Characters present: {", ".join(characters) if characters else "none"}
 
-以下是该场景在剧本中的原文段落：
+Source text passages of this scene in the screenplay:
 {context}{synopsis_section}"""
 
     try:
@@ -927,7 +908,7 @@ async def enrich_scene_environment_from_context(
     except Exception as exc:
         import logging
 
-        logging.error(f"LLM 场景描述生成失败 ({scene_name}): {exc}")
+        logging.error(f"LLM scene description generation failed ({scene_name}): {exc}")
 
     return NovelScene(
         name=scene_name,
@@ -1158,7 +1139,7 @@ async def enrich_scene_environments_batched(
         SceneEnrichmentList,
         "Scene Build Enricher",
     )
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
+    synopsis_section = f"\n\n[Story synopsis and character settings]\n{synopsis}" if synopsis else ""
 
     def describe(candidate: dict[str, Any]) -> str:
         context = "\n".join(
@@ -1166,17 +1147,17 @@ async def enrich_scene_environments_batched(
         )
         interior = bool(candidate.get("interior", True))
         return (
-            f"### 场景：{candidate['name']}\n"
-            f"室内外：{'内' if interior else '外'}\n"
-            f"出场人物：{', '.join(candidate.get('characters') or []) or '无'}\n"
-            f"原文段落：\n{context}"
+            f"### Scene: {candidate['name']}\n"
+            f"Interior/exterior: {'interior' if interior else 'exterior'}\n"
+            f"Characters present: {', '.join(candidate.get('characters') or []) or 'none'}\n"
+            f"Source passages:\n{context}"
         )
 
     async def run_batch(batch: list[dict[str, Any]]) -> list[NovelScene]:
         prompt = (
             asset_language_instruction(language)
-            + "\n\n请为下面每一个场景分别生成 environment_prompt，"
-            "name 必须与给出的场景名完全一致，不要合并或遗漏：\n\n"
+            + "\n\nGenerate an environment_prompt for each of the scenes below separately; "
+            "name must exactly match the given scene name; do not merge or omit any scene:\n\n"
             + "\n\n".join(describe(candidate) for candidate in batch)
             + synopsis_section
         )
@@ -1212,7 +1193,7 @@ async def enrich_scene_environments_batched(
         except Exception as exc:  # noqa: BLE001 - falls back per scene below
             import logging
 
-            logging.warning("批量场景描述生成失败，逐个重试: %s", exc)
+            logging.warning("Batch scene description generation failed, retrying one by one: %s", exc)
 
         answered: list[tuple[dict[str, Any], NovelScene]] = []
         for candidate in batch:
@@ -1288,7 +1269,7 @@ def _scene_candidates_from_normalized_blocks(
                 "scene_type": block.scene_type or "interior",
                 "time_of_day": normalized_time,
                 "time_counts": {normalized_time: 1} if normalized_time else {},
-                "interior": block.interior_exterior != "外",
+                "interior": block.interior_exterior != "ext",
                 "episodes": [episode],
                 "characters": list(dict.fromkeys(block.characters)),
                 "context_lines": list(block.content_lines or block.evidence_lines),
@@ -1351,7 +1332,7 @@ def _episode_number_from_normalized_block(block: NormalizedSceneBlock) -> int:
         return episode
 
     raw_header = str(block.raw_header or "").strip()
-    header_match = re.match(r"^\s*(?P<episode>\d+)\s*[-－—]", raw_header)
+    header_match = re.match(r"^\s*(?P<episode>\d+)\s*[-—]", raw_header)
     if header_match:
         return int(header_match.group("episode"))
     return 1
@@ -1384,15 +1365,15 @@ async def extract_scenes_from_graph(
         if on_log:
             on_log(message)
 
-    report(0.1, "通过图谱检索场景信息...")
+    report(0.1, "Retrieving scene information through the graph...")
     context_text = ""
     try:
         results = await _run_graph_read(
             state_dir,
             lambda: cognee.search(
                 query_text=(
-                    "列出作品中反复出现或对剧情重要的稳定物理地点，包括地点别名、"
-                    "空间环境、建筑结构和地点之间的关系；不要列人物、事件、情绪或抽象概念"
+                    "List the stable physical locations that recur in the work or matter to the plot, including location aliases, "
+                    "spatial environment, architectural structure and the relationships between locations; do not list characters, events, emotions or abstract concepts"
                 ),
                 query_type=SearchType.GRAPH_COMPLETION,
                 datasets=[dataset_name],
@@ -1407,29 +1388,29 @@ async def extract_scenes_from_graph(
                 )
                 for item in results
             )
-            log(f"图谱场景上下文获取成功: {len(context_text)} 字符")
+            log(f"Graph scene context retrieved: {len(context_text)} chars")
     except Exception as exc:
         import logging
 
-        logging.warning("cognee 场景搜索失败: %s", exc)
-        log(f"图谱场景搜索失败: {exc}")
-        raise RuntimeError("Cognee 图谱场景搜索失败") from exc
+        logging.warning("cognee scene search failed: %s", exc)
+        log(f"Graph scene search failed: {exc}")
+        raise RuntimeError("Cognee graph scene search failed") from exc
 
     if not context_text.strip():
-        log("⚠️ 图谱搜索无场景数据，请先完成知识图谱构建")
+        log("⚠️ Graph search returned no scene data; finish building the knowledge graph first")
         return []
 
-    report(0.3, "从图谱结构化提取基础场景...")
-    system_prompt = """你是影视项目的全局场景资产分析师。
-输入是知识图谱检索得到的上下文。请只提取可以跨镜头复用的稳定物理地点。
+    report(0.3, "Extracting base scenes from the graph with structured output...")
+    system_prompt = """You are a global scene asset analyst for a film and TV project.
+The input is context retrieved from the knowledge graph. Extract only stable physical locations that can be reused across shots.
 
-规则：
-- name 必须是具体物理地点，例如“菩提寝房”“镇国公府前院”，不能是“家里”“现场”“回忆”等泛称。
-- 合并同一地点的别名；不同时间、天气、损毁状态不要拆成新的基础场景。
-- 排除人物、组织、事件、动作、情绪、章节标题和抽象概念。
-- scene_type 只能是 interior、exterior、nature。
-- evidence_lines 必须来自输入图谱上下文，不得编造。
-- 图谱证据不足时宁缺毋滥，不要猜测地点。"""
+Rules:
+- name must be a specific physical location, e.g. "Bodhi Bedchamber" or "Front Courtyard of the Duke's Mansion", never a generic term such as "home", "the scene" or "flashback".
+- Merge aliases of the same location; do not split different times, weather or damage states into new base scenes.
+- Exclude characters, organizations, events, actions, emotions, chapter titles and abstract concepts.
+- scene_type must be one of interior, exterior, nature.
+- evidence_lines must come from the input graph context and must not be fabricated.
+- When graph evidence is insufficient, prefer omission over guessing locations."""
     try:
         result = await LLMGateway.acreate_structured_output(
             context_text,
@@ -1440,16 +1421,16 @@ async def extract_scenes_from_graph(
     except Exception as exc:
         import logging
 
-        logging.error("LLM 图谱场景提取失败: %s", exc)
-        log(f"LLM 图谱场景提取失败: {exc}")
-        raise RuntimeError("LLM 图谱场景提取失败") from exc
+        logging.error("LLM graph scene extraction failed: %s", exc)
+        log(f"LLM graph scene extraction failed: {exc}")
+        raise RuntimeError("LLM graph scene extraction failed") from exc
 
     candidates: list[GraphSceneCandidate] = []
     seen: set[str] = set()
-    generic_names = {"场景", "地点", "室内", "外景", "内景", "现场", "家里", "回忆"}
+    generic_names = {"scene", "location", "interior", "exterior", "indoors", "outdoors", "on site", "home", "flashback", "cảnh", "địa điểm", "nhà", "hồi tưởng"}
     for candidate in result.scenes:
         name = str(candidate.name or "").strip()
-        if not name or name in seen or name in generic_names:
+        if not name or name in seen or name.lower() in generic_names:
             continue
         aliases = _clean_aliases(name, candidate.aliases)
         evidence_lines = [
@@ -1466,7 +1447,7 @@ async def extract_scenes_from_graph(
                 and any(token and token in line for token in location_tokens)
             ][:8]
         if not evidence_lines:
-            log(f"  跳过缺少图谱证据的场景候选: {name}")
+            log(f"  Skipping scene candidate without graph evidence: {name}")
             continue
         candidate.aliases = aliases
         candidate.evidence_lines = evidence_lines
@@ -1474,10 +1455,10 @@ async def extract_scenes_from_graph(
         candidates.append(candidate)
 
     if not candidates:
-        log("⚠️ 图谱上下文未提取到稳定物理场景")
+        log("⚠️ No stable physical scenes were extracted from the graph context")
         return []
 
-    report(0.5, "生成场景环境描述...")
+    report(0.5, "Generating scene environment descriptions...")
     enrichment_agent = _create_scene_build_agent(
         SCENE_ENRICHMENT_SYSTEM_PROMPT,
         SceneEnrichmentList,
@@ -1488,7 +1469,7 @@ async def extract_scenes_from_graph(
     for index, candidate in enumerate(candidates, start=1):
         report(
             0.5 + 0.45 * ((index - 1) / max(total, 1)),
-            f"生成场景描述 ({index}/{total}): {candidate.name}",
+            f"Generating scene description ({index}/{total}): {candidate.name}",
         )
         scene_type = str(candidate.scene_type or "interior").strip().lower()
         if scene_type not in {"interior", "exterior", "nature"}:
@@ -1501,12 +1482,12 @@ async def extract_scenes_from_graph(
             context_lines=list(candidate.evidence_lines),
             enrichment_agent=enrichment_agent,
         )
-        scene.notes = _append_scene_note(scene.notes, "由 Cognee 图谱提取的基础场景")
+        scene.notes = _append_scene_note(scene.notes, "Base scene extracted from the Cognee graph")
         scenes.append(scene)
         log(f"  ✓ {scene.name}")
 
-    report(1.0, "完成")
-    log(f"图谱场景提取完成: {len(scenes)} 个")
+    report(1.0, "Done")
+    log(f"Graph scene extraction complete: {len(scenes)} scenes")
     return scenes
 
 
@@ -1552,13 +1533,13 @@ async def _normalized_scene_blocks_cached(
 def strip_scene_heading_suffix(name: str) -> str:
     """Drop the heading markers the parser left on a location name.
 
-    "郑玉琴办公室内" is the same room as "郑玉琴办公室": the 内 is the heading's
+    "Zheng's Office INT" is the same room as "Zheng's Office": the INT is the heading's
     interior marker, which the parser also returns as its own field. Removing it
     is the whole of what a per-block model call used to buy here.
 
-    The rules already exist — ``clean_scene_name_and_time`` handles the attached,
-    separated and spaced forms and refuses to strip when the result would not be
-    a name any more — so this only discards the time it also returns.
+    The rules already exist — ``clean_scene_name_and_time`` handles the separated
+    and spaced forms and refuses to strip when the result would not be a name any
+    more — so this only discards the time it also returns.
     """
     cleaned, _time_of_day = clean_scene_name_and_time(str(name or "").strip(), "")
     return cleaned or str(name or "").strip()
@@ -1610,9 +1591,9 @@ def _scene_recall_is_covered(
     located must still be reachable, as a name, an alias, or the same name with
     its heading markers stripped.
 
-    The test stays strict — an attached "内" is genuinely ambiguous ("商务车内"
-    is a place, "郑玉琴办公室内" is a marker) so a merge across one is not
-    recognised here and does send the build down the fallback. That is now
+    The test stays strict: it only recognises a location when it is reachable
+    by exact name, alias or the heading-marker-stripped name. A looser merge is
+    not recognised here and does send the build down the fallback. That is now
     affordable: the fallback is deterministic and costs no model call, and
     adjudication performs the same merge downstream with occurrence counts to
     decide it on.
@@ -1632,7 +1613,7 @@ def _scene_recall_is_covered(
         and strip_scene_heading_suffix(candidate.name) not in known
     ]
     if missing:
-        return False, f"AI normalizer 漏掉了 {len(missing)} 个地点: {missing[:5]}"
+        return False, f"AI normalizer missed {len(missing)} locations: {missing[:5]}"
     return True, ""
 
 
@@ -1642,13 +1623,13 @@ async def extract_scenes_from_script(
     on_log: Optional[Any] = None,
     cache: Optional[SceneBuildCache] = None,
 ) -> List[NovelScene]:
-    """从格式化剧本提取场景（AI normalizer first + parser fallback + LLM enrichment）。
+    """Extract scenes from a formatted screenplay (AI normalizer first + parser fallback + LLM enrichment).
 
-    流程：
-    1. 程序 parser 高召回定位场景块，作为 AI normalizer 的召回 sanity check
-    2. 优先使用 AI normalizer 输出的 NormalizedSceneBlock
-    3. AI 抛错、返回空或基础场景数少于 parser 结果时，回退到 parser + LLM 规范化
-    4. LLM 逐场景生成 environment_prompt
+    Flow:
+    1. The program parser locates scene blocks with high recall, as a recall sanity check for the AI normalizer
+    2. Prefer the NormalizedSceneBlock output of the AI normalizer
+    3. When the AI raises, returns empty, or yields fewer base scenes than the parser, fall back to parser + LLM normalization
+    4. The LLM generates environment_prompt scene by scene
     """
     from .script_parser import parse_scenes, extract_synopsis
 
@@ -1662,14 +1643,14 @@ async def extract_scenes_from_script(
     synopsis = extract_synopsis(novel_text)
     output_language = detect_asset_language(novel_text)
     if synopsis:
-        log(f"提取梗概+人物设定: {len(synopsis)} 字符")
+        log(f"Extracted synopsis + character settings: {len(synopsis)} chars")
 
     legacy_candidates = parse_scenes(novel_text)
     log(
         lmsg(
             "tasks.log.pipeline.legacyRecall",
-            "程序召回 sanity check 得到 "
-            f"{len(legacy_candidates)} 个场景块: {[c.name for c in legacy_candidates]}",
+            "Program recall sanity check found "
+            f"{len(legacy_candidates)} scene blocks: {[c.name for c in legacy_candidates]}",
             sceneCount=len(legacy_candidates),
             sceneNames=str([c.name for c in legacy_candidates]),
         )
@@ -1680,7 +1661,7 @@ async def extract_scenes_from_script(
 
     report(
         0.1,
-        lmsg("tasks.progress.pipeline.normalizingScenes", "AI 规范化剧本场景块..."),
+        lmsg("tasks.progress.pipeline.normalizingScenes", "AI normalizing screenplay scene blocks..."),
     )
     try:
         normalized_scene_candidates = await _normalized_scene_blocks_cached(
@@ -1694,28 +1675,28 @@ async def extract_scenes_from_script(
             normalized_scene_candidates = []
         if normalized_scene_candidates:
             log(
-                "AI 规范化得到 "
-                f"{len(normalized_scene_candidates)} 个基础场景: "
+                "AI normalization produced "
+                f"{len(normalized_scene_candidates)} base scenes: "
                 f"{[c['name'] for c in normalized_scene_candidates]}"
             )
         elif not fallback_reason:
-            fallback_reason = "AI normalizer 返回空"
+            fallback_reason = "AI normalizer returned empty"
     except Exception as e:
         import logging
 
-        logging.error(f"AI 场景规范化失败: {e}")
-        fallback_reason = f"AI normalizer 失败 ({e})"
+        logging.error(f"AI scene normalization failed: {e}")
+        fallback_reason = f"AI normalizer failed ({e})"
 
     if not normalized_scene_candidates:
         if fallback_reason:
-            log(f"⚠️ {fallback_reason}，回退到程序定位 + 本地规范化")
+            log(f"⚠️ {fallback_reason}, falling back to program location + local normalization")
 
-        report(0.15, "定位剧本场景块...")
+        report(0.15, "Locating screenplay scene blocks...")
         candidates = legacy_candidates
-        log(f"程序定位得到 {len(candidates)} 个场景块: {[c.name for c in candidates]}")
+        log(f"Program location found {len(candidates)} scene blocks: {[c.name for c in candidates]}")
 
         if not candidates:
-            log("⚠️ 未从剧本中解析出任何场景")
+            log("⚠️ No scenes could be parsed from the screenplay")
             return []
 
         # Deterministic, and no model call: a standard heading already states
@@ -1766,17 +1747,17 @@ async def extract_scenes_from_script(
 
         normalized_scene_candidates = list(merged_candidates.values())
         log(
-            "规范化后得到 "
-            f"{len(normalized_scene_candidates)} 个基础场景: "
+            "Normalization produced "
+            f"{len(normalized_scene_candidates)} base scenes: "
             f"{[c['name'] for c in normalized_scene_candidates]}"
         )
 
-    # Step 3: LLM 逐场景生成 environment_prompt
-    report(0.5, "LLM 生成场景环境描述...")
+    # Step 3: LLM generates environment_prompt scene by scene
+    report(0.5, "LLM generating scene environment descriptions...")
     scenes: List[NovelScene] = []
     total = len(normalized_scene_candidates)
     if not normalized_scene_candidates:
-        log("⚠️ 场景规范化后为空")
+        log("⚠️ No scenes left after scene normalization")
         return []
 
     enrichment_is_default = (
@@ -1806,9 +1787,9 @@ async def extract_scenes_from_script(
         completed += 1
         report(
             0.5 + 0.4 * (completed / max(total, 1)),
-            f"生成场景描述 ({completed}/{total}): {cand['name']}",
+            f"Generating scene description ({completed}/{total}): {cand['name']}",
         )
-        log(f"  ✓ {cand['name']}: environment_prompt={len(scene.environment_prompt)}字")
+        log(f"  ✓ {cand['name']}: environment_prompt={len(scene.environment_prompt)} chars")
 
     if enrichment_is_default:
         scenes.extend(
@@ -1840,35 +1821,35 @@ async def extract_scenes_from_script(
             note_progress(candidate, scene)
             scenes.append(scene)
 
-    log(f"场景提取完成: {len(scenes)} 个")
-    report(1.0, "完成")
+    log(f"Scene extraction complete: {len(scenes)} scenes")
+    report(1.0, "Done")
     return scenes
 
 
 # ============================================================
-# 道具提取 Pipeline
+# Prop extraction Pipeline
 # ============================================================
 
 
 class PropEnrichment(BaseModel):
-    """LLM 补充的道具信息。"""
+    """Prop information supplemented by the LLM."""
 
-    name: str = Field(..., description="道具主名称")
+    name: str = Field(..., description="Primary prop name")
     aliases: List[str] = Field(
-        default_factory=list, description="原文中真实出现过的别名/简称/自然称呼"
+        default_factory=list, description="Aliases/short names/natural forms of address that actually appear in the source text"
     )
     prop_type: str = Field(
         default="object", description="weapon/accessory/artifact/document/furniture"
     )
     visual_prompt: str = Field(
         default="",
-        description="道具固有外观视觉描述（材质、工艺、尺寸、色泽、纹饰，80-120字，不含人物和临时状态变化）",
+        description="Visual description of the prop's inherent appearance (material, craftsmanship, size, color, ornamentation, 50-80 words, without people or temporary state changes)",
     )
-    owner: str = Field(default="", description="所属角色名")
+    owner: str = Field(default="", description="Name of the owning character")
 
 
 class PropEnrichmentList(BaseModel):
-    """道具补充信息列表。"""
+    """List of supplemental prop information."""
 
     props: List[PropEnrichment]
 
@@ -1882,9 +1863,9 @@ async def extract_props_from_graph(
     on_progress: Optional[Any] = None,
     on_log: Optional[Any] = None,
 ) -> List[NovelProp]:
-    """从 cognee 图谱中提取道具。
+    """Extract props from the cognee graph.
 
-    只提取有情节意义的道具（推动剧情的信物、武器等），不提取普通物件。
+    Only props with plot significance (tokens, weapons, etc. that drive the plot) are extracted, not ordinary objects.
     """
     with preserve_st_env():
         import cognee
@@ -1898,14 +1879,14 @@ async def extract_props_from_graph(
     def log(message: MessageLike):
         print(f"[extract_props] {message}")
 
-    report(0.1, "通过图谱检索道具信息...")
+    report(0.1, "Retrieving prop information through the graph...")
 
     context_text = ""
     try:
         results = await _run_graph_read(
             state_dir,
             lambda: cognee.search(
-                query_text="列出小说中所有重要道具物件，包括武器、信物、文书、法宝等有情节意义的物品",
+                query_text="List all important props and objects in the novel, including weapons, tokens, documents, magic artifacts and other items with plot significance",
                 query_type=SearchType.GRAPH_COMPLETION,
                 datasets=[dataset_name],
                 only_context=True,
@@ -1922,49 +1903,49 @@ async def extract_props_from_graph(
                 else:
                     parts.append(_stringify_search_fragment(item))
             context_text = "\n".join(parts)
-            log(f"图谱上下文获取成功: {len(context_text)} 字符")
+            log(f"Graph context retrieved: {len(context_text)} chars")
     except Exception as e:
         import logging
 
-        logging.warning(f"cognee.search 失败: {e}")
-        raise RuntimeError("Cognee 图谱道具搜索失败") from e
+        logging.warning(f"cognee.search failed: {e}")
+        raise RuntimeError("Cognee graph prop search failed") from e
 
     if not context_text.strip():
-        log("⚠️ 图谱搜索无数据，请先构建图谱")
+        log("⚠️ Graph search returned no data; build the graph first")
         return []
 
     if novel_text:
-        context_text += f"\n\n【剧本原文全文】\n{novel_text}"
-        log(f"已注入原文全文辅助上下文: {len(novel_text)} 字符")
+        context_text += f"\n\n[Full original screenplay text]\n{novel_text}"
+        log(f"Injected the full original text as auxiliary context: {len(novel_text)} chars")
 
-    report(0.3, "LLM 结构化提取道具...")
+    report(0.3, "Extracting props with LLM structured output...")
 
-    system_prompt = """你是小说道具分析专家。以下是从知识图谱中提取的物品信息。
-请基于图谱上下文提取所有有情节意义的道具/物件；若提供了原文全文，可用来补充自然称呼和简称，但不要凭空添加图谱与原文都未提及的细节。
+    system_prompt = """You are a novel prop analysis expert. Below is the item information extracted from the knowledge graph.
+Based on the graph context, extract all props/objects with plot significance; if the full original text is provided it may be used to supplement natural names and short names, but do not add details that appear in neither the graph nor the original text.
 
-⚠️ 只提取推动剧情的重要物品（信物、武器、法宝、文书等），不提取普通日用品。
+⚠️ Extract only important items that drive the plot (tokens, weapons, magic artifacts, documents, etc.), not ordinary daily items.
 
-对于每个道具，生成：
-1. name: 道具主名称（如 '七星剑'、'传国玉玺'）
-2. aliases: 原文中真实出现过的其他称呼、简称或自然称呼
+For each prop, generate:
+1. name: primary prop name (e.g. 'Seven-Star Sword', 'Imperial Jade Seal')
+2. aliases: other names, short names or natural forms of address that actually appear in the source text
 3. prop_type: weapon/accessory/artifact/document/furniture
-4. visual_prompt: 道具固有外观视觉描述，80-120字，要求：
-   - 包含**材质、工艺、尺寸、色泽、纹饰**等细节
-   - 描述**固有外观**（断刀就是断的，锈剑就是锈的）
-   - **不含**人物、使用场景、临时状态变化（如沾血、着火）
-   - 基于图谱描述组织，不凭空创造细节
-   示例："三尺青锋长剑，剑身寒铁锻造泛冷蓝光泽，剑脊镌刻七颗星辰纹饰。剑柄缠深棕色鲨鱼皮，末端嵌圆形白玉剑首。配紫檀木鞘，鞘身浮雕云纹，鞘口鎏金"
-5. owner: 所属角色名（如有）
+4. visual_prompt: visual description of the prop's inherent appearance, 50-80 words, requirements:
+      - Include details such as **material, craftsmanship, size, color and ornamentation**
+      - Describe the **inherent appearance** (a broken blade is broken, a rusty sword is rusty)
+      - **Do not include** people, usage scenes or temporary state changes (such as blood stains or being on fire)
+      - Organize it from the graph description; do not invent details
+      Example: "A three-chi blue-steel longsword, its blade forged from cold iron with a cold blue sheen and seven star patterns engraved along the spine. The hilt is wrapped in dark brown shark skin, ending in a round white-jade pommel. Fitted with a rosewood scabbard carved in relief with cloud patterns and gilded at the mouth"
+5. owner: name of the owning character (if any)
 
-规则：
-- 只提取有明确情节作用的道具
-- visual_prompt 基于图谱描述组织，不凭空创造细节
-- 同一物品的不同叫法合并（别名）
-- 图谱是主依据，原文全文只作为补充证据，主要用于补全 aliases 和确认道具是否确实在原文中反复出现
-- aliases 优先收录原文里真实出现过的自然称呼或简称，例如正式名较长时，可补充正文里反复出现的短称
-- aliases 不要发散编造；不要加入过于泛化、容易误匹配其他物件的词
-- 不要把过短、过泛、或高碰撞的类别词放进 aliases，例如“箱子 / 盒子 / 剑 / 刀 / 文件 / 车”这类默认不要收，除非图谱上下文明确表明原文就是把该具名道具稳定地这样称呼
-- 如果某个别名只是主名称的重复写法，则不要重复输出"""
+Rules:
+- Extract only props with a clear plot function
+- Organize visual_prompt from the graph description; do not invent details
+- Merge different names for the same item (aliases)
+- The graph is the main basis; the full original text is only supplementary evidence, used mainly to complete aliases and confirm that the prop really recurs in the original text
+- aliases should prefer natural names or short names that actually appear in the source text, e.g. when the formal name is long, add the short name that recurs in the body text
+- Do not invent aliases; do not add words that are too generic and easily match other objects
+- Do not put overly short, generic or highly colliding category words into aliases, e.g. "box / case / sword / knife / document / car" should not be included by default, unless the graph context clearly shows that the source text stably refers to that specific prop that way
+- If an alias is merely a repeated spelling of the primary name, do not output it again"""
 
     try:
         result = await LLMGateway.acreate_structured_output(
@@ -1983,12 +1964,12 @@ async def extract_props_from_graph(
             )
             for p in result.props
         ]
-        log(f"LLM 结构化提取完成: {len(props)} 个道具")
+        log(f"LLM structured extraction complete: {len(props)} props")
     except Exception as e:
         import logging
 
-        logging.error(f"LLM 道具提取失败: {e}")
-        raise RuntimeError("LLM 图谱道具提取失败") from e
+        logging.error(f"LLM prop extraction failed: {e}")
+        raise RuntimeError("LLM graph prop extraction failed") from e
 
-    report(1.0, "完成")
+    report(1.0, "Done")
     return props

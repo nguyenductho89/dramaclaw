@@ -6,20 +6,20 @@ import { I18nextProvider, initReactI18next } from "react-i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NovelFormatDialog } from "@/components/ingest/NovelFormatDialog";
-import { enTranslation, zhTranslation } from "../../helpers/i18n-fixtures";
+import { enTranslation, viTranslation } from "../../helpers/i18n-fixtures";
 
 /**
- * 格式说明弹窗里的样例是「照着抄」的模板，中英各一套：解析器两种格式都认，但
- * 给英文用户看中文制片格式等于没给。这里钉住的是「跟着界面语言切」这件事。
+ * The samples in the format dialog are "copy this" templates, one set each for English and Vietnamese: the parser reads the same keywords,
+ * but showing Vietnamese users English-only content would be no help. What is pinned here is that "the samples follow the UI language".
  */
-async function renderIn(lng: "zh" | "en") {
+async function renderIn(lng: "vi" | "en") {
   const i18n = i18next.createInstance();
   await i18n.use(initReactI18next).init({
     lng,
     fallbackLng: lng,
     interpolation: { escapeValue: false },
     resources: {
-      zh: { translation: zhTranslation },
+      vi: { translation: viTranslation },
       en: { translation: enTranslation },
     },
   });
@@ -31,7 +31,7 @@ async function renderIn(lng: "zh" | "en") {
 }
 
 beforeAll(() => {
-  // Radix 的 Dialog 在 jsdom 里要用到这两个，缺了直接抛。
+  // Radix's Dialog needs these two in jsdom, and throws if they are missing.
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   window.ResizeObserver ??= class {
     observe() {}
@@ -44,42 +44,41 @@ describe("NovelFormatDialog", () => {
   it("shows the Fountain sample and English-only rules in the English UI", async () => {
     const { baseElement } = await renderIn("en");
     const shown = baseElement.textContent ?? "";
-    // 三个 <pre> 依次是：完整场景头 / 可修复格式 / 示例片段。分开断言，
-    // 因为「某一行出现在哪一块」正是这个弹窗要传达的信息。
+    // The three <pre> blocks are, in order: complete scene heading / repairable format / example excerpt. They are asserted separately,
+    // because "which block a given line appears in" is exactly what this dialog is there to convey.
     const [spec, repairable, example] = Array.from(
       baseElement.querySelectorAll("pre"),
     ).map((el) => el.textContent ?? "");
 
     expect(spec).toContain("INT. SEOUL SUBWAY STATION - NIGHT");
     expect(spec).toContain("EXT. SEOUL STREET - DAWN");
-    // 精确钟点走独立的 Time: 行，不能写进地点名。
+    // The exact clock time goes on its own Time: line and cannot be written into the location name.
     expect(spec).toContain("Time: 11:47 PM");
-    // 时间词只有 7 个，写别的会整行识别不出来。
+    // There are only 7 time words, and anything else makes the whole line unrecognizable.
     expect(spec).toContain("DAY / NIGHT / MORNING / AFTERNOON / EVENING / DAWN / DUSK");
 
-    // INT./EXT. 落不到单一的内/外景取值上，一个这样的场景就会把整本剧本从
-    // standard 拉到 repairable，所以它属于「可修复」而不是「完整」。对应后端
-    // tests/test_screenplay_scene_parser.py::test_int_ext_heading_is_repairable_not_complete。
+    // INT./EXT. cannot land on a single interior/exterior value, and one such scene pulls the whole script from
+    // standard down to repairable, so it belongs to "repairable" rather than "complete". It corresponds to the backend
+    // tests/test_screenplay_scene_parser.py::test_int_ext_heading_is_repairable_not_complete.
     expect(spec).not.toContain("INT./EXT.");
     expect(repairable).toContain("SCENE 1 - SEOUL SUBWAY STATION");
     expect(repairable).toContain("INT./EXT. MOVING TAXI - DAY");
 
-    // 完整示例逐字对齐 tests/test_screenplay_scene_parser.py 里那份，
-    // 那边钉住了它解析出来是 standard、零警告。
+    // The complete example is aligned verbatim with the one in tests/test_screenplay_scene_parser.py,
+    // which pins that it parses as standard with zero warnings.
     expect(example).toContain("EXT. SEOUL STREET - DAWN");
     expect(example).toContain("JI-WON: I made it back.");
 
     expect(shown).toContain("MIDNIGHT");
-    // 英文界面不该再漏中文样例。
-    expect(shown).not.toContain("苏鸾寝殿");
+    // The English UI must not leak the Vietnamese sample.
+    expect(shown).not.toContain("GA TÀU ĐIỆN NGẦM SEOUL");
   });
 
-  it("keeps the Chinese production-format sample in the Chinese UI", async () => {
-    const { baseElement } = await renderIn("zh");
+  it("shows the Vietnamese sample in the Vietnamese UI", async () => {
+    const { baseElement } = await renderIn("vi");
     const shown = baseElement.textContent ?? "";
 
-    expect(shown).toContain("1-1 苏鸾寝殿 深夜 内");
-    expect(shown).toContain("苏糖：锦绣，几更了？");
-    expect(shown).not.toContain("SEOUL SUBWAY STATION");
+    expect(shown).toContain("INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT");
+    expect(shown).toContain("JI-WON: Có ai ở đây không?");
   });
 });

@@ -47,7 +47,7 @@ function isScene360Model(model: { apiModel: string; label: string }): boolean {
   return (
     model.label === SCENE_360_MODEL_NAME
     || model.apiModel === SCENE_360_MODEL_NAME
-    // CE 拉取目录失败时的兼容兜底条目仍使用旧模型别名。
+    // The compatibility fallback entries when CE fails to fetch the catalog still use the old model alias.
     || model.apiModel === 'newapi_gpt_image2'
     || model.apiModel === 'huimeng_gpt_image2'
   );
@@ -69,14 +69,14 @@ export const Scene360Overlay = memo(
     const updateNodeData = useCanvasStore((state) => state.updateNodeData);
     const imageCatalog = useFreezoneImageModels();
     const imageModels = imageCatalog.models;
-    // 360 是固定的 LingShan-G2 能力，不跟随后台目录排序。否则管理员调整排序后，
-    // 报价和实际执行会在无提示的情况下切换到另一款模型。
+    // 360 is the fixed LingShan-G2 capability and does not follow the backend catalog ordering. Otherwise after an admin adjusts the ordering,
+    // the quote and the actual execution would switch to another model without any hint.
     const selectedModel = imageModels.find(isScene360Model);
     const modelUnavailable =
       isAuthoritativeEmptyCatalog(imageCatalog) || selectedModel === undefined;
-    // 全景没有尺寸/画质选择器，按后台对该模型配置的档位取默认值；模型没配
-    // 画质就不下发 quality。报价与提交必须来自同一次解析，见
-    // `resolveFixedFeatureModelRequest` 的注释。
+    // The panorama has no size/quality selector, taking defaults by the tiers the backend configures for that model; if the model has
+    // no quality configured, quality is not sent. The quote and the submission must come from the same resolution, see the note of
+    // `resolveFixedFeatureModelRequest`.
     const modelRequest = useMemo(
       () => resolveFixedFeatureModelRequest(selectedModel),
       [selectedModel],
@@ -97,7 +97,7 @@ export const Scene360Overlay = memo(
       (billingRuleMissing ? t('common.billingRuleNotConfiguredShort') : null);
 
     const handleSubmit = useCallback(async () => {
-      // 按钮已经禁用，这里再挡一道：没有固定模型就绝不该发出请求。
+      // The button is already disabled, so block once more here: with no fixed model a request must never be sent.
       if (modelUnavailable) return;
       const project = readUrl().project;
       if (!project) {
@@ -162,8 +162,8 @@ export const Scene360Overlay = memo(
         const viewerNodeId = addNode(CANVAS_NODE_TYPES.pano360Viewer, viewerPosition);
         addEdge(nextNodeId, viewerNodeId);
       } catch (err) {
-        // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-        // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+        // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+        // Writing an error banner would mark a live task as failed and clear the handle.
         if (isTaskPollTimeoutError(err)) {
           notifyTaskStillRunning(t);
           return;
@@ -199,7 +199,7 @@ export const Scene360Overlay = memo(
         offset={12}
         className={NODE_TOOLBAR_CLASS}
       >
-        {/* 操作区跟随画布缩放（align=center → 锚点顶边中点，贴节点底边）。 */}
+        {/* The operation area follows the canvas zoom (align=center -> anchor at the top-edge midpoint, hugging the node's bottom edge). */}
         <ZoomScaledToolbar origin="top center">
         <div
           className={`flex min-w-[420px] items-center gap-2 ${CANVAS_NODE_TOOLBAR_PILL_CLASS}`}

@@ -1,13 +1,13 @@
 # DramaClaw
 
-> source-available（ELv2）的小说→成片自托管管线（社区版 / CE）。单机运行，无需 PostgreSQL/Redis。
+> A source-available (ELv2) self-hosted pipeline from novel to finished video (Community Edition / CE). Runs on a single machine, with no PostgreSQL/Redis required.
 
-## 文档
+## Docs
 
-- [文档总览](docs/README.md): 对外文档入口
-- [功能总览](docs/features.md): DramaClaw 能做什么（小说→成片全流程能力）
-- [架构](docs/architecture.md): 系统怎么运作（流程 / 代码结构 / 端口与适配器）
-- [快速开始](docs/quickstart.md): 本地 Docker 一条命令跑起 CE
-- [自托管手册](docs/self-hosting.md): 部署、配置、升级、备份
-- [配置模型供应商](docs/configuring-models.md): 接入你自己的 OpenAI 兼容网关
-- [许可证说明](docs/license.md): 能做什么 / 商业限制（source available）
+- [Documentation overview](docs/README.md): entry point of the public docs
+- [Features](docs/en/concepts/features.md): what DramaClaw can do (full novel-to-video pipeline capabilities)
+- [Architecture](docs/en/concepts/architecture.md): how the system works (flow / code structure / ports and adapters)
+- [Quickstart](docs/en/getting-started/quickstart.md): bring up CE locally with a single Docker command
+- [Self-hosting handbook](docs/en/guides/self-hosting.md): deployment, configuration, upgrades, backups
+- [Configuring model providers](docs/en/getting-started/configuring-models.md): connect your own OpenAI-compatible gateway
+- [License notes](docs/en/license.md): what you can do / commercial restrictions (source available)

@@ -8,7 +8,7 @@ import { DEFAULT_NODE_WIDTH } from '@/features/canvas/domain/canvasNodes';
 import { useViewportReturnStore } from '@/features/canvas/application/viewportReturnStore';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-/** 「回到节点」时的固定缩放比例（10%）。 */
+/** The fixed zoom ratio (10%) when "Back to nodes". */
 const BACK_TO_NODES_ZOOM = 0.1;
 
 function nodeFallbackSize(node: {
@@ -26,23 +26,23 @@ function nodeFallbackSize(node: {
 }
 
 /**
- * 画布拖到空白区域（当前视口内一个节点都看不到）时，底部浮出的提示条 +
- * 「回到节点」按钮。点击后视口移动到所有节点包围盒的中心，缩放固定为 10%，
- * 让用户一眼看到全部内容的分布。
+ * A hint strip floating at the bottom when the canvas is dragged to a blank area (not a single node visible in the current viewport) +
+ * a "Back to nodes" button. After clicking, the viewport moves to the center of the bounding box of all nodes, with zoom fixed at 10%,
+ * letting the user see the distribution of all content at a glance.
  *
- * 只检查顶层节点（组的边界会包住成员；子节点的 position 是组内相对坐标，
- * 不能直接和视口比较）。空画布不显示——那是 empty hint 的职责。
+ * Check only top-level nodes (a group's bounds enclose its members; a child's position is group-relative coordinates
+ * and cannot be compared with the viewport directly). An empty canvas does not show it - that is the duty of the empty hint.
  */
 export function BackToNodesHint() {
   const { t } = useTranslation();
   const reactFlow = useReactFlow();
 
-  // 「返回节点」也占着底部居中那个位置，两条同时在时本条上移一格，别叠成一坨。
+  // "Back to node" also occupies the bottom-center position; when both are present this one moves up a notch, so they do not pile into a lump.
   const returnHintVisible = useViewportReturnStore((state) => state.request !== null);
 
   const anyNodeVisible = useCanvasStore((state) => {
     const { width, height } = state.canvasViewportSize;
-    if (width <= 0 || height <= 0) return true; // 视口尺寸未知时不打扰
+    if (width <= 0 || height <= 0) return true; // Do not disturb when the viewport size is unknown
     const topLevel = state.nodes.filter((node) => !node.parentId);
     if (topLevel.length === 0) return true;
     const vp = state.currentViewport;

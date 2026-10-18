@@ -1,4 +1,4 @@
-"""contract 层共用的测试装配。"""
+"""Shared test wiring for the contract layer."""
 
 from datetime import datetime, timezone
 from itertools import count
@@ -30,14 +30,14 @@ class _StubAuthz:
 
 @pytest.fixture
 def signed_inline_backend():
-    """造一个签名链路完整的 InlineTaskBackend。
+    """Build an InlineTaskBackend with a complete signing chain.
 
-    producer 与 consumer 都是真实实现，共用测试 keyring 与固定时钟，只有 authz
-    是 stub——签名与验签真跑，不是绕过校验的替身。
+    The producer and consumer are both real implementations, sharing the test keyring and a fixed clock; only authz
+    is a stub -- signing and verification really run, it is not a stand-in that bypasses validation.
 
-    必须接线：InlineTaskBackend 在 consumer 为 None 时按设计直接判
-    InvalidTaskEnvelope（失败关闭），裸构造的后端不会执行任何任务，用例只会卡在
-    等待上超时。生产侧唯一构造点 ports/local/__init__.py 同样必然传这两者。
+    It must be wired up: when the consumer is None, InlineTaskBackend by design directly judges
+    InvalidTaskEnvelope (fail-closed), so a bare-constructed backend executes no tasks and a case would only hang
+    and time out while waiting. The only production construction point, ports/local/__init__.py, necessarily passes both as well.
     """
 
     def _build() -> InlineTaskBackend:

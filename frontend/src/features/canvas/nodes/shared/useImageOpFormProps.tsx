@@ -16,7 +16,7 @@ import type { CreditPromotionDisplay } from '@/components/credits/credit-visual'
 import { useGenerationCreditCost } from '@/lib/queries/generation-credit-cost';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-/** 覆盖到 `ImageGenerationForm` 上的那几个 prop（功能节点专用）。 */
+/** The few props overridden onto `ImageGenerationForm` (for feature nodes only). */
 export interface ImageOpFormProps {
   promptLeadingChip: ReactNode;
   onPromptLeadingChipDelete: () => void;
@@ -25,20 +25,20 @@ export interface ImageOpFormProps {
   submitDisabled: boolean;
   totalCreditCostDisplay: string | null;
   /**
-   * 必须跟着 `totalCreditCostDisplay` 一起覆盖：这两个 prop 是 spread 在宿主表单
-   * 之后的，只盖 display 会让宫格的价格配上底图询价的促销标签。
+   * Must be overridden together with `totalCreditCostDisplay`: these two props are spread after the host form,
+   * and overriding only display would pair the grid's price with the promo label of the base-image quote.
    */
   creditPromotion: CreditPromotionDisplay | null;
 }
 
 /**
- * 功能节点（点「九宫格 / 宫格模板」下拉某一项后建出来的那种）在生成表单上的差异
- * 部分：输入框**里**多一枚可切可删的功能 chip、功能说明当占位文案、↑ 走对应模板
- * 而不是常规文生图。
+ * The differing part of the generation form for a feature node (the kind created after picking an item in the "nine-grid / grid template" dropdown):
+ * the input gets a switchable, deletable feature chip **inside** it, the feature description serves as the placeholder, and ↑ goes through the matching template
+ * instead of regular text-to-image.
  *
- * 工作流（`ImageGenNode`）与故事板（`AssetBoardImageGenForm`）挂的是同一张
- * `ImageGenerationForm`，这条差异也就只该写一遍——两处 spread 同一个返回值，
- * 交互天然一致。普通图片生成节点没有 `imageOpKey`，返回 null，宿主渲染与从前一致。
+ * The workflow (`ImageGenNode`) and the storyboard (`AssetBoardImageGenForm`) mount the same
+ * `ImageGenerationForm`, so this difference should be written only once — both spread the same return value,
+ * and interaction is naturally consistent. A plain image generation node has no `imageOpKey`, returns null, and the host renders as before.
  */
 export function useImageOpFormProps(
   nodeId: string,
@@ -53,19 +53,19 @@ export function useImageOpFormProps(
   const handleSubmit = useCallback(() => {
     void runAssetBoardImageOp(nodeId);
   }, [nodeId]);
-  // 在输入框开头退格 = 删掉这枚 chip = 该节点退回普通图片生成。
+  // Backspace at the start of the input = delete this chip = the node falls back to plain image generation.
   const handleChipDelete = useCallback(() => {
     clearAssetBoardImageOp(nodeId);
   }, [nodeId]);
 
-  // 功能节点的算力：宫格按 image_selection 询价（与工具条下拉同一套查询，两处显示
-  // 同一个数）；询价没回来退回功能表里的硬编码 cost。全景没有对应口径，返回 null
-  // → CreditCostPill 自己不渲染。
+  // Compute cost of a feature node: grids are quoted by image_selection (the same query as the toolbar dropdown, so both places show
+  // the same number); if the quote has not returned, fall back to the hard-coded cost in the feature table. Panorama has no matching basis, returning null
+  // → CreditCostPill does not render itself.
   const isGridOp = opKey !== null && isGridImageOpKey(opKey);
   const { models: imageModels } = useFreezoneImageModels();
   const selectedModel = imageModels[0];
-  // value 传 null 时 useGenerationCreditCost 自己 enabled:false（image_selection
-  // 属于 requiresValue 那档），非宫格功能不会白发一次询价请求。
+  // When value is null, useGenerationCreditCost sets enabled:false itself (image_selection
+  // belongs to the requiresValue tier), so non-grid features do not needlessly send one quote request.
   const creditCost = useGenerationCreditCost(
     'image_selection',
     isGridOp ? (selectedModel?.apiModel ?? null) : null,
@@ -87,8 +87,8 @@ export function useImageOpFormProps(
     ),
     onPromptLeadingChipDelete: handleChipDelete,
     promptPlaceholder: ASSET_BOARD_IMAGE_OP_MAP[opKey].description,
-    // 功能提交不要求提示词（模板本身就是「基于当前图像生成」，提示词是可选补充），
-    // 所以不能沿用共用表单那条 `submitDisabled = isGenerating || !hasEffectivePrompt`。
+    // A feature submit does not require a prompt (the template itself is "generate based on the current image", and the prompt is an optional supplement),
+    // so the shared form's `submitDisabled = isGenerating || !hasEffectivePrompt` cannot be reused.
     onSubmit: handleSubmit,
     submitDisabled: options.isGenerating,
     totalCreditCostDisplay: isGridOp

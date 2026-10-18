@@ -35,23 +35,23 @@ INGEST_PATH_ERROR = (
     "do not infer /ingest/init, /ingest/setup, /ingest_script, or /ingest_fast."
 )
 TEXT_CONTENT_FILTER_CHAT_ERROR = (
-    "模型内容安全过滤拦截了本次文本生成，请调整原文或改写稿中的敏感描述后重试。"
+    "The model's content safety filter blocked this text generation. Adjust the sensitive wording in the source text or the rewritten draft and try again."
 )
 VOICE_PREREQ_CHAT_PREFIX = (
-    "配音任务没有成功启动：当前缺少声线前置。请到「虾塘」上传或录制缺失的"
-    "项目解说人声线/角色声线，或明确同意由虾导准备系统声线后，再继续生成配音。"
+    "The dubbing task did not start: a voice prerequisite is missing. Upload or record the missing "
+    "project narrator voice / character voices in Shrimp Pond, or explicitly agree to let Shrimp Director prepare system voices, then continue generating the dubbing."
 )
 RENDER_PREREQ_CHAT_PREFIX = (
-    "Render 任务没有生成可用图片：当前缺少必要草图前置。请先在「虾塘」生成或确认对应 "
-    "Beat 的草图后，再重新生成 Render。"
+    "The Render task did not produce a usable image: a required sketch prerequisite is missing. Generate or confirm the sketch for the matching "
+    "Beat in Shrimp Pond first, then regenerate the Render."
 )
 FIRST_FRAME_BATCH_SIZE = 9
 AGENT_BATCH_POLL_SECONDS = 2.0
 _AGENT_BATCH_DISPATCHERS: dict[str, threading.Thread] = {}
 _AGENT_BATCH_DISPATCHERS_LOCK = threading.Lock()
 FREEZONE_MAINLINE_WRITE_DENIED_MESSAGE = (
-    "当前虾导运行在虾画画布中，只能查询项目状态或操作画布节点；"
-    "不能从这里启动主线视频生成、分集/脚本规划、草图、首帧、配音、成片或单 Beat 视频任务。"
+    "Shrimp Director is currently running inside the Shrimp Canvas canvas and can only query project status or operate canvas nodes; "
+    "it cannot start mainline video generation, episode/script planning, sketch, first-frame, dubbing, final-cut or single-beat video tasks from here."
 )
 FREEZONE_DENIED_MAINLINE_WRITE_TOOLS = {
     "dramaclaw_control_episode_auto",
@@ -125,7 +125,7 @@ def _has_text_content_filter(value: Any) -> bool:
 def _voice_prereq_error_text(value: Any) -> str:
     if isinstance(value, str):
         text = value.strip()
-        if "voice_prereq_required" in text or "声线缺失" in text:
+        if "voice_prereq_required" in text or "voice is missing" in text.lower() or "voice missing" in text.lower():
             return text[:1200]
         return ""
     if isinstance(value, dict):
@@ -133,7 +133,7 @@ def _voice_prereq_error_text(value: Any) -> str:
         error = str(value.get("error") or value.get("detail") or value.get("message") or "").strip()
         if code == "voice_prereq_required":
             return error[:1200] if error else "voice_prereq_required"
-        if "声线缺失" in error:
+        if "voice is missing" in error.lower() or "voice missing" in error.lower():
             return error[:1200]
         for item in value.values():
             found = _voice_prereq_error_text(item)
@@ -160,15 +160,20 @@ def _voice_setup_prerequisites(value: Any) -> dict[str, Any] | None:
     return prerequisites
 
 
+
+def _is_render_prereq_text(text: str) -> bool:
+    lowered = text.lower()
+    return "requires a sketch" in lowered or "no usable image" in lowered
+
 def _render_prereq_error_text(value: Any) -> str:
     if isinstance(value, str):
         text = value.strip()
-        if "Render 模式需要草图" in text or "未生成可用图片" in text:
+        if _is_render_prereq_text(text):
             return text[:1200]
         return ""
     if isinstance(value, dict):
         error = str(value.get("error") or value.get("detail") or value.get("message") or "").strip()
-        if "Render 模式需要草图" in error or "未生成可用图片" in error:
+        if _is_render_prereq_text(error):
             return error[:1200]
         for item in value.values():
             found = _render_prereq_error_text(item)
@@ -197,56 +202,56 @@ def _with_chat_error_hints(value: Any) -> Any:
     if audio_prerequisites is not None:
         raw_errors = audio_prerequisites.get("errors")
         errors = [str(item).strip() for item in raw_errors or [] if str(item).strip()]
-        detail = "；".join(errors[:5]) or "配音所需声线尚未准备好"
+        detail = "; ".join(errors[:5]) or "the voices required for dubbing are not ready yet"
         result.setdefault(
             "chat_notice",
             (
-                f"下一步需要先准备配音声线。缺失项：{detail}。请选择："
-                "1）到「虾塘」上传或录制声线；2）确认由虾导匹配系统声线。"
+                f"The next step is to prepare the dubbing voices first. Missing items: {detail}. Please choose: "
+                '1) Upload or record a voice in "Shrimp Pond"; 2) Confirm that Shrimp Director matches a system voice.'
             ),
         )
         result.setdefault(
             "agent_instruction",
             (
-                "Tell the user in natural Chinese that first-frame generation is complete, but "
+                "Tell the user, in the user's language (English or Vietnamese), that first-frame generation is complete, but "
                 "audio generation cannot start yet. Offer two choices: upload or record the listed "
-                "voices in 虾塘, or explicitly approve system voices. Do not prepare system voices "
+                "voices in Shrimp Pond, or explicitly approve system voices. Do not prepare system voices "
                 "without explicit approval. Do not claim TTS started and do not call "
                 "dramaclaw_generate_audio in this turn. The final question MUST explicitly contain "
-                "both Chinese choices: ‘到虾塘上传或录制声线’ and ‘由虾导匹配系统声线’. Never "
-                "describe system voices as unavailable, an external alternative, or ‘换别的方向’."
+                "both choices: ‘upload or record voices in Shrimp Pond’ and ‘let Shrimp Director match system voices’. Never "
+                "describe system voices as unavailable, an external alternative, or ‘switch to another direction’."
             ),
         )
     voice_error = "" if audio_prerequisites is not None else _voice_prereq_error_text(value)
     if voice_error:
         result.setdefault(
             "chat_error",
-            f"{VOICE_PREREQ_CHAT_PREFIX}\n\n缺失项：{voice_error}",
+            f"{VOICE_PREREQ_CHAT_PREFIX}\n\nMissing items: {voice_error}",
         )
         result.setdefault(
             "agent_instruction",
             (
-                "Reply to the user with chat_error in natural Chinese. Make clear the audio task "
-                "was not started. Offer two choices: go to 虾塘 to upload or record the missing "
+                "Reply to the user with chat_error in the user's language (English or Vietnamese). Make clear the audio task "
+                "was not started. Offer two choices: go to Shrimp Pond to upload or record the missing "
                 "voice lines, or explicitly approve system voices. Do not prepare system voices "
                 "until the user explicitly chooses that option. Do not start another tool in this turn."
-                " The final question MUST explicitly contain both Chinese choices: ‘到虾塘上传或录制声线’ "
-                "and ‘由虾导匹配系统声线’. Never describe system voices as unavailable, an external "
-                "alternative, or ‘换别的方向’."
+                " The final question MUST explicitly contain both choices: ‘upload or record voices in Shrimp Pond’ "
+                "and ‘let Shrimp Director match system voices’. Never describe system voices as unavailable, an external "
+                "alternative, or ‘switch to another direction’."
             ),
         )
     render_error = _render_prereq_error_text(value)
     if render_error:
         result.setdefault(
             "chat_error",
-            f"{RENDER_PREREQ_CHAT_PREFIX}\n\n错误原因：{render_error}",
+            f"{RENDER_PREREQ_CHAT_PREFIX}\n\nError details: {render_error}",
         )
         result.setdefault(
             "agent_instruction",
             (
-                "Reply to the user with chat_error in natural Chinese. Make clear the render "
+                "Reply to the user with chat_error in the user's language (English or Vietnamese). Make clear the render "
                 "task did not produce usable images because sketches are missing. Tell the user "
-                "to generate or verify sketches in 虾塘 before retrying render. Do not start "
+                "to generate or verify sketches in Shrimp Pond before retrying render. Do not start "
                 "another tool in this turn."
             ),
         )
@@ -255,7 +260,7 @@ def _with_chat_error_hints(value: Any) -> Any:
         result.setdefault(
             "agent_instruction",
             (
-                "Reply to the user with chat_error in natural Chinese. Do not quote the raw "
+                "Reply to the user with chat_error in the user's language (English or Vietnamese). Do not quote the raw "
                 "provider JSON or provider_response_id."
             ),
         )
@@ -301,7 +306,7 @@ def _deny_freezone_mainline_write(tool_name: str) -> str | None:
             "tool": tool_name,
             "chat_error": FREEZONE_MAINLINE_WRITE_DENIED_MESSAGE,
             "agent_instruction": (
-                "Reply in natural Chinese. Explain that Xi画's assistant can query project state "
+                "Reply in the user's language (English or Vietnamese). Explain that the Shrimp Canvas assistant can query project state "
                 "or operate canvas nodes, but cannot start mainline video-generation tasks here. "
                 "For canvas changes, use the Freezone canvas command tools so the user can review "
                 "and approve them; do not call whole-canvas save/delete endpoints."
@@ -778,7 +783,7 @@ def _media_ui_spec(spec_type: str, component_type: str, items: list[dict[str, An
         if not src:
             continue
         key = f"media_{index}"
-        title = str(item.get("title") or item.get("label") or f"媒体 {index}").strip()
+        title = str(item.get("title") or item.get("label") or f"Media {index}").strip()
         description = str(item.get("description") or "").strip()
         props: dict[str, Any] = {
             "src": src,
@@ -1216,7 +1221,7 @@ def _handle_build_characters(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_plan_episodes(args: dict[str, Any], **_: Any) -> str:
-    """Plan/generate episodes (分集规划) from the ingested story + characters.
+    """Plan/generate episodes from the ingested story + characters.
 
     Wraps POST /projects/{project}/episodes/plan (the async ``build_episodes``
     task at episode 0) so the agent never has to guess the path. Requires ingest
@@ -1245,7 +1250,7 @@ def _handle_control_episode_auto(args: dict[str, Any], **_: Any) -> str:
         project = _project_from_args(args)
         action = str(args.get("action") or "").strip().lower()
         if action == "suspend":
-            reason = str(args.get("reason") or "等待用户确认是否修改").strip()
+            reason = str(args.get("reason") or "Waiting for the user to confirm whether to modify").strip()
             return tool_result(
                 _request(
                     "POST",
@@ -1273,7 +1278,7 @@ def _handle_control_episode_auto(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_generate_script(args: dict[str, Any], **_: Any) -> str:
-    """Generate the screenplay for one episode (脚本生成, script_writer task).
+    """Generate the screenplay for one episode (script_writer task).
 
     Wraps POST /projects/{project}/episodes/{episode}/script/generate. Requires
     the episode's character identities to be planned first; if not, the API
@@ -1336,7 +1341,7 @@ def _episode_post(args: dict[str, Any], suffix: str, *, body: Any = None) -> dic
 
 
 def _handle_plan_identities(args: dict[str, Any], **_: Any) -> str:
-    """Plan character identities for one episode (身份规划, identity_planner task).
+    """Plan character identities for one episode (identity_planner task).
 
     POST /projects/{project}/episodes/{episode}/identities/plan-async. Prerequisite
     for dramaclaw_generate_script. Poll task_type="identity_planner", episode=N.
@@ -1398,7 +1403,7 @@ def _handle_generate_scene_reverse(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_generate_sketches(args: dict[str, Any], **_: Any) -> str:
-    """Generate beat sketches for one episode (草图生成, sketch_generation task).
+    """Generate beat sketches for one episode (sketch_generation task).
 
     POST /projects/{project}/episodes/{episode}/sketches/assign-colors, then
     POST /projects/{project}/episodes/{episode}/sketches/generate with the
@@ -1480,7 +1485,7 @@ def _handle_detect_sketch_identities(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_optimize_video_global(args: dict[str, Any], **_: Any) -> str:
-    """Run global video optimization for one episode (全局视频优化, global_optimize_video).
+    """Run global video optimization for one episode (global_optimize_video).
 
     POST /projects/{project}/episodes/{episode}/optimize/video-global.
     Poll task_type="global_optimize_video", episode=N.
@@ -1511,7 +1516,7 @@ def _handle_prepare_system_voices(args: dict[str, Any], **_: Any) -> str:
                 {
                     "ok": False,
                     "code": "system_voice_confirmation_required",
-                    "error": "使用系统声线前需要用户明确确认",
+                    "error": "The user must explicitly confirm before system voices are used",
                 }
             )
         return tool_result(
@@ -1621,8 +1626,8 @@ def _handle_get_sketches(args: dict[str, Any], **_: Any) -> str:
                 media_items.append(
                     {
                         "src": sketch_url,
-                        "title": f"Beat {beat_number} 草图",
-                        "description": "草图",
+                        "title": f"Beat {beat_number} sketch",
+                        "description": "Sketch",
                         "aspectRatio": "3/4",
                     }
                 )
@@ -1687,8 +1692,8 @@ def _handle_get_first_frames(args: dict[str, Any], **_: Any) -> str:
                 media_items.append(
                     {
                         "src": frame_url,
-                        "title": f"Beat {beat_number} 首帧",
-                        "description": "首帧",
+                        "title": f"Beat {beat_number} first frame",
+                        "description": "First frame",
                         "aspectRatio": "3/4",
                     }
                 )
@@ -1735,8 +1740,8 @@ def _handle_get_sketch_candidates(args: dict[str, Any], **_: Any) -> str:
             media_items.append(
                 {
                     "src": src,
-                    "title": f"Beat {beat} 草图候选",
-                    "description": "过期候选" if stale else "草图候选",
+                    "title": f"Beat {beat} sketch candidate",
+                    "description": "Stale candidate" if stale else "Sketch candidate",
                     "aspectRatio": "3/4",
                 }
             )
@@ -1810,7 +1815,7 @@ def _handle_get_scene_images(args: dict[str, Any], **_: Any) -> str:
                     media_items.append(
                         {
                             "src": url,
-                            "title": f"{scene_name or '场景'} · {kind}",
+                            "title": f"{scene_name or 'Scene'} · {kind}",
                             "description": scene.get("description") or scene.get("environment_prompt") or "",
                             "aspectRatio": "16/9" if kind == "pano" else "3/4",
                         }
@@ -1895,7 +1900,7 @@ def _handle_get_character_media(args: dict[str, Any], **_: Any) -> str:
                     media_items.append(
                         {
                             "src": portrait_url,
-                            "title": name or "角色肖像",
+                            "title": name or "Character portrait",
                             "description": role,
                             "aspectRatio": "3/4",
                         }
@@ -1937,7 +1942,7 @@ def _handle_get_character_media(args: dict[str, Any], **_: Any) -> str:
                         or identity.get("name")
                         or identity.get("identity_id")
                         or name
-                        or "身份图"
+                        or "Identity image"
                     )
                     identity_name_match = _matches_any_text(
                         [
@@ -2065,11 +2070,11 @@ def _handle_get_episode_media(args: dict[str, Any], **_: Any) -> str:
                     {
                         "src": video_url,
                         "poster": frame_url,
-                        "title": f"Beat {beat_number} 视频",
+                        "title": f"Beat {beat_number} video",
                     }
                 )
             if audio_url:
-                audio_items.append({"src": audio_url, "title": f"Beat {beat_number} 音频"})
+                audio_items.append({"src": audio_url, "title": f"Beat {beat_number} audio"})
 
         if media_type == "audio":
             limited = _limit_items(audio_items, args, 20)
@@ -2094,7 +2099,7 @@ def _handle_get_episode_media(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_render_first_frames(args: dict[str, Any], **_: Any) -> str:
-    """Generate first frames for an episode (首帧生成, selected_regen task).
+    """Generate first frames for an episode (selected_regen task).
 
     Wraps POST /projects/{project}/episodes/{episode}/beats/regenerate with
     ``{"beat_indices": [beat]}``. One tool call registers up to nine independent
@@ -2118,7 +2123,7 @@ def _handle_render_first_frames(args: dict[str, Any], **_: Any) -> str:
                         "requested": [],
                         "started": [],
                         "remaining": 0,
-                        "message": f"第 {episode} 集首帧已全部生成完成",
+                        "message": f"All first frames of episode {episode} have been generated",
                     }
                 )
             requested = missing[:FIRST_FRAME_BATCH_SIZE]
@@ -2178,11 +2183,11 @@ def _handle_render_first_frames(args: dict[str, Any], **_: Any) -> str:
                     else {}
                 ),
                 "message": (
-                    f"第 {episode} 集首帧批次已登记：运行 {len(started)} 个，等待 {len(waiting)} 个"
+                    f"First-frame batch of episode {episode} registered: {len(started)} running, {len(waiting)} waiting"
                     if not failed
                     else (
-                        f"第 {episode} 集首帧批次已登记：运行 {len(started)} 个，"
-                        f"等待 {len(waiting)} 个，{len(failed)} 个提交失败"
+                        f"First-frame batch of episode {episode} registered: {len(started)} running, "
+                        f"{len(waiting)} waiting, {len(failed)} failed to submit"
                     )
                 ),
             }
@@ -2192,7 +2197,7 @@ def _handle_render_first_frames(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_compose_episode(args: dict[str, Any], **_: Any) -> str:
-    """Compose/export the final video for one episode (合成导出, compose_episode task).
+    """Compose/export the final video for one episode (compose_episode task).
 
     POST /projects/{project}/episodes/{episode}/videos/compose.
     Poll task_type="compose_episode", episode=N.
@@ -2229,8 +2234,8 @@ def _handle_get_final_video(args: dict[str, Any], **_: Any) -> str:
                     [
                         {
                             "src": video_url,
-                            "title": f"第 {episode} 集成片",
-                            "description": "最终合成视频",
+                            "title": f"Final cut of episode {episode}",
+                            "description": "Final composed video",
                         }
                     ]
                 )
@@ -2292,8 +2297,8 @@ def _handle_get_final_video(args: dict[str, Any], **_: Any) -> str:
             media_items.append(
                 {
                     "src": video_url,
-                    "title": f"第 {episode} 集成片",
-                    "description": "最终合成视频",
+                    "title": f"Final cut of episode {episode}",
+                    "description": "Final composed video",
                 }
             )
 
@@ -2317,7 +2322,7 @@ def _handle_get_final_video(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_generate_portrait(args: dict[str, Any], **_: Any) -> str:
-    """Generate one character's portrait (肖像生成, character_portrait task).
+    """Generate one character's portrait (character_portrait task).
 
     POST /projects/{project}/characters/{name}/portrait-async. Poll
     task_type="character_portrait" (per character). Read via
@@ -2334,7 +2339,7 @@ def _handle_generate_portrait(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_generate_identity_image(args: dict[str, Any], **_: Any) -> str:
-    """Generate a character identity image (身份图生成, identity_image task).
+    """Generate a character identity image (identity_image task).
 
     POST /projects/{project}/characters/{name}/identities/{identity_id}/generate-async.
     Needs both the character name and the identity_id (from the character's identity
@@ -2356,12 +2361,12 @@ def _handle_generate_identity_image(args: dict[str, Any], **_: Any) -> str:
 
 
 def _handle_start_single_video(args: dict[str, Any], **_: Any) -> str:
-    """Generate one beat's video (单 beat 视频, single_video task).
+    """Generate one beat's video (single_video task).
 
     POST /projects/{project}/episodes/{episode}/beats/{beat}/video. The beat's
     prompt is taken from its stored ``video_prompt`` (set by the script step) —
     you do NOT pass a prompt. Requires the beat's first frame to exist already
-    (otherwise the API returns "首帧不存在") and the beat to have a non-empty
+    (otherwise the API returns "first frame does not exist") and the beat to have a non-empty
     video_prompt (otherwise the backend returns "prompt is required"). Only
     video_backend / duration / resolution / mode are accepted request fields.
     """
@@ -2398,7 +2403,7 @@ def _handle_start_video_batch(args: dict[str, Any], **_: Any) -> str:
                     "episode": episode,
                     "requested": [],
                     "started": [],
-                    "message": f"第 {episode} 集没有可提交的视频任务",
+                    "message": f"Episode {episode} has no video tasks to submit",
                 }
             )
         if len(beats) > 9:
@@ -2448,11 +2453,11 @@ def _handle_start_video_batch(args: dict[str, Any], **_: Any) -> str:
                 "failed": failed,
                 "items": items,
                 "message": (
-                    f"第 {episode} 集视频批次已登记：运行 {len(started)} 个，等待 {len(waiting)} 个"
+                    f"Video batch of episode {episode} registered: {len(started)} running, {len(waiting)} waiting"
                     if not failed
                     else (
-                        f"第 {episode} 集视频批次已登记：运行 {len(started)} 个，"
-                        f"等待 {len(waiting)} 个，{len(failed)} 个提交失败"
+                        f"Video batch of episode {episode} registered: {len(started)} running, "
+                        f"{len(waiting)} waiting, {len(failed)} failed to submit"
                     )
                 ),
             }
@@ -3008,7 +3013,7 @@ TOOLS = (
         "dramaclaw_control_episode_auto",
         _schema(
             "dramaclaw_control_episode_auto",
-            "Control the durable 本集自动 session in the outer 虾导. Use action='suspend' before "
+            "Control the durable Episode auto session in the outer Shrimp Director. Use action='suspend' before "
             "asking the user to confirm a possible modification; this pauses only future automatic "
             "steps and never cancels queued/running media tasks. Use action='resume' when the user "
             "declines the modification and wants automatic production to continue. Use action='pause' "
@@ -3260,7 +3265,7 @@ TOOLS = (
         "dramaclaw_plan_episodes",
         _schema(
             "dramaclaw_plan_episodes",
-            "Plan/generate episodes (分集规划, async build_episodes task, episode 0). Requires "
+            "Plan/generate episodes (async build_episodes task, episode 0). Requires "
             "ingest + character extraction done first. Use THIS instead of guessing a path — the "
             "real endpoint is POST /projects/{project}/episodes/plan (NOT /episodes, /tasks/..., "
             "/build_episodes or /start_pipeline). Poll with dramaclaw_get_task("
@@ -3277,7 +3282,7 @@ TOOLS = (
         "dramaclaw_generate_script",
         _schema(
             "dramaclaw_generate_script",
-            "Generate the screenplay for one episode (脚本生成, script_writer task). Use THIS "
+            "Generate the screenplay for one episode (script_writer task). Use THIS "
             "instead of guessing — the real endpoint is POST /projects/{project}/episodes/{episode}/"
             "script/generate. Requires the episode's character identities planned first (else returns "
             "code 'identity_plan_required'). Poll with dramaclaw_get_task(task_type='script_writer', "
@@ -3294,9 +3299,9 @@ TOOLS = (
         "dramaclaw_update_character_face_prompt",
         _schema(
             "dramaclaw_update_character_face_prompt",
-            "Set or repair one character's face_prompt (面部特征) before portrait generation. "
+            "Set or repair one character's face_prompt (facial features) before portrait generation. "
             "Use this after character extraction if a core character has an empty face_prompt, "
-            "or when character_portrait fails with '请先设置面部特征 (face_prompt)'. Real endpoint "
+            "or when character_portrait fails with 'Set the face features (face_prompt) first'. Real endpoint "
             "PATCH /projects/{project}/characters/{name} with {face_prompt: ...}. After this "
             "succeeds, retry dramaclaw_generate_portrait for that character.",
             {
@@ -3315,7 +3320,7 @@ TOOLS = (
         "dramaclaw_plan_identities",
         _schema(
             "dramaclaw_plan_identities",
-            "Plan character identities for one episode (身份规划, identity_planner task). Use THIS "
+            "Plan character identities for one episode (identity_planner task). Use THIS "
             "instead of guessing — real endpoint POST /projects/{project}/episodes/{episode}/identities/"
             "plan-async. This is a PREREQUISITE for dramaclaw_generate_script. Poll dramaclaw_get_task("
             "task_type='identity_planner', episode=N).",
@@ -3331,7 +3336,7 @@ TOOLS = (
         "dramaclaw_plan_scenes",
         _schema(
             "dramaclaw_plan_scenes",
-            "Plan the scene menu for one episode (场景规划, episode_scene_planner task). Use THIS "
+            "Plan the scene menu for one episode (episode_scene_planner task). Use THIS "
             "after script generation and before sketch generation when the pipeline needs scene "
             "context. Real endpoint POST /projects/{project}/episodes/{episode}/scenes/plan. Poll "
             "with dramaclaw_get_task(task_type='episode_scene_planner', episode=N).",
@@ -3347,7 +3352,7 @@ TOOLS = (
         "dramaclaw_plan_props",
         _schema(
             "dramaclaw_plan_props",
-            "Plan the prop menu for one episode (道具规划, episode_prop_planner task). Use THIS "
+            "Plan the prop menu for one episode (episode_prop_planner task). Use THIS "
             "after script generation and before sketch generation when the pipeline needs prop "
             "context. Real endpoint POST /projects/{project}/episodes/{episode}/props/plan. Poll "
             "with dramaclaw_get_task(task_type='episode_prop_planner', episode=N).",
@@ -3363,7 +3368,7 @@ TOOLS = (
         "dramaclaw_generate_scene_master",
         _schema(
             "dramaclaw_generate_scene_master",
-            "Generate one scene's canonical master reference image (场景正向参考图, "
+            "Generate one scene's canonical master reference image (forward reference image, "
             "scene_reference_asset task). Real endpoint POST /projects/{project}/scenes/{name}/"
             "master/generate-async. Use scene names from dramaclaw_get(path='/projects/{project}/"
             "scenes') or the episode scene menu. Poll with dramaclaw_get_task(task_type="
@@ -3380,7 +3385,7 @@ TOOLS = (
         "dramaclaw_generate_scene_reverse",
         _schema(
             "dramaclaw_generate_scene_reverse",
-            "Generate one scene's reverse master reference image (场景反向参考图, "
+            "Generate one scene's reverse master reference image (reverse reference image, "
             "scene_reference_asset task). Real endpoint POST /projects/{project}/scenes/{name}/"
             "reverse/generate-async. Poll with dramaclaw_get_task(task_type='scene_reference_asset', "
             "episode=0, scope=<returned scope>).",
@@ -3396,7 +3401,7 @@ TOOLS = (
         "dramaclaw_generate_portrait",
         _schema(
             "dramaclaw_generate_portrait",
-            "Generate one character's portrait (肖像生成, character_portrait task). Real endpoint "
+            "Generate one character's portrait (character_portrait task). Real endpoint "
             "POST /projects/{project}/characters/{name}/portrait-async. Call once per character. Poll "
             "dramaclaw_get_task(task_type='character_portrait').",
             {
@@ -3411,7 +3416,7 @@ TOOLS = (
         "dramaclaw_generate_identity_image",
         _schema(
             "dramaclaw_generate_identity_image",
-            "Generate a character identity image (身份图生成, identity_image task). Real endpoint POST "
+            "Generate a character identity image (identity_image task). Real endpoint POST "
             "/projects/{project}/characters/{name}/identities/{identity_id}/generate-async. Poll "
             "dramaclaw_get_task(task_type='identity_image').",
             {
@@ -3427,7 +3432,7 @@ TOOLS = (
         "dramaclaw_generate_sketches",
         _schema(
             "dramaclaw_generate_sketches",
-            "Generate beat sketches for one episode (草图生成, sketch_generation task). Real endpoint "
+            "Generate beat sketches for one episode (sketch_generation task). Real endpoint "
             "POST /projects/{project}/episodes/{episode}/sketches/generate with a canonical body. "
             "This tool automatically runs assign-colors first by default and fills safe defaults: "
             "model='nanobanana', grid_index=-1 (all grids), sketch_scene_grouping=true, "
@@ -3473,7 +3478,7 @@ TOOLS = (
             "and props to each beat. Real endpoint POST /projects/{project}/episodes/{episode}/"
             "sketches/detect-identities. Requires sketches to exist and sketch colors to be assigned; "
             "if colors are missing, run dramaclaw_generate_sketches or POST assign-colors first. Use "
-            "THIS when the user asks to run AI 检测 / identity detection for sketches. If the tool "
+            "THIS when the user asks to run AI detection / identity detection for sketches. If the tool "
             "returns a timeout or retryable=false, do not call it again in the same turn; report the "
             "timeout and stop.",
             {
@@ -3492,7 +3497,7 @@ TOOLS = (
             "returns only current sketch_url media. It does not fall back to "
             "grids/epNNN/sketch/beat_XX_t* pool candidates and never substitutes first frames. "
             "Use dramaclaw_get_first_frames only when the user explicitly "
-            "asks for 首帧/first frames. Do NOT read "
+            "asks for first frames. Do NOT read "
             "sketch_path from a task result, and do NOT use vision_analyze to 'show' images. "
             "After calling this tool, do not write markdown images, raw URLs, http/static paths, "
             "or HTML media tags.",
@@ -3520,7 +3525,7 @@ TOOLS = (
         _schema(
             "dramaclaw_get_first_frames",
             "Get display-ready first-frame URLs for an episode, to SHOW the user. This tool returns "
-            "only frame_url media. Use this only when the user explicitly asks for 首帧/first frames. "
+            "only frame_url media. Use this only when the user explicitly asks for first frames. "
             "Use dramaclaw_get_sketches for sketches. After calling this tool, do not write markdown "
             "images, raw URLs, http/static paths, or HTML media tags.",
             {
@@ -3690,7 +3695,7 @@ TOOLS = (
         "dramaclaw_render_first_frames",
         _schema(
             "dramaclaw_render_first_frames",
-            "Generate first frames for an episode (首帧生成, selected_regen task). Real endpoint POST "
+            "Generate first frames for an episode (selected_regen task). Real endpoint POST "
             "/projects/{project}/episodes/{episode}/beats/regenerate. One call registers up to nine "
             "independent beat tasks; only available queue slots start immediately and waiting Beats "
             "are submitted automatically as capacity opens. Omit beat_indices to render the next "
@@ -3717,7 +3722,7 @@ TOOLS = (
         _schema(
             "dramaclaw_generate_audio",
             "Generate episode audio/voiceover using the current IndexTTS2 audio pipeline "
-            "(音频生成, audio_generation_indextts2 task). Real endpoint POST /projects/{project}/"
+            "(audio_generation_indextts2 task). Real endpoint POST /projects/{project}/"
             "episodes/{episode}/audio/generate. Use THIS instead of legacy /tts/generate, which "
             "has been removed. Poll dramaclaw_get_task(task_type='audio_generation_indextts2', "
             "episode=N).",
@@ -3769,7 +3774,7 @@ TOOLS = (
         "dramaclaw_optimize_video_global",
         _schema(
             "dramaclaw_optimize_video_global",
-            "Run global video optimization for one episode (全局视频优化, global_optimize_video task). "
+            "Run global video optimization for one episode (global_optimize_video task). "
             "Real endpoint POST /projects/{project}/episodes/{episode}/optimize/video-global. Poll "
             "dramaclaw_get_task(task_type='global_optimize_video', episode=N).",
             {
@@ -3784,7 +3789,7 @@ TOOLS = (
         "dramaclaw_compose_episode",
         _schema(
             "dramaclaw_compose_episode",
-            "Compose/export the final video for one episode (合成导出, compose_episode task). Real "
+            "Compose/export the final video for one episode (compose_episode task). Real "
             "endpoint POST /projects/{project}/episodes/{episode}/videos/compose. Poll dramaclaw_get_task("
             "task_type='compose_episode', episode=N).",
             {
@@ -3799,7 +3804,7 @@ TOOLS = (
         "dramaclaw_get_final_video",
         _schema(
             "dramaclaw_get_final_video",
-            "Get and display composed final episode videos (最终成片展示). Pass episode for one "
+            "Get and display composed final episode videos (final cut display). Pass episode for one "
             "episode, episode_indices for selected episodes, or omit both to display all existing "
             "final videos in one tool call with offset/limit pagination. Use this after compose_episode "
             "completes or when the user asks for final videos. If no final video exists, report that "
@@ -3828,10 +3833,10 @@ TOOLS = (
         "dramaclaw_start_single_video",
         _schema(
             "dramaclaw_start_single_video",
-            "Generate one beat's video (单 beat 视频, single_video task), POST /episodes/{ep}/beats/"
+            "Generate one beat's video (single_video task), POST /episodes/{ep}/beats/"
             "{beat}/video. You do NOT pass a prompt — the beat's stored video_prompt is used. "
             "Prerequisites: the beat's first frame must exist AND the beat must have a non-empty "
-            "video_prompt; if the API returns '首帧不存在' or 'prompt is required', that prerequisite "
+            "video_prompt; if the API returns 'first frame does not exist' or 'prompt is required', that prerequisite "
             "is missing — report it, do NOT invent fixes. Compose only works after all beat videos exist.",
             {
                 "project_id": {"type": "string"},

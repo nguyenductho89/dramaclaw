@@ -221,7 +221,7 @@ def test_select_stale_sketch_pool_image_marks_response_stale(monkeypatch, tmp_pa
     body = response.json()
     assert body["ok"] is False
     assert body["stale"] is True
-    assert "过期" in body["error"]
+    assert "expired" in body["error"]
     assert not (tmp_path / "sketches" / "ep002" / "beat_03.png").exists()
 
 

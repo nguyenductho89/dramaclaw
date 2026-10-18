@@ -1,4 +1,4 @@
-"""上传文件名清洗，防路径穿越。"""
+"""Sanitize uploaded file names to prevent path traversal."""
 
 from __future__ import annotations
 
@@ -103,5 +103,5 @@ def stream_to_file_with_limit(
             except OSError:
                 pass
     if too_large:
-        raise UploadTooLargeError(f"上传超过 {max_bytes // (1024 * 1024)}MB 上限")
+        raise UploadTooLargeError(f"Upload exceeds the {max_bytes // (1024 * 1024)}MB limit")
     return written

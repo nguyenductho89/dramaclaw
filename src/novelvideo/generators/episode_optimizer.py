@@ -25,21 +25,21 @@ BRIDGMAN_CHARACTER_PALETTE = [
     ("#5C6BC0", "INDIGO"),
 ]
 
-# Prop 专用调色板：跟角色调色板视觉对比
-# - 角色调色板是 FLUORESCENT/NEON/ELECTRIC 高饱和荧光色（明度 ≈ 100%）
-# - Prop 调色板用 DEEP/SATURATED/PRIMARY 色（明度 ≈ 50-70%，非荧光），形成 value contrast
-# - 即使色相意外接近，亮度/饱和度差异让 prop 仍能跟 character 视觉分开
+# Prop-only palette: visually contrasts with the character palette
+# - The character palette uses high-saturation FLUORESCENT/NEON/ELECTRIC colors (value ~100%)
+# - The prop palette uses DEEP/SATURATED/PRIMARY colors (value ~50-70%, non-fluorescent), creating value contrast
+# - Even if hues happen to be close, the brightness/saturation difference keeps props visually distinct from characters
 PROP_MARKER_PALETTE = [
-    ("#B71C1C", "DEEP CRIMSON"),     # 0°   深红 - 跟橙红角色色对比
-    ("#6D4C41", "UMBER BROWN"),      # 16°  棕褐 - 避开角色荧光橙
-    ("#827717", "OLIVE BRONZE"),     # 54°  橄榄铜
-    ("#1B5E20", "FOREST GREEN"),     # 123° 深森林绿
-    ("#006064", "DEEP TEAL"),        # 186° 深青绿
-    ("#0D47A1", "ROYAL BLUE"),       # 213° 皇家蓝
-    ("#311B92", "DEEP INDIGO"),      # 256° 深靛
-    ("#7B1FA2", "DEEP ORCHID"),      # 284° 兰紫 - 和深靛拉开亮度/距离
-    ("#880E4F", "WINE BERRY"),       # 332° 酒红梅
-    ("#3E2723", "DARK CHOCOLATE"),   # 16°  巧克力棕
+    ("#B71C1C", "DEEP CRIMSON"),     # 0°   deep red - contrasts with the orange-red character color
+    ("#6D4C41", "UMBER BROWN"),      # 16°  umber brown - avoids the fluorescent character orange
+    ("#827717", "OLIVE BRONZE"),     # 54°  olive bronze
+    ("#1B5E20", "FOREST GREEN"),     # 123° deep forest green
+    ("#006064", "DEEP TEAL"),        # 186° deep teal
+    ("#0D47A1", "ROYAL BLUE"),       # 213° royal blue
+    ("#311B92", "DEEP INDIGO"),      # 256° deep indigo
+    ("#7B1FA2", "DEEP ORCHID"),      # 284° orchid purple - separated from deep indigo in brightness/distance
+    ("#880E4F", "WINE BERRY"),       # 332° wine berry
+    ("#3E2723", "DARK CHOCOLATE"),   # 16°  chocolate brown
 ]
 
 PRIMARY_MARKER_PALETTE_SIZE = 8
@@ -140,7 +140,7 @@ def assign_sketch_colors(
             used_indices.add(best_idx)
             print(f"[sketch_color] {marker_id}: {hex_code} {color_name}")
         else:
-            logging.warning("[assign_sketch_colors] 调色板用尽，%s 未分配颜色", marker_id)
+            logging.warning("[assign_sketch_colors] Palette exhausted; no color assigned to %s", marker_id)
 
     return color_map
 

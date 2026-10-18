@@ -17,7 +17,7 @@ vi.mock('@/lib/audioTranscode', async (importOriginal) => ({
 
 import { downloadAudioAs } from '@/features/canvas/application/audioDownload';
 
-describe('downloadAudioAs（音频格式下载核心，从 NodeActionToolbar 抽出）', () => {
+describe('downloadAudioAs (audio format download core, extracted from NodeActionToolbar)', () => {
   beforeEach(() => {
     downloadUrlAsFile.mockReset().mockResolvedValue(undefined);
     downloadBlobAsFile.mockReset();
@@ -32,7 +32,7 @@ describe('downloadAudioAs（音频格式下载核心，从 NodeActionToolbar 抽
     vi.unstubAllGlobals();
   });
 
-  it('同容器（mp3→mp3）透传下载原字节，不转码', async () => {
+  it('same container (mp3->mp3) passes the original bytes through for download without transcoding', async () => {
     const onConvertingChange = vi.fn();
     await downloadAudioAs('mp3', {
       audioUrl: '/static/bg.mp3',
@@ -45,7 +45,7 @@ describe('downloadAudioAs（音频格式下载核心，从 NodeActionToolbar 抽
     expect(onConvertingChange).not.toHaveBeenCalled();
   });
 
-  it('跨容器（mp3→wav）fetch → 转码 → 下载 blob，转码起止回调', async () => {
+  it('cross container (mp3->wav) fetch -> transcode -> download the blob, with transcode start/end callbacks', async () => {
     const onConvertingChange = vi.fn();
     const outBlob = new Blob(['wav']);
     transcodeAudio.mockResolvedValue(outBlob);
@@ -63,7 +63,7 @@ describe('downloadAudioAs（音频格式下载核心，从 NodeActionToolbar 抽
     expect(onConvertingChange.mock.calls).toEqual([['wav'], [null]]);
   });
 
-  it('转码失败向上抛，且转码态一定被清掉', async () => {
+  it('a transcode failure is thrown upward and the transcoding state is always cleared', async () => {
     const onConvertingChange = vi.fn();
     transcodeAudio.mockRejectedValue(new Error('ffmpeg boom'));
 

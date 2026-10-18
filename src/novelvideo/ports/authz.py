@@ -47,21 +47,21 @@ AUTHZ_ERROR_HTTP_STATUS = {
 
 _AUTHZ_ERROR_FALLBACK_STATUS = 403
 
-# User-facing copy, mirroring the 默认提示 column of the same §12 table.
+# User-facing copy, mirroring the default-message column of the same §12 table.
 _AUTHZ_USER_MESSAGES = {
-    "ORG_CONTEXT_REQUIRED": "当前请求缺少有效组织身份",
-    "ORG_MEMBERSHIP_INACTIVE": "组织成员身份已暂停或失效",
-    "MODEL_ACCESS_DENIED": "当前组织未开通该模型能力，请联系组织管理员",
-    "ORG_AUTHZ_STALE": "权限已变化，请刷新后重试",
-    "ORG_CREDENTIAL_MISSING": "组织尚无可用 Key，请联系组织管理员绑定",
-    "ORG_CREDENTIAL_DISABLED": "组织 Key 当前不可用，请联系组织管理员",
-    "ORG_CREDENTIAL_VERSION_MISMATCH": "Key 状态已更新，请刷新后重试",
-    "ORG_CREDENTIAL_DECRYPT_FAILED": "凭证服务异常，请联系支持",
-    "ORG_AUTHZ_UNAVAILABLE": "授权服务暂时不可用，请稍后重试",
-    "P0_GRAY_DISABLED": "组织任务功能当前未开放，请联系支持",
+    "ORG_CONTEXT_REQUIRED": "This request has no valid organization identity",
+    "ORG_MEMBERSHIP_INACTIVE": "Organization membership is suspended or no longer valid",
+    "MODEL_ACCESS_DENIED": "This model capability is not enabled for your organization. Please contact your organization administrator",
+    "ORG_AUTHZ_STALE": "Permissions have changed. Please refresh and try again",
+    "ORG_CREDENTIAL_MISSING": "Your organization has no usable key yet. Please contact your organization administrator to bind one",
+    "ORG_CREDENTIAL_DISABLED": "The organization key is currently unavailable. Please contact your organization administrator",
+    "ORG_CREDENTIAL_VERSION_MISMATCH": "The key status has been updated. Please refresh and try again",
+    "ORG_CREDENTIAL_DECRYPT_FAILED": "The credential service is abnormal. Please contact support",
+    "ORG_AUTHZ_UNAVAILABLE": "The authorization service is temporarily unavailable. Please try again later",
+    "P0_GRAY_DISABLED": "Organization task features are not currently available. Please contact support",
 }
 
-_GENERIC_AUTHZ_USER_MESSAGE = "组织授权校验未通过，请联系组织管理员"
+_GENERIC_AUTHZ_USER_MESSAGE = "Organization authorization check failed. Please contact your organization administrator"
 
 
 def authz_error_http_status(code: str) -> int:

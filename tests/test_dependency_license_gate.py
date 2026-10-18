@@ -12,7 +12,7 @@ from check_dependency_licenses import audit, classify  # noqa: E402
 
 
 def test_classify_denies_strong_copyleft() -> None:
-    """强 copyleft 的各种写法（SPDX 表达式 / 分类器全称）都必须拦下。"""
+    """All spellings of strong copyleft (SPDX expressions / full classifier names) must be blocked."""
     for text in (
         "GPL-3.0-only",
         "GPL-2.0-or-later",
@@ -25,7 +25,7 @@ def test_classify_denies_strong_copyleft() -> None:
 
 
 def test_classify_allows_permissive_and_weak_copyleft() -> None:
-    """宽松许可放行；LGPL/MPL 属弱 copyleft，放行但归为 notice。"""
+    """Permissive licenses pass; LGPL/MPL are weak copyleft and pass but are classified as notice."""
     for text in ("MIT", "Apache-2.0", "BSD-3-Clause", "MIT OR Apache-2.0", "Elastic-2.0"):
         assert classify(text) == "ok", text
     for text in (
@@ -42,12 +42,12 @@ def test_classify_flags_missing_metadata() -> None:
 
 
 def test_dependency_tree_has_no_license_violations() -> None:
-    """依赖树许可证门（DEP-11，硬零）：当前环境（=uv.lock 全树）不得含
-    强 copyleft / 无豁免的 UNKNOWN，豁免表不得腐烂。CI 守门见
-    .github/workflows/dependency-review.yml。"""
+    """Dependency-tree license gate (DEP-11, hard zero): the current environment (= the full uv.lock tree) must not contain
+    strong copyleft / UNKNOWN without an exemption, and the exemption table must not rot. The CI gate is
+    .github/workflows/dependency-review.yml."""
     violations, _notices, rotten = audit()
-    assert violations == [], "依赖许可证违规：\n" + "\n".join(violations)
-    assert rotten == [], "腐烂豁免：\n" + "\n".join(rotten)
+    assert violations == [], "dependency license violations:\n" + "\n".join(violations)
+    assert rotten == [], "rotten exemptions:\n" + "\n".join(rotten)
 
 
 def test_dependency_review_action_requires_dependency_graph_guard() -> None:

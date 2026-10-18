@@ -115,7 +115,7 @@ const MEDIA_STORAGE_PROVIDERS: MediaStorageProvider[] = [
   "cloudinary",
 ];
 
-// Codex 本地桥接暂时隐藏（保留组件代码，后端就绪后改回 true 即可恢复）。
+// The Codex local bridge is hidden for now (component code is kept; flip back to true once the backend is ready to restore it).
 const SHOW_CODEX_BRIDGE = false;
 const MODEL_CONFIGURATION_GUIDE_URL =
   "https://github.com/dramaclaw/dramaclaw/blob/main/docs/en/getting-started/configuring-models.md";
@@ -366,7 +366,7 @@ function ModelConfigSection({ open }: { open: boolean }) {
   const [customLlmMode, setCustomLlmMode] =
     useState<CustomLlmMode>("relayclaw_brainclaw");
   const updateCustomLlmMode = useSetCustomLlmMode();
-  // 配置加载后，把激活的 tab 同步到服务端当前 mode。
+  // After the config loads, sync the active tab to the server's current mode.
   const serverMode = config?.mode;
   useEffect(() => {
     if (serverMode && !modeChosenByUser.current) {
@@ -398,7 +398,7 @@ function ModelConfigSection({ open }: { open: boolean }) {
     }
   };
 
-  // CE 运行环境提供本地 NewAPI 管理地址；初始化与下方模型映射共用该地址。
+  // The CE runtime provides a local NewAPI admin address; initialization and the model mapping below share this address.
   const [customBaseUrl, setCustomBaseUrl] = useState(DEFAULT_CUSTOM_NEWAPI_URL);
   const seededCustomBaseUrl =
     config?.custom?.adminBaseUrl ||
@@ -563,7 +563,7 @@ function ModelConfigSection({ open }: { open: boolean }) {
         ) : null}
       </div>
 
-      {/* 功能模型映射仅在自定义渠道展示；官方渠道不需要。 */}
+      {/* The feature model mapping is shown only for custom channels; official channels do not need it. */}
       {mode === "custom" || mode === "hybrid" ? (
         <>
           <CustomGatewayPanel
@@ -1377,7 +1377,7 @@ function CustomGatewayPanel({
   );
 }
 
-// 功能模型映射每行的三列栅格：功能 | 供应商 | 模型名称。表头与行共用同一模板以对齐。
+// Three-column grid for each row of the feature model mapping: feature | provider | model name. The header and rows share one template so they align.
 const FEATURE_ROW_GRID =
   "grid grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)] items-center gap-3";
 
@@ -2221,7 +2221,7 @@ function QuickLocalNewApiSetup({
     if (missingKeyChannels.length > 0) {
       setApplyError(
         t("settings.modelConfig.quick.missingKeys", {
-          channels: missingKeyChannels.map((channel) => channel.id).join("、"),
+          channels: missingKeyChannels.map((channel) => channel.id).join(", "),
         }),
       );
       return;
@@ -2836,7 +2836,7 @@ function FeatureModelsBlock({
     updateFeatureProviderChannel,
   ]);
 
-  // 把功能行按 provider 分组拼成渠道：modelMapping = { DC内部模型名: 上游模型名 }。
+  // Group the feature rows by provider into channels: modelMapping = { DC internal model name: upstream model name }.
   const buildChannels = (): CustomChannelInput[] => {
     const byProvider = new Map<FeatureModelProvider, Record<string, string>>();
     for (const group of FEATURE_MODEL_GROUPS) {
@@ -2895,7 +2895,7 @@ function FeatureModelsBlock({
     if (missing.length > 0) {
       toast.error(
         t("settings.modelConfig.featureModels.missingKeys", {
-          providers: missing.join("、"),
+          providers: missing.join(", "),
         }),
       );
       return;
@@ -2979,7 +2979,7 @@ function FeatureModelsBlock({
         />
       ) : null}
 
-      {/* 功能模型映射 */}
+      {/* Feature model mapping */}
       {!mediaOnly && showAdvancedLlm ? (
         <>
           <h4 className="mt-5 text-xs font-medium text-foreground">
@@ -3631,7 +3631,7 @@ function MediaModelsBlock({
       const message = t("settings.modelConfig.featureModels.missingKeys", {
         providers: missingProviders
           .map((provider) => featureProviderLabel(provider))
-          .join("、"),
+          .join(", "),
       });
       setSaveError(message);
       toast.error(message);
@@ -4326,7 +4326,7 @@ function LocalMediaModelEditor({
                   {t("settings.modelConfig.mediaModels.supportedModes")}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {/* 左边是后端目录里的模式值，右边只是展示名，和视频节点的页签共用词条。 */}
+                  {/* The left side is the mode value in the backend catalog and the right side is only a display name; shared with the video node tabs via the same locale entries. */}
                   {[
                     ["text_to_video", "node.videoNode.tabs.textToVideo"],
                     ["first_frame", "node.videoNode.tabs.firstFrame"],
@@ -4414,7 +4414,7 @@ function CatalogListField({
           onChange([
             ...new Set(
               draft
-                .split(/[,，]/)
+                .split(/[,\uFF0C]/)
                 .map((item) => item.trim())
                 .filter(Boolean),
             ),
@@ -4453,7 +4453,7 @@ function CatalogMultiSelectField({
   };
   const addCustomValues = () => {
     const additions = customValue
-      .split(/[,，]/)
+      .split(/[,\uFF0C]/)
       .map((item) => item.trim())
       .filter(Boolean);
     if (additions.length === 0) return;
@@ -4683,7 +4683,7 @@ function ProviderChannelsBlock({
             .map((provider) =>
               featureProviderLabel(provider, channelTypeByProvider),
             )
-            .join("、"),
+            .join(", "),
         }),
       );
       return;
@@ -5503,7 +5503,7 @@ function FeatureModelCapabilitySection({
         </Button>
       </div>
 
-      {/* 表头：功能 / 供应商 / 上游模型名（与下方行栅格对齐） */}
+      {/* Header: feature / provider / upstream model name (aligned with the row grid below) */}
       <div
         className={cn(
           FEATURE_ROW_GRID,
@@ -5627,7 +5627,7 @@ function FeatureModelRow({
       : fallbackProvider;
   const model = entry?.model ?? "";
 
-  // 单条保存：仅把该功能拼成一个渠道（modelMapping 只含这一条）写入。
+  // Single save: only this feature is assembled into one channel (modelMapping contains just this entry) and written.
   const handleSaveRow = async () => {
     const m = model.trim();
     if (!m) {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这三件套（contextMatching / contextPromptCompiler / contextOperations）目前没有任何
-// 界面引用，reason / label 也直接拼进 contextPromptCompiler 那份锁中文的提示词。
-// 等它真被挂到某个面板上时，这些串要一起入词条；在那之前整份免检。
+// These three (contextMatching / contextPromptCompiler / contextOperations) are currently not referenced by any
+// UI, and reason / label are assembled directly into the English-only prompt of contextPromptCompiler.
+// When they are actually attached to a panel these strings should be moved into the locale files; until then the whole file is exempt.
 // i18n-exempt-start
 import type { MainlineContext } from "./mainlineContext";
 
@@ -18,7 +18,7 @@ export interface ContextMatch {
 
 const EMPTY_MATCH: ContextMatch = {
   matched: false,
-  reason: "缺少主线上下文，按普通图片处理",
+  reason: "Missing mainline context; treated as an ordinary image",
   identities: [],
   props: [],
   artifacts: [],
@@ -72,7 +72,7 @@ function artifactMatch(
   if (!beat) {
     return {
       ...EMPTY_MATCH,
-      reason: "缺少镜头上下文，按普通图片处理",
+      reason: "Missing shot context; treated as an ordinary image",
       artifacts: [artifact],
     };
   }
@@ -123,7 +123,7 @@ function matchingContextForBeat(
 export function matchForDirectorCombinedToSketch(
   contexts: MainlineContext[],
 ): ContextMatch {
-  return artifactMatch(contexts, "director_combined", "导演合成图可生成草图");
+  return artifactMatch(contexts, "director_combined", "Director composite can generate a sketch");
 }
 
 export function matchForSelectedBackgroundToSketch(
@@ -132,7 +132,7 @@ export function matchForSelectedBackgroundToSketch(
   return artifactMatch(
     contexts,
     "selected_background",
-    "当前背景可生成草图",
+    "Current background can generate a sketch",
   );
 }
 
@@ -141,7 +141,7 @@ export function matchForBeatToSketch(contexts: MainlineContext[]): ContextMatch 
   if (!beat) return { ...EMPTY_MATCH };
   return {
     matched: true,
-    reason: reasonForBeat(beat, "Beat 可生成草图"),
+    reason: reasonForBeat(beat, "Beat can generate a sketch"),
     beat,
     identities: contexts.filter((ctx) => ctx.kind === "identity"),
     scene: contexts.find((ctx) => ctx.kind === "scene"),
@@ -157,7 +157,7 @@ export function matchForFrameGeneration(contexts: MainlineContext[]): ContextMat
   if (!beat) {
     return {
       ...EMPTY_MATCH,
-      reason: "缺少镜头上下文，按普通图片处理",
+      reason: "Missing shot context; treated as an ordinary image",
       artifacts: [sketch],
     };
   }
@@ -174,11 +174,11 @@ export function matchForFrameGeneration(contexts: MainlineContext[]): ContextMat
     (ctx) => requiredPropSet.size === 0 || matchesProp(ctx, requiredPropSet),
   );
 
-  const parts = ["草图可生成分镜"];
-  parts.push("身份/场景/道具由主线 DB 读取");
-  if (identities.length) parts.push(`${identities.length} 个身份匹配`);
-  if (scene) parts.push(`${scene.sceneId || "场景"}匹配`);
-  if (props.length) parts.push(`${props.length} 个道具匹配`);
+  const parts = ["Sketch can generate a storyboard"];
+  parts.push("Identities/scene/props are read from the mainline DB");
+  if (identities.length) parts.push(`${identities.length} identities matched`);
+  if (scene) parts.push(`${scene.sceneId || "scene"} matched`);
+  if (props.length) parts.push(`${props.length} props matched`);
 
   return {
     matched: true,

@@ -9,19 +9,19 @@ import { UiButton, UiModal } from '@/components/ui/primitives';
 import { resolveImageDisplayUrl } from '@/features/canvas/application/imageData';
 
 /**
- * 截图选区对话框 — 用户从 source 图(master/reverse 等)选一块固定比例
- * 区域作为 beat 的 selected_background。
+ * Screenshot region dialog - the user picks a fixed-ratio region from a source image (master/reverse etc.)
+ * as the beat's selected_background.
  *
- * 流程:
- *   1. 加载 source 图,显示 react-image-crop UI
- *   2. 用户拖出固定比例区域(锁定纵横比)
- *   3. 点 "用作背景源" → canvas.toBlob
- *   4. 父组件决定是走主线 Commit 还是 legacy background-anchor upload
+ * Flow:
+ *   1. Load the source image and show the react-image-crop UI
+ *   2. The user drags out a fixed-ratio region (aspect ratio locked)
+ *   3. Click "Use as background source" -> canvas.toBlob
+ *   4. The parent component decides whether to go the mainline Commit or the legacy background-anchor upload
  *
- * 区别于 Pano360 + 3GS 的 "截当前 viewer 视角" 路径 — 那两个 source 在浏览器
- * 实时渲染 (yaw/pitch/fov, PlayCanvas 相机),最终也是 toBlob → upload,但用的是
- * 各自 viewer 节点上的 capture 按钮,不走这个 dialog。这个 dialog 专门给
- * 平面 source (master / reverse) 用。
+ * Different from the Pano360 + 3GS "capture the current viewer view" path - those two sources are rendered live in the browser
+ * (yaw/pitch/fov, PlayCanvas camera), and in the end also toBlob -> upload, but through the capture buttons
+ * on their own viewer nodes, not through this dialog. This dialog is dedicated to
+ * flat sources (master / reverse).
  */
 export interface BackgroundCropperDialogProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ function parseAspectRatioValue(value: string): number {
 export function centerInitialCrop(width: number, height: number, targetAspectRatio = 16 / 9): Crop {
   const sourceAspect = width / height;
   if (sourceAspect >= targetAspectRatio) {
-    // source 更宽 → 用 source 全高,水平居中目标比例
+    // The source is wider -> use the source's full height, centering the target ratio horizontally
     const cropWidthPct = (targetAspectRatio / sourceAspect) * 100;
     return {
       unit: '%',
@@ -60,7 +60,7 @@ export function centerInitialCrop(width: number, height: number, targetAspectRat
       height: 100,
     };
   }
-  // source 更高 → 用 source 全宽,垂直居中目标比例
+  // The source is taller -> use the source's full width, centering the target ratio vertically
   const cropHeightPct = (sourceAspect / targetAspectRatio) * 100;
   return {
     unit: '%',
@@ -99,8 +99,8 @@ async function exportCroppedBlob(
   pixelCrop: PixelCrop,
 ): Promise<Blob> {
   const canvas = document.createElement('canvas');
-  // 用 source 原始分辨率 (image.naturalWidth/Height) 计算 scale,确保 crop
-  // 输出是 source 真实像素的子集而不是 displayed 像素 (后者会被缩到 dialog 尺寸)。
+  // Compute scale with the source's original resolution (image.naturalWidth/Height), ensuring the crop
+  // output is a subset of the source's real pixels rather than displayed pixels (the latter would be scaled down to the dialog size).
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
   canvas.width = Math.round(pixelCrop.width * scaleX);

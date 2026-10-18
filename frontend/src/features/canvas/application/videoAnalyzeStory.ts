@@ -8,23 +8,23 @@ import { useCanvasStore } from '@/stores/canvasStore';
 
 import { normalizeVideoStoryRows } from './videoStoryNormalizer';
 
-/** 视频故事节点的落位尺寸（与 NodeActionToolbar.handleVideoAnalyze 一致）。 */
+/** Landing size of the video story node (consistent with NodeActionToolbar.handleVideoAnalyze). */
 const STORY_LAYOUT_WIDTH = 720;
 const STORY_LAYOUT_HEIGHT = 360;
 
 export interface VideoAnalyzeStoryResult {
-  /** 同步建好的 videoStory 节点 id（loading 态，数据回来后原地回填）。 */
+  /** The id of the synchronously built videoStory node (loading state, backfilled in place when data comes back). */
   nodeId: string;
-  /** 后台链（提交 → 轮询 → 归一化回填 / 写错）settle 时 resolve（不 reject）。 */
+  /** Resolves when the background chain (submit -> poll -> normalize backfill / write error) settles (never rejects). */
   completion: Promise<void>;
 }
 
 /**
- * 提交 → 轮询 → 归一化 → 回填的后台链（首次解析与重新解析共用）。
+ * The background chain of submit -> poll -> normalize -> backfill (shared by first-time analysis and re-analysis).
  *
- * @param storyNodeId 承载结果的 videoStory 节点（首次解析是刚建的，重新解析是它自己）。
- * @param sourceNodeId 触发解析的源视频节点；重新解析时为 null（没有独立源节点要同步
- *   loading/错误态——故事节点自己就是源）。
+ * @param storyNodeId the videoStory node carrying the result (for first-time analysis it was just built; for re-analysis it is itself).
+ * @param sourceNodeId the source video node that triggered the analysis; null on re-analysis (there is no separate source node to sync
+ *   loading/error state with - the story node itself is the source).
  */
 function runStoryAnalysis(
   projectId: string,
@@ -62,7 +62,7 @@ function runStoryAnalysis(
       const rows = normalizeVideoStoryRows(rawResult);
       console.info('[video-analyze] normalized rows', rows.length, rows);
 
-      // 把解析结果回填到承载结果的故事节点。
+      // Backfill the analysis result into the story node carrying the result.
       const done = useCanvasStore.getState();
       done.updateNodeData(storyNodeId, {
         rows,
@@ -79,7 +79,7 @@ function runStoryAnalysis(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[video-analyze] failed', error);
-      // 把错误写到故事节点,清掉它的 loading 态。
+      // Write the error to the story node and clear its loading state.
       const failed = useCanvasStore.getState();
       failed.updateNodeData(storyNodeId, {
         isAnalyzing: false,
@@ -96,20 +96,20 @@ function runStoryAnalysis(
 }
 
 /**
- * 视频解析（生成分镜故事）编排（从 NodeActionToolbar 的 handleVideoAnalyze 内联
- * 闭包原样搬出，语义零变化）：
- * 源节点置 isAnalyzing → 立即在下游建一个 loading 态 videoStory 节点并连边（不等
- * 后端返回）→ 提交 /freezone/analyze-video-story → 有 task_key 就等任务完成，没有
- * 就把响应本身当同步结果 → normalizeVideoStoryRows 后回填故事节点；失败把错误同时
- * 写到故事节点与源节点。
+ * Video analysis (generate storyboard story) orchestration (moved verbatim out of NodeActionToolbar's handleVideoAnalyze inline
+ * closure, with zero semantic change):
+ * the source node sets isAnalyzing -> immediately build a loading-state videoStory node downstream and connect an edge (without waiting for the
+ * backend to return) -> submit /freezone/analyze-video-story -> if there is a task_key wait for the task to complete, otherwise
+ * treat the response itself as a synchronous result -> after normalizeVideoStoryRows backfill the story node; on failure write the error to both
+ * the story node and the source node.
  *
- * @returns 故事节点 id + 后台链；缺 project 或源节点已不存在时返回 null。
+ * @returns the story node id + background chain; null when project is missing or the source node no longer exists.
  */
 export function analyzeVideoStory(
   sourceNodeId: string,
   opts: {
     videoUrl: string;
-    /** 源视频时长（秒）——没有就不下发，让后端自己探测。 */
+    /** Source video duration (seconds) - not sent if absent, letting the backend probe by itself. */
     durationSec?: number;
   },
 ): VideoAnalyzeStoryResult | null {
@@ -127,8 +127,8 @@ export function analyzeVideoStory(
     analysisError: null,
   });
 
-  // 立即在下游建一个 loading 态的视频故事节点 —— 不等后端返回。
-  // 数据回来后再 updateNodeData 把分镜填进去；失败则把错误写到该节点。
+  // Immediately build a loading-state video story node downstream - without waiting for the backend to return.
+  // After the data comes back, updateNodeData fills the storyboard in; on failure the error is written to that node.
   const storyPosition = store.findNodePosition(
     sourceNodeId,
     STORY_LAYOUT_WIDTH,
@@ -151,14 +151,14 @@ export function analyzeVideoStory(
 }
 
 /**
- * 重新解析一个已存在的视频故事节点：不建新节点、不连新边，直接把它自己重置成
- * loading 态并用**它记着的源片源**（data.sourceVideoUrl）再跑一次同一条链，结果
- * 原地覆盖 rows/rawResult。
+ * Re-analyze an existing video story node: build no new node and no new edge, reset itself directly to the loading state and run the same chain again with
+ * **the source clip it remembers** (data.sourceVideoUrl), with the result
+ * overwriting rows/rawResult in place.
  *
- * 与 {@link analyzeVideoStory} 共用 runStoryAnalysis —— 首次解析建节点、重新解析
- * 复用节点，除此之外提交/轮询/归一化/回填完全同一份实现。
+ * Shares runStoryAnalysis with {@link analyzeVideoStory} - first-time analysis builds a node, re-analysis
+ * reuses the node, and apart from that submit/poll/normalize/backfill are exactly the same implementation.
  *
- * @returns 故事节点 id + 后台链；缺 project、节点已不存在或它没记住片源时返回 null。
+ * @returns the story node id + background chain; null when project is missing, the node no longer exists, or it does not remember its source clip.
  */
 export function reanalyzeVideoStory(
   storyNodeId: string,

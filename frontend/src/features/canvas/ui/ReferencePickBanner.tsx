@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 拾取参考时画布顶部的提示条。挂在画布容器上（不在 ReactFlow 的变换层里），
- * 所以不随缩放平移移动。
+ * The hint bar at the top of the canvas while picking references. Mounted on the canvas container (not inside ReactFlow's transform layer),
+ * so it does not move with zoom or pan.
  *
- * 「返回节点」把视口还原到点 ＋参考 那一刻并退出拾取；「✕」原地退出。拾取本身
- * 不自动退出——一个节点常常要连好几个参考。
+ * "Back to node" restores the viewport to the moment of clicking + Reference and exits picking; "x" exits in place. Picking itself
+ * does not exit automatically - a node often needs several references connected.
  */
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ export function ReferencePickBanner() {
   const stop = useReferencePickStore((state) => state.stop);
   const reactFlowInstance = useReactFlow();
 
-  // 目标节点被删掉（或切了画布）就没有拾取的意义了，自动退出，避免提示条挂死。
+  // Once the target node is deleted (or the canvas switched) there is no point in picking, so exit automatically, avoiding the hint bar hanging dead.
   const targetNodeId = request?.targetNodeId ?? null;
   const targetMissing = useCanvasStore((state) =>
     targetNodeId === null ? false : !state.nodes.some((node) => node.id === targetNodeId)
@@ -43,8 +43,8 @@ export function ReferencePickBanner() {
   if (!request) return null;
 
   const handleReturn = () => {
-    // 顺手把目标节点重新选中：拾取途中多半点过画布空白，选中态早就丢了，
-    // 而用户「返回节点」正是为了看刚挂上去的参考 chip——那要操作面板还在。
+    // Re-select the target node along the way: during picking the user mostly clicked on blank canvas, and the selection was long lost,
+    // while the user's "Back to node" is exactly to see the reference chip just attached - which needs the operation panel to still be there.
     selectNodeExclusively(request.targetNodeId);
     if (request.originViewport) {
       void reactFlowInstance.setViewport(request.originViewport, { duration: 420 });

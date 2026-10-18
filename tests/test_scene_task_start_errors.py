@@ -19,7 +19,7 @@ from novelvideo.task_backend.limits import ProjectUserTaskLimitExceeded
 
 class _SceneStore:
     async def get_scene(self, name: str) -> NovelScene | None:
-        if name == "中庭":
+        if name == "Courtyard":
             return NovelScene(name=name)
         return None
 
@@ -42,13 +42,13 @@ def scene_task_start_client(
 
     project_dir = tmp_path / "output" / "alice" / "demo"
     project_dir.mkdir(parents=True)
-    master_path = canonical_scene_master_path(project_dir, "中庭")
+    master_path = canonical_scene_master_path(project_dir, "Courtyard")
     master_path.parent.mkdir(parents=True)
     master_path.write_bytes(b"png")
-    pano_path = stage_manifest.stage_dir(project_dir, "中庭") / "pano_360.png"
+    pano_path = stage_manifest.stage_dir(project_dir, "Courtyard") / "pano_360.png"
     pano_path.parent.mkdir(parents=True)
     pano_path.write_bytes(b"png")
-    stage_manifest.update_manifest(project_dir, "中庭", pano_path=pano_path.name)
+    stage_manifest.update_manifest(project_dir, "Courtyard", pano_path=pano_path.name)
     ctx = ProjectContext(
         project_id="proj_scenes",
         project_name="demo",
@@ -100,13 +100,13 @@ def test_scene_single_face_task_start_preserves_billing_error(
     client = scene_task_start_client(wrapper)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async"
     )
 
     assert response.status_code == 402
     assert response.json()["data"] == {
         "error_code": "INSUFFICIENT_CREDITS",
-        "message": "积分不足，请联系管理员充值",
+        "message": "Insufficient credits. Please contact your administrator to top up.",
         "user_id": "alice-id",
         "required": 40,
         "balance": 8,
@@ -125,7 +125,7 @@ def test_scene_task_start_prefers_wrapped_insufficient_credits(
     client = scene_task_start_client(outer)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async"
     )
 
     assert response.status_code == 402
@@ -143,7 +143,7 @@ def test_scene_task_start_prefers_wrapped_missing_billing_rule(
     client = scene_task_start_client(outer)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async"
     )
 
     assert response.status_code == 409
@@ -157,7 +157,7 @@ def test_scene_pano_task_start_preserves_billing_error(scene_task_start_client) 
     client = scene_task_start_client(wrapper)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/pano-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/pano-ply/generate-async"
     )
 
     assert response.status_code == 402
@@ -174,7 +174,7 @@ def test_scene_pano_generation_task_start_preserves_billing_error(
     client = scene_task_start_client(wrapper)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/pano/generate-async",
+        "/api/v1/projects/demo/scenes/Courtyard/pano/generate-async",
         json={"source": "text"},
     )
 
@@ -189,7 +189,7 @@ def test_scene_pano_generation_keeps_legacy_response_for_plain_runtime_error(
     client = scene_task_start_client(RuntimeError("broker unavailable"))
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/pano/generate-async",
+        "/api/v1/projects/demo/scenes/Courtyard/pano/generate-async",
         json={"source": "text"},
     )
 
@@ -206,7 +206,7 @@ def test_scene_single_face_task_start_preserves_authz_error(
     client = scene_task_start_client(wrapper)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async"
     )
 
     assert response.status_code == 409
@@ -226,7 +226,7 @@ def test_scene_pano_task_start_preserves_task_limit_error(
     client = scene_task_start_client(limit)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/pano-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/pano-ply/generate-async"
     )
 
     assert response.status_code == 429
@@ -249,7 +249,7 @@ def test_scene_task_start_preserves_wrapped_task_limit_error(
     client = scene_task_start_client(wrapper)
 
     response = client.post(
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async"
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async"
     )
 
     assert response.status_code == 429
@@ -260,8 +260,8 @@ def test_scene_task_start_preserves_wrapped_task_limit_error(
 @pytest.mark.parametrize(
     "endpoint",
     [
-        "/api/v1/projects/demo/scenes/中庭/3gs/master-ply/generate-async",
-        "/api/v1/projects/demo/scenes/中庭/3gs/pano-ply/generate-async",
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/master-ply/generate-async",
+        "/api/v1/projects/demo/scenes/Courtyard/3gs/pano-ply/generate-async",
     ],
 )
 def test_scene_task_start_keeps_legacy_response_for_plain_runtime_error(

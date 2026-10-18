@@ -1,13 +1,13 @@
-"""WYSIWYG 一致性测试 — 扫描真实项目数据验证三条路径完全一致。
+"""WYSIWYG consistency test -- scans real project data to verify the three paths are fully consistent.
 
-验证:
-1. build_reference_map 的 Image N 编号
-2. generate_grid 的 API 附件顺序
-3. handle_export_grid_prompt 的 img_idx 编号
+Verifies:
+1. Image N numbering of build_reference_map
+2. API attachment order of generate_grid
+3. img_idx numbering of handle_export_grid_prompt
 
 Usage:
     pytest tests/test_wysiwyg_consistency.py -v
-    python tests/test_wysiwyg_consistency.py          # 也可直接运行
+    python tests/test_wysiwyg_consistency.py          # can also be run directly
 """
 
 import asyncio
@@ -748,14 +748,14 @@ def test_render_reference_order_allows_empty_character_map():
 def test_build_character_map_render_uses_detected_identities_only(tmp_path: Path):
     characters = [
         {
-            "name": "沈知月",
+            "name": "Alice",
             "gender": "female",
             "body_type": "",
             "appearance_details": "A",
             "identities": [
                 {
-                    "identity_id": "沈知月_怀孕时期",
-                    "identity_name": "怀孕时期",
+                    "identity_id": "Alice_pregnant",
+                    "identity_name": "pregnant",
                     "appearance_details": "A1",
                     "face_prompt": "face-a",
                     "body_type": "",
@@ -763,14 +763,14 @@ def test_build_character_map_render_uses_detected_identities_only(tmp_path: Path
             ],
         },
         {
-            "name": "沈知薇",
+            "name": "Beth",
             "gender": "female",
             "body_type": "",
             "appearance_details": "B",
             "identities": [
                 {
-                    "identity_id": "沈知薇_千岁府时期",
-                    "identity_name": "千岁府时期",
+                    "identity_id": "Beth_palace",
+                    "identity_name": "palace",
                     "appearance_details": "B1",
                     "face_prompt": "face-b",
                     "body_type": "",
@@ -781,8 +781,8 @@ def test_build_character_map_render_uses_detected_identities_only(tmp_path: Path
     beats = [
         {
             "beat_number": 1,
-            "visual_description": "{{沈知薇_千岁府时期}}",
-            "detected_identities": ["沈知月_怀孕时期"],
+            "visual_description": "{{Beth_palace}}",
+            "detected_identities": ["Alice_pregnant"],
         }
     ]
     cmap = build_character_map_for_grid(
@@ -794,20 +794,20 @@ def test_build_character_map_render_uses_detected_identities_only(tmp_path: Path
         use_detected_identities=True,
     )
 
-    assert list(cmap.keys()) == ["沈知月"]
+    assert list(cmap.keys()) == ["Alice"]
 
 
 def test_build_character_map_sketch_uses_visual_description_only(tmp_path: Path):
     characters = [
         {
-            "name": "沈知月",
+            "name": "Alice",
             "gender": "female",
             "body_type": "",
             "appearance_details": "A",
             "identities": [
                 {
-                    "identity_id": "沈知月_怀孕时期",
-                    "identity_name": "怀孕时期",
+                    "identity_id": "Alice_pregnant",
+                    "identity_name": "pregnant",
                     "appearance_details": "A1",
                     "face_prompt": "face-a",
                     "body_type": "",
@@ -815,14 +815,14 @@ def test_build_character_map_sketch_uses_visual_description_only(tmp_path: Path)
             ],
         },
         {
-            "name": "沈知薇",
+            "name": "Beth",
             "gender": "female",
             "body_type": "",
             "appearance_details": "B",
             "identities": [
                 {
-                    "identity_id": "沈知薇_千岁府时期",
-                    "identity_name": "千岁府时期",
+                    "identity_id": "Beth_palace",
+                    "identity_name": "palace",
                     "appearance_details": "B1",
                     "face_prompt": "face-b",
                     "body_type": "",
@@ -833,8 +833,8 @@ def test_build_character_map_sketch_uses_visual_description_only(tmp_path: Path)
     beats = [
         {
             "beat_number": 1,
-            "visual_description": "{{沈知薇_千岁府时期}}",
-            "detected_identities": ["沈知月_怀孕时期"],
+            "visual_description": "{{Beth_palace}}",
+            "detected_identities": ["Alice_pregnant"],
         }
     ]
     cmap = build_character_map_for_grid(
@@ -846,7 +846,7 @@ def test_build_character_map_sketch_uses_visual_description_only(tmp_path: Path)
         use_detected_identities=False,
     )
 
-    assert list(cmap.keys()) == ["沈知薇"]
+    assert list(cmap.keys()) == ["Beth"]
 
 
 # ---------------------------------------------------------------------------

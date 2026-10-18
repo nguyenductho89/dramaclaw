@@ -44,11 +44,11 @@ export function deterministicNodeOutputIssue(
   if (handedOff) return null;
   if (action === 'generate_image') {
     const url = text(output.imageUrl, output.image_url, output.output_url, output.url, data.imageUrl, data.image_url);
-    if (!url) return '图片节点没有有效输出地址。';
+    if (!url) return 'The image node has no valid output address.';
     const width = finiteNumber(output.width, output.imageWidth, data.imageNaturalWidth);
     const height = finiteNumber(output.height, output.imageHeight, data.imageNaturalHeight);
     if ((width !== null && width <= 0) || (height !== null && height <= 0)) {
-      return '图片输出尺寸无效。';
+      return 'The image output size is invalid.';
     }
     const expected = finiteNumber(data.count);
     const batch = Array.isArray(output.generationBatch)
@@ -57,7 +57,7 @@ export function deterministicNodeOutputIssue(
         ? data.generationBatch
         : null;
     if (expected !== null && expected > 1 && batch && batch.filter(Boolean).length < expected) {
-      return `图片输出数量不足：期望 ${expected}，实际 ${batch.filter(Boolean).length}。`;
+      return `Image output count is insufficient: expected ${expected}, actual ${batch.filter(Boolean).length}.`;
     }
   }
   if (action === 'generate_video' || action === 'generate_text_video' || action === 'auto_compose_video') {
@@ -70,18 +70,18 @@ export function deterministicNodeOutputIssue(
       data.video_url,
       data.resultVideoUrl,
     );
-    if (!url) return '视频节点没有有效输出地址。';
+    if (!url) return 'The video node has no valid output address.';
     const durationMs = finiteNumber(output.durationMs, output.duration_ms, data.durationMs);
-    if (durationMs !== null && durationMs <= 0) return '视频输出时长无效。';
+    if (durationMs !== null && durationMs <= 0) return 'The video output duration is invalid.';
   }
   if (action === 'generate_audio') {
     const url = text(output.audioUrl, output.audio_url, output.output_url, output.url, data.audioUrl, data.audio_url);
-    if (!url) return '音频节点没有有效输出地址。';
+    if (!url) return 'The audio node has no valid output address.';
     const durationMs = finiteNumber(output.durationMs, output.duration_ms, data.durationMs);
-    if (durationMs !== null && durationMs <= 0) return '音频输出时长无效。';
+    if (durationMs !== null && durationMs <= 0) return 'The audio output duration is invalid.';
   }
   if (action === 'generate_text' && !text(output.content, data.content)) {
-    return '文本节点没有生成内容。';
+    return 'The text node generated no content.';
   }
   return null;
 }

@@ -562,10 +562,10 @@ function EpisodeListItem({
   propPromotion?: CreditPromotionDisplay | null;
 }) {
   const { t } = useTranslation();
-  // 镜头数直接读列表接口带出的 beat_count。这里曾经是 useEpisodeBeats(episode.number)
-  // ——每张卡片自己拉一次该集的完整 beats 载荷，只为取 .length。列表有几集就发几个
-  // 请求，每个都要解析项目上下文、开库、给每个 beat 拼 sketch/frame/video URL 并对
-  // 每条音频 fork 一次 ffprobe。改成后端一次 GROUP BY 带出来，这一页的扇出归零。
+  // The shot count reads the beat_count returned by the list endpoint directly. This used to be useEpisodeBeats(episode.number)
+  // - every card pulled the full beats payload of its episode on its own just to take .length. As many requests as episodes in the list,
+  // each of which resolves the project context, opens the DB, builds sketch/frame/video URLs for every beat and
+  // forks an ffprobe for every audio. Now the backend brings it out with a single GROUP BY, and the fan-out on this page drops to zero.
   const shotCount = episode.beat_count;
   const planIdentities = usePlanIdentities(project);
   const identityTask = useStageTask({
@@ -600,9 +600,9 @@ function EpisodeListItem({
   });
   const planScenes = usePlanEpisodeScenes(project);
   const planProps = usePlanEpisodeProps(project);
-  // 场景/道具规划走异步任务：POST 只是入队，请求返回时任务才刚开始。用任务控制器
-  // 接管进行中状态（含刷新页面后的重连），否则按钮转圈会在入队瞬间就停，和底部
-  // 任务中心的「生成中」对不上。
+  // Scene/prop planning goes through an async task: the POST only enqueues, and the task has just started when the request returns. A task controller
+  // takes over the in-progress state (including reconnection after a page refresh), otherwise the button spinner stops the moment the job is enqueued, out of step with the
+  // "generating" in the task center at the bottom.
   const sceneTask = useTaskController({
     key: {
       taskType: TASK_TYPES.EPISODE_SCENE_PLANNER,
@@ -681,8 +681,8 @@ function EpisodeListItem({
 
   const identityPending = planIdentities.isPending || identityTask.started;
 
-  // CE(无控制面)下后端同步跑完并直接返回结果，没有任务可订阅；EE 走队列，
-  // 返回的是 TaskResponse，此时才接上 SSE 流。
+  // Under CE (no control plane) the backend runs synchronously and returns the result directly, with no task to subscribe to; EE goes through the queue,
+  // and returns a TaskResponse, at which point the SSE stream is attached.
   const handlePlanScenes = async () => {
     try {
       const res = await planScenes.mutateAsync(episode.number);
@@ -829,9 +829,9 @@ function EpisodeListItem({
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
-// 导出只为页面级网络合同测试（``episodes-list-beats-contract.test.tsx``）：那条断言
-// 要的是"整页渲染出来一共发了哪些请求"，hook 单测覆盖不到组合层重新接回
-// ``useEpisodeBeats`` 的情况。路由本身仍只用下面那个 ``Route``。
+// Exported only for the page-level network contract test (``episodes-list-beats-contract.test.tsx``): that assertion
+// wants "which requests the whole rendered page sends in total", which hook unit tests cannot cover when the composition layer re-wires
+// ``useEpisodeBeats``. The route itself still only uses the ``Route`` below.
 export function EpisodesPage() {
   const { t } = useTranslation();
   const { project } = Route.useParams();
@@ -1102,9 +1102,9 @@ export function EpisodesPage() {
                   </Button>
                 </div>
               ) : (
-                // 卡片内的场景/道具规划用 useTaskController 订阅任务，需要一个
-                // 注册表宿主。列表不绑定单集，用 episode=0 作为宿主 scope；每张卡
-                // 片的 key 里带自己的集数，彼此互不干扰。
+                // The scene/prop planning inside cards subscribes to tasks via useTaskController, which needs a
+                // registry host. The list is not bound to a single episode, so episode=0 is used as the host scope; every card's
+                // key carries its own episode number, so they do not interfere with each other.
                 <TaskControllerProvider project={project} episode={0}>
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
                     {displayEpisodes.map((ep) => (

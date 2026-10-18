@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/concepts/features.md)
-
 # Feature Overview
 
 What DramaClaw CE can do — a complete pipeline that turns a **novel manuscript** into a **finished video**, running entirely on your own machine, BYO model key, no PostgreSQL / Redis required.

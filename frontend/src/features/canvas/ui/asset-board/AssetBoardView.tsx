@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   memo,
   useCallback,
@@ -16,7 +17,7 @@ import { Check, ChevronDown, ImageIcon, Maximize2, Minimize2, Play } from 'lucid
 
 import {
   buildAssetBoard,
-  // 别名：本文件同时导入了同名的栏壳组件 ./AssetBoardColumn。
+  // Alias: this file also imports the same-named column shell component ./AssetBoardColumn.
   type AssetBoardColumn as BoardColumnKind,
   type AssetBoardItem,
   type AssetBoardReference,
@@ -37,48 +38,48 @@ import { KeyElementsBar } from './KeyElementsBar';
 
 type VideoFilter = 'all' | 'final' | 'clip';
 
-/** 图片灯箱状态（视频不再走弹窗——详情面板里内联 <video controls> 播放）。 */
+/** Image lightbox state (video no longer uses a dialog - it plays inline with <video controls> in the detail panel). */
 type ViewerState = { urls: string[]; index: number } | null;
 
-/** 主从详情栈条目：column 决定左侧窄列表切到哪一栏（音频与图片/视频同款进详情栈）。 */
+/** Master-detail stack entry: column decides which column the left narrow list switches to (audio enters the detail stack the same way as image/video). */
 interface DetailEntry {
   column: 'text' | 'image' | 'video' | 'audio';
   nodeId: string;
 }
 
 interface AssetBoardViewProps {
-  /** false 时保持挂载但不可见（Shell 用 visibility 隐藏），数据源同时冻结。 */
+  /** When false it stays mounted but invisible (the Shell hides it with visibility), and the data source is frozen at the same time. */
   visible: boolean;
-  /** 「在画布中定位」：由 Shell 切回工作流并 requestFocusNode。 */
+  /** "Locate on canvas": the Shell switches back to the workflow and calls requestFocusNode. */
   onLocateNode: (nodeId: string) => void;
 }
 
-// 详情栈安全网：互相引用的节点（A→B→A→B…）理论上可以无限 push，50 层封顶
-// 只是兜底，不影响正常使用——正常路径靠下面 openReference 的去重截断收敛。
+// Detail stack safety net: nodes that reference each other (A->B->A->B...) could in theory push forever; the 50-level cap
+// is only a fallback and does not affect normal use - the normal path converges via the dedup truncation in openReference below.
 const DETAIL_STACK_MAX = 50;
 
-/** 放大态网格里「定位」高亮的持续时长（与卡片侧 LOCATE_HIGHLIGHT_MS 同值）。 */
+/** How long the "locate" highlight lasts in the expanded grid (same value as the card-side LOCATE_HIGHLIGHT_MS). */
 const GRID_LOCATE_HIGHLIGHT_MS = 1200;
 
 const VIDEO_FILTERS: ReadonlyArray<{ value: VideoFilter; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'final', label: '成片' },
-  { value: 'clip', label: '片段' },
+  { value: 'all', get label() { return i18n.t('canvas.assetBoard.filter.all'); } },
+  { value: 'final', get label() { return i18n.t('canvas.assetBoard.filter.final'); } },
+  { value: 'clip', get label() { return i18n.t('canvas.assetBoard.filter.clip'); } },
 ];
 
-// 冻结时 item 引用稳定，memo 让隐藏→显示切换外的重渲染跳过整卡子树。
+// While frozen the item references are stable; memo lets re-renders outside the hidden -> visible switch skip the whole card subtree.
 const MemoAssetBoardCard = memo(AssetBoardCard);
 
 export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): ReactElement {
-  // 隐藏时 selector 恒返回 null（Object.is 相等）→ 画布拖拽/生成进度不会重渲染隐藏的故事板。
+  // While hidden the selector always returns null (Object.is equal) -> canvas dragging / generation progress does not re-render the hidden storyboard.
   const liveNodes = useCanvasStore((state) => (visible ? state.nodes : null));
   const liveEdges = useCanvasStore((state) => (visible ? state.edges : null));
-  // 渲染期直接写 ref（非 effect）：这是有意的 last-non-null 缓存，不是遗留的
-  // 副作用误用。写入前的比较是幂等的——同一渲染只会把 dataRef.current 收敛到
-  // 与 liveNodes/liveEdges 一致的值，StrictMode 的双调用第二次进来时条件已为
-  // false，不会重复赋值或产生可观察差异。若未来引入 React Compiler，这类
-  // "读 props 派生、写自身 ref 缓存" 的模式需要人工复核是否仍然安全，不要机械
-  // 套用自动优化的 memo 化改写。
+  // Write the ref during render (not in an effect): this is an intentional last-non-null cache, not a leftover
+  // misuse of side effects. The comparison before writing is idempotent - the same render only converges dataRef.current to
+  // a value consistent with liveNodes/liveEdges, and when StrictMode double-invokes, the second time the condition is already
+  // false, so there is no repeated assignment or observable difference. If React Compiler is introduced in future, such
+  // "derive from props, write own ref cache" patterns need a manual re-check that they are still safe; do not mechanically
+  // apply auto-memoization rewrites.
   const dataRef = useRef<{ nodes: CanvasNode[]; edges: CanvasEdge[] }>({ nodes: [], edges: [] });
   if (liveNodes !== null && liveEdges !== null) {
     if (dataRef.current.nodes !== liveNodes || dataRef.current.edges !== liveEdges) {
@@ -89,17 +90,17 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
   const board = useMemo(() => buildAssetBoard(nodes, edges), [nodes, edges]);
 
   const [videoFilter, setVideoFilter] = useState<VideoFilter>('all');
-  // 放大态：把图片/视频栏摊成右半边的宽幅网格（左边只留关键元素 + 文本栏），
-  // 再点收起按钮回三栏。详情打开时优先渲染详情，关掉详情仍回到放大态。
+  // Expanded state: spread the image/video column into a wide grid on the right half (only key elements + the text column stay on the left),
+  // and clicking the collapse button returns to three columns. When a detail is open it renders first; closing the detail returns to the expanded state.
   const [expandedColumn, setExpandedColumn] = useState<'image' | 'video' | null>(null);
   const [viewer, setViewer] = useState<ViewerState>(null);
-  // 主从详情栈：点卡片/音频 chip=置 [item]；详情内参考跳转=push；←=pop；×/Esc=清空。
-  // 切换视图模式（visible 翻转）不清空——故事板保活语义。
+  // Master-detail stack: click a card/audio chip = set [item]; reference jump in the detail = push; back = pop; close/Esc = clear.
+  // Switching the view mode (visible flips) does not clear it - the storyboard's kept-alive semantics.
   const [detailStack, setDetailStack] = useState<DetailEntry[]>([]);
-  // 「定位」滚动请求：详情里参考素材点「定位」时置 { nodeId, token }，token 单调自增
-  // （即便重复定位同一节点也换令牌，保证目标卡片能再次触发滚动+高亮）。传给列/卡片，
-  // 只有被引用节点那张卡拿到非 null 令牌，其余恒 null（不打断 memo）。这里是故事板
-  // 列表内定位（滚到卡片位置），与 onLocateNode 的「跳回画布聚焦」是两回事。
+  // "Locate" scroll request: when "Locate" is clicked on a reference asset in the detail, set { nodeId, token }; the token increases monotonically
+  // (even re-locating the same node changes the token, so the target card can scroll + highlight again). Passed to columns/cards,
+  // only the card of the referenced node gets a non-null token, and the rest are always null (not breaking memo). This is locating within the storyboard
+  // list (scrolling to the card position), a different thing from onLocateNode's "jump back to the canvas to focus".
   const [scrollRequest, setScrollRequest] = useState<{ nodeId: string; token: number } | null>(
     null,
   );
@@ -109,8 +110,8 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     [board.video, videoFilter],
   );
 
-  // 关键元素：四栏里所有被标记（keyElementCategory 非空）的条目，跨栏收集，供顶部
-  // 关键元素栏常驻展示。按栏顺序（文本/图片/视频/音频，各栏内已是创建序新→旧）拼接。
+  // Key elements: all marked entries (non-empty keyElementCategory) across the four columns, collected across columns, for the top
+  // key element bar to keep showing. Concatenated in column order (text/image/video/audio; within each column already newest-to-oldest by creation).
   const keyElements = useMemo(
     () =>
       [...board.text, ...board.image, ...board.video, ...board.audio].filter(
@@ -119,13 +120,13 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     [board.text, board.image, board.video, board.audio],
   );
 
-  // 图片灯箱的翻页列表：图片栏全部有图卡片。
+  // Paging list for the image lightbox: all image-column cards that have an image.
   const imageUrls = useMemo(
     () => board.image.map((i) => i.mediaUrl).filter((u): u is string => u !== null),
     [board.image],
   );
 
-  // nodeId → 故事板条目（详情面板与参考跨栏跳转的查找表）。
+  // nodeId -> storyboard entry (the lookup table for the detail panel and cross-column reference jumps).
   const itemById = useMemo(() => {
     const map = new Map<string, AssetBoardItem>();
     for (const list of [board.text, board.image, board.video, board.audio]) {
@@ -134,24 +135,24 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     return map;
   }, [board.text, board.image, board.video, board.audio]);
 
-  // 点击语义：任意卡片/音频 chip（文本/图片/视频/音频）→ 打开详情面板。「跳画布」
-  // 只保留卡片准星按钮与详情内「在画布中定位」。
+  // Click semantics: any card/audio chip (text/image/video/audio) -> open the detail panel. "Jump to canvas"
+  // is kept only on the card's crosshair button and "Locate on canvas" inside the detail.
   const openItem = useCallback((item: AssetBoardItem) => {
     setDetailStack([{ column: item.column, nodeId: item.nodeId }]);
   }, []);
 
-  // 详情内点参考缩略图：被引用节点有故事板详情可开 → push（左栏自动切栏）；
-  // 否则（参考图无对应画布节点详情，如已不入板的类型）退化为灯箱单图。
-  // 去重语义（面包屑）：互相引用的节点 A→B→A→B… 会让栈无界增长——若目标
-  // (column, nodeId) 已经在栈里出现过，不再重复 push，而是截断回那一层
-  // （视为「回到已经打开过的那一级」），栈深因此收敛，不会无限增长。
-  // 50 层封顶是防御性兜底，正常情况下走不到。
+  // Clicking a reference thumbnail in the detail: if the referenced node has a storyboard detail to open -> push (the left column switches column automatically);
+  // otherwise (the reference image has no matching canvas node detail, e.g. a type no longer on the board) degrade to a single-image lightbox.
+  // Dedup semantics (breadcrumb): nodes referencing each other A->B->A->B... would make the stack grow unboundedly - if the target
+  // (column, nodeId) already appeared in the stack, do not push again but truncate back to that level
+  // (treated as "going back to a level already opened"), so the stack depth converges.
+  // The 50-level cap is a defensive fallback, not reached normally.
   const openReference = useCallback(
     (ref: AssetBoardReference) => {
-      // 自带参考图（nodeId=null）无对应画布节点详情 → 直接退化为灯箱看图。
+      // A built-in reference image (nodeId=null) has no matching canvas node detail -> degrade directly to a lightbox image view.
       const target = ref.nodeId ? itemById.get(ref.nodeId) : undefined;
       if (target && target.column !== 'audio') {
-        // 提出 const：属性收窄不会穿透进 setState 回调闭包。
+        // Extract a const: property narrowing does not carry into the setState callback closure.
         const column = target.column;
         const nodeId = target.nodeId;
         setDetailStack((stack) => {
@@ -173,14 +174,14 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     [itemById],
   );
 
-  // 详情内参考素材点「定位」：把故事板列表滚到被引用节点的卡片处并短暂高亮（非画布定位）。
-  // - 同栏（如图片详情引用图片，左侧窄列表就是图片栏）：保留详情，滚窄列表到该卡片。
-  // - 跨栏（如视频详情引用图片）：退回三栏总览（清空详情栈），滚到该节点所在栏的卡片。
-  // 令牌单调自增，保证连续两次定位同一节点也能重新触发目标卡片的滚动+高亮。
+  // "Locate" on a reference asset in the detail: scroll the storyboard list to the referenced node's card and highlight it briefly (not canvas positioning).
+  // - Same column (e.g. an image detail referencing an image, the left narrow list is the image column): keep the detail, scroll the narrow list to that card.
+  // - Cross column (e.g. a video detail referencing an image): fall back to the three-column overview (clear the detail stack) and scroll to the card in the column of that node.
+  // The token increases monotonically, so locating the same node twice in a row can re-trigger the target card's scroll + highlight.
   const locateInBoard = useCallback(
     (nodeId: string) => {
       const target = itemById.get(nodeId);
-      if (!target) return; // 不在故事板里（无对应卡片）→ 无处可滚，静默忽略。
+      if (!target) return; // Not in the storyboard (no matching card) -> nowhere to scroll, silently ignore.
       setDetailStack((stack) => {
         const active = stack.length > 0 ? stack[stack.length - 1] : null;
         return active && active.column === target.column ? stack : [];
@@ -190,10 +191,10 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     [itemById],
   );
 
-  // 按 (栏, nodeId) 打开详情（详情头部「创建副本」建好节点后切过去）。
-  // 栏由调用方给，不查 itemById：副本是在事件处理器里刚写进 store 的，此刻还没
-  // 重渲染，闭包里的 itemById 仍是上一帧的快照，查不到它——查表会让「创建副本」
-  // 变成静默无事发生。副本与源节点同类型，栏必然相同，调用方直接把 column 带过来。
+  // Open the detail by (column, nodeId) (switch to the copy after the detail header's "Create copy" builds the node).
+  // The column is given by the caller and itemById is not consulted: the copy was just written into the store in an event handler and has not
+  // re-rendered yet, so itemById in the closure is still the previous frame's snapshot and cannot find it - a lookup would make "Create copy"
+  // silently do nothing. The copy has the same type as the source node, so the column is necessarily the same; the caller just passes the column.
   const openNodeDetail = useCallback((nodeId: string, column: BoardColumnKind) => {
     setDetailStack([{ column, nodeId }]);
   }, []);
@@ -206,7 +207,7 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
   const previewImage = useCallback(
     (url: string) => {
       const index = imageUrls.indexOf(url);
-      // 参考图可能不在图片栏（如节点自带的本地参考图）→ 单图预览。
+      // The reference image may not be in the image column (e.g. a node's built-in local reference image) -> single-image preview.
       setViewer(index >= 0 ? { urls: imageUrls, index } : { urls: [url], index: 0 });
     },
     [imageUrls],
@@ -217,44 +218,44 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
   const detailOpen = activeDetail !== null;
   const viewerOpen = viewer !== null;
 
-  // 音频切换器始终在顶栏的音频标签里（对标 liblib，总览与音频详情两态一致）。音频详情
-  // 打开时把节点 id 传给顶栏 → 自动切到音频标签并高亮该 chip；左栏则退回可切换的文本
-  // 列表（见下方主从分支），不再单挂一条音频条。
+  // The audio switcher always lives in the top bar's audio tab (matches liblib, consistent between overview and audio detail). When an audio detail
+  // is open the node id is passed to the top bar -> it switches to the audio tab automatically and highlights that chip; the left column falls back to the switchable text
+  // list (see the master-detail branch below), no longer mounting a separate audio bar.
   const activeAudioNodeId = activeDetail?.column === 'audio' ? activeDetail.nodeId : null;
 
-  // 详情态左窄列表「显示哪一栏」——与右侧 activeDetail 解耦：头部下拉切栏只改这个，
-  // 右侧详情面板始终跟 activeDetail 不变。默认（及每次 activeDetail 切到新节点）回到
-  // 该节点所在栏；用户从下拉手动切栏后保持其选择，直到 activeDetail 再次变化。
+  // Which column the left narrow list shows in detail state - decoupled from the right activeDetail: the header dropdown only changes this,
+  // and the right detail panel always follows activeDetail. By default (and each time activeDetail switches to a new node) it returns to
+  // the column of that node; after the user manually switches columns from the dropdown the choice is kept until activeDetail changes again.
   const [leftListColumn, setLeftListColumn] = useState<'text' | 'image' | 'video'>('image');
-  // 渲染期同步派生 state（非 effect）：每当 activeDetail 切到新的(栏,节点)——打开卡片、
-  // 参考跳转 push、← 弹栈——把左列表重置回该栏。用 last-key ref 守卫，保证「同一详情内
-  // 用户手动下拉切栏」不会被这条同步覆盖（activeDetail 未变→key 未变→不重置）。
-  // React 支持在渲染期为「派生自其它 state」的 state 调用 setState：它会就地丢弃本次
-  // 渲染输出并立刻用新值重渲，不提交中间帧，故不会闪现旧栏（对齐本文件 dataRef 的
-  // 幂等渲染期写法；StrictMode 双调用第二次 key 已等于 ref，不重复置数）。
+  // State derived synchronously during render (not an effect): whenever activeDetail switches to a new (column, node) - opening a card,
+  // reference jump push, back pop - reset the left list to that column. A last-key ref guard ensures that "the user manually switching columns from the dropdown within the same
+  // detail" is not overwritten by this sync (activeDetail unchanged -> key unchanged -> no reset).
+  // React supports calling setState during render for state "derived from other state": it discards this render output in place
+  // and immediately re-renders with the new value, committing no intermediate frame, so the old column never flashes (matching this file's dataRef
+  // idempotent render-time write; under StrictMode double-invocation the second time the key already equals the ref, so no repeated set).
   const lastDetailKeyRef = useRef<string | null>(null);
   if (activeDetail !== null) {
     const detailKey = `${activeDetail.column}:${activeDetail.nodeId}`;
     if (detailKey !== lastDetailKeyRef.current) {
       lastDetailKeyRef.current = detailKey;
-      // 音频详情左栏没有对应栏（音频切换器在顶栏）→ 默认落到文本栏；其余落到该节点所在栏。
+      // An audio detail has no matching left column (the audio switcher is in the top bar) -> default to the text column; others go to the column of the node.
       const target = activeDetail.column === 'audio' ? 'text' : activeDetail.column;
       if (leftListColumn !== target) {
         setLeftListColumn(target);
       }
     }
   } else {
-    // 详情关闭：清空追踪，下次开详情必定重新同步。
+    // Detail closed: clear the tracking so the next detail open must sync again.
     lastDetailKeyRef.current = null;
   }
 
-  // Esc = 关闭详情。灯箱开着时不注册监听——灯箱自己的 Esc 先关灯箱，
-  // 避免一次按键连关两层（ImageViewerModal 的监听见其内部实现）。
+  // Esc = close the detail. When the lightbox is open no listener is registered - the lightbox's own Esc closes the lightbox first,
+  // avoiding two layers being closed by one key press (the ImageViewerModal listener is in its own implementation).
   useEffect(() => {
     if (!visible || !detailOpen || viewerOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 原生全屏（如详情视频的全屏播放）里的 Esc 是「退出全屏」，浏览器退出后
-      // 仍会派发 keydown——此时不能顺手把详情也关掉。
+      // Esc in native fullscreen (e.g. fullscreen playback of the detail video) means "exit fullscreen"; after the browser exits it
+      // still dispatches keydown - the detail must not be closed along with it.
       if (document.fullscreenElement) return;
       if (event.key === 'Escape') setDetailStack([]);
     };
@@ -262,19 +263,19 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [visible, detailOpen, viewerOpen]);
 
-  // 灯箱常驻挂载（open 布尔控制），关闭时 viewer 变 null，但内容 props
-  // 需要在 320-400ms 淡出期间维持最后一次的值，否则图片会跟着 viewer
-  // 一起瞬间清空（跟随 CanvasHistoryAssetsModal / Canvas.tsx 的常驻惯例）。
-  // 渲染期直接写 ref：与上面 dataRef 同理，是幂等的最近非空缓存。
+  // The lightbox stays mounted (controlled by an open boolean); when closed viewer becomes null, but the content props
+  // must keep the last value during the 320-400ms fade-out, otherwise the image would be cleared
+  // instantly along with viewer (following the always-mounted convention of CanvasHistoryAssetsModal / Canvas.tsx).
+  // Write the ref during render: same as dataRef above, an idempotent latest non-null cache.
   const lastViewerRef = useRef<Exclude<ViewerState, null> | null>(null);
   if (viewer !== null) {
     lastViewerRef.current = viewer;
   }
   const displayViewer = viewer ?? lastViewerRef.current;
 
-  // 关键元素 + 音频并进一条、标签切换。总览态横在三栏上方通栏，详情态挂进左列
-  // （位置变、实例不变，切换详情不会重挂丢掉分类筛选/音频标签的选中态）。
-  // 两类都空则不渲染、不占位。
+  // Key elements + audio merged into one bar, switched by tabs. In overview state it spans the top above the three columns; in detail state it is mounted into the left column
+  // (position changes, instance does not, so switching details does not remount and lose the category filter / audio tab selection).
+  // If both kinds are empty it renders nothing and takes no space.
   const keyElementsBar =
     keyElements.length > 0 || board.audio.length > 0 ? (
       <KeyElementsBar
@@ -285,15 +286,15 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
       />
     ) : null;
 
-  // 三栏与主从布局共用的栏渲染（主从时只渲染被点栏的窄列表 + 选中高亮）。
-  // 音频不走这里——它的切换器在顶栏音频标签里（KeyElementsBar）。
-  // titleSlot：详情态左窄列表传入「文本/图片/视频」切换下拉替换默认标题（见 return 内主从分支）。
+  // Column rendering shared by the three columns and the master-detail layout (in master-detail only the clicked column's narrow list + selection highlight is rendered).
+  // Audio does not go through here - its switcher is in the top bar's audio tab (KeyElementsBar).
+  // titleSlot: in detail state the left narrow list passes the "Text/Image/Video" switch dropdown to replace the default title (see the master-detail branch in return).
   const renderBoardColumn = (
     column: 'text' | 'image' | 'video',
     titleSlot?: ReactNode,
-    // 「放大」按钮只在总览三栏里有意义：详情态右半边被详情面板占着，放大态右半边
-    // 被网格占着，两种布局下点它都不会有任何变化（只会埋下「关掉详情后突然变成
-    // 放大态」的意外）。所以左窄列表/放大态左列一律不给。
+    // The "Expand" button only makes sense in the three-column overview: in detail state the right half is taken by the detail panel, and in expanded state the right half
+    // is taken by the grid, so clicking it changes nothing in either layout (it would only plant the surprise of "suddenly
+    // becoming expanded after closing the detail"). So the left narrow list / expanded-state left column never gets it.
     { expandable = false }: { expandable?: boolean } = {},
   ): ReactElement => {
     const selectedNodeId = activeDetail?.nodeId;
@@ -301,10 +302,10 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
       case 'text':
         return (
           <BoardColumn
-            title="文本"
+            title={i18n.t('canvas.assetBoard.column.text')}
             titleSlot={titleSlot}
             items={board.text}
-            emptyText="画布中还没有文本类节点"
+            emptyText={i18n.t('canvas.assetBoard.empty.text')}
             onOpen={openItem}
             onLocate={onLocateNode}
             onPreviewImage={previewImage}
@@ -313,17 +314,17 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
             selectedNodeId={selectedNodeId}
             scrollRequest={scrollRequest}
             paused={!visible}
-            // 文本卡只有一行图标+标题，本来就是一条条列表，不需要分割线（用户要求）；
-            // 分割线只给图片/视频这种「一个节点一大块内容」的栏。
+            // A text card is just one row of icon + title and is already a list of rows, so it needs no divider (user request);
+            // dividers are only for columns like image/video where "one node is one big block of content".
           />
         );
       case 'image':
         return (
           <BoardColumn
-            title="图片"
+            title={i18n.t('canvas.assetBoard.column.image')}
             titleSlot={titleSlot}
             items={board.image}
-            emptyText="画布中还没有图片节点"
+            emptyText={i18n.t('canvas.assetBoard.empty.image')}
             onOpen={openItem}
             onLocate={onLocateNode}
             onPreviewImage={previewImage}
@@ -341,10 +342,10 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
       case 'video':
         return (
           <BoardColumn
-            title="视频"
+            title={i18n.t('canvas.assetBoard.column.video')}
             titleSlot={titleSlot}
             items={filteredVideos}
-            emptyText={videoFilter === 'all' ? '画布中还没有视频节点' : '没有匹配当前筛选的视频'}
+            emptyText={videoFilter === 'all' ? i18n.t('canvas.assetBoard.empty.video') : i18n.t('canvas.assetBoard.empty.videoNoMatch')}
             onOpen={openItem}
             onLocate={onLocateNode}
             onPreviewImage={previewImage}
@@ -356,13 +357,13 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
             dividedItems
             headerExtra={
               <div className="flex items-center gap-1.5">
-                {/* 三项并排改成下拉（用户要求，对标 liblib）：默认「全部」，展开才看到
-                    成片/片段。菜单右对齐——触发器在栏头右上角，左对齐会顶出栏外。 */}
+                {/* The three items side by side became a dropdown (user request, matches liblib): default "All", expand to see
+                Final/Clips. The menu is right-aligned - the trigger is at the top-right of the column header, and left alignment would push it out of the column. */}
                 <BoardSelect
                   value={videoFilter}
                   options={VIDEO_FILTERS}
                   onSelect={setVideoFilter}
-                  menuLabel="筛选视频"
+                  menuLabel={i18n.t('canvas.assetBoard.filterVideos')}
                   menuClassName="right-0"
                   triggerClassName="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[12px] text-white/80 transition-colors hover:bg-white/[0.08] hover:text-white"
                 />
@@ -374,20 +375,20 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     }
   };
 
-  // 放大态的宽幅网格：只留缩略图 + 标题（徽标/参考素材那些细节留给窄栏与详情），
-  // 一屏能扫到更多素材。点卡片照常开详情。
+  // The wide grid in expanded state: only thumbnail + title (badges/reference asset details are left for the narrow column and the detail),
+  // so more assets can be scanned in one screen. Clicking a card still opens the detail as usual.
   const renderExpandedColumn = (column: 'image' | 'video'): ReactElement => {
     const items = column === 'image' ? board.image : filteredVideos;
     return (
       <AssetBoardColumn
-        title={column === 'image' ? '图片' : '视频'}
+        title={column === 'image' ? i18n.t('canvas.assetBoard.column.image') : i18n.t('canvas.assetBoard.column.video')}
         count={items.length}
         emptyText={
           column === 'image'
-            ? '画布中还没有图片节点'
+            ? i18n.t('canvas.assetBoard.empty.image')
             : videoFilter === 'all'
-              ? '画布中还没有视频节点'
-              : '没有匹配当前筛选的视频'
+              ? i18n.t('canvas.assetBoard.empty.video')
+              : i18n.t('canvas.assetBoard.empty.videoNoMatch')
         }
         headerExtra={
           <div className="flex items-center gap-1.5">
@@ -396,7 +397,7 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
                 value={videoFilter}
                 options={VIDEO_FILTERS}
                 onSelect={setVideoFilter}
-                menuLabel="筛选视频"
+                menuLabel={i18n.t('canvas.assetBoard.filterVideos')}
                 menuClassName="right-0"
                 triggerClassName="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[12px] text-white/80 transition-colors hover:bg-white/[0.08] hover:text-white"
               />
@@ -425,29 +426,29 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
     <div
       aria-hidden={!visible}
       className={cn(
-        // pt-12: 给 Shell 顶部居中的视图切换开关(top-1.5, h-8 → 底沿距根顶 38px)留空间。
-        // 取 48px 让内容与开关只隔 ~10px（原 pt-16=64px 会空出 26px，用户嫌太远）。
-        // pb-0: 三栏面板贴到底部、与任务中心状态栏之间不留空隙（对标 liblib，
-        // 栏壳底部配 rounded-b-none 直角贴边，见 AssetBoardColumn）。
-        // 根背景保持语义 token bg-background：比 #262626 面板更暗，让三栏/音频条
-        // 呈现"浮起"的层次（面板色见 AssetBoardColumn 与下方音频条）。
+        // pt-12: leaves room for the view switch at the top center of the Shell (top-1.5, h-8 -> bottom edge 38px from the root top).
+        // 48px keeps the content only ~10px from the switch (the original pt-16=64px left 26px of space, which the user found too far).
+        // pb-0: the three-column panel sticks to the bottom with no gap to the task center status bar (matches liblib,
+        // the column shell uses rounded-b-none square corners flush at the bottom, see AssetBoardColumn).
+        // The root background keeps the semantic token bg-background: darker than the #262626 panel, so the three columns / audio bar
+        // show a "floating" layering (panel color see AssetBoardColumn and the audio bar below).
         'absolute inset-0 z-30 flex flex-col gap-3 bg-background px-4 pt-12 pb-0',
         visible ? 'visible' : 'invisible',
       )}
     >
-      {/* 三栏总览态：关键元素栏横在最上方通栏（对标 liblib「关键元素 · 全部 ▾ 音频」）。
-          详情态/放大态它改挂到左列里，把右半边整个让给详情面板或宽幅网格。 */}
+      {/* Three-column overview: the key element bar spans the very top (matches liblib "Key elements · All ▾ Audio").
+      In detail/expanded state it is mounted into the left column instead, giving the whole right half to the detail panel or wide grid. */}
       {activeDetail === null && expandedColumn === null && keyElementsBar}
 
       {activeDetail !== null ? (
-        // 主从布局：右 = 详情面板；左 = 关键元素栏 + 可切换的窄列表（文本/图片/视频下拉）。
-        // 四类详情（文本/图片/视频/音频）统一走这一套：音频的切换器已并入关键元素栏的
-        // 音频标签，音频详情左栏默认落到文本栏（leftListColumn 同步见上方）。
-        // 详情优先于放大态——放大态点开卡片走这里，关掉详情仍回到放大的网格。
+        // Master-detail layout: right = detail panel; left = key element bar + switchable narrow list (Text/Image/Video dropdown).
+        // All four kinds of detail (text/image/video/audio) go through this one set: the audio switcher is merged into the key element bar's
+        // audio tab, and the audio detail's left column defaults to the text column (leftListColumn sync see above).
+        // Detail takes priority over expanded state - clicking a card in expanded state comes here, and closing the detail returns to the expanded grid.
         <div className="flex min-h-0 flex-1 gap-3">
           <div className="flex w-[340px] shrink-0 flex-col gap-3">
-            {/* 详情态关键元素栏缩进左列（用户要求，对标 liblib）：右半边从顶到底
-                都是详情面板，媒体区能吃到的高度也跟着变多。 */}
+            {/* In detail state the key element bar is indented into the left column (user request, matches liblib): the right half from top to bottom
+            is the detail panel, and the height the media area can use also increases. */}
             {keyElementsBar}
             {renderBoardColumn(
               leftListColumn,
@@ -467,7 +468,7 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
           />
         </div>
       ) : expandedColumn !== null ? (
-        // 放大态：左边只留关键元素栏 + 文本栏，右半边整个给被放大的那栏（宽幅网格）。
+        // Expanded state: the left keeps only the key element bar + text column, and the whole right half goes to the expanded column (wide grid).
         <div className="flex min-h-0 flex-1 gap-3">
           <div className="flex w-[340px] shrink-0 flex-col gap-3">
             {keyElementsBar}
@@ -476,7 +477,7 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
           {renderExpandedColumn(expandedColumn)}
         </div>
       ) : (
-        // 三栏可拖拽调宽：分隔条拖动改各栏占比，松手落库（AssetBoardColumns）。
+        // The three columns' widths are draggable: dragging the divider changes each column's share, and the result is saved on release (AssetBoardColumns).
         <AssetBoardColumns
           text={renderBoardColumn('text')}
           image={renderBoardColumn('image', undefined, { expandable: true })}
@@ -494,8 +495,8 @@ export function AssetBoardView({ visible, onLocateNode }: AssetBoardViewProps): 
           setViewer((current) => {
             if (current === null) return current;
             const next = direction === 'next' ? current.index + 1 : current.index - 1;
-            // 边界钳制而非取模回绕：与 ImageViewerModal 自身在 index 0/末尾
-            // 禁用 prev/next 按钮的行为保持一致（对齐 CanvasHistoryAssetsModal）。
+            // Clamp at the boundaries rather than wrap around by modulo: consistent with ImageViewerModal's own behavior of
+            // disabling the prev/next buttons at index 0/the end (matches CanvasHistoryAssetsModal).
             if (next < 0 || next >= current.urls.length) return current;
             return { ...current, index: next };
           })
@@ -510,26 +511,26 @@ interface BoardColumnProps {
   items: AssetBoardItem[];
   emptyText: string;
   headerExtra?: ReactNode;
-  /** 替换默认标题的自定义节点（详情态左窄列表传入切栏下拉，见 LeftColumnSwitcher）。 */
+  /** A custom node replacing the default title (in detail state the left narrow list passes the column switch dropdown, see LeftColumnSwitcher). */
   titleSlot?: ReactNode;
   onOpen: (item: AssetBoardItem) => void;
   onLocate: (nodeId: string) => void;
   onPreviewImage: (url: string) => void;
-  /** 参考素材 hover「编辑」→ 打开被引用节点详情。 */
+  /** Reference asset hover "Edit" -> open the detail of the referenced node. */
   onOpenReference: (ref: AssetBoardReference) => void;
-  /** 参考素材 hover「定位」→ 滚到被引用节点的卡片并高亮。 */
+  /** Reference asset hover "Locate" -> scroll to the referenced node's card and highlight it. */
   onLocateReference: (nodeId: string) => void;
-  /** 主从模式下当前详情项的 nodeId（窄列表选中高亮）。 */
+  /** The nodeId of the current detail item in master-detail mode (selection highlight of the narrow list). */
   selectedNodeId?: string;
-  /** 「定位」滚动请求（{ nodeId, token }）：命中的卡片滚进视野并短暂高亮，其余卡片恒 null。 */
+  /** "Locate" scroll request ({ nodeId, token }): the matching card scrolls into view and highlights briefly, other cards are always null. */
   scrollRequest?: { nodeId: string; token: number } | null;
-  /** 条目间加极淡分隔线（目前仅视频栏对齐 liblib 参考图使用）。 */
+  /** Add a very faint divider between entries (currently only used by the video column to match the liblib reference image). */
   dividedItems?: boolean;
-  /** 故事板整体不可见（保活隐藏）：卡片停掉生成进度轮询。 */
+  /** The storyboard as a whole is invisible (kept-alive hidden): cards stop the generation progress polling. */
   paused?: boolean;
 }
 
-// 内部薄封装：把 items 铺进栏壳，避免三栏重复 JSX。
+// Internal thin wrapper: lays items into the column shell, avoiding repeated JSX across the three columns.
 function BoardColumn({
   title,
   items,
@@ -566,7 +567,7 @@ function BoardColumn({
           onLocateReference={onLocateReference}
           selected={item.nodeId === selectedNodeId}
           paused={paused}
-          // 只有被定位的那张卡拿到非 null 令牌，其余恒 null（memo 稳定，不被逐次定位打断）。
+          // Only the located card gets a non-null token and the rest are always null (memo stable, not interrupted by each locate).
           scrollTargetToken={
             scrollRequest && scrollRequest.nodeId === item.nodeId ? scrollRequest.token : null
           }
@@ -579,14 +580,14 @@ function BoardColumn({
 type LeftColumn = 'text' | 'image' | 'video';
 
 const LEFT_COLUMN_OPTIONS: ReadonlyArray<{ value: LeftColumn; label: string }> = [
-  { value: 'text', label: '文本' },
-  { value: 'image', label: '图片' },
-  { value: 'video', label: '视频' },
+  { value: 'text', get label() { return i18n.t('canvas.assetBoard.column.text'); } },
+  { value: 'image', get label() { return i18n.t('canvas.assetBoard.column.image'); } },
+  { value: 'video', get label() { return i18n.t('canvas.assetBoard.column.video'); } },
 ];
 
 /**
- * 栏头右上角的「放大 / 收起」按钮：把图片或视频栏摊成右半边的宽幅网格，再点收回
- * 三栏（对标 liblib）。放大态左边只留关键元素栏与文本栏。
+ * The "Expand / Collapse" button at the top-right of the column header: spreads the image or video column into a wide grid on the right half, and clicking again returns to
+ * three columns (matches liblib). In expanded state the left keeps only the key element bar and the text column.
  */
 function ExpandColumnButton({
   column,
@@ -597,7 +598,7 @@ function ExpandColumnButton({
   expanded?: boolean;
   onToggle: (column: 'image' | 'video' | null) => void;
 }): ReactElement {
-  const label = expanded ? '收起' : '放大';
+  const label = expanded ? i18n.t('canvas.assetBoard.collapse') : i18n.t('canvas.assetBoard.expand');
   return (
     <button
       type="button"
@@ -613,8 +614,8 @@ function ExpandColumnButton({
 }
 
 /**
- * 放大态网格里的一张卡：缩略图 + 标题，点开详情。刻意比 AssetBoardCard 精简——
- * 网格一屏铺十几张，再带上徽标/参考素材行就没有「一眼扫完」的效果了。
+ * A card in the expanded grid: thumbnail + title, click to open the detail. Deliberately leaner than AssetBoardCard -
+ * the grid lays out a dozen or more per screen, and with badges/reference asset rows added there would be no "scan at a glance" effect.
  */
 function AssetBoardGridCard({
   item,
@@ -623,13 +624,13 @@ function AssetBoardGridCard({
 }: {
   item: AssetBoardItem;
   onOpen: (item: AssetBoardItem) => void;
-  /** 「定位」滚动令牌：与卡片同款语义（非 null 即滚进视野并短暂高亮）。 */
+  /** "Locate" scroll token: same semantics as the card (non-null scrolls into view and highlights briefly). */
   scrollTargetToken?: number | null;
 }): ReactElement {
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [locateHighlighted, setLocateHighlighted] = useState(false);
-  // 与 AssetBoardCard 同一套：令牌变化 → 滚进视野 + 亮一下；回 null → 清高亮。
-  // 网格态也要接，否则详情里点参考素材的「定位」在放大态是静默无反应的。
+  // The same set as AssetBoardCard: token change -> scroll into view + flash; back to null -> clear the highlight.
+  // The grid state must hook it too, otherwise "Locate" on a reference asset in the detail silently does nothing in expanded state.
   useEffect(() => {
     if (scrollTargetToken === null) {
       setLocateHighlighted(false);
@@ -648,8 +649,8 @@ function AssetBoardGridCard({
       onClick={() => onOpen(item)}
       title={item.title}
       data-locate-highlight={locateHighlighted ? 'true' : undefined}
-      // min-w-0：标题用 truncate 需要可收缩的容器，否则超长标题（视频标题常是整段
-      // 提示词）配 white-space:nowrap 会把 grid item 撑出轨道、盖住相邻卡片。
+      // min-w-0: a title using truncate needs a shrinkable container, otherwise an overlong title (video titles are often a whole
+      // prompt) with white-space:nowrap would push the grid item out of its track and cover adjacent cards.
       className={cn(
         'group flex min-w-0 flex-col gap-1.5 rounded-lg text-left',
         locateHighlighted && 'animate-pulse ring-2 ring-primary',
@@ -657,8 +658,8 @@ function AssetBoardGridCard({
     >
       <span className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-[#141414] ring-1 ring-inset ring-transparent transition-[box-shadow] group-hover:ring-white/20">
         {item.column === 'video' ? (
-          // 视频走与常规卡片同一份缩略图逻辑：没封面时用 <video> 取首帧，
-          // 否则大量没记封面的视频在网格里全是黑框。
+          // Video uses the same thumbnail logic as regular cards: without a cover take the first frame from <video>,
+          // otherwise lots of videos with no recorded cover would be all black boxes in the grid.
           <VideoThumb item={item} />
         ) : item.thumbnailUrl ? (
           <img
@@ -673,7 +674,7 @@ function AssetBoardGridCard({
         )}
         {item.column === 'video' && item.videoRole === 'final' && (
           <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white/90 backdrop-blur-sm">
-            成片
+            {i18n.t('canvas.assetBoard.finalBadge')}
           </span>
         )}
         {item.column === 'video' && (item.thumbnailUrl || item.mediaUrl) && (
@@ -692,13 +693,13 @@ function AssetBoardGridCard({
 }
 
 /**
- * 故事板里的小型选择下拉（左窄列表的「文本/图片/视频」切栏、视频栏的「全部/成片/片段」
- * 筛选共用）：触发器显示当前项 + ⌄，点击展开菜单，当前项打勾（lucide Check）。
+ * A small selection dropdown in the storyboard (shared by the left narrow list's "Text/Image/Video" column switch and the video column's "All/Final/Clips"
+ * filter): the trigger shows the current item + a chevron, click to expand the menu, with the current item checked (lucide Check).
  *
- * 交互按需求「点击展开即可（不必 hover）」：click 切换开合；点击外部（焦点离开 wrapper）
- * 或 Esc 收起（对齐 AssetBoardDetailToolbar / 参考素材菜单的 onBlur/Esc 收起惯例）。
- * 样式对齐本分支体系（面板 rounded-lg、项 hover bg-white/5）；触发器外观由调用方给，
- * 因为两处一个是栏标题、一个是右上角的小筛选胶囊。
+ * Interaction as required "click to expand (no hover needed)": click toggles open/close; clicking outside (focus leaving the wrapper)
+ * or Esc collapses (matches the onBlur/Esc collapse convention of AssetBoardDetailToolbar / the reference asset menu).
+ * Styles match this branch's system (panel rounded-lg, item hover bg-white/5); the trigger look is given by the caller,
+ * because one of the two is a column title and the other a small filter pill at the top-right.
  */
 function BoardSelect<T extends string>({
   value,
@@ -711,7 +712,7 @@ function BoardSelect<T extends string>({
   value: T;
   options: ReadonlyArray<{ value: T; label: string }>;
   onSelect: (value: T) => void;
-  /** 菜单的可及名称（读屏与测试用它定位这一组）。 */
+  /** Accessible name of the menu (screen readers and tests use it to locate this group). */
   menuLabel: string;
   triggerClassName: string;
   menuClassName?: string;
@@ -721,7 +722,7 @@ function BoardSelect<T extends string>({
   const currentLabel = options.find((option) => option.value === value)?.label ?? '';
 
   const handleBlur = useCallback((event: ReactFocusEvent<HTMLDivElement>) => {
-    // 焦点整体离开 wrapper（下一焦点不在内）→ 收起（点击外部/Tab 走开）。
+    // Focus leaves the wrapper as a whole (the next focus is not inside) -> collapse (click outside / Tab away).
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       setOpen(false);
     }
@@ -730,7 +731,7 @@ function BoardSelect<T extends string>({
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Escape' && open) {
-        event.stopPropagation(); // 不让 Esc 冒泡去关整个详情面板。
+        event.stopPropagation(); // Do not let Esc bubble up and close the whole detail panel.
         setOpen(false);
         triggerRef.current?.focus();
       }
@@ -793,7 +794,7 @@ function BoardSelect<T extends string>({
   );
 }
 
-/** 详情态左窄列表头部的「文本/图片/视频」切换下拉（切栏只改左列表，右侧详情不受影响）。 */
+/** The "Text/Image/Video" switch dropdown at the header of the left narrow list in detail state (switching columns only changes the left list, the right detail is unaffected). */
 function LeftColumnSwitcher({
   current,
   onSelect,
@@ -806,7 +807,7 @@ function LeftColumnSwitcher({
       value={current}
       options={LEFT_COLUMN_OPTIONS}
       onSelect={onSelect}
-      menuLabel="切换栏目"
+      menuLabel={i18n.t('canvas.assetBoard.switchColumn')}
       triggerClassName="-mx-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
     />
   );

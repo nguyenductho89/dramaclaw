@@ -77,7 +77,7 @@ async def _run_scene_reference_asset(
             logs=[current_task],
         )
 
-    update(0.10, "加载场景数据...")
+    update(0.10, "Loading scene data...")
     store = CogneeStore(
         ctx.owner_project_label,
         output_dir=str(output_dir),
@@ -87,7 +87,7 @@ async def _run_scene_reference_asset(
     try:
         scene = await store.sqlite_store.get_scene(scene_name)
         if scene is None:
-            raise RuntimeError(f"找不到场景: {scene_name}")
+            raise RuntimeError(f"Scene not found: {scene_name}")
         base_scene = None
         base_scene_id = str(getattr(scene, "base_scene_id", "") or "").strip()
         if base_scene_id and base_scene_id != scene.name:
@@ -106,7 +106,7 @@ async def _run_scene_reference_asset(
         style_label = preset.get("label") or style_id
         style_name = f"{style_label} ({style_id})"
 
-        update(0.40, f"调用图像模型生成 {kind}...")
+        update(0.40, f"Calling the image model to generate {kind}...")
         provider = None
         model = None
         force_image_size = None

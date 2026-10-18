@@ -1,7 +1,7 @@
-"""事件提取器：从章节中提取独立事件/场景。
+"""Event extractor: extract independent events/scenes from chapters.
 
-用于 AI 规划模式，支持将章节拆分为更细粒度的事件，
-从而实现 10章→20集 的灵活映射。
+Used in AI planning mode; it can split chapters into finer-grained events,
+enabling flexible 10-chapter -> 20-episode mappings.
 """
 
 from typing import List, Optional
@@ -15,13 +15,13 @@ console = Console()
 
 
 class ExtractedEvent(BaseModel):
-    description: str = Field(description="事件描述（20字以内）")
-    location: str = Field(default="", description="地点")
-    time_marker: str = Field(default="", description="时间标记")
-    characters: list[str] = Field(default_factory=list, description="参与角色")
-    start_text: str = Field(default="", description="事件开始的前20个字")
-    end_text: str = Field(default="", description="事件结束的后20个字")
-    causes: list[str] = Field(default_factory=list, description="前置事件的description")
+    description: str = Field(description="Event description (within 20 words)")
+    location: str = Field(default="", description="Location")
+    time_marker: str = Field(default="", description="Time marker")
+    characters: list[str] = Field(default_factory=list, description="Participating characters")
+    start_text: str = Field(default="", description="First 20 words of where the event starts")
+    end_text: str = Field(default="", description="Last 20 words of where the event ends")
+    causes: list[str] = Field(default_factory=list, description="description of the preceding events")
 
 
 class ExtractedEventList(BaseModel):
@@ -29,17 +29,17 @@ class ExtractedEventList(BaseModel):
 
 
 class EventExtractor:
-    """从章节中提取事件。
+    """Extract events from a chapter.
 
-    每个事件是一个完整的叙事单位：
-    - 一次对话
-    - 一个场景
-    - 一个动作序列
+    Each event is a complete narrative unit:
+    - one conversation
+    - one scene
+    - one action sequence
 
-    划分原则：
-    1. 地点或时间变化通常意味着新事件
-    2. 保持因果关系连贯
-    3. 标注 Freytag 叙事结构角色
+    Splitting principles:
+    1. A change of location or time usually means a new event
+    2. Keep cause and effect coherent
+    3. Label the Freytag narrative-structure role
     """
 
     def __init__(self):
@@ -51,15 +51,15 @@ class EventExtractor:
         chapter_content: str,
         on_log: Optional[callable] = None,
     ) -> List[NovelEvent]:
-        """提取章节中的事件。
+        """Extract the events in a chapter.
 
         Args:
-            chapter_num: 章节编号
-            chapter_content: 章节内容
-            on_log: 日志回调函数
+            chapter_num: Chapter number
+            chapter_content: Chapter content
+            on_log: Log callback
 
         Returns:
-            事件列表
+            List of events
         """
         from pydantic_ai import Agent
         from novelvideo.config import (
@@ -72,32 +72,32 @@ class EventExtractor:
                 on_log(msg)
             console.print(f"[dim]{msg}[/dim]")
 
-        log(f"开始提取第 {chapter_num} 章事件...")
+        log(f"Extracting events of chapter {chapter_num}...")
 
-        # 如果章节内容过长，截取
+        # Truncate the chapter content if it is too long
         truncated = (
             chapter_content[:12000] if len(chapter_content) > 12000 else chapter_content
         )
         if len(chapter_content) > 12000:
-            log(f"章节内容过长 ({len(chapter_content)} 字)，已截取前 12000 字")
+            log(f"Chapter content too long ({len(chapter_content)} chars); truncated to the first 12000 chars")
 
-        prompt = f"""分析以下章节内容，识别其中的独立事件/场景。
+        prompt = f"""Analyze the chapter content below and identify the independent events/scenes in it.
 
-章节内容：
+Chapter content:
 {truncated}
 
-事件划分原则：
-1. 每个事件是一个完整的叙事单位（一次对话、一个场景、一个动作序列）
-2. 地点或时间变化通常意味着新事件
-3. 保持因果关系连贯
-4. 标注 Freytag 叙事结构角色：
-   - exposition: 开场/背景介绍
-   - rising_action: 情节上升/冲突发展
-   - climax: 高潮
-   - falling_action: 情节下降/结果展开
-   - resolution: 结局/收尾
-   - narrative: 普通叙事（默认）
-5. 每章通常有 3-8 个事件"""
+Event splitting principles:
+1. Each event is a complete narrative unit (one conversation, one scene, one action sequence)
+2. A change of location or time usually means a new event
+3. Keep cause and effect coherent
+4. Label the Freytag narrative-structure role:
+   - exposition: opening/background introduction
+   - rising_action: rising plot/conflict development
+   - climax: climax
+   - falling_action: falling plot/consequences unfolding
+   - resolution: ending/wrap-up
+   - narrative: ordinary narration (default)
+5. Each chapter usually has 3-8 events"""
 
         try:
             agent = Agent(
@@ -108,26 +108,26 @@ class EventExtractor:
             ai_result = await agent.run(prompt)
 
             events_data = ai_result.output.events
-            log(f"LLM 返回 {len(events_data)} 个事件")
+            log(f"LLM returned {len(events_data)} events")
 
         except Exception as e:
-            log(f"事件提取失败: {e}")
-            # 回退：整个章节作为一个事件
+            log(f"Event extraction failed: {e}")
+            # Fallback: treat the whole chapter as one event
             return [
                 NovelEvent(
                     event_id=f"ch{chapter_num}_e1",
                     chapter_num=chapter_num,
-                    description=f"第{chapter_num}章内容",
+                    description=f"Chapter {chapter_num} content",
                     content=chapter_content,
                     text_start=0,
                     text_end=len(chapter_content),
                 )
             ]
 
-        # 解析事件并定位原文位置
+        # Parse events and locate their position in the source text
         events = []
         for i, e in enumerate(events_data):
-            # 在原文中定位事件边界
+            # Locate the event boundaries in the source text
             start_text = e.start_text
             end_text = e.end_text
 
@@ -137,13 +137,13 @@ class EventExtractor:
             if end_pos > 0:
                 end_pos += len(end_text)
 
-            # 如果定位失败，使用默认值
+            # If locating fails, use default values
             if start_pos < 0:
                 start_pos = 0
             if end_pos <= start_pos:
                 end_pos = len(chapter_content)
 
-            # 提取事件原文
+            # Extract the event source text
             event_content = chapter_content[start_pos:end_pos]
 
             event = NovelEvent(
@@ -160,7 +160,7 @@ class EventExtractor:
             )
             events.append(event)
 
-        log(f"第 {chapter_num} 章提取完成: {len(events)} 个事件")
+        log(f"Chapter {chapter_num} extraction complete: {len(events)} events")
         return events
 
     async def extract_all_chapters(
@@ -169,15 +169,15 @@ class EventExtractor:
         on_progress: Optional[callable] = None,
         on_log: Optional[callable] = None,
     ) -> List[NovelEvent]:
-        """批量提取所有章节的事件。
+        """Extract the events of all chapters in batch.
 
         Args:
-            chapters: 章节列表，每个元素包含 number 和 content
-            on_progress: 进度回调 (progress: float, task: str)
-            on_log: 日志回调
+            chapters: Chapter list; each item contains number and content
+            on_progress: Progress callback (progress: float, task: str)
+            on_log: Log callback
 
         Returns:
-            所有事件列表
+            List of all events
         """
         all_events = []
         total = len(chapters)
@@ -185,7 +185,7 @@ class EventExtractor:
         for i, chapter in enumerate(chapters):
             if on_progress:
                 progress = i / total
-                on_progress(progress, f"提取第 {chapter['number']} 章事件...")
+                on_progress(progress, f"Extracting events of chapter {chapter['number']}...")
 
             events = await self.extract_events(
                 chapter_num=chapter["number"],
@@ -195,6 +195,6 @@ class EventExtractor:
             all_events.extend(events)
 
         if on_progress:
-            on_progress(1.0, f"事件提取完成，共 {len(all_events)} 个事件")
+            on_progress(1.0, f"Event extraction complete, {len(all_events)} events in total")
 
         return all_events

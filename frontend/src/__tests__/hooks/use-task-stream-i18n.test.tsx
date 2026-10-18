@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 任务流的完成 toast 与日志必须落在 i18n 这一侧。
+ * The completion toast and logs of the task stream must live on the i18n side.
  *
- * review #462：完成分支原来直接 `toast.success(data.current_task)`，而 run_core
- * 收尾时固定写 `current_task="完成"`，英文界面的完成提示因此还是中文；空值时又
- * 硬编码回退到 "Task completed"，中文界面同样是错的。
+ * review #462: the completion branch used to call `toast.success(data.current_task)` directly, while run_core
+ * always writes `current_task="Done"` at the end, so the completion toast of the English UI was still in the backend language; and with an empty value it
+ * fell back to a hard-coded "Task completed", which would be just as wrong in the other languages.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
@@ -89,12 +89,12 @@ beforeEach(() => {
 
 afterEach(async () => {
   await act(async () => {
-    await i18next.changeLanguage("zh");
+    await i18next.changeLanguage("en");
   });
 });
 
-describe("useTaskStream 完成 toast", () => {
-  it("英文界面下不回显后端的「完成」哨兵，用状态词条", async () => {
+describe("useTaskStream completion toast", () => {
+  it("does not echo the backend's \"done\" sentinel in the English UI, and uses the status entry", async () => {
     await act(async () => {
       await i18next.changeLanguage("en");
     });
@@ -105,14 +105,14 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", {
         status: "completed",
         progress: 1,
-        current_task: "完成",
+        current_task: "Done",
       });
     });
 
     expect(toast.success).toHaveBeenCalledWith("Completed");
   });
 
-  it("后端没给完成文案时也走词条，不是硬编码的英文", () => {
+  it("uses the entry too when the backend gives no completion text, instead of hard-coded English", () => {
     mountStream();
     const stream = MockEventSource.instances[0];
 
@@ -120,10 +120,10 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", { status: "completed", progress: 1 });
     });
 
-    expect(toast.success).toHaveBeenCalledWith("已完成");
+    expect(toast.success).toHaveBeenCalledWith("Completed");
   });
 
-  it("后端给了真实收尾文案时，按 code 翻译后再提示", async () => {
+  it("when the backend gives real closing text, it is translated by code before being shown", async () => {
     await act(async () => {
       await i18next.changeLanguage("en");
     });
@@ -134,7 +134,7 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", {
         status: "completed",
         progress: 1,
-        current_task: "场景提取完成",
+        current_task: "Scene extraction complete",
         current_task_code: "tasks.progress.scenes.complete",
       });
     });
@@ -143,8 +143,8 @@ describe("useTaskStream 完成 toast", () => {
   });
 });
 
-describe("useTaskStream 日志兼容", () => {
-  it("老后端只发 logs（string[]）时照常显示", () => {
+describe("useTaskStream log compatibility", () => {
+  it("an old backend that only sends logs (string[]) still displays them as usual", () => {
     const { result } = mountStream();
     const stream = MockEventSource.instances[0];
 
@@ -152,15 +152,15 @@ describe("useTaskStream 日志兼容", () => {
       stream.emit("running", {
         status: "running",
         progress: 0.3,
-        current_task: "正在切分章节...",
-        logs: ["任务已开始", "原文已保存"],
+        current_task: "Splitting chapters...",
+        logs: ["Task started", "Source text saved"],
       });
     });
 
-    expect(result.current.logs).toEqual(["任务已开始", "原文已保存"]);
+    expect(result.current.logs).toEqual(["Task started", "Source text saved"]);
   });
 
-  it("新后端同时发 logs 和 logs_i18n 时，按结构化那份翻译", async () => {
+  it("a new backend that sends both logs and logs_i18n translates from the structured one", async () => {
     await act(async () => {
       await i18next.changeLanguage("en");
     });
@@ -171,9 +171,9 @@ describe("useTaskStream 日志兼容", () => {
       stream.emit("running", {
         status: "running",
         progress: 0.3,
-        current_task: "原文已保存",
-        logs: ["原文已保存"],
-        logs_i18n: [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }],
+        current_task: "Source text saved",
+        logs: ["Source text saved"],
+        logs_i18n: [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }],
       });
     });
 

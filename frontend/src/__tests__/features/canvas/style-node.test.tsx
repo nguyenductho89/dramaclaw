@@ -16,19 +16,19 @@ import { useCanvasStore } from "@/stores/canvasStore";
 const TEMPLATES: FreezoneStyleTemplate[] = [
   {
     id: "golden_age",
-    label: "黄金时代",
-    category: "年代",
+    label: "Golden Age",
+    category: "Era",
     cover: "golden_age/cover.webp",
     samples: ["golden_age/female.webp"],
-    style_prompt: "黄金时代的提示词",
+    style_prompt: "Golden Age prompt",
   },
   {
     id: "cyberpunk",
-    label: "赛博朋克",
-    category: "科幻",
+    label: "Cyberpunk",
+    category: "Sci-fi",
     cover: "cyberpunk/cover.webp",
     samples: ["cyberpunk/female.webp"],
-    style_prompt: "赛博朋克的提示词",
+    style_prompt: "Cyberpunk prompt",
   },
 ];
 
@@ -101,31 +101,31 @@ describe("StyleNode", () => {
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  it("卡片只放封面，风格名走节点标题", () => {
+  it("the card holds only the cover, and the style name goes in the node title", () => {
     seedCanvas({ withImageNode: true, templateId: "golden_age" });
     renderStyleNode("golden_age");
 
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "/style-gallery/golden_age/cover.webp",
     );
-    // 标题带上分类，换风格时跟着变；卡片里不再有第二处风格名。
-    expect(screen.getByText("风格 · 年代 · 黄金时代")).toBeInTheDocument();
-    expect(screen.queryByText("黄金时代")).not.toBeInTheDocument();
+    // The title carries the category and follows when the style changes; the card no longer has a second place with the style name.
+    expect(screen.getByText("Style · Era · Golden Age")).toBeInTheDocument();
+    expect(screen.queryByText("Golden Age")).not.toBeInTheDocument();
   });
 
-  it("用户改过名字后标题不被风格覆盖", () => {
+  it("the title is not overwritten by the style after the user renamed it", () => {
     seedCanvas({ withImageNode: true, templateId: "golden_age" });
     render(
       <StyleNode
         id="style_1"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         {...({ type: CANVAS_NODE_TYPES.style, dragging: false, zIndex: 0 } as any)}
-        data={{ styleTemplateId: "golden_age", displayName: "主视觉风格" }}
+        data={{ styleTemplateId: "golden_age", displayName: "Hero visual style" }}
       />,
     );
 
-    expect(screen.getByText("主视觉风格")).toBeInTheDocument();
+    expect(screen.getByText("Hero visual style")).toBeInTheDocument();
   });
 
   it("writes the picked style to the downstream image node, not to itself", async () => {
@@ -133,11 +133,11 @@ describe("StyleNode", () => {
     seedCanvas({ withImageNode: true, templateId: "golden_age" });
     renderStyleNode("golden_age");
 
-    await user.click(screen.getByRole("button", { name: "风格 黄金时代" }));
-    await user.click(screen.getByRole("button", { name: "使用赛博朋克" }));
+    await user.click(screen.getByRole("button", { name: "Style Golden Age" }));
+    await user.click(screen.getByRole("button", { name: "Use Cyberpunk" }));
 
     const nodes = useCanvasStore.getState().nodes;
-    // 真源是图片节点；风格节点自己的数据由图片节点那边的对账拉齐，这里不自写。
+    // The source of truth is the image node; the style node's own data is aligned by reconciliation over there, and is not written here.
     expect(
       (nodes.find((node) => node.id === "image_1")?.data as { styleTemplateId?: string })
         ?.styleTemplateId,
@@ -153,8 +153,8 @@ describe("StyleNode", () => {
     seedCanvas({ withImageNode: true, templateId: "golden_age" });
     renderStyleNode("golden_age");
 
-    await user.click(screen.getByRole("button", { name: "风格 黄金时代" }));
-    await user.click(screen.getByRole("button", { name: "清除风格" }));
+    await user.click(screen.getByRole("button", { name: "Style Golden Age" }));
+    await user.click(screen.getByRole("button", { name: "Clear style" }));
 
     expect(
       (
@@ -167,15 +167,15 @@ describe("StyleNode", () => {
     ).toBeNull();
   });
 
-  it("右上角的按钮能打开图墙", async () => {
+  it("the button at the top right can open the gallery", async () => {
     const user = userEvent.setup();
     seedCanvas({ withImageNode: true, templateId: "golden_age" });
     renderStyleNode("golden_age");
 
-    await user.click(screen.getByRole("button", { name: "更换风格" }));
+    await user.click(screen.getByRole("button", { name: "Change style" }));
 
     expect(
-      screen.getByRole("button", { name: "查看赛博朋克详情" }),
+      screen.getByRole("button", { name: "View Cyberpunk details" }),
     ).toBeInTheDocument();
   });
 
@@ -184,14 +184,14 @@ describe("StyleNode", () => {
     seedCanvas({ withImageNode: false, templateId: "golden_age" });
     renderStyleNode("golden_age");
 
-    expect(screen.getByText("未连接图片节点")).toBeInTheDocument();
-    // 写不到任何地方，入口按钮也不该露出来。
-    expect(screen.queryByRole("button", { name: "更换风格" })).not.toBeInTheDocument();
+    expect(screen.getByText("No image node connected")).toBeInTheDocument();
+    // It cannot write anywhere, so the entry button should not show either.
+    expect(screen.queryByRole("button", { name: "Change style" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "风格 黄金时代" }));
-    // 图墙不该打开 —— 没有下游图片节点时改风格写不到任何地方。
+    await user.click(screen.getByRole("button", { name: "Style Golden Age" }));
+    // The gallery must not open — with no downstream image node a style change would be written nowhere.
     expect(
-      screen.queryByRole("button", { name: "查看赛博朋克详情" }),
+      screen.queryByRole("button", { name: "View Cyberpunk details" }),
     ).not.toBeInTheDocument();
   });
 });

@@ -76,7 +76,7 @@ interface VerifyChipProps {
 
 /**
  * Self-contained verify chip — renders a status pill and opens a detail drawer
- * on click. Used inside sub-tab panes (草图 / 视频) to surface the stage-specific
+ * on click. Used inside sub-tab panes (Sketch / Video) to surface the stage-specific
  * consistency report.
  */
 export function VerifyChip({

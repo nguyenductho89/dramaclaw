@@ -1,4 +1,4 @@
-"""验证系统数据模型。"""
+"""Verification system data models."""
 
 from enum import Enum
 
@@ -13,7 +13,7 @@ class VerificationIssue(BaseModel):
 
 
 class VerificationResult(BaseModel):
-    """LLM 输出结构（用作 Agent 的 output_type）。"""
+    """LLM output structure (used as the Agent output_type)."""
 
     passed: bool
     score: float  # 0-10
@@ -39,34 +39,34 @@ class ConsistencyIssue(BaseModel):
 
 
 class ConsistencyDimension(BaseModel):
-    """单个一致性维度的评估。"""
+    """Evaluation of a single consistency dimension."""
 
     dimension: str = Field(
         description="face, hair, skin_tone, gender, clothing_style, clothing_color, accessories, body_type"
     )
-    score: float = Field(ge=0, le=10, description="0-10 评分")
+    score: float = Field(ge=0, le=10, description="Score 0-10")
     severity: str = Field(description="critical, warning, info")
-    description: str = Field(description="问题描述")
+    description: str = Field(description="Problem description")
 
 
 class CharacterConsistencyReport(BaseModel):
-    """单个角色的一致性报告。"""
+    """Consistency report of a single character."""
 
     character: str
     identity_id: str
     beats_checked: list[int]
     dimensions: list[ConsistencyDimension]
     face_score: float = Field(
-        ge=0, le=10, description="脸部综合评分 (face + hair + skin_tone 均值)"
+        ge=0, le=10, description="Overall face score (mean of face + hair + skin_tone)"
     )
     clothing_score: float = Field(
-        ge=0, le=10, description="服装综合评分 (clothing_style + clothing_color + accessories 均值)"
+        ge=0, le=10, description="Overall clothing score (mean of clothing_style + clothing_color + accessories)"
     )
-    passed: bool = Field(description="face_score >= 7.0 AND clothing_score >= 7.0 AND 无 critical")
+    passed: bool = Field(description="face_score >= 7.0 AND clothing_score >= 7.0 AND no critical")
 
 
 class ConsistencyResult(BaseModel):
-    """全局一致性验证结果（增强版，分维度评分）。"""
+    """Global consistency verification result (enhanced, scored by dimension)."""
 
     characters: list[CharacterConsistencyReport] = Field(default_factory=list)
     summary: str
@@ -77,7 +77,7 @@ class ConsistencyResult(BaseModel):
 
 
 class ColorMismatch(BaseModel):
-    """单个颜色不匹配条目。"""
+    """A single color mismatch entry."""
 
     identity_id: str
     color_hex: str
@@ -86,19 +86,19 @@ class ColorMismatch(BaseModel):
 
 
 class ColorVerifyBeatResult(BaseModel):
-    """单个 beat 的颜色验证结果。"""
+    """Color verification result of a single beat."""
 
     beat_number: int
     status: str  # "pass" | "fail" | "warn"
-    expected: list[str]  # 剧本中预期的 identity_ids
-    detected: list[str]  # 像素检测到的 identity_ids
-    missing: list[ColorMismatch]  # 预期有但没检测到
-    extra: list[ColorMismatch]  # 检测到但不该出现
-    sketch_path: str = ""  # 草图文件路径（用于失败时定位）
+    expected: list[str]  # identity_ids expected from the screenplay
+    detected: list[str]  # identity_ids detected by pixel analysis
+    missing: list[ColorMismatch]  # expected but not detected
+    extra: list[ColorMismatch]  # detected but should not appear
+    sketch_path: str = ""  # sketch file path (used to locate on failure)
 
 
 class ColorVerifyResult(BaseModel):
-    """整集颜色验证结果。"""
+    """Color verification result of a whole episode."""
 
     total_beats: int
     passed_beats: int
@@ -113,18 +113,18 @@ class ColorVerifyResult(BaseModel):
 
 
 class ObjectiveScore(BaseModel):
-    """T3 内容匹配评分结果（LLM 输出结构）。"""
+    """T3 content-match scoring result (LLM output structure)."""
 
-    script_match: float = Field(ge=0, le=10, description="剧本匹配度 0-10")
-    identity_clarity: float = Field(ge=0, le=10, description="角色辨识度 0-10")
-    total: float = Field(ge=0, le=10, description="均值")
+    script_match: float = Field(ge=0, le=10, description="Screenplay match 0-10")
+    identity_clarity: float = Field(ge=0, le=10, description="Character distinguishability 0-10")
+    total: float = Field(ge=0, le=10, description="Mean")
 
 
 # --- T4: Comparative Selection Models ---
 
 
 class CandidateRanking(BaseModel):
-    """单个候选的排名。"""
+    """Ranking of a single candidate."""
 
     pool_id: str
     rank: int
@@ -132,9 +132,9 @@ class CandidateRanking(BaseModel):
 
 
 class CompareResult(BaseModel):
-    """T4 对比选择结果（LLM 输出结构）。"""
+    """T4 comparison selection result (LLM output structure)."""
 
-    selected_index: int = Field(description="选中的候选序号（从 1 开始）")
+    selected_index: int = Field(description="Index of the selected candidate (starting from 1)")
     ranking: list[CandidateRanking] = Field(default_factory=list)
     comparison_summary: str = ""
 
@@ -143,23 +143,23 @@ class CompareResult(BaseModel):
 
 
 class ContinuityTransition(BaseModel):
-    """单个过渡点评估。"""
+    """Evaluation of a single transition point."""
 
     from_beat: int
     to_beat: int
-    spatial_consistency: float = Field(ge=0, le=10, description="空间关系连续性")
-    action_continuity: float = Field(ge=0, le=10, description="动作衔接")
-    scene_transition: float = Field(ge=0, le=10, description="场景过渡合理性")
-    total: float = Field(ge=0, le=10, description="三维均值")
-    issues: list[str] = Field(default_factory=list, description="具体问题")
+    spatial_consistency: float = Field(ge=0, le=10, description="Continuity of spatial relationships")
+    action_continuity: float = Field(ge=0, le=10, description="Action continuity")
+    scene_transition: float = Field(ge=0, le=10, description="Reasonableness of the scene transition")
+    total: float = Field(ge=0, le=10, description="Mean of the three dimensions")
+    issues: list[str] = Field(default_factory=list, description="Concrete issues")
 
 
 class ContinuityResult(BaseModel):
-    """T6 连贯性评估结果（LLM 输出结构）。"""
+    """T6 continuity evaluation result (LLM output structure)."""
 
     transitions: list[ContinuityTransition] = Field(default_factory=list)
     weak_transitions: list[int] = Field(
-        default_factory=list, description="连贯性较差的过渡点 beat_number"
+        default_factory=list, description="beat_numbers of transition points with poor continuity"
     )
     overall_score: float = Field(ge=0, le=10, default=10.0)
 
@@ -168,20 +168,20 @@ class ContinuityResult(BaseModel):
 
 
 class SimilarityPair(BaseModel):
-    """一对相似草图。"""
+    """A pair of similar sketches."""
 
     beat_a: int
     beat_b: int
-    similarity: float = Field(ge=0, le=1, description="相似度 0-1")
-    warning: bool = Field(default=False, description="是否超过阈值")
+    similarity: float = Field(ge=0, le=1, description="Similarity 0-1")
+    warning: bool = Field(default=False, description="Whether it exceeds the threshold")
 
 
 class SimilarityResult(BaseModel):
-    """T7 相似度检测结果（像素级，零 LLM）。"""
+    """T7 similarity detection result (pixel level, zero LLM)."""
 
     pairs: list[SimilarityPair] = Field(default_factory=list)
     duplicate_beats: list[int] = Field(
-        default_factory=list, description="与其他 beat 相似度 > 阈值的"
+        default_factory=list, description="Those whose similarity to other beats exceeds the threshold"
     )
     overall_passed: bool = Field(default=True)
 
@@ -190,40 +190,40 @@ class SimilarityResult(BaseModel):
 
 
 class EpisodeIssue(BaseModel):
-    """全局分镜审片发现的问题。"""
+    """Issue found in the global storyboard review."""
 
-    beat_number: int = Field(description="主要相关 beat")
+    beat_number: int = Field(description="Primary related beat")
     issue_type: str = Field(
         description="composition_repetition | style_drift | weak_climax | visual_monotony | pacing_imbalance | proportion_inconsistency"
     )
     severity: str = Field(description="critical | warning")
     description: str
     suggested_action: str = Field(description="swap_candidate | regenerate | info")
-    related_beats: list[int] = Field(default_factory=list, description="相关 beat（上下文）")
+    related_beats: list[int] = Field(default_factory=list, description="Related beats (context)")
 
 
 class EpisodeOverviewResult(BaseModel):
-    """T8 全局分镜审片结果（LLM 输出结构）。"""
+    """T8 global storyboard review result (LLM output structure)."""
 
-    visual_rhythm: float = Field(ge=0, le=10, description="视觉节奏 0-10")
-    composition_diversity: float = Field(ge=0, le=10, description="构图多样性 0-10")
-    narrative_arc: float = Field(ge=0, le=10, description="叙事弧线视觉化 0-10")
-    style_unity: float = Field(ge=0, le=10, description="风格统一性 0-10")
-    total: float = Field(ge=0, le=10, description="四维均值")
-    issues: list[EpisodeIssue] = Field(default_factory=list, description="最多 5 个")
-    overall_passed: bool = Field(description="无 critical issue 且 total >= 6.0")
-    summary: str = Field(description="一句话整体印象")
+    visual_rhythm: float = Field(ge=0, le=10, description="Visual rhythm 0-10")
+    composition_diversity: float = Field(ge=0, le=10, description="Composition diversity 0-10")
+    narrative_arc: float = Field(ge=0, le=10, description="Narrative arc visualization 0-10")
+    style_unity: float = Field(ge=0, le=10, description="Style unity 0-10")
+    total: float = Field(ge=0, le=10, description="Mean of the four dimensions")
+    issues: list[EpisodeIssue] = Field(default_factory=list, description="At most 5")
+    overall_passed: bool = Field(description="No critical issue and total >= 6.0")
+    summary: str = Field(description="One-sentence overall impression")
 
 
 class EditDecision(str, Enum):
-    """Teacher 对单张草图的顶层决策。"""
+    """Teacher top-level decision for a single sketch."""
 
     keep = "keep"
     revise = "revise"
 
 
 class SketchMainProblem(str, Enum):
-    """导演视角的主问题分类。"""
+    """Primary problem category from the director's perspective."""
 
     shot_scale_wrong = "shot_scale_wrong"
     composition_weak = "composition_weak"
@@ -235,23 +235,23 @@ class SketchMainProblem(str, Enum):
 
 
 class SketchEditResult(BaseModel):
-    """Teacher 生成的草图修正结果。"""
+    """Sketch correction result generated by the Teacher."""
 
     decision: EditDecision
     main_problem: SketchMainProblem | None = Field(
         default=None,
-        description="主问题类型；当 decision=keep 时可为 null。",
+        description="Primary problem type; may be null when decision=keep.",
     )
     reasoning: str = Field(
         default="",
-        description="1-3 句简洁解释，说明为什么保留或修正。",
+        description="A concise 1-3 sentence explanation of why it is kept or corrected.",
         max_length=150,
     )
     edit_instruction: str = Field(
         default="",
         description=(
-            "可直接执行的 Nanobanana 编辑提示词。提到身份时，使用精确 identity + hex color，"
-            "不要使用模糊颜色称呼。"
+            "A directly executable Nanobanana edit prompt. When mentioning an identity, use the exact identity + hex color, "
+            "do not use vague color names."
         ),
         max_length=900,
     )

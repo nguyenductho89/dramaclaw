@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). It does not import `@/i18n`
+// itself because that module pulls in react-i18next / HttpBackend; putting that on this widely
+// imported low-level chain would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 
 import type {
@@ -10,7 +10,7 @@ import type {
   SkillParameterSpec,
 } from '@/features/freezone/context/skillRoles';
 
-/** 后端 skill 定义没给 label 时的兜底显示名。 */
+/** Fallback display name when the backend skill definition provides no label. */
 const PARAMETER_LABEL_KEYS: Record<string, string> = {
   aspect_ratio: 'canvas.skillParams.aspectRatio',
   quality: 'canvas.skillParams.quality',

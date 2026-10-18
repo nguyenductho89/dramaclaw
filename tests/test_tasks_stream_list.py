@@ -70,21 +70,21 @@ def test_stage_asset_task_display_name_includes_scene_and_step():
         episode=0,
         scope="stage_asset__hash",
         status="queued",
-        metadata={"scene_name": "咖啡馆", "step": "pano_from_master"},
+        metadata={"scene_name": "Cafe", "step": "pano_from_master"},
     )
 
     payload = _serialize_task(task)
 
-    assert payload["task_type_label"] == "场景资产"
-    assert payload["display_name"] == "场景资产 · 咖啡馆 · Master 生成全景"
+    assert payload["task_type_label"] == "Scene assets"
+    assert payload["display_name"] == "Scene assets · Cafe · Panorama from Master"
 
 
 def test_backend_authored_display_name_stays_localizable():
-    """freezone / scripts 传的 display_name 是系统写死的中文，不是业务内容。
+    """The display_name passed by freezone / scripts is system hard-coded text, not business content.
 
-    review #447：这里一度写成「metadata 里有 display_name 就 localizable=False」，
-    于是 "生成草图 · EP1 / Beat 3" 被当成用户自定义名，前端 displayLabel 原样透出，
-    英文界面的任务中心、完成通知和伙伴气泡继续显示中文。
+    review #447: this was once written as "display_name in metadata means localizable=False",
+    so "Generate sketch · EP1 / Beat 3" was treated as a user-defined name, the frontend displayLabel passed it through as-is,
+    and the task center, completion notices, and companion bubbles of the English UI kept showing the wrong language.
     """
     from novelvideo.api.routes.tasks import _serialize_task
     from novelvideo.task_state import TaskState
@@ -96,22 +96,22 @@ def test_backend_authored_display_name_stays_localizable():
         episode=1,
         beat_num=3,
         status="queued",
-        # freezone.py:2053 的真实形状
+        # The real shape at freezone.py:2053
         metadata={
             "task_family": "mainline_skill",
-            "task_label": "生成草图",
-            "display_name": "生成草图 · EP1 / Beat 3",
+            "task_label": "Generate sketch",
+            "display_name": "Generate sketch · EP1 / Beat 3",
         },
     )
 
     payload = _serialize_task(task)
 
-    assert payload["display_name"] == "生成草图 · EP1 / Beat 3"
+    assert payload["display_name"] == "Generate sketch · EP1 / Beat 3"
     assert payload["display_name_localizable"] is True
 
 
 def test_user_authored_display_name_opts_out_of_localization():
-    """真正的用户自定义名称由生产者显式标记退出本地化，翻译它反而是错的。"""
+    """A genuinely user-defined name is explicitly marked by the producer to opt out of localization; translating it would be wrong."""
     from novelvideo.api.routes.tasks import _serialize_task
     from novelvideo.task_state import TaskState
 
@@ -121,29 +121,29 @@ def test_user_authored_display_name_opts_out_of_localization():
         project_id="proj_123",
         episode=0,
         status="queued",
-        metadata={"display_name": "雨夜巷口 · 第二版", "display_name_user_content": True},
+        metadata={"display_name": "Rainy Alley Entrance · Second Edition", "display_name_user_content": True},
     )
 
     payload = _serialize_task(task)
 
-    assert payload["display_name"] == "雨夜巷口 · 第二版"
+    assert payload["display_name"] == "Rainy Alley Entrance · Second Edition"
     assert payload["display_name_localizable"] is False
 
 
 def test_user_content_flag_survives_the_real_enqueue_projection():
-    """走真实链路：display_metadata_for_task → TaskState → _serialize_task。
+    """Take the real chain: display_metadata_for_task -> TaskState -> _serialize_task.
 
-    review #447 复审：opt-out 标记只在 _serialize_task 里读是不够的，入队时
-    display_metadata_for_task 的投影白名单会把它丢掉，标记等于形同虚设。
+    review #447 re-review: reading the opt-out marker only in _serialize_task is not enough; at enqueue time the projection whitelist of
+    display_metadata_for_task would drop it, and the marker would be nominal only.
     """
     from novelvideo.api.routes.tasks import _serialize_task
     from novelvideo.ports.tasks import display_metadata_for_task
     from novelvideo.task_state import TaskState
 
     payload = {
-        "display_name": "雨夜巷口 · 第二版",
+        "display_name": "Rainy Alley Entrance · Second Edition",
         "display_name_user_content": True,
-        "task_label": "自由生成图片",
+        "task_label": "Free image generation",
     }
     metadata = display_metadata_for_task("freezone_gen", payload)
 
@@ -163,7 +163,7 @@ def test_user_content_flag_survives_the_real_enqueue_projection():
 
 
 def test_user_content_flag_is_not_coerced_through_the_string_loop():
-    """标记必须是布尔投影：str(False) == "False" 是真值，会把判断整个反过来。"""
+    """The marker must be a boolean projection: str(False) == "False" is truthy and would invert the whole judgment."""
     from novelvideo.api.routes.tasks import _serialize_task
     from novelvideo.ports.tasks import display_metadata_for_task
     from novelvideo.task_state import TaskState
@@ -171,7 +171,7 @@ def test_user_content_flag_is_not_coerced_through_the_string_loop():
     for falsy in (False, None, "", 0):
         metadata = display_metadata_for_task(
             "freezone_gen",
-            {"display_name": "生成草图 · EP1 / Beat 3", "display_name_user_content": falsy},
+            {"display_name": "Generate sketch · EP1 / Beat 3", "display_name_user_content": falsy},
         )
         assert "display_name_user_content" not in metadata, falsy
         payload = _serialize_task(
@@ -355,7 +355,7 @@ async def test_project_task_stream_includes_logs(tmp_path, monkeypatch):
             scope="scope-a",
             status="running",
             progress=0.5,
-            current_task="生成草图中",
+            current_task="Generating sketch",
             logs=["start", "step"],
         ),
     )
@@ -386,11 +386,11 @@ async def test_project_task_stream_includes_logs(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_project_task_stream_keeps_logs_as_strings(tmp_path, monkeypatch):
-    """SSE 的 `logs` 也必须守住 `string[]` 契约。
+    """The SSE `logs` must also uphold the `string[]` contract.
 
-    结构化条目从存储层出来时是 `{text, code, params}`，原样推给还没升级的前端
-    （滚动发布期间、或用户手上那张缓存的旧页面），日志面板就变成一串
-    `[object Object]`。带 code 的那份走 `logs_i18n`。
+    Structured entries come out of the storage layer as `{text, code, params}`; pushed as-is to a frontend not yet upgraded
+    (during a rolling release, or a stale cached page in the user's hands), the log panel becomes a string of
+    `[object Object]`. The copy carrying a code goes through `logs_i18n`.
     """
     from novelvideo.task_state import TaskState
 
@@ -407,11 +407,11 @@ async def test_project_task_stream_keeps_logs_as_strings(tmp_path, monkeypatch):
             episode=0,
             status="running",
             progress=0.5,
-            current_task="正在切分章节...",
+            current_task="Splitting chapters...",
             logs=[
-                "任务已开始",
+                "Task started",
                 {
-                    "text": "已切分 3 段",
+                    "text": "Split into 3 segments",
                     "code": "tasks.log.ingest.chunked",
                     "params": {"chunkCount": 3},
                 },
@@ -439,5 +439,5 @@ async def test_project_task_stream_keeps_logs_as_strings(tmp_path, monkeypatch):
             await aclose()
 
     payload = json.loads(first["data"])
-    assert payload["logs"] == ["任务已开始", "已切分 3 段"]
+    assert payload["logs"] == ["Task started", "Split into 3 segments"]
     assert payload["logs_i18n"][1]["code"] == "tasks.log.ingest.chunked"

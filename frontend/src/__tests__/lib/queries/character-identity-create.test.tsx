@@ -41,36 +41,36 @@ describe("identity create query hook", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/identities",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/identities",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({
             ok: true,
             data: {
-              identity_id: "秦_幼年",
-              identity_name: "幼年",
+              identity_id: "Qin_child",
+              identity_name: "child",
               age_group: "child",
-              appearance_details: "粗布短衫",
+              appearance_details: "coarse cloth tunic",
             },
           });
         },
       ),
     );
 
-    const { result } = renderHook(() => useCreateIdentity("demo", "秦"), {
+    const { result } = renderHook(() => useCreateIdentity("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate({
-      identity_name: "幼年",
+      identity_name: "child",
       age_group: "child",
-      appearance_details: "粗布短衫",
+      appearance_details: "coarse cloth tunic",
     });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(body).toEqual({
-      identity_name: "幼年",
+      identity_name: "child",
       age_group: "child",
-      appearance_details: "粗布短衫",
+      appearance_details: "coarse cloth tunic",
     });
   });
 });

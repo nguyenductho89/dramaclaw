@@ -1,4 +1,4 @@
-"""T3: 内容匹配评分。"""
+"""T3: content-match scoring."""
 
 import logging
 import time
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SketchScorer:
-    """对单张草图进行内容匹配评分。"""
+    """Score the content match of a single sketch."""
 
     def __init__(self):
         self._agent: Agent | None = None
@@ -32,7 +32,7 @@ class SketchScorer:
                 output_type=ObjectiveScore,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="内容匹配评分员",
+                name="Content-match scorer",
             )
         return self._agent
 
@@ -53,11 +53,11 @@ class SketchScorer:
                 color_name = parts[1] if len(parts) > 1 else ""
                 color_lines.append(f"- {color_name} ({hex_code}) = {identity_id}")
             if color_lines:
-                color_section = "\n\n角色颜色标记:\n" + "\n".join(color_lines)
+                color_section = "\n\nCharacter color markers:\n" + "\n".join(color_lines)
 
         task = (
-            f"评估草图对以下描述的还原程度:\n"
-            f"画面描述: {safe_desc}"
+            f"Evaluate how faithfully the sketch reproduces the following description:\n"
+            f"Picture description: {safe_desc}"
             f"{color_section}"
         )
 

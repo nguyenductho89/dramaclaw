@@ -2,7 +2,7 @@
 
 ## piko-countdown-pixel.woff
 
-A digits-only (U+0030–U+0039) subset of **Ark Pixel / 方舟像素** (16px monospaced,
+A digits-only (U+0030–U+0039) subset of **Ark Pixel** (16px monospaced,
 Latin), used to render the Piko mini-game countdown.
 
 - Upstream: https://github.com/TakWolf/ark-pixel-font

@@ -16,7 +16,7 @@ threads. The final response contains:
 
 ```json
 {
-  "message": "节点已创建。",
+  "message": "Node created.",
   "mode": "mutation",
   "canvas_receipts": [{"bridge_key": "actual-bridge-key", "revision": null}]
 }

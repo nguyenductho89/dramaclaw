@@ -9,12 +9,12 @@ import { useAssetDropStore } from '@/stores/assetDropStore';
 import { resolveMediaUrl } from '@/lib/media-url';
 
 /**
- * 「替换素材」拖拽时跟随光标的缩略图浮层。
+ * The thumbnail overlay following the cursor while dragging for "replace material".
  *
- * AssetCommitHandle 用原生 pointer 事件自驱动拖拽(非 HTML5 DnD,因此没有浏览器
- * 自带的拖影)。这里订阅 assetDropStore.activeDrag,在拖拽期间用 portal 渲染一张
- * 跟随光标的卡片,与「从素材库拖入画布」时的视觉保持一致,让用户清楚自己正拖着
- * 哪个节点去替换。命中可替换素材时(hoverAssetId)切换为强调态 + 「松开替换」文案。
+ * AssetCommitHandle drives the drag itself with native pointer events (not HTML5 DnD, so there is no browser-provided drag
+ * ghost). Here assetDropStore.activeDrag is subscribed to, and during the drag a card following the cursor is rendered via a portal,
+ * visually consistent with "dragging from the asset library into the canvas", letting the user see clearly which
+ * node they are dragging to replace. When a replaceable material is hit (hoverAssetId) it switches to the emphasized state + the "Release to replace" text.
  */
 export function NodeReplaceDragPreview() {
   const { t } = useTranslation();

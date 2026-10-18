@@ -45,7 +45,7 @@ export type MultiAnglePresetKey =
   | 'panoramaTopDown'
   | 'backView';
 
-// 景别档位，直接采用后端 shot_size 枚举字符串（避免前后端映射错位）。
+// Shot size tiers, directly using the backend shot_size enum strings (avoiding a frontend/backend mapping misalignment).
 export type MultiAngleZoomLevel =
   | 'extreme_close_up'
   | 'close_up'
@@ -77,8 +77,8 @@ const PRESET_CONFIGS: Record<Exclude<MultiAnglePresetKey, 'custom'>, MultiAngleP
     horizontalDeg: 0,
     verticalDeg: 30,
     zoom: 'extreme_close_up',
-    // 直接拼进提示词发给模型，跟着界面语言走会让出图不稳。
-    defaultOverride: '极度特写镜头，广角镜头，边缘带有鱼眼畸变效果。', // i18n-exempt —— 提示词
+    // Spliced straight into the prompt sent to the model; following the UI language would make image output unstable.
+    defaultOverride: 'Extreme close-up shot, wide-angle lens, with fisheye distortion at the edges.', // i18n-exempt -- prompt
   },
   tilted: {
     horizontalDeg: 45,
@@ -92,7 +92,7 @@ const PRESET_CONFIGS: Record<Exclude<MultiAnglePresetKey, 'custom'>, MultiAngleP
   backView: { horizontalDeg: 180, verticalDeg: 0, zoom: 'medium' },
 };
 
-// 由近到远排列，对应景别滑块从左到右。
+// Arranged from near to far, corresponding to the shot size slider from left to right.
 const ZOOM_LEVELS: MultiAngleZoomLevel[] = [
   'extreme_close_up',
   'close_up',
@@ -103,10 +103,10 @@ const ZOOM_LEVELS: MultiAngleZoomLevel[] = [
   'extreme_wide',
 ];
 
-/** 供应商 id 由目录条目下发，前端不枚举。 */
+/** The provider id is delivered by the catalog entry, not enumerated by the frontend. */
 export type MultiAngleProviderId = string;
 
-/** 分辨率档位由后台「媒体模型」对所选模型的配置下发，前端不枚举。 */
+/** Resolution tiers are delivered by the backend "media models" config for the selected model, not enumerated by the frontend. */
 export type MultiAngleImageSize = string;
 const DEFAULT_MULTI_ANGLE_IMAGE_SIZE: MultiAngleImageSize = '2K';
 
@@ -139,7 +139,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-// 预览图片卡片的相对尺寸：景别越近越大、越远越小（仅影响球内预览，不发后端）。
+// Relative size of the preview image card: the closer the shot size, the larger, and the farther, the smaller (affecting only the in-sphere preview, not sent to the backend).
 const ZOOM_PREVIEW_SCALE: Record<MultiAngleZoomLevel, number> = {
   extreme_close_up: 1.9,
   close_up: 1.55,
@@ -186,7 +186,7 @@ interface SliderRowProps {
 
 interface QualityPickerProps {
   value: MultiAngleImageSize;
-  /** 当前模型允许的分辨率档位，由后台「媒体模型」配置下发。 */
+  /** The resolution tiers the current model allows, delivered by the backend "media models" config. */
   options: readonly string[];
   onChange: (value: MultiAngleImageSize) => void;
 }
@@ -345,7 +345,7 @@ interface DegreeInputProps {
   onChange: (value: number) => void;
 }
 
-// 可手动输入的角度框：用于「水平环绕 / 垂直俯仰」，让用户能精确到滑块拖不到的值。
+// An angle box that can be typed into by hand: used for "horizontal orbit / vertical pitch", letting users be precise to values the slider cannot reach.
 function DegreeInput({ value, min, max, onChange }: DegreeInputProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const display = draft ?? String(Math.round(value));
@@ -419,7 +419,7 @@ export function MultiAngleEditorPanel({ imageSource, onClose, onSubmit }: MultiA
   const [imageSize, setImageSize] = useState<MultiAngleImageSize>(DEFAULT_MULTI_ANGLE_IMAGE_SIZE);
   const { models: imageModels } = useFreezoneImageModels();
   const selectedModel = imageModels[0];
-  // 分辨率与画质档位跟随后台对该模型的配置。
+  // Resolution and quality tiers follow the backend's config for that model.
   const sizeOptions = useMemo(
     () => resolveModelSizeOptions(selectedModel),
     [selectedModel],

@@ -125,7 +125,7 @@ describe("scope sync active turn recovery", () => {
     {
       id: "user-turn-1",
       role: "user",
-      text: "继续生成",
+      text: "Continue generating",
       turnId: "turn-1",
       timestamp: 1,
     },
@@ -149,11 +149,11 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useParams: () => ({ project: "project-a" }),
 }));
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", async (importOriginal) => {
-  const models = [{ id: "image-model", label: "测试图片模型" }];
+  const models = [{ id: "image-model", label: "Test image model" }];
   return { ...await importOriginal<typeof import("@/features/canvas/hooks/useFreezoneImageModels")>(), useFreezoneImageModels: () => ({ models }) };
 });
 vi.mock("@/features/canvas/hooks/useFreezoneVideoModels", async (importOriginal) => {
-  const models = [{ id: "video-model", label: "测试视频模型", minDuration: 5, maxDuration: 15 }];
+  const models = [{ id: "video-model", label: "Test video model", minDuration: 5, maxDuration: 15 }];
   return { ...await importOriginal<typeof import("@/features/canvas/hooks/useFreezoneVideoModels")>(), useFreezoneVideoModels: () => ({ models }) };
 });
 
@@ -161,9 +161,9 @@ describe("mixed workflow approval execution", () => {
   it("keeps confirmed media groups when upstream image/audio nodes complete", () => {
     const previous = useCanvasStore.getState();
     const nodes = [
-      { id: "image-a", type: "imageGenNode" as const, position: { x: 0, y: 0 }, data: { prompt: "城市", model: "image-model" } },
-      { id: "video-a", type: "videoNode" as const, position: { x: 0, y: 0 }, data: { prompt: "城市", model: "video-model", durationSec: 5 } },
-      { id: "audio-a", type: "audioNode" as const, position: { x: 0, y: 0 }, data: { prompt: "音乐", audioKind: "music", forceInstrumental: true } },
+      { id: "image-a", type: "imageGenNode" as const, position: { x: 0, y: 0 }, data: { prompt: "City", model: "image-model" } },
+      { id: "video-a", type: "videoNode" as const, position: { x: 0, y: 0 }, data: { prompt: "City", model: "video-model", durationSec: 5 } },
+      { id: "audio-a", type: "audioNode" as const, position: { x: 0, y: 0 }, data: { prompt: "Music", audioKind: "music", forceInstrumental: true } },
     ];
     useCanvasStore.setState({ nodes, edges: [] });
     expect(workflowGenerationTargetsForPreflight({ type: "run_workflow", scope: "canvas" })).toHaveLength(3);
@@ -176,16 +176,16 @@ describe("mixed workflow approval execution", () => {
     const props = { approval, onApply: vi.fn(), onCancel: vi.fn() };
     const view = render(createElement(CanvasCommandApprovalCardForTest, props));
     try {
-      expect(view.getByLabelText("图片模型")).toBeTruthy();
-      expect(view.getByLabelText("视频模型")).toBeTruthy();
+      expect(view.getByLabelText("Image model")).toBeTruthy();
+      expect(view.getByLabelText("Video model")).toBeTruthy();
       view.rerender(createElement(CanvasCommandApprovalCardForTest, { ...props, isExecuting: true }));
       act(() => useCanvasStore.setState({ nodes: nodes.map((node) => ({
         ...node, data: { ...node.data, imageUrl: "image.png", audioUrl: "audio.mp3" },
       })) }));
-      expect(view.getByLabelText("图片模型")).toBeTruthy();
-      expect(view.getByLabelText("视频模型")).toBeTruthy();
-      expect(view.container.textContent).toContain("纯音乐");
-      expect(view.queryByText("待确认的画布操作")).toBeNull();
+      expect(view.getByLabelText("Image model")).toBeTruthy();
+      expect(view.getByLabelText("Video model")).toBeTruthy();
+      expect(view.container.textContent).toContain("Instrumental");
+      expect(view.queryByText("Canvas operations awaiting confirmation")).toBeNull();
     } finally {
       view.unmount();
       useCanvasStore.setState({ nodes: previous.nodes, edges: previous.edges });
@@ -231,12 +231,12 @@ describe("mergeHistorySnapshot", () => {
 
   it("replaces local turn messages with matching backend history", () => {
     const current = [
-      message("user-turn-1", "user", "你好", 10, "turn-1"),
-      message("assistant-turn-1", "assistant", "你好，有什么可以帮你？", 20, "turn-1"),
+      message("user-turn-1", "user", "Hello", 10, "turn-1"),
+      message("assistant-turn-1", "assistant", "Hello, how can I help you?", 20, "turn-1"),
     ];
     const history = [
-      message("backend-user-1", "user", "你好", 30),
-      message("backend-assistant-1", "assistant", "你好，有什么可以帮你？", 40),
+      message("backend-user-1", "user", "Hello", 30),
+      message("backend-assistant-1", "assistant", "Hello, how can I help you?", 40),
     ];
 
     const merged = mergeHistorySnapshot(current, history, "turn-1");
@@ -246,12 +246,12 @@ describe("mergeHistorySnapshot", () => {
 
   it("replaces a completed local turn when the final local delta is newer than backend history", () => {
     const current = [
-      message("user-turn-1", "user", "你好", 100, "turn-1"),
-      message("assistant-turn-1", "assistant", "你好，有什么可以帮你？", 300, "turn-1"),
+      message("user-turn-1", "user", "Hello", 100, "turn-1"),
+      message("assistant-turn-1", "assistant", "Hello, how can I help you?", 300, "turn-1"),
     ];
     const history = [
-      message("backend-user-1", "user", "你好", 150),
-      message("backend-assistant-1", "assistant", "你好，有什么可以帮你？", 250),
+      message("backend-user-1", "user", "Hello", 150),
+      message("backend-assistant-1", "assistant", "Hello, how can I help you?", 250),
     ];
 
     const merged = mergeHistorySnapshot(current, history, "turn-1");
@@ -261,12 +261,12 @@ describe("mergeHistorySnapshot", () => {
 
   it("replaces a completed local turn even when local partial text differs", () => {
     const current = [
-      message("user-turn-1", "user", "你好", 100, "turn-1"),
-      message("assistant-turn-1", "assistant", "正在生成", 120, "turn-1"),
+      message("user-turn-1", "user", "Hello", 100, "turn-1"),
+      message("assistant-turn-1", "assistant", "Generating", 120, "turn-1"),
     ];
     const history = [
-      message("backend-user-1", "user", "你好", 150),
-      message("backend-assistant-1", "assistant", "你好！有什么我可以帮你的吗？", 250),
+      message("backend-user-1", "user", "Hello", 150),
+      message("backend-assistant-1", "assistant", "Hello! Is there anything I can help you with?", 250),
     ];
 
     const merged = mergeHistorySnapshot(current, history, "turn-1");
@@ -276,14 +276,14 @@ describe("mergeHistorySnapshot", () => {
 
   it("keeps the protected in-flight turn when a stale snapshot has the same user text", () => {
     const current = [
-      message("backend-user-1", "user", "你好", 10),
-      message("backend-assistant-1", "assistant", "第一轮回复", 20),
-      message("user-turn-2", "user", "你好", 30, "turn-2"),
-      message("assistant-turn-2", "assistant", "正在生成", 40, "turn-2"),
+      message("backend-user-1", "user", "Hello", 10),
+      message("backend-assistant-1", "assistant", "First turn reply", 20),
+      message("user-turn-2", "user", "Hello", 30, "turn-2"),
+      message("assistant-turn-2", "assistant", "Generating", 40, "turn-2"),
     ];
     const staleHistory = [
-      message("backend-user-1", "user", "你好", 10),
-      message("backend-assistant-1", "assistant", "第一轮回复", 20),
+      message("backend-user-1", "user", "Hello", 10),
+      message("backend-assistant-1", "assistant", "First turn reply", 20),
     ];
 
     const merged = mergeHistorySnapshot(current, staleHistory, "turn-2");
@@ -298,14 +298,14 @@ describe("mergeHistorySnapshot", () => {
 
   it("keeps a protected assistant reply even when it resembles an earlier turn", () => {
     const current = [
-      message("backend-user-1", "user", "你好", 10, "turn-1"),
-      message("backend-assistant-1", "assistant", "你好，有什么可以帮你？", 20, "turn-1"),
-      message("user-turn-2", "user", "你好", 30, "turn-2"),
-      message("assistant-turn-2", "assistant", "你好，有什么可以帮你？", 40, "turn-2"),
+      message("backend-user-1", "user", "Hello", 10, "turn-1"),
+      message("backend-assistant-1", "assistant", "Hello, how can I help you?", 20, "turn-1"),
+      message("user-turn-2", "user", "Hello", 30, "turn-2"),
+      message("assistant-turn-2", "assistant", "Hello, how can I help you?", 40, "turn-2"),
     ];
     const staleHistory = [
-      message("backend-user-1", "user", "你好", 10, "turn-1"),
-      message("backend-assistant-1", "assistant", "你好，有什么可以帮你？", 20, "turn-1"),
+      message("backend-user-1", "user", "Hello", 10, "turn-1"),
+      message("backend-assistant-1", "assistant", "Hello, how can I help you?", 20, "turn-1"),
     ];
 
     const merged = mergeHistorySnapshot(current, staleHistory, "turn-2");
@@ -320,10 +320,10 @@ describe("mergeHistorySnapshot", () => {
 
   it("does not collapse repeated completed turns from backend history", () => {
     const history = [
-      message("backend-user-1", "user", "你好", 10),
-      message("backend-assistant-1", "assistant", "回复", 20),
-      message("backend-user-2", "user", "你好", 30),
-      message("backend-assistant-2", "assistant", "回复", 40),
+      message("backend-user-1", "user", "Hello", 10),
+      message("backend-assistant-1", "assistant", "Reply", 20),
+      message("backend-user-2", "user", "Hello", 30),
+      message("backend-assistant-2", "assistant", "Reply", 40),
     ];
 
     const merged = mergeHistorySnapshot([], history);
@@ -338,13 +338,13 @@ describe("mergeHistorySnapshot", () => {
 
   it("drops unprotected local assistant leftovers when backend history arrives", () => {
     const current = [
-      message("backend-user-1", "user", "第一句", 10),
-      message("backend-assistant-1", "assistant", "第一轮回复", 20),
-      message("assistant-stale", "assistant", "上次残留的回复", 30, "turn-stale"),
+      message("backend-user-1", "user", "First sentence", 10),
+      message("backend-assistant-1", "assistant", "First turn reply", 20),
+      message("assistant-stale", "assistant", "Reply left over from last time", 30, "turn-stale"),
     ];
     const history = [
-      message("backend-user-1", "user", "第一句", 10),
-      message("backend-assistant-1", "assistant", "第一轮回复", 20),
+      message("backend-user-1", "user", "First sentence", 10),
+      message("backend-assistant-1", "assistant", "First turn reply", 20),
     ];
 
     const merged = mergeHistorySnapshot(current, history);
@@ -354,7 +354,7 @@ describe("mergeHistorySnapshot", () => {
 
   it("keeps locally submitted prompt state when history still has the pending card", () => {
     const current: ChatMessage[] = [
-      message("backend-user-1", "user", "我想创建一个宣传海报 skill", 10, "turn-1"),
+      message("backend-user-1", "user", "I want to create a promotional poster skill", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
@@ -375,7 +375,7 @@ describe("mergeHistorySnapshot", () => {
       },
     ];
     const history: ChatMessage[] = [
-      message("backend-user-1", "user", "我想创建一个宣传海报 skill", 10, "turn-1"),
+      message("backend-user-1", "user", "I want to create a promotional poster skill", 10, "turn-1"),
       {
         id: "backend-assistant-1",
         role: "assistant",
@@ -407,7 +407,7 @@ describe("mergeHistorySnapshot", () => {
 
   it("keeps locally edited draft state when history still has the original draft", () => {
     const current: ChatMessage[] = [
-      message("backend-user-1", "user", "生成 skill 草稿", 10, "turn-1"),
+      message("backend-user-1", "user", "Generate a skill draft", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
@@ -420,7 +420,7 @@ describe("mergeHistorySnapshot", () => {
             bridge_key: "draft-key-1",
             skill_studio_session_id: "studio-1",
             draft: {
-              skill: { id: "edited-skill", description: "编辑后的草稿" },
+              skill: { id: "edited-skill", description: "Edited draft" },
               recipes: [],
             },
           },
@@ -428,7 +428,7 @@ describe("mergeHistorySnapshot", () => {
       },
     ];
     const history: ChatMessage[] = [
-      message("backend-user-1", "user", "生成 skill 草稿", 10, "turn-1"),
+      message("backend-user-1", "user", "Generate a skill draft", 10, "turn-1"),
       {
         id: "backend-assistant-1",
         role: "assistant",
@@ -440,7 +440,7 @@ describe("mergeHistorySnapshot", () => {
             type: "skill_studio.draft",
             bridge_key: "draft-key-1",
             skill_studio_session_id: "studio-1",
-            skill: { id: "original-skill", description: "原始草稿" },
+            skill: { id: "original-skill", description: "Original draft" },
             recipes: [],
           },
         ],
@@ -455,31 +455,31 @@ describe("mergeHistorySnapshot", () => {
       type: "skill_studio.draft",
       bridge_key: "draft-key-1",
       draft: {
-        skill: { id: "edited-skill", description: "编辑后的草稿" },
+        skill: { id: "edited-skill", description: "Edited draft" },
       },
     });
   });
 
   it("reveals an incomplete Skill Studio draft from submitted tool chunks when the turn ends", () => {
     const messages: ChatMessage[] = [
-      message("user-1", "user", "把画布提炼成 Skill", 10, "turn-1"),
+      message("user-1", "user", "Distill the canvas into a Skill", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
-        text: "正在生成草稿。",
+        text: "Generating the draft.",
         timestamp: 20,
         turnId: "turn-1",
         uiEvents: [
           {
             type: "skill_studio.status",
             status: "draft_skill_ready",
-            message: "已生成 Skill 基础配置",
+            message: "Skill base configuration generated",
             skill_studio_session_id: "studio-1",
           },
           {
             type: "skill_studio.status",
             status: "draft_recipe_ready",
-            message: "已生成 Recipe 1 / 2",
+            message: "Recipe 1 / 2 generated",
             recipe_index: 0,
             recipe_count: 2,
             skill_studio_session_id: "studio-1",
@@ -495,8 +495,8 @@ describe("mergeHistorySnapshot", () => {
           sessionId: "studio-1",
           mode: "create",
           expectedRecipeCount: 2,
-          skill: { id: "pixar-ad", description: "皮克斯广告" },
-          recipes: new Map([[0, { id: "storyboard", name: "分镜" }]]),
+          skill: { id: "pixar-ad", description: "Pixar ad" },
+          recipes: new Map([[0, { id: "storyboard", name: "Storyboard" }]]),
         },
       ],
     ]);
@@ -515,7 +515,7 @@ describe("mergeHistorySnapshot", () => {
       skill: { id: "pixar-ad" },
       recipes: [{ id: "storyboard" }],
     });
-    expect(event?.warnings).toContain("Recipe 已生成 1 / 2，缺少 1 个。");
+    expect(event?.warnings).toContain("Recipes generated 1 / 2, 1 missing.");
     expect(assistant?.uiEvents?.some((item) =>
       Boolean(item && typeof item === "object" && (item as Record<string, unknown>).type === "skill_studio.status"),
     )).toBe(false);
@@ -534,7 +534,7 @@ describe("assistant message ordered parts", () => {
             bridge_key: "draft-key-1",
             skill_studio_session_id: "studio-1",
             draft: {
-              skill: { id: "pixar-ip-brand-ad", description: "皮克斯广告" },
+              skill: { id: "pixar-ip-brand-ad", description: "Pixar ad" },
               recipes: [{ id: "character-design" }],
             },
           },
@@ -546,7 +546,7 @@ describe("assistant message ordered parts", () => {
           bridge_key: "draft-key-1",
           skill_studio_session_id: "studio-1",
           draft: {
-            skill: { id: "pixar-ip-brand-ad", description: "皮克斯广告" },
+            skill: { id: "pixar-ip-brand-ad", description: "Pixar ad" },
             recipes: [{ id: "character-design" }],
           },
         },
@@ -565,7 +565,7 @@ describe("assistant message ordered parts", () => {
         type: "skill_studio.draft",
         cancelled: true,
         draft: {
-          skill: { id: "pixar-ip-brand-ad", description: "皮克斯广告" },
+          skill: { id: "pixar-ip-brand-ad", description: "Pixar ad" },
           recipes: [{ id: "character-design" }],
         },
       },
@@ -575,27 +575,27 @@ describe("assistant message ordered parts", () => {
   it("keeps text and interaction cards in arrival order within one turn", () => {
     let messages: ChatMessage[] = [];
 
-    messages = upsertAssistantMessageForTest(messages, "turn-ordered", "第一段文字");
+    messages = upsertAssistantMessageForTest(messages, "turn-ordered", "First paragraph");
     messages = upsertAssistantUiEventForTest(messages, "turn-ordered", {
       type: "skill_studio.questions",
       bridge_key: "questions-1",
       skill_studio_session_id: "studio-1",
-      title: "方向确认",
+      title: "Direction confirmation",
       questions: [],
     });
-    messages = upsertAssistantMessageForTest(messages, "turn-ordered", "第一段文字\n\n第二段文字");
+    messages = upsertAssistantMessageForTest(messages, "turn-ordered", "First paragraph\n\nSecond paragraph");
     messages = upsertAssistantUiEventForTest(messages, "turn-ordered", {
       type: "skill_studio.draft",
       bridge_key: "draft-1",
       skill_studio_session_id: "studio-1",
-      summary: "草稿",
+      summary: "Draft",
       skill: { id: "skill-1" },
       recipes: [],
     });
     messages = upsertAssistantMessageForTest(
       messages,
       "turn-ordered",
-      "第一段文字\n\n第二段文字\n\n第三段文字",
+      "First paragraph\n\nSecond paragraph\n\nThird paragraph",
     );
 
     const assistant = messages.find((item) => item.turnId === "turn-ordered" && item.role === "assistant");
@@ -607,23 +607,23 @@ describe("assistant message ordered parts", () => {
       "text",
     ]);
     expect(assistant?.parts?.filter((part) => part.type === "text").map((part) => part.text)).toEqual([
-      "第一段文字",
-      "\n\n第二段文字",
-      "\n\n第三段文字",
+      "First paragraph",
+      "\n\nSecond paragraph",
+      "\n\nThird paragraph",
     ]);
   });
 
   it("keeps streamed prose around submitted Skill Studio cards when the final assistant message arrives", () => {
     let messages: ChatMessage[] = [];
     const firstText = [
-      "我先了解一下画布关键节点的详细内容，再来和你确认提炼方向。",
+      "Let me first understand the details of the key canvas nodes, then confirm the distillation direction with you.",
       "",
-      "我已经读完当前画布，整体看这是一条品牌 IP 短片制作流程。",
+      "I have read through the current canvas; overall it is a brand IP short film production flow.",
       "",
-      "在正式提炼前，我先和你确认几个关键方向。",
+      "Before distilling, let me confirm a few key directions with you.",
       "",
     ].join("\n");
-    const confirmedText = `${firstText}\n好的，方向已确认：可复用 Skill / 细粒度 6 个 Recipe。我现在开始起草。\n\n`;
+    const confirmedText = `${firstText}\nOkay, direction confirmed: a reusable Skill / 6 fine-grained Recipes. I will start drafting now.\n\n`;
 
     messages = upsertAssistantMessageForTest(messages, "turn-skill-studio-final", firstText);
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-studio-final", {
@@ -669,9 +669,9 @@ describe("assistant message ordered parts", () => {
 
   it("does not move realtime Skill Studio cards ahead of earlier streamed text on final assistant message", () => {
     let messages: ChatMessage[] = [];
-    const firstText = "好的，方向已确认。我现在开始起草 Skill。";
-    const secondText = `${firstText}\n\n明白，皮克斯风格是核心视觉协议，我现在补回草稿。`;
-    const finalText = `${secondText}\n\n已更新部分内容，你可以继续调整。`;
+    const firstText = "Okay, direction confirmed. I will start drafting the Skill now.";
+    const secondText = `${firstText}\n\nUnderstood, the Pixar style is the core visual protocol; I will add it back to the draft now.`;
+    const finalText = `${secondText}\n\nPart of the content has been updated; you can keep adjusting.`;
 
     messages = upsertAssistantMessageForTest(messages, "turn-skill-studio-patch", firstText);
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-studio-patch", {
@@ -718,14 +718,14 @@ describe("assistant message ordered parts", () => {
 
   it("reorders historical Skill Studio parts around their text anchors", () => {
     const firstText = [
-      "我先了解一下画布关键节点的详细内容，再来和你确认提炼方向。",
+      "Let me first understand the details of the key canvas nodes, then confirm the distillation direction with you.",
       "",
-      "我已经读完当前画布，整体看这是一条品牌 IP 短片制作流程。",
+      "I have read through the current canvas; overall it is a brand IP short film production flow.",
       "",
-      "在正式提炼前，我先和你确认几个关键方向。",
+      "Before distilling, let me confirm a few key directions with you.",
       "",
     ].join("\n");
-    const confirmedText = `${firstText}\n好的，方向已确认：可复用 Skill / 细粒度 6 个 Recipe。我现在开始起草。\n\n`;
+    const confirmedText = `${firstText}\nOkay, direction confirmed: a reusable Skill / 6 fine-grained Recipes. I will start drafting now.\n\n`;
     const assistant: ChatMessage = {
       id: "backend-assistant-1",
       role: "assistant",
@@ -751,7 +751,7 @@ describe("assistant message ordered parts", () => {
           event: {
             type: "agent.thought.delta",
             status: "completed",
-            text: "开始起草 Skill 和 Recipe。",
+            text: "Start drafting the Skill and Recipes.",
           },
         },
         {
@@ -803,7 +803,7 @@ describe("assistant message ordered parts", () => {
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-status", {
       type: "skill_studio.status",
       status: "draft_begin",
-      message: "正在创建草稿结构...",
+      message: "Creating the draft structure...",
     });
 
     const assistant = messages.find((item) => item.turnId === "turn-skill-status" && item.role === "assistant");
@@ -820,15 +820,15 @@ describe("assistant message ordered parts", () => {
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-status", {
       type: "skill_studio.status",
       status: "draft_begin",
-      message: "正在创建草稿结构...",
+      message: "Creating the draft structure...",
     });
-    messages = upsertAssistantMessageForTest(messages, "turn-skill-status", "开始整理草稿");
+    messages = upsertAssistantMessageForTest(messages, "turn-skill-status", "Start organizing the draft");
 
     const assistant = messages.find((item) => item.turnId === "turn-skill-status" && item.role === "assistant");
     expect(assistant?.parts?.map((part) => part.type)).toEqual(["skill_studio", "text"]);
     expect(assistant?.parts?.map((part) => part.type === "text" ? part.text : (part.event as { type?: string }).type)).toEqual([
       "skill_studio.status",
-      "开始整理草稿",
+      "Start organizing the draft",
     ]);
   });
 
@@ -846,14 +846,14 @@ describe("assistant message ordered parts", () => {
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-status", {
       type: "skill_studio.status",
       status: "draft_recipe_ready",
-      message: "已生成 Recipe 2 / 6",
+      message: "Recipe 2 / 6 generated",
     });
     messages = upsertServerAssistantMessageForTest(
       messages,
       {
         id: 3,
         role: "assistant",
-        content: "草稿生成未完成，请继续补充调整方向。",
+        content: "Draft generation is incomplete; please keep adding the direction of adjustment.",
         turn_id: "turn-skill-status",
         created_at: "2026-07-15T08:51:44.199417+00:00",
       },
@@ -861,12 +861,12 @@ describe("assistant message ordered parts", () => {
     );
 
     const assistant = messages.find((item) => item.turnId === "turn-skill-status" && item.role === "assistant");
-    expect(assistant?.text).toBe("草稿生成未完成，请继续补充调整方向。");
+    expect(assistant?.text).toBe("Draft generation is incomplete; please keep adding the direction of adjustment.");
     expect(assistant?.parts?.map((part) => part.type)).toEqual(["skill_studio", "skill_studio", "text"]);
     expect(assistant?.parts?.map((part) => part.type === "text" ? part.text : (part.event as { type?: string }).type)).toEqual([
       "skill_studio.questions",
       "skill_studio.status",
-      "草稿生成未完成，请继续补充调整方向。",
+      "Draft generation is incomplete; please keep adding the direction of adjustment.",
     ]);
     expect(assistant?.uiEvents?.map((event) => (event as { type?: string }).type)).toEqual([
       "skill_studio.questions",
@@ -888,7 +888,7 @@ describe("assistant message ordered parts", () => {
     messages = upsertAssistantUiEventForTest(messages, "turn-skill-status", {
       type: "skill_studio.status",
       status: "draft_recipe_ready",
-      message: "已生成 Recipe 2 / 6",
+      message: "Recipe 2 / 6 generated",
     });
 
     const cleaned = removeSkillStudioStatusForTurnForTest(messages, "turn-skill-status");
@@ -922,7 +922,7 @@ describe("assistant message ordered parts", () => {
           event: {
             type: "assistant.clarification.request",
             bridge_key: "clarify-key-1",
-            title: "修订方向",
+            title: "Revision direction",
           },
         },
       ],
@@ -989,23 +989,23 @@ describe("normalizeMessage", () => {
     const normalized = normalizeMessage({
       id: "backend-user-1",
       role: "user",
-      content: `上传了哪些文件了
+      content: `Which files did I upload
 
 [DRAMACLAW_UPLOADED_FILES]
 dramaclaw_project_id: 01KT62KTBQCDR69WW889VHJR3N
-file_1_filename: 她与她的江山.docx
+file_1_filename: Her and her country.docx
 [/DRAMACLAW_UPLOADED_FILES]`,
       created_at: "2026-06-03T09:00:00Z",
     });
 
-    expect(normalized?.text).toBe("上传了哪些文件了");
+    expect(normalized?.text).toBe("Which files did I upload");
   });
 
   it("strips internal SuperTale canvas command blocks from displayed text", () => {
     const normalized = normalizeMessage({
       id: "backend-user-2",
       role: "user",
-      content: `你好
+      content: `Hello
 
 [SUPERTALE_CANVAS_CHAT_COMMANDS]
 This Freezone chat can change the current canvas by returning a JSON block.
@@ -1013,7 +1013,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
       created_at: "2026-06-08T08:00:00Z",
     });
 
-    expect(normalized?.text).toBe("你好");
+    expect(normalized?.text).toBe("Hello");
   });
 
   it("maps internal empty Hermes replies to a user-facing message", () => {
@@ -1024,7 +1024,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
       created_at: "2026-07-10T08:00:00Z",
     });
 
-    expect(normalized?.text).toBe("这轮操作没有收到虾导的有效回复，请稍后重试。");
+    expect(normalized?.text).toBe("This turn did not receive a valid reply from Shrimp Director. Please try again later.");
   });
 
   it("preserves backend ui events for persisted canvas feedback", () => {
@@ -1037,7 +1037,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      content: "已完成",
+      content: "Completed",
       ui_events: uiEvents,
     });
 
@@ -1058,7 +1058,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
         {
           id: "tool-a",
           type: "tool_status",
-          event: { role: "tool", text: "创建节点", raw: { type: "tool.result" } },
+          event: { role: "tool", text: "Create node", raw: { type: "tool.result" } },
         },
       ],
     });
@@ -1070,18 +1070,18 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      text: "我来分析当前画布内容。",
+      text: "Let me analyze the current canvas content.",
       parts: [
         {
           id: "tool-a",
           type: "tool_status",
           event: {
             role: "tool",
-            text: "读取画布 Ontology",
+            text: "Read canvas ontology",
             raw: { type: "agent.tool.updated", name: "freezone_get_canvas_ontology" },
           },
         },
-        { id: "text-a", type: "text", text: "我来分析当前画布内容。" },
+        { id: "text-a", type: "text", text: "Let me analyze the current canvas content." },
       ],
     });
 
@@ -1092,7 +1092,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      text: "已打开打光面板。",
+      text: "The lighting panel has been opened.",
       parts: [
         {
           id: "tool-search",
@@ -1112,7 +1112,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
             raw: { type: "agent.tool.updated", name: "tool-describe" },
           },
         },
-        { id: "text-a", type: "text", text: "已打开打光面板。" },
+        { id: "text-a", type: "text", text: "The lighting panel has been opened." },
       ],
     });
 
@@ -1154,12 +1154,12 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      content: "先确认方向。\n\n草稿已生成。\n\nSkill 已创建完成，可以继续使用。",
+      content: "Confirm the direction first.\n\nThe draft has been generated.\n\nThe Skill has been created and can be used now.",
       parts: [
         {
           id: "text-1",
           type: "text",
-          text: "先确认方向。\n\n",
+          text: "Confirm the direction first.\n\n",
         },
         {
           id: "draft-1",
@@ -1175,7 +1175,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
     expect(normalized?.parts?.map((part) => part.type)).toEqual(["text", "skill_studio", "text"]);
     expect(normalized?.parts?.[2]).toMatchObject({
       type: "text",
-      text: "草稿已生成。\n\nSkill 已创建完成，可以继续使用。",
+      text: "The draft has been generated.\n\nThe Skill has been created and can be used now.",
     });
   });
 
@@ -1183,7 +1183,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      content: "Skill 已保存成功，可以直接使用。",
+      content: "The Skill was saved successfully and can be used directly.",
       parts: [
         {
           id: "clarification-1",
@@ -1208,19 +1208,19 @@ This Freezone chat can change the current canvas by returning a JSON block.
     expect(normalized?.parts?.map((part) => part.type)).toEqual(["clarification", "skill_studio", "text"]);
     expect(normalized?.parts?.[2]).toMatchObject({
       type: "text",
-      text: "Skill 已保存成功，可以直接使用。",
+      text: "The Skill was saved successfully and can be used directly.",
     });
   });
 
   it("uses the complete persisted text when ordered text parts are stale", () => {
     const fullText = [
-      "工作流已创建完成，包含以下节点：",
-      "1. 用户需求",
-      "2. 创意大纲",
-      "3. 广告脚本",
-      "4. 多宫格分镜图",
-      "5. 高清分镜图（3张）",
-      "6. 视频片段（3段）",
+      "The workflow has been created with the following nodes:",
+      "1. User requirements",
+      "2. Creative outline",
+      "3. Ad script",
+      "4. Multi-grid storyboard",
+      "5. HD storyboard (3 images)",
+      "6. Video clips (3 clips)",
     ].join("\n");
     const normalized = normalizeMessage({
       id: "assistant-workflow-summary",
@@ -1230,17 +1230,17 @@ This Freezone chat can change the current canvas by returning a JSON block.
         {
           id: "tool-1",
           type: "tool_status",
-          event: { role: "tool", text: "加载 Workflow Skill", raw: { type: "tool.result" } },
+          event: { role: "tool", text: "Load Workflow Skill", raw: { type: "tool.result" } },
         },
         {
           id: "text-stale",
           type: "text",
-          text: "我先读取工作流配置。",
+          text: "Let me read the workflow configuration first.",
         },
         {
           id: "text-partial",
           type: "text",
-          text: "工作流已创建完成，包含以下节点：\n1. 用户需求\n2. 创意大纲\n3. 广告脚本\n4. 多宫格分镜图\n5.",
+          text: "The workflow has been created with the following nodes:\n1. User requirements\n2. Creative outline\n3. Ad script\n4. Multi-grid storyboard\n5.",
         },
       ],
     });
@@ -1253,7 +1253,7 @@ This Freezone chat can change the current canvas by returning a JSON block.
     const normalized = normalizeMessage({
       id: "assistant-1",
       role: "assistant",
-      content: "草稿已生成。",
+      content: "The draft has been generated.",
       parts: [
         {
           id: "draft-1",
@@ -1304,9 +1304,9 @@ describe("normalizeMessageForScope", () => {
       {
         node_id: "node-text",
         node_type: "textAnnotationNode",
-        label: "文本",
+        label: "Text",
         text_field: "content",
-        text_content: "你好",
+        text_content: "Hello",
         media_type: null,
         source_url: null,
         preview_url: null,
@@ -1320,10 +1320,10 @@ describe("normalizeMessageForScope", () => {
     edges: [],
   };
   const canvasReferenceMedia = {
-    id: "canvas_node_reference:文本",
+    id: "canvas_node_reference:Text",
     kind: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
     type: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
-    label: "文本",
+    label: "Text",
     content: JSON.stringify(canvasReferencePayload),
   };
 
@@ -1332,14 +1332,14 @@ describe("normalizeMessageForScope", () => {
       {
         id: "user-1",
         role: "user",
-        text: "帮我连接到图片节点",
+        text: "Connect it to the image node for me",
         attachments: [
           {
-            id: "canvas_node_reference:文本",
+            id: "canvas_node_reference:Text",
             type: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
             kind: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
-            label: "文本",
-            fileName: "文本",
+            label: "Text",
+            fileName: "Text",
           },
         ],
         rawMedia: [canvasReferenceMedia],
@@ -1358,14 +1358,14 @@ describe("normalizeMessageForScope", () => {
       {
         id: "user-1",
         role: "user",
-        text: "帮我连接到图片节点",
+        text: "Connect it to the image node for me",
         attachments: [
           {
-            id: "canvas_node_reference:文本",
+            id: "canvas_node_reference:Text",
             type: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
             kind: CANVAS_NODE_REFERENCE_ATTACHMENT_TYPE,
-            label: "文本",
-            fileName: "文本",
+            label: "Text",
+            fileName: "Text",
           },
         ],
         rawMedia: [canvasReferenceMedia],
@@ -1383,7 +1383,7 @@ describe("upsertServerAssistantMessage", () => {
     const current = upsertRuntimePartInMessagesForTest([], "turn-agent", {
       id: "agent_thought:turn-agent",
       type: "agent_thought",
-      event: { text: "正在检查素材" },
+      event: { text: "Checking assets" },
     });
 
     const merged = upsertServerAssistantMessageForTest(
@@ -1391,7 +1391,7 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 7,
         role: "assistant",
-        content: "素材检查完成",
+        content: "Asset check complete",
         turn_id: "turn-agent",
         created_at: "2026-07-19T00:00:00+00:00",
       },
@@ -1407,11 +1407,11 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: "assistant-turn-grid",
         role: "assistant",
-        text: "多角度网格已提交到画布，稍",
+        text: "The multi-angle grid was submitted to the canvas; please wa",
         timestamp: 20,
         turnId: "turn-grid",
         parts: [
-          { id: "text-1", type: "text", text: "多角度网格已提交到画布，稍" },
+          { id: "text-1", type: "text", text: "The multi-angle grid was submitted to the canvas; please wa" },
         ],
       },
     ];
@@ -1421,7 +1421,7 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 11,
         role: "assistant",
-        content: "多角度网格已提交到画布，稍等结果生成。",
+        content: "The multi-angle grid was submitted to the canvas; please wait for the result to be generated.",
         turn_id: "turn-grid",
         created_at: "2026-07-23T01:56:37.894980+00:00",
       },
@@ -1429,9 +1429,9 @@ describe("upsertServerAssistantMessage", () => {
     );
 
     const assistant = merged.find((item) => item.role === "assistant");
-    expect(assistant?.text).toBe("多角度网格已提交到画布，稍等结果生成。");
+    expect(assistant?.text).toBe("The multi-angle grid was submitted to the canvas; please wait for the result to be generated.");
     expect(assistant?.parts?.filter((part) => part.type === "text").map((part) => part.text)).toEqual([
-      "多角度网格已提交到画布，稍等结果生成。",
+      "The multi-angle grid was submitted to the canvas; please wait for the result to be generated.",
     ]);
   });
 
@@ -1442,7 +1442,7 @@ describe("upsertServerAssistantMessage", () => {
       questions: [],
     };
     const current: ChatMessage[] = [
-      message("user-turn-1", "user", "创建 Skill", 10, "turn-1"),
+      message("user-turn-1", "user", "Create Skill", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
@@ -1458,7 +1458,7 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 3,
         role: "assistant",
-        content: "已进入问答环节",
+        content: "Entered the Q&A stage",
         turn_id: "turn-1",
         created_at: "2026-07-08T03:47:06.538231+00:00",
       },
@@ -1466,7 +1466,7 @@ describe("upsertServerAssistantMessage", () => {
     );
 
     const assistant = merged.find((item) => item.role === "assistant");
-    expect(assistant?.text).toBe("已进入问答环节");
+    expect(assistant?.text).toBe("Entered the Q&A stage");
     expect(assistant?.uiEvents).toEqual([uiEvent]);
   });
 
@@ -1487,14 +1487,14 @@ describe("upsertServerAssistantMessage", () => {
               key: "bridge-timeout",
               applied: 0,
               openedUiActions: 0,
-              errors: ["画布操作等待超时，已自动取消"],
+              errors: ["Canvas operation timed out and was cancelled automatically"],
               commandResults: [
                 {
                   commandIndex: -1,
                   type: "validate",
                   status: "error",
-                  label: "已取消",
-                  error: "画布操作等待超时，已自动取消",
+                  label: "Cancelled",
+                  error: "Canvas operation timed out and was cancelled automatically",
                 },
               ],
               cancelled: true,
@@ -1509,14 +1509,14 @@ describe("upsertServerAssistantMessage", () => {
             result: {
               applied: 0,
               openedUiActions: 0,
-              errors: ["画布操作等待超时，已自动取消"],
+              errors: ["Canvas operation timed out and was cancelled automatically"],
               commandResults: [
                 {
                   commandIndex: -1,
                   type: "validate",
                   status: "error",
-                  label: "已取消",
-                  error: "画布操作等待超时，已自动取消",
+                  label: "Cancelled",
+                  error: "Canvas operation timed out and was cancelled automatically",
                 },
               ],
             },
@@ -1533,7 +1533,7 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 9,
         role: "assistant",
-        content: "生成请求提交超时，可能是画布连接暂时中断。请在画布上直接点击该节点的生成按钮重试。",
+        content: "The generation request timed out, possibly because the canvas connection was briefly interrupted. Click the node's generate button on the canvas to retry.",
         turn_id: "turn-canvas-timeout",
         created_at: "2026-07-30T07:00:00+00:00",
       },
@@ -1550,7 +1550,7 @@ describe("upsertServerAssistantMessage", () => {
 
   it("merges same draft ui event when the final assistant message arrives", () => {
     const current: ChatMessage[] = [
-      message("user-turn-1", "user", "创建 Skill", 10, "turn-1"),
+      message("user-turn-1", "user", "Create Skill", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
@@ -1579,7 +1579,7 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 3,
         role: "assistant",
-        content: "继续处理",
+        content: "Keep going",
         turn_id: "turn-1",
         created_at: "2026-07-08T03:47:06.538231+00:00",
       },
@@ -1597,15 +1597,15 @@ describe("upsertServerAssistantMessage", () => {
 
   it("preserves transient clarification parts in arrival order when the final assistant message has draft parts", () => {
     const current: ChatMessage[] = [
-      message("user-turn-1", "user", "创建 Skill", 10, "turn-1"),
+      message("user-turn-1", "user", "Create Skill", 10, "turn-1"),
       {
         id: "assistant-turn-1",
         role: "assistant",
-        text: "先确认方向。",
+        text: "Confirm the direction first.",
         timestamp: 20,
         turnId: "turn-1",
         parts: [
-          { id: "text-1", type: "text", text: "先确认方向。" },
+          { id: "text-1", type: "text", text: "Confirm the direction first." },
           {
             id: "assistant.clarification.request:clarify-key-1",
             type: "clarification",
@@ -1626,11 +1626,11 @@ describe("upsertServerAssistantMessage", () => {
       {
         id: 3,
         role: "assistant",
-        content: "先确认方向。\n\n草稿已生成。",
+        content: "Confirm the direction first.\n\nThe draft has been generated.",
         turn_id: "turn-1",
         created_at: "2026-07-08T03:47:06.538231+00:00",
         parts: [
-          { id: "text-1", type: "text", text: "先确认方向。\n\n" },
+          { id: "text-1", type: "text", text: "Confirm the direction first.\n\n" },
           {
             id: "skill_studio.draft:draft-key-1",
             type: "skill_studio",
@@ -1726,7 +1726,7 @@ describe("Skill Studio question response", () => {
   it("keeps an existing assistant event message in its original timeline position", () => {
     const current = [
       message("assistant-turn-1", "assistant", "", 10, "turn-1"),
-      message("user-turn-2", "user", "用户提交后的下一条消息", 20, "turn-2"),
+      message("user-turn-2", "user", "The next message after the user submitted", 20, "turn-2"),
     ];
 
     const next = upsertAssistantUiEventForTest(current, "turn-1", {
@@ -1748,12 +1748,12 @@ describe("Skill Studio question response", () => {
     pending.uiEvents = [
       {
         type: "skill_studio.questions",
-        title: "创建宣传海报 Skill",
+        title: "Create promotional poster Skill",
         questions: [
           {
             id: "audience",
-            title: "目标受众是谁？",
-            options: [{ id: "locals", label: "本地居民" }],
+            title: "Who is the target audience?",
+            options: [{ id: "locals", label: "Local residents" }],
           },
         ],
       },
@@ -1764,7 +1764,7 @@ describe("Skill Studio question response", () => {
       {
         type: "skill_studio.questions",
         submitted: true,
-        title: "创建宣传海报 Skill",
+        title: "Create promotional poster Skill",
         questions: [],
       },
     ];
@@ -1779,12 +1779,12 @@ describe("Skill Studio question response", () => {
       {
         type: "assistant.clarification.request",
         bridge_key: "clarify-key-1",
-        title: "家乡文化海报 Skill 设定",
+        title: "Hometown culture poster Skill settings",
         questions: [
           {
             id: "audience",
-            title: "海报主要面向哪类人群？",
-            options: [{ id: "tourist", label: "外地游客" }],
+            title: "Which group is the poster mainly for?",
+            options: [{ id: "tourist", label: "Out-of-town tourists" }],
           },
         ],
       },
@@ -1808,8 +1808,8 @@ describe("Skill Studio question response", () => {
       {
         type: "assistant.clarification.request",
         bridge_key: "clarify-old",
-        title: "旧问题",
-        questions: [{ id: "old_question", title: "旧问题", options: [{ id: "old", label: "旧" }] }],
+        title: "Old question",
+        questions: [{ id: "old_question", title: "Old question", options: [{ id: "old", label: "Old" }] }],
       },
       {
         type: "skill_studio.draft",
@@ -1819,8 +1819,8 @@ describe("Skill Studio question response", () => {
       {
         type: "assistant.clarification.request",
         bridge_key: "clarify-new",
-        title: "新问题",
-        questions: [{ id: "new_question", title: "新问题", options: [{ id: "new", label: "新" }] }],
+        title: "New question",
+        questions: [{ id: "new_question", title: "New question", options: [{ id: "new", label: "New" }] }],
       },
     ];
 
@@ -1840,8 +1840,8 @@ describe("Skill Studio question response", () => {
       {
         type: "assistant.clarification.request",
         bridge_key: "clarify-revision",
-        title: "修订方向",
-        questions: [{ id: "focus", title: "先改哪里？", options: [{ id: "style", label: "风格" }] }],
+        title: "Revision direction",
+        questions: [{ id: "focus", title: "What should change first?", options: [{ id: "style", label: "Style" }] }],
       },
     ];
 
@@ -1868,12 +1868,12 @@ describe("Skill Studio question response", () => {
       {
         type: "skill_studio.questions",
         bridge_key: "skill-question-old",
-        questions: [{ id: "old_question", title: "旧问题", options: [{ id: "old", label: "旧" }] }],
+        questions: [{ id: "old_question", title: "Old question", options: [{ id: "old", label: "Old" }] }],
       },
       {
         type: "skill_studio.questions",
         bridge_key: "skill-question-new",
-        questions: [{ id: "new_question", title: "新问题", options: [{ id: "new", label: "新" }] }],
+        questions: [{ id: "new_question", title: "New question", options: [{ id: "new", label: "New" }] }],
       },
     ];
 
@@ -1886,8 +1886,8 @@ describe("Skill Studio question response", () => {
       {
         type: "assistant.clarification.request",
         bridge_key: "clarify-ended",
-        title: "历史问题",
-        questions: [{ id: "history_question", title: "历史问题", options: [{ id: "old", label: "旧" }] }],
+        title: "History question",
+        questions: [{ id: "history_question", title: "History question", options: [{ id: "old", label: "Old" }] }],
       },
     ];
 
@@ -1911,7 +1911,7 @@ describe("Skill Studio question response", () => {
       {
         type: "skill_studio.questions",
         bridge_key: "skill-question-ended",
-        questions: [{ id: "history_question", title: "历史问题", options: [{ id: "old", label: "旧" }] }],
+        questions: [{ id: "history_question", title: "History question", options: [{ id: "old", label: "Old" }] }],
       },
     ];
 
@@ -1933,18 +1933,18 @@ describe("Skill Studio question response", () => {
     expect(assistantClarificationEventIdentityForTest({
       type: "assistant.clarification.request",
       bridge_key: "clarify-a",
-      title: "同名问题",
+      title: "Same-name question",
     })).toBe("clarify-a");
     expect(assistantClarificationEventIdentityForTest({
       type: "assistant.clarification.request",
       bridge_key: "clarify-b",
-      title: "同名问题",
+      title: "Same-name question",
     })).toBe("clarify-b");
     expect(skillStudioQuestionEventIdentityForTest({
       type: "skill_studio.questions",
       bridge_key: "skill-question-a",
       skill_studio_session_id: "studio-1",
-      title: "同名问题",
+      title: "Same-name question",
     })).toBe("skill-question-a");
   });
 
@@ -1953,21 +1953,21 @@ describe("Skill Studio question response", () => {
       {
         type: "skill_studio.questions",
         skill_studio_session_id: "skill_studio_01",
-        title: "创建宣传海报 Skill",
+        title: "Create promotional poster Skill",
         questions: [
           {
             id: "audience",
-            title: "核心使用场景是什么？",
+            title: "What is the core use case?",
             options: [
-              { id: "social", label: "用于社媒平台发布", description: "小红书/抖音等" },
+              { id: "social", label: "For posting on social media platforms", description: "Xiaohongshu/Douyin etc." },
             ],
           },
           {
             id: "style",
-            title: "偏好的视觉风格是？",
+            title: "What is the preferred visual style?",
             options: [
-              { id: "ink", label: "水墨国风/新中式" },
-              { id: "modern", label: "现代简约/信息图风" },
+              { id: "ink", label: "Ink-wash Chinese style / new Chinese style" },
+              { id: "modern", label: "Modern minimalist / infographic style" },
             ],
           },
         ],
@@ -1975,12 +1975,12 @@ describe("Skill Studio question response", () => {
       { audience: "social", style: "modern" },
     );
 
-    expect(text).toContain("Skill Studio 会话：skill_studio_01");
-    expect(text).toContain("创建宣传海报 Skill");
-    expect(text).toContain("核心使用场景是什么？：用于社媒平台发布（小红书/抖音等）");
-    expect(text).toContain("偏好的视觉风格是？：现代简约/信息图风");
-    expect(text).toContain("用户已完成选择，请结合当前上下文继续。");
-    expect(text).not.toContain("继续生成 Skill / Recipe 草稿");
+    expect(text).toContain("Skill Studio session: skill_studio_01");
+    expect(text).toContain("Create promotional poster Skill");
+    expect(text).toContain("What is the core use case?: For posting on social media platforms (Xiaohongshu/Douyin etc.)");
+    expect(text).toContain("What is the preferred visual style?: Modern minimalist / infographic style");
+    expect(text).toContain("The user has finished selecting; continue with the current context.");
+    expect(text).not.toContain("Continue generating the Skill / Recipe draft");
   });
 
   it("builds a persisted submitted assistant clarification event", () => {
@@ -1991,15 +1991,15 @@ describe("Skill Studio question response", () => {
       canvas_id: "canvas-a",
       agent_id: "agent-1",
       turn_id: "turn-a",
-      anchor_text_prefix: "先确认方向",
+      anchor_text_prefix: "Confirm the direction first",
       clarification_id: "home-culture-poster-skill-setup",
-      title: "家乡文化海报 Skill 设置",
-      description: "选完后生成草稿",
+      title: "Hometown culture poster Skill settings",
+      description: "Generate the draft after selecting",
       questions: [
         {
           id: "poster_count",
-          title: "海报数量",
-          options: [{ id: "single", label: "单张主视觉海报" }],
+          title: "Poster count",
+          options: [{ id: "single", label: "Single key visual poster" }],
         },
       ],
       allow_skip: true,
@@ -2035,21 +2035,21 @@ describe("Skill Studio question response", () => {
         questions: [
           {
             id: "audience",
-            title: "核心使用场景是什么？",
-            options: [{ id: "social", label: "用于社媒平台发布" }],
+            title: "What is the core use case?",
+            options: [{ id: "social", label: "For posting on social media platforms" }],
           },
           {
             id: "style",
-            title: "偏好的视觉风格是？",
-            options: [{ id: "modern", label: "现代简约/信息图风" }],
+            title: "What is the preferred visual style?",
+            options: [{ id: "modern", label: "Modern minimalist / infographic style" }],
           },
         ],
       },
       { audience: "social" },
     );
 
-    expect(text).toContain("核心使用场景是什么？：用于社媒平台发布");
-    expect(text).toContain("偏好的视觉风格是？：未选择");
+    expect(text).toContain("What is the core use case?: For posting on social media platforms");
+    expect(text).toContain("What is the preferred visual style?: Not selected");
   });
 
   it("describes multiple options and custom text in question answers", () => {
@@ -2060,12 +2060,12 @@ describe("Skill Studio question response", () => {
         questions: [
           {
             id: "elements",
-            title: "海报通常需要包含哪些内容元素？",
+            title: "Which content elements does a poster usually need?",
             selection_mode: "multiple",
             options: [
-              { id: "intro", label: "家乡名称与简介" },
-              { id: "feature", label: "特色图片/插画" },
-              { id: "slogan", label: "宣传标语" },
+              { id: "intro", label: "Hometown name and introduction" },
+              { id: "feature", label: "Featured image / illustration" },
+              { id: "slogan", label: "Promotional slogan" },
             ],
           },
         ],
@@ -2073,12 +2073,12 @@ describe("Skill Studio question response", () => {
       {
         elements: {
           option_ids: ["intro", "feature"],
-          custom_text: "再加一个适合社媒传播的互动话题",
+          custom_text: "Add an interactive topic suited to social media sharing",
         },
       },
     );
 
-    expect(text).toContain("海报通常需要包含哪些内容元素？：家乡名称与简介；特色图片/插画；补充：再加一个适合社媒传播的互动话题");
+    expect(text).toContain("Which content elements does a poster usually need?: Hometown name and introduction; Featured image / illustration; Additional: Add an interactive topic suited to social media sharing");
   });
 
   it("builds compact timeline items for submitted question cards", () => {
@@ -2086,21 +2086,21 @@ describe("Skill Studio question response", () => {
       [
         {
           id: "audience",
-          title: "目标受众是谁？",
-          options: [{ id: "travelers", label: "外地游客", description: "潜在旅行者" }],
+          title: "Who is the target audience?",
+          options: [{ id: "travelers", label: "Out-of-town tourists", description: "Potential travelers" }],
         },
         {
           id: "elements",
-          title: "希望突出哪些内容？",
+          title: "Which content should be highlighted?",
           selection_mode: "multiple",
           options: [
-            { id: "food", label: "地方美食" },
-            { id: "heritage", label: "非遗文化" },
+            { id: "food", label: "Local cuisine" },
+            { id: "heritage", label: "Intangible cultural heritage" },
           ],
         },
         {
           id: "extra",
-          title: "其他补充",
+          title: "Other additions",
           options: [],
         },
       ],
@@ -2108,7 +2108,7 @@ describe("Skill Studio question response", () => {
         audience: "travelers",
         elements: {
           option_ids: ["food", "heritage"],
-          custom_text: "突出苏州桃花坞年画",
+          custom_text: "Highlight Suzhou Taohuawu New Year prints",
         },
       },
     );
@@ -2116,20 +2116,20 @@ describe("Skill Studio question response", () => {
     expect(items).toEqual([
       {
         key: "audience",
-        title: "目标受众是谁？",
-        summary: "外地游客（潜在旅行者）",
+        title: "Who is the target audience?",
+        summary: "Out-of-town tourists (Potential travelers)",
         answered: true,
       },
       {
         key: "elements",
-        title: "希望突出哪些内容？",
-        summary: "地方美食；非遗文化；补充：突出苏州桃花坞年画",
+        title: "Which content should be highlighted?",
+        summary: "Local cuisine; Intangible cultural heritage; Additional: Highlight Suzhou Taohuawu New Year prints",
         answered: true,
       },
       {
         key: "extra",
-        title: "其他补充",
-        summary: "未选择",
+        title: "Other additions",
+        summary: "Not selected",
         answered: false,
       },
     ]);
@@ -2140,14 +2140,14 @@ describe("Skill Studio question response", () => {
       [
         {
           id: "video_duration_seconds",
-          question: "视频时长是多久？",
+          question: "How long should the video be?",
           options: [{ id: "6", label: "6" }],
         },
       ],
       { video_duration_seconds: "6" },
     );
 
-    expect(items[0]?.title).toBe("视频时长是多久？");
+    expect(items[0]?.title).toBe("How long should the video be?");
   });
 
   it("preserves submitted skip status in compact question cards", () => {
@@ -2155,8 +2155,8 @@ describe("Skill Studio question response", () => {
       [
         {
           id: "confirm",
-          title: "草稿确认",
-          options: [{ id: "needs_edit", label: "需要调整" }],
+          title: "Draft confirmation",
+          options: [{ id: "needs_edit", label: "Needs adjusting" }],
         },
       ],
       {},
@@ -2166,8 +2166,8 @@ describe("Skill Studio question response", () => {
     expect(items).toEqual([
       {
         key: "confirm",
-        title: "草稿确认",
-        summary: "已跳过",
+        title: "Draft confirmation",
+        summary: "Skipped",
         answered: true,
       },
     ]);
@@ -2178,16 +2178,16 @@ describe("Skill Studio question response", () => {
       [
         {
           id: "image_model",
-          title: "图片模型",
+          title: "Image model",
           options: [{ id: "newapi_nanobanana2", label: "LingShan NB 2" }],
         },
         {
           id: "image_quality",
-          title: "图片画质",
+          title: "Image quality",
           options: [
-            { id: "low", label: "低画质" },
-            { id: "medium", label: "标准画质" },
-            { id: "high", label: "高画质" },
+            { id: "low", label: "Low quality" },
+            { id: "medium", label: "Standard quality" },
+            { id: "high", label: "High quality" },
           ],
         },
       ],
@@ -2197,7 +2197,7 @@ describe("Skill Studio question response", () => {
     expect(items).toEqual([
       {
         key: "image_model",
-        title: "图片模型",
+        title: "Image model",
         summary: "LingShan NB 2",
         answered: true,
       },
@@ -2208,25 +2208,25 @@ describe("Skill Studio question response", () => {
     const items = visibleAssistantClarificationTimelineItemsForTest(
       [{
         id: "video_duration_seconds",
-        question: "视频时长是多久？",
-        options: [{ id: "6", label: "6 秒" }],
+        question: "How long should the video be?",
+        options: [{ id: "6", label: "6 seconds" }],
       }],
       { video_duration_seconds: "6" },
     );
 
-    expect(items[0]?.title).toBe("视频时长是多久？");
+    expect(items[0]?.title).toBe("How long should the video be?");
   });
 
   it("keeps submitted option ids visible when dynamic labels are unavailable", () => {
     const items = visibleAssistantClarificationTimelineItemsForTest(
-      [{ id: "image_resolution", title: "图片分辨率", options: [] }],
+      [{ id: "image_resolution", title: "Image resolution", options: [] }],
       { image_resolution: { option_ids: ["1K"] } },
     );
 
     expect(items).toEqual([
       {
         key: "image_resolution",
-        title: "图片分辨率",
+        title: "Image resolution",
         summary: "1K",
         answered: true,
       },
@@ -2246,8 +2246,8 @@ describe("Skill Studio question response", () => {
         questions: [
           {
             id: "scope",
-            title: "主要做什么？",
-            options: [{ id: "planning", label: "策划" }],
+            title: "What is it mainly for?",
+            options: [{ id: "planning", label: "Planning" }],
           },
         ],
       },
@@ -2266,7 +2266,7 @@ describe("Skill Studio question response", () => {
       selections: { scope: "planning" },
       ok: true,
     });
-    expect(payload.message).toContain("主要做什么？：策划");
+    expect(payload.message).toContain("What is it mainly for?: Planning");
   });
 
   it("summarizes canvas command failures without exposing protocol details to users", () => {
@@ -2286,7 +2286,7 @@ describe("Skill Studio question response", () => {
             commandIndex: -1,
             type: "validate",
             status: "error",
-            label: "校验画布命令",
+            label: "Validate canvas command",
             error:
               "edge output role planning_text is not accepted by target imageGenNode for link_type prompt_for. Expected source role input_text.",
           },
@@ -2294,7 +2294,7 @@ describe("Skill Studio question response", () => {
       },
     });
 
-    expect(payload.user_message).toBe("当前文本需要先作为生成提示词连接到图片节点，我会按可执行的提示词来源来处理。");
+    expect(payload.user_message).toBe("The text must first be connected to the image node as a generation prompt; I'll handle it using an executable prompt source.");
     expect(payload.agent_hint).toContain("Do not mention");
     expect(payload.agent_hint).toContain("prompt_for");
     expect(payload.message).toBe(payload.user_message);
@@ -2305,7 +2305,7 @@ describe("Skill Studio question response", () => {
   });
 
   it("marks a workflow persistence failure as failed even after parameter updates applied", () => {
-    const persistenceError = "无法创建持久化工作流记录，未启动节点动作：database unavailable";
+    const persistenceError = "Unable to create the persistent workflow record; the node action was not started: database unavailable";
     const payload = buildCanvasCommandToolResultPayloadForTest({
       bridgeKey: "bridge-workflow-persistence",
       projectId: "project-a",
@@ -2316,15 +2316,15 @@ describe("Skill Studio question response", () => {
         createdNodeIds: [],
         errors: [persistenceError],
         commandResults: [
-          { commandIndex: 0, type: "update_node_data", status: "success", label: "更新图片参数" },
-          { commandIndex: 1, type: "update_node_data", status: "success", label: "更新视频参数" },
-          { commandIndex: 2, type: "update_node_data", status: "success", label: "更新审核参数" },
-          { commandIndex: 3, type: "run_workflow", status: "success", label: "运行工作流" },
+          { commandIndex: 0, type: "update_node_data", status: "success", label: "Update image parameters" },
+          { commandIndex: 1, type: "update_node_data", status: "success", label: "Update video parameters" },
+          { commandIndex: 2, type: "update_node_data", status: "success", label: "Update review parameters" },
+          { commandIndex: 3, type: "run_workflow", status: "success", label: "Run workflow" },
           {
             commandIndex: 3,
             type: "run_node_action",
             status: "error",
-            label: "生成图片",
+            label: "Generate image",
             nodeId: "image-a",
             action: "generate_image",
             error: persistenceError,
@@ -2349,10 +2349,10 @@ describe("Skill Studio question response", () => {
         applied: 1,
         openedUiActions: 0,
         createdNodeIds: [],
-        errors: ["第二个节点不存在"],
+        errors: ["The second node does not exist"],
         commandResults: [
-          { commandIndex: 0, type: "update_node_data", status: "success", label: "更新节点" },
-          { commandIndex: 1, type: "update_node_data", status: "error", label: "更新节点", error: "第二个节点不存在" },
+          { commandIndex: 0, type: "update_node_data", status: "success", label: "Update node" },
+          { commandIndex: 1, type: "update_node_data", status: "error", label: "Update node", error: "The second node does not exist" },
         ],
       },
     });
@@ -2373,11 +2373,11 @@ describe("Skill Studio question response", () => {
         questions: [
           {
             id: "content",
-            title: "内容元素？",
+            title: "Content elements?",
             selection_mode: "multiple",
             options: [
-              { id: "photo", label: "特色图片" },
-              { id: "qr", label: "二维码/Logo" },
+              { id: "photo", label: "Featured image" },
+              { id: "qr", label: "QR code / Logo" },
             ],
           },
         ],
@@ -2385,7 +2385,7 @@ describe("Skill Studio question response", () => {
       {
         content: {
           option_ids: ["photo", "qr"],
-          custom_text: "需要留一个主标题位置",
+          custom_text: "Leave room for a main title",
         },
       },
     );
@@ -2393,10 +2393,10 @@ describe("Skill Studio question response", () => {
     expect(payload.selections).toEqual({
       content: {
         option_ids: ["photo", "qr"],
-        custom_text: "需要留一个主标题位置",
+        custom_text: "Leave room for a main title",
       },
     });
-    expect(payload.message).toContain("内容元素？：特色图片；二维码/Logo；补充：需要留一个主标题位置");
+    expect(payload.message).toContain("Content elements?: Featured image; QR code / Logo; Additional: Leave room for a main title");
   });
 });
 
@@ -2407,14 +2407,14 @@ describe("Assistant clarification response", () => {
         type: "assistant.clarification.request",
         questions: [{
           id: "video_duration_seconds",
-          question: "视频时长是多久？",
-          options: [{ id: "6", label: "6 秒" }],
+          question: "How long should the video be?",
+          options: [{ id: "6", label: "6 seconds" }],
         }],
       },
       { video_duration_seconds: "6" },
     );
 
-    expect(text).toContain("视频时长是多久？\n6 秒");
+    expect(text).toContain("How long should the video be?\n6 seconds");
   });
 
   it("builds a reusable clarification summary from selected answers", () => {
@@ -2422,34 +2422,34 @@ describe("Assistant clarification response", () => {
       {
         type: "assistant.clarification.request",
         clarification_id: "clarify_01",
-        title: "向用户提问",
+        title: "Ask the user",
         questions: [
           {
             id: "skill_kind",
-            title: "你想创建的 skill 是做什么的？",
+            title: "What is the skill you want to create for?",
             options: [
-              { id: "workflow", label: "工作流自动化" },
-              { id: "domain", label: "领域知识" },
+              { id: "workflow", label: "Workflow automation" },
+              { id: "domain", label: "Domain knowledge" },
             ],
           },
           {
             id: "scope",
-            title: "这个 skill 的使用范围是？",
+            title: "What is the scope of this skill?",
             options: [
-              { id: "user", label: "用户级（推荐）" },
-              { id: "project", label: "项目级" },
+              { id: "user", label: "User level (recommended)" },
+              { id: "project", label: "Project level" },
             ],
           },
         ],
       },
       {
-        skill_kind: { option_ids: ["workflow"], custom_text: "用于海报生成" },
+        skill_kind: { option_ids: ["workflow"], custom_text: "For poster generation" },
         scope: { option_ids: ["user"], custom_text: "" },
       },
     );
 
-    expect(text).toContain("你想创建的 skill 是做什么的？\n工作流自动化；补充：用于海报生成");
-    expect(text).toContain("这个 skill 的使用范围是？\n用户级（推荐）");
+    expect(text).toContain("What is the skill you want to create for?\nWorkflow automation; Additional: For poster generation");
+    expect(text).toContain("What is the scope of this skill?\nUser level (recommended)");
   });
 
   it("keeps clarification replies in the current project when tool metadata omits scope", () => {
@@ -2470,13 +2470,13 @@ describe("Assistant clarification response", () => {
         canvas_id: "canvas-a",
         agent_id: "agent-1",
         turn_id: "turn-a",
-        anchor_text_prefix: "我先问几个问题。",
+        anchor_text_prefix: "Let me ask a few questions first.",
         clarification_id: "clarify_01",
         questions: [
           {
             id: "skill_kind",
-            title: "你想创建的 skill 是做什么的？",
-            options: [{ id: "workflow", label: "工作流自动化" }],
+            title: "What is the skill you want to create for?",
+            options: [{ id: "workflow", label: "Workflow automation" }],
           },
         ],
       },
@@ -2491,7 +2491,7 @@ describe("Assistant clarification response", () => {
       canvas_id: "canvas-a",
       agent_id: "agent-1",
       turn_id: "turn-a",
-      anchor_text_prefix: "我先问几个问题。",
+      anchor_text_prefix: "Let me ask a few questions first.",
       tool_call_status: "completed",
       clarification_status: "answered",
       action: "submit",
@@ -2500,8 +2500,8 @@ describe("Assistant clarification response", () => {
       },
       ok: true,
     });
-    expect(payload.message).toContain("你想创建的 skill 是做什么的？");
-    expect(payload.message).not.toContain("一次只提出一个问题");
+    expect(payload.message).toContain("What is the skill you want to create for?");
+    expect(payload.message).not.toContain("ask only one question at a time");
   });
 
   it("adds one-question guidance only for Skill Studio revision clarification results", () => {
@@ -2513,8 +2513,8 @@ describe("Assistant clarification response", () => {
         questions: [
           {
             id: "revision_focus",
-            title: "你想先调整哪个方向？",
-            options: [{ id: "style", label: "风格" }],
+            title: "Which direction do you want to adjust first?",
+            options: [{ id: "style", label: "Style" }],
           },
         ],
       },
@@ -2524,11 +2524,11 @@ describe("Assistant clarification response", () => {
       { skillStudioRevision: true },
     );
 
-    expect(payload.message).toContain("Skill Studio 草稿修订流程");
-    expect(payload.message).toContain("下一步必须继续调用 freezone_request_user_clarification");
+    expect(payload.message).toContain("Skill Studio draft revision flow");
+    expect(payload.message).toContain("the next step must be to call freezone_request_user_clarification again");
     expect(payload.message).toContain("freezone_finish_agent_catalog_draft");
-    expect(payload.message).toContain("不要只回复普通文本");
-    expect(payload.message).not.toContain("请基于以上补充信息继续");
+    expect(payload.message).toContain("Do not reply with plain text only");
+    expect(payload.message).not.toContain("continue based on the information above");
   });
 });
 
@@ -2544,7 +2544,7 @@ describe("Skill Studio status events", () => {
         {
           type: "skill_studio.status",
           status: "routing",
-          message: "正在进入 Skill Studio...",
+          message: "Entering Skill Studio...",
         },
       ],
     })).toBe(true);
@@ -2555,7 +2555,7 @@ describe("Skill Studio status events", () => {
       {
         type: "skill_studio.status",
         status: "routing",
-        message: "正在进入 Skill Studio...",
+        message: "Entering Skill Studio...",
       },
       {
         type: "skill_studio.questions",
@@ -2576,7 +2576,7 @@ describe("Skill Studio status events", () => {
       {
         type: "skill_studio.status",
         status: "draft_begin",
-        message: "正在创建草稿结构...",
+        message: "Creating the draft structure...",
       },
     ]).map((event) => event.type)).toEqual(["skill_studio.questions", "skill_studio.status"]);
   });
@@ -2586,17 +2586,17 @@ describe("Skill Studio status events", () => {
       {
         type: "skill_studio.status",
         status: "routing",
-        message: "正在整理 Skill 方向...",
+        message: "Organizing the Skill direction...",
       },
       {
         type: "skill_studio.status",
         status: "drafting",
-        message: "正在生成 Skill 草稿...",
+        message: "Generating the Skill draft...",
       },
       {
         type: "skill_studio.status",
         status: "finalizing",
-        message: "草稿较完整，正在补齐 Recipes 和校验项...",
+        message: "The draft is fairly complete; filling in Recipes and validation items...",
       },
     ]);
 
@@ -2604,7 +2604,7 @@ describe("Skill Studio status events", () => {
     expect(events[0]).toMatchObject({
       type: "skill_studio.status",
       status: "finalizing",
-      message: "草稿较完整，正在补齐 Recipes 和校验项...",
+      message: "The draft is fairly complete; filling in Recipes and validation items...",
     });
   });
 
@@ -2613,12 +2613,12 @@ describe("Skill Studio status events", () => {
       {
         type: "skill_studio.status",
         status: "draft_recipe_ready",
-        message: "已生成 Recipe 1 / 6",
+        message: "Recipe 1 / 6 generated",
       },
       {
         type: "skill_studio.status",
         status: "finalizing",
-        message: "草稿较完整，正在补齐 Recipes 和校验项...",
+        message: "The draft is fairly complete; filling in Recipes and validation items...",
       },
     ]);
 
@@ -2626,7 +2626,7 @@ describe("Skill Studio status events", () => {
     expect(events[0]).toMatchObject({
       type: "skill_studio.status",
       status: "draft_recipe_ready",
-      message: "已生成 Recipe 1 / 6",
+      message: "Recipe 1 / 6 generated",
     });
   });
 
@@ -2711,14 +2711,14 @@ describe("Skill Studio status events", () => {
     expect(visibleSkillStudioEventsForMessageForTest({
       id: "assistant-turn-1",
       role: "assistant",
-      text: "我正在查看可用 Skill。",
+      text: "I am looking at the available Skills.",
       timestamp: 10,
       turnId: "turn-1",
       uiEvents: [
         {
           type: "skill_studio.status",
           status: "routing",
-          message: "正在进入 Skill Studio...",
+          message: "Entering Skill Studio...",
         },
       ],
     }).map((event) => event.type)).toEqual([]);
@@ -2728,7 +2728,7 @@ describe("Skill Studio status events", () => {
     expect(visibleSkillStudioEventsForMessageForTest({
       id: "assistant-turn-1",
       role: "assistant",
-      text: "好的，我来构建 Skill 草稿。",
+      text: "Okay, I will build the Skill draft.",
       timestamp: 10,
       turnId: "turn-1",
       uiEvents: [
@@ -2743,7 +2743,7 @@ describe("Skill Studio status events", () => {
         {
           type: "skill_studio.status",
           status: "draft_begin",
-          message: "正在创建草稿结构...",
+          message: "Creating the draft structure...",
         },
       ],
     }).map((event) => event.type)).toEqual(["skill_studio.status"]);
@@ -2753,7 +2753,7 @@ describe("Skill Studio status events", () => {
     const assistant = message(
       "assistant-turn-1",
       "assistant",
-      "好的，通用品牌广告短片流程 + 细粒度 5 个 Recipe。我来构建 Skill 草稿。",
+      "Okay, a general brand ad short film flow + 5 fine-grained Recipes. I will build the Skill draft.",
       10,
       "turn-1",
     );
@@ -2776,7 +2776,7 @@ describe("Skill Studio status events", () => {
         event: {
           type: "skill_studio.status",
           status: "draft_begin",
-          message: "正在创建草稿结构...",
+          message: "Creating the draft structure...",
         },
       },
     ];
@@ -2799,12 +2799,12 @@ describe("Skill Studio status events", () => {
         {
           type: "skill_studio.status",
           status: "routing",
-          message: "正在进入 Skill Studio...",
+          message: "Entering Skill Studio...",
         },
         {
           type: "assistant.clarification.request",
           bridge_key: "clarify-key-1",
-          title: "家乡文化短片 Skill 配置",
+          title: "Hometown culture short film Skill configuration",
           submitted: true,
           action: "submit",
           questions: [],
@@ -2820,7 +2820,7 @@ describe("Skill Studio status events", () => {
       {
         type: "skill_studio.status",
         status: "routing",
-        message: "正在进入 Skill Studio...",
+        message: "Entering Skill Studio...",
       },
     ];
 
@@ -2844,7 +2844,7 @@ describe("Skill Studio status events", () => {
         turnId: "turn-1",
         bridgeKey: "node-params",
         status: "done",
-        labels: ["节点参数"],
+        labels: ["Node parameters"],
         errors: [],
       },
       {
@@ -2852,7 +2852,7 @@ describe("Skill Studio status events", () => {
         turnId: "turn-1",
         bridgeKey: "validate",
         status: "done",
-        labels: ["命令校验"],
+        labels: ["Command validation"],
         errors: [],
       },
     ]);
@@ -2864,28 +2864,28 @@ describe("Skill Studio status events", () => {
 describe("Skill Studio draft response", () => {
   it("uses the same Chinese field names as the catalog edit pages", () => {
     expect(skillStudioDraftFieldLabelsForTest.skill).toMatchObject({
-      keywords: "触发关键词",
-      node_scopes: "节点类型",
-      metaPlanningHints: "规划器提示词",
-      promptStyleGuide: "风格指引",
-      behaviorRules: "行为规则",
-      passingScore: "通过分数线",
-      domainRules: "领域规则",
-      ratingBands: "评分档位",
-      visualReviewItems: "视觉评审项",
-      textReviewItems: "文案评审项",
+      keywords: "Trigger keywords",
+      node_scopes: "Node types",
+      metaPlanningHints: "Planner hints",
+      promptStyleGuide: "Style guide",
+      behaviorRules: "Behavior rules",
+      passingScore: "Passing score",
+      domainRules: "Domain rules",
+      ratingBands: "Rating bands",
+      visualReviewItems: "Visual review items",
+      textReviewItems: "Copy review items",
     });
     expect(skillStudioDraftFieldLabelsForTest.recipe).toMatchObject({
-      output_kind: "生成类型",
-      action_keys: "操作类型",
+      output_kind: "Output type",
+      action_keys: "Action types",
       system_prompt: "System Prompt",
-      must_have_items: "必需元素",
-      planning_prompt: "规划器提示词",
-      result_summary: "输出概述",
-      requires_source_media: "依赖上游多模态输入",
-      enabled: "启用",
-      force_enhancement: "强制增强",
-      skip_detail_check: "跳过细节检查",
+      must_have_items: "Required elements",
+      planning_prompt: "Planner prompt",
+      result_summary: "Output summary",
+      requires_source_media: "Requires upstream multimodal input",
+      enabled: "Enabled",
+      force_enhancement: "Force enhancement",
+      skip_detail_check: "Skip detail check",
     });
     const legacyRecipeKeys = [
       "required" + "_elements",
@@ -2901,33 +2901,33 @@ describe("Skill Studio draft response", () => {
   it("maps canonical evaluation fields for draft display", () => {
     const fields = skillStudioEvaluationDraftFieldsForTest({
       quality_threshold: 7,
-      domain_constraints: ["必须为竖版 9:16 比例"],
+      domain_constraints: ["Must be vertical 9:16"],
       rating_bands: [
-        { score: 8, description: "风格统一且文化元素表达准确" },
+        { score: 8, description: "Consistent style and accurate expression of cultural elements" },
       ],
       visual_review_items: [
-        { name: "风格一致性", weight: 0.35, description: "是否符合国潮视觉风格" },
+        { name: "Style consistency", weight: 0.35, description: "Does it match the guochao visual style" },
       ],
       text_review_items: [
-        { name: "文案传播力", weight: 0.4, description: "标题是否有记忆点" },
+        { name: "Copy shareability", weight: 0.4, description: "Is the headline memorable" },
       ],
       passingScore: 5,
-      domainRules: ["旧字段不应显示"],
-      scoreAnchors: [{ score: 10, description: "旧字段不应显示" }],
+      domainRules: ["Old field must not be shown"],
+      scoreAnchors: [{ score: 10, description: "Old field must not be shown" }],
       visual: {
-        dimensions: [{ name: "旧视觉字段", weight: 1, description: "不应显示" }],
+        dimensions: [{ name: "Old visual field", weight: 1, description: "Must not be shown" }],
       },
       text: {
-        dimensions: [{ name: "旧文案字段", weight: 1, description: "不应显示" }],
+        dimensions: [{ name: "Old copy field", weight: 1, description: "Must not be shown" }],
       },
     });
 
     expect(fields).toEqual({
       qualityThreshold: 7,
-      domainConstraints: ["必须为竖版 9:16 比例"],
-      ratingBands: ["8：风格统一且文化元素表达准确"],
-      visualReviewItems: ["风格一致性（0.35）：是否符合国潮视觉风格"],
-      textReviewItems: ["文案传播力（0.4）：标题是否有记忆点"],
+      domainConstraints: ["Must be vertical 9:16"],
+      ratingBands: ["8: Consistent style and accurate expression of cultural elements"],
+      visualReviewItems: ["Style consistency (0.35): Does it match the guochao visual style"],
+      textReviewItems: ["Copy shareability (0.4): Is the headline memorable"],
     });
   });
 
@@ -2940,26 +2940,26 @@ describe("Skill Studio draft response", () => {
       agent_id: "agent-1",
       turn_id: "turn-a",
       skill_studio_session_id: "skill_studio_01",
-      summary: "草稿摘要",
+      summary: "Draft summary",
       skill: {
         id: "home-culture-poster",
-        name: "家乡文化海报",
+        name: "Hometown culture poster",
         schema_version: 1,
         version: "1.0.0",
-        description: "家乡文化海报",
+        description: "Hometown culture poster",
         category: "social",
         allowed_recipe_ids: ["home-culture-poster-image"],
         planning: {
-          metaPlanningHints: "先识别地域符号",
+          metaPlanningHints: "Identify regional symbols first",
         },
       },
       recipes: [
         {
           id: "home-culture-poster-image",
-          name: "家乡文化海报出图",
+          name: "Hometown culture poster rendering",
           output_kind: "image",
-          system_prompt: "生成海报",
-          must_have_items: ["地域符号"],
+          system_prompt: "Generate poster",
+          must_have_items: ["Regional symbols"],
         },
       ],
     };
@@ -2985,19 +2985,19 @@ describe("Skill Studio draft response", () => {
         skill: {
           id: "home-culture-poster",
           planning: {
-            metaPlanningHints: "先识别地域符号",
+            metaPlanningHints: "Identify regional symbols first",
           },
         },
         recipes: [
           {
             id: "home-culture-poster-image",
-            must_have_items: ["地域符号"],
+            must_have_items: ["Regional symbols"],
           },
         ],
       },
     });
     expect(payload.message).toContain("home-culture-poster");
-    expect(payload.message).toContain("已保存为正式 Skill / Recipe");
+    expect(payload.message).toContain("saved as an official Skill / Recipe");
   });
 
   it("normalizes Skill Studio draft input parameters before catalog save", () => {
@@ -3007,16 +3007,16 @@ describe("Skill Studio draft response", () => {
         input_parameters: [
           {
             id: "aspect_ratio",
-            label: "画面比例",
+            label: "Aspect ratio",
             type: "single_select",
             required: false,
             default: "16:9",
-            placeholder: "不要保存这个展示字段",
-            options: ["16:9 横版", "9:16 竖版"],
+            placeholder: "Do not save this display field",
+            options: ["16:9 landscape", "9:16 portrait"],
           },
           {
             id: "shot_count",
-            label: "分镜数量",
+            label: "Shot count",
             type: "number",
             required: false,
             default: 6,
@@ -3031,15 +3031,15 @@ describe("Skill Studio draft response", () => {
       input_parameters: [
         {
           id: "aspect_ratio",
-          label: "画面比例",
+          label: "Aspect ratio",
           type: "single_select",
           required: false,
-          default: "16:9 横版",
-          options: ["16:9 横版", "9:16 竖版"],
+          default: "16:9 landscape",
+          options: ["16:9 landscape", "9:16 portrait"],
         },
         {
           id: "shot_count",
-          label: "分镜数量",
+          label: "Shot count",
           type: "number",
           required: false,
           default: 6,
@@ -3078,12 +3078,12 @@ describe("Skill Studio draft response", () => {
       saved_skill_ids: [],
       saved_recipe_ids: [],
     });
-    expect(payload.message).toContain("用户已取消 Skill Studio 草稿保存");
-    expect(payload.message).toContain("本次草稿不会写入虾画配置");
-    expect(payload.message).toContain("不要重新提交");
+    expect(payload.message).toContain("The user cancelled saving the Skill Studio draft");
+    expect(payload.message).toContain("This draft will not be written to the Shrimp Canvas configuration");
+    expect(payload.message).toContain("do not resubmit");
     expect(payload.agent_instruction).toContain("Do not resubmit");
     expect(payload.agent_instruction).toContain("Do not call any Skill Studio");
-    expect(payload.message).not.toContain("继续回复");
+    expect(payload.message).not.toContain("keep replying");
   });
 
   it("builds a bridge tool result to start a Skill Studio draft revision session", () => {
@@ -3100,10 +3100,10 @@ describe("Skill Studio draft response", () => {
     const draft = {
       skill: {
         id: "home-culture-poster",
-        description: "用户手动编辑后的草稿",
+        description: "Draft after manual editing by the user",
       },
       recipes: [],
-      summary: "当前草稿",
+      summary: "Current draft",
     };
 
     const payload = buildSkillStudioDraftRevisionToolResultForTest(event, draft);
@@ -3120,35 +3120,35 @@ describe("Skill Studio draft response", () => {
       draft: {
         skill: {
           id: "home-culture-poster",
-          description: "用户手动编辑后的草稿",
+          description: "Draft after manual editing by the user",
         },
         recipes: [],
-        summary: "当前草稿",
+        summary: "Current draft",
       },
       draft_ref: {
         skill_studio_session_id: "skill_studio_01",
         skill_id: "home-culture-poster",
         skill_name: null,
-        summary: "当前草稿",
+        summary: "Current draft",
         recipe_count: 0,
       },
     });
-    expect(payload.message).toContain("启动 Skill Studio 草稿修改会话");
-    expect(payload.message).toContain("本次回执提供当前完整 draft");
-    expect(payload.message).toContain("draft 只用于理解被修改对象和后续局部 patch");
-    expect(payload.message).toContain("用户已经明确表示需要调整");
-    expect(payload.message).toContain("不要再询问是否需要调整");
-    expect(payload.message).toContain("不要询问是否保存当前版本");
+    expect(payload.message).toContain("started a Skill Studio draft revision session");
+    expect(payload.message).toContain("This receipt provides the full current draft");
+    expect(payload.message).toContain("the draft is only for understanding the object being modified and for later partial patches");
+    expect(payload.message).toContain("The user has explicitly said the current draft needs adjusting");
+    expect(payload.message).toContain("do not ask again whether adjustments are needed");
+    expect(payload.message).toContain("Do not ask whether to save the current version");
     expect(payload.message).toContain("save_now");
-    expect(payload.message).toContain("不是继续完成原草稿");
-    expect(payload.message).toContain("下一步必须调用 freezone_request_user_clarification");
-    expect(payload.message).toContain("questions 数组必须只有一个问题");
-    expect(payload.message).toContain("在用户回答修改方向之前，禁止调用 freezone_begin_agent_catalog_draft");
+    expect(payload.message).toContain("This is not about continuing to finish the original draft");
+    expect(payload.message).toContain("the next step must call freezone_request_user_clarification");
+    expect(payload.message).toContain("must contain exactly one question");
+    expect(payload.message).toContain("Before the user answers the direction of change, do not call freezone_begin_agent_catalog_draft");
     expect(payload.message).toContain("freezone_begin_agent_catalog_draft");
     expect(payload.message).toContain("freezone_finish_agent_catalog_draft");
-    expect(payload.message).toContain("禁止调用 freezone_finish_agent_catalog_draft 原样展示当前草稿");
-    expect(payload.message).toContain("不要在单个 tool_call 里传完整 Skill / Recipe catalog");
-    expect(payload.message).toContain("不要用普通文本总结修改结果");
+    expect(payload.message).toContain("Do not call freezone_finish_agent_catalog_draft to show the current draft unchanged");
+    expect(payload.message).toContain("Do not pass the full Skill / Recipe catalog in a single tool_call");
+    expect(payload.message).toContain("Do not summarize the modification result in plain text");
   });
 
   it("shows the draft as AI adjusting while a revision session is pending", () => {
@@ -3156,7 +3156,7 @@ describe("Skill Studio draft response", () => {
       submitted: false,
       cancelled: false,
       revisionPending: true,
-    })).toBe("AI 调整中，请按后续问题补充修改方向");
+    })).toBe("AI is adjusting; add the direction of change in the follow-up questions");
   });
 
   it("preserves HTML webpage deliverables when saving an imported Skill Studio recipe", () => {
@@ -3172,20 +3172,20 @@ describe("Skill Studio draft response", () => {
     const items = buildSkillStudioCatalogSaveItemsForTest({
       skill: {
         id: "home-culture-poster",
-        name: "家乡文化海报",
+        name: "Hometown culture poster",
         schema_version: "dramaclaw.workflow-skill.v1",
         version: "1.0.0",
-        description: "家乡文化海报",
+        description: "Hometown culture poster",
         category: "social",
         allowed_recipe_ids: ["home-culture-poster-image"],
         triggers: {
-          keywords: ["家乡文化"],
+          keywords: ["Hometown culture"],
           node_scopes: ["imageGeneration"],
         },
         planning: {
-          metaPlanningHints: "先识别地域符号",
-          promptStyleGuide: "水墨写意",
-          behaviorRules: ["保持文化准确"],
+          metaPlanningHints: "Identify regional symbols first",
+          promptStyleGuide: "Ink-wash freehand",
+          behaviorRules: ["Keep cultural accuracy"],
           default_aspect_ratios: {
             imageGeneration: "9:16",
             textGeneration: "1:1",
@@ -3193,27 +3193,27 @@ describe("Skill Studio draft response", () => {
           },
         },
         evaluation: {
-          scoreAnchors: [{ score: 8, description: "文化符号明确" }],
+          scoreAnchors: [{ score: 8, description: "Clear cultural symbols" }],
           passingScore: 7,
-          domainRules: ["不得混用地域符号"],
+          domainRules: ["Do not mix regional symbols"],
           visual: {
-            dimensions: [{ name: "文化识别度", weight: 0.6, description: "能看出地域特征" }],
+            dimensions: [{ name: "Cultural recognizability", weight: 0.6, description: "Regional features are visible" }],
           },
           text: {
-            dimensions: [{ name: "文案清晰度", weight: 0.4, description: "文案简洁" }],
+            dimensions: [{ name: "Copy clarity", weight: 0.4, description: "Concise copy" }],
           },
         },
       },
       recipes: [
         {
           id: "home-culture-poster-image",
-          name: "家乡文化海报出图",
+          name: "Hometown culture poster rendering",
           output_kind: "image",
           action_keys: ["home-culture-poster-image"],
-          system_prompt: "生成海报",
-          must_have_items: ["地域符号"],
-          planning_prompt: "根据地域符号生成海报",
-          result_summary: "一张家乡文化海报",
+          system_prompt: "Generate poster",
+          must_have_items: ["Regional symbols"],
+          planning_prompt: "Generate a poster from regional symbols",
+          result_summary: "One hometown culture poster",
           requires_source_media: true,
         },
       ],
@@ -3226,10 +3226,10 @@ describe("Skill Studio draft response", () => {
           id: "home-culture-poster-image",
           output_kind: "image",
           action_keys: ["home-culture-poster-image"],
-          system_prompt: "生成海报",
-          must_have_items: ["地域符号"],
-          planning_prompt: "根据地域符号生成海报",
-          result_summary: "一张家乡文化海报",
+          system_prompt: "Generate poster",
+          must_have_items: ["Regional symbols"],
+          planning_prompt: "Generate a poster from regional symbols",
+          result_summary: "One hometown culture poster",
           requires_source_media: true,
         }),
       }),
@@ -3237,29 +3237,29 @@ describe("Skill Studio draft response", () => {
         kind: "skills",
         payload: expect.objectContaining({
           id: "home-culture-poster",
-          name: "家乡文化海报",
+          name: "Hometown culture poster",
           schema_version: "dramaclaw.workflow-skill.v1",
           version: "1.0.0",
           enabled: true,
           allowed_recipe_ids: ["home-culture-poster-image"],
           triggers: {
-            keywords: ["家乡文化"],
+            keywords: ["Hometown culture"],
             node_scopes: ["imageGeneration"],
           },
           planning: expect.objectContaining({
-            planning_notes: "先识别地域符号",
-            prompt_guide: "水墨写意",
-            conduct_rules: ["保持文化准确"],
+            planning_notes: "Identify regional symbols first",
+            prompt_guide: "Ink-wash freehand",
+            conduct_rules: ["Keep cultural accuracy"],
           }),
           evaluation: expect.objectContaining({
             quality_threshold: 7,
-            domain_constraints: ["不得混用地域符号"],
-            rating_bands: [{ score: 8, description: "文化符号明确" }],
+            domain_constraints: ["Do not mix regional symbols"],
+            rating_bands: [{ score: 8, description: "Clear cultural symbols" }],
             visual_review_items: [
-              { name: "文化识别度", weight: 0.6, description: "能看出地域特征" },
+              { name: "Cultural recognizability", weight: 0.6, description: "Regional features are visible" },
             ],
             text_review_items: [
-              { name: "文案清晰度", weight: 0.4, description: "文案简洁" },
+              { name: "Copy clarity", weight: 0.4, description: "Concise copy" },
             ],
           }),
         }),
@@ -3274,8 +3274,8 @@ describe("Canvas command approval image params", () => {
     const questions = clarificationQuestionsWithLiveModelCatalogsForTest(
       [{
         id: "image_model",
-        title: "图片模型",
-        options: [{ id: "seedream-4.5", label: "Seedream 4.5", description: "快速" }],
+        title: "Image model",
+        options: [{ id: "seedream-4.5", label: "Seedream 4.5", description: "Fast" }],
       }],
       [
         { id: "newapi_gpt_image2", label: "LingShan G2", apiModel: "LingShan-G2" },
@@ -3286,7 +3286,7 @@ describe("Canvas command approval image params", () => {
 
     expect(questions[0]?.options).toEqual([
       { id: "newapi_gpt_image2", label: "LingShan G2" },
-      { id: "seedream-catalog-id", label: "Seedream 4.5", description: "快速" },
+      { id: "seedream-catalog-id", label: "Seedream 4.5", description: "Fast" },
     ]);
   });
 
@@ -3294,45 +3294,45 @@ describe("Canvas command approval image params", () => {
     const questions = clarificationQuestionsWithLiveModelCatalogsForTest(
       [{
         id: "preferred_model",
-        title: "视频模型",
+        title: "Video model",
         options_source: "video_models",
-        options: [{ id: "video-fast", label: "快速模型", description: "速度优先" }],
+        options: [{ id: "video-fast", label: "Fast model", description: "Speed first" }],
       }],
       [],
       [
-        { id: "video-quality", label: "高质量模型", apiModel: "video-quality-v1" },
-        { id: "video-fast", label: "快速模型", apiModel: "video-fast-v1" },
+        { id: "video-quality", label: "High-quality model", apiModel: "video-quality-v1" },
+        { id: "video-fast", label: "Fast model", apiModel: "video-fast-v1" },
       ],
     );
 
     expect(questions[0]?.options).toEqual([
-      { id: "video-quality", label: "高质量模型" },
-      { id: "video-fast", label: "快速模型", description: "速度优先" },
+      { id: "video-quality", label: "High-quality model" },
+      { id: "video-fast", label: "Fast model", description: "Speed first" },
     ]);
   });
 
   it("derives dependent generation options from the selected live model", () => {
     const questions = clarificationQuestionsWithLiveModelCatalogsForTest(
       [
-        { id: "image_model", title: "图片模型", options: [] },
-        { id: "image_aspect_ratio", title: "图片比例", options: [{ id: "1:1", label: "1:1" }] },
-        { id: "image_resolution", title: "图片分辨率", options: [] },
-        { id: "image_quality", title: "图片画质", options: [] },
-        { id: "video_model", title: "视频模型", options: [] },
-        { id: "video_resolution", title: "视频分辨率", options: [] },
-        { id: "video_duration_seconds", title: "视频时长", options: [] },
-        { id: "video_generate_audio", title: "生成声音", options: [] },
+        { id: "image_model", title: "Image model", options: [] },
+        { id: "image_aspect_ratio", title: "Image aspect ratio", options: [{ id: "1:1", label: "1:1" }] },
+        { id: "image_resolution", title: "Image resolution", options: [] },
+        { id: "image_quality", title: "Image quality", options: [] },
+        { id: "video_model", title: "Video model", options: [] },
+        { id: "video_resolution", title: "Video resolution", options: [] },
+        { id: "video_duration_seconds", title: "Video duration", options: [] },
+        { id: "video_generate_audio", title: "Generate audio", options: [] },
       ],
       [{
         id: "image-a",
-        label: "图片 A",
+        label: "Image A",
         ratioOptions: ["1:1", "16:9"],
         resolutionOptions: ["1K", "2K"],
         qualityOptions: ["low", "medium", "high"],
       }],
       [{
         id: "video-a",
-        label: "视频 A",
+        label: "Video A",
         resolutionOptions: ["480P", "720P"],
         minDuration: 4,
         maxDuration: 6,
@@ -3368,8 +3368,8 @@ describe("Canvas command approval image params", () => {
 
   it("requires concrete generation answers before showing recommendation", () => {
     const questions = [
-      { id: "image_model", title: "图片模型", options: [{ id: "image-a", label: "图片 A" }] },
-      { id: "image_resolution", title: "图片分辨率", options: [{ id: "1K", label: "1K" }] },
+      { id: "image_model", title: "Image model", options: [{ id: "image-a", label: "Image A" }] },
+      { id: "image_resolution", title: "Image resolution", options: [{ id: "1K", label: "1K" }] },
     ];
 
     expect(assistantClarificationCanSubmit(questions, {
@@ -3424,7 +3424,7 @@ describe("Canvas command approval image params", () => {
       questions: questions.map((question) => ({ ...question, options: [] })),
     }, { __action: "recommended", ...payload.answers })).toBe(true);
     expect(assistantClarificationShowsRecommended([
-      { id: "creative_style", title: "风格", options: [{ id: "warm", label: "温暖" }] },
+      { id: "creative_style", title: "Style", options: [{ id: "warm", label: "Warm" }] },
     ], true)).toBe(true);
   });
 
@@ -3434,9 +3434,9 @@ describe("Canvas command approval image params", () => {
     ["empty", { models: [], isLoading: false, isFallback: false }],
   ] as const)("blocks generation answers when the model catalog is %s", (issue, catalog) => {
     const rawQuestions = [
-      { id: "image_model", title: "图片模型", options: [{ id: "stale-model", label: "旧模型" }] },
-      { id: "image_resolution", title: "图片分辨率", options: [{ id: "1K", label: "1K" }] },
-      { id: "image_variants_per_node", title: "生成数量", options: [{ id: "1", label: "1" }] },
+      { id: "image_model", title: "Image model", options: [{ id: "stale-model", label: "Old model" }] },
+      { id: "image_resolution", title: "Image resolution", options: [{ id: "1K", label: "1K" }] },
+      { id: "image_variants_per_node", title: "Generation count", options: [{ id: "1", label: "1" }] },
     ];
     const questions = clarificationQuestionsWithLiveModelCatalogsForTest(
       rawQuestions, [], [], {
@@ -3457,19 +3457,19 @@ describe("Canvas command approval image params", () => {
 
   it("requires a live option for every remaining generation question", () => {
     const questions = [
-      { id: "image_model", title: "图片模型", options: [{ id: "image-a", label: "图片 A" }] },
-      { id: "image_resolution", title: "图片分辨率", options: [] },
-      { id: "image_variants_per_node", title: "生成数量", options: [{ id: "1", label: "1" }] },
+      { id: "image_model", title: "Image model", options: [{ id: "image-a", label: "Image A" }] },
+      { id: "image_resolution", title: "Image resolution", options: [] },
+      { id: "image_variants_per_node", title: "Generation count", options: [{ id: "1", label: "1" }] },
     ];
     expect(assistantClarificationCanSubmit(questions, {
       image_model: { option_ids: ["image-a"] },
       image_variants_per_node: { option_ids: ["1"] },
     })).toBe(false);
     expect(assistantClarificationCanSubmit([
-      { ...questions[0], options: [{ id: "image-b", label: "图片 B" }] },
+      { ...questions[0], options: [{ id: "image-b", label: "Image B" }] },
     ], { image_model: { option_ids: ["image-a"] } })).toBe(false);
     expect(assistantClarificationGenerationCatalogIssue([
-      { id: "preferred_model", title: "视频模型", options_source: "video_models", options: [] },
+      { id: "preferred_model", title: "Video model", options_source: "video_models", options: [] },
     ], { models: [], isLoading: false, isFallback: false }, {
       models: [], isLoading: false, isFallback: false,
     })).toBe("empty");
@@ -3488,9 +3488,9 @@ describe("Canvas command approval image params", () => {
       const countId = media === "image" ? "image_variants_per_node" : "video_variants_per_node";
       const modelId = media === "image" ? "image_model" : "video_model";
       const rawQuestions = [
-        { id: dependentId, title: "缺少的参数", options_source: dependentSource,
-          options: [{ id: "stale-option", label: "旧选项" }] },
-        { id: countId, title: "生成数量", options: [{ id: "1", label: "1" }] },
+        { id: dependentId, title: "Missing parameter", options_source: dependentSource,
+          options: [{ id: "stale-option", label: "Old option" }] },
+        { id: countId, title: "Generation count", options: [{ id: "1", label: "1" }] },
       ];
       const answers = {
         [modelId]: { option_ids: ["previous-model"] },
@@ -3523,13 +3523,13 @@ describe("Canvas command approval image params", () => {
       const isImage = media === "image";
       const questions = [
         { id: isImage ? "image_resolution" : "video_duration_seconds",
-          title: isImage ? "分辨率" : "时长",
+          title: isImage ? "Resolution" : "Duration",
           options_source: isImage
             ? "selected_image_model_resolutions" as const
             : "selected_video_model_durations" as const,
           options: [{ id: isImage ? "1K" : "5", label: isImage ? "1K" : "5" }] },
         { id: isImage ? "image_variants_per_node" : "video_variants_per_node",
-          title: "数量", options: [{ id: "1", label: "1" }] },
+          title: "Count", options: [{ id: "1", label: "1" }] },
       ];
       const answers = {
         [isImage ? "image_model" : "video_model"]: {
@@ -3551,11 +3551,11 @@ describe("Canvas command approval image params", () => {
     const questions = clarificationQuestionsWithLiveModelCatalogsForTest(
       [{
         id: "image_resolution",
-        title: "图片分辨率",
+        title: "Image resolution",
         options_source: "selected_image_model_resolutions",
         options: [{ id: "2K", label: "2K" }],
       }],
-      [{ id: "image-a", label: "图片 A", resolutionOptions: ["1K", "2K"] }],
+      [{ id: "image-a", label: "Image A", resolutionOptions: ["1K", "2K"] }],
       [],
     );
 
@@ -3567,19 +3567,19 @@ describe("Canvas command approval image params", () => {
       [
         {
           id: "image_resolution",
-          title: "图片分辨率",
+          title: "Image resolution",
           options_source: "selected_image_model_resolutions",
           options: [],
         },
         {
           id: "video_duration_seconds",
-          title: "视频时长",
+          title: "Video duration",
           options_source: "selected_video_model_durations",
           options: [],
         },
       ],
-      [{ id: "image-a", label: "图片 A", resolutionOptions: ["1K", "2K"] }],
-      [{ id: "video-a", label: "视频 A", minDuration: 4, maxDuration: 5 }],
+      [{ id: "image-a", label: "Image A", resolutionOptions: ["1K", "2K"] }],
+      [{ id: "video-a", label: "Video A", minDuration: 4, maxDuration: 5 }],
       {
         image_model: { option_ids: ["image-a"] },
         video_model: { option_ids: ["video-a"] },
@@ -3665,7 +3665,7 @@ describe("Canvas command approval image params", () => {
             type: "create_node" as const,
             client_id: "text-a",
             node_type: "textAnnotationNode" as const,
-            data: { workflowCatalog: { recipeId: "story-copy", recipeLabel: "故事文案" } },
+            data: { workflowCatalog: { recipeId: "story-copy", recipeLabel: "Story copy" } },
           },
           {
             type: "create_node" as const,
@@ -3746,7 +3746,7 @@ describe("Canvas command approval image params", () => {
     });
     expect(textApprovalInitialParamsForTest(approval as never, [])).toEqual({
       nodeIds: ["text-a"],
-      recipeLabel: "故事文案",
+      recipeLabel: "Story copy",
     });
     expect(audioApprovalInitialParamsForTest(approval as never, [])).toEqual([
       expect.objectContaining({ nodeIds: ["speech-a"], audioKind: "speech" }),
@@ -3802,7 +3802,7 @@ describe("Canvas command approval image params", () => {
             type: "create_node" as const,
             client_id: "image-a",
             node_type: "imageGenNode" as const,
-            data: { prompt: "城市雨夜", model: "recommended" },
+            data: { prompt: "City rainy night", model: "recommended" },
           },
           { type: "run_workflow" as const, node_ids: ["image-a"], scope: "selection" as const },
         ],
@@ -3825,7 +3825,7 @@ describe("Canvas command approval image params", () => {
         client_id: "image-a",
         node_type: "imageGenNode",
         data: {
-          prompt: "城市雨夜",
+          prompt: "City rainy night",
           model: "seedream-4.5",
           aspectRatio: "16:9",
           size: "2K",
@@ -3849,7 +3849,7 @@ describe("Canvas command approval image params", () => {
             source_node_id: "upload-1",
             node_type: "imageGenNode" as const,
             data: {
-              prompt: "水彩风格",
+              prompt: "Watercolor style",
               model: "newapi_gpt_image2",
               aspectRatio: "9:16",
               size: "1k",
@@ -3900,7 +3900,7 @@ describe("Canvas command approval image params", () => {
             node_type: "imageGenNode" as const,
             data: { model: "newapi_gpt_image2", aspectRatio: "9:16", size: "1k" },
           },
-          { type: "update_node_data" as const, node_id: "image-a", data: { aspectRatio: "1:1", prompt: "水彩" } },
+          { type: "update_node_data" as const, node_id: "image-a", data: { aspectRatio: "1:1", prompt: "Watercolor" } },
           { type: "run_node_action" as const, node_id: "image-a", action: "generate_image" },
         ],
       }],
@@ -3920,7 +3920,7 @@ describe("Canvas command approval image params", () => {
       "update_node_data",
       "run_node_action",
     ]);
-    expect(commands[1].data).toMatchObject({ aspectRatio: "3:4", size: "2k", prompt: "水彩" });
+    expect(commands[1].data).toMatchObject({ aspectRatio: "3:4", size: "2k", prompt: "Watercolor" });
     expect(imageApprovalParamGroupsForTest(amended as never, [], "other-model", models)[0])
       .toMatchObject({ aspectRatio: "3:4", size: "2k" });
   });
@@ -3987,8 +3987,8 @@ describe("Canvas command approval image params", () => {
               source_node_id: "upload-1",
               data: { model: "newapi_gpt_image2", aspectRatio: "9:16", size: "1k" },
             },
-            // 本批新建节点作源：类型沿 client_id 链继续推断（imageGen 的首个下游
-            // 类型仍是 imageGen），与执行器 chooseNextNodeType 的结果一致。
+            // A node newly created in this batch as the source: the type keeps being inferred along the client_id chain (the first downstream of imageGen
+            // is still imageGen), consistent with the result of the executor's chooseNextNodeType.
             {
               type: "add_next_node" as const,
               client_id: "image-b",
@@ -4035,7 +4035,7 @@ describe("Canvas command approval image params", () => {
       }], ["upload-1"]);
       const clientId = (envelopes[0].commands[0] as { client_id?: string }).client_id;
       expect(clientId).toBe("auto:new:0:0");
-      // 执行器会再规范化一次，已补的 id 必须保持不变，审批与执行才对得上同一节点。
+      // The executor normalizes once more; ids that were already filled in must stay unchanged so approval and execution map to the same node.
       expect(normalizeCanvasChatCommandEnvelopesForValidation(envelopes, ["upload-1"])).toEqual(envelopes);
 
       const approval = {
@@ -4270,7 +4270,7 @@ describe("Canvas command approval audio params", () => {
       audioKind: "speech",
       speechMode: "clone",
       presetVoice: "Serena",
-      voiceLabel: "我的旁白",
+      voiceLabel: "My narration",
       voiceRef: { scope: "user_custom", voiceId: "fv_voice_1" },
       voiceAvailable: true,
       emotionPrompt: "",
@@ -4285,7 +4285,7 @@ describe("Canvas command approval audio params", () => {
         speechMode: "clone",
         voiceRef: { scope: "user_custom", voiceId: "fv_voice_1" },
         voiceAvailable: true,
-        voiceLabel: "我的旁白",
+        voiceLabel: "My narration",
       }),
     });
   });
@@ -4309,8 +4309,8 @@ describe("Canvas command approval audio params", () => {
       audioKind: "speech",
       speechMode: "preset",
       presetVoice: "Serena",
-      voiceLabel: "系统女声",
-      emotionPrompt: "克制",
+      voiceLabel: "System female voice",
+      emotionPrompt: "Restrained",
       musicLengthSec: 30,
       forceInstrumental: true,
       respectSectionsDurations: true,
@@ -4323,10 +4323,10 @@ describe("Canvas command approval audio params", () => {
           audioKind: "speech",
           speechMode: "clone",
           voicePolicyConfirmed: true,
-          emotionPrompt: "克制",
+          emotionPrompt: "Restrained",
           voiceRef: null,
           voiceAvailable: false,
-          voiceLabel: "未选择自定义声线",
+          voiceLabel: "No custom voice selected",
           voiceLanguage: "",
         },
       },
@@ -4349,7 +4349,7 @@ describe("Canvas command approval audio params", () => {
             type: "create_node" as const,
             client_id: "speech-a",
             node_type: "audioNode" as const,
-            data: { audioKind: "speech", prompt: "雨停以后" },
+            data: { audioKind: "speech", prompt: "After the rain stops" },
           },
           { type: "run_workflow" as const, node_ids: ["speech-a"], scope: "selection" as const },
         ],
@@ -4362,8 +4362,8 @@ describe("Canvas command approval audio params", () => {
       audioKind: "speech",
       speechMode: "preset",
       presetVoice: "Serena",
-      voiceLabel: "系统女声",
-      emotionPrompt: "克制",
+      voiceLabel: "System female voice",
+      emotionPrompt: "Restrained",
       musicLengthSec: 30,
       forceInstrumental: true,
       respectSectionsDurations: true,
@@ -4376,13 +4376,13 @@ describe("Canvas command approval audio params", () => {
         node_type: "audioNode",
         data: {
           audioKind: "speech",
-          prompt: "雨停以后",
+          prompt: "After the rain stops",
           speechMode: "clone",
           voicePolicyConfirmed: true,
-          emotionPrompt: "克制",
+          emotionPrompt: "Restrained",
           voiceRef: null,
           voiceAvailable: false,
-          voiceLabel: "未选择自定义声线",
+          voiceLabel: "No custom voice selected",
           voiceLanguage: "",
         },
       },
@@ -4409,7 +4409,7 @@ describe("Canvas command approval audio params", () => {
       audioKind: "music",
       speechMode: "preset",
       presetVoice: "Serena",
-      voiceLabel: "项目默认声线",
+      voiceLabel: "Project default voice",
       emotionPrompt: "",
       musicLengthSec: 60,
       forceInstrumental: true,
@@ -4636,11 +4636,11 @@ describe("Canvas command approval video params", () => {
 describe("Skill Studio flow ordering", () => {
   it("places submitted clarification summaries at their saved text anchor", () => {
     const items = buildAssistantInteractionFlowItemsForTest(
-      "你要做的是 Skill 配置草稿。我先用几道关键选择题帮你定方向。\n\n方向已明确，正在生成草稿。",
+      "What you want is a Skill configuration draft. Let me first use a few key multiple-choice questions to set the direction.\n\nThe direction is clear; generating the draft now.",
       [
         {
           type: "skill_studio.draft",
-          anchor_text_prefix: "你要做的是 Skill 配置草稿。我先用几道关键选择题帮你定方向。\n\n方向已明确，正在生成草稿。",
+          anchor_text_prefix: "What you want is a Skill configuration draft. Let me first use a few key multiple-choice questions to set the direction.\n\nThe direction is clear; generating the draft now.",
           skill_studio_session_id: "skill_studio_01",
           skill: { id: "home-culture-poster" },
           recipes: [],
@@ -4651,7 +4651,7 @@ describe("Skill Studio flow ordering", () => {
           type: "assistant.clarification.request",
           submitted: true,
           bridge_key: "clarification-key",
-          anchor_text_prefix: "你要做的是 Skill 配置草稿。我先用几道关键选择题帮你定方向。\n\n",
+          anchor_text_prefix: "What you want is a Skill configuration draft. Let me first use a few key multiple-choice questions to set the direction.\n\n",
           questions: [],
           answers: {},
         },
@@ -4661,13 +4661,13 @@ describe("Skill Studio flow ordering", () => {
     expect(items.map((item) => item.kind)).toEqual(["text", "clarification", "text", "skill_studio"]);
     expect(items[0]).toMatchObject({
       kind: "text",
-      text: "你要做的是 Skill 配置草稿。我先用几道关键选择题帮你定方向。\n\n",
+      text: "What you want is a Skill configuration draft. Let me first use a few key multiple-choice questions to set the direction.\n\n",
     });
   });
 
   it("keeps interaction cards before text when they arrived before streaming text", () => {
     const items = buildAssistantInteractionFlowItemsForTest(
-      "我会根据你的选择继续生成草稿。",
+      "I will continue generating the draft based on your selections.",
       [],
       [
         {
@@ -4681,12 +4681,12 @@ describe("Skill Studio flow ordering", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["clarification", "text"]);
-    expect(items[1]).toMatchObject({ kind: "text", text: "我会根据你的选择继续生成草稿。" });
+    expect(items[1]).toMatchObject({ kind: "text", text: "I will continue generating the draft based on your selections." });
   });
 
   it("keeps a draft card at its arrival point when later text is appended after cancellation", () => {
-    const firstText = "好的，明确了：我来生成完整的 Skill 配置草稿。";
-    const continuation = "\n\n好的，已取消本次 Skill 草稿的保存，不会写入任何配置。";
+    const firstText = "Okay, understood: I will generate the full Skill configuration draft.";
+    const continuation = "\n\nOkay, saving this Skill draft was cancelled; nothing will be written to the configuration.";
     const items = buildAssistantInteractionFlowItemsForTest(
       `${firstText}${continuation}`,
       [
@@ -4694,7 +4694,7 @@ describe("Skill Studio flow ordering", () => {
           type: "skill_studio.draft",
           cancelled: true,
           received_at: 100,
-          anchor_text_prefix: `${firstText}（正在提交草稿卡片）`,
+          anchor_text_prefix: `${firstText} (submitting the draft card)`,
           skill_studio_session_id: "skill_studio_01",
           skill: { id: "poster-skill" },
           recipes: [],
@@ -4710,11 +4710,11 @@ describe("Skill Studio flow ordering", () => {
 
   it("renders anchored cards at the text position where the event arrived", () => {
     const items = buildSkillStudioFlowItemsForTest(
-      "先说明。\n后续文字。",
+      "Intro.\nFollow-up text.",
       [
         {
           type: "skill_studio.draft",
-          anchor_text_prefix: "先说明。\n",
+          anchor_text_prefix: "Intro.\n",
           skill_studio_session_id: "skill_studio_01",
           skill: { id: "poster-skill" },
           recipes: [],
@@ -4723,13 +4723,13 @@ describe("Skill Studio flow ordering", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "event", "text"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "先说明。\n" });
-    expect(items[2]).toMatchObject({ kind: "text", text: "后续文字。" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "Intro.\n" });
+    expect(items[2]).toMatchObject({ kind: "text", text: "Follow-up text." });
   });
 
   it("keeps stale-anchor cards after continuation text when streaming restarts after a tool result", () => {
     const items = buildSkillStudioFlowItemsForTest(
-      "已保存这个 Skill，接下来可以继续扩展。",
+      "This Skill has been saved; you can keep extending it next.",
       [
         {
           type: "skill_studio.draft",
@@ -4742,21 +4742,21 @@ describe("Skill Studio flow ordering", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "event"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "已保存这个 Skill，接下来可以继续扩展。" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "This Skill has been saved; you can keep extending it next." });
   });
 
   it("keeps submitted question cards after assistant narration when their saved anchor is stale", () => {
     const items = buildSkillStudioFlowItemsForTest(
       [
-        "你要做一个「家乡文化海报」工作流 Skill——我先按 Skill Studio 的方式问几个关键选择，再据此起草完整 Skill/Recipe。",
-        "这是 Skill Studio 配置，不是画布写入。先收几个方向信息，再生成完整 Skill/Recipe 草稿。",
-        "已根据你的选择整理完整 Skill 草稿，正在提交可视化卡片供你确认与微调。",
+        "You want a \"Hometown Culture Poster\" workflow Skill. I will first ask a few key choices the Skill Studio way, then draft the full Skill/Recipe accordingly.",
+        "This is a Skill Studio configuration, not a canvas write. Collect a few direction details first, then generate the full Skill/Recipe draft.",
+        "The full Skill draft has been organized from your selections; submitting a visual card for you to confirm and fine-tune.",
       ].join("\n\n"),
       [
         {
           type: "skill_studio.questions",
           submitted: true,
-          anchor_text_prefix: "我先进入 Skill Studio。",
+          anchor_text_prefix: "Let me enter Skill Studio first.",
           skill_studio_session_id: "skill_studio_01",
           selections: { audience: "local" },
           questions: [],
@@ -4767,13 +4767,13 @@ describe("Skill Studio flow ordering", () => {
     expect(items.map((item) => item.kind)).toEqual(["text", "event"]);
     expect(items[0]).toMatchObject({
       kind: "text",
-      text: expect.stringContaining("你要做一个「家乡文化海报」工作流 Skill"),
+      text: expect.stringContaining("You want a \"Hometown Culture Poster\" workflow Skill"),
     });
   });
 
   it("keeps submitted unanchored question cards after assistant text", () => {
     const items = buildSkillStudioFlowItemsForTest(
-      "我会根据你的选择生成草稿。",
+      "I will generate the draft based on your selections.",
       [
         {
           type: "skill_studio.questions",
@@ -4790,7 +4790,7 @@ describe("Skill Studio flow ordering", () => {
 
   it("keeps cancelled draft cards after text when no anchor is available", () => {
     const items = buildSkillStudioFlowItemsForTest(
-      "已取消保存，我会继续按当前上下文回复。",
+      "Saving was cancelled; I will keep replying based on the current context.",
       [
         {
           type: "skill_studio.draft",
@@ -4803,17 +4803,17 @@ describe("Skill Studio flow ordering", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "event"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "已取消保存，我会继续按当前上下文回复。" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "Saving was cancelled; I will keep replying based on the current context." });
   });
 
   it("keeps cancelled draft cards at the saved anchor before continuation text", () => {
     const items = buildSkillStudioFlowItemsForTest(
-      "已生成 Skill 草稿，正在提交卡片。\n已取消保存，我会继续按当前上下文回复。",
+      "The Skill draft has been generated; submitting the card.\nSaving was cancelled; I will keep replying based on the current context.",
       [
         {
           type: "skill_studio.draft",
           cancelled: true,
-          anchor_text_prefix: "已生成 Skill 草稿，正在提交卡片。\n",
+          anchor_text_prefix: "The Skill draft has been generated; submitting the card.\n",
           skill_studio_session_id: "skill_studio_01",
           skill: { id: "poster-skill" },
           recipes: [],
@@ -4822,8 +4822,8 @@ describe("Skill Studio flow ordering", () => {
     );
 
     expect(items.map((item) => item.kind)).toEqual(["text", "event", "text"]);
-    expect(items[0]).toMatchObject({ kind: "text", text: "已生成 Skill 草稿，正在提交卡片。\n" });
-    expect(items[2]).toMatchObject({ kind: "text", text: "已取消保存，我会继续按当前上下文回复。" });
+    expect(items[0]).toMatchObject({ kind: "text", text: "The Skill draft has been generated; submitting the card.\n" });
+    expect(items[2]).toMatchObject({ kind: "text", text: "Saving was cancelled; I will keep replying based on the current context." });
   });
 });
 
@@ -4833,39 +4833,39 @@ describe("repeated canvas status collapsing", () => {
       {
         kind: "context",
         key: "context:1",
-        activity: { key: "1", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        activity: { key: "1", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
       {
         kind: "context",
         key: "context:2",
-        activity: { key: "2", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        activity: { key: "2", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
-      { kind: "text", key: "text:1", text: "继续分析。" },
+      { kind: "text", key: "text:1", text: "Continue analyzing." },
       {
         kind: "context",
         key: "context:3",
-        activity: { key: "3", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        activity: { key: "3", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
       {
         kind: "context",
         key: "context:4",
-        activity: { key: "4", turnId: null, bridgeKey: null, status: "done", labels: ["画布 Ontology"], errors: [] },
+        activity: { key: "4", turnId: null, bridgeKey: null, status: "done", labels: ["Canvas ontology"], errors: [] },
       },
     ]);
 
     expect(items).toHaveLength(4);
     expect(items[0]).toMatchObject({
       kind: "context",
-      activity: { labels: ["节点详情"], repeatCount: 2 },
+      activity: { labels: ["Node details"], repeatCount: 2 },
     });
     expect(items[1]).toMatchObject({ kind: "text" });
     expect(items[2]).toMatchObject({
       kind: "context",
-      activity: { labels: ["节点详情"] },
+      activity: { labels: ["Node details"] },
     });
     expect(items[3]).toMatchObject({
       kind: "context",
-      activity: { labels: ["画布 Ontology"] },
+      activity: { labels: ["Canvas ontology"] },
     });
   });
 
@@ -4874,30 +4874,30 @@ describe("repeated canvas status collapsing", () => {
       {
         id: "context-1",
         type: "canvas_context",
-        event: { key: "1", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        event: { key: "1", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
       {
         id: "context-2",
         type: "canvas_context",
-        event: { key: "2", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        event: { key: "2", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
       { id: "text-1", type: "text", text: "Let me continue." },
       {
         id: "context-3",
         type: "canvas_context",
-        event: { key: "3", turnId: null, bridgeKey: null, status: "done", labels: ["节点详情"], errors: [] },
+        event: { key: "3", turnId: null, bridgeKey: null, status: "done", labels: ["Node details"], errors: [] },
       },
     ]);
 
     expect(parts).toHaveLength(3);
     expect(parts[0]).toMatchObject({
       type: "canvas_context",
-      event: { labels: ["节点详情"], repeatCount: 2 },
+      event: { labels: ["Node details"], repeatCount: 2 },
     });
     expect(parts[1]).toMatchObject({ type: "text" });
     expect(parts[2]).toMatchObject({
       type: "canvas_context",
-      event: { labels: ["节点详情"] },
+      event: { labels: ["Node details"] },
     });
   });
 });
@@ -5066,9 +5066,9 @@ describe("useSuperChat websocket lifecycle", () => {
 
     act(() => {
       hook.result.current.send(
-        "查看下当前节点详情然后返回ok",
+        "Check the current node details and reply ok",
         [],
-        "查看下当前节点详情然后返回ok\n\nnode_type: skillNode\navailable_actions: run_skill",
+        "Check the current node details and reply ok\n\nnode_type: skillNode\navailable_actions: run_skill",
       );
     });
 
@@ -5078,7 +5078,7 @@ describe("useSuperChat websocket lifecycle", () => {
 
     expect(chatFrame).toEqual(expect.objectContaining({
       text: expect.stringContaining("node_type: skillNode"),
-      user_text: "查看下当前节点详情然后返回ok",
+      user_text: "Check the current node details and reply ok",
       context: {
         freezone_canvas_id: "canvas-a",
         canvas_command_execution_mode: "auto_execute",
@@ -5152,8 +5152,8 @@ describe("useSuperChat websocket lifecycle", () => {
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledWith("api/v1/chat/cancel", {
       json: { scope, turn_id: chatFrame?.turn_id },
     }));
-    // 取消是请求而不是终态，连接要留着等服务端的终态帧。这里只断言"取消发给了正确的
-    // 业务轮次"（本测试的主题），关连接的时机由下面两条专门的测试管。
+    // Cancellation is a request, not a terminal state, so the connection must stay open for the server's terminal frame. Here we only assert "the cancel was sent to the correct
+    // business turn" (the subject of this test); the timing of closing the connection is covered by the two dedicated tests below.
     expect(closeCalls).toEqual([]);
   });
 
@@ -5219,8 +5219,8 @@ describe("useSuperChat websocket lifecycle", () => {
 
     act(() => hook.result.current.abort());
 
-    // 服务端要在几十毫秒内把 `agent.turn.completed disposition=cancelled` 发到这条
-    // 连接上；abort 立刻 close 的话这一帧对任何客户端都不可观测。
+    // Within tens of milliseconds the server sends `agent.turn.completed disposition=cancelled` on this
+    // connection; if abort closed it immediately, this frame would be unobservable to any client.
     expect(closeCalls).toEqual([]);
     expect(sockets[0]?.readyState).toBe(1);
 
@@ -5239,7 +5239,7 @@ describe("useSuperChat websocket lifecycle", () => {
       } as MessageEvent);
     });
 
-    // 正常收到终态帧就不需要关连接了，也不该触发重连。
+    // Once the terminal frame is received normally there is no need to close the connection, nor should it trigger a reconnect.
     expect(closeCalls).toEqual([]);
     expect(sockets).toHaveLength(1);
     expect(hook.result.current.busy).toBe(false);
@@ -5314,7 +5314,7 @@ describe("useSuperChat websocket lifecycle", () => {
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    // 服务端一直不给终态帧时才自救：关掉并让 onclose 重连，用历史对账。
+    // Only self-rescue when the server never sends a terminal frame: close and let onclose reconnect, reconciling with history.
     expect(closeCalls).toEqual([[4000, "client abort"]]);
   });
 
@@ -5365,7 +5365,7 @@ describe("useSuperChat websocket lifecycle", () => {
           type: "assistant.delta",
           scope,
           turn_id: "turn-identity",
-          text: "身份规划已完成，可直",
+          text: "Identity planning is complete; you can go straig",
           accumulated: true,
         }),
       } as MessageEvent);
@@ -5377,7 +5377,7 @@ describe("useSuperChat websocket lifecycle", () => {
           message: {
             id: 403,
             role: "assistant",
-            content: "身份规划已完成，可直接进入下一步（剧本生成）。",
+            content: "Identity planning is complete; you can go straight to the next step (script generation).",
             created_at: "2026-08-04T09:13:46.445748+00:00",
           },
         }),
@@ -5387,7 +5387,7 @@ describe("useSuperChat websocket lifecycle", () => {
     await waitFor(() => {
       const replies = hook.result.current.messages.filter((item) => item.role === "assistant");
       expect(replies).toHaveLength(1);
-      expect(replies[0]?.text).toBe("身份规划已完成，可直接进入下一步（剧本生成）。");
+      expect(replies[0]?.text).toBe("Identity planning is complete; you can go straight to the next step (script generation).");
     });
     expect(
       sentFrames
@@ -5491,7 +5491,7 @@ describe("useSuperChat websocket lifecycle", () => {
           message: {
             id: 9,
             role: "assistant",
-            content: "草稿已生成。",
+            content: "The draft has been generated.",
             turn_id: "turn-1",
             created_at: "2026-07-13T08:00:00+00:00",
             parts: [
@@ -5520,7 +5520,7 @@ describe("useSuperChat websocket lifecycle", () => {
             parts: expect.arrayContaining([
               expect.objectContaining({ type: "clarification" }),
               expect.objectContaining({ type: "skill_studio" }),
-              expect.objectContaining({ type: "text", text: "草稿已生成。" }),
+              expect.objectContaining({ type: "text", text: "The draft has been generated." }),
             ]),
           }),
         }),
@@ -5791,7 +5791,7 @@ describe("useSuperChat websocket lifecycle", () => {
           message: {
             id: 10,
             role: "assistant",
-            content: "草稿已生成。",
+            content: "The draft has been generated.",
             turn_id: "turn-1",
             created_at: "2026-07-13T08:00:00+00:00",
             parts: [
@@ -5804,7 +5804,7 @@ describe("useSuperChat websocket lifecycle", () => {
                   skill_studio_session_id: "studio-1",
                   mode: "create",
                   draft: {
-                    summary: "草稿",
+                    summary: "Draft",
                     skill: { id: "saved-skill" },
                     recipes: [{ id: "saved-recipe" }],
                     warnings: [],
@@ -5848,7 +5848,7 @@ describe("useSuperChat websocket lifecycle", () => {
           saved_recipe_ids: ["saved-recipe"],
           action: "confirm_add",
           draft: {
-            summary: "草稿",
+            summary: "Draft",
             skill: { id: "saved-skill" },
             recipes: [{ id: "saved-recipe" }],
             warnings: [],
@@ -5875,7 +5875,7 @@ describe("useSuperChat websocket lifecycle", () => {
                   saved_recipe_ids: ["saved-recipe"],
                 }),
               }),
-              expect.objectContaining({ type: "text", text: "草稿已生成。" }),
+              expect.objectContaining({ type: "text", text: "The draft has been generated." }),
             ]),
           }),
         }),
@@ -5901,7 +5901,7 @@ describe("canvas command bridge events", () => {
           canvas_id: "canvas-a",
           envelope: { schema_version: "canvas_chat_commands.v1", commands: [] },
         },
-        "正在更新视频节点的内容...\n",
+        "Updating the video node content...\n",
       );
     } finally {
       window.removeEventListener(SUPERCHAT_CANVAS_COMMAND_EVENT, handleEvent);
@@ -5909,7 +5909,7 @@ describe("canvas command bridge events", () => {
 
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({
-      anchorTextPrefix: "正在更新视频节点的内容...\n",
+      anchorTextPrefix: "Updating the video node content...\n",
       frame: {
         type: "canvas.command",
         bridge_key: "bridge-a",
@@ -5984,7 +5984,7 @@ describe("canvas command bridge events", () => {
           event: {
             type: "skill_studio.status",
             status: "draft_recipe_ready",
-            message: "已生成 Recipe 1 / 5",
+            message: "Recipe 1 / 5 generated",
           },
         }),
       } as MessageEvent);
@@ -6061,13 +6061,13 @@ describe("tool status parts", () => {
         name: "freezone_skill_list",
         status: "completed",
       }, "turn-a"),
-      { id: "text", type: "text", text: "你好，这是一段普通回复。" },
+      { id: "text", type: "text", text: "Hello, this is an ordinary reply." },
     ])).toBe(false);
   });
 
   it("keeps assistant messages wide for structured cards", () => {
     expect(assistantPartsPreferWideLayoutForTest([
-      { id: "text", type: "text", text: "请确认下面的操作。" },
+      { id: "text", type: "text", text: "Please confirm the operation below." },
       { id: "approval", type: "canvas_approval", event: { id: "approval-a" } },
     ])).toBe(true);
   });
@@ -6132,13 +6132,13 @@ describe("tool status parts", () => {
         id: "thought-1",
         type: "agent_thought",
         seq: 1,
-        event: { text: "先理解用户需求。", status: "completed" },
+        event: { text: "First understand the user's needs.", status: "completed" },
       },
       {
         id: "thought-2",
         type: "agent_thought",
         seq: 2,
-        event: { text: "再检查画布状态。", status: "running" },
+        event: { text: "Then check the canvas state.", status: "running" },
       },
       toolStatusPartForTest("agent.tool.updated", {
         type: "agent.tool.updated",
@@ -6151,7 +6151,7 @@ describe("tool status parts", () => {
         id: "thought-3",
         type: "agent_thought",
         seq: 4,
-        event: { text: "最后组织回复。", status: "completed" },
+        event: { text: "Finally compose the reply.", status: "completed" },
       },
     ]);
 
@@ -6161,7 +6161,7 @@ describe("tool status parts", () => {
       type: "agent_thought",
       seq: 1,
       event: {
-        text: "先理解用户需求。\n\n再检查画布状态。",
+        text: "First understand the user's needs.\n\nThen check the canvas state.",
         status: "running",
       },
     });
@@ -6214,7 +6214,7 @@ describe("tool status parts", () => {
       status: "completed",
     }, "turn-a");
 
-    expect(genericToolTitleForTest((part as { event: ChatMessage }).event)).toBe("整理 Skill 方案");
+    expect(genericToolTitleForTest((part as { event: ChatMessage }).event)).toBe("Outline Skill plan");
   });
 
   it("uses a lightweight retry label for failed Skill Studio outline status", () => {
@@ -6231,7 +6231,7 @@ describe("tool status parts", () => {
       status: "failed",
       title: genericToolTitleForTest(toolMessage),
       toolMessage,
-    })).toBe("待重新整理 Skill 方案");
+    })).toBe("Skill plan needs to be outlined again");
   });
 
   it("uses friendly labels for Workflow Skill draft tool status", () => {
@@ -6261,17 +6261,17 @@ describe("tool status parts", () => {
       status: "done",
       title: genericToolTitleForTest(prepareCompleted),
       toolMessage: prepareCompleted,
-    })).toBe("已生成工作流草稿");
+    })).toBe("Generate workflow draft done");
     expect(toolStatusRuntimeTextForTest({
       status: "failed",
       title: genericToolTitleForTest(prepareFailed),
       toolMessage: prepareFailed,
-    })).toBe("待重新生成工作流草稿");
+    })).toBe("Workflow draft needs to be regenerated");
     expect(toolStatusRuntimeTextForTest({
       status: "done",
       title: genericToolTitleForTest(confirmCompleted),
       toolMessage: confirmCompleted,
-    })).toBe("已提交到画布");
+    })).toBe("Submit to canvas done");
   });
 
   it("renders workflow parameter handoff as waiting instead of failed", () => {
@@ -6293,7 +6293,7 @@ describe("tool status parts", () => {
       status: "failed",
       title: genericToolTitleForTest(waiting),
       toolMessage: waiting,
-    })).toBe("等待选择生成参数");
+    })).toBe("Waiting for generation parameters");
   });
 
   it("hides a superseded parameter handoff after the same draft operation succeeds", () => {
@@ -6359,7 +6359,7 @@ describe("tool status parts", () => {
         call_id: "call-failed",
         name: "freezone_put_agent_catalog_recipe",
         status: "failed",
-        error: "提交失败",
+        error: "Submission failed",
       }, "turn-a"),
       seq: 3,
     };
@@ -6367,7 +6367,7 @@ describe("tool status parts", () => {
       id: "thought-a",
       type: "agent_thought",
       seq: 4,
-      event: { text: "继续整理草稿。", status: "running" },
+      event: { text: "Keep organizing the draft.", status: "running" },
     };
 
     const historical = agentRuntimeDisplayPartsForTest(
@@ -6550,7 +6550,7 @@ describe("tool status parts", () => {
       event: {
         type: "skill_studio.status",
         status: "routing",
-        message: "正在整理 Skill 方向...",
+        message: "Organizing the Skill direction...",
       },
     };
     const thought: ChatMessagePart & { type: "agent_thought"; event: unknown } = {
@@ -6562,7 +6562,7 @@ describe("tool status parts", () => {
 
     expect(hideSettledToolStatus).toBe(false);
     expect(agentThoughtRuntimePresentationForTest(thought, { streaming: true })).toMatchObject({
-      label: "思考中",
+      label: "Thinking",
       initiallyExpanded: true,
     });
   });
@@ -6571,13 +6571,13 @@ describe("tool status parts", () => {
     const assistant: ChatMessage = {
       id: "assistant-1",
       role: "assistant",
-      text: "好的，我重新提交这份草稿，你可以在预览后确认保存或继续修改。",
+      text: "Okay, I will resubmit this draft; after previewing it you can confirm saving or keep editing.",
       timestamp: Date.now(),
       parts: [
         {
           id: "text-1",
           type: "text",
-          text: "好的，我重新提交这份草稿，你可以在预览后确认保存或继续修改。",
+          text: "Okay, I will resubmit this draft; after previewing it you can confirm saving or keep editing.",
           seq: 1,
         },
         {
@@ -6587,7 +6587,7 @@ describe("tool status parts", () => {
           event: {
             type: "skill_studio.status",
             status: "draft_recipe_ready",
-            message: "已生成 Recipe 1 / 5",
+            message: "Recipe 1 / 5 generated",
           },
         },
         {
@@ -6620,26 +6620,26 @@ describe("tool status parts", () => {
           "missing-recipe",
         ],
       },
-      [{ id: "new-recipe", name: "新建 Recipe" }],
+      [{ id: "new-recipe", name: "New Recipe" }],
       [
         {
           id: "drama-character-turnaround",
-          name: "角色多角度立绘",
-          description: "角色设定与转面图",
+          name: "Character multi-angle illustration",
+          description: "Character settings and turnaround",
           output_kind: "image",
           action_keys: ["character-turnaround"],
-          system_prompt: "生成角色多角度模板",
-          must_have_items: ["正面", "侧面"],
-          planning_prompt: "整理角色外观",
-          result_summary: "角色模板",
+          system_prompt: "Generate a character multi-angle template",
+          must_have_items: ["Front", "Side"],
+          planning_prompt: "Organize the character appearance",
+          result_summary: "Character template",
           requires_source_media: true,
           force_enhancement: true,
           skip_detail_check: true,
         },
         {
           id: "video-storyboard-grid",
-          name: "多宫格分镜图",
-          result_summary: "分镜草图",
+          name: "Multi-grid storyboard",
+          result_summary: "Storyboard sketch",
           output_kind: "image",
         },
       ],
@@ -6648,13 +6648,13 @@ describe("tool status parts", () => {
     expect(referenced).toEqual([
       {
         id: "drama-character-turnaround",
-        name: "角色多角度立绘",
+        name: "Character multi-angle illustration",
         outputKind: "image",
         actionKeys: ["character-turnaround"],
-        systemPrompt: "生成角色多角度模板",
-        mustHaveItems: ["正面", "侧面"],
-        planningPrompt: "整理角色外观",
-        resultSummary: "角色模板",
+        systemPrompt: "Generate a character multi-angle template",
+        mustHaveItems: ["Front", "Side"],
+        planningPrompt: "Organize the character appearance",
+        resultSummary: "Character template",
         requiresSourceMedia: true,
         enabled: true,
         forceEnhancement: true,
@@ -6663,13 +6663,13 @@ describe("tool status parts", () => {
       },
       {
         id: "video-storyboard-grid",
-        name: "多宫格分镜图",
+        name: "Multi-grid storyboard",
         outputKind: "image",
         actionKeys: [],
         systemPrompt: "",
         mustHaveItems: [],
         planningPrompt: "",
-        resultSummary: "分镜草图",
+        resultSummary: "Storyboard sketch",
         requiresSourceMedia: false,
         enabled: true,
         forceEnhancement: false,
@@ -6698,15 +6698,15 @@ describe("tool status parts", () => {
     const thought: ChatMessagePart & { type: "agent_thought"; event: unknown } = {
       id: "thought-a",
       type: "agent_thought",
-      event: { text: "继续整理草稿。", status: "running" },
+      event: { text: "Keep organizing the draft.", status: "running" },
     };
 
     expect(agentThoughtRuntimePresentationForTest(thought, { streaming: false })).toMatchObject({
-      label: "思考过程",
+      label: "Thought process",
       initiallyExpanded: false,
     });
     expect(agentThoughtRuntimePresentationForTest(thought, { streaming: true })).toMatchObject({
-      label: "思考中",
+      label: "Thinking",
       initiallyExpanded: true,
     });
   });
@@ -6750,7 +6750,7 @@ describe("tool status parts", () => {
       type: "tool.result",
       turn_id: "turn-a",
       name: "freezone_create_node",
-      result: "已创建节点",
+      result: "Node created",
     })).toBe(false);
   });
 
@@ -6838,7 +6838,7 @@ describe("agent permission options", () => {
   const approval = {
     id: "permission-a",
     kind: "agent" as const,
-    title: "运行命令",
+    title: "Run command",
     options: [
       { optionId: "allow_once", kind: "allow_once", name: "Allow once" },
       { optionId: "allow_session", kind: "allow_always", name: "Allow for session" },
@@ -6882,7 +6882,7 @@ describe("sanitizeMessagesForCache", () => {
     const original: ChatMessage = {
       id: "m1",
       role: "user",
-      text: "见图",
+      text: "See the image",
       timestamp: 1,
       raw: { keep: "me" },
       attachments: [
@@ -6916,7 +6916,7 @@ describe("sanitizeMessagesForCache", () => {
     const original: ChatMessage = {
       id: "assistant-turn-a",
       role: "assistant",
-      text: "完成",
+      text: "Done",
       timestamp: 1,
       parts: [
         { id: "plan", type: "agent_plan", event: { entries: [] } },
@@ -6944,7 +6944,7 @@ describe("sanitizeMessagesForCache", () => {
     const original: ChatMessage = {
       id: "agent-tool-call-1",
       role: "tool",
-      text: "读取完成",
+      text: "Read complete",
       timestamp: 1,
       raw: { output: { large: "payload" } },
     };
@@ -6952,7 +6952,7 @@ describe("sanitizeMessagesForCache", () => {
     const [sanitized] = sanitizeMessagesForCache([original]);
 
     expect(sanitized.raw).toBeUndefined();
-    expect(sanitized.text).toBe("读取完成");
+    expect(sanitized.text).toBe("Read complete");
   });
 
   it("de-nests raw so it can't grow across load→save cycles", () => {

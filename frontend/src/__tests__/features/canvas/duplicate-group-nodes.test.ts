@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 复制一个组 = 组框 + 全部成员一起克隆。历史上这里踩过三个坑：成员被塞回原组、
-// 每个成员各自往下偏移一次（组内瞬间散架）、组框尺寸丢失（createNode 不带 width/height）。
+// Duplicating a group = cloning the group frame + all members together. Three pitfalls were hit here historically: members stuffed back into the original group,
+// each member offset downward once on its own (the group falls apart instantly), and the group frame size lost (createNode carries no width/height).
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CANVAS_NODE_TYPES, type CanvasNode } from "@/features/canvas/domain/canvasNodes";
@@ -28,14 +28,14 @@ describe("duplicateNodesAsSiblings", () => {
       "g",
       CANVAS_NODE_TYPES.group,
       { x: 0, y: 0 },
-      { label: "苏鸾" },
+      { label: "Su Luan" },
       { width: 640, height: 480, style: { zIndex: -1 } },
     );
     const member = node(
       "m",
       CANVAS_NODE_TYPES.imageGen,
       { x: 40, y: 60 },
-      { displayName: "立绘" },
+      { displayName: "Portrait" },
       { parentId: "g", extent: "parent" },
     );
     useCanvasStore.setState({ nodes: [group, member], edges: [] });
@@ -50,35 +50,35 @@ describe("duplicateNodesAsSiblings", () => {
 
     expect(groupClone).toBeDefined();
     expect(memberClone).toBeDefined();
-    // 成员挂到新组上，而不是原组
+    // Members attach to the new group, not the original group
     expect(memberClone?.parentId).toBe(groupCloneId);
-    // 成员坐标是相对父组的，跟着组走就行，不能再各自下移
+    // Member coordinates are relative to the parent group and simply follow the group; they must not each shift down again
     expect(memberClone?.position).toEqual({ x: 40, y: 60 });
-    // 组框自己才需要让开一个身位
+    // Only the group frame itself needs to step aside by one slot
     expect(groupClone?.position).toEqual({ x: 0, y: 480 + 24 });
-    // 尺寸/样式是节点级字段，createNode 带不过来，必须手动搬
+    // Size/style are node-level fields that createNode cannot carry over, so they must be moved by hand
     expect(groupClone?.width).toBe(640);
     expect(groupClone?.height).toBe(480);
-    // 只有被直接复制的对象加「副本」后缀，组内成员保持原名
-    expect((groupClone?.data as { label?: string }).label).toBe("苏鸾 - 副本");
-    expect((memberClone?.data as { displayName?: string }).displayName).toBe("立绘");
+    // Only the directly duplicated object gets the "Copy" suffix, and in-group members keep their original names
+    expect((groupClone?.data as { label?: string }).label).toBe("Su Luan - Copy");
+    expect((memberClone?.data as { displayName?: string }).displayName).toBe("Portrait");
   });
 
-  // 框选整组走的是这条路:marquee 剔除祖先组，工具栏拿到的 selected 里只有成员。
-  // 直接把它递给 store 会重现「副本散架 + 塞回原组」；补组后必须和显式选中组等价。
+  // Box-selecting a whole group goes this way: the marquee drops the ancestor group, and the toolbar's selected contains only members.
+  // Passing it straight to the store would reproduce "the copy falls apart + gets stuffed back into the original group"; after adding the group back it must be equivalent to explicitly selecting the group.
   it("keeps the group intact when only its members are selected (marquee path)", () => {
     const group = node(
       "g",
       CANVAS_NODE_TYPES.group,
       { x: 0, y: 0 },
-      { label: "苏鸾" },
+      { label: "Su Luan" },
       { width: 640, height: 480, style: { zIndex: -1 } },
     );
     const member = node(
       "m",
       CANVAS_NODE_TYPES.imageGen,
       { x: 40, y: 60 },
-      { displayName: "立绘" },
+      { displayName: "Portrait" },
       { parentId: "g", extent: "parent" },
     );
     const nodes = [group, member];
@@ -96,15 +96,15 @@ describe("duplicateNodesAsSiblings", () => {
     expect(memberClone?.position).toEqual({ x: 40, y: 60 });
     expect(groupClone?.position).toEqual({ x: 0, y: 480 + 24 });
     expect(groupClone?.width).toBe(640);
-    // 成员不加后缀，只有组框自己算「被直接复制的对象」
-    expect((groupClone?.data as { label?: string }).label).toBe("苏鸾 - 副本");
-    expect((memberClone?.data as { displayName?: string }).displayName).toBe("立绘");
+    // Members get no suffix; only the group frame itself counts as "the directly duplicated object"
+    expect((groupClone?.data as { label?: string }).label).toBe("Su Luan - Copy");
+    expect((memberClone?.data as { displayName?: string }).displayName).toBe("Portrait");
   });
 
   it("still offsets a standalone node below the original", () => {
     useCanvasStore.setState({
       nodes: [
-        node("solo", CANVAS_NODE_TYPES.imageGen, { x: 10, y: 20 }, { displayName: "封面" }, {
+        node("solo", CANVAS_NODE_TYPES.imageGen, { x: 10, y: 20 }, { displayName: "Cover" }, {
           measured: { width: 320, height: 200 },
         }),
       ],
@@ -116,7 +116,7 @@ describe("duplicateNodesAsSiblings", () => {
 
     expect(clone?.position).toEqual({ x: 10, y: 20 + 200 + 24 });
     expect(clone?.parentId).toBeUndefined();
-    expect((clone?.data as { displayName?: string }).displayName).toBe("封面 - 副本");
+    expect((clone?.data as { displayName?: string }).displayName).toBe("Cover - Copy");
   });
 });
 
@@ -125,13 +125,13 @@ describe("createdAt on duplication", () => {
     useCanvasStore.setState({ nodes: [], edges: [] });
   });
 
-  // 工厂里 createdAt 压在 ...data 之后，就是为了这条：duplicateNodeAsSibling 会把
-  // 源节点的整份 data 摊进去，放前面的话复制出来的节点会继承源节点的创建时刻，
-  // 而侧栏大纲正是靠这个时刻区分「同一条提示词复制三份」的重名行。
+  // In the factory createdAt is placed after ...data for exactly this reason: duplicateNodeAsSibling spreads
+  // the source node's whole data in, and if it came first the duplicate would inherit the source node's creation time,
+  // while the sidebar outline relies on exactly that time to tell apart same-named rows from "one prompt duplicated three times".
   it("gives each clone its own creation moment instead of inheriting the source's", () => {
     const createdAt = new Date(2020, 0, 1).getTime();
     useCanvasStore.setState({
-      nodes: [node("src", CANVAS_NODE_TYPES.video, { x: 0, y: 0 }, { displayName: "海边的黄昏", createdAt })],
+      nodes: [node("src", CANVAS_NODE_TYPES.video, { x: 0, y: 0 }, { displayName: "Dusk by the sea", createdAt })],
       edges: [],
     });
 
@@ -139,7 +139,7 @@ describe("createdAt on duplication", () => {
     const clone = useCanvasStore.getState().nodes.find((n) => n.id === cloneId);
 
     expect(clone).toBeDefined();
-    expect((clone!.data as { displayName?: string }).displayName).toBe("海边的黄昏");
+    expect((clone!.data as { displayName?: string }).displayName).toBe("Dusk by the sea");
     expect((clone!.data as { createdAt?: number }).createdAt).not.toBe(createdAt);
     expect((clone!.data as { createdAt?: number }).createdAt).toBeGreaterThan(createdAt);
   });

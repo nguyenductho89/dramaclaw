@@ -244,8 +244,8 @@ it("preserves connected copy and names media for HTML prompts", async () => {
   await executeWorkflowHtmlNode("page", "p", "c");
   expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({upstreamInputMode: "connected", upstreamText: "Fresh coffee"}));
   expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"name":"Coffee hero"');
-  expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"mention":"@图片1"');
-  expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"mention":"@文本1"');
+  expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"mention":"@image1"');
+  expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"mention":"@text1"');
   expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"width":1088');
   expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"height":608');
   expect(mocks.generate.mock.calls[0][0].requiredOutputContext).toContain('"aspect_ratio":"34:19"');
@@ -384,12 +384,12 @@ it("includes connected text and exact media metadata in ordinary HTML generation
 
   const prompt = mocks.submitText.mock.calls[0][1].prompt as string;
   expect(prompt).toContain("Build a coffee page");
-  expect(prompt).toContain('"mention":"@图片1"');
+  expect(prompt).toContain('"mention":"@image1"');
   expect(prompt).toContain('"url":"/api/v1/projects/p/media/coffee.png"');
   expect(prompt).toContain('"width":1088');
   expect(prompt).toContain('"height":608');
   expect(prompt).toContain('"aspect_ratio":"34:19"');
-  expect(prompt).toContain('"mention":"@文本1"');
+  expect(prompt).toContain('"mention":"@text1"');
   expect(prompt).toContain("Fresh coffee every morning");
 });
 

@@ -418,7 +418,7 @@ async def test_app_server_native_tool_search_preserves_gateway_event_chain(
                     "type": "message",
                     "role": "assistant",
                     "id": "message-1",
-                    "content": [{"type": "output_text", "text": "需要用户确认。"}],
+                    "content": [{"type": "output_text", "text": "User confirmation is required."}],
                 },
             },
             _response_completed("response-3"),
@@ -463,7 +463,7 @@ async def test_app_server_native_tool_search_preserves_gateway_event_chain(
             events = [
                 event
                 async for event in client.thread_start().stream(
-                    "为第 1 集准备系统音色，但不要确认执行。"
+                    "Prepare system voices for episode 1, but do not confirm execution."
                 )
             ]
         finally:
@@ -546,7 +546,7 @@ async def test_app_server_native_tool_search_preserves_gateway_event_chain(
     assert tool_events[0].call_id == tool_call_id
     assert tool_events[0].structured == tool_result
     assert any(
-        event.type == "complete" and event.text == "需要用户确认。" for event in events
+        event.type == "complete" and event.text == "User confirmation is required." for event in events
     )
 
 
@@ -571,7 +571,7 @@ async def test_app_server_chat_compat_catalog_omits_native_tool_search(
                     "type": "message",
                     "role": "assistant",
                     "id": "message-compat",
-                    "content": [{"type": "output_text", "text": "兼容模式正常。"}],
+                    "content": [{"type": "output_text", "text": "Compatibility mode works."}],
                 },
             },
             _response_completed("response-compat"),
@@ -613,7 +613,7 @@ async def test_app_server_chat_compat_catalog_omits_native_tool_search(
         try:
             events = [
                 event
-                async for event in client.thread_start().stream("查询当前项目状态。")
+                async for event in client.thread_start().stream("Query the current project status.")
             ]
         finally:
             codex_app_server.stop_shared_codex_runtime()
@@ -623,7 +623,7 @@ async def test_app_server_chat_compat_catalog_omits_native_tool_search(
     assert not any(tool.get("type") == "tool_search" for tool in tools)
     assert any(tool.get("type") == "function" for tool in tools)
     assert any(
-        event.type == "complete" and event.text == "兼容模式正常。" for event in events
+        event.type == "complete" and event.text == "Compatibility mode works." for event in events
     )
 
 
@@ -690,8 +690,8 @@ async def test_real_gateway_app_server_native_tool_search_calls_concrete_mcp(
         events = [
             event
             async for event in client.thread_start().stream(
-                "为第 1 集准备系统音色，但不要确认执行。使用原生 Tool Search 找到并调用"
-                "唯一合适的 DramaClaw MCP 业务工具，然后简短报告确认要求。"
+                "Prepare system voices for episode 1, but do not confirm execution. Use native Tool Search to find and call "
+                "the single suitable DramaClaw MCP business tool, then briefly report the confirmation requirement."
             )
         ]
     finally:
@@ -1072,7 +1072,7 @@ async def test_codex_stream_times_out_before_first_runtime_progress(
     assert events[-3].error["kind"] == "first-progress"
     assert events[-2].disposition == "timeout"
     assert events[-1].disposition == "timeout"
-    assert events[-1].text == "Codex App Server 响应超时，请重试。"
+    assert events[-1].text == "Codex App Server response timed out; please retry."
 
 
 def test_codex_first_progress_timeout_accepts_positive_environment_override(
@@ -1125,7 +1125,7 @@ async def test_codex_stream_times_out_after_runtime_becomes_idle(monkeypatch, tm
                     "threadId": "thread-idle",
                     "turnId": "turn-idle",
                     "itemId": "message-idle",
-                    "delta": "处理中",
+                    "delta": "Processing",
                 }
             ),
         ),
@@ -1263,7 +1263,7 @@ async def test_codex_stream_does_not_idle_timeout_while_waiting_for_user_input(
                         "threadId": "thread-confirm",
                         "turnId": self.id,
                         "itemId": "message-confirm",
-                        "delta": "已确认",
+                        "delta": "Confirmed",
                     }
                 ),
             )
@@ -1321,7 +1321,7 @@ async def test_codex_stream_does_not_idle_timeout_while_waiting_for_user_input(
 
     assert interrupt_calls == []
     assert events[-1].type == "complete"
-    assert events[-1].text == "已确认"
+    assert events[-1].text == "Confirmed"
     assert events[-2].type == "egress_disposition"
     assert events[-2].disposition == "completed"
 

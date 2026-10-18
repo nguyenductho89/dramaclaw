@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 品牌/平台字标,纯装饰性 SVG。登录页头部、登录舞台与下载页都要用同一套,
- * 之前 GithubMark 已经在两个文件里各抄了一份,统一收在这里。
+ * Brand / platform wordmarks, purely decorative SVG. The login page header, login stage and download page all use the same set,
+ * and GithubMark used to be copied separately in two files; it is consolidated here.
  *
- * lucide-react 当前版本已移除品牌图标(无 Github / Apple / Windows 导出),
- * 所以这三个只能内联官方 mark 的 path。
+ * The current lucide-react version has removed brand icons (no Github / Apple / Windows exports),
+ * so these three can only inline the official mark paths.
  *
- * 都用 `fill="currentColor"` + `aria-hidden`,尺寸由调用方的 CSS 决定。
+ * All use `fill="currentColor"` + `aria-hidden`; size is decided by the caller's CSS.
  */
 
 export function GithubMark() {

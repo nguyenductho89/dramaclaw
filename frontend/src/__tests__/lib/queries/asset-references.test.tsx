@@ -295,7 +295,7 @@ describe("asset reference details across a character rename", () => {
     expect(referenceRequests).toBe(1);
 
     await act(async () => {
-      await result.current.update.mutateAsync({ description: "换了个设定" });
+      await result.current.update.mutateAsync({ description: "changed the setting" });
     });
 
     expect(referenceRequests).toBe(1);

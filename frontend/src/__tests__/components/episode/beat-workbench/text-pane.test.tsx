@@ -8,18 +8,18 @@ import i18next from "i18next";
 import { describe, expect, it, vi, beforeEach, beforeAll, type Mock } from "vitest";
 import type { ReactNode } from "react";
 
-import { zhTranslation } from "../../../helpers/i18n-fixtures";
+import { enTranslation } from "../../../helpers/i18n-fixtures";
 
-// 本地 i18n 实例：直接吃 public/locales/zh/translation.json，不走 HTTP backend。
-// 以前是手抄一份子集，新增 key 时抄漏了测试就挂在「渲染出 key」上，索性用真的。
+// Local i18n instance: reads public/locales/en/translation.json directly, without the HTTP backend.
+// It used to be a hand-copied subset, and a newly added key that was missed made the test fail on "renders the key", so the real one is used.
 const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
-    resources: { zh: { translation: zhTranslation } },
+    resources: { en: { translation: enTranslation } },
   });
 });
 
@@ -81,10 +81,10 @@ vi.mock("@/lib/queries/scenes", () => ({
       ok: true,
       data: {
         render: {
-          label: "Render：将使用 卫生间_漏水_夜晚，锁图光",
+          label: "Render: will use Bathroom_leak_night, locked lighting",
           status: "time_baked",
           relight: false,
-          resolved_scene_name: "卫生间_漏水_夜晚",
+          resolved_scene_name: "Bathroom_leak_night",
           planned_scene_name: "",
         },
       },
@@ -113,10 +113,10 @@ function Wrapper({ children }: { children: ReactNode }) {
 function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 1,
-    narration_segment: "我带着丧尸病毒样本来，坠入闹市街头。",
-    visual_description: "阳光刺眼的繁忙街头",
-    scene_ref: { scene_id: "闹市街头" },
-    time_of_day: "午后",
+    narration_segment: "I came carrying zombie virus samples and fell into the busy street.",
+    visual_description: "Busy street under glaring sunlight",
+    scene_ref: { scene_id: "Busy Street" },
+    time_of_day: "Afternoon",
     audio_type: "narration",
     video_mode: "first_frame",
     video_prompt: "",
@@ -147,20 +147,20 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("台词")).toBeInTheDocument();
-    expect(screen.getByText("画面描述")).toBeInTheDocument();
-    expect(screen.queryByText("视频提示词")).not.toBeInTheDocument();
-    expect(screen.queryByText("关键帧提示词")).not.toBeInTheDocument();
+    expect(screen.getByText("Lines")).toBeInTheDocument();
+    expect(screen.getByText("Visual description")).toBeInTheDocument();
+    expect(screen.queryByText("Video prompt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Keyframe prompt")).not.toBeInTheDocument();
     expect(screen.queryByText(/Fish Speech|fishSpeechPrompt/)).not.toBeInTheDocument();
-    expect(screen.getByText("类型")).toBeInTheDocument();
-    expect(screen.getByText("场景")).toBeInTheDocument();
-    expect(screen.getByText("场景变体")).toBeInTheDocument();
-    expect(screen.getByText("时间")).toBeInTheDocument();
-    expect(screen.getByText("出场身份")).toBeInTheDocument();
-    expect(screen.getByText("出场道具")).toBeInTheDocument();
-    expect(screen.queryByText("更多")).not.toBeInTheDocument();
+    expect(screen.getByText("Type")).toBeInTheDocument();
+    expect(screen.getByText("Scene")).toBeInTheDocument();
+    expect(screen.getByText("Scene variant")).toBeInTheDocument();
+    expect(screen.getByText("Time of day")).toBeInTheDocument();
+    expect(screen.getByText("Identities")).toBeInTheDocument();
+    expect(screen.getByText("Props")).toBeInTheDocument();
+    expect(screen.queryByText("More")).not.toBeInTheDocument();
     expect(container.querySelector("details")).not.toBeInTheDocument();
-    expect(screen.queryByText(/置景/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Set dressing/)).not.toBeInTheDocument();
     expect(screen.queryByText("episode.workbench.text.setScene")).not.toBeInTheDocument();
     expect(screen.queryByText("episode.workbench.text.setProps")).not.toBeInTheDocument();
   });
@@ -177,7 +177,7 @@ describe("TextPane", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "AI 生成提示词" }),
+      screen.queryByRole("button", { name: "AI generate prompt" }),
     ).not.toBeInTheDocument();
   });
 
@@ -190,22 +190,22 @@ describe("TextPane", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "无角色出场" }),
+      screen.getByRole("button", { name: "No character" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("本集身份未规划，请先到「脚本」页配置本集身份。"),
+      screen.queryByText("Episode identities not planned. Go to Script page to configure."),
     ).not.toBeInTheDocument();
   });
 
   it("renders one badge per episode identity and toggles selection", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚", "陈锋_便装"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk", "Chen Feng_casual_wear"];
     render(
       <Wrapper>
         <TextPane beat={makeBeat()} project="demo" episode={1} />
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场身份" });
+    const group = screen.getByRole("group", { name: "Identities" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
@@ -213,28 +213,28 @@ describe("TextPane", () => {
     expect(buttons[0]).toHaveAttribute("aria-pressed", "false");
     expect(
       screen.getByText(
-        "未检测/未标注出场身份；如果确实没有角色出场，请选择「无角色出场」。",
+        "Identities are not detected or marked. If no character appears, choose \"No character\".",
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "陈锋_和尚" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chen Feng_monk" }));
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      detected_identities: ["陈锋_和尚"],
+      detected_identities: ["Chen Feng_monk"],
     });
-    expect(screen.getByRole("button", { name: "陈锋_和尚" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Chen Feng_monk" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     expect(
       screen.queryByText(
-        "未检测/未标注出场身份；如果确实没有角色出场，请选择「无角色出场」。",
+        "Identities are not detected or marked. If no character appears, choose \"No character\".",
       ),
     ).not.toBeInTheDocument();
   });
 
   it("offers no-character as a mutually exclusive identity option", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     render(
       <Wrapper>
         <TextPane
@@ -245,38 +245,38 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const noCharacter = screen.getByRole("button", { name: "无角色出场" });
+    const noCharacter = screen.getByRole("button", { name: "No character" });
     expect(noCharacter).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "陈锋_和尚" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chen Feng_monk" }));
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      detected_identities: ["陈锋_和尚"],
+      detected_identities: ["Chen Feng_monk"],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "陈锋_和尚" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chen Feng_monk" }));
     expect(mutateAsync.mock.calls[1][0].data).toEqual({
       detected_identities: ["__NO_CHARACTER__"],
     });
   });
 
   it("renders stale identities (selected but not in episode plan)", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ detected_identities: ["陈锋_和尚", "removed_character_id"] })}
+          beat={makeBeat({ detected_identities: ["Chen Feng_monk", "removed_character_id"] })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场身份" });
+    const group = screen.getByRole("group", { name: "Identities" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
     expect(buttons).toHaveLength(3);
-    expect(screen.getByText("（已移除）")).toBeInTheDocument();
+    expect(screen.getByText("(removed)")).toBeInTheDocument();
   });
 
   it("renders episode props and toggles detected_props", () => {
@@ -287,7 +287,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场道具" });
+    const group = screen.getByRole("group", { name: "Props" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
@@ -316,7 +316,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByRole("button", { name: "无道具出场" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "No prop" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -341,9 +341,9 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const trigger = screen.getByRole("combobox", { name: "类型" });
+    const trigger = screen.getByRole("combobox", { name: "Type" });
     await user.click(trigger);
-    const dialogue = await screen.findByRole("option", { name: "对白" });
+    const dialogue = await screen.findByRole("option", { name: "Dialogue" });
     await user.click(dialogue);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -351,7 +351,7 @@ describe("TextPane", () => {
   });
 
   it("renders narration beats with a read-only narrator label instead of speaker input", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     render(
       <Wrapper>
         <TextPane
@@ -363,16 +363,16 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("解说人")).toBeInTheDocument();
-    expect(screen.getByText("项目解说人")).toBeInTheDocument();
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.getByText("Narrator")).toBeInTheDocument();
+    expect(screen.getByText("Project narrator")).toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText("身份ID（如 陈锋_和尚），对白时必填"),
+      screen.queryByPlaceholderText("Identity ID (e.g. Chen_monk), required for dialogue"),
     ).not.toBeInTheDocument();
   });
 
   it("does not show narrator speaker semantics for drama narration", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     render(
       <Wrapper>
         <TextPane
@@ -383,37 +383,37 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("解说人")).not.toBeInTheDocument();
-    expect(screen.queryByText("项目解说人")).not.toBeInTheDocument();
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Project narrator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
   });
 
   it("does not show speaker controls for drama dialogue", () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ audio_type: "dialogue", speaker: "陈锋_和尚" })}
+          beat={makeBeat({ audio_type: "dialogue", speaker: "Chen Feng_monk" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText("身份ID（如 陈锋_和尚），对白时必填"),
+      screen.queryByPlaceholderText("Identity ID (e.g. Chen_monk), required for dialogue"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "说话人" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Speaker" })).not.toBeInTheDocument();
   });
 
   it("renders dialogue speaker as a single-select sourced from episode identities", async () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚", "陆辰_青年"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk", "Lu Chen_young_adult"];
     const user = userEvent.setup();
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ audio_type: "dialogue", speaker: "陈锋_和尚" })}
+          beat={makeBeat({ audio_type: "dialogue", speaker: "Chen Feng_monk" })}
           project="demo"
           episode={1}
           spineTemplate="narrated"
@@ -421,65 +421,65 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const speaker = screen.getByRole("combobox", { name: "说话人" });
-    expect(speaker).toHaveTextContent("陈锋_和尚");
+    const speaker = screen.getByRole("combobox", { name: "Speaker" });
+    expect(speaker).toHaveTextContent("Chen Feng_monk");
 
     await user.click(speaker);
-    expect(await screen.findByRole("option", { name: "陆辰_青年" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "旧值_不在本集" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: "陆辰_青年" }));
+    expect(await screen.findByRole("option", { name: "Lu Chen_Young adult" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "old_value_not_in_this_eps" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Lu Chen_Young adult" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
-    expect(mutateAsync.mock.calls[0][0].data).toEqual({ speaker: "陆辰_青年" });
+    expect(mutateAsync.mock.calls[0][0].data).toEqual({ speaker: "Lu Chen_young_adult" });
   });
 
   it("clears stale speaker when switching drama beats to dialogue", async () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     const user = userEvent.setup();
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ audio_type: "narration", speaker: "陈锋_和尚" })}
+          beat={makeBeat({ audio_type: "narration", speaker: "Chen Feng_monk" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
-    await user.click(await screen.findByRole("option", { name: "对白" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(await screen.findByRole("option", { name: "Dialogue" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
       audio_type: "dialogue",
       speaker: "",
     });
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
   });
 
   it("hides speaker controls for silence beats and clears speaker when switching away from dialogue", async () => {
-    episodeDetailState.identity_ids = ["陈锋_和尚"];
+    episodeDetailState.identity_ids = ["Chen Feng_monk"];
     const user = userEvent.setup();
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ audio_type: "dialogue", speaker: "陈锋_和尚" })}
+          beat={makeBeat({ audio_type: "dialogue", speaker: "Chen Feng_monk" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
-    await user.click(await screen.findByRole("option", { name: "静音" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(await screen.findByRole("option", { name: "Silence" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
       audio_type: "silence",
       speaker: "",
     });
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
-    expect(screen.queryByText("解说人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator")).not.toBeInTheDocument();
   });
 
   it("supports the NiceGUI silence audio type", async () => {
@@ -491,9 +491,9 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const trigger = screen.getByRole("combobox", { name: "类型" });
+    const trigger = screen.getByRole("combobox", { name: "Type" });
     await user.click(trigger);
-    const silence = await screen.findByRole("option", { name: "静音" });
+    const silence = await screen.findByRole("option", { name: "Silence" });
     await user.click(silence);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -513,10 +513,10 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
 
-    expect(screen.queryByRole("option", { name: "静音" })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "类型" })).toHaveTextContent("解说");
+    expect(screen.queryByRole("option", { name: "Silence" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Narration");
   });
 
   it("edits time_of_day with the shared closed choices", async () => {
@@ -524,18 +524,18 @@ describe("TextPane", () => {
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ time_of_day: "午后" })}
+          beat={makeBeat({ time_of_day: "Afternoon" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "时间" }));
-    await user.click(await screen.findByRole("option", { name: "夜晚" }));
+    await user.click(screen.getByRole("combobox", { name: "Time of day" }));
+    await user.click(await screen.findByRole("option", { name: "Night" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
-    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "夜晚" });
+    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "night" });
   });
 
   it("shows non-standard time_of_day as a legacy choice and can clear it", async () => {
@@ -543,21 +543,21 @@ describe("TextPane", () => {
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ time_of_day: "亥时" })}
+          beat={makeBeat({ time_of_day: "midnight" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    expect(screen.getByRole("combobox", { name: "时间" })).toHaveTextContent(
-      "亥时（剧本原值）",
+    expect(screen.getByRole("combobox", { name: "Time of day" })).toHaveTextContent(
+      "midnight (as written in the script)",
     );
 
-    await user.click(screen.getByRole("combobox", { name: "时间" }));
+    await user.click(screen.getByRole("combobox", { name: "Time of day" }));
     await user.click(
       await screen.findByRole("option", {
-        name: "无（保持场景图光线，不重打光）",
+        name: "None (keep the scene's lighting, no relight)",
       }),
     );
 
@@ -567,119 +567,119 @@ describe("TextPane", () => {
 
   it("edits scene_ref scene id and clears current variant", async () => {
     const user = userEvent.setup();
-    scenesState.names = ["闹市街头", "森林"];
+    scenesState.names = ["Busy Street", "Forest"];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "闹市街头", variant_id: "雨夜" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "Busy Street", variant_id: "Rainy Night" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    // 这里原本还断言「场景变体」不出现。那条断言从标签改名起就一直是空跑的：本地
-    // i18n 抄的是旧值「变体」，查「场景变体」自然查不到。换成真词条后才露出来 ——
-    // beat 上带着 variant_id: "雨夜"，变体选择器本来就该在。真正要验的是换场景后
-    // variant_id 被清掉，下面那条断言已经盯着了。
+    // This used to also assert that "scene variant" does not appear. That assertion had been a no-op ever since the label was renamed: the local
+    // i18n copied the old value "variant", so looking up "scene variant" naturally found nothing. It only showed up after switching to the real entries -
+    // the beat carries variant_id: "Rainy Night", so the variant selector should be there. What really needs verifying is that after switching scenes
+    // variant_id is cleared, which the assertion below already watches.
     // Scene is now a base-scene dropdown sourced from the episode scene menu.
-    await user.click(screen.getByRole("combobox", { name: "场景" }));
-    await user.click(await screen.findByRole("option", { name: "森林" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene" }));
+    await user.click(await screen.findByRole("option", { name: "Forest" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "森林", variant_id: "" },
+      scene_ref: { scene_id: "Forest", variant_id: "" },
     });
   });
 
   it("writes canonical base and variant when selecting an underscore scene", async () => {
     const user = userEvent.setup();
-    scenesState.names = ["卫生间", "卫生间_漏水"];
+    scenesState.names = ["Bathroom", "Bathroom_leak"];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "卫生间" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "Bathroom" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
-    await user.click(await screen.findByRole("option", { name: "漏水" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
+    await user.click(await screen.findByRole("option", { name: "leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "卫生间", variant_id: "漏水" },
+      scene_ref: { scene_id: "Bathroom", variant_id: "leak" },
     });
   });
 
   it("filters time-version scene plates out of the scene selector", async () => {
     const user = userEvent.setup();
     scenesState.records = [
-      { name: "卫生间", base_scene_id: "", variant_id: "", time_of_day: "" },
-      { name: "卫生间_漏水", base_scene_id: "卫生间", variant_id: "漏水", time_of_day: "" },
+      { name: "Bathroom", base_scene_id: "", variant_id: "", time_of_day: "" },
+      { name: "Bathroom_leak", base_scene_id: "Bathroom", variant_id: "leak", time_of_day: "" },
       {
-        name: "卫生间_漏水_夜晚",
-        base_scene_id: "卫生间",
-        variant_id: "漏水",
-        time_of_day: "夜晚",
+        name: "Bathroom_leak_night",
+        base_scene_id: "Bathroom",
+        variant_id: "leak",
+        time_of_day: "night",
       },
     ];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "卫生间" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "Bathroom" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
     expect(
-      screen.queryByRole("option", { name: "漏水_夜晚" }),
+      screen.queryByRole("option", { name: "leak_night" }),
     ).not.toBeInTheDocument();
-    await user.click(await screen.findByRole("option", { name: "漏水" }));
+    await user.click(await screen.findByRole("option", { name: "leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "卫生间", variant_id: "漏水" },
+      scene_ref: { scene_id: "Bathroom", variant_id: "leak" },
     });
   });
 
   it("shows the composed scene name when the beat has a scene variant", () => {
-    scenesState.names = ["卫生间", "卫生间_漏水"];
+    scenesState.names = ["Bathroom", "Bathroom_leak"];
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "卫生间", variant_id: "漏水" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "Bathroom", variant_id: "leak" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    expect(screen.getByRole("combobox", { name: "场景" })).toHaveTextContent("卫生间");
-    expect(screen.getByRole("combobox", { name: "场景变体" })).toHaveTextContent("漏水");
-    expect(screen.getByText("Render：将使用 卫生间_漏水_夜晚，锁图光")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Scene" })).toHaveTextContent("Bathroom");
+    expect(screen.getByRole("combobox", { name: "Scene variant" })).toHaveTextContent("leak");
+    expect(screen.getByText("Render: will use Bathroom_leak_night, locked lighting")).toBeInTheDocument();
   });
 
   it("does not duplicate scene saves on unmount with an explicit empty variant", async () => {
     const user = userEvent.setup();
-    scenesState.names = ["闹市街头", "森林"];
+    scenesState.names = ["Busy Street", "Forest"];
     const { unmount } = render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "闹市街头", variant_id: "雨夜" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "Busy Street", variant_id: "Rainy Night" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景" }));
-    await user.click(await screen.findByRole("option", { name: "森林" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene" }));
+    await user.click(await screen.findByRole("option", { name: "Forest" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     mutateAsync.mockClear();
 
@@ -691,7 +691,7 @@ describe("TextPane", () => {
   it("does not duplicate canonical scene saves on unmount", async () => {
     const user = userEvent.setup();
     scenesState.records = [];
-    const beat = makeBeat({ scene_ref: { scene_id: "卫生间", variant_id: "" } });
+    const beat = makeBeat({ scene_ref: { scene_id: "Bathroom", variant_id: "" } });
     const { rerender, unmount } = render(
       <Wrapper>
         <TextPane beat={beat} project="demo" episode={1} />
@@ -699,11 +699,11 @@ describe("TextPane", () => {
     );
 
     scenesState.records = [
-      { name: "卫生间", base_scene_id: "", variant_id: "", time_of_day: "" },
+      { name: "Bathroom", base_scene_id: "", variant_id: "", time_of_day: "" },
       {
-        name: "卫生间_漏水_严重",
-        base_scene_id: "卫生间",
-        variant_id: "漏水_严重",
+        name: "Bathroom_leak_severe",
+        base_scene_id: "Bathroom",
+        variant_id: "leak_severe",
         time_of_day: "",
       },
     ];
@@ -713,11 +713,11 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
-    await user.click(await screen.findByRole("option", { name: "漏水_严重" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
+    await user.click(await screen.findByRole("option", { name: "leak_severe" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "卫生间", variant_id: "漏水_严重" },
+      scene_ref: { scene_id: "Bathroom", variant_id: "leak_severe" },
     });
     mutateAsync.mockClear();
 
@@ -734,7 +734,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const narration = screen.getByDisplayValue("我带着丧尸病毒样本来，坠入闹市街头。");
+    const narration = screen.getByDisplayValue("I came carrying zombie virus samples and fell into the busy street.");
     fireEvent.blur(narration);
     expect(mutateAsync).not.toHaveBeenCalled();
   });
@@ -742,7 +742,7 @@ describe("TextPane", () => {
   it("does not PATCH on unmount when mention options load without user edits", () => {
     episodeDetailState.identity_ids = [];
     const beat = makeBeat({
-      visual_description: "@陆辰_青年 拿起玉佩",
+      visual_description: "@Lu Chen_young_adult picks up the jade pendant",
       detected_identities: [],
     });
     const { rerender, unmount } = render(
@@ -751,7 +751,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    episodeDetailState.identity_ids = ["陆辰_青年"];
+    episodeDetailState.identity_ids = ["Lu Chen_young_adult"];
     rerender(
       <Wrapper>
         <TextPane beat={beat} project="demo" episode={1} />
@@ -764,17 +764,17 @@ describe("TextPane", () => {
 
   it("uses latest mention options when flushing a dirty visual draft on unmount", () => {
     episodeDetailState.identity_ids = [];
-    const beat = makeBeat({ visual_description: "原画面" });
+    const beat = makeBeat({ visual_description: "Original visual" });
     const { rerender, unmount } = render(
       <Wrapper>
         <TextPane beat={beat} project="demo" episode={1} />
       </Wrapper>,
     );
 
-    fireEvent.change(screen.getByDisplayValue("原画面"), {
-      target: { value: "@陆辰_青年 拿起玉佩" },
+    fireEvent.change(screen.getByDisplayValue("Original visual"), {
+      target: { value: "@Lu Chen_young_adult picks up the jade pendant" },
     });
-    episodeDetailState.identity_ids = ["陆辰_青年"];
+    episodeDetailState.identity_ids = ["Lu Chen_young_adult"];
     rerender(
       <Wrapper>
         <TextPane beat={beat} project="demo" episode={1} />
@@ -784,40 +784,40 @@ describe("TextPane", () => {
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      visual_description: "{{陆辰_青年}} 拿起玉佩",
-      detected_identities: ["陆辰_青年"],
+      visual_description: "{{Lu Chen_young_adult}} picks up the jade pendant",
+      detected_identities: ["Lu Chen_young_adult"],
     });
   });
 
   it("converts visual @ mentions to program markers and syncs detected references", () => {
-    episodeDetailState.identity_ids = ["陆辰_青年"];
-    episodeDetailState.prop_menu = [{ prop_id: "玉佩" }];
+    episodeDetailState.identity_ids = ["Lu Chen_young_adult"];
+    episodeDetailState.prop_menu = [{ prop_id: "jade pendant" }];
     render(
       <Wrapper>
         <TextPane beat={makeBeat()} project="demo" episode={1} />
       </Wrapper>,
     );
 
-    const visual = screen.getByDisplayValue("阳光刺眼的繁忙街头");
-    fireEvent.change(visual, { target: { value: "@陆辰_青年 拿起 @玉佩" } });
+    const visual = screen.getByDisplayValue("Busy street under glaring sunlight");
+    fireEvent.change(visual, { target: { value: "@Lu Chen_young_adult picks up @jade pendant" } });
     fireEvent.blur(visual);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      visual_description: "{{陆辰_青年}} 拿起 [[玉佩]]",
-      detected_identities: ["陆辰_青年"],
-      detected_props: ["玉佩"],
+      visual_description: "{{Lu Chen_young_adult}} picks up [[jade pendant]]",
+      detected_identities: ["Lu Chen_young_adult"],
+      detected_props: ["jade pendant"],
     });
   });
 
   it("renders stored program markers as user-facing @ mentions", () => {
-    episodeDetailState.identity_ids = ["陆辰_青年"];
-    episodeDetailState.prop_menu = [{ prop_id: "玉佩" }];
+    episodeDetailState.identity_ids = ["Lu Chen_young_adult"];
+    episodeDetailState.prop_menu = [{ prop_id: "jade pendant" }];
     render(
       <Wrapper>
         <TextPane
           beat={makeBeat({
-            visual_description: "{{陆辰_青年}} 拿起 [[玉佩]]",
+            visual_description: "{{Lu Chen_young_adult}} picks up [[jade pendant]]",
           })}
           project="demo"
           episode={1}
@@ -825,6 +825,6 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByDisplayValue("@陆辰_青年 拿起 @玉佩")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("@Lu Chen_young_adult picks up @jade pendant")).toBeInTheDocument();
   });
 });

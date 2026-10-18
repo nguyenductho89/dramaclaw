@@ -65,8 +65,8 @@ function SelectContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
-  // 下拉面板挂在触发器下方，而不是 base-ui 默认的「选中项对齐触发器」——
-  // 后者会让面板整个压在触发器上，看着像错位。
+  // The dropdown panel hangs below the trigger instead of base-ui's default "selected item aligned to the trigger" -
+  // the latter makes the whole panel sit on top of the trigger, which looks misaligned.
   alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &

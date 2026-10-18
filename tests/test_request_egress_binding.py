@@ -1,16 +1,16 @@
 """C1 for the request-path trusted egress context factory (OI-54 S0).
 
-这是**工厂层**单测，按交接 prompt §4 允许使用假 `AuthzPort`；链路层
-（S1／S2／S4／S5）禁止 mock authz，那不在本片范围内。
+This is a **factory-layer** unit test; per handoff prompt §4 a fake `AuthzPort` is allowed here; the chain layer
+(S1/S2/S4/S5) forbids mocking authz, which is outside the scope of this slice.
 
-本文件刻意**不出现** `model_gateway_request_scope`：绑定必须由产品代码完成，
-测试只通过 `current_model_gateway_context()` 观察结果。测试自己绑上下文正是
-OI-54 记录的假绿写法之一（EE `tests/b2b/test_p0g4k_grid_family_egress_integration.py:305`）。
+This file deliberately **does not use** `model_gateway_request_scope`: the binding must be done by product code,
+and the tests observe the result only through `current_model_gateway_context()`. Binding the context in the test itself is
+one of the fake-green patterns recorded in OI-54 (EE `tests/b2b/test_p0g4k_grid_family_egress_integration.py:305`).
 
-假 port 一律**回显**调用方传入的 `user_id` / `root_task_id`，与两个真实实现一致：
-EE 侧 authz port 实现的 `_context_from_facts(..., user_id=, root_task_id=)`、
-CE `src/novelvideo/ports/local/__init__.py:67-79` 的 `LocalAuthz`。
-只有 C1-9／C1-10 两条刻意打破回显，用来钉住校验分支。
+The fake port always **echoes** the `user_id` / `root_task_id` passed in by the caller, consistent with the two real implementations:
+`_context_from_facts(..., user_id=, root_task_id=)` of the EE-side authz port implementation,
+and `LocalAuthz` of CE `src/novelvideo/ports/local/__init__.py:67-79`.
+Only C1-9 / C1-10 deliberately break the echo, to pin down the validation branch.
 """
 
 from __future__ import annotations
@@ -88,9 +88,9 @@ class _RaisingAuthz:
     async def admit_model_task(
         self, *, user_id: str, root_task_id: str
     ) -> AdmissionContext:
-        # 模拟真实实现：底层错误在 except 块内被转成 AuthzError，
-        # 于是 `__context__` 上挂着原始异常（EE `admission_repository.py:53-54`
-        # 把任何 PostgresError 映射成 ORG_AUTHZ_STALE 就是这个形状）。
+        # Simulate the real implementation: the underlying error is converted to AuthzError inside the except block,
+        # so the original exception hangs on `__context__` (EE `admission_repository.py:53-54`
+        # mapping any PostgresError to ORG_AUTHZ_STALE is exactly this shape).
         try:
             raise RuntimeError('relation "users" does not exist -- raw pg detail')
         except RuntimeError as exc:
@@ -134,8 +134,8 @@ class _SequencedAuthz:
 
 
 def _use(monkeypatch: pytest.MonkeyPatch, port: object) -> None:
-    # 与 `tests/test_p0g4c_video_egress.py:803` 同一写法；被测模块按
-    # `generators/video_generator.py:2733` 的先例在函数体内惰性取端口。
+    # Same style as `tests/test_p0g4c_video_egress.py:803`; the module under test lazily fetches the port inside the function body
+    # following the precedent of `generators/video_generator.py:2733`.
     monkeypatch.setattr(ports, "get_authz_port", lambda: port)
 
 
@@ -171,7 +171,7 @@ async def test_c1_01_organization_admission_maps_every_field(monkeypatch):
     admission = _admission(
         kind="organization", user_id=_USER_ID, root_task_id=root_task_id
     )
-    # 11 个必填字段逐个对应（`egress_context.py:24-34` 的字段表）。
+    # The 11 required fields correspond one by one (the field table of `egress_context.py:24-34`).
     assert context.envelope_id == f"req-{root_task_id}"
     assert context.project_id == _PROJECT_ID
     assert context.task_type == _TASK_TYPE
@@ -199,7 +199,7 @@ async def test_c1_02_platform_admission_returns_none(monkeypatch):
 
 
 async def test_c1_03_ce_local_admission_returns_none(monkeypatch):
-    # 真的 CE 单机降级实现，不是手搓的假 port。
+    # The real CE single-machine fallback implementation, not a hand-rolled fake port.
     _use(monkeypatch, LocalAuthz())
 
     assert await _build() is None
@@ -230,7 +230,7 @@ async def test_c1_05_membership_inactive_is_raised(monkeypatch):
 
 
 async def test_c1_06_model_access_denied_is_raised_not_admitted(monkeypatch):
-    # 压成 None 就是又造一个 OI-48 形状的 fail-open：真拒绝被读成「非组织，放行」。
+    # Squashing to None would build yet another OI-48-shaped fail-open: a real rejection would be read as "not an organization, allow".
     _use(monkeypatch, _RaisingAuthz("MODEL_ACCESS_DENIED"))
 
     with pytest.raises(AuthzError) as excinfo:
@@ -243,7 +243,7 @@ async def test_c1_06_model_access_denied_is_raised_not_admitted(monkeypatch):
 
 
 async def test_c1_07_authz_stale_is_raised_not_downgraded(monkeypatch):
-    # 与 `task_backend/producer.py:137-138` 今天对所有用户的语义一致，不得「体贴地」降级。
+    # Consistent with today's semantics of `task_backend/producer.py:137-138` for all users; it must not be "kindly" downgraded.
     _use(monkeypatch, _RaisingAuthz("ORG_AUTHZ_STALE"))
 
     with pytest.raises(AuthzError) as excinfo:
@@ -262,9 +262,9 @@ async def test_c1_08_raised_authz_error_carries_no_exception_chain(monkeypatch):
         await _build()
 
     exc = excinfo.value
-    # `__cause__` 单独不足以判别：在 except 块内 `raise AuthzError(code)`（无 from None）
-    # 同样是 `__cause__ is None`，但原始 PG 错误文本会挂在 `__context__` 上随异常外泄。
-    # 两条一起断言才真正钉住 `producer.py:137-138` 的「退出 except 块后 raise ... from None」。
+    # `__cause__` alone is not enough to discriminate: `raise AuthzError(code)` inside an except block (without from None)
+    # likewise gives `__cause__ is None`, but the original PG error text hangs on `__context__` and leaks out with the exception.
+    # Asserting both together is what truly pins `producer.py:137-138`'s "raise ... from None after leaving the except block".
     assert exc.__cause__ is None
     assert exc.__context__ is None
     assert exc.__suppress_context__ is True
@@ -331,7 +331,7 @@ async def test_c1_09_requester_mismatch_raises_instead_of_none(monkeypatch):
     with pytest.raises(Exception) as excinfo:
         await _build()
 
-    # `None` 的语义只有一个：非组织身份。它绝不表示「出错了」。
+    # `None` has only one meaning: a non-organization identity. It never means "something went wrong".
     assert excinfo.value is not None
 
 
@@ -360,8 +360,8 @@ async def test_c1_11_envelope_id_is_derived_and_unique_per_request(monkeypatch):
     assert first is not None and second is not None
     assert first.envelope_id == f"req-{first.root_task_id}"
     assert second.envelope_id == f"req-{second.root_task_id}"
-    # 下游 `egress_operations` 的 claim 靠 envelope_id 做重放保护，
-    # 因此不得按连接或按会话复用。
+    # The downstream `egress_operations` claim relies on envelope_id for replay protection,
+    # so it must not be reused per connection or per session.
     assert first.envelope_id != second.envelope_id
     assert first.root_task_id != second.root_task_id
     assert len(port.calls) == 2
@@ -384,7 +384,7 @@ async def test_c1_12_scope_binds_organization_identity_and_unbinds_on_exit(monke
 
     assert current_model_gateway_context() is None
 
-    # 平台路径必须逐字节不变：非组织身份下什么都不绑。
+    # The platform path must be byte-for-byte unchanged: nothing is bound under a non-organization identity.
     _use(monkeypatch, _RecordingAuthz(kind="platform"))
     async with request_egress_scope(
         requester_user_id=_USER_ID,
@@ -413,9 +413,9 @@ async def test_c1_13_scope_does_not_leak_context_var_on_exception(monkeypatch):
             project_id=_PROJECT_ID,
             task_type=_TASK_TYPE,
         ) as context:
-            # 必须断言「确实绑上了组织身份」，不能只写 `is context`：
-            # 什么都不绑时 `None is None` 也成立，那样这条用例对不泄漏一事
-            # 一行证据都提供不了（同义反复）。
+            # It must assert that "the organization identity was indeed bound", and not merely write `is context`:
+            # when nothing is bound `None is None` also holds, in which case this case provides not
+            # a single line of evidence for non-leakage (a tautology).
             assert type(context) is TrustedEgressContext
             assert current_model_gateway_context() is context
             raise _Boom("caller blew up inside the scope")

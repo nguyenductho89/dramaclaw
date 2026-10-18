@@ -34,13 +34,13 @@ async def test_recipe_text_timeout_returns_explicit_chat_safe_detail(monkeypatch
             FreezoneRecipeCompileRequest(
                 recipe_id="general-text",
                 node_kind="text",
-                node_prompt="生成分集剧本",
+                node_prompt="write the episode script",
             ),
             user=SimpleNamespace(get=lambda key, default="": "local" if key == "username" else default),
         )
 
     assert exc_info.value.status_code == 504
     assert exc_info.value.detail == (
-        "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。"
-        "本轮未继续执行下游节点。"
+        "Recipe text generation timed out: the model returned no result within the allotted time. Please try again later. "
+        "Downstream nodes were not executed in this round."
     )

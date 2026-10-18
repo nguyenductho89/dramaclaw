@@ -67,10 +67,10 @@ describe("resetUserSessionState", () => {
   });
 
   it("clears queryClient cache so the next account never sees stale data", () => {
-    // 回归用例：手动退出登录只清了 auth store，React Query 缓存原样留在内存里；
-    // 换账号登录后 projectSummaries 还在 staleTime 内，B 直接看到 A 的项目列表。
+    // Regression case: manual logout only cleared the auth store, and the React Query cache stayed in memory as is;
+    // after logging in as another account projectSummaries was still within staleTime, and B saw A's project list directly.
     const qc = new QueryClient();
-    qc.setQueryData(["projectSummaries"], ["A 的项目"]);
+    qc.setQueryData(["projectSummaries"], ["A's project"]);
     qc.setQueryData(["org", "me"], { organization: { org_id: "org-a" } });
     qc.setQueryData(["org", "members"], [{ user_id: "user-a" }]);
     resetUserSessionState({ queryClient: qc });

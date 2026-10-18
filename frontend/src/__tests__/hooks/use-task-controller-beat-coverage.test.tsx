@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 选中 Beats 再生（`sketch_regen` / `selected_regen`）的任务行 `beat_num` 是 None，
- * scope 又是服务端算的 `mode_key__sha1(beats)`，前端无从反推。于是每个 beat 的
- * 草图 / 渲染图面板都用同一个 `taskType|project|episode` 键订阅同一个注册表条目，
- * 一个 beat 在跑，其他 beat 的面板也跟着显示「生成中」。
+ * The task row of a selected-beats regenerate (`sketch_regen` / `selected_regen`) has `beat_num` = None,
+ * and the scope is computed by the server as `mode_key__sha1(beats)`, which the frontend cannot reverse. So the sketch /
+ * render panels of every beat subscribe to the same registry entry with the same `taskType|project|episode` key,
+ * and when one beat is running the panels of the other beats show "generating" as well.
  *
- * 修法：任务行在 metadata 里带上这次覆盖的 beat 号，controller 把它挂到快照上，
- * 面板按 `covers(beatNum)` 决定要不要显示进度条。共享一条 SSE 流的设计不变。
+ * The fix: the task row carries the beat numbers covered by this run in its metadata, the controller attaches them to the snapshot,
+ * and the panel decides by `covers(beatNum)` whether to show the progress bar. The design of sharing one SSE stream is unchanged.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -79,7 +79,7 @@ beforeEach(() => {
 });
 
 describe("useTaskController beat coverage", () => {
-  it("start() 带上的 beat 号决定哪些面板显示生成中", () => {
+  it("the beat number passed to start() decides which panels show generating", () => {
     const { result } = renderController();
 
     act(() => {
@@ -88,11 +88,11 @@ describe("useTaskController beat coverage", () => {
 
     expect(result.current.started).toBe(true);
     expect(result.current.covers(9)).toBe(true);
-    // 这一条正是用户看到的 bug：beat 11 没在跑，面板却也转圈。
+    // This is exactly the bug the user saw: beat 11 is not running, yet the panel spins too.
     expect(result.current.covers(11)).toBe(false);
   });
 
-  it("刷新后从任务行的 metadata.beat_numbers 复原覆盖范围", async () => {
+  it("restores the covered range from the task row's metadata.beat_numbers after a refresh", async () => {
     state.tasks = [runningRegen({ metadata: { beat_numbers: [9] } })];
 
     const { result } = renderController();
@@ -102,7 +102,7 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(11)).toBe(false);
   });
 
-  it("批量再生覆盖多个 beat 时，这些 beat 都算在跑", async () => {
+  it("when a batch regenerate covers several beats, all those beats count as running", async () => {
     state.tasks = [runningRegen({ metadata: { beat_numbers: [9, 10, 12] } })];
 
     const { result } = renderController();
@@ -113,8 +113,8 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(11)).toBe(false);
   });
 
-  it("任务行没带 beat 号时退回旧行为，不把真在跑的 beat 藏掉", async () => {
-    // 老任务行（后端加 metadata 之前入队的）和不认识这个字段的后端都会走到这里。
+  it("falls back to the old behaviour when the task row carries no beat numbers, without hiding a beat that is really running", async () => {
+    // Old task rows (enqueued before the backend added metadata) and backends that do not know this field both end up here.
     state.tasks = [runningRegen()];
 
     const { result } = renderController();
@@ -124,17 +124,17 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(11)).toBe(true);
   });
 
-  it("同一条任务的 reconcile 不会把已知的 beat 归属抹回未知", async () => {
-    // 任务行没带 beat_numbers——后端还没跟上这个字段（比如 dev 机上没重启的旧
-    // 进程），或者是这次改动之前入队的老行。
+  it("a reconcile of the same task does not wipe a known beat ownership back to unknown", async () => {
+    // The task row carries no beat_numbers - the backend has not caught up with this field (e.g. a stale
+    // process on a dev machine that was not restarted), or it is an old row enqueued before this change.
     state.tasks = [runningRegen({ task_id: "t1" })];
     const { result } = renderController();
 
     await waitFor(() => expect(result.current.started).toBe(true));
     expect(result.current.covers(11)).toBe(true);
 
-    // `start()` 之后 controller 已经知道这次只跑 beat 9。紧接着的那次 reconcile
-    // 命中的是同一条任务，任务行沉默不等于「覆盖全部」，不该把已知的归属抹掉。
+    // After `start()` the controller already knows this run only covers beat 9. The reconcile that follows
+    // hits the same task, and a silent task row does not mean "covers everything", so the known ownership must not be wiped.
     act(() => {
       result.current.start({
         scope: "sketch_1x1__ab12cd34ef56",
@@ -147,9 +147,9 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(11)).toBe(false);
   });
 
-  it("同时有两条再生任务时，认 start() 给的那条，不被别人的任务抢走", async () => {
-    // 批量面板发的另一条 sketch_regen 排在前面。reconcile 的兜底 find 不看 scope，
-    // 先命中的就是它，会把本 beat 的 scope / 覆盖范围整个改指过去。
+  it("with two regenerate tasks at once, the one given by start() is used and is not taken over by someone else's task", async () => {
+    // Another sketch_regen sent from the batch panel is ahead in the list. The fallback find in reconcile does not look at scope,
+    // and whichever it hits first would redirect this beat's scope / covered range entirely to that one.
     state.tasks = [
       runningRegen({ task_id: "t2", scope: "sketch_1x1__ffffffffffff", metadata: { beat_numbers: [5, 6] } }),
       runningRegen({ task_id: "t1", metadata: { beat_numbers: [9] } }),
@@ -169,9 +169,9 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(5)).toBe(false);
   });
 
-  it("换成另一条任务时不沿用上一次的 beat 归属", async () => {
-    // 别的入口（如批量面板）发起的另一条任务，同样没带 beat_numbers。沿用上一次
-    // 的 [9] 会把这条任务真在跑的 beat 藏掉，必须退回「覆盖全部」。
+  it("when switching to another task, the previous beat ownership is not carried over", async () => {
+    // Another task started from some other entry (such as the batch panel) also carries no beat_numbers. Carrying over the previous
+    // [9] would hide the beats this task is really running, so it must fall back to "covers everything".
     state.tasks = [runningRegen({ task_id: "t2" })];
     const { result } = renderController();
 
@@ -187,15 +187,15 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(11)).toBe(true);
   });
 
-  // 用户报的 bug：beat 4 在跑草图，切到 beat 5 「立即生成」是灰的，而且 beat 5
-  // 因为 covers() 不命中连进度条都没有——按钮成了没有任何解释的死键。后端本来就
-  // 支持并发（每个 selection_scope 是独立的 scope/任务行），所以 key 加 coversBeat
-  // 让每个 beat 拿自己的注册表条目，reconcile 也按覆盖范围过滤。
-  it("coversBeat 让别的 beat 在跑时本 beat 不被点亮", async () => {
+  // The bug the user reported: beat 4 is running a sketch, and switching to beat 5 the "Generate now" button is greyed out, and beat 5
+  // has no progress bar either because covers() does not hit - the button became a dead key with no explanation. The backend
+  // already supports concurrency (each selection_scope is an independent scope/task row), so adding coversBeat to the key
+  // gives each beat its own registry entry, and reconcile also filters by the covered range.
+  it("coversBeat keeps this beat from lighting up while another beat is running", async () => {
     state.tasks = [runningRegen({ task_id: "t4", metadata: { beat_numbers: [4] } })];
 
-    // 两个面板挂在同一个 provider 下：等 beat 4 那格认领成功，再断言 beat 5 没被带亮。
-    // 只断言「一直是 false」会因为初始就是 false 而形同虚设。
+    // Two panels are mounted under the same provider: wait until the beat 4 cell has claimed successfully, then assert beat 5 was not lit.
+    // Asserting only "always false" would be meaningless because it starts out false.
     const { result } = renderHook(
       () => ({
         four: useTaskController({ key: { ...KEY, coversBeat: 4 } }),
@@ -208,7 +208,7 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.five.started).toBe(false);
   });
 
-  it("coversBeat 命中的任务行照常认领", async () => {
+  it("a task row hit by coversBeat is claimed as usual", async () => {
     state.tasks = [runningRegen({ task_id: "t4", metadata: { beat_numbers: [4] } })];
 
     const { result } = renderHook(
@@ -220,7 +220,7 @@ describe("useTaskController beat coverage", () => {
     expect(result.current.covers(4)).toBe(true);
   });
 
-  it("覆盖范围未知的任务行仍按命中处理，不把真在跑的 beat 藏掉", async () => {
+  it("a task row with unknown coverage is still treated as a hit, without hiding a beat that is really running", async () => {
     state.tasks = [runningRegen({ task_id: "t4" })];
 
     const { result } = renderHook(
@@ -231,7 +231,7 @@ describe("useTaskController beat coverage", () => {
     await waitFor(() => expect(result.current.started).toBe(true));
   });
 
-  it("任务行只带 beat_num 时按单 beat 归属", async () => {
+  it("a task row carrying only beat_num is owned by that single beat", async () => {
     state.tasks = [
       runningRegen({ task_type: "director_control_to_sketch", beat_num: 9, scope: undefined }),
     ];

@@ -31,7 +31,7 @@ const SHARE_DIALOG_ZH: Record<string, string> = {
   "project.shareDialog.roleAdmin": "Can manage shared members",
   "project.shareDialog.inactive": "Inactive",
   "project.shareDialog.inactiveAccessChanged": "User currently cannot access this project",
-  "project.shareDialog.limitReached": "最多只能分享给 {{limit}} 人",
+  "project.shareDialog.limitReached": "You can share with at most {{limit}} people",
   "project.shareDialog.limitTitle": "Share limit reached",
   "project.shareDialog.noShareableUser": "No shareable user found. This user may be outside this project's sharing scope.",
   "project.shareDialog.quotaUnknownTitle": "Member count not available yet",
@@ -100,7 +100,7 @@ vi.mock("@/lib/queries/projects", () => ({
       : {
           data: { data: queryMocks.grants },
           isLoading: false,
-          // 刷新失败时 React Query 把上一份名单留着，status 走到 error。
+          // When a refresh fails React Query keeps the previous list, and status goes to error.
           isError: queryMocks.grantsError,
         },
   useUserSearch: (...args: unknown[]) => {
@@ -355,7 +355,7 @@ describe("ShareProjectDialog (share quota)", () => {
     await selectSearchResult();
 
     expect(screen.getByRole("button", { name: /Add/ })).toBeEnabled();
-    expect(screen.queryByText(`最多只能分享给 ${MAX_PROJECT_GRANTS} 人`)).not.toBeInTheDocument();
+    expect(screen.queryByText(`You can share with at most ${MAX_PROJECT_GRANTS} people`)).not.toBeInTheDocument();
   });
 
   it("keeps the add button clickable at the limit and explains itself in a dialog", async () => {
@@ -366,7 +366,7 @@ describe("ShareProjectDialog (share quota)", () => {
     await selectSearchResult();
     const addButton = screen.getByRole("button", { name: /Add/ });
 
-    // 死按钮说不出理由，点得动才有地方解释。
+    // A dead button cannot explain itself; a clickable one gives a place to explain.
     expect(addButton).toBeEnabled();
     await userEvent.click(addButton);
 
@@ -374,14 +374,14 @@ describe("ShareProjectDialog (share quota)", () => {
     expect(alertDialogMock).toHaveBeenCalledTimes(1);
     expect(alertDialogMock.mock.calls[0][0]).toMatchObject({
       title: "Share limit reached",
-      description: `最多只能分享给 ${MAX_PROJECT_GRANTS} 人`,
+      description: `You can share with at most ${MAX_PROJECT_GRANTS} people`,
     });
-    expect(screen.getByText(`最多只能分享给 ${MAX_PROJECT_GRANTS} 人`)).toBeInTheDocument();
+    expect(screen.getByText(`You can share with at most ${MAX_PROJECT_GRANTS} people`)).toBeInTheDocument();
   });
 
   it("refuses to add while the member list is still loading", async () => {
-    // 名单没回来时手上是空的，按它放行等于把「不知道几个人」当成「一个都没有」。
-    // grants 端点不数人头，这一下加进去的就是真的第 26 个。
+    // When the list has not come back it is empty, and letting it through treats "unknown how many" as "none at all".
+    // The grants endpoint does not count heads, so this add would really be the 26th.
     queryMocks.grantsLoading = true;
     queryMocks.searchResults = [{ id: "u99", username: "huangjiao" }];
     renderDialog();
@@ -398,8 +398,8 @@ describe("ShareProjectDialog (share quota)", () => {
   });
 
   it("refuses to add when the last member refresh failed", async () => {
-    // 刷新失败时旧名单还在（React Query 保留 data，status 走到 error）。
-    // 拿这份可能已经过期的人数继续放行，加进去的就可能是第 26 个。
+    // When a refresh fails the old list is still there (React Query keeps data, status goes to error).
+    // Continuing to let things through on this possibly stale count could make the added member the 26th.
     queryMocks.grants = grantRows(MAX_PROJECT_GRANTS - 1);
     queryMocks.grantsError = true;
     queryMocks.searchResults = [{ id: "u99", username: "huangjiao" }];

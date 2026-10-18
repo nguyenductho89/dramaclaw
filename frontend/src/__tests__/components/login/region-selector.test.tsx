@@ -13,8 +13,8 @@ vi.mock("@/lib/cluster-config", () => ({
   clusterConfig: {
     mode: "multi-region",
     regions: [
-      { id: "cn-1", displayName: "华东一区" },
-      { id: "us-1", displayName: "美西一区" },
+      { id: "cn-1", displayName: "East China 1" },
+      { id: "us-1", displayName: "US West 1" },
     ],
   },
 }));
@@ -52,7 +52,7 @@ describe("RegionSelector", () => {
     const user = userEvent.setup();
     render(<RegionSelector />);
     await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("华东一区"));
+    await user.click(screen.getByText("East China 1"));
     expect(useRegionStore.getState().selectedRegionId).toBe("cn-1");
     expect(getRegionCookie()).toBe("cn-1");
   });
@@ -63,7 +63,7 @@ describe("RegionSelector", () => {
     render(<RegionSelector />);
 
     await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("华东一区"));
+    await user.click(screen.getByText("East China 1"));
 
     expect(useRegionStore.getState().selectedRegionId).toBe("cn-1");
     expect(getRegionCookie()).toBe("cn-1");
@@ -79,7 +79,7 @@ describe("RegionSelector — single-region auto-select", () => {
 
   it("auto-selects the only region and renders read-only", async () => {
     vi.doMock("@/lib/cluster-config", () => ({
-      clusterConfig: { mode: "multi-region", regions: [{ id: "only-1", displayName: "唯一区" }] },
+      clusterConfig: { mode: "multi-region", regions: [{ id: "only-1", displayName: "Only region" }] },
     }));
     // Reload the store fresh so the component and this assertion read the
     // same module instance after vi.resetModules().
@@ -87,7 +87,7 @@ describe("RegionSelector — single-region auto-select", () => {
     freshStore.setState({ selectedRegionId: null });
     const { RegionSelector } = await import("@/components/login/region-selector");
     render(<RegionSelector />);
-    expect(screen.getByText("唯一区")).toBeInTheDocument();
+    expect(screen.getByText("Only region")).toBeInTheDocument();
     expect(freshStore.getState().selectedRegionId).toBe("only-1");
     expect(getRegionCookie()).toBe("only-1");
   });
@@ -118,6 +118,6 @@ describe("RegionSelector — empty regions in multi-region", () => {
     }));
     const { RegionSelector } = await import("@/components/login/region-selector");
     render(<RegionSelector />);
-    expect(screen.getByRole("button", { name: /retry|重试|region\.empty/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry|region\.empty/i })).toBeInTheDocument();
   });
 });

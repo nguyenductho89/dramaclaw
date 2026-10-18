@@ -50,13 +50,13 @@ describe("character voice sample query hooks", () => {
           HttpResponse.json({
             ok: true,
             data: {
-              character: "秦",
+              character: "Qin",
               slots: [
                 {
                   slot: "default",
-                  label: "默认（兜底）",
-                  path: "assets/characters/秦/voices/voice_default.wav",
-                  url: "/static/admin/demo/assets/characters/秦/voices/voice_default.wav",
+                  label: "default (fallback)",
+                  path: "assets/characters/Qin/voices/voice_default.wav",
+                  url: "/static/admin/demo/assets/characters/Qin/voices/voice_default.wav",
                   sha256: "sha",
                   updated_at: "2026-05-13T00:00:00+00:00",
                   inherited_from_default: false,
@@ -64,7 +64,7 @@ describe("character voice sample query hooks", () => {
                 },
                 {
                   slot: "child",
-                  label: "幼年",
+                  label: "child",
                   path: "",
                   url: "",
                   sha256: "",
@@ -78,7 +78,7 @@ describe("character voice sample query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useCharacterVoiceSamples("demo", "秦"), {
+    const { result } = renderHook(() => useCharacterVoiceSamples("demo", "Qin"), {
       wrapper,
     });
 
@@ -104,7 +104,7 @@ describe("character voice sample query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useUploadCharacterVoiceSample("demo", "秦"), {
+    const { result } = renderHook(() => useUploadCharacterVoiceSample("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate({ slot: "default", file: new File(["voice"], "voice.wav") });
@@ -119,7 +119,7 @@ describe("character voice sample query hooks", () => {
       ok: true,
       data: [
         {
-          name: "秦",
+          name: "Qin",
           age_group: "youth",
           reference_audio_path: "",
           reference_audio_url: "",
@@ -135,9 +135,9 @@ describe("character voice sample query hooks", () => {
             ok: true,
             data: {
               slot: "default",
-              label: "默认（兜底）",
-              path: "assets/characters/秦/voices/voice_default.wav",
-              url: "/static/admin/demo/assets/characters/秦/voices/voice_default.wav",
+              label: "default (fallback)",
+              path: "assets/characters/Qin/voices/voice_default.wav",
+              url: "/static/admin/demo/assets/characters/Qin/voices/voice_default.wav",
               sha256: "sha-default",
               updated_at: "2026-05-18T06:18:28+00:00",
               inherited_from_default: false,
@@ -148,7 +148,7 @@ describe("character voice sample query hooks", () => {
     );
 
     const { result } = renderHook(
-      () => useUploadCharacterVoiceSample("demo", "秦"),
+      () => useUploadCharacterVoiceSample("demo", "Qin"),
       {
         wrapper: wrapperWithClient(qc),
       },
@@ -164,9 +164,9 @@ describe("character voice sample query hooks", () => {
       queryKeys.characters("demo"),
     );
     expect(cached?.data[0]).toMatchObject({
-      reference_audio_path: "assets/characters/秦/voices/voice_default.wav",
+      reference_audio_path: "assets/characters/Qin/voices/voice_default.wav",
       reference_audio_url:
-        "/static/admin/demo/assets/characters/秦/voices/voice_default.wav",
+        "/static/admin/demo/assets/characters/Qin/voices/voice_default.wav",
       reference_audio_sha256: "sha-default",
       reference_audio_updated_at: "2026-05-18T06:18:28+00:00",
     });
@@ -186,7 +186,7 @@ describe("character voice sample query hooks", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
     const { result } = renderHook(
-      () => useUploadCharacterVoiceSample("demo", "秦"),
+      () => useUploadCharacterVoiceSample("demo", "Qin"),
       { wrapper: wrapperWithClient(qc) },
     );
 
@@ -216,7 +216,7 @@ describe("character voice sample query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useRecordCharacterVoiceSample("demo", "秦"), {
+    const { result } = renderHook(() => useRecordCharacterVoiceSample("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate({ slot: "youth", dataUrl: "data:audio/wav;base64,dm9pY2U=" });
@@ -240,19 +240,19 @@ describe("character voice sample query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useTrimCharacterVoiceSample("demo", "秦"), {
+    const { result } = renderHook(() => useTrimCharacterVoiceSample("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate({
       slot: "default",
-      sourcePath: "assets/characters/秦/voices/voice_default.wav",
+      sourcePath: "assets/characters/Qin/voices/voice_default.wav",
       startSeconds: 1.2,
       durationSeconds: 4,
     });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(body).toEqual({
-      source_path: "assets/characters/秦/voices/voice_default.wav",
+      source_path: "assets/characters/Qin/voices/voice_default.wav",
       start_seconds: 1.2,
       duration_seconds: 4,
     });
@@ -273,7 +273,7 @@ describe("character voice sample query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useDeleteCharacterVoiceSample("demo", "秦"), {
+    const { result } = renderHook(() => useDeleteCharacterVoiceSample("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate("child");

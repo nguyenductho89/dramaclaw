@@ -59,7 +59,7 @@ describe("ingest query error contract", () => {
         expect(body).toContain('name="spine_template"');
         expect(body).toContain("drama");
         expect(body).toContain('name="file"');
-        return HttpResponse.json({ ok: false, error: "解析章节失败: 文件编码不支持" });
+        return HttpResponse.json({ ok: false, error: "Failed to parse chapters: unsupported file encoding" });
       }),
     );
 
@@ -71,7 +71,7 @@ describe("ingest query error contract", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
-    expect(result.current.error?.message).toBe("解析章节失败: 文件编码不支持");
+    expect(result.current.error?.message).toBe("Failed to parse chapters: unsupported file encoding");
   });
 
   it("rejects start responses that return ok:false with a backend error", async () => {
@@ -95,7 +95,7 @@ describe("ingest query error contract", () => {
         HttpResponse.json(
           {
             ok: false,
-            error: "计费规则未配置，请联系管理员设置积分规则",
+            error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
             data: {
               error_code: "BILLING_RULE_NOT_CONFIGURED",
               billing_kind: "feature",
@@ -112,6 +112,6 @@ describe("ingest query error contract", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(BillingRuleNotConfiguredError);
-    expect(result.current.error?.message).toBe("计费规则未配置，请联系管理员设置积分规则");
+    expect(result.current.error?.message).toBe("Billing rules are not configured. Contact an administrator to set up credit rules.");
   });
 });

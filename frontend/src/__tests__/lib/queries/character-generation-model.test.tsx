@@ -46,7 +46,7 @@ describe("character generation model selection", () => {
       ),
     );
 
-    const { result } = renderHook(() => useGeneratePortraitAsync("demo", "秦"), {
+    const { result } = renderHook(() => useGeneratePortraitAsync("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate({ model: "openrouter_nanobanana2" });
@@ -63,7 +63,7 @@ describe("character generation model selection", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "当前项目 default 队列任务已满，请等待已有任务完成后再提交",
+              error: "The current project's default queue is full, wait for existing tasks to finish before submitting",
               data: {
                 project_id: "demo",
                 queue_kind: "default",
@@ -76,7 +76,7 @@ describe("character generation model selection", () => {
       ),
     );
 
-    const { result } = renderHook(() => useGeneratePortraitAsync("demo", "秦"), {
+    const { result } = renderHook(() => useGeneratePortraitAsync("demo", "Qin"), {
       wrapper,
     });
 
@@ -96,7 +96,7 @@ describe("character generation model selection", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "当前项目 default 队列任务已满，请等待已有任务完成后再提交",
+              error: "The current project's default queue is full, wait for existing tasks to finish before submitting",
               data: {
                 project_id: "demo",
                 queue_kind: "default",
@@ -110,7 +110,7 @@ describe("character generation model selection", () => {
     );
 
     const { result } = renderHook(
-      () => useGenerateSceneMasterAsync("demo", "办公室"),
+      () => useGenerateSceneMasterAsync("demo", "Office"),
       { wrapper },
     );
 
@@ -130,7 +130,7 @@ describe("character generation model selection", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "当前项目 video 队列任务已满，请等待已有任务完成后再提交",
+              error: "The current project's video queue is full, wait for existing tasks to finish before submitting",
               data: {
                 project_id: "demo",
                 queue_kind: "video",
@@ -173,7 +173,7 @@ describe("character generation model selection", () => {
     );
 
     const { result } = renderHook(
-      () => useGenerateIdentityImageAsync("demo", "秦"),
+      () => useGenerateIdentityImageAsync("demo", "Qin"),
       { wrapper },
     );
     result.current.mutate({
@@ -201,7 +201,7 @@ describe("character generation model selection", () => {
     );
 
     const { result } = renderHook(
-      () => useGenerateIdentityPortraitAsync("demo", "秦"),
+      () => useGenerateIdentityPortraitAsync("demo", "Qin"),
       { wrapper },
     );
     result.current.mutate({

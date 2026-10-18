@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 配音的任务行按「项目 + 集」复用，同一集上一次的配音任务（已结束）会在 `/tasks`
- * 里留一小时。start() 不带 taskId 时，终态兜底会把那条旧行当成这次的结果，当场
- * 收尾，新任务真正完成后 beats 就不再刷新，面板一直显示没生成。
+ * The voice-over task row is reused per "project + episode", and the previous (finished) voice-over task of the same episode stays
+ * in `/tasks` for an hour. When start() has no taskId, the terminal-state fallback takes that old row as this run's result and
+ * closes out on the spot; after the new task really completes beats is no longer refreshed, and the panel keeps showing "not generated".
  *
- * 带上 taskId 后，controller 只认这次的任务行。
+ * With a taskId, the controller only recognizes this run's task row.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -79,8 +79,8 @@ beforeEach(() => {
   state.tasks = [];
 });
 
-describe("useTaskController 与上一次已结束的同类任务", () => {
-  it("start() 带 taskId 时，上一次的终态任务行不会让这次提前结束", async () => {
+describe("useTaskController with a previous finished task of the same kind", () => {
+  it("with a taskId on start(), the previous terminal task row does not end this run early", async () => {
     state.tasks = [finishedAudio("previous-run")];
     const { result, invalidate } = renderAudioController();
 
@@ -93,7 +93,7 @@ describe("useTaskController 与上一次已结束的同类任务", () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it("这次的任务行结束后才收尾，并刷新 beats", async () => {
+  it("closes out only after this run's task row ends, and refreshes beats", async () => {
     state.tasks = [finishedAudio("previous-run")];
     const { result, rerender, invalidate } = renderAudioController();
 

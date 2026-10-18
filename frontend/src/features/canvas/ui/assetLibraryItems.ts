@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 资产库的条目模型与类目定义。弹窗(AssetLibraryModal，选参考图用)和 Freezone 左侧
-// 面板的「资产库」tab 共用这里，类目和归一化逻辑只有一份，避免两边漂移。
-// 这里只放纯数据推导，调接口的写操作(上传/改名/删除/同步)一律留在各自组件里。
+// The item model and category definitions of the asset library. The dialog (AssetLibraryModal, for picking reference images) and the Freezone left
+// panel's "Asset library" tab share this; the categories and normalization logic exist in only one copy, avoiding drift between the two sides.
+// Only pure data derivation goes here; write operations that call endpoints (upload/rename/delete/sync) stay in their own components.
 import type {
   FreezoneAssetLibraryCategory,
   FreezoneAssetLibraryFolder,
@@ -24,16 +24,16 @@ export interface LibraryItem {
   name: string;
   media: AssetLibraryMedia;
   source: FreezoneAssetLibrarySource;
-  /** 用途类目（标签）。老条目后端不返回时按 source/media 兜底推导，见 deriveCategory。 */
+  /** Purpose category (tag). When old items are not returned by the backend, it is derived from source/media as a fallback, see deriveCategory. */
   category: AssetCategory;
-  /** 保存位置（文件夹 key）。老条目没有该字段时按类目归位，见 deriveFolder。 */
+  /** Save location (folder key). When old items lack this field it is placed by category, see deriveFolder. */
   folder: AssetFolderKey;
-  /** 该条目在其 media 类型下的主展示 / 引用地址。 */
+  /** The item's primary display / reference address under its media type. */
   url: string;
   raw: Record<string, unknown>;
 }
 
-/** 资产名长度上限，与后端 LIBRARY_ITEM_NAME_MAX_LEN 一致。 */
+/** Upper limit of asset name length, consistent with the backend LIBRARY_ITEM_NAME_MAX_LEN. */
 export const LIBRARY_ITEM_NAME_MAX_LEN = 60;
 
 const FILE_EXTENSION_PATTERN = /\.([a-z0-9]{2,5})$/i;
@@ -44,10 +44,10 @@ const MEDIA_FALLBACK_EXTENSION: Record<AssetLibraryMedia, string> = {
 };
 
 /**
- * 下载时给素材起的文件名：资产名 + 从 URL 推出来的后缀。
+ * The file name given to an asset on download: asset name + the suffix inferred from the URL.
  *
- * 资产名是用户随手填的，可能带 `/`、`\`、`:` 之类会被系统当路径分隔符的字符，
- * 一律换成 `_`；名字整个被洗空时退回媒介名，总之不能生成一个空文件名。
+ * The asset name is typed freely by the user and may contain characters such as `/`, `\`, `:` that the system treats as path separators,
+ * all replaced with `_`; if the name is washed out entirely it falls back to the media name, so an empty file name is never produced.
  */
 export function libraryItemDownloadFilename(entry: LibraryItem): string {
   const path = entry.url.split(/[?#]/, 1)[0] ?? '';
@@ -56,23 +56,23 @@ export function libraryItemDownloadFilename(entry: LibraryItem): string {
     MEDIA_FALLBACK_EXTENSION[entry.media];
   const base =
     entry.name.replace(/[\\/:*?"<>|]+/g, '_').trim() || entry.media;
-  // 名字自己就带对后缀时不再叠一层（「封面.png」不该下成「封面.png.png」）。
+  // When the name already carries the right suffix do not stack another ("cover.png" should not be downloaded as "cover.png.png").
   return base.toLowerCase().endsWith(`.${extension}`)
     ? base
     : `${base}.${extension}`;
 }
 
 /**
- * 资产类目。分类不再按媒介（图片/视频/音频）切，而是按用途切——同一个类目下
- * 图片、视频、音频都可能有。`audio`（音效）是唯一天然只装音频的类目。
+ * Asset categories. Categories are no longer split by medium (image/video/audio) but by purpose - under the same category
+ * there may be images, videos and audio. `audio` (sound effects) is the only category that naturally holds only audio.
  */
 export type AssetCategory = FreezoneAssetLibraryCategory;
 
 export interface AssetCategoryDef {
   key: AssetCategory;
-  /** 展示名的词条 key——这张表跟着界面语言走，源码里只留 key。 */
+  /** The entry key of the display name - this table follows the UI language, and only the key is left in source. */
   labelKey: string;
-  /** 该类目收哪些媒介的文件——决定上传时的 accept 与提示文案。 */
+  /** Which media files this category accepts - decides the accept attribute and hint text on upload. */
   media: AssetLibraryMedia[];
 }
 
@@ -89,13 +89,13 @@ export const ASSET_CATEGORIES: AssetCategoryDef[] = [
   { key: 'audio', labelKey: 'canvas.assetLibrary.category.audio', media: ['audio'] },
 ];
 
-/** 类目筛选器的「全部类别」key。文件夹范围由独立导航控制，不再混入同一排。 */
+/** The "All categories" key of the category filter. The folder scope is controlled by independent navigation and is no longer mixed into the same row. */
 export const ALL_CATEGORY_KEY = 'all';
 export type AssetLibraryCategoryFilterKey =
   | typeof ALL_CATEGORY_KEY
   | AssetCategory;
 
-/** 从 File 的 MIME 判断它属于哪种媒介；认不出来返回 null（直接丢弃该文件）。 */
+/** Judge from a File's MIME which medium it belongs to; returns null if unrecognized (the file is dropped directly). */
 export function mediaOfFile(file: File): AssetLibraryMedia | null {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
@@ -106,8 +106,8 @@ export function mediaOfFile(file: File): AssetLibraryMedia | null {
 const CATEGORY_KEYS = new Set<string>(ASSET_CATEGORIES.map((c) => c.key));
 
 /**
- * 老条目没有 category 字段，按它的来源/媒介兜底推一个：主线同步来的人物/场景/
- * 道具直接对号入座，音频归音效，剩下的本地上传归「其它」。
+ * Old items have no category field, so derive one from their source/media as a fallback: characters/scenes/
+ * props synced from the mainline are matched directly, audio goes to sound effects, and the remaining local uploads go to "Other".
  */
 export function deriveCategory(
   raw: unknown,
@@ -131,20 +131,20 @@ export const SOURCE_LABEL_KEYS: Record<FreezoneAssetLibrarySource, string> = {
 };
 
 /**
- * 文件夹（保存位置）和类目（标签）是两个独立维度：类目只说「这素材是干嘛的」，
- * 文件夹说「它放在哪」。key 的取值有三种——
- *   - `mainline`：主线同步来的资产的固定去处，不接受上传；
- *   - 类目 key（other/character/…）：同名系统文件夹，老条目没有 folder 字段时
- *     按类目落进来，所以不需要数据迁移；
- *   - 其余：用户自建文件夹的 id（后端随机生成，不会和上面撞）。
- * 与后端 video_node.py 的 RESERVED_FOLDER_KEYS / _resolve_library_folder 对应。
+ * Folder (save location) and category (tag) are two independent dimensions: a category only says "what this asset is for",
+ * and a folder says "where it is kept". The key takes three kinds of values -
+ *   - `mainline`: the fixed home of assets synced from the mainline, which accepts no uploads;
+ *   - category key (other/character/...): the same-named system folder; old items without a folder field
+ *     fall in by category, so no data migration is needed;
+ *   - others: the id of a user-created folder (randomly generated by the backend, will not collide with the above).
+ * Corresponds to RESERVED_FOLDER_KEYS / _resolve_library_folder in the backend video_node.py.
  */
 export type AssetFolderKey = string;
 
 export const MAINLINE_FOLDER_KEY = 'mainline';
-/** 没归类的本地上传落在「其它」类目，文件夹上换个更直白的名字。 */
+/** Unclassified local uploads land in the "Other" category, and the folder gets a plainer name. */
 export const UNSORTED_FOLDER_LABEL_KEY = 'canvas.assetLibrary.uncategorized';
-/** 与后端 FOLDER_NAME_MAX_LEN 一致。 */
+/** Consistent with the backend FOLDER_NAME_MAX_LEN. */
 export const FOLDER_NAME_MAX_LEN = 20;
 
 const SYSTEM_FOLDER_LABEL_KEYS: Record<string, string> = {
@@ -157,25 +157,25 @@ const SYSTEM_FOLDER_LABEL_KEYS: Record<string, string> = {
   ),
 };
 
-/** 系统文件夹显示名的词条 key；不是系统 key（自建文件夹的 id）时返回 null。 */
+/** Entry key of the system folder display name; returns null when it is not a system key (the id of a user-created folder). */
 export function systemFolderLabelKey(key: AssetFolderKey): string | null {
   return SYSTEM_FOLDER_LABEL_KEYS[key] ?? null;
 }
 
 /**
- * 用户建不出来的名字（会和系统文件夹撞），与后端 RESERVED_FOLDER_NAMES 一致。
- * 这是跟后端对齐的协议值，不是界面文案，所以写死中文、不入词条。
+ * Names users cannot create (they would collide with system folders), consistent with the backend RESERVED_FOLDER_NAMES.
+ * This is a protocol value aligned with the backend, not UI copy, so it is hard-coded and not made an entry.
  */
 // i18n-exempt-start
 export const RESERVED_FOLDER_NAMES = [
-  '主线',
-  '待分类资产',
-  '其它',
-  '人物',
-  '场景',
-  '物品',
-  '风格',
-  '音效',
+  'Mainline',
+  'Unsorted assets',
+  'Other',
+  'Characters',
+  'Scenes',
+  'Props',
+  'Style',
+  'Sound effects',
 ];
 // i18n-exempt-end
 
@@ -183,17 +183,17 @@ export interface AssetFolder {
   key: AssetFolderKey;
   label: string;
   items: LibraryItem[];
-  /** 系统文件夹不可重命名/删除/改封面——它们是按标签派生的，没有实体记录。 */
+  /** System folders cannot be renamed/deleted/have their cover changed - they are derived from tags and have no physical record. */
   system: boolean;
-  /** 能否作为上传的保存位置。主线是同步产物，只读。 */
+  /** Whether it can serve as the save location of an upload. Mainline is a sync product and is read-only. */
   uploadable: boolean;
-  /** 用户设的封面图 URL；没设过时按文件夹里第一张图兜底，都没有就画图标。 */
+  /** Cover image URL set by the user; when never set, fall back to the first image in the folder, and draw an icon if there is none. */
   cover?: string | null;
-  /** 建夹时间（ISO）。系统文件夹是按标签派生的，没有这个字段。 */
+  /** Folder creation time (ISO). System folders are derived from tags and do not have this field. */
   createdAt?: string | null;
 }
 
-/** 建夹日期，只取到天：卡片上够用，也免得时区把时分秒显示歪。 */
+/** Folder creation date, down to the day only: enough on the card, and it also avoids time zones showing the time of day skewed. */
 export function formatFolderDate(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
@@ -202,7 +202,7 @@ export function formatFolderDate(iso: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** 文件夹封面：用户指定的优先，否则拿文件夹里第一张图顶上（音频没有可用画面）。 */
+/** Folder cover: the user-specified one first, otherwise use the first image in the folder (audio has no usable picture). */
 export function folderCoverUrl(folder: AssetFolder): string | null {
   if (folder.cover) return folder.cover;
   const firstImage = folder.items.find(
@@ -211,7 +211,7 @@ export function folderCoverUrl(folder: AssetFolder): string | null {
   return firstImage?.url ?? null;
 }
 
-/** 老条目没有 folder 字段：主线的进主线，本地上传的按类目进同名系统文件夹。 */
+/** Old items have no folder field: mainline ones go to mainline, and local uploads go into the same-named system folder by category. */
 export function deriveFolder(
   raw: unknown,
   source: FreezoneAssetLibrarySource,
@@ -222,8 +222,8 @@ export function deriveFolder(
 }
 
 /**
- * 把条目摆进文件夹。【主线】和【待分类资产】恒在——库是空的时候也得有地方可点；
- * 其余系统文件夹有内容才出现；自建文件夹一律出现（刚建完还是空的也要看得见）。
+ * Place items into folders. [Mainline] and [Unsorted assets] are always present - there must be somewhere clickable even when the library is empty;
+ * other system folders appear only when they have content; user-created folders always appear (even freshly created and still empty, they must be visible).
  */
 export function buildAssetFolders(
   items: LibraryItem[],
@@ -303,7 +303,7 @@ export function normalizeLibraryList(payload: unknown): LibraryItem[] {
       const id =
         typeof idRaw === 'string' ? idRaw : idRaw != null ? String(idRaw) : null;
       const name = typeof it.name === 'string' ? it.name : '';
-      // 缺省 image 兼容老数据（历史条目没有 media 字段）。
+      // Default to image for compatibility with old data (historical items have no media field).
       const mediaRaw = typeof it.media === 'string' ? it.media : 'image';
       const media: AssetLibraryMedia =
         mediaRaw === 'video' || mediaRaw === 'audio' ? mediaRaw : 'image';

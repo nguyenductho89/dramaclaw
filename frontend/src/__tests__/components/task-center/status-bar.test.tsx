@@ -43,7 +43,7 @@ beforeEach(() => {
 describe("TaskStatusBar", () => {
   it("renders idle when store is empty", () => {
     renderBar();
-    expect(screen.getByText(/idle|空闲/i)).toBeInTheDocument();
+    expect(screen.getByText(/idle/i)).toBeInTheDocument();
   });
 
   it("shows running count when any task is running", () => {
@@ -88,7 +88,7 @@ describe("TaskStatusBar", () => {
     useTaskCenterStore.getState().setHealth("reconnecting");
     renderBar();
     // Both the sr-only and the visible label exist; we just assert at least one match.
-    const matches = screen.getAllByText(/reconnecting|重新连接/i);
+    const matches = screen.getAllByText(/reconnecting/i);
     expect(matches.length).toBeGreaterThan(0);
   });
 

@@ -10,26 +10,26 @@ import {
 import type { CanvasNodeData } from '@/features/canvas/domain/canvasNodes';
 
 /**
- * 保存被后端 `canvas_media_scope_mismatch` 拒绝之后的自愈。
+ * Self-healing after a save is rejected by the backend with `canvas_media_scope_mismatch`.
  *
- * 静态资源按 URL 里的项目 id 独立鉴权，所以一张画布不能存别的项目的媒体地址：源项目
- * 成员看着一切正常，换个同样合法的本项目成员打开就是整片 403（SuperTale#192）。后端
- * 因此在 PUT 时拦下**本次新引入**的外项目引用，并回一份 `refs` 清单（节点 id + 字段
- * 路径 + 原 URL）。
+ * Static resources are authorized independently by the project id in the URL, so one canvas cannot store media addresses of another project: members of the
+ * source project see everything normal, but another equally valid member of this project who opens it gets 403 across the board (SuperTale#192). The backend
+ * therefore blocks the **newly introduced** out-of-project references at PUT time and returns a `refs` list (node id + field
+ * path + original URL).
  *
- * 这里把那份清单变成一次修复：素材拷进本项目（服务端 CopyObject，字节不过浏览器），
- * 新地址按字段路径填回节点，然后由调用方重试保存。拷不动的（源项目无权限 / 已删 /
- * 网络断）把字段置空并打上 `assetMigration: 'failed'` —— 保留原 URL 等于把 403 再存
- * 一次，后端下一轮还会拒，保存就永远卡死。
+ * This turns that list into a repair: copy the assets into this project (server-side CopyObject, bytes do not pass through the browser),
+ * fill the new addresses back into the nodes by field path, and then the caller retries the save. For ones that cannot be copied (no permission on the source project / deleted /
+ * network down), blank the field and mark `assetMigration: 'failed'` - keeping the original URL means saving the 403 again,
+ * the backend rejects it again next round, and saving is stuck forever.
  *
- * 跨项目**粘贴**走的是另一条更早的路（`crossProjectAssets`：URL 压根不进 store）。
- * 本模块兜的是所有其他把外项目 URL 塞进画布的路径——撤销重做旧数据、模板/投影插入、
- * 以及将来任何新写法。
+ * Cross-project **paste** takes another, earlier route (`crossProjectAssets`: the URL never enters the store at all).
+ * This module covers all the other paths that put an out-of-project URL into the canvas - undo/redo of old data, template/projection insertion,
+ * and any new approach in future.
  */
 
 export interface ForeignMediaRef {
   node_id: string;
-  /** 节点 `data` 内的字段路径，例如 `cells[1].imageUrl`。 */
+  /** Field path inside the node `data`, e.g. `cells[1].imageUrl`. */
   field: string;
   url: string;
   source_project_id: string;
@@ -52,8 +52,8 @@ function isForeignMediaRef(value: unknown): value is ForeignMediaRef {
 }
 
 /**
- * 从保存错误里取出后端报的外项目引用；不是这个错误、或者一条可修的都没有就回 `null`
- * （让调用方按普通错误处理，别为一份空清单空转一轮拷贝 + 重试）。
+ * Extract the out-of-project references reported by the backend from a save error; returns `null` if it is not this error or there is not a single repairable one
+ * (so the caller treats it as an ordinary error, rather than spinning a round of copy + retry for an empty list).
  */
 export function parseCanvasMediaScopeRefs(
   status: number | null,
@@ -74,7 +74,7 @@ export function parseCanvasMediaScopeRefs(
   return refs.length > 0 ? refs : null;
 }
 
-/** `cells[1].imageUrl` → `['cells', 1, 'imageUrl']`。解析不出来就回 `null`。 */
+/** `cells[1].imageUrl` -> `['cells', 1, 'imageUrl']`. Returns `null` if it cannot be parsed. */
 export function parseFieldPath(field: string): Array<string | number> | null {
   const path: Array<string | number> = [];
   const pattern = /([^.[\]]+)|\[(\d+)\]/g;
@@ -94,22 +94,22 @@ export function parseFieldPath(field: string): Array<string | number> | null {
 }
 
 export interface ForeignMediaRepairResult {
-  /** 原 URL → 本项目里的新 URL；调用方重试保存前也要拿它改自己手上的节点快照。 */
+  /** Original URL -> new URL in this project; before retrying the save the caller also needs it to change the node snapshot it holds. */
   urlMap: Map<string, string>;
-  /** 没拷成的原 URL；对应字段已被置空。 */
+  /** Original URLs that were not copied; the matching fields have been blanked. */
   failedUrls: Set<string>;
   /**
-   * 这次没拷成但下次可能行（网络断了 / 后端 5xx / 画布中途换了）。为真时**一个字段都没动**：
-   * 调用方该做的是把错误报给用户等他重试，而不是拿一次抖动换用户永久丢图。
+   * Not copied this time but may succeed next time (network down / backend 5xx / canvas switched midway). When true **not a single field was touched**:
+   * the caller should report the error to the user and wait for them to retry, rather than trading a blip for the user permanently losing images.
    */
   retryable: boolean;
 }
 
 /**
- * 把后端报的外项目引用拷进 `targetProject` 并填回节点。
+ * Copy the out-of-project references reported by the backend into `targetProject` and fill them back into the nodes.
  *
- * 只改「当前值仍然正是后端拒绝的那个 URL」的字段：拒绝到重试之间用户自己换了图，
- * 那是他的选择，不拿拷贝结果盖掉；节点已被删掉则整个跳过。相同 URL 只拷一次。
+ * Only change fields whose "current value is still exactly the URL the backend rejected": if the user swapped the image between the rejection and the retry,
+ * that is their choice, and the copy result does not overwrite it; if the node has been deleted the whole thing is skipped. The same URL is copied only once.
  */
 export async function repairForeignMediaRefs(params: {
   refs: ForeignMediaRef[];
@@ -117,43 +117,43 @@ export async function repairForeignMediaRefs(params: {
   getLiveNodeData: (id: string) => CanvasNodeData | null;
   updateNodeData: (id: string, patch: Partial<CanvasNodeData>) => void;
   /**
-   * 拷不动时是否把字段置空并标 `failed`。保存链路必须置空（保留源项目 URL 就等于把
-   * 403 再存一次，后端下一轮还会拒，保存永远卡死）；读取期的手动修复不能置空——那份
-   * 数据是历史遗留、后端已经放行，修不成也不该顺手把用户仅剩的线索删掉。
+   * Whether to blank the field and mark `failed` when it cannot be copied. The save path must blank it (keeping the source project URL means saving
+   * the 403 again, the backend rejects it again next round, and saving is stuck forever); a manual repair at read time must not blank it - that
+   * data is a historical leftover that the backend already lets through, and if it cannot be repaired the user's last remaining clue should not be deleted in passing.
    */
   blankOnFailure?: boolean;
 }): Promise<ForeignMediaRepairResult> {
   const { refs, targetProject, getLiveNodeData, updateNodeData } = params;
   const blankOnFailure = params.blankOnFailure ?? true;
   const scope = foreignMediaScope;
-  // 守卫按浏览器语义扫，`ref.url` 却是画布里的原始字符串（可能是同源完整 URL、可能带 `..`）。
-  // 复制接口只认相对 canonical 路径，直接把原串发过去会换回 invalid_source，自愈反倒把
-  // 引用删了。这里先归一化成复制接口认的形式，并留住「原 URL → 规范化源」好把结果改回去。
+  // The guard scans with browser semantics, but `ref.url` is the raw string in the canvas (it may be a same-origin full URL, or contain `..`).
+  // The copy endpoint only recognizes relative canonical paths, and sending the raw string would get invalid_source back, and the self-heal would delete
+  // the reference instead. So normalize first into the form the copy endpoint recognizes, and keep "original URL -> normalized source" to map results back.
   const sourceByUrl = new Map<string, string>();
   for (const ref of refs) {
     if (sourceByUrl.has(ref.url)) {
       continue;
     }
     const asset = toCopyableAsset(ref.url);
-    // 归一化不出来的（跨源、protocol-relative）：那是守卫的误拦，本来就不是本站资源，
-    // 拷不了也不该动它。整个跳过——一处都没改到时调用方会走"请删掉这些节点"那条路，
-    // 至少不会把用户一张正常的外链图删掉。
+    // Ones that cannot be normalized (cross-origin, protocol-relative): that is a false block by the guard and was never a resource of this site,
+    // so failing to copy it should not touch it either. Skip entirely - when not a single one is changed, the caller takes the "please delete these nodes" path,
+    // at least not deleting a user's normal external image.
     if (asset) {
       sourceByUrl.set(ref.url, asset.source);
     }
   }
   const sources = [...new Set(sourceByUrl.values())];
   const { mapping, failed, unavailable } = await copyAssetsInBatches(targetProject, sources);
-  // 拷贝期间用户切走了画布/项目：这些 refs 说的已经不是屏幕上这张图，改谁都是错的。
+  // The user switched away from the canvas/project during the copy: these refs no longer describe the image on screen, and changing anything would be wrong.
   if (foreignMediaScope !== scope) {
     return { urlMap: new Map(), failedUrls: new Set(), retryable: true };
   }
-  // 有一处只是"这次没拷成"，就整体不动手。半改半留会让重试对不上账，而置空是不可逆的。
+  // If even one was just "not copied this time", do nothing overall. Half changed and half kept would make retries not reconcile, and blanking is irreversible.
   if (unavailable.size > 0) {
     return { urlMap: new Map(), failedUrls: new Set(), retryable: true };
   }
-  // 后端按发过去的字符串回映射；没出现在 mapping 也没出现在 failed 的（不该发生）一律算
-  // 失败，免得字段带着源项目 URL 留在原地、下一轮保存再被拒。对外一律用原 URL 作 key。
+  // The backend maps back by the string that was sent; anything in neither the mapping nor failed (should not happen) counts as
+  // failed, so a field does not stay in place carrying the source project URL and get rejected again on the next save. Externally the original URL is always the key.
   const failedUrls = new Set<string>();
   for (const [url, source] of sourceByUrl) {
     if (!mapping.has(source) || failed.has(source)) {
@@ -189,7 +189,7 @@ export async function repairForeignMediaRefs(params: {
       }
       const source = sourceByUrl.get(ref.url);
       if (source === undefined) {
-        // 归一化不出来：不是本站资源，别动。
+        // Cannot be normalized: not a resource of this site, leave it alone.
         continue;
       }
       const newUrl = mapping.get(source);
@@ -217,7 +217,7 @@ export async function repairForeignMediaRefs(params: {
     }
   }
 
-  // 调用方拿它改自己手上的节点快照，键必须是画布里那串原 URL。
+  // The caller uses it to change the node snapshot it holds, and the key must be the original URL string in the canvas.
   const urlMap = new Map<string, string>();
   for (const [url, source] of sourceByUrl) {
     const newUrl = mapping.get(source);
@@ -229,11 +229,11 @@ export async function repairForeignMediaRefs(params: {
 }
 
 /**
- * 把一次修复的结果套到「即将重试的那份节点快照」上。
+ * Apply the result of a repair to "the node snapshot about to be retried".
  *
- * 修复已经写进了 store，但保存流程手上是发起这次 PUT 时的快照——不同步改一份，重试
- * 发出去的还是那些被拒的 URL，会原地死循环。没拷成的一律置空 + 标失败，理由同上。
- * 没有任何节点被改动时原样返回入参，避免下游无谓重渲染。
+ * The repair has been written into the store, but the save flow holds the snapshot from when this PUT was initiated - without changing one in sync, the retry
+ * would send out the same rejected URLs and loop forever in place. Anything not copied is blanked + marked failed, for the same reason as above.
+ * When no node is changed the input is returned as is, avoiding needless re-rendering downstream.
  */
 export function applyForeignMediaRepairToNodes<
   T extends { id: string; data?: unknown },
@@ -263,8 +263,8 @@ export function applyForeignMediaRepairToNodes<
       }
       const newUrl = repair.urlMap.get(ref.url);
       if (!newUrl && !repair.failedUrls.has(ref.url)) {
-        // 既没拷成也不算失败 = 修复根本没碰它（归一化不出来的非本站地址）。
-        // 这里置空会跟 store 里留着的原值对不上，还会删掉用户一张正常的外链图。
+        // Neither copied nor counted as failed = the repair never touched it (a non-site address that could not be normalized).
+        // Blanking it here would not match the original value kept in the store, and would delete a user's normal external image.
         continue;
       }
       data = writeAtPath(data, path, newUrl ?? null);
@@ -289,17 +289,17 @@ export function applyForeignMediaRepairToNodes<
   return changed ? next : (nodes as T[]);
 }
 
-// ——— 读取期诊断登记表 ————————————————————————————————————————————————
-// GET 画布时后端会把「仍在服务的外项目引用」挂在 `foreign_media` 里（这些是守卫上线
-// 之前存进去的历史数据，保存端放行，否则一个脏节点就把整张老画布锁死）。这里按节点
-// 索引一份，节点遮罩订阅它，把裂图换成一句解释 + 一键修复。
+// --- Read-time diagnostics registry ------------------------------------------------
+// On GET of a canvas the backend hangs "out-of-project references still being served" in `foreign_media` (historical data saved before the guard
+// went live, which the save side lets through, otherwise one dirty node would lock the whole old canvas). Here an index is kept per node,
+// the node mask subscribes to it, and replaces a broken image with an explanation plus a one-click repair.
 //
-// 刻意**不**写进节点 data：这是诊断信息，不是画布内容，不该落库、不该进撤销栈，也不该
-// 让一次纯粹的读取把画布标记成"有改动"。
+// Deliberately **not** written into node data: this is diagnostic information, not canvas content, and should not be persisted, should not enter the undo stack, and should not
+// let a purely read operation mark the canvas as "modified".
 
 let foreignMediaProject = '';
-// 当前诊断属于哪张画布。`repairForeignMediaRefs` 在 await 前后各读一次：拷贝要几秒，
-// 期间画布/项目换了的话，手上的 refs 指的已经不是屏幕上这张图了。
+// Which canvas the current diagnostics belong to. `repairForeignMediaRefs` reads it once before and once after await: the copy takes several seconds,
+// and if the canvas/project changes in between, the refs in hand no longer describe the image on screen.
 let foreignMediaScope = '';
 const foreignMediaByNode = new Map<string, ForeignMediaRef[]>();
 const foreignMediaListeners = new Set<() => void>();
@@ -311,14 +311,14 @@ function notifyForeignMedia(): void {
   }
 }
 
-/** 换画布 / 重新 hydrate 时整表替换：上一张画布的诊断绝不能留到下一张。 */
+/** Replace the whole table on canvas switch / re-hydrate: the previous canvas's diagnostics must never carry over to the next. */
 export function publishForeignMediaRefs(
   targetProject: string,
   canvasId: string,
   refs: readonly ForeignMediaRef[],
 ): void {
   foreignMediaProject = targetProject;
-  // 同一张画布重新 hydrate 不算换作用域，否则一次后台刷新就能把用户正在跑的修复打断。
+  // Re-hydrating the same canvas does not count as a scope change, otherwise one background refresh could interrupt a repair the user is running.
   foreignMediaScope = `${targetProject}:${canvasId}`;
   foreignMediaByNode.clear();
   for (const ref of refs) {
@@ -339,7 +339,7 @@ export function clearForeignMediaRefs(): void {
   notifyForeignMedia();
 }
 
-/** 快照必须是稳定引用：干净节点一律回同一个空数组，否则 useSyncExternalStore 死循环。 */
+/** The snapshot must be a stable reference: clean nodes always return the same empty array, otherwise useSyncExternalStore loops forever. */
 export function readForeignMediaRefsForNode(nodeId: string): ForeignMediaRef[] {
   return foreignMediaByNode.get(nodeId) ?? NO_REFS;
 }
@@ -355,7 +355,7 @@ export function subscribeForeignMediaRefs(listener: () => void): () => void {
   };
 }
 
-/** 一处修好了就从登记表里摘掉；剩下的还留着（部分成功也要如实显示）。 */
+/** Once one is repaired remove it from the registry; the rest stay (partial success must also be shown honestly). */
 export function resolveForeignMediaRefs(nodeId: string, urls: Iterable<string>): void {
   const bucket = foreignMediaByNode.get(nodeId);
   if (!bucket) {

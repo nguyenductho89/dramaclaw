@@ -8,9 +8,9 @@ import {
 } from "@/lib/route-switch-transition";
 
 /**
- * 这个模块的全部价值就在于「遮罩先上屏、跳转后发生」这个顺序 —— 少等一帧，
- * 跳转的同步长任务就会把遮罩连同新页面一起吞进同一次 commit，用户看到的还是
- * 卡一下再换页。所以测的是帧序，不是渲染结果。
+ * The whole value of this module lies in the order "the overlay hits the screen first, the navigation happens afterwards" - wait one frame less,
+ * and the synchronous long task of the navigation swallows the overlay together with the new page into the same commit, and the user still sees
+ * a hitch and then a sudden page change. So what is tested is the frame order, not the rendered result.
  */
 describe("beginRouteSwitch", () => {
   let frames: Array<() => void>;
@@ -27,8 +27,8 @@ describe("beginRouteSwitch", () => {
   });
 
   afterEach(() => {
-    // phase 是模块级的。endRouteSwitch 只收 navigating，所以先把可能停在 armed
-    // 的状态推完两帧，别把残留漏给下一个用例。
+    // phase is module-level. endRouteSwitch only takes navigating, so first push any state that may be stuck in armed
+    // through two frames, so no residue leaks into the next case.
     flushFrame();
     flushFrame();
     endRouteSwitch();
@@ -40,19 +40,19 @@ describe("beginRouteSwitch", () => {
     pending.forEach((cb) => cb());
   };
 
-  it("延后到第二帧才跳转", () => {
+  it("defers the navigation to the second frame", () => {
     const navigate = vi.fn();
     beginRouteSwitch(navigate);
 
     expect(navigate).not.toHaveBeenCalled();
     flushFrame();
-    // 第一帧的回调还跑在这一帧绘制之前，遮罩没上屏，不能跳。
+    // The first-frame callback still runs before this frame is painted, the overlay is not on screen, so it must not navigate.
     expect(navigate).not.toHaveBeenCalled();
     flushFrame();
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
-  it("连点两次只跳最后一次", () => {
+  it("two quick clicks only navigate for the last one", () => {
     const first = vi.fn();
     const second = vi.fn();
     beginRouteSwitch(first);
@@ -65,9 +65,9 @@ describe("beginRouteSwitch", () => {
     expect(second).toHaveBeenCalledTimes(1);
   });
 
-  it("上一次跳转落地时，不吞掉刚点下、还没发车的那一次", () => {
-    // 路由落地会调 endRouteSwitch。用户在上一页落地前的那两帧里点了第二个菜单，
-    // 这一下必须照样发出去，否则他停在上一页且完全没有反馈。
+  it("when the previous navigation lands, the just-clicked one that has not departed yet is not swallowed", () => {
+    // Route landing calls endRouteSwitch. The user clicked a second menu in the two frames before the previous page landed,
+    // and that click must still be sent out, otherwise they stay on the previous page with no feedback at all.
     const navigate = vi.fn();
     beginRouteSwitch(navigate);
     flushFrame();
@@ -77,7 +77,7 @@ describe("beginRouteSwitch", () => {
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
-  it("没有 rAF 时直接跳转，不把界面卡在遮罩里", () => {
+  it("without rAF, navigates directly and does not leave the UI stuck behind the overlay", () => {
     vi.stubGlobal("requestAnimationFrame", undefined);
     const navigate = vi.fn();
     beginRouteSwitch(navigate);

@@ -48,7 +48,7 @@ describe("cluster-config", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         new Response(
-          JSON.stringify({ regions: [{ id: "cn-1", displayName: "华东一区" }] }),
+          JSON.stringify({ regions: [{ id: "cn-1", displayName: "East China 1" }] }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
       ),
@@ -56,7 +56,7 @@ describe("cluster-config", () => {
     const { clusterConfig, loadClusterConfig } = await import("@/lib/cluster-config");
     await loadClusterConfig();
     expect(clusterConfig.mode).toBe("multi-region");
-    expect(clusterConfig.regions).toEqual([{ id: "cn-1", displayName: "华东一区" }]);
+    expect(clusterConfig.regions).toEqual([{ id: "cn-1", displayName: "East China 1" }]);
     expect(JSON.parse(localStorage.getItem(CACHE_KEY) ?? "null")).toMatchObject({
       regions: [{ id: "cn-1" }],
     });
@@ -69,13 +69,13 @@ describe("cluster-config", () => {
       CACHE_KEY,
       JSON.stringify({
         savedAt: Date.now() - 60_000,
-        regions: [{ id: "cn-1", displayName: "华东一区(cached)" }],
+        regions: [{ id: "cn-1", displayName: "East China 1(cached)" }],
       }),
     );
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const { clusterConfig, loadClusterConfig } = await import("@/lib/cluster-config");
     await loadClusterConfig();
-    expect(clusterConfig.regions).toEqual([{ id: "cn-1", displayName: "华东一区(cached)" }]);
+    expect(clusterConfig.regions).toEqual([{ id: "cn-1", displayName: "East China 1(cached)" }]);
   });
 
   it("graceful degrades to empty regions when fetch fails and cache is stale/absent", async () => {

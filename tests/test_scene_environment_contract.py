@@ -138,14 +138,14 @@ def test_boilerplate_is_replaced_by_a_valid_contract():
 def test_a_prompt_a_user_wrote_is_never_touched():
     """Only prompts this code generated carry the fingerprint."""
     assert not should_repair_scene_placeholder(SINGLE_LINE, MULTI_LINE)
-    assert not should_repair_scene_placeholder("我自己写的场景描述", SINGLE_LINE)
+    assert not should_repair_scene_placeholder("A scene description I wrote myself", SINGLE_LINE)
 
 
 def test_boilerplate_is_not_churned_into_more_boilerplate():
     assert not should_repair_scene_placeholder(PLACEHOLDER, PLACEHOLDER)
 
 
-@pytest.mark.parametrize("replacement", ["", "   ", "正面：a", "一段没有分区的描述"])
+@pytest.mark.parametrize("replacement", ["", "   ", "Front: a", "A description without sections"])
 def test_boilerplate_is_never_replaced_by_something_worse(replacement):
     """A malformed or empty model response must not overwrite what is stored."""
     assert not should_repair_scene_placeholder(PLACEHOLDER, replacement)

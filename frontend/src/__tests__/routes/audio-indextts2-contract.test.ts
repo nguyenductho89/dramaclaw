@@ -47,8 +47,8 @@ describe("audio IndexTTS2 alignment contract", () => {
   });
 
   it("hands the backend task_id to the audio task controller", () => {
-    // 配音接口只返回 task_id，没有 scope。只传 scope 时 controller 认不出这次的任务，
-    // 会把 /tasks 里上一次已结束的配音任务当成这次，当场收尾，完成后 beats 不再刷新。
+    // The voice-over endpoint only returns task_id, no scope. With only scope passed the controller cannot recognize this run's task,
+    // and would take the previous finished voice-over task in /tasks as this one and close out on the spot, so beats are no longer refreshed after completion.
     for (const path of [
       "src/components/episode/beat-workbench/audio-pane.tsx",
       "src/components/episode/beat-workbench/batch-bar.tsx",

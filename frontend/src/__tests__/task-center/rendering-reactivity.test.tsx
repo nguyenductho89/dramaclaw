@@ -103,7 +103,7 @@ describe("rendered-DOM reactivity — status bar", () => {
         sampleTask({ task_id: "a", task_key: "a", task_type: "script_writer", status: "running" }),
       );
     });
-    expect(screen.getAllByText(/script writer|ep\d|剧本/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/script writer|ep\d|script/i).length).toBeGreaterThan(0);
   });
 
   it("transitions from running-chip to completion chip when task finishes", () => {

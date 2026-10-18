@@ -978,7 +978,6 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
     const parts: string[] = [];
 
     // What is assembled below is the prompt sent to the model, not UI copy; following the UI language would make image output unstable.
-    // i18n-exempt-start
     const promptDirectives: string[] = [
       `Generate one ${gridRows}×${gridCols} grid of ${gridRows * gridCols} candidate variations, where each cell is an independent candidate image`,
     ];
@@ -1002,7 +1001,6 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
 
       parts.push(`Candidate ${index + 1}: ${sanitizedDescription}`);
     });
-    // i18n-exempt-end
 
     return parts.join('\n');
   }, [

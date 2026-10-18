@@ -28,16 +28,16 @@ const t = ((key: string, opts?: { defaultValue?: string; index?: number }) => {
 }) as unknown as Parameters<typeof humanizeTaskError>[1];
 
 const CHANNEL_POLICY_RAW =
-  '草图重生未生成可用图片（mode=1x1_2-3_sketch, beats=[5]）: HTTP 429: ' +
+  'Sketch regeneration produced no usable image (mode=1x1_2-3_sketch, beats=[5]): HTTP 429: ' +
   'body={"error":{"message":"huimeng channel skipped for low quality request",' +
   '"type":"channel_policy","code":"huimeng_low_quality_skipped"}}';
 
 const REAL_429_RAW =
-  'Render 重生未生成可用图片: HTTP 429: rate limit exceeded; body={"error":{"message":"Too Many Requests"}}';
+  'Render regeneration produced no usable image: HTTP 429: rate limit exceeded; body={"error":{"message":"Too Many Requests"}}';
 
 const MODERATION_RAW =
   'DramaClawAPI image generation failed: HTTP 400: request_id=req-123; ' +
-  'body={"error":{"message":"Content failed safety review. / 内容未通过安全审核。",' +
+  'body={"error":{"message":"Content failed safety review.",' +
   '"type":"content_policy_violation","param":"","code":"moderation_blocked"}}';
 const INPUT_POLICY_RAW =
   "freezone video generation failed: " +
@@ -57,7 +57,7 @@ describe("providerErrorMessage", () => {
 
   it("extracts a nested provider message from a wrapped body without altering the raw input", () => {
     expect(providerErrorMessage(MODERATION_RAW)).toBe(
-      "Content failed safety review. / 内容未通过安全审核。",
+      "Content failed safety review.",
     );
   });
 

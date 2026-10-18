@@ -23,9 +23,9 @@ import { MoreInfoMenu } from "@/components/login/cinematic/MoreInfoMenu";
 const validItems = [
   {
     id: "guide",
-    title: "Use 说明",
+    title: "Usage guide",
     content_type: "markdown",
-    content: "## 使用说明",
+    content: "## Usage guide",
     url: "",
     panel_width: 360,
     panel_height: 440,
@@ -34,7 +34,7 @@ const validItems = [
   },
   {
     id: "poster",
-    title: "活动海报",
+    title: "Event poster",
     content_type: "image",
     content: "https://example.com/poster.png",
     url: "",
@@ -94,11 +94,11 @@ describe("MoreInfoMenu", () => {
     expect(helpItem.tagName).toBe("A");
     expect(helpItem).toHaveAttribute("href", "https://example.com/docs");
 
-    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Use 说明" }));
-    expect(await screen.findByRole("heading", { name: "Use 说明" })).toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Usage guide" }));
+    expect(await screen.findByRole("heading", { name: "Usage guide" })).toBeInTheDocument();
 
-    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "活动海报" }));
-    expect(await screen.findByRole("img", { name: "活动海报" })).toHaveAttribute(
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Event poster" }));
+    expect(await screen.findByRole("img", { name: "Event poster" })).toHaveAttribute(
       "src",
       "https://example.com/poster.png",
     );

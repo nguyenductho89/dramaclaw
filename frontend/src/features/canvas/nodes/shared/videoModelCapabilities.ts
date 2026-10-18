@@ -596,7 +596,7 @@ export function formatAudioDurationSeconds(durationMs: number): string {
  * Join the violating entries into the `{{clips}}` in the hint (shared by tooShort / tooLong / totalTooLong).
  *
  * The brackets and separator are taken from the locale (en uses half-width brackets + commas), so do not
- * hard-code them at call sites — this once hard-coded full-width `（）` and `、`, and en users would see a string of CJK punctuation.
+ * hard-code them at call sites — this once hard-coded full-width brackets and an ideographic comma, and en users would see a string of CJK punctuation.
  */
 export function formatAudioDurationClips(
   clips: readonly { label: string; durationMs: number }[],

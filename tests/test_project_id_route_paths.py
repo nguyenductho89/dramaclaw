@@ -19,7 +19,7 @@ async def test_asset_references_resolves_project_id_before_opening_store(monkeyp
                     beat_number=2,
                     narration="n",
                     visual_description="v",
-                    scene_ref_json='{"scene_id": "客厅"}',
+                    scene_ref_json='{"scene_id": "LivingRoom"}',
                     detected_identities_json="[]",
                     detected_props_json="[]",
                 )
@@ -75,7 +75,7 @@ async def test_asset_references_resolves_project_id_before_opening_store(monkeyp
     result = await assets.get_asset_references(
         project="01PROJECTID",
         asset_type="scene",
-        asset_id="客厅",
+        asset_id="LivingRoom",
         user={"username": "admin"},
     )
 

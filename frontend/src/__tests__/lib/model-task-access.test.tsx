@@ -4,7 +4,7 @@
 // OI-44: the generation entries never consumed `/org/me`. A member of an org
 // whose tenant has no gateway key bound had `start_model_tasks: false` in the
 // snapshot the backend already served, yet every canvas node let them press
-// 生成 and walk into a server-side denial.
+// Generate and walk into a server-side denial.
 //
 // This covers the shared gate the six entries read. Fail-closed is the whole
 // point: an unreadable snapshot must disable, never allow.

@@ -972,7 +972,8 @@
         "submittedAnswers": "Câu trả lời đã gửi · {{count}}",
         "noAnswersSkipped": "Đã bỏ qua các câu hỏi này.",
         "noAnswersSubmitted": "Chưa gửi lựa chọn cụ thể nào."
-      }
+      },
+      "canvasCommandsCancelled": "Đã hủy thao tác canvas"
     },
     "canvases": {
       "defaultSection": "Canvas mặc định",
@@ -5882,6 +5883,31 @@
         },
         "missingProject": "Thiếu ngữ cảnh dự án; không thể gửi",
         "missingSource": "Không tìm thấy ảnh nguồn; không thể gửi"
+      },
+      "audioForm": {
+        "musicDescription": "Mô tả nhạc",
+        "textToSynthesize": "Văn bản cần tổng hợp",
+        "musicPlaceholder": "Mô tả nhạc bạn muốn: phong cách, nhạc cụ, nhịp điệu, không khí...",
+        "textPlaceholder": "Nhập văn bản cần tổng hợp",
+        "toneOptional": "Giọng điệu (tùy chọn)",
+        "tonePlaceholder": "VD: căng thẳng, hạ giọng, thoáng sợ hãi",
+        "chooseCustomVoice": "Chọn giọng tùy chỉnh",
+        "changeCustomVoice": "Đổi giọng tùy chỉnh",
+        "voice": "Giọng nói",
+        "voiceNotSelected": "Chưa chọn (bỏ qua khi tạo)",
+        "customVoice": "Giọng tùy chỉnh",
+        "musicDuration": "Thời lượng nhạc",
+        "forceInstrumental": "Bắt buộc nhạc không lời",
+        "respectSections": "Tuân theo thời lượng phân đoạn",
+        "modeMusic": "Văn bản thành nhạc",
+        "modeNarration": "Lời dẫn giọng tùy chỉnh",
+        "voiceSettingsTitle": "Cài đặt giọng (hiện tại: {{voice}})",
+        "voiceNotSelectedShort": "Chưa chọn",
+        "advancedSettings": "Cài đặt nâng cao",
+        "fillMusicFirst": "Hãy nhập mô tả nhạc trước",
+        "fillTextFirst": "Hãy nhập văn bản cần tổng hợp trước",
+        "regenerate": "Tạo lại",
+        "generate": "Tạo"
       }
     },
     "keyElement": {
@@ -5889,6 +5915,13 @@
       "scene": "Cảnh",
       "object": "Vật phẩm",
       "other": "Khác"
+    },
+    "selectedOverlay": {
+      "noRotateImage": "Node đích không có ảnh để xoay",
+      "noOutpaintImage": "Node đích không có ảnh để mở rộng",
+      "missingProject": "URL hiện tại thiếu project; không thể gửi tác vụ tạo",
+      "noUpscaleImage": "Node đích không có ảnh để nâng độ phân giải",
+      "noGenerateImage": "Node đích không có ảnh để tạo"
     }
   },
   "tool": {
@@ -8790,7 +8823,10 @@
         "upscaleResolution": "Độ phân giải HD",
         "autoCancelIn": "Tự động hủy sau {{seconds}}s",
         "cancel": "Hủy",
-        "pendingTitle": "Thao tác canvas đang chờ xác nhận"
+        "pendingTitle": "Thao tác canvas đang chờ xác nhận",
+        "required": "Cần cấp quyền cho thao tác",
+        "noOption": "Agent không cung cấp tùy chọn cấp quyền khả dụng",
+        "expired": "Yêu cầu cấp quyền đã hết hạn; hãy nhờ Shrimp Director chạy lại thao tác"
       },
       "canvas": {
         "expired": "Thao tác canvas đã hết hạn",
@@ -8912,7 +8948,18 @@
         },
         "answerSubmitted": "Đã gửi câu trả lời · {{answered}} / {{total}}",
         "studioChoice": "Lựa chọn Skill Studio",
-        "submitted": "Đã gửi"
+        "submitted": "Đã gửi",
+        "partial": "Agent đã gửi một phần nội dung, nhưng lượt trò chuyện này đã kết thúc và bản nháp chưa thể lưu.",
+        "skillReady": "Đã tạo cấu hình cơ bản của Skill.",
+        "skillMissing": "Thiếu cấu hình cơ bản của Skill.",
+        "recipesPartial": "Đã tạo Recipe {{count}} / {{expected}}, còn thiếu {{missing}}.",
+        "recipesReady": "Đã tạo {{count}} Recipe.",
+        "recipesNone": "Lượt này chưa gửi Recipe mới.",
+        "finalMissing": "Thiếu bước hoàn thiện bản nháp cuối cùng.",
+        "incompleteSummary": "Bản nháp Skill chưa hoàn tất",
+        "skillConfig": "Cấu hình cơ bản của Skill",
+        "finalTidy": "Hoàn thiện bản nháp cuối cùng",
+        "routing": "Đang sắp xếp hướng đi của Skill..."
       },
       "questions": {
         "submittedNoConfig": "Đã gửi; không có cấu hình câu hỏi để hiển thị.",
@@ -9077,7 +9124,8 @@
         "usedThisTurn": "Dùng cho lượt này",
         "deselectAll": "Bỏ chọn tất cả tham chiếu canvas",
         "cancelAll": "Hủy tất cả"
-      }
+      },
+      "turnFailed": "Lượt này thất bại: {{error}}\n\nHãy xử lý theo thông báo lỗi rồi thử lại."
     }
   },
   "productSurface": {

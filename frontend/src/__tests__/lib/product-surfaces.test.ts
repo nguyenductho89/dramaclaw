@@ -12,21 +12,21 @@ describe("product surface access", () => {
         items: [
           {
             surface_code: "mainline" as const,
-            label: "主线",
+            label: "Mainline",
             available: true,
-            unavailable_message: "主线功能暂未开放",
+            unavailable_message: "Mainline is not available yet",
           },
           {
             surface_code: "assistant" as const,
-            label: "虾导",
+            label: "Xia Director",
             available: false,
-            unavailable_message: "虾导功能暂未开放",
+            unavailable_message: "Xia Director is not available yet",
           },
           {
             surface_code: "payment" as const,
-            label: "积分充值",
+            label: "Credit top-up",
             available: false,
-            unavailable_message: "积分充值暂未开放",
+            unavailable_message: "Credit top-up is not available yet",
           },
         ],
       },
@@ -34,7 +34,7 @@ describe("product surface access", () => {
 
     expect(surfaceAccess(data, "assistant")).toMatchObject({
       available: false,
-      unavailable_message: "虾导功能暂未开放",
+      unavailable_message: "Xia Director is not available yet",
     });
     expect(surfaceAccess(data, "freezone")).toBeUndefined();
     expect(surfaceAccess(data, "payment")?.available).toBe(false);

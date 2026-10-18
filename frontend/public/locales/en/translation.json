@@ -990,7 +990,8 @@
         "submittedAnswers": "Submitted answers · {{count}}",
         "noAnswersSkipped": "These questions were skipped.",
         "noAnswersSubmitted": "No specific options were submitted."
-      }
+      },
+      "canvasCommandsCancelled": "Canvas operation cancelled"
     },
     "workflowRecovery": {
       "safetyReviewFailed": "Some nodes did not pass safety review",
@@ -5996,6 +5997,31 @@
         },
         "missingProject": "Missing project context; cannot submit",
         "missingSource": "Source image not found; cannot submit"
+      },
+      "audioForm": {
+        "musicDescription": "Music description",
+        "textToSynthesize": "Text to synthesize",
+        "musicPlaceholder": "Describe the music you want: style, instruments, rhythm, mood...",
+        "textPlaceholder": "Enter the text to synthesize",
+        "toneOptional": "Tone (optional)",
+        "tonePlaceholder": "e.g. tense, hushed, with a hint of fear",
+        "chooseCustomVoice": "Choose custom voice",
+        "changeCustomVoice": "Change custom voice",
+        "voice": "Voice",
+        "voiceNotSelected": "Not selected (skipped when generating)",
+        "customVoice": "Custom voice",
+        "musicDuration": "Music duration",
+        "forceInstrumental": "Force instrumental",
+        "respectSections": "Respect section durations",
+        "modeMusic": "Text to music",
+        "modeNarration": "Custom voice narration",
+        "voiceSettingsTitle": "Voice settings (current: {{voice}})",
+        "voiceNotSelectedShort": "Not selected",
+        "advancedSettings": "Advanced settings",
+        "fillMusicFirst": "Fill in the music description first",
+        "fillTextFirst": "Fill in the text to synthesize first",
+        "regenerate": "Regenerate",
+        "generate": "Generate"
       }
     },
     "keyElement": {
@@ -6003,6 +6029,13 @@
       "scene": "Scene",
       "object": "Object",
       "other": "Other"
+    },
+    "selectedOverlay": {
+      "noRotateImage": "The target node has no image to rotate",
+      "noOutpaintImage": "The target node has no image to outpaint",
+      "missingProject": "The current URL has no project; cannot submit generation",
+      "noUpscaleImage": "The target node has no image to upscale",
+      "noGenerateImage": "The target node has no image to generate from"
     }
   },
   "tool": {
@@ -8913,7 +8946,10 @@
         "upscaleResolution": "HD resolution",
         "autoCancelIn": "Auto-cancels in {{seconds}}s",
         "cancel": "Cancel",
-        "pendingTitle": "Canvas operations awaiting confirmation"
+        "pendingTitle": "Canvas operations awaiting confirmation",
+        "required": "Operation approval required",
+        "noOption": "The Agent did not provide a usable approval option",
+        "expired": "The approval request has expired; ask Shrimp Director to run the operation again"
       },
       "canvas": {
         "expired": "Canvas operation expired",
@@ -9035,7 +9071,18 @@
         },
         "answerSubmitted": "Answers submitted · {{answered}} / {{total}}",
         "studioChoice": "Skill Studio selection",
-        "submitted": "Submitted"
+        "submitted": "Submitted",
+        "partial": "The Agent submitted part of the content, but this turn has ended and the draft cannot be saved yet.",
+        "skillReady": "Skill base configuration generated.",
+        "skillMissing": "Skill base configuration is missing.",
+        "recipesPartial": "Recipes generated {{count}} / {{expected}}, {{missing}} missing.",
+        "recipesReady": "{{count}} Recipes generated.",
+        "recipesNone": "No new Recipe was submitted this turn.",
+        "finalMissing": "Final draft tidy-up is missing.",
+        "incompleteSummary": "Skill draft incomplete",
+        "skillConfig": "Skill base configuration",
+        "finalTidy": "Final draft tidy-up",
+        "routing": "Organizing the Skill direction..."
       },
       "questions": {
         "submittedNoConfig": "Submitted; no displayable question configuration was included.",
@@ -9200,7 +9247,8 @@
         "usedThisTurn": "Used this turn",
         "deselectAll": "Deselect all canvas references",
         "cancelAll": "Cancel all"
-      }
+      },
+      "turnFailed": "This turn failed: {{error}}\n\nHandle the error as indicated and retry."
     }
   },
   "productSurface": {

@@ -14,7 +14,7 @@ def test_reasoning_required_error_has_actionable_chinese_message() -> None:
 
     message = chat_routes._user_facing_chat_error(exc)
 
-    assert "上游模型要求启用推理" in message
+    assert "requires reasoning to be enabled" in message
     assert "NewAPI" in message
     assert "provider_name" not in message
 
@@ -28,7 +28,7 @@ async def test_home_turn_error_is_persisted_once(monkeypatch, tmp_path) -> None:
         "username": "alice",
         "scope": scope,
         "turn_id": "turn-failed-1",
-        "reason": "模型连接失败",
+        "reason": "Model connection failed",
     }
 
     first = await chat_routes._persist_chat_turn_error(**kwargs)
@@ -42,5 +42,5 @@ async def test_home_turn_error_is_persisted_once(monkeypatch, tmp_path) -> None:
     assert history[0]["turn_id"] == "turn-failed-1"
     assert history[0]["chat_error"] is True
     assert history[0]["content"] == (
-        "本轮处理失败：模型连接失败\n\n请根据错误提示处理后重试。"
+        "This turn failed: Model connection failed\n\nHandle the error shown and try again."
     )

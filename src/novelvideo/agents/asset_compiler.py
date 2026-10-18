@@ -1491,7 +1491,7 @@ Episode {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
             re.escape(suffix) for suffix in sorted(suffixes, key=len, reverse=True)
         )
         pattern = re.compile(
-            rf"\b(?:[A-Za-z][A-Za-z'\-]*\s+){{0,2}}(?:{suffix_pattern})\b",
+            rf"\b(?:[A-Za-z][A-Za-z'\-]*\s+){{0,2}}(?:{suffix_pattern})(?:\s+(?:{suffix_pattern}))?\b",
             re.IGNORECASE,
         )
         seen: set[str] = set()

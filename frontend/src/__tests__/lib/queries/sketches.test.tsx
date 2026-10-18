@@ -140,10 +140,10 @@ describe("director control frame queries", () => {
               viewer_kind: "three_d_director",
               mode: "beat",
               project: "demo",
-              scene_id: "地下室",
-              display_name: "地下室",
+              scene_id: "Basement",
+              display_name: "Basement",
               source: {
-                ply_url: "/static/admin/demo/director_worlds/地下室/v1/master_sharp.ply",
+                ply_url: "/static/admin/demo/director_worlds/Basement/v1/master_sharp.ply",
                 source_kind: "master",
               },
               palette: {
@@ -181,7 +181,7 @@ describe("director control frame queries", () => {
             data: {
               episode: 1,
               beat_num: 4,
-              scene_id: "地下室",
+              scene_id: "Basement",
               can_choose: true,
               current_anchor: "master",
               anchors: [{ id: "master", label: "master", exists: true, url: "/static/master.png" }],
@@ -200,7 +200,7 @@ describe("director control frame queries", () => {
             data: {
               episode: 1,
               beat_num: 4,
-              scene_id: "地下室",
+              scene_id: "Basement",
               can_choose: true,
               current_anchor: "selected_background",
               anchors: [],
@@ -242,7 +242,7 @@ describe("director control frame queries", () => {
             data: {
               episode: 1,
               beat_num: 4,
-              scene_id: "地下室",
+              scene_id: "Basement",
               can_choose: true,
               current_anchor: "master",
               anchors: [
@@ -306,7 +306,7 @@ describe("director control frame queries", () => {
             data: {
               episode: 1,
               beat_num: 4,
-              scene_id: "地下室",
+              scene_id: "Basement",
               can_choose: true,
               current_anchor: "selected_background",
               anchors: [],
@@ -352,7 +352,7 @@ describe("director control frame queries", () => {
             data: {
               episode: 1,
               beat_num: 4,
-              scene_id: "地下室",
+              scene_id: "Basement",
               can_choose: true,
               current_anchor: "master",
               current_source: "master",
@@ -648,7 +648,7 @@ describe("pool selection query", () => {
           HttpResponse.json({
             ok: false,
             stale: true,
-            error: "该草图已过期，请先重新生成。如确认仍要使用，请传 force=true。",
+            error: "This sketch is stale, regenerate it first. If you are sure you still want to use it, pass force=true.",
           }),
       ),
     );
@@ -1096,7 +1096,7 @@ describe("sketch action queries", () => {
           HttpResponse.json(
             {
               ok: false,
-              error: "计费规则未配置，请联系管理员设置积分规则",
+              error: "Billing rules are not configured. Contact an administrator to set up credit rules.",
               data: {
                 error_code: "BILLING_RULE_NOT_CONFIGURED",
                 billing_kind: "feature",

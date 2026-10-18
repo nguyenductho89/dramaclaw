@@ -41,7 +41,7 @@ vi.mock("@/lib/queries/product-surfaces", () => ({
             surface_code: "payment",
             label: "Credit recharge",
             available: productSurfaceState.paymentAvailable,
-            unavailable_message: "积分充值暂未开放",
+            unavailable_message: "Credit top-up is not available yet",
           },
         ],
       },
@@ -107,7 +107,7 @@ vi.mock("@/components/credits/CreditCenterDialog", () => ({
     open: boolean;
     initialTab?: string;
     paymentAvailable: boolean;
-  }) => (open ? <div role="dialog">积分中心弹窗:{initialTab}</div> : null),
+  }) => (open ? <div role="dialog">Credit center dialog:{initialTab}</div> : null),
 }));
 
 // The real dictionary, not a hand-copied one: which wallet this popover claims
@@ -192,7 +192,7 @@ describe("CreditBalanceBadge", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "View details" }));
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:usage");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:usage");
   });
 
   it("opens custom recharge from the recharge entry", () => {
@@ -201,7 +201,7 @@ describe("CreditBalanceBadge", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Custom recharge" }));
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:custom");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:custom");
   });
 
   it("opens billing history after returning from payment", () => {
@@ -211,7 +211,7 @@ describe("CreditBalanceBadge", () => {
 
     renderBadge();
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("积分中心弹窗:orders");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Credit center dialog:orders");
     expect(sessionStorage.getItem("dramaclaw-open-credit-center")).toBeNull();
     expect(sessionStorage.getItem("dramaclaw-credit-center-tab")).toBeNull();
   });

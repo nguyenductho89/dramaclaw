@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { characterMainCopyForSpineTemplate } from "@/lib/character-main-copy";
 
-// 只回显 key，断言选中的是哪一组文案，不依赖具体译文。
+// Only echo the key; assert which set of copy was selected, without depending on the exact translation.
 const echoKey = ((key: string) => key) as unknown as TFunction;
 
 describe("characterMainCopyForSpineTemplate", () => {

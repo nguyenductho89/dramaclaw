@@ -36,14 +36,14 @@ describe("asset query hooks", () => {
       http.get("http://localhost:3000/api/v1/projects/demo/scenes", () =>
         HttpResponse.json({
           ok: true,
-          data: [{ name: "皇宫大殿", scene_type: "interior" }],
+          data: [{ name: "Palace Hall", scene_type: "interior" }],
         }),
       ),
     );
 
     const { result } = renderHook(() => useScenes("demo"), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(result.current.data?.data[0].name).toBe("皇宫大殿");
+    expect(result.current.data?.data[0].name).toBe("Palace Hall");
   });
 
   it("starts a scoped scene 360 generation task", async () => {
@@ -64,7 +64,7 @@ describe("asset query hooks", () => {
     );
 
     const { result } = renderHook(
-      () => useGenerateScenePanoAsync("demo", "皇宫大殿"),
+      () => useGenerateScenePanoAsync("demo", "Palace Hall"),
       { wrapper },
     );
     result.current.mutate({ source: "master" });
@@ -81,14 +81,14 @@ describe("asset query hooks", () => {
       http.get("http://localhost:3000/api/v1/projects/demo/props", () =>
         HttpResponse.json({
           ok: true,
-          data: [{ name: "七星剑", prop_type: "weapon" }],
+          data: [{ name: "Seven Star Sword", prop_type: "weapon" }],
         }),
       ),
     );
 
     const { result } = renderHook(() => useProps("demo"), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(result.current.data?.data[0].name).toBe("七星剑");
+    expect(result.current.data?.data[0].name).toBe("Seven Star Sword");
   });
 
   it("starts a prop reference generation task", async () => {
@@ -106,7 +106,7 @@ describe("asset query hooks", () => {
     );
 
     const { result } = renderHook(
-      () => useGeneratePropReferenceAsync("demo", "七星剑"),
+      () => useGeneratePropReferenceAsync("demo", "Seven Star Sword"),
       { wrapper },
     );
     result.current.mutate();

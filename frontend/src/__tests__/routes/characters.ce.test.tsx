@@ -307,7 +307,7 @@ describe("characters page CE generation credit gating", () => {
     expect(dialogAction).not.toHaveClass("pr-9");
     expect(screen.queryByText("12 credits")).not.toBeInTheDocument();
     expect(toastErrorMock).not.toHaveBeenCalledWith(
-      expect.stringMatching(/积分不足|credit|insufficient/i),
+      expect.stringMatching(/credit|insufficient/i),
     );
   });
 

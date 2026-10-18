@@ -446,7 +446,6 @@ async def convert_control_frame_to_sketch(
     `tests/test_p0g4k_grid_family_image_egress.py` (`generate_grid` really reads it),
     not an assumed default.
     """
-    """
 
     del egress_context
     user = (user or "").strip()

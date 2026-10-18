@@ -100,7 +100,7 @@ async def test_build_characters_from_graph_only_adds_missing_characters(tmp_proj
         "extract_characters_from_graph",
         fake_extract_characters_from_graph,
     )
-    tmp_project.save_novel_content("剧本文本")
+    tmp_project.save_novel_content("screenplay text")
 
     added = await tmp_project.build_characters_from_graph()
 
@@ -212,7 +212,7 @@ async def test_build_scenes_from_graph_only_adds_missing_base_scenes(tmp_project
         ]
 
     monkeypatch.setattr(pipeline, "extract_scenes_from_graph", fake_extract_scenes_from_graph)
-    tmp_project.save_novel_content("剧本文本")
+    tmp_project.save_novel_content("screenplay text")
 
     added = await tmp_project.build_scenes_from_graph()
 
@@ -281,7 +281,7 @@ async def test_build_scenes_from_graph_repairs_its_own_boilerplate(
     monkeypatch.setattr(
         pipeline, "extract_scenes_from_graph", fake_extract_scenes_from_graph
     )
-    tmp_project.save_novel_content("剧本文本")
+    tmp_project.save_novel_content("screenplay text")
 
     added = await tmp_project.build_scenes_from_graph()
 
@@ -327,7 +327,7 @@ async def test_build_scenes_from_graph_keeps_boilerplate_over_invalid_output(
     monkeypatch.setattr(
         pipeline, "extract_scenes_from_graph", fake_extract_scenes_from_graph
     )
-    tmp_project.save_novel_content("剧本文本")
+    tmp_project.save_novel_content("screenplay text")
 
     await tmp_project.build_scenes_from_graph()
 
@@ -365,7 +365,7 @@ async def test_graph_rebuild_waits_only_for_scene_graph_query(
         "extract_scenes_from_graph",
         staged_extract_scenes_from_graph,
     )
-    tmp_project.save_novel_content("剧本文本")
+    tmp_project.save_novel_content("screenplay text")
 
     read_task = asyncio.create_task(tmp_project.build_scenes_from_graph())
     await asyncio.wait_for(graph_read_started.wait(), timeout=1)
@@ -506,7 +506,7 @@ async def test_add_scene_is_idempotent_by_scene_name(tmp_path):
         assert derived[0].name == "Palace_snowy"
         assert derived[0].environment_prompt == "Updated blizzard"
 
-        assert sorted(scene.name for scene in scenes) == ["Palace", "Palace_snowy", "Imperial Palace"]
+        assert sorted(scene.name for scene in scenes) == ["Imperial Palace", "Palace", "Palace_snowy"]
     finally:
         await store.close()
 
@@ -705,7 +705,7 @@ async def test_episode_and_beats(tmp_project):
 async def test_count_beats_by_episode_groups_in_one_query(tmp_project):
     """The shot count of the episode list takes one grouped query; episodes without shots do not appear in the result.
 
-    This method exists to replace "the frontend pulling the full beats then take len()".
+    This method exists to replace "the frontend fetching the full beats per episode and taking len()".
     """
     from novelvideo.cognee.pipeline import NovelEpisode, NovelVisualBeat
 
@@ -727,7 +727,7 @@ async def test_count_beats_by_episode_groups_in_one_query(tmp_project):
     counts = await store.count_beats_by_episode()
 
     assert counts == {1: 3, 3: 5}
-    # No.  2 episode 2 has not been split into shots yet -- absent rather than 0, the route layer uses .get(number, 0) filled in.
+    # Episode 2 has not been split into shots yet -- absent rather than 0; the route layer fills it in with .get(number, 0).
     assert 2 not in counts
 
 
@@ -741,7 +741,7 @@ async def test_count_beats_by_episode_on_empty_project(tmp_project):
 
 @pytest.mark.asyncio
 async def test_list_beat_asset_refs_returns_reference_columns_in_order(tmp_project):
-    """The six fields read back from the narrow columns must match the full beat match, including scene_ref decoding.
+    """The six fields read back from the narrow columns must match the full beat, including scene_ref decoding.
 
     The asset reverse index uses it to replace ``list_visual_beats()``. The field names are the same as in ``NovelVisualBeat``
     (including ``scene_ref`` property) so that the scan code can treat both shapes alike -- this test
@@ -777,7 +777,7 @@ async def test_list_beat_asset_refs_returns_reference_columns_in_order(tmp_proje
     assert [(r.episode_number, r.beat_number) for r in rows] == [(1, 1), (1, 2)]
 
     first, second = rows
-    # A beat without a scene/identity/prop beat read back as empty values rather than None, so the scan can directly json.loads.
+    # A beat without a scene/identity/prop reads back as empty values rather than None, so the scan can json.loads directly.
     assert first.detected_identities_json == "[]"
     assert first.detected_props_json == "[]"
     assert first.scene_ref_json == ""

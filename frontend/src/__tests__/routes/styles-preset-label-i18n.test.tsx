@@ -119,8 +119,8 @@ describe("built-in preset labels in the style editor", () => {
     } as Style;
   });
 
-  // 回归用例：内置 preset 的 label 是后端中文单语，英文界面里这个输入框原样显示
-  // 「动漫风格」。左侧列表早就按 id 查 i18n 了，详情页漏了。
+  // Regression case: the label of a built-in preset is monolingual in the backend, and in the UI this input showed it verbatim
+  // as the raw label. The left list already looked up i18n by id; the detail page missed it.
   it("shows the localized preset name instead of the backend Chinese label", async () => {
     renderStyles();
 
@@ -129,8 +129,8 @@ describe("built-in preset labels in the style editor", () => {
     expect(screen.queryByDisplayValue(PRESET_ZH_LABEL)).not.toBeInTheDocument();
   });
 
-  // 回归用例：显示成英文之后，如果照着输入框的值存回去，英文界面按一次保存就把
-  // 项目里这条 style 的中文标签覆盖成英文，中文界面跟着变。没动过就得写回原值。
+  // Regression case: after being shown in another language, saving back the input's value would overwrite
+  // this project's style label with the displayed language on one save, and other UI languages would change along with it. If untouched, the original value must be written back.
   it("saves the stored Chinese label when the user did not touch it", async () => {
     const user = userEvent.setup();
     renderStyles();
@@ -168,13 +168,13 @@ describe("built-in preset labels in the style editor", () => {
     styleQueryState.detail = {
       id: "my_style",
       name: "My Style",
-      label: "我的风格",
+      label: "My style",
       type: "custom",
       style_instructions: "hand drawn",
     } as Style;
 
     renderStyles();
 
-    expect(await screen.findByLabelText("UI Label")).toHaveValue("我的风格");
+    expect(await screen.findByLabelText("UI Label")).toHaveValue("My style");
   });
 });

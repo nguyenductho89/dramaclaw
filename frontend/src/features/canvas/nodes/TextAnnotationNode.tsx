@@ -109,10 +109,8 @@ const COMPACT_OPS_PANEL_MIN_WIDTH = 480;
 const COMPACT_MODES = new Set<TextNodeMode>(['textToVideo', 'imageToPrompt']);
 
 // The reverse-prompt instruction prefilled into the text node and sent to the model as is.
-// i18n-exempt-start
 const IMAGE_TO_PROMPT_DEFAULT_CONTENT =
   'Generate a structured English prompt from the image, including subject description, environment, lighting, camera language and style keywords.';
-// i18n-exempt-end
 
 function countBillableTextChars(text: string): number {
   return text.replace(/[\s\u3000]+/gu, '').length;
@@ -120,10 +118,8 @@ function countBillableTextChars(text: string): number {
 
 // Default music description for "text to music" — prefilled into the text node on click, and the user can edit from there.
 // Likewise a prompt sent to the model as is.
-// i18n-exempt-start
 const TEXT_TO_MUSIC_DEFAULT_CONTENT =
   'Generate a modern branded electronic track (about 110 BPM) with a clean, powerful low-end bass, crisp electronic drums, and an overall premium, futuristic feel. The intro builds a groove with a rhythmic bass and a simple synth tone. The main section adds a steady drum beat with clear rhythm and restrained tension. The build section adds richer layers, a lifted synth tone and a stronger groove without getting overcrowded. The ending softens the drums, leaving only the low end and ambient sound fading out for a clean, crisp finish.';
-// i18n-exempt-end
 
 const SPAWN_UPLOAD_WIDTH = 320;
 

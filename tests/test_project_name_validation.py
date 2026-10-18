@@ -23,7 +23,7 @@ def test_shared_validator_rejects_65_character_project_name():
     assert exc.value.detail == "Project name must be at most 64 characters long"
 
 
-@pytest.mark.parametrize("name", ["", "中文", "has space", "has-dash", "has/slash", "_hidden"])
+@pytest.mark.parametrize("name", ["", "nonasciié", "has space", "has-dash", "has/slash", "_hidden"])
 def test_shared_validator_keeps_existing_format_rules(name):
     with pytest.raises(HTTPException):
         validate_project_name(name)

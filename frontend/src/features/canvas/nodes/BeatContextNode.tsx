@@ -606,9 +606,7 @@ export const BeatContextNode = memo(
     const title =
       isStandaloneContext &&
       // Several canonical titles that were historically written into node data; recognize them and swap in the one in the current language.
-      // i18n-exempt-start
       ["Custom Beat Context", "Beat Context", "Custom Shot Context"].includes(titleFromData)
-      // i18n-exempt-end
         ? t("node.beatContextNode.standaloneTitle", { defaultValue: "Custom Shot Context" })
         : titleFromData;
     const episode =

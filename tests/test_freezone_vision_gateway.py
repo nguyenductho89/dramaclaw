@@ -39,7 +39,7 @@ async def test_vision_gateway_uses_explicit_request_scoped_transport_without_glo
     )
 
     model, output = await call_freezone_vision_model(
-        prompt="分析图片",
+        prompt="analyze the image",
         images=[VisionInput(data=b"image", media_type="image/png")],
         timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
         transport_context=explicit,
@@ -63,7 +63,7 @@ async def test_vision_gateway_rejects_untyped_transport_context_before_model_cal
 
     with pytest.raises(TypeError, match="transport_context"):
         await call_freezone_vision_model(
-            prompt="分析图片",
+            prompt="analyze the image",
             images=[VisionInput(data=b"image", media_type="image/png")],
             timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
             transport_context={"model_name": "forged"},
@@ -84,7 +84,7 @@ async def test_vision_gateway_uses_pydantic_agent_and_logical_model(
                 **kwargs,
             }
         )
-        return TestModel(custom_output_text="视觉解析结果")
+        return TestModel(custom_output_text="vision analysis result")
 
     monkeypatch.setattr(config, "get_newapi_text_pydantic_model", fake_get_model)
     monkeypatch.setattr(
@@ -95,13 +95,13 @@ async def test_vision_gateway_uses_pydantic_agent_and_logical_model(
     monkeypatch.setenv("FREEZONE_VISION_MODEL", "custom-vision-model")
 
     model, output = await call_freezone_vision_model(
-        prompt="分析图片",
+        prompt="analyze the image",
         images=[VisionInput(data=b"image", media_type="image/png")],
         timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
     )
 
     assert model == "custom-vision-model"
-    assert output == "视觉解析结果"
+    assert output == "vision analysis result"
     assert captured["model_env"] == "FREEZONE_VISION_MODEL"
     assert captured["model_name_override"] == "custom-vision-model"
     assert (

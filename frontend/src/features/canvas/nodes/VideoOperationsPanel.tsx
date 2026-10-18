@@ -521,7 +521,6 @@ export function VideoOperationsPanel({
       }
       return out;
     }, [referenceCaps, referenceMediaCapInfo]);
-    // i18n-exempt-end
 
     // Detach an upstream asset: delete the edge "that upstream node → this node". collectInputContents
     // walks only one hop, so item.nodeId is the directly connected upstream node, and the edge to delete can be located precisely.

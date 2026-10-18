@@ -1,17 +1,17 @@
-"""M8 步 7 · 渠道闸 / 人闸的 CE 错误面。
+"""M8 step 7 · CE error surface of the channel limit / person limit.
 
-本文件钉三件事：
+This file pins three things:
 
-1. 两个新异常与 ``task_backend/limits.py:46-101`` 的三个现有类**同族**
-   （dataclass + ``__post_init__`` 把字段原样喂给 ``RuntimeError.__init__`` + 自定义 ``__str__``），
-   且**都不带** ``limit_scope`` 字段 —— 该字面量硬写在 handler 里（``api/app.py:113/138/159``）。
-2. ``api/app.py`` 的两个新 handler 返 **429** 且 ``limit_scope`` 落在正确的轴上
-   （M8 §2.9(d)：``scope_kind == "platform"`` → ``platform``，否则 ``channel``；人闸 → ``user``）。
-3. **核心**：走 freezone 真实路由时，这些异常**不被降成 503**。
-   ``freezone.py`` 的宽 ``except RuntimeError`` （如 ``:8565-8571``）会把没被
-   ``_raise_if_task_limit_exception`` 认领的 ``RuntimeError`` 一律包成
-   ``HTTPException(503, ...)`` —— 这正是飞书 64-171 那个 bug 的复发路径
-   （M8 不变量 7：超限必须 429 且 ``limit_scope`` 正确，**绝不是 503**）。
+1. The two new exceptions are **of the same family** as the three existing classes in ``task_backend/limits.py:46-101``
+   (dataclass + ``__post_init__`` feeding fields as-is to ``RuntimeError.__init__`` + a custom ``__str__``),
+   and **neither carries** a ``limit_scope`` field -- that literal is hard-coded in the handlers (``api/app.py:113/138/159``).
+2. The two new handlers in ``api/app.py`` return **429** with ``limit_scope`` on the correct axis
+   (M8 §2.9(d): ``scope_kind == "platform"`` -> ``platform``, otherwise ``channel``; person limit -> ``user``).
+3. **Core**: through the real freezone routes these exceptions are **not downgraded to 503**.
+   The broad ``except RuntimeError`` in ``freezone.py`` (e.g. ``:8565-8571``) wraps every ``RuntimeError`` not claimed by
+   ``_raise_if_task_limit_exception`` into
+   ``HTTPException(503, ...)`` -- exactly the recurrence path of the Feishu 64-171 bug
+   (M8 invariant 7: an over-limit must be 429 with a correct ``limit_scope``, **never 503**).
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from novelvideo.task_backend.limits import (
 )
 
 # ---------------------------------------------------------------------------
-# 1. 异常形状：与 limits.py:46-101 的三个现有类同族
+# 1. Exception shape: same family as the three existing classes in limits.py:46-101
 # ---------------------------------------------------------------------------
 
 _EXISTING_FAMILY = (
@@ -72,22 +72,22 @@ _NEW_FAMILY = (
 
 @pytest.mark.parametrize("exc", _NEW_FAMILY, ids=lambda exc: type(exc).__name__)
 def test_new_limit_exceptions_share_the_existing_family_shape(exc) -> None:
-    """新类逐条对齐现有三个类的 dataclass / __post_init__ / __str__ 形状。"""
+    """The new classes align one by one with the dataclass / __post_init__ / __str__ shape of the existing three classes."""
     cls = type(exc)
     assert is_dataclass(cls)
     assert issubclass(cls, RuntimeError)
 
     field_names = [field.name for field in fields(cls)]
-    # __post_init__ 把全部字段按声明序原样喂给 RuntimeError.__init__（同 :53-54 / :71-78 / :94-95）
+    # __post_init__ feeds all fields to RuntimeError.__init__ as-is in declaration order (same as :53-54 / :71-78 / :94-95)
     assert exc.args == tuple(getattr(exc, name) for name in field_names)
 
-    # __str__ 是人话，不是 args 的 repr（同 :56-60 / :80-84 / :97-101）
+    # __str__ is human-readable, not the repr of args (same as :56-60 / :80-84 / :97-101)
     rendered = str(exc)
     assert rendered != repr(exc.args)
     assert "lane is full" in rendered
     assert f"({exc.active}/{exc.limit})" in rendered
 
-    # 现有三个类同样满足以上四条 —— 「同族」的判据在此处闭合
+    # The existing three classes satisfy the same four points -- the criterion of "same family" closes here
     for existing in _EXISTING_FAMILY:
         existing_names = [field.name for field in fields(type(existing))]
         assert existing.args == tuple(
@@ -98,7 +98,7 @@ def test_new_limit_exceptions_share_the_existing_family_shape(exc) -> None:
 
 @pytest.mark.parametrize("exc", _NEW_FAMILY, ids=lambda exc: type(exc).__name__)
 def test_new_limit_exceptions_do_not_carry_limit_scope(exc) -> None:
-    """limit_scope 硬写在 handler 里，异常类上没有这个字段（照现有三个类）。"""
+    """limit_scope is hard-coded in the handlers, and the exception classes have no such field (like the existing three classes)."""
     assert "limit_scope" not in {field.name for field in fields(type(exc))}
     assert not hasattr(exc, "limit_scope")
     for existing in _EXISTING_FAMILY:
@@ -132,8 +132,8 @@ def test_user_task_limit_exceeded_declares_the_step7_fields() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. handler：429 + 正确的 limit_scope
-#    形制照 tests/contract/test_l014_inline_task_backend_concurrency.py:569-597
+# 2. handler: 429 + correct limit_scope
+#    Form follows tests/contract/test_l014_inline_task_backend_concurrency.py:569-597
 # ---------------------------------------------------------------------------
 
 
@@ -141,7 +141,7 @@ def _client_raising(exc: RuntimeError) -> TestClient:
     app = create_app()
 
     @app.get("/_test/task-limit")
-    async def _raise_task_limit():  # pragma: no cover - 由 TestClient 触发
+    async def _raise_task_limit():  # pragma: no cover - triggered by TestClient
         raise exc
 
     return TestClient(app)
@@ -207,7 +207,7 @@ def test_user_limit_maps_to_429_user() -> None:
 
 
 def test_existing_three_limit_handlers_response_bodies_are_unchanged() -> None:
-    """既有三个异常的响应体逐字未变（project / user / global_lane_queue）。"""
+    """The response bodies of the existing three exceptions are verbatim unchanged (project / user / global_lane_queue)."""
     project = _client_raising(
         ProjectTaskLimitExceeded(
             project_id="proj_1", queue_kind="video", limit=4, active=4
@@ -257,8 +257,8 @@ def test_existing_three_limit_handlers_response_bodies_are_unchanged() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 3. 核心：走 freezone 真实路由，不被降成 503
-#    harness 照 tests/test_freezone_image_backend.py:224-253
+# 3. Core: through the real freezone routes, not downgraded to 503
+#    harness follows tests/test_freezone_image_backend.py:224-253
 # ---------------------------------------------------------------------------
 
 
@@ -311,8 +311,8 @@ def _patch_enqueue_raising(
 
 def _freezone_client() -> TestClient:
     production_app = create_app()
-    # 与 test_freezone_image_backend.py 同法：只借生产 app 的 exception handlers，
-    # 把路由挂在一个干净的 app 上，避开全量串行跑时累积的共享 router/port 状态。
+    # Same method as test_freezone_image_backend.py: borrow only the production app's exception handlers,
+    # and mount the route on a clean app, avoiding the shared router/port state accumulated in full serial runs.
     app = FastAPI()
     app.exception_handlers.update(production_app.exception_handlers)
     app.include_router(freezone_routes.router, prefix="/api/v1")
@@ -327,7 +327,7 @@ def _freezone_client() -> TestClient:
 def _post_omni_gen(client: TestClient):
     return client.post(
         "/api/v1/projects/58/freezone/video/omni-gen",
-        json={"prompt": "雨夜街头，人物缓慢回头。"},
+        json={"prompt": "A rainy street at night, the character slowly turns around."},
     )
 
 
@@ -372,7 +372,7 @@ def test_new_limit_exceptions_are_not_downgraded_to_503_on_real_route(
     exc: RuntimeError,
     expected_scope: str,
 ) -> None:
-    """不加进 _raise_if_task_limit_exception，这里拿到的就是 503（飞书 64-171 的复发路径）。"""
+    """Without adding to _raise_if_task_limit_exception, this is what you get: 503 (the recurrence path of Feishu 64-171)."""
     _patch_freezone_project(monkeypatch, tmp_path)
     _patch_enqueue_raising(monkeypatch, exc)
 
@@ -417,11 +417,11 @@ def test_existing_limit_exceptions_are_not_downgraded_to_503_on_real_route(
     exc: RuntimeError,
     expected_scope: str,
 ) -> None:
-    """既有三个异常未回归。
+    """The existing three exceptions have not regressed.
 
-    ``global_lane_queue`` 那条今天是**红**的：``app.py:143-162`` 的 handler 早就在，
-    但 ``_raise_if_task_limit_exception`` 不认它，宽 ``except RuntimeError`` 先把它
-    吞成 503 —— M8 §4 步 7 称之为「活标本，顺手补掉」，处置见登记册 ``TCP-P44``。
+    The ``global_lane_queue`` one is **red** today: the handler at ``app.py:143-162`` has long been there,
+    but ``_raise_if_task_limit_exception`` does not recognize it, and the broad ``except RuntimeError`` swallows it
+    into 503 first -- M8 §4 step 7 calls this "a live specimen, fix it in passing"; for disposal see register entry ``TCP-P44``.
     """
     _patch_freezone_project(monkeypatch, tmp_path)
     _patch_enqueue_raising(monkeypatch, exc)
@@ -434,9 +434,9 @@ def test_existing_limit_exceptions_are_not_downgraded_to_503_on_real_route(
 
 
 # ---------------------------------------------------------------------------
-# 4. 文案按作用域分叉
-#    共享池（``scope_kind == "platform"``）拦下的是不归属任何渠道的请求，
-#    对他们说"渠道"没有对应概念，配套的等待指引也无从执行。
+# 4. Copy forks by scope
+#    The shared pool (``scope_kind == "platform"``) rejects requests that belong to no channel,
+#    to whom the concept of "channel" means nothing, and the accompanying wait guidance cannot be carried out either.
 # ---------------------------------------------------------------------------
 
 
@@ -452,13 +452,13 @@ def test_platform_scope_message_avoids_channel_wording() -> None:
     ).get("/_test/task-limit")
 
     message = response.json()["error"]
-    assert "渠道" not in message
-    assert "组织" not in message
-    assert "平台" in message
+    assert "channel" not in message
+    assert "organization" not in message
+    assert "platform" in message
     assert "default" in message
-    # 共享池是全平台共用的，撞闸的人自己可能一个任务都没在跑 ——
-    # 让他"等待已有任务完成"是条不可行动的指引。
-    assert "等待已有任务完成" not in message
+    # The shared pool is shared platform-wide, and the blocked user may not have any task running at all --
+    # telling them to "wait for existing tasks to finish" is non-actionable guidance.
+    assert "wait for existing tasks" not in message.lower()
 
 
 def test_organization_scope_message_keeps_channel_wording() -> None:
@@ -473,12 +473,12 @@ def test_organization_scope_message_keeps_channel_wording() -> None:
     ).get("/_test/task-limit")
 
     assert response.json()["error"] == (
-        "当前渠道 video 队列任务已满，请等待已有任务完成后再提交"
+        "The video queue for this channel is full. Wait for existing tasks to finish before submitting again."
     )
 
 
 def test_message_split_leaves_channel_handler_data_untouched() -> None:
-    """分叉只动 error 文案，data 两个作用域都逐字未变。"""
+    """The fork only touches the error copy, and data is verbatim unchanged in both scopes."""
     platform = _client_raising(
         ChannelTaskLimitExceeded(
             scope_kind="platform",
@@ -519,10 +519,10 @@ def test_message_split_leaves_channel_handler_data_untouched() -> None:
 _LIMIT_LOGGER = "novelvideo.task_backend.limit_logging"
 
 # ---------------------------------------------------------------------------
-# 5. 限流日志
-#    429 的 limit_scope 此前只活在返回体里，日志一个字不记 —— 生产上撞闸后
-#    无法归因是五道闸里的哪一道。这五个 handler 覆盖「异常逃到 HTTP 层」这条出口；
-#    扇出循环吞掉异常的那条出口另见 tests/test_fanout_partial_dispatch.py。
+# 5. Rate-limit logs
+#    The 429 limit_scope used to live only in the response body and nothing was logged -- in production after a limit hit
+#    there was no way to attribute which of the five gates it was. These five handlers cover the exit of "the exception escapes to the HTTP layer";
+#    the exit where a fan-out loop swallows the exception is covered separately in tests/test_fanout_partial_dispatch.py.
 # ---------------------------------------------------------------------------
 
 _LIMIT_LOG_CASES = (
@@ -633,18 +633,18 @@ def test_every_limit_handler_emits_one_attributable_warning(
         if record.name == _LIMIT_LOGGER
         and "task lane limit rejected" in record.getMessage()
     ]
-    assert len(records) == 1, "每次拒绝恰好一条，不多不少"
+    assert len(records) == 1, "Exactly one per rejection, no more, no less"
 
     message = records[0].getMessage()
     assert records[0].levelno == logging.WARNING
     for fragment in expected_fragments:
-        assert fragment in message, f"{fragment!r} 不在 {message!r} 里"
+        assert fragment in message, f"{fragment!r} is not in {message!r}"
 
 
 def test_limit_log_never_carries_names_only_ids(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """可记业务 ID，不记用户名/项目名。"""
+    """May log business IDs, never user names / project names."""
     caplog.set_level(logging.WARNING, logger=_LIMIT_LOGGER)
 
     _client_raising(

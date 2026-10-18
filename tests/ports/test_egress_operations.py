@@ -76,8 +76,8 @@ def test_operation_key_uses_only_stable_identity_fields() -> None:
 def test_request_digest_is_canonical_and_rejects_non_json_values() -> None:
     from novelvideo.ports.egress_operations import canonical_request_digest
 
-    left = {"prompt": "雪", "options": {"width": 720, "steps": [1, 2.5, True, None]}}
-    right = {"options": {"steps": [1, 2.5, True, None], "width": 720}, "prompt": "雪"}
+    left = {"prompt": "snow", "options": {"width": 720, "steps": [1, 2.5, True, None]}}
+    right = {"options": {"steps": [1, 2.5, True, None], "width": 720}, "prompt": "snow"}
 
     assert canonical_request_digest(left) == canonical_request_digest(right)
     assert canonical_request_digest(left) == (

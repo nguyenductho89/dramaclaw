@@ -304,16 +304,17 @@ def test_asset_compiler_scene_planner_uses_scene_newapi_env(monkeypatch):
 
     compiler = asset_compiler.AssetCompiler(cognee_store=None)
     block = SimpleNamespace(
-        header_line="古董店 内 日", lines=["△ 古董堆满房间", "李雷环顾四周", "灯光昏暗"]
+        header_line="INT. ANTIQUE SHOP - DAY",
+        lines=["△ Antiques fill the room", "Li Lei looks around", "The lighting is dim"],
     )
 
-    result = asyncio.run(compiler._analyze_derived_scenes("古董店", block))
+    result = asyncio.run(compiler._analyze_derived_scenes("Antique Shop", block))
 
     assert result == []
     assert model_calls == [("EPISODE_SCENE_PLANNER_MODEL", None)]
     assert settings_calls == [()]
     assert agent_kwargs["model"] == "scene-model"
-    assert agent_kwargs["name"] == "派生场景分析师"
+    assert agent_kwargs["name"] == "Derived scene analyst"
 
 
 def test_asset_compiler_prop_planner_uses_prop_newapi_env(monkeypatch):
@@ -354,7 +355,8 @@ def test_asset_compiler_prop_planner_uses_prop_newapi_env(monkeypatch):
 
     compiler = asset_compiler.AssetCompiler(cognee_store=None)
     block = SimpleNamespace(
-        header_line="古董店 内 日", lines=["李雷拿起龙符咒", "龙符咒发出红光"]
+        header_line="INT. ANTIQUE SHOP - DAY",
+        lines=["Li Lei picks up the dragon talisman", "The dragon talisman glows red"],
     )
 
     result = asyncio.run(
@@ -369,7 +371,7 @@ def test_asset_compiler_prop_planner_uses_prop_newapi_env(monkeypatch):
     assert model_calls == [("EPISODE_PROP_PLANNER_MODEL", None)]
     assert settings_calls == [()]
     assert agent_kwargs["model"] == "prop-model"
-    assert agent_kwargs["name"] == "场景块道具分析师"
+    assert agent_kwargs["name"] == "Scene block prop analyst"
 
 
 def test_literal_script_writer_uses_literal_newapi_env(monkeypatch):
@@ -446,7 +448,7 @@ def test_ai_identity_detector_uses_newapi_detector_model_env(monkeypatch):
     assert model_calls == [("GLOBAL_VIDEO_IDENTITY_DETECTOR_MODEL", None)]
     assert settings_calls == [()]
     assert agent_kwargs["model"] == "detector-model"
-    assert agent_kwargs["name"] == "角色颜色识别"
+    assert agent_kwargs["name"] == "Character color identification"
     assert agent_kwargs["model_settings"] == {"openai_reasoning_effort": "none"}
 
 
@@ -492,7 +494,7 @@ def test_global_video_optimizer_wraps_plain_text_output_locally(monkeypatch, tmp
     class FakeAgent:
         async def run(self, user_prompt):
             seen["user_prompt"] = user_prompt
-            return SimpleNamespace(output="  镜头缓缓推近，黑衣男子抬手推门。  ")
+            return SimpleNamespace(output="  The camera slowly pushes in as the man in black raises a hand and pushes the door.  ")
 
     optimizer = GlobalVideoPromptOptimizer()
     monkeypatch.setattr(optimizer, "_get_agent", lambda _language: FakeAgent())
@@ -500,7 +502,7 @@ def test_global_video_optimizer_wraps_plain_text_output_locally(monkeypatch, tmp
 
     result = asyncio.run(
         optimizer.optimize_single_beat(
-            beat={"beat_number": 1, "visual_description": "黑衣男子推门"},
+            beat={"beat_number": 1, "visual_description": "The man in black pushes the door"},
             sketch_image_path=str(sketch_path),
             character_color_map={},
         )
@@ -509,7 +511,7 @@ def test_global_video_optimizer_wraps_plain_text_output_locally(monkeypatch, tmp
     assert result == {
         "beat_number": 1,
         "video_mode": "first_frame",
-        "prompt": "镜头缓缓推近，黑衣男子抬手推门。",
+        "prompt": "The camera slowly pushes in as the man in black raises a hand and pushes the door.",
     }
     task = seen["user_prompt"][0]
     assert "Output the English motion prompt directly" in task

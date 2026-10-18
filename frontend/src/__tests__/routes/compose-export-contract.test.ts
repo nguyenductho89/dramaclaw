@@ -24,7 +24,7 @@ describe("compose export API alignment", () => {
       "src/routes/_app/projects.$project/episodes.$episode/compose.lazy.tsx",
     );
 
-    // The 添加背景音乐 toggle was removed from the UI; the compose payload keeps
+    // The "Add background music" toggle was removed from the UI; the compose payload keeps
     // the flag explicitly off so the backend default never re-enables it.
     expect(compose).toContain("add_bgm: false");
     expect(compose).not.toContain("setAddBgm");

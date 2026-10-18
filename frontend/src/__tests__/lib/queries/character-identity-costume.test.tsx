@@ -42,7 +42,7 @@ describe("identity costume query hooks", () => {
       ),
     );
 
-    const { result } = renderHook(() => useDeleteIdentityCostume("demo", "秦"), {
+    const { result } = renderHook(() => useDeleteIdentityCostume("demo", "Qin"), {
       wrapper,
     });
     result.current.mutate("id-1");

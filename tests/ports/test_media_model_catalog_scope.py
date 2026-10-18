@@ -108,7 +108,7 @@ async def test_task_submission_rechecks_visibility_before_enqueue(
         )
 
     assert exc_info.value.status_code == 409
-    assert "未对当前组织开放" in str(exc_info.value.detail)
+    assert "not open to the current organization" in str(exc_info.value.detail)
     assert catalog.calls == [("image", "user-b")]
 
 
@@ -182,7 +182,7 @@ async def test_video_rechecks_visibility_after_async_media_probe_before_enqueue(
         )
 
     assert exc_info.value.status_code == 409
-    assert "当前没有可用的视频模型" in str(exc_info.value.detail)
+    assert "No video model is currently available" in str(exc_info.value.detail)
     assert catalog.calls == [("video", "user-a"), ("video", "user-a")]
 
 

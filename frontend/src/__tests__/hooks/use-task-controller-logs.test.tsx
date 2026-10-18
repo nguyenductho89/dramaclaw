@@ -58,8 +58,8 @@ describe("useTaskController logs", () => {
         episode: 1,
         status: "running",
         progress: 0.5,
-        current_task: "生成第 1 lines",
-        logs: ["[INFO] 启动", "[INFO] 生成第 1 lines"],
+        current_task: "Generating line 1",
+        logs: ["[INFO] Start", "[INFO] Generating line 1"],
       },
     ];
 
@@ -73,8 +73,8 @@ describe("useTaskController logs", () => {
 
     await waitFor(() =>
       expect(result.current.logs).toEqual([
-        "[INFO] 启动",
-        "[INFO] 生成第 1 lines",
+        "[INFO] Start",
+        "[INFO] Generating line 1",
       ]),
     );
   });

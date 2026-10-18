@@ -355,8 +355,8 @@ async def test_video_upscale_probe_returns_user_scoped_model_resolutions(
 @pytest.mark.parametrize(
     ("target_fps", "upscale_options", "frame_rate_options", "expected_model"),
     [
-        (None, ["1080p", "2k"], ["1080p", "2k", "4k"], "视频超分"),
-        (60, ["1080p", "2k", "4k"], ["1080p", "2k"], "视频帧率调整"),
+        (None, ["1080p", "2k"], ["1080p", "2k", "4k"], "Video upscaling"),
+        (60, ["1080p", "2k", "4k"], ["1080p", "2k"], "Video frame rate adjustment"),
     ],
 )
 @pytest.mark.asyncio
@@ -399,7 +399,7 @@ async def test_video_upscale_quote_rejects_unavailable_model_resolution_before_b
         lambda: SimpleNamespace(generation_credit_quote=unexpected_quote),
     )
 
-    with pytest.raises(HTTPException, match=f"当前{expected_model}模型不支持 4k 分辨率"):
+    with pytest.raises(HTTPException, match=f"The current {expected_model} model does not support 4k resolution"):
         await freezone_routes.freezone_video_upscale_quote(
             project="project",
             body=freezone_routes.FreezoneVideoUpscaleRequest(

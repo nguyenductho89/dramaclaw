@@ -65,7 +65,6 @@ export function buildContextPromptPaletteForNode(
  * The sentence inserted into the prompt input on click. It is sent to the model together with the upstream shot context,
  * and the model recognizes this fixed English phrasing regardless of the UI language.
  */
-// i18n-exempt-start
 export function contextPromptPaletteInsertionText(entry: ContextPromptPaletteEntry): string {
   if (entry.kind === "actor") {
     if (!entry.named) return `${entry.color}-marked character`;
@@ -74,7 +73,6 @@ export function contextPromptPaletteInsertionText(entry: ContextPromptPaletteEnt
   if (!entry.named) return `${entry.color}-marked prop`;
   return `${entry.color}-marked prop "${entry.label}"`;
 }
-// i18n-exempt-end
 
 // Keep these in sync with the backend director-world anonymous palettes:
 // BRIDGMAN_CHARACTER_PALETTE and PROP_MARKER_PALETTE.

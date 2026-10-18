@@ -18,18 +18,18 @@ const buildScenes = (overrides: Partial<TaskState> = {}): TaskState =>
     episode: 0,
     status: "running",
     progress: 0.4,
-    current_task: "抽取场景…",
+    current_task: "Extracting scenes…",
     ...overrides,
   });
 
-/** 模拟 provider 接管项目：setProject 先发生，补水随后才到。 */
+/** Simulates the provider taking over the project: setProject happens first, hydration arrives later. */
 function mountProvider(projectId = "demo") {
   act(() => {
     useTaskCenterStore.getState().setProject(projectId);
   });
 }
 
-/** 模拟任务中心补水完成（provider 在首次 GET /tasks 之后做的事）。 */
+/** Simulates the task center hydration completing (what the provider does after the first GET /tasks). */
 function hydrateWith(tasks: TaskState[]) {
   act(() => {
     useTaskCenterStore.getState().hydrate(tasks);
@@ -52,10 +52,10 @@ afterEach(() => {
 });
 
 describe("useTaskActivity", () => {
-  it("补水完成前报告 isRestoring，此时 isActive 不可信", () => {
+  it("reports isRestoring before hydration completes, and isActive is not trustworthy then", () => {
     const { result } = render();
     mountProvider();
-    // 硬刷新后的初始状态：store 是空的，但那只是还没拉到 /tasks。
+    // Initial state after a hard refresh: the store is empty, but only because /tasks has not been fetched yet.
     expect(result.current.isRestoring).toBe(true);
     expect(result.current.isActive).toBe(false);
 
@@ -65,26 +65,26 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(true);
   });
 
-  it("没有 provider 在跑时不报 isRestoring，免得把按钮永久禁死", () => {
+  it("does not report isRestoring when no provider is running, so a button is not disabled forever", () => {
     const { result } = render();
-    // 组件被渲染在 TaskCenterProvider 之外：补水永远不会到。
+    // The component is rendered outside TaskCenterProvider: hydration will never arrive.
     expect(result.current.isRestoring).toBe(false);
     expect(result.current.isActive).toBe(false);
   });
 
-  it("补水后认出后台仍在跑的任务，并带出进度和步骤文案", () => {
+  it("after hydration, recognizes tasks still running in the background, and surfaces progress and step text", () => {
     const { result } = render();
-    hydrateWith([buildScenes({ progress: 0.4, current_task: "抽取场景…" })]);
+    hydrateWith([buildScenes({ progress: 0.4, current_task: "Extracting scenes…" })]);
 
     expect(result.current.isActive).toBe(true);
     expect(result.current.progress).toBe(0.4);
-    expect(result.current.currentTask).toBe("抽取场景…");
+    expect(result.current.currentTask).toBe("Extracting scenes…");
     expect(result.current.task?.task_type).toBe("build_scenes");
   });
 
-  it("步骤文案按 current_task_code 本地化，不透出后端的中文兜底", async () => {
-    // review #462：场景构建页直接渲染这一串，之前返回的是 task.current_task，
-    // 于是英文界面运行构建任务时会一路显示中文进度。
+  it("step text is localized by current_task_code, and does not leak the backend's fallback text", async () => {
+    // review #462: the scene build page renders this string directly, and it used to return task.current_task,
+    // so the English UI would show progress in the backend language all the way through a build task.
     i18next.addResourceBundle("en", "translation", enTranslation, true, true);
     await act(async () => {
       await i18next.changeLanguage("en");
@@ -108,14 +108,14 @@ describe("useTaskActivity", () => {
     }
   });
 
-  it("后端还没带 code 时照旧回显那句中文，不显示裸 key", () => {
+  it("echoes the backend text as before when the backend has no code yet, instead of a bare key", () => {
     const { result } = render();
-    hydrateWith([buildScenes({ current_task: "抽取场景…" })]);
+    hydrateWith([buildScenes({ current_task: "Extracting scenes…" })]);
 
-    expect(result.current.currentTask).toBe("抽取场景…");
+    expect(result.current.currentTask).toBe("Extracting scenes…");
   });
 
-  it("忽略别的类型和别的 episode 的任务", () => {
+  it("ignores tasks of other types and other episodes", () => {
     const { result } = render();
     hydrateWith([
       sampleTask({ task_key: "a", task_type: "build_characters", episode: 0 }),
@@ -125,14 +125,14 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it("终态任务不算活跃", () => {
+  it("a terminal task does not count as active", () => {
     const { result } = render();
     hydrateWith([buildScenes({ status: "completed", progress: 1 })]);
 
     expect(result.current.isActive).toBe(false);
   });
 
-  it("markStarted 兜住任务进任务中心前的空窗", () => {
+  it("markStarted covers the gap before the task enters the task center", () => {
     const { result } = render();
     hydrateWith([]);
     expect(result.current.isActive).toBe(false);
@@ -140,7 +140,7 @@ describe("useTaskActivity", () => {
     act(() => result.current.markStarted());
     expect(result.current.isActive).toBe(true);
 
-    // 任务随后从 SSE 进来，接管 loading。
+    // The task then arrives from SSE and takes over loading.
     act(() => {
       useTaskCenterStore.getState().upsert(buildScenes());
     });
@@ -148,7 +148,7 @@ describe("useTaskActivity", () => {
     expect(result.current.task).not.toBeNull();
   });
 
-  it("任务始终没出现时，乐观窗口到点自动收回 loading", () => {
+  it("when the task never appears, the optimistic window retracts loading when the time is up", () => {
     const { result } = render();
     hydrateWith([]);
 
@@ -161,40 +161,40 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it("SSE 比入队响应先到时，任务跑完立刻收回 loading（不空等 15 秒）", () => {
+  it("when SSE arrives before the enqueue response, loading is retracted as soon as the task finishes (no idle wait of 15 seconds)", () => {
     const { result } = render();
     hydrateWith([]);
 
-    // 先收到 SSE 推来的任务……
+    // First receive the task pushed by SSE...
     act(() => {
       useTaskCenterStore.getState().upsert(buildScenes());
     });
-    // ……入队接口这时才返回，组件照常调 markStarted()。
+    // ...the enqueue API only returns now, and the component calls markStarted() as usual.
     act(() => result.current.markStarted());
     expect(result.current.isActive).toBe(true);
 
-    // 任务完成：活跃任务消失，乐观标记必须一起退场。
+    // Task completes: the active task disappears, and the optimistic marker must retire with it.
     act(() => {
       useTaskCenterStore.getState().upsert(buildScenes({ status: "completed", progress: 1 }));
     });
     expect(result.current.isActive).toBe(false);
 
-    // 即便再推进到超时点，也不该出现回弹。
+    // Even if time advances to the timeout point, there should be no rebound.
     act(() => {
       vi.advanceTimersByTime(15_000);
     });
     expect(result.current.isActive).toBe(false);
   });
 
-  it("首轮采样就撞上终态时，凭 task_id 立刻收回 loading", () => {
+  it("when the very first sample hits a terminal state, loading is retracted at once by task_id", () => {
     const { result } = render();
     hydrateWith([]);
 
     act(() => result.current.markStarted({ taskId: "run-2" }));
     expect(result.current.isActive).toBe(true);
 
-    // 轮询兜底（5s）下任务在两次采样之间跑完：这一轮 GET /tasks 回来时
-    // 已经是终态，活跃态从头到尾没被观察到。
+    // With polling fallback (5s) the task finishes between two samples: when this round of GET /tasks comes back
+    // it is already terminal, and the active state was never observed from start to finish.
     act(() => {
       useTaskCenterStore
         .getState()
@@ -204,7 +204,7 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it("任务入队后立刻失败时，凭 task_id 立刻收回 loading", () => {
+  it("when a task fails right after enqueue, loading is retracted at once by task_id", () => {
     const { result } = render();
     hydrateWith([]);
 
@@ -218,18 +218,18 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it("上一轮的旧终态记录不该把新一轮的乐观窗口提前清掉", () => {
+  it("an old terminal record from the previous round must not clear the new round's optimistic window early", () => {
     const { result } = render();
-    // task_key 跨轮复用，上一轮跑完的记录会在 store 里躺到被 prune 为止。
+    // task_key is reused across rounds, and the record of the round that finished stays in the store until pruned.
     hydrateWith([buildScenes({ task_id: "run-1", status: "completed", progress: 1 })]);
 
     act(() => result.current.markStarted({ taskId: "run-2" }));
 
-    // 新一轮刚入队、任务中心还没更新：loading 必须继续。
+    // The new round has only just been enqueued and the task center has not updated yet: loading must still continue.
     expect(result.current.isActive).toBe(true);
   });
 
-  it("没拿到 task_id 时退回 15 秒兜底，不误伤旧调用方", () => {
+  it("falls back to the 15-second cover when no task_id was obtained, without hurting old callers", () => {
     const { result } = render();
     hydrateWith([buildScenes({ task_id: "run-1", status: "completed", progress: 1 })]);
 
@@ -242,7 +242,7 @@ describe("useTaskActivity", () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it("任务正常跑完后收回 loading", () => {
+  it("once the task finishes normally, loading is retracted", () => {
     const { result } = render();
     hydrateWith([buildScenes()]);
     expect(result.current.isActive).toBe(true);

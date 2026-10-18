@@ -1057,6 +1057,7 @@ export function Canvas({
   // "query only when selected" gate in BeatContextNode, this avoids a 499 loop where nodes request on mount and are cancelled
   // on unmount under viewport virtualization.
   // Reduced to a stable string so the effect below only runs when the set of referenced episodes changes (not on every drag rebuild of nodes).
+  const queryClient = useQueryClient();
   // The project id comes from the URL and is constant during the canvas lifetime; memoize once instead of re-parsing in a store selector on every change.
   const canvasProject = useMemo(() => readUrl().project, []);
   const beatContextEpisodesKey = useCanvasStore(
@@ -1598,6 +1599,7 @@ export function Canvas({
   }, [pendingJobNodeKey, staleJobNodeKey, t, updateNodeData]);
 
   // Resume task_key-based generations (image / video / audio / 3D / script / reverse-prompt)
+  // after a page refresh. The submit flows persist a GenerationTaskDescriptor on the
   // node; here we re-attach to the task API so the result lands and the "generating" overlay
   // (driven by generationStartedAt) clears correctly.
   useEffect(() => {

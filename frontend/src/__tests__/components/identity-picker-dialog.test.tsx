@@ -35,9 +35,9 @@ const identitiesByCharacter = vi.hoisted(
     data: Record<string, Array<{ identity_id: string; identity_name: string }>>;
   } => ({
     data: {
-      秦: [
-        { identity_id: "秦_幼年", identity_name: "Child" },
-        { identity_id: "秦_青年", identity_name: "Young adult" },
+      Qin: [
+        { identity_id: "Qin_child", identity_name: "Child" },
+        { identity_id: "Qin_young_adult", identity_name: "Young adult" },
       ],
     },
   }),
@@ -66,9 +66,9 @@ describe("IdentityPickerDialog", () => {
           open
           onOpenChange={vi.fn()}
           project="demo"
-          characters={[{ name: "秦" }]}
-          selected={["秦_幼年", "秦_青年"]}
-          defaultMap={{ 秦: "秦_幼年" }}
+          characters={[{ name: "Qin" }]}
+          selected={["Qin_child", "Qin_young_adult"]}
+          defaultMap={{ Qin: "Qin_child" }}
           onChange={onChange}
           onPlan={vi.fn()}
           planPending={false}
@@ -76,12 +76,12 @@ describe("IdentityPickerDialog", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("radio", { name: "青年 默认" }));
+    await user.click(screen.getByRole("radio", { name: "Young adult Default" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onChange).toHaveBeenCalledWith(
-      ["秦_幼年", "秦_青年"],
-      { 秦: "秦_青年" },
+      ["Qin_child", "Qin_young_adult"],
+      { Qin: "Qin_young_adult" },
     );
   });
 });

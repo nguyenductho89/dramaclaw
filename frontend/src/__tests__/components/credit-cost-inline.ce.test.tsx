@@ -27,7 +27,7 @@ describe("CreditCostInline CE gating", () => {
       <CreditCostInline
         display="12→9"
         promotion={{
-          name: "暑期优惠",
+          name: "Summer promotion",
           discount_basis_points: 8000,
           ends_at: "2026-08-31T15:59:59+00:00",
         }}
@@ -36,7 +36,7 @@ describe("CreditCostInline CE gating", () => {
 
     expect(screen.getByText("12")).toHaveClass("line-through");
     expect(screen.getByText("9")).toBeInTheDocument();
-    expect(screen.getByText("{{percentOff}}% off, limited time")).toHaveAttribute("title", "暑期优惠");
+    expect(screen.getByText("{{percentOff}}% off, limited time")).toHaveAttribute("title", "Summer promotion");
   });
 
   it("shows a generic promotion label when promotion metadata is unavailable", () => {

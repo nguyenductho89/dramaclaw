@@ -2,16 +2,16 @@
 // Copyright (c) 2026 ClaymoreLab
 // Persisting + resuming task_key-based generations across page reloads.
 //
-// Most canvas generations (image / video / audio / 3D / script / 反推提示词) submit
+// Most canvas generations (image / video / audio / 3D / script / reverse-prompt) submit
 // a freezone job, get a `FreezoneJobRef`, then `await awaitTaskCompletion(task_key)`.
 // That promise lives only in memory, so a page refresh used to drop the progress
 // bar and stop polling entirely. We fix this by persisting the task identity on the
-// node (so the 生成中 overlay re-appears from `generationStartedAt`) and re-attaching
+// node (so the "generating" overlay re-appears from `generationStartedAt`) and re-attaching
 // to the task API on reload via {@link resumeNodeGeneration}.
 
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 import { completeDerivedMedia } from './derivedMedia';
 import type { CanvasNode, CanvasNodeType } from '@/features/canvas/domain/canvasNodes';
@@ -54,33 +54,32 @@ type FreezoneTaskType = FreezoneJobRef['task_type'];
  * not be confused with a freezone task job id.
  */
 /**
- * 轮询脱离时写回节点的补丁。
+ * The patch written back to the node when polling is detached.
  *
- * 只放掉 `generationJobId` —— 它是 canvasAiGateway 进程内 Map 的键，本来就活不
- * 过刷新，清掉正好让 Canvas.tsx 的轮询循环收工。`isGenerating` 和句柄三件套
- * 必须原样留着：{@link nodeNeedsGenerationResume} 要靠它们判定，少一个都会让
- * 「稍后刷新页面查看结果」变成空头支票。
+ * Only release `generationJobId` - it is the key of canvasAiGateway's in-process Map and never survives a refresh,
+ * so clearing it is exactly what lets Canvas.tsx's polling loop wind down. `isGenerating` and the handle trio
+ * must be left intact: {@link nodeNeedsGenerationResume} relies on them to decide, and missing even one would make
+ * "refresh the page later to see the result" an empty promise.
  *
- * 单独提出来是为了能被测试直接断言 —— 内联在 Canvas.tsx 的 effect 里改错了没
- * 人拦得住。
+ * It is extracted separately so tests can assert it directly - if it were inlined in Canvas.tsx's effect and changed wrongly nobody could stop it.
  */
 export const DETACHED_GENERATION_PATCH: Record<string, unknown> = {
   generationJobId: null,
 };
 
 /**
- * 这个节点的 `generationJobId` 是否值得本次会话去轮询。
+ * Whether this node's `generationJobId` is worth polling this session.
  *
- * `generationJobId` 是 canvasAiGateway 那个模块级 `jobs` Map 的键,只在写下它的
- * 那个 JS 会话里有意义。刷新后 Map 是空的,再去轮询必然拿到 `not_found`,而
- * Canvas.tsx 的错误分支会把它当作生成失败:写 `generationError`、把
- * `isGenerating` 清成 false。于是同一个节点上两条路径打架 —— descriptor 那条
- * 正在 resume,jobId 这条在写失败,而且失败分支通常先到(查内存 Map 比发一次
- * listTasks 快)。一旦它先写进去,{@link nodeNeedsGenerationResume} 下次就不成立,
- * 恢复路径永久断掉。
+ * `generationJobId` is the key of the module-level `jobs` Map in canvasAiGateway and is only meaningful in the JS session that wrote it.
+ * After a refresh the Map is empty, and polling would necessarily get `not_found`, which
+ * Canvas.tsx's error branch treats as a generation failure: writing `generationError` and clearing
+ * `isGenerating` to false. Then two paths fight on the same node - the descriptor one
+ * is resuming while the jobId one is writing the failure, and the failure branch usually arrives first (checking the in-memory Map is faster than sending a
+ * listTasks). Once it writes first, {@link nodeNeedsGenerationResume} no longer holds next time,
+ * and the recovery path is permanently cut.
  *
- * 所以轮询的前提是这个 id 由本次运行时会话写下。跨会话的遗留 id 交给
- * {@link staleGenerationJobPatch} 收拾。
+ * So the precondition for polling is that this id was written by this runtime session. Leftover ids from other sessions are left to
+ * {@link staleGenerationJobPatch} to clean up.
  */
 export function nodeOwnsLiveGenerationJob(node: CanvasNode): boolean {
   const data = node.data as Record<string, unknown>;
@@ -93,15 +92,15 @@ export function nodeOwnsLiveGenerationJob(node: CanvasNode): boolean {
 }
 
 /**
- * 上个会话遗留的 `generationJobId` 该怎么处理。返回 null 表示这个节点不用管。
+ * How to handle a `generationJobId` left over from the previous session. Returning null means this node needs no attention.
  *
- * 两种遗留节点的命运不同:
- * - **有 descriptor**:清掉死 id,`isGenerating` 与句柄留着,让
- *   {@link resumeNodeGeneration} 独占恢复路径 —— 补丁正是
- *   {@link DETACHED_GENERATION_PATCH},跟 detached 分支同一份。
- * - **没有 descriptor**(本 PR 之前提交的老节点):后端句柄压根没落盘,谁都接不回
- *   来。原先的行为是轮询到 `not_found` 再写失败,结论一样,只是白跑一轮;这里
- *   直接给出终态,免得节点永远转圈。
+ * The two kinds of leftover nodes have different fates:
+ * - **With a descriptor**: clear the dead id, and leave `isGenerating` and the handle in place so
+ *   {@link resumeNodeGeneration} owns the recovery path exclusively - the patch is exactly
+ *   {@link DETACHED_GENERATION_PATCH}, the same one as the detached branch.
+ * - **Without a descriptor** (old nodes submitted before this PR): the backend handle was never persisted, and nobody can reconnect it.
+ *   The previous behavior was to poll until `not_found` and then write a failure, the same conclusion just with a wasted round; here we
+ *   give the terminal state directly, so the node does not spin forever.
  */
 export function staleGenerationJobPatch(node: CanvasNode): Record<string, unknown> | null {
   const data = node.data as Record<string, unknown>;
@@ -119,17 +118,17 @@ export function staleGenerationJobPatch(node: CanvasNode): Record<string, unknow
   return buildErrorPatch('image', new Error(i18n.t('canvas.resumeGeneration.taskGone')));
 }
 
-/** 判定「任务不存在」需要连续 miss 的次数,以及每次之间的间隔。 */
+/** The number of consecutive misses needed to judge "the task does not exist", and the interval between each. */
 export const TASK_MISS_CONFIRM_ATTEMPTS = 3;
 export const TASK_MISS_CONFIRM_INTERVAL_MS = 5000;
 
 /**
- * 反复确认任务是否真的从列表里消失了。
+ * Repeatedly confirm whether the task has really disappeared from the list.
  *
- * 返回 true 只有一种情形:连续 {@link TASK_MISS_CONFIRM_ATTEMPTS} 次列表调用都
- * 成功、且都没有这个 task_key。任何一次命中就是 false(任务还在,交给
- * awaitTaskCompletion 按预算等);任何一次列表调用抛错也是 false —— 列不出来
- * 不等于任务没了,宁可去走完整轮询也别写失败。
+ * Returns true in only one case: `TASK_MISS_CONFIRM_ATTEMPTS` consecutive list calls all
+ * succeeded and none contained this task_key. Any hit means false (the task is still there, handed to
+ * awaitTaskCompletion to wait within the budget); any list call that throws is also false - being unable to list
+ * does not mean the task is gone, and better to go through the full polling than to write a failure.
  */
 async function confirmTaskMissing(projectId: string, taskKey: string): Promise<boolean> {
   for (let attempt = 0; attempt < TASK_MISS_CONFIRM_ATTEMPTS; attempt += 1) {
@@ -230,7 +229,7 @@ function pickPlyUrlFromResult(result: TaskState['result'] | undefined): string |
   return candidates[0] ?? null;
 }
 
-/** Fields cleared on every settle so the node leaves the 生成中 state cleanly. */
+/** Fields cleared on every settle so the node leaves the "generating" state cleanly. */
 export const CLEARED_GENERATION_TASK_FIELDS = {
   isGenerating: false,
   generationStartedAt: null,
@@ -321,7 +320,7 @@ async function buildSuccessPatch(
 
 function buildErrorPatch(kind: ResumeKind, error: unknown): Record<string, unknown> {
   if (isTaskCancelledError(error)) {
-    // 用户主动终止过的任务恢复时只清理生成态，不当错误展示。
+    // For a task the user actively terminated, resuming only clears the generating state and does not show an error.
     return { ...CLEARED_GENERATION_TASK_FIELDS };
   }
   if (kind === 'ply') {
@@ -350,7 +349,7 @@ function buildErrorPatch(kind: ResumeKind, error: unknown): Record<string, unkno
     };
   }
   // audio / script / reverse-prompt / text-generate surface their own inline errors elsewhere;
-  // just leave the 生成中 state.
+  // just leave the "generating" state.
   return { ...CLEARED_GENERATION_TASK_FIELDS };
 }
 
@@ -389,14 +388,14 @@ export async function resumeNodeGeneration(params: {
   const stillOwnsTask = () => readLatestNodeData().generationTaskKey === taskKey;
 
   // Quick pre-check: if the task no longer exists server-side (expired/cleaned),
-  // avoid hanging on the full poll budget — clear the stuck 生成中 state now.
+  // avoid hanging on the full poll budget — clear the stuck "generating" state now.
   //
-  // 但一次 miss 不作数。列表接口会静默丢行:后端 list_tasks_for_project 对每行
-  // 单独 _row_to_state,解析抛异常就只记一条 warning 然后跳过(task_state.py),
-  // 任务其实还在库里跑。再算上提交后的可见性窗口,单次 miss 判「不存在」会把
-  // 活着的任务写成失败 —— 这正是本 PR 要消除的那类误判,不该在恢复路径上重演。
-  // 连续 miss 才算数:确认窗口约 10 秒,相对 20~35 分钟的完整预算可以忽略,
-  // 却足以盖住瞬时漏项。
+  // But a single miss does not count. The list endpoint silently drops rows: the backend list_tasks_for_project runs _row_to_state on each row
+  // separately, and a parse exception only logs one warning and skips it (task_state.py),
+  // while the task is actually still running in the DB. Add the visibility window after submission, and judging "does not exist" on a single miss would write
+  // a live task as failed - exactly the kind of misjudgment this PR aims to eliminate, which must not be replayed on the recovery path.
+  // Only consecutive misses count: the confirmation window is about 10 seconds, negligible against the full budget of 20~35 minutes,
+  // yet enough to cover a transient omission.
   if (await confirmTaskMissing(projectId, taskKey)) {
     if (!stillOwnsTask()) {
       return;
@@ -407,7 +406,7 @@ export async function resumeNodeGeneration(params: {
   }
 
   try {
-    // 按任务类型取预算，跟提交侧同一份口径（见 pollTimeoutForTaskType）。
+    // Take the budget by task type, the same basis as the submit side (see pollTimeoutForTaskType).
     if (kind === 'derived-media') {
       await completeDerivedMedia(projectId, { task_key: taskKey, task_type: taskType, job_id: jobId }, (patch) => updateNodeData(node.id, patch));
       return;
@@ -433,8 +432,8 @@ export async function resumeNodeGeneration(params: {
     updateNodeData(node.id, patch);
   } catch (error) {
     console.warn('[resume-generation] task resume failed', { nodeId: node.id, taskKey, error });
-    // 轮询超时只说明这一轮不再等了，任务还在后端跑：保留 isGenerating 与句柄，
-    // 下次刷新再接一轮，别把还活着的任务写成失败。
+    // A poll timeout only says this round stops waiting, and the task is still running on the backend: keep isGenerating and the handle,
+    // pick it up again on the next refresh, and do not write a live task as failed.
     if (isTaskPollTimeoutError(error)) {
       return;
     }

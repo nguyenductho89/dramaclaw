@@ -221,6 +221,24 @@ Sau mục "Fix age/identity-fidelity..." ở trên: tuổi/tỉ lệ cơ thể �
   - **Đã verify THẬT qua đúng pipeline production (không phải script rời rạc nữa, 2026-10-18)**: `POST .../beats/regenerate` với `image_generation_selection=runpod_qwen21_compose` cho beat 7 (không có precondition 422 dù route trước đó luôn đòi sketch — xác nhận bypass hoạt động đúng trên API thật) → xong trong **~8 phút** (10:46:47 → 10:54:41). Ảnh thật: background khớp đúng `director_control_frames/.../selected_background.png` (ưu tiên đúng background anchor riêng của beat, không phải scene master chung — xác nhận `allow_beat_background_anchor=True` hoạt động đúng), khuôn mặt/trang phục Nam VÀ Ryan đều khớp portrait gần như hoàn hảo, bucket đúng y hệt prop reference, hoàn toàn photoreal, đúng tỉ lệ trẻ nhỏ, khung hình đã crop đúng 2:3 theo project. `submitted.json` xác nhận `render_provider: "runpod_qwen21_compose"`, đúng 4 reference theo thứ tự scene→Nam→Ryan→bucket, prompt sạch (đã áp 2 bug fix ở trên). **Kết quả khớp/vượt chất lượng lần test script tay ban đầu — đây là lần đầu tiên beat nhiều nhân vật của `BabyStories` đạt CẢ 3 tiêu chí cùng lúc: đúng tuổi/tỉ lệ cơ thể, đúng identity khuôn mặt/trang phục, và tốc độ nhanh (~8 phút, không phải 13-30 phút như 2 thiết kế cũ).**
   - **Khuyến nghị**: `runpod_qwen21_compose` là lựa chọn đáng tin nhất hiện có cho render nhiều nhân vật cần cả tốc độ lẫn độ chính xác identity — nên cân nhắc cho beat nào có scene master + identity + prop reference đầy đủ. `runpod_qwen21_render(_multi)` (sketch+mask) vẫn giữ lại làm phương án dự phòng, chưa xoá. `DEFAULT_RENDER_IMAGE_SELECTION` KHÔNG đổi (vẫn `gemini_webai`) — đây chỉ là lựa chọn thêm, chọn tay qua `image_generation_selection`.
 
+## Đo tốc độ H3 ref2va trên A40: đổi encoder/VAE sang INT8 KHÔNG nhanh hơn (2026-10-18)
+
+Giả thuyết ban đầu: `qwen3vl_32b_minimax_h3_nvfp4_awq` bị emulate trên Ampere nên chậm → đổi sang `..._int8_convrot` + `minimax_h3_video_vae_int8_convrot`. Đã đo thật (A40, endpoint `a31613hf7l83r5`, graph ref2va + PDD 8 bước giống production nhưng bỏ ảnh tham chiếu, 768x1344, 124 frame, seed cố định, worker ấm). **Kết luận: không đổi, giữ NVFP4 + VAE fp16.**
+
+| Khâu | NVFP4 + VAE fp16 | INT8 encoder + INT8 VAE |
+| --- | --- | --- |
+| Encode text | ~17s | ~27s (lần đầu đọc nguội 27GB từ volume) |
+| Sampling DiT (8 bước) | 447s (~55s/bước) | 444s (~55s/bước) |
+| Decode VAE video | ~32s | ~74s |
+| Tổng (`executionTime`) | 518s | 559s |
+
+- Log ComfyUI xác nhận NVFP4 bị emulate (`emulated ops: float8_e4m3fn, mxfp8, float8_e5m2, nvfp4`) nhưng encode chỉ chiếm ~3% thời gian job. **Điểm nghẽn thật là sampling DiT (~86%)**, đã là `int8_convrot` native (`Native ops: asym_w4a8_int8, int8_tensorwise, convrot_w4a4`) nên đổi định dạng không giúp thêm.
+- VAE INT8 chậm hơn fp16 (74s vs 32s) trên A40 dù docs ComfyUI nói nhanh hơn ~2x.
+- Cold start worker lần đầu ~7 phút (image + nạp model).
+- Worker dùng `Using pytorch attention` (chưa bật Sage Attention, docs ComfyUI ghi ~2x tốc độ attention) — cần đổi image worker (repo photoreal-h3-worker), chưa làm.
+- Hai file INT8 vẫn nằm trên volume `zyen2jmxt3` (`models/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors` 27GB, `models/vae/minimax_h3_video_vae_int8_convrot.safetensors` 2.8GB) — xoá nếu cần lấy lại chỗ.
+- Hướng còn lại để nhanh hơn: giảm số điểm ảnh/frame (chi phí sampling tỉ lệ thuận), Sage Attention, hoặc GPU nhanh hơn cho DiT (chưa đo). Blackwell chỉ có lợi nếu dùng NVFP4 DiT, mà DiT hiện là INT8.
+
 ## Dự án Tesla
 
 - `tesla_pov_short`, id `01M4QF11AY84RDH1B0FMW62W86`, kịch bản nguồn `examples/tesla-pov-short-60s.md`, mẫu `narrated`, đã ingest xong (`structured_v1`, 1 chunk).

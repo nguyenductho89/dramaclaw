@@ -21,7 +21,7 @@ function lookup(translations: Record<string, unknown>, key: string): unknown {
  * rather than falling back to another language -- so every key is checked here against both locales.
  */
 describe("capability copy is fully translated", () => {
-  const locales = ["zh", "en"].map((language) => ({
+  const locales = ["en", "vi"].map((language) => ({
     language,
     translations: JSON.parse(
       readFileSync(`public/locales/${language}/translation.json`, "utf8"),

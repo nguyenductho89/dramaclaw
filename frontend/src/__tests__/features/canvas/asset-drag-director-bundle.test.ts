@@ -40,7 +40,7 @@ describe("director bundle canvas assets", () => {
       store as Parameters<typeof spawnAssetNode>[0],
       {
         kind: "image",
-        label: "导演合成图",
+        label: "Director composite",
         url: bundle.urls.combined,
         aspectRatio: "16:9",
         source: {
@@ -79,18 +79,18 @@ describe("director bundle canvas assets", () => {
       store as Parameters<typeof spawnAssetNode>[0],
       {
         kind: "model",
-        label: "公寓楼电梯间 / 导演世界",
-        url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog",
+        label: "Apartment elevator lobby / Director world",
+        url: "/static/projects/proj/director_worlds/apartment_elevator_lobby/v1/master.sog",
         source: {
           kind: "scene",
           role: "scene_3gs_master_ply",
-          slot_target: { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+          slot_target: { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator lobby" },
         },
         mainlineContext: [
           {
             kind: "scene",
             projectId: "proj",
-            sceneId: "公寓楼电梯间",
+            sceneId: "Apartment elevator lobby",
             role: "scene_3gs_master_ply",
           },
         ],
@@ -101,11 +101,11 @@ describe("director bundle canvas assets", () => {
     expect(calls[0]?.type).toBe(CANVAS_NODE_TYPES.threeDWorld);
     expect(calls[0]?.data).toMatchObject({
       user_spawned: true,
-      slot_target: { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      slot_target: { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator lobby" },
       mainline_context: [
         expect.objectContaining({
           kind: "scene",
-          sceneId: "公寓楼电梯间",
+          sceneId: "Apartment elevator lobby",
         }),
       ],
     });
@@ -150,7 +150,7 @@ describe("director bundle canvas assets", () => {
     );
 
     expect(source).toContain("commitDirectorRenderFromCanvasSource(");
-    expect(source).not.toContain("已用导演合成 bundle 替换");
+    expect(source).not.toContain("Replaced with the director composite bundle");
   });
 
   it("labels director render commit success messages as composite asset writes", () => {
@@ -162,18 +162,18 @@ describe("director bundle canvas assets", () => {
       resolve(process.cwd(), "src/features/freezone/FreezoneShell.tsx"),
       "utf8",
     );
-    const zh = readFileSync(
-      resolve(process.cwd(), "public/locales/zh/translation.json"),
+    const en = readFileSync(
+      resolve(process.cwd(), "public/locales/en/translation.json"),
       "utf8",
     );
 
-    // 文案已搬进词条，源码里只剩 key；措辞本身对着 locale 查。
+    // The copy has moved into locale entries and the source keeps only keys; the wording itself is checked against the locale.
     expect(dialog).toContain('t("freezone.commit.success.directorRender"');
     expect(shell).toContain('t("freezone.commit.success.directorRender"');
-    expect(JSON.parse(zh).freezone.commit.success.directorRender).toContain("导演合成资产");
-    expect(dialog).not.toContain("导演合成 bundle");
-    expect(shell).not.toContain("导演合成 bundle");
-    expect(zh).not.toContain("导演合成 bundle");
+    expect(JSON.parse(en).freezone.commit.success.directorRender).toContain("director composite asset");
+    expect(dialog).not.toContain("director composite bundle");
+    expect(shell).not.toContain("director composite bundle");
+    expect(en).not.toContain("director composite bundle");
   });
 
   it("uses mainline asset wording and keeps current background labels beat-agnostic", () => {
@@ -185,8 +185,8 @@ describe("director bundle canvas assets", () => {
       resolve(process.cwd(), "src/features/canvas/application/selectedBackgroundSlot.ts"),
       "utf8",
     );
-    const zh = readFileSync(
-      resolve(process.cwd(), "public/locales/zh/translation.json"),
+    const en = readFileSync(
+      resolve(process.cwd(), "public/locales/en/translation.json"),
       "utf8",
     );
     const badges = readFileSync(
@@ -194,17 +194,17 @@ describe("director bundle canvas assets", () => {
       "utf8",
     );
 
-    // 文案搬进 i18n 之后这两处只剩 key，中文在词条表里；"主线素材" 这个旧叫法
-    // 三个文件都不该再出现。
+    // After the copy moved into i18n only keys remain in these two places and the wording is in the locale file; the old name "Mainline materials"
+    // should no longer appear in any of the three files.
     expect(panel).toContain("freezone.assetPanel.tab.library");
     expect(badges).toContain("freezone.nodeContext.mainlineAsset");
-    expect(zh).toContain('"library": "主线资产"');
-    expect(zh).toContain('"mainlineAsset": "主线资产"');
-    expect(`${panel}\n${badges}\n${zh}`).not.toContain("主线素材");
-    expect(panel).not.toContain(">素材库<");
-    expect(selectedBackgroundSlot).not.toContain("当前背景 · EP");
-    expect(selectedBackgroundSlot).not.toContain("已设置 EP");
-    expect(zh).toContain('"selectedBackgroundOutputLabel": "当前背景"');
+    expect(en).toContain('"library": "Mainline assets"');
+    expect(en).toContain('"mainlineAsset": "Mainline asset"');
+    expect(`${panel}\n${badges}\n${en}`).not.toContain("Mainline materials");
+    expect(panel).not.toContain(">Material library<");
+    expect(selectedBackgroundSlot).not.toContain("Current background · EP");
+    expect(selectedBackgroundSlot).not.toContain("Set EP");
+    expect(en).toContain('"selectedBackgroundOutputLabel": "Current background"');
   });
 
   it("refreshes the asset library after commits handled outside the library panel", () => {

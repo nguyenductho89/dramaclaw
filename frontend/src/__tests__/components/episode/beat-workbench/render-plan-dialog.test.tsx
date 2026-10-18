@@ -82,7 +82,7 @@ function makeMultiGridPlan() {
           rows: 2,
           cols: 3,
           beat_numbers: [1, 2, 3, 4, 5],
-          location: "闹市街头",
+          location: "Busy Street",
           padding_count: 1,
           reasons: [],
           warnings: [],
@@ -92,7 +92,7 @@ function makeMultiGridPlan() {
           rows: 2,
           cols: 3,
           beat_numbers: [6, 7, 8],
-          location: "公园",
+          location: "Park",
           padding_count: 0,
           reasons: [],
           warnings: [],
@@ -128,7 +128,7 @@ describe("RenderPlanDialog — /plan logical errors", () => {
   it("surfaces ok:false plan responses and does not leave a confirmable empty plan", async () => {
     planHandler = async () => ({
       ok: false,
-      error: "未检测到颜色分配，请先调用 assign-colors 接口",
+      error: "No color assignment detected, call the assign-colors endpoint first",
     });
 
     const onOpenChange = vi.fn();
@@ -149,7 +149,7 @@ describe("RenderPlanDialog — /plan logical errors", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "未检测到颜色分配，请先调用 assign-colors 接口",
+        "No color assignment detected, call the assign-colors endpoint first",
       );
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -264,7 +264,7 @@ describe("RenderPlanDialog — /plan logical errors", () => {
 
   it("surfaces unknown 400 backend messages directly", async () => {
     const backendMessage =
-      "Render 前请先到「草图」点击「AI 检测」识别出场身份，或在「更多 > 出场身份」手工标注。";
+      "Before Render, go to Sketch and click AI detect to identify the identities present, or annotate them manually under More > Identities present.";
     const error: { response: { status: number; json: () => Promise<unknown> } } =
       {
         response: {
@@ -315,10 +315,10 @@ describe("RenderPlanDialog — /plan happy path", () => {
       </Wrapper>,
     );
 
-    // Two plan entries → two location labels ("闹市街头", "公园") visible.
+    // Two plan entries → two location labels ("Busy Street", "Park") visible.
     await waitFor(() => {
-      expect(screen.getByTitle("闹市街头")).toBeInTheDocument();
-      expect(screen.getByTitle("公园")).toBeInTheDocument();
+      expect(screen.getByTitle("Busy Street")).toBeInTheDocument();
+      expect(screen.getByTitle("Park")).toBeInTheDocument();
     });
   });
 
@@ -357,7 +357,7 @@ describe("RenderPlanDialog — /plan happy path", () => {
       </Wrapper>,
     );
 
-    await screen.findByTitle("闹市街头");
+    await screen.findByTitle("Busy Street");
     expect(
       screen.queryByRole("combobox", { name: "episode.renderPlan.strategy" }),
     ).not.toBeInTheDocument();

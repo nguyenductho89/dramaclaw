@@ -111,7 +111,7 @@ function makeBeat(beatNumber: number): Beat {
   return {
     beat_number: beatNumber,
     narration_segment: "Narration",
-    visual_description: "画面",
+    visual_description: "Visual",
     audio_type: "narration",
     video_mode: "first_frame",
     detected_identities: [],
@@ -124,7 +124,7 @@ function makeBeat(beatNumber: number): Beat {
 }
 
 describe("ActionPanel", () => {
-  it("defaults to the 文案 section expanded with other sections collapsed (#21)", () => {
+  it("defaults to the Text section expanded with other sections collapsed (#21)", () => {
     const states: BeatStates = {
       1: {
         script: "missing",
@@ -148,7 +148,7 @@ describe("ActionPanel", () => {
       </I18nextProvider>,
     );
 
-    // 文案默认展开，用户无需点击即可看到文案内容；其它区块仍折叠。
+    // The Text section is expanded by default so the user sees the text content without clicking; the other sections stay collapsed.
     expect(screen.getByText("TextPane")).toBeInTheDocument();
     expect(screen.queryByText("SketchSection")).not.toBeInTheDocument();
   });
@@ -178,7 +178,7 @@ describe("ActionPanel", () => {
       </I18nextProvider>,
     );
 
-    // 用一个非默认展开的区块（草图）验证展开状态跨 remount 持久化。
+    // Use a section that is not expanded by default (Sketch) to verify the expanded state persists across remounts.
     fireEvent.click(screen.getByRole("button", { name: /Sketch/ }));
 
     await waitFor(() => {
@@ -226,7 +226,7 @@ describe("ActionPanel", () => {
       </I18nextProvider>,
     );
 
-    // 用一个非默认展开的区块（草图）验证切换 beat 时展开状态保留。
+    // Use a section that is not expanded by default (Sketch) to verify the expanded state is kept when switching beats.
     fireEvent.click(screen.getByRole("button", { name: /Sketch/ }));
     expect(screen.getByText("SketchSection")).toBeInTheDocument();
 

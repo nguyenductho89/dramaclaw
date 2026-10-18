@@ -13,7 +13,7 @@ function ControlledMentionTextarea() {
       aria-label="Visual description"
       value={value}
       onChange={(event) => setValue(event.target.value)}
-      mentionLabels={["陆辰_青年时期", "羊皮笔记本"]}
+      mentionLabels={["Lu Chen_young_adult", "Sheepskin notebook"]}
     />
   );
 }
@@ -27,10 +27,10 @@ describe("MentionTextarea", () => {
       target: { value: "@", selectionStart: 1, selectionEnd: 1 },
     });
 
-    const option = screen.getByRole("option", { name: "陆辰_青年时期" });
+    const option = screen.getByRole("option", { name: "Lu Chen_young_adult" });
     fireEvent.mouseDown(option);
 
-    expect(screen.getByDisplayValue("@陆辰_青年时期")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("@Lu Chen_young_adult")).toBeInTheDocument();
   });
 
   it("confirms the highlighted candidate when pressing space", () => {
@@ -43,13 +43,13 @@ describe("MentionTextarea", () => {
       target: { value: "@", selectionStart: 1, selectionEnd: 1 },
     });
     expect(
-      screen.getByRole("option", { name: "陆辰_青年时期" }),
+      screen.getByRole("option", { name: "Lu Chen_young_adult" }),
     ).toBeInTheDocument();
 
     fireEvent.keyDown(textarea, { key: " " });
 
     // Space confirms the first candidate and leaves a trailing separator.
-    expect(textarea.value).toBe("@陆辰_青年时期 ");
+    expect(textarea.value).toBe("@Lu Chen_young_adult ");
   });
 
   it("adds a separator when typing after a complete mention", () => {
@@ -60,13 +60,13 @@ describe("MentionTextarea", () => {
     }) as HTMLTextAreaElement;
     fireEvent.change(textarea, {
       target: {
-        value: "@陆辰_青年时期走近",
-        selectionStart: 9,
-        selectionEnd: 9,
+        value: "@Lu Chen_young_adultapproaches",
+        selectionStart: 21,
+        selectionEnd: 21,
       },
     });
 
-    expect(textarea.value).toBe("@陆辰_青年时期 走近");
+    expect(textarea.value).toBe("@Lu Chen_young_adult approaches");
   });
 
   it("does not hijack space while an IME is composing", () => {

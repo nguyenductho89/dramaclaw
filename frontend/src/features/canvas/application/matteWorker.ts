@@ -2,22 +2,22 @@
 // Copyright (c) 2026 ClaymoreLab
 /// <reference lib="webworker" />
 //
-// 抠图(背景去除)Web Worker。
+// Matting (background removal) Web Worker.
 //
-// 推理内核:`@huggingface/transformers`(Apache-2.0)的 background-removal pipeline。
-// 之前用的 `@imgly/background-removal` 是 AGPL-3.0(传染性 copyleft),与本仓库的
-// Elastic License v2 闭源策略冲突,已替换。模型权重选用宽松商用许可的开源模型
-// (见 MATTE_MODEL),不含任何 non-commercial / copyleft 约束。
+// Inference core: the background-removal pipeline of `@huggingface/transformers` (Apache-2.0).
+// The earlier `@imgly/background-removal` is AGPL-3.0 (viral copyleft), which conflicts with this repo's
+// Elastic License v2 closed-source policy, so it was replaced. The model weights use open-source models under permissive commercial licenses
+// (see MATTE_MODEL), carrying no non-commercial / copyleft constraints.
 //
-// 为什么要自建 Worker:推理(尤其 WASM 回退路径)若跑在主线程会把整个画布卡死。
-// 把 pipeline 整段放进 worker,无论 WebGPU 是否可用,主线程都不被阻塞。
+// Why build our own Worker: inference (especially the WASM fallback path), if run on the main thread, would freeze the whole canvas.
+// Putting the whole pipeline in a worker means the main thread is never blocked, whether or not WebGPU is available.
 
 import { pipeline } from "@huggingface/transformers";
 
-// 抠图模型(全部为宽松商用许可,可随时切换):
-//   - "Xenova/modnet"            Apache-2.0,~6.6MB(q8)/13MB(fp16),人像/角色 matting,体积最小
-//   - "onnx-community/BEN2-ONNX" MIT,~219MB(fp16),通用物体抠图质量最高,但首次下载很大
-// 本项目画布以角色立绘/分镜人物为主,默认用 MODNet(下载远小于旧的 imgly ~45MB)。
+// Matting models (all under permissive commercial licenses, switchable at any time):
+//   - "Xenova/modnet"            Apache-2.0, ~6.6MB (q8)/13MB (fp16), portrait/character matting, the smallest
+//   - "onnx-community/BEN2-ONNX" MIT, ~219MB (fp16), the best general object matting quality, but a large first download
+// This project's canvas is mainly character portraits / storyboard figures, so MODNet is the default (a download far smaller than the old imgly ~45MB).
 const MATTE_MODEL = "Xenova/modnet";
 
 type InboundMessage =
@@ -31,11 +31,11 @@ type OutboundMessage =
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
-// onnxruntime-web 在建 session 时会把 `wasm.numThreads` 设成 hardwareConcurrency。
-// 但 WASM 多线程依赖 SharedArrayBuffer,而 SAB 只有在页面「跨源隔离」(COOP+COEP)时
-// 才可用。我们的页面只设了 COOP 没设 COEP,所以 `crossOriginIsolated === false`,
-// 多线程起不来,ort 会打印告警再回落单线程。既然注定单线程,就把上报核数压到 1,
-// 让库一开始就只申请单线程,结果相同但没有无效的多线程初始化尝试和告警。
+// When onnxruntime-web creates a session it sets `wasm.numThreads` to hardwareConcurrency.
+// But WASM multithreading depends on SharedArrayBuffer, and SAB is only available when the page is "cross-origin isolated" (COOP+COEP).
+// Our page sets only COOP and not COEP, so `crossOriginIsolated === false`,
+// multithreading cannot start, and ort prints a warning and falls back to a single thread. Since it is bound to be single-threaded, report the core count as 1,
+// so the library requests only one thread from the start - the same result, but with no useless multithreaded init attempt and warning.
 if (!ctx.crossOriginIsolated) {
   try {
     Object.defineProperty(ctx.navigator, "hardwareConcurrency", {
@@ -43,7 +43,7 @@ if (!ctx.crossOriginIsolated) {
       get: () => 1,
     });
   } catch {
-    // 个别引擎可能拒绝重定义该只读属性;拒绝了也无妨,告警本身无害。
+    // Some engines may refuse to redefine this read-only property; being refused is fine, since the warning itself is harmless.
   }
 }
 
@@ -59,13 +59,13 @@ async function detectGpu(): Promise<boolean> {
   }
 }
 
-// pipeline 在 worker 内只初始化一次(懒加载单例):preload 与 matte 共用同一实例,
-// 命中已初始化的推理 session,避免重复加载模型权重。
+// The pipeline is initialized only once inside the worker (a lazily loaded singleton): preload and matte share the same instance,
+// hitting the already initialized inference session and avoiding reloading the model weights.
 //
-// 返回形态:transformers.js 的 BackgroundRemovalPipeline 对「单个输入」返回单个
-// RawImage,对「数组输入」才返回 RawImage[](源码:`Array.isArray(images) ? result : result[0]`)。
-// 我们每次只抠一张,所以拿到的是单个 RawImage——之前按数组解构会触发
-// 「(intermediate value) is not iterable」。
+// Return shape: transformers.js's BackgroundRemovalPipeline returns a single
+// RawImage for a "single input" and returns RawImage[] only for an "array input" (source: `Array.isArray(images) ? result : result[0]`).
+// We matte one image at a time, so what we get is a single RawImage - destructuring it as an array before
+// triggered "(intermediate value) is not iterable".
 type MatteImage = { toBlob(): Promise<Blob> };
 type RemoveBackground = (input: string) => Promise<MatteImage>;
 let removerPromise: Promise<RemoveBackground> | null = null;
@@ -76,7 +76,7 @@ function getRemover(): Promise<RemoveBackground> {
       const useGpu = await detectGpu();
       const remover = await pipeline("background-removal", MATTE_MODEL, {
         device: useGpu ? "webgpu" : "wasm",
-        // WebGPU 用 fp16;WASM(CPU)回退用 q8 量化权重,体积与内存最小。
+        // WebGPU uses fp16; the WASM (CPU) fallback uses q8 quantized weights, with the smallest size and memory.
         dtype: useGpu ? "fp16" : "q8",
       });
       return remover as unknown as RemoveBackground;
@@ -94,7 +94,7 @@ ctx.onmessage = async (event: MessageEvent<InboundMessage>) => {
       return;
     }
     const remover = await getRemover();
-    // background-removal pipeline 对单个输入返回单个 RawImage(已把 matte 合成到 alpha 通道)。
+    // The background-removal pipeline returns a single RawImage for a single input (the matte already composited into the alpha channel).
     const url = URL.createObjectURL(message.blob);
     try {
       const image = await remover(url);
@@ -112,7 +112,7 @@ ctx.onmessage = async (event: MessageEvent<InboundMessage>) => {
   }
 };
 
-// 模型权重从 Hugging Face Hub 加载、ort wasm 运行时从 jsDelivr 加载(均为
-// transformers.js 默认行为)。生产环境需在边缘 worker 的 CSP 放行这两个来源
-// (见 worker/index.ts 的 connect-src / script-src)。若改为自托管同源,设
-// env.allowRemoteModels=false / env.localModelPath / env.backends.onnx.wasm.wasmPaths。
+// Model weights are loaded from the Hugging Face Hub and the ort wasm runtime from jsDelivr (both
+// the transformers.js default behavior). In production the edge worker's CSP must allow these two origins
+// (see connect-src / script-src of worker/index.ts). If switching to self-hosted same-origin, set
+// env.allowRemoteModels=false / env.localModelPath / env.backends.onnx.wasm.wasmPaths.

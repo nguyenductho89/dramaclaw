@@ -539,7 +539,7 @@ async def test_freezone_video_omni_gen_rejects_happyhorse_model(
 
 
 def _audio_reference(project_dir: Path, name: str) -> dict[str, str]:
-    """落一个占位音频文件并返回对应的 reference 条目（时长由测试直接打桩）。"""
+    """Drop a placeholder audio file and return the corresponding reference entry (the duration is stubbed directly by the test)."""
     path = project_dir / "freezone" / "_uploads" / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"RIFF----WAVEfmt ")
@@ -551,10 +551,10 @@ async def test_freezone_video_omni_gen_rejects_audio_total_duration(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """3 条各 6s：逐条全合规、总计 18s —— 后端兜底必须在计费前 400 掉。
+    """3 items of 6s each: every one is compliant, total 18s -- the backend fallback must 400 before billing.
 
-    这就是 2026-08-06 3060 环境两次任务失败的形状：前端那层若被绕过（老画布数据、
-    <audio> 探测失败），厂商会在扣费之后才拒。
+    This is the shape of the two 2026-08-06 task failures in the 3060 environment: if the frontend layer is bypassed (old canvas data,
+    <audio> probing failed), the vendor rejects only after the charge.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"clip{i}.wav") for i in range(3)]
@@ -583,7 +583,7 @@ async def test_freezone_video_omni_gen_allows_audio_within_total_duration(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """总计正好顶格 15.2s 必须放行——兜底拦过头比不拦更难查。"""
+    """A total of exactly the 15.2s cap must be let through -- a fallback that blocks too much is harder to trace than one that does not block."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"ok{i}.wav") for i in range(2)]
     durations = iter([9.0, 6.2])
@@ -592,7 +592,7 @@ async def test_freezone_video_omni_gen_allows_audio_within_total_duration(
         return next(durations)
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
-    # 走到 enqueue 就说明时长这关过了，不必真的排任务。
+    # Reaching enqueue means the duration check was passed; there is no need to actually schedule a task.
     _patch_runtime_error_enqueue(monkeypatch)
 
     with pytest.raises(HTTPException) as exc:
@@ -613,7 +613,7 @@ async def test_freezone_video_omni_gen_skips_unprobeable_audio(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """ffprobe 测不出时不能把正常提交拦死——这层只在「知道超了」时才拦。"""
+    """When ffprobe cannot measure, a normal submission must not be blocked to death -- this layer blocks only when it "knows it is over"."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     references = [_audio_reference(project_dir, f"blind{i}.wav") for i in range(3)]
     async def fake_probe(_path: str) -> None:
@@ -636,7 +636,7 @@ async def test_freezone_video_omni_gen_skips_unprobeable_audio(
 
 
 def _patch_video_catalog(monkeypatch: pytest.MonkeyPatch, entry: dict[str, object]) -> None:
-    """视频目录替身：只放一条，omni-gen 会按它解析 backend / capabilities。"""
+    """Video catalog stand-in: only one entry, from which omni-gen resolves the backend / capabilities."""
 
     async def fake_catalog(media_type: str) -> list[dict[str, object]] | None:
         return [entry] if media_type == "video" else None
@@ -649,10 +649,10 @@ async def test_freezone_video_omni_gen_uses_catalog_audio_total_limit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """后台 referenceAudioTotalMaxSeconds 可以把上限**收得更严**（这里 8s < 厂商 15.2s）。
+    """The admin-side referenceAudioTotalMaxSeconds can **tighten the cap further** (here 8s < the vendor's 15.2s).
 
-    配宽的方向由 `..._clamps_catalog_total_to_vendor_cap` 盯着：那边取小之后厂商硬顶仍然
-    生效。两条合起来才是「取小」这个语义。
+    The direction of loosening is watched by `..._clamps_catalog_total_to_vendor_cap`: there, after taking the smaller, the vendor hard cap still
+    applies. Together the two cases make up the "take the smaller" semantics.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -684,7 +684,7 @@ async def test_freezone_video_omni_gen_uses_catalog_audio_total_limit(
             user={"username": "admin"},
         )
 
-    # 10s 在厂商 15.2s 之内，是后台那条 8s 把它拦下的。
+    # 10s is within the vendor's 15.2s; it was that admin-side 8s that blocked it.
     assert exc.value.status_code == 400
     assert "total duration must be <= 8s" in str(exc.value.detail)
 
@@ -694,10 +694,10 @@ async def test_freezone_video_omni_gen_skips_duration_guard_for_unknown_model(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """边界未知的模型（这里是 seedance-1.5-pro，由目录打开 all_reference）不套 2.0 的数字。
+    """A model with unknown bounds (here seedance-1.5-pro, with all_reference opened by the catalog) does not get 2.0's numbers applied.
 
-    1.8~15.2s 是从 2.0 的报文里实测出来的，别人家的模型凭空 400 比漏拦更糟；要卡就在
-    目录里配 referenceAudioTotalMaxSeconds 显式声明。
+    1.8~15.2s was measured from the 2.0 responses, and a made-up 400 on someone else's model is worse than a missed block; to block, declare it
+    explicitly in the catalog with referenceAudioTotalMaxSeconds.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -713,7 +713,7 @@ async def test_freezone_video_omni_gen_skips_duration_guard_for_unknown_model(
     references = [_audio_reference(project_dir, f"other{i}.wav") for i in range(3)]
 
     async def fake_probe(_path: str) -> float:
-        return 6.0  # 总计 18s，若误套 Seedance 口径就会 400
+        return 6.0  # total 18s; it would 400 if the Seedance rule were applied by mistake
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
     _patch_runtime_error_enqueue(monkeypatch)
@@ -737,11 +737,11 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """后台配了总时长≠授权用 Seedance 的逐条边界卡它。
+    """An admin-configured total duration is not authorization to apply Seedance's per-item bounds to it.
 
-    referenceAudioTotalMaxSeconds=60 的非 2.0 模型：一条 25s 的音频在总时长之内，必须放行。
-    早先这里的开关是一个 `audio_bounds_known`，配了总时长就连 1.8~15.2s 一起套上去，
-    正好会把这条 25s 凭空 400 掉。
+    For a non-2.0 model with referenceAudioTotalMaxSeconds=60: a 25s audio within the total duration must be let through.
+    Earlier the switch here was a single `audio_bounds_known`, and configuring a total duration applied 1.8~15.2s along with it,
+    which would have 400-ed this 25s item out of thin air.
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -758,7 +758,7 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
     references = [_audio_reference(project_dir, "long.wav")]
 
     async def fake_probe(_path: str) -> float:
-        return 25.0  # > 15.2s，但对这个模型没有逐条上限
+        return 25.0  # > 15.2s, but this model has no per-item cap
 
     monkeypatch.setattr(freezone_routes, "_probe_reference_audio_seconds", fake_probe)
     _patch_runtime_error_enqueue(monkeypatch)
@@ -774,7 +774,7 @@ async def test_freezone_video_omni_gen_catalog_total_does_not_apply_per_clip_bou
             user={"username": "admin"},
         )
 
-    # 503 = 走到了入队（被替身打回），说明时长守卫放行了。
+    # 503 = reached enqueue (bounced by the stand-in), meaning the duration guard let it through.
     assert exc.value.status_code == 503
 
 
@@ -783,7 +783,7 @@ async def test_freezone_video_omni_gen_uses_explicit_catalog_total_limit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """显式目录配置是权威值，不能再被代码里的隐藏厂商常量覆盖。"""
+    """The explicit catalog configuration is the authoritative value and must not be overridden again by a hidden vendor constant in code."""
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
         monkeypatch,
@@ -815,14 +815,14 @@ async def test_freezone_video_omni_gen_uses_explicit_catalog_total_limit(
             user={"username": "admin"},
         )
 
-    # 503 = 通过时长校验并走到入队（测试替身故意返回 broker unavailable）。
+    # 503 = passed duration validation and reached enqueue (the test stand-in deliberately returns broker unavailable).
     assert exc.value.status_code == 503
 
 
 def test_catalog_audio_total_duration_max_rejects_non_finite() -> None:
-    """inf 不能当成上限：`inf > 0` 是 True，漏进来就等于静默关掉总时长判定。
+    """inf cannot be taken as a cap: `inf > 0` is True, and letting it through silently turns off the total-duration judgment.
 
-    写入侧 schema 已经挡了，但目录条目可能是那道校验存在之前落的库，读出来再挡一次。
+    The write-side schema already blocks it, but a catalog entry may have been stored before that validation existed, so block it once more on read."""
     """
     read = freezone_routes._catalog_audio_total_duration_max
     assert read({"referenceAudioTotalMaxSeconds": 15.2}) == 15.2
@@ -836,11 +836,11 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """3 条音频必须并发探测。
+    """3 audio items must be probed concurrently.
 
-    ffprobe 单条有 20s 超时，串行 await 会把 3 条叠成最长 60s 的请求耗时。这里让每个
-    探测在返回前先 `asyncio.sleep(0)` 让出一次，只有并发调度才可能出现「3 个都进来了、
-    还没有一个返回」的时刻。
+    ffprobe has a 20s timeout per item, and serial awaits would stack 3 items into a request time of up to 60s. Here every
+    probe first yields once with `asyncio.sleep(0)` before returning, and only concurrent scheduling can produce the moment of
+    "all 3 have entered and none has returned yet"."""
     """
     project_dir, _output_dir = _patch_freezone_project(monkeypatch, tmp_path)
     _patch_video_catalog(
@@ -880,7 +880,7 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
             user={"username": "admin"},
         )
 
-    assert exc.value.status_code == 503  # 9s 未超限，走到入队被替身打回
+    assert exc.value.status_code == 503  # 9s is not over the limit; it reached enqueue and was bounced by the stand-in
     assert peak == 3
 
 
@@ -888,9 +888,9 @@ async def test_freezone_video_omni_gen_probes_audio_concurrently(
 async def test_probe_reference_audio_seconds_returns_none_when_probe_fails(
     tmp_path: Path,
 ) -> None:
-    """ffprobe 失败必须回 None，不能像 utils.media_io.get_audio_duration 那样返回 5.0。
+    """ffprobe failure must return None, and must not return 5.0 as utils.media_io.get_audio_duration does.
 
-    5.0 是个合法值，会让兜底变成静默放行——这个断言就是防它被顺手换掉。
+    5.0 is a legal value and would turn the fallback into a silent pass -- this assertion guards against it being swapped in casually."""
     """
     broken = tmp_path / "not-audio.wav"
     broken.write_bytes(b"not audio at all")
@@ -1409,11 +1409,11 @@ def test_freezone_ai_staging_prop_endpoint_returns_ai_prop(monkeypatch, tmp_path
         }
 
     monkeypatch.setattr(freezone_routes, "_run_ai_staging_prop", fake_run_ai_staging_prop)
-    # 该路由自 OI-54 S2 起在请求路径上解析出网身份，而这个裸 app 不经
-    # `ensure_bootstrap()`，端口注册表是空的（`get_authz_port()` 刻意没有
-    # `PortNotRegistered` 回落——回落就等于「端口没注册就跳过身份绑定」）。
-    # 用真的 CE 单机降级实现顶上：`LocalAuthz` 产 `kind="local"` → 非组织 →
-    # 什么都不绑，本测试既有断言一字不改。seam 照 `test_p0g4c_video_egress.py:803`。
+    # Since OI-54 S2 this route resolves the egress identity on the request path, and this bare app does not go through
+    # `ensure_bootstrap()`, so the port registry is empty (`get_authz_port()` deliberately has no
+    # `PortNotRegistered` fallback -- a fallback would mean "skip identity binding if the port is not registered").
+    # Substitute the real CE single-node degraded implementation: `LocalAuthz` produces `kind="local"` -> non-organization ->
+    # binds nothing, and this test's existing assertions change not by a word. The seam follows `test_p0g4c_video_egress.py:803`.
     import novelvideo.ports as ports
     from novelvideo.ports.local import LocalAuthz
 
@@ -1543,9 +1543,9 @@ def test_restore_preset_canvas_preserves_side_candidates() -> None:
 
 
 def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes() -> None:
-    """preset-managed 节点之间的 edge 归 preset 管。如果 preset 改了方向 / 删了边
-    (例如 Phase 1c 把 scene_360 workflow → viewer 反向),旧 edge 不能被
-    merge 残留下来,否则画布上新旧 edge 共存,出现 X 形交叉。
+    """Edges between preset-managed nodes belong to the preset. If the preset changes a direction / deletes an edge
+    (for example Phase 1c reversing scene_360 workflow -> viewer), the old edge must not be left behind by
+    the merge, otherwise old and new edges coexist on the canvas and cross in an X shape.
     """
     restored = {
         "nodes": [
@@ -1559,7 +1559,7 @@ def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes
             },
         ],
         "edges": [
-            # 新方向: workflow_a → viewer_b
+            # New direction: workflow_a -> viewer_b
             {"id": "edge_workflow_a_to_viewer_b", "source": "workflow_a", "target": "viewer_b"},
         ],
         "viewport": None,
@@ -1576,26 +1576,26 @@ def test_restore_preset_canvas_drops_stale_edge_between_two_preset_managed_nodes
             },
         ],
         "edges": [
-            # 旧方向: viewer_b → workflow_a (Phase 1c 之前的方向)
+            # Old direction: viewer_b -> workflow_a (the direction before Phase 1c)
             {"id": "edge_viewer_b_to_workflow_a", "source": "viewer_b", "target": "workflow_a"},
         ],
         "viewport": None,
     }
     merged = _merge_restored_preset_canvas(restored, existing)
     edges_by_pair = {(e["source"], e["target"]) for e in merged["edges"]}
-    assert ("workflow_a", "viewer_b") in edges_by_pair, "新方向 edge 必须保留"
+    assert ("workflow_a", "viewer_b") in edges_by_pair, "The new-direction edge must be kept"
     assert ("viewer_b", "workflow_a") not in edges_by_pair, (
-        "旧方向 edge (两端都 preset-managed) 必须被 preset 重建过程丢掉,"
-        "否则画布上出现 X 形重复连线 (用户实际遇到的 bug)"
+        "The old-direction edge (both ends preset-managed) must be dropped by the preset rebuild process, "
+        "otherwise duplicate X-shaped lines appear on the canvas (a bug the user actually hit)"
     )
 
 
 def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
-    """preset-emitted prompt 节点 (有 __freezone_source.kind=scene_prompt 等)
-    也算 preset-managed。Phase 1d 把 scene 360 prompt 从连 pano viewer 改成连
-    workflow trigger,旧的 prompt → viewer 边必须被 merge 清掉。
+    """A preset-emitted prompt node (with __freezone_source.kind=scene_prompt etc.)
+    also counts as preset-managed. Phase 1d changed the scene 360 prompt from connecting to the pano viewer to connecting to the
+    workflow trigger, and the old prompt -> viewer edge must be cleared by the merge.
 
-    覆盖用户报的实际 bug: \"提示词还连着 360 viewer\"。
+    Covers the actual bug the user reported: \"the prompt is still connected to the 360 viewer\".
     """
     restored = {
         "nodes": [
@@ -1618,12 +1618,12 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
                 "id": "ref_scene_director_pano_360_1",
                 "data": {
                     "preset_managed": True,
-                    "workflow_kind": "mainline_slot",  # viewer 节点也算 mainline_slot
+                    "workflow_kind": "mainline_slot",  # the viewer node also counts as mainline_slot
                 },
             },
         ],
         "edges": [
-            # 新方向: prompt → workflow trigger
+            # New direction: prompt -> workflow trigger
             {
                 "id": "edge_prompt_to_workflow",
                 "source": "prompt_scene_foo",
@@ -1651,7 +1651,7 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
             },
         ],
         "edges": [
-            # 旧方向 (Phase 1d 之前): prompt → pano viewer
+            # Old direction (before Phase 1d): prompt -> pano viewer
             {
                 "id": "edge_prompt_to_viewer",
                 "source": "prompt_scene_foo",
@@ -1662,10 +1662,9 @@ def test_restore_preset_canvas_drops_stale_prompt_to_viewer_edge() -> None:
     }
     merged = _merge_restored_preset_canvas(restored, existing)
     edges_by_pair = {(e["source"], e["target"]) for e in merged["edges"]}
-    assert ("prompt_scene_foo", "workflow_scene_foo_360") in edges_by_pair, "新方向必须保留"
     assert ("prompt_scene_foo", "ref_scene_director_pano_360_1") not in edges_by_pair, (
-        "旧 prompt → viewer 边必须被丢 (两端都 preset-managed:prompt 通过 __freezone_source.kind, "
-        "viewer 通过 workflow_kind:mainline_slot)"
+        "The old prompt -> viewer edge must be dropped (both ends preset-managed: the prompt via __freezone_source.kind, "
+        "the viewer via workflow_kind:mainline_slot)"
     )
 
 
@@ -3072,13 +3071,13 @@ async def test_put_canvas_lease_lost_returns_503(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TCP-EU-C4 · 丢租约走的是同一个错误面（B2 §3.3.3）。
+    """TCP-EU-C4 · Losing the lease goes through the same error surface (B2 Section 3.3.3).
 
-    `CanvasLeaseLost` 继承 `CanvasLockBusy`，所以上面那条用例本来就会自动接住它。
-    照它的形状再写一条 lease 版本，是为了证明「路由零改动」不是巧合：
-    错误面契约（503 ＋ `canvas_lock_busy` ＋ `Retry-After: 1`）对两种失败逐字相同。
-    丢租约判 503 而不是 409：那是并发条件，不是 revision 条件 —— 客户端重试时
-    `_check_revision` 才**权威地**决定这次是 200 还是 409（B2 §3.3.3）。
+    `CanvasLeaseLost` inherits `CanvasLockBusy`, so the case above would catch it automatically anyway.
+    Writing a lease version in the same shape is to prove that "zero route changes" is not a coincidence:
+    the error-surface contract (503 + `canvas_lock_busy` + `Retry-After: 1`) is identical to the letter for both failures.
+    A lost lease is judged 503 rather than 409: it is a concurrency condition, not a revision condition -- when the client retries,
+    `_check_revision` **authoritatively** decides whether this time is a 200 or a 409 (B2 Section 3.3.3).
     """
     from novelvideo.ports.canvas_mutex import CanvasLeaseLost
 
@@ -3138,7 +3137,7 @@ async def test_get_canvas_reports_another_actor_editing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TCP-EU-C4 步 6 · O2「另一个会话正在编辑」（B2 §3.9 O2 / §6.4 步 6）。"""
+    """TCP-EU-C4 step 6 · O2 "another session is editing" (B2 Section 3.9 O2 / Section 6.4 step 6)."""
     _patch_freezone_project(monkeypatch, tmp_path)
     _write_canvas_edited_by(tmp_path, "beat_1", updated_by="bob", age_seconds=2)
 
@@ -3149,7 +3148,7 @@ async def test_get_canvas_reports_another_actor_editing(
     )
 
     assert result["editing_by"] == "bob"
-    # 契约不变（B2-6）：提示字段挂在 `data` 之外，画布载荷形状一个字节都没动。
+    # Contract unchanged (B2-6): the hint field hangs outside `data`, and the canvas payload shape is untouched by a single byte.
     assert "editing_by" not in result["data"]
 
 
@@ -3199,10 +3198,10 @@ async def test_get_canvas_editing_by_adds_no_round_trip(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """步 6 的硬要求：读路径**不许新增数据库往返**（B2 §6.4 步 6）。
+    """The hard requirement of step 6: the read path **must not add database round trips** (B2 Section 6.4 step 6).
 
-    判据落成「读路径一次都不碰画布互斥端口」—— 端口是这条路径上唯一可能通往
-    Postgres 的东西（EE 的实现走租约表，`TCP-P40`）。
+    The criterion lands as "the read path never touches the canvas mutex port even once" -- the port is the only thing on this path that could lead to
+    Postgres (the EE implementation goes through the lease table, `TCP-P40`).
     """
     from novelvideo.ports import registry as ports_registry
 
@@ -3398,7 +3397,7 @@ def test_scene_setting_sheet_prompt_lists_all_eight_blocks() -> None:
     assert "libtv-style scene setting sheet" in prompt
     assert "one single landscape design sheet" in prompt
     assert "dark neutral background" in prompt
-    # 八个板块缺一不可——少一块产出就退化成普通概念图，跟角色三视图撞脸。
+    # All eight sections are indispensable -- if even one is missing, the output degrades into an ordinary concept image and looks the same as a character turnaround.
     for block in (
         "1 scene key visual",
         "2 mood concept sketches",
@@ -3412,7 +3411,7 @@ def test_scene_setting_sheet_prompt_lists_all_eight_blocks() -> None:
         assert block in prompt
     assert "short title block" in prompt
     assert "same language as the user prompt" in prompt
-    # 用户补充提示词照旧拼在模板后面。
+    # The user supplementary prompt is still appended after the template as before.
     assert prompt.endswith("User prompt:\n遗忘的悬浮神庙")
 
 
@@ -3543,7 +3542,7 @@ async def test_mask_edit_job_uses_reference_edit_provider_routing(
     assert captured["reference_images"] == [str(base), str(mask)]
     assert captured["config"]["provider"] == "newapi"
     assert captured["config"]["model"] == NEWAPI_IMAGE_MODEL
-    # Image 2 = 源图 + 红色高亮标注；模型只改红色区域，且红色不进入结果。
+    # Image 2 = source image + red highlight annotation; the model changes only the red area, and the red does not enter the result.
     assert "red-highlighted region" in captured["prompt"]
     assert "must NOT appear in the output" in captured["prompt"]
 
@@ -3565,11 +3564,11 @@ def test_camera_prompt_contains_camera_body_lens_focal_and_aperture() -> None:
 
 
 def test_image_style_templates_are_short_drama_styles() -> None:
-    """端点吐出来的必须就是随包那份清单,一条不多一条不少、顺序也一致。
+    """What the endpoint emits must be exactly the manifest shipped with the package, no entry more or fewer, in the same order.
 
-    原来在这里抄了一份 24 个 id 的列表,每加一批风格就要照抄一遍,而它想验的其实是
-    「路由拿的是内置清单」。改成直接比对清单文件:既不随风格数漂移,又比数量更严。
-    数量另设下限,防止清单被截断成空壳还悄悄通过。
+    It used to copy a list of 24 ids here, which had to be copied again with every batch of styles added, while what it wants to verify is actually
+    "the route uses the built-in manifest". Changed to compare directly against the manifest file: it neither drifts with the style count and is stricter than the count.
+    The count has a separate lower bound, to prevent the manifest being truncated into an empty shell and still passing quietly.
     """
     shipped = json.loads(
         (
@@ -3589,16 +3588,16 @@ def test_image_style_templates_are_short_drama_styles() -> None:
 
 
 def test_image_style_templates_have_assets_and_prompts() -> None:
-    # 图片已迁 OSS(STYLE_GALLERY_ASSET_BASE),不随仓库发布,所以 CI 里这个目录
-    # 不存在,只能校验路径形状。本地跑过 scripts/build_style_gallery.py 的人目录
-    # 才在,那时顺带校验清单与图片对得上 —— 加风格时漏转图片就在这里拦下。
+    # Images have moved to OSS (STYLE_GALLERY_ASSET_BASE) and are not shipped with the repo, so this directory
+    # does not exist in CI and only the path shape can be validated. For those who ran scripts/build_style_gallery.py locally, the directory
+    # exists, and then the manifest and the images are cross-checked as well -- forgetting to convert images when adding a style is caught right here.
     gallery_root = Path(__file__).resolve().parents[1] / "frontend" / "public" / "style-gallery"
     check_files_exist = gallery_root.is_dir()
 
     for item in freezone_routes._get_freezone_image_style_templates():
         assert item["label"], item["id"]
-        # 类目是受控词表,不是自由文本 —— 图墙的筛选 tab 直接按它铺,多一个错别字
-        # 就多一个只有一张卡的 tab。加风格时如果确实要新类目,在这里显式登记。
+        # Categories are a controlled vocabulary, not free text -- the filter tabs of the image wall are laid out directly by it, and one typo
+        # makes a tab with only one card. If a new category is truly needed when adding a style, register it explicitly here.
         assert item["category"] in {
             "古装",
             "都市",
@@ -3607,13 +3606,13 @@ def test_image_style_templates_have_assets_and_prompts() -> None:
             "科幻",
             "类型",
             "写意",
-            # 第二批素材:以画法/媒介立类。
+            # Second batch of assets: categories by technique/medium.
             "动画",
             "绘画",
             "神话",
         }, item["id"]
-        # 下限只为拦住「提示词被截成空壳/占位符」——不是质量分。第二批里 大友克洋(97)
-        # 与 埃及壁画(102) 素材本身就短,原来的 120 会把两条合法风格判死。
+        # The lower bound only guards against "the prompt being truncated into an empty shell/placeholder" -- it is not a quality score. In the second batch, Otomo (97)
+        # and Egyptian Mural (102) have short assets by nature, and the original 120 would have condemned two legitimate styles.
         assert len(item["style_prompt"]) >= 90, item["id"]
         assert "author" not in item, item["id"]
         assert len(item["samples"]) == 4, item["id"]
@@ -3628,12 +3627,12 @@ async def test_image_style_templates_route_keeps_data_a_bare_list(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """`data` 必须是裸列表 —— 这是跨仓库的前端契约，不是实现细节。
+    """`data` must be a bare list -- this is a cross-repo frontend contract, not an implementation detail.
 
-    这个端点同时服务多个仓库的前端，它们的 `apiCall` 只拆一层 `{ok, data}`、不校验
-    `data` 的形状。把 `data` 换成 `{asset_base, version, templates}` 对象曾经让所有
-    没跟进的前端一句 `templates.find(...)` 抛 `is not a function`，冒泡到根错误边界
-    变成整页「页面加载失败」。清单元信息只能挂在信封同级。
+    This endpoint serves the frontends of several repos at once; their `apiCall` unwraps only one layer of `{ok, data}` and does not validate
+    the shape of `data`. Replacing `data` with a `{asset_base, version, templates}` object once made every
+    frontend that had not followed along throw `is not a function` on a `templates.find(...)`, bubbling to the root error boundary
+    and becoming a whole-page "page failed to load". Manifest metadata may only hang beside the envelope.
     """
     _patch_freezone_project(monkeypatch, tmp_path)
     monkeypatch.setenv("STYLE_GALLERY_ASSET_BASE", "https://cdn.example.com/style")
@@ -3653,7 +3652,7 @@ async def test_image_style_templates_route_keeps_data_a_bare_list(
     assert response.status_code == 200
     payload = response.json()
     assert payload["ok"] is True
-    assert isinstance(payload["data"], list), "data 必须是裸列表，元信息挂信封同级"
+    assert isinstance(payload["data"], list), "data must be a bare list, with metadata hung beside the envelope"
     assert payload["data"] == freezone_routes._get_freezone_image_style_templates()
     assert payload["asset_base"] == "https://cdn.example.com/style"
     assert payload["version"]
@@ -3707,9 +3706,9 @@ def test_style_asset_base_defaults_to_empty(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_style_manifest_version_is_exposed_for_troubleshooting() -> None:
-    """图片和提示词各自可换代,接口带上清单版本才好定位是哪份在生效。
+    """Images and prompts can each change generations; having the interface carry the manifest version makes it easy to locate which one is in effect.
 
-    版本号跟着清单文件走,别在这里写死 —— 否则每改一版清单都要顺手改测试。
+    The version number follows the manifest file, so do not hard-code it here -- otherwise every manifest revision would require a test edit as well."""
     """
     manifest = json.loads(
         (
@@ -4048,7 +4047,7 @@ async def test_freezone_celery_text_runner_records_project_node_history(
     ctx = _project_ctx(tmp_path)
     project_dir = ctx.output_dir
 
-    # 普通任务不传组织身份；组织任务才由分发层注入 egress_context。
+    # Ordinary tasks do not pass an organization identity; only organization tasks have egress_context injected by the dispatch layer.
     async def fake_translate_freezone_text(
         *,
         text: str,
@@ -4106,7 +4105,7 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
     ctx = _project_ctx(tmp_path)
     project_dir = ctx.output_dir
 
-    # 普通任务不传组织身份；组织任务才由分发层注入 egress_context。
+    # Ordinary tasks do not pass an organization identity; only organization tasks have egress_context injected by the dispatch layer.
     async def fake_generate_freezone_text(*, prompt: str):
         assert prompt == "写一段雨夜重逢"
         return "DC-freezone-text-writer-LLM", "雨夜里，他们在旧站台重逢。"
@@ -4784,10 +4783,10 @@ async def test_scene_360_endpoint_keeps_image_size_below_the_cap(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """低于 2K 的档位必须原样透传，并带上目录身份一起计费。
+    """A tier below 2K must be passed through as is, and billed together with the catalog identity.
 
-    画布面板按媒体模型目录里那一档报价 —— 目录只给 1K 的模型如果在这里被抬到
-    2K，报价与执行、计费口径就全对不上。
+    The canvas panel quotes by the tier in the media model catalog -- if a model for which the catalog offers only 1K is raised to
+    2K here, the quote, execution and billing conventions would all diverge."""
     """
     ctx = _project_ctx(tmp_path)
     captured: dict = {}
@@ -4867,7 +4866,7 @@ def test_scene_360_image_size_is_case_insensitive_and_capped(
 
 
 def _fake_media_model_catalog(entries: list[dict[str, object]]):
-    """权威（EE）图片目录的替身：非空列表 = 目录里只认这几条。"""
+    """A stand-in for the authoritative (EE) image catalog: a non-empty list = only these entries are recognized in the catalog."""
 
     async def fake_catalog(media_type: str) -> list[dict[str, object]]:
         assert media_type == "image"
@@ -4910,10 +4909,10 @@ async def test_scene_360_takes_model_and_billing_identity_from_the_catalog(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """身份以目录条目为准，不采信 body。
+    """Identity follows the catalog entry, not the body.
 
-    body 里的 catalog_id 直接决定按哪条目录规则扣费 —— 采信它就等于允许客户端
-    报一个便宜的 catalog_id、配一个贵的 model。
+    The catalog_id in the body directly decides which catalog rule is used for billing -- trusting it would let the client
+    report a cheap catalog_id paired with an expensive model."""
     """
     captured: dict = {}
     _patch_scene_360_enqueue(monkeypatch, tmp_path, captured)
@@ -4994,7 +4993,7 @@ async def test_scene_360_rejects_a_model_the_catalog_does_not_have(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """目录权威时非目录模型必须被拦掉，而不是拿默认模型偷偷跑掉。"""
+    """When the catalog is authoritative, a non-catalog model must be blocked, rather than quietly run with the default model."""
     captured: dict = {}
     _patch_scene_360_enqueue(monkeypatch, tmp_path, captured)
     monkeypatch.setattr(
@@ -5024,10 +5023,10 @@ async def test_template_edit_takes_provider_model_and_identity_from_the_catalog(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """宫格动作与 /freezone/edit 共用同一条执行链，provider 也要跟着目录走。
+    """Grid actions share the same execution chain as /freezone/edit, and the provider must also follow the catalog.
 
-    只发裸 model 的话网关按默认 provider 路由，目录里配的 openrouter 模型会被
-    送错家。
+    If only a bare model is sent, the gateway routes by the default provider, and an openrouter model configured in the catalog would be
+    sent to the wrong house."""
     """
     username = "admin"
     project = "59"
@@ -5113,10 +5112,10 @@ async def test_freezone_edit_forwards_catalog_model_params_into_task_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """带参考图的图编辑走 /freezone/edit，目录动态参数必须一路到任务负载。
+    """Image editing with reference images goes through /freezone/edit, and the catalog dynamic parameters must reach the task payload all the way.
 
-    schema 要和取值一起下发 —— runner 只有拿到 requestPath 才知道把参数写进网关
-    请求体的哪个位置，只带值等于没生效。
+    The schema must be sent together with the values -- the runner knows where in the gateway request body to write the parameter only after it gets the requestPath,
+    and carrying only the value is as good as not taking effect."""
     """
     username = "admin"
     project = "58"
@@ -5178,7 +5177,7 @@ async def test_run_freezone_edit_writes_model_params_into_gateway_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """runner 侧同 run_freezone_gen 一个口径：参数与 schema 都要落到网关 config。"""
+    """The runner side follows the same convention as run_freezone_gen: both the parameters and the schema must land in the gateway config."""
     from novelvideo import config as novelvideo_config
     from novelvideo.freezone import jobs as freezone_jobs
     from novelvideo.generators import nanobanana_grid
@@ -10048,7 +10047,7 @@ async def test_freezone_video_generation_rejects_small_reference_image_before_bi
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """参考图小于 300px 在入队前就 400，不预扣积分、不送厂商（3060 2026-08-26 实例）。"""
+    """A reference image smaller than 300px 400s before enqueueing, without pre-deducting credits or sending to the vendor (3060 2026-08-26 instance)."""
 
     async def unexpected_enqueue(*_args, **_kwargs):
         raise AssertionError("image validation must happen before enqueue")
@@ -10100,7 +10099,7 @@ async def test_freezone_video_generation_skips_dimension_gate_for_non_seedance_b
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """300~6000px 是火山 Seedance 的规则，别的模型不能拿它凭空 400。"""
+    """300~6000px is a Volcengine Seedance rule, and other models must not be 400-ed out of thin air by it."""
     captured: dict[str, object] = {}
 
     async def fake_enqueue_project_task(_ctx: ProjectContext, **kwargs):
@@ -10148,7 +10147,7 @@ async def test_freezone_video_generation_reports_duplicate_last_frame_once(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """关键帧路由会把尾帧同时放进 reference_items 和 last_frame_path，预检要去重。"""
+    """The keyframe route puts the last frame into both reference_items and last_frame_path, so the pre-check must deduplicate."""
 
     async def unexpected_enqueue(*_args, **_kwargs):
         raise AssertionError("image validation must happen before enqueue")

@@ -5749,7 +5749,9 @@
         "labelWithCategory": "Phần tử chính · {{category}}",
         "set": "Đặt làm phần tử chính",
         "current": "Hiện tại",
-        "clear": "Bỏ phần tử chính"
+        "clear": "Bỏ phần tử chính",
+        "barTab": "Phần tử chính · {{filter}}",
+        "emptyCategory": "Chưa có phần tử chính nào trong danh mục này"
       },
       "detailToolbar": {
         "more": "Thêm",
@@ -5795,7 +5797,8 @@
       "column": {
         "text": "Văn bản",
         "image": "Hình ảnh",
-        "video": "Video"
+        "video": "Video",
+        "audio": "Âm thanh"
       },
       "empty": {
         "text": "Chưa có node văn bản nào trên canvas",
@@ -5910,7 +5913,21 @@
         "generate": "Tạo"
       },
       "referenceImage": "Ảnh tham chiếu",
-      "storyboardTableSummary": "Bảng phân cảnh · {{count}} cảnh quay"
+      "storyboardTableSummary": "Bảng phân cảnh · {{count}} cảnh quay",
+      "audioChip": {
+        "notM4a": "Tệp nguồn không phải m4a nên không thể chuyển sang m4a",
+        "downloadFailed": "Tải âm thanh xuống thất bại",
+        "generationFailed": "Tạo thất bại",
+        "downloadLabel": "Tải xuống {{title}}",
+        "downloadTitle": "Tải xuống / chuyển định dạng",
+        "downloadAs": "Tải xuống dạng {{format}}",
+        "m4aOnly": "Chỉ nguồn m4a"
+      },
+      "imageGenForm": {
+        "ownReference": "Ảnh tham chiếu của node",
+        "referenceAlt": "Ảnh tham chiếu",
+        "removeReference": "Gỡ ảnh tham chiếu"
+      }
     },
     "keyElement": {
       "character": "Nhân vật",

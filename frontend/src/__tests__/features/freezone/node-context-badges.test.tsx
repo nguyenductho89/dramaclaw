@@ -21,6 +21,6 @@ describe("NodeContextBadges", () => {
       />,
     );
 
-    expect(screen.getAllByText("导演合成图 · EP1/B3")).toHaveLength(1);
+    expect(screen.getAllByText("Director composite · EP1/B3")).toHaveLength(1);
   });
 });

@@ -126,10 +126,10 @@ describe("NarratorVoicePanel CE generation credit gating", () => {
     expect(screen.getAllByRole("button", { name: "Upload" })).not.toHaveLength(0);
 
     expect(screen.queryByText(/credits?/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/积分|额度/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/credit|quota/)).not.toBeInTheDocument();
     expect(classNameContains(container, "#007A87")).toBe(false);
     expect(toastErrorMock).not.toHaveBeenCalledWith(
-      expect.stringMatching(/积分不足|credit|insufficient/i),
+      expect.stringMatching(/credit|insufficient/i),
     );
   });
 });

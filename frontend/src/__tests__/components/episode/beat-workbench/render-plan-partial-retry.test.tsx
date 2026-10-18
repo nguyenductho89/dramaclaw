@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// TCP-EU-B4b — 尽力投递（partial dispatch）在 render 计划对话框里的前端半边。
+// TCP-EU-B4b - the frontend half of best-effort (partial) dispatch inside the render plan dialog.
 //
-// 这个文件刻意走**真的** `useRenderPlan` / `useRenderExecute` + MSW，而不是像
-// `render-plan-dialog.test.tsx` 那样整模块 `vi.mock`：本 EU 的核心判据是**重投
-// 请求的形状**（`beat_indices` 恰为被拒条目 beats 的并集、`custom_plan: true`、
-// `plan` 逐字、新的 `input_fingerprint`），只有在 HTTP 层断言才算真钉住。
+// This file deliberately goes through the **real** `useRenderPlan` / `useRenderExecute` + MSW, rather than mocking the whole module like
+// `render-plan-dialog.test.tsx` does: the core criterion of this EU is the **shape of the resubmit
+// request** (`beat_indices` is exactly the union of the rejected entries' beats, `custom_plan: true`,
+// `plan` verbatim, a fresh `input_fingerprint`), which is only truly pinned down when asserted at the HTTP layer.
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,15 +19,15 @@ import type { ReactNode } from "react";
 // implementation that requires an absolute URL, so the production `api` (which
 // uses `prefix: "/"` + relative inputs) throws `Failed to parse URL`. Inject a
 // test-only ky instance with an absolute `baseUrl` so requests reach MSW.
-// （先例：`src/__tests__/lib/queries/render-plan.test.tsx:11-17`）
+// (precedent: `src/__tests__/lib/queries/render-plan.test.tsx:11-17`)
 vi.mock("@/lib/api", () => ({
   api: ky.create({ baseUrl: "http://localhost:3000/" }),
   handleSessionExpired: vi.fn(),
   setApiQueryClient: vi.fn(),
 }));
 
-// react-i18next：把 `defaultValue` 原样吐出来并做变量替换，这样三种 reason 的
-// 文案能被断言为「三条真的不一样的话」，而不是三次同一个 key。
+// react-i18next: emits `defaultValue` as is and does variable substitution, so the copy of the three reasons
+// can be asserted to be "three genuinely different sentences" instead of the same key three times.
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (
@@ -71,10 +71,10 @@ function entry(modeKey: string, beats: number[], location: string): PlanEntry {
   };
 }
 
-const G0 = entry("1x2_a", [1, 2], "街头");
-const G1 = entry("1x2_b", [3, 4], "巷口");
-const G2 = entry("1x2_c", [5, 6], "天台");
-const G3 = entry("1x2_d", [7, 8], "地铁");
+const G0 = entry("1x2_a", [1, 2], "Street");
+const G1 = entry("1x2_b", [3, 4], "Alley");
+const G2 = entry("1x2_c", [5, 6], "Rooftop");
+const G3 = entry("1x2_d", [7, 8], "Subway");
 const FULL_PLAN = [G0, G1, G2, G3];
 const ALL_BEATS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -84,7 +84,7 @@ interface Recorded {
 }
 
 let recorded: Recorded;
-/** 依次消费的 /render/execute 响应。 */
+/** The /render/execute responses consumed in turn. */
 let executeResponses: Array<() => Response>;
 let planResponses: Array<() => Response>;
 
@@ -109,7 +109,7 @@ function okExecute(opts: {
 }) {
   const body: Record<string, unknown> = {
     task_type: "render_plan",
-    message: "渲染已启动",
+    message: "Render started",
     scope: "location__deadbeef0000",
     resolved_grids: opts.resolvedGrids,
     task_ids: opts.taskIds,
@@ -193,9 +193,9 @@ async function confirm() {
 }
 
 /**
- * 模拟「页面上既有的 `useTasks` 轮询把新一轮任务状态写进缓存」。对话框是这份
- * 缓存的**只读订阅者**（`queryFn: skipToken`），所以直接 `setQueryData` 就是
- * 生产里发生的事，且比等 2s 轮询确定得多。
+ * Simulates "the `useTasks` polling already on the page writing the new round of task state into the cache". The dialog is a
+ * **read-only subscriber** of that cache (`queryFn: skipToken`), so calling `setQueryData` directly is
+ * what happens in production, and is far more deterministic than waiting for the 2s polling.
  */
 async function pushTasks(qc: QueryClient, rows: Task[]) {
   await act(async () => {
@@ -203,8 +203,8 @@ async function pushTasks(qc: QueryClient, rows: Task[]) {
   });
 }
 
-describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", () => {
-  it("`rejected` 缺席时行为与今天逐字一致（全投、关窗、无横幅）", async () => {
+describe("render plan dialog - best-effort delivery / resubmit only the rejected part", () => {
+  it("when `rejected` is absent the behaviour is identical to today (submit all, close the window, no banner)", async () => {
     executeResponses = [
       () => okExecute({ taskIds: ["t0", "t1", "t2", "t3"], resolvedGrids: FULL_PLAN }),
     ];
@@ -213,11 +213,11 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
 
     await waitFor(() => expect(onDispatched).toHaveBeenCalledWith(["t0", "t1", "t2", "t3"]));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(screen.queryByText(/已投/)).toBeNull();
+    expect(screen.queryByText(/Submitted/)).toBeNull();
     expect(recorded.execute).toHaveLength(1);
   });
 
-  it("`rejected: []` 与缺席同形（不许把空数组当部分投递）", async () => {
+  it("`rejected: []` has the same shape as absent (an empty array must not be treated as partial delivery)", async () => {
     executeResponses = [
       () =>
         okExecute({
@@ -231,11 +231,11 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
 
     await waitFor(() => expect(onDispatched).toHaveBeenCalledWith(["t0", "t1", "t2", "t3"]));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(screen.queryByText(/已投/)).toBeNull();
+    expect(screen.queryByText(/Submitted/)).toBeNull();
     expect(recorded.execute).toHaveLength(1);
   });
 
-  it("部分投递时给出「已投 2 / 被拒 2」并且不关窗", async () => {
+  it("on partial delivery shows \"Submitted 2 / rejected 2\" and does not close the window", async () => {
     executeResponses = [
       () =>
         okExecute({
@@ -250,12 +250,12 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     const { onDispatched, onOpenChange } = renderDialog();
     await confirm();
 
-    expect(await screen.findByText(/已投 2 \/ 被拒 2/)).toBeTruthy();
+    expect(await screen.findByText(/Submitted 2 \/ rejected 2/)).toBeTruthy();
     expect(onDispatched).toHaveBeenCalledWith(["t0", "t1"]);
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
-  it("在途下降后自动重投一轮：/render/plan 的 beat_indices 恰为被拒并集，/render/execute 带 custom_plan 与逐字 plan", async () => {
+  it("after in-flight drops, auto-resubmits one round: /render/plan beat_indices is exactly the rejected union, /render/execute carries custom_plan and the verbatim plan", async () => {
     executeResponses = [
       () =>
         okExecute({
@@ -274,7 +274,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     ];
     const { qc, onDispatched } = renderDialog();
     await confirm();
-    await screen.findByText(/已投 2 \/ 被拒 2/);
+    await screen.findByText(/Submitted 2 \/ rejected 2/);
 
     await pushTasks(qc, [task("t0", "running"), task("t1", "running")]);
     expect(recorded.execute).toHaveLength(1);
@@ -292,7 +292,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     expect(onDispatched).toHaveBeenCalledWith(["t4", "t5"]);
   });
 
-  it("绝不整批重放：重投里不含任何已成功条目的 beat", async () => {
+  it("never replays the whole batch: the resubmit contains no beat of any already successful entry", async () => {
     executeResponses = [
       () =>
         okExecute({
@@ -311,7 +311,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     ];
     const { qc } = renderDialog();
     await confirm();
-    await screen.findByText(/已投 2 \/ 被拒 2/);
+    await screen.findByText(/Submitted 2 \/ rejected 2/);
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await waitFor(() => expect(recorded.execute).toHaveLength(2));
 
@@ -323,7 +323,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     expect((exec2.plan as PlanEntry[]).length).toBe(2);
   });
 
-  it("第二次仍被拒 → 没有第三次自动重投，改成「继续」按钮", async () => {
+  it("rejected a second time -> no third automatic resubmit, turns into a \"Continue\" button", async () => {
     const rejectedTwo = [
       { scope: "s2", reason: "channel", limit: 12, active: 12 },
       { scope: "s3", reason: "channel", limit: 12, active: 12 },
@@ -343,19 +343,19 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     ];
     const { qc } = renderDialog();
     await confirm();
-    await screen.findByText(/已投 2 \/ 被拒 2/);
+    await screen.findByText(/Submitted 2 \/ rejected 2/);
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await waitFor(() => expect(recorded.execute).toHaveLength(2));
 
     expect(await screen.findByRole("button", { name: "Continue" })).toBeTruthy();
 
-    // 再喂一轮「在途下降」，不许出现第三次自动重投。
+    // Feed another round of "in-flight drops"; a third automatic resubmit must not appear.
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await new Promise((r) => setTimeout(r, 50));
     expect(recorded.execute).toHaveLength(2);
   });
 
-  it("点「继续」发出的是同样的两条请求形状", async () => {
+  it("clicking \"Continue\" sends the same two request shapes", async () => {
     const rejectedTwo = [
       { scope: "s2", reason: "user", limit: 32, active: 32 },
       { scope: "s3", reason: "user", limit: 32, active: 32 },
@@ -372,7 +372,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     ];
     const { qc } = renderDialog();
     await confirm();
-    await screen.findByText(/已投 2 \/ 被拒 2/);
+    await screen.findByText(/Submitted 2 \/ rejected 2/);
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await waitFor(() => expect(recorded.execute).toHaveLength(2));
 
@@ -387,7 +387,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     expect(exec3.input_fingerprint).toBe("f3");
   });
 
-  it("四种 reason 给四条不同文案，而不是一条通用报错", async () => {
+  it("four reasons give four different texts, not one generic error", async () => {
     const texts: string[] = [];
     for (const reason of ["channel", "platform", "user", "project"]) {
       recorded = { plan: [], execute: [] };
@@ -409,13 +409,13 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
       cleanup();
     }
     expect(new Set(texts).size).toBe(4);
-    expect(texts[0]).toMatch(/渠道/);
-    expect(texts[1]).toMatch(/平台/);
-    expect(texts[2]).toMatch(/你的/);
+    expect(texts[0]).toMatch(/Channel/);
+    expect(texts[1]).toMatch(/Platform/);
+    expect(texts[2]).toMatch(/Your/);
     expect(texts[3]).toMatch(/Project/);
   });
 
-  it("未知 reason 只提示部分失败，不开放补投", async () => {
+  it("an unknown reason only says partial failure and does not offer resubmit", async () => {
     executeResponses = [
       () =>
         okExecute({
@@ -431,11 +431,11 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     renderDialog();
     await confirm();
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/已投 2 \/ 被拒 2/);
+    expect(await screen.findByRole("status")).toHaveTextContent(/Submitted 2 \/ rejected 2/);
     expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
   });
 
-  it("429（一个都没投出去）仍走既有 429 路径，不当部分投递", async () => {
+  it("429 (nothing submitted at all) still takes the existing 429 path, without being treated as partial delivery", async () => {
     executeResponses = [
       () =>
         HttpResponse.json(
@@ -452,7 +452,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(onDispatched).not.toHaveBeenCalled();
-    expect(screen.queryByText(/已投/)).toBeNull();
+    expect(screen.queryByText(/Submitted/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
   });
 });

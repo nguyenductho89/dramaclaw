@@ -69,24 +69,24 @@ function renderCard(prop: PropAsset, overrides = {}) {
 describe("PropAssetCard", () => {
   it("renders reference image and generate action", () => {
     const handlers = renderCard({
-      name: "七星剑",
+      name: "Seven Star Sword",
       aliases: [],
       prop_type: "weapon",
-      visual_prompt: "古铜剑柄，剑身刻七星纹",
+      visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
       description: "",
-      owner: "李青",
+      owner: "Li Qing",
       notes: "",
       reference_url: "/static/u/p/assets/props/seven-star-sword/reference.png",
     });
 
-    expect(screen.getByText("七星剑")).toBeInTheDocument();
+    expect(screen.getByText("Seven Star Sword")).toBeInTheDocument();
     expect(screen.getByText("Weapon")).toBeInTheDocument();
-    expect(screen.getByText("所属角色：李青")).toBeInTheDocument();
-    expect(screen.getByText("参考图 已生成")).toBeInTheDocument();
+    expect(screen.getByText("Owner character: Li Qing")).toBeInTheDocument();
+    expect(screen.getByText("Reference image Generated")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate reference" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: /Upload/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /删除参考图/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete reference image/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Regenerate reference" }));
     expect(handlers.onGenerateReference).toHaveBeenCalledTimes(1);
@@ -94,11 +94,11 @@ describe("PropAssetCard", () => {
 
   it("renders empty reference state", () => {
     renderCard({
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
     });
@@ -109,17 +109,17 @@ describe("PropAssetCard", () => {
 
   it("falls back when a convention URL points at a missing file", () => {
     renderCard({
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
-      reference_url: "/static/projects/demo/assets/props/密信/reference_3view.png",
+      reference_url: "/static/projects/demo/assets/props/Secret Letter/reference_3view.png",
     });
 
-    fireEvent.error(screen.getByAltText("密信 参考图"));
+    fireEvent.error(screen.getByAltText("Secret Letter reference image"));
 
     expect(screen.getByText("Reference image missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
@@ -127,14 +127,14 @@ describe("PropAssetCard", () => {
 
   it("retries the convention URL after an upload finishes", () => {
     const prop: PropAsset = {
-      name: "密信",
+      name: "Secret Letter",
       aliases: [],
       prop_type: "document",
       visual_prompt: "",
-      description: "折叠的牛皮纸密信",
+      description: "A folded kraft-paper secret letter",
       owner: "",
       notes: "",
-      reference_url: "/static/projects/demo/assets/props/密信/reference_3view.png",
+      reference_url: "/static/projects/demo/assets/props/Secret Letter/reference_3view.png",
     };
     const handlers = {
       onEdit: vi.fn(),
@@ -149,7 +149,7 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    fireEvent.error(screen.getByAltText("密信 参考图"));
+    fireEvent.error(screen.getByAltText("Secret Letter reference image"));
     expect(screen.getByText("Reference image missing")).toBeInTheDocument();
 
     view.rerender(
@@ -158,7 +158,7 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByAltText("密信 参考图")).toBeInTheDocument();
+    expect(screen.getByAltText("Secret Letter reference image")).toBeInTheDocument();
   });
 
   it("renders NiceGUI prop type labels instead of raw prop type codes", () => {
@@ -166,7 +166,7 @@ describe("PropAssetCard", () => {
       name: "TOKEN",
       aliases: [],
       prop_type: "artifact",
-      visual_prompt: "红色数字、二进制代码和方块粒子构成的发光团",
+      visual_prompt: "A glowing cluster made of red digits, binary code and block particles",
       description: "",
       owner: "",
       notes: "",
@@ -181,7 +181,7 @@ describe("PropAssetCard", () => {
       name: "TOKEN",
       aliases: [],
       prop_type: "artifact",
-      visual_prompt: "红色数字、二进制代码和方块粒子构成的发光团",
+      visual_prompt: "A glowing cluster made of red digits, binary code and block particles",
       description: "",
       owner: "",
       notes: "",
@@ -194,31 +194,31 @@ describe("PropAssetCard", () => {
 
   it("opens a reference image preview from the card image", () => {
     renderCard({
-      name: "七星剑",
+      name: "Seven Star Sword",
       aliases: [],
       prop_type: "weapon",
-      visual_prompt: "古铜剑柄，剑身刻七星纹",
+      visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
       description: "",
       owner: "",
       notes: "",
       reference_url: "/static/u/p/assets/props/seven-star-sword/reference.png",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "七星剑 参考图" }));
+    fireEvent.click(screen.getByRole("button", { name: "Seven Star Sword reference image" }));
 
     expect(
       screen.getByRole("link", { name: "Download image" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByAltText("七星剑 参考图")).toHaveLength(2);
+    expect(screen.getAllByAltText("Seven Star Sword reference image")).toHaveLength(2);
   });
 
   it("shows the NiceGUI generating label for single prop reference generation", () => {
     renderCard(
       {
-        name: "七星剑",
+        name: "Seven Star Sword",
         aliases: [],
         prop_type: "weapon",
-        visual_prompt: "古铜剑柄，剑身刻七星纹",
+        visual_prompt: "Ancient bronze hilt, blade engraved with the seven stars",
         description: "",
         owner: "",
         notes: "",

@@ -109,7 +109,7 @@ describe("WorkflowRunRecoveryBar", () => {
           node_id: "compose-1",
           action: "auto_compose_video",
           status: "blocked",
-          error: "跳过 auto_compose_video：上游节点 video-1 未成功完成。",
+          error: "Skipped auto_compose_video: upstream node video-1 did not complete successfully.",
         },
       ],
     };
@@ -125,7 +125,7 @@ describe("WorkflowRunRecoveryBar", () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalled());
-    expect(screen.queryByText("发现未完成的工作流")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unfinished workflow found")).not.toBeInTheDocument();
     await waitFor(() => expect(updateFreezoneWorkflowRun).toHaveBeenCalledWith(
       "project-a",
       "canvas-a",
@@ -197,7 +197,7 @@ describe("WorkflowRunRecoveryBar", () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalled());
-    expect(screen.queryByText("发现未完成的工作流")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unfinished workflow found")).not.toBeInTheDocument();
     await waitFor(() => expect(updateFreezoneWorkflowRun).toHaveBeenCalledWith(
       "project-a",
       "canvas-a",
@@ -231,7 +231,7 @@ describe("WorkflowRunRecoveryBar", () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalled());
-    expect(await screen.findByText("发现未完成的工作流")).toBeInTheDocument();
+    expect(await screen.findByText("Unfinished workflow found")).toBeInTheDocument();
   });
 
   it("hides but preserves a run while its generation task is active", async () => {
@@ -259,7 +259,7 @@ describe("WorkflowRunRecoveryBar", () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalled());
-    expect(screen.queryByText("发现未完成的工作流")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unfinished workflow found")).not.toBeInTheDocument();
     expect(updateFreezoneWorkflowRun).not.toHaveBeenCalled();
   });
 
@@ -271,7 +271,7 @@ describe("WorkflowRunRecoveryBar", () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalled());
-    expect(screen.queryByText("发现未完成的工作流")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unfinished workflow found")).not.toBeInTheDocument();
   });
 
   it("reconciles a workflow immediately when its task-center state changes", async () => {
@@ -286,7 +286,7 @@ describe("WorkflowRunRecoveryBar", () => {
     vi.mocked(listFreezoneWorkflowRuns).mockResolvedValue({ runs: [trackedRun] });
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
     await waitFor(() => expect(listFreezoneWorkflowRuns).toHaveBeenCalledTimes(1));
-    await screen.findByText("发现未完成的工作流");
+    await screen.findByText("Unfinished workflow found");
 
     act(() => {
       useTaskCenterStore.getState().upsert({
@@ -317,10 +317,10 @@ describe("WorkflowRunRecoveryBar", () => {
   it("requires an explicit click before resuming unfinished nodes", async () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
-    expect(await screen.findByText("发现未完成的工作流")).toBeInTheDocument();
+    expect(await screen.findByText("Unfinished workflow found")).toBeInTheDocument();
     expect(applyCanvasChatCommandsAsync).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "继续下游" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue downstream" }));
 
     await waitFor(() => {
       expect(applyCanvasChatCommandsAsync).toHaveBeenCalledWith(
@@ -359,8 +359,8 @@ describe("WorkflowRunRecoveryBar", () => {
     });
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
-    expect(await screen.findByText("发现未完成的工作流")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "继续下游" }));
+    expect(await screen.findByText("Unfinished workflow found")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Continue downstream" }));
 
     await waitFor(() => {
       expect(applyCanvasChatCommandsAsync).toHaveBeenCalledWith(
@@ -382,21 +382,21 @@ describe("WorkflowRunRecoveryBar", () => {
       applied: 0,
       openedUiActions: 0,
       createdNodeIds: [],
-      errors: ["执行启动失败"],
+      errors: ["Execution start failed"],
       commandResults: [],
     });
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "继续下游" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue downstream" }));
 
-    expect(await screen.findByText("执行启动失败")).toBeInTheDocument();
+    expect(await screen.findByText("Execution start failed")).toBeInTheDocument();
     expect(updateFreezoneWorkflowRun).not.toHaveBeenCalled();
   });
 
   it("can retry only failed nodes without running blocked downstream nodes", async () => {
     render(<WorkflowRunRecoveryBar projectId="project-a" canvasId="canvas-a" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "仅重试失败" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry failed only" }));
 
     await waitFor(() => {
       expect(applyCanvasChatCommandsAsync).toHaveBeenCalledWith(

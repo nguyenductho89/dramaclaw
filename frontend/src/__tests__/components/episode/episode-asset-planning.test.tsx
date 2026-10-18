@@ -36,7 +36,7 @@ const labels = {
   promotePropTitle: (name: string) => `Add to global prop library: ${name}`,
   promotePropName: "Global prop name",
   promotePropType: "Prop type",
-  promoteVisualPrompt: "视觉 Prompt",
+  promoteVisualPrompt: "Visual Prompt",
   promoteOwner: "Owner",
   promoteSubmit: "Add to global",
   promoteCancel: "Cancel",
@@ -81,11 +81,11 @@ describe("EpisodeAssetPlanning", () => {
 
     renderPlanning({
       selectedCategory: "scenes",
-      sceneMenu: [{ scene_id: "宫门" }],
+      sceneMenu: [{ scene_id: "Palace Gate" }],
       onPlanScenes,
     });
 
-    expect(screen.getByText("宫门")).toBeInTheDocument();
+    expect(screen.getByText("Palace Gate")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Re-plan scenes" }));
     expect(onPlanScenes).toHaveBeenCalledTimes(1);
   });
@@ -101,11 +101,11 @@ describe("EpisodeAssetPlanning", () => {
 
     renderPlanning({
       selectedCategory: "props",
-      propMenu: [{ prop_id: "玉佩", prop_type: "object" }],
+      propMenu: [{ prop_id: "jade pendant", prop_type: "object" }],
       onPlanProps,
     });
 
-    expect(screen.getByText("玉佩")).toBeInTheDocument();
+    expect(screen.getByText("jade pendant")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Re-plan props" }));
     expect(onPlanProps).toHaveBeenCalledTimes(1);
   });
@@ -151,10 +151,10 @@ describe("EpisodeAssetPlanning", () => {
   it("blocks identity planning until characters are ready", () => {
     renderPlanning({
       selectedCategory: "identities",
-      identityDisabledReason: "请先从知识图谱构建角色",
+      identityDisabledReason: "Build characters from the knowledge graph first",
     });
 
-    expect(screen.getByText("请先从知识图谱构建角色")).toBeInTheDocument();
+    expect(screen.getByText("Build characters from the knowledge graph first")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Plan identities" })).toBeDisabled();
   });
 
@@ -198,7 +198,7 @@ describe("EpisodeAssetPlanning", () => {
       http.get("http://localhost:3000/api/v1/projects/demo/props", () =>
         HttpResponse.json({
           ok: true,
-          data: [{ name: "玉佩", prop_type: "object" }],
+          data: [{ name: "jade pendant", prop_type: "object" }],
         }),
       ),
       http.post("http://localhost:3000/api/v1/projects/demo/props", async ({ request }) => {
@@ -206,7 +206,7 @@ describe("EpisodeAssetPlanning", () => {
         return HttpResponse.json({
           ok: true,
           data: {
-            name: "青铜镜",
+            name: "bronze mirror",
             prop_type: "artifact",
             visual_prompt: "old bronze mirror with cloud pattern",
             owner: "",
@@ -218,13 +218,13 @@ describe("EpisodeAssetPlanning", () => {
     renderPlanning({
       selectedCategory: "props",
       propMenu: [
-        { prop_id: "玉佩", prop_type: "object" },
+        { prop_id: "jade pendant", prop_type: "object" },
         {
-          prop_id: "青铜镜",
+          prop_id: "bronze mirror",
           prop_type: "artifact",
           visual_prompt: "old bronze mirror with cloud pattern",
           description: "fallback description",
-          owner_identity_id: "秦_青年",
+          owner_identity_id: "Qin_young_adult",
         },
       ],
     });
@@ -236,14 +236,14 @@ describe("EpisodeAssetPlanning", () => {
       }),
     );
 
-    expect(screen.getByText("Add to global prop library: 青铜镜")).toBeInTheDocument();
-    expect(screen.getAllByText("青铜镜").length).toBeGreaterThan(0);
+    expect(screen.getByText("Add to global prop library: bronze mirror")).toBeInTheDocument();
+    expect(screen.getAllByText("bronze mirror").length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue("old bronze mirror with cloud pattern")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add to global" }));
 
     expect(receivedBody).toEqual({
-      name: "青铜镜",
+      name: "bronze mirror",
       prop_type: "artifact",
       visual_prompt: "old bronze mirror with cloud pattern",
       owner: "",

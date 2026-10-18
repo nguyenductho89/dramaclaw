@@ -14,7 +14,7 @@ import {
 import { promoteToAsset } from "@/features/freezone/commit/promoteToAsset";
 import { assetToPushTarget, completeTarget, inferDefaultTarget } from "@/features/freezone/commit/pushTarget";
 
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 describe("CommitDialog target kinds", () => {
   it("hides deprecated and auxiliary scene asset kinds from user selection", () => {
@@ -44,19 +44,19 @@ describe("CommitDialog target kinds", () => {
     const target = completeTarget(
       inferDefaultTarget({
         kind: "scene_360",
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       }),
     );
 
-    expect(target).toEqual({ kind: "scene_director_pano_360", scene_id: "厨房" });
+    expect(target).toEqual({ kind: "scene_director_pano_360", scene_id: "Kitchen" });
   });
 
   it("treats scene director world as one structured scene commit target", () => {
     expect(assetToPushTarget({
       kind: "scene",
       role: "scene_director_world",
-      meta: { scene_id: "公寓楼电梯间" },
-    })).toEqual({ kind: "scene_director_world", scene_id: "公寓楼电梯间" });
+      meta: { scene_id: "Apartment elevator hall" },
+    })).toEqual({ kind: "scene_director_world", scene_id: "Apartment elevator hall" });
   });
 
   it("labels scene director world commits as manifest state instead of a raw 3D model", () => {
@@ -67,7 +67,7 @@ describe("CommitDialog target kinds", () => {
 
     expect(source).toContain("commitSourceTitle");
     expect(source).toContain('target?.kind === "scene_director_world"');
-    // 文案已搬进词条，源码里只剩 key；词条内容由 locale 对齐测试兜底。
+    // Copy lives in the locale files; the source only holds the key, and locale content is covered by the locale alignment test.
     expect(source).toContain('t("freezone.commit.directorWorldState")');
     expect(source).toContain('t("freezone.commit.directorWorldManifestHint")');
   });
@@ -85,10 +85,10 @@ describe("CommitDialog target kinds", () => {
 
   it("shows canonical scene names in commit target dropdowns, not aliases", () => {
     expect(sceneOptionLabel({
-      name: "公寓楼电梯间",
-      aliases: ["电梯"],
+      name: "Apartment elevator hall",
+      aliases: ["elevator"],
       variant_id: "night",
-    })).toBe("公寓楼电梯间");
+    })).toBe("Apartment elevator hall");
   });
 
   it("uses director world source labels instead of raw generated SOG filenames", () => {
@@ -106,15 +106,15 @@ describe("CommitDialog target kinds", () => {
       },
       "/static/u/p/freezone/generated/master_sharp.sog",
       "master_sharp.sog",
-      zhT,
-    )).toBe("自定义 3D 世界");
+      enT,
+    )).toBe("Custom 3D world");
   });
 
   it("does not allow scene director world through the file-copy commit route", async () => {
     await expect(promoteToAsset(
       "proj",
       "/static/proj/world.ply",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
     )).rejects.toThrow("Scene director world commit requires canvas node state");
   });
 

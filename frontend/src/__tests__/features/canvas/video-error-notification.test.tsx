@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 「素材含真人被内容安全拦截」的专用引导，靠的是在**保真的**诊断报文里找厂商错误
-// 码。归一化后的展示文案里没有这个码——一旦策略判定改回去扫 resolved/display，
-// 用户看到的就只是一句泛泛的「视频生成失败」，不知道去开「真人素材审核」开关。
+// The dedicated guidance for "assets with a real person blocked by content safety" relies on finding the vendor error code in the **faithful** diagnostic
+// payload. The normalized display copy does not carry this code — once the policy check is changed back to scan resolved/display,
+// the user sees only a vague "Video generation failed" and does not know to turn on the "Real-person asset review" switch.
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,8 +21,8 @@ class ResizeObserverMock {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
-// t 返回 key：模拟「有译文」的真实运行时，展示文案因此不含厂商错误码——
-// 这正是本用例要区分的两条路径。
+// t returns the key: simulating the real runtime "with translations", so the display copy therefore does not contain the vendor error code —
+// which is exactly the two paths this case must tell apart.
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => `translated:${key}` }),
 }));
@@ -58,7 +58,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-video",
       providerId: "huimeng",
       apiModel: "test_video_api",
-      label: "测试视频模型",
+      label: "Test video model",
     },
   ]),
   fetchFreezoneVideoCameraTemplates: vi.fn(async () => []),
@@ -76,7 +76,7 @@ function seed() {
         type: CANVAS_NODE_TYPES.video,
         position: { x: 0, y: 0 },
         data: {
-          prompt: "一只猫跳上桌子",
+          prompt: "A cat jumps onto the table",
           modelId: "huimeng/test-video",
           genMode: "textToVideo",
         },
@@ -105,9 +105,9 @@ describe("VideoNode error notification contract", () => {
     });
     const dialogCalls = vi.mocked(showErrorDialog).mock.calls;
     const [message, title, details] = dialogCalls[dialogCalls.length - 1];
-    expect(String(message)).toContain("真人素材审核");
-    expect(String(title)).toBe("素材被拦截");
-    // 诊断报文原样透传给对话框——展开「详情」时看到的必须是厂商原文。
+    expect(String(message)).toContain("node.videoNode.generation.faceBlockedMessage");
+    expect(String(title)).toBe("node.videoNode.generation.faceBlockedTitle");
+    // The diagnostic payload is passed through to the dialog as is — what shows when expanding "Details" must be the vendor's original text.
     expect(String(details)).toContain(POLICY_CODE);
   });
 
@@ -128,7 +128,7 @@ describe("VideoNode error notification contract", () => {
     });
     const dialogCalls = vi.mocked(showErrorDialog).mock.calls;
     const [message] = dialogCalls[dialogCalls.length - 1];
-    expect(String(message)).not.toContain("真人素材审核");
+    expect(String(message)).not.toContain("node.videoNode.generation.faceBlockedMessage");
   });
 
   it("records a Recipe compilation failure on the node for the workflow runner", async () => {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useRef, useState, type ReactElement } from 'react';
 import { ChevronDown, ImageIcon, MessageSquarePlus } from 'lucide-react';
 
@@ -26,28 +27,32 @@ import { cn } from '@/lib/utils';
 
 import { AssetBoardAudioChip } from './AssetBoardAudioChip';
 
-/** 「全部」+ 四个分类；关键元素标签内的分类下拉用它。 */
+/** "All" + the four categories; the category dropdown inside the key elements tab uses it. */
 type CategoryFilter = 'all' | KeyElementCategory;
 
+// Getters so labels follow the active language at read time (not frozen at import).
 const FILTER_LABEL: Record<CategoryFilter, string> = {
-  all: '全部',
-  ...KEY_ELEMENT_CATEGORY_LABEL,
+  get all() { return i18n.t('canvas.assetBoard.filter.all'); },
+  get character() { return KEY_ELEMENT_CATEGORY_LABEL.character; },
+  get scene() { return KEY_ELEMENT_CATEGORY_LABEL.scene; },
+  get object() { return KEY_ELEMENT_CATEGORY_LABEL.object; },
+  get other() { return KEY_ELEMENT_CATEGORY_LABEL.other; },
 };
 
 const FILTER_OPTIONS: readonly CategoryFilter[] = ['all', ...KEY_ELEMENT_CATEGORY_KEYS];
 
-/** 顶栏两个标签：关键元素（带分类下拉）/ 音频。 */
+/** The two tabs of the top bar: key elements (with a category dropdown) / audio. */
 type BarTab = 'keyElements' | 'audio';
 
 /**
- * 故事板顶部栏（对标 liblib 顶部「关键元素 · 全部 ▾   音频」）：把两类常驻内容并进
- * 一条栏、用标签切换——
- *   - 关键元素：用户手动标记的画布节点（keyElementCategory 非空），带分类下拉筛选；
- *   - 音频：画布里的音频节点（复用 AssetBoardAudioChip，点开进音频详情）。
+ * The storyboard's top bar (matches liblib's top "Key elements · All ▾   Audio"): merges the two kinds of persistent content into
+ * one bar, switched by tabs -
+ *   - Key elements: canvas nodes marked manually by the user (keyElementCategory non-empty), with a category dropdown filter;
+ *   - Audio: the audio nodes on the canvas (reusing AssetBoardAudioChip, click to open the audio detail).
  *
- * 标签按内容存在与否显示：只有关键元素 → 只显示关键元素标签；只有音频 → 只显示音频
- * 标签（等价旧的独立音频条）；两者都有 → 双标签。宿主在「音频详情态」把 audioItems
- * 传空来隐藏音频标签（音频切换器那时搬到详情左栏，避免重复）。
+ * Tabs are shown by whether content exists: only key elements -> only the key elements tab; only audio -> only the audio
+ * tab (equivalent to the old standalone audio bar); both -> two tabs. In "audio detail state" the host
+ * passes audioItems empty to hide the audio tab (the audio switcher has moved to the detail's left column then, avoiding duplication).
  */
 export function KeyElementsBar({
   keyItems,
@@ -55,28 +60,28 @@ export function KeyElementsBar({
   activeAudioNodeId,
   onOpen,
 }: {
-  /** keyElementCategory 非空的条目（宿主跨栏收集）。 */
+  /** Entries with non-empty keyElementCategory (collected across columns by the host). */
   keyItems: AssetBoardItem[];
-  /** 音频条目（音频切换器就在这条音频标签里，含总览与音频详情两态）。 */
+  /** Audio entries (the audio switcher lives in this audio tab, covering both overview and audio detail states). */
   audioItems: AssetBoardItem[];
-  /** 当前打开的音频详情节点 id：非空 → 顶栏自动切到音频标签并高亮该 chip。 */
+  /** The id of the currently open audio detail node: non-empty -> the top bar switches to the audio tab automatically and highlights that chip. */
   activeAudioNodeId?: string | null;
-  /** 点 chip 打开该节点详情（关键元素与音频共用）。 */
+  /** Click a chip to open that node's detail (shared by key elements and audio). */
   onOpen: (item: AssetBoardItem) => void;
 }): ReactElement {
   const hasKey = keyItems.length > 0;
   const hasAudio = audioItems.length > 0;
   const [tab, setTab] = useState<BarTab>(hasKey ? 'keyElements' : 'audio');
   const [filter, setFilter] = useState<CategoryFilter>('all');
-  // 音频详情打开（activeAudioNodeId 指向某音频）→ 顶栏切到音频标签。渲染期派生同步
-  // （同本仓 dataRef/leftListColumn 惯例），lastRef 守卫只在它变化时切一次，之后用户
-  // 仍可手动切回关键元素。
+  // An audio detail opens (activeAudioNodeId points to some audio) -> the top bar switches to the audio tab. Derived and synced during render
+  // (the same convention as this repo's dataRef/leftListColumn); the lastRef guard switches only once when it changes, after which the user
+  // can still switch back to key elements by hand.
   const lastActiveAudioRef = useRef<string | null | undefined>(undefined);
   if (activeAudioNodeId !== lastActiveAudioRef.current) {
     lastActiveAudioRef.current = activeAudioNodeId;
     if (activeAudioNodeId && tab !== 'audio') setTab('audio');
   }
-  // 选中的标签若内容已空 → 回落到另一个有内容的标签，保证 activeTab 始终有效。
+  // If the selected tab's content has become empty -> fall back to the other tab with content, ensuring activeTab is always valid.
   const activeTab: BarTab =
     tab === 'audio' && !hasAudio ? 'keyElements' : tab === 'keyElements' && !hasKey ? 'audio' : tab;
   const visibleKey =
@@ -89,8 +94,8 @@ export function KeyElementsBar({
     );
 
   return (
-    // 这条栏只是常驻索引，不该吃掉三栏的高度：缩略图 48px、上下 py-2.5、行距 gap-2
-    // （原来 64px + py-3 + gap-3 高出一截，用户要求收窄）。
+    // This bar is only a persistent index and should not eat up the height of the three columns: thumbnails 48px, py-2.5 top and bottom, row gap-2
+    // (the original 64px + py-3 + gap-3 was a notch taller, and the user asked to narrow it).
     <div className="flex shrink-0 flex-col gap-2 rounded-lg border border-white/5 bg-[#262626] px-4 py-2.5">
       <div className="flex items-center gap-4">
         {hasKey && (
@@ -104,7 +109,7 @@ export function KeyElementsBar({
                   tabClass(activeTab === 'keyElements'),
                 )}
               >
-                关键元素 · {FILTER_LABEL[filter]}
+                {i18n.t('canvas.assetBoard.keyElement.barTab', { filter: FILTER_LABEL[filter] })}
                 <ChevronDown className="h-3.5 w-3.5 text-white/40" />
               </button>
             </DropdownMenuTrigger>
@@ -133,7 +138,7 @@ export function KeyElementsBar({
         )}
         {hasAudio && (
           <button type="button" onClick={() => setTab('audio')} className={tabClass(activeTab === 'audio')}>
-            音频
+            {i18n.t('canvas.assetBoard.column.audio')}
           </button>
         )}
       </div>
@@ -150,15 +155,15 @@ export function KeyElementsBar({
           ))}
         </div>
       ) : visibleKey.length > 0 ? (
-        // hoverable 浮层承载「添加到对话」pill：TooltipContent 走 Portal，不受这条
-        // overflow-x-auto 裁剪；hover 缩略图即在其正上方浮出，点 pill 把该节点 @ 进虾导。
+        // The hoverable overlay hosts the "Add to chat" pill: TooltipContent goes through a Portal and is not clipped by this
+        // overflow-x-auto; on hover the thumbnail pops up directly above it, and clicking the pill @-mentions that node into the shrimp guide.
         <TooltipProvider delay={120}>
           <div className="flex items-start gap-3 overflow-x-auto">
             {visibleKey.map((item) => (
               <Tooltip key={item.nodeId}>
                 <TooltipTrigger
                   render={
-                    // 不再挂原生 title：与浮层提示并存会同时冒两个；可及名称由下方标题 span 提供。
+                    // No native title attached anymore: coexisting with the overlay tooltip would show two at once; the accessible name is provided by the title span below.
                     <button
                       type="button"
                       onClick={() => onOpen(item)}
@@ -166,7 +171,7 @@ export function KeyElementsBar({
                     >
                       <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-black/20 transition-colors hover:border-white/25">
                         {item.thumbnailUrl ? (
-                          // alt="" 让缩略图是装饰性的：按钮可及名称由下方标题 span 提供。
+                          // alt="" makes the thumbnail decorative: the button's accessible name is provided by the title span below.
                           <img
                             src={item.thumbnailUrl}
                             alt=""
@@ -193,7 +198,7 @@ export function KeyElementsBar({
                   <button
                     type="button"
                     onClick={(event) => {
-                      // 不冒泡到缩略图：它的 onClick 会打开详情，这里只要把节点 @ 进虾导。
+                      // Do not bubble to the thumbnail: its onClick opens the detail, and here we only want to @-mention the node into the shrimp guide.
                       event.stopPropagation();
                       addNodesToChat([item.nodeId]);
                     }}
@@ -209,8 +214,8 @@ export function KeyElementsBar({
           </div>
         </TooltipProvider>
       ) : (
-        // 关键元素标签下、当前分类为空（切了个空分类）：占位而不塌成没有内容。
-        <p className="py-1 text-[12px] text-white/40">该分类下暂无关键元素</p>
+        // Under the key elements tab, when the current category is empty (switched to an empty category): a placeholder so it does not collapse into having no content.
+        <p className="py-1 text-[12px] text-white/40">{i18n.t('canvas.assetBoard.keyElement.emptyCategory')}</p>
       )}
     </div>
   );

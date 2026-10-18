@@ -422,7 +422,7 @@ def _coarse_mark_region(mark: dict[str, Any]) -> str:
     if isinstance(px, (int, float)) and isinstance(py, (int, float)):
         horizontal = "left" if px < 0.33 else "right" if px > 0.66 else "center"
         vertical = "top" if py < 0.33 else "bottom" if py > 0.66 else "middle"
-        return f"{horizontal}{vertical}"
+        return f"{vertical} {horizontal}"
     return ""
 
 

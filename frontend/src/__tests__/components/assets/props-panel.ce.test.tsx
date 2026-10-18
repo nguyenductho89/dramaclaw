@@ -197,7 +197,7 @@ describe("PropsPanel CE generation credit gating", () => {
     expect(screen.queryByText("12 credits")).not.toBeInTheDocument();
     expect(classNameContains(container, "#007A87")).toBe(false);
     expect(toastErrorMock).not.toHaveBeenCalledWith(
-      expect.stringMatching(/积分不足|credit|insufficient/i),
+      expect.stringMatching(/credit|insufficient/i),
     );
   });
 });

@@ -61,7 +61,7 @@ vi.mock("@/lib/queries/video", () => ({
         reference_url: mockHasVoice ? "/static/demo/assets/narrator/voice.mp3" : "",
         heading: "First-person narrator voice",
         detail: "",
-        explanation: "第一人称解说使用主角声线。",
+        explanation: "First-person narration uses the protagonist's voice.",
         is_first_person: true,
       },
     },

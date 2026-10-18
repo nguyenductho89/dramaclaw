@@ -11,7 +11,7 @@ import { useCanvasStore } from '@/stores/canvasStore';
 
 import { notifyTaskStillRunning } from './errorDialog';
 
-/** 音频 / 静音视频结果节点的落位尺寸（与 NodeActionToolbar 原实现一致）。 */
+/** Landing size of the audio / muted-video result nodes (consistent with the original NodeActionToolbar implementation). */
 const AUDIO_LAYOUT_WIDTH = 480;
 const AUDIO_LAYOUT_HEIGHT = 180;
 const SILENT_LAYOUT_WIDTH = 480;
@@ -78,17 +78,17 @@ function pickUrlField(
 }
 
 /**
- * 从「分离音视频」任务结果里挑出音频轨与静音视频的地址（从 NodeActionToolbar 的
- * `classify` 内联闭包原样搬出，语义零变化）。
+ * Pick the addresses of the audio track and the muted video from the "separate audio/video" task result (moved verbatim out of NodeActionToolbar's
+ * inline `classify` closure, with zero semantic change).
  *
- * 优先取后端给的规范字段：结果同时带文件系统 `*_path`
- * （`/data/output/<user>/<project>/...`）与可直接访问的 `*_url`
- * （`/static/projects/<project_id>/...`），只有 `*_url` 在线可达
- * （OpenResty 对历史 `/static/<user>/<project>/...` 返回 410），
- * 因此绝不从 `*_path` 反推 URL。
+ * Prefer the canonical fields given by the backend: the result carries both the filesystem `*_path`
+ * (`/data/output/<user>/<project>/...`) and the directly accessible `*_url`
+ * (`/static/projects/<project_id>/...`), and only `*_url` is reachable online
+ * (OpenResty returns 410 for the historical `/static/<user>/<project>/...`),
+ * so the URL is never derived back from `*_path`.
  *
- * 没有显式 URL 字段时才走兜底启发式：遍历整棵树按扩展名/关键词挑，
- * 并把已可直接访问的 `/static`、http(s) 串排在裸文件系统路径前面。
+ * Only when there is no explicit URL field does it go through the fallback heuristic: walk the whole tree and pick by extension/keyword,
+ * and put strings already directly accessible (`/static`, http(s)) before bare filesystem paths.
  */
 export function classifyAudioSeparateResult(
   source: Record<string, unknown> | null | undefined,
@@ -124,8 +124,8 @@ export function classifyAudioSeparateResult(
 }
 
 /**
- * 结果节点的标题前缀：优先源文件名，其次展示名，都没有就 `video`；去掉扩展名
- * （与 NodeActionToolbar 原实现一致）。
+ * The title prefix of result nodes: prefer the source file name, then the display name, and `video` if neither; strip the extension
+ * (consistent with the original NodeActionToolbar implementation).
  */
 export function resolveSeparateBaseName(data: Record<string, unknown>): string {
   const rawName =
@@ -138,22 +138,22 @@ export function resolveSeparateBaseName(data: Record<string, unknown>): string {
 }
 
 export interface VideoSeparateAudioResult {
-  /** 新建的音频节点 id；未成功时为 null。 */
+  /** The id of the newly created audio node; null if unsuccessful. */
   audioNodeId: string | null;
-  /** 新建的静音视频节点 id；未成功时为 null。 */
+  /** The id of the newly created muted video node; null if unsuccessful. */
   videoNodeId: string | null;
-  /** 失败原因；成功或「结果里找不到地址」时为 null（后者只记 warn，同原实现）。 */
+  /** Failure reason; null on success or when "no address could be found in the result" (the latter only logs a warn, same as the original implementation). */
   error: string | null;
 }
 
 /**
- * 分离音视频编排（从 NodeActionToolbar 的 handleAudioSeparate 内联闭包原样搬出，
- * 语义零变化；建边策略后调整，见下）：源节点置 isSeparatingAv → 提交
- * /freezone/video/audio-separate → 等任务完成 → 从 SSE 结果里挑音频/静音视频
- * 地址（挑不全再打一次 job result 接口兜底）→ 在源节点下游各建一个音频节点与
- * 静音视频节点；静音视频 video→video 合法，连边；音频节点撞白名单，不连边、
- * 只靠 findNodePosition 落在源附近（见下方注释）。无论成功失败都在最后清掉
- * isSeparatingAv。
+ * Separate audio/video orchestration (moved verbatim out of NodeActionToolbar's handleAudioSeparate inline closure,
+ * with zero semantic change; the edge strategy was adjusted later, see below): the source node sets isSeparatingAv -> submit
+ * /freezone/video/audio-separate -> wait for the task to complete -> pick the audio/muted-video
+ * addresses from the SSE result (if incomplete, hit the job result endpoint once more as a fallback) -> build an audio node and a
+ * muted video node downstream of the source node; muted video video->video is legal, so connect an edge; the audio node hits the whitelist, gets no edge,
+ * and only lands near the source via findNodePosition (see the comment below). Whether it succeeds or fails, isSeparatingAv
+ * is cleared at the end.
  */
 export async function separateVideoAudio(
   sourceNodeId: string,
@@ -216,8 +216,8 @@ export async function separateVideoAudio(
       silentVideoOutputUrl,
     });
 
-    const audioTitle = `${baseName}_背景音`;
-    const silentTitle = `${baseName}_无声`;
+    const audioTitle = `${baseName}_background_audio`;
+    const silentTitle = `${baseName}_silent`;
 
     const done = useCanvasStore.getState();
     const audioPos = done.findNodePosition(
@@ -230,10 +230,10 @@ export async function separateVideoAudio(
       sourceFileName: audioTitle,
       displayName: audioTitle,
     } as unknown as Parameters<typeof done.addNode>[2]);
-    // 音频节点刻意不连回源视频：store 的上游白名单里 audio 只接受
-    // textAnnotation 作为源（UPSTREAM_SOURCE_WHITELIST），video→audio 这条边
-    // 建了也会被拒、静默失效——用户拍板不为此改白名单语义，音频节点只靠
-    // findNodePosition 落在源节点附近，不建边。
+    // The audio node is deliberately not connected back to the source video: in the store's upstream whitelist audio accepts only
+    // textAnnotation as a source (UPSTREAM_SOURCE_WHITELIST), and a video->audio edge
+    // would be rejected and silently ineffective even if built - the user decided not to change the whitelist semantics for this, so the audio node only relies on
+    // findNodePosition to land near the source node, and no edge is built.
 
     const silentPos = done.findNodePosition(
       sourceNodeId,

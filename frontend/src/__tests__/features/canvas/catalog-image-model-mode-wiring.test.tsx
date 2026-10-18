@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 目录参数按 `modes` 过滤：`MediaModelParameterChip` 拿不到模式时，声明了 modes 的
-// 参数**一个都不渲染**（整个控件 return null），用户在 UI 上根本看不到、也就无从
-// 设置。
+// Catalog params are filtered by `modes`: when `MediaModelParameterChip` cannot get a mode, params that declare modes are
+// **not rendered at all** (the whole control returns null), so the user cannot see them in the UI and has no way to
+// set them.
 //
-// 三个图片宿主里只有 ImageEditNode 有模式选择器，而它的 `data.generationMode` 在
-// 用户没手动选过之前是 undefined；ImageGenNode / StoryboardGenNode 的节点数据里
-// 压根没有这个字段。所以「把 `data.generationMode` 直接递给控件」等于三处全都是
-// undefined —— 控件永远藏参数。这里锁住的是「递给控件的必须是推导后的模式」。
+// Of the three image hosts only ImageEditNode has a mode selector, and its `data.generationMode` is undefined until
+// the user manually picks one; in the node data of ImageGenNode / StoryboardGenNode there is no
+// such field at all. So "pass `data.generationMode` straight to the control" means undefined in all three places —
+// the control always hides the params. What is locked here is "what is passed to the control must be the derived mode".
 //
-// 本文件取代了原来 readFileSync + toContain 的版本：那种写法只要字符串还在源文件
-// 里就通过，既不验证推导出的值对不对，也不验证控件真的显示出来了。这里改成渲染断言
-// ——参数只声明在某一个模式下，控件出现/消失就是「推导值等于那个模式」的证据。
+// This file replaces the old readFileSync + toContain version: that style passed as long as the strings were still in the source
+// file, neither verifying that the derived value is right nor that the control really shows up. It is changed to render assertions here
+// — a param is declared under only one mode, and the control appearing/disappearing is the evidence that "the derived value equals that mode".
 //
-// 提交侧的模式由 `catalog-image-model-params.test.ts` 覆盖到 ops payload；这条只
-// 盯住渲染侧的接线，因为控件不显示的话提交侧再对也没有值可提交。
+// The submit-side mode is covered up to the ops payload by `catalog-image-model-params.test.ts`; this one only
+// watches the render-side wiring, because if the control does not show, a correct submit side has no value to submit.
 import { render, renderHook, waitFor } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,7 +64,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-image",
       providerId: "huimeng",
       apiModel: "test_image_api",
-      label: "测试模型",
+      label: "Test model",
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -72,7 +72,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
   listFreezoneGenerationHistory: vi.fn(async () => []),
 }));
 
-// 每个用例把「目录声明了哪些参数」换掉，用参数各自的 modes 当探针。
+// Each case swaps out "which params the catalog declares", using each param's own modes as a probe.
 const catalog = vi.hoisted(() => ({
   parameters: [] as unknown[],
 }));
@@ -85,7 +85,7 @@ vi.mock("@/features/canvas/domain/catalogImageModels", async (importOriginal) =>
       id: "huimeng/test-image",
       providerId: "huimeng",
       apiModel: "test_image_api",
-      label: "测试模型",
+      label: "Test model",
       request: {
         parameters: catalog.parameters,
       } as never,
@@ -104,17 +104,17 @@ vi.mock("@/features/canvas/domain/catalogImageModels", async (importOriginal) =>
   };
 });
 
-/** 只在 `mode` 这一个模式下可见的参数。控件出现 == 推导出的模式就是它。 */
+/** A param visible only under this one `mode`. Control appears == the derived mode is it. */
 function paramForMode(mode: string): MediaModelParameterDefinition {
   return {
     key: `p_${mode}`,
-    label: `参数 ${mode}`,
+    label: `Param ${mode}`,
     control: "number",
     modes: [mode],
   } as unknown as MediaModelParameterDefinition;
 }
 
-/** React Flow 会把这些必填 prop 一并传给节点组件，测试里补齐即可。 */
+/** React Flow passes these required props to node components together; just fill them in for tests. */
 const REACT_FLOW_NODE_PROPS = {
   type: "",
   draggable: true,
@@ -127,7 +127,7 @@ const REACT_FLOW_NODE_PROPS = {
   positionAbsoluteY: 0,
 } as const;
 
-/** `MediaModelParameterChip` 的触发钮只有一个图标，用 title 定位。 */
+/** The trigger button of `MediaModelParameterChip` has only an icon, so locate it by title. */
 function paramsChip(): HTMLElement | null {
   return document.querySelector('button[title="canvas.modelParams.title"]');
 }
@@ -137,7 +137,7 @@ function imageGenNode(id: string, data: Record<string, unknown> = {}): CanvasNod
     id,
     type: CANVAS_NODE_TYPES.imageGen,
     position: { x: 0, y: 0 },
-    data: { prompt: "一只猫", modelId: "huimeng/test-image", ...data },
+    data: { prompt: "A cat", modelId: "huimeng/test-image", ...data },
   } as CanvasNode;
 }
 
@@ -155,15 +155,15 @@ beforeEach(() => {
   useCanvasStore.getState().setCanvasData([], []);
 });
 
-describe("模式缺失时模型参数控件的后果", () => {
-  it("mode 为 undefined 时，声明了 modes 的参数一个都不渲染", () => {
+describe("consequences for the model-param control when the mode is missing", () => {
+  it("when mode is undefined, no param that declares modes renders at all", () => {
     const { container } = render(
       <MediaModelParameterChip parameters={[paramForMode("image_to_image")]} onChange={vi.fn()} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("拿到匹配的 mode 就渲染出来", () => {
+  it("renders once it gets the matching mode", () => {
     render(
       <MediaModelParameterChip
         parameters={[paramForMode("image_to_image")]}
@@ -175,8 +175,8 @@ describe("模式缺失时模型参数控件的后果", () => {
   });
 });
 
-describe("ImageGenNode（共享生成表单）递出去的模式", () => {
-  it("没有参考图时推导为文生图，而不是留空", async () => {
+describe("the mode ImageGenNode (shared generation form) hands out", () => {
+  it("with no reference image it is derived as text-to-image, not left empty", async () => {
     useCanvasStore.getState().setCanvasData([imageGenNode("img-1")], []);
 
     const { result } = renderHook(() => useImageGenerationForm("img-1"));
@@ -186,7 +186,7 @@ describe("ImageGenNode（共享生成表单）递出去的模式", () => {
     });
   });
 
-  it("有上游参考图时推导为图生图", async () => {
+  it("with an upstream reference image it is derived as image-to-image", async () => {
     useCanvasStore
       .getState()
       .setCanvasData(
@@ -201,7 +201,7 @@ describe("ImageGenNode（共享生成表单）递出去的模式", () => {
     });
   });
 
-  it("节点数据里没有 generationMode 字段时也永远有值", async () => {
+  it("it always has a value even when the node data has no generationMode field", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([imageGenNode("img-1", { generationMode: undefined })], []);
@@ -214,11 +214,11 @@ describe("ImageGenNode（共享生成表单）递出去的模式", () => {
   });
 });
 
-describe("ImageEditNode 递给模型参数控件的模式", () => {
+describe("the mode ImageEditNode hands to the model-param control", () => {
   function renderNode(data: Record<string, unknown>) {
     return render(
       <ReactFlowProvider>
-        {/* 节点组件只吃 React Flow 传的这几个 prop */}
+        {/* The node component only takes these few props passed by React Flow */}
         <ImageEditNode
           {...REACT_FLOW_NODE_PROPS}
           id="edit-1"
@@ -231,7 +231,7 @@ describe("ImageEditNode 递给模型参数控件的模式", () => {
     );
   }
 
-  it("用户没手动选过模式、也没有上游图时，文生图参数依然可见", () => {
+  it("when the user never picked a mode and there is no upstream image, text-to-image params are still visible", () => {
     catalog.parameters = [paramForMode("text_to_image")];
     const node = {
       id: "edit-1",
@@ -243,11 +243,11 @@ describe("ImageEditNode 递给模型参数控件的模式", () => {
 
     renderNode(node.data as Record<string, unknown>);
 
-    // 递裸 data.generationMode（undefined）的话这里就是 null。
+    // Passing the bare data.generationMode (undefined) would make this null.
     expect(paramsChip()).not.toBeNull();
   });
 
-  it("有上游图时推导为全能参考，只在该模式下声明的参数才出现", () => {
+  it("with an upstream image it is derived as all reference, and only params declared under that mode appear", () => {
     catalog.parameters = [paramForMode("all_reference")];
     const node = {
       id: "edit-1",
@@ -267,7 +267,7 @@ describe("ImageEditNode 递给模型参数控件的模式", () => {
     expect(paramsChip()).not.toBeNull();
   });
 
-  it("没有上游图时，全能参考专属参数不该出现（证明推导值不是随便给的）", () => {
+  it("with no upstream image the all-reference-only param should not appear (proving the derived value is not arbitrary)", () => {
     catalog.parameters = [paramForMode("all_reference")];
     const node = {
       id: "edit-1",
@@ -282,7 +282,7 @@ describe("ImageEditNode 递给模型参数控件的模式", () => {
     expect(paramsChip()).toBeNull();
   });
 
-  it("用户手动选过模式时以他选的为准", () => {
+  it("when the user manually picked a mode theirs prevails", () => {
     catalog.parameters = [paramForMode("all_reference")];
     const node = {
       id: "edit-1",
@@ -298,7 +298,7 @@ describe("ImageEditNode 递给模型参数控件的模式", () => {
   });
 });
 
-describe("StoryboardGenNode 递给模型参数控件的模式", () => {
+describe("the mode StoryboardGenNode hands to the model-param control", () => {
   function seedAndRender(params: MediaModelParameterDefinition[]) {
     catalog.parameters = params;
     const node = {
@@ -322,12 +322,12 @@ describe("StoryboardGenNode 递给模型参数控件的模式", () => {
     );
   }
 
-  it("恒为图生图（宫格图总是作为参考图提交），不看节点数据", () => {
+  it("always image-to-image (the grid image is always submitted as a reference image), regardless of node data", () => {
     seedAndRender([paramForMode("image_to_image")]);
     expect(paramsChip()).not.toBeNull();
   });
 
-  it("文生图专属参数在分镜生成节点上永远不出现", () => {
+  it("text-to-image-only params never appear on the storyboard generation node", () => {
     seedAndRender([paramForMode("text_to_image")]);
     expect(paramsChip()).toBeNull();
   });

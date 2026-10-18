@@ -91,13 +91,13 @@ describe("CharacterVoicePanel", () => {
           HttpResponse.json({
             ok: true,
             data: {
-              character: "秦",
+              character: "Qin",
               slots: [
                 {
                   slot: "default",
-                  label: "默认（兜底）",
-                  path: "assets/characters/秦/voices/voice_default.wav",
-                  url: "/static/admin/demo/assets/characters/秦/voices/voice_default.wav",
+                  label: "default (fallback)",
+                  path: "assets/characters/Qin/voices/voice_default.wav",
+                  url: "/static/admin/demo/assets/characters/Qin/voices/voice_default.wav",
                   sha256: "sha-default",
                   updated_at: "2026-05-13T00:00:00+00:00",
                   inherited_from_default: false,
@@ -136,8 +136,8 @@ describe("CharacterVoicePanel", () => {
                 {
                   slot: "elder",
                   label: "Elder",
-                  path: "assets/characters/秦/voices/voice_elder.wav",
-                  url: "/static/admin/demo/assets/characters/秦/voices/voice_elder.wav",
+                  path: "assets/characters/Qin/voices/voice_elder.wav",
+                  url: "/static/admin/demo/assets/characters/Qin/voices/voice_elder.wav",
                   sha256: "sha-elder",
                   updated_at: "2026-05-13T00:00:01+00:00",
                   inherited_from_default: false,
@@ -149,15 +149,15 @@ describe("CharacterVoicePanel", () => {
       ),
     );
 
-    const { container } = renderPanel({ name: "秦", age_group: "youth" });
+    const { container } = renderPanel({ name: "Qin", age_group: "youth" });
 
     expect(await screen.findByText("Voice samples (IndexTTS2)")).toBeInTheDocument();
-    expect(await screen.findByText("青年 (default · required)")).toBeInTheDocument();
-    expect(screen.getByText("幼年 (optional override)")).toBeInTheDocument();
+    expect(await screen.findByText("Young adult (default · required)")).toBeInTheDocument();
+    expect(screen.getByText("Child (optional override)")).toBeInTheDocument();
     expect(screen.getAllByText("-> inherits default").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("voice_elder.wav")).toHaveAttribute(
       "title",
-      "assets/characters/秦/voices/voice_elder.wav",
+      "assets/characters/Qin/voices/voice_elder.wav",
     );
     expect(screen.getAllByRole("button", { name: "Upload voice sample" })).toHaveLength(4);
     expect(screen.getAllByRole("button", { name: "Record" })).toHaveLength(4);
@@ -182,11 +182,11 @@ describe("CharacterVoicePanel", () => {
           HttpResponse.json({
             ok: true,
             data: {
-              character: "秦",
+              character: "Qin",
               slots: [
                 {
                   slot: "default",
-                  label: "默认（兜底）",
+                  label: "default (fallback)",
                   path: "",
                   url: "",
                   sha256: "",
@@ -200,7 +200,7 @@ describe("CharacterVoicePanel", () => {
       ),
     );
 
-    renderPanel({ name: "秦" });
+    renderPanel({ name: "Qin" });
 
     await waitFor(() =>
       expect(screen.getByText("Not configured -> this character cannot speak")).toBeInTheDocument(),
@@ -214,13 +214,13 @@ describe("CharacterVoicePanel", () => {
         () =>
           HttpResponse.json({
             ok: false,
-            error: "Character '秦' not found",
+            error: "Character 'Qin' not found",
           }),
       ),
     );
 
-    renderPanel({ name: "秦" });
+    renderPanel({ name: "Qin" });
 
-    expect(await screen.findByText("读取声线样本失败")).toBeInTheDocument();
+    expect(await screen.findByText("Failed to read voice samples")).toBeInTheDocument();
   });
 });

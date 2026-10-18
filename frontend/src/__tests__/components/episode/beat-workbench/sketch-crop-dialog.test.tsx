@@ -163,7 +163,7 @@ describe("SketchCropDialog", () => {
   it("shows a load error instead of an infinite spinner", () => {
     poseEditorQueryMock.mockReturnValue({
       data: undefined,
-      error: new Error("Beat 4 缺少当前草图"),
+      error: new Error("Beat 4 is missing the current sketch"),
       isError: true,
     });
 
@@ -177,7 +177,7 @@ describe("SketchCropDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Beat 4 缺少当前草图")).toBeInTheDocument();
+    expect(screen.getByText("Beat 4 is missing the current sketch")).toBeInTheDocument();
     expect(screen.queryByText("Loading")).not.toBeInTheDocument();
   });
 

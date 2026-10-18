@@ -5863,7 +5863,9 @@
         "labelWithCategory": "Key element · {{category}}",
         "set": "Set key element",
         "current": "Current",
-        "clear": "Remove key element"
+        "clear": "Remove key element",
+        "barTab": "Key elements · {{filter}}",
+        "emptyCategory": "No key elements in this category yet"
       },
       "detailToolbar": {
         "more": "More",
@@ -5909,7 +5911,8 @@
       "column": {
         "text": "Text",
         "image": "Images",
-        "video": "Videos"
+        "video": "Videos",
+        "audio": "Audio"
       },
       "empty": {
         "text": "No text nodes on the canvas yet",
@@ -6024,7 +6027,21 @@
         "generate": "Generate"
       },
       "referenceImage": "Reference image",
-      "storyboardTableSummary": "Storyboard table · {{count}} shots"
+      "storyboardTableSummary": "Storyboard table · {{count}} shots",
+      "audioChip": {
+        "notM4a": "The source file is not m4a and cannot be converted to m4a",
+        "downloadFailed": "Audio download failed",
+        "generationFailed": "Generation failed",
+        "downloadLabel": "Download {{title}}",
+        "downloadTitle": "Download / convert format",
+        "downloadAs": "Download as {{format}}",
+        "m4aOnly": "m4a source only"
+      },
+      "imageGenForm": {
+        "ownReference": "Node's own reference image",
+        "referenceAlt": "Reference image",
+        "removeReference": "Remove reference image"
+      }
     },
     "keyElement": {
       "character": "Character",

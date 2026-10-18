@@ -105,7 +105,7 @@ function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 29,
     narration_segment: "Narration",
-    visual_description: "画面",
+    visual_description: "Visual",
     audio_type: "narration",
     video_mode: "first_frame",
     detected_identities: [],
@@ -141,7 +141,7 @@ function renderPanel(
 }
 
 describe("SingleBeatPanel", () => {
-  it("shows the audio pane for 解说剧 (narrated) projects", () => {
+  it("shows the audio pane for narrated (narrated drama) projects", () => {
     renderPanel({ isSeedance2Backend: true, spineTemplate: "narrated" });
 
     expect(screen.getByText("Audio")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("SingleBeatPanel", () => {
     expect(screen.getByText("VideoPane")).toBeInTheDocument();
   });
 
-  it("hides the audio pane for 精品剧 (drama) projects", () => {
+  it("hides the audio pane for premium drama (drama) projects", () => {
     renderPanel({ isSeedance2Backend: true, spineTemplate: "drama" });
 
     expect(screen.queryByText("Audio")).not.toBeInTheDocument();

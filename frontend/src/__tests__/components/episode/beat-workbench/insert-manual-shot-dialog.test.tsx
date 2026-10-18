@@ -108,23 +108,23 @@ const queryState: {
     {
       beat_number: 1,
       narration_segment: "Narration",
-      visual_description: "原镜头",
-      scene_ref: { scene_id: "仓库_夜晚" },
+      visual_description: "Original shot",
+      scene_ref: { scene_id: "Warehouse_night" },
       time_of_day: "Night",
       estimated_duration: 4,
       audio_type: "narration",
       detected_identities: [],
       detected_props: [],
       set_description:
-        '{"scene_description":"旧置景场景","props_description":"旧置景道具"}',
+        '{"scene_description":"old set scene","props_description":"old set props"}',
     },
   ],
   episode: {
     number: 1,
     title: "ep1",
-    identity_ids: ["陆辰"],
-    scene_menu: [{ scene_id: "仓库_夜晚" }],
-    prop_menu: [{ prop_id: "玉佩" }],
+    identity_ids: ["Lu Chen"],
+    scene_menu: [{ scene_id: "Warehouse_night" }],
+    prop_menu: [{ prop_id: "jade pendant" }],
   },
 };
 
@@ -165,23 +165,23 @@ beforeEach(() => {
     {
       beat_number: 1,
       narration_segment: "Narration",
-      visual_description: "原镜头",
-      scene_ref: { scene_id: "仓库_夜晚" },
+      visual_description: "Original shot",
+      scene_ref: { scene_id: "Warehouse_night" },
       time_of_day: "Night",
       estimated_duration: 4,
       audio_type: "narration",
       detected_identities: [],
       detected_props: [],
       set_description:
-        '{"scene_description":"旧置景场景","props_description":"旧置景道具"}',
+        '{"scene_description":"old set scene","props_description":"old set props"}',
     },
   ];
   queryState.episode = {
     number: 1,
     title: "ep1",
-    identity_ids: ["陆辰"],
-    scene_menu: [{ scene_id: "仓库_夜晚" }],
-    prop_menu: [{ prop_id: "玉佩" }],
+    identity_ids: ["Lu Chen"],
+    scene_menu: [{ scene_id: "Warehouse_night" }],
+    prop_menu: [{ prop_id: "jade pendant" }],
   };
 });
 
@@ -205,9 +205,9 @@ describe("InsertManualShotDialog", () => {
     expect(screen.getByText("Dialogue")).toBeInTheDocument();
     expect(screen.getByText("Scene")).toBeInTheDocument();
     expect(screen.queryByText("Video prompt")).not.toBeInTheDocument();
-    expect(screen.queryByText(/置景/)).not.toBeInTheDocument();
-    expect(screen.queryByDisplayValue("旧置景场景")).not.toBeInTheDocument();
-    expect(screen.queryByDisplayValue("旧置景道具")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Set dressing/)).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("old set scene")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("old set props")).not.toBeInTheDocument();
   });
 
   it("submits an empty manual beat container by default", () => {
@@ -259,11 +259,11 @@ describe("InsertManualShotDialog", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText("Describe what the camera should show in one sentence"),
-      { target: { value: "仓库门口的空镜" } },
+      { target: { value: "Empty shot at the warehouse door" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Narration" }));
     fireEvent.change(screen.getByPlaceholderText("Enter the dialogue or narration to speak"), {
-      target: { value: "门外的脚步声越来越近。" },
+      target: { value: "The footsteps outside the door are getting closer." },
     });
 
     expect(screen.getByText("Narrator")).toBeInTheDocument();
@@ -275,26 +275,26 @@ describe("InsertManualShotDialog", () => {
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);
     expect(insertMutateAsync.mock.calls[0][0]).toMatchObject({
       audio_type: "narration",
-      narration_segment: "门外的脚步声越来越近。",
+      narration_segment: "The footsteps outside the door are getting closer.",
       speaker: null,
-      visual_description: "仓库门口的空镜",
+      visual_description: "Empty shot at the warehouse door",
     });
   });
 
   it("submits canonical base and variant from split scene controls", async () => {
     const user = userEvent.setup();
     queryState.episode.scene_menu = [
-      { scene_id: "卫生间", base_scene_id: "", variant_id: "", time_of_day: "" },
+      { scene_id: "Bathroom", base_scene_id: "", variant_id: "", time_of_day: "" },
       {
-        scene_id: "卫生间_漏水",
-        base_scene_id: "卫生间",
-        variant_id: "Water leak",
+        scene_id: "Bathroom_leak",
+        base_scene_id: "Bathroom",
+        variant_id: "leak",
         time_of_day: "",
       },
       {
-        scene_id: "卫生间_漏水_夜晚",
-        base_scene_id: "卫生间",
-        variant_id: "Water leak",
+        scene_id: "Bathroom_leak_night",
+        base_scene_id: "Bathroom",
+        variant_id: "leak",
         time_of_day: "Night",
       },
     ];
@@ -311,14 +311,14 @@ describe("InsertManualShotDialog", () => {
     );
 
     await user.click(screen.getByRole("combobox", { name: "Scene" }));
-    await user.click(await screen.findByRole("option", { name: "卫生间" }));
+    await user.click(await screen.findByRole("option", { name: "Bathroom" }));
     await user.click(screen.getByRole("combobox", { name: "Variant" }));
     await user.click(await screen.findByRole("option", { name: "Water leak" }));
     fireEvent.click(screen.getByRole("button", { name: "Insert" }));
 
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);
     expect(insertMutateAsync.mock.calls[0][0]).toMatchObject({
-      scene_ref: { scene_id: "卫生间", variant_id: "Water leak" },
+      scene_ref: { scene_id: "Bathroom", variant_id: "leak" },
     });
   });
 
@@ -357,11 +357,11 @@ describe("InsertManualShotDialog", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText("Describe what the camera should show in one sentence"),
-      { target: { value: "陆辰在仓库门口回头" } },
+      { target: { value: "Lu Chen turns around at the warehouse door" } },
     );
     fireEvent.click(screen.getByText("Dialogue"));
     fireEvent.change(screen.getByPlaceholderText("Enter the dialogue or narration to speak"), {
-      target: { value: "别回头。" },
+      target: { value: "Don't look back." },
     });
 
     expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
@@ -371,9 +371,9 @@ describe("InsertManualShotDialog", () => {
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);
     expect(insertMutateAsync.mock.calls[0][0]).toMatchObject({
       audio_type: "dialogue",
-      narration_segment: "别回头。",
+      narration_segment: "Don't look back.",
       speaker: null,
-      visual_description: "陆辰在仓库门口回头",
+      visual_description: "Lu Chen turns around at the warehouse door",
     });
   });
 
@@ -394,23 +394,23 @@ describe("InsertManualShotDialog", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText("Describe what the camera should show in one sentence"),
-      { target: { value: "陆辰在仓库门口回头" } },
+      { target: { value: "Lu Chen turns around at the warehouse door" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Silent" }));
     fireEvent.click(screen.getByText("Dialogue"));
     fireEvent.change(screen.getByPlaceholderText("Enter the dialogue or narration to speak"), {
-      target: { value: "别回头。" },
+      target: { value: "Don't look back." },
     });
     await user.click(screen.getByRole("combobox", { name: "Speaker" }));
-    await user.click(await screen.findByRole("option", { name: "陆辰" }));
+    await user.click(await screen.findByRole("option", { name: "Lu Chen" }));
     fireEvent.click(screen.getByRole("button", { name: "Insert" }));
 
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);
     expect(insertMutateAsync.mock.calls[0][0]).toMatchObject({
       audio_type: "dialogue",
-      narration_segment: "别回头。",
-      speaker: "陆辰",
-      visual_description: "陆辰在仓库门口回头",
+      narration_segment: "Don't look back.",
+      speaker: "Lu Chen",
+      visual_description: "Lu Chen turns around at the warehouse door",
     });
   });
 
@@ -429,15 +429,15 @@ describe("InsertManualShotDialog", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText("Describe what the camera should show in one sentence"),
-      { target: { value: "@陆辰 拿起 @玉佩" } },
+      { target: { value: "@Lu Chen picks up @jade pendant" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Insert" }));
 
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);
     expect(insertMutateAsync.mock.calls[0][0]).toMatchObject({
-      visual_description: "{{陆辰}} 拿起 [[玉佩]]",
-      detected_identities: ["陆辰"],
-      detected_props: ["玉佩"],
+      visual_description: "{{Lu Chen}} picks up [[jade pendant]]",
+      detected_identities: ["Lu Chen"],
+      detected_props: ["jade pendant"],
     });
   });
 
@@ -456,10 +456,10 @@ describe("InsertManualShotDialog", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText("Describe what the camera should show in one sentence"),
-      { target: { value: "@陆辰 拿起 @玉佩" } },
+      { target: { value: "@Lu Chen picks up @jade pendant" } },
     );
 
-    expect(screen.getByDisplayValue("陆辰")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("玉佩")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Lu Chen")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("jade pendant")).toBeInTheDocument();
   });
 });

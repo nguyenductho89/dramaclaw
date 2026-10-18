@@ -33,7 +33,7 @@ beforeAll(async () => {
             close: "Close",
           },
           episode: {
-            beat: { noRender: "暂无 Render" },
+            beat: { noRender: "No Render yet" },
             workbench: {
               render: {
                 backgroundTitle: "Render background reference",
@@ -41,7 +41,7 @@ beforeAll(async () => {
                 backgroundHint: "Applies color/material to the sketch without changing composition.",
                 backgroundMissing: "No reference image found",
                 backgroundOpen360: "Open Director World",
-                backgroundNo360: "无 360",
+                backgroundNo360: "No 360",
                 backgroundAnchorLabels: {
                   master: "Scene front",
                   reverse: "Scene back",
@@ -63,7 +63,7 @@ beforeAll(async () => {
                 relightTooltip: "Relight: re-lights the shot for the beat's time of day without changing the scene structure.",
                 lockedLightTooltip: "Locked lighting: uses the scene image's own lighting; no relight.",
                 lockedLightLabel: "Locked lighting",
-                renderCurrentSketch: "Render 当前草图",
+                renderCurrentSketch: "Render current sketch",
                 sketchRequired: "Generate or upload a sketch first",
                 regenDesc: "Regenerate render for Beat #{{n}}. New render enters candidate pool.",
                 regenFailed: "Regen failed",
@@ -116,8 +116,8 @@ vi.mock("@/lib/queries/sketches", async (importOriginal) => {
           viewer_kind: "three_d_director",
           mode: "beat",
           project: "demo",
-          scene_id: "地下室",
-          display_name: "地下室",
+          scene_id: "Basement",
+          display_name: "Basement",
           source: {
             ply_url: "/static/director_worlds/scene/master_sharp.ply",
             source_kind: "master",
@@ -242,7 +242,7 @@ const beat = {
   beat_number: 5,
   narration_segment: "beat text",
   sketch_url: "/static/current-sketch.png",
-  scene_ref: { scene_id: "卫生间", variant_id: "夜" },
+  scene_ref: { scene_id: "Bathroom", variant_id: "night" },
   time_of_day: "Daytime",
   frame_url: "/static/current-render.png",
 } as Beat;
@@ -303,7 +303,7 @@ beforeEach(() => {
       data: {
         episode: 1,
         beat_num: 5,
-        scene_id: "地下室",
+        scene_id: "Basement",
         can_choose: true,
         current_anchor: "master",
         render_anchor_id: "selected_background",
@@ -400,8 +400,8 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "详情" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "坏图分析" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bad image analysis" })).not.toBeInTheDocument();
   });
 
   it("shows render relight state next to render actions", () => {
@@ -409,7 +409,7 @@ describe("RenderSection", () => {
       render: {
         relight: true,
         status: "relight",
-        label: "Render：将使用 卫生间_夜，relight 到 白天",
+        label: "Render: will use Bathroom_night, relight to day",
       },
     };
 
@@ -425,7 +425,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Relight to 白天")).toBeInTheDocument();
+    expect(screen.getByText("Relight to day")).toBeInTheDocument();
     expect(screen.getByTitle("Relight: re-lights the shot for the beat's time of day without changing the scene structure.")).toBeInTheDocument();
     expect(screen.queryByText(/Seedance2/)).not.toBeInTheDocument();
   });
@@ -435,7 +435,7 @@ describe("RenderSection", () => {
       render: {
         relight: false,
         status: "time_baked",
-        label: "Render：将使用 卫生间_夜，锁图光",
+        label: "Render: will use Bathroom_night, locked lighting",
       },
     };
 
@@ -487,7 +487,7 @@ describe("RenderSection", () => {
         data: {
           episode: 1,
           beat_num: 5,
-          scene_id: "地下室",
+          scene_id: "Basement",
           can_choose: true,
           current_anchor: "",
           render_anchor_id: "",
@@ -640,12 +640,12 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Render 背景参考")).toBeInTheDocument();
+    expect(screen.getByText("Render background reference")).toBeInTheDocument();
     expect(screen.getByAltText("Beat 5 render").parentElement).toHaveStyle({
       aspectRatio: "2 / 3",
     });
-    expect(screen.getByText("Current: 场景正面")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "无 360" })).not.toBeInTheDocument();
+    expect(screen.getByText("Current: Scene front")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "No 360" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Director world scene screenshot" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("bg-primary/[0.075]");
     expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("border-primary/45");
@@ -665,12 +665,12 @@ describe("RenderSection", () => {
     await user.click(screen.getByRole("button", { name: "Scene back" }));
     expect(updateBackgroundAnchorMock).toHaveBeenCalledWith({ anchorId: "reverse" });
 
-    await user.click(screen.getByRole("button", { name: "Crop 场景正面" }));
-    expect(screen.getByRole("heading", { name: "场景正面 crop screenshot" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crop Scene front" }));
+    expect(screen.getByRole("heading", { name: "Scene front crop screenshot" })).toBeInTheDocument();
     expect(screen.getByText("Crop 2:3")).toBeInTheDocument();
     expect(cropBackgroundAnchorMock).not.toHaveBeenCalled();
 
-    const cropImage = screen.getByAltText("场景正面 crop screenshot");
+    const cropImage = screen.getByAltText("Scene front crop screenshot");
     Object.defineProperty(cropImage, "naturalWidth", {
       configurable: true,
       value: 1200,
@@ -706,7 +706,7 @@ describe("RenderSection", () => {
       crop: { x: 360, y: 0, width: 600, height: 900 },
     });
 
-    expect(screen.queryByRole("button", { name: "Render 当前草图" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Render current sketch" })).not.toBeInTheDocument();
     expect(regenerateMock).not.toHaveBeenCalled();
     expect(taskStartMock).not.toHaveBeenCalled();
   });
@@ -727,7 +727,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Crop 场景正面" }));
+    await user.click(screen.getByRole("button", { name: "Crop Scene front" }));
 
     expect(screen.getByText("Crop 16:9")).toBeInTheDocument();
   });
@@ -740,7 +740,7 @@ describe("RenderSection", () => {
         data: {
           episode: 1,
           beat_num: 5,
-          scene_id: "地下室",
+          scene_id: "Basement",
           can_choose: true,
           current_anchor: "selected_background",
           current_source: "master",
@@ -798,7 +798,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Current: 场景正面")).toBeInTheDocument();
+    expect(screen.getByText("Current: Scene front")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("bg-primary/[0.075]");
     expect(screen.getByRole("button", { name: "Scene front" })).toHaveClass("border-primary/45");
     expect(screen.queryByRole("button", { name: "Capture/Upload" })).not.toBeInTheDocument();

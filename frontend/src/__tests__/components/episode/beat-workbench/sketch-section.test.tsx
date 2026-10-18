@@ -28,13 +28,13 @@ vi.mock("react-i18next", () => ({
       if (key === "common.generateNew") return "Generate new";
       if (key === "common.regenerate") return "Regenerate";
       if (key === "episode.workbench.sketch.generateNow") return "Generate now";
-      if (key === "episode.workbench.sketch.regenDesc") return `重生第 ${vars?.n} beats`;
-      if (key === "episode.workbench.sketch.generateDesc") return `生成第 ${vars?.n} beats`;
+      if (key === "episode.workbench.sketch.regenDesc") return `Regenerate ${vars?.n} beats`;
+      if (key === "episode.workbench.sketch.generateDesc") return `Generate ${vars?.n} beats`;
       if (key === "episode.workbench.sketch.directorControl") return "Director composite asset";
       if (key === "episode.workbench.sketch.directorControlFile") return "Combined + env-only + metadata";
       if (key === "episode.workbench.sketch.convertDirectorControl") return "Convert to sketch";
-      if (key === "episode.workbench.sketch.convertDirectorStarted") return "已启动";
-      if (key === "episode.workbench.sketch.convertDirectorFailed") return "启动失败";
+      if (key === "episode.workbench.sketch.convertDirectorStarted") return "Started";
+      if (key === "episode.workbench.sketch.convertDirectorFailed") return "Failed to start";
       if (key === "episode.workbench.sketch.openDirectorWorld") return "Director world";
       if (key === "episode.workbench.sketch.chooseBackground") return "Background";
       if (key === "episode.workbench.sketch.poseEdit") return "Pose edit";
@@ -64,7 +64,7 @@ vi.mock("@/lib/queries/scripts", () => ({
       ok: true,
       data: {
         sketch_colors: {
-          "陆辰_青年时期": "#00ffff CYAN",
+          "Lu Chen_young_adult": "#00ffff CYAN",
         },
       },
     },
@@ -89,7 +89,7 @@ vi.mock("@/lib/queries/generation-credit-cost", () => ({
 
 vi.mock("@/lib/queries/characters", () => ({
   useCharacters: () => ({
-    data: [{ name: "陆辰" }],
+    data: [{ name: "Lu Chen" }],
   }),
 }));
 
@@ -100,7 +100,7 @@ vi.mock("@/lib/queries/episodes", () => ({
       data: {
         prop_menu: [
           {
-            prop_id: "羊皮笔记本",
+            prop_id: "sheepskin notebook",
             marker_color: "#d4af37 GOLD",
           },
         ],
@@ -153,11 +153,11 @@ vi.mock("sonner", () => ({
 function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 4,
-    narration_segment: "发现密室里的书",
-    visual_description: "陆辰举着[[强光手电]]翻开[[羊皮笔记本]]",
+    narration_segment: "Found the book in the secret room",
+    visual_description: "Lu Chen holds up [[flashlight]] and opens [[sheepskin notebook]]",
     sketch_url: "/static/sketches/beat_04.png",
-    detected_identities: ["陆辰_青年时期"],
-    detected_props: ["羊皮笔记本"],
+    detected_identities: ["Lu Chen_young_adult"],
+    detected_props: ["sheepskin notebook"],
     ...overrides,
   } as Beat;
 }
@@ -187,8 +187,8 @@ describe("SketchSection", () => {
           viewer_kind: "three_d_director",
           mode: "beat",
           project: "demo",
-          scene_id: "地下室",
-          display_name: "地下室",
+          scene_id: "Basement",
+          display_name: "Basement",
           source: {
             ply_url: "/static/director_worlds/scene/master_sharp.ply",
             source_kind: "master",
@@ -258,9 +258,9 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.getByTitle("陆辰 · 青年时期")).toBeInTheDocument();
-    expect(screen.getByText("羊皮笔记本")).toBeInTheDocument();
-    expect(screen.getByText("强光手电")).toBeInTheDocument();
+    expect(screen.getByTitle("Lu Chen · Young adult")).toBeInTheDocument();
+    expect(screen.getByText("sheepskin notebook")).toBeInTheDocument();
+    expect(screen.getByText("flashlight")).toBeInTheDocument();
   });
 
   it("displays portrait sketches at the generated 2:3 asset ratio", () => {
@@ -290,7 +290,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.getAllByText("羊皮笔记本")).toHaveLength(1);
+    expect(screen.getAllByText("sheepskin notebook")).toHaveLength(1);
   });
 
   it("shows beat Director World and single-beat background actions", () => {
@@ -550,8 +550,8 @@ describe("SketchSection", () => {
     });
   });
 
-  // beat 4 在跑草图时切到 beat 5,「立即生成」不该是灰的:sketch_regen 的 registry
-  // entry 必须按 beat 分开(coversBeat),而不是整集共用一个。
+  // While beat 4 is running a sketch, after switching to beat 5 "Generate now" must not be greyed out: the sketch_regen registry
+  // entry must be split per beat (coversBeat) instead of one for the whole episode.
   it("scopes the sketch_regen controller to this beat's coverage", () => {
     render(
       <SketchSection
@@ -569,7 +569,7 @@ describe("SketchSection", () => {
         coversBeat: 4,
       }),
     );
-    // 按 beat 分 entry 之后,切走的那一格没人 own 了,得靠全局任务总线兜底刷新。
+    // After splitting entries per beat, the cell that was switched away from has no owner, and the global task bus has to cover the refresh.
     const regenKey = taskControllerKeyMock.mock.calls
       .map(([key]) => key as { taskType: string; beatNum?: number })
       .find((key) => key.taskType === "sketch_regen");

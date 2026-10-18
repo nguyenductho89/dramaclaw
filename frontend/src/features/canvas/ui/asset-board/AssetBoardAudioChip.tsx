@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useState, type ReactElement } from 'react';
 import { AlertCircle, Download, Loader2, Music } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ import {
   type AudioDownloadFormat,
 } from '@/lib/audioTranscode';
 
-/** 时长角标格式：mm:ss（对齐参考图方块内「01:41」）。 */
+/** Duration badge format: mm:ss (matches "01:41" inside the reference image's square). */
 function formatDuration(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
   const mm = Math.floor(s / 60)
@@ -32,14 +33,14 @@ function formatDuration(totalSec: number): string {
 }
 
 /**
- * 音频 chip：大图标方块 + 下方标题（与关键元素/图片缩略图同款形态，对齐参考图）。
- * 方块点击 = 打开音频详情（波形播放器 + 生成表单，与图片/视频同一套主从详情）；
- * hover 时方块右上角出「下载/格式转换」按钮（复用 application/audioDownload 的
- * 透传/转码核心）。顶部音频条（总览态）与音频详情左侧切换器共用同一枚 chip。
+ * Audio chip: a large icon square + the title below (the same form as key elements / image thumbnails, matching the reference image).
+ * Clicking the square = open the audio detail (waveform player + generation form, the same master-detail as image/video);
+ * on hover a "download / format convert" button appears at the square's top-right (reusing the passthrough/transcode core of
+ * application/audioDownload). The top audio bar (overview state) and the audio detail's left switcher share the same chip.
  *
- * 失败指示：音频生成失败只写在 node.data.generationError 上，chip 此前只有生成中
- * spinner、没有任何失败痕迹——用户看到的是「转完圈就没动静了」。这里在方块角上补一个
- * 红色角标（title 带完整错误文案），完整错误文本在详情里的生成表单上。
+ * Failure indicator: audio generation failures are written only on node.data.generationError, and the chip used to have only a generating
+ * spinner and no trace of failure - what the user saw was "the spinner stopped and then nothing". Here a red badge is added on the square's corner
+ * (the title carries the full error text), and the full error text is on the generation form in the detail.
  */
 export function AssetBoardAudioChip({
   item,
@@ -47,22 +48,22 @@ export function AssetBoardAudioChip({
   selected = false,
 }: {
   item: AssetBoardItem;
-  /** 点击主体 → 打开该音频节点的详情面板。 */
+  /** Click the body -> open the detail panel of this audio node. */
   onOpen: (item: AssetBoardItem) => void;
-  /** 顶部音频条（音频切换器）里当前详情项的选中高亮。 */
+  /** Selected highlight of the current detail item in the top audio bar (audio switcher). */
   selected?: boolean;
 }): ReactElement {
   const [converting, setConverting] = useState<AudioDownloadFormat | null>(null);
-  // 节点没记 durationMs 时（生成/上传路径大多不写），用一个隐藏 <audio preload="metadata">
-  // 探测真实时长——否则 chip 上永远空着。
-  // 只落本地 state、不回写节点：updateNodeData 会 pushSnapshot 进撤销栈并 trackEdit
-  // 标脏，而这条探测是「打开故事板就自动跑」的被动行为——回写会让用户没做任何操作
-  // 就被塞进 N 条撤销记录（Ctrl+Z 先撤销这些）并触发一次无意义的自动保存。
-  // 与图片卡的自然尺寸兜底（AssetBoardCard 的 captureNaturalSize）同一口径。
+  // When the node did not record durationMs (generation/upload paths mostly do not write it), use a hidden <audio preload="metadata">
+  // to probe the real duration - otherwise the chip would stay empty forever.
+  // Only land it in local state, do not write back to the node: updateNodeData would pushSnapshot into the undo stack and trackEdit
+  // to mark dirty, while this probe is a passive behavior that "runs automatically when the storyboard is opened" - writing back would stuff the user
+  // with N undo records without them doing anything (Ctrl+Z would undo these first) and trigger a pointless autosave.
+  // The same basis as the image card's natural size fallback (AssetBoardCard's captureNaturalSize).
   const [probedSec, setProbedSec] = useState<number | null>(null);
   const audioUrl = item.mediaUrl;
   const sourceExt = audioUrl ? getAudioExtFromUrl(audioUrl) : '';
-  // 分离出的音频节点 title 可能不带扩展名；带了就剥掉，按所选格式重拼。
+  // A separated audio node's title may not carry an extension; if it does, strip it and re-append by the chosen format.
   const baseFileName =
     item.title.replace(/\.(mp3|m4a|aac|wav|flac|ogg|opus|mp4|m4b)$/i, '') ||
     `audio-${item.nodeId}`;
@@ -70,7 +71,7 @@ export function AssetBoardAudioChip({
   const handleDownload = async (format: AudioDownloadFormat) => {
     if (!audioUrl || converting) return;
     if (!canProduceFormat(format, sourceExt)) {
-      toast.error('源文件不是 m4a，无法转换为 m4a 格式');
+      toast.error(i18n.t('canvas.assetBoard.audioChip.notM4a'));
       return;
     }
     try {
@@ -81,11 +82,11 @@ export function AssetBoardAudioChip({
       });
     } catch (error) {
       console.error('[asset-board] audio download failed', error);
-      toast.error('音频下载失败');
+      toast.error(i18n.t('canvas.assetBoard.audioChip.downloadFailed'));
     }
   };
 
-  // 生成中优先于失败：重试期间不该还挂着上一次的红标。
+  // Generating takes priority over failure: during a retry the previous red mark should not still be hanging.
   const failure = !item.isGenerating && item.generationError ? item.generationError : null;
   const durationSec = item.durationSec ?? probedSec;
   const durationLabel = durationSec !== null ? formatDuration(durationSec) : null;
@@ -99,8 +100,8 @@ export function AssetBoardAudioChip({
           title={item.title}
           onClick={() => onOpen(item)}
           className={cn(
-            // 方块底色统一 #141414（用户指定的纯黑）：选中/hover 的反馈改走边框，
-            // 免得再用白透明层把底色提亮、破坏这个纯黑。
+            // The square's background is uniformly #141414 (the pure black the user specified): selected/hover feedback goes through the border,
+            // avoiding a white translucent layer brightening the background and breaking this pure black.
             'flex h-full w-full items-center justify-center rounded-[6px] border bg-[#141414] transition-colors',
             failure
               ? 'border-red-500/40'
@@ -109,7 +110,7 @@ export function AssetBoardAudioChip({
                 : 'border-transparent hover:border-white/15',
           )}
         >
-          {/* 图标在上、时长在下并居中（对齐参考图），不再是压在左下角的小角标。 */}
+          {/* Icon on top, duration below and centered (matches the reference image), no longer a small badge pressed in the bottom-left corner. */}
           <span className="flex flex-col items-center gap-1">
             {item.isGenerating ? (
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -122,7 +123,7 @@ export function AssetBoardAudioChip({
           </span>
         </button>
 
-        {/* 探测用的隐藏音频：只在节点没记时长、且本地也还没探到时挂。 */}
+        {/* Hidden audio for probing: mounted only when the node did not record a duration and none has been probed locally yet. */}
         {audioUrl && item.durationSec === null && probedSec === null && (
           <audio
             src={audioUrl}
@@ -138,7 +139,7 @@ export function AssetBoardAudioChip({
 
         {failure && (
           <span
-            aria-label="生成失败"
+            aria-label={i18n.t('canvas.assetBoard.audioChip.generationFailed')}
             title={failure}
             className="pointer-events-none absolute left-1 top-1 inline-flex"
           >
@@ -151,12 +152,12 @@ export function AssetBoardAudioChip({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                aria-label={`下载 ${item.title}`}
-                title="下载 / 格式转换"
+                aria-label={i18n.t('canvas.assetBoard.audioChip.downloadLabel', { title: item.title })}
+                title={i18n.t('canvas.assetBoard.audioChip.downloadTitle')}
                 disabled={converting !== null}
                 className={cn(
                   'absolute right-1 top-1 rounded-md bg-black/50 p-1 text-white/80 transition-opacity hover:bg-black/70 disabled:cursor-not-allowed',
-                  // 平时隐藏,hover/聚焦方块时露出;转码中常驻可见(带 spinner)。
+                  // Hidden normally, shown on hover/focus of the square; always visible while transcoding (with a spinner).
                   converting ? 'opacity-100' : 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100',
                 )}
               >
@@ -186,8 +187,8 @@ export function AssetBoardAudioChip({
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
-                    <span className="flex-1">下载为 {format.toUpperCase()}</span>
-                    {!available && <span className="text-[10px] opacity-60">仅 m4a 源</span>}
+                    <span className="flex-1">{i18n.t('canvas.assetBoard.audioChip.downloadAs', { format: format.toUpperCase() })}</span>
+                    {!available && <span className="text-[10px] opacity-60">{i18n.t('canvas.assetBoard.audioChip.m4aOnly')}</span>}
                   </DropdownMenuItem>
                 );
               })}

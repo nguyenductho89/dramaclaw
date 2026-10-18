@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 打开分集列表不能去拉任意一集的完整 beats。
+ * Opening the episode list must not pull the full beats of any episode.
  *
- * 这一页的每张卡片都要显示镜头数，原先是每张卡片自己 ``useEpisodeBeats``——列表有
- * 几集就发几个 ``/episodes/{n}/beats``，而那是最贵的路由（开库、给每个 beat 拼四个
- * 资产 URL、对每条音频 fork 一次 ffprobe），只为取一个 ``.length``。本 PR 把它换成
- * 列表接口一次 GROUP BY 带出来的 ``beat_count``。
+ * Every card on this page shows the shot count, and each card used to call `useEpisodeBeats` on its own - as many
+ * `/episodes/{n}/beats` as there were episodes in the list, the most expensive route (opens the DB, builds four asset URLs for every beat,
+ * forks an ffprobe for every audio), just to take a `.length`. This PR replaces it with the `beat_count` that the
+ * list endpoint brings out with a single GROUP BY.
  *
- * 断言落在网络层、且渲染的是整页而不是单个 hook：扇出从来不体现在渲染结果里，它体
- * 现在"页面组合层碰巧调了哪些 hook"上——正是 UI 重构会悄悄接回去的那一类。
+ * The assertions sit at the network layer and render the whole page rather than a single hook: the fan-out never shows up in the rendered result, it
+ * shows up in "which hooks the page composition layer happens to call" - exactly the kind a UI refactor quietly wires back in.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -27,7 +27,7 @@ vi.mock("@/lib/api", () => ({
   uploadApi: ky.create({ baseUrl: "http://localhost:3000/" }),
 }));
 
-// 路由只留到能让页面跑起来：这个文件断言的是网络看见了什么，不是导航。
+// The route is kept only enough to let the page run: this file asserts what the network saw, not navigation.
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => () => ({
     useParams: () => ({ project: "demo" }),
@@ -39,8 +39,8 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
   useSearch: () => ({}),
   useParams: () => ({ project: "demo" }),
-  // ``useActiveStagePath`` 用的是 select 形式，mock 必须把选择器真的跑一遍，
-  // 否则拿到的是整个 state 对象而不是 pathname 字符串。
+  // `useActiveStagePath` uses the select form, and the mock must really run the selector,
+  // otherwise what comes back is the whole state object instead of the pathname string.
   useRouterState: ({ select }: { select?: (s: unknown) => unknown } = {}) => {
     const state = { location: { pathname: "/projects/demo/episodes" } };
     return select ? select(state) : state;
@@ -92,14 +92,14 @@ describe("the episode list does not read the beats table", () => {
     const seen = recordRequests();
     server.use(
       http.get("http://localhost:3000/api/v1/projects/demo/episodes", ({ request }) => {
-        // 专用 handler 比 catch-all 优先，得自己记一笔，否则这条请求不进 ``seen``。
+        // A dedicated handler takes precedence over the catch-all, so it has to record itself, otherwise this request does not reach `seen`.
         seen.push(new URL(request.url).pathname);
         return HttpResponse.json({
           ok: true,
           data: [
-            { number: 1, title: "Episode 一", beat_count: 7 },
-            { number: 2, title: "Episode 二", beat_count: 4 },
-            { number: 3, title: "Episode 三", beat_count: 0 },
+            { number: 1, title: "Episode One", beat_count: 7 },
+            { number: 2, title: "Episode Two", beat_count: 4 },
+            { number: 3, title: "Episode Three", beat_count: 0 },
           ],
         });
       }),
@@ -107,13 +107,13 @@ describe("the episode list does not read the beats table", () => {
 
     renderWithProviders(<EpisodesPage />);
 
-    // 先确认三张卡片真的渲染出来了——否则页面崩在半路，下面那条 ``/beats`` 断言
-    // 会因为什么都没发而空过。
-    expect(await screen.findByText("Episode 一")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("Episode 三")).toBeInTheDocument());
+    // First confirm the three cards really rendered - otherwise the page crashes halfway and the `/beats` assertion below
+    // passes vacuously because nothing was sent.
+    expect(await screen.findByText("Episode One")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Episode Three")).toBeInTheDocument());
     expect(seen.filter((path) => path.endsWith("/episodes"))).toHaveLength(1);
-    // 三集，三张卡片，零个 beats 请求。这里写 toEqual([]) 而不是数个数：回归的形状
-    // 就是"每集一"，列出来比一个数字更能说明是哪几集漏了。
+    // Three episodes, three cards, zero beats requests. toEqual([]) is written here rather than counting: the shape of the regression
+    // is "one per episode", and listing shows which episodes were missed better than a number.
     expect(seen.filter((path) => path.includes("/beats"))).toEqual([]);
   });
 });

@@ -246,7 +246,7 @@ def test_freezone_audio_ref_payload_builds_project_static_url(tmp_path: Path) ->
 
     assert payload["exists"] is True
     assert payload["url"].startswith(
-        "/static/projects/proj_demo/assets/characters/%E6%9E%97%E5%B0%8F%E6%BB%A1/voices/voice_default.mp3"
+        "/static/projects/proj_demo/assets/characters/Lin_Xiaoman/voices/voice_default.mp3"
     )
     assert payload["character_name"] == "Lin_Xiaoman"
     assert payload["slot"] == "default"
@@ -577,7 +577,7 @@ async def test_freezone_audio_speech_drama_first_person_uses_project_narrator(
             "prompt": "A voice-over begins.",
             "audio_url": "data://voice.wav",
             "output_path": freezone_audio_speech_output_path(project_dir, "job-1"),
-            "emotion_prompt": "Read from a third-person narrator perspective, in an objective and calm explanatory tone",
+            "emotion_prompt": "Read as a third-person narrator, in an objective and calm narration tone",
         }
     ]
 

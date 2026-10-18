@@ -66,29 +66,29 @@ describe("AudioOperationsPanel voice prerequisite", () => {
   it("does not auto-open voice selection when custom mode has no usable voice", () => {
     renderPanel({
       audioKind: "speech",
-      text: "旁白",
+      text: "Narration",
       speechMode: "clone",
       voicePolicyConfirmed: true,
       voiceAvailable: false,
     });
 
-    expect(screen.getByText("尚未选中可用的自定义声线")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "选择声线" })).toBeTruthy();
-    expect(screen.queryByText("音色选择")).toBeNull();
+    expect(screen.getByText("No usable custom voice is selected")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose voice" })).toBeTruthy();
+    expect(screen.queryByText("Pick a voice")).toBeNull();
   });
 
   it("skips generation when no custom voice is selected", async () => {
     renderPanel({
       audioKind: "speech",
-      text: "旁白",
+      text: "Narration",
       speechMode: "clone",
       voiceAvailable: false,
     });
 
-    fireEvent.click(screen.getByTitle("生成（未选择自定义声线时跳过）"));
+    fireEvent.click(screen.getByTitle("Generate (skip when no custom voice is selected)"));
     await waitFor(() => expect(
       useCanvasStore.getState().nodes.find((node) => node.id === "audio-1")?.data.generationError,
-    ).toBe("未选择自定义声线，已跳过生成"));
+    ).toBe("No usable custom voice selected; generation skipped"));
   });
 
   it("requires a real voice id for a user custom selection", () => {
@@ -123,7 +123,7 @@ describe("AudioOperationsPanel voice prerequisite", () => {
   it("keeps a saved legacy voice reference without requiring a refreshed availability flag", () => {
     expect(requiresCustomVoiceSelection({
       audioUrl: null, audioKind: "speech", speechMode: "clone",
-      voiceRef: { scope: "character_default", characterName: "主角" },
+      voiceRef: { scope: "character_default", characterName: "Protagonist" },
     })).toBe(false);
   });
 
@@ -143,13 +143,13 @@ describe("AudioOperationsPanel voice prerequisite", () => {
   it("does not apply the speech voice prerequisite to music generation", () => {
     renderPanel({
       audioKind: "music",
-      text: "紧张的弦乐",
+      text: "Tense strings",
       voiceAvailable: false,
     });
 
-    expect(screen.getByTitle("生成")).toBeTruthy();
-    expect(screen.queryByText("请先配置或选择声线")).toBeNull();
-    expect(screen.queryByText("音色选择")).toBeNull();
+    expect(screen.getByTitle("Generate")).toBeTruthy();
+    expect(screen.queryByText("Configure or select a voice first")).toBeNull();
+    expect(screen.queryByText("Pick a voice")).toBeNull();
   });
 
   it("retains legacy system speech without a custom voice prerequisite", () => {
@@ -157,11 +157,11 @@ describe("AudioOperationsPanel voice prerequisite", () => {
       audioKind: "speech",
       speechMode: "preset",
       presetVoice: "Serena",
-      text: "旁白",
+      text: "Narration",
       voiceAvailable: false,
     });
 
-    expect(screen.getByTitle("生成")).toBeTruthy();
-    expect(screen.queryByText("尚未选中可用的自定义声线")).toBeNull();
+    expect(screen.getByTitle("Generate")).toBeTruthy();
+    expect(screen.queryByText("No usable custom voice is selected")).toBeNull();
   });
 });

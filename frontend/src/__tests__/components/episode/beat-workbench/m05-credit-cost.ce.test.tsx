@@ -121,9 +121,9 @@ describe("M05 CE generation credit cost gating", () => {
 
   it("hides scene image and Director World conversion costs in CE runtime", () => {
     renderSceneAssetCard({
-      name: "皇宫大殿",
+      name: "Palace Hall",
       scene_type: "interior",
-      environment_prompt: "金色宫灯、朱红立柱、纵深空间",
+      environment_prompt: "Golden palace lanterns, vermilion pillars, deep space",
       description: "",
       aliases: [],
       notes: "",
@@ -139,19 +139,19 @@ describe("M05 CE generation credit cost gating", () => {
 
   it("keeps Director World confirmation copy free of credit prices in CE runtime", () => {
     renderSceneAssetCard({
-      name: "皇宫大殿",
+      name: "Palace Hall",
       scene_type: "interior",
-      environment_prompt: "金色宫灯、朱红立柱、纵深空间",
+      environment_prompt: "Golden palace lanterns, vermilion pillars, deep space",
       description: "",
       aliases: [],
       notes: "",
       master_url: "/static/u/p/assets/scenes/hall/master.png",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "master→导演世界" }));
+    fireEvent.click(screen.getByRole("button", { name: "master→director world" }));
 
     const dialog = screen.getByRole("alertdialog");
-    expect(dialog).toHaveTextContent("场景单面转 SOG will start immediately after confirmation.");
+    expect(dialog).toHaveTextContent("Scene single-face to SOG will start immediately after confirmation.");
     expect(dialog).not.toHaveTextContent("6 credits");
     expect(dialog).not.toHaveTextContent("Credits");
   });

@@ -48,24 +48,24 @@ from novelvideo.freezone.video_node import (
 
 def test_build_freezone_video_prompt_includes_camera_template_and_character_names() -> None:
     prompt = build_freezone_video_prompt(
-        user_prompt="赛博朋克街头，角色缓慢向前走",
+        user_prompt="A cyberpunk street, the character walks slowly forward",
         camera_template_id="follow_tracking",
-        character_names=["林小满", "阿七"],
-        marks=[{"label": "老人", "point_x": 0.2, "point_y": 0.5}],
+        character_names=["Lin_Xiaoman", "A_Qi"],
+        marks=[{"label": "old man", "point_x": 0.2, "point_y": 0.5}],
     )
 
-    assert "赛博朋克街头" in prompt
-    assert "跟随拍摄" in prompt
-    assert "林小满、阿七" in prompt
-    assert "重点元素标记" in prompt
-    assert "老人" in prompt
+    assert "A cyberpunk street" in prompt
+    assert "Follow shot" in prompt
+    assert "Lin_Xiaoman, A_Qi" in prompt
+    assert "Key element marks" in prompt
+    assert "old man" in prompt
 
 
 def test_video_camera_template_lookup_works() -> None:
     template = get_video_camera_template("locked_off")
 
     assert template is not None
-    assert template["name"] == "固定镜头"
+    assert template["name"] == "Locked-off shot"
 
 
 def test_locked_frame_selects_nearest_supported_ratio(tmp_path: Path) -> None:
@@ -83,14 +83,14 @@ def test_video_character_library_roundtrip(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     item = add_video_character_library_item(
         project_dir,
-        name="林小满",
+        name="Lin_Xiaoman",
         image_urls=["/static/admin/58/freezone/_uploads/char.png"],
     )
 
     items = load_video_character_library(project_dir)
     assert len(items) == 1
     assert items[0]["id"] == item["id"]
-    assert items[0]["name"] == "林小满"
+    assert items[0]["name"] == "Lin_Xiaoman"
 
     deleted = delete_video_character_library_item(project_dir, item["id"])
     assert deleted is True
@@ -101,70 +101,70 @@ def test_video_character_library_rename_keeps_everything_else(tmp_path: Path) ->
     project_dir = tmp_path / "project"
     item = add_video_character_library_item(
         project_dir,
-        name="未命名",
+        name="Unnamed",
         image_urls=["/static/admin/58/freezone/_uploads/char.png"],
         category="character",
         folder="character",
     )
 
-    renamed = rename_video_character_library_item(project_dir, item["id"], name="  林小满  ")
+    renamed = rename_video_character_library_item(project_dir, item["id"], name="  Lin_Xiaoman  ")
 
     assert renamed is not None
-    assert renamed["name"] == "林小满"
-    # 改名只动名字：地址/类目/保存位置都得原样留着，画布上引用它的节点才不会裂。
+    assert renamed["name"] == "Lin_Xiaoman"
+    # Renaming changes only the name: the URL / category / save location must stay as they were, so that canvas nodes referencing it do not break.
     assert renamed["image_urls"] == item["image_urls"]
     assert renamed["category"] == "character"
     assert renamed["folder"] == "character"
-    assert [it["name"] for it in load_video_character_library(project_dir)] == ["林小满"]
+    assert [it["name"] for it in load_video_character_library(project_dir)] == ["Lin_Xiaoman"]
 
 
 def test_video_character_library_rename_rejects_bad_names(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     item = add_video_character_library_item(
-        project_dir, name="原名", image_urls=["/static/a.png"]
+        project_dir, name="Old name", image_urls=["/static/a.png"]
     )
 
-    assert rename_video_character_library_item(project_dir, "missing", name="新名") is None
+    assert rename_video_character_library_item(project_dir, "missing", name="New name") is None
     with pytest.raises(ValueError):
         rename_video_character_library_item(project_dir, item["id"], name="   ")
     with pytest.raises(ValueError):
-        rename_video_character_library_item(project_dir, item["id"], name="长" * 61)
-    # 校验失败不能把库写脏。
-    assert [it["name"] for it in load_video_character_library(project_dir)] == ["原名"]
+        rename_video_character_library_item(project_dir, item["id"], name="x" * 61)
+    # A validation failure must not dirty the library.
+    assert [it["name"] for it in load_video_character_library(project_dir)] == ["Old name"]
 
 
 def test_video_character_library_category(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
 
-    # 不传类目时按来源/媒介兜底：本地上传的图片归「其它」，音频归「音效」。
+    # When no category is passed, fall back by source/medium: locally uploaded images go to "other", and audio goes to "sound effects".
     plain = add_video_character_library_item(
-        project_dir, name="参考图", image_urls=["/static/a.png"]
+        project_dir, name="Reference image", image_urls=["/static/a.png"]
     )
     assert plain["category"] == "other"
     bgm = add_video_character_library_item(
-        project_dir, name="脚步声", media="audio", audio_url="/static/step.mp3"
+        project_dir, name="Footsteps", media="audio", audio_url="/static/step.mp3"
     )
     assert bgm["category"] == "audio"
 
     styled = add_video_character_library_item(
-        project_dir, name="赛博霓虹", image_urls=["/static/b.png"], category="style"
+        project_dir, name="Cyber Neon", image_urls=["/static/b.png"], category="style"
     )
     assert styled["category"] == "style"
 
-    # 主线同步按 source 归类，且不会把已经归好的类目冲掉。
+    # Mainline sync classifies by source, and does not wash out categories that are already sorted.
     sync_mainline_assets_into_library(
         project_dir,
         assets=[
             {
-                "id": "mainline:scene:厨房",
-                "name": "厨房",
+                "id": "mainline:scene:kitchen",
+                "name": "Kitchen",
                 "media": "image",
                 "source": "scene",
                 "url": "/static/kitchen.png",
             },
             {
                 "id": styled["id"],
-                "name": "赛博霓虹",
+                "name": "Cyber Neon",
                 "media": "image",
                 "source": "upload",
                 "url": "/static/b.png",
@@ -172,32 +172,32 @@ def test_video_character_library_category(tmp_path: Path) -> None:
         ],
     )
     items = {str(it["id"]): it for it in load_video_character_library(project_dir)}
-    assert items["mainline:scene:厨房"]["category"] == "scene"
+    assert items["mainline:scene:kitchen"]["category"] == "scene"
     assert items[styled["id"]]["category"] == "style"
 
 
 def test_video_character_library_folder(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
 
-    # 不传保存位置时按类目落到同名系统文件夹，主线同步来的一律进 mainline。
+    # When no save location is passed, land by category in the same-named system folder, and everything synced from the mainline goes into mainline.
     plain = add_video_character_library_item(
-        project_dir, name="参考图", image_urls=["/static/a.png"]
+        project_dir, name="Reference image", image_urls=["/static/a.png"]
     )
     assert plain["folder"] == "other"
     styled = add_video_character_library_item(
-        project_dir, name="赛博霓虹", image_urls=["/static/b.png"], category="style"
+        project_dir, name="Cyber Neon", image_urls=["/static/b.png"], category="style"
     )
     assert styled["folder"] == "style"
 
-    # 文件夹和标签是两个独立维度：可以放进自建文件夹、同时打「人物」标签。
-    folder = add_video_character_folder(project_dir, name="第一集素材")
-    assert folder["name"] == "第一集素材"
+    # Folders and labels are two independent dimensions: an item can go into a user-created folder and carry the "character" label at the same time.
+    folder = add_video_character_folder(project_dir, name="Episode 1 assets")
+    assert folder["name"] == "Episode 1 assets"
     assert folder["id"] not in RESERVED_FOLDER_KEYS
     assert folder["id"] in library_folder_keys(project_dir)
 
     filed = add_video_character_library_item(
         project_dir,
-        name="女主定妆",
+        name="Heroine look test",
         image_urls=["/static/c.png"],
         category="character",
         folder=folder["id"],
@@ -205,28 +205,28 @@ def test_video_character_library_folder(tmp_path: Path) -> None:
     assert filed["folder"] == folder["id"]
     assert filed["category"] == "character"
 
-    # 重名（含系统文件夹名）建不出来。
+    # Duplicate names (including system folder names) cannot be created.
     with pytest.raises(ValueError):
-        add_video_character_folder(project_dir, name="第一集素材")
+        add_video_character_folder(project_dir, name="Episode 1 assets")
     with pytest.raises(ValueError):
-        add_video_character_folder(project_dir, name="待分类资产")
+        add_video_character_folder(project_dir, name="Unsorted assets")
     with pytest.raises(ValueError):
         add_video_character_folder(project_dir, name="x" * 21)
 
-    # 主线同步不会把用户挪好的位置冲掉。
+    # Mainline sync does not wash out positions the user has arranged.
     sync_mainline_assets_into_library(
         project_dir,
         assets=[
             {
-                "id": "mainline:scene:厨房",
-                "name": "厨房",
+                "id": "mainline:scene:kitchen",
+                "name": "Kitchen",
                 "media": "image",
                 "source": "scene",
                 "url": "/static/kitchen.png",
             },
             {
                 "id": filed["id"],
-                "name": "女主定妆",
+                "name": "Heroine look test",
                 "media": "image",
                 "source": "upload",
                 "url": "/static/c.png",
@@ -234,41 +234,41 @@ def test_video_character_library_folder(tmp_path: Path) -> None:
         ],
     )
     items = {str(it["id"]): it for it in load_video_character_library(project_dir)}
-    assert items["mainline:scene:厨房"]["folder"] == "mainline"
+    assert items["mainline:scene:kitchen"]["folder"] == "mainline"
     assert items[filed["id"]]["folder"] == folder["id"]
 
 
 def test_video_character_folder_update_and_delete(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
-    folder = add_video_character_folder(project_dir, name="第一集素材")
-    other = add_video_character_folder(project_dir, name="第二集素材")
+    folder = add_video_character_folder(project_dir, name="Episode 1 assets")
+    other = add_video_character_folder(project_dir, name="Episode 2 assets")
 
-    # 改名 / 换封面互不影响：只传一个字段时另一个原样保留。
-    renamed = update_video_character_folder(project_dir, folder["id"], name="第一集")
-    assert renamed is not None and renamed["name"] == "第一集"
+    # Renaming / changing the cover do not affect each other: when only one field is passed, the other is kept as is.
+    renamed = update_video_character_folder(project_dir, folder["id"], name="Episode 1")
+    assert renamed is not None and renamed["name"] == "Episode 1"
     covered = update_video_character_folder(
         project_dir, folder["id"], cover="/static/c.png"
     )
     assert covered is not None
     assert covered["cover"] == "/static/c.png"
-    assert covered["name"] == "第一集"
+    assert covered["name"] == "Episode 1"
 
-    # 改名走的是和新建同一套校验；改成自己现在的名字不算重名。
-    assert update_video_character_folder(project_dir, folder["id"], name="第一集")
+    # Renaming goes through the same validation as creation; changing to its own current name does not count as a duplicate.
+    assert update_video_character_folder(project_dir, folder["id"], name="Episode 1")
     with pytest.raises(ValueError):
-        update_video_character_folder(project_dir, folder["id"], name="第二集素材")
+        update_video_character_folder(project_dir, folder["id"], name="Episode 2 assets")
     with pytest.raises(ValueError):
-        update_video_character_folder(project_dir, folder["id"], name="主线")
-    assert update_video_character_folder(project_dir, "nope", name="随便") is None
+        update_video_character_folder(project_dir, folder["id"], name="Mainline")
+    assert update_video_character_folder(project_dir, "nope", name="whatever") is None
 
     inside = add_video_character_library_item(
-        project_dir, name="女主定妆", image_urls=["/static/c.png"], folder=folder["id"]
+        project_dir, name="Heroine look test", image_urls=["/static/c.png"], folder=folder["id"]
     )
     outside = add_video_character_library_item(
-        project_dir, name="路人", image_urls=["/static/d.png"], folder=other["id"]
+        project_dir, name="Passerby", image_urls=["/static/d.png"], folder=other["id"]
     )
 
-    # 整柜清空：文件夹和里面的素材一起没，别的文件夹不受牵连。
+    # Emptying the whole cabinet: the folder and the assets inside it go together, and other folders are unaffected.
     assert delete_video_character_folder(project_dir, folder["id"]) == 1
     assert folder["id"] not in library_folder_keys(project_dir)
     remaining = {str(it["id"]) for it in load_video_character_library(project_dir)}
@@ -286,24 +286,24 @@ def test_video_ratio_and_resolution_normalization() -> None:
 
 def test_build_freezone_omni_video_prompt_includes_theme() -> None:
     prompt = build_freezone_omni_video_prompt(
-        user_prompt="雨夜中老人躺在病床上，年轻男子伸手整理氧气管。",
-        theme="压抑、克制、纪实感",
+        user_prompt="On a rainy night an old man lies in a hospital bed, and a young man reaches out to adjust the oxygen tube.",
+        theme="Oppressive, restrained, documentary feel",
         camera_template_id="orbit_up",
-        marks=[{"label": "氧气管", "point_x": 0.7, "point_y": 0.6}],
+        marks=[{"label": "oxygen tube", "point_x": 0.7, "point_y": 0.6}],
     )
 
-    assert "压抑、克制、纪实感" in prompt
-    assert "盘旋抬升" in prompt
-    assert "氧气管" in prompt
+    assert "Oppressive, restrained, documentary feel" in prompt
+    assert "Orbit and rise" in prompt
+    assert "oxygen tube" in prompt
 
 
 def test_build_freezone_omni_video_prompt_marks_single_video_as_reference() -> None:
     prompt = build_freezone_omni_video_prompt(
-        user_prompt="参考人物动作，生成新的镜头。",
+        user_prompt="Reference the character's actions to generate a new shot.",
         reference_items=[{"type": "video", "path": "/tmp/reference.mp4"}],
     )
 
-    assert prompt.count("这是视频参考生成新的视频，不是视频编辑。") == 1
+    assert prompt.count("This is generating a new video from a video reference, not video editing.") == 1
 
 
 @pytest.mark.parametrize(
@@ -319,66 +319,66 @@ def test_build_freezone_omni_video_prompt_does_not_mark_other_inputs(
     reference_items: list[dict[str, str]],
 ) -> None:
     prompt = build_freezone_omni_video_prompt(
-        user_prompt="参考素材生成新的镜头。",
+        user_prompt="Generate a new shot from the reference assets.",
         reference_items=reference_items,
     )
 
-    assert "这是视频参考生成新的视频，不是视频编辑。" not in prompt
+    assert "This is generating a new video from a video reference, not video editing." not in prompt
 
 
 def test_build_freezone_image_to_video_prompt_uses_image_reference_semantics() -> None:
     prompt = build_freezone_image_to_video_prompt(
-        user_prompt="老人缓慢抬眼，呼吸微弱。",
+        user_prompt="The old man slowly raises his eyes, his breathing faint.",
         camera_template_id="pedestal_up",
-        marks=[{"label": "老人", "point_x": 0.15, "point_y": 0.45, "note": "主体"}],
+        marks=[{"label": "old man", "point_x": 0.15, "point_y": 0.45, "note": "main subject"}],
     )
 
-    assert "老人缓慢抬眼" in prompt
-    assert "镜头上升" in prompt
-    assert "老人" in prompt
-    assert "主体" in prompt
-    assert "图片参考约束" in prompt
-    assert "不要强制把输入图片锁定为视频第一帧" in prompt
-    assert "首帧约束" not in prompt
+    assert "The old man slowly raises his eyes" in prompt
+    assert "Pedestal up" in prompt
+    assert "old man" in prompt
+    assert "main subject" in prompt
+    assert "Image reference constraint" in prompt
+    assert "do not force the input image to be locked as the first frame of the video" in prompt
+    assert "First frame constraint" not in prompt
 
 
 def test_build_freezone_image_to_video_prompt_supports_multi_image_references() -> None:
     prompt = build_freezone_image_to_video_prompt(
-        user_prompt="老人微微抬头，保持病房压抑氛围。",
+        user_prompt="The old man lifts his head slightly, keeping the oppressive atmosphere of the ward.",
         camera_template_id="follow_tracking",
         reference_image_count=3,
     )
 
-    assert "图片参考约束" in prompt
-    assert "多张输入图片" in prompt
-    assert "跟随拍摄" in prompt
+    assert "Image reference constraint" in prompt
+    assert "multiple input images" in prompt
+    assert "Follow shot" in prompt
 
 
 def test_build_freezone_image_to_video_prompt_supports_box_marks() -> None:
     prompt = build_freezone_image_to_video_prompt(
-        user_prompt="老人微微转头。",
+        user_prompt="The old man turns his head slightly.",
         camera_template_id="locked_off",
-        marks=[{"label": "老人", "box_x": 0.05, "box_y": 0.2, "box_width": 0.3, "box_height": 0.5}],
+        marks=[{"label": "old man", "box_x": 0.05, "box_y": 0.2, "box_width": 0.3, "box_height": 0.5}],
     )
 
-    assert "重点元素标记" in prompt
-    assert "老人" in prompt
-    assert "左侧中间" in prompt
+    assert "Key element marks" in prompt
+    assert "old man" in prompt
+    assert "middle left" in prompt
 
 
 def test_build_freezone_keyframe_video_prompt_handles_first_and_last_frame() -> None:
     prompt = build_freezone_keyframe_video_prompt(
-        user_prompt="老人抬眼后镜头缓慢推进到病床侧面。",
+        user_prompt="After the old man raises his eyes, the camera slowly pushes in to the side of the hospital bed.",
         camera_template_id="pedestal_up",
-        marks=[{"label": "老人", "point_x": 0.4, "point_y": 0.4}],
+        marks=[{"label": "old man", "point_x": 0.4, "point_y": 0.4}],
         has_first_frame=True,
         has_last_frame=True,
     )
 
-    assert "老人抬眼后镜头缓慢推进到病床侧面" in prompt
-    assert "镜头上升" in prompt
-    assert "首尾帧约束" in prompt
-    assert "老人" in prompt
+    assert "After the old man raises his eyes, the camera slowly pushes in to the side of the hospital bed" in prompt
+    assert "Pedestal up" in prompt
+    assert "First/last frame constraint" in prompt
+    assert "old man" in prompt
 
 
 def test_video_model_options_and_resolution_work() -> None:
@@ -503,7 +503,6 @@ def test_resolve_freezone_video_backend_accepts_id_and_label() -> None:
     assert resolve_freezone_video_backend("Seedance1.5 Pro") == "newapi_seedance-1.5-pro"
     assert resolve_freezone_video_backend("huimeng_seedance20_fast") == "newapi_seedance-2.0-fast"
     assert resolve_freezone_video_backend("seedance_fast") == "newapi_seedance-1.0-pro-fast"
-    assert resolve_freezone_video_backend("Seedance 1.5 有声") == "newapi_seedance-1.5-pro"
     assert resolve_freezone_video_backend(None) == "newapi_seedance-2.0-fast"
 
 
@@ -560,7 +559,7 @@ async def test_freezone_video_gen_allows_newapi_seedance2_text_to_video(
     out = await run_freezone_video_gen(
         project_dir=tmp_path,
         job_id="job_newapi_t2v",
-        prompt="雨夜街头，镜头缓慢推进",
+        prompt="A rainy night street, the camera slowly pushes in",
         reference_items=[],
         backend="newapi_seedance-2.0-fast",
     )
@@ -595,7 +594,7 @@ async def test_freezone_video_gen_allows_newapi_fast_text_to_video(monkeypatch, 
     out = await run_freezone_video_gen(
         project_dir=tmp_path,
         job_id="job_newapi_fast_t2v",
-        prompt="雨夜街头，镜头缓慢推进",
+        prompt="A rainy night street, the camera slowly pushes in",
         reference_items=[],
         backend="newapi_seedance-1.0-pro-fast",
     )
@@ -630,8 +629,8 @@ async def test_freezone_keyframe_tail_only_does_not_promote_tail_to_first_frame(
     await run_freezone_video_gen(
         project_dir=tmp_path,
         job_id="job_tail_only",
-        prompt="最终停在目标构图",
-        reference_items=[{"type": "image", "path": str(tail_path), "role": "尾帧"}],
+        prompt="Finally settle on the target composition",
+        reference_items=[{"type": "image", "path": str(tail_path), "role": "last frame"}],
         backend="newapi_seedance-2.0",
         last_frame_path=str(tail_path),
         gen_mode="first_last_frame",
@@ -671,9 +670,9 @@ def test_huimeng_multimodal_reference_params_support_images_videos_and_audio(
     generator = object.__new__(HuimengVideoGenerator)
     params, counts = generator._build_reference_params(
         [
-            ShotReference("image", str(image_path), "角色参考"),
-            ShotReference("video", str(video_path), "动作参考"),
-            ShotReference("audio", str(audio_path), "音频参考"),
+            ShotReference("image", str(image_path), "character reference"),
+            ShotReference("video", str(video_path), "motion reference"),
+            ShotReference("audio", str(audio_path), "audio reference"),
         ],
         log=lambda _msg: None,
     )
@@ -754,13 +753,13 @@ def test_validate_omni_reference_limits_and_summary() -> None:
 
 
 def test_validate_omni_reference_audio_durations_per_clip_bounds() -> None:
-    # 厂商逐条口径：1.8s ≤ 时长 ≤ 15.2s，两端都是闭区间。
+    # Vendor per-item rule: 1.8s <= duration <= 15.2s, with both ends closed.
     validate_omni_reference_audio_durations([("a.wav", 1.8)])
     validate_omni_reference_audio_durations([("a.wav", 15.2)])
 
     with pytest.raises(ValueError, match=r"must be >= 1\.8s") as short_exc:
         validate_omni_reference_audio_durations([("ok.wav", 5.0), ("tiny.wav", 0.9)])
-    # 只点名越界的那条，别把合规的也列进去让用户猜。
+    # Name only the out-of-range one, and do not list the compliant ones too and make the user guess.
     assert "tiny.wav (0.9s)" in str(short_exc.value)
     assert "ok.wav" not in str(short_exc.value)
 
@@ -769,10 +768,10 @@ def test_validate_omni_reference_audio_durations_per_clip_bounds() -> None:
 
 
 def test_validate_omni_reference_audio_durations_total_bound() -> None:
-    """3 条各 6s：逐条全合规，总计 18s —— 2026-08-06 3060 两次任务就死在这。
+    """3 items of 6s each: every one is compliant, but the total is 18s -- the two 2026-08-06 3060 tasks died exactly here.
 
-    厂商报文：`audio total duration (seconds) ... must be less than or equal to 15.2
-    for model doubao-seedance-2-0 in r2v`。别把这条当成多余的本地规则删掉。
+    Vendor message: `audio total duration (seconds) ... must be less than or equal to 15.2
+    for model doubao-seedance-2-0 in r2v`. Do not delete this as a redundant local rule.
     """
     with pytest.raises(ValueError, match="total duration must be <= 15.2s") as exc:
         validate_omni_reference_audio_durations(
@@ -780,18 +779,18 @@ def test_validate_omni_reference_audio_durations_total_bound() -> None:
         )
     assert "got 18s" in str(exc.value)
 
-    # 顶格 15.2s 必须放行：浮点和会漂到 15.200000000000001，裸比较会误拦。
+    # Exactly 15.2s must be let through: the floating-point sum drifts to 15.200000000000001, and a bare comparison would block it by mistake.
     validate_omni_reference_audio_durations(
         [("a.wav", 6.0), ("b.wav", 6.0), ("c.wav", 3.2)]
     )
-    # 单条顶格同样不能被总和这条误伤（兜底上限与单条上限同值）。
+    # A single item at the cap likewise must not be hit by the total rule (the fallback cap equals the per-item cap).
     validate_omni_reference_audio_durations([("a.wav", 15.2)])
 
-    # 单条越界优先上报：先换掉那条，再谈整体裁剪。
+    # A per-item out-of-range is reported first: replace that one before talking about trimming the whole.
     with pytest.raises(ValueError, match="must be <= 15.2s"):
         validate_omni_reference_audio_durations([("a.wav", 20.0), ("b.wav", 6.0)])
 
-    # 上限走传入值（后台 referenceAudioTotalMaxSeconds）。
+    # The cap uses the passed-in value (the admin-side referenceAudioTotalMaxSeconds).
     validate_omni_reference_audio_durations(
         [("a.wav", 6.0), ("b.wav", 6.0)], total_max_seconds=30.0
     )
@@ -802,13 +801,13 @@ def test_validate_omni_reference_audio_durations_total_bound() -> None:
 
 
 def test_validate_omni_reference_audio_durations_skips_unmeasured() -> None:
-    """探测不出的条目不参与判定——漏算只会让和更小，不会因此误拦。"""
+    """Entries that cannot be probed do not take part in the judgment -- an omission can only make the sum smaller and cannot cause a false block."""
     validate_omni_reference_audio_durations([("unknown.wav", None)])
     validate_omni_reference_audio_durations(
         [("a.wav", 6.0), ("unknown.wav", None), ("c.wav", 6.0)]
     )
     validate_omni_reference_audio_durations([])
-    # 0 / 负数是 ffprobe 的垃圾输出，同样按「测不出」处理，别当成一条 0s 的太短音频。
+    # 0 / negative values are garbage output of ffprobe and are likewise treated as "could not be probed", not as a too-short 0s audio.
     validate_omni_reference_audio_durations([("weird.wav", 0.0), ("neg.wav", -1.0)])
 
 
@@ -822,7 +821,7 @@ def test_validate_reference_duration_total_min_requires_complete_measurement() -
             total_max_seconds=None,
         )
 
-    # 有一条无法探测时，已知总和只是下界，不能据此误判低于总时长下限。
+    # When one item cannot be probed, the known sum is only a lower bound and must not be used to wrongly judge it below the total-duration minimum.
     validate_omni_reference_audio_durations(
         [("a.wav", 4.0), ("unknown.wav", None)],
         min_seconds=None,
@@ -853,7 +852,7 @@ def _write_png(path: Path, width: int, height: int) -> Path:
 def test_validate_omni_reference_image_dimensions_rejects_small_image(
     tmp_path: Path,
 ) -> None:
-    """3060 实例：338x191 的参考图被火山 HeightTooSmall 打回，要在入队前拦住。"""
+    """3060 instance: a 338x191 reference image was rejected by Volcengine with HeightTooSmall and must be blocked before enqueueing."""
     small = _write_png(tmp_path / "logo.png", 338, 191)
     ok = _write_png(tmp_path / "frame.png", 1280, 720)
 

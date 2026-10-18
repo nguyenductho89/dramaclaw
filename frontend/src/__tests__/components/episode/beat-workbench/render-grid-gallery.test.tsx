@@ -408,8 +408,8 @@ describe("RenderGridGallery", () => {
           project="demo"
           episode={1}
           beats={[
-            ...[1, 2, 3, 4, 5, 6].map((beat) => beatWithScene(beat, "地下室")),
-            ...[7, 8, 18, 19].map((beat) => beatWithScene(beat, "旧书店一楼")),
+            ...[1, 2, 3, 4, 5, 6].map((beat) => beatWithScene(beat, "Basement")),
+            ...[7, 8, 18, 19].map((beat) => beatWithScene(beat, "Old bookstore ground floor")),
           ]}
         />
       </I18nextProvider>,
@@ -458,7 +458,7 @@ describe("RenderGridGallery", () => {
     );
     const file = new File(["grid"], "grid.png", { type: "image/png" });
 
-    await user.upload(screen.getByLabelText("上传 grid"), file);
+    await user.upload(screen.getByLabelText("Upload grid"), file);
     expect(uploadGridMock).toHaveBeenCalledWith({
       gridIndex: 2,
       file,
@@ -467,7 +467,7 @@ describe("RenderGridGallery", () => {
       beatNumbers: [5, 6],
     });
 
-    await user.click(screen.getByRole("button", { name: "导出 prompt" }));
+    await user.click(screen.getByRole("button", { name: "Export prompt" }));
     expect(exportGridPromptMock).toHaveBeenCalledWith({
       gridIndex: 2,
       gridType: "render",

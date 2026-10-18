@@ -72,15 +72,15 @@ describe("ProjectStyleChip", () => {
         expect(new URL(request.url).searchParams.get("project")).toBe("demo");
         return HttpResponse.json({
           ok: true,
-          data: [{ id: "cyber_ink", name: "Cyber Ink", label: "赛博水墨" }],
+          data: [{ id: "cyber_ink", name: "Cyber Ink", label: "Cyber Ink" }],
         });
       }),
     );
 
     renderWithProviders(<ProjectStyleChip project="demo" />);
 
-    expect(await screen.findByText("赛博水墨")).toBeInTheDocument();
-    expect(screen.getByLabelText("赛博水墨")).toHaveAttribute(
+    expect(await screen.findByText("Cyber Ink")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cyber Ink")).toHaveAttribute(
       "title",
       "Configure the project style on the import page",
     );
@@ -101,7 +101,7 @@ describe("ProjectStyleChip", () => {
 
     renderWithProviders(<ProjectStyleChip project="demo" />);
 
-    expect(await screen.findByText("中式古装剧")).toBeInTheDocument();
+    expect(await screen.findByText("Chinese period drama")).toBeInTheDocument();
   });
 
   it("falls back to the built-in guoman fantasy label when styles are not loaded", async () => {

@@ -84,7 +84,7 @@ EPISODE_HEADER_RE = re.compile(
     re.IGNORECASE,
 )
 SCENE_MARKER_RE = re.compile(
-    rf"^{SCENE_WORD}\s*[:.]?\s*(?P<scene_no>\d+[A-Za-z]?)"
+    rf"^{SCENE_WORD}\s*[:.]?\s*\(?(?P<scene_no>\d+[A-Za-z]?)\)?"
     r"(?:\s*[:.\-–—]\s*(?P<title>.*))?\s*$",
     re.IGNORECASE,
 )
@@ -146,12 +146,14 @@ SIMPLE_LOCATION_RE = re.compile(
     rf"|(?P<interior_first>{INT_EXT_TOKEN_RE})[\s,]+(?P<time_last>{TIME_TOKEN_RE}))$"
 )
 INTERNATIONAL_SCENE_RE = re.compile(
-    r"^(?P<intro>(?i:I/E|INT\.?/EXT|INTERIOR|EXTERIOR|INT|EXT|EST)|NỘI|NGOẠI)\.?\s+"
+    r"^(?P<intro>(?i:I/E|INT\.?/EXT|INT|EXT|EST)|NỘI|NGOẠI)\.?\s+"
     r"(?P<location>.+?)\s*[-–—]\s*"
     rf"(?P<time>{TIME_TOKEN_RE})"
     r"(?:\s+#[A-Za-z0-9.\-]+#)?$"
 )
 SPEAKER_LINE_RE = re.compile(r"^[^\n:]{1,24}:.+$")
+# Lines that open with these markers are action / shot lines, never scene headings.
+ACTION_LINE_PREFIXES = ("△", "▲", "[")
 
 
 @dataclass
@@ -342,7 +344,7 @@ def parse_scene_blocks(text_or_lines: str | list[str]) -> list[ParsedSceneBlock]
         if labeled_time and current.header_line and (collecting_header or not current.lines):
             time_hint = (labeled_time.group("time") or "").strip()
             if _is_time_hint(time_hint):
-                current.time_of_day = normalize_time_of_day(time_hint)
+                current.time_of_day = time_hint
                 current.time_inferred = False
             else:
                 current.lines.append(line)
@@ -554,7 +556,7 @@ def _apply_inline_location(
     descriptive_time = DESCRIPTIVE_TIME_RE.fullmatch(text)
     if descriptive_time:
         block.location = (descriptive_time.group("location") or "").strip()
-        block.time_of_day = normalize_time_of_day(descriptive_time.group("time") or "")
+        block.time_of_day = (descriptive_time.group("time") or "").strip()
         block.time_inferred = False
         return
     block.location = text
@@ -593,7 +595,7 @@ def _looks_like_partial_location(text: str) -> bool:
     candidate = (text or "").strip()
     if not candidate or len(candidate) > 60:
         return False
-    if SPEAKER_LINE_RE.match(candidate) or candidate.startswith("["):
+    if SPEAKER_LINE_RE.match(candidate) or candidate.startswith(ACTION_LINE_PREFIXES):
         return False
     if candidate.endswith((".", "!", "?")):
         return False
@@ -621,7 +623,7 @@ def _looks_like_content_line(line: str) -> bool:
     stripped = (line or "").strip()
     if not stripped:
         return False
-    if stripped.startswith("["):
+    if stripped.startswith(ACTION_LINE_PREFIXES):
         return True
     return bool(SPEAKER_LINE_RE.match(stripped))
 

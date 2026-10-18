@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 视频生成的计费契约——**行为断言**，不是源码 grep。
+// Billing contract of video generation — **behavioral assertions**, not source grep.
 //
-// 询价与提交禁用条件住在 `useVideoGenerationForm` 里，工作流的 VideoNode 和故事板
-// 的 AssetBoardVideoGenForm 都挂它，所以对着 hook 断言就同时覆盖了两个视图。这份
-// 文件取代了原来 readFileSync + toContain 的版本：那种写法在重构把代码搬进新文件
-// 后，只要字符串跟着搬过去就照样「通过」，验证力为零。
+// Quote and submit-disabled conditions live in `useVideoGenerationForm`, and the workflow VideoNode and the storyboard
+// AssetBoardVideoGenForm both mount it, so asserting against the hook covers both views at once. This
+// file replaces the old readFileSync + toContain version: after a refactor moved the code into a new file,
+// that style still "passed" as long as the string moved along, with zero verification power.
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,7 +33,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-// 只替换 hook，保留真的 BillingRuleNotConfiguredError —— 断言依赖 instanceof。
+// Replace only the hook, keeping the real BillingRuleNotConfiguredError — the assertions depend on instanceof.
 vi.mock("@/lib/queries/generation-credit-cost", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/queries/generation-credit-cost")>()),
   useGenerationCreditCost: vi.fn(() => ({ data: undefined, error: null })),
@@ -51,7 +51,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-video",
       providerId: "huimeng",
       apiModel: "test_video_api",
-      label: "测试视频模型",
+      label: "Test video model",
       catalogId: "catalog-1",
     },
   ]),
@@ -72,7 +72,7 @@ function videoNode(data: Record<string, unknown> = {}): CanvasNode {
     type: CANVAS_NODE_TYPES.video,
     position: { x: 0, y: 0 },
     data: {
-      prompt: "一只猫跳上桌子",
+      prompt: "A cat jumps onto the table",
       modelId: "huimeng/test-video",
       genMode: "textToVideo",
       ...data,
@@ -84,7 +84,7 @@ function seed(data: Record<string, unknown> = {}) {
   useCanvasStore.getState().setCanvasData([videoNode(data)], []);
 }
 
-/** 询价 hook 最近一次的 (value, options)。 */
+/** The most recent (value, options) of the quote hook. */
 function latestProbe() {
   const calls = vi.mocked(useGenerationCreditCost).mock.calls;
   const featureCalls = calls.filter((call) => call[1] === VIDEO_GENERATE_FEATURE_KEY);
@@ -122,7 +122,7 @@ describe("canvas video generation credit contract", () => {
         catalog_id: "catalog-1",
         video_backend: "test_video_api",
         operation: "textToVideo",
-        // 视频按「条数 × 时长」计价，不是按条数。
+        // Video is priced by "count × duration", not by count.
         pricing_quantity: 2 * 5,
         video_input_present: false,
         input_video_duration_seconds: 0,
@@ -146,22 +146,22 @@ describe("canvas video generation credit contract", () => {
     await result.current.submit();
 
     expect(submitFreezoneVideoGen).not.toHaveBeenCalled();
-    expect(String(nodeData().generationError)).toContain("计费规则未配置");
+    expect(String(nodeData().generationError)).toContain("billing rules are not configured");
     expect(nodeData().generationErrorDetails).toBe(nodeData().generationError);
     expect(nodeData().isGenerating).toBe(false);
   });
 
   it("gates the error-state regenerate path on the billing rule too", async () => {
-    // 失败横幅上的重试按钮是节点未选中时唯一还能提交的入口，它的 disabled 接的
-    // 就是 submitDisabled（VideoNode.tsx），handleSubmit 开头也再拦一道。
+    // The retry button on the failure banner is the only entry that can still submit while the node is unselected, and its disabled is wired
+    // to submitDisabled (VideoNode.tsx); handleSubmit also blocks once more at the start.
     vi.mocked(useGenerationCreditCost).mockReturnValue({
       data: undefined,
       error: new BillingRuleNotConfiguredError("no rule", 409),
     } as unknown as ReturnType<typeof useGenerationCreditCost>);
-    seed({ generationError: "上游服务超时", isGenerating: false });
+    seed({ generationError: "Upstream service timed out", isGenerating: false });
 
     const { result } = renderHook(() =>
-      // 未选中 —— 宿主关掉了常规询价，失败态仍须拿到 billing 闸门。
+      // Unselected — the host turned off regular quoting, and the failure state must still get the billing gate.
       useVideoGenerationForm("vid-1", { costProbeEnabled: false }),
     );
 

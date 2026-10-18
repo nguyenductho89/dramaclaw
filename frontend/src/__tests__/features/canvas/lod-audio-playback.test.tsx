@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 回归：播放中的音频节点不能被低缩放档的 shell 换掉。
+ * Regression: a playing audio node must not be swapped out by the low-zoom tier's shell.
  *
- * 音频节点不在 LOD_SHELL_EXEMPT_TYPES 里，播放态又是 AudioWaveformPlayer 的组件
- * 内部 state，shell 决策（withLodShell）在组件外层读不到。播放按钮还会
- * stopPropagation，节点不会被选中，也就吃不到「选中豁免」。三者叠加的结果是：
- * 未选中状态点播放 → 缩小过阈值 → <audio> 随组件卸载 → 播放中断且进度归零。
+ * The audio node is not in LOD_SHELL_EXEMPT_TYPES, the playing state is internal component state of AudioWaveformPlayer,
+ * and the shell decision (withLodShell) outside the component cannot read it. The play button also
+ * stopPropagation, so the node is not selected and gets no "selection exemption". Stacked together: click play while
+ * unselected → zoom out past the threshold → <audio> unmounts with the component → playback is interrupted and progress resets to zero.
  *
- * 这里锁两件事：
- *   1. 播放器把播放态抛给了调用方（AudioNode 据此写 setNodeMediaActive）；
- *   2. media 活跃的节点跨阈值时不换壳，且 DOM 实例是同一个（进度不会重置）。
+ * This locks two things:
+ *   1. The player reports the playing state to the caller (AudioNode writes setNodeMediaActive from it);
+ *   2. A node with active media is not re-shelled across the threshold, and the DOM instance is the same one (progress does not reset).
  */
 import { render, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,7 +22,7 @@ import {
   setNodeMediaActive,
 } from '@/features/canvas/application/canvasLod';
 
-// ---- @xyflow/react：只需要 useStore 能读到 transform[2]，Handle 渲染成空节点 ----
+// ---- @xyflow/react: only useStore needs to read transform[2], and Handle renders as an empty node ----
 let currentZoom = 1;
 vi.mock('@xyflow/react', () => ({
   Handle: () => null,
@@ -31,7 +31,7 @@ vi.mock('@xyflow/react', () => ({
     selector({ transform: [0, 0, currentZoom] }),
 }));
 
-// 画布 store：这些用例里节点始终不被选中（正是播放按钮 stopPropagation 的后果）。
+// Canvas store: in these cases the node is never selected (exactly the consequence of the play button's stopPropagation).
 vi.mock('@/stores/canvasStore', () => ({
   useCanvasStore: (selector: (state: { selectedNodeId: string | null }) => unknown) =>
     selector({ selectedNodeId: null }),
@@ -67,10 +67,10 @@ function renderAudioNode() {
   );
 }
 
-describe('AudioWaveformPlayer 播放态外抛', () => {
+describe('AudioWaveformPlayer reports its playing state outward', () => {
   beforeEach(() => {
-    // jsdom 没有 ResizeObserver / canvas 2d / AudioContext，波形那条线在这些
-    // 用例里不是关注点，给足最小桩让组件挂得起来即可。
+    // jsdom has no ResizeObserver / canvas 2d / AudioContext, and the waveform line is not the focus
+    // of these cases; a minimal stub that lets the component mount is enough.
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -89,21 +89,21 @@ describe('AudioWaveformPlayer 播放态外抛', () => {
     vi.restoreAllMocks();
   });
 
-  it('播放/暂停都会通知调用方', async () => {
+  it('notifies the caller on both play and pause', async () => {
     const onPlayingChange = vi.fn();
     const { container } = render(
       <AudioWaveformPlayer src="blob:audio" onPlayingChange={onPlayingChange} />,
     );
-    // 挂载时先同步一次「未播放」。
+    // Sync "not playing" once on mount.
     expect(onPlayingChange).toHaveBeenLastCalledWith(false);
 
     const audio = container.querySelector('audio');
     expect(audio).not.toBeNull();
 
-    // jsdom 不实现 play()，直接驱动组件监听的 pause/ended 事件与播放入口。
+    // jsdom does not implement play(), so drive the pause/ended events the component listens to and the play entry directly.
     const playButton = container.querySelector('button[aria-label="play"]');
     expect(playButton).not.toBeNull();
-    // jsdom 的 paused 恒为 true，togglePlay 会走 play() 分支。
+    // jsdom's paused is always true, so togglePlay takes the play() branch.
     await act(async () => {
       (playButton as HTMLButtonElement).click();
     });
@@ -115,7 +115,7 @@ describe('AudioWaveformPlayer 播放态外抛', () => {
     expect(onPlayingChange).toHaveBeenLastCalledWith(false);
   });
 
-  it('播放中被卸载时补发 false —— <audio> 卸载不会派发 pause 事件', async () => {
+  it('emits false when unmounted while playing — <audio> unmount does not dispatch a pause event', async () => {
     const onPlayingChange = vi.fn();
     const { container, unmount } = render(
       <AudioWaveformPlayer src="blob:audio" onPlayingChange={onPlayingChange} />,
@@ -131,7 +131,7 @@ describe('AudioWaveformPlayer 播放态外抛', () => {
   });
 });
 
-describe('播放中的音频节点跨低缩放档不换壳', () => {
+describe('a playing audio node is not re-shelled across the low-zoom tier', () => {
   beforeEach(() => {
     currentZoom = 1;
     setCanvasGestureActive(false);
@@ -143,7 +143,7 @@ describe('播放中的音频节点跨低缩放档不换壳', () => {
     vi.restoreAllMocks();
   });
 
-  it('没在播放时，缩到阈值以下会换成 shell（对照组）', () => {
+  it('when not playing, zooming below the threshold swaps to the shell (control group)', () => {
     const { queryByTestId, rerender } = renderAudioNode();
     expect(queryByTestId('full-audio-node')).not.toBeNull();
 
@@ -165,12 +165,12 @@ describe('播放中的音频节点跨低缩放档不换壳', () => {
     expect(queryByTestId('full-audio-node')).toBeNull();
   });
 
-  it('播放中缩到阈值以下仍保留完整组件，且 DOM 实例没被重建（进度不丢）', () => {
+  it('while playing, zooming below the threshold keeps the full component, and the DOM instance is not rebuilt (progress is not lost)', () => {
     const { queryByTestId, rerender } = renderAudioNode();
     const before = queryByTestId('full-audio-node');
     expect(before).not.toBeNull();
 
-    // 未选中状态下点播放：AudioNode 把播放态写进模块级注册表。
+    // Click play while unselected: AudioNode writes the playing state into the module-level registry.
     setNodeMediaActive(NODE_ID, true);
     expect(isNodeMediaActive(NODE_ID)).toBe(true);
 
@@ -192,7 +192,7 @@ describe('播放中的音频节点跨低缩放档不换壳', () => {
 
     const after = queryByTestId('full-audio-node');
     expect(after).not.toBeNull();
-    // 同一个 DOM 节点 —— 组件没卸载重挂，<audio> 的 currentTime 自然还在。
+    // The same DOM node — the component was not unmounted and remounted, so the <audio>'s currentTime is naturally still there.
     expect(after).toBe(before);
   });
 });

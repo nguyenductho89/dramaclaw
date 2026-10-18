@@ -26,7 +26,7 @@ beforeAll(async () => {
             billingRuleNotConfiguredShort: "Configure",
           },
           episode: {
-            script: { identityRequired: "需要身份规划" },
+            script: { identityRequired: "Identity planning required" },
             workbench: {
               batch: {
                 rewriteScript: "Rewrite all scripts",
@@ -51,7 +51,7 @@ beforeAll(async () => {
                 reassignColorsTitle: "Reassign sketch colors?",
                 reassignColorsDesc: "Reassign sketch colors?",
                 reassignColorsSuccess:
-                  "已分配 {{count}} 个身份、{{propCount}} props",
+                  "Assigned {{count}} identities, {{propCount}} props",
                 insertManualBeforeFirst: "Before first shot",
                 insertManualBeforeFirstTooltip: "Before first shot",
                 genMissingManualTitle: "Fill missing sketches?",
@@ -98,7 +98,7 @@ beforeAll(async () => {
             renderSettings: {
               model: "Model",
               modelPlaceholder: "Choose",
-              sketchAspectPadding: "草图适配",
+              sketchAspectPadding: "Sketch fit",
             },
             sketchSettings: {
               model: "Sketch model",
@@ -341,7 +341,7 @@ beforeEach(() => {
       total_beats: 3,
       total_identities: 2,
       total_props: 1,
-      review_message: "后端核对提示",
+      review_message: "Backend review hint",
     },
   });
   generateMissingManualMock.mockReset();
@@ -411,7 +411,7 @@ describe("BatchBar", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "重写脚本" }),
+      screen.queryByRole("button", { name: "Rewrite script" }),
     ).not.toBeInTheDocument();
   });
 
@@ -447,7 +447,7 @@ describe("BatchBar", () => {
     );
 
     expect(screen.queryByRole("button", { name: "All renders" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "规划渲染" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Plan render" })).not.toBeInTheDocument();
   });
 
   it("does not expose the 0.5K render setting", () => {
@@ -468,7 +468,7 @@ describe("BatchBar", () => {
   });
 
   it("hides whole-beat video prompt generation from the batch toolbar", () => {
-    // 解说片 (narrated) 是这个入口原先唯一露头的地方，现在也不给了。
+    // The narrated drama (narrated) used to be the only place this entry showed up, and now it is not offered there either.
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
         <BatchBar
@@ -521,7 +521,7 @@ describe("BatchBar", () => {
     );
 
     expect(screen.queryByText("Video model")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "补生成草图" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fill in missing sketches" })).not.toBeInTheDocument();
   });
 
   it.each([
@@ -570,7 +570,7 @@ describe("BatchBar", () => {
 
     expect(detectIdentitiesMock).toHaveBeenCalledTimes(1);
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "AI 检测完成：3 个 beat，共 2 个身份、1 个道具\n后端核对提示",
+      "AI detect done: 3 beats, 2 identities, 1 props\nBackend review hint",
       { id: "toast-1" },
     );
 
@@ -579,7 +579,7 @@ describe("BatchBar", () => {
 
     expect(assignColorsMock).toHaveBeenCalledWith({ force: true });
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "已分配 1 个身份、2 props",
+      "Assigned 1 identities, 2 props",
     );
   });
 

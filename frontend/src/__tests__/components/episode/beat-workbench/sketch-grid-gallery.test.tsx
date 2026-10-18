@@ -586,7 +586,7 @@ describe("SketchGridGallery", () => {
     expect(screen.queryByRole("button", { name: "Cut to pool" })).not.toBeInTheDocument();
     expect(cutGridMock).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "导出 prompt" }));
+    await user.click(screen.getByRole("button", { name: "Export prompt" }));
     expect(exportGridPromptMock).toHaveBeenCalledWith({
       gridIndex: 4,
       gridType: "sketch",

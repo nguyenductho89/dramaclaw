@@ -13,7 +13,7 @@ import {
   hasDirectorWorldSceneState,
   nodeDataAfterDirectorWorldSourceSlotCommit,
 } from "@/features/freezone/commit/sceneDirectorWorldCommit";
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 vi.mock("@/api/viewerManifests", () => ({
   clearSceneDirectorWorld: vi.fn(async () => ({ active_source_id: "" })),
@@ -96,7 +96,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           { id: "pano", source_type: "pano360", source_kind: "pano", url: "/static/proj/director_worlds/公寓楼电梯间/v1/pano.jpg" },
         ],
       },
-      zhT,
+      enT,
     );
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog" },
         ],
       },
-      zhT,
+      enT,
     );
 
     expect(saveSceneDirectorWorld).toHaveBeenCalledTimes(1);
@@ -196,7 +196,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog" },
         ],
       },
-      zhT,
+      enT,
     )).rejects.toThrow("save failed");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
@@ -223,7 +223,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      zhT,
+      enT,
     )).rejects.toThrow("先把当前世界来源提交到主线槽位");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
@@ -251,7 +251,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      zhT,
+      enT,
     )).rejects.toThrow("先把当前世界来源提交到主线槽位");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
@@ -279,7 +279,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      zhT,
+      enT,
     )).rejects.toThrow("先把当前世界来源提交到主线槽位");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
@@ -330,7 +330,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         target_path: "director_worlds/公寓楼电梯间/v1/master.ply",
         target_url: "/static/admin/proj/director_worlds/公寓楼电梯间/v1/master.ply",
       },
-      zhT,
+      enT,
     );
 
     expect(originalNodeData.sources.find((source) => source.id === "custom-local")).toMatchObject({
@@ -343,7 +343,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       "proj",
       { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
       patchedData,
-      zhT,
+      enT,
     );
 
     expect(saveSceneDirectorWorld).toHaveBeenCalledTimes(1);
@@ -401,7 +401,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
         target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
       },
-      zhT,
+      enT,
     );
 
     expect(hasDirectorWorldSceneState(patchedData)).toBe(false);
@@ -467,7 +467,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      zhT,
+      enT,
       { pruneStale: false },
     );
 
@@ -522,7 +522,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         committed_source_id:
           "legacy:master:sog:/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
       },
-      zhT,
+      enT,
       { pruneStale: false },
     );
 
@@ -608,7 +608,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      zhT,
+      enT,
     );
 
     expect(saveSceneDirectorWorld).toHaveBeenCalledWith("proj", "Hall", expect.objectContaining({
@@ -649,7 +649,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
         target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123#frag",
       },
-      zhT,
+      enT,
     );
 
     expect(patchedData.activeSourceId).toBe("custom-local");
@@ -693,7 +693,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
         target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog",
       },
-      zhT,
+      enT,
     );
 
     expect(patchedData.mainline_context).toBeUndefined();

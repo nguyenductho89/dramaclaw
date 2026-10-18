@@ -9,12 +9,12 @@ import {
 } from "@/components/episode/beat-workbench/mention-textarea";
 
 describe("findMentionTokenAtSelection", () => {
-  const text = "参考 @图片1 收尾"; // @图片1 在 [3,7)
-  const labels = ["Image 片1", "Image 片2"];
+  const text = "See @image1 end"; // @image1 is at [4,11)
+  const labels = ["image1", "image2"];
 
   it("finds the mention token overlapping the double-click selection", () => {
-    const hit = findMentionTokenAtSelection(text, labels, 4, 6);
-    expect(hit).toEqual({ start: 3, end: 7, label: "Image 片1" });
+    const hit = findMentionTokenAtSelection(text, labels, 5, 7);
+    expect(hit).toEqual({ start: 4, end: 11, label: "image1" });
   });
 
   it("returns null on plain text", () => {
@@ -22,52 +22,52 @@ describe("findMentionTokenAtSelection", () => {
   });
 
   it("returns null when no labels are known", () => {
-    expect(findMentionTokenAtSelection(text, [], 4, 6)).toBeNull();
+    expect(findMentionTokenAtSelection(text, [], 5, 7)).toBeNull();
   });
 });
 
-describe("MentionTextarea — 双击替换引用", () => {
+describe("MentionTextarea - double-click to replace a reference", () => {
   it("double-clicking a mention opens the picker and replaces it in place", () => {
     const onChange = vi.fn();
     const { container, getByRole } = render(
       <MentionTextarea
-        value="参考 @图片1 收尾"
-        mentionLabels={["Image 片1", "Image 片2"]}
+        value="See @image1 end"
+        mentionLabels={["image1", "image2"]}
         onChange={onChange}
       />,
     );
 
     const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
-    textarea.setSelectionRange(4, 6); // 选区落在 @图片1 上
+    textarea.setSelectionRange(5, 7); // the selection lands on @image1
     fireEvent.doubleClick(textarea);
 
-    // 替换态 picker 出现，列出全部候选。
+    // The replace-mode picker appears, listing all candidates.
     const listbox = getByRole("listbox");
     expect(listbox).toBeTruthy();
 
-    // 选「图片2」替换。
+    // Pick "image2" to replace.
     const option = Array.from(listbox.querySelectorAll("button")).find(
-      (b) => b.textContent === "Image 片2",
+      (b) => b.textContent === "image2",
     );
     expect(option).toBeTruthy();
     fireEvent.mouseDown(option as Element);
 
     expect(onChange).toHaveBeenCalledTimes(1);
     const event = onChange.mock.calls[0][0] as { target: { value: string } };
-    expect(event.target.value).toBe("参考 @图片2 收尾");
+    expect(event.target.value).toBe("See @image2 end");
   });
 
   it("does not open the picker when double-clicking plain text", () => {
     const onChange = vi.fn();
     const { container, queryByRole } = render(
       <MentionTextarea
-        value="参考 @图片1 收尾"
-        mentionLabels={["Image 片1", "Image 片2"]}
+        value="See @image1 end"
+        mentionLabels={["image1", "image2"]}
         onChange={onChange}
       />,
     );
     const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
-    textarea.setSelectionRange(0, 1); // 落在「参」上
+    textarea.setSelectionRange(0, 1); // lands on "S"
     fireEvent.doubleClick(textarea);
     expect(queryByRole("listbox")).toBeNull();
   });

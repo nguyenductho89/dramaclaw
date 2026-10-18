@@ -6,12 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import { EpisodeSourceEditor } from "@/components/episode/episode-source-editor";
 
 const labels = {
-  rawLabel: "原文",
+  rawLabel: "Original text",
   rawActionLabel: "View source",
-  noRawText: "暂无原文",
+  noRawText: "No original text",
   sourceLabel: "Beat source text",
   sourceMeta: (count: number) => `Edits auto-save, ${count} lines total`,
-  sourcePlaceholder: "填写分镜源文本",
+  sourcePlaceholder: "Enter the beat source text",
   linePreviewLabel: "Line split preview",
   lineCount: (count: number) => `${count} lines`,
   noLines: "No generated lines yet",
@@ -22,42 +22,42 @@ describe("EpisodeSourceEditor", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
       <EpisodeSourceEditor
-        rawContent="第一章原文"
-        sourceText="旧分镜源文本"
+        rawContent="Chapter one original text"
+        sourceText="old beat source text"
         labels={labels}
         onSave={onSave}
       />,
     );
 
-    expect(screen.queryByText("第一章原文")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chapter one original text")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "View source" }));
-    expect(screen.getByText("第一章原文")).toBeInTheDocument();
+    expect(screen.getByText("Chapter one original text")).toBeInTheDocument();
 
-    const source = screen.getByLabelText("分镜源文本 1");
-    expect(source).toHaveValue("旧分镜源文本");
+    const source = screen.getByLabelText("Beat source text 1");
+    expect(source).toHaveValue("old beat source text");
 
-    fireEvent.change(source, { target: { value: "新分镜源文本" } });
+    fireEvent.change(source, { target: { value: "new beat source text" } });
     fireEvent.blur(source);
 
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith("新分镜源文本"));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith("new beat source text"));
   });
 
   it("edits source text as one input per generated line", () => {
     render(
       <EpisodeSourceEditor
         rawContent=""
-        sourceText={" 第一行\n\n第二行 \r\n 第三行 "}
+        sourceText={" First line\n\nSecond line \r\n Third line "}
         labels={labels}
         onSave={vi.fn()}
       />,
     );
 
     expect(
-      screen.getByText("(编辑后的内容自动保存，当前共 3 行)"),
+      screen.getByText("(Edits are saved automatically, 3 lines in total)"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("分镜源文本 1")).toHaveValue("第一行");
-    expect(screen.getByLabelText("分镜源文本 2")).toHaveValue("第二行");
-    expect(screen.getByLabelText("分镜源文本 3")).toHaveValue("第三行");
+    expect(screen.getByLabelText("Beat source text 1")).toHaveValue("First line");
+    expect(screen.getByLabelText("Beat source text 2")).toHaveValue("Second line");
+    expect(screen.getByLabelText("Beat source text 3")).toHaveValue("Third line");
   });
 
   it("splits pasted multiline text into editable lines and saves normalized text", async () => {
@@ -65,21 +65,21 @@ describe("EpisodeSourceEditor", () => {
     render(
       <EpisodeSourceEditor
         rawContent=""
-        sourceText="第一行"
+        sourceText="First line"
         labels={labels}
         onSave={onSave}
       />,
     );
 
-    const source = screen.getByLabelText("分镜源文本 1");
-    fireEvent.change(source, { target: { value: "改写第一行\n改写第二行" } });
-    expect(screen.getByLabelText("分镜源文本 1")).toHaveValue("改写第一行");
-    expect(screen.getByLabelText("分镜源文本 2")).toHaveValue("改写第二行");
+    const source = screen.getByLabelText("Beat source text 1");
+    fireEvent.change(source, { target: { value: "Rewritten first line\nRewritten second line" } });
+    expect(screen.getByLabelText("Beat source text 1")).toHaveValue("Rewritten first line");
+    expect(screen.getByLabelText("Beat source text 2")).toHaveValue("Rewritten second line");
 
-    fireEvent.blur(screen.getByLabelText("分镜源文本 2"));
+    fireEvent.blur(screen.getByLabelText("Beat source text 2"));
 
     await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith("改写第一行\n改写第二行"),
+      expect(onSave).toHaveBeenCalledWith("Rewritten first line\nRewritten second line"),
     );
   });
 });

@@ -169,7 +169,7 @@ describe("asset panel rename behavior", () => {
 
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText('Delete scene "Hall"?')).toBeInTheDocument();
-    // 走原生 confirm 的话对话框根本不会出现，删除也早就发出去了。
+    // With the native confirm the dialog would never appear, and the deletion would have been sent long ago.
     expect(nativeConfirm).not.toHaveBeenCalled();
     expect(deleted).toBe(false);
 
@@ -315,7 +315,7 @@ describe("asset panel rename behavior", () => {
     await user.click(screen.getByRole("button", { name: "Select scene Hall" }));
 
     expect(screen.getByText("Hall_Night")).toBeInTheDocument();
-    expect(screen.queryByText("Door_上午")).not.toBeInTheDocument();
+    expect(screen.queryByText("Door_morning")).not.toBeInTheDocument();
   });
 
   it("remembers the selected scene group after the scene panel unmounts", async () => {
@@ -386,7 +386,7 @@ describe("asset panel rename behavior", () => {
             {
               name: "Hall",
               scene_type: "interior",
-              environment_prompt: "正面：wide hall\n光源：soft skylight",
+              environment_prompt: "Front: wide hall\nLighting: soft skylight",
               description: "base hall description",
             },
           ],
@@ -396,7 +396,7 @@ describe("asset panel rename behavior", () => {
         postBody = await request.json();
         return HttpResponse.json({
           ok: true,
-          data: { name: "Hall_漏水_夜晚", scene_type: "interior" },
+          data: { name: "Hall_leak_night", scene_type: "interior" },
         });
       }),
     );
@@ -418,12 +418,12 @@ describe("asset panel rename behavior", () => {
     });
     await user.click(within(dialog).getByRole("combobox", { name: "Time" }));
     await user.click(await screen.findByRole("option", { name: "Night" }));
-    expect(within(dialog).getByText("Hall_漏水_夜晚")).toBeInTheDocument();
+    expect(within(dialog).getByText("Hall_leak_night")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(postBody).toBeDefined());
     expect(postBody).toMatchObject({
-      name: "Hall_漏水_夜晚",
+      name: "Hall_leak_night",
       base_scene_id: "Hall",
       variant_id: "Water leak",
       time_of_day: "Night",
@@ -572,7 +572,7 @@ describe("asset panel rename behavior", () => {
       active_source_id: "scene-pano:Hall",
       snapshot: { world: { activeSourceId: "scene-pano:Hall" } },
     });
-    expect(screen.queryByText(/当前导演世界/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
   });
 
 });

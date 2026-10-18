@@ -205,7 +205,7 @@ describe("asset tabs do not read the beats table", () => {
             ok: true,
             data: {
               references: {
-                "identity:林默_默认": [{ episode: 2, beat_number: 3 }],
+                "identity:Lin Mo_default": [{ episode: 2, beat_number: 3 }],
               },
               scene_co_occurrence: {},
             },
@@ -217,7 +217,7 @@ describe("asset tabs do not read the beats table", () => {
     renderWithProviders(
       <LazyAssetBeatReferences
         project="demo"
-        asset={{ type: "identity", id: "林默_默认" }}
+        asset={{ type: "identity", id: "Lin Mo_default" }}
       />,
     );
 
@@ -227,7 +227,7 @@ describe("asset tabs do not read the beats table", () => {
     );
 
     await waitFor(() =>
-      expect(requestedIds).toEqual([["identity:林默_默认"]]),
+      expect(requestedIds).toEqual([["identity:Lin Mo_default"]]),
     );
   });
 });

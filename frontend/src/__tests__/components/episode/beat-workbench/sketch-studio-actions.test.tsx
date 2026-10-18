@@ -37,7 +37,7 @@ beforeAll(async () => {
                 reassignColorsTitle: "Reassign sketch colors?",
                 reassignColorsDesc: "Reassign sketch colors?",
                 reassignColorsSuccess:
-                  "已分配 {{count}} 个身份、{{propCount}} props",
+                  "Assigned {{count}} identities, {{propCount}} props",
               },
               sketch: {
                 identityColors: "Identity",
@@ -129,7 +129,7 @@ describe("SketchStudioActions", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: /场景草图画廊|openSceneGallery/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Scene sketch gallery|openSceneGallery/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Sketch grid" }));
 

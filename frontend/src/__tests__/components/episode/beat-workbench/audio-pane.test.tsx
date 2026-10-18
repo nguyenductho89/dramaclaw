@@ -97,7 +97,7 @@ vi.mock("@/lib/queries/video", () => ({
         reference_url: "",
         heading: "Third-person project narration voice",
         detail: "",
-        explanation: "第三人称解说使用项目级声线。",
+        explanation: "Third-person narration uses the project-level voice.",
         is_first_person: false,
       },
     },
@@ -137,8 +137,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 1,
-    narration_segment: "画外音响起。",
-    visual_description: "空旷走廊",
+    narration_segment: "A voice-over sounds.",
+    visual_description: "Empty corridor",
     audio_type: "narration",
     audio_url: "",
     ...overrides,
@@ -158,7 +158,7 @@ beforeEach(() => {
 describe("AudioPane", () => {
   it("uses quote prerequisite errors to avoid submitting an invalid audio task", async () => {
     audioPrereqErrors.current = [
-      "Beat 01 解说声线缺失：项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储",
+      "Beat 01 narrator voice missing: the project narrator voice is configured but its voice file cannot be read, re-upload it or check project storage",
     ];
     const user = userEvent.setup();
 
@@ -179,7 +179,7 @@ describe("AudioPane", () => {
     expect(mutateRegenerate).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Confirm" })).not.toBeInTheDocument();
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：项目解说人声线已配置，但声线文件无法读取，请重新上传或检查项目存储。请到「资产 > 声线」上传或裁剪默认解说声线。",
+      "Beat 01 narrator voice missing: the project narrator voice is configured but its voice file cannot be read, re-upload it or check project storage. Go to Assets > Voices to upload or trim a default narrator voice.",
       expect.objectContaining({
         action: expect.objectContaining({ label: "Configure" }),
       }),
@@ -263,7 +263,7 @@ describe("AudioPane", () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
       code: "voice_prereq_required",
-      error: "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频",
+      error: "Beat 01 narrator voice missing: the project narrator voice is not configured, upload or record narrator audio",
     });
     const user = userEvent.setup();
 
@@ -283,7 +283,7 @@ describe("AudioPane", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：项目解说人声线未配置，请上传或录制解说人音频。请到「资产 > 声线」上传或裁剪默认解说声线。",
+      "Beat 01 narrator voice missing: the project narrator voice is not configured, upload or record narrator audio. Go to Assets > Voices to upload or trim a default narrator voice.",
       expect.objectContaining({
         action: expect.objectContaining({ label: "Configure" }),
       }),
@@ -303,7 +303,7 @@ describe("AudioPane", () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
       code: "voice_prereq_required",
-      error: "Beat 01 解说声线缺失：解说主角声线缺失，请到角色工作台上传角色声线",
+      error: "Beat 01 narrator voice missing: the narrator protagonist voice is missing, upload a character voice in the character workbench",
     });
     const user = userEvent.setup();
 
@@ -323,7 +323,7 @@ describe("AudioPane", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "Beat 01 解说声线缺失：解说主角声线缺失，请到角色工作台上传角色声线。请到「角色」中上传解说主角声线。",
+      "Beat 01 narrator voice missing: the narrator protagonist voice is missing, upload a character voice in the character workbench. Go to Characters to upload the narrator voice.",
       expect.objectContaining({
         action: expect.objectContaining({ label: "Configure" }),
       }),
@@ -342,7 +342,7 @@ describe("AudioPane", () => {
   it("keeps regular regeneration errors as plain toasts", async () => {
     mutateRegenerate.mockResolvedValueOnce({
       ok: false,
-      error: "TTS 服务暂不可用",
+      error: "TTS service is temporarily unavailable",
     });
     const user = userEvent.setup();
 
@@ -362,7 +362,7 @@ describe("AudioPane", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toastError).toHaveBeenCalledWith(
-      "TTS 服务暂不可用",
+      "TTS service is temporarily unavailable",
     );
   });
 });

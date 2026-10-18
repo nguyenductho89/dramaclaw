@@ -34,7 +34,7 @@ import {
   shouldFlushBeforePresetRefresh,
 } from "@/features/freezone/useCanvasSync";
 import { BackendStatusError } from "@/lib/api-errors";
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -106,11 +106,11 @@ describe("freezone canvas browser sections", () => {
   });
 
   it("creates a placeholder personal canvas when it does not exist yet", () => {
-    const sections = buildCanvasBrowserSections([canvas("default", "default")], "default", "林知微");
+    const sections = buildCanvasBrowserSections([canvas("default", "default")], "default", "Lin Zhiwei");
 
     expect(sections.defaultCanvas).toMatchObject({
       id: "user_u_klqmat",
-      displayName: "林知微",
+      displayName: "Lin Zhiwei",
       size: 0,
     });
     expect(sections.otherCanvases.map((item) => item.id)).toEqual(["default"]);
@@ -147,7 +147,7 @@ describe("freezone canvas browser sections", () => {
         canvas("canvas_story_lab_abc123", undefined, "2026-06-03T13:00:00Z", {
           metadata: {
             canvas_origin: "user_created",
-            display_name: "故事实验",
+            display_name: "Story Lab",
             creator_username: "alice",
           },
         }),
@@ -166,7 +166,7 @@ describe("freezone canvas browser sections", () => {
         canvas("canvas_story_lab_abc123", "default", "2026-06-03T13:00:00Z", {
           metadata: {
             canvas_origin: "user_created",
-            display_name: "故事实验",
+            display_name: "Story Lab",
             creator_username: "alice",
           },
         }),
@@ -177,26 +177,26 @@ describe("freezone canvas browser sections", () => {
   it("detects duplicate user-facing canvas names", () => {
     const t = (key: string, options?: Record<string, unknown>) =>
       key === "freezone.canvases.description.default"
-        ? "默认画布"
+        ? "Default canvas"
         : String(options?.name ?? key);
     const items = [
       canvas("canvas_story_lab_abc123", undefined, "2026-06-03T13:00:00Z", {
         metadata: {
           canvas_origin: "user_created",
-          display_name: "故事实验",
+          display_name: "Story Lab",
           creator_username: "alice",
         },
       }),
     ];
 
-    expect(findDuplicateCanvasName(items, " 故事实验 ", t)?.id).toBe("canvas_story_lab_abc123");
-    expect(findDuplicateCanvasName(items, "新的画布", t)).toBeNull();
+    expect(findDuplicateCanvasName(items, " Story Lab ", t)?.id).toBe("canvas_story_lab_abc123");
+    expect(findDuplicateCanvasName(items, "New canvas", t)).toBeNull();
   });
 
   it("builds stable user-created canvas ids from username and name", () => {
-    expect(userCreatedCanvasId("故事实验", "alice")).toBe(userCreatedCanvasId("故事实验", "alice"));
-    expect(userCreatedCanvasId("故事实验", "alice")).not.toBe(userCreatedCanvasId("故事实验", "bob"));
-    expect(userCreatedCanvasId("故事实验", "alice")).toMatch(/^canvas_canvas_[a-z0-9]+$/);
+    expect(userCreatedCanvasId("Story Lab", "alice")).toBe(userCreatedCanvasId("Story Lab", "alice"));
+    expect(userCreatedCanvasId("Story Lab", "alice")).not.toBe(userCreatedCanvasId("Story Lab", "bob"));
+    expect(userCreatedCanvasId("Story Lab", "alice")).toMatch(/^canvas_canvas_[a-z0-9]+$/);
   });
 
   it("allows deleting only non-personal canvases", () => {
@@ -291,8 +291,8 @@ describe("freezone preset auto refresh guard", () => {
     ).toBe(true);
   });
 
-  // 个人画布 id 由用户名推出（personalCanvasIdForUsername），A、B 两个项目下是
-  // 同一个 canvasId；freezone 换项目又不再 remount，所以这几个判定必须带上项目。
+  // A personal canvas id derives from the username (personalCanvasIdForUsername), so projects A and B share
+  // the same canvasId; freezone no longer remounts when switching projects, so these checks must include the project.
   it("treats a same-id canvas in another project as not hydrated", () => {
     expect(
       shouldClearProjectionStatuses({
@@ -502,11 +502,11 @@ describe("freezone preset auto refresh guard", () => {
   it("does not refresh canvas node urls after scene director world manifest commits", () => {
     expect(shouldRefreshCommittedTargetNodes({
       kind: "scene_director_world",
-      scene_id: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
     })).toBe(false);
     expect(shouldRefreshCommittedTargetNodes({
       kind: "scene_3gs_master_ply",
-      scene_id: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
     })).toBe(true);
   });
 
@@ -540,24 +540,24 @@ describe("freezone preset auto refresh guard", () => {
           },
         ],
       },
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
-        target_url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=1",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.sog",
+        target_url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=1",
         backup: null,
       },
       "proj",
-      zhT,
+      enT,
     );
 
     expect(patch).toMatchObject({
       activeSourceId: "custom-local",
-      displayName: "已提交 · 公寓楼电梯间 / 正面世界",
-      plyUrl: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=1",
+      displayName: "Committed · Apartment elevator hall / Front world",
+      plyUrl: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=1",
       sourceFileName: "master.sog",
-      slot_target: { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
-      committed_slot_url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=1",
-      committed_target_label: "公寓楼电梯间 / 正面世界",
+      slot_target: { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
+      committed_slot_url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=1",
+      committed_target_label: "Apartment elevator hall / Front world",
       mainline_context: undefined,
       scene: { world: { activeSourceId: "custom-local" } },
       scenesBySourceId: {
@@ -567,7 +567,7 @@ describe("freezone preset auto refresh guard", () => {
     expect((patch?.sources as Array<{ id: string; current?: boolean; label?: string }>)).toEqual([
       expect.objectContaining({ id: "custom-local", current: true }),
     ]);
-    expect((patch?.sources as Array<{ label?: string }>).some((source) => source.label === "正面世界")).toBe(false);
+    expect((patch?.sources as Array<{ label?: string }>).some((source) => source.label === "Front world")).toBe(false);
   });
 
   it("does not rewrite the canvas node after a director-world source slot commit", () => {
@@ -577,14 +577,14 @@ describe("freezone preset auto refresh guard", () => {
         activeSourceId: "custom-local",
         plyUrl: "/static/proj/freezone/generated/custom.sog",
       },
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
-        target_url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=1",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.sog",
+        target_url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=1",
         backup: null,
       },
       "proj",
-      zhT,
+      enT,
     )).toBeNull();
   });
 
@@ -602,17 +602,17 @@ describe("freezone preset auto refresh guard", () => {
         backup: null,
       },
       "proj",
-      zhT,
+      enT,
     );
 
     expect(patch).toMatchObject({
       imageUrl: "/static/proj/renders/ep001/beat_03.png?v=2",
       previewImageUrl: "/static/proj/renders/ep001/beat_03.png?v=2",
-      displayName: "已提交 · EP1 / Beat 3 / 分镜",
+      displayName: "Committed · EP1 / Beat 3 / Frame",
       sourceFileName: "beat_03.png",
       slot_target: { kind: "frame", episode: 1, beat: 3 },
       committed_slot_url: "/static/proj/renders/ep001/beat_03.png?v=2",
-      committed_target_label: "EP1 / Beat 3 / 分镜",
+      committed_target_label: "EP1 / Beat 3 / Frame",
       mainline_context: undefined,
     });
   });
@@ -623,11 +623,11 @@ describe("freezone preset auto refresh guard", () => {
       { kind: "video", episode: 2, beat: 4 },
       { target_path: "videos/ep002/beat_04.mp4", target_url: "/static/video.mp4", backup: null },
       "proj",
-      zhT,
+      enT,
     )).toMatchObject({
       videoUrl: "/static/video.mp4",
       previewImageUrl: "/static/video.mp4",
-      displayName: "EP2 / Beat 4 / 视频",
+      displayName: "EP2 / Beat 4 / Video",
       mainline_context: [expect.objectContaining({ kind: "video", episode: 2, beat: 4 })],
     });
 
@@ -636,42 +636,42 @@ describe("freezone preset auto refresh guard", () => {
       { kind: "beat_audio", episode: 2, beat: 4 },
       { target_path: "audio/ep002/beat_04.wav", target_url: "/static/audio.wav", backup: null },
       "proj",
-      zhT,
+      enT,
     )).toMatchObject({
       audioUrl: "/static/audio.wav",
       url: "/static/audio.wav",
-      displayName: "EP2 / Beat 4 / 音频",
+      displayName: "EP2 / Beat 4 / Audio",
       mainline_context: [expect.objectContaining({ kind: "audio", audioRole: "beat_audio" })],
     });
 
     expect(nodeDataPatchAfterCommittedTarget(
       { imageUrl: "/tmp/identity.png" },
-      { kind: "identity", character: "杜晨", identity_id: "default" },
+      { kind: "identity", character: "Du Chen", identity_id: "default" },
       { target_path: "characters/duchen/default.png", target_url: "/static/identity.png", backup: null },
       "proj",
-      zhT,
+      enT,
     )).toMatchObject({
       imageUrl: "/static/identity.png",
-      displayName: "杜晨 / default / 身份",
+      displayName: "Du Chen / default / Identity",
       __freezone_source: {
-        meta: { character: "杜晨", identity_id: "default" },
+        meta: { character: "Du Chen", identity_id: "default" },
       },
-      mainline_context: [expect.objectContaining({ kind: "identity", character: "杜晨", identityId: "default" })],
+      mainline_context: [expect.objectContaining({ kind: "identity", character: "Du Chen", identityId: "default" })],
     });
 
     expect(nodeDataPatchAfterCommittedTarget(
       { imageUrl: "/tmp/prop.png" },
-      { kind: "prop_ref", prop_id: "纸箱" },
+      { kind: "prop_ref", prop_id: "Cardboard box" },
       { target_path: "props/box.png", target_url: "/static/prop.png", backup: null },
       "proj",
-      zhT,
+      enT,
     )).toMatchObject({
       imageUrl: "/static/prop.png",
-      displayName: "纸箱 / 道具",
+      displayName: "Cardboard box / Prop",
       __freezone_source: {
-        meta: { prop_id: "纸箱", prop: "纸箱" },
+        meta: { prop_id: "Cardboard box", prop: "Cardboard box" },
       },
-      mainline_context: [expect.objectContaining({ kind: "prop", propId: "纸箱" })],
+      mainline_context: [expect.objectContaining({ kind: "prop", propId: "Cardboard box" })],
     });
   });
 });
@@ -714,7 +714,7 @@ describe("freezone canvas creation limit", () => {
     return canvas(`canvas_mine_${index}`, undefined, "2026-06-03T00:00:00Z", {
       metadata: {
         canvas_origin: "user_created",
-        display_name: `我的画布 ${index}`,
+        display_name: `My canvas ${index}`,
         ...(creator === null ? {} : { creator_username: creator }),
       },
     });
@@ -769,14 +769,14 @@ describe("freezone canvas creation limit", () => {
   });
 
   it("reports the quota as unknown until the canvas list has loaded", () => {
-    // 列表还没回来时手上是空数组，按它算出来的「还没超」是假的：后端不数个数，
-    // 放行等于真的多建一张。
+    // While the list has not come back the code holds an empty array, and the "not over the limit yet" computed from it is false: the backend does not count,
+    // and letting it through really creates one extra canvas.
     expect(canvasCreationQuotaStatus(undefined, "alice")).toBe("unknown");
   });
 
   it("reports the quota as unknown until the username has loaded", () => {
-    // 登录态还没落地时 username 是 null，此时数出来的是「缺 creator_username 的
-    // 老画布」这个匿名桶——既不能拿它拦真作者，也不能当成还有余量。
+    // Before the login state lands username is null, and what gets counted is the anonymous bucket of "old canvases missing creator_username"
+    // - it can neither be used to block the real author nor treated as having room left.
     const orphans = Array.from({ length: MAX_USER_CREATED_CANVASES_PER_PROJECT }, (_unused, index) =>
       myCanvas(index, null),
     );

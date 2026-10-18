@@ -48,7 +48,7 @@ describe("Freezone canvas agents", () => {
     expect(state.agents).toEqual([
       {
         id: DEFAULT_FREEZONE_AGENT_ID,
-        name: "新对话",
+        name: "New chat",
         createdAt: 1000,
         lastActiveAt: 1000,
       },
@@ -61,8 +61,8 @@ describe("Freezone canvas agents", () => {
     const second = addFreezoneCanvasAgent("project-a", "canvas-a", 3000);
     const otherCanvas = loadFreezoneCanvasAgents("project-a", "canvas-b", 4000);
 
-    expect(first.agent).toMatchObject({ id: "agent-2000", name: "新对话" });
-    expect(second.agent).toMatchObject({ id: "agent-3000", name: "新对话" });
+    expect(first.agent).toMatchObject({ id: "agent-2000", name: "New chat" });
+    expect(second.agent).toMatchObject({ id: "agent-3000", name: "New chat" });
     expect(second.state.activeAgentId).toBe("agent-3000");
     expect(second.state.agents.map((agent) => agent.id)).toEqual([
       "main",
@@ -101,7 +101,7 @@ describe("Freezone canvas agents", () => {
     try {
       const result = addFreezoneCanvasAgent("project-a", "canvas-a", 2000);
 
-      expect(result.agent).toMatchObject({ id: "agent-2000", name: "新对话" });
+      expect(result.agent).toMatchObject({ id: "agent-2000", name: "New chat" });
       expect(result.state.activeAgentId).toBe("agent-2000");
       expect(result.state.agents.map((agent) => agent.id)).toEqual(["main", "agent-2000"]);
       expect(setItem).toHaveBeenCalled();
@@ -127,23 +127,23 @@ describe("Freezone canvas agents", () => {
       "project-a",
       "canvas-a",
       "main",
-      "我想做个广告短片",
+      "I want an ad short",
       2000,
     );
     const afterFollowUp = updateFreezoneCanvasAgentFromUserMessage(
       "project-a",
       "canvas-a",
       "main",
-      "再加一个音乐节点",
+      "Add a music node too",
       3000,
     );
 
     expect(titled.agents.find((agent) => agent.id === "main")).toMatchObject({
-      name: "我想做个广告短片",
+      name: "I want an ad short",
       lastActiveAt: 2000,
     });
     expect(afterFollowUp.agents.find((agent) => agent.id === "main")).toMatchObject({
-      name: "我想做个广告短片",
+      name: "I want an ad short",
       lastActiveAt: 3000,
     });
   });
@@ -157,7 +157,7 @@ describe("Freezone canvas agents", () => {
       "project-a",
       "canvas-a",
       "main",
-      "你好",
+      "Hello",
       4000,
     );
 
@@ -188,15 +188,15 @@ describe("Freezone canvas agents", () => {
       "project-a",
       "canvas-a",
       [
-        { id: "agent-2", name: "服务端最近会话", createdAt: 2000, lastActiveAt: 5000 },
-        { id: "main", name: "服务端主会话", createdAt: 1000, lastActiveAt: 3000 },
+        { id: "agent-2", name: "Server recent session", createdAt: 2000, lastActiveAt: 5000 },
+        { id: "main", name: "Server main session", createdAt: 1000, lastActiveAt: 3000 },
       ],
       { preferServerActive: true },
     );
 
     expect(restored.activeAgentId).toBe("agent-2");
     expect(restored.agents.map((agent) => agent.id)).toEqual(["main", "agent-2"]);
-    expect(restored.agents.find((agent) => agent.id === "agent-2")?.name).toBe("服务端最近会话");
+    expect(restored.agents.find((agent) => agent.id === "agent-2")?.name).toBe("Server recent session");
   });
 
   it("keeps a stored local selection over the latest server agent", () => {
@@ -208,7 +208,7 @@ describe("Freezone canvas agents", () => {
       "project-a",
       "canvas-a",
       [
-        { id: "agent-2", name: "服务端最近会话", createdAt: 2000, lastActiveAt: 5000 },
+        { id: "agent-2", name: "Server recent session", createdAt: 2000, lastActiveAt: 5000 },
       ],
       { preferServerActive: false },
     );

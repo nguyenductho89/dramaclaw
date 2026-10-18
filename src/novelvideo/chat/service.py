@@ -701,13 +701,13 @@ _FREEZONE_CANVAS_WRITE_OBJECT_RE = re.compile(
 )
 _FREEZONE_DIRECT_MEDIA_WRITE_RE = re.compile(
     r"(?:"
-    r"(?:generate|create|add|make|run|execute)\s+(?:an?\s+|some\s+)?"
-    r"(?:image|video|audio|music|voiceover|composition)"
+    r"(?:generate|create|add|make|run|execute)\s+[^.!?\n]{0,32}?"
+    r"(?:image|picture|video|audio|music|voiceover|composition)"
     r")",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_KNOWLEDGE_QUESTION_RE = re.compile(
-    r"(?:\bwhat\b|\bwhy\b|\bhow\b|\bcan\s+i\b|\btutorial\b|\bsteps?\b|\bsupported?\b)",
+    r"(?:\bwhat\b|\bwhy\b|\bhow\b|\bcan\s+i\b|\btutorial\b|\bsteps?\b|\bsupport(?:s|ed)?\b)",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_NO_WRITE_FAILURE_RE = re.compile(

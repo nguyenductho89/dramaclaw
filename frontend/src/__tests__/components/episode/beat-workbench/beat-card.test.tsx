@@ -11,8 +11,8 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, vars?: Record<string, string | number>) => {
       if (key === "episode.beat.select") return "Select Beat";
-      if (key === "episode.beat.deselect") return "取消选择 Beat";
-      if (key === "episode.beat.insertAfter") return `在第 ${vars?.n} 个 beat 后插入`;
+      if (key === "episode.beat.deselect") return "Deselect Beat";
+      if (key === "episode.beat.insertAfter") return `Insert after beat ${vars?.n}`;
       if (key === "episode.beat.openFreezone") return "Open XiPaint Beat Workbench";
       return key;
     },
@@ -21,8 +21,8 @@ vi.mock("react-i18next", () => ({
 
 const beat = {
   beat_number: 4,
-  narration_segment: "发现密室里的书",
-  visual_description: "主角翻开旧书",
+  narration_segment: "Found the book in the secret room",
+  visual_description: "The protagonist opens the old book",
   sketch_url: "/static/sketches/beat_04.png",
   frame_url: "/static/renders/beat_04.png",
 } as Beat;
@@ -71,7 +71,7 @@ describe("BeatCard", () => {
   it("shows the check icon only after the card is checked", () => {
     renderBeatCard({ isChecked: true });
 
-    const selectButton = screen.getByRole("button", { name: "取消选择 Beat" });
+    const selectButton = screen.getByRole("button", { name: "Deselect Beat" });
     expect(selectButton.className).toContain("text-primary");
     expect(selectButton.className).not.toContain("text-transparent");
   });

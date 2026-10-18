@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 资产库卡片的画面层：图片直接铺，视频给首帧封面 + 悬停就地预览，音频给一个
-// 自绘的小播放器。
+// The picture layer of asset library cards: images are laid out directly, videos get a first-frame cover + hover in-place preview, and audio gets a
+// hand-drawn small player.
 //
-// 音频过去直接摆原生 <audio controls>——浏览器给的那条灰色胶囊和整个面板的深色
-// 皮肤格格不入，还会把卡片下沿的名字挤掉。这里换成「圆形播放键 + 波形进度条 +
-// 时间」，和视频卡的播放角标视觉对齐，两种非图片素材看起来才像一套东西。
+// Audio used to be a native <audio controls> placed directly - the gray capsule the browser provides clashes with the dark
+// skin of the whole panel, and also squeezes out the name along the bottom edge of the card. Here it becomes "a round play button + waveform progress bar +
+// time", visually aligned with the video card's play badge, so the two kinds of non-image material look like one set.
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { resolveImageDisplayUrl } from '@/features/canvas/application/imageData';
 import type { LibraryItem } from './assetLibraryItems';
 
-/** mm:ss；时长还没读出来时按 0:00 显示，别让卡片上闪一串 NaN。 */
+/** mm:ss; shows 0:00 while the duration has not been read yet, so the card does not flash a string of NaN. */
 function formatClock(seconds: number): string {
   const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
   const total = Math.floor(safe);
@@ -22,18 +22,17 @@ function formatClock(seconds: number): string {
 }
 
 /**
- * 同一时间只留一条音轨在响。卡片是网格铺开的，挨个点过去很容易叠成一片噪音，
- * 这里在模块级记着当前那条，新的一播就把旧的按停。
- */
+ * Only one audio track sounds at a time. Cards are laid out in a grid, and clicking through them one by one easily piles into a wall of noise;
+ * here the current one is remembered at module level, and playing a new one stops the old one.
 let playingAudio: HTMLAudioElement | null = null;
 
 const WAVEFORM_BARS = 28;
 
 /**
- * 按 URL 生成一串固定的波形高度。
+ * Generate a fixed string of waveform heights by URL.
  *
- * 真波形要解码整段音频才画得出来，代价太大；这里只要「每条音轨看起来不一样、
- * 但每次打开都一样」，用 URL 做种子的线性同余就够了。
+ * A real waveform needs the whole audio decoded to draw, which is too costly; all that is needed here is "each track looks different
+ * but looks the same every time it is opened", and a linear congruential generator seeded by the URL is enough.
  */
 function waveformHeights(seed: string): number[] {
   let state = 0;
@@ -50,7 +49,7 @@ export interface AssetLibraryItemMediaProps {
   entry: LibraryItem;
 }
 
-/** 卡片画面层。外层负责方形容器与选中/删除等浮层，这里只管把内容画满。 */
+/** The card's picture layer. The outer layer handles the square container and overlays such as selection/delete; here we only fill the content. */
 export function AssetLibraryItemMedia({ entry }: AssetLibraryItemMediaProps) {
   const src = resolveImageDisplayUrl(entry.url);
   if (entry.media === 'video') return <VideoThumb src={src} />;
@@ -70,8 +69,8 @@ function VideoThumb({ src }: { src: string }) {
   const [duration, setDuration] = useState(0);
   const [previewing, setPreviewing] = useState(false);
 
-  // `#t=0.1` 让浏览器 seek 到 0.1 秒并把那一帧画出来当封面；t=0 在部分浏览器
-  // 是黑帧。preload=metadata 只拉首帧，不下整段。
+  // `#t=0.1` makes the browser seek to 0.1 second and paint that frame as the cover; t=0 is a black frame in some browsers.
+  // preload=metadata pulls only the first frame, not the whole clip.
   const posterSrc = src.includes('#') ? src : `${src}#t=0.1`;
 
   const startPreview = () => {
@@ -83,7 +82,7 @@ function VideoThumb({ src }: { src: string }) {
     const el = videoRef.current;
     if (!el) return;
     el.pause();
-    // 回到封面帧，鼠标划过一排卡片后不会留下一堆停在半截的画面。
+    // Return to the cover frame, so after the mouse sweeps over a row of cards it does not leave a pile of pictures stuck halfway.
     el.currentTime = 0.1;
   };
 
@@ -109,7 +108,7 @@ function VideoThumb({ src }: { src: string }) {
         onPlay={() => setPreviewing(true)}
         onPause={() => setPreviewing(false)}
       />
-      {/* 播放角标：预览一起来就淡出，别糊在画面中间。 */}
+      {/* Play badge: fades out once the preview starts, so it does not smear over the middle of the picture. */}
       <span
         className={`pointer-events-none absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 ring-1 ring-white/25 backdrop-blur-[2px] transition-opacity duration-200 ${
           previewing ? 'opacity-0' : 'opacity-100'
@@ -118,7 +117,7 @@ function VideoThumb({ src }: { src: string }) {
         <Play className="ml-0.5 h-4 w-4 text-white" fill="currentColor" />
       </span>
       {duration > 0 && (
-        // 摆左下：右下是删除按钮的位置，底边留给名字。
+        // Placed at the bottom-left: the bottom-right is where the delete button is, and the bottom edge is left for the name.
         <span className="pointer-events-none absolute bottom-8 left-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] tabular-nums text-white/90">
           {formatClock(duration)}
         </span>
@@ -135,7 +134,7 @@ function AudioThumb({ src }: { src: string }) {
   const [duration, setDuration] = useState(0);
   const [bars] = useState(() => waveformHeights(src));
 
-  // 播放中用 rAF 推进度：timeupdate 事件一秒才来四次，波形会一格一格地跳。
+  // While playing, advance progress with rAF: the timeupdate event comes only four times a second, and the waveform would jump cell by cell.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -148,8 +147,8 @@ function AudioThumb({ src }: { src: string }) {
     return () => cancelAnimationFrame(raf);
   }, [playing]);
 
-  // 卡片被翻页/切目录换掉时，声音得跟着停——组件没了但 <audio> 还在响是最糟的。
-  // 元素移出文档时规范本来也会暂停，但那是副作用不是保证，这里显式停一次。
+  // When the card is replaced by paging/switching directory, the sound must stop with it - the worst case is the component gone while the <audio> keeps sounding.
+  // The spec also pauses when an element is removed from the document, but that is a side effect rather than a guarantee, so stop explicitly once here.
   useEffect(
     () => () => {
       const el = audioRef.current;
@@ -160,7 +159,7 @@ function AudioThumb({ src }: { src: string }) {
     [],
   );
 
-  // 试听不该顺手把卡片选中；卡片其余部分照旧点了就选。
+  // Auditioning should not select the card in passing; the rest of the card still selects on click as usual.
   const toggle = (event: ReactMouseEvent) => {
     event.stopPropagation();
     const el = audioRef.current;
@@ -222,7 +221,7 @@ function AudioThumb({ src }: { src: string }) {
         )}
       </button>
 
-      {/* 波形即进度条：播过的柱子亮起来，点哪跳哪。 */}
+      {/* The waveform is the progress bar: played bars light up, and clicking anywhere jumps there. */}
       <div
         role="slider"
         aria-label={t('canvas.assetLibrary.audioProgress')}

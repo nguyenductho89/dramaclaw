@@ -80,14 +80,14 @@ describe("CharacterStatsStrip", () => {
 
     const strip = screen.getByRole("list", { name: "Character stats" });
     expect(strip).toHaveClass("custom-strip");
-    expect(strip).toHaveTextContent("总角色3");
-    expect(strip).toHaveTextContent("解说主角1");
+    expect(strip).toHaveTextContent("Total3");
+    expect(strip).toHaveTextContent("Narrator lead1");
     expect(strip).not.toHaveTextContent("Portrait");
-    expect(strip).toHaveTextContent("身份2/3");
-    expect(strip).toHaveTextContent("声线1/3");
+    expect(strip).toHaveTextContent("Identity2/3");
+    expect(strip).toHaveTextContent("Voice1/3");
 
-    expect(screen.getByLabelText("总角色: 3")).toBeInTheDocument();
-    expect(screen.getByLabelText("声线: 1/3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Total: 3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Voice: 1/3")).toBeInTheDocument();
   });
 
   it("uses the supplied main character label for drama projects", () => {
@@ -98,7 +98,7 @@ describe("CharacterStatsStrip", () => {
       />,
     );
 
-    expect(screen.getByLabelText("主角: 1")).toBeInTheDocument();
-    expect(screen.queryByLabelText("解说主角: 1")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Lead: 1")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Narrator lead: 1")).not.toBeInTheDocument();
   });
 });

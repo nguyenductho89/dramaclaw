@@ -53,9 +53,9 @@ function renderCard(scene: SceneAsset, overrides = {}) {
 describe("SceneAssetCard", () => {
   it("renders master, 360, and active Director World controls", () => {
     const handlers = renderCard({
-      name: "皇宫大殿",
+      name: "Palace Hall",
       scene_type: "interior",
-      environment_prompt: "金色宫灯、朱红立柱、纵深空间",
+      environment_prompt: "Golden palace lanterns, vermilion pillars, deep space",
       description: "",
       aliases: [],
       notes: "",
@@ -105,7 +105,7 @@ describe("SceneAssetCard", () => {
       },
     });
 
-    expect(screen.getByText("皇宫大殿")).toBeInTheDocument();
+    expect(screen.getByText("Palace Hall")).toBeInTheDocument();
     expect(screen.getByText("Master")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
     expect(screen.getByText("360 panorama")).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("SceneAssetCard", () => {
     expect(screen.getByRole("button", { name: "Open 360 Viewer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Director World" })).toBeInTheDocument();
     expect(screen.getByText("Director world")).toBeInTheDocument();
-    expect(screen.queryByText(/当前导演世界/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
     expect(screen.getByText("Custom Director World ready")).toBeInTheDocument();
     expect(screen.getByText("master Director World ready")).toBeInTheDocument();
     expect(screen.getByText("360 Director World ready")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("SceneAssetCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "master→Director World" }));
     expect(handlers.onGenerateStagePly).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "场景单面转 SOG will start immediately after confirmation.",
+      "Scene single-face to SOG will start immediately after confirmation.",
     );
     expect(screen.getByRole("alertdialog")).toHaveTextContent("6");
     fireEvent.click(screen.getByRole("button", { name: "Confirm and start" }));
@@ -157,7 +157,7 @@ describe("SceneAssetCard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "360→Director World" }));
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "场景全景转 SOG will start immediately after confirmation.",
+      "Scene panorama to SOG will start immediately after confirmation.",
     );
     expect(screen.getByRole("alertdialog")).toHaveTextContent("8");
     fireEvent.click(screen.getByRole("button", { name: "Confirm and start" }));
@@ -167,7 +167,7 @@ describe("SceneAssetCard", () => {
   it("disables Director World conversion when the organization price is unavailable", () => {
     renderCard(
       {
-        name: "皇宫大殿",
+        name: "Palace Hall",
         scene_type: "interior",
         environment_prompt: "",
         description: "",
@@ -192,10 +192,10 @@ describe("SceneAssetCard", () => {
 
   it("falls back to text-to-360 when master is missing", () => {
     const handlers = renderCard({
-      name: "雨夜巷口",
+      name: "Rainy Alley",
       scene_type: "exterior",
       environment_prompt: "",
-      description: "潮湿的巷口和霓虹灯",
+      description: "A damp alley mouth and neon lights",
       aliases: [],
       notes: "",
     });
@@ -210,7 +210,7 @@ describe("SceneAssetCard", () => {
 
   it("allows opening Director World even when no scene source exists yet", () => {
     const handlers = renderCard({
-      name: "公寓楼家门口",
+      name: "Apartment building doorway",
       scene_type: "exterior",
       environment_prompt: "",
       description: "",
@@ -218,7 +218,7 @@ describe("SceneAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.queryByText(/当前导演世界/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
     expect(screen.queryByText("Director World not ready")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Open Director World" }));
@@ -227,7 +227,7 @@ describe("SceneAssetCard", () => {
 
   it("renders scene type badges in Chinese", () => {
     renderCard({
-      name: "雨夜巷口",
+      name: "Rainy Alley",
       scene_type: "exterior",
       environment_prompt: "",
       description: "",

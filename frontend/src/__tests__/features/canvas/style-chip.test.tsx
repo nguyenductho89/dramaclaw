@@ -12,11 +12,11 @@ import {
 
 const TEMPLATE: FreezoneStyleTemplate = {
   id: "golden_age",
-  label: "黄金时代",
-  category: "年代",
+  label: "Golden Age",
+  category: "Era",
   cover: "golden_age/cover.webp",
   samples: ["golden_age/female.webp"],
-  style_prompt: "黄金时代的提示词",
+  style_prompt: "Golden Age prompt",
 };
 
 describe("StyleTriggerChip", () => {
@@ -26,17 +26,17 @@ describe("StyleTriggerChip", () => {
 
     render(<StyleTriggerChip onOpen={onOpen} />);
 
-    await user.click(screen.getByRole("button", { name: "风格" }));
+    await user.click(screen.getByRole("button", { name: "Style" }));
 
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  // 「查不到模板」不等于「没选风格」—— 那个 id 照样会跟着生成请求发出去，
-  // chip 说成「风格」会让用户以为自己没选，出图带了风格反而像是撞了鬼。
+  // "Template not found" does not mean "no style selected" — that id is still sent along with the generation request,
+  // and a chip that just says "Style" would make the user think they selected none, so images that carry a style look haunted.
   it.each([
-    ["loading" as const, "风格 · 加载中"],
-    ["failed" as const, "风格 · 加载失败"],
-    ["missing" as const, "风格 · 已失效"],
+    ["loading" as const, "Style · loading"],
+    ["failed" as const, "Style · load failed"],
+    ["missing" as const, "Style · unavailable"],
   ])("tells the truth in the %s state", (state, label) => {
     render(<StyleTriggerChip state={state} onOpen={vi.fn()} />);
 
@@ -49,7 +49,7 @@ describe("StyleTriggerChip", () => {
 
     render(<StyleTriggerChip state="failed" onOpen={onOpen} />);
 
-    await user.click(screen.getByRole("button", { name: "风格 · 加载失败" }));
+    await user.click(screen.getByRole("button", { name: "Style · load failed" }));
 
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
@@ -66,12 +66,12 @@ describe("StyleThumbnail", () => {
       />,
     );
 
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "/style-gallery/golden_age/cover.webp",
     );
-    // hover 才可见，但文案本身要在 DOM 里
-    expect(screen.getByText("黄金时代")).toBeInTheDocument();
+    // Only visible on hover, but the copy itself must be in the DOM
+    expect(screen.getByText("Golden Age")).toBeInTheDocument();
   });
 
   it("prefixes the cover with the configured asset base", () => {
@@ -84,7 +84,7 @@ describe("StyleThumbnail", () => {
       />,
     );
 
-    expect(screen.getByAltText("黄金时代")).toHaveAttribute(
+    expect(screen.getByAltText("Golden Age")).toHaveAttribute(
       "src",
       "https://cdn.example.com/styles/golden_age/cover.webp",
     );
@@ -103,7 +103,7 @@ describe("StyleThumbnail", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "风格 黄金时代" }));
+    await user.click(screen.getByRole("button", { name: "Style Golden Age" }));
 
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
@@ -122,7 +122,7 @@ describe("StyleThumbnail", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "清除风格" }));
+    await user.click(screen.getByRole("button", { name: "Clear style" }));
 
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();

@@ -56,15 +56,15 @@ export function historyRecordHtmlIdentity(
   return { artifactId, version };
 }
 
-/** 3GS 扩展名;命中即视为世界模型产物。 */
+/** 3GS extension; a hit counts as a world model product. */
 const THREE_GS_EXT_RE = /\.(ply|sog|splat|ksplat|spz)(\?|#|$)/i;
 
 /**
- * 从一条记录的 `result` 里深挖出世界模型(3GS / 360 全景)的产物 URL。
- * 世界模型的 url 可能藏在 `sog_url` / `splat_url` / `scene_3gs_ply_fs` /
- * `master_ply_url` 等多种键(甚至嵌套)下,通用的 {@link historyRecordOutputUrl}
- * 只认扁平的 `ply_url`/`url` 会漏取。这里递归探测并优先压缩包(.sog → splat → ply)。
- * 与 ThreeDWorldNode 的 restore 取值逻辑保持一致,作为世界历史的单一真源。
+ * Dig the world model (3GS / 360 panorama) product URL out of a record's `result`.
+ * A world model url may hide under many keys such as `sog_url` / `splat_url` / `scene_3gs_ply_fs` /
+ * `master_ply_url` (even nested), and the generic {@link historyRecordOutputUrl},
+ * recognizing only the flat `ply_url`/`url`, would miss it. Here it probes recursively and prefers compressed packages (.sog -> splat -> ply).
+ * Kept consistent with ThreeDWorldNode's restore value logic, as the single source of truth for world history.
  */
 export function historyRecordWorldUrl(
   record: FreezoneGenerationHistoryRecord,
@@ -110,25 +110,25 @@ export function historyRecordWorldUrl(
     }
   };
   visit(record.result ?? {}, 0);
-  // 优先压缩 SOG / splat 包,其次旧的裸 PLY,再退回首个候选(可能是 360 全景图)。
+  // Prefer compressed SOG / splat packages, then the old bare PLY, and finally fall back to the first candidate (possibly a 360 panorama image).
   const sog = candidates.find((c) => /\.sog(\?|#|$)/i.test(c));
   if (sog) return sog;
   const packaged = candidates.find((c) => /\.(ksplat|splat|spz)(\?|#|$)/i.test(c));
   if (packaged) return packaged;
   const ply = candidates.find((c) => /\.ply(\?|#|$)/i.test(c));
   if (ply) return ply;
-  // 没有 3GS 扩展时,回退到通用输出 url(360 全景多是普通图片 url)。
+  // With no 3GS extension, fall back to the generic output url (360 panoramas are mostly ordinary image urls).
   return candidates[0] ?? historyRecordOutputUrl(record);
 }
 
 /**
- * 严格判断「这是不是一条世界(3GS / 360→3GS)生成记录」并取其产物 URL。
- * 与 {@link historyRecordWorldUrl} 不同:这里**只**收集 result 里真正命中 3GS 标记
- * (`.ply/.sog/.splat/...` 扩展名,或 `scene_3gs/ply_fs/splat` 字样)的字符串,绝不
- * 无条件吞 `output_url/url` 这类通用键——所以普通图片/视频记录会返回 null。
- * 用于历史资产弹窗的分桶:image-to-3gs 记录的 `media_type` 后端并不可靠(常被标成
- * `image` 等),不能单凭 media_type 判世界,得像节点侧 `pickPlyUrlFromResult` 那样
- * 嗅探产物结构。返回值优先 .sog → splat 包 → 裸 .ply → 首个命中。
+ * Strictly judge "is this a world (3GS / 360 -> 3GS) generation record" and take its product URL.
+ * Unlike {@link historyRecordWorldUrl}: this **only** collects strings in result that truly hit 3GS markers
+ * (`.ply/.sog/.splat/...` extensions, or the `scene_3gs/ply_fs/splat` wording), and never
+ * unconditionally swallows generic keys like `output_url/url` - so ordinary image/video records return null.
+ * Used for bucketing in the history assets dialog: the backend's `media_type` for image-to-3gs records is unreliable (often marked
+ * `image` etc.), so a world cannot be judged by media_type alone, and the product structure has to be sniffed like the node side's `pickPlyUrlFromResult`.
+ * The return value prefers .sog -> splat package -> bare .ply -> first hit.
  */
 export function historyRecordStrictWorldUrl(
   record: FreezoneGenerationHistoryRecord,
@@ -163,8 +163,8 @@ export function historyRecordStrictWorldUrl(
 }
 
 /**
- * 取一张「可作缩略图的预览图」URL —— 用于产物本身不是图片的记录(如 3D 世界 .sog)。
- * 探测结果里常见的预览/源图字段;没有则返回 null,由 host 传入的 fallback 兜底。
+ * Take a "preview image URL usable as a thumbnail" - for records whose product is not itself an image (such as a 3D world .sog).
+ * Probe the commonly seen preview/source image fields in the result; return null if none, and the fallback passed in by the host takes over.
  */
 export function historyRecordPreviewImageUrl(
   record: FreezoneGenerationHistoryRecord,
@@ -185,15 +185,15 @@ export function historyRecordPreviewImageUrl(
     const value = result[key];
     if (typeof value === 'string' && value.length > 0) return value;
   }
-  // 兜底:产物没有自带预览图时(如 image-to-3gs 的 .sog 世界),用**输入源图**当封面。
-  // 源图 url 可能在顶层或嵌套在 input/params/request 等容器里,键名也不一(source_url
-  // /image_url/url 等)。只接受像图片的 url(扩展名),避免把 .sog/.ply 当封面。
+  // Fallback: when the product has no preview of its own (such as an image-to-3gs .sog world), use the **input source image** as the cover.
+  // The source image url may be at the top level or nested in containers such as input/params/request, and the key names vary (source_url
+  // /image_url/url etc.). Only accept image-like urls (by extension), avoiding using .sog/.ply as a cover.
   const input = historyRecordInputImageUrl(record);
   if (input) return input;
   return null;
 }
 
-/** 像图片的 url(常见图片扩展名)。 */
+/** An image-like url (common image extensions). */
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|avif|gif|bmp|tiff?)(\?|#|$)/i;
 const INPUT_IMAGE_KEYS = [
   'source_url',
@@ -357,12 +357,12 @@ interface NodeGenerationHistoryProps {
    */
   isActive?: (record: FreezoneGenerationHistoryRecord) => boolean;
   /**
-   * 产物非图片(如 3D 世界 .sog)且记录自身没有预览图时,用这张兜底缩略图
-   * (通常是 host 节点的 previewImageUrl,例如场景 pano)。
+   * When the product is not an image (such as a 3D world .sog) and the record itself has no preview image, use this fallback thumbnail
+   * (usually the host node's previewImageUrl, e.g. a scene pano).
    */
   fallbackThumbnailUrl?: string | null;
   className?: string;
-  /** true 时整条禁用（如生成中不可恢复）：条带变暗、光标 not-allowed，行按钮原生 disabled。 */
+  /** When true the whole entry is disabled (e.g. not recoverable while generating): the strip dims, the cursor is not-allowed, and the row buttons are natively disabled. */
   disabled?: boolean;
 }
 
@@ -432,17 +432,17 @@ export function NodeGenerationHistory({
         {sorted.map((record) => {
           const rawUrl = historyRecordOutputUrl(record);
           const url = resolveMediaUrl(rawUrl);
-          // 缩略图位只喂降采样变体：原图动辄 5504x3072，画进 56x56 的格子后
-          // 每张仍要整幅 decode + raster——九张实测 2.1s 主线程长任务、掉 7 帧。
-          // `url` 保持原图，onRestore 恢复回节点的必须是原始产物。
+          // The thumbnail slot is fed only the downsampled variant: the original is often 5504x3072, and drawn into a 56x56 cell
+          // each one still needs a full decode + raster - nine measured 2.1s of main-thread long task and 7 dropped frames.
+          // `url` stays the original, and what onRestore restores back to the node must be the original product.
           const thumbUrl = resolveMediaUrl(rawUrl, { variant: 'thumb' });
           const completed = isCompleted(record);
           const isImage =
             completed && Boolean(url) && record.media_type === 'image';
-          // 视频缩略图不能用 <img>（src 是 .mp4 会裂图），改用 <video> 取首帧。
+          // A video thumbnail cannot use <img> (a src of .mp4 gives a broken image), so use <video> to take the first frame instead.
           const isVideo =
             completed && Boolean(url) && record.media_type === 'video';
-          // 产物非图片/视频(如 3D 世界 .sog)时,用记录自带预览图或 host 兜底图当缩略。
+          // When the product is not an image/video (such as a 3D world .sog), use the record's own preview image or the host's fallback image as the thumbnail.
           const previewImg =
             completed && !isImage && !isVideo
               ? resolveMediaUrl(

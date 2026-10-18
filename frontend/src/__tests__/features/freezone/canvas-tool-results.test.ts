@@ -37,7 +37,7 @@ describe("Freezone canvas tool result reporting", () => {
             commandIndex: 0,
             type: "create_node",
             status: "success",
-            label: "创建节点",
+            label: "Create node",
           },
         ],
       },
@@ -84,12 +84,12 @@ describe("Freezone canvas tool result reporting", () => {
         createdNodeIds: [],
         errors: [],
         commandResults: [
-          { commandIndex: 0, type: "run_workflow", status: "success", label: "运行工作流" },
+          { commandIndex: 0, type: "run_workflow", status: "success", label: "Run workflow" },
           {
             commandIndex: 0,
             type: "run_node_action",
             status: "pending",
-            label: "生成图片（产物待同步）",
+            label: "Generate image (output pending sync)",
             nodeId: "image-a",
             action: "generate_image",
           },
@@ -101,7 +101,7 @@ describe("Freezone canvas tool result reporting", () => {
       json: expect.objectContaining({
         canvas_apply_status: "pending",
         applied: false,
-        message: expect.stringContaining("待同步"),
+        message: expect.stringContaining("still syncing"),
         agent_hint: expect.stringContaining("Do not rerun generation"),
       }),
       timeout: 30_000,
@@ -114,7 +114,7 @@ describe("Freezone canvas tool result reporting", () => {
       result: {
         applied: 0, openedUiActions: 0, createdNodeIds: [], errors: [],
         commandResults: [{
-          commandIndex: 0, type: "run_node_action", status: "pending", label: "生成图片",
+          commandIndex: 0, type: "run_node_action", status: "pending", label: "Generate image",
           output: { pending: true, reason: "workflow_server_reconciliation_pending" },
         }],
       },
@@ -122,7 +122,7 @@ describe("Freezone canvas tool result reporting", () => {
     expect(api.post).toHaveBeenLastCalledWith("api/v1/chat/canvas-command-tool-result", {
       json: expect.objectContaining({
         canvas_apply_status: "pending",
-        message: expect.stringContaining("服务端仍在核对"),
+        message: expect.stringContaining("server is still verifying"),
         agent_hint: expect.stringContaining("server is still verifying"),
       }),
       timeout: 30_000,
@@ -147,7 +147,7 @@ describe("Freezone canvas tool result reporting", () => {
         applied: 0, openedUiActions: 0, createdNodeIds: [], errors: [],
         commandResults: [{
           commandIndex: 0, type: "run_node_action", status: "pending",
-          label: "生成图片", output: { pending: true, reason: "workflow_result_sync_pending" },
+          label: "Generate image", output: { pending: true, reason: "workflow_result_sync_pending" },
         }],
       },
     });
@@ -172,7 +172,7 @@ describe("Freezone canvas tool result reporting", () => {
       bridgeKey: "bridge-replay", followup: true,
       result: {
         applied: 0, openedUiActions: 0, createdNodeIds: [], errors: [],
-        commandResults: [{ commandIndex: 0, type: "run_node_action", status: "pending", label: "待同步" }],
+        commandResults: [{ commandIndex: 0, type: "run_node_action", status: "pending", label: "pending sync" }],
       },
     });
     const receipts = JSON.parse(window.localStorage.getItem("dramaclaw.canvas-command-receipts.v1") ?? "{}");

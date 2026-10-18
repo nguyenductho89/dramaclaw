@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-/** 422 canvas_media_scope_mismatch 走自愈分支，而不是和「载荷过大」一样直接躺平。 */
+/** 422 canvas_media_scope_mismatch takes the self-healing branch instead of giving up flat like "payload too large". */
 import { describe, expect, it } from "vitest";
 import { classifySaveError } from "@/features/freezone/canvasSyncCore";
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 const REF = {
   node_id: "n1",
@@ -19,14 +19,14 @@ describe("classifySaveError · canvas_media_scope_mismatch", () => {
         422,
         { detail: { code: "canvas_media_scope_mismatch", refs: [REF] } },
         "fallback",
-        zhT,
+        enT,
       ),
     ).toEqual({ kind: "media_scope", refs: [REF] });
   });
 
   it("keeps 422 canvas_payload_too_large fatal", () => {
     expect(
-      classifySaveError(422, { detail: { code: "canvas_payload_too_large" } }, "fallback", zhT),
+      classifySaveError(422, { detail: { code: "canvas_payload_too_large" } }, "fallback", enT),
     ).toMatchObject({ kind: "fatal" });
   });
 
@@ -36,7 +36,7 @@ describe("classifySaveError · canvas_media_scope_mismatch", () => {
         422,
         { detail: { code: "canvas_media_scope_mismatch", refs: [] } },
         "fallback",
-        zhT,
+        enT,
       ),
     ).toMatchObject({ kind: "error" });
   });

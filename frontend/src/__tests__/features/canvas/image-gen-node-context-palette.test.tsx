@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 调色盘按钮与提示词插入已随生成表单 UI 一起抽到 `ImageGenerationForm`（可独立挂载
-// 于 React Flow 之外），ImageGenNode 本身只渲染该组件。这条锁住的是**用户能走完
-// 的那条路**：面板上出现调色盘 → 展开看到条目 → 点一下把标准措辞写进提示词。
+// The palette button and prompt insertion were extracted together with the generation form UI into `ImageGenerationForm` (which can mount standalone
+// outside React Flow), and ImageGenNode itself only renders that component. This locks **the path a user can walk through**:
+// the palette appears on the panel → expand to see entries → one click writes the standard phrasing into the prompt.
 //
-// 本文件取代了原来 readFileSync + toContain 的版本。那种写法只要 `<NodeContext
-// PromptPaletteButton` / `insertTextAtCursor(` 这些字符串还在源文件里就通过——按钮
-// 因 palette 为空而不渲染、ref 没接上导致插入是空操作、传错 nodeId 拿到别的节点的
-// 上下文，它一个都发现不了。
+// This file replaces the old readFileSync + toContain version. That style passed as long as strings like `<NodeContext
+// PromptPaletteButton` / `insertTextAtCursor(` were still in the source — it would find none of: the button
+// not rendering because the palette is empty, an insertion being a no-op because the ref is not wired, or the wrong nodeId fetching another node's
+// context.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,7 +25,7 @@ class ResizeObserverMock {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
-// 调色盘按钮的文案走 i18n key，这里让 t 回落到 key，便于按 aria-label 定位。
+// The palette button's copy goes through i18n keys; here t falls back to the key, convenient for locating by aria-label.
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: unknown) =>
@@ -51,7 +51,7 @@ vi.mock("@/api/ops", async (importOriginal) => ({
       id: "huimeng/test-image",
       providerId: "huimeng",
       apiModel: "test_image_api",
-      label: "测试模型",
+      label: "Test model",
     },
   ]),
   listFreezoneStyleTemplates: vi.fn(async () => []),
@@ -68,13 +68,13 @@ function beatContext(overrides: Partial<MainlineContext> = {}): MainlineContext 
     episode: 1,
     beat: 2,
     label: "EP1 / Beat 2",
-    sketchColors: { "identity:面馆男青年_青年时期": "#FF00FF" },
-    propMarkerColors: { "prop:纸箱": "#B71C1C" },
+    sketchColors: { "identity:diner_young_man_young_adult": "#FF00FF" },
+    propMarkerColors: { "prop:carton": "#B71C1C" },
     ...overrides,
   };
 }
 
-/** 宿主：跟 ImageGenNode 一样「hook 出 formProps → 展开给表单」，不带 React Flow。 */
+/** Host: like ImageGenNode, "hook produces formProps → spread into the form", without React Flow. */
 function Host({ nodeId }: { nodeId: string }) {
   const { formProps } = useImageGenerationForm(nodeId);
   return (
@@ -108,12 +108,12 @@ function paletteButton() {
   return screen.queryByRole("button", { name: PALETTE_BUTTON_LABEL });
 }
 
-describe("ImageGenNode 的上下文调色盘", () => {
+describe("ImageGenNode's context palette", () => {
   beforeEach(() => {
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  it("画布上有节拍上下文时，面板里出现调色盘按钮", async () => {
+  it("when the canvas has a beat context, a palette button appears on the panel", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([imageGenNode("img-1"), beatContextNode("beat-1")], []);
@@ -125,7 +125,7 @@ describe("ImageGenNode 的上下文调色盘", () => {
     });
   });
 
-  it("没有节拍上下文时仍可用，只是条目退化成匿名颜色", async () => {
+  it("still works without a beat context, only the entries degrade into anonymous colors", async () => {
     useCanvasStore.getState().setCanvasData([imageGenNode("img-1")], []);
 
     render(<Host nodeId="img-1" />);
@@ -135,21 +135,21 @@ describe("ImageGenNode 的上下文调色盘", () => {
     });
     fireEvent.click(paletteButton()!);
 
-    // 匿名条目没有人物名，只有色块；插入的措辞相应地不带「」。
+    // An anonymous entry has no character name, only a color block; the inserted phrasing accordingly carries no quotes.
     const swatch = await screen.findByTitle("#FF00FF");
     fireEvent.click(swatch);
 
     await waitFor(() => {
       const editor = document.querySelector<HTMLElement>("[contenteditable='true']");
-      expect(editor?.textContent ?? "").toContain("#FF00FF 标记的人物");
+      expect(editor?.textContent ?? "").toContain("#FF00FF-marked character");
     });
     const editor = document.querySelector<HTMLElement>("[contenteditable='true']");
-    expect(editor?.textContent ?? "").not.toContain("「");
+    expect(editor?.textContent ?? "").not.toContain('"');
   });
 
-  it("画布上有多个节拍上下文时，只认自己连着的那一个", async () => {
-    // 两个以上节拍上下文 → 「全画布唯一」的兜底不生效，必须靠 nodeId 沿边找上游。
-    // 传错 nodeId（比如写死成别的 id）在这里就会拿不到具名条目。
+  it("when the canvas has several beat contexts, only the one it is connected to counts", async () => {
+    // With two or more beat contexts → the "unique on the whole canvas" fallback does not apply, and the upstream must be found along edges by nodeId.
+    // A wrong nodeId (say hard-coded to another id) would fail to get the named entry here.
     useCanvasStore.getState().setCanvasData(
       [
         imageGenNode("img-1"),
@@ -158,7 +158,7 @@ describe("ImageGenNode 的上下文调色盘", () => {
           "beat-2",
           beatContext({
             beat: 7,
-            sketchColors: { "identity:天台女配_中年时期": "#00FFCC" },
+            sketchColors: { "identity:rooftop_woman_middle_aged": "#00FFCC" },
             propMarkerColors: {},
           }),
         ),
@@ -173,11 +173,11 @@ describe("ImageGenNode 的上下文调色盘", () => {
     });
     fireEvent.click(paletteButton()!);
 
-    expect(await screen.findByText(/面馆男青年_青年时期/)).toBeInTheDocument();
-    expect(screen.queryByText(/天台女配_中年时期/)).toBeNull();
+    expect(await screen.findByText(/diner_young_man_young_adult/)).toBeInTheDocument();
+    expect(screen.queryByText(/rooftop_woman_middle_aged/)).toBeNull();
   });
 
-  it("展开后点条目，把标准措辞插进提示词编辑器", async () => {
+  it("after expanding, clicking an entry inserts the standard phrasing into the prompt editor", async () => {
     useCanvasStore
       .getState()
       .setCanvasData([imageGenNode("img-1"), beatContextNode("beat-1")], []);
@@ -189,15 +189,15 @@ describe("ImageGenNode 的上下文调色盘", () => {
     });
     fireEvent.click(paletteButton()!);
 
-    // 具名条目按 sketchColors 解析出人物名。
-    const entry = await screen.findByText(/面馆男青年_青年时期/);
+    // A named entry resolves the character name from sketchColors.
+    const entry = await screen.findByText(/diner_young_man_young_adult/);
     fireEvent.click(entry);
 
-    // 插入的是 contextPromptPaletteInsertionText 的措辞：颜色 + 「人物名」。
+    // What is inserted is the phrasing of contextPromptPaletteInsertionText: color + "character name".
     await waitFor(() => {
       const editor = document.querySelector<HTMLElement>("[contenteditable='true']");
       expect(editor?.textContent ?? "").toContain(
-        "#FF00FF 标记的人物「面馆男青年_青年时期」",
+        '#FF00FF-marked character "diner_young_man_young_adult"',
       );
     });
   });

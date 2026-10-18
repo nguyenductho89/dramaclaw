@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * `foreign_media` 挂在信封里 `data` 的**同级**（和 `editing_by` 一样），画布契约
- * 一个字节不变。只解一层信封的 `apiCall` 会把它丢掉，所以这条读取路径必须收整个信封。
+ * `foreign_media` sits at the **same level** as `data` in the envelope (like `editing_by`), so the canvas contract
+ * stays byte-for-byte unchanged. An `apiCall` that unwraps only one envelope layer would drop it, so this read path must take the whole envelope.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

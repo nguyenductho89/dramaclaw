@@ -32,7 +32,7 @@ const JOB_REF = { task_key: 'tk-rl', task_type: 'freezone_relight', job_id: 'job
 function payload(overrides: Partial<LightEditorSubmitPayload> = {}): LightEditorSubmitPayload {
   return {
     prompt: '',
-    displayName: '打光',
+    displayName: 'Relight',
     brightness: 70,
     color: '#ffd7a8',
     colorTemperatureKelvin: 4000,
@@ -40,15 +40,15 @@ function payload(overrides: Partial<LightEditorSubmitPayload> = {}): LightEditor
       vector: { x: -0.6, y: 0.2 },
       depth: 'front',
       nearestPreset: 'left',
-      label: '左侧',
+      label: 'Left',
     },
     rimLight: true,
     smartMode: {
       enabled: true,
-      prompt: '清晨柔光',
+      prompt: 'Soft morning light',
       preset: null,
       presetLabel: null,
-      presetPrompt: '电影感',
+      presetPrompt: 'Cinematic feel',
     },
     apiModel: 'gpt-image-2',
     providerId: 'huimeng',
@@ -69,7 +69,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('imageRelight application（重打光生成编排）', () => {
+describe('imageRelight application (relight generation orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneRelight.mockReset();
@@ -78,7 +78,7 @@ describe('imageRelight application（重打光生成编排）', () => {
     seedSourceNode();
   });
 
-  it('建结果节点并连边 → 提交（主光方向 + 智能提示词拼接）→ 回填 url', async () => {
+  it('builds the result node and wires the edge -> submits (key light direction + smart prompt concatenation) -> fills the url back', async () => {
     submitFreezoneRelight.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/rl.png' } });
 
@@ -88,7 +88,7 @@ describe('imageRelight application（重打光生成编排）', () => {
     const nodeId = result?.nodeId;
     const state = useCanvasStore.getState();
     expect(state.nodes.find((node) => node.id === nodeId)?.data).toMatchObject({
-      displayName: '打光',
+      displayName: 'Relight',
       aspectRatio: '16:9',
       resultKind: 'generic',
       isGenerating: true,
@@ -108,8 +108,8 @@ describe('imageRelight application（重打光生成编排）', () => {
       colorTemperatureKelvin: 4000,
       keyLightDirection: 'left',
       rimLight: true,
-      // 智能模式开：prompt + presetPrompt 换行拼接。
-      prompt: '清晨柔光\n电影感',
+      // Smart mode on: prompt + presetPrompt joined with a newline.
+      prompt: 'Soft morning light\nCinematic feel',
       imageSize: '2K',
       model: 'gpt-image-2',
     });
@@ -121,7 +121,7 @@ describe('imageRelight application（重打光生成编排）', () => {
     });
   });
 
-  it('智能模式关 → 提示词为空；主光无有效预设 → 回落 front', async () => {
+  it('smart mode off -> empty prompt; key light without a valid preset -> falls back to front', async () => {
     submitFreezoneRelight.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/rl.png' } });
 
@@ -133,14 +133,14 @@ describe('imageRelight application（重打光生成编排）', () => {
           vector: { x: 0, y: 0 },
           depth: 'front',
           nearestPreset: null,
-          label: '正面',
+          label: 'Front',
         },
         smartMode: {
           enabled: false,
-          prompt: '被忽略',
+          prompt: 'Ignored',
           preset: null,
           presetLabel: null,
-          presetPrompt: '也被忽略',
+          presetPrompt: 'Also ignored',
         },
       }),
     );
@@ -153,14 +153,14 @@ describe('imageRelight application（重打光生成编排）', () => {
     });
   });
 
-  it('缺 project → 返回 null，不建节点', () => {
+  it('missing project -> returns null and creates no node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(relightImage('src-1', '/static/src.png', payload())).toBeNull();
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('提交失败 → 错误写回结果节点', async () => {
+  it('submit failure -> the error is written back to the result node', async () => {
     submitFreezoneRelight.mockRejectedValue(new Error('relight boom'));
 
     const result = relightImage('src-1', '/static/src.png', payload());

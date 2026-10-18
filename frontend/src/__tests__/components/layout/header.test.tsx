@@ -254,8 +254,8 @@ describe("Header runtime gating", () => {
     ).toBeInTheDocument();
   });
 
-  // 回归用例：独立公告按钮被删掉后，账号头像成了公告中心的唯一入口。它当时只绑了
-  // onMouseEnter —— 触屏没有 hover、键盘也激活不了，公告中心等于对这两类用户消失。
+  // Regression case: after the standalone announcement button was removed, the account avatar became the only entry to the announcement center. It was bound only to
+  // onMouseEnter -- touch screens have no hover and keyboards cannot activate it, so the announcement center effectively vanished for those users.
   it("opens the account panel on click so the announcement entry survives without hover", async () => {
     const user = userEvent.setup();
     renderHeader();
@@ -279,7 +279,7 @@ describe("Header runtime gating", () => {
     trigger.focus();
     await user.keyboard("{Enter}");
 
-    // 面板 portal 到 body 末尾，Tab 走不进去，所以打开时必须主动把焦点送进第一项。
+    // The panel is portaled to the end of body and Tab cannot reach it, so on open focus must be moved to the first item explicitly.
     expect(await screen.findByRole("button", { name: "Announcement Center" })).toHaveFocus();
 
     await user.keyboard("{Escape}");
@@ -325,8 +325,8 @@ describe("Header runtime gating", () => {
     await user.click(trigger);
     await screen.findByRole("button", { name: "Announcement Center" });
 
-    // 悬停打开的面板移开就收；点击「钉住」的不该被 mouseleave 收走，
-    // 否则触屏点开后手指一抬内容就没了。
+    // A panel opened by hover closes when the pointer leaves; one pinned by click must not be closed by mouseleave,
+    // otherwise on touch screens the content vanishes as soon as the finger lifts.
     fireEvent.mouseLeave(trigger.parentElement!);
 
     await waitFor(() => {
@@ -349,8 +349,8 @@ describe("Header runtime gating", () => {
   });
 
   it("purges user-scoped caches after logout so the next account can't see stale data", async () => {
-    // 回归用例：手动退出是 SPA 内部跳转，不清 QueryClient 的话换账号登录后
-    // projectSummaries 还在 staleTime 内，新账号会看到上一个账号的项目列表。
+    // Regression case: manual logout is an in-SPA navigation, and if the QueryClient is not cleared, after logging in with another account
+    // projectSummaries is still within staleTime and the new account would see the previous account's project list.
     authState.logout.mockResolvedValue(undefined);
 
     renderHeader();

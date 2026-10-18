@@ -15,7 +15,7 @@ import {
 
 vi.mock("@/api/client", () => ({
   apiCall: vi.fn(),
-  // 画布详情走整信封:`foreign_media` 挂在 `data` 同级,只解一层的 apiCall 会丢掉它。
+  // Canvas detail goes through the whole envelope: `foreign_media` sits beside `data`, and an apiCall that unwraps only one layer would drop it.
   apiCallEnvelope: vi.fn(),
 }));
 
@@ -149,7 +149,7 @@ describe("canvas projection api", () => {
 
     await createBlankFreezoneCanvas("project-a", {
       canvasId: "canvas_story_lab_abc123",
-      name: "故事实验",
+      name: "Story Lab",
       creatorUsername: "alice",
     });
 
@@ -169,7 +169,7 @@ describe("canvas projection api", () => {
           viewport: null,
           metadata: {
             canvas_origin: "user_created",
-            display_name: "故事实验",
+            display_name: "Story Lab",
             creator_username: "alice",
           },
         }),

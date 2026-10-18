@@ -70,7 +70,7 @@ order) stays an agent-authored draft with the difference recorded in
      "data": {
        "workflowCatalog": {"recipeId": "general-audio"},
        "audioKind": "music",
-       "text": "Instrumental ambient background music with no lyrics"
+       "text": "Instrumental background ambience music with no lyrics"
      }
    }
    ```
@@ -137,7 +137,7 @@ response, present the persisted preview, and confirm only the returned draft rev
 
 Do not call `freezone_emit_canvas_command` for this path. Do not separately create nodes, edges,
 groups, or layout after the graph call. Never write placeholder or diagnostic nodes such as `A/B`,
-`T1/T2`, or "test node" to the user's canvas. If read-only diagnosis is required, pass the same
+`T1/T2`, or “test node” to the user's canvas. If read-only diagnosis is required, pass the same
 complete plan to `workflow_graph_compile`; never compile a reduced probe or a multi-node plan with
 an empty `edges` array.
 

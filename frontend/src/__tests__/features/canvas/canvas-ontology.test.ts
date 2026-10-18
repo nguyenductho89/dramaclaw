@@ -22,7 +22,7 @@ describe("canvas ontology", () => {
     const beatContext = node({
       id: "beat-context",
       type: CANVAS_NODE_TYPES.beatContext,
-      data: { content: "雨夜街口，角色回头" },
+      data: { content: "A rainy street corner, the character turns around" },
     });
     const sourceImage = node({
       id: "source-image",
@@ -32,12 +32,12 @@ describe("canvas ontology", () => {
     const planningText = node({
       id: "planning-text",
       type: CANVAS_NODE_TYPES.textAnnotation,
-      data: { content: "镜头规划" },
+      data: { content: "Shot plan" },
     });
     const imageGen = node({
       id: "image-gen",
       type: CANVAS_NODE_TYPES.imageGen,
-      data: { prompt: "角色定妆" },
+      data: { prompt: "Character makeup test" },
     });
     const video = node({
       id: "video",
@@ -101,7 +101,7 @@ describe("canvas ontology", () => {
       type: CANVAS_NODE_TYPES.imageGen,
       position: { x: 0, y: 0 },
       data: {
-        displayName: "当前分镜",
+        displayName: "Current storyboard frame",
         imageUrl: "/static/frame.png",
         preset_managed: true,
         slot_target: { kind: "frame", episode: 1, beat: 2 },
@@ -113,7 +113,7 @@ describe("canvas ontology", () => {
       type: CANVAS_NODE_TYPES.imageGen,
       position: { x: 360, y: 0 },
       data: {
-        displayName: "分镜候选",
+        displayName: "Storyboard candidate",
         imageUrl: "/static/candidate.png",
         user_spawned: true,
         slot_target: { kind: "frame", episode: 1, beat: 2 },
@@ -125,7 +125,7 @@ describe("canvas ontology", () => {
       type: CANVAS_NODE_TYPES.skill,
       position: { x: 720, y: 0 },
       data: {
-        displayName: "从镜头上下文生成分镜",
+        displayName: "Generate storyboard frame from shot context",
         skill_id: "freezone.frame_from_context",
       },
     });
@@ -140,8 +140,8 @@ describe("canvas ontology", () => {
       type: CANVAS_NODE_TYPES.textAnnotation,
       position: { x: 0, y: 240 },
       data: {
-        title: "角色设定",
-        content: "一位温柔坚定的公益主角",
+        title: "Character setting",
+        content: "A gentle and resolute charity protagonist",
       },
     });
     const generator = node({
@@ -149,7 +149,7 @@ describe("canvas ontology", () => {
       type: CANVAS_NODE_TYPES.imageGen,
       position: { x: 360, y: 240 },
       data: {
-        prompt: "角色形象图",
+        prompt: "Character portrait",
       },
     });
     const semanticEdge = {
@@ -223,8 +223,8 @@ describe("canvas ontology", () => {
       ...semanticSource,
       id: "input-text",
       data: {
-        displayName: "可执行图片提示词",
-        content: "直接用于生成图片的提示词",
+        displayName: "Executable image prompt",
+        content: "A prompt used directly to generate images",
         semanticOutputRole: "input_text",
       },
     };
@@ -296,14 +296,14 @@ describe("canvas ontology", () => {
         skill_id: "freezone.frame_from_context",
         action: "run_skill",
         command_type: "run_node_action",
-        label: "从镜头上下文生成分镜",
+        label: "Generate storyboard frame from shot context",
         execution_state: null,
       },
     ]);
     expect(summary.pushable_candidates[0]).toMatchObject({
       node_id: "candidate-frame",
       slot_kind: "frame",
-      label: "分镜候选",
+      label: "Storyboard candidate",
       media_type: "image",
     });
   });
@@ -313,7 +313,7 @@ describe("canvas ontology", () => {
       id: "director-world",
       type: CANVAS_NODE_TYPES.threeDWorld,
       data: {
-        displayName: "导演世界",
+        displayName: "Director world",
         plyUrl: "/static/world.sog",
         previewImageUrl: "/static/world-preview.png",
       },

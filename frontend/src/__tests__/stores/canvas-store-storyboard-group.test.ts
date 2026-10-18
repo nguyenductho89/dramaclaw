@@ -232,7 +232,7 @@ describe("canvasStore fitGroupToChildren", () => {
           type: CANVAS_NODE_TYPES.group,
           position: { x: 0, y: 0 },
           style: { width: 200, height: 150 },
-          data: { label: "组" },
+          data: { label: "Group" },
         },
         {
           id: child,
@@ -266,7 +266,7 @@ describe("canvasStore fitGroupToChildren", () => {
           type: CANVAS_NODE_TYPES.group,
           position: { x: 0, y: 0 },
           style: { width: 1000, height: 800 },
-          data: { label: "组" },
+          data: { label: "Group" },
         },
         {
           id: "c2",

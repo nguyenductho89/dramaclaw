@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 目录条目 → `ImageModelDefinition.resolveRequest` → `freezoneAiGateway` 的
-// provider/model 往返。这条链上唯一的耦合点是「gateway 按**第一个** `/` 拆
-// provider/model」，而目录的 apiModel 自己可能就带命名空间（OpenRouter 的
-// `google/gemini-...`）。只测 resolveRequest 的返回值形状是测不出问题的——
-// 必须让真的 gateway 去拆一遍，断言后端最终收到的两个字段。
+// The provider/model round trip of catalog entry -> `ImageModelDefinition.resolveRequest` -> `freezoneAiGateway`.
+// The only coupling point on this chain is that "the gateway splits provider/model at the **first** `/`",
+// while the catalog's apiModel may itself carry a namespace (OpenRouter's
+// `google/gemini-...`). Testing only the shape of resolveRequest's return value cannot reveal the problem --
+// the real gateway must do the split, and the two fields the backend finally receives must be asserted.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -52,7 +52,7 @@ function entry(overrides: Partial<CatalogImageModelEntry>): CatalogImageModelEnt
   };
 }
 
-/** 走一次真实提交，返回 gateway 交给 ops 层的 payload（provider/model 已拆好）。 */
+/** Runs one real submission and returns the payload the gateway hands to the ops layer (provider/model already split). */
 async function submittedBody(
   model: CatalogImageModelEntry,
   referenceImages: string[] = [],
@@ -80,8 +80,8 @@ beforeEach(() => {
   awaitTaskCompletion.mockResolvedValue({ result: { output_url: "https://x/1.png" } });
 });
 
-describe("目录模型的 provider/model 往返", () => {
-  it("小写分辨率目录仍默认选择 2k 档位", () => {
+describe("provider/model round trip of catalog models", () => {
+  it("a lower-case resolution catalog still defaults to the 2k tier", () => {
     const definition = toImageModelDefinition(
       entry({ resolutionOptions: ["1k", "2k", "4k"] }),
     );
@@ -89,21 +89,21 @@ describe("目录模型的 provider/model 往返", () => {
     expect(definition.defaultResolution).toBe("2k");
   });
 
-  it("OpenRouter 命名空间模型：provider 归 openrouter，model 保留完整多段名", async () => {
+  it("OpenRouter namespaced model: provider is openrouter, and model keeps the full multi-segment name", async () => {
     const body = await submittedBody(entry({}));
     expect(body.provider).toBe("openrouter");
-    // 关键断言：不能被截成 `gemini-2.5-flash-image-preview`——那个串不在目录
-    // 条目的 identifiers 里，后端会 400 "model does not match configured media model"。
+    // Key assertion: it must not be truncated to `gemini-2.5-flash-image-preview` -- that string is not among the catalog entry's
+    // identifiers, and the backend would answer 400 "model does not match configured media model".
     expect(body.model).toBe("google/gemini-2.5-flash-image-preview");
   });
 
-  it("编辑路径（带参考图）同样保留完整模型名", async () => {
+  it("the edit path (with reference images) keeps the full model name too", async () => {
     const body = await submittedBody(entry({}), ["https://x/base.png"]);
     expect(body.provider).toBe("openrouter");
     expect(body.model).toBe("google/gemini-2.5-flash-image-preview");
   });
 
-  it("apiModel 不带命名空间时也不能丢 provider", async () => {
+  it("the provider must not be lost even when apiModel carries no namespace", async () => {
     const body = await submittedBody(
       entry({
         id: "huimeng/gpt-image-2",
@@ -115,8 +115,8 @@ describe("目录模型的 provider/model 往返", () => {
     expect(body.model).toBe("huimeng_gpt_image2");
   });
 
-  it("目录 id 与 provider/apiModel 组合不一致时，送的是 apiModel 而非 id", async () => {
-    // 后台可以给条目配任意 id；能被后端 identifiers 认出来的是 apiModel。
+  it("when the catalog id disagrees with the provider/apiModel combination, apiModel is sent rather than the id", async () => {
+    // The backend can configure any id for an entry; what the backend identifiers recognize is apiModel.
     const body = await submittedBody(
       entry({ id: "custom-slug", providerId: "openai", apiModel: "gpt-image-2" }),
     );

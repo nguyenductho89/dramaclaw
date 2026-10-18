@@ -1,12 +1,12 @@
-"""OI-48：叶子闸门在调用点漏传 `egress_context=` 时必须回落到请求作用域的身份。
+"""OI-48: a leaf gate must fall back to the request-scoped identity when a call site forgets to pass `egress_context=`.
 
-出网闸门通过可选参数携带身份，于是「平台任务，允许」与「调用点忘了穿参数」
-被压成同一个 `None`——闸门无法区分，组织流量因此拿平台凭据直连上游、记到平台
-账上。派发点（`task_backend/run_core.py`）已把身份绑在请求作用域上，每个做出
-`is_organization` 判决的**叶子**闸门都必须读得到它。
+Egress gates carry identity through an optional parameter, so "platform task, allowed" and "the call site forgot to pass the parameter"
+collapse into the same `None` - the gate cannot tell them apart, so organization traffic connects upstream directly with platform credentials and is billed to the platform
+account. The dispatch point (`task_backend/run_core.py`) already binds the identity to the request scope, and every **leaf** gate that makes an
+`is_organization` verdict must be able to read it.
 
-透传站点（`egress_context=egress_context`）不在此列：只要叶子会回落，透传空值
-仍然得到正确判决，在透传处再解析一次只是重复。
+Pass-through sites (`egress_context=egress_context`) are excluded: as long as the leaf falls back, passing an empty value through
+still yields the correct verdict, and resolving again at the pass-through site would only be duplication.
 """
 
 from __future__ import annotations
@@ -61,11 +61,11 @@ def _organization_context() -> TrustedEgressContext:
 
 
 def test_platform_scope_is_not_adopted_as_an_egress_context() -> None:
-    """回落只补组织这一支——平台身份在这些闸门里与 `None` 同义。
+    """The fallback only fills in the organization branch - a platform identity is synonymous with `None` in these gates.
 
-    否则修 fail-open 会修出 fail-closed 的误伤：`IndexTTS2FalClient.generate`
-    对「有身份且非组织」直接判 `ORG_EGRESS_DENIED`，把平台身份回落进去，
-    平台自己的语音合成就被自己的组织闸门拒了。
+    Otherwise fixing fail-open would cause a fail-closed false positive: `IndexTTS2FalClient.generate`
+    returns `ORG_EGRESS_DENIED` directly for "has an identity and is not an organization"; falling the platform identity back into it
+    would have the platform's own speech synthesis rejected by its own organization gate.
     """
 
     from novelvideo.egress_context import (
@@ -82,7 +82,7 @@ def test_platform_scope_is_not_adopted_as_an_egress_context() -> None:
 
 
 def test_subprocess_model_child_denies_org_without_explicit_context() -> None:
-    """漏传参数不该让组织拿到一个持有平台密钥的模型子进程。"""
+    """A forgotten parameter must not let an organization obtain a model subprocess holding platform secrets."""
 
     from novelvideo.task_backend.subprocesses import (
         EgressBoundaryError,
@@ -96,11 +96,11 @@ def test_subprocess_model_child_denies_org_without_explicit_context() -> None:
 
 
 def test_subprocess_launch_does_not_adopt_scope_identity() -> None:
-    """受限启动**不**回落——它要的是调用方备好的策略，不是身份判决。
+    """A restricted launch does **not** fall back - it wants a policy prepared by the caller, not an identity verdict.
 
-    全仓 16 个 `run_project_subprocess` 调用点只有一个传 `restricted_policy`，
-    回落会把其余 15 处本地 ffmpeg/媒体命令对组织一律拒掉。那些命令不带凭据也
-    不出网，拒掉是功能损坏而非安全收益。
+    Of the 16 `run_project_subprocess` call sites in the whole repo only one passes `restricted_policy`,
+    and falling back would make all 15 other local ffmpeg/media commands be rejected for organizations. Those commands carry no credentials and
+    make no egress, so rejecting them is functional breakage rather than a security gain.
     """
 
     from novelvideo.task_backend import subprocesses
@@ -116,7 +116,7 @@ def test_subprocess_launch_does_not_adopt_scope_identity() -> None:
 
 @pytest.mark.asyncio
 async def test_image_egress_denies_non_newapi_without_explicit_context() -> None:
-    """组织只允许走 newapi；漏传参数不该让 fal 直连悄悄放行。"""
+    """Organizations may only go through newapi; a forgotten parameter must not silently let a direct fal connection through."""
 
     from novelvideo.generators.nanobanana_grid import (
         _prepare_organization_image_egress,
@@ -135,7 +135,7 @@ async def test_image_egress_denies_non_newapi_without_explicit_context() -> None
 
 
 def test_character_generator_uses_request_scoped_credentials_by_default() -> None:
-    """构造期未传身份时，组织不该拿到本地配置里的平台 provider 与密钥。"""
+    """When no identity is passed at construction time, an organization must not get the platform provider and secrets from local config."""
 
     from novelvideo.generators.nanobanana_character import (
         NanoBananaCharacterGenerator,
@@ -148,7 +148,7 @@ def test_character_generator_uses_request_scoped_credentials_by_default() -> Non
 
 
 def test_indextts2_client_blanks_platform_key_without_explicit_context() -> None:
-    """漏传参数不该让组织的语音合成落在平台 FAL/newapi 密钥上。"""
+    """A forgotten parameter must not let an organization's speech synthesis land on platform FAL/newapi secrets."""
 
     from novelvideo.generators.indextts2_fal import IndexTTS2FalClient
 
@@ -160,7 +160,7 @@ def test_indextts2_client_blanks_platform_key_without_explicit_context() -> None
 
 @pytest.mark.asyncio
 async def test_volcengine_image_generate_denies_org_without_explicit_context() -> None:
-    """火山直连是组织禁止触达的叶子，漏传参数不该绕开它。"""
+    """Volcano direct is a leaf organizations are forbidden to reach; a forgotten parameter must not bypass it."""
 
     from novelvideo.generators.image_generator import VolcengineImageGenerator
     from novelvideo.ports.egress import EgressError
@@ -173,9 +173,9 @@ async def test_volcengine_image_generate_denies_org_without_explicit_context() -
 
 
 def test_scope_survives_asyncio_run_into_a_leaf_gate() -> None:
-    """`verification/sketch_edit_execute.py:546` 用 `asyncio.run` 进叶子，全程无
-    `egress_context` 参数可传——它只能靠作用域身份。ContextVar 会随
-    `asyncio.run` 复制进新事件循环，这条依赖必须被钉住而不是假定。
+    """`verification/sketch_edit_execute.py:546` enters the leaf via `asyncio.run` with no
+    `egress_context` parameter to pass - it can only rely on the scoped identity. The ContextVar is copied into the new
+    event loop by `asyncio.run`; this dependency must be pinned rather than assumed.
     """
 
     import asyncio
@@ -191,12 +191,12 @@ def test_scope_survives_asyncio_run_into_a_leaf_gate() -> None:
 
 
 def test_seedream_is_a_legacy_alias_for_a_newapi_selection() -> None:
-    """钉住一条否证：`image_generator.py:1191` 的 seedream 拒绝不是漏洞。
+    """Pin down a refutation: the seedream rejection at `image_generator.py:1191` is not a hole.
 
-    该判定在 `normalize_character_image_selection` **之前**求值，看似传
-    `model=None` 就能绕开。但归一化永远不会返回 `"seedream"`——它是映射到
-    `newapi_gpt_image2` 的历史别名，而 newapi 正是组织**被允许**的通道。
-    把判定挪到归一化之后只会拒掉合法的组织路径。
+    That check is evaluated **before** `normalize_character_image_selection`, so passing
+    `model=None` seems to bypass it. But normalization never returns `"seedream"` - it is a historical alias mapped to
+    `newapi_gpt_image2`, and newapi is exactly the channel organizations are **allowed** to use.
+    Moving the check after normalization would only reject legitimate organization paths.
     """
 
     from novelvideo.config import normalize_character_image_selection
@@ -209,7 +209,7 @@ def test_seedream_is_a_legacy_alias_for_a_newapi_selection() -> None:
 async def test_prop_reference_uses_request_scoped_config_without_explicit_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """道具三视图漏传参数时会走本地 provider 配置——必须回落到组织通道。"""
+    """When a prop turnaround omits the parameter it goes through the local provider config - it must fall back to the organization channel."""
 
     from novelvideo.generators import nanobanana_prop
 
@@ -232,7 +232,7 @@ async def test_prop_reference_uses_request_scoped_config_without_explicit_contex
 async def test_freezone_gen_denies_volcengine_without_explicit_context(
     tmp_path,
 ) -> None:
-    """自由区生成漏传参数时，组织仍不该被放去火山直连。"""
+    """When free-zone generation omits the parameter, an organization must still not be sent to Volcano direct."""
 
     from novelvideo.freezone import jobs
     from novelvideo.ports.egress import EgressError
@@ -252,7 +252,7 @@ async def test_freezone_gen_denies_volcengine_without_explicit_context(
 async def test_beat_audio_builds_org_client_without_explicit_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """整批语音漏传参数时会用平台客户端——必须回落到 newapi 组织客户端。"""
+    """When a whole voice batch omits the parameter it would use the platform client - it must fall back to the newapi organization client."""
 
     from novelvideo.audio import indextts2_beat_audio_task as task
     from novelvideo.generators import indextts2_fal
@@ -288,7 +288,7 @@ async def test_beat_audio_builds_org_client_without_explicit_context(
 async def test_freezone_vision_egress_prepares_org_path_without_explicit_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """自由区视觉分析漏传参数时，会当成平台流量直连——必须回落到组织通道。"""
+    """When free-zone vision analysis omits the parameter it would be treated as platform traffic going direct - it must fall back to the organization channel."""
 
     from novelvideo.freezone import presets
 

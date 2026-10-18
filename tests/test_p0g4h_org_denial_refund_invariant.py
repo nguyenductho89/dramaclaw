@@ -1,18 +1,18 @@
-"""OI-48 块⑥：整批语音的退款正确性压在一条没人守护的隐含不变量上。
+"""OI-48 block 6: refund correctness of a whole voice batch rests on an unguarded implicit invariant.
 
-链路：`indextts2_fal.py` 判 `ORG_EGRESS_DENIED`
+Chain: `indextts2_fal.py` decides `ORG_EGRESS_DENIED`
   → `indextts2_beat_audio_task.py:596 raise`
-  → `:622` 吞进 `result.failed`
-  → `task_backend/runners/audio.py:106` 只在 `generated == 0 and failed` 时抛
-  → `task_backend/run_core.py:721` 退回本次特性积分预留。
+  -> `:622` swallows it into `result.failed`
+  -> `task_backend/runners/audio.py:106` raises only when `generated == 0 and failed`
+  -> `task_backend/run_core.py:721` returns this feature's credit reservation.
 
-也就是说**只有整批全灭才退款**。今天全灭是因为 `ORG_EGRESS_DENIED` 是
-(context, provider) 的性质、对每个 beat 齐一——安全是撞上的，不是设计的。
-一旦出现「部分 beat 被拒、部分成功」，`generated > 0` 就绕开 `:106`，被拒部分
-的积分无声白扣。
+In other words, **a refund happens only when the whole batch fails**. Today the whole batch fails because `ORG_EGRESS_DENIED` is a
+property of (context, provider) and is uniform across beats - the safety is incidental, not designed.
+Once "some beats denied, some succeeded" occurs, `generated > 0` bypasses `:106`, and the credits for the denied part
+are silently charged.
 
-本文件钉住这条不变量本身，不改退款逻辑：齐一性一旦被破坏，测试转红并指向
-退款缺口。缺口的修复另立 OI 条目。
+This file pins the invariant itself without changing refund logic: once uniformity is broken, the test goes red and points to
+the refund gap. Fixing the gap is tracked in a separate OI entry.
 """
 
 from __future__ import annotations
@@ -49,17 +49,17 @@ def _organization_context() -> TrustedEgressContext:
 
 @pytest.mark.asyncio
 async def test_org_denial_is_uniform_across_beat_level_inputs(tmp_path) -> None:
-    """齐一性的来源：拒绝只取决于 (context, provider)，与 beat 级输入无关。
+    """Source of uniformity: denial depends only on (context, provider), not on beat-level inputs.
 
-    两者在一次整批生成里恒定，所以拒绝对每个 beat 齐一，`generated` 必为 0，
-    `runners/audio.py:106` 因而总能触发退款。若哪天判据开始读 beat 级输入
-    （文本、声线、输出路径），齐一性即告破裂，这条断言会转红——那时
-    `generated > 0` 会绕开退款条件。
+    Both are constant within one whole-batch generation, so denial is uniform across beats, `generated` must be 0,
+    and `runners/audio.py:106` therefore always triggers the refund. If the criterion ever starts reading beat-level inputs
+    (text, voice, output path), uniformity breaks and this assertion goes red - at that point
+    `generated > 0` would bypass the refund condition.
     """
 
     from novelvideo.generators.indextts2_fal import IndexTTS2FalClient
 
-    # provider 与组织身份不符 → 组织必须被拒。
+    # provider does not match the organization identity -> the organization must be denied.
     client = IndexTTS2FalClient(provider="fal", egress_context=_organization_context())
 
     verdicts = []
@@ -76,7 +76,7 @@ async def test_org_denial_is_uniform_across_beat_level_inputs(tmp_path) -> None:
 
 
 def test_refund_requires_the_whole_batch_to_fail() -> None:
-    """把「只有全灭才退款」这条实际条件钉下来，别让它看起来像「失败就退款」。"""
+    """Pin down the actual condition "refund only when the whole batch fails", so it does not look like "refund on any failure"."""
 
     from novelvideo.task_backend.runners import audio
 
@@ -88,7 +88,7 @@ def test_refund_requires_the_whole_batch_to_fail() -> None:
 async def test_denied_batch_reports_zero_generated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """行为面：组织整批被拒时 `generated == 0`，退款条件成立。"""
+    """Behavior: when the whole organization batch is denied, `generated == 0`; the refund condition holds."""
 
     from novelvideo.audio import indextts2_beat_audio_task as task
     from novelvideo.generators.tts_generator import TTSResult

@@ -16,14 +16,14 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-// `login()` 成功后会顺带 void refreshAvatar() 打一发 `/api/v1/account/avatar`
-// (EE 头像端点;getCurrentUser 不再搭这趟便车,改由 App 顶层独立触发)。这些
-// 去重/缓存断言只关心 `/auth/me` 被打了几次,所以按 URL 过滤,别把 avatar 那一发算进来。
+// After a successful `login()`, void refreshAvatar() also fires a request to `/api/v1/account/avatar`
+// (an EE avatar endpoint; getCurrentUser no longer piggybacks on it and is triggered independently at the App top level). These
+// dedupe/cache assertions only care how many times `/auth/me` was called, so filter by URL and do not count the avatar request.
 function authMeCallCount(fetchMock: ReturnType<typeof vi.fn>): number {
   return fetchMock.mock.calls.filter(([url]) => String(url).includes("/auth/me")).length;
 }
 
-// 非 /auth/me 的请求(如 /account/avatar)统一返回 ok:false,让 refreshAvatar 静默早退。
+// Requests other than /auth/me (such as /account/avatar) all return ok:false so refreshAvatar exits early silently.
 const avatarMiss = { ok: false, json: async () => ({}) };
 
 describe("auth-store", () => {

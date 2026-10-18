@@ -11,15 +11,15 @@ function edgesOf(nodeId: string) {
     .edges.filter((edge) => edge.source === nodeId || edge.target === nodeId);
 }
 
-describe("canvasStore.convertNodeType — 换类型后同步清理不再合法的边", () => {
+describe("canvasStore.convertNodeType — edges that become invalid after a type change are cleaned up in sync", () => {
   beforeEach(() => {
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  it("Upload 转成音频后，原来连向图片节点的边被清掉", () => {
-    // 空 Upload 节点先连到图片节点（合法），之后用户往里丢了个音频文件，
-    // UploadNode 会把它转成 Audio —— 那条边从此不合法。不清掉的话它会一直留在
-    // 画布上，直到下次加载被规范化静默删除。
+  it("after Upload converts to audio, the edge that led to the image node is removed", () => {
+    // An empty Upload node is first connected to an image node (valid), then the user drops an audio file into it,
+    // and UploadNode converts it to Audio -- that edge is no longer valid. If it is not removed it stays on
+    // the canvas until it is silently removed by normalization on the next load.
     const store = useCanvasStore.getState();
     const upload = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 0 }, {});
     const image = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 400, y: 0 }, {});
@@ -40,8 +40,8 @@ describe("canvasStore.convertNodeType — 换类型后同步清理不再合法�
     expect(edgesOf(upload)).toEqual([]);
   });
 
-  it("换类型后仍然合法的边原样保留", () => {
-    // 音频 → 视频是合法的，Upload 转成 Audio 之后这条边不该被误伤。
+  it("edges that are still valid after the type change are kept as they are", () => {
+    // Audio -> video is valid, so this edge must not be hit by mistake after Upload converts to Audio.
     const store = useCanvasStore.getState();
     const upload = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 0 }, {});
     const video = store.addNode(CANVAS_NODE_TYPES.video, { x: 400, y: 0 }, {});
@@ -61,7 +61,7 @@ describe("canvasStore.convertNodeType — 换类型后同步清理不再合法�
     expect(edgesOf(upload)).toHaveLength(1);
   });
 
-  it("清理后的边可以被撤销恢复", () => {
+  it("edges removed by cleanup can be restored by undo", () => {
     const store = useCanvasStore.getState();
     const upload = store.addNode(CANVAS_NODE_TYPES.upload, { x: 0, y: 0 }, {});
     const image = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 400, y: 0 }, {});

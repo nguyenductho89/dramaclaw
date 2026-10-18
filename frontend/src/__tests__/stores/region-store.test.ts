@@ -6,8 +6,8 @@ vi.mock("@/lib/cluster-config", () => ({
   clusterConfig: {
     mode: "multi-region",
     regions: [
-      { id: "cn-1", displayName: "华东一区" },
-      { id: "us-1", displayName: "美西一区" },
+      { id: "cn-1", displayName: "East China 1" },
+      { id: "us-1", displayName: "US West 1" },
     ],
   },
 }));

@@ -51,11 +51,11 @@ function readSource(relativePath: string): string {
 }
 
 /**
- * 工作流工具条「九宫格」下拉的交互：与故事板详情工具条完全一致——点某一项只建
- * 一个功能节点（空的图片生成节点，节点名=功能名），提示词/参考图/比例都在那个节点
- * 上改，按 ↑ 才提交。原来那条「确认即提交」的浮条（GridActionConfirmOverlay）已撤掉。
+ * Interaction of the workflow toolbar "Nine-grid" dropdown: exactly the same as the storyboard detail toolbar -- clicking an item only builds
+ * a feature node (an empty image generation node, node name = feature name), and the prompt / reference images / ratio are all edited on that
+ * node, with submission only on the up arrow. The old "confirm to submit" floating bar (GridActionConfirmOverlay) has been removed.
  */
-describe('工作流 · 宫格功能（点功能建节点 → ↑ 才提交）', () => {
+describe('workflow · grid feature (click a feature to create a node -> only the up arrow submits)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneTemplateEdit.mockReset();
@@ -64,27 +64,27 @@ describe('工作流 · 宫格功能（点功能建节点 → ↑ 才提交）', 
     seedSourceNode();
   });
 
-  it('点功能只建节点、不提交：新节点是 imageGen、节点名=功能名、记住源图并连边', () => {
+  it('clicking a feature only creates a node without submitting: the new node is imageGen, its name = the feature name, and it remembers the source image and wires the edge', () => {
     const nextNodeId = spawnAssetBoardImageOpNode('img-1', '/static/a.png?sig=x', 'multiCameraGrid');
 
     const state = useCanvasStore.getState();
     const created = state.nodes.find((node) => node.id === nextNodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.imageGen);
     expect(created?.data).toMatchObject({
-      displayName: '多机位九宫格',
+      displayName: 'Multi-Camera 3x3',
       imageOpKey: 'multiCameraGrid',
-      // 源图去掉签名 query 后记在节点上，↑ 时按它提交。
+      // The source image, with the signature query stripped, is recorded on the node and submitted from there on the up arrow.
       imageOpSourceUrl: '/static/a.png',
       isGenerating: false,
     });
     expect(
       state.edges.some((edge) => edge.source === 'img-1' && edge.target === nextNodeId),
     ).toBe(true);
-    // 关键：这一步不提交。
+    // Key point: this step does not submit.
     expect(submitFreezoneTemplateEdit).not.toHaveBeenCalled();
   });
 
-  it('↑ 提交：按功能映射的 mode 下发，产物回填到功能节点自己身上', async () => {
+  it('up-arrow submit: sent with the mode mapped by the feature, and the result is filled back into the feature node itself', async () => {
     submitFreezoneTemplateEdit.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/out.png' } });
 
@@ -94,11 +94,11 @@ describe('工作流 · 宫格功能（点功能建节点 → ↑ 才提交）', 
     expect(submitFreezoneTemplateEdit).toHaveBeenCalledWith('proj-1', {
       sourceUrl: '/static/a.png',
       mode: 'scene_setting_sheet',
-      // 提示词留空 → 用功能名兜底。
-      prompt: '场景设定图',
+      // Empty prompt -> falls back to the feature name.
+      prompt: 'Scene Setting Sheet',
     });
     expect(awaitTaskCompletion).toHaveBeenCalledWith('tk-1', 'proj-1');
-    // output_url 已有 → 不再兜底查 job result。
+    // output_url already present -> no more fallback lookup of the job result.
     expect(fetchFreezoneJobResult).not.toHaveBeenCalled();
 
     const state = useCanvasStore.getState();
@@ -108,14 +108,14 @@ describe('工作流 · 宫格功能（点功能建节点 → ↑ 才提交）', 
       isGenerating: false,
       generationError: null,
     });
-    // 不再额外建结果节点：源图 + 功能节点，就两个。
+    // No extra result node is built: the source image + the feature node, just two.
     expect(state.nodes).toHaveLength(2);
   });
 
-  it('工具条下拉挂的是「建功能节点」而不是确认浮条', () => {
+  it('the toolbar dropdown hangs on "create feature node" rather than a confirm floating bar', () => {
     const toolbar = readSource('src/features/canvas/ui/NodeActionToolbar.tsx');
     expect(toolbar).toContain('onSpawnGridActionNode({');
-    // 下拉项不再自带提示词/算力——那是确认浮条时代的东西。
+    // Dropdown items no longer carry a prompt / compute cost -- those belong to the confirm floating bar era.
     expect(toolbar).not.toContain('gridMenu.multiCameraGridPrompt');
 
     const overlay = readSource('src/features/canvas/ui/SelectedNodeOverlay.tsx');
@@ -124,7 +124,7 @@ describe('工作流 · 宫格功能（点功能建节点 → ↑ 才提交）', 
     expect(overlay).not.toContain('GridActionConfirmOverlay');
   });
 
-  it('工作流与故事板的生成表单共用同一份功能 props（chip / 占位文案 / ↑ 走模板）', () => {
+  it('the workflow and storyboard generation forms share the same feature props (chip / placeholder text / up arrow goes through the template)', () => {
     for (const host of [
       'src/features/canvas/nodes/ImageGenNode.tsx',
       'src/features/canvas/ui/asset-board/AssetBoardImageGenForm.tsx',

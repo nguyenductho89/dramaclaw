@@ -22,7 +22,7 @@ export interface RenderPlan {
 
 /**
  * One fanout entry the backend refused to dispatch because a concurrency lane
- * was full. Present on best-effort ("尽力投递") fanout responses: the backend
+ * was full. Present on best-effort ("best-effort delivery") fanout responses: the backend
  * dispatches until a lane rejects, then stops and reports the remainder here.
  *
  * `reason` mirrors the 429 taxonomy the same limits raise when *nothing* could

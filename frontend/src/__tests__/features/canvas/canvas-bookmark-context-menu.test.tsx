@@ -10,10 +10,10 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) =>
       ({
-        "canvas.bookmarks.setCurrent": "设置当前定位（覆盖）",
-        "canvas.bookmarks.setNew": "设置当前定位",
-        "canvas.bookmarks.deleteCurrent": "删除当前定位",
-        "canvas.bookmarks.clearAll": "清除所有定位",
+        "canvas.bookmarks.setCurrent": "Set current position (overwrite)",
+        "canvas.bookmarks.setNew": "Set current position",
+        "canvas.bookmarks.deleteCurrent": "Delete current position",
+        "canvas.bookmarks.clearAll": "Clear all positions",
       }[key] ?? key),
   }),
 }));
@@ -31,9 +31,9 @@ describe("CanvasBookmarkContextMenu", () => {
 
   it("renders the three actions", () => {
     render(<CanvasBookmarkContextMenu {...baseProps} />);
-    expect(screen.getByText("设置当前定位（覆盖）")).toBeInTheDocument();
-    expect(screen.getByText("删除当前定位")).toBeInTheDocument();
-    expect(screen.getByText("清除所有定位")).toBeInTheDocument();
+    expect(screen.getByText("Set current position (overwrite)")).toBeInTheDocument();
+    expect(screen.getByText("Delete current position")).toBeInTheDocument();
+    expect(screen.getByText("Clear all positions")).toBeInTheDocument();
   });
 
   it("invokes the set handler then closes", async () => {
@@ -43,18 +43,18 @@ describe("CanvasBookmarkContextMenu", () => {
     render(
       <CanvasBookmarkContextMenu {...baseProps} onSetCurrent={onSetCurrent} onClose={onClose} />,
     );
-    await user.click(screen.getByText("设置当前定位（覆盖）"));
+    await user.click(screen.getByText("Set current position (overwrite)"));
     expect(onSetCurrent).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("hides delete and drops the overwrite hint when the slot is empty", () => {
     render(<CanvasBookmarkContextMenu {...baseProps} filled={false} />);
-    // Empty slot: no delete row, and the set label has no （覆盖） suffix.
-    expect(screen.queryByText("删除当前定位")).not.toBeInTheDocument();
-    expect(screen.getByText("设置当前定位")).toBeInTheDocument();
-    expect(screen.queryByText("设置当前定位（覆盖）")).not.toBeInTheDocument();
+    // Empty slot: no delete row, and the set label has no (overwrite) suffix.
+    expect(screen.queryByText("Delete current position")).not.toBeInTheDocument();
+    expect(screen.getByText("Set current position")).toBeInTheDocument();
+    expect(screen.queryByText("Set current position (overwrite)")).not.toBeInTheDocument();
     // Clear-all stays available regardless of slot state.
-    expect(screen.getByText("清除所有定位")).toBeInTheDocument();
+    expect(screen.getByText("Clear all positions")).toBeInTheDocument();
   });
 });

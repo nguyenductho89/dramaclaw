@@ -8,7 +8,7 @@ import { AssetLibraryUploadDialog } from '@/features/canvas/ui/AssetLibraryUploa
 const FOLDERS = [
   {
     key: 'other' as const,
-    label: '待分类资产',
+    label: 'Uncategorized',
     items: [],
     system: true,
     uploadable: true,
@@ -49,40 +49,40 @@ describe('AssetLibraryUploadDialog', () => {
     });
   });
 
-  it('明确展示拖放入口与支持格式', () => {
+  it('clearly shows the drop entry and the supported formats', () => {
     renderDialog();
 
-    expect(screen.getByText('拖放文件到这里，或点击选择')).toBeInTheDocument();
+    expect(screen.getByText('Drop files here, or click to choose')).toBeInTheDocument();
     expect(screen.getByText(/jpg\/jpeg\/png\/webp/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '上传' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
   });
 
-  it('不支持的文件不会静默消失', () => {
+  it('unsupported files do not silently disappear', () => {
     renderDialog();
     const file = new File(['notes'], 'notes.txt', { type: 'text/plain' });
 
-    fireEvent.change(screen.getByLabelText('选择本地文件'), {
+    fireEvent.change(screen.getByLabelText('Choose local files'), {
       target: { files: [file] },
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      '1 个文件格式不受支持，已自动忽略',
+      '1 file(s) in unsupported formats were ignored',
     );
   });
 
-  it('显示选择数量，并在选定保存位置后用明确文案提交', () => {
+  it('shows the selection count and submits with explicit text after a destination is chosen', () => {
     const onSubmit = renderDialog();
     const file = new File(['image'], 'cover.png', { type: 'image/png' });
 
-    fireEvent.change(screen.getByLabelText('选择本地文件'), {
+    fireEvent.change(screen.getByLabelText('Choose local files'), {
       target: { files: [file] },
     });
     expect(screen.getByTitle('cover.png')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '上传 1 项' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Upload 1' })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: '选择保存位置' }));
-    fireEvent.click(screen.getByRole('button', { name: '待分类资产' }));
-    fireEvent.click(screen.getByRole('button', { name: '上传 1 项' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a destination' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Uncategorized' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload 1' }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       [{ file, media: 'image' }],

@@ -43,7 +43,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('imageUpscale application（预建节点 + 高清提交编排）', () => {
+describe('imageUpscale application (pre-built node + upscale submission orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneUpscale.mockReset();
@@ -52,14 +52,14 @@ describe('imageUpscale application（预建节点 + 高清提交编排）', () =
     seedSourceNode();
   });
 
-  it('createUpscaleResultNode：建 resultKind:upscale 占位节点并连边（写入放大参数，不提交）', () => {
-    const nodeId = createUpscaleResultNode('src-1', { displayName: '高清放大' });
+  it('createUpscaleResultNode: builds a resultKind:upscale placeholder node and wires the edge (writes the upscale params, no submit)', () => {
+    const nodeId = createUpscaleResultNode('src-1', { displayName: 'Upscale' });
 
     const state = useCanvasStore.getState();
     const created = state.nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '高清放大',
+      displayName: 'Upscale',
       previewImageUrl: '/static/src.png',
       aspectRatio: '16:9',
       resultKind: 'upscale',
@@ -71,18 +71,18 @@ describe('imageUpscale application（预建节点 + 高清提交编排）', () =
     expect(
       state.edges.some((edge) => edge.source === 'src-1' && edge.target === nodeId),
     ).toBe(true);
-    // 预建不提交任务。
+    // Pre-building does not submit a task.
     expect(submitFreezoneUpscale).not.toHaveBeenCalled();
   });
 
-  it('createUpscaleResultNode：源节点不存在 → 返回 null，不建节点', () => {
+  it('createUpscaleResultNode: source node does not exist -> returns null and creates no node', () => {
     const before = useCanvasStore.getState().nodes.length;
-    expect(createUpscaleResultNode('nope', { displayName: '高清放大' })).toBeNull();
+    expect(createUpscaleResultNode('nope', { displayName: 'Upscale' })).toBeNull();
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('submitImageUpscale：置 isGenerating → 提交（去 query 源 url）→ 回填 url', async () => {
-    const nodeId = createUpscaleResultNode('src-1', { displayName: '高清放大' }) as string;
+  it('submitImageUpscale: sets isGenerating -> submits (query-stripped source url) -> fills the url back', async () => {
+    const nodeId = createUpscaleResultNode('src-1', { displayName: 'Upscale' }) as string;
     submitFreezoneUpscale.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/hd.png' } });
 
@@ -100,7 +100,7 @@ describe('imageUpscale application（预建节点 + 高清提交编排）', () =
       model: 'gpt-image-2',
     });
     expect(awaitTaskCompletion).toHaveBeenCalledWith('tk-up', 'proj-1');
-    // output_url 直出 → 不回退 job result。
+    // output_url returned directly -> no fallback to the job result.
     expect(fetchFreezoneJobResult).not.toHaveBeenCalled();
     const done = useCanvasStore.getState().nodes.find((node) => node.id === nodeId);
     expect(done?.data).toMatchObject({
@@ -111,8 +111,8 @@ describe('imageUpscale application（预建节点 + 高清提交编排）', () =
     });
   });
 
-  it('submitImageUpscale：缺 project → 返回 null，不提交', () => {
-    const nodeId = createUpscaleResultNode('src-1', { displayName: '高清放大' }) as string;
+  it('submitImageUpscale: missing project -> returns null without submitting', () => {
+    const nodeId = createUpscaleResultNode('src-1', { displayName: 'Upscale' }) as string;
     readUrl.mockReturnValue({ project: null, canvas: null });
     expect(
       submitImageUpscale(nodeId, {
@@ -125,8 +125,8 @@ describe('imageUpscale application（预建节点 + 高清提交编排）', () =
     expect(submitFreezoneUpscale).not.toHaveBeenCalled();
   });
 
-  it('submitImageUpscale 失败 → 错误写回节点', async () => {
-    const nodeId = createUpscaleResultNode('src-1', { displayName: '高清放大' }) as string;
+  it('submitImageUpscale failure -> the error is written back to the node', async () => {
+    const nodeId = createUpscaleResultNode('src-1', { displayName: 'Upscale' }) as string;
     submitFreezoneUpscale.mockRejectedValue(new Error('backend down'));
 
     await submitImageUpscale(nodeId, {

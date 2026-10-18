@@ -102,7 +102,7 @@ def test_authoring_guide_text_recipe_template_produces_final_deliverable():
     )
 
     assert validated["output_kind"] == "text"
-    assert "directly generate the deliverable final text" in validated["system_prompt"]
+    assert "directly produce a deliverable final text" in validated["system_prompt"]
 
 
 def test_retro_skill_keeps_entry_guard_out_of_recipe_runtime_constraints():

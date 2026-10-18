@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 保存被后端以 `canvas_media_scope_mismatch` 拒绝后的自愈：解析 refs、把素材拷进
- * 本项目、按字段路径填回节点；拷不动的置空并标记失败，让保存能继续走下去。
+ * Self-healing after a save is rejected by the backend with `canvas_media_scope_mismatch`: parse the refs, copy the assets into
+ * this project, and fill them back into the nodes by field path; anything that cannot be copied is blanked and marked failed so the save can proceed.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -57,7 +57,7 @@ describe('parseCanvasMediaScopeRefs', () => {
   });
 
   it('returns null when the backend reports the code with no usable ref', () => {
-    // 没有可修的位置就别进自愈分支空转一圈,直接按普通错误报出去。
+    // With no repairable location, do not spin through the self-healing branch; report it directly as an ordinary error.
     expect(
       parseCanvasMediaScopeRefs(422, { detail: { code: 'canvas_media_scope_mismatch', refs: [] } }),
     ).toBeNull();
@@ -133,7 +133,7 @@ describe('repairForeignMediaRefs', () => {
       updateNodeData,
     });
 
-    // 置空是必须的:保留源项目 URL 就等于把 403 再存一次,后端也会再拒一次。
+    // Blanking is required: keeping the source project URL means saving the 403 again, and the backend would reject it again.
     expect(updateNodeData).toHaveBeenCalledWith('n1', {
       imageUrl: null,
       assetMigration: 'failed',
@@ -142,7 +142,7 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('leaves every field alone when the request itself did not go through', async () => {
-    // 请求没走通 ≠ 这些素材拷不了。置空是不可逆的,不能拿它换一次网络抖动。
+    // A request that did not go through != these assets cannot be copied. Blanking is irreversible and must not be traded for a network blip.
     copyFreezoneAssets.mockRejectedValue(new Error('network down'));
     const updateNodeData = vi.fn();
 
@@ -177,7 +177,7 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('leaves every field alone when the copy failed on the storage side', async () => {
-    // copy_failed = 拷贝/建目标文件时的 OSError,是存储侧出岔子,不是这个源拷不了。
+    // copy_failed = an OSError while copying/creating the target file, a storage-side problem, not that this source cannot be copied.
     copyFreezoneAssets.mockResolvedValue({
       mapping: {},
       failed: [{ source: FOREIGN, reason: 'copy_failed' }],
@@ -196,8 +196,8 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('normalizes a same-origin absolute url before asking the backend to copy it', async () => {
-    // 守卫按浏览器语义扫得到它,复制接口却只认相对 canonical 路径:不归一化就换回
-    // invalid_source,自愈反倒把引用删了。
+    // The guard finds it by browser semantics, but the copy endpoint accepts only relative canonical paths: without normalization it would come back as
+    // invalid_source, and the self-healing would instead delete the reference.
     const absolute = `${window.location.origin}/static/projects/projA/freezone/x/../_uploads/a.png`;
     copyFreezoneAssets.mockResolvedValue({ mapping: { [FOREIGN]: COPIED }, failed: [] });
     const updateNodeData = vi.fn();
@@ -210,13 +210,13 @@ describe('repairForeignMediaRefs', () => {
     });
 
     expect(copyFreezoneAssets).toHaveBeenCalledWith('projB', [FOREIGN]);
-    // 对外仍按画布里那串原 URL 作 key,调用方才改得动自己手上的快照。
+    // Externally the original URL string from the canvas is still the key, so the caller can modify the snapshot it holds.
     expect(result.urlMap.get(absolute)).toBe(COPIED);
     expect(updateNodeData).toHaveBeenCalledWith('n1', { imageUrl: COPIED });
   });
 
   it('does not touch an url it cannot resolve to a same-origin asset', async () => {
-    // 路径长得像项目资源的外链图:守卫会误拦,但它本来就不是本站资源,拷不了也不该删。
+    // An external image whose path looks like a project asset: the guard blocks it by mistake, but it was never a local asset, and if it cannot be copied it should not be deleted.
     const external = 'https://cdn.example.com/static/projects/projA/a.png';
     const updateNodeData = vi.fn();
 
@@ -233,7 +233,7 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('still blanks what the backend definitively refused', async () => {
-    // 403 是终局:留着源项目 URL 就是把 403 再存一次,后端下一轮还会拒,保存永远卡死。
+    // 403 is final: keeping the source project URL saves the 403 again, the backend would reject it next round, and the save would be stuck forever.
     copyFreezoneAssets.mockResolvedValue({
       mapping: {},
       failed: [{ source: FOREIGN, reason: 'forbidden' }],
@@ -256,7 +256,7 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('writes nothing when the canvas changed while the copy was in flight', async () => {
-    // 拷贝要几秒;期间换了画布,手上的 refs 指的已经不是屏幕上这张图了。
+    // The copy takes a few seconds; if the canvas is switched meanwhile, the refs in hand no longer refer to the image on screen.
     publishForeignMediaRefs('projB', 'canvas-a', [ref()]);
     const updateNodeData = vi.fn();
     copyFreezoneAssets.mockImplementation(async () => {
@@ -276,7 +276,7 @@ describe('repairForeignMediaRefs', () => {
   });
 
   it('keeps going when the same canvas merely re-hydrates mid-copy', async () => {
-    // 后台刷新不能把用户正在跑的修复打断。
+    // A background refresh must not interrupt a repair the user is running.
     publishForeignMediaRefs('projB', 'canvas-a', [ref()]);
     const updateNodeData = vi.fn();
     copyFreezoneAssets.mockImplementation(async () => {
@@ -316,7 +316,7 @@ describe('repairForeignMediaRefs', () => {
     await repairForeignMediaRefs({
       refs: [ref()],
       targetProject: 'projB',
-      // 拒绝到重试之间用户自己换了图:那是他的选择,别拿拷贝结果盖掉。
+      // If the user swapped the image between the rejection and the retry, that is their choice; do not overwrite it with the copy result.
       getLiveNodeData: () => ({ imageUrl: '/static/projects/projB/mine.png' }) as never,
       updateNodeData,
     });
@@ -327,7 +327,7 @@ describe('repairForeignMediaRefs', () => {
 
 describe('applyForeignMediaRepairToNodes', () => {
   const nodes = [
-    { id: 'n1', data: { imageUrl: FOREIGN, label: '一' } },
+    { id: 'n1', data: { imageUrl: FOREIGN, label: 'One' } },
     { id: 'n2', data: { imageUrl: '/static/projects/projB/ok.png' } },
   ];
 
@@ -340,9 +340,9 @@ describe('applyForeignMediaRepairToNodes', () => {
 
     expect((next[0] as { data: { imageUrl: string; label: string } }).data).toEqual({
       imageUrl: COPIED,
-      label: '一',
+      label: 'One',
     });
-    // 没被碰过的节点保持同一引用,免得整棵画布白重渲染一遍。
+    // Untouched nodes keep the same reference, so the whole canvas is not re-rendered for nothing.
     expect(next[1]).toBe(nodes[1]);
   });
 

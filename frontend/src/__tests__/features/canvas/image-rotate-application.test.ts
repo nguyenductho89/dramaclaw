@@ -41,7 +41,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-// jsdom 的 <canvas> 无 2D 上下文；stub 一个最简 ctx + toBlob。
+// jsdom's <canvas> has no 2D context; stub a minimal ctx + toBlob.
 function stubCanvas() {
   const ctx = {
     translate: vi.fn(),
@@ -60,7 +60,7 @@ function stubCanvas() {
   });
 }
 
-describe('imageRotate application（预建/取消 + 原地旋转写回）', () => {
+describe('imageRotate application (pre-build/cancel + in-place rotation write-back)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     uploadFreezoneImage.mockReset();
@@ -72,20 +72,20 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
     vi.restoreAllMocks();
   });
 
-  it('isIdentityRotateTransform：角度 0 且无镜像视为无变换', () => {
+  it('isIdentityRotateTransform: angle 0 with no mirroring counts as no transform', () => {
     expect(isIdentityRotateTransform({ angleDeg: 0, mirrorH: false, mirrorV: false })).toBe(true);
     expect(isIdentityRotateTransform({ angleDeg: 90, mirrorH: false, mirrorV: false })).toBe(false);
     expect(isIdentityRotateTransform({ angleDeg: 0, mirrorH: true, mirrorV: false })).toBe(false);
   });
 
-  it('createRotateResultNode：以源图为预览建 exportImage 并连边（不置 isGenerating）', () => {
-    const nodeId = createRotateResultNode('src-1', { displayName: '旋转结果' });
+  it('createRotateResultNode: builds an exportImage previewing the source image and wires the edge (without setting isGenerating)', () => {
+    const nodeId = createRotateResultNode('src-1', { displayName: 'Rotate result' });
 
     const state = useCanvasStore.getState();
     const created = state.nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '旋转结果',
+      displayName: 'Rotate result',
       previewImageUrl: '/static/src.png',
       aspectRatio: '4:3',
       resultKind: 'generic',
@@ -96,7 +96,7 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
     ).toBe(true);
   });
 
-  it('createRotateResultNode：支持只有 referenceImageUrl 的 imageGen 节点', () => {
+  it('createRotateResultNode: supports an imageGen node that has only a referenceImageUrl', () => {
     useCanvasStore.getState().setCanvasData(
       [
         {
@@ -109,24 +109,24 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
       [],
     );
 
-    const nodeId = createRotateResultNode('src-ref', { displayName: '旋转结果' });
+    const nodeId = createRotateResultNode('src-ref', { displayName: 'Rotate result' });
 
     const created = useCanvasStore.getState().nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data.previewImageUrl).toBe('/static/reference.png');
   });
 
-  it('discardRotateResultNode：删掉预建节点（取消/退出路径）', () => {
-    const nodeId = createRotateResultNode('src-1', { displayName: '旋转结果' }) as string;
+  it('discardRotateResultNode: deletes the pre-built node (cancel/exit path)', () => {
+    const nodeId = createRotateResultNode('src-1', { displayName: 'Rotate result' }) as string;
     discardRotateResultNode(nodeId);
     expect(useCanvasStore.getState().nodes.find((node) => node.id === nodeId)).toBeUndefined();
   });
 
-  it('rotateImageInPlace：本地 canvas 旋转 → 上传 → 原地写回 url 与新 aspectRatio', async () => {
+  it('rotateImageInPlace: local canvas rotation -> upload -> writes the url and new aspectRatio back in place', async () => {
     stubCanvas();
     loadImageElement.mockResolvedValue({ naturalWidth: 100, naturalHeight: 50 });
     uploadFreezoneImage.mockResolvedValue({ url: '/static/rotated.png' });
-    const nodeId = createRotateResultNode('src-1', { displayName: '旋转结果' }) as string;
+    const nodeId = createRotateResultNode('src-1', { displayName: 'Rotate result' }) as string;
 
     await rotateImageInPlace(nodeId, '/static/src.png', {
       angleDeg: 90,
@@ -138,7 +138,7 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
     expect(uploadFreezoneImage).toHaveBeenCalledTimes(1);
     expect(uploadFreezoneImage.mock.calls[0][0]).toBe('proj-1');
     const done = useCanvasStore.getState().nodes.find((node) => node.id === nodeId);
-    // 90° 旋转后画布交换宽高 → 50x100。
+    // After a 90 degree rotation the canvas swaps width and height -> 50x100.
     expect(done?.data).toMatchObject({
       imageUrl: '/static/rotated.png',
       previewImageUrl: '/static/rotated.png',
@@ -148,9 +148,9 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
     });
   });
 
-  it('rotateImageInPlace：缺 project → 返回 null，不上传', () => {
+  it('rotateImageInPlace: missing project -> returns null without uploading', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
-    const nodeId = createRotateResultNode('src-1', { displayName: '旋转结果' }) as string;
+    const nodeId = createRotateResultNode('src-1', { displayName: 'Rotate result' }) as string;
     expect(
       rotateImageInPlace(nodeId, '/static/src.png', {
         angleDeg: 90,
@@ -161,10 +161,10 @@ describe('imageRotate application（预建/取消 + 原地旋转写回）', () =
     expect(uploadFreezoneImage).not.toHaveBeenCalled();
   });
 
-  it('rotateImageInPlace 失败 → 错误写回节点', async () => {
+  it('rotateImageInPlace failure -> the error is written back to the node', async () => {
     stubCanvas();
     loadImageElement.mockRejectedValue(new Error('load boom'));
-    const nodeId = createRotateResultNode('src-1', { displayName: '旋转结果' }) as string;
+    const nodeId = createRotateResultNode('src-1', { displayName: 'Rotate result' }) as string;
 
     await rotateImageInPlace(nodeId, '/static/src.png', {
       angleDeg: 90,

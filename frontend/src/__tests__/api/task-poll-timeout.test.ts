@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 等待预算的语义：只有「服务端不再报告这个任务」才算脱离，排队和执行都不消耗
-// 预算。后端重任务（视频 / 图像 / ffmpeg / stage_asset / image-to-3gs）执行上限
-// 就有 30 分钟（generators/video_generator.py 的 NEWAPI_VIDEO_HTTP_TIMEOUT_SECONDS、
-// nanobanana_grid.py 的 NEWAPI_IMAGE_HTTP_TIMEOUT_SECONDS、freezone/jobs.py 的
-// _run_cmd(timeout=1800)），线上排队还要另算——按墙钟一刀切必然误杀。
+// Wait-budget semantics: a task only counts as detached once "the server no longer reports it"; neither queueing nor execution consumes
+// the budget. Heavy backend tasks (video / image / ffmpeg / stage_asset / image-to-3gs) have an execution cap
+// of 30 minutes (NEWAPI_VIDEO_HTTP_TIMEOUT_SECONDS in generators/video_generator.py,
+// NEWAPI_IMAGE_HTTP_TIMEOUT_SECONDS in nanobanana_grid.py, and
+// _run_cmd(timeout=1800) in freezone/jobs.py), and production queueing comes on top of that, so a flat wall-clock cutoff would inevitably kill live tasks.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiCall } from "@/api/client";
@@ -75,12 +75,12 @@ describe("budget is idle-time, not wall-clock", () => {
       taskType: "freezone_video_generate",
     }).then(settled, settled);
 
-    // 10 分钟排队 —— 换成旧的墙钟预算，这段时间是从执行预算里扣的。
+    // 10 minutes of queueing -- under the old wall-clock budget this time was deducted from the execution budget.
     await advance(10 * 60 * 1000);
     expect(settled).not.toHaveBeenCalled();
 
     serverReports([task("video-key", "running")]);
-    // 28 分钟执行，加上排队总计 38 分钟 > 35 分钟预算。
+    // 28 minutes of execution plus queueing totals 38 minutes > the 35-minute budget.
     await advance(28 * 60 * 1000);
     expect(settled).not.toHaveBeenCalled();
 
@@ -116,7 +116,7 @@ describe("budget is idle-time, not wall-clock", () => {
     await advance(5 * 60 * 1000);
     expect(settled).not.toHaveBeenCalled();
 
-    // 任务记录消失（被清理 / 查不到）——这才是前端该收手的信号。
+    // The task record disappears (cleaned up / not found) -- this is the signal for the frontend to stop.
     serverReports([]);
     await advance(tasks.LONG_JOB_MAX_POLL_MS - 60_000);
     expect(settled).not.toHaveBeenCalled();
@@ -128,7 +128,7 @@ describe("budget is idle-time, not wall-clock", () => {
     expect(tasks.isTaskPollTimeoutError(error)).toBe(true);
     expect((error as TaskPollTimeoutError).taskKey).toBe("gone-key");
     expect((error as TaskPollTimeoutError).lastStatus).toBe("running");
-    // 空转时长按「最后一次听到」算，而不是从提交时算。
+    // Idle time is counted from the last time the task was heard from, not from submission.
     expect((error as TaskPollTimeoutError).idleMs).toBeGreaterThanOrEqual(
       tasks.LONG_JOB_MAX_POLL_MS,
     );
@@ -201,8 +201,8 @@ describe("budget sizing per task type", () => {
   });
 
   it("defaults unknown task types to the long budget", () => {
-    // 新增的后端任务类型没登记时宁可多等：等久了只是晚一点兜底，
-    // 等短了会把还在跑的任务报成失败。
+    // When a new backend task type is not registered, prefer waiting longer: waiting too long only delays the fallback,
+    // while waiting too short reports a still-running task as failed.
     expect(tasks.pollTimeoutForTaskType("freezone_some_new_job")).toBe(
       tasks.LONG_JOB_MAX_POLL_MS,
     );

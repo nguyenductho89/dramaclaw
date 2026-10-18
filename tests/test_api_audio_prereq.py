@@ -58,6 +58,7 @@ async def test_audio_generate_prereq_error_does_not_start_task(monkeypatch, tmp_
     assert response == {
         "ok": False,
         "code": "voice_prereq_required",
+        "reason_code": "voice_narrator_missing",
         "error": "Beat 01 narrator voice is missing: upload the narration voice",
     }
 

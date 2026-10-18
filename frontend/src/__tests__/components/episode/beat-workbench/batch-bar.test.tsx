@@ -570,7 +570,7 @@ describe("BatchBar", () => {
 
     expect(detectIdentitiesMock).toHaveBeenCalledTimes(1);
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "AI detect done: 3 beats, 2 identities, 1 props\nBackend review hint",
+      "AI detect complete: 3 beats, 2 identities, 1 props\nBackend review hint",
       { id: "toast-1" },
     );
 

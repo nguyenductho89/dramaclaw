@@ -91,7 +91,7 @@ def test_task_failure_maps_novel_import_prerequisite(monkeypatch) -> None:
 
 def test_task_failure_maps_video_prompt_prerequisite(monkeypatch) -> None:
     celery_tasks = _import_celery_tasks(monkeypatch)
-    message = "Beat 1 缺少草图或首帧，请先生成草图或预览"
+    message = "Beat 1 is missing its sketch or first frame; generate a sketch or preview first"
 
     error, metadata, handled = celery_tasks._project_task_failure_for_exception(
         VideoPromptPrerequisiteError(message)
@@ -190,7 +190,7 @@ def test_celery_task_failure_maps_soft_time_limit(monkeypatch) -> None:
     )
 
     assert handled is True
-    assert error == "任务超过 30 分钟未完成，已自动放弃"
+    assert error == "Task did not finish within 30 minutes and was abandoned automatically"
     assert metadata == {"error_code": "TASK_TIMEOUT", "timeout_seconds": 30 * 60}
 
 
@@ -209,7 +209,7 @@ def test_celery_task_failure_maps_cooperative_task_timeout(monkeypatch) -> None:
     )
 
     assert handled is True
-    assert error == "任务超过 30 分钟未完成，已自动放弃"
+    assert error == "Task did not finish within 30 minutes and was abandoned automatically"
     assert metadata == {"error_code": "TASK_TIMEOUT", "timeout_seconds": 30 * 60}
 
 
@@ -226,7 +226,7 @@ def test_celery_task_failure_reraises_non_business_base_exception(monkeypatch) -
         "freezone video generation failed: VIDEO_MEDIA_DIMENSIONS_INVALID",
         (
             "freezone video generation failed: {'code': 'VIDEO_MEDIA_DIMENSIONS_INVALID', "
-            "'message': '素材尺寸不符合要求，宽度和高度需在 300 至 6000 像素之间。'}"
+            "'message': 'The asset size does not meet the requirements; width and height must be between 300 and 6000 pixels.'}"
         ),
     ],
 )

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 资产库弹窗：左侧文件夹控制存放范围，右侧类目只筛选当前范围内的资产。
+// Asset library modal: the left-hand folders control the storage scope, and the right-hand categories only filter assets within that scope.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
@@ -36,22 +36,22 @@ import { ConfirmDialogHost } from "@/components/confirm-dialog-host";
 
 const LIBRARY = [
   {
-    id: "mainline:scene:厨房",
-    name: "厨房",
+    id: "mainline:scene:Kitchen",
+    name: "Kitchen",
     media: "image",
     source: "scene",
     image_urls: ["/static/kitchen.png"],
   },
   {
     id: "up-1",
-    name: "参考图A",
+    name: "Reference image A",
     media: "image",
     source: "upload",
     image_urls: ["/static/a.png"],
   },
   {
     id: "up-2",
-    name: "赛博霓虹",
+    name: "Cyber neon",
     media: "image",
     source: "upload",
     category: "style",
@@ -59,7 +59,7 @@ const LIBRARY = [
   },
   {
     id: "up-3",
-    name: "脚步声",
+    name: "Footsteps",
     media: "audio",
     source: "upload",
     category: "audio",
@@ -76,22 +76,22 @@ function renderModal(props: Partial<React.ComponentProps<typeof AssetLibraryModa
   );
 }
 
-/** 删除确认走 AlertDialog（不是 window.confirm），点掉它的「删除」放行。 */
+/** Delete confirmation goes through AlertDialog (not window.confirm); click its "Delete" to let it through. */
 async function acceptDeleteConfirm() {
   const dialog = await screen.findByRole("alertdialog");
-  fireEvent.click(within(dialog).getByRole("button", { name: "删除" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 }
 
-/** 取消：按「不是删除的那个」找，取消文案走 i18n，测试里没初始化语言包。 */
+/** Cancel: find the button that is not "Delete", so the test does not depend on the cancel label. */
 async function dismissConfirm(dialog: HTMLElement) {
   const cancel = within(dialog)
     .getAllByRole("button")
-    .find((button) => button.textContent !== "删除");
+    .find((button) => button.textContent !== "Delete");
   fireEvent.click(cancel as HTMLElement);
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 }
 
-describe("AssetLibraryModal 类目与文件夹", () => {
+describe("AssetLibraryModal categories and folders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue({ items: LIBRARY });
@@ -100,91 +100,91 @@ describe("AssetLibraryModal 类目与文件夹", () => {
     deleteFreezoneVideoCharacterLibraryItem.mockResolvedValue({ ok: true });
   });
 
-  it("默认展示真正的全部资产，文件夹独立放在左侧导航", async () => {
+  it("shows all assets by default, with folders in the left navigation", async () => {
     renderModal();
 
-    expect(await screen.findByRole("button", { name: "文件夹 主线" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "文件夹 待分类资产" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "文件夹 风格" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "全部资产" })).toHaveAttribute(
+    expect(await screen.findByRole("button", { name: "Folder Mainline" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Folder Uncategorized" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Folder Styles" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All assets" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(await screen.findByText("厨房")).toBeInTheDocument();
-    expect(screen.getByText("参考图A")).toBeInTheDocument();
-    // 高频写操作直接放在右上角，不再藏进只有两个选项的「新建」菜单。
-    expect(screen.getByRole("button", { name: "批量删除" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "新建文件夹" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "上传资产" })).toBeInTheDocument();
+    expect(await screen.findByText("Kitchen")).toBeInTheDocument();
+    expect(screen.getByText("Reference image A")).toBeInTheDocument();
+    // High-frequency write actions sit in the top-right corner instead of hiding in a two-option "New" menu.
+    expect(screen.getByRole("button", { name: "Bulk delete" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New folder" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload assets" })).toBeInTheDocument();
   });
 
-  it("文件夹只改变资产范围，全部资产入口能恢复全量视图", async () => {
+  it("folders only change the asset scope, and the All assets entry restores the full view", async () => {
     renderModal();
 
-    fireEvent.click(await screen.findByRole("button", { name: "文件夹 主线" }));
-    expect(await screen.findByText("厨房")).toBeInTheDocument();
-    expect(screen.queryByText("参考图A")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Folder Mainline" }));
+    expect(await screen.findByText("Kitchen")).toBeInTheDocument();
+    expect(screen.queryByText("Reference image A")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "全部资产" }));
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
-    expect(screen.getByText("厨房")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All assets" }));
+    expect(await screen.findByText("Reference image A")).toBeInTheDocument();
+    expect(screen.getByText("Kitchen")).toBeInTheDocument();
   });
 
-  it("待分类资产文件夹只装没归类的上传", async () => {
+  it("the Unsorted assets folder holds only uploads without a category", async () => {
     renderModal();
 
-    fireEvent.click(await screen.findByRole("button", { name: "文件夹 待分类资产" }));
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
-    expect(screen.queryByText("赛博霓虹")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Folder Uncategorized" }));
+    expect(await screen.findByText("Reference image A")).toBeInTheDocument();
+    expect(screen.queryByText("Cyber neon")).toBeNull();
   });
 
-  it("类目只筛选当前资产范围，不会切回另一种内容层级", async () => {
+  it("categories only filter the current asset scope and never switch to another content level", async () => {
     renderModal();
 
-    await screen.findByRole("button", { name: "文件夹 主线" });
-    fireEvent.click(screen.getByRole("button", { name: "分类 风格" }));
-    expect(await screen.findByText("赛博霓虹")).toBeInTheDocument();
-    expect(screen.queryByText("参考图A")).toBeNull();
-    expect(screen.getByRole("button", { name: "文件夹 待分类资产" })).toBeInTheDocument();
+    await screen.findByRole("button", { name: "Folder Mainline" });
+    fireEvent.click(screen.getByRole("button", { name: "Category Styles" }));
+    expect(await screen.findByText("Cyber neon")).toBeInTheDocument();
+    expect(screen.queryByText("Reference image A")).toBeNull();
+    expect(screen.getByRole("button", { name: "Folder Uncategorized" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 主线" }));
-    expect(await screen.findByText("厨房")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "分类 风格" }));
-    expect(screen.queryByText("赛博霓虹")).toBeNull();
-    expect(screen.getByText("当前分类下没有素材")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Folder Mainline" }));
+    expect(await screen.findByText("Kitchen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Category Styles" }));
+    expect(screen.queryByText("Cyber neon")).toBeNull();
+    expect(screen.getByText("No assets in this category")).toBeInTheDocument();
   });
 
-  it("allowedMedia 只要图片时，音效类目和音频条目都不出现", async () => {
+  it("when allowedMedia is image-only, neither the sound-effect category nor audio entries appear", async () => {
     renderModal({ allowedMedia: ["image"] });
 
-    await screen.findByRole("button", { name: "文件夹 主线" });
-    expect(screen.queryByRole("button", { name: "分类 音效" })).toBeNull();
+    await screen.findByRole("button", { name: "Folder Mainline" });
+    expect(screen.queryByRole("button", { name: "Category Audio" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 待分类资产" }));
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
-    expect(screen.queryByText("脚步声")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Folder Uncategorized" }));
+    expect(await screen.findByText("Reference image A")).toBeInTheDocument();
+    expect(screen.queryByText("Footsteps")).toBeNull();
   });
 
-  it("在当前文件夹与分类范围内按名称搜索，并能从空态直接清空", async () => {
+  it("searches by name within the current folder and category scope, and can be cleared straight from the empty state", async () => {
     renderModal();
-    await screen.findByText("参考图A");
+    await screen.findByText("Reference image A");
 
-    const search = screen.getByRole("searchbox", { name: "搜索资产" });
-    fireEvent.change(search, { target: { value: "赛博" } });
+    const search = screen.getByRole("searchbox", { name: "Search assets" });
+    fireEvent.change(search, { target: { value: "Cyber" } });
 
-    expect(screen.getByText("赛博霓虹")).toBeInTheDocument();
-    expect(screen.queryByText("参考图A")).toBeNull();
+    expect(screen.getByText("Cyber neon")).toBeInTheDocument();
+    expect(screen.queryByText("Reference image A")).toBeNull();
 
-    fireEvent.change(search, { target: { value: "不存在" } });
-    expect(screen.getByText("没有匹配的资产")).toBeInTheDocument();
-    const clearButtons = screen.getAllByRole("button", { name: "清空搜索" });
+    fireEvent.change(search, { target: { value: "nonexistent" } });
+    expect(screen.getByText("No matching assets")).toBeInTheDocument();
+    const clearButtons = screen.getAllByRole("button", { name: "Clear search" });
     fireEvent.click(clearButtons[clearButtons.length - 1]!);
 
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
+    expect(await screen.findByText("Reference image A")).toBeInTheDocument();
   });
 });
 
-describe("AssetLibraryModal 新建", () => {
+describe("AssetLibraryModal create", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue({ items: LIBRARY });
@@ -192,61 +192,61 @@ describe("AssetLibraryModal 新建", () => {
     fetchFreezoneAssetLibraryFolders.mockResolvedValue([]);
   });
 
-  it("新建文件夹保存后立刻出现并进到该文件夹", async () => {
-    const created = { id: "fld-1", name: "第一集素材" };
+  it("a new folder appears right after saving and is entered", async () => {
+    const created = { id: "fld-1", name: "Episode 1 assets" };
     createFreezoneAssetLibraryFolder.mockResolvedValue(created);
-    // 建完会重新拉一次文件夹列表。
+    // The folder list is refetched after creation.
     fetchFreezoneAssetLibraryFolders
       .mockResolvedValueOnce([])
       .mockResolvedValue([created]);
 
     renderModal();
-    await screen.findByRole("button", { name: "文件夹 主线" });
+    await screen.findByRole("button", { name: "Folder Mainline" });
 
-    fireEvent.click(screen.getByRole("button", { name: "新建文件夹" }));
+    fireEvent.click(screen.getByRole("button", { name: "New folder" }));
 
-    const input = screen.getByPlaceholderText("请输入文件夹名称");
-    fireEvent.change(input, { target: { value: "第一集素材" } });
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    const input = screen.getByPlaceholderText("Enter a folder name");
+    fireEvent.change(input, { target: { value: "Episode 1 assets" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(createFreezoneAssetLibraryFolder).toHaveBeenCalledWith(
         "demo",
-        "第一集素材",
+        "Episode 1 assets",
       ),
     );
-    // 建完直接把左侧范围切到新文件夹，右侧显示对应空状态。
+    // After creation the left scope switches straight to the new folder and the right side shows the matching empty state.
     expect(
-      await screen.findByRole("button", { name: "文件夹 第一集素材" }),
+      await screen.findByRole("button", { name: "Folder Episode 1 assets" }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("这里还没有素材")).toBeInTheDocument();
+    expect(screen.getByText("No assets yet")).toBeInTheDocument();
   });
 
-  it("上传资产弹窗要先选保存位置才能保存，主线不在可选之列", async () => {
+  it("the upload dialog requires a destination before saving, and Mainline is not selectable", async () => {
     fetchFreezoneAssetLibraryFolders.mockResolvedValue([
-      { id: "fld-1", name: "第一集素材" },
+      { id: "fld-1", name: "Episode 1 assets" },
     ]);
     renderModal();
-    await screen.findByRole("button", { name: "文件夹 主线" });
+    await screen.findByRole("button", { name: "Folder Mainline" });
 
-    fireEvent.click(screen.getByRole("button", { name: "上传资产" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload assets" }));
 
-    // 没选文件、没选保存位置，保存不可用。
-    expect(screen.getByRole("button", { name: "上传" })).toBeDisabled();
+    // With no file and no destination chosen, saving is unavailable.
+    expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "选择保存位置" }));
-    expect(screen.getByRole("button", { name: "待分类资产" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "第一集素材" })).toBeInTheDocument();
-    // 主线是同步产物，不能当上传目标。
-    expect(screen.queryByRole("button", { name: "主线" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose a destination" }));
+    expect(screen.getByRole("button", { name: "Uncategorized" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Episode 1 assets" })).toBeInTheDocument();
+    // Mainline is a synced artifact and cannot be an upload target.
+    expect(screen.queryByRole("button", { name: "Mainline" })).toBeNull();
   });
 });
 
-describe("AssetLibraryModal 底部分页", () => {
-  // 26 条无标签上传 → 全都落在「待分类资产」里，够翻两页。
+describe("AssetLibraryModal bottom pagination", () => {
+  // 26 untagged uploads -> all land in "Unsorted assets", enough for two pages.
   const MANY = Array.from({ length: 26 }, (_, i) => ({
     id: `up-${i + 1}`,
-    name: `素材${i + 1}`,
+    name: `Asset ${i + 1}`,
     media: "image",
     source: "upload",
     image_urls: [`/static/${i + 1}.png`],
@@ -259,64 +259,64 @@ describe("AssetLibraryModal 底部分页", () => {
     fetchFreezoneAssetLibraryFolders.mockResolvedValue([]);
   });
 
-  it("管理态底部只剩分页，没有「确定」", async () => {
+  it("manage mode keeps only pagination at the bottom, with no Confirm", async () => {
     renderModal();
 
-    expect(await screen.findByRole("button", { name: "第 1 页" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "每页条数" })).toHaveTextContent(
-      "20条/页",
+    expect(await screen.findByRole("button", { name: "Page 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Items per page" })).toHaveTextContent(
+      "20 / page",
     );
-    expect(screen.queryByRole("button", { name: "确定" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
   });
 
-  it("挑素材给节点用时「确定」还在", async () => {
+  it("Confirm is still there when picking assets for a node", async () => {
     renderModal({ mode: "pick", onConfirm: vi.fn() });
 
-    expect(await screen.findByRole("button", { name: "确定" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Confirm" })).toBeInTheDocument();
   });
 
-  it("默认每页 20 条，翻页看后面的", async () => {
+  it("defaults to 20 per page, and paging shows the rest", async () => {
     renderModal();
 
-    fireEvent.click(await screen.findByRole("button", { name: "文件夹 待分类资产" }));
-    expect(await screen.findByText("素材1")).toBeInTheDocument();
-    expect(screen.getByText("素材20")).toBeInTheDocument();
-    expect(screen.queryByText("素材21")).toBeNull();
-    // 26 条 → 2 页。
-    expect(screen.queryByRole("button", { name: "第 3 页" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Folder Uncategorized" }));
+    expect(await screen.findByText("Asset 1")).toBeInTheDocument();
+    expect(screen.getByText("Asset 20")).toBeInTheDocument();
+    expect(screen.queryByText("Asset 21")).toBeNull();
+    // 26 items -> 2 pages.
+    expect(screen.queryByRole("button", { name: "Page 3" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
-    expect(await screen.findByText("素材21")).toBeInTheDocument();
-    expect(screen.queryByText("素材1")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("Asset 21")).toBeInTheDocument();
+    expect(screen.queryByText("Asset 1")).toBeNull();
   });
 
-  it("改每页条数后回到第一页并一次列全", async () => {
+  it("changing the page size returns to page one and lists everything at once", async () => {
     renderModal();
 
-    fireEvent.click(await screen.findByRole("button", { name: "文件夹 待分类资产" }));
-    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
-    expect(await screen.findByText("素材21")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Folder Uncategorized" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("Asset 21")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "每页条数" }));
-    fireEvent.click(screen.getByRole("button", { name: "40条/页" }));
+    fireEvent.click(screen.getByRole("button", { name: "Items per page" }));
+    fireEvent.click(screen.getByRole("button", { name: "40 / page" }));
 
-    expect(await screen.findByText("素材1")).toBeInTheDocument();
-    expect(screen.getByText("素材26")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "第 2 页" })).toBeNull();
+    expect(await screen.findByText("Asset 1")).toBeInTheDocument();
+    expect(screen.getByText("Asset 26")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Page 2" })).toBeNull();
   });
 });
 
-describe("AssetLibraryModal 文件夹操作", () => {
+describe("AssetLibraryModal folder actions", () => {
   const CUSTOM = {
     id: "fld-1",
-    name: "第一集素材",
+    name: "Episode 1 assets",
     created_at: "2026-08-12T10:20:30",
   };
   const FILED = [
     ...LIBRARY,
     {
       id: "up-4",
-      name: "女主定妆",
+      name: "Heroine makeup test",
       media: "image",
       source: "upload",
       category: "character",
@@ -334,78 +334,78 @@ describe("AssetLibraryModal 文件夹操作", () => {
     deleteFreezoneAssetLibraryFolder.mockResolvedValue({ deleted_items: 1 });
   });
 
-  it("只有自建文件夹带「…」菜单，系统文件夹没有", async () => {
+  it("only user-created folders have the \"...\" menu, system folders do not", async () => {
     renderModal();
 
     expect(
-      await screen.findByRole("button", { name: "第一集素材 更多操作" }),
+      await screen.findByRole("button", { name: "More actions for Episode 1 assets" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "主线 更多操作" })).toBeNull();
-    // 名字挪到卡片下边，条数不再显示，建夹日期显示在名字下面一行。
-    expect(screen.queryByText("1 个")).toBeNull();
+    expect(screen.queryByRole("button", { name: "More actions for Mainline" })).toBeNull();
+    // The name moves below the card, the count is no longer shown, and the creation date appears on the line under the name.
+    expect(screen.queryByText("1 asset")).toBeNull();
     expect(screen.getByText("2026-08-12")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "待分类资产 更多操作" }),
+      screen.queryByRole("button", { name: "More actions for Uncategorized" }),
     ).toBeNull();
   });
 
-  it("「发送到画布」把整个文件夹交给调用方并关掉弹窗", async () => {
+  it("\"Send to canvas\" hands the whole folder to the caller and closes the dialog", async () => {
     const onSendFolderToCanvas = vi.fn();
     const onClose = vi.fn();
     renderModal({ onSendFolderToCanvas, onClose });
 
-    // 每个非空文件夹导航项旁都有一个，按该行圈定再点。
+    // There is one next to every non-empty folder nav item; scope to that row, then click.
     const folderButton = await screen.findByRole("button", {
-      name: "文件夹 第一集素材",
+      name: "Folder Episode 1 assets",
     });
     fireEvent.click(
       within(folderButton.parentElement as HTMLElement).getByRole("button", {
-        name: "发送到画布",
+        name: "Send to canvas",
       }),
     );
 
     expect(onSendFolderToCanvas).toHaveBeenCalledTimes(1);
     expect(onSendFolderToCanvas.mock.calls[0][0]).toMatchObject({
       key: "fld-1",
-      label: "第一集素材",
+      label: "Episode 1 assets",
     });
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("重命名走 PATCH，只改名字", async () => {
+  it("rename goes through PATCH and changes only the name", async () => {
     renderModal();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "第一集素材 更多操作" }),
+      await screen.findByRole("button", { name: "More actions for Episode 1 assets" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "重命名" }));
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
 
-    const input = screen.getByPlaceholderText("请输入文件夹名称");
-    expect(input).toHaveValue("第一集素材");
-    fireEvent.change(input, { target: { value: "第一集" } });
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    const input = screen.getByPlaceholderText("Enter a folder name");
+    expect(input).toHaveValue("Episode 1 assets");
+    fireEvent.change(input, { target: { value: "Episode 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateFreezoneAssetLibraryFolder).toHaveBeenCalledWith(
         "demo",
         "fld-1",
-        { name: "第一集" },
+        { name: "Episode 1" },
       ),
     );
   });
 
-  it("改封面从文件夹内的图片里挑", async () => {
+  it("changing the cover picks from the images inside the folder", async () => {
     renderModal();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "第一集素材 更多操作" }),
+      await screen.findByRole("button", { name: "More actions for Episode 1 assets" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "修改封面" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change cover" }));
 
-    // 只列这个文件夹自己的图片，别的文件夹的不出现。
-    expect(screen.queryByRole("button", { name: "选择封面 参考图A" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "选择封面 女主定妆" }));
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    // Only this folder's own images are listed; other folders' images do not appear.
+    expect(screen.queryByRole("button", { name: "Use Reference image A as cover" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Use Heroine makeup test as cover" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateFreezoneAssetLibraryFolder).toHaveBeenCalledWith(
@@ -416,26 +416,26 @@ describe("AssetLibraryModal 文件夹操作", () => {
     );
   });
 
-  it("删除文件夹要二次确认，确认后整柜删掉", async () => {
+  it("deleting a folder needs a second confirmation, then deletes the whole folder", async () => {
     const nativeConfirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderModal();
 
     const moreButton = await screen.findByRole("button", {
-      name: "第一集素材 更多操作",
+      name: "More actions for Episode 1 assets",
     });
     fireEvent.click(moreButton);
     fireEvent.click(
       within(moreButton.parentElement as HTMLElement).getByRole("button", {
-        name: "删除",
+        name: "Delete",
       }),
     );
 
-    // 确认文案要写明里面的素材也会没。
+    // The confirmation text must say the assets inside will be gone too.
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog.textContent).toContain("1 项素材会一起删掉");
-    // 走原生 confirm 的话这个对话框根本不会出现。
+    expect(dialog.textContent).toContain("The 1 assets inside will be deleted too");
+    // With the native confirm this dialog would never appear.
     expect(nativeConfirm).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog).getByRole("button", { name: "删除" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(deleteFreezoneAssetLibraryFolder).toHaveBeenCalledWith(
         "demo",
@@ -444,14 +444,14 @@ describe("AssetLibraryModal 文件夹操作", () => {
     );
   });
 
-  it("确认文案按整柜的真实条数算，不受 allowedMedia 过滤影响", async () => {
-    // 生图节点只让看图片，但后端删的是整柜——文案要照实说 2 项，不然那条视频
-    // 会在用户毫不知情的情况下没掉。
+  it("the confirmation text counts the real number of items in the folder, unaffected by the allowedMedia filter", async () => {
+    // An image-generation node only shows images, but the backend deletes the whole folder -- the text must say 2 items honestly, otherwise that video
+    // would vanish without the user knowing.
     const withVideo = [
       ...FILED,
       {
         id: "up-5",
-        name: "定妆花絮",
+        name: "Makeup test outtakes",
         media: "video",
         source: "upload",
         category: "character",
@@ -464,24 +464,24 @@ describe("AssetLibraryModal 文件夹操作", () => {
     renderModal({ allowedMedia: ["image"] });
 
     const moreButton = await screen.findByRole("button", {
-      name: "第一集素材 更多操作",
+      name: "More actions for Episode 1 assets",
     });
     fireEvent.click(moreButton);
     fireEvent.click(
       within(moreButton.parentElement as HTMLElement).getByRole("button", {
-        name: "删除",
+        name: "Delete",
       }),
     );
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog.textContent).toContain("2 项素材会一起删掉");
-    // 一定要答完：confirmDialog 的 pending 挂在模块级 store 上，卸载组件也清不掉，
-    // 漏一个没关的确认框，下一个用例一渲染就被它罩住整页。
+    expect(dialog.textContent).toContain("The 2 assets inside will be deleted too");
+    // Always answer it: confirmDialog's pending state lives in a module-level store that unmounting does not clear,
+    // so a leftover open confirm dialog would cover the whole page in the next case's render.
     await dismissConfirm(dialog);
   });
 });
 
-describe("AssetLibraryModal 批量操作", () => {
+describe("AssetLibraryModal bulk actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue({ items: LIBRARY });
@@ -490,53 +490,53 @@ describe("AssetLibraryModal 批量操作", () => {
     deleteFreezoneVideoCharacterLibraryItem.mockResolvedValue({ ok: true });
   });
 
-  it("全部资产默认就是资产视图，批量删除无需先进入文件夹", async () => {
+  it("All assets is the asset view by default, and bulk delete needs no folder first", async () => {
     renderModal();
 
-    const bulkButton = await screen.findByRole("button", { name: "批量删除" });
+    const bulkButton = await screen.findByRole("button", { name: "Bulk delete" });
     expect(bulkButton).toBeEnabled();
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
+    expect(await screen.findByText("Reference image A")).toBeInTheDocument();
   });
 
-  it("管理态点击卡片进入详情并提供明确后续操作，不再产生无结果选择", async () => {
+  it("in manage mode clicking a card opens details with clear next actions, producing no dead-end selection", async () => {
     const onSendItemToCanvas = vi.fn();
     renderModal({ onSendItemToCanvas });
 
-    expect(screen.queryByRole("button", { name: "选择" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
     fireEvent.click(
-      await screen.findByRole("button", { name: "查看 参考图A 详情" }),
+      await screen.findByRole("button", { name: "View details for Reference image A" }),
     );
 
-    const details = screen.getByRole("dialog", { name: "资产详情" });
-    expect(within(details).getByRole("button", { name: "下载" })).toBeEnabled();
-    expect(within(details).getByRole("button", { name: "删除" })).toBeEnabled();
-    fireEvent.click(within(details).getByRole("button", { name: "发送到画布" }));
+    const details = screen.getByRole("dialog", { name: "Asset details" });
+    expect(within(details).getByRole("button", { name: "Download" })).toBeEnabled();
+    expect(within(details).getByRole("button", { name: "Delete" })).toBeEnabled();
+    fireEvent.click(within(details).getByRole("button", { name: "Send to canvas" }));
     expect(onSendItemToCanvas).toHaveBeenCalledWith(
       expect.objectContaining({ id: "up-1" }),
     );
   });
 
-  it("选材态保留选择确认，但不暴露批量删除", async () => {
+  it("pick mode keeps the selection confirm but hides bulk delete", async () => {
     renderModal({ mode: "pick", onConfirm: vi.fn() });
 
-    expect((await screen.findAllByRole("button", { name: "选择" })).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "批量删除" })).toBeNull();
-    expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
+    expect((await screen.findAllByRole("button", { name: "Select" })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Bulk delete" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
   });
 
-  it("批量态下能删掉本地上传的素材，主线素材不可选", async () => {
+  it("in bulk mode locally uploaded assets can be deleted, and mainline assets are not selectable", async () => {
     renderModal();
-    await screen.findByRole("button", { name: "文件夹 主线" });
+    await screen.findByRole("button", { name: "Folder Mainline" });
 
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 待分类资产" }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
+    fireEvent.click(screen.getByRole("button", { name: "Folder Uncategorized" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bulk delete" }));
 
-    fireEvent.click(await screen.findByRole("button", { name: "选中待删除" }));
-    expect(screen.getByText(/只能删除本地上传的素材/)).toHaveTextContent(
-      "已选 1 项",
+    fireEvent.click(await screen.findByRole("button", { name: "Mark for deletion" }));
+    expect(screen.getByText(/only locally uploaded assets can be deleted/)).toHaveTextContent(
+      "1 selected",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "删除所选" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected" }));
     await acceptDeleteConfirm();
     await waitFor(() =>
       expect(deleteFreezoneVideoCharacterLibraryItem).toHaveBeenCalledWith(
@@ -546,19 +546,19 @@ describe("AssetLibraryModal 批量操作", () => {
     );
   });
 
-  it("批量删除里有一条失败，剩下的照删", async () => {
-    // 最常见的失败是这个 id 已经被别处删掉了。为它把整批放弃说不过去。
+  it("when one bulk delete fails, the rest are still deleted", async () => {
+    // The most common failure is that the id was already deleted elsewhere; abandoning the whole batch for that makes no sense.
     const items = [
       {
         id: "up-1",
-        name: "参考图A",
+        name: "Reference image A",
         media: "image",
         source: "upload",
         image_urls: ["/static/a.png"],
       },
       {
         id: "up-9",
-        name: "参考图B",
+        name: "Reference image B",
         media: "image",
         source: "upload",
         image_urls: ["/static/e.png"],
@@ -573,16 +573,16 @@ describe("AssetLibraryModal 批量操作", () => {
           : Promise.resolve({ ok: true }),
     );
     renderModal();
-    await screen.findByRole("button", { name: "文件夹 主线" });
+    await screen.findByRole("button", { name: "Folder Mainline" });
 
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 待分类资产" }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
+    fireEvent.click(screen.getByRole("button", { name: "Folder Uncategorized" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bulk delete" }));
 
     fireEvent.click(
-      (await screen.findAllByRole("button", { name: "选中待删除" }))[0],
+      (await screen.findAllByRole("button", { name: "Mark for deletion" }))[0],
     );
-    fireEvent.click(screen.getByRole("button", { name: "选中待删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "删除所选" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark for deletion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected" }));
     await acceptDeleteConfirm();
 
     await waitFor(() =>
@@ -597,18 +597,18 @@ describe("AssetLibraryModal 批量操作", () => {
     );
   });
 
-  it("批量态下主线素材不显示删除勾选，但仍能打开详情", async () => {
+  it("in bulk mode mainline assets show no delete checkbox but can still open details", async () => {
     renderModal();
-    await screen.findByRole("button", { name: "文件夹 主线" });
+    await screen.findByRole("button", { name: "Folder Mainline" });
 
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 主线" }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
+    fireEvent.click(screen.getByRole("button", { name: "Folder Mainline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bulk delete" }));
 
     expect(
-      screen.queryByRole("button", { name: "主线同步来的素材不能删除" }),
+      screen.queryByRole("button", { name: "Mark for deletion" }),
     ).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: "查看 厨房 详情" }));
-    expect(screen.getByRole("dialog", { name: "资产详情" })).toBeInTheDocument();
-    expect(screen.getByText("主线同步资产需回到对应主线内容中维护")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "View details for Kitchen" }));
+    expect(screen.getByRole("dialog", { name: "Asset details" })).toBeInTheDocument();
+    expect(screen.getByText("Assets synced from the mainline must be edited in the mainline content they come from")).toBeInTheDocument();
   });
 });

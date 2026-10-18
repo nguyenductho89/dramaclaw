@@ -11,17 +11,17 @@ import { downloadBlobAsFile, downloadUrlAsFile } from '@/lib/browserDownload';
 import { resolveImageDisplayUrl } from './imageData';
 
 /**
- * 音频「下载为指定格式」共享核心（从 NodeActionToolbar.handleAudioDownload 抽出，
- * 语义零变化）：目标容器与源一致（或 m4a 直取）时透传下载原字节；否则 fetch →
- * 前端转码 → 触发下载。转码起止通过 onConvertingChange 通知调用方（节点工具栏写
- * node data 的 convertingAudioFormat，故事板音频 chip 用本地 state）。
- * 可用性预检（canProduceFormat）与错误提示由调用方自持；失败向上抛。
+ * The shared core of audio "download as a specified format" (extracted from NodeActionToolbar.handleAudioDownload,
+ * with zero semantic change): when the target container is the same as the source (or m4a direct take), pass through and download the original bytes; otherwise fetch ->
+ * frontend transcode -> trigger the download. The transcoding start/end are notified to the caller via onConvertingChange (the node toolbar writes
+ * convertingAudioFormat of node data, and the storyboard audio chip uses local state).
+ * The availability pre-check (canProduceFormat) and the error hint are held by the caller; failures are thrown upward.
  */
 export async function downloadAudioAs(
   format: AudioDownloadFormat,
   params: {
     audioUrl: string;
-    /** 不带扩展名的文件名主体（调用方已剥掉尾部音频扩展名）。 */
+    /** The file name body without an extension (the caller has already stripped the trailing audio extension). */
     baseFileName: string;
     onConvertingChange?: (format: AudioDownloadFormat | null) => void;
   },

@@ -13,9 +13,9 @@ interface PanelExpandButtonProps {
 }
 
 /**
- * 操作区「放大 / 收起」开关。各节点的浮动操作面板（ImageGen / Video / Audio …）
- * 共用这一颗按钮：展开时把面板放大成更舒适的编辑尺寸，收起时还原。位置由调用方
- * 通过 `className` 决定（一般是面板右上角 absolute）。
+ * The operation area's "Enlarge / Collapse" toggle. The floating operation panels of each node (ImageGen / Video / Audio ...)
+ * share this one button: expanding enlarges the panel into a more comfortable editing size, and collapsing restores it. The position is decided by the caller
+ * through `className` (generally absolute at the panel's top-right).
  */
 export function PanelExpandButton({ expanded, onToggle, className }: PanelExpandButtonProps) {
   const { t } = useTranslation();

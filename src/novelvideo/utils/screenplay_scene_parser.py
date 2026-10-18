@@ -79,9 +79,11 @@ _BUILDING_PREFIX_RE = re.compile(
 )
 
 SCENE_WORD = r"(?:SCENE|SENSE|CẢNH)"
+# "EPISODE 3", "EPISODE 3 - Title" or "EPISODE 3 Title" (a bare title must start with a capital
+# letter, so prose such as "Chapter 2 explains why..." is never taken for a heading).
 EPISODE_HEADER_RE = re.compile(
-    r"^(?:EPISODE|CHAPTER|TẬP|CHƯƠNG)\s*(\d+)(?:\s*[:.\-–—]\s*.*)?\s*$",
-    re.IGNORECASE,
+    r"^(?i:EPISODE|CHAPTER|TẬP|CHƯƠNG)\s*(\d+)"
+    r"(?:\s*[:.\-–—]\s*.*|\s+[A-ZÀ-ỸĐ].*)?\s*$"
 )
 SCENE_MARKER_RE = re.compile(
     rf"^{SCENE_WORD}\s*[:.]?\s*\(?(?P<scene_no>\d+[A-Za-z]?)\)?"
@@ -315,7 +317,17 @@ def parse_scene_blocks(text_or_lines: str | list[str]) -> list[ParsedSceneBlock]
             ep = int(numbered.group("episode"))
             if current_episode <= 0 or ep != current_episode:
                 current_episode = ep
-            rest = (numbered.group("rest") or "").strip()
+            rest = _numbered_rest(numbered)
+            numbered_fountain = _parse_international_scene_header(rest)
+            if numbered_fountain:
+                # "1-1. INT. KITCHEN - NIGHT": a scene number in front of a Fountain heading.
+                start_block(line, scene_no=numbered.group("scene") or "")
+                (
+                    current.location,
+                    current.time_of_day,
+                    current.interior_exterior,
+                ) = numbered_fountain
+                continue
             start_block(line, scene_no=numbered.group("scene") or "", location_line=rest)
             continue
 
@@ -579,15 +591,24 @@ def _strip_location_prefix(line: str) -> str:
 def _strip_numbered_scene_prefix(line: str) -> str:
     match = NUMBERED_SCENE_RE.match((line or "").strip())
     if match and _looks_like_scene_number_line(match):
-        return (match.group("rest") or "").strip()
+        return _numbered_rest(match)
     return line
 
 
+def _numbered_rest(match: re.Match[str]) -> str:
+    """Text after a scene number, without the separator punctuation ("1-1. INT. X" -> "INT. X")."""
+    return (match.group("rest") or "").strip().lstrip(".:;,-– ").strip()
+
+
 def _looks_like_scene_number_line(match: re.Match[str]) -> bool:
-    rest = (match.group("rest") or "").strip()
+    rest = _numbered_rest(match)
     if not rest:
         return True
-    return bool(parse_location_line(rest)) or _looks_like_partial_location(rest)
+    return (
+        bool(_parse_international_scene_header(rest))
+        or bool(parse_location_line(rest))
+        or _looks_like_partial_location(rest)
+    )
 
 
 def _looks_like_partial_location(text: str) -> bool:

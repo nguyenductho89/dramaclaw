@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""风格清单加载器:外部覆盖、坏清单兜底、原地替换后的缓存失效。"""
+"""Style manifest loader: external override, broken-manifest fallback, cache invalidation after in-place replacement."""
 
 from __future__ import annotations
 
@@ -29,10 +29,10 @@ def _write_manifest(path: Path, templates: list[dict], version: str = "test-1") 
 
 
 def _builtin_ids() -> list[str]:
-    """直接从内置清单文件读 id 列表。
+    """Read the id list directly from the built-in manifest file.
 
-    「回落到内置清单」的断言原本写死 24,每加一批风格就要改三处数字,而它想表达的
-    其实是「拿到的就是内置那份」。改成比对 id 列表:既不随风格数漂移,又比数量更严。
+    The "falls back to the built-in manifest" assertion used to hard-code 24, requiring three numbers to be changed with every batch of styles added, while what it wants to express
+    is actually "what is obtained is the built-in one". Changed to compare the id list: it neither drifts with the style count nor is looser than the count.
     """
     shipped = json.loads(manifest.BUILTIN_MANIFEST_PATH.read_text(encoding="utf-8"))
     return [item["id"] for item in shipped["templates"]]
@@ -41,18 +41,18 @@ def _builtin_ids() -> list[str]:
 def _template(template_id: str = "demo") -> dict:
     return {
         "id": template_id,
-        "label": "示例风格",
-        "category": "都市",
+        "label": "Sample style",
+        "category": "Urban",
         "cover": f"{template_id}/cover.webp",
         "samples": [f"{template_id}/female.webp"],
-        "style_prompt": "示例提示词",
+        "style_prompt": "Sample prompt",
     }
 
 
 def test_builtin_manifest_ships_with_the_package() -> None:
     assert manifest.BUILTIN_MANIFEST_PATH.is_file()
-    # 加载器读出来的必须和文件里那份一字不差 —— 校验环节把不合规的条目丢掉时,
-    # 这里就会少几条。数量另设下限,防止清单被截断成空壳还悄悄通过。
+    # What the loader reads out must match the file word for word -- if the validation step drops non-compliant entries,
+    # there would be fewer here. The count has a separate lower bound to prevent a manifest truncated into an empty shell from passing quietly.
     assert [item["id"] for item in manifest.load_style_templates()] == _builtin_ids()
     assert len(_builtin_ids()) >= 24
     assert manifest.get_style_manifest_version()
@@ -83,7 +83,7 @@ def test_missing_override_falls_back_to_the_builtin_manifest(
     [
         "{ not json",
         json.dumps({"templates": []}),
-        json.dumps({"templates": [{"id": "a", "label": "甲"}]}),
+        json.dumps({"templates": [{"id": "a", "label": "Alpha"}]}),
         json.dumps({"templates": [{**_template("a"), "samples": [""]}]}),
         json.dumps({"templates": [_template("a"), _template("a")]}),
     ],
@@ -114,7 +114,7 @@ def test_bare_array_manifest_is_accepted(
 def test_replacing_the_file_in_place_takes_effect(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """运维覆盖清单文件后不必重启进程 —— 缓存按 mtime/size 失效。"""
+    """After ops overrides the manifest file there is no need to restart the process -- the cache invalidates by mtime/size."""
     path = _write_manifest(tmp_path / "styles.json", [_template("before")])
     monkeypatch.setenv(manifest.MANIFEST_ENV, str(path))
     manifest.reset_style_template_cache()
@@ -144,13 +144,13 @@ def test_samples_default_to_empty_when_absent(
 def test_loaded_templates_are_not_shared_by_reference(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """调用方拿到的列表可以随便改,别污染下一次请求。"""
+    """The list the caller gets can be modified freely without polluting the next request."""
     path = _write_manifest(tmp_path / "styles.json", [_template()])
     monkeypatch.setenv(manifest.MANIFEST_ENV, str(path))
     manifest.reset_style_template_cache()
 
     first = manifest.load_style_templates()
-    first[0]["label"] = "被改过的名字"
+    first[0]["label"] = "A renamed label"
     first[0]["samples"].append("intruder.webp")
     first.clear()
 

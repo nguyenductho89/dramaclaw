@@ -73,9 +73,9 @@ def test_text_recipe_rejects_second_stage_model_instruction():
                 "name": "Invalid text Recipe",
                 "output_kind": "text",
                 "action_keys": ["invalid-text-recipe"],
-                "system_prompt": "不要自己编写大纲，只输出能指导 LLM 的指令。",
-                "planning_prompt": "生成大纲",
-                "result_summary": "大纲",
+                "system_prompt": "Do not write it yourself; output only prompts that guide the LLM.",
+                "planning_prompt": "Generate an outline",
+                "result_summary": "Outline",
             }
         )
 
@@ -86,7 +86,7 @@ def test_authoring_guide_text_recipe_template_produces_final_deliverable():
         / ".hermes/skills/freezone/references/skill-studio-authoring-guide.md"
     )
     guide = guide_path.read_text(encoding="utf-8")
-    text_recipe_section = guide.split("#### 文字 Recipe", 1)[1]
+    text_recipe_section = guide.split("#### Text Recipe", 1)[1]
     system_prompt = text_recipe_section.split("```text", 1)[1].split("```", 1)[0].strip()
 
     validated = validate_agent_recipe_config(
@@ -96,13 +96,13 @@ def test_authoring_guide_text_recipe_template_produces_final_deliverable():
             "output_kind": "text",
             "action_keys": ["guide-text-template"],
             "system_prompt": system_prompt,
-            "planning_prompt": "根据已确认输入直接生成最终文案。",
-            "result_summary": "可直接交付的最终文案。",
+            "planning_prompt": "Directly generate the final copy from the confirmed input.",
+            "result_summary": "Final copy that can be delivered directly.",
         }
     )
 
     assert validated["output_kind"] == "text"
-    assert "直接生成可交付的最终文本" in validated["system_prompt"]
+    assert "directly generate the deliverable final text" in validated["system_prompt"]
 
 
 def test_retro_skill_keeps_entry_guard_out_of_recipe_runtime_constraints():
@@ -116,10 +116,10 @@ def test_retro_skill_keeps_entry_guard_out_of_recipe_runtime_constraints():
     constraints = recipe_runtime._skill_constraints(skill)
     compiled_constraints = "\n".join(constraints["hard_constraints"])
 
-    assert "请先上传至少一张角色参考图或一句文字灵感" not in compiled_constraints
-    assert "暂停等待导演确认" not in compiled_constraints
-    assert "阶段标题使用【模块名】格式" not in constraints["prompt_guide"]
-    assert "一次性在草稿中列出完整工作流" in skill["planning"]["planning_notes"]
+    assert "Please upload at least one character reference image or a line of text inspiration first" not in compiled_constraints
+    assert "Pause and wait for the director's confirmation" not in compiled_constraints
+    assert "Use the [Module Name] format for stage titles" not in constraints["prompt_guide"]
+    assert "list the complete workflow in the draft at once" in skill["planning"]["planning_notes"]
 
 
 def test_kungfu_shot_recipe_requires_per_shot_action_phases():
@@ -131,10 +131,10 @@ def test_kungfu_shot_recipe_requires_per_shot_action_phases():
     recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
     prompt = recipe["system_prompt"]
 
-    assert "当前 Shot 的每个核心动作逐项写出" in prompt
-    assert "不得只写泛化的三段式要求" in prompt
-    assert "每个视频节点自身" in prompt
-    assert "逐动作预备/运动/完成" in recipe["must_have_items"]
+    assert "for each core action of the current Shot, write out" in prompt
+    assert "must not merely state a generic three-phase requirement" in prompt
+    assert "each video node must itself contain" in prompt
+    assert "Per-action anticipation/movement/completion" in recipe["must_have_items"]
 
 
 def test_outdoor_stage_duel_character_elements_use_one_turnaround_reference():
@@ -145,8 +145,8 @@ def test_outdoor_stage_duel_character_elements_use_one_turnaround_reference():
     )
     recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
 
-    assert "正面、侧面、背面" in recipe["system_prompt"]
-    assert "全身三视图" in "\n".join(recipe["must_have_items"])
+    assert "front, side and back" in recipe["system_prompt"]
+    assert "full-body three-view" in "\n".join(recipe["must_have_items"])
 
 
 def test_outdoor_stage_duel_video_recipe_preserves_confirmed_beat_order():
@@ -158,10 +158,10 @@ def test_outdoor_stage_duel_video_recipe_preserves_confirmed_beat_order():
     recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
     prompt = recipe["system_prompt"]
 
-    assert "已确认" in prompt and "Beat" in prompt
-    assert "Beat 3 中心峰值碰撞和明确受力反馈；Beat 4 反击" not in prompt
-    assert "逐 Beat 保留已确认 Storyboard/用户顺序和动作" in prompt
-    assert "若未提供确认顺序" in prompt
+    assert "confirmed" in prompt and "Beat" in prompt
+    assert "Beat 3 as the central peak collision with clear impact feedback; Beat 4 as the counterattack" not in prompt
+    assert "keep the confirmed Storyboard / user order and actions beat by beat" in prompt
+    assert "if no confirmed order is provided" in prompt
     assert "continuous handheld long take" in prompt
     assert "Three-layer composition" in prompt
     assert "First-person audience POV" in prompt
@@ -235,28 +235,28 @@ def test_build_recipe_compiler_task_checks_output_kind():
 
 def test_build_recipe_compiler_task_contains_runtime_context():
     task = recipe_runtime.build_recipe_compiler_task(
-        recipe={"id": "scene", "output_kind": "image", "system_prompt": "商业摄影"},
+        recipe={"id": "scene", "output_kind": "image", "system_prompt": "commercial photography"},
         node_kind="image",
-        node_prompt="北欧厨房",
-        user_goal="生成三张咖啡机商品图",
-        upstream_text="银色金属机身",
-        reference_media=[{"kind": "image", "label": "产品参考图"}],
+        node_prompt="Nordic kitchen",
+        user_goal="Generate three coffee machine product images",
+        upstream_text="Silver metal body",
+        reference_media=[{"kind": "image", "label": "Product reference image"}],
         confirmed_inputs={"aspect_ratio": "9:16", "language": "zh"},
         skill_constraints={
-            "hard_constraints": ["不得虚构产品功能", "不要字幕"],
-            "prompt_guide": "高端商业摄影",
+            "hard_constraints": ["Do not invent product features", "No subtitles"],
+            "prompt_guide": "Premium commercial photography",
         },
         skill_id="ecommerce",
         skill_version="2.1.0",
     )
 
-    assert "商业摄影" in task
-    assert "北欧厨房" in task
-    assert "银色金属机身" in task
-    assert "产品参考图" in task
+    assert "commercial photography" in task
+    assert "Nordic kitchen" in task
+    assert "Silver metal body" in task
+    assert "Product reference image" in task
     assert '"aspect_ratio": "9:16"' in task
-    assert "不得虚构产品功能" in task
-    assert "高端商业摄影" in task
+    assert "Do not invent product features" in task
+    assert "Premium commercial photography" in task
     assert '"version": "2.1.0"' in task
 
 
@@ -305,25 +305,25 @@ def test_combined_recipe_preserves_pipeline_order():
         [
             {
                 "id": "shotlist",
-                "name": "分镜方法",
+                "name": "Storyboard method",
                 "version": 1,
                 "output_kind": "image",
-                "system_prompt": "先确定镜头信息。",
+                "system_prompt": "First settle the shot information.",
             },
             {
                 "id": "lighting",
-                "name": "布光方法",
+                "name": "Lighting method",
                 "version": 2,
                 "output_kind": "image",
-                "system_prompt": "再设计光线。",
+                "system_prompt": "Then design the lighting.",
             },
         ]
     )
 
     assert combined["id"] == "shotlist+lighting"
-    assert combined["system_prompt"].index("先确定镜头信息") < combined[
+    assert combined["system_prompt"].index("First settle the shot information") < combined[
         "system_prompt"
-    ].index("再设计光线")
+    ].index("Then design the lighting")
 
 
 def test_recipe_compiler_priority_places_skill_before_recipe():
@@ -339,9 +339,9 @@ def test_recipe_compiler_priority_places_skill_before_recipe():
 def test_build_recipe_compiler_task_limits_large_upstream_context():
     upstream = "A" * 20_000 + "B" * 20_000
     task = recipe_runtime.build_recipe_compiler_task(
-        recipe={"id": "scene", "output_kind": "image", "system_prompt": "商业摄影"},
+        recipe={"id": "scene", "output_kind": "image", "system_prompt": "commercial photography"},
         node_kind="image",
-        node_prompt="厨房",
+        node_prompt="kitchen",
         upstream_text=upstream,
     )
 
@@ -378,7 +378,7 @@ async def test_compile_recipe_prompt_loads_server_recipe_and_returns_only_prompt
             nonlocal calls
             calls += 1
             assert "trusted internal method" in task
-            return SimpleNamespace(output="最终可执行提示词")
+            return SimpleNamespace(output="Final executable prompt")
 
     monkeypatch.setattr(recipe_runtime, "Agent", FakeAgent)
     monkeypatch.setattr(
@@ -391,17 +391,17 @@ async def test_compile_recipe_prompt_loads_server_recipe_and_returns_only_prompt
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
+        node_prompt="Kitchen scene",
     )
     cached = await recipe_runtime.compile_recipe_prompt_result(
         username="local",
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
+        node_prompt="Kitchen scene",
     )
 
-    assert compiled.prompt == "最终可执行提示词"
+    assert compiled.prompt == "Final executable prompt"
     assert compiled.mode == "model"
     assert cached.prompt == compiled.prompt
     assert cached.mode == "memory_cache"
@@ -413,7 +413,7 @@ async def test_compile_recipe_prompt_loads_server_recipe_and_returns_only_prompt
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
+        node_prompt="Kitchen scene",
     )
     assert persisted.prompt == compiled.prompt
     assert persisted.mode == "persistent_cache"
@@ -424,7 +424,7 @@ async def test_compile_recipe_prompt_loads_server_recipe_and_returns_only_prompt
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
+        node_prompt="Kitchen scene",
     )
     assert compatible_prompt == compiled.prompt
 
@@ -456,7 +456,7 @@ async def test_compile_recipe_prompt_deduplicates_concurrent_model_calls(
             nonlocal calls
             calls += 1
             await asyncio.sleep(0.01)
-            return SimpleNamespace(output="共享提示词")
+            return SimpleNamespace(output="Shared prompt")
 
     monkeypatch.setattr(recipe_runtime, "Agent", FakeAgent)
     monkeypatch.setattr(
@@ -468,7 +468,7 @@ async def test_compile_recipe_prompt_deduplicates_concurrent_model_calls(
         "recipe_id": "scene",
         "recipe_version": "1",
         "node_kind": "image",
-        "node_prompt": "厨房场景",
+        "node_prompt": "Kitchen scene",
     }
 
     results = await asyncio.gather(
@@ -476,7 +476,7 @@ async def test_compile_recipe_prompt_deduplicates_concurrent_model_calls(
         recipe_runtime.compile_recipe_prompt(**kwargs),
     )
 
-    assert results == ["共享提示词", "共享提示词"]
+    assert results == ["Shared prompt", "Shared prompt"]
     assert calls == 1
 
 
@@ -495,13 +495,13 @@ async def test_compile_recipe_prompt_uses_fallback_on_timeout_and_caches_late_re
             "id": "scene",
             "version": 1,
             "output_kind": "image",
-            "system_prompt": "可信的商品摄影方法",
+            "system_prompt": "Trusted product photography method",
         },
     )
 
     async def slow_compiler(_task: str) -> str:
         await asyncio.sleep(0.03)
-        return "后台完成的精炼提示词"
+        return "Refined prompt completed in the background"
 
     monkeypatch.setattr(recipe_runtime, "_run_recipe_compiler", slow_compiler)
     monkeypatch.setattr(
@@ -513,29 +513,29 @@ async def test_compile_recipe_prompt_uses_fallback_on_timeout_and_caches_late_re
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
-        user_goal="生成咖啡机商品图",
+        node_prompt="Kitchen scene",
+        user_goal="Generate a coffee machine product image",
     )
 
     assert fallback_result.mode == "timeout_fallback"
     assert fallback_result.recipe_ids == ("scene",)
-    assert "生成咖啡机商品图" in fallback_result.prompt
-    assert "厨房场景" in fallback_result.prompt
-    assert "可信的商品摄影方法" in fallback_result.prompt
+    assert "Generate a coffee machine product image" in fallback_result.prompt
+    assert "Kitchen scene" in fallback_result.prompt
+    assert "Trusted product photography method" in fallback_result.prompt
 
     await asyncio.sleep(0.04)
     assert recipe_runtime._prompt_inflight == {}
-    assert "后台完成的精炼提示词" in recipe_runtime._prompt_cache.values()
+    assert "Refined prompt completed in the background" in recipe_runtime._prompt_cache.values()
 
     cached = await recipe_runtime.compile_recipe_prompt(
         username="local",
         recipe_id="scene",
         recipe_version="1",
         node_kind="image",
-        node_prompt="厨房场景",
-        user_goal="生成咖啡机商品图",
+        node_prompt="Kitchen scene",
+        user_goal="Generate a coffee machine product image",
     )
-    assert cached == "后台完成的精炼提示词"
+    assert cached == "Refined prompt completed in the background"
 
 
 @pytest.mark.asyncio
@@ -561,12 +561,12 @@ async def test_compile_recipe_prompt_skips_model_for_deterministic_strategy(
         username="local",
         recipe_id="video",
         node_kind="video",
-        node_prompt="镜头缓慢推进",
-        upstream_text="商品分镜",
+        node_prompt="The camera slowly pushes in",
+        upstream_text="Product storyboard",
         prompt_strategy="previous_output",
     )
 
-    assert result == "商品分镜\n\n镜头缓慢推进"
+    assert result == "Product storyboard\n\nThe camera slowly pushes in"
 
 
 @pytest.mark.asyncio
@@ -647,7 +647,7 @@ async def test_generate_recipe_text_rejects_display_copy_that_drops_product_subj
             "id": "general-text",
             "version": "1",
             "output_kind": "text",
-            "system_prompt": "生成展示文案",
+            "system_prompt": "Generate display copy",
             "_catalog_source": "builtin",
         },
     )
@@ -657,7 +657,7 @@ async def test_generate_recipe_text_rejects_display_copy_that_drops_product_subj
             pass
 
         async def run(self, _task):
-            return SimpleNamespace(output="一抹炽热红韵，点亮每个清晨。\n温润质感，暖意蔓延。")
+            return SimpleNamespace(output="A touch of blazing red lights up every morning.\nWarm texture, warmth spreading.")
 
     monkeypatch.setattr(recipe_runtime, "Agent", FakeAgent)
     monkeypatch.setattr(
@@ -670,8 +670,8 @@ async def test_generate_recipe_text_rejects_display_copy_that_drops_product_subj
             username="local",
             recipe_id="general-text",
             node_kind="text",
-            node_prompt="为同一只亮红色陶瓷杯写两句展示文案",
-            user_goal="两句红杯展示文案，不要标题",
+            node_prompt="Write two lines of display copy for the same bright red ceramic cup",
+            user_goal="Two lines of red cup display copy, no title",
         )
 
 
@@ -685,7 +685,7 @@ async def test_generate_recipe_text_executes_compiled_instruction(monkeypatch):
             "id": "ecommerce-text-plan",
             "version": "1.0.0",
             "output_kind": "text",
-            "system_prompt": "生成三屏详情页方案",
+            "system_prompt": "Generate a three-screen detail page plan",
             "_catalog_source": "builtin",
         },
     )
@@ -695,9 +695,9 @@ async def test_generate_recipe_text_executes_compiled_instruction(monkeypatch):
             pass
 
         async def run(self, task):
-            assert "生成三屏详情页方案" in task
+            assert "Generate a three-screen detail page plan" in task
             assert "Produce the final text deliverable now" in task
-            return SimpleNamespace(output="# 详情页方案")
+            return SimpleNamespace(output="# Detail page plan")
 
     monkeypatch.setattr(recipe_runtime, "Agent", FakeAgent)
     monkeypatch.setattr(
@@ -710,10 +710,10 @@ async def test_generate_recipe_text_executes_compiled_instruction(monkeypatch):
         username="local",
         recipe_id="ecommerce-text-plan",
         node_kind="text",
-        node_prompt="咖啡机",
+        node_prompt="coffee machine",
     )
 
-    assert result == "# 详情页方案"
+    assert result == "# Detail page plan"
     assert captured["model_env"] == "FREEZONE_TEXT_WRITER_MODEL"
     assert captured["timeout_seconds_override"] == 540.0
     assert captured["capability"] == "freezone.text.generate"
@@ -735,7 +735,7 @@ async def test_generate_recipe_text_omits_variant_for_user_recipe(monkeypatch):
             "id": "private-recipe",
             "version": "1.0.0",
             "output_kind": "text",
-            "system_prompt": "生成正文",
+            "system_prompt": "Generate body text",
             "_catalog_source": "user",
         },
     )
@@ -745,7 +745,7 @@ async def test_generate_recipe_text_omits_variant_for_user_recipe(monkeypatch):
             pass
 
         async def run(self, _task):
-            return SimpleNamespace(output="正文")
+            return SimpleNamespace(output="Body text")
 
     monkeypatch.setattr(recipe_runtime, "Agent", FakeAgent)
     monkeypatch.setattr(
@@ -758,8 +758,8 @@ async def test_generate_recipe_text_omits_variant_for_user_recipe(monkeypatch):
             username="local",
             recipe_id="private-recipe",
             node_kind="text",
-            node_prompt="写作",
+            node_prompt="writing",
         )
-        == "正文"
+        == "Body text"
     )
     assert captured["brainclaw_profile_variant"] is None

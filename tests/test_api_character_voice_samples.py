@@ -140,7 +140,7 @@ async def test_list_characters_returns_indextts2_voice_fields(tmp_path, monkeypa
     assert "fish_voice_id" not in asset
     assert asset["reference_audio_path"] == "assets/characters/Qin/voices/voice_default.wav"
     assert asset["reference_audio_url"] == (
-        "/static/projects/proj_demo/assets/characters/%E7%A7%A6/voices/voice_default.wav"
+        "/static/projects/proj_demo/assets/characters/Qin/voices/voice_default.wav"
     )
     assert asset["reference_audio_sha256"] == "default-sha"
     assert asset["reference_audio_updated_at"] == "2026-05-13T00:00:00+00:00"

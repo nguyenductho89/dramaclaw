@@ -65,7 +65,7 @@ export interface VideoCaptureFrameResult {
  *
  * The seek position is computed in advance by the caller with {@link resolveCaptureSeekSec} - only the caller can get
  * that live <video> element (the in-node player in the workflow, the large detail player in the storyboard).
- * 那个活的 <video> 元素（工作流是节点内播放器，故事板是详情大播放器）。
+ * that live <video> element (the in-node player in the workflow, the large detail player in the storyboard).
  */
 export async function captureVideoFrameToNode(
   sourceNodeId: string,

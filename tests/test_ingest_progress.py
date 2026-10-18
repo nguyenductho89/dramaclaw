@@ -59,13 +59,13 @@ class _FakeStore:
     async def ingest_novel_fast(
         self, novel_path, rebuild=False, spine_template=None, on_progress=None, on_log=None
     ):
-        on_progress(0.02, "读取并校验原文...")
-        on_log("文件读取完成")
-        on_progress(0.3, "构建知识图谱...")
-        on_log("正在处理实体")
-        on_progress(0.7, "创建向量索引...")
-        on_log("正在写入索引")
-        on_progress(1.0, "导入完成")
+        on_progress(0.02, "Reading and validating the source text...")
+        on_log("File read complete")
+        on_progress(0.3, "Building the knowledge graph...")
+        on_log("Processing entities")
+        on_progress(0.7, "Creating the vector index...")
+        on_log("Writing the index")
+        on_progress(1.0, "Import complete")
         return {"status": "graph_ready"}
 
     async def close(self) -> None:

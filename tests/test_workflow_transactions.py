@@ -430,7 +430,7 @@ def test_exact_plan_restating_the_template_becomes_the_standard_compilation(monk
     """Issue #678: the draft's source plan is the standard planner's output,
     so intent and compiled agree when the draft is claimed."""
     compiled = catalog.compile_workflow_intent(
-        {"skill_id": "text-to-image-video", "user_goal": "赛博城市",
+        {"skill_id": "text-to-image-video", "user_goal": "Cyber city",
          "planner": {"mode": "standard", "item_count": 1}}
     )
     plan = deepcopy(compiled["plan"])
@@ -495,14 +495,14 @@ def test_compact_intent_preparation_and_revision_use_authenticated_catalog(monke
     monkeypatch.setenv("DRAMACLAW_USERNAME", "wrong-process-user")
     intent = {
         "skill_id": "sample",
-        "user_goal": "商品图",
+        "user_goal": "product image",
         "include_compose": False,
-        "items": [{"id": "hero", "title": "商品", "recipe_id": "sample-image"}],
+        "items": [{"id": "hero", "title": "product", "recipe_id": "sample-image"}],
     }
     prepared = prepare_workflow_source({"intent": intent}, username="alice")
     assert prepared["compiled"]["ok"]
-    revised = revise_workflow_source(prepared, {"title": "新标题"}, username="alice")
-    assert revised["intent"]["title"] == "新标题"
+    revised = revise_workflow_source(prepared, {"title": "New title"}, username="alice")
+    assert revised["intent"]["title"] == "New title"
     assert all(user == "alice" for user, _ in calls)
     assert catalog._REQUEST_CATALOG.get() is None
 @pytest.mark.parametrize("source", ["compact", "exact"])

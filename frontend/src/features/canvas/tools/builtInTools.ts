@@ -12,8 +12,8 @@ import {
 import { stringifyAnnotationItems } from './annotation';
 import type { CanvasToolPlugin } from './types';
 
-// imageGen 也算图片源节点：上传的参考图同样可被裁剪 / 标注 / 分格抽取，
-// 结果会落到新建的下游节点，不会覆盖参考图本身。
+// imageGen also counts as an image source node: an uploaded reference image can likewise be cropped / annotated / cell-extracted,
+// with the result landing on a newly built downstream node and not overwriting the reference image itself.
 function supportsImageSourceNode(node: CanvasNode): boolean {
   return (
     isUploadNode(node) ||

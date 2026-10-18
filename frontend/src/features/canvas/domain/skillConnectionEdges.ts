@@ -265,9 +265,9 @@ export function applySkillRoleBindingConnection({
   }
 
   const sourceNode = nodes.find((node) => node.id === normalizedConnection.source);
-  // targetHandle 可能是具体输入口 role，也可能空 / 通用 "target"（落在节点本体）。
-  // 后者交给意图推断按「源节点 role/slot + 目标技能」选出真正的输入口；推断只产出
-  // 建议 role，下面仍用 skillSpec.inputs + accepts 二次把关。
+  // targetHandle may be a concrete input slot role, or empty / the generic "target" (landing on the node body).
+  // For the latter, intent inference picks the real input slot by "source node role/slot + target skill"; inference only produces
+  // a suggested role, and skillSpec.inputs + accepts is still used below as a second check.
   const requestedRole = roleFromConnection(normalizedConnection);
   const inferredRole = inferSkillConnectionRole({
     sourceNode,

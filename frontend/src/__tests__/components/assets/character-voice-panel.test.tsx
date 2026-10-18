@@ -221,6 +221,6 @@ describe("CharacterVoicePanel", () => {
 
     renderPanel({ name: "Qin" });
 
-    expect(await screen.findByText("Failed to read voice samples")).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load voice samples")).toBeInTheDocument();
   });
 });

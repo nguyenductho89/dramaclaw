@@ -21,8 +21,8 @@ const labels = {
     })[type] ?? type,
   speaker: "Speaker",
   noSpeaker: "No speaker",
-  dialogueLine: "Dialogue",
-  narrationLine: "Narration",
+  dialogueLine: "Dialogue line",
+  narrationLine: "Narration line",
   noNarration: "No lines",
   visualDescription: "Visual description",
   noVisualDescription: "No visual description",
@@ -66,8 +66,8 @@ describe("ScriptBeatPreview", () => {
     expect(screen.getByText("No speaker")).toBeInTheDocument();
     expect(screen.getByText("Chen Feng_monk")).toBeInTheDocument();
     // The narration beat shows the narration text label; the dialogue beat shows the dialogue text label.
-    expect(screen.getByText("Narration")).toBeInTheDocument();
-    expect(screen.getByText("Dialogue")).toBeInTheDocument();
+    expect(screen.getByText("Narration line")).toBeInTheDocument();
+    expect(screen.getByText("Dialogue line")).toBeInTheDocument();
     expect(screen.getByText("Narration text")).toBeInTheDocument();
     expect(screen.getByText("Dialogue text")).toBeInTheDocument();
     expect(screen.getAllByText("Visual description")).toHaveLength(2);
@@ -111,7 +111,7 @@ describe("ScriptBeatPreview", () => {
     expect(screen.queryByText("Action not shown")).not.toBeInTheDocument();
     expect(screen.queryByText("Manual shot not shown")).not.toBeInTheDocument();
     // No spoken-line column (and no speaker badge) for silent/action/manual beats.
-    expect(screen.queryAllByText("Dialogue")).toHaveLength(0);
-    expect(screen.queryAllByText("Narration")).toHaveLength(0);
+    expect(screen.queryAllByText("Dialogue line")).toHaveLength(0);
+    expect(screen.queryAllByText("Narration line")).toHaveLength(0);
   });
 });

@@ -2,15 +2,15 @@
 // Copyright (c) 2026 ClaymoreLab
 import { create } from 'zustand';
 
-// 触控板平移：笔记本用户没有鼠标中键（画布默认靠中键拖动平移），开启后用触控板
-// 两指滑动平移画布（ReactFlow panOnScroll），捏合仍可缩放。状态独立成一个轻量
-// store，和对齐吸附开关同构，订阅它的按钮 / Canvas 不会因 canvas 节点变动而重渲染。
+// Trackpad pan: laptop users have no mouse middle button (the canvas pans by middle-button drag by default); when enabled, a two-finger swipe on the trackpad
+// pans the canvas (ReactFlow panOnScroll), and pinch still zooms. The state is its own lightweight
+// store, isomorphic with the snap alignment switch, so the button / Canvas subscribing to it does not re-render because of canvas node changes.
 
 const STORAGE_KEY = 'canvas.trackpadPan.enabled';
 
 function readPersistedEnabled(): boolean {
-  // 默认开启：笔记本用户没有鼠标中键，开箱即可用触控板两指滑动平移画布。
-  // 仅当用户显式关过（持久化为 '0'）才保持关闭，尊重其选择。
+  // On by default: laptop users have no mouse middle button, so a two-finger swipe on the trackpad pans the canvas out of the box.
+  // Only when the user explicitly turned it off (persisted as '0') does it stay off, respecting their choice.
   if (typeof window === 'undefined') return true;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -26,7 +26,7 @@ function persistEnabled(value: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, value ? '1' : '0');
   } catch {
-    // localStorage 写不进去就算了，下次进来从默认值开始。
+    // If localStorage cannot be written, so be it; next time start from the default value.
   }
 }
 

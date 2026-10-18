@@ -412,7 +412,7 @@ describe("render plan dialog - best-effort delivery / resubmit only the rejected
     expect(texts[0]).toMatch(/Channel/);
     expect(texts[1]).toMatch(/Platform/);
     expect(texts[2]).toMatch(/Your/);
-    expect(texts[3]).toMatch(/Project/);
+    expect(texts[3]).toMatch(/project/i);
   });
 
   it("an unknown reason only says partial failure and does not offer resubmit", async () => {

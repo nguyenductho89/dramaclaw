@@ -258,7 +258,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.getByTitle("Lu Chen · Young adult")).toBeInTheDocument();
+    expect(screen.getByTitle("Lu Chen · young_adult")).toBeInTheDocument();
     expect(screen.getByText("sheepskin notebook")).toBeInTheDocument();
     expect(screen.getByText("flashlight")).toBeInTheDocument();
   });

@@ -7,15 +7,15 @@ import { MEDIA_VARIANT_MAX_EDGE, pickMediaVariant, type MediaVariant } from '@/l
 import { useDevicePixelRatio } from '@/lib/useDevicePixelRatio';
 
 /**
- * 这个节点的主体图该按多大的长边预算去挑副本。
+ * How large a long-edge budget this node's body image should use to pick a copy.
  *
- * 返回的不是「需要多少像素」的原始值，而是 320px thumb 或 Infinity；thumb
- * 盖不住时 nodeBodyImageSrc 会交回原图。
+ * What is returned is not the raw value of "how many pixels are needed", but the 320px thumb or Infinity; when the thumb
+ * cannot cover it, nodeBodyImageSrc hands back the original image.
  *
- * 之所以先量化再返回：原始值随 zoom 每一帧都在变，而节点订阅的是这个 selector
- * 的结果。量化之后取值只有两个，缩放跨过 320px 阈值时才重渲染、切换 src。这条
- * 线原本就是节点为了躲开「平移每帧重渲染」而只订阅布尔值的那条线，沿用同一个
- * 手法。
+ * The reason to quantize before returning: the raw value changes every frame with zoom, while nodes subscribe to the result of this selector.
+ * After quantizing there are only two values, so re-rendering and switching src happen only when zoom crosses the 320px threshold. This
+ * line is the very one where nodes subscribe only to a boolean to avoid "re-rendering every frame while panning", and the same
+ * technique is followed.
  */
 export function useNodeBodyVariant(display: {
   width: number;

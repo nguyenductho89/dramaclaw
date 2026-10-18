@@ -66,21 +66,21 @@ async def test_text_deliverable_never_reuses_prompt_only_text_recipe():
 
 
 def test_prompt_only_filter_is_limited_to_explicit_text_contracts():
-    assert _prompt_only_text_recipe({'output_kind': 'text', 'system_prompt': '只输出优化后的提示词。'})
-    assert not _prompt_only_text_recipe({'output_kind': 'image', 'system_prompt': '只输出优化后的提示词。'})
-    assert not _prompt_only_text_recipe({'output_kind': 'text', 'system_prompt': '直接输出最终文档。'})
+    assert _prompt_only_text_recipe({'output_kind': 'text', 'system_prompt': 'Output only the optimized prompt.'})
+    assert not _prompt_only_text_recipe({'output_kind': 'image', 'system_prompt': 'Output only the optimized prompt.'})
+    assert not _prompt_only_text_recipe({'output_kind': 'text', 'system_prompt': 'Directly output the final document.'})
     assert not _prompt_only_text_recipe({
         'output_kind': 'text',
         'system_prompt': 'Do not output only refined prompt text. Produce the final specification document.',
     })
     assert not _prompt_only_text_recipe({
-        'output_kind': 'text', 'system_prompt': '不要只输出优化后的提示词。请直接产出最终规格文档。',
+        'output_kind': 'text', 'system_prompt': 'Do not output only the optimized prompt. Produce the final spec document directly.',
     })
     assert not _prompt_only_text_recipe({
-        'output_kind': 'text', 'system_prompt': '只输出最终文档，不要输出提示词。',
+        'output_kind': 'text', 'system_prompt': 'Output only the final document, not the prompt.',
     })
     assert not _prompt_only_text_recipe({
-        'output_kind': 'text', 'system_prompt': '仅输出完整评审报告，禁止输出提示词。',
+        'output_kind': 'text', 'system_prompt': 'Output only the complete review report; outputting the prompt is forbidden.',
     })
 
 
@@ -490,12 +490,12 @@ async def test_uninspected_tasks_get_budget_before_expansions(monkeypatch):
 @pytest.mark.asyncio
 async def test_grid_conflict_overrides_positive_verdict():
     catalog = [{'id': 'grid', 'name': 'grid', 'output_kind': 'image',
-                'system_prompt': '9镜=3×3。禁止涉及分镜脚本中的画面描述'}]
+                'system_prompt': '9 shots = 3x3. Do not include picture descriptions from the storyboard script'}]
     async def ask(name, instruction, data, validate, amount, **kwargs):
         return validate({'tasks': [{'task_id': 'grid-task', 'decisions': [{
             'recipe_id': 'grid', 'compatible': True, 'reason': 'Layout matches',
-            'constraint_checks': [{'recipe_quote': '禁止涉及分镜脚本中的画面描述',
-                'task_requirement': '每格描述具体画面', 'status': 'conflict',
+            'constraint_checks': [{'recipe_quote': 'Do not include picture descriptions from the storyboard script',
+                'task_requirement': 'Each cell describes a specific picture', 'status': 'conflict',
                 'reason': 'Cannot include required scene descriptions', 'exception_quote': ''}],
         }]}]})
     result = await resolve_task_recipes({'tasks': [task('grid-task', 'grid', 'image')],
@@ -506,47 +506,47 @@ async def test_grid_conflict_overrides_positive_verdict():
 
 @pytest.mark.parametrize('status,quote,exception', [
     ('conflict', 'invented rule', ''),
-    ('explicit_exception', '禁止文字', ''),
-    ('explicit_exception', '禁止文字', 'invented exception'),
+    ('explicit_exception', 'No text', ''),
+    ('explicit_exception', 'No text', 'invented exception'),
 ])
 def test_constraint_evidence_must_exist(status, quote, exception):
     from novelvideo.freezone.skill_import_retrieval import validate_recipe_verdict
     value = {'recipe_id': 'grid', 'compatible': True, 'reason': 'Fits',
-             'constraint_checks': [{'recipe_quote': quote, 'task_requirement': '文字',
+             'constraint_checks': [{'recipe_quote': quote, 'task_requirement': 'text',
                  'status': status, 'reason': 'Check', 'exception_quote': exception}]}
     with pytest.raises(ValueError):
-        validate_recipe_verdict(value, {'system_prompt': '禁止文字，除非用户明确要求'})
+        validate_recipe_verdict(value, {'system_prompt': 'No text, unless the user explicitly requests it'})
 
 
 def test_explicit_recipe_exception_allows_reuse():
     from novelvideo.freezone.skill_import_retrieval import validate_recipe_verdict
     value = {'recipe_id': 'grid', 'compatible': True, 'reason': 'Fits',
-             'constraint_checks': [{'recipe_quote': '禁止文字', 'task_requirement': '用户已确认文字',
+             'constraint_checks': [{'recipe_quote': 'No text', 'task_requirement': 'User-confirmed text',
                  'status': 'explicit_exception', 'reason': 'Confirmed text is allowed',
-                 'exception_quote': '除非用户明确要求'}]}
-    assert validate_recipe_verdict(value, {'system_prompt': '禁止文字，除非用户明确要求'})['compatible']
+                 'exception_quote': 'unless the user explicitly requests it'}]}
+    assert validate_recipe_verdict(value, {'system_prompt': 'No text, unless the user explicitly requests it'})['compatible']
 
 
 def test_compatibility_requires_explicit_constraint_audit():
     from novelvideo.freezone.skill_import_retrieval import validate_recipe_verdict
     with pytest.raises(ValueError):
         validate_recipe_verdict({'recipe_id': 'grid', 'compatible': True, 'reason': 'Looks similar'},
-                                {'system_prompt': '禁止涉及分镜脚本中的画面描述'})
+                                {'system_prompt': 'Do not include picture descriptions from the storyboard script'})
 
 
 @pytest.mark.asyncio
 async def test_conflicting_candidate_does_not_hide_compatible_alternative():
     catalog = [
-        {'id': 'a-grid', 'name': 'grid', 'output_kind': 'image', 'system_prompt': '禁止画面描述'},
-        {'id': 'b-grid', 'name': 'grid', 'output_kind': 'image', 'system_prompt': '根据逐格画面描述生成分镜'},
+        {'id': 'a-grid', 'name': 'grid', 'output_kind': 'image', 'system_prompt': 'No picture descriptions'},
+        {'id': 'b-grid', 'name': 'grid', 'output_kind': 'image', 'system_prompt': 'Generate the storyboard from per-cell picture descriptions'},
     ]
     async def ask(name, instruction, data, validate, amount, **kwargs):
         decisions = []
         for rid in data['tasks'][0]['candidate_ids']:
             conflict = rid == 'a-grid'
             decisions.append({'recipe_id': rid, 'compatible': True, 'reason': 'Grid method',
-                'constraint_checks': [{'recipe_quote': '禁止画面描述' if conflict else '根据逐格画面描述生成分镜',
-                    'task_requirement': '每格描述具体画面', 'status': 'conflict' if conflict else 'satisfied',
+                'constraint_checks': [{'recipe_quote': 'No picture descriptions' if conflict else 'Generate the storyboard from per-cell picture descriptions',
+                    'task_requirement': 'Each cell describes a specific picture', 'status': 'conflict' if conflict else 'satisfied',
                     'reason': 'Conflicts' if conflict else 'Supports scenes', 'exception_quote': ''}]})
         return validate({'tasks': [{'task_id': 'grid-task', 'decisions': decisions}]})
     result = await resolve_task_recipes({'tasks': [task('grid-task', 'grid', 'image')],
@@ -614,21 +614,21 @@ async def test_failed_inspection_cancels_other_inflight_request():
 @pytest.mark.asyncio
 async def test_bad_quote_on_rejected_recipe_does_not_discard_reusable_candidate():
     catalog = [
-        {'id': 'wrong', 'name': 'draft', 'output_kind': 'text', 'system_prompt': '输出故事剧本'},
-        {'id': 'good', 'name': 'document', 'output_kind': 'text', 'system_prompt': '输出规格文档'},
+        {'id': 'wrong', 'name': 'draft', 'output_kind': 'text', 'system_prompt': 'Output the story script'},
+        {'id': 'good', 'name': 'document', 'output_kind': 'text', 'system_prompt': 'Output the spec document'},
     ]
     async def ask(name, instruction, data, validate, amount, **kwargs):
         decisions = []
         for recipe_id in data['tasks'][0]['candidate_ids']:
             if recipe_id == 'wrong':
                 decisions.append({'recipe_id': recipe_id, 'compatible': False, 'reason': 'Wrong output',
-                    'constraint_checks': [{'recipe_quote': '【任务目标】输出故事剧本',
-                        'task_requirement': '规格文档', 'status': 'conflict',
+                    'constraint_checks': [{'recipe_quote': '[Task goal] Output the story script',
+                        'task_requirement': 'spec document', 'status': 'conflict',
                         'reason': 'Wrong output', 'exception_quote': ''}]})
             else:
                 decisions.append({'recipe_id': recipe_id, 'compatible': True, 'reason': 'Direct document',
-                    'constraint_checks': [{'recipe_quote': '输出规格文档',
-                        'task_requirement': '规格文档', 'status': 'satisfied',
+                    'constraint_checks': [{'recipe_quote': 'Output the spec document',
+                        'task_requirement': 'spec document', 'status': 'satisfied',
                         'reason': 'Same deliverable', 'exception_quote': ''}]})
         return validate({'tasks': [{'task_id': 'spec', 'decisions': decisions}]})
     result = await resolve_task_recipes({'tasks': [task('spec', 'unrelated')], 'skill_notes': ''}, catalog, ask)

@@ -263,7 +263,7 @@ def test_list_characters_summary_uses_convention_urls_without_filesystem_probes(
     assert response.status_code == 200
     asset = response.json()["data"][0]
     assert asset["portrait_url"].endswith(
-        "/assets/characters/%E6%9E%97%E6%98%AD/portrait.png"
+        "/assets/characters/LinZhao/portrait.png"
     ) or asset["portrait_url"].endswith("/assets/characters/LinZhao/portrait.png")
     assert store.load_graph_state_flags == [False]
 
@@ -307,20 +307,20 @@ def test_character_and_identity_lists_expose_asset_history_links(monkeypatch, tm
     assert characters_response.status_code == 200
     char_item = characters_response.json()["data"][0]
     assert char_item["history_url"] == (
-        "/api/v1/projects/proj_demo/characters/%E6%9E%97%E6%98%AD/asset-history?kind=portrait"
+        "/api/v1/projects/proj_demo/characters/LinZhao/asset-history?kind=portrait"
     )
     assert char_item["restore_url"] == (
-        "/api/v1/projects/proj_demo/characters/%E6%9E%97%E6%98%AD/asset-history/restore"
+        "/api/v1/projects/proj_demo/characters/LinZhao/asset-history/restore"
     )
 
     assert identities_response.status_code == 200
     identity_item = identities_response.json()["data"][0]
     assert identity_item["history_url"] == (
-        "/api/v1/projects/proj_demo/characters/%E6%9E%97%E6%98%AD/"
-        "asset-history?kind=identity&identity_id=%E6%9E%97%E6%98%AD_%E9%9D%92%E5%B9%B4"
+        "/api/v1/projects/proj_demo/characters/LinZhao/"
+        "asset-history?kind=identity&identity_id=LinZhao_young_adult"
     )
     assert identity_item["restore_url"] == (
-        "/api/v1/projects/proj_demo/characters/%E6%9E%97%E6%98%AD/asset-history/restore"
+        "/api/v1/projects/proj_demo/characters/LinZhao/asset-history/restore"
     )
 
 

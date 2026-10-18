@@ -9,10 +9,10 @@ import { awaitTaskCompletion } from '@/api/tasks';
 import { readUrl } from '@/lib/url-params';
 
 /**
- * 文本翻译共享核心（原 ImageGenNode / VideoNode / TextAnnotationNode / ScriptNode /
- * AudioOperationsPanel 各自内联的同一段编排）：提交 /freezone/text/translate →
- * 等任务完成 → 取译文。canvasId 统一取当前 URL（与原实现一致）。
- * project 守卫、加载态与译文写回（各节点字段不同）由调用方自持。
+ * The shared core of text translation (the same orchestration formerly inlined separately in ImageGenNode / VideoNode / TextAnnotationNode / ScriptNode /
+ * AudioOperationsPanel): submit /freezone/text/translate ->
+ * wait for the task to complete -> take the translation. canvasId is uniformly taken from the current URL (consistent with the original implementation).
+ * The project guard, loading state and writing back the translation (the fields differ per node) are held by the caller.
  */
 export async function translateNodeText(
   project: string,

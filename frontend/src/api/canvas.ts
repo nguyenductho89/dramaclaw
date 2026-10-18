@@ -54,7 +54,7 @@ export type CanvasSaveSource =
 
 export type CanvasBackupStatus = "disabled" | "synced" | "pending" | "failed";
 
-/** 后端在 GET 里报出的一处外项目媒体引用（见 canvasMediaScope）。 */
+/** An out-of-project media reference reported by the backend in GET (see canvasMediaScope). */
 export interface CanvasForeignMediaRef {
   node_id: string;
   field: string;
@@ -64,9 +64,9 @@ export interface CanvasForeignMediaRef {
 
 export interface FreezoneCanvasPayload {
   /**
-   * 读取期诊断：这张画布里仍然指向别的项目的媒体引用。后端把它挂在信封里 `data` 的
-   * **同级**（画布契约一个字节不变），这里合进返回对象只是图调用方好拿；它不是画布
-   * 内容，`canvasEnvelopeFromRemote` 按字段显式挑选，不会被写回服务端。
+   * Read-time diagnostics: media references in this canvas that still point to other projects. The backend hangs it **beside** `data` in the envelope
+   * (the canvas contract is not changed by a single byte); merging it into the returned object here is only for the caller's convenience; it is not canvas
+   * content, `canvasEnvelopeFromRemote` picks fields explicitly, and it is not written back to the server.
    */
   foreign_media?: CanvasForeignMediaRef[];
   schema_version?: 2;
@@ -340,14 +340,14 @@ export async function getFreezoneCanvas(
   canvasId: string,
   options?: { signal?: AbortSignal },
 ): Promise<FreezoneCanvasPayload> {
-  // 收整个信封:`foreign_media` 挂在 `data` 同级,只解一层的 apiCall 会把它丢掉。
+  // Take the whole envelope: `foreign_media` hangs beside `data`, and apiCall, which unwraps only one layer, would drop it.
   const envelope = await apiCallEnvelope<FreezoneCanvasPayload>(
     `projects/${encodeURIComponent(projectId)}/freezone/canvases/${encodeURIComponent(canvasId)}`,
     options?.signal ? { signal: options.signal } : undefined,
   );
   const payload = (envelope.data ?? {}) as FreezoneCanvasPayload;
   const foreignMedia = envelope.foreign_media;
-  // 同级字段没有静态类型,运行时判定——跨仓库契约上的类型断言是纯粹的谎言。
+  // Sibling fields have no static type and are judged at runtime - a type assertion on a cross-repo contract is a pure lie.
   if (!Array.isArray(foreignMedia)) {
     return payload;
   }

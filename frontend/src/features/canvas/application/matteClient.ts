@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 抠图 Worker 的主线程客户端:懒加载单例 worker,做请求↔响应的 id 关联。
-// 见 ./matteWorker.ts 顶部注释:整段推理在 worker 内执行,主线程(画布)不被阻塞。
+// The main-thread client of the matting Worker: a lazily loaded singleton worker, correlating requests <-> responses by id.
+// See the comment at the top of ./matteWorker.ts: the whole inference runs inside the worker, and the main thread (canvas) is not blocked.
 
 type OutboundMessage =
   | { type: "ready"; id: number }
@@ -22,7 +22,7 @@ function ensureWorker(): Worker {
   worker.onmessage = (event: MessageEvent<OutboundMessage>) => {
     const message = event.data;
     if (message.type === "ready") {
-      return; // 预热 ack,无需 pending promise
+      return; // Warm-up ack, no pending promise needed
     }
     const entry = pending.get(message.id);
     if (!entry) {
@@ -36,7 +36,7 @@ function ensureWorker(): Worker {
     }
   };
   worker.onerror = (event) => {
-    // worker 整体崩溃:拒绝所有在途请求,并重置以便下次重建。
+    // The worker crashed as a whole: reject all in-flight requests, and reset so it can be rebuilt next time.
     const err = new Error(event.message || "matte worker crashed");
     for (const [, entry] of pending) {
       entry.reject(err);
@@ -48,12 +48,12 @@ function ensureWorker(): Worker {
   return worker;
 }
 
-/** 空闲预热:创建 worker 并预加载模型,把一次性初始化挪到用户点击之前。 */
+/** Idle warm-up: create the worker and preload the model, moving the one-time initialization to before the user clicks. */
 export function preloadMatteWorker(): void {
   ensureWorker().postMessage({ type: "preload", id: 0 });
 }
 
-/** 在 worker 内抠图;主线程不阻塞。返回去背后的 PNG blob。 */
+/** Matte inside the worker; the main thread is not blocked. Returns the background-removed PNG blob. */
 export function matteInWorker(blob: Blob): Promise<Blob> {
   const target = ensureWorker();
   const id = nextRequestId++;

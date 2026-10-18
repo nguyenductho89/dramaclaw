@@ -26,8 +26,8 @@ export const NODE_REFERENCE_MEDIA_CHIP_CLASS =
 export const NODE_REFERENCE_MEDIA_DETACH_CLASS =
   'nodrag absolute right-1 top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full bg-black/70 text-white shadow-sm ring-1 ring-white/15 transition-colors hover:bg-red-500 group-hover/refmedia:flex';
 
-// 引用缩略图右下角的 @ 按钮。与 DETACH 不同，它常驻显示（不是 hover 才出）：
-// 「能把这条引用 @ 进提示词」是个需要被发现的能力，藏起来等于没有。
+// The @ button at the bottom-right of a reference thumbnail. Unlike DETACH, it is always shown (not only on hover):
+// "this reference can be @-ed into the prompt" is a capability that needs to be discovered, and hiding it amounts to not having it.
 export const NODE_REFERENCE_MEDIA_MENTION_CLASS =
   'nodrag absolute bottom-1 right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/65 text-white/85 shadow-sm ring-1 ring-white/15 transition-colors hover:bg-[rgb(var(--accent-rgb))] hover:text-white';
 

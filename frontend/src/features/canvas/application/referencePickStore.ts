@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 「参考」拾取态。独立成一个轻量 store，理由同 snapAlignStore：订阅它的组件
- * （顶部 banner、每个节点上的拾取遮罩）不该因为画布内容变动而重渲染。
+ * The "reference" pick state. It is its own lightweight store, for the same reason as snapAlignStore: the components subscribing to it
+ * (the top banner, the pick mask on each node) should not re-render because of canvas content changes.
  *
- * 规则与候选计算在 [[referencePick]]。
+ * The rules and candidate computation are in [[referencePick]].
  */
 import type { Viewport } from '@xyflow/react';
 import { create } from 'zustand';
@@ -13,14 +13,14 @@ import type { CanvasNodeType } from '../domain/canvasNodes';
 import type { ReferencePickCandidate } from './referencePick';
 
 export interface ReferencePickRequest {
-  /** 发起 ＋参考 的那个节点，最终所有参考边都连到它。 */
+  /** The node that initiated + Reference, to which all reference edges are finally connected. */
   targetNodeId: string;
   targetNodeType: CanvasNodeType;
-  /** 进入拾取态时的视口，「返回节点」按原样恢复。 */
+  /** The viewport when entering the pick state, which "Back to node" restores as is. */
   originViewport: Viewport | null;
-  /** 进入拾取态那一刻算好的可选节点快照：nodeId → 候选信息。 */
+  /** The snapshot of selectable nodes computed at the moment of entering the pick state: nodeId -> candidate info. */
   candidates: Map<string, ReferencePickCandidate>;
-  /** 同一刻算好的「连得上但种类不收」的节点：nodeId → 不能选的原因文案。 */
+  /** The nodes computed at the same moment that are "connectable but whose kind is not accepted": nodeId -> the reason text why they cannot be chosen. */
   rejections: Map<string, string>;
 }
 

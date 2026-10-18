@@ -13,12 +13,12 @@ export interface NodeGenerationTaskState {
   isGenerating: boolean;
 }
 
-// 刚提交后，节点已写入 taskKey，但任务要经一次接口往返 + SSE/轮询才会出现在
-// task-center 里。这段空窗内 `task` 还是 null，若此时既不算 optimistic（taskKey
-// 已有）又不算 waiting（task-center 早已 hydrated），isGenerating 会瞬间掉回
-// false，loading 遮罩闪一下才回来。用 generationStartedAt 给一个「刚开跑」的
-// 宽限窗把这段空窗补上——任务一旦真正出现在 store 就改用其真实活跃态，宽限不再
-// 参与；窗外（如刷新恢复一条早已被裁剪的旧任务）则不再信任过期的本地标志。
+// Right after submission the node has written taskKey, but the task only appears in the task-center after an endpoint round trip + SSE/polling.
+// In this gap `task` is still null, and if it counts neither as optimistic (taskKey
+// already present) nor as waiting (task-center long hydrated), isGenerating would instantly drop back to
+// false, and the loading mask would flash before coming back. A "just started" grace window based on generationStartedAt fills this gap -
+// once the task really appears in the store its real active state is used, and the grace no longer
+// takes part; outside the window (e.g. refresh-resuming an old task long since pruned) the stale local flag is no longer trusted.
 const RECENTLY_STARTED_GRACE_MS = 10_000;
 
 export function useNodeGenerationTaskState(data: unknown): NodeGenerationTaskState {

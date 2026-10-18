@@ -526,17 +526,17 @@ async def test_eg18b_freezone_mask_edit_reuses_org_context_and_pins_newapi(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
-    """图像擦除也归 EG-18b：组织身份必须一路带到出网点（OI-56 ①）。
+    """Image erase also belongs to EG-18b: the organization identity must be carried all the way to the egress point (OI-56 item 1).
 
-    上面那条钉的是 `run_freezone_gen`；擦除此前根本到不了这里（分类表判 DENIED，
-    分发器兜底拒绝）。接上形参而不往下透传，就是 OI-48 那种「有形参没接住」的形状，
-    分类自洽性检查看不出来——所以断言落在 `generate_reference_edit_image` 实收的
-    kwargs 上。
+    The one above pins `run_freezone_gen`; erase could not reach here before (the classification table judged DENIED,
+    and the dispatcher's fallback rejected it). Adding the parameter without passing it down is OI-48's "has the parameter but does not catch it" shape,
+    which the classification self-consistency check cannot see -- so the assertion lands on the
+    kwargs actually received by `generate_reference_edit_image`.
 
-    `config["provider"]` 一并钉死：组织下若沿用 `get_grid_generation_config`，本地
-    目录配置可能给出非 newapi provider，会在 `nanobanana_grid.py:138-139` 撞
-    ORG_EGRESS_DENIED。这里把那个函数投毒成 volcengine——默认配置恰好也返回
-    newapi，不投毒的话这条断言对「组织分支被删掉」是绿的。
+    `config["provider"]` is pinned too: under an organization, if `get_grid_generation_config` were reused, the local
+    catalog configuration might give a non-newapi provider, which would hit
+    ORG_EGRESS_DENIED at `nanobanana_grid.py:138-139`. Here that function is poisoned into volcengine -- the default configuration happens to return
+    newapi too, so without poisoning this assertion would be green even if "the organization branch were deleted".
     """
 
     from novelvideo.freezone import jobs
@@ -632,14 +632,14 @@ async def test_eg18b_freezone_vision_builds_explicit_transport_from_same_org_cre
     assert built[0]["base_url"] == "https://vision-gateway.invalid/v1"
     assert len(operation_port.claims) == 1
     assert operation_port.claims[0].capability == "freezone.vision.analyze"
-    # 成功也要有终态：只 claim 不 complete，行会一直躺在 dispatching。
+    # Success also needs a terminal state: claiming without completing leaves the row in dispatching forever.
     assert [state.state for state in operation_port.states.values()] == [
         OperationState.COMPLETED
     ]
 
 
 class _AbandonRecordingOperationPort(_OperationPort):
-    """记录终态原语的调用，用来断言 claim 没有停在 dispatching。"""
+    """Record calls of the terminal-state primitives, used to assert that the claim did not stop in dispatching."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -657,7 +657,7 @@ def _org_vision_ports(
     context: TrustedEgressContext,
     operation_port,
 ) -> list[dict[str, object]]:
-    """把组织 vision 出网的两个端口换成假的，并封住平台通道回落。"""
+    """Replace the two ports of organization vision egress with fakes, and seal off the platform channel fallback."""
 
     import novelvideo.config as config_module
     import novelvideo.ports as ports
@@ -694,11 +694,11 @@ async def test_eg18b_freezone_analyze_shots_builds_explicit_transport_from_org_c
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
-    """镜头分析与上面的逆推提示词同一条出网点，此前它根本没接（OI-56 ②）。
+    """Shot analysis shares the same egress point as the reverse-prompt above, and previously it was not wired at all (OI-56 item 2).
 
-    没有 `transport_context` 时 `vision_gateway.py:81` 会回落到平台通道——组织的
-    请求用平台 Key 出网。这里把 `get_newapi_text_pydantic_model` 投毒成 fail：它一旦
-    被调用就说明回落发生了，比断言「transport_context 非 None」更贴近后果。
+    Without `transport_context`, `vision_gateway.py:81` falls back to the platform channel -- the organization's
+    request would go out with the platform Key. Here `get_newapi_text_pydantic_model` is poisoned into a fail: once it
+    is called, the fallback has happened, which is closer to the consequence than asserting "transport_context is not None".
     """
 
     from novelvideo.freezone import jobs
@@ -723,7 +723,7 @@ async def test_eg18b_freezone_analyze_shots_builds_explicit_transport_from_org_c
     assert built[0]["base_url"] == "https://vision-gateway.invalid/v1"
     assert len(operation_port.claims) == 1
     assert operation_port.claims[0].capability == "freezone.vision.analyze"
-    # 成功也要有终态：只 claim 不 complete，行会一直躺在 dispatching。
+    # Success also needs a terminal state: claiming without completing leaves the row in dispatching forever.
     assert [state.state for state in operation_port.states.values()] == [
         OperationState.COMPLETED
     ]
@@ -734,10 +734,10 @@ async def test_eg18b_freezone_analyze_shots_failure_leaves_no_dispatching_claim(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
-    """出网抛异常时 claim 必须落终态，不能停在 dispatching（OI-56 ② 的失败路径）。
+    """When egress raises, the claim must land in a terminal state and not stop in dispatching (the failure path of OI-56 item 2).
 
-    样板 `reverse_prompt_from_image` 在 `prepare_*` 之后没有 try——一抛就到不了
-    `complete_*`，claim 留在 dispatching 等收割器。新调用点不复制这个形状。
+    The template `reverse_prompt_from_image` has no try after `prepare_*` -- once it raises, `complete_*` is never reached,
+    and the claim stays in dispatching waiting for the reaper. The new call site does not copy this shape.
     """
 
     from novelvideo.freezone import jobs
@@ -772,10 +772,10 @@ async def test_eg18b_freezone_analyze_shots_failure_leaves_no_dispatching_claim(
 async def test_abandon_freezone_vision_egress_rejects_when_nothing_was_submitted(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """确未提交时落 rejected，不落 unknown——两者对收割器语义不同。
+    """When definitely not submitted, land in rejected rather than unknown -- the two have different semantics for the reaper.
 
-    `unknown` 是「不知道对面发生了什么」，收割器不敢当没发生；`rejected` 是
-    「确实没提交」。上面那条走的是 unknown 分支，这条单测钉住另一半。
+    `unknown` means "we do not know what happened on the other side" and the reaper dares not treat it as not having happened; `rejected` means
+    "definitely not submitted". The one above goes through the unknown branch, and this unit test pins down the other half.
     """
 
     import novelvideo.ports as ports
@@ -798,7 +798,7 @@ async def test_abandon_freezone_vision_egress_rejects_when_nothing_was_submitted
     )
 
     await abandon_freezone_vision_egress(state, submitted=False)
-    # 非组织上下文下 prepare 返回 None，abandon 必须是 no-op 而不是崩。
+    # Under a non-organization context prepare returns None, and abandon must be a no-op rather than crash.
     await abandon_freezone_vision_egress(None, submitted=True)
 
     assert [state for state, _ in operation_port.abandoned] == ["rejected"]

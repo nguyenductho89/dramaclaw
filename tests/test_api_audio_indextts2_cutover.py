@@ -18,7 +18,7 @@ class _FakeStore:
             {
                 "beat_number": 2,
                 "audio_type": "dialogue",
-                "narration_segment": "Go.",
+                "narration_segment": "Go",
                 "video_prompt": "The camera slowly pushes in on the character from the front.",
                 "seedance2_config_json": '{"final_prompt": "Reference @image1, the camera slowly pushes in on the character from the front."}',
             }
@@ -235,6 +235,7 @@ async def test_audio_generate_route_does_not_enqueue_when_voice_file_is_missing(
     assert response == {
         "ok": False,
         "code": "voice_prereq_required",
+        "reason_code": "voice_narrator_missing",
         "error": (
             "Beat 02 narrator voice is missing: the project narrator voice is configured, "
             "but the voice file cannot be read; re-upload it or check project storage"

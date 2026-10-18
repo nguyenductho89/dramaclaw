@@ -14,7 +14,7 @@ interface RegenerateButtonProps {
 }
 
 /**
- * Shared 重新生成 entry used by failure states across canvas generation nodes
+ * Shared Regenerate entry used by failure states across canvas generation nodes
  * (ImageGen / ExportImage / Storyboard / Video / Audio). Lives on `.nodrag` so
  * clicking it inside a node body doesn't start a canvas drag, and stops both
  * pointerdown + click from bubbling to the node's select/drag handlers.

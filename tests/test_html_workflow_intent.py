@@ -18,7 +18,7 @@ def private_catalog(monkeypatch):
     recipes = [private_recipe('private-html-copy', 'text'), private_recipe('private-html-image', 'image'),
                private_recipe('private-html-page', 'text', output_format='html')]
     skill = dict(id='private-html-smoke-test', version='1', allowed_recipe_ids=[r['id'] for r in recipes],
-                 planning={'planning_notes': '先完成文案和配图，再制作产品介绍网页。'})
+                 planning={'planning_notes': 'First finish the copy and images, then build the product introduction page.'})
     monkeypatch.setattr(catalog, '_load_skill', lambda _: skill)
     monkeypatch.setattr(catalog, '_load_agent_config_items', lambda kind, *roots: recipes if kind == 'recipes' else [skill])
     return recipes
@@ -27,11 +27,11 @@ def private_catalog(monkeypatch):
 def test_normal_private_skill_intent_selects_html_from_recipe_metadata(private_catalog):
     result = catalog.compile_workflow_intent({
         'schema_version': 'freezone_workflow_intent.v1', 'skill_id': 'private-html-smoke-test',
-        'user_goal': '制作包含文案和配图的产品介绍网页', 'planner': {'deliverable': 'html'},
+        'user_goal': 'Build a product introduction page with copy and images', 'planner': {'deliverable': 'html'},
         'items': [
-            {'id': 'copy', 'title': '产品文案', 'recipe_id': 'private-html-copy'},
-            {'id': 'image', 'title': '产品配图', 'recipe_id': 'private-html-image', 'reference_inputs': ['copy']},
-            {'id': 'page', 'title': '产品介绍网页', 'recipe_id': 'private-html-page', 'reference_inputs': ['copy', 'image']},
+            {'id': 'copy', 'title': 'Product copy', 'recipe_id': 'private-html-copy'},
+            {'id': 'image', 'title': 'Product images', 'recipe_id': 'private-html-image', 'reference_inputs': ['copy']},
+            {'id': 'page', 'title': 'Product introduction page', 'recipe_id': 'private-html-page', 'reference_inputs': ['copy', 'image']},
         ],
     })
     assert result['ok'], result
@@ -95,7 +95,7 @@ async def test_normal_private_html_intent_survives_strict_mcp_boundaries(private
     from jsonschema import Draft202012Validator
     import json
 
-    intent = {'skill_id': 'private-html-smoke-test', 'user_goal': '制作产品介绍网页',
+    intent = {'skill_id': 'private-html-smoke-test', 'user_goal': 'Build a product introduction page',
               'items': [{'id': name, 'title': name, 'recipe_id': 'private-html-' + name,
                          **({'reference_inputs': ['copy', 'image']} if name == 'page'
                             else {'reference_inputs': ['copy']} if name == 'image' else {})}

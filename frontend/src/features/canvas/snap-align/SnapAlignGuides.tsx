@@ -7,7 +7,7 @@ import { useSnapAlignStore } from './snapAlignStore';
 const GUIDE_COLOR = '#5ba0ff';
 const GUIDE_OPACITY = 0.52;
 
-/** 局部智能引导线：只连接参与吸附的两个节点，不叠加数值标签。 */
+/** Local smart guide lines: connect only the two nodes taking part in snapping, with no numeric labels layered on. */
 export function SnapAlignGuides() {
   const guides = useSnapAlignStore((state) => state.guides);
   const { x: viewportX, y: viewportY, zoom } = useViewport();

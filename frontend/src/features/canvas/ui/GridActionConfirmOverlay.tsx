@@ -95,12 +95,12 @@ export const GridActionConfirmOverlay = memo(
     const imageCatalog = useFreezoneImageModels();
     const imageModels = imageCatalog.models;
     const selectedModel = imageModels[0];
-    // 后台确实一个图片模型都没配时禁止提交：这个面板没有模型选择器，提交下去
-    // 后端拿不到目录条目会直接 409，先让用户点一下再报错是最糟的体验。
+    // Submission is forbidden when the backend has really configured not a single image model: this panel has no model selector, and once submitted
+    // the backend cannot get a catalog entry and returns 409 outright; making the user click once before reporting an error is the worst experience.
     const catalogIsEmpty = isAuthoritativeEmptyCatalog(imageCatalog);
     const gridMode = GRID_ACTION_MODE_MAP[request.key];
-    // 宫格动作没有尺寸/画质选择器，按后台对该模型配置的档位取默认值。报价与提交
-    // 必须来自同一次解析，见 `resolveFixedFeatureModelRequest` 的注释。
+    // Grid actions have no size/quality selector, taking defaults by the tiers the backend configures for that model. The quote and the submission
+    // must come from the same resolution, see the note of `resolveFixedFeatureModelRequest`.
     const modelRequest = useMemo(
       () => resolveFixedFeatureModelRequest(selectedModel, { mode: gridMode }),
       [gridMode, selectedModel],
@@ -121,7 +121,7 @@ export const GridActionConfirmOverlay = memo(
       (billingRuleMissing ? t('common.billingRuleNotConfiguredShort') : null);
 
     const handleSubmit = useCallback(async () => {
-      // 按钮已经禁用，这里再挡一道：没有模型就绝不该发出请求。
+      // The button is already disabled, so block once more here: with no model a request must never be sent.
       if (catalogIsEmpty) return;
       const project = readUrl().project;
       if (!project) {
@@ -179,8 +179,8 @@ export const GridActionConfirmOverlay = memo(
           generationError: null,
         });
       } catch (err) {
-        // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-        // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+        // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+        // Writing an error banner would mark a live task as failed and clear the handle.
         if (isTaskPollTimeoutError(err)) {
           notifyTaskStillRunning(t);
           return;

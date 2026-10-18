@@ -26,8 +26,8 @@ export const DEFAULT_BEAT_SELECTION: PersistedBeatSelection = {
   mode: "none",
   activeBeat: null,
 };
-// 默认展开「文案」区块：台词/类型/场景/画面描述等核心信息无需额外点击即可见
-// (#21)。仅作用于未自定义过的 scope；用户手动折叠后会按 scope 持久化覆盖此默认。
+// The "Copy" section is expanded by default: core information such as dialogue/type/scene/visual description is visible without extra clicks
+// (#21). It applies only to scopes not customized; after the user collapses manually it is persisted per scope, overriding this default.
 export const DEFAULT_ACTION_PANEL_SECTIONS: readonly BeatActionPanelSectionId[] = [
   "text",
 ];

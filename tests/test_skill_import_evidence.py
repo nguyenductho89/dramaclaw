@@ -38,7 +38,7 @@ def test_segments_markdown_blocks_with_exact_offsets_and_heading_paths():
     "source",
     [
         "# Data\n\n```python\nvalue = `raw` \\\\ path\n```\n",
-        "# Table\n\n| 名称 | 值 |\n| --- | --- |\n| café | 東京 |\n",
+        "# Table\n\n| Name | Value |\n| --- | --- |\n| café | Tokyo |\n",
         "# Markup\n\n<section data-kind=\"demo\">\n<item>one</item>\n</section>\n",
         "# Windows\r\n\r\nText with `ticks` and C:\\\\tmp\\file.\r\n",
         "Repeated text.\n\nRepeated text.\n",

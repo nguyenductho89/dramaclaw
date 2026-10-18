@@ -1,9 +1,9 @@
-"""B2 §6.4 步 7：`normalize_queue_kind` 的静默回落改为抛异常。
+"""B2 §6.4 step 7: the silent fallback of `normalize_queue_kind` becomes an exception.
 
-依据：B2 §2.6（`task_backend/queues.py:8-10` 对未知值静默回落 `"default"`，
-拼错的 lane 名会悄悄跑进 default 池）与 B2 §6.4 步 7 的 RED
-（「拼错的 lane 名 → 抛异常，而不是静默落进 `default`」）。
-合法值的行为必须逐字不变。
+Basis: B2 §2.6 (`task_backend/queues.py:8-10` silently falls back to `"default"` for unknown values,
+so a misspelled lane name quietly runs in the default pool) and the RED of B2 §6.4 step 7
+("a misspelled lane name -> raise, instead of silently landing in `default`").
+The behavior for valid values must stay exactly the same.
 """
 
 from __future__ import annotations
@@ -32,9 +32,9 @@ def test_normalize_queue_kind_keeps_known_lanes_verbatim(lane: str) -> None:
 
 @pytest.mark.parametrize("absent", [None, "", "   "])
 def test_normalize_queue_kind_treats_absent_as_default(absent: str | None) -> None:
-    """缺省仍然回落 `default` —— 今天 `(kind or "default")` 就是这个语义。
+    """A missing value still falls back to `default` - that is today's `(kind or "default")` semantics.
 
-    抛异常针对的是「拼错的 lane 名」，不是「没写 lane」。
+    Raising targets a 'misspelled lane name', not a 'lane not given'.
     """
     assert normalize_queue_kind(absent) == "default"
 

@@ -10,19 +10,19 @@ class _FakeStore:
     def __init__(self, project_dir: Path) -> None:
         self.project_dir = project_dir
         self.characters = [
-            NovelCharacter(name="林夏", gender="女", age_group="youth", is_main=True)
+            NovelCharacter(name="LinXia", gender="female", age_group="youth", is_main=True)
         ]
         self.beats = [
             {
                 "beat_number": 1,
                 "audio_type": "narration",
-                "narration_segment": "夜色笼罩着城市。",
+                "narration_segment": "Night covers the city.",
             },
             {
                 "beat_number": 2,
                 "audio_type": "dialogue",
-                "speaker": "林夏_日常",
-                "narration_segment": "“我们出发吧。”",
+                "speaker": "LinXia_casual",
+                "narration_segment": "“Let us set off.”",
             },
         ]
 
@@ -96,7 +96,7 @@ async def test_prepare_missing_system_voices_fills_narrator_and_character(
 
     assert result["ready"] is True
     assert result["prepared_count"] == 2
-    assert {item["target"] for item in result["prepared"]} == {"项目解说人", "林夏"}
+    assert {item["target"] for item in result["prepared"]} == {"Project narrator", "LinXia"}
     assert narrator_updates[0]["relative_path"] == "assets/narrator/voice.mp3"
     assert store.characters[0].reference_audio_path
     assert (tmp_path / store.characters[0].reference_audio_path).exists()
@@ -133,7 +133,7 @@ async def test_system_voice_setup_runner_reports_progress(monkeypatch, tmp_path)
         assert kwargs["store"].graph_state_loaded is True
         return {
             "ready": True,
-            "prepared": [{"target": "项目解说人"}],
+            "prepared": [{"target": "Project narrator"}],
             "prepared_count": 1,
             "remaining_errors": [],
         }

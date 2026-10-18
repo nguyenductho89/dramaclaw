@@ -9,9 +9,9 @@ import { mediaNeedsCrossOrigin } from './imageData';
  * `toBlob` throws. Same-origin /static (the dev vite proxy) skips crossOrigin
  * since that origin doesn't echo Access-Control-Allow-Origin and isn't tainted.
  *
- * 从 VideoNode 的私有实现原样搬出（工作流截帧与故事板详情截帧共用）。单独成模块
- * 而不是并进 videoCaptureFrame.ts：那边的编排要在测试里跑，而这里真的要一个能
- * 解码的浏览器（jsdom 下 <video> 永远不会 loadeddata），必须能被整体替身掉。
+ * Moved verbatim out of VideoNode's private implementation (shared by workflow frame capture and storyboard detail frame capture). It is its own module
+ * rather than merged into videoCaptureFrame.ts: the orchestration over there has to run in tests, while this really needs a browser that can
+ * decode (under jsdom <video> never fires loadeddata), and must be replaceable by a stand-in as a whole.
  */
 export async function captureVideoFrameBlob(
   src: string,

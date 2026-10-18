@@ -50,9 +50,9 @@ export function getStoryboardCellPreview(node: CanvasNode): StoryboardCellPrevie
     firstStr((data as { displayName?: unknown }).displayName, (data as { label?: unknown }).label) ??
     '';
 
-  // 还没出图的高清结果节点：它的 previewImageUrl 是待放大的**源图**，不是自己的
-  // 内容。照常渲染出来用户会以为那就是放大后的效果，所以走空态占位（「待确认后
-  // 生成」），与 liblib 一致。
+  // An upscale result node not yet produced: its previewImageUrl is the **source image to be enlarged**, not its own
+  // content. Rendering it as usual would make the user think that is the enlarged result, so it takes the empty-state placeholder ("Generates after
+  // confirmation"), consistent with liblib.
   if (isPendingUpscaleNode(node)) {
     return { nodeId: node.id, kind: 'image', imageUrl: null, label };
   }

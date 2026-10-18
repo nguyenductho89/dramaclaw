@@ -13,7 +13,7 @@ type NoteIcon = ComponentType<{ className?: string }>;
 interface ShortcutRow {
   /** i18n key for the action label. */
   labelKey: string;
-  /** i18n keys for keycap chips whose legend must localize (e.g. Space / 空格). Rendered before `keys`. */
+  /** i18n keys for keycap chips whose legend must localize (e.g. Space). Rendered before `keys`. */
   keyKeys?: string[];
   /** Modifier / letter tokens rendered as keycap chips. */
   keys?: string[];
@@ -55,7 +55,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     titleKey: 'canvas.shortcuts.groups.move',
     rows: [
-      // 拖动画布按输入设备拆成三行：键盘(空格+拖动) / 触控板双指 / 鼠标中键。
+      // Panning the canvas is split into three rows by input device: keyboard (space + drag) / trackpad two-finger / mouse middle button.
       {
         labelKey: 'canvas.shortcuts.devices.keyboard',
         keyKeys: ['canvas.shortcuts.keys.space'],

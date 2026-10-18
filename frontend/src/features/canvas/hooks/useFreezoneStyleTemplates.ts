@@ -14,10 +14,10 @@ export interface UseFreezoneStyleTemplatesResult {
   isLoading: boolean;
   error: Error | null;
   /**
-   * 失败后重来一次。风格直接决定出图效果，不像相机参数那样可有可无，所以这里
-   * 比同族 hook 多给一个出口。只在 error 态生效，其余状态调用是空操作 —— 不做
-   * 自动重试是因为 ensureLoaded 在 render 里调用，自动重试会变成失败→重渲染→
-   * 再失败的死循环。
+   * retry once after a failure. The style directly decides the image result, unlike camera parameters which are optional, so here
+   * one more exit is given than the same-family hooks. It takes effect only in the error state, and calls in other states are no-ops - no
+   * automatic retry because ensureLoaded is called in render, and automatic retry would become a failure -> re-render ->
+   * failure again infinite loop.
    */
   retry: () => void;
 }
@@ -46,8 +46,8 @@ function writeState(project: string, next: UseFreezoneStyleTemplatesResult) {
   emit(project);
 }
 
-// 起飞时故意只 states.set 不 emit：ensureLoaded 会在 render 阶段被调用，那时
-// 通知订阅者等于在渲染别的组件时改它的 state。手工重试不在 render 里，可以 emit。
+// On takeoff deliberately only states.set without emit: ensureLoaded is called during the render phase, and notifying
+// subscribers then amounts to changing another component's state while rendering one. Manual retry is not in render, so emitting is fine.
 function startFetch(project: string) {
   states.set(project, {
     templates: [],

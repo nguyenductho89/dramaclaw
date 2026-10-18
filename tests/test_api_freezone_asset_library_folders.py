@@ -66,11 +66,11 @@ def test_folder_cover_accepts_same_origin_asset(folders_client) -> None:
 
     response = client.patch(
         f"{_FOLDERS}/{folder_id}",
-        json={"cover": "/freezone/_uploads/%E5%B0%81%E9%9D%A2.png"},
+        json={"cover": "/freezone/_uploads/cover.png"},
     )
 
     assert response.status_code == 200, response.text
-    assert _cover(client, folder_id) == "/freezone/_uploads/%E5%B0%81%E9%9D%A2.png"
+    assert _cover(client, folder_id) == "/freezone/_uploads/cover.png"
 
 
 @pytest.mark.parametrize(

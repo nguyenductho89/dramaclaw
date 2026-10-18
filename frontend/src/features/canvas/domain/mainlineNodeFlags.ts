@@ -4,10 +4,10 @@
  * Per-node derived flags for "mainline behavior" — the 5 orthogonal questions
  * that drive visual, toolbar, and Push behavior:
  *
- *   isPresetManaged  — Is this node owned by the backend preset emit? (拓扑锁)
- *   isUserSpawned    — Did the user create this (drag/spawn/duplicate)? (可改可删)
+ *   isPresetManaged  — Is this node owned by the backend preset emit? (topology lock)
+ *   isUserSpawned    — Did the user create this (drag/spawn/duplicate)? (editable and deletable)
  *   hasMainlineContext — Carries `mainline_context` array? (provenance / legacy)
- *   hasSlotTarget    — Carries Push default target? (Push 默认目标已知)
+ *   hasSlotTarget    — Carries Push default target? (Push default target known)
  *   hasCommittedSlot — Carries canonical slot URL? (canonical provenance)
  *
  * The legacy workflow-kind switch is intentionally absent. Visual / toolbar

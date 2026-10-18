@@ -557,9 +557,9 @@ async def test_c1_eg20a_freezone_runner_uses_restricted_subprocess(
     assert all("KEY" not in name for name in launches[0][1]["restricted_policy"].env)
 
 
-# --- OI54-S3: hermes 签名前置切片的钉子 ---------------------------------------
-# username（登录名）与 requester_user_id（user id）在本仓是两个不同的值；
-# 出网闸门只认后者。下面这组用例把这条口径、以及 project 身份的两层拆分钉住。
+# --- OI54-S3: pins for the hermes signing pre-slice ---------------------------------------
+# username (login name) and requester_user_id (user id) are two different values in this repo;
+# the egress gate only recognizes the latter. The cases below pin that rule and the two-layer split of the project identity.
 
 
 def _authorization():
@@ -769,10 +769,10 @@ def test_c1_s3_08_home_scope_sentinel_is_frozen_and_context_legal():
 
 
 def test_c1_s3_04b_pool_build_env_home_scope_keeps_the_two_project_ids_apart(tmp_path):
-    """home 态：会话 project 是 None，出网 project 是真值——两者必须各走各的形参。
+    """Home scope: the session project is None and the egress project is a real value - the two must go through separate parameters.
 
-    这条钉的是 `_build_env` 这一层的接线：把 `egress_project_id` 错接成
-    `session project_id` 时，home 态会拿空串去比对，闸门当场拒绝。
+    This pins the wiring at the `_build_env` layer: when `egress_project_id` is mistakenly wired to
+    `session project_id`, the home scope compares against an empty string and the gate rejects it on the spot.
     """
     from novelvideo.chat import hermes_pool
     from novelvideo.ports.auth_contract import AgentSessionToken

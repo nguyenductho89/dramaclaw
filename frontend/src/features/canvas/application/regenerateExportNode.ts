@@ -5,9 +5,9 @@ import {
   submitFreezoneRedraw,
   type FreezoneRedrawAspectRatio,
 } from '@/api/ops';
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 
 import { awaitTaskCompletion, isTaskPollTimeoutError } from '@/api/tasks';
@@ -20,7 +20,7 @@ import type { GenerateImagePayload } from './ports';
 import { generationTaskDescriptor } from './resumeGeneration';
 
 /**
- * Params persisted on an export node created by the 擦除 / 重绘 flow, so a failed
+ * Params persisted on an export node created by the erase / redraw flow, so a failed
  * node can re-run its freezone `redraw` call without the overlay being mounted.
  */
 interface FreezoneRedrawRequest {
@@ -45,7 +45,7 @@ function readFreezoneRedrawRequest(
   };
 }
 
-/** Retry a failed 擦除/重绘 export node by re-running its stored freezone redraw. */
+/** Retry a failed erase/redraw export node by re-running its stored freezone redraw. */
 async function regenerateFreezoneRedrawNode(
   nodeId: string,
   request: FreezoneRedrawRequest,
@@ -162,7 +162,7 @@ export async function regenerateExportImageNode(nodeId: string): Promise<void> {
     store.updateNodeData(nodeId, {
       generationJobId: jobId,
       generationClientSessionId: CURRENT_RUNTIME_SESSION_ID,
-      // 与上面的重绘路径同口径：句柄落到节点上，脱离监听后刷新才接得回来。
+      // The same basis as the redraw path above: the handle lands on the node, so it can be picked up after a refresh once detached from listening.
       ...generationTaskDescriptor(ref),
     });
   } catch (error) {

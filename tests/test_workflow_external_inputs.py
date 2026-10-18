@@ -36,15 +36,15 @@ def _intent() -> dict:
     return {
         "schema_version": "freezone_workflow_intent.v1",
         "skill_id": "ecommerce-ad",
-        "user_goal": "只引用红杯，保留杯形，改蓝色背景，不加字",
+        "user_goal": "Reference only the red cup, keep the cup shape, change to a blue background, add no text",
         "include_audio": False,
         "include_compose": False,
         "external_inputs": [deepcopy(EXTERNAL)],
         "items": [
             {
                 "id": "red-cup-blue-bg-image",
-                "title": "蓝底红杯",
-                "prompt": "保留杯形，改蓝色背景，不加字",
+                "title": "Red cup on blue",
+                "prompt": "Keep the cup shape, change to a blue background, add no text",
                 "recipe_id": "ecommerce-remix-image",
                 "reference_inputs": ["cup"],
             }
@@ -65,7 +65,7 @@ def _canvas(
                 "type": "uploadNode",
                 "data": {
                     "imageUrl": image_url,
-                    "displayName": "红杯原图",
+                    "displayName": "Red cup original image",
                 },
             },
             {
@@ -108,7 +108,7 @@ def test_existing_image_compiles_to_real_media_edge_without_copy(
         {
             "id": "cup",
             "node_id": "red-cup-source",
-            "display_name": "红杯原图",
+            "display_name": "Red cup original image",
         }
     ]
     graph = build_workflow_graph_commands(
@@ -131,7 +131,7 @@ def test_existing_image_compiles_to_real_media_edge_without_copy(
     assert target["data"]["workflowCatalog"]["recipeId"] == "ecommerce-remix-image"
     assert target["data"]["workflowCatalog"]["recipeVersion"] == "1"
     assert target["data"]["workflowCatalog"]["promptBuilder"]["planItem"]["prompt"] == (
-        "保留杯形，改蓝色背景，不加字"
+        "Keep the cup shape, change to a blue background, add no text"
     )
     assert not any(
         command.get("type") == "create_node"

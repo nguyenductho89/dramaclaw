@@ -236,7 +236,7 @@ async def test_audio_runner_forwards_only_organization_context_to_beat_leaf(
 
     await audio_runner._run_indextts2_audio(envelope, ctx)
 
-    # 与 freezone 的叶子分发同理：平台与本地任务不带组织出网身份，否则 IndexTTS2 会判 ORG_EGRESS_DENIED。
+    # Same reasoning as freezone's leaf dispatch: platform and local tasks carry no organization egress identity, otherwise IndexTTS2 would judge ORG_EGRESS_DENIED.
     assert captured.get("egress_context") is (context if forwarded else None)
 
 

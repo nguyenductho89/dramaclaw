@@ -367,7 +367,7 @@ async def _invoke_runner(name: str, ctx: ProjectContext) -> None:
         await character_image._run_character_image(
             {
                 "task_type": "character_portrait",
-                "payload": {"mode": "portrait", "character_name": "林小满"},
+                "payload": {"mode": "portrait", "character_name": "LinXiaoman"},
             },
             ctx,
         )
@@ -381,14 +381,14 @@ async def _invoke_runner(name: str, ctx: ProjectContext) -> None:
         from novelvideo.task_backend.runners import scene_reference
 
         await scene_reference._run_scene_reference_asset(
-            {"payload": {"scene_name": "学校天台", "kind": "master"}}, ctx
+            {"payload": {"scene_name": "school_rooftop", "kind": "master"}}, ctx
         )
         return
     if name == "prop_reference":
         from novelvideo.task_backend.runners import prop_reference
 
         await prop_reference._run_prop_reference_asset(
-            {"payload": {"prop_name": "旧手机"}}, ctx
+            {"payload": {"prop_name": "old_phone"}}, ctx
         )
         return
     if name == "sketch":
@@ -397,7 +397,7 @@ async def _invoke_runner(name: str, ctx: ProjectContext) -> None:
         await sketch._ensure_scene_refs_for_beats(
             ctx=ctx,
             output_dir=str(ctx.output_dir),
-            beats=[{"beat_number": 1, "scene_id": "学校天台"}],
+            beats=[{"beat_number": 1, "scene_id": "school_rooftop"}],
             episode=1,
             director_ref_mode="off",
             director_ref_beat_numbers=None,

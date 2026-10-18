@@ -148,7 +148,7 @@ describe("M05 CE generation credit cost gating", () => {
       master_url: "/static/u/p/assets/scenes/hall/master.png",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "master→director world" }));
+    fireEvent.click(screen.getByRole("button", { name: "master→Director World" }));
 
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveTextContent("Scene single-face to SOG will start immediately after confirmation.");

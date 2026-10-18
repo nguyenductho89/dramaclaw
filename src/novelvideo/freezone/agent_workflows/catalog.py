@@ -1466,7 +1466,15 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
             return _allowed_inferred_option(parameter, "manual")
         if any(
             keyword in lowered
-            for keyword in ("auto-execute", "auto execution", "auto-run", "execute directly", "generate directly")
+            for keyword in (
+                "auto-execute",
+                "auto execution",
+                "auto-run",
+                "execute automatically",
+                "run automatically",
+                "execute directly",
+                "generate directly",
+            )
         ):
             return _allowed_inferred_option(parameter, "auto")
 
@@ -1482,7 +1490,7 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
 
     if parameter_id in {"duration", "duration_seconds"}:
         duration_match = re.search(
-            r"(?<!\d)(\d{1,4})\s*(?:s\b|sec(?:ond)?s?\b)", lowered
+            r"(?<!\d)(\d{1,4})\s*-?\s*(?:s\b|sec(?:ond)?s?\b)", lowered
         )
         if duration_match:
             seconds = int(duration_match.group(1))
@@ -2604,10 +2612,7 @@ def _expand_standard_skill_intent(
                         ),
                     ),
                 )
-            if narration == title or re.fullmatch(
-                r"(?:this is )?(?:the )?(?:short drama |video )?(?:(?:segment|part|section|unit)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:narration|voice-?over)|(?:narration|voice-?over)\s+(?:for|of)\s+(?:the\s+)?(?:segment|part|section|unit)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))[.!]?",
-                narration, re.IGNORECASE,
-            ):
+            if narration == title or _PLACEHOLDER_NARRATION_RE.fullmatch(narration):
                 return (
                     intent,
                     None,
@@ -2618,7 +2623,7 @@ def _expand_standard_skill_intent(
                         hint=(
                             "Write the exact sentence(s) the voice-over should speak "
                             "aloud for this unit, in the user's language. Placeholders "
-                            'like "Segment one narration" / "This is the narration for part two" and unit titles '
+                            'like "Segment one narration" / "This is the narration for the second part of the short drama" and unit titles '
                             'are rejected. Example: "The convenience store at midnight, with only him inside." '
                             "If include_audio was not requested by the user, set "
                             "include_audio=false instead of inventing narration."
@@ -3216,6 +3221,23 @@ def _intent_audio_kind(item: dict[str, Any], recipe: dict[str, Any] | None) -> s
     )
 
 
+_NUMBER_WORDS = r"(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)"
+_ORDINAL_WORDS = r"(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)"
+_UNIT_NOUNS = r"(?:segment|part|section|unit)"
+_UNIT_REFERENCE = (
+    rf"(?:(?:the\s+)?{_ORDINAL_WORDS}\s+{_UNIT_NOUNS}|{_UNIT_NOUNS}\s+{_NUMBER_WORDS})"
+    r"(?:\s+of\s+(?:the\s+)?(?:short\s+drama|video))?"
+)
+# Placeholder narration such as "Segment one narration" / "This is the narration for the
+# first segment of the short drama" -- a request to produce narration, not the narration itself.
+_PLACEHOLDER_NARRATION_RE = re.compile(
+    r"(?:this\s+is\s+)?(?:the\s+)?(?:(?:short\s+drama|video)\s+)?"
+    rf"(?:{_UNIT_REFERENCE}\s+(?:narration|voice-?over)"
+    rf"|(?:narration|voice-?over)\s+(?:for|of)\s+(?:the\s+)?{_UNIT_REFERENCE})[.!]?",
+    re.IGNORECASE,
+)
+
+
 def _looks_like_speech_generation_instruction(value: Any) -> bool:
     text = _text(value)
     if not text:
@@ -3223,8 +3245,8 @@ def _looks_like_speech_generation_instruction(value: Any) -> bool:
     return bool(
         re.search(
             r"(?:based on|using|extract|convert)\s.{0,40}(?:narration|copy|script|ad copy).{0,40}"
-            r"(?:generate|create|produce|convert|synthesize)\s.{0,12}(?:narration|voice-?over|speech|audio)"
-            r"|(?:generate|create|make|produce)\s.{0,20}(?:voice-?over narration|speech audio|narration audio)",
+            r"(?:generate|create|produce|convert|synthesize)\s.{0,30}(?:narration|voice-?over|speech|audio)"
+            r"|(?:generate|create|make|produce)\s.{0,30}(?:voice-?over narration|narration voice-?over|speech audio|narration audio)",
             text,
             re.IGNORECASE,
         )
@@ -3239,10 +3261,10 @@ def _duration_ms(value: Any) -> int | None:
     text = _text(value).lower()
     if not text:
         return None
-    minute_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:min(?:ute)?s?)", text)
+    minute_match = re.search(r"(\d+(?:\.\d+)?)\s*-?\s*(?:min(?:ute)?s?)\b", text)
     if minute_match:
         return int(float(minute_match.group(1)) * 60_000)
-    second_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)", text)
+    second_match = re.search(r"(\d+(?:\.\d+)?)\s*-?\s*(?:sec(?:ond)?s?|s)\b", text)
     if second_match:
         return int(float(second_match.group(1)) * 1000)
     return None

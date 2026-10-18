@@ -53,7 +53,7 @@ describe("EpisodeSourceEditor", () => {
     );
 
     expect(
-      screen.getByText("(Edits are saved automatically, 3 lines in total)"),
+      screen.getByText("(Edits auto-save, 3 lines total)"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Beat source text 1")).toHaveValue("First line");
     expect(screen.getByLabelText("Beat source text 2")).toHaveValue("Second line");

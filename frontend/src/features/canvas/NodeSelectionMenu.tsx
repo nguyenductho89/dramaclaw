@@ -101,8 +101,8 @@ export function NodeSelectionMenu({
         key: 'image',
         label: t('node.menu.image'),
         Icon: Image,
-        // 创建顺序：imageGen（默认生成节点） → imageEdit（编辑节点） →
-        // upload（纯上传节点，目标端创建参考图时用）。
+        // Creation order: imageGen (default generation node) -> imageEdit (edit node) ->
+        // upload (pure upload node, used when the target side creates reference images).
         type: allowedTypeSet.has(CANVAS_NODE_TYPES.imageGen)
           ? CANVAS_NODE_TYPES.imageGen
           : allowedTypeSet.has(CANVAS_NODE_TYPES.imageEdit)
@@ -339,7 +339,7 @@ export function NodeSelectionMenu({
         {/*
           Inner scroll container. The outer wrapper keeps `overflow-hidden` so
           the rounded corners + border clip cleanly; without this inner div the
-          menu just runs off the bottom of the viewport once 技能节点 / 添加资源
+            menu just runs off the bottom of the viewport once skill nodes / add resources
           push the height past the screen. `max-h-[70vh]` adapts to short
           screens; the right-side skill panel already has its own 520px cap.
         */}

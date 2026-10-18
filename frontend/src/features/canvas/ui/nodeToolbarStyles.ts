@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 export const TOOLBAR_BUTTON_RADIUS_CLASS = "rounded-[12px]";
-// 扁平菜单项：去掉独立边框与胶囊背景，融入工具栏整条；仅靠 hover 高亮区分。
+// Flat menu items: no independent border and pill background, blending into the whole toolbar; distinguished only by hover highlight.
 export const TOOLBAR_NEUTRAL_BUTTON_CLASS =
   "!border-transparent !bg-transparent text-text-dark hover:!bg-[rgba(255,255,255,0.075)] focus:!border-transparent focus:!bg-transparent focus:!shadow-none focus-visible:!outline-none focus-visible:!ring-0 data-[state=open]:!border-transparent data-[state=open]:!shadow-none";
 export const TOOLBAR_TEXT_BUTTON_CLASS = `h-9 ${TOOLBAR_BUTTON_RADIUS_CLASS} px-3 text-sm ${TOOLBAR_NEUTRAL_BUTTON_CLASS}`;

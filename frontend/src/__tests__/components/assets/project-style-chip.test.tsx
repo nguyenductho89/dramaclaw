@@ -101,7 +101,7 @@ describe("ProjectStyleChip", () => {
 
     renderWithProviders(<ProjectStyleChip project="demo" />);
 
-    expect(await screen.findByText("Chinese period drama")).toBeInTheDocument();
+    expect(await screen.findByText("Chinese Period Drama")).toBeInTheDocument();
   });
 
   it("falls back to the built-in guoman fantasy label when styles are not loaded", async () => {

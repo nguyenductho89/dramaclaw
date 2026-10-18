@@ -120,7 +120,7 @@ async def test_scene_build_runner_refuses_a_running_planner(monkeypatch):
     monkeypatch.setattr(
         "novelvideo.task_state.get_task_manager", lambda: PlanningTaskManager()
     )
-    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _dir: "正文")
+    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _dir: "body text")
 
     async def forbidden(_ctx):
         raise AssertionError("the build must be rejected before opening the store")
@@ -149,7 +149,7 @@ async def test_scene_build_runner_proceeds_past_a_queued_planner(monkeypatch):
     monkeypatch.setattr(
         "novelvideo.task_state.get_task_manager", lambda: QueuedTaskManager()
     )
-    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _dir: "正文")
+    monkeypatch.setattr(graph_build, "require_imported_novel", lambda _dir: "body text")
 
     async def reached(_ctx):
         raise RuntimeError("admitted")
@@ -191,7 +191,7 @@ def test_any_episodes_planner_blocks_the_build():
     # The task carries no episode of its own here; what matters is that the
     # predicate does not filter by one, and the message does not claim to.
     assert running_scene_planner([_planner_task("running")])
-    assert "本集" not in SCENE_PLANNING_RUNNING_MESSAGE
+    assert "this episode" not in SCENE_PLANNING_RUNNING_MESSAGE
     assert str(ScenePlanningRunningError()) == SCENE_PLANNING_RUNNING_MESSAGE
 
 
@@ -265,7 +265,7 @@ async def test_a_narrated_build_never_reaches_the_queue(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    (state_dir / "novel.txt").write_text("第一章 归来\n\n正文。\n", encoding="utf-8")
+    (state_dir / "novel.txt").write_text("Chapter 1 The Return\n\nBody text.\n", encoding="utf-8")
 
     ctx = SimpleNamespace(
         project_id="p1",
@@ -323,7 +323,7 @@ async def test_a_drama_build_still_reaches_the_queue(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    (state_dir / "novel.txt").write_text("第1场 客厅 日 内\n", encoding="utf-8")
+    (state_dir / "novel.txt").write_text("1. INT. LIVING ROOM - DAY\n", encoding="utf-8")
 
     ctx = SimpleNamespace(
         project_id="p1",

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 双击引用素材跳到该素材所在位置后，画布底部浮出的「返回节点」提示条。
+ * The "Back to node" hint strip floating at the bottom of the canvas after double-clicking a reference material to jump to where it is.
  *
- * 位置和形态与 [[BackToNodesHint]] 同一套（底部居中的胶囊）——两者都是「视口迷路了」
- * 的退路，长得一样用户不用重新认。两条同时出现时由 BackToNodesHint 让位上移。
+ * The position and form are the same set as [[BackToNodesHint]] (a capsule centered at the bottom) - both are the way back from
+ * "the viewport got lost", and since they look the same the user need not learn them anew. When both appear, BackToNodesHint yields and moves up.
  */
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,7 @@ export function ViewportReturnHint() {
   const stop = useViewportReturnStore((state) => state.stop);
   const reactFlow = useReactFlow();
 
-  // 起点节点被删了，这条退路就没有意义了（回去也只剩空白），直接收掉。
+  // If the starting node has been deleted, this way back is meaningless (going back would leave only blank), so remove it directly.
   const originGone = useCanvasStore(
     (state) =>
       request !== null && !state.nodes.some((node) => node.id === request.originNodeId)
@@ -32,8 +32,8 @@ export function ViewportReturnHint() {
 
   const handleReturn = useCallback(() => {
     if (!request) return;
-    // 先选中再移视口：选中会把操作面板重新打开，用户回到的是「刚才正在写的那个节点」，
-    // 而不只是一个坐标。
+    // Select first, then move the viewport: selecting reopens the operation panel, and the user returns to "the node they were just writing",
+    // not just a coordinate.
     selectNodeExclusively(request.originNodeId);
     void reactFlow.setViewport(request.originViewport, { duration: 320 });
     stop();

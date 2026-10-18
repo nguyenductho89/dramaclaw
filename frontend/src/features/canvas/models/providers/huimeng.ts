@@ -7,5 +7,5 @@ import type { ModelProviderDefinition } from '../types';
 export const provider: ModelProviderDefinition = {
   id: 'huimeng',
   name: 'HuiMeng',
-  label: '惠盟 / HuiMeng', // i18n-exempt —— 服务商品牌名
+  label: 'HuiMeng', // i18n-exempt -- provider brand name
 };

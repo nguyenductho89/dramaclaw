@@ -114,14 +114,14 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
     const next = availableResolutions[0];
     updateNodeData(node.id, {
       upscaleResolution: next,
-      displayName: `${t('node.videoUpscale.nodeTitle')}（${RESOLUTION_LABEL[next]}）`,
+      displayName: `${t('node.videoUpscale.nodeTitle')} (${RESOLUTION_LABEL[next]})`,
     });
   }, [availableResolutions, node.id, resolution, t, updateNodeData]);
 
   const setResolution = useCallback((next: FreezoneVideoUpscaleResolution) => {
     updateNodeData(node.id, {
       upscaleResolution: next,
-      displayName: `${t('node.videoUpscale.nodeTitle')}（${RESOLUTION_LABEL[next]}）`,
+      displayName: `${t('node.videoUpscale.nodeTitle')} (${RESOLUTION_LABEL[next]})`,
     });
   }, [node.id, t, updateNodeData]);
 

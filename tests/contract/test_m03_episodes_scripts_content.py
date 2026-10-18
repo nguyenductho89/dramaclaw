@@ -334,7 +334,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
         json={"content": "Source one\nSource two"},
     )
     assert raw_saved.status_code == 200
-    assert raw_saved.json()["data"]["length"] == 7
+    assert raw_saved.json()["data"]["length"] == 21
 
     raw_loaded = client.get("/api/v1/projects/demo/episodes/1/raw-content")
     assert raw_loaded.status_code == 200
@@ -345,7 +345,7 @@ def test_m03_l2_covers_episodes_scripts_and_content_endpoints(m03_client):
         json={"content": "Rewritten draft"},
     )
     assert adapted_saved.status_code == 200
-    assert adapted_saved.json()["data"]["length"] == 3
+    assert adapted_saved.json()["data"]["length"] == 15
 
     adapted_loaded = client.get("/api/v1/projects/demo/episodes/1/adapted-content")
     assert adapted_loaded.status_code == 200

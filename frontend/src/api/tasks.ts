@@ -65,7 +65,7 @@ export class TaskCompletionError extends Error {
   }
 }
 
-/** 用户主动终止的任务不是错误 —— 用于跳过错误弹窗/错误横幅。 */
+/** A task the user actively terminated is not an error - used to skip the error dialog/error banner. */
 export function isTaskCancelledError(error: unknown): boolean {
   return error instanceof TaskCompletionError && error.status === "cancelled";
 }

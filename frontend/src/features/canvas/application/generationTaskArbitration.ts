@@ -12,9 +12,9 @@ const GENERATED_MEDIA_FIELDS = [
   'audioUrl',
 ] as const;
 
-// 失败横幅是绝对定位盖在图上的（见 ImageGenNode 的错误浮层），只要节点上换了一张
-// 新图却没清这三个字段，上一次的「生成失败 / 请求 ID / 重新生成」就会继续糊在新图
-// 上面。任何原地写 imageUrl / previewImageUrl / referenceImageUrl 的路径都要带上它。
+// The failure banner is absolutely positioned over the image (see the error overlay of ImageGenNode), and as long as a
+// new image is put on the node without clearing these three fields, the previous "Generation failed / request ID / Regenerate" would keep smearing over the new
+// image. Any path that writes imageUrl / previewImageUrl / referenceImageUrl in place must carry it.
 export const GENERATION_ERROR_CLEARED_PATCH = {
   generationError: null,
   generationErrorDetails: null,

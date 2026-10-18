@@ -20,8 +20,8 @@ def _write_valid_labels(project_dir, episode_num: int = 1) -> None:
         "result": {
             "decision": "revise",
             "main_problem": "composition_weak",
-            "reasoning": "构图需要更清楚。",
-            "edit_instruction": "调整构图，让主体动作更清楚。",
+            "reasoning": "The composition needs to be clearer.",
+            "edit_instruction": "Adjust the composition so the subject's action is clearer.",
             "confidence": 0.9,
         },
         "raw_text": "",
@@ -111,8 +111,8 @@ def test_sketch_edit_execute_runner_calls_existing_executor(tmp_path, monkeypatc
 
     def fake_execute_sketch_edit_batches(**kwargs):
         calls.append(kwargs)
-        kwargs["progress_callback"](0.5, "执行中")
-        kwargs["log_callback"]("完成")
+        kwargs["progress_callback"](0.5, "Running")
+        kwargs["log_callback"]("Done")
         return {"updated_beats": [1], "summary_path": "summary.json"}
 
     monkeypatch.setattr(

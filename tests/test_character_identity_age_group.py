@@ -5,9 +5,9 @@ from novelvideo.models import CharacterIdentity, NovelCharacter
 
 def test_character_identity_age_group_assignment_normalizes_none():
     identity = CharacterIdentity(
-        identity_id="江砚_书店时期",
-        character_name="江砚",
-        identity_name="书店时期",
+        identity_id="Jiang Yan_bookstore",
+        character_name="Jiang Yan",
+        identity_name="bookstore",
     )
 
     identity.age_group = None
@@ -16,13 +16,13 @@ def test_character_identity_age_group_assignment_normalizes_none():
 
 
 def test_novel_character_identities_tolerate_historical_null_age_group():
-    char = NovelCharacter(name="江砚")
+    char = NovelCharacter(name="Jiang Yan")
     char.identities_json = json.dumps(
         [
             {
-                "identity_id": "江砚_书店时期",
-                "character_name": "江砚",
-                "identity_name": "书店时期",
+                "identity_id": "Jiang Yan_bookstore",
+                "character_name": "Jiang Yan",
+                "identity_name": "bookstore",
                 "age_group": None,
             }
         ],
@@ -36,11 +36,11 @@ def test_novel_character_identities_tolerate_historical_null_age_group():
 
 
 def test_novel_character_identities_setter_does_not_serialize_null_age_group():
-    char = NovelCharacter(name="孟桥生")
+    char = NovelCharacter(name="Meng Qiaosheng")
     identity = CharacterIdentity(
-        identity_id="孟桥生_古玩店时期",
-        character_name="孟桥生",
-        identity_name="古玩店时期",
+        identity_id="Meng Qiaosheng_antique_shop",
+        character_name="Meng Qiaosheng",
+        identity_name="antique_shop",
     )
 
     identity.age_group = None

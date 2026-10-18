@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 音频波形峰值解码 + 模块级缓存。
+ * Audio waveform peak decoding + module-level cache.
  *
- * 给「视频合成」时间线上的音频片段画波形用：按固定密度（{@link PEAK_BUCKETS_PER_SEC}）
- * 把整段源音频降采样成归一化峰值数组，时间线上再按片段的裁剪窗口切片绘制。
- * decodeAudioData 开销不小，同一 src 只解一次并 LRU 缓存；并发请求复用同一 promise。
+ * Used to draw waveforms for audio clips on the "video compose" timeline: by a fixed density ({@link PEAK_BUCKETS_PER_SEC}),
+ * downsample the whole source audio into a normalized peak array, and the timeline then slices and draws it by the clip's trim window.
+ * decodeAudioData is not cheap, so the same src is decoded only once with an LRU cache; concurrent requests reuse the same promise.
  */
 
-/** 峰值采样密度（每秒桶数）。波形按此密度切片，越大越细。 */
+/** Peak sampling density (buckets per second). The waveform is sliced by this density; larger is finer. */
 export const PEAK_BUCKETS_PER_SEC = 120;
 
 const CACHE_MAX = 60;
@@ -16,7 +16,7 @@ const cache = new Map<string, Float32Array>();
 const inflight = new Map<string, Promise<Float32Array>>();
 
 function cachePeaks(src: string, peaks: Float32Array): void {
-  cache.delete(src); // 命中即刷新到「最近使用」末尾
+  cache.delete(src); // A hit refreshes it to the end of "most recently used"
   cache.set(src, peaks);
   while (cache.size > CACHE_MAX) {
     const oldest = cache.keys().next().value;
@@ -42,19 +42,19 @@ function computePeaks(buffer: AudioBuffer): Float32Array {
     peaks[i] = peak;
     if (peak > max) max = peak;
   }
-  // 归一化，放大较安静的素材便于观看。
+  // Normalize, amplifying quieter material for easier viewing.
   if (max > 0) {
     for (let i = 0; i < peaks.length; i += 1) peaks[i] /= max;
   }
   return peaks;
 }
 
-/** 已解码并缓存的峰值（同步读取，未缓存返回 null）。 */
+/** Peaks already decoded and cached (read synchronously, returns null if not cached). */
 export function getCachedAudioPeaks(src: string): Float32Array | null {
   return cache.get(src) ?? null;
 }
 
-/** 拉取 + 解码 + 降采样音频，返回归一化峰值数组（带缓存 / 并发去重）。 */
+/** Fetch + decode + downsample the audio, returning a normalized peak array (with cache / concurrent dedup). */
 export async function loadAudioPeaks(src: string): Promise<Float32Array> {
   const cached = cache.get(src);
   if (cached) {

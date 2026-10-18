@@ -5,24 +5,24 @@ import { useCallback, useMemo, useRef } from 'react';
 import './multi-angle-sphere.css';
 
 export interface MultiAngleSphereProps {
-  /** 0..360，0 正面 / 90 右 / 180 背面 / 270 左。 */
+  /** 0..360, 0 front / 90 right / 180 back / 270 left. */
   horizontalDeg: number;
-  /** -90..90，正＝俯视 / 负＝仰视。 */
+  /** -90..90, positive = looking down / negative = looking up. */
   verticalDeg: number;
-  /** 中心参考图相对尺寸（景别越近越大）。 */
+  /** Relative size of the center reference image (the closer the shot size, the larger). */
   imageScale: number;
   imageSource: string;
   onAngleChange: (next: { horizontalDeg: number; verticalDeg: number }) => void;
 }
 
-// 球面半径（px）；场景按 ~200px 见方设计，给方向键留出四周空间。
+// Sphere radius (px); the scene is designed as about 200px square, leaving room around for the arrow keys.
 const RADIUS = 78;
-// 经线：每 15° 一条竖直大圆。
+// Meridians: one vertical great circle every 15 degrees.
 const MERIDIAN_STEP = 15;
 const MERIDIAN_COUNT = 180 / MERIDIAN_STEP;
-// 纬线：南北各 4 圈。
+// Parallels: 4 circles each in the north and south.
 const PARALLEL_LATITUDES = [15, 30, 45, 60];
-// 拖动灵敏度（px → 度）。
+// Drag sensitivity (px -> degrees).
 const DRAG_SENSITIVITY = 0.6;
 
 function clamp(value: number, min: number, max: number): number {
@@ -59,11 +59,11 @@ function ChevronRightIcon() {
 }
 
 /**
- * libtv 风格的 3D 线框球角度调节区:CSS 3D 拼出的经纬线地球 + 沿球面环绕的立体小
- * 相机 + 中心朝向观察者的参考图 + 四向微调按钮。拖动改变方位/俯仰角。
+ * A libtv-style 3D wireframe sphere angle adjustment area: a CSS 3D globe of latitude and longitude lines + a 3D small camera orbiting along the sphere surface
+ * + a reference image at the center facing the viewer + four directional nudge buttons. Dragging changes the azimuth/elevation angle.
  *
- * verticalDeg → 球的 rotateX（俯仰），horizontalDeg → rotateY（方位）。相机挂在同一
- * 支点里、沿 +Z 推到球面 `translateZ(RADIUS)`，因此跟着支点一起绕中心环绕。
+ * verticalDeg -> the sphere's rotateX (elevation), horizontalDeg -> rotateY (azimuth). The camera hangs in the same
+ * pivot, pushed along +Z to the sphere surface `translateZ(RADIUS)`, so it orbits around the center along with the pivot.
  */
 export function MultiAngleSphere({
   horizontalDeg,
@@ -72,7 +72,7 @@ export function MultiAngleSphere({
   imageSource,
   onAngleChange,
 }: MultiAngleSphereProps) {
-  // 中心参考图尺寸随景别缩放。
+  // The center reference image size scales with the shot size.
   const cardW = clamp(56 + 64 * imageScale, 64, 104);
   const cardH = clamp(38 + 44 * imageScale, 46, 74);
 
@@ -93,7 +93,7 @@ export function MultiAngleSphere({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      // 方向键自己处理点击，别把拖动逻辑也触发了。
+      // The directional keys handle clicks themselves, so do not let the drag logic fire too.
       if ((event.target as HTMLElement).closest('.ma-dir-btn')) return;
       event.preventDefault();
       event.stopPropagation();
@@ -135,15 +135,15 @@ export function MultiAngleSphere({
     [horizontalDeg, verticalDeg, onAngleChange],
   );
 
-  // horizontalDeg 是规范化到 0..360 的展示值（驱动滑块/数字框/后端）。直接喂给
-  // rotateY 会在 359°↔0° 边界让 CSS transition 倒着绕一整圈。这里维护一个「连续」
-  // 的 yaw 累加值：每次都按最短路径（落在 ±180° 内）逼近目标角，使球始终就近转动。
+  // horizontalDeg is a display value normalized to 0..360 (driving the slider/number box/backend). Feeding it directly to
+  // rotateY would make the CSS transition spin a whole circle backwards at the 359 <-> 0 boundary. Here a "continuous"
+  // yaw accumulator is maintained: each time it approaches the target angle by the shortest path (landing within +-180 degrees), so the sphere always turns the nearest way.
   const continuousYawRef = useRef(horizontalDeg);
   const shortestDelta = (((horizontalDeg - continuousYawRef.current) % 360) + 540) % 360 - 180;
   const continuousYaw = continuousYawRef.current + shortestDelta;
   continuousYawRef.current = continuousYaw;
 
-  // 球的旋转：俯仰用 rotateX（取负号让「俯视=正」朝下看），方位用 rotateY。
+  // Sphere rotation: elevation uses rotateX (negated so "looking down = positive" looks downward), azimuth uses rotateY.
   const pivotStyle = {
     ['--ma-pitch' as string]: `${-verticalDeg}deg`,
     ['--ma-yaw' as string]: `${continuousYaw}deg`,
@@ -151,11 +151,11 @@ export function MultiAngleSphere({
 
   return (
     <div className="ma-scene" onPointerDown={handlePointerDown}>
-      {/* 共享 3D 世界：旋转的球/相机 + 球心参考图，统一按 Z 深度排序 */}
+      {/* Shared 3D world: the rotating sphere/camera + the center reference image, all sorted by Z depth */}
       <div className="ma-world">
-      {/* 旋转支点：线框球 + 环绕相机 */}
+      {/* Rotation pivot: wireframe sphere + orbiting camera */}
       <div className="ma-pivot" style={pivotStyle}>
-        {/* 经线（竖直大圆） */}
+        {/* Meridians (vertical great circles) */}
         {meridians.map((deg) => (
           <div
             key={`mer-${deg}`}
@@ -169,7 +169,7 @@ export function MultiAngleSphere({
             }}
           />
         ))}
-        {/* 赤道（水平大圆） */}
+        {/* Equator (horizontal great circle) */}
         <div
           className="ma-ring ma-meridian"
           style={{
@@ -180,7 +180,7 @@ export function MultiAngleSphere({
             transform: 'rotateX(90deg)',
           }}
         />
-        {/* 纬线（水平圈，按纬度上下平移） */}
+        {/* Parallels (horizontal circles, shifted up and down by latitude) */}
         {parallels.map(({ lat, ringRadius, offsetY }) => (
           <div
             key={`par-${lat}`}
@@ -195,9 +195,9 @@ export function MultiAngleSphere({
           />
         ))}
 
-        {/* 环绕相机：推到球面前点，随支点旋转即绕中心环绕 */}
+        {/* Orbiting camera: pushed to the front point of the sphere, rotating with the pivot, i.e. orbiting around the center */}
         <div className="ma-camera" style={{ transform: `translateZ(${RADIUS}px)` }}>
-          {/* 相机 → 球心连杆 */}
+          {/* Camera -> sphere center connector */}
           <div className="ma-camera-line" style={{ height: RADIUS }} />
           <div className="ma-camera-body">
             <div className="ma-camera-face ma-camera-face-front">
@@ -215,13 +215,13 @@ export function MultiAngleSphere({
         </div>
       </div>
 
-      {/* 中心参考图：球心、始终正对观察者；与相机同处 3D 世界，按 Z 正确遮挡 */}
+      {/* Center reference image: at the sphere center, always facing the viewer; in the same 3D world as the camera, occluded correctly by Z */}
       <div className="ma-center-image" style={{ width: cardW, height: cardH }}>
         <img src={imageSource} alt="" draggable={false} />
       </div>
       </div>
 
-      {/* 四向微调 */}
+      {/* Four-direction nudge */}
       <button type="button" className="ma-dir-btn ma-dir-up" onClick={() => nudge(0, 15)} aria-label="up">
         <ChevronUp />
       </button>

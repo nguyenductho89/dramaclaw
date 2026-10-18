@@ -5597,7 +5597,8 @@
       "workflowCompleted": "Workflow completed",
       "runWorkflow": "Run workflow",
       "rerunAllTitle": "Re-run all workflow nodes",
-      "rerunAll": "Re-run all"
+      "rerunAll": "Re-run all",
+      "selectedNothingToRun": "The selected workflow has no nodes left to run"
     },
     "style": {
       "chip": "Style",
@@ -6041,6 +6042,18 @@
         "ownReference": "Node's own reference image",
         "referenceAlt": "Reference image",
         "removeReference": "Remove reference image"
+      },
+      "textBody": {
+        "clickToEdit": "Click to edit",
+        "noText": "No text content yet",
+        "noScript": "No script content yet",
+        "noShotRows": "No shot rows yet",
+        "noContent": "Nothing to show",
+        "colShotNo": "Shot",
+        "colDuration": "Duration",
+        "colVisual": "Visual description",
+        "colDialogue": "Dialogue",
+        "colSummary": "Content summary"
       }
     },
     "keyElement": {

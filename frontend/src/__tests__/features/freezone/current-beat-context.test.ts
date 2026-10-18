@@ -9,12 +9,12 @@ describe("getCurrentBeatContextFromNode", () => {
     const context = {
       schema: "beat_context.v1",
       source: "standalone",
-      title: "自定义镜头上下文",
-      visual_description: "{{女主_雨衣}} 在雨夜便利店门口拿着 [[红伞]]",
-      detected_identities: ["女主_雨衣"],
-      detected_props: ["红伞"],
-      sketch_colors: { "女主_雨衣": "#FF00FF" },
-      prop_marker_colors: { "红伞": "#B71C1C" },
+      title: "Custom shot context",
+      visual_description: "{{Heroine_raincoat}} holds [[Red umbrella]] outside the convenience store on a rainy night",
+      detected_identities: ["Heroine_raincoat"],
+      detected_props: ["Red umbrella"],
+      sketch_colors: { "Heroine_raincoat": "#FF00FF" },
+      prop_marker_colors: { "Red umbrella": "#B71C1C" },
     };
 
     expect(
@@ -25,7 +25,7 @@ describe("getCurrentBeatContextFromNode", () => {
           context_scope: "standalone",
           beat_context: context,
           snapshot: {
-            detectedIdentities: ["旧身份"],
+            detectedIdentities: ["Old identity"],
           },
         },
       }),
@@ -42,16 +42,16 @@ describe("getCurrentBeatContextFromNode", () => {
           beat_context: {
             schema: "beat_context.v1",
             source: "standalone",
-            visual_description: "{{女主}} 拿起 [[雨伞]]",
-            detected_identities: ["女主", "旧身份"],
-            detected_props: ["雨伞", "旧道具"],
+            visual_description: "{{Heroine}} picks up [[Umbrella]]",
+            detected_identities: ["Heroine", "Old identity"],
+            detected_props: ["Umbrella", "Old prop"],
           },
         },
       }),
     ).toMatchObject({
-      visual_description: "{{女主}} 拿起 [[雨伞]]",
-      detected_identities: ["女主"],
-      detected_props: ["雨伞"],
+      visual_description: "{{Heroine}} picks up [[Umbrella]]",
+      detected_identities: ["Heroine"],
+      detected_props: ["Umbrella"],
     });
   });
 
@@ -65,7 +65,7 @@ describe("getCurrentBeatContextFromNode", () => {
           beat_context: {
             schema: "beat_context.v1",
             source: "standalone",
-            visual_description: "雨夜便利店门口，空无一人",
+            visual_description: "Outside the convenience store on a rainy night, nobody around",
             detected_identities: ["__NO_CHARACTER__"],
             detected_props: ["__NO_PROP__"],
           },
@@ -89,22 +89,22 @@ describe("getCurrentBeatContextFromNode", () => {
           beat_context: {
             schema: "beat_context.v1",
             source: "standalone",
-            detected_identities: ["错误 standalone 身份"],
-            detected_props: ["错误 standalone 道具"],
+            detected_identities: ["Wrong standalone identity"],
+            detected_props: ["Wrong standalone prop"],
           },
           snapshot: {
-            visualDescription: "主线同步画面",
-            narrationSegment: "主线旁白",
-            sceneId: "面馆",
-            detectedIdentities: ["主线男"],
-            detectedProps: ["纸箱"],
-            sketchColors: { "主线男": "#FF00FF" },
+            visualDescription: "Mainline synced frame",
+            narrationSegment: "Mainline narration",
+            sceneId: "Noodle shop",
+            detectedIdentities: ["Mainline man"],
+            detectedProps: ["Cardboard box"],
+            sketchColors: { "Mainline man": "#FF00FF" },
           },
           beat_edit_fields: {
-            visual_description: "画布本地画面",
-            detected_identities: ["本地女"],
-            detected_props: ["天线电视"],
-            prop_marker_colors: { "天线电视": "#B71C1C" },
+            visual_description: "Canvas local frame",
+            detected_identities: ["Local woman"],
+            detected_props: ["Antenna TV"],
+            prop_marker_colors: { "Antenna TV": "#B71C1C" },
           },
           mainline_context: [
             {
@@ -119,13 +119,13 @@ describe("getCurrentBeatContextFromNode", () => {
     ).toEqual({
       episode: 1,
       beat: 4,
-      scene_id: "面馆",
-      visual_description: "画布本地画面",
-      narration_segment: "主线旁白",
-      detected_identities: ["本地女", "主线男"],
-      detected_props: ["天线电视", "纸箱"],
-      sketch_colors: { "主线男": "#FF00FF" },
-      prop_marker_colors: { "天线电视": "#B71C1C" },
+      scene_id: "Noodle shop",
+      visual_description: "Canvas local frame",
+      narration_segment: "Mainline narration",
+      detected_identities: ["Local woman", "Mainline man"],
+      detected_props: ["Antenna TV", "Cardboard box"],
+      sketch_colors: { "Mainline man": "#FF00FF" },
+      prop_marker_colors: { "Antenna TV": "#B71C1C" },
     });
   });
 });

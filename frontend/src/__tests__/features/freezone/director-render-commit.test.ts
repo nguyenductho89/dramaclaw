@@ -51,7 +51,7 @@ describe("commitDirectorRenderFromCanvasSource", () => {
     }, {
       sourceUrl: "/static/p/freezone/edit.png",
       sourceNodeId: "node-1",
-      label: "改过的图",
+      label: "Edited image",
     });
 
     expect(result.target_path).toBe("director_control_frames/ep001/beat_06/combined.png");

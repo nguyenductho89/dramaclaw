@@ -21,8 +21,8 @@ vi.mock("@/api/viewerManifests", () => ({
     viewer_kind: "three_d_director",
     mode: "scene",
     project: "proj",
-    scene_id: "公寓楼电梯间",
-    display_name: "公寓楼电梯间",
+    scene_id: "Apartment elevator hall",
+    display_name: "Apartment elevator hall",
     source: { source_kind: "master" },
     sources: [],
     scenes_by_source_id: {},
@@ -47,8 +47,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       viewer_kind: "three_d_director",
       mode: "scene",
       project: "proj",
-      scene_id: "公寓楼电梯间",
-      display_name: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
+      display_name: "Apartment elevator hall",
       source: { source_kind: "master" },
       sources: [],
       scenes_by_source_id: {},
@@ -83,7 +83,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     const result = await commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "pano",
         scene: panoScene,
@@ -92,8 +92,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           pano: panoScene,
         },
         sources: [
-          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.ply" },
-          { id: "pano", source_type: "pano360", source_kind: "pano", url: "/static/proj/director_worlds/公寓楼电梯间/v1/pano.jpg" },
+          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.ply" },
+          { id: "pano", source_type: "pano360", source_kind: "pano", url: "/static/proj/director_worlds/Apartment elevator hall/v1/pano.jpg" },
         ],
       },
       enT,
@@ -111,8 +111,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       active_source: { id: "pano", source_type: "pano360" },
     });
     expect(result).toMatchObject({
-      target_path: "director_worlds/公寓楼电梯间/v1/stage_manifest.json",
-      target_url: "/static/proj/director_worlds/公寓楼电梯间/v1/pano.jpg",
+      target_path: "director_worlds/Apartment elevator hall/v1/stage_manifest.json",
+      target_url: "/static/proj/director_worlds/Apartment elevator hall/v1/pano.jpg",
       backup: null,
       affected_count: 2,
     });
@@ -123,8 +123,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       viewer_kind: "three_d_director",
       mode: "scene",
       project: "proj",
-      scene_id: "公寓楼电梯间",
-      display_name: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
+      display_name: "Apartment elevator hall",
       active_source_id: "old",
       source: { source_kind: "master" },
       sources: [
@@ -144,12 +144,12 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     await commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "front",
         scene,
         sources: [
-          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog" },
+          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog" },
         ],
       },
       enT,
@@ -157,7 +157,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     expect(saveSceneDirectorWorld).toHaveBeenCalledTimes(1);
     expect(clearSceneDirectorWorld).toHaveBeenCalledTimes(1);
-    expect(clearSceneDirectorWorld).toHaveBeenCalledWith("proj", "公寓楼电梯间", "old");
+    expect(clearSceneDirectorWorld).toHaveBeenCalledWith("proj", "Apartment elevator hall", "old");
     expect(
       vi.mocked(saveSceneDirectorWorld).mock.invocationCallOrder[0],
     ).toBeLessThan(
@@ -170,8 +170,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       viewer_kind: "three_d_director",
       mode: "scene",
       project: "proj",
-      scene_id: "公寓楼电梯间",
-      display_name: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
+      display_name: "Apartment elevator hall",
       active_source_id: "old",
       source: { source_kind: "master" },
       sources: [{ id: "old", source_type: "sog", source_kind: "custom" }],
@@ -183,7 +183,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     await expect(commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "front",
         scene: {
@@ -193,7 +193,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           world: { activeSourceId: "front" },
         },
         sources: [
-          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog" },
+          { id: "front", source_type: "sog", source_kind: "master", url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog" },
         ],
       },
       enT,
@@ -205,7 +205,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
   it("requires freezone custom world sources to be committed to a slot first", async () => {
     await expect(commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "custom-local",
         scene: {
@@ -224,7 +224,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("先把当前世界来源提交到主线槽位");
+    )).rejects.toThrow("Commit the current world source to a mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();
@@ -233,7 +233,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
   it("requires freezone pano sources to be committed to a mainline slot before manifest sync", async () => {
     await expect(commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "pano-local",
         scene: {
@@ -252,7 +252,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("先把当前世界来源提交到主线槽位");
+    )).rejects.toThrow("Commit the current world source to a mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
   it("requires freezone-generated pano 3DGS sources to be committed before manifest sync", async () => {
     await expect(commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "generated-sog:pano:1",
         scene: {
@@ -280,7 +280,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("先把当前世界来源提交到主线槽位");
+    )).rejects.toThrow("Commit the current world source to a mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();
@@ -325,10 +325,10 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
     };
     const patchedData = nodeDataAfterDirectorWorldSourceSlotCommit(
       originalNodeData,
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.ply",
-        target_url: "/static/admin/proj/director_worlds/公寓楼电梯间/v1/master.ply",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.ply",
+        target_url: "/static/admin/proj/director_worlds/Apartment elevator hall/v1/master.ply",
       },
       enT,
     );
@@ -341,14 +341,14 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     await commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       patchedData,
       enT,
     );
 
     expect(saveSceneDirectorWorld).toHaveBeenCalledTimes(1);
     const canonicalMasterSourceId =
-      "legacy:master:sog:/static/admin/proj/director_worlds/公寓楼电梯间/v1/master.ply";
+      "legacy:master:sog:/static/admin/proj/director_worlds/Apartment elevator hall/v1/master.ply";
     expect(vi.mocked(saveSceneDirectorWorld).mock.calls[0]?.[2]).toMatchObject({
       active_source_id: canonicalMasterSourceId,
       snapshot: {
@@ -359,7 +359,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         id: canonicalMasterSourceId,
         source_type: "sog",
         source_kind: "master",
-        ply_url: "/static/admin/proj/director_worlds/公寓楼电梯间/v1/master.ply",
+        ply_url: "/static/admin/proj/director_worlds/Apartment elevator hall/v1/master.ply",
       },
     });
     expect(patchedData).toMatchObject({
@@ -378,7 +378,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       expect.objectContaining({ id: "custom-local", current: true }),
     ]);
     expect((patchedData.scenesBySourceId as Record<string, unknown>)["stale-local"]).toBeUndefined();
-    expect((patchedData.sources as Array<{ label?: string }>).some((source) => source.label === "正面世界")).toBe(false);
+    expect((patchedData.sources as Array<{ label?: string }>).some((source) => source.label === "Front world")).toBe(false);
   });
 
   it("does not treat a plain source slot commit as a director-world state commit", () => {
@@ -396,10 +396,10 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
-        target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.sog",
+        target_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
       },
       enT,
     );
@@ -430,8 +430,8 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       viewer_kind: "three_d_director",
       mode: "scene",
       project: "proj",
-      scene_id: "公寓楼电梯间",
-      display_name: "公寓楼电梯间",
+      scene_id: "Apartment elevator hall",
+      display_name: "Apartment elevator hall",
       active_source_id: "legacy:reverse:sog:/static/reverse.sog",
       source: { source_kind: "master" },
       sources: [
@@ -454,7 +454,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
 
     await commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         activeSourceId: "legacy:master:sog:/static/master.sog",
         scene,
@@ -463,7 +463,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
             id: "legacy:master:sog:/static/master.sog",
             source_type: "sog",
             source_kind: "master",
-            url: "/static/proj/director_worlds/公寓楼电梯间/v1/master.sog",
+            url: "/static/proj/director_worlds/Apartment elevator hall/v1/master.sog",
           },
         ],
       },
@@ -488,13 +488,13 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       props: [],
       world: {
         activeSourceId:
-          "legacy:master:sog:/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+          "legacy:master:sog:/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
       },
     };
 
     await commitSceneDirectorWorldFromCanvasNode(
       "proj",
-      { kind: "scene_director_world", scene_id: "公寓楼电梯间" },
+      { kind: "scene_director_world", scene_id: "Apartment elevator hall" },
       {
         user_spawned: true,
         activeSourceId: "custom-local",
@@ -513,21 +513,21 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
             id: "custom-local",
             source_type: "sog",
             source_kind: "custom",
-            ply_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+            ply_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
             current: true,
           },
         ],
-        slot_target: { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
-        committed_slot_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+        slot_target: { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
+        committed_slot_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
         committed_source_id:
-          "legacy:master:sog:/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+          "legacy:master:sog:/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
       },
       enT,
       { pruneStale: false },
     );
 
     const canonicalMasterSourceId =
-      "legacy:master:sog:/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog";
+      "legacy:master:sog:/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog";
     expect(saveSceneDirectorWorldSource).toHaveBeenCalledTimes(1);
     expect(vi.mocked(saveSceneDirectorWorldSource).mock.calls[0]?.[2]).toMatchObject({
       source_id: canonicalMasterSourceId,
@@ -536,7 +536,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
       },
       source: {
         id: canonicalMasterSourceId,
-        ply_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123",
+        ply_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123",
       },
     });
   });
@@ -644,10 +644,10 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
-        target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123#frag",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.sog",
+        target_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123#frag",
       },
       enT,
     );
@@ -659,7 +659,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
     expect(patchedData.sources).toEqual([
       expect.objectContaining({
         id: "custom-local",
-        url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog?v=123#frag",
+        url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog?v=123#frag",
         current: true,
       }),
     ]);
@@ -688,10 +688,10 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
           },
         ],
       },
-      { kind: "scene_3gs_master_ply", scene_id: "公寓楼电梯间" },
+      { kind: "scene_3gs_master_ply", scene_id: "Apartment elevator hall" },
       {
-        target_path: "director_worlds/公寓楼电梯间/v1/master.sog",
-        target_url: "/static/projects/proj/director_worlds/公寓楼电梯间/v1/master.sog",
+        target_path: "director_worlds/Apartment elevator hall/v1/master.sog",
+        target_url: "/static/projects/proj/director_worlds/Apartment elevator hall/v1/master.sog",
       },
       enT,
     );

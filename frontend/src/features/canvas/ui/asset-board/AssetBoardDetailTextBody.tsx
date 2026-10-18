@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { useState, type ReactElement } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
@@ -19,8 +20,8 @@ function str(value: unknown): string | null {
 }
 
 /**
- * 表格单元格回写（与 VideoStoryNode.handleCellCommit 同形态）：行下标 + 列字段名 +
- * 新值，由宿主决定写回 data.rows 还是 data.scriptResult.rows。
+ * Table cell write-back (the same form as VideoStoryNode.handleCellCommit): row index + column field name +
+ * new value, with the host deciding whether to write back to data.rows or data.scriptResult.rows.
  */
 export type TextBodyCellCommit = (
   rowIndex: number,
@@ -28,7 +29,7 @@ export type TextBodyCellCommit = (
   nextValue: string,
 ) => void;
 
-/** 文本详情的 Markdown 阅读页（对齐 TextAnnotationNode 的 ReactMarkdown 配置）。 */
+/** Markdown reading page of the text detail (aligned with TextAnnotationNode's ReactMarkdown config). */
 function MarkdownBody({ content }: { content: string }): ReactElement {
   return (
     <div className="text-sm leading-6 text-white/80">
@@ -63,10 +64,10 @@ function MarkdownBody({ content }: { content: string }): ReactElement {
   );
 }
 
-/** 一格：展示值 + 该格对应的行/列坐标（有坐标才可编辑）。 */
+/** One cell: display value + the row/column coordinates of that cell (editable only with coordinates). */
 interface RowCell {
   value: string;
-  /** 回写用的列字段名；null → 该列只读（如镜号这种由数组顺序兜底的展示值）。 */
+  /** The column field name used for write-back; null -> that column is read-only (e.g. shot numbers, a display value fallback from array order). */
   colKey: string | null;
 }
 
@@ -77,13 +78,13 @@ function cell(value: string, colKey: string | null = null): RowCell {
 interface RowTableProps {
   headers: string[];
   rows: RowCell[][];
-  /** 传了才可编辑：点击单元格进入编辑，失焦回写，Esc 放弃。 */
+  /** Editable only when passed: click a cell to enter editing, blur writes back, Esc abandons. */
   onCellCommit?: TextBodyCellCommit;
 }
 
-/** 分镜/脚本的简单行表：镜号等窄列 + 内容宽列。 */
+/** A simple row table for storyboard/script: narrow columns such as shot number + a wide content column. */
 function RowTable({ headers, rows, onCellCommit }: RowTableProps): ReactElement {
-  // 同一时刻只有一格在编辑（坐标 + 草稿），与 VideoStoryNode 的表格编辑同语义。
+  // Only one cell is being edited at a time (coordinates + draft), with the same semantics as VideoStoryNode's table editing.
   const [editing, setEditing] = useState<{ row: number; col: number } | null>(null);
   const [draft, setDraft] = useState('');
 
@@ -138,15 +139,15 @@ function RowTable({ headers, rows, onCellCommit }: RowTableProps): ReactElement 
                 return (
                   <td
                     key={cellIndex}
-                    // 只读列保持原样式；可编辑列给出可点提示（hover 高亮 + 文本光标）。
+                    // Read-only columns keep the original style; editable columns get a clickable hint (hover highlight + text cursor).
                     className={`border-b border-white/5 px-2 py-2 align-top leading-5 ${
                       editable ? 'cursor-text rounded transition-colors hover:bg-white/[0.06]' : ''
                     }`}
-                    title={editable ? '点击编辑' : undefined}
+                    title={editable ? i18n.t('canvas.assetBoard.textBody.clickToEdit') : undefined}
                     onClick={
                       editable
                         ? () => {
-                            // 展示值里的 '-' 是「空」的占位，进编辑时不该被当成正文。
+                            // The '-' in a display value is the placeholder for "empty" and should not be taken as body text when entering editing.
                             setDraft(item.value === '-' ? '' : item.value);
                             setEditing({ row: rowIndex, col: cellIndex });
                           }
@@ -165,7 +166,7 @@ function RowTable({ headers, rows, onCellCommit }: RowTableProps): ReactElement 
   );
 }
 
-/** scriptNode.scriptResult 是 unknown（后端 { title, rows[] }）——软取行记录。 */
+/** scriptNode.scriptResult is unknown (the backend { title, rows[] }) - softly take the row records. */
 export function scriptRowsOf(result: unknown): Array<Record<string, unknown>> {
   if (!result || typeof result !== 'object') return [];
   const rows = (result as { rows?: unknown }).rows;
@@ -174,8 +175,8 @@ export function scriptRowsOf(result: unknown): Array<Record<string, unknown>> {
 }
 
 /**
- * 「内容摘要」列眼下展示的是哪个字段——编辑要写回**正在展示的那个**，否则用户改的
- * 是 narrative、值却落进空的 visualDescription，表面上看像没生效。
+ * Which field the "content summary" column is currently showing - editing must write back to **the one being shown**, otherwise what the user edits
+ * is narrative but the value lands in an empty visualDescription, apparently not taking effect.
  */
 export function videoStorySummaryField(row: VideoStoryRow): 'visualDescription' | 'narrative' {
   return str(row.visualDescription) !== null || str(row.narrative) === null
@@ -189,18 +190,18 @@ function videoStorySummary(row: VideoStoryRow): string {
 
 interface AssetBoardDetailTextBodyProps {
   node: CanvasNode;
-  /** 故事板条目标题（详情阅读页顶部的大标题，对齐 liblib 文本详情）。 */
+  /** The storyboard entry title (the large title at the top of the detail reading page, matching the liblib text detail). */
   title: string;
   /**
-   * script / videoStory 行表的单元格回写。传了才可编辑；宿主负责把
-   * (rowIndex, colKey, value) 落回对应的 store 字段。
+   * Cell write-back of script / videoStory row tables. Editable only when passed; the host is responsible for landing
+   * (rowIndex, colKey, value) back in the matching store field.
    */
   onCellCommit?: TextBodyCellCommit;
 }
 
 /**
- * 文本栏详情正文：textAnnotation / beatContext 渲染 Markdown；
- * scriptNode 渲染 scriptTitle + 行表；videoStoryNode 渲染镜头行表。
+ * Text column detail body: textAnnotation / beatContext render Markdown;
+ * scriptNode renders scriptTitle + row table; videoStoryNode renders the shot row table.
  */
 export function AssetBoardDetailTextBody({
   node,
@@ -213,7 +214,7 @@ export function AssetBoardDetailTextBody({
     body = content ? (
       <MarkdownBody content={content} />
     ) : (
-      <p className="py-8 text-center text-[13px] text-muted-foreground">暂无文本内容</p>
+      <p className="py-8 text-center text-[13px] text-muted-foreground">{i18n.t('canvas.assetBoard.textBody.noText')}</p>
     );
   } else if (isScriptNode(node)) {
     const rows = scriptRowsOf(node.data.scriptResult);
@@ -223,7 +224,7 @@ export function AssetBoardDetailTextBody({
         {scriptTitle && <h2 className="text-base font-semibold text-foreground">{scriptTitle}</h2>}
         {rows.length > 0 ? (
           <RowTable
-            headers={['镜号', '时长', '画面描述', '对白']}
+            headers={[i18n.t('canvas.assetBoard.textBody.colShotNo'), i18n.t('canvas.assetBoard.textBody.colDuration'), i18n.t('canvas.assetBoard.textBody.colVisual'), i18n.t('canvas.assetBoard.textBody.colDialogue')]}
             onCellCommit={onCellCommit}
             rows={rows.map((row, index) => [
               cell(str(row.shot_no) ?? String(index + 1), 'shot_no'),
@@ -233,7 +234,7 @@ export function AssetBoardDetailTextBody({
             ])}
           />
         ) : (
-          <p className="py-8 text-center text-[13px] text-muted-foreground">暂无脚本内容</p>
+          <p className="py-8 text-center text-[13px] text-muted-foreground">{i18n.t('canvas.assetBoard.textBody.noScript')}</p>
         )}
       </div>
     );
@@ -242,7 +243,7 @@ export function AssetBoardDetailTextBody({
     body =
       rows.length > 0 ? (
         <RowTable
-          headers={['镜号', '时长', '内容摘要']}
+          headers={[i18n.t('canvas.assetBoard.textBody.colShotNo'), i18n.t('canvas.assetBoard.textBody.colDuration'), i18n.t('canvas.assetBoard.textBody.colSummary')]}
           onCellCommit={onCellCommit}
           rows={rows.map((row, index) => [
             cell(
@@ -256,11 +257,11 @@ export function AssetBoardDetailTextBody({
           ])}
         />
       ) : (
-        <p className="py-8 text-center text-[13px] text-muted-foreground">暂无镜头行</p>
+        <p className="py-8 text-center text-[13px] text-muted-foreground">{i18n.t('canvas.assetBoard.textBody.noShotRows')}</p>
       );
   } else {
-    // 文本栏兜底（未知文本类节点）：无结构化渲染路径。
-    body = <p className="py-8 text-center text-[13px] text-muted-foreground">暂无可展示的内容</p>;
+    // Text column fallback (unknown text-type node): no structured rendering path.
+    body = <p className="py-8 text-center text-[13px] text-muted-foreground">{i18n.t('canvas.assetBoard.textBody.noContent')}</p>;
   }
 
   return (

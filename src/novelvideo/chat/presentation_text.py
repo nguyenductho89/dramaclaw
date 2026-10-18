@@ -251,6 +251,8 @@ def _strip_media_rendering_leaks(content: str) -> str:
             continue
         if "dramaclaw_" in lower:
             continue
+        if "rendered per the spec" in lower or "ui gallery" in lower:
+            continue
         lines.append(line)
     text = _redact_local_filesystem_paths("\n".join(lines).strip())
     return re.sub(r"\n{3,}", "\n\n", text)

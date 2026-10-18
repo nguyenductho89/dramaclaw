@@ -64,19 +64,19 @@ def anyio_backend():
 
 def test_chat_visible_text_redacts_local_filesystem_paths():
     content = (
-        "前端目录 ~/Works/supertale-fe，"
-        "后端目录 /Users/tao/Works/SuperTale/state/admin/.hermes。"
+        "Frontend directory ~/Works/supertale-fe, "
+        "Backend directory /Users/tao/Works/SuperTale/state/admin/.hermes."
     )
 
     redacted = chat_service._redact_local_filesystem_paths(content)
 
     assert "~/Works/supertale-fe" not in redacted
     assert "/Users/tao/Works/SuperTale" not in redacted
-    assert redacted.count("[本地路径]") == 2
+    assert redacted.count("[local path]") == 2
 
 
 def test_mainline_script_creation_still_requires_uploaded_script():
-    prompt = "请创建一个30秒悬疑短剧工作流，生成完整脚本和分镜方案"
+    prompt = "Please create a 30-second suspense short drama workflow and generate the full script and storyboard plan"
 
     routed = chat_service._script_creation_model_reply_prompt(
         prompt,
@@ -84,11 +84,11 @@ def test_mainline_script_creation_still_requires_uploaded_script():
     )
 
     assert routed is not None
-    assert "虾料" in routed
+    assert "materials area" in routed
 
 
 def test_freezone_workflow_can_expand_an_idea_into_script_nodes():
-    prompt = "请创建一个30秒悬疑短剧工作流，生成完整脚本和分镜方案"
+    prompt = "Please create a 30-second suspense short drama workflow and generate the full script and storyboard plan"
 
     routed = chat_service._script_creation_model_reply_prompt(
         prompt,
@@ -213,9 +213,9 @@ async def test_hermes_thread_serializes_concurrent_prompt_streams(
 
 
 def test_completion_notice_appends_without_replacing_existing_reply():
-    existing = "我已经检查完前置条件，下一步会启动第 1 个任务。"
+    existing = "I have checked the prerequisites; the next step will start task 1."
     notice = (
-        "当前任务已开始处理。请稍后让我查看当前任务进度，或在任务完成后再继续下一步。"
+        "The current task has started. Ask me later to check its progress, or continue to the next step once the task finishes."
     )
 
     merged = chat_service._completion_text_or_existing(notice, existing)
@@ -225,14 +225,14 @@ def test_completion_notice_appends_without_replacing_existing_reply():
 
 
 def test_workflow_planning_reply_rejects_large_unmetered_text():
-    oversized = "正文" * 2_001
+    oversized = "ab" * 2_001
 
     rejected = chat_service._bounded_workflow_planning_reply(
         oversized,
         draft_ready=True,
     )
 
-    assert "已拒绝直接交付" in rejected
+    assert "refused for direct delivery" in rejected
     assert "text Recipe" in rejected
     assert oversized not in rejected
     assert (
@@ -458,8 +458,8 @@ def test_hermes_lifecycle_tool_updates_are_not_user_visible():
 
 def test_infer_display_tool_call_recovers_sketch_display_promise():
     inferred = chat_service._infer_display_tool_call_from_text(
-        "全部显示",
-        "我来为您显示全部37个beat的草图。正在为您展示第1集前12个beat的草图：",
+        "show all",
+        "I will show all 37 beat sketches. Showing the sketches of the first 12 beats of episode 1:",
         [],
     )
 
@@ -468,9 +468,9 @@ def test_infer_display_tool_call_recovers_sketch_display_promise():
 
 def test_infer_display_tool_call_uses_recent_context_for_short_reply():
     inferred = chat_service._infer_display_tool_call_from_text(
-        "全部显示",
-        "正在为您展示前12个。",
-        ["如果您需要查看全部37个草图，我可以分页显示。"],
+        "show all",
+        "Showing the first 12.",
+        ["If you want to see all 37 sketches, I can page through them."],
     )
 
     assert inferred == ("dramaclaw_get_sketches", {"episode": 1})
@@ -478,9 +478,9 @@ def test_infer_display_tool_call_uses_recent_context_for_short_reply():
 
 def test_infer_display_tool_call_ignores_progress_status_language():
     inferred = chat_service._infer_display_tool_call_from_text(
-        "进度怎样了",
-        "当前进度如下：草图生成已完成，下面展示进度表。",
-        ["如果您需要查看全部37个草图，我可以分页显示。"],
+        "how is the progress",
+        "Current progress: sketch generation is complete; the progress table is shown below.",
+        ["If you want to see all 37 sketches, I can page through them."],
     )
 
     assert inferred is None
@@ -488,8 +488,8 @@ def test_infer_display_tool_call_ignores_progress_status_language():
 
 def test_infer_display_tool_call_requires_user_sketch_display_intent():
     inferred = chat_service._infer_display_tool_call_from_text(
-        "看一下第2集草图",
-        "正在为您展示第2集草图。",
+        "show me the sketches of episode 2",
+        "Showing the sketches of episode 2.",
         [],
     )
 
@@ -498,8 +498,8 @@ def test_infer_display_tool_call_requires_user_sketch_display_intent():
 
 def test_infer_display_tool_call_uses_sketch_candidate_tool_for_pool_terms():
     inferred = chat_service._infer_display_tool_call_from_text(
-        "看第1集 Beat 3 的草图候选池",
-        "正在为您展示 Beat 3 的草图候选。",
+        "show the sketch candidate pool of beat 3 in episode 1",
+        "Showing the sketch candidates of Beat 3.",
         [],
     )
 
@@ -624,18 +624,18 @@ async def test_append_chat_notification_persists_project_assistant_message(
     result = await chat_routes.append_chat_notification(
         chat_routes.ChatNotificationIn(
             scope=chat_routes.ChatScopePayload(kind="project", id="demo"),
-            text="  任务已完成。  ",
+            text="  Task completed.  ",
         ),
         user={"username": "alice"},
     )
 
     assert result == {
         "ok": True,
-        "data": {"id": "1", "role": "assistant", "content": "任务已完成。"},
+        "data": {"id": "1", "role": "assistant", "content": "Task completed."},
     }
     assert seen["username"] == "alice"
     assert seen["project"] == "demo"
-    assert seen["content"] == "任务已完成。"
+    assert seen["content"] == "Task completed."
     assert seen["project_dir"] == tmp_path / "out"
     assert seen["project_state_dir"] == tmp_path / "state"
 
@@ -652,14 +652,14 @@ async def test_deterministic_stream_redacts_local_paths(monkeypatch, tmp_path):
     message = await chat_service._stream_deterministic_assistant_reply(
         "admin",
         "project-a",
-        "临时路径：~/Works/supertale-fe/src",
+        "Temp path: ~/Works/supertale-fe/src",
         on_event,
     )
 
     assert "~/Works/supertale-fe" not in message["content"]
-    assert message["content"] == "临时路径：[本地路径]"
+    assert message["content"] == "Temp path: [local path]"
     assert events[0]["type"] == "assistant_delta"
-    assert events[0]["text"] == "临时路径：[本地路径]"
+    assert events[0]["text"] == "Temp path: [local path]"
 
 
 @pytest.mark.anyio
@@ -1329,49 +1329,49 @@ async def test_codex_stream_passes_conversation_scope_to_thread_builder(
 
 
 def test_codex_freezone_write_request_detection_ignores_injected_context_and_questions():
-    assert chat_service._freezone_canvas_write_requested("创建一个图片节点") is True
+    assert chat_service._freezone_canvas_write_requested("create an image node") is True
     assert (
         chat_service._freezone_canvas_write_requested(
-            "创建一个图片节点\n[SUPERTALE_CANVAS_ROUTING] canvas edits"
+            "create an image node\n[SUPERTALE_CANVAS_ROUTING] canvas edits"
         )
         is True
     )
-    assert chat_service._freezone_canvas_write_requested("怎么创建图片节点？") is False
+    assert chat_service._freezone_canvas_write_requested("how do I create an image node?") is False
     assert (
-        chat_service._freezone_canvas_write_requested("能否帮我创建一个短视频工作流？")
+        chat_service._freezone_canvas_write_requested("could you help me create a short video workflow?")
         is True
     )
     assert (
-        chat_service._freezone_canvas_write_requested("可不可以创建一个图片节点？")
+        chat_service._freezone_canvas_write_requested("may I create an image node?")
         is True
     )
     assert (
-        chat_service._freezone_canvas_write_requested("你们是否支持创建图片节点？")
+        chat_service._freezone_canvas_write_requested("do you support creating image nodes?")
         is False
     )
     assert (
         chat_service._freezone_canvas_write_requested(
-            "生成下这个\n[SUPERTALE_CANVAS_NODE_REFERENCES] node_id: image-a"
+            "generate this one\n[SUPERTALE_CANVAS_NODE_REFERENCES] node_id: image-a"
         )
         is True
     )
-    assert chat_service._freezone_canvas_write_requested("清空一下") is True
+    assert chat_service._freezone_canvas_write_requested("clear it") is True
     assert (
         chat_service._freezone_canvas_write_requested(
-            "你好\n[SUPERTALE_CANVAS_ROUTING] For canvas edits, use Freezone tools"
+            "Hello\n[SUPERTALE_CANVAS_ROUTING] For canvas edits, use Freezone tools"
         )
         is False
     )
-    assert chat_service._freezone_canvas_write_requested("生成一张图片") is True
+    assert chat_service._freezone_canvas_write_requested("generate an image") is True
     assert (
-        chat_service._freezone_canvas_write_requested("生成一张赛博朋克风格的图片")
+        chat_service._freezone_canvas_write_requested("generate a cyberpunk-style image")
         is True
     )
-    assert chat_service._freezone_canvas_write_requested("生成一段视频") is True
+    assert chat_service._freezone_canvas_write_requested("generate a video") is True
     assert (
-        chat_service._freezone_canvas_write_requested("做一个女总裁复仇短视频") is True
+        chat_service._freezone_canvas_write_requested("make a female CEO revenge short video") is True
     )
-    assert chat_service._freezone_canvas_write_requested("生成一个视频脚本") is False
+    assert chat_service._freezone_canvas_write_requested("write a video script") is False
     assert (
         chat_service._freezone_canvas_write_requested("generate a video script")
         is False
@@ -1380,9 +1380,9 @@ def test_codex_freezone_write_request_detection_ignores_injected_context_and_que
         chat_service._freezone_canvas_write_requested("create an image prompt") is False
     )
     assert (
-        chat_service._freezone_canvas_write_requested("生成这个工作流的文案") is False
+        chat_service._freezone_canvas_write_requested("generate this workflow's copy") is False
     )
-    assert chat_service._freezone_canvas_write_requested("生成一张带文案的图片") is True
+    assert chat_service._freezone_canvas_write_requested("generate an image with a caption") is True
     assert (
         chat_service._freezone_canvas_write_requested(
             "create an image from this prompt"
@@ -1402,12 +1402,12 @@ def test_codex_freezone_write_request_detection_ignores_injected_context_and_que
         is True
     )
     assert (
-        chat_service._freezone_canvas_write_requested("根据这个提示词生成视频") is True
+        chat_service._freezone_canvas_write_requested("generate a video from this prompt") is True
     )
-    assert chat_service._freezone_canvas_write_requested("用这段描述生成一张图") is True
+    assert chat_service._freezone_canvas_write_requested("generate an image from this description") is True
     assert (
         chat_service._freezone_canvas_write_requested(
-            "请生成本集完整剧本。输出 20—25 个视觉 Beat，并描述旧图片与视频质感。"
+            "Please generate the complete script for this episode. Output 20-25 visual beats, and describe the old image and video texture."
         )
         is False
     )
@@ -1416,35 +1416,6 @@ def test_codex_freezone_write_request_detection_ignores_injected_context_and_que
 @pytest.mark.parametrize(
     ("prompt", "expected"),
     [
-        ("创建图片转黑白线稿 Skill，先展示草稿，确认后保存，暂不运行", False),
-        ("帮我生成一个图片转黑白线稿 Skill", False),
-        ("修改这个 Skill，添加画幅选项，保存但不要创建画布节点", False),
-        ("创建一个工作流 Skill", False),
-        ("创建图片转线稿 Skill，然后用它生成一张图片", True),
-        ("保存 Skill 后运行工作流", True),
-        ("创建 Skill 并添加到画布", True),
-        ("创建一个 Skill，然后删除画布上的旧节点", True),
-        ("创建一个 Skill，同时更新画布节点", True),
-        ("创建一个 Skill，然后清空画布", True),
-        ("创建一个 Skill，再连接画布上的两个节点", True),
-        ("创建一个 Skill，并创建一个文本节点", True),
-        ("创建一个 Skill，不用确认，直接添加到画布", True),
-        ("创建一个 Skill，不要废话，直接运行它", True),
-        ("创建一个 Skill，但不删除画布节点", False),
-        ("创建一个 Skill，不修改画布", False),
-        ("创建一个 Skill，但不要使用它", False),
-        ("创建一个 Skill，暂时不用这个 Skill", False),
-        ("创建一个用于清空画布的 Skill", False),
-        ("创建一个删除画布旧节点的 Skill", False),
-        ("创建一个 Skill，用于更新画布节点", False),
-        ("创建一个 Skill，然后生成一份使用说明", False),
-        ("创建一个 Skill，保存后创建一份说明文档", False),
-        ("创建一个 Skill，然后让它生成一张图片", True),
-        ("创建一个 Skill，然后由它生成一张图片", True),
-        ("创建一个 Skill，然后让这个 Skill 生成一张图片", True),
-        ("创建一个会使用图片清理 Skill 的 Skill", False),
-        ("创建一个设计为使用现有 Skill 的 Skill", False),
-        ("用刚保存的 Skill 生成图片", True),
         ("Create an image cleanup Skill, but do not run it", False),
         ("Create a Skill and then run it", True),
         ("Create a Skill, then delete the old canvas node", True),
@@ -1762,13 +1733,13 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                 node_id = "video-a" if is_video else "image-a"
                 initial_data = (
                     {
-                        "prompt": "海边日落",
+                        "prompt": "sunset at the beach",
                         "model": "video-model-a",
                         "aspectRatio": "16:9",
                         "quality": "720p",
                     }
                     if is_video
-                    else {"prompt": "水彩风格"}
+                    else {"prompt": "watercolor style"}
                 )
                 base_commands = [
                     {
@@ -1812,7 +1783,7 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                     else:
                         retry_commands[0]["data"]["model"] = "image-model-a"
                         if tool_outcome == "preflight_other_success":
-                            retry_commands[0]["data"]["prompt"] = "另一张图片"
+                            retry_commands[0]["data"]["prompt"] = "another image"
                     yield SimpleNamespace(
                         type="tool_updated",
                         text="[mcp:completed] dramaclaw.freezone_emit_canvas_command",
@@ -1844,7 +1815,7 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                             status="completed",
                             input={},
                             output=None,
-                            structured={"ok": False, "error": "另一个节点未保存"},
+                            structured={"ok": False, "error": "the other node was not saved"},
                             error=None,
                         )
             elif tool_outcome in {
@@ -2028,7 +1999,7 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                             "Patch the draft and confirm its new revision to change "
                             "run_after_create."
                         ),
-                        "user_message": "工作流草稿的执行方式需要先更新草稿再确认。",
+                        "user_message": "The workflow draft's execution mode must be updated in the draft before confirming.",
                         "retryable": True,
                         "current_revision": 1,
                         "run_after_create": False,
@@ -2111,7 +2082,7 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                     else {
                         "ok": False,
                         "status": "invalid_command_schema",
-                        "error": "文本节点缺少 content 字段",
+                        "error": "The text node is missing the content field",
                     }
                 )
                 if tool_outcome == "wrong_scope":
@@ -2143,33 +2114,33 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                         status="completed",
                         input={},
                         output=None,
-                        structured={"ok": False, "error": "第二个节点未保存"},
+                        structured={"ok": False, "error": "the second node was not saved"},
                         error=None,
                     )
             assistant_reply = (
-                "未能创建工作流：找不到匹配的 Workflow Skill。"
+                "Unable to create the workflow: no matching Workflow Skill was found."
                 if tool_outcome == "blocked"
                 else (
-                    "图片转黑白线稿 Skill 已保存，当前没有运行或写入画布。"
+                    "The image-to-black-and-white-line-art Skill has been saved; nothing was run or written to the canvas."
                     if tool_outcome == "skill_saved"
-                    else "好的，已创建一个图片节点。"
+                    else "OK, an image node has been created."
                 )
             )
             if tool_outcome == "read_only":
-                assistant_reply = "建议保持当前节点位置，先检查配置。"
+                assistant_reply = "I suggest keeping the current node positions and checking the configuration first."
             if tool_outcome == "clarification_answered":
-                assistant_reply = "参数已确认，尚未执行画布操作。"
+                assistant_reply = "Parameters confirmed; no canvas operation has been performed yet."
             if tool_outcome.startswith("video_preflight"):
-                assistant_reply = "已提交视频生成任务。"
+                assistant_reply = "The video generation task has been submitted."
             if tool_outcome in {"single_run_retry", "workflow_run_retry"}:
-                assistant_reply = "已提交生成任务。"
+                assistant_reply = "The generation task has been submitted."
             if tool_outcome in {
                 "draft_confirm_retry",
                 "draft_confirm_policy_retry",
                 "draft_confirm_policy_skip_patch",
                 "draft_confirm_policy_unverified_retry",
             }:
-                assistant_reply = "工作流已提交创建。"
+                assistant_reply = "The workflow creation has been submitted."
             receipts = []
             if tool_outcome in {
                 "single_run_retry",
@@ -2233,14 +2204,14 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
         state_dir=str(tmp_path / "state" / "admin" / "project-a"),
     )
     request_prompt = (
-        "创建图片转黑白线稿 Skill，确认后保存，暂不运行"
+        "Create an image-to-black-and-white-line-art Skill, save after confirmation, do not run it yet"
         if tool_outcome == "skill_saved"
-        else "创建一个图片节点"
+        else "create an image node"
     )
     if tool_outcome == "read_only":
-        request_prompt = "不要移动节点，只给我布局建议"
+        request_prompt = "do not move the nodes, just give me layout suggestions"
     elif tool_outcome == "missing":
-        request_prompt = "做个咖啡店宣传页"
+        request_prompt = "make a coffee shop promo page"
     result = await chat_service._stream_assistant_reply_codex(
         "admin",
         "project-a",
@@ -2258,19 +2229,19 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
         event["text"] for event in events if event["type"] == "assistant_delta"
     ]
     if tool_outcome in {"success", "preflight_retry"}:
-        assert result["content"] == "好的，已创建一个图片节点。"
-        assert assistant_deltas == ["好的，已创建一个图片节点。"]
+        assert result["content"] == "OK, an image node has been created."
+        assert assistant_deltas == ["OK, an image node has been created."]
     elif tool_outcome == "video_preflight_retry":
-        assert result["content"] == "已提交视频生成任务。"
+        assert result["content"] == "The video generation task has been submitted."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "video_preflight_other_failure":
-        assert result["content"] == "画布操作未完成：另一个节点未保存"
+        assert result["content"] == "Canvas operation incomplete: the other node was not saved"
         assert assistant_deltas == [result["content"]]
     elif tool_outcome in {"single_run_retry", "workflow_run_retry"}:
-        assert result["content"] == "已提交生成任务。"
+        assert result["content"] == "The generation task has been submitted."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome in {"draft_confirm_retry", "draft_confirm_policy_retry"}:
-        assert result["content"] == "工作流已提交创建。"
+        assert result["content"] == "The workflow creation has been submitted."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome in {
         "draft_confirm_policy_only_patch",
@@ -2282,51 +2253,51 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
         # receipt at all, a receipt that kept the old policy (patch skipped), or
         # a receipt that does not report the policy. The user sees the localized
         # message rather than the agent hint.
-        assert result["content"] == "画布操作未完成：工作流草稿的执行方式需要先更新草稿再确认。"
+        assert result["content"] == "Canvas operation incomplete: The workflow draft's execution mode must be updated in the draft before confirming."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome in {
         "preflight_only", "preflight_other_success", "single_run_only_update",
         "draft_confirm_other_success", "draft_confirm_only_patch",
     }:
         assert result["content"] == (
-            "画布操作未完成：image/video generation parameters "
+            "Canvas operation incomplete: image/video generation parameters "
             "require user clarification"
         )
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "failure":
-        assert result["content"] == "画布操作未完成：文本节点缺少 content 字段"
+        assert result["content"] == "Canvas operation incomplete: The text node is missing the content field"
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "missing":
-        assert "已创建" not in result["content"]
+        assert "created" not in result["content"]
         assert (
             result["content"]
-            == "画布操作未完成：本轮没有可验证的画布写入回执，请重试。"
+            == "Canvas operation incomplete: this turn has no verifiable canvas write receipt; please retry."
         )
         assert assistant_deltas == [result["content"]]
     elif tool_outcome in {"draft_ready", "plan_draft_ready"}:
         assert result["content"] == (
-            "工作流草稿已准备完成，等待你确认后创建画布节点；尚未执行生成。"
+            "The workflow draft is ready; it is waiting for your confirmation before canvas nodes are created. Nothing has been generated yet."
         )
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "clarification_answered":
-        assert result["content"] == "参数已确认，尚未执行画布操作。"
+        assert result["content"] == "Parameters confirmed; no canvas operation has been performed yet."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "skill_saved":
         assert result["content"] == (
-            "图片转黑白线稿 Skill 已保存，当前没有运行或写入画布。"
+            "The image-to-black-and-white-line-art Skill has been saved; nothing was run or written to the canvas."
         )
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "read_only":
-        assert result["content"] == "建议保持当前节点位置，先检查配置。"
+        assert result["content"] == "I suggest keeping the current node positions and checking the configuration first."
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "mixed":
-        assert result["content"] == "画布操作未完成：第二个节点未保存"
+        assert result["content"] == "Canvas operation incomplete: the second node was not saved"
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "wrong_scope":
-        assert "成功画布写入回执" in result["content"]
+        assert "successful canvas write receipt" in result["content"]
         assert assistant_deltas == [result["content"]]
     else:
-        assert result["content"] == ("未能创建工作流：找不到匹配的 Workflow Skill。")
+        assert result["content"] == ("Unable to create the workflow: no matching Workflow Skill was found.")
         assert assistant_deltas == [result["content"]]
     assert revoked == ["agent-token"]
 
@@ -2390,7 +2361,7 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
             "source_node_id": "upload-a",
             "client_id": "watercolor",
             "node_type": "imageGenNode",
-            "data": {"prompt": "水彩风格"},
+            "data": {"prompt": "watercolor style"},
         },
         {
             "type": "run_node_action",
@@ -2402,7 +2373,7 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
     rejected_commands[0]["position"] = {"x": 640, "y": 120}
     if scenario == "handler_failure_retry":
         rejected_commands = commands
-        rejection = {"ok": False, "error": "源节点不存在"}
+        rejection = {"ok": False, "error": "source node does not exist"}
     else:
         # Shape of dramaclaw_mcp._mcp_error_result for an input-schema failure.
         rejection = {
@@ -2433,10 +2404,10 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
         # Two identical anonymous creates must not collapse into one identity.
         note = {"type": "create_node", "node_type": "textAnnotationNode"}
         rejected_input["commands"] = [
-            {**note, "data": {"text": "甲"}, "bogus": 1},
-            {**note, "data": {"text": "乙"}},
+            {**note, "data": {"text": "A"}, "bogus": 1},
+            {**note, "data": {"text": "B"}},
         ]
-        retry_input["commands"] = [{**note, "data": {"text": "甲"}}]
+        retry_input["commands"] = [{**note, "data": {"text": "A"}}]
     elif scenario in {
         "argument_retry_draft_revision_corrected",
         "argument_retry_other_draft_revision",
@@ -2480,7 +2451,7 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
         retry_input["commands"] = [second, first]
     elif scenario == "argument_retry_correction_plus_data_change":
         retry_input["commands"] = [
-            {**commands[0], "data": {"prompt": "油画风格"}},
+            {**commands[0], "data": {"prompt": "oil painting style"}},
             commands[1],
         ]
     elif scenario in {
@@ -2651,7 +2622,7 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
                 type="assistant_delta",
                 text=json.dumps(
                     {
-                        "message": "已创建水彩风格图片节点并提交生成。",
+                        "message": "Created a watercolor-style image node and submitted generation.",
                         "mode": "mutation",
                         "canvas_receipts": receipts,
                     }
@@ -2683,14 +2654,14 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
     result = await chat_service._stream_assistant_reply_codex(
         "admin",
         "project-a",
-        "把选中的图片转成水彩风格",
+        "convert the selected image to watercolor style",
         collect_event,
         project_state_dir=tmp_path / "state" / "admin" / "project-a",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
         store_scope=scope,
         turn_id="business-turn",
-        route_prompt="把选中的图片转成水彩风格",
+        route_prompt="convert the selected image to watercolor style",
     )
 
     if scenario in {
@@ -2698,16 +2669,16 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
         "argument_retry_draft_revision_corrected",
         "argument_retry_projection_episode_corrected",
     }:
-        assert result["content"] == "已创建水彩风格图片节点并提交生成。"
+        assert result["content"] == "Created a watercolor-style image node and submitted generation."
     elif scenario == "handler_failure_retry":
         # Only a pre-handler schema rejection is side-effect free; a business
         # failure from the handler keeps the turn failed.
-        assert result["content"] == "画布操作未完成：源节点不存在"
+        assert result["content"] == "Canvas operation incomplete: source node does not exist"
     else:
         # No retry, or a retry that differs beyond the provable corrections:
         # dropped, added or reordered commands, other targets, coordinates or
         # data, or a field the server never reported as unexpected.
-        assert result["content"] == "画布操作未完成：tool_arguments_invalid"
+        assert result["content"] == "Canvas operation incomplete: tool_arguments_invalid"
     assistant_deltas = [
         event["text"] for event in events if event["type"] == "assistant_delta"
     ]
@@ -2720,16 +2691,16 @@ async def test_codex_freezone_argument_rejection_superseded_by_corrected_retry(
     [
         (
             "timeout",
-            "Codex App Server 响应超时，请重试。",
-            "Codex App Server 响应超时，请重试。",
+            "Codex App Server response timed out; please retry.",
+            "Codex App Server response timed out; please retry.",
         ),
-        ("cancelled", '{"mode":"mutation","text":"已创建成功', "已取消本轮请求。"),
+        ("cancelled", '{"mode":"mutation","text":"Created successfully', "This turn's request was cancelled."),
         (
             "cancelled",
-            '{"mode":"mutation","text":"已创建成功","canvas_receipts":[]}',
-            "已取消本轮请求。",
+            '{"mode":"mutation","text":"Created successfully","canvas_receipts":[]}',
+            "This turn's request was cancelled.",
         ),
-        ("cancelled", "", "已取消本轮请求。"),
+        ("cancelled", "", "This turn's request was cancelled."),
     ],
 )
 @pytest.mark.parametrize("notification", ["egress_disposition", "turn_completed"])
@@ -2796,14 +2767,14 @@ async def test_codex_freezone_interruption_discards_unvalidated_output(
     result = await chat_service._stream_assistant_reply_codex(
         "admin",
         "project-a",
-        "创建一个图片工作流",
+        "create an image workflow",
         collect_event,
         project_state_dir=tmp_path / "state" / "admin" / "project-a",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
         store_scope=scope,
         turn_id="business-turn",
-        route_prompt="创建一个图片工作流",
+        route_prompt="create an image workflow",
     )
 
     assert result["content"] == expected
@@ -3986,7 +3957,7 @@ def test_chat_run_lock_is_user_scoped(monkeypatch, tmp_path):
 
     lock_id = chat_service._acquire_chat_run_lock("admin", "project-a")
     try:
-        with pytest.raises(RuntimeError, match="当前用户已有 AI 对话"):
+        with pytest.raises(RuntimeError, match="already has an AI chat in progress"):
             chat_service._acquire_chat_run_lock("admin", "project-b")
     finally:
         chat_service._release_chat_run_lock("admin", "project-a", lock_id)
@@ -4107,7 +4078,7 @@ def test_chat_run_lock_uses_updated_at_for_idle_timeout(monkeypatch, tmp_path):
     )
 
     assert chat_service.chat_run_lock_is_active("admin", "project-a") is True
-    with pytest.raises(RuntimeError, match="当前用户已有 AI 对话"):
+    with pytest.raises(RuntimeError, match="already has an AI chat in progress"):
         chat_service._acquire_chat_run_lock("admin", "project-a")
 
 
@@ -4132,7 +4103,7 @@ def test_chat_run_lock_trusts_fresh_heartbeat_from_another_pod(monkeypatch, tmp_
     )
 
     assert chat_service.chat_run_lock_is_active("admin", "project-a") is True
-    with pytest.raises(RuntimeError, match="当前用户已有 AI 对话"):
+    with pytest.raises(RuntimeError, match="already has an AI chat in progress"):
         chat_service._acquire_chat_run_lock("admin", "project-a")
     assert (
         json.loads(lock_path.read_text(encoding="utf-8"))["lock_id"] == "old-pod-lock"
@@ -4225,7 +4196,7 @@ def test_chat_run_lock_treats_new_empty_lock_as_active(monkeypatch, tmp_path):
     lock_path = chat_service._chat_run_lock_path("admin", "project-a")
     lock_path.write_text("", encoding="utf-8")
 
-    with pytest.raises(RuntimeError, match="当前用户已有 AI 对话"):
+    with pytest.raises(RuntimeError, match="already has an AI chat in progress"):
         chat_service._acquire_chat_run_lock("admin", "project-a")
 
     assert lock_path.exists()
@@ -4268,7 +4239,7 @@ async def test_reingest_confirmation_reply_bypasses_agent_backend(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        """创建视频
+        """Create a video
 
 [DRAMACLAW_REINGEST_CONFIRMATION]
 stage: choose_overwrite
@@ -4278,9 +4249,9 @@ filename: novel.docx
         on_event,
     )
 
-    assert "当前项目已有摄入内容" in result["content"]
-    assert "覆盖" in result["content"]
-    assert "新建项目" not in result["content"]
+    assert "already has ingested content" in result["content"]
+    assert "overwrite" in result["content"]
+    assert "new project" not in result["content"]
     assert [event["type"] for event in events] == ["assistant_delta", "done"]
 
 
@@ -4301,7 +4272,7 @@ async def test_reingest_final_confirmation_reply_bypasses_agent_backend(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        """覆盖
+        """overwrite
 
 [DRAMACLAW_REINGEST_CONFIRMATION]
 stage: confirm_clear
@@ -4311,9 +4282,9 @@ filename: novel.docx
         on_event,
     )
 
-    assert "会清空/重建当前项目已有角色" in result["content"]
-    assert "确定" in result["content"]
-    assert "新建项目" not in result["content"]
+    assert "Overwriting will clear and rebuild the existing characters" in result["content"]
+    assert "confirm" in result["content"]
+    assert "new project" not in result["content"]
 
 
 def test_prompt_injects_json_render_contract(monkeypatch, tmp_path):
@@ -4322,42 +4293,42 @@ def test_prompt_injects_json_render_contract(monkeypatch, tmp_path):
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "查看肖像图片，用 json-render 显示",
+        "view the portrait image, display it with json-render",
     )
 
     assert "[RENDERING_CONTRACT]" in prompt
-    assert "才需要调用对应的 DramaClaw 展示工具" in prompt
-    assert "不要向用户解释内部渲染格式、渲染机制、工具调用过程或工具名" in prompt
-    assert "不要用文字列表、文件名列表、Beat 名称列表或 URL 列表替代媒体展示" in prompt
-    assert "必须调用对应展示工具" in prompt
-    assert "若没有工具返回的可展示媒体，只说明当前暂无可展示媒体" in prompt
-    assert "后端会自动把工具结果渲染为 json-render" not in prompt
-    assert "不要手写、复制或粘贴 <ui-spec> JSON" not in prompt
+    assert "call the matching DramaClaw display tool" in prompt
+    assert "Do not explain internal rendering formats, rendering mechanics, the tool-calling process, or tool names to the user" in prompt
+    assert "do not replace the media display with a text list, a file-name list, a Beat-name list, or a URL list" in prompt
+    assert "you must call the matching display tool" in prompt
+    assert "If no displayable media was returned by a tool, only say there is currently no displayable media" in prompt
+    assert "The backend will automatically render tool results as json-render" not in prompt
+    assert "Do not hand-write, copy, or paste <ui-spec> JSON" not in prompt
     assert "dramaclaw_get_character_media" in prompt
     assert "dramaclaw_get_sketches" in prompt
     assert "dramaclaw_get_scene_images" in prompt
     assert "dramaclaw_get_episode_media" in prompt
     assert (
-        "只有在回复需要展示图片、肖像、身份图、草图、首帧、视频、音频等可视/可播放媒体时"
+        "the reply needs to show visual or playable media such as images, portraits, identity images, sketches, first frames, video, or audio"
         in prompt
     )
     assert "media_json" in prompt
-    assert "不要猜测、拼接或改写静态资源路径" in prompt
-    assert "禁止自行编造 /static/projects/{project_id}/..." in prompt
+    assert "Do not guess, concatenate, or rewrite static resource paths" in prompt
+    assert "never invent /static/projects/{project_id}/..." in prompt
     assert "portrait_url" in prompt
     assert "image_url" in prompt
     assert "video_url" in prompt
-    assert "不要使用 *_path" in prompt
-    assert "发送前自检" in prompt
+    assert "do not use a *_path" in prompt
+    assert "Pre-send self-check" in prompt
     assert (
-        "角色列表、剧集规划、项目进度、任务状态、脚本/beat 摘要、表格、长篇正文、普通结构化说明默认使用 markdown"
+        "Character lists, episode plans, project progress, task status, script/beat summaries, tables, long-form text, and ordinary structured explanations default to markdown"
         in prompt
     )
-    assert "不要为纯文本、进度、脚本、表格、角色/剧集清单调用媒体展示工具" in prompt
+    assert "Do not call media display tools for plain text, progress, scripts, tables, or character/episode lists" in prompt
     assert "[USER_PREFERENCES]" not in prompt
     assert "reused across projects" not in prompt
     assert not (tmp_path / "state" / "admin" / "preferences.md").exists()
-    assert prompt.rstrip().endswith("查看肖像图片，用 json-render 显示")
+    assert prompt.rstrip().endswith("view the portrait image, display it with json-render")
 
 
 def test_prompt_injects_one_step_execution_hint_for_explicit_continuation(
@@ -4368,15 +4339,15 @@ def test_prompt_injects_one_step_execution_hint_for_explicit_continuation(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "下一步",
-        route_prompt="下一步",
+        "next step",
+        route_prompt="next step",
     )
 
     assert "[DRAMACLAW_CONTINUATION]" in prompt
     assert "start exactly one matching write" in prompt
     assert "dramaclaw_render_first_frames" in prompt
     assert "Do not reread identical status" in prompt
-    assert prompt.rstrip().endswith("下一步")
+    assert prompt.rstrip().endswith("next step")
 
 
 def test_prompt_does_not_treat_continuation_question_as_write_authorization(
@@ -4387,8 +4358,8 @@ def test_prompt_does_not_treat_continuation_question_as_write_authorization(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "为什么点击下一步不能继续？",
-        route_prompt="为什么点击下一步不能继续？",
+        "why can't I continue after clicking next step?",
+        route_prompt="why can't I continue after clicking next step?",
     )
 
     assert "[DRAMACLAW_CONTINUATION]" not in prompt
@@ -4402,9 +4373,9 @@ def test_prompt_does_not_inject_mainline_continuation_into_freezone(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "下一步",
+        "next step",
         tool_mode="freezone_canvas",
-        route_prompt="下一步",
+        route_prompt="next step",
     )
 
     assert "[DRAMACLAW_CONTINUATION]" not in prompt
@@ -4418,7 +4389,7 @@ def test_freezone_prompt_allows_creative_ideation_canvas_framework_without_mainl
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "我想做个公益短片没思路",
+        "I want to make a charity short film but have no ideas",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4446,7 +4417,7 @@ def test_freezone_prompt_allows_creative_ideation_canvas_framework_without_mainl
     assert "batch only for several ordinary non-workflow" in prompt
     assert "freezone_prepare_workflow_plan_draft once" in prompt
     assert "not a Workflow catalog `skill_id`" in prompt
-    assert "Do not ask for a second “创建并运行” confirmation" in prompt
+    assert "Do not ask for a second “create and run” confirmation" in prompt
     assert "the write tool creates it" in prompt
     assert "Never\n  use the host's built-in request_user_input" in prompt
     assert "canvas video/audio/composition nodes" in prompt
@@ -4467,7 +4438,7 @@ def test_freezone_prompt_defaults_canvas_execution_mode_to_manual_confirmation(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "生成一张图片",
+        "generate an image",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4484,7 +4455,7 @@ def test_freezone_prompt_injects_auto_execute_parameter_policy(monkeypatch, tmp_
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "生成一段视频",
+        "generate a video",
         tool_mode="freezone_canvas",
         surface_context={
             "freezone_canvas_id": "canvas-a",
@@ -4508,7 +4479,7 @@ def test_codex_freezone_prompt_requires_fresh_parameter_selection_for_each_turn(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "继续生成视频",
+        "continue generating the video",
         tool_mode="freezone_canvas",
         surface_context={
             "freezone_canvas_id": "canvas-a",
@@ -4536,7 +4507,7 @@ def test_freezone_prompt_omits_skill_studio_contract_for_normal_canvas_requests(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "加一个视频节点",
+        "add a video node",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4554,7 +4525,7 @@ def test_freezone_prompt_routes_skill_studio_by_user_text_not_canvas_context(
         "admin",
         "project-a",
         (
-            "查看下当前节点详情然后返回ok\n\n"
+            "check the current node details and then return ok\n\n"
             "[SUPERTALE_CANVAS_NODE_REFERENCES]\n"
             "node_type: skillNode\n"
             "available_actions: add_next_node, run_skill\n"
@@ -4562,7 +4533,7 @@ def test_freezone_prompt_routes_skill_studio_by_user_text_not_canvas_context(
         ),
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
-        route_prompt="查看下当前节点详情然后返回ok",
+        route_prompt="check the current node details and then return ok",
     )
 
     assert "[FREEZONE_SKILL_STUDIO]" not in prompt
@@ -4583,16 +4554,16 @@ def test_prompt_keeps_transport_context_out_of_user_message(monkeypatch, tmp_pat
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        f"你是谁？\n\n{transport_context}",
+        f"Who are you?\n\n{transport_context}",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
-        route_prompt="你是谁？",
+        route_prompt="Who are you?",
     )
 
     assert "[DRAMACLAW_EXECUTION_CONTEXT]" in prompt
     assert transport_context in prompt
     assert prompt.index(transport_context) < prompt.index("[USER_MESSAGE]")
-    assert prompt.rsplit("[USER_MESSAGE]\n", 1)[1] == "你是谁？"
+    assert prompt.rsplit("[USER_MESSAGE]\n", 1)[1] == "Who are you?"
     assert prompt.count(transport_context) == 1
 
 
@@ -4600,7 +4571,7 @@ def test_prompt_preserves_legacy_full_message_without_route_prompt(
     monkeypatch, tmp_path
 ):
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
-    legacy_prompt = "你是谁？\n\n[LEGACY_CONTEXT]\nlarge transport context"
+    legacy_prompt = "Who are you?\n\n[LEGACY_CONTEXT]\nlarge transport context"
 
     prompt = chat_service._prompt_with_user_context(
         "admin",
@@ -4620,7 +4591,7 @@ def test_freezone_prompt_includes_clarification_card_rule_for_interactive_questi
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "你给我提几个问题测试一下我对重庆了解多少",
+        "Ask me a few questions to test how much I know about Chongqing",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4642,7 +4613,7 @@ def test_freezone_prompt_includes_skill_studio_contract_only_for_catalog_intent(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "帮我创建一个电商详情页 Skill",
+        "Help me create an e-commerce page Skill",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4680,9 +4651,9 @@ def test_freezone_prompt_includes_skill_studio_contract_only_for_catalog_intent(
     assert "complete dynamic freezone_workflow_plan.v1" in prompt
     assert "dynamic dependency rules" in prompt
     assert "For text Recipes, do not write the final" not in prompt
-    assert "不要自己生成最终内容" not in prompt
-    assert "终端生成型" not in prompt
-    assert "不要把所有 Recipe 都写成 prompt compiler" not in prompt
+    assert "do not generate the final content yourself" not in prompt
+    assert "terminal generation type" not in prompt
+    assert "do not write all Recipes as a prompt compiler" not in prompt
     assert "must not emit Freezone canvas commands" in prompt
     assert (
         "All user-visible Skill Studio text must follow the user's current language"
@@ -4699,7 +4670,7 @@ def test_freezone_prompt_separates_new_skill_from_current_canvas_context(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "我想做一个制作公益短片的 skill",
+        "I want to make a skill for producing charity short films",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4723,7 +4694,7 @@ def test_freezone_prompt_requires_summary_confirmation_for_canvas_workflow_skill
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "把当前流程保存成 Skill",
+        "save the current flow as a Skill",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4746,7 +4717,7 @@ def test_freezone_prompt_requires_summary_confirmation_for_canvas_workflow_skill
     assert "decision matrix" in prompt
     assert "Do not merge these layers into one question" in prompt
     assert "Do not over-infer visual style from node names" in prompt
-    assert 'Never present a vague phrase such as "光影风格广告"' in prompt
+    assert 'Never present a vague phrase such as "lighting-style ad"' in prompt
     assert (
         "The first question for canvas distillation should usually be about what workflow method to preserve"
         in prompt
@@ -4760,16 +4731,16 @@ def test_freezone_prompt_requires_summary_confirmation_for_canvas_workflow_skill
     assert (
         "Translate internal analysis labels into user-facing question titles" in prompt
     )
-    assert "下次主要复用什么？" in prompt
-    assert "下次可以替换哪些内容？" in prompt
-    assert "哪些效果必须保持？" in prompt
-    assert "每次开始前要确认什么？" in prompt
+    assert "What should be reused next time?" in prompt
+    assert "What can be replaced next time?" in prompt
+    assert "Which effects must stay the same?" in prompt
+    assert "What should be confirmed before each start?" in prompt
     assert (
         "Option text should describe the effect of choosing it, not the implementation"
         in prompt
     )
     assert "Do not always ask the same two questions" in prompt
-    assert "do not expose internal terms such as Recipe, Recipes, 配方" in prompt
+    assert "do not expose internal terms such as Recipe, Recipes, allowed_recipe_ids" in prompt
     assert "freezone_request_user_clarification" in prompt
 
 
@@ -4781,7 +4752,7 @@ def test_freezone_prompt_requires_canvas_workflow_distillation_rules(
     prompt = chat_service._prompt_with_user_context(
         "admin",
         "project-a",
-        "帮我把当前画布总结成一个 Skill",
+        "Summarize this canvas as a Skill",
         tool_mode="freezone_canvas",
         surface_context={"freezone_canvas_id": "canvas-a"},
     )
@@ -4867,7 +4838,7 @@ def test_freezone_prompt_requires_canvas_workflow_distillation_rules(
 
 
 def test_tool_mode_does_not_infer_freezone_from_frontend_canvas_injection():
-    prompt = """加个视频节点
+    prompt = """add a video node
 
 [SUPERTALE_CANVAS_ROUTING]
 Current surface is Freezone canvas.
@@ -4987,11 +4958,11 @@ def test_project_history_hides_trace_messages(monkeypatch, tmp_path):
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("NOVELVIDEO_OUTPUT_DIR", str(tmp_path / "output"))
 
-    chat_service.add_user_message("admin", "project-a", "你好")
+    chat_service.add_user_message("admin", "project-a", "Hello")
     chat_service.add_trace_message(
         "admin", "project-a", "→ dramaclaw_pipeline_status\ncompleted"
     )
-    chat_service.add_assistant_message("admin", "project-a", "你好！")
+    chat_service.add_assistant_message("admin", "project-a", "Hello!")
 
     messages = chat_service.list_messages("admin", "project-a")
 
@@ -5019,11 +4990,11 @@ def test_home_history_hides_trace_messages(monkeypatch, tmp_path):
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
     scope = ChatScope(kind="home")
 
-    chat_store.append_message("admin", scope, "user", "你好")
+    chat_store.append_message("admin", scope, "user", "Hello")
     chat_store.append_message(
         "admin", scope, "trace", "→ dramaclaw_pipeline_status\ncompleted"
     )
-    chat_store.append_message("admin", scope, "assistant", "你好！")
+    chat_store.append_message("admin", scope, "assistant", "Hello!")
 
     messages = chat_store.list_messages("admin", scope)
 
@@ -5039,13 +5010,13 @@ def test_chat_history_keeps_repeated_assistant_replies_across_turns(
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
     scope = ChatScope(kind="home")
 
-    chat_store.append_message("admin", scope, "user", "你好", turn_id="turn-1")
+    chat_store.append_message("admin", scope, "user", "Hello", turn_id="turn-1")
     chat_store.append_message(
-        "admin", scope, "assistant", "你好！有什么可以帮你？", turn_id="turn-1"
+        "admin", scope, "assistant", "Hello! How can I help you?", turn_id="turn-1"
     )
-    chat_store.append_message("admin", scope, "user", "你好", turn_id="turn-2")
+    chat_store.append_message("admin", scope, "user", "Hello", turn_id="turn-2")
     chat_store.append_message(
-        "admin", scope, "assistant", "你好！有什么可以帮你？", turn_id="turn-2"
+        "admin", scope, "assistant", "Hello! How can I help you?", turn_id="turn-2"
     )
 
     messages = chat_store.list_messages("admin", scope)
@@ -5056,8 +5027,8 @@ def test_chat_history_keeps_repeated_assistant_replies_across_turns(
         "user",
         "assistant",
     ]
-    assert messages[1]["content"] == "你好！有什么可以帮你？"
-    assert messages[3]["content"] == "你好！有什么可以帮你？"
+    assert messages[1]["content"] == "Hello! How can I help you?"
+    assert messages[3]["content"] == "Hello! How can I help you?"
 
 
 def test_freezone_history_uses_separate_project_chat_db(monkeypatch, tmp_path):
@@ -5235,10 +5206,10 @@ def test_freezone_canvas_agent_summaries_pick_recent_server_agent(
         agent_id="agent-3",
     )
 
-    chat_store.append_message("admin", main_scope, "user", "主会话")
-    chat_store.append_message("admin", other_canvas_scope, "user", "别的画布")
+    chat_store.append_message("admin", main_scope, "user", "main session")
+    chat_store.append_message("admin", other_canvas_scope, "user", "another canvas")
     chat_store.append_message(
-        "admin", second_scope, "user", "最近的服务端会话标题很长需要截断"
+        "admin", second_scope, "user", "Latest server session"
     )
     chat_store.append_message("admin", second_scope, "assistant", "agent-2 reply")
 
@@ -5249,7 +5220,7 @@ def test_freezone_canvas_agent_summaries_pick_recent_server_agent(
     )
 
     assert [summary["id"] for summary in summaries] == ["agent-2", "main"]
-    assert summaries[0]["name"] == "最近的服务端会话标题很长需要截断"
+    assert summaries[0]["name"] == "Latest server session"
     assert summaries[0]["lastActiveAt"] > summaries[1]["lastActiveAt"]
 
 
@@ -5343,7 +5314,7 @@ async def test_freezone_hermes_assistant_message_keeps_turn_id(monkeypatch, tmp_
             yield backend_sdk.ChatBackendEvent(
                 type="thread_started", thread_id="thread-a", turn_id="turn-a"
             )
-            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="你好")
+            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="Hello")
             yield backend_sdk.ChatBackendEvent(type="complete", text="")
 
     class FakePool:
@@ -5362,7 +5333,7 @@ async def test_freezone_hermes_assistant_message_keeps_turn_id(monkeypatch, tmp_
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "你好",
+        "Hello",
         on_event,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5409,7 +5380,7 @@ async def test_freezone_hermes_retries_once_when_cached_session_is_unavailable(
                 thread_id="fresh-thread",
                 turn_id="fresh-turn",
             )
-            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="恢复好了")
+            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="Recovered fine")
             yield backend_sdk.ChatBackendEvent(type="complete", text="")
 
     class FakePool:
@@ -5439,7 +5410,7 @@ async def test_freezone_hermes_retries_once_when_cached_session_is_unavailable(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "你好",
+        "Hello",
         on_event,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5449,7 +5420,7 @@ async def test_freezone_hermes_retries_once_when_cached_session_is_unavailable(
 
     assert fake_pool.get_calls == 1
     assert fake_pool.reset_calls == 1
-    assert result["content"] == "恢复好了"
+    assert result["content"] == "Recovered fine"
     assert any(event.get("thread_id") == "fresh-thread" for event in events)
 
 
@@ -5489,7 +5460,7 @@ async def test_freezone_hermes_retries_once_when_prompt_completion_reports_stale
                 thread_id="fresh-thread",
                 turn_id="fresh-turn",
             )
-            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="恢复好了")
+            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="Recovered fine")
             yield backend_sdk.ChatBackendEvent(type="complete", text="")
 
     class FakePool:
@@ -5514,7 +5485,7 @@ async def test_freezone_hermes_retries_once_when_prompt_completion_reports_stale
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "你好",
+        "Hello",
         lambda _event: None,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5523,7 +5494,7 @@ async def test_freezone_hermes_retries_once_when_prompt_completion_reports_stale
     )
 
     assert fake_pool.reset_calls == 1
-    assert result["content"] == "恢复好了"
+    assert result["content"] == "Recovered fine"
 
 
 @pytest.mark.anyio
@@ -5558,7 +5529,7 @@ async def test_freezone_hermes_retries_once_when_stream_ends_before_completion(
                 thread_id="fresh-thread",
                 turn_id="fresh-turn",
             )
-            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="恢复好了")
+            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="Recovered fine")
             yield backend_sdk.ChatBackendEvent(type="complete", text="")
 
     class FakePool:
@@ -5583,7 +5554,7 @@ async def test_freezone_hermes_retries_once_when_stream_ends_before_completion(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "你好",
+        "Hello",
         lambda _event: None,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5592,7 +5563,7 @@ async def test_freezone_hermes_retries_once_when_stream_ends_before_completion(
     )
 
     assert fake_pool.reset_calls == 1
-    assert result["content"] == "恢复好了"
+    assert result["content"] == "Recovered fine"
 
 
 @pytest.mark.anyio
@@ -5621,7 +5592,7 @@ async def test_freezone_hermes_recovers_once_from_repeated_read(
             prompts.append(prompt)
             yield backend_sdk.ChatBackendEvent(
                 type="complete",
-                text="本轮操作已停止：虾导重复读取同一项状态。",
+                text="This turn was stopped: the Director Agent is repeatedly reading the same state without producing any new action.",
                 guard={
                     "reason": "tool_call_guard",
                     "guard_reason": "repeated_read",
@@ -5634,7 +5605,7 @@ async def test_freezone_hermes_recovers_once_from_repeated_read(
         async def stream(self, prompt, *, current_project=None, **_kwargs):
             prompts.append(prompt)
             yield backend_sdk.ChatBackendEvent(
-                type="assistant_delta", text="工作流草稿已创建"
+                type="assistant_delta", text="The workflow draft has been created"
             )
             yield backend_sdk.ChatBackendEvent(type="complete", text="")
 
@@ -5663,7 +5634,7 @@ async def test_freezone_hermes_recovers_once_from_repeated_read(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "创建一个图片生成工作流",
+        "create an image generation workflow",
         on_event,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5673,12 +5644,12 @@ async def test_freezone_hermes_recovers_once_from_repeated_read(
 
     assert fake_pool.reset_calls == 1
     assert len(prompts) == 2
-    assert "创建一个图片生成工作流" in prompts[1]
+    assert "create an image generation workflow" in prompts[1]
     assert "FREEZONE_AUTOMATIC_RECOVERY" in prompts[1]
-    assert "Workflow Skill 的草稿流程" in prompts[1]
-    assert "不得使用 freezone_emit_canvas_command" in prompts[1]
-    assert result["content"] == "工作流草稿已创建"
-    assert all("重复读取同一项状态" not in str(event) for event in events)
+    assert "the draft flow of the selected Workflow Skill" in prompts[1]
+    assert "do not use freezone_emit_canvas_command" in prompts[1]
+    assert result["content"] == "The workflow draft has been created"
+    assert all("repeatedly reading the same state" not in str(event) for event in events)
 
 
 @pytest.mark.anyio
@@ -5702,7 +5673,7 @@ async def test_freezone_hermes_does_not_replay_failed_workflow_draft_operation(
         async def stream(self, prompt, *, current_project=None, **_kwargs):
             yield backend_sdk.ChatBackendEvent(
                 type="complete",
-                text="本轮操作已停止：工作流草稿操作重复失败。",
+                text="This turn was stopped: the workflow draft operation failed repeatedly.",
                 guard={
                     "reason": "tool_call_guard",
                     "guard_reason": "repeated_read",
@@ -5732,7 +5703,7 @@ async def test_freezone_hermes_does_not_replay_failed_workflow_draft_operation(
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "创建一个图片生成工作流",
+        "create an image generation workflow",
         lambda _event: None,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5741,7 +5712,7 @@ async def test_freezone_hermes_does_not_replay_failed_workflow_draft_operation(
     )
 
     assert fake_pool.reset_calls == 0
-    assert "工作流草稿操作重复失败" in result["content"]
+    assert "workflow draft operation failed repeatedly" in result["content"]
 
 
 @pytest.mark.anyio
@@ -5766,7 +5737,7 @@ async def test_freezone_hermes_drops_mainline_media_ui_specs(monkeypatch, tmp_pa
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/project-a/sketches/ep001/beat_01.png",
-                    "alt": "Beat 1 草图",
+                    "alt": "Beat 1 sketch",
                 },
                 "children": [],
             },
@@ -5781,7 +5752,7 @@ async def test_freezone_hermes_drops_mainline_media_ui_specs(monkeypatch, tmp_pa
             yield backend_sdk.ChatBackendEvent(
                 type="assistant_delta",
                 text=(
-                    "已为你触发了这张图片的生成。\n\n"
+                    "Generation of this image has been triggered for you.\n\n"
                     f"{chat_service._ui_spec_block(sketch_spec)}"
                 ),
             )
@@ -5818,7 +5789,7 @@ async def test_freezone_hermes_drops_mainline_media_ui_specs(monkeypatch, tmp_pa
     result = await chat_service.stream_assistant_reply(
         "admin",
         "project-a",
-        "生成下这个",
+        "generate this one",
         on_event,
         surface="freezone",
         surface_context={"canvasId": "canvas-a"},
@@ -5827,10 +5798,10 @@ async def test_freezone_hermes_drops_mainline_media_ui_specs(monkeypatch, tmp_pa
     )
 
     assert result["role"] == "assistant"
-    assert "已为你触发了这张图片的生成" in result["content"]
+    assert "Generation of this image has been triggered for you" in result["content"]
     assert "<ui-spec" not in result["content"]
     assert "sketch_gallery" not in result["content"]
-    assert "Beat 1 草图" not in result["content"]
+    assert "Beat 1 sketch" not in result["content"]
     assert result["media"] == []
 
 
@@ -5919,7 +5890,7 @@ def test_chat_ui_events_attach_to_user_message_when_turn_has_no_assistant(
         kind="project", id="project-a", surface="freezone", canvas_id="canvas-a"
     )
 
-    chat_store.append_message("admin", scope, "user", "加个视频节点", turn_id="turn-a")
+    chat_store.append_message("admin", scope, "user", "add a video node", turn_id="turn-a")
     chat_store.append_ui_event(
         "admin",
         scope,
@@ -5947,7 +5918,7 @@ def test_chat_message_parts_keep_canvas_feedback_after_stale_snapshot(
         kind="project", id="project-a", surface="freezone", canvas_id="canvas-a"
     )
 
-    chat_store.append_message("admin", scope, "user", "生成下分镜", turn_id="turn-a")
+    chat_store.append_message("admin", scope, "user", "generate the storyboard", turn_id="turn-a")
     chat_store.append_message("admin", scope, "assistant", "", turn_id="turn-a")
     context_part = {
         "id": "canvas_context:context:bridge-a:validation",
@@ -5972,7 +5943,7 @@ def test_chat_message_parts_keep_canvas_feedback_after_stale_snapshot(
         "type": "canvas_feedback",
         "event": {
             "key": "bridge:bridge-a:turn:turn-a",
-            "errors": ["节点动作完成但未产出 imageUrl。"],
+            "errors": ["The node action completed but produced no imageUrl."],
         },
     }
 
@@ -6004,7 +5975,7 @@ def test_chat_message_parts_keep_canvas_feedback_after_stale_snapshot(
 
     assert "canvas_feedback" in part_types
     assert "canvas_approval" not in part_types
-    assert feedback["event"]["errors"] == ["节点动作完成但未产出 imageUrl。"]
+    assert feedback["event"]["errors"] == ["The node action completed but produced no imageUrl."]
 
 
 def test_chat_message_parts_drop_stale_skill_studio_status_snapshot(
@@ -6016,10 +5987,10 @@ def test_chat_message_parts_drop_stale_skill_studio_status_snapshot(
     )
 
     chat_store.append_message(
-        "admin", scope, "user", "做一个公益短片 skill", turn_id="turn-a"
+        "admin", scope, "user", "make a charity short film skill", turn_id="turn-a"
     )
     chat_store.append_message(
-        "admin", scope, "assistant", "草稿已生成。", turn_id="turn-a"
+        "admin", scope, "assistant", "The draft has been generated.", turn_id="turn-a"
     )
     question_part = {
         "id": "skill_studio.questions:question-key",
@@ -6037,10 +6008,10 @@ def test_chat_message_parts_drop_stale_skill_studio_status_snapshot(
         "event": {
             "type": "skill_studio.status",
             "status": "draft_patch_applied",
-            "message": "已更新 Recipe: public-welfare-storyboard-images",
+            "message": "Updated Recipe: public-welfare-storyboard-images",
         },
     }
-    text_part = {"id": "text-3", "type": "text", "text": "草稿已生成。"}
+    text_part = {"id": "text-3", "type": "text", "text": "The draft has been generated."}
 
     chat_store.append_ui_event(
         "admin",
@@ -6074,9 +6045,9 @@ def test_chat_history_does_not_restore_orphan_parts_outside_message_limit(
         kind="project", id="project-a", surface="freezone", canvas_id="canvas-a"
     )
 
-    chat_store.append_message("admin", scope, "user", "旧请求", turn_id="turn-old")
+    chat_store.append_message("admin", scope, "user", "old request", turn_id="turn-old")
     chat_store.append_message(
-        "admin", scope, "assistant", "完整旧回复", turn_id="turn-old"
+        "admin", scope, "assistant", "complete old reply", turn_id="turn-old"
     )
     chat_store.append_ui_event(
         "admin",
@@ -6084,17 +6055,17 @@ def test_chat_history_does_not_restore_orphan_parts_outside_message_limit(
         "turn-old",
         {
             "type": "assistant.message_parts",
-            "parts": [{"id": "text-old", "type": "text", "text": "残缺旧回复"}],
+            "parts": [{"id": "text-old", "type": "text", "text": "truncated old reply"}],
         },
     )
-    chat_store.append_message("admin", scope, "user", "新请求", turn_id="turn-new")
+    chat_store.append_message("admin", scope, "user", "new request", turn_id="turn-new")
     chat_store.append_message(
-        "admin", scope, "assistant", "完整新回复", turn_id="turn-new"
+        "admin", scope, "assistant", "complete new reply", turn_id="turn-new"
     )
 
     messages = chat_store.list_messages("admin", scope, limit=2)
 
-    assert [message["content"] for message in messages] == ["新请求", "完整新回复"]
+    assert [message["content"] for message in messages] == ["new request", "complete new reply"]
     assert all(message.get("turn_id") != "turn-old" for message in messages)
 
 
@@ -6165,7 +6136,7 @@ def test_legacy_freezone_scope_still_uses_legacy_chat_db(monkeypatch, tmp_path):
 
 
 def test_json_render_reply_normalizer_unwraps_fenced_ui_spec():
-    content = """请查看：
+    content = """Please look:
 
 ```json-render
 <ui-spec>
@@ -6180,7 +6151,7 @@ def test_json_render_reply_normalizer_unwraps_fenced_ui_spec():
     },
     "portrait": {
       "type": "Image",
-      "props": {"src": "/static/projects/demo/portrait.png", "alt": "肖像"},
+      "props": {"src": "/static/projects/demo/portrait.png", "alt": "portrait"},
       "children": []
     }
   }
@@ -6200,7 +6171,7 @@ def test_json_render_reply_normalizer_repairs_missing_trailing_brace():
 
     normalized = chat_service._normalize_json_render_reply(content)
 
-    assert "格式校验失败" not in normalized
+    assert "validation failed" not in normalized
     assert '"elements": {' in normalized
     assert normalized.rstrip().endswith("</ui-spec>")
 
@@ -6218,7 +6189,7 @@ def test_json_render_reply_normalizer_repairs_legacy_component_children_props():
     },
     "heading": {
       "type": "Heading",
-      "props": {"level": 3, "children": "第 1 集脚本概览"},
+      "props": {"level": 3, "children": "Episode 1 script overview"},
       "children": []
     },
     "badge": {
@@ -6228,7 +6199,7 @@ def test_json_render_reply_normalizer_repairs_legacy_component_children_props():
     },
     "body": {
       "type": "Text",
-      "props": {"children": "脚本已经生成完成。", "variant": "body"},
+      "props": {"children": "The script has been generated.", "variant": "body"},
       "children": []
     }
   }
@@ -6237,12 +6208,12 @@ def test_json_render_reply_normalizer_repairs_legacy_component_children_props():
 
     normalized = chat_service._normalize_json_render_reply(content)
 
-    assert "格式校验失败" not in normalized
+    assert "validation failed" not in normalized
     assert '"direction": "column"' in normalized
-    assert '"content": "第 1 集脚本概览"' in normalized
+    assert '"content": "Episode 1 script overview"' in normalized
     assert '"label": "completed"' in normalized
-    assert '"content": "脚本已经生成完成。"' in normalized
-    assert '"children": "脚本已经生成完成。"' not in normalized
+    assert '"content": "The script has been generated."' in normalized
+    assert '"children": "The script has been generated."' not in normalized
 
 
 def test_json_render_reply_normalizer_blocks_invalid_ui_spec():
@@ -6251,7 +6222,7 @@ def test_json_render_reply_normalizer_blocks_invalid_ui_spec():
     normalized = chat_service._normalize_json_render_reply(content)
 
     assert "<ui-spec>" not in normalized
-    assert "格式校验失败" in normalized
+    assert "validation failed" in normalized
 
 
 def test_json_render_reply_normalizer_accepts_media_bundle_array():
@@ -6262,7 +6233,7 @@ def test_json_render_reply_normalizer_accepts_media_bundle_array():
             "root": {"type": "Stack", "props": {}, "children": ["portrait"]},
             "portrait": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/portrait.png", "alt": "肖像"},
+                "props": {"src": "/static/projects/demo/portrait.png", "alt": "portrait"},
                 "children": [],
             },
         },
@@ -6274,7 +6245,7 @@ def test_json_render_reply_normalizer_accepts_media_bundle_array():
             "root": {"type": "Stack", "props": {}, "children": ["sketch"]},
             "sketch": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/sketch.png", "alt": "草图"},
+                "props": {"src": "/static/projects/demo/sketch.png", "alt": "sketch"},
                 "children": [],
             },
         },
@@ -6283,7 +6254,7 @@ def test_json_render_reply_normalizer_accepts_media_bundle_array():
 
     normalized = chat_service._normalize_json_render_reply(content)
 
-    assert "格式校验失败" not in normalized
+    assert "validation failed" not in normalized
     assert normalized.count("<ui-spec") == 1
     assert '<ui-spec type="media_bundle">' in normalized
     assert '"type": "character_showcase"' in normalized
@@ -6298,19 +6269,19 @@ def test_json_render_reply_normalizer_wraps_embedded_canonical_json():
             "root": {"type": "Stack", "props": {}, "children": ["sketch"]},
             "sketch": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/sketch.png", "alt": "草图"},
+                "props": {"src": "/static/projects/demo/sketch.png", "alt": "sketch"},
                 "children": [],
             },
         },
     }
     content = (
-        f"已加载草图：\n\n{json.dumps(spec, ensure_ascii=False)}\n\n继续查看请告诉我。"
+        f"Sketch loaded:\n\n{json.dumps(spec, ensure_ascii=False)}\n\nTell me if you want to keep viewing."
     )
 
     normalized = chat_service._normalize_json_render_reply(content)
 
-    assert "已加载草图" in normalized
-    assert "继续查看请告诉我" in normalized
+    assert "Sketch loaded" in normalized
+    assert "Tell me if you want to keep viewing" in normalized
     assert '<ui-spec type="sketch_gallery">' in normalized
     assert "/static/projects/demo/sketch.png" in normalized
 
@@ -6333,7 +6304,7 @@ def test_extract_tool_ui_specs_canonicalizes_tool_payload():
                             "type": "Image",
                             "props": {
                                 "src": "/static/projects/demo/scene.png?v=1",
-                                "alt": "场景",
+                                "alt": "scene",
                             },
                         },
                     },
@@ -6369,7 +6340,7 @@ def test_extract_tool_ui_specs_parses_json_string_tool_result():
                             "type": "Image",
                             "props": {
                                 "src": "/static/projects/demo/sketch.png?v=1",
-                                "alt": "草图",
+                                "alt": "sketch",
                             },
                         },
                     },
@@ -6400,7 +6371,7 @@ def test_extract_tool_chat_error_from_nested_tool_result_string():
                     {
                         "status": "failed",
                         "error": "Content filter triggered. Finish reason: 'content_filter'",
-                        "chat_error": "模型内容安全过滤拦截了本次文本生成，请调整原文后重试。",
+                        "chat_error": "The model content-safety filter blocked this text generation; adjust the source text and retry.",
                     }
                 ],
             },
@@ -6410,7 +6381,7 @@ def test_extract_tool_chat_error_from_nested_tool_result_string():
 
     assert (
         chat_service._extract_tool_chat_error(payload)
-        == "模型内容安全过滤拦截了本次文本生成，请调整原文后重试。"
+        == "The model content-safety filter blocked this text generation; adjust the source text and retry."
     )
 
 
@@ -6429,8 +6400,8 @@ def test_extract_tool_chat_error_ignores_raw_provider_error_without_hint():
 
 def test_extract_tool_chat_error_maps_render_prereq_task_error():
     raw_error = (
-        "Render 重生未生成可用图片（mode=1x1_2-3, beats=[1, 2, 3]）："
-        "Render 模式需要草图但未找到覆盖 beat 1-1 的草图"
+        "Render regeneration produced no usable image (mode=1x1_2-3, beats=[1, 2, 3]): "
+        "Render mode requires a sketch but none was found covering beat 1-1"
     )
     payload = {
         "sessionUpdate": "tool_call_update",
@@ -6444,8 +6415,8 @@ def test_extract_tool_chat_error_maps_render_prereq_task_error():
     chat_error = chat_service._extract_tool_chat_error(payload)
 
     assert chat_error is not None
-    assert "Render 任务没有生成可用图片" in chat_error
-    assert "虾塘" in chat_error
+    assert "The Render task did not produce a usable image" in chat_error
+    assert "character workbench" in chat_error
     assert raw_error in chat_error
 
 
@@ -6455,15 +6426,15 @@ def test_extract_tool_chat_error_maps_generic_failed_task_error():
         "status": "completed",
         "result": {
             "status": "failed",
-            "error": "上游下载失败 token=secret-token provider_response_id=resp_123",
+            "error": "Upstream download failed token=secret-token provider_response_id=resp_123",
         },
     }
 
     chat_error = chat_service._extract_tool_chat_error(payload)
 
     assert chat_error is not None
-    assert chat_error.startswith("任务执行失败：")
-    assert "上游下载失败" in chat_error
+    assert chat_error.startswith("Task failed: ")
+    assert "Upstream download failed" in chat_error
     assert "secret-token" not in chat_error
     assert "resp_123" not in chat_error
 
@@ -6477,7 +6448,7 @@ def test_extract_tool_chat_error_maps_ok_false_without_error_text():
 
     assert (
         chat_service._extract_tool_chat_error(payload)
-        == "任务执行失败：接口返回 ok=false，但没有提供具体错误原因。"
+        == "Task failed: the API returned ok=false without a specific error."
     )
 
 
@@ -6511,8 +6482,8 @@ def test_freezone_suppresses_canvas_bridge_tool_lifecycle_failure():
                             "ok": False,
                             "tool_call_status": "failed",
                             "canvas_apply_status": "failed",
-                            "errors": ["节点动作完成但未产出 imageUrl。"],
-                            "user_message": "节点动作完成但未产出 imageUrl。",
+                            "errors": ["The node action completed but produced no imageUrl."],
+                            "user_message": "The node action completed but produced no imageUrl.",
                         },
                         ensure_ascii=False,
                     ),
@@ -6533,7 +6504,7 @@ def test_freezone_keeps_tool_lifecycle_failure_with_business_payload():
         "status": "failed",
         "result": {
             "status": "failed",
-            "error": "前端桥接执行失败",
+            "error": "Frontend bridge execution failed",
         },
     }
 
@@ -6544,14 +6515,14 @@ def test_freezone_keeps_tool_lifecycle_failure_with_business_payload():
 
 
 def test_freezone_strips_status_only_lifecycle_failure_prefix():
-    text = "任务执行失败：当前状态为 failed。\n\n已触发「Sketch from selected background」技能。"
+    text = "Task failed: current status is failed.\n\nTriggered the “Sketch from selected background” skill."
 
     assert (
         chat_service._strip_freezone_tool_lifecycle_failure_text(
             text,
             tool_mode="freezone_canvas",
         )
-        == "已触发「Sketch from selected background」技能。"
+        == "Triggered the “Sketch from selected background” skill."
     )
     assert (
         chat_service._strip_freezone_tool_lifecycle_failure_text(
@@ -6565,17 +6536,17 @@ def test_freezone_strips_status_only_lifecycle_failure_prefix():
 def test_freezone_hides_generic_tool_lifecycle_failure_error():
     assert (
         chat_service._visible_tool_chat_error_for_mode(
-            "任务执行失败：当前状态为 failed。",
+            "Task failed: current status is failed.",
             tool_mode="freezone_canvas",
         )
         is None
     )
     assert (
         chat_service._visible_tool_chat_error_for_mode(
-            "任务执行失败：当前状态为 failed。",
+            "Task failed: current status is failed.",
             tool_mode="default",
         )
-        == "任务执行失败：当前状态为 failed。"
+        == "Task failed: current status is failed."
     )
 
 
@@ -6589,16 +6560,16 @@ def test_append_tool_ui_specs_adds_block_when_model_did_not_write_one():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/portrait.png?v=1",
-                    "alt": "肖像",
+                    "alt": "portrait",
                 },
                 "children": [],
             },
         },
     }
 
-    content = chat_service._append_tool_ui_specs("已展示肖像。", [spec])
+    content = chat_service._append_tool_ui_specs("Portrait shown.", [spec])
 
-    assert content.startswith("已展示肖像。")
+    assert content.startswith("Portrait shown.")
     assert '<ui-spec type="character_showcase">' in content
     assert "/static/projects/demo/portrait.png?v=1" in content
 
@@ -6613,7 +6584,7 @@ def test_append_tool_ui_specs_ignores_placeholder_ui_spec_chatter():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/portrait.png?v=1",
-                    "alt": "肖像",
+                    "alt": "portrait",
                 },
                 "children": [],
             },
@@ -6623,10 +6594,10 @@ def test_append_tool_ui_specs_ignores_placeholder_ui_spec_chatter():
     content = chat_service._append_tool_ui_specs(
         "\n".join(
             [
-                "首先，调用dramaclaw_get_character_media工具获取角色肖像信息：",
+                "First, call the dramaclaw_get_character_media tool to get the character portrait information:",
                 "<ui-spec> JSON has been generated and will be automatically rendered by the backend.",
-                "所有图片都已按规范渲染为UI画廊，您可以直接查看。",
-                "如需查看其他内容，请告诉我。",
+                "All images have been rendered into the UI gallery per the spec, so you can view them directly.",
+                "Let me know if you want to see anything else.",
             ]
         ),
         [spec],
@@ -6634,8 +6605,8 @@ def test_append_tool_ui_specs_ignores_placeholder_ui_spec_chatter():
 
     assert "dramaclaw_get_character_media" not in content
     assert "automatically rendered" not in content
-    assert "UI画廊" not in content
-    assert "如需查看其他内容" in content
+    assert "UI gallery" not in content
+    assert "Let me know if you want to see anything else" in content
     assert '<ui-spec type="character_showcase">' in content
     assert "/static/projects/demo/portrait.png?v=1" in content
 
@@ -6648,7 +6619,7 @@ def test_append_tool_ui_specs_replaces_truncated_embedded_media_json():
             "root": {"type": "Stack", "props": {}, "children": ["sketch"]},
             "sketch": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/sketch.png", "alt": "草图"},
+                "props": {"src": "/static/projects/demo/sketch.png", "alt": "sketch"},
                 "children": [],
             },
         },
@@ -6659,12 +6630,12 @@ def test_append_tool_ui_specs_replaces_truncated_embedded_media_json():
     )
 
     content = chat_service._append_tool_ui_specs(
-        f"已为您展示草图：\n\n{truncated_json}\n\n继续查看请告诉我。",
+        f"Here are the sketches:\n\n{truncated_json}\n\nTell me if you want to keep viewing.",
         [spec],
     )
 
-    assert "已为您展示草图" in content
-    assert "继续查看请告诉我" in content
+    assert "Here are the sketches" in content
+    assert "Tell me if you want to keep viewing" in content
     assert truncated_json not in content
     assert '<ui-spec type="sketch_gallery">' in content
     assert "/static/projects/demo/sketch.png" in content
@@ -6680,7 +6651,7 @@ def test_ui_spec_json_is_generated_before_wrapping_tags():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/portrait.png?v=1",
-                    "alt": "肖像",
+                    "alt": "portrait",
                 },
                 "children": [],
             },
@@ -6707,8 +6678,8 @@ def test_append_tool_ui_specs_keeps_image_specs_separate_and_ordered():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/portrait.png?v=1",
-                    "alt": "肖像",
-                    "overlayTitle": "江念",
+                    "alt": "portrait",
+                    "overlayTitle": "Jiang Nian",
                 },
                 "children": [],
             },
@@ -6723,8 +6694,8 @@ def test_append_tool_ui_specs_keeps_image_specs_separate_and_ordered():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/sketch.png?v=1",
-                    "alt": "草图",
-                    "overlayTitle": "Beat 1 草图",
+                    "alt": "sketch",
+                    "overlayTitle": "Beat 1 sketch",
                 },
                 "children": [],
             },
@@ -6732,7 +6703,7 @@ def test_append_tool_ui_specs_keeps_image_specs_separate_and_ordered():
     }
 
     content = chat_service._append_tool_ui_specs(
-        "已展示媒体。", [portrait_spec, sketch_spec]
+        "Media shown.", [portrait_spec, sketch_spec]
     )
 
     assert content.count("<ui-spec") == 2
@@ -6758,8 +6729,8 @@ def test_append_tool_ui_specs_merges_adjacent_character_showcase_specs():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/jiang-nian.png?v=1",
-                    "alt": "江念",
-                    "overlayTitle": "江念",
+                    "alt": "Jiang Nian",
+                    "overlayTitle": "Jiang Nian",
                 },
                 "children": [],
             },
@@ -6774,8 +6745,8 @@ def test_append_tool_ui_specs_merges_adjacent_character_showcase_specs():
                 "type": "Image",
                 "props": {
                     "src": "/static/projects/demo/luo-xi.png?v=1",
-                    "alt": "洛曦",
-                    "overlayTitle": "洛曦",
+                    "alt": "Luo Xi",
+                    "overlayTitle": "Luo Xi",
                 },
                 "children": [],
             },
@@ -6783,7 +6754,7 @@ def test_append_tool_ui_specs_merges_adjacent_character_showcase_specs():
     }
 
     content = chat_service._append_tool_ui_specs(
-        "已展示角色。", [first_spec, second_spec]
+        "Characters shown.", [first_spec, second_spec]
     )
 
     assert content.count('<ui-spec type="character_showcase">') == 1
@@ -6846,7 +6817,7 @@ def test_append_tool_ui_specs_merges_same_category_video_and_audio_specs():
     }
 
     content = chat_service._append_tool_ui_specs(
-        "已展示媒体。", [video_a, video_b, audio_a, audio_b]
+        "Media shown.", [video_a, video_b, audio_a, audio_b]
     )
 
     assert content.count('<ui-spec type="keyframe_video">') == 1
@@ -6871,7 +6842,7 @@ def test_append_tool_ui_specs_keeps_same_src_across_different_categories():
             "root": {"type": "Stack", "props": {}, "children": ["portrait"]},
             "portrait": {
                 "type": "Image",
-                "props": {"src": shared_src, "alt": "肖像", "overlayTitle": "角色肖像"},
+                "props": {"src": shared_src, "alt": "portrait", "overlayTitle": "Character portrait"},
                 "children": [],
             },
         },
@@ -6883,20 +6854,20 @@ def test_append_tool_ui_specs_keeps_same_src_across_different_categories():
             "root": {"type": "Stack", "props": {}, "children": ["sketch"]},
             "sketch": {
                 "type": "Image",
-                "props": {"src": shared_src, "alt": "草图", "overlayTitle": "草图候选"},
+                "props": {"src": shared_src, "alt": "sketch", "overlayTitle": "Sketch candidate"},
                 "children": [],
             },
         },
     }
 
     content = chat_service._append_tool_ui_specs(
-        "已展示媒体。", [portrait_spec, sketch_spec]
+        "Media shown.", [portrait_spec, sketch_spec]
     )
 
     assert content.count("<ui-spec") == 2
     assert content.count(shared_src) == 2
-    assert "角色肖像" in content
-    assert "草图候选" in content
+    assert "Character portrait" in content
+    assert "Sketch candidate" in content
 
 
 def test_split_ui_specs_from_text_extracts_model_written_blocks():
@@ -6907,21 +6878,21 @@ def test_split_ui_specs_from_text_extracts_model_written_blocks():
             "root": {"type": "Stack", "props": {}, "children": ["image"]},
             "image": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/sketch.png", "alt": "草图"},
+                "props": {"src": "/static/projects/demo/sketch.png", "alt": "sketch"},
                 "children": [],
             },
         },
     }
     content = (
-        "以下是草图：\n\n"
+        "Here are the sketches:\n\n"
         f"<ui-spec>{json.dumps(spec, ensure_ascii=False)}</ui-spec>\n\n"
-        "展示完成。"
+        "Display complete."
     )
 
     text, specs = chat_service._split_ui_specs_from_text(content)
 
     assert "<ui-spec" not in text
-    assert text == "以下是草图：\n\n展示完成。"
+    assert text == "Here are the sketches:\n\nDisplay complete."
     assert len(specs) == 1
     assert specs[0]["type"] == "sketch_gallery"
     assert specs[0]["elements"]["image"]["children"] == []
@@ -6935,7 +6906,7 @@ def test_append_tool_ui_specs_does_not_duplicate_existing_ui_spec():
             "root": {"type": "Stack", "props": {}, "children": ["portrait"]},
             "portrait": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/portrait.png", "alt": "肖像"},
+                "props": {"src": "/static/projects/demo/portrait.png", "alt": "portrait"},
                 "children": [],
             },
         },
@@ -6947,19 +6918,19 @@ def test_append_tool_ui_specs_does_not_duplicate_existing_ui_spec():
             "root": {"type": "Stack", "props": {}, "children": ["sketch"]},
             "sketch": {
                 "type": "Image",
-                "props": {"src": "/static/projects/demo/sketch.png", "alt": "草图"},
+                "props": {"src": "/static/projects/demo/sketch.png", "alt": "sketch"},
                 "children": [],
             },
         },
     }
 
     content = chat_service._append_tool_ui_specs(
-        f"已有展示\n<ui-spec>{json.dumps(existing_spec, ensure_ascii=False)}</ui-spec>",
+        f"Existing display\n<ui-spec>{json.dumps(existing_spec, ensure_ascii=False)}</ui-spec>",
         [tool_spec],
     )
 
     assert content.count("<ui-spec") == 1
-    assert "已有展示" in content
+    assert "Existing display" in content
     assert "/static/projects/demo/portrait.png" in content
     assert "/static/projects/demo/sketch.png" not in content
 
@@ -7080,8 +7051,8 @@ _READ_NODE_DETAIL = SimpleNamespace(
     error=None,
 )
 
-_READ_ONLY_ANSWER = "工作流失败，未生成视频。"
-_FORMAT_FAILURE = "回复未通过操作结果校验：未返回结构化结果，请重试。"
+_READ_ONLY_ANSWER = "The workflow failed; no video was generated."
+_FORMAT_FAILURE = "The reply did not pass operation result validation: No structured result was returned; please retry."
 
 
 @pytest.mark.anyio
@@ -7106,14 +7077,14 @@ _FORMAT_FAILURE = "回复未通过操作结果校验：未返回结构化结果�
             _codex_turn_events(
                 json.dumps(
                     {
-                        "message": "图片节点已创建成功。",
+                        "message": "The image node was created successfully.",
                         "mode": "mutation",
                         "canvas_receipts": [{"bridge_key": "forged", "revision": None}],
                     },
                     ensure_ascii=False,
                 )
             ),
-            "画布操作未完成：本轮没有可验证的画布写入回执，请重试。",
+            "Canvas operation incomplete: this turn has no verifiable canvas write receipt; please retry.",
         ),
         (_codex_turn_events(_READ_ONLY_ANSWER), _FORMAT_FAILURE),
         (_codex_turn_events("", disposition="timeout"), _FORMAT_FAILURE),
@@ -7173,7 +7144,7 @@ async def test_codex_freezone_read_only_plain_reply_is_repaired_once(
         agent_id="main",
         state_dir=str(tmp_path / "state" / "admin" / "project-a"),
     )
-    request_prompt = "检查刚才工作流的真实状态，只回答一句话。"
+    request_prompt = "Check the real status of the workflow just now and answer in one sentence."
     result = await chat_service._stream_assistant_reply_codex(
         "admin",
         "project-a",
@@ -7201,14 +7172,14 @@ async def test_codex_freezone_read_only_plain_reply_is_repaired_once(
     [
         _codex_turn_events(
             json.dumps(
-                {"message": "建议保持布局。", "mode": "read_only", "canvas_receipts": []},
+                {"message": "I suggest keeping the layout.", "mode": "read_only", "canvas_receipts": []},
                 ensure_ascii=False,
             )
         ),
         _codex_turn_events(
             json.dumps(
                 {
-                    "message": "图片节点已创建成功。",
+                    "message": "The image node was created successfully.",
                     "mode": "read_only",
                     "canvas_receipts": [{"bridge_key": "forged", "revision": None}],
                 },
@@ -7259,7 +7230,7 @@ async def test_codex_freezone_format_repair_only_follows_completed_contract_fail
     result = await chat_service._stream_assistant_reply_codex(
         "admin",
         "project-a",
-        "只给我布局建议",
+        "just give me layout suggestions",
         collect_event,
         project_state_dir=tmp_path / "state" / "admin" / "project-a",
         tool_mode="freezone_canvas",
@@ -7273,8 +7244,8 @@ async def test_codex_freezone_format_repair_only_follows_completed_contract_fail
             state_dir=str(tmp_path / "state" / "admin" / "project-a"),
         ),
         turn_id="business-turn",
-        route_prompt="只给我布局建议",
+        route_prompt="just give me layout suggestions",
     )
 
     assert len(prompts) == 1
-    assert "已创建成功" not in result["content"]
+    assert "Created successfully" not in result["content"]

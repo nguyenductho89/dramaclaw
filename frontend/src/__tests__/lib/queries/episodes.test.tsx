@@ -275,7 +275,7 @@ describe("episode list cache merging", () => {
           number: 2,
           title: "Episode Two",
           identity_ids: ["Lu Chen_young_adult", "Shen Yuebai_young_adult"],
-          identity_default_map: { Lu Chen: "Lu Chen_young_adult" },
+          identity_default_map: { "Lu Chen": "Lu Chen_young_adult" },
         },
       ),
     ).toEqual([
@@ -284,7 +284,7 @@ describe("episode list cache merging", () => {
         number: 2,
         title: "Episode Two",
         identity_ids: ["Lu Chen_young_adult", "Shen Yuebai_young_adult"],
-        identity_default_map: { Lu Chen: "Lu Chen_young_adult" },
+        identity_default_map: { "Lu Chen": "Lu Chen_young_adult" },
       },
     ]);
   });

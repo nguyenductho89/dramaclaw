@@ -26,7 +26,7 @@ describe("canvas command validator", () => {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
       commands: [
         {type: "create_node", client_id: "blue-cup", node_type: CANVAS_NODE_TYPES.imageGen,
-          data: {displayName: "蓝底红杯", prompt: "保留杯形，蓝底，不加字", workflowCatalog: {
+          data: {displayName: "Blue-bottom red cup", prompt: "Keep the cup shape, blue base, no text", workflowCatalog: {
             skillId: "ecommerce-ad", recipeId: "ecommerce-remix-image",
           }}},
         {type: "create_edge", source: "red-cup-source", target: "blue-cup", link_type: "media_input_for",
@@ -49,7 +49,7 @@ describe("canvas command validator", () => {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
       commands: [
         { type: "create_node", client_id: "result", node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { prompt: "改蓝色背景" } },
+          data: { prompt: "Change to a blue background" } },
         { type: "create_edge", source: "reference", target: "result", link_type: "media_input_for",
           expected_source_image_url: "/static/projects/project-a/reference.png" },
       ],
@@ -108,7 +108,7 @@ describe("canvas command validator", () => {
     expect(contextLinkType).toMatchObject({
       source_object_types: ["TextNode", "ScriptNode"],
       target_object_types: ["TextNode", "ScriptNode"],
-      description: "文本/剧本规划节点之间的背景、约束或说明关系，用于组织创作思路，不直接驱动媒体生成。",
+      description: "Background, constraint or explanatory relation between text/script planning nodes, used to organize creative thinking; it does not directly drive media generation.",
       instruction: expect.stringContaining("Never use context_for for image/video/audio generation targets"),
     });
   });
@@ -266,7 +266,7 @@ describe("canvas command validator", () => {
     const videoNode = node({
       id: "video-node",
       type: CANVAS_NODE_TYPES.video,
-      data: { prompt: "旧提示词", displayName: "旧标题" },
+      data: { prompt: "Old prompt", displayName: "Old title" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -274,7 +274,7 @@ describe("canvas command validator", () => {
         {
           type: "update_node_data",
           node_id: "video-node",
-          data: { label: "新标题" },
+          data: { label: "New title" },
         },
       ],
     };
@@ -289,7 +289,7 @@ describe("canvas command validator", () => {
     const textNode = node({
       id: "text-node",
       type: CANVAS_NODE_TYPES.textAnnotation,
-      data: { displayName: "旧标题", content: "旧内容" },
+      data: { displayName: "Old title", content: "Old content" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -297,7 +297,7 @@ describe("canvas command validator", () => {
         {
           type: "update_node_data",
           node_id: "text-node",
-          data: { title: "新标题", content: "新内容" },
+          data: { title: "New title", content: "New content" },
         },
       ],
     };
@@ -317,8 +317,8 @@ describe("canvas command validator", () => {
           client_id: "brief",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
           data: {
-            displayName: "海报简报",
-            content: "家乡文化海报策划",
+            displayName: "Poster brief",
+            content: "Hometown culture poster plan",
             semanticOutputRole: "planning_text",
           },
         },
@@ -326,7 +326,7 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "poster",
           node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { displayName: "海报图", prompt: "一张家乡文化海报" },
+          data: { displayName: "Poster image", prompt: "A hometown culture poster" },
         },
         {
           type: "create_edge",
@@ -358,13 +358,13 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "prompt",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
-          data: { displayName: "图片提示", content: "新国风水墨海报" },
+          data: { displayName: "Image prompt", content: "New Chinese-style ink-wash poster" },
         },
         {
           type: "create_node",
           client_id: "poster",
           node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { displayName: "海报图", prompt: "" },
+          data: { displayName: "Poster image", prompt: "" },
         },
         {
           type: "create_edge",
@@ -389,13 +389,13 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "poster_root",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
-          data: { displayName: "海报创意工作区", content: "整体方向" },
+          data: { displayName: "Poster creative workspace", content: "Overall direction" },
         },
         {
           type: "create_node",
           client_id: "culture_elements",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
-          data: { displayName: "文化元素", content: "家乡文化符号" },
+          data: { displayName: "Cultural elements", content: "Hometown cultural symbols" },
         },
         {
           type: "create_edge",
@@ -420,13 +420,13 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "brief",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
-          data: { displayName: "海报创意", content: "整体方向" },
+          data: { displayName: "Poster concept", content: "Overall direction" },
         },
         {
           type: "create_node",
           client_id: "poster",
           node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { displayName: "海报图", prompt: "生成海报" },
+          data: { displayName: "Poster image", prompt: "Generate poster" },
         },
         {
           type: "create_edge",
@@ -456,8 +456,8 @@ describe("canvas command validator", () => {
           client_id: "prompt",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
           data: {
-            displayName: "海报提示词",
-            content: "一张家乡文化海报，典雅大气，高清印刷风格",
+            displayName: "Poster prompt",
+            content: "A hometown culture poster, elegant and grand, high-definition print style",
             semanticOutputRole: "input_text",
           },
         },
@@ -465,7 +465,7 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "poster",
           node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { displayName: "海报图", prompt: "按上游提示词生成海报" },
+          data: { displayName: "Poster image", prompt: "Generate the poster from the upstream prompt" },
         },
         {
           type: "create_edge",
@@ -490,13 +490,13 @@ describe("canvas command validator", () => {
           type: "create_node",
           client_id: "image_input",
           node_type: CANVAS_NODE_TYPES.imageGen,
-          data: { displayName: "图片输入", imageUrl: "/static/input.png" },
+          data: { displayName: "Image input", imageUrl: "/static/input.png" },
         },
         {
           type: "create_node",
           client_id: "text_output",
           node_type: CANVAS_NODE_TYPES.textAnnotation,
-          data: { displayName: "生成文本", content: "根据上游图片生成描述文本。" },
+          data: { displayName: "Generate text", content: "Generate a description text from the upstream image." },
         },
         {
           type: "create_edge",
@@ -600,7 +600,7 @@ describe("canvas command validator", () => {
     const imageNode = node({
       id: "image-node",
       type: CANVAS_NODE_TYPES.imageGen,
-      data: { prompt: "猫吃鱼" },
+      data: { prompt: "Cat eating fish" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -654,7 +654,7 @@ describe("canvas command validator", () => {
     const pendingBackgroundNode = node({
       id: "pending-background",
       type: CANVAS_NODE_TYPES.imageGen,
-      data: { prompt: "背景图生成中" },
+      data: { prompt: "Background image generating" },
     });
     const skillNode = node({
       id: "skill-node",
@@ -703,7 +703,7 @@ describe("canvas command validator", () => {
     const worldNode = node({
       id: "world-node",
       type: CANVAS_NODE_TYPES.threeDWorld,
-      data: { displayName: "导演世界" },
+      data: { displayName: "Director world" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -731,7 +731,7 @@ describe("canvas command validator", () => {
     const worldNode = node({
       id: "world-node",
       type: CANVAS_NODE_TYPES.threeDWorld,
-      data: { displayName: "导演世界" },
+      data: { displayName: "Director world" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -775,7 +775,7 @@ describe("canvas command validator", () => {
     const videoNode = node({
       id: "video-node",
       type: CANVAS_NODE_TYPES.video,
-      data: { videoUrl: "/static/video.mp4", prompt: "镜头推进" },
+      data: { videoUrl: "/static/video.mp4", prompt: "Camera push-in" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -808,7 +808,7 @@ describe("canvas command validator", () => {
     const videoNode = node({
       id: "video-node",
       type: CANVAS_NODE_TYPES.video,
-      data: { videoUrl: "/static/video.mp4", prompt: "镜头推进" },
+      data: { videoUrl: "/static/video.mp4", prompt: "Camera push-in" },
     });
     const envelope: CanvasChatCommandEnvelope = {
       schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
@@ -995,9 +995,9 @@ describe("node-specific mode command validation", () => {
     expect(buildCanvasNodeActionCatalog(target).editable_schema.genMode.option_labels?.firstFrame)
       .toBe("First frame");
     expect(translate).toHaveBeenCalledWith("node.videoNode.tabs.firstFrame");
-    translate.mockReturnValue("首帧");
+    translate.mockReturnValue("First frame");
     expect(buildCanvasNodeActionCatalog(target).editable_schema.genMode.option_labels?.firstFrame)
-      .toBe("首帧");
+      .toBe("First frame");
   });
 
   it("rejects an AI-created imageToVideo mode for a text-only model", () => {

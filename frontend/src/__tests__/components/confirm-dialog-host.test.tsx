@@ -79,9 +79,9 @@ describe("ConfirmDialogHost", () => {
     const HIGHEST_OVERLAY_Z = 10010; // CanvasBookmarkContextMenu, the highest layer in the whole repo
 
     render(<ConfirmDialogHost />);
-    void confirmDialog({ description: "Are you sure you want to delete "Cover"?" });
+    void confirmDialog({ description: "Are you sure you want to delete \"Cover\"?" });
 
-    await screen.findByText("Are you sure you want to delete "Cover"?");
+    await screen.findByText("Are you sure you want to delete \"Cover\"?");
 
     for (const slot of ["alert-dialog-overlay", "alert-dialog-content"]) {
       const el = document.querySelector(`[data-slot="${slot}"]`);

@@ -1,59 +1,58 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 「外部 File → 新建节点」这条投递链的载体（模块级暂存）。
+ * The carrier of the "external File -> new node" delivery chain (module-level staging).
  *
- * 为什么不能只靠事件总线：投递方（画布拖入文件、粘贴图片、
- * spawnExternalAssetNodes、UploadNode 变形成 video/audio）都是「先建节点、下一帧
- * 再把 File 发给它」，而 InMemoryCanvasEventBus 没有重放语义 —— 发的那一刻没有
- * 订阅者，File 就永久丢了。低缩放档（zoom < LOW_DETAIL_ZOOM_THRESHOLD）里这条
- * 假设直接不成立：新节点先以 LOD shell 挂载（见 [[LodShellNode]]），完整组件要等
- * requestShellUpgrade 的升级队列放行才挂上订阅，必然晚于投递那一帧。结果就是画布
- * 上留下一个永远空着的「上传资源」节点，跟用户拖进来的图毫不相干。
+ * Why the event bus alone is not enough: the senders (canvas file drop, pasted images,
+ * spawnExternalAssetNodes, UploadNode morphing into video/audio) all "build the node first, send the File to it on the next frame",
+ * and InMemoryCanvasEventBus has no replay semantics - at the moment of sending there is no
+ * subscriber, and the File is lost forever. At the low-zoom tier (zoom < LOW_DETAIL_ZOOM_THRESHOLD) this
+ * assumption simply does not hold: a new node first mounts as an LOD shell (see [[LodShellNode]]), and the full component only attaches its subscription once
+ * the requestShellUpgrade upgrade queue releases it, necessarily later than the delivery frame. The result is an "Upload resource" node left
+ * forever empty on the canvas, unrelated to the image the user dragged in.
  *
- * 所以 File 本体走这里暂存，事件降级成「敲一下已挂载的节点」：
- *   - 投递方：stashExternalFile(...) 之后照旧发事件（两件事都做，见各投递点）；
- *   - 消费方：useExternalFileHandoff 在挂载时和收到事件时都 take 一次。
- * take 是消费性的（拿走即删），所以「挂载补投」与「事件即时投」不会重复处理同一个
- * File，也就不需要额外的去重标记。
+ * So the File itself is staged here, and the event is downgraded to "poke an already-mounted node":
+ *   - Sender: after stashExternalFile(...) emit the event as usual (do both, see each delivery point);
+ *   - Consumer: useExternalFileHandoff takes once on mount and once on receiving the event.
+ * take is consuming (removed once taken), so "re-delivery on mount" and "immediate delivery on event" will not process the same
+ * File twice, and no extra dedup marker is needed.
  *
- * 新增投递方必须 stash —— 只 publish 不 stash 的话消费侧看不到 File（消费侧只认
- * 暂存里的东西，不读事件 payload 的 file）。
+ * New senders must stash - with publish but no stash the consumer side cannot see the File (the consumer only trusts what is in
+ * staging, and does not read the file of the event payload).
  */
 import type { CanvasEventMap } from '@/features/canvas/application/ports';
 
-/** 三条「注入外部 File」的通道，与 [[ports]] 里的事件名一一对应。 */
+/** The three "inject external File" channels, one to one with the event names in [[ports]]. */
 export type ExternalFileChannel = Extract<
   keyof CanvasEventMap,
   'upload-node/external-file' | 'video-node/external-file' | 'audio-node/external-file'
 >;
 
 /**
- * 上限只是兜底：节点在消费前就被删掉（撤销、手滑删节点）时没人来 take，条目会
- * 一直握着 File 的引用。超过上限就按插入顺序淘汰最老的一条 —— 待投递的 File 天然
- * 是「刚刚拖进来的那几个」，正常用法下 map 里同时不会有几条。
+ * The cap is only a fallback: when a node is deleted before consuming (undo, accidentally deleting the node) nobody takes, and the entry would
+ * keep holding the reference to the File forever. Beyond the cap the oldest is evicted in insertion order - Files waiting for delivery are naturally
+ * "the few just dragged in", and in normal use the map never holds more than a few at a time.
  */
 const MAX_PENDING = 64;
 
 const pending = new Map<string, File>();
 
 /**
- * 分隔符用 NUL：通道名与节点 id 都不可能含它，拼不出歧义的 key。必须写成
- * \u0000 转义 —— 直接嵌一个裸 0x00 字节会让 git 把本文件当二进制，PR 里既没有
- * 行级 diff 也没法评审。
+ * The separator is NUL: neither channel names nor node ids can contain it, so no ambiguous key can be concatenated. It must be written as a
+ * \u0000 escape - embedding a bare 0x00 byte directly would make git treat this file as binary, with neither a line-level diff in the PR nor any way to review it.
  */
 function keyOf(channel: ExternalFileChannel, nodeId: string): string {
   return `${channel}\u0000${nodeId}`;
 }
 
-/** 暂存一份待投递的 File；同一节点重复 stash 以最后一次为准。 */
+/** Stage a File waiting for delivery; stashing repeatedly for the same node, the last one wins. */
 export function stashExternalFile(
   channel: ExternalFileChannel,
   nodeId: string,
   file: File,
 ): void {
   const key = keyOf(channel, nodeId);
-  // 覆盖已有条目不会让 map 变大，此时淘汰只会白白丢掉一份不相干的待投递文件。
+  // Overwriting an existing entry does not make the map larger, in which case evicting would only discard an unrelated File waiting for delivery for nothing.
   if (pending.size >= MAX_PENDING && !pending.has(key)) {
     const oldest = pending.keys().next();
     if (!oldest.done) pending.delete(oldest.value);
@@ -61,7 +60,7 @@ export function stashExternalFile(
   pending.set(key, file);
 }
 
-/** 取走待投递的 File（消费性）；没有则返回 null。 */
+/** Take away the File waiting for delivery (consuming); returns null if none. */
 export function takeExternalFile(
   channel: ExternalFileChannel,
   nodeId: string,
@@ -73,7 +72,7 @@ export function takeExternalFile(
   return file;
 }
 
-/** 仅测试用：清空暂存，避免用例间互相污染。 */
+/** For tests only: clear the staging, avoiding cross-contamination between cases. */
 export function resetPendingExternalFilesForTest(): void {
   pending.clear();
 }

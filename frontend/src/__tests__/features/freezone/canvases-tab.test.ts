@@ -109,7 +109,7 @@ describe("freezone canvas browser sections", () => {
     const sections = buildCanvasBrowserSections([canvas("default", "default")], "default", "Lin Zhiwei");
 
     expect(sections.defaultCanvas).toMatchObject({
-      id: "user_u_klqmat",
+      id: "user_lin_zhiwei_1575fos",
       displayName: "Lin Zhiwei",
       size: 0,
     });
@@ -196,7 +196,7 @@ describe("freezone canvas browser sections", () => {
   it("builds stable user-created canvas ids from username and name", () => {
     expect(userCreatedCanvasId("Story Lab", "alice")).toBe(userCreatedCanvasId("Story Lab", "alice"));
     expect(userCreatedCanvasId("Story Lab", "alice")).not.toBe(userCreatedCanvasId("Story Lab", "bob"));
-    expect(userCreatedCanvasId("Story Lab", "alice")).toMatch(/^canvas_canvas_[a-z0-9]+$/);
+    expect(userCreatedCanvasId("Story Lab", "alice")).toMatch(/^canvas_story_lab_[a-z0-9]+$/);
   });
 
   it("allows deleting only non-personal canvases", () => {

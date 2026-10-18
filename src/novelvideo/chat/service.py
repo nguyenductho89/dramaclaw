@@ -692,7 +692,7 @@ Skill Studio continuation:
 [/FREEZONE_CANVAS_ASSISTANT]"""
 
 _FREEZONE_CANVAS_WRITE_ACTION_RE = re.compile(
-    r"(?:create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|run|execute|generate)",
+    r"(?:create|add|insert|delete|remove|clear|update|connect|move|layout|select|open|run|execute|generate|make)",
     re.IGNORECASE,
 )
 _FREEZONE_CANVAS_WRITE_OBJECT_RE = re.compile(

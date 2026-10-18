@@ -57,9 +57,9 @@ vi.mock("@/lib/queries/episodes", () => ({
       data: {
         number: 1,
         title: "EP1",
-        identity_ids: ["面馆男青年_青年时期", "面馆女青年_青年时期"],
-        scene_menu: [{ scene_id: "兰州拉面馆" }],
-        prop_menu: [{ prop_id: "账单" }, { prop_id: "红色凳子" }],
+        identity_ids: ["diner_young_man_young_adult", "diner_young_woman_young_adult"],
+        scene_menu: [{ scene_id: "noodle_shop" }],
+        prop_menu: [{ prop_id: "bill" }, { prop_id: "red_stool" }],
       },
     },
   }),
@@ -71,8 +71,8 @@ vi.mock("@/lib/queries/episodes", () => ({
           beat_number: 3,
           narration_segment: "",
           visual_description: "",
-          scene_ref: { scene_id: "兰州拉面馆" },
-          time_of_day: "夜晚",
+          scene_ref: { scene_id: "noodle_shop" },
+          time_of_day: "night",
           detected_identities: [],
           detected_props: [],
         },
@@ -98,10 +98,10 @@ function makeData(
     projectId: "demo",
     episode: 1,
     beat: 3,
-    content: "全景镜头，兰州拉面馆内。",
+    content: "Wide shot, inside the Lanzhou noodle shop.",
     snapshot: {
-      visualDescription: "全景镜头，兰州拉面馆内。",
-      sceneId: "兰州拉面馆",
+      visualDescription: "Wide shot, inside the Lanzhou noodle shop.",
+      sceneId: "noodle_shop",
       timeOfDay: "",
       detectedIdentities: [],
       detectedProps: [],
@@ -159,10 +159,10 @@ beforeEach(() => {
             episode: 1,
             beat: 3,
             label: "EP1 / Beat 3",
-            visual_description: "全景镜头，兰州拉面馆内。",
+            visual_description: "Wide shot, inside the Lanzhou noodle shop.",
             narration_segment: "",
-            scene_id: "兰州拉面馆",
-            time_of_day: "夜晚",
+            scene_id: "noodle_shop",
+            time_of_day: "night",
             detected_identities: [],
             detected_props: [],
             sketch_colors: {},
@@ -194,9 +194,9 @@ function localeValue(locale: Record<string, unknown>, path: string): unknown {
 }
 
 describe("BeatContextNode", () => {
-  it("defines i18n labels for shot context standalone UI in zh and en", () => {
-    const zh = JSON.parse(
-      readFileSync("public/locales/zh/translation.json", "utf-8"),
+  it("defines i18n labels for shot context standalone UI in vi and en", () => {
+    const vi = JSON.parse(
+      readFileSync("public/locales/vi/translation.json", "utf-8"),
     );
     const en = JSON.parse(
       readFileSync("public/locales/en/translation.json", "utf-8"),
@@ -209,12 +209,12 @@ describe("BeatContextNode", () => {
       "node.beatContextNode.palette.propColors",
     ];
     for (const key of keys) {
-      expect(localeValue(zh, key)).toEqual(expect.any(String));
+      expect(localeValue(vi, key)).toEqual(expect.any(String));
       expect(localeValue(en, key)).toEqual(expect.any(String));
     }
-    expect(localeValue(zh, "node.menu.beatContext")).toBe("镜头上下文");
-    expect(localeValue(zh, "node.beatContextNode.heading")).toBe("镜头上下文");
-    expect(localeValue(zh, "node.beatContextNode.standaloneTitle")).toBe("自定义镜头上下文");
+    expect(localeValue(en, "node.menu.beatContext")).toBe("Shot Context");
+    expect(localeValue(en, "node.beatContextNode.heading")).toBe("Shot Context");
+    expect(localeValue(en, "node.beatContextNode.standaloneTitle")).toBe("Custom Shot Context");
     expect(localeValue(en, "viewer.threeD.beatOverlay.title")).toBe("Shot overlay");
   });
 
@@ -225,9 +225,9 @@ describe("BeatContextNode", () => {
         episode: 1,
         beat: 3,
         label: "EP1 / Beat 3",
-        visual_description: "全景镜头，兰州拉面馆内。",
+        visual_description: "Wide shot, inside the Lanzhou noodle shop.",
         narration_segment: "",
-        scene_id: "兰州拉面馆",
+        scene_id: "noodle_shop",
         detected_identities: [],
         detected_props: [],
         sketch_colors: {},
@@ -237,27 +237,27 @@ describe("BeatContextNode", () => {
       makeData({
         snapshot: {
           ...makeData().snapshot,
-          timeOfDay: "夜晚",
+          timeOfDay: "night",
         },
         beat_edit_fields: {
-          time_of_day: "夜晚",
+          time_of_day: "night",
         },
       }),
     );
 
-    expect(patch.snapshot?.timeOfDay).toBe("夜晚");
-    expect(patch.beat_edit_fields?.time_of_day).toBe("夜晚");
+    expect(patch.snapshot?.timeOfDay).toBe("night");
+    expect(patch.beat_edit_fields?.time_of_day).toBe("night");
   });
 
   it("renders selectable identity and prop chips instead of CSV inputs", () => {
     renderNode();
 
-    expect(screen.getByText("出场身份")).toBeInTheDocument();
-    expect(screen.getByText("出场道具")).toBeInTheDocument();
+    expect(screen.getByText("Appearing identities")).toBeInTheDocument();
+    expect(screen.getByText("Appearing props")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /面馆男青年_青年时期/ }),
+      screen.getByRole("button", { name: /diner_young_man_young_adult/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /账单/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /bill/ })).toBeInTheDocument();
   });
 
   it("shows assigned identity and prop colors on selectable chips", () => {
@@ -266,21 +266,21 @@ describe("BeatContextNode", () => {
         snapshot: {
           ...makeData().snapshot,
           sketchColors: {
-            面馆男青年_青年时期: "#FF00FF MAGENTA",
+            diner_young_man_young_adult: "#FF00FF MAGENTA",
           },
           propMarkerColors: {
-            账单: "#5D4037 BROWN",
+            bill: "#5D4037 BROWN",
           },
         },
       }),
     );
 
     expect(
-      screen.getByTestId("beat-context-color-identity-面馆男青年_青年时期"),
+      screen.getByTestId("beat-context-color-identity-diner_young_man_young_adult"),
     ).toHaveStyle({
       backgroundColor: "#FF00FF",
     });
-    expect(screen.getByTestId("beat-context-color-prop-账单")).toHaveStyle({
+    expect(screen.getByTestId("beat-context-color-prop-bill")).toHaveStyle({
       backgroundColor: "#5D4037",
     });
   });
@@ -296,10 +296,10 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "雨夜里，女主站在便利店门口回头。",
+          title: "Custom Shot Context",
+          visual_description: "On a rainy night, the heroine stands at the convenience store entrance and looks back.",
           narration_segment: "",
-          scene_id: "便利店门口",
+          scene_id: "store_entrance",
           detected_identities: [],
           detected_props: [],
           sketch_colors: {},
@@ -308,14 +308,14 @@ describe("BeatContextNode", () => {
       }),
     );
 
-    expect(screen.getByText("自定义镜头上下文")).toBeInTheDocument();
+    expect(screen.getByText("Custom Shot Context")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "同步到主线" }),
+      screen.queryByRole("button", { name: "Sync to mainline" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("EP? / Beat ?")).not.toBeInTheDocument();
     expect(screen.queryByText("EP1 / Beat 3")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("场景")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("时间")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Scene")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Time")).not.toBeInTheDocument();
   });
 
   it("treats beat nodes with mainline_context as mainline even if default standalone fields leaked in", () => {
@@ -325,7 +325,7 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
+          title: "Custom Shot Context",
           visual_description: "",
           narration_segment: "",
           detected_identities: [],
@@ -337,23 +337,23 @@ describe("BeatContextNode", () => {
     );
 
     expect(screen.getAllByText("EP1 / Beat 3").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("场景")).toBeInTheDocument();
-    expect(screen.getByLabelText("时间")).toBeInTheDocument();
+    expect(screen.getByLabelText("Scene")).toBeInTheDocument();
+    expect(screen.getByLabelText("Time")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "同步到主线" }),
+      screen.getByRole("button", { name: "Sync to mainline" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("上下文已同步；技能会使用当前节点。"),
+      screen.getByText("Context is synced; skills use this node."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("自定义上下文；仅当前画布使用。"),
+      screen.queryByText("Custom context; only used on this canvas."),
     ).not.toBeInTheDocument();
   });
 
   it("inserts standalone mention templates and derives identity and prop chips", () => {
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -363,7 +363,7 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
+          title: "Custom Shot Context",
           visual_description: "",
           narration_segment: "",
           detected_identities: [],
@@ -375,10 +375,10 @@ describe("BeatContextNode", () => {
       }),
     );
 
-    const visual = screen.getByPlaceholderText("未设置;点击输入起始画面描述");
+    const visual = screen.getByPlaceholderText("Unset; click to enter the opening frame");
     fireEvent.change(visual, { target: { value: "@", selectionStart: 1 } });
 
-    const identityTemplate = screen.getByText("人物").closest("button");
+    const identityTemplate = screen.getByText("Character").closest("button");
     expect(identityTemplate).not.toBeNull();
     fireEvent.click(identityTemplate!);
 
@@ -386,36 +386,36 @@ describe("BeatContextNode", () => {
 
     fireEvent.change(visual, {
       target: {
-        value: "{{女主}} 拿起 @",
-        selectionStart: "{{女主}} 拿起 @".length,
+        value: "{{Heroine}} picks up @",
+        selectionStart: "{{Heroine}} picks up @".length,
       },
     });
 
-    const propTemplate = screen.getByText("道具").closest("button");
+    const propTemplate = screen.getByText("Prop").closest("button");
     expect(propTemplate).not.toBeNull();
     fireEvent.click(propTemplate!);
 
-    expect(screen.getByDisplayValue("{{女主}} 拿起 [[]]")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("{{Heroine}} picks up [[]]")).toBeInTheDocument();
     fireEvent.change(visual, {
       target: {
-        value: "{{女主}} 拿起 [[雨伞]]",
-        selectionStart: "{{女主}} 拿起 [[雨伞]]".length,
+        value: "{{Heroine}} picks up [[umbrella]]",
+        selectionStart: "{{Heroine}} picks up [[umbrella]]".length,
       },
     });
     fireEvent.blur(visual);
 
     expect(
-      screen.getByDisplayValue("{{女主}} 拿起 [[雨伞]]"),
+      screen.getByDisplayValue("{{Heroine}} picks up [[umbrella]]"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /女主/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /雨伞/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Heroine/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /umbrella/ })).toBeInTheDocument();
     expect(updateBeat).not.toHaveBeenCalled();
   });
 
   it("removes standalone prop chips when prop markers are removed from visual text", async () => {
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -425,11 +425,11 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{Kris}} 拿着一把 [[雨伞]] 和 [[黑色西装]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Kris}} holding a [[umbrella]] and [[black suit]]",
           narration_segment: "",
           detected_identities: ["Kris"],
-          detected_props: ["雨伞", "黑色西装"],
+          detected_props: ["umbrella", "black suit"],
           sketch_colors: {},
           prop_marker_colors: {},
         },
@@ -438,25 +438,25 @@ describe("BeatContextNode", () => {
     );
 
     const visual = screen.getByDisplayValue(
-      "{{Kris}} 拿着一把 [[雨伞]] 和 [[黑色西装]]",
+      "{{Kris}} holding a [[umbrella]] and [[black suit]]",
     );
-    expect(screen.getByRole("button", { name: /雨伞/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /umbrella/ })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /黑色西装/ }),
+      screen.getByRole("button", { name: /black suit/ }),
     ).toBeInTheDocument();
 
     fireEvent.change(visual, {
       target: {
-        value: "{{Kris}} 拿着一把 [[雨伞]]",
-        selectionStart: "{{Kris}} 拿着一把 [[雨伞]]".length,
+        value: "{{Kris}} holding a [[umbrella]]",
+        selectionStart: "{{Kris}} holding a [[umbrella]]".length,
       },
     });
     fireEvent.blur(visual);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /雨伞/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /umbrella/ })).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /黑色西装/ }),
+        screen.queryByRole("button", { name: /black suit/ }),
       ).not.toBeInTheDocument();
     });
     expect(updateBeat).not.toHaveBeenCalled();
@@ -466,7 +466,7 @@ describe("BeatContextNode", () => {
     const user = userEvent.setup();
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -476,27 +476,27 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{女主}} 拿起 [[雨伞]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Heroine}} picks up [[umbrella]]",
           narration_segment: "",
-          detected_identities: ["女主"],
-          detected_props: ["雨伞"],
-          sketch_colors: { "女主": "#FF00FF" },
+          detected_identities: ["Heroine"],
+          detected_props: ["umbrella"],
+          sketch_colors: { "Heroine": "#FF00FF" },
           prop_marker_colors: {},
         },
         snapshot: {},
       }),
     );
 
-    const identityChip = screen.getByRole("button", { name: /女主/ });
+    const identityChip = screen.getByRole("button", { name: /Heroine/ });
     expect(identityChip).toHaveAttribute("aria-pressed", "true");
     await user.click(identityChip);
 
-    const toggledChip = screen.getByRole("button", { name: /女主/ });
+    const toggledChip = screen.getByRole("button", { name: /Heroine/ });
     expect(toggledChip).toBeInTheDocument();
     expect(toggledChip).toHaveAttribute("aria-pressed", "false");
     expect(
-      screen.getByDisplayValue("{{女主}} 拿起 [[雨伞]]"),
+      screen.getByDisplayValue("{{Heroine}} picks up [[umbrella]]"),
     ).toBeInTheDocument();
     expect(updateBeat).not.toHaveBeenCalled();
   });
@@ -505,7 +505,7 @@ describe("BeatContextNode", () => {
     const user = userEvent.setup();
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -515,28 +515,28 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{女主}} 拿起 [[雨伞]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Heroine}} picks up [[umbrella]]",
           narration_segment: "",
-          detected_identities: ["女主"],
-          detected_props: ["雨伞"],
-          sketch_colors: { "女主": "#FF00FF" },
+          detected_identities: ["Heroine"],
+          detected_props: ["umbrella"],
+          sketch_colors: { "Heroine": "#FF00FF" },
           prop_marker_colors: {},
         },
         snapshot: {},
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: /女主/ }));
-    expect(screen.getByRole("button", { name: /女主/ })).toHaveAttribute(
+    await user.click(screen.getByRole("button", { name: /Heroine/ }));
+    expect(screen.getByRole("button", { name: /Heroine/ })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
-    fireEvent.blur(screen.getByDisplayValue("{{女主}} 拿起 [[雨伞]]"));
+    fireEvent.blur(screen.getByDisplayValue("{{Heroine}} picks up [[umbrella]]"));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /女主/ })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: /Heroine/ })).toHaveAttribute(
         "aria-pressed",
         "false",
       );
@@ -546,7 +546,7 @@ describe("BeatContextNode", () => {
   it("shows standalone identity options from visual markers even when not selected", () => {
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -556,8 +556,8 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{女主}} 拿起 [[雨伞]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Heroine}} picks up [[umbrella]]",
           narration_segment: "",
           detected_identities: [],
           detected_props: [],
@@ -568,19 +568,19 @@ describe("BeatContextNode", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: /女主/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Heroine/ })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
-    expect(screen.getByRole("button", { name: /雨伞/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /umbrella/ })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
-    expect(screen.getByRole("button", { name: "无角色出场" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "No character appears" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "无道具出场" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "No prop appears" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -590,7 +590,7 @@ describe("BeatContextNode", () => {
     const user = userEvent.setup();
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -600,11 +600,11 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{女主}} 拿起 [[雨伞]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Heroine}} picks up [[umbrella]]",
           narration_segment: "",
-          detected_identities: ["女主"],
-          detected_props: ["雨伞"],
+          detected_identities: ["Heroine"],
+          detected_props: ["umbrella"],
           sketch_colors: {},
           prop_marker_colors: {},
         },
@@ -612,17 +612,17 @@ describe("BeatContextNode", () => {
       }),
     );
 
-    const visual = screen.getByDisplayValue("{{女主}} 拿起 [[雨伞]]");
+    const visual = screen.getByDisplayValue("{{Heroine}} picks up [[umbrella]]");
     await user.clear(visual);
-    await user.type(visual, "空镜头");
+    await user.type(visual, "empty shot");
     fireEvent.blur(visual);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "无角色出场" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "No character appears" })).toHaveAttribute(
         "aria-pressed",
         "true",
       );
-      expect(screen.getByRole("button", { name: "无道具出场" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "No prop appears" })).toHaveAttribute(
         "aria-pressed",
         "true",
       );
@@ -633,7 +633,7 @@ describe("BeatContextNode", () => {
     const user = userEvent.setup();
     renderNode(
       makeData({
-        displayName: "镜头上下文",
+        displayName: "Shot Context",
         context_scope: "standalone",
         projectId: undefined,
         episode: undefined,
@@ -643,11 +643,11 @@ describe("BeatContextNode", () => {
         beat_context: {
           schema: "beat_context.v1",
           source: "standalone",
-          title: "自定义镜头上下文",
-          visual_description: "{{女主}} 拿起 [[雨伞]]",
+          title: "Custom Shot Context",
+          visual_description: "{{Heroine}} picks up [[umbrella]]",
           narration_segment: "",
-          detected_identities: ["女主"],
-          detected_props: ["雨伞"],
+          detected_identities: ["Heroine"],
+          detected_props: ["umbrella"],
           sketch_colors: {},
           prop_marker_colors: {},
         },
@@ -658,17 +658,17 @@ describe("BeatContextNode", () => {
     expect(
       document.querySelector('input[type=\"color\"]'),
     ).not.toBeInTheDocument();
-    const identityColor = screen.getByLabelText("身份颜色 女主");
-    const propColor = screen.getByLabelText("道具颜色 雨伞");
+    const identityColor = screen.getByLabelText("Identity color Heroine");
+    const propColor = screen.getByLabelText("Prop color umbrella");
 
     await user.click(identityColor);
-    const actorCyan = screen.getByRole("button", { name: "人物颜色 #00FFFF" });
+    const actorCyan = screen.getByRole("button", { name: "Actor colors #00FFFF" });
     expect(actorCyan.closest(".max-h-56.overflow-auto")).toBeNull();
     await user.click(actorCyan);
     expect(identityColor).toHaveStyle({ backgroundColor: "#00FFFF" });
 
     await user.click(propColor);
-    await user.click(screen.getByRole("button", { name: "道具颜色 #B71C1C" }));
+    await user.click(screen.getByRole("button", { name: "Prop color #B71C1C" }));
     expect(propColor).toHaveStyle({ backgroundColor: "#B71C1C" });
 
     expect(updateBeat).not.toHaveBeenCalled();
@@ -677,9 +677,9 @@ describe("BeatContextNode", () => {
   it("does not restore stale persisted syncing status as an active refresh", () => {
     renderNode(makeData({ syncStatus: "syncing" }));
 
-    expect(screen.queryByText("正在同步到主线...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Syncing to mainline...")).not.toBeInTheDocument();
     expect(
-      screen.getByText("上下文已同步；技能会使用当前节点。"),
+      screen.getByText("Context is synced; skills use this node."),
     ).toBeInTheDocument();
   });
 
@@ -687,11 +687,11 @@ describe("BeatContextNode", () => {
     const user = userEvent.setup();
     renderNode();
 
-    const visual = screen.getByDisplayValue("全景镜头，兰州拉面馆内。");
+    const visual = screen.getByDisplayValue("Wide shot, inside the Lanzhou noodle shop.");
     await user.clear(visual);
-    await user.type(visual, "角色 @");
+    await user.type(visual, "Character @");
     const identityMention = (
-      await screen.findByText("{{面馆男青年_青年时期}}")
+      await screen.findByText("{{diner_young_man_young_adult}}")
     ).closest("button");
     expect(identityMention).not.toBeNull();
 
@@ -699,19 +699,19 @@ describe("BeatContextNode", () => {
 
     expect(updateBeat).not.toHaveBeenCalled();
     expect(
-      screen.getByDisplayValue("角色 {{面馆男青年_青年时期}}"),
+      screen.getByDisplayValue("Character {{diner_young_man_young_adult}}"),
     ).toBeInTheDocument();
 
     const updatedVisual =
-      screen.getByDisplayValue("角色 {{面馆男青年_青年时期}}");
+      screen.getByDisplayValue("Character {{diner_young_man_young_adult}}");
     await user.clear(updatedVisual);
-    await user.type(updatedVisual, "道具 @");
-    const propMention = (await screen.findByText("[[账单]]")).closest("button");
+    await user.type(updatedVisual, "Prop @");
+    const propMention = (await screen.findByText("[[bill]]")).closest("button");
     expect(propMention).not.toBeNull();
     await user.click(propMention!);
 
     expect(updateBeat).not.toHaveBeenCalled();
-    expect(screen.getByDisplayValue("道具 [[账单]]")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Prop [[bill]]")).toBeInTheDocument();
   });
 
   it("updates scene and time as local draft fields", async () => {
@@ -722,13 +722,13 @@ describe("BeatContextNode", () => {
       }),
     );
 
-    await chooseUiSelectOption(user, "场景", "兰州拉面馆");
+    await chooseUiSelectOption(user, "Scene", "noodle_shop");
     expect(updateBeat).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "场景" })).toHaveTextContent("兰州拉面馆");
+    expect(screen.getByRole("button", { name: "Scene" })).toHaveTextContent("noodle_shop");
 
-    await chooseUiSelectOption(user, "时间", "夜晚");
+    await chooseUiSelectOption(user, "Time", "Night");
     expect(updateBeat).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "时间" })).toHaveTextContent("夜晚");
+    expect(screen.getByRole("button", { name: "Time" })).toHaveTextContent("Night");
   });
 
   it("preserves scene variant when syncing local beat edits", async () => {
@@ -736,17 +736,17 @@ describe("BeatContextNode", () => {
     const data = makeData({
       snapshot: {
         ...makeData().snapshot,
-        sceneId: "兰州拉面馆",
-        sceneVariantId: "雨夜",
+        sceneId: "noodle_shop",
+        sceneVariantId: "rainy_night",
       },
       beat_edit_fields: {
-        scene_id: "兰州拉面馆",
-        scene_variant_id: "雨夜",
+        scene_id: "noodle_shop",
+        scene_variant_id: "rainy_night",
       },
     });
     renderNode(data);
 
-    await user.click(screen.getByRole("button", { name: "同步到主线" }));
+    await user.click(screen.getByRole("button", { name: "Sync to mainline" }));
 
     await waitFor(() => {
       expect(updateBeat).toHaveBeenCalledWith(
@@ -754,7 +754,7 @@ describe("BeatContextNode", () => {
         1,
         3,
         expect.objectContaining({
-          scene_ref: { scene_id: "兰州拉面馆", variant_id: "雨夜" },
+          scene_ref: { scene_id: "noodle_shop", variant_id: "rainy_night" },
         }),
       );
     });
@@ -776,11 +776,11 @@ describe("BeatContextNode", () => {
           type: CANVAS_NODE_TYPES.upload,
           position: { x: -300, y: 0 },
           data: {
-            displayName: "面馆男青年_青年时期",
+            displayName: "diner_young_man_young_adult",
             mainline_context: [
               {
                 kind: "identity",
-                identityId: "面馆男青年_青年时期",
+                identityId: "diner_young_man_young_adult",
                 role: "character_identity",
               },
             ],
@@ -821,11 +821,11 @@ describe("BeatContextNode", () => {
               episode: 1,
               beat: 3,
               label: "EP1 / Beat 3",
-              visual_description: "全景镜头，兰州拉面馆内。",
+              visual_description: "Wide shot, inside the Lanzhou noodle shop.",
               narration_segment: "",
-              scene_id: "兰州拉面馆",
-              time_of_day: "夜晚",
-              detected_identities: ["面馆男青年_青年时期"],
+              scene_id: "noodle_shop",
+              time_of_day: "night",
+              detected_identities: ["diner_young_man_young_adult"],
               detected_props: [],
               sketch_colors: {},
               prop_marker_colors: {},
@@ -838,7 +838,7 @@ describe("BeatContextNode", () => {
 
     renderNode(data);
     await user.click(
-      screen.getByRole("button", { name: /面馆男青年_青年时期/ }),
+      screen.getByRole("button", { name: /diner_young_man_young_adult/ }),
     );
 
     await waitFor(() => {
@@ -854,9 +854,9 @@ describe("BeatContextNode", () => {
           return (
             edge.source === "identity_ref" &&
             edge.target === "skill_frame" &&
-            edge.targetHandle === "identity:面馆男青年_青年时期" &&
+            edge.targetHandle === "identity:diner_young_man_young_adult" &&
             edgeData?.role === "identity" &&
-            edgeData.reference_target?.identity_id === "面馆男青年_青年时期" &&
+            edgeData.reference_target?.identity_id === "diner_young_man_young_adult" &&
             edgeData.autoBeatContextProjection === true
           );
         }),
@@ -894,13 +894,13 @@ describe("BeatContextNode", () => {
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 120, y: 120 },
           data: {
-            displayName: "面馆女青年_青年时期",
+            displayName: "diner_young_woman_young_adult",
             preset_managed: true,
             mainline_context: [
               {
                 kind: "identity",
                 projectId: "demo",
-                identityId: "面馆女青年_青年时期",
+                identityId: "diner_young_woman_young_adult",
                 role: "character_identity",
               },
             ],
@@ -930,7 +930,7 @@ describe("BeatContextNode", () => {
           type: CANVAS_NODE_TYPES.upload,
           position: { x: 800, y: 200 },
           data: {
-            displayName: "我的临时节点",
+            displayName: "My temp node",
             imageUrl: "/local.png",
             aspectRatio: "1:1",
             user_spawned: true,
@@ -940,7 +940,7 @@ describe("BeatContextNode", () => {
           id: "bad_projection",
           type: CANVAS_NODE_TYPES.textAnnotation,
           position: { x: 100, y: 100 },
-          data: { displayName: "错误投影", autoBeatContextProjection: true },
+          data: { displayName: "Wrong projection", autoBeatContextProjection: true },
         },
       ],
       [],
@@ -948,14 +948,14 @@ describe("BeatContextNode", () => {
 
     renderNode(data);
     await user.click(
-      screen.getByRole("button", { name: /面馆女青年_青年时期/ }),
+      screen.getByRole("button", { name: /diner_young_woman_young_adult/ }),
     );
 
     expect(updateBeat).not.toHaveBeenCalled();
     expect(createCanvasFromPreset).not.toHaveBeenCalled();
-    expect(screen.queryByText("正在同步到主线...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Syncing to mainline...")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "同步到主线" }));
+    await user.click(screen.getByRole("button", { name: "Sync to mainline" }));
 
     await waitFor(() => {
       const state = useCanvasStore.getState();
@@ -964,7 +964,7 @@ describe("BeatContextNode", () => {
         1,
         3,
         expect.objectContaining({
-          detected_identities: ["面馆女青年_青年时期"],
+          detected_identities: ["diner_young_woman_young_adult"],
         }),
       );
       expect(createCanvasFromPreset).toHaveBeenCalledWith(

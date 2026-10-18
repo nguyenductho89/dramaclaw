@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 保存被 `canvas_media_scope_mismatch` 拒绝后的自愈闭环：拷素材 → 改节点 → 重试一次。
- * 拷不动时字段置空 + 标失败再重试，绝不把源项目 URL 原样再交一遍（否则死循环）。
+ * Self-healing loop after a save is rejected with `canvas_media_scope_mismatch`: copy assets -> rewrite nodes -> retry once.
+ * When copying fails, blank the field + mark failed and retry; never hand the source project's URL back as-is (otherwise an endless loop).
  */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,7 +104,7 @@ describe("useCanvasSync · canvas_media_scope_mismatch", () => {
       (n) => n.id === nodeId,
     );
     expect(node?.data.imageUrl).toBe(COPIED);
-    // store 也得改,否则下一次自动保存又把源项目 URL 交上去。
+    // The store must change too, otherwise the next autosave would submit the source project's URL again.
     expect(
       (useCanvasStore.getState().nodes.find((n) => n.id === nodeId)!.data as { imageUrl: string })
         .imageUrl,
@@ -132,7 +132,7 @@ describe("useCanvasSync · canvas_media_scope_mismatch", () => {
 
   it("gives up after one self-heal instead of looping", async () => {
     copyFreezoneAssets.mockResolvedValue({ mapping: { [FOREIGN]: COPIED }, failed: [] });
-    // 后端第二次还拒(不该发生):必须停在这里,不能再拷再重试。
+    // If the backend rejects a second time (should not happen): it must stop here, with no more copying or retrying.
     let nodeId = "";
     vi.mocked(putFreezoneCanvas).mockImplementation(async () =>
       Promise.reject(scopeRejection(nodeId)),
@@ -154,7 +154,7 @@ describe("useCanvasSync · canvas_media_scope_mismatch", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    // 修复写回 store 会再触发一次自动保存,但保存链路已经进 error 态,不再发请求。
+    // Writing the repair back to the store triggers another autosave, but the save pipeline has already entered the error state and sends no more requests.
     await act(async () => {
       vi.advanceTimersByTime(5_000);
       await Promise.resolve();
@@ -167,7 +167,7 @@ describe("useCanvasSync · canvas_media_scope_mismatch", () => {
   });
 });
 
-describe("useCanvasSync · 读取期诊断", () => {
+describe("useCanvasSync · read-time diagnostics", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.mocked(getFreezoneCanvas).mockReset();

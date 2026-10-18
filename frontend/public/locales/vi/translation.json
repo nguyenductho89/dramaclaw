@@ -5483,7 +5483,8 @@
       "workflowCompleted": "Workflow đã hoàn tất",
       "runWorkflow": "Chạy workflow",
       "rerunAllTitle": "Chạy lại tất cả node workflow",
-      "rerunAll": "Chạy lại tất cả"
+      "rerunAll": "Chạy lại tất cả",
+      "selectedNothingToRun": "Workflow đã chọn không còn node nào cần chạy"
     },
     "style": {
       "chip": "Phong cách",
@@ -5927,6 +5928,18 @@
         "ownReference": "Ảnh tham chiếu của node",
         "referenceAlt": "Ảnh tham chiếu",
         "removeReference": "Gỡ ảnh tham chiếu"
+      },
+      "textBody": {
+        "clickToEdit": "Nhấn để chỉnh sửa",
+        "noText": "Chưa có nội dung văn bản",
+        "noScript": "Chưa có nội dung kịch bản",
+        "noShotRows": "Chưa có dòng cảnh quay",
+        "noContent": "Không có nội dung để hiển thị",
+        "colShotNo": "Cảnh",
+        "colDuration": "Thời lượng",
+        "colVisual": "Mô tả hình ảnh",
+        "colDialogue": "Lời thoại",
+        "colSummary": "Tóm tắt nội dung"
       }
     },
     "keyElement": {

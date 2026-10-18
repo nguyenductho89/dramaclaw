@@ -25,8 +25,8 @@ import {
   EXPORT_RESULT_DISPLAY_NAME,
 } from "@/features/canvas/domain/nodeDisplay";
 
-// 大纲的默认名现在走 i18n。这里把 key 解回中文规范默认值，好让下面的断言仍然对着
-// 用户看得见的文案写，而不是对着 key。
+// The outline's default names now go through i18n. Here the key is resolved back to the English canonical default, so the assertions below are still written against
+// the copy users can see rather than the key.
 const t = ((key: string) => {
   const nodeType = key.replace("node.displayName.", "");
   if (nodeType !== key) {
@@ -57,42 +57,42 @@ function node(
 describe("buildCanvasOutline", () => {
   it("keeps ungrouped nodes at the top level in store order", () => {
     const outline = buildCanvasOutline([
-      node("a", CANVAS_NODE_TYPES.imageGen, { displayName: "封面" }),
+      node("a", CANVAS_NODE_TYPES.imageGen, { displayName: "Cover" }),
       node("b", CANVAS_NODE_TYPES.video, {}),
     ], t);
 
     expect(outline.map((item) => [item.id, item.kind, item.name])).toEqual([
-      ["a", "node", "封面"],
-      ["b", "node", "视频"],
+      ["a", "node", "Cover"],
+      ["b", "node", "Video"],
     ]);
   });
 
   it("turns a group node into a folder named after the group", () => {
     const outline = buildCanvasOutline([
-      node("g", CANVAS_NODE_TYPES.group, { label: "苏鸾" }),
-      node("m1", CANVAS_NODE_TYPES.imageGen, { displayName: "立绘" }, "g"),
+      node("g", CANVAS_NODE_TYPES.group, { label: "Su Luan" }),
+      node("m1", CANVAS_NODE_TYPES.imageGen, { displayName: "Portrait" }, "g"),
       node("m2", CANVAS_NODE_TYPES.video, {}, "g"),
       node("loose", CANVAS_NODE_TYPES.audio, {}),
     ], t);
 
     expect(outline).toHaveLength(2);
-    expect(outline[0]).toMatchObject({ id: "g", kind: "group", name: "苏鸾" });
+    expect(outline[0]).toMatchObject({ id: "g", kind: "group", name: "Su Luan" });
     expect(outline[0].children.map((child) => child.id)).toEqual(["m1", "m2"]);
     expect(outline[1]).toMatchObject({ id: "loose", kind: "node" });
   });
 
   it("prefers displayName over the legacy group label", () => {
     const outline = buildCanvasOutline([
-      node("g", CANVAS_NODE_TYPES.group, { label: "旧名", displayName: "新名" }),
+      node("g", CANVAS_NODE_TYPES.group, { label: "Old name", displayName: "New name" }),
     ], t);
 
-    expect(outline[0].name).toBe("新名");
+    expect(outline[0].name).toBe("New name");
   });
 
   it("nests groups inside groups", () => {
     const outline = buildCanvasOutline([
-      node("outer", CANVAS_NODE_TYPES.group, { label: "外层" }),
-      node("inner", CANVAS_NODE_TYPES.group, { label: "内层" }, "outer"),
+      node("outer", CANVAS_NODE_TYPES.group, { label: "Outer" }),
+      node("inner", CANVAS_NODE_TYPES.group, { label: "Inner" }, "outer"),
       node("leaf", CANVAS_NODE_TYPES.imageGen, {}, "inner"),
     ], t);
 
@@ -130,8 +130,8 @@ describe("buildCanvasOutline", () => {
 describe("collectOutlineIds", () => {
   it("lists a group before its members so clones can re-parent", () => {
     const outline = buildCanvasOutline([
-      node("outer", CANVAS_NODE_TYPES.group, { label: "外层" }),
-      node("inner", CANVAS_NODE_TYPES.group, { label: "内层" }, "outer"),
+      node("outer", CANVAS_NODE_TYPES.group, { label: "Outer" }),
+      node("inner", CANVAS_NODE_TYPES.group, { label: "Inner" }, "outer"),
       node("leaf", CANVAS_NODE_TYPES.imageGen, {}, "inner"),
     ], t);
 
@@ -142,7 +142,7 @@ describe("collectOutlineIds", () => {
 describe("collectOutlineDownloads", () => {
   it("collects every descendant that actually has media", () => {
     const outline = buildCanvasOutline([
-      node("g", CANVAS_NODE_TYPES.group, { label: "组" }),
+      node("g", CANVAS_NODE_TYPES.group, { label: "Folder" }),
       node("img", CANVAS_NODE_TYPES.exportImage, { imageUrl: "https://cdn/a.png" }, "g"),
       node("mute", CANVAS_NODE_TYPES.audio, {}, "g"),
       node("clip", CANVAS_NODE_TYPES.video, { videoUrl: "https://cdn/c.mp4" }, "g"),
@@ -166,9 +166,9 @@ describe("collectOutlineDownloads", () => {
     expect(outline[0].mediaUrl).toBe("https://cdn/c.mp4");
   });
 
-  // 下面这几种节点身上原件与封面同时存在，且原件不叫 videoUrl。自己认字段的实现会
-  // 把封面当原件下载给用户 —— 必须走 resolveNodePrimaryAsset 那张全局映射。
-  it("下载 3D 世界拿的是 3GS 包，不是封面图", () => {
+  // In the nodes below, the original and the cover image exist together, and the original is not named videoUrl. An implementation that recognizes fields by itself would
+  // download the cover as the original for the user - it must go through the global mapping resolveNodePrimaryAsset.
+  it("downloading a 3D world takes the 3GS package, not the cover image", () => {
     const outline = buildCanvasOutline([
       node("world", CANVAS_NODE_TYPES.threeDWorld, {
         plyUrl: "https://cdn/scene.sog",
@@ -180,7 +180,7 @@ describe("collectOutlineDownloads", () => {
     expect(outline[0].mediaUrl).toBe("https://cdn/scene.sog");
   });
 
-  it("下载视频合成拿的是成片，不是海报", () => {
+  it("downloading a video compose takes the final video, not the poster", () => {
     const outline = buildCanvasOutline([
       node("compose", CANVAS_NODE_TYPES.videoCompose, {
         resultVideoUrl: "https://cdn/final.mp4",
@@ -192,7 +192,7 @@ describe("collectOutlineDownloads", () => {
     expect(outline[0].mediaUrl).toBe("https://cdn/final.mp4");
   });
 
-  it("视频故事只有源片时也能下载", () => {
+  it("a video story can still be downloaded when it only has a source clip", () => {
     const outline = buildCanvasOutline([
       node("story", CANVAS_NODE_TYPES.videoStory, {
         sourceVideoUrl: "https://cdn/source.mp4",
@@ -202,7 +202,7 @@ describe("collectOutlineDownloads", () => {
     expect(outline[0].mediaUrl).toBe("https://cdn/source.mp4");
   });
 
-  it("全景查看器的球面贴图既是缩略图也是原件", () => {
+  it("the panorama viewer's sphere texture is both the thumbnail and the original", () => {
     const outline = buildCanvasOutline([
       node("pano", CANVAS_NODE_TYPES.pano360Viewer, {
         imageUrl: "https://cdn/pano.jpg",
@@ -213,7 +213,7 @@ describe("collectOutlineDownloads", () => {
     expect(outline[0].mediaUrl).toBe("https://cdn/pano.jpg");
   });
 
-  it("分格节点下载第一格，而不是整节点没有原件", () => {
+  it("a split node downloads the first cell instead of having no original", () => {
     const outline = buildCanvasOutline([
       node("split", CANVAS_NODE_TYPES.storyboardSplit, {
         frames: [
@@ -230,8 +230,8 @@ describe("collectOutlineDownloads", () => {
 describe("collectOutlineGroupIds", () => {
   it("collects nested groups but not plain nodes", () => {
     const outline = buildCanvasOutline([
-      node("outer", CANVAS_NODE_TYPES.group, { label: "外层" }),
-      node("inner", CANVAS_NODE_TYPES.group, { label: "内层" }, "outer"),
+      node("outer", CANVAS_NODE_TYPES.group, { label: "Outer" }),
+      node("inner", CANVAS_NODE_TYPES.group, { label: "Inner" }, "outer"),
       node("leaf", CANVAS_NODE_TYPES.imageGen, {}, "inner"),
       node("loose", CANVAS_NODE_TYPES.audio, {}),
     ], t);
@@ -256,7 +256,7 @@ describe("CANVAS_OUTLINE_FILTERS", () => {
     expect([...seen].sort()).toEqual([...expected].sort());
   });
 
-  it("maps 全部 to an empty type list", () => {
+  it("maps All to an empty type list", () => {
     expect(outlineFilterTypes("all")).toEqual([]);
     expect(outlineFilterTypes("audio")).toEqual([CANVAS_NODE_TYPES.audio]);
   });
@@ -264,32 +264,32 @@ describe("CANVAS_OUTLINE_FILTERS", () => {
 
 describe("matchesOutlineQuery", () => {
   it("matches case-insensitive substrings", () => {
-    expect(matchesOutlineQuery("Image 107 - 副本", "image 107")).toBe(true);
-    expect(matchesOutlineQuery("Image 107 - 副本", "副本")).toBe(true);
+    expect(matchesOutlineQuery("Image 107 - copy", "image 107")).toBe(true);
+    expect(matchesOutlineQuery("Image 107 - copy", "copy")).toBe(true);
   });
 
   it("falls back to subsequence matching", () => {
-    expect(matchesOutlineQuery("Image 107 - 副本", "img107")).toBe(true);
-    expect(matchesOutlineQuery("Image 107 - 副本", "img701")).toBe(false);
+    expect(matchesOutlineQuery("Image 107 - copy", "img107")).toBe(true);
+    expect(matchesOutlineQuery("Image 107 - copy", "img701")).toBe(false);
   });
 
   it("rejects subsequences scattered across a long prompt name", () => {
-    const prompt = `白袍侠客在雨夜的青石板路上疾行${"，".repeat(60)}斗笠下露出几缕发丝，衣袖翻卷`;
-    expect(matchesOutlineQuery(prompt, "白衣")).toBe(false);
-    expect(matchesOutlineQuery("白衣女", "白衣")).toBe(true);
+    const prompt = `Wolf${",".repeat(60)}ear`;
+    expect(matchesOutlineQuery(prompt, "wr")).toBe(false);
+    expect(matchesOutlineQuery("wr-ap", "wr")).toBe(true);
   });
 
   it("treats an empty query as a match", () => {
-    expect(matchesOutlineQuery("任意", "   ")).toBe(true);
+    expect(matchesOutlineQuery("anything", "   ")).toBe(true);
   });
 });
 
 describe("filterCanvasOutline", () => {
   const outline = buildCanvasOutline([
-    node("g", CANVAS_NODE_TYPES.group, { label: "苏鸾" }),
-    node("m1", CANVAS_NODE_TYPES.imageGen, { displayName: "立绘" }, "g"),
-    node("m2", CANVAS_NODE_TYPES.video, { displayName: "出场镜头" }, "g"),
-    node("loose", CANVAS_NODE_TYPES.audio, { displayName: "配乐" }),
+    node("g", CANVAS_NODE_TYPES.group, { label: "Su Luan" }),
+    node("m1", CANVAS_NODE_TYPES.imageGen, { displayName: "Portrait" }, "g"),
+    node("m2", CANVAS_NODE_TYPES.video, { displayName: "Entrance shot" }, "g"),
+    node("loose", CANVAS_NODE_TYPES.audio, { displayName: "Score" }),
   ], t);
 
   it("returns the same array when nothing is filtered", () => {
@@ -316,7 +316,7 @@ describe("filterCanvasOutline", () => {
   });
 
   it("keeps the whole group when the group name itself matches", () => {
-    const result = filterCanvasOutline(outline, { query: "苏鸾", types: [] });
+    const result = filterCanvasOutline(outline, { query: "Su Luan", types: [] });
 
     expect(result.map((item) => item.id)).toEqual(["g"]);
     expect(result[0].children.map((child) => child.id)).toEqual(["m1", "m2"]);
@@ -324,12 +324,12 @@ describe("filterCanvasOutline", () => {
 
   it("combines the type filter with the query", () => {
     expect(
-      filterCanvasOutline(outline, { query: "立绘", types: outlineFilterTypes("image") }).flatMap(
+      filterCanvasOutline(outline, { query: "Portrait", types: outlineFilterTypes("image") }).flatMap(
         (item) => item.children.map((child) => child.id),
       ),
     ).toEqual(["m1"]);
-    // 组名命中不能绕过类型筛选，否则筛「图片」会把整个组的视频也带出来
-    expect(filterCanvasOutline(outline, { query: "苏鸾", types: outlineFilterTypes("video") })).toEqual(
+    // A group name hit must not bypass the type filter, otherwise filtering "Image" would also bring along the whole group's videos
+    expect(filterCanvasOutline(outline, { query: "Su Luan", types: outlineFilterTypes("video") })).toEqual(
       [],
     );
   });
@@ -337,7 +337,7 @@ describe("filterCanvasOutline", () => {
 
 describe("canvasOutlineSignature", () => {
   it("ignores position changes", () => {
-    const before = [node("a", CANVAS_NODE_TYPES.imageGen, { displayName: "封面" })];
+    const before = [node("a", CANVAS_NODE_TYPES.imageGen, { displayName: "Cover" })];
     const after = [
       { ...before[0], position: { x: 999, y: -42 } } as CanvasNode,
     ];
@@ -347,27 +347,27 @@ describe("canvasOutlineSignature", () => {
 
   it("changes when a node is renamed, regrouped, added or re-imaged", () => {
     const base = [
-      node("g", CANVAS_NODE_TYPES.group, { label: "组" }),
-      node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "封面", imageUrl: "u1" }),
+      node("g", CANVAS_NODE_TYPES.group, { label: "Folder" }),
+      node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "Cover", imageUrl: "u1" }),
     ];
     const signature = canvasOutlineSignature(base);
 
     expect(
       canvasOutlineSignature([
         base[0],
-        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "改名", imageUrl: "u1" }),
+        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "Renamed", imageUrl: "u1" }),
       ]),
     ).not.toBe(signature);
     expect(
       canvasOutlineSignature([
         base[0],
-        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "封面", imageUrl: "u1" }, "g"),
+        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "Cover", imageUrl: "u1" }, "g"),
       ]),
     ).not.toBe(signature);
     expect(
       canvasOutlineSignature([
         base[0],
-        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "封面", imageUrl: "u2" }),
+        node("a", CANVAS_NODE_TYPES.exportImage, { displayName: "Cover", imageUrl: "u2" }),
       ]),
     ).not.toBe(signature);
     expect(canvasOutlineSignature([...base, node("b", CANVAS_NODE_TYPES.audio)])).not.toBe(
@@ -377,9 +377,9 @@ describe("canvasOutlineSignature", () => {
 });
 
 describe("outline meta", () => {
-  // 时刻只在「正在转圈」时看得见、跑完就消失，是这一行最容易退回去的坑：
-  // generationStartedAt 在每条生成链路的成功和失败分支上都会被写回 null，
-  // 所以下面这两条钉的是「读的必须是持久字段」，而不是「能显示出个时间」。
+  // The time is only visible while "spinning" and disappears once finished, which is the pitfall this row most easily regresses into:
+  // generationStartedAt is written back to null on both the success and failure branches of every generation chain,
+  // so the two cases below pin down "what is read must be the persistent field", not "a time can be shown".
   const CREATED_AT = new Date(2026, 7, 20, 14, 32).getTime(); // 08-20 14:32
 
   function metaOf(data: Record<string, unknown>): string | null {
@@ -388,10 +388,10 @@ describe("outline meta", () => {
   }
 
   it("keeps the stamp after generation finishes", () => {
-    // 生成跑完的样子：isGenerating 落回 false，generationStartedAt 被清成 null。
+    // What it looks like after generation finishes: isGenerating falls back to false, and generationStartedAt is cleared to null.
     expect(
       metaOf({
-        displayName: "海边的黄昏",
+        displayName: "Seaside dusk",
         createdAt: CREATED_AT,
         isGenerating: false,
         generationStartedAt: null,
@@ -400,9 +400,9 @@ describe("outline meta", () => {
   });
 
   it("does not fall back to the transient generationStartedAt", () => {
-    // 老画布里的节点没有 createdAt。宁可不显示，也不能显示一个待会儿要蒸发的值。
+    // Nodes in old canvases have no createdAt. Better not to show anything than to show a value that is about to evaporate.
     const meta = metaOf({
-      displayName: "海边的黄昏",
+      displayName: "Seaside dusk",
       isGenerating: true,
       generationStartedAt: CREATED_AT,
     });
@@ -411,11 +411,11 @@ describe("outline meta", () => {
   });
 
   it("separates same-named siblings by their own creation moment", () => {
-    // 同一条提示词生成三次：名字和类型都一样，只剩时刻能区分。
+    // The same prompt generated three times: name and type are identical, and only the time can tell them apart.
     const outline = buildCanvasOutline([
-      node("a", CANVAS_NODE_TYPES.video, { displayName: "海边的黄昏", createdAt: CREATED_AT }),
+      node("a", CANVAS_NODE_TYPES.video, { displayName: "Seaside dusk", createdAt: CREATED_AT }),
       node("b", CANVAS_NODE_TYPES.video, {
-        displayName: "海边的黄昏",
+        displayName: "Seaside dusk",
         createdAt: CREATED_AT + 5 * 60_000,
       }),
     ], t);

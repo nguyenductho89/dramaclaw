@@ -412,7 +412,7 @@ def test_literal_script_writer_uses_literal_newapi_env(monkeypatch):
     assert model_calls == [("LITERAL_BEAT_META_MODEL", None)]
     assert settings_calls == [()]
     assert agent_kwargs["model"] == "literal-model"
-    assert agent_kwargs["name"] == "逐行剧本分镜标注师"
+    assert agent_kwargs["name"] == "Line-by-line script storyboard annotator"
     assert agent_kwargs["output_type"] is literal_script_writing.LiteralBeatMetaOutput
     assert agent_kwargs["output_retries"] == 2
 

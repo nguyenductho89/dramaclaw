@@ -1,271 +1,271 @@
-# 虾画画布操作手册
+# Shrimp Canvas Canvas Operation Handbook
 
-这份手册不是协议文档，也不是参数表。它回答的是：
+This handbook is neither a protocol document nor a parameter table. It answers:
 
-- 画布里的节点分别承担什么职责
-- 连线在产品里表达什么
-- 用户一句自然语言，通常应落成什么节点关系
-- 哪些做法看起来合理，但实际上会把画布语义做坏
+- What responsibility each node on the canvas carries
+- What a link expresses in the product
+- What node relationships a single natural-language sentence from the user should usually become
+- Which practices look reasonable but actually ruin the canvas semantics
 
-## 1. 画布操作哲学
+## 1. Canvas operation philosophy
 
-- 画布不是流程图编辑器，连线不表示“先做 A 再做 B”。
-- 画布连线表示的是：输入、参考、上下文依赖。
-- 当前被选中的节点只是用户当前关注点，不等于它一定是下游节点的合法输入源。
-- 两个节点在业务上相关，不代表它们应该直接连线。
-- 如果一个需求只是“语义上承接上一步”，但没有真实输入输出关系，可以：
-  - 创建独立节点
-  - 放在附近
-  - 必要时放进同一个 group
-  - 不强行补边
+- The canvas is not a flowchart editor; a link does not mean "do A first, then B".
+- A canvas link expresses: input, reference, context dependency.
+- The currently selected node is only the user's current focus; it is not necessarily a legal input source for a downstream node.
+- Two nodes being related in business terms does not mean they should be linked directly.
+- If a requirement only "semantically follows the previous step" but has no real input/output relation, you may:
+  - Create a standalone node
+  - Place it nearby
+  - Put it into the same group if necessary
+  - Not force an edge
 
-## 2. 节点分类
+## 2. Node classification
 
-写命令前先给每个节点归类。分类决定它能做什么、能连什么边。
+Classify each node before writing a command. The classification decides what it can do and which edges it can have.
 
-### 2.1 语义源节点
+### 2.1 Semantic source nodes
 
-这类节点提供文字、设定、脚本、上下文，本身通常不是最终媒体结果。
+These nodes provide text, settings, scripts and context, and are usually not final media results themselves.
 
 - `textAnnotationNode`
-  - 普通文本、文案、设定、广告语、角色描述、分镜描述、配音文稿
-  - 默认是规划文本或内容容器，可以被 Agent 读取、整理、改写
-  - 只有当内容已经是可直接给生成模型消费的提示词、配音稿或镜头输入时，才作为图片/视频/音频节点的直接输入
-  - 不能把它说成“自己执行生图/生视频”
+  - Ordinary text, copy, settings, slogans, character descriptions, storyboard descriptions, voiceover scripts
+  - By default a planning text or content container that the Agent can read, organize and rewrite
+  - Only when the content is already a prompt, voiceover script or shot input that a generation model can consume directly is it used as a direct input of an image/video/audio node
+  - It cannot be described as "executing image/video generation itself"
 - `scriptNode`
-  - 结构化脚本/脚本生成节点
-  - 适合表格化、结构化、带镜头项的脚本产物
-  - 不是普通自由文本节点，也不是当前默认的工作流中间节点
-  - 在现阶段，如果只是写创意、分镜描述、配音稿、人物设定、广告脚本，优先使用 `textAnnotationNode`
-  - 只有当用户明确要“生成一份结构化脚本/镜头表/分镜表”，或产品侧明确需要脚本生成器节点时，再使用 `scriptNode`
+  - Structured script / script generation node
+  - Suitable for tabular, structured script artifacts with shot items
+  - It is not an ordinary free-text node, nor the current default intermediate node of a workflow
+  - At this stage, if you are only writing ideas, storyboard descriptions, voiceover scripts, character settings or ad scripts, prefer `textAnnotationNode`
+  - Use `scriptNode` only when the user explicitly wants "a structured script / shot table / storyboard table", or the product side explicitly needs a script generator node
 - `beatContextNode`
-  - 镜头上下文、剧情上下文、主线上下文
-  - 是强语义来源，但不是媒体生成结果
+  - Shot context, plot context, mainline context
+  - A strong semantic source, but not a media generation result
 
-### 2.2 生成节点
+### 2.2 Generation nodes
 
-这类节点负责真正调用模型或前端生成逻辑产出媒体。
+These nodes actually call a model or frontend generation logic to produce media.
 
 - `imageGenNode`
-  - 真正出图的节点
-  - 可以消费上游文本、图片参考等
+  - The node that actually produces images
+  - Can consume upstream text, image references and so on
 - `videoNode`
-  - 真正出单段视频/单个镜头的节点
-  - 支持不同生成模式，例如文生视频、图生视频、首尾帧、全能参考、图片参考
+  - The node that actually produces a single video clip / single shot
+  - Supports different generation modes, such as text-to-video, image-to-video, first/last frame, omni-reference, image reference
 - `audioNode`
-  - 真正出配音、语音、音乐的节点
+  - The node that actually produces voiceover, speech and music
 
-### 2.3 合成/导出节点
+### 2.3 Compose / export nodes
 
 - `videoComposeNode`
-  - 最终时间线/合成节点，用于把多个视频片段和音频轨合成最终视频
-  - 输入应该是已经产出的 `videoNode` / `audioNode` 媒体结果，或同一批命令中会产出视频/音频的节点占位
-  - 不消费创意简报、分镜文字或 prompt；这些文本应给图片/视频/音频生成节点，或与合成节点分组展示
-  - 不是默认的视频生成入口
+  - The final timeline/compose node, used to compose multiple video clips and audio tracks into the final video
+  - Its inputs should be media results already produced by `videoNode` / `audioNode`, or placeholders of nodes in the same batch of commands that will produce video/audio
+  - It does not consume creative briefs, storyboard text or prompts; that text should go to image/video/audio generation nodes, or be shown grouped with the compose node
+  - It is not the default entry for video generation
 
-### 2.4 展示/工具节点
+### 2.4 Display / tool nodes
 
-- `threeDWorldNode`、`pano360ViewerNode` 等更偏展示、查看或特定工具能力
-- 不要把这类节点当成通用媒体生成节点
+- `threeDWorldNode`, `pano360ViewerNode` and the like are oriented more toward display, viewing or specific tool capabilities
+- Do not treat these nodes as general media generation nodes
 
-## 3. 连线语义
+## 3. Link semantics
 
-### 正确理解
+### Correct understanding
 
 - `textAnnotationNode(semanticOutputRole=input_text) -> imageGenNode`
-  - 表示：这段文本已经是可直接消费的图片生成输入
+  - Means: this text is already a directly consumable image generation input
 - `imageGenNode -> videoNode`
-  - 表示：这张图作为视频生成输入
+  - Means: this image serves as the video generation input
 - `textAnnotationNode(semanticOutputRole=input_text) -> videoNode`
-  - 表示：这段文本已经是可直接消费的视频生成输入
+  - Means: this text is already a directly consumable video generation input
 - `imageGenNode + textAnnotationNode(semanticOutputRole=input_text) -> videoNode`
-  - 表示：图片和文本共同作为视频输入
-- `textAnnotationNode(普通简报/设定) + imageGenNode` 放在同一个 group，但不连线
-  - 表示：业务上属于同一个工作流，但简报还不是直接生成输入
-- `textAnnotationNode(主题方向/创意要点) -> textAnnotationNode(分镜草稿)` 用 `context_for`
-  - 表示：前者给后者提供上下文、约束或解释；如果只是并列材料，同组即可不连线
+  - Means: the image and the text together serve as the video input
+- `textAnnotationNode(ordinary brief/settings) + imageGenNode` in the same group, but not linked
+  - Means: they belong to the same workflow in business terms, but the brief is not yet a direct generation input
+- `textAnnotationNode(theme direction/creative points) -> textAnnotationNode(storyboard draft)` with `context_for`
+  - Means: the former provides context, constraints or explanation for the latter; if they are merely parallel materials, just put them in the same group without a link
 
-### 错误理解
+### Incorrect understanding
 
 - `imageGenNode -> textAnnotationNode -> videoNode`
-  - 错，因为这看起来像“顺序流程”，但中间文本节点并不是视频生成的唯一合法中继
-- `textAnnotationNode(创意要点) -> textAnnotationNode(分镜草稿)` 用 `prompt_for`
-  - 错，`prompt_for` 不用于普通文本节点之间；文本到文本用 `context_for` 或不连线
-- `textAnnotationNode(分镜草稿) -> videoNode` 用 `media_input_for`
-  - 错，文本不是媒体；如果分镜草稿只是规划材料，先分组，不直接连视频
-- “和这个节点相关，所以连一下”
-  - 错，只有真实输入关系才应该连
+  - Wrong, because this looks like a "sequential flow", but the intermediate text node is not the only legal relay for video generation
+- `textAnnotationNode(creative points) -> textAnnotationNode(storyboard draft)` with `prompt_for`
+  - Wrong; `prompt_for` is not used between ordinary text nodes; text-to-text uses `context_for` or no link
+- `textAnnotationNode(storyboard draft) -> videoNode` with `media_input_for`
+  - Wrong; text is not media; if the storyboard draft is only planning material, group it first and do not connect it directly to the video
+- "It is related to this node, so connect it"
+  - Wrong; only a real input relation should be linked
 
-## 4. 常见任务该怎么搭
+## 4. How to build common tasks
 
-### 文本生成图片
+### Text to image
 
-用户意图：
+User intent:
 
-- “根据这段人物设定出一张图”
-- “把这段广告文案做成一张 KV”
+- "Make an image from this character setting"
+- "Turn this ad copy into a KV"
 
-推荐画布关系：
+Recommended canvas relation:
 
 - `textAnnotationNode(semanticOutputRole=input_text) -> imageGenNode`
 
-原则：
+Principles:
 
-- 文本节点提供已经整理好的生成提示词
-- 真正出图的是 `imageGenNode`
-- 不要说“文本节点执行 generate_image”
-- 如果上游文本只是创意简报/策划说明，先提炼成图片节点 prompt，或另建一个 `semanticOutputRole=input_text` 的提示词节点；不要把普通简报直接连到图片节点。
+- The text node provides an already organized generation prompt
+- What actually produces the image is the `imageGenNode`
+- Do not say "the text node executes generate_image"
+- If the upstream text is only a creative brief / planning note, first refine it into the image node's prompt, or create a separate prompt node with `semanticOutputRole=input_text`; do not connect an ordinary brief directly to an image node.
 
-### 图片生成视频
+### Image to video
 
-用户意图：
+User intent:
 
-- “把这张图做成视频”
-- “让这张图动起来”
+- "Turn this image into a video"
+- "Make this image move"
 
-推荐画布关系：
+Recommended canvas relation:
 
 - `imageGenNode -> videoNode`
 
-原则：
+Principles:
 
-- 默认优先 `videoNode`
-- 不要默认创建 `videoComposeNode`
+- Prefer `videoNode` by default
+- Do not create `videoComposeNode` by default
 
-### 图片 + 文本生成视频
+### Image + text to video
 
-用户意图：
+User intent:
 
-- “用这张图，加上这段字幕描述，做一个镜头视频”
+- "Use this image plus this caption description to make a shot video"
 
-推荐画布关系：
+Recommended canvas relation:
 
 - `imageGenNode -> videoNode`
 - `textAnnotationNode(semanticOutputRole=input_text) -> videoNode`
 
-原则：
+Principles:
 
-- 两个输入分别接到 `videoNode`
-- 不要串成 `image -> text -> video`
+- Connect the two inputs to the `videoNode` separately
+- Do not chain them as `image -> text -> video`
 
-### 创意框架 -> 分镜脚本 -> 多镜头素材
+### Creative framework -> storyboard script -> multi-shot material
 
-用户意图：
+User intent:
 
-- “帮我做一个公益广告短片”
+- "Help me make a public-service ad short film"
 
-推荐关系：
+Recommended relations:
 
-- `textAnnotationNode(创意框架)`
-- `textAnnotationNode / scriptNode(分镜脚本)`
-- 多个 `imageGenNode` / `videoNode`
+- `textAnnotationNode(creative framework)`
+- `textAnnotationNode / scriptNode(storyboard script)`
+- multiple `imageGenNode` / `videoNode`
 
-原则：
+Principles:
 
-- 分镜脚本节点是语义源，不是默认的最终媒体输出节点
-- Agent 可以读取脚本内容，再拆成多个镜头节点
-- 如果脚本节点本身不是合法输入源，不要为了“顺下去”强行连线
-- 现阶段默认推荐：
-  - 创意框架、广告脚本、配音稿、镜头描述先用多个 `textAnnotationNode`
-  - `scriptNode` 只在需要结构化脚本产物时使用
+- The storyboard script node is a semantic source, not the default final media output node
+- The Agent can read the script content and then split it into multiple shot nodes
+- If the script node itself is not a legal input source, do not force a link just to "flow on"
+- The default recommendation at this stage:
+  - Use multiple `textAnnotationNode`s first for the creative framework, ad script, voiceover script and shot descriptions
+  - Use `scriptNode` only when a structured script artifact is needed
 
-### 多段视频合成成片
+### Composing multiple video clips into a final cut
 
-用户意图：
+User intent:
 
-- “把这几段视频和配音合成最终广告”
+- "Compose these video clips and the voiceover into the final ad"
 
-推荐关系：
+Recommended relations:
 
-- 多个 `videoNode` -> `videoComposeNode`
+- multiple `videoNode` -> `videoComposeNode`
 - `audioNode` -> `videoComposeNode`
 
-原则：
+Principles:
 
-- 这是 `videoComposeNode` 的主要使用场景：多个视频/音频输入进入合成轨道，输出最终视频
-- 如果是在搭建完整短片工作流，可以创建 `videoNode` / `audioNode` / `videoComposeNode` 并用 `composition_input_for` 连接视频/音频到合成节点
-- 如果只是创意规划，还没有任何视频/音频生成节点，不应单独提前创建 `videoComposeNode`
+- This is the main use of `videoComposeNode`: multiple video/audio inputs enter the compose track and output the final video
+- When building a complete short-film workflow, you may create `videoNode` / `audioNode` / `videoComposeNode` and connect video/audio to the compose node with `composition_input_for`
+- If it is only creative planning and there are no video/audio generation nodes yet, do not create a `videoComposeNode` ahead of time on its own
 
-## 5. 视频节点与视频合成节点
+## 5. Video nodes and video compose nodes
 
-### 什么时候用 `videoNode`
+### When to use `videoNode`
 
-- 做一个镜头
-- 做一段短视频素材
-- 把图片做成视频
-- 根据文本生成视频
-- 用多参考素材生成一段视频
+- Making a shot
+- Making a short video clip
+- Turning an image into a video
+- Generating a video from text
+- Generating a video from multiple reference materials
 
-### 什么时候用 `videoComposeNode`
+### When to use `videoComposeNode`
 
-- 已经有一个或多个真实视频片段
-- 要把视频片段、配音、字幕、音乐拼成最终成片
-- 用户明确说“时间线合成 / 合成成片 / 最终导出”
-- 搭建完整短片工作流时，作为最终合成阶段接收上游视频/音频节点输出
+- There are already one or more real video clips
+- You want to piece video clips, voiceover, subtitles and music into the final cut
+- The user explicitly says "timeline composition / compose the final cut / final export"
+- When building a complete short-film workflow, as the final compose stage that receives the upstream video/audio node outputs
 
-### 一个硬规则
+### One hard rule
 
-- `videoComposeNode` 只接收视频/音频合成输入。不要把规划文本、简报、分镜文字或 prompt 直接连到它。
-- 如果当前只有图片、文本、脚本、音频，没有视频生成节点，默认先用 `videoNode` 创建视频片段阶段，再考虑合成节点。
+- `videoComposeNode` accepts only video/audio compose inputs. Do not connect planning text, briefs, storyboard text or prompts directly to it.
+- If currently there are only images, text, scripts and audio and no video generation nodes, by default first create the video clip stage with `videoNode`, and then consider the compose node.
 
-## 6. 文本节点的正确理解
+## 6. The correct understanding of text nodes
 
-- `textAnnotationNode` 是“可读语义源”，不是“可执行生图节点”
-- 它可以：
-  - 被 Agent 读取
-  - 在内容已经整理为可执行提示词/配音稿/镜头输入时，作为 `imageGenNode` / `videoNode` / `audioNode` 的输入
-  - 在内容只是简报、设定、策划时，作为同组规划材料存在，不直接连生成节点
-- 它不应该被描述成：
-  - “自己执行 generate_image”
-  - “自己执行 generate_video”
+- `textAnnotationNode` is a "readable semantic source", not an "executable image-generation node"
+- It can:
+  - Be read by the Agent
+  - Serve as the input of `imageGenNode` / `videoNode` / `audioNode` when the content has been organized into an executable prompt / voiceover script / shot input
+  - Exist as same-group planning material when the content is only a brief, settings or planning, without being connected directly to generation nodes
+- It should not be described as:
+  - "executing generate_image itself"
+  - "executing generate_video itself"
 
-正确说法：
+Correct phrasing:
 
-- “读取这个文本节点的内容，并据此创建图片节点”
-- “把这段文本作为提示词，用图片节点生成图像”
+- "Read this text node's content and create an image node from it"
+- "Use this text as the prompt and generate an image with the image node"
 
-错误说法：
+Incorrect phrasing:
 
-- “这个文本节点调用生成图像动作”
+- "This text node calls the generate image action"
 
-## 7. 脚本节点的当前定位
+## 7. Current positioning of the script node
 
-- `scriptNode` 当前更像”脚本生成器的结果节点”或”结构化脚本容器”。
-- 它可以被 Agent 读取、总结、拆分，但不应默认被当成后续图片/视频节点的直接输入中枢。
-- 如果用户只是想”继续写脚本””补一段分镜””改配音稿””补广告文案”，优先继续创建或更新 `textAnnotationNode`。
-- 如果用户明确要的是：
-  - 分镜表
-  - 镜头表
-  - 结构化脚本
-  - 脚本生成器产物
-  才优先考虑 `scriptNode`。
-- 当前阶段的默认策略是：普通文本内容用多个 `textAnnotationNode` 组合，`scriptNode` 少用、慎用。
+- `scriptNode` is currently more like a "result node of a script generator" or a "structured script container".
+- It can be read, summarized and split by the Agent, but should not by default be treated as the direct input hub for later image/video nodes.
+- If the user merely wants to "keep writing the script", "add a storyboard segment", "revise the voiceover script" or "add ad copy", prefer continuing to create or update `textAnnotationNode`.
+- If the user explicitly wants:
+  - a storyboard table
+  - a shot table
+  - a structured script
+  - a script generator artifact
+  then consider `scriptNode` first.
+- The default strategy at this stage is: compose ordinary text content with multiple `textAnnotationNode`s; use `scriptNode` sparingly and with caution.
 
-## 8. 禁止模式
+## 8. Forbidden patterns
 
-- 不要把文本节点说成能直接生图
-- 不要把脚本节点默认当成图片或视频生成节点
-- 不要把脚本节点默认当成通用“承上启下”的中继节点
-- 不要把连线当成执行顺序
-- 不要为了表达“下一步”强行补边
-- 不要在没有真实视频片段时默认创建 `videoComposeNode`
-- 不要把当前选中节点自动当成合法输入源
-- 不要在 schema 不支持时自造字段或枚举值
-- 不要把每个批量操作都机械分组；只有同一主题、同一方案、同一工作流或同一素材包才需要工作组
-- 不要为了把新节点加入主题组而伪造连线；组表达归属，边表达真实输入/参考/上下文依赖
+- Do not say a text node can generate images directly
+- Do not treat a script node by default as an image or video generation node
+- Do not treat a script node by default as a generic "bridge" relay node
+- Do not treat links as execution order
+- Do not force an edge just to express "the next step"
+- Do not create `videoComposeNode` by default when there are no real video clips
+- Do not automatically treat the currently selected node as a legal input source
+- Do not invent fields or enum values when the schema does not support them
+- Do not mechanically group every batch operation; only the same theme, the same plan, the same workflow or the same material pack needs a work group
+- Do not fabricate links just to add a new node to a theme group; a group expresses membership, an edge expresses a real input/reference/context dependency
 
-## 9. 决策顺序
+## 9. Decision order
 
-遇到一个画布请求时，优先按这个顺序想：
+When facing a canvas request, think in this order first:
 
-1. 用户是在开放找思路/要建议，还是明确要求操作画布？开放找思路时先自然语言提问和给方向，不写命令。
-2. 用户是否明确要求“落到画布 / 搭出来 / 创建节点 / 生成工作流 / 连接 / 布局 / 运行”？没有这些明确动作时，不要因为当前在虾画界面就自动落画布。
-3. 当前节点是语义源、生成节点、还是合成节点？
-4. 这个节点角色能做什么、不能做什么？语义源承载文本，生成节点产出媒体，合成节点只消费媒体产物，普通组表达归属。
-5. 用户要的是新媒体产物，还是最终合成，还是只是把想法结构化落到画布？
-6. 当前选中的节点是不是这个目标节点的真实输入？
-7. 这是不是同一主题的一组成套工作？如果是，创建或沿用一个工作组；如果只是单独节点或零散操作，不建组。
-8. 如果不是合法输入关系，应该：
-   - 找真正的上游输入源
-   - 或创建独立节点
-   - 或只做分组，不连线
+1. Is the user openly looking for ideas / asking for suggestions, or explicitly asking to operate the canvas? When openly looking for ideas, first ask questions and give directions in natural language, and write no commands.
+2. Has the user explicitly asked to "put it on the canvas / build it / create nodes / generate a workflow / connect / lay out / run"? Without these explicit actions, do not automatically put things on the canvas just because you are in the Shrimp Canvas interface.
+3. Is the current node a semantic source, a generation node, or a compose node?
+4. What can and can't this node role do? A semantic source carries text, a generation node produces media, a compose node only consumes media artifacts, and an ordinary group expresses membership.
+5. Does the user want a new media artifact, a final composition, or merely to structure ideas onto the canvas?
+6. Is the currently selected node a real input of this target node?
+7. Is this a set of full-package work on the same theme? If so, create or reuse one work group; if it is only a standalone node or scattered operations, do not create a group.
+8. If it is not a legal input relation, you should:
+   - find the real upstream input source
+   - or create a standalone node
+   - or only group, without linking

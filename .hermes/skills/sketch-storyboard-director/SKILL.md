@@ -5,32 +5,32 @@ description: Use when doing a separate post-QC storyboard-directing pass on Supe
 
 # Sketch Storyboard Director
 
-> **Agent 行为规范**：
-> - **默认全包完成，不中途停下**。整个 `prepare context → prepare tasks → label → validate → execute → copy 回正式草图目录` 流程应当一口气跑完。
-> - 不要向用户展示 curl 命令、API 路径、认证头等技术细节。
-> - 读取项目内 SQLite、脚本、草图时，继续本地直读。
-> - 启动系统执行任务和查询任务状态时，优先走 `$SUPERTALE_API_URL` 提供的 API，而不是直接在 skill 里碰本地 Ray。
-> - 环境变量解析顺序与 `sketch-correction-worker` 一致：先读真实进程环境变量，再回退到项目级 `.claude/settings.local.json` / `.claude/settings.json`。
-> - 项目上下文解析顺序与 `sketch-correction-worker` 一致：必须提供 `SUPERTALE_PROJECT` / `SUPERTALE_USERNAME`，不再从目录结构推断。
-> - 只有在 API 环境未配置时，才回退到本地脚本直调模式。
+> **Agent behavior rules**:
+> - **Complete everything by default, without stopping midway**. The whole `prepare context → prepare tasks → label → validate → execute → copy back to the official sketch directory` flow should run in one go.
+> - Do not show the user technical details such as curl commands, API paths and auth headers.
+> - When reading the project's SQLite, scripts and sketches, keep reading locally and directly.
+> - When starting system execution tasks and querying task status, prefer the API provided by `$SUPERTALE_API_URL` rather than touching local Ray directly inside the skill.
+> - The environment variable resolution order is the same as `sketch-correction-worker`: read the real process environment variables first, then fall back to the project-level `.claude/settings.local.json` / `.claude/settings.json`.
+> - The project context resolution order is the same as `sketch-correction-worker`: `SUPERTALE_PROJECT` / `SUPERTALE_USERNAME` must be provided, and nothing is inferred from the directory structure any more.
+> - Fall back to the direct local-script mode only when the API environment is not configured.
 
 Use this skill only after sketch QC is already acceptable.
 This skill should complete a full directing-and-modification pass in one run without pausing for intermediate confirmation.
 
 This skill is for:
-- 景别
-- 机位
-- 构图 / 调度
-- 视觉节奏
-- 相邻 beat 的镜头变化
+- shot size
+- camera position
+- composition / blocking
+- visual rhythm
+- shot changes between adjacent beats
 and it should actually drive the second-layer sketch modification pass, not just produce comments.
 
 This skill is not for first-line defect checking. Do not use it to judge:
-- 身份色是否正确
-- 非命名角色是否误上色
-- 多余手 / 多余脚 / 畸形肢体
-- 图中文字
-- 主体缺失 / 多余主体
+- whether identity colors are correct
+- whether unnamed characters were wrongly colored
+- extra hands / extra feet / malformed limbs
+- text in the image
+- missing subjects / extra subjects
 
 Those belong to `sketch-correction-worker`.
 
@@ -166,9 +166,9 @@ If you also write notes, use this structure:
 ```md
 # Episode N Storyboard Notes
 
-- Beat 3: 保持不动。
-- Beat 4: 改成更近的中近景，保留两人位置关系。
-- Beat 7: 机位略下压，主体左下/右上分离，留出动作空隙。
+- Beat 3: keep unchanged.
+- Beat 4: change to a closer medium close-up, keep the two people's positional relationship.
+- Beat 7: lower the camera slightly, separate the subjects lower-left/upper-right, and leave a gap for the action.
 ```
 
 Keep each beat note short and directly actionable.
@@ -176,10 +176,10 @@ Keep each beat note short and directly actionable.
 ## Output style
 
 Write short, concrete storyboard notes such as:
-- `改成更近的中近景，保留两人位置关系。`
-- `机位下压一点，让前景压迫感更直接。`
-- `避免连续三个平视中景，这拍改成略俯视。`
-- `主体左下/右上分离，留出动作空隙。`
+- `Change to a closer medium close-up, keep the two people's positional relationship.`
+- `Lower the camera a bit so the foreground pressure feels more direct.`
+- `Avoid three eye-level medium shots in a row; change this beat to a slightly high angle.`
+- `Separate the subjects lower-left/upper-right and leave a gap for the action.`
 
 ## Final reporting discipline
 

@@ -17,12 +17,12 @@ type TestNode = {
   hidden?: boolean;
 };
 
-// 增益要可预期，所以把节点摆成固定尺寸：viewScale = max(2000/200, 1500/150) = 10。
+// The gain must be predictable, so nodes are laid out at a fixed size: viewScale = max(2000/200, 1500/150) = 10.
 const PLAIN_NODES: TestNode[] = [
   { id: "n", position: { x: 0, y: 0 }, width: 2000, height: 1500 },
 ];
 
-// ---- 手动驱动的 rAF ---------------------------------------------------------
+// ---- Manually driven rAF ---------------------------------------------------------
 let rafCallbacks = new Map<number, FrameRequestCallback>();
 let nextRafId = 1;
 let now = 0;
@@ -68,9 +68,9 @@ function mountMinimapDom() {
 }
 
 /**
- * 复刻 `instance.getNodesBounds`：它带 nodeLookup，分组成员按**绝对坐标**
- * （父位置 + 相对位置）计入。同名的静态工具没有 nodeLookup，会把相对坐标
- * 当成全局坐标 —— 两者的差别正是下面那条分组用例要卡的东西。
+ * Replicates `instance.getNodesBounds`: it carries nodeLookup, and group members are counted by **absolute position**
+ * (parent position + relative position). The same-named static utility has no nodeLookup and would treat relative coordinates
+ * as global coordinates -- the difference between the two is exactly what the group case below pins down.
  */
 function makeGetNodesBounds(allNodes: TestNode[]) {
   const byId = new Map(allNodes.map((node) => [node.id, node]));
@@ -142,7 +142,7 @@ describe("useSmoothMinimapPan", () => {
       useSmoothMinimapPan({
         enabled: true,
         wrapperRef: { current: wrapper },
-        // 只用到 getViewport / getNodes / getNodesBounds / setViewport 四个方法。
+        // Only the four methods getViewport / getNodes / getNodesBounds / setViewport are used.
         instance: instance as never,
         onPanStart,
         onPanEnd,
@@ -152,39 +152,39 @@ describe("useSmoothMinimapPan", () => {
     return { view, svg, instance, onPanStart, onPanEnd, onViewportSettled };
   }
 
-  it("指针拖出小地图后仍继续平移，直到 pointerup 才结束", () => {
+  it("keeps panning after the pointer is dragged out of the minimap, ending only at pointerup", () => {
     const { svg, instance, onPanStart, onPanEnd } = setup();
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 7, clientX: 200, clientY: 180 }));
     expect(onPanStart).toHaveBeenCalledTimes(1);
 
-    // 指针已经远在小地图之外（小地图右边界 300），事件只会打到 window 上。
+    // The pointer is already far outside the minimap (minimap right edge 300), so events only hit window.
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 7, clientX: 220, clientY: 180 }));
     flushFrames(120);
 
-    // moveScale = viewScale(10) * zoom(0.5) = 5，位移 20px ⇒ 视口 x 走 -100。
+    // moveScale = viewScale(10) * zoom(0.5) = 5, a 20px displacement => viewport x moves by -100.
     expect(instance.current().x).toBeCloseTo(-100, 5);
 
-    // 还没松手，继续拖依然跟手，而且增益不变（不再随视口拖离内容区复利放大）。
+    // Not released yet, so continued dragging still follows the pointer, and the gain is unchanged (no longer compounding as the viewport drifts off the content area).
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 7, clientX: 240, clientY: 180 }));
     flushFrames(120);
     expect(instance.current().x).toBeCloseTo(-200, 5);
     expect(onPanEnd).not.toHaveBeenCalled();
 
-    // 松手点在小地图外（小地图下边界 250）⇒ 外层应恢复自动隐藏。
+    // The release point is outside the minimap (minimap bottom edge 250) => the outer layer should resume auto-hiding.
     window.dispatchEvent(pointerEvent("pointerup", { pointerId: 7, clientX: 240, clientY: 400 }));
     flushFrames(120);
     expect(onPanEnd).toHaveBeenCalledTimes(1);
     expect(onPanEnd).toHaveBeenCalledWith(false);
 
-    // 松手后的 pointermove 不该再动视口。
+    // A pointermove after release must not move the viewport.
     const settled = instance.current().x;
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 7, clientX: 400, clientY: 180 }));
     flushFrames(120);
     expect(instance.current().x).toBeCloseTo(settled, 5);
   });
 
-  it("松手点仍在小地图内时告知外层保持显示", () => {
+  it("tells the outer layer to keep it visible when the release point is still inside the minimap", () => {
     const { svg, onPanEnd } = setup();
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 3, clientX: 200, clientY: 180 }));
     window.dispatchEvent(pointerEvent("pointerup", { pointerId: 3, clientX: 210, clientY: 190 }));
@@ -192,14 +192,14 @@ describe("useSmoothMinimapPan", () => {
     expect(onPanEnd).toHaveBeenCalledWith(true);
   });
 
-  it("收敛后按住不动不再空转 rAF，也不再重复写视口", () => {
+  it("after converging, holding still no longer spins rAF idly or rewrites the viewport repeatedly", () => {
     const { svg, instance } = setup();
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 1, clientX: 200, clientY: 180 }));
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 180 }));
     flushFrames(200);
 
-    // 指针仍按着，但已经到位：循环必须自己停掉。
+    // The pointer is still pressed but already in place: the loop must stop by itself.
     expect(rafCallbacks.size).toBe(0);
 
     const callsAfterSettle = instance.setViewport.mock.calls.length;
@@ -207,18 +207,18 @@ describe("useSmoothMinimapPan", () => {
     expect(instance.setViewport).toHaveBeenCalledTimes(callsAfterSettle);
   });
 
-  it("卸载时若仍在拖动，要把结束事件还给外层", () => {
+  it("if still dragging on unmount, the end event must be handed back to the outer layer", () => {
     const { view, svg, onPanEnd } = setup();
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 5, clientX: 200, clientY: 180 }));
     view.unmount();
     expect(onPanEnd).toHaveBeenCalledWith(false);
   });
 
-  // ---- P1：增益只按可见节点的绝对包围盒算 ------------------------------------
-  it("分组的隐藏成员不参与增益计算，相对坐标也不会被当成全局坐标", () => {
-    // 分镜组：组在 x=10000，成员被改成 parentId + hidden，position 是组内单元格
-    // 坐标（近原点）。静态 getNodesBounds 会把包围盒从 x=20 一路撑到 x=12000
-    // （宽 11980 ⇒ 增益 ~29.95），而正确答案只算可见的组本身（宽 2000 ⇒ 增益 5）。
+  // ---- P1: gain is computed only from the absolute bounding box of visible nodes ------------------------------------
+  it("hidden group members do not take part in the gain calculation, and relative coordinates are not mistaken for global ones", () => {
+    // Storyboard group: the group is at x=10000, members are changed to parentId + hidden, and position is an in-group cell
+    // coordinate (near the origin). The static getNodesBounds would stretch the bounding box from x=20 all the way to x=12000
+    // (width 11980 => gain ~29.95), whereas the correct answer counts only the visible group itself (width 2000 => gain 5).
     const nodes: TestNode[] = [
       { id: "g", position: { x: 10000, y: 0 }, width: 2000, height: 1500 },
       { id: "c", parentId: "g", hidden: true, position: { x: 20, y: 10 }, width: 100, height: 100 },
@@ -227,24 +227,24 @@ describe("useSmoothMinimapPan", () => {
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 9, clientX: 200, clientY: 180 }));
 
-    // 隐藏成员必须先被过滤掉 —— 内置 MiniMap 的包围盒同样只算可见节点。
+    // Hidden members must be filtered out first -- the built-in MiniMap's bounding box likewise counts only visible nodes.
     expect(instance.getNodesBounds).toHaveBeenCalledTimes(1);
     expect(instance.getNodesBounds.mock.calls[0][0].map((node: TestNode) => node.id)).toEqual(["g"]);
 
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 9, clientX: 220, clientY: 180 }));
     flushFrames(200);
-    // moveScale = 10 * 0.5 = 5 ⇒ 20px 位移走 -100，而不是被撑大后的 -599。
+    // moveScale = 10 * 0.5 = 5 => a 20px displacement moves by -100, not the stretched -599.
     expect(instance.current().x).toBeCloseTo(-100, 5);
   });
 
-  // ---- P1：收敛时提交一次最终视口 --------------------------------------------
-  it("收敛时把最终视口交给外层提交一次，缓动中途不发", () => {
+  // ---- P1: commit the final viewport once on convergence --------------------------------------------
+  it("on convergence hands the final viewport to the outer layer to commit once, and sends nothing midway through the easing", () => {
     const { svg, instance, onViewportSettled } = setup();
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 2, clientX: 200, clientY: 180 }));
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 2, clientX: 220, clientY: 180 }));
 
-    // 缓动每帧只走 30%，头几帧远没到位，这期间不该有任何提交。
+    // The easing covers only 30% per frame, so the first few frames are far from in place and nothing should be committed during that time.
     flushFrames(3);
     expect(instance.setViewport.mock.calls.length).toBeGreaterThan(1);
     expect(onViewportSettled).not.toHaveBeenCalled();
@@ -254,18 +254,18 @@ describe("useSmoothMinimapPan", () => {
     expect(onViewportSettled.mock.calls[0][0].x).toBeCloseTo(-100, 5);
   });
 
-  // ---- P2：结束通知等缓动真正到位 --------------------------------------------
-  it("松手时缓动还没收尾，就要等到位后才通知外层结束", () => {
+  // ---- P2: the end notification waits until the easing is really in place --------------------------------------------
+  it("if the easing has not finished on release, the outer layer is notified of the end only after it settles", () => {
     const { svg, instance, onPanEnd } = setup();
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 4, clientX: 200, clientY: 180 }));
-    // 一口气拖很远（400px ⇒ 视口要走 2000），松手时离目标还差得远。
+    // Dragged far in one go (400px => the viewport must travel 2000), and still far from the target on release.
     window.dispatchEvent(pointerEvent("pointermove", { pointerId: 4, clientX: 600, clientY: 180 }));
     flushFrames(2);
     window.dispatchEvent(pointerEvent("pointerup", { pointerId: 4, clientX: 600, clientY: 180 }));
 
-    // 松手那一刻不能就报结束：外层一旦解除挂载保护，MiniMap 卸载会把 rAF 掐断，
-    // 画布停在半路。固定 180ms 的老做法盖不住这段收敛时间。
+    // The end must not be reported at the moment of release: once the outer layer lifts its mount protection, unmounting MiniMap cuts off rAF
+    // and leaves the canvas halfway. The old fixed 180ms approach cannot cover this convergence time.
     expect(onPanEnd).not.toHaveBeenCalled();
     flushFrames(5);
     expect(onPanEnd).not.toHaveBeenCalled();
@@ -276,7 +276,7 @@ describe("useSmoothMinimapPan", () => {
     expect(onPanEnd).toHaveBeenCalledTimes(1);
   });
 
-  it("缓动收尾期间又按下去，不会把上一次的结束通知冲出来", () => {
+  it("pressing again during the easing wind-down does not flush out the previous end notification", () => {
     const { svg, onPanEnd } = setup();
 
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 6, clientX: 200, clientY: 180 }));
@@ -284,7 +284,7 @@ describe("useSmoothMinimapPan", () => {
     flushFrames(2);
     window.dispatchEvent(pointerEvent("pointerup", { pointerId: 6, clientX: 200, clientY: 180 }));
 
-    // 收尾还没走完就又按下 ⇒ 新手势开始，旧的结束通知作废。
+    // Pressing again before the wind-down finishes => a new gesture starts and the old end notification is voided.
     svg.dispatchEvent(pointerEvent("pointerdown", { pointerId: 8, clientX: 200, clientY: 180 }));
     flushFrames(200);
     expect(onPanEnd).not.toHaveBeenCalled();

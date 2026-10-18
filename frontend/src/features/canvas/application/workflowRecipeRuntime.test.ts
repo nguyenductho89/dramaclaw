@@ -54,14 +54,14 @@ describe('workflowRecipeRuntime', () => {
           recipeId: 'ecommerce-scene-image',
           recipeVersion: '1',
           promptStrategy: 'previous_output',
-          promptBuilder: { userGoal: '生成三张商品图' },
+          promptBuilder: { userGoal: 'Generate three product images' },
         },
       },
       nodeKind: 'image',
-      nodePrompt: '北欧厨房',
-      upstreamText: '银色咖啡机',
+      nodePrompt: 'Nordic kitchen',
+      upstreamText: 'Silver coffee machine',
       fallbackPrompt: 'fallback',
-      referenceMedia: [{ kind: 'image', label: '产品参考图' }],
+      referenceMedia: [{ kind: 'image', label: 'Product reference image' }],
     });
 
     expect(result).toBe('compiled prompt');
@@ -73,10 +73,10 @@ describe('workflowRecipeRuntime', () => {
       confirmedInputs: { aspect_ratio: '9:16', language: 'zh' },
       nodeKind: 'image',
       promptStrategy: 'previous_output',
-      nodePrompt: '北欧厨房',
-      upstreamText: '银色咖啡机',
-      userGoal: '生成三张商品图',
-      referenceMedia: [{ kind: 'image', label: '产品参考图' }],
+      nodePrompt: 'Nordic kitchen',
+      upstreamText: 'Silver coffee machine',
+      userGoal: 'Generate three product images',
+      referenceMedia: [{ kind: 'image', label: 'Product reference image' }],
     });
   });
 
@@ -95,9 +95,9 @@ describe('workflowRecipeRuntime', () => {
         },
       },
       nodeKind: 'audio',
-      nodePrompt: '冷灰海浪氛围配乐',
+      nodePrompt: 'Cool-grey ocean wave ambient score',
       upstreamText: '',
-      fallbackPrompt: '第1集剧本\n\n冷灰海浪氛围配乐',
+      fallbackPrompt: 'Episode 1 script\n\nCool-grey ocean wave ambient score',
     });
 
     expect(compileMock).toHaveBeenCalledWith({
@@ -108,7 +108,7 @@ describe('workflowRecipeRuntime', () => {
       confirmedInputs: {},
       nodeKind: 'audio',
       promptStrategy: 'llm_refine',
-      nodePrompt: '冷灰海浪氛围配乐',
+      nodePrompt: 'Cool-grey ocean wave ambient score',
       upstreamText: '',
       userGoal: '',
       referenceMedia: undefined,
@@ -130,7 +130,7 @@ describe('workflowRecipeRuntime', () => {
         nodeId: 'image-1',
         nodeData: { workflowCatalog: { recipeId: 'product-image' } },
         nodeKind: 'image',
-        nodePrompt: '商品图',
+        nodePrompt: 'Product image',
         fallbackPrompt: 'fallback',
       });
     } finally {
@@ -152,7 +152,7 @@ describe('workflowRecipeRuntime', () => {
         nodeId: 'image-billed',
         nodeData: { workflowCatalog: { recipeId: 'product-image' } },
         nodeKind: 'image',
-        nodePrompt: '商品图',
+        nodePrompt: 'Product image',
         fallbackPrompt: 'fallback',
       });
     } finally {
@@ -172,27 +172,27 @@ describe('workflowRecipeRuntime', () => {
   });
 
   it('executes a catalog-backed text node', async () => {
-    generateTextMock.mockResolvedValue('# 电商方案');
+    generateTextMock.mockResolvedValue('# E-commerce plan');
 
     const result = await generateWorkflowText({
       nodeData: {
         workflowCatalog: {
           recipeId: 'ecommerce-text-plan',
           recipeVersion: 1,
-          userGoal: '生成三屏详情页',
+          userGoal: 'Generate a three-screen detail page',
         },
       },
-      nodePrompt: '咖啡机卖点',
-      upstreamText: '银色金属机身',
+      nodePrompt: 'Coffee machine selling points',
+      upstreamText: 'Silver metal body',
     });
 
-    expect(result).toBe('# 电商方案');
+    expect(result).toBe('# E-commerce plan');
     expect(generateTextMock).toHaveBeenCalledWith({
       recipeId: 'ecommerce-text-plan',
       recipeVersion: '1',
-      nodePrompt: '咖啡机卖点',
-      upstreamText: '银色金属机身',
-      userGoal: '生成三屏详情页',
+      nodePrompt: 'Coffee machine selling points',
+      upstreamText: 'Silver metal body',
+      userGoal: 'Generate a three-screen detail page',
     });
   });
 
@@ -210,7 +210,7 @@ describe('workflowRecipeRuntime', () => {
         },
       },
       nodeKind: 'image',
-      nodePrompt: '雨夜街道中的主角',
+      nodePrompt: 'The protagonist on a rainy night street',
       fallbackPrompt: 'fallback',
     });
 
@@ -235,26 +235,26 @@ describe('workflowRecipeRuntime', () => {
           nodeId: 'outline-node',
           nodeType: CANVAS_NODE_TYPES.textAnnotation,
           workflowStepId: 'outline',
-          text: '创意大纲',
+          text: 'Creative outline',
         },
         {
           nodeId: 'brief-node',
           nodeType: CANVAS_NODE_TYPES.textAnnotation,
           workflowStepId: 'brief',
-          text: '广告脚本',
+          text: 'Ad script',
         },
       ],
-      '创意大纲\n\n广告脚本',
+      'Creative outline\n\nAd script',
     );
 
-    expect(result).toBe('广告脚本');
+    expect(result).toBe('Ad script');
   });
 
   it('suppresses text context for user-assets-only strategies', () => {
     expect(selectWorkflowUpstreamText(
       { workflowCatalog: { inputStrategy: { type: 'user_assets' } } },
       undefined,
-      '不应传入模型',
+      'Should not be passed to the model',
     )).toBe('');
   });
 });

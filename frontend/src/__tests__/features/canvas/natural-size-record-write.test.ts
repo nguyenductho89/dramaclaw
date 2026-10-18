@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// onLoad 量到真尺寸之后要不要落库。这件事有两个坑，都不在「比例变了」这条明路上：
+// Whether to persist after onLoad measures the real size. There are two pitfalls, neither on the obvious "ratio changed" path:
 //
-// 1. 记录本来就是空的。老项目里的节点比例早算对了、尺寸也早贴合了，比例和显示尺寸
-//    两个条件永远为 false，于是 imageNaturalWidth/Height 一辈子写不进去；而
-//    nodeBodyImageSrc 没有记录只能喂原图，这个节点从此享受不到降采样副本——整个
-//    改动对存量项目静默失效。
-// 2. 补记这类写入不是用户的改动。真进撤销栈，打开一个老项目就堆进几十条「忘掉一张
-//    图的尺寸」，还会把重做栈清空。
+// 1. The record is empty to begin with. Nodes in old projects already had the right ratio and a fitting size, so the ratio and display-size
+//    conditions are always false, and imageNaturalWidth/Height never gets written; while
+//    nodeBodyImageSrc without a record can only feed the original, so this node never benefits from the downscaled copy -- the whole
+//    change silently does nothing for existing projects.
+// 2. A backfill write like this is not a user change. If it really entered the undo stack, opening an old project would pile up dozens of "forget one
+//    image's size" entries and also clear the redo stack.
 import { describe, expect, it } from "vitest";
 
 import { planNaturalSizeRecordWrite } from "@/features/canvas/application/imageData";
@@ -24,7 +24,7 @@ const SETTLED = {
 };
 
 describe("planNaturalSizeRecordWrite", () => {
-  it("记录空着就得补上，哪怕比例和显示尺寸都已经贴合", () => {
+  it("an empty record must be backfilled even when the ratio and display size already fit", () => {
     expect(planNaturalSizeRecordWrite({ ...SETTLED, record: null })).toEqual({
       persist: true,
       recordHistory: false,
@@ -32,21 +32,21 @@ describe("planNaturalSizeRecordWrite", () => {
     });
   });
 
-  // 同比例换图：5504x3072 -> 2752x1536，比例和显示尺寸都不动。
-  it("记录和刚量到的真相对不上也得写回去", () => {
+  // Same-ratio image swap: 5504x3072 -> 2752x1536, with the ratio and display size both unchanged.
+  it("a record that disagrees with the freshly measured truth must be written back too", () => {
     expect(
       planNaturalSizeRecordWrite({ ...SETTLED, record: { width: 2752, height: 1536 } }),
     ).toEqual({ persist: true, recordHistory: false, applySize: false });
   });
 
-  it("补记和纠正都不进撤销栈，它们不改变屏幕上的任何一个像素", () => {
+  it("backfills and corrections do not enter the undo stack, since they change no pixel on screen", () => {
     expect(planNaturalSizeRecordWrite({ ...SETTLED, record: null }).recordHistory).toBe(false);
     expect(
       planNaturalSizeRecordWrite({ ...SETTLED, record: { width: 1, height: 1 } }).recordHistory,
     ).toBe(false);
   });
 
-  it("比例或显示尺寸变了是用户看得见的改动，进撤销栈", () => {
+  it("a changed ratio or display size is a user-visible change and enters the undo stack", () => {
     expect(
       planNaturalSizeRecordWrite({ ...SETTLED, record: MEASURED, aspectRatioChanged: true }),
     ).toEqual({ persist: true, recordHistory: true, applySize: true });
@@ -55,8 +55,8 @@ describe("planNaturalSizeRecordWrite", () => {
     ).toEqual({ persist: true, recordHistory: true, applySize: true });
   });
 
-  // 写完就收敛：同一份输入第二次算出来不再写，不会每次 onLoad 都更新一遍节点数据。
-  it("记录已经是真相时什么都不写", () => {
+  // Converge once written: the same input no longer writes the second time, so node data is not updated on every onLoad.
+  it("writes nothing when the record is already the truth", () => {
     expect(planNaturalSizeRecordWrite({ ...SETTLED, record: MEASURED })).toEqual({
       persist: false,
       recordHistory: false,
@@ -64,22 +64,22 @@ describe("planNaturalSizeRecordWrite", () => {
     });
   });
 
-  // ImageNode 放大到 1.45 以上喂的是 imageUrl，那可能是完全另一张图（旋转、补光、
-  // 多视角的结果都写在 previewImageUrl 里）。拿它去补记录是把空的换成错的。
-  it("量的不是记录该描述的那张图时，连补记都不做", () => {
+  // Beyond a 1.45 zoom ImageNode feeds imageUrl, which may be a completely different image (the results of rotate, relight,
+  // and multi-angle are all in previewImageUrl). Backfilling the record from it swaps an empty value for a wrong one.
+  it("does not even backfill when what was measured is not the image the record should describe", () => {
     expect(
       planNaturalSizeRecordWrite({ ...SETTLED, record: null, measuringRecordSubject: false }),
     ).toEqual({ persist: false, recordHistory: false, applySize: false });
   });
 
-  // 用户拖过尺寸的节点（isSizeManuallyAdjusted）。onLoad 原本在这里直接 return，于是
-  // 换图之后真实尺寸永远写不回去：角标当次靠组件局部 state 还是对的，重新挂载读到的
-  // 却是旧记录；同比例换图时降采样副本那层校验也认不出来，于是继续按旧尺寸挑变体。
-  // 保住用户拖出来的显示尺寸，和把真实像素尺寸记对，是两件互不相干的事。
-  describe("用户拖定过尺寸的节点", () => {
+  // Nodes whose size the user dragged (isSizeManuallyAdjusted). onLoad used to return right here, so
+  // after an image swap the real size could never be written back: the badge was right for that moment thanks to component-local state, but a remount reads the
+  // old record; with a same-ratio swap the downscaled-copy validation also cannot tell, so it keeps picking the variant by the old size.
+  // Preserving the display size the user dragged and recording the real pixel size correctly are two unrelated things.
+  describe("a node whose size the user dragged", () => {
     const LOCKED = { ...SETTLED, sizeLockedByUser: true };
 
-    it("不碰它的显示尺寸，但记录该补还是要补", () => {
+    it("leaves its display size alone but still backfills the record", () => {
       expect(planNaturalSizeRecordWrite({ ...LOCKED, record: null })).toEqual({
         persist: true,
         recordHistory: false,
@@ -87,7 +87,7 @@ describe("planNaturalSizeRecordWrite", () => {
       });
     });
 
-    it("比例变了也只纠正记录，尺寸不动，也不进撤销栈", () => {
+    it("even when the ratio changed it only corrects the record, leaves the size alone, and does not enter the undo stack", () => {
       expect(
         planNaturalSizeRecordWrite({
           ...LOCKED,
@@ -98,7 +98,7 @@ describe("planNaturalSizeRecordWrite", () => {
       ).toEqual({ persist: true, recordHistory: false, applySize: false });
     });
 
-    it("记录已经是真相时什么都不写", () => {
+    it("writes nothing when the record is already the truth", () => {
       expect(planNaturalSizeRecordWrite({ ...LOCKED, record: MEASURED })).toEqual({
         persist: false,
         recordHistory: false,
@@ -106,7 +106,7 @@ describe("planNaturalSizeRecordWrite", () => {
       });
     });
 
-    it("量的不是记录该描述的那张图时，连补记都不做", () => {
+    it("does not even backfill when what was measured is not the image the record should describe", () => {
       expect(
         planNaturalSizeRecordWrite({ ...LOCKED, record: null, measuringRecordSubject: false }),
       ).toEqual({ persist: false, recordHistory: false, applySize: false });
@@ -114,7 +114,7 @@ describe("planNaturalSizeRecordWrite", () => {
   });
 });
 
-describe("updateNodeSize 的 recordHistory", () => {
+describe("updateNodeSize recordHistory", () => {
   const seed = (nodeId: string) => {
     useCanvasStore.setState({
       nodes: [
@@ -132,7 +132,7 @@ describe("updateNodeSize 的 recordHistory", () => {
     } as never);
   };
 
-  it("补记事实不进撤销栈，也不清空重做栈", () => {
+  it("a factual backfill does not enter the undo stack or clear the redo stack", () => {
     seed("n1");
     const future = useCanvasStore.getState().history.future;
 
@@ -148,7 +148,7 @@ describe("updateNodeSize 的 recordHistory", () => {
     expect(after.nodes[0].data.imageNaturalWidth).toBe(5504);
   });
 
-  it("默认仍然进撤销栈", () => {
+  it("still enters the undo stack by default", () => {
     seed("n2");
 
     useCanvasStore.getState().updateNodeSize("n2", { width: 321, height: 123 });

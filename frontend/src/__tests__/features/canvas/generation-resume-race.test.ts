@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 刷新恢复路径上的两个时序坑：
-//   1. 任务列表瞬时漏项（后端 list_tasks_for_project 单行解析失败会静默跳过），
-//      单次 miss 就判「不存在」会把还在跑的任务写成失败；
-//   2. 上个会话遗留的 generationJobId 与 descriptor resume 抢同一个节点——
-//      gateway 内存 Map 刷新后是空的，轮询必然 not_found，写失败又比 resume 快。
-// 两条都会让「稍后刷新页面查看结果」落空，所以在这里钉死。
+// Two timing pitfalls on the refresh-recovery path:
+//   1. The task list transiently misses items (a single-row parse failure in the backend list_tasks_for_project is silently skipped),
+//      and judging "does not exist" on a single miss would write a still-running task as failed;
+//   2. A generationJobId left over from the previous session races the descriptor resume for the same node --
+//      the gateway in-memory Map is empty after a refresh, so polling is bound to get not_found, and writing the failure is faster than the resume.
+// Both make "refresh the page later to see the result" fail, so they are pinned down here.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CanvasNode } from "@/features/canvas/domain/canvasNodes";
@@ -48,7 +48,7 @@ vi.mock("@/features/canvas/application/workflowHtmlRuntime", () => ({
 
 const TASK_KEY = "freezone_image:job-9";
 
-/** 一个刷新后待恢复的图片节点：句柄齐全、仍在生成中。 */
+/** An image node awaiting recovery after a refresh: handles complete, still generating. */
 function resumableNode(extra: Record<string, unknown> = {}): CanvasNode {
   return {
     id: "n1",
@@ -101,8 +101,8 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
-describe("恢复路径：列表漏项不等于任务不存在", () => {
-  it("第一次列表为空、随后出现时，照常等到结果，不写失败", async () => {
+describe("recovery path: a missing list item does not mean the task does not exist", () => {
+  it("when the first list is empty and the task appears afterwards, it waits for the result as usual without writing a failure", async () => {
     vi.useFakeTimers();
     try {
       listTasks
@@ -123,8 +123,8 @@ describe("恢复路径：列表漏项不等于任务不存在", () => {
       await vi.runAllTimersAsync();
       await pending;
 
-      // 第二次列表命中，于是进了 awaitTaskCompletion —— 这才是有 idle budget
-      // 语义的那条路。
+      // The second list hits, so it enters awaitTaskCompletion -- that is the path with idle budget
+      // semantics.
       expect(awaitTaskCompletion).toHaveBeenCalledTimes(1);
       const calls = updateNodeData.mock.calls;
       const patch = calls[calls.length - 1]?.[1] as Record<string, unknown>;
@@ -135,7 +135,7 @@ describe("恢复路径：列表漏项不等于任务不存在", () => {
     }
   });
 
-  it("连续 miss 到确认次数才判定任务不存在", async () => {
+  it("only judges the task nonexistent after enough consecutive misses", async () => {
     vi.useFakeTimers();
     try {
       listTasks.mockResolvedValue([]);
@@ -150,7 +150,7 @@ describe("恢复路径：列表漏项不等于任务不存在", () => {
       await pending;
 
       expect(listTasks).toHaveBeenCalledTimes(TASK_MISS_CONFIRM_ATTEMPTS);
-      // 确认到底了才写失败，并且没有白等一整个轮询预算。
+      // The failure is written only once confirmed all the way, without waiting out a whole polling budget in vain.
       expect(awaitTaskCompletion).not.toHaveBeenCalled();
       const calls = updateNodeData.mock.calls;
       const patch = calls[calls.length - 1]?.[1] as Record<string, unknown>;
@@ -161,7 +161,7 @@ describe("恢复路径：列表漏项不等于任务不存在", () => {
     }
   });
 
-  it("列表接口报错时绝不判失败——列不出来不等于任务没了", async () => {
+  it("never judges failure when the list endpoint errors -- being unable to list does not mean the task is gone", async () => {
     listTasks.mockRejectedValue(new Error("offline"));
     awaitTaskCompletion.mockResolvedValue({
       task_key: TASK_KEY,
@@ -181,8 +181,8 @@ describe("恢复路径：列表漏项不等于任务不存在", () => {
   });
 });
 
-describe("恢复路径：文本任务按任务类型取回结果", () => {
-  it("刷新后使用文本生成结果接口恢复正文和模型", async () => {
+describe("recovery path: text tasks fetch results by task type", () => {
+  it("after a refresh, uses the text generation result endpoint to recover the body and model", async () => {
     const taskKey = "freezone_text_generate:text-job-1";
     listTasks.mockResolvedValue([{ task_key: taskKey, status: "running" }]);
     awaitTaskCompletion.mockResolvedValue({
@@ -191,7 +191,7 @@ describe("恢复路径：文本任务按任务类型取回结果", () => {
       result: { output_format: "json" },
     });
     fetchFreezoneTextGenerateResult.mockResolvedValue({
-      generated_text: "雨落在旧车站的铁轨上。",
+      generated_text: "Rain falls on the rails of the old station.",
       model: "DC-freezone-text-writer-LLM",
     });
     const updateNodeData = vi.fn();
@@ -205,14 +205,14 @@ describe("恢复路径：文本任务按任务类型取回结果", () => {
     expect(fetchFreezoneTextGenerateResult).toHaveBeenCalledWith("demo", "text-job-1");
     const calls = updateNodeData.mock.calls;
     const patch = calls[calls.length - 1]?.[1] as Record<string, unknown>;
-    expect(patch.content).toBe("雨落在旧车站的铁轨上。");
+    expect(patch.content).toBe("Rain falls on the rails of the old station.");
     expect(patch.model).toBe("DC-freezone-text-writer-LLM");
     expect(patch.isGenerating).toBe(false);
   });
 });
 
-describe("恢复路径：HTML 文本任务保存为 Artifact", () => {
-  it("刷新后走 HTML 完成器，不把源码写进普通 content 字段", async () => {
+describe("recovery path: HTML text tasks are saved as an Artifact", () => {
+  it("after a refresh, goes through the HTML completer and does not write the source into the plain content field", async () => {
     const taskKey = "freezone_text_generate:html-job-1";
     listTasks.mockResolvedValue([{ task_key: taskKey, status: "running" }]);
     awaitTaskCompletion.mockResolvedValue({
@@ -244,26 +244,26 @@ describe("恢复路径：HTML 文本任务保存为 Artifact", () => {
   });
 });
 
-describe("恢复路径：旧会话的 generationJobId 不许抢跑", () => {
-  it("旧 session jobId + 完整 descriptor：不轮询，清死 id，resume 独占", () => {
+describe("recovery path: a stale session's generationJobId must not jump the queue", () => {
+  it("old-session jobId + complete descriptor: no polling, the dead id is cleared, and resume has exclusive use", () => {
     const node = resumableNode({
       generationJobId: "gateway-job-1",
       generationClientSessionId: "session-from-before-the-refresh",
     });
 
-    // 关键：不进轮询循环。否则 gateway 内存 Map 里查无此 id → not_found →
-    // 错误分支把 isGenerating 清成 false，descriptor resume 就此断路。
+    // Key point: do not enter the polling loop. Otherwise the id is not found in the gateway in-memory Map -> not_found ->
+    // the error branch clears isGenerating to false, and the descriptor resume is cut off right there.
     expect(nodeOwnsLiveGenerationJob(node)).toBe(false);
 
     const patch = staleGenerationJobPatch(node);
     expect(patch).toEqual(DETACHED_GENERATION_PATCH);
     expect(patch!.generationJobId).toBeNull();
-    // isGenerating 与句柄没被动过，所以打完补丁仍然是可恢复态。
+    // isGenerating and the handles were untouched, so after applying the patch it is still in a recoverable state.
     const patched = { ...node, data: { ...node.data, ...patch } } as CanvasNode;
     expect(nodeNeedsGenerationResume(patched)).toBe(true);
   });
 
-  it("本次会话写下的 jobId 照常轮询，不被当成遗留", () => {
+  it("a jobId written in this session is polled as usual and not treated as stale", () => {
     const node = resumableNode({
       generationJobId: "gateway-job-1",
       generationClientSessionId: CURRENT_RUNTIME_SESSION_ID,
@@ -273,8 +273,8 @@ describe("恢复路径：旧会话的 generationJobId 不许抢跑", () => {
     expect(staleGenerationJobPatch(node)).toBeNull();
   });
 
-  it("旧 session jobId 但没有 descriptor：直接给终态，别让节点永远转圈", () => {
-    // 本 PR 之前提交的老节点——后端句柄压根没落盘，谁都接不回来。
+  it("old-session jobId without a descriptor: gives a terminal state directly so the node does not spin forever", () => {
+    // Old nodes submitted before this PR -- the backend handle was never persisted, so nobody can pick it back up.
     const node = {
       id: "n2",
       type: CANVAS_NODE_TYPES.exportImage,
@@ -291,7 +291,7 @@ describe("恢复路径：旧会话的 generationJobId 不许抢跑", () => {
     expect(patch.generationError).toBeTruthy();
   });
 
-  it("没在生成中的节点一律不管", () => {
+  it("nodes that are not generating are ignored", () => {
     const node = {
       id: "n3",
       type: CANVAS_NODE_TYPES.exportImage,
@@ -304,8 +304,8 @@ describe("恢复路径：旧会话的 generationJobId 不许抢跑", () => {
   });
 });
 
-describe("恢复路径：旧任务不能覆盖同一节点的新任务", () => {
-  it("旧视频结果晚到时保留新任务的生成态和句柄", async () => {
+describe("recovery path: an old task must not overwrite a new task on the same node", () => {
+  it("when an old video result arrives late, the new task's generating state and handle are kept", async () => {
     const oldTaskKey = "freezone_video_upscale:old-job";
     const newTaskKey = "freezone_video_upscale:new-job";
     const node = {

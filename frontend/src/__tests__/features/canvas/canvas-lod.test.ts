@@ -19,36 +19,36 @@ import {
 } from '@/features/canvas/application/canvasLod';
 
 describe('isLowDetailZoom', () => {
-  it('阈值以下才算低缩放档，边界值本身不算', () => {
+  it('only below the threshold counts as the low zoom tier, the boundary value itself does not', () => {
     expect(isLowDetailZoom(LOW_DETAIL_ZOOM_THRESHOLD - 0.01)).toBe(true);
     expect(isLowDetailZoom(LOW_DETAIL_ZOOM_THRESHOLD)).toBe(false);
     expect(isLowDetailZoom(LOW_DETAIL_ZOOM_THRESHOLD + 0.01)).toBe(false);
   });
 
-  it('常用工作缩放区间(0.5~1)不受影响', () => {
+  it('the common working zoom range (0.5~1) is unaffected', () => {
     expect(isLowDetailZoom(0.5)).toBe(false);
     expect(isLowDetailZoom(1)).toBe(false);
   });
 
-  it('非有限值一律按「不降级」处理，避免初始化期误判', () => {
+  it('non-finite values are all treated as "no downgrade" to avoid misjudgment during initialization', () => {
     expect(isLowDetailZoom(Number.NaN)).toBe(false);
     expect(isLowDetailZoom(Number.POSITIVE_INFINITY)).toBe(false);
     expect(isLowDetailZoom(Number.NEGATIVE_INFINITY)).toBe(false);
   });
 });
 
-describe('画布测量延迟信号', () => {
+describe('canvas measurement deferral signal', () => {
   beforeEach(() => {
-    // 模块级状态跨用例存活，每个用例前复位。
+    // Module-level state survives across cases, so reset it before each case.
     setCanvasGestureActive(false);
     setCanvasLowDetail(false);
   });
 
-  it('默认可以测量', () => {
+  it('measurement is allowed by default', () => {
     expect(isCanvasMeasurementDeferred()).toBe(false);
   });
 
-  it('手势中或低缩放档都要跳过测量', () => {
+  it('measurement is skipped during gestures or in the low zoom tier', () => {
     setCanvasGestureActive(true);
     expect(isCanvasMeasurementDeferred()).toBe(true);
 
@@ -57,7 +57,7 @@ describe('画布测量延迟信号', () => {
     expect(isCanvasMeasurementDeferred()).toBe(true);
   });
 
-  it('画布静下来时通知订阅方补测', () => {
+  it('notifies subscribers to re-measure when the canvas settles', () => {
     const listener = vi.fn();
     onCanvasMeasurementResume(listener);
 
@@ -68,23 +68,23 @@ describe('画布测量延迟信号', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('另一个条件仍在延迟时不通知——否则会在低缩放档下白量一遍', () => {
+  it('does not notify while another condition is still deferring -- otherwise it would measure in vain under the low zoom tier', () => {
     const listener = vi.fn();
     onCanvasMeasurementResume(listener);
 
     setCanvasGestureActive(true);
     setCanvasLowDetail(true);
 
-    // 手势结束，但仍处于低缩放档：还不能测量。
+    // The gesture ended, but still in the low zoom tier: measuring is not allowed yet.
     setCanvasGestureActive(false);
     expect(listener).not.toHaveBeenCalled();
 
-    // 缩放拉回来，此时才真正静止。
+    // Zoom is pulled back, and only now is it truly still.
     setCanvasLowDetail(false);
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('重复设置同一状态不会重复通知', () => {
+  it('setting the same state repeatedly does not notify repeatedly', () => {
     const listener = vi.fn();
     onCanvasMeasurementResume(listener);
 
@@ -96,7 +96,7 @@ describe('画布测量延迟信号', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('退订后不再收到通知', () => {
+  it('no more notifications after unsubscribing', () => {
     const listener = vi.fn();
     const unsubscribe = onCanvasMeasurementResume(listener);
 
@@ -108,8 +108,8 @@ describe('画布测量延迟信号', () => {
   });
 });
 
-describe('节点媒体活跃信号', () => {
-  it('标记/清除/查询是一致的', () => {
+describe('node media active signal', () => {
+  it('mark/clear/query are consistent', () => {
     expect(isNodeMediaActive('n1')).toBe(false);
     setNodeMediaActive('n1', true);
     expect(isNodeMediaActive('n1')).toBe(true);
@@ -118,7 +118,7 @@ describe('节点媒体活跃信号', () => {
     expect(isNodeMediaActive('n1')).toBe(false);
   });
 
-  it('重复清除是幂等的（卸载清理与 onPause 会先后触发）', () => {
+  it('repeated clearing is idempotent (unmount cleanup and onPause fire one after the other)', () => {
     setNodeMediaActive('n1', true);
     setNodeMediaActive('n1', false);
     setNodeMediaActive('n1', false);
@@ -126,7 +126,7 @@ describe('节点媒体活跃信号', () => {
   });
 });
 
-describe('shell 升级队列', () => {
+describe('shell upgrade queue', () => {
   let rafCallbacks: FrameRequestCallback[];
 
   beforeEach(() => {
@@ -139,13 +139,13 @@ describe('shell 升级队列', () => {
     setCanvasLowDetail(false);
   });
 
-  /** 跑一「帧」：执行当前已排期的 rAF 回调（泵可能重新排期到下一帧）。 */
+  /** Runs one "frame": executes the currently scheduled rAF callbacks (the pump may reschedule for the next frame). */
   const tick = () => {
     const callbacks = rafCallbacks.splice(0);
     for (const cb of callbacks) cb(0);
   };
 
-  /** 用例收尾：把队列彻底放干，避免模块级状态泄漏到下一个用例。 */
+  /** Case cleanup: drains the queue completely so module-level state does not leak into the next case. */
   const drain = () => {
     setCanvasGestureActive(false);
     for (let i = 0; i < 50 && rafCallbacks.length > 0; i++) tick();
@@ -156,7 +156,7 @@ describe('shell 升级队列', () => {
     vi.unstubAllGlobals();
   });
 
-  it('每帧只放行 3 个，其余顺延后续帧', () => {
+  it('lets only 3 through per frame, deferring the rest to later frames', () => {
     const granted: number[] = [];
     for (let i = 0; i < 7; i++) requestShellUpgrade(() => granted.push(i));
     tick();
@@ -167,7 +167,7 @@ describe('shell 升级队列', () => {
     expect(granted).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 
-  it('手势进行中不放行，手势结束后继续', () => {
+  it('lets nothing through during a gesture and resumes after it ends', () => {
     const granted = vi.fn();
     requestShellUpgrade(granted);
     requestShellUpgrade(granted);
@@ -176,7 +176,7 @@ describe('shell 升级队列', () => {
     expect(isCanvasGestureActive()).toBe(true);
     tick();
     expect(granted).not.toHaveBeenCalled();
-    // 泵保持活着（重新排到下一帧），而不是死掉
+    // The pump stays alive (rescheduled for the next frame) rather than dying
     expect(rafCallbacks.length).toBeGreaterThan(0);
 
     setCanvasGestureActive(false);
@@ -184,7 +184,7 @@ describe('shell 升级队列', () => {
     expect(granted).toHaveBeenCalledTimes(2);
   });
 
-  it('取消后不再放行（节点排队期间被卸载）', () => {
+  it('lets nothing through after cancellation (the node was unmounted while queued)', () => {
     const a = vi.fn();
     const b = vi.fn();
     const cancelA = requestShellUpgrade(a);
@@ -196,25 +196,25 @@ describe('shell 升级队列', () => {
   });
 });
 
-describe('低缩放档新建节点自动聚焦', () => {
+describe('auto-focus for newly created nodes in the low zoom tier', () => {
   const CANVAS_SOURCE = readFileSync('src/features/canvas/Canvas.tsx', 'utf8');
 
   /**
-   * 截出某个组件内 handler 的函数体：从声明锚点到下一个组件作用域（两空格缩进）
-   * 的 `const` 声明为止。内层 `const` 缩进更深，不会误截。
+   * Cuts out the function body of a handler inside a component: from the declaration anchor to the next component scope (two-space indent)
+   * `const` declaration. Inner `const` declarations are indented deeper and will not be cut by mistake.
    */
   const bodyAfter = (marker: string): string => {
     const start = CANVAS_SOURCE.indexOf(marker);
-    expect(start, `Canvas.tsx 里找不到锚点：${marker}`).toBeGreaterThan(-1);
+    expect(start, `Anchor not found in Canvas.tsx: ${marker}`).toBeGreaterThan(-1);
     const rest = CANVAS_SOURCE.slice(start + marker.length);
     const end = rest.indexOf('\n  const ');
     return end === -1 ? rest : rest.slice(0, end);
   };
 
-  it('所有「凭空新建节点」的入口都要过 focusNewNodeIfLowZoom', () => {
-    // 10% 缩放下新节点在屏幕上只有几十像素、深色面板贴深色背景，用户会以为
-    // 「没创建上」。之前只有拖放式落点补了聚焦，底部「+」快捷栏与拖线菜单
-    // 漏掉了 —— 这份清单就是为了锁住所有入口，新增入口必须一起补。
+  it('every "create a node from nothing" entry must go through focusNewNodeIfLowZoom', () => {
+    // At 10% zoom a new node is only a few dozen pixels on screen, a dark panel against a dark background, and the user would think
+    // "it was not created". Previously only the drag-and-drop drop point got focus, while the bottom "+" quick bar and the drag-line menu
+    // were missed -- this list exists to lock down all entries, and any new entry must be added to it too.
     for (const marker of [
       'const commitNodePlacementAtClientPosition = useCallback(',
       'const finalizeNodeSpawn = useCallback(',
@@ -225,7 +225,7 @@ describe('低缩放档新建节点自动聚焦', () => {
     }
   });
 
-  it('聚焦门槛走 isLowDetailZoom，且把 zoom 拉到 ≥0.6', () => {
+  it('the focus threshold goes through isLowDetailZoom and pulls zoom up to >=0.6', () => {
     expect(bodyAfter('const focusNewNodeIfLowZoom = useCallback(')).toContain(
       'isLowDetailZoom(reactFlowInstance.getZoom())'
     );
@@ -233,9 +233,9 @@ describe('低缩放档新建节点自动聚焦', () => {
   });
 });
 
-describe('shell 豁免清单', () => {
-  it('组件内恢复逻辑/blur 落盘/动态 handle 的三类节点不做 shell', () => {
-    // 这三类的豁免理由见 canvasLod.ts 注释；清单变更应当是有意的设计决定。
+describe('shell exemption list', () => {
+  it('the three node kinds with in-component recovery logic / blur persistence / dynamic handles are not made into shells', () => {
+    // The exemption reasons for these three kinds are in the canvasLod.ts comments; changing the list should be a deliberate design decision.
     expect([...LOD_SHELL_EXEMPT_TYPES].sort()).toEqual([
       'beatContextNode',
       'groupNode',

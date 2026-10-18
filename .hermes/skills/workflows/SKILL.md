@@ -1,116 +1,116 @@
 ---
 name: workflows
-description: "Use in Freezone/虾画 chat when the user selects a Skill or asks to create, plan, analyze, or expand a dynamic canvas workflow for short drama, ads, ecommerce, product video, MV, text, image, video, or audio production."
-compatibility: Requires Freezone/虾画 chat surface and preferably injected canvas context. Canvas execution is delegated to freezone-canvas-node-operator after user confirmation.
+description: "Use in Freezone/Shrimp Canvas chat when the user selects a Skill or asks to create, plan, analyze, or expand a dynamic canvas workflow for short drama, ads, ecommerce, product video, MV, text, image, video, or audio production."
+compatibility: Requires Freezone/Shrimp Canvas chat surface and preferably injected canvas context. Canvas execution is delegated to freezone-canvas-node-operator after user confirmation.
 ---
 
 # Workflows Skill
 
-你是虾画的动态工作流技能总入口。你根据用户选择的 Skill 和本次需求生成精简的 `freezone_workflow_intent.v1`；工具把它确定性编译并保存为可确认的工作流草稿。不要创建 CreativePlan、Skill Session 或其它模型生成的中间 Plan。
+You are the main entry point of Shrimp Canvas dynamic workflow skills. From the Skill the user selected and this request you produce a compact `freezone_workflow_intent.v1`; the tool deterministically compiles it and saves it as a confirmable workflow draft. Do not create a CreativePlan, a Skill Session or any other model-generated intermediate Plan.
 
-工作流 skill 不依赖外部项目主线。它只基于用户输入、前端注入的当前项目/画布资源上下文，以及虾画节点能力来规划生产流程。
+A workflow skill does not depend on an external project mainline. It plans the production flow solely from the user's input, the current project/canvas resource context injected by the frontend, and the Shrimp Canvas node capabilities.
 
-用户从输入框选择 `/skill-id` 后，Hermes 会原生加载对应 Workflow Skill。必须使用该 Skill 固定的 `skill_id` 直接调用 `freezone_get_workflow_skill(skill_id=..., inputs=...)`，不得再次语义路由。`inputs` 只填写用户已经明确提供的结构化参数。正常规划只使用 `available_recipes` 摘要，不读取完整 Recipe `system_prompt`。
+After the user selects `/skill-id` in the input box, Hermes natively loads the corresponding Workflow Skill. You must use that Skill's fixed `skill_id` to call `freezone_get_workflow_skill(skill_id=..., inputs=...)` directly, and must not route semantically again. Fill `inputs` only with structured parameters the user has explicitly provided. Normal planning uses only the `available_recipes` summary and does not read the full Recipe `system_prompt`.
 
-读取 Skill 规划包并收集完整输入后，必须先调用 `freezone_begin_agent_product_generation(product_kind="workflow_result", ...)` 完成生成准入；只有返回 operation_id 后，Agent 才生成结构化 Intent/Plan，并把该 operation_id 传给 `freezone_prepare_workflow_draft`。节点数据、稳定 ID、连线类型、分组、布局和成片合成由工具确定性完成。用户调整方案时调用 `freezone_patch_workflow_draft`，确认后调用 `freezone_confirm_workflow_draft`；确认/落图不重复收费。不得调用 `freezone_build_workflow_plan`，也不得用通用画布命令手写工作流。
+After reading the Skill planning pack and collecting the complete inputs, you must first call `freezone_begin_agent_product_generation(product_kind="workflow_result", ...)` to complete generation admission; only after it returns an operation_id does the Agent produce the structured Intent/Plan, and pass that operation_id to `freezone_prepare_workflow_draft`. Node data, stable IDs, link types, grouping, layout and final-cut composition are completed deterministically by the tools. When the user adjusts the plan, call `freezone_patch_workflow_draft`, and after confirmation call `freezone_confirm_workflow_draft`; confirmation / putting on the canvas is not charged again. You must not call `freezone_build_workflow_plan`, and must not hand-write a workflow with generic canvas commands.
 
-用户未指定内部媒体参数或要求推荐时，在对应图片／视频节点的 `model` 中写 `recommended`，直接准备草稿；服务端用当前用户可见的同一 Catalog 快照解析具体模型和兼容参数，返回的预览供用户确认。不得把 `recommended` 写进 size、quality 或 resolution，也不得按 Catalog 列表顺序取第一个模型。推荐模型不可用或用户明确要求选择参数时，调用 `freezone_request_user_clarification(generation_media_types=[...])`，只列出本次涉及的 `image`/`video` 类型；工具负责生成完整字段问题和实时选项，不手写生成参数问题列表。首次准备草稿时，把问题卡返回的 `answers` 原样作为 `generation_answers` 传给准备工具，由工具映射到节点参数。已有草稿需要补问时，把 `draft_id`、`revision` 分别作为 `workflow_draft_id`、`workflow_expected_revision` 传给澄清工具；它校验答案并修订同一草稿，返回新的预览和 revision。若确认入口或画布写入返回 `generation_parameters_required`，还应将返回的 `required_choices` 原样传入 `generation_required_choices`，并把已确认的模型等选择放进 `answers`，服务端据此从同一 Catalog 条目给出推荐值。澄清结果里的 `node_data.<节点类型>` 就是可直接写入节点 `data` 的具体字段（如 `node_data.imageGenNode.aspectRatio`），只补入重试节点或 Plan 的缺失字段；保留各镜头已明确的参数，不要自行翻译问题 id。修订后必须展示新预览、等待用户确认。
+When the user did not specify internal media parameters or asks for a recommendation, write `recommended` in the `model` of the corresponding image/video node and prepare the draft directly; the server resolves the concrete model and compatible parameters from the same Catalog snapshot currently visible to the user, and the returned preview is for the user to confirm. Never write `recommended` into size, quality or resolution, and never take the first model by Catalog list order. When the recommended model is unavailable or the user explicitly asks to choose parameters, call `freezone_request_user_clarification(generation_media_types=[...])`, listing only the `image`/`video` types involved this time; the tool generates the complete field questions and live options, and you must not hand-write a generation-parameter question list. When preparing a draft for the first time, pass the `answers` returned by the question card as-is as `generation_answers` to the prepare tool, which maps them to node parameters. When an existing draft needs follow-up questions, pass `draft_id` and `revision` as `workflow_draft_id` and `workflow_expected_revision` to the clarification tool; it validates the answers and revises the same draft, returning a new preview and revision. If the confirmation entry or the canvas write returns `generation_parameters_required`, also pass the returned `required_choices` as-is into `generation_required_choices`, and put the already confirmed choices such as the model into `answers`; the server then gives the recommended values from the same Catalog entry. The `node_data.<node type>` in the clarification result holds the concrete fields that can be written directly into the node `data` (such as `node_data.imageGenNode.aspectRatio`); only add the missing fields of the retry node or Plan; keep the parameters already explicit for each shot, and do not translate question ids yourself. After a revision you must show the new preview and wait for the user's confirmation.
 
-调用生成参数澄清卡时，将用户本轮明确给出的画幅、视频节点分辨率和是否需要镜头内声音写入 `generation_preferences`；例如有对白的镜头传 `video_generate_audio=true`。`无 BGM` 仅表示不创建背景音乐，不代表视频静音。用户逐镜头指定时长时传 `video_shot_durations_seconds`，并在每个视频 Plan 节点填写对应 `data.durationSec`；此时澄清卡不再问一个全局时长。`delivery_resolution` 是最终交付规格，只有用户明确要求视频生成节点的分辨率时才传 `video_resolution`。对白或需要可听声音的视频 Intent item 写 `requires_generated_audio=true`；完整 WorkflowPlan 的对应视频节点写 `data.workflowCatalog.requiresGeneratedAudio=true`。用户明确要求静音的镜头保留 `false`，逐镜头判断。卡片若提示当前模型无法满足这些要求，改为逐项选择兼容模型和参数，不自行沿用冲突的目录缺省值。
+When calling the generation-parameter clarification card, write the aspect ratio, video node resolution and whether in-shot sound is needed that the user explicitly gave this turn into `generation_preferences`; for example pass `video_generate_audio=true` for shots with dialogue. `No BGM` only means that no background music is created, not that the video is silent. When the user specifies durations shot by shot, pass `video_shot_durations_seconds` and fill the corresponding `data.durationSec` in each video Plan node; in this case the clarification card no longer asks for one global duration. `delivery_resolution` is the final delivery specification; pass `video_resolution` only when the user explicitly asks for the resolution of the video generation node. For video Intent items with dialogue or that need audible sound, write `requires_generated_audio=true`; for a complete WorkflowPlan, the corresponding video node writes `data.workflowCatalog.requiresGeneratedAudio=true`. Keep `false` for shots the user explicitly wants silent, judging shot by shot. If the card indicates that the current model cannot meet these requirements, choose compatible models and parameters item by item instead of carrying over conflicting catalog defaults yourself.
 
-## 工具调用方式
+## How to call tools
 
-`freezone_*` 工具不在工具列表里，统一用 `tool_call(name="<工具名>", arguments={...})` 调用；JSON 里先写 `name` 再写 `arguments`（arguments 很大时后写的 `name` 容易被漏掉，缺 `name` 会直接报错）；`arguments` 必须传 JSON 对象——不要传转义后的 JSON 字符串，大型嵌套 intent 会因转义损坏而反复失败。**不要先跑 `tool_search` 或 `tool_describe`**——`tool_call` 不依赖它们。**顺序固定：读规划包 → 生成结构化 intent → 编译草稿 → 用户确认 → 创建**。`deliverable`、Recipe、字段枚举都来自规划包，跳过它自造字段会被校验反复打回。所需参数如下：
+`freezone_*` tools are not in the tool list; call them uniformly with `tool_call(name="<tool name>", arguments={...})`; write `name` before `arguments` in the JSON (when arguments is very large, a `name` written afterwards is easily dropped, and a missing `name` errors out directly); `arguments` must be a JSON object - do not pass an escaped JSON string, since a large nested intent will fail repeatedly from escaping corruption. **Do not run `tool_search` or `tool_describe` first** - `tool_call` does not depend on them. **The order is fixed: read the planning pack -> produce the structured intent -> compile the draft -> user confirms -> create**. `deliverable`, Recipes and field enums all come from the planning pack; skipping it and inventing fields will be rejected by validation repeatedly. The required parameters are as follows:
 
-- 读规划包：`tool_call(name="freezone_get_workflow_skill", arguments={"skill_id": ..., "inputs": {...}})`
-- 生成准入：`tool_call(name="freezone_begin_agent_product_generation", arguments={"product_kind": "workflow_result", "generation_session_id": ..., "artifact_id": "<skill_id>@<skill_version>", "skill_id": ..., "skill_version": ..., "normalized_inputs": {...}})`；`artifact_id`、`skill_id` 必须与随后提交的 `compiled.skill_id` 一致。
-- 规划草稿：`tool_call(name="freezone_prepare_workflow_draft", arguments={"canvas_id": ..., "operation_id": ..., "intent": {...}})`
-- 自定义拓扑草稿：`tool_call(name="freezone_prepare_workflow_plan_draft", arguments={"canvas_id": ..., "operation_id": ..., "plan": {"schema_version":"freezone_workflow_plan.v1","skill":{"id":...,"version":...},"nodes":[...],"edges":[...]}, "generation_answers": {...}})`；`generation_answers` 只能补充完整 Plan，不能替代 `plan`、`schema_version` 或 `skill`；Recipe 支持的文本执行节点不得使用仅供无 Recipe 用户资源节点使用的 `input`/`resource`/`asset` stage；返回精确预览而不直接写画布
-- 修改草稿：`freezone_patch_workflow_draft`，arguments `{"draft_id": ..., "expected_revision": ..., "changes": {...}}`
-- 确认落图：`freezone_confirm_workflow_draft`，arguments `{"draft_id": ..., "revision": ...}`
+- Read the planning pack: `tool_call(name="freezone_get_workflow_skill", arguments={"skill_id": ..., "inputs": {...}})`
+- Generation admission: `tool_call(name="freezone_begin_agent_product_generation", arguments={"product_kind": "workflow_result", "generation_session_id": ..., "artifact_id": "<skill_id>@<skill_version>", "skill_id": ..., "skill_version": ..., "normalized_inputs": {...}})`; `artifact_id` and `skill_id` must be consistent with the `compiled.skill_id` submitted afterwards.
+- Plan draft: `tool_call(name="freezone_prepare_workflow_draft", arguments={"canvas_id": ..., "operation_id": ..., "intent": {...}})`
+- Custom topology draft: `tool_call(name="freezone_prepare_workflow_plan_draft", arguments={"canvas_id": ..., "operation_id": ..., "plan": {"schema_version":"freezone_workflow_plan.v1","skill":{"id":...,"version":...},"nodes":[...],"edges":[...]}, "generation_answers": {...}})`; `generation_answers` can only supplement a complete Plan and cannot replace `plan`, `schema_version` or `skill`; text execution nodes supported by a Recipe must not use the `input`/`resource`/`asset` stage that is only for user resource nodes without a Recipe; returns an exact preview without writing the canvas directly
+- Modify the draft: `freezone_patch_workflow_draft`, arguments `{"draft_id": ..., "expected_revision": ..., "changes": {...}}`
+- Confirm and put on the canvas: `freezone_confirm_workflow_draft`, arguments `{"draft_id": ..., "revision": ...}`
 
-用户指定已有画布图片作为 Recipe 参考图时，在 intent 或 Plan 顶层声明
-`external_inputs: [{"id":"source_image","node_id":"真实画布节点 ID","media_kind":"image"}]`，
-并在目标 item 的 `reference_inputs` 或 Plan 的 `media_input_for` 边中引用 `source_image`。
-不要把已有图片写进 `nodes`、复制源节点或手填图片 URL；服务端在准备和确认时校验源图。
+When the user specifies an existing canvas image as a Recipe reference image, declare at the top level of the intent or Plan
+`external_inputs: [{"id":"source_image","node_id":"real canvas node ID","media_kind":"image"}]`,
+and reference `source_image` in the target item's `reference_inputs` or in the Plan's `media_input_for` edge.
+Do not write the existing image into `nodes`, copy the source node or hand-fill an image URL; the server validates the source image when preparing and confirming.
 
-如果用户只是咨询或分析，只展示一般性说明，不创建草稿或写画布。用户提出具体创建需求后，先读取当前已选的唯一 Skill 紧凑规划包并生成结构化 `intent`，再调用 `freezone_prepare_workflow_draft`。只有用户明确要求 Skill 蓝图无法表达的自定义拓扑时，才使用 `freezone_prepare_workflow_plan_draft(plan=...)`，并继续走同一草稿确认入口。
+If the user is merely consulting or analyzing, only give a general explanation and do not create a draft or write the canvas. After the user makes a concrete creation request, first read the compact planning pack of the one currently selected Skill and produce the structured `intent`, then call `freezone_prepare_workflow_draft`. Only when the user explicitly asks for a custom topology that the Skill blueprint cannot express may you use `freezone_prepare_workflow_plan_draft(plan=...)`, and continue through the same draft confirmation entry.
 
-“再创建一个 / 再来一个 / 再添加一个 / 重新建一个 / 复制一个同类型工作流”都属于创建请求。当前画布已经存在相同工作流时，不要改为查询列表、解释已有工作流、复用旧节点或等待用户重新选择，仍然创建一个新的工作流实例并走确认流程；不要复用旧 `draft_id`，也不要调用 `freezone_emit_canvas_command`。
+"Create another one / one more / add another / rebuild one / duplicate a workflow of the same type" are all creation requests. When the same workflow already exists on the current canvas, do not switch to querying the list, explaining the existing workflow, reusing old nodes or waiting for the user to choose again; still create a new workflow instance and go through the confirmation flow; do not reuse the old `draft_id`, and do not call `freezone_emit_canvas_command`.
 
-## 可用工作流
+## Available workflows
 
-当用户问“有哪些工作流 / 有哪些工作流技能 / 我的工作流技能有哪些 / 支持哪些流程 / 有哪些模板 / workflow skill”时，使用 Hermes 原生 `skills_list` 查看当前 Profile 中可用的 Workflow Skills，并提示用户在输入框键入 `/` 选择。不要编造固定数量。
+When the user asks "which workflows are there / which workflow skills are there / what are my workflow skills / which flows are supported / which templates are there / workflow skill", use Hermes' native `skills_list` to view the Workflow Skills available in the current Profile, and prompt the user to type `/` in the input box to choose. Do not invent a fixed number.
 
-不保留独立的 Workflow Skill 列表或语义评分路由。创建统一使用 `Hermes 原生 Skill → skill_id → freezone_get_workflow_skill → 动态 WorkflowPlan`。
+No separate Workflow Skill list or semantic scoring route is kept. Creation uniformly uses `Hermes native Skill -> skill_id -> freezone_get_workflow_skill -> dynamic WorkflowPlan`.
 
-动态工作流必须按以下顺序执行：
+A dynamic workflow must be executed in the following order:
 
-1. 使用 Hermes 本轮已经加载的原生 Workflow Skill；没有唯一 Skill 时先用 `skills_list` 展示候选，让用户通过输入框 `/` 选择。已选 Skill 不得再做语义路由或加载其它候选。
-2. 调用一次 `freezone_get_workflow_skill` 读取该 Skill 的 Recipe 规划摘要、能力约束和 `input_contract`。
-3. 使用 `input_contract.resolved` 展示用户值、工具从原话确定性提取的值和默认值；`fields[].source=inferred` 表示工具已从时长、画幅、执行模式等明确措辞中提取，不要再次分析或追问。只追问 `missing_required` 或修正 `errors`，已有素材和明确参数不要重复询问。`requires_confirmation=true` 时，在方案确认中一并确认这些值，不创建 Skill Session。
-4. 生成精简 `freezone_workflow_intent.v1`：严格以 Intent Schema 为字段白名单，只写 `skill_id`、`user_goal`、当前 `inputs`、PlanItems 和必要选项。Recipe 查询中的 `requires_source_media` 等字段只用于选择 Recipe 和规划依赖，禁止复制到 `intent.items[]`；服务端会根据 `recipe_id` 推导权威约束。每个 item 使用语义化 `id`、`title`、`prompt`、一个来自 `available_recipes` 的 `recipe_id`，并用 `depends_on` 声明真实输入依赖；用户已提供实际朗读正文时写入 `narration`。短剧遵循 screenplay-first：旁白/对白将由上游剧本或镜头 Recipe 产生时，保留 `drama-shot-voice` item，并把对应文本 item 同时写入 `depends_on` 和 `reference_inputs`，由运行时 `prompt_for` 绑定正文；不要在草稿阶段虚构台词，也不能删除用户要求的配音节点来绕过校验。当图片或视频节点需要根据上游剧本、分镜或 Shot List 生成时，必须把对应文本 PlanItem 写入 `depends_on`；当它还需要角色、场景、道具等生成素材作为实际参考时，再把这些素材写入 `reference_inputs`。每个视频 item 的 `prompt` 必须说明所对应 Shot 或 Shot Group 的具体叙事、动作和目标，不能只写“开场日常”“镜头一”等泛化标题。不要把时间码、时长、语气、环境音、音效或配乐说明写入 `narration`。调用 `freezone_prepare_workflow_draft` 编译并保存，记录返回的 `draft_id` 和 `revision`。不要生成画布 nodes/edges、UUID、连线类型、布局或分组。
-5. 缺少素材但允许从文字创建时，把素材锚点作为第一个 PlanItem，选择同一 Skill 允许的、`requires_source_media=false` 且输出类型匹配的 Recipe；后续依赖项通过 `depends_on` 引用该语义 item id。
-6. 严格按草稿工具返回的 `preview` 展示节点数量、作品清单、阶段和执行方式，不展示内部 JSON、`draft_id` 或 `revision`。
-7. 用户调整方案时，只把发生变化的字段传给 `freezone_patch_workflow_draft(draft_id=..., expected_revision=..., changes=...)`；不要重建 Intent 或创建新草稿。按新预览展示结果并记录新 revision。
-8. 用户确认后调用一次 `freezone_confirm_workflow_draft(draft_id=..., revision=...)`。执行方式默认使用草稿中已经确认的 `run_after_create`。
-9. 草稿校验失败时只修正返回的输入、item 或选项字段后重试；绝不原样重提。同一错误路径修正一次后仍失败，本轮停止重试并报告阻塞，避免累计“失败 ×N”。禁止改用单节点工具绕过校验，也不要退回生成整份 Plan。
+1. Use the native Workflow Skill that Hermes has already loaded this turn; when there is no unique Skill, first show the candidates with `skills_list` and let the user choose by typing `/` in the input box. A chosen Skill must not be semantically routed again or have other candidates loaded.
+2. Call `freezone_get_workflow_skill` once to read that Skill's Recipe planning summary, capability constraints and `input_contract`.
+3. Use `input_contract.resolved` to show the user's values, the values the tool deterministically extracted from the user's words, and the defaults; `fields[].source=inferred` means the tool has already extracted them from explicit wording about duration, aspect ratio, execution mode and so on, so do not analyze or ask again. Only ask about `missing_required` or fix `errors`; do not repeatedly ask for existing material and explicit parameters. When `requires_confirmation=true`, confirm these values together in the plan confirmation, without creating a Skill Session.
+4. Produce a compact `freezone_workflow_intent.v1`: strictly use the Intent Schema as the field whitelist, writing only `skill_id`, `user_goal`, the current `inputs`, PlanItems and necessary options. Fields such as `requires_source_media` in the Recipe query are used only for choosing Recipes and planning dependencies and must not be copied into `intent.items[]`; the server derives authoritative constraints from `recipe_id`. Each item uses a semantic `id`, `title`, `prompt`, one `recipe_id` from `available_recipes`, and declares real input dependencies with `depends_on`; when the user has provided the actual text to read aloud, write it into `narration`. Short dramas follow screenplay-first: when the narration/dialogue will be produced by an upstream screenplay or shot Recipe, keep the `drama-shot-voice` item, and write the corresponding text item into both `depends_on` and `reference_inputs`, so the runtime binds the body text via `prompt_for`; do not fabricate lines at the draft stage, and never delete the voiceover nodes the user asked for in order to bypass validation. When an image or video node needs to be generated from an upstream screenplay, storyboard or Shot List, the corresponding text PlanItem must be written into `depends_on`; when it also needs generated materials such as characters, scenes and props as actual references, then write these materials into `reference_inputs`. The `prompt` of each video item must state the concrete narrative, action and goal of the Shot or Shot Group it corresponds to, and cannot be only a generic title such as "opening daily life" or "shot one". Do not write timecodes, durations, tone, ambient sound, sound effects or music notes into `narration`. Call `freezone_prepare_workflow_draft` to compile and save, and record the returned `draft_id` and `revision`. Do not generate canvas nodes/edges, UUIDs, link types, layout or groups.
+5. When material is missing but creating from text is allowed, make the material anchor the first PlanItem, choose a Recipe allowed by the same Skill with `requires_source_media=false` and a matching output type; later dependent items reference that semantic item id through `depends_on`.
+6. Show the node count, deliverable list, stages and execution mode strictly per the `preview` returned by the draft tool, without showing internal JSON, `draft_id` or `revision`.
+7. When the user adjusts the plan, pass only the changed fields to `freezone_patch_workflow_draft(draft_id=..., expected_revision=..., changes=...)`; do not rebuild the Intent or create a new draft. Show the result per the new preview and record the new revision.
+8. After the user confirms, call `freezone_confirm_workflow_draft(draft_id=..., revision=...)` once. The execution mode defaults to the `run_after_create` already confirmed in the draft.
+9. When draft validation fails, fix only the returned input, item or option fields and retry; never resubmit unchanged. If the same error path still fails after one fix, stop retrying this turn and report the blocker, to avoid accumulating "failed xN". Do not switch to single-node tools to bypass validation, and do not fall back to generating a whole Plan.
 
-Plan 中的边只表示真实输入依赖，不表示时间顺序。节点 ID 必须稳定且唯一；禁止环、坏边、未知节点类型、未知 Recipe 和不兼容 Recipe。用户要求自动执行时才设置 `run_after_create=true`，否则只创建画布。
+Edges in a Plan only represent real input dependencies, not time order. Node IDs must be stable and unique; cycles, bad edges, unknown node types, unknown Recipes and incompatible Recipes are forbidden. Set `run_after_create=true` only when the user asks for automatic execution; otherwise only create the canvas.
 
-### 缺少输入素材
+### Missing input material
 
-缺少图片、视频或音频时，不要仅回复“请先上传”并停止规划。先检查所选 Recipe 的 `requires_source_media`：
+When an image, video or audio is missing, do not merely reply "please upload first" and stop planning. First check the chosen Recipe's `requires_source_media`:
 
-- 为 `false`：直接按用户文字目标创建生成节点。
-- 为 `true` 且画布已有合适素材：把素材节点通过 `media_input_for` 或 `derived_from` 连接到执行节点。
-- 为 `true` 且画布没有合适素材：先增加一个资产锚点生成节点，选择同一 Skill 允许的、相同输出类型且 `requires_source_media=false` 的 Recipe；再把锚点节点通过 `media_input_for` 连接到所有依赖它的节点。
+- `false`: create the generation node directly from the user's text goal.
+- `true` and the canvas already has suitable material: connect the material node to the execution node through `media_input_for` or `derived_from`.
+- `true` and the canvas has no suitable material: first add an asset-anchor generation node, choosing a Recipe allowed by the same Skill with the same output type and `requires_source_media=false`; then connect the anchor node through `media_input_for` to all nodes that depend on it.
 
-电商商品图场景中，用户没有产品图时，默认先生成一张清晰、中性背景、外观定义完整的“产品锚点图”，再生成主图、细节图和生活场景图。向用户确认时只说明“将先生成产品基准图以保持后续一致”，不要展示 Recipe、模型或内部字段。只有用户明确要求必须忠实还原真实商品时，才把上传真实产品图作为阻塞条件。
+In e-commerce product-image scenarios, when the user has no product image, by default first generate a clear "product anchor image" with a neutral background and a complete appearance definition, and then generate the main image, detail images and lifestyle scene images. When confirming with the user, only say "a product baseline image will be generated first to keep later images consistent", and do not show Recipes, models or internal fields. Only when the user explicitly requires faithfully reproducing the real product do you make uploading the real product image a blocking condition.
 
-语音节点默认使用系统预设音色，不要求用户上传参考音频。只有用户明确提出“使用我的声音”“克隆声音”或指定项目/角色声线时，才把节点切换为克隆音色并检查对应参考声线；背景音乐始终走 music 模式，不依赖声线样本。
+Voice nodes use system preset voices by default and do not require the user to upload reference audio. Only when the user explicitly says "use my voice", "clone the voice" or specifies a project/character voice do you switch the node to a cloned voice and check the corresponding reference voice; background music always goes through music mode and does not depend on voice samples.
 
-不要列 `freezone.sketch_from_context`、`freezone.frame_from_context`、`freezone.scene_360`、`agent.review_frame`。这些是画布原子执行技能，不是工作流技能。
+Do not list `freezone.sketch_from_context`, `freezone.frame_from_context`, `freezone.scene_360` or `agent.review_frame`. These are canvas atomic execution skills, not workflow skills.
 
-## 路由
+## Routing
 
-- 短剧、小说转视频、故事转视频、分集剧情：读取 `references/short-drama.md`。
-- 广告视频、投放素材、Hook、A/B 版本：读取 `references/ad-video.md`。
-- 产品视频、商品演示、功能讲解、使用场景：读取 `references/product-video.md`。
-- MV、音乐视频、歌词视觉化、节奏镜头：读取 `references/mv.md`。
-- 文生图：选择 `text-to-image` Skill 并生成动态 Plan。
-- 图生视频：选择 `image-to-video` Skill 并生成动态 Plan。
-- 文生视频：选择 `text-to-video` Skill 并生成动态 Plan。
-- “文字生图再生视频 / 文生图再生视频 / 文本生成图片再生成视频 / 文本到图片到视频”都属于三节点 `text_to_video`，必须创建文本节点、图片节点、视频节点，并按 `文本 -> 图片 -> 视频` 连线；不要误判为只包含文本和图片的 `text_to_image`。
-- 图生文：选择 `image-to-text` Skill 并生成动态 Plan。
-- 文生音频：选择 `text-to-audio` Skill 并生成动态 Plan。
+- Short drama, novel-to-video, story-to-video, episodic plot: read `references/short-drama.md`.
+- Ad video, ad-delivery material, Hook, A/B versions: read `references/ad-video.md`.
+- Product video, product demo, feature explanation, usage scenarios: read `references/product-video.md`.
+- MV, music video, lyric visualization, rhythm shots: read `references/mv.md`.
+- Text to image: choose the `text-to-image` Skill and produce a dynamic Plan.
+- Image to video: choose the `image-to-video` Skill and produce a dynamic Plan.
+- Text to video: choose the `text-to-video` Skill and produce a dynamic Plan.
+- "Text to image then video / text-to-image-to-video / generate an image from text then generate a video / text to image to video" are all the three-node `text_to_video`; you must create a text node, an image node and a video node, and link them as `text -> image -> video`; do not misjudge it as `text_to_image` with only text and image.
+- Image to text: choose the `image-to-text` Skill and produce a dynamic Plan.
+- Text to audio: choose the `text-to-audio` Skill and produce a dynamic Plan.
 
-所有工作流计划都必须遵循 `references/spec.md`。
+All workflow plans must follow `references/spec.md`.
 
-工作流规划只负责回答两件事：
+Workflow planning is only responsible for answering two things:
 
-- 这类需求通常需要哪些节点、分支和阶段；
-- 这些节点之间哪些是真实输入依赖。
+- Which nodes, branches and stages this kind of request usually needs;
+- Which of the relations between these nodes are real input dependencies.
 
-不要把“阶段顺序”直接翻译成画布连线。真正落图时，应让边只表示输入、参考或上下文关系。
+Do not translate "stage order" directly into canvas links. When actually putting things on the canvas, let edges represent only input, reference or context relations.
 
-## 边界
+## Boundaries
 
-- 模型只负责查询、分类、Recipe/依赖决策和精简 Intent，不生成完整 WorkflowPlan。
-- 不输出或手写 `canvas_chat_commands.v1`、画布 UUID、连线类型、分组和布局。
-- 准备或修改草稿不会写画布；只有用户确认后才调用草稿确认工具创建节点。
-- 普通节点删除、移动、连接或属性修改交给 Freezone 节点操作工具，不混入工作流规划。
-- 用户未要求自动执行时，不自动运行图片、视频、音频生成。
-- Skill 蓝图无法表达的高级自定义拓扑，才允许准备完整 Plan 草稿；不得直接写画布。
+- The model is only responsible for querying, classification, Recipe/dependency decisions and the compact Intent, and does not generate a complete WorkflowPlan.
+- Do not output or hand-write `canvas_chat_commands.v1`, canvas UUIDs, link types, groups and layout.
+- Preparing or modifying a draft does not write the canvas; only after user confirmation is the draft confirmation tool called to create nodes.
+- Ordinary node deletion, moving, connecting or property modification is handed to the Freezone node operation tools and is not mixed into workflow planning.
+- When the user did not ask for automatic execution, do not automatically run image, video or audio generation.
+- Only for advanced custom topologies that the Skill blueprint cannot express may a complete Plan draft be prepared; writing the canvas directly is not allowed.
 
-## 落画布交接
+## Handoff to the canvas
 
-用户确认动态方案后，只调用 `freezone_confirm_workflow_draft(draft_id=..., revision=...)`，一次性创建草稿中已经预览过的节点、连线、布局和分组。普通 Intent 与高级完整 Plan 都必须先生成持久化草稿；不再保留任何直接创建兼容入口。
-- 用户要求“继续/完成工作流”时直接调用 `freezone_run_workflow(regenerate=false)`，让 Runner 自动发现可执行节点并跳过已有结果；调用前不要读取画布摘要、节点详情、邻接图或逐节点动作目录，也不要逐节点执行。
-- 只有一个可执行节点的工作流仍然是工作流。用户明确称目标为工作流并要求运行、执行、继续或恢复时，仍直接调用 `freezone_run_workflow`；禁止因为节点数为 1 而降级为 `freezone_run_node_action`。
-- 用户修改某个节点后要求“从这里重跑/重做后续”时，调用 `freezone_run_workflow(node_ids=[...], direction="downstream", regenerate=true)`；Agent 不遍历或枚举下游节点。
-- 仅重试一个失败节点时使用 `direction="node"`；没有明确要求覆盖已有结果时不得设置 `regenerate=true`。
-- 禁止为动态工作流调用 `freezone_emit_canvas_command`。这个通用批量工具只用于非工作流的普通画布编辑。
-- 如果用户的创建请求无法唯一匹配一个 Hermes 原生 Workflow Skill，先让用户通过输入框 `/` 选择，不要凭经验猜测。例如“创建一个视频工作流”可能是广告视频、产品视频、MV、文生视频、图生视频或短剧。
-- 当用户一次要求多个交付分支时，把它们规划进同一份动态 `freezone_workflow_plan.v1`；需要完全独立的多个工作流时，逐份确认和创建，不得传 `workflow_types`。
-- 创建成功后的节点清单必须直接使用工具结果中的 `created_nodes[].displayName`，保持原顺序并完整列出；不要凭计划重新组织名称。无法完整列出时只报告节点总数，不要输出残缺的表格行。
+After the user confirms the dynamic plan, call only `freezone_confirm_workflow_draft(draft_id=..., revision=...)`, creating in one go the nodes, links, layout and groups already previewed in the draft. Both the ordinary Intent and the advanced complete Plan must first produce a persisted draft; no direct-creation compatibility entry is kept.
+- When the user asks to "continue / finish the workflow", directly call `freezone_run_workflow(regenerate=false)` so the Runner automatically discovers executable nodes and skips existing results; before the call do not read the canvas summary, node details, neighbor graph or per-node action catalog, and do not execute node by node.
+- A workflow with only one executable node is still a workflow. When the user explicitly calls the target a workflow and asks to run, execute, continue or resume it, still call `freezone_run_workflow` directly; downgrading to `freezone_run_node_action` because the node count is 1 is forbidden.
+- When, after the user modified some node, they ask to "rerun from here / redo what follows", call `freezone_run_workflow(node_ids=[...], direction="downstream", regenerate=true)`; the Agent does not traverse or enumerate downstream nodes.
+- To retry only one failed node use `direction="node"`; do not set `regenerate=true` unless overwriting existing results is explicitly requested.
+- Calling `freezone_emit_canvas_command` for a dynamic workflow is forbidden. This generic batch tool is only for ordinary non-workflow canvas edits.
+- If the user's creation request cannot be uniquely matched to one Hermes native Workflow Skill, first let the user choose by typing `/` in the input box; do not guess from experience. For example "create a video workflow" could be an ad video, product video, MV, text-to-video, image-to-video or short drama.
+- When the user asks for multiple delivery branches at once, plan them into the same dynamic `freezone_workflow_plan.v1`; when completely independent multiple workflows are needed, confirm and create them one by one, and do not pass `workflow_types`.
+- The node list after a successful creation must use `created_nodes[].displayName` from the tool result directly, keeping the original order and listing it in full; do not reorganize names from the plan. When it cannot be listed in full, only report the total node count and do not output incomplete table rows.

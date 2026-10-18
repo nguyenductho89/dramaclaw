@@ -1,62 +1,62 @@
-# 虾画画布命令指南
+# Shrimp Canvas Canvas Command Guide
 
-## 执行流程（强制顺序，不可跳过）
+## Execution flow (mandatory order, no skipping)
 
-操作画布时，**必须严格按以下顺序执行，不得颠倒**：
+When operating the canvas you **must follow this order strictly, never reversed**:
 
-1. **调用工具** — 先调工具（`freezone_emit_canvas_command` 或单步工具）
-2. **检查结果** — 读取工具返回结果
-3. **判断成败** — 结果中有明确成功标记（如 `"success": true`、`status: "ok"` 等）才算成功；有错误信息或空结果就是失败
-4. **再回复用户** — 根据第 3 步的判断，向用户报告结果
+1. **Call the tool** - call the tool first (`freezone_emit_canvas_command` or a single-step tool)
+2. **Check the result** - read the result the tool returned
+3. **Judge success or failure** - only a result with an explicit success marker (such as `"success": true`, `status: "ok"`) counts as success; an error message or an empty result is a failure
+4. **Then reply to the user** - report the result to the user according to the judgment in step 3
 
-画布操作类请求的**第一输出必须是 Freezone 写入工具调用**。在写入工具调用前，**禁止输出任何面向用户的文字回复**（不要说"好的"、"我会…"、"我正在…"、"已…"）。只调用工具，不说话。
+The **first output of a canvas-operation request must be a Freezone write tool call**. Before the write tool call, **outputting any user-facing text reply is forbidden** (do not say "OK", "I will...", "I'm working on...", "done..."). Only call the tool, say nothing.
 
-工具返回失败时，**禁止假装成功**。必须如实告知用户。
+When a tool returns a failure, **pretending success is forbidden**. You must tell the user honestly.
 
-如果失败可以根据返回内容明确修正，先静默修正并重新调用工具，不要向用户展示失败详情或修正策略。只有最终无法完成时才回复用户，且只能用产品层语言说明没有完成，不暴露字段、节点 id、`client_id`、`source/target`、`link_type`、工具名或 JSON。
+If the failure can be clearly fixed from the returned content, fix it silently and call the tool again, without showing the user the failure details or the fixing strategy. Only reply to the user when it ultimately cannot be completed, and only explain in product-level language that it was not completed, without exposing fields, node ids, `client_id`, `source/target`, `link_type`, tool names or JSON.
 
-你的职责是沿着最安全的前端工具路径操作 Freezone 画布。除非前端已经实际执行命令并返回成功，否则不要声称画布已经发生变化。
+Your responsibility is to operate the Freezone canvas along the safest frontend tool path. Unless the frontend has actually executed the command and returned success, do not claim that the canvas has changed.
 
-硬边界：用户要求创建、添加、删除、更新、连接、移动、布局、选择、打开、运行、应用或执行任何画布对象时，必须调用 Freezone 写入工具并等待结果。工具可以灵活选择：单个明确操作可用对应单步写入工具或 `freezone_emit_canvas_command`；多个画布变化必须用一次 `freezone_emit_canvas_command`。但不能跳过工具，不能用纯文本把画布操作说成已经完成。
+Hard boundary: when the user asks to create, add, delete, update, connect, move, lay out, select, open, run, apply or execute any canvas object, you must call a Freezone write tool and wait for the result. The tool can be chosen flexibly: a single explicit operation may use the corresponding single-step write tool or `freezone_emit_canvas_command`; multiple canvas changes must use a single `freezone_emit_canvas_command`. But you may not skip the tool, and you may not describe a canvas operation as done in plain text.
 
-重要边界：创建、删除、更新、连接、布局、打开工具、前端节点动作，都走前端命令路径。普通画布修改默认使用一次 `freezone_emit_canvas_command` 批量提交。只有用户明确要求“刚好一个操作”时，才使用具体的单步 Freezone 写入工具。用户明确要求搭框架、搭工作流、把分镜结构/短片方案落到画布，或任何会创建多个节点/连线/分组/布局的请求时，先收集必要 catalog/schema 并校验，然后用一次批量命令提交；不要边想边连续写多个单步操作。
+Important boundary: create, delete, update, connect, layout, open tool and frontend node actions all go through the frontend command path. Ordinary canvas modifications default to one batch submission with `freezone_emit_canvas_command`. Use a specific single-step Freezone write tool only when the user explicitly asks for "exactly one operation". When the user explicitly asks to build a framework, build a workflow, put a storyboard structure / short-film plan on the canvas, or any request that creates multiple nodes/links/groups/layout, first gather the necessary catalog/schema and validate, then submit with one batch command; do not write several single-step operations in a row while thinking.
 
-对于明确的单个画布操作，可以调用对应的单步工具，而不是手写通用命令对象：`freezone_create_node`、`freezone_add_next_node`、`freezone_update_node_data`、`freezone_create_edge`、`freezone_delete_nodes`、`freezone_delete_edges`、`freezone_move_nodes`、`freezone_layout_nodes`、`freezone_group_nodes`、`freezone_select_nodes` 或 `freezone_run_node_action`。
+For a clear single canvas operation, you can call the corresponding single-step tool instead of hand-writing a generic command object: `freezone_create_node`, `freezone_add_next_node`, `freezone_update_node_data`, `freezone_create_edge`, `freezone_delete_nodes`, `freezone_delete_edges`, `freezone_move_nodes`, `freezone_layout_nodes`, `freezone_group_nodes`, `freezone_select_nodes` or `freezone_run_node_action`.
 
-解释边界：进入画布写入前，先确认用户明确要求操作画布（而非咨询、解释、找思路或开放创意请求）。"我想做...没思路"、"帮我想想"、"给点建议"、"有什么方向"默认是对话规划，不是画布写入。意图判断规则见 SKILL.md「意图判断」章节。
+Explanation boundary: before entering a canvas write, first confirm that the user explicitly asked to operate the canvas (rather than consult, explain, look for ideas, or make an open creative request). "I want to make ... but have no ideas", "help me think", "give me some suggestions", "what directions are there" are by default conversational planning, not canvas writes. See the "Intent judgment" section in SKILL.md for the intent judgment rules.
 
-多节点、多连线、故事板、原型、画布搭建，或任何包含多个画布变化的请求，不要连续调用多个单步写入工具。如果批量命令字段不清楚，先调用 `freezone_get_canvas_command_catalog`，再提交一次 `freezone_emit_canvas_command` 批量命令。
+For multiple nodes, multiple links, storyboards, prototypes, canvas building, or any request containing multiple canvas changes, do not call several single-step write tools in a row. If the batch command fields are unclear, first call `freezone_get_canvas_command_catalog`, then submit one `freezone_emit_canvas_command` batch command.
 
-画布写入必须有依据。创建节点或编辑图结构前，先使用当前画布 summary/ontology；涉及命令结构、节点 data 或连线时，按需查询 `freezone_get_canvas_command_catalog`、`freezone_get_node_create_schema` 和 `freezone_get_link_type_catalog`。多步骤或包含连线的命令，写入前必须先校验。
+Canvas writes must have a basis. Before creating nodes or editing the graph structure, first use the current canvas summary/ontology; when command structure, node data or links are involved, query `freezone_get_canvas_command_catalog`, `freezone_get_node_create_schema` and `freezone_get_link_type_catalog` as needed. A multi-step command or one containing links must be validated before writing.
 
-如果校验返回某对 source/target 的 `Allowed link_type values: none`，不要继续尝试其它 `link_type`。可以用 `group_nodes` 做视觉分组兜底，或保持这些节点不连接。
+If validation returns `Allowed link_type values: none` for a source/target pair, do not keep trying other `link_type`s. You may fall back to visual grouping with `group_nodes`, or leave those nodes unconnected.
 
-如果编辑前需要只读画布上下文、动态参数选项、命令字段规则或前端预校验，使用具体的 Freezone 工具：`freezone_get_canvas_ontology`、`freezone_summarize_canvas`、`freezone_get_canvas_action_catalog`、`freezone_get_canvas_command_catalog`、`freezone_get_link_type_catalog`、`freezone_get_selection`、`freezone_get_node_detail`、`freezone_get_neighbor_graph`、`freezone_get_node_action_catalog`、`freezone_get_node_create_schema`、`freezone_get_audio_voice_options` 和 `freezone_get_slot_candidates`。非平凡的创建、更新、删除、连接、布局操作，在写入前调用 `freezone_validate_canvas_commands`，只传入 `canvas_chat_commands.v1` envelope 中的 `commands` 数组；如果校验返回问题，修正 `commands` 后再次校验。不要把完整 envelope 或 `canvas_context_request.v1` 放进任何写入工具，也不要用 `run_node_action` 获取选项。
+If, before editing, you need read-only canvas context, dynamic parameter options, command field rules or frontend pre-validation, use the specific Freezone tools: `freezone_get_canvas_ontology`, `freezone_summarize_canvas`, `freezone_get_canvas_action_catalog`, `freezone_get_canvas_command_catalog`, `freezone_get_link_type_catalog`, `freezone_get_selection`, `freezone_get_node_detail`, `freezone_get_neighbor_graph`, `freezone_get_node_action_catalog`, `freezone_get_node_create_schema`, `freezone_get_audio_voice_options` and `freezone_get_slot_candidates`. For non-trivial create, update, delete, connect and layout operations, call `freezone_validate_canvas_commands` before writing, passing only the `commands` array of the `canvas_chat_commands.v1` envelope; if validation returns problems, fix the `commands` and validate again. Do not put the full envelope or `canvas_context_request.v1` into any write tool, and do not use `run_node_action` to get options.
 
-如果可用且需要只读画布上下文或动态参数选项，可以使用 `freezone_request_canvas_context`。例如 `neighbor_graph`、`node_create_schema`、`action_catalog` 和 `audio_voice_options`。不要把 `canvas_context_request.v1` 放进 `freezone_emit_canvas_command.commands`，也不要用 `run_node_action` 获取选项。
+If available and read-only canvas context or dynamic parameter options are needed, you can use `freezone_request_canvas_context`. For example `neighbor_graph`, `node_create_schema`, `action_catalog` and `audio_voice_options`. Do not put `canvas_context_request.v1` into `freezone_emit_canvas_command.commands`, and do not use `run_node_action` to get options.
 
-用户可见语言必须保持产品层表达。内部实现细节（协议名、schema 名、字段名、内部 id、JSON 等）只能用于推理或工具调用。回复风格见 SKILL.md「用户可见回复」章节。
+User-visible language must stay at the product level. Internal implementation details (protocol names, schema names, field names, internal ids, JSON and so on) may only be used for reasoning or tool calls. See the "User-visible replies" section in SKILL.md for the reply style.
 
-## 使用条件
+## Conditions of use
 
-只有同时满足以下条件时，才使用本指南：
+Use this guide only when all of the following conditions are met:
 
-- 当前聊天界面是 Freezone/虾画/canvas，或用户消息提到画布节点。
-- prompt 中包含 `[SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]`、`[SUPERTALE_CANVAS_NODE_REFERENCES]` 或 `[SUPERTALE_CANVAS_CHAT_COMMANDS]`。
-- 用户要求操作引用节点、当前选中、节点组，或创建独立节点。
+- The current chat surface is Freezone/Shrimp Canvas/canvas, or the user message mentions canvas nodes.
+- The prompt contains `[SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]`, `[SUPERTALE_CANVAS_NODE_REFERENCES]` or `[SUPERTALE_CANVAS_CHAT_COMMANDS]`.
+- The user asks to operate on referenced nodes, the current selection, a node group, or to create standalone nodes.
 
-典型请求：
+Typical requests:
 
-- “给这个节点后面加一个视频节点”
-- “把选中的节点改成...”
-- “给这张图开高清/重绘/裁剪”
-- “把这几个节点排整齐”
-- “删除这些节点”
-- “创建一个下一步节点并连上”
+- "Add a video node after this node"
+- "Change the selected nodes to ..."
+- "Upscale / redraw / crop this image"
+- "Arrange these nodes neatly"
+- "Delete these nodes"
+- "Create a next-step node and connect it"
 
-## 输入
+## Input
 
-前端可能会注入只读的画布 ontology overview：
+The frontend may inject a read-only canvas ontology overview:
 
 ```text
 [SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]
@@ -64,9 +64,9 @@
 [/SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]
 ```
 
-用这个 overview 理解已有节点、连线、候选项、slots、actions 和当前选中。它只是只读上下文，不代表用户请求的操作已经执行。
+Use this overview to understand the existing nodes, links, candidates, slots, actions and current selection. It is only read-only context and does not mean the operation the user requested has already been executed.
 
-前端也可能注入选中节点引用：
+The frontend may also inject selected-node references:
 
 ```text
 [SUPERTALE_CANVAS_NODE_REFERENCES]
@@ -82,24 +82,24 @@ reference_1_edge_1_target: ...
 [/SUPERTALE_CANVAS_NODE_REFERENCES]
 ```
 
-除非用户明确说不是这些节点，否则把当前输入块中的 `node_id` 当成本轮目标集合。如果引用了多个节点，用户要求操作当前选中、选中节点、这些节点、一个组，或要求一起移动、删除、布局、选择它们，就把所有引用节点 id 放进一个命令。不要悄悄只操作 `reference_1_node_1_id`。
+Unless the user explicitly says it is not these nodes, treat the `node_id`s in the current input block as this turn's target set. If multiple nodes are referenced and the user asks to operate on the current selection, the selected nodes, these nodes, a group, or asks to move, delete, lay out or select them together, put all referenced node ids into one command. Do not quietly operate only on `reference_1_node_1_id`.
 
-如果 ontology overview 和 node references 同时存在，以 node references 作为本轮明确目标集合，以 ontology overview 作为全局背景。
+If the ontology overview and node references both exist, treat the node references as this turn's explicit target set and the ontology overview as global background.
 
-忽略旧聊天轮次里的节点 id。画布节点可能已经被删除；只有当前用户文本、当前 `SUPERTALE_CANVAS_NODE_REFERENCES` 块，以及同一个 envelope 里刚创建的 client id，才是有效操作目标。
+Ignore node ids from earlier chat turns. Canvas nodes may already have been deleted; only the current user text, the current `SUPERTALE_CANVAS_NODE_REFERENCES` block, and client ids just created in the same envelope are valid operation targets.
 
-把引用中的 `edge_*` 当作引用节点之间的已知边。只有在断开、取消连接、删除连线请求中使用 edge 引用；不要在删除节点请求中使用 edge 引用。
+Treat `edge_*` in the references as known edges between the referenced nodes. Use edge references only in disconnect, unlink and delete-link requests; do not use edge references in delete-node requests.
 
-每个节点的 `node_detail` 和 action 工具分工如下：
+The division of labor between each node's `node_detail` and the action tools is as follows:
 
-- `downstream_spawn_types`：可从该节点向下游创建的节点类型。
-- `parameters`：节点自身可普通 patch 的 data 字段、当前值和可选项。
-- `action_summary.actions`：节点可用动作的轻量列表。
-- `freezone_get_node_action_catalog(node_id, action)`：某个动作的完整参数、执行方式和说明。
+- `downstream_spawn_types`: the node types that can be created downstream from this node.
+- `parameters`: the data fields the node itself allows ordinary patching of, with current values and options.
+- `action_summary.actions`: a lightweight list of the node's available actions.
+- `freezone_get_node_action_catalog(node_id, action)`: the full parameters, execution mode and description of an action.
 
-`parameters` 不是工具栏/面板 action 的参数。用户问“这个工具有哪些参数”“高清/裁剪/抠图/打光怎么配置”时，先用 `action_summary.actions` 找到对应 action，再调用 `freezone_get_node_action_catalog(node_id, action)`；不要直接用源节点的 `parameters` 回答。
+`parameters` are not the parameters of toolbar/panel actions. When the user asks "what parameters does this tool have", "how do I configure upscale/crop/cutout/lighting", first use `action_summary.actions` to find the corresponding action, then call `freezone_get_node_action_catalog(node_id, action)`; do not answer directly from the source node's `parameters`.
 
-对于 `execution="frontend_node"` 的动作，不要找后端 `action_id` 或 `skill_id`。使用 `run_node_action`，并传入列出的 `action` 字符串。例如，如果 `imageGenNode` 有 `action="generate_image"`，使用：
+For actions with `execution="frontend_node"`, do not look for a backend `action_id` or `skill_id`. Use `run_node_action` and pass the listed `action` string. For example, if an `imageGenNode` has `action="generate_image"`, use:
 
 ```json
 {
@@ -109,21 +109,21 @@ reference_1_edge_1_target: ...
 }
 ```
 
-不要发明节点 id。同一个 envelope 里后续还要引用的新建节点必须显式声明 `client_id`，后续命令也必须引用这些值。禁止输出 `node_0`、`node_1`、`new_node`、`auto:*` 或任何未声明占位符；它们不是“第几个新建节点”的有效引用。
+Do not invent node ids. A newly created node that will be referenced later in the same envelope must explicitly declare a `client_id`, and later commands must reference those values. Outputting `node_0`, `node_1`, `new_node`, `auto:*` or any undeclared placeholder is forbidden; they are not valid references to "the Nth newly created node".
 
-Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多个画布节点、连线、分组或布局变化，使用一次 `freezone_emit_canvas_command` 批量提交，并显式声明 `client_id`，不要拆成多个单步工具调用。
+A Plan id is not a canvas node id. If a confirmed custom plan needs to become multiple canvas nodes, links, groups or layout changes, submit it in one batch with one `freezone_emit_canvas_command` and explicitly declare `client_id`s; do not split it into several single-step tool calls.
 
-## 工具契约
+## Tool contract
 
-需要执行画布操作时，调用 Freezone 写入工具。不要在聊天消息里输出协议 JSON。如果没有可用的 Freezone 写入工具，说明当前画布工具不可用，请用户工具恢复后重试。
+When you need to perform a canvas operation, call a Freezone write tool. Do not output protocol JSON in chat messages. If no Freezone write tool is available, say the current canvas tools are unavailable and ask the user to retry once the tools recover.
 
-不要把内部命令 payload 包在 `<schema_version="canvas_chat_commands.v1">` 这类 XML/HTML 风格标签里。协议字段只能放在工具参数中，不能出现在用户可见回复里。
+Do not wrap the internal command payload in XML/HTML-style tags such as `<schema_version="canvas_chat_commands.v1">`. Protocol fields may only go in tool parameters and must not appear in user-visible replies.
 
-前端在 Freezone 写入工具参数中支持以下命令类型：
+The frontend supports the following command types in Freezone write tool parameters:
 
 ### create_node
 
-创建独立节点。
+Create a standalone node.
 
 ```json
 {
@@ -137,7 +137,7 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 
 ### add_next_node
 
-从已有节点创建下游节点，并可选地连接它。
+Create a downstream node from an existing node, and optionally connect it.
 
 ```json
 {
@@ -150,15 +150,15 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-选择节点类型时，优先使用源节点的 `downstream_spawn_types`。
+When choosing the node type, prefer the source node's `downstream_spawn_types`.
 
-`add_next_node` 没有 `position` 字段：新节点会自动放在源节点旁边。带 `position` 会被参数校验拒绝；需要指定坐标时改用 `create_node` + `create_edge`。
+`add_next_node` has no `position` field: the new node is automatically placed beside the source node. Passing a `position` is rejected by parameter validation; when you need to specify coordinates, use `create_node` + `create_edge` instead.
 
-如果同一个 envelope 里的后续命令要引用新建节点，这个 `create_node` 或 `add_next_node` 必须声明 `client_id`。所有后续会被 `create_edge`、`group_nodes`、`select_nodes` 或定向 `move_nodes` 使用的新建节点，都必须有显式 `client_id`。
+If later commands in the same envelope reference the newly created node, this `create_node` or `add_next_node` must declare a `client_id`. Every newly created node that will later be used by `create_edge`, `group_nodes`, `select_nodes` or a targeted `move_nodes` must have an explicit `client_id`.
 
-主题性批量创建时，把同一主题的一组节点放进一个普通组。适用场景包括：短片方案、广告创意包、分镜框架、工作流、素材准备包、同一目标下的规划/生成/合成节点。不要把“单独添加一个节点”或零散修改也包装成组。
+For themed batch creation, put the set of nodes on the same theme into one ordinary group. Applicable scenarios include: a short-film plan, an ad creative pack, a storyboard framework, a workflow, a material preparation pack, planning/generation/compose nodes under the same goal. Do not wrap "adding a single node" or scattered modifications into a group.
 
-同批新建并连接时，使用语义化 `client_id`：
+When creating and connecting in the same batch, use semantic `client_id`s:
 
 ```json
 {
@@ -167,13 +167,13 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
       "type": "create_node",
       "client_id": "creative_brief",
       "node_type": "textAnnotationNode",
-      "data": { "displayName": "创意简报", "content": "..." }
+      "data": { "displayName": "Creative brief", "content": "..." }
     },
     {
       "type": "create_node",
       "client_id": "poster_image",
       "node_type": "imageGenNode",
-      "data": { "displayName": "主视觉海报", "prompt": "..." }
+      "data": { "displayName": "Key visual poster", "prompt": "..." }
     },
     {
       "type": "create_edge",
@@ -184,36 +184,36 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
     {
       "type": "group_nodes",
       "node_ids": ["creative_brief", "poster_image"],
-      "label": "公益短片视觉方向"
+      "label": "Public-welfare short film visual direction"
     }
   ]
 }
 ```
 
-不要这样写：
+Do not write it like this:
 
 ```json
 {
   "commands": [
-    { "type": "create_node", "node_type": "textAnnotationNode", "data": { "displayName": "创意简报" } },
-    { "type": "create_node", "node_type": "imageGenNode", "data": { "displayName": "主视觉海报" } },
+    { "type": "create_node", "node_type": "textAnnotationNode", "data": { "displayName": "Creative brief" } },
+    { "type": "create_node", "node_type": "imageGenNode", "data": { "displayName": "Key visual poster" } },
     { "type": "create_edge", "source": "node_0", "target": "node_1", "link_type": "prompt_for" }
   ]
 }
 ```
 
-后续延展已有主题时，如果用户引用的是组内节点，且新增节点确实是该节点的下游或派生结果，优先使用 `add_next_node`，这样前端会把新节点放在同一组语境里。不要为了“加入组”而伪造 `prompt_for`、`media_input_for` 或其它输入连线；如果只是补一个相关材料但不是输入关系，创建在组附近、保持布局一致即可，不要假设存在 `group_id` 字段。
+When later extending an existing theme, if the node the user references is inside a group and the new node really is a downstream or derived result of that node, prefer `add_next_node`, so the frontend places the new node in the same group context. Do not fabricate `prompt_for`, `media_input_for` or other input links just to "join the group"; if you are only adding a piece of related material that is not an input relation, create it near the group and keep the layout consistent; do not assume a `group_id` field exists.
 
-视频相关创建按阶段选择节点类型：
+For video-related creation, choose the node type by stage:
 
-- 如果用户要求制作/生成视频、制作广告短片、创建短片，或在图片/文本/音频素材准备好后问下一步做什么，默认选择 `videoNode`。`videoNode` 从上游图片、文本、脚本或音频引用生成视频片段。
-- `videoComposeNode` 是最终时间线/合成节点，用于把多个视频片段和音频轨合成最终视频。只把视频/音频产物作为合成输入连进去，不要把创意简报、分镜文字或 prompt 直接连到它。
-- 默认不要选择 `videoComposeNode`。只有当用户明确要求时间线合成、最终组装、视频合成，或正在搭建包含视频/音频生成节点和最终合成阶段的完整短片工作流时，才使用 `videoComposeNode`。
-- 如果可用上游只有图片、文本、脚本、音频节点，且没有视频生成阶段，先创建/连接 `videoNode`，不要单独创建 `videoComposeNode`。
+- If the user asks to produce/generate a video, make an ad short, create a short film, or asks what to do next after image/text/audio material is ready, choose `videoNode` by default. `videoNode` generates video clips from upstream image, text, script or audio references.
+- `videoComposeNode` is the final timeline/compose node, used to compose multiple video clips and audio tracks into the final video. Connect only video/audio artifacts into it as compose inputs; do not connect creative briefs, storyboard text or prompts directly to it.
+- Do not choose `videoComposeNode` by default. Use `videoComposeNode` only when the user explicitly asks for timeline composition, final assembly or video composition, or is building a complete short-film workflow containing video/audio generation nodes and a final compose stage.
+- If the only available upstreams are image, text, script and audio nodes and there is no video generation stage, first create/connect a `videoNode`; do not create a `videoComposeNode` on its own.
 
 ### update_node_data
 
-修改节点上的普通可编辑 data。
+Modify ordinary editable data on a node.
 
 ```json
 {
@@ -223,22 +223,22 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-除非用户明确要求修改明显安全的普通显示字段，否则只更新 `freezone_get_node_detail` 返回的 `parameters` 中列出的字段。`displayName` 是标准节点标题字段；普通节点标题不要用 `label`、`title` 或 `name`。前端会剥离保留字段，包括主线/projection 字段。
+Unless the user explicitly asks to modify an obviously safe ordinary display field, update only the fields listed in the `parameters` returned by `freezone_get_node_detail`. `displayName` is the standard node title field; do not use `label`, `title` or `name` for ordinary node titles. The frontend strips reserved fields, including mainline/projection fields.
 
 ### create_edge
 
-连接两个节点。创建边之前，从 Freezone link type catalog 中选择 `link_type`。如果当前 prompt 没有 catalog，或 source/target 对象是否匹配不清楚，调用 `freezone_get_link_type_catalog`。
+Connect two nodes. Before creating an edge, choose the `link_type` from the Freezone link type catalog. If the current prompt has no catalog, or it is unclear whether the source/target objects match, call `freezone_get_link_type_catalog`.
 
-边表示数据输入或语义输入关系，不是视觉关联线。只有当目标节点应该消费源节点作为输入、参考、上下文或合成素材时才创建边。如果节点只是相关，或属于同一组内容，用 `group_nodes` 或 `layout_nodes`，不要用 `create_edge`。
+An edge represents a data-input or semantic-input relation, not a visual association line. Create an edge only when the target node should consume the source node as an input, reference, context or compose material. If the nodes are merely related, or belong to the same group of content, use `group_nodes` or `layout_nodes`, not `create_edge`.
 
-创建边前先做角色判断：
+Do a role judgment before creating an edge:
 
-- TextNode/ScriptNode -> TextNode/ScriptNode：只能表达上下文、约束、解释，用 `context_for`；如果只是同一主题，直接分组即可。
-- TextNode/ScriptNode -> ImageNode/VideoNode/AudioNode/ScriptNode：只有上游文本是目标直接消费的提示词、配音稿、镜头指令或脚本输入时，才用 `prompt_for`。普通 brief、主题方向、创意要点、分镜草稿、需求说明默认是 `planning_text`，不要直接连生成节点。
-- ImageNode/VideoNode/AudioNode -> ImageNode/VideoNode/AudioNode/TextNode/ScriptNode：媒体作为参考、素材或来源时，才用 `media_input_for` 或 `derived_from`。
-- VideoNode/AudioNode -> videoComposeNode：作为最终合成素材时，才用 `composition_input_for`。
+- TextNode/ScriptNode -> TextNode/ScriptNode: can only express context, constraints, explanation, using `context_for`; if they are merely on the same theme, just group them.
+- TextNode/ScriptNode -> ImageNode/VideoNode/AudioNode/ScriptNode: use `prompt_for` only when the upstream text is a prompt, voiceover script, shot instruction or script input that the target consumes directly. An ordinary brief, theme direction, creative points, storyboard draft and requirement notes are by default `planning_text`; do not connect them directly to generation nodes.
+- ImageNode/VideoNode/AudioNode -> ImageNode/VideoNode/AudioNode/TextNode/ScriptNode: use `media_input_for` or `derived_from` only when the media serves as reference, material or source.
+- VideoNode/AudioNode -> videoComposeNode: use `composition_input_for` only when serving as final compose material.
 
-如果 planning text 的内容确实要作为生成输入，先新建一个单独的 `textAnnotationNode`，设置 `semanticOutputRole="input_text"`，把可直接消费的 prompt 写进去；可选地用 `context_for` 从规划文本连到这个 input_text 节点，再用 `prompt_for` 连到生成节点。
+If the content of the planning text really must serve as a generation input, first create a separate `textAnnotationNode` with `semanticOutputRole="input_text"` and write the directly consumable prompt into it; optionally connect from the planning text to this input_text node with `context_for`, then connect to the generation node with `prompt_for`.
 
 ```json
 {
@@ -249,19 +249,19 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-每个 `create_edge` 命令都必须包含 `link_type`。只选择以下之一：
+Every `create_edge` command must include `link_type`. Choose only one of the following:
 
-- `context_for`：TextNode/ScriptNode -> TextNode/ScriptNode。上游文本是另一个文本节点的上下文、brief、beat context、约束或解释。
-- `prompt_for`：TextNode/ScriptNode -> ImageNode/VideoNode/AudioNode/ScriptNode。上游文本、prompt 或脚本是目标生成器直接消费的提示词或指令。`textAnnotationNode(semanticOutputRole="input_text") -> imageGenNode` 用这个类型；如果源文本只是 brief、方案、需求备注或上下文文档，把它保留为 `planning_text`，并和生成器分组，不要直接连接。
-- `media_input_for`：ImageNode/VideoNode/AudioNode -> TextNode/ImageNode/VideoNode/AudioNode/ScriptNode。上游媒体是目标消费的输入、来源或视觉/音频参考。
-- `derived_from`：ImageNode/VideoNode/AudioNode -> ImageNode/VideoNode/AudioNode。目标是从源素材编辑、提取、放大、裁剪、修复或变化而来的产物。
-- `composition_input_for`：VideoNode/AudioNode -> VideoNode。上游视频片段或音频轨进入合成、时间线或最终视频节点。主要用于多个 `videoNode` / `audioNode` 输入到 `videoComposeNode`；不要用文本、简报、分镜或 prompt 连接到合成节点。
+- `context_for`: TextNode/ScriptNode -> TextNode/ScriptNode. The upstream text is the context, brief, beat context, constraint or explanation of another text node.
+- `prompt_for`: TextNode/ScriptNode -> ImageNode/VideoNode/AudioNode/ScriptNode. The upstream text, prompt or script is the prompt or instruction directly consumed by the target generator. Use this type for `textAnnotationNode(semanticOutputRole="input_text") -> imageGenNode`; if the source text is only a brief, plan, requirement note or context document, keep it as `planning_text` and group it with the generator; do not connect them directly.
+- `media_input_for`: ImageNode/VideoNode/AudioNode -> TextNode/ImageNode/VideoNode/AudioNode/ScriptNode. The upstream media is an input, source, or visual/audio reference consumed by the target.
+- `derived_from`: ImageNode/VideoNode/AudioNode -> ImageNode/VideoNode/AudioNode. The target is a product edited, extracted, upscaled, cropped, repaired or varied from the source material.
+- `composition_input_for`: VideoNode/AudioNode -> VideoNode. The upstream video clip or audio track enters a compose, timeline or final video node. Mainly used for multiple `videoNode` / `audioNode` inputs into `videoComposeNode`; do not connect text, briefs, storyboards or prompts to a compose node.
 
-不要在 `create_edge` 中输出 `role`、`link_kind`、`semantic_kind`、`semantic_reason` 或 `semantic_description`。
+Do not output `role`, `link_kind`, `semantic_kind`, `semantic_reason` or `semantic_description` in `create_edge`.
 
 ### delete_edges
 
-通过删除边来断开节点。只有当用户要求断开、取消连接、移除连接、删除边/线时使用它。用户要求删除节点、组件或组时，不要用 `delete_edges`。
+Disconnect nodes by deleting edges. Use it only when the user asks to disconnect, unlink, remove a connection, or delete an edge/line. When the user asks to delete nodes, components or groups, do not use `delete_edges`.
 
 ```json
 {
@@ -272,7 +272,7 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-如果知道准确的 edge id，也支持 `edge_ids`：
+If you know the exact edge id, `edge_ids` is also supported:
 
 ```json
 {
@@ -281,11 +281,11 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-当用户说“断开他们的连接”，且你有两个节点 id 时，优先使用 `pairs`。
+When the user says "disconnect them" and you have the two node ids, prefer `pairs`.
 
 ### layout_nodes
 
-排列引用节点。
+Arrange the referenced nodes.
 
 ```json
 {
@@ -295,15 +295,15 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-允许的模式：`horizontal`、`vertical`、`grid`。
+Allowed modes: `horizontal`, `vertical`, `grid`.
 
-如果正在排列刚创建的节点，且不需要定向到某个子集，优先完全省略 `node_ids`，让前端排列当前画布/分组，不必额外要求同 envelope alias。
+If you are arranging nodes just created and do not need to target a subset, prefer omitting `node_ids` entirely and let the frontend arrange the current canvas/group, without needing an extra same-envelope alias.
 
-大范围布局变化可能需要前端确认。
+Large-scale layout changes may need frontend confirmation.
 
 ### move_nodes
 
-通过相对偏移或精确画布坐标移动一个或多个节点。对于“向左移动 100”这类请求，优先使用相对 `dx`/`dy`。
+Move one or more nodes by a relative offset or exact canvas coordinates. For requests such as "move left by 100", prefer relative `dx`/`dy`.
 
 ```json
 {
@@ -314,7 +314,7 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-多选移动时，对每个引用节点使用相同的相对偏移：
+For a multi-selection move, use the same relative offset for every referenced node:
 
 ```json
 {
@@ -325,7 +325,7 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-用户给出目标位置、你计算出最终 x/y 后对齐，或要通过 `client_id` 重新定位新建节点时，使用精确坐标。
+Use exact coordinates when the user gives a target position, when you align after computing the final x/y, or when you reposition newly created nodes by `client_id`.
 
 ```json
 {
@@ -339,7 +339,7 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 
 ### select_nodes
 
-选择一个或多个节点，并可选地把视口聚焦到第一个选中节点。
+Select one or more nodes, and optionally focus the viewport on the first selected node.
 
 ```json
 {
@@ -349,13 +349,13 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-用户要求选择/聚焦节点时使用它；如果同一个 envelope 中前面的命令创建/移动了节点，且用户希望选中结果，也使用它。`focus` 默认是 true。
+Use it when the user asks to select/focus nodes; also use it if earlier commands in the same envelope created/moved nodes and the user wants the result selected. `focus` defaults to true.
 
 ### delete_nodes
 
-删除整张画布的全部节点时，直接调用 `freezone_delete_nodes(scope="canvas")`，无需先读取或整理节点 ID。删除指定节点时才传 `node_ids`。
+To delete all nodes of the whole canvas, call `freezone_delete_nodes(scope="canvas")` directly, with no need to read or tidy node IDs first. Pass `node_ids` only when deleting specific nodes.
 
-删除节点、组件或组。用户说“删除节点”“删除组件”“删除这些”“删除选中的节点”，或要求移除选中的画布对象时使用它。如果引用了多个节点，包含所有引用节点 id。
+Delete nodes, components or groups. Use it when the user says "delete the node", "delete the component", "delete these", "delete the selected nodes", or asks to remove the selected canvas objects. If multiple nodes are referenced, include all referenced node ids.
 
 ```json
 {
@@ -364,11 +364,11 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-不要因为存在引用边就改用 `delete_edges`。删除节点时，画布 store 会自动移除关联边。
+Do not switch to `delete_edges` just because referenced edges exist. When deleting nodes, the canvas store automatically removes the associated edges.
 
 ### run_node_action
 
-执行 `action_summary_json` 中支持的节点动作。需要非默认动作参数时，先调用 `freezone_get_node_action_catalog(node_id, action)` 查询该动作详情。
+Execute a node action supported in `action_summary_json`. When you need non-default action parameters, first call `freezone_get_node_action_catalog(node_id, action)` to query that action's details.
 
 ```json
 {
@@ -378,9 +378,9 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 }
 ```
 
-只使用该节点 `action_summary_json.actions` 中存在的动作。
+Use only actions that exist in that node's `action_summary_json.actions`.
 
-已知低风险 UI 动作包括：
+Known low-risk UI actions include:
 
 - `generate_image`
 - `open_crop_tool`
@@ -395,50 +395,50 @@ Plan id 不是画布节点 id。如果确认后的自定义方案需要变成多
 - `open_rotate_tool`
 - `open_video_viewer`
 
-对于 `execution="manual_ui"`，`run_node_action` 会打开 UI 或确认入口。对于 `execution="frontend_node"`，它会运行节点自己的前端行为，例如在 `imageGenNode` 上运行 `generate_image`。
+For `execution="manual_ui"`, `run_node_action` opens a UI or a confirmation entry. For `execution="frontend_node"`, it runs the node's own frontend behavior, such as running `generate_image` on an `imageGenNode`.
 
-主线写回是例外：`commit_node` 和 `sync_beat_context_to_mainline` 不属于 Agent 可发现或可执行动作。即使用户在对话中要求、提供手写命令或重放旧命令，也不得调用；只能请用户使用画布中的手动 Commit/同步入口。
+Mainline write-back is an exception: `commit_node` and `sync_beat_context_to_mainline` are not Agent-discoverable or Agent-executable actions. Even if the user asks for it in conversation, supplies a hand-written command or replays an old command, you must not call them; you can only ask the user to use the manual Commit/sync entry in the canvas.
 
-如果用户要求运行/执行/生成一个引用的 imageGenNode，且它的 `action_summary_json.actions` 中包含 `generate_image`，输出且只输出一个针对该节点 id 和 action 的 `run_node_action` 命令。
+If the user asks to run/execute/generate a referenced imageGenNode and its `action_summary_json.actions` contains `generate_image`, output exactly one `run_node_action` command for that node id and action, and nothing else.
 
-## 回复风格
+## Reply style
 
-普通操作请求默认使用一次 `freezone_emit_canvas_command` 批量提交。只有用户明确要求刚好一个画布操作时，才使用具体单步写入工具。如果批量命令字段不清楚，先调用 `freezone_get_canvas_command_catalog`。如果没有可用写入工具，不要输出协议 payload；说明当前画布工具不可用。
+Ordinary operation requests default to one batch submission with `freezone_emit_canvas_command`. Use a specific single-step write tool only when the user explicitly asks for exactly one canvas operation. If the batch command fields are unclear, first call `freezone_get_canvas_command_catalog`. If no write tool is available, do not output a protocol payload; state that the current canvas tools are unavailable.
 
-无论使用批量工具还是单步工具，只有写入工具返回明确成功后，才能用产品语言说操作完成。如果本轮没有写入工具成功结果，禁止写"已创建"、"已提交成功"、"frontend write returned success"或等价表达。
+Whether you use a batch tool or a single-step tool, only after the write tool returns explicit success may you say in product language that the operation is complete. If there is no write tool success result this turn, writing "created", "submitted successfully", "frontend write returned success" or an equivalent is forbidden.
 
-**关键：不要向用户叙述你的内部推理和工具调用过程。** 获取 schema、查询 catalog、validate 校验、构建命令等步骤是内部行为，用户不需要看到。
+**Key point: do not narrate your internal reasoning and tool-call process to the user.** Steps such as getting the schema, querying the catalog, validating and building commands are internal behavior that the user does not need to see.
 
-校验失败后的修正同样是内部行为。不要输出“已修正策略”“所有新建节点统一指定 client_id”“后续 source/target 使用这些 client_id”“某某节点已存在，ID 为...”这类回复。可修则直接修正并重试；不可修才用产品层语言说明没能完成。
+Corrections after validation failures are also internal behavior. Do not output replies such as "strategy corrected", "all newly created nodes now specify client_id", "later source/target use these client_ids", "such-and-such node already exists, its ID is ...". If fixable, fix and retry directly; only if not fixable, explain in product-level language that it could not be completed.
 
-输出顺序：
+Output order:
 
-用户要求操作画布且无需澄清时，不要先说“好的”或“我会”。第一输出直接调用 `freezone_emit_canvas_command` 或合适的单步写入工具。
+When the user asks to operate the canvas and no clarification is needed, do not first say "OK" or "I will". The first output directly calls `freezone_emit_canvas_command` or a suitable single-step write tool.
 
-前端结果返回后，用产品层语言总结结果，不暴露工具名、节点 id、坐标或协议细节。
+After the frontend result returns, summarize the result in product-level language without exposing tool names, node ids, coordinates or protocol details.
 
-> 视频节点已创建。
+> Video node created.
 
-不要输出类似以下的回复：
+Do not output replies like the following:
 
-> 我将调用 freezone_get_node_create_schema 获取 videoNode 的 schema…已获取命令目录…验证通过…现在执行 create_node…
+> I will call freezone_get_node_create_schema to get the schema of videoNode... obtained the command catalog... validation passed... now executing create_node...
 
-如果没有引用节点：
+If there are no referenced nodes:
 
-- 对于独立创建请求，比如”添加一个图片节点”，调用 `freezone_create_node` 创建刚好一个节点，或用 `freezone_emit_canvas_command` 批量创建。
-- 对于需要已有目标的操作，比如删除、更新、添加下游、打开工具，让用户先选中节点并点击”添加到聊天”。
+- For a standalone creation request, such as "add an image node", call `freezone_create_node` to create exactly one node, or batch-create with `freezone_emit_canvas_command`.
+- For operations that need an existing target, such as delete, update, add downstream and open a tool, ask the user to select the node first and click "Add to chat".
 
-如果用户要求的事情需要 `action_summary_json` 中未暴露的生成能力，说明当前画布聊天可以准备/打开相关节点 UI，但还不能静默完成该生成。
+If the user asks for something that needs a generation capability not exposed in `action_summary_json`, explain that the current canvas chat can prepare/open the relevant node UI, but cannot yet complete that generation silently.
 
-## 硬规则
+## Hard rules
 
-- 用户没有要求操作画布时，不要输出画布命令。
-- 不要把复杂图命令拆成连续的单步工具调用。
-- 多节点创建加批量连线、布局、分组，放进一次 `freezone_emit_canvas_command`。
-- 普通节点创建、删除、更新、连线、布局、打开 UI 工具，以及 `generate_image` 这类节点动作，必须留在前端命令路径。
-- 不要发明节点 id、画布 id、项目 id 或后端任务 id。
-- 不要为了画布操作写文件或调用 shell 命令。
-- 不要绕过前端对破坏性操作的确认。
-- **不要仅仅因为调用了写入工具就说”已完成/已删除/已生成”。实际结果以前端执行和返回为准。** 工具尚未返回时，不要向用户报告成功状态。工具返回错误时，如实告知用户，不要假装成功。
-- 不要向用户暴露内部 API token、文件路径、插件名或实现细节。
-- 不要用 markdown media embed 或原始 `/static` URL 作为媒体展示的主要回答。
+- Do not output canvas commands when the user did not ask to operate the canvas.
+- Do not split a complex graph command into consecutive single-step tool calls.
+- Put multi-node creation plus batch linking, layout and grouping into one `freezone_emit_canvas_command`.
+- Ordinary node creation, deletion, update, linking, layout, opening UI tools, and node actions such as `generate_image` must stay on the frontend command path.
+- Do not invent node ids, canvas ids, project ids or backend task ids.
+- Do not write files or call shell commands for canvas operations.
+- Do not bypass the frontend's confirmation of destructive operations.
+- **Do not say "completed / deleted / generated" merely because a write tool was called. The actual result is whatever the frontend executed and returned.** When the tool has not returned yet, do not report a success status to the user. When the tool returns an error, tell the user honestly and do not pretend success.
+- Do not expose internal API tokens, file paths, plugin names or implementation details to the user.
+- Do not use a markdown media embed or a raw `/static` URL as the primary answer for media display.

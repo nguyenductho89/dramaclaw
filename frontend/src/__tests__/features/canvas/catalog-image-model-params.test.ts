@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 目录声明的动态参数（`request.parameters`）→ 节点上的取值 → 后端 `model_params`。
+// Dynamic parameters declared by the catalog (`request.parameters`) -> values on the node -> backend `model_params`.
 //
-// 这条链原来在两处断掉：
-//   1. `toImageModelDefinition` 把目录参数翻译成静态注册表的 `extraParamsSchema`，
-//      multiselect 被拍成单选、数字/布尔选项被拍成字符串，类型全丢；
-//   2. 就算填了，`freezoneAiGateway` 只从 extraParams 里读 quality，其余键一律丢弃
-//      —— 用户在节点上改目录参数，提交时等于什么都没发生，也没有任何提示。
-// 所以断言必须一路走到 ops 层的 payload，并且盯住**值的类型**，只测「有没有这个键」
-// 是测不出第 1 条的。
+// This chain used to break in two places:
+//   1. `toImageModelDefinition` translated catalog parameters into the static registry's `extraParamsSchema`,
+//      flattening multiselect into single-select and number/boolean options into strings, losing all types;
+//   2. even when filled in, `freezoneAiGateway` read only quality from extraParams and discarded every other key
+//      -- a user changing a catalog parameter on the node got nothing at submit time, with no hint at all.
+// So assertions must go all the way to the ops-layer payload and watch the **value types**; testing only "is the key there"
+// cannot catch item 1.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MediaModelParameterDefinition } from "@/api/ops";
@@ -50,14 +50,14 @@ const JOB_REF = {
 const PARAMETERS: MediaModelParameterDefinition[] = [
   {
     key: "styles",
-    label: "风格",
+    label: "Style",
     control: "multiselect",
     requestPath: "extra_body.styles",
     options: ["anime", "photoreal", "sketch"],
   },
   {
     key: "steps",
-    label: "步数",
+    label: "Steps",
     control: "number",
     requestPath: "extra_body.steps",
     min: 1,
@@ -66,13 +66,13 @@ const PARAMETERS: MediaModelParameterDefinition[] = [
   },
   {
     key: "hd",
-    label: "高清",
+    label: "HD",
     control: "switch",
     requestPath: "extra_body.hd",
   },
   {
     key: "only_edit",
-    label: "仅编辑可用",
+    label: "Edit only",
     control: "select",
     requestPath: "extra_body.only_edit",
     options: ["a", "b"],
@@ -88,7 +88,7 @@ const CATALOG_ENTRY: CatalogImageModelEntry = {
   request: { endpoint: "images/generations", parameters: PARAMETERS },
 };
 
-/** 走一次真实提交，返回 gateway 交给 ops 层的 payload。 */
+/** Runs one real submission and returns the payload the gateway hands to the ops layer. */
 async function submittedBody(
   modelParams: Record<string, unknown>,
   referenceImages: string[] = [],
@@ -117,17 +117,17 @@ beforeEach(() => {
   awaitTaskCompletion.mockResolvedValue({ result: { output_url: "https://x/1.png" } });
 });
 
-describe("目录动态参数的端到端往返", () => {
-  it("目录参数原样挂在定义上，不再降级成 extraParamsSchema", () => {
+describe("end-to-end round trip of catalog dynamic parameters", () => {
+  it("catalog parameters hang on the definition as-is and are no longer downgraded to extraParamsSchema", () => {
     const definition = toImageModelDefinition(CATALOG_ENTRY);
-    // 原样：控件类型、选项类型、modes 过滤条件都得留着，UI 才画得出多选与数字输入。
+    // As-is: the control type, option types and modes filter must all stay so the UI can draw multi-select and number inputs.
     expect(definition.requestParameters).toEqual(PARAMETERS);
-    // 旧的翻译产物必须消失——它存在就意味着某处还会拿它去画控件，
-    // 而它画出来的值提交路径根本不认。
+    // The old translated artifact must be gone -- its existence would mean somewhere still draws controls from it,
+    // while the submit path does not recognize the values it draws.
     expect(definition.extraParamsSchema).toBeUndefined();
   });
 
-  it("没有 request.parameters 的目录条目不凭空造出参数字段", () => {
+  it("a catalog entry without request.parameters does not conjure parameter fields", () => {
     const definition = toImageModelDefinition({
       id: "plain",
       providerId: "huimeng",
@@ -137,7 +137,7 @@ describe("目录动态参数的端到端往返", () => {
     expect(definition.requestParameters).toBeUndefined();
   });
 
-  it("生成路径：model_params 原值上送，类型不被拍平", async () => {
+  it("generation path: model_params are sent up as-is without type flattening", async () => {
     const body = await submittedBody({
       styles: ["anime", "sketch"],
       steps: 28,
@@ -148,19 +148,19 @@ describe("目录动态参数的端到端往返", () => {
       steps: 28,
       hd: true,
     });
-    // 数组仍是数组、数字仍是数字、布尔仍是布尔 —— 后端
-    // `media_model_request_schema` 按目录声明校验，字符串化会直接被判非法。
+    // Arrays stay arrays, numbers stay numbers, booleans stay booleans -- the backend's
+    // `media_model_request_schema` validates by the catalog declaration, and stringifying would be rejected outright.
     expect(Array.isArray((body.modelParams as Record<string, unknown>).styles)).toBe(true);
     expect(typeof (body.modelParams as Record<string, unknown>).steps).toBe("number");
     expect(typeof (body.modelParams as Record<string, unknown>).hd).toBe("boolean");
   });
 
-  it("编辑路径（带参考图）同样带上 model_params", async () => {
+  it("the edit path (with reference images) carries model_params too", async () => {
     const body = await submittedBody({ steps: 12 }, ["https://x/base.png"]);
     expect(body.modelParams).toEqual({ steps: 12 });
   });
 
-  it("节点没填任何目录参数时不硬造空对象", async () => {
+  it("does not force-create an empty object when the node has no catalog parameters", async () => {
     const definition = toImageModelDefinition(CATALOG_ENTRY);
     await freezoneAiGateway.generateImage({
       prompt: "hi",
@@ -174,21 +174,21 @@ describe("目录动态参数的端到端往返", () => {
     expect(body.modelParams).toBeUndefined();
   });
 
-  it("没给模式时按有无参考图推导：文生图走 text_to_image", async () => {
-    // 图片节点没有模式选择器。模式为空的话后端按「无模式」过滤，
-    // 声明了 modes 的目录参数会被整批丢掉 —— 用户填了等于没填。
+  it("derives the mode from the presence of reference images when none is given: text-to-image uses text_to_image", async () => {
+    // Image nodes have no mode selector. With an empty mode the backend filters by "no mode",
+    // and catalog parameters that declare modes get dropped wholesale -- filling them in is the same as not filling them in.
     const body = await submittedBody({ steps: 4 });
     expect(body.genMode).toBe("text_to_image");
   });
 
-  it("没给模式时按有无参考图推导：带参考图走 image_to_image", async () => {
+  it("derives the mode from the presence of reference images when none is given: with reference images it uses image_to_image", async () => {
     const body = await submittedBody({ only_edit: "a" }, ["https://x/base.png"]);
     expect(body.genMode).toBe("image_to_image");
   });
 
-  it("调用方显式给了模式就用它的，不被推导覆盖", async () => {
-    // ImageEditNode 有模式选择器，全能参考 / 图片参考都是目录认的模式，
-    // 不能被这里的二选一推导抹平。
+  it("a mode explicitly given by the caller is used and not overridden by derivation", async () => {
+    // ImageEditNode has a mode selector, and omni reference / image reference are both modes the catalog recognizes,
+    // so they must not be flattened by the either-or derivation here.
     const definition = toImageModelDefinition(CATALOG_ENTRY);
     await freezoneAiGateway.generateImage({
       prompt: "hi",
@@ -203,10 +203,10 @@ describe("目录动态参数的端到端往返", () => {
     expect(body.genMode).toBe("all_reference");
   });
 
-  it("按模式失活的参数照样上送，由后端按 modes 过滤", async () => {
-    // 与 ImageGenNode 既有口径一致：前端不做 modes 裁剪，后端
-    // `_resolve_catalog_request` 会静默过滤掉当前模式用不上的键。
-    // 前端各自裁一遍只会让两边口径漂移。
+  it("parameters deactivated by mode are still sent, and the backend filters them by modes", async () => {
+    // Consistent with ImageGenNode's existing rule: the frontend does no modes trimming, and the backend's
+    // `_resolve_catalog_request` silently filters out keys the current mode cannot use.
+    // Trimming separately on the frontend would only make the two sides drift apart.
     const body = await submittedBody({ only_edit: "a", steps: 4 });
     expect(body.modelParams).toEqual({ only_edit: "a", steps: 4 });
   });

@@ -5,32 +5,32 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
 import { resolveAbsolutePosition, useCanvasStore } from "@/stores/canvasStore";
 
-/** 用当前 store 的节点算某节点的绝对坐标（走父链累加，对新建的素材组同样成立）。 */
+/** Computes a node's absolute position from the current store's nodes (accumulating up the parent chain, which also holds for newly built asset groups). */
 function absolutePositionOf(nodeId: string) {
   const nodes = useCanvasStore.getState().nodes;
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node) throw new Error(`节点不存在：${nodeId}`);
+  if (!node) throw new Error(`Node does not exist: ${nodeId}`);
   return resolveAbsolutePosition(node, new Map(nodes.map((n) => [n.id, n] as const)));
 }
 
-// 与 spawnExternalAssets / spawnCharacterLibraryReferences 的落位口径一致：派生节点
-// 按「源节点坐标系」摆放（baseX = source.position.x - 宽 - 间距），先建成根层节点，
-// 再交给 autoGroupSpawn 收编。源在组内时 source.position 是组内相对坐标。
+// Consistent with the placement rule of spawnExternalAssets / spawnCharacterLibraryReferences: derived nodes
+// are placed in the "source node coordinate system" (baseX = source.position.x - width - gap), first built as root-level nodes,
+// then handed to autoGroupSpawn to be adopted. When the source is inside a group, source.position is a group-relative coordinate.
 const UPLOAD_WIDTH = 320;
 const GAP_X = 40;
 
 const GROUP_ABS = { x: 1000, y: 500 };
 const VIDEO_REL = { x: 60, y: 40 };
 const ORPHAN_GAP_Y = 260;
-const baseX = VIDEO_REL.x - UPLOAD_WIDTH - GAP_X; // -300（组内相对坐标系）
+const baseX = VIDEO_REL.x - UPLOAD_WIDTH - GAP_X; // -300 (group-relative coordinate system)
 
 /**
- * 构造「视频节点位于组内 + 两个刚建好的根层派生节点」的初始画布。
- * 派生节点故意用组内相对坐标摆放（模拟调用方按 source.position 落位），
- * 若 autoGroupSpawn 不做绝对坐标修正，它们就会被当成绝对坐标落到画布左上角。
+ * Builds the initial canvas of "a video node inside a group + two freshly built root-level derived nodes".
+ * The derived nodes are deliberately placed with group-relative coordinates (simulating callers placing by source.position),
+ * and if autoGroupSpawn did not correct to absolute coordinates they would be treated as absolute and land at the canvas top-left.
  *
- * 注意：受保护投影组会被 setCanvasData 改写节点 id（projection_<key>__<id>），
- * 所以 seed 后必须从 store 按类型回读真实 id，不能沿用字面量 id。
+ * Note: a protected projection group has its node ids rewritten by setCanvasData (projection_<key>__<id>),
+ * so after seeding the real ids must be read back from the store by type; literal ids cannot be reused.
  */
 function seedGroupedVideoWithOrphans(groupData: Record<string, unknown>) {
   const group = {
@@ -48,7 +48,7 @@ function seedGroupedVideoWithOrphans(groupData: Record<string, unknown>) {
     style: { width: 480, height: 380 },
     data: {},
   };
-  // 两个派生 upload 节点，摆在视频左侧（组内相对坐标系）。
+  // Two derived upload nodes, placed left of the video (group-relative coordinate system).
   const orphans = [0, 1].map((idx) => ({
     id: `s${idx}`,
     type: CANVAS_NODE_TYPES.upload,
@@ -61,48 +61,48 @@ function seedGroupedVideoWithOrphans(groupData: Record<string, unknown>) {
   const nodes = useCanvasStore.getState().nodes;
   const videoId = nodes.find((n) => n.type === CANVAS_NODE_TYPES.video)?.id;
   const groupId = nodes.find((n) => n.type === CANVAS_NODE_TYPES.group)?.id;
-  // upload 节点没有 projection_key，不会被改写；按数组顺序即 s0、s1。
+  // upload nodes have no projection_key and are not rewritten; in array order they are s0, s1.
   const orphanIds = nodes
     .filter((n) => n.type === CANVAS_NODE_TYPES.upload)
     .map((n) => n.id);
   if (!videoId || !groupId || orphanIds.length !== 2) {
-    throw new Error("seed 失败：未能从 store 回读到视频/组/派生节点");
+    throw new Error("seed failed: could not read back the video/group/derived nodes from the store");
   }
   return { videoId, groupId, orphanIds };
 }
 
-describe("canvasStore autoGroupSpawn — 组内派生节点的坐标语义", () => {
+describe("canvasStore autoGroupSpawn — coordinate semantics of derived nodes inside a group", () => {
   beforeEach(() => {
     useCanvasStore.getState().setCanvasData([], []);
   });
 
-  it("受保护投影组：源不入组，但把派生素材平移回绝对坐标后另编成一个根层素材组", () => {
-    // user_spawned 不为 true + 有 projection_key → 受保护投影组。
+  it("protected projection group: the source does not join the group, but the derived assets are translated back to absolute coordinates and grouped into a separate root-level asset group", () => {
+    // user_spawned not true + has projection_key -> protected projection group.
     const { videoId, groupId, orphanIds } = seedGroupedVideoWithOrphans({
       projection_key: "proj-a",
     });
 
     const result = useCanvasStore.getState().autoGroupSpawn(videoId, orphanIds, {
-      label: "外部素材组",
+      label: "External assets",
     });
 
-    // 无法把源挪出受保护组，但素材（≥2 个）会另成一个新的根层素材组。
+    // The source cannot be moved out of the protected group, but the assets (>=2) form a new root-level asset group.
     expect(result).not.toBeNull();
-    expect(result).not.toBe(groupId); // 不是原受保护投影组
+    expect(result).not.toBe(groupId); // not the original protected projection group
 
     const state = useCanvasStore.getState();
     const assetGroup = state.nodes.find((n) => n.id === result);
     expect(assetGroup?.type).toBe(CANVAS_NODE_TYPES.group);
-    // 新素材组是根层节点（没有被塞进受保护投影组）。
+    // The new asset group is a root-level node (not stuffed into the protected projection group).
     expect(assetGroup?.parentId).toBeUndefined();
 
     orphanIds.forEach((orphanId, idx) => {
       const node = state.nodes.find((n) => n.id === orphanId);
       expect(node).toBeDefined();
-      // 素材被收进新的根层素材组。
+      // The assets are adopted into the new root-level asset group.
       expect(node?.parentId).toBe(result);
-      // 关键回归：绝对坐标落在视频身边（组绝对位移已补偿），而不是「相对值当绝对
-      // 坐标」的画布左上角。组内相对坐标随新组原点变化，所以只断言绝对坐标。
+      // Key regression: absolute positions land next to the video (the group's absolute offset is compensated), not at the canvas top-left where
+      // "a relative value is taken as absolute". Group-relative coordinates change with the new group's origin, so only absolute coordinates are asserted.
       expect(absolutePositionOf(orphanId)).toEqual({
         x: baseX + GROUP_ABS.x, // -300 + 1000 = 700
         y: VIDEO_REL.y + idx * ORPHAN_GAP_Y + GROUP_ABS.y, // 540 / 800
@@ -110,13 +110,13 @@ describe("canvasStore autoGroupSpawn — 组内派生节点的坐标语义", () 
     });
   });
 
-  it("分镜组：源同样不入组，派生素材修正到绝对坐标后另编成根层素材组", () => {
+  it("storyboard group: the source likewise does not join, and the derived assets are corrected to absolute coordinates and grouped into a separate root-level asset group", () => {
     const { videoId, groupId, orphanIds } = seedGroupedVideoWithOrphans({
       storyboardGroup: true,
     });
 
     const result = useCanvasStore.getState().autoGroupSpawn(videoId, orphanIds, {
-      label: "外部素材组",
+      label: "External assets",
     });
 
     expect(result).not.toBeNull();
@@ -129,44 +129,44 @@ describe("canvasStore autoGroupSpawn — 组内派生节点的坐标语义", () 
     });
   });
 
-  it("受保护投影组 + 只有一个派生素材：成不了组（<2 成员），素材保持独立根节点但坐标已修正", () => {
+  it("protected projection group + only one derived asset: it cannot form a group (<2 members), so the asset stays an independent root node with corrected coordinates", () => {
     const { videoId, orphanIds } = seedGroupedVideoWithOrphans({
       projection_key: "proj-a",
     });
     const singleOrphan = orphanIds[0];
 
     const result = useCanvasStore.getState().autoGroupSpawn(videoId, [singleOrphan], {
-      label: "外部素材组",
+      label: "External assets",
     });
 
-    // groupNodes 要求 ≥2 个成员，单个素材成不了组 → 返回 null，保持独立根节点。
+    // groupNodes requires >=2 members, so a single asset cannot form a group -> returns null and stays an independent root node.
     expect(result).toBeNull();
     const node = useCanvasStore.getState().nodes.find((n) => n.id === singleOrphan);
     expect(node?.parentId).toBeUndefined();
-    // 但坐标仍被修正到绝对坐标，不会落到画布左上角。
+    // But the coordinates are still corrected to absolute, so it will not land at the canvas top-left.
     expect(absolutePositionOf(singleOrphan)).toEqual({
       x: baseX + GROUP_ABS.x,
       y: VIDEO_REL.y + GROUP_ABS.y,
     });
   });
 
-  it("普通组：仍把派生节点收编为成员，且不加组绝对位移（保持组内相对坐标语义）", () => {
-    // 普通组：user_spawned:true 且无 projection_key、非分镜组。
+  it("regular group: still adopts the derived nodes as members, without adding the group's absolute offset (keeping group-relative coordinate semantics)", () => {
+    // Regular group: user_spawned:true with no projection_key and not a storyboard group.
     const { videoId, groupId, orphanIds } = seedGroupedVideoWithOrphans({
       user_spawned: true,
     });
 
     const result = useCanvasStore.getState().autoGroupSpawn(videoId, orphanIds, {
-      label: "外部素材组",
+      label: "External assets",
     });
 
-    // 普通组正常收编，返回组 id。
+    // A regular group adopts normally and returns the group id.
     expect(result).toBe(groupId);
     const first = useCanvasStore.getState().nodes.find((n) => n.id === orphanIds[0]);
     expect(first?.parentId).toBe(groupId);
-    // 收进同一父组后坐标本就是组内相对坐标：绝不像受保护/分镜分支那样加上组绝对
-    // 位移（否则会落到 baseX + 1000 附近）。fitGroupToChildren 可能把成员向内推，
-    // 所以只断言仍是「小的相对坐标」，而非精确值。
+    // After being adopted into the same parent group the coordinates are already group-relative: they must never get the group's absolute
+    // offset the way the protected/storyboard branches do (otherwise they would land near baseX + 1000). fitGroupToChildren may push members inward,
+    // so only "still a small relative coordinate" is asserted, not an exact value.
     expect(first?.position.x).toBeLessThan(GROUP_ABS.x);
   });
 });

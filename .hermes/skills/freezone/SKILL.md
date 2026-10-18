@@ -1,169 +1,169 @@
 ---
 name: freezone
-description: "Use when the active chat surface is 虾画/Freezone/canvas, or when the user asks about canvas nodes, visual boards, selections, graph edits, canvas actions, layout, or Freezone short-video workflow work."
-compatibility: Requires Freezone/虾画 chat surface with frontend-injected current project, canvas, resource, and node context for canvas-scoped operations.
+description: "Use when the active chat surface is Shrimp Canvas/Freezone/canvas, or when the user asks about canvas nodes, visual boards, selections, graph edits, canvas actions, layout, or Freezone short-video workflow work."
+compatibility: Requires Freezone/Shrimp Canvas chat surface with frontend-injected current project, canvas, resource, and node context for canvas-scoped operations.
 ---
 
-# Freezone 虾画 Skill
+# Freezone (Shrimp Canvas) Skill
 
-## 定位
+## Positioning
 
-- 这个 skill 是虾画/Freezone 的总入口，负责判断当前是不是画布场景、用户意图属于咨询还是画布操作，以及用户可见回复应该怎么说。
-- 具体节点职责、连线语义、视频节点和合成节点的产品建模，读取 `references/canvas-modeling-guide.md`。
-- 只有复杂批量命令的字段不明确时，才读取 `references/canvas-command-guide.md`。删除、选择、布局等参数已经明确的单步操作禁止先读取该指南。
+- This skill is the main entry point for Shrimp Canvas/Freezone. It decides whether the current scene is a canvas scene, whether the user's intent is a consultation or a canvas operation, and how the user-visible reply should be phrased.
+- For the product modeling of concrete node responsibilities, link semantics, video nodes and compose nodes, read `references/canvas-modeling-guide.md`.
+- Read `references/canvas-command-guide.md` only when the fields of a complex batch command are unclear. For single-step operations with clear parameters such as delete, select and layout, it is forbidden to read that guide first.
 
-## 意图判断
+## Intent judgment
 
-- **解释/咨询类**：用户问"怎么 / 如何 / 什么是 / 介绍 / 说明 / 教我 / how to / what is / explain / show me how"时，只用自然语言回答；不要创建、修改、连接、布局、运行节点。
-- **画布操作类**：用户明确要求在画布上创建、生成、搭建、添加、连接、修改、删除、布局、选择、打开工具、运行、应用或执行时，进入画布命令模式。
-- **开放性创意/没思路类**：用户说"想做...没思路""帮我想想""给点建议""有什么方向""怎么策划"时，先用自然语言提问、给方向或给 2-3 个可选方案；不要直接创建工作流、节点、连线或分组。只有用户继续明确说"就按这个做""落到画布""搭出来""创建这些节点""生成工作流"时，才进入画布命令模式。
-- **创意咨询**：可以自然语言回答；如果用户希望"落到画布"，使用画布工具创建可继续工作的材料。
-- **选择式澄清/互动类**：当用户希望助手通过提问推进对话，或当前任务需要用户补充/选择几个关键信息后才能继续时，优先调用 `freezone_request_user_clarification` 展示问题卡片。适用场景包括：帮用户理清想法、做偏好选择、做小测验/问答互动、确认方向、收集必要条件。问题应贴近用户表达方式，让用户能凭直觉选择或补充；不要询问内部实现细节、工具参数、节点类型、link_type、schema、模型参数等。若只是普通闲聊、简单知识问答、单个自然追问，或用户已经给出明确指令，则直接自然语言回复，不要强行发卡片。
-- **全局画布请求**：用户说"看看画布""整理当前画布"时，优先使用当前注入的画布上下文；不足时再读取。
-- **运行已有工作流**：复用已有节点、内容和连线，优先运行已有工作流；不要重新规划一套重复节点，除非用户明确要求新增、重写或替换。
-- **继续/恢复未完成工作流**：直接调用 `freezone_run_workflow` 交给确定性 DAG Runner；不要逐个读取节点、逐个触发动作，也不要自行轮询任务。一次运行返回失败后，根据返回的错误类别暂停并说明下一步，不要在同一请求或后续自动恢复中反复修改节点。
-- **单节点工作流仍是工作流**：用户明确要求运行、执行、继续或恢复工作流时，即使其中只有一个可执行节点，也直接调用 `freezone_run_workflow`；不要读取子节点后改用 `freezone_run_node_action`。
-- **内容安全失败不是提示词诊断**：`content_policy`、`OutputVideoSensitiveContentDetected`、`OutputImageSensitiveContentDetected` 只说明上游拒绝了输入或输出，不能证明某个具体词敏感。除非上游错误明确指出具体字段或内容，禁止声称“全息”“服务器机柜”等词触发审核，禁止靠猜词反复改写提示词。
-- **审核失败的返工边界**：内容安全失败不可自动重试，也不可由 Agent 自主修改提示词。先保留原提示词和原始错误，向用户说明是输入素材审核还是输出内容审核；只有用户明确要求修改某个节点的提示词时，才修改该节点一次。修改后再次失败就暂停，等待用户更换素材、调整创意方向或手动编辑，不得继续换词试错。
-- **动态工作流**：工作流选择只使用 Hermes 原生 Skill 机制。用户可在输入框键入 `/` 选择 Workflow Skill；未显式选择且存在多个候选时，使用 `skills_list` 展示并让用户选择。加载后生成精简 `freezone_workflow_intent.v1`，调用 `freezone_prepare_workflow_draft` 得到确定性预览；调整时调用 `freezone_patch_workflow_draft`，确认后调用 `freezone_confirm_workflow_draft`。对于 `ecommerce-ad`、`text-to-image-video`、`video-tutorial`、`short-drama-quick`，优先传 `planner={mode:"standard", item_count, total_duration_seconds, deliverable, include_audio, units}`，其中 `units` 只描述每段的标题、内容、旁白和可选 `duration_seconds`；`include_audio=true` 时每个 unit 都必须带 `narration`（该段实际朗读的原文，不能缺省、不能写占位说明）；不要为标准流程选择 Recipe 或编写依赖。用户指定总时长时必须传 `total_duration_seconds`，编译器会为未指定时长的片段进行确定性分配。只有用户明确要求特殊拓扑时才传完整 `items`；自定义视频 item 必须传 `duration_seconds`，并确保所有视觉片段时长之和等于用户目标时长；自定义音频 item 用 `audio_kind:"speech"`（narration 填实际朗读原文）或 `audio_kind:"music"` 区分。不要使用固定 `workflow_type`，不要手写画布命令，也不要调用旧的模板 Plan Builder。草稿校验失败时按返回的 `errors`/`hint` 修正后重试即可，不要读插件源码。
-- **已有图片作为 Recipe 输入**：在 Intent 顶层声明 `external_inputs=[{"id":"source_image","node_id":"画布真实节点 ID","media_kind":"image"}]`，目标 item 用 `reference_inputs=["source_image"]`；自定义 Plan 用同一声明及 `media_input_for` 边。保持源节点原样，等待草稿确认，不要退回普通 `add_next_node` 或手填图片 URL。
-- **外部 Skill 导入**：用户提供 Markdown 并明确要求转成虾画 Skill 时，调用 `freezone_import_external_skill` 提交后台转换，正文完整传入，不手工编码。ZIP 或带引用资料的完整包使用设置中的“导入外部 Skill”上传入口。返回后告知任务与导入编号，不反复轮询、不声称已安装。用户要求查看时调用 `freezone_get_skill_import`；完成的 `import_result.bundle` 是原生 Skill 与 Recipes 草稿，用户要求修改时交给现有 Skill Studio 草稿流程，不创建画布节点。
-- **Skill Studio 配置类**：用户明确要求创建、编辑、保存、沉淀 Skill / Recipe / 技能 / 配方时，这是 catalog 配置草稿流程，不是画布写入，也不是纯文本完成。不要调用画布写入工具，不要声称已保存；需要澄清方向时调用 `freezone_request_user_clarification`，生成或修改草稿时按 `freezone_begin_agent_catalog_draft` → `freezone_put_agent_catalog_skill` → `freezone_put_agent_catalog_recipe` → `freezone_finish_agent_catalog_draft` 的分片流程提交，由 Freezone bridge 触发前端卡片展示。
-- **编写或沉淀 Skill / Recipe**：用户要求创建、编写、编辑、总结、抽成、沉淀或保存 Skill / Recipe 时，必须读取 `references/skill-studio-authoring-guide.md`。先判定来源模式再做能力建模：从用户一句话新建时，不要把当前画布当来源；只有用户明确说当前画布/流程/选中节点时，才做画布工作流分析；不要只按 tool schema 字段或节点类型摘要。
-- **全画布理解**：用户要求总结、理解或沉淀整张画布时，优先使用 canvas ontology / canvas summary；不要为了全局理解逐个读取所有节点详情。只有缺少关键字段时，才少量补读关键节点。
-- **清空画布**：用户明确要求删除全部节点时，直接调用 `freezone_delete_nodes(scope="canvas")`。不要先总结画布，不要逐个读取节点详情，也不要用 Python 整理节点 ID。
-- **删除选中节点**：用户要求删除当前/选中节点，且 `[SUPERTALE_CANVAS_NODE_REFERENCES]` 已提供目标时，直接把其中的 `nodeId` 作为 `freezone_delete_nodes(node_ids=[...])` 参数。禁止先调用 `skill_view`、canvas summary、ontology、selection detail 或 node detail；不要重复加载任何参考文档。
-- **简单删除快速路径优先级最高**：上述两种删除请求必须以删除写工具作为本轮第一次工具调用。不要为了遵循一般画布流程而加载指南；一般规则不能覆盖此快速路径。
+- **Explanation / consultation**: when the user asks "how / how to / what is / introduce / explain / teach me / how to / what is / explain / show me how", answer only in natural language; do not create, modify, connect, lay out or run nodes.
+- **Canvas operation**: when the user explicitly asks to create, generate, build, add, connect, modify, delete, lay out, select, open a tool, run, apply or execute something on the canvas, enter canvas command mode.
+- **Open-ended creative / no ideas**: when the user says "I want to make ... but have no ideas", "help me think", "give me some suggestions", "what directions are there", "how do I plan it", first ask questions in natural language, give directions, or give 2-3 options; do not directly create workflows, nodes, links or groups. Only when the user then explicitly says "go with this one", "put it on the canvas", "build it", "create these nodes" or "generate the workflow" do you enter canvas command mode.
+- **Creative consultation**: may be answered in natural language; if the user wants it "put on the canvas", use the canvas tools to create material that can be worked on further.
+- **Choice-based clarification / interactive**: when the user wants the assistant to advance the conversation through questions, or the current task needs the user to supply/choose a few key pieces of information before continuing, prefer calling `freezone_request_user_clarification` to show a question card. Applicable scenarios include: helping the user clarify ideas, making preference choices, quizzes / Q&A interaction, confirming a direction, collecting necessary conditions. Questions should stay close to the user's way of expressing themselves, so the user can choose or supplement intuitively; do not ask about internal implementation details, tool parameters, node types, link_type, schema, model parameters and so on. For ordinary chit-chat, simple knowledge Q&A, a single natural follow-up question, or when the user has already given an explicit instruction, reply directly in natural language and do not force a card.
+- **Global canvas request**: when the user says "look at the canvas" or "tidy up the current canvas", prefer the currently injected canvas context; read more only when it is insufficient.
+- **Run an existing workflow**: reuse existing nodes, content and links and prefer running the existing workflow; do not re-plan a duplicate set of nodes unless the user explicitly asks to add, rewrite or replace.
+- **Continue / resume an unfinished workflow**: call `freezone_run_workflow` directly and hand over to the deterministic DAG Runner; do not read nodes one by one, trigger actions one by one, or poll tasks yourself. After a run returns a failure, pause according to the returned error category and explain the next step; do not repeatedly modify nodes in the same request or in later automatic resumes.
+- **A single-node workflow is still a workflow**: when the user explicitly asks to run, execute, continue or resume a workflow, call `freezone_run_workflow` directly even if it has only one executable node; do not read the child node and switch to `freezone_run_node_action`.
+- **A content-safety failure is not a prompt diagnosis**: `content_policy`, `OutputVideoSensitiveContentDetected` and `OutputImageSensitiveContentDetected` only say that the upstream rejected the input or output; they cannot prove that any specific word is sensitive. Unless the upstream error explicitly points to a specific field or content, never claim that words such as "hologram" or "server cabinet" triggered moderation, and never repeatedly rewrite prompts by guessing words.
+- **Rework boundary after moderation failures**: a content-safety failure must not be retried automatically, and the Agent must not modify the prompt on its own. First keep the original prompt and the original error, and tell the user whether the input material or the output content was rejected; only when the user explicitly asks to change a node's prompt may you modify that node, once. If it fails again after the change, pause and wait for the user to replace the material, adjust the creative direction or edit manually; do not continue trying new wording.
+- **Dynamic workflows**: workflow selection uses only the native Hermes Skill mechanism. The user can type `/` in the input box to pick a Workflow Skill; when none is chosen explicitly and several candidates exist, use `skills_list` to show them and let the user choose. After loading, produce a compact `freezone_workflow_intent.v1`, call `freezone_prepare_workflow_draft` to get a deterministic preview; to adjust, call `freezone_patch_workflow_draft`, and after confirmation call `freezone_confirm_workflow_draft`. For `ecommerce-ad`, `text-to-image-video`, `video-tutorial` and `short-drama-quick`, prefer passing `planner={mode:"standard", item_count, total_duration_seconds, deliverable, include_audio, units}`, where `units` only describes each segment's title, content, narration and optional `duration_seconds`; when `include_audio=true`, every unit must carry `narration` (the original text actually read aloud for that segment; it cannot be omitted or replaced by placeholder text); do not choose a Recipe or write dependencies for the standard flow. When the user specifies a total duration you must pass `total_duration_seconds`, and the compiler deterministically allocates durations to segments without a specified duration. Pass full `items` only when the user explicitly asks for a special topology; custom video items must pass `duration_seconds`, and the durations of all visual segments must sum to the user's target duration; custom audio items use `audio_kind:"speech"` (fill narration with the actual text to read aloud) or `audio_kind:"music"` to distinguish them. Do not use a fixed `workflow_type`, do not hand-write canvas commands, and do not call the old template Plan Builder. When draft validation fails, fix it according to the returned `errors`/`hint` and retry; do not read the plugin source code.
+- **An existing image as Recipe input**: declare `external_inputs=[{"id":"source_image","node_id":"real node ID on the canvas","media_kind":"image"}]` at the top level of the Intent, and have the target item use `reference_inputs=["source_image"]`; a custom Plan uses the same declaration and a `media_input_for` edge. Keep the source node as is, wait for the draft confirmation, and do not fall back to an ordinary `add_next_node` or a hand-filled image URL.
+- **External Skill import**: when the user provides Markdown and explicitly asks to turn it into a Shrimp Canvas Skill, call `freezone_import_external_skill` to submit the background conversion, passing the full body without hand-encoding. A ZIP or a complete package with reference materials uses the "Import external Skill" upload entry in Settings. After it returns, tell the user the task and import number; do not poll repeatedly and do not claim it is installed. When the user asks to view it, call `freezone_get_skill_import`; the completed `import_result.bundle` is a native Skill and Recipes draft, and when the user asks to modify it, hand it to the existing Skill Studio draft flow and do not create canvas nodes.
+- **Skill Studio configuration**: when the user explicitly asks to create, edit, save or consolidate a Skill / Recipe, this is the catalog configuration draft flow, not a canvas write and not a plain-text completion. Do not call canvas write tools and do not claim it has been saved; when you need to clarify the direction call `freezone_request_user_clarification`, and when generating or modifying a draft submit it in pieces in the order `freezone_begin_agent_catalog_draft` -> `freezone_put_agent_catalog_skill` -> `freezone_put_agent_catalog_recipe` -> `freezone_finish_agent_catalog_draft`; the Freezone bridge triggers the frontend card display.
+- **Writing or consolidating a Skill / Recipe**: when the user asks to create, write, edit, summarize, extract, consolidate or save a Skill / Recipe, you must read `references/skill-studio-authoring-guide.md`. Determine the source mode first and then do capability modeling: when creating from the user's one-line request, do not treat the current canvas as the source; only when the user explicitly refers to the current canvas / flow / selected nodes should you analyze the canvas workflow; do not go only by tool schema fields or node-type summaries.
+- **Whole-canvas understanding**: when the user asks to summarize, understand or consolidate the entire canvas, prefer the canvas ontology / canvas summary; do not read every node's details one by one for global understanding. Only when key fields are missing, read a few key nodes.
+- **Clear the canvas**: when the user explicitly asks to delete all nodes, call `freezone_delete_nodes(scope="canvas")` directly. Do not summarize the canvas first, do not read node details one by one, and do not use Python to tidy node IDs.
+- **Delete selected nodes**: when the user asks to delete the current/selected nodes and `[SUPERTALE_CANVAS_NODE_REFERENCES]` already provides the targets, pass the `nodeId`s in it directly as the `freezone_delete_nodes(node_ids=[...])` parameter. Calling `skill_view`, canvas summary, ontology, selection detail or node detail first is forbidden; do not reload any reference document.
+- **The simple-delete fast path has the highest priority**: the two delete requests above must make the delete write tool this turn's first tool call. Do not load a guide in order to follow the general canvas flow; general rules cannot override this fast path.
 
-### 开放意图的默认响应
+### Default response to open-ended intent
 
-开放问题的默认目标是帮助用户缩小方向，而不是替用户抢先改画布。即使当前处在虾画界面、前端注入了画布上下文，也不要把注入上下文当成用户要求落画布。
+The default goal for an open question is to help the user narrow down the direction, not to modify the canvas ahead of the user. Even when you are in the Shrimp Canvas interface and the frontend injected canvas context, do not treat the injected context as the user asking to put something on the canvas.
 
-典型开放意图：
+Typical open-ended intents:
 
-- "我想做个公益短片没思路"
-- "帮我想一个广告创意"
-- "这个主题可以怎么做"
-- "给我几个分镜方向"
+- "I want to make a public-welfare short film but have no ideas"
+- "Help me think of an ad idea"
+- "How could this topic be done"
+- "Give me a few storyboard directions"
 
-推荐回复方式：
+Recommended reply approach:
 
-1. 先给 2-3 个方向或一个简短建议。
-2. 问一个推进问题，例如主题、受众、时长、平台、风格、是否需要落到画布。
-3. 如果方案已经足够明确，可以补一句"你定一个方向后，我可以再帮你整理成虾画节点"，但不要直接执行画布命令。
+1. First give 2-3 directions or a short suggestion.
+2. Ask one advancing question, such as the topic, audience, duration, platform, style, or whether it should be put on the canvas.
+3. If the plan is already clear enough, you may add one sentence: "Once you pick a direction, I can organize it into Shrimp Canvas nodes for you", but do not directly execute canvas commands.
 
-只有在用户出现明确落画布动词时，才进入画布写入原则。不要因为"短片/工作流/分镜"这些词本身就创建节点。
+Enter the canvas write principles only when the user uses an explicit put-on-canvas verb. Do not create nodes merely because of words such as "short film / workflow / storyboard".
 
-## 注入上下文
+## Injected context
 
-- `[SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]` 是当前画布的只读 overview，用来理解已有 nodes、links、slots、actions 和 current selection；不要把它当执行结果。
-- `[SUPERTALE_CANVAS_NODE_REFERENCES]` 是本轮明确目标节点。若 overview 和 node references 同时存在，优先以 node references 作为操作目标。
-- `[SUPERTALE_CANVAS_CHAT_COMMANDS]` 表示前端已经注入画布命令规则。优先使用注入规则；只有复杂命令字段仍不明确时才读取完整指南。
+- `[SUPERTALE_CANVAS_ONTOLOGY_CONTEXT]` is a read-only overview of the current canvas, used to understand the existing nodes, links, slots, actions and current selection; do not treat it as an execution result.
+- `[SUPERTALE_CANVAS_NODE_REFERENCES]` are the explicit target nodes of this turn. When the overview and node references both exist, prefer the node references as the operation targets.
+- `[SUPERTALE_CANVAS_CHAT_COMMANDS]` means the frontend has injected the canvas command rules. Prefer the injected rules; read the full guide only when the fields of a complex command are still unclear.
 
-## 落画布决策顺序
+## Decision order for putting things on the canvas
 
-在写任何画布命令前，先按这个顺序判断。不要先把用户的话画成自然语言流程图。
+Before writing any canvas command, judge in this order. Do not first draw the user's words as a natural-language flowchart.
 
-1. **识别对象角色**：每个节点先归类为语义源、生成节点、媒体产物、合成节点、展示/工具节点或普通组。
-2. **判断操作能力**：确认这个角色能做什么。语义源承载文字和上下文；生成节点产出图片/视频/音频；合成节点只消费视频/音频产物；普通组表达主题归属。
-3. **判断关系能否用边表达**：边只表示真实输入、参考、上下文或合成素材依赖。只是同主题、同方案、同工作包、视觉上应放一起，用组和布局，不用边。
-4. **选择合法连接**：TextNode -> TextNode 只能是上下文关系 `context_for`；TextNode -> 生成节点只有直接可消费提示词才是 `prompt_for`；图片/视频/音频等媒体 -> 生成节点才是 `media_input_for`；视频/音频 -> 合成节点才是 `composition_input_for`。
-5. **决定命令形态**：单个明确操作可以用单步工具；主题性成套工作使用一次批量命令，通常包含 `create_node`、必要的合法 `create_edge`、`group_nodes` 和可选 `layout_nodes`。
-6. **不确定就少连边**：如果不能确定目标真的消费源节点，不要猜 `link_type`。先查 catalog；仍不确定时创建节点并分组/布局，保留未连接。
+1. **Identify object roles**: classify each node first as a semantic source, generation node, media artifact, compose node, display/tool node or ordinary group.
+2. **Judge operation capability**: confirm what this role can do. A semantic source carries text and context; a generation node produces images/videos/audio; a compose node only consumes video/audio artifacts; an ordinary group expresses topic affiliation.
+3. **Judge whether the relationship can be expressed by an edge**: an edge only represents a real input, reference, context or compose-material dependency. Being merely on the same topic, the same plan, the same work package, or visually belonging together calls for groups and layout, not edges.
+4. **Choose a legal link**: TextNode -> TextNode can only be the context relation `context_for`; TextNode -> generation node is `prompt_for` only when it is a directly consumable prompt; media such as image/video/audio -> generation node is `media_input_for`; video/audio -> compose node is `composition_input_for`.
+5. **Decide the command shape**: a single explicit operation may use a single-step tool; themed full-set work uses one batch command, which usually includes `create_node`, the necessary legal `create_edge`, `group_nodes` and an optional `layout_nodes`.
+6. **When unsure, connect fewer edges**: if you cannot be sure that the target really consumes the source node, do not guess `link_type`. Check the catalog first; if still unsure, create the nodes, group/lay them out, and leave them unconnected.
 
-## 快速决策表
+## Quick decision table
 
-| 用户意图 | 节点类型 | 连线类型 | 说明 |
+| User intent | Node types | Link type | Notes |
 |---------|---------|---------|------|
-| 根据文字出图 | `textAnnotationNode` → `imageGenNode` | `prompt_for` | 文本需已整理为可消费 prompt，否则先提炼 |
-| 图片做视频 | `imageGenNode` → `videoNode` | `media_input_for` | 默认 `videoNode`，不是 `videoComposeNode` |
-| 图片 + 文字做视频 | `imageGenNode` + `textAnnotationNode` → `videoNode` | 分别 `media_input_for` + `prompt_for` | 不要串成 image → text → video |
-| 多段视频合成成片 | 多个 `videoNode` / `audioNode` → `videoComposeNode` | `composition_input_for` | 只连视频/音频产物，不连文本/简报/prompt |
-| 文本/简报/方向 → 分镜/脚本草稿 | `textAnnotationNode` → `textAnnotationNode` | `context_for` 或不连线 | 文本之间不是生成输入链路 |
-| 规划文本 → 图片/视频/音频节点 | 规划文本 + 生成节点 | 不直接连，或另建 `input_text` 提示词节点后 `prompt_for` | planning_text 不能硬连生成节点 |
-| 创意框架 → 分镜 → 多镜头 | 多个 `textAnnotationNode` + `imageGenNode` / `videoNode` | 视实际输入关系定 | `scriptNode` 仅结构化脚本时使用 |
-| 文本节点相关但非输入 | `textAnnotationNode` + 生成节点 | 不连线，用 `group_nodes` | 业务相关 ≠ 应该连线 |
+| Generate an image from text | `textAnnotationNode` → `imageGenNode` | `prompt_for` | The text must already be organized into a consumable prompt, otherwise refine it first |
+| Make a video from an image | `imageGenNode` → `videoNode` | `media_input_for` | Default is `videoNode`, not `videoComposeNode` |
+| Make a video from an image + text | `imageGenNode` + `textAnnotationNode` → `videoNode` | `media_input_for` + `prompt_for` respectively | Do not chain image → text → video |
+| Compose multiple videos into a final cut | multiple `videoNode` / `audioNode` → `videoComposeNode` | `composition_input_for` | Connect only video/audio artifacts, not text/briefs/prompts |
+| Text/brief/direction → storyboard/script draft | `textAnnotationNode` → `textAnnotationNode` | `context_for` or no link | Text-to-text is not a generation-input chain |
+| Planning text → image/video/audio nodes | planning text + generation nodes | Do not connect directly, or create a separate `input_text` prompt node and then `prompt_for` | planning_text must not be hard-linked to generation nodes |
+| Creative framework → storyboard → multiple shots | multiple `textAnnotationNode` + `imageGenNode` / `videoNode` | Decided by the actual input relations | Use `scriptNode` only for structured scripts |
+| Text node related but not an input | `textAnnotationNode` + generation node | No link, use `group_nodes` | Business-related ≠ should be linked |
 
-## 建模原则（精简版）
+## Modeling principles (condensed)
 
-- 连线表示**输入、参考、上下文或合成素材关系**，不表示"下一步顺序"或视觉关联。详见 `references/canvas-modeling-guide.md` 第 3 节。
-- 两个节点只是相关、属于同一组内容时，用分组或布局，**不要强行连线**。
-- 画布只能使用前端真实支持的节点类型，不要发明抽象节点类型。
-- 普通文本、设定、创意、镜头描述、配音稿，默认用 `textAnnotationNode`。
-- `scriptNode` 仅在用户明确要结构化脚本、镜头表、分镜表时使用；慎用。
-- `videoNode` 用于单段视频/镜头生成；用户说"做成视频 / 生成视频"时默认先考虑它。
-- `videoComposeNode` 是最终时间线/合成节点，只接收视频/音频产物作为输入。详见 `references/canvas-modeling-guide.md` 第 5 节。
-- 完整建模规则读取 `references/canvas-modeling-guide.md`。
+- A link represents an **input, reference, context or compose-material relation**, not "the next step in order" or a visual association. See section 3 of `references/canvas-modeling-guide.md`.
+- When two nodes are merely related or belong to the same group of content, use groups or layout; **do not force a link**.
+- The canvas may only use node types that the frontend really supports; do not invent abstract node types.
+- Ordinary text, settings, ideas, shot descriptions and voiceover scripts default to `textAnnotationNode`.
+- Use `scriptNode` only when the user explicitly wants a structured script, shot table or storyboard table; use with caution.
+- `videoNode` is for generating a single video/shot; when the user says "make it into a video / generate a video", consider it first by default.
+- `videoComposeNode` is the final timeline/compose node and only accepts video/audio artifacts as input. See section 5 of `references/canvas-modeling-guide.md`.
+- Read `references/canvas-modeling-guide.md` for the complete modeling rules.
 
-## 画布写入原则（精简版）
+## Canvas write principles (condensed)
 
-- 画布操作类请求的**第一输出必须是 Freezone 写入工具调用**。在写入工具调用前，禁止输出任何面向用户的文字，包括“好的”“我会…”“正在…”“已…”等确认、说明、摘要或状态。
-- `freezone_*` 工具不在工具列表里，统一用 `tool_call(name="<工具名>", arguments={...})` 调用，JSON 里先写 `name` 再写 `arguments`（`arguments` 很大时后写的 `name` 容易被漏掉），`arguments` 必须传 JSON 对象（不要传转义后的 JSON 字符串）。`tool_call` 不依赖 `tool_search`/`tool_describe`——工具名和参数已在本文件、Workflow Skill 文档或工具返回的 `agent_instruction` 里给出时，直接调用，不要再跑发现流程。
-- 画布写入必须有依据。创建节点或编辑图结构前，先基于当前画布 summary/ontology。
-- 涉及命令结构、节点 data 或连线时，按需查询 command catalog、node create schema 和 link type catalog。
-- 用户要求创建、添加、删除、更新、连接、移动、布局、选择、打开、运行、应用或执行任何画布对象时，**必须先调用 Freezone 写入工具**。没有写入工具成功结果，就不能说画布已变化。
-- 单个明确操作可以用对应单步写入工具，也可以用 `freezone_emit_canvas_command`；工具选择可以灵活，但“必须调用写入工具并等待结果”不可省略。
-- **多节点/连线/分组/布局请求必须用一次批量命令提交**（普通非工作流编辑使用 `freezone_emit_canvas_command`；动态工作流使用草稿准备、修改和确认工具），不要连续调用多个单步工具。
-- 同一个批量命令里，如果后续命令会引用本轮新建节点（连线、分组、布局、选择、移动、运行等），创建该节点时必须显式声明 `client_id`，后续只引用这个 `client_id`。禁止用 `node_0`、`node_1`、`new_node`、`auto:*` 或任何未声明占位符表示“第几个刚创建的节点”。
-- 主题性批量工作默认组织成一个工作组：例如同一个短片方案、广告创意、分镜包、工作流、素材准备包、同一目标的一组规划/生成/合成节点。批量命令里显式加入 `group_nodes`，用清晰业务 label 命名。单独加一个节点、零散修改、删除、移动、选择、运行，或只是临时补一个不成套的节点时，不要为了“批量”而强行建组。
-- 延续已有主题时，优先复用该主题组：如果当前引用节点属于某个组，且用户是在继续这个主题补节点，优先从组内合适节点 `add_next_node` 生成真实下游；这类新增节点会自然落在同组语境里。若新增内容只是相关材料而非真实下游，创建在组附近并保持同一主题布局，不要为了把节点塞进组而伪造输入连线。
-- 多步骤、批量修改或包含连线的命令，写入前必须先 `validate`。
-- 校验返回 `Allowed link_type values: none` 时，不要枚举重试；改用分组或保留未连接。
-- 复杂批量命令字段不明确时才读取完整命令指南；参数明确的单步工具不要加载指南。
+- The **first output of a canvas-operation request must be a Freezone write tool call**. Before the write tool call, outputting any user-facing text is forbidden, including confirmations, explanations, summaries or status such as "OK", "I will...", "working on...", "done...".
+- `freezone_*` tools are not in the tool list; call them uniformly with `tool_call(name="<tool name>", arguments={...})`, writing `name` before `arguments` in the JSON (when `arguments` is very large, a `name` written afterwards is easily dropped), and `arguments` must be a JSON object (not an escaped JSON string). `tool_call` does not depend on `tool_search`/`tool_describe` - when the tool name and parameters are already given in this file, in the Workflow Skill document or in the `agent_instruction` returned by a tool, call directly and do not run a discovery flow again.
+- Canvas writes must have a basis. Before creating nodes or editing the graph structure, first rely on the current canvas summary/ontology.
+- When command structure, node data or links are involved, query the command catalog, node create schema and link type catalog as needed.
+- When the user asks to create, add, delete, update, connect, move, lay out, select, open, run, apply or execute any canvas object, you **must call a Freezone write tool first**. Without a successful write tool result, you cannot say the canvas changed.
+- A single explicit operation may use the corresponding single-step write tool, or `freezone_emit_canvas_command`; the tool choice can be flexible, but "must call a write tool and wait for the result" cannot be omitted.
+- **Requests involving multiple nodes / links / groups / layout must be submitted in one batch command** (ordinary non-workflow edits use `freezone_emit_canvas_command`; dynamic workflows use the draft prepare, patch and confirm tools); do not call several single-step tools in a row.
+- Within the same batch command, if later commands will reference nodes created in this round (linking, grouping, layout, selecting, moving, running and so on), the creation of those nodes must explicitly declare a `client_id`, and later commands reference only that `client_id`. Using `node_0`, `node_1`, `new_node`, `auto:*` or any undeclared placeholder to mean "the Nth node just created" is forbidden.
+- Themed batch work is by default organized into one work group: for example the same short-film plan, ad idea, storyboard pack, workflow, material preparation pack, or a set of planning/generation/compose nodes for the same goal. Explicitly include `group_nodes` in the batch command and name it with a clear business label. When adding a single node, making scattered edits, deleting, moving, selecting, running, or just adding one stray node that is not part of a set, do not force a group in the name of "batching".
+- When continuing an existing theme, prefer reusing that theme's group: if the currently referenced node belongs to a group and the user is adding nodes to continue this theme, prefer generating a real downstream node from a suitable node in the group with `add_next_node`; such new nodes naturally land in the same group context. If the new content is merely related material and not a real downstream, create it near the group and keep the same thematic layout; do not fabricate input links just to cram a node into a group.
+- A multi-step command, a batch modification or a command containing links must `validate` before being written.
+- When validation returns `Allowed link_type values: none`, do not retry by enumeration; switch to grouping or leave them unconnected.
+- Read the full command guide only when the fields of a complex batch command are unclear; do not load the guide for single-step tools with clear parameters.
 
-## 常见错误速查
+## Quick error reference
 
-| ❌ 错误 | ✅ 正确 |
+| ❌ Wrong | ✅ Right |
 |--------|--------|
-| 说"文本节点调用生成图像" | 说"读取文本节点内容，用图片节点生成图像" |
-| 因为"相关"就强行连线 | 用 `group_nodes` 分组，不连线 |
-| 同一主题创建一批节点却散落画布 | 用 `group_nodes` 创建一个带业务 label 的工作组 |
-| 单独添加一个节点也强行建组 | 单节点保持独立；只有成套主题工作才建组 |
-| 用 `prompt_for` 连接两个普通文本节点 | 文本到文本用 `context_for`，或同组不连线 |
-| 用 `media_input_for` 把文本连到视频 | 文本不是媒体；直接提示词用 `prompt_for`，规划文本先提炼 `input_text` 或只分组 |
-| 把 planning_text 直接连到生成节点 | 另建 `semanticOutputRole="input_text"` 的提示词节点，或不连线只分组 |
-| 默认创建 `videoComposeNode` | 默认用 `videoNode`；`videoComposeNode` 只在明确要合成时创建 |
-| 把连线当执行顺序 | 连线只表示输入/参考/上下文关系 |
-| 没有视频片段时提前创建 `videoComposeNode` | 先创建 `videoNode` 生成视频片段，再考虑合成 |
-| 自造节点类型或字段名 | 只用前端支持的节点类型，字段用 `freezone_get_node_detail` 返回的 `parameters` 中列出的 |
-| 用 `node_0` / `node_1` 连向刚创建的节点 | 给 `create_node` 写显式 `client_id`，后续引用该 `client_id` |
+| Saying "the text node calls image generation" | Saying "read the text node's content and generate the image with the image node" |
+| Forcing a link just because they are "related" | Group with `group_nodes`, no link |
+| Creating a batch of nodes on the same theme scattered across the canvas | Create one work group with a business label using `group_nodes` |
+| Forcing a group when adding a single node | A single node stays independent; only themed full-set work gets a group |
+| Connecting two ordinary text nodes with `prompt_for` | Text-to-text uses `context_for`, or same group with no link |
+| Connecting text to a video with `media_input_for` | Text is not media; a direct prompt uses `prompt_for`, planning text is first refined into `input_text` or only grouped |
+| Connecting planning_text directly to a generation node | Create a separate prompt node with `semanticOutputRole="input_text"`, or do not link and only group |
+| Creating `videoComposeNode` by default | Use `videoNode` by default; create `videoComposeNode` only when composing is explicitly wanted |
+| Treating a link as execution order | A link only represents an input/reference/context relation |
+| Creating `videoComposeNode` ahead of time when there are no video clips | First create `videoNode`s to generate the video clips, then consider composing |
+| Inventing node types or field names | Use only node types the frontend supports, with the fields listed in the `parameters` returned by `freezone_get_node_detail` |
+| Linking to a just-created node with `node_0` / `node_1` | Write an explicit `client_id` on `create_node` and reference that `client_id` later |
 
-完整禁止模式读取 `references/canvas-modeling-guide.md` 第 8 节。
+For the complete list of forbidden patterns, read section 8 of `references/canvas-modeling-guide.md`.
 
-## 用户可见回复
+## User-visible replies
 
-### 称呼
+### Naming
 
-- 面向用户时称为"虾画"。
+- When addressing the user, call it "Shrimp Canvas".
 
-### 回复边界（硬规则）
+### Reply boundaries (hard rules)
 
-以下内部信息**绝对不可出现在用户可见回复中**，只能用于你内部推理和工具调用：
+The following internal information **must absolutely never appear in user-visible replies**; it can only be used for your internal reasoning and tool calls:
 
-- **工具调用过程**：不说"我将调用 xxx"、"已获取 xxx"、"正在验证"、"校验通过"、"现在执行 xxx"
-- **工具名 / 函数名**：`freezone_get_node_create_schema`、`freezone_emit_canvas_command`、`freezone_validate_canvas_commands` 等
-- **内部标识**：`canvas_id: default`、节点 UUID（如 `9030fb3b-...`）、`client_id`、`canvasId`
-- **Schema / 字段细节**：`displayName`、`prompt`、`genMode`、`aspectRatio`、`Allowed link_type values: none`
-- **协议 / 命令结构**：`create_node`、`canvas_chat_commands.v1`、`freezone_emit_canvas_command` 的 JSON payload、`source/target`、`link_type`
-- **坐标位置**：`(x=400, y=200)` 等
-- **连线类型名**：`prompt_for`、`media_input_for`、`composition_input_for`
-- **校验步骤叙述**：不要说"我先获取 schema → 再获取命令目录 → 验证通过 → 正式创建"
-- **失败修正过程**：不要说"已修正策略"、"改用 client_id"、"source/target 使用..."、"节点 ID 为..."。这些只能用于下一次工具调用。
+- **Tool-call process**: do not say "I will call xxx", "obtained xxx", "validating", "validation passed", "now executing xxx"
+- **Tool names / function names**: `freezone_get_node_create_schema`, `freezone_emit_canvas_command`, `freezone_validate_canvas_commands` and so on
+- **Internal identifiers**: `canvas_id: default`, node UUIDs (such as `9030fb3b-...`), `client_id`, `canvasId`
+- **Schema / field details**: `displayName`, `prompt`, `genMode`, `aspectRatio`, `Allowed link_type values: none`
+- **Protocol / command structure**: `create_node`, `canvas_chat_commands.v1`, the JSON payload of `freezone_emit_canvas_command`, `source/target`, `link_type`
+- **Coordinates**: `(x=400, y=200)` and the like
+- **Link type names**: `prompt_for`, `media_input_for`, `composition_input_for`
+- **Validation step narration**: do not say "first get the schema -> then get the command catalog -> validation passed -> formally create"
+- **Failure correction process**: do not say "strategy corrected", "switched to client_id", "source/target use ...", "the node ID is ...". These may only be used for the next tool call.
 
-### 输出顺序与结果确认（硬规则，最高优先级）
+### Output order and result confirmation (hard rule, highest priority)
 
-**执行顺序：先调用写入工具 → 等工具返回 → 再写用户可见回复。** 工具调用前不要输出任何面向用户的文字（包括“好的 / 我会… / 正在…”）。
+**Execution order: first call the write tool -> wait for the tool to return -> then write the user-visible reply.** Before the tool call, do not output any user-facing text (including "OK / I will... / working on...").
 
-- **工具返回成功** → 用一句产品层结果总结（“已创建 / 已删除…”），不暴露节点类型、节点 id、坐标、工具名或协议细节。
-- **工具返回错误** → 能根据错误明确修正时，先在内部静默修正并重新提交，不向用户解释失败原因或修正策略；最终仍失败时只用产品语言说明（例：“这次没有成功把方案落到画布里，我需要你重新发起一次或先选中目标节点。”），不复述校验器错误、字段名、`client_id`、`link_type` 或 JSON 片段。
-- **工具尚未调用 / 未返回 / 超时** → 禁止使用“已创建 / 已更新 / 已删除 / 已连接 / 已移动 / 已选择 / 已打开 / 已运行 / 已提交 / 已完成 / 操作成功”等表达，只能说明无法确认画布已变更。发送回复前自查“已”字：出现即确认对应工具结果确已成功返回。
+- **Tool returned success** -> summarize the result in one product-level sentence ("Created / Deleted ..."), without exposing node types, node ids, coordinates, tool names or protocol details.
+- **Tool returned an error** -> when you can fix it clearly from the error, first silently fix it internally and resubmit, without explaining the failure reason or the fixing strategy to the user; if it ultimately still fails, explain only in product language (for example: "This time I could not put the plan on the canvas; please start it again or select the target node first."), without restating validator errors, field names, `client_id`, `link_type` or JSON fragments.
+- **Tool not yet called / not returned / timed out** -> expressions such as "created / updated / deleted / connected / moved / selected / opened / ran / submitted / completed / operation successful" are forbidden; you can only say that you cannot confirm the canvas has changed. Before sending the reply, self-check any past-tense claim: if one appears, confirm that the corresponding tool result really returned successfully.
 
-### 其他规则
+### Other rules
 
-- 需要向用户确认"添加哪类节点/内容"时，用口语化产品名称（"视频节点"、"文案节点"），不要列内部 `node_type`。
-- 当前会话若未绑定具体画布，只能做项目级解释，或要求用户先打开一个画布。
+- When you need to confirm with the user "which kind of node/content to add", use colloquial product names ("video node", "copy node") and do not list internal `node_type`s.
+- If the current session is not bound to a specific canvas, you can only give project-level explanations, or ask the user to open a canvas first.
 
-## 工具不可用时
+## When tools are unavailable
 
-- 如果虾画工具返回 `not_configured`、`not_implemented` 或 `canvas_id is required`，简短说明当前虾画工具尚未完成注入或未绑定画布。
-- 不要改用 shell、curl、文件读写或猜测本地状态来绕过前端画布工具。
+- If a Shrimp Canvas tool returns `not_configured`, `not_implemented` or `canvas_id is required`, briefly explain that the Shrimp Canvas tools have not finished being injected or no canvas is bound.
+- Do not use shell, curl, file read/write or guessed local state to bypass the frontend canvas tools.

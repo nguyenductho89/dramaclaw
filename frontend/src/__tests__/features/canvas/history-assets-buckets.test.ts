@@ -106,11 +106,11 @@ describe("recordsToAssetBuckets — world history", () => {
       record({
         id: "img-2",
         media_type: "image",
-        result: { image_url: "/static/p/y.png", prompt: "一只在雨中的猫" },
+        result: { image_url: "/static/p/y.png", prompt: "A cat in the rain" },
       }),
     ]);
-    expect(buckets.image[0]?.prompt).toBe("一只在雨中的猫");
-    expect(buckets.image[0]?.label).toBe("一只在雨中的猫");
+    expect(buckets.image[0]?.prompt).toBe("A cat in the rain");
+    expect(buckets.image[0]?.label).toBe("A cat in the rain");
   });
 
   it("falls back to the host node's cover/name when the record carries neither", () => {
@@ -125,12 +125,12 @@ describe("recordsToAssetBuckets — world history", () => {
       ],
       (nodeId) =>
         nodeId === "world-node"
-          ? { cover: "/static/p/dorm.png", name: "大学宿舍" }
+          ? { cover: "/static/p/dorm.png", name: "University dorm" }
           : { cover: null, name: null },
     );
     expect(buckets.model).toHaveLength(1);
     expect(buckets.model[0]?.previewUrl).toContain("dorm.png");
-    expect(buckets.model[0]?.label).toBe("大学宿舍");
+    expect(buckets.model[0]?.label).toBe("University dorm");
   });
 
   it("prefers the record's own prompt/cover over the host-node fallback", () => {
@@ -142,20 +142,20 @@ describe("recordsToAssetBuckets — world history", () => {
           media_type: "3d",
           result: {
             ply_url: "/static/p/world.sog",
-            prompt: "记录里的提示词",
+            prompt: "Prompt in the record",
             source_url: "/static/p/record-src.png",
           },
         }),
       ],
-      () => ({ cover: "/static/p/dorm.png", name: "大学宿舍" }),
+      () => ({ cover: "/static/p/dorm.png", name: "University dorm" }),
     );
-    expect(buckets.model[0]?.label).toBe("记录里的提示词");
+    expect(buckets.model[0]?.label).toBe("Prompt in the record");
     expect(buckets.model[0]?.previewUrl).toContain("record-src.png");
   });
 });
 
-describe("recordsToAssetBuckets — model/genMode 记忆", () => {
-  it("从带 model/gen_mode 的记录提取到 asset", () => {
+describe("recordsToAssetBuckets — model/genMode memory", () => {
+  it("extracts model/gen_mode from a record into the asset", () => {
     const buckets = recordsToAssetBuckets([
       record({
         media_type: "video",
@@ -171,7 +171,7 @@ describe("recordsToAssetBuckets — model/genMode 记忆", () => {
     expect(asset?.genMode).toBe("firstLastFrame");
   });
 
-  it("旧记录无字段时得到 undefined", () => {
+  it("gets undefined when an old record lacks the fields", () => {
     const buckets = recordsToAssetBuckets([
       record({ media_type: "image", result: { output_url: "/static/p/i.png" } }),
     ]);
@@ -183,7 +183,7 @@ describe("recordsToAssetBuckets — model/genMode 记忆", () => {
   });
 });
 
-// issue #175：历史资产关键词搜索。
+// issue #175: keyword search for history assets.
 describe("assetMatchesQuery", () => {
   function asset(partial: Partial<CanvasAsset>): CanvasAsset {
     return {
@@ -199,49 +199,49 @@ describe("assetMatchesQuery", () => {
     } as CanvasAsset;
   }
 
-  it("命中提示词里的子串", () => {
-    expect(assetMatchesQuery(asset({ prompt: "一只在雨中的猫" }), "雨中")).toBe(true);
-    expect(assetMatchesQuery(asset({ prompt: "一只在雨中的猫" }), "狗")).toBe(false);
+  it("matches a substring of the prompt", () => {
+    expect(assetMatchesQuery(asset({ prompt: "A cat in the rain" }), "rain")).toBe(true);
+    expect(assetMatchesQuery(asset({ prompt: "A cat in the rain" }), "dog")).toBe(false);
   });
 
-  it("英文大小写不敏感", () => {
+  it("English matching is case-insensitive", () => {
     expect(assetMatchesQuery(asset({ prompt: "A Fluffy Cat" }), "fluffy")).toBe(true);
     expect(assetMatchesQuery(asset({ prompt: "a fluffy cat" }), "FLUFFY")).toBe(true);
   });
 
-  it("也匹配 label（世界记录回退成的节点名 / 取图时的文件名）", () => {
-    expect(assetMatchesQuery(asset({ prompt: null, label: "大学宿舍" }), "宿舍")).toBe(
+  it("also matches label (the node name a world record falls back to / the file name at pick time)", () => {
+    expect(assetMatchesQuery(asset({ prompt: null, label: "University dorm" }), "dorm")).toBe(
       true,
     );
   });
 
-  it("prompt 与 label 都为空的资产（音频 / 旧记录）在有查询词时落选", () => {
-    expect(assetMatchesQuery(asset({ prompt: null, label: null }), "猫")).toBe(false);
+  it("an asset with both prompt and label empty (audio / old record) is dropped when there is a query", () => {
+    expect(assetMatchesQuery(asset({ prompt: null, label: null }), "cat")).toBe(false);
   });
 
-  it("空查询命中一切", () => {
+  it("an empty query matches everything", () => {
     expect(assetMatchesQuery(asset({ prompt: null, label: null }), "")).toBe(true);
   });
 
-  it("不会跨 prompt/label 边界拼出假命中", () => {
-    // 逐字段匹配：prompt 结尾 +『label 开头』不该被拼成一个命中。
-    expect(assetMatchesQuery(asset({ prompt: "小猫", label: "鱼缸" }), "猫鱼")).toBe(
+  it("does not stitch a false match across the prompt/label boundary", () => {
+    // Per-field matching: the end of prompt + the start of label must not be stitched into one match.
+    expect(assetMatchesQuery(asset({ prompt: "kitten", label: "fishbowl" }), "tenfi")).toBe(
       false,
     );
   });
 
-  it("live-canvas 资产（prompt 恒为 undefined）仍可按 label 搜到", () => {
-    // extractCanvasAssets 从不写 prompt，只有 label（节点名/文件名）。
-    const live = asset({ prompt: undefined, label: "分镜01.png" });
-    expect(assetMatchesQuery(live, "分镜")).toBe(true);
+  it("a live-canvas asset (prompt is always undefined) can still be found by label", () => {
+    // extractCanvasAssets never writes prompt, only label (node name / file name).
+    const live = asset({ prompt: undefined, label: "storyboard01.png" });
+    expect(assetMatchesQuery(live, "storyboard")).toBe(true);
     expect(assetMatchesQuery(live, "png")).toBe(true);
   });
 
-  it("首尾空格不影响命中", () => {
-    expect(assetMatchesQuery(asset({ prompt: "一只小猫" }), "  小猫  ")).toBe(true);
+  it("leading and trailing spaces do not affect matching", () => {
+    expect(assetMatchesQuery(asset({ prompt: "A kitten" }), "  kitten  ")).toBe(true);
   });
 
-  it("纯空白查询视同空查询，命中一切", () => {
+  it("a whitespace-only query counts as empty and matches everything", () => {
     expect(assetMatchesQuery(asset({ prompt: null, label: null }), "   ")).toBe(true);
   });
 });
@@ -251,34 +251,34 @@ describe("filterAssetBuckets", () => {
     record({
       id: "i-1",
       media_type: "image",
-      result: { image_url: "/static/p/cat.png", prompt: "一只可爱的小猫" },
+      result: { image_url: "/static/p/cat.png", prompt: "A cute kitten" },
     }),
     record({
       id: "i-2",
       media_type: "image",
-      result: { image_url: "/static/p/dog.png", prompt: "一只狗在跑" },
+      result: { image_url: "/static/p/dog.png", prompt: "A dog running" },
     }),
     record({
       id: "v-1",
       media_type: "video",
-      result: { output_url: "/static/p/cat.mp4", prompt: "小猫在吃鱼" },
+      result: { output_url: "/static/p/cat.mp4", prompt: "A kitten eating fish" },
     }),
   ]);
 
-  it("跨桶过滤：各 tab 的计数只留命中项", () => {
-    const filtered = filterAssetBuckets(buckets, "小猫");
+  it("cross-bucket filtering: each tab's count keeps only matching items", () => {
+    const filtered = filterAssetBuckets(buckets, "kitten");
     expect(filtered.image.map((a) => a.id)).toEqual(["i-1"]);
     expect(filtered.video.map((a) => a.id)).toEqual(["v-1"]);
     expect(filtered.audio).toHaveLength(0);
     expect(filtered.model).toHaveLength(0);
   });
 
-  it("无命中时四个桶都为空", () => {
-    const filtered = filterAssetBuckets(buckets, "不存在的关键词");
+  it("all four buckets are empty when nothing matches", () => {
+    const filtered = filterAssetBuckets(buckets, "a keyword that does not exist");
     expect(Object.values(filtered).flat()).toHaveLength(0);
   });
 
-  it("空查询原样返回同一对象（引用稳定，不触发下游重算）", () => {
+  it("an empty query returns the same object as-is (stable reference, no downstream recompute)", () => {
     expect(filterAssetBuckets(buckets, "")).toBe(buckets);
   });
 });

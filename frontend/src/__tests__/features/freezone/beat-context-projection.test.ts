@@ -135,7 +135,7 @@ describe("syncBeatContextMainlineEdges", () => {
         .filter((edge) => (edge.data as { role?: unknown }).role === "identity")
         .map((edge) => edge.targetHandle)
         .sort(),
-    ).toEqual(["identity:ShenYuebai_young_adult", "identity:LuChen_young_adult"]);
+    ).toEqual(["identity:LuChen_young_adult", "identity:ShenYuebai_young_adult"]);
     expect(next.some((edge) => (edge.data as { role?: unknown }).role === "prop")).toBe(false);
   });
 });

@@ -53,11 +53,11 @@ describe("resetRegionState", () => {
   });
 
   it("localStorage sweep preserves supertale-app and i18nextLng", () => {
-    localStorage.setItem("supertale-app", JSON.stringify({ state: { language: "zh" } }));
-    localStorage.setItem("i18nextLng", "zh");
+    localStorage.setItem("supertale-app", JSON.stringify({ state: { language: "vi" } }));
+    localStorage.setItem("i18nextLng", "vi");
     resetRegionState({ queryClient: new QueryClient() });
     expect(localStorage.getItem("supertale-app")).not.toBeNull();
-    expect(localStorage.getItem("i18nextLng")).toBe("zh");
+    expect(localStorage.getItem("i18nextLng")).toBe("vi");
   });
 });
 
@@ -90,11 +90,11 @@ describe("resetUserSessionState", () => {
   it("preserves the region selection — logout must not force a region re-pick", () => {
     localStorage.setItem("supertale-region", JSON.stringify({ state: { selectedRegionId: "cn-1" } }));
     localStorage.setItem("supertale-app", "keep");
-    localStorage.setItem("i18nextLng", "zh");
+    localStorage.setItem("i18nextLng", "vi");
     resetUserSessionState({ queryClient: new QueryClient() });
     expect(localStorage.getItem("supertale-region")).not.toBeNull();
     expect(localStorage.getItem("supertale-app")).toBe("keep");
-    expect(localStorage.getItem("i18nextLng")).toBe("zh");
+    expect(localStorage.getItem("i18nextLng")).toBe("vi");
   });
 
   it("resetRegionState still sweeps the region key (region-switch behavior unchanged)", () => {

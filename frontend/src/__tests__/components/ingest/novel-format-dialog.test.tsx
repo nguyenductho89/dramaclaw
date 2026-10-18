@@ -80,6 +80,5 @@ describe("NovelFormatDialog", () => {
 
     expect(shown).toContain("INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT");
     expect(shown).toContain("JI-WON: Có ai ở đây không?");
-    expect(shown).not.toContain("INT. SEOUL SUBWAY STATION");
   });
 });

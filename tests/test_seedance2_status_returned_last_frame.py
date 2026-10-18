@@ -35,10 +35,10 @@ def test_seedance2_status_exposes_returned_last_frame_asset(tmp_path):
 
     assert payload is not None
     assert payload["key"] == "returned_last_frame"
-    assert payload["label"] == "返回尾帧 · Beat 1"
+    assert payload["label"] == "Return last frame · Beat 1"
     assert payload["media_type"] == "image"
     assert payload["exists"] is True
-    assert payload["reference_label"] == "尾帧"
+    assert payload["reference_label"] == "last frame"
     assert payload["path"] == "videos/beats/ep001/returned_last_frames/beat_01.png"
     # Canonical protected static URL is project-id based after the storage refactor.
     assert payload["url"].startswith(

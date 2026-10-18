@@ -668,7 +668,7 @@ describe("BeatContextNode", () => {
     expect(identityColor).toHaveStyle({ backgroundColor: "#00FFFF" });
 
     await user.click(propColor);
-    await user.click(screen.getByRole("button", { name: "Prop color #B71C1C" }));
+    await user.click(screen.getByRole("button", { name: "Prop colors #B71C1C" }));
     expect(propColor).toHaveStyle({ backgroundColor: "#B71C1C" });
 
     expect(updateBeat).not.toHaveBeenCalled();

@@ -24,6 +24,7 @@ function formatClock(seconds: number): string {
 /**
  * Only one audio track sounds at a time. Cards are laid out in a grid, and clicking through them one by one easily piles into a wall of noise;
  * here the current one is remembered at module level, and playing a new one stops the old one.
+ */
 let playingAudio: HTMLAudioElement | null = null;
 
 const WAVEFORM_BARS = 28;

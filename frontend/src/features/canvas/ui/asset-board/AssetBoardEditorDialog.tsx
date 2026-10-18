@@ -4,29 +4,29 @@ import { useCallback, useEffect, useRef, type ReactElement, type ReactNode } fro
 import { createPortal } from 'react-dom';
 
 interface AssetBoardEditorDialogProps {
-  /** 无障碍名（编辑器标题，如「多维度编辑器」）；面板内部已有可见标题，这里只给 a11y。 */
+  /** Accessible name (the editor title, e.g. "Multi-dimension editor"); the panel already has a visible title inside, and this is only for a11y. */
   label: string;
   onClose: () => void;
   children: ReactNode;
 }
 
 /**
- * 故事板详情里承载「工作流完整编辑器」的居中弹窗外壳。
+ * The centered dialog shell hosting the "complete workflow editor" inside the storyboard detail.
  *
- * portal 到 document.body 的 z-[300] 全屏层（同 RedrawOverlay / EraseOverlay 的层级
- * 与遮罩配方），高于故事板的 z-30；点遮罩或按 Esc 关闭。
+ * A z-[300] full-screen layer portaled to document.body (the same layering and mask recipe as RedrawOverlay / EraseOverlay),
+ * higher than the storyboard's z-30; clicking the mask or pressing Esc closes it.
  *
- * 外壳**不加卡片 chrome**：塞进来的编辑器面板（MultiAngleEditorPanel /
- * LightEditorPanel）本身就是自带圆角与背景的 600px 卡片，外壳再包一层会出现
- * 双层边框。视口不够高时整体可滚动，避免 600×~430 的面板被裁切。
+ * The shell **adds no card chrome**: the editor panels stuffed in (MultiAngleEditorPanel /
+ * LightEditorPanel) are themselves 600px cards with their own corner radius and background, and wrapping another layer in the shell would produce
+ * a double border. When the viewport is not tall enough the whole thing scrolls, avoiding a 600x~430 panel being clipped.
  */
 /**
- * 把关闭回调包成「本次挂载内只放行一次」。
+ * Wrap the close callback to "let through only once within this mount".
  *
- * 必需，因为两个编辑器面板自己也带「点击面板外即 onClose」的 document 捕获监听
- * （MultiAngleEditorPanel / LightEditorPanel 都有）：点遮罩会同时命中面板的监听
- * 和外壳的 onClick，不去重宿主就会收到两次关闭。调用方要把**同一个**包装后的
- * 回调同时交给外壳和内容层，否则两条路径各自持有原始回调，去重不生效。
+ * Necessary, because the two editor panels themselves also carry a document capture listener of "click outside the panel -> onClose"
+ * (both MultiAngleEditorPanel / LightEditorPanel have it): clicking the mask hits both the panel's listener
+ * and the shell's onClick, and without dedup the host would receive the close twice. The caller must hand the **same** wrapped
+ * callback to both the shell and the content layer, otherwise the two paths each hold the raw callback and dedup is ineffective.
  */
 export function useCloseOnce(onClose: () => void): () => void {
   const closedRef = useRef(false);
@@ -43,7 +43,7 @@ export function AssetBoardEditorDialog({
   children,
 }: AssetBoardEditorDialogProps): ReactElement | null {
   useEffect(() => {
-    // 两个面板都没有自己的 Esc 关闭，这里补上。
+    // Neither panel has its own Esc close, so it is added here.
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };

@@ -244,7 +244,7 @@ beforeAll(async () => {
           common: { novelImportRequired: "Please import a novel first" },
         },
       },
-      zh: {
+      vi: {
         translation: {
           common: { novelImportRequired: "Please import a novel first" },
         },
@@ -313,7 +313,7 @@ describe("characters page CE generation credit gating", () => {
 
   it.each([
     ["en", "Please import a novel first"],
-    ["zh", "Please import a novel first"],
+    ["vi", "Please import a novel first"],
   ])(
     "localizes the backend prerequisite error in %s without starting a missing task stream",
     async (language, expectedMessage) => {

@@ -9,9 +9,9 @@ import {
 
 describe("petdexStateForAction", () => {
   it("maps task states to petdex rows: running→Running, success→Waving, failure→Failed", () => {
-    expect(petdexStateForAction("typing")).toBe(PETDEX_STATES.running); // 任务进行中, row 7
-    expect(petdexStateForAction("flag")).toBe(PETDEX_STATES.waving); // 任务成功, row 3
-    expect(petdexStateForAction("repair")).toBe(PETDEX_STATES.failed); // 任务失败, row 5
+    expect(petdexStateForAction("typing")).toBe(PETDEX_STATES.running); // task in progress, row 7
+    expect(petdexStateForAction("flag")).toBe(PETDEX_STATES.waving); // task succeeded, row 3
+    expect(petdexStateForAction("repair")).toBe(PETDEX_STATES.failed); // task failed, row 5
   });
 
   it("falls back to idle for all regular/idle actions", () => {

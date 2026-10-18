@@ -10,26 +10,26 @@ import {
 } from '@/features/canvas/ui/rotateEditorContent';
 
 interface AssetBoardRotateDialogProps {
-  /** 旋转写回的目标节点 id（调用方进入前预建的「旋转结果」节点）。 */
+  /** The id of the target node the rotation is written back to (the "rotate result" node pre-built by the caller before entering). */
   nodeId: string;
   imageSource: string;
-  /** `committed=false` 时调用方需要回收预建的结果节点，见 useRotateEditor 的说明。 */
+  /** When `committed=false` the caller needs to reclaim the pre-built result node, see the note on useRotateEditor. */
   onClose: (committed: boolean) => void;
-  /** 提交起飞后把 completion 交给调用方挂 busy 态与失败反馈。 */
+  /** After the submit takes off, hand the completion to the caller to attach the busy state and failure feedback. */
   onCommitted: (completion: Promise<void>) => void;
 }
 
 /**
- * 故事板详情里的旋转编辑器：大图实时预览 + 悬浮在图上的一条控制条（对齐 libtv）。
+ * The rotate editor in the storyboard detail: large-image live preview + a control bar floating over the image (matches libtv).
  *
- * 与工作流的 RotateEditorOverlay 是同一套内容层（rotateEditorContent），只是外壳
- * 不同——那边挂 React Flow 的 NodeToolbar，故事板详情没有 React Flow，走 portal 到
- * body 的 z-[300] 全屏层（同 RedrawOverlay / EraseOverlay 的层级与遮罩配方）。
+ * The same content layer (rotateEditorContent) as the workflow's RotateEditorOverlay, only the shell
+ * differs - that side hangs on React Flow's NodeToolbar, while the storyboard detail has no React Flow and goes through a portal to
+ * body's z-[300] full-screen layer (the same layering and mask recipe as RedrawOverlay / EraseOverlay).
  *
- * 取景框刻意做成**正方形**：图片 object-contain 进一个正方形框后，任意角度旋转的
- * 外接尺寸都不会超出这个框，于是不需要按实际宽高算缩放补偿，转 90° 也不会被裁。
+ * The crop frame is deliberately a **square**: after an image is object-contained into a square frame, the bounding size of a rotation at any angle
+ * never exceeds the frame, so there is no need to compute scale compensation from the actual width and height, and rotating by 90 degrees is not cropped.
  *
- * Esc 由 useRotateEditor 统一处理，这里不再另挂一份（否则一次 Esc 会关两遍）。
+ * Esc is handled uniformly by useRotateEditor, and not attached again here (otherwise one Esc would close twice).
  */
 export function AssetBoardRotateDialog({
   nodeId,
@@ -54,12 +54,11 @@ export function AssetBoardRotateDialog({
         }
       }}
     >
-      {/* 不裁切：正方形取景框已经保证任意角度旋转都不出框，而控制条比窄图更宽时
-          需要能溢出到图外，overflow-hidden 会把它两端切掉。 */}
+      {/* No clipping: the square frame already guarantees rotation at any angle never leaves the frame, and the control bar, when wider than a narrow image,
+      needs to overflow outside the image; overflow-hidden would cut both its ends off. */}
       <div className="flex h-[min(72vh,76vw)] w-[min(72vh,76vw)] items-center justify-center">
-        {/* 内层只包住图片本身：transform 不影响布局盒，所以这个 wrapper 始终是图片
-            未旋转时的取景框，控制条锚在它上面就会贴着图走，不会因为外层是正方形而
-            被甩到一片空白里。 */}
+        {/* The inner layer wraps only the image itself: the transform does not affect the layout box, so this wrapper is always the image's
+        unrotated frame, and the control bar anchored on it follows the image, rather than being flung into a blank area because the outer layer is a square. */}
         <div className="relative">
           <img
             src={imageSource}
@@ -72,11 +71,11 @@ export function AssetBoardRotateDialog({
             }}
           />
 
-          {/* 控制条浮在图片**上方**而不是压在图上——压上去会挡住画面顶部（用户反馈）。
-              bottom-full 贴着图片上边缘往外放，取景框收到 72vh 就是为了给它留出这条
-              空间（竖图撑满高度时也不会被顶出视口）。
-              inset-x-0 + justify-center 而不是 left-1/2 + translate：后者会把绝对定位
-              元素的可用宽度砍到一半，控制条被挤窄后文案会竖排。 */}
+          {/* The control bar floats **above** the image rather than pressed on it - pressing on it would cover the top of the picture (user feedback).
+          bottom-full places it outward against the image's top edge, and the frame is reduced to 72vh to leave this
+          space (so a portrait image filling the height is not pushed out of the viewport either).
+          inset-x-0 + justify-center rather than left-1/2 + translate: the latter halves the available width of an absolutely positioned
+          element, and once the control bar is squeezed narrow its text would run vertically. */}
           <div className="absolute inset-x-0 bottom-full mb-3 flex justify-center">
             <RotateEditorToolbar controller={controller} showTitle />
           </div>

@@ -189,14 +189,14 @@ async def test_graph_compile_accepts_canonical_plan_fields():
                         "node_type": "textAnnotationNode",
                         "stage": "input",
                         "data": {
-                            "text": "用户提供的固定文案",
+                            "text": "Fixed copy provided by the user",
                         },
                 },
                 {
                     "id": "image",
                     "node_type": "imageGenNode",
                     "data": {
-                        "prompt": "未来城市雨夜",
+                        "prompt": "Future city rainy night",
                         "workflowCatalog": {"recipeId": "general-image"},
                     },
                 },
@@ -234,8 +234,8 @@ async def test_graph_compile_normalizes_agent_resource_aliases():
                     "node_type": "textAnnotationNode",
                     "data": {
                         "stage": "input",
-                        "title": "用户需求",
-                        "prompt": "用户提供的固定文案",
+                        "title": "User request",
+                        "prompt": "Fixed copy provided by the user",
                         "workflowCatalog": {},
                     },
                 },
@@ -243,7 +243,7 @@ async def test_graph_compile_normalizes_agent_resource_aliases():
                     "id": "image",
                     "node_type": "imageGenNode",
                     "data": {
-                        "prompt": "未来城市雨夜",
+                        "prompt": "Future city rainy night",
                         "workflowCatalog": {"recipeId": "general-image"},
                     },
                 },
@@ -252,7 +252,7 @@ async def test_graph_compile_normalizes_agent_resource_aliases():
                 {"source": "input", "target": "image", "link_type": "prompt_for"}
             ],
             "groups": [
-                {"id": "episode-1", "label": "第一集", "node_ids": ["input", "image"]}
+                {"id": "episode-1", "label": "Episode one", "node_ids": ["input", "image"]}
             ],
         }
     }
@@ -267,7 +267,7 @@ async def test_graph_compile_normalizes_agent_resource_aliases():
 
     payload = _result_payload(result)
     assert payload["ok"] is True, payload
-    assert payload["commands"][0]["data"]["content"] == "用户提供的固定文案"
+    assert payload["commands"][0]["data"]["content"] == "Fixed copy provided by the user"
     assert payload["commands"][0]["data"]["workflowCatalogRole"] == "user_input"
     assert "stage" not in payload["commands"][0]["data"]
     assert any(command["type"] == "group_nodes" for command in payload["commands"])
@@ -359,13 +359,13 @@ async def test_graph_compile_rejects_nested_execution_policy():
                 {
                     "id": "input",
                     "node_type": "textAnnotationNode",
-                    "data": {"stage": "input", "text": "文案"},
+                    "data": {"stage": "input", "text": "Copy"},
                 },
                 {
                     "id": "image",
                     "node_type": "imageGenNode",
                     "data": {
-                        "prompt": "雨夜城市",
+                        "prompt": "Rainy night city",
                         "workflowCatalog": {"recipeId": "general-image"},
                     },
                 },
@@ -395,7 +395,7 @@ async def test_graph_compile_explains_how_to_connect_independent_branches():
                     "id": "beat-01-input",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
-                    "data": {"text": "第一段"},
+                    "data": {"text": "First segment"},
                 },
                 {
                     "id": "beat-01-image",
@@ -406,7 +406,7 @@ async def test_graph_compile_explains_how_to_connect_independent_branches():
                     "id": "beat-02-input",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
-                    "data": {"text": "第二段"},
+                    "data": {"text": "Second segment"},
                 },
                 {
                     "id": "beat-02-image",
@@ -433,9 +433,9 @@ async def test_graph_compile_explains_how_to_connect_independent_branches():
 
     payload = _result_payload(result)
     assert payload["ok"] is False
-    assert "公共输入根节点" in payload["agent_instruction"]
-    assert "不要要求用户补充内部连线" in payload["agent_instruction"]
-    assert "不要为了" in payload["agent_instruction"]
+    assert "shared input root node" in payload["agent_instruction"]
+    assert "Do not ask the user for internal links" in payload["agent_instruction"]
+    assert "do not chain Beats/shots that need independent failure isolation" in payload["agent_instruction"]
 
 
 @pytest.mark.asyncio
@@ -449,7 +449,7 @@ async def test_graph_compile_rejects_edge_guessing_and_directs_catalog_lookup():
                     "id": "input-root",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
-                    "data": {"text": "公共输入"},
+                    "data": {"text": "Shared input"},
                 },
                 {
                     "id": "beat-image",
@@ -472,8 +472,8 @@ async def test_graph_compile_rejects_edge_guessing_and_directs_catalog_lookup():
     payload = _result_payload(result)
     assert payload["ok"] is False
     assert "freezone_get_link_type_catalog" in payload["agent_instruction"]
-    assert "禁止继续猜测" in payload["agent_instruction"]
-    assert "立即用同一份计划提交工作流创建" in payload["agent_instruction"]
+    assert "do not keep guessing other types" in payload["agent_instruction"]
+    assert "immediately submit the workflow creation with the same plan" in payload["agent_instruction"]
 
 
 @pytest.mark.asyncio
@@ -580,23 +580,23 @@ def test_graph_compiler_emits_one_grouped_canvas_batch():
             "plan": {
                 "schema_version": "freezone_workflow_plan.v1",
                 "workflow_type": "dynamic.text-image-video",
-                "title": "文生视频测试工作流",
+                "title": "Text-to-video test workflow",
                 "nodes": [
                     {
                         "id": "prompt",
                         "node_type": "textAnnotationNode",
                         "data": {
-                            "title": "测试提示词",
-                            "text": "夜晚的未来城市",
+                            "title": "Test prompt",
+                            "text": "Future city at night",
                         },
                     },
                     {
                         "id": "frame",
                         "node_type": "imageGenNode",
-                        "title": "测试首帧",
-                        "prompt": "霓虹灯下的未来城市首帧",
+                        "title": "Test first frame",
+                        "prompt": "First frame of the future city under neon lights",
                     },
-                    {"id": "video", "node_type": "videoNode", "title": "测试视频"},
+                    {"id": "video", "node_type": "videoNode", "title": "Test video"},
                 ],
                 "edges": [
                     {"source": "prompt", "target": "frame", "link_type": "prompt_for"},
@@ -607,7 +607,7 @@ def test_graph_compiler_emits_one_grouped_canvas_batch():
                     },
                 ],
                 "group": {
-                    "label": "文生视频测试工作流",
+                    "label": "Text-to-video test workflow",
                     "node_ids": ["prompt", "frame", "video"],
                 },
             }
@@ -626,10 +626,10 @@ def test_graph_compiler_emits_one_grouped_canvas_batch():
         "layout_nodes",
         "select_nodes",
     ]
-    assert result["commands"][0]["data"]["title"] == "测试提示词"
-    assert result["commands"][1]["data"]["prompt"] == "霓虹灯下的未来城市首帧"
-    assert result["commands"][0]["data"]["content"] == "夜晚的未来城市"
-    assert result["commands"][5]["label"] == "文生视频测试工作流"
+    assert result["commands"][0]["data"]["title"] == "Test prompt"
+    assert result["commands"][1]["data"]["prompt"] == "First frame of the future city under neon lights"
+    assert result["commands"][0]["data"]["content"] == "Future city at night"
+    assert result["commands"][5]["label"] == "Text-to-video test workflow"
 
 
 def test_graph_compiler_derives_text_title_from_nested_display_name():
@@ -643,8 +643,8 @@ def test_graph_compiler_derives_text_title_from_nested_display_name():
                         "node_type": "textAnnotationNode",
                         "stage": "input",
                         "data": {
-                            "displayName": "公共输入",
-                            "text": "九个 Beat 的共享创作要求",
+                            "displayName": "Shared input",
+                            "text": "Shared creative requirements for nine Beats",
                         },
                     }
                 ],
@@ -655,8 +655,8 @@ def test_graph_compiler_derives_text_title_from_nested_display_name():
 
     assert result["ok"] is True
     command = result["commands"][0]
-    assert command["data"]["title"] == "公共输入"
-    assert command["data"]["content"] == "九个 Beat 的共享创作要求"
+    assert command["data"]["title"] == "Shared input"
+    assert command["data"]["content"] == "Shared creative requirements for nine Beats"
 
 
 def test_graph_compiler_completes_structural_text_node_canvas_fields():
@@ -669,7 +669,7 @@ def test_graph_compiler_completes_structural_text_node_canvas_fields():
                         "id": "input-root",
                         "node_type": "textAnnotationNode",
                         "stage": "input",
-                        "data": {"displayName": "公共输入"},
+                        "data": {"displayName": "Shared input"},
                     }
                 ],
                 "edges": [],
@@ -679,8 +679,8 @@ def test_graph_compiler_completes_structural_text_node_canvas_fields():
 
     assert result["ok"] is True
     command = result["commands"][0]
-    assert command["data"]["title"] == "公共输入"
-    assert command["data"]["content"] == "公共输入"
+    assert command["data"]["title"] == "Shared input"
+    assert command["data"]["content"] == "Shared input"
     assert validate_workflow_graph_commands(result["commands"]) == []
 
 
@@ -692,7 +692,7 @@ def test_compiled_command_validator_reports_canvas_contract_paths():
                 "client_id": "input-root",
                 "node_type": "textAnnotationNode",
                 "position": {"x": 80, "y": 80},
-                "data": {"displayName": "公共输入", "content": ""},
+                "data": {"displayName": "Shared input", "content": ""},
             },
             {
                 "type": "create_edge",
@@ -720,7 +720,7 @@ def test_graph_compiler_ignores_removed_run_after_create_alias():
                         "id": "prompt",
                         "node_type": "textAnnotationNode",
                         "stage": "input",
-                        "content": "只创建，不执行",
+                        "content": "Create only, do not execute",
                     }
                 ],
                 "edges": [],
@@ -744,7 +744,7 @@ def test_graph_compiler_replaces_empty_nested_prompt_with_portable_prompt():
                     {
                         "id": "frame",
                         "node_type": "imageGenNode",
-                        "prompt": "未来城市首帧",
+                        "prompt": "Future city first frame",
                         "data": {"prompt": ""},
                     }
                 ],
@@ -754,7 +754,7 @@ def test_graph_compiler_replaces_empty_nested_prompt_with_portable_prompt():
     )
 
     assert result["ok"] is True
-    assert result["commands"][0]["data"]["prompt"] == "未来城市首帧"
+    assert result["commands"][0]["data"]["prompt"] == "Future city first frame"
 
 
 def test_graph_compiler_marks_portable_input_nodes_as_non_executable():
@@ -767,7 +767,7 @@ def test_graph_compiler_marks_portable_input_nodes_as_non_executable():
                         "id": "request",
                         "node_type": "textAnnotationNode",
                         "stage": "input",
-                        "data": {"content": "用户提供的剧本事实"},
+                        "data": {"content": "Script facts provided by the user"},
                     }
                 ],
                 "edges": [],
@@ -819,7 +819,7 @@ print(json.dumps(result, ensure_ascii=False))
 async def test_builtin_workflow_skill_get_preserves_planning_instructions():
     result = await workflow_mcp.call_tool(
         "workflow_skill_get",
-        {"skill_id": "lego-minifigure-animation-video", "user_goal": "做个短片"},
+        {"skill_id": "lego-minifigure-animation-video", "user_goal": "make a short film"},
     )
     payload = _result_payload(result)
     assert payload["ok"] is True
@@ -836,7 +836,7 @@ async def test_workflow_intent_schema_explains_compose_field_location():
     assert "intent.include_compose" in schema["properties"]["planner"]["description"]
     intent = {
         "skill_id": "lego-minifigure-animation-video",
-        "user_goal": "做个短片",
+        "user_goal": "make a short film",
         "planner": {"mode": "standard"},
         "include_compose": True,
     }

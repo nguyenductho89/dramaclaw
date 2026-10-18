@@ -60,8 +60,8 @@ describe("ImageGenNode director combined world entry", () => {
     const en = JSON.parse(
       readFileSync(resolve(process.cwd(), "public/locales/en/translation.json"), "utf8"),
     );
-    expect(zh.node.threeDWorld.combinedLabel).toBe("Director composite");
-    expect(zh.node.threeDWorld.envOnlyLabel).toBe("Background only");
+    expect(en.node.threeDWorld.combinedLabel).toBe("Director composite");
+    expect(en.node.threeDWorld.envOnlyLabel).toBe("Background only");
     expect(source).toContain("director_control_bundle");
   });
 

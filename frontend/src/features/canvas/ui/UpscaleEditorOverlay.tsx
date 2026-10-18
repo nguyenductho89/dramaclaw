@@ -71,8 +71,8 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
     typeof persisted.upscaleModelId === 'string' ? persisted.upscaleModelId : DEFAULT_SHARED_MODEL_ID;
   const imageCatalog = useFreezoneImageModels();
   const availableModels = imageCatalog.models;
-  // 后台确实一个图片模型都没配时禁止提交：后端 `_resolve_catalog_request`
-  // 对空目录直接 409，让用户点一下再收报错是最糟的体验。
+  // Submission is forbidden when the backend has really configured not a single image model: the backend `_resolve_catalog_request`
+  // returns 409 straight away for an empty catalog, and making the user click once only to receive an error is the worst experience.
   const catalogIsEmpty = isAuthoritativeEmptyCatalog(imageCatalog);
   const persistedScaleFactor: FreezoneUpscaleScaleFactor =
     persisted.upscaleScaleFactor === 4 || persisted.upscaleScaleFactor === 6
@@ -80,13 +80,13 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
       : DEFAULT_UPSCALE_SCALE_FACTOR;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // 目录为空时故意让 selectedModel 保持 undefined。原来这里尾巴上还挂着
-  // `?? SHARED_MODELS.find(...)`，等于把前端硬编码的模型当成可用模型复活，
-  // 正是「后台没配模型，界面照样显示能用」的来源。
+  // When the catalog is empty, deliberately leave selectedModel undefined. There used to be a trailing
+  // `?? SHARED_MODELS.find(...)` here, which revives the frontend hard-coded model as an available one -
+  // exactly the source of "the backend configured no model yet the UI still looks usable".
   const selectedModel =
     availableModels.find((m) => m.id === persistedModelId) ?? availableModels[0];
-  // 分辨率与画质档位来自后台对该模型的配置；节点上存的旧值若已不在档位里，
-  // 就收回到首个可用档位。
+  // Resolution and quality tiers come from the backend's config for that model; if an old value stored on the node is no longer among the tiers,
+  // it is pulled back to the first available tier.
   const sizeOptions = useMemo(
     () => resolveModelSizeOptions(selectedModel),
     [selectedModel],
@@ -144,7 +144,7 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
   }, [deleteNode, node.id, setSelectedNode]);
 
   const handleSubmit = useCallback(async () => {
-    // 按钮已经禁用，这里再挡一道：没有可用模型就绝不该发出请求。
+    // The button is already disabled, so block once more here: with no available model a request must never be sent.
     if (isSubmitting || catalogIsEmpty) return;
     if (!sourceUrl) {
       console.error('[upscale] missing upscaleSourceUrl on node.data — cannot submit');
@@ -162,8 +162,8 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
 
     setIsSubmitting(true);
     const generationStartedAt = Date.now();
-    // 超分是唯一原地改写源节点的编辑器（其余三个都新建结果节点），所以这里必须
-    // 把上一次失败的三个字段一起清掉，否则新一轮开始时旧请求 ID 还挂在节点上。
+    // Upscale is the only editor that rewrites the source node in place (the other three build result nodes), so here
+    // the three fields of the last failure must be cleared together, otherwise the old request ID would still hang on the node when a new round starts.
     updateNodeData(node.id, {
       isGenerating: true,
       generationStartedAt,
@@ -193,8 +193,8 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
         ...GENERATION_ERROR_CLEARED_PATCH,
       });
     } catch (err) {
-      // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-      // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+      // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+      // Writing an error banner would mark a live task as failed and clear the handle.
       if (isTaskPollTimeoutError(err)) {
         notifyTaskStillRunning(t);
         return;
@@ -231,8 +231,8 @@ export const UpscaleEditorOverlay = memo(({ node }: UpscaleEditorOverlayProps) =
       offset={12}
       className={NODE_TOOLBAR_CLASS}
     >
-      {/* 操作区按画布缩放同步缩放：面板挂在节点下方，锚点取顶边（贴着节点底边），
-          画布缩小时面板朝节点收缩、视觉上与节点同比变小。 */}
+      {/* The operation area scales in sync with the canvas zoom: the panel hangs below the node, anchored at the top edge (hugging the node's bottom edge),
+      when the canvas is zoomed out the panel shrinks toward the node, visually shrinking in proportion with the node. */}
       <ZoomScaledToolbar origin="top center">
         <div
           className={`w-[400px] p-4 ${CANVAS_NODE_TOOLBAR_CARD_CLASS}`}
@@ -312,7 +312,7 @@ function PanelRow({ label, children }: { label: string; children: React.ReactNod
 
 interface QualityPickerProps {
   value: string;
-  /** 当前模型允许的分辨率档位，由后台「媒体模型」配置下发。 */
+  /** The resolution tiers the current model allows, delivered by the backend "media models" config. */
   options: readonly string[];
   onChange: (value: string) => void;
 }

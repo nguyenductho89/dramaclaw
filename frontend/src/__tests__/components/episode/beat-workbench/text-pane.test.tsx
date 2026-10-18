@@ -155,7 +155,7 @@ describe("TextPane", () => {
     expect(screen.getByText("Type")).toBeInTheDocument();
     expect(screen.getByText("Scene")).toBeInTheDocument();
     expect(screen.getByText("Scene variant")).toBeInTheDocument();
-    expect(screen.getByText("Time")).toBeInTheDocument();
+    expect(screen.getByText("Time of day")).toBeInTheDocument();
     expect(screen.getByText("Identities")).toBeInTheDocument();
     expect(screen.getByText("Props")).toBeInTheDocument();
     expect(screen.queryByText("More")).not.toBeInTheDocument();
@@ -425,9 +425,9 @@ describe("TextPane", () => {
     expect(speaker).toHaveTextContent("Chen Feng_monk");
 
     await user.click(speaker);
-    expect(await screen.findByRole("option", { name: "Lu Chen_young_adult" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Lu Chen_Young adult" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "old_value_not_in_this_eps" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: "Lu Chen_young_adult" }));
+    await user.click(screen.getByRole("option", { name: "Lu Chen_Young adult" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({ speaker: "Lu Chen_young_adult" });
@@ -471,7 +471,7 @@ describe("TextPane", () => {
     );
 
     await user.click(screen.getByRole("combobox", { name: "Type" }));
-    await user.click(await screen.findByRole("option", { name: "Mute" }));
+    await user.click(await screen.findByRole("option", { name: "Silence" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
@@ -493,7 +493,7 @@ describe("TextPane", () => {
 
     const trigger = screen.getByRole("combobox", { name: "Type" });
     await user.click(trigger);
-    const silence = await screen.findByRole("option", { name: "Mute" });
+    const silence = await screen.findByRole("option", { name: "Silence" });
     await user.click(silence);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -515,7 +515,7 @@ describe("TextPane", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Type" }));
 
-    expect(screen.queryByRole("option", { name: "Mute" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Silence" })).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Narration");
   });
 
@@ -531,11 +531,11 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Time" }));
+    await user.click(screen.getByRole("combobox", { name: "Time of day" }));
     await user.click(await screen.findByRole("option", { name: "Night" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
-    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "Night" });
+    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "night" });
   });
 
   it("shows non-standard time_of_day as a legacy choice and can clear it", async () => {
@@ -550,11 +550,11 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByRole("combobox", { name: "Time" })).toHaveTextContent(
+    expect(screen.getByRole("combobox", { name: "Time of day" })).toHaveTextContent(
       "midnight (as written in the script)",
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Time" }));
+    await user.click(screen.getByRole("combobox", { name: "Time of day" }));
     await user.click(
       await screen.findByRole("option", {
         name: "None (keep the scene's lighting, no relight)",
@@ -606,7 +606,7 @@ describe("TextPane", () => {
     );
 
     await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
-    await user.click(await screen.findByRole("option", { name: "Water leak" }));
+    await user.click(await screen.findByRole("option", { name: "leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
@@ -623,7 +623,7 @@ describe("TextPane", () => {
         name: "Bathroom_leak_night",
         base_scene_id: "Bathroom",
         variant_id: "leak",
-        time_of_day: "Night",
+        time_of_day: "night",
       },
     ];
     render(
@@ -640,7 +640,7 @@ describe("TextPane", () => {
     expect(
       screen.queryByRole("option", { name: "leak_night" }),
     ).not.toBeInTheDocument();
-    await user.click(await screen.findByRole("option", { name: "Water leak" }));
+    await user.click(await screen.findByRole("option", { name: "leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
@@ -661,7 +661,7 @@ describe("TextPane", () => {
     );
 
     expect(screen.getByRole("combobox", { name: "Scene" })).toHaveTextContent("Bathroom");
-    expect(screen.getByRole("combobox", { name: "Scene variant" })).toHaveTextContent("Water leak");
+    expect(screen.getByRole("combobox", { name: "Scene variant" })).toHaveTextContent("leak");
     expect(screen.getByText("Render: will use Bathroom_leak_night, locked lighting")).toBeInTheDocument();
   });
 

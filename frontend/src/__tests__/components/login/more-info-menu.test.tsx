@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const runtimeState = vi.hoisted(() => ({ isCe: false }));
-const translationState = vi.hoisted(() => ({ language: "zh" }));
+const translationState = vi.hoisted(() => ({ language: "en" }));
 
 vi.mock("@/lib/runtime-config", () => ({
   isCeRuntime: () => runtimeState.isCe,
@@ -69,7 +69,7 @@ function mockResponse(body: unknown, ok = true) {
 describe("MoreInfoMenu", () => {
   beforeEach(() => {
     runtimeState.isCe = false;
-    translationState.language = "zh";
+    translationState.language = "en";
     vi.unstubAllGlobals();
   });
 

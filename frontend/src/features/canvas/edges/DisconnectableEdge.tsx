@@ -28,16 +28,16 @@ function recordValue(value: unknown): Record<string, unknown> {
     : {};
 }
 
-// 稳定的空数组引用 —— 非 smartOrthogonal 模式下边不需要订阅 nodes,返回它即可让
-// selector 永远「相等」,从而拖动任意节点都不会触发边重渲染。
+// A stable empty array reference - outside smartOrthogonal mode the edge need not subscribe to nodes; returning it keeps the
+// selector always "equal", so dragging any node never triggers an edge re-render.
 const NO_ROUTING_NODES: CanvasNode[] = [];
 
 const EDGE_ACTIVE_TRANSITION_MS = 300;
-// 连接端点圆点半径，以及沿 port 方向朝节点外的偏移量（>=半径 → 整颗圆点落在节点外、贴边）。
+// The radius of the connection endpoint dot, and its offset along the port direction toward outside the node (>= radius -> the whole dot lands outside the node, hugging the edge).
 const PORT_DOT_RADIUS = 4;
 const PORT_DOT_OFFSET = 4;
 
-// 端点圆点的外移向量：按 handle 所在边朝节点外偏移，避免被上层节点挡掉一半。
+// The outward offset vector of the endpoint dot: offset toward outside the node by the edge the handle is on, avoiding half of it being blocked by an upper-layer node.
 function portDotOffset(position: Position | undefined): { dx: number; dy: number } {
   switch (position) {
     case Position.Left:
@@ -76,9 +76,9 @@ export const DisconnectableEdge = memo(function DisconnectableEdge(props: EdgePr
   const deleteEdge = useCanvasStore((state) => state.deleteEdge);
   const selectedNodeId = useCanvasStore((state) => state.selectedNodeId);
   const canvasEdgeRoutingMode = useSettingsStore((state) => state.canvasEdgeRoutingMode);
-  // 仅 smartOrthogonal 避障需要全量 nodes(算障碍矩形)。spline/普通正交模式下边的路径
-  // 完全由 xyflow 提供的 source/target 端点坐标决定,无需订阅 nodes —— 拖动无关节点
-  // 时本边不再重渲染。useShallow 逐元素比较使 smart 模式下也只在节点真正移动时才重算。
+  // Only smartOrthogonal obstacle avoidance needs the full nodes (to compute obstacle rectangles). In spline/plain orthogonal mode the edge's path
+  // is fully decided by the source/target endpoint coordinates provided by xyflow, and need not subscribe to nodes - when dragging unrelated nodes
+  // this edge no longer re-renders. useShallow compares element by element so that in smart mode it recomputes only when nodes really move.
   const routingNodes = useCanvasStore(
     useShallow((state) =>
       canvasEdgeRoutingMode === 'smartOrthogonal' ? state.nodes : NO_ROUTING_NODES
@@ -131,8 +131,8 @@ export const DisconnectableEdge = memo(function DisconnectableEdge(props: EdgePr
     };
   }, []);
 
-  // 选中态高亮：没有选中节点时所有连线保持灰色；选中某节点后，与它相连的
-  // 连线点亮（accent），其余连线压暗，突出与当前节点的关系。
+  // Selected state highlight: when no node is selected all edges stay gray; after selecting a node, the edges
+  // connected to it light up (accent) and the rest are dimmed, highlighting the relationship with the current node.
   const hasSelection = selectedNodeId != null;
   const isConnectedToSelected =
     hasSelection && (source === selectedNodeId || target === selectedNodeId);
@@ -184,8 +184,8 @@ export const DisconnectableEdge = memo(function DisconnectableEdge(props: EdgePr
     targetY,
   ]);
 
-  // 直接在 selector 里算成布尔值:返回原始值,Object.is 比较使本边只在「是否处理中」
-  // 翻转时才重渲染,而非每次任意节点变化都重算。
+  // Compute a boolean directly in the selector: return a primitive value, and Object.is comparison makes this edge re-render only when "whether it is processing"
+  // flips, rather than recomputing on every change of any node.
   const isProcessingEdge = useCanvasStore((state) => {
     const sourceNode = state.nodes.find((node) => node.id === source);
     const targetNode = state.nodes.find((node) => node.id === target);
@@ -215,8 +215,8 @@ export const DisconnectableEdge = memo(function DisconnectableEdge(props: EdgePr
   const processingDashStroke = 'rgb(var(--accent-rgb) / 1)';
   const baseStrokeWidth = isProcessingEdge ? (selected ? 2.7 : 2.2) : 2;
 
-  // 处理中的连线始终保持自己的 accent 高亮样式，不参与选中态调光。
-  // hover/选中相连连线轻微点亮；常态灰色半透明；选中后无关连线再压暗一档。
+  // An edge being processed always keeps its own accent highlight style, and does not take part in selection dimming.
+  // Edges connected to hover/selection light up slightly; normally gray semi-transparent; after selection unrelated edges are dimmed one more notch.
   const highlightStroke = 'rgba(205, 209, 216, 0.64)';
   const bindingStroke = 'rgba(34,211,238,0.66)';
   const bindingHighlightStroke = 'rgba(172, 226, 236, 0.72)';
@@ -264,12 +264,12 @@ export const DisconnectableEdge = memo(function DisconnectableEdge(props: EdgePr
           transition: `stroke ${EDGE_ACTIVE_TRANSITION_MS}ms ease, stroke-width ${EDGE_ACTIVE_TRANSITION_MS}ms ease`,
         }}
       />
-      {/* 连接端点小圆点（对标 libtv）：连线建立后，在两端节点的连接口各画一个连接点，
-          让「已连线」状态在节点上可见——过去节点的 handle 被全局 opacity:0 藏起，连上
-          之后节点看起来和没连一样。画在边上（而非各节点的 Handle）天然覆盖所有节点类型
-          （图片/视频/…），且随节点移动、随边高亮一起变色。深色描边保证压在亮图上也看得清。
-          端点正好压在节点边沿，而边图层在节点之下，直接画会被节点挡掉一半——沿各自 port
-          方向朝外偏移 PORT_DOT_OFFSET，让圆点整颗落在节点外、贴着边、正好压在连线上。 */}
+      {/* Connection endpoint dots (matches libtv): after an edge is established, draw a connection point at the connection port of each end node,
+      making the "connected" state visible on the nodes - in the past a node's handle was hidden by a global opacity:0, and after connecting
+      the node looked the same as unconnected. Drawing on the edge (rather than on each node's Handle) naturally covers all node types
+      (image/video/...), and changes color along with the node moving and the edge highlight. A dark stroke ensures it can be seen clearly even over a bright image.
+      The endpoint sits exactly on the node border, and the edge layer is below the nodes, so drawing directly would be half blocked by the node - offset outward along each port
+      direction by PORT_DOT_OFFSET, so the whole dot lands outside the node, hugging the edge and exactly on top of the line. */}
       <g style={{ pointerEvents: 'none' }}>
         <circle
           cx={sourceX + sourceDotOffset.dx}

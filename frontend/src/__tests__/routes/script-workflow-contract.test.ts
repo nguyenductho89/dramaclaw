@@ -133,7 +133,7 @@ describe("script workflow canonical contract", () => {
     const route = read(
       "src/routes/_app/projects.$project/episodes.$episode/script.lazy.tsx",
     );
-    const zh = read("public/locales/zh/translation.json");
+    const viLocale = read("public/locales/vi/translation.json");
     const en = read("public/locales/en/translation.json");
 
     expect(route).toContain("rewriteTargetBeats");
@@ -146,9 +146,9 @@ describe("script workflow canonical contract", () => {
     expect(route).toContain("beat_chars_min: rewriteBeatCharsMin");
     expect(route).toContain("beat_chars_max: rewriteBeatCharsMax");
     expect(route).not.toContain("generateRewrite.mutateAsync({})");
-    expect(zh).toContain('"rewriteTargetBeats"');
-    expect(zh).toContain('"rewriteBeatCharsMin"');
-    expect(zh).toContain('"rewriteBeatCharsMax"');
+    expect(viLocale).toContain('"rewriteTargetBeats"');
+    expect(viLocale).toContain('"rewriteBeatCharsMin"');
+    expect(viLocale).toContain('"rewriteBeatCharsMax"');
     expect(en).toContain('"rewriteTargetBeats"');
     expect(en).toContain('"rewriteBeatCharsMin"');
     expect(en).toContain('"rewriteBeatCharsMax"');

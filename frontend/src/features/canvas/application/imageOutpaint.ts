@@ -30,25 +30,25 @@ export const OUTPAINT_ASPECT_RATIOS: readonly FreezoneOutpaintAspectRatio[] = [
   '9:16',
 ];
 
-// 数量 > 1 时多个结果节点纵向错开摆放的间距。
+// Spacing by which multiple result nodes are staggered vertically when count > 1.
 const RESULT_STACK_GAP = 24;
 
 export interface OutpaintImageResult {
-  /** 新建的 exportImage 结果节点 id（数量 N 时按纵向摆放顺序）。 */
+  /** The ids of the newly built exportImage result nodes (in vertical placement order when the count is N). */
   nodeIds: string[];
-  /** 全部单图链（提交 → 轮询 → 回填/写错）settle 时 resolve（不 reject）。 */
+  /** Resolves when all single-image chains (submit -> poll -> backfill/write error) settle (never rejects). */
   completion: Promise<void>;
 }
 
 /**
- * 扩图提交编排（从 OutpaintEditorOverlay.handleSubmit 原样搬出，语义零变化）：
- * 同步在源节点下游建 N 个 isGenerating 的 exportImage 结果节点（纵向错开）并连边
- * ——后端 outpaint 单次仅出 1 张，选了 N 张就发起 N 次单图请求，每个节点各自独立
- * 轮询 / 回填 / 报错。结果节点经 inheritMainlineFields 继承主线字段（1→1 outpaint
- * 语义：新节点仍代表同一 canonical slot 的另一候选）。
+ * Outpaint submission orchestration (moved verbatim out of OutpaintEditorOverlay.handleSubmit, with zero semantic change):
+ * synchronously build N isGenerating exportImage result nodes downstream of the source node (staggered vertically) and connect edges
+ * - the backend outpaint produces only 1 image at a time, so choosing N images launches N single-image requests, with each node polling /
+ * backfilling / reporting errors independently. The result nodes inherit mainline fields via inheritMainlineFields (1->1 outpaint
+ * semantics: the new node still represents another candidate of the same canonical slot).
  *
- * @returns 结果节点 id 列表 + 后台链 completion；缺 project 或源节点已不存在时
- *   返回 null（不落任何状态）。
+ * @returns the list of result node ids + the background chain completion; returns null when project is missing or the source node no longer exists
+ *   (landing no state).
  */
 export function outpaintImage(
   sourceNodeId: string,
@@ -127,7 +127,7 @@ export function outpaintImage(
   return { nodeIds, completion };
 }
 
-/** 针对已建好的节点提交单图扩图（num_images=1）→ 轮询 → 回填。 */
+/** Submit a single-image outpaint (num_images=1) for the already built node -> poll -> backfill. */
 async function runOutpaintGeneration(
   project: string,
   nodeId: string,

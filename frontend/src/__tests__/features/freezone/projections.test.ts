@@ -26,7 +26,7 @@ describe("freezone projection helpers", () => {
 
   it("creates a stable ascii-safe personal canvas id", () => {
     expect(personalCanvasIdForUsername("eric@example.com")).toBe("user_eric_example_com_1m9fjbn");
-    expect(personalCanvasIdForUsername("Lin Zhiwei")).toBe("user_u_klqmat");
+    expect(personalCanvasIdForUsername("Lin Zhiwei")).toBe("user_lin_zhiwei_1575fos");
   });
 
   it("creates deterministic projection keys", () => {

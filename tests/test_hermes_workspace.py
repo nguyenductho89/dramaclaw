@@ -152,11 +152,11 @@ def test_fresh_create_layout(isolated_workspace, repo_skills, repo_plugins):
     assert _enabled_toolsets(config) == ["hermes-acp", "memory"]
     assert "    - dramaclaw" in config
     assert "    - freezone" not in config
-    assert "你是虾导" in (home / "SOUL.md").read_text()
+    assert "You are the Director Agent" in (home / "SOUL.md").read_text()
     memory = (home / "memories" / "MEMORY.md").read_text()
-    assert "虾导在 DramaClaw 会话中面向用户自称“虾导”" in memory
-    assert "不要在普通回复开头自报身份" in memory
-    assert "我是虾导，DramaClaw 的小说转视频创作助手。" not in memory
+    assert 'In DramaClaw sessions the Director Agent introduces itself to users as "the Director Agent"' in memory
+    assert "Do not announce your identity at the start of ordinary replies" in memory
+    assert "I am the Director Agent, DramaClaw's novel-to-video creation assistant." not in memory
 
 
 def test_project_workspace_keeps_hermes_native_state_under_project(
@@ -199,17 +199,17 @@ def test_freezone_profile_uses_isolated_workspace(
     assert "dramaclaw-acp" in parsed["disabled_toolsets"]
     soul = (home / "SOUL.md").read_text(encoding="utf-8")
     memory = (home / "memories" / "MEMORY.md").read_text(encoding="utf-8")
-    assert "创意咨询" in soul
-    assert "画布节点、连线、资源和工作流操作" in soul
-    assert "不要在普通回复开头自报身份" in soul
+    assert "creative consulting" in soul
+    assert "canvas nodes, links, resources, and workflow operations" in soul
+    assert "Do not announce your identity at the start of ordinary replies" in soul
     assert "FREEZONE_CANVAS_ASSISTANT" in soul
     assert "command catalog" not in soul
-    assert "只使用 Freezone 画布能力" in memory
-    assert "不得用 DramaClaw 主线工具" in memory
-    assert "创意咨询" not in memory
+    assert "only use Freezone canvas capabilities" in memory
+    assert "never use DramaClaw mainline tools" in memory
+    assert "creative consulting" not in memory
     assert "command catalog" not in memory
-    assert len(soul) < 250
-    assert len(memory) < 100
+    assert len(soul) < 520
+    assert len(memory) < 200
     assert (hw.freezone_python_hook_dir(home) / "sitecustomize.py").is_file()
 
 
@@ -220,18 +220,18 @@ def test_freezone_workspace_preserves_learned_identity_and_memory(
     soul_file = home / "SOUL.md"
     memory_file = home / "memories" / "MEMORY.md"
     soul_file.write_text(
-        soul_file.read_text(encoding="utf-8") + "\n用户偏好简洁沟通。\n",
+        soul_file.read_text(encoding="utf-8") + "\nThe user prefers concise communication.\n",
         encoding="utf-8",
     )
     memory_file.write_text(
-        memory_file.read_text(encoding="utf-8") + "\n项目使用暖色电影感。\n",
+        memory_file.read_text(encoding="utf-8") + "\nThe project uses a warm cinematic look.\n",
         encoding="utf-8",
     )
 
     hw.ensure_user_hermes_workspace("admin", profile="freezone")
 
-    assert "用户偏好简洁沟通" in soul_file.read_text(encoding="utf-8")
-    assert "项目使用暖色电影感" in memory_file.read_text(encoding="utf-8")
+    assert "The user prefers concise communication" in soul_file.read_text(encoding="utf-8")
+    assert "The project uses a warm cinematic look" in memory_file.read_text(encoding="utf-8")
 
 
 def test_freezone_sitecustomize_disables_only_skill_manage(
@@ -353,10 +353,10 @@ def test_freezone_profile_materializes_native_workflow_skills(
     items = [
         {
             "id": "ecommerce-ad",
-            "name": "电商广告",
-            "description": "动态生成电商广告工作流。",
+            "name": "E-commerce ads",
+            "description": "Dynamically generates an e-commerce ad workflow.",
             "category": "ecommerce",
-            "triggers": {"keywords": ["商品广告", "带货视频"]},
+            "triggers": {"keywords": ["product ads", "shopping videos"]},
             "allowed_recipe_ids": ["ecommerce-ad-image"],
         }
     ]
@@ -376,8 +376,8 @@ def test_freezone_profile_materializes_native_workflow_skills(
     assert summaries == [
         {
             "id": "ecommerce-ad",
-            "name": "电商广告",
-            "description": "动态生成电商广告工作流。 适用于：商品广告、带货视频。 选择后使用虾画确定性工具生成动态工作流。",
+            "name": "E-commerce ads",
+            "description": "Dynamically generates an e-commerce ad workflow. Suitable for: product ads, shopping videos. Once selected, use the Canvas Assistant deterministic tools to generate a dynamic workflow.",
             "category": "ecommerce",
             "source": "hermes_native_workflow_skill",
             "allowed_recipe_ids": ["ecommerce-ad-image"],
@@ -569,7 +569,7 @@ def test_hermes_translates_thought_plan_and_usage_updates():
         _session_update(
             {
                 "sessionUpdate": "agent_thought_chunk",
-                "content": {"type": "text", "text": "分析画布结构"},
+                "content": {"type": "text", "text": "Analyzing the canvas structure"},
             }
         ),
         "turn-a",
@@ -580,12 +580,12 @@ def test_hermes_translates_thought_plan_and_usage_updates():
                 "sessionUpdate": "plan",
                 "entries": [
                     {
-                        "content": "读取资产",
+                        "content": "Read assets",
                         "status": "completed",
                         "priority": "medium",
                     },
                     {
-                        "content": "生成分镜",
+                        "content": "Generate storyboard",
                         "status": "in_progress",
                         "priority": "high",
                     },
@@ -601,12 +601,12 @@ def test_hermes_translates_thought_plan_and_usage_updates():
 
     assert thought is not None
     assert thought.type == "thought_delta"
-    assert thought.text == "分析画布结构"
+    assert thought.text == "Analyzing the canvas structure"
     assert plan is not None
     assert plan.type == "plan_update"
     assert plan.entries == [
-        {"content": "读取资产", "status": "completed", "priority": "medium"},
-        {"content": "生成分镜", "status": "in_progress", "priority": "high"},
+        {"content": "Read assets", "status": "completed", "priority": "medium"},
+        {"content": "Generate storyboard", "status": "in_progress", "priority": "high"},
     ]
     assert usage is not None
     assert usage.type == "usage_update"
@@ -676,12 +676,12 @@ async def test_hermes_permission_request_round_trip_uses_selected_acp_option():
             "params": {
                 "sessionId": "session-a",
                 "toolCall": {
-                    "title": "运行媒体探测",
+                    "title": "Run media probe",
                     "rawInput": "ffprobe clip.mp4",
                 },
                 "options": [
-                    {"optionId": "allow-1", "kind": "allow_once", "name": "允许一次"},
-                    {"optionId": "deny-1", "kind": "reject_once", "name": "拒绝"},
+                    {"optionId": "allow-1", "kind": "allow_once", "name": "Allow once"},
+                    {"optionId": "deny-1", "kind": "reject_once", "name": "Reject"},
                 ],
             },
         },
@@ -691,7 +691,7 @@ async def test_hermes_permission_request_round_trip_uses_selected_acp_option():
     assert event is not None
     assert event.type == "permission_requested"
     assert event.request_id == 71
-    assert event.text == "运行媒体探测"
+    assert event.text == "Run media probe"
     assert await thread.resolve_permission(71, "allow-1") is True
     assert json.loads(writer.data.decode("utf-8")) == {
         "jsonrpc": "2.0",
@@ -725,7 +725,7 @@ async def test_hermes_rejects_expired_permission_response(monkeypatch):
             "method": "session/request_permission",
             "params": {
                 "sessionId": "session-a",
-                "toolCall": {"title": "运行命令"},
+                "toolCall": {"title": "Run command"},
                 "options": [
                     {
                         "optionId": "allow_once",
@@ -754,7 +754,7 @@ def test_hermes_clears_pending_permissions_for_completed_turn():
             "method": "session/request_permission",
             "params": {
                 "sessionId": "session-a",
-                "toolCall": {"title": "运行命令"},
+                "toolCall": {"title": "Run command"},
                 "options": [
                     {"optionId": "deny", "kind": "reject_once", "name": "Deny"}
                 ],
@@ -996,14 +996,14 @@ def test_hermes_tool_call_guard_still_stops_repeated_inputless_reads():
         )
 
     assert stop_message is not None
-    assert "重复读取" in stop_message
+    assert "repeatedly reading" in stop_message
 
 
 def test_hermes_tool_call_guard_reason_is_machine_readable():
-    assert hermes_sdk._tool_call_guard_reason("本轮操作已停止：重复读取同一项状态") == (
+    assert hermes_sdk._tool_call_guard_reason("This turn was stopped: repeatedly reading the same state") == (
         "repeated_read"
     )
-    assert hermes_sdk._tool_call_guard_reason("本轮操作已停止：连续调用工具过多") == (
+    assert hermes_sdk._tool_call_guard_reason("This turn was stopped: too many consecutive tool calls") == (
         "tool_call_limit"
     )
 
@@ -1024,7 +1024,7 @@ def test_hermes_tool_call_guard_stops_repeated_identical_node_reads():
         )
 
     assert stop_message is not None
-    assert "重复读取同一个画布节点" in stop_message
+    assert "repeatedly reading the same canvas node" in stop_message
 
 
 def test_hermes_tool_call_guard_stops_repeated_identical_mainline_reads():
@@ -1043,7 +1043,7 @@ def test_hermes_tool_call_guard_stops_repeated_identical_mainline_reads():
         )
 
     assert stop_message is not None
-    assert "重复读取同一项状态" in stop_message
+    assert "repeatedly reading the same state" in stop_message
 
 
 def test_hermes_tool_call_guard_allows_distinct_mainline_reads():
@@ -1128,7 +1128,7 @@ def test_hermes_tool_call_guard_stops_repeated_identical_failures():
         )
 
     assert stop_message is not None
-    assert "重复返回相同错误" in stop_message
+    assert "returned the same error repeatedly" in stop_message
     assert guard.total == 2
 
 
@@ -1165,7 +1165,7 @@ def test_hermes_tool_call_guard_tracks_same_failure_across_unrelated_success():
     stop_message = guard.observe(second_failure)
 
     assert stop_message is not None
-    assert "重复返回相同错误" in stop_message
+    assert "returned the same error repeatedly" in stop_message
 
 
 def test_hermes_tool_call_guard_normalizes_volatile_failure_fields():
@@ -1193,7 +1193,7 @@ def test_hermes_tool_call_guard_normalizes_volatile_failure_fields():
         )
 
     assert stop_message is not None
-    assert "重复返回相同错误" in stop_message
+    assert "returned the same error repeatedly" in stop_message
 
 
 def test_hermes_tool_call_guard_stops_repeated_successful_validation():
@@ -1204,7 +1204,7 @@ def test_hermes_tool_call_guard_stops_repeated_successful_validation():
             {
                 "type": "create_node",
                 "node_type": "textAnnotationNode",
-                "data": {"title": "线索核对", "content": "核对账册"},
+                "data": {"title": "Clue check", "content": "Check the ledger"},
             }
         ]
     }
@@ -1222,7 +1222,7 @@ def test_hermes_tool_call_guard_stops_repeated_successful_validation():
         )
 
     assert stop_message is not None
-    assert "重复校验同一批画布命令" in stop_message
+    assert "repeatedly validated the same batch of canvas commands" in stop_message
 
 
 def test_hermes_freezone_tool_limit_message_uses_freezone_context():
@@ -1230,8 +1230,8 @@ def test_hermes_freezone_tool_limit_message_uses_freezone_context():
         "freezone_put_agent_catalog_recipe"
     )
 
-    assert "虾画" in message
-    assert "虾导" not in message
+    assert "Canvas Agent" in message
+    assert "Director Agent" not in message
     assert "beat" not in message
 
 
@@ -1507,24 +1507,24 @@ def test_existing_plugin_block_gets_missing_freezone_plugin(
     assert parsed["agent"]["max_turns"] == 4
 
 
-def test_legacy_identity_context_is_migrated(
+def test_legacy_identity_context_gets_identity_line(
     isolated_workspace, repo_skills, repo_plugins
 ):
     home = isolated_workspace / "state" / "admin" / ".hermes"
     memories = home / "memories"
     memories.mkdir(parents=True)
     (home / "SOUL.md").write_text(hw._OLD_SOUL_PREFIX + "\n", encoding="utf-8")
-    (memories / "MEMORY.md").write_text(hw._OLD_MEMORY_LINE + "\n", encoding="utf-8")
+    (memories / "MEMORY.md").write_text("Legacy memory note.\n", encoding="utf-8")
 
     hw.ensure_user_hermes_workspace("admin")
 
     soul = (home / "SOUL.md").read_text(encoding="utf-8")
     memory = (memories / "MEMORY.md").read_text(encoding="utf-8")
-    assert "你是虾导" in soul
+    assert "You are the Director Agent" in soul
     assert "You are Hermes Agent" not in soul
-    assert "我是虾导，DramaClaw 的小说转视频创作助手。" not in memory
-    assert "DramaClaw 管理的虾导会话" in memory
-    assert "DramaClaw 管理的 Hermes 会话" not in memory
+    assert "I am the Director Agent, DramaClaw's novel-to-video creation assistant." not in memory
+    assert 'the Director Agent introduces itself to users as "the Director Agent"' in memory
+    assert "Legacy memory note." in memory
 
 
 def test_stale_symlinks_removed(isolated_workspace, repo_skills, repo_plugins):

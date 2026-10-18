@@ -52,22 +52,22 @@ function buildRelightPrompt(smart: LightSmartModeDescriptor): string {
 }
 
 export interface RelightImageResult {
-  /** 新建的 exportImage 结果节点 id。 */
+  /** The id of the newly built exportImage result node. */
   nodeId: string;
-  /** 后台链（提交 → 轮询 → 回填/写错）settle 时 resolve（不 reject）。 */
+  /** Resolves when the background chain (submit -> poll -> backfill/write error) settles (never rejects). */
   completion: Promise<void>;
 }
 
 /**
- * 重打光生成编排（从 LightEditorOverlay.handleSubmit 原样搬出，语义零变化）：
- * 同步在源节点下游建 isGenerating 的 exportImage 结果节点并连边（经
- * inheritMainlineFields 继承主线字段——1→1 relight，新节点仍代表同一 canonical
- * slot 的另一候选），然后提交 /freezone/relight → 等任务完成 → 回填产物 url；
- * 失败把错误写到结果节点。
+ * Relight generation orchestration (moved verbatim out of LightEditorOverlay.handleSubmit, with zero semantic change):
+ * synchronously build an isGenerating exportImage result node downstream of the source node and connect an edge (inheriting mainline fields
+ * via inheritMainlineFields - a 1->1 relight, where the new node still represents another candidate of the same canonical
+ * slot), then submit /freezone/relight -> wait for the task to complete -> backfill the product url;
+ * on failure write the error to the result node.
  *
- * @param payload LightEditorPanel 的提交载荷（亮度 / 色温 / 主光方向 / 轮廓光 /
- *   智能模式 / 模型 / 画质）。
- * @returns 结果节点 id + 后台链 completion；缺 project 或源节点已不存在时返回 null。
+ * @param payload the submission payload of LightEditorPanel (brightness / color temperature / key light direction / rim light /
+ *   smart mode / model / quality).
+ * @returns the result node id + the background chain completion; null when project is missing or the source node no longer exists.
  */
 export function relightImage(
   sourceNodeId: string,

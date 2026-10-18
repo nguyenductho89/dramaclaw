@@ -395,8 +395,8 @@ describe("canvas action catalog", () => {
       current_value: "imageToVideo",
       options: expect.arrayContaining(["textToVideo", "imageToVideo", "allReference"]),
       option_labels: expect.objectContaining({
-        textToVideo: "Text to video",
-        imageToVideo: "Image to video",
+        textToVideo: "Text to Video",
+        imageToVideo: "Image to Video",
       }),
     });
     expect(catalog.editable_schema.aspectRatio).toMatchObject({
@@ -873,7 +873,7 @@ describe("canvas action catalog", () => {
     expect(splitAction).toMatchObject({
       execution: "manual_ui",
       command_type: "run_node_action",
-      description: expect.stringContaining("Panel extraction"),
+      description: expect.stringContaining("panel-extraction"),
       parameters: {
         node_id: "image-a",
         tool_type: "split-storyboard",
@@ -1018,8 +1018,8 @@ describe("canvas action catalog", () => {
     const mattingCapability = catalog.frontend_command_catalog.find(
       (item) => item.id === "ui.run_matting_tool",
     );
-    expect(mattingCapability?.frontend_mapping?.description).toContain("Remove background");
-    expect(mattingCapability?.frontend_mapping?.description).toContain("Transparent background");
+    expect(mattingCapability?.frontend_mapping?.description).toContain("background removal");
+    expect(mattingCapability?.frontend_mapping?.description).toContain("transparent background");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.run_grid_product_three_view");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.generate_video");
     expect(catalog.frontend_command_catalog.map((item) => item.id)).toContain("ui.generate_audio");
@@ -1120,7 +1120,7 @@ describe("canvas action catalog", () => {
       }),
     });
     expect(catalog.canvas_action_catalog.find((item) => item.id === "ui.run_scene360_tool")).toMatchObject({
-      display_name: expect.stringContaining("Panorama"),
+      display_name: expect.stringContaining("panorama"),
       execution: "frontend_node",
       frontend_mapping: expect.objectContaining({
         action: "run_scene360_tool",

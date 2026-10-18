@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -18,17 +19,17 @@ import {
   type ColumnFractions,
 } from './useAssetBoardColumnFractions';
 
-/** 单栏最小宽度：拖到底不塌陷（对标 liblib 的栏宽下限）。 */
+/** Minimum width of a single column: does not collapse when dragged to the end (matches liblib's column width lower bound). */
 const MIN_COLUMN_PX = 200;
 
 interface AssetBoardColumnsProps {
-  /** 三栏内容（文本 / 图片 / 视频）。音频条不参与，独立在上方全宽渲染。 */
+  /** The content of the three columns (text / image / video). The audio bar does not take part, rendered separately full width above. */
   text: ReactNode;
   image: ReactNode;
   video: ReactNode;
 }
 
-/** 拖拽会话：pointerdown 时快照起点，move/up 从事件 clientX 重算，避免闭包读到陈旧 state。 */
+/** Drag session: snapshot the starting point at pointerdown, recompute from the event clientX on move/up, avoiding closures reading stale state. */
 interface DragSession {
   handleIndex: 0 | 1;
   startX: number;
@@ -36,13 +37,13 @@ interface DragSession {
   width: number;
 }
 
-/** jsdom / 老浏览器可能没有 pointer capture —— 存在才调用，且吞掉激活态异常。 */
+/** jsdom / old browsers may lack pointer capture - call only if present, and swallow exceptions about the active state. */
 function safeSetPointerCapture(el: Element, pointerId: number): void {
   if (typeof el.setPointerCapture !== 'function') return;
   try {
     el.setPointerCapture(pointerId);
   } catch {
-    // pointer 未激活等边界，忽略即可。
+    // Boundaries such as the pointer not being active can be ignored.
   }
 }
 
@@ -51,14 +52,14 @@ function safeReleasePointerCapture(el: Element, pointerId: number): void {
   try {
     el.releasePointerCapture(pointerId);
   } catch {
-    // 同上。
+    // Same as above.
   }
 }
 
 /**
- * 总览态三栏容器：文本 / 图片 / 视频 之间挂两条可拖拽分隔条，实时调宽并把比例
- * 持久化到 localStorage（松手落库）。仅总览态使用——进详情态时本组件整体卸载，
- * 退回时重挂载并从 localStorage 恢复比例（故详情态天然不受 fractions 影响）。
+ * The three-column container in overview state: two draggable dividers between text / image / video, adjusting widths live and
+ * persisting the ratios to localStorage (saved on release). Used only in overview state - this component unmounts as a whole when entering detail state,
+ * remounts on the way back and restores the ratios from localStorage (so detail state is naturally unaffected by fractions).
  */
 export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps): ReactElement {
   const { fractions, setFractions, commitFractions } = useAssetBoardColumnFractions();
@@ -66,7 +67,7 @@ export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps
   const dragRef = useRef<DragSession | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  // 拖拽期禁用文本选中并统一光标，松手/卸载还原（SSR 无 document 时 effect 本就不跑）。
+  // Disable text selection and unify the cursor while dragging, restored on release/unmount (the effect does not run anyway without document under SSR).
   useEffect(() => {
     if (!dragging) return;
     const { body } = document;
@@ -85,7 +86,7 @@ export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps
       const container = containerRef.current;
       if (!container) return;
       const width = container.getBoundingClientRect().width;
-      // SSR/未布局/零宽兜底：拿不到有效宽度就不进入拖拽（换算会除以 0）。
+      // SSR/not laid out/zero-width fallback: without a valid width do not enter dragging (the conversion would divide by 0).
       if (!(width > 0)) return;
       event.preventDefault();
       dragRef.current = { handleIndex, startX: event.clientX, startFractions: fractions, width };
@@ -115,8 +116,8 @@ export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const session = dragRef.current;
       if (!session) return;
-      // 从 pointerup/cancel 的 clientX 重算最终比例（= 最后一次 move 的位置），
-      // 无需额外 ref 镜像 state，规避 setState 异步导致的陈旧闭包。
+      // Recompute the final ratios from the clientX of pointerup/cancel (= the position of the last move),
+      // with no extra ref mirroring state, avoiding the stale closure caused by async setState.
       const next = applyColumnResize(
         session.startFractions,
         session.handleIndex,
@@ -127,7 +128,7 @@ export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps
       dragRef.current = null;
       setDragging(false);
       safeReleasePointerCapture(event.currentTarget, event.pointerId);
-      commitFractions(next); // 松手落库
+      commitFractions(next); // Persist on release
     },
     [commitFractions],
   );
@@ -136,13 +137,13 @@ export function AssetBoardColumns({ text, image, video }: AssetBoardColumnsProps
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="调整栏宽"
+      aria-label={i18n.t('canvas.assetBoard.resizeColumns')}
       data-testid={`asset-board-resizer-${handleIndex}`}
       onPointerDown={handlePointerDown(handleIndex)}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      // w-3 命中区（12px），内嵌 w-1 细条视觉；hover / 拖拽中提亮，克制对齐面板 token。
+      // A w-3 hit area (12px), with a w-1 thin bar inside for the visual; brighten on hover / while dragging, restrained to match the panel tokens.
       className="group relative flex w-3 shrink-0 cursor-col-resize touch-none items-stretch justify-center"
     >
       <div

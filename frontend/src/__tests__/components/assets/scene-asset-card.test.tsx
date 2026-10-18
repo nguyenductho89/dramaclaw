@@ -107,7 +107,7 @@ describe("SceneAssetCard", () => {
 
     expect(screen.getByText("Palace Hall")).toBeInTheDocument();
     expect(screen.getByText("Master")).toBeInTheDocument();
-    expect(screen.getByText("Back")).toBeInTheDocument();
+    expect(screen.getByText("Reverse")).toBeInTheDocument();
     expect(screen.getByText("360 panorama")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload master" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate master" })).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe("SceneAssetCard", () => {
     expect(screen.getByRole("button", { name: "Delete 360" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open 360 Viewer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Director World" })).toBeInTheDocument();
-    expect(screen.getByText("Director world")).toBeInTheDocument();
+    expect(screen.getByText("Director World")).toBeInTheDocument();
     expect(screen.queryByText(/Current director world/)).not.toBeInTheDocument();
     expect(screen.getByText("Custom Director World ready")).toBeInTheDocument();
     expect(screen.getByText("master Director World ready")).toBeInTheDocument();

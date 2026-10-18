@@ -18,7 +18,7 @@ vi.mock("@/lib/cluster-config", () => ({
 
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: "zh" } }) };
+  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: "en" } }) };
 });
 
 const switchSpy = vi.fn();

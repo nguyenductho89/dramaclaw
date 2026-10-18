@@ -29,12 +29,12 @@ export interface CoverEditorProps {
   project: string;
   timeline: ComposeTimelineState;
   durationMs: number;
-  /** 打开时选帧滑块的默认位置（一般传当前播放头）。 */
+  /** The default position of the frame-picking slider when opened (usually the current playhead). */
   defaultFrameMs: number;
-  /** 已有封面（用于回显 tab / 滑块位置）。 */
+  /** An existing cover (used to echo the tab / slider position). */
   cover: ComposeCover | null;
   onCancel: () => void;
-  /** 确定时回传已上传落地的封面。 */
+  /** Passes back the cover that has been uploaded and landed on confirm. */
   onApply: (cover: ComposeCover) => void;
 }
 
@@ -75,9 +75,9 @@ export function CoverEditor({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // 选帧预览：滑块变化时把预览 <video> seek 到对应源帧。换源时等元数据就绪再 seek。
-  // frameMs 钳到 durationMs - 1：activeClipAt 的片段区间右端开（end-exclusive），
-  // 滑块拖到最末端时不钳会取不到帧源、预览/截帧落在不可控的旧帧上。
+  // Frame-picking preview: when the slider changes seek the preview <video> to the matching source frame. On a source swap, wait for metadata before seeking.
+  // frameMs is clamped to durationMs - 1: the clip interval of activeClipAt is end-exclusive,
+  // and without clamping when the slider is dragged to the very end, no frame source can be taken, and the preview/capture would land on an uncontrollable old frame.
   useEffect(() => {
     if (tab !== "frame") return;
     const el = videoRef.current;
@@ -93,7 +93,7 @@ export function CoverEditor({
       el.dataset.src = resolved;
       // Cross-origin CDN media must load with CORS, otherwise drawing this frame
       // to a canvas taints it and `captureVideoFrame` → toBlob throws a
-      // SecurityError ("截取当前帧失败"). Same-origin /static (dev proxy) skips it.
+      // SecurityError ("failed to capture the current frame"). Same-origin /static (dev proxy) skips it.
       if (mediaNeedsCrossOrigin(resolved)) {
         el.crossOrigin = "anonymous";
       } else {
@@ -122,7 +122,7 @@ export function CoverEditor({
     }
   }, [tab, frameMs, timeline, durationMs]);
 
-  // 释放上传预览的 object URL。
+  // Release the object URL of the upload preview.
   useEffect(
     () => () => {
       if (uploadPreview) URL.revokeObjectURL(uploadPreview);
@@ -132,7 +132,7 @@ export function CoverEditor({
 
   const onPickFile = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    event.target.value = ""; // 允许重复选同一文件
+    event.target.value = ""; // Allow selecting the same file repeatedly
     if (!file) return;
     setUploadFile(file);
     setUploadPreview((prev) => {
@@ -159,15 +159,15 @@ export function CoverEditor({
         onApply({ source: "upload", frameMs: null, url: res.url });
       } else {
         const el = videoRef.current;
-        // 拖完滑块立刻点确定时元素可能还在 seeking —— 等目标帧落定再截，
-        // 否则截到的是上一个已解码帧。
+        // When the slider is dragged and OK is clicked right away the element may still be seeking - wait for the target frame to settle before capturing,
+        // otherwise what gets captured is the previous decoded frame.
         if (el) await waitForVideoFrameReady(el);
         const blob = el ? await captureVideoFrame(el) : null;
         if (!blob) throw new Error(t("videoCompose.cover.captureFailed"));
         const res = await uploadFreezoneImage(project, blob, name);
         onApply({ source: "frame", frameMs, url: res.url });
       }
-      // 成功后由父级关闭编辑器，这里不复位 busy（避免闪烁）。
+      // After success the parent closes the editor, and busy is not reset here (avoiding flicker).
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);

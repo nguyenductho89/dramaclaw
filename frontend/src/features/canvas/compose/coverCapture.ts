@@ -3,20 +3,20 @@
 import { activeClipAt, type ComposeTimelineState } from "./timelineModel";
 
 /**
- * 封面选帧的纯逻辑工具（无 React）。把「时间线某 ms」解析成可截帧的源地址 + 源内
- * 时间，并把一个已 seek 到目标帧的 <video> 元素画成 JPEG Blob。截帧元素的装载 /
- * seek 留给调用方（封面编辑器持有一个可见的预览 <video>）。
+ * Pure logic utilities for cover frame picking (no React). Resolve "some ms on the timeline" into a capturable source address + the time within
+ * the source, and draw a <video> element already sought to the target frame into a JPEG Blob. The loading / seek of the capture
+ * element is left to the caller (the cover editor holds a visible preview <video>).
  */
 
 export interface CoverFrameSource {
   sourceUrl: string;
-  /** 该时间线时刻对应的源媒体内时间（ms，已含 trim/变速换算）。 */
+  /** The time within the source media (ms) corresponding to that timeline moment (trim/speed conversion already included). */
   sourceMs: number;
 }
 
 /**
- * 在时间线某 ms 处，取「最上层命中」的视频片段的源地址与源内时间（与预览舞台同款
- * 取轨规则：数组靠后的视频轨在上层）。落在空隙 / 无视频时返回 null。
+ * At some ms on the timeline, take the source address and in-source time of the "topmost hit" video clip (the same track-picking rule as
+ * the preview stage: a later video track in the array is on top). Returns null when it falls in a gap / there is no video.
  */
 export function coverFrameSourceAt(
   timeline: ComposeTimelineState,
@@ -32,7 +32,7 @@ export function coverFrameSourceAt(
   return null;
 }
 
-/** 时间线是否含任意可截帧的视频片段（用于禁用「选帧」tab）。 */
+/** Whether the timeline contains any capturable video clip (used to disable the "pick frame" tab). */
 export function hasCoverableVideo(timeline: ComposeTimelineState): boolean {
   return timeline.tracks.some(
     (track) => track.kind === "video" && track.clips.length > 0,
@@ -40,9 +40,9 @@ export function hasCoverableVideo(timeline: ComposeTimelineState): boolean {
 }
 
 /**
- * 等待 <video> 元素的待决 seek 落定、当前帧可绘制（readyState ≥ HAVE_CURRENT_DATA）。
- * 截帧必须先等这个 —— 用户拖完选帧滑块立刻点确定时元素往往还在 seeking，直接
- * drawImage 画到的是上一个已解码帧而非所选帧。超时兜底返回（按当前帧截，不无限等）。
+ * Wait for the <video> element's pending seek to settle and the current frame to be drawable (readyState >= HAVE_CURRENT_DATA).
+ * Frame capture must wait for this first - when the user finishes dragging the frame-picking slider and immediately clicks OK the element is often still seeking, and
+ * drawImage would draw the previous decoded frame rather than the chosen one. A timeout fallback returns (capture the current frame, no waiting forever).
  */
 export function waitForVideoFrameReady(
   video: HTMLVideoElement,
@@ -69,9 +69,9 @@ export function waitForVideoFrameReady(
 }
 
 /**
- * 把一个已 seek 到目标帧的 <video> 元素画到离屏 canvas，导出 JPEG Blob。
- * 源经 Vite 代理 / Worker 反代后与页面同源，canvas 不会被污染。无尺寸 / 无 2d
- * 上下文 / 编码失败时返回 null。
+ * Draw a <video> element already sought to the target frame onto an offscreen canvas and export a JPEG Blob.
+ * After the source goes through the Vite proxy / Worker reverse proxy it is same-origin with the page, so the canvas is not tainted. Returns null when there is no size / no 2d
+ * context / encoding fails.
  */
 export function captureVideoFrame(
   video: HTMLVideoElement,

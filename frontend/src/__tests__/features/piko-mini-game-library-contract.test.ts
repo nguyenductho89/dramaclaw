@@ -15,15 +15,15 @@ const posterCardSource = source.slice(
   source.indexOf("function PikoGamePosterCard"),
   source.indexOf("const KIND_LABEL"),
 );
-const zh = JSON.parse(
-  readFileSync("public/locales/zh/translation.json", "utf8"),
+const vi = JSON.parse(
+  readFileSync("public/locales/vi/translation.json", "utf8"),
 );
 const en = JSON.parse(
   readFileSync("public/locales/en/translation.json", "utf8"),
 );
 
-describe("Piko 游戏中心", () => {
-  it("只保留六款确认上线的小游戏", () => {
+describe("Piko Game Center", () => {
+  it("keeps only the six confirmed mini games", () => {
     expect(librarySource.match(/\bid:/g)).toHaveLength(6);
     expect(librarySource).not.toContain('id: "catch"');
     expect(source).not.toContain("PikoCatchGame");
@@ -32,24 +32,24 @@ describe("Piko 游戏中心", () => {
     ).toBe(false);
   });
 
-  it("使用确认后的简短中文名称，并保持英文标题齐全", () => {
+  it("uses the confirmed short names and keeps the English titles complete", () => {
     expect([
-      zh.pikoMiniGame.title,
-      zh.pikoMiniGame.memory.title,
-      zh.pikoMiniGame.breakout.title,
-      zh.pikoMiniGame.stackGame.title,
-      zh.pikoMiniGame.flying.title,
-      zh.pikoMiniGame.leap.title,
+      vi.pikoMiniGame.title,
+      vi.pikoMiniGame.memory.title,
+      vi.pikoMiniGame.breakout.title,
+      vi.pikoMiniGame.stackGame.title,
+      vi.pikoMiniGame.flying.title,
+      vi.pikoMiniGame.leap.title,
     ]).toEqual([
-      "灵感咻咻",
-      "翻到一对",
-      "砖块退散",
-      "叠住别慌",
-      "千万别撞",
-      "跳准一点",
+      "Piko một chút, bắt lại cảm hứng",
+      "Lật hình trí nhớ",
+      "Phá gạch",
+      "Xếp đi, đừng hoảng",
+      "Piko bay",
+      "Piko nhảy",
     ]);
     expect(en.pikoMiniGame.catch).toBeUndefined();
-    expect(zh.pikoMiniGame.catch).toBeUndefined();
+    expect(vi.pikoMiniGame.catch).toBeUndefined();
     expect([
       en.pikoMiniGame.title,
       en.pikoMiniGame.memory.title,
@@ -67,7 +67,7 @@ describe("Piko 游戏中心", () => {
     ]);
   });
 
-  it("使用原生四比三海报入口，并为六个游戏提供 hover 视频", () => {
+  it("uses the native 4:3 poster entry and provides hover videos for the six games", () => {
     expect(source).toContain("aspect-[4/3]");
     expect(source).not.toContain("aspect-[3/2]");
     expect(source).not.toContain("aspect-square");
@@ -99,12 +99,12 @@ describe("Piko 游戏中心", () => {
     expect(posterCardSource).not.toContain("hoverVideoVisible");
     expect(posterCardSource).toContain("onPointerEnter={playHoverPreview}");
     expect(posterCardSource).toContain("onPointerLeave={stopHoverPreview}");
-    // hover 视频是按需资源：打开游戏库会一次挂满六张卡，preload 必须是 none，
-    // 否则未 hover 也会预取约 5.9MiB。首帧由 poster 承担，加载交给 load()。
+    // The hover video is an on-demand resource: opening the game library mounts all six cards at once, so preload must be none,
+    // otherwise about 5.9MiB is prefetched even without hovering. The first frame is carried by the poster, and loading is left to load().
     expect(posterCardSource).toContain('preload="none"');
     expect(posterCardSource).not.toContain('preload="auto"');
     expect(posterCardSource).not.toContain('preload="metadata"');
-    // load() 只在首次 hover 触发一次，重复 hover 不得打断进行中的加载。
+    // load() fires only once on the first hover, and repeated hovers must not interrupt an in-progress load.
     expect(posterCardSource).toContain("hoverVideoLoadStartedRef");
     expect(posterCardSource.match(/video\.load\(\)/g)).toHaveLength(1);
     expect(posterCardSource).toContain("video.currentTime = HOVER_VIDEO_FIRST_FRAME");
@@ -123,13 +123,13 @@ describe("Piko 游戏中心", () => {
     expect(source).not.toContain("border-b border-white/[0.07]");
   });
 
-  it("海报入口按窗口宽度保留递进式卡片间距", () => {
+  it("the poster entry keeps progressive card spacing according to window width", () => {
     expect(source).toContain(
       "grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6",
     );
   });
 
-  it("进入任意小游戏时共享灵感咻咻的背景音乐", () => {
+  it("entering any mini game shares the Inspiration Whoosh background music", () => {
     expect(source).toContain('const BGM_SOUND_SRC = "/piko/sounds/bgm.mp3"');
     expect(source).toContain('if (!open || stationView !== "game" || isAudioMuted)');
     expect(source).not.toContain('activeGameId !== "inspiration-station"');

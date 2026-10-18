@@ -198,16 +198,16 @@ export function useFreezoneImageModels(
 }
 
 /**
- * 后台**确实**一个模型都没配（接口成功返回空列表），不是拉取失败兜底、
- * 也不是还在加载。
+ * The backend has **really** not configured a single model (the endpoint succeeded and returned an empty list), not a fetch-failure fallback,
+ * nor still loading.
  *
- * 为 true 时调用方必须禁用提交：后端 `_resolve_catalog_request` 对权威空目录
- * 直接 409，让用户拿一个前端硬编码的模型点下去再收一个报错是最糟的体验。
- * 三个状态必须一起看 —— 只判 `models.length === 0` 会把「还在加载」也算成
- * 「没配」，面板会闪一下不可用。
+ * When true the caller must disable submission: the backend `_resolve_catalog_request` returns 409 straight away for an authoritative empty catalog,
+ * and letting the user click with a frontend hard-coded model only to receive an error is the worst experience.
+ * The three states must be looked at together - checking only `models.length === 0` would count "still loading" as
+ * "not configured" too, and the panel would flash unavailable.
  *
- * 只吃 models/isLoading/isFallback 三个字段，`useFreezoneVideoModels` 的返回值
- * 形状相同，视频目录也用这一条判据。
+ * It takes only the three fields models/isLoading/isFallback; the return value of `useFreezoneVideoModels` has the same
+ * shape, and the video catalog uses this same criterion.
  */
 export function isAuthoritativeEmptyCatalog(
   result: Pick<UseFreezoneImageModelsResult, "models" | "isLoading" | "isFallback">,

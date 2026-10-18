@@ -325,10 +325,9 @@ describe("originDeepLink", () => {
 });
 
 it.each([
-  ["freezone_image_vectorize", "Generate vector image", "Generate vector image"],
-  ["freezone_image_animate_gif", "Convert animated GIF", "Convert animated GIF"],
-])("labels %s without internal job IDs", (task_type, zh, en) => {
+  ["freezone_image_vectorize", "Generate vector image"],
+  ["freezone_image_animate_gif", "Convert animated GIF"],
+])("labels %s without internal job IDs", (task_type, label) => {
   const task = sampleTask({ task_type, scope: "opaque-job-gif" });
-  expect(displayLabel(task, enT)).toBe(zh);
-  expect(displayLabel(task, enT)).toBe(en);
+  expect(displayLabel(task, enT)).toBe(label);
 });

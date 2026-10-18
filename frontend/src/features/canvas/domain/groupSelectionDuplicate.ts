@@ -3,7 +3,7 @@
 import { CANVAS_NODE_TYPES, type CanvasNode } from "./canvasNodes";
 import { isPresetManagedNode } from "./mainlineNodeFlags";
 
-/** 节点到根的祖先层数；带环保护（画布数据损坏时不至于死循环）。 */
+/** The number of ancestor levels from a node to the root; with cycle protection (so corrupted canvas data does not cause an infinite loop). */
 function nodeDepth(node: CanvasNode, byId: Map<string, CanvasNode>): number {
   let depth = 0;
   const visited = new Set<string>([node.id]);
@@ -17,24 +17,24 @@ function nodeDepth(node: CanvasNode, byId: Map<string, CanvasNode>): number {
 }
 
 /**
- * 批量复制时,「所选节点」实际要送进 `duplicateNodesAsSiblings` 的 id 列表。
+ * In bulk duplication, the id list of "the selected nodes" actually sent into `duplicateNodesAsSiblings`.
  *
- * 和 {@link collectBatchDeletableIds} 是同一个坑的两面:画布的自定义 marquee 会把
- * 「包住其它命中节点的组」从选择里剔除(`Canvas.tsx` 的 `ancestorsOfHits`),否则拖动
- * 多选时父子会双重位移。代价是**用户框选整个组时,组本身的 `selected` 始终为假**。
+ * This is two sides of the same pitfall as {@link collectBatchDeletableIds}: the canvas's custom marquee removes
+ * "groups that enclose other hit nodes" from the selection (`ancestorsOfHits` in `Canvas.tsx`), otherwise when dragging
+ * a multi-selection parent and child would be displaced twice. The cost is that **when the user box-selects a whole group, the group's own `selected` is always false**.
  *
- * 复制若只拿 selected,`duplicateNodesAsSiblings` 里的 `parentIsCloned` 全为假,于是
- * 每个成员各自下移一个身位、各自加「- 副本」、`parentId` 回指原组 —— 副本散架并塞回
- * 原来那个组。这里把「会被整组复制」的普通组补回去。
+ * If duplication took only selected, `parentIsCloned` in `duplicateNodesAsSiblings` would be false everywhere, so
+ * each member would move down one slot on its own, each add "- Copy", and `parentId` point back at the original group - the copies fall apart and get stuffed back into
+ * the original group. Here the ordinary groups that "will be duplicated as a whole" are added back.
  *
- * 两点和删除侧不同:
- * - **不过滤 preset/主线锁定的成员**。复制不是破坏性操作,现有行为就是照单全收;
- *   只有*补回来的组*本身受锁定约束 —— 用户没选它,不该替他克隆一个受管容器。
- * - **返回值保证前序**(父一定排在成员前面)。`duplicateNodesAsSiblings` 靠这个顺序
- *   用 `idMap.get(source.parentId)` 把成员重指到新克隆的组上;顺序反了,成员会拿不到
- *   父组的克隆 id 而落回原组。删除侧没有这个约束,所以它直接 `Array.from(Set)` 就够。
+ * Two differences from the delete side:
+ * - **Preset/mainline-locked members are not filtered**. Duplication is not destructive, and the existing behavior is to take everything as is;
+ *   only *the added-back group* itself is subject to the lock - the user did not select it, and a managed container should not be cloned for them.
+ * - **The return value guarantees pre-order** (the parent always comes before its members). `duplicateNodesAsSiblings` relies on this order
+ *   to re-point members to the newly cloned group with `idMap.get(source.parentId)`; with the order reversed, members could not get
+ *   the parent group's clone id and would land back in the original group. The delete side has no such constraint, so `Array.from(Set)` is enough there.
  *
- * 嵌套组也要成立:先深后浅地补,深层子组补进来之后,外层组才看得见「成员已全覆盖」。
+ * Nested groups must hold too: add back deep first, then shallow, and only after a deep subgroup is added back can the outer group see "members are all covered".
  */
 export function collectDuplicableIds(
   nodes: CanvasNode[],
@@ -49,7 +49,7 @@ export function collectDuplicableIds(
     }
   }
 
-  // 一次遍历统计每个父节点的子节点总数,子节点的「已覆盖」数随补组过程增长。
+  // One pass to count each parent node's total children; a child's "covered" count grows as groups are added back.
   const childrenByParent = new Map<string, CanvasNode[]>();
   for (const node of nodes) {
     if (!node.parentId) {
@@ -66,7 +66,7 @@ export function collectDuplicableIds(
   const groups = nodes
     .filter((node) => node.type === CANVAS_NODE_TYPES.group)
     .map((node) => ({ node, depth: nodeDepth(node, byId) }))
-    // 深的先判定:嵌套组补进 result 后,它的父组才能算「成员全覆盖」。
+    // Judge deep ones first: only after a nested group is added into result can its parent group count as "members all covered".
     .sort((a, b) => b.depth - a.depth);
   for (const { node } of groups) {
     if (result.has(node.id) || isPresetManagedNode(node)) {
@@ -78,7 +78,7 @@ export function collectDuplicableIds(
     }
   }
 
-  // 前序:按祖先层数升序。父的层数必然小于子,浅的排前面即可,同层保持 `nodes` 原序。
+  // Pre-order: ascending by ancestor level. A parent's level is necessarily smaller than a child's, so putting shallow ones first is enough, and same-level ones keep the original `nodes` order.
   return nodes
     .filter((node) => result.has(node.id))
     .map((node) => ({ id: node.id, depth: nodeDepth(node, byId) }))

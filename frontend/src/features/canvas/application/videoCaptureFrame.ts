@@ -13,14 +13,14 @@ export type VideoCaptureFrameMode = 'first' | 'last' | 'current';
 export { captureVideoFrameBlob };
 
 /**
- * 三档截帧对应的 seek 位置（从 VideoNode.handleCaptureFrame 抽出的纯计算）：
- * - first  → 0
- * - last   → 时长 - 0.05s；时长完全未知时给 MAX_SAFE_INTEGER，让
- *            captureVideoFrameBlob 内部按实际 duration 夹到末尾
- * - current→ 活的播放器 currentTime；拿不到就退回 0
+ * The seek position corresponding to the three capture tiers (pure computation extracted from VideoNode.handleCaptureFrame):
+ * - first  -> 0
+ * - last   -> duration - 0.05s; when the duration is entirely unknown give MAX_SAFE_INTEGER, letting
+ *            captureVideoFrameBlob clamp to the end by the actual duration internally
+ * - current-> the live player's currentTime; fall back to 0 if unavailable
  *
- * `liveDurationSec` 是详情/节点里那个正在播的 <video> 报的时长（最准），
- * `fallbackDurationSec` 是节点 data.durationMs 换算来的兜底。
+ * `liveDurationSec` is the duration reported by the <video> that is playing in the detail/node (the most accurate),
+ * `fallbackDurationSec` is the fallback converted from the node's data.durationMs.
  */
 export function resolveCaptureSeekSec(
   mode: VideoCaptureFrameMode,

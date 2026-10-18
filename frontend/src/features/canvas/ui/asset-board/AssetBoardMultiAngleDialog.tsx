@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { type ReactElement } from 'react';
 
 import { type CanvasNode } from '@/features/canvas/domain/canvasNodes';
@@ -9,24 +10,24 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { AssetBoardEditorDialog, useCloseOnce } from './AssetBoardEditorDialog';
 
 export interface AssetBoardMultiAngleDialogProps {
-  /** 源图片节点。 */
+  /** The source image node. */
   node: CanvasNode;
-  /** 已解析的图源。 */
+  /** The resolved image source. */
   imageSource: string;
-  /** 关闭弹窗（提交成功后内容层也会调用）。 */
+  /** Close the dialog (the content layer also calls it after a successful submit). */
   onClose: () => void;
-  /** 提交成功回调，入参新结果节点 id（默认已请求视口预定位，这里可再叠 busy 态收尾）。 */
+  /** Submit success callback, with the new result node id as argument (viewport pre-positioning is requested by default; a busy-state wrap-up can be layered on here). */
   onSubmitted?: (nodeId: string) => void;
 }
 
 /**
- * 故事板详情的「多角度」弹窗：居中弹窗里放**工作流那套完整的多维度编辑器**
- * （球体选角 + 方向钮 + 预设/画质 + 三条滑杆 + 提示词开关 + 算力与提交），
- * 而不是详情内联的简化配置行。
+ * The "Multi-angle" dialog of the storyboard detail: a centered dialog holding **the workflow's complete multi-dimension editor**
+ * (sphere angle picking + direction buttons + presets/quality + three sliders + prompt switch + compute cost and submit),
+ * rather than the simplified inline config row in the detail.
  *
- * 与工作流唯一的差异是提交后的收尾：工作流选中新节点，这里请求视口预定位
- * （故事板可见时画布是 suspended 的，选中态没有意义；预定位让用户切回工作流
- * 时视口已对准结果节点，同 Task 10 模式）。
+ * The only difference from the workflow is the wrap-up after submission: the workflow selects the new node, while here viewport pre-positioning is requested
+ * (when the storyboard is visible the canvas is suspended, so selection state is meaningless; pre-positioning lets the user find the viewport already aimed
+ * at the result node on switching back to the workflow, the same Task 10 pattern).
  */
 export function AssetBoardMultiAngleDialog({
   node,
@@ -34,10 +35,10 @@ export function AssetBoardMultiAngleDialog({
   onClose,
   onSubmitted,
 }: AssetBoardMultiAngleDialogProps): ReactElement {
-  // 外壳与内容层必须共用同一个包装后的关闭回调，见 useCloseOnce 的说明。
+  // The shell and the content layer must share the same wrapped close callback, see the note on useCloseOnce.
   const close = useCloseOnce(onClose);
   return (
-    <AssetBoardEditorDialog label="多维度编辑器" onClose={close}>
+    <AssetBoardEditorDialog label={i18n.t('canvas.assetBoard.multiAngleEditor')} onClose={close}>
       <MultiAngleEditorContent
         node={node}
         imageSource={imageSource}

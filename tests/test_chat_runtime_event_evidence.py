@@ -62,8 +62,8 @@ def test_runtime_event_evidence_requires_saved_canvas_identity() -> None:
         is event.structured
     )
     assert _codex_freezone_write_receipt(event, expected_canvas="canvas-b") is None
-    event.structured = {"ok": False, "user_message": "画布写入失败"}
-    assert _codex_freezone_write_result_error(event) == "画布写入失败"
+    event.structured = {"ok": False, "user_message": "Canvas write failed"}
+    assert _codex_freezone_write_result_error(event) == "Canvas write failed"
 
 
 def _confirm_event(*, input: dict | None, structured: dict) -> SimpleNamespace:

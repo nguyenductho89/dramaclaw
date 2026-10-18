@@ -12,11 +12,11 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      en: {
         translation: {
           common: { cancel: "Cancel", error: "Errors" },
           episode: {
@@ -110,7 +110,7 @@ const queryState: {
       narration_segment: "Narration",
       visual_description: "Original shot",
       scene_ref: { scene_id: "Warehouse_night" },
-      time_of_day: "Night",
+      time_of_day: "night",
       estimated_duration: 4,
       audio_type: "narration",
       detected_identities: [],
@@ -167,7 +167,7 @@ beforeEach(() => {
       narration_segment: "Narration",
       visual_description: "Original shot",
       scene_ref: { scene_id: "Warehouse_night" },
-      time_of_day: "Night",
+      time_of_day: "night",
       estimated_duration: 4,
       audio_type: "narration",
       detected_identities: [],
@@ -295,7 +295,7 @@ describe("InsertManualShotDialog", () => {
         scene_id: "Bathroom_leak_night",
         base_scene_id: "Bathroom",
         variant_id: "leak",
-        time_of_day: "Night",
+        time_of_day: "night",
       },
     ];
     render(
@@ -313,7 +313,7 @@ describe("InsertManualShotDialog", () => {
     await user.click(screen.getByRole("combobox", { name: "Scene" }));
     await user.click(await screen.findByRole("option", { name: "Bathroom" }));
     await user.click(screen.getByRole("combobox", { name: "Variant" }));
-    await user.click(await screen.findByRole("option", { name: "Water leak" }));
+    await user.click(await screen.findByRole("option", { name: "leak" }));
     fireEvent.click(screen.getByRole("button", { name: "Insert" }));
 
     expect(insertMutateAsync).toHaveBeenCalledTimes(1);

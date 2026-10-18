@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -14,8 +15,8 @@ import { MapPin, PenLine } from 'lucide-react';
 import type { AssetBoardReference } from '@/features/canvas/domain/assetBoard';
 import { cn } from '@/lib/utils';
 
-// 菜单项样式（与 AssetBoardDetailToolbar 的「...」菜单项同款：rounded-[6px]、
-// hover bg-white/5，本分支体系统一）。
+// Menu item style (the same as the "..." menu items of AssetBoardDetailToolbar: rounded-[6px],
+// hover bg-white/5, unified in this branch's system).
 const REFERENCE_MENU_ITEM_CLASS =
   'flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white/80 transition-colors hover:bg-white/5 hover:text-white';
 
@@ -23,31 +24,31 @@ const REFERENCE_MENU_CLOSE_DELAY_MS = 140;
 
 interface AssetBoardReferenceThumbMenuProps {
   reference: AssetBoardReference;
-  /** 「编辑」→ 打开被引用节点的详情，用户在那里改。 */
+  /** "Edit" -> open the referenced node's detail, where the user edits. */
   onEdit: () => void;
-  /** 「定位」→ 滚到被引用节点的卡片处并高亮；null（自带参考图无对应节点）→ 不渲染该项。 */
+  /** "Locate" -> scroll to the referenced node's card and highlight it; null (the node's own reference image has no matching node) -> this item is not rendered. */
   onLocate: (() => void) | null;
-  /** 缩略图尺寸等外观覆盖：详情 48px、卡片 40px。 */
+  /** Appearance overrides such as thumbnail size: 48px in detail, 40px in cards. */
   className?: string;
   /**
-   * 点击缩略图本身的行为。不传 → 点击切换菜单开关（详情的既有手感）；
-   * 传了 → 点击执行它（卡片：开灯箱预览），菜单只由 hover/focus 驱动。
+   * The behavior of clicking the thumbnail itself. Not passed -> a click toggles the menu open/closed (the detail's existing feel);
+   * passed -> a click runs it (card: open a lightbox preview), and the menu is driven only by hover/focus.
    */
   onThumbClick?: () => void;
 }
 
 /**
- * 参考素材缩略图 + 悬停菜单（详情面板与故事板卡片共用，保证两处手感一致）：
- * 缩略图即触发器，hover / 点击展开一个小菜单——
- * - 「编辑」→ onEdit（跨栏 push 该被引用节点的详情去改）；
- * - 「定位」→ onLocate（把故事板列表滚到该被引用节点的卡片处并高亮，非画布定位）。
+ * Reference asset thumbnail + hover menu (shared by the detail panel and storyboard cards, keeping the feel consistent in both places):
+ * the thumbnail is the trigger, and hover / click expands a small menu -
+ * - "Edit" -> onEdit (push the referenced node's detail across columns to edit);
+ * - "Locate" -> onLocate (scroll the storyboard list to the referenced node's card and highlight it, not canvas positioning).
  *
- * hover 为主：移入缩略图或面板都保持打开，移出延迟 {@link REFERENCE_MENU_CLOSE_DELAY_MS}ms
- * 收起（防抖）。键盘可达：focus 落到触发器/任一项即展开，焦点整体离开则收起，
- * Esc 收起并把焦点还给缩略图。选完任一项即收起菜单。
+ * Mainly hover: moving into the thumbnail or panel keeps it open, and moving out collapses it after a delay of {@link REFERENCE_MENU_CLOSE_DELAY_MS}ms
+ * (debounced). Keyboard accessible: focus landing on the trigger/any item expands it, and focus leaving as a whole collapses it,
+ * Esc collapses and returns focus to the thumbnail. After choosing any item the menu collapses.
  *
- * 根节点吞掉 click 冒泡：卡片整体挂着「点开详情」的 onClick，参考素材的菜单交互
- * 不应连带把当前卡片也打开（详情侧无父级点击处理，吞掉无副作用）。
+ * The root node swallows click bubbling: the whole card carries a "click to open detail" onClick, and the reference asset menu interaction
+ * should not open the current card along with it (the detail side has no parent click handler, so swallowing has no side effect).
  */
 export function AssetBoardReferenceThumbMenu({
   reference,
@@ -78,7 +79,7 @@ export function AssetBoardReferenceThumbMenu({
     clearCloseTimer();
     closeTimerRef.current = setTimeout(() => setOpen(false), REFERENCE_MENU_CLOSE_DELAY_MS);
   }, [clearCloseTimer]);
-  // 卸载/切换详情项（列表按 key 重挂）时清掉未触发的收起定时器。
+  // On unmount / switching detail items (the list remounts by key) clear any pending collapse timer.
   useEffect(() => clearCloseTimer, [clearCloseTimer]);
 
   const handleBlur = useCallback(
@@ -102,7 +103,7 @@ export function AssetBoardReferenceThumbMenu({
 
   return (
     <div
-      // shrink-0：卡片里的参考行是 flex-wrap，缩略图不能被挤扁。
+      // shrink-0: the reference row in a card is flex-wrap, and the thumbnail must not be squashed.
       className="relative shrink-0"
       onMouseEnter={openNow}
       onMouseLeave={scheduleClose}
@@ -126,8 +127,8 @@ export function AssetBoardReferenceThumbMenu({
           if (open) closeNow();
           else openNow();
         }}
-        // 圆角 3px：与提示词内联参考缩略图（AssetBoardPromptText）统一，小缩略图
-        // 配近乎直角的小圆角更紧致。
+        // Corner radius 3px: unified with the inline reference thumbnails in the prompt (AssetBoardPromptText); a small thumbnail
+        // pairs better with a nearly right-angled small radius for a tighter look.
         className={cn(
           'block h-12 w-12 overflow-hidden rounded-[3px] border border-white/10 transition-colors hover:border-white/25',
           className,
@@ -144,7 +145,7 @@ export function AssetBoardReferenceThumbMenu({
       {open && (
         <div
           role="menu"
-          aria-label={`${reference.label} 操作`}
+          aria-label={i18n.t('canvas.assetBoard.referenceMenu.actions', { label: reference.label })}
           className="absolute left-0 top-full z-50 mt-1.5 min-w-[120px] rounded-md border border-white/10 bg-[#2e2e2e] p-1 text-white/85 shadow-xl"
         >
           <button
@@ -157,7 +158,7 @@ export function AssetBoardReferenceThumbMenu({
             className={REFERENCE_MENU_ITEM_CLASS}
           >
             <PenLine className="h-4 w-4 shrink-0" />
-            <span className="flex-1">编辑</span>
+            <span className="flex-1">{i18n.t('canvas.assetBoard.referenceMenu.edit')}</span>
           </button>
           {onLocate && (
             <button
@@ -170,7 +171,7 @@ export function AssetBoardReferenceThumbMenu({
               className={REFERENCE_MENU_ITEM_CLASS}
             >
               <MapPin className="h-4 w-4 shrink-0" />
-              <span className="flex-1">定位</span>
+              <span className="flex-1">{i18n.t('canvas.assetBoard.referenceMenu.locate')}</span>
             </button>
           )}
         </div>

@@ -20,7 +20,7 @@ vi.mock("@/features/viewer-kit/pano/PanoCaptureSurface", () => ({
     surfaceProps.current = props;
     return (
       <button type="button" data-testid="pano-capture-surface" onClick={props.onClose}>
-        关闭
+        Dismiss
       </button>
     );
   },
@@ -30,8 +30,8 @@ const manifest: PanoViewerManifest = {
   viewer_kind: "pano360",
   mode: "beat",
   project: "demo",
-  scene_id: "地下室",
-  display_name: "地下室 360",
+  scene_id: "Basement",
+  display_name: "Basement 360",
   source: {
     slot_kind: "scene_director_pano_360",
     url: "/static/demo/pano.jpg",
@@ -92,7 +92,7 @@ describe("PanoCaptureDialog", () => {
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
     expect(surfaceProps.current?.onClose).toEqual(expect.any(Function));
 
-    await user.click(screen.getByRole("button", { name: "关闭" }));
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

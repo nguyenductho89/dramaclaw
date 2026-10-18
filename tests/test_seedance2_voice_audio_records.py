@@ -17,7 +17,7 @@ def test_voice_audio_record_upsert_and_lookup(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=3,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=audio_path,
         voice_sha256="abc123",
         mode="missing_only",
@@ -31,7 +31,7 @@ def test_voice_audio_record_upsert_and_lookup(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=3,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
     )
 
     assert record is not None
@@ -60,7 +60,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=3,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=stale_path,
         voice_sha256="old",
         mode="redo_all",
@@ -73,7 +73,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=4,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=current_path,
         voice_sha256="new",
         mode="redo_all",
@@ -87,7 +87,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=missing_path,
         current_voice_sha256="new",
     ).state == "missing"
@@ -95,7 +95,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=2,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=unknown_path,
         current_voice_sha256="new",
     ).state == "unknown"
@@ -103,7 +103,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=3,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=stale_path,
         current_voice_sha256="new",
     ).state == "stale"
@@ -111,7 +111,7 @@ def test_classify_seedance2_voice_audio_states(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=4,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=current_path,
         current_voice_sha256="new",
     ).state == "current"
@@ -127,14 +127,14 @@ def test_classify_seedance2_voice_audio_marks_text_hash_changes_stale(tmp_path):
     audio_path = tmp_path / "project" / "audio" / "ep001" / "beat_05.mp3"
     audio_path.parent.mkdir(parents=True)
     audio_path.write_bytes(b"audio")
-    old_text_hash = hashlib.sha256("旧台词".encode("utf-8")).hexdigest()
-    new_text_hash = hashlib.sha256("新台词".encode("utf-8")).hexdigest()
+    old_text_hash = hashlib.sha256("old line".encode("utf-8")).hexdigest()
+    new_text_hash = hashlib.sha256("new line".encode("utf-8")).hexdigest()
 
     upsert_seedance2_voice_audio_record(
         db_path=db_path,
         episode_number=1,
         beat_number=5,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=audio_path,
         voice_sha256="voice",
         text_sha256=old_text_hash,
@@ -149,7 +149,7 @@ def test_classify_seedance2_voice_audio_marks_text_hash_changes_stale(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=5,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=audio_path,
         current_voice_sha256="voice",
         current_text_sha256=old_text_hash,
@@ -158,7 +158,7 @@ def test_classify_seedance2_voice_audio_marks_text_hash_changes_stale(tmp_path):
         db_path=db_path,
         episode_number=1,
         beat_number=5,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         audio_path=audio_path,
         current_voice_sha256="voice",
         current_text_sha256=new_text_hash,
@@ -177,7 +177,7 @@ def test_audio_scope_attempt_count_tracks_task_starts(tmp_path):
     assert count_audio_scope_attempts(
         project_output_dir=project_output_dir,
         task_type="seedance2_voice_audio",
-        scope="ep001:谢铮_幼年时期",
+        scope="ep001:XieZheng_child",
         episode=1,
     ) == 0
 
@@ -187,9 +187,9 @@ def test_audio_scope_attempt_count_tracks_task_starts(tmp_path):
         provider="fal.ai",
         model_name="IndexTTS2",
         task_type="seedance2_voice_audio",
-        scope="ep001:谢铮_幼年时期",
+        scope="ep001:XieZheng_child",
         episode=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
     )
     update_audio_generation_attempt(
         project_output_dir=project_output_dir,
@@ -200,6 +200,6 @@ def test_audio_scope_attempt_count_tracks_task_starts(tmp_path):
     assert count_audio_scope_attempts(
         project_output_dir=project_output_dir,
         task_type="seedance2_voice_audio",
-        scope="ep001:谢铮_幼年时期",
+        scope="ep001:XieZheng_child",
         episode=1,
     ) == 1

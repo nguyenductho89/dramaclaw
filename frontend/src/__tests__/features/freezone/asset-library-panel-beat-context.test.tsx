@@ -31,7 +31,7 @@ vi.mock("@/features/freezone/CanvasesTab", () => ({
   CanvasesTab: () => null,
 }));
 
-// 「主线资产」tab 受后台的 mainline product surface 开关控制,默认按开着测。
+// The "Mainline assets" tab is controlled by the backend's mainline product surface switch; test with it on by default.
 let mainlineAvailable = true;
 vi.mock("@/lib/queries/product-surfaces", () => ({
   useProductSurfaces: () => ({ data: undefined, isPending: false }),
@@ -39,7 +39,7 @@ vi.mock("@/lib/queries/product-surfaces", () => ({
     code === "mainline"
       ? {
           surface_code: "mainline",
-          label: "虾集",
+          label: "Market",
           available: mainlineAvailable,
           unavailable_message: "",
         }
@@ -146,8 +146,8 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "主线资产" }));
-    await screen.findByText(/项目素材加载失败：network down/);
+    fireEvent.click(screen.getByRole("tab", { name: "Mainline assets" }));
+    await screen.findByText(/Failed to load project assets: network down/);
 
     act(() => {
       rerender(
@@ -163,7 +163,7 @@ describe("AssetLibraryPanel beat context", () => {
 
     await vi.waitFor(() => expect(listFreezoneProjectAssets).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => {
-      expect(screen.queryByText(/项目素材加载失败/)).toBeNull();
+      expect(screen.queryByText(/Failed to load project assets/)).toBeNull();
     });
   });
 
@@ -174,7 +174,7 @@ describe("AssetLibraryPanel beat context", () => {
         tab: "director",
         kind: "director",
         role: "director_combined",
-        label: "导演合成图",
+        label: "Director composite",
         sublabel: "EP1 / Beat 1",
         url: "/static/director_control_frames/ep001/beat_01/combined.png",
         rel_path: "director_control_frames/ep001/beat_01/combined.png",
@@ -187,7 +187,7 @@ describe("AssetLibraryPanel beat context", () => {
         tab: "director",
         kind: "director",
         role: "selected_background",
-        label: "当前背景 · Beat 1",
+        label: "Current background · Beat 1",
         sublabel: "EP1 / Beat 1",
         url: "/static/director_control_frames/ep001/beat_01/selected_background.png",
         rel_path: "director_control_frames/ep001/beat_01/selected_background.png",
@@ -200,13 +200,13 @@ describe("AssetLibraryPanel beat context", () => {
         tab: "scenes",
         kind: "scene",
         role: "scene_master",
-        label: "厨房",
+        label: "Kitchen",
         sublabel: "scene master",
         url: "/static/assets/scenes/kitchen/master.png",
         rel_path: "assets/scenes/kitchen/master.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
     ]);
     listFreezoneBeatContext.mockResolvedValue({
@@ -225,11 +225,11 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "主线资产" }));
-    fireEvent.click(screen.getByRole("button", { name: /场景/ }));
-    expect(await screen.findByText("厨房")).toBeInTheDocument();
-    expect(screen.queryByText("导演合成图")).toBeNull();
-    expect(screen.queryByText("当前背景 · Beat 1")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Mainline assets" }));
+    fireEvent.click(screen.getByRole("button", { name: /Scene/ }));
+    expect(await screen.findByText("Kitchen")).toBeInTheDocument();
+    expect(screen.queryByText("Director composite")).toBeNull();
+    expect(screen.queryByText("Current background · Beat 1")).toBeNull();
   });
 
   it("keeps concrete scene slots and hides auxiliary scene pointers", async () => {
@@ -239,130 +239,130 @@ describe("AssetLibraryPanel beat context", () => {
         tab: "scenes",
         kind: "scene",
         role: "scene_master",
-        label: "厨房 / master",
-        sublabel: "厨房",
+        label: "Kitchen / master",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/master.png",
         rel_path: "assets/scenes/kitchen/master.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-reverse-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_reverse_master",
-        label: "厨房 / reverse master",
-        sublabel: "厨房",
+        label: "Kitchen / reverse master",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/reverse_master.png",
         rel_path: "assets/scenes/kitchen/reverse_master.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-deprecated-360-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_360",
-        label: "厨房 / 旧 360",
-        sublabel: "厨房",
+        label: "Kitchen / old 360",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/scene_panorama_sketch_360.png",
         rel_path: "assets/scenes/kitchen/scene_panorama_sketch_360.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-director-pano-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_director_pano_360",
-        label: "厨房 / director pano 360",
-        sublabel: "厨房",
+        label: "Kitchen / director pano 360",
+        sublabel: "Kitchen",
         url: "/static/director_worlds/kitchen/v1/pano_360.png",
         rel_path: "director_worlds/kitchen/v1/pano_360.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-3gs-master-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_3gs_master_ply",
-        label: "厨房 / 3D 世界（正面）",
-        sublabel: "厨房",
+        label: "Kitchen / 3D world (front)",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/3dgs/master.sog",
         rel_path: "assets/scenes/kitchen/3dgs/master.sog",
         media_type: "file",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-3gs-reverse-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_3gs_reverse_ply",
-        label: "厨房 / 3D 世界（背面）",
-        sublabel: "厨房",
+        label: "Kitchen / 3D world (back)",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/3dgs/reverse.sog",
         rel_path: "assets/scenes/kitchen/3dgs/reverse.sog",
         media_type: "file",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-3gs-pano-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_3gs_pano_ply",
-        label: "厨房 / 3D 世界（360）",
-        sublabel: "厨房",
+        label: "Kitchen / 3D world (360)",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/3dgs/pano.sog",
         rel_path: "assets/scenes/kitchen/3dgs/pano.sog",
         media_type: "file",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-3gs-active-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_3gs_active_ply",
-        label: "厨房 / 3D 世界（当前）",
-        sublabel: "厨房",
+        label: "Kitchen / 3D world (current)",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/3dgs/active.sog",
         rel_path: "assets/scenes/kitchen/3dgs/active.sog",
         media_type: "file",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-3gs-collision-kitchen",
         tab: "scenes",
         kind: "scene",
         role: "scene_3gs_collision_glb",
-        label: "厨房 / 3D 碰撞体",
-        sublabel: "厨房",
+        label: "Kitchen / 3D collider",
+        sublabel: "Kitchen",
         url: "/static/assets/scenes/kitchen/3dgs/collision.glb",
         rel_path: "assets/scenes/kitchen/3dgs/collision.glb",
         media_type: "file",
         exists: true,
-        meta: { scene_id: "厨房" },
+        meta: { scene_id: "Kitchen" },
       },
       {
         id: "scene-master-bedroom",
         tab: "scenes",
         kind: "scene",
         role: "scene_master",
-        label: "卧室 / master",
-        sublabel: "卧室",
+        label: "Bedroom / master",
+        sublabel: "Bedroom",
         url: "/static/assets/scenes/bedroom/master.png",
         rel_path: "assets/scenes/bedroom/master.png",
         media_type: "image",
         exists: true,
-        meta: { scene_id: "卧室" },
+        meta: { scene_id: "Bedroom" },
       },
     ]);
     listFreezoneBeatContext.mockResolvedValue({
@@ -381,28 +381,28 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "主线资产" }));
-    fireEvent.click(screen.getByRole("button", { name: /场景/ }));
+    fireEvent.click(screen.getByRole("tab", { name: "Mainline assets" }));
+    fireEvent.click(screen.getByRole("button", { name: /Scene/ }));
 
-    expect(await screen.findByText("厨房 / master")).toBeInTheDocument();
-    expect(screen.getByText("厨房 / reverse master")).toBeInTheDocument();
-    expect(screen.getByText("厨房 / 导演世界")).toBeInTheDocument();
-    expect(screen.getByText("卧室 / master")).toBeInTheDocument();
-    expect(screen.queryByText("厨房 / 旧 360")).toBeNull();
-    expect(screen.queryByText("厨房 / director pano 360")).toBeNull();
-    expect(screen.queryByText("厨房 / 3D 世界（正面）")).toBeNull();
-    expect(screen.queryByText("厨房 / 3D 世界（背面）")).toBeNull();
-    expect(screen.queryByText("厨房 / 3D 世界（360）")).toBeNull();
-    expect(screen.queryByText("厨房 / 3D 世界（当前）")).toBeNull();
-    expect(screen.queryByText("厨房 / 3D 碰撞体")).toBeNull();
-    expect(screen.getAllByText("正面图")).toHaveLength(2);
-    expect(screen.getAllByText("背面图")).toHaveLength(1);
-    expect(screen.getAllByText("导演世界")).toHaveLength(1);
-    expect(screen.queryByText("360图")).toBeNull();
-    expect(screen.queryByText("正面世界")).toBeNull();
-    expect(screen.queryByText("背面世界")).toBeNull();
-    expect(screen.queryByText("360世界")).toBeNull();
-    expect(screen.getByRole("button", { name: /场景.*4/ })).toBeInTheDocument();
+    expect(await screen.findByText("Kitchen / master")).toBeInTheDocument();
+    expect(screen.getByText("Kitchen / reverse master")).toBeInTheDocument();
+    expect(screen.getByText("Kitchen / Director world")).toBeInTheDocument();
+    expect(screen.getByText("Bedroom / master")).toBeInTheDocument();
+    expect(screen.queryByText("Kitchen / old 360")).toBeNull();
+    expect(screen.queryByText("Kitchen / director pano 360")).toBeNull();
+    expect(screen.queryByText("Kitchen / 3D world (front)")).toBeNull();
+    expect(screen.queryByText("Kitchen / 3D world (back)")).toBeNull();
+    expect(screen.queryByText("Kitchen / 3D world (360)")).toBeNull();
+    expect(screen.queryByText("Kitchen / 3D world (current)")).toBeNull();
+    expect(screen.queryByText("Kitchen / 3D collider")).toBeNull();
+    expect(screen.getAllByText("Front view")).toHaveLength(2);
+    expect(screen.getAllByText("Reverse view")).toHaveLength(1);
+    expect(screen.getAllByText("Director world")).toHaveLength(1);
+    expect(screen.queryByText("360 image")).toBeNull();
+    expect(screen.queryByText("Front world")).toBeNull();
+    expect(screen.queryByText("Reverse world")).toBeNull();
+    expect(screen.queryByText("360 world")).toBeNull();
+    expect(screen.getByRole("button", { name: /Scene.*4/ })).toBeInTheDocument();
   });
 
   it("hides the mainline asset tab when the mainline surface is disabled", async () => {
@@ -424,10 +424,10 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    expect(screen.queryByRole("tab", { name: "主线资产" })).toBeNull();
-    expect(screen.queryByPlaceholderText("搜索素材...")).toBeNull();
-    // 「项目画布」不受这个开关影响,必须还在。
-    expect(screen.getByRole("tab", { name: "项目画布" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Mainline assets" })).toBeNull();
+    expect(screen.queryByPlaceholderText("Search assets...")).toBeNull();
+    // "Project canvases" is not affected by this switch and must still be there.
+    expect(screen.getByRole("tab", { name: "Project canvases" })).toBeInTheDocument();
   });
 
   it("falls back to the canvases tab when mainline is switched off while open", async () => {
@@ -448,8 +448,8 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "主线资产" }));
-    expect(screen.getByPlaceholderText("搜索素材...")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Mainline assets" }));
+    expect(screen.getByPlaceholderText("Search assets...")).toBeInTheDocument();
 
     mainlineAvailable = false;
     act(() => {
@@ -464,9 +464,9 @@ describe("AssetLibraryPanel beat context", () => {
     });
 
     await vi.waitFor(() => {
-      expect(screen.queryByPlaceholderText("搜索素材...")).toBeNull();
+      expect(screen.queryByPlaceholderText("Search assets...")).toBeNull();
     });
-    expect(screen.queryByRole("tab", { name: "主线资产" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Mainline assets" })).toBeNull();
   });
 
   it("browses the project asset library under its own tab", async () => {
@@ -480,21 +480,21 @@ describe("AssetLibraryPanel beat context", () => {
       items: [
         {
           id: "lib-1",
-          name: "参考图A",
+          name: "Reference A",
           media: "image",
           source: "upload",
           image_urls: ["/static/library/a.png"],
         },
         {
           id: "lib-2",
-          name: "厨房静帧",
+          name: "Kitchen still",
           media: "image",
           source: "scene",
           image_urls: ["/static/library/kitchen.png"],
         },
         {
           id: "lib-3",
-          name: "片段B",
+          name: "Clip B",
           media: "video",
           source: "upload",
           video_url: "/static/library/b.mp4",
@@ -512,30 +512,30 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "资产库" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Asset library" }));
 
-    // 根目录只有文件夹,条目要点进去才看得到。
+    // The root has only folders; items are visible only after clicking in.
     expect(
-      await screen.findByRole("button", { name: "文件夹 主线" }),
+      await screen.findByRole("button", { name: "Folder Mainline" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "文件夹 待分类资产" }),
+      screen.getByRole("button", { name: "Folder Uncategorized" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("参考图A")).toBeNull();
+    expect(screen.queryByText("Reference A")).toBeNull();
 
-    // 主线同步来的条目(不论人物/场景/道具)统统收在一个【主线】文件夹里。
-    fireEvent.click(screen.getByRole("button", { name: "文件夹 主线" }));
-    expect(await screen.findByText("厨房静帧")).toBeInTheDocument();
-    expect(screen.queryByText("参考图A")).toBeNull();
+    // Items synced from the mainline (characters/scenes/props alike) are all collected into one [Mainline] folder.
+    fireEvent.click(screen.getByRole("button", { name: "Folder Mainline" }));
+    expect(await screen.findByText("Kitchen still")).toBeInTheDocument();
+    expect(screen.queryByText("Reference A")).toBeNull();
 
-    // 面包屑退回根目录,再进【待分类资产】看本地上传的图片和视频。
-    fireEvent.click(screen.getByRole("button", { name: "返回资产库根目录" }));
+    // The breadcrumb goes back to the root, then enter [Uncategorized] to see the locally uploaded images and videos.
+    fireEvent.click(screen.getByRole("button", { name: "Back to the asset library root" }));
     fireEvent.click(
-      await screen.findByRole("button", { name: "文件夹 待分类资产" }),
+      await screen.findByRole("button", { name: "Folder Uncategorized" }),
     );
-    expect(await screen.findByText("参考图A")).toBeInTheDocument();
-    expect(screen.getByText("片段B")).toBeInTheDocument();
-    expect(screen.queryByText("厨房静帧")).toBeNull();
+    expect(await screen.findByText("Reference A")).toBeInTheDocument();
+    expect(screen.getByText("Clip B")).toBeInTheDocument();
+    expect(screen.queryByText("Kitchen still")).toBeNull();
   });
 
   it("keeps the asset library tab available when mainline is disabled", async () => {
@@ -558,10 +558,10 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    // 资产库装的是本地上传的素材,不属于主线,开关关掉也得留着。
-    expect(screen.queryByRole("tab", { name: "主线资产" })).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "资产库" }));
-    expect(await screen.findByText(/资产库还是空的/)).toBeInTheDocument();
+    // The asset library holds locally uploaded assets, which are not part of the mainline, and must stay even with the switch off.
+    expect(screen.queryByRole("tab", { name: "Mainline assets" })).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Asset library" }));
+    expect(await screen.findByText(/asset library is empty/)).toBeInTheDocument();
   });
 
   it("opens the asset library modal from the tab bar icon", async () => {
@@ -585,18 +585,18 @@ describe("AssetLibraryPanel beat context", () => {
       { wrapper: makeWrapper() },
     );
 
-    // 入口常驻,停在「项目画布」tab 上也能点开。
-    expect(screen.getByRole("tab", { name: "项目画布" })).toHaveAttribute(
+    // The entry is always present; it can be opened even while sitting on the "Project canvases" tab.
+    expect(screen.getByRole("tab", { name: "Project canvases" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    fireEvent.click(screen.getByRole("button", { name: "资产管理" }));
+    fireEvent.click(screen.getByRole("button", { name: "Asset manager" }));
 
     expect(
-      await screen.findByRole("button", { name: "新建文件夹" }),
+      await screen.findByRole("button", { name: "New folder" }),
     ).toBeInTheDocument();
-    // 管理态的批量能力已收窄为「批量删除」，且只作用于本地上传资产——主线同步
-    // 的条目删了也会被下次同步拉回来。入口文案随之改名，这里断言新名字。
-    expect(screen.getByRole("button", { name: "批量删除" })).toBeInTheDocument();
+    // The management state's batch capability has been narrowed to "Batch delete", applying only to locally uploaded assets - mainline-synced
+    // items would be pulled back by the next sync after deletion. The entry copy was renamed accordingly, and the new name is asserted here.
+    expect(screen.getByRole("button", { name: "Bulk delete" })).toBeInTheDocument();
   });
 });

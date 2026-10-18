@@ -18,13 +18,13 @@ import { useCanvasStore } from '@/stores/canvasStore';
 import { loadImageElement } from './imageData';
 
 /**
- * 「裁剪」的编排层。与 imageRotate 是同一族（本地 canvas 变换 → 上传 → 写回一个
- * **预建的结果节点**，源图始终不动），差别只在变换本身：旋转扩画布，裁剪取子矩形。
+ * The orchestration layer of "Crop". The same family as imageRotate (local canvas transform -> upload -> write back to a
+ * **pre-built result node**, with the source image always untouched); the difference is only in the transform itself: rotation expands the canvas, crop takes a sub-rectangle.
  *
- * 纯本地运算，不走生成接口——所以没有算力消耗，也没有任务轮询。
+ * Pure local computation, not going through generation endpoints - so no compute cost and no task polling.
  */
 
-/** 裁剪框，单位是源图的**自然像素**（不是显示像素，也不是归一化比例）。 */
+/** The crop frame, in the source image's **natural pixels** (not display pixels, nor a normalized ratio). */
 export interface CropRect {
   x: number;
   y: number;
@@ -33,15 +33,15 @@ export interface CropRect {
 }
 
 /**
- * 裁剪比例选项（顺序即下拉里的顺序，对齐 liblib）。`original` 是**原图比例**——
- * 锁成源图自己的宽高比，不是自由裁剪；取景框始终锁比例，用户只调大小和位置。
+ * Crop ratio options (the order is the order in the dropdown, aligned with liblib). `original` is the **original image ratio** -
+ * locked to the source image's own aspect ratio, not free cropping; the crop frame is always ratio-locked, and the user only adjusts size and position.
  */
 export const CROP_ASPECT_OPTIONS = ['original', '1:1', '4:3', '3:4', '16:9', '9:16'] as const;
 export type CropAspectOption = (typeof CROP_ASPECT_OPTIONS)[number];
 
 /**
- * 比例选项 → 宽/高数值。`original` 取源图自身比例，所以必须把自然尺寸传进来。
- * 尺寸还没量到（图未加载）时返回 null，调用方据此先不摆取景框。
+ * Ratio option -> width/height number. `original` takes the source image's own ratio, so the natural size must be passed in.
+ * Returns null when the size has not been measured (image not loaded), and the caller then does not place the crop frame for now.
  */
 export function resolveCropAspectRatio(
   option: CropAspectOption,
@@ -54,7 +54,7 @@ export function resolveCropAspectRatio(
   return w > 0 && h > 0 ? w / h : null;
 }
 
-/** 给定比例下、能塞进整张图的最大居中矩形——切换比例时取景框就复位到这里。 */
+/** The largest centered rectangle that fits in the whole image at a given ratio - the crop frame resets here when switching ratios. */
 export function maxCenteredCropRect(
   natural: { width: number; height: number },
   ratio: number,
@@ -74,10 +74,10 @@ export function maxCenteredCropRect(
 }
 
 /**
- * 裁剪框是否等同于「整张图」。用户没拖动过取景框就按「确认」时据此走「未提交」
- * 路径：不必上传一张和原图逐像素相同的新图，也不该凭空留下一个结果节点。
+ * Whether the crop frame equals "the whole image". When the user presses "Confirm" without ever dragging the crop frame, this is used to take the "not committed"
+ * path: no need to upload a new image pixel-identical to the original, nor to leave a result node from nowhere.
  *
- * 容差 1px：取景框是按显示像素拖出来的，换算回自然像素后常有亚像素误差。
+ * Tolerance 1px: the crop frame is dragged out in display pixels, and converting back to natural pixels often leaves sub-pixel error.
  */
 export function isFullFrameCrop(rect: CropRect, natural: { width: number; height: number }): boolean {
   return (
@@ -89,10 +89,10 @@ export function isFullFrameCrop(rect: CropRect, natural: { width: number; height
 }
 
 /**
- * 预建「裁剪结果」节点（与 createRotateResultNode 同构）：在源图片节点下游建一个
- * 以源图为预览的 exportImage 节点并连边——裁剪对这个新节点原地写回，源图保持不动。
+ * Pre-build the "crop result" node (isomorphic with createRotateResultNode): build an exportImage node downstream of the source image node
+ * previewing the source image and connect an edge - crop writes back in place onto this new node, and the source image stays untouched.
  *
- * @returns 新建结果节点 id；源节点不存在 / 类型不支持 / 无图源时返回 null。
+ * @returns the new result node id; null when the source node does not exist / the type is unsupported / there is no image source.
  */
 export function createCropResultNode(
   sourceNodeId: string,
@@ -142,21 +142,21 @@ export function createCropResultNode(
 }
 
 /**
- * 丢弃预建的「裁剪结果」节点：用户退出 / 按 Esc / 没框选任何区域就确认时调用，
- * 否则会凭空多出一个节点（同 discardRotateResultNode）。
+ * Discard the pre-built "crop result" node: called when the user exits / presses Esc / confirms without selecting any region,
+ * otherwise a node would appear from nowhere (same as discardRotateResultNode).
  */
 export function discardCropResultNode(nodeId: string): void {
   useCanvasStore.getState().deleteNode(nodeId);
 }
 
 /**
- * 按裁剪框切图并原地写回结果节点：本地 canvas `drawImage` 取子矩形 → 上传 PNG →
- * 把新 url / 新 aspectRatio 写回该节点；失败把错误写到该节点。
+ * Cut the image by the crop frame and write back to the result node in place: local canvas `drawImage` takes the sub-rectangle -> upload PNG ->
+ * write the new url / new aspectRatio back to that node; on failure write the error to that node.
  *
- * @param rect 自然像素坐标的裁剪框；越界部分会被夹回图内（拖拽已限制在图内，
- *   这里只是防御性收口，避免 drawImage 画出透明边）。
- * @returns 后台链 settle 时 resolve 的 Promise（不 reject）；缺 project 时不落
- *   任何状态、返回 null（调用方可据此保留编辑态或回收预建节点）。
+ * @param rect the crop frame in natural pixel coordinates; the out-of-bounds part is clamped back into the image (dragging is already confined to the image,
+ *   so this is only a defensive gate, avoiding drawImage producing transparent edges).
+ * @returns a Promise that resolves when the background chain settles (never rejects); when project is missing it lands no
+ *   state and returns null (the caller can use this to keep the editing state or reclaim the pre-built node).
  */
 export function cropImageInPlace(
   nodeId: string,

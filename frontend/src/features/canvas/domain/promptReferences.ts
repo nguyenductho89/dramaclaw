@@ -2,7 +2,6 @@
 // Copyright (c) 2026 ClaymoreLab
 import {
   isAudioNode,
-  isImageEditNode,
   isImageGenNode,
   isVideoNode,
   type CanvasNode,

@@ -2,16 +2,16 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 「没有模型选择器」的图片能力面板（360 全景、宫格动作）如何解析模型。
+ * How image capability panels "without a model selector" (360 panorama, grid actions) resolve the model.
  *
- * 这类面板不让用户挑模型 / 尺寸 / 画质，由调用方按功能规则选定目录模型
- * （例如 360 固定 LingShan-G2，宫格使用目录默认模型）。之前报价和提交各写各的：
- * 报价按选定模型 + 收敛后的 size/quality 算，提交却
- * 一个都不带，后端于是用自己的 `FREEZONE_DEFAULT_IMAGE_MODEL` 和固定 2K 去跑。
- * 结果是「目录首模型 ≠ 后端默认模型」或「该模型不配 2K」时，界面上标的价格、
- * 能力档位与真正执行的完全是两回事，后台的媒体模型配置在这两个面板等于没生效。
+ * Such panels do not let the user pick the model / size / quality, and the caller selects a catalog model by feature rules
+ * (e.g. 360 is fixed to LingShan-G2, grid uses the catalog default model). Previously the quote and the submission each did their own thing:
+ * the quote was computed by the selected model + converged size/quality, but the submission carried
+ * none of them, so the backend ran with its own `FREEZONE_DEFAULT_IMAGE_MODEL` and a fixed 2K.
+ * The result: when "the catalog's first model != the backend default model" or "that model has no 2K", the price shown on the UI,
+ * the capability tiers and what actually runs were entirely different, and the backend's media model config was as good as ineffective on these two panels.
  *
- * 这里把报价参数和提交字段**从同一次解析里一起产出**，让它们没有机会走散。
+ * Here the quote parameters and the submission fields are **produced together from the same resolution**, leaving no chance for them to diverge.
  */
 
 import { buildImageFeatureBillingParams } from '@/features/canvas/domain/imageBilling';
@@ -22,36 +22,36 @@ import {
   type MediaModelCapabilities,
 } from '@/features/canvas/domain/mediaModelOptions';
 
-/** 解析所需的目录条目字段（`FreezoneImageModelInfo` 与兜底 `ModelOption` 都满足）。 */
+/** The catalog entry fields needed for resolution (both `FreezoneImageModelInfo` and the fallback `ModelOption` satisfy them). */
 export interface FixedFeatureModel extends MediaModelCapabilities {
   catalogId?: string;
   apiModel?: string;
 }
 
-/** 提交给 `/freezone/scene-360`、`/freezone/template-edit` 的模型相关字段。 */
+/** Model-related fields submitted to `/freezone/scene-360` and `/freezone/template-edit`. */
 export interface FixedFeatureSubmitFields {
   /**
-   * 裸 `apiModel`，不带 provider 前缀。
+   * The bare `apiModel`, without a provider prefix.
    *
-   * 这两条老路由各自推断 provider 的方式不同（scene-360 恒定按 newapi 走，
-   * template-edit 才认 `provider/model`），带前缀在 scene-360 那边会被整串当成
-   * 模型名。统一送裸名，provider 交给后端按各自的老规则定。
+   * These two old routes infer the provider in different ways (scene-360 always goes by newapi,
+   * template-edit alone recognizes `provider/model`), and a prefix would be taken as the whole model name on the scene-360 side.
+   * Send the bare name uniformly, leaving the provider to the backend under each one's old rules.
    */
   model?: string;
-  /** 目录身份。带上后端才会按目录定价规则计费，与报价口径一致。 */
+  /** Catalog identity. With it the backend bills by the catalog pricing rules, consistent with the quote basis. */
   catalogId?: string;
   imageSize: string;
-  /** 目录声明了 qualityOptions 才有；没声明就不下发，也不按 quality 报价。 */
+  /** Present only if the catalog declares qualityOptions; if not declared it is not sent and not quoted by quality. */
   quality?: string;
 }
 
 export interface FixedFeatureModelRequest {
   submit: FixedFeatureSubmitFields;
-  /** 直接喂给 `useGenerationCreditCost` 的 `params`。 */
+  /** The `params` fed directly to `useGenerationCreditCost`. */
   billingParams: Record<string, unknown>;
 }
 
-/** 面板不提供选择器时想要的默认档位（仍需落在模型实际支持的档位里）。 */
+/** The default tier wanted when the panel provides no selector (it must still fall within the tiers the model actually supports). */
 const PREFERRED_SIZE = '2K';
 const PREFERRED_QUALITY = 'medium';
 

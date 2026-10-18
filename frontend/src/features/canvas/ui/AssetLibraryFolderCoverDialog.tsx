@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 「修改封面」弹窗：从该文件夹自己的图片素材里挑一张当封面。
+// The "Change cover" dialog: pick one of the folder's own image materials as the cover.
 //
-// 只列图片——视频抽帧要解码、音频压根没有画面，都不适合当封面；文件夹里一张图
-// 都没有时给一句空态提示，而不是弹一个空网格。封面存的是素材 URL 本身，所以这里
-// 不涉及上传，素材被删掉后封面自然回落到默认图标。
+// Only images are listed - video frame extraction needs decoding and audio has no picture at all, neither suitable as a cover; when a folder has not a single
+// image, a line of empty-state hint is given rather than popping up an empty grid. The cover stores the material URL itself, so no
+// upload is involved here, and after the material is deleted the cover naturally falls back to the default icon.
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ export interface AssetLibraryFolderCoverDialogProps {
   open: boolean;
   folder: AssetFolder | null;
   onClose: () => void;
-  /** 抛错即视为失败，错误信息显示在底部，弹窗保持打开。 */
+  /** Throwing counts as failure, the error message is shown at the bottom, and the dialog stays open. */
   onSubmit: (cover: string) => Promise<void>;
 }
 
@@ -34,7 +34,7 @@ export function AssetLibraryFolderCoverDialog({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 每次打开预选当前封面，用户只想换别的时一眼能看出现在是哪张。
+  // Preselect the current cover on every open, so a user who only wants to switch to another can tell at a glance which one it is now.
   useEffect(() => {
     if (!open) return;
     setPicked(folder ? folderCoverUrl(folder) : null);

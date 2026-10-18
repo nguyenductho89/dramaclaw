@@ -38,19 +38,19 @@ class FakeStore:
             Path(self.project_dir)
             / "assets"
             / "characters"
-            / "谢铮"
+            / "XieZheng"
             / "identities"
-            / "幼年时期_voice.wav"
+            / "child_voice.wav"
         )
         reference.parent.mkdir(parents=True, exist_ok=True)
         reference.write_bytes(b"reference")
-        character = NovelCharacter(name="谢铮", gender="男")
+        character = NovelCharacter(name="XieZheng", gender="male")
         character.identities = [
             CharacterIdentity(
-                identity_id="谢铮_幼年时期",
-                character_name="谢铮",
-                identity_name="幼年时期",
-                reference_audio_path="assets/characters/谢铮/identities/幼年时期_voice.wav",
+                identity_id="XieZheng_child",
+                character_name="XieZheng",
+                identity_name="child",
+                reference_audio_path="assets/characters/XieZheng/identities/child_voice.wav",
                 reference_audio_sha256=self.voice_hash,
             )
         ]
@@ -75,22 +75,22 @@ class FakeStoreCharacterDefaultVoice:
             Path(self.project_dir)
             / "assets"
             / "characters"
-            / "谢铮"
+            / "XieZheng"
             / "voice_sample.wav"
         )
         reference.parent.mkdir(parents=True, exist_ok=True)
         reference.write_bytes(b"character-default-reference")
         character = NovelCharacter(
-            name="谢铮",
-            gender="男",
-            reference_audio_path="assets/characters/谢铮/voice_sample.wav",
+            name="XieZheng",
+            gender="male",
+            reference_audio_path="assets/characters/XieZheng/voice_sample.wav",
             reference_audio_sha256=self.voice_hash,
         )
         character.identities = [
             CharacterIdentity(
-                identity_id="谢铮_幼年时期",
-                character_name="谢铮",
-                identity_name="幼年时期",
+                identity_id="XieZheng_child",
+                character_name="XieZheng",
+                identity_name="child",
                 reference_audio_path="",
                 reference_audio_sha256="",
             )
@@ -103,26 +103,26 @@ def _beats():
         {
             "beat_number": 1,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "谢铮说：“你终于来了。”",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Xie Zheng says: “You finally came.”",
         },
         {
             "beat_number": 2,
             "audio_type": "dialogue",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "“别走。”她说。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "“Do not go.” she said.",
         },
         {
             "beat_number": 3,
             "audio_type": "dialogue",
-            "speaker": "李婶_镇民时期",
-            "narration_segment": "“谢谢。”",
+            "speaker": "AuntLi_townsperson",
+            "narration_segment": "“Thank you.”",
         },
         {
             "beat_number": 4,
             "audio_type": "narration",
-            "speaker": "谢铮_幼年时期",
-            "narration_segment": "旁白。",
+            "speaker": "XieZheng_child",
+            "narration_segment": "Narration.",
         },
     ]
 
@@ -166,7 +166,7 @@ class FakeNarrationStore:
                 "beat_number": 1,
                 "audio_type": "narration",
                 "speaker": "",
-                "narration_segment": "旁白。",
+                "narration_segment": "Narration.",
             }
         ]
 
@@ -177,19 +177,19 @@ class FakeNarrationStore:
             Path(self.project_dir)
             / "assets"
             / "characters"
-            / "谢铮"
+            / "XieZheng"
             / "identities"
-            / "青年_voice.wav"
+            / "young_voice.wav"
         )
         reference.parent.mkdir(parents=True, exist_ok=True)
         reference.write_bytes(b"main-character-reference")
-        character = NovelCharacter(name="谢铮", gender="男", is_main=True)
+        character = NovelCharacter(name="XieZheng", gender="male", is_main=True)
         character.identities = [
             CharacterIdentity(
-                identity_id="谢铮_青年",
-                character_name="谢铮",
-                identity_name="青年",
-                reference_audio_path="assets/characters/谢铮/identities/青年_voice.wav",
+                identity_id="XieZheng_young",
+                character_name="XieZheng",
+                identity_name="young",
+                reference_audio_path="assets/characters/XieZheng/identities/young_voice.wav",
                 reference_audio_sha256="main-character-hash",
             )
         ]
@@ -211,7 +211,7 @@ async def test_seedance2_voice_task_missing_only_skips_existing(tmp_path):
     result = await run_seedance2_voice_audio_generation(
         store=store,
         episode=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         mode="missing_only",
         expected_voice_sha256="voice-new",
         generator=generator,
@@ -238,7 +238,7 @@ async def test_seedance2_voice_task_accepts_character_default_voice_fallback(tmp
     result = await run_seedance2_voice_audio_generation(
         store=store,
         episode=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         mode="redo_all",
         expected_voice_sha256="character-default-hash",
         generator=generator,
@@ -265,7 +265,7 @@ async def test_seedance2_voice_task_redo_all_overwrites_existing(tmp_path):
     result = await run_seedance2_voice_audio_generation(
         store=store,
         episode=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         mode="redo_all",
         expected_voice_sha256="voice-new",
         generator=generator,
@@ -290,11 +290,11 @@ async def test_seedance2_voice_task_stops_when_voice_hash_changed(tmp_path):
         voice_hash="other",
     )
 
-    with pytest.raises(RuntimeError, match="声线版本已变化"):
+    with pytest.raises(RuntimeError, match="voice version has changed"):
         await run_seedance2_voice_audio_generation(
             store=store,
             episode=1,
-            speaker="谢铮_幼年时期",
+            speaker="XieZheng_child",
             mode="redo_all",
             expected_voice_sha256="voice-new",
             generator=FakeGenerator(),
@@ -312,7 +312,7 @@ async def test_seedance2_voice_task_collects_partial_failures(tmp_path):
     result = await run_seedance2_voice_audio_generation(
         store=store,
         episode=1,
-        speaker="谢铮_幼年时期",
+        speaker="XieZheng_child",
         mode="redo_all",
         expected_voice_sha256="voice-new",
         generator=generator,

@@ -72,8 +72,8 @@ interface EraseOverlayProps {
 
 type Tool = 'brush' | 'rect' | 'eraser';
 
-// 比例与分辨率档位来自后台「媒体模型」对选中模型的配置，这里只留下要改写的
-// 档位对应的词条 key（未命中时直接显示原值）。
+// Ratio and resolution tiers come from the backend "media models" config for the selected model; only the entry key for the tier to be rewritten is kept here
+// (shown as the raw value when not hit).
 const ASPECT_RATIO_LABEL_KEYS: Partial<Record<FreezoneRedrawAspectRatio, string>> = {
   original: 'canvas.paintTools.aspectOriginal',
 };
@@ -109,7 +109,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
   const undoStackRef = useRef<ImageData[]>([]);
   const redoStackRef = useRef<ImageData[]>([]);
   const baseUrlRef = useRef(imageSource.split('?')[0]);
-  // 已加载的源图，导出蒙版时用作红色高亮的打底（后端把蒙版当视觉参考图）。
+  // The loaded source image, used as the base of the red highlight when exporting the mask (the backend treats the mask as a visual reference image).
   const sourceImgRef = useRef<HTMLImageElement | null>(null);
 
   const [tool, setTool] = useState<Tool>('brush');
@@ -126,8 +126,8 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
   const [aspectRatio, setAspectRatio] = useState<FreezoneRedrawAspectRatio>('16:9');
   const { models: imageModels } = useFreezoneImageModels();
   const selectedModel = imageModels[0];
-  // 尺寸 / 比例 / 画质跟随后台对该模型的配置；比例还要落在擦除（重绘）接口
-  // 自身支持的取值里。
+  // Size / ratio / quality follow the backend's config for that model; the ratio must also fall within the values the erase (redraw) endpoint
+  // itself supports.
   const sizeOptions = useMemo(
     () => resolveModelSizeOptions(selectedModel),
     [selectedModel],
@@ -172,7 +172,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     creditCost.data?.data.display ??
     (billingRuleMissing ? t('common.billingRuleNotConfiguredShort') : null);
 
-  // 节点在画布坐标系里的尺寸（flow 单位）。蒙版画布要按当前缩放贴合到节点上的图。
+  // The node's size in the canvas coordinate system (flow units). The mask canvas must fit the image on the node at the current zoom.
   const nodeWidth =
     typeof node.measured?.width === 'number'
       ? node.measured.width
@@ -186,8 +186,8 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
         ? node.height
         : nodeWidth;
 
-  // 节点用 object-contain 显示图片：算出图片实际显示矩形（可能有黑边），
-  // 蒙版只覆盖这块，且乘以当前 zoom 换算成屏幕像素，保证任意缩放下都对齐。
+  // A node shows the image with object-contain: compute the rectangle where the image is actually displayed (there may be black bars),
+  // the mask covers only this area, and is multiplied by the current zoom to convert to screen pixels, ensuring alignment at any zoom.
   const display = useMemo(() => {
     if (!imageDims) {
       return { width: nodeWidth * zoom, height: nodeHeight * zoom };
@@ -217,7 +217,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     img.onerror = () => setError(t('canvas.paintTools.loadSourceFailed'));
   }, [imageSource, t]);
 
-  // Esc 退出擦除。
+  // Esc exits erasing.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !submitting) onClose();
@@ -260,7 +260,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     if (!snap) return;
     if (undoStackRef.current.length >= 32) undoStackRef.current.shift();
     undoStackRef.current.push(snap);
-    redoStackRef.current = []; // 新操作让 redo 失效
+    redoStackRef.current = []; // A new operation invalidates redo
     syncHistoryFlags();
   }, [snapshot, syncHistoryFlags]);
 
@@ -443,7 +443,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     [canvasToImageCoords, commitRect, recomputeHasMask, tool],
   );
 
-  // 蒙版导出（供视觉模型识别）：源图 + 涂抹区二值化后的均匀半透明红高亮，见 mask-highlight.ts。
+  // Mask export (for vision models to recognize): the source image + the brushed area binarized into a uniform semi-transparent red highlight, see mask-highlight.ts.
   const buildMaskBlob = useCallback(async (): Promise<Blob> => {
     const mask = maskCanvasRef.current;
     const baseImg = sourceImgRef.current;
@@ -452,7 +452,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     return await buildRedHighlightMaskBlob(baseImg, mask);
   }, []);
 
-  // 建一个 loading 结果节点并连边，立即返回节点 id（同步，不等待上传/生成）。
+  // Build a loading result node and connect an edge, returning the node id immediately (synchronous, not waiting for upload/generation).
   const createEraseNode = useCallback(
     (resultAspectRatio: string, position: { x: number; y: number }) => {
       const generationStartedAt = Date.now();
@@ -472,7 +472,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
     [addEdge, addNode, node.id],
   );
 
-  // 针对已建好的节点提交单图擦除（走重绘接口）→ 轮询 → 回填。
+  // Submit a single-image erase (going through the redraw endpoint) for the already built node -> poll -> backfill.
   const runEraseGeneration = useCallback(
     async (
       project: string,
@@ -481,7 +481,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
       maskUrl: string,
       resultAspectRatio: string,
     ) => {
-      // 失败后「重新生成」按钮据此重跑同一次擦除（走重绘接口）。
+      // After a failure the "Regenerate" button reruns the same erase from this (going through the redraw endpoint).
       updateNodeData(nodeId, {
         freezoneRedrawRequest: {
           sourceUrl,
@@ -512,14 +512,14 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
           isGenerating: false,
           generationStartedAt: null,
           ...GENERATION_ERROR_CLEARED_PATCH,
-          // 清掉任务句柄,避免刷新后被 resume 扫描误判为「仍在生成」而重新轮询。
+          // Clear the task handle, avoiding a resume scan after refresh misjudging it as "still generating" and polling again.
           generationTaskKey: null,
           generationTaskType: null,
           generationTaskJobId: null,
         });
       } catch (err) {
-        // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-        // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+        // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+        // Writing an error banner would mark a live task as failed and clear the handle.
         if (isTaskPollTimeoutError(err)) {
           notifyTaskStillRunning(t);
           return;
@@ -560,7 +560,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
       EXPORT_RESULT_NODE_LAYOUT_HEIGHT,
     );
 
-    // 张数 > 1：先一次性建好全部 loading 节点（纵向错开摆放），再上传蒙版、发起单图请求。
+    // Count > 1: first build all loading nodes at once (staggered vertically), then upload the mask and launch single-image requests.
     const count = Math.max(1, numImages);
     const nodeIds = Array.from({ length: count }, (_unused, i) =>
       createEraseNode(resultAspectRatio, {
@@ -584,7 +584,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
         void runEraseGeneration(project, id, sourceUrl, maskUrl, resultAspectRatio),
       );
     } catch (err) {
-      // 蒙版上传等前置步骤失败：把所有占位节点标记为失败。
+      // A prerequisite step such as mask upload failed: mark all the placeholder nodes as failed.
       const message = err instanceof Error ? err.message : String(err);
       console.error('[erase] submit failed', err);
       nodeIds.forEach((id) =>
@@ -623,7 +623,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
 
   return (
     <>
-      {/* 蒙版绘制层：覆盖节点上显示的图片（随缩放对齐）。 */}
+      {/* Mask drawing layer: covers the image shown on the node (aligned with zoom). */}
       <ReactFlowNodeToolbar
         nodeId={node.id}
         isVisible
@@ -661,7 +661,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
         </div>
       </ReactFlowNodeToolbar>
 
-      {/* 顶部擦除工具栏。 */}
+      {/* Top erase toolbar. */}
       <ReactFlowNodeToolbar
         nodeId={node.id}
         isVisible
@@ -730,7 +730,7 @@ export const EraseOverlay = memo(({ node, imageSource, onClose }: EraseOverlayPr
         </div>
       </ReactFlowNodeToolbar>
 
-      {/* 底部生成控制条：比例 / 分辨率 / 张数 / 提交（无模型选择、无提示词）。 */}
+      {/* Bottom generation control bar: ratio / resolution / count / submit (no model selection, no prompt). */}
       <ReactFlowNodeToolbar
         nodeId={node.id}
         isVisible

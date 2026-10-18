@@ -10,28 +10,28 @@ import {
 import { multiAngleImage } from '@/features/canvas/application/imageMultiAngle';
 
 export interface MultiAngleEditorContentProps {
-  /** 源图片节点（结果节点建在它下游）。 */
+  /** The source image node (the result node is built downstream of it). */
   node: CanvasNode;
-  /** 已解析的图源（调用方用 resolveNodeSourceImageUrl 取）。 */
+  /** The resolved image source (taken by the caller with resolveNodeSourceImageUrl). */
   imageSource: string;
-  /** 关闭编辑器。提交成功后也会被调用（在 onSubmitted 之后）。 */
+  /** Close the editor. Also called after a successful submit (after onSubmitted). */
   onClose: () => void;
   /**
-   * 提交成功、结果节点已同步建好时回调，入参是新结果节点 id。
-   * 宿主决定后续动作——工作流侧选中该节点，故事板侧请求视口预定位。
-   * 缺 project / 源节点不存在导致没提交成功时不会触发（也不会 onClose）。
+   * Called back when submission succeeds and the result node has been built synchronously, with the new result node id as the argument.
+   * The host decides the follow-up action - the workflow side selects that node, the storyboard side requests viewport pre-positioning.
+   * It does not fire (nor onClose) when submission fails because project is missing / the source node does not exist.
    */
   onSubmitted?: (nodeId: string) => void;
 }
 
 /**
- * 多维度编辑器的**纯内容层**：完整的编辑器面板 + 提交编排，不含任何 React Flow
- * 依赖（无 NodeToolbar / useReactFlow / ZoomScaledToolbar），因此既能挂在画布节点
- * 下方（MultiAngleEditorOverlay），也能塞进故事板的居中弹窗
- * （AssetBoardMultiAngleDialog）。
+ * The **pure content layer** of the multi-dimension editor: the complete editor panel + submission orchestration, with no React Flow
+ * dependency whatsoever (no NodeToolbar / useReactFlow / ZoomScaledToolbar), so it can be mounted below a canvas node
+ * (MultiAngleEditorOverlay) and also stuffed into the storyboard's centered dialog
+ * (AssetBoardMultiAngleDialog).
  *
- * 提交走 application/imageMultiAngle（与工作流同源），本组件不碰选中态/视口，
- * 一律通过 onSubmitted 交给宿主，避免两种宿主的行为互相污染。
+ * Submission goes through application/imageMultiAngle (the same source as the workflow); this component does not touch selection/viewport,
+ * and always hands off to the host via onSubmitted, avoiding the behaviors of the two hosts polluting each other.
  */
 export const MultiAngleEditorContent = memo(
   ({ node, imageSource, onClose, onSubmitted }: MultiAngleEditorContentProps) => {

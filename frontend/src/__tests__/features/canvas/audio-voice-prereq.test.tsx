@@ -88,7 +88,7 @@ describe("AudioOperationsPanel voice prerequisite", () => {
     fireEvent.click(screen.getByTitle("Generate (skip when no custom voice is selected)"));
     await waitFor(() => expect(
       useCanvasStore.getState().nodes.find((node) => node.id === "audio-1")?.data.generationError,
-    ).toBe("No usable custom voice selected; generation skipped"));
+    ).toBe("No custom voice selected; generation was skipped"));
   });
 
   it("requires a real voice id for a user custom selection", () => {

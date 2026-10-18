@@ -5668,7 +5668,9 @@
       "muteTodo": "Mute (not implemented yet)",
       "loopTodo": "Loop (not implemented yet)",
       "submitting": "Trimming…",
-      "submit": "Apply trim"
+      "submit": "Apply trim",
+      "noUrl": "Clip finished but no video address was returned",
+      "defaultTitle": "Clip"
     },
     "mentionReplace": {
       "empty": "No assets available to swap in",
@@ -6000,7 +6002,8 @@
           }
         },
         "missingProject": "Missing project context; cannot submit",
-        "missingSource": "Source image not found; cannot submit"
+        "missingSource": "Source image not found; cannot submit",
+        "chipTitle": "{{label}} · click to switch feature, Backspace to remove"
       },
       "audioForm": {
         "musicDescription": "Music description",
@@ -6054,7 +6057,16 @@
         "colVisual": "Visual description",
         "colDialogue": "Dialogue",
         "colSummary": "Content summary"
-      }
+      },
+      "referenceMenu": {
+        "actions": "{{label}} actions",
+        "edit": "Edit",
+        "locate": "Locate"
+      },
+      "dropHint": "Drag assets, images or videos here to add them as references",
+      "resizeColumns": "Resize columns",
+      "multiAngleEditor": "Multi-dimension editor",
+      "lightEditor": "Lighting effect editor"
     },
     "keyElement": {
       "character": "Character",
@@ -6074,6 +6086,17 @@
       "imageToPrompt": "Image reverse-prompt group",
       "textToMusic": "Text-to-music group",
       "cloneAudio": "Clone audio group"
+    },
+    "addToChat": {
+      "label": "Add to chat"
+    },
+    "errors": {
+      "missingProjectParam": "The current URL has no project parameter",
+      "noUpstreamImageForPrompt": "No upstream image to reverse into a prompt",
+      "noDownstreamVideoNode": "No downstream video node to hold the result"
+    },
+    "matte": {
+      "defaultTitle": "Matte"
     }
   },
   "tool": {

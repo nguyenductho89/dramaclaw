@@ -27,7 +27,7 @@ describe("PromptMentionEditor — audio reference chip", () => {
     const chip = container.querySelector(".mention-chip");
     expect(chip).not.toBeNull();
     // Visible label is capped at 10 chars + ellipsis.
-    expect(chip?.querySelector(".mention-chip-label")?.textContent).toBe("audio_long-vo…");
+    expect(chip?.querySelector(".mention-chip-label")?.textContent).toBe("audio_long…");
     // ...but the serialized token stays the numbered name (what reaches the backend).
     expect(chip?.getAttribute("data-name")).toBe("audio1");
     // Full name remains available in the tooltip.
@@ -53,8 +53,8 @@ describe("PromptMentionEditor — audio reference chip", () => {
   });
 
   it("truncateChipLabel caps at 10 chars and leaves short labels intact", () => {
-    expect(truncateChipLabel("audio_long-voice-clip-name.mp3")).toBe("audio_long-vo…");
-    expect(truncateChipLabel("audio_short")).toBe("audio_short");
+    expect(truncateChipLabel("audio_long-voice-clip-name.mp3")).toBe("audio_long…");
+    expect(truncateChipLabel("audio_a")).toBe("audio_a");
     expect(truncateChipLabel("1234567890")).toBe("1234567890"); // exactly 10, no ellipsis
   });
 });

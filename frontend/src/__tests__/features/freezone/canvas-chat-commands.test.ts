@@ -69,7 +69,7 @@ vi.mock("@/api/ops", async (importOriginal) => {
         {
           scope: "user_custom",
           voice_id: "voice-a",
-          label: "温柔女声",
+          label: "Gentle female voice",
           language: "zh-CN",
           gender: "female",
         },
@@ -191,7 +191,7 @@ describe("canvas chat commands", () => {
   it("returns a workflow creation failure instead of waiting for durable acceptance", async () => {
     const failure = {
       applied: 0, openedUiActions: 0, createdNodeIds: [],
-      errors: ["无法创建持久化工作流记录，未启动节点动作"], commandResults: [],
+      errors: ["Unable to create a persistent workflow record; no node actions were started"], commandResults: [],
     };
     const persistence = new Promise<void>(() => undefined);
     await expect(waitForImmediateCanvasCommandResult(Promise.resolve(failure), persistence))
@@ -272,7 +272,7 @@ describe("canvas chat commands", () => {
         {
           id: "assistant-old",
           role: "assistant",
-          text: "上一轮回复",
+          text: "Previous reply",
           timestamp: 1,
           turnId: "turn-old",
         },
@@ -368,7 +368,7 @@ describe("canvas chat commands", () => {
       shouldShowComposerWaitingIndicator({
         busy: true,
         hasAssistantText: true,
-        streamText: "正在处理",
+        streamText: "Processing",
         pendingCanvasCommandApprovalCount: 0,
         hasPendingVisibleUserMessage: true,
         hasThinkingCanvasContextActivity: false,
@@ -456,7 +456,7 @@ describe("canvas chat commands", () => {
             client_id: "brief",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             data: {
-              displayName: "广告需求",
+              displayName: "Ad requirements",
               workflowInstanceId: "workflow-draft-a",
               workflowPlanNodeId: "brief",
             },
@@ -466,7 +466,7 @@ describe("canvas chat commands", () => {
             client_id: "image",
             node_type: CANVAS_NODE_TYPES.imageGen,
             data: {
-              displayName: "广告画面",
+              displayName: "Ad visual",
               workflowInstanceId: "workflow-draft-a",
               workflowPlanNodeId: "image",
             },
@@ -511,22 +511,22 @@ describe("canvas chat commands", () => {
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.storyboardSplit,
-            data: { displayName: "不应该创建" },
+            data: { displayName: "Should not be created" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.group,
-            data: { displayName: "空组" },
+            data: { displayName: "Empty group" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.skill,
-            data: { displayName: "允许的技能节点" },
+            data: { displayName: "Allowed skill node" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
-            data: { displayName: "允许的文本", content: "保留" },
+            data: { displayName: "Allowed text", content: "Keep" },
           },
         ],
       },
@@ -556,7 +556,7 @@ describe("canvas chat commands", () => {
       commands: [{
         type: "create_node",
         node_type: CANVAS_NODE_TYPES.video,
-        data: { displayName: "测试视频", prompt: "雨夜撑伞", model },
+        data: { displayName: "Test video", prompt: "Umbrella on a rainy night", model },
       }],
     }]);
     const result = applyCanvasChatCommands(envelopes);
@@ -568,14 +568,14 @@ describe("canvas chat commands", () => {
   it("keeps an ordinary upstream action when the same source feeds an unrelated Recipe", async () => {
     const store = useCanvasStore.getState();
     const sourceId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 0, y: 0 }, {
-      prompt: "生成源图片",
+      prompt: "Generate source image",
       referenceImageUrl: "/static/project/source.png",
     });
     const recipeId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 360, y: 0 }, {
       prompt: "Recipe A",
     });
     const targetId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 360, y: 300 }, {
-      prompt: "普通目标 B",
+      prompt: "Ordinary target B",
     });
     store.addEdgeWithData(sourceId, recipeId, {
       link_type: "media_input_for",
@@ -612,14 +612,14 @@ describe("canvas chat commands", () => {
   it("does not traverse an external input source into an unrelated workflow", async () => {
     const store = useCanvasStore.getState();
     const sourceId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 0, y: 0 }, {
-      prompt: "生成源图片",
+      prompt: "Generate source image",
       referenceImageUrl: "/static/project/source.png",
     });
     const recipeId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 360, y: 0 }, {
       prompt: "Recipe A",
     });
     const otherId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 360, y: 300 }, {
-      prompt: "普通目标 B",
+      prompt: "Ordinary target B",
     });
     store.addEdgeWithData(sourceId, recipeId, {
       link_type: "media_input_for",
@@ -657,7 +657,7 @@ describe("canvas chat commands", () => {
   it("rejects an external input edge after its source image changes", async () => {
     const store = useCanvasStore.getState();
     const sourceId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 0, y: 0 }, {
-      prompt: "源图片",
+      prompt: "Source image",
       imageUrl: "/static/project/new.png",
     });
     const targetId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 360, y: 0 }, {
@@ -695,8 +695,8 @@ describe("canvas chat commands", () => {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.imageGen,
             data: {
-              displayName: "图片节点",
-              prompt: "国风水墨海报",
+              displayName: "Image node",
+              prompt: "Chinese-style ink-wash poster",
               model: "flux-pro-1.1",
             },
           },
@@ -724,14 +724,14 @@ describe("canvas chat commands", () => {
         imageUrl: "/static/mainline/identity.png",
         slot_target: {
           kind: "identity",
-          character: "林小满",
-          identity_id: "业主时期",
+          character: "LinXiaoman",
+          identity_id: "owner_period",
         },
         mainline_context: [
           {
             kind: "identity",
             role: "character_identity",
-            label: "林小满_业主时期",
+            label: "LinXiaoman_owner_period",
           },
         ],
         committed_slot_url: "/static/mainline/identity.png",
@@ -763,14 +763,14 @@ describe("canvas chat commands", () => {
       user_spawned: true,
       slot_target: {
         kind: "identity",
-        character: "林小满",
-        identity_id: "业主时期",
+        character: "LinXiaoman",
+        identity_id: "owner_period",
       },
       mainline_context: [
         {
           kind: "identity",
           role: "character_identity",
-          label: "林小满_业主时期",
+          label: "LinXiaoman_owner_period",
         },
       ],
       committed_slot_url: "/static/mainline/identity.png",
@@ -879,12 +879,12 @@ describe("canvas chat commands", () => {
     const sourceId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
-      { content: "旁白脚本" },
+      { content: "Narration script" },
     );
     const existingAudioId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 320 },
-      { text: "旧旁白", speechMode: "clone", voiceRef: { scope: "project_narrator" } },
+      { text: "Old narration", speechMode: "clone", voiceRef: { scope: "project_narrator" } },
     );
 
     const result = applyCanvasChatCommands([
@@ -895,7 +895,7 @@ describe("canvas chat commands", () => {
             type: "create_node",
             client_id: "preset-audio",
             node_type: CANVAS_NODE_TYPES.audio,
-            data: { text: "系统旁白" },
+            data: { text: "System narration" },
           },
           {
             type: "add_next_node",
@@ -903,7 +903,7 @@ describe("canvas chat commands", () => {
             client_id: "clone-audio",
             node_type: CANVAS_NODE_TYPES.audio,
             data: {
-              text: "指定声线旁白",
+              text: "Designated-voice narration",
               speechMode: "clone",
               voiceRef: { scope: "project_narrator" },
             },
@@ -911,7 +911,7 @@ describe("canvas chat commands", () => {
           {
             type: "update_node_data",
             node_id: existingAudioId,
-            data: { text: "更新后的旁白" },
+            data: { text: "Updated narration" },
           },
         ],
       },
@@ -932,7 +932,7 @@ describe("canvas chat commands", () => {
     expect(cloneAudio?.data).not.toHaveProperty("presetModel");
     expect(cloneAudio?.data).not.toHaveProperty("presetVoice");
     expect(existingAudio?.data).toMatchObject({
-      text: "更新后的旁白",
+      text: "Updated narration",
       speechMode: "clone",
       voiceRef: { scope: "project_narrator" },
     });
@@ -944,7 +944,7 @@ describe("canvas chat commands", () => {
     const audioId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 0 },
-      { audioKind: "speech", text: "系统旁白", speechMode: "preset" },
+      { audioKind: "speech", text: "System narration", speechMode: "preset" },
     );
 
     const result = applyCanvasChatCommands([
@@ -1056,7 +1056,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.beatContext,
       { x: -480, y: 0 },
       {
-        displayName: "镜头上下文",
+        displayName: "Shot context",
         beat_context: { episode: 1, beat: 2 },
       },
     );
@@ -1064,7 +1064,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: -240, y: 0 },
       {
-        displayName: "背景",
+        displayName: "Background",
         imageUrl: "/static/background.png",
       },
     );
@@ -1072,7 +1072,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.skill,
       { x: 0, y: 0 },
       {
-        displayName: "根据当前背景生成草图",
+        displayName: "Generate sketch from current background",
         skill_id: "freezone.sketch_from_context",
       },
     );
@@ -1157,7 +1157,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const events: Array<{
@@ -1232,7 +1232,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const unsubscribe = canvasEventBus.subscribe(
@@ -1306,7 +1306,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const events: Array<{
@@ -1382,7 +1382,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const events: Array<{ nodeId: string; action: string }> = [];
@@ -1455,7 +1455,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "离屏目标节点",
+        prompt: "Off-screen target node",
       },
     );
     const events: Array<{ nodeId: string; action: string }> = [];
@@ -1531,7 +1531,7 @@ describe("canvas chat commands", () => {
       { x: 0, y: 0 },
       {
         audioKind: "speech",
-        text: "需要先选择音色",
+        text: "A voice must be selected first",
         audioUrl: null,
       },
     );
@@ -1554,7 +1554,7 @@ describe("canvas chat commands", () => {
             requires_user_action: true,
             reason: "missing_voice",
             agent_instruction:
-              "等待用户在已打开的音色选择器中上传或选择音色，不要继续查询 audio_voice_options。",
+              "Waiting for the user to upload or choose a voice in the already-open voice picker; do not keep querying audio_voice_options.",
           },
         });
       },
@@ -1604,7 +1604,7 @@ describe("canvas chat commands", () => {
     const audioId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 0 },
-      { audioKind: "speech", speechMode: "clone", text: "旁白", audioUrl: null },
+      { audioKind: "speech", speechMode: "clone", text: "Narration", audioUrl: null },
     );
     const unsubscribe = canvasEventBus.subscribe(
       "freezone/run-node-action",
@@ -1658,26 +1658,26 @@ describe("canvas chat commands", () => {
             client_id: "script",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             position: { x: 10, y: 20 },
-            data: { content: "剧本内容", semanticOutputRole: "input_text" },
+            data: { content: "Script content", semanticOutputRole: "input_text" },
           },
           {
             type: "add_next_node",
             source_node_id: "script",
             client_id: "video",
             node_type: CANVAS_NODE_TYPES.video,
-            data: { prompt: "生成视频" },
+            data: { prompt: "Generate video" },
           },
           {
             type: "add_next_node",
             source_node_id: "script",
             client_id: "audio",
             node_type: CANVAS_NODE_TYPES.audio,
-            data: { text: "旁白" },
+            data: { text: "Narration" },
           },
           {
             type: "group_nodes",
             node_ids: ["script", "video", "audio"],
-            label: "剧本视频工作流",
+            label: "Script video workflow",
           },
         ],
       },
@@ -1692,7 +1692,7 @@ describe("canvas chat commands", () => {
 
     expect(result.errors).toEqual([]);
     expect(result.applied).toBe(4);
-    expect(group?.data.displayName).toBe("剧本视频工作流");
+    expect(group?.data.displayName).toBe("Script video workflow");
     expect(members).toHaveLength(3);
     expect(members.map((node) => node.type).sort()).toEqual(
       [
@@ -1708,7 +1708,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "剧本内容",
+        content: "Script content",
         semanticOutputRole: "input_text",
       },
     );
@@ -1721,14 +1721,14 @@ describe("canvas chat commands", () => {
             source_node_id: sourceId,
             client_id: "video",
             node_type: CANVAS_NODE_TYPES.video,
-            data: { prompt: "生成视频" },
+            data: { prompt: "Generate video" },
           },
           {
             type: "add_next_node",
             source_node_id: sourceId,
             client_id: "audio",
             node_type: CANVAS_NODE_TYPES.audio,
-            data: { text: "旁白" },
+            data: { text: "Narration" },
           },
         ],
       },
@@ -1742,7 +1742,7 @@ describe("canvas chat commands", () => {
     const members = state.nodes.filter((node) => node.parentId === group?.id);
 
     expect(result.errors).toEqual([]);
-    expect(group?.data.displayName).toBe("工作流组");
+    expect(group?.data.displayName).toBe("Workflow group");
     expect(members).toHaveLength(3);
     expect(
       result.commandResults.some((step) => step.type === "group_nodes"),
@@ -1758,25 +1758,25 @@ describe("canvas chat commands", () => {
             type: "create_node",
             client_id: "brief",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
-            data: { content: "广告 Brief" },
+            data: { content: "Ad brief" },
           },
           {
             type: "create_node",
             client_id: "image",
             node_type: CANVAS_NODE_TYPES.imageGen,
-            data: { prompt: "生成关键视觉" },
+            data: { prompt: "Generate key visual" },
           },
           {
             type: "create_node",
             client_id: "video",
             node_type: CANVAS_NODE_TYPES.video,
-            data: { prompt: "生成广告视频" },
+            data: { prompt: "Generate ad video" },
           },
           {
             type: "create_node",
             client_id: "compose",
             node_type: CANVAS_NODE_TYPES.videoCompose,
-            data: { prompt: "合成成片" },
+            data: { prompt: "Compose final cut" },
           },
         ],
       },
@@ -1788,7 +1788,7 @@ describe("canvas chat commands", () => {
     const members = state.nodes.filter((node) => node.parentId === group?.id);
 
     expect(result.errors).toEqual([]);
-    expect(group?.data.displayName).toBe("工作流组");
+    expect(group?.data.displayName).toBe("Workflow group");
     expect(members).toHaveLength(4);
     expect(result.commandResults.some((step) => step.type === "group_nodes")).toBe(true);
   });
@@ -1803,33 +1803,33 @@ describe("canvas chat commands", () => {
             client_id: "script",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             position: { x: 0, y: 0 },
-            data: { content: "剧情脚本", semanticOutputRole: "input_text" },
+            data: { content: "Plot script", semanticOutputRole: "input_text" },
           },
           {
             type: "create_node",
             client_id: "image",
             node_type: CANVAS_NODE_TYPES.imageGen,
             position: { x: 320, y: 0 },
-            data: { prompt: "生成关键视觉" },
+            data: { prompt: "Generate key visual" },
           },
           {
             type: "create_node",
             client_id: "video",
             node_type: CANVAS_NODE_TYPES.video,
             position: { x: 640, y: 0 },
-            data: { prompt: "生成视频" },
+            data: { prompt: "Generate video" },
           },
           {
             type: "create_node",
             client_id: "audio",
             node_type: CANVAS_NODE_TYPES.audio,
             position: { x: 320, y: 280 },
-            data: { text: "旁白" },
+            data: { text: "Narration" },
           },
           {
             type: "group_nodes",
             node_ids: ["script", "image", "video", "audio"],
-            label: "视频工作流",
+            label: "Video workflow",
           },
         ],
       },
@@ -1853,25 +1853,25 @@ describe("canvas chat commands", () => {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             position: { x: 0, y: 0 },
-            data: { content: "剧情脚本", semanticOutputRole: "input_text" },
+            data: { content: "Plot script", semanticOutputRole: "input_text" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.imageGen,
             position: { x: 320, y: 0 },
-            data: { prompt: "生成首帧" },
+            data: { prompt: "Generate first frame" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.audio,
             position: { x: 320, y: 260 },
-            data: { text: "旁白" },
+            data: { text: "Narration" },
           },
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.video,
             position: { x: 640, y: 0 },
-            data: { prompt: "生成视频" },
+            data: { prompt: "Generate video" },
           },
           {
             type: "create_edge",
@@ -1900,7 +1900,7 @@ describe("canvas chat commands", () => {
           {
             type: "group_nodes",
             node_ids: ["auto:0", "auto:1", "auto:2", "auto:3"],
-            label: "短剧视频工作流",
+            label: "Short drama video workflow",
           },
           {
             type: "select_nodes",
@@ -1913,7 +1913,7 @@ describe("canvas chat commands", () => {
 
     const result = applyCanvasChatCommands(envelopes);
     const state = useCanvasStore.getState();
-    const script = state.nodes.find((node) => node.data.content === "剧情脚本");
+    const script = state.nodes.find((node) => node.data.content === "Plot script");
     const image = state.nodes.find(
       (node) => node.type === CANVAS_NODE_TYPES.imageGen,
     );
@@ -1935,7 +1935,7 @@ describe("canvas chat commands", () => {
     expect(
       state.nodes.find((node) => node.type === CANVAS_NODE_TYPES.group)?.data
         .displayName,
-    ).toBe("短剧视频工作流");
+    ).toBe("Short drama video workflow");
   });
 
   it("normalizes free-form text fields for text-like node types", () => {
@@ -1947,13 +1947,13 @@ describe("canvas chat commands", () => {
             type: "create_node",
             client_id: "text-brief",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
-            data: { prompt: "普通文本内容" },
+            data: { prompt: "Ordinary text content" },
           },
           {
             type: "create_node",
             client_id: "script-brief",
             node_type: CANVAS_NODE_TYPES.script,
-            data: { content: "广告脚本生成要求" },
+            data: { content: "Ad script generation requirements" },
           },
         ],
       },
@@ -1969,13 +1969,13 @@ describe("canvas chat commands", () => {
     );
 
     expect(result.errors).toEqual([]);
-    // 聊天指令建节点不带 displayName，走 addNode 的标题自动发号（「文本1」）——
-    // 与画布上手动新建的节点同一套命名，避免同类型节点重名。
+    // A chat command creating a node carries no displayName and goes through addNode's automatic title numbering ("Text1") -
+    // the same naming scheme as nodes created manually on the canvas, avoiding duplicate names for nodes of the same type.
     expect(textNode?.data).toMatchObject({
-      displayName: "文本1",
-      content: "普通文本内容",
+      displayName: "Text1",
+      content: "Ordinary text content",
     });
-    expect(scriptNode?.data).toMatchObject({ prompt: "广告脚本生成要求" });
+    expect(scriptNode?.data).toMatchObject({ prompt: "Ad script generation requirements" });
   });
 
   it("maps text annotation title to displayName for canvas rendering", () => {
@@ -1987,9 +1987,9 @@ describe("canvas chat commands", () => {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             data: {
-              title: "公益短片主题",
-              content: "留守儿童：爱的守望者",
-              text: "聚焦中国农村留守儿童群体，展现他们的情感需求、成长挑战与希望之光。",
+              title: "Public-service short theme",
+              content: "Left-behind children: guardians of love",
+              text: "Focusing on left-behind children in rural areas, showing their emotional needs, growth challenges and light of hope.",
             },
           },
         ],
@@ -2003,9 +2003,9 @@ describe("canvas chat commands", () => {
 
     expect(result.errors).toEqual([]);
     expect(textNode?.data).toMatchObject({
-      title: "公益短片主题",
-      displayName: "公益短片主题",
-      content: "留守儿童：爱的守望者",
+      title: "Public-service short theme",
+      displayName: "Public-service short theme",
+      content: "Left-behind children: guardians of love",
     });
   });
 
@@ -2015,7 +2015,7 @@ describe("canvas chat commands", () => {
       .addNode(
         CANVAS_NODE_TYPES.textAnnotation,
         { x: 0, y: 0 },
-        { content: "旧内容" },
+        { content: "Old content" },
       );
     const envelopes = extractCanvasChatCommandEnvelopes([
       {
@@ -2025,8 +2025,8 @@ describe("canvas chat commands", () => {
             type: "update_node_data",
             node_id: textId,
             data: {
-              title: "新标题",
-              content: "新内容",
+              title: "New title",
+              content: "New content",
             },
           },
         ],
@@ -2040,9 +2040,9 @@ describe("canvas chat commands", () => {
 
     expect(result.errors).toEqual([]);
     expect(textNode?.data).toMatchObject({
-      title: "新标题",
-      displayName: "新标题",
-      content: "新内容",
+      title: "New title",
+      displayName: "New title",
+      content: "New content",
     });
   });
 
@@ -2052,7 +2052,7 @@ describe("canvas chat commands", () => {
       .addNode(
         CANVAS_NODE_TYPES.textAnnotation,
         { x: 0, y: 0 },
-        { title: "旧标题", content: "旧内容" },
+        { title: "Old title", content: "Old content" },
       );
     const envelopes = extractCanvasChatCommandEnvelopes([
       {
@@ -2062,8 +2062,8 @@ describe("canvas chat commands", () => {
             type: "update_node_data",
             node_id: textId,
             data: {
-              displayName: "新标题",
-              prompt: "新内容",
+              displayName: "New title",
+              prompt: "New content",
             },
           },
         ],
@@ -2078,9 +2078,9 @@ describe("canvas chat commands", () => {
     expect(result.applied).toBe(1);
     expect(result.errors).toEqual([]);
     expect(textNode?.data).toMatchObject({
-      title: "旧标题",
-      displayName: "新标题",
-      content: "新内容",
+      title: "Old title",
+      displayName: "New title",
+      content: "New content",
     });
     expect(textNode?.data).not.toHaveProperty("prompt");
   });
@@ -2091,7 +2091,7 @@ describe("canvas chat commands", () => {
       .addNode(
         CANVAS_NODE_TYPES.imageGen,
         { x: 0, y: 0 },
-        { prompt: "广告视觉素材" },
+        { prompt: "Ad visual assets" },
       );
     const envelopes = extractCanvasChatCommandEnvelopes([
       {
@@ -2101,7 +2101,7 @@ describe("canvas chat commands", () => {
             type: "add_next_node",
             source_node_id: imageId,
             node_type: CANVAS_NODE_TYPES.audio,
-            data: { audioKind: "music", text: "轻快广告背景音乐" },
+            data: { audioKind: "music", text: "Upbeat ad background music" },
           },
         ],
       },
@@ -2125,12 +2125,12 @@ describe("canvas chat commands", () => {
     const textId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
-      { content: "广告脚本" },
+      { content: "Ad script" },
     );
     const scriptId = store.addNode(
       CANVAS_NODE_TYPES.script,
       { x: 320, y: 0 },
-      { prompt: "故事脚本" },
+      { prompt: "Story script" },
     );
     const textNode = useCanvasStore
       .getState()
@@ -2242,16 +2242,16 @@ describe("canvas chat commands", () => {
     const firstId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
-      { displayName: "产品资料" },
+      { displayName: "Product materials" },
     );
     const secondId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 320, y: 0 },
-      { displayName: "广告关键画面" },
+      { displayName: "Ad key visual" },
     );
     const edgeId = store.addEdge(firstId, secondId);
     const groupId = store.groupNodes([firstId, secondId], {
-      label: "电商广告工作流",
+      label: "E-commerce ad workflow",
     });
     if (!edgeId || !groupId) throw new Error("test graph was not created");
     const nodes = useCanvasStore.getState().nodes;
@@ -2300,23 +2300,23 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 120 },
       {
-        displayName: "图片说明",
-        content: "使用已经确认的图片节点参数。",
+        displayName: "Image caption",
+        content: "Use the confirmed image node parameters.",
       },
     );
     const imageId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 120, y: 120 },
       {
-        displayName: "已确认图片工作流",
-        prompt: "红色陶瓷杯，蓝色背景",
+        displayName: "Confirmed image workflow",
+        prompt: "Red ceramic cup, blue background",
         workflowInstanceId: "workflow-one",
         workflowPlanNodeId: "image-one",
         workflowConfigConfirmed: true,
       },
     );
     const groupId = store.groupNodes([briefId, imageId], {
-      label: "已确认图片工作流",
+      label: "Confirmed image workflow",
     });
     if (!groupId) throw new Error("test group was not created");
     const nodes = useCanvasStore.getState().nodes;
@@ -2493,7 +2493,7 @@ describe("canvas chat commands", () => {
             id: "new_image_node_1",
             node_type: CANVAS_NODE_TYPES.imageGen,
             position: { x: 0, y: 0 },
-            data: { prompt: "猫吃鱼" },
+            data: { prompt: "Cat eating fish" },
           },
           {
             type: "move_nodes",
@@ -2514,7 +2514,7 @@ describe("canvas chat commands", () => {
     expect(result.errors).toEqual([]);
     expect(result.applied).toBe(2);
     expect(created?.position).toEqual({ x: 600, y: 400 });
-    expect(created?.data).toMatchObject({ prompt: "猫吃鱼" });
+    expect(created?.data).toMatchObject({ prompt: "Cat eating fish" });
   });
 
   it("infers a same-envelope client_id when the next command has one unknown node ref", () => {
@@ -2525,7 +2525,7 @@ describe("canvas chat commands", () => {
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.imageGen,
-            data: { prompt: "猫吃鱼" },
+            data: { prompt: "Cat eating fish" },
           },
           {
             type: "select_nodes",
@@ -2550,17 +2550,17 @@ describe("canvas chat commands", () => {
     const firstId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 400, y: 200 },
-      { title: "产品/素材输入" },
+      { title: "Product/material input" },
     );
     const secondId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
-      { title: "Hook 与卖点" },
+      { title: "Hook and selling points" },
     );
     const thirdId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 200, y: 80 },
-      { title: "广告关键画面" },
+      { title: "Ad key visual" },
     );
 
     const result = applyCanvasChatCommands(
@@ -2672,7 +2672,7 @@ describe("canvas chat commands", () => {
           {
             type: "group_nodes",
             node_ids: ["d", "b", "a", "c"],
-            label: "Codex 工作流",
+            label: "Codex workflow",
           },
           {
             type: "layout_nodes",
@@ -2707,7 +2707,7 @@ describe("canvas chat commands", () => {
           {
             type: "create_node",
             node_type: CANVAS_NODE_TYPES.imageGen,
-            data: { prompt: "猫吃鱼" },
+            data: { prompt: "Cat eating fish" },
           },
           {
             type: "select_nodes",
@@ -2908,7 +2908,7 @@ describe("canvas chat commands", () => {
           data: {
             preset_managed: true,
             projection_key: "asset:scene:master",
-            title: "主线场景",
+            title: "Mainline scene",
           },
         },
         {
@@ -2919,7 +2919,7 @@ describe("canvas chat commands", () => {
           data: {
             preset_managed: true,
             projection_key: "asset:scene:master",
-            label: "场景生成",
+            label: "Scene generation",
           },
         },
       ],
@@ -2973,7 +2973,7 @@ describe("canvas chat commands", () => {
           data: {
             preset_managed: true,
             projection_key: projectionKey,
-            title: "主线场景",
+            title: "Mainline scene",
           },
         },
         {
@@ -2984,7 +2984,7 @@ describe("canvas chat commands", () => {
           data: {
             preset_managed: true,
             projection_key: projectionKey,
-            label: "场景生成",
+            label: "Scene generation",
           },
         },
       ],
@@ -3245,7 +3245,7 @@ describe("canvas chat commands", () => {
             {
               type: "mainline_projection_assets",
               asset_kinds: ["prop", "identity"],
-              query: "耳机",
+              query: "Headphones",
               limit: 5,
             },
           ],
@@ -3257,21 +3257,21 @@ describe("canvas chat commands", () => {
           tab: "props",
           kind: "prop",
           role: "prop_reference",
-          label: "铁三角监听耳机 / reference",
+          label: "Audio-Technica monitor headphones / reference",
           sublabel: "object",
           url: "/static/prop.png",
           exists: true,
-          meta: { prop_id: "铁三角监听耳机", huge_prompt: "must not leak" },
+          meta: { prop_id: "Audio-Technica monitor headphones", huge_prompt: "must not leak" },
         },
         {
           id: "identity-meng",
           tab: "characters",
           kind: "identity",
           role: "character_identity",
-          label: "孟遥 / 青年时期",
+          label: "MengYao / young_adult",
           url: "/static/meng.png",
           exists: true,
-          meta: { character: "孟遥", identity_id: "孟遥_青年时期" },
+          meta: { character: "MengYao", identity_id: "MengYao_young_adult" },
         },
       ],
     });
@@ -3280,18 +3280,18 @@ describe("canvas chat commands", () => {
       {
         type: "mainline_projection_assets",
         asset_kinds: ["prop", "identity"],
-        query: "耳机",
+        query: "Headphones",
         data: [
           {
             asset_kind: "prop",
-            label: "铁三角监听耳机 / reference",
+            label: "Audio-Technica monitor headphones / reference",
             sublabel: "object",
             media_type: null,
             exists: true,
             projection_request: {
               scope: "asset",
               asset_kind: "prop",
-              asset_id: "铁三角监听耳机",
+              asset_id: "Audio-Technica monitor headphones",
             },
           },
         ],
@@ -3325,10 +3325,10 @@ describe("canvas chat commands", () => {
           {
             kind: "identity",
             role: "character_identity",
-            label: "孟遥 / 青年时期",
+            label: "MengYao / young_adult",
             url: "/static/meng.png",
             exists: true,
-            meta: { character: "孟遥", identity_id: "孟遥_青年时期" },
+            meta: { character: "MengYao", identity_id: "MengYao_young_adult" },
           },
         ],
       },
@@ -3343,14 +3343,14 @@ describe("canvas chat commands", () => {
         data: [
           {
             asset_kind: "character",
-            label: "孟遥 / 青年时期",
+            label: "MengYao / young_adult",
             sublabel: null,
             media_type: null,
             exists: true,
             projection_request: {
               scope: "asset",
               asset_kind: "character",
-              character: "孟遥",
+              character: "MengYao",
             },
           },
         ],
@@ -3385,12 +3385,12 @@ describe("canvas chat commands", () => {
           tab: "characters",
           kind: "character",
           role: "character_profile",
-          label: "陈默",
-          sublabel: "主角",
+          label: "ChenMo",
+          sublabel: "Protagonist",
           url: null,
           exists: true,
           media_type: "text",
-          meta: { character: "陈默" },
+          meta: { character: "ChenMo" },
         },
       ],
     });
@@ -3403,14 +3403,14 @@ describe("canvas chat commands", () => {
         data: [
           {
             asset_kind: "character",
-            label: "陈默",
-            sublabel: "主角",
+            label: "ChenMo",
+            sublabel: "Protagonist",
             media_type: "text",
             exists: true,
             projection_request: {
               scope: "asset",
               asset_kind: "character",
-              character: "陈默",
+              character: "ChenMo",
             },
           },
         ],
@@ -3427,15 +3427,15 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        displayName: "陈默青年身份",
+        displayName: "ChenMo young identity",
         imageUrl: "/static/identity.png",
         mainline_context: [
           {
             kind: "identity",
             projectId: "project-1",
-            character: "陈默",
-            identityId: "陈默_青年时期",
-            label: "陈默 / 青年时期",
+            character: "ChenMo",
+            identityId: "ChenMo_young_adult",
+            label: "ChenMo / young_adult",
           },
         ],
       },
@@ -3444,11 +3444,11 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.upload,
       { x: 360, y: 0 },
       {
-        displayName: "陈默头像",
+        displayName: "ChenMo avatar",
         imageUrl: "/static/portrait.png",
         slot_target: {
           kind: "portrait",
-          character: "陈默",
+          character: "ChenMo",
         },
       },
     );
@@ -3486,14 +3486,14 @@ describe("canvas chat commands", () => {
         data: [
           {
             asset_kind: "character",
-            label: "陈默 / 青年时期",
+            label: "ChenMo / young_adult",
             sublabel: identityNodeId,
             media_type: "image",
             exists: true,
             projection_request: {
               scope: "asset",
               asset_kind: "character",
-              character: "陈默",
+              character: "ChenMo",
             },
           },
         ],
@@ -3587,7 +3587,7 @@ describe("canvas chat commands", () => {
         type: "tool.result",
         name: "agent.tool",
         result: {
-          text: `已生成画布命令：
+          text: `Canvas command generated:
 
 \`\`\`json
 {
@@ -3764,9 +3764,9 @@ describe("canvas chat commands", () => {
     const mattingAction = catalog.actions.find(
       (action) => action.action === "run_matting_tool",
     );
-    expect(mattingAction?.description).toContain("抠图");
-    expect(mattingAction?.description).toContain("去背景");
-    expect(mattingAction?.description).toContain("透明背景");
+    expect(mattingAction?.description).toContain("Matting");
+    expect(mattingAction?.description).toContain("background removal");
+    expect(mattingAction?.description).toContain("transparent background");
     expect(catalog.actions.map((action) => action.action)).toContain(
       "open_split_storyboard_tool",
     );
@@ -3832,7 +3832,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.upload,
       { x: 0, y: 0 },
       {
-        displayName: "当前分镜",
+        displayName: "Current frame",
         imageUrl: "/static/project/frame.png",
         slot_target: { kind: "frame", episode: 1, beat: 2 },
       },
@@ -3855,7 +3855,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.upload,
       { x: 0, y: 0 },
       {
-        displayName: "上传素材",
+        displayName: "Upload asset",
         previewImageUrl: "/static/project/video-cover.png",
       },
     );
@@ -3882,14 +3882,14 @@ describe("canvas chat commands", () => {
         projectId: "project-a",
         episode: 1,
         beat: 2,
-        content: "{{陈默_青年时期}} 搬进幸福新开的小区。",
+        content: "{{ChenMo_young_adult}} moves into the newly opened Happiness Community.",
         snapshot: {
-          visualDescription: "{{陈默_青年时期}} 搬进幸福新开的小区。",
-          sceneId: "幸福小区",
-          sceneVariantId: "清晨",
-          timeOfDay: "清晨",
-          detectedIdentities: ["陈默_青年时期"],
-          detectedProps: ["业主守则"],
+          visualDescription: "{{ChenMo_young_adult}} moves into the newly opened Happiness Community.",
+          sceneId: "Happiness Community",
+          sceneVariantId: "dawn",
+          timeOfDay: "dawn",
+          detectedIdentities: ["ChenMo_young_adult"],
+          detectedProps: ["Owner rules"],
         },
         mainline_context: [
           {
@@ -3897,16 +3897,16 @@ describe("canvas chat commands", () => {
             projectId: "project-a",
             episode: 1,
             beat: 2,
-            sceneId: "幸福小区",
-            sceneVariantId: "清晨",
-            timeOfDay: "清晨",
+            sceneId: "Happiness Community",
+            sceneVariantId: "dawn",
+            timeOfDay: "dawn",
           },
           {
             kind: "scene",
             projectId: "project-a",
-            sceneId: "幸福小区",
-            sceneVariantId: "清晨",
-            label: "幸福小区_清晨",
+            sceneId: "Happiness Community",
+            sceneVariantId: "dawn",
+            label: "Happiness Community_dawn",
           },
         ],
       },
@@ -3927,20 +3927,20 @@ describe("canvas chat commands", () => {
       "time_of_day",
     ]);
     expect(agentCatalog.editable_schema.visual_description.current_value).toBe(
-      "{{陈默_青年时期}} 搬进幸福新开的小区。",
+      "{{ChenMo_young_adult}} moves into the newly opened Happiness Community.",
     );
     expect(agentCatalog.editable_schema.scene_ref).toMatchObject({
       type: "object",
-      current_value: { scene_id: "幸福小区", variant_id: "清晨" },
+      current_value: { scene_id: "Happiness Community", variant_id: "dawn" },
       options: expect.arrayContaining([
-        { scene_id: "幸福小区", variant_id: "清晨" },
+        { scene_id: "Happiness Community", variant_id: "dawn" },
       ]),
     });
     expect(agentCatalog.editable_schema.time_of_day).toMatchObject({
       type: "enum",
-      current_value: "清晨",
-      options: expect.arrayContaining(["", "清晨"]),
-      option_labels: { "": "未设置" },
+      current_value: "dawn",
+      options: expect.arrayContaining(["", "dawn"]),
+      option_labels: { "": "Not set" },
     });
     expect(agentCatalog.actions).toContainEqual(
       expect.objectContaining({
@@ -3960,11 +3960,11 @@ describe("canvas chat commands", () => {
       agentCatalog.actions.find(
         (action: { action: string }) => action.action === "update_node_data",
       )?.description,
-    ).toContain("出场身份和出场道具不开放给 agent 编辑");
+    ).toContain("appearing identities and props are not open to agent editing");
     expect(agentCatalog.instruction).toContain(
-      "修改这些字段时使用 update_node_data",
+      "Use update_node_data to modify these fields",
     );
-    expect(agentCatalog.instruction).toContain("只能由用户使用界面中的手动入口");
+    expect(agentCatalog.instruction).toContain("can only be done by the user through the manual entry in the UI");
     expect(
       agentCatalog.actions.map((action: { action: string }) => action.action),
     ).not.toContain("add_next_node");
@@ -4032,9 +4032,9 @@ describe("canvas chat commands", () => {
               type: "update_node_data",
               node_id: node.id,
               data: {
-                visual_description: "{{陈默_青年时期}} 傍晚走进幸福小区。",
-                scene_ref: { scene_id: "幸福小区", variant_id: "傍晚" },
-                time_of_day: "傍晚",
+                visual_description: "{{ChenMo_young_adult}} walks into Happiness Community at dusk.",
+                scene_ref: { scene_id: "Happiness Community", variant_id: "dusk" },
+                time_of_day: "dusk",
               },
             },
           ],
@@ -4046,20 +4046,20 @@ describe("canvas chat commands", () => {
     const updated = useCanvasStore
       .getState()
       .nodes.find((item) => item.id === node.id);
-    expect(updated?.data.content).toBe("{{陈默_青年时期}} 傍晚走进幸福小区。");
+    expect(updated?.data.content).toBe("{{ChenMo_young_adult}} walks into Happiness Community at dusk.");
     expect(updated?.data.snapshot).toMatchObject({
-      visualDescription: "{{陈默_青年时期}} 傍晚走进幸福小区。",
-      sceneId: "幸福小区",
-      sceneVariantId: "傍晚",
-      timeOfDay: "傍晚",
-      detectedIdentities: ["陈默_青年时期"],
-      detectedProps: ["业主守则"],
+      visualDescription: "{{ChenMo_young_adult}} walks into Happiness Community at dusk.",
+      sceneId: "Happiness Community",
+      sceneVariantId: "dusk",
+      timeOfDay: "dusk",
+      detectedIdentities: ["ChenMo_young_adult"],
+      detectedProps: ["Owner rules"],
     });
     expect(updated?.data.beat_edit_fields).toMatchObject({
-      visual_description: "{{陈默_青年时期}} 傍晚走进幸福小区。",
-      scene_id: "幸福小区",
-      scene_variant_id: "傍晚",
-      time_of_day: "傍晚",
+      visual_description: "{{ChenMo_young_adult}} walks into Happiness Community at dusk.",
+      scene_id: "Happiness Community",
+      scene_variant_id: "dusk",
+      time_of_day: "dusk",
     });
     expect(updated?.data.syncStatus).toBe("stale");
 
@@ -4072,7 +4072,7 @@ describe("canvas chat commands", () => {
               type: "update_node_data",
               node_id: node.id,
               data: {
-                detected_identities: ["不该改"],
+                detected_identities: ["Should not change"],
               },
             },
           ],
@@ -4089,7 +4089,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "女主低声说：今晚必须离开。",
+        content: "The heroine whispers: I must leave tonight.",
       },
     );
     const imageId = store.addNode(
@@ -4123,7 +4123,7 @@ describe("canvas chat commands", () => {
     ).toBe("content");
     expect(
       payload.nodes?.find((node) => node.node_id === textId)?.text_content,
-    ).toBe("女主低声说：今晚必须离开。");
+    ).toBe("The heroine whispers: I must leave tonight.");
     expect(
       payload.nodes?.find((node) => node.node_id === imageId)?.text_field,
     ).toBe("prompt");
@@ -4132,7 +4132,7 @@ describe("canvas chat commands", () => {
     ).toBe("A tense neon alley, cinematic rain");
     expect(context).toContain(`reference_1_node_1_text_field: content`);
     expect(context).toContain(
-      `reference_1_node_1_text_preview: ${JSON.stringify("女主低声说：今晚必须离开。")}`,
+      `reference_1_node_1_text_preview: ${JSON.stringify("The heroine whispers: I must leave tonight.")}`,
     );
     expect(context).toContain(`reference_1_node_2_text_field: prompt`);
     expect(context).toContain(
@@ -4146,7 +4146,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        displayName: "图片节点",
+        displayName: "Image node",
         imageUrl: "/static/project/image.png",
       },
     );
@@ -4176,20 +4176,20 @@ describe("canvas chat commands", () => {
     );
     expect(withSummary).toContain("[SUPERTALE_CANVAS_ONTOLOGY_SUMMARY]");
     expect(withSummary).toContain("canvas_ontology_summary.v1");
-    expect(shouldIncludeCanvasSummary("基于当前画布搭一个流程")).toBe(true);
-    expect(shouldIncludeCanvasSummary("整理当前画布的节点布局")).toBe(true);
-    expect(shouldIncludeCanvasSummary("修改现有工作流的节点依赖")).toBe(true);
-    expect(shouldIncludeCanvasSummary("加一个图片节点")).toBe(false);
-    expect(shouldIncludeCanvasSummary("我想做个公益短片没思路")).toBe(false);
-    expect(shouldIncludeCanvasSummary("运行当前工作流")).toBe(false);
-    expect(shouldIncludeCanvasSummary("清空当前画布")).toBe(false);
+    expect(shouldIncludeCanvasSummary("Build a flow based on the current canvas")).toBe(true);
+    expect(shouldIncludeCanvasSummary("Tidy up the node layout of the current canvas")).toBe(true);
+    expect(shouldIncludeCanvasSummary("Modify the node dependencies of the existing workflow")).toBe(true);
+    expect(shouldIncludeCanvasSummary("Add an image node")).toBe(false);
+    expect(shouldIncludeCanvasSummary("I want to make a public-service short film but have no ideas")).toBe(false);
+    expect(shouldIncludeCanvasSummary("Run the current workflow")).toBe(false);
+    expect(shouldIncludeCanvasSummary("Clear the current canvas")).toBe(false);
     expect(
-      shouldIncludeCanvasSummary("基于当前画布搭一个流程", {
+      shouldIncludeCanvasSummary("Build a flow based on the current canvas", {
         hasCanvasContent: false,
       }),
     ).toBe(false);
     expect(
-      shouldIncludeCanvasSummary("重新选择图片模型", {
+      shouldIncludeCanvasSummary("Reselect the image model", {
         hasFocusedNodeContext: true,
       }),
     ).toBe(false);
@@ -4200,8 +4200,8 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        title: "公益创意",
-        content: "一支温暖的公益广告创意",
+        title: "Public-service concept",
+        content: "A warm public-service ad concept",
       },
     );
     const node = useCanvasStore
@@ -4230,8 +4230,8 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        displayName: "图片生成输入",
-        content: "直接用于生成图片的完整提示词",
+        displayName: "Image generation input",
+        content: "The complete prompt used directly to generate the image",
         semanticOutputRole: "input_text",
       },
     );
@@ -4259,7 +4259,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        displayName: "图片节点",
+        displayName: "Image node",
         imageUrl: "/static/project/image.png",
         prompt: "A city at dusk",
       },
@@ -4268,7 +4268,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        displayName: "视频",
+        displayName: "Video",
       },
     );
     const edgeId = store.addEdge(imageId, videoId);
@@ -4364,7 +4364,7 @@ describe("canvas chat commands", () => {
     expect(nodeDetail?.data?.nodes).toHaveLength(1);
     expect(nodeDetail?.data?.nodes?.[0]?.action_summary).toBeTruthy();
     expect(nodeDetail?.data?.nodes?.[0]?.parameters?.prompt).toMatchObject({
-      label: "提示词",
+      label: "Prompt",
       type: "string",
       current_value: "A city at dusk",
     });
@@ -4388,7 +4388,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        displayName: "角色图",
+        displayName: "Character image",
         imageUrl: "/static/project/character.png",
         prompt: "A bright character portrait",
       },
@@ -4571,7 +4571,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
       {
-        displayName: "镜头视频",
+        displayName: "Shot video",
         videoUrl: "/static/project/shot.mp4",
         quality: "720P",
         durationSec: 5,
@@ -4644,7 +4644,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
       {
-        displayName: "源视频",
+        displayName: "Source video",
         videoUrl: "/static/project/source.mp4",
       },
     );
@@ -4652,7 +4652,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        displayName: "高清（1080P）",
+        displayName: "HD (1080P)",
         isUpscaleNode: true,
         upscaleSourceUrl: "/static/project/source.mp4",
         upscaleResolution: "1080p",
@@ -4695,7 +4695,7 @@ describe("canvas chat commands", () => {
     const parameters = nodeDetail?.data?.nodes?.[0]?.parameters ?? {};
 
     expect(parameters.upscaleResolution).toMatchObject({
-      label: "分辨率",
+      label: "Resolution",
       current_value: "1080p",
       options: ["1080p", "2k", "4k"],
     });
@@ -4712,7 +4712,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        displayName: "6镜分镜草图",
+        displayName: "6-shot storyboard sketch",
         imageUrl: "/static/project/storyboard.png",
         previewImageUrl: "/static/project/storyboard-thumb.png",
       },
@@ -4721,7 +4721,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 240 },
       {
-        displayName: "IP角色立绘",
+        displayName: "IP character portrait",
         imageUrl: "/static/project/character.png",
       },
     );
@@ -4729,8 +4729,8 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        displayName: "镜头2-拍朋友",
-        prompt: "生成视频",
+        displayName: "Shot 2 - filming a friend",
+        prompt: "Generate video",
         referenceOrder: [characterId, storyboardId],
       },
     );
@@ -4780,24 +4780,24 @@ describe("canvas chat commands", () => {
 
     expect(videoDetail?.reference_media).toEqual([
       expect.objectContaining({
-        mention: "@图片1",
+        mention: "@image1",
         node_id: characterId,
-        label: "IP角色立绘",
+        label: "IP character portrait",
         media_type: "image",
         source_url: "/static/project/character.png",
         link_type: "media_input_for",
       }),
       expect.objectContaining({
-        mention: "@图片2",
+        mention: "@image2",
         node_id: storyboardId,
-        label: "6镜分镜草图",
+        label: "6-shot storyboard sketch",
         media_type: "image",
         source_url: "/static/project/storyboard.png",
         preview_url: "/static/project/storyboard-thumb.png",
         link_type: "media_input_for",
       }),
     ]);
-    expect(nodeDetail?.data?.instruction).toContain("@图片1");
+    expect(nodeDetail?.data?.instruction).toContain("@image1");
   });
 
   it("hides mainline projection commands outside the current user's personal canvas", async () => {
@@ -4976,20 +4976,20 @@ describe("canvas chat commands", () => {
 
   it("returns group node detail with direct children instead of an empty shell", async () => {
     const store = useCanvasStore.getState();
-    const longPrompt = `系统生成提示词 ${"很长的内部提示。".repeat(80)}`;
+    const longPrompt = `System generated prompt ${"A very long internal hint. ".repeat(80)}`;
     const textId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        displayName: "镜头上下文",
-        content: "主角走进小区。",
+        displayName: "Shot context",
+        content: "The protagonist walks into the community.",
       },
     );
     const imageId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 320, y: 0 },
       {
-        displayName: "首帧",
+        displayName: "First frame",
         prompt: longPrompt,
         workflowInstanceId: "workflow-detail",
         workflowPlanNodeId: "image-detail",
@@ -5065,7 +5065,7 @@ describe("canvas chat commands", () => {
       false,
     );
     expect(detailNodes.some((node) => Boolean(node.text_content))).toBe(false);
-    expect(imageDetail?.text_preview).toContain("系统生成提示词");
+    expect(imageDetail?.text_preview).toContain("System generated prompt");
     expect(imageDetail?.parameters?.prompt?.current_value).toBe(
       imageDetail?.text_preview,
     );
@@ -5084,9 +5084,9 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 0 },
       {
-        displayName: "广告配音",
+        displayName: "Ad voice-over",
         audioKind: "speech",
-        text: "广告词",
+        text: "Ad copy",
       },
     );
     const envelopes = extractCanvasContextRequestEnvelopes([
@@ -5182,15 +5182,15 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        title: "角色设定",
-        content: "一位温柔坚定的公益主角",
+        title: "Character profile",
+        content: "A gentle but firm public-service protagonist",
       },
     );
     const targetId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 320, y: 0 },
       {
-        prompt: "公益主角形象图",
+        prompt: "Public-service protagonist image",
       },
     );
     const edgeId = store.addEdge(sourceId, targetId);
@@ -5222,8 +5222,8 @@ describe("canvas chat commands", () => {
             client_id: "role_text",
             node_type: CANVAS_NODE_TYPES.textAnnotation,
             data: {
-              displayName: "林奶奶角色设定",
-              prompt: "慈祥、温和、南方老奶奶",
+              displayName: "Grandma Lin character profile",
+              prompt: "Kindly, gentle southern grandma",
               semanticOutputRole: "input_text",
             },
           },
@@ -5232,8 +5232,8 @@ describe("canvas chat commands", () => {
             client_id: "portrait",
             node_type: CANVAS_NODE_TYPES.imageGen,
             data: {
-              displayName: "林奶奶肖像",
-              prompt: "南方老奶奶肖像",
+              displayName: "Grandma Lin portrait",
+              prompt: "Southern grandma portrait",
             },
           },
           {
@@ -5350,7 +5350,7 @@ describe("canvas chat commands", () => {
       expect.objectContaining({
         type: "open_mainline_projection",
         status: "success",
-        label: "打开主线虾画",
+        label: "Open mainline canvas",
         output: expect.objectContaining({
           opened: true,
           canvas_id: "user_canvas",
@@ -5426,7 +5426,7 @@ describe("canvas chat commands", () => {
       { x: 0, y: 0 },
       {
         audioKind: "speech",
-        text: "广告词",
+        text: "Ad copy",
       },
     );
     const events: Array<{
@@ -5477,7 +5477,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
         imageUrl: "/static/cat.png",
       },
     );
@@ -5485,7 +5485,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 300, y: 0 },
       {
-        text: "猫吃鱼",
+        text: "Cat eating fish",
         audioKind: "speech",
       },
     );
@@ -5493,21 +5493,21 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 600, y: 0 },
       {
-        content: "一段需要翻译的文案",
+        content: "A piece of copy to translate",
       },
     );
     const scriptNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.script,
       { x: 900, y: 0 },
       {
-        prompt: "生成一个广告短片脚本",
+        prompt: "Generate an ad short script",
       },
     );
     const worldNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.threeDWorld,
       { x: 1200, y: 0 },
       {
-        displayName: "导演世界",
+        displayName: "Director world",
       },
     );
     useCanvasStore.getState().addEdge(imageNodeId, worldNodeId);
@@ -5620,14 +5620,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "猫吃鱼视频",
+        prompt: "Cat eating fish video",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -5720,7 +5720,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
 
@@ -5775,7 +5775,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
 
@@ -5840,7 +5840,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "未生成的上游图片",
+        prompt: "Ungenerated upstream image",
       },
     );
     const targetImageId = store.addNode(
@@ -6125,14 +6125,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "未生成的上游全景来源",
+        prompt: "Ungenerated upstream panorama source",
       },
     );
     const panoNodeId = store.addNode(
       CANVAS_NODE_TYPES.pano360Viewer,
       { x: 360, y: 0 },
       {
-        displayName: "360 全景查看器",
+        displayName: "360 panorama viewer",
         imageUrl: "/static/project/existing-pano.png",
         previewImageUrl: "/static/project/existing-pano.png",
       },
@@ -6200,14 +6200,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "猫吃鱼视频",
+        prompt: "Cat eating fish video",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -6266,8 +6266,8 @@ describe("canvas chat commands", () => {
   });
 
   it.each([
-    { field: "referenceImageUrl" as const, prompt: "保留原始风格" },
-    { field: "previewImageUrl" as const, prompt: "保留原始风格" },
+    { field: "referenceImageUrl" as const, prompt: "Keep the original style" },
+    { field: "previewImageUrl" as const, prompt: "Keep the original style" },
     { field: "referenceImageUrl" as const, prompt: "" },
   ])("runs only the Recipe target with an external $field source", async ({ field, prompt }) => {
     const store = useCanvasStore.getState();
@@ -6279,7 +6279,7 @@ describe("canvas chat commands", () => {
     const targetId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
-      { prompt: "保留主体，改蓝色背景" },
+      { prompt: "Keep the subject, change to a blue background" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -6323,14 +6323,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "猫吃鱼视频",
+        prompt: "Cat eating fish video",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -6345,7 +6345,7 @@ describe("canvas chat commands", () => {
           nodeId: payload.nodeId,
           action: payload.action,
           status: "error",
-          error: "图片生成失败",
+          error: "Image generation failed",
         });
       },
     );
@@ -6375,9 +6375,9 @@ describe("canvas chat commands", () => {
       expect(events).toEqual([
         { nodeId: imageNodeId, action: "generate_image" },
       ]);
-      expect(result.errors).toContain("图片生成失败");
+      expect(result.errors).toContain("Image generation failed");
       expect(
-        result.errors.some((error) => error.includes("跳过 generate_video")),
+        result.errors.some((error) => error.includes("Skipped generate_video")),
       ).toBe(true);
     } finally {
       unsubscribe();
@@ -6389,12 +6389,12 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
-      { prompt: "商品视频" },
+      { prompt: "Product video" },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const events: Array<{ nodeId: string; action: string }> = [];
@@ -6412,7 +6412,7 @@ describe("canvas chat commands", () => {
             nodeId: payload.nodeId,
             action: payload.action,
             status: "error",
-            error: "节点动作执行超时",
+            error: "Node action timed out",
           });
           return;
         }
@@ -6471,7 +6471,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     let attempts = 0;
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -6534,7 +6534,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     let attempts = 0;
     // "(503)" would look transient; the ended marker must still win.
@@ -6566,7 +6566,7 @@ describe("canvas chat commands", () => {
       );
 
       expect(attempts).toBe(1);
-      const expected = `本次节点执行已结束，请重新运行该节点以开始新的执行（${ended}）`;
+      const expected = `This node's run has ended. Rerun the node to start a new attempt (${ended})`;
       expect(result.errors.join("\n")).toContain(expected);
       expect(updateFreezoneWorkflowRun).toHaveBeenCalledWith(
         "project-a",
@@ -6591,12 +6591,12 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
-      { prompt: "商品视频" },
+      { prompt: "Product video" },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const events: string[] = [];
@@ -6627,7 +6627,7 @@ describe("canvas chat commands", () => {
 
       expect(events).toEqual([imageNodeId]);
       expect(result.errors).toContain(
-        "画布节点或连线已发生变化，已停止执行旧工作流的后续节点。",
+        "Canvas nodes or connections have changed; the remaining nodes of the old workflow were not executed.",
       );
     } finally {
       unsubscribe();
@@ -6640,14 +6640,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "第一张",
+        prompt: "First",
       },
     );
     const secondImageId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
       {
-        prompt: "第二张",
+        prompt: "Second",
       },
     );
     useCanvasStore.getState().setCanvasData(useCanvasStore.getState().nodes, [
@@ -6685,7 +6685,7 @@ describe("canvas chat commands", () => {
       );
 
       expect(events).toEqual([]);
-      expect(result.errors[0]).toContain("环形依赖");
+      expect(result.errors[0]).toContain("cyclic dependency");
       expect(result.commandResults).toHaveLength(2);
       expect(
         result.commandResults.every((step) => step.status === "error"),
@@ -6701,14 +6701,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "第一张",
+        prompt: "First",
       },
     );
     const secondImageId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
       {
-        prompt: "第二张",
+        prompt: "Second",
       },
     );
     const events: string[] = [];
@@ -6764,7 +6764,7 @@ describe("canvas chat commands", () => {
     const nodeIds = Array.from({ length: 5 }, (_, index) => store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: index * 240, y: 0 },
-      { prompt: `商品图 ${index + 1}` },
+      { prompt: `Product image ${index + 1}` },
     ));
     const events: Array<{ nodeId: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe(
@@ -6825,7 +6825,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     let generatingAtDispatch: unknown;
     let workflowRunningAtDispatch: unknown;
@@ -6881,7 +6881,7 @@ describe("canvas chat commands", () => {
     const nodeIds = Array.from({ length: 4 }, (_, index) => store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: index * 360, y: 0 },
-      { prompt: `广告镜头 ${index + 1}` },
+      { prompt: `Ad shot ${index + 1}` },
     ));
     const events: Array<{ nodeId: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe(
@@ -6969,7 +6969,7 @@ describe("canvas chat commands", () => {
     const nodeIds = Array.from({ length: 3 }, (_, index) => store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: index * 360, y: 0 },
-      { prompt: `广告镜头 ${index + 1}` },
+      { prompt: `Ad shot ${index + 1}` },
     ));
     const events: Array<{ nodeId: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -7031,21 +7031,21 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "角色首帧",
+        prompt: "Character first frame",
       },
     );
     const audioNodeId = store.addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 240 },
       {
-        text: "旁白台词",
+        text: "Narration lines",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "根据首帧和旁白生成视频",
+        prompt: "Generate a video from the first frame and the narration",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -7162,7 +7162,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
       {
-        prompt: "镜头 1",
+        prompt: "Shot 1",
         durationMs: 8000,
       },
     );
@@ -7170,7 +7170,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "镜头 2",
+        prompt: "Shot 2",
       },
     );
     store.addEdgeWithData(firstVideoId, secondVideoId, {
@@ -7196,7 +7196,7 @@ describe("canvas chat commands", () => {
           const state = useCanvasStore.getState();
           const tailFrame = state.nodes.find((node) =>
             node.type === CANVAS_NODE_TYPES.exportImage &&
-            (node.data as Record<string, unknown>).displayName === "上一镜尾帧"
+            (node.data as Record<string, unknown>).displayName === "Previous shot tail frame"
           );
           expect(tailFrame?.data).toMatchObject({
             imageUrl: "/static/project/tail-frame.png",
@@ -7217,7 +7217,7 @@ describe("canvas chat commands", () => {
           expect(
             (state.nodes.find((node) => node.id === secondVideoId)?.data as Record<string, unknown>)
               .prompt,
-          ).toContain("上一镜尾帧已作为图片参考接入");
+          ).toContain("The previous shot's tail frame is attached as an image reference");
           useCanvasStore.getState().updateNodeData(secondVideoId, {
             videoUrl: "/static/project/shot-2.mp4",
           });
@@ -7271,12 +7271,12 @@ describe("canvas chat commands", () => {
     const firstVideoId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
-      { prompt: "镜头 1", durationMs: 8000, videoUrl: "/static/project/shot-1.mp4" },
+      { prompt: "Shot 1", durationMs: 8000, videoUrl: "/static/project/shot-1.mp4" },
     );
     const secondVideoId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
-      { prompt: "镜头 2" },
+      { prompt: "Shot 2" },
     );
     store.addEdgeWithData(firstVideoId, secondVideoId, {
       link_type: "dependency_for",
@@ -7323,7 +7323,7 @@ describe("canvas chat commands", () => {
       expect(captureVideoFrameBlob).toHaveBeenCalled();
       expect(events).toEqual([]);
       expect(result.errors).toContain(
-        "工作流运行已结束（interrupted），已停止启动后续节点；请继续工作流以完成未完成的部分。",
+        "The workflow run has ended (interrupted); no further nodes were started. Continue the workflow to finish the remaining parts.",
       );
     } finally {
       unsubscribe();
@@ -7340,12 +7340,12 @@ describe("canvas chat commands", () => {
     const firstVideoId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 0, y: 0 },
-      { prompt: "镜头 1", durationMs: 8000, videoUrl: "/static/project/shot-1.mp4" },
+      { prompt: "Shot 1", durationMs: 8000, videoUrl: "/static/project/shot-1.mp4" },
     );
     const secondVideoId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
-      { prompt: "镜头 2" },
+      { prompt: "Shot 2" },
     );
     store.addEdgeWithData(firstVideoId, secondVideoId, {
       link_type: "dependency_for",
@@ -7391,7 +7391,7 @@ describe("canvas chat commands", () => {
       expect(captureVideoFrameBlob).toHaveBeenCalled();
       expect(events).toEqual([]);
       expect(result.errors).toContain(
-        "工作流运行已结束（interrupted），已停止启动后续节点；请继续工作流以完成未完成的部分。",
+        "The workflow run has ended (interrupted); no further nodes were started. Continue the workflow to finish the remaining parts.",
       );
     } finally {
       unsubscribe();
@@ -7408,7 +7408,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -7455,7 +7455,7 @@ describe("canvas chat commands", () => {
       );
       expect(events).toEqual([]);
       expect(result.errors).toContain(
-        "工作流状态保存失败，已停止启动后续节点：database unavailable",
+        "Failed to save workflow state; no further nodes were started: database unavailable",
       );
     } finally {
       unsubscribe();
@@ -7473,21 +7473,21 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const textNodeId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 360, y: 0 },
       {
-        content: "基于图片的补充说明",
+        content: "Image-based supplementary notes",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 720, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     store.addEdge(imageNodeId, textNodeId);
@@ -7585,7 +7585,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const events: Array<{
@@ -7656,7 +7656,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "待生成内容",
+        content: "Content to be generated",
         workflowCatalog: { recipeId: "video-creative-outline" },
       },
     );
@@ -7665,7 +7665,7 @@ describe("canvas chat commands", () => {
       (payload) => {
         if (!payload.requestId) return;
         useCanvasStore.getState().updateNodeData(textNodeId, {
-          generationError: "上游文本模型请求超时",
+          generationError: "Upstream text model request timed out",
         });
         canvasEventBus.publish("freezone/node-action-result", {
           requestId: payload.requestId,
@@ -7690,13 +7690,13 @@ describe("canvas chat commands", () => {
         },
       ]);
 
-      expect(result.errors).toEqual(["上游文本模型请求超时"]);
+      expect(result.errors).toEqual(["Upstream text model request timed out"]);
       expect(result.commandResults[0]).toMatchObject({
         type: "run_node_action",
         status: "error",
         nodeId: textNodeId,
         action: "generate_text",
-        error: "上游文本模型请求超时",
+        error: "Upstream text model request timed out",
       });
     } finally {
       unsubscribe();
@@ -7708,7 +7708,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "待生成内容",
+        content: "Content to be generated",
         workflowCatalog: { recipeId: "video-creative-outline" },
       },
     );
@@ -7722,7 +7722,7 @@ describe("canvas chat commands", () => {
           action: payload.action,
         });
         setTimeout(() => {
-          const content = "# 视频创意大纲";
+          const content = "# Video creative outline";
           useCanvasStore.getState().updateNodeData(textNodeId, {
             content,
             workflowTextGenerated: true,
@@ -7760,7 +7760,7 @@ describe("canvas chat commands", () => {
         status: "success",
         nodeId: textNodeId,
         action: "generate_text",
-        output: { content: "# 视频创意大纲" },
+        output: { content: "# Video creative outline" },
       });
     } finally {
       unsubscribe();
@@ -7781,7 +7781,7 @@ describe("canvas chat commands", () => {
     {
       nodeType: CANVAS_NODE_TYPES.script,
       action: "generate_story_script",
-      delayedData: { scriptResult: { rows: [{ narration: "成片脚本" }] } },
+      delayedData: { scriptResult: { rows: [{ narration: "Final cut script" }] } },
     },
     {
       nodeType: CANVAS_NODE_TYPES.threeDWorld,
@@ -7796,8 +7796,8 @@ describe("canvas chat commands", () => {
         nodeType,
         { x: 0, y: 0 },
         {
-          prompt: "生成内容",
-          text: "生成内容",
+          prompt: "Generated content",
+          text: "Generated content",
         },
       );
       if (action === "generate_3gs_world") {
@@ -7856,21 +7856,21 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "广告脚本",
+        content: "Ad script",
       },
     );
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 720, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     store.addEdge(textNodeId, imageNodeId);
@@ -7962,7 +7962,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
         imageUrl: "/static/project/existing-image.png",
       },
     );
@@ -7970,12 +7970,12 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const groupId = store.groupNodes([imageNodeId, videoNodeId], {
-      label: "商品视频工作流",
+      label: "Product video workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -8023,7 +8023,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "雨夜首帧" },
+      { prompt: "Rainy night first frame" },
     );
     const events: Array<{ nodeId: string; action: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8077,7 +8077,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "持久化后执行" },
+      { prompt: "Run after persisting" },
     );
     const persisted = vi.fn();
     let resolveRun!: (run: FreezoneWorkflowRun) => void;
@@ -8140,12 +8140,12 @@ describe("canvas chat commands", () => {
     const firstNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "第一条工作流" },
+      { prompt: "First workflow" },
     );
     const secondNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
-      { prompt: "第二条工作流" },
+      { prompt: "Second workflow" },
     );
     const events: Array<{ nodeId: string; action: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8215,7 +8215,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "排队中的首帧" },
+      { prompt: "Queued first frame" },
     );
     const events: Array<{ nodeId: string; action: string; requestId?: string }> = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8278,17 +8278,17 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "用户需求",
+        content: "User requirements",
         workflowCatalogRole: "user_input",
       },
     );
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const groupId = store.groupNodes([inputNodeId, imageNodeId], {
-      label: "商品图工作流",
+      label: "Product image workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -8334,7 +8334,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "用户已经提供的剧本事实",
+        content: "Script facts already provided by the user",
         workflowCatalog: {
           recipeId: "general-text",
           stepId: "user_requirement",
@@ -8345,7 +8345,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 360, y: 0 },
       {
-        content: "生成8 Beat剧本",
+        content: "Generate an 8-beat script",
         workflowCatalog: {
           recipeId: "general-text",
           stepId: "episode_script",
@@ -8354,7 +8354,7 @@ describe("canvas chat commands", () => {
     );
     store.addEdge(inputNodeId, scriptNodeId);
     const groupId = store.groupNodes([inputNodeId, scriptNodeId], {
-      label: "短剧工作流",
+      label: "Short drama workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -8365,14 +8365,14 @@ describe("canvas chat commands", () => {
         events.push({ nodeId: payload.nodeId, action: payload.action });
         if (!payload.requestId) return;
         store.updateNodeData(payload.nodeId, {
-          content: "已生成的8 Beat剧本",
+          content: "Generated 8-beat script",
         });
         canvasEventBus.publish("freezone/node-action-result", {
           requestId: payload.requestId,
           nodeId: payload.nodeId,
           action: payload.action,
           status: "success",
-          output: { content: "已生成的8 Beat剧本" },
+          output: { content: "Generated 8-beat script" },
         });
       },
     );
@@ -8398,7 +8398,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe(
       "freezone/run-node-action",
@@ -8462,7 +8462,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8481,7 +8481,7 @@ describe("canvas chat commands", () => {
         { projectId: "project-a", canvasId: "canvas-a", actionTimeoutMs: 100 },
       );
 
-      expect(result.errors).toEqual(["当前画布已有工作流正在执行，请等待其完成后再试。"]);
+      expect(result.errors).toEqual(["A workflow is already running on this canvas; wait for it to finish and try again."]);
       expect(events).toEqual([]);
     } finally {
       unsubscribe();
@@ -8493,7 +8493,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const persisted = vi.fn();
@@ -8519,7 +8519,7 @@ describe("canvas chat commands", () => {
       );
 
       expect(result.errors).toEqual([
-        "无法创建持久化工作流记录，未启动节点动作：database unavailable",
+        "Unable to create a persistent workflow record; no node actions were started: database unavailable",
       ]);
       expect(events).toEqual([]);
       expect(persisted).not.toHaveBeenCalled();
@@ -8533,7 +8533,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8553,7 +8553,7 @@ describe("canvas chat commands", () => {
       );
 
       expect(result.errors).toEqual([
-        "工作流状态保存失败，已停止启动后续节点：database unavailable",
+        "Failed to save workflow state; no further nodes were started: database unavailable",
       ]);
       expect(events).toEqual([]);
     } finally {
@@ -8566,7 +8566,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8589,7 +8589,7 @@ describe("canvas chat commands", () => {
       );
 
       expect(result.errors).toEqual([
-        "工作流运行已结束（interrupted），已停止启动后续节点；请继续工作流以完成未完成的部分。",
+        "The workflow run has ended (interrupted); no further nodes were started. Continue the workflow to finish the remaining parts.",
       ]);
       expect(events).toEqual([]);
     } finally {
@@ -8602,7 +8602,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8647,7 +8647,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const events: string[] = [];
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
@@ -8697,7 +8697,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -8752,14 +8752,14 @@ describe("canvas chat commands", () => {
   it.each([
     [
       "interrupted",
-      "工作流运行已结束（interrupted），已停止启动后续节点；请继续工作流以完成未完成的部分。",
+      "The workflow run has ended (interrupted); no further nodes were started. Continue the workflow to finish the remaining parts.",
     ],
   ])("reports %s returned by the final completed PATCH", async (serverStatus, expectedError) => {
     const store = useCanvasStore.getState();
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -8810,7 +8810,7 @@ describe("canvas chat commands", () => {
     ["running", "pending"],
   ] as const)("reports %s after reconciling a running final PATCH", async (reconciledStatus, expectedStepStatus) => {
     const store = useCanvasStore.getState();
-    const imageNodeId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 0, y: 0 }, { prompt: "主图" });
+    const imageNodeId = store.addNode(CANVAS_NODE_TYPES.imageGen, { x: 0, y: 0 }, { prompt: "Main image" });
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
       canvasEventBus.publish("freezone/node-action-accepted", {
@@ -8853,12 +8853,12 @@ describe("canvas chat commands", () => {
     const firstNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "首帧" },
+      { prompt: "First frame" },
     );
     const secondNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 300, y: 0 },
-      { prompt: "尾帧" },
+      { prompt: "Last frame" },
     );
     store.addEdge(firstNodeId, secondNodeId);
     const events: string[] = [];
@@ -8909,7 +8909,7 @@ describe("canvas chat commands", () => {
       );
       expect(events).toEqual([firstNodeId]);
       expect(result.errors).toContain(
-        "工作流运行已结束（interrupted），已停止启动后续节点；请继续工作流以完成未完成的部分。",
+        "The workflow run has ended (interrupted); no further nodes were started. Continue the workflow to finish the remaining parts.",
       );
     } finally {
       unsubscribe();
@@ -8926,7 +8926,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -8988,7 +8988,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "商品主图" },
+      { prompt: "Product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -9039,7 +9039,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "已经完成的商品主图" },
+      { prompt: "Already completed product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -9095,7 +9095,7 @@ describe("canvas chat commands", () => {
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { prompt: "尚未完成的商品主图" },
+      { prompt: "Not yet completed product main image" },
     );
     const unsubscribe = canvasEventBus.subscribe("freezone/run-node-action", (payload) => {
       if (!payload.requestId) return;
@@ -9143,19 +9143,19 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "商品主图提示词",
+        content: "Product main image prompt",
       },
     );
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     store.addEdge(textNodeId, imageNodeId);
     const groupId = store.groupNodes([textNodeId, imageNodeId], {
-      label: "商品图片工作流",
+      label: "Product image workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -9212,7 +9212,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
         imageUrl: "/static/project/existing-image.png",
       },
     );
@@ -9261,7 +9261,7 @@ describe("canvas chat commands", () => {
       expect(result.commandResults).not.toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            label: "节点已有内容，未重新生成",
+            label: "Node already has content; not regenerated",
           }),
         ]),
       );
@@ -9276,7 +9276,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
         imageUrl: "/static/project/existing-image.png",
       },
     );
@@ -9334,7 +9334,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "主分支商品图",
+        prompt: "Main-branch product image",
         imageUrl: "/static/project/old-main.png",
       },
     );
@@ -9342,7 +9342,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "主分支视频",
+        prompt: "Main-branch video",
         videoUrl: "/static/project/old-main.mp4",
       },
     );
@@ -9350,7 +9350,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 360 },
       {
-        prompt: "旁路商品图",
+        prompt: "Side-branch product image",
         imageUrl: "/static/project/old-side.png",
       },
     );
@@ -9358,7 +9358,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 360 },
       {
-        prompt: "旁路视频",
+        prompt: "Side-branch video",
         videoUrl: "/static/project/old-side.mp4",
       },
     );
@@ -9445,7 +9445,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "旧提示词",
+        prompt: "Old prompt",
         imageUrl: "/static/project/old-main.png",
       },
     );
@@ -9453,7 +9453,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "主分支视频",
+        prompt: "Main-branch video",
         videoUrl: "/static/project/old-main.mp4",
       },
     );
@@ -9461,7 +9461,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 360 },
       {
-        prompt: "旁路",
+        prompt: "Side branch",
         imageUrl: "/static/project/side.png",
       },
     );
@@ -9473,7 +9473,7 @@ describe("canvas chat commands", () => {
         commands: [{
           type: "update_node_data",
           node_id: imageNodeId,
-          data: { prompt: "新提示词" },
+          data: { prompt: "New prompt" },
         }],
       }]),
       { projectId: "project-a", canvasId: "canvas-a" },
@@ -9502,28 +9502,28 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     const audioNodeId = store.addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
       },
     );
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -9624,28 +9624,28 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "产品资料",
+        content: "Product materials",
       },
     );
     const scriptNodeId = store.addNode(
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 360, y: 0 },
       {
-        content: "广告脚本",
+        content: "Ad script",
       },
     );
     const imageNodeId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 720, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 1080, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     store.addEdge(sourceNodeId, scriptNodeId);
@@ -9713,14 +9713,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -9792,28 +9792,28 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
       },
     );
     const audioNodeId = store.addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
       },
     );
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
@@ -9908,7 +9908,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -9916,7 +9916,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
         audioUrl: "/static/project/audio.wav",
       },
     );
@@ -9924,14 +9924,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 520 },
       {
-        text: "未使用的备用口播",
+        text: "Unused backup voice-over",
       },
     );
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -9985,7 +9985,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -9993,7 +9993,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
         audioUrl: "/static/project/audio.wav",
       },
     );
@@ -10001,7 +10001,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -10048,7 +10048,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -10056,7 +10056,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
         audioUrl: "/static/project/audio.wav",
       },
     );
@@ -10064,14 +10064,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 520 },
       {
-        text: "不应重新生成的备用口播",
+        text: "Backup voice-over that should not be regenerated",
       },
     );
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -10081,7 +10081,7 @@ describe("canvas chat commands", () => {
     const groupId = store.groupNodes(
       [videoNodeId, audioNodeId, extraAudioNodeId, composeNodeId],
       {
-        label: "成片工作流",
+        label: "Final-cut workflow",
       },
     );
     if (!groupId) throw new Error("expected workflow group");
@@ -10131,7 +10131,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品镜头",
+        prompt: "Product shot",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -10139,7 +10139,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
         audioUrl: "/static/project/audio.wav",
       },
     );
@@ -10147,8 +10147,8 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 720, y: 0 },
       {
-        displayName: "最终合成",
-        prompt: "合成全部镜头",
+        displayName: "Final compose",
+        prompt: "Compose all shots",
         genMode: "allReference",
         workflowCatalog: { stepId: "final-compose" },
       },
@@ -10157,7 +10157,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.videoCompose,
       { x: 1080, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, legacyComposeGeneratorId);
@@ -10214,7 +10214,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -10222,7 +10222,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "已有口播",
+        text: "Existing voice-over",
         audioUrl: "/static/project/existing-audio.wav",
       },
     );
@@ -10230,14 +10230,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 520 },
       {
-        text: "需要生成的旁白",
+        text: "Narration to be generated",
       },
     );
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -10307,7 +10307,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -10315,7 +10315,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "商品口播",
+        text: "Product voice-over",
         audioUrl: "/static/project/audio.wav",
       },
     );
@@ -10323,13 +10323,13 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 520 },
       {
-        text: "不应重新生成的备用口播",
+        text: "Backup voice-over that should not be regenerated",
       },
     );
     const groupId = store.groupNodes(
       [videoNodeId, audioNodeId, extraAudioNodeId],
       {
-        label: "成片前置组",
+        label: "Pre-final-cut group",
       },
     );
     if (!groupId) throw new Error("expected workflow group");
@@ -10337,7 +10337,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -10389,7 +10389,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/video.mp4",
       },
     );
@@ -10397,7 +10397,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.audio,
       { x: 360, y: 260 },
       {
-        text: "组外口播",
+        text: "Voice-over outside the group",
         audioUrl: "/static/project/outside-audio.wav",
       },
     );
@@ -10405,18 +10405,18 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.textAnnotation,
       { x: 0, y: 0 },
       {
-        content: "组选中的说明文本",
+        content: "Group-selected description text",
       },
     );
     const groupId = store.groupNodes([textNodeId, videoNodeId], {
-      label: "只选中的视频组",
+      label: "Selected video group",
     });
     if (!groupId) throw new Error("expected workflow group");
     const composeNodeId = store.addNode(
       CANVAS_NODE_TYPES.videoCompose,
       { x: 720, y: 0 },
       {
-        title: "成片合成",
+        title: "Final compose",
       },
     );
     store.addEdge(videoNodeId, composeNodeId);
@@ -10444,7 +10444,7 @@ describe("canvas chat commands", () => {
       expect(result.errors).toEqual([]);
       expect(events).toEqual([]);
       expect(
-        result.commandResults.some((step) => step.label === "工作流已完成，未重新生成"),
+        result.commandResults.some((step) => step.label === "Workflow already completed; not regenerated"),
       ).toBe(true);
     } finally {
       unsubscribe();
@@ -10457,7 +10457,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
         imageUrl: "/static/project/existing-image.png",
       },
     );
@@ -10465,13 +10465,13 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/existing-video.mp4",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const groupId = store.groupNodes([imageNodeId, videoNodeId], {
-      label: "商品视频工作流",
+      label: "Product video workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -10497,7 +10497,7 @@ describe("canvas chat commands", () => {
       expect(result.errors).toEqual([]);
       expect(events).toEqual([]);
       expect(
-        result.commandResults.some((step) => step.label === "工作流已完成，未重新生成"),
+        result.commandResults.some((step) => step.label === "Workflow already completed; not regenerated"),
       ).toBe(true);
     } finally {
       unsubscribe();
@@ -10510,7 +10510,7 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "商品主图",
+        prompt: "Product main image",
         imageUrl: "/static/project/existing-image.png",
       },
     );
@@ -10518,13 +10518,13 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "商品视频",
+        prompt: "Product video",
         videoUrl: "/static/project/existing-video.mp4",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const groupId = store.groupNodes([imageNodeId, videoNodeId], {
-      label: "商品视频工作流",
+      label: "Product video workflow",
     });
     if (!groupId) throw new Error("expected workflow group");
 
@@ -10580,19 +10580,19 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "女主站在雨夜街头",
+        prompt: "The heroine stands on a rainy street",
       },
     );
     const videoNodeId = store.addNode(
       CANVAS_NODE_TYPES.video,
       { x: 360, y: 0 },
       {
-        prompt: "雨夜街头镜头推进",
+        prompt: "Camera push-in on a rainy street",
       },
     );
     store.addEdge(imageNodeId, videoNodeId);
     const groupId = store.groupNodes([imageNodeId, videoNodeId], {
-      label: "短剧工作流",
+      label: "Short drama workflow",
     });
     if (!groupId) throw new Error("expected workflow group to be created");
 
@@ -10651,14 +10651,14 @@ describe("canvas chat commands", () => {
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
       {
-        prompt: "第一张",
+        prompt: "First",
       },
     );
     const secondImageId = store.addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 360, y: 0 },
       {
-        prompt: "第二张",
+        prompt: "Second",
       },
     );
     store.onNodesChange([
@@ -10710,7 +10710,7 @@ describe("canvas chat commands", () => {
       { x: 0, y: 0 },
       {
         imageUrl: "/static/project/image.png",
-        prompt: "猫吃鱼",
+        prompt: "Cat eating fish",
       },
     );
     const events: Array<{ nodeId: string; action: string }> = [];

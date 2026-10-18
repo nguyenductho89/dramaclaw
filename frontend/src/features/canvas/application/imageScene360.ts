@@ -20,20 +20,20 @@ const PANO_VIEWER_LAYOUT_WIDTH = 720;
 const PANO_VIEWER_LAYOUT_HEIGHT = 420;
 
 export interface Scene360ImageResult {
-  /** 新建的 exportImage 全景候选节点 id。 */
+  /** The id of the newly built exportImage panorama candidate node. */
   nodeId: string;
-  /** 后台链（提交 → 轮询 → 回填 + 建 360 查看器 / 写错）settle 时 resolve（不 reject）。 */
+  /** Resolves when the background chain (submit -> poll -> backfill + build the 360 viewer / write error) settles (never rejects). */
   completion: Promise<void>;
 }
 
 /**
- * 全景生成编排（从 Scene360Overlay.handleSubmit 原样搬出，语义零变化）：
- * 同步在源节点下游建 isGenerating 的 exportImage 全景候选节点
- * （output_role:'scene_360_candidate' / media_kind:'pano360'）并连边，然后提交
- * /freezone/scene-360 → 等任务完成 → 回填产物 url，并在候选节点下游建
- * pano360Viewer 查看器节点连边；失败把错误写到候选节点。
+ * Panorama generation orchestration (moved verbatim out of Scene360Overlay.handleSubmit, with zero semantic change):
+ * synchronously build an isGenerating exportImage panorama candidate node downstream of the source node
+ * (output_role:'scene_360_candidate' / media_kind:'pano360') and connect an edge, then submit
+ * /freezone/scene-360 -> wait for the task to complete -> backfill the product url, and build a
+ * pano360Viewer viewer node downstream of the candidate node and connect an edge; on failure write the error to the candidate node.
  *
- * @returns 候选节点 id + 后台链 completion；缺 project 或源节点已不存在时返回 null。
+ * @returns the candidate node id + the background chain completion; null when project is missing or the source node no longer exists.
  */
 export function scene360Image(
   sourceNodeId: string,

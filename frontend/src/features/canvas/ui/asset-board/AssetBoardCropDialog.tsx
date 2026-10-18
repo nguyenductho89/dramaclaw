@@ -11,23 +11,23 @@ import {
 } from '@/features/canvas/ui/cropEditorContent';
 
 interface AssetBoardCropDialogProps {
-  /** 裁剪写回的目标节点 id（调用方进入前预建的「裁剪结果」节点）。 */
+  /** The id of the target node the crop is written back to (the "crop result" node pre-built by the caller before entering). */
   nodeId: string;
   imageSource: string;
-  /** `committed=false` 时调用方需要回收预建的结果节点，见 useCropEditor 的说明。 */
+  /** When `committed=false` the caller needs to reclaim the pre-built result node, see the note on useCropEditor. */
   onClose: (committed: boolean) => void;
-  /** 提交起飞后把 completion 交给调用方挂 busy 态与失败反馈。 */
+  /** After the submit takes off, hand the completion to the caller to attach the busy state and failure feedback. */
   onCommitted: (completion: Promise<void>) => void;
 }
 
 /**
- * 故事板详情里的裁剪编辑器：大图 + 取景框 + 悬浮在图上方的一条控制条（对齐 liblib）。
+ * The crop editor in the storyboard detail: large image + crop frame + a control bar floating above the image (matches liblib).
  *
- * 外壳与 AssetBoardRotateDialog 同配方（portal 到 body 的 z-[300] 全屏遮罩），差别
- * 只在取景框不需要正方形容器——裁剪不旋转，图按自身比例 object-contain 铺开即可，
- * 取景框用百分比落在图上（见 cropEditorContent 的坐标系说明）。
+ * The shell has the same recipe as AssetBoardRotateDialog (a z-[300] full-screen mask portaled to body), the difference
+ * being only that the crop frame needs no square container - cropping does not rotate, and the image just spreads out object-contain by its own ratio,
+ * with the crop frame placed on the image by percentage (see the coordinate system note in cropEditorContent).
  *
- * Esc 由 useCropEditor 统一处理，这里不再另挂一份（否则一次 Esc 会关两遍）。
+ * Esc is handled uniformly by useCropEditor, and not attached again here (otherwise one Esc would close twice).
  */
 export function AssetBoardCropDialog({
   nodeId,
@@ -52,8 +52,8 @@ export function AssetBoardCropDialog({
         }
       }}
     >
-      {/* 只包住图片本身：控制条锚在它上边缘外侧（bottom-full），窄图也会贴着图走。
-          图高收到 72vh 就是为了给控制条留出这条空间。 */}
+      {/* Wraps only the image itself: the control bar is anchored outside its top edge (bottom-full), so even a narrow image has it follow along.
+      The image height is reduced to 72vh precisely to leave this space for the control bar. */}
       <div className="relative">
         <CropEditorSurface
           controller={controller}

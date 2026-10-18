@@ -15,7 +15,7 @@ def test_resolve_project_static_url_decodes_quoted_relpath(tmp_path: Path) -> No
 
     resolved = resolve_static_url_to_path(
         "/static/projects/01KSEFAPS6DM42P0HPASKYR4GM/"
-        "assets/characters/%E9%99%88%E9%BB%98/portrait.png?v=123",
+        "assets/characters/chen_mo/portrait.png?v=123",
         project_dir,
     )
 
@@ -30,7 +30,7 @@ def test_resolve_project_relative_url_decodes_quoted_relpath(tmp_path: Path) -> 
     mask.write_bytes(b"png")
 
     resolved = resolve_static_url_to_path(
-        "/freezone/_uploads/%E9%81%AE%E7%BD%A9.png#mask",
+        "/freezone/_uploads/mask.png#mask",
         project_dir,
     )
 

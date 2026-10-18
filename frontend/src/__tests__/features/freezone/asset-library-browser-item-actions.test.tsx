@@ -109,7 +109,7 @@ describe("AssetLibraryBrowser item actions", () => {
   // The cover rule must match the dialog: if there is an image take the first image as the cover; a pure-audio folder falls back to the folder icon.
   it("shows a cover thumbnail on folders that hold an image", async () => {
     renderBrowser(() => {});
-    const folder = await screen.findByLabelText("Folder Unsorted assets");
+    const folder = await screen.findByLabelText("Folder Uncategorized");
 
     const cover = folder.querySelector("img");
     expect(cover).toBeTruthy();
@@ -119,7 +119,7 @@ describe("AssetLibraryBrowser item actions", () => {
   it("falls back to the folder icon when nothing inside is an image", async () => {
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue([VOICE_ONLY]);
     renderBrowser(() => {});
-    const folder = await screen.findByLabelText("Folder Sound effects");
+    const folder = await screen.findByLabelText("Folder Audio");
 
     expect(folder.querySelector("img")).toBeNull();
   });
@@ -127,7 +127,7 @@ describe("AssetLibraryBrowser item actions", () => {
   it("does not preload metadata for every video in an opened folder", async () => {
     fetchFreezoneVideoCharacterLibrary.mockResolvedValue([VIDEO_ONLY]);
     renderBrowser(() => {});
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
 
     const video = document.querySelector("video");
     expect(video).toBeTruthy();
@@ -136,7 +136,7 @@ describe("AssetLibraryBrowser item actions", () => {
 
   it("offers the four actions on a locally uploaded asset", async () => {
     renderBrowser(() => {});
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
 
     expect(screen.getByRole("menuitem", { name: "Send to canvas" })).toBeTruthy();
@@ -147,7 +147,7 @@ describe("AssetLibraryBrowser item actions", () => {
 
   it("hides Send to canvas when there is no canvas to send to", async () => {
     renderBrowser();
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
 
     expect(screen.queryByRole("menuitem", { name: "Send to canvas" })).toBeNull();
@@ -169,7 +169,7 @@ describe("AssetLibraryBrowser item actions", () => {
   it("sends the clicked asset to the canvas", async () => {
     const onSend = vi.fn();
     renderBrowser(onSend);
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
     fireEvent.click(screen.getByRole("menuitem", { name: "Send to canvas" }));
 
@@ -183,18 +183,18 @@ describe("AssetLibraryBrowser item actions", () => {
   it("downloads under the asset name plus the url's extension", async () => {
     downloadUrlAsFile.mockResolvedValue(undefined);
     renderBrowser(() => {});
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
     fireEvent.click(screen.getByRole("menuitem", { name: "Download" }));
 
     await waitFor(() => expect(downloadUrlAsFile).toHaveBeenCalledTimes(1));
-    expect(downloadUrlAsFile.mock.calls[0][1]).toBe("atompunk.png");
+    expect(downloadUrlAsFile.mock.calls[0][1]).toBe("Atompunk.png");
   });
 
   it("renames through the shared name dialog", async () => {
     renameFreezoneVideoCharacterLibraryItem.mockResolvedValue({});
     renderBrowser(() => {});
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
     fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
 
@@ -216,7 +216,7 @@ describe("AssetLibraryBrowser item actions", () => {
     const nativeConfirm = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     renderBrowser(() => {});
-    await openFolder("Unsorted assets");
+    await openFolder("Uncategorized");
     await openItemMenu("Atompunk");
     fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 

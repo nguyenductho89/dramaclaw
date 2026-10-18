@@ -316,7 +316,7 @@ class _FakeContextBeatStore:
                 "scene_ref": {"name": "Lanzhou Noodle Shop"},
                 "narration_segment": "The young man stares at the bill on the table.",
                 "visual_description": "The young man sits at the wooden table of the noodle shop, his right hand resting by the bowl.",
-                "detected_identities": ["Noodle_Shop_Young_Man"],
+                "detected_identities": ["Noodle_Shop_YoungMan"],
                 "detected_props": ["bill"],
             }
         ]
@@ -1288,17 +1288,17 @@ async def test_freezone_audio_generation_enqueues_two_feature_billings(
     assert speech_billing == {
         "feature_key": "freezone.audio_speech",
         "operation": "speech",
-        "billable_chars": 7,
-        "pricing_quantity": 7,
+        "billable_chars": 22,
+        "pricing_quantity": 22,
         "pricing_kind": "audio",
         "pricing_model": INDEXTTS2_RECORD_MODEL,
         "pricing_params": {},
         "pricing_metrics": {
             "call_count": 1,
             "item_count": 1,
-            "billable_chars": 7,
+            "billable_chars": 22,
         },
-        "items": 7,
+        "items": 22,
     }
 
     music_billing = captured[1]["payload"]["billing"]
@@ -1360,15 +1360,15 @@ async def test_freezone_image_reverse_prompt_enqueues_feature_billing(
     assert captured["payload"]["billing"] == {
         "feature_key": "freezone.image_reverse_prompt",
         "operation": "image_reverse_prompt",
-        "billable_chars": 5,
-        "pricing_quantity": 5,
+        "billable_chars": 17,
+        "pricing_quantity": 17,
         "pricing_kind": "text",
         "pricing_model": "freezone-vision-model",
         "pricing_params": {},
         "pricing_metrics": {
             "call_count": 1,
             "item_count": 1,
-            "billable_chars": 5,
+            "billable_chars": 17,
         },
     }
     assert captured["payload"]["instruction"] == "Cinematic lighting"
@@ -2461,13 +2461,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                         "id": "edge_identity_old_only",
                         "source": "ref_character_identity_1",
                         "target": "skill_frame_from_context",
-                        "targetHandle": "identity:Shen_Yuebai_young_adult",
+                        "targetHandle": "identity:ShenYuebai_young_adult",
                         "data": {
                             "edgeKind": "role_binding",
                             "role": "identity",
                             "reference_target": {
                                 "kind": "identity",
-                                "identity_id": "Shen_Yuebai_young_adult",
+                                "identity_id": "ShenYuebai_young_adult",
                             },
                         },
                     }
@@ -2519,13 +2519,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                     "id": "edge_identity_1",
                     "source": "ref_character_identity_1",
                     "target": "skill_frame_from_context",
-                    "targetHandle": "identity:Shen_Yuebai_young_adult",
+                    "targetHandle": "identity:ShenYuebai_young_adult",
                     "data": {
                         "edgeKind": "role_binding",
                         "role": "identity",
                         "reference_target": {
                             "kind": "identity",
-                            "identity_id": "Shen_Yuebai_young_adult",
+                            "identity_id": "ShenYuebai_young_adult",
                         },
                     },
                 },
@@ -2533,13 +2533,13 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
                     "id": "edge_identity_2",
                     "source": "ref_character_identity_2",
                     "target": "skill_frame_from_context",
-                    "targetHandle": "identity:Lu_Chen_young_adult",
+                    "targetHandle": "identity:LuChen_young_adult",
                     "data": {
                         "edgeKind": "role_binding",
                         "role": "identity",
                         "reference_target": {
                             "kind": "identity",
-                            "identity_id": "Lu_Chen_young_adult",
+                            "identity_id": "LuChen_young_adult",
                         },
                     },
                 },
@@ -2578,7 +2578,7 @@ async def test_get_canvas_refreshes_beat_preset_from_mainline_context(
         for edge in data["edges"]
         if (edge.get("data") or {}).get("role") == "identity"
     }
-    assert identity_handles == {"identity:Shen_Yuebai_young_adult", "identity:Lu_Chen_young_adult"}
+    assert identity_handles == {"identity:ShenYuebai_young_adult", "identity:LuChen_young_adult"}
 
 
 @pytest.mark.asyncio
@@ -4155,13 +4155,13 @@ async def test_freezone_celery_text_generate_runner_records_project_node_history
     assert result["generated_text"] == "On a rainy night, they meet again on the old platform."
     assert result["billing"] == {
         "operation": "text_generate",
-        "billable_chars": 13,
-        "pricing_quantity": 13,
+        "billable_chars": 44,
+        "pricing_quantity": 44,
         "quantity_source": "generated_text",
     }
     assert result["__feature_credit_reservation_id"] == "reservation_actual_text"
-    assert reservations[0]["quantity"] == 13
-    assert reservations[0]["params"]["pricing_metrics"]["billable_chars"] == 13
+    assert reservations[0]["quantity"] == 44
+    assert reservations[0]["params"]["pricing_metrics"]["billable_chars"] == 44
     assert history[-1]["task_type"] == "freezone_text_generate"
     assert history[-1]["model"] == "DC-freezone-text-writer-LLM"
 
@@ -4493,7 +4493,7 @@ async def test_freezone_text_job_preserves_canvas_node_context_in_celery_payload
     assert captured["task_type"] == "freezone_text_translate"
     assert captured["payload"]["canvas_id"] == "canvas_a"
     assert captured["payload"]["node_id"] == "node_text"
-    assert captured["payload"]["billing"] == {"billable_chars": 2}
+    assert captured["payload"]["billing"] == {"billable_chars": 5}
 
 
 @pytest.mark.asyncio
@@ -4535,7 +4535,7 @@ async def test_freezone_text_generate_job_defers_quantity_to_trusted_result(
     assert captured["payload"]["billing"] == {
         "operation": "text_generate",
         "quantity_source": "trusted_runner_result",
-        "billable_chars": 7,
+        "billable_chars": 21,
         "result_billing_version": 2,
     }
 
@@ -4575,7 +4575,7 @@ async def test_freezone_story_script_job_uses_model_visible_chars_for_billing(
     )
 
     assert captured["task_type"] == "freezone_story_script"
-    assert captured["payload"]["billing"] == {"billable_chars": 9}
+    assert captured["payload"]["billing"] == {"billable_chars": 31}
 
 
 @pytest.mark.asyncio
@@ -5228,7 +5228,7 @@ def _skill_beat_input() -> dict:
             "episode": 1,
             "beat": 8,
             "scene_id": "Lanzhou Noodle Shop",
-            "detected_identities": ["Noodle_Shop_Young_Man"],
+            "detected_identities": ["Noodle_Shop_YoungMan"],
         },
     }
 
@@ -5293,17 +5293,17 @@ def test_standalone_beat_context_normalizes_plain_identity_to_mainline_prompt_sh
 def test_standalone_beat_context_character_map_uses_mainline_identity_suffix_shape() -> None:
     character_map = freezone_routes._standalone_beat_context_character_map(
         {
-            "detected_identities": ["Lu_Chen_young_adult"],
-            "sketch_colors": {"Lu_Chen_young_adult": "#00FFFF"},
+            "detected_identities": ["LuChen_young_adult"],
+            "sketch_colors": {"LuChen_young_adult": "#00FFFF"},
         }
     )
 
     assert character_map == {
-        "Lu_Chen": {
-            "base_prompt": "Lu_Chen",
+        "LuChen": {
+            "base_prompt": "LuChen",
             "reference_mode": "prompt_only",
             "sketch_color": "#00FFFF",
-            "identity_appearances": {"young_adult": "Lu_Chen_young_adult"},
+            "identity_appearances": {"young_adult": "LuChen_young_adult"},
             "identity_sketch_colors": {"young_adult": "#00FFFF"},
         }
     }
@@ -9235,7 +9235,7 @@ def _beat_skill_emit_payload(
     detected_props: list[str] | None = None,
 ) -> dict:
     identity_ids = (
-        detected_identities if detected_identities is not None else ["Young_Man_default", "Young_Man"]
+        detected_identities if detected_identities is not None else ["YoungMan_default", "YoungMan"]
     )
     prop_ids = detected_props if detected_props is not None else ["bill"]
     prop_id = prop_ids[0] if prop_ids else "bill"
@@ -9307,24 +9307,24 @@ def _beat_skill_emit_payload(
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "Young_Man identity",
-                "rel_path": "assets/characters/Young_Man/identities/default.png",
-                "url": "/static/admin/demo/assets/characters/Young_Man/identities/default.png",
+                "label": "YoungMan identity",
+                "rel_path": "assets/characters/YoungMan/identities/default.png",
+                "url": "/static/admin/demo/assets/characters/YoungMan/identities/default.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "1:1",
-                "meta": {"character": "Young_Man", "identity_id": "Young_Man_default"},
+                "meta": {"character": "YoungMan", "identity_id": "YoungMan_default"},
             },
             {
                 "kind": "identity",
                 "role": "character_portrait",
-                "label": "Young_Man portrait",
-                "rel_path": "assets/characters/Young_Man/portrait.png",
-                "url": "/static/admin/demo/assets/characters/Young_Man/portrait.png",
+                "label": "YoungMan portrait",
+                "rel_path": "assets/characters/YoungMan/portrait.png",
+                "url": "/static/admin/demo/assets/characters/YoungMan/portrait.png",
                 "exists": True,
                 "media_type": "image",
                 "aspect_ratio": "1:1",
-                "meta": {"character": "Young_Man"},
+                "meta": {"character": "YoungMan"},
             },
             {
                 "kind": "prop",
@@ -9472,18 +9472,18 @@ def test_beat_preset_skill_role_edges_target_handle_equals_role() -> None:
             "ref_character_identity_1",
             "skill_frame_from_context",
             "identity",
-            "identity:Young_Man_default",
+            "identity:YoungMan_default",
         ),
-        ("ref_character_portrait_1", "skill_frame_from_context", "identity", "identity:Young_Man"),
+        ("ref_character_portrait_1", "skill_frame_from_context", "identity", "identity:YoungMan"),
         ("ref_prop_reference_1", "skill_frame_from_context", "prop", "prop:bill"),
     }
     edges_by_pair = {(edge["source"], edge["target"]): edge for edge in role_edges}
     assert edges_by_pair[("ref_character_identity_1", "skill_frame_from_context")]["data"][
         "reference_target"
-    ] == {"kind": "identity", "identity_id": "Young_Man_default"}
+    ] == {"kind": "identity", "identity_id": "YoungMan_default"}
     assert edges_by_pair[("ref_character_portrait_1", "skill_frame_from_context")]["data"][
         "reference_target"
-    ] == {"kind": "identity", "identity_id": "Young_Man"}
+    ] == {"kind": "identity", "identity_id": "YoungMan"}
     assert edges_by_pair[("ref_prop_reference_1", "skill_frame_from_context")]["data"][
         "reference_target"
     ] == {"kind": "prop", "prop_id": "bill"}
@@ -9512,14 +9512,14 @@ def test_beat_preset_does_not_duplicate_reference_skill_input_edges() -> None:
 
 
 def test_beat_preset_prefers_identity_reference_over_portrait_for_same_identity() -> None:
-    payload = _beat_skill_emit_payload(detected_identities=["Young_Man_default"])
+    payload = _beat_skill_emit_payload(detected_identities=["YoungMan_default"])
 
     identity_edges = [
         edge
         for edge in payload["edges"]
         if edge.get("target") == "skill_frame_from_context"
         and (edge.get("data") or {}).get("role") == "identity"
-        and edge.get("targetHandle") == "identity:Young_Man_default"
+        and edge.get("targetHandle") == "identity:YoungMan_default"
     ]
 
     assert len(identity_edges) == 1

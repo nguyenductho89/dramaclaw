@@ -143,30 +143,30 @@ def test_scene_asset_records_include_push_targets() -> None:
     project_dir = Path(__file__).resolve().parents[1]
     existing_file = Path(__file__).resolve()
     cases = [
-        ("scene", "scene_master", existing_file, {"kind": "scene_master", "scene_id": "小区"}),
+        ("scene", "scene_master", existing_file, {"kind": "scene_master", "scene_id": "compound"}),
         (
             "scene",
             "scene_reverse_master",
             existing_file,
-            {"kind": "scene_reverse_master", "scene_id": "小区"},
+            {"kind": "scene_reverse_master", "scene_id": "compound"},
         ),
         (
             "scene",
             "scene_director_pano_360",
             existing_file,
-            {"kind": "scene_director_pano_360", "scene_id": "小区"},
+            {"kind": "scene_director_pano_360", "scene_id": "compound"},
         ),
         (
             "scene",
             "scene_3gs_pano_ply",
             existing_file,
-            {"kind": "scene_3gs_pano_ply", "scene_id": "小区"},
+            {"kind": "scene_3gs_pano_ply", "scene_id": "compound"},
         ),
         (
             "scene",
             "scene_3gs_collision_glb",
             existing_file,
-            {"kind": "scene_3gs_collision_glb", "scene_id": "小区"},
+            {"kind": "scene_3gs_collision_glb", "scene_id": "compound"},
         ),
     ]
 
@@ -181,7 +181,7 @@ def test_scene_asset_records_include_push_targets() -> None:
             role=role,
             label=role,
             abs_path=path,
-            meta={"scene_id": "小区"},
+            meta={"scene_id": "compound"},
         )
         assert record["slot_target"] == target
         assert record["pushable"] is True
@@ -217,23 +217,23 @@ def test_identity_costume_asset_record_has_push_target() -> None:
         tab="characters",
         kind="identity_costume",
         role="identity_costume",
-        label="林昭 / 青年 costume",
+        label="LinZhao / young_adult costume",
         abs_path=Path(__file__).resolve(),
-        meta={"character": "林昭", "identity_id": "林昭_青年"},
+        meta={"character": "LinZhao", "identity_id": "LinZhao_young_adult"},
     )
 
     assert record["slot_target"] == {
         "kind": "identity_costume",
-        "character": "林昭",
-        "identity_id": "林昭_青年",
+        "character": "LinZhao",
+        "identity_id": "LinZhao_young_adult",
     }
     assert record["pushable"] is True
     assert record["history_url"] == (
-        "/api/v1/projects/proj_1/characters/%E6%9E%97%E6%98%AD/"
-        "asset-history?kind=identity_costume&identity_id=%E6%9E%97%E6%98%AD_%E9%9D%92%E5%B9%B4"
+        "/api/v1/projects/proj_1/characters/LinZhao/"
+        "asset-history?kind=identity_costume&identity_id=LinZhao_young_adult"
     )
     assert record["restore_url"] == (
-        "/api/v1/projects/proj_1/characters/%E6%9E%97%E6%98%AD/asset-history/restore"
+        "/api/v1/projects/proj_1/characters/LinZhao/asset-history/restore"
     )
 
 
@@ -247,15 +247,15 @@ def test_identity_portrait_asset_record_has_push_target() -> None:
         tab="characters",
         kind="identity_portrait",
         role="identity_portrait",
-        label="林昭 / 青年 portrait",
+        label="LinZhao / young_adult portrait",
         abs_path=Path(__file__).resolve(),
-        meta={"character": "林昭", "identity_id": "林昭_青年"},
+        meta={"character": "LinZhao", "identity_id": "LinZhao_young_adult"},
     )
 
     assert record["slot_target"] == {
         "kind": "identity_portrait",
-        "character": "林昭",
-        "identity_id": "林昭_青年",
+        "character": "LinZhao",
+        "identity_id": "LinZhao_young_adult",
     }
     assert record["pushable"] is True
 
@@ -276,7 +276,7 @@ def test_director_combined_asset_record_carries_control_bundle(tmp_path: Path) -
         tab="beat",
         kind="director",
         role="director_combined",
-        label="导演合成图",
+        label="Director composite image",
         abs_path=bundle_dir / "combined.png",
         aspect_ratio="16:9",
         meta={"episode": 1, "beat": 6},
@@ -302,8 +302,8 @@ def test_director_combined_asset_record_carries_control_bundle(tmp_path: Path) -
 
 def test_scene_preset_refs_include_all_scene_reference_images(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
-    scene_dir = project_dir / "assets" / "scenes" / "小区"
-    pano_dir = project_dir / "director_worlds" / "小区" / "v1"
+    scene_dir = project_dir / "assets" / "scenes" / "compound"
+    pano_dir = project_dir / "director_worlds" / "compound" / "v1"
     scene_dir.mkdir(parents=True)
     pano_dir.mkdir(parents=True)
     for filename in ("master.png", "reverse_master.png", "spatial_layout.png"):
@@ -327,8 +327,8 @@ def test_scene_preset_refs_include_all_scene_reference_images(tmp_path: Path) ->
         username="admin",
         project="demo",
         project_dir=project_dir,
-        scene_name="小区",
-        scene_info={"environment_prompt": "小区内院，白色楼房，绿化很好"},
+        scene_name="compound",
+        scene_info={"environment_prompt": "Compound courtyard, white buildings, lush greenery"},
     )
 
     payload_refs = [ref.model_dump() for ref in refs]
@@ -341,10 +341,10 @@ def test_scene_preset_refs_include_all_scene_reference_images(tmp_path: Path) ->
     assert "scene_360" not in {ref["role"] for ref in payload_refs}
     assert "scene_spatial_layout" not in {ref["role"] for ref in payload_refs}
     assert all(ref["exists"] for ref in payload_refs)
-    assert all(ref["meta"]["scene_id"] == "小区" for ref in payload_refs)
+    assert all(ref["meta"]["scene_id"] == "compound" for ref in payload_refs)
     assert all(ref["mainline_context"][0]["kind"] == "scene" for ref in payload_refs)
     assert all(
-        ref["meta"]["environment_prompt"] == "小区内院，白色楼房，绿化很好" for ref in payload_refs
+        ref["meta"]["environment_prompt"] == "Compound courtyard, white buildings, lush greenery" for ref in payload_refs
     )
 
 
@@ -362,7 +362,7 @@ def test_scene_asset_preset_creates_missing_ply_workflow_nodes() -> None:
                 "url": "/static/admin/demo/assets/scenes/lanzhou/master.png",
                 "exists": True,
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "lanzhou", "environment_prompt": "拉面馆正面"},
+                "meta": {"scene_id": "lanzhou", "environment_prompt": "Noodle shop front"},
             },
             {
                 "kind": "scene",
@@ -372,7 +372,7 @@ def test_scene_asset_preset_creates_missing_ply_workflow_nodes() -> None:
                 "url": "/static/admin/demo/assets/scenes/lanzhou/reverse_master.png",
                 "exists": True,
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "lanzhou", "environment_prompt": "拉面馆反面"},
+                "meta": {"scene_id": "lanzhou", "environment_prompt": "Noodle shop back"},
             },
             {
                 "kind": "scene",
@@ -382,7 +382,7 @@ def test_scene_asset_preset_creates_missing_ply_workflow_nodes() -> None:
                 "url": "/static/admin/demo/assets/scenes/lanzhou/scene_panorama_sketch_360.png",
                 "exists": True,
                 "aspect_ratio": "2:1",
-                "meta": {"scene_id": "lanzhou", "environment_prompt": "拉面馆全景"},
+                "meta": {"scene_id": "lanzhou", "environment_prompt": "Noodle shop panorama"},
             },
         ],
     }
@@ -405,7 +405,7 @@ def test_scene_asset_preset_creates_missing_ply_workflow_nodes() -> None:
     assert "workflow_scene_lanzhou_pano_ply" not in nodes
     world = nodes["director_world_scene_lanzhou"]
     assert world["type"] == "threeDWorldNode"
-    assert world["data"]["displayName"] == "lanzhou 导演世界"
+    assert world["data"]["displayName"] == "lanzhou director world"
     assert ("ref_scene_master_1", "director_world_scene_lanzhou") in edges
     assert ("ref_scene_reverse_master_1", "director_world_scene_lanzhou") in edges
     assert ("ref_scene_360_1", "director_world_scene_lanzhou") in edges
@@ -469,8 +469,8 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                 "meta": {
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
-                    "environment_prompt": "拉面馆正面，旧木桌，暖黄色灯光",
-                    "style_name": "电影写实 (cinematic)",
+                    "environment_prompt": "Noodle shop front, old wooden tables, warm yellow lighting",
+                    "style_name": "Cinematic realism (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
                 },
@@ -486,8 +486,8 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                 "meta": {
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
-                    "environment_prompt": "拉面馆反面，收银台和厨房门",
-                    "style_name": "电影写实 (cinematic)",
+                    "environment_prompt": "Noodle shop back, cashier counter and kitchen door",
+                    "style_name": "Cinematic realism (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
                 },
@@ -503,8 +503,8 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                 "meta": {
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
-                    "environment_prompt": "拉面馆完整空间",
-                    "style_name": "电影写实 (cinematic)",
+                    "environment_prompt": "Noodle shop full space",
+                    "style_name": "Cinematic realism (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
                 },
@@ -522,7 +522,7 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
     for node_id in ["prompt_scene_lanzhou_master", "prompt_scene_lanzhou"]:
         content = nodes[node_id]["data"]["content"]
         assert "PROJECT STYLE PRESET:" in content
-        assert "- Style id/name: 电影写实 (cinematic)" in content
+        assert "- Style id/name: Cinematic realism (cinematic)" in content
         assert "cinematic realism, natural skin texture, grounded lighting" in content
         assert "no cartoon rendering, no plastic surfaces" in content
     reverse_content = nodes["prompt_scene_lanzhou_reverse_master"]["data"]["content"]
@@ -548,10 +548,10 @@ def test_derived_scene_asset_preset_projects_base_master_dependency() -> None:
                     "scene_id": "bathroom_leak",
                     "base_scene_id": "bathroom",
                     "variant_id": "leak",
-                    "variant_prompt": "地面积水，天花板持续滴水。",
+                    "variant_prompt": "Standing water on the floor, with the ceiling dripping continuously.",
                     "base_master_url": "/static/admin/demo/assets/scenes/bathroom/master.png",
                     "base_master_rel_path": "assets/scenes/bathroom/master.png",
-                    "base_environment_prompt": "白瓷砖墙面，正面是洗手台。",
+                    "base_environment_prompt": "White-tile walls, with a washbasin at the front.",
                 },
             },
         ],
@@ -602,7 +602,7 @@ def test_scene_asset_preset_folds_existing_3gs_sources_into_director_world() -> 
             {
                 "kind": "scene",
                 "role": "scene_3gs_pano_ply",
-                "label": "lanzhou 3D 世界（360）",
+                "label": "lanzhou 3D world (360)",
                 "rel_path": "director_worlds/lanzhou/v1/world.sog",
                 "url": "/static/admin/demo/director_worlds/lanzhou/v1/world.sog",
                 "exists": True,
@@ -637,7 +637,7 @@ async def test_scene_asset_preset_emits_missing_scene_slot_placeholders(tmp_path
             return {
                 "scene_id": scene_id,
                 "scene_type": "interior",
-                "environment_prompt": "兰州拉面馆内，昏暗灯光，旧桌椅",
+                "environment_prompt": "Inside the Lanzhou noodle shop, dim lighting, old tables and chairs",
             }
 
     _write_fake_image(tmp_path / "assets/scenes/lanzhou/spatial_layout.png")
@@ -719,28 +719,28 @@ class _FakeEpisodeWorkbenchStore:
         return [
             {
                 "beat_number": 1,
-                "visual_description": "陈默在{{陈默_青年时期}}身旁拿起[[业主守则]]。",
-                "narration_segment": "陈默发现规则不对。",
-                "scene_ref": {"scene_id": "小区"},
+                "visual_description": "ChenMo picks up [[resident_rules]] beside {{ChenMo_young_adult}}.",
+                "narration_segment": "ChenMo finds the rules wrong.",
+                "scene_ref": {"scene_id": "compound"},
                 "detected_identities": [
-                    {"identity_id": "陈默_青年时期"},
-                    {"identity_id": "陈默_青年时期"},
+                    {"identity_id": "ChenMo_young_adult"},
+                    {"identity_id": "ChenMo_young_adult"},
                 ],
-                "detected_props": [{"prop_id": "业主守则"}, {"prop_id": "业主守则"}],
+                "detected_props": [{"prop_id": "resident_rules"}, {"prop_id": "resident_rules"}],
             },
             {
                 "beat_number": 2,
-                "visual_description": "杜晨站在{{杜晨_正装}}面前。",
-                "narration_segment": "杜晨出现。",
-                "scene_ref": {"scene_id": "办公室"},
-                "detected_identities": [{"identity_id": "杜晨_正装"}],
+                "visual_description": "DuChen stands in front of {{DuChen_formal}}.",
+                "narration_segment": "DuChen appears.",
+                "scene_ref": {"scene_id": "office"},
+                "detected_identities": [{"identity_id": "DuChen_formal"}],
                 "detected_props": [],
             },
         ]
 
     async def get_episode_from_graph(self, episode: int):
         assert episode == 1
-        return SimpleNamespace(title="第一集")
+        return SimpleNamespace(title="Episode 1")
 
     async def get_scene(self, scene_id: str):
         return {"scene_id": scene_id, "scene_type": "interior"}
@@ -804,11 +804,11 @@ async def test_episode_preset_creates_overview_context_graph(tmp_path: Path) -> 
         if (node.get("data") or {}).get("mainline_context", [{}])[0].get("kind") == "prop"
     ]
     assert {node["data"]["mainline_context"][0]["identityId"] for node in identity_nodes} == {
-        "杜晨_正装",
-        "陈默_青年时期",
+        "DuChen_formal",
+        "ChenMo_young_adult",
     }
     assert {node["data"]["mainline_context"][0]["propId"] for node in prop_nodes} == {
-        "业主守则",
+        "resident_rules",
     }
     assert ("context_beat_001", "context_episode") in edges
     assert ("context_beat_002", "context_episode") in edges
@@ -839,21 +839,21 @@ async def test_episode_preset_creates_overview_context_graph(tmp_path: Path) -> 
 
 @pytest.mark.asyncio
 async def test_episode_preset_uses_one_best_ref_per_context_asset(tmp_path: Path) -> None:
-    # 陈默 has a canonical identity image (assets/characters/陈默/identities/...).
-    # 杜晨 has only portrait + deprecated reference_front — i.e. canonical identity is
+    # ChenMo has a canonical identity image (assets/characters/ChenMo/identities/...).
+    # DuChen has only portrait + deprecated reference_front — i.e. canonical identity is
     # MISSING. EP preset now skips portrait fallback for
     # identity refs (Q1 fix: avoid surfacing a portrait stand-in as if it were
-    # a generated identity at the EP scope), so 杜晨 should NOT appear in the
+    # a generated identity at the EP scope), so DuChen should NOT appear in the
     # EP-scope refs. The beat workbench preset still keeps the fallback.
-    _write_fake_image(tmp_path / "assets/characters/陈默/identities/青年时期.png")
-    _write_fake_image(tmp_path / "assets/characters/陈默/portrait.png")
-    _write_fake_image(tmp_path / "assets/characters/陈默/reference_front.png")
-    _write_fake_image(tmp_path / "assets/characters/杜晨/portrait.png")
-    _write_fake_image(tmp_path / "assets/characters/杜晨/reference_front.png")
-    _write_fake_image(tmp_path / "assets/props/业主守则/reference_3view.png")
-    _write_fake_image(tmp_path / "assets/scenes/小区/master.png")
-    _write_fake_image(tmp_path / "assets/scenes/小区/reverse_master.png")
-    _write_fake_image(tmp_path / "assets/scenes/办公室/master.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/identities/young_adult.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/portrait.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/reference_front.png")
+    _write_fake_image(tmp_path / "assets/characters/DuChen/portrait.png")
+    _write_fake_image(tmp_path / "assets/characters/DuChen/reference_front.png")
+    _write_fake_image(tmp_path / "assets/props/resident_rules/reference_3view.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/master.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/reverse_master.png")
+    _write_fake_image(tmp_path / "assets/scenes/office/master.png")
     _write_fake_image(tmp_path / "director_control_frames/ep001/beat_01/selected_background.png")
     _write_fake_image(tmp_path / "director_control_frames/ep001/beat_02/selected_background.png")
 
@@ -871,12 +871,12 @@ async def test_episode_preset_uses_one_best_ref_per_context_asset(tmp_path: Path
     background_refs = [ref for ref in refs if ref["role"] == "selected_background"]
     prop_refs = [ref for ref in refs if ref["kind"] == "prop"]
 
-    # Only 陈默 has a canonical four-view identity file → only 陈默 is emitted at EP scope.
+    # Only ChenMo has a canonical four-view identity file → only ChenMo is emitted at EP scope.
     assert {
         (ref["role"], ref["meta"].get("identity_id"), ref["meta"].get("character"))
         for ref in identity_refs
     } == {
-        ("character_identity", "陈默_青年时期", "陈默"),
+        ("character_identity", "ChenMo_young_adult", "ChenMo"),
     }
     assert [ref["role"] for ref in background_refs] == [
         "selected_background",
@@ -887,24 +887,24 @@ async def test_episode_preset_uses_one_best_ref_per_context_asset(tmp_path: Path
 
 
 class _FakeBeatWorkbenchStore:
-    _characters = {"陈默": object()}
+    _characters = {"ChenMo": object()}
 
     async def get_beats_as_dicts(self, episode: int) -> list[dict]:
         assert episode == 1
         return [
             {
                 "beat_number": 2,
-                "visual_description": "{{陈默_青年时期}}拿起[[业主守则]]。",
-                "narration_segment": "陈默发现规则不对。",
-                "scene_ref": {"scene_id": "小区"},
-                "detected_identities": [{"identity_id": "陈默_青年时期"}],
-                "detected_props": [{"prop_id": "业主守则"}],
+                "visual_description": "{{ChenMo_young_adult}} picks up [[resident_rules]].",
+                "narration_segment": "ChenMo finds the rules wrong.",
+                "scene_ref": {"scene_id": "compound"},
+                "detected_identities": [{"identity_id": "ChenMo_young_adult"}],
+                "detected_props": [{"prop_id": "resident_rules"}],
             }
         ]
 
     async def get_episode_from_graph(self, episode: int):
         assert episode == 1
-        return SimpleNamespace(title="第一集", prop_menu=[])
+        return SimpleNamespace(title="Episode 1", prop_menu=[])
 
     async def get_scene(self, scene_id: str):
         return {"scene_id": scene_id, "scene_type": "exterior"}
@@ -915,13 +915,13 @@ class _FakeBeatWorkbenchStore:
 
 @pytest.mark.asyncio
 async def test_beat_preset_keeps_minimal_context_refs(tmp_path: Path) -> None:
-    _write_fake_image(tmp_path / "assets/characters/陈默/identities/青年时期.png")
-    _write_fake_image(tmp_path / "assets/characters/陈默/portrait.png")
-    _write_fake_image(tmp_path / "assets/characters/陈默/reference_front.png")
-    _write_fake_image(tmp_path / "assets/props/业主守则/reference_3view.png")
-    _write_fake_image(tmp_path / "assets/scenes/小区/master.png")
-    _write_fake_image(tmp_path / "assets/scenes/小区/reverse_master.png")
-    _write_fake_image(tmp_path / "assets/scenes/小区/scene_panorama_sketch_360.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/identities/young_adult.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/portrait.png")
+    _write_fake_image(tmp_path / "assets/characters/ChenMo/reference_front.png")
+    _write_fake_image(tmp_path / "assets/props/resident_rules/reference_3view.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/master.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/reverse_master.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/scene_panorama_sketch_360.png")
     _write_fake_image(tmp_path / "sketches/ep001/beat_02.png")
     _write_fake_image(tmp_path / "frames/ep001/beat_02.png")
     _write_fake_image(tmp_path / "director_control_frames/ep001/beat_02/combined.png")
@@ -947,7 +947,7 @@ async def test_beat_preset_keeps_minimal_context_refs(tmp_path: Path) -> None:
     assert [
         (ref["role"], ref["meta"].get("identity_id"), ref["meta"].get("character"))
         for ref in identity_refs
-    ] == [("character_identity", "陈默_青年时期", "陈默")]
+    ] == [("character_identity", "ChenMo_young_adult", "ChenMo")]
     # Beat canvas should not project scene assets as nodes. The background
     # source picker on the set-selected-background SkillNode owns master /
     # reverse / 360 / 3GS source selection.
@@ -960,7 +960,7 @@ async def test_beat_preset_keeps_minimal_context_refs(tmp_path: Path) -> None:
     assert "director_combined" in roles
     assert [
         (ref["role"], ref["label"], ref["meta"].get("beat")) for ref in selected_background_refs
-    ] == [("selected_background", "当前背景 · Beat 2", 2)]
+    ] == [("selected_background", "Current background · Beat 2", 2)]
 
 
 @pytest.mark.asyncio
@@ -1023,7 +1023,7 @@ async def test_beat_preset_current_sketch_ignores_pool_fallback(
 async def test_beat_preset_falls_back_to_scene_master_for_missing_selected_background(
     tmp_path: Path,
 ) -> None:
-    _write_fake_image(tmp_path / "assets/scenes/小区/master.png")
+    _write_fake_image(tmp_path / "assets/scenes/compound/master.png")
     _write_fake_image(tmp_path / "sketches/ep001/beat_02.png")
 
     context = await freezone_presets.build_beat_preset_context(
@@ -1044,9 +1044,9 @@ async def test_beat_preset_falls_back_to_scene_master_for_missing_selected_backg
         "director_control_frames/ep001/beat_02/selected_background.png"
     )
     assert selected_background["exists"] is True
-    assert "assets/scenes/%E5%B0%8F%E5%8C%BA/master.png" in selected_background["url"]
+    assert "assets/scenes/compound/master.png" in selected_background["url"]
     assert selected_background["meta"]["fallback_source"] == "scene_master"
-    assert selected_background["meta"]["fallback_rel_path"] == "assets/scenes/小区/master.png"
+    assert selected_background["meta"]["fallback_rel_path"] == "assets/scenes/compound/master.png"
 
     payload = build_canvas_payload_from_context(
         context=context,
@@ -1071,11 +1071,11 @@ def test_beat_preset_includes_refs_as_workflow_nodes() -> None:
         "primary_slot": "render",
         "beat_data": {
             "beat_number": 2,
-            "visual_description": "陈默拿起[[业主守则]]，站在小区门口。",
-            "keyframe_prompt": "保持人物和道具清晰",
-            "scene_ref": {"scene_id": "小区"},
+            "visual_description": "ChenMo picks up [[resident_rules]] and stands at the compound gate.",
+            "keyframe_prompt": "Keep the characters and props clear",
+            "scene_ref": {"scene_id": "compound"},
         },
-        "prop_menu": [{"prop_id": "业主守则"}],
+        "prop_menu": [{"prop_id": "resident_rules"}],
         "refs": [
             {
                 "kind": "sketch",
@@ -1100,37 +1100,37 @@ def test_beat_preset_includes_refs_as_workflow_nodes() -> None:
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "陈默_青年时期",
-                "rel_path": "assets/characters/陈默/identities/青年时期.png",
-                "url": "/static/admin/demo/assets/characters/陈默/identities/青年时期.png",
+                "label": "ChenMo_young_adult",
+                "rel_path": "assets/characters/ChenMo/identities/young_adult.png",
+                "url": "/static/admin/demo/assets/characters/ChenMo/identities/young_adult.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"character": "陈默", "identity_id": "陈默_青年时期"},
+                "meta": {"character": "ChenMo", "identity_id": "ChenMo_young_adult"},
             },
             {
                 "kind": "prop",
                 "role": "prop_reference",
-                "label": "业主守则",
-                "rel_path": "assets/props/业主守则/reference_3view.png",
-                "url": "/static/admin/demo/assets/props/业主守则/reference_3view.png",
+                "label": "resident_rules",
+                "rel_path": "assets/props/resident_rules/reference_3view.png",
+                "url": "/static/admin/demo/assets/props/resident_rules/reference_3view.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"prop_id": "业主守则"},
+                "meta": {"prop_id": "resident_rules"},
             },
             {
                 "kind": "scene",
                 "role": "scene_master",
-                "label": "小区 master",
-                "rel_path": "assets/scenes/小区/master.png",
-                "url": "/static/admin/demo/assets/scenes/小区/master.png",
+                "label": "compound master",
+                "rel_path": "assets/scenes/compound/master.png",
+                "url": "/static/admin/demo/assets/scenes/compound/master.png",
                 "exists": True,
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "小区"},
+                "meta": {"scene_id": "compound"},
             },
             {
                 "kind": "scene",
                 "role": "director_combined",
-                "label": "3GS 导演合成图",
+                "label": "3GS director composite",
                 "rel_path": "freezone/director_control_frames/ep001/beat_02/combined.png",
                 "url": "/static/admin/demo/freezone/director_control_frames/ep001/beat_02/combined.png",
                 "exists": True,
@@ -1165,13 +1165,13 @@ def test_beat_preset_includes_refs_as_workflow_nodes() -> None:
     assert nodes["context_beat"]["type"] == "beatContextNode"
     assert nodes["context_beat"]["measured"] == {"width": 420, "height": 560}
     assert nodes["context_beat"]["data"]["displayName"] == "EP1 / Beat 2 / render"
-    assert nodes["context_beat"]["data"]["content"] == "陈默拿起[[业主守则]]，站在小区门口。"
+    assert nodes["context_beat"]["data"]["content"] == "ChenMo picks up [[resident_rules]] and stands at the compound gate."
     assert "Episode:" not in nodes["context_beat"]["data"]["content"]
     assert "Video Prompt" not in nodes["context_beat"]["data"]["content"]
     assert nodes["context_beat"]["data"]["mainline_context"][0]["kind"] == "beat"
     assert nodes["context_beat"]["data"]["mainline_context"][0]["episode"] == 1
     assert nodes["context_beat"]["data"]["mainline_context"][0]["beat"] == 2
-    assert "陈默拿起[[业主守则]]" in nodes["context_beat"]["data"]["snapshot"]["visualDescription"]
+    assert "ChenMo picks up [[resident_rules]]" in nodes["context_beat"]["data"]["snapshot"]["visualDescription"]
     assert "ref_current_frame_1" in nodes
     assert "ref_character_identity_1" in nodes
     assert "ref_prop_reference_1" in nodes
@@ -1253,7 +1253,7 @@ def test_beat_context_asset_omits_beat_director_control_frames() -> None:
         ref={
             "kind": "director",
             "role": "director_combined",
-            "label": "导演合成图",
+            "label": "Director composite image",
             "rel_path": "freezone/director_control_frames/ep001/beat_03/combined.png",
             "url": "/static/admin/demo/freezone/director_control_frames/ep001/beat_03/combined.png",
             "exists": True,
@@ -1343,7 +1343,7 @@ def test_beat_frame_preset_uses_readable_backend_layout(
 ) -> None:
     def _fake_render_prompt(render_context: dict) -> str:
         render_context["_freezone_render_reference_paths"] = [
-            str(tmp_path / "assets/characters/陈默/portrait.png"),
+            str(tmp_path / "assets/characters/ChenMo/portrait.png"),
             str(
                 tmp_path / "freezone/director_control_frames/ep001/beat_03/selected_background.png"
             ),
@@ -1360,11 +1360,11 @@ def test_beat_frame_preset_uses_readable_backend_layout(
         "sketch_aspect_ratio": "2:3",
         "beat_data": {
             "beat_number": 3,
-            "visual_description": "{{陈默_青年时期}}低头看着[[业主守则]]。",
+            "visual_description": "{{ChenMo_young_adult}} looks down at [[resident_rules]].",
             "keyframe_prompt": "",
-            "scene_ref": {"scene_id": "3栋7楼走廊"},
-            "detected_identities": ["陈默_青年时期"],
-            "detected_props": ["业主守则"],
+            "scene_ref": {"scene_id": "bldg3_7f_corridor"},
+            "detected_identities": ["ChenMo_young_adult"],
+            "detected_props": ["resident_rules"],
         },
         "refs": [
             {
@@ -1390,58 +1390,58 @@ def test_beat_frame_preset_uses_readable_backend_layout(
             {
                 "kind": "identity",
                 "role": "character_portrait",
-                "label": "陈默 portrait",
-                "rel_path": "assets/characters/陈默/portrait.png",
-                "url": "/static/admin/demo/assets/characters/陈默/portrait.png",
+                "label": "ChenMo portrait",
+                "rel_path": "assets/characters/ChenMo/portrait.png",
+                "url": "/static/admin/demo/assets/characters/ChenMo/portrait.png",
                 "exists": True,
                 "aspect_ratio": "56:75",
-                "meta": {"character": "陈默"},
+                "meta": {"character": "ChenMo"},
             },
             {
                 "kind": "prop",
                 "role": "prop_reference",
-                "label": "业主守则",
-                "rel_path": "assets/props/业主守则/reference_3view.png",
-                "url": "/static/admin/demo/assets/props/业主守则/reference_3view.png",
+                "label": "resident_rules",
+                "rel_path": "assets/props/resident_rules/reference_3view.png",
+                "url": "/static/admin/demo/assets/props/resident_rules/reference_3view.png",
                 "exists": True,
                 "aspect_ratio": "43:24",
-                "meta": {"prop_id": "业主守则"},
+                "meta": {"prop_id": "resident_rules"},
             },
             {
                 "kind": "scene",
                 "role": "scene_master",
-                "label": "3栋7楼走廊 master",
-                "rel_path": "assets/scenes/3栋7楼走廊/master.png",
-                "url": "/static/admin/demo/assets/scenes/3栋7楼走廊/master.png",
+                "label": "bldg3_7f_corridor master",
+                "rel_path": "assets/scenes/bldg3_7f_corridor/master.png",
+                "url": "/static/admin/demo/assets/scenes/bldg3_7f_corridor/master.png",
                 "exists": True,
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "3栋7楼走廊"},
+                "meta": {"scene_id": "bldg3_7f_corridor"},
             },
             {
                 "kind": "scene",
                 "role": "scene_reverse_master",
-                "label": "3栋7楼走廊 reverse master",
-                "rel_path": "assets/scenes/3栋7楼走廊/reverse_master.png",
-                "url": "/static/admin/demo/assets/scenes/3栋7楼走廊/reverse_master.png",
+                "label": "bldg3_7f_corridor reverse master",
+                "rel_path": "assets/scenes/bldg3_7f_corridor/reverse_master.png",
+                "url": "/static/admin/demo/assets/scenes/bldg3_7f_corridor/reverse_master.png",
                 "exists": True,
                 "aspect_ratio": "16:9",
-                "meta": {"scene_id": "3栋7楼走廊"},
+                "meta": {"scene_id": "bldg3_7f_corridor"},
             },
             {
                 "kind": "scene",
                 "role": "scene_3gs_active_ply",
                 "label": "3GS active",
-                "rel_path": "director_worlds/3栋7楼走廊/v1/master_sharp.ply",
-                "url": "/static/admin/demo/director_worlds/3栋7楼走廊/v1/master_sharp.ply",
+                "rel_path": "director_worlds/bldg3_7f_corridor/v1/master_sharp.ply",
+                "url": "/static/admin/demo/director_worlds/bldg3_7f_corridor/v1/master_sharp.ply",
                 "exists": True,
                 "media_type": "file",
                 "aspect_ratio": "1:1",
-                "meta": {"scene_id": "3栋7楼走廊", "ply_kind": "active"},
+                "meta": {"scene_id": "bldg3_7f_corridor", "ply_kind": "active"},
             },
             {
                 "kind": "director",
                 "role": "director_combined",
-                "label": "3GS 导演合成图",
+                "label": "3GS director composite",
                 "rel_path": "freezone/director_control_frames/ep001/beat_03/combined.png",
                 "url": "/static/admin/demo/freezone/director_control_frames/ep001/beat_03/combined.png",
                 "exists": True,
@@ -1503,7 +1503,7 @@ def test_beat_frame_preset_uses_readable_backend_layout(
     assert payload["metadata"]["director_capture"] == {
         "episode": 1,
         "beat": 3,
-        "scene_id": "3栋7楼走廊",
+        "scene_id": "bldg3_7f_corridor",
         "node_id": "director_capture",
     }
     assert nodes["context_beat"]["position"] == {"x": -1840, "y": -720}
@@ -1531,11 +1531,11 @@ def test_beat_frame_preset_uses_readable_backend_layout(
     assert nodes["ref_current_frame_1"]["data"]["aspectRatio"] == "2:3"
     assert nodes["ref_current_frame_1"]["data"]["actualAspectRatio"] == "75:112"
     assert nodes["context_beat"]["data"]["beat_edit_fields"] == {
-        "visual_description": "{{陈默_青年时期}}低头看着[[业主守则]]。",
-        "scene_id": "3栋7楼走廊",
+        "visual_description": "{{ChenMo_young_adult}} looks down at [[resident_rules]].",
+        "scene_id": "bldg3_7f_corridor",
         "time_of_day": "",
-        "detected_identities": ["陈默_青年时期"],
-        "detected_props": ["业主守则"],
+        "detected_identities": ["ChenMo_young_adult"],
+        "detected_props": ["resident_rules"],
     }
     role_edges = {
         (edge["source"], edge["target"], (edge.get("data") or {}).get("role"))
@@ -1583,7 +1583,7 @@ def test_beat_sketch_preset_uses_current_sketch_as_primary() -> None:
         "primary_slot": "sketch",
         "beat_data": {
             "beat_number": 1,
-            "visual_description": "黑屏标题卡",
+            "visual_description": "Black-screen title card",
             "keyframe_prompt": "",
             "scene_ref": None,
         },
@@ -1645,7 +1645,7 @@ def test_beat_sketch_preset_uses_marker_prompt_not_image_refs() -> None:
         "primary_slot": "sketch",
         "beat_data": {
             "beat_number": 3,
-            "visual_description": "{{陈默_青年时期}}手里拿着一叠[[业主守则]]。",
+            "visual_description": "{{ChenMo_young_adult}} holds a stack of [[resident_rules]].",
             "keyframe_prompt": "",
             "scene_ref": None,
             "detected_identities": [],
@@ -1653,23 +1653,23 @@ def test_beat_sketch_preset_uses_marker_prompt_not_image_refs() -> None:
         },
         "prop_menu": [
             {
-                "prop_id": "业主守则",
+                "prop_id": "resident_rules",
                 "prop_type": "document",
-                "visual_prompt": "一张白色A4打印纸",
+                "visual_prompt": "A sheet of white A4 printer paper",
             }
         ],
         "sketch_context": {
-            "sketch_colors": {"陈默_青年时期": "#00FFFF FLUORESCENT CYAN"},
+            "sketch_colors": {"ChenMo_young_adult": "#00FFFF FLUORESCENT CYAN"},
             "characters": {
-                "陈默": {
-                    "name": "陈默",
-                    "gender": "男",
-                    "body_type": "普通体型",
+                "ChenMo": {
+                    "name": "ChenMo",
+                    "gender": "male",
+                    "body_type": "Average build",
                     "identities": [
                         {
-                            "identity_id": "陈默_青年时期",
-                            "identity_name": "青年时期",
-                            "appearance_details": "深灰连帽衫",
+                            "identity_id": "ChenMo_young_adult",
+                            "identity_name": "young_adult",
+                            "appearance_details": "Dark gray hoodie",
                         }
                     ],
                 }
@@ -1689,56 +1689,56 @@ def test_beat_sketch_preset_uses_marker_prompt_not_image_refs() -> None:
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "陈默_青年时期",
-                "rel_path": "assets/characters/陈默/identities/青年时期.png",
-                "url": "/static/admin/demo/assets/characters/陈默/identities/青年时期.png",
+                "label": "ChenMo_young_adult",
+                "rel_path": "assets/characters/ChenMo/identities/young_adult.png",
+                "url": "/static/admin/demo/assets/characters/ChenMo/identities/young_adult.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"character": "陈默", "identity_id": "陈默_青年时期"},
+                "meta": {"character": "ChenMo", "identity_id": "ChenMo_young_adult"},
             },
             {
                 "kind": "identity",
                 "role": "character_portrait",
-                "label": "陈默 portrait",
-                "rel_path": "assets/characters/陈默/portrait.png",
-                "url": "/static/admin/demo/assets/characters/陈默/portrait.png",
+                "label": "ChenMo portrait",
+                "rel_path": "assets/characters/ChenMo/portrait.png",
+                "url": "/static/admin/demo/assets/characters/ChenMo/portrait.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"character": "陈默"},
+                "meta": {"character": "ChenMo"},
             },
             {
                 "kind": "prop",
                 "role": "prop_reference",
-                "label": "业主守则",
-                "rel_path": "assets/props/业主守则/reference_3view.png",
-                "url": "/static/admin/demo/assets/props/业主守则/reference_3view.png",
+                "label": "resident_rules",
+                "rel_path": "assets/props/resident_rules/reference_3view.png",
+                "url": "/static/admin/demo/assets/props/resident_rules/reference_3view.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"prop_id": "业主守则"},
+                "meta": {"prop_id": "resident_rules"},
             },
             {
                 "kind": "scene",
                 "role": "scene_director_pano_360",
-                "label": "小区 director pano 360",
-                "rel_path": "director_worlds/小区/v1/pano_360.png",
-                "url": "/static/admin/demo/director_worlds/小区/v1/pano_360.png",
+                "label": "compound director pano 360",
+                "rel_path": "director_worlds/compound/v1/pano_360.png",
+                "url": "/static/admin/demo/director_worlds/compound/v1/pano_360.png",
                 "exists": True,
                 "aspect_ratio": "2:1",
                 "meta": {
-                    "scene_id": "小区",
-                    "environment_prompt": "小区内院，白色楼房，绿化很好",
+                    "scene_id": "compound",
+                    "environment_prompt": "Compound courtyard, white buildings, lush greenery",
                 },
             },
             {
                 "kind": "director",
                 "role": "scene_3gs_pano_ply",
-                "label": "小区 3D 世界（360）",
-                "rel_path": "director_worlds/小区/v1/pano_sharp_merged.ply",
-                "url": "/static/admin/demo/director_worlds/小区/v1/pano_sharp_merged.ply",
+                "label": "compound 3D world (360)",
+                "rel_path": "director_worlds/compound/v1/pano_sharp_merged.ply",
+                "url": "/static/admin/demo/director_worlds/compound/v1/pano_sharp_merged.ply",
                 "exists": True,
                 "media_type": "file",
                 "aspect_ratio": "1:1",
-                "meta": {"scene_id": "小区", "ply_kind": "pano"},
+                "meta": {"scene_id": "compound", "ply_kind": "pano"},
             },
             {
                 "kind": "director",
@@ -1786,16 +1786,16 @@ def test_beat_sketch_preset_uses_marker_prompt_not_image_refs() -> None:
     assert "REFERENCE IMAGES: none" in sketch_prompt
     assert "reference_images: []" in nodes["sketch_marker_context"]["data"]["content"]
     assert "FLUORESCENT CYAN (#00FFFF)" in sketch_prompt
-    assert "业主守则" in sketch_prompt
-    assert "{{陈默_青年时期}}" not in sketch_prompt
+    assert "resident_rules" in sketch_prompt
+    assert "{{ChenMo_young_adult}}" not in sketch_prompt
     assert "[[" not in sketch_prompt
 
 
 def test_beat_preset_detected_refs_edge_into_frame_workflow() -> None:
-    """Phase 5: beat 的 detected_identities / detected_props 要有显式 propagating
-    edge 连到 ref_current_frame_1 (取代旧 workflow_background_sketch_to_frame),
-    跟后端 `_collect_mainline_typed_reference_urls` 实际取的图集合一致 ——
-    画布上看到的连线 = render slot 实际会用的 image refs。
+    """Phase 5: the beat's detected_identities / detected_props must have explicit propagating
+    edges into ref_current_frame_1 (replacing the old workflow_background_sketch_to_frame),
+    consistent with the image set the backend `_collect_mainline_typed_reference_urls` actually takes --
+    the lines seen on the canvas = the image refs the render slot will actually use.
     """
     context = {
         "scope": "beat",
@@ -1804,9 +1804,9 @@ def test_beat_preset_detected_refs_edge_into_frame_workflow() -> None:
         "primary_slot": "render",
         "beat_data": {
             "beat_number": 5,
-            "visual_description": "陈默拿起[[业主守则]]，走到桌前。",
-            "detected_identities": ["陈默_青年时期"],
-            "detected_props": ["业主守则"],
+            "visual_description": "ChenMo picks up [[resident_rules]] and walks to the desk.",
+            "detected_identities": ["ChenMo_young_adult"],
+            "detected_props": ["resident_rules"],
         },
         "refs": [
             {
@@ -1830,22 +1830,22 @@ def test_beat_preset_detected_refs_edge_into_frame_workflow() -> None:
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "陈默_青年时期",
-                "rel_path": "assets/characters/陈默/identities/青年时期.png",
-                "url": "/static/admin/demo/assets/characters/陈默/identities/青年时期.png",
+                "label": "ChenMo_young_adult",
+                "rel_path": "assets/characters/ChenMo/identities/young_adult.png",
+                "url": "/static/admin/demo/assets/characters/ChenMo/identities/young_adult.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"character": "陈默", "identity_id": "陈默_青年时期"},
+                "meta": {"character": "ChenMo", "identity_id": "ChenMo_young_adult"},
             },
             {
                 "kind": "prop",
                 "role": "prop_reference",
-                "label": "业主守则",
-                "rel_path": "assets/props/业主守则/reference_3view.png",
-                "url": "/static/admin/demo/assets/props/业主守则/reference_3view.png",
+                "label": "resident_rules",
+                "rel_path": "assets/props/resident_rules/reference_3view.png",
+                "url": "/static/admin/demo/assets/props/resident_rules/reference_3view.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"prop_id": "业主守则"},
+                "meta": {"prop_id": "resident_rules"},
             },
         ],
     }
@@ -1863,18 +1863,18 @@ def test_beat_preset_detected_refs_edge_into_frame_workflow() -> None:
 
 
 def test_beat_preset_selected_background_placeholder_when_file_missing() -> None:
-    """selected_background 文件不存在时,beat 工作台依然要 emit 一个
-    placeholder ref(url=None),让画布上有站位节点 —— 不然用户根本看不到
-    背景 slot,不知道往哪 commit 选定背景图。
+    """When the selected_background file does not exist, the beat workbench must still emit a
+    placeholder ref (url=None), so there is a placeholder node on the canvas -- otherwise the user cannot see
+    the background slot at all and does not know where to commit the selected background image.
     """
     context = {
         "scope": "beat",
         "episode": 1,
         "beat": 7,
         "primary_slot": "render",
-        "beat_data": {"beat_number": 7, "visual_description": "黑屏"},
+        "beat_data": {"beat_number": 7, "visual_description": "Black screen"},
         "refs": [
-            # 没有 selected_background ref!模拟文件还没生成的情况。
+            # No selected_background ref! Simulates the file not having been generated yet.
             {
                 "kind": "director",
                 "role": "selected_background",
@@ -1894,8 +1894,8 @@ def test_beat_preset_selected_background_placeholder_when_file_missing() -> None
     nodes = {node["id"]: node for node in payload["nodes"]}
     assert (
         "ref_selected_background_1" in nodes
-    ), "缺文件时也要给 selected_background 站位节点,用户才知道 commit 到哪"
-    # placeholder 节点是 imageGenNode(没 url 走的空生成框);有文件时才是 imageNode/asset。
+    ), "Even when the file is missing, a selected_background placeholder node must be given, so the user knows where to commit"
+    # The placeholder node is an imageGenNode (an empty generation box when there is no url); only when a file exists is it an imageNode/asset.
     assert nodes["ref_selected_background_1"]["type"] == "imageGenNode"
     assert nodes["ref_selected_background_1"]["data"]["slot_target"] == {
         "kind": "selected_background",
@@ -1910,7 +1910,7 @@ def test_beat_render_preset_emits_missing_sketch_and_frame_placeholders() -> Non
         "episode": 1,
         "beat": 9,
         "primary_slot": "render",
-        "beat_data": {"beat_number": 9, "visual_description": "陈默推开门。"},
+        "beat_data": {"beat_number": 9, "visual_description": "ChenMo pushes open the door."},
         "refs": [],
     }
 
@@ -2064,27 +2064,27 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
     context = {
         "scope": "asset",
         "asset_kind": "character",
-        "character": "林昭",
+        "character": "LinZhao",
         "refs": [
             {
                 "kind": "identity",
                 "role": "character_portrait",
-                "label": "林昭 portrait",
-                "rel_path": "assets/characters/林昭/portrait.png",
-                "url": "/static/admin/demo/assets/characters/林昭/portrait.png",
+                "label": "LinZhao portrait",
+                "rel_path": "assets/characters/LinZhao/portrait.png",
+                "url": "/static/admin/demo/assets/characters/LinZhao/portrait.png",
                 "exists": True,
                 "aspect_ratio": "3:4",
-                "meta": {"character": "林昭"},
+                "meta": {"character": "LinZhao"},
             },
             {
                 "kind": "identity",
                 "role": "character_identity",
-                "label": "林昭_青年",
-                "rel_path": "assets/characters/林昭/identities/青年.png",
-                "url": "/static/admin/demo/assets/characters/林昭/identities/青年.png",
+                "label": "LinZhao_young_adult",
+                "rel_path": "assets/characters/LinZhao/identities/young_adult.png",
+                "url": "/static/admin/demo/assets/characters/LinZhao/identities/young_adult.png",
                 "exists": True,
                 "aspect_ratio": "3:4",
-                "meta": {"character": "林昭", "identity_id": "林昭_青年"},
+                "meta": {"character": "LinZhao", "identity_id": "LinZhao_young_adult"},
             },
             {
                 "kind": "sketch",
@@ -2099,27 +2099,27 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
         ],
         "generation_context": {
             "character_profile": {
-                "name": "林昭",
-                "aliases": ["林队"],
-                "role": "主角",
-                "gender": "男",
+                "name": "LinZhao",
+                "aliases": ["Captain Lin"],
+                "role": "protagonist",
+                "gender": "male",
                 "age_group": "youth",
-                "body_type": "挺拔",
-                "description": "冷静克制的行动队长",
-                "face_prompt": "男性，二十多岁，眼神冷静",
+                "body_type": "tall and straight",
+                "description": "A calm and restrained squad captain",
+                "face_prompt": "Male, in his twenties, with a calm gaze",
             },
-            "portrait": {"character": "林昭", "prompt": "男性，二十多岁，眼神冷静"},
+            "portrait": {"character": "LinZhao", "prompt": "Male, in his twenties, with a calm gaze"},
             "identities": [
                 {
-                    "identity_id": "林昭_青年",
-                    "identity_name": "青年",
+                    "identity_id": "LinZhao_young_adult",
+                    "identity_name": "young_adult",
                     "prompt": (
                         "Character identity reference sheet. Neutral studio setup.\n"
                         "create a 4-panel character reference sheet arranged LEFT to RIGHT\n"
                         "CHARACTER DETAILS (CRITICAL - use this for clothing and appearance):\n"
-                        "黑色作战服，身形挺拔"
+                        "Black combat uniform, a tall and straight build"
                     ),
-                    "identity_prompt": "黑色作战服，身形挺拔",
+                    "identity_prompt": "Black combat uniform, a tall and straight build",
                 }
             ],
         },
@@ -2127,8 +2127,8 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
 
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:character:林昭::",
-        default_push_target={"kind": "portrait", "character": "林昭"},
+        preset_key="asset:character:LinZhao::",
+        default_push_target={"kind": "portrait", "character": "LinZhao"},
     )
     edges = {(edge["source"], edge["target"]) for edge in payload["edges"]}
     nodes = {node["id"]: node for node in payload["nodes"]}
@@ -2136,9 +2136,9 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
 
     assert "preset_context" not in nodes
     assert nodes["character_profile"]["type"] == "textAnnotationNode"
-    assert "角色定位: 主角" in nodes["character_profile"]["data"]["content"]
-    assert "别名: 林队" in nodes["character_profile"]["data"]["content"]
-    assert "描述:\n冷静克制的行动队长" in nodes["character_profile"]["data"]["content"]
+    assert "Role: protagonist" in nodes["character_profile"]["data"]["content"]
+    assert "Aliases: Captain Lin" in nodes["character_profile"]["data"]["content"]
+    assert "Description:\nA calm and restrained squad captain" in nodes["character_profile"]["data"]["content"]
     assert nodes["ref_character_portrait_1"]["type"] == "imageGenNode"
     assert nodes["ref_character_identity_1"]["type"] == "imageGenNode"
     assert "ref_character_reference_1" not in nodes
@@ -2146,14 +2146,14 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
     assert nodes["ref_character_identity_1"]["data"]["__freezone_source"]["kind"] == "identity"
     assert (
         nodes["ref_character_identity_1"]["data"]["referenceImageUrl"]
-        == "/static/admin/demo/assets/characters/林昭/portrait.png"
+        == "/static/admin/demo/assets/characters/LinZhao/portrait.png"
     )
     assert ("prompt_character_portrait", "ref_character_portrait_1") in edges
     assert ("ref_character_portrait_1", "ref_character_identity_1") in edges
     assert not any(node_id.startswith("flow_identity_") for node_id in nodes)
     identity_prompt = nodes["ref_character_identity_1"]["data"]["prompt"]
     assert "Character identity reference sheet" in identity_prompt
-    assert "黑色作战服，身形挺拔" in identity_prompt
+    assert "Black combat uniform, a tall and straight build" in identity_prompt
     assert "create a 4-panel character reference sheet arranged LEFT to RIGHT" in identity_prompt
     assert (
         node_positions["prompt_character_portrait"]["x"]
@@ -2168,37 +2168,37 @@ def test_character_preset_keeps_portrait_as_identity_workflow_source() -> None:
 
 
 def test_prop_preset_builds_prompt_to_reference_workflow() -> None:
-    visual_prompt = "一份灰褐色旧册子，封面写有业务守则四个字"
+    visual_prompt = "A gray-brown old booklet with 'Business Rules' written on the cover"
     full_prompt = build_prop_reference_prompt(visual_prompt)
     context = {
         "scope": "asset",
         "asset_kind": "prop_ref",
-        "asset_id": "业主守则",
+        "asset_id": "resident_rules",
         "refs": [
             {
                 "kind": "prop",
                 "role": "prop_reference",
-                "label": "业主守则",
-                "rel_path": "assets/props/业主守则/reference_3view.png",
-                "url": "/static/admin/demo/assets/props/业主守则/reference_3view.png",
+                "label": "resident_rules",
+                "rel_path": "assets/props/resident_rules/reference_3view.png",
+                "url": "/static/admin/demo/assets/props/resident_rules/reference_3view.png",
                 "exists": True,
                 "aspect_ratio": "1:1",
-                "meta": {"prop_id": "业主守则", "prop_type": "document"},
+                "meta": {"prop_id": "resident_rules", "prop_type": "document"},
             },
         ],
         "generation_context": {
             "prop": {
-                "prop_id": "业主守则",
+                "prop_id": "resident_rules",
                 "prompt": full_prompt,
                 "visual_prompt": visual_prompt,
                 "profile": {
-                    "name": "业主守则",
-                    "aliases": ["守则"],
+                    "name": "resident_rules",
+                    "aliases": ["rules"],
                     "prop_type": "document",
                     "visual_prompt": visual_prompt,
-                    "description": "小区规则文件",
+                    "description": "Compound rules document",
                     "owner": "",
-                    "notes": "三视图参考",
+                    "notes": "Three-view reference",
                 },
             }
         },
@@ -2206,22 +2206,22 @@ def test_prop_preset_builds_prompt_to_reference_workflow() -> None:
 
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:prop_ref:::业主守则",
-        default_push_target={"kind": "prop_ref", "prop_id": "业主守则"},
+        preset_key="asset:prop_ref:::resident_rules",
+        default_push_target={"kind": "prop_ref", "prop_id": "resident_rules"},
     )
     nodes = {node["id"]: node for node in payload["nodes"]}
     edges = {(edge["source"], edge["target"]) for edge in payload["edges"]}
 
     assert nodes["prop_profile"]["type"] == "textAnnotationNode"
-    assert "别名: 守则" in nodes["prop_profile"]["data"]["content"]
+    assert "Aliases: rules" in nodes["prop_profile"]["data"]["content"]
     assert "prompt_prop_reference" not in nodes
     assert nodes["ref_prop_reference_1"]["type"] == "imageGenNode"
     assert nodes["ref_prop_reference_1"]["data"]["prompt"] == full_prompt
-    assert nodes["ref_prop_reference_1"]["data"]["displayName"] == "业主守则"
+    assert nodes["ref_prop_reference_1"]["data"]["displayName"] == "resident_rules"
     assert nodes["ref_prop_reference_1"]["data"]["autoCommitOnGenerate"] is True
     assert nodes["ref_prop_reference_1"]["data"]["slot_target"] == {
         "kind": "prop_ref",
-        "prop_id": "业主守则",
+        "prop_id": "resident_rules",
     }
     assert "flow_prop_reference" not in nodes
     assert "Generate a 3-PANEL product reference sheet" in full_prompt
@@ -2234,7 +2234,7 @@ def test_prop_preset_builds_prompt_to_reference_workflow() -> None:
     assert ("prop_profile", "ref_prop_reference_1") in edges
     assert payload["metadata"]["default_push_target"] == {
         "kind": "prop_ref",
-        "prop_id": "业主守则",
+        "prop_id": "resident_rules",
     }
 
 
@@ -2246,9 +2246,9 @@ async def test_prop_asset_preset_emits_missing_reference_placeholder(tmp_path: P
         async def get_prop(self, prop_id: str):
             return SimpleNamespace(
                 name=prop_id,
-                aliases=["账单"],
+                aliases=["bill"],
                 prop_type="document",
-                visual_prompt="一张旧纸质账单，没有任何可读文字",
+                visual_prompt="An old paper bill with no readable text",
                 description="",
                 owner="",
                 notes="",
@@ -2261,18 +2261,18 @@ async def test_prop_asset_preset_emits_missing_reference_placeholder(tmp_path: P
         project_dir=tmp_path,
         store=Store(),
         asset_kind="prop_ref",
-        asset_id="账单",
+        asset_id="bill",
     )
 
     refs_by_role = {ref["role"]: ref for ref in context["refs"]}
     assert refs_by_role["prop_reference"]["exists"] is False
     assert refs_by_role["prop_reference"]["url"] is None
-    assert refs_by_role["prop_reference"]["rel_path"] == "assets/props/账单/reference_3view.png"
+    assert refs_by_role["prop_reference"]["rel_path"] == "assets/props/bill/reference_3view.png"
 
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:prop_ref:::账单",
-        default_push_target={"kind": "prop_ref", "prop_id": "账单"},
+        preset_key="asset:prop_ref:::bill",
+        default_push_target={"kind": "prop_ref", "prop_id": "bill"},
     )
     nodes = {node["id"]: node for node in payload["nodes"]}
     edges = {(edge["source"], edge["target"]) for edge in payload["edges"]}
@@ -2281,7 +2281,7 @@ async def test_prop_asset_preset_emits_missing_reference_placeholder(tmp_path: P
     assert nodes["ref_prop_reference_1"]["data"]["imageUrl"] is None
     assert nodes["ref_prop_reference_1"]["data"]["slot_target"] == {
         "kind": "prop_ref",
-        "prop_id": "账单",
+        "prop_id": "bill",
     }
     assert nodes["ref_prop_reference_1"]["data"]["autoCommitOnGenerate"] is True
     assert "flow_prop_reference" not in nodes
@@ -2297,10 +2297,10 @@ async def test_prop_asset_context_prefers_episode_visual_prompt_over_profile_des
             1: SimpleNamespace(
                 prop_menu=[
                     {
-                        "prop_id": "业主守则",
+                        "prop_id": "resident_rules",
                         "prop_type": "document",
-                        "visual_prompt": "一张白色的A4打印纸，上方印有醒目的黑色标题“业主守则”。",
-                        "description": "塞在门缝里的打印件，印有十二条诡异规则。",
+                        "visual_prompt": "A sheet of white A4 printer paper, with a prominent black title 'Resident Rules' printed at the top.",
+                        "description": "A printout stuffed in the door gap, printed with twelve eerie rules.",
                     }
                 ]
             )
@@ -2311,8 +2311,8 @@ async def test_prop_asset_context_prefers_episode_visual_prompt_over_profile_des
                 name=prop_id,
                 aliases=[],
                 prop_type="document",
-                visual_prompt="塞在门缝里的打印件，印有十二条诡异规则。",
-                description="塞在门缝里的打印件，印有十二条诡异规则。",
+                visual_prompt="A printout stuffed in the door gap, printed with twelve eerie rules.",
+                description="A printout stuffed in the door gap, printed with twelve eerie rules.",
                 owner="",
                 notes="",
             )
@@ -2324,51 +2324,51 @@ async def test_prop_asset_context_prefers_episode_visual_prompt_over_profile_des
         project_dir=tmp_path,
         store=Store(),
         asset_kind="prop_ref",
-        asset_id="业主守则",
+        asset_id="resident_rules",
     )
 
     prop_context = context["generation_context"]["prop"]
-    assert prop_context["visual_prompt"] == "一张白色的A4打印纸，上方印有醒目的黑色标题“业主守则”。"
+    assert prop_context["visual_prompt"] == "A sheet of white A4 printer paper, with a prominent black title 'Resident Rules' printed at the top."
     assert "Generate a 3-PANEL product reference sheet" in prop_context["prompt"]
     assert (
-        "PROP DESCRIPTION:\n一张白色的A4打印纸，上方印有醒目的黑色标题“业主守则”。"
+        "PROP DESCRIPTION:\nA sheet of white A4 printer paper, with a prominent black title 'Resident Rules' printed at the top."
         in prop_context["prompt"]
     )
     assert (
         prop_context["profile"]["visual_prompt"]
-        == "一张白色的A4打印纸，上方印有醒目的黑色标题“业主守则”。"
+        == "A sheet of white A4 printer paper, with a prominent black title 'Resident Rules' printed at the top."
     )
 
 
 def test_prop_preset_default_push_target_uses_prop_ref() -> None:
     assert _default_push_target_for_preset(
-        PresetCanvasRequest(scope="asset", asset_kind="prop_ref", asset_id="业主守则")
-    ) == {"kind": "prop_ref", "prop_id": "业主守则"}
+        PresetCanvasRequest(scope="asset", asset_kind="prop_ref", asset_id="resident_rules")
+    ) == {"kind": "prop_ref", "prop_id": "resident_rules"}
 
 
 @pytest.mark.asyncio
 async def test_character_asset_preset_emits_missing_identity_slot_placeholders(
     tmp_path: Path,
 ) -> None:
-    _write_fake_image(tmp_path / "assets/characters/林昭/portrait.png")
+    _write_fake_image(tmp_path / "assets/characters/LinZhao/portrait.png")
 
     class Store:
         def get_character(self, name: str):
             return SimpleNamespace(
                 name=name,
                 aliases=[],
-                role="主角",
+                role="protagonist",
                 is_main=True,
-                gender="男",
+                gender="male",
                 age_group="youth",
-                body_type="挺拔",
-                description="冷静克制",
-                face_prompt="二十多岁男性，眼神冷静",
+                body_type="tall and straight",
+                description="Calm and restrained",
+                face_prompt="Male in his twenties, with a calm gaze",
                 identities=[
                     SimpleNamespace(
-                        identity_id="林昭_青年",
-                        identity_name="青年",
-                        appearance_details="黑色作战服，身形挺拔",
+                        identity_id="LinZhao_young_adult",
+                        identity_name="young_adult",
+                        appearance_details="Black combat uniform, a tall and straight build",
                         face_prompt="",
                         age_group="youth",
                         portrait_image="",
@@ -2384,7 +2384,7 @@ async def test_character_asset_preset_emits_missing_identity_slot_placeholders(
         project_dir=tmp_path,
         store=Store(),
         asset_kind="character",
-        character="林昭",
+        character="LinZhao",
     )
 
     refs_by_role = {ref["role"]: ref for ref in context["refs"]}
@@ -2392,19 +2392,19 @@ async def test_character_asset_preset_emits_missing_identity_slot_placeholders(
     assert refs_by_role["character_identity"]["exists"] is False
     assert refs_by_role["character_identity"]["url"] is None
     assert refs_by_role["character_identity"]["rel_path"].endswith(
-        "assets/characters/林昭/identities/青年.png"
+        "assets/characters/LinZhao/identities/young_adult.png"
     )
     assert "identity_portrait" not in refs_by_role
     assert refs_by_role["identity_costume"]["exists"] is False
     assert refs_by_role["identity_costume"]["url"] is None
     assert refs_by_role["identity_costume"]["rel_path"].endswith(
-        "assets/characters/林昭/identities/青年_costume.png"
+        "assets/characters/LinZhao/identities/young_adult_costume.png"
     )
 
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:character:林昭::",
-        default_push_target={"kind": "portrait", "character": "林昭"},
+        preset_key="asset:character:LinZhao::",
+        default_push_target={"kind": "portrait", "character": "LinZhao"},
     )
     nodes = {node["id"]: node for node in payload["nodes"]}
     edges = {(edge["source"], edge["target"]) for edge in payload["edges"]}
@@ -2413,14 +2413,14 @@ async def test_character_asset_preset_emits_missing_identity_slot_placeholders(
     assert nodes["ref_character_identity_1"]["data"]["imageUrl"] is None
     assert nodes["ref_character_identity_1"]["data"]["slot_target"] == {
         "kind": "identity",
-        "character": "林昭",
-        "identity_id": "林昭_青年",
+        "character": "LinZhao",
+        "identity_id": "LinZhao_young_adult",
     }
     assert nodes["ref_character_identity_1"]["data"]["autoCommitOnGenerate"] is True
     portrait_prompt = nodes["ref_character_portrait_1"]["data"]["prompt"]
     assert "Generate a face-only character identity reference portrait" in portrait_prompt
     assert "FACIAL FEATURES TO CAPTURE" in portrait_prompt
-    assert "二十多岁男性，眼神冷静" in portrait_prompt
+    assert "Male in his twenties, with a calm gaze" in portrait_prompt
     assert "VISUAL STYLE:" in portrait_prompt
     assert "MUST AVOID:" in portrait_prompt
     assert nodes["prompt_character_portrait"]["data"]["content"] == portrait_prompt
@@ -2429,14 +2429,14 @@ async def test_character_asset_preset_emits_missing_identity_slot_placeholders(
     assert nodes["ref_identity_costume_1"]["data"]["imageUrl"] is None
     assert nodes["ref_identity_costume_1"]["data"]["slot_target"] == {
         "kind": "identity_costume",
-        "character": "林昭",
-        "identity_id": "林昭_青年",
+        "character": "LinZhao",
+        "identity_id": "LinZhao_young_adult",
     }
     assert nodes["ref_identity_costume_1"]["data"]["autoCommitOnGenerate"] is True
     identity_prompt = nodes["ref_character_identity_1"]["data"]["prompt"]
     costume_prompt = nodes["ref_identity_costume_1"]["data"]["prompt"]
     assert "Character identity reference sheet" in identity_prompt
-    assert "黑色作战服，身形挺拔" in identity_prompt
+    assert "Black combat uniform, a tall and straight build" in identity_prompt
     assert "PLAIN SOLID WHITE or LIGHT GRAY background ONLY" in identity_prompt
     assert costume_prompt == identity_prompt
     assert ("ref_character_portrait_1", "ref_character_identity_1") in edges
@@ -2477,13 +2477,13 @@ async def test_character_asset_preset_style_lookup_uses_project_context(
             return SimpleNamespace(
                 name=name,
                 aliases=[],
-                role="主角",
+                role="protagonist",
                 is_main=True,
-                gender="男",
+                gender="male",
                 age_group="youth",
-                body_type="挺拔",
-                description="冷静克制",
-                face_prompt="二十多岁男性，眼神冷静",
+                body_type="tall and straight",
+                description="Calm and restrained",
+                face_prompt="Male in his twenties, with a calm gaze",
                 identities=[],
             )
 
@@ -2494,7 +2494,7 @@ async def test_character_asset_preset_style_lookup_uses_project_context(
         project_dir=tmp_path,
         store=Store(),
         asset_kind="character",
-        character="林昭",
+        character="LinZhao",
     )
 
     assert captured["config_username"] == "admin"
@@ -2525,8 +2525,8 @@ def test_scene_preset_default_push_targets_use_requested_scene_kind() -> None:
         "scene_3gs_collision_glb",
     ]:
         assert _default_push_target_for_preset(
-            PresetCanvasRequest(scope="asset", asset_kind=asset_kind, asset_id="小区")
-        ) == {"kind": asset_kind, "scene_id": "小区"}
+            PresetCanvasRequest(scope="asset", asset_kind=asset_kind, asset_id="compound")
+        ) == {"kind": asset_kind, "scene_id": "compound"}
 
 
 @pytest.mark.asyncio
@@ -2539,14 +2539,14 @@ async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
             return {
                 "scene_id": scene_id,
                 "scene_type": "interior",
-                "environment_prompt": "公寓楼电梯间，电梯数字显示屏，固定顶灯",
+                "environment_prompt": "Apartment building elevator lobby, elevator digital display, fixed ceiling light",
             }
 
     monkeypatch.setattr(
         freezone_presets,
         "_project_style_meta",
         lambda _username, _project, _project_dir: {
-            "style_name": "电影写实 (cinematic)",
+            "style_name": "Cinematic realism (cinematic)",
             "style_prompt": "cinematic realism, controlled highlights, subtle film grain",
             "avoid_instructions": "no cartoon rendering, no plastic surfaces",
         },
@@ -2571,7 +2571,7 @@ async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
     generic_content = nodes["prompt_scene_apartment_elevator"]["data"]["content"]
 
     for content in [master_content, generic_content]:
-        assert "电影写实 (cinematic)" in content
+        assert "Cinematic realism (cinematic)" in content
         assert "cinematic realism, controlled highlights, subtle film grain" in content
         assert "no cartoon rendering, no plastic surfaces" in content
 
@@ -2580,29 +2580,29 @@ async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
 async def test_scene_asset_preset_projects_derived_scene_effective_prompt(
     tmp_path: Path,
 ) -> None:
-    base_master_path = tmp_path / "assets" / "scenes" / "城市街道" / "master.png"
+    base_master_path = tmp_path / "assets" / "scenes" / "City_Street" / "master.png"
     base_master_path.parent.mkdir(parents=True)
     base_master_path.write_bytes(b"fake image")
 
     class Store:
         async def get_scene(self, scene_id: str):
             scenes = {
-                "城市街道": {
-                    "scene_id": "城市街道",
-                    "name": "城市街道",
+                "City_Street": {
+                    "scene_id": "City_Street",
+                    "name": "City_Street",
                     "scene_type": "exterior",
-                    "environment_prompt": "正面：霓虹店铺和公交站\n左侧：玻璃橱窗",
-                    "description": "城市主街道",
+                    "environment_prompt": "Front: neon shops and a bus stop\nLeft: glass display windows",
+                    "description": "City main street",
                 },
-                "城市街道_雨夜版": {
-                    "scene_id": "城市街道_雨夜版",
-                    "name": "城市街道_雨夜版",
+                "City_Street_rainy_night": {
+                    "scene_id": "City_Street_rainy_night",
+                    "name": "City_Street_rainy_night",
                     "scene_type": "exterior",
-                    "base_scene_id": "城市街道",
-                    "variant_id": "雨夜版",
+                    "base_scene_id": "City_Street",
+                    "variant_id": "rainy_night",
                     "environment_prompt": "",
-                    "variant_prompt": "路面积水反射霓虹，雨幕明显，空气潮湿",
-                    "description": "雨夜城市街道",
+                    "variant_prompt": "Standing water on the road reflects neon, with heavy rain and humid air",
+                    "description": "Rainy night city street",
                 },
             }
             return scenes.get(scene_id)
@@ -2614,12 +2614,12 @@ async def test_scene_asset_preset_projects_derived_scene_effective_prompt(
         project_dir=tmp_path,
         store=Store(),
         asset_kind="scene",
-        asset_id="城市街道_雨夜版",
+        asset_id="City_Street_rainy_night",
     )
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:scene:::城市街道_雨夜版",
-        default_push_target={"kind": "scene_master", "scene_id": "城市街道_雨夜版"},
+        preset_key="asset:scene:::City_Street_rainy_night",
+        default_push_target={"kind": "scene_master", "scene_id": "City_Street_rainy_night"},
     )
     prompt_nodes = [
         node
@@ -2629,13 +2629,13 @@ async def test_scene_asset_preset_projects_derived_scene_effective_prompt(
     ]
     assert len(prompt_nodes) == 1
     content = prompt_nodes[0]["data"]["content"]
-    assert "正面：霓虹店铺和公交站" in content
-    assert "路面积水反射霓虹" in content
+    assert "Front: neon shops and a bus stop" in content
+    assert "Standing water on the road reflects neon" in content
     assert "VARIANT DELTA PROMPT" in content
     base_master_nodes = [
         node
         for node in payload["nodes"]
-        if node.get("data", {}).get("displayName") == "城市街道 base master"
+        if node.get("data", {}).get("displayName") == "City_Street base master"
     ]
     assert len(base_master_nodes) == 1
     assert base_master_nodes[0]["data"]["imageUrl"]
@@ -2645,8 +2645,8 @@ async def test_scene_asset_preset_projects_derived_scene_effective_prompt(
 
 def test_scene_preset_default_push_target_keeps_scene_alias_as_master() -> None:
     assert _default_push_target_for_preset(
-        PresetCanvasRequest(scope="asset", asset_kind="scene", asset_id="小区")
-    ) == {"kind": "scene_master", "scene_id": "小区"}
+        PresetCanvasRequest(scope="asset", asset_kind="scene", asset_id="compound")
+    ) == {"kind": "scene_master", "scene_id": "compound"}
 
 
 @pytest.mark.asyncio
@@ -2658,18 +2658,18 @@ async def test_character_asset_preset_emits_age_variant_portrait_placeholder(
             return SimpleNamespace(
                 name=name,
                 aliases=[],
-                role="主角",
+                role="protagonist",
                 is_main=True,
-                gender="男",
+                gender="male",
                 age_group="youth",
-                body_type="挺拔",
-                description="冷静克制",
-                face_prompt="二十多岁男性，眼神冷静",
+                body_type="tall and straight",
+                description="Calm and restrained",
+                face_prompt="Male in his twenties, with a calm gaze",
                 identities=[
                     SimpleNamespace(
-                        identity_id="林昭_中年",
-                        identity_name="中年",
-                        appearance_details="中年形态，眼角有细纹",
+                        identity_id="LinZhao_middle_aged",
+                        identity_name="middle_aged",
+                        appearance_details="Middle-aged form, with fine lines at the corners of the eyes",
                         face_prompt="",
                         age_group="middle_age",
                         portrait_image="",
@@ -2685,20 +2685,20 @@ async def test_character_asset_preset_emits_age_variant_portrait_placeholder(
         project_dir=tmp_path,
         store=Store(),
         asset_kind="character",
-        character="林昭",
+        character="LinZhao",
     )
 
     refs_by_role = {ref["role"]: ref for ref in context["refs"]}
     assert refs_by_role["identity_portrait"]["exists"] is False
     assert refs_by_role["identity_portrait"]["url"] is None
     assert refs_by_role["identity_portrait"]["rel_path"].endswith(
-        "assets/characters/林昭/identities/林昭_中年_portrait.png"
+        "assets/characters/LinZhao/identities/LinZhao_middle_aged_portrait.png"
     )
 
     payload = build_canvas_payload_from_context(
         context=context,
-        preset_key="asset:character:林昭::",
-        default_push_target={"kind": "portrait", "character": "林昭"},
+        preset_key="asset:character:LinZhao::",
+        default_push_target={"kind": "portrait", "character": "LinZhao"},
     )
     nodes = {node["id"]: node for node in payload["nodes"]}
     edges = {(edge["source"], edge["target"]) for edge in payload["edges"]}
@@ -2707,14 +2707,14 @@ async def test_character_asset_preset_emits_age_variant_portrait_placeholder(
     assert nodes["ref_identity_portrait_1"]["data"]["imageUrl"] is None
     assert nodes["ref_identity_portrait_1"]["data"]["slot_target"] == {
         "kind": "identity_portrait",
-        "character": "林昭",
-        "identity_id": "林昭_中年",
+        "character": "LinZhao",
+        "identity_id": "LinZhao_middle_aged",
     }
     assert nodes["ref_identity_portrait_1"]["data"]["autoCommitOnGenerate"] is True
     identity_portrait_prompt = nodes["ref_identity_portrait_1"]["data"]["prompt"]
     assert "Generate a face-only character identity reference portrait" in identity_portrait_prompt
     assert "FACIAL FEATURES TO CAPTURE" in identity_portrait_prompt
-    assert "中年形态，眼角有细纹" in identity_portrait_prompt
+    assert "Middle-aged form, with fine lines at the corners of the eyes" in identity_portrait_prompt
     assert "VISUAL STYLE:" in identity_portrait_prompt
     assert "MUST AVOID:" in identity_portrait_prompt
     assert ("ref_identity_portrait_1", "ref_character_identity_1") in edges
@@ -2722,7 +2722,7 @@ async def test_character_asset_preset_emits_age_variant_portrait_placeholder(
 
 def test_portrait_preset_does_not_duplicate_portrait_as_identity(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
-    portrait_path = project_dir / "assets" / "characters" / "周牧野" / "portrait.png"
+    portrait_path = project_dir / "assets" / "characters" / "ZhouMuye" / "portrait.png"
     portrait_path.parent.mkdir(parents=True)
     portrait_path.write_bytes(b"fake portrait")
 
@@ -2735,7 +2735,7 @@ def test_portrait_preset_does_not_duplicate_portrait_as_identity(tmp_path: Path)
         username="admin",
         project="demo",
         project_dir=project_dir,
-        character="周牧野",
+        character="ZhouMuye",
         identity_id=None,
     )
 
@@ -2746,15 +2746,15 @@ def test_portrait_preset_does_not_duplicate_portrait_as_identity(tmp_path: Path)
         context={
             "scope": "asset",
             "asset_kind": "portrait",
-            "character": "周牧野",
+            "character": "ZhouMuye",
             "refs": payload_refs,
             "generation_context": {
-                "portrait": {"character": "周牧野", "prompt": "短发利落，眼睛冷厉"},
+                "portrait": {"character": "ZhouMuye", "prompt": "Neat short hair, cold sharp eyes"},
                 "identities": [],
             },
         },
-        preset_key="asset:portrait:周牧野::",
-        default_push_target={"kind": "portrait", "character": "周牧野"},
+        preset_key="asset:portrait:ZhouMuye::",
+        default_push_target={"kind": "portrait", "character": "ZhouMuye"},
     )
 
     ref_nodes = [node for node in payload["nodes"] if node["id"].startswith("ref_")]

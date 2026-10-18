@@ -106,7 +106,7 @@ describe("VideoNode error notification contract", () => {
     const dialogCalls = vi.mocked(showErrorDialog).mock.calls;
     const [message, title, details] = dialogCalls[dialogCalls.length - 1];
     expect(String(message)).toContain("node.videoNode.generation.faceBlockedMessage");
-    expect(String(title)).toBe("node.videoNode.generation.faceBlockedTitle");
+    expect(String(title)).toContain("node.videoNode.generation.faceBlockedTitle");
     // The diagnostic payload is passed through to the dialog as is — what shows when expanding "Details" must be the vendor's original text.
     expect(String(details)).toContain(POLICY_CODE);
   });

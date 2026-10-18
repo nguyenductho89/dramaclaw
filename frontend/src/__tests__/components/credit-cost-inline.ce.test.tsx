@@ -36,7 +36,7 @@ describe("CreditCostInline CE gating", () => {
 
     expect(screen.getByText("12")).toHaveClass("line-through");
     expect(screen.getByText("9")).toBeInTheDocument();
-    expect(screen.getByText("{{percentOff}}% off, limited time")).toHaveAttribute("title", "Summer promotion");
+    expect(screen.getByText("20% off, limited time")).toHaveAttribute("title", "Summer promotion");
   });
 
   it("shows a generic promotion label when promotion metadata is unavailable", () => {

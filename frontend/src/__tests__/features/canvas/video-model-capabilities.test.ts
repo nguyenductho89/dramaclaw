@@ -288,7 +288,7 @@ describe("resolveVideoKeyframeUrls — stable edge slots", () => {
         { url: "legacy-last.png" },
         { url: "unassigned.png" },
       ]),
-    ).toEqual({ firstFrameUrl: "unassigned.png", lastFrameUrl: "legacy-last.png" });
+    ).toEqual({ firstFrameUrl: "legacy-last.png", lastFrameUrl: "unassigned.png" });
   });
 });
 

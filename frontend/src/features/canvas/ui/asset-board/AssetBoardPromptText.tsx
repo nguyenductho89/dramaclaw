@@ -14,10 +14,10 @@ import type { CanvasNode } from '@/features/canvas/domain/canvasNodes';
 import { buildMentionRegex } from '@/lib/mention-markers';
 
 /**
- * 提示词里的引用 chip（只读）：缩略图方块 + 「图片N」标签，hover 在上方浮出大图预览。
+ * A reference chip in the prompt (read-only): a thumbnail square + an "imageN" label, with a large image preview floating above on hover.
  *
- * 与工作流节点内的引用 chip 同构（见 nodes/shared/ReferenceTextChip：portal + fixed
- * 定位，绕开祖先的 overflow 裁切），但**刻意不带 detach 角标**——详情是只读展示面。
+ * Isomorphic with the reference chip inside workflow nodes (see nodes/shared/ReferenceTextChip: portal + fixed
+ * positioning, getting around ancestors' overflow clipping), but **deliberately without the detach badge** - the detail is a read-only display surface.
  */
 function PromptReferenceChip({
   target,
@@ -34,7 +34,7 @@ function PromptReferenceChip({
     if (!previewUrl) return;
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // 贴着 chip 上沿留 8px；浮层自身 translateY(-100%) 上移。
+    // Leave 8px along the chip's top edge; the floating layer itself moves up by translateY(-100%).
     setAnchor({ top: rect.top - 8, left: rect.left });
   };
 
@@ -95,29 +95,29 @@ function PromptReferenceChip({
 interface AssetBoardPromptTextProps {
   node: CanvasNode;
   prompt: string;
-  /** 点击 chip 跳到该引用的详情（可选；无 nodeId 的自带参考图不可点）。 */
+  /** Click the chip to jump to that reference's detail (optional; an own reference image without nodeId is not clickable). */
   onOpenReference?: (target: PromptReferenceTarget) => void;
 }
 
 /**
- * 详情面板的提示词正文：把 `@图片N` / `@视频N` / `@音频N` 渲染成带缩略图的只读
- * chip（hover 出大图），其余文本原样展示。
+ * The prompt body of the detail panel: render `@imageN` / `@videoN` / `@audioN` as read-only chips with thumbnails
+ * (large image on hover), and show the rest of the text as is.
  *
- * - **解析层复用 `buildMentionRegex`**（与工作流 mention-textarea 高亮层、
- *   mentionsToProgramMarkers 解析层同一份）：字典驱动、按标签长度降序匹配，
- *   `@图片1@图片2` 相邻也能各自命中，无需尾随空格。
- * - **编号映射复用 `resolvePromptReferences`**（内部就是工作流的
- *   orderedReferenceUrlsWithOwnFirst / sortUpstreamByReferenceOrder + 分类型计数）。
- * - 字典只包含**当前真的解析得到目标**的标签，所以引用已被删除 / 编号越界的
- *   `@图片9` 天然不匹配，原样显示为纯文本（不渲染空 chip、不报错）。
+ * - **The parsing layer reuses `buildMentionRegex`** (the same one as the workflow mention-textarea highlight layer and
+ *   the mentionsToProgramMarkers parsing layer): dictionary-driven, matching by label length in descending order,
+ *   `@image1@image2` adjacent ones can each hit as well, with no need for a trailing space.
+ * - **The numbering map reuses `resolvePromptReferences`** (internally it is the workflow's
+ *   orderedReferenceUrlsWithOwnFirst / sortUpstreamByReferenceOrder + per-type counting).
+ * - The dictionary contains only labels that **really resolve to a target now**, so references that have been deleted / numbers out of range
+ *   such as `@image9` naturally do not match and show as plain text as is (no empty chip rendered, no error).
  */
 export function AssetBoardPromptText({
   node,
   prompt,
   onOpenReference,
 }: AssetBoardPromptTextProps): ReactElement {
-  // 直接复用工作流的 useUpstreamNodes：只订阅本节点一跳上游、按连线顺序，且用
-  // useShallow 稳定引用（裸 selector 每次返回新数组会把渲染打进无限循环）。
+  // Directly reuse the workflow's useUpstreamNodes: subscribing only to this node's one-hop upstream, in edge order, and using
+  // useShallow to stabilize the reference (a bare selector returning a new array every time would push rendering into an infinite loop).
   const upstreamNodes = useUpstreamNodes(node.id);
   const targets = useMemo(
     () => resolvePromptReferences(node, upstreamNodes),

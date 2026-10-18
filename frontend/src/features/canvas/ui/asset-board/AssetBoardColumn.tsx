@@ -5,33 +5,33 @@ import { Children, Fragment, isValidElement, type ReactElement, type ReactNode }
 interface AssetBoardColumnProps {
   title: string;
   count: number;
-  /** header 右侧的附加控件（如视频栏的筛选按钮组）。 */
+  /** Extra controls on the right of the header (such as the video column's filter button group). */
   headerExtra?: ReactNode;
   /**
-   * 替换 header 左侧默认标题（<h3>{title}+count）的自定义节点。详情态左窄列表用它
-   * 挂「文本/图片/视频」切换下拉；不传则退回默认标题（三栏总览态、音频详情文本栏）。
+   * A custom node replacing the header's default title on the left (<h3>{title}+count>). The detail-state left narrow list uses it
+   * to mount the "Text/Image/Video" switch dropdown; when not passed it falls back to the default title (three-column overview state, audio detail text column).
    */
   titleSlot?: ReactNode;
   emptyText: string;
   children: ReactNode;
-  /** 条目间加极淡分隔线（对齐 liblib 参考图的视频栏）。 */
+  /** Add a very faint divider between entries (matches the video column of the liblib reference image). */
   dividedItems?: boolean;
 }
 
 /**
- * 在条目之间插入真实的分隔线元素。
+ * Insert real divider elements between entries.
  *
- * 刻意不用 Tailwind 的 `divide-y`：v4 的 divide 规则包在 `:where()` 里（特指度 0），
- * 而卡片自己带 `border border-transparent`（hover 才变白）——卡片的 border-color
- * 稳赢，分隔线颜色被刷成透明，线等于没画。分隔线是独立元素就与卡片边框无关了。
+ * Deliberately not using Tailwind's `divide-y`: v4's divide rule is wrapped in `:where()` (specificity 0),
+ * while the card itself carries `border border-transparent` (turning white only on hover) - the card's border-color
+ * always wins, the divider color gets painted transparent, and the line is as good as undrawn. A divider as an independent element is unrelated to the card border.
  */
 function withDividers(children: ReactNode): ReactNode {
   const items = Children.toArray(children);
   return items.map((child, index) => (
-    // key 取子节点自己的 key（卡片按 nodeId keyed），不能用下标：栏内按创建顺序
-    // 新→旧排，新建节点插在最前面，用下标当 key 会让每个 Fragment 位置上的子节点
-    // key 整体错位，React 逐个卸载重挂整栏卡片——卡片本地态（图片自然尺寸缓存、
-    // 定位高亮）全丢，没封面的视频还会重新拉一遍元数据。
+    // key takes the child node's own key (cards are keyed by nodeId), not the index: in-column order is by creation
+    // newest to oldest, a newly built node is inserted at the very front, and using the index as key would shift the children at every Fragment position
+    // out of alignment, and React would unmount and remount the whole column of cards one by one - the card's local state (image natural size cache,
+    // locate highlight) all lost, and videos without a cover would fetch metadata again.
     <Fragment key={isValidElement(child) && child.key !== null ? child.key : index}>
       {index > 0 && (
         <div aria-hidden data-testid="asset-board-item-divider" className="h-px shrink-0 bg-white/10" />
@@ -50,7 +50,7 @@ export function AssetBoardColumn({
   children,
   dividedItems = false,
 }: AssetBoardColumnProps): ReactElement {
-  // rounded-b-none: 故事板根容器 pb-0 让栏壳贴到底部，底边直角贴边（对标 liblib）。
+  // rounded-b-none: the storyboard root container's pb-0 makes the column shell hug the bottom, with the bottom edge square and flush (matches liblib).
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg rounded-b-none border border-white/5 bg-[#262626]">
       <header className="flex items-center justify-between gap-2 px-4 py-3">

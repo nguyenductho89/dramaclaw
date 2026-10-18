@@ -205,7 +205,7 @@ describe("model task access wiring", () => {
     expect(read(path)).toContain("useModelTaskAccess");
   });
 
-  it.each(["zh", "en"])("%s defines copy for every denial reason", (language) => {
+  it.each(["vi", "en"])("%s defines copy for every denial reason", (language) => {
     const translations = JSON.parse(
       read(`public/locales/${language}/translation.json`),
     ) as { modelTaskAccess?: { blocked?: Record<string, unknown> } };

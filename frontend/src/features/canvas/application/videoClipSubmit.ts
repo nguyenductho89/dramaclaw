@@ -1,35 +1,38 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import { fetchFreezoneJobResult, submitFreezoneVideoCompose } from '@/api/ops';
 import { awaitTaskCompletion } from '@/api/tasks';
 import { CANVAS_NODE_TYPES } from '@/features/canvas/domain/canvasNodes';
 import { readUrl } from '@/lib/url-params';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-/** 结果视频节点的落位尺寸（与 VideoNode 的 DEFAULT_WIDTH/HEIGHT 一致）。 */
+/** Landing size of the result video node (consistent with VideoNode's DEFAULT_WIDTH/HEIGHT). */
 const CLIP_RESULT_LAYOUT_WIDTH = 580;
 const CLIP_RESULT_LAYOUT_HEIGHT = 380;
 
-/** 剪辑完成但后端没给产物地址时的提示（与 VideoNode.handleClipSubmit 原文一致）。 */
-export const VIDEO_CLIP_NO_URL_MESSAGE = '剪辑完成但未返回视频地址';
+/** The hint when the clip finished but the backend gave no product address (identical to the original text of VideoNode.handleClipSubmit). */
+export function videoClipNoUrlMessage(): string {
+  return i18n.t('canvas.videoClip.noUrl');
+}
 
 export interface VideoClipSubmitResult {
-  /** 新建的剪辑结果视频节点 id；失败时为 null。 */
+  /** The id of the newly built clip result video node; null on failure. */
   nodeId: string | null;
-  /** 失败原因；成功时为 null。 */
+  /** Failure reason; null on success. */
   error: string | null;
 }
 
 /**
- * 视频剪辑提交编排（从 VideoNode.handleClipSubmit 原样搬出，语义零变化）：
- * 用单轨单片段的 compose 任务把 [startMs, endMs) 区间裁出来 → 等任务完成 →
- * 取 job result → 在源节点下游建视频节点承载产物并连边。
+ * Video clip submission orchestration (moved verbatim out of VideoNode.handleClipSubmit, with zero semantic change):
+ * use a single-track single-clip compose task to cut out the [startMs, endMs) interval -> wait for the task to complete ->
+ * take the job result -> build a video node downstream of the source node to carry the product and connect an edge.
  *
- * 与 spawn 型编排（imageScene360 等）不同，这里的结果节点只有在任务成功返回
- * 产物地址后才建——原实现就是这个顺序，保持不变（失败不会在画布上留下空节点）。
+ * Unlike spawn-type orchestrations (imageScene360 etc.), the result node here is only built after the task successfully returns
+ * the product address - the original implementation had this order, kept unchanged (a failure leaves no empty node on the canvas).
  *
- * UI 状态（isComposingClip / clipError / 退出剪辑模式）由调用方自持：工作流的
- * VideoNode 与故事板详情的「剪辑轨道」共用这一条提交路径。
+ * UI state (isComposingClip / clipError / exiting clip mode) is held by the caller: the workflow's
+ * VideoNode and the storyboard detail's "Clip track" share this one submission path.
  */
 export async function submitVideoClip(
   sourceNodeId: string,
@@ -37,9 +40,9 @@ export async function submitVideoClip(
     sourceUrl: string;
     startMs: number;
     endMs: number;
-    /** 源节点的画质档（VideoNode 的 data.quality）——compose 只支持 720p/1080p。 */
+    /** The source node's quality tier (VideoNode's data.quality) - compose only supports 720p/1080p. */
     quality?: string | null;
-    /** 结果节点标题，默认「剪辑」（与 VideoNode 原文一致）。 */
+    /** Result node title, default "Clip" (identical to the original text of VideoNode). */
     displayName?: string;
   },
 ): Promise<VideoClipSubmitResult> {
@@ -51,8 +54,8 @@ export async function submitVideoClip(
     return { nodeId: null, error: null };
   }
   // Compose only supports 720p / 1080p — fall back to 720p for 480p sources.
-  // 大小写不敏感：媒体目录里的档位现在是小写（"1080p"），老节点上仍可能存着
-  // "1080P"，硬比较会把 1080p 源悄悄降到 720p。
+  // Case-insensitive: tiers in the media catalog are now lowercase ("1080p"), while old nodes may still store
+  // "1080P", and a hard comparison would quietly downgrade a 1080p source to 720p.
   const composeResolution =
     (opts.quality ?? '').toLowerCase() === '1080p' ? '1080p' : '720p';
   const sourceStart = opts.startMs / 1000;
@@ -85,7 +88,7 @@ export async function submitVideoClip(
     );
     if (!result.url) {
       console.warn('[video-clip] compose completed without url', result);
-      return { nodeId: null, error: VIDEO_CLIP_NO_URL_MESSAGE };
+      return { nodeId: null, error: videoClipNoUrlMessage() };
     }
     const store = useCanvasStore.getState();
     const position = store.findNodePosition(
@@ -96,7 +99,7 @@ export async function submitVideoClip(
     const newNodeId = store.addNode(CANVAS_NODE_TYPES.video, position, {
       videoUrl: result.url,
       durationMs: Math.round((sourceEnd - sourceStart) * 1000),
-      displayName: opts.displayName ?? '剪辑',
+      displayName: opts.displayName ?? i18n.t('canvas.videoClip.defaultTitle'),
     } as unknown as Parameters<typeof store.addNode>[2]);
     store.addEdge(sourceNodeId, newNodeId);
     return { nodeId: newNodeId, error: null };

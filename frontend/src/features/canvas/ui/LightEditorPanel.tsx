@@ -83,7 +83,7 @@ const DIRECTION_PRESETS: Record<LightDirectionKey, LightVector> = {
 };
 
 const DEFAULT_BRIGHTNESS = 60;
-// 色温（开尔文）。后端 `color_temperature_kelvin`，范围 1500-10000，默认 5600。
+// Color temperature (Kelvin). Backend `color_temperature_kelvin`, range 1500-10000, default 5600.
 const MIN_KELVIN = 1500;
 const MAX_KELVIN = 10000;
 const DEFAULT_KELVIN = 5600;
@@ -94,8 +94,8 @@ const DEFAULT_SMART_MODE = false;
 const EDITOR_PROMPT_TEXTAREA_CLASS =
   "mb-5 h-20 rounded-xl !border-white/[0.14] !bg-bg-dark/45 px-3 py-2 text-xs !text-text-dark placeholder:!text-text-dark/52 shadow-inner";
 
-// 开尔文色温 → 近似 RGB（Tanner Helland 近似，适用 ~1000-40000K）。用于色温滑块
-// 的暖冷渐变轨道、手柄颜色与 3D 光球预览着色；提交给后端的是开尔文整数本身。
+// Kelvin color temperature -> approximate RGB (Tanner Helland approximation, valid for ~1000-40000K). Used for the color temperature slider's
+// warm-to-cool gradient track, the handle color and shading of the 3D light ball preview; what is submitted to the backend is the Kelvin integer itself.
 function kelvinToRgb(kelvin: number): [number, number, number] {
   const temp = clamp(kelvin, 1000, 40000) / 100;
   const channel = (v: number) => Math.round(clamp(v, 0, 255));
@@ -119,17 +119,17 @@ function kelvinToHex(kelvin: number): string {
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
-// 暖→冷渐变（色温滑块轨道背景）。
+// Warm -> cool gradient (the color temperature slider's track background).
 const KELVIN_GRADIENT = `linear-gradient(to right, ${[
   1500, 2700, 4000, 5600, 7000, 8500, 10000,
 ]
   .map((k) => kelvinToHex(k))
   .join(", ")})`;
 
-/** 供应商 id 由目录条目下发，前端不枚举。 */
+/** The provider id is delivered by the catalog entry, not enumerated by the frontend. */
 export type LightProviderId = string;
 
-/** 分辨率档位由后台「媒体模型」对所选模型的配置下发，前端不枚举。 */
+/** Resolution tiers are delivered by the backend "media models" config for the selected model, not enumerated by the frontend. */
 export type LightImageSize = string;
 const DEFAULT_LIGHT_IMAGE_SIZE: LightImageSize = "2K";
 
@@ -152,9 +152,9 @@ export interface LightEditorSubmitPayload {
   prompt: string;
   displayName: string;
   brightness: number;
-  /** 主光源色调 hex（由色温派生，用于预览与后端 color_hex）。 */
+  /** Key light tone hex (derived from color temperature, used for the preview and the backend color_hex). */
   color: string;
-  /** 色温（开尔文，1500-10000），提交给后端 color_temperature_kelvin。 */
+  /** Color temperature (Kelvin, 1500-10000), submitted to the backend color_temperature_kelvin. */
   colorTemperatureKelvin: number;
   mainLight: LightMainLightDescriptor;
   rimLight: boolean;
@@ -593,8 +593,8 @@ interface ValueInputProps {
   inputWidthClass?: string;
 }
 
-// 滑块旁可手动输入的数值框：聚焦可编辑、回车/失焦提交并夹取到 [min,max]（取整，
-// 不强制滑块的 step，方便精确设置）；Esc 放弃。未编辑时实时跟随外部值（拖动滑块）。
+// A value box beside the slider that can be typed into by hand: focus to edit, Enter/blur to submit, clamped to [min,max] (rounded,
+// not forcing the slider's step, convenient for precise setting); Esc abandons. When not editing it follows the external value live (dragging the slider).
 function ValueInput({
   value,
   min,
@@ -688,20 +688,20 @@ interface ToggleProps {
 
 interface QualityPickerProps {
   value: LightImageSize;
-  /** 当前模型允许的分辨率档位，由后台「媒体模型」配置下发。 */
+  /** The resolution tiers the current model allows, delivered by the backend "media models" config. */
   options: readonly string[];
   onChange: (value: LightImageSize) => void;
 }
 
 interface ColorTemperatureSliderProps {
-  /** 当前色温（开尔文，1500-10000）。 */
+  /** The current color temperature (Kelvin, 1500-10000). */
   valueKelvin: number;
   onChange: (kelvin: number) => void;
 }
 
-// 色温滑块：一根暖↔冷渐变轨道 + 可拖动手柄（不是任意取色，而是光感冷暖度）。
-// 直接用指针事件驱动（轨道按下/拖动→换算开尔文），渲染在面板内、不 portal，
-// 不会触发面板「点外部即关闭」。
+// Color temperature slider: a warm <-> cool gradient track + a draggable handle (not arbitrary color picking, but a perceived warm/cool degree of light).
+// Driven directly by pointer events (track press/drag -> converted to Kelvin), rendered inside the panel and not portaled,
+// so it does not trigger the panel's "click outside to close".
 function ColorTemperatureSlider({
   valueKelvin,
   onChange,
@@ -871,7 +871,7 @@ export function LightEditorPanel({
   const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
   const [colorTemperatureKelvin, setColorTemperatureKelvin] =
     useState<number>(DEFAULT_KELVIN);
-  // 主光源色调 hex 由色温派生 —— 光球预览/提示词仍按 hex 走，提交另发开尔文值。
+  // The key light tone hex is derived from color temperature - the light ball preview/prompt still goes by hex, and submission sends the Kelvin value separately.
   const color = useMemo(
     () => kelvinToHex(colorTemperatureKelvin),
     [colorTemperatureKelvin],
@@ -886,7 +886,7 @@ export function LightEditorPanel({
   );
   const { models: imageModels } = useFreezoneImageModels();
   const selectedModel = imageModels[0];
-  // 分辨率与画质档位跟随后台对该模型的配置。
+  // Resolution and quality tiers follow the backend's config for that model.
   const sizeOptions = useMemo(
     () => resolveModelSizeOptions(selectedModel),
     [selectedModel],

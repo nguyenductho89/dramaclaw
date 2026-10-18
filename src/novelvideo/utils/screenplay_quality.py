@@ -47,6 +47,8 @@ AMBIGUOUS_SPEAKERS = {
     "on the phone", "voice", "the other end", "anh ấy", "cô ấy", "họ", "đối phương",
     "người đàn ông", "người phụ nữ", "ai đó", "giọng nói",
 }
+# A single dialogue line at least this many characters long counts as "long" (about 25 English words).
+LONG_DIALOGUE_CHARS = 120
 NUMBERED_SCENE_PREFIX_RE = re.compile(r"^\s*\d+\s*[-–.]\s*\d+")
 _EXPLICIT_TIME_RE = re.compile(rf"(?:^|[\s,])(?:{TIME_TOKEN_RE})(?:$|[\s,])")
 
@@ -147,11 +149,13 @@ def _has_source_scene_header_evidence(header_line: str) -> bool:
     header = str(header_line or "").strip()
     if not header:
         return False
-    header = re.sub(
-        r"(?:\s*\([^()]*\))+\s*$",
-        "",
-        header,
-    ).strip()
+    # A trailing parenthetical note such as "(flashback)" does not change the heading,
+    # but "SCENE (1)" keeps its parenthesis, so test the heading both ways.
+    stripped = re.sub(r"(?:\s*\([^()]*\))+\s*$", "", header).strip()
+    return any(_header_has_evidence(candidate) for candidate in dict.fromkeys((header, stripped)) if candidate)
+
+
+def _header_has_evidence(header: str) -> bool:
     if INTERNATIONAL_SCENE_RE.fullmatch(header):
         return True
     if SCENE_MARKER_RE.fullmatch(header):
@@ -234,7 +238,7 @@ def check_screenplay_import_quality(text: str) -> ScreenplayQualityReport:
             ambiguous_speaker_count += 1
         if "(" in line:
             parenthetical_dialogue_count += 1
-        if len(dialogue_text) >= 40:
+        if len(dialogue_text) >= LONG_DIALOGUE_CHARS:
             long_dialogue_count += 1
 
     total_scene_headers = scene_header_count + scene_block_header_count

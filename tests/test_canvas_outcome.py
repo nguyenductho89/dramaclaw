@@ -11,7 +11,7 @@ from novelvideo.chat.canvas_outcome import (
 )
 
 
-def reply(mode="read_only", claims=None, message="建议保持当前布局。"):
+def reply(mode="read_only", claims=None, message="I suggest keeping the current layout."):
     return json.dumps(
         {"message": message, "mode": mode, "canvas_receipts": claims or []}
     )
@@ -28,7 +28,7 @@ def test_reply_schema_accepts_read_only_and_mutation_results():
 def test_read_only_answer_needs_no_canvas_receipt():
     assert (
         finalize_canvas_reply(reply(), attempts={}, receipts=set())
-        == "建议保持当前布局。"
+        == "I suggest keeping the current layout."
     )
 
 
@@ -54,24 +54,24 @@ def test_freezone_instructions_embed_schema_and_valid_greeting_example():
 
 
 def test_plain_success_claim_is_still_rejected_without_receipts():
-    assert "未返回结构化结果" in finalize_canvas_reply(
-        "图片节点已创建成功。", attempts={}, receipts=set()
+    assert "No structured result was returned" in finalize_canvas_reply(
+        "The image node was created successfully.", attempts={}, receipts=set()
     )
 
 
 def test_catalog_only_success_needs_no_canvas_receipt():
     assert (
         finalize_canvas_reply(
-            reply(message="Skill 已保存，尚未运行。"), attempts={}, receipts=set()
+            reply(message="The Skill has been saved and not run yet."), attempts={}, receipts=set()
         )
-        == "Skill 已保存，尚未运行。"
+        == "The Skill has been saved and not run yet."
     )
 
 
 def test_canvas_success_requires_actual_same_turn_receipts():
     text = reply("mutation", [{"bridge_key": "bridge-a", "revision": None}])
-    assert "没有可验证" in finalize_canvas_reply(text, attempts={}, receipts=set())
-    assert "不匹配" in finalize_canvas_reply(
+    assert "no verifiable" in finalize_canvas_reply(text, attempts={}, receipts=set())
+    assert "does not match" in finalize_canvas_reply(
         text, attempts={"call-a": "succeeded"}, receipts={("bridge-other", None)}
     )
 
@@ -82,23 +82,23 @@ def test_canvas_success_accepts_verified_browser_receipt():
             reply(
                 "mutation",
                 [{"bridge_key": "bridge-a", "revision": None}],
-                "节点已创建。",
+                "Node created.",
             ),
             attempts={"call-a": "succeeded"},
             receipts={("bridge-a", None)},
         )
-        == "节点已创建。"
+        == "Node created."
     )
 
 
 def test_canvas_success_accepts_verified_direct_revision():
     assert (
         finalize_canvas_reply(
-            reply("mutation", [{"bridge_key": None, "revision": 3}], "节点已更新。"),
+            reply("mutation", [{"bridge_key": None, "revision": 3}], "Node updated."),
             attempts={"call-a": "succeeded"},
             receipts={("", 3)},
         )
-        == "节点已更新。"
+        == "Node updated."
     )
 
 
@@ -108,9 +108,9 @@ def test_one_success_cannot_mask_another_failed_write():
             reply("mutation", [{"bridge_key": "bridge-a", "revision": None}]),
             attempts={"call-a": "succeeded", "call-b": "failed"},
             receipts={("bridge-a", None)},
-            failure="第二个节点未保存。",
+            failure="the second node was not saved.",
         )
-        == "画布操作未完成：第二个节点未保存。"
+        == "Canvas operation incomplete: the second node was not saved."
     )
 
 
@@ -121,45 +121,45 @@ def test_non_success_operation_keeps_its_state(state):
     result = finalize_canvas_reply(
         reply("mutation"), attempts={"call-a": state}, receipts=set()
     )
-    expected = {"cancelled": "已取消", "timeout": "等待超时"}.get(state, "等待确认")
+    expected = {"cancelled": "cancelled", "timeout": "timed out"}.get(state, "waiting for confirmation")
     assert expected in result
 
 
 def test_workflow_draft_is_pending_approval_not_success_or_failure():
     result = finalize_canvas_reply(
-        "已创建节点。", attempts={}, receipts=set(), draft_ready=True
+        "Node created.", attempts={}, receipts=set(), draft_ready=True
     )
-    assert "等待你确认" in result
-    assert "操作未完成" not in result
+    assert "waiting for your confirmation" in result
+    assert "operation incomplete" not in result
 
 
 @pytest.mark.parametrize(
     "text",
     [
-        "已创建节点。",
+        "Node created.",
         "[]",
         "null",
         "{}",
-        json.dumps({"message": "说明", "mode": [], "canvas_receipts": []}),
+        json.dumps({"message": "Explanation", "mode": [], "canvas_receipts": []}),
         json.dumps(
-            {"message": "说明", "mode": "read_only", "canvas_receipts": [], "extra": 1}
+            {"message": "Explanation", "mode": "read_only", "canvas_receipts": [], "extra": 1}
         ),
     ],
 )
 def test_missing_or_invalid_structured_reply_fails_closed(text):
-    assert "未通过操作结果校验" in finalize_canvas_reply(
+    assert "did not pass operation result validation" in finalize_canvas_reply(
         text, attempts={}, receipts=set()
     )
 
 
 def test_read_only_mode_cannot_hide_actual_canvas_writes():
-    assert "不一致" in finalize_canvas_reply(
+    assert "inconsistent" in finalize_canvas_reply(
         reply(), attempts={"call-a": "succeeded"}, receipts={("bridge-a", None)}
     )
 
 
 def test_claims_must_cover_all_successful_writes():
-    assert "未覆盖" in finalize_canvas_reply(
+    assert "does not cover" in finalize_canvas_reply(
         reply("mutation", [{"bridge_key": "bridge-a", "revision": None}]),
         attempts={"call-a": "succeeded", "call-b": "succeeded"},
         receipts={("bridge-a", None), ("bridge-b", None)},
@@ -168,7 +168,7 @@ def test_claims_must_cover_all_successful_writes():
 
 @pytest.mark.parametrize("revision", [True, "3", 3.5])
 def test_invalid_revision_claims_fail_closed(revision):
-    assert "不匹配" in finalize_canvas_reply(
+    assert "does not match" in finalize_canvas_reply(
         reply("mutation", [{"bridge_key": None, "revision": revision}]),
         attempts={"call-a": "succeeded"},
         receipts={("", 3)},
@@ -178,7 +178,7 @@ def test_invalid_revision_claims_fail_closed(revision):
 def test_read_only_plain_text_needs_format_repair():
     # #680: a no-write turn that answered in prose is repaired, not replaced.
     assert needs_canvas_format_repair(
-        "工作流失败，未生成视频。", attempts={}, receipts=set()
+        "The workflow failed; no video was generated.", attempts={}, receipts=set()
     )
     assert needs_canvas_format_repair("{}", attempts={}, receipts=set())
 
@@ -187,10 +187,10 @@ def test_read_only_plain_text_needs_format_repair():
     ("text", "attempts", "receipts", "draft_ready"),
     [
         (reply(), {}, set(), False),
-        ("已创建节点。", {"call-a": "succeeded"}, {("bridge-a", None)}, False),
-        ("已创建节点。", {}, {("", 7)}, False),
-        ("已创建节点。", {"call-a": "failed"}, set(), False),
-        ("草稿已准备。", {}, set(), True),
+        ("Node created.", {"call-a": "succeeded"}, {("bridge-a", None)}, False),
+        ("Node created.", {}, {("", 7)}, False),
+        ("Node created.", {"call-a": "failed"}, set(), False),
+        ("The draft is ready.", {}, set(), True),
         (reply("mutation", [{"bridge_key": "bridge-a", "revision": None}]), {}, set(), False),
         # A well-formed envelope with invented receipts is a false claim, not a
         # format slip: a retry could drop the receipts and keep the claim.
@@ -198,7 +198,7 @@ def test_read_only_plain_text_needs_format_repair():
             reply(
                 "read_only",
                 [{"bridge_key": "forged", "revision": None}],
-                message="图片节点已创建成功。",
+                message="The image node was created successfully.",
             ),
             {},
             set(),

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 「新建文件夹」弹窗。只收一个名字，重名/超长由后端判定并回显在输入框下方。
-// 它可能开在「上传资产」弹窗之上（保存位置那里也能现建文件夹），所以 z-index
-// 通过 layer 拉高，不写死。
+// The "New folder" dialog. It takes only a name, with duplicate/too-long judged by the backend and echoed below the input box.
+// It may open on top of the "Upload asset" dialog (a folder can also be created on the spot at the save location), so z-index
+// is raised via layer rather than hard-coded.
 //
-// 文件夹改名、素材改名也复用这一个：都是「弹个框收一个名字」，差别只在标题、
-// 字段名和长度上限，各自传进来即可。
+// Folder rename and asset rename also reuse this one: all are "pop a dialog to take a name", differing only in title,
+// field name and length limit, each passed in.
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,19 +18,19 @@ import { FOLDER_NAME_MAX_LEN } from './assetLibraryItems';
 export interface AssetLibraryNewFolderDialogProps {
   open: boolean;
   onClose: () => void;
-  /** 抛错即视为失败，错误信息直接显示在输入框下方，弹窗保持打开。 */
+  /** Throwing counts as failure, the error message is shown directly below the input box, and the dialog stays open. */
   onSubmit: (name: string) => Promise<void>;
-  /** 叠在上传弹窗之上时传更高的层级。 */
+  /** Pass a higher layer when stacked on top of the upload dialog. */
   z?: number;
-  /** 重命名复用同一个弹窗，只换标题与初始值。 */
+  /** Rename reuses the same dialog, changing only the title and initial value. */
   title?: string;
-  /** 新建还是改名——只影响标题下那句说明，默认按新建。 */
+  /** New or rename - only affects the description line under the title, defaulting to new. */
   mode?: 'create' | 'rename';
   initialName?: string;
-  /** 输入框上方的字段名。改素材名时传「资产名称」。 */
+  /** The field name above the input box. Pass "Asset name" when renaming an asset. */
   fieldLabel?: string;
   placeholder?: string;
-  /** 字数上限，与后端校验保持一致。 */
+  /** Character limit, kept consistent with the backend validation. */
   maxLength?: number;
 }
 
@@ -47,7 +47,7 @@ export function AssetLibraryNewFolderDialog({
   maxLength = FOLDER_NAME_MAX_LEN,
 }: AssetLibraryNewFolderDialogProps) {
   const { t } = useTranslation();
-  // 素材改名弹窗和文件夹弹窗可能同时挂在树上，写死 id 会重复。
+  // The asset rename dialog and the folder dialog may be on the tree at the same time, and a hard-coded id would be duplicated.
   const inputId = useId();
   const errorId = useId();
   const [name, setName] = useState(initialName);
@@ -85,9 +85,9 @@ export function AssetLibraryNewFolderDialog({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      // 必须在 finally 里复位：成功时弹窗会被关掉，这次 setState 无关紧要；但
-      // handler 也可能什么都没做就 return（比如 project 还是 null），那时只在
-      // catch 里复位就等于把「保存」永久按灰，用户连错误提示都看不到。
+      // Must reset in finally: on success the dialog is closed and this setState does not matter; but
+      // the handler may also return without doing anything (e.g. project is still null), and resetting only in
+      // catch would then gray out "Save" permanently, with the user not even seeing an error hint.
       setSubmitting(false);
     }
   };

@@ -12,10 +12,10 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "en",
+    fallbackLng: "en",
     resources: {
-      zh: {
+      en: {
         translation: {
           assets: {
             common: {
@@ -81,8 +81,8 @@ describe("PropAssetCard", () => {
 
     expect(screen.getByText("Seven Star Sword")).toBeInTheDocument();
     expect(screen.getByText("Weapon")).toBeInTheDocument();
-    expect(screen.getByText("Owner character: Li Qing")).toBeInTheDocument();
-    expect(screen.getByText("Reference image Generated")).toBeInTheDocument();
+    expect(screen.getByText("Owner: Li Qing")).toBeInTheDocument();
+    expect(screen.getByText("Reference image Ready")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate reference" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: /Upload/ })).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("PropAssetCard", () => {
       reference_url: "/static/projects/demo/assets/props/Secret Letter/reference_3view.png",
     });
 
-    fireEvent.error(screen.getByAltText("Secret Letter reference image"));
+    fireEvent.error(screen.getByAltText("Secret Letter Reference image"));
 
     expect(screen.getByText("Reference image missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    fireEvent.error(screen.getByAltText("Secret Letter reference image"));
+    fireEvent.error(screen.getByAltText("Secret Letter Reference image"));
     expect(screen.getByText("Reference image missing")).toBeInTheDocument();
 
     view.rerender(
@@ -158,7 +158,7 @@ describe("PropAssetCard", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByAltText("Secret Letter reference image")).toBeInTheDocument();
+    expect(screen.getByAltText("Secret Letter Reference image")).toBeInTheDocument();
   });
 
   it("renders NiceGUI prop type labels instead of raw prop type codes", () => {
@@ -204,12 +204,12 @@ describe("PropAssetCard", () => {
       reference_url: "/static/u/p/assets/props/seven-star-sword/reference.png",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Seven Star Sword reference image" }));
+    fireEvent.click(screen.getByRole("button", { name: "Seven Star Sword Reference image" }));
 
     expect(
       screen.getByRole("link", { name: "Download image" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByAltText("Seven Star Sword reference image")).toHaveLength(2);
+    expect(screen.getAllByAltText("Seven Star Sword Reference image")).toHaveLength(2);
   });
 
   it("shows the NiceGUI generating label for single prop reference generation", () => {

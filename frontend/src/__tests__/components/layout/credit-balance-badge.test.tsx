@@ -116,7 +116,7 @@ vi.mock("@/components/credits/CreditCenterDialog", () => ({
 vi.mock("react-i18next", async () => {
   const { readFileSync } = await import("node:fs");
   const dictionary = JSON.parse(
-    readFileSync("public/locales/zh/translation.json", "utf8"),
+    readFileSync("public/locales/en/translation.json", "utf8"),
   ) as Record<string, unknown>;
   const translate = (key: string, vars?: Record<string, unknown>) => {
     const raw = key
@@ -136,7 +136,7 @@ vi.mock("react-i18next", async () => {
   return {
     useTranslation: () => ({
       t: translate,
-      i18n: { resolvedLanguage: "zh", language: "zh" },
+      i18n: { resolvedLanguage: "en", language: "en" },
     }),
   };
 });

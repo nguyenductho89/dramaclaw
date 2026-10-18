@@ -5554,7 +5554,9 @@
       "muteTodo": "Tắt tiếng (chưa hỗ trợ)",
       "loopTodo": "Lặp lại (chưa hỗ trợ)",
       "submitting": "Đang cắt…",
-      "submit": "Áp dụng đoạn cắt"
+      "submit": "Áp dụng đoạn cắt",
+      "noUrl": "Cắt hoàn tất nhưng không trả về địa chỉ video",
+      "defaultTitle": "Đoạn cắt"
     },
     "mentionReplace": {
       "empty": "Không có asset nào để thay vào",
@@ -5886,7 +5888,8 @@
           }
         },
         "missingProject": "Thiếu ngữ cảnh dự án; không thể gửi",
-        "missingSource": "Không tìm thấy ảnh nguồn; không thể gửi"
+        "missingSource": "Không tìm thấy ảnh nguồn; không thể gửi",
+        "chipTitle": "{{label}} · nhấn để đổi chức năng, Backspace để xóa"
       },
       "audioForm": {
         "musicDescription": "Mô tả nhạc",
@@ -5940,7 +5943,16 @@
         "colVisual": "Mô tả hình ảnh",
         "colDialogue": "Lời thoại",
         "colSummary": "Tóm tắt nội dung"
-      }
+      },
+      "referenceMenu": {
+        "actions": "Thao tác {{label}}",
+        "edit": "Chỉnh sửa",
+        "locate": "Định vị"
+      },
+      "dropHint": "Kéo tài nguyên, ảnh hoặc video vào đây để thêm làm tham chiếu",
+      "resizeColumns": "Điều chỉnh độ rộng cột",
+      "multiAngleEditor": "Trình chỉnh sửa đa chiều",
+      "lightEditor": "Trình chỉnh sửa hiệu ứng ánh sáng"
     },
     "keyElement": {
       "character": "Nhân vật",
@@ -5960,6 +5972,17 @@
       "imageToPrompt": "Nhóm tạo prompt từ ảnh",
       "textToMusic": "Nhóm văn bản thành nhạc",
       "cloneAudio": "Nhóm nhân bản âm thanh"
+    },
+    "addToChat": {
+      "label": "Thêm vào hội thoại"
+    },
+    "errors": {
+      "missingProjectParam": "URL hiện tại thiếu tham số project",
+      "noUpstreamImageForPrompt": "Không có ảnh đầu vào để tạo prompt ngược",
+      "noDownstreamVideoNode": "Không có node video phía sau để chứa kết quả"
+    },
+    "matte": {
+      "defaultTitle": "Tách nền"
     }
   },
   "tool": {

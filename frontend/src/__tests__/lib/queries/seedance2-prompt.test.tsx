@@ -28,7 +28,7 @@ const server = setupServer();
 beforeAll(() => server.listen());
 afterEach(() => {
   server.resetHandlers();
-  useAppStore.setState({ language: "zh" });
+  useAppStore.setState({ language: "en" });
 });
 afterAll(() => server.close());
 

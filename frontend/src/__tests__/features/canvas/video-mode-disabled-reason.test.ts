@@ -132,6 +132,6 @@ describe("videoModeDisabledReason — mode availability when a video is connecte
         enT,
         WITH_VIDEO_EXTEND,
       ),
-    ).toBe("Video extend accepts exactly one source video and no image or audio assets");
+    ).toBe("“Video extend” accepts only the source video; remove image or audio assets");
   });
 });

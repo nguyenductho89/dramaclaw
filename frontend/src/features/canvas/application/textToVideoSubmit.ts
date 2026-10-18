@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   submitFreezoneVideoGen,
   type FreezoneVideoAspectRatio,
@@ -17,7 +18,7 @@ import { useCanvasStore } from '@/stores/canvasStore';
 
 import { generationTaskDescriptor } from './resumeGeneration';
 
-/** 后端不再支持一次出多条——按视频节点选的「生成数量」并发调 N 次，上限 4。 */
+/** The backend no longer supports producing several at once - call N times concurrently per the "generation count" chosen on the video node, capped at 4. */
 const MAX_PARALLEL_COUNT = 4;
 
 function resolveVideoOutputUrl(
@@ -35,7 +36,7 @@ function qualityToResolution(q: VideoGenQuality): FreezoneVideoResolution {
   return q.toLowerCase() as FreezoneVideoResolution;
 }
 
-/** 取文本节点第一条下游边指向的视频节点（文生视频的参数与产物都落在它身上）。 */
+/** Take the video node pointed to by the text node's first downstream edge (the parameters and products of text-to-video both land on it). */
 export function resolveTextNodeDownstreamVideoNodeId(nodeId: string): string | null {
   const state = useCanvasStore.getState();
   const downstreamEdge = state.edges.find((edge) => edge.source === nodeId);
@@ -46,28 +47,28 @@ export function resolveTextNodeDownstreamVideoNodeId(nodeId: string): string | n
 }
 
 export interface TextToVideoSubmitResult {
-  /** 本次承载产物的视频节点 id（第 1 个是下游那个原节点，其余是并排复制出来的）。 */
+  /** The video node ids carrying the products this time (the first is the original downstream node, the rest are copies placed side by side). */
   nodeIds: string[];
-  /** 任一条失败时的首个错误原因；全部成功为 null。 */
+  /** The first error reason when any one fails; null when all succeed. */
   error: string | null;
 }
 
 /**
- * 文生视频提交编排（从 TextAnnotationNode.runTextToVideo 原样搬出，语义零变化）：
+ * Text-to-video submission orchestration (moved verbatim out of TextAnnotationNode.runTextToVideo, with zero semantic change):
  *
- * 参数**读自下游视频节点**（画幅/画质/时长/音轨/数量/模型），不读文本节点——文本
- * 节点只提供 prompt。按「生成数量」并发调 N 次接口：第 1 条回填下游视频节点，其余
- * 用 duplicateNodeAsSibling 复制成同类视频节点并排承载。
+ * The parameters are **read from the downstream video node** (aspect/quality/duration/audio track/count/model), not from the text node - the text
+ * node only provides the prompt. Call the endpoint N times concurrently per "generation count": the 1st backfills the downstream video node, and the rest
+ * are copied with duplicateNodeAsSibling into same-type video nodes placed side by side.
  *
- * 失败只清对应视频节点的 loading 态（错误进 console），与原实现一致；返回值让调用
- * 方（故事板详情）能把失败文案显示在源文本节点的工具条上。
+ * A failure only clears the loading state of the matching video node (errors go to the console), consistent with the original implementation; the return value lets the caller
+ * (storyboard detail) show the failure text on the source text node's toolbar.
  */
 export async function submitTextToVideo(
   nodeId: string,
   opts: {
-    /** 提交用的提示词（工作流传节点当前正文；详情同源）。 */
+    /** The prompt used for submission (the workflow passes the node's current body; the detail uses the same source). */
     content: string;
-    /** 下游视频节点没选模型时的兜底 id（调用方从 useFreezoneVideoModels 解析）。 */
+    /** Fallback id when the downstream video node has not chosen a model (resolved by the caller from useFreezoneVideoModels). */
     fallbackModelId: string;
   },
 ): Promise<TextToVideoSubmitResult> {
@@ -76,16 +77,16 @@ export async function submitTextToVideo(
   const projectId = readUrl().project;
   if (!projectId) {
     console.error('[text-node] no project in URL');
-    return { nodeIds: [], error: '当前 URL 缺少 project 参数' };
+    return { nodeIds: [], error: i18n.t('canvas.errors.missingProjectParam') };
   }
   const targetNodeId = resolveTextNodeDownstreamVideoNodeId(nodeId);
   if (!targetNodeId) {
     console.warn('[text-node] textToVideo: no downstream video node');
-    return { nodeIds: [], error: '下游没有可承载产物的视频节点' };
+    return { nodeIds: [], error: i18n.t('canvas.errors.noDownstreamVideoNode') };
   }
   const store = useCanvasStore.getState();
   const targetNode = store.nodes.find((node) => node.id === targetNodeId);
-  if (!targetNode) return { nodeIds: [], error: '下游没有可承载产物的视频节点' };
+  if (!targetNode) return { nodeIds: [], error: i18n.t('canvas.errors.noDownstreamVideoNode') };
   const videoData = targetNode.data as VideoNodeData;
   const aspectRatio = (videoData.aspectRatio ?? '16:9') as FreezoneVideoAspectRatio;
   const quality: VideoGenQuality = videoData.quality ?? '720P';
@@ -102,7 +103,7 @@ export async function submitTextToVideo(
     prompt: promptText,
     isGenerating: true,
     generationStartedAt: Date.now(),
-    // 目标节点可能带着上次批量生成的画册，本次单条回填后画册与主视频脱钩——清掉。
+    // The target node may carry an album from the last batch generation; after this single backfill the album is decoupled from the main video - clear it.
     generationBatch: null,
   });
   const targetIds: string[] = [targetNodeId];
@@ -114,8 +115,8 @@ export async function submitTextToVideo(
       count: 1,
       videoUrl: null,
       sourceFileName: null,
-      // duplicateNodeAsSibling 整份展开源节点 data，画册字段必须显式清空，
-      // 否则兄弟节点会继承源节点的旧画册（卡边 + 徽标显示别人的结果）。
+      // duplicateNodeAsSibling spreads the whole source node data, so the album fields must be cleared explicitly,
+      // otherwise the sibling node would inherit the source node's old album (card edge + badge showing someone else's result).
       generationBatch: null,
     });
     if (siblingId) targetIds.push(siblingId);

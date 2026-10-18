@@ -224,7 +224,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("Commit the current world source to a mainline slot first");
+    )).rejects.toThrow("Commit the current world source to its mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();
@@ -252,7 +252,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("Commit the current world source to a mainline slot first");
+    )).rejects.toThrow("Commit the current world source to its mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();
@@ -280,7 +280,7 @@ describe("commitSceneDirectorWorldFromCanvasNode", () => {
         ],
       },
       enT,
-    )).rejects.toThrow("Commit the current world source to a mainline slot first");
+    )).rejects.toThrow("Commit the current world source to its mainline slot first");
 
     expect(clearSceneDirectorWorld).not.toHaveBeenCalled();
     expect(saveSceneDirectorWorld).not.toHaveBeenCalled();

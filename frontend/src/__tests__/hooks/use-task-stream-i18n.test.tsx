@@ -89,7 +89,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await act(async () => {
-    await i18next.changeLanguage("zh");
+    await i18next.changeLanguage("en");
   });
 });
 

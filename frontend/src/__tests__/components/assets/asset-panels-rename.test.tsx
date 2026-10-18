@@ -269,7 +269,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "Night",
+              time_of_day: "night",
               environment_prompt: "",
             },
           ],
@@ -298,7 +298,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "Night",
+              time_of_day: "night",
               environment_prompt: "",
             },
           ],
@@ -331,7 +331,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "Night",
+              time_of_day: "night",
               environment_prompt: "",
             },
           ],
@@ -411,7 +411,7 @@ describe("asset panel rename behavior", () => {
     expect(within(dialog).queryByDisplayValue("wide hall")).not.toBeInTheDocument();
     expect(within(dialog).queryByDisplayValue("soft skylight")).not.toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText("Variant"), {
-      target: { value: "Water leak" },
+      target: { value: "leak" },
     });
     fireEvent.change(within(dialog).getByLabelText("Variant delta prompt"), {
       target: { value: "floor water and dripping ceiling" },
@@ -425,8 +425,8 @@ describe("asset panel rename behavior", () => {
     expect(postBody).toMatchObject({
       name: "Hall_leak_night",
       base_scene_id: "Hall",
-      variant_id: "Water leak",
-      time_of_day: "Night",
+      variant_id: "leak",
+      time_of_day: "night",
       variant_prompt: "floor water and dripping ceiling",
       description: "",
     });

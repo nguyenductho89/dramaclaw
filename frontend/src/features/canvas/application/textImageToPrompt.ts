@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   ensureBackendImageUrl,
   fetchFreezoneReversePromptResult,
@@ -11,16 +12,16 @@ import { useCanvasStore } from '@/stores/canvasStore';
 
 import { generationTaskDescriptor } from './resumeGeneration';
 
-/** 反推提示词通常十几秒返回，用它给 loading 覆盖层估算进度推进。 */
+/** Reverse-prompt usually returns in a dozen or so seconds; used to estimate progress advance for the loading overlay. */
 export const REVERSE_PROMPT_DURATION_MS = 15000;
 
 /**
- * 解析上游图片节点「眼下展示的那张图」的 URL。和 graphContentResolver 的图片分支
- * 保持同一套回退顺序：生成结果 imageUrl → previewImageUrl → referenceImageUrl，
- * 这样图生节点只挂了参考图（还没生成）时也能被识别为可引用素材。
+ * Resolve the URL of "the image the upstream image node is showing right now". Keeps the same fallback order as the image branch of
+ * graphContentResolver: generation result imageUrl -> previewImageUrl -> referenceImageUrl,
+ * so that an image-generation node with only a reference image attached (not yet generated) is also recognized as a referenceable material.
  *
- * （从 TextAnnotationNode 的模块私有函数原样搬出并导出——故事板详情要在按钮显隐
- * 判断里用同一套回退顺序，否则「有图能反推」的口径会和工作流分叉。）
+ * (Moved verbatim out of TextAnnotationNode's module-private function and exported - the storyboard detail needs to use the same fallback order
+ * in its button show/hide check, otherwise the basis of "has an image, can reverse" would diverge from the workflow.)
  */
 export function resolveUpstreamImageUrl(data: unknown): string | null {
   const d = data as
@@ -32,7 +33,7 @@ export function resolveUpstreamImageUrl(data: unknown): string | null {
   return null;
 }
 
-/** 取文本节点第一条上游边源节点上「眼下展示的那张图」（无上游/无图 → null）。 */
+/** Take "the image shown right now" on the source node of the text node's first upstream edge (no upstream / no image -> null). */
 export function resolveTextNodeUpstreamImageUrl(nodeId: string): string | null {
   const state = useCanvasStore.getState();
   const upstreamEdge = state.edges.find((edge) => edge.target === nodeId);
@@ -42,21 +43,21 @@ export function resolveTextNodeUpstreamImageUrl(nodeId: string): string | null {
 }
 
 export interface TextImageToPromptResult {
-  /** 反推出的提示词；未成功回填时为 null。 */
+  /** The prompt reversed out; null when not backfilled successfully. */
   prompt: string | null;
-  /** 失败原因；成功（含「返回空提示词」）时为 null。 */
+  /** Failure reason; null on success (including "returned an empty prompt"). */
   error: string | null;
 }
 
 /**
- * 图片反推提示词提交编排（从 TextAnnotationNode.runImageToPrompt 原样搬出，语义
- * 零变化）：取上游图 URL → 置本节点 isGenerating → 必要时先把 data: URL 传成后端
- * 静态路径 → 提交 /freezone/reverse-prompt → 等任务完成 → 取 job result 的 prompt
- * 回填到**本节点自己的 content**（不新建节点）。
+ * Image reverse-prompt submission orchestration (moved verbatim out of TextAnnotationNode.runImageToPrompt, with zero
+ * semantic change): take the upstream image URL -> set this node's isGenerating -> when needed first upload a data: URL to a backend
+ * static path -> submit /freezone/reverse-prompt -> wait for the task to complete -> take the prompt of the job result
+ * and backfill into **this node's own content** (no new node).
  *
- * 失败与「无上游图」都只清 loading 态、不写 node.data.generationError —— 原实现
- * 就是这样（错误只进 console），保持不变；返回值让调用方（故事板详情）能把失败
- * 文案显示在自己的工具条上。
+ * Failures and "no upstream image" both only clear the loading state and do not write node.data.generationError - the original implementation
+ * was like this (errors only go to the console), kept unchanged; the return value lets the caller (storyboard detail) show the failure
+ * text on its own toolbar.
  */
 export async function runTextImageToPrompt(
   nodeId: string,
@@ -64,12 +65,12 @@ export async function runTextImageToPrompt(
   const projectId = readUrl().project;
   if (!projectId) {
     console.error('[text-node] no project in URL');
-    return { prompt: null, error: '当前 URL 缺少 project 参数' };
+    return { prompt: null, error: i18n.t('canvas.errors.missingProjectParam') };
   }
   const rawUrl = resolveTextNodeUpstreamImageUrl(nodeId);
   if (!rawUrl) {
     console.warn('[text-node] imageToPrompt: no upstream image url');
-    return { prompt: null, error: '上游没有可反推的图片' };
+    return { prompt: null, error: i18n.t('canvas.errors.noUpstreamImageForPrompt') };
   }
   const updateNodeData = useCanvasStore.getState().updateNodeData;
   updateNodeData(nodeId, { isGenerating: true, generationStartedAt: Date.now() });

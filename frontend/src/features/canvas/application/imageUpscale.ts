@@ -29,16 +29,16 @@ export const DEFAULT_UPSCALE_IMAGE_SIZE: UpscaleImageSize = '2K';
 export const UPSCALE_SCALE_FACTORS: readonly FreezoneUpscaleScaleFactor[] = [2, 4, 6];
 export const DEFAULT_UPSCALE_SCALE_FACTOR: FreezoneUpscaleScaleFactor = 2;
 
-/** 工作流预建节点默认写入的模型 id（SelectedNodeOverlay 原硬编码值）。 */
+/** The model id written by default by the workflow pre-built node (the original hard-coded value of SelectedNodeOverlay). */
 export const DEFAULT_UPSCALE_MODEL_ID = 'newapi_gpt_image2';
 
 /**
- * 预建「高清放大」结果节点（从 SelectedNodeOverlay.handleOpenUpscale 原样搬出，
- * 语义零变化）：在源图片节点下游建一个 resultKind:'upscale' 的 exportImage 占位
- * 节点并连边——不提交任务。工作流入口随后选中它以展开 UpscaleEditorOverlay 配置
- * 面板；故事板详情在详情内选好配置后直接对它调 {@link submitImageUpscale}。
+ * Pre-build the "Upscale" result node (moved verbatim out of SelectedNodeOverlay.handleOpenUpscale, with
+ * zero semantic change): build a resultKind:'upscale' exportImage placeholder
+ * node downstream of the source image node and connect an edge - without submitting the task. The workflow entry then selects it to expand the UpscaleEditorOverlay configuration
+ * panel; the storyboard detail, after choosing the configuration in the detail, directly calls {@link submitImageUpscale} on it.
  *
- * @returns 新建占位节点 id；源节点不存在 / 类型不支持 / 无图源时返回 null。
+ * @returns the new placeholder node id; null when the source node does not exist / the type is unsupported / there is no image source.
  */
 export function createUpscaleResultNode(
   sourceNodeId: string,
@@ -62,8 +62,8 @@ export function createUpscaleResultNode(
   ) {
     return null;
   }
-  // 与工具栏 canHandleImage / 其它图片工具一致，用统一 helper 取图源
-  // ——它能识别 imageGen 节点（含 referenceImageUrl 兜底）。
+  // Consistent with the toolbar's canHandleImage / other image tools, use the unified helper to get the image source
+  // - it recognizes imageGen nodes (including the referenceImageUrl fallback).
   const sourceImageUrl = resolveNodeSourceImageUrl(sourceNode);
   if (!sourceImageUrl) {
     return null;
@@ -100,12 +100,12 @@ export function createUpscaleResultNode(
 }
 
 /**
- * 高清放大提交编排（从 UpscaleEditorOverlay.handleSubmit 原样搬出，语义零变化）：
- * 对结果节点置 isGenerating → 提交 /freezone/upscale → 等任务完成（output_url
- * 缺失时回退 job result）→ 把产物 url 回填到该节点；失败把错误写到该节点。
+ * Upscale submission orchestration (moved verbatim out of UpscaleEditorOverlay.handleSubmit, with zero semantic change):
+ * set isGenerating on the result node -> submit /freezone/upscale -> wait for the task to complete (falling back to the job result when
+ * output_url is missing) -> backfill the product url into that node; on failure write the error to that node.
  *
- * @returns 后台链 settle 时 resolve 的 Promise（不 reject）；缺 sourceUrl 或
- *   缺 project 时不落任何状态、返回 null。
+ * @returns a Promise that resolves when the background chain settles (never rejects); when sourceUrl or
+ *   project is missing it lands no state and returns null.
  */
 export function submitImageUpscale(
   nodeId: string,

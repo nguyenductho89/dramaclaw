@@ -3,23 +3,23 @@
 import { apiCall } from "./client";
 
 /**
- * Beat 的 selected_background.png 是从场景资产 (master / reverse / director_env)
- * "选源 → 复制" 而来。后端实现在 utils/background_anchor.py
- * (select_background_anchor) + 路由 PATCH /background-anchor。
+ * The Beat's selected_background.png comes from "pick a source -> copy" of the scene assets (master / reverse / director_env).
+ * The backend implementation is in utils/background_anchor.py
+ * (select_background_anchor) + the route PATCH /background-anchor.
  *
- * 我们前端把这条 API 暴露在 beat workbench 上 — 用户点 scene_master /
- * scene_reverse_master 节点上的 "用作背景源" 按钮 → 调这个 → 选定背景被
- * 刷新到本 beat slot。
+ * The frontend exposes this API on the beat workbench - the user clicks the "Use as background source" button on a scene_master /
+ * scene_reverse_master node -> this is called -> the selected background is
+ * refreshed into this beat's slot.
  *
- * 支持的 anchor_id (见 background_anchor.py:22-25):
- *   - "master"               (= scene_master 图)
- *   - "reverse"              (= scene_reverse_master 图)
- *   - "director_env_only"    (= 导演阶段环境渲染,不带 actor)
- *   - "selected_background"  (self,已选定的;一般不主动 set)
+ * Supported anchor_id (see background_anchor.py:22-25):
+ *   - "master"               (= the scene_master image)
+ *   - "reverse"              (= the scene_reverse_master image)
+ *   - "director_env_only"    (= the director-stage environment render, without actors)
+ *   - "selected_background"  (self, already selected; generally not set actively)
  *
- * scene_director_pano_360 / scene_3gs_*_ply 暂不直接支持 (360 panorama 是 2:1,
- * 需要 cropper 选区域;3GS world 需要先 capture 截图)。这两条留作后续 cropper
- * / capture step UI 接入。
+ * scene_director_pano_360 / scene_3gs_*_ply are not directly supported for now (a 360 panorama is 2:1 and
+ * needs a cropper to pick a region; a 3GS world needs a capture screenshot first). These two are left for later cropper
+ * / capture step UI integration.
  */
 export type BackgroundAnchorId =
   | "master"
@@ -44,9 +44,9 @@ export interface BackgroundAnchorsResponse {
 }
 
 /**
- * PATCH /background-anchor — 选择 anchor_id 作为 beat 的背景源,
- * backend 会把对应 source 文件 (master.png / reverse.png 等) snapshot 到
- * beat 的 selected_background.png slot。
+ * PATCH /background-anchor - choose anchor_id as the beat's background source,
+ * and the backend snapshots the matching source file (master.png / reverse.png etc.) into
+ * the beat's selected_background.png slot.
  */
 export async function selectBeatBackgroundAnchor(
   project: string,
@@ -64,14 +64,14 @@ export async function selectBeatBackgroundAnchor(
 }
 
 /**
- * POST /background-anchor/upload — 上传一张外部图片作为 beat 的
- * selected_background.png。后端 RGB 转换 + 保存 + 更新 scene_ref。
+ * POST /background-anchor/upload - upload an external image as the beat's
+ * selected_background.png. The backend converts to RGB + saves + updates scene_ref.
  *
- * 用途: 360 panorama 当前视角截图 + 3GS world 取景截图 — 这两种来源
- * 不是 anchor_id 直接支持的固定文件 (master/reverse/director_env_only),
- * 而是用户在 viewer 里实时取景产生的 blob,所以走 upload 路径。
+ * Use: the current-view screenshot of a 360 panorama + the framing screenshot of a 3GS world - these two sources
+ * are not fixed files directly supported by anchor_id (master/reverse/director_env_only),
+ * but blobs produced live by framing in the viewer, so they go through the upload path.
  *
- * 后端 multipart/form-data,field 名 'file'。
+ * Backend multipart/form-data, field name 'file'.
  */
 export async function uploadBeatBackgroundAnchor(
   project: string,

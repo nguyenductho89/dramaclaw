@@ -735,7 +735,7 @@ export function BatchPanel({
                   askConfirm(
                     t("episode.workbench.batch.regenSketchSingleTitle", {
                       count,
-                      defaultValue: "Regenerate single sketch",
+                      defaultValue: "Redraw single sketch",
                     }),
                     t("episode.workbench.batch.regenSketchSingleDesc", {
                       beats: beatList.join(", #"),
@@ -748,7 +748,7 @@ export function BatchPanel({
               >
                 <Square className="size-3" />
                 {t("episode.workbench.batch.singleRegen", {
-                  defaultValue: "Single regen",
+                  defaultValue: "Single redraw",
                 })}
               </Button>
               <Button
@@ -760,7 +760,7 @@ export function BatchPanel({
               >
                 <Grid2X2 className="size-3" />
                 {t("episode.workbench.batch.autoCombine", {
-                  defaultValue: "Batch regen",
+                  defaultValue: "Batch redraw",
                 })}
                 <CreditCostInline
                   display={sketchPlanCostDisplay}
@@ -864,7 +864,7 @@ export function BatchPanel({
               >
                 <Square className="size-3" />
                 {t("episode.workbench.batch.singleRegen", {
-                  defaultValue: "Single regen",
+                  defaultValue: "Single redraw",
                 })}
               </Button>
               <Button

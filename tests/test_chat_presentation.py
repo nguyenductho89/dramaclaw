@@ -90,7 +90,7 @@ def test_split_invalid_block_logs_through_application_callback(monkeypatch):
     )
     assert service._split_ui_specs_from_text(content) == expected
     assert expected[1] == []
-    assert "格式校验失败" in expected[0]
+    assert "validation failed" in expected[0]
     assert str(direct_errors[0][0]) == str(app_errors[0][0])
     assert direct_errors[0][1] == app_errors[0][1] == body
 

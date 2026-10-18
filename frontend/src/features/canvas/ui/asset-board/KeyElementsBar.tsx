@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { AssetBoardItem } from '@/features/canvas/domain/assetBoard';
-import { ADD_NODE_TO_CHAT_LABEL, addNodesToChat } from '@/features/canvas/ui/AddNodeToChatButton';
+import { addNodeToChatLabel, addNodesToChat } from '@/features/canvas/ui/AddNodeToChatButton';
 import {
   KEY_ELEMENT_CATEGORY_KEYS,
   KEY_ELEMENT_CATEGORY_LABEL,
@@ -206,7 +206,7 @@ export function KeyElementsBar({
                     className="inline-flex items-center gap-1 rounded-md bg-[#2e2e2e] px-2.5 py-1.5 text-xs font-medium text-white/90 shadow-xl ring-1 ring-white/10 transition-colors hover:bg-[#3a3a3a] hover:text-white"
                   >
                     <MessageSquarePlus className="h-3.5 w-3.5" />
-                    {ADD_NODE_TO_CHAT_LABEL}
+                    {addNodeToChatLabel()}
                   </button>
                 </TooltipContent>
               </Tooltip>

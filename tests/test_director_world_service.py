@@ -18,13 +18,13 @@ def test_3gs_stage_url_uses_configured_director_viewer_origin(tmp_path, monkeypa
     for name in ("DIRECTOR_VIEWER_URL", "VITE_DIRECTOR_VIEWER_URL"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(env_name, f"http://{expected_netloc}")
-    stage_dir = stage_manifest.stage_dir(tmp_path, "地下室")
+    stage_dir = stage_manifest.stage_dir(tmp_path, "Basement")
     stage_dir.mkdir(parents=True)
     (stage_dir / "master_sharp.ply").write_bytes(b"ply")
     (stage_dir / "master_sharp.sog").write_bytes(b"sog")
     stage_manifest.update_manifest(
         tmp_path,
-        "地下室",
+        "Basement",
         source="uploaded_master",
         ply_path="master_sharp.ply",
         master_ply_path="master_sharp.ply",
@@ -32,7 +32,7 @@ def test_3gs_stage_url_uses_configured_director_viewer_origin(tmp_path, monkeypa
 
     url = DirectorWorldService(tmp_path).make_3gs_editor_url(
         episode=1,
-        scene_id="地下室",
+        scene_id="Basement",
         user="admin",
         project="shiguangshuwu",
         slate_beat=2,
@@ -43,7 +43,7 @@ def test_3gs_stage_url_uses_configured_director_viewer_origin(tmp_path, monkeypa
     assert parsed.scheme == "http"
     assert parsed.netloc == expected_netloc
     assert parsed.path == "/app/viewer/supertale_playcanvas_3gs_stage.html"
-    assert params["scene_id"] == ["地下室"]
+    assert params["scene_id"] == ["Basement"]
     assert params["beat"] == ["2"]
     assert params["scene_3gs_ply_fs"][0].endswith("/master_sharp.sog")
     assert params["scene_3gs_master_ply_fs"][0].endswith("/master_sharp.sog")

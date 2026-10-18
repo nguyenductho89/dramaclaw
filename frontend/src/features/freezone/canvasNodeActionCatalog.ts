@@ -1146,7 +1146,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       execution: "frontend_node",
       command_type: "run_node_action",
       description:
-        "Generate a new 25-frame serial storyboard image from this image node with default parameters. Does not open UI. This is not panel extraction; if the user says "panel extraction / extract panels / open panel split", use open_split_storyboard_tool instead.",
+        "Generate a new 25-frame serial storyboard image from this image node with default parameters. Does not open UI. This is not panel extraction; if the user says \"panel extraction / extract panels / open panel split\", use open_split_storyboard_tool instead.",
       parameters: { node_id: node.id, grid_action: "serialStoryboard25", result_policy: "spawn_child" },
     },
     {

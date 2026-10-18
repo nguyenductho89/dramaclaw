@@ -1,12 +1,12 @@
-"""celery/EE 僵尸回收:按 40 分钟 TTL,不按进程启动时间。
+"""celery/EE zombie reaping: by a 40-minute TTL, not by process start time.
 
-celery worker 独立于 API 进程,被杀后任务永远停在 running,永久占住该
-task_key 的去重守卫与并发额度,既无回收也无告警。inline 那一轴(早于本进程
-启动即必然中断)对它不成立,所以另立一条 TTL 轴:
-40min = task_time_limit 35min(EE celery_app.py:53)+ 5min 余量。
+A celery worker is independent of the API process; once it is killed, the task stays in running forever, permanently holding that
+task_key's dedup guard and concurrency quota, with neither reaping nor alerting. The inline axis (anything older than this process
+start has necessarily been interrupted) does not hold for it, so a separate TTL axis is set up:
+40min = task_time_limit 35min (EE celery_app.py:53) + 5min margin.
 
-inline 轴的行为在 test_task_state_restart_reconcile.py,本文件只钉 TTL 轴,
-并逐条钉住它**不许**外溢到 inline 行与终态行。
+The inline axis behavior is in test_task_state_restart_reconcile.py; this file pins only the TTL axis,
+and pins one by one that it must **not** spill over onto inline rows or terminal-state rows.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -29,7 +29,7 @@ _ANCIENT = "2000-01-01T00:00:00.000000Z"
 
 
 def _minutes_ago(minutes: int) -> str:
-    """与 utc_now_iso() 同形(task_state.py:141-142),小数位不省略。"""
+    """Same shape as utc_now_iso() (task_state.py:141-142), fractional digits not omitted."""
     stamp = (
         datetime.now(timezone.utc) - timedelta(minutes=minutes)
     ).isoformat().replace("+00:00", "Z")
@@ -72,7 +72,7 @@ def _backdate(
 
 
 def _restarted() -> TaskStateManager:
-    """清扫按库记忆化在 manager 实例上;新实例 = 模拟新进程首次连接。"""
+    """The sweep is memoized per DB on the manager instance; a new instance = simulating the first connection of a new process."""
     return TaskStateManager()
 
 
@@ -116,7 +116,7 @@ def test_celery_running_task_within_ttl_is_untouched(tmp_path: Path) -> None:
 
 
 def test_celery_zombie_no_longer_blocks_reservation(tmp_path: Path) -> None:
-    """这就是现网症状:僵尸行占住去重守卫,该业务任务再也投不出去。"""
+    """This is the symptom in production: a zombie row holds the dedup guard and that business task can never be submitted again."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     task_id = _running_celery_task(manager, ctx, "job_reserve")
@@ -134,10 +134,10 @@ def test_celery_zombie_no_longer_blocks_reservation(tmp_path: Path) -> None:
 def test_ttl_axis_does_not_reach_inline_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """TTL 轴只认 celery。inline 仍只由进程启动时间那一轴判(不变量 10)。
+    """The TTL axis recognizes only celery. inline is still judged solely by the process start time axis (invariant 10).
 
-    倒填进程启动时间,使 41 分钟前的 inline 行**晚于**进程启动 —— inline 轴
-    不该动它,若 TTL 轴漏写 backend 过滤就会把它扫掉。
+    Backdate the process start time so a 41-minute-old inline row is **later** than the process start -- the inline axis
+    must not touch it, and if the TTL axis forgot its backend filter it would sweep it away.
     """
     monkeypatch.setattr(task_state_module, "_PROCESS_STARTED_AT", _ANCIENT)
     manager = TaskStateManager()
@@ -156,7 +156,7 @@ def test_ttl_axis_does_not_reach_inline_rows(
 
 
 def test_terminal_celery_row_past_ttl_is_untouched(tmp_path: Path) -> None:
-    """回收只针对在途状态;已完成的行不许被改写成 failed。"""
+    """Reaping targets only in-flight states; completed rows must not be rewritten as failed."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     created = manager.create_task_for_project(

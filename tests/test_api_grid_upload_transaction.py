@@ -227,7 +227,7 @@ async def test_committed_upload_survives_logging_failure(upload, tmp_path, monke
     original = builtins.print
 
     def broken_log(*args, **kwargs):
-        if args and str(args[0]).startswith("[PoolIndexer] 索引已保存:"):
+        if args and str(args[0]).startswith("[PoolIndexer] Index saved:"):
             raise BrokenPipeError("closed stdout")
         return original(*args, **kwargs)
 

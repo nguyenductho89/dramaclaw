@@ -57,7 +57,7 @@ export function ThreeDStageCanvas({
   const onPlaceRequestRef = useRef<(() => void) | undefined>(onPlaceRequest);
   const sourceTransformRef = useRef<typeof sourceTransform>(sourceTransform);
   const interactionActiveRef = useRef(interactionActive);
-  // viewer 只在挂载时建一次，t 却会随语言切换换实例；用 ref 保证引擎拿到的永远是最新那个。
+  // The viewer is built only once at mount, but t changes instance on language switch; use a ref so the engine always gets the latest one.
   const tRef = useRef(t);
   onReadyRef.current = onReady;
   onErrorRef.current = onError;

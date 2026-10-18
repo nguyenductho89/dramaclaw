@@ -153,9 +153,9 @@ import {
 import type { GridActionKey } from "@/features/canvas/application/gridTemplateAction";
 
 /**
- * 「九宫格」下拉选中某一项时抛给宿主的请求。宿主据此在源节点下游建一个功能节点
- * （空的图片生成节点，节点名 = 功能名），用户在那个节点的输入框里按 ↑ 才提交
- * ——所以这里除了「哪个节点、哪个功能」之外不需要别的信息。
+ * The request thrown to the host when an item of the "3x3 grid" dropdown is selected. The host builds a feature node downstream of the source node
+ * (an empty image generation node, node name = feature name), and the user submits by pressing the up button in that node's input box
+ * - so nothing is needed here other than "which node, which feature".
  */
 export interface GridActionRequest {
   nodeId: string;
@@ -382,7 +382,7 @@ function beatContextNodeData(
   };
 }
 
-/** 工具栏内分组之间的竖向分隔线，呼应 libtv 的连续扁平条视觉。 */
+/** Vertical divider between groups inside the toolbar, echoing libtv's continuous flat bar look. */
 function ToolbarDivider() {
   return (
     <span
@@ -393,9 +393,9 @@ function ToolbarDivider() {
 }
 
 /**
- * 让 Radix DropdownMenu 支持鼠标 hover 自动展开/移出延迟收起（Radix 原生只支持
- * 点击）。返回挂到根的受控 props 与挂到「触发器 + 内容」的 hover 事件；点击仍可用。
- * `onOpen` 在打开瞬间触发（用来关掉同行的下载浮层等）。
+ * Make the Radix DropdownMenu support mouse hover auto-expand / delayed collapse on leave (Radix natively only supports
+ * click). Returns controlled props attached to the root and hover events attached to the "trigger + content"; click still works.
+ * `onOpen` fires the instant it opens (used to close the download popover in the same row etc.).
  */
 function useHoverMenu(onOpen?: () => void) {
   const [open, setOpen] = useState(false);
@@ -439,8 +439,8 @@ function useHoverMenu(onOpen?: () => void) {
 
 
 /**
- * Icon-only toolbar 按钮：方形 32×32 click area + 16px icon，与同行的带文字 chip
- * 等高对齐；hover 时在下方浮出主题化 tooltip（不依赖原生 title 的浏览器实现）。
+ * Icon-only toolbar button: a square 32x32 click area + 16px icon, aligned in height with chips that carry text in the same row;
+ * on hover a themed tooltip floats below (not relying on the browser implementation of the native title).
  */
 function ToolbarIconChip({
   label,
@@ -510,11 +510,11 @@ export const NodeActionToolbar = memo(
     // renders, so reading `node.id` at the call site fails to type-check.
     const nodeId = node.id;
     const isUngroupableGroup = isGroupNode(node) && !isProtectedProjectionGroupNode(node);
-    // 主线投影组只锁拓扑（不能解组），几何类操作（背景色 / 排列）照常给：后端算出的
-    // 布局不合意时，用户得有补救手段——组框本身是只读的，没有这两项就真的动不了。
+    // Mainline projection groups only lock the topology (no ungroup); geometric operations (background color / arrange) are still offered: when the backend-computed
+    // layout is unsatisfactory the user needs a remedy - the group frame itself is read-only, and without these two items there would really be no way to move it.
     const isAdjustableGroup = isGroupNode(node);
-    // 同 nodeId:在 node 仍是完整类型时捕获组背景色。下方过宽的类型守卫会把 node
-    // 收窄成 never,到 ungroup 按钮渲染处再读 node.data 会编译失败(tsc -b)。
+    // Same as nodeId: capture the group background color while node is still the full type. The overly wide type guard below narrows node
+    // to never, and reading node.data again where the ungroup button renders would fail compilation (tsc -b).
     const groupBackgroundColor = isGroupNode(node)
       ? ((node.data as GroupNodeData).backgroundColor ?? null)
       : null;
@@ -566,7 +566,7 @@ export const NodeActionToolbar = memo(
     const copyErrorFeedbackTimerRef = useRef<ReturnType<
       typeof setTimeout
     > | null>(null);
-    // mainline canvas readonly state + "打开工作台" 入口需要的本地状态。
+    // mainline canvas readonly state + local state needed by the "Open workbench" entry.
     const workbenchTarget = useMemo(() => {
       const raw = (node.data as { workbench_target?: unknown }).workbench_target;
       if (!raw || typeof raw !== "object") return null;
@@ -581,7 +581,7 @@ export const NodeActionToolbar = memo(
       return null;
     }, [node.data]);
     const [openingWorkbench, setOpeningWorkbench] = useState(false);
-    // 用统一 helper 解析节点当前图片源，避免每种图片节点各写一套判断。
+    // Resolve the node's current image source with a unified helper, avoiding each image node type writing its own checks.
     const imageSource = useMemo(() => resolveNodeSourceImageUrl(node), [node]);
     const canHandleImage = Boolean(imageSource);
     const videoUrl = useMemo(() => {
@@ -596,8 +596,8 @@ export const NodeActionToolbar = memo(
         ? node.data.audioUrl
         : null;
     }, [node]);
-    // commit 按钮现在覆盖所有媒体节点(图像/视频/音频/3GS)——只要能从节点推断出
-    // 可提交的媒体 url 就显示。具体提交目标在 CommitDialog 里按 mediaType 处理。
+    // The commit button now covers all media nodes (image/video/audio/3GS) - shown whenever a committable media url can be inferred
+    // from the node. The concrete commit target is handled in CommitDialog by mediaType.
     const canCommitNode = useMemo(
       () => Boolean(deriveNodeDropInfo(node)?.sourceUrl),
       [node],
@@ -681,13 +681,13 @@ export const NodeActionToolbar = memo(
           },
         );
         if (result.errors.length > 0) {
-          toast.error(result.errors[0] ?? "工作流执行失败");
+          toast.error(result.errors[0] ?? t("canvas.nodeToolbar.workflowRunFailed"));
           return;
         }
         if (result.openedUiActions > 0 || result.applied > 0) {
-          toast.success("已开始运行工作流");
+          toast.success(t("canvas.nodeToolbar.workflowStarted"));
         } else {
-          toast.info("这个工作流没有需要继续执行的节点");
+          toast.info(t("canvas.nodeToolbar.workflowNothingToRun"));
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : String(error));
@@ -700,7 +700,7 @@ export const NodeActionToolbar = memo(
       const { canvas: canvasId } = readUrl();
       cancelCanvasWorkflowExecution(canvasId ?? undefined);
       setGroupWorkflowStopRequested(true);
-      toast.info("已停止启动后续节点");
+      toast.info(t("canvas.nodeToolbar.workflowStopped"));
     }, []);
 
     useEffect(() => {
@@ -725,12 +725,12 @@ export const NodeActionToolbar = memo(
       [t],
     );
 
-    // hover 即展开的编辑/九宫格下拉（打开时顺手关掉下载浮层）。
+    // Hover-expanding edit/3x3 grid dropdowns (closing the download popover along the way when opened).
     const editMenu = useHoverMenu(closeDownloadMenu);
     const gridMenu = useHoverMenu(closeDownloadMenu);
 
-    // 选中可抠图的节点时,在浏览器空闲间隙预热抠图管线,把一次性的模型/Worker/
-    // WASM 初始化挪到用户点击「抠图」之前,避免点击瞬间主线程卡 2~3s。整段只跑一次。
+    // When a mattable node is selected, warm up the matting pipeline in browser idle gaps, moving the one-time model/Worker/
+    // WASM initialization to before the user clicks "Matting", avoiding a 2~3s main-thread stall at the click. Runs only once overall.
     useEffect(() => {
       if (!canHandleImage) {
         return;
@@ -892,7 +892,7 @@ export const NodeActionToolbar = memo(
 
     const handleDownloadSaveAs = useCallback(async () => {
       if (!imageSource) {
-        throw new Error("当前节点没有可下载图片");
+        throw new Error(t("canvas.nodeToolbar.noDownloadableImage"));
       }
       try {
         await downloadUrlAsFile(
@@ -922,7 +922,7 @@ export const NodeActionToolbar = memo(
 
     const requireVideoUrl = useCallback(() => {
       if (!isVideoNode(node) || !videoUrl) {
-        throw new Error("当前节点没有可操作的视频");
+        throw new Error(t("canvas.nodeToolbar.noOperableVideo"));
       }
       return videoUrl;
     }, [node, videoUrl]);
@@ -984,12 +984,12 @@ export const NodeActionToolbar = memo(
 
     const handleDownloadAudioNode = useCallback(async () => {
       if (!isAudioNode(node) || !audioUrl) {
-        throw new Error("当前节点没有可下载音频");
+        throw new Error(t("canvas.nodeToolbar.noDownloadableAudio"));
       }
       const format = resolveAudioDownloadFormat();
       const sourceExt = getAudioExtFromUrl(audioUrl);
       if (!canProduceFormat(format, sourceExt)) {
-        throw new Error("当前音频格式不支持该下载格式");
+        throw new Error(t("canvas.nodeToolbar.audioFormatUnsupported"));
       }
       try {
         await downloadAudioAs(format, {
@@ -1026,11 +1026,11 @@ export const NodeActionToolbar = memo(
       const { resolution } = resolveVideoUpscaleParams(parameters);
       const upscaleNodeId = createVideoUpscaleResultNode(node.id, {
         sourceUrl: url,
-        displayName: `${t("node.videoUpscale.nodeTitle")}（${VIDEO_UPSCALE_RESOLUTION_LABEL[resolution]}）`,
+        displayName: `${t("node.videoUpscale.nodeTitle")} (${VIDEO_UPSCALE_RESOLUTION_LABEL[resolution]})`,
         resolution,
       });
       if (!upscaleNodeId) {
-        throw new Error("无法创建视频高清节点");
+        throw new Error(t("canvas.nodeToolbar.upscaleNodeFailed"));
       }
       onNodesChange([
         { id: node.id, type: "select", selected: false },
@@ -1057,7 +1057,7 @@ export const NodeActionToolbar = memo(
           : undefined;
       const result = analyzeVideoStory(node.id, { videoUrl: url, durationSec });
       if (!result) {
-        throw new Error("无法启动视频解析");
+        throw new Error(t("canvas.nodeToolbar.videoAnalyzeFailed"));
       }
       onNodesChange([
         { id: node.id, type: "select", selected: false },
@@ -1096,12 +1096,12 @@ export const NodeActionToolbar = memo(
       [node.id, requireVideoUrl, setSelectedNode, updateNodeData],
     );
 
-    // 以下符号被暂时隐藏的 toolbar 按钮使用，保留代码不删除：
-    // - Sparkles 图标用于 AI 改图按钮
-    // - Copy 图标用于复制按钮
-    // - RefreshCw 图标 / canReupload 用于"重新上传"按钮
-    // - handleCreateAiEditNode / handleCopyImage / isCopySuccess 同上
-    // 取消注释相关 JSX 后这些 void 也可以一起删掉
+    // The following symbols are used by temporarily hidden toolbar buttons; the code is kept, not deleted:
+    // - the Sparkles icon is used by the AI image edit button
+    // - the Copy icon is used by the copy button
+    // - the RefreshCw icon / canReupload is used by the "re-upload" button
+    // - handleCreateAiEditNode / handleCopyImage / isCopySuccess likewise
+    // After uncommenting the related JSX these voids can be deleted together
     void Sparkles;
     void RefreshCw;
     void canReupload;
@@ -1143,7 +1143,7 @@ export const NodeActionToolbar = memo(
       setSelectedNode,
       t,
     ]);
-    // 同上：保留 handleCreateAiEditNode 等待恢复 AI 改图按钮
+    // Same as above: keep handleCreateAiEditNode waiting for the AI image edit button to be restored
     void handleCreateAiEditNode;
 
     const handleCreatePresetEditNode = useCallback(
@@ -1191,14 +1191,14 @@ export const NodeActionToolbar = memo(
         t,
       ],
     );
-    // 擦除已改为 EraseOverlay（蒙版 + 重绘接口），不再新建 imageEdit 预设节点；
-    // 保留此 helper 以便将来其它预设改图入口复用。
+    // Erase is now EraseOverlay (mask + redraw API) and no longer creates an imageEdit preset node;
+    // this helper is kept for other preset image edit entries to reuse in future.
     void handleCreatePresetEditNode;
 
-    // 抠图编排移到 application/matteImage（故事板详情工具条共用），语义零变化。
+    // The matting orchestration moved to application/matteImage (shared with the storyboard detail toolbar), with zero semantic change.
     const handleMatteImage = useCallback(async (): Promise<Record<string, unknown>> => {
       if (!imageSource) {
-        throw new Error("当前节点没有可抠图图片");
+        throw new Error(t("canvas.nodeToolbar.noMattableImage"));
       }
       closeDownloadMenu();
       const result = matteImage(node.id, imageSource, { displayName: t("nodeToolbar.matting") });
@@ -1404,7 +1404,7 @@ export const NodeActionToolbar = memo(
     // back to the same canonical. The lock affects only:
     //   - mutate-in-place tools (Rotate, the HD/upscale entry inside the
     //     edit-menu dropdown) — they'd violate canonical immutability;
-    // The leading "主线投影 · 锁定" pill (+ optional "打开工作台" button)
+    // The leading "Mainline projection · locked" pill (+ optional "Open workbench" button)
     // signals the state visually so the user knows why some chips are
     // missing.
     const _toolbarFlags = nodeMainlineFlags(node);
@@ -1414,7 +1414,7 @@ export const NodeActionToolbar = memo(
 
     if (node.type === CANVAS_NODE_TYPES.htmlArtifact && !node.data.artifactId) return null;
 
-    // 分镜组 has its own dedicated toolbar (aspect / grid / index / convert /
+    // Storyboard groups have their own dedicated toolbar (aspect / grid / index / convert /
     // ungroup) — render it instead of the generic node toolbar.
     if (isStoryboardGroupNode(node)) {
       return <StoryboardGroupToolbar node={node} />;
@@ -1431,8 +1431,8 @@ export const NodeActionToolbar = memo(
           className={NODE_TOOLBAR_CLASS}
         >
           <ZoomScaledToolbar origin="bottom center" mode="counter" counterMax={1}>
-          {/* 节点激活时，顶部菜单从节点上沿淡入+轻微上滑浮现（而非生硬地直接出现），
-              与下方操作区的入场动画呼应。motion-reduce 下退化为无动画。 */}
+          {/* When a node is activated, the top menu fades in from the node's top edge with a slight upward slide (rather than appearing abruptly),
+          echoing the entrance animation of the operation area below. Degrades to no animation under motion-reduce. */}
           <UiPanel className="flex animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 items-center gap-1.5 rounded-[18px] !border-white/10 !bg-[#242426]/95 px-2 py-1.5 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-2xl duration-200 ease-out motion-reduce:animate-none [&_svg]:h-4 [&_svg]:w-4">
             {/* Mainline lock indicator — shown as a leading pill when the
                 node is preset-managed (or canvas-level fallback applies).
@@ -1452,10 +1452,10 @@ export const NodeActionToolbar = memo(
               <span
                 key="recipe-compile-fallback"
                 className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1.5 text-sm text-amber-100"
-                title="Recipe 模型编译超时，本次已使用稳定降级提示词继续生成"
+                title={t("canvas.nodeToolbar.recipeDegradedTitle")}
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
-                Recipe 已降级编译
+                {t("canvas.nodeToolbar.recipeDegraded")}
               </span>
             )}
             {isPresetLocked && workbenchTarget && (
@@ -1487,7 +1487,7 @@ export const NodeActionToolbar = memo(
             )}
             {canHandleImage && <ImageDerivedActions node={node} onOpen={onOpenDerivedMedia} />}
             {(node.type === "vectorSvgNode" || node.type === "animatedGifNode") && <DerivedMediaActions node={node} />}
-            {/* AI 改图按钮暂时隐藏（保留代码，等需求恢复时取消注释）
+            {/* The AI image edit button is temporarily hidden (code kept; uncomment when the requirement is restored)
         {!isImageEdit && canHandleImage && (
           <UiChipButton
             key="image-ai-edit"
@@ -1571,7 +1571,7 @@ export const NodeActionToolbar = memo(
                     run: () => {
                       void handleMatteImage().catch((error) => {
                         console.error("[matte] failed", error);
-                        toast.error("抠图失败");
+                        toast.error(t("canvas.nodeToolbar.matteFailed"));
                       });
                     },
                   },
@@ -1658,9 +1658,9 @@ export const NodeActionToolbar = memo(
             {!isImageEdit &&
               canHandleImage &&
               (() => {
-                // 点某一项 = 在源节点下游建一个「功能节点」（空的图片生成节点，
-                // 节点名 = 功能名），提示词/参考图/比例都在那个节点上改，按 ↑ 才
-                // 提交——与故事板详情工具条同一条交互。
+                // Clicking an item = build a "feature node" downstream of the source node (an empty image generation node,
+                // node name = feature name); the prompt/reference images/ratio are all edited on that node and submitted
+                // with the up button - the same interaction as the storyboard detail toolbar.
                 const gridActions: Array<{
                   key: GridActionKey;
                   icon: typeof Crop;
@@ -1817,7 +1817,7 @@ export const NodeActionToolbar = memo(
                 }}
               />
             )}
-            {/* 重新上传按钮暂时隐藏（保留代码，等需求恢复时取消注释）
+            {/* The re-upload button is temporarily hidden (code kept; uncomment when the requirement is restored)
         {!isImageEdit && canReupload && (
           <UiChipButton
             key="upload-reupload"
@@ -1833,7 +1833,7 @@ export const NodeActionToolbar = memo(
           </UiChipButton>
         )}
         */}
-            {/* 复制图片按钮暂时隐藏（保留代码，等需求恢复时取消注释）
+            {/* The copy image button is temporarily hidden (code kept; uncomment when the requirement is restored)
         {!isImageEdit && canHandleImage && (
           <UiChipButton
             key="image-copy"
@@ -1917,8 +1917,8 @@ export const NodeActionToolbar = memo(
                   if (!hasVideo || !videoUrl || isAnalyzing) {
                     return;
                   }
-                  // 编排在 application/videoAnalyzeStory（故事板详情「解析」共用）：
-                  // 同步建 loading 故事节点 → 提交 → 归一化回填 / 写错。
+                  // The orchestration is in application/videoAnalyzeStory (shared with the storyboard detail "Analyze"):
+                  // synchronously build a loading story node -> submit -> normalize backfill / write the error.
                   const durationSec =
                     typeof videoData.durationMs === "number" && videoData.durationMs > 0
                       ? videoData.durationMs / 1000
@@ -1959,18 +1959,18 @@ export const NodeActionToolbar = memo(
                   });
                 };
 
-                // 「高清」：在下游建一个视频节点（复用 video 节点的播放器/角标/尺寸，
-                // 与普通视频节点一致），以本视频为源、打 isUpscaleNode 标记 —— 选中后在
-                // 其下方展开 VideoUpscaleEditorOverlay 配置面板，提交走 /freezone/video/upscale。
-                // 节点创建走 application/videoUpscale 的共享函数（故事板详情同源）；
-                // 选中态切换是工作流入口特有的（为了展开配置面板），留在这里。
+                // "Upscale": build a video node downstream (reusing the video node's player/badge/size,
+                // same as a plain video node), with this video as the source and marked isUpscaleNode - once selected, the
+                // VideoUpscaleEditorOverlay config panel expands below it, and submission goes to /freezone/video/upscale.
+                // Node creation uses the shared function in application/videoUpscale (same source as the storyboard detail);
+                // the selection toggle is specific to the workflow entry (to expand the config panel) and stays here.
                 const handleVideoUpscale = () => {
                   if (!hasVideo || !videoUrl) {
                     return;
                   }
                   const upscaleNodeId = createVideoUpscaleResultNode(node.id, {
                     sourceUrl: videoUrl,
-                    displayName: `${t("node.videoUpscale.nodeTitle")}（1080P）`,
+                    displayName: `${t("node.videoUpscale.nodeTitle")} (1080P)`,
                     resolution: "1080p",
                   });
                   if (!upscaleNodeId) {
@@ -1989,8 +1989,8 @@ export const NodeActionToolbar = memo(
                   if (!hasVideo || !videoUrl || isSeparatingAv) {
                     return;
                   }
-                  // 编排在 application/videoSeparateAudio（故事板详情「分离音视频」
-                  // 共用）：提交 → 挑音频/静音视频地址 → 各建一个下游节点。
+                  // The orchestration is in application/videoSeparateAudio (shared with the storyboard detail "Separate audio/video"):
+                  // submit -> pick the audio / muted-video addresses -> build a downstream node for each.
                   void separateVideoAudio(node.id, { sourceUrl: videoUrl });
                 };
 
@@ -2200,7 +2200,7 @@ export const NodeActionToolbar = memo(
                 const isConverting = Boolean(convertingFormat);
 
                 // The separated-audio node stores `sourceFileName` WITHOUT an
-                // extension (e.g. `xxx_背景音`), which previously produced an
+                // extension (e.g. `xxx_background_audio`), which previously produced an
                 // extensionless download the OS couldn't open. Strip any trailing
                 // audio extension and re-append the chosen format below.
                 const baseFileName = (() => {
@@ -2218,8 +2218,8 @@ export const NodeActionToolbar = memo(
                   );
                 })();
 
-                // 透传/转码下载核心移到 application/audioDownload（故事板音频
-                // chip 共用）；可用性守卫与 toast 留在这里，转码态仍写 node data。
+                // The passthrough/transcode download core moved to application/audioDownload (shared with the storyboard audio
+                // chip); the availability guard and toast stay here, and the transcoding state is still written to node data.
                 const handleAudioDownload = async (
                   format: AudioDownloadFormat,
                 ) => {
@@ -2322,7 +2322,7 @@ export const NodeActionToolbar = memo(
                         <UiChipButton
                           key="group-workflow-running"
                           className={TOOLBAR_TEXT_BUTTON_CLASS}
-                          title="工作流正在运行"
+                          title={t("canvas.nodeToolbar.workflowRunningTitle")}
                           disabled
                           onClick={(event) => event.stopPropagation()}
                         >
@@ -2331,12 +2331,12 @@ export const NodeActionToolbar = memo(
                           ) : (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           )}
-                          {groupWorkflowStopRequested ? "已停止后续" : "运行中"}
+                          {groupWorkflowStopRequested ? t("canvas.nodeToolbar.followupStopped") : t("canvas.nodeToolbar.running")}
                         </UiChipButton>
                         <UiChipButton
                           key="group-stop-workflow"
                           className={TOOLBAR_TEXT_BUTTON_CLASS}
-                          title="停止启动后续工作流节点"
+                          title={t("canvas.nodeToolbar.stopFollowupTitle")}
                           disabled={groupWorkflowStopRequested}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -2349,7 +2349,7 @@ export const NodeActionToolbar = memo(
                           ) : (
                             <CirclePause className="h-3.5 w-3.5" />
                           )}
-                          {groupWorkflowStopRequested ? "等待当前节点" : "停止后续"}
+                          {groupWorkflowStopRequested ? t("canvas.nodeToolbar.waitingForCurrent") : t("canvas.nodeToolbar.stopFollowup")}
                         </UiChipButton>
                       </>
                     ) : (
@@ -2359,8 +2359,8 @@ export const NodeActionToolbar = memo(
                           className={TOOLBAR_TEXT_BUTTON_CLASS}
                           title={
                             groupWorkflowState.status === "completed"
-                              ? "工作流已完成"
-                              : "运行工作流"
+                              ? t("canvas.nodeToolbar.workflowCompleted")
+                              : t("canvas.nodeToolbar.runWorkflow")
                           }
                           disabled={isRunningGroupWorkflow || !groupWorkflowState.canContinue}
                           onClick={(event) => {
@@ -2374,13 +2374,13 @@ export const NodeActionToolbar = memo(
                           ) : (
                             <Workflow className="h-3.5 w-3.5" />
                           )}
-                          {isRunningGroupWorkflow ? "运行中" : groupWorkflowState.primaryLabel}
+                          {isRunningGroupWorkflow ? t("canvas.nodeToolbar.running") : groupWorkflowState.primaryLabel}
                         </UiChipButton>
                         {groupWorkflowState.canRegenerate && (
                           <UiChipButton
                             key="group-rerun-workflow"
                             className={TOOLBAR_TEXT_BUTTON_CLASS}
-                            title="重新运行全部工作流节点"
+                            title={t("canvas.nodeToolbar.rerunAllTitle")}
                             disabled={isRunningGroupWorkflow}
                             onClick={(event) => {
                               event.stopPropagation();
@@ -2389,7 +2389,7 @@ export const NodeActionToolbar = memo(
                             }}
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
-                            重新运行全部
+                            {t("canvas.nodeToolbar.rerunAll")}
                           </UiChipButton>
                         )}
                       </>
@@ -2467,33 +2467,33 @@ export const NodeActionToolbar = memo(
                     <DropdownMenuContent
                       align="start"
                       sideOffset={6}
-                      // 150px 同多选工具条：加了图标后 120px 会把「宫格排列」挤折行。
+                      // 150px same as the multi-select toolbar: after adding icons 120px would squeeze "Grid layout" onto two lines.
                       className={`${TOOLBAR_MENU_CONTENT_CLASS} min-w-[150px]`}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {/* 文案与图标跟多选工具条（MultiSelectionToolbar）那份排列菜单
-                          逐字对齐：宫格/水平/垂直。这里原来照 mode key 直译成
-                          「网格/横向/纵向」，同一个产品出现两套说法。 */}
+                      {/* Text and icons are aligned verbatim with the arrange menu of the multi-select toolbar (MultiSelectionToolbar):
+                      grid/horizontal/vertical. This used to be a literal translation of the mode keys as
+                      "grid/horizontal/vertical" variants, giving the same product two wordings. */}
                       <DropdownMenuItem
                         className={TOOLBAR_MENU_ITEM_CLASS}
                         onSelect={() => arrangeGroupChildren(nodeId, 'grid')}
                       >
                         <Workflow className="h-4 w-4 text-text-muted" />
-                        宫格排列
+                        {t("canvas.multiSelect.arrangeGrid")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className={TOOLBAR_MENU_ITEM_CLASS}
                         onSelect={() => arrangeGroupChildren(nodeId, 'horizontal')}
                       >
                         <StretchHorizontal className="h-4 w-4 text-text-muted" />
-                        水平排列
+                        {t("canvas.multiSelect.arrangeHorizontal")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className={TOOLBAR_MENU_ITEM_CLASS}
                         onSelect={() => arrangeGroupChildren(nodeId, 'vertical')}
                       >
                         <StretchVertical className="h-4 w-4 text-text-muted" />
-                        垂直排列
+                        {t("canvas.multiSelect.arrangeVertical")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

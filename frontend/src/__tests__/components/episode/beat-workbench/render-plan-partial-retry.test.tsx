@@ -347,7 +347,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await waitFor(() => expect(recorded.execute).toHaveLength(2));
 
-    expect(await screen.findByRole("button", { name: "继续" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Continue" })).toBeTruthy();
 
     // 再喂一轮「在途下降」，不许出现第三次自动重投。
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
@@ -376,7 +376,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     await pushTasks(qc, [task("t0", "completed"), task("t1", "completed")]);
     await waitFor(() => expect(recorded.execute).toHaveLength(2));
 
-    await userEvent.click(await screen.findByRole("button", { name: "继续" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
     await waitFor(() => expect(recorded.execute).toHaveLength(3));
 
     expect(recorded.plan[2].beat_indices).toEqual([5, 6, 7, 8]);
@@ -412,7 +412,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     expect(texts[0]).toMatch(/渠道/);
     expect(texts[1]).toMatch(/平台/);
     expect(texts[2]).toMatch(/你的/);
-    expect(texts[3]).toMatch(/项目/);
+    expect(texts[3]).toMatch(/Project/);
   });
 
   it("未知 reason 只提示部分失败，不开放补投", async () => {
@@ -432,7 +432,7 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     await confirm();
 
     expect(await screen.findByRole("status")).toHaveTextContent(/已投 2 \/ 被拒 2/);
-    expect(screen.queryByRole("button", { name: "继续" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
   });
 
   it("429（一个都没投出去）仍走既有 429 路径，不当部分投递", async () => {
@@ -453,6 +453,6 @@ describe("render plan dialog — 尽力投递 / 只重投被拒的那部分", ()
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(onDispatched).not.toHaveBeenCalled();
     expect(screen.queryByText(/已投/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "继续" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
   });
 });

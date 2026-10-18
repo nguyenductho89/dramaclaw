@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   fetchFreezoneJobResult,
   submitFreezoneScene360,
@@ -23,32 +24,32 @@ import { GRID_ACTION_MODE_MAP, type GridActionKey } from './gridTemplateAction';
 import { generationTaskDescriptor } from './resumeGeneration';
 
 /**
- * 一图流「功能」key。= 11 项能力：10 个宫格模板（复用
- * {@link GRID_ACTION_MODE_MAP}）+ 全景。
+ * One-image "feature" key. = 11 capabilities: 10 grid templates (reusing
+ * {@link GRID_ACTION_MODE_MAP}) + panorama.
  *
- * 交互形态两个视图现在完全一致：点功能 → 先建一个空的图片生成节点（节点名=功能名）
- * → 在它的输入框里改提示词/参考图/比例、或换成别的功能 → 按 ↑ 才真正提交。
- * 工作流侧原来那条「确认即提交」的浮条（GridActionConfirmOverlay）已按用户要求撤掉。
+ * The interaction is now exactly the same in both views: click a feature -> first build an empty image generation node (node name = feature name)
+ * -> edit the prompt/reference images/ratio in its input box, or switch to another feature -> only submit with the up button.
+ * The workflow side's old "confirm to submit" floating bar (GridActionConfirmOverlay) was removed at the user's request.
  *
- * 多角度 / 打光**不在这张表里**（用户要求撤下）：它们的价值在环绕角・俯仰角・
- * 景别 / 亮度・色温・主光方向那几组滑杆上，退化成「一句提示词点生成」并不好用；
- * 详情工具条上的那两个完整编辑器仍在，走的是工作流那条「确认即提交」。
+ * Multi-angle / lighting are **not in this table** (removed at the user's request): their value lies in the slider groups for orbit angle, pitch angle,
+ * shot size / brightness, color temperature, key light direction, and degrading to "one prompt, click generate" is not useful;
+ * the two complete editors on the detail toolbar remain and go through the workflow's "confirm to submit".
  */
 export type AssetBoardImageOpKey = GridActionKey | 'scene360';
 
-/** 功能框的分组（对标 liblib 的四栏：分镜叙事 / 空间与机位 / 设定图 / 质感调节）。 */
+/** Grouping of the feature box (matches liblib's four columns: storyboard narrative / space & camera / design sheets / texture tuning). */
 export type AssetBoardImageOpCategoryKey = 'narrative' | 'space' | 'setting' | 'texture';
 
 export interface AssetBoardImageOpDef {
   key: AssetBoardImageOpKey;
-  /** 功能名。同时作为新节点的 displayName，以及提示词为空时下发的 prompt。 */
+  /** Feature name. Also the displayName of the new node, and the prompt sent when the prompt is empty. */
   label: string;
-  /** 功能框里跟在功能名下面的一行短说明（一句话说清这个功能产出什么）。 */
+  /** A short line under the feature name in the feature box (one sentence on what this feature produces). */
   summary: string;
-  /** 选中该功能后，输入框的占位文案（对标 liblib「点击生成，直接基于当前图像生成…」）。 */
+  /** Placeholder text of the input box after this feature is selected (matches liblib "Click to generate, directly based on the current image..."). */
   description: string;
   category: AssetBoardImageOpCategoryKey;
-  /** 询价用的硬编码兜底算力（活价没回来时展示，与工具条同源）。 */
+  /** Hard-coded fallback compute cost used for pricing (shown when the live price has not come back, same source as the toolbar). */
   cost: number;
 }
 
@@ -56,102 +57,102 @@ export const ASSET_BOARD_IMAGE_OP_CATEGORY_LABELS: Record<
   AssetBoardImageOpCategoryKey,
   string
 > = {
-  narrative: '分镜叙事',
-  space: '空间与机位',
-  setting: '设定图',
-  texture: '质感调节',
+  get narrative() { return i18n.t('canvas.assetBoard.imageOps.category.narrative'); },
+  get space() { return i18n.t('canvas.assetBoard.imageOps.category.space'); },
+  get setting() { return i18n.t('canvas.assetBoard.imageOps.category.setting'); },
+  get texture() { return i18n.t('canvas.assetBoard.imageOps.category.texture'); },
 };
 
 /**
- * 功能清单。label 与工具条 `GRID_ACTION_DEFS` / 全景・多角度・打光按钮同名——
- * 同一个能力在两个视图里必须叫同一个名字。
+ * The feature list. label has the same name as the toolbar's `GRID_ACTION_DEFS` / the panorama, multi-angle, lighting buttons -
+ * one capability must go by the same name in both views.
  */
 export const ASSET_BOARD_IMAGE_OPS: readonly AssetBoardImageOpDef[] = [
   {
     key: 'plotFourGrid',
-    label: '剧情推演四宫格',
-    summary: '一图推演四格剧情',
-    description: '点击生成，直接基于当前图像推演出四格剧情；支持通过文本补充剧情走向。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.plotFourGrid'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.plotFourGrid.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.plotFourGrid.description'); },
     category: 'narrative',
     cost: 8,
   },
   {
     key: 'serialStoryboard25',
-    label: '25宫格连贯分镜',
-    summary: '长段落连贯分镜',
-    description: '点击生成，直接基于当前图像生成 25 格连贯分镜；支持通过文本描述段落节奏。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.serialStoryboard25'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.serialStoryboard25.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.serialStoryboard25.description'); },
     category: 'narrative',
     cost: 32,
   },
   {
     key: 'frameProjection3sLater',
-    label: '画面推演 - 3秒后',
-    summary: '预测 3 秒后的画面',
-    description: '点击生成，推演当前画面 3 秒之后的样子；支持通过文本指定运动或事件。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.frameProjection3sLater'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.frameProjection3sLater.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.frameProjection3sLater.description'); },
     category: 'narrative',
     cost: 4,
   },
   {
     key: 'frameProjection5sEarlier',
-    label: '画面推演 - 5秒前',
-    summary: '反推 5 秒前的画面',
-    description: '点击生成，反推当前画面 5 秒之前的样子；支持通过文本指定前情。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.frameProjection5sEarlier'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.frameProjection5sEarlier.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.frameProjection5sEarlier.description'); },
     category: 'narrative',
     cost: 4,
   },
   {
     key: 'multiCameraGrid',
-    label: '多机位九宫格',
-    summary: '九个机位一次铺开',
-    description: '点击生成，直接基于当前图像铺开九个机位；支持通过文本指定镜头语言。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.multiCameraGrid'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.multiCameraGrid.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.multiCameraGrid.description'); },
     category: 'space',
     cost: 14,
   },
   {
     key: 'scene360',
-    label: '全景',
-    summary: '扩成 360° 全景',
-    description: '点击生成，把当前图像扩成 360° 全景；比例固定 2:1 / 21:9。',
+    get label() { return i18n.t('canvas.assetBoard.imageOps.pano'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.scene360.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.scene360.description'); },
     category: 'space',
     cost: 10,
   },
   {
     key: 'characterThreeView',
-    label: '角色三视图生成',
-    summary: '角色全身三视图',
-    description: '点击生成，直接基于当前图像生成完整的角色三视图；支持通过文本/参考图生成。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.characterThreeView'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.characterThreeView.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.characterThreeView.description'); },
     category: 'setting',
     cost: 6,
   },
   {
     key: 'faceThreeView',
-    label: '角色脸部三视图',
-    summary: '五官细节三视图',
-    description: '点击生成，直接基于当前图像生成角色脸部三视图；支持通过文本补充五官特征。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.faceThreeView'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.faceThreeView.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.faceThreeView.description'); },
     category: 'setting',
     cost: 6,
   },
   {
     key: 'productThreeView',
-    label: '产品三视图',
-    summary: '产品前侧后三视图',
-    description: '点击生成，直接基于当前图像生成产品三视图；支持通过文本补充材质与细节。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.productThreeView'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.productThreeView.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.productThreeView.description'); },
     category: 'setting',
     cost: 6,
   },
   {
     key: 'sceneSettingSheet',
-    label: '场景设定图',
-    summary: '场景美术设定页',
-    description: '点击生成，直接基于当前图像生成场景设定图；支持通过文本补充场景背景。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.sceneSettingSheet'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.sceneSettingSheet.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.sceneSettingSheet.description'); },
     category: 'setting',
     cost: 6,
   },
   {
     key: 'cinematicLightCorrection',
-    label: '电影级光影校正',
-    summary: '光影校正到电影级',
-    description: '点击生成，把当前图像的光影校正到电影级；支持通过文本指定影调倾向。',
+    get label() { return i18n.t('nodeToolbar.gridMenu.cinematicLightCorrection'); },
+    get summary() { return i18n.t('canvas.assetBoard.imageOps.feature.cinematicLightCorrection.summary'); },
+    get description() { return i18n.t('canvas.assetBoard.imageOps.feature.cinematicLightCorrection.description'); },
     category: 'texture',
     cost: 4,
   },
@@ -168,8 +169,8 @@ export function isAssetBoardImageOpKey(value: unknown): value is AssetBoardImage
 }
 
 /**
- * 是不是 9 个宫格模板之一。询价用得上：宫格走 `image_selection`，全景没有对应
- * 的询价口径，宁可不显示也不摆一个文生图的价上去骗人。
+ * Whether it is one of the 9 grid templates. Useful for pricing: grids go through `image_selection`, while panorama has no matching
+ * pricing basis, and it is better not to show anything than to put a text-to-image price on it and mislead.
  */
 export function isGridImageOpKey(key: AssetBoardImageOpKey): key is GridActionKey {
   return key in GRID_ACTION_MODE_MAP;
@@ -183,14 +184,14 @@ function readString(data: Record<string, unknown>, field: string): string | null
 }
 
 /**
- * 点功能时**先建节点、不提交**：在源节点下游建一个空的 imageGen 节点并连边，
- * 节点名 = 功能名，`imageOpKey` 记住选中的功能、`imageOpSourceUrl` 记住源图。
- * 工作流工具条的「九宫格」下拉与故事板详情工具条都走这里。
+ * Clicking a feature = **create the node first, do not submit**: build an empty imageGen node downstream of the source node and connect an edge,
+ * node name = feature name, `imageOpKey` remembers the selected feature, `imageOpSourceUrl` remembers the source image.
+ * The workflow toolbar's "3x3 grid" dropdown and the storyboard detail toolbar both go through here.
  *
- * 建 imageGen（而不是编排用的 exportImage 结果节点）是这条交互的前提：两个视图都
- * 只给 imageGen / video 节点渲生成表单，没有表单就没有输入框，功能 chip 也就无处可挂。
+ * Building imageGen (rather than the exportImage result node used for orchestration) is a precondition of this interaction: both views only
+ * render generation forms for imageGen / video nodes, and with no form there is no input box and the feature chip has nowhere to hang.
  *
- * @returns 新节点 id；源节点已不存在时返回 null。
+ * @returns the new node id; null when the source node no longer exists.
  */
 export function spawnAssetBoardImageOpNode(
   sourceNodeId: string,
@@ -219,7 +220,7 @@ export function spawnAssetBoardImageOpNode(
       prompt: '',
       imageUrl: null,
       previewImageUrl: null,
-      // 全景产物本来就是超宽图，先把节点比例摆对，用户不用自己去调。
+      // A panorama product is an ultra-wide image anyway, so set the node ratio right first so the user does not have to adjust it.
       aspectRatio: opKey === 'scene360' ? DEFAULT_FREEZONE_SCENE_360_ASPECT_RATIO : sourceAspectRatio,
       imageOpKey: opKey,
       imageOpSourceUrl: imageSource.split('?')[0],
@@ -232,7 +233,7 @@ export function spawnAssetBoardImageOpNode(
   return nextNodeId;
 }
 
-/** 在功能框里换功能：改 key + 跟着改节点名（用户没自己改过名时）。 */
+/** Switch the feature in the feature box: change the key + rename the node accordingly (when the user has not renamed it). */
 export function switchAssetBoardImageOp(nodeId: string, nextKey: AssetBoardImageOpKey): void {
   const store = useCanvasStore.getState();
   const node = store.nodes.find((candidate) => candidate.id === nodeId);
@@ -241,7 +242,7 @@ export function switchAssetBoardImageOp(nodeId: string, nextKey: AssetBoardImage
   const currentKey = data.imageOpKey;
   if (currentKey === nextKey) return;
   const nextDef = ASSET_BOARD_IMAGE_OP_MAP[nextKey];
-  // 节点名还是上一个功能名（= 没被用户手改过）才跟着换，否则尊重用户起的名字。
+  // Only follow along when the node name is still the previous feature name (= not edited by the user); otherwise respect the user's name.
   const currentLabel = isAssetBoardImageOpKey(currentKey)
     ? ASSET_BOARD_IMAGE_OP_MAP[currentKey].label
     : null;
@@ -256,7 +257,7 @@ export function switchAssetBoardImageOp(nodeId: string, nextKey: AssetBoardImage
   store.updateNodeData(nodeId, patch);
 }
 
-/** 关掉 chip：退化成一个普通的图片生成节点（↑ 走常规文生图/图生图）。 */
+/** Close the chip: degrade to a plain image generation node (the up button goes through regular text-to-image / image-to-image). */
 export function clearAssetBoardImageOp(nodeId: string): void {
   useCanvasStore.getState().updateNodeData(nodeId, { imageOpKey: null });
 }
@@ -282,8 +283,8 @@ function submitOp(
       prompt,
     });
   }
-  // 宫格之外只剩全景（多角度/打光已从功能表撤下，见 AssetBoardImageOpKey）。
-  // 全景的比例是它自己那套 2:1 / 21:9，不吃通用比例。
+  // Besides grids only panorama remains (multi-angle/lighting were removed from the feature table, see AssetBoardImageOpKey).
+  // The panorama ratio is its own 2:1 / 21:9, and does not take the generic ratio.
   const imageSize = readString(data, 'size') ?? undefined;
   return submitFreezoneScene360(project, {
     referenceUrl: sourceUrl,
@@ -293,12 +294,12 @@ function submitOp(
 }
 
 /**
- * 按 ↑ 时真正提交：**把结果写回节点自己**（不像扩图/高清那几个编排那样再建一个
- * 结果节点）——用户是在这个节点上配的参数，产物就该落在这个节点上。
+ * The real submission when the up button is pressed: **write the result back to the node itself** (unlike outpaint/upscale and the other orchestrations that build another
+ * result node) - the user configured the parameters on this node, so the product should land on this node.
  *
- * 提交 → 轮询 → 回填 url / 写错，与画布上其它一图流编排同一套语义。
+ * Submit -> poll -> backfill url / write the error, the same semantics as the other one-image orchestrations on the canvas.
  *
- * @returns settle 时 resolve 的后台链（不 reject）。
+ * @returns the background chain that resolves on settle (never rejects).
  */
 export async function runAssetBoardImageOp(nodeId: string): Promise<void> {
   const project = readUrl().project;
@@ -311,14 +312,14 @@ export async function runAssetBoardImageOp(nodeId: string): Promise<void> {
 
   const sourceUrl = readString(data, 'imageOpSourceUrl');
   if (!project || !sourceUrl) {
-    const message = !project ? '缺少项目上下文，无法提交' : '找不到源图，无法提交';
+    const message = !project ? i18n.t('canvas.assetBoard.imageOps.missingProject') : i18n.t('canvas.assetBoard.imageOps.missingSource');
     console.error('[asset-board-op] cannot submit', { project, sourceUrl });
     store.updateNodeData(nodeId, { generationError: message });
     return;
   }
 
   const def = ASSET_BOARD_IMAGE_OP_MAP[opKey];
-  // 提示词留空就用功能名下发（与工具条「确认即提交」时的行为一致）。
+  // If the prompt is left blank, send the feature name (consistent with the toolbar's behavior of "confirm to submit").
   const prompt = readString(data, 'prompt') ?? def.label;
 
   store.updateNodeData(nodeId, {

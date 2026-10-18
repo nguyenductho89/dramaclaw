@@ -23,7 +23,6 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, TypeAlias
 
-from pypinyin import pinyin, Style
 
 from novelvideo.config import get_style_preset, IMAGE_DEFAULT_STYLE
 from novelvideo.models import beat_scene_id, real_detected_identities, real_detected_props
@@ -276,10 +275,6 @@ class PromptComponents:
         for char in prop_id:
             if re.match(r"[a-zA-Z0-9]", char):
                 initials.append(char.upper())
-            elif re.match(r"[\u4e00-\u9fff]", char):
-                py = pinyin(char, style=Style.FIRST_LETTER)
-                if py and py[0]:
-                    initials.append(py[0][0].upper())
 
         pinyin_initials = "".join(initials) if initials else "PROP"
         prop_hash = hashlib.md5(prop_id.encode("utf-8")).hexdigest()[:4]

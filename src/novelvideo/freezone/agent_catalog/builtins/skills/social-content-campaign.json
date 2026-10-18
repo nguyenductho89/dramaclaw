@@ -3,19 +3,19 @@
   "id": "social-content-campaign",
   "version": "1.0.0",
   "enabled": true,
-  "name": "社交内容套图",
-  "description": "根据品牌、产品或活动目标，动态规划社交平台文案、通用视觉和各平台适配图片。",
+  "name": "Social Content Image Set",
+  "description": "From the brand, product or campaign goal, dynamically plan social platform copy, general visuals and per-platform adapted images.",
   "category": "social",
   "triggers": {
     "keywords": [
-      "社交媒体内容",
-      "社媒套图",
-      "小红书配图",
-      "抖音封面",
-      "微博配图",
-      "微信公众号配图",
-      "Instagram 帖子",
-      "多平台内容"
+      "social media content",
+      "social image set",
+      "Xiaohongshu images",
+      "Douyin cover",
+      "Weibo images",
+      "WeChat Official Account images",
+      "Instagram post",
+      "multi-platform content"
     ],
     "node_scopes": [
       "textGeneration",
@@ -25,22 +25,22 @@
   "input_parameters": [
     {
       "id": "platforms",
-      "label": "发布平台",
+      "label": "Publishing platforms",
       "type": "multi_select",
       "required": false,
       "default": [
-        "小红书"
+        "Xiaohongshu"
       ],
       "options": [
-        "小红书",
-        "抖音",
-        "微博/微信",
+        "Xiaohongshu",
+        "Douyin",
+        "Weibo/WeChat",
         "Instagram"
       ]
     },
     {
       "id": "image_count",
-      "label": "图片数量",
+      "label": "Image count",
       "type": "number",
       "required": false,
       "default": 3,
@@ -48,7 +48,7 @@
     },
     {
       "id": "aspect_ratio",
-      "label": "图片比例",
+      "label": "Image aspect ratio",
       "type": "single_select",
       "required": false,
       "default": "3:4",
@@ -69,53 +69,53 @@
     "social-ig-post"
   ],
   "planning": {
-    "planning_notes": "先根据用户目标生成一份核心文案，再按用户选择的平台和数量动态创建图片计划项；只创建实际需要的平台版本。",
-    "prompt_guide": "所有平台版本共享品牌事实和核心信息，但构图、文字密度、比例和视觉节奏应符合对应平台。",
+    "planning_notes": "First generate one piece of core copy from the user goal, then dynamically create image plan items according to the platforms and count the user chose; create only the platform versions that are actually needed.",
+    "prompt_guide": "All platform versions share the brand facts and core messages, but composition, text density, aspect ratio and visual rhythm should fit each platform.",
     "conduct_rules": [
-      "根据 platforms 和 image_count 动态决定节点数量",
-      "同一套内容必须保持品牌、商品和核心卖点一致",
-      "每个平台只使用与其交付格式匹配的 Recipe",
-      "创建画布节点前先生成并确认动态计划"
+      "Dynamically decide the number of nodes from platforms and image_count",
+      "The same set of content must keep the brand, product and core selling points consistent",
+      "Use for each platform only the Recipe that matches its delivery format",
+      "Generate and confirm the dynamic plan before creating canvas nodes"
     ]
   },
   "evaluation": {
     "rating_bands": [
       {
         "score": 10,
-        "description": "品牌信息一致，平台适配准确，文案和图片均可直接使用"
+        "description": "Brand information is consistent, platform adaptation is accurate, and both copy and images are ready to use"
       },
       {
         "score": 7,
-        "description": "核心内容完整，少量平台格式需要调整"
+        "description": "Core content is complete; a few platform formats need adjustment"
       },
       {
         "score": 4,
-        "description": "平台适配错误或不同版本的品牌信息不一致"
+        "description": "Platform adaptation is wrong or the brand information differs between versions"
       }
     ],
     "visual_review_items": [
       {
-        "name": "品牌一致性",
-        "description": "不同平台图片中的主体、品牌和卖点保持一致",
+        "name": "Brand consistency",
+        "description": "The subject, brand and selling points stay consistent across the images of different platforms",
         "weight": 0.5
       },
       {
-        "name": "平台适配",
-        "description": "构图、比例和信息密度符合目标平台",
+        "name": "Platform adaptation",
+        "description": "Composition, aspect ratio and information density fit the target platform",
         "weight": 0.5
       }
     ],
     "text_review_items": [
       {
-        "name": "核心信息一致",
-        "description": "各平台文案不改变品牌事实和核心卖点",
+        "name": "Core message consistency",
+        "description": "Copy on each platform does not alter the brand facts or core selling points",
         "weight": 1
       }
     ],
     "quality_threshold": 7,
     "domain_constraints": [
-      "不得虚构产品功能、价格、资质或活动信息",
-      "不同平台版本必须共享同一套已确认品牌事实"
+      "Do not invent product features, prices, qualifications or campaign information",
+      "Different platform versions must share the same confirmed brand facts"
     ]
   }
 }

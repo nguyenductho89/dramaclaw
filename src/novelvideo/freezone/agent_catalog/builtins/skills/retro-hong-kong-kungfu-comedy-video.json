@@ -3,19 +3,19 @@
   "id": "retro-hong-kong-kungfu-comedy-video",
   "version": "1.0.0",
   "enabled": true,
-  "name": "港风功夫萌宠短片",
-  "description": "把人物、宠物、动物参考或一句灵感发展成 80 年代复古香港功夫喜剧短片；先搭建包含剧本、分镜、关键元素、逐镜视频和音频层的完整工作流，再交由画布工作流分阶段执行。",
+  "name": "Retro Hong Kong Kung Fu Pet Short",
+  "description": "Develops a person, pet, animal reference or a one-line inspiration into a 1980s retro Hong Kong kung fu comedy short; first build the complete workflow containing the script, storyboard, key elements, shot-by-shot videos and audio layers, then hand it to the canvas workflow to execute in stages.",
   "category": "video",
   "triggers": {
     "keywords": [
-      "港风功夫",
-      "功夫喜剧",
-      "萌宠武侠",
-      "动物功夫短片",
-      "80年代香港电影",
-      "复古港片",
-      "港式普通话",
-      "街坊喜剧"
+      "Hong Kong style kung fu",
+      "kung fu comedy",
+      "cute pet martial arts",
+      "animal kung fu short",
+      "1980s Hong Kong cinema",
+      "retro Hong Kong film",
+      "Hong Kong accent dialogue",
+      "neighborhood comedy"
     ],
     "node_scopes": [
       "textGeneration",
@@ -27,7 +27,7 @@
   "input_parameters": [
     {
       "id": "total_duration",
-      "label": "目标时长",
+      "label": "Target duration",
       "type": "single_select",
       "required": true,
       "default": "15s",
@@ -39,31 +39,31 @@
     },
     {
       "id": "character_input_method",
-      "label": "角色来源",
+      "label": "Character source",
       "type": "single_select",
       "required": true,
-      "default": "根据当前输入判断",
+      "default": "Judge from current input",
       "options": [
-        "根据当前输入判断",
-        "参考图",
-        "文字描述",
-        "内置角色库"
+        "Judge from current input",
+        "Reference image",
+        "Text description",
+        "Built-in character library"
       ]
     },
     {
       "id": "bgm_mode",
-      "label": "背景音乐",
+      "label": "Background music",
       "type": "single_select",
       "required": true,
-      "default": "不生成 BGM",
+      "default": "Do not generate BGM",
       "options": [
-        "不生成 BGM",
-        "生成港风轻喜剧武侠 BGM"
+        "Do not generate BGM",
+        "Generate Hong Kong light-comedy wuxia BGM"
       ]
     },
     {
       "id": "aspect_ratio",
-      "label": "画幅",
+      "label": "Aspect ratio",
       "type": "single_select",
       "required": true,
       "default": "16:9",
@@ -83,68 +83,68 @@
     "video-audio-layer"
   ],
   "planning": {
-    "planning_notes": "使用前先结合 total_duration、character_input_method、bgm_mode、aspect_ratio、用户文字灵感和画布/上传素材判断信息是否足够。若既没有可用角色参考，也没有文字灵感，应先向导演补问；此时不要创建工作流草稿或画布节点，也不要把入口提示写入节点内容。信息足够后，先在对话中确认全局创意 Brief，锁定片名、时长、画幅、角色来源、喜剧方向和音频选择；Brief 只服务规划，不创建独立节点。然后一次性在草稿中列出完整工作流：四幕喜剧剧本大纲、分镜规划、拟人功夫关键元素图阶段中按可独立引用的角色/动物、场景和关键道具分别创建独立关键元素节点，以及按已确认剧情和目标时长拆开的全部拟人功夫单段视频，最后按选择加入视频音频层；视频与音频最终连接到视频合成节点。不得把多个主体合并为一个关键元素节点；只有始终作为同一整体被下游引用的资产才可共用一个节点。每个镜头必须是独立的 intent item 和画布节点，不能只创建第一阶段或用一个笼统视频节点代替完整短片。每条镜头默认并行：共同依赖已确认的分镜规划和实际需要的关键元素节点；只有后一镜需要前一镜已生成的视频作为真实连续性输入时，才建立镜头间依赖和视频引用。Runner 只执行已落到画布的节点，不会从已完成的大纲自动扩展出后续节点。完整工作流落画布后，依次运行故事/分镜、关键元素、视频和音频阶段；各阶段产物保留为可审阅节点，但不得因此延后创建这些节点。仅当 bgm_mode 选择“生成港风轻喜剧武侠 BGM”或导演明确要求时，才在草稿中加入音频层。最终合成由视频合成节点按分镜顺序连接视频和音频，由画布工具处理。",
-    "prompt_guide": "创作核心是 1980s 复古香港功夫喜剧：喜剧优先，功夫是外壳；宠物/动物保留本能行为，与武侠造型形成荒诞反差。全局视觉为暖黄偏暗、低饱和强光、35mm 旧胶片颗粒、硬光轮廓、暗部重亮部柔，红黄轻微褪色，烟雾、灰尘和室内昏黄灯光可以强化旧港片质感。常用场景包括老街巷、茶餐厅、旧武馆、天台、竹林、庙宇和码头。每个视频节点都必须针对当前镜头的每个核心动作逐项写出预备、运动、完成三段，明确身体部位、方向、力度和完成状态；不得只写“动作要有三段”或“打斗很激烈”这类泛化要求；运镜优先使用推拉、跟拍、低机位、快速切到反应镜头和喜剧停顿。对白或旁白使用港式普通话口音和老麦克风颗粒。",
+    "planning_notes": "Before starting, judge whether the information is sufficient by combining total_duration, character_input_method, bgm_mode, aspect_ratio, the user's text inspiration and the canvas/uploaded assets. If there is neither a usable character reference nor a text inspiration, ask the director first; at that point do not create a workflow draft or canvas nodes, and do not write the entry prompt into node content. Once the information is sufficient, first confirm the global creative Brief in conversation, locking the title, duration, aspect ratio, character source, comedy direction and audio choice; the Brief serves planning only and creates no standalone node. Then list the complete workflow in the draft at once: the four-act comedy script outline, the storyboard plan, the anthropomorphic kung fu key element image stage in which independent key element nodes are created separately for independently referenceable characters/animals, scenes and key props, all the anthropomorphic kung fu single-clip videos split by the confirmed plot and target duration, and finally the video audio layer as chosen; the videos and audio finally connect to the video compose node. Do not merge multiple subjects into one key element node; only assets that are always referenced downstream as one whole may share a node. Every shot must be an independent intent item and canvas node; creating only the first stage, or one generic video node to stand in for the complete short, is not allowed. By default each shot runs in parallel: they commonly depend on the confirmed storyboard plan and the key element nodes they actually need; only when a later shot needs the previous shot's generated video as a real continuity input should dependencies and video references between shots be established. The Runner executes only nodes that have landed on the canvas and will not automatically expand later nodes from a completed outline. After the complete workflow lands on the canvas, run the story/storyboard, key element, video and audio stages in order; the output of each stage remains a reviewable node, but the creation of these nodes must not be delayed because of that. Add the audio layer to the draft only when bgm_mode selects \"Generate Hong Kong light-comedy wuxia BGM\" or the director explicitly asks for it. Final composition is done by the video compose node connecting the videos and audio in storyboard order, handled by canvas tools.",
+    "prompt_guide": "The creative core is 1980s retro Hong Kong kung fu comedy: comedy first, with kung fu as the shell; pets/animals keep their instinctive behavior, forming an absurd contrast with the wuxia styling. The global visual is warm yellow and slightly dark, low-saturation strong light, 35mm old film grain, hard-light outlines, heavy shadows with soft highlights, slightly faded reds and yellows; smoke, dust and dim yellow indoor lighting can reinforce the old Hong Kong film texture. Common scenes include old alleys, cha chaan teng diners, old martial arts schools, rooftops, bamboo forests, temples and docks. Every video node must write out, for each core action of the current shot, the three phases of preparation, motion and completion, making the body part, direction, force and completion state explicit; it must not merely write generic requirements like \"actions need three phases\" or \"the fight is intense\"; camera movement prefers push/pull, follow shots, low angles, quick cuts to reaction shots and comedic pauses. Dialogue or narration uses a Hong Kong-flavored accent and old-microphone grain.",
     "conduct_rules": [
-      "全部图片和视频保持 input_parameters 中确认的画幅，不得擅自改画幅。",
-      "默认不添加字幕；背景音乐仅在开始前选择或导演明确要求时生成。",
-      "宠物或动物必须同时保留物种习性和武侠造型，笑点来自行为逻辑反差。",
-      "视频开场应尽快建立冲突或反差，动作必须具备预备、运动和完成状态。",
-      "禁止无人机航拍、明显手持晃动和过度平滑稳定器滑轨感。"
+      "All images and videos keep the aspect ratio confirmed in input_parameters; do not change the aspect ratio on your own.",
+      "No subtitles by default; background music is generated only when chosen before starting or explicitly requested by the director.",
+      "A pet or animal must keep both its species habits and its wuxia styling, with the humor coming from the behavioral logic contrast.",
+      "The video opening should establish conflict or contrast as soon as possible, and actions must have preparation, motion and completion states.",
+      "Drone aerial shots, obvious handheld shake and an over-smooth stabilizer/slider feel are forbidden."
     ]
   },
   "evaluation": {
     "rating_bands": [
       {
         "score": 5,
-        "description": "动态阶段清晰、阶段边界完整，港风功夫喜剧、宠物本能反差、旧胶片质感和音频硬规则都稳定落入每个产物。"
+        "description": "The dynamic stages are clear with complete stage boundaries, and Hong Kong kung fu comedy, pet instinct contrast, old film texture and the hard audio rules all land stably in every output."
       },
       {
         "score": 3,
-        "description": "流程基本完整，但部分阶段缺少阶段边界、动作弧线、港片质感、参考绑定或音频/字幕约束。"
+        "description": "The flow is basically complete, but some stages lack stage boundaries, action arcs, Hong Kong film texture, reference binding or audio/subtitle constraints."
       },
       {
         "score": 1,
-        "description": "跳过阶段、机械套固定模板、默认加字幕/BGM、画幅错误，或把纯武侠当成喜剧核心。"
+        "description": "Stages are skipped, a fixed template is applied mechanically, subtitles/BGM are added by default, the aspect ratio is wrong, or pure wuxia is treated as the comedy core."
       }
     ],
     "visual_review_items": [
       {
-        "name": "港片复古质感",
+        "name": "Retro Hong Kong film texture",
         "weight": 1.2,
-        "description": "暖黄偏暗、低饱和强光、35mm 颗粒、硬光轮廓、暗部重亮部柔，红黄轻微褪色。"
+        "description": "Warm yellow and slightly dark, low-saturation strong light, 35mm grain, hard-light outlines, heavy shadows with soft highlights, slightly faded reds and yellows."
       },
       {
-        "name": "萌宠功夫反差",
+        "name": "Cute pet kung fu contrast",
         "weight": 1.4,
-        "description": "动物本能和武侠造型同时存在，笑点来自行为逻辑反差，而不是简单夸张表情。"
+        "description": "Animal instinct and wuxia styling coexist, with the humor coming from behavioral logic contrast rather than simply exaggerated expressions."
       },
       {
-        "name": "动作真实度",
+        "name": "Action realism",
         "weight": 1,
-        "description": "每个动作写出预备、运动、完成，体现速度、幅度、身体部位和完成状态。"
+        "description": "Every action writes out preparation, motion and completion, reflecting speed, amplitude, body parts and completion state."
       }
     ],
     "text_review_items": [
       {
-        "name": "阶段边界",
+        "name": "Stage boundaries",
         "weight": 1.5,
-        "description": "每阶段都明确产物、输入依赖和下一步，便于画布工作流审阅和推进。"
+        "description": "Each stage has a clear output, input dependencies and next step, making it easy to review and advance the canvas workflow."
       },
       {
-        "name": "结构化输出",
+        "name": "Structured output",
         "weight": 1,
-        "description": "使用中文 Markdown 表格，字段完整，便于下游节点和导演修改。"
+        "description": "Use Markdown tables in the same language as the user's input with complete fields, convenient for downstream nodes and director edits."
       }
     ],
     "quality_threshold": 4,
     "domain_constraints": [
-      "遵循开始前选择的画幅。",
-      "默认无字幕、无背景音乐。",
-      "默认保留环境声；对白/旁白使用港式普通话口音和老麦克风颗粒。",
-      "首 3 秒必须建立冲突或反差。",
-      "宠物/动物必须同时保留物种习性和武侠造型。",
-      "禁止无人机航拍、明显手持晃动、过度平滑稳定器滑轨感。"
+      "Follow the aspect ratio chosen before starting.",
+      "No subtitles and no background music by default.",
+      "Ambient sound is kept by default; dialogue/narration uses a Hong Kong-flavored accent and old-microphone grain.",
+      "The first 3 seconds must establish conflict or contrast.",
+      "Pets/animals must keep both their species habits and their wuxia styling.",
+      "Drone aerial shots, obvious handheld shake and an over-smooth stabilizer/slider feel are forbidden."
     ]
   }
 }

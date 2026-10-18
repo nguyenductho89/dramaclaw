@@ -7,14 +7,14 @@ import { EpisodeSourceEditor } from "@/components/episode/episode-source-editor"
 
 const labels = {
   rawLabel: "原文",
-  rawActionLabel: "点击查看原文",
+  rawActionLabel: "View source",
   noRawText: "暂无原文",
-  sourceLabel: "分镜源文本",
-  sourceMeta: (count: number) => `编辑后的内容自动保存，当前共 ${count} 行`,
+  sourceLabel: "Beat source text",
+  sourceMeta: (count: number) => `Edits auto-save, ${count} lines total`,
   sourcePlaceholder: "填写分镜源文本",
-  linePreviewLabel: "行切分预览",
-  lineCount: (count: number) => `${count} 行`,
-  noLines: "暂无可生成行",
+  linePreviewLabel: "Line split preview",
+  lineCount: (count: number) => `${count} lines`,
+  noLines: "No generated lines yet",
 };
 
 describe("EpisodeSourceEditor", () => {
@@ -30,7 +30,7 @@ describe("EpisodeSourceEditor", () => {
     );
 
     expect(screen.queryByText("第一章原文")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "点击查看原文" }));
+    fireEvent.click(screen.getByRole("button", { name: "View source" }));
     expect(screen.getByText("第一章原文")).toBeInTheDocument();
 
     const source = screen.getByLabelText("分镜源文本 1");

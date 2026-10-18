@@ -48,7 +48,7 @@ import {
   AssetLibraryUploadDialog,
   type AssetLibraryUploadPick,
 } from './AssetLibraryUploadDialog';
-// 条目模型与类目定义和左侧面板的「资产库」tab 共用，见 ./assetLibraryItems
+// The item model and category definitions are shared with the "Asset library" tab of the left panel, see ./assetLibraryItems
 import {
   ALL_CATEGORY_KEY,
   ASSET_CATEGORIES,
@@ -69,7 +69,7 @@ import {
   type LibraryItem,
 } from './assetLibraryItems';
 
-/** 每页条数可选档位，第一个是默认值。 */
+/** Selectable page-size options; the first is the default. */
 const ASSET_LIBRARY_PAGE_SIZES = [20, 40, 80, 100] as const;
 
 const ASSET_LIBRARY_MODAL_CLASS =
@@ -82,7 +82,7 @@ interface PendingUpload {
   fileName: string;
   previewUrl: string;
   media: AssetLibraryMedia;
-  /** 标签可以不选，后端会按媒介兜底推一个。 */
+  /** A tag may be left unselected; the backend will infer one from the medium as a fallback. */
   category: AssetCategory | null;
   folder: AssetFolderKey;
   status: 'uploading' | 'failed';
@@ -96,21 +96,21 @@ export interface AssetLibrarySelection {
 }
 
 export interface AssetLibraryModalProps {
-  /** 管理态负责查看/维护资产；选材态只负责把素材交给节点。 */
+  /** Manage mode views/maintains assets; pick mode only hands materials to a node. */
   mode: 'manage' | 'pick';
   open: boolean;
   project: string | null;
   onClose: () => void;
   onSuccess?: () => void;
   onConfirm?: (selections: AssetLibrarySelection[]) => void;
-  /** 管理态下把单条素材发送到当前画布。 */
+  /** In manage mode, send a single asset to the current canvas. */
   onSendItemToCanvas?: (entry: LibraryItem) => void;
   maxSelectable?: number;
-  /** 允许的媒介类型；缺省三类都开。生图/图片编辑节点只传 ['image']。 */
+  /** Allowed media types; all three are open by default. Image generation / image edit nodes pass only ['image']. */
   allowedMedia?: AssetLibraryMedia[];
   /**
-   * 把整个文件夹的素材发到画布并编成一组（组名 = 文件夹名）。不传时文件夹卡片上
-   * 不出现「发送到画布」——节点里打开的选素材弹窗没有「发到画布」这个语义。
+   * Send a whole folder's assets to the canvas and group them (group name = folder name). When not passed, the folder card shows no
+   * "Send to canvas" - the pick-material dialog opened inside a node has no "send to canvas" semantics.
    */
   onSendFolderToCanvas?: (folder: AssetFolder) => void;
 }
@@ -137,9 +137,9 @@ export function AssetLibraryModal({
   onSendFolderToCanvas,
 }: AssetLibraryModalProps) {
   const { t } = useTranslation();
-  // 类目（标签）按用途分，不按媒介分；allowedMedia 只在两个地方起作用：整类都装
-  // 不下的类目（如只收音频的「音效」在只要图片的节点里）不出现在筛选条上，条目
-  // 本身再过滤一遍。
+  // Categories (tags) are divided by purpose, not by medium; allowedMedia only matters in two places: categories that cannot hold
+  // anything at all (e.g. an audio-only "Sound effects" in an image-only node) do not appear on the filter bar, and the items
+  // themselves are filtered once more.
   const categories = useMemo(
     () =>
       ASSET_CATEGORIES.filter(
@@ -148,8 +148,8 @@ export function AssetLibraryModal({
       ),
     [allowedMedia],
   );
-  // 把 onSuccess 收进 ref，避免它进 initializeLibrary 依赖后，父组件每次渲染换新
-  // 函数身份就触发「打开自动同步」effect 反复重跑。
+  // Put onSuccess into a ref, so that once it enters the initializeLibrary dependencies the parent's new function identity on every render
+  // would not make the "auto sync on open" effect rerun repeatedly.
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
   const [library, setLibrary] = useState<LibraryItem[]>([]);
@@ -163,21 +163,21 @@ export function AssetLibraryModal({
   const [isDragging, setIsDragging] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [previewEntry, setPreviewEntry] = useState<LibraryItem | null>(null);
-  // 文件夹是资产的存放范围，类目是当前范围内的筛选条件：两个维度分别存状态，
-  // 避免把「全部资产」和「人物 / 场景」伪装成同级 Tab。
+  // A folder is the storage scope of assets, and a category is a filter condition within the current scope: store the two dimensions as separate states,
+  // avoiding disguising "All assets" and "Characters / Scenes" as sibling tabs.
   const [activeCategoryKey, setActiveCategoryKey] =
     useState<AssetLibraryCategoryFilterKey>(ALL_CATEGORY_KEY);
-  // null 表示真正的全部资产；有值表示只浏览该文件夹。
+  // null means truly all assets; a value means browsing only that folder.
   const [activeFolderKey, setActiveFolderKey] =
     useState<AssetFolderKey | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  // 批量删除只属于管理态；选材态的选择只服务于节点确认，两种任务不复用状态。
+  // Bulk delete belongs only to manage mode; the selection in pick mode serves only node confirmation, and the two tasks do not share state.
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkIds, setBulkIds] = useState<string[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  // 文件夹卡片上的「…」菜单与它派生的两个弹窗。都按 key 存而不是存整个 folder
-  // 对象——folders 每次刷新都是新对象，存 key 才能跟着最新数据走。
+  // The "..." menu on a folder card and the two dialogs derived from it. Both are stored by key rather than the whole folder
+  // object - folders is a new object on every refresh, and only the key follows the latest data.
   const [folderMenuKey, setFolderMenuKey] = useState<AssetFolderKey | null>(null);
   const [renameFolderKey, setRenameFolderKey] = useState<AssetFolderKey | null>(
     null,
@@ -185,8 +185,8 @@ export function AssetLibraryModal({
   const [coverFolderKey, setCoverFolderKey] = useState<AssetFolderKey | null>(
     null,
   );
-  // 分页只管当前资产网格。切换文件夹 / 类目或改每页条数都回到第一页——留在
-  // 第 3 页看一个只有 2 页的结果集没有意义。
+  // Pagination only governs the current asset grid. Switching folder / category or changing the page size returns to the first page - staying on
+  // page 3 to look at a result set that has only 2 pages is meaningless.
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(ASSET_LIBRARY_PAGE_SIZES[0]);
   const [assetQuery, setAssetQuery] = useState('');
@@ -225,7 +225,7 @@ export function AssetLibraryModal({
     setPage(1);
   }, [activeCategoryKey, activeFolderKey, assetQuery, pageSize]);
 
-  // allowedMedia 变了(不同节点复用同一弹窗)时，把类目筛选收敛回允许集合。
+  // When allowedMedia changes (different nodes reuse the same dialog), converge the category filter back into the allowed set.
   useEffect(() => {
     if (
       activeCategoryKey !== ALL_CATEGORY_KEY &&
@@ -235,7 +235,7 @@ export function AssetLibraryModal({
     }
   }, [categories, activeCategoryKey]);
 
-  // 纯加载已有库：失败不弹红条(缺库文件/后端未就绪都当空处理)，返回加载到的条目。
+  // Pure load of the existing library: failure shows no red bar (a missing library file / backend not ready both count as empty), returning the loaded items.
   const refreshLibrary = useCallback(async (): Promise<LibraryItem[]> => {
     if (!project) return [];
     try {
@@ -250,8 +250,8 @@ export function AssetLibraryModal({
     }
   }, [project]);
 
-  // 自建文件夹是后加的路由，老后端会 404；当成「还没有自建文件夹」处理，系统
-  // 文件夹照常可用，不要因此整个弹窗报错。
+  // Custom folders are a later-added route, and old backends 404; treat it as "no custom folders yet", and system
+  // folders stay available as usual, rather than erroring the whole dialog.
   const refreshFolders = useCallback(async () => {
     if (!project) return;
     try {
@@ -263,8 +263,8 @@ export function AssetLibraryModal({
     }
   }, [project]);
 
-  // 打开即自动同步：先加载已有库(静默兜底)，再从主线自动同步合并。只有当
-  // 既无已有库、同步又失败时，才提示错误(通常代表后端还没重启/路由缺失)。
+  // Auto sync on open: first load the existing library (silent fallback), then auto-sync and merge from the mainline. Only when
+  // there is no existing library and the sync also fails is an error shown (usually meaning the backend has not restarted / the route is missing).
   const initializeLibrary = useCallback(
     async (isCancelled?: () => boolean) => {
       if (!project) return;
@@ -296,8 +296,8 @@ export function AssetLibraryModal({
 
   useEffect(() => {
     if (!open || !project) return;
-    // 弹窗在自动同步 resolve 前就关闭时，用 cancelled 丢弃过期结果，避免关闭态回填 library
-    // 与 240ms 关闭重置 effect 打架。
+    // When the dialog closes before the auto sync resolves, use cancelled to discard stale results, avoiding a backfill of library in the closed state
+    // fighting with the 240ms close-reset effect.
     let cancelled = false;
     void initializeLibrary(() => cancelled);
     return () => {
@@ -432,7 +432,7 @@ export function AssetLibraryModal({
         },
       }));
       setPendingUploads((prev) => [...prev, ...accepted.map((a) => a.entry)]);
-      // 把范围切到目标文件夹，并保留本次指定的类目，确保上传进度立刻可见。
+      // Switch the scope to the target folder and keep the category specified this time, so upload progress is visible immediately.
       setActiveCategoryKey(category ?? ALL_CATEGORY_KEY);
       setActiveFolderKey(folder);
       accepted.forEach(({ entry, file }) => {
@@ -492,8 +492,8 @@ export function AssetLibraryModal({
     });
     if (!confirmed) return;
     setIsBulkDeleting(true);
-    // 一条失败不能把剩下的也拦住——最常见的是这个 id 已经被别处删掉了，为它把
-    // 另外几十项的删除全放弃说不过去。逐条来，记下失败的，成功的照删。
+    // One failure must not block the rest - most commonly this id has already been deleted elsewhere, and abandoning the deletion of
+    // dozens of other items for it is unreasonable. Go one by one, record the failures, and delete the successes as usual.
     const failed: string[] = [];
     let lastError: unknown = null;
     try {
@@ -506,10 +506,10 @@ export function AssetLibraryModal({
           lastError = err;
         }
       }
-      // 已删掉的那些要从视图里消失，所以失败了照样刷一次。
+      // The deleted ones must disappear from the view, so refresh even on failure.
       const remaining = await refreshLibrary();
-      // 失败的留在选中态里方便重试，但只留后端确认还在的——已经不存在的 id 留着
-      // 只会让下一次「删除所选」重复撞同一个 404，永远删不完。
+      // Failed ones stay in the selected state for easy retry, but keep only those the backend confirms still exist - ids that no longer exist,
+      // if kept, would only make the next "Delete selected" hit the same 404 again and never finish deleting.
       const alive = new Set(remaining.map((entry) => entry.id));
       setBulkIds(failed.filter((id) => alive.has(id)));
       if (lastError) {
@@ -527,7 +527,7 @@ export function AssetLibraryModal({
     }
   }, [project, bulkIds, isBulkDeleting, refreshLibrary]);
 
-  // 调用方（生图/图片编辑节点只要图片）不要的媒介，在任何视图里都不出现。
+  // Media that the caller (image generation / image edit nodes only want images) does not want never appears in any view.
   const allowedItems = useMemo(
     () =>
       allowedMedia
@@ -536,7 +536,7 @@ export function AssetLibraryModal({
     [library, allowedMedia],
   );
 
-  // 左侧文件夹导航与常驻面板「资产库」tab 共用同一套分法（见 buildAssetFolders）。
+  // The left folder navigation shares the same split as the persistent panel's "Asset library" tab (see buildAssetFolders).
   const folders = useMemo(
     () => buildAssetFolders(allowedItems, t, customFolders),
     [allowedItems, t, customFolders],
@@ -550,11 +550,11 @@ export function AssetLibraryModal({
     if (!activeFolderKey) return null;
     const found = folders.find((folder) => folder.key === activeFolderKey);
     if (found) return found;
-    // 空的系统类目文件夹是「有内容才出现」的（见 buildAssetFolders），所以往一个
-    // 还没有素材的类目里传第一个文件时，它并不在 folders 里。这时若照常回落到
-    // 文件夹网格，上传中的卡片就没地方落——进度看不见，失败了连「移除」也点不到。
-    // 给个同 key 的空壳兜住。只在确实有上传要落进来时才造，免得把刚删掉的文件夹
-    // 又变出来。
+    // Empty system category folders "appear only when they have content" (see buildAssetFolders), so when the first file is uploaded into a category
+    // that has no assets yet, it is not in folders. If we then fell back to the folder grid as usual, the uploading card would have nowhere to land -
+    // progress invisible, and on failure not even "Remove" could be clicked.
+    // Give it an empty shell with the same key. Build it only when there really is an upload landing in it, so a folder just deleted
+    // is not conjured up again.
     if (!pendingUploads.some((p) => p.folder === activeFolderKey)) return null;
     const placeholder: AssetFolder = {
       key: activeFolderKey,
@@ -579,9 +579,9 @@ export function AssetLibraryModal({
   const handleDeleteFolder = useCallback(
     async (folder: AssetFolder) => {
       if (!project || folder.system) return;
-      // 后端删的是这个 folder 下的所有素材，不看当前弹窗只准显示哪种媒介，所以
-      // 数数要用没过滤的 library。用 folder.items 会少报——只收图片的节点里，一个
-      // 装满视频的文件夹会显示成 0 项，等于一句数据丢失的警告都不给。
+      // The backend deletes all assets under this folder, regardless of which media the current dialog is allowed to show, so
+      // the count must use the unfiltered library. Using folder.items would under-report - in an image-only node, a folder
+      // full of videos would show as 0 items, giving not so much as a data-loss warning.
       const doomed = library.filter(
         (entry) => entry.folder === folder.key,
       ).length;
@@ -604,15 +604,15 @@ export function AssetLibraryModal({
         console.error('[asset-library] delete folder failed', err);
         setLibraryError(err instanceof Error ? err.message : String(err));
       }
-      // 删的是「文件夹 + 里面的素材」，两份数据都得重拉；失败也刷，避免视图停在
-      // 一个可能已经被删掉的文件夹上。
+      // What is deleted is "the folder + the assets inside", and both sets of data must be re-fetched; refresh on failure too, to avoid the view staying on
+      // a folder that may already have been deleted.
       if (activeFolderKey === folder.key) setActiveFolderKey(null);
       await Promise.all([refreshLibrary(), refreshFolders()]);
     },
     [project, library, activeFolderKey, refreshLibrary, refreshFolders],
   );
-  // 直接拖文件时，文件夹决定保存位置，类目筛选决定标签。全部资产 + 全部类别时
-  // 默认落到「待分类资产」，避免一个没有存放位置的上传入口。
+  // When files are dragged in directly, the folder decides the save location and the category filter decides the tag. With All assets + All categories
+  // default to "Unclassified assets", avoiding an upload entry without a storage location.
   const dropTarget = useMemo<
     { folder: AssetFolderKey; category: AssetCategory | null; label: string } | null
   >(() => {
@@ -705,8 +705,8 @@ export function AssetLibraryModal({
     (key: string) => {
       setSelectedKeys((prev) => {
         if (prev.includes(key)) return prev.filter((k) => k !== key);
-        // 每种媒介各自独立的选择配额：切筛选时不会被别的媒介占满 maxSelectable
-        // 而卡住当前媒介的勾选（selectionKey 前缀即 media）。
+        // Each medium has its own independent selection quota: switching the filter will not leave the current medium's checking stuck because another medium filled
+        // maxSelectable (the selectionKey prefix is the media).
         const media = key.split(':', 1)[0];
         const sameMediaCount = prev.filter((k) =>
           k.startsWith(`${media}:`),
@@ -745,17 +745,17 @@ export function AssetLibraryModal({
 
   if (typeof document === 'undefined' || !open) return null;
 
-  // 分页只作用在当前范围和类目过滤后的资产。上传中的占位卡不参与分页——它们
-  // 几秒后就变成正式条目，被翻到后面反而看不到进度。
+  // Pagination only applies to assets after the current scope and category filtering. Uploading placeholder cards do not take part - they
+  // become real items in a few seconds, and being paged to the back would hide their progress.
   const pagedTotal = visibleItems.length;
   const pageCount = Math.max(1, Math.ceil(pagedTotal / pageSize));
-  // 删素材会让总页数缩水，停在已经不存在的页上就成空白了，这里兜一下。
+  // Deleting assets shrinks the total page count, and staying on a page that no longer exists would show blank; guard against that here.
   const safePage = Math.min(page, pageCount);
   const pageStart = (safePage - 1) * pageSize;
   const pagedItems = visibleItems.slice(pageStart, pageStart + pageSize);
   const selectedCount = selectedKeys.length;
-  // 配额按媒介算（selectionKey 前缀即 media），所以「选满禁选」也得按条目自己的
-  // 媒介判断——文件夹里图片和视频是混着的。
+  // The quota is counted by medium (the selectionKey prefix is the media), so "disable selecting when full" must also follow the item's own
+  // medium - images and videos are mixed in a folder.
   const selectedCountOf = (media: AssetLibraryMedia) =>
     selectedKeys.filter((k) => k.startsWith(`${media}:`)).length;
   const hasSelection = selectedCount > 0;
@@ -793,7 +793,7 @@ export function AssetLibraryModal({
         }}
         onDrop={handleDrop}
       >
-        {/* 标题与高频操作同层：上传和建夹直接暴露，避免为了两个选项再开一层菜单。 */}
+        {/* Title and high-frequency actions on the same level: upload and new folder are exposed directly, avoiding another menu layer for two options. */}
         <div className="flex shrink-0 flex-col items-stretch justify-between gap-3 px-5 pb-3 pt-5 sm:flex-row sm:items-center sm:gap-4">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-foreground">{t('canvas.assetLibrary.title')}</h2>
@@ -870,7 +870,7 @@ export function AssetLibraryModal({
         </div>
 
         <div className="flex min-h-0 flex-1 bg-[rgba(var(--bg-rgb)/0.16)]">
-          {/* 位置导航：只表达资产存放范围，不再与人物 / 场景等类目混为同级 Tab。 */}
+          {/* Location navigation: expresses only the asset storage scope, no longer a sibling tab with categories such as characters / scenes. */}
           <aside className="ui-scrollbar flex w-52 shrink-0 flex-col overflow-y-auto bg-black/10 p-3">
             <button
               type="button"
@@ -1000,7 +1000,7 @@ export function AssetLibraryModal({
               </div>
             </div>
 
-            {/* 当前范围内的资产网格 */}
+            {/* The asset grid within the current scope */}
             <div className="ui-scrollbar relative flex-1 overflow-y-auto px-5 pb-2 [scrollbar-gutter:stable]">
           {isDragging && dropTarget && (
             <div className="pointer-events-none absolute inset-x-5 inset-y-0 z-10 flex items-center justify-center rounded-sm border border-dashed border-primary/60 bg-primary/10 text-sm text-foreground">
@@ -1074,8 +1074,8 @@ export function AssetLibraryModal({
             {pagedItems.map((entry, idx) => {
               const key = selectionKey(entry);
               const pickMode = mode === 'pick';
-              // 批量删除只给本地上传资产显示复选框；主线资产仍保持可查看，不伪装成
-              // 一张“坏掉、点不了”的卡片。
+              // Bulk delete shows checkboxes only for locally uploaded assets; mainline assets stay viewable, without disguising themselves as
+              // a "broken, unclickable" card.
               const bulkEligible =
                 mode === 'manage' && bulkMode && entry.source === 'upload' && !!entry.id;
               const selected = pickMode
@@ -1272,8 +1272,8 @@ export function AssetLibraryModal({
                 onPageChange={setPage}
                 onPageSizeChange={setPageSize}
               />
-              {/* 「确定」只在挑素材给节点用时才有意义；侧栏点开的资产管理态没有
-                  接收方，那儿的底部就只剩分页。 */}
+              {/* "OK" only makes sense when picking materials for a node; the asset manage mode opened from the sidebar has no
+              recipient, so only pagination remains at its bottom. */}
               {mode === 'pick' && onConfirm && (
                 <Button
                   size="sm"
@@ -1323,7 +1323,7 @@ export function AssetLibraryModal({
         onSubmit={async (name) => {
           const key = await handleCreateFolder(name);
           setNewFolderOpen(false);
-          // 建完直接把左侧范围切到新文件夹，省得用户回头再找。
+          // After creating, switch the left scope straight to the new folder, saving the user from going back to look for it.
           setActiveCategoryKey(ALL_CATEGORY_KEY);
           setActiveFolderKey(key);
         }}
@@ -1374,7 +1374,7 @@ export function AssetLibraryModal({
   );
 }
 
-/** 左侧文件夹导航项：位置入口、数量与文件夹操作保持在同一行。 */
+/** Left folder navigation item: location entry, count and folder actions stay in the same row. */
 function FolderCard({
   folder,
   active,
@@ -1391,7 +1391,7 @@ function FolderCard({
   menuOpen: boolean;
   onToggleMenu: () => void;
   onOpen: () => void;
-  /** 不传表示当前场景没有画布可发（如节点里打开的选素材弹窗）。 */
+  /** When not passed, the current scene has no canvas to send to (e.g. the pick-material dialog opened inside a node). */
   onSend?: () => void;
   onEditCover: () => void;
   onRename: () => void;
@@ -1507,9 +1507,9 @@ function FolderCard({
 }
 
 /**
- * 底部分页。页码窗口最多 7 格、两端省略，够用又不会把 footer 撑开。
+ * Bottom pagination. The page-number window has at most 7 slots with ellipses at both ends, enough without stretching the footer.
  *
- * 每页条数的下拉往上开：它贴着弹窗底边，往下开会被 overflow-hidden 裁掉。
+ * The per-page dropdown opens upward: it hugs the bottom edge of the dialog, and opening downward would be clipped by overflow-hidden.
  */
 function AssetLibraryPagination({
   page,
@@ -1616,7 +1616,7 @@ function AssetLibraryPagination({
   );
 }
 
-/** 页码窗口：总页数 ≤7 全列，否则首尾常驻、当前页两侧各留一格，中间省略。 */
+/** Page-number window: with total pages <= 7 list all, otherwise keep first/last pinned with one slot on each side of the current page and ellipses in between. */
 function pageWindow(page: number, pageCount: number): Array<number | '...'> {
   if (pageCount <= 7) {
     return Array.from({ length: pageCount }, (_, i) => i + 1);

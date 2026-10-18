@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import vi from '../../../public/locales/vi/translation.json';
+import viLocale from '../../../public/locales/vi/translation.json';
 import en from '../../../public/locales/en/translation.json';
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/api/client', () => ({ apiCall: vi.fn() }));
@@ -32,7 +32,7 @@ describe('external skill imports', () => {
     expect(parseCandidateBundle(JSON.stringify(bundle))).toEqual(bundle);
   });
   it('hands off a native candidate without asking chat to run the canvas', async () => {
-    await i18n.init({ lng: 'vi', resources: { vi: { translation: vi }, en: { translation: en } } });
+    await i18n.init({ lng: 'vi', resources: { vi: { translation: viLocale }, en: { translation: en } } });
     const prompt = skillImportStudioPrompt({ skill: { id: 'ad' }, recipes: [] });
     expect(prompt).toContain('Skill Studio');
     expect(prompt).toContain('"id": "ad"');

@@ -97,9 +97,9 @@ describe("the episode list does not read the beats table", () => {
         return HttpResponse.json({
           ok: true,
           data: [
-            { number: 1, title: "第一集", beat_count: 7 },
-            { number: 2, title: "第二集", beat_count: 4 },
-            { number: 3, title: "第三集", beat_count: 0 },
+            { number: 1, title: "Episode 一", beat_count: 7 },
+            { number: 2, title: "Episode 二", beat_count: 4 },
+            { number: 3, title: "Episode 三", beat_count: 0 },
           ],
         });
       }),
@@ -109,11 +109,11 @@ describe("the episode list does not read the beats table", () => {
 
     // 先确认三张卡片真的渲染出来了——否则页面崩在半路，下面那条 ``/beats`` 断言
     // 会因为什么都没发而空过。
-    expect(await screen.findByText("第一集")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("第三集")).toBeInTheDocument());
+    expect(await screen.findByText("Episode 一")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Episode 三")).toBeInTheDocument());
     expect(seen.filter((path) => path.endsWith("/episodes"))).toHaveLength(1);
     // 三集，三张卡片，零个 beats 请求。这里写 toEqual([]) 而不是数个数：回归的形状
-    // 就是"每集一个"，列出来比一个数字更能说明是哪几集漏了。
+    // 就是"每集一"，列出来比一个数字更能说明是哪几集漏了。
     expect(seen.filter((path) => path.includes("/beats"))).toEqual([]);
   });
 });

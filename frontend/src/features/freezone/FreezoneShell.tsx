@@ -3254,7 +3254,7 @@ function FreezoneAgentHistoryPanel({
 
 function formatAgentHistoryTime(timestamp: number): string {
   if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(i18n.language || undefined, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

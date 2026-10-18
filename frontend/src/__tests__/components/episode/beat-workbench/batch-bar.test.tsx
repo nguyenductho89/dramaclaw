@@ -19,94 +19,94 @@ beforeAll(async () => {
       zh: {
         translation: {
           common: {
-            cancel: "取消",
-            confirmExecute: "确认执行",
-            error: "错误",
+            cancel: "Cancel",
+            confirmExecute: "Confirm execution",
+            error: "Errors",
             ok: "OK",
-            billingRuleNotConfiguredShort: "需配置",
+            billingRuleNotConfiguredShort: "Configure",
           },
           episode: {
             script: { identityRequired: "需要身份规划" },
             workbench: {
               batch: {
-                rewriteScript: "重写脚本",
-                rewriteScriptTitle: "重写脚本？",
-                rewriteScriptDesc: "确认重写脚本？",
-                genSketch: "生成草图",
-                genSketchTitle: "生成草图？",
-                genSketchDesc: "确认生成草图？",
-                aiOptimize: "生成全 Beat 视频提示词",
-                aiOptimizeTitle: "生成全 Beat 视频提示词？",
-                aiOptimizeDesc: "确认生成全 Beat 视频提示词？",
-                aiDetect: "AI 检测",
-                aiDetectTooltip: "AI 检测",
-                aiDetectRunning: "AI 检测中",
-                aiDetectEmpty: "无检测结果",
+                rewriteScript: "Rewrite all scripts",
+                rewriteScriptTitle: "Rewrite all scripts?",
+                rewriteScriptDesc: "Regenerate all beat narrations from source/adapted text. Existing text and sketch stale marks will be affected.",
+                genSketch: "Generate Sketches",
+                genSketchTitle: "Generate all sketches?",
+                genSketchDesc: "Generate sketches for all beats. Existing sketches won't be overwritten; new ones enter the candidate pool.",
+                aiOptimize: "Generate all-beat video prompts",
+                aiOptimizeTitle: "Generate all-beat video prompts?",
+                aiOptimizeDesc: "Use SuperPower to analyze this episode's sketches and generate video prompts for all beats.",
+                aiDetect: "AI detect",
+                aiDetectTooltip: "AI detect",
+                aiDetectRunning: "AI detecting characters...",
+                aiDetectEmpty: "AI returned no detections",
                 aiDetectSuccess:
-                  "AI 检测完成：{{beats}} 个 beat，共 {{ids}} 个身份、{{props}} 个道具",
+                  "AI detect complete: {{beats}} beats, {{ids}} identities, {{props}} props",
                 aiDetectReview:
-                  "请核对每个 beat；漏识别可在更多里的出场身份/出场道具中补选。",
-                reassignColors: "重新配色",
-                reassignColorsTooltip: "重新配色",
-                reassignColorsTitle: "重新配色？",
-                reassignColorsDesc: "确认重新配色？",
+                  "Review each beat; add missing identities or props under More if AI missed anything.",
+                reassignColors: "Reassign colors",
+                reassignColorsTooltip: "Reassign colors",
+                reassignColorsTitle: "Reassign sketch colors?",
+                reassignColorsDesc: "Reassign sketch colors?",
                 reassignColorsSuccess:
-                  "已分配 {{count}} 个身份、{{propCount}} 个道具",
-                insertManualBeforeFirst: "首镜前插入",
-                insertManualBeforeFirstTooltip: "首镜前插入",
-                genMissingManualTitle: "补生成草图？",
-                genMissingManualDesc: "确认补生成草图？",
-                genMissingManual: "补生成草图",
-                genMissingManualTooltip: "补生成草图",
-                genMissingManualEmpty: "没有缺草图的手工镜头",
+                  "已分配 {{count}} 个身份、{{propCount}} props",
+                insertManualBeforeFirst: "Before first shot",
+                insertManualBeforeFirstTooltip: "Before first shot",
+                genMissingManualTitle: "Fill missing sketches?",
+                genMissingManualDesc: "Batch generate sketches for newly inserted manual shots in this episode that are missing one, grouped by scene.",
+                genMissingManual: "Fill sketches",
+                genMissingManualTooltip: "Generate sketches for newly inserted manual shots in this episode that are missing one, grouped by scene",
+                genMissingManualEmpty: "No manual shots are missing a sketch",
                 genMissingManualDispatched:
-                  "已发起 {{count}} 组手工镜头草图任务",
-                genRender: "规划渲染",
-                genRenderShort: "全集渲染",
-                genRenderTooltip: "规划渲染",
-                genAudio: "生成音频",
-                genAudioTitle: "生成音频？",
-                genAudioDesc: "确认生成音频？",
-                genAudioUnavailableForVideoModel: "当前模型无需单独生成音频",
-                videoModel: "视频模型",
-                sketchSettingsLabel: "草图设置",
-                renderSettingsLabel: "渲染设置",
-                videoSettingsLabel: "视频设置",
-                genVideo: "生成视频",
-                genVideoTitle: "生成视频？",
-                genVideoDesc: "确认生成视频？",
-                narrationIncompatible: "不兼容旁白 {{count}}",
-                globalOptimizeStarted: "已启动 AI 优化",
-                selectedCount: "已选 {{count}} 个节拍",
-                clearSelection: "清除选择",
-                singleRegen: "单张重抽",
-                autoCombine: "批量重抽",
-                regenSketchSingleTitle: "单张重抽 {{count}} 个 beat 草图？",
-                regenSketchSingleDesc: "按当前画幅把 #{{beats}} 拆成 1×1 草图任务。",
-                dispatched: "已发配 {{count}} 个 beat → {{mode}}",
-                dispatchedBatch: " × {{batches}} 组",
-                dispatchFailed: "发配失败",
-                sketch: "草图",
-                sketchGroupRunning: "相同草图组正在运行中",
-                sketchGroupSkippedRunning: "已跳过 {{count}} 个正在运行的草图组",
+                  "Dispatched {{count}} manual-shot sketch task(s)",
+                genRender: "Render full episode",
+                genRenderShort: "All renders",
+                genRenderTooltip: "Open full-episode Render Plan (standard generate_grid mode)",
+                genAudio: "Generate Audio",
+                genAudioTitle: "Generate all audio?",
+                genAudioDesc: "Generate TTS voiceover for all beats missing audio.",
+                genAudioUnavailableForVideoModel: "The current video model does not need separate full-episode audio generation",
+                videoModel: "Video model",
+                sketchSettingsLabel: "Sketch settings",
+                renderSettingsLabel: "Render settings",
+                videoSettingsLabel: "Video settings",
+                genVideo: "Generate video",
+                genVideoTitle: "Generate video?",
+                genVideoDesc: "Generate video clips for all beats missing video. Requires sketches/renders and audio first.",
+                narrationIncompatible: "This model only supports dialogue shots ({{count}} narration beats incompatible)",
+                globalOptimizeStarted: "Global optimize started",
+                selectedCount: "{{count}} beats selected",
+                clearSelection: "Clear selection",
+                singleRegen: "Single redraw",
+                autoCombine: "Batch redraw",
+                regenSketchSingleTitle: "Single redraw {{count}} beat sketches?",
+                regenSketchSingleDesc: "Split #{{beats}} into 1×1 sketch tasks using the current aspect ratio.",
+                dispatched: "Dispatched {{count}} beats → {{mode}}",
+                dispatchedBatch: " × {{batches}} batches",
+                dispatchFailed: "Dispatch failed",
+                sketch: "Sketch",
+                sketchGroupRunning: "Matching sketch group is already running",
+                sketchGroupSkippedRunning: "Skipped {{count}} running sketch groups",
               },
               video: {
-                noteDefault: "默认",
-                noteDialogue: "对白镜头",
+                noteDefault: "Default",
+                noteDialogue: "Dialogue shot",
               },
             },
             renderSettings: {
-              model: "模型",
-              modelPlaceholder: "请选择",
+              model: "Model",
+              modelPlaceholder: "Choose",
               sketchAspectPadding: "草图适配",
             },
             sketchSettings: {
-              model: "草图模型",
-              modelPlaceholder: "请选择草图模型",
+              model: "Sketch model",
+              modelPlaceholder: "Select sketch model",
               wide16x9: "16:9",
             },
             renderPlan: {
-              dispatched: "已发起 {{scope}}",
+              dispatched: "Render started",
             },
           },
         },
@@ -429,7 +429,7 @@ describe("BatchBar", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "生成草图" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate Sketches" })).not.toBeInTheDocument();
   });
 
   it("hides whole-episode render generation from the batch toolbar", () => {
@@ -446,7 +446,7 @@ describe("BatchBar", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "全集渲染" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "All renders" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "规划渲染" })).not.toBeInTheDocument();
   });
 
@@ -484,7 +484,7 @@ describe("BatchBar", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /生成全 Beat 视频提示词/ }),
+      screen.queryByRole("button", { name: /Generate all-beat video prompts/ }),
     ).not.toBeInTheDocument();
 
     rerender(
@@ -502,7 +502,7 @@ describe("BatchBar", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /生成全 Beat 视频提示词/ }),
+      screen.queryByRole("button", { name: /Generate all-beat video prompts/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -520,7 +520,7 @@ describe("BatchBar", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.queryByText("视频模型")).not.toBeInTheDocument();
+    expect(screen.queryByText("Video model")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "补生成草图" })).not.toBeInTheDocument();
   });
 
@@ -545,7 +545,7 @@ describe("BatchBar", () => {
         </I18nextProvider>,
       );
 
-      expect(screen.queryByRole("button", { name: "生成音频" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Generate Audio" })).not.toBeInTheDocument();
     },
   );
 
@@ -564,7 +564,7 @@ describe("BatchBar", () => {
       </I18nextProvider>,
     );
 
-    const aiDetectButton = screen.getByRole("button", { name: "AI 检测" });
+    const aiDetectButton = screen.getByRole("button", { name: "AI detect" });
     expect(aiDetectButton).toHaveTextContent("5");
     await user.click(aiDetectButton);
 
@@ -574,12 +574,12 @@ describe("BatchBar", () => {
       { id: "toast-1" },
     );
 
-    await user.click(screen.getByRole("button", { name: "重新配色" }));
-    await user.click(screen.getByRole("button", { name: "确认执行" }));
+    await user.click(screen.getByRole("button", { name: "Reassign colors" }));
+    await user.click(screen.getByRole("button", { name: "Confirm execution" }));
 
     expect(assignColorsMock).toHaveBeenCalledWith({ force: true });
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "已分配 1 个身份、2 个道具",
+      "已分配 1 个身份、2 props",
     );
   });
 

@@ -46,9 +46,9 @@ class FakeIdentityStore:
 
 class ExistingCharacterIdentityPlanner(IdentityPlanner):
     async def _filter_cast(self, all_names, content_text, episode, on_log=None):
-        assert "陆辰" in all_names
+        assert "Luke" in all_names
         self.filtered_content_text = content_text
-        return ["陆辰"], ""
+        return ["Luke"], ""
 
     async def _analyze_default_identities(
         self,
@@ -61,9 +61,9 @@ class ExistingCharacterIdentityPlanner(IdentityPlanner):
         return EpisodeDefaultIdentities(
             defaults=[
                 DefaultIdentityRequirement(
-                    character_name="陆辰",
-                    visual_state="默认",
-                    reason="图谱已有角色，场次头明确标注出场人物",
+                    character_name="Luke",
+                    visual_state="default",
+                    reason="The graph already has the character and the scene header clearly lists the cast",
                 )
             ]
         )
@@ -71,7 +71,7 @@ class ExistingCharacterIdentityPlanner(IdentityPlanner):
     async def _resolve_requirements(
         self, episode_number, requirements, on_log=None, output_language=None
     ):
-        return 0, ["陆辰_默认"], {("陆辰", "默认"): "陆辰_默认"}
+        return 0, ["Luke_default"], {("Luke", "default"): "Luke_default"}
 
     async def _analyze_special_identities(
         self,
@@ -88,7 +88,7 @@ class ExistingCharacterIdentityPlanner(IdentityPlanner):
 class MissingCharacterIdentityPlanner(IdentityPlanner):
     async def _filter_cast(self, all_names, content_text, episode, on_log=None):
         assert all_names == []
-        assert self.cognee_store.get_character("陆辰") is None
+        assert self.cognee_store.get_character("Luke") is None
         return [], ""
 
 
@@ -96,34 +96,34 @@ class MissingCharacterIdentityPlanner(IdentityPlanner):
 async def test_identity_planner_uses_existing_characters_without_auto_creation():
     store = FakeIdentityStore(
         """
-场次（1） 地点：地下室，夜，内；出场人物：陆辰
-陆辰推开一个腐朽的空书架。
+Scene 1. INT. BASEMENT - NIGHT; Characters: Luke
+Luke pushes open a rotting empty bookshelf.
 """
     )
     await store.add_character(
         NovelCharacter(
-            name="陆辰",
-            aliases=["陆先生"],
-            gender="男",
-            description="手动确认过的全局角色",
+            name="Luke",
+            aliases=["Mr. Luke"],
+            gender="male",
+            description="Manually confirmed global character",
         )
     )
     planner = ExistingCharacterIdentityPlanner(store)
 
     new_count, resolved_count = await planner.plan_single_episode(
-        NovelEpisode(number=1, title="命运之书")
+        NovelEpisode(number=1, title="The Book of Fate")
     )
 
     assert new_count == 0
     assert resolved_count == 1
-    assert sorted(store._characters) == ["陆辰"]
+    assert sorted(store._characters) == ["Luke"]
     assert planner.auto_promoted_characters == []
     assert store.updated_episode == (
         1,
         {
-            "identity_ids": ["陆辰_默认"],
-            "character_names": ["陆辰"],
-            "identity_default_map": {"陆辰": "陆辰_默认"},
+            "identity_ids": ["Luke_default"],
+            "character_names": ["Luke"],
+            "identity_default_map": {"Luke": "Luke_default"},
         },
     )
 
@@ -131,36 +131,36 @@ async def test_identity_planner_uses_existing_characters_without_auto_creation()
 @pytest.mark.asyncio
 async def test_identity_planner_prefers_current_production_text():
     store = FakeIdentityStore(
-        "原始剧本中的陆辰。",
-        working_content="改写工作稿中的陆辰。",
+        "Luke in the original script.",
+        working_content="Luke in the rewritten working draft.",
     )
-    await store.add_character(NovelCharacter(name="陆辰"))
+    await store.add_character(NovelCharacter(name="Luke"))
     planner = ExistingCharacterIdentityPlanner(store)
 
     await planner.plan_single_episode(
         NovelEpisode(
             number=1,
-            title="命运之书",
-            beat_source_text="最终制作稿中的陆辰。",
+            title="The Book of Fate",
+            beat_source_text="Luke in the final production draft.",
         )
     )
 
-    assert planner.filtered_content_text == "最终制作稿中的陆辰。"
+    assert planner.filtered_content_text == "Luke in the final production draft."
 
 
 @pytest.mark.asyncio
 async def test_identity_planner_does_not_auto_create_missing_characters():
     store = FakeIdentityStore(
         """
-场次（1） 地点：地下室，夜，内；出场人物：陆辰
-陆辰推开一个腐朽的空书架。
+Scene 1. INT. BASEMENT - NIGHT; Characters: Luke
+Luke pushes open a rotting empty bookshelf.
 """
     )
     planner = MissingCharacterIdentityPlanner(store)
 
     with pytest.raises(ValueError, match="Pass 0"):
-        await planner.plan_single_episode(NovelEpisode(number=1, title="命运之书"))
+        await planner.plan_single_episode(NovelEpisode(number=1, title="The Book of Fate"))
 
-    assert store.get_character("陆辰") is None
+    assert store.get_character("Luke") is None
     assert planner.auto_promoted_characters == []
     assert store.updated_episode is None

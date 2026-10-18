@@ -42,8 +42,8 @@ import {
 import { useRewardEventsStore } from "@/features/rewards/reward-events-store";
 import { openVersionUpdateDialog } from "@/features/version-update/version-update-events";
 
-/** 气泡可见时长按事件种类对齐宠物动作时长（成功/失败动画结束时气泡同步收尾），
- * 与 Piko 气泡共用同一组淡出节奏（{@link BUBBLE_FADE_OUT_MS}）。 */
+/** Bubble visible duration is aligned with the pet action duration by event kind (the bubble wraps up in sync when the success/failure animation ends),
+ * and shares the same fade-out rhythm as the Piko bubble ({@link BUBBLE_FADE_OUT_MS}). */
 const PET_BUBBLE_VISIBLE_MS: Record<"running" | "success" | "failure", number> = {
   running: BUBBLE_VISIBLE_MS,
   success: SUCCESS_ACTION_MS,
@@ -103,7 +103,7 @@ export function MyBuddyCompanion() {
   const [importRefreshKey, setImportRefreshKey] = useState(0);
   const [importedPets, setImportedPets] = useState<ImportedPetEntry[]>([]);
   const [homeXPercent] = useState(randomCompanionHomeXPercent);
-  // 宠物的手动状态覆盖（null = 跟随系统/任务）。「状态模拟」下拉选择 + 点击宠物循环共用。
+  // Manual state override of the pet (null = follow system/task). Shared by the "state simulation" dropdown selection and click-pet cycling.
   const [petStateName, setPetStateName] = useState<PetdexStateName | null>(null);
   const [companionResetNonce, setCompanionResetNonce] = useState(0);
   const [draggingCompanion, setDraggingCompanion] = useState(false);
@@ -135,9 +135,9 @@ export function MyBuddyCompanion() {
   const isPiko = companionKind === PIKO_COMPANION_KIND;
   const pikoAction = isDiveRecovering ? action : pikoDebugAction ?? action;
 
-  // 加载已导入宠物（IndexedDB），为每只建会话级 blob URL。回收策略：拿到新的一批后
-  // 再 revoke 上一批（而不是在 cleanup 里先 revoke——否则会把当前正在显示的那只 URL
-  // 提前撤销，导致刷新时闪一下），unmount 时回收最后一批。
+  // Load imported pets (IndexedDB) and build a session-level blob URL for each. Reclaim strategy: after getting a new batch,
+  // revoke the previous batch (rather than revoking first in cleanup - otherwise the URL of the pet currently on display would be
+  // revoked early and flash on refresh), and reclaim the last batch on unmount.
   const importedUrlsRef = useRef<string[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -186,15 +186,15 @@ export function MyBuddyCompanion() {
     [importedPets],
   );
 
-  // 当前宠物：选形象时已把 PetdexCatalogEntry 存进 companionPet。导入宠物按 slug 取
-  // 会话级 blob URL（持久化的 url 刷新后失效）；内置宠物直接用 companionPet。
+  // Current pet: when an avatar is chosen the PetdexCatalogEntry is already stored in companionPet. Imported pets take the
+  // session-level blob URL by slug (the persisted url is invalid after a refresh); built-in pets use companionPet directly.
   const activePet = useMemo(() => {
     if (isPiko || !companionPet) return null;
     if (companionPet.imported) return importedBySlug.get(companionPet.slug) ?? null;
     return companionPet;
   }, [isPiko, companionPet, importedBySlug]);
 
-  // 宠物气泡：参考 Piko —— 任务「开始 / 成功 / 失败」时事件触发，显示几秒后淡出。
+  // Pet bubble: following Piko - triggered by task "start / success / failure" events, shown for a few seconds then fades out.
   const tasks = useTaskCenterStore((state) => state.tasks);
   const [petBubble, setPetBubble] = useState<{
     kind: "running" | "success" | "failure";
@@ -207,7 +207,7 @@ export function MyBuddyCompanion() {
   const bubbleLeaveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // 按任务 key 比对上一帧状态，捕捉「新开始 / 新成功 / 新失败」的跳变。
+    // Compare the previous frame's state by task key, to catch the "newly started / newly succeeded / newly failed" transitions.
     const current = new Map<string, string>();
     let event: { kind: "running" | "success" | "failure"; name: string } | null = null;
     for (const [key, task] of tasks) {
@@ -222,8 +222,8 @@ export function MyBuddyCompanion() {
     }
     prevStatusRef.current = current;
     if (!bubbleInitedRef.current) {
-      // 首帧记基线；但若此刻已有任务在跑，也弹一次「进行中」气泡（否则挂载时
-      // 已在跑的任务永远不会有气泡）。
+      // Record the baseline on the first frame; but if a task is already running right now, also pop one "in progress" bubble (otherwise a task
+      // already running at mount would never get a bubble).
       bubbleInitedRef.current = true;
       const active = Array.from(tasks.values()).find(isActive);
       if (!active) return;
@@ -240,7 +240,7 @@ export function MyBuddyCompanion() {
     if (bubbleLeaveTimerRef.current) window.clearTimeout(bubbleLeaveTimerRef.current);
     setPetBubbleLeaving(false);
     setPetBubble({ kind: event.kind, text: t(textKey, { name: event.name }) });
-    // 可见时长随事件种类对齐动作动画（成功 2.6s / 失败 3.6s / 进行中 3.5s）→ 淡出 → 卸载。
+    // Visible duration is aligned with the action animation by event kind (success 2.6s / failure 3.6s / in progress 3.5s) -> fade out -> unmount.
     const visibleMs = PET_BUBBLE_VISIBLE_MS[event.kind];
     bubbleTimerRef.current = window.setTimeout(() => setPetBubbleLeaving(true), visibleMs);
     bubbleLeaveTimerRef.current = window.setTimeout(
@@ -274,7 +274,7 @@ export function MyBuddyCompanion() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // 位置：占视口宽/高的百分比，可整页任意拖动。未拖动过用默认落点（顶部随机 x）。
+  // Position: a percentage of the viewport width/height, freely draggable across the page. Before any drag, use the default landing spot (random x at the top).
   const xPercent = companionXPercent ?? homeXPercent;
   const yPercent = companionYPercent ?? 1;
   const displayXPercent = dragPosition?.xPercent ?? xPercent;
@@ -324,7 +324,7 @@ export function MyBuddyCompanion() {
     });
   }, []);
 
-  // 点击宠物：在 9 个状态（含「跟随系统」auto=null）之间循环切换动作预览。
+  // Click the pet: cycle the action preview through the 9 states (including "follow system" auto=null).
   const cyclePetState = useCallback(() => {
     setPetStateName((current) => {
       const order: (PetdexStateName | null)[] = [null, ...PETDEX_STATE_OPTIONS.map((o) => o.name)];
@@ -351,8 +351,8 @@ export function MyBuddyCompanion() {
     [triggerMockAccessoryBatchUnlock, triggerMockAccessoryUnlock],
   );
 
-  // 拖拽 / 点击：透明把手层捕获指针。移动超过阈值 → 2D 拖动定位（按视口百分比持久化）；
-  // 几乎没动 → 视为点击 → 切换宠物动作。
+  // Drag / click: a transparent handle layer captures the pointer. Moving beyond a threshold -> 2D drag positioning (persisted as viewport percentages);
+  // barely moving -> treated as a click -> switch the pet action.
   const handleDragPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
@@ -454,12 +454,12 @@ export function MyBuddyCompanion() {
     [cyclePetState, emitDragPixel, isPiko, scheduleDragPosition, setCompanionPosition, xPercent, yPercent],
   );
 
-  // 切换形象时清掉手动覆盖，回到跟随系统。
+  // When switching avatars clear the manual override and return to following the system.
   useEffect(() => {
     setPetStateName(null);
   }, [companionKind]);
 
-  // 全局隐藏开关：开启后不渲染陪伴形象（hooks 已在上方执行完，安全早返回）。
+  // Global hide switch: when on, the companion avatar is not rendered (hooks have all run above, so an early return is safe).
   if (companionHidden) return null;
 
   return (
@@ -512,7 +512,7 @@ export function MyBuddyCompanion() {
           </button>
         </div>
       )}
-      {/* 整页任意定位的浮动容器（fixed，相对视口）。形象/气泡/拖拽把手都在其中。 */}
+      {/* Floating container positioned anywhere on the page (fixed, relative to the viewport). The avatar/bubble/drag handle are all inside it. */}
       <div
         ref={floatingRef}
         className="mybuddy-companion-floating"
@@ -559,8 +559,8 @@ export function MyBuddyCompanion() {
                 stateOverride={petStateName ? PETDEX_STATES[petStateName] : null}
               />
             ) : (
-              // 绝对定位（top/left:0）让 PikoActionTransition 的「离场+入场」两个 anchor
-              // 重叠淡入淡出，而非在流内上下叠加（那会导致切换动作时上下闪动）。
+              // Absolute positioning (top/left:0) lets PikoActionTransition's "leave + enter" two anchors
+              // overlap and cross-fade, instead of stacking vertically in flow (which would make it jump up and down when switching actions).
               <PikoActionTransition
                 key={`piko-${companionResetNonce}`}
                 action={pikoAction}
@@ -575,8 +575,8 @@ export function MyBuddyCompanion() {
             )}
           </div>
         </div>
-        {/* 任务开始/成功/失败：宠物右上角的马赛克像素风气泡，几秒后淡出（仅 petdex 宠物；
-            Piko 有自己的气泡系统）。 */}
+        {/* Task start/success/failure: a mosaic pixel-style bubble at the pet's top-right, fading out after a few seconds (petdex pets only;
+            Piko has its own bubble system). */}
         {activePet && petBubble && (
           <div
             className="petdex-pet-bubble"
@@ -587,7 +587,7 @@ export function MyBuddyCompanion() {
             {petBubble.text}
           </div>
         )}
-        {/* 透明拖拽把手：盖在形象上方，按住可整页任意拖动。 */}
+        {/* Transparent drag handle: covers the avatar, hold to drag anywhere on the page. */}
         <div
           className="mybuddy-companion-drag-handle"
           onPointerDown={handleDragPointerDown}

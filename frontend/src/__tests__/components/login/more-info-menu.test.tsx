@@ -13,7 +13,7 @@ vi.mock("@/lib/runtime-config", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: () =>
-      translationState.language === "en" ? "More information" : "更多信息",
+      translationState.language === "en" ? "More information" : "More information",
     i18n: { language: translationState.language },
   }),
 }));
@@ -23,7 +23,7 @@ import { MoreInfoMenu } from "@/components/login/cinematic/MoreInfoMenu";
 const validItems = [
   {
     id: "guide",
-    title: "使用说明",
+    title: "Use 说明",
     content_type: "markdown",
     content: "## 使用说明",
     url: "",
@@ -45,7 +45,7 @@ const validItems = [
   },
   {
     id: "docs",
-    title: "帮助中心",
+    title: "Help Center",
     content_type: "link",
     content: "",
     url: "https://example.com/docs",
@@ -88,14 +88,14 @@ describe("MoreInfoMenu", () => {
     mockResponse({ ok: true, items: validItems });
     render(<MoreInfoMenu />);
 
-    const trigger = await screen.findByRole("button", { name: "更多信息" });
+    const trigger = await screen.findByRole("button", { name: "More information" });
     fireEvent.focus(trigger);
-    const helpItem = screen.getByRole("menuitem", { name: "帮助中心" });
+    const helpItem = screen.getByRole("menuitem", { name: "Help Center" });
     expect(helpItem.tagName).toBe("A");
     expect(helpItem).toHaveAttribute("href", "https://example.com/docs");
 
-    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "使用说明" }));
-    expect(await screen.findByRole("heading", { name: "使用说明" })).toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Use 说明" }));
+    expect(await screen.findByRole("heading", { name: "Use 说明" })).toBeInTheDocument();
 
     fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "活动海报" }));
     expect(await screen.findByRole("img", { name: "活动海报" })).toHaveAttribute(
@@ -130,7 +130,7 @@ describe("MoreInfoMenu", () => {
   it("updates the trigger and menu label when the language changes", async () => {
     mockResponse({ ok: true, items: validItems });
     const { rerender } = render(<MoreInfoMenu />);
-    const trigger = await screen.findByRole("button", { name: "更多信息" });
+    const trigger = await screen.findByRole("button", { name: "More information" });
     fireEvent.focus(trigger);
 
     translationState.language = "en";

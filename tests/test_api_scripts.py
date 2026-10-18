@@ -77,7 +77,7 @@ def test_script_generate_requires_identity_plan_before_side_effects(monkeypatch,
 def test_script_generate_starts_script_writer_when_identity_plan_exists(
     monkeypatch, tmp_path
 ):
-    client, store, clean_calls = _script_client(monkeypatch, tmp_path, ["秦_幼年"])
+    client, store, clean_calls = _script_client(monkeypatch, tmp_path, ["Qin_child"])
 
     response = client.post("/api/v1/projects/demo/episodes/2/script/generate", json={})
 

@@ -862,7 +862,7 @@ Note that both are "let a human see it earlier", not automatic error correction.
 
 LibTV publishes a client package under the OpenClaw specification so that any compatible Agent can remote-control its cloud service. The OpenClaw ecosystem is not small, but **we do not build a similar package**, because of an architectural conflict and not workload:
 
-Publishing a remote-control package means demoting external Agents to porters and taking creative decisions back to the server, which directly contradicts Claim 1 (the Graph is the local source of truth for creation) and Claim 3 (the creative method is inspectable). The split between the two open-source strategies can be summarized in one sentence: **LibTV publishes client source to protect the cloud-side method, while DramaClaw publishes the method itself, so no client is needed.**
+Publishing a remote-control package means demoting external Agents to porters and taking creative decisions back to the server, which directly contradicts Claim 1 (the Graph is the local source of truth for creation) and Claim 3 (the creative method is inspectable). The split between the two source-disclosure strategies can be summarized in one sentence: **LibTV publishes client source to protect the cloud-side method, while DramaClaw publishes the method itself, so no client is needed.**
 
 Our unit of distribution is the Skill Bundle, the method itself, rather than an access credential plus an API wrapper.
 

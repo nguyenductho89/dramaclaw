@@ -18,13 +18,13 @@ describe("ConfirmDialogHost", () => {
     render(<ConfirmDialogHost />);
 
     const pending = confirmDialog({
-      title: "终止任务",
+      title: "Stop task",
       description: "终止不会退还积分",
-      confirmText: "确认终止",
-      cancelText: "继续执行",
+      confirmText: "Stop task",
+      cancelText: "Keep running",
     });
 
-    await user.click(await screen.findByRole("button", { name: "确认终止" }));
+    await user.click(await screen.findByRole("button", { name: "Stop task" }));
 
     await expect(pending).resolves.toBe(true);
   });
@@ -61,7 +61,7 @@ describe("ConfirmDialogHost", () => {
     const user = userEvent.setup();
     render(<ConfirmDialogHost />);
 
-    const pending = alertDialog({ title: "画布已达上限", description: "删掉一些再新建" });
+    const pending = alertDialog({ title: "Canvas limit reached", description: "删掉一些再新建" });
 
     expect(await screen.findByText("删掉一些再新建")).toBeInTheDocument();
     // 没有第二条路可选，留个「取消」只会让人以为还能反悔。

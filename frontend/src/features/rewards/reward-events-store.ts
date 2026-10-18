@@ -150,9 +150,9 @@ export const useRewardEventsStore = create<RewardEventsState>()(
       version: 1,
       storage: createJSONStorage(() => quotaSafeStateStorage),
       partialize: (state) => ({ events: capPersistedRewardEvents(state.events) }),
-      // v0 时代 DEV 会自动注入一个「创始勋章」mock 奖励，不领取就一直弹
-      // Piko 气泡。迁移时把这个未领取的种子事件清掉；已领取的保留（饰品
-      // 已经归属用户）。
+      // In the v0 era DEV automatically injected a "Founder Badge" mock reward, which kept popping up the
+      // Piko bubble until claimed. The migration clears this unclaimed seed event; claimed ones are kept (the accessory
+      // already belongs to the user).
       migrate: (persisted: unknown) => {
         const base = (persisted ?? {}) as { events?: AccessoryRewardEvent[] };
         return {

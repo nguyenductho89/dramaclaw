@@ -1,42 +1,42 @@
-# 外部 Skill 导入
+# External Skill Import
 
-外部 Markdown/ZIP 是转换来源，产品运行时仍使用原生 Skill JSON + Recipes，不引入第二套 Skill Runtime。
+An external Markdown/ZIP is a conversion source; the product runtime still uses native Skill JSON + Recipes, and no second Skill Runtime is introduced.
 
-## 默认转换链路（报告 v3）
+## Default conversion path (report v3)
 
-1. 读取 MD 或包含一个 SKILL.md 的 ZIP，检查大小、路径安全和引用资源。附件脚本不执行。
-2. 一次模型调用提取关键方法并设计 Skill/Recipes。设计是内部辅助信息，不要求逐字引用清单、一对一映射或测试场景。
-3. 生成原生 Bundle。代码补齐可以确定的重复元数据；非空冲突仍报错。已有 Recipes 必须原样复用，或换新 ID。
-4. 验证 Bundle、Skill、Recipes、引用、输入参数和评分量纲，规范化结果再验证一次。独立结构错误一起反馈修复。
-5. 将最终包与完整原文对照审核。阻断限于具体方法遗漏、方法改变和 Recipe 职责错误，必须提供原文依据与 Bundle 字段证据；可选建议为警告。中间设计不作为最终硬契约。
-6. 结构与方法审核通过即可安装；警告确认后可安装。修改草稿必须重新验证，报告绑定最终包内容哈希。
+1. Read the MD, or a ZIP containing one SKILL.md, and check size, path safety, and referenced resources. Attached scripts are not executed.
+2. One model call extracts the key methods and designs the Skill/Recipes. The design is internal auxiliary information and does not require verbatim citation lists, one-to-one mapping, or test scenarios.
+3. Generate a native Bundle. Code fills in the repeated metadata that can be determined; non-empty conflicts still raise errors. Existing Recipes must be reused as is, or given a new ID.
+4. Validate the Bundle, Skill, Recipes, references, input parameters, and rating scales, normalize the result and validate once more. Independent structural errors are fed back together for repair.
+5. Review the final package against the full original text. Blocking is limited to specific method omissions, method changes, and wrong Recipe responsibilities, which must come with original-text basis and Bundle field evidence; optional suggestions are warnings. The intermediate design is not a final hard contract.
+6. A package that passes the structure and method review can be installed; with warnings it can be installed after confirmation. A modified draft must be re-validated, and the report is bound to the final package content hash.
 
-默认不生成 Graph，不检查模型、凭证、真实素材、运行时配置或能力快照。现有流程执行机制保持原样。独立的静态 Graph 校验工具不参与导入和安装判定。
+By default no Graph is generated, and models, credentials, real assets, runtime configuration, or capability snapshots are not checked. The existing workflow execution mechanism stays as is. The standalone static Graph validation tool does not take part in import and install decisions.
 
-无修复时通常为设计、生成、审核三次模型调用。每次格式错误最多修正一次，最多三轮候选包（为格式修复后的方法修复保留机会），总计最多十次调用。修复携带具体错误和上次回答。重验用户编辑的草稿只检查，不替用户重写。
+Without repairs there are usually three model calls: design, generation, and review. Each format error is corrected at most once, with at most three rounds of candidate packages (leaving a chance for method repair after a format repair), for at most ten calls in total. A repair carries the specific errors and the previous answer. Re-validating a draft edited by the user only checks and does not rewrite it for the user.
 
-## 界面与接口
+## UI and API
 
-设置中的 Skills → 导入外部 Skill。当前提交任务仍需要项目上下文，任务通过 default 队列运行；关闭对话框不会中断。聊天中的 Hermes/Codex 共享外部导入工具入口。
+Settings → Skills → Import external Skill. Submitting a task currently still needs project context, and the task runs through the default queue; closing the dialog does not interrupt it. The Hermes/Codex in chat share the external import tool entry.
 
-`/api/v1/projects/{project}/freezone/skill-imports` 支持提交和列表；`/{id}` 读取详情，`/{id}/retry` 重新转换，`/{id}/validate` 检查草稿，`/{id}/install` 安装。来源与转换记录按项目和请求者隔离，安装到当前用户的技能库。
+`/api/v1/projects/{project}/freezone/skill-imports` supports submission and listing; `/{id}` reads details, `/{id}/retry` re-converts, `/{id}/validate` checks a draft, and `/{id}/install` installs. Source and conversion records are isolated by project and requester, and installation goes to the current user's skill library.
 
-列表按记录行内展开/收起。结果只显示结构检查与方法完整性，提供编辑、重新检查、安装、复制到 Skill Studio 和下载 JSON。任务中心可以打开对应记录。
+The list expands/collapses inline per record. The result shows only the structure check and method completeness, and offers edit, re-check, install, copy to Skill Studio, and download JSON. The task center can open the corresponding record.
 
-旧 v2 报告不能直接解锁安装：重新转换或重验后生成 v3 报告。新版本丢弃旧能力映射和 Graph 阻断，重新依据最终包检查，不将旧报告直接改成通过。
+An old v2 report cannot directly unlock installation: re-convert or re-validate to generate a v3 report. The new version discards the old capability mapping and Graph blocking, re-checks against the final package, and does not turn an old report into a pass directly.
 
-## 后台诊断
+## Background diagnostics
 
-每次运行有 diagnostic_run_id，关联 import_id、task_id、模型路由、阶段、尝试次数、输入哈希和耗时。普通应用日志使用 skill_import 前缀，仅记录元信息。
+Each run has a diagnostic_run_id, correlated with import_id, task_id, model route, stage, attempt count, input hash, and duration. Ordinary application logs use the skill_import prefix and record meta information only.
 
-脱敏后的请求、响应和错误保存在 `<state_dir>/skill_imports/<account_hash>/<import_id>.json` 的 diagnostics 字段，公开 API 不返回。请求最多 180,000 字符、响应最多 100,000 字符；每条导入保留最近 100 个事件且总计不超过 2 MB，带截断和淘汰记录。诊断含用户内容，仅用于后台排错。
+The sanitized requests, responses, and errors are saved in the diagnostics field of `<state_dir>/skill_imports/<account_hash>/<import_id>.json`, and the public API does not return them. Requests are at most 180,000 characters and responses at most 100,000 characters; each import keeps the latest 100 events with a total of no more than 2 MB, with truncation and eviction records. Diagnostics contain user content and are for background troubleshooting only.
 
-## 验证边界
+## Verification boundary
 
-内容审核是模型辅助检查，不是生产效果保证。安装只确认原生包结构与转换内容，不证明任意工作流或媒体输出都正确。不会自动安装、覆盖共享 Recipes、执行源包脚本或生成媒体。
+Content review is a model-assisted check, not a guarantee of production results. Installation only confirms the native package structure and the converted content, and does not prove that any workflow or media output is correct. It will not install automatically, overwrite shared Recipes, execute source package scripts, or generate media.
 
-### Recipe 复用
+### Recipe reuse
 
-转换设计阶段读取已有 Recipe 的完整原生定义，比较输入输出、强制格式、生产方法和质量约束。兼容时原样引用已有 ID；仅主题、风格、任务参数不同，优先由 Skill 规划传递上下文。存在方法冲突时才新增，设计记录 `recipe_decisions` 保存候选及原因，不以复用数量作为安装门槛。
+The conversion design stage reads the full native definition of existing Recipes and compares inputs and outputs, mandatory formats, production methods, and quality constraints. When compatible, the existing ID is referenced as is; if only the subject, style, or task parameters differ, context is preferably passed by Skill planning. A new one is added only when there is a method conflict, and the design record `recipe_decisions` keeps the candidates and reasons; the reuse count is not an installation threshold.
 
-生成阶段可以省略已引用的共享 Recipe 定义；服务端从目录快照补齐，形成可导出的完整 Bundle。已有定义被改写仍会被拒绝，不会静默覆盖。最终报告 `recipe_reuse` 根据实际 Bundle 标记复用和新增 ID，后台记录 `recipe_reuse_resolved` 日志。用户手工编辑草稿的验证不自动补写内容。
+The generation stage may omit definitions of shared Recipes that are already referenced; the server fills them in from the catalog snapshot, forming a complete exportable Bundle. A rewritten existing definition is still rejected and never silently overwritten. The final report `recipe_reuse` marks reused and newly added IDs based on the actual Bundle, and the background records a `recipe_reuse_resolved` log. Validation of a user's hand-edited draft does not automatically write content.

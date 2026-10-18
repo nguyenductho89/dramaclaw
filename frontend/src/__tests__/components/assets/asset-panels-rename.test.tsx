@@ -269,7 +269,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "夜晚",
+              time_of_day: "Night",
               environment_prompt: "",
             },
           ],
@@ -280,9 +280,9 @@ describe("asset panel rename behavior", () => {
     renderWithProviders(<ScenesPanel project="demo" />);
 
     expect(await screen.findAllByText("Door")).not.toHaveLength(0);
-    expect(screen.queryByText("1 个场景变体")).not.toBeInTheDocument();
+    expect(screen.queryByText("1 scene variants")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Select scene Hall" }));
-    expect(screen.queryByText("2 个场景变体")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 scene variants")).not.toBeInTheDocument();
   });
 
   it("uses a character-tab style split view for scene bases and selected variants", async () => {
@@ -298,7 +298,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "夜晚",
+              time_of_day: "Night",
               environment_prompt: "",
             },
           ],
@@ -331,7 +331,7 @@ describe("asset panel rename behavior", () => {
               name: "Hall_Night",
               scene_type: "interior",
               base_scene_id: "Hall",
-              time_of_day: "夜晚",
+              time_of_day: "Night",
               environment_prompt: "",
             },
           ],
@@ -370,9 +370,9 @@ describe("asset panel rename behavior", () => {
     const dialog = screen.getByRole("dialog");
 
     expect(within(dialog).getByLabelText("Scene name")).toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("基础场景")).not.toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("变体")).not.toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("时间")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Base scene")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Variant")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Time")).not.toBeInTheDocument();
   });
 
   it("creates scene variants from the selected base scene and stores only variant delta prompt", async () => {
@@ -411,7 +411,7 @@ describe("asset panel rename behavior", () => {
     expect(within(dialog).queryByDisplayValue("wide hall")).not.toBeInTheDocument();
     expect(within(dialog).queryByDisplayValue("soft skylight")).not.toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText("Variant"), {
-      target: { value: "漏水" },
+      target: { value: "Water leak" },
     });
     fireEvent.change(within(dialog).getByLabelText("Variant delta prompt"), {
       target: { value: "floor water and dripping ceiling" },
@@ -425,8 +425,8 @@ describe("asset panel rename behavior", () => {
     expect(postBody).toMatchObject({
       name: "Hall_漏水_夜晚",
       base_scene_id: "Hall",
-      variant_id: "漏水",
-      time_of_day: "夜晚",
+      variant_id: "Water leak",
+      time_of_day: "Night",
       variant_prompt: "floor water and dripping ceiling",
       description: "",
     });

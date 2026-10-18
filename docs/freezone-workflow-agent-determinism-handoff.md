@@ -1,53 +1,53 @@
-# Freezone 工作流创建稳定性改造交接
+# Freezone Workflow Creation Stability: Handoff
 
-## 目标
+## Goal
 
-减少 Agent 对工作流底层结构的直接生成，让工具和服务端负责可确定生成的内容：
+Reduce the Agent's direct generation of the low-level workflow structure, and let tools and the server generate everything that can be determined:
 
-- Agent 只提供业务目标、故事要求、数量约束和简短任务说明。
-- 工具负责 Schema、Skill 身份、Recipe 映射、生成参数、节点阶段和规范化。
-- 标准 Planner 负责标准节点、连线、布局和合成结构。
-- 只有用户明确指定非标准画布节点及依赖图时，才允许 Agent 提交自定义 Plan。
+- The Agent supplies only the business goal, story requirements, quantity constraints, and a short task description.
+- Tools are responsible for the Schema, Skill identity, Recipe mapping, generation parameters, node stages, and normalization.
+- The standard Planner is responsible for standard nodes, edges, layout, and composition structure.
+- Only when the user explicitly specifies non-standard canvas nodes and a dependency graph may the Agent submit a custom Plan.
 
-## 复现项目与现象
+## Reproduction project and symptoms
 
-项目：`test_11`
+Project: `test_11`
 
-聊天中连续出现：
+The chat showed, repeatedly:
 
 ```text
-Dramaclaw.Freezone Prepare Workflow失败 × 4
+Dramaclaw.Freezone Prepare Workflow failed × 4
 ```
 
-这不是同一个错误随机重试，而是同一次大型自定义 Plan 被逐字段修补：
+This was not the same error retried at random, but one large custom Plan being patched field by field:
 
-1. 只提交了 `generation_answers`，缺少完整 `intent` 或 `plan`。
-2. 补交 Plan 后缺少 `schema_version`。
-3. 再次补交后缺少 `skill`。
-4. Recipe 驱动的三个文本执行节点使用了保留的 `asset` stage，被识别成用户资源节点。
+1. Only `generation_answers` was submitted, with no complete `intent` or `plan`.
+2. After the Plan was resubmitted, `schema_version` was missing.
+3. After another resubmission, `skill` was missing.
+4. Three Recipe-driven text execution nodes used the reserved `asset` stage and were recognized as user resource nodes.
 
-当时 Agent 生成了约 47 个节点的短剧自定义 Plan。根因是 Agent 指令把 Beat、镜头和节点数量要求过早路由到了自定义拓扑，而工具 Schema 又让错误逐个暴露。
+At that time the Agent had generated a custom short-drama Plan of about 47 nodes. The root cause was that the Agent instructions routed Beat, shot, and node count requirements to custom topology too early, while the tool Schema exposed the errors one at a time.
 
-## 已完成修改
+## Changes already made
 
-### 1. 工具端确定性规范化
+### 1. Deterministic normalization on the tool side
 
-文件：`.hermes/plugins/freezone/__init__.py`
+File: `.hermes/plugins/freezone/__init__.py`
 
-`freezone_prepare_workflow` 当前行为：
+Current behavior of `freezone_prepare_workflow`:
 
-- Plan 缺少 `schema_version` 时，工具补入当前版本。
-- Plan 缺少 `skill.id` 时，从已准入的 `workflow_result` operation 恢复 Skill 身份。
-- 恢复身份前检查 operation 的产品类型和画布范围。
-- Recipe 驱动的 `textAnnotationNode` 如果误带 `input/resource/asset` 保留 stage，工具移除该系统冲突字段，再交给后端根据 Recipe 处理。
-- `generation_answers` 只补充完整 Intent/Plan。
-- 完全缺少 Intent/Plan 或同时提供两者时，一次性返回明确的结构化错误。
-- 持久化 Plan 的内部 Schema 仍保持严格；只在工具输入边界放宽可由 operation 唯一恢复的字段。
-- 已显式提供但冲突的 Schema 或 Skill 不会被静默覆盖，仍由后端拒绝。
+- When the Plan lacks `schema_version`, the tool fills in the current version.
+- When the Plan lacks `skill.id`, the tool recovers the Skill identity from the admitted `workflow_result` operation.
+- Before recovering the identity, the operation's product type and canvas scope are checked.
+- If a Recipe-driven `textAnnotationNode` mistakenly carries a reserved `input/resource/asset` stage, the tool removes this system-conflicting field and hands it to the backend to handle according to the Recipe.
+- `generation_answers` only supplements a complete Intent/Plan.
+- When both Intent and Plan are completely missing, or both are provided, a clear structured error is returned once.
+- The internal Schema of the persisted Plan remains strict; only at the tool input boundary are fields relaxed that the operation can uniquely recover.
+- A Schema or Skill that is explicitly provided but conflicting is not silently overwritten and is still rejected by the backend.
 
-### 2. 减少 Agent 生成原始拓扑
+### 2. Reduce the Agent's generation of raw topology
 
-已修改：
+Modified:
 
 - `src/novelvideo/chat/service.py`
 - `src/novelvideo/agent_skills/dramaclaw-workflows/SKILL.md`
@@ -57,127 +57,127 @@ Dramaclaw.Freezone Prepare Workflow失败 × 4
 - `.hermes/skills/workflows/SKILL.md`
 - `.hermes/skills/workflows/references/spec.md`
 
-新路由原则：
+New routing principles:
 
-- 集数、Beat 数、镜头数、时长、交付数量属于标准 Planner 的业务输入。
-- 单独出现这些数量要求，不再触发 Agent 编写完整节点图。
-- 只有用户明确要求具体画布节点，并指定偏离标准模板的依赖关系时，才进入自定义 Plan。
-- 自定义 Plan 必须携带完整业务节点和边；工具负责系统身份与规范化。
+- Episode count, Beat count, shot count, duration, and delivery quantity are business inputs of the standard Planner.
+- These quantity requirements appearing alone no longer trigger the Agent to write a complete node graph.
+- Only when the user explicitly asks for specific canvas nodes and specifies dependencies that deviate from the standard template does it enter a custom Plan.
+- A custom Plan must carry complete business nodes and edges; the tool is responsible for system identity and normalization.
 
-Agent 协议版本已从 `canvas-workflows-v24` 逐步升级到 `canvas-workflows-v26`，用于避免重启后复用旧线程指令。
+The Agent protocol version was upgraded step by step from `canvas-workflows-v24` to `canvas-workflows-v26`, to avoid reusing old thread instructions after a restart.
 
-## 安全边界
+## Security boundaries
 
-当前设计不应放宽权限或执行边界：
+The current design should not relax permissions or execution boundaries:
 
-- operation 仍受项目、用户和画布范围限制。
-- 只从 `workflow_result` operation 恢复 Skill 身份。
-- Recipe、节点类型和连线类型仍走白名单与后端校验。
-- 节点与边数量仍有上限。
-- 工具补全不会绕过 Draft 确认或画布批准。
-- `run_after_create` 的既有确认语义不变。
-- Agent 显式提交冲突身份时，不自动改写为另一 Skill。
+- An operation is still limited to the project, user, and canvas scope.
+- Skill identity is recovered only from a `workflow_result` operation.
+- Recipes, node types, and edge types still go through allowlists and backend validation.
+- Node and edge counts still have upper limits.
+- Tool completion does not bypass Draft confirmation or canvas approval.
+- The existing confirmation semantics of `run_after_create` are unchanged.
+- When the Agent explicitly submits a conflicting identity, it is not automatically rewritten to another Skill.
 
-需要继续审查的一点：工具移除 Recipe 文本节点上的保留 stage 属于规范化。应确认所有标准 Planner/Recipe 都能从 Recipe 目录正确推导执行阶段；如果不能，应改成由目录显式返回 canonical stage，而不是依赖删除后的推导。
+One point that needs continued review: the tool removing the reserved stage on a Recipe text node is a normalization. Confirm that all standard Planners/Recipes can correctly derive the execution stage from the Recipe catalog; if not, the catalog should return the canonical stage explicitly, rather than relying on derivation after deletion.
 
-## 已增加或更新的测试
+## Tests added or updated
 
-主要测试位于：
+The main tests are in:
 
 - `tests/test_freezone_plugin.py`
 - `tests/test_workflow_mcp.py`
 - `tests/test_chat_service_user_agent_scope.py`
 
-已覆盖：
+Covered:
 
-- 从 operation 恢复 Plan Skill 身份和版本。
-- 自动补充 Plan Schema 版本。
-- 清理 Recipe 文本节点的冲突 stage。
-- 完全缺少 Intent/Plan 时只返回一次明确错误。
-- Agent Skill/reference 明确描述完整 Plan 字段和标准 Planner 路由。
-- 新的 Freezone Agent 协议指令已注入。
+- Recovering the Plan Skill identity and version from the operation.
+- Automatically filling in the Plan Schema version.
+- Cleaning the conflicting stage of Recipe text nodes.
+- Returning one clear error only when Intent/Plan is completely missing.
+- The Agent Skill/reference explicitly describes the complete Plan fields and the standard Planner routing.
+- The new Freezone Agent protocol instructions are injected.
 
-最近执行结果：
+Latest results:
 
 ```text
-相关定向 pytest：通过
-ruff：通过
-git diff --check：通过
+Targeted pytest: passed
+ruff: passed
+git diff --check: passed
 ```
 
-测试环境中的 `pytest` 可执行脚本仍带旧目录 shebang，因此使用：
+The `pytest` executable script in the test environment still carries a shebang pointing at the old directory, so use:
 
 ```bash
 ./.venv/bin/python -m pytest ...
 ```
 
-## 当前工作区注意事项
+## Notes on the current working tree
 
-工作区存在多组未提交修改，其中一部分来自此前 Draft 状态、任务超时和前端重复失败展示修复。不要 reset、checkout 或覆盖不相关修改。
+The working tree has several groups of uncommitted changes, some of which come from earlier fixes for Draft state, task timeouts, and duplicate frontend failure display. Do not reset, checkout, or overwrite unrelated changes.
 
-`.cache/` 为未跟踪目录，不要纳入本问题提交。
+`.cache/` is an untracked directory and should not be included in the commit for this issue.
 
-开始工作前请先执行：
+Before starting work, run:
 
 ```bash
 git status --short
 git diff --check
 ```
 
-## 新会话建议任务
+## Suggested tasks for a new session
 
-新会话先阅读本文件，然后完成以下检查：
+A new session should read this file first, then complete the following checks:
 
-1. 审查 `freezone_prepare_workflow` 的 operation 身份恢复是否存在跨项目、跨画布或错误产品类型风险。
-2. 确认标准短剧请求在新指令下走 compact Intent/standard Planner，而不是生成几十节点的 raw Plan。
-3. 为“Beat/镜头数量不触发自定义拓扑”补充更直接的行为测试，而不仅是指令文本断言。
-4. 检查标准 Planner 是否能表达 `test_11` 的三集大纲、第一集 20–25 Beats、角色/场景/道具、镜头组、视频、配音和合成需求。
-5. 如标准 Planner 能表达，增加端到端测试，断言 Agent 侧不需要提交 nodes/edges/stage/skill identity。
-6. 运行相关完整测试集，并在重启服务后使用新项目复测；不要直接依赖旧 `test_11` 的活动线程。
+1. Review whether the operation identity recovery of `freezone_prepare_workflow` carries risks across projects, across canvases, or with the wrong product type.
+2. Confirm that a standard short-drama request goes through the compact Intent/standard Planner under the new instructions, rather than generating a raw Plan of dozens of nodes.
+3. Add more direct behavioral tests for "Beat/shot count does not trigger custom topology", instead of only assertions on instruction text.
+4. Check whether the standard Planner can express the three-episode outline of `test_11`, 20-25 Beats in episode one, characters/scenes/props, shot groups, video, voice-over, and composition needs.
+5. If the standard Planner can express them, add an end-to-end test asserting that the Agent side does not need to submit nodes/edges/stage/skill identity.
+6. Run the full related test set, and after restarting the service retest with a new project; do not depend directly on the active thread of the old `test_11`.
 
-## 后续整改结果
+## Follow-up remediation results
 
-已完成以下闭环整改：
+The following closed-loop remediation has been completed:
 
-- `workflow_result` operation 现在必须携带非空 `canvas_id`，幂等复用时也校验画布。
-- 草稿 API 强制校验 operation 与目标画布、Skill ID、Skill 版本及 artifact 身份一致。
-- Plan 工具对提供了 `operation_id` 的请求始终校验 operation；可分别补齐缺失的
-  `skill.id` 和 `skill.version`，显式冲突会一次性拒绝。
-- Recipe 文本节点误用保留 stage 时，优先按标准 Planner 的 Recipe 目录恢复
-  canonical stage；无法唯一恢复时才移除冲突 stage。
-- `short-drama-quick` 标准 Planner 支持最多 25 个 Beat，并确定性生成故事规划、
-  角色设定与身份图、场景设定与参考图、道具设定与参考图、逐 Beat 镜头设计、
-  首帧、视频、配音、背景音乐和最终合成。
-- 新增 25 Beat compact Intent 行为测试：Agent 输入不含 `nodes`/`edges`/`stage` 或
-  Plan 身份结构，服务端展开为 110 个节点，并通过图命令编译和完整 preflight。
-- 相关回归测试：`941 passed`；`ruff` 与 `git diff --check` 通过。
+- A `workflow_result` operation must now carry a non-empty `canvas_id`, and the canvas is also validated on idempotent reuse.
+- The draft API enforces that the operation matches the target canvas, Skill ID, Skill version, and artifact identity.
+- For requests that provide an `operation_id`, the Plan tool always validates the operation; it can separately fill in the missing
+  `skill.id` and `skill.version`, and an explicit conflict is rejected once.
+- When a Recipe text node misuses a reserved stage, it first restores the
+  canonical stage from the standard Planner's Recipe catalog; the conflicting stage is removed only when it cannot be uniquely restored.
+- The `short-drama-quick` standard Planner supports up to 25 Beats, and deterministically generates story planning,
+  character settings and identity images, scene settings and reference images, prop settings and reference images, per-Beat shot design,
+  first frames, video, voice-over, background music, and final composition.
+- Added a behavioral test for a 25-Beat compact Intent: the Agent input contains no `nodes`/`edges`/`stage` or
+  Plan identity structure, the server expands it into 110 nodes, and it passes graph command compilation and the full preflight.
+- Related regression tests: `941 passed`; `ruff` and `git diff --check` pass.
 
-## 新会话可直接使用的提示
+## Prompt a new session can use directly
 
 ```text
-请先阅读 dc/dramaclaw-ce/docs/freezone-workflow-agent-determinism-handoff.md，
-检查现有未提交改动，不要覆盖用户修改。目标是让 Agent 尽量只生成业务 Intent，
-由工具和标准 Planner 确定性生成工作流结构。请审查安全边界、补足行为测试，
-然后验证短剧工作流不再因为 Beat/镜头数量进入大型 raw Plan。
+Please first read dc/dramaclaw-ce/docs/freezone-workflow-agent-determinism-handoff.md,
+and inspect the existing uncommitted changes without overwriting user modifications. The goal is to have the Agent generate only the business Intent as much as possible,
+with tools and the standard Planner deterministically generating the workflow structure. Please review the security boundaries, add behavioral tests,
+then verify that the short-drama workflow no longer enters a large raw Plan because of Beat/shot counts.
 ```
 
-## test_12 配音草稿重复失败整改
+## test_12 voice-over draft repeated-failure remediation
 
-`test_12` 暴露了 screenplay-first 与草稿音频校验之间的冲突：短剧标准 Planner
-开启音频时，旧逻辑要求每个尚未执行的 Beat 在草稿阶段已经携带字面 `narration`，
-导致 Agent 对同一 `planner.units.0.narration` 错误反复重试，最后甚至通过删除逐镜头
-配音节点绕过校验。
+`test_12` exposed a conflict between screenplay-first and draft audio validation: when the short-drama standard Planner
+had audio enabled, the old logic required every not-yet-executed Beat to already carry literal `narration` at the draft stage,
+causing the Agent to retry the same `planner.units.0.narration` error repeatedly, and finally even bypass the validation by deleting the per-shot
+voice-over nodes.
 
-现已调整为：
+It has now been adjusted as follows:
 
-- `short-drama-quick` 可在草稿阶段省略尚未生成的字面旁白；标准 Planner 保留
-  `drama-shot-voice` 节点，并用 `prompt_for` 从上游镜头/剧本文本运行时绑定正文。
-- 用户已提供字面旁白时仍原样保留；占位旁白继续拒绝。非 screenplay-first 的标准
-  Planner 仍要求字面旁白，不扩大放宽范围。
-- 自定义短剧显式 `include_audio=true` 时必须保留 speech 节点，不能只留 BGM 或删除
-  配音来绕过校验。
-- 顶层 `intent.include_audio` 与 `planner.include_audio` 冲突时一次性返回明确错误，不再
-  静默使用顶层值后重复报“缺少 narration”。
-- Intent Schema 是序列化白名单；Recipe 查询结果中的 `requires_source_media` 只用于选择
-  Recipe 和规划依赖，不复制到 `intent.items[]`。权威值由服务端依据 `recipe_id` 推导。
-- Agent 指令增加同错误路径熔断：禁止原样重提；修正一次后同一路径仍失败则本轮停止。
+- `short-drama-quick` may omit not-yet-generated literal narration at the draft stage; the standard Planner keeps the
+  `drama-shot-voice` node and uses `prompt_for` to bind the body text at runtime from the upstream shot/script text.
+- Literal narration already provided by the user is kept as is; placeholder narration is still rejected. Standard
+  Planners that are not screenplay-first still require literal narration, so the relaxation is not widened.
+- When a custom short drama explicitly sets `include_audio=true`, the speech node must be kept; leaving only BGM or deleting
+  the voice-over to bypass validation is not allowed.
+- When the top-level `intent.include_audio` conflicts with `planner.include_audio`, a clear error is returned once, instead of
+  silently using the top-level value and then repeatedly reporting "missing narration".
+- The Intent Schema is a serialization allowlist; `requires_source_media` in Recipe query results is used only to choose the
+  Recipe and plan dependencies, and is not copied into `intent.items[]`. The authoritative value is derived by the server from `recipe_id`.
+- The Agent instructions add a same-error-path circuit breaker: resubmitting as is is forbidden; if the same path still fails after one fix, the turn stops.

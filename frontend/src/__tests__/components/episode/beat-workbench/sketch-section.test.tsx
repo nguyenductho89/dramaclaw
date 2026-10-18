@@ -24,21 +24,21 @@ const trackRegenScopeMock = vi.fn();
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, vars?: Record<string, string | number>) => {
-      if (key === "episode.beat.noSketch") return "无草图";
-      if (key === "common.generateNew") return "生成新图";
-      if (key === "common.regenerate") return "重新生成";
-      if (key === "episode.workbench.sketch.generateNow") return "立即生成";
-      if (key === "episode.workbench.sketch.regenDesc") return `重生第 ${vars?.n} 个 beat`;
-      if (key === "episode.workbench.sketch.generateDesc") return `生成第 ${vars?.n} 个 beat`;
-      if (key === "episode.workbench.sketch.directorControl") return "导演合成资产";
-      if (key === "episode.workbench.sketch.directorControlFile") return "合成图 + 纯背景 + 元数据";
-      if (key === "episode.workbench.sketch.convertDirectorControl") return "转草图";
+      if (key === "episode.beat.noSketch") return "No sketch";
+      if (key === "common.generateNew") return "Generate new";
+      if (key === "common.regenerate") return "Regenerate";
+      if (key === "episode.workbench.sketch.generateNow") return "Generate now";
+      if (key === "episode.workbench.sketch.regenDesc") return `重生第 ${vars?.n} beats`;
+      if (key === "episode.workbench.sketch.generateDesc") return `生成第 ${vars?.n} beats`;
+      if (key === "episode.workbench.sketch.directorControl") return "Director composite asset";
+      if (key === "episode.workbench.sketch.directorControlFile") return "Combined + env-only + metadata";
+      if (key === "episode.workbench.sketch.convertDirectorControl") return "Convert to sketch";
       if (key === "episode.workbench.sketch.convertDirectorStarted") return "已启动";
       if (key === "episode.workbench.sketch.convertDirectorFailed") return "启动失败";
-      if (key === "episode.workbench.sketch.openDirectorWorld") return "导演世界";
-      if (key === "episode.workbench.sketch.chooseBackground") return "背景";
-      if (key === "episode.workbench.sketch.poseEdit") return "姿势编辑";
-      if (key === "episode.workbench.sketch.cropEdit") return "裁剪保存";
+      if (key === "episode.workbench.sketch.openDirectorWorld") return "Director world";
+      if (key === "episode.workbench.sketch.chooseBackground") return "Background";
+      if (key === "episode.workbench.sketch.poseEdit") return "Pose edit";
+      if (key === "episode.workbench.sketch.cropEdit") return "Crop save";
       return key;
     },
   }),
@@ -304,8 +304,8 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /导演世界/ })).toBeEnabled();
-    expect(screen.getByRole("button", { name: /背景/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Director world/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Background/ })).toBeEnabled();
   });
 
   it("promotes a pool-only sketch before opening crop", async () => {
@@ -334,7 +334,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /裁剪保存/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Crop save/ }));
 
     await waitFor(() =>
       expect(poolSelectMock).toHaveBeenCalledWith({
@@ -375,7 +375,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /背景/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Background/ }));
 
     await waitFor(() => expect(refetch).toHaveBeenCalled());
     expect(await screen.findByText("master")).toBeInTheDocument();
@@ -406,9 +406,9 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.getByText("导演合成资产")).toBeInTheDocument();
-    expect(screen.getByText("合成图 + 纯背景 + 元数据")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /转草图/ })).toBeEnabled();
+    expect(screen.getByText("Director composite asset")).toBeInTheDocument();
+    expect(screen.getByText("Combined + env-only + metadata")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Convert to sketch/ })).toBeEnabled();
     expect(creditCostMock).toHaveBeenCalledWith(
       "feature",
       "mainline.director_control_to_sketch",
@@ -482,7 +482,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /转草图/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Convert to sketch/ }));
 
     await waitFor(() => expect(directorConvertMock).toHaveBeenCalled());
     expect(taskStartMock).toHaveBeenCalledWith({
@@ -539,7 +539,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /重新生成/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Regenerate/ }));
     fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
 
     await waitFor(() => expect(regenerateSketchMock).toHaveBeenCalled());
@@ -587,7 +587,7 @@ describe("SketchSection", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /重新生成/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Regenerate/ }));
     fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
 
     await waitFor(() =>
@@ -606,8 +606,8 @@ describe("SketchSection", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: /重新生成/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /立即生成/ }));
+    expect(screen.queryByRole("button", { name: /Regenerate/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Generate now/ }));
     fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
 
     await waitFor(() => expect(regenerateSketchMock).toHaveBeenCalledWith({

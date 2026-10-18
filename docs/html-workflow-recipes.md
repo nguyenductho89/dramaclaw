@@ -2,7 +2,7 @@
 
 A Skill's planning notes describe the business workflow, for example:
 
-> 先完成产品文案和配图，再制作包含这些内容的产品介绍网页。
+> First finish the product copy and images, then build a product introduction web page that contains them.
 
 The webpage Recipe declares its output format as machine metadata:
 

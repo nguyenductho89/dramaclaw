@@ -239,4 +239,4 @@ async def test_global_optimize_video_continues_after_consecutive_model_failures(
         )
 
     assert attempts == [1, 2, 3, 4, 5]
-    assert not any("提前停止全局优化" in message for message in logs)
+    assert not any("Stopping global optimization early" in message for message in logs)

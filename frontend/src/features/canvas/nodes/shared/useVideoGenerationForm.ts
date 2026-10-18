@@ -3,6 +3,7 @@
 import { selectVideoModel } from "@/features/canvas/domain/catalogVideoModels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFn } from "@/lib/i18n-types";
 import { toast } from "sonner";
 
 import {
@@ -114,21 +115,21 @@ import { writeLastVideoModel } from "@/features/canvas/domain/lastVideoModel";
 import { useGenerationCreditCost } from "@/lib/queries/generation-credit-cost";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
-// 媒体目录可以给模型声明任意分辨率档位，这里只是没配置时的兜底；大小写按后端
-// 口径统一成小写（`qualityToResolution` 因此退化成恒等函数）。
+// The media catalog can declare arbitrary resolution tiers for a model, and this is only a fallback when nothing is configured; case follows the backend
+// basis, unified to lowercase (`qualityToResolution` thus degenerates into the identity function).
 const QUALITIES: ReadonlyArray<VideoGenQuality> = ["480p", "720p", "1080p"];
 const SCENE_OPTIMIZE_OPTIONS: ReadonlyArray<Seedance2SceneOptimize> = ["anime", "realistic"];
 const DEFAULT_DURATION_MIN = 5;
 const DEFAULT_DURATION_MAX = 15;
-// 统一计费（#210）：视频生成走 feature 键询价，模型身份塞进 params。
+// Unified billing (#210): video generation is quoted by feature key, with the model identity put into params.
 const VIDEO_GENERATE_FEATURE_KEY = "freezone.video_generate";
 
-// 节点被删除 / 尚未出现在 store 里时的空数据兜底，保持 hook 的 early-return-free
-// 结构（hooks 数量必须每帧一致）。
+// Empty-data fallback for when the node is deleted / not yet in the store, keeping the hook free of early returns
+// (the number of hooks must be the same every frame).
 const EMPTY_NODE_DATA = {} as VideoNodeData;
 
-// 档位字符串就是后端要的 resolution：媒体目录里配什么就原样发什么，前端不再做
-// 「480P → 480p」这类白名单映射，否则 Admin 新配的档位会被静默丢掉。
+// The tier string is the resolution the backend wants: whatever the media catalog configures is sent as is, and the frontend no longer keeps
+// a whitelist mapping like "480P → 480p", otherwise tiers newly configured by Admin would be silently dropped.
 function qualityToResolution(q: VideoGenQuality): FreezoneVideoResolution {
   return q;
 }
@@ -140,8 +141,8 @@ function videoQualityOptionsForModel(
   return options.length > 0 ? options : QUALITIES;
 }
 
-// 节点上存着的旧值可能是 "720P"，目录里现在写的是 "720p"：大小写不敏感地对上，
-// 别把用户选过的档位当非法值重置掉。
+// The old value stored on the node may be "720P" while the catalog now says "720p": match case-insensitively,
+// and do not reset the tier the user picked as an invalid value.
 function normalizeVideoQuality(
   value: VideoGenQuality | undefined,
   options: readonly VideoGenQuality[],
@@ -154,29 +155,30 @@ function normalizeVideoQuality(
   return configured ?? fallback;
 }
 
-// 素材守卫两层叠加：先是模型能力（Seedance 1.x 只吃 1 张图之类，写死在能力模块
-// 里），再是媒体目录声明的逐模式上限。
+// The asset guard stacks two layers: first the model capability (Seedance 1.x takes only 1 image and the like, hard-coded in the capability module),
+// then the per-mode caps declared by the media catalog.
 function selectedVideoModelReferenceDisabledReason(
   model: ModelOption | null | undefined,
   counts: { images: number; videos: number; audios: number },
   mode: VideoGenMode,
+  t: TFn,
 ): string | null {
   const capabilityReason = videoModelReferenceDisabledReason(model, counts);
   if (capabilityReason) return capabilityReason;
   const caps = referenceCapsForMode(model, mode);
   if (!caps) return null;
   if (counts.images > caps.image) {
-    return `该模型最多支持 ${caps.image} 张图片素材`;
+    return t("node.videoModel.reason.maxImages", { count: caps.image });
   }
   if (counts.videos > caps.video) {
     return caps.video === 0
-      ? "该模型不支持视频素材"
-      : `该模型最多支持 ${caps.video} 个视频素材`;
+      ? t("node.videoModel.reason.videoUnsupported")
+      : t("node.videoModel.reason.maxVideos", { count: caps.video });
   }
   if (counts.audios > caps.audio) {
     return caps.audio === 0
-      ? "该模型不支持音频素材"
-      : `该模型最多支持 ${caps.audio} 个音频素材`;
+      ? t("node.videoModel.reason.audioUnsupported")
+      : t("node.videoModel.reason.maxAudios", { count: caps.audio });
   }
   return null;
 }
@@ -191,8 +193,8 @@ function videoDurationBoundsForModel(
   return { min: resolvedMin, max: resolvedMax };
 }
 
-// 媒体节点的 durationMs 可能尚未加载。提交前用临时媒体元素探测真实时长兜底，
-// 探测失败（CORS/网络等）返回 null，不阻断提交，交由后端兜底。
+// A media node's durationMs may not be loaded yet. Before submit, probe the real duration with a temporary media element as a fallback;
+// if probing fails (CORS/network etc.) it returns null and does not block submission, leaving the backend to handle it.
 function probeMediaDurationMs(
   url: string,
   media: "audio" | "video",
@@ -281,8 +283,8 @@ function normalizeSceneOptimize(
   return value && options.includes(value) ? value : fallback;
 }
 
-// 音频引用 chip 的展示文件名：优先节点的 displayName，否则从 audioUrl 取末段文件名。
-// 仅用于前端展示（音频_<文件名>），不影响序列化给后端的 @音频N。
+// Display file name of an audio reference chip: prefer the node's displayName, otherwise take the last file-name segment from audioUrl.
+// For frontend display only (audio_<file name>); does not affect the @audio1 serialized to the backend.
 function audioReferenceFileName(item: {
   displayName?: string | null;
   audioUrl: string;
@@ -336,11 +338,11 @@ function resolveOutputUrl(
 }
 
 /**
- * `VideoGenerationForm` 的 props 里，由本 hook 负责供给的那一部分。
+ * The part of the props of `VideoGenerationForm` that this hook is responsible for supplying.
  *
- * 剩下的两个是**宿主自己的编排 / 排版**，与生成表单的数据与提交无关，故不进 hook：
- * - `onOpenCharacterLibrary`：打开宿主持有的资产库弹窗；
- * - `compact`：宿主自己决定 chips 行右侧是否留出「放大」按钮的位置。
+ * The remaining two are **the host's own orchestration / layout**, unrelated to the generation form's data and submit, so they do not enter the hook:
+ * - `onOpenCharacterLibrary`: opens the asset library dialog held by the host;
+ * - `compact`: the host decides whether to leave room for the "enlarge" button on the right of the chips row.
  */
 export type VideoGenerationFormBoundProps = Omit<
   VideoGenerationFormProps,
@@ -349,41 +351,41 @@ export type VideoGenerationFormBoundProps = Omit<
 
 export interface UseVideoGenerationFormOptions {
   /**
-   * 一批生成（含并发的 N 次调用）全部尘埃落定后触发。节点用它刷新「生成历史」
-   * 记录条；不关心历史的宿主可以不传。
+   * Fired after a batch of generations (including N concurrent calls) has all settled. The node uses it to refresh the "generation history"
+   * strip; hosts that do not care about history may omit it.
    */
   onGenerationSettled?: () => void;
   /**
-   * 是否发起算力预估询价。默认 true —— 故事板那种「表单常驻、一屏一个」的宿主
-   * 直接用默认值。
+   * Whether to fire the compute cost estimate quote. Default true — hosts like the storyboard where "the form is resident, one per screen"
+   * use the default directly.
    *
-   * 工作流节点必须传 `selected`：hook 挂在 VideoNode 顶层，画布上每个配好模型的
-   * 视频节点都会各发一次 /generation-credit-cost（query key 含各自的 params，
-   * react-query 去重不了）。口径与同文件上方 `useNodeGenerationHistory` 的
-   * `enabled: Boolean(selected)` 一致。
+   * Workflow nodes must pass `selected`: the hook is mounted at the top level of VideoNode, and every video node on the canvas with a configured model
+   * would each send one /generation-credit-cost (the query key contains their own params,
+   * so react-query cannot dedupe). Same basis as `useNodeGenerationHistory` above in the same file,
+   * `enabled: Boolean(selected)`.
    *
-   * 失败态由 hook 内部兜底常开，不受本开关约束：失败横幅上的重试按钮是节点未选中
-   * 时唯一还能提交的入口，它的 disabled 接的就是 submitDisabled，必须拿得到
-   * billing 规则缺失的闸门。
+   * The failure state is kept always on inside the hook and is not bound by this switch: the retry button on the failure banner is the only entry that can still submit
+   * while the node is unselected, its disabled is wired to submitDisabled, and it must get the gate
+   * for missing billing rules.
    */
   costProbeEnabled?: boolean;
 }
 
 export interface UseVideoGenerationFormResult {
-  /** 直接展开给 `<VideoGenerationForm {...formProps} />`。 */
+  /** Spread directly into `<VideoGenerationForm {...formProps} />`. */
   formProps: VideoGenerationFormBoundProps;
   /**
-   * 下面几个值 formProps 里也有（或由它派生），但宿主自己还要用：
-   * - isGenerating / submitDisabled / submit：节点上「生成失败」横幅的重试按钮，
-   *   以及生成中时历史记录点击的「非破坏性预览」分支；
-   * - prompt：**已落库的** `data.prompt`（非编辑器草稿）——「首帧生成视频」CTA
-   *   靠它判断用户是否已经写过提示词、要不要覆盖；
-   * - quality：节点剪辑合成按它挑 compose 分辨率；
-   * - upstreamCounts：节点空态 CTA 用 `videos === 0` 决定是否显示首帧/首尾帧引导。
+   * The values below also exist in formProps (or derive from it), but the host needs them itself:
+   * - isGenerating / submitDisabled / submit: the retry button of the "generation failed" banner on the node,
+   *   and the "non-destructive preview" branch of clicking history while generating;
+   * - prompt: the **persisted** `data.prompt` (not the editor draft) — the "first-frame-to-video" CTA
+   *   relies on it to judge whether the user has already written a prompt and whether to overwrite it;
+   * - quality: the node's edit-compose picks the compose resolution by it;
+   * - upstreamCounts: the node empty-state CTA uses `videos === 0` to decide whether to show the first-frame/first-last-frame guidance.
    */
   isGenerating: boolean;
   submitDisabled: boolean;
-  /** 提交生成；返回本批第 1 条完成的视频 url（全失败/无产物时为空对象）。 */
+  /** Submit generation; returns the url of the first video to finish in this batch (an empty object when all fail / nothing produced). */
   submit: () => Promise<{ videoUrl?: string }>;
   prompt: string;
   quality: VideoGenQuality;
@@ -392,20 +394,20 @@ export interface UseVideoGenerationFormResult {
 }
 
 /**
- * 视频生成表单的**父级状态与编排**：prompt 草稿 + 输入法合成态、上游文本 / 图 /
- * 视频 / 音频的收集与编号（@图片N / @视频N / @音频N）、genMode 状态机（含随上游
- * 与模型自动切换的那几条兜底）、模型与参数归一化、翻译、算力预估，以及按「生成
- * 数量」并发调用的 handleSubmit（按 genMode 分派到 keyframes / i2v / edit /
- * omni-gen / gen 五个端点）。
+ * The **parent state and orchestration** of the video generation form: prompt draft + IME composition state, collection and numbering of upstream text / image /
+ * video / audio (@image1 / @video1 / @audio1), the genMode state machine (including the several fallbacks that auto-switch with upstream
+ * and model), model and param normalization, translation, compute cost estimate, and the handleSubmit that calls concurrently by "generation
+ * count" (dispatching by genMode to the five endpoints keyframes / i2v / edit /
+ * omni-gen / gen).
  *
- * 与 `VideoGenerationForm` 一样不碰任何 React Flow 上下文——节点数据一律从
- * `useCanvasStore` 按 id 取（画布喂给 ReactFlow 的就是 store 里的同一份 nodes，
- * 因此与节点组件收到的 `data` prop 是同一个对象）。这样故事板详情之类的独立布局
- * 也能直接 `useVideoGenerationForm(nodeId)` 拿到整套能力。
+ * Like `VideoGenerationForm` it touches no React Flow context — node data is always taken from
+ * `useCanvasStore` by id (the nodes the canvas feeds to ReactFlow are the same ones in the store,
+ * so they are the same object as the `data` prop the node component receives). This way standalone layouts such as the storyboard detail
+ * can also get the whole set of capabilities directly via `useVideoGenerationForm(nodeId)`.
  *
- * 提交编排刻意留在 hook 内部（与图片侧 `useImageGenerationForm` 同样的取舍）：它
- * 交织了 per-run 补丁、模块级画册计数（albumPendingTotals）、错误聚合弹窗与
- * 「部分失败」toast，外提到 application/ 需要十几个入参，反而危及「行为零变化」。
+ * The submit orchestration is deliberately kept inside the hook (the same trade-off as the image-side `useImageGenerationForm`): it
+ * interweaves per-run patches, the module-level album counts (albumPendingTotals), the aggregated error dialog and the
+ * "partial failure" toast; lifting it out to application/ would need a dozen parameters and instead endanger "zero behavior change".
  */
 export function useVideoGenerationForm(
   nodeId: string,
@@ -422,12 +424,12 @@ export function useVideoGenerationForm(
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const deleteEdge = useCanvasStore((state) => state.deleteEdge);
 
-  // 在途守卫：持到本批所有并发任务 allSettled 才释放（见 handleSubmit）。
+  // In-flight guard: held until all concurrent tasks of this batch allSettle (see handleSubmit).
   const submittingRef = useRef(false);
   const [isTranslatingPrompt, setIsTranslatingPrompt] = useState(false);
 
   const prompt = typeof data.prompt === "string" ? data.prompt : "";
-  // Local draft + composition guard so IME (中文输入法) candidates stop being
+  // Local draft + composition guard so IME (input method) candidates stop being
   // wiped by the store-driven re-render. Same fix pattern as
   // `docs/changes/2026-05-12-image-gen-ime-fix.md`.
   const [promptDraft, setPromptDraft] = useState(prompt);
@@ -437,8 +439,8 @@ export function useVideoGenerationForm(
     setPromptDraft(prompt);
   }, [prompt]);
 
-  // 提示词草稿 / IME 合成态留在本 hook 里（不下沉到表单组件）：「生成失败」重试
-  // 横幅与自动提交都读同一份 prompt 判断可否提交，草稿若下沉会造成两处失配。
+  // The prompt draft / IME composition state stay in this hook (not moved down into the form component): the "generation failed" retry
+  // banner and auto-submit both read the same prompt to judge whether it can be submitted, and moving the draft down would make the two places mismatch.
   const handlePromptChange = useCallback(
     (next: string) => {
       setPromptDraft(next);
@@ -477,9 +479,9 @@ export function useVideoGenerationForm(
     [selectedVideoModel],
   );
   const hasConfiguredAspectRatios = configuredAspectRatios.length > 0;
-  // 模型在媒体目录里声明了比例时以它为准；没声明才走旧口径 —— aspectRatio 只认
-  // 合法的比例预设（含 "auto"），历史上曾被写成像素串(如 "1248:704")的旧节点在
-  // 这里吸附到最接近的合法视频比例，保证 chip 显示干净。
+  // When the model declares ratios in the media catalog they prevail; otherwise the old basis applies — aspectRatio accepts only
+  // legal ratio presets (including "auto"); old nodes that were historically written as a pixel string (such as "1248:704")
+  // snap here to the nearest legal video ratio, keeping the chip display clean.
   const aspectRatio: FreezoneVideoAspectRatio = hasConfiguredAspectRatios
     ? configuredAspectRatios.includes(String(data.aspectRatio))
       ? String(data.aspectRatio)
@@ -491,8 +493,8 @@ export function useVideoGenerationForm(
           VIDEO_GENERATION_ASPECT_RATIOS,
           "16:9",
         );
-  // Admin 配置存在时原样提交模型声明的比例；未配置时保留旧版 auto 推导逻辑：
-  // 绝不发 "auto"，按节点真实像素(若有)推导最接近的比例，否则回退 16:9。
+  // When Admin config exists, submit the model's declared ratio as is; when not configured keep the old auto-derivation logic:
+  // never send "auto", derive the nearest ratio from the node's real pixels (if any), otherwise fall back to 16:9.
   const submitAspectRatio: FreezoneVideoAspectRatio =
     !hasConfiguredAspectRatios && aspectRatio === "auto"
       ? snapToAllowedAspectRatio(
@@ -534,8 +536,8 @@ export function useVideoGenerationForm(
   );
   const generateAudio = Boolean(data.generateAudio);
   const isSeedance20Model = isSeedance2VideoModel(selectedVideoModelId);
-  // 真人素材审核开关改由媒体目录声明（#210）：以前是「凡 Seedance 2.0 都显示」，
-  // 现在谁支持谁在 Admin 里勾。isSeedance20Model 仍用于场景优化等 2.0 专属逻辑。
+  // The real-person asset review switch is now declared by the media catalog (#210): it used to be "shown for every Seedance 2.0",
+  // and now whoever supports it is ticked in Admin. isSeedance20Model is still used for 2.0-only logic such as scene optimization.
   const supportsHumanReview = selectedVideoModel?.humanReview === true;
   const humanReview = Boolean(data.humanReview);
   const count: VideoGenCount = (data.count ?? 1) as VideoGenCount;
@@ -614,9 +616,9 @@ export function useVideoGenerationForm(
   );
   const videoCount = Math.min(Math.max(debouncedCount, 1), 4);
   const videoPricingQuantity = videoCount * debouncedDurationSec;
-  // 失败态永远询价（见 costProbeEnabled 的注释）：重试按钮在节点未选中时也能提交。
-  // 这行原本在下方 cameraMovementPreset 之后，为了给询价当输入提到这里；调用位置
-  // 变了但仍然无条件执行，hook 顺序照旧稳定。
+  // The failure state always quotes (see the comment of costProbeEnabled): the retry button can submit even when the node is unselected.
+  // This line used to sit below cameraMovementPreset and was lifted here to serve as input to the quote; the call position
+  // changed but it still executes unconditionally, so the hook order stays stable.
   const { isGenerating } = useNodeGenerationTaskState(data);
   const hasGenerationError =
     !isGenerating &&
@@ -649,17 +651,17 @@ export function useVideoGenerationForm(
   const billingRuleMissingSubmitMessage = videoBillingRuleMissing
     ? t("node.videoNode.billingRuleMissingSubmit", {
         defaultValue:
-          "视频生成未启动：计费规则未配置，请联系管理员设置积分规则后重试。",
+          "Video generation did not start: billing rules are not configured. Contact an administrator to set credit rules and retry.",
       })
     : null;
-  // 用服务端下发的 `display`，别自己 format `cost`：促销时 display 是「原价→现价」，
-  // CreditCostPill 正是靠这个 `→` 才渲染划线原价和促销标签（credit-visual.tsx:117）。
-  // 自拼出来的只有一个数字，促销展示会整块消失。口径与 VideoNode 一致。
+  // Use the server-issued `display`, do not format `cost` yourself: during a promotion display is "original→current",
+  // and CreditCostPill renders the struck-through original price and the promo label precisely through this `→` (credit-visual.tsx:117).
+  // A self-assembled one has only a single number, and the whole promo display would vanish. Same basis as VideoNode.
   const totalCreditCostDisplay =
     videoCreditCost.data?.data.display ??
     (videoBillingRuleMissing ? t("common.billingRuleNotConfiguredShort") : null);
-  // display 与 promotion 必须成对下发：只有前者时标签会兜底成通用的「促销中」，
-  // 拿不到「限时 5 折」这种真实文案。
+  // display and promotion must be issued as a pair: with only the former the label falls back to the generic "On sale",
+  // and the real copy like "50% off for a limited time" cannot be obtained.
   const creditPromotion = videoCreditCost.data?.data.promotion ?? null;
   const cameraMovementId =
     typeof data.cameraMovement === "string" ? data.cameraMovement : null;
@@ -706,9 +708,9 @@ export function useVideoGenerationForm(
       );
   }, [videoInputNodes, data.referenceOrder]);
 
-  // 统一的「图 / 视 / 音」上游引用条目，给 chips 行用。顺序按连接顺序
-  // （与 referenceImages 同步），让 chip 编号 1/2/3... 跟可视顺序一致。
-  // text 上游不进这一行 —— 上面已经单独渲染了「@文本 chip」。
+  // Unified "image / video / audio" upstream reference entries, for the chips row. The order follows the connection order
+  // (in sync with referenceImages), so chip numbers 1/2/3... match the visual order.
+  // Text upstreams do not enter this row — the "@text chip" is already rendered separately above.
   const referenceMedia = useMemo<ReferenceMediaItem[]>(() => {
     const upstream = sortUpstreamByReferenceOrder(
       videoInputNodes,
@@ -766,10 +768,10 @@ export function useVideoGenerationForm(
     return items;
   }, [videoInputNodes, data.referenceOrder]);
 
-  // 提示词里的 @图片N / @音频N 必须随「角色库」连线引用实时对应：删除 / 重排 /
-  // 新增引用时角色库会重新编号（删掉图片1 后原图片2 变图片1），这里把 prompt 里的
-  // mention 数字一并重写，被删引用的 mention 则移除。按「上一帧有序 id ↔ 这一帧有序
-  // id」差分，覆盖所有删边路径（detach 按钮 / 双击断开 / Delete 键）与手动重排。
+  // @image1 / @audio1 in the prompt must correspond live to the "character library" connected references: when deleting / reordering /
+  // adding references the library renumbers (after image1 is deleted the old image2 becomes image1), and here the mention numbers in the prompt
+  // are rewritten accordingly, with mentions of deleted references removed. By diffing "the previous frame's ordered ids ↔ this frame's ordered
+  // ids", it covers all edge-deletion paths (detach button / double-click disconnect / Delete key) and manual reordering.
   const orderedImageIds = useMemo(
     () =>
       referenceMedia
@@ -798,16 +800,16 @@ export function useVideoGenerationForm(
   useReferenceMentionSync(
     prompt,
     [
-      { prefix: "图片", ids: orderedImageIds },
-      { prefix: "视频", ids: orderedVideoIds },
-      { prefix: "音频", ids: orderedAudioIds },
+      { prefix: "image", ids: orderedImageIds },
+      { prefix: "video", ids: orderedVideoIds },
+      { prefix: "audio", ids: orderedAudioIds },
     ],
     applyPromptRemap,
   );
 
-  // 给每个 referenceMedia 条目补上「同类型序号 + 是否在当前模式上限内」。
-  // 当前 genMode 在 REFERENCE_CAPS_BY_MODE 里没有条目（textToVideo），统一按
-  // within=true 处理；下游 chip / mention 候选会决定是否消费 within。
+  // Add "same-type index + whether within the current mode's cap" to each referenceMedia entry.
+  // When the current genMode has no entry in REFERENCE_CAPS_BY_MODE (textToVideo), everything is treated as
+  // within=true; the downstream chip / mention candidates decide whether to consume within.
   const referenceCaps = useMemo(
     () => referenceCapsForMode(selectedVideoModel, genMode),
     [genMode, selectedVideoModel],
@@ -822,13 +824,13 @@ export function useVideoGenerationForm(
     });
   }, [referenceCaps, referenceMedia]);
 
-  // @ 提及候选 —— 图片、音频都可引用，但编号按 *各自类型* 的序号走，
-  // *不* 按行内混合位置。后端按上传的图片数量来对应 图片N，若用混合位置编号
-  // （音频排第一时图片就成了「图片2」），后端只看到 1 张图却被要求引用图片2
-  // 会报错。所以图片用图片序号、音频用音频序号，各自独立计数。
+  // @ mention candidates — images and audio can both be referenced, but the numbering follows *each type's own* index,
+  // *not* the mixed position in the row. The backend maps imageN by the number of uploaded images; if mixed positions were used for numbering
+  // (with audio first the image would become "image2"), the backend sees only 1 image yet is asked to reference image2
+  // and errors. So images use the image index and audio uses the audio index, each counted independently.
   //
-  // 在 REFERENCE_CAPS_BY_MODE 表里有条目的模式，超过 cap 的条目不能进 @ 候选
-  // —— 服务端会直接丢弃，留在候选里只会让用户选了之后被静默忽略。
+  // For modes with an entry in the REFERENCE_CAPS_BY_MODE table, entries beyond the cap must not enter the @ candidates
+  // — the server drops them outright, and leaving them in the candidates would only get what the user picked silently ignored.
   const mentionCandidates = useMemo<MentionCandidate[]>(() => {
     const out: MentionCandidate[] = [];
     let imageIdx = 0;
@@ -842,7 +844,7 @@ export function useVideoGenerationForm(
         if (enforceCap && !info.withinCap) continue;
         out.push({
           key: item.nodeId,
-          name: `图片${imageIdx}`,
+          name: `image${imageIdx}`,
           imageUrl: resolveImageDisplayUrl(item.imageUrl),
           index: imageIdx,
         });
@@ -851,7 +853,7 @@ export function useVideoGenerationForm(
         if (enforceCap && !info.withinCap) continue;
         out.push({
           key: item.nodeId,
-          name: `视频${videoIdx}`,
+          name: `video${videoIdx}`,
           imageUrl: item.thumbUrl ? resolveImageDisplayUrl(item.thumbUrl) : "",
           videoUrl: resolveImageDisplayUrl(item.videoUrl),
           index: videoIdx,
@@ -861,7 +863,7 @@ export function useVideoGenerationForm(
         if (enforceCap && !info.withinCap) continue;
         out.push({
           key: item.nodeId,
-          name: `音频${audioIdx}`,
+          name: `audio${audioIdx}`,
           imageUrl: "",
           index: audioIdx,
           audioUrl: resolveImageDisplayUrl(item.audioUrl),
@@ -872,8 +874,8 @@ export function useVideoGenerationForm(
     return out;
   }, [referenceCaps, referenceMediaCapInfo]);
 
-  // 取消关联某个上游素材：删掉「该上游节点 → 本节点」的连线。collectInputContents
-  // 只走一跳，item.nodeId 就是直接相连的上游节点，可精确定位要删的边。
+  // Detach an upstream asset: delete the edge "that upstream node → this node". collectInputContents
+  // walks only one hop, so item.nodeId is the directly connected upstream node, and the edge to delete can be located precisely.
   const handleDetachUpstream = useCallback(
     (sourceNodeId: string) => {
       useCanvasStore
@@ -884,9 +886,9 @@ export function useVideoGenerationForm(
     [id, deleteEdge],
   );
 
-  // 通用上游遍历：拿到所有上游节点的 text/imageUrl/videoUrl/audioUrl 统一视图。
-  // 视频生成只用其中的 text 字段拼接到 prompt 前面；image/video/audio 仍走
-  // 各自分支已有的分类逻辑（带 backend 上限校验）。
+  // Generic upstream traversal: get a unified view of text/imageUrl/videoUrl/audioUrl of all upstream nodes.
+  // Video generation uses only the text field to prepend to the prompt; image/video/audio still go through
+  // the classification logic already in their own branches (with backend limit validation).
   const upstreamContents = useMemo(
     () => videoInputNodes.map(extractUpstreamContent),
     [videoInputNodes],
@@ -904,15 +906,15 @@ export function useVideoGenerationForm(
   );
 
   // Count upstream resources by media type. Drives the disable rules on the
-  // tab row — e.g. 图生视频 only makes sense with images (no upstream videos),
-  // 首尾帧 caps at 2 images.
+  // tab row — e.g. image-to-video only makes sense with images (no upstream videos),
+  // first-last-frame caps at 2 images.
   const upstreamCounts = useMemo(() => {
     let images = 0;
     let videos = 0;
     let audios = 0;
     for (const node of videoInputNodes) {
       if (referenceVideoUrl(node)) {
-        // 视频节点或携带 videoUrl 的 upload 节点（资产库选入的视频）都算视频。
+        // Video nodes or upload nodes carrying a videoUrl (videos picked from the asset library) all count as video.
         videos += 1;
       } else if (isAudioNode(node)) {
         if (
@@ -927,16 +929,16 @@ export function useVideoGenerationForm(
     }
     return { images, videos, audios };
   }, [videoInputNodes]);
-  // HappyHorse 的模式可用性由「上游节点类型」决定，而非素材是否已填。空的图片
-  // 节点（尚未生成/上传图）也应让「首帧 / 图片参考」可选——用户先连节点、后填图
-  // 是正常顺序。所以这里按节点类型统计，区别于 upstreamCounts 的「已解析 URL」口径。
+  // HappyHorse mode availability is decided by the "upstream node type", not by whether the asset is filled in. An empty image
+  // node (not yet generated/uploaded) should also make "first frame / image reference" selectable — connecting the node first and filling the image
+  // later is the normal order. So counts here are by node type, unlike the "resolved URL" basis of upstreamCounts.
   const upstreamTypeCounts = useMemo(() => {
     let images = 0;
     let videos = 0;
     let audios = 0;
     for (const node of videoInputNodes) {
-      // 携带 videoUrl 的 upload 节点（资产库视频）先判为视频，避免落到下面
-      // 的 isUploadNode 分支被误算成图片。空的 video 节点（尚未生成）仍按类型算视频。
+      // An upload node carrying a videoUrl (a library video) is judged as video first, avoiding falling into the isUploadNode branch below
+      // and being miscounted as an image. An empty video node (not yet generated) still counts as video by type.
       if (isVideoNode(node) || referenceVideoUrl(node)) {
         videos += 1;
       } else if (isAudioNode(node)) {
@@ -998,15 +1000,15 @@ export function useVideoGenerationForm(
     updateNodeData,
   ]);
 
-  // HappyHorse 的模式完全由上游节点类型决定（文档的 4 大功能一一对应），这里用
-  // 一条统一状态机替代分散的兜底 effect，避免多个 effect 互相打架：
-  //   - 上游有视频            → 视频编辑 (videoEdit / video_url)
-  //   - 上游图片 >1 张        → 图片参考 (imageReference / reference_images 1-9)
-  //   - 上游图片 == 1 张      → 默认首帧 (imageToVideo / image_url)，但尊重用户
-  //                             主动切到的「图片参考」
-  //   - 无上游                → 文生视频 (textToVideo)
-  // 每次都纠正，确保 genMode 不会卡在与当前上游不匹配的模式（否则 submit 时会被
-  // 静默截断 / 触发上游互斥报错）。
+  // HappyHorse's mode is entirely decided by the upstream node type (the 4 major functions of the docs map one to one); here a
+  // unified state machine replaces scattered fallback effects, avoiding several effects fighting each other:
+  //   - upstream has video       → video edit (videoEdit / video_url)
+  //   - upstream images >1       → image reference (imageReference / reference_images 1-9)
+  //   - upstream images == 1     → default first frame (imageToVideo / image_url), but respect the user's
+  //                                active switch to "image reference"
+  //   - no upstream              → text-to-video (textToVideo)
+  // Corrected every time, ensuring genMode never gets stuck in a mode that mismatches the current upstream (otherwise submit would be
+  // silently truncated / trigger an upstream mutual-exclusion error).
   useEffect(() => {
     if (!isHappyHorseModel) return;
     const { images, videos } = upstreamTypeCounts;
@@ -1098,10 +1100,10 @@ export function useVideoGenerationForm(
     updateNodeData,
   ]);
 
-  // 上游接入视频素材时，只有「全能参考」能消费视频；其它模式（文生 / 图生 /
-  // 首尾帧 / 图片参考）都会把视频丢弃。所以只要上游存在视频就强制切到
-  // allReference 并锁死——下面的 tab 禁用规则会把其它 tab 一并禁用。
-  // 与音频的「0→≥1 transition」不同，这里每次都纠正，确保视频在场期间无法切走。
+  // When video is connected upstream, only "all reference" can consume it; other modes (text-to-video / image-to-video /
+  // first-last-frame / image reference) all discard the video. So whenever a video exists upstream, force-switch to
+  // allReference and lock it — the tab disabling rules below disable the other tabs along with it.
+  // Unlike the audio "0→≥1 transition", this corrects every time, ensuring the mode cannot be switched away while a video is present.
   useEffect(() => {
     if (upstreamCounts.videos === 0) return;
     if (videoModelsLoading) return;
@@ -1120,10 +1122,10 @@ export function useVideoGenerationForm(
     updateNodeData,
   ]);
 
-  // 文生视频不接受任何素材引用。即便用户先手动选了 textToVideo 再接入
-  // 图片/音频（此时上面两个自动切换 effect 都因 genMode 已显式而 bail），
-  // 也要强制切走，否则会停在 textToVideo 把已连素材丢弃。图片/音频统一走
-  // allReference（全能参考），与「首次接入图片」的默认保持一致。
+  // Text-to-video accepts no asset references. Even if the user first manually picked textToVideo and then connected
+  // images/audio (the two auto-switch effects above both bail because genMode is already explicit),
+  // it must be forced away, otherwise it stays on textToVideo and discards the connected assets. Images/audio uniformly go to
+  // allReference (all reference), consistent with the default on "first image connection".
   useEffect(() => {
     if (isHappyHorseModel) return;
     if (genMode !== "textToVideo") return;
@@ -1146,10 +1148,10 @@ export function useVideoGenerationForm(
     updateNodeData,
   ]);
 
-  // 首尾帧只承载「首帧 + 尾帧」两张图。一旦上游图片数 >2，从语义上就不再是
-  // 首尾帧场景（应该是多图参考 / 全能参考），自动切到 allReference 跟「视频
-  // 上游强制切 allReference」是同一类兜底逻辑。每次都纠正，避免用户在 >2
-  // 图状态下被卡在 firstLastFrame 触发 submit 时被静默截断成两张。
+  // First-last-frame carries only the two images "first frame + last frame". Once upstream images >2, semantically it is no longer
+  // a first-last-frame scenario (it should be multi-image reference / all reference); auto-switching to allReference is the same kind of fallback as
+  // "force allReference when video is upstream". Corrected every time, so the user is not stuck in firstLastFrame with >2
+  // images and silently truncated to two on submit.
   useEffect(() => {
     if (isHappyHorseModel) return;
     if (genMode !== "firstLastFrame") return;
@@ -1168,11 +1170,12 @@ export function useVideoGenerationForm(
     upstreamCounts,
   );
   const mediaRejectionReason = mediaRejectionReasonKey ? t(mediaRejectionReasonKey) : null;
-  // 媒体目录声明的逐模式素材上限：超了就别让用户点下去白等一次后端 400。
+  // Per-mode asset caps declared by the media catalog: when exceeded, do not let the user click only to wait for a backend 400.
   const selectedModelReferenceError = selectedVideoModelReferenceDisabledReason(
     selectedVideoModel,
     upstreamCounts,
     genMode,
+    t,
   );
   const submitDisabled =
     isGenerating ||
@@ -1196,9 +1199,9 @@ export function useVideoGenerationForm(
       return {};
     }
     if (submitDisabled) return {};
-    // 在途守卫（与 ImageGenNode 一致）：第 1 条完成就会清 isGenerating，
-    // submitDisabled 拦不住「旧批次 N-1 个任务还在跑时重新提交」——旧闭包
-    // 会用过期的 completedUrls 覆写新批次的 generationBatch。
+    // In-flight guard (consistent with ImageGenNode): the first completion clears isGenerating,
+    // and submitDisabled cannot stop "resubmitting while N-1 tasks of the old batch are still running" — the old closure
+    // would overwrite the new batch's generationBatch with stale completedUrls.
     if (submittingRef.current) return {};
     submittingRef.current = true;
     try {
@@ -1211,14 +1214,14 @@ export function useVideoGenerationForm(
       isGenerating: true,
       generationStartedAt: Date.now(),
       // Clear any prior failure so the banner reflects only this attempt.
-      // 注意 generationBatch 不在这里清：下面还有多条校验失败的早退路径，
-      // 在这里清会让一次失败的提交白白毁掉已有画册——批次清空挪到真正开跑前。
+      // Note generationBatch is not cleared here: below there are several more validation-failure early-return paths,
+      // and clearing here would let one failed submission needlessly destroy the existing album — batch clearing moves to just before the run really starts.
       generationError: null,
       generationErrorDetails: null,
       generationErrorRequestId: null,
     });
-    // 运镜 fragment 拼接到最终 prompt 的开头；上游 text 在前、用户自己写
-    // 的 prompt 在后，两段以 \n\n 隔开（与 ImageGenNode/ImageEditNode 一致）。
+    // The camera-movement fragment is prepended to the final prompt; upstream text comes first, the user's own
+    // prompt after, and the two segments are separated by \n\n (consistent with ImageGenNode/ImageEditNode).
     const fragment = cameraMovementPreset?.promptFragment;
     const trimmedPrompt = prompt.trim();
     const userPrompt = [upstreamTextJoined, trimmedPrompt]
@@ -1226,11 +1229,11 @@ export function useVideoGenerationForm(
       .join("\n\n");
     const fallbackPrompt = fragment
       ? userPrompt
-        ? `${fragment}，${userPrompt}`
+        ? `${fragment}, ${userPrompt}`
         : fragment
       : userPrompt;
     try {
-      // 工作流配方节点用配方编译出的最终 prompt；非配方节点回落上面这段拼接。
+      // Workflow recipe nodes use the final prompt compiled by the recipe; non-recipe nodes fall back to the concatenation above.
       const composedPrompt = await compileWorkflowNodePrompt({
         nodeId: id,
         nodeData: data,
@@ -1252,9 +1255,9 @@ export function useVideoGenerationForm(
         }),
       });
       // Walk the current edges/nodes once — used by every non-textToVideo
-      // branch to collect upstream resources. 必须与 UI 编号侧（useUpstreamNodes）
-      // 同源：按连线顺序收集。曾按 state.nodes 顺序（节点创建顺序）收集，先创建
-      // 但后连线的节点会排到 references 前面，@图片N 在后端就指向错位的图。
+      // branch to collect upstream resources. It must come from the same source as the UI numbering side (useUpstreamNodes):
+      // collected in connection order. It once collected in state.nodes order (node creation order), so a node created first
+      // but connected later was ordered before others in references, and @image1 pointed to a misaligned image on the backend.
       const collectUpstream = () => {
         const state = useCanvasStore.getState();
         const inputEdges = state.edges.filter((edge) => {
@@ -1287,7 +1290,6 @@ export function useVideoGenerationForm(
         const candidates: Array<{
           url: string;
           slot?: "first" | "last";
-          legacyDisplayName?: string | null;
         }> = [];
         for (const node of collectUpstream()) {
           const url = submittableImageUrl(node);
@@ -1298,8 +1300,6 @@ export function useVideoGenerationForm(
           candidates.push({
             url,
             slot: edge?.data?.keyframeSlot,
-            legacyDisplayName:
-              typeof node.data.displayName === "string" ? node.data.displayName : null,
           });
         }
         return resolveVideoKeyframeUrls(candidates);
@@ -1307,12 +1307,12 @@ export function useVideoGenerationForm(
 
       const durationClamped = clampVideoDuration(durationSec, durationBounds);
       const cameraTemplateId = cameraMovementId;
-      // 后端按 canvas_id + node_id 记录每个节点的生成历史。多条生成时每个
-      // 兄弟节点用各自的 targetId 作 node_id，历史才能分别落到对应节点。
+      // The backend records each node's generation history by canvas_id + node_id. With multiple generations each
+      // sibling node uses its own targetId as node_id, so history lands on the matching node separately.
       const canvasId = readUrl().canvas ?? "default";
 
-      // 后端不再支持一次出多条，改为按「生成数量」并发调用 N 次接口。先按
-      // genMode 组装出一个「调一次接口」的闭包 doSubmit，校验失败则置空提前返回。
+      // The backend no longer supports producing several at once; instead it calls the endpoint N times concurrently by "generation count". First
+      // assemble a "call the endpoint once" closure doSubmit by genMode; if validation fails it is set to empty and returns early.
       let doSubmit: ((targetId: string) => Promise<FreezoneJobRef>) | null = null;
       if (genMode === "firstFrame" || genMode === "firstLastFrame") {
         const keyframes = collectUpstreamKeyframeUrls();
@@ -1347,7 +1347,7 @@ export function useVideoGenerationForm(
             nodeId: targetId,
           });
       } else if (genMode === "imageToVideo" || genMode === "imageReference") {
-        // Unified i2v endpoint: 1 image = 图生视频, 2-9 images = 图片参考视频.
+        // Unified i2v endpoint: 1 image = image-to-video, 2-9 images = image-reference video.
         const imageUrls = collectUpstreamImageUrls().slice(
           0,
           referenceCaps?.image ?? 9,
@@ -1378,9 +1378,9 @@ export function useVideoGenerationForm(
             nodeId: targetId,
           });
       } else if (genMode === "videoEdit") {
-        // 视频编辑：1 个源视频 + 0-5 张参考图 → video_url + reference_images。
-        // 不再是 HappyHorse 专属 —— 目录里声明了 video_edit 的模型都走这条路，
-        // 提交时带的是各自的 catalogId，能力由后端按目录校验。
+        // Video edit: 1 source video + 0-5 reference images → video_url + reference_images.
+        // No longer HappyHorse-only — every model that declares video_edit in the catalog takes this path,
+        // and submissions carry their own catalogId, with capability validated by the backend per the catalog.
         const upstream = collectUpstream();
         const videoUrl =
           upstream
@@ -1395,12 +1395,12 @@ export function useVideoGenerationForm(
           return {};
         }
         const allImageUrls = collectUpstreamImageUrls();
-        // 视频编辑的参考图上限以媒体目录为准（没配就是 5）；超出的静默截断会让
-        // 用户以为全用上了。
+        // The reference image cap of video edit follows the media catalog (5 if not configured); silent truncation of the excess would make
+        // the user think all were used.
         const imageLimit = referenceCaps?.image ?? 5;
         if (allImageUrls.length > imageLimit) {
           toast.warning(
-            `视频编辑最多支持 ${imageLimit} 张参考图，已使用前 ${imageLimit} 张（忽略其余 ${allImageUrls.length - imageLimit} 张）`,
+            t("node.videoNode.videoEdit.imageLimit", { limit: imageLimit, ignored: allImageUrls.length - imageLimit }),
           );
         }
         const imageUrls = allImageUrls.slice(0, imageLimit);
@@ -1451,8 +1451,8 @@ export function useVideoGenerationForm(
         if (!isSeedance20Model) {
           void showErrorDialog(
             isHappyHorseModel
-              ? "HappyHorse 不支持全能参考模式，请切换为文生视频或图生视频。"
-              : "全能参考仅支持 Seedance 2.0 模型，请切换到 Seedance 2.0，或改用「首帧生成视频」。",
+              ? t("node.videoNode.allReference.happyHorseUnsupported")
+              : t("node.videoNode.allReference.modelUnsupported"),
             t("common.error"),
           );
           updateNodeData(id, {
@@ -1462,8 +1462,8 @@ export function useVideoGenerationForm(
           return {};
         }
         // Omni-gen: classify each upstream node by its media type.
-        // 逐类型上限以媒体目录为准（没配就是 image≤9 / video≤3 / audio≤3）；总数
-        // 上限只有在模型自带配置时才按三者之和算，否则沿用后端的硬上限 12。
+        // Per-type caps follow the media catalog (if not configured image≤9 / video≤3 / audio≤3); the total
+        // cap is computed as the sum of the three only when the model carries its own config, otherwise the backend's hard cap of 12 is kept.
         const caps = referenceCaps ?? { image: 9, video: 3, audio: 3 };
         const totalReferenceLimit = hasConfiguredReferenceCaps(selectedVideoModel)
           ? caps.image + caps.video + caps.audio
@@ -1487,7 +1487,7 @@ export function useVideoGenerationForm(
           if (references.length >= totalReferenceLimit) break;
           const videoRefUrl = referenceVideoUrl(node);
           if (videoRefUrl) {
-            // 视频节点或携带 videoUrl 的 upload 节点（资产库视频）统一收集。
+            // Video nodes or upload nodes carrying a videoUrl (library videos) are collected uniformly.
             if (videoCount < caps.video) {
               references.push({ type: "video", url: videoRefUrl });
               videoRefs.push({
@@ -1508,8 +1508,8 @@ export function useVideoGenerationForm(
                 ? node.data.audioUrl
                 : "";
             if (url && audioCount < caps.audio) {
-              // 音频引用默认走「配乐参考」语义；label 用 sourceFileName /
-              // displayName 之一，方便后端日志和后续 UI 展示对得上。
+              // Audio references use the "soundtrack reference" semantics by default; label uses one of sourceFileName /
+              // displayName, so backend logs and later UI display line up.
               const rawLabel =
                 (typeof node.data.sourceFileName === "string"
                   ? node.data.sourceFileName
@@ -1520,7 +1520,7 @@ export function useVideoGenerationForm(
               references.push({
                 type: "audio",
                 url,
-                role: "配乐参考",
+                role: "soundtrack_reference",
                 label: rawLabel,
               });
               audioRefs.push({
@@ -1691,21 +1691,21 @@ export function useVideoGenerationForm(
       }
       const submitOnce = doSubmit;
 
-      // 多条生成不再复制兄弟节点：N 个任务并发、全部回填到当前节点的
-      // generationBatch（叠卡画册，与图片节点一致）。第 1 条完成的设为主视频，
-      // 其余逐条追加。
+      // Multiple generations no longer clone sibling nodes: N tasks run concurrently and all backfill the current node's
+      // generationBatch (stacked-card album, consistent with the image node). The first one to finish is set as the main video,
+      // and the rest are appended one by one.
       const total = Math.min(Math.max(count, 1), 4);
-      // 各并发任务完成顺序不定，本地累积已完成的 URL，整组写回（避免读改写竞态）。
+      // Concurrent tasks finish in no fixed order, so accumulate the completed URLs locally and write back the whole group (avoiding read-modify-write races).
       const completedUrls: string[] = [];
-      // 收集每个子任务的失败，留到整批 settle 后统一决定是否弹错误框——避免
-      // 「N 条里 1 条秒失败（如命中队列上限）、其余正常生成」时一边弹报错一边
-      // 又冒加载动画的矛盾观感。
+      // Collect each sub-task's failure and leave it until the whole batch settles to decide uniformly whether to show an error dialog — avoiding
+      // the contradictory look of "1 of N fails instantly (e.g. hits the queue limit) while the rest generate normally" showing an error and
+      // a loading animation at the same time.
       const runErrors: unknown[] = [];
       const runOne = async (runIndex: number) => {
         try {
           const ref = await submitOnce(id);
           // Persist the task handle so a page refresh can resume this job.
-          // N 个并发任务同节点只能存一个句柄——保留第 1 个（主视频）的。
+          // N concurrent tasks of the same node can store only one handle — keep the first one's (the main video's).
           if (runIndex === 0) {
             updateNodeData(id, generationTaskDescriptor(ref));
           }
@@ -1729,7 +1729,7 @@ export function useVideoGenerationForm(
             completedUrls.push(url);
             const isFirstCompleted = completedUrls.length === 1;
             updateNodeData(id, {
-              // 第 1 条完成的设为主视频并结束 loading；后续只扩充画册。
+              // The first to finish is set as the main video and ends loading; later ones only expand the album.
               ...(isFirstCompleted
                 ? {
                     videoUrl: url,
@@ -1748,13 +1748,13 @@ export function useVideoGenerationForm(
               "[video-node] video gen completed without output url",
               completed,
             );
-            // 只有 run 0（任务句柄归属者）且尚无任何成功时才终结 loading——
-            // 非首个任务先「无 URL 完成」不能把还在跑的整体 loading 掐掉。
+            // Only run 0 (the owner of the task handle) with no success so far ends loading —
+            // a non-first task finishing first "without a URL" must not cut off the overall loading that is still running.
             if (runIndex === 0 && completedUrls.length === 0) {
               updateNodeData(id, {
                 isGenerating: false,
                 generationStartedAt: null,
-                generationError: "视频生成未返回结果",
+                generationError: t("node.videoNode.generation.noResult"),
                 generationErrorDetails: null,
                 generationErrorRequestId: null,
               });
@@ -1762,19 +1762,19 @@ export function useVideoGenerationForm(
           }
         } catch (error) {
           console.error("[video-node] video gen failed", error);
-          // 先记下错误再决定是否早退 —— settle 后的聚合分支靠 runErrors 判断
-          // 「部分失败」并弹 toast；早退前不记会把首个成功之后的失败彻底吞掉。
+          // Record the error first and then decide whether to return early — the aggregation branch after settle relies on runErrors to judge
+          // "partial failure" and show a toast; not recording before an early return would swallow failures after the first success entirely.
           runErrors.push(error);
-          // 已有同批其它视频完成（主视频已落）时不覆盖成功态为错误——
-          // 部分失败只影响画册条数。
+          // When other videos of the same batch have completed (the main video has landed), do not overwrite the success state with an error —
+          // a partial failure only affects the album count.
           if (completedUrls.length > 0) return;
-          const resolved = resolveErrorContent(error, "视频生成失败");
+          const resolved = resolveErrorContent(error, t("node.videoNode.generation.failed"));
           const displayErrorMessage = backendErrorToastMessage(error, t);
           const diagnostics = resolveGenerationErrorDiagnostics(error, resolved.details);
-          // Persist the failure on the node so the 重新生成 entry survives after
+          // Persist the failure on the node so the regenerate entry survives after
           // the user dismisses the dialog (previously the error was dialog-only).
-          // 只有 run 0 失败才终结 loading：非首 run 失败时 run 0 可能还在跑，
-          // 它的成功补丁会清掉这里写的错误横幅。
+          // Only a run 0 failure ends loading: when a non-first run fails, run 0 may still be running,
+          // and its success patch would clear the error banner written here.
           updateNodeData(id, {
             ...(runIndex === 0
               ? { isGenerating: false, generationStartedAt: null }
@@ -1786,8 +1786,8 @@ export function useVideoGenerationForm(
         }
       };
 
-      // 旧画册清空 + 占位计数都在所有校验通过、真正开跑前才动——前面有多个
-      // 校验失败的早退路径，提前动会白白毁掉已有画册 / 把「生成中」占位卡死。
+      // Clearing the old album + the placeholder count happen only after all validations pass and just before the run really starts — earlier there are several
+      // validation-failure early-return paths, and doing it earlier would needlessly destroy the existing album / leave the "generating" placeholder stuck.
       updateNodeData(id, { generationBatch: null });
       setAlbumPendingTotal(id, total > 1 ? total : 0);
       await Promise.allSettled(
@@ -1795,14 +1795,14 @@ export function useVideoGenerationForm(
       );
       setAlbumPendingTotal(id, 0);
       updateNodeData(id, CLEARED_GENERATION_TASK_FIELDS);
-      // 整批结束后再决定错误反馈：
-      //  - 一条都没成功 → 弹一次错误框（含真人素材被拦截的专用引导）；
-      //  - 部分成功 → 不弹模态打断，仅用轻量 toast 告知少出了几条。
-      // 这样「N 条里 1 条命中队列上限秒失败、其余正常在跑」时不会再出现
-      // 「先弹上限报错、节点却又冒出加载动画」的矛盾观感。
+      // Decide the error feedback after the whole batch ends:
+      //  - none succeeded → show one error dialog (including dedicated guidance for blocked real-person assets);
+      //  - partially succeeded → no modal interruption, only a light toast saying how many fewer were produced.
+      // This way "1 of N hits the queue limit and fails instantly while the rest run normally" no longer produces
+      // the contradictory look of "a limit error pops up first, yet the node shows a loading animation".
       if (completedUrls.length === 0 && runErrors.length > 0) {
         const firstError = runErrors[0];
-        const resolved = resolveErrorContent(firstError, "视频生成失败");
+        const resolved = resolveErrorContent(firstError, t("node.videoNode.generation.failed"));
         const displayErrorMessage = backendErrorToastMessage(firstError, t);
         const diagnostics = resolveGenerationErrorDiagnostics(firstError, resolved.details);
         const haystack = `${displayErrorMessage}\n${diagnostics.details ?? ""}`;
@@ -1810,10 +1810,10 @@ export function useVideoGenerationForm(
           haystack.includes("InputImageSensitiveContentDetected.PrivateInformation")
           || haystack.includes("InputImageSensitiveContentDetected.PrivacyInformation")
         ) {
-          // 素材含真实人脸被拦截：引导用户开启「真人素材审核」后重试。
+          // Assets containing a real face were blocked: guide the user to turn on "Real-person asset review" and retry.
           void showErrorDialog(
-            "素材包含真实人脸，已被内容安全策略拦截。请在下方打开「真人素材审核」开关后重试（可能增加审核时间，不保证通过）。",
-            "素材被拦截",
+            t("node.videoNode.generation.faceBlockedMessage"),
+            t("node.videoNode.generation.faceBlockedTitle"),
             diagnostics.details ?? undefined,
           );
         } else {
@@ -1831,8 +1831,8 @@ export function useVideoGenerationForm(
           }),
         );
       }
-      // 所有任务尘埃落定后统一拉一次历史：N 条记录都落在本节点名下，run 0
-      // settle 时就拉会漏掉后完成的 N-1 条（后端成功失败都会记）。
+      // After all tasks settle, fetch history once uniformly: all N records land under this node, and fetching when run 0
+      // settles would miss the N-1 that finish later (the backend records both success and failure).
       onGenerationSettled?.();
       return completedUrls[0] ? { videoUrl: completedUrls[0] } : {};
     } catch (error) {
@@ -1879,15 +1879,15 @@ export function useVideoGenerationForm(
     upstreamTextJoined,
   ]);
 
-  // 换模型不是一次纯 patch，故不下沉到表单组件：新模型不支持当前 genMode 时
-  // （如 HappyHorse 专属的 videoEdit 切到普通模型）要重置为通用安全值
-  // textToVideo，让状态机按新模型 + 上游重新推导；否则残留模式会在提交时打到
-  // 不支持的端点被后端 400（界面还停在错误的 tab）。顺带记住这次选择，后续新建
-  // 的视频节点将继承它。
+  // Switching models is not a pure patch, so it does not move down into the form component: when the new model does not support the current genMode
+  // (such as HappyHorse-only videoEdit switching to a regular model) reset to the generic safe value
+  // textToVideo, letting the state machine re-derive by the new model + upstream; otherwise a leftover mode would hit
+  // an unsupported endpoint on submit and be rejected with a backend 400 (while the UI is still on the wrong tab). Also remember this choice, so video
+  // nodes created later will inherit it.
   const handleModelChange = useCallback(
     (nextModelId: string) => {
-      // 传模型对象而非裸 id：媒体目录声明了 supportedModes 时以它为准，
-      // 落回能力推断只是没配置时的兜底。
+      // Pass the model object rather than a bare id: when the media catalog declares supportedModes they prevail,
+      // and falling back to capability inference is only a fallback when nothing is configured.
       const resetGenMode =
         data.genMode != null &&
         !isVideoModeSupportedByModel(
@@ -1896,8 +1896,8 @@ export function useVideoGenerationForm(
         );
       updateNodeData(id, {
         model: nextModelId,
-        // 换模型必须清空 modelParams：参数表是按模型声明的，留着上一个模型的键
-        // 会原样发给后端，轻则被忽略重则报参数不合法。
+        // Switching models must clear modelParams: the param table is declared per model, and keys left over from the previous model
+        // would be sent to the backend as is — at best ignored, at worst rejected as invalid params.
         modelParams: {},
         ...(resetGenMode ? { genMode: "textToVideo" as VideoGenMode } : {}),
       });
@@ -1906,7 +1906,7 @@ export function useVideoGenerationForm(
     [availableVideoModels, data.genMode, id, updateNodeData],
   );
 
-  // 表单按钮只需要 `() => void`；异步编排仍在本 hook 里。
+  // The form buttons only need `() => void`; async orchestration stays in this hook.
   const handleTranslate = useCallback(() => {
     void handleTranslatePrompt();
   }, [handleTranslatePrompt]);
@@ -1923,8 +1923,8 @@ export function useVideoGenerationForm(
       genMode,
       genModeModelId: selectedVideoModelId,
       genModeSupportedModes: selectedVideoModel?.supportedModes,
-      // HappyHorse 的可选模式由上游节点类型（含未填图的空节点）决定，
-      // 其余模型仍按已解析素材 URL 计数。
+      // HappyHorse's selectable modes are decided by the upstream node type (including empty nodes with no image filled),
+      // while other models still count by resolved asset URLs.
       genModeUpstreamCounts: isHappyHorseModel ? upstreamTypeCounts : upstreamCounts,
       upstreamTextContents,
       onDetachUpstream: handleDetachUpstream,
@@ -1959,15 +1959,15 @@ export function useVideoGenerationForm(
       count,
       isTranslatingPrompt,
       isGenerating,
-      // 翻译门槛看的是**已落库的** prompt（data.prompt），不是编辑器草稿——
-      // IME 合成途中草稿已有字符但还没写回 store，此时按钮仍应保持禁用。
+      // The translate threshold looks at the **persisted** prompt (data.prompt), not the editor draft —
+      // during IME composition the draft already has characters but has not been written back to the store, and the button should stay disabled then.
       translateDisabled:
         isTranslatingPrompt || isGenerating || prompt.trim().length === 0,
       onTranslate: handleTranslate,
       totalCreditCostDisplay,
       creditPromotion,
       submitDisabled,
-      // 素材超限的提示优先于「素材类型不支持」：前者是用户刚拖多了、改得动的。
+      // An over-cap asset hint takes priority over "asset type unsupported": the former is something the user just over-dragged and can fix.
       submitDisabledReason:
         billingRuleMissingSubmitMessage ??
         selectedModelReferenceError ??

@@ -93,7 +93,7 @@ describe("useTaskActivity", () => {
       const { result } = render();
       hydrateWith([
         buildScenes({
-          current_task: "从场次头提取基础场景...",
+          current_task: "Extracting base scenes from scene headings…",
           current_task_code: "tasks.progress.scenes.extractingFromHeadings",
         }),
       ]);

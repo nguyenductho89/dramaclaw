@@ -8,15 +8,15 @@ import {
 
 type PetSpriteThumbnailProps = {
   url: string;
-  /** 网格列/行数（默认 petdex 标准 8×9）。 */
+  /** Grid columns/rows (default petdex standard 8x9). */
   cols?: number;
   rows?: number;
   className?: string;
 };
 
 /**
- * 静态精灵图缩略图：取左上角 idle 首帧，不做动画。画廊行 / 导入预览共用，避免三处
- * 各写一遍背景网格定位（动画版见 SpritePetCompanion）。
+ * Static sprite sheet thumbnail: takes the top-left idle first frame, no animation. Shared by gallery rows / import preview, avoiding three places
+ * each writing their own background grid positioning (see SpritePetCompanion for the animated version).
  */
 export function PetSpriteThumbnail({
   url,

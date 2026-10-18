@@ -9,7 +9,7 @@ import { SketchAspectCheckbox } from "@/components/episode/beat-workbench/sketch
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
-      if (key === "episode.sketchSettings.aspectRatio") return "画幅";
+      if (key === "episode.sketchSettings.aspectRatio") return "Aspect";
       return key;
     },
   }),
@@ -29,9 +29,9 @@ describe("SketchAspectCheckbox", () => {
     );
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "画幅" })).toHaveTextContent("16:9");
+    expect(screen.getByRole("combobox", { name: "Aspect" })).toHaveTextContent("16:9");
 
-    await user.click(screen.getByRole("combobox", { name: "画幅" }));
+    await user.click(screen.getByRole("combobox", { name: "Aspect" }));
     expect(await screen.findByRole("option", { name: "2:3" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "16:9" })).toBeInTheDocument();
 

@@ -57,15 +57,15 @@ async def test_update_beat_accepts_seedance2_config_json(monkeypatch, tmp_path):
         episode_num=3,
         beat_num=2,
         body=BeatUpdate(
-            seedance2_config_json='{"final_prompt":"参考图片1生成视频。"}',
+            seedance2_config_json='{"final_prompt":"Generate the video from reference @image1."}',
         ),
         user={"username": "alice"},
     )
 
     assert response["ok"] is True
     assert response["data"]["seedance2_config_json"] == (
-        '{"final_prompt":"参考图片1生成视频。"}'
+        '{"final_prompt":"Generate the video from reference @image1."}'
     )
     assert store.updated["seedance2_config_json"] == (
-        '{"final_prompt":"参考图片1生成视频。"}'
+        '{"final_prompt":"Generate the video from reference @image1."}'
     )

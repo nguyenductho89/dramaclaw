@@ -1,12 +1,12 @@
-"""Store 生命周期：工厂初始化失败也要关，scope 出了 ``async with`` 一定关。
+"""Store lifecycle: the factory must close on init failure, and the scope must always close on leaving ``async with``.
 
-每个 ``SQLiteStore`` 背后是一条 aiosqlite 连接加一个后台线程。漏关不会立刻报错，
-只会在压测或长跑里表现成连接数和线程数单调上涨——所以这里的断言全部落在
-"``close()`` 被调用了几次"上，而不是落在返回值。
+Behind every ``SQLiteStore`` is an aiosqlite connection plus a background thread. A missed close does not raise an error immediately;
+it only shows up in load tests or long runs as monotonically rising connection and thread counts -- so all assertions here land on
+"how many times ``close()`` was called", not on return values.
 
-工厂那条尤其容易漏：``*_scope`` 的 ``try/finally`` 只对**工厂成功返回的**实例负责。
-``initialize()`` 已经把连接打开、``load_graph_state()`` 随后抛错时，实例还没交给任
-何人，scope 的 ``finally`` 根本看不见它。
+The factory path is especially easy to miss: the ``try/finally`` of ``*_scope`` is responsible only for instances the **factory returned successfully**.
+When ``initialize()`` has already opened the connection and ``load_graph_state()`` then raises, the instance has not been handed to anyone yet,
+and the scope's ``finally`` cannot see it at all.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import pytest
 
 
 class _FakeStore:
-    """记账用的假 store：只关心 init 步骤抛不抛、close 被调用几次。"""
+    """Bookkeeping fake store: only cares whether the init step raises and how many times close is called."""
 
     instances: list["_FakeStore"] = []
 
@@ -44,7 +44,7 @@ class _FakeStore:
 
 
 def _install_fake_store(monkeypatch, *, fail_on: str | None = None):
-    """把工厂内部 ``from novelvideo.sqlite_store import SQLiteStore`` 换成假货。"""
+    """Replace the ``from novelvideo.sqlite_store import SQLiteStore`` inside the factory with a fake."""
     import novelvideo.sqlite_store as sqlite_store_module
 
     _FakeStore.instances.clear()
@@ -67,12 +67,12 @@ def _ctx(tmp_path: Path):
 
 @pytest.fixture
 def deps_module(monkeypatch):
-    # 函数内 import：``tests/contract/test_m01_auth.py`` 会把 ``novelvideo.api.*``
-    # 整片从 ``sys.modules`` 里弹掉再以 CE 模式重建 app，模块级绑定到那时已经是个
-    # 死对象，打在上面的 patch 会静默落空。
+    # Import inside the function: ``tests/contract/test_m01_auth.py`` pops ``novelvideo.api.*``
+    # wholesale out of ``sys.modules`` and rebuilds the app in CE mode, so a module-level binding is by then a
+    # dead object, and a patch applied to it silently misses.
     from novelvideo.api import deps
 
-    # 工厂里这一步只做归属校验，和本文件要验的生命周期无关。
+    # This step in the factory only does ownership validation and is unrelated to the lifecycle verified in this file.
     monkeypatch.setattr(deps, "require_project_home_node", lambda ctx, operation="": None)
     return deps
 
@@ -80,14 +80,14 @@ def deps_module(monkeypatch):
 async def test_context_factory_closes_store_when_load_graph_state_raises(
     deps_module, monkeypatch, tmp_path
 ):
-    """初始化窗口：连接已经开了，第二步抛错，实例还没交出去——必须自己关掉。"""
+    """Initialization window: the connection is already open, the second step raises, and the instance has not been handed out -- it must close itself."""
     _install_fake_store(monkeypatch, fail_on="load_graph_state")
 
     with pytest.raises(RuntimeError, match="boom in load_graph_state"):
         await deps_module.make_sqlite_store_for_context(_ctx(tmp_path))
 
     (store,) = _FakeStore.instances
-    assert store.initialized is True, "前提：连接确实开了，否则这条用例没在测它想测的东西"
+    assert store.initialized is True, "Precondition: the connection was really opened, otherwise this case is not testing what it intends to"
     assert store.close_calls == 1
 
 
@@ -106,7 +106,7 @@ async def test_context_factory_closes_store_when_initialize_raises(
 async def test_context_factory_skips_graph_state_but_still_closes_on_init_failure(
     deps_module, monkeypatch, tmp_path
 ):
-    """``load_graph_state=False`` 是 ``/beats`` 走的分支，别在这条上漏掉收口。"""
+    """``load_graph_state=False`` is the branch taken by ``/beats``; do not miss the closing on this one."""
     _install_fake_store(monkeypatch, fail_on="initialize")
 
     with pytest.raises(RuntimeError):
@@ -122,7 +122,7 @@ async def test_context_factory_skips_graph_state_but_still_closes_on_init_failur
 async def test_ce_factory_closes_store_when_load_graph_state_raises(
     deps_module, monkeypatch, tmp_path
 ):
-    """CE 路径（按 username/project 开库）享有同样的保证。"""
+    """The CE path (opening the database by username/project) enjoys the same guarantee."""
     _install_fake_store(monkeypatch, fail_on="load_graph_state")
     monkeypatch.setattr(deps_module, "get_output_dir", lambda u, p: str(tmp_path))
     monkeypatch.setattr(deps_module, "get_state_dir", lambda u, p: str(tmp_path))
@@ -137,7 +137,7 @@ async def test_ce_factory_closes_store_when_load_graph_state_raises(
 async def test_successful_factory_does_not_close_the_store_it_returns(
     deps_module, monkeypatch, tmp_path
 ):
-    """反向哨兵：别把"出错就关"写成"总是关"，那样调用方拿到的是条死连接。"""
+    """Reverse sentinel: do not write "close on error" as "always close", otherwise the caller gets a dead connection."""
     _install_fake_store(monkeypatch)
 
     store = await deps_module.make_sqlite_store_for_context(_ctx(tmp_path))
@@ -169,12 +169,12 @@ async def test_context_scope_closes_when_the_body_raises(deps_module, monkeypatc
 async def test_context_scope_leaves_no_store_open_when_init_fails(
     deps_module, monkeypatch, tmp_path
 ):
-    """scope 的 ``finally`` 看不见初始化失败的实例，这条守的就是工厂那层的兜底。"""
+    """The scope's ``finally`` cannot see an instance whose initialization failed; this guards the fallback at the factory layer."""
     _install_fake_store(monkeypatch, fail_on="load_graph_state")
 
     with pytest.raises(RuntimeError, match="boom in load_graph_state"):
         async with deps_module.sqlite_store_for_context_scope(_ctx(tmp_path)):
-            pytest.fail("不该进到 body：工厂就已经抛了")
+            pytest.fail("Should not reach the body: the factory already raised")
 
     (store,) = _FakeStore.instances
     assert store.close_calls == 1

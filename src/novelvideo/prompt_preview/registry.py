@@ -70,10 +70,8 @@ STEP_ORDER: list[tuple[str, str, ModelKind, bool]] = [
 
 # Why a step has no preview, shown instead of a generic "not available".
 UNSUPPORTED_NOTES: dict[str, str] = {
-    "episodes": "结构化项目按章节切分集数，不调用 LLM；仅旧版 AI 规划才会发送提示词。"
-    " / Structured projects split episodes by chapter without an LLM; only the legacy AI planner sends a prompt.",
-    "coloring": "该步骤的提示词依赖草图图像与逐帧检测结果，运行时才产生。"
-    " / Its prompt depends on sketch images and per-frame detection produced at run time.",
+    "episodes": "Structured projects split episodes by chapter without an LLM; only the legacy AI planner sends a prompt.",
+    "coloring": "Its prompt depends on sketch images and per-frame detection produced at run time.",
 }
 
 

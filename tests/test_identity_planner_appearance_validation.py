@@ -13,21 +13,21 @@ from novelvideo.agents.identity_planner import (
 from novelvideo.models import CharacterIdentity, NovelCharacter
 
 
-VALID_APPEARANCE = "月白色棉麻长衫配深色腰带，衣襟绣有细密云纹，长发用木簪整齐束起"
-VALID_FACE = "六七岁幼童，圆润小脸带有婴儿肥，杏眼明亮，鼻梁小巧，五官比例稚嫩"
-VALID_BODY = "矮小圆润的幼童体型，身高仅及成人腰部"
+VALID_APPEARANCE = "Moon-white cotton-linen robe with a dark sash, fine cloud-pattern embroidery on the lapel, long hair neatly pinned with a wooden hairpin"
+VALID_FACE = "Six- or seven-year-old child, round small face with baby fat, bright almond eyes, small nose bridge, youthful facial proportions"
+VALID_BODY = "Small, round toddler build, only waist-high to an adult"
 
 OBSERVED_CORRUPTION = [
     "�body_type",
     "/* empty */",
     "proportbody_typeemonia",
-    "焐body_typeملاحظة",
+    "xbody_typeملاحظة",
     " بقدرbody_type_",
     "proptobody_type\u200b",
     "♇body_type\u200c",
     (
-        "𝔭body_type判定ing: empty for same age. Yes. Count: Let's check length of "
-        "appearance_details.\n\n正常服装描述\n\nThat's about 50-60 characters. Perfect."
+        "𝔭body_typeJudging: empty for same age. Yes. Count: Let's check length of "
+        "appearance_details.\n\nNormal clothing description\n\nThat's about 50-60 characters. Perfect."
     ),
     "@returnsbody_type letztlich",
     "pensãobody_type}\r\n\r\n",
@@ -49,7 +49,7 @@ def test_appearance_description_rejects_observed_corruption(field_name, corrupte
         AppearanceDescription(**payload)
 
 
-@pytest.mark.parametrize("appearance", ["", "   ", "过短描述", "长" * 201])
+@pytest.mark.parametrize("appearance", ["", "   ", "too short", "x" * 401])
 def test_appearance_description_requires_bounded_nonblank_appearance(appearance):
     with pytest.raises(ValidationError):
         AppearanceDescription(appearance_details=appearance)
@@ -57,7 +57,7 @@ def test_appearance_description_requires_bounded_nonblank_appearance(appearance)
 
 @pytest.mark.parametrize(
     "appearance",
-    [123456789012, ["月白色长衫", "深色腰带"], {"clothes": "月白色长衫配深色腰带"}],
+    [123456789012, ["moon-white robe", "dark sash"], {"clothes": "moon-white robe with a dark sash"}],
 )
 def test_appearance_description_rejects_non_string_appearance(appearance):
     with pytest.raises(ValidationError):
@@ -163,7 +163,7 @@ async def test_generate_appearance_retries_twice_then_accepts_valid_output(monke
     monkeypatch.setattr(IdentityPlanner, "_identity_model", staticmethod(lambda _env: model))
     planner = IdentityPlanner(EmptyIdentityStore())
 
-    result = await planner._generate_appearance("林知微", "少女时期", "", "回忆场景")
+    result = await planner._generate_appearance("Lin Zhiwei", "young_lady", "", "memory scene")
 
     assert result.appearance_details == VALID_APPEARANCE
     assert len(captured_messages) == 3
@@ -186,7 +186,7 @@ async def test_generate_appearance_raises_after_three_invalid_outputs(monkeypatc
     planner = IdentityPlanner(EmptyIdentityStore())
 
     with pytest.raises(UnexpectedModelBehavior, match="maximum.*retries"):
-        await planner._generate_appearance("林知微", "少女时期", "", "回忆场景")
+        await planner._generate_appearance("Lin Zhiwei", "young_lady", "", "memory scene")
 
     assert len(captured_messages) == 3
     assert _retry_parts(captured_messages[1])
@@ -212,7 +212,7 @@ async def test_generate_appearance_retries_non_string_tool_output(monkeypatch):
     monkeypatch.setattr(IdentityPlanner, "_identity_model", staticmethod(lambda _env: model))
     planner = IdentityPlanner(EmptyIdentityStore())
 
-    result = await planner._generate_appearance("林知微", "战斗装", "", "动作场景")
+    result = await planner._generate_appearance("Lin Zhiwei", "combat_outfit", "", "action scene")
 
     assert result.appearance_details == VALID_APPEARANCE
     assert len(captured_messages) == 2
@@ -239,10 +239,10 @@ async def test_generate_appearance_retries_fields_missing_for_planned_age(monkey
     planner = IdentityPlanner(EmptyIdentityStore())
 
     result = await planner._generate_appearance(
-        "林知微",
-        "幼年时期",
+        "Lin Zhiwei",
         "child",
-        "童年回忆",
+        "child",
+        "childhood memory",
     )
 
     assert result.age_group == "child"
@@ -291,19 +291,19 @@ class ControlledAppearancePlanner(IdentityPlanner):
 
 
 def _identity_character(identity):
-    character = NovelCharacter(name="林知微", gender="女", age_group="youth")
+    character = NovelCharacter(name="Lin Zhiwei", gender="female", age_group="youth")
     character.identities = [identity]
     return character
 
 
-def _requirement(visual_state="战斗装", age_group=""):
+def _requirement(visual_state="combat_outfit", age_group=""):
     return EpisodeIdentityRequirements(
         requirements=[
             IdentityRequirement(
-                character_name="林知微",
+                character_name="Lin Zhiwei",
                 visual_state=visual_state,
                 age_group=age_group,
-                reason="本集需要该造型",
+                reason="This episode needs this look",
             )
         ]
     )
@@ -312,9 +312,9 @@ def _requirement(visual_state="战斗装", age_group=""):
 @pytest.mark.asyncio
 async def test_resolve_refills_only_narrowly_pending_planner_identity():
     identity = CharacterIdentity(
-        identity_id="林知微_战斗装",
-        character_name="林知微",
-        identity_name="战斗装",
+        identity_id="Lin Zhiwei_combat_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="combat_outfit",
         source="identity_planner",
     )
     store = RecordingIdentityStore(_identity_character(identity))
@@ -334,9 +334,9 @@ async def test_resolve_refills_only_narrowly_pending_planner_identity():
 @pytest.mark.parametrize("source", ["api", "freezone"])
 async def test_resolve_does_not_refill_non_planner_empty_identity(source):
     identity = CharacterIdentity(
-        identity_id="林知微_战斗装",
-        character_name="林知微",
-        identity_name="战斗装",
+        identity_id="Lin Zhiwei_combat_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="combat_outfit",
         source=source,
         costume_image="assets/user-costume.png" if source == "freezone" else "",
     )
@@ -358,9 +358,9 @@ async def test_resolve_repairs_polluted_face_without_replacing_valid_appearance(
     polluted_face,
 ):
     identity = CharacterIdentity(
-        identity_id="林知微_战斗装",
-        character_name="林知微",
-        identity_name="战斗装",
+        identity_id="Lin Zhiwei_combat_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="combat_outfit",
         source="identity_planner",
         appearance_details=VALID_APPEARANCE,
         face_prompt=polluted_face,
@@ -368,7 +368,7 @@ async def test_resolve_repairs_polluted_face_without_replacing_valid_appearance(
     store = RecordingIdentityStore(_identity_character(identity))
     planner = ControlledAppearancePlanner(
         store,
-        result=AppearanceDescription(appearance_details="深青色窄袖劲装配皮质护腕，腰束革带悬挂短刃，长发高束便于行动"),
+        result=AppearanceDescription(appearance_details="Deep teal narrow-sleeved fighting outfit with leather bracers, a belt holding a short blade at the waist, long hair tied high for movement"),
     )
 
     await planner._resolve_requirements(1, _requirement())
@@ -383,9 +383,9 @@ async def test_resolve_repairs_polluted_face_without_replacing_valid_appearance(
 @pytest.mark.asyncio
 async def test_resolve_repairs_polluted_body_without_overwriting_valid_user_face():
     identity = CharacterIdentity(
-        identity_id="林知微_幼年时期",
-        character_name="林知微",
-        identity_name="幼年时期",
+        identity_id="Lin Zhiwei_child",
+        character_name="Lin Zhiwei",
+        identity_name="child",
         source="identity_planner",
         appearance_details=VALID_APPEARANCE,
         face_prompt=VALID_FACE,
@@ -396,14 +396,14 @@ async def test_resolve_repairs_polluted_body_without_overwriting_valid_user_face
     planner = ControlledAppearancePlanner(
         store,
         result=AppearanceDescription(
-            appearance_details="浅粉色棉布短袄配百褶裙，腰系红绳，双丫髻点缀小巧绢花",
-            face_description="八岁幼童，鹅蛋脸轮廓柔和，杏眼清亮，鼻唇小巧，双颊带婴儿肥",
+            appearance_details="Light pink cotton short jacket with a pleated skirt, a red cord at the waist, twin buns adorned with small silk flowers",
+            face_description="Eight-year-old child, soft oval face, clear almond eyes, small nose and lips, chubby baby-fat cheeks",
             age_group="child",
             body_type=VALID_BODY,
         ),
     )
 
-    await planner._resolve_requirements(1, _requirement("幼年时期", "child"))
+    await planner._resolve_requirements(1, _requirement("child", "child"))
 
     assert len(store.update_calls) == 1
     updates = store.update_calls[0][2]
@@ -415,9 +415,9 @@ async def test_resolve_repairs_polluted_body_without_overwriting_valid_user_face
 @pytest.mark.asyncio
 async def test_repair_prefers_persisted_age_group_when_requirement_has_none():
     identity = CharacterIdentity(
-        identity_id="林知微_回忆装",
-        character_name="林知微",
-        identity_name="回忆装",
+        identity_id="Lin Zhiwei_memory_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="memory_outfit",
         source="identity_planner",
         appearance_details=VALID_APPEARANCE,
         face_prompt=VALID_FACE,
@@ -428,14 +428,14 @@ async def test_repair_prefers_persisted_age_group_when_requirement_has_none():
     planner = ControlledAppearancePlanner(
         store,
         result=AppearanceDescription(
-            appearance_details="浅粉色棉布短袄配百褶裙，腰系红绳，双丫髻点缀小巧绢花",
+            appearance_details="Light pink cotton short jacket with a pleated skirt, a red cord at the waist, twin buns adorned with small silk flowers",
             face_description=VALID_FACE,
             age_group="child",
             body_type=VALID_BODY,
         ),
     )
 
-    await planner._resolve_requirements(1, _requirement("回忆装", ""))
+    await planner._resolve_requirements(1, _requirement("memory_outfit", ""))
 
     assert planner.appearance_calls[0][2] == "child"
     assert store.update_calls[0][2]["body_type"] == VALID_BODY
@@ -444,9 +444,9 @@ async def test_repair_prefers_persisted_age_group_when_requirement_has_none():
 @pytest.mark.asyncio
 async def test_resolve_pending_generation_failure_performs_no_write():
     identity = CharacterIdentity(
-        identity_id="林知微_战斗装",
-        character_name="林知微",
-        identity_name="战斗装",
+        identity_id="Lin Zhiwei_combat_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="combat_outfit",
         source="identity_planner",
     )
     store = RecordingIdentityStore(_identity_character(identity))
@@ -461,9 +461,9 @@ async def test_resolve_pending_generation_failure_performs_no_write():
 @pytest.mark.asyncio
 async def test_resolve_corrupt_generation_failure_clears_only_polluted_field():
     identity = CharacterIdentity(
-        identity_id="林知微_战斗装",
-        character_name="林知微",
-        identity_name="战斗装",
+        identity_id="Lin Zhiwei_combat_outfit",
+        character_name="Lin Zhiwei",
+        identity_name="combat_outfit",
         source="identity_planner",
         appearance_details=VALID_APPEARANCE,
         face_prompt="/* empty */",
@@ -480,9 +480,9 @@ async def test_resolve_corrupt_generation_failure_clears_only_polluted_field():
 @pytest.mark.asyncio
 async def test_resolve_inconsistent_merge_clears_only_polluted_field():
     identity = CharacterIdentity(
-        identity_id="林知微_幼年时期",
-        character_name="林知微",
-        identity_name="幼年时期",
+        identity_id="Lin Zhiwei_child",
+        character_name="Lin Zhiwei",
+        identity_name="child",
         source="identity_planner",
         appearance_details=VALID_APPEARANCE,
         face_prompt="�body_type",
@@ -493,7 +493,7 @@ async def test_resolve_inconsistent_merge_clears_only_polluted_field():
     planner = ControlledAppearancePlanner(
         store,
         result=AppearanceDescription(
-            appearance_details="浅粉色棉布短袄配百褶裙，腰系红绳，双丫髻点缀小巧绢花",
+            appearance_details="Light pink cotton short jacket with a pleated skirt, a red cord at the waist, twin buns adorned with small silk flowers",
             face_description=VALID_FACE,
             age_group="child",
             body_type=VALID_BODY,
@@ -503,9 +503,9 @@ async def test_resolve_inconsistent_merge_clears_only_polluted_field():
 
     await planner._resolve_requirements(
         1,
-        _requirement("幼年时期", "child"),
+        _requirement("child", "child"),
         on_log=logs.append,
     )
 
     assert store.update_calls[0][2] == {"face_prompt": ""}
-    assert any("无法在保留有效字段" in message for message in logs)
+    assert any("Could not repair" in message for message in logs)

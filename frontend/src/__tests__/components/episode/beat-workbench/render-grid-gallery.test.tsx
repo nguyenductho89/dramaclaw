@@ -20,37 +20,37 @@ beforeAll(async () => {
       zh: {
         translation: {
           common: {
-            regenerate: "重新生成",
-            download: "下载",
-            stop: "停止",
-            upload: "上传",
-            copy: "复制",
-            billingRuleNotConfiguredShort: "需配置",
+            regenerate: "Regenerate",
+            download: "Download",
+            stop: "Stop",
+            upload: "Upload",
+            copy: "Copy",
+            billingRuleNotConfiguredShort: "Configure",
           },
           episode: {
             workbench: {
               renderGrid: {
                 title: "Render Grid",
                 titleWithCount: "Render Grid ({{count}} grids)",
-                gridCount: "{{count}} 个 grid",
+                gridCount: "{{count}} grids",
                 gridLabel: "Grid #{{n}}",
-                cellCount: "{{count}} 格",
-                cut: "切割入池",
-                regenStarted: "Grid #{{n}} 已启动",
-                regenFailed: "Grid 重生失败",
-                cutSuccess: "Grid #{{n}} 已切割",
-                cutFailed: "Grid 切割失败",
-                uploadGrid: "上传 grid",
-                rebuildIndex: "重建索引",
-                rebuildSuccess: "索引重建完成：{{count}} 张图片",
-                rebuildFailed: "索引重建失败",
-                uploadSuccess: "Grid #{{n}} 已上传",
-                uploadFailed: "Grid 上传失败",
-                exportPrompt: "导出 prompt",
+                cellCount: "{{count}} cells",
+                cut: "Cut to pool",
+                regenStarted: "Grid #{{n}} started",
+                regenFailed: "Grid regen failed",
+                cutSuccess: "Grid #{{n}} cut",
+                cutFailed: "Grid cut failed",
+                uploadGrid: "Upload grid",
+                rebuildIndex: "Rebuild index",
+                rebuildSuccess: "Index rebuilt: {{count}} images",
+                rebuildFailed: "Index rebuild failed",
+                uploadSuccess: "Grid #{{n}} uploaded",
+                uploadFailed: "Grid upload failed",
+                exportPrompt: "Export prompt",
                 promptTitle: "Grid #{{n}} prompt",
-                promptContent: "Prompt 内容",
-                promptFailed: "Prompt 导出失败",
-                copySuccess: "Prompt 已复制",
+                promptContent: "Prompt content",
+                promptFailed: "Prompt export failed",
+                copySuccess: "Prompt copied",
               },
             },
           },
@@ -231,7 +231,7 @@ describe("RenderGridGallery", () => {
     );
 
     expect(screen.getByText(/Render Grid/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "重建索引" }));
+    await user.click(screen.getByRole("button", { name: "Rebuild index" }));
 
     expect(rebuildPoolIndexMock).toHaveBeenCalledTimes(1);
   });
@@ -245,7 +245,7 @@ describe("RenderGridGallery", () => {
 
     expect(screen.getByText(/Render Grid/)).toBeInTheDocument();
     expect(screen.getByText("Grid #2")).toBeInTheDocument();
-    expect(screen.getByText(/2 格/)).toBeInTheDocument();
+    expect(screen.getByText(/2 cells/)).toBeInTheDocument();
   });
 
   it("keeps custom render grids separate when backend pool grid_index is reused", () => {
@@ -431,14 +431,14 @@ describe("RenderGridGallery", () => {
     );
 
     expect(screen.getByText("8")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "重新生成" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
     expect(regenerateGridMock).toHaveBeenCalledWith({
       gridIndex: 2,
       sceneGrouping: true,
     });
     expect(taskStartMock).toHaveBeenCalledWith({ scope: "grid_2" });
 
-    await user.click(screen.getByRole("button", { name: "切割入池" }));
+    await user.click(screen.getByRole("button", { name: "Cut to pool" }));
     expect(cutGridMock).toHaveBeenCalledWith({
       gridIndex: 2,
       rows: 1,

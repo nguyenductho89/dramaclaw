@@ -32,8 +32,7 @@ def _chunks(scope: PreviewScope):
 # --- characters: stage 1, one prompt per source chunk ---------------------------------------------
 
 _CHARACTERS_NOTE = (
-    "仅显示第一阶段（逐片段抽取）。合并、裁决与外貌补全依赖模型输出，运行时才产生。"
-    " / Stage 1 only (per-chunk extraction). Merging, adjudication and appearance enrichment depend on model output."
+    "Stage 1 only (per-chunk extraction). Merging, adjudication and appearance enrichment depend on model output."
 )
 
 
@@ -72,7 +71,7 @@ async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
 
 
 async def _identity_targets(scope: PreviewScope) -> list[PreviewTarget]:
-    return [PreviewTarget("pass_a", "default identities")]
+    return [PreviewTarget("pass_a", "Pass A · default identities")]
 
 
 async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
@@ -118,8 +117,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
             ),
         ],
         inputs={"cast_names": cast},
-        note="出场角色在运行时先经 LLM 筛选，此处按全部角色预览；Pass B（特殊身份）未显示。"
-        " / The cast is filtered by an LLM at run time; this preview assumes all characters. Pass B is not shown.",
+        note="The cast is filtered by an LLM at run time; this preview assumes all characters. Pass B is not shown.",
     )
 
 
@@ -169,11 +167,9 @@ register(StepSpec("identity_plan", "Identity planning", "llm", needs_episode=Tru
                   targets_fn=_identity_targets, build_fn=_identity_build))
 register(_system_only(
     "script", "Script", _script_system,
-    "每一行的用户提示词依赖前面各行的选择，运行时逐行拼装；这里只显示系统提示词。"
-    " / The per-line user prompt depends on earlier lines and is assembled at run time; only the system prompt is shown.",
+    "The per-line user prompt depends on earlier lines and is assembled at run time; only the system prompt is shown.",
 ))
 register(_system_only(
     "global_optimize", "Global optimize", _optimizer_system,
-    "每个分镜的用户提示词依赖草图图像与角色颜色映射，运行时拼装；这里只显示系统提示词。"
-    " / The per-beat user prompt needs the sketch image and colour map at run time; only the system prompt is shown.",
+    "The per-beat user prompt needs the sketch image and colour map at run time; only the system prompt is shown.",
 ))

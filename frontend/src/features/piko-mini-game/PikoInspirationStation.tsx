@@ -176,8 +176,8 @@ function PikoGamePosterCard({
     if (!video) return;
     hoverPreviewRequestedRef.current = true;
     if (!hoverVideoPreparedRef.current) {
-      // preload="none" 下首帧要等这次 load()。同一张卡反复进出只 load 一次——
-      // 重复调用会把正在进行的加载打断重来，鼠标来回蹭就永远备不好首帧。
+      // With preload="none" the first frame waits for this load(). A card going in and out repeatedly loads only once -
+      // repeated calls would interrupt and restart an in-progress load, so moving the mouse back and forth would never get the first frame ready.
       if (!hoverVideoLoadStartedRef.current) {
         hoverVideoLoadStartedRef.current = true;
         video.load();
@@ -217,20 +217,20 @@ function PikoGamePosterCard({
         muted
         loop
         playsInline
-        // 六张卡在打开游戏库时一起挂载，激进的 preload 会让浏览器立刻预取约
-        // 5.9MiB 视频——用户一次都没 hover 也照付。首帧封面已由 poster 承担，
-        // 真正的加载推迟到 playHoverPreview 里显式 load()。
+        // The six cards mount together when the game library opens, and an aggressive preload would make the browser prefetch about
+        // 5.9MiB of video at once - paid even if the user never hovers. The first-frame cover is already carried by the poster,
+        // and the real load is deferred to an explicit load() inside playHoverPreview.
         preload="none"
         onError={(event) => {
-          // 这次加载已经终止，守卫必须放行，否则这张卡后续所有 hover 都会跳过
-          // load()，只能靠关掉弹窗重新挂载才能恢复。
+          // This load has already terminated, so the guard must let it through, otherwise all later hovers on this card would skip
+          // load(), recoverable only by closing the dialog and remounting.
           //
-          // 只挂 error，不挂 abort/emptied：preload="none" 下元素停在
-          // NETWORK_IDLE，我们自己调 load() 就会先排一个 abort 任务，挂上去等于
-          // 在加载刚开始时把守卫清掉，退回到「鼠标来回蹭就反复打断」的老问题。
+          // Attach only error, not abort/emptied: with preload="none" the element rests at
+          // NETWORK_IDLE, and our own load() first queues an abort task, so attaching it would be equivalent to
+          // clearing the guard just as loading starts, falling back to the old problem of "moving the mouse back and forth interrupts repeatedly".
           hoverVideoLoadStartedRef.current = false;
           hoverVideoPreparedRef.current = false;
-          // 首帧已经不可用了，把封面装回去，别留一块黑图。
+          // The first frame is no longer usable; put the cover back so a black image is not left behind.
           event.currentTarget.setAttribute("poster", game.posterSrc);
         }}
         onLoadedData={(event) => {

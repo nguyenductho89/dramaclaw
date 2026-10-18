@@ -73,16 +73,15 @@ const GENERATIVE_HISTORY_NODE_TYPES = new Set<string>([
  * Map backend generation-history records into the asset-card shape the modal
  * already renders. Only completed records that carry a usable output url for an
  * image/video/audio surface; `recorded_at` drives date grouping (fixing the
- * old "未知日期" bucketing that the live-canvas scrape produced). Deduped by
+ * old "Unknown date" bucketing that the live-canvas scrape produced). Deduped by
  * (kind,url) so a restored/duplicated output shows once. No per-tab display cap
  * — every record the backend returns (up to its own fetch limit) is shown, so
  * the history browser never silently hides older assets.
  */
 /**
- * 可选的「节点元信息」解析器:用一条记录的 `node_id` 回到 live 画布,取该(世界)节点
- * 的兜底封面与名字。世界记录的 `result` 往往既无预览图也无提示词,但生成它的
- * `threeDWorld` 节点把**输入源图**存在 `previewImageUrl`、并经 `sourceNodeId` 指向上游
- * 图片节点(其 displayName 即如「大学宿舍」)——拿来当封面/名字最贴切。
+ * An optional "node meta" resolver: use a record's `node_id` to go back to the live canvas and take that (world) node's
+ * fallback cover and name. A world record's `result` often has neither a preview image nor a prompt, but the `threeDWorld` node that generated it stores the **input source image**
+ * in `previewImageUrl` and points to the upstream image node via `sourceNodeId` (whose displayName is e.g. "University dorm") - which is the most fitting cover/name.
  */
 export interface HistoryNodeMeta {
   cover: string | null;
@@ -97,10 +96,10 @@ export function recordsToAssetBuckets(
   const seen = new Set<string>();
   for (const record of records) {
     if (record.status !== 'completed' && record.status !== 'succeeded') continue;
-    // 世界(3GS / 360→3GS)记录判定:**先看产物结构**(result 里有没有真正的
-    // .sog/.ply/3GS url),再退而看 media_type。image-to-3gs 记录的 media_type 后端
-    // 标得并不可靠(常是 `image` 而非 `3d`),只认 media_type 会漏掉整个世界历史——
-    // 节点侧历史 strip 一向靠嗅探产物 url 判世界,这里与之对齐。
+    // World (3GS / 360 -> 3GS) record check: **look at the product structure first** (does result contain a real
+    // .sog/.ply/3GS url), and only then fall back to media_type. The backend's media_type for image-to-3gs records
+    // is unreliable (often `image` rather than `3d`), and trusting only media_type would miss the whole world history -
+    // the node-side history strip has always sniffed product urls to judge worlds; this aligns with it.
     const worldUrl = historyRecordStrictWorldUrl(record);
     const isWorld =
       worldUrl !== null ||
@@ -115,8 +114,8 @@ export function recordsToAssetBuckets(
         ? record.media_type
         : null;
     if (!kind) continue;
-    // 世界模型产物 url 可能藏在 sog_url/scene_3gs_ply_fs 等键下,用专用提取器;
-    // 其余类型走通用 output url。
+    // World model product urls may hide under keys like sog_url/scene_3gs_ply_fs, so use a dedicated extractor;
+    // other types use the generic output url.
     const url = resolveMediaUrl(
       kind === 'model'
         ? (worldUrl ?? historyRecordWorldUrl(record))
@@ -127,14 +126,14 @@ export function recordsToAssetBuckets(
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
     const ts = new Date(record.recorded_at).getTime();
-    // 世界记录用 host 节点兜底封面/名字(见 HistoryNodeMeta);其余类型不兜底,沿用
-    // 各自既有取值。
+    // World records use the host node for fallback cover/name (see HistoryNodeMeta); other types have no fallback and keep
+    // their own existing values.
     const nodeMeta =
       kind === 'model' ? resolveNodeMeta?.(record.node_id) : undefined;
     // Show only the prompt the backend stored on this record, so the prompt
     // always matches the video. Legacy records that never stored a prompt show
     // nothing (no node-prompt fallback — it misattributed the node's current
-    // prompt to old versions). 世界记录例外:无提示词时回退到上游源图节点的名字。
+    // prompt to old versions). World records are an exception: with no prompt, fall back to the upstream source image node's name.
     const prompt = historyRecordPrompt(record);
     const label = prompt ?? nodeMeta?.name ?? null;
     buckets[kind].push({
@@ -146,10 +145,10 @@ export function recordsToAssetBuckets(
       ),
       nodeId: record.node_id,
       label,
-      // 用「使用」建节点时把这条记录原始提示词灌进新节点的提示词框；label 对世界
-      // 记录可能回退成节点名,所以这里单独存 prompt（仅后端存过提示词时才有值）。
+      // When "Use" creates a node, pour this record's original prompt into the new node's prompt box; label may fall back to the node name
+      // for world records, so the prompt is stored separately here (only has a value when the backend stored a prompt).
       prompt: prompt ?? null,
-      // 原始生成的注册表模型 id / 生成模式，透传给「使用」还原节点（旧记录为 undefined）。
+      // The original generation's registry model id / generation mode, passed through to the "Use" restored node (undefined for old records).
       model: record.model,
       genMode: record.gen_mode,
       timestamp: Number.isNaN(ts) ? null : ts,
@@ -169,20 +168,20 @@ const TAB_LABEL_KEY: Record<CanvasAssetKind, string> = {
 interface CanvasHistoryAssetsModalProps {
   onClose: () => void;
   /**
-   * 「使用」：把该资产作为一个新节点加入画布（落在视口中心）。批量使用时传 placement，
-   * 由外层把多个节点在视口中心附近铺成网格。
+   * "Use": add this asset to the canvas as a new node (landing at the viewport center). For bulk use, placement is passed,
+   * and the outer layer lays out the nodes as a grid near the viewport center.
    */
   onUseAsset: (asset: CanvasAsset, placement?: { index: number; total: number }) => void;
-  /** live-canvas 来源的「删除」：从画布移除该资产对应的源节点。 */
+  /** "Delete" for live-canvas sources: remove the source node corresponding to the asset from the canvas. */
   onDeleteNode: (nodeId: string) => void;
-  /** 仅展示图片 tab（用于分镜组只接受图片的取图场景）。 */
+  /** Show only the image tab (for the storyboard group's image-only picking scenario). */
   imageOnly?: boolean;
   /**
-   * 资产来源：
-   * - `'generation-history'`（默认）：拉后端「整画布生成历史记录」，按 recorded_at
-   *   分组——这是全局「历史资产」弹窗要的语义（节点的历次生成产物）。
-   * - `'live-canvas'`：抓当前画布上所有节点现存的资产（含上传/参考图）。分镜组取图
-   *   走这条，需要能选到未经生成的上传图。
+   * Asset source:
+   * - `'generation-history'` (default): fetch the backend's "whole-canvas generation history" and group by recorded_at
+   *   - the semantics the global "History assets" dialog wants (each generation product of a node).
+   * - `'live-canvas'`: scrape the assets currently existing on all nodes on the canvas (including uploads/reference images). The storyboard group's image picking
+   *   goes through this, since uploaded images that were never generated must be selectable.
    */
   assetSource?: 'generation-history' | 'live-canvas';
 }
@@ -215,10 +214,10 @@ export function CanvasHistoryAssetsModal({
   const [activeTab, setActiveTab] = useState<CanvasAssetKind>('image');
   const tabOrder = imageOnly ? (['image'] as CanvasAssetKind[]) : TAB_ORDER;
   const [direction, setDirection] = useState<'desc' | 'asc'>('desc');
-  // 关键词搜索(issue #175)。分两个 state:`query` 是输入框显示值(含 IME 组字中还没上屏
-  // 的拼音),`searchTerm` 才参与过滤 —— 组字期间不更新,否则中文用户敲「小猫」的途中,
-  // x/xi/xia/xiao 每一步都是一次真实过滤,网格反复清空、计数掉到 (0)。与
-  // AudioOperationsPanel 的输入框同一套路:草稿照常更新保证输入框跟手,只把下游提交挡住。
+  // Keyword search (issue #175). Two states: `query` is the input box display value (including pinyin still being composed under IME
+  // and not yet committed), and `searchTerm` is what participates in filtering - it is not updated during composition, otherwise a user typing "kitten" in Chinese
+  // would make every step x/xi/xia/xiao a real filter, with the grid repeatedly emptying and the count dropping to (0). The same scheme as the
+  // AudioOperationsPanel input box: the draft updates as usual so the input follows the hand, and only downstream submission is blocked.
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const isComposingRef = useRef(false);
@@ -229,13 +228,13 @@ export function CanvasHistoryAssetsModal({
   // Image lightbox state (drives the shared ImageViewerModal nav list).
   const [imageViewerIndex, setImageViewerIndex] = useState<number | null>(null);
   const [videoViewerUrl, setVideoViewerUrl] = useState<string | null>(null);
-  // 世界模型「查看」：用产物 url 现搭一个最小 manifest，直接开虾境（导演台）。
+  // World model "View": build a minimal manifest on the spot from the product url and open the Shrimp realm (director stage) directly.
   const [worldManifest, setWorldManifest] = useState<DirectorStageManifest | null>(null);
   // Full-prompt dialog (opened by clicking a card's compact prompt caption).
   const [promptDialogText, setPromptDialogText] = useState<string | null>(null);
 
-  // 世界记录兜底封面/名字:用记录的 node_id 回到 live 画布,取该 threeDWorld 节点的
-  // previewImageUrl(=输入源图)当封面、上游源图节点的 displayName(如「大学宿舍」)当名字。
+  // World record fallback cover/name: use the record's node_id to go back to the live canvas, take that threeDWorld node's
+  // previewImageUrl (= the input source image) as the cover, and the upstream source image node's displayName (e.g. "University dorm") as the name.
   const resolveNodeMeta = useMemo(() => {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const trimmed = (value: unknown): string | null =>
@@ -270,8 +269,8 @@ export function CanvasHistoryAssetsModal({
     [buckets, normalizedQuery],
   );
   const activeAssets = filteredBuckets[activeTab];
-  // 当前 tab 没命中、但别的 tab 有时,空态要指路 —— 否则「没有匹配的历史资产」会和头上
-  // 明明写着「视频历史(1)」的计数自相矛盾。
+  // When the current tab has no hit but other tabs do, the empty state must point the way - otherwise "No matching history assets" would contradict the count
+  // "Video history (1)" plainly shown at the top.
   const otherTabsWithMatches = tabOrder.filter(
     (tab) => tab !== activeTab && filteredBuckets[tab].length > 0,
   );
@@ -286,9 +285,9 @@ export function CanvasHistoryAssetsModal({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      // 组字中的 Escape 是「关掉候选窗」,浏览器照样把 keydown 冒泡到 document ——
-      // 不在这里拦住,搜索框那边的守卫(它组字时刻意不 stopPropagation)就会让中文
-      // 用户取消一次候选词把整个弹窗关掉。与 Canvas.tsx 的全局键盘守卫同一判据。
+      // Escape during composition means "close the candidate window", yet the browser still bubbles the keydown to document -
+      // if not intercepted here, the search box's guard (which deliberately does not stopPropagation while composing) would let a Chinese
+      // user cancelling a candidate close the whole dialog. The same criterion as Canvas.tsx's global keyboard guard.
       if (event.isComposing) return;
       if (event.key === 'Escape') {
         // Inner overlays own Escape while open: prompt dialog first, then the
@@ -306,10 +305,10 @@ export function CanvasHistoryAssetsModal({
 
   useEffect(() => {
     // Reset selection when switching tab so counts can't leak across kinds.
-    // 刻意不在搜索词变化时清空:`selectedAssets` 本来就是从过滤后的 activeAssets 里取的,
-    // 被筛掉的卡片进不了任何批量操作,清空并不能多防住什么;反倒会让用户手挑了几十张后
-    // 多敲一个字就全没了(批量下载途中还会把进度条连同 spinner 一起卸载)。选中项在筛选
-    // 期间保留、清空搜索后回来,是可预期的。
+    // Deliberately not cleared when the search term changes: `selectedAssets` is already taken from the filtered activeAssets,
+    // and cards filtered out cannot enter any bulk operation, so clearing prevents nothing more; instead it would make a user who hand-picked dozens of cards
+    // lose them all by typing one more character (and during a bulk download it would unmount the progress bar along with the spinner). Keeping the selection during
+    // filtering and having it back after clearing the search is predictable.
     setSelectedIds(new Set());
   }, [activeTab]);
 
@@ -325,7 +324,7 @@ export function CanvasHistoryAssetsModal({
     });
   };
 
-  // 查看：图片 / 视频放大查看。音频不走这里 —— 直接在卡片上内联播放（见 AssetCard）。
+  // View: enlarge images / videos. Audio does not go through here - it plays inline on the card (see AssetCard).
   const handleView = (asset: CanvasAsset) => {
     if (asset.kind === 'image') {
       const index = orderedImageUrls.indexOf(asset.url);
@@ -333,8 +332,8 @@ export function CanvasHistoryAssetsModal({
     } else if (asset.kind === 'video') {
       setVideoViewerUrl(asset.url);
     } else if (asset.kind === 'model') {
-      // 直接进虾境：历史记录只有产物 url，没有节点的 sources/场景编辑，临时搭一个
-      // 最小 scene-mode manifest 打开导演台（仅看裸 3GS / 360 全景）。
+      // Enter the Shrimp realm directly: history records only have the product url, with no node sources/scene edits, so temporarily build a
+      // minimal scene-mode manifest to open the director stage (only for viewing a bare 3GS / 360 panorama).
       const project = readUrl().project;
       if (!project) return;
       const manifest = buildStandaloneWorldManifest({
@@ -377,8 +376,8 @@ export function CanvasHistoryAssetsModal({
     }
   };
 
-  // 批量操作：当前 tab 里被选中的资产（保持展示顺序）。切 tab 会清空 selectedIds，
-  // 所以只需在 activeAssets 里过滤即可，不会跨类型串味。
+  // Bulk operations: the assets selected in the current tab (keeping display order). Switching tabs clears selectedIds,
+  // so filtering within activeAssets is enough, with no cross-type mixing.
   const selectedAssets = useMemo(
     () => activeAssets.filter((asset) => selectedIds.has(asset.id)),
     [activeAssets, selectedIds],
@@ -387,9 +386,9 @@ export function CanvasHistoryAssetsModal({
     activeAssets.length > 0 && selectedAssets.length === activeAssets.length;
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // 全选 / 取消全选只作用于「当前可见(已过滤)的」资产,与 allSelected 用同一个判据
-  // (selectedAssets),否则搜索把已选项筛掉后,按钮会显示「全选」却执行清空。筛选期间被
-  // 隐藏的选中项保持不动。
+  // Select all / deselect all only acts on the "currently visible (filtered)" assets, using the same criterion as allSelected
+  // (selectedAssets); otherwise when search filters out selected items, the button would show "Select all" but execute clear. Selected items hidden
+  // during filtering stay untouched.
   const handleToggleSelectAll = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -401,14 +400,14 @@ export function CanvasHistoryAssetsModal({
     });
   };
 
-  // 批量下载：逐个触发浏览器下载，之间留一点间隔，避免浏览器把并发下载判为弹窗滥用而拦截。
+  // Bulk download: trigger browser downloads one by one with a small gap between them, to avoid the browser treating concurrent downloads as popup abuse and blocking them.
   const handleBatchDownload = async () => {
     if (isDownloading || selectedAssets.length === 0) return;
     setIsDownloading(true);
     try {
       for (const asset of selectedAssets) {
-        // 不用 label 当文件名：图片/视频的 label 是整段提示词，做文件名很糟；
-        // 交给 downloadUrlAsFile 从 url 推断更合适。
+        // Do not use the label as the file name: for images/videos the label is a whole prompt, which makes a poor file name;
+        // it is better to let downloadUrlAsFile infer it from the url.
         await downloadUrlAsFile(asset.url);
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
@@ -417,7 +416,7 @@ export function CanvasHistoryAssetsModal({
     }
   };
 
-  // 批量使用：把选中的资产逐个作为新节点加入画布（网格铺开），完成后关闭弹窗。
+  // Bulk use: add the selected assets one by one as new nodes on the canvas (laid out as a grid), and close the dialog when done.
   const handleBatchUse = () => {
     if (selectedAssets.length === 0) return;
     selectedAssets.forEach((asset, index) => {
@@ -483,10 +482,10 @@ export function CanvasHistoryAssetsModal({
             })}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* 关键词搜索:过滤当前所有 tab 的历史资产(命中数反映在各 tab 计数)。
-                placeholder 分两套 —— live-canvas 取图那条路径上资产没有 prompt(见
-                CanvasAsset.prompt 注释),只有节点名/文件名可搜,不能承诺「搜提示词」。
-                框里有内容时 Escape 先清空输入,否则才让弹窗接管关闭。 */}
+            {/* Keyword search: filters the history assets of all tabs (hit counts are reflected in each tab count).
+            The placeholder has two variants - on the live-canvas picking path assets have no prompt (see the
+            CanvasAsset.prompt note), only node names/file names are searchable, so it must not promise "search prompts".
+            When the box has content, Escape first clears the input, and only otherwise lets the dialog take over closing. */}
             <div className="relative shrink-0">
               <Search
                 className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
@@ -515,8 +514,8 @@ export function CanvasHistoryAssetsModal({
                   setSearchTerm(next);
                 }}
                 onKeyDown={(event) => {
-                  // 组字中的 Escape 是「取消候选词」,不是「清空搜索框」—— 不加这个判断,
-                  // 用中文输入法按 Esc 关候选窗会把已经敲好的整个查询词抹掉。
+                  // Escape during composition means "cancel the candidate", not "clear the search box" - without this check,
+                  // pressing Esc to close the candidate window with a Chinese IME would wipe the whole query already typed.
                   if (event.key === 'Escape' && query && !event.nativeEvent.isComposing) {
                     event.stopPropagation();
                     setQuery('');
@@ -583,9 +582,9 @@ export function CanvasHistoryAssetsModal({
 
         {/* Body */}
         <div className="ui-scrollbar min-h-0 flex-1 overflow-y-auto px-5 pb-6">
-          {/* 加载态判据用**未过滤**的桶:搜索无命中时后台若刚好在 refetch(如删掉某个节点触发
-              重新拉取),用 activeAssets 会把已经确定的「没有匹配」换成「加载中」,暗示结果
-              还可能出现。 */}
+          {/* The loading-state criterion uses the **unfiltered** bucket: when search has no hits and the background happens to be refetching (e.g. deleting a node triggers
+          a re-fetch), using activeAssets would swap the already determined "no matches" for "loading", hinting that results
+          might still appear. */}
           {useHistory && isLoading && buckets[activeTab].length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               {t('common.loading')}
@@ -600,9 +599,9 @@ export function CanvasHistoryAssetsModal({
                   ? t('canvas.history.empty')
                   : otherTabsWithMatches.length > 0
                     ? t('canvas.history.noMatchOtherTabs', {
-                        // 连接词跟着界面语言走:硬编码顿号会让英文界面显示成
-                        // 「try Images、Videos」。disjunction 而非 conjunction ——
-                        // 这里是让用户挑一个别的分类去看,不是说两个都要看。
+                        // The conjunction follows the UI language: a hard-coded enumeration comma would make the English UI show
+                        // "try Images, Videos". Disjunction rather than conjunction -
+                        // here we ask the user to pick another category to look at, not to say both should be viewed.
                         tabs: new Intl.ListFormat(i18n.resolvedLanguage ?? i18n.language, {
                           type: 'disjunction',
                         }).format(otherTabsWithMatches.map((tab) => t(TAB_LABEL_KEY[tab]))),
@@ -651,7 +650,7 @@ export function CanvasHistoryAssetsModal({
           )}
         </div>
 
-        {/* 批量操作栏：进入选择模式且至少选中一项时，从底部浮出。 */}
+        {/* Bulk action bar: floats up from the bottom when in selection mode and at least one item is selected. */}
         {selectionMode && selectedAssets.length > 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-5">
             <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--ui-border-soft)] bg-[rgba(var(--surface-rgb)/0.96)] px-2.5 py-2 shadow-[var(--ui-shadow-panel)]">
@@ -711,8 +710,8 @@ export function CanvasHistoryAssetsModal({
         onClose={() => setVideoViewerUrl(null)}
       />
 
-      {/* 世界模型「查看」：进虾境（导演台）只读浏览。历史产物没有可保存的源节点，
-          故不接 onSaveScene / onCapture* 回调（纯查看）。 */}
+      {/* World model "View": enter the Shrimp realm (director stage) for read-only browsing. History products have no saveable source node,
+      so the onSaveScene / onCapture* callbacks are not wired (view only). */}
       <ThreeDDirectorDialog
         open={Boolean(worldManifest)}
         onOpenChange={(open) => {
@@ -723,7 +722,7 @@ export function CanvasHistoryAssetsModal({
         viewerPurpose="freezone"
       />
 
-      {/* 提示词完整查看：单击卡片提示词摘要打开，完整滚动展示。 */}
+      {/* Full prompt view: click the card's prompt summary to open it, shown in full with scrolling. */}
       {promptDialogText !== null && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
           <div
@@ -797,14 +796,14 @@ function AssetCard({
 }: AssetCardProps) {
   const { t } = useTranslation();
   const isAudio = asset.kind === 'audio';
-  // 音频：在卡片上做一个轻量自定义播放器（居中播放/暂停 + 底部进度），就地播放，
-  // 不弹独立 modal，也不用难看的原生 <audio controls>。
+  // Audio: a lightweight custom player on the card (centered play/pause + bottom progress), playing in place,
+  // with no separate modal and no ugly native <audio controls>.
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioTime, setAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
 
-  // 播放中用 rAF 平滑驱动进度条。
+  // While playing, drive the progress bar smoothly with rAF.
   useEffect(() => {
     if (!audioPlaying) return;
     let raf = 0;
@@ -877,8 +876,8 @@ function AssetCard({
           />
         </div>
       ) : asset.kind === 'model' ? (
-        // 世界模型（3GS / 360 全景）：产物本身不是图片，用封面缩略图；没有封面则
-        // 画一个 3D 盒子占位，避免把 .sog 当 <img> 渲染导致裂图。
+        // World models (3GS / 360 panorama): the product itself is not an image, so use the cover thumbnail; with no cover
+        // draw a 3D box placeholder, avoiding rendering .sog as <img> and getting a broken image.
         asset.previewUrl ? (
           <img
             src={asset.previewUrl}
@@ -892,11 +891,11 @@ function AssetCard({
           </div>
         )
       ) : asset.kind === 'video' && !asset.previewUrl ? (
-        // 视频节点大多没有存封面帧（previewImageUrl 为空），过去只画一个空的播放
-        // 占位图标。这里直接用 <video> 渲染视频本身的首帧当封面：`#t=0.1` 让浏览器
-        // seek 到 0.1s 并绘制该帧（t=0 在部分浏览器是黑帧/不绘制），preload=metadata
-        // 保证只拉首帧元数据、不下载整段。静音 + 无 controls，纯静态封面，点击交给
-        // 卡片的 hover 蒙层。
+        // Most video nodes have no stored cover frame (previewImageUrl is empty), and in the past only an empty play
+        // placeholder icon was drawn. Here the <video> renders the video's own first frame as the cover: `#t=0.1` makes the browser
+        // seek to 0.1s and paint that frame (t=0 is a black/unpainted frame in some browsers), preload=metadata
+        // ensures only the first-frame metadata is fetched without downloading the whole clip. Muted + no controls, a purely static cover, with clicks left to
+        // the card's hover mask.
         <video
           src={asset.url.includes('#') ? asset.url : `${asset.url}#t=0.1`}
           className="h-full w-full object-cover"
@@ -932,8 +931,8 @@ function AssetCard({
           </span>
         </button>
       ) : isAudio ? (
-        // 音频卡片：左上「使用」、右上「删除」角标悬停浮现；播放/进度交给下方控件层，
-        // 不用整片 hover 蒙层去盖播放按钮。
+        // Audio card: top-left "Use", top-right "Delete" badges appear on hover; play/progress are left to the control layer below,
+        // not using a whole-card hover mask to cover the play button.
         <>
           <button
             type="button"
@@ -958,7 +957,7 @@ function AssetCard({
           </button>
         </>
       ) : (
-        // 图片 / 视频 hover 蒙层：轻度模糊复杂缩略图，让右上删除和居中操作稳定可读。
+        // Image / video hover mask: lightly blurs complex thumbnails so the top-right delete and centered action stay reliably readable.
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 backdrop-blur-[10px] transition-opacity duration-[var(--duration-fast)] group-focus-within:opacity-100 group-hover:opacity-100">
           <button
             type="button"
@@ -993,7 +992,7 @@ function AssetCard({
         </div>
       )}
 
-      {/* 音频自定义控件：居中播放/暂停按钮 + 底部进度条（始终可点）。 */}
+      {/* Audio custom controls: centered play/pause button + bottom progress bar (always clickable). */}
       {isAudio && !selectionMode && (
         <button
           type="button"
@@ -1032,10 +1031,10 @@ function AssetCard({
       )}
       </div>
 
-      {/* 提示词：固定两行摘要保证网格节奏一致，单击打开完整弹窗；不在 hover 时展开，
-          避免单张卡片改变尺寸并挤动周围内容。历史资产里仍是「产物 + 提示词」一张卡片。
-          用 asset.prompt 作为显示条件（仅生成历史记录才有值）：分镜取图（live-canvas）
-          的 label 是文件名而非提示词、prompt 为空，故那里不会误显文件名。 */}
+      {/* Prompt: a fixed two-line summary keeps the grid rhythm consistent, click to open the full dialog; it does not expand on hover,
+      to avoid a single card changing size and pushing surrounding content. In history assets it is still one card of "product + prompt".
+      asset.prompt is used as the display condition (only generation history records have a value): the label of storyboard picking (live-canvas)
+      is a file name rather than a prompt and prompt is empty, so a file name is not shown by mistake there. */}
       {(asset.kind === 'image' || asset.kind === 'video') &&
         !selectionMode &&
         asset.prompt && (
@@ -1056,8 +1055,8 @@ function AssetCard({
           </button>
         )}
 
-      {/* 世界模型：缩略图下方常显名字（提示词缺失时回退到「导演世界」默认名），
-          让没有封面的世界卡片至少能认出是什么。双击看全文（有提示词时）。 */}
+      {/* World model: the name is always shown below the thumbnail (falling back to the "Director world" default name when the prompt is missing),
+      so a world card without a cover can at least be recognized. Double-click for the full text (when there is a prompt). */}
       {asset.kind === 'model' && !selectionMode && (
         <div
           title={asset.label ?? t('viewer.threeD.directorWorld')}

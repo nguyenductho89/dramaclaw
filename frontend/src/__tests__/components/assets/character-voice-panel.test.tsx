@@ -30,31 +30,31 @@ beforeAll(async () => {
         translation: {
           characters: {
             voiceSamples: {
-              title: "声线管理 (IndexTTS2)",
-              hint: "通常只需上传默认声线；只有年龄变体需要不同声音时再覆盖。",
-              defaultRequired: "默认（必填）",
-              ageDefaultRequired: "{{age}}（默认 · 必填）",
-              optionalOverride: "{{age}}（可选覆盖）",
-              missingDefault: "未配置 → 角色将无法出声",
-              inheritedDefault: "→ 继承默认",
-              missing: "未配置",
-              upload: "上传声音样本",
-              record: "录音",
-              trim: "裁剪到 3-5 秒",
-              clear: "清除",
-              loading: "正在读取声线样本",
-              loadFailed: "读取声线样本失败",
-              currentDuration: "当前约 {{seconds}} 秒",
+              title: "Voice samples (IndexTTS2)",
+              hint: "Usually upload only the default voice. Override age slots only when variants need a different sound.",
+              defaultRequired: "Default (required)",
+              ageDefaultRequired: "{{age}} (default · required)",
+              optionalOverride: "{{age}} (optional override)",
+              missingDefault: "Not configured -> this character cannot speak",
+              inheritedDefault: "-> inherits default",
+              missing: "Not configured",
+              upload: "Upload voice sample",
+              record: "Record",
+              trim: "Trim to 3-5 seconds",
+              clear: "Clear",
+              loading: "Loading voice samples",
+              loadFailed: "Failed to load voice samples",
+              currentDuration: "Current: about {{seconds}} seconds",
             },
             ageGroups: {
-              child: "幼年",
-              young: "青年",
-              middle: "中年",
-              elder: "老年",
+              child: "Child",
+              young: "Young adult",
+              middle: "Middle-aged",
+              elder: "Elder",
             },
           },
           common: {
-            error: "错误",
+            error: "Errors",
           },
         },
       },
@@ -105,7 +105,7 @@ describe("CharacterVoicePanel", () => {
                 },
                 {
                   slot: "child",
-                  label: "幼年",
+                  label: "Child",
                   path: "",
                   url: "",
                   sha256: "",
@@ -115,7 +115,7 @@ describe("CharacterVoicePanel", () => {
                 },
                 {
                   slot: "youth",
-                  label: "青年",
+                  label: "Young adult",
                   path: "",
                   url: "",
                   sha256: "",
@@ -125,7 +125,7 @@ describe("CharacterVoicePanel", () => {
                 },
                 {
                   slot: "middle",
-                  label: "中年",
+                  label: "Middle-aged",
                   path: "",
                   url: "",
                   sha256: "",
@@ -135,7 +135,7 @@ describe("CharacterVoicePanel", () => {
                 },
                 {
                   slot: "elder",
-                  label: "老年",
+                  label: "Elder",
                   path: "assets/characters/秦/voices/voice_elder.wav",
                   url: "/static/admin/demo/assets/characters/秦/voices/voice_elder.wav",
                   sha256: "sha-elder",
@@ -151,18 +151,18 @@ describe("CharacterVoicePanel", () => {
 
     const { container } = renderPanel({ name: "秦", age_group: "youth" });
 
-    expect(await screen.findByText("声线管理 (IndexTTS2)")).toBeInTheDocument();
-    expect(await screen.findByText("青年（默认 · 必填）")).toBeInTheDocument();
-    expect(screen.getByText("幼年（可选覆盖）")).toBeInTheDocument();
-    expect(screen.getAllByText("→ 继承默认").length).toBeGreaterThanOrEqual(2);
+    expect(await screen.findByText("Voice samples (IndexTTS2)")).toBeInTheDocument();
+    expect(await screen.findByText("青年 (default · required)")).toBeInTheDocument();
+    expect(screen.getByText("幼年 (optional override)")).toBeInTheDocument();
+    expect(screen.getAllByText("-> inherits default").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("voice_elder.wav")).toHaveAttribute(
       "title",
       "assets/characters/秦/voices/voice_elder.wav",
     );
-    expect(screen.getAllByRole("button", { name: "上传声音样本" })).toHaveLength(4);
-    expect(screen.getAllByRole("button", { name: "录音" })).toHaveLength(4);
-    expect(screen.getAllByRole("button", { name: "裁剪到 3-5 秒" })).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "清除" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Upload voice sample" })).toHaveLength(4);
+    expect(screen.getAllByRole("button", { name: "Record" })).toHaveLength(4);
+    expect(screen.getAllByRole("button", { name: "Trim to 3-5 seconds" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Clear" })).toHaveLength(2);
 
     const audio = await waitFor(() => {
       const el = container.querySelector("audio");
@@ -171,7 +171,7 @@ describe("CharacterVoicePanel", () => {
     });
     Object.defineProperty(audio, "duration", { value: 6.5, configurable: true });
     fireEvent.loadedMetadata(audio);
-    expect(await screen.findByText("当前约 6.5 秒")).toBeInTheDocument();
+    expect(await screen.findByText("Current: about 6.5 seconds")).toBeInTheDocument();
   });
 
   it("warns when the default voice is missing", async () => {
@@ -203,7 +203,7 @@ describe("CharacterVoicePanel", () => {
     renderPanel({ name: "秦" });
 
     await waitFor(() =>
-      expect(screen.getByText("未配置 → 角色将无法出声")).toBeInTheDocument(),
+      expect(screen.getByText("Not configured -> this character cannot speak")).toBeInTheDocument(),
     );
   });
 

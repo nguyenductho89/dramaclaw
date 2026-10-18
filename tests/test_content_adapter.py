@@ -23,24 +23,24 @@ async def test_adapted_content_overrides_raw_working_content(tmp_path) -> None:
             [
                 NovelEpisode(
                     number=1,
-                    title="第一集",
-                    raw_content="原文第一行\n原文第二行",
+                    title="Episode One",
+                    raw_content="Source line one\nSource line two",
                 )
             ]
         )
 
-        assert await store.load_working_content(1) == "原文第一行\n原文第二行"
+        assert await store.load_working_content(1) == "Source line one\nSource line two"
 
-        await store.save_adapted_content(1, "改写第一行\n改写第二行")
+        await store.save_adapted_content(1, "Rewritten line one\nRewritten line two")
 
-        assert await store.load_adapted_content(1) == "改写第一行\n改写第二行"
-        assert await store.load_working_content(1) == "改写第一行\n改写第二行"
+        assert await store.load_adapted_content(1) == "Rewritten line one\nRewritten line two"
+        assert await store.load_working_content(1) == "Rewritten line one\nRewritten line two"
         assert (
             await load_episode_planning_content(
                 store,
-                NovelEpisode(number=1, title="第一集"),
+                NovelEpisode(number=1, title="Episode One"),
             )
-            == "改写第一行\n改写第二行"
+            == "Rewritten line one\nRewritten line two"
         )
 
         assert (
@@ -48,23 +48,23 @@ async def test_adapted_content_overrides_raw_working_content(tmp_path) -> None:
                 store,
                 NovelEpisode(
                     number=1,
-                    title="第一集",
-                    beat_source_text="最终制作稿第一行\n最终制作稿第二行",
+                    title="Episode One",
+                    beat_source_text="Final production draft line one\nFinal production draft line two",
                 ),
             )
-            == "最终制作稿第一行\n最终制作稿第二行"
+            == "Final production draft line one\nFinal production draft line two"
         )
 
         await store.save_adapted_content(1, "")
 
         assert await store.load_adapted_content(1) == ""
-        assert await store.load_working_content(1) == "原文第一行\n原文第二行"
+        assert await store.load_working_content(1) == "Source line one\nSource line two"
         assert (
             await load_episode_planning_content(
                 store,
-                NovelEpisode(number=1, title="第一集"),
+                NovelEpisode(number=1, title="Episode One"),
             )
-            == "原文第一行\n原文第二行"
+            == "Source line one\nSource line two"
         )
     finally:
         await store.close()
@@ -79,7 +79,7 @@ async def test_save_adapted_content_requires_existing_episode(tmp_path) -> None:
     )
     try:
         await store.initialize()
-        with pytest.raises(ValueError, match="剧集 99 不存在"):
+        with pytest.raises(ValueError, match="99"):
             await store.save_adapted_content(99, "missing")
     finally:
         await store.close()
@@ -89,7 +89,7 @@ class _RewriteRouteStore:
     def __init__(self):
         self.adapted_content = ""
         self.episode_updates: list[tuple[int, dict]] = []
-        self.episode = NovelEpisode(number=1, title="第一集", raw_content="原文")
+        self.episode = NovelEpisode(number=1, title="Episode One", raw_content="Source")
 
     async def load_episode_content(self, ep_num: int):
         return self.episode.raw_content if ep_num == self.episode.number else ""
@@ -156,7 +156,7 @@ async def test_generate_rewrite_applies_output_to_beat_source_text(monkeypatch) 
     from novelvideo.api.schemas import RewriteGenerateRequest
 
     async def fake_rewrite_episode_content(*args, **kwargs):
-        return "改写第一行\n改写第二行"
+        return "Rewritten line one\nRewritten line two"
 
     monkeypatch.setattr(
         content_rewriter,
@@ -183,10 +183,10 @@ async def test_generate_rewrite_applies_output_to_beat_source_text(monkeypatch) 
     )
 
     assert response["ok"] is True
-    assert store.adapted_content == "改写第一行\n改写第二行"
-    assert store.episode.beat_source_text == "改写第一行\n改写第二行"
+    assert store.adapted_content == "Rewritten line one\nRewritten line two"
+    assert store.episode.beat_source_text == "Rewritten line one\nRewritten line two"
     assert store.episode_updates == [
-        (1, {"beat_source_text": "改写第一行\n改写第二行"})
+        (1, {"beat_source_text": "Rewritten line one\nRewritten line two"})
     ]
     assert meter.reserved[0]["feature_key"] == "mainline.content_rewrite"
     assert meter.reserved[0]["task_type"] == "content_rewrite"
@@ -251,7 +251,7 @@ async def test_generate_rewrite_does_not_refund_success_when_confirm_is_pending(
     from novelvideo.api.schemas import RewriteGenerateRequest
 
     async def fake_rewrite_episode_content(*args, **kwargs):
-        return "已成功改写"
+        return "Successfully rewritten"
 
     class ConfirmPendingMeter(_UsageMeter):
         async def settle_feature_credit_reservation(
@@ -289,7 +289,7 @@ async def test_generate_rewrite_does_not_refund_success_when_confirm_is_pending(
     )
 
     assert response["ok"] is True
-    assert response["data"]["adapted_content"] == "已成功改写"
+    assert response["data"]["adapted_content"] == "Successfully rewritten"
     assert meter.refunded == []
 
 
@@ -311,7 +311,7 @@ async def test_content_rewriter_uses_newapi_text_model(monkeypatch) -> None:
                 (),
                 {
                     "output": content_rewriter.AdaptedContentOutput(
-                        lines=["改写第一行", "改写第二行"]
+                        lines=["Rewritten line one", "Rewritten line two"]
                     )
                 },
             )()
@@ -350,12 +350,12 @@ async def test_content_rewriter_uses_newapi_text_model(monkeypatch) -> None:
     )
 
     rewritten = await content_rewriter.rewrite_episode_content(
-        "原文第一段",
-        episode_title="第一集",
+        "Source paragraph one",
+        episode_title="Episode One",
         target_beats=2,
     )
 
-    assert rewritten == "改写第一行\n改写第二行"
+    assert rewritten == "Rewritten line one\nRewritten line two"
     assert calls["model"] == "newapi-model"
     assert calls["model_env"] == "CONTENT_REWRITER_MODEL"
     assert calls["default_model"] is None

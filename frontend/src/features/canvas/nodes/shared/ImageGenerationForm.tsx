@@ -2,6 +2,7 @@
 // Copyright (c) 2026 ClaymoreLab
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowUp,
   Camera,
@@ -94,7 +95,7 @@ interface AspectSizeChipProps {
   aspectOptions: ReadonlyArray<{ value: string; label: string }>;
   quality: ImageQuality;
   qualityOptions: readonly ImageQuality[];
-  /** 媒体目录声明图片质量选项时显示选择器，并在标签里带上画质。 */
+  /** Show the selector when the media catalog declares image quality options, and carry the quality in the label. */
   showQuality: boolean;
   onChange: (patch: Partial<ImageGenNodeData>) => void;
 }
@@ -109,6 +110,7 @@ function AspectSizeChip({
   showQuality,
   onChange,
 }: AspectSizeChipProps) {
+  const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -164,7 +166,7 @@ function AspectSizeChip({
         >
           {showQuality && (
             <>
-              <div className={IMAGE_PARAM_LABEL_CLASS}>画质</div>
+              <div className={IMAGE_PARAM_LABEL_CLASS}>{t('node.imageGen.param.quality')}</div>
               <div className={IMAGE_PARAM_ROW_CLASS}>
                 {qualityOptions.map((value) => {
                   const label =
@@ -188,7 +190,7 @@ function AspectSizeChip({
               </div>
             </>
           )}
-          <div className={IMAGE_PARAM_LABEL_CLASS}>分辨率</div>
+          <div className={IMAGE_PARAM_LABEL_CLASS}>{t('node.imageGen.param.resolution')}</div>
           <div className={IMAGE_PARAM_ROW_CLASS}>
             {sizeOptions.map((option) => {
               const isActive = size === option;
@@ -209,7 +211,7 @@ function AspectSizeChip({
             })}
           </div>
 
-          <div className={IMAGE_PARAM_LABEL_CLASS}>比例</div>
+          <div className={IMAGE_PARAM_LABEL_CLASS}>{t('node.imageGen.param.aspect')}</div>
           <div className="grid grid-cols-4 gap-2">
             {aspectOptions.map((option) => {
               const isActive = nearestAspect.value === option.value;
@@ -243,6 +245,7 @@ interface StyleChipProps {
 }
 
 function StyleChip({ selectedId, selectedLabel, onChange, onOpenChange }: StyleChipProps) {
+  const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -271,7 +274,7 @@ function StyleChip({ selectedId, selectedLabel, onChange, onOpenChange }: StyleC
   }, [isOpen]);
 
   const isActive = Boolean(selectedId);
-  const label = isActive ? selectedLabel ?? '风格' : '风格';
+  const label = isActive ? selectedLabel ?? t('canvasNodes.imageForm.style') : t('canvasNodes.imageForm.style');
 
   return (
     <div className="relative">
@@ -282,7 +285,7 @@ function StyleChip({ selectedId, selectedLabel, onChange, onOpenChange }: StyleC
           event.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        title={isActive ? selectedLabel ?? undefined : '风格'}
+        title={isActive ? selectedLabel ?? undefined : t('canvasNodes.imageForm.style')}
         className={`${NODE_TEXT_CONTROL_TRIGGER_CLASS} max-w-[160px]`}
       >
         <Palette className={`${NODE_TEXT_CONTROL_ICON_CLASS} shrink-0`} />
@@ -315,6 +318,7 @@ interface CameraChipProps {
 }
 
 function CameraChip({ selection, summary, onChange }: CameraChipProps) {
+  const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -361,7 +365,7 @@ function CameraChip({ selection, summary, onChange }: CameraChipProps) {
   }, [isOpen, syncPopoverPosition]);
 
   const isActive = Boolean(selection) && summary != null;
-  const label = isActive && summary ? summary : '摄像机';
+  const label = isActive && summary ? summary : t('node.imageGen.camera');
 
   return (
     <div className="relative">
@@ -372,7 +376,7 @@ function CameraChip({ selection, summary, onChange }: CameraChipProps) {
           event.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        title={isActive ? summary ?? undefined : '摄像机'}
+        title={isActive ? summary ?? undefined : t('node.imageGen.camera')}
         className={`${NODE_TEXT_CONTROL_TRIGGER_CLASS} max-w-[220px]`}
       >
         <Camera className={`${NODE_TEXT_CONTROL_ICON_CLASS} shrink-0`} />
@@ -410,6 +414,7 @@ interface CountSelectProps {
 }
 
 function CountSelect({ value, onChange }: CountSelectProps) {
+  const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -440,7 +445,7 @@ function CountSelect({ value, onChange }: CountSelectProps) {
         }}
         className={NODE_TEXT_CONTROL_TRIGGER_CLASS}
       >
-        <span>{value}张</span>
+        <span>{t('node.imageGen.countValue', { count: value })}</span>
         <ChevronDown className="h-3 w-3 text-text-muted/90" />
       </button>
       {isOpen && (
@@ -464,7 +469,7 @@ function CountSelect({ value, onChange }: CountSelectProps) {
                     : 'text-text-muted/95 hover:bg-white/[0.11] hover:text-text-dark'
                 }`}
               >
-                {option}张
+                {t('node.imageGen.countValue', { count: option })}
               </button>
             );
           })}
@@ -476,105 +481,106 @@ function CountSelect({ value, onChange }: CountSelectProps) {
 
 export interface ImageGenerationFormProps {
   /**
-   * 目标节点 id：仅用于本组件内部按钮的定位标识（NodeContextPromptPaletteButton）
-   * 和调用 useCanvasStore().updateNodeData 时的 nodeId，不读取任何 React Flow 上下文。
+   * Target node id: used only as the positioning identifier of buttons inside this component (NodeContextPromptPaletteButton)
+   * and as the nodeId when calling useCanvasStore().updateNodeData; it reads no React Flow context.
    */
   nodeId: string;
 
-  // ── 参考 / 风格 chips 行 ──
+  // ── Reference / style chips row ──
   styleTemplateId: string | null;
   selectedStyleLabel: string | null;
-  /** 风格弹层开关：宿主（ImageGenNode）用它临时隐藏下方历史记录条，避免叠层。 */
+  /** Style popover toggle: the host (ImageGenNode) uses it to temporarily hide the history strip below, avoiding stacked layers. */
   onStylePickerOpenChange: (open: boolean) => void;
   onOpenAssetLibrary: () => void;
   upstreamTextContents: readonly UpstreamContent[];
   upstreamImageContents: readonly UpstreamContent[];
   onDetachUpstream: (sourceNodeId: string) => void;
 
-  // ── 提示词编辑器 ──
-  // prompt 的 draft 状态、IME 合成态由宿主持有——节点上「生成失败」横幅的重试按钮
-  // 需要读同一份 prompt 判断是否可提交，draft 状态若下沉到本组件会导致两处失配。
+  // ── Prompt editor ──
+  // The prompt draft state and IME composition state are held by the host — the retry button of the "generation failed" banner on the node
+  // needs to read the same prompt to judge whether it can be submitted, and moving the draft state into this component would make the two places mismatch.
   prompt: string;
   onPromptChange: (next: string) => void;
   onCompositionStart: () => void;
   onCompositionEnd: (next: string) => void;
   mentionCandidates: MentionCandidate[];
-  /** 上游拼接的文本，非空时提示词占位符文案不同。 */
+  /** Text concatenated from upstream; when non-empty the prompt placeholder copy differs. */
   upstreamTextJoined: string;
 
-  // ── 参数行 ──
+  // ── Params row ──
   modelId: string;
   aspectRatio: string;
   /**
-   * 分辨率/比例/画质三档由媒体目录驱动（#210）：宿主 hook 已按所选模型把可选值和
-   * 「吸附后的当前值」算好，本组件只负责渲染，不再自己判断模型支持什么。
+   * The resolution/ratio/quality tiers are driven by the media catalog (#210): the host hook has already computed the selectable values and
+   * the "snapped current value" per the selected model; this component only renders and no longer judges what a model supports.
    */
   size: string;
   sizeOptions: readonly string[];
   aspectOptions: ReadonlyArray<{ value: string; label: string }>;
   quality: ImageQuality;
   qualityOptions: readonly ImageQuality[];
-  /** 媒体目录声明了 qualityOptions 才显示「画质」选择器。 */
+  /** The "Quality" selector shows only when the media catalog declares qualityOptions. */
   showQuality: boolean;
-  /** 所选模型声明的自定义参数表单（MediaModelParameterChip）。 */
+  /** The custom parameter form declared by the selected model (MediaModelParameterChip). */
   modelParameters: MediaModelParameterDefinition[] | undefined;
   modelParams: Record<string, unknown> | undefined;
   modelParamsMode: string | undefined;
-  /** 模型对参考图数量有上限时，超限的提示语；null 表示没问题。 */
+  /** The hint when the model caps the number of reference images and it is exceeded; null means fine. */
   selectedModelReferenceError: string | null;
-  /** 模型下拉里逐项的禁用理由（同样是参考图上限）。 */
+  /** Per-item disabled reasons in the model dropdown (likewise the reference image cap). */
   getModelOptionDisabledReason: (model: ModelOption) => string | null;
   cameraSelection: ImageGenCameraSelection | null;
   cameraSummary: string | null;
-  /** 自动提交到主线的系统节点隐藏「生成数量」——数量固定为 1。 */
+  /** System nodes that auto-submit to the mainline hide "generation count" — the count is fixed at 1. */
   showCountSelect: boolean;
   count: ImageGenCount;
   isTranslatingPrompt: boolean;
   isGenerating: boolean;
   onTranslate: () => void;
 
-  // ── 提交 ──
+  // ── Submit ──
   totalCreditCostDisplay: string | null;
-  /** 与 `totalCreditCostDisplay` 成对：缺了它促销标签只会兜底成通用的「促销中」。 */
+  /** Paired with `totalCreditCostDisplay`: without it the promo label falls back to the generic "On sale". */
   creditPromotion: CreditPromotionDisplay | null;
   submitDisabled: boolean;
   onSubmit: () => void;
 
   /**
-   * 纯排版适配位（不改任何字段/行为）：默认在 chips 行右侧留出 `pr-10` 给宿主
-   * 叠在右上角的「放大」按钮（ImageGenNode 的 PanelExpandButton）。故事板详情
-   * 没有那个按钮，传 true 收掉这段留白，避免 chips 行凭空缺一块。
+   * A pure layout adaptation slot (changes no field/behavior): by default `pr-10` is left on the right of the chips row for the host's
+   * "enlarge" button overlaid at the top right (ImageNode's PanelExpandButton in ImageGenNode). The storyboard detail
+   * has no such button; pass true to drop this margin, so the chips row does not lack a chunk out of thin air.
    */
   compact?: boolean;
 
   /**
-   * 塞进**提示词输入框内部**、正文最前面的内联 chip（故事板的功能 chip）。它是
-   * contenteditable 里的一个原子节点：不参与 prompt 序列化，但能像一个字符那样被
-   * 光标越过、被退格删掉（删掉时回调 `onPromptLeadingChipDelete`）。工作流的
-   * ImageGenNode 不传这两个 prop，渲染与从前一致。
+   * An inline chip stuffed **inside the prompt input** at the very start of the body (the storyboard's feature chip). It is an
+   * atomic node in the contenteditable: it takes no part in prompt serialization, but can be crossed by the caret like a character and
+   * deleted by backspace (calling back `onPromptLeadingChipDelete` on deletion). The workflow's
+   * ImageGenNode passes neither of these two props, and renders as before.
    */
   promptLeadingChip?: ReactNode;
   onPromptLeadingChipDelete?: () => void;
 
   /**
-   * 覆盖提示词占位文案。故事板功能节点用它把「这个功能会拿当前图做什么」写在
-   * chip 后面同一行（对标 liblib），省掉单独一行说明。
+   * Override the prompt placeholder copy. The storyboard feature node uses it to write "what this feature will do with the current image" on the
+   * same line after the chip (matching liblib), saving a separate explanatory line.
    */
   promptPlaceholder?: string;
 }
 
 /**
- * 图片生成节点的**纯表单内容层**：提示词输入 + 参考/风格 chips + 模型选择 +
- * 参数（比例/画质/尺寸/数量）+ 翻译按钮 + 算力 + 提交按钮。不含任何 React Flow
- * 依赖（无 useReactFlow / useNodeId / NodeToolbar / useUpdateNodeInternals），
- * 因此既能挂在画布节点下方的浮动面板里（ImageGenNode + OperationPanelShell），
- * 也能塞进故事板详情之类的独立布局。
+ * The **pure form content layer** of the image generation node: prompt input + reference/style chips + model selection +
+ * params (ratio/quality/size/count) + translate button + compute cost + submit button. It contains no React Flow
+ * dependency (no useReactFlow / useNodeId / NodeToolbar / useUpdateNodeInternals),
+ * so it can sit in the floating panel below a canvas node (ImageGenNode + OperationPanelShell),
+ * and also be stuffed into a standalone layout such as the storyboard detail.
  *
- * 面板的「收起/放大」壳体（OperationPanelShell）、在画布上的绝对定位、以及
- * 「生成失败」重试横幅（复用同一个 onSubmit/submitDisabled）都由宿主负责——
- * 这些是节点几何 / 选中态相关的展示逻辑，不属于表单本身。
+ * The panel's "collapse/enlarge" shell (OperationPanelShell), its absolute positioning on the canvas, and the
+ * "generation failed" retry banner (reusing the same onSubmit/submitDisabled) are all the host's responsibility —
+ * these are display logic tied to node geometry / selection state and do not belong to the form itself.
  */
 export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
+  const { t } = useTranslation();
   const {
     nodeId,
     styleTemplateId,
@@ -623,8 +629,8 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const promptEditorRef = useRef<PromptMentionEditorHandle>(null);
 
-  // 弹层与编辑器同在面板里、编辑器恒已挂载，故插入直接走命令式 API，回调保持稳定引用
-  // （无需依赖 prompt，避免每次按键重建回调、连带调色盘按钮重渲染）。
+  // The popover and editor are both in the panel and the editor is always mounted, so insertion goes straight through the imperative API and the callback keeps a stable reference
+  // (no need to depend on prompt, avoiding rebuilding the callback on every keystroke and re-rendering the palette button with it).
   const insertContextPaletteEntry = useCallback(
     (entry: ContextPromptPaletteEntry) => {
       promptEditorRef.current?.insertTextAtCursor(
@@ -673,10 +679,10 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
             onOpenAssetLibrary();
           }}
           className={`${NODE_TEXT_CONTROL_TRIGGER_CLASS} group/asset px-1.5`}
-          title="从资产库选择参考图（人物 / 场景 / 道具）"
+          title={t('node.imageGen.assetLibraryTitle')}
         >
           <Library className={`${NODE_TEXT_CONTROL_ICON_CLASS} group-hover/asset:text-text-dark`} />
-          <span>资产库</span>
+          <span>{t('node.imageGen.assetLibrary')}</span>
         </button>
         {upstreamTextContents.map((content) => (
           <ReferenceTextChip
@@ -695,7 +701,7 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
                 <div
                   key={`upstream-image-${content.nodeId}`}
                   className={NODE_REFERENCE_MEDIA_CHIP_CLASS}
-                  title={`来自上游 · ${content.displayName ?? content.nodeType}`}
+                  title={t('node.imageGen.fromUpstream', { name: content.displayName ?? content.nodeType })}
                   onMouseEnter={(event) => {
                     setRefHover({
                       imageUrl: url,
@@ -710,11 +716,11 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
                     className="h-full w-full object-cover"
                     draggable={false}
                   />
-                  {/* 前端按产品要求不再显示「图片N」数字角标——引用统一呈现为
-                      「图片」，序号只存在于提交给后端的 prompt（@图片N）里。 */}
+                  {/* Per product requirements the frontend no longer shows numeric badges like "image N" — references are presented uniformly as
+                      "Image", and the index exists only in the prompt (@image1) submitted to the backend. */}
                   <button
                     type="button"
-                    title="取消引用此素材"
+                    title={t('node.imageGen.dropReference')}
                     className={NODE_REFERENCE_MEDIA_DETACH_CLASS}
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
@@ -744,8 +750,8 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
         placeholder={
           promptPlaceholder
           ?? (upstreamTextJoined.length > 0
-            ? '上游内容已自动接入，可继续补充提示词…'
-            : '描述你想要生成的画面内容，@引用素材')
+            ? t('node.imageGen.promptPlaceholderUpstream')
+            : t('node.imageGen.promptPlaceholder'))
         }
         className={`nodrag nowheel min-h-0 w-full flex-1 overflow-y-auto whitespace-pre-wrap break-words border-none bg-transparent px-3 py-2 text-sm leading-6 text-text-dark outline-none ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`}
       />
@@ -754,8 +760,8 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
         <div className="flex min-w-0 items-center gap-2">
           <ProviderModelPicker
             selectedModelId={modelId}
-            // 换模型必须清空 modelParams：参数表是按模型声明的，留着上一个模型的
-            // 键会原样发给后端，轻则被忽略重则报参数不合法。
+            // Switching models must clear modelParams: the param table is declared per model, and keys left over from the previous model
+            // would be sent to the backend as is — at best ignored, at worst rejected as invalid params.
             onChange={(nextModelId) =>
               updateNodeData(nodeId, { model: nextModelId, modelParams: {} })
             }
@@ -791,7 +797,7 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
           )}
           <button
             type="button"
-            title="翻译提示词（中英文互译）"
+            title={t('node.imageGen.translatePrompt')}
             disabled={isTranslatingPrompt || isGenerating || prompt.trim().length === 0}
             onClick={(event) => {
               event.stopPropagation();
@@ -820,7 +826,7 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
           <button
             type="button"
             disabled={submitDisabled}
-            title={selectedModelReferenceError ?? '生成'}
+            title={selectedModelReferenceError ?? t('node.imageGen.generate')}
             onClick={(event) => {
               event.stopPropagation();
               onSubmit();

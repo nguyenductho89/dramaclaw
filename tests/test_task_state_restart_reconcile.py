@@ -1,10 +1,10 @@
-"""服务重启后 inline 任务的僵尸回收。
+"""Zombie reaping of inline tasks after a service restart.
 
-inline 后端的 worker 随 API 进程消亡:进程启动时间之前仍标记
-submitting/queued/running 的 inline 任务必然已中断,读取路径应将其
-落为 failed,避免僵尸任务永久挡住新任务(去重守卫/并发限额)。
-Celery/EE worker 独立于 API 进程,**这条进程启动时间的规则对它绝不适用**;
-它按自己的 40min TTL 回收,那一轴在 test_task_state_celery_zombie_ttl.py。
+The worker of the inline backend dies with the API process: an inline task still marked submitting/queued/running
+from before the process start time has necessarily been interrupted, and the read path should
+mark it failed, so a zombie task does not permanently block new tasks (dedup guard / concurrency limit).
+A Celery/EE worker is independent of the API process, and **this process-start-time rule must never apply to it**;
+it is reaped by its own 40min TTL, and that axis is in test_task_state_celery_zombie_ttl.py.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -40,10 +40,10 @@ def _ctx(tmp_path: Path) -> ProjectContext:
 
 
 def _before_process_start_within_celery_ttl() -> str:
-    """早于本进程启动、但未过 celery 的 40min TTL(CELERY_STALE_TTL)。
+    """Older than this process start, but not yet past celery's 40min TTL (CELERY_STALE_TTL).
 
-    用来把两条轴分开:落在这个窗口里的 celery 行,只有「进程启动时间」那条
-    规则会碰它——而它不该碰。
+    Used to separate the two axes: a celery row inside this window is touched only by the "process start time" rule
+    -- which must not touch it.
     """
     stamp = (
         datetime.now(timezone.utc) - timedelta(minutes=39)
@@ -67,7 +67,7 @@ def _backdate(
 
 
 def _restarted() -> TaskStateManager:
-    """清扫按库记忆化在 manager 实例上;新实例 = 模拟重启后的进程。"""
+    """The sweep is memoized per DB on the manager instance; a new instance = a process after a restart."""
     return TaskStateManager()
 
 
@@ -85,7 +85,7 @@ def test_stale_inline_running_task_is_failed_on_read(tmp_path: Path) -> None:
 
     assert len(listed) == 1
     assert listed[0].status == "failed"
-    assert "重启" in (listed[0].error or "")
+    assert "restarted" in (listed[0].error or "")
 
     fetched = manager.get_task_for_project(ctx, "ingest_fast", 0, scope="job_1")
     assert fetched is not None
@@ -93,7 +93,7 @@ def test_stale_inline_running_task_is_failed_on_read(tmp_path: Path) -> None:
 
 
 def test_stale_celery_running_task_is_untouched(tmp_path: Path) -> None:
-    """celery 行早于进程启动也不该被这条规则碰(它有自己的 TTL 轴)。"""
+    """A celery row older than the process start must not be touched by this rule either (it has its own TTL axis)."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     created = manager.create_task_for_project(
@@ -124,7 +124,7 @@ def test_fresh_inline_running_task_is_untouched(tmp_path: Path) -> None:
 
 
 def test_stale_inline_task_unblocks_reservation(tmp_path: Path) -> None:
-    """准入闸(reserve)也必须看不到僵尸,否则重启后重试提交仍被去重守卫拒绝。"""
+    """The admission gate (reserve) must also not see zombies, otherwise retrying a submission after a restart is still rejected by the dedup guard."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     created = manager.create_task_for_project(
@@ -143,7 +143,7 @@ def test_stale_inline_task_unblocks_reservation(tmp_path: Path) -> None:
 
 
 def test_sweep_runs_once_per_db_by_design(tmp_path: Path) -> None:
-    """清扫按库记忆化:进程启动后新出现的'过期'行不再被扫(启动前遗留才是僵尸)。"""
+    """The sweep is memoized per DB: a newly appeared "expired" row after process start is no longer swept (only leftovers from before start are zombies)."""
     manager = TaskStateManager()
     ctx = _ctx(tmp_path)
     first = manager.create_task_for_project(

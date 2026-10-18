@@ -1,33 +1,33 @@
-# Skill 导入可靠性修复设计
+# Skill Import Reliability Fix Design
 
-## 目标
+## Goal
 
-修复真实 Skill 导入中暴露的三个可靠性问题：模型复制原文引用时的轻微格式差异会重跑整个分析；临时网关故障会直接终止任务；15 分钟整轮预算不足以覆盖正常生成、审核和一次临时重试。
+Fix three reliability problems exposed by real Skill imports: slight format differences when the model copies source quotes cause the whole analysis to be rerun; transient gateway failures terminate the task directly; and the 15-minute whole-run budget is not enough to cover normal generation, review, and one transient retry.
 
-验收时使用同一个真实 Skill 新建三条记录冷启动导入，三次均须完成最终审核且 `quality_report.validated=true`。测试不复用分析或生成检查点，不安装结果，也不执行媒体生成。
+For acceptance, use the same real Skill to create three new records and cold-start import them; all three must complete the final review with `quality_report.validated=true`. The test does not reuse analysis or generation checkpoints, does not install the result, and does not execute media generation.
 
-## 原文证据
+## Source evidence
 
-分析前，程序把上传原文转换成有序的证据段。优先采用 Markdown 块边界，包括标题、段落、列表项、代码块、表格行及 HTML/XML 风格块；解析器未覆盖的非空原文按原始行补段。异常长的块按换行、句末标点、空格依次拆分，最后才按字符边界拆分。
+Before analysis, the program converts the uploaded source into ordered evidence segments. Markdown block boundaries are preferred, including headings, paragraphs, list items, code blocks, table rows, and HTML/XML-style blocks; non-empty source text not covered by the parser is added as segments by raw line. An abnormally long block is split in turn by newline, sentence-ending punctuation, and space, and only at the end by character boundary.
 
-每段包含稳定的顺序 ID、原文字符起止位置、原样文本和仅供理解使用的标题路径。段落文本必须满足 `source[start:end] == text`；所有非空原文内容必须被覆盖。模型接收按原文顺序排列的段落，只返回每个生产任务引用的段落 ID。程序验证 ID 后，从原文位置回填现有 `source_quotes`，供搜索、生成和审核继续使用。
+Each segment contains a stable sequential ID, the start and end character positions in the source, the verbatim text, and a heading path used for understanding only. The segment text must satisfy `source[start:end] == text`; all non-empty source content must be covered. The model receives the segments in source order and returns only the segment IDs referenced by each production task. After the program validates the IDs, it backfills the existing `source_quotes` from the source positions, for search, generation, and review to keep using.
 
-最终内容审核的阻断问题也使用同一套证据段 ID，由程序回填精确 `source_quote`。不存在的 ID、空证据或超过数量上限均视为结构错误，不做模糊猜测。源文件或分段算法版本变化时，使旧分析检查点失效。
+The blocking issues of the final content review also use the same evidence segment IDs, with the program backfilling the exact `source_quote`. A nonexistent ID, empty evidence, or exceeding the count limit is treated as a structural error, with no fuzzy guessing. When the source file or the segmentation algorithm version changes, old analysis checkpoints are invalidated.
 
-## 临时故障重试
+## Transient failure retry
 
-每个模型请求最多执行一次初始请求和一次临时故障重试。可重试范围仅包括：请求超时、连接失败、HTTP 429 和 HTTP 5xx。请求参数错误、鉴权错误、内容拒绝、JSON/Schema 校验失败不属于传输重试；JSON/Schema 仍使用现有的格式纠正流程。
+Each model request performs at most one initial request and one transient-failure retry. The retryable scope includes only: request timeout, connection failure, HTTP 429, and HTTP 5xx. Request parameter errors, authentication errors, content refusals, and JSON/Schema validation failures are not transport retries; JSON/Schema still uses the existing format-correction flow.
 
-重试只针对当前请求。已经保存的分析、候选核对、整包生成检查点继续有效。两次提交分别计入模型调用上限和输入字符统计，并写入诊断记录，包含阶段、格式纠正轮次、传输尝试序号、耗时和错误类型。采用短暂退避，不在后台无限重试。
+A retry applies only to the current request. Already saved analysis, candidate verification, and whole-package generation checkpoints remain valid. The two submissions are counted separately toward the model call limit and input character statistics, and are written to the diagnostic record, including stage, format-correction round, transport attempt number, duration, and error type. A short backoff is used, and there is no unlimited background retrying.
 
-## 时间与调用预算
+## Time and call budget
 
-单次供应商请求超时保持 300 秒。每轮 Skill 导入总预算由 900 秒调整为 1800 秒。模型请求上限保持 12 次，Recipe 匹配请求上限保持 4 次。缓存和检查点读取不计为模型调用。
+The timeout of a single provider request stays at 300 seconds. The total budget of each Skill import run is adjusted from 900 seconds to 1800 seconds. The model request limit stays at 12, and the Recipe matching request limit stays at 4. Cache and checkpoint reads do not count as model calls.
 
-总预算是防止异常任务无限运行的最后边界。临时重试、格式纠正、整包生成和最终审核均计入同一预算。达到调用次数或总时间上限时继续保持阻断状态，不允许安装未完成审核的结果。
+The total budget is the last boundary that prevents an abnormal task from running forever. Transient retries, format corrections, whole-package generation, and the final review all count toward the same budget. When the call count or total time limit is reached, the blocked state is kept, and a result whose review is incomplete is not allowed to be installed.
 
-## 测试
+## Tests
 
-单元测试覆盖：Markdown 和异常文本分段的确定性与原文位置回溯；反引号、反斜杠、嵌套列表、代码块、表格、HTML/XML、重复段落、CRLF、超长单行和 Unicode；模型仅返回段落 ID 后无需第二次分析调用；未知段落 ID 被拒绝；可重试与不可重试错误分类；临时故障仅重试一次；每次传输尝试计入预算；1800 秒整轮上限及 300 秒单次上限。
+Unit tests cover: determinism and source-position traceback of Markdown and abnormal-text segmentation; backticks, backslashes, nested lists, code blocks, tables, HTML/XML, duplicate paragraphs, CRLF, very long single lines, and Unicode; no second analysis call needed after the model returns only segment IDs; unknown segment IDs are rejected; classification of retryable and non-retryable errors; a transient failure is retried only once; each transport attempt counts toward the budget; the 1800-second whole-run limit and the 300-second single-request limit.
 
-回归测试覆盖现有 Skill 导入、Recipe 搜索、检查点、安装质量门禁及 Agent Bundle 合约。真实测试连续执行三次全新导入，记录各阶段耗时、请求次数、重试次数、最终校验状态和人工内容检查结果。若任何一次未通过，不把修复报告为稳定完成，而是根据新增诊断继续定位失败阶段。
+Regression tests cover the existing Skill import, Recipe search, checkpoints, installation quality gate, and the Agent Bundle contract. The real test runs three brand-new imports in a row, recording the duration of each stage, the request count, the retry count, the final validation status, and the manual content check result. If any run fails, the fix is not reported as stably complete; instead, the failing stage is further located from the new diagnostics.

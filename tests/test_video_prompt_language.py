@@ -20,7 +20,7 @@ class _TextAgent:
 @pytest.mark.parametrize(
     ("language", "required", "forbidden"),
     [
-        ("en", "English", "Chinese (中文) only"),
+        ("en", "English", "Vietnamese only"),
         ("vi", "Vietnamese", "English only"),
     ],
 )
@@ -74,7 +74,7 @@ def test_global_video_optimizer_applies_language_to_system_and_task(
     ("language", "required", "expected_fallback"),
     [
         ("en", "English", "The character moves naturally"),
-        ("zh", "中文", "角色自然动作"),
+        ("vi", "Vietnamese", "The character moves naturally"),
     ],
 )
 def test_video_prompt_builder_applies_language_to_task_and_fallback(
@@ -112,7 +112,7 @@ def test_video_prompt_builder_applies_language_to_task_and_fallback(
     ("language", "required", "expected_fallback"),
     [
         ("en", "English", "The character adjusts their posture naturally"),
-        ("zh", "中文", "角色姿态自然调整"),
+        ("vi", "Vietnamese", "The character adjusts their posture naturally"),
     ],
 )
 def test_keyframe_prompt_builder_applies_language_to_task_and_fallback(

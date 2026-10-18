@@ -133,8 +133,7 @@ def _grid_steps(step: str, kind: str, label: str) -> StepSpec:
             model_kind="image",
             target_label=target,
             last_sent=last,
-            note=""
-            "Assembled at generation time; showing the most recently sent prompt",
+            note="Assembled at generation time; showing the most recently sent prompt",
         )
         return out
 

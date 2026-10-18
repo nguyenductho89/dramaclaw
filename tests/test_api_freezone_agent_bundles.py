@@ -10,21 +10,21 @@ def _skill_payload() -> dict:
     return {
         "schema_version": "dramaclaw.workflow-skill.v1",
         "id": "community-video",
-        "name": "社区视频 Skill",
+        "name": "Community Video Skill",
         "version": "1.0.0",
-        "description": "根据用户素材动态生成社区视频工作流。",
+        "description": "Dynamically generates a community video workflow from the user's assets.",
         "category": "video",
-        "triggers": {"keywords": ["社区视频"], "node_scopes": ["textGeneration"]},
+        "triggers": {"keywords": ["community video"], "node_scopes": ["textGeneration"]},
         "allowed_recipe_ids": ["community-brief"],
         "planning": {
-            "planning_notes": "动态执行路径：根据用户输入和素材决定文本规划阶段。",
-            "prompt_guide": "保持中文输出。",
-            "conduct_rules": ["高成本生成前等待用户确认。"],
+            "planning_notes": "Dynamic execution path: decide the text planning stage from the user input and assets.",
+            "prompt_guide": "Keep the output in English.",
+            "conduct_rules": ["Wait for user confirmation before high-cost generation."],
         },
         "evaluation": {
-            "rating_bands": [{"score": 5, "description": "结果可用"}],
+            "rating_bands": [{"score": 5, "description": "Result is usable"}],
             "quality_threshold": 4,
-            "domain_constraints": ["不得虚构用户素材事实"],
+            "domain_constraints": ["Do not fabricate facts about the user's assets"],
         },
     }
 
@@ -33,14 +33,14 @@ def _recipe_payload() -> dict:
     return {
         "schema_version": "dramaclaw.recipe.v1",
         "id": "community-brief",
-        "name": "社区简报",
+        "name": "Community brief",
         "version": "1.0.0",
         "output_kind": "text",
         "action_keys": ["community-brief"],
-        "system_prompt": "根据用户输入直接生成最终视频简报。",
-        "must_have_items": ["主题"],
-        "planning_prompt": "根据用户目标生成视频简报提示词。",
-        "result_summary": "视频简报提示词。",
+        "system_prompt": "Generate the final video brief directly from the user input.",
+        "must_have_items": ["Theme"],
+        "planning_prompt": "Generate the video brief prompt from the user goal.",
+        "result_summary": "Video brief prompt.",
     }
 
 
@@ -48,9 +48,9 @@ def _bundle_payload() -> dict:
     return {
         "schema_version": "dramaclaw.skill-bundle.v1",
         "id": "community-video",
-        "name": "社区视频 Skill",
+        "name": "Community Video Skill",
         "version": "1.0.0",
-        "description": "社区视频动态工作流。",
+        "description": "Community video dynamic workflow.",
         "author": "DramaClaw",
         "license": "CC-BY-4.0",
         "min_dramaclaw_version": "1.0.0",
@@ -131,9 +131,9 @@ def test_export_bundle_api_returns_skill_with_recipes(bundle_client: TestClient)
             "skill_id": "community-video",
             "bundle": {
                 "id": "community-video",
-                "name": "社区视频 Skill",
+                "name": "Community Video Skill",
                 "version": "1.0.0",
-                "description": "社区视频动态工作流。",
+                "description": "Community video dynamic workflow.",
                 "author": "DramaClaw",
                 "license": "CC-BY-4.0",
                 "min_dramaclaw_version": "1.0.0",

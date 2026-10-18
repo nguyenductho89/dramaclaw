@@ -6,11 +6,11 @@ import { describe, expect, it } from "vitest";
 import { EpisodeStoryContext } from "@/components/episode/episode-story-context";
 
 const labels = {
-  summary: "剧情摘要",
+  summary: "Story summary",
   noSummary: "暂无摘要",
-  keyEvents: "关键事件",
-  noKeyEvents: "暂无关键事件",
-  cliffhanger: "悬念钩子",
+  keyEvents: "Key events",
+  noKeyEvents: "No key events yet",
+  cliffhanger: "Cliffhanger",
   noCliffhanger: "暂无悬念",
 };
 
@@ -25,12 +25,12 @@ describe("EpisodeStoryContext", () => {
       />,
     );
 
-    expect(screen.getByText("剧情摘要")).toBeInTheDocument();
+    expect(screen.getByText("Story summary")).toBeInTheDocument();
     expect(screen.getByText("秦在雨夜进入王城。")).toBeInTheDocument();
-    expect(screen.getByText("关键事件")).toBeInTheDocument();
+    expect(screen.getByText("Key events")).toBeInTheDocument();
     expect(screen.getByText("入宫")).toBeInTheDocument();
     expect(screen.getByText("遇见旧友")).toBeInTheDocument();
-    expect(screen.getByText("悬念钩子")).toBeInTheDocument();
+    expect(screen.getByText("Cliffhanger")).toBeInTheDocument();
     expect(screen.getByText("城门后传来熟悉的声音。")).toBeInTheDocument();
   });
 
@@ -45,7 +45,7 @@ describe("EpisodeStoryContext", () => {
     );
 
     expect(screen.getByText("暂无摘要")).toBeInTheDocument();
-    expect(screen.getByText("暂无关键事件")).toBeInTheDocument();
+    expect(screen.getByText("No key events yet")).toBeInTheDocument();
     expect(screen.getByText("暂无悬念")).toBeInTheDocument();
   });
 });

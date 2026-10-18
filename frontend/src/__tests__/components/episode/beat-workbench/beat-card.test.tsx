@@ -10,10 +10,10 @@ import type { Beat } from "@/types/episode";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, vars?: Record<string, string | number>) => {
-      if (key === "episode.beat.select") return "选择 Beat";
+      if (key === "episode.beat.select") return "Select Beat";
       if (key === "episode.beat.deselect") return "取消选择 Beat";
       if (key === "episode.beat.insertAfter") return `在第 ${vars?.n} 个 beat 后插入`;
-      if (key === "episode.beat.openFreezone") return "进入虾画 Beat 工作台";
+      if (key === "episode.beat.openFreezone") return "Open XiPaint Beat Workbench";
       return key;
     },
   }),
@@ -52,7 +52,7 @@ describe("BeatCard", () => {
   it("keeps the multi-select control visible without hover-only opacity over thumbnails", () => {
     renderBeatCard();
 
-    const selectButton = screen.getByRole("button", { name: "选择 Beat" });
+    const selectButton = screen.getByRole("button", { name: "Select Beat" });
     expect(selectButton.className).toContain("size-5");
     expect(selectButton.className).not.toContain("opacity-40");
     expect(selectButton.className).not.toContain("group-hover:opacity-100");
@@ -61,7 +61,7 @@ describe("BeatCard", () => {
   it("does not reveal the check icon on hover before the card is selected", () => {
     renderBeatCard();
 
-    const selectButton = screen.getByRole("button", { name: "选择 Beat" });
+    const selectButton = screen.getByRole("button", { name: "Select Beat" });
     expect(selectButton.className).toContain("text-transparent");
     expect(selectButton.className).toContain("hover:border-white/[0.30]");
     expect(selectButton.className).toContain("hover:bg-black/50");
@@ -80,7 +80,7 @@ describe("BeatCard", () => {
     const user = userEvent.setup();
     const { onCardClick, onCheckboxClick } = renderBeatCard();
 
-    await user.click(screen.getByRole("button", { name: "选择 Beat" }));
+    await user.click(screen.getByRole("button", { name: "Select Beat" }));
 
     expect(onCheckboxClick).toHaveBeenCalledWith(4);
     expect(onCardClick).not.toHaveBeenCalled();
@@ -114,10 +114,10 @@ describe("BeatCard", () => {
     const onOpenFreezone = vi.fn();
     const { onCardClick } = renderBeatCard({ onOpenFreezone });
 
-    await user.click(screen.getByRole("button", { name: "进入虾画 Beat 工作台" }));
+    await user.click(screen.getByRole("button", { name: "Open XiPaint Beat Workbench" }));
 
     expect(onOpenFreezone).toHaveBeenCalledWith(4, "frame");
     expect(onCardClick).not.toHaveBeenCalled();
-    expect(screen.queryByText("进入虾画 Beat 工作台")).not.toBeInTheDocument();
+    expect(screen.queryByText("Open XiPaint Beat Workbench")).not.toBeInTheDocument();
   });
 });

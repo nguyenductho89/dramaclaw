@@ -5572,7 +5572,31 @@
       "arrangeGrid": "Grid",
       "arrangeHorizontal": "Horizontal",
       "arrangeVertical": "Vertical",
-      "commitHint": "Write this node's content back to the mainline asset"
+      "commitHint": "Write this node's content back to the mainline asset",
+      "workflowRunFailed": "Workflow execution failed",
+      "workflowStarted": "Workflow started",
+      "workflowNothingToRun": "This workflow has no nodes left to run",
+      "workflowStopped": "Stopped starting further nodes",
+      "noDownloadableImage": "The current node has no downloadable image",
+      "noOperableVideo": "The current node has no operable video",
+      "noDownloadableAudio": "The current node has no downloadable audio",
+      "audioFormatUnsupported": "The current audio does not support this download format",
+      "upscaleNodeFailed": "Could not create the video upscale node",
+      "videoAnalyzeFailed": "Could not start video analysis",
+      "noMattableImage": "The current node has no image to cut out",
+      "recipeDegradedTitle": "The Recipe model timed out while compiling; generation continued with a stable fallback prompt",
+      "recipeDegraded": "Recipe compiled in fallback mode",
+      "matteFailed": "Background removal failed",
+      "workflowRunningTitle": "Workflow is running",
+      "followupStopped": "Further nodes stopped",
+      "running": "Running",
+      "stopFollowupTitle": "Stop starting further workflow nodes",
+      "waitingForCurrent": "Waiting for current node",
+      "stopFollowup": "Stop further nodes",
+      "workflowCompleted": "Workflow completed",
+      "runWorkflow": "Run workflow",
+      "rerunAllTitle": "Re-run all workflow nodes",
+      "rerunAll": "Re-run all"
     },
     "style": {
       "chip": "Style",
@@ -5902,7 +5926,77 @@
       "generatingPercent": "Generating {{percent}}%...",
       "durationSec": "{{count}}s",
       "locateOnCanvas": "Locate on canvas",
-      "pendingConfirm": "Generates after confirmation"
+      "pendingConfirm": "Generates after confirmation",
+      "imageOps": {
+        "upscaleNode": "Upscale",
+        "cropResult": "Crop result",
+        "rotateResult": "Rotate result",
+        "upscale": "Upscale",
+        "crop": "Crop",
+        "rotate": "Rotate",
+        "panoConfirm": "Generate a 360° panorama from this image?",
+        "panoNodeName": "360° panorama",
+        "pano": "Panorama",
+        "multiAngle": "Multi-angle",
+        "relight": "Relight",
+        "panoTitle": "Generate a 360° panorama from this image (and attach a panorama viewer node)",
+        "multiAngleTitle": "Open the multi-angle editor (sphere angle picker + quality + prompt)",
+        "relightTitle": "Open the lighting editor (direction + brightness/color temperature + smart mode)",
+        "category": {
+          "narrative": "Storyboard narrative",
+          "space": "Space & camera",
+          "setting": "Design sheets",
+          "texture": "Texture tuning"
+        },
+        "feature": {
+          "plotFourGrid": {
+            "summary": "Project a 4-panel plot from one image",
+            "description": "Click to generate: project a 4-panel plot straight from the current image; add plot direction via text."
+          },
+          "serialStoryboard25": {
+            "summary": "Long coherent storyboard",
+            "description": "Click to generate: create a coherent 25-cell storyboard straight from the current image; describe the pacing via text."
+          },
+          "frameProjection3sLater": {
+            "summary": "Predict the frame 3 seconds later",
+            "description": "Click to generate: project what the current frame looks like 3 seconds later; specify motion or events via text."
+          },
+          "frameProjection5sEarlier": {
+            "summary": "Reconstruct the frame 5 seconds earlier",
+            "description": "Click to generate: reconstruct what the current frame looked like 5 seconds earlier; specify the preceding events via text."
+          },
+          "multiCameraGrid": {
+            "summary": "Nine camera angles at once",
+            "description": "Click to generate: lay out nine camera angles straight from the current image; specify the shot language via text."
+          },
+          "scene360": {
+            "summary": "Expand to a 360° panorama",
+            "description": "Click to generate: expand the current image into a 360° panorama; the ratio is fixed at 2:1 / 21:9."
+          },
+          "characterThreeView": {
+            "summary": "Full-body character three-view",
+            "description": "Click to generate: create a complete character three-view straight from the current image; text/reference images are supported."
+          },
+          "faceThreeView": {
+            "summary": "Facial detail three-view",
+            "description": "Click to generate: create a character face three-view straight from the current image; add facial features via text."
+          },
+          "productThreeView": {
+            "summary": "Product front/side/back views",
+            "description": "Click to generate: create a product three-view straight from the current image; add materials and details via text."
+          },
+          "sceneSettingSheet": {
+            "summary": "Scene art setting sheet",
+            "description": "Click to generate: create a scene setting sheet straight from the current image; add scene background via text."
+          },
+          "cinematicLightCorrection": {
+            "summary": "Grade lighting to cinematic level",
+            "description": "Click to generate: grade the current image's lighting to a cinematic level; specify the tonal direction via text."
+          }
+        },
+        "missingProject": "Missing project context; cannot submit",
+        "missingSource": "Source image not found; cannot submit"
+      }
     },
     "keyElement": {
       "character": "Character",
@@ -6666,7 +6760,8 @@
       "emptyState": {
         "tryLabel": "Try:"
       },
-      "videoLoadFailed": "Video failed to load"
+      "videoLoadFailed": "Video failed to load",
+      "billingRuleMissingSubmit": "Video generation did not start: billing rules are not configured. Contact an administrator to set credit rules and retry."
     },
     "pano360": {
       "captureGroup2x2": "Panorama capture set (4)",
@@ -7077,6 +7172,9 @@
       "directorCaptureSizeFailed": "Could not read the director world capture dimensions",
       "directorElement": "Director element",
       "directorExportLabel": "Director world export"
+    },
+    "imageGenNode": {
+      "billingRuleMissingSubmit": "Image generation did not start: billing rules are not configured. Contact an administrator to set credit rules and retry."
     }
   },
   "viewer": {
@@ -8760,7 +8858,8 @@
         "validated": "Canvas commands validated",
         "reading": "Reading {{label}}",
         "readFailed": "Failed to read {{label}}",
-        "readDone": "Read {{label}}"
+        "readDone": "Read {{label}}",
+        "thinking": "Thinking..."
       },
       "status": {
         "running": "In progress",
@@ -8832,7 +8931,10 @@
         "node": "Node: {{id}}",
         "action": "Action: {{action}}",
         "appliedCount": "Applied {{count}} canvas operations",
-        "rerun": "Run again"
+        "rerun": "Run again",
+        "executionError": "Canvas command execution error: {{message}}",
+        "executionErrorLabel": "Canvas execution error",
+        "cancelledMessageFallback": "Canvas commands cancelled"
       },
       "plan": {
         "nodeType": {
@@ -8995,6 +9097,109 @@
         "aiAdjust": "Let AI adjust",
         "confirmAdd": "Confirm and add",
         "enteringStudio": "Entering Skill Studio..."
+      },
+      "waitingForReply": "Waiting for your reply",
+      "removeCanvasReference": "Remove canvas reference",
+      "contextLabels": {
+        "canvas_ontology": "Canvas ontology",
+        "canvas_summary": "Canvas summary",
+        "canvas_action_catalog": "Canvas capabilities",
+        "canvas_command_catalog": "Command rules",
+        "node_detail": "Node details",
+        "neighbor_graph": "Upstream/downstream relations",
+        "node_action_catalog": "Node capabilities",
+        "action_catalog": "Node capabilities",
+        "action_catalog_by_id": "Capability details",
+        "node_create_schema": "Node parameters",
+        "audio_voice_options": "Voice options",
+        "slot_candidates": "Submittable slots",
+        "mainline_projection_assets": "Mainline assets",
+        "selection_detail": "Current selection",
+        "link_type_catalog": "Link types",
+        "validate_canvas_commands": "Command validation"
+      },
+      "runMode": {
+        "manual": {
+          "label": "Manual mode",
+          "description": "You confirm before each generation step runs"
+        },
+        "auto": {
+          "label": "Episode Auto",
+          "description": "After a second confirmation the episode advances automatically; stops on failure or when the final cut is done"
+        }
+      },
+      "execMode": {
+        "manual": {
+          "label": "Manual confirm",
+          "description": "The Agent asks for confirmation before running canvas commands"
+        },
+        "auto": {
+          "label": "Auto generate",
+          "description": "The Agent runs safe commands automatically and reports the results"
+        }
+      },
+      "billing": {
+        "loadFailed": "Unable to load the Shrimp Director billing reference right now",
+        "title": "Shrimp Director billing reference",
+        "dialogTitle": "Shrimp Director Agent credit reference",
+        "defaultNote": "Regular chat and canvas operations are free; only advanced Agent capability deliveries are billed.",
+        "colTask": "Task",
+        "colIncludes": "Includes",
+        "colBilling": "Agent billing",
+        "loading": "Loading billing reference…",
+        "footnote": "The ranges in the table give an advance sense of the cost scale; the final charge is based on the feature prices configured in the system and the number of successful deliveries. Model generation costs for images, audio, video and so on are not included in this table and are still settled separately by NewAPI under the existing rules. Tool retries and internal multi-step calls do not incur repeated Agent delivery fees."
+      },
+      "auto": {
+        "pausedAwaitingConfirm": "Episode Auto has paused further progress; waiting for you to confirm whether to make the change",
+        "episodeDone": "Automatic production of episode {{episode}} is complete",
+        "currentEpisode": "current",
+        "paused": "Episode Auto has paused",
+        "selected": "Episode Auto selected; after you send a start instruction you must confirm once more before it runs",
+        "manualPauseFailed": "Switched to manual mode, but the request to pause the backend automatic run was not delivered",
+        "startFailed": "Unable to start Episode Auto: {{error}}",
+        "requestFailed": "Backend request failed",
+        "started": "Episode Auto started; checking current progress",
+        "running": "Episode Auto is running and will keep advancing based on task status",
+        "badgeRunning": "Episode Auto · Running",
+        "badgeAwaitingChange": "Episode Auto · Awaiting change confirmation",
+        "badgeAwaitingConfirm": "Episode Auto · Awaiting confirmation"
+      },
+      "taskNotice": {
+        "completed": "✅ {{label}} completed. You can ask me to review the results or continue to the next step.",
+        "failed": "{{label}} failed: {{error}}\nFix the prerequisites according to the error before continuing.",
+        "noReason": "No specific error reason provided"
+      },
+      "toast": {
+        "turnEnded": "This turn has ended; this question can no longer be submitted",
+        "bridgeMissing": "Skill Studio bridge information is missing; please retry",
+        "connectionNotReady": "The Skill Studio connection is not ready; please retry",
+        "submitSelectionFailed": "Failed to submit the Skill Studio selection; please retry",
+        "clarificationBridgeMissing": "The additional-information bridge is missing; please retry",
+        "recommendedInvalid": "The recommended configuration is missing valid parameters; reselect or refresh and retry",
+        "clarificationConnectionNotReady": "The additional-information connection is not ready; please retry",
+        "submitClarificationFailed": "Failed to submit the additional information; please retry",
+        "saveNotConfirmed": "The backend did not confirm the save",
+        "addFailedWithReason": "Failed to add Skill / Recipe: {{error}}",
+        "addFailed": "Failed to add Skill / Recipe; check the required fields and retry",
+        "startRevisionFailed": "Failed to start the draft revision; please retry"
+      },
+      "backToBottom": "Back to bottom",
+      "skills": {
+        "title": "Skills",
+        "none": "No skills available yet",
+        "noneHint": "You can ask the Agent to summarize the current canvas into a Skill, or just describe your workflow and let it create a dedicated skill for you.",
+        "pick": "Choose Skill",
+        "create": "Create",
+        "search": "Search Skills",
+        "noMatch": "No matching Skills",
+        "noneHere": "There are no Skills here yet",
+        "noneHint2": "You can ask the Agent to summarize the current canvas into a Skill, or describe your workflow to create a dedicated skill."
+      },
+      "selection": {
+        "current": "Currently selected",
+        "usedThisTurn": "Used this turn",
+        "deselectAll": "Deselect all canvas references",
+        "cancelAll": "Cancel all"
       }
     }
   },
@@ -9185,6 +9390,14 @@
       "close": "Close",
       "loading": "Loading…",
       "empty": "No style templates yet"
+    },
+    "imageForm": {
+      "style": "Style"
+    },
+    "videoForm": {
+      "multipleVideosUnavailable": "Unavailable with multiple upstream videos",
+      "cameraMovement": "Camera movement",
+      "externalMaterial": "External assets"
     }
   }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 import {
   MEDIA_VARIANT_MAX_EDGE,
@@ -19,8 +19,8 @@ export function parseAspectRatio(value: string): number {
   return width / height;
 }
 
-// 从一组候选比例（"w:h" 字符串）里挑数值上最接近 targetRatio 的那个。用比值的
-// 对数距离，横/竖比例对称（2.33 与其倒数 0.43 到 1 的距离一致）。候选为空时回退 '1:1'。
+// From a set of candidate ratios ("w:h" strings), pick the numerically closest to targetRatio. Uses the log
+// distance of the ratio, so landscape/portrait are symmetric (2.33 and its reciprocal 0.43 are equally far from 1). Falls back to '1:1' when there are no candidates.
 export function pickClosestAspectRatio(
   targetRatio: number,
   supportedAspectRatios: string[],
@@ -55,8 +55,8 @@ export const IMAGE_GENERATION_ASPECT_RATIOS = [
   '2:3',
   '4:5',
   '5:4',
-  // 后端 FREEZONE_PRESET_IMAGE_ASPECT_RATIOS 支持 21:9，节点下拉也提供该选项；
-  // 若这里缺失，提交时 snap 会把用户选的 21:9 错吸附成最接近的 16:9（issue #52）。
+  // The backend FREEZONE_PRESET_IMAGE_ASPECT_RATIOS supports 21:9, and the node dropdown offers it too;
+  // if missing here, snap at submit time would wrongly snap the user's chosen 21:9 to the nearest 16:9 (issue #52).
   '21:9',
 ] as const;
 
@@ -176,9 +176,9 @@ export function resolveImageDisplayUrl(imageUrl: string): string {
   return imageUrl;
 }
 
-// 判断字符串是否是可作为 <img src> 渲染的真实图片来源（协议 URL 或本地图片路径）。
-// 脚本表格的「角色图/参考」是后端占位字符串字段，模型常填入 `无` 之类的非 URL 文本，
-// 直接塞进 <img> 会 404 变成裂图；渲染前用它过滤。
+// Determine whether a string is a real image source that can be rendered as <img src> (a protocol URL or a local image path).
+// The script table's "character image/reference" is a backend placeholder string field, and models often fill in non-URL text such as `none`,
+// which would 404 into a broken image if put straight into <img>; filter with this before rendering.
 export function isRenderableImageSrc(value: string): boolean {
   if (!value) {
     return false;
@@ -241,34 +241,34 @@ export function withImageCacheBust(imageUrl: string, token: string | number | nu
   return hash ? `${busted}#${hash}` : busted;
 }
 
-// ── 节点主体图：喂降采样副本 ────────────────────────────────────────────────
+// -- Node body image: feed a downsampled copy -------------------------------------------
 //
-// 解码 + 光栅的成本只跟源图像素数有关，跟画进多大的盒子无关：一张 5504x3072
-// 的 PNG 画进 580px 的节点里，仍然要付 16.9MP 的代价。zoom 0.35（刚好在 LOD
-// shell 阈值之上）一屏能放下几十个这样的节点——和历史条那 9 张图是同一个问题，
-// 只是规模大一个量级。
+// The cost of decode + raster depends only on the source image's pixel count, not on the size of the box it is drawn into: a 5504x3072
+// PNG drawn into a 580px node still pays 16.9MP. At zoom 0.35 (just above the LOD
+// shell threshold) a screen can hold dozens of such nodes - the same problem as the 9 images in the history strip,
+// just an order of magnitude larger.
 //
-// 麻烦在于节点主体的 onLoad 同时是画布对这张图的「测量」：它喂分辨率角标，并把
-// imageNaturalWidth/Height + aspectRatio 落到节点数据里。从降采样副本上读这些数
-// 会把错的尺寸写进图里。所以只有当真实尺寸已经记在节点数据上时才用变体——那时
-// 元素已经没有新东西可教我们，调用方改从记录里读（见 nodeBodyImageMeasurement）。
-// 尺寸未知的节点照旧加载原图、照旧测量、照旧落库，下次挂载自然就用上变体了。
+// The trouble is that the node body's onLoad is also the canvas's "measurement" of this image: it feeds the resolution badge and writes
+// imageNaturalWidth/Height + aspectRatio into node data. Reading these from a downsampled copy
+// would write wrong sizes into the node. So the variant is used only when the real size is already recorded in node data - by then
+// the element has nothing new to teach us, and the caller reads from the record instead (see nodeBodyImageMeasurement).
+// Nodes of unknown size load the original, measure and persist as before, and the next mount naturally uses the variant.
 //
-// 前端只请求生产会预热的 320px thumb。按 displayEdge × zoom × devicePixelRatio
-// 算出这一格需要的设备像素；thumb 盖不住就回原图，避免放大模糊。
+// The frontend only requests the 320px thumb that production warms. Compute the device pixels this slot needs from displayEdge x zoom x devicePixelRatio;
+// if the thumb cannot cover it, return the original image, avoiding blur from upscaling.
 //
-// 用 zoom 但不怕抖：pickMediaVariant 的输出只有 thumb 和 null，节点订阅的是这个
-// 量化结果而不是 zoom 本身，只在跨过 320px 阈值时切换 src。
+// zoom is used but jitter is not a worry: pickMediaVariant's output is only thumb and null, and the node subscribes to this
+// quantized result rather than zoom itself, switching src only when crossing the 320px threshold.
 //
-// 全屏查看器 / 下载 / 导出 / 各类编辑器一律仍然拿原图，见各调用点的
-// viewerSourceUrl。
+// The fullscreen viewer / download / export / all kinds of editors still always get the original; see the viewerSourceUrl at each
+// call site.
 export const NODE_BODY_VARIANT_MAX_EDGE = MEDIA_VARIANT_MAX_EDGE.thumb;
 
 /**
- * 节点主体图这一格需要多少设备像素（长边）。
+ * How many device pixels (long edge) this slot of the node body image needs.
  *
- * CSS 像素不是答案：一张 320px 的副本填进 315 CSS px 的框，1x 屏上锐利，2x 屏上
- * 只有需要的一半分辨率。zoom 同理——同一个节点缩到 0.4 只占屏幕四成宽。
+ * CSS pixels are not the answer: a 320px copy filling a 315 CSS px box is sharp on a 1x screen, but on a 2x screen has
+ * only half the needed resolution. Likewise zoom - the same node scaled to 0.4 takes only 40% of the screen width.
  */
 export function nodeBodyRequiredEdge(
   display: { width: number; height: number },
@@ -285,17 +285,17 @@ export function nodeBodyRequiredEdge(
 export type ImagePixelSize = { width: number; height: number };
 
 export type NodeBodyImage = {
-  /** 喂给 <img src> 的地址。 */
+  /** The address fed to <img src>. */
   src: string;
-  /** 未附变体的原图地址；判断「这张图已经不信记录了」时按它比对。 */
+  /** The original image address without a variant attached; compare against it when judging "this image no longer trusts the record". */
   original: string;
-  /** true 表示 src 是降采样副本，元素上的 naturalWidth/Height 不可信。 */
+  /** true means src is a downsampled copy, and naturalWidth/Height on the element cannot be trusted. */
   downscaled: boolean;
-  /** 副本的长边预算；喂的是原图时为 null。核对元素尺寸时按它算。 */
+  /** The long-edge budget of the copy; null when the original is fed. Use it when checking the element's size. */
   maxEdge: number | null;
 };
 
-/** 从节点数据里读已记录的原图像素尺寸；没有或不合法时返回 null。 */
+/** Read the recorded original pixel size from node data; returns null when absent or invalid. */
 export function readNodeNaturalSize(data: unknown): ImagePixelSize | null {
   if (!data || typeof data !== 'object') return null;
   const { imageNaturalWidth: w, imageNaturalHeight: h } = data as {
@@ -313,41 +313,41 @@ export function nodeBodyImageSrc(
   options?: { preferOriginal?: boolean; requiredEdge?: number },
 ): NodeBodyImage {
   const asOriginal: NodeBodyImage = { src: url, original: url, downscaled: false, maxEdge: null };
-  // 放大到细看这一档：交回原图。
+  // Zoomed in to the detailed-view tier: hand back the original.
   if (options?.preferOriginal) return asOriginal;
-  // 尺寸未知：这次加载还担着测量职责，必须是原图。
+  // Size unknown: this load still carries the measurement duty, so it must be the original.
   if (!natural) return asOriginal;
-  // 这一格要的像素比阶梯顶还多：给副本就是放大糊，交回原图。
+  // The pixels needed for this slot exceed the top of the ladder: giving a copy would be blurry when enlarged, so hand back the original.
   const variant = pickMediaVariant(options?.requiredEdge ?? NODE_BODY_VARIANT_MAX_EDGE);
   if (variant === null) return asOriginal;
   const maxEdge = MEDIA_VARIANT_MAX_EDGE[variant];
-  // 本来就不比变体大：换成变体只是重编码一遍，白白多一个文件。
+  // It is no larger than the variant anyway: swapping to the variant would just re-encode once, an extra file for nothing.
   if (Math.max(natural.width, natural.height) <= maxEdge) return asOriginal;
-  // 变体只对受保护的项目静态图片生效；不适用时原样返回（blob:/data: 的上传预览、
-  // 遗留路径、非图片后缀都会走到这里），downscaled 随之为 false。
+  // Variants only apply to protected project static images; when not applicable it is returned as is (blob:/data: upload previews,
+  // legacy paths and non-image suffixes all land here), and downscaled is false accordingly.
   const src = withMediaVariant(url, variant);
   return src === url ? asOriginal : { src, original: url, downscaled: true, maxEdge };
 }
 
 /**
- * 记录里的尺寸，描述的是不是眼下这张加载好的图。
+ * Whether the size in the record describes the image that is loaded right now.
  *
- * 记录没有和任何 URL 绑定，而节点的图是会被换掉的：画册选主图、从历史恢复、
- * 生成完成回填，这几条路都只改 imageUrl/previewImageUrl，不动
- * imageNaturalWidth/Height。真实尺寸手动调过尺寸的节点更是连修正的机会都没有
- * （onLoad 里 isSizeManuallyAdjusted 那一支会提前 return）。所以「有记录」不等
- * 于「记录说的是这张图」，必须当场对一下。
+ * The record is not bound to any URL, while a node's image can be swapped: album main image selection, restore from history,
+ * generation completion backfill - these paths all change only imageUrl/previewImageUrl and leave
+ * imageNaturalWidth/Height untouched. For nodes whose real size was manually adjusted there is not even a chance to correct it
+ * (the isSizeManuallyAdjusted branch in onLoad returns early). So "has a record" does not
+ * mean "the record describes this image", and it must be checked on the spot.
  *
- * 对法是把记录按变体的规则算一遍，看元素报的是不是那个结果：后端 thumbnail 把
- * 长边正好压到预算上，短边按比例四舍五入（Pillow 的取整，±1px）。对不上就说明
- * 记录描述的是另一张图。
+ * The way to check is to compute the record by the variant's rule and see whether the element reports that result: the backend thumbnail pins
+ * the long edge exactly to the budget, and the short edge is rounded proportionally (Pillow's rounding, +-1px). A mismatch means
+ * the record describes another image.
  *
- * 反过来不成立，这一点必须说清楚：对得上只说明比例对得上。副本的长边被钉死在预
- * 算上，原图有多大这个信息在降采样时就丢了，所以 5504x3072 和 2752x1536 的
- * thumb 副本都是 320x179，拿旧记录去比一样能过。换图时的那条线因此不能只靠
- * 这里——各节点在主图地址变了的当下就直接不信任记录（见 distrustRecord），
- * 这里只当兜底：
- * 管挂载时就已经存歪了的旧数据，那种情况没有「上一张」可比。
+ * The converse does not hold, and this must be made clear: a match only shows the ratio matches. The copy's long edge is pinned to the
+ * budget, and the information about how large the original was is lost in downsampling, so thumb copies of 5504x3072 and 2752x1536
+ * are both 320x179, and an old record compared against them passes just the same. So the line for image swaps cannot rely on
+ * this alone - each node distrusts the record the moment the main image address changes (see distrustRecord),
+ * and this is only a fallback:
+ * it covers old data that was already skewed at mount time, in which case there is no "previous image" to compare.
  */
 export function nodeBodyRecordDescribesImage(
   image: { naturalWidth: number; naturalHeight: number },
@@ -357,28 +357,28 @@ export function nodeBodyRecordDescribesImage(
   if (!natural) return false;
   const { naturalWidth: w, naturalHeight: h } = image;
   if (!(w > 0) || !(h > 0)) return false;
-  // 横竖都不一样，不用再算了。
+  // Both width and height differ, no need to compute further.
   if (w >= h !== natural.width >= natural.height) return false;
   const long = Math.max(w, h);
   const short = Math.min(w, h);
   const recLong = Math.max(natural.width, natural.height);
   const recShort = Math.min(natural.width, natural.height);
-  // 后端拒绝了这次降采样（渲染失败、或源图本就在预算内）直接给了原图。
+  // The backend refused this downsampling (render failed, or the source was already within the budget) and gave the original directly.
   if (long === recLong && short === recShort) return true;
   if (long !== maxEdge) return false;
   return Math.abs(short - Math.round((long * recShort) / recLong)) <= 1;
 }
 
 /**
- * 这次 onLoad 该按哪组尺寸来测量。
+ * Which set of sizes this onLoad should measure by.
  *
- * 喂的是降采样副本时元素在说谎，改用记录里的真实尺寸——于是后续的比例计算、
- * 自动尺寸、角标全都和喂原图时逐字节一致，不是「跳过测量」。
+ * When a downsampled copy is fed the element is lying, so use the real size from the record - then the later ratio computation,
+ * auto sizing and badge are all byte-for-byte identical to feeding the original, rather than "skipping measurement".
  *
- * 但只在记录确实描述这张图时才这么做；对不上时元素虽然也不是原图，至少是从这
- * 张图来的，比一个属于别的图的记录可信。调用方应当先用
- * nodeBodyRecordDescribesImage 判一下，对不上就退回原图重测（见各节点的
- * onLoad），那才拿得到真相。
+ * But only do so when the record really describes this image; on a mismatch the element, while also not the original, at least came from this
+ * image, which is more credible than a record belonging to another image. Callers should first judge with
+ * nodeBodyRecordDescribesImage, and on a mismatch fall back to the original and re-measure (see each node's
+ * onLoad), where the truth can be obtained.
  */
 export function nodeBodyImageMeasurement(
   image: { naturalWidth: number; naturalHeight: number },
@@ -396,40 +396,39 @@ export function nodeBodyImageMeasurement(
 }
 
 export type NaturalSizeRecordWrite = {
-  /** 要不要把这一轮量到的尺寸写回节点数据。 */
+  /** Whether to write the size measured this round back to node data. */
   persist: boolean;
-  /** 这次写回该不该进撤销栈。 */
+  /** Whether this write-back should enter the undo stack. */
   recordHistory: boolean;
-  /** 要不要顺带把节点尺寸改成贴合这张图的尺寸。 */
+  /** Whether to also change the node size to fit this image. */
   applySize: boolean;
 };
 
 /**
- * onLoad 量完之后，这次要不要落库、算不算一次用户可撤销的改动。
+ * After onLoad finishes measuring, whether this time to persist and whether it counts as a user-undoable change.
  *
- * 三种要写的情形，性质完全不同：
+ * The three cases that need a write are entirely different in nature:
+ * 1. The ratio changed / the display size does not match - the node would visibly deform on screen, a change the user can see,
+ *    and entering the undo stack is natural.
+ * 2. The record was empty to begin with - in old projects the node's ratio was long computed correctly and its size already fitted, so the two conditions above
+ *    are forever false, and imageNaturalWidth/Height can never be written; and
+ *    without a record nodeBodyImageSrc can only feed the original, so this node never enjoys downsampled copies.
+ *    Adding this write changes not a single pixel on screen.
+ * 3. The record does not match the truth - swapping to another image of the same ratio (5504x3072 -> 2752x1536) leaves the ratio and
+ *    display size unchanged, so relying on case 1 alone the correction can never land. It likewise changes nothing on screen.
  *
- * 1. 比例变了 / 显示尺寸对不上 —— 节点在屏幕上会跟着变形，是用户看得见的改动，
- *    进撤销栈天经地义。
- * 2. 记录本来就是空的 —— 老项目里的节点比例早就算对了、尺寸也早就贴合了，上面
- *    两个条件永远是 false，于是 imageNaturalWidth/Height 一辈子写不进去；而
- *    nodeBodyImageSrc 没有记录就只能喂原图，这个节点从此享受不到降采样副本。
- *    补这一笔不改变屏幕上的任何一个像素。
- * 3. 记录和真相对不上 —— 换成同比例的另一张图（5504x3072 -> 2752x1536）比例和
- *    显示尺寸都不变，只靠第 1 条的话修正永远落不了地。同样不改变屏幕。
+ * The latter two only record facts the canvas already knew, and are not edits. If put in the undo stack, merely opening
+ * an old project would pile dozens of "forget image size" entries and clear the redo stack - so
+ * recordHistory is true only in case 1.
  *
- * 后两种只是把画布早就知道的事实补记下来，不是编辑。放进撤销栈的话，光是打开
- * 一个老项目就会堆进几十条「忘掉图片尺寸」的条目，还会把重做栈清空——所以
- * recordHistory 只在第 1 种情形为真。
+ * Cases 2 and 3 both converge by themselves: once written the record matches the truth, and next time the same judgment is false directly.
  *
- * 第 2、3 种都自带收敛：写完记录就和真相一致，下次同一判断直接为假。
+ * sizeLockedByUser means "the user manually dragged the size". It only turns off applySize, not record correction:
+ * preserving the display size the user dragged and recording the real pixel size correctly are two unrelated things.
  *
- * sizeLockedByUser 是「用户手动拖过尺寸」。它只关掉 applySize，不关掉记录纠正：
- * 保住用户拖出来的显示尺寸，和把真实像素尺寸记对，是两件互不相干的事。
- *
- * measuringRecordSubject 是给 ImageNode 那种「放大档换喂另一个 URL」的节点用的：
- * 那一轮元素上的尺寸属于另一张图（旋转/补光/多视角的结果都写在 previewImageUrl
- * 里，和 imageUrl 不必同尺寸），拿它去纠正记录是把错的换成另一个错的。
+ * measuringRecordSubject is for nodes like ImageNode that "feed a different URL at the zoom-in tier":
+ * in that round the size on the element belongs to another image (rotate/relight/multi-angle results are all written in previewImageUrl,
+ * which need not have the same size as imageUrl), and using it to correct the record swaps one wrong for another.
  */
 export function planNaturalSizeRecordWrite(input: {
   aspectRatioChanged: boolean;
@@ -444,9 +443,9 @@ export function planNaturalSizeRecordWrite(input: {
     && (input.record === null
       || input.record.width !== input.measured.width
       || input.record.height !== input.measured.height);
-  // 用户拖定过尺寸：屏幕上的尺寸归他，记录归事实。这两件事原本捆在一起，于是
-  // 「不许自动改尺寸」把「纠正记录」也一并跳过了——换图之后角标当次靠组件局部
-  // state 还是对的，重新挂载读到的却是旧记录，变体也按旧尺寸挑。
+  // The user dragged the size: the on-screen size belongs to them, the record belongs to the facts. These two were originally tied together, so
+  // "do not auto-change the size" skipped "correcting the record" too - after an image swap the badge was still right that time via component-local
+  // state, but a remount read the old record and the variant was also picked by the old size.
   if (input.sizeLockedByUser) {
     return { persist: recordIsWrong, recordHistory: false, applySize: false };
   }

@@ -21,7 +21,7 @@ describe("getAudioExtFromUrl", () => {
   });
 
   it("returns empty string when there is no extension", () => {
-    expect(getAudioExtFromUrl("/a/b/xxx_背景音")).toBe("");
+    expect(getAudioExtFromUrl("/a/b/xxx_background_music")).toBe("");
   });
 });
 

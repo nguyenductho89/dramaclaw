@@ -266,7 +266,7 @@ describe("1.x beat video prompt generation query", () => {
             {
               ok: false,
               code: "VIDEO_PROMPT_PREREQUISITE_REQUIRED",
-              error: "Beat 2 缺少草图或首帧，请先生成草图或预览",
+              error: "Beat 2 is missing a sketch or first frame, generate a sketch or preview first",
             },
             { status: 409 },
           ),
@@ -281,7 +281,7 @@ describe("1.x beat video prompt generation query", () => {
     await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.error).toBeInstanceOf(BackendStatusError);
     expect(result.current.error?.message).toBe(
-      "Beat 2 缺少草图或首帧，请先生成草图或预览",
+      "Beat 2 is missing a sketch or first frame, generate a sketch or preview first",
     );
   });
 });

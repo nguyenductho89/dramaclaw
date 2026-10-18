@@ -33,13 +33,13 @@ describe("taskErrorMessage", () => {
       taskErrorMessage(
         task({
           error_code: "NOVEL_IMPORT_REQUIRED",
-          error: "请先导入小说",
+          error: "Please import a novel first",
         }),
         t,
       ),
     ).toBe("Please import a novel first");
     expect(tMock).toHaveBeenCalledWith("common.novelImportRequired", {
-      defaultValue: "请先导入小说",
+      defaultValue: "Please import a novel first",
     });
   });
 
@@ -56,13 +56,13 @@ describe("taskErrorMessage", () => {
       taskErrorMessage(
         task({
           error_code: "BILLING_RULE_NOT_CONFIGURED",
-          error: "计费规则未配置，请联系管理员设置积分规则",
+          error: "Billing rule is not configured. Please contact an administrator to set credit pricing.",
         }),
         t,
       ),
     ).toBe("Billing rule is not configured.");
     expect(tMock).toHaveBeenCalledWith("common.billingRuleNotConfigured", {
-      defaultValue: "计费规则未配置，请联系管理员设置积分规则",
+      defaultValue: "Billing rule is not configured. Please contact an administrator to set credit pricing.",
     });
   });
 

@@ -1,32 +1,32 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 画布平移的「细节降级」(LOD) 规则。
+ * "Detail degradation" (LOD) rules for canvas panning.
  *
- * 背景（实测，69 个节点 / zoom 0.1 / 同一台机器）：
- *   基线                                    62.3 fps，p90 帧时 26.6ms
- *   只去掉 backdrop-filter/shadow/filter    66.8 fps，p90 帧时 26.2ms
- *   只藏掉 <video>                          66.3 fps，p90 帧时 26.4ms
- *   两者都去掉                              74.5 fps，p90 帧时 14.1ms
+ * Background (measured, 69 nodes / zoom 0.1 / the same machine):
+ *   baseline                                    62.3 fps, p90 frame time 26.6ms
+ *   only remove backdrop-filter/shadow/filter   66.8 fps, p90 frame time 26.2ms
+ *   only hide <video>                           66.3 fps, p90 frame time 26.4ms
+ *   remove both                                 74.5 fps, p90 frame time 14.1ms
  *
- * p90 是 26ms —— 恰好两个 vsync 周期，也就是每 10 帧固定丢 1 帧；肉眼看到的
- * 「顿挫」就是它，而不是平均 fps。单独砍一项都跨不回 13.3ms 的预算线，必须
- * 同时砍。参照组 liblib.tv 同缩放下是 74.6 fps / p90 14.1ms，其画布卡片上
- * 有 0 个 <video>、backdrop-filter 密度只有我们的 1/4——这是取舍不是技巧。
+ * p90 at 26ms is exactly two vsync periods, i.e. one frame dropped for every 10 frames; the "stutter" the eye sees
+ * is this, not the average fps. Cutting any single item cannot get back across the 13.3ms budget line; both must
+ * be cut together. The reference liblib.tv at the same zoom is 74.6 fps / p90 14.1ms, with 0 <video> on its canvas cards
+ * and a backdrop-filter density only 1/4 of ours - this is a trade-off, not a trick.
  *
- * 于是分两档：
- *   - 手势档（平移/缩放进行中）：只关视觉效果。动的时候没人看得见毛玻璃和
- *     投影，手势一停就恢复，稳态零视觉变化。
- *   - 低缩放档：节点在屏幕上已经很小，额外把 <video> 换成静态首帧/占位块。
- *     视频层是独立合成层，数量随节点数线性增长，只有换掉才能跨回预算线。
+ * So there are two tiers:
+ *   - Gesture tier (panning/zooming in progress): only turn off visual effects. Nobody can see frosted glass and
+ *     shadows while moving; they come back as soon as the gesture stops, with zero visual change in the steady state.
+ *   - Low-zoom tier: nodes are already tiny on screen, so additionally replace <video> with a static first frame/placeholder block.
+ *     Video layers are independent compositing layers whose count grows linearly with nodes, and only replacing them gets back across the budget line.
  */
 
 /**
- * 低缩放档阈值。低于它才把视频降级成静态图。
+ * Low-zoom tier threshold. Only below it are videos degraded to static images.
  *
- * 画布节点标准宽度约 320–400px，0.35 倍下屏幕占位约 110–140px；此时首帧里
- * 已经看不清任何有效信息，换成静态图不损失可读性。高于该值保持原样，避免在
- * 常用工作缩放区间（0.5–1）出现任何行为变化。
+ * The standard canvas node width is about 320-400px, taking about 110-140px on screen at 0.35x; at that point no useful information
+ * can be made out in the first frame, so switching to a static image loses no readability. Above this value everything stays as is, avoiding
+ * any behavior change in the common working zoom range (0.5-1).
  */
 export const LOW_DETAIL_ZOOM_THRESHOLD = 0.35;
 
@@ -35,16 +35,16 @@ export function isLowDetailZoom(zoom: number): boolean {
 }
 
 /**
- * 低缩放档下不做 shell 替换的节点类型。
+ * Node types that are not shell-replaced at the low-zoom tier.
  *
- * - skillNode：生成任务的恢复逻辑在组件内部（SkillNode 自带 resume effect，不在
- *   resumeGeneration 的 Canvas 层覆盖内），卸载期间任务完成会无人写回；且其
- *   handle id 集合是动态的（按 spec role / beat 引用 / 现存边求并集），shell 复刻
- *   不划算。技能节点数量极少，保持完整渲染。
- * - groupNode：故事板组带 dragHandle（.storyboard-group-drag-handle）和条件渲染的
- *   handle 对，shell 会破坏拖拽与边锚定；组本身只是一个标题框，渲染成本可忽略。
- * - beatContextNode：起始画面草稿只在 onBlur 落盘，React 卸载不派发 blur，编辑中
- *   shell 化会直接丢输入。
+ * - skillNode: the generation task resume logic lives inside the component (SkillNode has its own resume effect, not covered by
+ *   the Canvas-layer resumeGeneration), so a task completing during unmount would have nobody to write back; and its
+ *   handle id set is dynamic (the union of spec role / beat references / existing edges), so replicating it in a shell
+ *   is not worth it. There are very few skill nodes, so they keep full rendering.
+ * - groupNode: storyboard groups carry a dragHandle (.storyboard-group-drag-handle) and conditionally rendered
+ *   handle pairs; a shell would break dragging and edge anchoring; the group itself is just a title box, with negligible render cost.
+ * - beatContextNode: the start-frame draft is only persisted on onBlur, and React unmount does not dispatch blur, so
+ *   shelling it during editing would lose the input outright.
  */
 export const LOD_SHELL_EXEMPT_TYPES: ReadonlySet<string> = new Set([
   'skillNode',
@@ -53,14 +53,14 @@ export const LOD_SHELL_EXEMPT_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /* ------------------------------------------------------------------------- *
- * 「节点媒体活跃中」信号
+ * "Node media active" signal
  *
- * 正在播放的视频不能被 shell 化——用户主动播了就说明他在看，缩放小也不该把
- * 播放器抽走（还会丢播放进度）。播放态原本是 VideoNode 组件内的 ref，shell
- * 决策发生在组件外层，读不到，所以提升成模块级注册表。
+ * A playing video must not be shelled - the user actively playing it means they are watching, and even at small zoom the player should not
+ * be pulled out (it would also lose the playback progress). The playing state was originally a ref inside the VideoNode component, while the shell
+ * decision happens outside the component and cannot read it, so it is lifted into a module-level registry.
  *
- * 刻意不做成响应式：注册表变化不触发重渲染，下一次跨档/重挂时自然生效。
- * 代价是「低缩放档下暂停后节点仍保持完整渲染直到下次跨档」——单个节点，可接受。
+ * Deliberately not made reactive: registry changes do not trigger re-rendering and take effect naturally the next time a tier is crossed/remounted.
+ * The cost is that "after pausing at the low-zoom tier the node keeps full rendering until the next tier crossing" - a single node, acceptable.
  * ------------------------------------------------------------------------- */
 
 const mediaActiveNodes = new Set<string>();
@@ -74,35 +74,34 @@ export function isNodeMediaActive(nodeId: string): boolean {
   return mediaActiveNodes.has(nodeId);
 }
 
-/** 手势进行中挂在画布容器上；CSS 侧据此关掉 backdrop-filter / shadow / filter。 */
+/** Attached to the canvas container while a gesture is in progress; CSS uses it to turn off backdrop-filter / shadow / filter. */
 export const CANVAS_PANNING_CLASS = 'dc-canvas--panning';
 
-/** 低缩放档挂在画布容器上；同样关效果，另外给节点内部提供降级钩子。 */
+/** Attached to the canvas container at the low-zoom tier; also turns off effects and additionally gives nodes a degradation hook. */
 export const CANVAS_LOW_DETAIL_CLASS = 'dc-canvas--low-detail';
 
 /**
- * 手势结束后延迟多久摘掉 panning 类。
+ * How long after a gesture ends to remove the panning class.
  *
- * React Flow 的 onMoveEnd 在惯性滚动（触控板/滚轮）真正停下之前就可能触发，
- * 立刻恢复效果会在滑行的尾巴上重新掉帧。80ms 足够盖住尾帧，又短到不会被
- * 感知成「效果慢半拍才回来」。
+ * React Flow's onMoveEnd may fire before inertial scrolling (trackpad/wheel) has really stopped,
+ * and restoring effects immediately would drop frames again on the tail of the glide. 80ms is enough to cover the tail frames, and short enough not to
+ * be perceived as "effects coming back half a beat late".
  */
 export const PANNING_CLASS_RELEASE_DELAY_MS = 80;
 
 /* ------------------------------------------------------------------------- *
- * 「画布静止了吗」信号
+ * "Is the canvas still" signal
  *
- * 节点里有若干处需要读 scrollWidth / clientWidth / getBoundingClientRect 才能
- * 决定怎么渲染（例如标题溢出淡出）。这类读取会强制同步布局，单次在这个体量的
- * DOM 上约 2ms。平时无所谓，但快速平移时 React Flow 的可见性剔除每帧要挂载
- * 3~4 个节点，每个新挂载的节点都跑一遍——每帧就是 20ms 量级的布局抖动，实测
- * 拖拽帧率因此掉到 20fps 上下。
+ * Several places in nodes need to read scrollWidth / clientWidth / getBoundingClientRect to
+ * decide how to render (e.g. title overflow fade). Such reads force a synchronous layout, about 2ms each on a DOM of this size.
+ * Normally harmless, but during fast panning React Flow's visibility culling mounts 3~4 nodes per frame, and each newly mounted node runs it -
+ * that is layout jitter on the order of 20ms per frame, and the measured drag frame rate dropped to around 20fps because of it.
  *
- * 所以给它们一个统一的「现在别量」信号：手势进行中、或低缩放档（此时文字只有
- * 几个像素高，量了也没有可读性收益）一律跳过，等画布静下来再补测一次。
+ * So give them a unified "do not measure now" signal: skip during a gesture, or at the low-zoom tier (where text is only
+ * a few pixels tall and measuring brings no readability benefit), and measure again once the canvas settles.
  *
- * 刻意不做成 React state：这信号一变就要通知上百个节点，走 state 等于把省下的
- * 布局时间还给 render。订阅方拿到回调后自己决定要不要 setState。
+ * Deliberately not React state: when this signal changes it must notify hundreds of nodes, and going through state would hand the saved
+ * layout time back to render. Subscribers decide for themselves whether to setState after receiving the callback.
  * ------------------------------------------------------------------------- */
 
 let gestureActive = false;
@@ -129,38 +128,38 @@ export function setCanvasLowDetail(active: boolean): void {
   notifyIfSettled(wasDeferred);
 }
 
-/** true 表示「现在读布局不划算」，调用方应跳过测量。 */
+/** true means "reading layout now is not worthwhile", and callers should skip measuring. */
 export function isCanvasMeasurementDeferred(): boolean {
   return gestureActive || lowDetailActive;
 }
 
-/** 手势（平移/缩放）是否进行中。shell 升级泵据此暂停放行。 */
+/** Whether a gesture (pan/zoom) is in progress. The shell upgrade pump pauses grants accordingly. */
 export function isCanvasGestureActive(): boolean {
   return gestureActive;
 }
 
 /* ------------------------------------------------------------------------- *
- * 换画布时的「首帧全 shell」窗口
+ * The "all-shell first frame" window when switching canvases
  *
- * 切画布会把几百个节点一次性挂上去。哪怕相机已经先摆好（见 useCanvasSync 的
- * hydrate），视口内仍可能有几十个完整组件要在同一次提交里挂完，实测就是那一下
- * 几百毫秒的冻结。这里给 hydrate 开一个短窗口：窗口内挂载的节点一律先出 shell
- * （~4 个元素），随后交给上面的升级队列每帧 3 个补成完整组件——一次长帧被摊成
- * 几十个短帧，用户看到的是「先出灰块、逐个填充」而不是「白屏一下」。
+ * Switching canvases mounts hundreds of nodes at once. Even if the camera is positioned first (see hydrate in useCanvasSync),
+ * dozens of full components inside the viewport may still have to mount in the same commit, and that is the freeze of several hundred
+ * milliseconds. Here hydrate opens a short window: nodes mounted inside the window all start as shells
+ * (~4 elements), and are then handed to the upgrade queue above, which completes 3 per frame into full components - one long frame is spread into
+ * dozens of short frames, so the user sees "gray blocks first, filled in one by one" rather than "a white screen flash".
  *
- * 用两个 rAF 关窗而不是计时器：第一个 rAF 后挂载提交已完成，第二个覆盖
- * ReactFlow 应用视口后重算裁剪带来的第二波挂载。之后新进视口的节点走原来的
- * 手势规则，与本窗口无关。
+ * The window is closed with two rAFs rather than a timer: after the first rAF the mount commit is done, and the second covers
+ * the second wave of mounts from culling recomputed after ReactFlow applies the viewport. After that nodes newly entering the viewport follow the original
+ * gesture rules, unrelated to this window.
  * ------------------------------------------------------------------------- */
 
 let hydrateBurstActive = false;
 
-/** hydrate 首帧窗口是否开着。节点挂载时据此决定要不要从 shell 起步。 */
+/** Whether the hydrate first-frame window is open. Node mounts use it to decide whether to start from a shell. */
 export function isCanvasHydrateBurstActive(): boolean {
   return hydrateBurstActive;
 }
 
-/** 在 setCanvasData 之前调用，开启「本次挂载全部先出 shell」的窗口。 */
+/** Called before setCanvasData to open the "everything mounted this time starts as a shell" window. */
 export function beginCanvasHydrateBurst(): void {
   hydrateBurstActive = true;
   requestAnimationFrame(() => {
@@ -171,21 +170,21 @@ export function beginCanvasHydrateBurst(): void {
 }
 
 /* ------------------------------------------------------------------------- *
- * 换画布时的缩放档同步
+ * Zoom tier sync when switching canvases
  *
- * 相机在挂节点之前就用 reactFlow.setViewport 摆好了，但 Canvas 的
- * lowDetailActive（驱动 onlyRenderVisibleElements）只由 onMove/onMoveEnd 更新，
- * 而 ReactFlow 的程序化 setViewport 要到下一拍才派发这些事件。于是新画布的节点
- * 是按「上一张画布的缩放档」挂载的：0.6 → 0.2 会先按裁剪只挂十几个再翻成全量，
- * 0.2 → 0.6 会先全量挂 354 个再裁回十几个——两个方向都白挂一整波。
+ * The camera is positioned with reactFlow.setViewport before nodes are mounted, but Canvas's
+ * lowDetailActive (which drives onlyRenderVisibleElements) is only updated by onMove/onMoveEnd,
+ * and ReactFlow's programmatic setViewport dispatches those events only on the next beat. So the new canvas's nodes
+ * are mounted according to "the previous canvas's zoom tier": 0.6 -> 0.2 would first mount a dozen or so by culling and then flip to all,
+ * and 0.2 -> 0.6 would first mount all 354 and then cull back to a dozen - a whole wave mounted in vain in both directions.
  *
- * 这里给 hydrate 一条直达通道：在同一个事件里同步喂给 Canvas 目标缩放，React 会
- * 把它和 setCanvasData 批进同一次提交，节点一次就按最终档挂好。
+ * Here hydrate gets a direct channel: in the same event it synchronously feeds Canvas the target zoom, and React
+ * batches it with setCanvasData into the same commit, so nodes mount at the final tier in one go.
  * ------------------------------------------------------------------------- */
 
 const hydrateViewportListeners = new Set<(zoom: number) => void>();
 
-/** Canvas 订阅换画布的目标缩放；返回取消订阅函数。 */
+/** Canvas subscribes to the target zoom of a canvas switch; returns the unsubscribe function. */
 export function onCanvasHydrateViewport(
   listener: (zoom: number) => void,
 ): () => void {
@@ -195,29 +194,29 @@ export function onCanvasHydrateViewport(
   };
 }
 
-/** hydrate 时调用，必须与 setCanvasData 在同一个事件里，才能批进同一次提交。 */
+/** Called on hydrate; must be in the same event as setCanvasData to be batched into the same commit. */
 export function notifyCanvasHydrateViewport(zoom: number): void {
   for (const listener of hydrateViewportListeners) listener(zoom);
 }
 
 /* ------------------------------------------------------------------------- *
- * shell → 完整组件的分批升级队列
+ * Batched upgrade queue from shell to full component
  *
- * 完整节点组件的挂载很贵（VideoNode 一次 ~5ms：上百个 hook + handle 测量回流 +
- * store 订阅风暴），一帧里挂多个就丢帧。所以 shell 升级成完整组件一律排队领
- * 名额：每帧只放行 UPGRADES_PER_FRAME 个，手势进行中完全不放行（此时用户在动
- * 画布，shell 本来就是这一档该有的样子）。
+ * Mounting a full node component is expensive (VideoNode ~5ms each: hundreds of hooks + handle measurement reflow +
+ * store subscription storm), and mounting several in one frame drops frames. So every shell upgrade to a full component queues for a
+ * quota: only UPGRADES_PER_FRAME are granted per frame, and none at all during a gesture (the user is moving the
+ * canvas, and shells are exactly what this tier should look like).
  *
- * 两个来源共用这一条队列：
- *   1. 缩放升档（退出低缩放）时视口内的全部 shell——原先一次提交全升，实测
- *      179ms + 234ms 两个长帧；分批后摊平。
- *   2. 手势进行中新进视口挂载的节点——原先直接挂完整组件，快速平移时每秒
- *      几十次，是稳态 40fps 尖刺的来源。
+ * Two sources share this one queue:
+ *   1. All shells inside the viewport when zoom upgrades a tier (leaving low zoom) - previously all upgraded in one commit, measured
+ *      as two long frames of 179ms + 234ms; spread out after batching.
+ *   2. Nodes newly mounted into the viewport during a gesture - previously mounted as full components directly, dozens of times per second during
+ *      fast panning, the source of the steady-state 40fps spikes.
  * ------------------------------------------------------------------------- */
 
 /**
- * 每帧放行的升级数。VideoNode 级别的挂载单个 ~5ms，3 个 ≈ 15ms，恰好贴着
- * 75Hz 的 13.3ms 预算线；再大就会重新可感知。
+ * Upgrades granted per frame. A VideoNode-level mount is ~5ms each, 3 is about 15ms, just touching
+ * the 13.3ms budget line of 75Hz; any larger becomes perceptible again.
  */
 const UPGRADES_PER_FRAME = 3;
 
@@ -228,7 +227,7 @@ let upgradePumpScheduled = false;
 function pumpUpgrades(): void {
   upgradePumpScheduled = false;
   if (upgradeQueue.length === 0) return;
-  // 手势中不放行，但保持泵活着，手势一停下一帧就继续。
+  // No grants during a gesture, but keep the pump alive so it continues the next frame after the gesture stops.
   if (!gestureActive) {
     for (const grant of upgradeQueue.splice(0, UPGRADES_PER_FRAME)) grant();
   }
@@ -242,8 +241,8 @@ function scheduleUpgradePump(): void {
 }
 
 /**
- * 排队申请一次 shell → 完整组件的升级名额；轮到时回调 `grant`。
- * 返回取消函数（节点在排队期间被卸载/重新降档时调用）。
+ * Queue for one shell -> full component upgrade quota; `grant` is called back when it is your turn.
+ * Returns a cancel function (called when the node is unmounted/downgraded again while queued).
  */
 export function requestShellUpgrade(grant: UpgradeGrant): () => void {
   upgradeQueue.push(grant);
@@ -254,7 +253,7 @@ export function requestShellUpgrade(grant: UpgradeGrant): () => void {
   };
 }
 
-/** 画布重新静止时回调；返回取消订阅函数。 */
+/** Called back when the canvas is still again; returns the unsubscribe function. */
 export function onCanvasMeasurementResume(listener: () => void): () => void {
   resumeListeners.add(listener);
   return () => {

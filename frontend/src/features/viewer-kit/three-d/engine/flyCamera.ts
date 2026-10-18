@@ -2,8 +2,8 @@
 // Copyright (c) 2026 ClaymoreLab
 import * as pc from 'playcanvas';
 
-// 飞行 + 轨道相机：左键拖拽看向（lookCamera），右键拖拽平移（panCamera），
-// 滚轮缩放，WASD/QE 移动。模型沿用 BuilderGPT 9024 viewer 的 SuperSplat 控制。
+// Fly + orbit camera: left-drag to look (lookCamera), right-drag to pan (panCamera),
+// scroll to zoom, WASD/QE to move. The model follows the SuperSplat controls of the BuilderGPT 9024 viewer.
 
 const SUPER_SPLAT_CONTROLS = {
   minZoom: 1e-6,
@@ -36,13 +36,13 @@ export interface FlyCameraController {
   setSceneRadius: (radius: number) => void;
   setSpeedScale: (scale: number) => void;
   resetToInitial: () => void;
-  // 把 orbit focalPoint 平滑插值到 target；durationMs 默认 300ms（ease-out cubic）。
-  // 用户拖镜头 / 按 WASD/QE 会立即取消。
+  // Smoothly interpolate the orbit focalPoint to target; durationMs defaults to 300ms (ease-out cubic).
+  // Dragging the camera / pressing WASD/QE cancels it immediately.
   lookAtTarget: (target: pc.Vec3, durationMs?: number) => void;
-  // Camera preset 用：把 focalPoint = target，相机摆到 target + offset，自动计算
-  // azim/elev/distance 并 sync。对应 BuilderGPT 的 setCameraByOffset。
+  // For camera presets: set focalPoint = target and place the camera at target + offset, automatically computing
+  // azim/elev/distance and syncing. Corresponds to BuilderGPT's setCameraByOffset.
   setCameraByOffset: (target: pc.Vec3, offset: pc.Vec3) => void;
-  // 保存/恢复：azim/elev/distance + focalPoint，序列化进 scene snapshot。
+  // Save/restore: azim/elev/distance + focalPoint, serialized into the scene snapshot.
   getCameraState: () => FlyCameraState;
   setCameraState: (state: unknown) => void;
   setInputEnabled: (enabled: boolean) => void;
@@ -384,18 +384,18 @@ export function createFlyCameraController(options: FlyCameraControllerOptions): 
       focalPoint.copy(target);
       const length = Math.hypot(offset.x, offset.y, offset.z);
       if (length < 1e-6) {
-        // offset = 0 没意义，保持现有 azim/elev/distance，只移焦点。
+        // offset = 0 is meaningless; keep the current azim/elev/distance and only move the focal point.
         sync();
         return;
       }
-      // 反推 azim/elev/distance：camera = focalPoint + forward * actualDistance
+      // Back-compute azim/elev/distance: camera = focalPoint + forward * actualDistance
       // forward = (cos(ex)*sin(ey), -sin(ex), cos(ex)*cos(ey))
       const dirY = offset.y / length;
       const elevRad = -Math.asin(Math.max(-1, Math.min(1, dirY)));
       const azimRad = Math.atan2(offset.x, offset.z);
       azim = modDegrees(azimRad * pc.math.RAD_TO_DEG);
       elev = pc.math.clamp(elevRad * pc.math.RAD_TO_DEG, -90, 90);
-      // actualDistance = distance * sceneRadius / fovFactor，所以 distance = length * fovFactor / sceneRadius
+      // actualDistance = distance * sceneRadius / fovFactor, so distance = length * fovFactor / sceneRadius
       const dist = length * Math.max(1e-6, fovFactor()) / Math.max(1e-6, sceneRadius);
       distance = pc.math.clamp(dist, SUPER_SPLAT_CONTROLS.minZoom, SUPER_SPLAT_CONTROLS.maxZoom);
       sync();

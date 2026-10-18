@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 复刻旧 PlayCanvas 3GS 导演台的 DIRECTOR_SHAPE_HINTS：
-// 给 prop / staging 一个粗粒度的「形状语义」标签，决定默认 scale、affordances、
-// 挂载点（attachment_points）。挂载点用三维 offset（相对 prop entity 局部坐标系，
-// 已按 prop scale + yaw 应用），actor 落到这个点上时取 facing_delta 决定面向。
+// Reproduces DIRECTOR_SHAPE_HINTS of the old PlayCanvas 3GS director stage:
+// gives a prop / staging a coarse "shape semantics" label that decides the default scale, affordances and
+// attachment points (attachment_points). An attachment point uses a 3D offset (relative to the prop entity's local frame,
+// already applied with prop scale + yaw), and an actor landing on this point takes facing_delta to decide its facing.
 //
-// 重要：image-freezone 还没有真实 prop 资产；shape_hint 会生成代码内置的低模
-// blocking silhouette。default_scale 是新建/AI staging 的建议包围盒尺寸，运行时
-// 用户仍可以继续缩放。
+// Important: image-freezone has no real prop assets yet; shape_hint generates a built-in low-poly
+// blocking silhouette in code. default_scale is the suggested bounding-box size for new/AI staging, and at runtime
+// the user can still keep scaling.
 
 export type AttachKind = 'mount' | 'seat' | 'operate' | 'hold';
 export type ActorState = 'standing' | 'sitting' | 'mounted' | 'operating' | 'lying';
@@ -15,10 +15,10 @@ export type ActorState = 'standing' | 'sitting' | 'mounted' | 'operating' | 'lyi
 export interface AttachmentPoint {
   id: string;
   kind: AttachKind;
-  /** prop 局部坐标偏移（米）。x: 左右，y: 上下，z: 前后；rotated by prop yaw at runtime. */
+  /** Prop-local coordinate offset (meters). x: left/right, y: up/down, z: front/back; rotated by prop yaw at runtime. */
   offset: [number, number, number];
   actor_state: ActorState;
-  /** actor 在挂载点上的 yaw（相对 prop yaw 的弧度）。骑马 = π（actor 面向 prop 前方）。 */
+  /** Actor yaw at the attachment point (radians relative to the prop yaw). Riding a horse = pi (actor faces the prop front). */
   facing_delta?: number;
 }
 
@@ -157,8 +157,8 @@ export function proxyLocalBottomForHint(hint: ShapeHintName): number {
   );
 }
 
-// Per-axis [min, max] scale 限制（手动编辑用，比 import 时更宽松）。复刻 BuilderGPT
-// QUADRUPED_MOUNT_MANUAL_SCALE_LIMITS / GENERIC_PROP_SCALE_LIMITS。
+// Per-axis [min, max] scale limits (for manual editing, looser than at import time). Reproduces BuilderGPT's
+// QUADRUPED_MOUNT_MANUAL_SCALE_LIMITS / GENERIC_PROP_SCALE_LIMITS.
 const GENERIC_SCALE_LIMITS: [number, number][] = [
   [0.08, 12],
   [0.08, 12],
@@ -189,7 +189,7 @@ export function clampScaleToHint(
   ];
 }
 
-// 取选定挂点：未指定 id → 第一个；指定但找不到 → null（表示该 prop 不可挂载）。
+// Pick the selected attachment point: no id specified -> the first; specified but not found -> null (meaning this prop cannot be mounted).
 export function resolveAttachmentPoint(
   hint: ShapeHintName,
   attachPointId: string | undefined,
@@ -200,7 +200,7 @@ export function resolveAttachmentPoint(
   return points.find((p) => p.id === attachPointId) ?? null;
 }
 
-// 把 prop 局部 offset 按 prop yaw 旋转到世界向量；y 轴不旋转。
+// Rotate the prop-local offset into a world vector by the prop yaw; the y axis is not rotated.
 export function rotatedOffsetY(offset: [number, number, number], yawRad: number): [number, number, number] {
   const cos = Math.cos(yawRad);
   const sin = Math.sin(yawRad);

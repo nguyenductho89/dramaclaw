@@ -7,11 +7,11 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) =>
       ({
-        "characters.stats.strip.total": "总角色",
-        "characters.stats.strip.mainCharacter": "解说主角",
-        "characters.stats.strip.identity": "身份",
-        "characters.stats.strip.voice": "声线",
-        "characters.stats.strip.ariaLabel": "角色统计",
+        "characters.stats.strip.total": "Total",
+        "characters.stats.strip.mainCharacter": "Narrator lead",
+        "characters.stats.strip.identity": "Identity",
+        "characters.stats.strip.voice": "Voice",
+        "characters.stats.strip.ariaLabel": "Character stats",
       })[key] ?? key,
   }),
 }));
@@ -25,14 +25,14 @@ import type { Character } from "@/types/character";
 const characters: Character[] = [
   {
     name: "Mira",
-    role: "主角",
+    role: "Lead",
     is_main: true,
     portrait_url: "/static/demo/mira/portrait.png",
     reference_audio_path: "assets/characters/Mira/voice.wav",
   },
   {
     name: "Jun",
-    role: "配角",
+    role: "Supporting",
     portrait_path: "assets/characters/Jun/portrait.png",
     reference_audio_path: "",
   },
@@ -78,11 +78,11 @@ describe("CharacterStatsStrip", () => {
       />,
     );
 
-    const strip = screen.getByRole("list", { name: "角色统计" });
+    const strip = screen.getByRole("list", { name: "Character stats" });
     expect(strip).toHaveClass("custom-strip");
     expect(strip).toHaveTextContent("总角色3");
     expect(strip).toHaveTextContent("解说主角1");
-    expect(strip).not.toHaveTextContent("头像");
+    expect(strip).not.toHaveTextContent("Portrait");
     expect(strip).toHaveTextContent("身份2/3");
     expect(strip).toHaveTextContent("声线1/3");
 
@@ -94,7 +94,7 @@ describe("CharacterStatsStrip", () => {
     render(
       <CharacterStatsStrip
         characters={characters}
-        mainCharacterLabel="主角"
+        mainCharacterLabel="Lead"
       />,
     );
 

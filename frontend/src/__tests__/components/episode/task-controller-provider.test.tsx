@@ -551,9 +551,9 @@ describe("TaskControllerProvider + useTaskController integration", () => {
           scope: "stage_asset__abc123",
           status: "completed",
           progress: 1,
-          current_task: "完成",
+          current_task: "Done",
           result: { ok: true },
-          logs: ["完成"],
+          logs: ["Done"],
         },
       ],
     };

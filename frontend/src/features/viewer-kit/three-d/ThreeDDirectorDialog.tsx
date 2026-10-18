@@ -122,14 +122,14 @@ interface ThreeDDirectorDialogProps {
   onCaptureSelectedBackground?: (blob: Blob, meta: ThreeDDirectorCaptureMeta) => void | Promise<void>;
   onCaptureCanvasNode?: (blob: Blob, meta: ThreeDDirectorCaptureMeta) => void | Promise<void>;
   onSubmitDirectorCombined?: (blob: Blob, meta: ThreeDDirectorCaptureMeta) => void | Promise<void>;
-  /** 来源 3D 世界节点的「已保存场景快照」;打开时恢复 actor/prop/staging/相机。 */
+  /** The "saved scene snapshot" of the source 3D world node; restores actor/prop/staging/camera on open. */
   initialScene?: ThreeDSceneSnapshot | null;
   /** Per-source saved snapshots; source switching restores from this map. */
   initialScenesBySourceId?: Record<string, ThreeDSceneSnapshot | null | undefined> | null;
-  /** 「保存 3D 世界」:导出当前编辑快照写回来源节点(下次打开自动恢复)。 */
+  /** "Save 3D world": export the current editing snapshot back to the source node (restored automatically next open). */
   onSaveScene?: (snapshot: ThreeDSceneSnapshot, activeSourceId?: string) => void | Promise<void>;
   registerSaveSceneHandler?: (handler: (() => Promise<void>) | null) => void;
-  /** 「清空保存」:清掉来源节点已存快照。 */
+  /** "Clear saved": clear the snapshot already stored on the source node. */
   onClearScene?: (activeSourceId?: string) => void | Promise<void>;
 }
 
@@ -960,7 +960,7 @@ function ThreeDDirectorSurface({
   const [actorId, setActorId] = useState(actorChoices[0]?.identity_id ?? "");
   const [propId, setPropId] = useState(propChoices[0]?.prop_id ?? "");
   const [actorScale, setActorScale] = useState(1);
-  // 匿名/场景模式下人物颜色可自由选择(默认跟随所选身份的预设色)。
+  // In anonymous/scene mode the actor color can be chosen freely (default follows the preset color of the selected identity).
   const [actorColor, setActorColor] = useState<string>(ANONYMOUS_FALLBACK_COLOR);
   const [stagingName, setStagingName] = useState("");
   const [propLikeColor, setPropLikeColor] = useState<string>(ANONYMOUS_FALLBACK_COLOR);
@@ -1003,7 +1003,7 @@ function ThreeDDirectorSurface({
     : nextAnonymousProp;
   const trimmedStagingName = stagingName.trim();
 
-  // 选不同(匿名)身份时,把颜色默认值同步成该身份预设色;用户随后可自由改。
+  // When a different (anonymous) identity is chosen, sync the color default to that identity's preset color; the user can then change it freely.
   useEffect(() => {
     if (activeActor) setActorColor(activeActor.color);
   }, [activeActor]);
@@ -1152,7 +1152,7 @@ function ThreeDDirectorSurface({
     ]);
   }, []);
 
-  // 「保存 3D 世界」:把导演台里摆好的 actor/prop/staging/相机导出成快照写回来源节点。
+  // "Save 3D world": export the actor/prop/staging/camera arranged in the director stage as a snapshot and write it back to the source node.
   const handleSaveScene = useCallback(async () => {
     const viewerApp = viewerRef.current;
     if (!viewerApp || !onSaveScene) return;
@@ -1482,8 +1482,8 @@ function ThreeDDirectorSurface({
 
   const placeActor = useCallback(() => {
     if (!activeActor) return;
-    // beat 模式颜色与身份绑定(截图按色回收 identity),保持 palette 色;
-    // 匿名/场景模式用用户选的 actorColor。
+    // In beat mode the color is bound to the identity (screenshots recover identity by color), keep the palette color;
+    // in anonymous/scene mode use the user-chosen actorColor.
     const color = manifest.mode === "beat" ? activeActor.color : actorColor;
     const placed = viewerRef.current?.placeMarker("actor", {
       color,
@@ -2293,7 +2293,7 @@ function ThreeDDirectorSurface({
               )}
               {manifest.mode !== "beat" && (
                 <ColorPaletteField
-                  label={t("viewer.threeD.actorColor", { defaultValue: "人物颜色" })}
+                  label={t("viewer.threeD.actorColor", { defaultValue: "Actor color" })}
                   value={actorColor}
                   palette={anonymousActorPalette}
                   onChange={setActorColor}

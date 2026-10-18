@@ -149,8 +149,8 @@ def test_build_projection_from_preset_stamps_mainline_context_project_id(
     projection_client,
     monkeypatch,
 ) -> None:
-    """「同步更新」直接把这里的节点写进内存画布；缺 projectId 的 beat 上下文
-    会被前端当成 standalone，必须和读画布时一样补上。"""
+    """The frontend "sync update" writes the nodes here directly into the in-memory canvas; a beat context missing projectId
+    is treated by the frontend as standalone and must be filled in exactly as when the canvas is read."""
     from novelvideo.api.routes import freezone
 
     client, _project_dir = projection_client
@@ -201,26 +201,26 @@ def test_projection_scene_asset_includes_derived_base_master_input(
     from novelvideo.api.routes import freezone
 
     client, project_dir = projection_client
-    base_master_path = project_dir / "assets" / "scenes" / "城市街道" / "master.png"
+    base_master_path = project_dir / "assets" / "scenes" / "CityStreet" / "master.png"
     base_master_path.parent.mkdir(parents=True)
     base_master_path.write_bytes(b"fake image")
 
     class Store:
         async def get_scene(self, scene_id: str):
             scenes = {
-                "城市街道": {
-                    "scene_id": "城市街道",
-                    "name": "城市街道",
+                "CityStreet": {
+                    "scene_id": "CityStreet",
+                    "name": "CityStreet",
                     "scene_type": "exterior",
-                    "environment_prompt": "正面：霓虹店铺和公交站",
+                    "environment_prompt": "Front: neon shops and a bus stop",
                 },
-                "城市街道_雨夜版": {
-                    "scene_id": "城市街道_雨夜版",
-                    "name": "城市街道_雨夜版",
+                "CityStreet_RainyNight": {
+                    "scene_id": "CityStreet_RainyNight",
+                    "name": "CityStreet_RainyNight",
                     "scene_type": "exterior",
-                    "base_scene_id": "城市街道",
-                    "variant_id": "雨夜版",
-                    "variant_prompt": "路面积水反射霓虹，雨幕明显",
+                    "base_scene_id": "CityStreet",
+                    "variant_id": "RainyNight",
+                    "variant_prompt": "Puddles reflect the neon, heavy curtain of rain",
                 },
             }
             return scenes.get(scene_id)
@@ -242,8 +242,8 @@ def test_projection_scene_asset_includes_derived_base_master_input(
         "user_alice_abc123",
         scope="asset",
         asset_kind="scene",
-        asset_id="城市街道_雨夜版",
-        projection_key="scene:城市街道_雨夜版",
+        asset_id="CityStreet_RainyNight",
+        projection_key="scene:CityStreet_RainyNight",
     )
 
     assert status == 200, body
@@ -252,7 +252,7 @@ def test_projection_scene_asset_includes_derived_base_master_input(
     base_nodes = [
         node
         for node in payload["nodes"]
-        if node.get("data", {}).get("displayName") == "城市街道 base master"
+        if node.get("data", {}).get("displayName") == "CityStreet base master"
     ]
     assert len(base_nodes) == 1
     groups = {node["id"]: node for node in payload["nodes"] if node["type"] == "groupNode"}
@@ -262,52 +262,52 @@ def test_projection_scene_asset_includes_derived_base_master_input(
 
 
 def test_projection_group_id_is_unique_per_non_ascii_asset() -> None:
-    """一个人物一个主线投影组。
+    """One mainline projection group per character.
 
-    组 id 由 projection_key 清洗而来，中文角色名被 ``[^A-Za-z0-9]`` 全部换成 ``_``、
-    再 strip 掉，两个角色都塌成 ``projection_group_asset_character``——第二个角色
-    进虾画时组名被换、两个角色的节点挤进同一个组。
+    The group id is sanitized from projection_key; a non-ASCII character name has every character replaced by ``_`` via ``[^A-Za-z0-9]``
+    and then stripped, so both characters collapse to ``projection_group_asset_character`` -- the group name of the second character
+    was displaced when entering the canvas, and the nodes of both characters were crammed into one group.
     """
     from novelvideo.api.routes import freezone
 
-    lin = freezone._projection_group_id("asset:character:林小满")
-    gu = freezone._projection_group_id("asset:character:顾南城")
+    lin = freezone._projection_group_id("asset:character:Анна")
+    gu = freezone._projection_group_id("asset:character:Борис")
     assert lin != gu
-    # 组 id 就是节点 id，跨请求必须稳定，否则每次投影都长出一个新组。
-    assert lin == freezone._projection_group_id("asset:character:林小满")
-    # ASCII / beat / episode 这些原本就不会撞的 key 仍要各自唯一。
+    # The group id is the node id and must be stable across requests, otherwise every projection grows a new group.
+    assert lin == freezone._projection_group_id("asset:character:Анна")
+    # Keys that never collided anyway (ASCII / beat / episode) must still each be unique.
     assert freezone._projection_group_id("beat:1:4") != freezone._projection_group_id(
         "beat:1:6"
     )
 
 
 def test_projection_group_encloses_nodes_without_explicit_size() -> None:
-    """组框必须包住成员的**真实**渲染尺寸。
+    """The group frame must enclose the members' **real** rendered size.
 
-    preset 产出的节点大多不带显式 width/height（`_text_node` / `_upload_node`），
-    带尺寸的（`_skill_node` / `_beat_context_node`）也只写在 `measured` 里。按统一
-    的 320x180 估算会严重低估这些节点，算出的组框包不住成员——成员带
-    `extent: "parent"`，React Flow 会把它们夹回小框内叠成一堆（用户可见症状）。
+    Most nodes produced by presets carry no explicit width/height (`_text_node` / `_upload_node`),
+    and those that carry a size (`_skill_node` / `_beat_context_node`) write it only in `measured`. Estimating with a uniform
+    320x180 badly underestimates these nodes, and the computed group frame cannot enclose the members -- members carry
+    `extent: "parent"`, so React Flow clamps them back into the small frame in a heap (user-visible symptom).
     """
     from novelvideo.api.routes import freezone
 
-    projection_key = "asset:character:林小满"
+    projection_key = "asset:character:Анна"
     nodes = [
-        # _text_node：无 width/height/style，前端实际渲染 440x320
+        # _text_node: no width/height/style; the frontend actually renders 440x320
         {
             "id": "character_profile",
             "type": "textAnnotationNode",
             "position": {"x": -1040, "y": -560},
             "data": {"preset_managed": True, "projection_key": projection_key},
         },
-        # _upload_node：无尺寸，前端实际渲染 320x350
+        # _upload_node: no size; the frontend actually renders 320x350
         {
             "id": "portrait_ref",
             "type": "uploadNode",
             "position": {"x": -560, "y": -220},
             "data": {"preset_managed": True, "projection_key": projection_key},
         },
-        # _skill_node：尺寸只写在 measured 里
+        # _skill_node: the size is written only in measured
         {
             "id": "skill_portrait",
             "type": "skillNode",
@@ -325,7 +325,7 @@ def test_projection_group_encloses_nodes_without_explicit_size() -> None:
     payload = freezone._wrap_projection_payload_in_group(
         {"nodes": [dict(node) for node in nodes], "edges": []},
         projection_key=projection_key,
-        label="林小满",
+        label="Анна",
     )
     group = next(node for node in payload["nodes"] if node["type"] == "groupNode")
     group_width = group["style"]["width"]
@@ -834,7 +834,7 @@ def test_projection_remove_missing_canvas_returns_404(projection_client) -> None
 
 
 def _projection_payload_with_group() -> dict:
-    """一个投影：一个组节点 + 两个归位的成员。"""
+    """One projection: one group node + two members in place."""
     return {
         "nodes": [
             {
@@ -842,8 +842,8 @@ def _projection_payload_with_group() -> dict:
                 "type": "groupNode",
                 "data": {
                     "preset_managed": True,
-                    "projection_key": "asset:character:林小满",
-                    "label": "林小满",
+                    "projection_key": "asset:character:Анна",
+                    "label": "Анна",
                 },
             },
             {
@@ -852,7 +852,7 @@ def _projection_payload_with_group() -> dict:
                 "parentId": "scoped__projection_group_asset_character_abc",
                 "data": {
                     "preset_managed": True,
-                    "projection_key": "asset:character:林小满",
+                    "projection_key": "asset:character:Анна",
                 },
             },
             {
@@ -861,7 +861,7 @@ def _projection_payload_with_group() -> dict:
                 "parentId": "scoped__projection_group_asset_character_abc",
                 "data": {
                     "preset_managed": True,
-                    "projection_key": "asset:character:林小满",
+                    "projection_key": "asset:character:Анна",
                 },
             },
         ]
@@ -873,14 +873,14 @@ def test_projection_is_intact_when_every_member_sits_in_its_own_group() -> None:
 
     assert (
         freezone._projection_is_intact_in_payload(
-            _projection_payload_with_group(), "asset:character:林小满"
+            _projection_payload_with_group(), "asset:character:Анна"
         )
         is True
     )
 
 
 def test_projection_is_broken_when_members_lost_their_group() -> None:
-    """组没了、成员散落在画布上——facts 没变也必须重建，否则永远修不回来。"""
+    """The group is gone and members are scattered on the canvas -- it must be rebuilt even if facts are unchanged, otherwise it can never be repaired."""
     from novelvideo.api.routes import freezone
 
     payload = _projection_payload_with_group()
@@ -891,20 +891,20 @@ def test_projection_is_broken_when_members_lost_their_group() -> None:
         node.pop("parentId", None)
 
     assert (
-        freezone._projection_is_intact_in_payload(payload, "asset:character:林小满")
+        freezone._projection_is_intact_in_payload(payload, "asset:character:Анна")
         is False
     )
 
 
 def test_projection_is_broken_when_members_hang_under_another_characters_group() -> None:
-    """id 撞车的历史遗留：成员的 parent 是别人的组。"""
+    """Legacy of an id collision: the member's parent is someone else's group."""
     from novelvideo.api.routes import freezone
 
     payload = _projection_payload_with_group()
-    payload["nodes"][0]["data"]["projection_key"] = "asset:character:顾南城"
+    payload["nodes"][0]["data"]["projection_key"] = "asset:character:Борис"
 
     assert (
-        freezone._projection_is_intact_in_payload(payload, "asset:character:林小满")
+        freezone._projection_is_intact_in_payload(payload, "asset:character:Анна")
         is False
     )
 
@@ -920,10 +920,10 @@ def test_projection_refresh_rebuilds_group_when_facts_unchanged(
     projection_client,
     monkeypatch,
 ) -> None:
-    """facts 没变但组丢了：不能 noop,得把成员重新收回组里。
+    """Facts unchanged but the group is lost: it must not noop, the members must be gathered back into the group.
 
-    组丢失是历史 id 撞车 / 命名空间迁移的残局。上游事实没变,只看 facts_signature
-    的话 refresh 会一路 noop,散落的成员永远回不到组里。
+    Group loss is the aftermath of a historical id collision / namespace migration. Upstream facts are unchanged, and looking only at facts_signature,
+    refresh would noop all the way and the scattered members could never return to the group.
     """
     from novelvideo.api.routes import freezone
 
@@ -965,7 +965,7 @@ def test_projection_refresh_rebuilds_group_when_facts_unchanged(
     assert any(node.get("type") == "groupNode" for node in payload["nodes"])
     revision = payload["revision"]
 
-    # 模拟命名空间迁移后的残局：组没了,成员变成散落节点。
+    # Simulate the aftermath of a namespace migration: the group is gone and the members become scattered nodes.
     payload["nodes"] = [
         {key: value for key, value in node.items() if key not in {"parentId", "extent"}}
         for node in payload["nodes"]

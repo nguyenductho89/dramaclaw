@@ -108,7 +108,7 @@ function recordRequests(): string[] {
       return HttpResponse.json({
         ok: true,
         // 按 ``types/episode.ts`` 的 ``Beat`` 给字段：``beat_number`` 是 ``BeatCardGrid``
-        // 的 React key，缺了它两张卡会同 key 折成一张，"渲染出两张"的前置断言就失真。
+        // 的 React key，缺了它两张卡会同 key 折成一张，"×渲染出两"的前置断言就失真。
         data: [
           { beat_number: 1, narration_segment: "第三集第一拍", visual_description: "" },
           { beat_number: 2, narration_segment: "第三集第二拍", visual_description: "" },
@@ -154,7 +154,7 @@ describe("entering one episode reads only that episode's beats", () => {
       expect(screen.getAllByLabelText("episode.beat.select")).toHaveLength(2),
     );
 
-    // 列出具体路径而不是数个数——回归的形状是"顺手多拉了第几集"，列出来才看得出。
+    // 列出具体路径而不是数个数——回归的形状是"顺手多拉了第几 eps"，列出来才看得出。
     expect(seen.filter((path) => path.includes("/beats"))).toEqual([
       "/api/v1/projects/demo/episodes/3/beats",
     ]);

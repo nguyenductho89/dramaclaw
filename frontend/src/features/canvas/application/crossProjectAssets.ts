@@ -4,51 +4,51 @@ import { copyFreezoneAssets } from '@/api/ops';
 import type { CanvasNodeData } from '@/features/canvas/domain/canvasNodes';
 
 /**
- * 跨项目粘贴时的资产迁移。
+ * Asset migration on cross-project paste.
  *
- * 画布的复制/粘贴只是深拷贝节点数据，媒体 URL（videoUrl / imageUrl / audioUrl …）
- * 原样保留，仍指向「源项目」的静态路径。粘贴到另一个项目后，这些资产并不属于
- * 目标项目（不进素材库、源项目一删即失效、非源项目成员打开直接 403）。
+ * Canvas copy/paste is only a deep copy of node data, and media URLs (videoUrl / imageUrl / audioUrl ...)
+ * are kept as they are, still pointing at the static paths of the "source project". After pasting into another project these assets do not belong to the
+ * target project (not in the asset library, they stop working once the source project is deleted, and non-members of the source project get a 403 when opening them).
  *
- * 约束：**源项目的 URL 任何时候都不进 store、不落库。** 粘贴时先用
- * `withholdForeignAssetUrls` 把这些字段置空、记下位置，节点带着
- * `assetMigration: 'copying'` 入 store（节点外壳渲染「素材复制中」占位）；再把记下的
- * URL 交给后端 `freezone/assets/copy`，由后端在服务端把文件拷进目标项目（OSS 部署下是
- * CopyObject，字节不经过浏览器）；成功后把目标项目的新地址填回原位置、摘掉标记，节点
- * 才算完整；失败则保持字段为空、标记 `'failed'`，让用户删掉重贴。自动保存在迁移期间
- * 即使被超时恢复，落库的也只是「无 URL 的占位节点」，不会带上源项目地址。
+ * Constraint: **the source project's URLs never enter the store or the persisted data at any time.** On paste, first use
+ * `withholdForeignAssetUrls` to blank these fields and record their positions, and the node enters the store with
+ * `assetMigration: 'copying'` (the node shell renders an "Assets copying" placeholder); then hand the recorded
+ * URLs to the backend `freezone/assets/copy`, where the backend copies the files into the target project server-side (CopyObject under OSS deployment,
+ * bytes do not pass through the browser); on success fill the target project's new address back into the original position and remove the marker, and the node
+ * is then complete; on failure the fields stay empty and are marked `'failed'`, so the user deletes and pastes again. Even if autosave is
+ * resumed by a timeout during migration, what gets persisted is only a "placeholder node without URLs", never the source project address.
  *
- * 识别策略：递归遍历节点数据，凡是 key 以 `Url` 结尾、值是「同源 /static/projects/<pid>/…
- * 或 /api/v1/projects/<pid>/media/… 路径」的字符串就迁移。这样无需维护字段白名单，
- * 叠卡画册 / 分镜帧等嵌套结构也自动覆盖。
+ * Identification strategy: recursively traverse node data, and migrate any string whose key ends with `Url` and whose value is a "same-origin /static/projects/<pid>/...
+ * or /api/v1/projects/<pid>/media/... path". This needs no field whitelist,
+ * and nested structures such as stacked-card albums / storyboard frames are covered automatically.
  */
 
-// 单次请求最多带多少个 URL：后端一次请求上限 200，留余量，也让大批粘贴分批出结果。
+// Maximum number of URLs per request: the backend limit per request is 200; leave headroom, and let large batch pastes return results in batches.
 const COPY_BATCH_SIZE = 64;
 
 const STATIC_PROJECT_PREFIX = '/static/projects/';
 const MEDIA_PROJECT_RE = /^\/api\/v1\/projects\/([^/]+)\/media\/.+/;
 
 export interface CopyableAsset {
-  /** 发给后端的同源路径（含查询串，后端按原字符串回映射）。 */
+  /** The same-origin path sent to the backend (including the query string; the backend maps back by the original string). */
   source: string;
-  /** URL 指向的项目 id（已解码）。 */
+  /** The project id the URL points to (decoded). */
   project: string;
 }
 
 /**
- * 把存储的原始 URL 归一化成「后端能拷的同源项目路径」。
+ * Normalize a stored raw URL into "a same-origin project path the backend can copy".
  *
- * 关键：**不**走 `resolveMediaUrl`——它会把 legacy `/static/<user>/<project>/…`
- * 按当前路由项目重锚定。这里只认带项目 id 的 canonical 形式；legacy 形式后端已经
- * 410，也没法按项目授权，直接不收。
+ * Key point: do **not** go through `resolveMediaUrl` - it would re-anchor legacy `/static/<user>/<project>/...`
+ * to the current route's project. Only the canonical form with a project id is accepted here; the legacy form already returns 410 from the backend
+ * and cannot be authorized by project, so it is simply not accepted.
  */
 export function toCopyableAsset(raw: string): CopyableAsset | null {
   const trimmed = raw.trim();
   if (!trimmed) {
     return null;
   }
-  // data: / blob: 不是跨项目静态资产；protocol-relative 一律拒绝。
+  // data: / blob: are not cross-project static assets; protocol-relative is always rejected.
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('//')) {
     return null;
   }
@@ -62,7 +62,7 @@ export function toCopyableAsset(raw: string): CopyableAsset | null {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return null;
   }
-  // 跨源媒体本部署不支持（后端 /static 始终同源经边缘代理）。
+  // Cross-origin media is not supported in this deployment (the backend /static is always same-origin via the edge proxy).
   if (typeof window !== 'undefined' && parsed.origin !== window.location.origin) {
     return null;
   }
@@ -97,7 +97,7 @@ function projectIdFromPath(pathname: string): string | null {
   }
 }
 
-/** 节点数据里的迁移状态字段；只有跨项目粘贴进来、且带外项目媒体的节点才有。 */
+/** The migration state field in node data; only nodes pasted across projects and carrying out-of-project media have it. */
 export const ASSET_MIGRATION_KEY = 'assetMigration';
 
 export type AssetMigrationState = 'copying' | 'failed';
@@ -110,7 +110,7 @@ export function readAssetMigrationState(data: unknown): AssetMigrationState | nu
   return value === 'copying' || value === 'failed' ? value : null;
 }
 
-/** 一处被置空的媒体字段：在节点数据里的路径 + 原来指向源项目的 URL。 */
+/** A blanked media field: its path in the node data + the original URL pointing to the source project. */
 export interface WithheldAssetRef {
   path: Array<string | number>;
   url: string;
@@ -146,9 +146,9 @@ function withholdInto(
 }
 
 /**
- * 粘贴入 store **之前**调用：把节点数据里指向别的项目的媒体 URL 全部置空并记下位置。
- * 返回的数据可以直接进 store / 落库——里面不再有任何源项目地址。没有外项目媒体时
- * `withheld` 为空、数据原样（不加标记）。
+ * Called **before** pasting into the store: blank all media URLs in the node data that point to other projects and record their positions.
+ * The returned data can go straight into the store / be persisted - it no longer contains any source project address. When there is no out-of-project media,
+ * `withheld` is empty and the data is unchanged (no marker added).
  */
 export function withholdForeignAssetUrls(
   data: CanvasNodeData,
@@ -174,7 +174,7 @@ export function readAtPath(root: unknown, path: Array<string | number>): unknown
   return cursor;
 }
 
-/** 纯函数：在 `root` 的 `path` 处写入 `value`，沿途容器浅拷贝，返回新根。 */
+/** Pure function: write `value` at `path` of `root`, shallow-copying containers along the way, and return the new root. */
 export function writeAtPath(root: unknown, path: Array<string | number>, value: unknown): unknown {
   if (path.length === 0) {
     return value;
@@ -189,9 +189,9 @@ export function writeAtPath(root: unknown, path: Array<string | number>, value: 
   return { ...source, [head]: writeAtPath(source[head as string], rest, value) };
 }
 
-// ——— 进行中的迁移登记：占位渲染靠它区分「正在拷」和「标记还在、任务已不在」———
-// 后者出现在刷新（store 里是落库的 copying 标记，任务随页面一起没了）或迁移意外抛错，
-// 一律按失败占位渲染，不让转圈永远转下去。本 PR 不做跨刷新续传。
+// --- Registry of migrations in progress: the placeholder rendering uses it to tell "copying" from "marker still there but the task is gone" ---
+// The latter happens on refresh (the store has the persisted copying marker, and the task is gone along with the page) or when the migration unexpectedly throws,
+// and is always rendered as a failure placeholder, so the spinner never spins forever. This PR does not do resume across refresh.
 const inFlightNodeIds = new Set<string>();
 const inFlightListeners = new Set<() => void>();
 
@@ -219,7 +219,7 @@ export function isAssetMigrationInFlight(nodeId: string): boolean {
   return inFlightNodeIds.has(nodeId);
 }
 
-/** 供 useSyncExternalStore：登记表变化时通知，快照用 `isAssetMigrationInFlight`。 */
+/** For useSyncExternalStore: notify when the registry changes; the snapshot uses `isAssetMigrationInFlight`. */
 export function subscribeAssetMigrations(listener: () => void): () => void {
   inFlightListeners.add(listener);
   return () => {
@@ -228,10 +228,10 @@ export function subscribeAssetMigrations(listener: () => void): () => void {
 }
 
 /**
- * 后端 `failed[].reason` 里哪些不代表「这个源拷不了」。
+ * Which reasons in the backend's `failed[].reason` do not mean "this source cannot be copied".
  *
- * `unavailable` = 解析源项目时 403/404 之外的错（5xx）；`copy_failed` = 拷贝或准备目标
- * 文件时的 OSError。剩下的 `forbidden` / `not_found` / `invalid_source` 才是对源本身的结论。
+ * `unavailable` = an error other than 403/404 when resolving the source project (5xx); `copy_failed` = an OSError while copying or preparing the target
+ * file. The remaining `forbidden` / `not_found` / `invalid_source` are conclusions about the source itself.
  */
 const RETRYABLE_COPY_REASONS = new Set(['unavailable', 'copy_failed']);
 
@@ -244,13 +244,13 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 /**
- * 分批让后端拷贝，返回 归一化路径 → 新 URL 的映射，外加两类没拷成的路径。
+ * Have the backend copy in batches, returning a mapping of normalized path -> new URL, plus two kinds of paths that were not copied.
  *
- * `failed` 是后端对**源本身**下了结论（没权限 / 源没了 / URL 不合法），重试多少次都一样；
- * `unavailable` 是这次没拷成但下次可能行 —— 网络断了、后端 5xx、源项目暂时解析不出来，
- * 以及 `copy_failed`：那是拷贝或建目标文件时的 OSError，是存储侧出岔子，不是这个源拷不了。
- * 分开是因为调用方对这两类的处置相反：前者可以把字段清掉收敛，后者清掉就是拿一次
- * 网络抖动换用户永久丢图。一批整体失败只影响这一批。
+ * `failed` is the backend's conclusion about the **source itself** (no permission / source gone / URL invalid), which is the same however many times it is retried;
+ * `unavailable` means this time it did not get copied but may next time - network down, backend 5xx, the source project temporarily unresolvable,
+ * and `copy_failed`: that is an OSError while copying or creating the target file, a storage-side problem, not that this source cannot be copied.
+ * They are separated because callers treat the two in opposite ways: the former can be cleared to converge, while clearing the latter trades a network
+ * blip for the user permanently losing images. The failure of a whole batch only affects that batch.
  */
 export async function copyAssetsInBatches(
   targetProject: string,
@@ -277,7 +277,7 @@ export async function copyAssetsInBatches(
         console.warn('[cross-project-assets] copy failed, field stays empty', item);
       }
     } catch (error) {
-      // 请求本身没走通：没有任何证据说明这些源真的拷不了。
+      // The request itself did not go through: there is no evidence that these sources really cannot be copied.
       for (const source of batch) {
         unavailable.add(source);
       }
@@ -292,27 +292,27 @@ export async function copyAssetsInBatches(
 
 export interface PastedNodeForMigration {
   id: string;
-  /** `withholdForeignAssetUrls` 记下的、待填回的媒体位置。 */
+  /** The media positions recorded by `withholdForeignAssetUrls` that are waiting to be filled back. */
   withheld: WithheldAssetRef[];
 }
 
 export interface AssetMigrationSummary {
-  /** 成功拷进目标项目的去重资产数。 */
+  /** Number of deduplicated assets successfully copied into the target project. */
   migrated: number;
-  /** 拷贝失败的去重资产数（对应字段保持为空）。 */
+  /** Number of deduplicated assets that failed to copy (the matching fields stay empty). */
   failed: number;
-  /** 至少有一处媒体没拷成、被标记为 `'failed'` 的节点 id。 */
+  /** Ids of nodes with at least one media not copied that are marked `'failed'`. */
   failedNodeIds: string[];
 }
 
 /**
- * 把一组刚粘贴进来的节点里被扣下的媒体资产拷到 `targetProject`，再填回节点。
+ * Copy the withheld media assets of a set of just-pasted nodes into `targetProject`, then fill them back into the nodes.
  *
- * 分三步：(1) 从各节点记下的位置收集去重的资产 URL；(2) 分批交给后端拷贝，得到旧→新
- * URL 映射；(3) 用 `getLiveNodeData` 读取**当前**节点数据（而非粘贴时的快照），只把新
- * 地址写到「仍然为空」的原位置——拷贝期间用户往那格自己放了东西就不覆盖；节点若已被
- * 删除 / 切走项目则跳过。全部填回的节点摘掉 `assetMigration`，有失败的标成 `'failed'`。
- * 相同 URL 只拷一次。
+ * Three steps: (1) collect the deduplicated asset URLs from the positions recorded on each node; (2) hand them to the backend in batches to copy, getting an old -> new
+ * URL mapping; (3) use `getLiveNodeData` to read the **current** node data (not the snapshot at paste time), writing the new
+ * address only to original positions that are "still empty" - if the user put something in that slot during the copy it is not overwritten; nodes already
+ * deleted / after switching projects are skipped. Nodes fully filled back have `assetMigration` removed, and ones with failures are marked `'failed'`.
+ * The same URL is copied only once.
  */
 export async function migratePastedNodeAssets(params: {
   nodes: PastedNodeForMigration[];
@@ -330,8 +330,8 @@ export async function migratePastedNodeAssets(params: {
   try {
     return await runMigration(pending, targetProject, getLiveNodeData, updateNodeData);
   } catch (error) {
-    // 意外抛错（不该发生：单批失败已在 copyAssetsInBatches 里吞掉）：把还挂着
-    // copying 的节点统一标成失败，别让占位永远转圈。
+    // Unexpected throw (should not happen: single-batch failure is already swallowed in copyAssetsInBatches): mark all nodes still hanging
+    // on copying as failed, so the placeholder does not spin forever.
     console.warn('[cross-project-assets] migration crashed, marking nodes failed', error);
     const failedNodeIds: string[] = [];
     const failedUrls = new Set<string>();
@@ -360,7 +360,7 @@ async function runMigration(
   getLiveNodeData: (id: string) => CanvasNodeData | null,
   updateNodeData: (id: string, patch: Partial<CanvasNodeData>) => void,
 ): Promise<AssetMigrationSummary> {
-  // 1. 收集去重的资产 URL（原始字符串 → 归一化路径）。
+  // 1. Collect the deduplicated asset URLs (raw string -> normalized path).
   const rawToSource = new Map<string, string>();
   for (const { withheld } of nodes) {
     for (const { url } of withheld) {
@@ -374,7 +374,7 @@ async function runMigration(
     }
   }
 
-  // 2. 分批让后端拷贝，构建 原始字符串 → 新 URL 的映射。
+  // 2. Have the backend copy in batches, building a raw string -> new URL mapping.
   const sources = [...new Set(rawToSource.values())];
   const copied =
     sources.length > 0
@@ -385,8 +385,8 @@ async function runMigration(
           unavailable: new Set<string>(),
         };
   const { mapping } = copied;
-  // 粘贴链路上原 URL 早就被 `withholdForeignAssetUrls` 摘掉了，没有「保持原样」可选：
-  // 这里两类一视同仁，节点标 failed 由用户重新贴。
+  // On the paste path the original URL was long removed by `withholdForeignAssetUrls`, so there is no "keep as is" option:
+  // both kinds are treated alike here, the node is marked failed and the user pastes again.
   const failedSources = new Set([...copied.failed, ...copied.unavailable]);
   const urlMap = new Map<string, string>();
   for (const [raw, source] of rawToSource) {
@@ -396,7 +396,7 @@ async function runMigration(
     }
   }
 
-  // 3. 只往「当前」节点数据里仍为空的原位置填新地址；节点已不在则跳过。
+  // 3. Fill new addresses only into original positions that are still empty in the "current" node data; skip if the node is gone.
   const failedNodeIds: string[] = [];
   for (const { id, withheld } of nodes) {
     const liveData = getLiveNodeData(id);
@@ -412,7 +412,7 @@ async function runMigration(
         continue;
       }
       if (readAtPath(nextData, path) !== null) {
-        // 用户在拷贝期间自己填了这一格（或改动了结构），不覆盖。
+        // The user filled this slot themselves during the copy (or changed the structure), so do not overwrite.
         continue;
       }
       nextData = writeAtPath(nextData, path, newUrl);

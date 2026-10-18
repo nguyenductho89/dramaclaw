@@ -1,17 +1,17 @@
 {
   "id": "video-tutorial",
-  "name": "视频解说教程",
+  "name": "Video Explainer Tutorial",
   "enabled": true,
   "version": 1,
-  "description": "把知识点、操作步骤或产品使用方法转换为分段解说教程视频。",
+  "description": "Turn knowledge points, operation steps or product usage methods into a segmented explainer tutorial video.",
   "category": "education",
   "triggers": {
     "keywords": [
-      "视频解说教程",
-      "教程视频",
-      "操作教程",
-      "知识讲解",
-      "步骤演示"
+      "Video Explainer Tutorial",
+      "tutorial video",
+      "how-to tutorial",
+      "knowledge explainer",
+      "step-by-step demo"
     ],
     "node_scopes": [
       "textGeneration",
@@ -21,13 +21,13 @@
     ]
   },
   "planning": {
-    "planning_notes": "按照用户提供的步骤或主题动态展开教学段落，每个段落对应画面和视频片段。",
-    "prompt_guide": "内容准确、步骤清晰、画面与解说一一对应，避免虚构未提供的产品功能。",
+    "planning_notes": "Dynamically expand teaching segments from the steps or topic the user provides, with each segment corresponding to a picture and a video clip.",
+    "prompt_guide": "Accurate content, clear steps, and a one-to-one match between picture and narration; do not invent product features that were not provided.",
     "conduct_rules": [
-      "根据用户目标动态决定节点数量和依赖关系",
-      "仅使用 allowed_recipe_ids 中声明的能力",
-      "教程规划文案必须用 prompt_for 传给每张步骤图片，使图片消费上游内容；dependency_for 只控制先后顺序，不能替代内容输入",
-      "创建画布节点前先生成并确认动态计划"
+      "Dynamically decide the number of nodes and their dependencies from the user goal",
+      "Use only the capabilities declared in allowed_recipe_ids",
+      "The tutorial planning copy must be passed to every step image through prompt_for so that the images consume the upstream content; dependency_for only controls ordering and cannot replace content input",
+      "Generate and confirm the dynamic plan before creating canvas nodes"
     ]
   },
   "schema_version": "dramaclaw.workflow-skill.v1",
@@ -42,22 +42,22 @@
     "rating_bands": [
       {
         "score": 10,
-        "description": "完整满足用户目标且工作流可以执行"
+        "description": "Fully meets the user goal and the workflow can be executed"
       },
       {
         "score": 7,
-        "description": "核心流程完整，允许少量非关键调整"
+        "description": "Core flow is complete; a few non-critical adjustments are allowed"
       },
       {
         "score": 4,
-        "description": "缺少关键阶段或依赖关系不完整"
+        "description": "Missing key stages or incomplete dependencies"
       }
     ],
     "visual_review_items": [],
     "text_review_items": [],
     "quality_threshold": 7,
     "domain_constraints": [
-      "工作流必须符合用户目标并保持输入素材一致性"
+      "The workflow must match the user goal and keep the input assets consistent"
     ]
   }
 }

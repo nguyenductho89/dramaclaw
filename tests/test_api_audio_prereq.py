@@ -26,7 +26,7 @@ async def test_audio_generate_prereq_error_does_not_start_task(monkeypatch, tmp_
         return _FakeStore()
 
     async def fake_audio_generation_plan(**kwargs):
-        return [], ["Beat 01 解说声线缺失：请上传旁白声线"], 0
+        return [], ["Beat 01 narrator voice is missing: upload the narration voice"], 0
 
     async def fake_resolve_project_scope(project, user, *, required_role="viewer"):
         return ProjectResolution(
@@ -58,7 +58,7 @@ async def test_audio_generate_prereq_error_does_not_start_task(monkeypatch, tmp_
     assert response == {
         "ok": False,
         "code": "voice_prereq_required",
-        "error": "Beat 01 解说声线缺失：请上传旁白声线",
+        "error": "Beat 01 narrator voice is missing: upload the narration voice",
     }
 
 

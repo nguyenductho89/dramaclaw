@@ -297,7 +297,7 @@ def test_guoman_fantasy_is_listed_as_3d_animation_preset():
     assert response.status_code == 200
     styles = response.json()["data"]
     guoman = next(style for style in styles if style["id"] == "guoman_fantasy")
-    assert guoman["label"] == "3D玄幻国漫"
+    assert guoman["label"] == "3D Xianxia Guoman"
     assert guoman["style_family"] == "animation"
     assert guoman["animation_subtype"] == "3d"
 
@@ -334,10 +334,10 @@ def test_create_style_accepts_frontend_payload_with_top_level_id_and_name(monkey
         "/styles",
         json={
             "id": "custom_drama",
-            "name": "自定义剧集风格",
+            "name": "Custom Drama Style",
             "project": "demo",
             "config": {
-                "label": "自定义剧集风格",
+                "label": "Custom Drama Style",
                 "style_instructions": "cinematic live action",
                 "avoid_instructions": "anime",
                 "style_tag": "LIVE-ACTION",
@@ -351,8 +351,8 @@ def test_create_style_accepts_frontend_payload_with_top_level_id_and_name(monkey
     style_id, config, kwargs = saved[0]
     assert style_id == "custom_drama"
     assert config.id == "custom_drama"
-    assert config.name == "自定义剧集风格"
-    assert config.label == "自定义剧集风格"
+    assert config.name == "Custom Drama Style"
+    assert config.label == "Custom Drama Style"
     assert kwargs == {
         "username": "alice",
         "project": "demo",
@@ -393,7 +393,7 @@ def test_create_style_accepts_existing_published_preview_path(monkeypatch, tmp_p
         "/styles",
         json={
             "id": "custom_drama",
-            "name": "自定义剧集风格",
+            "name": "Custom Drama Style",
             "project": "demo",
             "preview_path": "assets/styles/custom_drama/reference.png",
             "config": {"style_instructions": "cinematic live action"},

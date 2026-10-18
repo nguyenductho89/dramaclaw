@@ -155,7 +155,7 @@ def test_character_voice_field_defaults_match_pydantic():
     """NovelCharacter / CharacterIdentity expose the new IndexTTS2 voice fields."""
     from novelvideo.models import CharacterIdentity, NovelCharacter
 
-    char = NovelCharacter(name="测试角色")
+    char = NovelCharacter(name="Test Character")
     assert char.reference_audio_path == ""
     assert char.reference_audio_sha256 == ""
     assert char.voice_samples_by_age_group_json == "{}"
@@ -168,9 +168,9 @@ def test_character_voice_field_defaults_match_pydantic():
     assert char.voice_samples_by_age_group["youth"]["sha256"] == "abc"
 
     identity = CharacterIdentity(
-        identity_id="测试_皇帝",
-        character_name="测试",
-        identity_name="皇帝",
+        identity_id="Test_emperor",
+        character_name="Test",
+        identity_name="emperor",
     )
     assert identity.reference_audio_path == ""
     assert identity.reference_audio_sha256 == ""

@@ -65,12 +65,11 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
             target_label=label,
             parts=[
                 PromptPart("system", name, text),
-                PromptPart("image", "sketch frame", str(sketch) if sketch else "missing sketch or frame）"),
+                PromptPart("image", "sketch frame", str(sketch) if sketch else "missing sketch or frame"),
             ],
             inputs={"video_mode": mode, "language": language},
             last_sent=_stored(beat, "video_prompt"),
-            note="首帧模式：用户提示词依赖角色颜色映射，运行时拼装；这里显示系统提示词与草图。"
-            " / First-frame mode: the user prompt needs the colour map at run time; showing the system prompt and sketch.",
+            note="First-frame mode: the user prompt needs the colour map at run time; showing the system prompt and sketch.",
         )
 
     next_beat = next((b for b in beats if int(b.get("beat_number") or 0) == num + 1), None)
@@ -92,7 +91,7 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
         audio_type=audio_type,
         dialogue_line=narration if audio_type == "dialogue" else "",
     )
-    missing = "missing frame or sketch）"
+    missing = "missing frame or sketch"
     return PromptPreview(
         step=_STEP,
         model_kind="llm",
@@ -105,8 +104,7 @@ async def _build(scope: PreviewScope, target: str) -> PromptPreview:
         ],
         inputs={"video_mode": mode, "language": language, "has_both_frames": bool(first and last)},
         last_sent=_stored(beat, "keyframe_prompt"),
-        note="生成时语言取自界面语言，此处按原文语言预览；缺少任一帧时生成会失败。"
-        " / At generation time the language follows the UI language (preview uses the source language); generation fails if either frame is missing.",
+        note="At generation time the language follows the UI language (preview uses the source language); generation fails if either frame is missing.",
     )
 
 

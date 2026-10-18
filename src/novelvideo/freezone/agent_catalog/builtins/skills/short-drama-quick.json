@@ -1,15 +1,15 @@
 {
   "id": "short-drama-quick",
-  "name": "短剧（快速测试）",
+  "name": "Short Drama (Quick Test)",
   "enabled": true,
   "version": 2,
-  "description": "用于快速验证动态短剧工作流：故事规划、角色锚点、分镜、视频、配音和自动合成。",
+  "description": "Quickly validates the dynamic short drama workflow: story planning, character anchors, storyboard, video, voiceover and automatic composition.",
   "category": "drama",
   "triggers": {
     "keywords": [
-      "短剧快速测试",
-      "快速短剧",
-      "一键短剧"
+      "short drama quick test",
+      "quick short drama",
+      "one-click short drama"
     ],
     "node_scopes": [
       "textGeneration",
@@ -19,13 +19,13 @@
     ]
   },
   "planning": {
-    "planning_notes": "这是轻量测试流程；正式复杂短剧继续使用原有 short-drama Skill。先明确 visual_style：用户已确认视觉风格时填其原意，未确认时填“未指定”，不要自行指定风格。已确认风格须进入每个图片和视频任务本身，或通过 prompt_for/context_for 消费含该风格的上游文本节点；仅靠图片素材边或 Plan 输入不算传递。每个镜头 item 必须提供 title、prompt 和非空 narration，narration 是该镜头实际朗读的一句旁白或对白。",
-    "prompt_guide": "保持角色身份、服装、场景和叙事连续，每个计划项对应一个剧情镜头。已确认视觉风格须在视觉任务的画面 prompt 或其可消费上游文本中可追踪；未确认时不要强加风格。prompt 只描述画面，narration 只写该镜头实际朗读的旁白或对白，不要包含时间码、时长、情绪标签、环境音、音效或配乐说明。",
+    "planning_notes": "This is a lightweight test flow; formal complex short dramas continue to use the original short-drama Skill. First settle visual_style: fill in the user's intent when the user has confirmed a visual style, and fill in \"unspecified\" when not confirmed; do not pick a style on your own. A confirmed style must enter every image and video task itself, or be consumed through prompt_for/context_for from an upstream text node containing that style; image-asset edges or Plan inputs alone do not count as passing it on. Every shot item must provide title, prompt and a non-empty narration, where narration is the one line of narration or dialogue actually spoken in that shot.",
+    "prompt_guide": "Keep character identity, costume, scene and narrative continuous, with each plan item corresponding to one plot shot. A confirmed visual style must be traceable in the visual task's picture prompt or in the upstream text it can consume; when not confirmed, do not impose a style. The prompt describes only the picture, and narration contains only the narration or dialogue actually spoken in that shot, without timecodes, duration, emotion tags, ambient sound, sound effects or music notes.",
     "conduct_rules": [
-      "根据用户目标动态决定节点数量和依赖关系",
-      "仅使用 allowed_recipe_ids 中声明的能力",
-      "创建画布节点前先生成并确认动态计划",
-      "不得省略视觉风格决定：已确认风格填 visual_style 并传到视觉任务；未确认填“未指定”，不得擅自强加"
+      "Dynamically decide the number of nodes and their dependencies from the user goal",
+      "Use only the capabilities declared in allowed_recipe_ids",
+      "Generate and confirm the dynamic plan before creating canvas nodes",
+      "Do not omit the visual style decision: fill a confirmed style into visual_style and pass it to the visual tasks; fill \"unspecified\" when not confirmed, and never impose one on your own"
     ]
   },
   "schema_version": "dramaclaw.workflow-skill.v1",
@@ -50,7 +50,7 @@
   "input_parameters": [
     {
       "id": "visual_style",
-      "label": "已确认视觉风格（未确认填“未指定”）",
+      "label": "Confirmed visual style (fill \"unspecified\" if not confirmed)",
       "type": "text",
       "required": true
     }
@@ -59,22 +59,22 @@
     "rating_bands": [
       {
         "score": 10,
-        "description": "完整满足用户目标且工作流可以执行"
+        "description": "Fully meets the user goal and the workflow can be executed"
       },
       {
         "score": 7,
-        "description": "核心流程完整，允许少量非关键调整"
+        "description": "Core flow is complete; a few non-critical adjustments are allowed"
       },
       {
         "score": 4,
-        "description": "缺少关键阶段或依赖关系不完整"
+        "description": "Missing key stages or incomplete dependencies"
       }
     ],
     "visual_review_items": [],
     "text_review_items": [],
     "quality_threshold": 7,
     "domain_constraints": [
-      "工作流必须符合用户目标并保持输入素材一致性"
+      "The workflow must match the user goal and keep the input assets consistent"
     ]
   }
 }

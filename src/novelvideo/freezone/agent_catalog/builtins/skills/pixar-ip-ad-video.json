@@ -3,26 +3,26 @@
   "id": "pixar-ip-ad-video",
   "version": "1.0.0",
   "enabled": true,
-  "name": "皮克斯 IP 品牌广告短片",
-  "description": "把 IP 角色描述、品牌/道具设定、广告剧情或参考素材发展成皮克斯 3D 卡通风格品牌广告短片，通过角色属性锁定、道具锚定、分镜规划、视频片段生成和音频合成分阶段推进，保证角色、道具、分镜和视频引用链一致。",
+  "name": "Pixar-Style IP Brand Ad Short",
+  "description": "Develops an IP character description, brand/prop settings, an ad storyline or reference assets into a Pixar 3D cartoon style brand ad short, advancing in stages through character attribute locking, prop anchoring, storyboard planning, video clip generation and audio composition, ensuring consistency of the character, prop, storyboard and video reference chain.",
   "category": "video",
   "triggers": {
     "keywords": [
-      "皮克斯广告",
-      "3D卡通IP短片",
-      "皮克斯风格广告",
-      "卡通IP角色广告",
-      "皮克斯产品广告",
-      "IP角色短片",
-      "卡通品牌广告",
-      "品牌动画广告",
+      "Pixar ad",
+      "3D cartoon IP short",
+      "Pixar-style ad",
+      "cartoon IP character ad",
+      "Pixar product ad",
+      "IP character short",
+      "cartoon brand ad",
+      "brand animation ad",
       "Pixar brand ad",
       "IP character short film",
       "3D cartoon ad",
-      "角色锚定广告",
-      "分镜广告短片",
-      "皮克斯风格短片",
-      "品牌IP广告"
+      "character-anchored ad",
+      "storyboard ad short",
+      "Pixar-style short",
+      "brand IP ad"
     ],
     "node_scopes": [
       "imageGeneration",
@@ -34,7 +34,7 @@
   "input_parameters": [
     {
       "id": "aspect_ratio",
-      "label": "画面比例",
+      "label": "Aspect ratio",
       "type": "single_select",
       "required": false,
       "default": "16:9",
@@ -47,7 +47,7 @@
     },
     {
       "id": "duration",
-      "label": "目标时长",
+      "label": "Target duration",
       "type": "single_select",
       "required": false,
       "default": "15",
@@ -59,43 +59,43 @@
     },
     {
       "id": "tone",
-      "label": "叙事语气",
+      "label": "Narrative tone",
       "type": "single_select",
       "required": false,
-      "default": "欢快有活力",
+      "default": "Cheerful and energetic",
       "options": [
-        "欢快有活力",
-        "温暖舒适",
-        "冷静科技感"
+        "Cheerful and energetic",
+        "Warm and cozy",
+        "Calm and tech-forward"
       ]
     },
     {
       "id": "dialogue_mode",
-      "label": "对话需求",
+      "label": "Dialogue needs",
       "type": "single_select",
       "required": false,
-      "default": "纯视觉",
+      "default": "Visuals only",
       "options": [
-        "纯视觉",
-        "需要旁白",
-        "需要角色对白"
+        "Visuals only",
+        "Narration needed",
+        "Character dialogue needed"
       ]
     },
     {
       "id": "character_input_method",
-      "label": "角色来源",
+      "label": "Character source",
       "type": "single_select",
       "required": false,
-      "default": "使用预设角色",
+      "default": "Use preset character",
       "options": [
-        "使用预设角色",
-        "自定义角色",
-        "沿用画布角色"
+        "Use preset character",
+        "Custom character",
+        "Reuse canvas character"
       ]
     },
     {
       "id": "has_brand_logo",
-      "label": "品牌 Logo 收尾",
+      "label": "Brand logo ending",
       "type": "boolean",
       "required": false,
       "default": true,
@@ -103,15 +103,15 @@
     },
     {
       "id": "audio_mode",
-      "label": "音频模式",
+      "label": "Audio mode",
       "type": "single_select",
       "required": false,
-      "default": "轻快欢乐背景音乐",
+      "default": "Light and cheerful background music",
       "options": [
-        "轻快欢乐背景音乐",
-        "温馨抒情背景音乐",
-        "动感节奏背景音乐",
-        "仅音效无配乐"
+        "Light and cheerful background music",
+        "Warm lyrical background music",
+        "Dynamic rhythmic background music",
+        "Sound effects only, no music"
       ]
     }
   ],
@@ -123,106 +123,106 @@
     "video-audio-layer"
   ],
   "planning": {
-    "planning_notes": "【交互式渐进信息收集】\n闸门 1：确认品牌名称、产品类别、角色原型和画面比例。\n闸门 2：确认目标时长、叙事语气和对话需求。\n闸门 3：确认角色属性表，至少包含颜色、体型、眼睛、耳朵/角/翅膀/尾巴等身体附属结构、职业标识、服装配饰和关键排除项；若用户选择预设角色，给出 4 个完整属性选项 + 自定义选项。\n闸门 4：角色属性锁定后再进入道具锚定，区分产品道具和角色关联道具。\n闸门 5：提供 3 个叙事框架供选择：发现结构、挑战结构、愿景结构，并允许自定义。\n闸门 6：整合品牌、角色、道具、叙事、画幅、语气和音频需求，形成风格锁定卡与场景大纲。\n\n【执行路径】\n1. 角色属性锁定后生成广告 IP 角色锚点立绘；角色锚点必须是源节点，不引用角色自身，角色锚点完成后进入道具锚定。\n2. 道具锚定阶段区分产品道具和角色关联道具：产品道具独立展示，角色关联道具必须引用角色锚点；多个道具可以并行。\n3. 基于角色锚点、道具锚点和叙事框架生成分镜规划，按 Sequence → Shot Group → Shot 组织，并让分镜规划清晰可审阅。\n4. 根据分镜规划拆分并生成视频片段。15 秒广告通常拆分为 4 个视频片段；30 秒广告通常拆分为 6 个视频片段；单个片段不超过 8 秒。\n5. 所有视频片段完成后再生成音频层，包含背景音乐、音效、旁白或配音；视频片段里默认只写中文音效，不提前混入 BGM。\n6. 所有视频片段和音频层完成后，最终剪辑、混音和导出交给画布合成节点处理。\n\n【面板数量公式】\n15 秒广告 = 9 个面板；30 秒广告 = 12-15 个面板；60 秒广告 = 18-24 个面板。\n开始前确认的画面比例必须贯穿所有图片和视频阶段。",
-    "prompt_guide": "所有提示词使用中文撰写。\n\n【皮克斯视觉语言】\n皮克斯 3D 卡通渲染，C4D + Octane 质感，圆润人物建模，毛绒或光滑材质细腻，柔和暖橙色调光影，整体明亮、亲和、商业广告友好；避免写实、恐怖、赛博朋克、水墨、阴冷灰暗或成人化质感。\n\n【锚点画面风格】\n角色和道具锚点使用极简浅米色或浅灰纯色背景，主体完整、边缘清楚、便于抠图和下游引用；Logo 和品牌文字需要清晰可读。\n\n【分镜与视频风格】\n分镜草图保持黑白铅笔线稿，不上色不上灰度；视频片段沿用同一皮克斯卡通观感、暖色自然光、圆润角色比例和广告级干净构图。\n\n【跨阶段表达】\n角色提示词须包含完整属性表和「角色造型锁定：...，后续节点不得改变」；下游提示词要原文引用角色核心特征、道具锚点和品牌名称，保持语气统一、镜头描述具体。",
+    "planning_notes": "[Interactive progressive information gathering]\nGate 1: confirm the brand name, product category, character archetype and aspect ratio.\nGate 2: confirm the target duration, narrative tone and dialogue needs.\nGate 3: confirm the character attribute table, containing at least color, body type, eyes, body appendages such as ears/horns/wings/tail, occupational markers, clothing accessories and key exclusions; if the user chooses a preset character, give 4 complete attribute options + a custom option.\nGate 4: enter prop anchoring only after the character attributes are locked, distinguishing product props from character-related props.\nGate 5: offer 3 narrative frameworks to choose from: discovery structure, challenge structure, vision structure, and allow a custom one.\nGate 6: integrate the brand, character, props, narrative, aspect ratio, tone and audio needs into a style lock card and a scene outline.\n\n[Execution path]\n1. After the character attributes are locked, generate the ad IP character anchor portrait; the character anchor must be a source node that does not reference the character itself, and prop anchoring begins after the character anchor is complete.\n2. The prop anchoring stage distinguishes product props from character-related props: product props are shown independently, and character-related props must reference the character anchor; multiple props can run in parallel.\n3. Based on the character anchor, the prop anchors and the narrative framework, generate the storyboard plan, organized as Sequence -> Shot Group -> Shot, and make the storyboard plan clear and reviewable.\n4. Split and generate video clips according to the storyboard plan. A 15-second ad is usually split into 4 video clips; a 30-second ad usually into 6 video clips; a single clip does not exceed 8 seconds.\n5. Generate the audio layers only after all video clips are complete, including background music, sound effects, narration or voiceover; video clips by default write only sound effects (in the same language as the dialogue) and do not mix in BGM ahead of time.\n6. After all video clips and audio layers are complete, final editing, mixing and export are handled by the canvas compose node.\n\n[Panel count formula]\n15-second ad = 9 panels; 30-second ad = 12-15 panels; 60-second ad = 18-24 panels.\nThe aspect ratio confirmed before starting must run through all image and video stages.",
+    "prompt_guide": "Write all prompts in the same language as the user's input.\n\n[Pixar visual language]\nPixar 3D cartoon rendering, C4D + Octane texture, rounded character modeling, delicate plush or smooth materials, soft warm-orange lighting, bright, approachable and commercial-ad-friendly overall; avoid realism, horror, cyberpunk, ink-wash, gloomy gray or adult-looking textures.\n\n[Anchor picture style]\nCharacter and prop anchors use a minimal light beige or light gray solid background, with the subject complete and edges clear, convenient for cutout and downstream referencing; the logo and brand text must be clearly readable.\n\n[Storyboard and video style]\nStoryboard sketches stay black-and-white pencil line drawings, without color or grayscale; video clips continue the same Pixar cartoon look, warm natural light, rounded character proportions and ad-grade clean composition.\n\n[Cross-stage expression]\nCharacter prompts must contain the complete attribute table and \"Character look lock: ..., later nodes must not change it\"; downstream prompts must quote the character's core features, the prop anchors and the brand name verbatim, keeping the tone unified and the shot descriptions specific.",
     "conduct_rules": [
-      "必须按闸门顺序收集信息，不要在基础创意身份未确认前询问后续复杂细节",
-      "角色属性表未完整前，不得生成角色锚点",
-      "角色立绘必须是源节点，不引用角色自身；角色立绘完成后，才可进入道具锚点和分镜草图阶段",
-      "严格按 角色立绘 → 道具锚点 → 分镜草图 → 视频片段 → 音频层 → 最终合成 顺序执行，不得跳步",
-      "每个阶段只创建对应节点，不得把角色、道具、分镜、视频、音频合并成一个输出",
-      "道具锚点必须区分产品道具和角色关联道具：产品道具独立展示，角色关联道具必须引用角色锚点",
-      "道具锚点和分镜规划必须以角色立绘为参考输入。",
-      "道具默认优先保证结构清晰和品牌可读；只有用户明确选择多角度时才做多角度展示",
-      "分镜规划必须包含编号、时间段、镜头目标、动作、场景、道具出现时机和最终品牌/产品锁定画面。",
-      "分镜规划阶段完成后再进入视频阶段。",
-      "逐镜视频必须以已确认分镜为故事板指导，同时引用角色立绘和道具锚点。",
-      "视频片段可并行生成，但每个片段必须绑定连续分镜面板范围，单段不超过 8 秒",
-      "每段视频必须保持角色立绘、道具锚点和分镜草图的完整引用链，不得断裂",
-      "视频提示词必须包含角色造型锁定和主角不分身约束",
-      "视频片段提示词中的音效必须使用中文描述，并明确无背景音乐",
-      "音频层在所有视频片段完成后生成，BGM 不要提前混入视频片段",
-      "最终合成交给画布合成节点处理。",
-      "最终合成只接收视频和音频产物，不得把文本、简报或提示词作为媒体输入",
-      "角色核心特征（毛色、体型、耳朵、表情等）在所有下游节点提示词中必须原文引用锁定",
-      "品牌名称和产品卖点在分镜和视频提示词中不得改写或省略",
-      "用户修改角色时，重新生成角色锚点并级联更新引用它的道具、分镜和视频",
-      "用户修改道具时，只重新生成道具锚点以及引用该道具的视频片段",
-      "用户修改分镜时，只重新生成受影响面板和对应视频片段，不重跑完整流程"
+      "Collect information in the order of the gates; do not ask about later complex details before the basic creative identity is confirmed",
+      "Do not generate the character anchor before the character attribute table is complete",
+      "The character portrait must be a source node that does not reference the character itself; only after the character portrait is complete may the prop anchor and storyboard sketch stages begin",
+      "Execute strictly in the order character portrait -> prop anchors -> storyboard sketches -> video clips -> audio layers -> final composition, without skipping steps",
+      "Each stage creates only its corresponding nodes; do not merge the character, props, storyboard, video and audio into one output",
+      "Prop anchors must distinguish product props from character-related props: product props are shown independently, and character-related props must reference the character anchor",
+      "Prop anchors and the storyboard plan must take the character portrait as reference input.",
+      "Props by default prioritize clear structure and brand legibility; only make a multi-angle display when the user explicitly chooses multi-angle",
+      "The storyboard plan must contain numbering, time range, shot goal, action, scene, prop appearance timing and the final brand/product lock frame.",
+      "Enter the video stage only after the storyboard planning stage is complete.",
+      "Shot-by-shot videos must use the confirmed storyboard as storyboard guidance while referencing the character portrait and the prop anchors.",
+      "Video clips may be generated in parallel, but each clip must be bound to a continuous range of storyboard panels, with a single clip not exceeding 8 seconds",
+      "Each video must keep the complete reference chain of the character portrait, prop anchors and storyboard sketches, without breaks",
+      "Video prompts must contain the character look lock and the constraint that the protagonist is not duplicated",
+      "Sound effects in video clip prompts must be described in the same language as the dialogue, with no background music made explicit",
+      "The audio layers are generated after all video clips are complete; do not mix BGM into the video clips ahead of time",
+      "Final composition is handled by the canvas compose node.",
+      "Final composition accepts only video and audio outputs; text, briefs or prompts must not be used as media input",
+      "The character's core features (fur color, body type, ears, expression, etc.) must be quoted verbatim and locked in all downstream node prompts",
+      "The brand name and product selling points must not be rewritten or omitted in storyboard and video prompts",
+      "When the user modifies the character, regenerate the character anchor and cascade-update the props, storyboards and videos that reference it",
+      "When the user modifies a prop, regenerate only the prop anchor and the video clips that reference that prop",
+      "When the user modifies the storyboard, regenerate only the affected panels and the corresponding video clips, without rerunning the entire flow"
     ]
   },
   "evaluation": {
     "rating_bands": [
       {
         "score": 9,
-        "description": "角色/道具/分镜/视频风格高度统一，品牌元素清晰，叙事流畅完整"
+        "description": "Character/prop/storyboard/video styles are highly unified, brand elements are clear, and the narrative is smooth and complete"
       },
       {
         "score": 7,
-        "description": "风格基本统一，偶有细节偏差但不影响整体观感"
+        "description": "The style is basically unified, with occasional detail deviations that do not affect the overall look"
       },
       {
         "score": 5,
-        "description": "风格出现明显不一致，角色/道具变形或品牌元素缺失"
+        "description": "Obvious style inconsistency, character/prop deformation or missing brand elements"
       },
       {
         "score": 3,
-        "description": "角色/道具严重偏离设定，分镜与视频不对应，无法使用"
+        "description": "The character/props deviate seriously from the settings, the storyboard and video do not correspond, and it is unusable"
       }
     ],
     "visual_review_items": [
       {
-        "name": "角色一致性",
-        "description": "角色在立绘、道具、分镜、视频中造型一致",
+        "name": "Character consistency",
+        "description": "The character's look is consistent across the portrait, props, storyboard and video",
         "weight": 0.3
       },
       {
-        "name": "道具一致性",
-        "description": "道具外观与锚点图一致，品牌文字清晰",
+        "name": "Prop consistency",
+        "description": "Prop appearance matches the anchor image, and brand text is clear",
         "weight": 0.2
       },
       {
-        "name": "风格统一性",
-        "description": "皮克斯3D卡通渲染、柔和暖色调、圆润建模风格统一",
+        "name": "Style unity",
+        "description": "Pixar 3D cartoon rendering, soft warm tones and rounded modeling style are unified",
         "weight": 0.25
       },
       {
-        "name": "分镜质量",
-        "description": "分镜构图清晰、动作指示明确、镜头语言合理",
+        "name": "Storyboard quality",
+        "description": "Storyboard composition is clear, action directions are explicit, and shot language is sound",
         "weight": 0.25
       }
     ],
     "text_review_items": [
       {
-        "name": "叙事完整性",
-        "description": "分镜剧情是否覆盖广告叙事弧线（引入→发现→高潮→收尾）",
+        "name": "Narrative completeness",
+        "description": "Whether the storyboard plot covers the ad narrative arc (introduction -> discovery -> climax -> ending)",
         "weight": 0.3
       },
       {
-        "name": "品牌信息准确度",
-        "description": "品牌名称、Slogan、产品卖点是否准确嵌入",
+        "name": "Brand information accuracy",
+        "description": "Whether the brand name, slogan and product selling points are embedded accurately",
         "weight": 0.25
       },
       {
-        "name": "提示词结构质量",
-        "description": "逐镜提示词是否包含角色锁定、道具参考、场景与表演指令",
+        "name": "Prompt structure quality",
+        "description": "Whether the shot-by-shot prompts contain character lock, prop references, scene and performance instructions",
         "weight": 0.25
       },
       {
-        "name": "音频与合成准备",
-        "description": "音频层是否覆盖所有视频片段，且能与视频产物对齐合成",
+        "name": "Audio and composition readiness",
+        "description": "Whether the audio layers cover all video clips and can be aligned with the video outputs for composition",
         "weight": 0.2
       }
     ],
     "quality_threshold": 7.5,
     "domain_constraints": [
-      "角色造型全程锁定，不得在分镜/视频/合成阶段改变核心特征",
-      "道具外观与道具锚点严格一致，不得变形、增加无关细节或改写品牌拼写",
-      "分镜规划必须覆盖广告叙事弧线、品牌/产品展示和最终收尾画面",
-      "视频片段必须参考已确认分镜的对应镜头动作与构图",
-      "每段视频必须引用角色立绘，并按需要引用相关道具锚点，引用链不得断裂",
-      "每个视频镜头中主角只出现一次，不得出现重复角色或分身",
-      "品牌 Logo 展示须与道具锚点一致，文字清晰可读"
+      "The character's look is locked throughout and its core features must not change in the storyboard/video/composition stages",
+      "Prop appearance must strictly match the prop anchors, without deformation, added irrelevant details or altered brand spelling",
+      "The storyboard plan must cover the ad narrative arc, brand/product display and the final closing frame",
+      "Video clips must refer to the corresponding shot actions and compositions of the confirmed storyboard",
+      "Each video must reference the character portrait and, as needed, the relevant prop anchors, with the reference chain unbroken",
+      "The protagonist appears only once in each video shot, with no duplicated characters or clones",
+      "The brand logo display must match the prop anchor, with clearly readable text"
     ]
   }
 }

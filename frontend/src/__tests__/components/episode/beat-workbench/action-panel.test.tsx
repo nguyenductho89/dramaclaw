@@ -22,20 +22,20 @@ beforeAll(async () => {
         translation: {
           episode: {
             beat: {
-              sectionText: "文案",
-              sectionSketch: "草图",
-              sectionRender: "渲染图",
-              sectionAudio: "音频",
-              sectionVideo: "视频",
-              edited: "已编辑",
-              notEdited: "未编辑",
-              selected: "已选择",
-              notSelected: "未选择",
-              rendered: "已渲染",
-              notRendered: "未渲染",
-              generated: "已生成",
-              notGenerated: "未生成",
-              clickToView: "点击镜头查看详情",
+              sectionText: "Text",
+              sectionSketch: "Sketch",
+              sectionRender: "Render",
+              sectionAudio: "Audio",
+              sectionVideo: "Video",
+              edited: "Edited",
+              notEdited: "Not edited",
+              selected: "Selected",
+              notSelected: "Not selected",
+              rendered: "Rendered",
+              notRendered: "Not rendered",
+              generated: "Ready",
+              notGenerated: "Not generated",
+              clickToView: "Click a beat to view details",
             },
           },
         },
@@ -110,7 +110,7 @@ vi.mock("@/components/episode/beat-workbench/video-pane", () => ({
 function makeBeat(beatNumber: number): Beat {
   return {
     beat_number: beatNumber,
-    narration_segment: "旁白",
+    narration_segment: "Narration",
     visual_description: "画面",
     audio_type: "narration",
     video_mode: "first_frame",
@@ -179,7 +179,7 @@ describe("ActionPanel", () => {
     );
 
     // 用一个非默认展开的区块（草图）验证展开状态跨 remount 持久化。
-    fireEvent.click(screen.getByRole("button", { name: /草图/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Sketch/ }));
 
     await waitFor(() => {
       expect(screen.getByText("SketchSection")).toBeInTheDocument();
@@ -227,7 +227,7 @@ describe("ActionPanel", () => {
     );
 
     // 用一个非默认展开的区块（草图）验证切换 beat 时展开状态保留。
-    fireEvent.click(screen.getByRole("button", { name: /草图/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Sketch/ }));
     expect(screen.getByText("SketchSection")).toBeInTheDocument();
 
     rerender(

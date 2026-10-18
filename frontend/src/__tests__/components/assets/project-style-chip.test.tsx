@@ -30,15 +30,15 @@ beforeAll(async () => {
         translation: {
           characters: {
             projectStyle: {
-              label: "风格",
-              configureHint: "在导入页面配置项目风格",
-              loading: "读取风格",
+              label: "Style",
+              configureHint: "Configure the project style on the import page",
+              loading: "Loading style",
             },
           },
           ingest: {
             visualStyles: {
-              chinesePeriodDrama: "中式古装剧",
-              guomanFantasy: "3D玄幻国漫",
+              chinesePeriodDrama: "Chinese Period Drama",
+              guomanFantasy: "3D Xianxia Guoman",
             },
           },
         },
@@ -82,7 +82,7 @@ describe("ProjectStyleChip", () => {
     expect(await screen.findByText("赛博水墨")).toBeInTheDocument();
     expect(screen.getByLabelText("赛博水墨")).toHaveAttribute(
       "title",
-      "在导入页面配置项目风格",
+      "Configure the project style on the import page",
     );
   });
 
@@ -119,6 +119,6 @@ describe("ProjectStyleChip", () => {
 
     renderWithProviders(<ProjectStyleChip project="demo" />);
 
-    expect(await screen.findByText("3D玄幻国漫")).toBeInTheDocument();
+    expect(await screen.findByText("3D Xianxia Guoman")).toBeInTheDocument();
   });
 });

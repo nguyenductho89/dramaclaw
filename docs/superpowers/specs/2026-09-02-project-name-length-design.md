@@ -1,31 +1,31 @@
-# 项目名称最大长度校验
+# Project Name Maximum Length Validation
 
-## 目标
+## Goal
 
-将新建项目名称限制为最多 64 个字符，同时保持当前格式规则和重名校验行为不变。API
-契约、后端校验和创建项目弹窗必须执行同一长度限制。
+Limit new project names to at most 64 characters, while keeping the current format rules and duplicate-name validation behavior unchanged. The API
+contract, backend validation, and the create-project dialog must enforce the same length limit.
 
-## 改动范围
+## Scope of changes
 
-- 通过路由输入校验与共享校验共同执行最大 64 字符约束，让 API 契约与应用层行为保持一致。
-- 在 `validate_project_name()` 中执行同样的最大长度校验，避免未来或非路由调用绕过规则。
-- 保持现有合法字符集（`[A-Za-z0-9_]`）以及“不能以下划线开头”的规则。
-- 首页创建项目输入框在应用层执行长度校验且不截断输入。用户可以继续输入超过 64 个字符的名称，但弹窗会即时展示本地化错误，并禁用“创建”按钮。
-- 补充后端和前端自动化测试，覆盖 1、64、65 字符边界，既有非法格式，以及重名回归行为。
+- Enforce the 64-character maximum through both route input validation and shared validation, so the API contract and application-layer behavior stay consistent.
+- Enforce the same maximum-length validation in `validate_project_name()`, to prevent future or non-route callers from bypassing the rule.
+- Keep the existing allowed character set (`[A-Za-z0-9_]`) and the rule "cannot start with an underscore".
+- The home-page create-project input performs the length validation at the application layer without truncating input. The user can keep typing a name longer than 64 characters, but the dialog immediately shows a localized error and disables the "Create" button.
+- Add backend and frontend automated tests covering the 1, 64, and 65 character boundaries, the existing illegal formats, and duplicate-name regression behavior.
 
-## API 行为
+## API behavior
 
-路由输入模型将名称长度限制为 64。FastAPI 在路由执行前拒绝过长请求，沿用框架标准的 422 校验响应。
-`validate_project_name()` 收到过长名称时，返回 HTTP 400 和稳定文案：`Project name must be at most 64 characters long`。
+The route input model limits the name length to 64. FastAPI rejects over-long requests before the route runs, keeping the framework's standard 422 validation response.
+When `validate_project_name()` receives an over-long name, it returns HTTP 400 with the stable message: `Project name must be at most 64 characters long`.
 
-两层保留各自正常的错误响应结构，但使用相同的 64 字符规则和面向客户端的文案。现有重复名称的检测及响应不作修改。
+The two layers keep their own normal error response structures, but use the same 64-character rule and client-facing message. Duplicate-name detection and responses are not modified.
 
-## 前端行为
+## Frontend behavior
 
-创建项目弹窗继续沿用当前“提交前去掉首尾空格”的逻辑。长度校验也基于去掉首尾空格后的名称执行，并与当前格式、重名校验一起决定错误状态。名称达到 65 个字符时，展示本地化的最大长度提示，设置 `aria-invalid`，并禁用“创建”按钮；不会截断用户已经输入的内容。
+The create-project dialog keeps the current logic of "trim leading and trailing spaces before submitting". The length validation is also performed on the trimmed name, and together with the current format and duplicate-name validation decides the error state. When the name reaches 65 characters, a localized maximum-length hint is shown, `aria-invalid` is set, and the "Create" button is disabled; what the user has already typed is not truncated.
 
-## 验证方式
+## Verification
 
-- 后端测试确认 1 和 64 字符的合法名称能通过，并确认 65 字符的名称会同时被 schema 和共享校验函数拒绝。
-- 保持既有非法字符、以下划线开头、重复名称的测试通过，以证明原有行为没有回归。
-- 前端测试覆盖 64 字符边界、超过长度时的本地化错误提示，以及“创建”按钮被禁用。
+- Backend tests confirm that valid names of 1 and 64 characters pass, and that a 65-character name is rejected by both the schema and the shared validation function.
+- Keep the existing tests for illegal characters, leading underscores, and duplicate names passing, to prove the original behavior has not regressed.
+- Frontend tests cover the 64-character boundary, the localized error hint when the length is exceeded, and the "Create" button being disabled.

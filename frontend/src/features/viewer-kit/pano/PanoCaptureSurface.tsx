@@ -735,7 +735,7 @@ export function PanoCaptureSurface({
   return (
     <div className={cn("flex h-full min-h-0 flex-col bg-background", className)}>
       <div className="flex shrink-0 flex-col gap-3 border-b border-border/60 px-4 py-3">
-        {/* 标题行右侧给弹窗自带的关闭按钮(右上角)留出空间,避免文字被盖住。 */}
+        {/* Leave room on the right of the title row for the dialog's own close button (top-right) so text is not covered. */}
         <div className="min-w-0 pr-14">
           <div className="truncate text-sm font-medium">{manifest.display_name}</div>
           <div className="truncate text-xs text-muted-foreground">{manifest.source.slot_kind}</div>
@@ -750,7 +750,7 @@ export function PanoCaptureSurface({
             ))}
           </div>
         </div>
-        {/* 工具栏单独成行,下移避开右上角关闭按钮。 */}
+        {/* The toolbar gets its own row, shifted down to clear the top-right close button. */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-border bg-card p-0.5">
             {PANO_CAPTURE_ASPECTS.map((item) => (

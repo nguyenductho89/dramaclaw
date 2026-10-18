@@ -15,16 +15,16 @@ A preset must not override the concrete content of the story. Exact era, locatio
 
 ## Field Semantics
 
-`label` is the product-facing name. It may describe the intended look in familiar user language, but it is not injected into generation prompts and must not act as a hidden content fallback. For example, the built-in `guoman_fantasy` preset keeps the familiar `3D玄幻国漫` label while its prompt controls only the 3D Guoman rendering medium and finish.
+`label` is the product-facing name. It may describe the intended look in familiar user language, but it is not injected into generation prompts and must not act as a hidden content fallback. For example, the built-in `guoman_fantasy` preset keeps the familiar `3D Xianxia Guoman` label while its prompt controls only the 3D Guoman rendering medium and finish.
 
 Content bias inside a preset may only be conditional genre tone, never a hard rule or a fallback source for concrete entities. Exact facial traits, expression, temperament, ethnicity, age, costume, identity, props, and environment details belong to character/scene/prop content. Explicit descriptions and reference images always win.
 
-`style_tag` is the short, high-signal anchor injected near every generated panel. It should describe medium and grade, not era or story content. Avoid words like `PERIOD`, `REPUBLICAN`, `ERA`, `DYNASTY`, `MODERN`, `ANCIENT`, `DRAMA`, `民国`, or `古装` in `style_tag`.
+`style_tag` is the short, high-signal anchor injected near every generated panel. It should describe medium and grade, not era or story content. Avoid words like `PERIOD`, `REPUBLICAN`, `ERA`, `DYNASTY`, `MODERN`, `ANCIENT`, `DRAMA`, `REPUBLICAN-ERA`, or `COSTUME` in `style_tag`.
 
 Because `style_tag` is repeated on every panel and is not visible to the user, an era/content word here silently overrides legitimate content (a flashback phone, a Western suit, a pre-apocalypse clean scene) on every frame. That is exactly the covert-injection failure this design avoids. It is consumed in two places, both of which inherit this constraint:
 
 - `generators/prompt_builder.py` — appended to each Panel header in render mode: `- **Panel N** [loc] [tod] [STYLE_TAG]:`.
-- `generators/voxel_restyle.py` — the target look for the voxel→realistic restyle. Its empty-`style_tag` fallback must stay neutral (e.g. `PHOTOREALISTIC`); it must NOT fall back to `label`, since labels like `写实古装剧` / `民国年代剧` carry era words.
+- `generators/voxel_restyle.py` — the target look for the voxel→realistic restyle. Its empty-`style_tag` fallback must stay neutral (e.g. `PHOTOREALISTIC`); it must NOT fall back to `label`, since labels like `Chinese Period Drama` / `Republican Era Drama` carry era words.
 
 `style_instructions` explains how to shoot, render, light, grade, and texture the image. It may include conditional genre flavor such as "when the beat or scene context calls for it", but it must explicitly defer concrete content to beat, scene, character, and prop descriptions.
 

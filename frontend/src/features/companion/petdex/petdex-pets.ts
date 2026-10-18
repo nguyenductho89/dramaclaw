@@ -3,36 +3,36 @@
 import type { MyBuddyAction } from "@/features/companion/mybuddy-actions";
 
 /**
- * petdex 宠物接入（原型）。
+ * petdex pet integration (prototype).
  *
- * petdex（https://petdex.dev）的宠物是「精灵图」：每只一张 spritesheet，按
- * 网格切帧，行 = 动画状态，与 Piko 的「CSS 像素小人」是两套渲染。这里把 petdex
- * 宠物作为「可切换形象」接进来，与 Piko 并存，用同一套 controller 状态驱动。
+ * petdex (https://petdex.dev) pets are "sprite sheets": each one is a spritesheet cut into frames by
+ * a grid, row = animation state, a different render path from Piko's "CSS pixel figure". Here petdex
+ * pets are brought in as a "switchable avatar", coexisting with Piko and driven by the same controller state.
  *
- * 纯本地方案：宠物精灵图（webp）下载到 public/petdex/，目录由同源清单
- * public/petdex/pets.json 维护（{@link fetchLocalPets} 读取）——加宠物 = 放一张
- * <slug>.webp + 在 pets.json 加一条；用户也可经导入弹窗存进 IndexedDB。不碰任何
- * CDN / manifest（线上限流 + 资源浪费）。
+ * Purely local approach: pet sprite sheets (webp) are downloaded into public/petdex/, with the directory maintained by the same-origin manifest
+ * public/petdex/pets.json (read by {@link fetchLocalPets}) - adding a pet = drop in one
+ * <slug>.webp + add an entry in pets.json; users can also store them into IndexedDB via the import dialog. It touches no
+ * CDN / manifest (online rate limiting + wasted resources).
  *
- * ⚠️ 授权：petdex 源码 MIT，但宠物素材归各提交者所有、各自挑选 license，pet.json
- * 里并不携带 license 字段。原型阶段这些第三方精灵图随仓库一并入库以便演示；商用上线
- * 前必须逐只确认授权，未确认的需移出仓库。
+ * WARNING licensing: the petdex source is MIT, but pet assets belong to each submitter who picks their own license, and pet.json
+ * carries no license field. During the prototype stage these third-party sprite sheets are checked into the repo for demos; before a commercial launch
+ * each one must be confirmed for licensing, and unconfirmed ones must be removed from the repo.
  */
 
-// 精灵图网格约定（8 列 × 9 行，每帧 192×208）。8 列是「格子上限」，每个状态实际帧数
-// 不同（见 PETDEX_STATES），按各自帧数循环、跳过该行多余的空格。
+// Sprite sheet grid convention (8 columns x 9 rows, each frame 192x208). 8 columns is the "cell upper bound"; the actual frame count of each state
+// differs (see PETDEX_STATES), looping over its own frame count and skipping the extra empty cells in that row.
 export const PETDEX_GRID_COLS = 8;
 export const PETDEX_GRID_ROWS = 9;
-export const PETDEX_FRAME_MS = 150; // 每帧时长，保证各状态播放速度一致
+export const PETDEX_FRAME_MS = 150; // frame duration, keeps the playback speed consistent across states
 
 export interface PetdexState {
-  /** 精灵图里的行号（0 起）。 */
+  /** Row index in the sprite sheet (0-based). */
   row: number;
-  /** 该状态实际帧数（该行从第 0 列起的有效帧数）。 */
+  /** Actual frame count of this state (valid frames in this row starting from column 0). */
   frames: number;
 }
 
-// petdex 标准 9 状态布局（来源：petdex 宠物详情页，多个精灵图实测一致）。每行帧数不同。
+// petdex standard 9-state layout (source: petdex pet detail page, consistent across several measured sprite sheets). Frame counts differ per row.
 export const PETDEX_STATES = {
   idle: { row: 0, frames: 6 },
   runRight: { row: 1, frames: 8 },
@@ -47,7 +47,7 @@ export const PETDEX_STATES = {
 
 export type PetdexStateName = keyof typeof PETDEX_STATES;
 
-/** 9 个状态的有序列表（名字 + 展示标签）——用于「状态模拟」下拉 & 点击宠物循环预览。 */
+/** Ordered list of the 9 states (name + display label) - used by the "state simulation" dropdown & click-pet cycle preview. */
 export const PETDEX_STATE_OPTIONS: { name: PetdexStateName; label: string }[] = [
   { name: "idle", label: "Idle" },
   { name: "runRight", label: "Run Right" },
@@ -61,45 +61,45 @@ export const PETDEX_STATE_OPTIONS: { name: PetdexStateName; label: string }[] = 
 ];
 
 /**
- * 把 controller 的动作（已由任务中心状态映射而来：运行中→typing、成功→flag、
- * 异常→repair、问候→peek …）再映射到 petdex 的 9 个标准状态，实现「任务状态 ↔ 宠物
- * 动作」同步。没有对应语义的闲置/节日动作统一归 idle。
+ * Map the controller's actions (already mapped from task-center state: running->typing, success->flag,
+ * error->repair, greeting->peek ...) onward to petdex's 9 standard states, syncing "task state <-> pet
+ * action". Idle/festival actions with no matching semantics all go to idle.
  */
 export function petdexStateForAction(action: MyBuddyAction): PetdexState {
   switch (action) {
     case "typing":
-      return PETDEX_STATES.running; // 任务进行中 → Running
+      return PETDEX_STATES.running; // task in progress -> Running
     case "flag":
-      return PETDEX_STATES.waving; // 任务成功 → Waving
+      return PETDEX_STATES.waving; // task succeeded -> Waving
     case "repair":
-      return PETDEX_STATES.failed; // 任务失败 → Failed
+      return PETDEX_STATES.failed; // task failed -> Failed
     default:
-      return PETDEX_STATES.idle; // 常规状态（待机/闲置/节日/问候）→ Idle
+      return PETDEX_STATES.idle; // normal state (standby/idle/festival/greeting) -> Idle
   }
 }
 
 export const PIKO_COMPANION_KIND = "piko";
 
-// ─── 本地宠物目录 ───────────────────────────────────────────────────────────
-/** 一只可选用的宠物形象（内置目录条目 / 用户导入条目共用此形状）。 */
+// --- Local pet catalog ---------------------------------------------------
+/** A selectable pet avatar (built-in catalog entries / user-imported entries share this shape). */
 export interface PetdexCatalogEntry {
   slug: string;
   displayName: string;
-  /** 同源精灵图地址，一般是 /petdex/<slug>.webp。 */
+  /** Same-origin sprite sheet address, usually /petdex/<slug>.webp. */
   spritesheetUrl: string;
   submittedBy?: string;
-  /** 网格非默认 8×9 时，在 pets.json 里覆盖（行序/帧数走 petdex 标准布局）。 */
+  /** Override in pets.json when the grid is not the default 8x9 (row order / frame counts follow the petdex standard layout). */
   cols?: number;
   rows?: number;
-  /** 来自用户导入（IndexedDB）。spritesheetUrl 是会话级 blob URL，刷新后需按 slug 重解析。 */
+  /** Comes from a user import (IndexedDB). spritesheetUrl is a session-level blob URL and must be re-resolved by slug after a refresh. */
   imported?: boolean;
 }
 
 const LOCAL_PETS_URL = "/petdex/pets.json";
 
 /**
- * 读取本地宠物目录（同源、稳定、不碰网络）。pets.json 是内置宠物的**唯一**来源；
- * 清单缺失/损坏（如生产未部署该原型素材）则返回空，画廊只剩「我的宠物」(IndexedDB)。
+ * Read the local pet catalog (same-origin, stable, no network). pets.json is the **only** source of built-in pets;
+ * if the manifest is missing/corrupt (e.g. production without this prototype asset deployed) return empty, and the gallery keeps only "My pets" (IndexedDB).
  */
 export async function fetchLocalPets(signal?: AbortSignal): Promise<PetdexCatalogEntry[]> {
   try {
@@ -121,7 +121,7 @@ export async function fetchLocalPets(signal?: AbortSignal): Promise<PetdexCatalo
         }));
     }
   } catch {
-    // 清单缺失 / 解析失败 → 空目录（仅保留用户导入）
+    // manifest missing / parse failed -> empty catalog (keep only user imports)
   }
   return [];
 }

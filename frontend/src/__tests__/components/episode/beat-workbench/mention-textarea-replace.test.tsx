@@ -10,11 +10,11 @@ import {
 
 describe("findMentionTokenAtSelection", () => {
   const text = "参考 @图片1 收尾"; // @图片1 在 [3,7)
-  const labels = ["图片1", "图片2"];
+  const labels = ["Image 片1", "Image 片2"];
 
   it("finds the mention token overlapping the double-click selection", () => {
     const hit = findMentionTokenAtSelection(text, labels, 4, 6);
-    expect(hit).toEqual({ start: 3, end: 7, label: "图片1" });
+    expect(hit).toEqual({ start: 3, end: 7, label: "Image 片1" });
   });
 
   it("returns null on plain text", () => {
@@ -32,7 +32,7 @@ describe("MentionTextarea — 双击替换引用", () => {
     const { container, getByRole } = render(
       <MentionTextarea
         value="参考 @图片1 收尾"
-        mentionLabels={["图片1", "图片2"]}
+        mentionLabels={["Image 片1", "Image 片2"]}
         onChange={onChange}
       />,
     );
@@ -47,7 +47,7 @@ describe("MentionTextarea — 双击替换引用", () => {
 
     // 选「图片2」替换。
     const option = Array.from(listbox.querySelectorAll("button")).find(
-      (b) => b.textContent === "图片2",
+      (b) => b.textContent === "Image 片2",
     );
     expect(option).toBeTruthy();
     fireEvent.mouseDown(option as Element);
@@ -62,7 +62,7 @@ describe("MentionTextarea — 双击替换引用", () => {
     const { container, queryByRole } = render(
       <MentionTextarea
         value="参考 @图片1 收尾"
-        mentionLabels={["图片1", "图片2"]}
+        mentionLabels={["Image 片1", "Image 片2"]}
         onChange={onChange}
       />,
     );

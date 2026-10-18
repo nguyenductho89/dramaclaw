@@ -162,26 +162,26 @@ def test_from_preset_scene_asset_includes_derived_base_master_input(
     from novelvideo.api.routes import freezone
 
     client, project_dir = preset_client
-    base_master_path = project_dir / "assets" / "scenes" / "城市街道" / "master.png"
+    base_master_path = project_dir / "assets" / "scenes" / "CityStreet" / "master.png"
     base_master_path.parent.mkdir(parents=True)
     base_master_path.write_bytes(b"fake image")
 
     class Store:
         async def get_scene(self, scene_id: str):
             scenes = {
-                "城市街道": {
-                    "scene_id": "城市街道",
-                    "name": "城市街道",
+                "CityStreet": {
+                    "scene_id": "CityStreet",
+                    "name": "CityStreet",
                     "scene_type": "exterior",
-                    "environment_prompt": "正面：霓虹店铺和公交站",
+                    "environment_prompt": "Front: neon shops and a bus stop",
                 },
-                "城市街道_雨夜版": {
-                    "scene_id": "城市街道_雨夜版",
-                    "name": "城市街道_雨夜版",
+                "CityStreet_RainyNight": {
+                    "scene_id": "CityStreet_RainyNight",
+                    "name": "CityStreet_RainyNight",
                     "scene_type": "exterior",
-                    "base_scene_id": "城市街道",
-                    "variant_id": "雨夜版",
-                    "variant_prompt": "路面积水反射霓虹，雨幕明显",
+                    "base_scene_id": "CityStreet",
+                    "variant_id": "RainyNight",
+                    "variant_prompt": "Puddles reflect the neon, heavy curtain of rain",
                 },
             }
             return scenes.get(scene_id)
@@ -202,7 +202,7 @@ def test_from_preset_scene_asset_includes_derived_base_master_input(
         client,
         scope="asset",
         asset_kind="scene",
-        asset_id="城市街道_雨夜版",
+        asset_id="CityStreet_RainyNight",
     )
 
     assert status == 200, body
@@ -213,7 +213,7 @@ def test_from_preset_scene_asset_includes_derived_base_master_input(
     base_nodes = [
         node
         for node in payload["nodes"]
-        if node.get("data", {}).get("displayName") == "城市街道 base master"
+        if node.get("data", {}).get("displayName") == "CityStreet base master"
     ]
     assert len(base_nodes) == 1
     assert base_nodes[0]["data"]["imageUrl"]

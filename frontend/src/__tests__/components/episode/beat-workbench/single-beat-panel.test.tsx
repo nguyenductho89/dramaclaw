@@ -20,21 +20,21 @@ beforeAll(async () => {
         translation: {
           episode: {
             beat: {
-              sectionText: "文案",
-              sectionSketch: "草图",
-              sectionRender: "渲染图",
-              sectionAudio: "音频",
-              sectionVideo: "视频",
-              edited: "已编辑",
-              notEdited: "未编辑",
-              selected: "已选择",
-              notSelected: "未选择",
-              rendered: "已渲染",
-              notRendered: "未渲染",
-              generated: "已生成",
-              notGenerated: "未生成",
-              deleteManualShotTitle: "删除手工镜头？",
-              deleteManualShotDesc: "删除 Beat #{{n}}？",
+              sectionText: "Text",
+              sectionSketch: "Sketch",
+              sectionRender: "Render",
+              sectionAudio: "Audio",
+              sectionVideo: "Video",
+              edited: "Edited",
+              notEdited: "Not edited",
+              selected: "Selected",
+              notSelected: "Not selected",
+              rendered: "Rendered",
+              notRendered: "Not rendered",
+              generated: "Ready",
+              notGenerated: "Not generated",
+              deleteManualShotTitle: "Delete manual shot?",
+              deleteManualShotDesc: "Delete manual shot Beat #{{n}}? Subsequent beats will be renumbered.",
             },
           },
         },
@@ -104,7 +104,7 @@ vi.mock("@/components/episode/beat-workbench/video-pane", () => ({
 function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 29,
-    narration_segment: "旁白",
+    narration_segment: "Narration",
     visual_description: "画面",
     audio_type: "narration",
     video_mode: "first_frame",
@@ -144,7 +144,7 @@ describe("SingleBeatPanel", () => {
   it("shows the audio pane for 解说剧 (narrated) projects", () => {
     renderPanel({ isSeedance2Backend: true, spineTemplate: "narrated" });
 
-    expect(screen.getByText("音频")).toBeInTheDocument();
+    expect(screen.getByText("Audio")).toBeInTheDocument();
     expect(screen.getByText("AudioPane")).toBeInTheDocument();
     expect(screen.getByText("VideoPane")).toBeInTheDocument();
   });
@@ -152,7 +152,7 @@ describe("SingleBeatPanel", () => {
   it("hides the audio pane for 精品剧 (drama) projects", () => {
     renderPanel({ isSeedance2Backend: true, spineTemplate: "drama" });
 
-    expect(screen.queryByText("音频")).not.toBeInTheDocument();
+    expect(screen.queryByText("Audio")).not.toBeInTheDocument();
     expect(screen.queryByText("AudioPane")).not.toBeInTheDocument();
     expect(screen.getByText("VideoPane")).toBeInTheDocument();
   });

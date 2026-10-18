@@ -49,7 +49,7 @@ def test_generate_ai_staging_prop_uses_director_world_shape_hints(monkeypatch) -
         captured["task"] = staging_prop_ai.build_user_prompt(request)
         return {
             "prop_id": "horse_mount",
-            "name": "可骑的马",
+            "name": "Rideable horse",
             "semantic_label": "horse",
             "shape_hint": "quadruped_mount",
             "position": [1, 0, 2],
@@ -64,8 +64,8 @@ def test_generate_ai_staging_prop_uses_director_world_shape_hints(monkeypatch) -
             "api_key": "test-key",
             "base_url": "http://example.test/v1",
             "model": "test-model",
-            "scene_id": "面馆",
-            "user_hint": "让男青年骑一匹马",
+            "scene_id": "Noodle Shop",
+            "user_hint": "Have the young man ride a horse",
             "crosshair_target": {"position": [1, 0, 2]},
         }
     )
@@ -75,17 +75,17 @@ def test_generate_ai_staging_prop_uses_director_world_shape_hints(monkeypatch) -
     assert result["prop"]["shape_hint"] == "quadruped_mount"
     assert result["prop"]["attachment_points"][0]["kind"] == "mount"
     assert captured["model"] == "test-model"
-    assert "让男青年骑一匹马" in captured["task"]
+    assert "Have the young man ride a horse" in captured["task"]
 
 
 def test_generate_ai_staging_prop_falls_back_to_shape_hint_inference(monkeypatch) -> None:
     async def fake_run_staging_prop_agent(_request, **_kwargs):
-        return {"name": "一匹马"}
+        return {"name": "A horse"}
 
     monkeypatch.setattr(staging_prop_ai, "run_staging_prop_agent", fake_run_staging_prop_agent)
 
     result = staging_prop_ai.generate_ai_staging_prop(
-        {"api_key": "test-key", "user_hint": "让他骑马", "crosshair_target": {}}
+        {"api_key": "test-key", "user_hint": "Have him ride the horse", "crosshair_target": {}}
     )
 
     assert result["prop"]["semantic_label"] == "horse"

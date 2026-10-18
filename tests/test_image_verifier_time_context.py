@@ -38,19 +38,19 @@ async def test_image_verifier_marks_time_baked_scene_as_locked_light(monkeypatch
 
     await verifier.verify_sketch(
         str(image_path),
-        "夜晚的卫生间里地面积水。",
+        "Water pools on the bathroom floor at night.",
         [],
-        "卫生间",
-        "夜晚",
-        resolved_scene_name="卫生间_漏水_夜晚",
+        "Bathroom",
+        "night",
+        resolved_scene_name="Bathroom_leak_night",
         time_baked=True,
-        prompt_time_of_day="夜晚",
+        prompt_time_of_day="night",
     )
 
-    assert "解析场景: 卫生间_漏水_夜晚" in fake_agent.task
-    assert "时间/光线验证: 已命中烘焙时间版场景图" in fake_agent.task
-    assert "锁定该图自带的夜晚光照" in fake_agent.task
-    assert "不要要求额外 relight" in fake_agent.task
+    assert "Resolved scene: Bathroom_leak_night" in fake_agent.task
+    assert "Time/lighting verification: a scene image with the time baked in was hit" in fake_agent.task
+    assert "lock its built-in night lighting" in fake_agent.task
+    assert "do not require an extra relight" in fake_agent.task
 
 
 @pytest.mark.asyncio
@@ -65,22 +65,22 @@ async def test_image_verifier_marks_unbaked_scene_as_relight_target(monkeypatch,
 
     await verifier.verify_sketch(
         str(image_path),
-        "白天的卫生间里地面积水。",
+        "Water pools on the bathroom floor in the daytime.",
         [],
-        "卫生间",
-        "白天",
-        resolved_scene_name="卫生间_漏水",
+        "Bathroom",
+        "day",
+        resolved_scene_name="Bathroom_leak",
         time_baked=False,
-        prompt_time_of_day="白天",
+        prompt_time_of_day="day",
     )
 
-    assert "解析场景: 卫生间_漏水" in fake_agent.task
-    assert "时间/光线验证: 当前场景图不是烘焙时间版" in fake_agent.task
-    assert "画面应通过生成/relight 呈现白天" in fake_agent.task
+    assert "Resolved scene: Bathroom_leak" in fake_agent.task
+    assert "Time/lighting verification: the current scene image does not have the time baked in" in fake_agent.task
+    assert "the picture should present day through generation/relight" in fake_agent.task
 
 
 def test_resolve_verification_scene_context_uses_time_baked_plate(tmp_path):
-    plate_dir = tmp_path / "assets" / "scenes" / "卫生间_夜晚"
+    plate_dir = tmp_path / "assets" / "scenes" / "Bathroom_night"
     plate_dir.mkdir(parents=True)
     (plate_dir / "master.png").write_bytes(b"night")
 
@@ -88,14 +88,14 @@ def test_resolve_verification_scene_context_uses_time_baked_plate(tmp_path):
         tmp_path,
         {
             "beat_number": 1,
-            "scene_ref": {"scene_id": "卫生间", "variant_id": ""},
-            "time_of_day": "夜晚",
+            "scene_ref": {"scene_id": "Bathroom", "variant_id": ""},
+            "time_of_day": "night",
         },
     )
 
     assert context == {
-        "scene_id": "卫生间",
-        "resolved_scene_name": "卫生间_夜晚",
+        "scene_id": "Bathroom",
+        "resolved_scene_name": "Bathroom_night",
         "time_baked": True,
-        "prompt_time_of_day": "夜晚",
+        "prompt_time_of_day": "night",
     }

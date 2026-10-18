@@ -1627,7 +1627,7 @@ function CanvasContextActivityCard({ activity }: { activity: CanvasContextActivi
   const isValidation = canvasContextActivityIsValidation(activity);
   const hasErrors = activity.errors.length > 0;
   const statusText = isThinking
-    ? CANVAS_CONTEXT_THINKING_LABEL
+    ? i18n.t("superchat.panel.canvasContext.thinking")
     : isValidation
       ? running
         ? i18n.t("superchat.panel.canvasContext.validating")
@@ -2406,8 +2406,8 @@ function generationCommandNodeIds(
       ) {
         nodeIds.add(command.client_id);
       }
-      // add_next_node 同样会在 run_workflow 里被执行；省略 node_type 时按执行器的
-      // 规则从源节点推断类型，否则参数审批卡不会出现。
+      // add_next_node is also executed inside run_workflow; when node_type is omitted the type is inferred
+      // from the source node by the executor's rules, otherwise the parameter approval card would not appear.
       if (hasWorkflowRun && command.type === "add_next_node" && command.client_id) {
         const nodeType = approvalCommandNodeType(
           envelopes,
@@ -2608,8 +2608,8 @@ function approvalNodeData(
     : {};
   for (const envelope of approval.envelopes) {
     for (const command of envelope.commands) {
-      // add_next_node 与 create_node 一样新建节点并携带 data；漏掉它会让确认卡
-      // 读不到 Agent 给的比例/分辨率而回落默认值，确认时再把默认值写回节点（#685）。
+      // add_next_node creates a node and carries data just like create_node; missing it would make the confirmation card
+      // unable to read the ratio/resolution given by the Agent and fall back to defaults, which are then written back to the node on confirm (#685).
       if (
         (command.type === "create_node" || command.type === "add_next_node")
         && command.client_id === nodeId
@@ -2626,11 +2626,11 @@ function approvalNodeData(
 }
 
 /**
- * 解析审批批次里某个节点（画布已有节点或本批 client_id）的节点类型。
+ * Resolves the node type of a node in an approval batch (an existing canvas node or a client_id from this batch).
  *
- * add_next_node 可以省略 node_type，执行器按源节点推断（canvasChatCommands 的
- * chooseNextNodeType：取源节点类型的第一个下游可生成类型）；审批阶段节点还没建出来，
- * 这里按同一规则推断，源节点本身也可能是本批新建的节点，所以递归解析。
+ * add_next_node may omit node_type, and the executor infers it from the source node (canvasChatCommands'
+ * chooseNextNodeType: take the first downstream-generatable type of the source node type); during approval the node has not been created yet,
+ * so the same rule is applied here, and the source node itself may also be newly created in this batch, hence the recursive resolution.
  */
 function approvalCommandNodeType(
   envelopes: CanvasChatCommandEnvelope[],
@@ -2958,8 +2958,8 @@ function amendCanvasApprovalWithGenerationData(
     envelopes: approval.envelopes.map((envelope) => ({
       ...envelope,
       commands: envelope.commands.map((command) => {
-        // 同一批里 Agent 对该节点的 update_node_data 会在创建之后执行；确认值也要
-        // 合并进去，否则后续更新会把用户在审批卡上确认的参数覆盖回旧值。
+        // Within the same batch, the Agent's update_node_data for this node runs after creation; the confirmed values must also
+        // be merged in, otherwise the later update would overwrite the parameters the user confirmed on the approval card with old values.
         if (command.type === "update_node_data" && targets.has(command.node_id)) {
           return {
             ...command,
@@ -8685,7 +8685,7 @@ export const MessageBubble = memo(function MessageBubble({
                 ) : waitingForUserReply ? (
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs text-muted-foreground">
                       <ListTree className="size-3.5" />
-                      <span>正在等待您的回复</span>
+                      <span>{i18n.t("superchat.panel.waitingForReply")}</span>
                     </div>
                 ) : null}
               </div>
@@ -9472,9 +9472,9 @@ function createSpeechRecognition(): SpeechRecognitionLike | null {
 }
 
 const VIDEO_CREATION_RE =
-  /(生成|创建|制作|开始|做|转|剪|出).{0,12}(视频|短剧|短片|成片|影片)|(?:视频|短剧|短片|成片|影片).{0,12}(生成|创建|制作|开始|做|转)|create.{0,16}video|make.{0,16}video|generate.{0,16}video|story.{0,12}video/i;
+  /(?:create|make|generate|produce|start|turn|edit|render).{0,16}(?:video|short drama|short film|final cut)|(?:video|short drama|short film|final cut).{0,12}(?:generate|create|make|start|render)|story.{0,12}video|(?:tạo|làm|sản xuất|bắt đầu|dựng).{0,16}(?:video|phim ngắn|phim)|(?:video|phim ngắn).{0,12}(?:tạo|làm|bắt đầu)/i;
 const UPLOADED_FILES_QUERY_RE =
-  /(当前|现在|刚才|我)?\s*(上传|传了|传过|已上传).{0,12}(哪些|什么|列表|文件|剧本|小说)|(?:what|which|list|show).{0,20}uploaded.{0,10}(files?|scripts?)/i;
+  /(?:what|which|list|show).{0,20}uploaded.{0,10}(?:files?|scripts?|novels?)|(?:tệp|tập tin|file|kịch bản|tiểu thuyết).{0,12}(?:đã tải lên|đã upload)|(?:đã tải lên|đã upload).{0,12}(?:những gì|gì|danh sách|tệp|file|kịch bản|tiểu thuyết)/i;
 
 const NOVEL_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md", ".doc", ".docx"]);
 const INLINE_TEXT_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md"]);
@@ -9568,11 +9568,11 @@ function shouldReportUploadedFiles(text: string): boolean {
 }
 
 function isOverwriteChoice(text: string): boolean {
-  return /^覆盖[。.!！?？\s]*$/.test(text.trim());
+  return /^(?:overwrite|replace|ghi đè)[.!?\s]*$/i.test(text.trim());
 }
 
 function isFinalOverwriteConfirmation(text: string): boolean {
-  return /^(确定|继续)[。.!！?？\s]*$/.test(text.trim());
+  return /^(?:confirm|continue|yes|ok|xác nhận|tiếp tục|đồng ý)[.!?\s]*$/i.test(text.trim());
 }
 
 function uploadedFileFromPrepared(item: PreparedIngestAttachment): UploadedIngestFile | null {
@@ -9627,7 +9627,7 @@ function buildReingestConfirmationContext(
     `filename: ${pending.filename}`,
     pending.stage === "choose_overwrite"
       ? "The current project has already ingested a script. Do not call ingest/start yet. Tell the user the current project is not empty and ask only whether they want to overwrite this project. Do not recommend creating a new project, and do not offer to create another project from the current project flow."
-      : "The user chose overwrite. Do not call ingest/start yet. Ask the second confirmation and warn that overwrite/rebuild will clear existing characters, episodes, scripts, sketches, audio, videos, and other pipeline outputs. Only an exact user reply of 确定 or 继续 may proceed.",
+      : "The user chose overwrite. Do not call ingest/start yet. Ask the second confirmation and warn that overwrite/rebuild will clear existing characters, episodes, scripts, sketches, audio, videos, and other pipeline outputs. Only an exact user reply of Confirm or Continue may proceed.",
     "[/DRAMACLAW_REINGEST_CONFIRMATION]",
   ].join("\n");
 }
@@ -10186,7 +10186,7 @@ function CanvasNodeReferenceThumb({
       <button
         type="button"
         className="absolute right-0.5 top-0.5 z-20 flex size-4 items-center justify-center rounded-full bg-black/70 text-white/75 opacity-0 shadow-sm backdrop-blur transition hover:bg-black/85 hover:text-white group-hover:opacity-100 group-focus-within:opacity-100"
-        aria-label="移除画布引用"
+        aria-label={i18n.t("superchat.panel.removeCanvasReference")}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -10429,7 +10429,7 @@ const FREEZONE_NODE_CHIP_GLYPH: Record<AssetBoardColumn, string> = {
   audio: "♪",
 };
 
-/** 草稿无节点提及时复用的空查表，避免每帧新建 Map 触发编辑器重渲染。 */
+/** Shared empty lookup for drafts with no node mentions, avoiding a new Map every frame that would re-render the editor. */
 const EMPTY_FREEZONE_NODE_MENTION_LOOKUP: FreezoneNodeMentionLookup = new Map();
 
 function buildFreezoneNodeChipElement(
@@ -10442,7 +10442,7 @@ function buildFreezoneNodeChipElement(
   chip.dataset.freezoneNodeLabel = label;
   chip.contentEditable = "false";
   chip.className = FREEZONE_CHIP_CLASS;
-  // 不挂原生 title：hover 走下方 React 富预览浮层，两者并存会同时冒两个提示。
+  // No native title: hover uses the React rich preview overlay below, and having both would pop up two tooltips at once.
   chip.setAttribute("aria-label", label);
 
   if (meta?.thumbnailUrl) {
@@ -10453,7 +10453,7 @@ function buildFreezoneNodeChipElement(
     thumb.className = "size-4 shrink-0 rounded-[3px] object-cover";
     chip.appendChild(thumb);
   } else if (meta?.column === "video" && meta.mediaUrl) {
-    // 视频没记封面：拿片源取首帧当缩略图（对齐故事板 VideoThumb 的 #t=0.1 兜底）。
+    // Video with no stored cover: take the first frame from the media source as the thumbnail (matches the storyboard VideoThumb #t=0.1 fallback).
     const thumb = document.createElement("video");
     thumb.src = `${meta.mediaUrl}#t=0.1`;
     thumb.muted = true;
@@ -10514,7 +10514,7 @@ function renderFreezoneSkillEditorContent(
 
   let cursor = 0;
   for (const mention of mentions) {
-    if (mention.start < cursor) continue; // 防御：token 不重叠
+    if (mention.start < cursor) continue; // defensive: tokens do not overlap
     if (mention.start > cursor) {
       root.appendChild(document.createTextNode(value.slice(cursor, mention.start)));
     }
@@ -10591,7 +10591,7 @@ function FreezoneSkillInlineEditor({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const lastEmittedValueRef = useRef(value);
   const lastRenderedSuggestionsKeyRef = useRef("");
-  // 悬浮预览：hover 引用 chip 时在其上方（空间不足则下方）浮出放大缩略图 + 名称/类型卡。
+  // Hover preview: when hovering a reference chip, an enlarged thumbnail + name/type card pops up above it (below if there is not enough room).
   const [mentionPreview, setMentionPreview] = useState<
     (FreezoneNodePreviewInfo & { left: number; top: number; placement: "above" | "below" }) | null
   >(null);
@@ -10648,9 +10648,9 @@ function FreezoneSkillInlineEditor({
     onKeyDown(event);
   }, [onChange, onKeyDown]);
 
-  // 事件委托：chip 是命令式注入的动态 DOM，逐个挂 mouseenter 会随每次重渲染丢失，
-  // 故在稳定的编辑器根上用冒泡的 mouseover 判定「当前指到哪个引用 chip」。指到非 chip
-  // 处（正文/空白）同样走这里清空，离开编辑器再由 mouseleave 兜底。
+  // Event delegation: chips are imperatively injected dynamic DOM, and attaching mouseenter to each one would be lost on every re-render,
+  // so a bubbling mouseover on the stable editor root decides "which reference chip is currently pointed at". Pointing at a non-chip
+  // spot (body text / blank) also clears it here, and leaving the editor is covered by mouseleave as a fallback.
   const handleEditorMouseOver = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const editor = editorRef.current;
@@ -10668,7 +10668,7 @@ function FreezoneSkillInlineEditor({
       const info = buildFreezoneNodePreviewInfo(label, nodeLookup.get(nodeId) ?? null);
       const rect = chip.getBoundingClientRect();
       const left = Math.min(Math.max((rect.left + rect.right) / 2, 16), window.innerWidth - 16);
-      // 输入框贴着面板底部，上方基本恒有空间；仅在贴近视口顶端（放不下卡片）时翻到下方。
+      // The composer sits against the bottom of the panel so there is almost always room above; only flip below when close to the top of the viewport (the card would not fit).
       const placement: "above" | "below" = rect.top >= 240 ? "above" : "below";
       setMentionPreview({
         ...info,
@@ -10721,8 +10721,8 @@ function FreezoneSkillInlineEditor({
                 />
               ) : (
                 mentionPreview.videoPosterUrl && (
-                  // 视频引用：hover 预览时自动循环播放（静音+内联满足浏览器自动播放策略），
-                  // 不再停在首帧。key 绑片源，切到另一个视频 chip 时重挂 <video> 从头播。
+                  // Video reference: auto-loop on hover preview (muted + inline satisfies browser autoplay policies),
+                  // no longer stuck on the first frame. The key is bound to the media source so switching to another video chip remounts <video> from the start.
                   <video
                     key={mentionPreview.videoPosterUrl}
                     src={mentionPreview.videoPosterUrl}
@@ -10755,24 +10755,24 @@ function FreezoneSkillInlineEditor({
 }
 
 const CANVAS_CONTEXT_REQUEST_LABELS: Record<string, string> = {
-  canvas_ontology: "画布 Ontology",
-  canvas_summary: "画布摘要",
-  canvas_action_catalog: "画布能力",
-  canvas_command_catalog: "命令规则",
-  node_detail: "节点详情",
-  neighbor_graph: "上下游关系",
-  node_action_catalog: "节点能力",
-  action_catalog: "节点能力",
-  action_catalog_by_id: "能力详情",
-  node_create_schema: "节点参数",
-  audio_voice_options: "音色选项",
-  slot_candidates: "可提交槽位",
-  mainline_projection_assets: "主线资产",
-  selection_detail: "当前选择",
-  link_type_catalog: "连线类型",
-  validate_canvas_commands: "命令校验",
+  get canvas_ontology() { return i18n.t("superchat.panel.contextLabels.canvas_ontology"); },
+  get canvas_summary() { return i18n.t("superchat.panel.contextLabels.canvas_summary"); },
+  get canvas_action_catalog() { return i18n.t("superchat.panel.contextLabels.canvas_action_catalog"); },
+  get canvas_command_catalog() { return i18n.t("superchat.panel.contextLabels.canvas_command_catalog"); },
+  get node_detail() { return i18n.t("superchat.panel.contextLabels.node_detail"); },
+  get neighbor_graph() { return i18n.t("superchat.panel.contextLabels.neighbor_graph"); },
+  get node_action_catalog() { return i18n.t("superchat.panel.contextLabels.node_action_catalog"); },
+  get action_catalog() { return i18n.t("superchat.panel.contextLabels.action_catalog"); },
+  get action_catalog_by_id() { return i18n.t("superchat.panel.contextLabels.action_catalog_by_id"); },
+  get node_create_schema() { return i18n.t("superchat.panel.contextLabels.node_create_schema"); },
+  get audio_voice_options() { return i18n.t("superchat.panel.contextLabels.audio_voice_options"); },
+  get slot_candidates() { return i18n.t("superchat.panel.contextLabels.slot_candidates"); },
+  get mainline_projection_assets() { return i18n.t("superchat.panel.contextLabels.mainline_projection_assets"); },
+  get selection_detail() { return i18n.t("superchat.panel.contextLabels.selection_detail"); },
+  get link_type_catalog() { return i18n.t("superchat.panel.contextLabels.link_type_catalog"); },
+  get validate_canvas_commands() { return i18n.t("superchat.panel.contextLabels.validate_canvas_commands"); },
 };
-const CANVAS_CONTEXT_THINKING_LABEL = "正在思考中";
+const CANVAS_CONTEXT_THINKING_LABEL = "Thinking...";
 type CanvasContextActivity = {
   key: string;
   turnId: string | null;
@@ -10966,14 +10966,14 @@ const DIRECTOR_RUN_MODE_OPTIONS: ReadonlyArray<{
   {
     value: "manual_confirm",
     icon: ShieldAlert,
-    label: "手动模式",
-    description: "每个生成步骤执行前由你确认",
+    get label() { return i18n.t("superchat.panel.runMode.manual.label"); },
+    get description() { return i18n.t("superchat.panel.runMode.manual.description"); },
   },
   {
     value: "episode_auto",
     icon: Gauge,
-    label: "本集自动",
-    description: "二次确认后自动推进本集，失败或成片完成时停止",
+    get label() { return i18n.t("superchat.panel.runMode.auto.label"); },
+    get description() { return i18n.t("superchat.panel.runMode.auto.description"); },
   },
 ];
 
@@ -11054,7 +11054,7 @@ async function getDirectorAutoServer(project: string): Promise<DirectorAutoServe
   return response.data;
 }
 
-/** 输入框左下角那颗「手动确认 / 自动生成」下拉里的两档。 */
+/** The two options in the "Manual confirm / Auto generate" dropdown at the bottom-left of the composer. */
 const CANVAS_COMMAND_EXECUTION_MODE_OPTIONS: ReadonlyArray<{
   value: CanvasCommandExecutionMode;
   icon: LucideIcon;
@@ -11064,14 +11064,14 @@ const CANVAS_COMMAND_EXECUTION_MODE_OPTIONS: ReadonlyArray<{
   {
     value: "manual_confirm",
     icon: ShieldAlert,
-    label: "手动确认",
-    description: "Agent 在执行画布命令前都会请求确认",
+    get label() { return i18n.t("superchat.panel.execMode.manual.label"); },
+    get description() { return i18n.t("superchat.panel.execMode.manual.description"); },
   },
   {
     value: "auto_execute",
     icon: Wrench,
-    label: "自动生成",
-    description: "Agent 会自动执行安全命令并反馈结果",
+    get label() { return i18n.t("superchat.panel.execMode.auto.label"); },
+    get description() { return i18n.t("superchat.panel.execMode.auto.description"); },
   },
 ];
 
@@ -11165,7 +11165,7 @@ function canvasCommandPlanLabel(command: CanvasChatCommand): string {
 function canvasCommandPlanPrimary(command: CanvasChatCommand): string | undefined {
   switch (command.type) {
     case "create_node":
-      // 规范化补的合成 client_id 只是内部标识，不展示给用户。
+      // The synthetic client_id added by normalization is only an internal identifier and is not shown to the user.
       return isGeneratedCanvasClientId(command.client_id) ? undefined : command.client_id;
     case "add_next_node":
       return command.source_node_id;
@@ -11385,7 +11385,7 @@ function createThinkingCanvasContextActivity(turnId: string): CanvasContextActiv
 }
 
 function canvasContextActivityIsValidation(activity: CanvasContextActivity): boolean {
-  return activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands) || activity.labels.includes("命令校验");
+  return activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands);
 }
 
 function canvasCommandAnchorEndIndex(text: string, anchorTextPrefix?: string | null): number {
@@ -11414,8 +11414,9 @@ function relaxedCanvasCommandAnchorEndIndex(text: string, anchorTextPrefix: stri
 
 function firstCanvasCommandSemanticMarkerIndex(text: string, markers: string[]): number | null {
   let best: number | null = null;
+  const lowerText = text.toLowerCase();
   for (const marker of markers) {
-    const index = text.indexOf(marker);
+    const index = lowerText.indexOf(marker.toLowerCase());
     if (index < 0) continue;
     best = best == null ? index : Math.min(best, index);
   }
@@ -11427,17 +11428,18 @@ function canvasCommandSemanticAnchorIndex(text: string, event: CanvasCommandSurf
   if (
     event.kind === "context" &&
     (
-      event.activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands) ||
-      event.activity.labels.includes("命令校验")
+      event.activity.labels.includes(CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands)
     )
   ) {
     return firstCanvasCommandSemanticMarkerIndex(text, [
-      "验证通过",
-      "校验通过",
-      "验证失败",
-      "校验失败",
-      "命令验证",
-      "命令校验",
+      "validation passed",
+      "validated successfully",
+      "validation failed",
+      "command validation",
+      "validating the command",
+      "kiểm tra thành công",
+      "kiểm tra thất bại",
+      "kiểm tra lệnh",
     ]);
   }
   if (event.kind === "context") {
@@ -11446,39 +11448,43 @@ function canvasCommandSemanticAnchorIndex(text: string, event: CanvasCommandSurf
   }
   if (event.kind === "feedback" && event.feedback.applied + event.feedback.openedUiActions > 0) {
     return firstCanvasCommandSemanticMarkerIndex(text, [
-      "已经在画布上",
-      "已在画布上",
-      "已成功创建",
-      "成功创建",
-      "已经成功",
-      "我已经成功",
-      "已创建",
-      "创建好了",
-      "搭建好了",
+      "is now on the canvas",
+      "are now on the canvas",
+      "successfully created",
+      "i have created",
+      "i've created",
+      "has been created",
+      "have been created",
+      "đã được tạo",
+      "đã tạo thành công",
+      "đã có trên canvas",
     ]);
   }
   return null;
 }
 
 function canvasContextReadSemanticAnchorIndex(text: string, activity: CanvasContextActivity): number | null {
-  if (!activity.labels.some((label) => label !== CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands && label !== "命令校验")) {
+  if (!activity.labels.some((label) => label !== CANVAS_CONTEXT_REQUEST_LABELS.validate_canvas_commands)) {
     return null;
   }
   const requestMarkers = [
-    "我需要获取",
-    "我需要读取",
-    "我先获取",
-    "我先读取",
-    "先获取",
-    "先读取",
-    "让我先查看",
-    "让我查看",
-    "查看一下",
-    "创建schema",
-    "获取该节点的详细信息",
-    "读取节点详情",
-    "检查当前",
-    "确认当前",
+    "i need to fetch",
+    "i need to read",
+    "i'll fetch",
+    "i'll read",
+    "let me first fetch",
+    "let me first read",
+    "let me check",
+    "let me look at",
+    "create schema",
+    "get the details of the node",
+    "read the node details",
+    "check the current",
+    "confirm the current",
+    "tôi cần lấy",
+    "tôi cần đọc",
+    "để tôi xem",
+    "để tôi kiểm tra",
   ];
   const requestIndex = firstCanvasCommandSemanticMarkerIndex(text, requestMarkers);
   if (requestIndex != null) {
@@ -11486,12 +11492,15 @@ function canvasContextReadSemanticAnchorIndex(text: string, activity: CanvasCont
     return paragraphEnd < 0 ? text.length : paragraphEnd + 2;
   }
   return firstCanvasCommandSemanticMarkerIndex(text, [
-    "现在我已经获取",
-    "现在我已获取",
-    "已经获取",
-    "已获取",
-    "已经读取",
-    "已读取",
+    "i have now fetched",
+    "i've now fetched",
+    "already fetched",
+    "have fetched",
+    "already read",
+    "have read",
+    "tôi đã lấy",
+    "tôi đã đọc",
+    "đã lấy được",
   ]);
 }
 
@@ -11928,8 +11937,8 @@ function canvasCommandFeedbackIsValidationOnly(feedback: CanvasCommandFeedback):
     feedback.applied === 0 &&
     feedback.openedUiActions === 0 &&
     steps.length > 0 &&
-    !steps.some((step) => step.label === "已取消") &&
-    steps.every((step) => step.type === "validate" || step.label === "校验画布命令")
+    !steps.some((step) => step.label === i18n.t("superchat.panel.canvas.cancelledStep")) &&
+    steps.every((step) => step.type === "validate" || step.label === i18n.t("freezone.cmd.validateCanvasCommand"))
   );
 }
 
@@ -12213,7 +12222,7 @@ interface SuperChatPanelProps {
   currentCanvasOntologyContext?: CanvasOntologyContext | null;
   pendingAttachments?: ChatAttachment[];
   onPendingAttachmentsConsumed?: () => void;
-  /** 「添加到对话」落地：一批 nodeId,面板挂载后 drain 成 draft 里的行内 mention chip。 */
+  /** "Add to chat" landing: a batch of nodeIds that, once the panel mounts, are drained into inline mention chips in the draft. */
   pendingNodeMentions?: string[];
   onPendingNodeMentionsConsumed?: () => void;
   onRequestClose?: () => void;
@@ -12327,7 +12336,7 @@ export function SuperChatPanel({
     void apiCall<AgentCapabilityPriceReference>("chat/agent-capability-price-reference")
       .then(setAgentBillingReference)
       .catch(() => {
-        toast.error("暂时无法加载虾导计费说明");
+        toast.error(i18n.t("superchat.panel.billing.loadFailed"));
       });
   }, [agentBillingReference, isFreezoneLayout]);
   const shouldStickToBottomRef = useRef(true);
@@ -12448,7 +12457,7 @@ export function SuperChatPanel({
     () => (nodeAtQuery === null ? [] : filterFreezoneNodeSuggestions(allNodeSuggestions, nodeAtQuery)),
     [allNodeSuggestions, nodeAtQuery],
   );
-  // 仅当草稿里已含节点 token 时才建查表；避免无引用时每帧重算 buildAssetBoard。
+  // Only build the lookup when the draft already contains node tokens; avoids recomputing buildAssetBoard every frame when there are no references.
   const hasNodeMentionDraft = isFreezoneLayout && draft.includes("@[");
   const nodeMentionLookup = useMemo(
     () =>
@@ -12618,7 +12627,7 @@ export function SuperChatPanel({
     params.project,
     selectedFreezoneNodes,
   ]);
-  // 正文里 @ 提及的节点 → 结构化附件（与「当前选中」附件并行，提交时合并去重）。
+  // @-mentioned nodes in the body -> structured attachments (parallel to the "currently selected" attachments, merged and deduplicated on submit).
   const mentionedNodeReferenceAttachment = useMemo(() => {
     if (!isFreezoneLayout) return null;
     const ids = freezoneNodeMentionIds(draft);
@@ -12826,15 +12835,15 @@ export function SuperChatPanel({
           episode: detail.episode ?? current.episode ?? 1,
           voicePolicy: detail.voicePolicy ?? current.voicePolicy,
         });
-        toast.info("本集自动已暂停后续推进，等待你确认是否修改", { duration: 10000 });
+        toast.info(i18n.t("superchat.panel.auto.pausedAwaitingConfirm"), { duration: 10000 });
         return;
       }
       if (detail?.status === "paused" || detail?.status === "completed") {
         updateDirectorRunState(defaultDirectorRunState());
         if (detail.status === "completed") {
-          toast.success(`第 ${detail.episode ?? "当前"} 集自动制作已完成`);
-        } else if (detail.message && detail.message !== "用户切换为手动模式") {
-          toast.error("本集自动已暂停");
+          toast.success(i18n.t("superchat.panel.auto.episodeDone", { episode: detail.episode ?? i18n.t("superchat.panel.auto.currentEpisode") }));
+        } else if (detail.message && !/switched to manual mode/i.test(detail.message)) {
+          toast.error(i18n.t("superchat.panel.auto.paused"));
         }
       }
     };
@@ -12845,7 +12854,7 @@ export function SuperChatPanel({
   const setDirectorExecutionMode = useCallback((mode: DirectorRunMode) => {
     if (mode === "episode_auto") {
       updateDirectorRunState(activateDirectorEpisodeAuto());
-      toast.success("已选择本集自动；发送开始指令后，还需再次确认才会执行", {
+      toast.success(i18n.t("superchat.panel.auto.selected"), {
         duration: 10000,
       });
     } else {
@@ -12853,7 +12862,7 @@ export function SuperChatPanel({
       const project = params.project?.trim();
       if (project) {
         void pauseDirectorAutoServer(project).catch(() => {
-          toast.error("已切换为手动模式，但后端自动任务暂停请求未送达");
+          toast.error(i18n.t("superchat.panel.auto.manualPauseFailed"));
         });
       }
     }
@@ -12931,8 +12940,8 @@ export function SuperChatPanel({
       const label = buildChatTaskLabel(event.task, t);
       const text =
         event.type === "task_complete"
-          ? `✅ ${label}已完成。你可以让我查看结果，或继续下一步。`
-          : `${label}失败：${event.task.error || event.task.current_task || "未提供具体错误原因"}\n请根据错误处理前置条件后再继续。`;
+          ? i18n.t("superchat.panel.taskNotice.completed", { label })
+          : i18n.t("superchat.panel.taskNotice.failed", { label, error: event.task.error || event.task.current_task || i18n.t("superchat.panel.taskNotice.noReason") });
       void chat.appendNotification(text);
     });
   }, [chat.appendNotification, params.project, t, taskEventBus, variant]);
@@ -13490,7 +13499,7 @@ export function SuperChatPanel({
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          const errorMessage = `画布命令执行异常：${message}`;
+          const errorMessage = i18n.t("superchat.panel.canvas.executionError", { message });
           result = {
             applied: 0,
             openedUiActions: 0,
@@ -13501,7 +13510,7 @@ export function SuperChatPanel({
                 commandIndex: -1,
                 type: "validate",
                 status: "error",
-                label: "画布执行异常",
+                label: i18n.t("superchat.panel.canvas.executionErrorLabel"),
                 error: errorMessage,
               },
             ],
@@ -13594,7 +13603,7 @@ export function SuperChatPanel({
       );
     }
     const receivedAt = Date.now();
-    const cancelMessage = reason === "timeout" ? "画布操作等待超时，已自动取消" : t("freezone.chat.canvasCommandsCancelled");
+    const cancelMessage = reason === "timeout" ? i18n.t("superchat.panel.canvas.timeoutAutoCancelled") : t("freezone.chat.canvasCommandsCancelled");
     const result: CanvasChatCommandApplyResult = {
       applied: 0,
       openedUiActions: 0,
@@ -13605,7 +13614,7 @@ export function SuperChatPanel({
           commandIndex: -1,
           type: "validate",
           status: "error",
-          label: "已取消",
+          label: i18n.t("superchat.panel.canvas.cancelledStep"),
           error: cancelMessage,
         },
       ],
@@ -13703,8 +13712,8 @@ export function SuperChatPanel({
     if (canvasCommandExecutionMode !== "auto_execute") return;
     for (const approval of pendingCanvasCommandApprovals) {
       if (approval.requiresUserChoice) continue;
-      // manual_ui 动作必须由用户主动确认。自动模式不能把“重试生成”擅自
-      // 解释成“打开声线选择并改用自定义声线”。
+      // manual_ui actions must be confirmed by the user. Auto mode must not arbitrarily interpret "retry generation"
+      // as "open the voice picker and switch to a custom voice".
       if (canvasApprovalRequiresManualUiAction(approval)) continue;
       if (canvasApprovalRequiresAudioVoiceChoice(approval, canvasNodes)) continue;
       if (
@@ -14165,8 +14174,8 @@ export function SuperChatPanel({
     restoreDraftFocusRef.current = true;
   }, [existingCanvasNodeIds, onPendingAttachmentsConsumed, pendingAttachments]);
 
-  // 「添加到对话」：把待处理的 nodeId drain 成 draft 里的行内 mention chip，
-  // 标题从画布节点解析（与 @ 菜单同源）。挂载后 pendingNodeMentions 已就位即抽干。
+  // "Add to chat": drain pending nodeIds into inline mention chips in the draft,
+  // with titles resolved from canvas nodes (same source as the @ menu). Drained as soon as pendingNodeMentions is in place after mount.
   useEffect(() => {
     if (pendingNodeMentions.length === 0) {
       consumedPendingNodeMentionsKeyRef.current = null;
@@ -14475,13 +14484,13 @@ export function SuperChatPanel({
             await startDirectorAutoServer(project, state.episode ?? 1, voicePolicy);
           } catch (error) {
             toast.error(
-              `无法启动本集自动：${error instanceof Error ? error.message : "后端请求失败"}`,
+              i18n.t("superchat.panel.auto.startFailed", { error: error instanceof Error ? error.message : i18n.t("superchat.panel.auto.requestFailed") }),
             );
             return false;
           }
           const confirmed = confirmDirectorEpisodeAuto({ ...state, voicePolicy });
           updateDirectorRunState(confirmed);
-          toast.success("本集自动已启动，正在检查当前进度", { duration: 10000 });
+          toast.success(i18n.t("superchat.panel.auto.started"), { duration: 10000 });
           nextText = directorAutoRunTransportText(nextText);
         } else if (state.confirmationStage === "awaiting_intervention") {
           nextText = directorAutoInterventionTransportText(nextText);
@@ -14589,7 +14598,7 @@ export function SuperChatPanel({
       setClearDialogOpen(true);
       return;
     }
-    // 双轨附件：画布「当前选中」+ 正文 @ 提及，各自可能为 null，合并去重。
+    // Dual-track attachments: canvas "currently selected" + @-mentions in the body; each may be null, merged and deduplicated.
     const canvasRefAttachments = [
       selectedFreezoneNodeAttachment,
       mentionedNodeReferenceAttachment,
@@ -14597,7 +14606,7 @@ export function SuperChatPanel({
     const messageAttachments = canvasRefAttachments.length > 0
       ? mergeCanvasNodeReferenceAttachments([...attachments, ...canvasRefAttachments])
       : attachments;
-    // 发给 agent 的正文把 @[名](id) 还原成可读的 [名]，nodeId 交由附件精确定位。
+    // The body sent to the agent restores @[name](id) to a readable [name]; the nodeId is left to the attachments for precise targeting.
     const readableDraft = freezoneNodeMentionText(draft).trim();
     const hasCurrentContent = readableDraft.length > 0 || messageAttachments.length > 0;
     if (!hasCurrentContent || preparingSend) return;
@@ -14681,7 +14690,7 @@ export function SuperChatPanel({
     if (showNodeSuggestions && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       const cap = Math.min(nodeSuggestionVisibleCount, filteredNodeSuggestions.length);
-      // 已在已渲染末项且仍有更多结果：先加载下一页再前移，让键盘也能走到窗口外的节点。
+      // Already on the last rendered item with more results: load the next page before moving forward so the keyboard can reach nodes beyond the window.
       if (
         event.key === "ArrowDown"
         && activeNodeSuggestionIndex >= cap - 1
@@ -14711,7 +14720,7 @@ export function SuperChatPanel({
       return;
     }
     if (showNodeSuggestions && event.key === "Escape") {
-      // Esc 收起菜单：仅抹掉正在输入的 @token，保留其余正文，并恢复输入框焦点。
+      // Esc closes the menu: only erase the @token being typed, keep the rest of the body, and restore input focus.
       event.preventDefault();
       setDraft((current) => stripFreezoneNodeAtQuery(current));
       restoreDraftFocusRef.current = true;
@@ -14781,11 +14790,11 @@ export function SuperChatPanel({
     selections: SkillStudioQuestionSelections,
   ): Promise<boolean> => {
     if (!chat.busy || !event.turn_id || event.turn_id !== chat.activeTurnId) {
-      toast.error("这轮对话已结束，不能继续提交这个问题");
+      toast.error(i18n.t("superchat.panel.toast.turnEnded"));
       return false;
     }
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -14811,7 +14820,7 @@ export function SuperChatPanel({
               : buildSkillStudioQuestionResponseForTest(event, selections),
       };
       if (!chat.submitSkillStudioResult(payload)) {
-        toast.error("Skill Studio 连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
         return false;
       }
       if (event.turn_id) {
@@ -14848,7 +14857,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] skill studio result submit failed", error);
-      toast.error("提交 Skill Studio 选择失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.submitSelectionFailed"));
       return false;
     }
   }, [chat, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, updateChatUiEvent]);
@@ -14858,11 +14867,11 @@ export function SuperChatPanel({
     answers: AssistantClarificationAnswers,
   ): Promise<boolean> => {
     if (!chat.busy || !event.turn_id || event.turn_id !== chat.activeTurnId) {
-      toast.error("这轮对话已结束，不能继续提交这个问题");
+      toast.error(i18n.t("superchat.panel.toast.turnEnded"));
       return false;
     }
     if (!event.bridge_key) {
-      toast.error("补充信息桥接缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.clarificationBridgeMissing"));
       return false;
     }
     try {
@@ -14874,7 +14883,7 @@ export function SuperChatPanel({
       if (action === "recommended" && !assistantClarificationCanSubmitRecommended(
         event, answers,
       )) {
-        toast.error("推荐配置缺少有效参数，请重新选择或刷新后重试");
+        toast.error(i18n.t("superchat.panel.toast.recommendedInvalid"));
         return false;
       }
       const skillStudioRevision = activeAssistantClarificationIsSkillStudioRevision(visibleMessages, event);
@@ -14886,7 +14895,7 @@ export function SuperChatPanel({
 	        used_recommended: action === "recommended",
 	      };
       if (!chat.submitAssistantClarificationResult(payload)) {
-        toast.error("补充信息连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.clarificationConnectionNotReady"));
         return false;
       }
       if (event.turn_id) {
@@ -14929,7 +14938,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] clarification result submit failed", error);
-      toast.error("提交补充信息失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.submitClarificationFailed"));
       return false;
     }
 	  }, [chat, params.project, effectiveFreezoneCanvasId, effectiveFreezoneAgentId, persistSkillStudioUiEvent, updateChatUiEvent, visibleMessages]);
@@ -14939,7 +14948,7 @@ export function SuperChatPanel({
     draftPayload: Record<string, unknown>,
   ): Promise<boolean> => {
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -14965,9 +14974,9 @@ export function SuperChatPanel({
         json: payload,
       });
       if (!result.ok || !result.saved_to_catalog) {
-        const errorText = result.errors?.find(Boolean) || result.message || "后端没有确认保存成功";
+        const errorText = result.errors?.find(Boolean) || result.message || i18n.t("superchat.panel.toast.saveNotConfirmed");
         const partiallySaved = Boolean(result.saved_skill_ids?.length || result.saved_recipe_ids?.length);
-        toast.error(partiallySaved && result.message ? result.message : `添加 Skill / Recipe 失败：${errorText}`);
+        toast.error(partiallySaved && result.message ? result.message : i18n.t("superchat.panel.toast.addFailedWithReason", { error: errorText }));
         return false;
       }
       payload.saved_skill_ids = result.saved_skill_ids ?? payload.saved_skill_ids;
@@ -15027,11 +15036,11 @@ export function SuperChatPanel({
           );
         persistSkillStudioUiEvent(event.turn_id, persistedEvent);
       }
-      toast.success("已添加到虾画 Skills / Recipes");
+      toast.success(i18n.t("superchat.panel.skillDraft.footer.submitted"));
       return true;
     } catch (error) {
       console.error("[superchat] skill studio draft submit failed", error);
-      toast.error("添加 Skill / Recipe 失败，请检查必填字段后重试");
+      toast.error(i18n.t("superchat.panel.toast.addFailed"));
       return false;
     }
   }, [chat.activeTurnId, chat.busy, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, queryClient, updateChatUiEvent]);
@@ -15072,7 +15081,7 @@ export function SuperChatPanel({
   ): Promise<boolean> => {
     if (!event.turn_id) return false;
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return false;
     }
     try {
@@ -15084,7 +15093,7 @@ export function SuperChatPanel({
         }),
       };
       if (!chat.submitSkillStudioResult(payload)) {
-        toast.error("Skill Studio 连接未就绪，请重试");
+        toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
         return false;
       }
       const receivedAt = uiEventFirstReceivedAt(event);
@@ -15119,7 +15128,7 @@ export function SuperChatPanel({
       return true;
     } catch (error) {
       console.error("[superchat] skill studio draft revision submit failed", error);
-      toast.error("启动草稿调整失败，请重试");
+      toast.error(i18n.t("superchat.panel.toast.startRevisionFailed"));
       return false;
     }
   }, [chat, effectiveFreezoneAgentId, effectiveFreezoneCanvasId, params.project, persistSkillStudioUiEvent, updateChatUiEvent]);
@@ -15130,7 +15139,7 @@ export function SuperChatPanel({
   ) => {
     if (!event.turn_id) return;
     if (!event.bridge_key) {
-      toast.error("Skill Studio 桥接信息缺失，请重试");
+      toast.error(i18n.t("superchat.panel.toast.bridgeMissing"));
       return;
     }
     const payload = {
@@ -15141,7 +15150,7 @@ export function SuperChatPanel({
       }),
     };
     if (!chat.submitSkillStudioResult(payload)) {
-      toast.error("Skill Studio 连接未就绪，请重试");
+      toast.error(i18n.t("superchat.panel.toast.connectionNotReady"));
       return;
     }
     const receivedAt = uiEventFirstReceivedAt(event);
@@ -15312,7 +15321,7 @@ export function SuperChatPanel({
     if (!recognition) return;
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "zh-CN";
+    recognition.lang = i18n.language?.startsWith("vi") ? "vi-VN" : "en-US";
     recognition.onresult = (event) => {
       let text = "";
       for (let i = 0; i < event.results.length; i += 1) {
@@ -15337,7 +15346,7 @@ export function SuperChatPanel({
       )}
       <section className="relative z-10 flex min-w-0 flex-1 flex-col">
         {isFreezoneLayout && (
-          // data-freezone-chat-drag-handle：虾导切成浮窗时，宿主靠它认出「按住这里拖窗」。
+          // data-freezone-chat-drag-handle: when Shrimp Director is turned into a floating window, the host uses it to recognize "press here to drag the window".
           <div
             data-freezone-chat-drag-handle=""
             className="flex min-h-9 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-black/[0.16] px-3 py-1 backdrop-blur-xl"
@@ -15368,8 +15377,8 @@ export function SuperChatPanel({
               variant="ghost"
               size="icon-sm"
               onClick={() => setAgentBillingOpen(true)}
-              aria-label="虾导计费说明"
-              title="虾导计费说明"
+              aria-label={i18n.t("superchat.panel.billing.title")}
+              title={i18n.t("superchat.panel.billing.title")}
               className="text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
             >
               <Gauge className="size-4" />
@@ -15643,8 +15652,8 @@ export function SuperChatPanel({
                 "absolute bottom-4 left-1/2 z-30 h-9 w-9 -translate-x-1/2 rounded-full border border-white/12 bg-background/88 text-foreground shadow-lg backdrop-blur transition hover:bg-background",
                 isFreezoneLayout && "bottom-3",
               )}
-              title="回到底部"
-              aria-label="回到底部"
+              title={i18n.t("superchat.panel.backToBottom")}
+              aria-label={i18n.t("superchat.panel.backToBottom")}
               onClick={() => scrollToChatBottom("auto", { force: true })}
             >
               <ArrowDown className="h-4 w-4" />
@@ -15666,7 +15675,7 @@ export function SuperChatPanel({
                   aria-live="polite"
                 >
                   <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-success" />
-                  <span>本集自动正在运行，将按任务状态继续推进</span>
+                  <span>{i18n.t("superchat.panel.auto.running")}</span>
                 </div>
               ) : (
                 <ComposerWaitingStatus
@@ -15749,7 +15758,7 @@ export function SuperChatPanel({
             {!hasActiveComposerPrompt && showFreezoneSkillSuggestions && !showClearCommandSuggestion && !freezoneSkillMenuExplicitOpen && (
               <div className="border-b border-white/10 bg-black/20 px-3 py-2.5">
                 <div className="mb-1.5 px-0.5 text-xs text-muted-foreground/85">
-                  技能
+                  {i18n.t("superchat.panel.skills.title")}
                 </div>
                 <div className="max-h-52 overflow-y-auto pr-1">
                   {visibleFreezoneSkillSuggestions.length > 0 ? (
@@ -15786,10 +15795,10 @@ export function SuperChatPanel({
                   ) : (
                     <div className="px-0.5 pb-2 pt-0.5 text-xs leading-5 text-muted-foreground/65">
                       <div className="font-normal text-muted-foreground/72">
-                        还没有可用技能
+                        {i18n.t("superchat.panel.skills.none")}
                       </div>
                       <div className="mt-1 max-w-[30rem] text-[11px] leading-4 text-muted-foreground/45">
-                        可以让 Agent 把当前画布总结成 Skill，也可以直接描述你的工作流，让它帮你创建专属技能。
+                        {i18n.t("superchat.panel.skills.noneHint")}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {FREEZONE_SKILL_EMPTY_ACTIONS.map((action) => (
@@ -15895,17 +15904,17 @@ export function SuperChatPanel({
             {!hasActiveComposerPrompt && isFreezoneLayout && selectedFreezoneNodes.length > 0 && (
               <div className={cn("px-4", visibleComposerAttachments.length > 0 ? "pt-2" : "pt-3")}>
                 <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>当前选中</span>
+                  <span>{i18n.t("superchat.panel.selection.current")}</span>
                   <div className="flex items-center gap-2">
-                    <span>本轮会使用</span>
+                    <span>{i18n.t("superchat.panel.selection.usedThisTurn")}</span>
                     {selectedFreezoneNodes.length > 1 && (
                       <button
                         type="button"
                         onClick={deselectAllSelectedFreezoneNodeReferences}
                         className="rounded-sm px-1.5 py-0.5 text-[11px] font-medium text-destructive transition hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="取消全部画布引用"
+                        aria-label={i18n.t("superchat.panel.selection.deselectAll")}
                       >
-                        全部取消
+                        {i18n.t("superchat.panel.selection.cancelAll")}
                       </button>
                     )}
                   </div>
@@ -15987,15 +15996,15 @@ export function SuperChatPanel({
                             <>
                               <Gauge className="size-3.5" />
                               {directorRunState.confirmationStage === "confirmed"
-                                ? "本集自动 · 运行中"
+                                ? i18n.t("superchat.panel.auto.badgeRunning")
                                 : directorRunState.confirmationStage === "awaiting_intervention"
-                                  ? "本集自动 · 待修改确认"
-                                : "本集自动 · 待确认"}
+                                  ? i18n.t("superchat.panel.auto.badgeAwaitingChange")
+                                : i18n.t("superchat.panel.auto.badgeAwaitingConfirm")}
                             </>
                           ) : (
                             <>
                               <ShieldAlert className="size-3.5" />
-                              手动模式
+                              {i18n.t("superchat.panel.runMode.manual.label")}
                             </>
                           )}
                         </DropdownMenuTrigger>
@@ -16053,32 +16062,32 @@ export function SuperChatPanel({
                             {canvasCommandExecutionMode === "manual_confirm" ? (
                               <>
                                 <ShieldAlert className="size-3.5" />
-                                手动确认
+                                {i18n.t("superchat.panel.execMode.manual.label")}
                               </>
                             ) : (
                               <>
                                 <Wrench className="size-3.5" />
-                                自动生成
+                                {i18n.t("superchat.panel.execMode.auto.label")}
                               </>
                             )}
                           </DropdownMenuTrigger>
-                          {/* 两档执行模式：语义上就是一组单选，交给 shadcn 的
-                              DropdownMenuRadioGroup —— 定位、外点关闭、Esc、方向键
-                              与选中标记都由组件给，不再手搓 portal + getBoundingClientRect。 */}
+                          {/* Two execution modes: semantically just a single-choice group, handed to shadcn's
+                              DropdownMenuRadioGroup; positioning, outside-click close, Esc, arrow keys
+                              and the selected marker are all provided by the component, no more hand-rolled portal + getBoundingClientRect. */}
                           <DropdownMenuContent
                             side="top"
                             align="start"
                             sideOffset={8}
-                            // 圆角收到 rounded-md（用户要求「别太大」）；底色跟画布
-                            // 工具条一套中性灰，别用带蓝调的 popover token——抽屉是
-                            // 中性 #212121，蓝灰浮层压上去会发闷。
-                            // p-2 + 加宽：hover 高亮原来几乎顶满外框、两档还贴在一起，
-                            // 看着糊成一坨；外框放大留出 8px 内边距，高亮四周就有了呼吸位
-                            // （用户要求）。300px 是让两行说明各自一行放得下、不再吊出
-                            // 「确认」「果」这种一两个字的孤行。
+                            // Corners tightened to rounded-md (the user asked for "not too big"); the background follows the canvas
+                            // toolbar's neutral gray, avoid the blue-tinted popover token: the drawer is
+                            // neutral #212121 and a blue-gray overlay on top of it would look muddy.
+                            // p-2 + wider: the hover highlight used to fill nearly the whole frame and the two options sat right next to each other,
+                            // looking like a blob; the enlarged frame leaves 8px of padding so the highlight gets breathing room all around
+                            // (user request). 300px lets each description fit on one line and stops one- or two-character
+                            // orphan lines from hanging below.
                             className="w-[300px] rounded-md bg-[#2a2a2c] p-2 shadow-lg ring-white/12"
                           >
-                            {/* space-y-1：两档之间留 4px，hover 高亮不再首尾相接。 */}
+                            {/* space-y-1: 4px between the two options so the hover highlights no longer touch end to end. */}
                             <DropdownMenuRadioGroup
                               className="space-y-1"
                               value={canvasCommandExecutionMode}
@@ -16090,8 +16099,8 @@ export function SuperChatPanel({
                                 <DropdownMenuRadioItem
                                   key={option.value}
                                   value={option.value}
-                                  // pr-8 得留着：选中标记是绝对定位在右侧的，收窄右
-                                  // 内边距会让它压到描述文字上。
+                                  // pr-8 must stay: the selected marker is absolutely positioned on the right, and narrowing the right
+                                  // padding would make it overlap the description text.
                                   className="items-start gap-2.5 rounded-md py-2 pl-2 pr-8 focus:bg-white/[0.075] data-checked:bg-white/[0.05] data-checked:focus:bg-white/[0.075]"
                                 >
                                   <option.icon className="mt-0.5 shrink-0 text-muted-foreground" />
@@ -16128,8 +16137,8 @@ export function SuperChatPanel({
                             setActiveFreezoneSkillSuggestionIndex(0);
                             restoreDraftFocusRef.current = true;
                           }}
-                          aria-label="选择 Skill"
-                          title="选择 Skill"
+                          aria-label={i18n.t("superchat.panel.skills.pick")}
+                          title={i18n.t("superchat.panel.skills.pick")}
                           aria-expanded={showFreezoneSkillSuggestions}
                         >
                           <Package className="size-4" />
@@ -16214,8 +16223,8 @@ export function SuperChatPanel({
       {isFreezoneLayout && freezoneSkillMenuExplicitOpen && freezoneSkillMenuPosition && createPortal(
         <div
           data-freezone-skill-menu="true"
-          // 圆角一律写死 px：本项目把 --radius 调到了 1rem，rounded-lg/xl 实际是
-          // 16/20px，比 tailwind 默认大一圈，用语义档位会不知不觉又变圆（用户要求收小）。
+          // Corner radii are hard-coded in px: this project sets --radius to 1rem, so rounded-lg/xl are actually
+          // 16/20px, a size larger than tailwind defaults; using semantic tiers would quietly make things round again (the user asked for tighter).
           className="fixed z-[1000] w-[min(380px,calc(100vw-16px))] overflow-hidden rounded-[10px] border border-white/[0.12] bg-[#18191d]/95 p-3 text-foreground shadow-[0_18px_48px_rgba(0,0,0,0.52)] backdrop-blur-xl"
           style={{
             left: freezoneSkillMenuPosition.left,
@@ -16242,7 +16251,7 @@ export function SuperChatPanel({
                   aria-expanded={freezoneSkillCreateMenuOpen}
                 >
                   <Plus className="size-3.5" />
-                  创建
+                  {i18n.t("superchat.panel.skills.create")}
                   <ChevronDown className={cn("size-3 transition", freezoneSkillCreateMenuOpen && "rotate-180")} />
                 </button>
                 {freezoneSkillCreateMenuOpen && (
@@ -16309,7 +16318,7 @@ export function SuperChatPanel({
                   );
                 }
               }}
-              placeholder="搜索 Skill"
+              placeholder={i18n.t("superchat.panel.skills.search")}
               className="h-9 w-full rounded-[8px] border border-white/[0.08] bg-white/[0.06] pl-8 pr-3 text-sm text-foreground outline-none placeholder:text-white/32 transition focus:border-white/[0.18] focus:bg-white/[0.08]"
             />
           </label>
@@ -16347,12 +16356,12 @@ export function SuperChatPanel({
             ) : (
               <div className="px-1 pb-1 pt-0.5 text-xs leading-5 text-muted-foreground/78">
                 <div className="font-medium text-foreground/78">
-                  {freezoneSkillMenuSearch.trim() ? "没有匹配的 Skill" : "这里暂时没有 Skill"}
+                  {freezoneSkillMenuSearch.trim() ? i18n.t("superchat.panel.skills.noMatch") : i18n.t("superchat.panel.skills.noneHere")}
                 </div>
                 {!freezoneSkillMenuSearch.trim() && (
                   <>
                     <div className="mt-1 text-muted-foreground/62">
-                      可以让 Agent 把当前画布总结成 Skill，也可以描述你的工作流来创建专属技能。
+                      {i18n.t("superchat.panel.skills.noneHint2")}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {FREEZONE_SKILL_EMPTY_ACTIONS.map((action) => (
@@ -16394,10 +16403,10 @@ export function SuperChatPanel({
         <Dialog open={agentBillingOpen} onOpenChange={setAgentBillingOpen}>
           <DialogContent className="w-[calc(100vw-2rem)] border-white/10 bg-background/95 p-0 backdrop-blur-xl sm:max-w-[min(46.08rem,calc(100vw-3rem))]">
             <div className="border-b border-white/10 px-5 py-4">
-              <DialogTitle>虾导 Agent 积分参考</DialogTitle>
+              <DialogTitle>{i18n.t("superchat.panel.billing.dialogTitle")}</DialogTitle>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {agentBillingReference?.note
-                  ?? "普通聊天和画布操作免费；仅高级 Agent 能力交付计费。"}
+                  ?? i18n.t("superchat.panel.billing.defaultNote")}
               </p>
             </div>
             <div className="max-h-[65vh] overflow-auto px-5 py-4">
@@ -16405,9 +16414,9 @@ export function SuperChatPanel({
                 <table className="w-full min-w-[640px] table-fixed text-left text-xs">
                   <thead className="bg-white/[0.05] text-muted-foreground">
                     <tr>
-                      <th className="w-[24%] px-3 py-2.5 font-medium">任务</th>
-                      <th className="w-[54%] px-3 py-2.5 font-medium">包含内容</th>
-                      <th className="w-[22%] px-3 py-2.5 font-medium">Agent 计费</th>
+                      <th className="w-[24%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colTask")}</th>
+                      <th className="w-[54%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colIncludes")}</th>
+                      <th className="w-[22%] px-3 py-2.5 font-medium">{i18n.t("superchat.panel.billing.colBilling")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.07]">
@@ -16427,7 +16436,7 @@ export function SuperChatPanel({
                     {!agentBillingReference && (
                       <tr>
                         <td colSpan={3} className="px-3 py-8 text-center text-muted-foreground">
-                          正在加载计费参考…
+                          {i18n.t("superchat.panel.billing.loading")}
                         </td>
                       </tr>
                     )}
@@ -16435,9 +16444,7 @@ export function SuperChatPanel({
                 </table>
               </div>
               <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
-                表中区间用于提前了解消耗量级，最终以系统配置的功能价格和实际成功交付数量为准。
-                图片、音频和视频等模型生成费用不包含在本表中，仍由 NewAPI 按原有规则独立结算。
-                工具重试和内部多步调用不会重复收取 Agent 交付费用。
+                {i18n.t("superchat.panel.billing.footnote")}
               </p>
             </div>
           </DialogContent>

@@ -19,26 +19,26 @@ beforeAll(async () => {
         translation: {
           assets: {
             common: {
-              edit: "编辑",
-              delete: "删除",
-              generated: "已生成",
-              missing: "未生成",
+              edit: "Edit",
+              delete: "Delete",
+              generated: "Ready",
+              missing: "Not generated",
             },
             props: {
-              reference: "参考图",
-              noReference: "未生成参考图",
-              noDescription: "暂无描述",
-              generateReference: "生成参考图",
-              generatingReference: "生成中...",
-              regenerateReference: "重生参考图",
-              owner: "所属角色",
+              reference: "Reference image",
+              noReference: "Reference image missing",
+              noDescription: "No description",
+              generateReference: "Generate reference",
+              generatingReference: "Generating...",
+              regenerateReference: "Regenerate reference",
+              owner: "Owner",
               types: {
-                weapon: "武器",
-                accessory: "饰品",
-                artifact: "神器/法器",
-                document: "文书",
-                furniture: "家具",
-                object: "其他物件",
+                weapon: "Weapon",
+                accessory: "Accessory",
+                artifact: "Artifact",
+                document: "Document",
+                furniture: "Furniture",
+                object: "Other object",
               },
             },
           },
@@ -80,15 +80,15 @@ describe("PropAssetCard", () => {
     });
 
     expect(screen.getByText("七星剑")).toBeInTheDocument();
-    expect(screen.getByText("武器")).toBeInTheDocument();
+    expect(screen.getByText("Weapon")).toBeInTheDocument();
     expect(screen.getByText("所属角色：李青")).toBeInTheDocument();
     expect(screen.getByText("参考图 已生成")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重生参考图" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate reference" })).toBeInTheDocument();
 
-    expect(screen.queryByRole("button", { name: /上传/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Upload/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /删除参考图/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "重生参考图" }));
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate reference" }));
     expect(handlers.onGenerateReference).toHaveBeenCalledTimes(1);
   });
 
@@ -103,8 +103,8 @@ describe("PropAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
   });
 
   it("falls back when a convention URL points at a missing file", () => {
@@ -121,8 +121,8 @@ describe("PropAssetCard", () => {
 
     fireEvent.error(screen.getByAltText("密信 参考图"));
 
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
   });
 
   it("retries the convention URL after an upload finishes", () => {
@@ -150,7 +150,7 @@ describe("PropAssetCard", () => {
     );
 
     fireEvent.error(screen.getByAltText("密信 参考图"));
-    expect(screen.getByText("未生成参考图")).toBeInTheDocument();
+    expect(screen.getByText("Reference image missing")).toBeInTheDocument();
 
     view.rerender(
       <I18nextProvider i18n={i18n}>
@@ -172,7 +172,7 @@ describe("PropAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByText("神器/法器")).toBeInTheDocument();
+    expect(screen.getByText("Artifact")).toBeInTheDocument();
     expect(screen.queryByText("artifact")).not.toBeInTheDocument();
   });
 
@@ -187,9 +187,9 @@ describe("PropAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByRole("button", { name: "编辑" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "生成参考图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate reference" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
   it("opens a reference image preview from the card image", () => {
@@ -227,7 +227,7 @@ describe("PropAssetCard", () => {
       { generating: true },
     );
 
-    expect(screen.getByRole("button", { name: "生成中..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generating..." })).toBeDisabled();
   });
 
   it("renders the NiceGUI empty description fallback", () => {
@@ -241,6 +241,6 @@ describe("PropAssetCard", () => {
       notes: "",
     });
 
-    expect(screen.getByText("暂无描述")).toBeInTheDocument();
+    expect(screen.getByText("No description")).toBeInTheDocument();
   });
 });

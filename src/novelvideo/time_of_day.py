@@ -24,7 +24,7 @@ TIME_OF_DAY_ALIASES_BY_CANONICAL: dict[str, tuple[str, ...]] = {
     "morning": ("morning", "buổi sáng", "sáng"),
     "noon": ("noon", "midday", "buổi trưa", "trưa"),
     "afternoon": ("afternoon", "buổi chiều", "chiều"),
-    "day": ("day", "daytime", "ban ngày"),
+    "day": ("day", "daytime", "ngày", "ban ngày"),
     "dusk": ("dusk", "evening", "twilight", "sunset", "hoàng hôn", "chiều tối", "buổi tối"),
     "night": (
         "night",

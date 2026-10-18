@@ -216,7 +216,7 @@ async def test_org_cognee_stage_does_not_retry_in_process(wired):
         with pytest.raises(RuntimeError):
             await CogneeStore._run_cognee_pipeline_with_retry(
                 store,
-                stage_name="知识图谱构建",
+                stage_name="Knowledge graph build",
                 operation=operation,
                 log=lambda _message: None,
             )

@@ -10,7 +10,7 @@ function ControlledMentionTextarea() {
   const [value, setValue] = useState("");
   return (
     <MentionTextarea
-      aria-label="画面描述"
+      aria-label="Visual description"
       value={value}
       onChange={(event) => setValue(event.target.value)}
       mentionLabels={["陆辰_青年时期", "羊皮笔记本"]}
@@ -22,7 +22,7 @@ describe("MentionTextarea", () => {
   it("opens candidates after @ and inserts the selected mention", () => {
     render(<ControlledMentionTextarea />);
 
-    const textarea = screen.getByRole("textbox", { name: "画面描述" });
+    const textarea = screen.getByRole("textbox", { name: "Visual description" });
     fireEvent.change(textarea, {
       target: { value: "@", selectionStart: 1, selectionEnd: 1 },
     });
@@ -37,7 +37,7 @@ describe("MentionTextarea", () => {
     render(<ControlledMentionTextarea />);
 
     const textarea = screen.getByRole("textbox", {
-      name: "画面描述",
+      name: "Visual description",
     }) as HTMLTextAreaElement;
     fireEvent.change(textarea, {
       target: { value: "@", selectionStart: 1, selectionEnd: 1 },
@@ -56,7 +56,7 @@ describe("MentionTextarea", () => {
     render(<ControlledMentionTextarea />);
 
     const textarea = screen.getByRole("textbox", {
-      name: "画面描述",
+      name: "Visual description",
     }) as HTMLTextAreaElement;
     fireEvent.change(textarea, {
       target: {
@@ -73,7 +73,7 @@ describe("MentionTextarea", () => {
     render(<ControlledMentionTextarea />);
 
     const textarea = screen.getByRole("textbox", {
-      name: "画面描述",
+      name: "Visual description",
     }) as HTMLTextAreaElement;
     fireEvent.change(textarea, {
       target: { value: "@", selectionStart: 1, selectionEnd: 1 },

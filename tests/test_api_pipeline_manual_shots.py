@@ -123,7 +123,7 @@ async def test_pipeline_status_requires_voice_setup_before_tts(monkeypatch, tmp_
 
     async def fake_voice_prerequisites(**kwargs):
         assert kwargs["episode"] == 1
-        return ["Beat 01 解说声线缺失：请上传或录制解说人音频"]
+        return ["Beat 01 narrator voice is missing: upload or record narrator audio"]
 
     monkeypatch.setattr(pipeline, "resolve_project_scope", fake_resolve_project_scope)
     monkeypatch.setattr(pipeline, "_collect_voice_prereq_errors", fake_voice_prerequisites)
@@ -157,20 +157,20 @@ async def test_pipeline_status_requires_voice_setup_before_tts(monkeypatch, tmp_
 
     data = response["data"]
     assert data["next_step"] == "voice_setup"
-    assert data["next_step_name"] == "准备配音声线"
+    assert data["next_step_name"] == "Prepare voiceover voices"
     assert data["audio_prerequisites"] == {
         "checked": True,
         "ready": False,
-        "errors": ["Beat 01 解说声线缺失：请上传或录制解说人音频"],
+        "errors": ["Beat 01 narrator voice is missing: upload or record narrator audio"],
     }
 
 
 def test_pipeline_script_status_accepts_current_sqlite_beat_fields():
     from novelvideo.api.routes.pipeline import _beat_has_script_content
 
-    assert _beat_has_script_content({"narration": "旁白", "visual_description": ""}) is True
-    assert _beat_has_script_content({"narration": "", "visual_description": "黑屏标题"}) is True
-    assert _beat_has_script_content({"narration_segment": "旧字段"}) is True
+    assert _beat_has_script_content({"narration": "Narration", "visual_description": ""}) is True
+    assert _beat_has_script_content({"narration": "", "visual_description": "Black screen title"}) is True
+    assert _beat_has_script_content({"narration_segment": "legacy field"}) is True
     assert _beat_has_script_content({"narration": "", "visual_description": ""}) is False
 
 
@@ -185,17 +185,17 @@ def test_pipeline_audio_status_ignores_beats_that_do_not_require_audio(tmp_path)
         {
             "beat_number": 1,
             "audio_type": "narration",
-            "narration_segment": "需要配音。",
+            "narration_segment": "Needs voiceover.",
         },
         {
             "beat_number": 2,
             "audio_type": "action",
-            "narration_segment": "无声动作镜头。",
+            "narration_segment": "Silent action shot.",
         },
         {
             "beat_number": 3,
             "audio_type": "dialogue",
-            "speaker": "角色A",
+            "speaker": "CharacterA",
             "narration_segment": "",
         },
     ]

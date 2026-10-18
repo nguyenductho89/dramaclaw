@@ -6,44 +6,44 @@ import type {
 } from "@/api/ops";
 
 /**
- * 前端「视频合成」时间线模型。
+ * Frontend "video compose" timeline model.
  *
- * 这层是纯逻辑（无 DOM / React），把 libtv 风格的多轨时间线编辑状态映射到后端
- * 已有的 `submitFreezoneVideoCompose` 契约（{@link FreezoneVideoComposePayload}）。
- * 渲染/编码全部由后端 FFmpeg 完成 —— 前端只负责「编排 + 预览」。
+ * This layer is pure logic (no DOM / React), mapping the libtv-style multi-track timeline editing state to the backend's
+ * existing `submitFreezoneVideoCompose` contract ({@link FreezoneVideoComposePayload}).
+ * All rendering/encoding is done by the backend FFmpeg - the frontend is only responsible for "arranging + previewing".
  *
- * v2：每个片段在输出时间线上的位置由显式 `timelineStartMs` 决定，允许片段之间留有
- * 间隙、也允许把片段拖到任意位置（libtv 风格自由定位）。同一轨道内不应重叠（由 UI
- * 拖拽时约束）。后端 payload 本身就支持任意 timelineStart，这里据此排布。
- * 同种类可有多条轨道（多轨），渲染顺序即数组顺序。
+ * v2: the position of each clip on the output timeline is decided by an explicit `timelineStartMs`, allowing gaps between clips
+ * and dragging clips to any position (libtv-style free positioning). Clips within the same track should not overlap (constrained by the UI
+ * during dragging). The backend payload itself supports an arbitrary timelineStart, and the layout here follows it.
+ * There may be several tracks of the same kind (multi-track), and the render order is the array order.
  */
 
 export type ComposeTrackKind = "video" | "audio";
 
 export interface ComposeClip {
-  /** 本地片段 id，同时作为提交时的 itemId。 */
+  /** Local clip id, also used as the itemId on submission. */
   id: string;
-  /** 来源画布节点 id（用于回溯缩略图/名称）；外部注入的素材可为 null。 */
+  /** Source canvas node id (for tracing back the thumbnail/name); may be null for externally injected materials. */
   nodeId: string | null;
   kind: ComposeTrackKind;
   sourceUrl: string;
   displayName: string | null;
-  /** 缩略图（视频节点的 previewImageUrl）；音频/缺失时为 null。 */
+  /** Thumbnail (the video node's previewImageUrl); null for audio / when missing. */
   thumbUrl: string | null;
-  /** 源媒体完整时长（ms）。探测到元数据前为 null。 */
+  /** Full duration of the source media (ms). null until metadata is probed. */
   durationMs: number | null;
-  /** 片段左边缘在输出时间线上的位置（ms）。允许间隙；同轨不应重叠。 */
+  /** Position of the clip's left edge on the output timeline (ms). Gaps allowed; clips in the same track should not overlap. */
   timelineStartMs: number;
-  /** 源内裁剪起点（ms）。 */
+  /** Trim start point within the source (ms). */
   trimStartMs: number;
-  /** 源内裁剪终点（ms，不含）。必须 > trimStartMs。 */
+  /** Trim end point within the source (ms, exclusive). Must be > trimStartMs. */
   trimEndMs: number;
-  /** 0..1 音量。 */
+  /** 0..1 volume. */
   volume: number;
   muted: boolean;
   /**
-   * 播放倍速（变速）。1 = 原速。时间线上占用长度 = 源裁剪长度 / speed。
-   * ⚠️ 导出是否真正变速取决于后端 compose 接口是否支持该字段。
+   * Playback speed (speed change). 1 = original speed. Length occupied on the timeline = source trim length / speed.
+   * Warning: whether the export really changes speed depends on whether the backend compose endpoint supports this field.
    */
   speed: number;
 }
@@ -51,49 +51,49 @@ export interface ComposeClip {
 export interface ComposeTrack {
   id: string;
   kind: ComposeTrackKind;
-  /** 顺序即首尾相接的排布顺序。 */
+  /** The order is the end-to-end layout order. */
   clips: ComposeClip[];
 }
 
 /**
- * 整条合成时间线的封面。两种来源都归一成一张已上传的稳定图片 URL：
- *  - `frame`：从时间线某帧截取（`frameMs` 记录时间线位置，用于回显选帧滑块）；
- *  - `upload`：用户上传的自定义图片（`frameMs` 为 null）。
- * 仅持久化已上传的 `url`；本地未上传前的预览不进此结构（避免把 base64 写进草稿）。
+ * The cover of the whole compose timeline. Both sources are normalized into one uploaded stable image URL:
+ *  - `frame`: captured from a frame on the timeline (`frameMs` records the timeline position, used to echo the frame-picking slider);
+ *  - `upload`: a custom image uploaded by the user (`frameMs` is null).
+ * Only the uploaded `url` is persisted; a local preview before upload does not enter this structure (avoiding writing base64 into the draft).
  */
 export interface ComposeCover {
   source: "frame" | "upload";
-  /** 选帧来源时的时间线位置（ms）；upload 来源为 null。 */
+  /** Timeline position (ms) for the frame source; null for the upload source. */
   frameMs: number | null;
-  /** 已上传的稳定封面 URL；落地后才有值。 */
+  /** The uploaded stable cover URL; only has a value once it has landed. */
   url: string | null;
 }
 
 export interface ComposeTimelineState {
   tracks: ComposeTrack[];
   resolution: FreezoneVideoComposeResolution;
-  /** 合成封面（未设置时为空）。随草稿持久化。 */
+  /** The compose cover (empty when not set). Persisted with the draft. */
   cover?: ComposeCover | null;
 }
 
-/** 默认裁剪长度（ms）—— 源时长未知时的兜底，避免长度为 0 无法排布/预览。 */
+/** Default trim length (ms) - a fallback when the source duration is unknown, avoiding a zero length that cannot be laid out/previewed. */
 export const FALLBACK_CLIP_MS = 5000;
 export const MIN_CLIP_MS = 200;
 
 /**
- * 主视频轨 / 主音频轨的固定 id。主视频轨是唯一的「磁吸」轨：片段永远无缝紧贴、
- * 拖拽只能换序；附加视频轨与音频轨自由定位。补位（{@link compactVideoTracks}）
- * 与拖拽分支都以此 id 判定，保持同一条规则。
+ * Fixed ids of the main video track / main audio track. The main video track is the only "magnetic" track: clips always stay flush without gaps,
+ * and dragging can only reorder; additional video tracks and audio tracks are freely positioned. Gap-filling ({@link compactVideoTracks})
+ * and the drag branch both judge by this id, keeping to the same rule.
  */
 export const VIDEO_TRACK_ID = "track_video";
 export const AUDIO_TRACK_ID = "track_audio";
 
-/** 源裁剪长度（ms）—— 消费掉的源媒体时长，与倍速无关。 */
+/** Source trim length (ms) - the source media duration consumed, independent of speed. */
 export function sourceSpanMs(clip: ComposeClip): number {
   return Math.max(0, clip.trimEndMs - clip.trimStartMs);
 }
 
-/** 片段在时间线上占用的长度（ms）= 源裁剪长度 / 倍速。 */
+/** Length the clip occupies on the timeline (ms) = source trim length / speed. */
 export function clipLengthMs(clip: ComposeClip): number {
   return sourceSpanMs(clip) / (clip.speed > 0 ? clip.speed : 1);
 }
@@ -105,8 +105,8 @@ export interface LaidClip {
 }
 
 /**
- * 按各片段显式的 `timelineStartMs` 排布（升序），算出在输出时间线上的起止（ms）。
- * 允许间隙；负值被夹到 0。长度为 0 的片段跳过。
+ * Lay out by each clip's explicit `timelineStartMs` (ascending), computing the start and end on the output timeline (ms).
+ * Gaps allowed; negative values are clamped to 0. Clips with zero length are skipped.
  */
 export function layoutTrack(track: ComposeTrack): LaidClip[] {
   return track.clips
@@ -119,9 +119,9 @@ export function layoutTrack(track: ComposeTrack): LaidClip[] {
 }
 
 /**
- * 把一条轨道的片段按数组顺序首尾相接地重新排布（magnetic / 无缝）：
- * timelineStartMs 从 0 起依次累加每段时间线长度，返回新的 clips 数组（不改原对象）。
- * 视频轨用它实现「剪映式」磁吸轨——拖拽换序后整条轨永远无缝紧贴、不留空隙。
+ * Re-lay out a track's clips end to end in array order (magnetic / seamless):
+ * timelineStartMs accumulates from 0 by each clip's timeline length, returning a new clips array (original objects unchanged).
+ * The video track uses it to implement a "CapCut-style" magnetic track - after a drag reorder the whole track always stays flush with no gaps.
  */
 export function packTrackClips(clips: ComposeClip[]): ComposeClip[] {
   let cursor = 0;
@@ -133,10 +133,10 @@ export function packTrackClips(clips: ComposeClip[]): ComposeClip[] {
 }
 
 /**
- * 把「主视频轨」按时间线顺序无缝补位（ripple）：删除 / 裁剪 / 变速后用它消除空隙，
- * 让主轨永远首尾紧贴。附加视频轨与音频轨保持自由定位、原样不动 —— 拖拽分支允许
- * 用户把附加轨片段摆到任意时间位置，这里若一并打包会把它们悄悄吸回 0、制造与主轨
- * 的时间重叠（导出被 hasOverlappingVideoClips 拦截）。
+ * Fill the "main video track" seamlessly in timeline order (ripple): after delete / trim / speed change use it to remove gaps,
+ * keeping the main track always flush end to end. Additional video tracks and audio tracks stay freely positioned and untouched - the drag branch lets
+ * the user place additional-track clips at any time position, and packing them here would quietly snap them back to 0, creating time overlap
+ * with the main track (export is then blocked by hasOverlappingVideoClips).
  */
 export function compactVideoTracks(
   state: ComposeTimelineState,
@@ -159,9 +159,9 @@ export function compactVideoTracks(
 }
 
 /**
- * 把探测到的源时长（clipId → ms）写回片段：仍停在兜底长度或超出源长的裁剪终点
- * 收到真实时长，然后主视频轨补位。不补位的话，按 5s 兜底排好的后继片段起点不会
- * 跟着右移，片段变长后就会与后继重叠。
+ * Write the probed source duration (clipId -> ms) back to clips: a trim end point still at the fallback length or beyond the source length
+ * receives the real duration, then the main video track is gap-filled. Without gap-filling, the start of the following clip laid out with the 5s fallback
+ * would not shift right, and once the clip gets longer it would overlap its successor.
  */
 export function applyProbedDurations(
   state: ComposeTimelineState,
@@ -189,9 +189,9 @@ export function applyProbedDurations(
 }
 
 /**
- * 拖拽换序时，根据被拖片段左缘在时间线上的落点（ms），算它该插入到「已无缝排布的
- * siblings」中的下标。判定基准是被拖片段的中心越过某 sibling 的中心即排到其前面。
- * siblings 必须已按时间线顺序排列。
+ * On drag reorder, from the drop position (ms) of the dragged clip's left edge on the timeline, compute the index at which it should be inserted into the
+ * "already seamlessly laid out siblings". The criterion is that the dragged clip's center crossing a sibling's center places it before that one.
+ * siblings must already be in timeline order.
  */
 export function reorderIndexForDrag(
   siblings: ComposeClip[],
@@ -209,8 +209,8 @@ export function reorderIndexForDrag(
 }
 
 /**
- * 一条轨道上某片段紧邻的左右邻居边界（按时间线位置排序后的前一段末尾 / 后一段开头）。
- * 拖拽 / 裁剪时用来把片段约束在邻居之间、避免重叠。无邻居侧返回 null。
+ * The boundaries of the left and right neighbors immediately adjacent to a clip on a track (the previous clip's end / next clip's start after sorting by timeline position).
+ * Used to constrain a clip between its neighbors during drag / trim to avoid overlap. Returns null on a side with no neighbor.
  */
 export function neighborBoundsMs(
   track: ComposeTrack,
@@ -225,7 +225,7 @@ export function neighborBoundsMs(
   };
 }
 
-/** 整个时间线的总时长（ms）= 各轨道排布后末尾的最大值。 */
+/** Total duration of the whole timeline (ms) = the largest end after laying out each track. */
 export function timelineDurationMs(state: ComposeTimelineState): number {
   let max = 0;
   for (const track of state.tracks) {
@@ -238,13 +238,13 @@ export function timelineDurationMs(state: ComposeTimelineState): number {
 
 export interface ActiveClip {
   laid: LaidClip;
-  /** 该播放头时刻对应的「源媒体内」时间（ms）。 */
+  /** The time within the source media (ms) corresponding to that playhead moment. */
   sourceMs: number;
 }
 
 /**
- * 给定播放头位置，返回某条轨道上当前命中的片段及其源内时间。
- * 落在片段之间的空隙 / 末尾之外时返回 null。
+ * Given the playhead position, return the clip currently hit on a track and its in-source time.
+ * Returns null when it falls in a gap between clips / beyond the end.
  */
 export function activeClipAt(
   track: ComposeTrack,
@@ -267,7 +267,7 @@ export interface BuildComposeOptions {
   fps?: number;
 }
 
-/** 把时间线状态映射成后端 compose 接口入参（ms → 秒）。空轨道被剔除。 */
+/** Map the timeline state to the backend compose endpoint's input (ms -> seconds). Empty tracks are dropped. */
 export function buildComposePayload(
   state: ComposeTimelineState,
   options: BuildComposeOptions = {},
@@ -284,7 +284,7 @@ export function buildComposePayload(
         sourceEnd: clip.trimEndMs / 1000,
         volume: clip.volume,
         muted: clip.muted,
-        // ⚠️ 后端需支持该字段才会真正变速；否则被忽略（导出按原速）。
+        // Warning: the backend must support this field for the speed to really change; otherwise it is ignored (export at original speed).
         speed: clip.speed > 0 ? clip.speed : 1,
       })),
     }))
@@ -296,13 +296,13 @@ export function buildComposePayload(
     nodeId: options.nodeId,
     resolution: state.resolution,
     fps: options.fps ?? 30,
-    // 封面作为成片元信息返回，前端写入结果视频节点的 previewImageUrl / poster。
+    // The cover is returned as result video metadata, and the frontend writes it into the result video node's previewImageUrl / poster.
     coverUrl: state.cover?.url ?? null,
     tracks,
   };
 }
 
-/** 时间线是否有任何可导出的片段。 */
+/** Whether the timeline has any exportable clip. */
 export function hasExportableClips(state: ComposeTimelineState): boolean {
   return state.tracks.some((track) =>
     track.clips.some((clip) => clipLengthMs(clip) > 0),
@@ -310,17 +310,17 @@ export function hasExportableClips(state: ComposeTimelineState): boolean {
 }
 
 /**
- * 是否存在「时间上重叠的视频片段」（跨所有视频轨道合并后按时间排序判断）。
- * MVP 后端 compose 不支持视频重叠合成，导出前据此拦截并给出明确提示。
- * 音频不在此判断内（多条音频轨可叠加混音）。1ms 容差吸收浮点取整误差。
+ * Whether there are "time-overlapping video clips" (judged after merging across all video tracks and sorting by time).
+ * The MVP backend compose does not support overlapping video compose, so this is used to block before export and give a clear message.
+ * Audio is not judged here (multiple audio tracks can be layered and mixed). A 1ms tolerance absorbs floating-point rounding error.
  */
 export function hasOverlappingVideoClips(state: ComposeTimelineState): boolean {
   return overlappingVideoClipIds(state).size > 0;
 }
 
 /**
- * 返回所有「与其它视频片段时间重叠」的视频片段 id（跨所有视频轨道）。
- * 用于在时间轴上把冲突片段高亮出来提示用户。1ms 容差吸收浮点取整。
+ * Return the ids of all video clips that "overlap other video clips in time" (across all video tracks).
+ * Used to highlight conflicting clips on the timeline to warn the user. A 1ms tolerance absorbs floating-point rounding.
  */
 export function overlappingVideoClipIds(state: ComposeTimelineState): Set<string> {
   const laid = state.tracks
@@ -330,7 +330,7 @@ export function overlappingVideoClipIds(state: ComposeTimelineState): Set<string
   const ids = new Set<string>();
   for (let i = 0; i < laid.length; i += 1) {
     for (let j = i + 1; j < laid.length; j += 1) {
-      // 已按起点排序：一旦后者起点 ≥ 前者终点，更后面的更不会与 i 重叠，提前停。
+      // Already sorted by start: once the latter's start >= the former's end, later ones overlap i even less, so stop early.
       if (laid[j].timelineStartMs >= laid[i].timelineEndMs - 1) break;
       ids.add(laid[i].clip.id);
       ids.add(laid[j].clip.id);

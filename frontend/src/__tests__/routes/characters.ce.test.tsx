@@ -132,8 +132,8 @@ vi.mock("@/lib/queries/characters", () => ({
         {
           name: "Li Qing",
           aliases: [],
-          role: "主角",
-          gender: "男",
+          role: "Lead",
+          gender: "Male",
           age_group: "middle",
           is_main: true,
           description: "Lead character",
@@ -152,8 +152,8 @@ vi.mock("@/lib/queries/characters", () => ({
         {
           name: "Li Qing",
           aliases: [],
-          role: "主角",
-          gender: "男",
+          role: "Lead",
+          gender: "Male",
           age_group: "middle",
           is_main: true,
           description: "Lead character",
@@ -246,7 +246,7 @@ beforeAll(async () => {
       },
       zh: {
         translation: {
-          common: { novelImportRequired: "请先导入小说" },
+          common: { novelImportRequired: "Please import a novel first" },
         },
       },
     },
@@ -313,7 +313,7 @@ describe("characters page CE generation credit gating", () => {
 
   it.each([
     ["en", "Please import a novel first"],
-    ["zh", "请先导入小说"],
+    ["zh", "Please import a novel first"],
   ])(
     "localizes the backend prerequisite error in %s without starting a missing task stream",
     async (language, expectedMessage) => {
@@ -321,7 +321,7 @@ describe("characters page CE generation credit gating", () => {
       buildCharactersMutationMock.mockResolvedValue({
         ok: false,
         code: "NOVEL_IMPORT_REQUIRED",
-        error: "请先导入小说",
+        error: "Please import a novel first",
       });
       const user = userEvent.setup();
       renderCharactersPage();

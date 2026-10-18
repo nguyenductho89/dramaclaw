@@ -116,7 +116,7 @@ function makeBeat(overrides: Partial<Beat> = {}): Beat {
     narration_segment: "我带着丧尸病毒样本来，坠入闹市街头。",
     visual_description: "阳光刺眼的繁忙街头",
     scene_ref: { scene_id: "闹市街头" },
-    time_of_day: "午后",
+    time_of_day: "Afternoon",
     audio_type: "narration",
     video_mode: "first_frame",
     video_prompt: "",
@@ -147,18 +147,18 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("台词")).toBeInTheDocument();
-    expect(screen.getByText("画面描述")).toBeInTheDocument();
-    expect(screen.queryByText("视频提示词")).not.toBeInTheDocument();
-    expect(screen.queryByText("关键帧提示词")).not.toBeInTheDocument();
+    expect(screen.getByText("Lines")).toBeInTheDocument();
+    expect(screen.getByText("Visual description")).toBeInTheDocument();
+    expect(screen.queryByText("Video prompt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Keyframe prompt")).not.toBeInTheDocument();
     expect(screen.queryByText(/Fish Speech|fishSpeechPrompt/)).not.toBeInTheDocument();
-    expect(screen.getByText("类型")).toBeInTheDocument();
-    expect(screen.getByText("场景")).toBeInTheDocument();
-    expect(screen.getByText("场景变体")).toBeInTheDocument();
-    expect(screen.getByText("时间")).toBeInTheDocument();
-    expect(screen.getByText("出场身份")).toBeInTheDocument();
-    expect(screen.getByText("出场道具")).toBeInTheDocument();
-    expect(screen.queryByText("更多")).not.toBeInTheDocument();
+    expect(screen.getByText("Type")).toBeInTheDocument();
+    expect(screen.getByText("Scene")).toBeInTheDocument();
+    expect(screen.getByText("Scene variant")).toBeInTheDocument();
+    expect(screen.getByText("Time")).toBeInTheDocument();
+    expect(screen.getByText("Identities")).toBeInTheDocument();
+    expect(screen.getByText("Props")).toBeInTheDocument();
+    expect(screen.queryByText("More")).not.toBeInTheDocument();
     expect(container.querySelector("details")).not.toBeInTheDocument();
     expect(screen.queryByText(/置景/)).not.toBeInTheDocument();
     expect(screen.queryByText("episode.workbench.text.setScene")).not.toBeInTheDocument();
@@ -190,10 +190,10 @@ describe("TextPane", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "无角色出场" }),
+      screen.getByRole("button", { name: "No character" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("本集身份未规划，请先到「脚本」页配置本集身份。"),
+      screen.queryByText("Episode identities not planned. Go to Script page to configure."),
     ).not.toBeInTheDocument();
   });
 
@@ -205,7 +205,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场身份" });
+    const group = screen.getByRole("group", { name: "Identities" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
@@ -213,7 +213,7 @@ describe("TextPane", () => {
     expect(buttons[0]).toHaveAttribute("aria-pressed", "false");
     expect(
       screen.getByText(
-        "未检测/未标注出场身份；如果确实没有角色出场，请选择「无角色出场」。",
+        "Identities are not detected or marked. If no character appears, choose \"No character\".",
       ),
     ).toBeInTheDocument();
 
@@ -228,7 +228,7 @@ describe("TextPane", () => {
     );
     expect(
       screen.queryByText(
-        "未检测/未标注出场身份；如果确实没有角色出场，请选择「无角色出场」。",
+        "Identities are not detected or marked. If no character appears, choose \"No character\".",
       ),
     ).not.toBeInTheDocument();
   });
@@ -245,7 +245,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const noCharacter = screen.getByRole("button", { name: "无角色出场" });
+    const noCharacter = screen.getByRole("button", { name: "No character" });
     expect(noCharacter).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "陈锋_和尚" }));
@@ -271,12 +271,12 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场身份" });
+    const group = screen.getByRole("group", { name: "Identities" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
     expect(buttons).toHaveLength(3);
-    expect(screen.getByText("（已移除）")).toBeInTheDocument();
+    expect(screen.getByText("(removed)")).toBeInTheDocument();
   });
 
   it("renders episode props and toggles detected_props", () => {
@@ -287,7 +287,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const group = screen.getByRole("group", { name: "出场道具" });
+    const group = screen.getByRole("group", { name: "Props" });
     const buttons = within(group)
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
@@ -316,7 +316,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByRole("button", { name: "无道具出场" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "No prop" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -341,9 +341,9 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const trigger = screen.getByRole("combobox", { name: "类型" });
+    const trigger = screen.getByRole("combobox", { name: "Type" });
     await user.click(trigger);
-    const dialogue = await screen.findByRole("option", { name: "对白" });
+    const dialogue = await screen.findByRole("option", { name: "Dialogue" });
     await user.click(dialogue);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -363,11 +363,11 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText("解说人")).toBeInTheDocument();
-    expect(screen.getByText("项目解说人")).toBeInTheDocument();
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.getByText("Narrator")).toBeInTheDocument();
+    expect(screen.getByText("Project narrator")).toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText("身份ID（如 陈锋_和尚），对白时必填"),
+      screen.queryByPlaceholderText("Identity ID (e.g. Chen_monk), required for dialogue"),
     ).not.toBeInTheDocument();
   });
 
@@ -383,9 +383,9 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("解说人")).not.toBeInTheDocument();
-    expect(screen.queryByText("项目解说人")).not.toBeInTheDocument();
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Project narrator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
   });
 
   it("does not show speaker controls for drama dialogue", () => {
@@ -400,11 +400,11 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText("身份ID（如 陈锋_和尚），对白时必填"),
+      screen.queryByPlaceholderText("Identity ID (e.g. Chen_monk), required for dialogue"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "说话人" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Speaker" })).not.toBeInTheDocument();
   });
 
   it("renders dialogue speaker as a single-select sourced from episode identities", async () => {
@@ -421,12 +421,12 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const speaker = screen.getByRole("combobox", { name: "说话人" });
+    const speaker = screen.getByRole("combobox", { name: "Speaker" });
     expect(speaker).toHaveTextContent("陈锋_和尚");
 
     await user.click(speaker);
     expect(await screen.findByRole("option", { name: "陆辰_青年" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "旧值_不在本集" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "旧值_不在本 eps" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: "陆辰_青年" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -446,15 +446,15 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
-    await user.click(await screen.findByRole("option", { name: "对白" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(await screen.findByRole("option", { name: "Dialogue" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
       audio_type: "dialogue",
       speaker: "",
     });
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
   });
 
   it("hides speaker controls for silence beats and clears speaker when switching away from dialogue", async () => {
@@ -470,16 +470,16 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
-    await user.click(await screen.findByRole("option", { name: "静音" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(await screen.findByRole("option", { name: "Mute" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
       audio_type: "silence",
       speaker: "",
     });
-    expect(screen.queryByText("说话人")).not.toBeInTheDocument();
-    expect(screen.queryByText("解说人")).not.toBeInTheDocument();
+    expect(screen.queryByText("Speaker")).not.toBeInTheDocument();
+    expect(screen.queryByText("Narrator")).not.toBeInTheDocument();
   });
 
   it("supports the NiceGUI silence audio type", async () => {
@@ -491,9 +491,9 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    const trigger = screen.getByRole("combobox", { name: "类型" });
+    const trigger = screen.getByRole("combobox", { name: "Type" });
     await user.click(trigger);
-    const silence = await screen.findByRole("option", { name: "静音" });
+    const silence = await screen.findByRole("option", { name: "Mute" });
     await user.click(silence);
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -513,10 +513,10 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "类型" }));
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
 
-    expect(screen.queryByRole("option", { name: "静音" })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "类型" })).toHaveTextContent("解说");
+    expect(screen.queryByRole("option", { name: "Mute" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Narration");
   });
 
   it("edits time_of_day with the shared closed choices", async () => {
@@ -524,18 +524,18 @@ describe("TextPane", () => {
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ time_of_day: "午后" })}
+          beat={makeBeat({ time_of_day: "Afternoon" })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "时间" }));
-    await user.click(await screen.findByRole("option", { name: "夜晚" }));
+    await user.click(screen.getByRole("combobox", { name: "Time" }));
+    await user.click(await screen.findByRole("option", { name: "Night" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
-    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "夜晚" });
+    expect(mutateAsync.mock.calls[0][0].data).toEqual({ time_of_day: "Night" });
   });
 
   it("shows non-standard time_of_day as a legacy choice and can clear it", async () => {
@@ -550,14 +550,14 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByRole("combobox", { name: "时间" })).toHaveTextContent(
-      "亥时（剧本原值）",
+    expect(screen.getByRole("combobox", { name: "Time" })).toHaveTextContent(
+      "亥时 (as written in the script)",
     );
 
-    await user.click(screen.getByRole("combobox", { name: "时间" }));
+    await user.click(screen.getByRole("combobox", { name: "Time" }));
     await user.click(
       await screen.findByRole("option", {
-        name: "无（保持场景图光线，不重打光）",
+        name: "None (keep the scene's lighting, no relight)",
       }),
     );
 
@@ -583,7 +583,7 @@ describe("TextPane", () => {
     // beat 上带着 variant_id: "雨夜"，变体选择器本来就该在。真正要验的是换场景后
     // variant_id 被清掉，下面那条断言已经盯着了。
     // Scene is now a base-scene dropdown sourced from the episode scene menu.
-    await user.click(screen.getByRole("combobox", { name: "场景" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene" }));
     await user.click(await screen.findByRole("option", { name: "森林" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -605,12 +605,12 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
-    await user.click(await screen.findByRole("option", { name: "漏水" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
+    await user.click(await screen.findByRole("option", { name: "Water leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "卫生间", variant_id: "漏水" },
+      scene_ref: { scene_id: "卫生间", variant_id: "Water leak" },
     });
   });
 
@@ -618,12 +618,12 @@ describe("TextPane", () => {
     const user = userEvent.setup();
     scenesState.records = [
       { name: "卫生间", base_scene_id: "", variant_id: "", time_of_day: "" },
-      { name: "卫生间_漏水", base_scene_id: "卫生间", variant_id: "漏水", time_of_day: "" },
+      { name: "卫生间_漏水", base_scene_id: "卫生间", variant_id: "Water leak", time_of_day: "" },
       {
         name: "卫生间_漏水_夜晚",
         base_scene_id: "卫生间",
-        variant_id: "漏水",
-        time_of_day: "夜晚",
+        variant_id: "Water leak",
+        time_of_day: "Night",
       },
     ];
     render(
@@ -636,15 +636,15 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
     expect(
       screen.queryByRole("option", { name: "漏水_夜晚" }),
     ).not.toBeInTheDocument();
-    await user.click(await screen.findByRole("option", { name: "漏水" }));
+    await user.click(await screen.findByRole("option", { name: "Water leak" }));
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[0][0].data).toEqual({
-      scene_ref: { scene_id: "卫生间", variant_id: "漏水" },
+      scene_ref: { scene_id: "卫生间", variant_id: "Water leak" },
     });
   });
 
@@ -653,15 +653,15 @@ describe("TextPane", () => {
     render(
       <Wrapper>
         <TextPane
-          beat={makeBeat({ scene_ref: { scene_id: "卫生间", variant_id: "漏水" } })}
+          beat={makeBeat({ scene_ref: { scene_id: "卫生间", variant_id: "Water leak" } })}
           project="demo"
           episode={1}
         />
       </Wrapper>,
     );
 
-    expect(screen.getByRole("combobox", { name: "场景" })).toHaveTextContent("卫生间");
-    expect(screen.getByRole("combobox", { name: "场景变体" })).toHaveTextContent("漏水");
+    expect(screen.getByRole("combobox", { name: "Scene" })).toHaveTextContent("卫生间");
+    expect(screen.getByRole("combobox", { name: "Scene variant" })).toHaveTextContent("Water leak");
     expect(screen.getByText("Render：将使用 卫生间_漏水_夜晚，锁图光")).toBeInTheDocument();
   });
 
@@ -678,7 +678,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene" }));
     await user.click(await screen.findByRole("option", { name: "森林" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     mutateAsync.mockClear();
@@ -713,7 +713,7 @@ describe("TextPane", () => {
       </Wrapper>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "场景变体" }));
+    await user.click(screen.getByRole("combobox", { name: "Scene variant" }));
     await user.click(await screen.findByRole("option", { name: "漏水_严重" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutateAsync.mock.calls[0][0].data).toEqual({

@@ -1,6 +1,6 @@
-"""统一的路径计算工具。
+"""Unified path computation helpers.
 
-所有资源路径都应通过此模块计算，不再存储在数据中。
+All resource paths should be computed through this module and no longer stored in data.
 """
 
 import json
@@ -23,21 +23,21 @@ def canonical_portrait_path(project_dir: Path, char_name: str) -> Path:
 
 
 def compute_portrait_path(project_dir: Path, char_name: str) -> str:
-    """动态计算头像路径。"""
+    """Dynamically compute the avatar path."""
     path = canonical_portrait_path(project_dir, char_name)
     return str(path) if path.exists() else ""
 
 
 def compute_scene_reference_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景参考图路径。
+    """Dynamically compute the scene reference image path.
 
-    2.0 主线只维护 master 源图；360/3GS/voxel 都从 master 或 pano_360 派生。
+    The 2.0 mainline only maintains the master source image; 360/3GS/voxel are all derived from master or pano_360.
     """
     return compute_scene_master_path(project_dir, scene_name)
 
 
 def compute_scene_master_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景 master 图路径，用于创建 DirectorWorld。"""
+    """Dynamically compute the scene master image path, used to create the DirectorWorld."""
     path = canonical_scene_master_path(project_dir, scene_name)
     return str(path) if path.exists() else ""
 
@@ -105,7 +105,7 @@ def canonical_scene_spatial_layout_path(project_dir: Path, scene_name: str) -> P
 
 
 def compute_scene_spatial_layout_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景级空间布局图路径，用于草图生成和 director 修正。"""
+    """Dynamically compute the scene-level spatial layout image path, used for sketch generation and director correction."""
     path = canonical_scene_spatial_layout_path(project_dir, scene_name)
     return str(path) if path.exists() else ""
 
@@ -125,16 +125,16 @@ def canonical_scene_reverse_master_path(project_dir: Path, scene_name: str) -> P
 
 
 def compute_scene_reverse_master_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景 reverse master 路径（BACK-FACING establishing view）。"""
+    """Dynamically compute the scene reverse master path (BACK-FACING establishing view)."""
     path = canonical_scene_reverse_master_path(project_dir, scene_name)
     return str(path) if path.exists() else ""
 
 
 def compute_scene_topdown_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景俯视/平面图路径。
+    """Dynamically compute the scene top-down / floor plan image path.
 
-    当前仍处在实验迁移期，因此兼容最近几轮测试文件名；以后稳定后应收敛到
-    `top_down.png` 或 `floor_plan.png`。
+    It is still in an experimental migration period, so file names from the last few rounds of testing are tolerated; once stable it should converge to
+    `top_down.png` or `floor_plan.png`.
     """
     return _first_existing_scene_file(
         project_dir,
@@ -151,7 +151,7 @@ def compute_scene_topdown_path(project_dir: Path, scene_name: str) -> str:
 
 
 def compute_scene_reverse_path(project_dir: Path, scene_name: str) -> str:
-    """动态计算场景反向/背面参考图路径。"""
+    """Dynamically compute the scene reverse/back reference image path."""
     return _first_existing_scene_file(
         project_dir,
         scene_name,
@@ -167,48 +167,48 @@ def compute_scene_reverse_path(project_dir: Path, scene_name: str) -> str:
 
 
 def compute_scene_world_model_pack_paths(project_dir: Path, scene_name: str) -> list[str]:
-    """返回 render 阶段的场景参考包。
+    """Return the scene reference bundle for the render stage.
 
-    正式主线不再附加旧 top_down/reverse 场景参考图；它们只作为 legacy
-    调试文件保留。需要稳定几何时应使用 pano_360、voxel world 或 3GS control frame。
+    The official mainline no longer attaches the old top_down/reverse scene reference images; they are kept only as legacy
+    debug files. When stable geometry is needed, use pano_360, the voxel world or the 3GS control frame.
     """
     paths = [compute_scene_master_path(project_dir, scene_name)]
     return [path for path in paths if path]
 
 
 def compute_scene_style_reference_path(project_dir: Path, scene_name: str) -> str:
-    """Legacy alias: 返回 master 源图。"""
+    """Legacy alias: return the master source image."""
     return compute_scene_master_path(project_dir, scene_name)
 
 
 def compute_director_ref_dir(project_dir: Path, episode: int, beat_num: int) -> Path:
-    """Beat 级导演模式参考目录。"""
+    """Beat-level director-mode reference directory."""
     return project_dir / "assets" / "director_refs" / f"ep{episode:03d}" / f"beat_{beat_num:02d}"
 
 
 def compute_director_color_ref_path(project_dir: Path, episode: int, beat_num: int) -> str:
-    """动态计算 beat 级导演彩图参考路径。"""
+    """Dynamically compute the beat-level director color-image reference path."""
     path = compute_director_ref_dir(project_dir, episode, beat_num) / "director_color_ref.png"
     return str(path) if path.exists() else ""
 
 
 def compute_director_sketch_ref_path(project_dir: Path, episode: int, beat_num: int) -> str:
-    """动态计算 beat 级导演线稿参考路径。"""
+    """Dynamically compute the beat-level director line-art reference path."""
     path = compute_director_ref_dir(project_dir, episode, beat_num) / "director_sketch_ref.png"
     return str(path) if path.exists() else ""
 
 
 def compute_director_blocking_ref_path(project_dir: Path, episode: int, beat_num: int) -> str:
-    """动态计算 DirectorWorld 控制图路径。"""
+    """Dynamically compute the DirectorWorld control image path."""
     path = compute_director_ref_dir(project_dir, episode, beat_num) / "director_blocking_ref.png"
     return str(path) if path.exists() else ""
 
 
 def compute_director_world_control_ref_path(project_dir: Path, episode: int, beat_num: int) -> str:
-    """动态计算原始 DirectorWorld 控制图路径。
+    """Dynamically compute the raw DirectorWorld control image path.
 
-    这是编辑器/截图导出的 raw control，用于锁定镜头、位置、遮挡和 actor/prop
-    marker；不应被当作美术风格参考，也不应被二次生成流程覆盖。
+    This is the raw control exported by the editor / screenshot, used to lock the camera, position, occlusion and actor/prop
+    markers; it must not be used as an art-style reference, nor overwritten by a second generation pass.
     """
     path = (
         compute_director_ref_dir(project_dir, episode, beat_num) / "director_world_control_ref.png"
@@ -217,12 +217,12 @@ def compute_director_world_control_ref_path(project_dir: Path, episode: int, bea
 
 
 def compute_director_view_meta_path(project_dir: Path, episode: int, beat_num: int) -> Path:
-    """Beat 级导演机位元数据路径。"""
+    """Beat-level director camera-position metadata path."""
     return compute_director_ref_dir(project_dir, episode, beat_num) / "director_view.json"
 
 
 def compute_prop_reference_path(project_dir: Path, prop_name: str) -> str:
-    """动态计算道具参考三视图路径。"""
+    """Dynamically compute the prop three-view reference image path."""
     path = canonical_prop_reference_path(project_dir, prop_name)
     return str(path) if path.exists() else ""
 
@@ -233,7 +233,7 @@ def canonical_prop_reference_path(project_dir: Path, prop_name: str) -> Path:
 
 
 def compute_identity_path(project_dir: Path, char_name: str, identity_name: str) -> str:
-    """动态计算身份参考图路径。"""
+    """Dynamically compute the identity reference image path."""
     path = canonical_identity_path(project_dir, char_name, identity_name)
     return str(path) if path.exists() else ""
 
@@ -248,7 +248,7 @@ def canonical_identity_path(project_dir: Path, char_name: str, identity_name: st
 
 
 def compute_identity_portrait_path(project_dir: Path, char_name: str, identity_name: str) -> str:
-    """动态计算身份级 portrait 路径（年龄变体等面部差异大的身份）。"""
+    """Dynamically compute the identity-level portrait path (identities with very different faces, such as age variants)."""
     preferred = canonical_identity_portrait_path(project_dir, char_name, identity_name)
     if preferred.exists():
         return str(preferred)
@@ -284,7 +284,7 @@ def canonical_identity_portrait_path(project_dir: Path, char_name: str, identity
 
 
 def compute_identity_costume_path(project_dir: Path, char_name: str, identity_name: str) -> str:
-    """动态计算身份级服装参考图路径。"""
+    """Dynamically compute the identity-level outfit reference image path."""
     path = canonical_identity_costume_path(project_dir, char_name, identity_name)
     return str(path) if path.exists() else ""
 
@@ -312,7 +312,7 @@ def compute_scoped_grid_filename(
     prefix: str = "grid",
     ext: str = "png",
 ) -> str:
-    """按 mode_key + beat_numbers 生成稳定唯一的整图文件名。"""
+    """Generate a stable, unique whole-image file name from mode_key + beat_numbers."""
     normalized = [int(beat) for beat in beat_numbers if beat is not None]
     if not mode_key or not normalized:
         raise ValueError("scoped grid filename requires mode_key and beat_numbers")
@@ -328,7 +328,7 @@ def resolve_render_grid_path(
     *,
     grid_index: int | None = None,
 ) -> Path:
-    """优先返回 scoped 唯一路径；没有则 fallback 到旧的 grid_XX.png。"""
+    """Prefer the scoped unique path; fall back to the old grid_XX.png if there is none."""
     mode_dir = project_dir / "grids" / f"ep{episode:03d}" / mode_key
     scoped_path = mode_dir / compute_scoped_grid_filename(
         mode_key,
@@ -358,7 +358,7 @@ def resolve_sketch_grid_path(
     beat_start: int | None = None,
     beat_end: int | None = None,
 ) -> Path:
-    """优先返回 scoped 草图文件；没有则 fallback 到旧 sketch_g / sketch_b。"""
+    """Prefer the scoped sketch file; fall back to the old sketch_g / sketch_b if there is none."""
     sketch_base = project_dir / "grids" / f"ep{episode:03d}" / "sketch"
     normalized = [int(beat) for beat in (beat_numbers or []) if beat is not None]
     if mode_key and normalized:
@@ -420,24 +420,24 @@ def resolve_sketch_grid_path(
 
 
 class PathResolver:
-    """项目资源路径计算器。"""
+    """Project resource path calculator."""
 
     def __init__(self, output_dir: str, episode: int):
         self.output_dir = Path(output_dir)
         self.episode = episode
         self._ep_str = f"ep{episode:03d}"
 
-    # === Beat 级别资源 ===
+    # === Beat-level resources ===
 
     def frame(self, beat_num: int) -> Path:
-        """首帧图片路径（显示用，可能经过裁剪处理）。"""
+        """First-frame image path (for display; may have gone through cropping)."""
         return self.output_dir / "frames" / self._ep_str / f"beat_{beat_num:02d}.png"
 
     def director_render(self, beat_num: int) -> Path:
-        """Director Render combined.png — Sprint C/D 的 3GS 主链路产物。
+        """Director Render combined.png -- the output of the Sprint C/D 3GS main chain.
 
-        路径：`director_control_frames/ep<NNN>/beat_<MM>/combined.png`，
-        由 PlayCanvas 直接截取实时 combined 画面，保留视口中的环境/actor 遮挡关系。
+        Path: `director_control_frames/ep<NNN>/beat_<MM>/combined.png`,
+        captured directly by PlayCanvas from the live combined view, keeping the environment/actor occlusion in the viewport.
         """
         return (
             self.output_dir
@@ -448,10 +448,10 @@ class PathResolver:
         )
 
     def video_input_frame(self, beat_num: int, *, slot: str = "first_frame") -> Path:
-        """视频输入派生帧路径。
+        """Video-input derived frame path.
 
-        这里存放从已选 render 裁出来的视频模型输入，不覆盖 `frames/...`
-        源资产，确保资产比例和视频输入比例分离。
+        This holds the video-model input cropped from the selected render, and does not overwrite the `frames/...`
+        source asset, keeping the asset ratio separate from the video input ratio.
         """
         safe_slot = "last_frame" if slot == "last_frame" else "first_frame"
         return (
@@ -522,11 +522,11 @@ class PathResolver:
         return None
 
     def first_frame_for_video(self, beat_num: int, *, use_director_render: bool = False) -> Path:
-        """视频生成用首帧路径。
+        """First-frame path used for video generation.
 
-        `use_director_render=True` 时才使用
-        `director_control_frames/.../combined.png`。默认走旧
-        `frames/.../beat_NN.png`，避免 stale Director Render 静默覆盖已确认首帧。
+        `director_control_frames/.../combined.png` is used only when
+        `use_director_render=True`. By default the old
+        `frames/.../beat_NN.png` is used, so that a stale Director Render does not silently overwrite a confirmed first frame.
         """
         director_render = self.director_render(beat_num)
         source = (
@@ -542,34 +542,34 @@ class PathResolver:
         return override or source
 
     def sketch(self, beat_num: int) -> Path:
-        """草图图片路径（显示用，类似 frame）。"""
+        """Sketch image path (for display, similar to frame)."""
         return self.output_dir / "sketches" / self._ep_str / f"beat_{beat_num:02d}.png"
 
     def sketches_dir(self) -> Path:
         return self.output_dir / "sketches" / self._ep_str
 
     def audio(self, beat_num: int) -> Path:
-        """音频路径。"""
+        """Audio path."""
         return self.output_dir / "audio" / self._ep_str / f"beat_{beat_num:02d}.mp3"
 
     def video(self, beat_num: int) -> Path:
-        """视频路径。"""
+        """Video path."""
         return self.output_dir / "videos" / "beats" / self._ep_str / f"beat_{beat_num:02d}.mp4"
 
-    # === 视频提示词 ===
+    # === Video prompts ===
 
     def video_prompt(self, beat_num: int) -> Path:
-        """视频提示词文件路径。"""
+        """Video prompt file path."""
         return self.output_dir / "prompts" / "videos" / self._ep_str / f"beat_{beat_num:02d}.txt"
 
-    # === Grid 级别资源 ===
+    # === Grid-level resources ===
 
     def grid(self, mode: str, grid_idx: int) -> Path:
-        """网格图片路径。grid_idx 从 1 开始。"""
+        """Grid image path. grid_idx starts from 1."""
         return self.output_dir / "grids" / self._ep_str / mode / f"grid_{grid_idx:02d}.png"
 
     def grid_prompt(self, mode: str, grid_idx: int) -> Path:
-        """网格提示词路径。"""
+        """Grid prompt path."""
         return (
             self.output_dir
             / "grids"
@@ -579,23 +579,23 @@ class PathResolver:
             / f"grid_{grid_idx:02d}.prompt.txt"
         )
 
-    # === Shot 级别资源 ===
+    # === Shot-level resources ===
 
     def shot_video(self, shot_id: int) -> Path:
-        """Shot 视频路径。"""
+        """Shot video path."""
         return self.output_dir / "videos" / "shots" / self._ep_str / f"shot_{shot_id:02d}.mp4"
 
     def shot_audio(self, shot_id: int) -> Path:
-        """Shot 合并 TTS 音轨路径。"""
+        """Shot merged TTS audio track path."""
         return self.output_dir / "audio" / "shots" / self._ep_str / f"shot_{shot_id:02d}.mp3"
 
     def shots_video_dir(self) -> Path:
         return self.output_dir / "videos" / "shots" / self._ep_str
 
-    # === Episode 级别资源 ===
+    # === Episode-level resources ===
 
     def final_video(self, filename: Optional[str] = None) -> Path:
-        """最终合成视频路径。"""
+        """Final composed video path."""
         if filename:
             return self.output_dir / "videos" / "episodes" / filename
         return self.output_dir / "videos" / "episodes" / f"{self._ep_str}_final.mp4"
@@ -604,11 +604,11 @@ class PathResolver:
         return self.output_dir / "videos" / "episodes"
 
     def script(self) -> Path:
-        """剧本 JSON 路径。"""
+        """Script JSON path."""
         return self.output_dir / "scripts" / f"{self._ep_str}_script.json"
 
     def script_mtime(self) -> Optional[datetime]:
-        """剧本文件的修改时间，文件不存在时返回 None。"""
+        """Modification time of the script file; None if the file does not exist."""
         script_path = self.script()
         if not script_path.exists():
             return None
@@ -618,12 +618,12 @@ class PathResolver:
             return None
 
     def clean_sketches(self) -> int:
-        """清理该集的 sketch 展示文件（sketches/epXXX/）。
+        """Clean up the sketch display files of this episode (sketches/epXXX/).
 
-        grids 目录保留不动。
+        The grids directory is left untouched.
 
         Returns:
-            删除的文件数
+            Number of files deleted
         """
         import shutil
 
@@ -635,7 +635,7 @@ class PathResolver:
         sketch_dir.mkdir(parents=True, exist_ok=True)
         return count
 
-    # === 目录 ===
+    # === Directories ===
 
     def frames_dir(self) -> Path:
         return self.output_dir / "frames" / self._ep_str
@@ -647,11 +647,11 @@ class PathResolver:
         return self.output_dir / "videos" / "beats" / self._ep_str
 
     def video_pool_dir(self) -> Path:
-        """视频池目录。"""
+        """Video pool directory."""
         return self.output_dir / "videos" / "beats" / self._ep_str / "pool"
 
     def video_pool_index(self) -> Path:
-        """视频池索引文件路径。"""
+        """Video pool index file path."""
         return resolve_state_index_path(
             self.output_dir / "videos" / "beats" / self._ep_str,
             "video_pool_index.json",
@@ -660,31 +660,31 @@ class PathResolver:
     def grids_dir(self, mode: str) -> Path:
         return self.output_dir / "grids" / self._ep_str / mode
 
-    # === Action Beat 资源（2.0 短剧模式） ===
+    # === Action Beat resources (2.0 short-drama mode) ===
 
     def action_grid(self, beat_num: int) -> Path:
-        """Action beat 5×5 网格图路径。"""
+        """Action beat 5x5 grid image path."""
         return self.output_dir / "grids" / self._ep_str / "action" / f"beat_{beat_num:02d}_grid.png"
 
     def action_panels_dir(self, beat_num: int) -> Path:
-        """Action beat 切割面板目录。"""
+        """Action beat cut panel directory."""
         return self.output_dir / "grids" / self._ep_str / "action" / f"beat_{beat_num:02d}_panels"
 
     def action_panel(self, beat_num: int, panel_index: int) -> Path:
-        """Action beat 单个面板路径（panel_index 1-25）。"""
+        """Single panel path of an action beat (panel_index 1-25)."""
         return self.action_panels_dir(beat_num) / f"panel_{panel_index:02d}.png"
 
     def action_selected_frame(self, beat_num: int, order: int) -> Path:
-        """Action beat 选中帧路径（order 从 1 开始，按用户选取顺序编号）。
+        """Selected frame path of an action beat (order starts from 1, numbered in the order the user picked them).
 
-        选中时从 action_panel() 池复制到此处，与 1.0 pool→frame 约定一致。
+        On selection it is copied from the action_panel() pool to here, consistent with the 1.0 pool→frame convention.
         """
         return (
             self.output_dir / "frames" / self._ep_str / f"beat_{beat_num:02d}_sel_{order:02d}.png"
         )
 
     def action_video(self, beat_num: int, order: int) -> Path:
-        """Action beat 选中帧对应的视频路径（order 与 selected_frame 对应）。"""
+        """Video path of an action beat selected frame (order corresponds to selected_frame)."""
         return (
             self.output_dir
             / "videos"
@@ -693,72 +693,72 @@ class PathResolver:
             / f"beat_{beat_num:02d}_sel_{order:02d}.mp4"
         )
 
-    # === 非 Episode 级别资源 ===
+    # === Non-Episode-level resources ===
 
     def character_assets_dir(self, char_name: str) -> Path:
-        """角色资源目录（不依赖 episode）。"""
+        """Character resource directory (independent of episode)."""
         return self.output_dir / "assets" / "characters" / char_name
 
     def sketch_dir(self) -> Path:
-        """草图目录（flat，不按 ratio 分子目录）。
+        """Sketch directory (flat, not split into subdirectories by ratio).
 
         Returns:
-            草图目录路径，如 grids/ep001/sketch/
+            Sketch directory path, e.g. grids/ep001/sketch/
         """
         return self.output_dir / "grids" / self._ep_str / "sketch"
 
     def render_dir(self) -> Path:
-        """渲染图输出目录（beat 中心命名格式）。"""
+        """Render output directory (beat-centered naming format)."""
         return self.output_dir / "grids" / self._ep_str / "render"
 
     def has_sketch(self) -> bool:
-        """检查是否存在草图文件。"""
+        """Check whether sketch files exist."""
         d = self.sketch_dir()
         if not d.exists():
             return False
-        # 新格式（flat）: beat_*_t*.*
+        # New format (flat): beat_*_t*.*
         if list(d.glob("beat_*_t*.*")):
             return True
-        # 整图格式: sketch_g*_*x*.*
+        # Whole-image format: sketch_g*_*x*.*
         if list(d.glob("sketch_g*_*x*.*")):
             return True
-        # 旧格式: sketch_b*_*x*.*
+        # Old format: sketch_b*_*x*.*
         if list(d.glob("sketch_b*_*x*.*")):
             return True
-        # 兼容旧 ratio 子目录（如 sketch/1-1/beat_*）
+        # Compatible with old ratio subdirectories (e.g. sketch/1-1/beat_*)
         for sub in d.iterdir():
             if sub.is_dir() and list(sub.glob("beat_*_t*.*")):
                 return True
         return False
 
-    # === Phase 2: Preset 目录 + Grid 文件名 ===
+    # === Phase 2: Preset directories + Grid file names ===
 
     def episode_grids_dir(self) -> Path:
-        """集数 grids 根目录。"""
+        """Episode grids root directory."""
         return self.output_dir / "grids" / self._ep_str
 
     def preset_dir(self, preset: str) -> Path:
-        """preset 分组目录。
+        """Preset group directory.
 
         Args:
-            preset: 分组名，scene / char / loc / custom
+            preset: group name, scene / char / loc / custom
 
         Returns:
-            如 grids/ep001/scene/
+            e.g. grids/ep001/scene/
         """
         return self.output_dir / "grids" / self._ep_str / preset
 
     def grid_filename(self, grid_type: str, mode_key: str, beat_nums: list[int], ts: str) -> str:
-        """生成整图文件名。
+        """Generate a whole-image file name.
 
         Args:
             grid_type: render | sketch
-            mode_key: 如 3x3, 1x1_9-16
-            beat_nums: beat 编号列表
-            ts: 时间戳字符串（YYYYMMDDHHmmss）
+            mode_key: e.g. 3x3, 1x1_9-16
+            beat_nums: list of beat numbers
+            ts: timestamp string (YYYYMMDDHHmmss)
 
         Returns:
-            如 render_3x3_1-2-3-4-5-6-7-8-9_grid_20260227143052.png
+            e.g. render_3x3_1-2-3-4-5-6-7-8-9_grid_20260227143052.png
         """
         beats_str = "-".join(str(b) for b in beat_nums)
         return f"{grid_type}_{mode_key}_{beats_str}_grid_{ts}.png"
@@ -766,20 +766,20 @@ class PathResolver:
     def grid_prompt_filename(
         self, grid_type: str, mode_key: str, beat_nums: list[int], ts: str
     ) -> str:
-        """生成整图提示词文件名。"""
+        """Generate a whole-image prompt file name."""
         beats_str = "-".join(str(b) for b in beat_nums)
         return f"{grid_type}_{mode_key}_{beats_str}_prompt.txt"
 
     def cell_filename(self, beat_num: int, ts: str) -> str:
-        """生成 cell 文件名（beat 中心命名）。
+        """Generate a cell file name (beat-centered naming).
 
         Returns:
-            如 beat_01_t20260227143052.png
+            e.g. beat_01_t20260227143052.png
         """
         return f"beat_{beat_num:02d}_t{ts}.png"
 
     def pool_index_path(self) -> Path:
-        """池索引文件路径。"""
+        """Pool index file path."""
         return resolve_state_index_path(
             self.output_dir / "grids" / self._ep_str,
             "pool_index.json",
@@ -791,29 +791,29 @@ class PathResolver:
         mode_key: str,
         beat_nums: list[int],
     ) -> Optional[Path]:
-        """查找整图文件（兼容新旧路径）。
+        """Find the whole-image file (compatible with old and new paths).
 
-        搜索顺序：
-        1. 新 preset 目录: {preset}/{type}_{mode}_{beats}_grid_{ts}.png
-        2. 旧 mode_key 目录: {mode_key}/grid_*.png
-        3. 旧 render/sketch 目录: render/regen_*.png, sketch/regen_*.png
+        Search order:
+        1. New preset directory: {preset}/{type}_{mode}_{beats}_grid_{ts}.png
+        2. Old mode_key directory: {mode_key}/grid_*.png
+        3. Old render/sketch directory: render/regen_*.png, sketch/regen_*.png
 
         Returns:
-            找到的文件路径，或 None
+            The file path found, or None
         """
         ep_grids = self.episode_grids_dir()
         beats_str = "-".join(str(b) for b in beat_nums)
 
-        # 1. 搜索 preset 目录
+        # 1. Search the preset directory
         for preset in ("scene", "char", "loc", "custom"):
             preset_dir = ep_grids / preset
             if preset_dir.exists():
                 pattern = f"{grid_type}_{mode_key}_{beats_str}_grid_*.png"
                 matches = sorted(preset_dir.glob(pattern))
                 if matches:
-                    return matches[-1]  # 最新的
+                    return matches[-1]  # the newest
 
-        # 2. 旧 mode_key 目录
+        # 2. Old mode_key directory
         mode_dir = ep_grids / mode_key
         if mode_dir.exists():
             scoped_path = mode_dir / compute_scoped_grid_filename(
@@ -827,7 +827,7 @@ class PathResolver:
             for f in sorted(mode_dir.glob("grid_*.png")):
                 return f
 
-        # 3. 旧 render/sketch 目录
+        # 3. Old render/sketch directory
         type_dir = ep_grids / ("sketch" if grid_type == "sketch" else "render")
         if type_dir.exists():
             for f in sorted(type_dir.glob(f"regen_{mode_key}_b*.png")):

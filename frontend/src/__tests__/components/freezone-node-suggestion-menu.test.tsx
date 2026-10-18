@@ -85,7 +85,7 @@ describe("<FreezoneNodeSuggestionMenu />", () => {
         onReachEnd={noop}
       />,
     );
-    expect(screen.getByText("没有匹配的节点")).toBeInTheDocument();
+    expect(screen.getByText("No matching nodes")).toBeInTheDocument();
   });
 
   it("renders an <img> with the thumbnail src when thumbnailUrl is set", () => {

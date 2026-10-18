@@ -2164,7 +2164,6 @@ export const VideoNode = memo(
           const candidates: Array<{
             url: string;
             slot?: "first" | "last";
-            legacyDisplayName?: string | null;
           }> = [];
           for (const node of collectUpstream()) {
             const url = submittableImageUrl(node);
@@ -2175,8 +2174,6 @@ export const VideoNode = memo(
             candidates.push({
               url,
               slot: edge?.data?.keyframeSlot,
-              legacyDisplayName:
-                typeof node.data.displayName === "string" ? node.data.displayName : null,
             });
           }
           return resolveVideoKeyframeUrls(candidates);

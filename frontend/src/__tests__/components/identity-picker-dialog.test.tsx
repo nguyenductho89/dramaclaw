@@ -17,12 +17,12 @@ beforeAll(async () => {
     resources: {
       zh: {
         translation: {
-          common: { cancel: "取消", save: "保存" },
+          common: { cancel: "Cancel", save: "Save" },
           identityPicker: {
-            title: "选择本集身份",
-            empty: "暂无角色身份",
-            aiPlan: "AI 规划",
-            defaultIdentity: "默认",
+            title: "Select Character Identities",
+            empty: "No characters yet. Create characters and identities on the Characters page first.",
+            aiPlan: "AI Plan Identities",
+            defaultIdentity: "Default",
           },
         },
       },
@@ -36,8 +36,8 @@ const identitiesByCharacter = vi.hoisted(
   } => ({
     data: {
       秦: [
-        { identity_id: "秦_幼年", identity_name: "幼年" },
-        { identity_id: "秦_青年", identity_name: "青年" },
+        { identity_id: "秦_幼年", identity_name: "Child" },
+        { identity_id: "秦_青年", identity_name: "Young adult" },
       ],
     },
   }),
@@ -77,7 +77,7 @@ describe("IdentityPickerDialog", () => {
     );
 
     await user.click(screen.getByRole("radio", { name: "青年 默认" }));
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onChange).toHaveBeenCalledWith(
       ["秦_幼年", "秦_青年"],

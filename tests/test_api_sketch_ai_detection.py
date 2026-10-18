@@ -392,7 +392,7 @@ def test_detect_identities_marks_empty_ai_result_as_no_character_and_no_prop(
     assert body["ok"] is True
     assert body["data"]["identity_detections"] == {"1": ["__NO_CHARACTER__"]}
     assert body["data"]["prop_detections"] == {"1": ["__NO_PROP__"]}
-    assert "核对" in body["data"]["review_message"]
+    assert "review" in body["data"]["review_message"]
     assert store.identity_writes == {1: ["__NO_CHARACTER__"]}
     assert store.prop_writes == {1: ["__NO_PROP__"]}
 

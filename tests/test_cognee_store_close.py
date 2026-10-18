@@ -614,9 +614,9 @@ async def test_graph_snapshot_is_bounded_ranked_and_json_safe(monkeypatch):
     async def fake_get_dataset_graph_data(**_kwargs):
         return (
             [
-                ("chunk", {"name": "原文章节", "type": "DocumentChunk", "embedding": [1, 2]}),
-                ("hero", {"name": "林昭", "type": "Entity", "description": "主角"}),
-                ("place", {"name": "雨巷", "type": "Entity"}),
+                ("chunk", {"name": "Source chapter", "type": "DocumentChunk", "embedding": [1, 2]}),
+                ("hero", {"name": "Lin Zhao", "type": "Entity", "description": "Protagonist"}),
+                ("place", {"name": "Rainy Alley", "type": "Entity"}),
             ],
             [
                 ("hero", "place", "appears_in", {}),
@@ -630,7 +630,7 @@ async def test_graph_snapshot_is_bounded_ranked_and_json_safe(monkeypatch):
 
     assert snapshot["total_nodes"] == 3
     assert snapshot["total_edges"] == 2
-    assert snapshot["nodes"][0]["label"] == "林昭"
+    assert snapshot["nodes"][0]["label"] == "Lin Zhao"
     chunk = next(node for node in snapshot["nodes"] if node["id"] == "chunk")
     assert "embedding" not in chunk["properties"]
 
@@ -657,7 +657,7 @@ async def test_graph_snapshot_reads_the_project_dataset_database(monkeypatch):
     class FakeGraphEngine:
         async def get_graph_data(self):
             calls.append("graph.read")
-            return [("hero", {"name": "林昭", "type": "Entity"})], []
+            return [("hero", {"name": "Lin Zhao", "type": "Entity"})], []
 
     async def fake_get_default_user():
         return user
@@ -685,7 +685,7 @@ async def test_graph_snapshot_reads_the_project_dataset_database(monkeypatch):
 
     nodes, edges = await store._get_dataset_graph_data()
 
-    assert nodes[0][1]["name"] == "林昭"
+    assert nodes[0][1]["name"] == "Lin Zhao"
     assert edges == []
     assert calls == [
         ("dataset.lookup", "novelvideo_local/test", "user-id"),

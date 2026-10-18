@@ -95,30 +95,30 @@ async def test_delete_identity_costume_removes_file_and_clears_store(
 ):
     from novelvideo.api.routes import characters
 
-    costume_path = tmp_path / "assets" / "characters" / "秦" / "identities" / "少年_costume.png"
+    costume_path = tmp_path / "assets" / "characters" / "Qin" / "identities" / "teen_costume.png"
     costume_path.parent.mkdir(parents=True)
     costume_path.write_bytes(b"costume")
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
         costume_image=str(costume_path),
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
     response = await characters.delete_identity_costume(
         project="demo",
-        name="秦",
-        identity_id="秦_少年",
+        name="Qin",
+        identity_id="Qin_teen",
         user={"username": "admin"},
     )
 
     assert response == {"ok": True, "data": {"deleted": True}}
     assert not costume_path.exists()
-    assert store.identity_updates == [("秦", "秦_少年", {"costume_image": ""})]
+    assert store.identity_updates == [("Qin", "Qin_teen", {"costume_image": ""})]
 
 
 @pytest.mark.asyncio
@@ -128,42 +128,42 @@ async def test_delete_identity_costume_is_idempotent_when_file_missing(
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
         costume_image="",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
     response = await characters.delete_identity_costume(
         project="demo",
-        name="秦",
-        identity_id="秦_少年",
+        name="Qin",
+        identity_id="Qin_teen",
         user={"username": "admin"},
     )
 
     assert response == {"ok": True, "data": {"deleted": False}}
-    assert store.identity_updates == [("秦", "秦_少年", {"costume_image": ""})]
+    assert store.identity_updates == [("Qin", "Qin_teen", {"costume_image": ""})]
 
 
 @pytest.mark.asyncio
 async def test_add_identity_persists_age_group(tmp_path, monkeypatch):
     from novelvideo.api.routes import characters
 
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
     response = await characters.add_identity(
         project="demo",
-        name="秦",
+        name="Qin",
         body=IdentityCreate(
-            identity_name="幼年",
+            identity_name="child",
             age_group="child",
-            appearance_details="粗布短衫",
+            appearance_details="coarse cloth tunic",
         ),
         user={"username": "admin"},
     )
@@ -178,11 +178,11 @@ async def test_upload_identity_costume_returns_project_context_url(tmp_path, mon
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
 
@@ -200,21 +200,21 @@ async def test_upload_identity_costume_returns_project_context_url(tmp_path, mon
 
     response = await characters.upload_identity_costume(
         project="demo",
-        name="秦",
-        identity_id="秦_少年",
+        name="Qin",
+        identity_id="Qin_teen",
         file=_png_upload(),
         user={"username": "admin"},
     )
 
     assert response["ok"] is True
     assert response["data"]["costume_image_url"] == (
-        "/static/projects/proj_demo/assets/characters/秦/identities/少年_costume.png"
+        "/static/projects/proj_demo/assets/characters/Qin/identities/teen_costume.png"
     )
     assert store.identity_updates == [
         (
-            "秦",
-            "秦_少年",
-            {"costume_image": str(tmp_path / "assets/characters/秦/identities/少年_costume.png")},
+            "Qin",
+            "Qin_teen",
+            {"costume_image": str(tmp_path / "assets/characters/Qin/identities/teen_costume.png")},
         )
     ]
 
@@ -224,11 +224,11 @@ async def test_upload_identity_portrait_returns_project_context_url(tmp_path, mo
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
 
@@ -246,23 +246,23 @@ async def test_upload_identity_portrait_returns_project_context_url(tmp_path, mo
 
     response = await characters.upload_identity_portrait(
         project="demo",
-        name="秦",
-        identity_id="秦_少年",
+        name="Qin",
+        identity_id="Qin_teen",
         file=_png_upload(),
         user={"username": "admin"},
     )
 
     assert response["ok"] is True
     assert response["data"]["portrait_image_url"] == (
-        "/static/projects/proj_demo/assets/characters/秦/identities/秦_少年_portrait.png"
+        "/static/projects/proj_demo/assets/characters/Qin/identities/Qin_teen_portrait.png"
     )
     assert store.identity_updates == [
         (
-            "秦",
-            "秦_少年",
+            "Qin",
+            "Qin_teen",
             {
                 "portrait_image": str(
-                    tmp_path / "assets/characters/秦/identities/秦_少年_portrait.png"
+                    tmp_path / "assets/characters/Qin/identities/Qin_teen_portrait.png"
                 )
             },
         )
@@ -274,28 +274,28 @@ async def test_upload_identity_image_backs_up_existing_file(tmp_path, monkeypatc
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
-    target = tmp_path / "assets" / "characters" / "秦" / "identities" / "少年.png"
+    target = tmp_path / "assets" / "characters" / "Qin" / "identities" / "teen.png"
     old_bytes = _write_png(target, (10, 20, 30))
 
     response = await characters.upload_identity_image(
         project="demo",
-        name="秦",
-        identity_name="少年",
+        name="Qin",
+        identity_name="teen",
         file=_png_upload(),
         user={"username": "admin"},
     )
 
     assert response["ok"] is True
-    backups = list(target.parent.glob("少年_*.png"))
+    backups = list(target.parent.glob("teen_*.png"))
     assert len(backups) == 1
     assert backups[0].read_bytes() == old_bytes
     assert target.read_bytes() != old_bytes
@@ -306,25 +306,25 @@ async def test_character_asset_history_lists_backups(tmp_path, monkeypatch):
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
-    target = tmp_path / "assets" / "characters" / "秦" / "identities" / "少年.png"
+    target = tmp_path / "assets" / "characters" / "Qin" / "identities" / "teen.png"
     _write_png(target, (10, 20, 30))
-    backup = target.parent / "少年_20260603112233.png"
+    backup = target.parent / "teen_20260603112233.png"
     backup.write_bytes(target.read_bytes())
 
     response = await characters.list_character_asset_history(
         project="demo",
-        name="秦",
+        name="Qin",
         kind="identity",
-        identity_id="秦_少年",
+        identity_id="Qin_teen",
         user={"username": "admin"},
     )
 
@@ -341,26 +341,26 @@ async def test_restore_character_asset_history_backs_up_current_and_restores_bac
     from novelvideo.api.routes import characters
 
     identity = CharacterIdentity(
-        identity_id="秦_少年",
-        character_name="秦",
-        identity_name="少年",
+        identity_id="Qin_teen",
+        character_name="Qin",
+        identity_name="teen",
     )
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     character.identities = [identity]
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
-    target = tmp_path / "assets" / "characters" / "秦" / "identities" / "少年.png"
+    target = tmp_path / "assets" / "characters" / "Qin" / "identities" / "teen.png"
     current_bytes = _write_png(target, (200, 20, 30))
-    backup = target.parent / "少年_20260603112233.png"
+    backup = target.parent / "teen_20260603112233.png"
     old_bytes = _write_png(backup, (10, 20, 30))
 
     response = await characters.restore_character_asset_history(
         project="demo",
-        name="秦",
+        name="Qin",
         body=SimpleNamespace(
             kind="identity",
-            identity_id="秦_少年",
+            identity_id="Qin_teen",
             history_id=backup.name,
         ),
         user={"username": "admin"},
@@ -369,7 +369,7 @@ async def test_restore_character_asset_history_backs_up_current_and_restores_bac
     assert response["ok"] is True
     assert target.read_bytes() == old_bytes
     new_backups = [
-        path for path in target.parent.glob("少年_*.png") if path.name != "少年_20260603112233.png"
+        path for path in target.parent.glob("teen_*.png") if path.name != "teen_20260603112233.png"
     ]
     assert len(new_backups) == 1
     assert new_backups[0].read_bytes() == current_bytes
@@ -379,18 +379,18 @@ async def test_restore_character_asset_history_backs_up_current_and_restores_bac
 async def test_restore_character_portrait_advances_summary_revision(tmp_path, monkeypatch):
     from novelvideo.api.routes import characters
 
-    character = NovelCharacter(name="秦")
+    character = NovelCharacter(name="Qin")
     store = _CharacterStore(character)
     _patch_character_project(monkeypatch, characters, tmp_path, store)
 
-    target = tmp_path / "assets" / "characters" / "秦" / "portrait.png"
+    target = tmp_path / "assets" / "characters" / "Qin" / "portrait.png"
     _write_png(target, (200, 20, 30))
     backup = target.parent / "portrait_20260603112233.png"
     restored_bytes = _write_png(backup, (10, 20, 30))
 
     response = await characters.restore_character_asset_history(
         project="demo",
-        name="秦",
+        name="Qin",
         body=SimpleNamespace(
             kind="portrait",
             identity_id="",
@@ -401,4 +401,4 @@ async def test_restore_character_portrait_advances_summary_revision(tmp_path, mo
 
     assert response["ok"] is True
     assert target.read_bytes() == restored_bytes
-    assert store.touched_character_assets == ["秦"]
+    assert store.touched_character_assets == ["Qin"]

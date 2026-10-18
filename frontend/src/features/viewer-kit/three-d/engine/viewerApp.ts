@@ -30,8 +30,8 @@ export { isPoseName, POSES, POSE_LABEL_KEYS, requirePoseName } from './poses';
 export { SHAPE_HINT_NAMES, type ShapeHintName } from './shapeHints';
 
 /**
- * 引擎不依赖 react-i18next：状态文案只在这里落成 key，由调用方把 t 传进来解析。
- * 不传时原样回显 key —— 单测和脱离 React 的调用点仍然能跑。
+ * The engine does not depend on react-i18next: status copy is turned into keys only here, and the caller passes t in to resolve them.
+ * When not passed the key is echoed as-is - unit tests and call sites outside React still work.
  */
 export type ViewerStatusTranslate = (
   key: string,
@@ -221,14 +221,14 @@ export interface SelectionState {
   index: number;          // zero-based index within markers[kind]
   label: string;
   position: [number, number, number];
-  pose: PoseName | null;  // 仅 actor 有意义；prop / staging 永远为 null
-  actionPlaying: boolean | null; // 仅 actor 有意义；控制当前 pose 动作是否循环播放
-  mounted: boolean;       // actor 是否挂在某个 prop / staging 上；非 actor 永远 false
-  // prop / staging 的 shape hint；actor 永远为 null。
+  pose: PoseName | null;  // only meaningful for actors; always null for prop / staging
+  actionPlaying: boolean | null; // only meaningful for actors; controls whether the current pose action loops
+  mounted: boolean;       // whether the actor is mounted on a prop / staging; always false for non-actors
+  // shape hint of prop / staging; always null for actors.
   shapeHint: ShapeHintName | null;
 }
 
-// 单个 marker 的可序列化快照；写入 ThreeDWorldNodeData.scene。
+// Serializable snapshot of a single marker; written into ThreeDWorldNodeData.scene.
 export interface ThreeDMarkerSnapshot {
   label: string;
   color: string;                                  // hex like #ff3344
@@ -236,11 +236,11 @@ export interface ThreeDMarkerSnapshot {
   position: [number, number, number];
   yawDeg: number;                                 // entity.eulerAngles.y
   scale: [number, number, number];                // localScale
-  pose?: PoseName;                                // 仅 actor
-  actionPlaying?: boolean;                        // 仅 actor；默认 true
-  /** actor 是否挂在某个 prop/staging 上；用 kind+index 引用同一份 snapshot 内的目标。 */
+  pose?: PoseName;                                // actor only
+  actionPlaying?: boolean;                        // actor only; default true
+  /** Whether the actor is mounted on a prop/staging; references the target within the same snapshot by kind+index. */
   mount?: { kind: 'prop' | 'staging'; index: number; attachPointId: string };
-  shapeHint?: ShapeHintName;                      // 仅 prop / staging
+  shapeHint?: ShapeHintName;                      // prop / staging only
 }
 
 export interface ThreeDSceneSnapshot {
@@ -264,25 +264,25 @@ export interface SelectionScreenPosition {
 }
 
 /**
- * 3D 世界(.ply / .sog)加载进度。`.sog` 由 PlayCanvas 的 SogBundleParser 内置解码,
- * `.ply` 走 PlyParser —— GSplatHandler 按后缀自动选择,前端无需额外集成解码器。
+ * 3D world (.ply / .sog) loading progress. `.sog` is decoded by PlayCanvas's built-in SogBundleParser,
+ * `.ply` goes through PlyParser - GSplatHandler picks automatically by suffix, so the frontend needs no extra decoder.
  */
 export interface SplatLoadProgress {
   phase: 'loading' | 'ready' | 'error';
-  /** 0-100;总大小未知(后端未给 Content-Length)时为 null,UI 退化为不确定进度。 */
+  /** 0-100; null when the total size is unknown (the backend gave no Content-Length), and the UI degrades to indeterminate progress. */
   percent: number | null;
   loadedBytes: number;
   totalBytes: number | null;
-  /** 解码完成后的高斯点数;未知为 null。 */
+  /** Gaussian point count after decoding; null if unknown. */
   gaussians: number | null;
-  /** phase==='error' 时的用户友好提示。 */
+  /** User-friendly message when phase==='error'. */
   message: string | null;
 }
 
 /**
- * 把底层 loader 的原始报错归类成一条用户能看懂的文案 key(技术细节仍保留在 console / Error)。
- * 典型场景:URL 指向后端本地路径/已过期 → 拉到 404 HTML → SogBundleParser 当 zip 解 →
- * "EOCDR not found"。
+ * Classify the underlying loader's raw error into a user-readable copy key (technical details are still kept in console / Error).
+ * Typical case: the URL points to a backend local path / expired -> a 404 HTML is fetched -> SogBundleParser unzips it as a zip ->
+ * "EOCDR not found".
  */
 export function splatErrorMessageKey(raw: string): string {
   const lower = raw.toLowerCase();
@@ -314,21 +314,21 @@ export interface ViewerApp {
   readonly fly: FlyCameraController;
   readonly axesGrid: AxesGridDrawer;
   loadSplat: (url: string, options?: LoadSplatOptions) => Promise<void>;
-  // 纯 360 全景图作为导演世界的球内环境贴图；仍然使用同一个 3D stage 放置 actor/prop/staging。
+  // A pure 360 panorama serves as the director world's in-sphere environment map; the same 3D stage is still used to place actor/prop/staging.
   loadPano: (url: string | null, options?: LoadPanoOptions) => Promise<void>;
   clearWorldSource: () => void;
-  // 可选 collision.glb：用作准星投地 / 落地的物理表面；不传则用 y=0 平面。
+  // Optional collision.glb: used as the physical surface for crosshair projection / grounding; without it the y=0 plane is used.
   loadCollision: (url: string | null) => Promise<void>;
   hasCollision: () => boolean;
   setCollisionVisible: (visible: boolean) => void;
-  // 调试 hit marker：粉色小球，开启后每次 raycast 命中地面 / collision 都会在命中点显示。
-  // 默认关闭；BuilderGPT 是通过 ?show_hit_marker=1 URL 参数控制，这里改成显式 API。
+  // Debug hit marker: a small pink sphere, shown at the hit point whenever a raycast hits the ground / collision once enabled.
+  // Off by default; BuilderGPT controls it via the ?show_hit_marker=1 URL parameter, here it is an explicit API.
   setHitMarkerEnabled: (enabled: boolean) => void;
   isHitMarkerEnabled: () => boolean;
   resetCamera: () => void;
   setStatus: (next: string) => void;
   onStatus: (listener: (status: string) => void) => () => void;
-  /** 订阅 3D 世界加载进度(百分比 / 已加载字节 / 高斯点数 / 友好错误)。 */
+  /** Subscribe to 3D world loading progress (percentage / loaded bytes / Gaussian point count / friendly error). */
   onSplatProgress: (listener: (progress: SplatLoadProgress) => void) => () => void;
   placeMarker: (kind: MarkerKind, options?: PlaceMarkerOptions) => boolean;
   deleteLastMarker: (kind: MarkerKind) => boolean;
@@ -336,7 +336,7 @@ export interface ViewerApp {
   getMarkerCounts: () => MarkerCounts;
   onMarkersChange: (listener: (counts: MarkerCounts) => void) => () => void;
   captureScreenshot: (options?: CaptureScreenshotOptions) => string | null;
-  // 选中：射线 / 准星拾取，给当前选中提供事件订阅与屏幕投影
+  // Selection: ray / crosshair picking, providing event subscription and screen projection for the current selection
   selectAtScreen: (clientX: number, clientY: number) => boolean;
   selectAtCrosshair: () => boolean;
   getCrosshairTarget: () => CrosshairTarget;
@@ -344,11 +344,11 @@ export interface ViewerApp {
   getSelection: () => SelectionState | null;
   onSelectionChange: (listener: (selection: SelectionState | null) => void) => () => void;
   getSelectionScreenPosition: () => SelectionScreenPosition | null;
-  // 选中操作：循环选 / 索引选 / 移动 / 落地 / 旋转 / 缩放 / 删除。
-  // 所有变更类方法返回布尔值表示是否真的发生了变更（无选中或空列表时返回 false）。
+  // Selection operations: cycle / index select / move / ground / rotate / scale / delete.
+  // All mutating methods return a boolean saying whether a change really happened (false when nothing is selected or the list is empty).
   getMarkerLabels: (kind: MarkerKind) => string[];
   selectByIndex: (kind: MarkerKind, index: number) => boolean;
-  // Pose：仅 actor 有效；setSelectedPose / cycleSelectedPose 都返回是否生效。
+  // Pose: actor only; setSelectedPose / cycleSelectedPose both return whether they took effect.
   getActorPose: (index: number) => PoseName | null;
   setSelectedPose: (pose: PoseName) => boolean;
   cycleSelectedPose: (dir?: 1 | -1) => boolean;
@@ -363,33 +363,33 @@ export interface ViewerApp {
   groundSelected: () => boolean;
   rotateSelected: (deg: number) => boolean;
   scaleSelected: (factor: number) => boolean;
-  // 把选中沿世界坐标整体平移 (dx, dy, dz)（米）。
+  // Translate the selection as a whole along world coordinates by (dx, dy, dz) (meters).
   nudgeSelected: (dx: number, dy: number, dz: number) => boolean;
-  // 镜头平滑插值看向当前选中（保留原 azim/elev/distance）。无选中返回 false。
+  // Smoothly interpolate the camera to look at the current selection (keeping the original azim/elev/distance). Returns false if nothing is selected.
   lookAtSelected: (durationMs?: number) => boolean;
-  // PlayCanvas TranslateGizmo 开关；默认开启。关闭后 gizmo 立即 detach + 隐藏。
+  // PlayCanvas TranslateGizmo toggle; on by default. When turned off the gizmo detaches and hides immediately.
   setTranslateGizmoEnabled: (enabled: boolean) => void;
   isTranslateGizmoEnabled: () => boolean;
-  // 3GS/SOG 世界相对导演地板的手动高度偏移。actor/prop/staging 坐标不变。
+  // Manual height offset of the 3GS/SOG world relative to the director floor. actor/prop/staging coordinates are unchanged.
   nudgeWorldYOffset: (delta: number) => boolean;
   resetWorldYOffset: () => boolean;
   getWorldYOffset: () => number;
   getSourceTransform: () => DirectorWorldSourceTransform;
   setSourceTransform: (transform: Partial<DirectorWorldSourceTransform>) => boolean;
   resetSourceTransform: () => boolean;
-  // 场景持久化：导出当前 actor/prop/staging + 相机的可序列化快照；调 loadSceneSnapshot
-  // 把快照应用回当前 viewer（先清空 markers，再依次重建并恢复 pose / camera）。
+  // Scene persistence: export a serializable snapshot of the current actor/prop/staging + camera; calling loadSceneSnapshot
+  // applies the snapshot back to the current viewer (clear markers first, then rebuild in order and restore pose / camera).
   exportSceneSnapshot: () => ThreeDSceneSnapshot;
   loadSceneSnapshot: (snap: ThreeDSceneSnapshot) => void;
-  // Shape hint：运行时 marker blocking proxy。UI 只暴露给 staging，prop 保持默认 box。
-  // setSelectedShapeHint 返回是否生效（选中不是 staging 时返回 false）。
+  // Shape hint: the runtime marker blocking proxy. The UI only exposes it for staging; prop keeps the default box.
+  // setSelectedShapeHint returns whether it took effect (false when the selection is not a staging).
   getMarkerShapeHint: (kind: 'prop' | 'staging', index: number) => ShapeHintName | null;
   setSelectedShapeHint: (hint: ShapeHintName) => boolean;
-  // Camera presets：复刻旧 PlayCanvas 3GS 导演台。
-  // fitView：把整个 splat 包进画面（target = scene center，offset 与 sceneRadius 同量级）。
-  // cameraBehindSelected：摄影机贴到选中对象身后 1.6m、抬高 0.45m，按 entity yaw 取背后方向。
-  // cameraFaceSelected ：摄影机摆到选中对象正前方 1.8m、抬高 0.45m，可用于 over-shoulder 反打。
-  // 没有选中时 behind / face 退化成 fitView。
+  // Camera presets: reproduces the old PlayCanvas 3GS director stage.
+  // fitView: fit the whole splat into the frame (target = scene center, offset on the same order as sceneRadius).
+  // cameraBehindSelected: place the camera 1.6m behind the selected object and 0.45m higher, taking the back direction from the entity yaw.
+  // cameraFaceSelected : place the camera 1.8m in front of the selected object and 0.45m higher, usable for an over-shoulder reverse shot.
+  // With no selection, behind / face degrade to fitView.
   fitView: () => boolean;
   cameraBehindSelected: () => boolean;
   cameraFaceSelected: () => boolean;
@@ -485,7 +485,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
   app.setCanvasResolution(pc.RESOLUTION_AUTO);
   app.scene.exposure = 1.0;
 
-  // 用 ResizeObserver 自动跟随容器尺寸。
+  // Follow the container size automatically with a ResizeObserver.
   const resize = () => {
     const rect = canvas.parentElement?.getBoundingClientRect();
     if (!rect) return;
@@ -547,7 +547,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
   let sourceTransform: DirectorWorldSourceTransform = { ...DEFAULT_DIRECTOR_WORLD_SOURCE_TRANSFORM };
   let panoEntity: pc.Entity | null = null;
   let panoAsset: pc.Asset | null = null;
-  // 跟踪场景 AABB 用于 camera preset 的 fit_view；splat 加载完后从 gsplat aabb 拷过来。
+  // Track the scene AABB for the camera preset's fit_view; copied from the gsplat aabb once the splat has loaded.
   let sceneCenter = new pc.Vec3(0, 0, 0);
   let sceneRadiusValue = 1;
 
@@ -675,8 +675,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return true;
   }
 
-  // 根据 URL 后缀决定如何旋转 splat 实体到世界坐标。
-  // 复刻 BuilderGPT viewer 的 supersplat_auto 默认值。
+  // Decide how to rotate the splat entity into world coordinates by the URL suffix.
+  // Reproduces the supersplat_auto default of the BuilderGPT viewer.
   function pickSplatOrientationEuler(
     url: string,
     mode: DirectorStageOrientationMode = 'supersplat_auto',
@@ -728,8 +728,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     enterDefaultInteriorView();
   }
 
-  // 手动建 Asset(而非 loadFromUrl)以便订阅 'progress' 事件做加载进度;
-  // GSplatHandler 仍按 url 后缀自动选 PlyParser / SogBundleParser。
+  // Build the Asset by hand (instead of loadFromUrl) so we can subscribe to the 'progress' event for loading progress;
+  // GSplatHandler still picks PlyParser / SogBundleParser automatically by the url suffix.
   function loadAsset(
     url: string,
     type: 'gsplat' | 'container' | 'texture',
@@ -841,7 +841,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     splatPivotEntity.addChild(splatEntity);
     app.root.addChild(splatPivotEntity);
 
-    // 用 splat AABB 调整场景半径，让飞行速度和远近裁切自适应。
+    // Adjust the scene radius with the splat AABB so fly speed and near/far clipping adapt.
     type GSplatLike = { customAabb?: pc.BoundingBox; resource?: { aabb?: pc.BoundingBox } };
     const gsplat = splatEntity.findComponent('gsplat') as unknown as GSplatLike | null;
     const aabb = gsplat?.customAabb || gsplat?.resource?.aabb;
@@ -933,9 +933,9 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     setStatus(tr('viewer.threeD.statusMessages.engine.panoLoaded'));
   }
 
-  // ---------- Collision 物理表面 ----------
-  // collision.glb 只作为可选调试线框保留。导演台的 actor / prop / staging
-  // 坐标统一落在 stage ground，不再从 collision 读取地形高度。
+  // ---------- Collision physical surface ----------
+  // collision.glb is kept only as an optional debug wireframe. actor / prop / staging of the director stage
+  // coordinates all land on the stage ground and no longer read terrain height from collision.
   let collisionEntity: pc.Entity | null = null;
   let collisionMeshInstances: pc.MeshInstance[] = [];
   let collisionVisible = false;
@@ -999,7 +999,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     }
     collisionEntity = resource.instantiateRenderEntity({ castShadows: false });
     collisionEntity.name = 'collision_mesh';
-    // 与 splat 默认朝向保持一致（其他 splat 朝向请用 lcc/spz 走 splat 自身的旋转）。
+    // Keep consistent with the default splat orientation (for other splat orientations use lcc/spz and the splat's own rotation).
     collisionEntity.setEulerAngles(0, 0, 180);
     app.root.addChild(collisionEntity);
     collisionMeshInstances = (collisionEntity.findComponents('render') as pc.RenderComponent[])
@@ -1012,12 +1012,12 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     );
   }
 
-  // ---------- 占位放置 / 截图 ----------
-  // Phase 2a：导演态 actor / prop / staging 还没有后端资产管线，先用原色 primitive
-  // 在「准星所指地面」位置放置占位；准星 = 屏幕中央 = 相机正前方。
+  // ---------- Placeholder placement / screenshots ----------
+  // Phase 2a: director-state actor / prop / staging have no backend asset pipeline yet, so use plain-color primitives
+  // placed at the "ground the crosshair points at"; crosshair = screen center = straight ahead of the camera.
   const markers: Record<MarkerKind, pc.Entity[]> = { actor: [], prop: [], staging: [] };
-  // 每个 marker 创建时用的 hex 颜色，保存 / 恢复 scene snapshot 用。
-  // 直接读 material.diffuse 也行，但 mannequin 是多 bone 多材质，记录原 hex 简单可靠。
+  // The hex color each marker was created with, used when saving / restoring the scene snapshot.
+  // Reading material.diffuse directly also works, but a mannequin has many bones and materials; recording the original hex is simple and reliable.
   const markerColors = new WeakMap<pc.Entity, string>();
   type MountTarget = {
     kind: 'prop' | 'staging';
@@ -1084,8 +1084,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     }
   }
 
-  // Mannequin 用 emissive 实色材质：不依赖场景灯光，颜色稳定，与 BuilderGPT
-  // playcanvas 3GS director stage 保持一致。
+  // The mannequin uses an emissive solid-color material: independent of scene lighting, with stable color, consistent with BuilderGPT's
+  // playcanvas 3GS director stage.
   function makeFlatMaterial(color: pc.Color): pc.StandardMaterial {
     const m = new pc.StandardMaterial();
     m.diffuse = color.clone();
@@ -1264,8 +1264,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return new pc.Vec3(pos.x + fwd.x * t, planeY, pos.z + fwd.z * t);
   }
 
-  // 准星落点：用屏幕中心真实 ray 和导演水平地板求交。
-  // 默认不依赖 collision，因为大多数导演世界没有可用的 collision mesh。
+  // Crosshair landing point: intersect the real ray from the screen center with the director's horizontal floor.
+  // Does not depend on collision by default, since most director worlds have no usable collision mesh.
   function raycastCrosshairToGround(): pc.Vec3 {
     const ray = crosshairRay();
     if (ray) {
@@ -1284,8 +1284,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
   }
 
   // ---------- Debug hit marker ----------
-  // 复刻 BuilderGPT showHitMarker：raycast 后在命中点放一个粉色 emissive 小球，便于
-  // 排查准星到地面的距离差。默认关闭。
+  // Reproduces BuilderGPT showHitMarker: after a raycast place a pink emissive sphere at the hit point, to make it easy to
+  // diagnose the crosshair-to-ground distance error. Off by default.
   let hitMarker: pc.Entity | null = null;
   let hitMarkerEnabled = false;
 
@@ -1325,21 +1325,21 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     if (!enabled && hitMarker) hitMarker.enabled = false;
   }
 
-  // (x, z) 处地面 Y：导演台固定地板。collision 只保留为调试/未来能力。
+  // Ground Y at (x, z): the director stage's fixed floor. collision is kept only as a debug / future capability.
   function groundYAt(x: number, z: number): number {
     void x;
     void z;
     return STAGE_GROUND_Y;
   }
 
-  // 每个 actor entity 对应的当前 pose 名。WeakMap 保证 entity destroy 后自动 GC。
+  // The current pose name of each actor entity. A WeakMap guarantees automatic GC after the entity is destroyed.
   const actorPoses = new WeakMap<pc.Entity, PoseName>();
   const actorActionPlaying = new WeakMap<pc.Entity, boolean>();
   const actorProxyMaterialColors = new WeakMap<pc.Entity, string>();
   const actorProxyMaterials = new Map<string, pc.StandardMaterial>();
   const markerYaws = new WeakMap<pc.Entity, number>();
-  // 每个 prop / staging entity 的 shape_hint；仅用于运行时 blocking proxy。
-  // 默认：prop → 'box'，staging → 'generic_large'；UI 只允许改 staging。
+  // The shape_hint of each prop / staging entity; used only for the runtime blocking proxy.
+  // Default: prop -> 'box', staging -> 'generic_large'; the UI only allows changing staging.
   const markerShapeHints = new WeakMap<pc.Entity, ShapeHintName>();
 
   function getEntityShapeHint(entity: pc.Entity): ShapeHintName {
@@ -1384,7 +1384,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     }
   }
 
-  // 取 prop/staging 的语义参考点；用于准星/点击的容错选中，不建立挂载关系。
+  // Get the semantic reference point of a prop/staging; used for tolerant crosshair/click selection and establishes no mount relationship.
   function attachmentPointForProp(
     prop: pc.Entity,
     attachPointId?: string,
@@ -1436,8 +1436,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
       entity.setLocalScale(size);
       entity.setPosition(hit.x, explicitPosition ? hit.y : hit.y + size.y / 2, hit.z);
       markerYaws.set(entity, 0);
-      // 默认 shape_hint：staging → generic_large（无挂点），prop → box（无挂点）。
-      // 用户用 setSelectedShapeHint 切到 quadruped_mount 之类才能上 saddle 挂点。
+      // Default shape_hint: staging -> generic_large (no attach points), prop -> box (no attach points).
+      // Only after the user switches to something like quadruped_mount via setSelectedShapeHint can the saddle attach point be used.
       const hint = opts.shapeHint ?? (kind === 'staging' ? 'generic_large' : 'box');
       markerShapeHints.set(entity, hint);
       rebuildShapeHintProxy(entity, hint, colorHex);
@@ -1494,11 +1494,11 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     emitMarkers();
   }
 
-  // ---------- 选中（拾取 + 高亮 + 订阅） ----------
-  // 单选：actor / prop / staging 各自的 markers 数组里挑一个 entity。
-  // 高亮：复刻旧 PlayCanvas 3GS 导演台的 selection
-  // wireframe marker —— 一个根级 box，渲染样式 WIREFRAME，按 actor sitting / standing /
-  // prop / staging 的不同尺寸自适应；每帧由 updateSelectionMarker 跟随选中实体。
+  // ---------- Selection (picking + highlight + subscription) ----------
+  // Single select: pick one entity from the markers arrays of actor / prop / staging.
+  // Highlight: reproduces the old PlayCanvas 3GS director stage's selection
+  // wireframe marker - a root-level box rendered in WIREFRAME style, adapting to the different sizes of actor sitting / standing /
+  // prop / staging; updateSelectionMarker makes it follow the selected entity every frame.
   type InternalSelection = {
     kind: MarkerKind;
     entity: pc.Entity;
@@ -1559,10 +1559,10 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return marker;
   }
 
-  // 复刻旧 PlayCanvas 3GS 导演台 selectionMarkerTransform：
-  //   actor standing → 高 1.9m，宽厚 0.82m * actorScale；sitting → 高 1.45m
-  //   prop_staging   → 比 entity 大 8%、最小 0.45m；垫到中下
-  //   prop           → 比 entity 大 15%、最小 0.28m；垫到中下
+  // Reproduces the old PlayCanvas 3GS director stage's selectionMarkerTransform:
+  //   actor standing -> 1.9m high, 0.82m * actorScale wide and deep; sitting -> 1.45m high
+  //   prop_staging   -> 8% larger than the entity, minimum 0.45m; padded to the lower-middle
+  //   prop           -> 15% larger than the entity, minimum 0.28m; padded to the lower-middle
   function selectionMarkerTransform(sel: InternalSelection): { position: pc.Vec3; scale: pc.Vec3 } {
     const pos = sel.entity.getPosition();
     const scale = sel.entity.getLocalScale();
@@ -1618,13 +1618,13 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     emitSelection();
   }
 
-  // ---------- TranslateGizmo（XYZ 轴拖拽） ----------
-  // 复刻旧 PlayCanvas 3GS 导演台的 pc.TranslateGizmo：
-  // 选中 actor / prop / staging 后，attach gizmo 到该 entity；拖动 X/Y/Z 箭头或 plane
-  // 在 world 空间平移。拖 prop / staging 时同步挂载在它上面的 actor。
+  // ---------- TranslateGizmo (XYZ axis dragging) ----------
+  // Reproduces the old PlayCanvas 3GS director stage's pc.TranslateGizmo:
+  // After selecting an actor / prop / staging, attach the gizmo to that entity; dragging the X/Y/Z arrows or plane
+  // translates in world space. When dragging a prop / staging, the actors mounted on it move along.
   //
-  // PlayCanvas TranslateGizmo / Gizmo.createLayer 在 v2+ 才稳定；不存在或抛错时
-  // gizmoCreateFailed=true 后续永远不重试，整体功能静默退化（其他交互不受影响）。
+  // PlayCanvas TranslateGizmo / Gizmo.createLayer is only stable from v2+; when missing or throwing,
+  // gizmoCreateFailed=true is set and never retried, and the feature degrades silently as a whole (other interactions are unaffected).
   let translateGizmoEnabled = true;
   let translateGizmo: pc.TranslateGizmo | null = null;
   let translateGizmoLayer: pc.Layer | null = null;
@@ -1649,7 +1649,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
       gizmo.axisCenterSize = 0.085;
       gizmo.axisLineThickness = 0.035;
       gizmo.axisLineLength = 0.72;
-      // 关掉中键 / 右键拖动；中键是飞行 dolly，右键是相机旋转，避免误触 gizmo。
+      // Disable middle / right-button dragging; middle is the fly dolly and right is camera rotation, avoiding accidental gizmo touches.
       gizmo.mouseButtons[1] = false;
       gizmo.mouseButtons[2] = false;
       gizmo.on('transform:move', () => {
@@ -1721,7 +1721,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     syncMountedActorsOf(selection.entity);
   }
 
-  // 屏幕坐标 → 世界射线（origin = camera, direction = unit vector toward picked screen point）。
+  // Screen coordinates -> world ray (origin = camera, direction = unit vector toward picked screen point).
   function screenToRay(clientX: number, clientY: number): pc.Ray | null {
     if (!camera.camera) return null;
     const rect = canvas.getBoundingClientRect();
@@ -1750,7 +1750,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
       : Math.max(0.55, maxScale * 0.45);
   }
 
-  // 对 markers 的每个 entity（含子节点）做 AABB-vs-ray 检测，挑命中点离 origin 最近的。
+  // Run AABB-vs-ray detection on every entity of the markers (including children) and pick the hit closest to the origin.
   function pickMarker(ray: pc.Ray): { kind: MarkerKind; entity: pc.Entity } | null {
     let best: { kind: MarkerKind; entity: pc.Entity } | null = null;
     let bestDistance = Infinity;
@@ -1861,7 +1861,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
 
   function getSelectionScreenPosition(): SelectionScreenPosition | null {
     if (!selection || !camera.camera) return null;
-    // 投影 entity 顶部一点点，便于 tag 浮在头顶不被遮。
+    // Project a point slightly above the entity top, so the tag floats over the head without being occluded.
     const worldPos = selection.entity.getPosition().clone();
     const localScale = selection.entity.getLocalScale();
     const lift = selection.kind === 'actor' ? 1.95 * localScale.y : 0.65 * localScale.y;
@@ -1874,8 +1874,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return { x: screen.x, y: screen.y, visible };
   }
 
-  // ---------- 选中操作 ----------
-  // actor 用 root.y = ground.y（脚底贴地）；prop / staging 用 proxy 最低点贴地。
+  // ---------- Selection operations ----------
+  // actor uses root.y = ground.y (feet on the ground); prop / staging use the proxy's lowest point on the ground.
   function placeOnGround(kind: MarkerKind, entity: pc.Entity, x: number, groundY: number, z: number): void {
     if (kind === 'actor') {
       entity.setPosition(x, groundY, z);
@@ -1948,17 +1948,17 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
   function scaleSelected(factor: number): boolean {
     if (!selection || !Number.isFinite(factor) || factor <= 0) return false;
     const s = selection.entity.getLocalScale();
-    // prop / staging 按 shape_hint 的 scale 限制夹一下；actor 不约束（导演态可能要
-    // 巨人 / 矮人）。复刻 BuilderGPT normalizedPropScale 的手动编辑路径。
+    // prop / staging are clamped by the shape_hint's scale limits; actors are unconstrained (the director state may need
+    // giants / dwarfs). Reproduces the manual editing path of BuilderGPT normalizedPropScale.
     let nextArr: [number, number, number] = [s.x * factor, s.y * factor, s.z * factor];
     if (selection.kind !== 'actor') {
       const hint = getEntityShapeHint(selection.entity);
       nextArr = clampScaleToHint(hint, nextArr);
     }
     const next = new pc.Vec3(nextArr[0], nextArr[1], nextArr[2]);
-    // 已达到 min/max 时 factor 失效 → 提前返回，避免触发无意义的落地 / 同步。
+    // When min/max is already reached the factor is ineffective -> return early, avoiding meaningless grounding / syncing.
     if (next.x === s.x && next.y === s.y && next.z === s.z) return false;
-    // 缩放后要保持 proxy 最低点贴在原地面高度。
+    // After scaling, the proxy's lowest point must stay at the original ground height.
     const pos = selection.entity.getPosition();
     selection.entity.setLocalScale(next);
     if (selection.kind !== 'actor') {
@@ -2200,13 +2200,13 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
   function lookAtSelected(durationMs = 300): boolean {
     if (!selection) return false;
     const target = selection.entity.getPosition();
-    // actor 的 anchor 在脚底，把视线抬到大致胸口高度，避免镜头看脚下。
+    // The actor's anchor is at the feet; raise the line of sight to roughly chest height so the camera does not look at the feet.
     const lift = selection.kind === 'actor' ? 1.0 * selection.entity.getLocalScale().y : 0;
     fly.lookAtTarget(new pc.Vec3(target.x, target.y + lift, target.z), durationMs);
     return true;
   }
 
-  // 选中对象的中心点（actor 用胸口高度，prop / staging 用 entity 当前位置）。
+  // Center point of the selected object (actors use chest height, prop / staging use the entity's current position).
   function selectionCenter(): pc.Vec3 | null {
     if (!selection) return null;
     const pos = selection.entity.getPosition();
@@ -2223,8 +2223,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return true;
   }
 
-  // 进入场景内部默认视角：站在 sceneCenter 附近朝中心看，避免 INITIAL_ZOOM * R
-  // 反推出的 actualDistance ≈ 1.6 R 把相机推到房间外。loadSplat / resetCamera 用。
+  // Default view when entering the scene interior: stand near sceneCenter looking at the center, to avoid the actualDistance ≈ 1.6 R
+  // back-computed from INITIAL_ZOOM * R pushing the camera outside the room. Used by loadSplat / resetCamera.
   function enterDefaultInteriorView(): void {
     if (!(sceneRadiusValue > 0)) return;
     const r = sceneRadiusValue;
@@ -2275,7 +2275,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     return true;
   }
 
-  // ---------- Scene snapshot：保存 / 恢复 ----------
+  // ---------- Scene snapshot: save / restore ----------
   function snapshotMarker(entity: pc.Entity, kind: MarkerKind): ThreeDMarkerSnapshot {
     const pos = entity.getPosition();
     const eul = entity.getEulerAngles();
@@ -2321,8 +2321,8 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
     };
   }
 
-  // 用 snapshot 重建一个 marker；不走 placeMarker 因为后者要 raycast 准星，
-  // 恢复时直接按存储的 position/yaw/scale 落地。
+  // Rebuild a marker from a snapshot; does not go through placeMarker since that needs a crosshair raycast,
+  // on restore it lands directly at the stored position/yaw/scale.
   function restoreMarker(kind: MarkerKind, snap: ThreeDMarkerSnapshot): pc.Entity | null {
     const color = parseHex(snap.color);
     const transform = resolveSnapshotWorldTransform(snap);
@@ -2369,7 +2369,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
       console.warn('[viewer] loadSceneSnapshot: unsupported schema', snap?.schemaVersion);
       return;
     }
-    // 清场：destroy 现有 markers + 解除选中 + 清 pose/color WeakMaps（GC 自动）。
+    // Clear the stage: destroy existing markers + clear selection + clear the pose/color WeakMaps (GC is automatic).
     clearMarkers();
     if (snap.world?.sourceTransform) {
       sourceTransform = normalizeDirectorWorldSourceTransform(snap.world.sourceTransform);
@@ -2450,7 +2450,7 @@ export async function createViewerApp(options: ViewerAppOptions): Promise<Viewer
           }
         }
       }
-      // preserveDrawingBuffer:true 已开启；强制 render 一帧以保证最新画面已写入。
+      // preserveDrawingBuffer:true is already on; force one render so the latest frame is guaranteed written.
       app.render();
       const rect = calculateFrameCaptureRect({
         canvasWidth: canvas.width,

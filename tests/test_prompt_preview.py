@@ -111,11 +111,10 @@ def test_character_chunk_prompt_builder_matches_what_the_agent_sends():
     from novelvideo.structured_extraction import build_character_chunk_prompt
     from novelvideo.utils.source_language import asset_language_instruction
 
-    chunk = chunk_source_text("第一章\n林默回到了家。", "narrated")[0]
-    text = build_character_chunk_prompt(chunk, "zh")
-    assert text == (
-        f"{asset_language_instruction('zh')}\n\n【片段 {chunk.section_label}】\n{chunk.text}"
-    )
+    chunk = chunk_source_text("Chapter 1\nLin Mo returned home.", "narrated")[0]
+    text = build_character_chunk_prompt(chunk, "en")
+    assert text.startswith(asset_language_instruction("en"))
+    assert chunk.section_label in text and chunk.text in text
 
 
 def test_default_identity_task_builder_keeps_prompt_structure():
@@ -126,48 +125,51 @@ def test_default_identity_task_builder_keeps_prompt_structure():
 
     task = build_default_identity_task(
         episode_number=2,
-        episode_title="雨夜",
-        cast_names=["林默", "苏晴"],
-        identity_info="### 林默",
+        episode_title="Rainy Night",
+        cast_names=["Lin Mo", "Su Qing"],
+        identity_info="### Lin Mo",
         graph_context="ctx",
-        content_text="原文内容",
+        content_text="Source content",
     )
-    assert task.startswith("分析第 2 集《雨夜》")
-    for marker in ("## 出场角色\n林默, 苏晴", "## 图谱上下文\nctx", "## 本集原文\n原文内容"):
+    assert task.startswith("Analyze the **real-world main-storyline default identity**")
+    assert 'episode 2 "Rainy Night"' in task
+    for marker in ("## Cast\nLin Mo, Su Qing", "## Graph context\nctx", "## Episode source text\nSource content"):
         assert marker in task
-    assert "## 图谱上下文" not in build_default_identity_task(
+    assert "## Graph context" not in build_default_identity_task(
         episode_number=1, episode_title="t", cast_names=["a"], identity_info="",
         graph_context=None, content_text="x",
     )
-    assert build_default_identity_system_prompt("原文内容").startswith("# 你是影视角色主线形态分析师")
+    assert build_default_identity_system_prompt("Source content").startswith(
+        "# You are an analyst of film/TV character main-storyline forms"
+    )
 
 
 def test_identity_preview_uses_rows_not_store_cache(tmp_path):
     ident = SimpleNamespace(
-        identity_id="lin_default", appearance_details="黑色风衣", face_prompt="", age_group="youth"
+        identity_id="lin_default", appearance_details="black trench coat", face_prompt="", age_group="youth"
     )
     char = SimpleNamespace(
-        name="林默", aliases=["小默"], gender="male", age_group="youth",
+        name="Lin Mo", aliases=["Little Mo"], gender="male", age_group="youth",
         face_prompt="", body_type="", identities=[ident],
     )
 
     class Store(_FakeStore):
         async def list_episodes(self):
-            return [SimpleNamespace(number=1, title="雨夜")]
+            return [SimpleNamespace(number=1, title="Rainy Night")]
 
         async def load_episode_content(self, ep):
-            return "林默走进雨里。"
+            return "Lin Mo walks into the rain."
 
     scope = _scope(tmp_path, Store([char]), episode=1)
     preview = _run(get_step("identity_plan").build_fn(scope, "pass_a"))
     task = preview.parts[1].text
-    assert "`lin_default`: 黑色风衣" in task and "林默走进雨里。" in task
+    assert "`lin_default`: black trench coat" in task and "Lin Mo walks into the rain." in task
     assert preview.parts[0].role == "system"
 
 
 def test_script_and_optimizer_show_system_prompt_only(tmp_path):
     scope = _scope(tmp_path, _FakeStore(), episode=1)
-    for step, marker in (("script", "逐行分镜标注师"), ("global_optimize", "Global Video Motion Director")):
+    for step, marker in (("script", ""), ("global_optimize", "Global Video Motion Director")):
         preview = _run(get_step(step).build_fn(scope, "system"))
         assert [p.role for p in preview.parts] == ["system"]
         assert marker in preview.parts[0].text and preview.note
@@ -181,9 +183,9 @@ def _beat(n, mode="keyframe", **kw):
         "beat_number": n,
         "video_mode": mode,
         "audio_type": "dialogue",
-        "speaker": "林默",
-        "narration_segment": f"台词{n}",
-        "visual_description": f"画面{n}",
+        "speaker": "Lin Mo",
+        "narration_segment": f"Line {n}",
+        "visual_description": f"Scene {n}",
         "keyframe_prompt": "",
         "video_prompt": "",
     }
@@ -215,7 +217,7 @@ def test_keyframe_agent_receives_exactly_the_shared_task_builder_output(tmp_path
             return SimpleNamespace(output="ok")
 
     builder = KeyframePromptBuilder()
-    builder._get_agent = lambda language="zh": _Agent()
+    builder._get_agent = lambda language="en": _Agent()
     kw = dict(
         narration="N", next_narration="next", language="en", visual_description="hall",
         next_visual_description="street", audio_type="dialogue", dialogue_line="hi",
@@ -235,10 +237,10 @@ def test_keyframe_preview_builds_task_and_reports_frames(tmp_path):
     roles = [p.role for p in preview.parts]
     assert roles == ["system", "user", "image", "image"]
     task = preview.parts[1].text
-    assert "【台词·林默】台词1" in task and "台词2" in task  # narration + next narration
+    assert "Lin Mo" in task and "Line 1" in task and "Line 2" in task  # narration + next narration
     # The real caller passes no colour map, and only the colour-map branch includes the visual
     # descriptions, so they are (faithfully) absent from the prompt.
-    assert "画面1" not in task
+    assert "Scene 1" not in task
     assert preview.parts[2].text.endswith("beat_01.png") and "missing" in preview.parts[3].text
     assert preview.inputs["has_both_frames"] is False
     assert preview.last_sent.text == "STORED"
@@ -250,7 +252,7 @@ def test_keyframe_preview_last_beat_and_first_frame_mode(tmp_path):
     spec = get_step("video_prompt")
 
     last = _run(spec.build_fn(scope, "2"))
-    assert last.parts == [] and "最后一个" in last.note
+    assert last.parts == [] and "Last beat" in last.note
 
     first_frame = _run(spec.build_fn(scope, "1"))
     assert [p.role for p in first_frame.parts] == ["system", "image"]

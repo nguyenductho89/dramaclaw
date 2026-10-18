@@ -6,7 +6,7 @@ import pytest
 
 from novelvideo.models import NovelScene
 
-ENRICHED_ENVIRONMENT_PROMPT = "正面：临街玻璃窗\n左侧：咖啡吧台\n右侧：木质书架\n背面：入口木门"
+ENRICHED_ENVIRONMENT_PROMPT = "Front: street-facing glass window\nLeft: coffee bar counter\nRight: wooden bookshelf\nBack: wooden entrance door"
 
 
 async def _return_async(value):
@@ -75,17 +75,17 @@ class _FakeCogneeStore:
         return None
 
 
-def _block(location: str = "咖啡馆", time_of_day: str = "夜"):
+def _block(location: str = "Cafe", time_of_day: str = "night"):
     return SimpleNamespace(
         location=location,
-        interior_exterior="内",
+        interior_exterior="int",
         time_of_day=time_of_day,
-        characters=["陆辰", "沈月白"],
-        header_line=f"场次（1）地点：{location}，{time_of_day}，内；出场人物：陆辰、沈月白",
+        characters=["Luke", "Mia"],
+        header_line=f"Scene 1. INT. {location} - {time_of_day}; Characters: Luke, Mia",
         lines=[
-            "窗外暴雨如注，雨滴重重砸在玻璃上。",
-            "咖啡馆内只有他们这一桌，昏黄的灯光将两人的影子拉得很长。",
-            "沈月白将自己的手机推到桌子中央。",
+            "Rain pours down outside, hammering against the glass.",
+            "They are the only table in the cafe; the dim amber light stretches their shadows long.",
+            "Mia pushes her phone to the middle of the table.",
         ],
     )
 
@@ -102,21 +102,21 @@ async def test_drama_scene_planning_uses_screenplay_normalizer_as_primary(monkey
         return NormalizedSceneHeader(
             episode_number=1,
             scene_no="2",
-            location="菩提寝房",
-            time_of_day="夜",
-            interior_exterior="内",
+            location="Bodhi Bedchamber",
+            time_of_day="night",
+            interior_exterior="int",
         )
 
     monkeypatch.setattr(asset_compiler, "normalize_screenplay_scene_header", fake_normalize)
 
     compiler = asset_compiler.AssetCompiler(_FakeCogneeStore())
     original = SimpleNamespace(
-        header_line="1-2 菩提寝房 夜 内",
-        location="菩提寝房",
-        time_of_day="夜",
-        interior_exterior="内",
-        characters=["孙悟空", "菩提祖师"],
-        lines=["孙悟空跪坐在蒲团上。"],
+        header_line="1-2 INT. BODHI BEDCHAMBER - NIGHT",
+        location="Bodhi Bedchamber",
+        time_of_day="night",
+        interior_exterior="int",
+        characters=["Sun Wukong", "Patriarch Subhuti"],
+        lines=["Sun Wukong kneels on the prayer cushion."],
     )
     blocks = await compiler._normalize_scene_block_headers(
         [original],
@@ -125,19 +125,19 @@ async def test_drama_scene_planning_uses_screenplay_normalizer_as_primary(monkey
 
     assert calls == [
         (
-            "1-2 菩提寝房 夜 内",
+            "1-2 INT. BODHI BEDCHAMBER - NIGHT",
             {
-                "location_hint": "菩提寝房",
-                "time_of_day_hint": "夜",
-                "interior_exterior_hint": "内",
-                "context_lines": ["孙悟空跪坐在蒲团上。"],
+                "location_hint": "Bodhi Bedchamber",
+                "time_of_day_hint": "night",
+                "interior_exterior_hint": "int",
+                "context_lines": ["Sun Wukong kneels on the prayer cushion."],
             },
         )
     ]
     assert len(blocks) == 1
-    assert blocks[0].location == "菩提寝房"
-    assert blocks[0].characters == ["孙悟空", "菩提祖师"]
-    assert blocks[0].lines == ["孙悟空跪坐在蒲团上。"]
+    assert blocks[0].location == "Bodhi Bedchamber"
+    assert blocks[0].characters == ["Sun Wukong", "Patriarch Subhuti"]
+    assert blocks[0].lines == ["Sun Wukong kneels on the prayer cushion."]
 
 
 @pytest.mark.asyncio
@@ -150,7 +150,7 @@ async def test_drama_scene_planning_rejects_empty_normalizer_output(monkeypatch)
     monkeypatch.setattr(asset_compiler, "normalize_screenplay_scene_header", fake_normalize)
 
     compiler = asset_compiler.AssetCompiler(_FakeCogneeStore())
-    with pytest.raises(ValueError, match="AI 未识别到第 1 个有效场景头"):
+    with pytest.raises(ValueError, match="AI did not recognize a valid scene header for scene #1"):
         await compiler._normalize_scene_block_headers(
             [_block()],
             lambda _message: None,
@@ -167,7 +167,7 @@ async def test_compile_episode_scenes_reconciles_base_scene_before_planning(monk
             aliases=[],
             scene_type=kwargs["scene_type"],
             environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-            description="雨夜咖啡馆",
+            description="Rainy-night cafe",
         )
 
     async def fake_derived(self, scene_name, block):
@@ -175,13 +175,13 @@ async def test_compile_episode_scenes_reconciles_base_scene_before_planning(monk
 
     async def fake_reconcile(self, source_text, episode, log):
         scene = await fake_enrich(
-            scene_name="咖啡馆",
+            scene_name="Cafe",
             scene_type="interior",
-            context_lines=["窗外暴雨如注。"],
+            context_lines=["Rain pours down outside."],
         )
         await self.cognee_store.sqlite_store.add_scene(scene)
-        log("  AI补全基础场景: 咖啡馆")
-        return ["咖啡馆"]
+        log("  AI completed base scene: Cafe")
+        return ["Cafe"]
 
     async def fake_load_scene_blocks(self, episode):
         return [_block()]
@@ -208,21 +208,21 @@ async def test_compile_episode_scenes_reconciles_base_scene_before_planning(monk
     compiler = asset_compiler.AssetCompiler(store)
 
     scene_menu, new_count = await compiler.compile_episode_scenes(
-        SimpleNamespace(number=1, title="第一集", beat_source_text="场次（1）地点：咖啡馆"),
+        SimpleNamespace(number=1, title="Episode One", beat_source_text="Scene 1. INT. Cafe"),
         lambda _message: None,
     )
 
-    assert scene_menu[0].scene_id == "咖啡馆"
+    assert scene_menu[0].scene_id == "Cafe"
     assert new_count == 0
-    assert [scene.name for scene in store.sqlite_store.added] == ["咖啡馆"]
-    assert store.sqlite_store.scenes["咖啡馆"].environment_prompt.startswith("正面：临街玻璃窗")
+    assert [scene.name for scene in store.sqlite_store.added] == ["Cafe"]
+    assert store.sqlite_store.scenes["Cafe"].environment_prompt.startswith("Front: street-facing glass window")
 
 
 @pytest.mark.asyncio
 async def test_compile_episode_scenes_backfills_existing_empty_scene_prompt(monkeypatch):
     import novelvideo.agents.asset_compiler as asset_compiler
 
-    existing = NovelScene(name="咖啡馆", scene_type="interior", environment_prompt="")
+    existing = NovelScene(name="Cafe", scene_type="interior", environment_prompt="")
 
     async def fake_enrich(**kwargs):
         return NovelScene(
@@ -230,7 +230,7 @@ async def test_compile_episode_scenes_backfills_existing_empty_scene_prompt(monk
             aliases=[],
             scene_type="interior",
             environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-            description="雨夜咖啡馆",
+            description="Rainy-night cafe",
         )
 
     async def fake_derived(self, scene_name, block):
@@ -251,15 +251,15 @@ async def test_compile_episode_scenes_backfills_existing_empty_scene_prompt(monk
     assert pending_scenes == []
     assert store.sqlite_store.updated == [
         (
-            "咖啡馆",
+            "Cafe",
             {
                 "scene_type": "interior",
                 "environment_prompt": ENRICHED_ENVIRONMENT_PROMPT,
-                "description": "雨夜咖啡馆",
+                "description": "Rainy-night cafe",
             },
         )
     ]
-    assert existing.environment_prompt.startswith("正面：临街玻璃窗")
+    assert existing.environment_prompt.startswith("Front: street-facing glass window")
 
 
 @pytest.mark.asyncio
@@ -267,16 +267,16 @@ async def test_compile_episode_scenes_keeps_existing_prompt(monkeypatch):
     import novelvideo.agents.asset_compiler as asset_compiler
 
     existing = NovelScene(
-        name="咖啡馆",
+        name="Cafe",
         scene_type="interior",
-        environment_prompt="已有完整空间合同",
-        description="已有描述",
+        environment_prompt="Existing complete spatial contract",
+        description="Existing description",
     )
     enrich_calls = []
 
     async def fake_enrich(**kwargs):
         enrich_calls.append(kwargs)
-        return NovelScene(name=kwargs["scene_name"], environment_prompt="不应使用")
+        return NovelScene(name=kwargs["scene_name"], environment_prompt="Should not be used")
 
     async def fake_derived(self, scene_name, block):
         return []
@@ -296,7 +296,7 @@ async def test_compile_episode_scenes_keeps_existing_prompt(monkeypatch):
     assert pending_scenes == []
     assert store.sqlite_store.updated == []
     assert enrich_calls == []
-    assert existing.environment_prompt == "已有完整空间合同"
+    assert existing.environment_prompt == "Existing complete spatial contract"
 
 
 @pytest.mark.asyncio
@@ -311,7 +311,7 @@ async def test_compile_episode_scenes_creates_empty_time_plate_slot_for_repeated
             aliases=[],
             scene_type="interior",
             environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-            description="咖啡馆",
+            description="Cafe",
         )
 
     async def fake_derived(self, scene_name, block):
@@ -323,30 +323,30 @@ async def test_compile_episode_scenes_creates_empty_time_plate_slot_for_repeated
     store = _FakeCogneeStore(
         [
             NovelScene(
-                name="咖啡馆",
+                name="Cafe",
                 scene_type="interior",
                 environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-                description="咖啡馆",
+                description="Cafe",
             )
         ]
     )
     compiler = asset_compiler.AssetCompiler(store)
 
     scene_menu, pending_scenes = await compiler._compile_scenes(
-        [_block(time_of_day="夜"), _block(time_of_day="夜")],
+        [_block(time_of_day="night"), _block(time_of_day="night")],
         SimpleNamespace(number=1),
         lambda _message: None,
     )
 
-    assert [item.scene_id for item in scene_menu] == ["咖啡馆", "咖啡馆_夜晚"]
-    assert scene_menu[1].base_scene_id == "咖啡馆"
+    assert [item.scene_id for item in scene_menu] == ["Cafe", "Cafe_night"]
+    assert scene_menu[1].base_scene_id == "Cafe"
     assert scene_menu[1].variant_id == ""
-    assert scene_menu[1].time_of_day == "夜晚"
-    time_plate = next(scene for scene in pending_scenes if scene.name == "咖啡馆_夜晚")
-    assert time_plate.base_scene_id == "咖啡馆"
+    assert scene_menu[1].time_of_day == "night"
+    time_plate = next(scene for scene in pending_scenes if scene.name == "Cafe_night")
+    assert time_plate.base_scene_id == "Cafe"
     assert time_plate.variant_id == ""
-    assert time_plate.time_of_day == "夜晚"
-    assert "空 plate 槽位" in time_plate.notes
+    assert time_plate.time_of_day == "night"
+    assert "Empty plate slot" in time_plate.notes
 
 
 @pytest.mark.asyncio
@@ -356,13 +356,13 @@ async def test_compile_episode_scenes_uses_narrated_fallback_without_scene_heade
     import novelvideo.agents.asset_compiler as asset_compiler
 
     async def fake_extract(self, source_text, episode, log):
-        assert "医院走廊" in source_text
+        assert "Hospital Corridor" in source_text
         return [
             NovelScene(
-                name="医院走廊",
+                name="Hospital Corridor",
                 scene_type="interior",
-                environment_prompt="正面：护士站与急诊指示牌\n左侧：病房门\n右侧：候诊椅\n背面：电梯间",
-                description="急诊楼医院走廊",
+                environment_prompt="Front: nurses station and emergency signage\nLeft: ward door\nRight: waiting chairs\nBack: elevator lobby",
+                description="Emergency building hospital corridor",
             )
         ]
 
@@ -375,22 +375,22 @@ async def test_compile_episode_scenes_uses_narrated_fallback_without_scene_heade
     monkeypatch.setattr(
         asset_compiler,
         "normalize_screenplay_scene_header",
-        lambda *_args, **_kwargs: pytest.fail("解说剧不应调用 screenplay normalizer"),
+        lambda *_args, **_kwargs: pytest.fail("Narrated dramas must not call the screenplay normalizer"),
     )
 
     store = _FakeCogneeStore(
-        raw_content="林晚冲进医院走廊，护士站前的灯牌闪烁。",
+        raw_content="Lin Wan rushes into the Hospital Corridor, the sign light in front of the nurses station flickering.",
         project_dir=str(tmp_path),
     )
     compiler = asset_compiler.AssetCompiler(store)
     compiler.spine_template = "narrated"
-    episode = SimpleNamespace(number=1, title="第一集", beat_source_text="")
+    episode = SimpleNamespace(number=1, title="Episode One", beat_source_text="")
 
     scene_menu, new_count = await compiler.compile_episode_scenes(episode, lambda _message: None)
 
     assert new_count == 1
-    assert scene_menu[0].scene_id == "医院走廊"
-    assert store.sqlite_store.added[0].name == "医院走廊"
+    assert scene_menu[0].scene_id == "Hospital Corridor"
+    assert store.sqlite_store.added[0].name == "Hospital Corridor"
     # Both tracks take the column-level patch, so concurrent scene and prop
     # planning cannot overwrite each other's menu.
     assert store.sqlite_store.patched == [(1, {"scene_menu": scene_menu})]
@@ -408,26 +408,26 @@ async def test_drama_without_scene_headers_uses_semantic_scene_planning(monkeypa
                 time_of_day="",
                 interior_exterior="",
                 characters=[],
-                lines=["林晚冲进医院走廊，护士站前的灯牌闪烁。"],
+                lines=["Lin Wan rushes into the Hospital Corridor, the sign light in front of the nurses station flickering."],
             )
         ]
 
     async def fake_extract(self, source_text, episode, log):
-        assert "医院走廊" in source_text
+        assert "Hospital Corridor" in source_text
         return [
             NovelScene(
-                name="医院走廊",
+                name="Hospital Corridor",
                 scene_type="interior",
-                environment_prompt="正面：护士站\n左侧：病房门\n右侧：候诊椅\n背面：电梯间",
-                description="急诊楼医院走廊",
+                environment_prompt="Front: nurses station\nLeft: ward door\nRight: waiting chairs\nBack: elevator lobby",
+                description="Emergency building hospital corridor",
             )
         ]
 
     async def fail_normalize(self, scene_blocks, log):
-        pytest.fail("无场景头的历史精品剧不应调用 screenplay normalizer")
+        pytest.fail("A legacy drama without scene headers must not call the screenplay normalizer")
 
     async def fail_reconcile(self, source_text, episode, log):
-        pytest.fail("语义 fallback 不应进入场景头校对链路")
+        pytest.fail("The semantic fallback must not enter the scene-header reconciliation chain")
 
     monkeypatch.setattr(
         asset_compiler.AssetCompiler,
@@ -451,7 +451,7 @@ async def test_drama_without_scene_headers_uses_semantic_scene_planning(monkeypa
     )
 
     store = _FakeCogneeStore(
-        raw_content="林晚冲进医院走廊，护士站前的灯牌闪烁。",
+        raw_content="Lin Wan rushes into the Hospital Corridor, the sign light in front of the nurses station flickering.",
         project_dir=str(tmp_path),
     )
     compiler = asset_compiler.AssetCompiler(store)
@@ -459,16 +459,16 @@ async def test_drama_without_scene_headers_uses_semantic_scene_planning(monkeypa
     logs: list[str] = []
 
     scene_menu, new_count = await compiler.compile_episode_scenes(
-        SimpleNamespace(number=1, title="第一集", beat_source_text=""),
+        SimpleNamespace(number=1, title="Episode One", beat_source_text=""),
         logs.append,
     )
 
     assert new_count == 1
-    assert [item.scene_id for item in scene_menu] == ["医院走廊"]
+    assert [item.scene_id for item in scene_menu] == ["Hospital Corridor"]
     # Both tracks take the column-level patch, so concurrent scene and prop
     # planning cannot overwrite each other's menu.
     assert store.sqlite_store.patched == [(1, {"scene_menu": scene_menu})]
-    assert any("项目类型仍保持精品剧" in message for message in logs)
+    assert any("the project type stays drama" in message for message in logs)
 
 
 @pytest.mark.asyncio
@@ -480,16 +480,16 @@ async def test_compile_scenes_promotes_stable_visual_states_to_pending_scenes(mo
             name=kwargs["scene_name"],
             scene_type=kwargs["scene_type"],
             environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-            description="雨夜咖啡馆",
+            description="Rainy-night cafe",
         )
 
     async def fake_derived(self, scene_name, block):
         return [
             asset_compiler.DerivedSceneRequirement(
-                label="暴雨版",
-                description="窗外暴雨，玻璃挂满水痕",
-                lighting="昏黄灯光",
-                atmosphere="潮湿雨夜空气",
+                label="rainstorm",
+                description="Rainstorm outside, water streaks across the glass",
+                lighting="dim amber light",
+                atmosphere="damp rainy-night air",
             )
         ]
 
@@ -499,10 +499,10 @@ async def test_compile_scenes_promotes_stable_visual_states_to_pending_scenes(mo
     store = _FakeCogneeStore(
         [
             NovelScene(
-                name="咖啡馆",
+                name="Cafe",
                 scene_type="interior",
                 environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-                description="雨夜咖啡馆",
+                description="Rainy-night cafe",
             )
         ]
     )
@@ -514,20 +514,20 @@ async def test_compile_scenes_promotes_stable_visual_states_to_pending_scenes(mo
         lambda _message: None,
     )
 
-    assert [item.scene_id for item in scene_menu] == ["咖啡馆", "咖啡馆_暴雨版"]
-    assert scene_menu[1].base_scene_id == "咖啡馆"
-    assert scene_menu[1].variant_id == "暴雨版"
-    assert [scene.name for scene in pending_scenes] == ["咖啡馆_暴雨版"]
+    assert [item.scene_id for item in scene_menu] == ["Cafe", "Cafe_rainstorm"]
+    assert scene_menu[1].base_scene_id == "Cafe"
+    assert scene_menu[1].variant_id == "rainstorm"
+    assert [scene.name for scene in pending_scenes] == ["Cafe_rainstorm"]
     derived_scene = pending_scenes[0]
-    assert derived_scene.name == "咖啡馆_暴雨版"
+    assert derived_scene.name == "Cafe_rainstorm"
     assert not hasattr(derived_scene, "base_scene")
-    assert derived_scene.aliases == ["咖啡馆"]
+    assert derived_scene.aliases == ["Cafe"]
     assert derived_scene.environment_prompt == ""
-    assert derived_scene.description == "窗外暴雨，玻璃挂满水痕"
-    assert "窗外暴雨，玻璃挂满水痕" in derived_scene.variant_prompt
-    assert "昏黄灯光" in derived_scene.variant_prompt
-    assert "潮湿雨夜空气" in derived_scene.variant_prompt
-    assert "正面：临街玻璃窗" not in derived_scene.variant_prompt
+    assert derived_scene.description == "Rainstorm outside, water streaks across the glass"
+    assert "Rainstorm outside, water streaks across the glass" in derived_scene.variant_prompt
+    assert "dim amber light" in derived_scene.variant_prompt
+    assert "damp rainy-night air" in derived_scene.variant_prompt
+    assert "Front: street-facing glass window" not in derived_scene.variant_prompt
 
 
 @pytest.mark.asyncio
@@ -537,10 +537,10 @@ async def test_compile_scenes_reuses_existing_derived_scene(monkeypatch):
     async def fake_derived(self, scene_name, block):
         return [
             asset_compiler.DerivedSceneRequirement(
-                label="暴雨版",
-                description="窗外暴雨，玻璃挂满水痕",
-                lighting="昏黄灯光",
-                atmosphere="潮湿雨夜空气",
+                label="rainstorm",
+                description="Rainstorm outside, water streaks across the glass",
+                lighting="dim amber light",
+                atmosphere="damp rainy-night air",
             )
         ]
 
@@ -549,16 +549,16 @@ async def test_compile_scenes_reuses_existing_derived_scene(monkeypatch):
     store = _FakeCogneeStore(
         [
             NovelScene(
-                name="咖啡馆",
+                name="Cafe",
                 scene_type="interior",
                 environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
             ),
             NovelScene(
-                name="咖啡馆_暴雨版",
+                name="Cafe_rainstorm",
                 scene_type="interior",
-                base_scene_id="咖啡馆",
-                variant_id="暴雨版",
-                variant_prompt="已有暴雨版",
+                base_scene_id="Cafe",
+                variant_id="rainstorm",
+                variant_prompt="Existing rainstorm variant",
             ),
         ]
     )
@@ -570,7 +570,7 @@ async def test_compile_scenes_reuses_existing_derived_scene(monkeypatch):
         lambda _message: None,
     )
 
-    assert [item.scene_id for item in scene_menu] == ["咖啡馆", "咖啡馆_暴雨版"]
+    assert [item.scene_id for item in scene_menu] == ["Cafe", "Cafe_rainstorm"]
     assert pending_scenes == []
 
 
@@ -588,27 +588,27 @@ async def test_compile_episode_scenes_persists_base_and_derived_as_normal_scenes
             name=kwargs["scene_name"],
             scene_type=kwargs["scene_type"],
             environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
-            description="雨夜咖啡馆",
+            description="Rainy-night cafe",
         )
 
     async def fake_derived(self, scene_name, block):
         return [
             asset_compiler.DerivedSceneRequirement(
-                label="暴雨版",
-                description="窗外暴雨，玻璃挂满水痕",
-                lighting="昏黄灯光",
-                atmosphere="潮湿雨夜空气",
+                label="rainstorm",
+                description="Rainstorm outside, water streaks across the glass",
+                lighting="dim amber light",
+                atmosphere="damp rainy-night air",
             )
         ]
 
     async def fake_reconcile(self, source_text, episode, log):
         scene = await fake_enrich(
-            scene_name="咖啡馆",
+            scene_name="Cafe",
             scene_type="interior",
-            context_lines=["窗外暴雨如注。"],
+            context_lines=["Rain pours down outside."],
         )
         await self.cognee_store.sqlite_store.add_scene(scene)
-        return ["咖啡馆"]
+        return ["Cafe"]
 
     monkeypatch.setattr(
         asset_compiler.AssetCompiler,
@@ -631,15 +631,15 @@ async def test_compile_episode_scenes_persists_base_and_derived_as_normal_scenes
     store = _FakeCogneeStore(project_dir=str(tmp_path))
     compiler = asset_compiler.AssetCompiler(store)
     scene_menu, new_count = await compiler.compile_episode_scenes(
-        SimpleNamespace(number=1, title="第一集"),
+        SimpleNamespace(number=1, title="Episode One"),
         lambda _message: None,
     )
 
     assert new_count == 1
-    assert [scene.name for scene in store.sqlite_store.added] == ["咖啡馆", "咖啡馆_暴雨版"]
-    assert [item.scene_id for item in scene_menu] == ["咖啡馆", "咖啡馆_暴雨版"]
-    assert scene_menu[1].base_scene_id == "咖啡馆"
-    assert scene_menu[1].variant_id == "暴雨版"
+    assert [scene.name for scene in store.sqlite_store.added] == ["Cafe", "Cafe_rainstorm"]
+    assert [item.scene_id for item in scene_menu] == ["Cafe", "Cafe_rainstorm"]
+    assert scene_menu[1].base_scene_id == "Cafe"
+    assert scene_menu[1].variant_id == "rainstorm"
     # Both tracks take the column-level patch, so concurrent scene and prop
     # planning cannot overwrite each other's menu.
     assert store.sqlite_store.patched == [(1, {"scene_menu": scene_menu})]
@@ -691,8 +691,8 @@ async def test_base_scene_reconcile_does_not_create_existing_alias():
     store = _FakeCogneeStore(
         [
             NovelScene(
-                name="医院走廊",
-                aliases=["急诊走廊"],
+                name="Hospital Corridor",
+                aliases=["emergency corridor"],
                 scene_type="interior",
                 environment_prompt=ENRICHED_ENVIRONMENT_PROMPT,
             )
@@ -705,19 +705,19 @@ async def test_base_scene_reconcile_does_not_create_existing_alias():
             scenes=[
                 asset_compiler.BaseSceneReconcileDecision(
                     action="create",
-                    scene_name="急诊走廊",
+                    scene_name="emergency corridor",
                     scene_type="interior",
-                    evidence_lines=["急诊走廊里灯牌闪烁。"],
+                    evidence_lines=["The sign light flickers in the emergency corridor."],
                 )
             ]
         ),
-        "急诊走廊里灯牌闪烁。",
+        "The sign light flickers in the emergency corridor.",
         SimpleNamespace(number=1),
         lambda _message: None,
     )
 
     assert created == []
-    assert sorted(store.sqlite_store.scenes) == ["医院走廊"]
+    assert sorted(store.sqlite_store.scenes) == ["Hospital Corridor"]
 
 
 @pytest.mark.asyncio
@@ -726,22 +726,22 @@ async def test_find_matching_scene_treats_independent_underscore_scene_as_base_c
 
     store = _FakeCogneeStore(
         [
-            NovelScene(name="地下", aliases=[], scene_type="interior"),
-            NovelScene(name="地下_主控室", aliases=["主控室"], scene_type="interior"),
+            NovelScene(name="Basement", aliases=[], scene_type="interior"),
+            NovelScene(name="Basement_control_room", aliases=["control room"], scene_type="interior"),
             NovelScene(
-                name="地下_漏水",
-                base_scene_id="地下",
-                variant_id="漏水",
+                name="Basement_leak",
+                base_scene_id="Basement",
+                variant_id="leak",
                 scene_type="interior",
             ),
         ]
     )
     compiler = asset_compiler.AssetCompiler(store)
 
-    matched = await compiler._find_matching_scene("主控室")
+    matched = await compiler._find_matching_scene("control room")
 
     assert matched is not None
-    assert matched.name == "地下_主控室"
+    assert matched.name == "Basement_control_room"
 
 
 def test_derived_scene_normalization_filters_plain_time_but_keeps_stable_light_plate():
@@ -749,18 +749,18 @@ def test_derived_scene_normalization_filters_plain_time_but_keeps_stable_light_p
 
     normalized = asset_compiler.AssetCompiler._build_derived_scene_specs(
         [
-            asset_compiler.DerivedSceneRequirement(label="夜晚", description="普通夜间时段"),
+            asset_compiler.DerivedSceneRequirement(label="night", description="Ordinary night-time period"),
             asset_compiler.DerivedSceneRequirement(
-                label="暴雨夜霓虹版",
-                description="暴雨夜晚，霓虹灯在积水中反射",
-                lighting="高对比霓虹反光",
-                atmosphere="雨幕和湿冷空气",
+                label="rainstorm neon night",
+                description="Rainstorm night, neon lights reflecting in puddles",
+                lighting="high-contrast neon reflections",
+                atmosphere="curtains of rain and cold damp air",
             ),
-            asset_compiler.DerivedSceneRequirement(label="特写", description="镜头语言"),
+            asset_compiler.DerivedSceneRequirement(label="close_up", description="Camera language"),
         ]
     )
 
-    assert [item.label for item in normalized] == ["暴雨夜霓虹版"]
+    assert [item.label for item in normalized] == ["rainstorm neon night"]
 
 
 @pytest.mark.asyncio

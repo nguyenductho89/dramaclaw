@@ -112,8 +112,8 @@ def _write_valid_labels(project_dir: Path, episode_num: int = 1) -> None:
         "result": {
             "decision": "revise",
             "main_problem": "composition_weak",
-            "reasoning": "构图需要更清楚。",
-            "edit_instruction": "调整构图，让主体动作更清楚。",
+            "reasoning": "The composition needs to be clearer.",
+            "edit_instruction": "Adjust the composition so the subject's action is clearer.",
             "confidence": 0.9,
         },
         "raw_text": "",

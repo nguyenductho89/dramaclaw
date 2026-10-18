@@ -12,13 +12,13 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mutation = vi.hoisted(() => () => ({ mutateAsync: vi.fn(), isPending: false }));
 const createStyleMock = vi.hoisted(() => vi.fn());
-const PRESET_ZH_LABEL = "动漫风格";
+const PRESET_ZH_LABEL = "Anime";
 
 const styleQueryState = vi.hoisted(() => ({
   detail: {
     id: "anime",
     name: "Anime",
-    label: "动漫风格",
+    label: "Anime",
     type: "preset",
     style_instructions: "clean cel shading",
     avoid_instructions: "photoreal skin",

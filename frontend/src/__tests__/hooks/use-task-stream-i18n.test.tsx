@@ -4,7 +4,7 @@
  * 任务流的完成 toast 与日志必须落在 i18n 这一侧。
  *
  * review #462：完成分支原来直接 `toast.success(data.current_task)`，而 run_core
- * 收尾时固定写 `current_task="完成"`，英文界面的完成提示因此还是中文；空值时又
+ * 收尾时固定写 `current_task="Done"`，英文界面的完成提示因此还是中文；空值时又
  * 硬编码回退到 "Task completed"，中文界面同样是错的。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -105,7 +105,7 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", {
         status: "completed",
         progress: 1,
-        current_task: "完成",
+        current_task: "Done",
       });
     });
 
@@ -120,7 +120,7 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", { status: "completed", progress: 1 });
     });
 
-    expect(toast.success).toHaveBeenCalledWith("已完成");
+    expect(toast.success).toHaveBeenCalledWith("Completed");
   });
 
   it("后端给了真实收尾文案时，按 code 翻译后再提示", async () => {
@@ -134,7 +134,7 @@ describe("useTaskStream 完成 toast", () => {
       stream.emit("completed", {
         status: "completed",
         progress: 1,
-        current_task: "场景提取完成",
+        current_task: "Scene extraction complete",
         current_task_code: "tasks.progress.scenes.complete",
       });
     });
@@ -153,11 +153,11 @@ describe("useTaskStream 日志兼容", () => {
         status: "running",
         progress: 0.3,
         current_task: "正在切分章节...",
-        logs: ["任务已开始", "原文已保存"],
+        logs: ["Task started", "Source text saved"],
       });
     });
 
-    expect(result.current.logs).toEqual(["任务已开始", "原文已保存"]);
+    expect(result.current.logs).toEqual(["Task started", "Source text saved"]);
   });
 
   it("新后端同时发 logs 和 logs_i18n 时，按结构化那份翻译", async () => {
@@ -171,9 +171,9 @@ describe("useTaskStream 日志兼容", () => {
       stream.emit("running", {
         status: "running",
         progress: 0.3,
-        current_task: "原文已保存",
-        logs: ["原文已保存"],
-        logs_i18n: [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }],
+        current_task: "Source text saved",
+        logs: ["Source text saved"],
+        logs_i18n: [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }],
       });
     });
 

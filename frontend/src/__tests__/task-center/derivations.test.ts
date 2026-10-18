@@ -48,9 +48,9 @@ describe("ageMs", () => {
 
 describe("displayLabel", () => {
   it.each([
-    ["freezone_agent_workflow_result", "创建工作流", "Create workflow"],
-    ["freezone_agent_recipe_result", "生成 Recipe", "Generate Recipe"],
-    ["freezone_workflow_confirm", "确认工作流", "Confirm workflow"],
+    ["freezone_agent_workflow_result", "Create workflow", "Create workflow"],
+    ["freezone_agent_recipe_result", "Generate Recipe", "Generate Recipe"],
+    ["freezone_workflow_confirm", "Confirm workflow", "Confirm workflow"],
   ])("labels %s without exposing the operation scope", (task_type, zh, en) => {
     const task = sampleTask({ task_type, episode: 0, scope: "agent_product_123" });
     expect(displayLabel(task, zhT)).toBe(zh);
@@ -64,7 +64,7 @@ describe("displayLabel", () => {
       episode: 0,
       scope: "user_admin_en845w:workflow_draft_abc:1",
     });
-    expect(displayLabel(task, zhT)).toBe("确认工作流");
+    expect(displayLabel(task, zhT)).toBe("Confirm workflow");
     expect(displayLabel(task, enT)).toBe("Confirm workflow");
   });
 
@@ -74,7 +74,7 @@ describe("displayLabel", () => {
       episode: 0,
       scope: "043a194450664f66",
     });
-    expect(displayLabel(task, zhT)).toBe("生成自由区视频");
+    expect(displayLabel(task, zhT)).toBe("Generate Freezone video");
     expect(displayLabel(task, enT)).toBe("Generate Freezone video");
   });
 
@@ -210,11 +210,11 @@ describe("currentTaskText", () => {
   const t = zhT as unknown as (k: string, opts?: Record<string, unknown>) => string;
 
   it("replaces the backend terminal sentinel with the localized status", () => {
-    expect(currentTaskText(sampleTask({ status: "completed", current_task: "完成" }), t)).toBe(
-      "已完成",
+    expect(currentTaskText(sampleTask({ status: "completed", current_task: "Done" }), t)).toBe(
+      "Completed",
     );
     expect(currentTaskText(sampleTask({ status: "completed", current_task: "done" }), t)).toBe(
-      "已完成",
+      "Completed",
     );
   });
   it("keeps real progress text as the backend sent it", () => {
@@ -222,8 +222,8 @@ describe("currentTaskText", () => {
       currentTaskText(sampleTask({ status: "running", current_task: "Writing beats..." }), t),
     ).toBe("Writing beats...");
     expect(
-      currentTaskText(sampleTask({ status: "completed", current_task: "生成 12 个 Beat" }), t),
-    ).toBe("生成 12 个 Beat");
+      currentTaskText(sampleTask({ status: "completed", current_task: "生成 12 Beats" }), t),
+    ).toBe("生成 12 Beats");
   });
   it("returns empty for a blank current task", () => {
     expect(currentTaskText(sampleTask({ status: "running", current_task: "" }), t)).toBe("");
@@ -231,13 +231,13 @@ describe("currentTaskText", () => {
   it("translates via the backend code when one is present", () => {
     const task = sampleTask({
       status: "running",
-      current_task: "读取并校验原文...",
+      current_task: "Reading and validating source text...",
       current_task_code: "tasks.progress.ingest.reading",
     });
     expect(currentTaskText(task, enT as unknown as typeof t)).toBe(
       "Reading and validating source text...",
     );
-    expect(currentTaskText(task, t)).toBe("读取并校验原文...");
+    expect(currentTaskText(task, t)).toBe("Reading and validating source text...");
   });
   it("falls back to the backend text when the code has no catalog entry", () => {
     // 后端先发新 code、前端词条还没跟上时，用户看到的是中文，不是裸 key。
@@ -258,7 +258,7 @@ describe("taskLogLines", () => {
       taskLogLines(
         [
           {
-            text: "文件读取完成: 1234 字符",
+            text: "File read: 1234 characters",
             code: "tasks.log.ingest.readComplete",
             params: { charCount: 1234 },
           },
@@ -269,15 +269,15 @@ describe("taskLogLines", () => {
   });
   it("passes plain strings through untouched", () => {
     // 还没迁移的后端调用点直接发中文字符串，不能被丢掉。
-    expect(taskLogLines(["原文已保存", "任务已开始"], t)).toEqual(["原文已保存", "任务已开始"]);
+    expect(taskLogLines(["Source text saved", "Task started"], t)).toEqual(["Source text saved", "Task started"]);
   });
   it("keeps structured and plain entries side by side", () => {
     expect(
       taskLogLines(
-        [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }, "任务已开始"],
+        [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }, "Task started"],
         enT as unknown as typeof t,
       ),
-    ).toEqual(["Source text saved", "任务已开始"]);
+    ).toEqual(["Source text saved", "Task started"]);
   });
   it("returns an empty array for a missing logs field", () => {
     expect(taskLogLines(undefined, t)).toEqual([]);
@@ -291,8 +291,8 @@ describe("taskLogLinesOf", () => {
     expect(
       taskLogLinesOf(
         {
-          logs: ["原文已保存"],
-          logs_i18n: [{ text: "原文已保存", code: "tasks.log.ingest.sourceSaved" }],
+          logs: ["Source text saved"],
+          logs_i18n: [{ text: "Source text saved", code: "tasks.log.ingest.sourceSaved" }],
         },
         enT as unknown as typeof t,
       ),
@@ -300,9 +300,9 @@ describe("taskLogLinesOf", () => {
   });
   it("falls back to logs when the backend predates logs_i18n", () => {
     // 滚动发布的另一半：老后端只发 `logs`，新前端照样得显示出来。
-    expect(taskLogLinesOf({ logs: ["原文已保存", "任务已开始"] }, t)).toEqual([
-      "原文已保存",
-      "任务已开始",
+    expect(taskLogLinesOf({ logs: ["Source text saved", "Task started"] }, t)).toEqual([
+      "Source text saved",
+      "Task started",
     ]);
   });
   it("returns an empty array when neither field is present", () => {
@@ -328,8 +328,8 @@ describe("originDeepLink", () => {
 });
 
 it.each([
-  ["freezone_image_vectorize", "生成矢量图", "Generate vector image"],
-  ["freezone_image_animate_gif", "转换动态图 GIF", "Convert animated GIF"],
+  ["freezone_image_vectorize", "Generate vector image", "Generate vector image"],
+  ["freezone_image_animate_gif", "Convert animated GIF", "Convert animated GIF"],
 ])("labels %s without internal job IDs", (task_type, zh, en) => {
   const task = sampleTask({ task_type, scope: "opaque-job-gif" });
   expect(displayLabel(task, zhT)).toBe(zh);

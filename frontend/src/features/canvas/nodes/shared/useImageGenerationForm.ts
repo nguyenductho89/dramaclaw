@@ -62,11 +62,11 @@ import type { ImageGenerationFormProps } from '@/features/canvas/nodes/shared/Im
 
 const DEFAULT_IMAGE_QUALITY: ImageQuality = 'medium';
 
-// 统一计费（#210）：图片生成走 feature 键询价，模型身份塞进 params。
+// Unified billing (#210): image generation is quoted by feature key, with the model identity put into params.
 const IMAGE_GENERATE_FEATURE_KEY = 'freezone.image_generate';
 
-// 节点被删除 / 尚未出现在 store 里时的空数据兜底，保持 hook 的 early-return-free
-// 结构（hooks 数量必须每帧一致）。
+// Empty-data fallback for when the node is deleted / not yet in the store, keeping the hook free of early returns
+// (the number of hooks must be the same every frame).
 const EMPTY_NODE_DATA = {} as ImageGenNodeData;
 
 function resolveOutputUrl(result: Record<string, unknown> | null | undefined): string | null {
@@ -79,11 +79,11 @@ function resolveOutputUrl(result: Record<string, unknown> | null | undefined): s
 }
 
 /**
- * `ImageGenerationForm` 的 props 里，由本 hook 负责供给的那一部分。
+ * The part of the props of `ImageGenerationForm` that this hook is responsible for supplying.
  *
- * 剩下的两个（`onStylePickerOpenChange` / `onOpenAssetLibrary`）是**宿主自己的
- * 浮层编排**——前者用来让宿主临时藏起叠在下方的历史记录条，后者打开宿主持有的
- * 素材库弹窗——与生成表单的数据/提交无关，故不进 hook。
+ * The remaining two (`onStylePickerOpenChange` / `onOpenAssetLibrary`) are **the host's own
+ * popover orchestration** — the former lets the host temporarily hide the history strip stacked below, the latter opens the material library
+ * dialog held by the host — unrelated to the generation form's data/submit, so they do not enter the hook.
  */
 export type ImageGenerationFormBoundProps = Omit<
   ImageGenerationFormProps,
@@ -92,27 +92,27 @@ export type ImageGenerationFormBoundProps = Omit<
 
 export interface UseImageGenerationFormOptions {
   /**
-   * 一批生成（含并发的 N 次调用）全部尘埃落定后触发。节点用它刷新「生成历史」
-   * 记录条；不关心历史的宿主可以不传。
+   * Fired after a batch of generations (including N concurrent calls) has all settled. The node uses it to refresh the "generation history"
+   * strip; hosts that do not care about history may omit it.
    */
   onGenerationSettled?: () => void;
 }
 
 export interface UseImageGenerationFormResult {
-  /** 直接展开给 `<ImageGenerationForm {...formProps} />`。 */
+  /** Spread directly into `<ImageGenerationForm {...formProps} />`. */
   formProps: ImageGenerationFormBoundProps;
   /**
-   * 下面几个值 formProps 里也有，但宿主自己还要用：
-   * - isGenerating / submitDisabled / submit：节点上「生成失败」横幅的重试按钮，
-   *   以及历史记录点击时的「非破坏性预览」分支；
-   * - canAutoCommitOnGenerate：决定主线托管节点是否只读；
-   * - referenceImageUrl：节点主体的占位图 / 「移除参考图」按钮。
+   * The values below also exist in formProps, but the host needs them itself:
+   * - isGenerating / submitDisabled / submit: the retry button of the "generation failed" banner on the node,
+   *   and the "non-destructive preview" branch when a history entry is clicked;
+   * - canAutoCommitOnGenerate: decides whether a mainline-managed node is read-only;
+   * - referenceImageUrl: the placeholder image of the node body / the "remove reference image" button.
    */
   isGenerating: boolean;
   submitDisabled: boolean;
   /**
-   * 提交生成。completionMode='submitted' 时提交完成即返回任务句柄，产物在后台
-   * 回填（工作流配方按单节点执行时用）；默认 'completed' 等产物落地后再返回。
+   * Submit generation. With completionMode='submitted' it returns the task handle once submitted, and the result is backfilled in the background
+   * (used when a workflow recipe runs a single node); by default 'completed' returns only after the result lands.
    */
   submit: (
     options?: { completionMode?: 'submitted' | 'completed' },
@@ -124,20 +124,20 @@ export interface UseImageGenerationFormResult {
   closeReferenceErrors: () => void;
   openReferenceErrors: () => void;
   /**
-   * 作废在途生成（#224）。宿主每条「用户主动换掉节点上这张图」的路径都要先调它，
-   * 否则上一批还在飞的请求回来会把刚换上的图盖掉，或糊上一条对不上号的失败横幅。
+   * Void in-flight generation (#224). Every host path where "the user actively swaps the image on the node" must call this first,
+   * otherwise requests of the previous batch still in flight would cover the image just swapped in when they return, or stick on a mismatched failure banner.
    */
   invalidateInFlightGeneration: () => void;
 }
 
 /**
- * 图片生成表单的**父级状态与提交编排**：prompt 草稿 + 输入法合成态、上游文本/
- * 图片、@图片N 编号与重排、模型/参数/算力、翻译、以及并发出图的 handleSubmit。
+ * The **parent state and submit orchestration** of the image generation form: prompt draft + IME composition state, upstream text/
+ * images, @image1 numbering and reordering, model/params/compute cost, translation, and the concurrent image-producing handleSubmit.
  *
- * 与 `ImageGenerationForm` 一样不碰任何 React Flow 上下文——节点数据一律从
- * `useCanvasStore` 按 id 取（画布喂给 ReactFlow 的就是 store 里的同一份 nodes，
- * 因此与节点组件收到的 `data` prop 是同一个对象）。这样故事板详情之类的独立
- * 布局也能直接 `useImageGenerationForm(nodeId)` 拿到整套能力。
+ * Like `ImageGenerationForm` it touches no React Flow context — node data is always taken from
+ * `useCanvasStore` by id (the nodes the canvas feeds to ReactFlow are the same ones in the store,
+ * so they are the same object as the `data` prop the node component receives). This way standalone
+ * layouts such as the storyboard detail can also get the whole set of capabilities directly via `useImageGenerationForm(nodeId)`.
  */
 export function useImageGenerationForm(
   nodeId: string,
@@ -154,7 +154,7 @@ export function useImageGenerationForm(
   const deleteEdge = useCanvasStore((state) => state.deleteEdge);
 
   // Local prompt buffer keeps the textarea's React `value` in lockstep with
-  // user input even during IME composition (中文输入法). Committing to the
+  // user input even during IME composition (input method). Committing to the
   // Zustand store on every keystroke triggers a global re-render that can
   // clobber the in-flight composition; the buffer absorbs that race.
   const externalPrompt = typeof data.prompt === 'string' ? data.prompt : '';
@@ -162,12 +162,12 @@ export function useImageGenerationForm(
   const isComposingRef = useRef(false);
   const hasUserEditedPromptRef = useRef(false);
   const submittingRef = useRef(false);
-  // 用户手动换图（恢复历史记录等）会作废上一批还在飞的请求：异步完成回来时必须
-  // 先对上这个计数器，才允许把结果或错误写回节点，否则新图刚换上就被旧批次覆盖，
-  // 或者盖上一条对不上号的失败横幅。宿主换图路径调 invalidateInFlightGeneration()。
+  // A manual image swap by the user (restoring history etc.) voids requests of the previous batch still in flight: when an async completion returns it must
+  // first match this counter before it may write the result or error back to the node, otherwise the new image just swapped in is overwritten by the old batch,
+  // or a mismatched failure banner is stuck on. Host image-swap paths call invalidateInFlightGeneration().
   const generationAttemptRef = useRef(0);
-  // 在途提交的等待队列：配方运行时可能在同一节点上并发触发 submit，后到的调用
-  // 不另起一次生成，而是挂在这里等前一次的产物（与工作流侧语义一致）。
+  // Wait queue for in-flight submissions: a recipe run may trigger submit concurrently on the same node, and a later call
+  // does not start another generation but hangs here waiting for the previous one's result (consistent with the workflow side).
   const submitWaitersRef = useRef<Array<(value: Record<string, unknown> | undefined) => void>>([]);
   useEffect(() => {
     if (isComposingRef.current) return;
@@ -177,7 +177,7 @@ export function useImageGenerationForm(
   const aspectRatio = typeof data.aspectRatio === 'string' && data.aspectRatio
     ? data.aspectRatio
     : '16:9';
-  // 目录可以给模型声明任意分辨率档位（不限于 1K/2K/4K），所以这里按裸字符串读。
+  // The catalog may declare arbitrary resolution tiers for a model (not limited to 1K/2K/4K), so read as a bare string here.
   const size = typeof data.size === 'string' && data.size.trim() ? data.size : '2K';
   const quality = (data.quality ?? DEFAULT_IMAGE_QUALITY) as ImageQuality;
   const count = (data.count ?? 1) as ImageGenCount;
@@ -227,8 +227,8 @@ export function useImageGenerationForm(
     );
   }, [data.model, availableModels]);
   const modelId = selectedModel?.id ?? '';
-  // 分辨率/比例/画质三档一律由媒体目录（admin 后台可配）驱动，不再靠模型名正则猜。
-  // 目录没声明时退回内置常量，保证老模型与离线兜底列表照常可用。
+  // The resolution/ratio/quality tiers are all driven by the media catalog (admin-configurable) and no longer guessed by a model-name regex.
+  // When the catalog declares nothing, fall back to the built-in constants, so old models and the offline fallback list keep working as usual.
   const modelSizeOptions = useMemo(() => {
     const configured = selectedModel?.resolutionOptions
       ?.map((item) => item.trim())
@@ -264,9 +264,9 @@ export function useImageGenerationForm(
   const imageSelectionForCost =
     imageModelsLoading || imageModelsFallback ? null : selectedModel?.apiModel ?? null;
   const imageQuantity = Math.min(Math.max(effectiveCount, 1), 4);
-  // 统一计费（#210）：按 feature 键询价，模型身份走 buildImageFeatureBillingParams
-  // 拼进 params。与 ImageGenNode 从前的写法必须逐字一致，否则同一个节点在工作流
-  // 和故事板两个视图里会报出不同的价格。
+  // Unified billing (#210): quote by feature key, with the model identity spliced into params via buildImageFeatureBillingParams.
+  // It must be verbatim identical to ImageGenNode's former code, otherwise the same node would report different prices in the workflow
+  // and storyboard views.
   const imageCreditCost = useGenerationCreditCost(
     'feature',
     imageSelectionForCost ? IMAGE_GENERATE_FEATURE_KEY : null,
@@ -285,12 +285,12 @@ export function useImageGenerationForm(
   const billingRuleMissingSubmitMessage = imageBillingRuleMissing
     ? t('node.imageGenNode.billingRuleMissingSubmit', {
         defaultValue:
-          '图片生成未启动：计费规则未配置，请联系管理员设置积分规则后重试。',
+          'Image generation did not start: billing rules are not configured. Contact an administrator to set credit rules and retry.',
       })
     : null;
-  // 用服务端下发的 `display`，别自己 format `cost`：促销时 display 是「原价→现价」，
-  // CreditCostPill 正是靠这个 `→` 才渲染划线原价和促销标签（credit-visual.tsx:117）。
-  // 自拼出来的只有一个数字，促销展示会整块消失。口径与 ImageGenNode 一致。
+  // Use the server-issued `display`, do not format `cost` yourself: during a promotion display is "original→current",
+  // and CreditCostPill renders the struck-through original price and the promo label precisely through this `→` (credit-visual.tsx:117).
+  // A self-assembled one has only a single number, and the whole promo display would vanish. Same basis as ImageGenNode.
   const totalCreditCostDisplay = useMemo(() => {
     const display = imageCreditCost.data?.data.display;
     if (!display) {
@@ -300,8 +300,8 @@ export function useImageGenerationForm(
     }
     return display;
   }, [imageBillingRuleMissing, imageCreditCost.data?.data.display, t]);
-  // display 与 promotion 必须成对下发：只有前者时标签会兜底成通用的「促销中」，
-  // 拿不到「限时 5 折」这种真实文案。
+  // display and promotion must be issued as a pair: with only the former the label falls back to the generic "On sale",
+  // and the real copy like "50% off for a limited time" cannot be obtained.
   const creditPromotion = imageCreditCost.data?.data.promotion ?? null;
   const { options: cameraOptions } = useFreezoneCameraOptions();
   const cameraSummary = describeCameraSelection(cameraSelection, cameraOptions);
@@ -309,8 +309,8 @@ export function useImageGenerationForm(
   const selectedStyle = describeStyleSelection(styleTemplateId, styleTemplates);
 
   const upstreamContents = useUpstreamContents(id);
-  // ImageGen 上游只消费「文本 + 图片」，视频/音频内容被丢弃 ——
-  // 即便 upload 节点带了视频 URL，也不进 OpsPanel 也不进 reference_urls。
+  // ImageGen upstream consumes only "text + images"; video/audio content is dropped —
+  // even if an upload node carries a video URL, it enters neither the OpsPanel nor reference_urls.
   const upstreamImageContents = useMemo(() => {
     const seen = new Set<string>();
     const out: typeof upstreamContents = [];
@@ -352,10 +352,10 @@ export function useImageGenerationForm(
       ),
     [upstreamImageContents],
   );
-  // 提交给后端的参考图有序列表：自身参考图排第 1、上游图接在后面（URL 去重）。
-  // @图片N 编号、mention 重排基线、提交三处共用这一份 —— 后端按位置解释 图片N，
-  // 曾经编号只数上游图、提交却把自身参考图前置，节点自带参考图时所有 @图片N
-  // 到后端整体偏移 1（@图片1 实际指向自身参考图）。
+  // The ordered list of reference images submitted to the backend: the node's own reference images come first, upstream images follow (URL deduped).
+  // The @image1 numbering, the mention-remap baseline and submission all share this one list — the backend interprets imageN by position,
+  // and once the numbering counted only upstream images while submission prepended the own reference image, so with a node-owned reference image all @imageN
+  // were shifted by 1 on the backend (@image1 actually pointed to the own reference image).
   const orderedReferenceUrls = useMemo(
     () => orderedReferenceUrlsWithOwnFirst(referenceImageUrl, upstreamReferenceUrls),
     [referenceImageUrl, upstreamReferenceUrls],
@@ -363,27 +363,27 @@ export function useImageGenerationForm(
   const generationMode =
     orderedReferenceUrls.length > 0 ? 'image_to_image' : 'text_to_image';
 
-  // 候选按 orderedReferenceUrls 编号（自身参考图在场时就是图片1），保证 @ 出来的
-  // 缩略图与后端解析到的 图片N 是同一张。key 优先用上游 nodeId；自身参考图没有
-  // 上游节点，用 URL 兜底（key 只需在候选内稳定唯一）。
+  // Candidates are numbered by orderedReferenceUrls (when the own reference image is present it is image1), ensuring the thumbnail shown by @
+  // is the same image as the imageN the backend resolves. The key prefers the upstream nodeId; the own reference image has no
+  // upstream node, so fall back to the URL (the key just needs to be stable and unique within the candidates).
   const mentionCandidates = useMemo<MentionCandidate[]>(
     () =>
       orderedReferenceUrls.map((url, index) => ({
         key:
           upstreamImageContents.find((content) => content.imageUrl === url)
             ?.nodeId ?? `self:${url}`,
-        name: `图片${index + 1}`,
+        name: `image${index + 1}`,
         imageUrl: resolveImageDisplayUrl(url),
         index: index + 1,
       })),
     [orderedReferenceUrls, upstreamImageContents],
   );
 
-  // 让 prompt 里的 @图片N 始终跟随参考图引用编号：删除 / 重排 / 新增引用连线、
-  // 上传或移除自身参考图后，mentionCandidates 会重新编号，这里把 prompt 里的数字
-  // 一并重写、被删引用的 mention 移除。有序基线 = orderedReferenceUrls（自身参考图
-  // 在前、去重 URL、连接顺序，与编号和提交口径一致；用 URL 而非 nodeId 作身份，
-  // 避免「两个上游节点图同一 URL」时删其一被误判为引用消失）。
+  // Keep @image1 in the prompt following the reference image numbering: after deleting / reordering / adding reference edges,
+  // or uploading or removing the own reference image, mentionCandidates renumbers, and here the numbers in the prompt are
+  // rewritten accordingly with mentions of deleted references removed. Ordered baseline = orderedReferenceUrls (own reference image
+  // first, URLs deduped, connection order, consistent with the numbering and submission basis; identity uses the URL rather than nodeId,
+  // avoiding "when two upstream nodes share the same URL, deleting one is misjudged as the reference disappearing").
   const applyPromptRemap = useCallback(
     (next: string) => {
       setPromptDraft(next);
@@ -393,13 +393,13 @@ export function useImageGenerationForm(
   );
   useReferenceMentionSync(
     prompt,
-    [{ prefix: "图片", ids: orderedReferenceUrls }],
+    [{ prefix: "image", ids: orderedReferenceUrls }],
     applyPromptRemap,
   );
 
-  // 取消关联某个上游素材：直接删掉「该上游节点 → 本节点」的连线，无需用户
-  // 去画布上找那根线。collectInputContents 只走一跳，所以 content.nodeId 就是
-  // 直接相连的上游节点，可精确定位到要删的边。
+  // Detach an upstream asset: directly delete the edge "that upstream node → this node", so the user need not
+  // hunt for that line on the canvas. collectInputContents walks only one hop, so content.nodeId is
+  // the directly connected upstream node, and the edge to delete can be located precisely.
   const handleDetachUpstream = useCallback(
     (sourceNodeId: string) => {
       useCanvasStore
@@ -437,25 +437,25 @@ export function useImageGenerationForm(
     }
   }, [id, isGenerating, isTranslatingPrompt, prompt, updateNodeData]);
 
-  // 「实时读取上游」：用户可以不填 prompt，只要上游连了带 text 的节点
-  // (文本/脚本/图片生成 prompt 等) 就能 submit；submit 时拼接上游 text。
+  // "Read upstream live": the user may leave the prompt empty; as long as a node with text is connected upstream
+  // (text/script/image-generation prompt etc.) it can submit; on submit the upstream text is concatenated.
   const hasEffectivePrompt =
     prompt.trim().length > 0 ||
     (
       upstreamTextJoined.length > 0 &&
       (!shouldInlineUpstreamTextAsPrompt || !hasUserEditedPromptRef.current)
     );
-  // 媒体目录可以给模型声明参考图上限；超了就别让用户点下去白等一次后端 400。
+  // The media catalog may declare a reference image cap for a model; when exceeded, do not let the user click only to wait for a backend 400.
   const selectedModelReferenceError =
     selectedModel?.referenceImageMax != null &&
     orderedReferenceUrls.length > selectedModel.referenceImageMax
-      ? `该模型最多支持 ${selectedModel.referenceImageMax} 张图片素材`
+      ? `This model supports at most ${selectedModel.referenceImageMax} image assets`
       : null;
-  // 下拉里逐项标灰：换到上限更小的模型前就能看见「该模型最多支持 N 张」。
+  // Gray out item by item in the dropdown: before switching to a model with a smaller cap you can already see "this model supports at most N".
   const getModelOptionDisabledReason = useCallback(
     (model: { referenceImageMax?: number | null }) =>
       model.referenceImageMax != null && orderedReferenceUrls.length > model.referenceImageMax
-        ? `该模型最多支持 ${model.referenceImageMax} 张图片素材`
+        ? `This model supports at most ${model.referenceImageMax} image assets`
         : null,
     [orderedReferenceUrls.length],
   );
@@ -467,8 +467,8 @@ export function useImageGenerationForm(
     selectedModelReferenceError !== null;
 
   /**
-   * 宿主在「用户主动把节点上的图换成别的」时调用（恢复历史记录、把画册某格设为
-   * 主图……）：作废上一批还在飞的请求，它们回来后不再写节点。
+   * Called by the host when "the user actively swaps the image on the node for another" (restoring history, setting a cell of the album as
+   * the main image…): void the previous batch of in-flight requests, which no longer write to the node after they return.
    */
   const invalidateInFlightGeneration = useCallback(() => {
     generationAttemptRef.current += 1;
@@ -513,9 +513,9 @@ export function useImageGenerationForm(
       selectedModel?.apiModel
       ?? SHARED_MODELS.find((m) => m.id === modelId)?.apiModel
       ?? modelId;
-    // 自身参考图（用户手动上传） + 所有上游图片/视频 URL，去重 —— 与 @图片N
-    // 编号共用同一份有序列表（orderedReferenceUrls），后端按位置解释 图片N。
-    // 后端 reference_urls 接受 image / video 混合数组。
+    // The node's own reference images (manually uploaded by the user) + all upstream image/video URLs, deduped — sharing the same ordered list
+    // (orderedReferenceUrls) with the @image1 numbering, and the backend interprets imageN by position.
+    // The backend reference_urls accepts a mixed array of image / video.
     const referenceUrls = orderedReferenceUrls;
     setReferenceErrors([]);
     setReferenceErrorsOpen(false);
@@ -537,7 +537,7 @@ export function useImageGenerationForm(
       : [upstreamTextJoined, ownPrompt]
         .filter((s) => s.length > 0)
         .join('\n\n');
-    // 工作流配方节点用配方编译出的最终 prompt；非配方节点回落上面这段拼接。
+    // Workflow recipe nodes use the final prompt compiled by the recipe; non-recipe nodes fall back to the concatenation above.
     const effectivePrompt = await compileWorkflowNodePrompt({
       nodeId: id,
       nodeData: data,
@@ -560,11 +560,11 @@ export function useImageGenerationForm(
     });
     const genPayload = {
       prompt: effectivePrompt,
-      // 后端只接受固定的几个比例；节点上的 aspectRatio 可能是图片自然尺寸约分出的
-      // 非标准值（如 "43:24"）或 "auto"，提交前吸附到最接近的合法比例（auto→1:1）。
+      // The backend accepts only a fixed set of ratios; the node's aspectRatio may be a non-standard value reduced from the image's natural size
+      // (such as "43:24") or "auto", and before submit it snaps to the nearest legal ratio (auto→1:1).
       aspectRatio: effectiveAspectRatio as typeof aspectRatio,
       imageSize: effectiveImageSize,
-      // 画质仅在媒体目录声明 qualityOptions 时下发。
+      // Quality is sent only when the media catalog declares qualityOptions.
       quality: supportsImageQuality ? effectiveQuality : null,
       referenceUrls,
       provider: selectedModel?.providerId as FreezoneProvider | undefined,
@@ -583,10 +583,10 @@ export function useImageGenerationForm(
       style: styleTemplateId ? { templateId: styleTemplateId } : null,
     };
 
-    // 后端不再支持一次出多张，改为按「生成数量」并发调用 N 次接口，每次出
-    // 1 张。N > 1 时不再复制兄弟节点，而是全部回填到当前节点的
-    // generationBatch（叠卡画册）：第 1 张完成的设为主图（imageUrl），其余
-    // 逐张追加进画册，收拢态渲染成叠起的卡片。
+    // The backend no longer supports producing several images at once; instead it calls the endpoint N times concurrently by "generation count", each producing
+    // 1 image. When N > 1 sibling nodes are no longer cloned; all are backfilled into the current node's
+    // generationBatch (stacked-card album): the first image to finish is set as the main image (imageUrl), and the rest
+    // are appended to the album one by one, rendered as stacked cards when collapsed.
     const total = Math.min(Math.max(effectiveCount, 1), 4);
     const resolvedCompletionMode = resolveImageGenerationCompletionMode(completionMode, total);
     // Clear any prior failure / album on resubmit — the on-node error banner
@@ -599,11 +599,11 @@ export function useImageGenerationForm(
       generationErrorRequestId: null,
       generationBatch: null,
     });
-    // 先完成的图立即入册展示，未完成的在画册里渲染占位骨架。
+    // Images that finish first enter the album and display immediately, while unfinished ones render placeholder skeletons in the album.
     setAlbumPendingTotal(id, total > 1 ? total : 0);
 
     const canvasId = readUrl().canvas ?? 'default';
-    // 各并发任务完成顺序不定，本地累积已完成的 URL，整组写回（避免读改写竞态）。
+    // Concurrent tasks finish in no fixed order, so accumulate the completed URLs locally and write back the whole group (avoiding read-modify-write races).
     const completedUrls: string[] = [];
     const submittedRefs: Array<{
       task_key: string;
@@ -646,7 +646,7 @@ export function useImageGenerationForm(
             completedUrls.push(url);
             const isFirstCompleted = completedUrls.length === 1;
             updateNodeData(id, {
-              // 第 1 张完成的设为主图并结束 loading；后续只扩充画册。
+              // The first image to finish is set as the main image and ends loading; later ones only expand the album.
               ...(isFirstCompleted ? buildImageGenerationSuccessPatch(url) : {}),
               ...(total > 1 ? { generationBatch: [...completedUrls] } : {}),
             });
@@ -659,16 +659,16 @@ export function useImageGenerationForm(
           } else {
             if (!isCurrentGenerationAttempt()) return;
             console.warn('[image-gen] generation completed without output url', completed);
-            // 只有 run 0（任务句柄的归属者）且尚无任何成功时才终结 loading——
-            // 非首个任务先「无 URL 完成」不能把还在跑的整体 loading 提前掐掉。
+            // Only run 0 (the owner of the task handle) with no success so far ends loading —
+            // a non-first task finishing first "without a URL" must not cut off the overall loading that is still running.
             if (runIndex === 0 && completedUrls.length === 0) {
               updateNodeData(id, { isGenerating: false, generationStartedAt: null });
             }
-            throw new Error('图片生成完成但未返回图片地址');
+            throw new Error('Image generation finished but returned no image URL');
           }
         };
-        // 'submitted'：提交即返回任务句柄，产物回填在后台继续（配方运行时按
-        // 单节点执行时用这个模式，不阻塞整条链路）。
+        // 'submitted': return the task handle once submitted, and the result backfill continues in the background (a recipe run
+        // executing a single node uses this mode, without blocking the whole chain).
         if (resolvedCompletionMode === 'submitted') {
           void completeTask().catch((error) => {
             console.error('[image-gen] background generation failed', error);
@@ -692,8 +692,8 @@ export function useImageGenerationForm(
       } catch (error) {
         if (!isCurrentGenerationAttempt()) return;
         console.error('[image-gen] generation failed', error);
-        // 已有同批其它图完成（主图已落）时不覆盖成功态为错误——部分失败只
-        // 影响画册张数。
+        // When other images of the same batch have completed (the main image has landed), do not overwrite the success state with an error — a partial failure only
+        // affects the album count.
         if (completedUrls.length > 0) return;
         const issues = referenceIssues(error);
         if (issues.length > 0 && runIndex === 0) {
@@ -724,9 +724,9 @@ export function useImageGenerationForm(
           });
           throw error;
         }
-        // 任务仲裁（stale / shouldWrite）只对 run 0 有意义：节点上只持久化了
-        // run 0 的任务句柄，其余 run 的 taskKey 必然对不上，套用仲裁会把
-        // 它们的失败全部误判为「过期任务」而静默吞掉。
+        // Task arbitration (stale / shouldWrite) is meaningful only for run 0: only run 0's task handle is
+        // persisted on the node, and the taskKey of other runs inevitably fails to match; applying arbitration would misjudge all of
+        // their failures as "stale tasks" and silently swallow them.
         if (runIndex === 0) {
           const latestNodeData = (useCanvasStore
             .getState()
@@ -746,8 +746,8 @@ export function useImageGenerationForm(
         }
         // Persist the failure on the node so it stays visible until the next
         // submit — the request id is the handle support uses to trace it.
-        // 只有 run 0 失败才终结 loading：非首 run 失败时 run 0 可能还在跑，
-        // 它的成功补丁会清掉这里写的错误横幅。
+        // Only a run 0 failure ends loading: when a non-first run fails, run 0 may still be running,
+        // and its success patch would clear the error banner written here.
         const rawErrorMessage =
           error instanceof Error && error.message
             ? error.message
@@ -770,7 +770,7 @@ export function useImageGenerationForm(
     const settledRuns = await Promise.allSettled(
       Array.from({ length: total }, (_, runIndex) => runOne(runIndex)),
     );
-    // 全部尘埃落定后撤掉占位（失败的任务不留空槽，画册按实际完成数收口）。
+    // After everything settles, remove the placeholders (failed tasks leave no empty slot; the album closes by the actual completed count).
     setAlbumPendingTotal(id, 0);
     // Backend records each attempt (success or failure); pull the new entries.
     // Failures are surfaced directly on the failing node (request-id banner),
@@ -805,7 +805,7 @@ export function useImageGenerationForm(
       };
       return actionOutput;
     }
-    throw new Error('图片生成未提交任务，也没有返回图片地址');
+    throw new Error('Image generation did not submit a task and returned no image URL');
     } finally {
       submittingRef.current = false;
       const waiters = submitWaitersRef.current;

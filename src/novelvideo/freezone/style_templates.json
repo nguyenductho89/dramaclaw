@@ -4,7 +4,7 @@
     {
       "id": "period_idol",
       "label": "Period Idol",
-      "category": "Period",
+      "category": "period",
       "cover": "period_idol/cover.webp",
       "samples": [
         "period_idol/female.webp",
@@ -17,7 +17,7 @@
     {
       "id": "palace_intrigue",
       "label": "Palace Intrigue",
-      "category": "Period",
+      "category": "period",
       "cover": "palace_intrigue/cover.webp",
       "samples": [
         "palace_intrigue/female.webp",
@@ -29,8 +29,8 @@
     },
     {
       "id": "wuxia",
-      "label": "Wuxia Jianghu",
-      "category": "Period",
+      "label": "Wuxia",
+      "category": "period",
       "cover": "wuxia/cover.webp",
       "samples": [
         "wuxia/female.webp",
@@ -43,7 +43,7 @@
     {
       "id": "cn_urban",
       "label": "Chinese Urban",
-      "category": "Urban",
+      "category": "urban",
       "cover": "cn_urban/cover.webp",
       "samples": [
         "cn_urban/female.webp",
@@ -56,7 +56,7 @@
     {
       "id": "urban_romance",
       "label": "Urban Romance",
-      "category": "Urban",
+      "category": "urban",
       "cover": "urban_romance/cover.webp",
       "samples": [
         "urban_romance/female.webp",
@@ -68,8 +68,8 @@
     },
     {
       "id": "crime_suspense",
-      "label": "Realist Suspense",
-      "category": "Urban",
+      "label": "Crime Suspense",
+      "category": "urban",
       "cover": "crime_suspense/cover.webp",
       "samples": [
         "crime_suspense/female.webp",
@@ -82,7 +82,7 @@
     {
       "id": "korean_muted",
       "label": "Korean Muted",
-      "category": "Urban",
+      "category": "urban",
       "cover": "korean_muted/cover.webp",
       "samples": [
         "korean_muted/female.webp",
@@ -94,8 +94,8 @@
     },
     {
       "id": "nineties",
-      "label": "1990s",
-      "category": "Vintage",
+      "label": "The Nineties",
+      "category": "era",
       "cover": "nineties/cover.webp",
       "samples": [
         "nineties/female.webp",
@@ -108,7 +108,7 @@
     {
       "id": "golden_age",
       "label": "Golden Age",
-      "category": "Vintage",
+      "category": "era",
       "cover": "golden_age/cover.webp",
       "samples": [
         "golden_age/female.webp",
@@ -121,7 +121,7 @@
     {
       "id": "documentary_realism",
       "label": "Documentary Realism",
-      "category": "Vintage",
+      "category": "era",
       "cover": "documentary_realism/cover.webp",
       "samples": [
         "documentary_realism/female.webp",
@@ -134,7 +134,7 @@
     {
       "id": "retro_narrative",
       "label": "Retro Narrative",
-      "category": "Vintage",
+      "category": "era",
       "cover": "retro_narrative/cover.webp",
       "samples": [
         "retro_narrative/female.webp",
@@ -146,8 +146,8 @@
     },
     {
       "id": "american_nineties",
-      "label": "American 90s",
-      "category": "Vintage",
+      "label": "American Nineties",
+      "category": "era",
       "cover": "american_nineties/cover.webp",
       "samples": [
         "american_nineties/female.webp",
@@ -160,7 +160,7 @@
     {
       "id": "showa_monochrome",
       "label": "Showa Monochrome",
-      "category": "Vintage",
+      "category": "era",
       "cover": "showa_monochrome/cover.webp",
       "samples": [
         "showa_monochrome/female.webp",
@@ -173,7 +173,7 @@
     {
       "id": "vintage_industrial",
       "label": "Vintage Industrial",
-      "category": "Vintage",
+      "category": "era",
       "cover": "vintage_industrial/cover.webp",
       "samples": [
         "vintage_industrial/female.webp",
@@ -185,8 +185,8 @@
     },
     {
       "id": "sixties_poster",
-      "label": "60s Poster",
-      "category": "Vintage",
+      "label": "Sixties Poster",
+      "category": "era",
       "cover": "sixties_poster/cover.webp",
       "samples": [
         "sixties_poster/female.webp",
@@ -198,8 +198,8 @@
     },
     {
       "id": "hk_retro",
-      "label": "Retro Hong Kong Film",
-      "category": "Vintage",
+      "label": "Retro Hong Kong Cinema",
+      "category": "era",
       "cover": "hk_retro/cover.webp",
       "samples": [
         "hk_retro/female.webp",
@@ -212,7 +212,7 @@
     {
       "id": "retro_film",
       "label": "Retro Film",
-      "category": "Vintage",
+      "category": "era",
       "cover": "retro_film/cover.webp",
       "samples": [
         "retro_film/female.webp",
@@ -225,7 +225,7 @@
     {
       "id": "healing_life",
       "label": "Healing Life",
-      "category": "Lifestyle",
+      "category": "lifestyle",
       "cover": "healing_life/cover.webp",
       "samples": [
         "healing_life/female.webp",
@@ -238,7 +238,7 @@
     {
       "id": "youth_film",
       "label": "Youth Film",
-      "category": "Lifestyle",
+      "category": "lifestyle",
       "cover": "youth_film/cover.webp",
       "samples": [
         "youth_film/female.webp",
@@ -251,7 +251,7 @@
     {
       "id": "atompunk",
       "label": "Atompunk",
-      "category": "Sci-Fi",
+      "category": "scifi",
       "cover": "atompunk/cover.webp",
       "samples": [
         "atompunk/female.webp",
@@ -264,7 +264,7 @@
     {
       "id": "neon_punk",
       "label": "Neon Punk",
-      "category": "Sci-Fi",
+      "category": "scifi",
       "cover": "neon_punk/cover.webp",
       "samples": [
         "neon_punk/female.webp",
@@ -277,7 +277,7 @@
     {
       "id": "hard_scifi",
       "label": "Hard Sci-Fi",
-      "category": "Sci-Fi",
+      "category": "scifi",
       "cover": "hard_scifi/cover.webp",
       "samples": [
         "hard_scifi/female.webp",
@@ -290,7 +290,7 @@
     {
       "id": "steampunk",
       "label": "Steampunk",
-      "category": "Sci-Fi",
+      "category": "scifi",
       "cover": "steampunk/cover.webp",
       "samples": [
         "steampunk/female.webp",
@@ -303,7 +303,7 @@
     {
       "id": "biopunk",
       "label": "Biopunk",
-      "category": "Sci-Fi",
+      "category": "scifi",
       "cover": "biopunk/cover.webp",
       "samples": [
         "biopunk/female.webp",
@@ -316,7 +316,7 @@
     {
       "id": "psychological_horror",
       "label": "Psychological Horror",
-      "category": "Genre",
+      "category": "genre",
       "cover": "psychological_horror/cover.webp",
       "samples": [
         "psychological_horror/female.webp",
@@ -329,7 +329,7 @@
     {
       "id": "cult_film",
       "label": "Cult Film",
-      "category": "Genre",
+      "category": "genre",
       "cover": "cult_film/cover.webp",
       "samples": [
         "cult_film/female.webp",
@@ -342,7 +342,7 @@
     {
       "id": "modern_warfare",
       "label": "Modern Warfare",
-      "category": "Genre",
+      "category": "genre",
       "cover": "modern_warfare/cover.webp",
       "samples": [
         "modern_warfare/female.webp",
@@ -355,7 +355,7 @@
     {
       "id": "wasteland_road",
       "label": "Wasteland Road",
-      "category": "Genre",
+      "category": "genre",
       "cover": "wasteland_road/cover.webp",
       "samples": [
         "wasteland_road/female.webp",
@@ -368,7 +368,7 @@
     {
       "id": "western_cowboy",
       "label": "Western Cowboy",
-      "category": "Genre",
+      "category": "genre",
       "cover": "western_cowboy/cover.webp",
       "samples": [
         "western_cowboy/female.webp",
@@ -381,7 +381,7 @@
     {
       "id": "neo_chinese",
       "label": "Neo-Chinese",
-      "category": "Stylized",
+      "category": "expressive",
       "cover": "neo_chinese/cover.webp",
       "samples": [
         "neo_chinese/female.webp",
@@ -394,7 +394,7 @@
     {
       "id": "high_key_absurd",
       "label": "High-Key Absurd",
-      "category": "Stylized",
+      "category": "expressive",
       "cover": "high_key_absurd/cover.webp",
       "samples": [
         "high_key_absurd/female.webp",
@@ -407,7 +407,7 @@
     {
       "id": "shanghai_animation",
       "label": "Shanghai Animation",
-      "category": "Animation",
+      "category": "animation",
       "cover": "shanghai_animation/cover.webp",
       "samples": [
         "shanghai_animation/female.webp",
@@ -419,8 +419,8 @@
     },
     {
       "id": "otomo_akira",
-      "label": "Katsuhiro Otomo",
-      "category": "Animation",
+      "label": "Otomo Akira",
+      "category": "animation",
       "cover": "otomo_akira/cover.webp",
       "samples": [
         "otomo_akira/female.webp",
@@ -433,7 +433,7 @@
     {
       "id": "stop_motion",
       "label": "Stop Motion",
-      "category": "Animation",
+      "category": "animation",
       "cover": "stop_motion/cover.webp",
       "samples": [
         "stop_motion/female.webp",
@@ -446,7 +446,7 @@
     {
       "id": "claymation",
       "label": "Claymation",
-      "category": "Animation",
+      "category": "animation",
       "cover": "claymation/cover.webp",
       "samples": [
         "claymation/female.webp",
@@ -459,7 +459,7 @@
     {
       "id": "chinese_ink",
       "label": "Chinese Ink",
-      "category": "Art",
+      "category": "painting",
       "cover": "chinese_ink/cover.webp",
       "samples": [
         "chinese_ink/female.webp",
@@ -472,7 +472,7 @@
     {
       "id": "ukiyo_e",
       "label": "Ukiyo-e",
-      "category": "Art",
+      "category": "painting",
       "cover": "ukiyo_e/cover.webp",
       "samples": [
         "ukiyo_e/female.webp",
@@ -484,8 +484,8 @@
     },
     {
       "id": "shadow_puppet",
-      "label": "Shadow Puppetry",
-      "category": "Art",
+      "label": "Shadow Puppet",
+      "category": "painting",
       "cover": "shadow_puppet/cover.webp",
       "samples": [
         "shadow_puppet/female.webp",
@@ -498,7 +498,7 @@
     {
       "id": "egyptian_mural",
       "label": "Egyptian Mural",
-      "category": "Art",
+      "category": "painting",
       "cover": "egyptian_mural/cover.webp",
       "samples": [
         "egyptian_mural/female.webp",
@@ -511,7 +511,7 @@
     {
       "id": "minimal_illustration",
       "label": "Minimal Illustration",
-      "category": "Art",
+      "category": "painting",
       "cover": "minimal_illustration/cover.webp",
       "samples": [
         "minimal_illustration/female.webp",
@@ -523,8 +523,8 @@
     },
     {
       "id": "dali_surreal",
-      "label": "Dali Surrealism",
-      "category": "Art",
+      "label": "Dali Surreal",
+      "category": "painting",
       "cover": "dali_surreal/cover.webp",
       "samples": [
         "dali_surreal/female.webp",
@@ -537,7 +537,7 @@
     {
       "id": "game_concept",
       "label": "Game Concept",
-      "category": "Art",
+      "category": "painting",
       "cover": "game_concept/cover.webp",
       "samples": [
         "game_concept/female.webp",
@@ -550,7 +550,7 @@
     {
       "id": "chinese_myth",
       "label": "Chinese Mythology",
-      "category": "Mythology",
+      "category": "myth",
       "cover": "chinese_myth/cover.webp",
       "samples": [
         "chinese_myth/female.webp",
@@ -563,7 +563,7 @@
     {
       "id": "greek_myth",
       "label": "Greek Mythology",
-      "category": "Mythology",
+      "category": "myth",
       "cover": "greek_myth/cover.webp",
       "samples": [
         "greek_myth/female.webp",
@@ -576,7 +576,7 @@
     {
       "id": "western_fantasy",
       "label": "Western Fantasy",
-      "category": "Mythology",
+      "category": "myth",
       "cover": "western_fantasy/cover.webp",
       "samples": [
         "western_fantasy/female.webp",

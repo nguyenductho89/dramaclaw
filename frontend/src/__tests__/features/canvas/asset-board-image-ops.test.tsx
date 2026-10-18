@@ -213,18 +213,18 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     // Entering the editor builds the "Rotate result" node (source image untouched), and the editor writes straight back to it.
     expect(createRotateResultNode).toHaveBeenCalledWith('img-up', { displayName: 'Rotate result' });
 
-    const dialog = await screen.findByRole('dialog', { name: 'rotateEditor.title' });
+    const dialog = await screen.findByRole('dialog', { name: 'Rotate & Mirror' });
     const preview = dialog.querySelector('img');
     expect(preview).not.toBeNull();
     expect(preview?.style.transform).toBe('rotate(0deg) scale(1, 1)');
 
     // Each click of "rotate 90 clockwise" adds 90 to the current angle, and the preview follows live (libtv behavior).
-    const rotate90 = within(dialog).getByRole('button', { name: 'rotateEditor.rotate90' });
+    const rotate90 = within(dialog).getByRole('button', { name: 'Rotate 90° clockwise' });
     await user.click(rotate90);
     await user.click(rotate90);
     expect(preview?.style.transform).toBe('rotate(180deg) scale(1, 1)');
 
-    await user.click(within(dialog).getByRole('button', { name: /rotateEditor\.save/ }));
+    await user.click(within(dialog).getByRole('button', { name: /Save/ }));
 
     expect(rotateImageInPlace).toHaveBeenCalledWith('rot-1', expect.stringContaining('up.png'), {
       angleDeg: 180,
@@ -232,7 +232,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
       mirrorV: false,
     });
     // After submit the editor closes, and the source node's "... -> Rotate" goes busy until the background chain settles.
-    expect(screen.queryByRole('dialog', { name: 'rotateEditor.title' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Rotate & Mirror' })).not.toBeInTheDocument();
     expect(inFlightImageOps.get('img-up')).toBe('rotate');
     expect(discardRotateResultNode).not.toHaveBeenCalled();
   });
@@ -244,12 +244,12 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
 
     fireEvent.click(within(openMoreMenu()).getByRole('button', { name: 'Rotate' }));
 
-    const dialog = await screen.findByRole('dialog', { name: 'rotateEditor.title' });
-    await user.click(within(dialog).getByRole('button', { name: 'rotateEditor.exit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Rotate & Mirror' });
+    await user.click(within(dialog).getByRole('button', { name: 'Exit rotate & mirror' }));
 
     expect(rotateImageInPlace).not.toHaveBeenCalled();
     expect(discardRotateResultNode).toHaveBeenCalledWith('rot-2');
-    expect(screen.queryByRole('dialog', { name: 'rotateEditor.title' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Rotate & Mirror' })).not.toBeInTheDocument();
     expect(inFlightImageOps.get('img-up')).toBeUndefined();
   });
 
@@ -274,14 +274,14 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     // Entering the editor builds the "Crop result" node (source image untouched), and the editor writes straight back to it.
     expect(createCropResultNode).toHaveBeenCalledWith('img-up', { displayName: 'Crop result' });
 
-    const dialog = await screen.findByRole('dialog', { name: 'cropEditor.title' });
+    const dialog = await screen.findByRole('dialog', { name: 'Crop' });
     loadCropImage(dialog, 800, 400);
 
     // The default is "original ratio"; after switching to 1:1 the crop frame resets to the largest centered rectangle at that ratio
     // (400x400 inside 800x400, centered means x=200).
-    await user.click(within(dialog).getByRole('button', { name: 'cropEditor.aspectOriginal' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Original ratio' }));
     await user.click(await within(dialog).findByRole('option', { name: /1:1/ }));
-    await user.click(within(dialog).getByRole('button', { name: 'cropEditor.confirm' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
     expect(cropImageInPlace).toHaveBeenCalledWith('crop-1', '/static/up.png', {
       x: 200,
@@ -290,7 +290,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
       height: 400,
     });
     // After submit the editor closes, and the source node's "... -> Crop" goes busy until the background chain settles.
-    expect(screen.queryByRole('dialog', { name: 'cropEditor.title' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Crop' })).not.toBeInTheDocument();
     expect(within(openMoreMenu()).getByRole('button', { name: 'Crop' })).toBeDisabled();
     expect(inFlightImageOps.get('img-up')).toBe('crop');
     expect(discardCropResultNode).not.toHaveBeenCalled();
@@ -304,21 +304,21 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     openDetail('Uploaded image');
 
     fireEvent.click(within(openMoreMenu()).getByRole('button', { name: 'Crop' }));
-    let dialog = await screen.findByRole('dialog', { name: 'cropEditor.title' });
-    await user.click(within(dialog).getByRole('button', { name: 'cropEditor.exit' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Crop' });
+    await user.click(within(dialog).getByRole('button', { name: 'Exit crop' }));
 
     expect(cropImageInPlace).not.toHaveBeenCalled();
     expect(discardCropResultNode).toHaveBeenCalledWith('crop-2');
-    expect(screen.queryByRole('dialog', { name: 'cropEditor.title' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Crop' })).not.toBeInTheDocument();
     expect(inFlightImageOps.get('img-up')).toBeUndefined();
 
     // Enter again and confirm without touching anything: the crop frame is still the whole image, nothing to crop -- do not upload, and
     // likewise recycle the pre-built node so the canvas does not gain a copy pixel-identical to the original.
     createCropResultNode.mockReturnValue('crop-3');
     fireEvent.click(within(openMoreMenu()).getByRole('button', { name: 'Crop' }));
-    dialog = await screen.findByRole('dialog', { name: 'cropEditor.title' });
+    dialog = await screen.findByRole('dialog', { name: 'Crop' });
     loadCropImage(dialog, 800, 400);
-    await user.click(within(dialog).getByRole('button', { name: 'cropEditor.confirm' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
     expect(cropImageInPlace).not.toHaveBeenCalled();
     expect(discardCropResultNode).toHaveBeenCalledWith('crop-3');
@@ -344,7 +344,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
 
     // The detail switched to the newly built upscale node, with the upscale editor (model/quality/multiplier + up arrow) mounted below the body.
     const detail = detailPanel();
-    expect(within(detail).getByRole('button', { name: 'upscaleEditor.submit' })).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: 'Generate' })).toBeInTheDocument();
     // The result node has requested a viewport pre-position (Task 10 pattern).
     expect(useCanvasStore.getState().pendingFocusNodeId).toBe(upscaleResultNodeId);
     // The source node did not go busy -- this step produces no in-flight task.
@@ -368,7 +368,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
 
     const detail = detailPanel();
     // Quality is picked in the popup selector (the card shared with the workflow).
-    await user.click(within(detail).getByRole('button', { name: /qualityPicker/ }));
+    await user.click(within(detail).getByRole('button', { name: /Quality/ }));
     await user.click(await screen.findByRole('button', { name: '4K' }));
     // The upscale multiplier is a segmented button group.
     await user.click(within(detail).getByRole('button', { name: '4' }));
@@ -380,7 +380,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     expect(resultData.upscaleImageSize).toBe('4K');
     expect(resultData.upscaleScaleFactor).toBe(4);
 
-    await user.click(within(detail).getByRole('button', { name: 'upscaleEditor.submit' }));
+    await user.click(within(detail).getByRole('button', { name: 'Generate' }));
 
     expect(submitImageUpscale).toHaveBeenCalledWith(upscaleResultNodeId, {
       sourceUrl: '/static/up.png',
@@ -503,7 +503,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     expect(screen.queryByText(/Orbit 0° · Pitch 0°/)).not.toBeInTheDocument();
 
     // Submit carries the editor panel's current params (default horizontal/vertical 0 degrees, medium shot) and requests a viewport pre-position.
-    await user.click(within(dialog).getByRole('button', { name: 'multiAngleEditor.submit' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
     expect(multiAngleImage).toHaveBeenCalledWith(
       'img-up',
       '/static/up.png',
@@ -554,7 +554,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     // The old inline plane config row (key light direction segments) no longer coexists.
     expect(screen.queryByText('Key light direction')).not.toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'lightEditor.submit' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
     expect(relightImage).toHaveBeenCalledWith(
       'img-up',
       '/static/up.png',

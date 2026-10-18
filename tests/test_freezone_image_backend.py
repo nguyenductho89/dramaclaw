@@ -3600,17 +3600,17 @@ def test_image_style_templates_have_assets_and_prompts() -> None:
         # Categories are a controlled vocabulary, not free text -- the filter tabs of the image wall are laid out directly by it, and one typo
         # makes a tab with only one card. If a new category is truly needed when adding a style, register it explicitly here.
         assert item["category"] in {
-            "Period",
-            "Urban",
-            "Vintage",
-            "Lifestyle",
-            "Sci-Fi",
-            "Genre",
-            "Stylized",
+            "period",
+            "urban",
+            "era",
+            "lifestyle",
+            "scifi",
+            "genre",
+            "expressive",
             # Second batch of assets: categories by technique/medium.
-            "Animation",
-            "Art",
-            "Mythology",
+            "animation",
+            "painting",
+            "myth",
         }, item["id"]
         # The lower bound only guards against "the prompt being truncated into an empty shell/placeholder" -- it is not a quality score. In the second batch, Otomo (97)
         # and Egyptian Mural (102) have short assets by nature, and the original 120 would have condemned two legitimate styles.

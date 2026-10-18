@@ -106,7 +106,7 @@ def test_scene_360_refunds_reserved_credit_on_subprocess_failure(monkeypatch, tm
         lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stdout="", stderr="boom"),
     )
 
-    with pytest.raises(RuntimeError, match="360 全景生成失败"):
+    with pytest.raises(RuntimeError, match="360 panorama generation failed"):
         stage_asset_tasks.run_scene_360(
             tmp_path / "project",
             "Hall",

@@ -1,90 +1,90 @@
-# 当前项目初始化阶段（Steps 1-7）
+# Current project initialization stage (Steps 1-7)
 
-> 本文件是 Steps 1-7 流程顺序的唯一事实源。API 请求细节不确定时，读取
-> `references/step-api-reference.md`；技术参考不得改变本文件的顺序。
+> This file is the single source of truth for the process order of Steps 1-7. When API request details are uncertain, read
+> `references/step-api-reference.md`; technical references must not change the order in this file.
 
-## 前置：项目存在性检查
+## Precondition: project existence check
 
-Step 0（SKILL.md §0）的 `/pipeline/status` 返回决定从哪一步开始：
-- **404**：当前会话绑定的项目不存在或不可访问 → 停止，提示用户先在前端创建/打开项目；虾导不调用 `POST /projects`
-- **200 + 各阶段全 false**：项目已存在但未摄入 → 从 Step 1（获取小说文件）开始
-- **200 + 部分完成**：实际上应走 resume.md；如误路由到此，退回按 `next_step` 定位
+The `/pipeline/status` response from Step 0 (SKILL.md, status preflight) decides which step to start from:
+- **404**: the project bound to the current session does not exist or is not accessible -> stop and tell the user to create/open the project in the frontend first; Shrimp Director does not call `POST /projects`
+- **200 + all stages false**: the project exists but has not been ingested -> start from Step 1 (get the source file)
+- **200 + partially complete**: this should actually go through resume.md; if routed here by mistake, fall back to locating by `next_step`
 
-## 入口决策树
+## Entry decision tree
 
-> 进入本 playbook 的前提是当前消息已经带有剧本文档附件，或前端已注入 `[DRAMACLAW_INGEST_AUTOMATION]` / 明确摄入上下文。若用户只是用聊天文字要求“创建/生成/写剧本”，不得进入下面流程；直接告知只能通过“虾料”上传剧本文档。
+> The precondition for entering this playbook is that the current message already carries a screenplay document attachment, or the frontend has injected `[DRAMACLAW_INGEST_AUTOMATION]` / an explicit ingest context. If the user only asks in chat text to "create/generate/write a screenplay", do not enter the flow below; tell them directly that screenplay documents can only be uploaded through "Shrimp Feed".
 
 ```
-1. 获取小说文件
-   当前消息必须已有剧本文档附件或虾料摄入上下文
-   ├─ 有 → 使用前端提供的上传/摄入上下文
-   └─ 没有 → 停止，提示通过“虾料”上传剧本文档
+1. Get the source file
+   The current message must already have a screenplay document attachment or a Shrimp Feed ingest context
+   ├─ Present → use the upload/ingest context provided by the frontend
+   └─ Absent → stop and tell the user to upload a screenplay document through "Shrimp Feed"
 
-2. 按当前状态执行一个动作（不重复确认同一步）
-   - 前端已注入 `[DRAMACLAW_INGEST_AUTOMATION]`：上传和摄入启动已由前端处理，不重复调用写工具，只汇报当前状态。
-   - 当前附件尚未上传：只执行上传（Step 1）并收口；用户下次继续时再启动摄入。
-   - 文件已上传但摄入未启动：只启动摄入（Step 2）并立即收口。
-   - 摄入处于 queued/running：只告知后台正在摄入，不等待完成后继续配置。
+2. Execute one action according to the current state (do not re-confirm the same step)
+   - The frontend has injected `[DRAMACLAW_INGEST_AUTOMATION]`: upload and ingest start were already handled by the frontend; do not call write tools again, only report the current status.
+   - The current attachment has not been uploaded yet: only perform the upload (Step 1) and wrap up; start ingest the next time the user continues.
+   - The file is uploaded but ingest has not started: only start ingest (Step 2) and wrap up immediately.
+   - Ingest is queued/running: only tell the user that ingest is running in the background; do not wait for completion and continue configuring.
 
-3. 智能推荐配置（§5 决策点规则）
-   摄入完成后分析小说内容再推荐：
-   - 时代背景/关键词 → 视觉风格
-   - 角色名/背景 → 种族
-   - 人称视角 → 叙事方式
-   - 情节节奏 → rhythm
+3. Smart recommended configuration (decision-point rules in §5)
+   After ingest completes, analyze the novel content before recommending:
+   - Era / keywords -> visual style
+   - Character names / background -> ethnicity
+   - Point of view -> narration style
+   - Plot pace -> rhythm
 
-4. 一次性展示推荐方案，让用户确认/修改
+4. Present the recommended plan in one go and let the user confirm/modify
 
-5. 确认后 → 配置项目(3)；配置完成后询问运行模式，不继续启动角色提取
+5. After confirmation -> configure the project (3); after configuration, ask for the run mode and do not continue to start character extraction
 ```
 
-**运行模式**：配置完成后**必须**先问一句「要我**每步确认**，还是**自动推进（每轮一步）**？」，
-然后 `Read references/run-modes.md` 按所选模式执行：
-- **逐步确认模式** → 每个写操作步骤前停下问用户，一次只推进一步
-- **自动推进模式** → 用户下次说“继续”时按断点推进；每轮仍最多启动一个写任务，启动后收口
+**Run mode**: after configuration you **must** first ask one question: "Should I **confirm every step**, or **advance automatically (one step per turn)**?",
+then `Read references/run-modes.md` and execute according to the chosen mode:
+- **Step-by-step confirmation mode** -> pause before every write step and ask the user; advance only one step at a time
+- **Auto-advance mode** -> the next time the user says "continue", advance from the breakpoint; each turn still starts at most one write task and wraps up after starting it
 
-**关键**：不要逐项问用户选择配置，分析后一次性推荐；但**运行模式必须显式问**。
+**Key point**: do not ask the user to choose configuration items one by one; recommend them all at once after analysis; but the **run mode must be asked explicitly**.
 
-## 步骤详情
+## Step details
 
-**API 详情**：见 `references/step-api-reference.md` Steps 1-7。项目创建由前端/系统完成，不属于虾导步骤。
+**API details**: see Steps 1-7 in `references/step-api-reference.md`. Project creation is done by the frontend/system and is not a Shrimp Director step.
 
-**Step 4 失败处理**：若 `build_characters` 返回空结果，从小说内容分析角色后通过 `POST /projects/{project}/characters` 逐个添加。
+**Step 4 failure handling**: if `build_characters` returns an empty result, analyze the characters from the novel content and add them one by one through `POST /projects/{project}/characters`.
 
-**Step 5 face_prompt 前置**：生成肖像前必须读取 `GET /projects/{project}/characters`，检查核心角色/重要角色的 `face_prompt`。
-- 如果为空，先根据角色名、性别、年龄段、description 生成一句具体面部特征描述，调用 `dramaclaw_update_character_face_prompt` 写入。
-- `face_prompt` 只写脸部特征：发型、脸型、五官、肤色、年龄感、气质；不要写服装、身份、场景。
-- 只有缺失角色全部补齐后，才允许进入肖像生成。
-- 如果肖像任务报“请先设置面部特征 (face_prompt)”，停在当前角色，补齐该角色 `face_prompt` 后再重试，不要跳过或继续生成其它依赖项。
+**Step 5 face_prompt precondition**: before generating portraits you must read `GET /projects/{project}/characters` and check the `face_prompt` of core/important characters.
+- If it is empty, first generate one concrete facial-feature description from the character name, gender, age range and description, and write it with `dramaclaw_update_character_face_prompt`.
+- `face_prompt` covers facial features only: hairstyle, face shape, facial features, skin tone, apparent age, temperament; do not write clothing, identity or scene.
+- Only after all missing characters are filled in may portrait generation begin.
+- If a portrait task reports "set the facial features (face_prompt) first", stay on the current character, fill in that character's `face_prompt` and retry; do not skip it or continue generating other dependencies.
 
-**Step 6.5 角色分级标准**：
+**Step 6.5 character tiering standard**:
 
-| 级别 | 条件 | 处理 |
+| Tier | Condition | Handling |
 |------|------|------|
-| 核心角色 | `is_main=true`，或多集反复出场 | Portrait + 身份图 |
-| 重要配角 | 有人名，2集以上出场 | Portrait + 身份图 |
-| 一次性配角 | 仅1集出场，无关键剧情 | 跳过 |
+| Core character | `is_main=true`, or appears repeatedly across episodes | Portrait + identity image |
+| Important supporting character | Named, appears in 2+ episodes | Portrait + identity image |
+| One-off supporting character | Appears in only 1 episode, no key plot | Skip |
 
-### 决策点参考
+### Decision-point reference
 
-**智能推荐**（分析小说内容后一次性推荐）：
-- `visual_style`: 古代/武侠→`chinese_period_drama` | 现代都市→`realistic` | 末日→`post_apocalyptic` | 二次元→`anime`
-- `narration_style`: 原文人称 → `first_person`/`third_person`（默认 first_person）
-- `ethnicity`: 姓名/地理 → `Chinese`/`Japanese`/`Korean`/`Western`（默认 Chinese）
-- `rhythm`: 情节密度 → `fast`(3s)/`medium`(4s)/`slow`(5s)（默认 medium）
+**Smart recommendation** (recommend all at once after analyzing the novel content):
+- `visual_style`: ancient/wuxia -> `chinese_period_drama` | modern urban -> `realistic` | apocalypse -> `post_apocalyptic` | anime -> `anime`
+- `narration_style`: point of view of the source text -> `first_person`/`third_person` (default first_person)
+- `ethnicity`: names/geography -> `Chinese`/`Japanese`/`Korean`/`Western` (default Chinese)
+- `rhythm`: plot density -> `fast`(3s)/`medium`(4s)/`slow`(5s) (default medium)
 
-**用户必选**（首次或用户主动问时展示）：
-- 配音: `tts_provider`+`tts_voice`（默认 cosyvoice + longanling_v3）
-- 视频后端: `video_backend`（默认 `huimeng_seedance-1.0-pro-fast`；`huimeng_seedance-1.5-pro` 仅在用户明确指定时使用；旧值仅兼容历史任务）
-- 分辨率: `video_resolution`（720x1280/1080x1920，默认 720x1280）
+**User must choose** (show on the first time or when the user asks):
+- Voice: `tts_provider`+`tts_voice` (default cosyvoice + longanling_v3)
+- Video backend: `video_backend` (default `huimeng_seedance-1.0-pro-fast`; `huimeng_seedance-1.5-pro` only when the user explicitly specifies it; old values are only kept for historical tasks)
+- Resolution: `video_resolution` (720x1280/1080x1920, default 720x1280)
 
-## Step 7 完成 → 阶段过渡
+## Step 7 complete -> stage transition
 
-**无论手动/自动模式**，输出阶段摘要（如："全局准备完成：项目 X，5角色(2核心3重要)，10集，肖像已生成"）。
+**In either manual or auto mode**, output a stage summary (for example: "Global preparation complete: project X, 5 characters (2 core, 3 important), 10 episodes, portraits generated").
 
-**逐步确认模式**：见 `references/run-modes.md` 模式一——从 Step 3 起每个写操作步骤前都停下问用户，
-一次只推进一步。CP1 处展示核心角色 Portrait + 级别 + 分集标题，用户可改角色分级/外貌/分集数量，
-确认后再问「执行下一步吗」。
+**Step-by-step confirmation mode**: see mode one in `references/run-modes.md` - from Step 3 on, pause before every write step and ask the user,
+advancing only one step at a time. At CP1 show the core characters' Portraits + tiers + episode titles; the user may change character tiers/appearance/the number of episodes,
+and after confirmation ask "Execute the next step?".
 
-**自动推进模式**：见 `references/run-modes.md` 模式二——自动选择下一步，但每轮最多启动一个写任务；
-启动后立即收口。到 CP1（展示核心角色+分集标题）时也必须停下，等待用户继续。
+**Auto-advance mode**: see mode two in `references/run-modes.md` - choose the next step automatically, but start at most one write task per turn;
+wrap up immediately after starting it. At CP1 (showing core characters + episode titles) you must also pause and wait for the user to continue.

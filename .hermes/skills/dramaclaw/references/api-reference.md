@@ -1,173 +1,173 @@
-# DramaClaw 虾导 API 快速参考
+# DramaClaw (Shrimp Director) API Quick Reference
 
 **Base URL**: `$DRAMACLAW_API_URL/api/v1`
-**认证**: `Authorization: Bearer $DRAMACLAW_AGENT_TOKEN`
+**Auth**: `Authorization: Bearer $DRAMACLAW_AGENT_TOKEN`
 
 ---
 
-## 项目管理
+## Project management
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects` | 列出所有项目 |
-| `POST` | `/projects` | 创建项目 `{"name":"..."}`；仅前端/系统使用，虾导流程不调用 |
-| `GET` | `/projects/{project}` | 获取项目配置 |
-| `PATCH` | `/projects/{project}` | 更新配置 |
+| `GET` | `/projects` | List all projects |
+| `POST` | `/projects` | Create a project `{"name":"..."}`; frontend/system only, not called in the Shrimp Director flow |
+| `GET` | `/projects/{project}` | Get the project configuration |
+| `PATCH` | `/projects/{project}` | Update the configuration |
 
-## 摄入
+## Ingest
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/ingest/upload` | 上传小说 (multipart) |
-| `POST` | `/projects/{project}/ingest/start` | 启动摄入 `{"filename":"...", "rebuild":false}` [ASYNC]；已摄入项目覆盖重建必须二次确认后传 `{"rebuild":true}` |
+| `POST` | `/projects/{project}/ingest/upload` | Upload a novel (multipart) |
+| `POST` | `/projects/{project}/ingest/start` | Start ingest `{"filename":"...", "rebuild":false}` [ASYNC]; overwrite-rebuilding an already ingested project must be double-confirmed before passing `{"rebuild":true}` |
 
-摄入 API 只允许以上两个路径。`ingest_fast` 是后端任务类型，不是 HTTP 路由；不要调用或推断 `/ingest/init`、`/ingest/setup`、`/ingest_script`、`/ingest_fast`、`/projects/{project}/ingest` 或其它 ingest 变体。遇到这些路径的 404 时，不要解释为摄入模块未启用，应改用上表真实路由。
+The ingest API allows only the two paths above. `ingest_fast` is a backend task type, not an HTTP route; do not call or infer `/ingest/init`, `/ingest/setup`, `/ingest_script`, `/ingest_fast`, `/projects/{project}/ingest` or any other ingest variant. When these paths return 404, do not interpret it as the ingest module being disabled; switch to the real routes in the table above.
 
-## 角色
+## Characters
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/characters` | 列出角色 |
-| `POST` | `/projects/{project}/characters` | 手动添加角色 `{"name":"...","role":"...","is_main":true,"gender":"female","age_group":"youth","description":"...","face_prompt":"..."}` |
-| `POST` | `/projects/{project}/characters/build` | 提取角色 [ASYNC] |
-| `PATCH` | `/projects/{project}/characters/{name}` | 修改角色 |
-| `POST` | `/projects/{project}/characters/{name}/portrait` | 单个肖像 |
-| `POST` | `/projects/{project}/characters/{name}/portrait/upload` | 上传肖像 (multipart) |
-| `GET` | `/projects/{project}/characters/{name}/identities` | 查看身份 |
-| `POST` | `/projects/{project}/characters/{name}/identities` | 新增身份 |
-| `PATCH` | `/projects/{project}/characters/{name}/identities/{identity_id}` | 修改身份（identity_id = `角色名_身份名`） |
-| `DELETE` | `/projects/{project}/characters/{name}/identities/{identity_id}` | 删除身份 |
-| `POST` | `/projects/{project}/characters/{name}/identities/{identity_name}/upload` | 上传身份图 |
-| `POST` | `/projects/{project}/characters/{name}/identities/{identity_id}/generate` | 生成身份图（Identity Locking）`{"style":"...","model":"..."}` [SYNC] |
+| `GET` | `/projects/{project}/characters` | List characters |
+| `POST` | `/projects/{project}/characters` | Add a character manually `{"name":"...","role":"...","is_main":true,"gender":"female","age_group":"youth","description":"...","face_prompt":"..."}` |
+| `POST` | `/projects/{project}/characters/build` | Extract characters [ASYNC] |
+| `PATCH` | `/projects/{project}/characters/{name}` | Modify a character |
+| `POST` | `/projects/{project}/characters/{name}/portrait` | Single portrait |
+| `POST` | `/projects/{project}/characters/{name}/portrait/upload` | Upload a portrait (multipart) |
+| `GET` | `/projects/{project}/characters/{name}/identities` | View identities |
+| `POST` | `/projects/{project}/characters/{name}/identities` | Add an identity |
+| `PATCH` | `/projects/{project}/characters/{name}/identities/{identity_id}` | Modify an identity (identity_id = `character_name_identity_name`) |
+| `DELETE` | `/projects/{project}/characters/{name}/identities/{identity_id}` | Delete an identity |
+| `POST` | `/projects/{project}/characters/{name}/identities/{identity_name}/upload` | Upload an identity image |
+| `POST` | `/projects/{project}/characters/{name}/identities/{identity_id}/generate` | Generate an identity image (Identity Locking) `{"style":"...","model":"..."}` [SYNC] |
 
-## 分集
+## Episodes
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/episodes` | 列出分集 |
-| `POST` | `/projects/{project}/episodes/plan` | 分集规划 `{"target_episodes":10,"planning_mode":"chapters"}` [ASYNC] |
-| `GET` | `/projects/{project}/chapters` | 检测小说章节 |
-| `PATCH` | `/projects/{project}/episodes/{ep}` | 修改集信息 |
-| `POST` | `/projects/{project}/episodes/{ep}/identities/plan` | 规划本集身份 |
+| `GET` | `/projects/{project}/episodes` | List episodes |
+| `POST` | `/projects/{project}/episodes/plan` | Episode planning `{"target_episodes":10,"planning_mode":"chapters"}` [ASYNC] |
+| `GET` | `/projects/{project}/chapters` | Detect novel chapters |
+| `PATCH` | `/projects/{project}/episodes/{ep}` | Modify episode info |
+| `POST` | `/projects/{project}/episodes/{ep}/identities/plan` | Plan this episode's identities |
 
-## 剧本
+## Script
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/episodes/{ep}/script` | 获取剧本（当前后端可能返回 script_mode，但不要依赖 literal_source 作为硬判定） |
-| `PUT` | `/projects/{project}/episodes/{ep}/script` | 保存完整剧本 `{"beats":[...]}` |
-| `GET` | `/projects/{project}/episodes/{ep}/beats` | 获取 beat 列表 |
-| `PATCH` | `/projects/{project}/episodes/{ep}/beats/{beat}` | 编辑 beat |
+| `GET` | `/projects/{project}/episodes/{ep}/script` | Get the script (the current backend may return script_mode, but do not rely on literal_source as a hard criterion) |
+| `PUT` | `/projects/{project}/episodes/{ep}/script` | Save the complete script `{"beats":[...]}` |
+| `GET` | `/projects/{project}/episodes/{ep}/beats` | Get the beat list |
+| `PATCH` | `/projects/{project}/episodes/{ep}/beats/{beat}` | Edit a beat |
 
-## 原文 & 改写稿（新流程输入）
+## Source text and rewritten draft (input of the new flow)
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/episodes/{ep}/raw-content` | 读原文 |
-| `PUT` | `/projects/{project}/episodes/{ep}/raw-content` | 保存原文 `{"content":"..."}`（UPSERT） |
-| `GET` | `/projects/{project}/episodes/{ep}/adapted-content` | 读改写稿（未保存返回空串） |
-| `PUT` | `/projects/{project}/episodes/{ep}/adapted-content` | 保存改写稿 `{"content":"..."}` |
-| `DELETE` | `/projects/{project}/episodes/{ep}/adapted-content` | 清空改写稿，回退到原文 |
+| `GET` | `/projects/{project}/episodes/{ep}/raw-content` | Read the source text |
+| `PUT` | `/projects/{project}/episodes/{ep}/raw-content` | Save the source text `{"content":"..."}` (UPSERT) |
+| `GET` | `/projects/{project}/episodes/{ep}/adapted-content` | Read the rewritten draft (returns an empty string if not saved) |
+| `PUT` | `/projects/{project}/episodes/{ep}/adapted-content` | Save the rewritten draft `{"content":"..."}` |
+| `DELETE` | `/projects/{project}/episodes/{ep}/adapted-content` | Clear the rewritten draft and fall back to the source text |
 
-## 解说改写 & 剧本生成（Step 10）
+## Narration rewrite and script generation (Step 10)
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/rewrite/generate` | 解说改写：原文 → 改写稿 `{"target_beats":18,"beat_chars_min":14,"beat_chars_max":20,"narration_style":"first_person"}` [ASYNC → content_rewriter] |
-| `POST` | `/projects/{project}/episodes/{ep}/script/generate` | 生成剧本 [ASYNC → script_writer]；当前后端没有 `literal-script/generate` 路由 |
+| `POST` | `/projects/{project}/episodes/{ep}/rewrite/generate` | Narration rewrite: source text -> rewritten draft `{"target_beats":18,"beat_chars_min":14,"beat_chars_max":20,"narration_style":"first_person"}` [ASYNC -> content_rewriter] |
+| `POST` | `/projects/{project}/episodes/{ep}/script/generate` | Generate the script [ASYNC -> script_writer]; the current backend has no `literal-script/generate` route |
 
-## 画面生成
+## Image generation
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/sketches/generate` | 草图 `{"style":"...","model":"nanobanana","grid_index":0,"sketch_location_grouping":true}` [ASYNC]。后端按 beat 数自动拆成 N 张 grid（2x4 起步，按容量 8/6/4/2/1 降级；18 beat→`2x4+2x4+1x2` 共 3 张）。每次只启动一个 `grid_index`；首次调用的 SSE result 里返回 `total_grids`。如果还有后续 grid，等用户下一轮“继续”再启动下一个；不要同一轮循环所有 grid。详见 `step-api-reference.md` Step 12。 |
-| `POST` | `/projects/{project}/episodes/{ep}/grids/generate` | 九宫格 [ASYNC] |
-| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/regenerate` | 重新生成单个网格 [ASYNC] |
-| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/cut` | 切割入池 |
-| `GET` | `/projects/{project}/episodes/{ep}/grids` | 查看九宫格与图池（返回 `images[].stale` 布尔字段，true=旧版脚本生成） |
-| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/pool-select` | 从图池选图 `{"pool_id":"...","force":false}` 旧批次需 `force:true` |
-| `POST` | `/projects/{project}/episodes/{ep}/sketches/assign-colors` | 草图配色（为身份分配唯一颜色）[SYNC] |
-| `POST` | `/projects/{project}/episodes/{ep}/sketches/detect-identities` | AI 身份检测（识别草图中出场角色）[SYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/sketches/generate` | Sketches `{"style":"...","model":"nanobanana","grid_index":0,"sketch_location_grouping":true}` [ASYNC]. The backend automatically splits the beats into N grids (starting at 2x4, degrading by capacity 8/6/4/2/1; 18 beats -> `2x4+2x4+1x2`, 3 grids in total). Start only one `grid_index` at a time; the SSE result of the first call returns `total_grids`. If more grids follow, wait for the user's "continue" in the next turn to start the next one; do not loop over all grids in the same turn. See Step 12 in `step-api-reference.md` for details. |
+| `POST` | `/projects/{project}/episodes/{ep}/grids/generate` | Nine-grid [ASYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/regenerate` | Regenerate a single grid [ASYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/cut` | Cut into the pool |
+| `GET` | `/projects/{project}/episodes/{ep}/grids` | View the nine-grids and image pool (returns a boolean `images[].stale` field, true = generated from an old script version) |
+| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/pool-select` | Select an image from the pool `{"pool_id":"...","force":false}`; old batches need `force:true` |
+| `POST` | `/projects/{project}/episodes/{ep}/sketches/assign-colors` | Sketch coloring (assigns a unique color to each identity) [SYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/sketches/detect-identities` | AI identity detection (recognizes the characters appearing in the sketch) [SYNC] |
 
-## TTS & 音频
+## TTS and audio
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/audio/generate` | 批量语音生成 [ASYNC: audio_generation_indextts2]；当前主线用这个 |
-| `POST` | `/projects/{project}/episodes/{ep}/audio/system-voices/prepare` | 经用户确认后准备系统声线 [ASYNC: system_voice_setup]；仅虾导使用，不启动 TTS |
-| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/audio` | 重做单beat音频 (SYNC) |
+| `POST` | `/projects/{project}/episodes/{ep}/audio/generate` | Batch speech generation [ASYNC: audio_generation_indextts2]; the current main line uses this |
+| `POST` | `/projects/{project}/episodes/{ep}/audio/system-voices/prepare` | Prepare system voices after user confirmation [ASYNC: system_voice_setup]; used only by Shrimp Director, does not start TTS |
+| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/audio` | Redo a single beat's audio (SYNC) |
 
-旧 `/tts/generate`、`/tts/preview`、`/tts/voices` 已移除，不要调用。
+The old `/tts/generate`, `/tts/preview` and `/tts/voices` have been removed; do not call them.
 
-## 视频
+## Video
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/optimize/video-global` | 全局视频优化(SuperPower⚡️) `{"language":"en"}` en=英文(默认), zh=中文 [ASYNC] |
-| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/video` | 单beat视频重做 [ASYNC: single_video]。默认 `{"video_backend": "huimeng_seedance-1.0-pro-fast"}`；只有用户明确指定 1.5 Pro / 有声 1.5 / Huimeng 1.5 时才传 `{"video_backend": "huimeng_seedance-1.5-pro"}`。同一用户请求里同一 beat 只 POST 一次；启动接口返回 `ok:false` 或 HTTP 错误时，必须直接反馈接口 `error`。POST 返回 2xx 且 `ok`/`generated: true` 后，查 `GET /projects/{project}/tasks/single_video/{ep}?beat_num={beat}`；若状态是 `failed` / `cancelled`，必须反馈 `task.error`/`error_code`，不要说已完成。不要因 `Task not found`、任务状态缺失或无 `result.video_path` 重复 POST。没有 `result.video_path` 时不要探测 `/files`，不要探测 `/api/v1/projects/{project}/files`，只能按已启动或当前状态收口；`generated: true` 不等于返回新视频路径，不要交付 beat 记录里的旧 `video_url`，不要拼接 host。**不要触发整集 compose/generate/optimize** |
-| `POST` | `/projects/{project}/episodes/{ep}/videos/compose` | 合成 `{"add_subtitles":true,"add_bgm":false}` [ASYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/optimize/video-global` | Global video optimization (SuperPower⚡️) `{"language":"en"}` en = English (default), zh = Chinese [ASYNC] |
+| `POST` | `/projects/{project}/episodes/{ep}/beats/{beat}/video` | Redo a single beat's video [ASYNC: single_video]. Default `{"video_backend": "huimeng_seedance-1.0-pro-fast"}`; pass `{"video_backend": "huimeng_seedance-1.5-pro"}` only when the user explicitly specifies 1.5 Pro / audio 1.5 / Huimeng 1.5. POST the same beat only once per user request; when the start endpoint returns `ok:false` or an HTTP error, you must report the endpoint's `error` directly. After POST returns 2xx and `ok`/`generated: true`, query `GET /projects/{project}/tasks/single_video/{ep}?beat_num={beat}`; if the status is `failed` / `cancelled`, you must report `task.error`/`error_code` and not say it is done. Do not POST repeatedly because of `Task not found`, a missing task status or no `result.video_path`. When there is no `result.video_path`, do not probe `/files` and do not probe `/api/v1/projects/{project}/files`; wrap up only according to started / current status; `generated: true` does not mean a new video path was returned, do not deliver the old `video_url` in the beat record, and do not concatenate a host. **Do not trigger whole-episode compose/generate/optimize** |
+| `POST` | `/projects/{project}/episodes/{ep}/videos/compose` | Compose `{"add_subtitles":true,"add_bgm":false}` [ASYNC] |
 
-## 导出 & 文件
+## Export and files
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/export/zip` | 导出 ZIP |
-| `GET` | `/projects/{project}/episodes/{ep}/export/srt` | 导出 SRT 字幕 |
-| `GET` | `/projects/{project}/episodes/{ep}/final` | 读取最终成片状态和可展示 `video_url` |
-| `GET` | `/projects/{project}/files/{path}` | 下载文件 |
+| `POST` | `/projects/{project}/episodes/{ep}/export/zip` | Export ZIP |
+| `GET` | `/projects/{project}/episodes/{ep}/export/srt` | Export SRT subtitles |
+| `GET` | `/projects/{project}/episodes/{ep}/final` | Read the final-cut status and displayable `video_url` |
+| `GET` | `/projects/{project}/files/{path}` | Download a file |
 
-## 再生成
+## Regeneration
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `POST` | `/projects/{project}/episodes/{ep}/sketches/regenerate` | 重做指定草图 `{"beat_indices":[...],"style":"..."}` [ASYNC: sketch_regen] |
-| `POST` | `/projects/{project}/episodes/{ep}/beats/regenerate` | 重做指定首帧 `{"beat_indices":[...],"style":"..."}` [ASYNC: selected_regen] |
-| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/regenerate` | 重做单个网格 `{"style":"...","model":"nanobanana"}` [ASYNC: grid_regenerate] |
+| `POST` | `/projects/{project}/episodes/{ep}/sketches/regenerate` | Redo specified sketches `{"beat_indices":[...],"style":"..."}` [ASYNC: sketch_regen] |
+| `POST` | `/projects/{project}/episodes/{ep}/beats/regenerate` | Redo specified first frames `{"beat_indices":[...],"style":"..."}` [ASYNC: selected_regen] |
+| `POST` | `/projects/{project}/episodes/{ep}/grids/{idx}/regenerate` | Redo a single grid `{"style":"...","model":"nanobanana"}` [ASYNC: grid_regenerate] |
 
-## 场景与锚图
+## Scenes and anchor images
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/scenes` | 列项目场景库；展示场景图时取 `master_url` / `reverse_master_url` / `pano_url` / `custom_scene_url`，不要用本地 `*_path` |
-| `POST` | `/projects/{project}/scenes` | 新增场景 `{"name":"...","description":"...","environment_prompt":"..."}`；已存在会返回错误 |
-| `PATCH` | `/projects/{project}/scenes/{name}` | 修改场景；当前后端支持改名与更新描述/提示词字段 |
-| `POST` | `/projects/{project}/scenes/{name}/delete` | 删除场景 |
-| `POST` | `/projects/{project}/scenes/{name}/master/generate-async` | 生成场景 master 图 [ASYNC: scene_reference_asset] |
-| `POST` | `/projects/{project}/scenes/{name}/reverse/generate-async` | 生成场景 reverse master 图 [ASYNC: scene_reference_asset] |
+| `GET` | `/projects/{project}/scenes` | List the project scene library; to show scene images use `master_url` / `reverse_master_url` / `pano_url` / `custom_scene_url`, not the local `*_path` |
+| `POST` | `/projects/{project}/scenes` | Add a scene `{"name":"...","description":"...","environment_prompt":"..."}`; returns an error if it already exists |
+| `PATCH` | `/projects/{project}/scenes/{name}` | Modify a scene; the current backend supports renaming and updating the description/prompt fields |
+| `POST` | `/projects/{project}/scenes/{name}/delete` | Delete a scene |
+| `POST` | `/projects/{project}/scenes/{name}/master/generate-async` | Generate a scene master image [ASYNC: scene_reference_asset] |
+| `POST` | `/projects/{project}/scenes/{name}/reverse/generate-async` | Generate a scene reverse master image [ASYNC: scene_reference_asset] |
 
-## 道具（只读）
+## Props (read-only)
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/props` | 列项目道具 |
-| `POST` | `/projects/{project}/episodes/{ep}/props/plan` | 规划本集道具 |
+| `GET` | `/projects/{project}/props` | List project props |
+| `POST` | `/projects/{project}/episodes/{ep}/props/plan` | Plan this episode's props |
 
-当前后端还提供项目级道具写接口：`POST /projects/{project}/props`、`PATCH /projects/{project}/props/{name}`、`POST /projects/{project}/props/{name}/delete`。
+The current backend also provides project-level prop write endpoints: `POST /projects/{project}/props`, `PATCH /projects/{project}/props/{name}` and `POST /projects/{project}/props/{name}/delete`.
 
-## 风格
+## Styles
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/styles` | 列出风格 |
-| `GET` | `/styles/{id}` | 风格详情 |
-| `POST` | `/styles` | 创建自定义风格 |
-| `DELETE` | `/styles/{id}` | 删除自定义风格 |
-| `GET` | `/styles/{id}/preview` | 风格预览图（返回图片文件）。**拿到 200 响应即完成，直接告知用户"预览图已获取"，不要暴露 URL，不要再探测其他路径** |
-| `POST` | `/projects/{project}/styles/analyze` | 风格分析（上传参考图提取风格参数）multipart/form-data [SYNC] |
+| `GET` | `/styles` | List styles |
+| `GET` | `/styles/{id}` | Style details |
+| `POST` | `/styles` | Create a custom style |
+| `DELETE` | `/styles/{id}` | Delete a custom style |
+| `GET` | `/styles/{id}/preview` | Style preview image (returns an image file). **A 200 response means done; directly tell the user "the preview image has been obtained", do not expose the URL, and do not probe other paths** |
+| `POST` | `/projects/{project}/styles/analyze` | Style analysis (upload a reference image to extract style parameters) multipart/form-data [SYNC] |
 
-## 流水线状态
+## Pipeline status
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/pipeline/status` | 聚合流水线进度（支持 `?episode=N`）|
+| `GET` | `/projects/{project}/pipeline/status` | Aggregated pipeline progress (supports `?episode=N`) |
 
-## 任务管理
+## Task management
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/projects/{project}/tasks` | 列出项目任务 |
-| `GET` | `/projects/{project}/tasks/{task_type}/{episode}` | 查询项目任务状态，单 beat 任务带 `?beat_num=N` |
-| `GET` | `/projects/{project}/tasks/{task_type}/{episode}/stream` | 项目任务 SSE，单 beat 任务带 `?beat_num=N` |
-| `GET` | `/projects/{project}/tasks/stream` | 项目任务聚合 SSE |
-| `DELETE` | `/projects/{project}/tasks/{task_type}/{episode}` | 取消项目任务 |
-| `DELETE` | `/projects/{project}/tasks/completed` | 清理项目已完成任务 |
+| `GET` | `/projects/{project}/tasks` | List project tasks |
+| `GET` | `/projects/{project}/tasks/{task_type}/{episode}` | Query project task status; single-beat tasks carry `?beat_num=N` |
+| `GET` | `/projects/{project}/tasks/{task_type}/{episode}/stream` | Project task SSE; single-beat tasks carry `?beat_num=N` |
+| `GET` | `/projects/{project}/tasks/stream` | Aggregated project task SSE |
+| `DELETE` | `/projects/{project}/tasks/{task_type}/{episode}` | Cancel a project task |
+| `DELETE` | `/projects/{project}/tasks/completed` | Clean up completed project tasks |

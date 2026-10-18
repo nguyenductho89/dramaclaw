@@ -14,14 +14,14 @@ function edge(source: string, target: string): CanvasEdge {
 }
 
 describe('buildAssetBoard', () => {
-  it('把节点按媒介类型分进 text/image/video/audio 四桶，忽略分组等结构节点', () => {
+  it('sorts nodes into the text/image/video/audio buckets by media type and ignores structural nodes such as groups', () => {
     const board = buildAssetBoard(
       [
-        node('t1', CANVAS_NODE_TYPES.textAnnotation, { content: '广告分镜脚本正文' }),
+        node('t1', CANVAS_NODE_TYPES.textAnnotation, { content: 'Ad storyboard script body' }),
         node('i1', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/i1.png' }),
         node('v1', CANVAS_NODE_TYPES.video, { videoUrl: '/static/v1.mp4' }),
         node('a1', CANVAS_NODE_TYPES.audio, { audioUrl: '/static/a1.mp3' }),
-        node('g1', CANVAS_NODE_TYPES.group, { label: '组' }),
+        node('g1', CANVAS_NODE_TYPES.group, { label: 'Group' }),
         node('s1', CANVAS_NODE_TYPES.skill, {}),
       ],
       [],
@@ -32,7 +32,7 @@ describe('buildAssetBoard', () => {
     expect(board.audio.map((i) => i.nodeId)).toEqual(['a1']);
   });
 
-  it('视频合成节点标记为成片(final)，普通视频节点为片段(clip)', () => {
+  it('video compose nodes are marked final and regular video nodes are clips', () => {
     const board = buildAssetBoard(
       [
         node('vc', CANVAS_NODE_TYPES.videoCompose, { resultVideoUrl: '/static/final.mp4' }),
@@ -44,7 +44,7 @@ describe('buildAssetBoard', () => {
     expect(roles).toEqual({ vc: 'final', v1: 'clip' });
   });
 
-  it('徽标元数据：model / durationSec / widthPx / heightPx；音频 durationMs 换算成秒', () => {
+  it('badge metadata: model / durationSec / widthPx / heightPx; audio durationMs is converted to seconds', () => {
     const board = buildAssetBoard(
       [
         node('v1', CANVAS_NODE_TYPES.video, {
@@ -66,11 +66,11 @@ describe('buildAssetBoard', () => {
     expect(board.audio[0].durationSec).toBe(101);
   });
 
-  it('参考素材按连线顺序取上游、referenceOrder 可重排、无缩略图的上游被丢弃', () => {
+  it('reference assets take upstream in edge order, referenceOrder can reorder them, and upstreams without a thumbnail are dropped', () => {
     const nodes = [
-      node('img-a', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/a.png', displayName: '角色图A' }),
-      node('img-b', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/b.png', displayName: '道具图B' }),
-      node('txt', CANVAS_NODE_TYPES.textAnnotation, { content: '纯文本上游，无缩略图' }),
+      node('img-a', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/a.png', displayName: 'Character image A' }),
+      node('img-b', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/b.png', displayName: 'Prop image B' }),
+      node('txt', CANVAS_NODE_TYPES.textAnnotation, { content: 'Plain-text upstream, no thumbnail' }),
       node('v1', CANVAS_NODE_TYPES.video, {
         videoUrl: '/static/v1.mp4',
         referenceOrder: ['img-b', 'img-a'],
@@ -79,10 +79,10 @@ describe('buildAssetBoard', () => {
     const edges = [edge('img-a', 'v1'), edge('img-b', 'v1'), edge('txt', 'v1')];
     const board = buildAssetBoard(nodes, edges);
     expect(board.video[0].references.map((r) => r.nodeId)).toEqual(['img-b', 'img-a']);
-    expect(board.video[0].references.map((r) => r.label)).toEqual(['道具图B', '角色图A']);
+    expect(board.video[0].references.map((r) => r.label)).toEqual(['Prop image B', 'Character image A']);
   });
 
-  it('自带参考图（imageGen 的 referenceImageUrl，无上游连线）纳入参考素材，排第 1、nodeId 为 null', () => {
+  it('the own reference image (imageGen referenceImageUrl, no upstream edge) joins the reference assets at position 1 with a null nodeId', () => {
     const board = buildAssetBoard(
       [
         node('gen', CANVAS_NODE_TYPES.imageGen, {
@@ -95,14 +95,14 @@ describe('buildAssetBoard', () => {
     const refs = board.image[0].references;
     expect(refs).toHaveLength(1);
     expect(refs[0]).toMatchObject({ nodeId: null, thumbnailUrl: '/static/own-ref.png' });
-    // 口径与 @图片N 一致：自带图作为一条独立参考出现，即便节点本体主图是生成结果。
-    expect(refs[0].label).toBe('参考图');
+    // Consistent with @imageN: the own image appears as a separate reference, even if the node's main image is a generated result.
+    expect(refs[0].label).toBe('Reference image');
   });
 
-  it('自带参考图 + 上游图：自带图排第 1、上游按连线顺序顺延（口径同 orderedReferenceUrlsWithOwnFirst）', () => {
+  it('own reference image + upstream images: the own image takes position 1 and upstream follows in edge order (same as orderedReferenceUrlsWithOwnFirst)', () => {
     const nodes = [
-      node('up-a', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/up-a.png', displayName: '上游A' }),
-      node('up-b', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/up-b.png', displayName: '上游B' }),
+      node('up-a', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/up-a.png', displayName: 'Upstream A' }),
+      node('up-b', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/up-b.png', displayName: 'Upstream B' }),
       node('gen', CANVAS_NODE_TYPES.imageGen, {
         imageUrl: '/static/gen.png',
         referenceImageUrl: '/static/own.png',
@@ -119,10 +119,10 @@ describe('buildAssetBoard', () => {
     expect(refs.map((r) => r.nodeId)).toEqual([null, 'up-a', 'up-b']);
   });
 
-  it('自带参考图与某上游图 URL 相同 → 去重，只保留自带图那条（排第 1）', () => {
+  it('when the own reference image has the same URL as an upstream image -> dedupe, keeping only the own-image entry (position 1)', () => {
     const nodes = [
-      node('up-same', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/shared.png', displayName: '同图上游' }),
-      node('up-other', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/other.png', displayName: '另一上游' }),
+      node('up-same', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/shared.png', displayName: 'Same-image upstream' }),
+      node('up-other', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/other.png', displayName: 'Another upstream' }),
       node('gen', CANVAS_NODE_TYPES.imageGen, {
         imageUrl: '/static/gen.png',
         referenceImageUrl: '/static/shared.png',
@@ -130,12 +130,12 @@ describe('buildAssetBoard', () => {
     ];
     const board = buildAssetBoard(nodes, [edge('up-same', 'gen'), edge('up-other', 'gen')]);
     const refs = board.image.find((i) => i.nodeId === 'gen')?.references ?? [];
-    // shared.png 只出现一次（自带图那条），other.png 顺延。
+    // shared.png appears only once (the own-image entry), and other.png follows.
     expect(refs.map((r) => r.thumbnailUrl)).toEqual(['/static/shared.png', '/static/other.png']);
     expect(refs.map((r) => r.nodeId)).toEqual([null, 'up-other']);
   });
 
-  it('纯上游 imageGen（无自带参考图）参考素材保持不变（回归）', () => {
+  it('pure-upstream imageGen (no own reference image) keeps its reference assets unchanged (regression)', () => {
     const nodes = [
       node('up-a', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/a.png', displayName: 'A' }),
       node('up-b', CANVAS_NODE_TYPES.upload, { imageUrl: '/static/b.png', displayName: 'B' }),
@@ -146,7 +146,7 @@ describe('buildAssetBoard', () => {
     expect(refs.map((r) => r.nodeId)).toEqual(['up-a', 'up-b']);
   });
 
-  it('非 imageGen 节点的 referenceImageUrl 不进参考素材（自带参考图是 imageGen 专属概念）', () => {
+  it('referenceImageUrl of a non-imageGen node does not enter the reference assets (own reference image is an imageGen-only concept)', () => {
     const board = buildAssetBoard(
       [
         node('up', CANVAS_NODE_TYPES.upload, {
@@ -159,7 +159,7 @@ describe('buildAssetBoard', () => {
     expect(board.image[0].references).toEqual([]);
   });
 
-  it('栏内按创建顺序（nodes 数组序）新→旧排列，最新建的节点在最上面', () => {
+  it('items in a column are ordered newest to oldest by creation order (nodes array order), with the newest node on top', () => {
     const board = buildAssetBoard(
       [
         node('first', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/first.png' }),
@@ -168,27 +168,27 @@ describe('buildAssetBoard', () => {
       ],
       [],
     );
-    // addNode append 到末尾 → 数组序 first→second→third；倒序 = 最新建的 third 置顶。
+    // addNode appends to the end -> array order first->second->third; reversed = the newest, third, on top.
     expect(board.image.map((i) => i.nodeId)).toEqual(['third', 'second', 'first']);
   });
 
-  it('刚生成完（generationStartedAt 已清空、无 committed_at）的节点仍排在老节点上面', () => {
+  it('a node that just finished generating (generationStartedAt cleared, no committed_at) still sorts above older nodes', () => {
     const board = buildAssetBoard(
       [
         node('old-committed', CANVAS_NODE_TYPES.imageGen, {
           imageUrl: '/static/old.png',
           committed_at: '2026-07-01T00:00:00Z',
         }),
-        // 后建的空节点里生成出图：完成后 generationStartedAt 被清成 null、也没有 committed_at。
+        // An image is generated in a later-created empty node: after completion generationStartedAt is cleared to null and there is no committed_at.
         node('fresh-gen', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/fresh.png' }),
       ],
       [],
     );
-    // 时间戳排序会让 fresh-gen（无戳）沉底；改用创建顺序后，后建的 fresh-gen 置顶。
+    // Timestamp ordering would sink fresh-gen (no stamp) to the bottom; with creation order, the later-created fresh-gen goes on top.
     expect(board.image.map((i) => i.nodeId)).toEqual(['fresh-gen', 'old-committed']);
   });
 
-  it('keyElementCategory：从节点 data 读关键元素分类，合法值透传、非法/缺失为 null', () => {
+  it('keyElementCategory: reads the key-element category from node data, passing valid values through and giving null for invalid/missing ones', () => {
     const board = buildAssetBoard(
       [
         node('tagged', CANVAS_NODE_TYPES.imageGen, {
@@ -197,7 +197,7 @@ describe('buildAssetBoard', () => {
         }),
         node('bad', CANVAS_NODE_TYPES.imageGen, {
           imageUrl: '/static/b.png',
-          keyElementCategory: '乱填',
+          keyElementCategory: 'garbage',
         }),
         node('untagged', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/c.png' }),
       ],
@@ -209,7 +209,7 @@ describe('buildAssetBoard', () => {
     expect(byId.untagged).toBeNull();
   });
 
-  it('文本预览：content 截断 80 字；分镜表显示镜头数；标题走 resolveNodeDisplayName 默认名', () => {
+  it('text preview: content is truncated to 80 chars; the storyboard table shows the shot count; the title uses the resolveNodeDisplayName default', () => {
     const long = 'x'.repeat(100);
     const board = buildAssetBoard(
       [
@@ -219,11 +219,11 @@ describe('buildAssetBoard', () => {
       [],
     );
     expect(board.text.find((i) => i.nodeId === 't1')?.textPreview).toBe(`${'x'.repeat(80)}…`);
-    expect(board.text.find((i) => i.nodeId === 'vs')?.textPreview).toBe('分镜表 · 3 个镜头');
-    expect(board.text.find((i) => i.nodeId === 't1')?.title).toBe('文本');
+    expect(board.text.find((i) => i.nodeId === 'vs')?.textPreview).toBe('Storyboard table · 3 shots');
+    expect(board.text.find((i) => i.nodeId === 't1')?.title).toBe('Text');
   });
 
-  it('videoCompose 的 mediaUrl 回退到 resultVideoUrl', () => {
+  it('videoCompose mediaUrl falls back to resultVideoUrl', () => {
     const board = buildAssetBoard(
       [node('vc', CANVAS_NODE_TYPES.videoCompose, { resultVideoUrl: '/static/final.mp4' })],
       [],
@@ -231,19 +231,19 @@ describe('buildAssetBoard', () => {
     expect(board.video.find((i) => i.nodeId === 'vc')?.mediaUrl).toBe('/static/final.mp4');
   });
 
-  it('script 节点 textPreview 走 scriptTitle，无 scriptTitle 时回退 prompt', () => {
+  it('script node textPreview uses scriptTitle and falls back to prompt without it', () => {
     const board = buildAssetBoard(
       [
-        node('s-title', CANVAS_NODE_TYPES.script, { scriptTitle: '第一集：破晓', prompt: '写一个开场' }),
-        node('s-prompt', CANVAS_NODE_TYPES.script, { prompt: '写一个结尾' }),
+        node('s-title', CANVAS_NODE_TYPES.script, { scriptTitle: 'Episode 1: Daybreak', prompt: 'Write an opening' }),
+        node('s-prompt', CANVAS_NODE_TYPES.script, { prompt: 'Write an ending' }),
       ],
       [],
     );
-    expect(board.text.find((i) => i.nodeId === 's-title')?.textPreview).toBe('第一集：破晓');
-    expect(board.text.find((i) => i.nodeId === 's-prompt')?.textPreview).toBe('写一个结尾');
+    expect(board.text.find((i) => i.nodeId === 's-title')?.textPreview).toBe('Episode 1: Daybreak');
+    expect(board.text.find((i) => i.nodeId === 's-prompt')?.textPreview).toBe('Write an ending');
   });
 
-  it('视频 durationSec 向下取整', () => {
+  it('video durationSec is rounded down', () => {
     const board = buildAssetBoard(
       [node('v1', CANVAS_NODE_TYPES.video, { videoUrl: '/static/v1.mp4', durationSec: 5.9 })],
       [],
@@ -251,7 +251,7 @@ describe('buildAssetBoard', () => {
     expect(board.video[0].durationSec).toBe(5);
   });
 
-  it('isGenerating：isGenerating/isUploading/isAnalyzing 任一为真即进行中，Boolean 归一', () => {
+  it('isGenerating: any of isGenerating/isUploading/isAnalyzing being true means in progress, normalized with Boolean', () => {
     const board = buildAssetBoard(
       [
         node('gen', CANVAS_NODE_TYPES.imageGen, { imageUrl: null, isGenerating: true }),
@@ -262,30 +262,30 @@ describe('buildAssetBoard', () => {
     );
     expect(board.image.find((i) => i.nodeId === 'gen')?.isGenerating).toBe(true);
     expect(board.video.find((i) => i.nodeId === 'up')?.isGenerating).toBe(true);
-    // 非布尔 truthy 值被 Boolean() 归一成 true（而非透传原值）。
+    // Non-boolean truthy values are normalized to true by Boolean() (rather than passed through).
     expect(board.video.find((i) => i.nodeId === 'ana')?.isGenerating).toBe(true);
   });
 
-  it('generationError 回退链：generationError ?? analysisError ?? uploadError', () => {
+  it('generationError fallback chain: generationError ?? analysisError ?? uploadError', () => {
     const board = buildAssetBoard(
       [
         node('e1', CANVAS_NODE_TYPES.video, {
           videoUrl: null,
-          generationError: '生成失败',
-          analysisError: '解析失败',
-          uploadError: '上传失败',
+          generationError: 'Generation failed',
+          analysisError: 'Analysis failed',
+          uploadError: 'Upload failed',
         }),
-        node('e2', CANVAS_NODE_TYPES.video, { videoUrl: null, analysisError: '解析失败' }),
-        node('e3', CANVAS_NODE_TYPES.upload, { imageUrl: null, uploadError: '上传失败' }),
+        node('e2', CANVAS_NODE_TYPES.video, { videoUrl: null, analysisError: 'Analysis failed' }),
+        node('e3', CANVAS_NODE_TYPES.upload, { imageUrl: null, uploadError: 'Upload failed' }),
       ],
       [],
     );
-    expect(board.video.find((i) => i.nodeId === 'e1')?.generationError).toBe('生成失败');
-    expect(board.video.find((i) => i.nodeId === 'e2')?.generationError).toBe('解析失败');
-    expect(board.image.find((i) => i.nodeId === 'e3')?.generationError).toBe('上传失败');
+    expect(board.video.find((i) => i.nodeId === 'e1')?.generationError).toBe('Generation failed');
+    expect(board.video.find((i) => i.nodeId === 'e2')?.generationError).toBe('Analysis failed');
+    expect(board.image.find((i) => i.nodeId === 'e3')?.generationError).toBe('Upload failed');
   });
 
-  it('无任何进行中/失败标记时 isGenerating=false、generationError=null（空串错误视同无）', () => {
+  it('with no in-progress/failure markers isGenerating=false and generationError=null (an empty-string error counts as none)', () => {
     const board = buildAssetBoard(
       [
         node('idle', CANVAS_NODE_TYPES.imageGen, { imageUrl: '/static/i.png' }),
@@ -298,7 +298,7 @@ describe('buildAssetBoard', () => {
     expect(board.image.find((i) => i.nodeId === 'blank')?.generationError).toBeNull();
   });
 
-  it('generationStartedAt：数字原样透传，非数字/缺失归一成 null（卡片进度估算的输入）', () => {
+  it('generationStartedAt: numbers pass through as-is, non-numbers/missing normalize to null (input for the card progress estimate)', () => {
     const board = buildAssetBoard(
       [
         node('gen', CANVAS_NODE_TYPES.imageGen, {
@@ -322,12 +322,12 @@ describe('buildAssetBoard', () => {
 });
 
 describe('modelBadgeLabel', () => {
-  it('剥掉渠道前缀，只留模型名', () => {
+  it('strips the channel prefix and keeps only the model name', () => {
     expect(modelBadgeLabel('newapi_seedance-2.0-value')).toBe('seedance-2.0-value');
     expect(modelBadgeLabel('newapi_happyhorse-1.0')).toBe('happyhorse-1.0');
   });
 
-  it('没有前缀 / 前缀畸形的 id 原样返回（不吞成空串）', () => {
+  it('ids with no prefix / a malformed prefix are returned as-is (not swallowed into an empty string)', () => {
     expect(modelBadgeLabel('wan2.5')).toBe('wan2.5');
     expect(modelBadgeLabel('_leading')).toBe('_leading');
     expect(modelBadgeLabel('trailing_')).toBe('trailing_');

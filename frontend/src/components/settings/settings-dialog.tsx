@@ -1492,7 +1492,7 @@ function minimaxH3Fl2vaWorkflow(firstFrame: boolean) {
       multiple: 32,
     }),
     "105:11": comfyNode("VAELoader", {
-      vae_name: "minimax_h3_video_vae_fp16.safetensors",
+      vae_name: "minimax_h3_video_vae_int8_convrot.safetensors",
     }),
     "105:24": comfyNode("VAELoader", {
       vae_name: "minimax_h3_audio_vae_fp32.safetensors",
@@ -1528,7 +1528,7 @@ function minimaxH3Fl2vaWorkflow(firstFrame: boolean) {
       weight_dtype: "default",
     }),
     "105:13": comfyNode("CLIPLoader", {
-      clip_name: "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      clip_name: "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
       type: "minimax",
       device: "default",
     }),
@@ -1565,7 +1565,7 @@ function minimaxH3ReferenceWorkflow() {
       multiple: 32,
     }),
     "119": comfyNode("VAELoader", {
-      vae_name: "minimax_h3_video_vae_fp16.safetensors",
+      vae_name: "minimax_h3_video_vae_int8_convrot.safetensors",
     }),
     "120": comfyNode("VAELoader", {
       vae_name: "minimax_h3_audio_vae_fp32.safetensors",
@@ -1598,7 +1598,7 @@ function minimaxH3ReferenceWorkflow() {
       weight_dtype: "default",
     }),
     "128": comfyNode("CLIPLoader", {
-      clip_name: "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      clip_name: "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
       type: "minimax",
       device: "default",
     }),

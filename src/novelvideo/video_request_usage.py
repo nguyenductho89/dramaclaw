@@ -1,7 +1,7 @@
-"""项目级视频请求使用记录。
+"""Project-level video request usage records.
 
-只要第三方平台返回 request/task id，就立刻记为 accepted。
-后续再按 completed / downloaded / failed 更新状态。
+As soon as a third-party platform returns a request/task id, it is recorded as accepted.
+Status is then updated to completed / downloaded / failed.
 """
 
 from __future__ import annotations

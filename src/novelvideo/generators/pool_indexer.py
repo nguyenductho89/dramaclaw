@@ -1,6 +1,6 @@
-"""图片池索引管理模块。
+"""Image pool index management module.
 
-管理所有生成的图片（1x1, 3x3, 5x5 等），提供统一的索引和检索功能。
+Manages all generated images (1x1, 3x3, 5x5, etc.) and provides unified indexing and lookup.
 """
 
 import hashlib
@@ -31,9 +31,9 @@ def compute_beat_content_hash(
     beat: dict,
     sketch_colors: Optional[Dict[str, str]] = None,
 ) -> str:
-    """计算影响草图生成的 beat 内容哈希。
+    """Compute a content hash of the beat fields that affect sketch generation.
 
-    2.0 不再依赖 set_description，这里只纳入当前仍会影响草图的字段。
+    2.0 no longer depends on set_description; only the fields that still affect the sketch are included here.
     """
     parts = [
         beat.get("visual_description", "") or "",
@@ -62,7 +62,7 @@ def is_pool_image_stale(
     beat_hashes: Dict[int, str],
     script_mt,
 ) -> bool:
-    """统一 stale 判断：优先内容 hash，回退到 mtime。"""
+    """Unified stale check: prefer the content hash, fall back to mtime."""
     if img.type != "sketch":
         return False
     if img.beat_content_hash:
@@ -76,14 +76,14 @@ def build_beat_sketch_paths(
     beat_numbers: List[int],
     sketches_dir: Union[str, Path] = None,
 ) -> Dict[int, str]:
-    """从 sketches/ 目录构建 beat_num → 绝对路径映射。
+    """Build a beat_num -> absolute path mapping from the sketches/ directory.
 
-    如果传入 sketches_dir，直接从该目录查找；
-    否则从 episode_grids_dir 推算（向上一级 → sketches/epXXX/）。
+    If sketches_dir is passed, look directly in that directory;
+    otherwise derive it from episode_grids_dir (go up one level -> sketches/epXXX/).
 
     Returns:
         {4: "/abs/path/sketches/ep001/beat_04.png", ...}
-        仅包含文件实际存在的 beat。
+        Only includes beats whose files actually exist.
     """
     if sketches_dir:
         sd = Path(sketches_dir)
@@ -105,16 +105,16 @@ def build_pool_index(
     episode_grids_dir: Union[str, Path],
     episode: int,
 ) -> PoolIndex:
-    """构建图片池索引。
+    """Build the image pool index.
 
-    扫描 render/ 和 sketch/ 目录（flat，beat 中心命名），索引所有候选版本。
+    Scan the render/ and sketch/ directories (flat, beat-centric naming) and index every candidate version.
 
     Args:
-        episode_grids_dir: 集数的 grids 目录路径（如 grids/ep001/）
-        episode: 集数
+        episode_grids_dir: grids directory of the episode (e.g. grids/ep001/)
+        episode: episode number
 
     Returns:
-        PoolIndex 对象
+        PoolIndex object
     """
     grids_dir = Path(episode_grids_dir)
 
@@ -125,7 +125,7 @@ def build_pool_index(
         images=[],
     )
 
-    # 扫描 render/ 目录
+    # Scan the render/ directory
     render_items = sorted(
         scan_render_dir(grids_dir),
         key=lambda item: (
@@ -156,9 +156,9 @@ def build_pool_index(
         )
     if render_items:
         pool.modes["render"] = {"total_cells": len(render_items)}
-        print(f"[PoolIndexer] 扫描到 {len(render_items)} 个 beat render 图")
+        print(f"[PoolIndexer] Scanned {len(render_items)} beat render images")
 
-    # 扫描 sketch/ 目录
+    # Scan the sketch/ directory
     sketch_items = sorted(
         scan_sketch_dir(grids_dir),
         key=lambda item: (
@@ -189,9 +189,9 @@ def build_pool_index(
         )
     if sketch_items:
         pool.modes["sketch"] = {"total_cells": len(sketch_items)}
-        print(f"[PoolIndexer] 扫描到 {len(sketch_items)} 个 beat 草图")
+        print(f"[PoolIndexer] Scanned {len(sketch_items)} beat sketches")
 
-    print(f"[PoolIndexer] 索引完成: episode={episode}, 共 {len(pool.images)} 张图片")
+    print(f"[PoolIndexer] Index complete: episode={episode}, {len(pool.images)} images total")
     return pool
 
 
@@ -231,10 +231,10 @@ def _preserve_rebuilt_assignments(
 
 
 def _pool_index_payload(pool: PoolIndex) -> dict:
-    # 转换为可序列化的字典
+    # Convert to a serializable dict
     def serialize_image(img: PoolImage) -> dict:
         data = img.model_dump()
-        # 将 datetime 转换为 ISO 格式字符串
+        # Convert datetime to an ISO-format string
         if data.get("generated_at"):
             data["generated_at"] = data["generated_at"].isoformat()
         return data
@@ -260,7 +260,7 @@ def _pool_index_payload(pool: PoolIndex) -> dict:
 def _save_pool_index_unlocked(pool: PoolIndex, index_path: Path) -> Path:
     write_json_atomic(index_path, _pool_index_payload(pool))
     try:
-        print(f"[PoolIndexer] 索引已保存: {index_path}")
+        print(f"[PoolIndexer] Index saved: {index_path}")
     except OSError:
         # The atomic replace has committed. A closed log pipe must not make
         # callers roll back files referenced by this successfully saved index.
@@ -272,10 +272,10 @@ def save_pool_index(
     pool: PoolIndex,
     episode_grids_dir: Union[str, Path],
 ) -> Path:
-    """保存图片池索引到 state JSON 文件。
+    """Save the image pool index to the state JSON file.
 
-    旧 output/grids/epXXX/pool_index.json 会在首次访问时 move 到 state，
-    后续只维护 state 里的 sidecar，避免 output 成为状态源。
+    The legacy output/grids/epXXX/pool_index.json is moved to state on first access;
+    afterwards only the sidecar in state is maintained, so output never becomes the state source.
     """
     grids_dir = Path(episode_grids_dir)
     index_path = resolve_state_index_path(grids_dir, _POOL_INDEX_FILENAME)
@@ -291,15 +291,15 @@ def _load_pool_index_unlocked(index_path: Path) -> Optional[PoolIndex]:
     with open(index_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # 检查是否为旧格式（简单的 key-value 映射）
+    # Check for the legacy format (simple key-value mapping)
     if "episode" not in data:
-        # 旧格式，返回 None 让调用者重建索引
-        print(f"[load_pool_index] 旧格式 pool_index.json，需要重建索引")
+        # Legacy format: return None so the caller rebuilds the index
+        print(f"[load_pool_index] Legacy-format pool_index.json, index needs to be rebuilt")
         return None
 
-    # 解析 images，处理 generated_at 字段
+    # Parse images and handle the generated_at field
     def parse_image(img_data: dict) -> PoolImage:
-        # 将 ISO 格式字符串转换为 datetime
+        # Convert ISO-format strings to datetime
         if img_data.get("generated_at") and isinstance(img_data["generated_at"], str):
             img_data["generated_at"] = datetime.fromisoformat(img_data["generated_at"])
         return PoolImage(**img_data)
@@ -309,7 +309,7 @@ def _load_pool_index_unlocked(index_path: Path) -> Optional[PoolIndex]:
             g_data["generated_at"] = datetime.fromisoformat(g_data["generated_at"])
         return GridEntry(**g_data)
 
-    # 重建 PoolIndex 对象
+    # Rebuild the PoolIndex object
     pool = PoolIndex(
         episode=data["episode"],
         generated_at=datetime.fromisoformat(data["generated_at"]),
@@ -338,7 +338,7 @@ def _load_pool_index_for_update(
 def load_pool_index(
     episode_grids_dir: Union[str, Path],
 ) -> Optional[PoolIndex]:
-    """从 state JSON 文件加载图片池索引。"""
+    """Load the image pool index from the state JSON file."""
     grids_dir = Path(episode_grids_dir)
     index_path = resolve_state_index_path(grids_dir, _POOL_INDEX_FILENAME)
     with index_file_lock(index_path):
@@ -351,17 +351,17 @@ def rebuild_pool_index(
     episode: int,
     split_cells: bool = False,
 ) -> PoolIndex:
-    """重建图片池索引。
+    """Rebuild the image pool index.
 
-    扫描 render/ 和 sketch/ 目录，构建索引并保存。
+    Scan the render/ and sketch/ directories, build the index and save it.
 
     Args:
-        episode_grids_dir: 集数的 grids 目录路径
-        episode: 集数
-        split_cells: 已弃用，保留参数兼容
+        episode_grids_dir: grids directory of the episode
+        episode: episode number
+        split_cells: deprecated, kept for compatibility
 
     Returns:
-        新建的 PoolIndex 对象
+        Newly built PoolIndex object
     """
     grids_dir = Path(episode_grids_dir)
 
@@ -369,7 +369,7 @@ def rebuild_pool_index(
     pool = build_pool_index(grids_dir, episode)
     _preserve_rebuilt_assignments(old_pool, pool)
 
-    # 保存索引
+    # Save the index
     save_pool_index(pool, grids_dir)
 
     return pool
@@ -380,31 +380,31 @@ def select_frame_from_pool(
     episode_grids_dir: Union[str, Path],
     pool: Optional[PoolIndex] = None,
 ) -> Optional[str]:
-    """为 beat 选择池中的图片，返回实际文件路径。
+    """Pick an image from the pool for a beat and return the actual file path.
 
     Args:
-        pool_id: 图片池 ID（如 "3x3_01_05"）
-        episode_grids_dir: 集数的 grids 目录路径
-        pool: 可选的 PoolIndex 对象（如果已加载）
+        pool_id: image pool ID (e.g. "3x3_01_05")
+        episode_grids_dir: grids directory of the episode
+        pool: optional PoolIndex object (if already loaded)
 
     Returns:
-        单元格的完整路径，如果不存在则返回 None
+        Full path of the cell, or None if it does not exist
     """
     if pool is None:
         pool = load_pool_index(episode_grids_dir)
 
     if pool is None:
-        print(f"[PoolIndexer] 警告: 无法加载池索引 {episode_grids_dir}")
+        print(f"[PoolIndexer] Warning: cannot load pool index {episode_grids_dir}")
         return None
 
     cell_path = pool.get_cell_path(pool_id)
     if cell_path is None:
-        print(f"[PoolIndexer] 警告: 找不到图片 {pool_id}")
+        print(f"[PoolIndexer] Warning: image not found {pool_id}")
         return None
 
     full_path = Path(episode_grids_dir) / cell_path
     if not full_path.exists():
-        print(f"[PoolIndexer] 警告: 文件不存在 {full_path}")
+        print(f"[PoolIndexer] Warning: file does not exist {full_path}")
         return None
 
     return str(full_path)
@@ -414,64 +414,64 @@ def delete_cell_from_pool(
     episode_grids_dir: Union[str, Path],
     pool_id: str,
 ) -> bool:
-    """从图片池删除指定的 cell。
+    """Delete the specified cell from the image pool.
 
     Args:
-        episode_grids_dir: grids 目录路径
-        pool_id: 图片池 ID（如 "3x3_01_05"）
+        episode_grids_dir: grids directory path
+        pool_id: image pool ID (e.g. "3x3_01_05")
 
     Returns:
-        是否删除成功
+        Whether the deletion succeeded
     """
     grids_dir = Path(episode_grids_dir)
     index_path = _state_pool_index_path(grids_dir)
 
     with index_file_lock(index_path):
-        # 1. 加载索引
+        # 1. Load the index
         index_path, pool = _load_pool_index_for_update(grids_dir)
         if pool is None:
-            print(f"[PoolIndexer] 警告: 无法加载池索引 {grids_dir}")
+            print(f"[PoolIndexer] Warning: cannot load pool index {grids_dir}")
             return False
 
-        # 2. 找到图片
+        # 2. Find the image
         img = pool.get_image(pool_id)
         if img is None:
-            print(f"[PoolIndexer] 警告: 找不到图片 {pool_id}")
+            print(f"[PoolIndexer] Warning: image not found {pool_id}")
             return False
 
-        # 3. 删除 cell 文件（如果存在）
+        # 3. Delete the cell file (if it exists)
         if img.cell_path:
             cell_path = grids_dir / img.cell_path
             if cell_path.exists():
                 cell_path.unlink()
-                print(f"[PoolIndexer] 已删除文件: {cell_path}")
+                print(f"[PoolIndexer] Deleted file: {cell_path}")
 
-        # 4. 从索引中移除
+        # 4. Remove from the index
         pool.images = [i for i in pool.images if i.id != pool_id]
 
-        # 5. 更新模式统计
+        # 5. Update mode statistics
         for mode in pool.modes:
             pool.modes[mode]["total_cells"] = len([i for i in pool.images if i.mode == mode])
 
-        # 6. 保存更新后的索引
+        # 6. Save the updated index
         _save_pool_index_unlocked(pool, index_path)
-    print(f"[PoolIndexer] 已从池中删除: {pool_id}")
+    print(f"[PoolIndexer] Removed from pool: {pool_id}")
 
     return True
 
 
 # =============================================================================
-# Beat 中心命名格式支持（render/beat_NN_t{ts}.png, sketch/{ratio}/beat_NN_t{ts}.jpg）
+# Beat-centric naming format support (render/beat_NN_t{ts}.png, sketch/{ratio}/beat_NN_t{ts}.jpg)
 # =============================================================================
 
 
 def _parse_beat_timestamp(filename: str) -> Optional[datetime]:
-    """从 beat 中心命名的文件名解析时间戳。
+    """Parse the timestamp from a beat-centric filename.
 
-    支持格式：beat_{NN}_t{YYYYMMDDHHMMSS}.{ext}
+    Supported format: beat_{NN}_t{YYYYMMDDHHMMSS}.{ext}
 
     Returns:
-        datetime 对象，如果解析失败则返回 None
+        datetime object, or None if parsing fails
     """
     match = re.search(r"beat_\d+_t(\d{14})\.", filename)
     if match:
@@ -483,9 +483,9 @@ def _parse_beat_timestamp(filename: str) -> Optional[datetime]:
 
 
 def _parse_beat_number(filename: str) -> Optional[int]:
-    """从文件名解析 beat 编号。
+    """Parse the beat number from a filename.
 
-    支持格式：beat_{NN}_t{ts}.{ext} 或 beat_{NN}_raw.{ext}
+    Supported formats: beat_{NN}_t{ts}.{ext} or beat_{NN}_raw.{ext}
     """
     match = re.match(r"beat_(\d+)", filename)
     if match:
@@ -494,7 +494,7 @@ def _parse_beat_number(filename: str) -> Optional[int]:
 
 
 def scan_render_dir(episode_grids_dir: Union[str, Path]) -> list[dict]:
-    """扫描 render/ 目录下的 beat 中心命名文件。
+    """Scan beat-centric files under the render/ directory.
 
     Returns:
         [{"path": "render/beat_01_t...", "beat_number": 1, "timestamp": datetime, "type": "render"}, ...]
@@ -523,7 +523,7 @@ def scan_render_dir(episode_grids_dir: Union[str, Path]) -> list[dict]:
 
 
 def scan_sketch_dir(episode_grids_dir: Union[str, Path]) -> list[dict]:
-    """扫描 sketch/ 目录下的 beat 中心命名文件（flat 目录）。
+    """Scan beat-centric files under the sketch/ directory (flat directory).
 
     Returns:
         [{"path": "sketch/beat_01_t...", "beat_number": 1, "timestamp": datetime, "type": "sketch"}, ...]
@@ -556,12 +556,12 @@ def add_beat_images_to_pool(
     pool: PoolIndex,
     episode_grids_dir: Union[str, Path],
 ) -> int:
-    """将 render/ 和 sketch/ 中的 beat 中心命名图片加入图片池。
+    """Add beat-centric images from render/ and sketch/ to the image pool.
 
-    仅添加尚未在池中的图片（按 path 去重）。
+    Only adds images not already in the pool (deduplicated by path).
 
     Returns:
-        新增的图片数量
+        Number of images added
     """
     grids_dir = Path(episode_grids_dir)
     existing_paths = {img.cell_path for img in pool.images if img.cell_path}
@@ -600,7 +600,7 @@ def add_beat_images_to_pool(
             added += 1
 
     if added > 0:
-        print(f"[PoolIndexer] 新增 {added} 张 beat 中心命名图片到池")
+        print(f"[PoolIndexer] Added {added} beat-centric images to the pool")
 
     return added
 
@@ -622,27 +622,27 @@ def save_grid_and_split(
     beats: Optional[list[dict]] = None,
     sketch_colors: Optional[Dict[str, str]] = None,
 ) -> dict:
-    """保存整图到 preset 目录，切割 cell 到 cells/，注册到池。
+    """Save the full grid image to the preset directory, split cells into cells/, and register them in the pool.
 
-    完整的 grid → cells 流程：
-    1. 将整图移动/复制到 {preset}/{type}_{mode}_{beats}_grid_{ts}.png
-    2. 保存提示词到 {preset}/{type}_{mode}_{beats}_prompt.txt
-    3. 切割为 cells → cells/beat_{NN}_t{ts}.png
-    4. 入池时对比去重
-    5. promote 到 frames/ 或 sketches/
+    Full grid -> cells flow:
+    1. Move/copy the full image to {preset}/{type}_{mode}_{beats}_grid_{ts}.png
+    2. Save the prompt to {preset}/{type}_{mode}_{beats}_prompt.txt
+    3. Split into cells -> cells/beat_{NN}_t{ts}.png
+    4. Compare and deduplicate when adding to the pool
+    5. Promote to frames/ or sketches/
 
     Args:
-        grid_image_path: 生成的整图路径
-        episode_grids_dir: grids/ep001 目录
+        grid_image_path: path of the generated full image
+        episode_grids_dir: grids/ep001 directory
         grid_type: "render" | "sketch"
-        mode_key: 如 "3x3", "1x1_9-16"
-        beat_nums: beat 编号列表（与 cell 顺序对应）
+        mode_key: e.g. "3x3", "1x1_9-16"
+        beat_nums: list of beat numbers (in cell order)
         preset: "scene" | "char" | "loc" | "custom"
-        rows, cols: 网格行列数
-        ts: 时间戳字符串
-        pool: 池索引（如果不传则自动 load）
-        promote_dir: 目标 promote 目录（如 frames/ 或 sketches/）
-        prompt_text: 提示词文本
+        rows, cols: number of grid rows and columns
+        ts: timestamp string
+        pool: pool index (auto-loaded if not passed)
+        promote_dir: target promote directory (e.g. frames/ or sketches/)
+        prompt_text: prompt text
 
     Returns:
         {"grid_path": str, "cell_paths": [Path], "added": int, "skipped": int}
@@ -653,18 +653,18 @@ def save_grid_and_split(
     grids_dir = Path(episode_grids_dir)
     src_path = Path(grid_image_path)
 
-    # 1. 准备 preset 目录 + 文件名
+    # 1. Prepare the preset directory + filename
     beats_str = "-".join(str(b) for b in beat_nums)
     grid_filename = f"{grid_type}_{mode_key}_{beats_str}_grid_{ts}.png"
     preset_dir = grids_dir / preset
     preset_dir.mkdir(parents=True, exist_ok=True)
     dst_grid = preset_dir / grid_filename
 
-    # 移动/复制整图
+    # Move/copy the full image
     if src_path.exists() and src_path != dst_grid:
         shutil.copy2(str(src_path), str(dst_grid))
 
-    # 2. 保存提示词
+    # 2. Save the prompt
     prompt_path = ""
     if prompt_text:
         prompt_filename = f"{grid_type}_{mode_key}_{beats_str}_prompt.txt"
@@ -674,7 +674,7 @@ def save_grid_and_split(
 
     grid_rel = dst_grid.relative_to(grids_dir).as_posix()
 
-    # 4. 切割到 render/ 或 sketch/ 目录（flat，beat 中心命名）
+    # 4. Split into the render/ or sketch/ directory (flat, beat-centric naming)
     target_dir = grids_dir / grid_type  # "render" or "sketch"
     target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -687,7 +687,7 @@ def save_grid_and_split(
         prefix=f"tmp_{ts}_{uuid.uuid4().hex}_",
     )
 
-    # 5. 预计算 beat content hash（用于 sketch stale 判断）
+    # 5. Precompute the beat content hash (used for sketch stale checks)
     beat_hash_map: Dict[int, str] = {}
     if beats:
         for beat in beats:
@@ -697,7 +697,7 @@ def save_grid_and_split(
                     beat, sketch_colors=sketch_colors
                 )
 
-    # 6. 索引更新必须在同一把锁下完成，避免并发任务覆盖彼此的条目。
+    # 6. The index update must complete under the same lock to prevent concurrent tasks from overwriting each other's entries.
     index_path = _state_pool_index_path(grids_dir)
     with index_file_lock(index_path):
         index_path, latest_pool = _load_pool_index_for_update(grids_dir)
@@ -720,7 +720,7 @@ def save_grid_and_split(
             prompt_path=prompt_path,
         )
 
-        # 6. 重命名为 beat-centric + 去重入池
+        # 6. Rename to beat-centric + dedupe into the pool
         added = 0
         skipped = 0
         final_cell_paths = []
@@ -757,8 +757,8 @@ def save_grid_and_split(
             final_cell_paths.append(cell_path)
 
             # 7. Promote
-            # force_promote=True: regen/render 等用户明确指定的操作，覆盖已有
-            # force_promote=False: 批量抽卡草图，不覆盖用户手动选图结果
+            # force_promote=True: explicit user actions such as regen/render overwrite existing ones
+            # force_promote=False: batch sketch draws do not overwrite the user's manual image choice
             if promote_dir and cell_path.exists():
                 promote = Path(promote_dir)
                 promote.mkdir(parents=True, exist_ok=True)
@@ -766,7 +766,7 @@ def save_grid_and_split(
                 if force_promote or not dst.exists():
                     shutil.copy2(str(cell_path), str(dst))
 
-            # 重复则删除新 cell（promote 之后再删）
+            # If duplicate, delete the new cell (after promote)
             if not result:
                 cell_path.unlink(missing_ok=True)
 
@@ -786,16 +786,16 @@ def assign_beat_image(
     image_path: str,
     img_type: str = "render",
 ) -> bool:
-    """为 beat 分配图片（render 或 sketch），同时 copy 到 frames/。
+    """Assign an image to a beat (render or sketch) and also copy it to frames/.
 
     Args:
-        episode_grids_dir: grids 目录
-        beat_num: beat 编号
-        image_path: 图片相对路径（相对于 grids_dir）
-        img_type: "render" 或 "sketch"
+        episode_grids_dir: grids directory
+        beat_num: beat number
+        image_path: relative image path (relative to grids_dir)
+        img_type: "render" or "sketch"
 
     Returns:
-        是否成功
+        Whether it succeeded
     """
     import shutil
 
@@ -804,21 +804,21 @@ def assign_beat_image(
     with index_file_lock(index_path):
         index_path, pool = _load_pool_index_for_update(grids_dir)
         if pool is None:
-            print(f"[PoolIndexer] 警告: 无法加载池索引 {grids_dir}")
+            print(f"[PoolIndexer] Warning: cannot load pool index {grids_dir}")
             return False
 
         if img_type != "sketch":
             pool.beat_assignments[str(beat_num)] = image_path
-            # 同时 copy 到 frames/beat_XX.png 兼容下游
+            # Also copy to frames/beat_XX.png for downstream compatibility
             src = grids_dir / image_path
             if src.exists():
-                # grids_dir 格式: output/{user}/{project}/grids/ep001
-                # frames 目录: output/{user}/{project}/frames/ep001
+                # grids_dir format: output/{user}/{project}/grids/ep001
+                # frames directory: output/{user}/{project}/frames/ep001
                 frames_dir = grids_dir.parent.parent / "frames" / grids_dir.name
                 frames_dir.mkdir(parents=True, exist_ok=True)
                 dst = frames_dir / f"beat_{beat_num:02d}.png"
                 shutil.copy2(str(src), str(dst))
-                print(f"[PoolIndexer] 已 copy 到 frames: {dst}")
+                print(f"[PoolIndexer] Copied to frames: {dst}")
 
         _save_pool_index_unlocked(pool, index_path)
     print(f"[PoolIndexer] Beat {beat_num} ({img_type}) → {image_path}")
@@ -826,20 +826,20 @@ def assign_beat_image(
 
 
 # =============================================================================
-# Phase 2: 内容哈希 + 去重
+# Phase 2: content hash + dedupe
 # =============================================================================
 
 
 def compute_image_hash(image_path: Union[str, Path]) -> str:
-    """计算图片内容哈希（用于去重）。
+    """Compute the image content hash (used for deduplication).
 
-    使用 MD5 哈希文件内容。快速且足够用于去重判断。
+    Uses an MD5 hash of the file content. Fast and sufficient for dedupe checks.
 
     Args:
-        image_path: 图片文件路径
+        image_path: image file path
 
     Returns:
-        MD5 哈希字符串
+        MD5 hash string
     """
     path = Path(image_path)
     if not path.exists():
@@ -862,33 +862,33 @@ def add_cell_with_dedup(
     col: int = 0,
     beat_content_hash: str = "",
 ) -> Optional[PoolImage]:
-    """将 cell 入池，入池前检查去重。
+    """Add a cell to the pool, checking for duplicates first.
 
-    对比同 beat 位置已有的图片：
-    - 如果池里已有相同 beat 且内容一致的图 → 跳过
-    - 否则添加新条目
+    Compare against existing images at the same beat position:
+    - If the pool already has an image for the same beat with identical content -> skip
+    - Otherwise add a new entry
 
     Args:
-        pool: 池索引对象
-        cell_path: cell 文件绝对路径
-        episode_grids_dir: grids 根目录
-        beat_num: beat 编号
-        ts: 时间戳字符串
+        pool: pool index object
+        cell_path: absolute path of the cell file
+        episode_grids_dir: grids root directory
+        beat_num: beat number
+        ts: timestamp string
         img_type: render | sketch
-        mode: 生成模式
-        grid_index: 网格索引
-        cell_index: cell 索引
-        grid_path: 网格图片相对路径
-        row: 行号
-        col: 列号
+        mode: generation mode
+        grid_index: grid index
+        cell_index: cell index
+        grid_path: relative path of the grid image
+        row: row number
+        col: column number
 
     Returns:
-        新增的 PoolImage，如果重复则返回 None
+        Newly added PoolImage, or None if it is a duplicate
     """
     content_hash = compute_image_hash(cell_path)
 
     if content_hash and pool.has_duplicate_cell(beat_num, content_hash):
-        print(f"[PoolIndexer] 去重：Beat {beat_num} 已存在内容相同的图片，跳过")
+        print(f"[PoolIndexer] Dedupe: Beat {beat_num} already has an image with identical content, skipping")
         return None
 
     rel_path = cell_path.relative_to(episode_grids_dir).as_posix()
@@ -992,19 +992,19 @@ def register_grid_entry(
     grid_path: str,
     prompt_path: str = "",
 ) -> GridEntry:
-    """注册整图元数据到池索引。
+    """Register full-grid metadata in the pool index.
 
     Args:
-        pool: 池索引对象
+        pool: pool index object
         grid_type: render | sketch
-        mode_key: 如 3x3, 1x1_9-16
-        beat_nums: 包含的 beat 编号列表
+        mode_key: e.g. 3x3, 1x1_9-16
+        beat_nums: list of included beat numbers
         preset: scene / char / loc / custom
-        grid_path: 整图相对路径
-        prompt_path: 提示词相对路径
+        grid_path: relative path of the full image
+        prompt_path: relative path of the prompt
 
     Returns:
-        新增的 GridEntry
+        Newly added GridEntry
     """
     entry = GridEntry(
         type=grid_type,
@@ -1020,7 +1020,7 @@ def register_grid_entry(
 
 
 def scan_preset_dirs(episode_grids_dir: Union[str, Path]) -> list[dict]:
-    """扫描 preset 目录下的整图文件。
+    """Scan the full-grid files under the preset directory.
 
     Returns:
         [{"path": "scene/render_3x3_1-2-3_grid_ts.png", "type": "render",

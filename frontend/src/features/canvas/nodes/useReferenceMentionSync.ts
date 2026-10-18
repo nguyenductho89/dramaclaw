@@ -9,27 +9,27 @@ import {
 } from "./referenceMentions";
 
 export interface ReferenceMentionFamilyInput {
-  /** mention 前缀，如 "图片"（视频 / ImageGen）/ "图"（ImageEdit）/ "音频"。 */
+  /** Mention prefix, e.g. "image" (video / ImageGen) / "audio". */
   prefix: string;
   /**
-   * 当前帧的有序引用 id 列表，下标 +1 即该引用在 prompt 里的序号（@<前缀>N）。
-   * 必须与节点给「角色库 / 引用行」编号时用的有序列表一致（去重后、连接顺序）。
+   * The current frame's ordered reference id list; index + 1 is the reference's number in the prompt (@<prefix>N).
+   * Must match the ordered list the node uses to number the "character library / reference row" (after dedupe, in connection order).
    */
   ids: string[];
 }
 
-// 拼 signature 用的分隔符，取节点 id / 前缀里不会出现的不可见字符，避免拼接歧义。
+// Separator for the signature: an invisible character that never appears in node ids / prefixes, avoiding concatenation ambiguity.
 const FIELD_SEP = "␟";
 const FAMILY_SEP = "␞";
 
 /**
- * 让 prompt 里的 `@<前缀>N` mention 始终跟随引用编号：每当某个 family 的有序 id 列表
- * 变化（删除 / 重排 / 新增引用连线，覆盖所有删边路径），就把 prompt 里对应的数字重写，
- * 被删引用的 mention 连同其后随空格一起移除。首帧只记录基线、不改 prompt —— 持久化的
- * mention 已与当时的引用顺序一致。详见 referenceMentions.ts。
+ * Keeps `@<prefix>N` mentions in the prompt following the reference numbering: whenever a family's ordered id list
+ * changes (delete / reorder / add a reference edge, covering every edge-deletion path), the matching numbers in the prompt are rewritten,
+ * and the mention of a deleted reference is removed together with its trailing space. The first frame only records a baseline and leaves the prompt alone — persisted
+ * mentions already match the reference order at that time. See referenceMentions.ts.
  *
- * `applyPrompt` 应稳定（useCallback）；即便不稳定也仅多跑一次空操作（sameOrder 守卫
- * 保证只有顺序真的变了才写回），不会损坏 prompt。
+ * `applyPrompt` should be stable (useCallback); even if it is not, it only costs one extra no-op (the sameOrder guard
+ * ensures a write-back happens only when the order really changed), and the prompt is never corrupted.
  */
 export function useReferenceMentionSync(
   prompt: string,
@@ -37,7 +37,7 @@ export function useReferenceMentionSync(
   applyPrompt: (next: string) => void,
 ): void {
   const prevRef = useRef<Map<string, string[]> | null>(null);
-  // 结构签名作为 effect 依赖：只有某个 family 的 ids 真的变化时才重新运行。
+  // Structural signature as the effect dependency: re-run only when some family's ids really change.
   const signature = families
     .map((family) => family.prefix + FIELD_SEP + family.ids.join(FIELD_SEP))
     .join(FAMILY_SEP);
@@ -47,7 +47,7 @@ export function useReferenceMentionSync(
     prevRef.current = new Map(
       families.map((family) => [family.prefix, family.ids] as const),
     );
-    // 首帧只记录基线，不动 prompt。
+    // The first frame only records the baseline and does not touch the prompt.
     if (!prev) return;
 
     let changed = false;
@@ -60,7 +60,7 @@ export function useReferenceMentionSync(
 
     const next = remapReferenceMentions(prompt, remapFamilies);
     if (next !== prompt) applyPrompt(next);
-    // families 由 signature 表征；prompt / applyPrompt 显式列出。
+    // families are represented by the signature; prompt / applyPrompt are listed explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, prompt, applyPrompt]);
 }

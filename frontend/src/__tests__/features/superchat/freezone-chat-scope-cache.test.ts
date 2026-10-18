@@ -19,7 +19,7 @@ describe("freezone chat scope cache", () => {
       superChatMessageCacheKeyForTest(oldScopeKey),
       JSON.stringify({
         updatedAt: 1000,
-        messages: [{ id: "old", role: "user", text: "旧消息", timestamp: 1000 }],
+        messages: [{ id: "old", role: "user", text: "Old message", timestamp: 1000 }],
       }),
     );
 

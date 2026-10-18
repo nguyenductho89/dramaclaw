@@ -237,7 +237,7 @@ def _effective_project_config(
     )
     if result.get("visual_style") not in available:
         print(
-            f"[load_project_config] visual_style '{result['visual_style']}' 无效，回退默认",
+            f"[load_project_config] visual_style '{result['visual_style']}' is invalid, falling back to default",
             flush=True,
         )
         result["visual_style"] = default_config["visual_style"]
@@ -324,7 +324,7 @@ def save_project_config(username: str, project: str, config: dict | None = None,
 
     saved_config = update_project_config_file(username, project, _apply)
     print(
-        "[save_project_config] 已保存配置: "
+        "[save_project_config] saved config: "
         f"{username}/{project}/project_config.json -> {saved_config}",
         flush=True,
     )
@@ -364,7 +364,7 @@ def load_project_config(username: str, project: str) -> dict:
     )
 
     _log.debug(
-        "[load_project_config] 已加载配置: %s/%s/project_config.json -> %s",
+        "[load_project_config] loaded config: %s/%s/project_config.json -> %s",
         username,
         project,
         result,
@@ -404,7 +404,7 @@ def load_project_config_from_state_dir(
         use_project_style_loader=False,
     )
     _log.debug(
-        "[load_project_config_from_state_dir] 已加载配置: %s/project_config.json -> %s",
+        "[load_project_config_from_state_dir] loaded config: %s/project_config.json -> %s",
         state_dir,
         result,
     )

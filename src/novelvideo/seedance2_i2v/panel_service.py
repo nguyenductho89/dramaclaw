@@ -37,6 +37,7 @@ from novelvideo.seedance2_i2v.models import (
     parse_seedance2_config,
 )
 from novelvideo.seedance2_i2v.prompt import (
+    SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES,
     build_seedance2_prompt_draft,
     compute_seedance2_prompt_inputs_hash,
     detect_seedance2_prompt_language,
@@ -52,14 +53,6 @@ from novelvideo.utils.path_resolver import PathResolver
 from novelvideo.utils.source_language import AssetLanguage
 
 
-SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, str] = {
-    "主体": "主体：明确画面核心人物或物体、当前动作和状态，避免多个主体争抢焦点。",
-    "场景": "场景：补充空间背景、地点关系、关键道具和环境材质，保持与参考图一致。",
-    "光影": "光影：描述主光源、明暗层次、色温和氛围，避免忽明忽暗。",
-    "镜头": "镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
-    "风格": "风格：限定画面质感、时代感、色彩倾向和真实度，避免风格漂移。",
-    "无字幕": "无字幕：避免生成任何文字或字幕，保持画面纯净。",
-}
 _SEEDANCE2_ASSET_CONCURRENCY = 2
 _seedance2_asset_limiter_var: RunVar[anyio.CapacityLimiter] = RunVar(
     "seedance2_asset_limiter"
@@ -633,9 +626,9 @@ def _resolve_project_audio_source(project_dir: Path, source_path: str | Path) ->
     try:
         source.relative_to(root)
     except ValueError as exc:
-        raise ValueError("请选择项目内有效的音频文件") from exc
+        raise ValueError("Select a valid audio file inside the project") from exc
     if not source.exists() or not source.is_file() or source.suffix.lower() not in VOICE_SAMPLE_EXTENSIONS:
-        raise ValueError("请选择项目内有效的音频文件")
+        raise ValueError("Select a valid audio file inside the project")
     return source
 
 
@@ -713,7 +706,7 @@ def _prepare_trimmed_seedance2_audio(
     if str(asset_key or "").strip() == "voice:narrator":
         state_dir = str(getattr(store, "state_dir", "") or "")
         if not state_dir:
-            raise ValueError("项目 state_dir 未解析，无法保存解说声线")
+            raise ValueError("Project state_dir is not resolved; cannot save the narrator voice")
         target = Path(project_dir) / "assets" / "narrator" / "voice.mp3"
         target.parent.mkdir(parents=True, exist_ok=True)
         _archive_narrator_voice_siblings(target)
@@ -907,9 +900,9 @@ def build_seedance2_video_panel_state(
 
 def mark_seedance2_prompt_references_for_editor(prompt: str) -> str:
     text = str(prompt or "")
-    text = re.sub(r"@@+(图片|音频)\s*(\d+)", r"@\1\2", text)
-    text = re.sub(r"@?(图片|音频)\s+(\d+)", r"@\1\2", text)
-    text = re.sub(r"(?<!@)(图片|音频)(\d+)", r"@\1\2", text)
+    text = re.sub(r"@@+(image|audio)\s*(\d+)", r"@\1\2", text)
+    text = re.sub(r"@?(image|audio)\s+(\d+)", r"@\1\2", text)
+    text = re.sub(r"(?<!@)\b(image|audio)(\d+)", r"@\1\2", text)
     return text
 
 
@@ -1002,7 +995,7 @@ def _append_seedance2_user_reference_assets(
                 exists=item_path.exists(),
                 selected=item_path.exists() and not validation_error,
                 request_field="reference_images",
-                reference_label=f"图片{image_count}",
+                reference_label=f"image{image_count}",
                 validation_error=validation_error,
             )
         )
@@ -1021,7 +1014,7 @@ def _append_seedance2_user_reference_assets(
                 exists=item_path.exists(),
                 selected=item_path.exists(),
                 request_field="reference_audios",
-                reference_label=f"音频{audio_count}",
+                reference_label=f"audio{audio_count}",
             )
         )
 
@@ -1136,16 +1129,16 @@ def _seedance2_prompt_inputs_hash(
 
 def _seedance2_prompt_status(config: Any, current_hash: str) -> str:
     if not str(config.final_prompt or "").strip():
-        return "未生成"
+        return "Not generated"
     if str(config.prompt_source or "") in {"manual", "edited"}:
-        return "已手动编辑"
+        return "Edited manually"
     if config.prompt_inputs_hash and config.prompt_inputs_hash != current_hash:
-        return "Prompt 已过期"
+        return "Prompt outdated"
     if config.prompt_source == "generated":
-        return "AI 生成"
+        return "AI generated"
     if config.prompt_source == "fallback":
-        return "规则草稿"
-    return "旧提示词"
+        return "Rule-based draft"
+    return "Legacy prompt"
 
 
 def _seedance2_storyboard_context(beat: dict[str, Any]) -> list[tuple[str, str]]:
@@ -1156,14 +1149,14 @@ def _seedance2_storyboard_context(beat: dict[str, Any]) -> list[tuple[str, str]]
         ).strip()
     rows = [
         (
-            "分镜概要",
+            "Storyboard summary",
             str(beat.get("synopsis") or beat.get("visual_description") or "").strip(),
         ),
         (
-            "旧视频提示词",
+            "Legacy video prompt",
             str(beat.get("video_prompt") or beat.get("keyframe_prompt") or "").strip(),
         ),
-        ("旁白/对话", spoken_text),
+        ("Narration/dialogue", spoken_text),
     ]
     return [(label, value) for label, value in rows if value]
 

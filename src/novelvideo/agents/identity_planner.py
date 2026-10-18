@@ -1,12 +1,12 @@
-"""Identity Planner — 批量为所有剧集规划角色身份。
+"""Identity Planner — plan character identities for all episodes in batch.
 
-在剧集工作台中一次性运行，为每集分析并落库角色身份。
+Runs once in the episode workbench; analyzes each episode and persists the character identities.
 
-当前流程（每集）：
-1. 预筛本集出场角色
-2. Pass A: 分析每个角色的现实主线默认身份
-3. Pass B: 分析默认身份之外的其他非默认身份
-4. resolve / create 并写回 episode.identity_ids + episode.identity_default_map
+Current per-episode flow:
+1. Pre-screen the characters appearing in this episode
+2. Pass A: analyze each character's default identity on the real-world main storyline
+3. Pass B: analyze the other, non-default identities
+4. resolve / create, then write back episode.identity_ids + episode.identity_default_map
 """
 
 import re
@@ -40,52 +40,58 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
+_AGE_GROUP_ALIASES = {
+    "kid": "child",
+    "toddler": "child",
+    "infant": "child",
+    "childhood": "child",
+    "teen": "youth",
+    "teenage": "youth",
+    "teenager": "youth",
+    "adolescent": "youth",
+    "young_adult": "youth",
+    "young": "youth",
+    "adult": "youth",
+    "middle_aged": "middle",
+    "midlife": "middle",
+    "elderly": "elder",
+    "old": "elder",
+    "senior": "elder",
+    "old_age": "elder",
+}
+
+
 def _normalize_age_group_value(v: str) -> str:
     if not v:
         return ""
-    v = v.strip().lower()
+    v = re.sub(r"[\s\-]+", "_", v.strip().lower())
     if v in ("child", "youth", "middle", "elder"):
         return v
-    mapping = {
-        "儿童": "child",
-        "幼儿": "child",
-        "幼年": "child",
-        "童年": "child",
-        "孩童": "child",
-        "少年": "youth",
-        "teenager": "youth",
-        "青年": "youth",
-        "young": "youth",
-        "adult": "youth",
-        "中年": "middle",
-        "中老年": "middle",
-        "老年": "elder",
-        "老人": "elder",
-        "old": "elder",
-    }
-    return mapping.get(v, "")
+    return _AGE_GROUP_ALIASES.get(v, "")
 
 
 def _merge_age_group_values(existing: str, incoming: str) -> str:
     existing_norm = _normalize_age_group_value(existing)
     incoming_norm = _normalize_age_group_value(incoming)
     if existing_norm and incoming_norm and existing_norm != incoming_norm:
-        raise ValueError(f"冲突 age_group: {existing_norm!r} vs {incoming_norm!r}")
+        raise ValueError(
+            f"Conflicting age_group: {existing_norm!r} vs {incoming_norm!r}"
+        )
     return existing_norm or incoming_norm
 
 
 class IdentityRequirement(BaseModel):
-    """AI 分析出的单个身份需求。"""
+    """A single identity requirement produced by the AI analysis."""
 
-    character_name: str = Field(description="角色名（使用主名称）")
+    character_name: str = Field(description="Character name (use the primary name)")
     visual_state: str = Field(
-        description="故事时期或造型分支名称，如 '战神时期'、'皇后宫装'、'皇后便装'、'嫡女时期'"
+        description="Short English slug for the story period or look branch, e.g. 'warlord_era', 'empress_court_dress', 'empress_casual', 'young_lady'"
     )
     age_group: str = Field(
         default="",
-        description="该身份对应的年龄段，取值: child/youth/middle/elder。年龄变体必须填写；普通同龄换装留空字符串",
+        description="Age group of this identity, one of: child/youth/middle/elder. Required for age variants; leave an empty string for ordinary same-age outfit changes",
     )
-    reason: str = Field(description="一句话原因")
+    reason: str = Field(description="One-sentence reason")
 
     @field_validator("age_group", mode="before")
     @classmethod
@@ -94,15 +100,17 @@ class IdentityRequirement(BaseModel):
 
 
 class DefaultIdentityRequirement(BaseModel):
-    """Pass A：每个角色的现实主线默认身份。"""
+    """Pass A: each character's default identity on the real-world main storyline."""
 
-    character_name: str = Field(description="角色名（使用主名称）")
-    visual_state: str = Field(description="本集现实主线中的默认视觉形态名称")
+    character_name: str = Field(description="Character name (use the primary name)")
+    visual_state: str = Field(
+        description="Name of the default visual state on this episode's real-world main storyline (short English slug)"
+    )
     age_group: str = Field(
         default="",
-        description="该默认身份对应的年龄段，取值: child/youth/middle/elder。若 identity 本身是明确年龄阶段，必须填写；否则留空字符串",
+        description="Age group of this default identity, one of: child/youth/middle/elder. Required if the identity itself is a clear age stage; otherwise leave an empty string",
     )
-    reason: str = Field(description="一句话原因")
+    reason: str = Field(description="One-sentence reason")
 
     @field_validator("age_group", mode="before")
     @classmethod
@@ -111,18 +119,20 @@ class DefaultIdentityRequirement(BaseModel):
 
 
 class EpisodeDefaultIdentities(BaseModel):
-    """Pass A 的输出：每个出场角色的默认身份。"""
+    """Pass A output: the default identity of each character in the cast."""
 
     defaults: list[DefaultIdentityRequirement] = Field(
-        default_factory=list, description="每个出场角色的现实主线默认身份（每人一个）"
+        default_factory=list,
+        description="The default identity on the real-world main storyline for each cast character (one per character)",
     )
 
 
 class EpisodeIdentityRequirements(BaseModel):
-    """Pass B 的输出：其他非默认身份。"""
+    """Pass B output: the other, non-default identities."""
 
     requirements: list[IdentityRequirement] = Field(
-        default_factory=list, description="本集需要的其他非默认身份列表（不含默认身份）"
+        default_factory=list,
+        description="List of other non-default identities needed in this episode (excluding default identities)",
     )
 
 
@@ -146,44 +156,44 @@ def _appearance_corruption_reason(value: object, field_name: str) -> str | None:
         return None
     lowered = text.casefold()
     if "\ufffd" in text:
-        return "包含 Unicode replacement character"
+        return "contains the Unicode replacement character"
     if any(token in lowered for token in _APPEARANCE_SCHEMA_TOKENS):
-        return "包含结构化输出字段名"
+        return "contains structured-output field names"
     if lowered == "/* empty */":
-        return "包含模型空值哨兵"
+        return "contains a model empty-value sentinel"
     if (
         "```" in text
         or "<tool" in lowered
         or "</tool" in lowered
         or "@returns" in lowered
     ):
-        return "包含工具调用框架"
+        return "contains tool-call scaffolding"
     if field_name in {"face_description", "body_type"} and (
         "\n" in text or "\r" in text
     ):
-        return "短描述包含多行内容"
+        return "short description contains multiple lines"
     if _APPEARANCE_REASONING_RE.search(text):
-        return "包含模型推理文本"
+        return "contains model reasoning text"
     return None
 
 
 class AppearanceDescription(BaseModel):
-    """AI 生成的身份外观描述。"""
+    """AI-generated identity appearance description."""
 
     appearance_details: str = Field(
-        description="外观描述（服装、配饰、发型、整体造型状态，50-80字，不含动作表情）"
+        description="Appearance description (clothing, accessories, hairstyle, overall styling; 20-40 words; no actions or expressions)"
     )
     face_description: str = Field(
         default="",
-        description="面部描述（仅当身份涉及年龄变化时填写：年龄特征、脸型、五官比例，不含服装）",
+        description="Face description (fill only when the identity involves an age change: age traits, face shape, facial proportions; no clothing)",
     )
     age_group: str = Field(
         default="",
-        description="仅当身份涉及年龄变化时填写该身份的年龄段，取值: child/youth/middle/elder；普通换装留空字符串",
+        description="Fill only when the identity involves an age change: the age group of this identity, one of: child/youth/middle/elder; leave an empty string for ordinary outfit changes",
     )
     body_type: str = Field(
         default="",
-        description="仅当身份涉及年龄变化时填写体型描述（如'矮小圆润的幼童体型'、'佝偻消瘦的老人体型'），普通换装不填",
+        description="Fill only when the identity involves an age change: body type description (e.g. 'small, round toddler build', 'stooped, thin elderly build'); leave empty for ordinary outfit changes",
     )
 
     @field_validator(
@@ -204,12 +214,12 @@ class AppearanceDescription(BaseModel):
         if reason := _appearance_corruption_reason(value, field_name):
             raise ValueError(f"{field_name} {reason}")
         if field_name == "appearance_details":
-            if not 10 <= len(value) <= 200:
-                raise ValueError("appearance_details 长度必须为 10–200 字符")
-        elif field_name == "face_description" and value and not 10 <= len(value) <= 100:
-            raise ValueError("face_description 长度必须为 10–100 字符")
-        elif field_name == "body_type" and value and not 2 <= len(value) <= 80:
-            raise ValueError("body_type 长度必须为 2–80 字符")
+            if not 10 <= len(value) <= 400:
+                raise ValueError("appearance_details length must be 10-400 characters")
+        elif field_name == "face_description" and value and not 10 <= len(value) <= 300:
+            raise ValueError("face_description length must be 10-300 characters")
+        elif field_name == "body_type" and value and not 2 <= len(value) <= 160:
+            raise ValueError("body_type length must be 2-160 characters")
         return value
 
     @field_validator("age_group", mode="before")
@@ -222,7 +232,7 @@ class AppearanceDescription(BaseModel):
         variant_fields = (self.face_description, self.age_group, self.body_type)
         if any(variant_fields) and not all(variant_fields):
             raise ValueError(
-                "face_description、age_group、body_type 必须同时为空或同时填写"
+                "face_description, age_group and body_type must be either all empty or all filled in"
             )
         context = info.context if isinstance(info.context, dict) else {}
         planned_age_group = _normalize_age_group_value(
@@ -230,98 +240,98 @@ class AppearanceDescription(BaseModel):
         )
         if planned_age_group and self.age_group != planned_age_group:
             raise ValueError(
-                f"已规划 age_group={planned_age_group}，外观输出必须填写匹配的年龄变体字段"
+                f"age_group={planned_age_group} was already planned; the appearance output must fill in the matching age-variant fields"
             )
         return self
 
 
 class EpisodeCastList(BaseModel):
-    """AI 从原文中筛选出的出场角色列表。"""
+    """List of cast characters the AI selected from the source text."""
 
     character_names: list[str] = Field(
-        description="本集中实际出场的角色名列表（使用主名称）"
+        description="List of characters who actually appear in this episode (use primary names)"
     )
 
 
-APPEARANCE_GENERATION_PROMPT = """# 你是专业的影视服装造型师
+APPEARANCE_GENERATION_PROMPT = """# You are a professional costume stylist for film and TV
 
-## 任务
-为虚构影视作品中的角色设计服装造型方案。
+## Task
+Design costume and styling plans for characters in a fictional film/TV production.
 
-## 要求
-- appearance_details: 描述服装款式、面料材质、配饰、发型造型，50-80字，**不含**人物外貌、动作和表情
-- face_description: **仅当身份涉及年龄变化**（幼年、少年、老年等）时填写面部描述，30-50字
-  - 包括：年龄特征、脸型轮廓、五官比例
-  - 不含：服装、配饰、动作、表情
-  - 普通换装身份（同年龄段）不填此项
-- body_type: **仅当身份涉及年龄变化**时填写体型描述
-  - 包括：身高、体型、体态特征
-  - 普通换装身份（同年龄段）不填此项
-- 具体、可视化，适合影视美术部门制作参考
+## Requirements
+- appearance_details: describe garment styles, fabric materials, accessories and hairstyle, 20-40 words, **without** the person's physical features, actions or expressions
+- face_description: fill in **only when the identity involves an age change** (childhood, adolescence, old age, etc.), a 15-30 word face description
+  - Include: age traits, face shape and contour, facial proportions
+  - Exclude: clothing, accessories, actions, expressions
+  - Do not fill this in for ordinary outfit-change identities (same age group)
+- body_type: fill in **only when the identity involves an age change**, a body type description
+  - Include: height, build, posture
+  - Do not fill this in for ordinary outfit-change identities (same age group)
+- Be concrete and visual, suitable as a reference for the film art department
 
-## 示例
-- appearance_details: "月白色麻布僧袍，腰系粗麻绳，颈戴木质佛珠，脚穿草鞋，光头造型"
-- appearance_details: "大红织金嫁衣凤冠霞帔，金步摇垂珠，额间贴花钿，盘发高髻"
-- face_description（幼年）: "六七岁幼童，圆润小脸，大而明亮的杏眼，小巧鼻子，婴儿肥双颊"
-- face_description（老年）: "七旬老者，面颊消瘦多皱纹，眼窝深陷，颧骨突出，鬓发花白稀疏"
-- body_type（幼年）: "矮小圆润的幼童体型，身高仅及成人腰部"
-- body_type（老年）: "佝偻消瘦的老人体型，身高略矮，背部微驼"
+## Examples
+- appearance_details: "Moon-white linen monk's robe, coarse hemp rope at the waist, wooden prayer beads around the neck, straw sandals, shaved head"
+- appearance_details: "Crimson gold-brocade wedding robe with phoenix crown and embroidered cape, gold tassel hairpin, floral decal on the forehead, hair coiled in a high bun"
+- face_description (childhood): "Six- or seven-year-old child, round small face, big bright almond eyes, small nose, chubby baby-fat cheeks"
+- face_description (old age): "Man in his seventies, gaunt wrinkled cheeks, deep-set eyes, prominent cheekbones, sparse graying temples"
+- body_type (childhood): "Small, round toddler build, only waist-high to an adult"
+- body_type (old age): "Stooped, thin elderly build, slightly short, back slightly hunched"
 """
 
 
-DEFAULT_IDENTITY_PROMPT = """# 你是影视角色主线形态分析师
+DEFAULT_IDENTITY_PROMPT = """# You are an analyst of film/TV character main-storyline forms
 
-## 任务
-为本集每个出场角色确定一个**现实主线默认身份**。
+## Task
+Determine one **real-world main-storyline default identity** for each character who appears in this episode.
 
-## 什么是"默认身份"
-- 本集中该角色在**非回忆、非闪回、非梦境**的现实场景中，最常出现的稳定视觉形态
-- 一个角色只有一个默认身份
-- 如果角色在本集只有一种形态，那它就是默认身份
+## What is a "default identity"
+- The most frequently appearing stable visual form of the character in this episode's **non-memory, non-flashback, non-dream** real-world scenes
+- A character has exactly one default identity
+- If the character has only one form in this episode, that is the default identity
 
-## 规则
-- 优先复用已有身份名称，不要新建近义词
-- 命名优先使用人生阶段/社会阶段/年龄阶段（如"大厂时期"、"中年时期"、"学生时期"、"幼年时期"）
-- 只有在**同一时期内部**长期稳定存在两套反复出现的造型时，才使用造型分支名（如"职场装束"、"居家装束"）
-- 不要把服装类别直接当作一级默认身份名；如果它本质上对应一个人生阶段，应优先命名为该阶段
-- 不用剧情语义词（不用"回归时期"、"觉醒时期"）
-- 不用短期处境词（不用"落魄时期"、"囚禁中"）
-- 不要包含角色名（用"中年时期"而非"杜晨_中年时期"）
-- 输出时同时给出 age_group
-  - 如果 visual_state 明确是年龄阶段（如"孩童时期"、"少年时期"、"中年时期"、"老年时期"），age_group 必填
-  - 普通同龄造型分支（如"职场装束"、"居家装束"）可留空
+## Rules
+- Prefer reusing existing identity names; do not create near-synonyms
+- Name identities with a short English snake_case slug (lowercase letters, digits, underscores; no spaces). Prefer life-stage / social-stage / age-stage names (e.g. "corporate_era", "middle_aged", "student", "child")
+- Only use a look-branch name (e.g. "office_attire", "home_attire") when two repeatedly recurring looks exist stably **within the same period**
+- Do not use a clothing category directly as a top-level default identity name; if it essentially corresponds to a life stage, name it after that stage
+- Do not use plot-semantic words (no "return_era", "awakening_era")
+- Do not use short-term situation words (no "down_and_out", "imprisoned")
+- Do not include the character name (use "middle_aged", not "Dunstan_middle_aged")
+- Also output age_group
+  - If visual_state is clearly an age stage (e.g. "child", "teen", "middle_aged", "elderly"), age_group is required
+  - Ordinary same-age look branches (e.g. "office_attire", "home_attire") may leave it empty
 """
 
 
-OTHER_IDENTITY_PROMPT = """# 你是影视视觉身份分析师
+OTHER_IDENTITY_PROMPT = """# You are a film/TV visual-identity analyst
 
-## 任务
-基于本集全文，找出各角色在默认身份**之外**还需要的其他身份。
+## Task
+Based on the full text of this episode, find the other identities each character needs **in addition to** the default identity.
 
-## 什么是"其他身份"
-- 任何不同于默认身份、且需要独立稳定视觉基底的形态
-- 包括但不限于：
-  - 回忆/闪回中的不同年龄形态（幼年、少年、老年）
-  - 同一时期内长期且反复出现的另一套稳定造型（如宫装 vs 便装、职场装束 vs 居家装束）
-  - 电视画面/照片中的历史形象
-  - 同集内明确长期分离的另一阶段形态
+## What is an "other identity"
+- Any form that differs from the default identity and needs its own stable visual base
+- Including but not limited to:
+  - Different age forms in memories/flashbacks (child, teen, elderly)
+  - Another stable look that recurs over a long time within the same period (e.g. court dress vs casual wear, office attire vs home attire)
+  - Historical appearances on TV screens / in photographs
+  - Another stage form clearly separated over a long span within the same episode
 
-## 什么不是"其他身份"
-- 一次性状态（脏了、受伤、淋湿）
-- 短期剧情处境（待嫁、落魄、囚禁中）
-- 单次动作或镜头语言
-- 只是情绪变化、站位变化、构图变化
+## What is NOT an "other identity"
+- One-off states (dirty, injured, soaked)
+- Short-term plot situations (about to be married off, down and out, imprisoned)
+- A single action or camera language
+- Mere changes in emotion, position or composition
 
-## 硬约束
-- **年龄变体必须独立身份**：脸型、五官、身高完全不同，即使只出现一两场
-- 不要把这一步理解成"只补年龄身份"
-- 只要和默认身份不是同一个稳定视觉基底，就应该列出
-- 命名优先使用时期/阶段名；只有在同一时期内部区分多套长期造型时，才使用"装束/便装/正装"这类造型名
-- 默认身份已经处理完了，不要重复输出
-- 优先复用已有身份名称
-- 输出时同时给出 age_group
-  - 年龄变体（孩童/少年/中年/老年）必须填写对应 age_group
-  - 普通同龄造型分支可留空
+## Hard constraints
+- **Age variants must be separate identities**: face shape, features and height are entirely different, even if they appear in only one or two scenes
+- Do not interpret this step as "only add age identities"
+- Whenever it is not the same stable visual base as the default identity, it should be listed
+- Prefer period/stage names for naming (short English snake_case slugs such as "child", "teen", "elderly", "1893_chicago"); only use look names like "attire / casual / formal" when distinguishing several long-lived looks within the same period
+- Default identities have already been handled; do not output them again
+- Prefer reusing existing identity names
+- Also output age_group
+  - Age variants (child / teen / middle-aged / elderly) must fill in the matching age_group
+  - Ordinary same-age look branches may leave it empty
 """
 
 
@@ -330,9 +340,8 @@ OTHER_IDENTITY_PROMPT = """# 你是影视视觉身份分析师
 # =============================================================================
 
 
-
 def format_character_info(characters: list[str], resolve_name, get_character) -> str:
-    """基础信息 + 已有身份文本（Pass A/B 共用）。"""
+    """Basic info + existing identities text (shared by Pass A/B)."""
     lines = []
     for char_name in characters:
         resolved = resolve_name(char_name)
@@ -341,28 +350,28 @@ def format_character_info(characters: list[str], resolve_name, get_character) ->
             lines.append(f"### {char.name}")
             base_attrs = []
             if char.gender:
-                base_attrs.append(f"性别: {char.gender}")
+                base_attrs.append(f"gender: {char.gender}")
             if char.age_group:
-                base_attrs.append(f"默认年龄段: {char.age_group}")
+                base_attrs.append(f"default age group: {char.age_group}")
             if char.face_prompt:
-                base_attrs.append(f"默认面部: {char.face_prompt}")
+                base_attrs.append(f"default face: {char.face_prompt}")
             if char.body_type:
-                base_attrs.append(f"体型: {char.body_type}")
+                base_attrs.append(f"body type: {char.body_type}")
             if base_attrs:
-                lines.append(f"基础信息: {', '.join(base_attrs)}")
+                lines.append(f"Basic info: {', '.join(base_attrs)}")
             if char.identities:
                 for ident in char.identities:
-                    desc = ident.appearance_details or "无描述"
+                    desc = ident.appearance_details or "no description"
                     extra = ""
                     if ident.face_prompt:
-                        extra = f" [身份级面容: {ident.face_prompt[:30]}, 年龄段={ident.age_group}]"
+                        extra = f" [identity-level face: {ident.face_prompt[:30]}, age_group={ident.age_group}]"
                     lines.append(f"- `{ident.identity_id}`: {desc}{extra}")
             else:
-                lines.append("- （无已有身份）")
+                lines.append("- (no existing identities)")
             lines.append("")
         else:
             lines.append(f"### {resolved or char_name}")
-            lines.append("- （无已有身份）")
+            lines.append("- (no existing identities)")
             lines.append("")
     return "\n".join(lines)
 
@@ -383,50 +392,52 @@ def build_default_identity_task(
     """Pass A user message: each cast member's default identity for the episode."""
     graph_section = ""
     if graph_context and graph_context.strip():
-        graph_section = f"\n## 图谱上下文\n{graph_context[:3000]}\n"
-    return f"""分析第 {episode_number} 集《{episode_title}》中每个角色的**现实主线默认身份**。
+        graph_section = f"\n## Graph context\n{graph_context[:3000]}\n"
+    return f"""Analyze the **real-world main-storyline default identity** of each character in episode {episode_number} "{episode_title}".
 
-## 出场角色
+## Cast
 {", ".join(cast_names)}
 
-## 已有身份列表（优先复用）
+## Existing identities (prefer reuse)
 {identity_info}
 {graph_section}
-## 本集原文
+## Episode source text
 {content_text}
 
 ---
-请为每个出场角色确定一个默认身份（现实主线中最常出现的稳定形态）。
-- 已有身份能覆盖的，使用相同的 visual_state 名称（复用）
-- character_name 使用角色主名称
-- 每个角色只输出一个默认身份
-- 同时输出 age_group
-  - 如果 visual_state 明确是年龄阶段，请填写对应 age_group
-  - 如果只是同龄造型分支，可留空
+Determine one default identity for each cast character (the stable form that appears most often on the real-world main storyline).
+- Where an existing identity covers it, use the same visual_state name (reuse)
+- Use the character's primary name for character_name
+- Output exactly one default identity per character
+- Also output age_group
+  - If visual_state is clearly an age stage, fill in the matching age_group
+  - If it is only a same-age look branch, leave it empty
 """
 
 
 class IdentityPlanner:
-    """批量为所有剧集规划角色身份。
+    """Plan character identities for all episodes in batch.
 
-    按集数顺序处理每集，后面的集数能看到前面新建的身份，自然复用。
+    Episodes are processed in order, so later episodes see the identities created by earlier ones and reuse them naturally.
 
-    示例:
+    Example:
         >>> planner = IdentityPlanner(cognee_store)
         >>> results = await planner.plan_all_episodes(episodes)
-        >>> # results = {1: 2, 2: 0, 3: 1}  # {集数: 新建身份数}
+        >>> # results = {1: 2, 2: 0, 3: 1}  # {episode number: number of new identities}
     """
 
     def __init__(self, cognee_store: "CogneeStore"):
         self.cognee_store = cognee_store
         # Reads and writes that need no graph go to the SQLite store directly.
         self.store = getattr(cognee_store, "sqlite_store", cognee_store)
-        self._structured = is_structured_pipeline(getattr(cognee_store, "state_dir", None))
+        self._structured = is_structured_pipeline(
+            getattr(cognee_store, "state_dir", None)
+        )
         self.auto_promoted_characters: list[str] = []
 
     @staticmethod
     def _normalize_visual_state_for_char(char_name: str, visual_state: str) -> str:
-        """将 `杜晨_中年时期` 这类带角色前缀的 visual_state 归一为 `中年时期`。"""
+        """Normalize a visual_state carrying a character prefix like `Dunstan_middle_aged` to `middle_aged`."""
         normalized_char = str(char_name or "").strip()
         normalized_state = str(visual_state or "").strip()
         prefix = normalized_char + "_"
@@ -436,23 +447,28 @@ class IdentityPlanner:
 
     @staticmethod
     def _infer_age_group_from_visual_state(visual_state: str) -> str:
-        """仅从 identity 名称本身推断明确的年龄变体。"""
-        text = str(visual_state or "").strip()
+        """Infer an explicit age variant from the identity name alone."""
+        text = str(visual_state or "").strip().lower()
         if not text:
             return ""
 
-        child_tokens = ("幼年", "孩童", "儿童", "童年", "幼童", "孩提")
-        youth_tokens = ("少年", "学生时期")
-        middle_tokens = ("中年",)
-        elder_tokens = ("老年", "老人", "老者")
+        normalized = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+        tokens = set(normalized.split("_"))
 
-        if any(token in text for token in child_tokens):
+        child_tokens = {"child", "childhood", "kid", "toddler", "infant"}
+        youth_tokens = {"teen", "teens", "teenage", "teenager", "student", "adolescent"}
+        middle_tokens = {"middle", "midlife"}
+        elder_tokens = {"elderly", "elder", "senior"}
+
+        if tokens & child_tokens:
             return "child"
-        if any(token in text for token in youth_tokens):
+        if tokens & youth_tokens or "young_adult" in normalized:
             return "youth"
-        if any(token in text for token in middle_tokens):
+        if tokens & middle_tokens:
             return "middle"
-        if any(token in text for token in elder_tokens):
+        if tokens & elder_tokens or any(
+            phrase in normalized for phrase in ("old_age", "old_man", "old_woman")
+        ):
             return "elder"
         return ""
 
@@ -462,7 +478,7 @@ class IdentityPlanner:
         visual_state: str,
         age_group: str = "",
     ) -> tuple[str, str]:
-        """使用 AI 输出的 age_group，并做最小必要的一致性校验。"""
+        """Use the AI-provided age_group, with a minimal consistency check."""
         normalized_age_group = _normalize_age_group_value(age_group)
         inferred_age_group = self._infer_age_group_from_visual_state(visual_state)
         if (
@@ -471,7 +487,7 @@ class IdentityPlanner:
             and inferred_age_group != normalized_age_group
         ):
             raise ValueError(
-                f"身份 `{visual_state}` 的 age_group 冲突: AI={normalized_age_group}, 名称推断={inferred_age_group}"
+                f"age_group conflict for identity `{visual_state}`: AI={normalized_age_group}, inferred from name={inferred_age_group}"
             )
         final_age_group = normalized_age_group or inferred_age_group
         if not inferred_age_group and final_age_group == getattr(char, "age_group", ""):
@@ -508,10 +524,10 @@ class IdentityPlanner:
         episode: "NovelEpisode",
         on_log: Optional[Callable] = None,
     ) -> tuple[int, int]:
-        """规划单集身份。完成后自动保存缓存。
+        """Plan the identities of a single episode. Saves the cache automatically when done.
 
         Returns:
-            (new_count, resolved_count): 新建身份数 和 总解析身份数
+            (new_count, resolved_count): number of newly created identities and total resolved identities
         """
         self.auto_promoted_characters = []
         content_text = await load_episode_planning_content(self.cognee_store, episode)
@@ -519,7 +535,7 @@ class IdentityPlanner:
             return 0, 0
         output_language = detect_asset_language(content_text)
 
-        # 预筛出场角色（只调一次，后续复用）
+        # Pre-screen the cast (called once, reused afterwards)
         all_chars = self.cognee_store.get_all_characters()
         all_names = [c.name for c in all_chars]
         cast_names, graph_context = await self._filter_cast(
@@ -527,10 +543,10 @@ class IdentityPlanner:
         )
         if not cast_names:
             raise ValueError(
-                "Pass 0 未能稳定识别本集出场角色，已中止规划以避免污染已有身份结果"
+                "Pass 0 could not reliably identify this episode's cast; planning aborted to avoid polluting existing identity results"
             )
 
-        # Pass A: 默认身份分析 + resolve
+        # Pass A: default identity analysis + resolve
         default_requirements = await self._analyze_default_identities(
             episode,
             on_log,
@@ -554,13 +570,15 @@ class IdentityPlanner:
                     for d in default_requirements.defaults
                 ]
             )
-            default_new, resolved_ids, resolved_identity_map = (
-                await self._resolve_requirements(
-                    episode.number,
-                    default_as_requirements,
-                    on_log,
-                    output_language=output_language,
-                )
+            (
+                default_new,
+                resolved_ids,
+                resolved_identity_map,
+            ) = await self._resolve_requirements(
+                episode.number,
+                default_as_requirements,
+                on_log,
+                output_language=output_language,
             )
             new_count += default_new
             for d in default_requirements.defaults:
@@ -577,7 +595,7 @@ class IdentityPlanner:
                 if identity_id:
                     identity_default_map[char_name] = identity_id
                     if on_log:
-                        on_log(f"  默认身份: {char_name} -> {identity_id}")
+                        on_log(f"  Default identity: {char_name} -> {identity_id}")
 
         canonical_cast_names = list(
             dict.fromkeys(
@@ -594,14 +612,15 @@ class IdentityPlanner:
         if missing_default_chars:
             if on_log:
                 on_log(
-                    f"[EP{episode.number:03d}] Pass A 默认身份缺失: "
+                    f"[EP{episode.number:03d}] Pass A missing default identities: "
                     + ", ".join(missing_default_chars)
                 )
             raise ValueError(
-                "Pass A 默认身份覆盖不完整: " + ", ".join(missing_default_chars)
+                "Pass A default identity coverage is incomplete: "
+                + ", ".join(missing_default_chars)
             )
 
-        # Pass B: 其他非默认身份分析 + resolve
+        # Pass B: other non-default identity analysis + resolve
         special_requirements = await self._analyze_special_identities(
             episode,
             on_log,
@@ -625,7 +644,7 @@ class IdentityPlanner:
                 resolved_ids.append(identity_id)
                 resolved_seen.add(identity_id)
 
-        # 保存
+        # Save
         if resolved_ids:
             char_names = list(
                 dict.fromkeys(iid.split("_", 1)[0] for iid in resolved_ids)
@@ -645,10 +664,10 @@ class IdentityPlanner:
         on_log: Optional[Callable] = None,
         on_progress: Optional[Callable] = None,
     ) -> dict[int, int]:
-        """批量规划所有剧集的身份。按集数顺序处理。
+        """Plan the identities of all episodes in batch, processing them in episode order.
 
         Returns:
-            {集数: 新建身份数；失败时为 -1}
+            {episode number: number of new identities; -1 on failure}
         """
         results = {}
         sorted_eps = sorted(episodes, key=lambda e: e.number)
@@ -656,7 +675,8 @@ class IdentityPlanner:
         for i, episode in enumerate(sorted_eps):
             if on_progress:
                 on_progress(
-                    (i + 1) / len(sorted_eps), f"规划第 {episode.number} 集身份..."
+                    (i + 1) / len(sorted_eps),
+                    f"Planning identities for episode {episode.number}...",
                 )
             try:
                 new_count, resolved_count = await self.plan_single_episode(
@@ -665,12 +685,12 @@ class IdentityPlanner:
                 results[episode.number] = new_count
                 if on_log:
                     on_log(
-                        f"[EP{episode.number:03d}] 完成, 新建 {new_count} / 复用 {resolved_count - new_count} 个身份"
+                        f"[EP{episode.number:03d}] Done, {new_count} new / {resolved_count - new_count} reused identities"
                     )
             except Exception as e:
                 results[episode.number] = -1
                 if on_log:
-                    on_log(f"[EP{episode.number:03d}] 失败: {e}")
+                    on_log(f"[EP{episode.number:03d}] Failed: {e}")
 
         return results
 
@@ -687,7 +707,7 @@ class IdentityPlanner:
         """Build alias context from the character table instead of the graph.
 
         Structured builds record every alias they could prove from the source
-        text, so the same "陛下 → 萧玦" resolution the graph query provided is
+        text, so the same "Your Majesty -> Xiao Jue" resolution the graph query provided is
         already on disk and needs no search to retrieve.
         """
         lines: list[str] = []
@@ -697,10 +717,10 @@ class IdentityPlanner:
                 continue
             if character.aliases:
                 lines.append(
-                    f"{character.name}：别名/称谓 {'、'.join(character.aliases)}"
+                    f"{character.name}: aliases/forms of address {', '.join(character.aliases)}"
                 )
             else:
-                lines.append(f"{character.name}：无已知别名")
+                lines.append(f"{character.name}: no known aliases")
         return "\n".join(lines)
 
     async def _graph_alias_context(
@@ -724,8 +744,8 @@ class IdentityPlanner:
                 with self.cognee_store.embedding_model_scope():
                     graph_results = await cognee.search(
                         query_text=(
-                            f"第{episode.number}集出场的人物角色，"
-                            "以及他们的别名、称谓和关系"
+                            f"Characters appearing in episode {episode.number}, "
+                            "and their aliases, forms of address and relationships"
                         ),
                         query_type=SearchType.GRAPH_COMPLETION,
                         datasets=[self.cognee_store.dataset_name],
@@ -734,7 +754,9 @@ class IdentityPlanner:
                     )
         except Exception as exc:
             if on_log:
-                on_log(f"[EP{episode.number:03d}] 图谱上下文获取失败（非致命）: {exc}")
+                on_log(
+                    f"[EP{episode.number:03d}] Failed to fetch graph context (non-fatal): {exc}"
+                )
             return ""
 
         if not graph_results:
@@ -756,12 +778,12 @@ class IdentityPlanner:
         episode: "NovelEpisode",
         on_log: Optional[Callable] = None,
     ) -> tuple[list[str], str]:
-        """用 cognee 图谱 + AI 从原文中筛选本集实际出场的角色（含别名解析）。
+        """Use the cognee graph + AI to select the characters who actually appear in this episode from the source text (including alias resolution).
 
-        利用 cognee.search 的图谱能力自动解析别名关系（如"陛下"→萧玦）。
+        Relies on cognee.search graph capabilities to resolve alias relationships automatically (e.g. "Your Majesty" -> Xiao Jue).
 
         Returns:
-            (filtered_names, graph_context) — 筛选后的角色名列表 + 图谱上下文文本
+            (filtered_names, graph_context) — the filtered character name list + graph context text
         """
         graph_context = ""
         try:
@@ -778,11 +800,11 @@ class IdentityPlanner:
             if graph_context:
                 graph_section = f"""
 
-以下是已知的人物关系与别名信息（包含称谓解析，如"陛下"→某角色名）：
+Known character relationships and alias information (including forms-of-address resolution, e.g. "Your Majesty" -> a character name):
 ---
 {graph_context[:4000]}
 ---
-利用上述信息，将原文中的称谓/别名解析为角色主名。
+Use the above to resolve forms of address / aliases in the source text to the character's primary name.
 """
 
             cast_agent = Agent(
@@ -790,35 +812,35 @@ class IdentityPlanner:
                 model_settings=self._identity_model_settings(),
                 output_type=EpisodeCastList,
             )
-            cast_result = await cast_agent.run(f"""以下是全部已知角色：
+            cast_result = await cast_agent.run(f"""All known characters:
 {chr(10).join(all_names)}
 {graph_section}
-请根据第{episode.number}集原文，列出本集中**被提及**的角色。
-只要角色名或其别名/称谓在原文中出现（无论是直接出场、回忆、闪回、被叙述者提及），都算出场。
-注意：返回角色主名，不要返回别名。
+Based on the source text of episode {episode.number}, list the characters **mentioned** in this episode.
+A character counts as appearing whenever the character name or an alias / form of address occurs in the source text (whether on screen, in a memory, in a flashback, or mentioned by the narrator).
+Note: return primary names, not aliases.
 
-原文：
+Source text:
 {content_text}""")
             cast = cast_result.output
             filtered = self._normalize_cast_names(cast.character_names)
             if on_log:
                 on_log(
-                    f"[EP{episode.number:03d}] 图谱+AI 筛选出场角色: {', '.join(filtered)}"
+                    f"[EP{episode.number:03d}] Graph+AI selected cast: {', '.join(filtered)}"
                 )
             return filtered, graph_context
         except Exception as e:
             if on_log:
-                on_log(f"[EP{episode.number:03d}] AI 筛选出场角色失败: {e}")
-            raise RuntimeError(f"Pass 0 出场角色筛选失败: {e}") from e
+                on_log(f"[EP{episode.number:03d}] AI cast selection failed: {e}")
+            raise RuntimeError(f"Pass 0 cast selection failed: {e}") from e
 
     def _build_character_info(self, characters: list[str]) -> str:
-        """构建角色基础信息 + 已有身份信息文本。"""
+        """Build the text of character basic info + existing identities."""
         return format_character_info(
             characters, self.cognee_store.resolve_name, self.cognee_store.get_character
         )
 
     def _normalize_cast_names(self, names: list[str]) -> list[str]:
-        """将主名/别名统一映射成主名并去重。"""
+        """Map primary names/aliases to primary names and deduplicate."""
         normalized: list[str] = []
         seen: set[str] = set()
         for raw_name in names:
@@ -840,7 +862,7 @@ class IdentityPlanner:
         cast_names: list[str],
         on_log: Optional[Callable] = None,
     ) -> list[DefaultIdentityRequirement]:
-        """确保 Pass A 输出满足每角色唯一默认身份。"""
+        """Ensure the Pass A output gives each character exactly one default identity."""
         canonical_cast_names = self._normalize_cast_names(cast_names)
         cast_set = set(canonical_cast_names)
         seen_char_to_item: dict[str, DefaultIdentityRequirement] = {}
@@ -861,7 +883,7 @@ class IdentityPlanner:
             existing_item = seen_char_to_item.get(char_name)
             if existing_item and existing_item.visual_state != visual_state:
                 raise ValueError(
-                    f"Pass A 为角色 {char_name} 输出了多个默认身份: {existing_item.visual_state}, {visual_state}"
+                    f"Pass A output multiple default identities for character {char_name}: {existing_item.visual_state}, {visual_state}"
                 )
             if existing_item:
                 try:
@@ -871,8 +893,8 @@ class IdentityPlanner:
                 except ValueError:
                     if on_log:
                         on_log(
-                            f"[Pass A] {char_name}_{visual_state} age_group 冲突: "
-                            f"{existing_item.age_group!r} vs {item.age_group!r}，保留前者"
+                            f"[Pass A] {char_name}_{visual_state} age_group conflict: "
+                            f"{existing_item.age_group!r} vs {item.age_group!r}, keeping the former"
                         )
                     merged_age_group = existing_item.age_group
                 if merged_age_group != existing_item.age_group:
@@ -891,7 +913,10 @@ class IdentityPlanner:
             if char_name not in seen_char_to_item
         ]
         if missing_chars:
-            raise ValueError("Pass A 默认身份覆盖不完整: " + ", ".join(missing_chars))
+            raise ValueError(
+                "Pass A default identity coverage is incomplete: "
+                + ", ".join(missing_chars)
+            )
         return list(seen_char_to_item.values())
 
     def _normalize_other_requirements(
@@ -901,7 +926,7 @@ class IdentityPlanner:
         default_identity_ids: list[str] | None = None,
         on_log: Optional[Callable] = None,
     ) -> list[IdentityRequirement]:
-        """归一 Pass B 输出，过滤 cast 外角色、重复项和默认身份重复项。"""
+        """Normalize the Pass B output, filtering out characters outside the cast, duplicates and duplicates of default identities."""
         canonical_cast_names = self._normalize_cast_names(cast_names)
         cast_set = set(canonical_cast_names)
         default_states_by_char: dict[str, set[str]] = {}
@@ -938,8 +963,8 @@ class IdentityPlanner:
                 except ValueError:
                     if on_log:
                         on_log(
-                            f"[Pass B] {char_name}_{visual_state} age_group 冲突: "
-                            f"{existing_item.age_group!r} vs {item.age_group!r}，保留前者"
+                            f"[Pass B] {char_name}_{visual_state} age_group conflict: "
+                            f"{existing_item.age_group!r} vs {item.age_group!r}, keeping the former"
                         )
                     merged_age_group = existing_item.age_group
                 if merged_age_group != existing_item.age_group:
@@ -962,7 +987,7 @@ class IdentityPlanner:
         content_text: str | None = None,
         graph_context: str | None = None,
     ) -> EpisodeDefaultIdentities:
-        """Pass A: 分析每个角色的现实主线默认身份。"""
+        """Pass A: analyze each character's default identity on the real-world main storyline."""
         if content_text is None:
             content_text = await self.cognee_store.load_episode_content(episode.number)
         if not content_text:
@@ -1004,8 +1029,10 @@ class IdentityPlanner:
             return result.output
         except Exception as e:
             if on_log:
-                on_log(f"[EP{episode.number:03d}] Pass A 默认身份分析失败: {e}")
-            raise RuntimeError(f"Pass A 默认身份分析失败: {e}") from e
+                on_log(
+                    f"[EP{episode.number:03d}] Pass A default identity analysis failed: {e}"
+                )
+            raise RuntimeError(f"Pass A default identity analysis failed: {e}") from e
 
     async def _analyze_special_identities(
         self,
@@ -1017,7 +1044,7 @@ class IdentityPlanner:
         graph_context: str | None = None,
         already_resolved: list[str] | None = None,
     ) -> EpisodeIdentityRequirements:
-        """Pass B: 全文分析默认身份之外的其他非默认身份。"""
+        """Pass B: analyze, over the full text, the other non-default identities beyond the default identities."""
         if content_text is None:
             content_text = await self.cognee_store.load_episode_content(episode.number)
         if not content_text:
@@ -1029,38 +1056,38 @@ class IdentityPlanner:
         identity_info = self._build_character_info(canonical_cast_names)
         graph_section = ""
         if graph_context and graph_context.strip():
-            graph_section = f"\n## 图谱上下文\n{graph_context[:3000]}\n"
+            graph_section = f"\n## Graph context\n{graph_context[:3000]}\n"
 
         resolved_default_ids = list(dict.fromkeys(already_resolved or []))
         already_section = ""
         if resolved_default_ids:
             already_section = (
-                "\n## 已确定的默认身份（不要重复）\n"
+                "\n## Already-determined default identities (do not repeat)\n"
                 + "\n".join(f"- `{iid}`" for iid in resolved_default_ids)
                 + "\n"
             )
 
-        task = f"""分析第 {episode.number} 集《{episode.title}》中各角色在默认身份之外还需要的**其他身份**。
+        task = f"""Analyze the **other identities** each character in episode {episode.number} "{episode.title}" needs beyond the default identity.
 
-## 出场角色
+## Cast
 {", ".join(canonical_cast_names)}
 
-## 已有身份列表（优先复用）
+## Existing identities (prefer reuse)
 {identity_info}
 {already_section}{graph_section}
-## 本集原文
+## Episode source text
 {content_text}
 
 ---
-请列出本集中有强文本证据的其他非默认身份。
-- 不要重复输出默认身份
-- 年龄变体（幼年/少年/老年）必须独立身份，即使只在回忆/闪回中出现一两场
-- 长期稳定的另一套造型/阶段也应独立列出
-- 已有身份能覆盖的，使用相同的 visual_state 名称（复用）
-- 同时输出 age_group
-  - 年龄变体必须填写对应 age_group
-  - 普通同龄造型分支可留空
-- 如果没有其他身份需求，返回空列表
+List the other non-default identities in this episode that have strong textual evidence.
+- Do not repeat default identities
+- Age variants (child / teen / elderly) must be separate identities, even if they appear only in one or two memory/flashback scenes
+- Another stable long-lived look/stage should also be listed separately
+- Where an existing identity covers it, use the same visual_state name (reuse)
+- Also output age_group
+  - Age variants must fill in the matching age_group
+  - Ordinary same-age look branches may leave it empty
+- If there are no other identity needs, return an empty list
 """
         try:
             language_instruction = asset_language_instruction(
@@ -1091,7 +1118,9 @@ class IdentityPlanner:
             return result.output
         except Exception as e:
             if on_log:
-                on_log(f"[EP{episode.number:03d}] Pass B 其他身份分析失败: {e}")
+                on_log(
+                    f"[EP{episode.number:03d}] Pass B other-identity analysis failed: {e}"
+                )
             return EpisodeIdentityRequirements()
 
     @staticmethod
@@ -1156,8 +1185,8 @@ class IdentityPlanner:
             ):
                 if on_log:
                     on_log(
-                        f"  ⚠ {char.name}_{visual_state}: 外观阶段 age_group={appearance_age_group} "
-                        f"与身份规划 age_group={resolved_age_group} 冲突，采用身份规划值"
+                        f"  ⚠ {char.name}_{visual_state}: appearance stage age_group={appearance_age_group} "
+                        f"conflicts with identity-planned age_group={resolved_age_group}; using the identity-planned value"
                     )
                 appearance_age_group = resolved_age_group
             voice_age_group = appearance_age_group or resolved_age_group
@@ -1179,7 +1208,7 @@ class IdentityPlanner:
             if on_log:
                 on_log(
                     f"  ⚠ {char.name}_{visual_state}: age_group={voice_age_group} "
-                    "与角色相同，清空年龄变体字段"
+                    "is the same as the character's; clearing age-variant fields"
                 )
             face_description = ""
             voice_age_group = ""
@@ -1236,11 +1265,11 @@ class IdentityPlanner:
                 )
                 if on_log:
                     on_log(
-                        f"  ⚠ 修复失败，已清空污染字段: {identity.identity_id} "
+                        f"  ⚠ Repair failed; cleared corrupted fields: {identity.identity_id} "
                         f"({', '.join(sorted(corrupted_fields))})"
                     )
             elif on_log:
-                on_log(f"  保留: {identity.identity_id} 已创建，外观待补")
+                on_log(f"  Kept: {identity.identity_id} created, appearance pending")
             return False
 
         if pending:
@@ -1251,7 +1280,7 @@ class IdentityPlanner:
             )
             if on_log:
                 on_log(
-                    f"  补全: {identity.identity_id} — "
+                    f"  Filled in: {identity.identity_id} — "
                     f"{generated['appearance_details'][:40]}..."
                 )
             return True
@@ -1272,8 +1301,8 @@ class IdentityPlanner:
             repair_updates = {field: "" for field in corrupted_fields}
             if on_log:
                 on_log(
-                    f"  ⚠ 无法在保留有效字段的前提下修复 {identity.identity_id}，"
-                    "已清空污染字段并使用角色级回退"
+                    f"  ⚠ Could not repair {identity.identity_id} while keeping the valid fields; "
+                    "cleared corrupted fields and using the character-level fallback"
                 )
 
         await self.cognee_store.update_character_identity(
@@ -1283,7 +1312,7 @@ class IdentityPlanner:
         )
         if on_log:
             on_log(
-                f"  修复: {identity.identity_id} "
+                f"  Repaired: {identity.identity_id} "
                 f"({', '.join(sorted(corrupted_fields))})"
             )
         return True
@@ -1295,11 +1324,11 @@ class IdentityPlanner:
         on_log: Optional[Callable] = None,
         output_language: AssetLanguage | None = None,
     ) -> tuple[int, list[str], dict[tuple[str, str], str]]:
-        """Phase 2: 匹配已有身份 → 创建缺失身份。
+        """Phase 2: match existing identities -> create missing identities.
 
         Returns:
             (new_count, resolved_ids, resolved_identity_map):
-            新建身份数、所有解析到的 identity_id 列表、(character_name, visual_state) 到 identity_id 的映射
+            number of new identities, list of all resolved identity_ids, and a mapping from (character_name, visual_state) to identity_id
         """
         new_count = 0
         resolved_ids: list[str] = []
@@ -1310,10 +1339,10 @@ class IdentityPlanner:
             char = self.cognee_store.get_character(resolved_name)
             if not char:
                 if on_log:
-                    on_log(f"  跳过: 角色 {req.character_name} 不存在")
+                    on_log(f"  Skipped: character {req.character_name} does not exist")
                 continue
 
-            # 构建候选 identity_id（去掉 visual_state 中重复的角色名前缀）
+            # Build the candidate identity_id (strip a duplicated character-name prefix from visual_state)
             vs = self._normalize_visual_state_for_char(char.name, req.visual_state)
             candidate_id = f"{char.name}_{vs}"
             explicit_age_group = self._infer_age_group_from_visual_state(vs)
@@ -1323,10 +1352,10 @@ class IdentityPlanner:
                 )
             except ValueError as e:
                 if on_log:
-                    on_log(f"  跳过: {candidate_id} 字段冲突 ({e})")
+                    on_log(f"  Skipped: {candidate_id} field conflict ({e})")
                 continue
 
-            # 1. 精确匹配 identity_id
+            # 1. Exact match on identity_id
             matched = self._find_matching_identity(char, vs, candidate_id)
 
             if matched:
@@ -1370,16 +1399,16 @@ class IdentityPlanner:
                             )
                             if on_log:
                                 on_log(
-                                    f"  回填结构字段: {matched.identity_id}"
+                                    f"  Backfilled structural fields: {matched.identity_id}"
                                     f" age_group={updates.get('age_group', getattr(matched, 'age_group', ''))}"
                                 )
                         except Exception as e:
                             if on_log:
                                 on_log(
-                                    f"  回填结构字段失败({matched.identity_id}): {e}"
+                                    f"  Failed to backfill structural fields ({matched.identity_id}): {e}"
                                 )
                     if on_log:
-                        on_log(f"  复用: {matched.identity_id} (ep{episode_number})")
+                        on_log(f"  Reused: {matched.identity_id} (ep{episode_number})")
             else:
                 from novelvideo.utils.identity_resolver import compute_char_tag
 
@@ -1399,17 +1428,17 @@ class IdentityPlanner:
                     resolved_ids.append(candidate_id)
                     resolved_identity_map[(char.name, vs)] = candidate_id
                     if on_log:
-                        on_log(f"  新建: {candidate_id} — 外观待补")
+                        on_log(f"  Created: {candidate_id} — appearance pending")
                 except ValueError as e:
-                    # 身份已存在（幂等性）
-                    if "已存在" in str(e):
+                    # Identity already exists (idempotency)
+                    if "already exists" in str(e).lower():
                         resolved_ids.append(candidate_id)
                         resolved_identity_map[(char.name, vs)] = candidate_id
                         if on_log:
-                            on_log(f"  跳过: {candidate_id} 已存在")
+                            on_log(f"  Skipped: {candidate_id} already exists")
                     else:
                         if on_log:
-                            on_log(f"  错误: {e}")
+                            on_log(f"  Error: {e}")
                         continue
 
                 try:
@@ -1428,7 +1457,9 @@ class IdentityPlanner:
                     )
                 except Exception as e:
                     if on_log:
-                        on_log(f"  外观保存失败({candidate_id}): {e}，身份已保留")
+                        on_log(
+                            f"  Failed to save appearance ({candidate_id}): {e}; identity kept"
+                        )
 
         return new_count, resolved_ids, resolved_identity_map
 
@@ -1438,20 +1469,20 @@ class IdentityPlanner:
         visual_state: str,
         candidate_id: str,
     ) -> Optional[CharacterIdentity]:
-        """在角色已有身份中查找匹配（仅精确匹配）。
+        """Find a match among the character's existing identities (exact match only).
 
-        AI 在 Phase 1 已经看到完整的已有身份列表并被要求复用相同名称，
-        输出不同名字 = 需要新身份。子串/同义词 fallback 会导致误匹配。
+        In Phase 1 the AI saw the complete list of existing identities and was told to reuse the same names;
+        outputting a different name means a new identity is needed. Substring/synonym fallbacks would cause false matches.
         """
         if not char.identities:
             return None
 
-        # 1. 精确匹配 identity_id
+        # 1. Exact match on identity_id
         for ident in char.identities:
             if ident.identity_id == candidate_id:
                 return ident
 
-        # 2. 精确匹配 identity_name
+        # 2. Exact match on identity_name
         for ident in char.identities:
             if ident.identity_name == visual_state:
                 return ident
@@ -1467,22 +1498,22 @@ class IdentityPlanner:
         on_log: Optional[Callable] = None,
         output_language: AssetLanguage | None = None,
     ) -> AppearanceDescription:
-        """用 AI 生成身份的服装造型描述（含可选面部描述）。"""
-        # 获取角色已有造型作为参考（不发送 face_prompt 避免触发安全过滤）
+        """Use the AI to generate the identity's costume/styling description (with an optional face description)."""
+        # Fetch the character's existing looks as reference (face_prompt is not sent, to avoid triggering safety filters)
         char = self.cognee_store.get_character(character_name)
         base_info = ""
         default_info = ""
         if char:
-            # 角色默认面部、年龄段、体型——AI 需要对比判断是否需要覆盖
+            # The character's default face, age group and body type — the AI compares them to decide whether to override
             default_parts = []
             if char.face_prompt:
-                default_parts.append(f"默认面部特征: {char.face_prompt}")
+                default_parts.append(f"Default facial features: {char.face_prompt}")
             if char.age_group:
-                default_parts.append(f"默认年龄段: {char.age_group}")
+                default_parts.append(f"Default age group: {char.age_group}")
             if char.body_type:
-                default_parts.append(f"默认体型: {char.body_type}")
+                default_parts.append(f"Default body type: {char.body_type}")
             if char.gender:
-                default_parts.append(f"性别: {char.gender}")
+                default_parts.append(f"Gender: {char.gender}")
             if default_parts:
                 default_info = "\n".join(default_parts) + "\n"
             if char.identities:
@@ -1492,27 +1523,25 @@ class IdentityPlanner:
                     if i.appearance_details
                 )
                 if existing_desc:
-                    base_info = f"已有造型参考:\n{existing_desc}\n"
+                    base_info = f"Existing look references:\n{existing_desc}\n"
 
         planned_age_info = ""
         if planned_age_group:
-            planned_age_info = (
-                f"该身份在前一规划阶段已确定年龄段: {planned_age_group}\n"
-            )
+            planned_age_info = f"The age group of this identity was determined in the previous planning stage: {planned_age_group}\n"
 
-        task = f"""为虚构影视角色「{character_name}」的「{visual_state}」造型设计服装方案。
+        task = f"""Design a costume plan for the "{visual_state}" look of the fictional film/TV character "{character_name}".
 
 {default_info}{base_info}{planned_age_info}
-剧情背景: {reason}
+Story context: {reason}
 
-请设计 50-80 字的服装造型方案（款式、面料、配饰、发型，不含人物外貌和表情）。
+Design a 20-40 word costume plan (style, fabric, accessories, hairstyle; excluding the person's physical features and expressions).
 
-⚠️ face_description、age_group、body_type 判断规则：
-- 如果上面已经给出“已确定年龄段”，输出时应与该年龄段保持一致
-- 只有当该身份的年龄与角色默认年龄段**明显不同**时才填写（如幼年回忆、老年形态）
-- 如果该身份的年龄与上述默认一致或接近，face_description、age_group、body_type 必须留空
-- face_description 格式：30-50字面部描述（年龄特征、脸型、五官比例，不含服装）
-- body_type 格式：简短体型描述（如"矮小圆润的幼童体型"、"佝偻消瘦的老人体型"）
+⚠️ Rules for face_description, age_group and body_type:
+- If an "age group already determined" is given above, the output should stay consistent with it
+- Fill these in only when the identity's age is **clearly different** from the character's default age group (e.g. childhood memory, elderly form)
+- If the identity's age is the same as or close to the default above, face_description, age_group and body_type must be left empty
+- face_description format: a 15-30 word face description (age traits, face shape, facial proportions; no clothing)
+- body_type format: a short body type description (e.g. "small, round toddler build", "stooped, thin elderly build")
 """
 
         try:
@@ -1534,5 +1563,7 @@ class IdentityPlanner:
             return ai_result.output
         except Exception as e:
             if on_log:
-                on_log(f"  外观生成失败({character_name}/{visual_state}): {e}")
+                on_log(
+                    f"  Appearance generation failed ({character_name}/{visual_state}): {e}"
+                )
             raise

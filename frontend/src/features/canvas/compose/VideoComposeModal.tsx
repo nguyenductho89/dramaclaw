@@ -97,14 +97,14 @@ const BACKGROUND_MUSIC_TRACK_ID = `${AUDIO_TRACK_ID}_background_music`;
 export interface VideoComposeModalProps {
   project: string;
   canvasId: string;
-  /** 画布上被选中、用于初始化时间线的节点 id（按选择顺序）。 */
+  /** Ids of the nodes selected on the canvas, used to initialize the timeline (in selection order). */
   seedNodeIds: string[];
   onClose: () => void;
-  /** 合成成功后回调，参数为最终视频 url + 封面 url（未设封面时为 null）。 */
+  /** Callback after a successful compose, with the final video url + cover url (null when no cover is set). */
   onComposed: (url: string, coverUrl: string | null) => void;
-  /** 上次保存的草稿时间线；提供时优先用它初始化（而非从上游重新摆放）。 */
+  /** The last saved draft timeline; when provided it takes priority for initialization (instead of re-laying out from upstream). */
   initialTimeline?: ComposeTimelineState | null;
-  /** 关闭弹窗时回传当前时间线，供宿主持久化为草稿。 */
+  /** Passes the current timeline back when the dialog closes, so the host can persist it as a draft. */
   onPersistDraft?: (timeline: ComposeTimelineState) => void;
 }
 
@@ -144,7 +144,7 @@ function formatTime(ms: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-/** 片段时长时间码 HH:MM:SS:FF（默认 30fps），用于片段标签。 */
+/** Clip duration timecode HH:MM:SS:FF (default 30fps), used for clip labels. */
 function formatTimecode(ms: number, fps = 30): string {
   const totalMs = Math.max(0, Math.round(ms));
   const totalSec = Math.floor(totalMs / 1000);
@@ -157,8 +157,8 @@ function formatTimecode(ms: number, fps = 30): string {
 }
 
 /**
- * 探测超时：URL 网络卡住时元素既不触发 loadedmetadata 也不触发 error，自动合成
- * 会 await 在这里永不返回。超时按探测失败处理。
+ * Probe timeout: when the URL network stalls the element fires neither loadedmetadata nor error, and auto compose
+ * would await here forever. A timeout is treated as a probe failure.
  */
 export const PROBE_TIMEOUT_MS = 15_000;
 
@@ -204,10 +204,10 @@ function probeMediaDuration(
 }
 
 /**
- * 为源时长未知（durationMs 为空、仍按 5s 兜底排布）的片段探测真实时长并写回。
- * 自动合成不经过弹窗、没有弹窗里的探测 effect，提交前必须先走这里，否则兜底
- * 长度会被当成裁剪区间直接导出（两段 10s 合出 15s）。视频片段探测失败时抛错，
- * 宁可不合成也不静默截断。
+ * For clips whose source duration is unknown (durationMs empty, still laid out with the 5s fallback), probe the real duration and write it back.
+ * Auto compose does not go through the dialog and has no probe effect from it, so it must go through here before submitting; otherwise the fallback
+ * length would be exported as a trim range (two 10s clips composing to 15s). Throws when a video clip probe fails;
+ * better to not compose than to silently truncate.
  */
 export async function resolveUnknownClipDurations(
   state: ComposeTimelineState,
@@ -241,7 +241,7 @@ export function buildInitialTimeline(seedNodeIds: string[]): ComposeTimelineStat
   const videoClips: ComposeClip[] = [];
   const audioClips: ComposeClip[] = [];
   const backgroundMusicClips: ComposeClip[] = [];
-  // 初始把同种类片段顺序首尾相接摆放（与旧行为一致）；之后可自由拖动。
+  // Initially lay out clips of the same kind end to end in order (same as the old behavior); they can be dragged freely afterwards.
   let videoCursor = 0;
   let audioCursor = 0;
   const videoStartByWorkflowInstance = new Map<string, number>();
@@ -377,12 +377,12 @@ function workflowTimelineInstanceKey(data: unknown): string | null {
 }
 
 /**
- * 用「当前连着的上游」校正草稿时间线：
- *  - 上游已断开（nodeId 不再连着）的片段 → 丢弃；
- *  - 当前连着、但草稿里没有对应片段的上游（新接入 / 之前删掉又重连）→ 补回来；
- *  - 仍连着的片段保留草稿里的全部编辑（裁剪 / 排序 / 音量 / 分割）。
- * 这样合成节点的输入永远 = 画布上当前连着的素材，不会出现「连了却不显示」。
- * 代价：删掉某个仍连着的片段，重开会被补回来——要彻底移除请在画布上断开该节点。
+ * Reconcile the draft timeline with the "currently connected upstream":
+ *  - clips whose upstream is disconnected (nodeId no longer connected) -> dropped;
+ *  - upstreams currently connected but with no matching clip in the draft (newly connected / deleted then reconnected) -> added back;
+ *  - clips still connected keep all edits in the draft (trim / order / volume / split).
+ * So the compose node's input always equals the materials currently connected on the canvas; no "connected but not shown".
+ * Cost: deleting a clip that is still connected gets it added back on reopen - to remove it fully, disconnect the node on the canvas.
  */
 export function reconcileDraftWithUpstream(
   draft: ComposeTimelineState,
@@ -392,7 +392,7 @@ export function reconcileDraftWithUpstream(
   const nodeById = new Map(
     useCanvasStore.getState().nodes.map((node) => [node.id, node] as const),
   );
-  // 1) 丢弃上游已断开的片段（外部素材 nodeId 为空时保留）。
+  // 1) Drop clips whose upstream is disconnected (kept when an external asset's nodeId is empty).
   const tracks: ComposeTrack[] = draft.tracks.map((track) => ({
     ...track,
     clips: track.clips
@@ -424,7 +424,7 @@ export function reconcileDraftWithUpstream(
         };
       }),
   }));
-  // 2) 已连接但草稿里没有片段的上游 → 用初始摆放生成并追加到对应种类轨道末尾。
+  // 2) Upstreams connected but without clips in the draft -> generate with the initial layout and append to the end of the matching kind of track.
   const present = new Set(
     tracks
       .flatMap((track) => track.clips.map((clip) => clip.nodeId))
@@ -452,7 +452,7 @@ export function reconcileDraftWithUpstream(
       }
     }
   }
-  // 视频轨补位，保持无缝。
+  // Video track gap-filling, keeping it seamless.
   return compactVideoTracks({ ...draft, tracks });
 }
 
@@ -460,7 +460,7 @@ export function reconcileDraftWithUpstream(
  * Drive a single <video>/<audio> element off the master playhead. The clock in
  * {@link useComposePlayback} owns progress — this only swaps src at clip
  * boundaries, seeks while scrubbing, mirrors play/pause/volume, and applies the
- * per-clip playback rate (变速).
+ * per-clip playback rate (speed change).
  */
 function useTrackMediaSync<T extends HTMLMediaElement>(
   ref: RefObject<T | null>,
@@ -497,8 +497,8 @@ function useTrackMediaSync<T extends HTMLMediaElement>(
       }
       return;
     }
-    // 标记元素当前真正装载的是哪个片段 —— 媒体主时钟据此校验「映射用的片段」与
-    // 「元素实际在放的片段」是否一致，避免边界换源瞬间用错映射把竖线算回上一段。
+    // Marks which clip the element is actually loading - the media master clock uses it to verify that the clip used for mapping
+    // matches the clip the element is really playing, so a wrong mapping at the instant of a boundary source swap cannot push the playhead back to the previous clip.
     el.dataset.clipId = activeClipId ?? "";
     el.src = resolveImageDisplayUrl(sourceUrl);
     try {
@@ -531,11 +531,11 @@ function useTrackMediaSync<T extends HTMLMediaElement>(
     else el.pause();
   }, [isPlaying, activeClipId, forceMuted, speed, ref]);
 
-  // (3) scrub：暂停态把播放头镜像进媒体元素。关键是「合并 seek」——快速拖动时不要
-  // 每次都直接写 currentTime，否则一连串 seek 塞满解码器、互相挤压，预览画面卡顿。
-  // 做法：始终记录最新目标时间 desiredSourceSecRef；当前正在 seek 时只更新目标、不
-  // 发新 seek；seek 完成（见下方 seeked 监听）后若目标已变再追一次。这样画面以解码
-  // 能跑到的最快速度跟手，不堆积。
+  // (3) scrub: while paused, mirror the playhead into the media element. The key is "coalescing seeks": when dragging quickly, do not
+  // write currentTime every time, otherwise a flood of seeks jams the decoder and the preview stutters.
+  // Approach: always record the latest target time desiredSourceSecRef; while a seek is in progress only update the target and do not
+  // issue a new seek; after the seek completes (see the seeked listener below) chase once more if the target changed. This way the picture follows
+  // at the fastest speed the decoder can manage, with no pile-up.
   const desiredSourceSecRef = useRef<number | null>(null);
   useEffect(() => {
     if (isPlaying) return;
@@ -550,12 +550,12 @@ function useTrackMediaSync<T extends HTMLMediaElement>(
     } catch {
       /* ignore */
     }
-    // 依赖含 active：片段在播放头不动的情况下被拖到别的轨道（sourceMs 变了但 playheadMs
-    // 没变）时也要重新对齐 currentTime，否则预览停在旧位置。
+    // Dependencies include active: when a clip is dragged to another track with the playhead still (sourceMs changed but playheadMs
+    // did not), currentTime must also be realigned, otherwise the preview stays at the old position.
   }, [playheadMs, isPlaying, ref, active]);
 
-  // seek 完成时，如果拖动中目标已经移动到别处，立刻追到最新目标。这把「拖动期间
-  // 堆积的中间 seek」压成「永远只追最后一个」，是 scrub 不卡的核心。
+  // When a seek completes, if the target moved elsewhere during the drag, chase the latest target immediately. This squeezes the "intermediate seeks
+  // piled up during the drag" into "always chase only the last one", the core of a smooth scrub.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -599,12 +599,12 @@ export function VideoComposeModal({
   onPersistDraft,
 }: VideoComposeModalProps) {
   const { t } = useTranslation();
-  // 合成弹窗打开期间标记为「沉浸式」：画布的全局快捷键（Delete 删节点、⌘C/⌘V、⌘Z…）
-  // 整体让位，避免弹窗内按 Delete 删片段却把画布上的视频合成节点也删了、并弹回画布。
+  // While the compose dialog is open mark it "immersive": the canvas's global shortcuts (Delete node, Cmd+C/Cmd+V, Cmd+Z...)
+  // all yield, so pressing Delete in the dialog to delete a clip does not also delete the video compose node on the canvas and pop back to the canvas.
   useViewerImmersiveBody(true);
   const [timeline, setTimeline] = useState<ComposeTimelineState>(() =>
-    // 有草稿则恢复草稿，但用「当前连着的上游」对账（断开的丢弃、新连的补回）；
-    // 没草稿就按上游素材首次摆放。
+    // If there is a draft, restore it, but reconcile with the "currently connected upstream" (drop disconnected, add back newly connected);
+    // with no draft, lay out the upstream materials for the first time.
     initialTimeline && initialTimeline.tracks?.length
       ? reconcileDraftWithUpstream(initialTimeline, seedNodeIds)
       : buildInitialTimeline(seedNodeIds),
@@ -613,21 +613,21 @@ export function VideoComposeModal({
   const [future, setFuture] = useState<ComposeTimelineState[]>([]);
   const [pxPerSec, setPxPerSec] = useState(DEFAULT_PX_PER_SEC);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  // selected = 主选中（驱动变速/音量/分割等编辑面板）；selectedIds = 全部选中片段 id
-  // （高亮 + 批量删除）。Shift/⌘ 点选叠加到 selectedIds，普通点选收敛为单选。
+  // selected = primary selection (drives the speed/volume/split edit panels); selectedIds = all selected clip ids
+  // (highlight + bulk delete). Shift/Cmd click adds to selectedIds; a plain click collapses to a single selection.
   const [selected, setSelected] = useState<SelectedClipRef | null>(null);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
-  // 拖动中的「投影轨迹」：被拖片段会在落点槽位留一道半透明投影，同时跟随指针浮起一个
-  // 幽灵副本（libtv / 剪映式）。null = 当前没有片段在拖动。
+  // "Projection trail" while dragging: the dragged clip leaves a semi-transparent projection at the drop slot, while a ghost copy
+  // floats along with the pointer (libtv / CapCut style). null = no clip is being dragged.
   const [dragGhost, setDragGhost] = useState<{
     clipId: string;
     trackId: string;
-    /** 跟随指针的幽灵副本左缘（px，相对所在轨道的内容区）。 */
+    /** Left edge of the ghost copy following the pointer (px, relative to the content area of its track). */
     ghostLeftPx: number;
   } | null>(null);
-  // 正在裁剪的片段（用于在其边缘浮一个「裁剪后时长」气泡）。null = 没在裁剪。
+  // The clip being trimmed (used to float a "trimmed duration" bubble at its edge). null = not trimming.
   const [trimEdit, setTrimEdit] = useState<{
     clipId: string;
     edge: "start" | "end";
@@ -646,9 +646,9 @@ export function VideoComposeModal({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const trackScrollRef = useRef<HTMLDivElement | null>(null);
-  // 当前正在进行的拖动（clip 移动 / trim / scrub）的清理函数。用于：① 同一时刻只允许
-  // 一个拖动（多指/多触点防重复挂监听）；② 组件卸载（关弹窗）时清掉残留的 window 监听，
-  // 避免对已卸载组件 setState。
+  // Cleanup function for the drag in progress (clip move / trim / scrub). Used to: (1) allow only one drag at a time
+  // (multi-finger / multi-touch must not attach duplicate listeners); (2) on component unmount (dialog close) clear leftover window listeners,
+  // avoiding setState on an unmounted component.
   const activeDragCleanupRef = useRef<(() => void) | null>(null);
   useEffect(
     () => () => {
@@ -658,7 +658,7 @@ export function VideoComposeModal({
     [],
   );
 
-  // 收敛为单选：主选中 + 高亮集合都设成这一片段（或清空）。
+  // Collapse to a single selection: set both the primary selection and the highlight set to this clip (or clear).
   const selectOnly = useCallback((ref: SelectedClipRef | null) => {
     setSelected(ref);
     setSelectedIds(ref ? new Set([ref.clipId]) : new Set());
@@ -667,9 +667,9 @@ export function VideoComposeModal({
     setSelected(null);
     setSelectedIds(new Set());
   }, []);
-  // Shift/⌘ 叠加点选：在高亮集合里增删该片段；加入时把它设为主选中。
-  // 取消的若是主选中，必须同步清掉 selected —— 否则它仍是高亮/删除/编辑面板的
-  // 目标，表现为「主选中片段 shift-click 取消不掉」。
+  // Shift/Cmd additive click: add/remove the clip in the highlight set; when adding, make it the primary selection.
+  // If the one being removed is the primary selection, selected must be cleared too - otherwise it remains the target of
+  // highlight/delete/edit panel, showing up as "shift-click cannot deselect the primary clip".
   const toggleInSelection = useCallback(
     (ref: SelectedClipRef) => {
       const removing = selectedIds.has(ref.clipId);
@@ -695,22 +695,22 @@ export function VideoComposeModal({
   snapRef.current = snapEnabled;
   const timelineRef = useRef(timeline);
   timelineRef.current = timeline;
-  // ⌘C 复制的片段快照（⌘V 时插入其副本）。
+  // Snapshot of clips copied with Cmd+C (Cmd+V inserts a copy of it).
   const clipboardRef = useRef<ComposeClip | null>(null);
 
   const durationMs = useMemo(() => timelineDurationMs(timeline), [timeline]);
 
-  // 竖线 DOM 直驱：rAF 时钟每帧通过这个 ref 改 transform，绕开 React 重渲染，
-  // 整条时间轴（filmstrip 等）便不再被播放头每帧带着重渲染。
+  // Playhead line driven directly on the DOM: the rAF clock changes transform through this ref every frame, bypassing React re-rendering,
+  // so the whole timeline (filmstrip etc.) is no longer re-rendered by the playhead every frame.
   const playheadElRef = useRef<HTMLDivElement>(null);
   const playingRef = useRef(false);
   const positionPlayhead = useCallback((ms: number) => {
     const x = ms * pxPerMsRef.current;
     const el = playheadElRef.current;
     if (el) el.style.transform = `translateX(${x}px)`;
-    // 播放时让时间轴平滑跟随播放头：命令式改 scrollLeft（不触发 React 重渲染），
-    // 播放头逼近视口左右边缘时才滚动，保持其始终在 margin 内 —— 连续播放时即表现
-    // 为时间轴匀速跟随。手动 scrub / 暂停态不跟随（playingRef 为 false）。
+    // While playing, make the timeline follow the playhead smoothly: imperatively change scrollLeft (no React re-render),
+    // scrolling only when the playhead nears the left/right edge of the viewport so it stays within the margin - during continuous playback this shows
+    // as the timeline following at a steady speed. No follow during manual scrub / paused (playingRef is false).
     if (playingRef.current) {
       const cont = trackScrollRef.current;
       if (cont) {
@@ -723,9 +723,9 @@ export function VideoComposeModal({
     }
   }, []);
 
-  // 横向滚动条已隐藏（ui-scrollbar-vertical），改用 Ctrl + 滚轮做横向滚动。
-  // 必须挂原生非 passive 监听才能 preventDefault 掉浏览器默认的 Ctrl+滚轮缩放
-  // —— React 合成 onWheel 在 root 上是 passive，preventDefault 无效。
+  // The horizontal scrollbar is hidden (ui-scrollbar-vertical); use Ctrl + wheel for horizontal scrolling instead.
+  // A native non-passive listener is required to preventDefault the browser's default Ctrl+wheel zoom
+  // - React's synthetic onWheel is passive on the root, so preventDefault has no effect.
   useEffect(() => {
     const cont = trackScrollRef.current;
     if (!cont) return;
@@ -738,9 +738,9 @@ export function VideoComposeModal({
     return () => cont.removeEventListener("wheel", onWheel);
   }, []);
 
-  // 播放态媒体主时钟：把正在播放的视频元素的 currentTime 反算回时间线 ms，让竖线
-  // 跟真实解码帧走，画面与竖线严丝合缝（libtv 效果）。边界 / 缓冲 / 无视频时返回
-  // null，交回墙钟推进。activeVideoRef 在下方随激活片段更新。
+  // Media master clock while playing: map the playing video element's currentTime back to timeline ms so the playhead line
+  // follows the real decoded frame, with picture and line in perfect sync (libtv effect). At boundaries / buffering / no video it returns
+  // null and hands control back to wall-clock advance. activeVideoRef is updated below with the active clip.
   const activeVideoRef = useRef<{
     clipId: string;
     timelineStartMs: number;
@@ -753,8 +753,8 @@ export function VideoComposeModal({
     const a = activeVideoRef.current;
     if (!el || !a) return null;
     if (el.paused || el.seeking || el.readyState < 2) return null;
-    // 元素当前装载的片段必须与映射所用片段一致；换源瞬间不一致时交回墙钟推进，
-    // 否则会用错片段的时间线偏移，把竖线算回上一段（画面已是下一段）。
+    // The clip the element currently loads must match the clip used for the mapping; when they differ at the instant of a source swap, hand back to wall-clock advance,
+    // otherwise the wrong clip's timeline offset would push the playhead back to the previous clip (the picture is already the next one).
     if (el.dataset.clipId !== a.clipId) return null;
     const speed = a.speed > 0 ? a.speed : 1;
     const ms = a.timelineStartMs + (el.currentTime * 1000 - a.trimStartMs) / speed;
@@ -767,13 +767,13 @@ export function VideoComposeModal({
     positionPlayhead,
     mediaClockMs,
   );
-  // 播放头当前值的 ref —— 给快捷键（←/→ 微移）读最新值，免得把 playheadMs 列进
-  // keydown effect 依赖、播放时每帧重挂监听。
+  // Ref of the current playhead value - lets the shortcut (left/right nudge) read the latest value, so playheadMs need not be a dependency of the
+  // keydown effect (which would re-attach the listener every frame during playback).
   const playheadRef = useRef(playheadMs);
   playheadRef.current = playheadMs;
 
-  // 全屏播放：对预览舞台容器（非 <video> 本身）请求全屏，避免片段换源时退出全屏；
-  // 从头播放整条时间线。
+  // Fullscreen playback: request fullscreen on the preview stage container (not the <video> itself) so fullscreen is not exited when a clip swaps source;
+  // play the whole timeline from the start.
   const previewStageRef = useRef<HTMLDivElement>(null);
   const handleFullscreenPlay = useCallback(() => {
     const el = previewStageRef.current;
@@ -783,14 +783,14 @@ export function VideoComposeModal({
   }, [play, seek]);
   playingRef.current = isPlaying;
 
-  // 非播放态（seek / 暂停 / 缩放）由 React state 兜底定位；播放态交给 onFrame
-  // 每帧直驱，避免被节流后的 state 拽回造成跳动。
+  // When not playing (seek / paused / zoom) React state provides the fallback positioning; while playing it is left to onFrame
+  // to drive every frame, avoiding being pulled back by throttled state and jumping.
   useEffect(() => {
     if (!isPlaying) positionPlayhead(playheadMs);
   }, [playheadMs, pxPerSec, isPlaying, positionPlayhead]);
 
-  // 视频预览取播放头处有片段的最上层轨道；音频轨分别挂载播放器，以便旁白和背景乐
-  // 按时间线同时预览。最终导出仍由后端按全部轨道合成。
+  // The video preview takes the topmost track that has a clip at the playhead; audio tracks mount players separately so narration and background music
+  // preview simultaneously on the timeline. The final export is still composed by the backend from all tracks.
   const videoTrack = useMemo(() => {
     const vids = timeline.tracks.filter((track) => track.kind === "video");
     for (let i = vids.length - 1; i >= 0; i -= 1) {
@@ -889,12 +889,12 @@ export function VideoComposeModal({
     [],
   );
 
-  // 视频轨 ripple 补位：删除 / 裁剪 / 变速后调用，消除空隙（音频轨不动）。
+  // Video track ripple gap-filling: called after delete / trim / speed change to remove gaps (audio tracks untouched).
   const compactVideoNow = useCallback(() => {
     setTimeline((prev) => compactVideoTracks(prev));
   }, []);
 
-  // 关闭弹窗（卸载）时把当前时间线回传宿主存为草稿，重开/刷新后恢复。
+  // On dialog close (unmount) pass the current timeline back to the host to save as a draft, restored on reopen/refresh.
   const onPersistDraftRef = useRef(onPersistDraft);
   onPersistDraftRef.current = onPersistDraft;
   useEffect(() => {
@@ -903,7 +903,7 @@ export function VideoComposeModal({
     };
   }, []);
 
-  // 设置 / 更新封面（history-tracked），关闭封面编辑器。
+  // Set / update the cover (history-tracked) and close the cover editor.
   const applyCover = useCallback(
     (cover: ComposeCover) => {
       pushHistory();
@@ -913,14 +913,14 @@ export function VideoComposeModal({
     [pushHistory],
   );
 
-  // 重新从上游素材摆放（丢弃当前草稿编辑）—— 上游新增/变更素材后用它重置。
+  // Re-lay out from upstream materials (discarding current draft edits) - use it to reset after upstream adds/changes materials.
   const resetToUpstream = useCallback(() => {
     pushHistory();
     setTimeline(buildInitialTimeline(seedNodeIds));
     clearSelection();
   }, [clearSelection, pushHistory, seedNodeIds]);
 
-  // 拖动定位时把片段左/右边缘磁吸到其它片段边界或 0（排除自身），不吸时原值。
+  // While dragging, magnet-snap the clip's left/right edges to other clips' boundaries or 0 (excluding itself); original value when not snapping.
   const snapClipStart = useCallback(
     (clipId: string, start: number, lengthMs: number): number => {
       if (!snapRef.current) return Math.max(0, start);
@@ -951,8 +951,8 @@ export function VideoComposeModal({
     [],
   );
 
-  // 指针 Y 命中目标轨道：落在某条同种类轨道行内 → 该轨；落到所有同种类行下方 →
-  // "new"（拖出一条新行）；行间 / 上方 → null（不改变轨道）。靠 DOM 行 rect 命中。
+  // Pointer Y hits the target track: inside a same-kind track row -> that track; below all same-kind rows ->
+  // "new" (drag out a new row); between rows / above -> null (track unchanged). Hit by DOM row rects.
   const resolveDropTrack = useCallback(
     (kind: ComposeTrackKind, clientY: number): { trackId: string } | "new" | null => {
       const rows = Array.from(
@@ -976,19 +976,19 @@ export function VideoComposeModal({
     [],
   );
 
-  // 拖动片段本体：横向改时间位置（同轨防重叠 + 磁吸），纵向拖到新行直接新建同种类
-  // 轨道承载；拖回已有轨道则把本次新建、已空的轨道删掉。带 4px 阈值区分点选/拖动。
-  // 用 window 监听（不用 setPointerCapture）—— 片段跨轨道会重新挂载 DOM，捕获会丢失。
+  // Drag the clip body: horizontal changes the time position (no overlap within a track + magnet snap); dragging vertically to a new row creates a new same-kind
+  // track to hold it; dragging back to an existing track deletes the newly created, now empty track. A 4px threshold distinguishes click from drag.
+  // Uses window listeners (not setPointerCapture) - the DOM is remounted when a clip crosses tracks, so capture would be lost.
   const startClipMove = useCallback(
     (event: ReactPointerEvent, track: ComposeTrack, clip: ComposeClip) => {
       event.stopPropagation();
       event.preventDefault();
-      // Shift/⌘ 点选：叠加/取消选中该片段，不进入拖动。
+      // Shift/Cmd click: add/remove the clip from the selection without starting a drag.
       if (event.shiftKey || event.metaKey || event.ctrlKey) {
         toggleInSelection({ trackId: track.id, clipId: clip.id });
         return;
       }
-      if (activeDragCleanupRef.current) return; // 已有拖动在进行，忽略并发触发
+      if (activeDragCleanupRef.current) return; // A drag is already in progress; ignore the concurrent trigger
       selectOnly({ trackId: track.id, clipId: clip.id });
       const startX = event.clientX;
       const startY = event.clientY;
@@ -1006,8 +1006,8 @@ export function VideoComposeModal({
         rafId = 0;
         const { x: clientX, y: clientY } = latest;
         const dxMs = (clientX - startX) / pxPerMsRef.current;
-        // 以「最新已提交状态」为基准同步计算整帧结果，并在落地前做防御性跳过 ——
-        // 失败就整帧不动（不改 state、不动闭包变量），片段保持上一个合法位置。
+        // Compute the whole frame's result synchronously from the "latest committed state", with defensive skipping before landing -
+        // on failure the whole frame does nothing (no state change, no closure variable change) and the clip stays at its last legal position.
         const snapshot = timelineRef.current;
         const fromTrack = snapshot.tracks.find((t) =>
           t.clips.some((c) => c.id === clipId),
@@ -1022,13 +1022,13 @@ export function VideoComposeModal({
         if (drop === "new") destId = prevAuto ?? (createId as string);
         else if (drop) destId = drop.trackId;
 
-        // resolveDropTrack 查的是可能滞后的 DOM；命中一条已从 state 删除的轨道时跳过
-        // 此帧，绝不把片段放进不存在的轨道（否则摘除后无处安放 → 片段丢失）。
+        // resolveDropTrack reads the DOM, which may lag; when it hits a track already deleted from state, skip
+        // this frame and never put a clip into a nonexistent track (otherwise after removal there is nowhere to put it -> the clip is lost).
         if (!createId && !snapshot.tracks.some((t) => t.id === destId)) return;
 
-        // 仅「主视频轨」走剪映式磁吸换序：拖拽只决定插入次序，整条轨永远无缝紧贴、自动重排。
-        // 附加视频轨（拖出来的第二/第三条）走下面的自由定位分支，可放到任意时间位置，
-        // 否则会被强制吸到 0、只能与同轨片段换序，表现为「拖不动」。
+        // Only the "main video track" uses CapCut-style magnet reordering: dragging only decides the insertion order, and the whole track always stays seamless and auto re-flows.
+        // Additional video tracks (the second/third dragged out) take the free-positioning branch below and can be placed at any time position;
+        // otherwise they would be forced to snap to 0 and could only reorder with same-track clips, showing as "cannot drag".
         if (kind === "video" && destId === VIDEO_TRACK_ID) {
           let tracks = snapshot.tracks.map((t) => ({
             ...t,
@@ -1040,7 +1040,7 @@ export function VideoComposeModal({
           }
           const destTrack = tracks.find((t) => t.id === destId);
           if (!destTrack) return;
-          // siblings 取目标轨「当前时间线顺序」，被拖片段按指针落点插入后整体重排。
+          // siblings take the target track's "current timeline order"; the dragged clip is inserted at the pointer drop position and the whole is re-flowed.
           const siblings = [...destTrack.clips].sort(
             (a, b) => a.timelineStartMs - b.timelineStartMs,
           );
@@ -1055,7 +1055,7 @@ export function VideoComposeModal({
             tracks = tracks.filter((t) => t.id !== prevAuto || t.clips.length > 0);
           }
           setTimeline((prev) => ({ ...prev, tracks }));
-          // 幽灵副本跟随指针（被抓取点不变）：原片段左缘 + 指针位移。
+          // The ghost copy follows the pointer (grab point unchanged): the original clip's left edge + pointer displacement.
           const ghostLeftPx = Math.max(
             0,
             origStart * pxPerMsRef.current + (clientX - startX),
@@ -1067,10 +1067,10 @@ export function VideoComposeModal({
           return;
         }
 
-        // 自由定位分支（音频轨 + 附加视频轨）：目标位置 = 磁吸 + 同轨防重叠夹取。
-        // 只按「本轨」内的片段防重叠，这样附加视频轨可自由摆到任意时间（与主轨/其它轨
-        // 在时间上重叠由 overlappingVideoClipIds 高亮提示、导出前拦截，不在此处卡死拖动）。
-        setDragGhost(null); // 自由定位下片段本体直接跟手，清掉可能残留的磁吸幽灵
+        // Free-positioning branch (audio tracks + additional video tracks): target position = magnet snap + same-track no-overlap clamp.
+        // Overlap prevention only considers clips in "this track", so additional video tracks can be placed at any time (time overlap with the main/other tracks
+        // is highlighted by overlappingVideoClipIds and blocked before export, not by stalling the drag here).
+        setDragGhost(null); // In free positioning the clip body follows the hand directly; clear any leftover magnet ghost
         const blockingLaid = snapshot.tracks
           .filter((t) => t.id === destId)
           .flatMap((t) => layoutTrack(t))
@@ -1082,7 +1082,7 @@ export function VideoComposeModal({
           if (l.timelineStartMs <= nextStart) lo = Math.max(lo, l.timelineEndMs);
           else hi = Math.min(hi, l.timelineStartMs - lengthMs);
         }
-        // 间隙不足以容纳该片段（hi < lo）→ 跳过此帧，保持上个合法位置，绝不重叠。
+        // The gap is too small for the clip (hi < lo) -> skip this frame, keep the last legal position, never overlap.
         if (hi < lo) return;
         nextStart = Math.max(0, clamp(nextStart, lo, hi));
 
@@ -1101,14 +1101,14 @@ export function VideoComposeModal({
         tracks = tracks.map((t) =>
           t.id === destId ? { ...t, clips: [...t.clips, placed] } : t,
         );
-        // 本次新建、片段已离开而变空的轨道，删掉
+        // Delete a track newly created in this drag that became empty because the clip left
         if (prevAuto && prevAuto !== destId) {
           tracks = tracks.filter((t) => t.id !== prevAuto || t.clips.length > 0);
         }
         setTimeline((prev) => ({ ...prev, tracks }));
 
-        // 仅在「成功落地」后维护闭包：新建→记下；片段离开自动轨（被剪枝）→ 清空，
-        // 避免下次拖「新行」复用已删除 id 导致片段丢失。currentTrackId 始终指向有效轨。
+        // Maintain the closure only after a "successful landing": newly created -> remember it; clip left an auto track (pruned) -> clear it,
+        // so the next drag of a "new row" does not reuse a deleted id and lose the clip. currentTrackId always points to a valid track.
         if (createId) autoCreatedTrackId = createId;
         else if (destId !== prevAuto) autoCreatedTrackId = null;
         currentTrackId = destId;
@@ -1129,9 +1129,9 @@ export function VideoComposeModal({
         window.removeEventListener("pointerup", end);
         window.removeEventListener("pointercancel", end);
         activeDragCleanupRef.current = null;
-        setDragGhost(null); // 收起拖动投影/幽灵
+        setDragGhost(null); // Hide the drag projection/ghost
         if (!moved) return;
-        // 收尾：清掉所有变空的非默认轨道，并把选中跟到片段最终所在轨道。
+        // Wrap-up: clear all emptied non-default tracks and move the selection to the clip's final track.
         setTimeline((prev) => {
           const tracks = prev.tracks.filter(
             (t) =>
@@ -1151,8 +1151,8 @@ export function VideoComposeModal({
     [pushHistory, resolveDropTrack, selectOnly, snapClipStart, toggleInSelection],
   );
 
-  // 把片段移到「新的一行」：新建同种类轨道承载该片段（保留时间位置），从原轨移除；
-  // 清掉因此变空的非默认轨道。
+  // Move the clip to a "new row": create a new same-kind track to hold the clip (keeping its time position) and remove it from the original track;
+  // clear any non-default tracks that become empty as a result.
   const moveToNewTrack = useCallback(
     (trackId: string, clipId: string) => {
       const src = timelineRef.current.tracks.find((t) => t.id === trackId);
@@ -1201,14 +1201,14 @@ export function VideoComposeModal({
                   clips: track.clips.filter((clip) => clip.id !== clipId),
                 },
           )
-          // 删空了的非默认轨道顺手清掉，不留空行；默认视频/音频轨保留。
+          // Also clear emptied non-default tracks, leaving no empty rows; default video/audio tracks are kept.
           .filter(
             (track) =>
               track.clips.length > 0 ||
               track.id === VIDEO_TRACK_ID ||
               track.id === AUDIO_TRACK_ID,
           );
-        // 删除后视频轨 ripple 补位，缺口自动合拢（音频轨保持原位）。
+        // After deletion the video track ripple-fills, so the gap closes automatically (audio tracks stay in place).
         return compactVideoTracks({ ...prev, tracks });
       });
       setSelected((cur) => (cur?.clipId === clipId ? null : cur));
@@ -1278,7 +1278,7 @@ export function VideoComposeModal({
     selectOnly({ trackId: track.id, clipId: leftId });
   }, [canSplitInside, pushHistory, selectOnly, selectedClip, selectedSourceMs]);
 
-  // 向左分割 / 向右分割 —— 删除选中片段在播放头一侧的部分（裁掉而非留两段）。
+  // Split left / split right - delete the part of the selected clip on one side of the playhead (trim away rather than keep two pieces).
   const trimSelectedToPlayhead = useCallback(
     (side: "left" | "right") => {
       if (!selectedClip || selectedSourceMs == null || !canSplitInside) return;
@@ -1288,12 +1288,12 @@ export function VideoComposeModal({
         track.id,
         clip.id,
         side === "left"
-          ? // 裁掉左半：保留段从播放头开始，左边缘移到播放头时间线位置（右边缘不动）。
+          ? // Trim away the left half: the kept part starts at the playhead, the left edge moves to the playhead's timeline position (right edge fixed).
             { trimStartMs: selectedSourceMs, timelineStartMs: playheadMs }
-          : // 裁掉右半：左边缘不动，仅缩短源出点。
+          : // Trim away the right half: left edge fixed, only shorten the source out point.
             { trimEndMs: selectedSourceMs },
       );
-      // 裁掉一侧后视频轨补位。
+      // Fill the gap on the video track after trimming one side.
       compactVideoNow();
     },
     [
@@ -1314,19 +1314,19 @@ export function VideoComposeModal({
       updateClip(selectedClip.track.id, selectedClip.clip.id, {
         speed: clamp(speed, SPEED_MIN, SPEED_MAX),
       });
-      // 变速改变片段时间线长度 → 视频轨补位，避免出现/留下空隙。
+      // A speed change alters the clip's timeline length -> fill gaps on the video track to avoid creating/leaving gaps.
       compactVideoNow();
     },
     [compactVideoNow, pushHistory, selectedClip, updateClip],
   );
 
-  // 音量滑杆 onChange 在一次拖动里触发数十次 —— 历史快照只在手势开始时 push 一次
-  //（见 VolumePopover 的 onGestureStart），否则一次拖动就把整个撤销栈冲掉。
+  // The volume slider's onChange fires dozens of times in one drag - the history snapshot is pushed only once at gesture start
+  // (see VolumePopover's onGestureStart); otherwise a single drag would flush the whole undo stack.
   const setSelectedVolume = useCallback(
     (volume: number) => {
       if (!selectedClip) return;
       const v = clamp(volume, 0, 1);
-      // 拖音量即取消静音（音量为 0 视作静音），与剪映一致。
+      // Dragging the volume cancels mute (volume 0 counts as muted), same as CapCut.
       updateClip(selectedClip.track.id, selectedClip.clip.id, {
         volume: v,
         muted: v <= 0,
@@ -1343,9 +1343,9 @@ export function VideoComposeModal({
     });
   }, [pushHistory, selectedClip, updateClip]);
 
-  // ── 复制 / 粘贴 / 副本 ─────────────────────────────────────────────────────
-  // 把 sourceClip 复制一份（新 id）插进目标轨：视频轨在 afterClipId 之后插入并整体无缝
-  // 重排；音频轨追加到末尾（避免与现有片段重叠）。返回新片段 id 并选中它。
+  // -- Copy / paste / duplicate -----------------------------------------------------
+  // Copy sourceClip (new id) and insert it into the target track: on a video track insert after afterClipId and re-flow the whole thing
+  // seamlessly; on an audio track append to the end (avoiding overlap with existing clips). Returns the new clip id and selects it.
   const insertDuplicate = useCallback(
     (sourceClip: ComposeClip, trackId: string, afterClipId: string | null) => {
       const copyId = makeClipId();
@@ -1365,7 +1365,7 @@ export function VideoComposeModal({
             ordered.splice(idx + 1, 0, copy);
             return { ...tr, clips: packTrackClips(ordered) };
           }
-          // 音频：追加到轨末尾，不与现有片段重叠。
+          // Audio: append to the end of the track, not overlapping existing clips.
           const end = layoutTrack(tr).reduce(
             (m, l) => Math.max(m, l.timelineEndMs),
             0,
@@ -1394,7 +1394,7 @@ export function VideoComposeModal({
   const pasteClipboard = useCallback(() => {
     const src = clipboardRef.current;
     if (!src) return;
-    // 落到同类型的默认轨；当前选中片段也在该轨时紧跟其后插入，否则追加。
+    // Land on the default track of the same type; if the selected clip is also on that track insert right after it, otherwise append.
     const targetTrackId =
       src.kind === "video" ? videoTrack?.id : primaryAudioTrack?.id;
     if (!targetTrackId) return;
@@ -1405,7 +1405,7 @@ export function VideoComposeModal({
     insertDuplicate(src, targetTrackId, afterId);
   }, [insertDuplicate, primaryAudioTrack, selectedClip, videoTrack]);
 
-  // 批量删除当前所有选中片段（含主选中），删后视频轨补位、清空选择。
+  // Bulk delete all currently selected clips (including the primary selection); after deletion fill gaps on the video track and clear the selection.
   const removeSelected = useCallback(() => {
     const ids = new Set(selectedIds);
     if (selected) ids.add(selected.clipId);
@@ -1452,8 +1452,8 @@ export function VideoComposeModal({
           best = boundary;
         }
       }
-      // 仅在靠近片段边缘时磁吸到边界；否则原样返回 ms，让播放头像素级连续跟手。
-      // 之前这里会把位置取整到 500ms 网格，导致拖动「半秒一跳」、毫不跟手。
+      // Magnet-snap to the boundary only when near a clip edge; otherwise return ms as is so the playhead follows the hand with pixel-level continuity.
+      // Previously the position was rounded to a 500ms grid here, making dragging jump "every half second" and not follow the hand at all.
       return best != null ? best : ms;
     },
     [boundaryList],
@@ -1469,7 +1469,7 @@ export function VideoComposeModal({
     ) => {
       event.stopPropagation();
       event.preventDefault();
-      if (activeDragCleanupRef.current) return; // 已有拖动在进行，忽略并发触发
+      if (activeDragCleanupRef.current) return; // A drag is already in progress; ignore the concurrent trigger
       selectOnly({ trackId: track.id, clipId: clip.id });
       setTrimEdit({ clipId: clip.id, edge });
       pushHistory();
@@ -1479,8 +1479,8 @@ export function VideoComposeModal({
       const origTimelineStart = clip.timelineStartMs;
       const speed = clip.speed > 0 ? clip.speed : 1;
       const sourceMaxEnd = clip.durationMs ?? Math.max(origEnd, FALLBACK_CLIP_MS);
-      // 向右拉伸时间线上不能压到下一个相邻片段（视频跨所有视频轨道判断，音频本轨内）：
-      // 把源出点上限再夹到「到下一片段起点的距离换算回源时长」。
+      // When stretching right, the clip must not overlap the next adjacent clip on the timeline (video is checked across all video tracks, audio within its own track):
+      // clamp the source out point upper bound to the "distance to the next clip start converted back to source duration".
       const nextNeighborStartMs = (() => {
         const blocking = (
           clip.kind === "video"
@@ -1507,7 +1507,7 @@ export function VideoComposeModal({
         const dms = ((ev.clientX - startX) / pxPerMsRef.current) * speed;
         if (edge === "start") {
           const next = clamp(snapSource(origStart + dms), 0, origEnd - MIN_CLIP_MS);
-          // 拖左把手：源入点变化，同时把左边缘随之平移，使右边缘保持不动。
+          // Dragging the left handle: the source in point changes and the left edge shifts with it so the right edge stays fixed.
           const nextTimelineStart = Math.max(
             0,
             Math.round(origTimelineStart + (next - origStart) / speed),
@@ -1526,8 +1526,8 @@ export function VideoComposeModal({
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
         activeDragCleanupRef.current = null;
-        setTrimEdit(null); // 收起裁剪时长气泡
-        // 裁剪结束后视频轨 ripple 补位，把裁出来的缺口合拢。
+        setTrimEdit(null); // Hide the trim duration bubble
+        // After trimming, ripple-fill the video track to close the gap left by trimming.
         compactVideoNow();
       };
       activeDragCleanupRef.current = onUp;
@@ -1550,15 +1550,15 @@ export function VideoComposeModal({
     [seek, snapPlayhead],
   );
 
-  // 统一的「按下即拖动 scrub」：用 setPointerCapture 把后续 move/up 都锁定到按下的
-  // 元素上，并监听 pointercancel —— 旧实现挂的是 window 监听且只听 pointerup，一旦
-  // pointercancel（触控板手势 / 指针被系统接管等）就漏掉清理，move 监听残留，于是
-  // 鼠标在空白区移动也会带着时间针走。指针捕获 + cancel 兜底彻底消除这个泄漏。
+  // Unified "scrub on press": setPointerCapture locks later move/up to the pressed
+  // element, and pointercancel is listened to - the old implementation attached window listeners and only listened to pointerup; on
+  // pointercancel (trackpad gesture / pointer taken over by the system etc.) cleanup was missed and the move listener lingered, so
+  // moving the mouse over blank areas would still drag the playhead. Pointer capture + the cancel fallback eliminate this leak.
   const startScrub = useCallback(
     (event: ReactPointerEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      if (activeDragCleanupRef.current) return; // 已有拖动在进行，忽略并发触发
+      if (activeDragCleanupRef.current) return; // A drag is already in progress; ignore the concurrent trigger
       const el = event.currentTarget as HTMLElement;
       const pointerId = event.pointerId;
       try {
@@ -1567,9 +1567,9 @@ export function VideoComposeModal({
         /* ignore */
       }
       seekFromClientX(event.clientX);
-      // 把高频 pointermove 合并到每帧一次：拖动时只记录最新 X，rAF 里处理一次。
-      // 避免一次拖动甩出几十上百个 seek + setState 把主线程塞满（进而饿死解码/绘制，
-      // 表现为预览画面卡顿）。
+      // Coalesce high-frequency pointermove to once per frame: during a drag only record the latest X and handle it once in rAF.
+      // This avoids dozens to hundreds of seeks + setState in one drag flooding the main thread (which would starve decode/paint
+      // and show as preview stutter).
       let latestX = event.clientX;
       let rafId = 0;
       const pump = () => {
@@ -1591,7 +1591,7 @@ export function VideoComposeModal({
           /* ignore */
         }
         activeDragCleanupRef.current = null;
-        seekFromClientX(latestX); // 落点精确对齐最后位置
+        seekFromClientX(latestX); // Land exactly on the last position
       };
       activeDragCleanupRef.current = end;
       el.addEventListener("pointermove", onMove);
@@ -1612,7 +1612,7 @@ export function VideoComposeModal({
   );
 
   // ── export ──────────────────────────────────────────────────────────────────
-  // 把合成产物（临时 job URL）取回为 blob，用作下载或重新上传的源。
+  // Fetch the compose output (temporary job URL) as a blob, used as the source for download or re-upload.
   const fetchComposedBlob = useCallback(async (url: string): Promise<Blob> => {
     const resolved = resolveImageDisplayUrl(url) || url;
     const res = await fetch(resolved, { credentials: "include" });
@@ -1626,7 +1626,7 @@ export function VideoComposeModal({
     [],
   );
 
-  // 导出到本地：把剪辑后的视频直接下载到本地。
+  // Export to local: download the edited video directly to local.
   const exportToLocal = useCallback(
     async (url: string) => {
       const blob = await fetchComposedBlob(url);
@@ -1642,7 +1642,7 @@ export function VideoComposeModal({
     [composedFileName, fetchComposedBlob],
   );
 
-  // 导出到画布：先把合成视频经 upload 接口落成稳定素材，再回显到本节点的合成结果上。
+  // Export to canvas: first persist the composed video as a stable asset via the upload API, then echo it onto this node's compose result.
   const exportToCanvas = useCallback(
     async (url: string, coverUrl?: string | null) => {
       const blob = await fetchComposedBlob(url);
@@ -1662,7 +1662,7 @@ export function VideoComposeModal({
       resolution: FreezoneVideoComposeResolution,
     ) => {
       if (isExporting || !hasExportableClips(timeline)) return;
-      // MVP 后端不支持视频重叠合成；导出前拦截并给出明确提示，而不是让后端报错。
+      // The MVP backend does not support overlapping video compose; block before export and give a clear message instead of letting the backend error.
       if (hasOverlappingVideoClips(timeline)) {
         setExportError(t("videoCompose.error.overlap"));
         return;
@@ -1690,8 +1690,8 @@ export function VideoComposeModal({
         if (target === "local") await exportToLocal(result.url);
         else await exportToCanvas(result.url, result.cover_url);
       } catch (error) {
-        // 脱离监听 ≠ 合成失败：不写红色错误区，改中性提示，并把任务句柄留在
-        // 任务中心可查（合成没有节点可挂句柄，这里只能提示用户稍后取回）。
+        // Detaching from listening != compose failure: do not write the red error area, show a neutral message, and keep the task handle
+        // queryable in the task center (a compose has no node to hang the handle on, so the user can only be told to retrieve it later).
         if (isTaskPollTimeoutError(error)) {
           console.warn('[video-compose] detached from a still-running compose', {
             taskKey: error.taskKey,
@@ -1722,8 +1722,8 @@ export function VideoComposeModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [coverEditorOpen, exportMenuOpen, isExporting, onClose, speedOpen, volumeOpen]);
 
-  // 编辑快捷键：空格 播放/暂停、Delete 删片段、⌘Z/⇧⌘Z 撤销重做、⌘C/⌘V/⌘D 复制粘贴副本、
-  // ←/→ 微移播放头（按 1 帧，Shift 为 1 秒）。焦点在输入框 / 导出弹窗打开时不拦截。
+  // Edit shortcuts: Space play/pause, Delete delete clip, Cmd+Z/Shift+Cmd+Z undo/redo, Cmd+C/Cmd+V/Cmd+D copy/paste/duplicate,
+  // Left/Right nudge the playhead (1 frame, Shift for 1 second). Not intercepted when focus is in an input / the export dialog is open.
   useEffect(() => {
     const FRAME_MS = 1000 / 30;
     const isTyping = (el: EventTarget | null) => {
@@ -1769,7 +1769,7 @@ export function VideoComposeModal({
         duplicateSelected();
         return;
       }
-      if (mod) return; // 其余带修饰键的组合交给浏览器/系统
+      if (mod) return; // Other modifier combinations are left to the browser/system
 
       if (key === " " || key === "Spacebar") {
         event.preventDefault();
@@ -1808,14 +1808,14 @@ export function VideoComposeModal({
   const rulerSeconds = Math.max(RULER_MIN_SECONDS, Math.ceil(durationMs / 1000));
   const timelineWidthPx = rulerSeconds * pxPerSec;
   const canExport = hasExportableClips(timeline) && !isExporting;
-  // 时间轴上重叠的视频片段 id —— 用于把冲突片段高亮（红框）提示用户。
+  // Ids of overlapping video clips on the timeline - used to highlight conflicting clips (red frame) to warn the user.
   const overlapClipIds = useMemo(() => overlappingVideoClipIds(timeline), [timeline]);
 
   const videoActive = useMemo(
     () => (videoTrack ? activeClipAt(videoTrack, playheadMs) : null),
     [videoTrack, playheadMs],
   );
-  // 媒体主时钟用：把当前激活视频片段的时间线/裁剪/变速映射喂给 mediaClockMs。
+  // For the media master clock: feed the active video clip's timeline/trim/speed mapping to mediaClockMs.
   activeVideoRef.current = videoActive
     ? {
         clipId: videoActive.laid.clip.id,
@@ -1844,7 +1844,7 @@ export function VideoComposeModal({
           <span className="text-sm font-semibold">{t("videoCompose.title")}</span>
         </div>
         <div className="flex items-center gap-3">
-          {/* 设置封面：独立入口，点开封面编辑器（选帧 / 上传）。已设封面时左侧带缩略图。 */}
+          {/* Set cover: a separate entry that opens the cover editor (pick a frame / upload). When a cover is set, a thumbnail shows on the left. */}
           <button
             type="button"
             onClick={() => setCoverEditorOpen(true)}
@@ -1862,12 +1862,12 @@ export function VideoComposeModal({
             )}
             {t("videoCompose.cover.button")}
           </button>
-          {/* 不再提供 720p/1080p 切换：导出沿用源视频画质（默认 1080p，不降采样）。 */}
-          {/* 导出下拉：自建轻量 popover —— 共享的 Base UI DropdownMenu 把菜单 portal 到
-              body 且 Positioner 固定 z-50，会被本弹窗的 z-[120] 整层盖住（点了像没反应）。
-              这里跟 SpeedPopover 一样用模态内的相对定位浮层，避开 z 冲突。 */}
-          {/* hover 即展开（不是点击）。onMouseLeave 在指针离开按钮+菜单整体时才关闭：
-              菜单是 wrapper 的 DOM 子节点，且用 pt-2 桥接视觉间隙，避免移到菜单途中关掉。 */}
+          {/* No more 720p/1080p switch: export keeps the source video quality (default 1080p, no downsampling). */}
+          {/* Export dropdown: a self-built lightweight popover - the shared Base UI DropdownMenu portals its menu to
+          body with a fixed z-50 Positioner, which this dialog's z-[120] fully covers (clicks seem to do nothing).
+          Like SpeedPopover, use an in-modal relatively positioned floating layer here to avoid the z conflict. */}
+          {/* Expands on hover (not click). onMouseLeave only closes when the pointer leaves the button + menu as a whole:
+          the menu is a DOM child of the wrapper, and pt-2 bridges the visual gap so it does not close on the way to the menu. */}
           <div
             className="relative"
             onMouseEnter={() =>
@@ -1921,7 +1921,7 @@ export function VideoComposeModal({
                 </div>
               </div>
             )}
-            {/* 导出设置弹窗：锚定在「导出」按钮正下方（参考 libtv），非屏幕居中。 */}
+            {/* Export settings dialog: anchored directly below the "Export" button (like libtv), not screen-centered. */}
             {exportDialog.open && (
               <>
                 <div
@@ -2233,25 +2233,25 @@ export function VideoComposeModal({
               ))}
             </div>
 
-            {/* Playhead (draggable) —— 位置由 positionPlayhead 命令式写 transform，
-                不绑 React state，避免播放时被整树重渲染拖卡。translateX 走合成层，
-                不触发 layout。 */}
+            {/* Playhead (draggable) - position is written imperatively to transform by positionPlayhead,
+            not bound to React state, to avoid the whole tree re-rendering and stuttering during playback. translateX goes through the compositor layer
+            and does not trigger layout. */}
             <div
               ref={playheadElRef}
               className="pointer-events-none absolute top-0 bottom-0 left-0 z-20"
-              // transform 不放进 JSX style：否则播放时被节流的 state 重渲染会把竖线
-              // 拽回旧位置再被 onFrame 拉回，产生抖动。位置一律命令式设置。
+              // transform is not put into the JSX style: otherwise a throttled state re-render during playback would pull the playhead
+              // back to the old position and then onFrame would pull it forward again, causing jitter. The position is always set imperatively.
               style={{ willChange: "transform" }}
             >
-              {/* 可见的细竖线 */}
+              {/* Visible thin vertical line */}
               <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-primary" />
-              {/* 加宽的透明抓取条（触发块）：覆盖整条高度，居中对齐竖线，任意高度都能
-                  抓住拖动。仅 ~11px 宽，落在竖线上随它移动，对片段点击的影响极小。 */}
+              {/* Widened transparent grab bar (hit target): covers the full height, centered on the line, so it can be grabbed
+              at any height. Only ~11px wide, it sits on the line and moves with it, with minimal impact on clip clicks. */}
               <div
                 className="pointer-events-auto absolute inset-y-0 -left-[5px] w-[11px] cursor-ew-resize"
                 onPointerDown={startScrub}
               />
-              {/* 顶部圆点把手 */}
+              {/* Top dot handle */}
               <div
                 className="pointer-events-auto absolute -left-[5px] -top-1 h-3 w-3 cursor-ew-resize rounded-full bg-primary shadow"
                 onPointerDown={startScrub}
@@ -2355,8 +2355,8 @@ function Stepper({
 }
 
 /**
- * 变速 popover —— 倍数 / 时长 双向联动。倍速是唯一真值,时长 = 源裁剪长度 / 倍速,
- * 反过来调时长则 倍速 = 源长 / 时长。两个值都可拖滑块或点上下步进。
+ * Speed popover - multiplier / duration linked both ways. The speed is the single source of truth, duration = source trim length / speed,
+ * and adjusting duration in turn gives speed = source length / duration. Both values can be dragged on a slider or stepped up/down.
  */
 function SpeedPopover({
   speed,
@@ -2399,7 +2399,7 @@ function SpeedPopover({
         </button>
       </div>
 
-      {/* 倍数 */}
+      {/* Multiplier */}
       <div className="mb-3">
         <div className="mb-1 text-xs text-text-muted">
           {t("videoCompose.speedMultiplier")}
@@ -2429,7 +2429,7 @@ function SpeedPopover({
         </div>
       </div>
 
-      {/* 时长 */}
+      {/* Duration */}
       <div>
         <div className="mb-1 text-xs text-text-muted">
           {t("videoCompose.duration")}
@@ -2455,7 +2455,7 @@ function SpeedPopover({
 }
 
 /**
- * 音量 popover —— 0~100% 滑杆 + 一键静音。音量为 0 即静音；拖动滑杆离开 0 自动取消静音。
+ * Volume popover - 0~100% slider + one-click mute. Volume 0 means muted; dragging the slider away from 0 unmutes automatically.
  */
 function VolumePopover({
   volume,
@@ -2468,7 +2468,7 @@ function VolumePopover({
   volume: number;
   muted: boolean;
   onChange: (volume: number) => void;
-  /** 一次调节手势开始（指针按下 / 单次按键）时调用 —— 宿主借此只 push 一次历史。 */
+  /** Called when an adjustment gesture starts (pointer down / a single key press) - the host uses it to push history only once. */
   onGestureStart: () => void;
   onToggleMute: () => void;
   onClose: () => void;
@@ -2513,7 +2513,7 @@ function VolumePopover({
           value={effective}
           onPointerDown={onGestureStart}
           onKeyDown={(e) => {
-            // 键盘步进：每次独立按键算一个手势（按住连发只记一次）。
+            // Keyboard stepping: each independent key press counts as one gesture (holding the key for auto-repeat records only once).
             if (!e.repeat && e.key.startsWith("Arrow")) onGestureStart();
           }}
           onChange={(e) => onChange(Number(e.target.value))}
@@ -2532,7 +2532,7 @@ function VolumePopover({
  * trim range — the libtv-style filmstrip. Frames are captured once per source
  * and cached, so trimming only re-picks frames (no re-capture).
  */
-// libtv 风格「加载中」占位：斜纹底 + 左侧标签。缩略图 / 媒体未就绪时铺在片段上。
+// libtv-style "loading" placeholder: diagonal-stripe base + label on the left. Laid over the clip when thumbnails / media are not ready.
 function ClipLoadingStripe({ label }: { label: string }) {
   return (
     <div
@@ -2579,7 +2579,7 @@ function ClipFilmstrip({
     };
   }, [sourceUrl]);
 
-  // 缩略图还在抓取时，铺一层 libtv 风格的斜纹 + 「视频加载中…」占位。
+  // While thumbnails are still being captured, lay a libtv-style diagonal stripe + "Video loading..." placeholder.
   if (frames.length === 0) {
     return loading ? <ClipLoadingStripe label={t("videoCompose.clipLoading")} /> : null;
   }
@@ -2612,8 +2612,8 @@ function ClipFilmstrip({
 }
 
 /**
- * 音频片段波形 —— 解码源音频峰值并按裁剪窗口绘制到 canvas，随片段宽度/裁剪实时重绘。
- * 峰值带模块级缓存，同一 src 只解码一次。解码完成前铺底色（外层渐变）兜底。
+ * Audio clip waveform - decode the source audio peaks and draw them to a canvas by the trim window, redrawn live with clip width/trim.
+ * Peaks have a module-level cache, so the same src is decoded only once. Before decoding finishes the base color (outer gradient) is the fallback.
  */
 function ClipWaveform({
   sourceUrl,
@@ -2644,7 +2644,7 @@ function ClipWaveform({
         if (!cancelled) setPeaks(p);
       })
       .catch(() => {
-        // 解码失败（CORS / 格式不支持）→ 保持底色，不画波形。
+        // Decoding failed (CORS / unsupported format) -> keep the base color, draw no waveform.
       });
     return () => {
       cancelled = true;
@@ -2710,16 +2710,16 @@ function TrackRow({
   track: ComposeTrack;
   pxPerMs: number;
   selectedClipId: string | null;
-  /** 全部选中片段 id（高亮用）；多选时含多个。 */
+  /** All selected clip ids (for highlight); includes several when multi-selected. */
   selectedIds: ReadonlySet<string>;
   overlapClipIds: ReadonlySet<string>;
-  /** 正在被拖动的片段 id（用于在落点画半透明投影）。 */
+  /** Id of the clip being dragged (used to draw a semi-transparent projection at the drop spot). */
   draggingClipId: string | null;
-  /** 跟随指针的幽灵副本左缘（px）；仅当被拖片段在本轨时非 null。 */
+  /** Left edge of the ghost copy following the pointer (px); non-null only when the dragged clip is in this track. */
   ghostLeftPx: number | null;
-  /** 正在裁剪的片段 id（用于在其边缘浮裁剪后时长气泡）。 */
+  /** Id of the clip being trimmed (used to float the trimmed-duration bubble at its edge). */
   trimmingClipId: string | null;
-  /** 正在裁剪的边（start=左 / end=右），决定气泡贴哪一侧。 */
+  /** The edge being trimmed (start = left / end = right), deciding which side the bubble sticks to. */
   trimEdge: "start" | "end" | null;
   onStartClipMove: (
     event: ReactPointerEvent,
@@ -2739,16 +2739,16 @@ function TrackRow({
   const { t } = useTranslation();
   const laid = layoutTrack(track);
   const Icon = track.kind === "video" ? VideoIcon : Music;
-  // 跟随指针浮起的幽灵副本对应的片段（仅当被拖片段落在本轨时）。
+  // The clip for the ghost copy floating with the pointer (only when the dragged clip lands in this track).
   const ghostClip =
     ghostLeftPx != null && draggingClipId
       ? track.clips.find((c) => c.id === draggingClipId) ?? null
       : null;
-  // 拖动时落点槽位的起点（ms）—— 气泡显示「将落在 mm:ss」。
+  // Start of the drop slot while dragging (ms) - the bubble shows "will land at mm:ss".
   const ghostStartMs = ghostClip
     ? laid.find((l) => l.clip.id === draggingClipId)?.timelineStartMs ?? 0
     : 0;
-  // 正在裁剪的片段（在其边缘浮「裁剪后时长」气泡）。
+  // The clip being trimmed (floats a "trimmed duration" bubble at its edge).
   const trimLaid = trimmingClipId
     ? laid.find((l) => l.clip.id === trimmingClipId) ?? null
     : null;
@@ -2772,7 +2772,7 @@ function TrackRow({
           const isPrimary = clip.id === selectedClipId;
           const isSelected = isPrimary || selectedIds.has(clip.id);
           const isOverlapping = overlapClipIds.has(clip.id);
-          // 被拖片段：在它将落入的槽位画一道半透明青色「投影」，幽灵副本另在下方跟指针浮起。
+          // Dragged clip: draw a semi-transparent cyan "projection" at the slot it will land in; the ghost copy floats with the pointer below it.
           const isDragging = clip.id === draggingClipId;
           return (
             <div
@@ -2785,7 +2785,7 @@ function TrackRow({
                   : isOverlapping
                     ? "border-red-400 ring-2 ring-red-400/70"
                     : isSelected
-                      ? // 多选都描白边；主选中（驱动编辑面板）描得更亮一点。
+                      ? // Multi-selected clips all get a white outline; the primary selection (driving the edit panel) is outlined brighter.
                         `border-white ring-2 ${isPrimary ? "ring-white" : "ring-white/60"}`
                       : "border-border-dark"
               }`}
@@ -2822,7 +2822,7 @@ function TrackRow({
                     {formatTimecode(clipLengthMs(clip))}
                   </span>
                   <div className="flex items-center gap-0.5">
-                    {/* 视频和音频片段都可单独静音（视频静的是它自带的声轨）。 */}
+                    {/* Both video and audio clips can be muted individually (for video it mutes its own audio track). */}
                     <button
                       type="button"
                       onPointerDown={(e) => e.stopPropagation()}
@@ -2836,7 +2836,7 @@ function TrackRow({
                         <Volume2 className="h-3 w-3" />
                       )}
                     </button>
-                    {/* 移到新的一行（新建同种类轨道） */}
+                    {/* Move to a new row (create a new same-kind track) */}
                     <button
                       type="button"
                       onPointerDown={(e) => e.stopPropagation()}
@@ -2877,8 +2877,8 @@ function TrackRow({
           );
         })}
 
-        {/* 拖动幽灵副本：跟随指针浮起（轻微抬升 + 阴影 + 高亮描边），与落点的青色投影呼应，
-            清晰表达「这段正在被拖动」。纯展示，pointer-events 全关，不参与命中。 */}
+        {/* Drag ghost copy: floats with the pointer (slight lift + shadow + highlighted outline), echoing the cyan projection at the drop spot,
+        clearly showing "this clip is being dragged". Display only, all pointer-events off, takes no part in hit-testing. */}
         {ghostClip && ghostLeftPx != null && (
           <div
             className="pointer-events-none absolute top-0 z-30 h-16 -translate-y-1.5 overflow-hidden rounded-md border border-white/90 bg-bg-dark opacity-95 shadow-[0_10px_24px_rgba(0,0,0,0.5)] ring-2 ring-cyan-300/60"
@@ -2907,7 +2907,7 @@ function TrackRow({
           </div>
         )}
 
-        {/* 拖动时间气泡：落点起始时间码，跟着幽灵副本走。 */}
+        {/* Drag time bubble: the timecode of the drop start, following the ghost copy. */}
         {ghostClip && ghostLeftPx != null && (
           <div
             className="pointer-events-none absolute top-0 z-40 -translate-y-[18px] rounded bg-cyan-500/90 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-white shadow"
@@ -2917,7 +2917,7 @@ function TrackRow({
           </div>
         )}
 
-        {/* 裁剪时长气泡：贴在被裁边缘，实时显示裁剪后的片段时长。 */}
+        {/* Trim duration bubble: sticks to the trimmed edge and shows the trimmed clip duration live. */}
         {trimLaid && (
           <div
             className="pointer-events-none absolute top-0 z-40 rounded bg-cyan-500/90 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-white shadow"

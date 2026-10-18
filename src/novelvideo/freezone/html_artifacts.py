@@ -554,7 +554,7 @@ class _PortableHTML(HTMLParser):
     def media_path(self, value: str):
         parts = urlsplit(value)
         if not value or parts.scheme or parts.netloc or '\\' in value:
-            raise ValueError('不支持的媒体资源（仅支持当前项目媒体或内嵌图片）：' + value)
+            raise ValueError('Unsupported media resource (only current-project media or inline images are supported): ' + value)
         path = unquote(parts.path)
         if path.startswith('/api/v1/projects/'):
             prefix = f'/api/v1/projects/{self.store.project_id}/media/'
@@ -588,10 +588,10 @@ class _PortableHTML(HTMLParser):
     def navigation(self, value: str) -> str:
         value = value.strip()
         if any(ord(char) < 32 or ord(char) == 127 for char in value) or '\\' in value:
-            raise ValueError('链接包含不支持的控制字符')
+            raise ValueError('The link contains unsupported control characters')
         if value.startswith('#') or urlsplit(value).scheme.lower() in {'http', 'https', 'mailto', 'tel'}:
             return value
-        raise ValueError('不支持的跳转链接：' + value)
+        raise ValueError('Unsupported redirect link: ' + value)
 
     def handle_starttag(self, tag, attrs):
         if tag in {'base', 'iframe', 'object', 'embed', 'link'}:

@@ -74,7 +74,7 @@ import type { PushResult, PushTarget } from "@/api/push";
 import type { MainlineContext } from "@/features/freezone/context/mainlineContext";
 import type { DirectorWorldSource } from "@/features/viewer-kit/three-d/directorManifest";
 
-/** 把侧栏资产映射成可与画布节点匹配的拖拽媒体类型。 */
+/** Map sidebar assets to a drag media type that can match canvas nodes. */
 function assetDropMediaType(asset: LibraryAsset): DropMediaType | null {
   if (isThreeDAsset(asset)) return "model";
   if (asset.mediaType === "image") return "image";
@@ -123,7 +123,7 @@ export function directorControlBundleFromAssetSource(
   };
 }
 
-/** 拖拽替换的协调上下文,供深层 AssetCard 消费(避免逐层透传)。 */
+/** Coordination context for drag-to-replace, consumed by deep AssetCards (avoids prop drilling). */
 interface AssetReplaceContextValue {
   confirmingAssetId: string | null;
   busyAssetId: string | null;
@@ -164,7 +164,7 @@ interface LibraryAsset {
   source: Record<string, unknown>;
   mainlineContext?: MainlineContext[];
   beatContext?: MainlineContext & { episode: number; beat: number };
-  /** 缩略图。3GS 包本身没法直接渲染，借用同 scene_id 的 scene 图当封面。 */
+  /** Thumbnail. A 3GS package cannot be rendered directly, so borrow the scene image with the same scene_id as the cover. */
   coverUrl?: string;
 }
 
@@ -181,7 +181,7 @@ const BEAT_SCOPED_LIBRARY_ASSET_ROLES = new Set([
 
 const BEAT_SCOPED_LIBRARY_ASSET_KINDS = new Set(["video", "audio"]);
 
-/** library = 主线资产，canvases = 项目画布，assets = 项目级资产库（只读浏览）。 */
+/** library = mainline assets, canvases = project canvases, assets = project-level asset library (read-only browsing). */
 type PanelTab = "library" | "canvases" | "assets";
 
 interface AssetLibraryPanelProps {
@@ -189,23 +189,23 @@ interface AssetLibraryPanelProps {
   metadata: Record<string, unknown> | null;
   collapsed?: boolean;
   onCollapsedChange?: (next: boolean) => void;
-  /** 拖拽节点替换某条素材完成(或失败)后回调:成功时携带 target/result。 */
+  /** Callback after a drag-node replacement of an asset completes (or fails): on success it carries target/result. */
   onReplaced?: (
     payload: { target: PushTarget; result: PushResult } | null,
     message: string,
   ) => void;
-  /** 当前画布 id —— 用于「画布」tab 高亮当前项。 */
+  /** Current canvas id - used by the "Canvas" tab to highlight the current item. */
   currentCanvasId: string;
-  /** 主线 preset 画布的「同步主线视图」回调；只在 preset 画布下显示按钮。 */
+  /** Callback for "sync mainline view" on a mainline preset canvas; the button only shows on preset canvases. */
   onRestoreMainlineDefault?: () => Promise<void> | void;
-  /** 外部提交成功后自增，通知素材库重拉项目资产。 */
+  /** Incremented after an external commit succeeds, notifying the asset library to refetch project assets. */
   reloadToken?: number;
 }
 
 const FLOATING_PANEL_CONTROL_SURFACE_CLASS =
   "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/[0.10] bg-[rgb(var(--surface-rgb)/0.78)] shadow-[0_10px_28px_rgba(0,0,0,0.30)] backdrop-blur-[20px] transition-[background-color,border-color,box-shadow] duration-200 group-hover/btn:border-white/[0.16] group-hover/btn:bg-[rgb(var(--surface-rgb)/0.86)]";
 
-/* ─────────────────── 资产缩略图卡片 ─────────────────── */
+/* ─────────────────── Asset thumbnail card ─────────────────── */
 
 function MiniThumb({
   asset,
@@ -230,7 +230,7 @@ function MiniThumb({
     Boolean(thumbUrl) &&
     (!isThreeD || Boolean(asset.coverUrl)) &&
     (!isVideo || Boolean(asset.coverUrl));
-  // 视频没有后端封面时，用 <video> 抓首帧当缩略图（#t 强制浏览器渲染一帧）。
+  // When a video has no backend cover, grab the first frame with <video> as the thumbnail (#t forces the browser to render a frame).
   const videoPosterUrl =
     isVideo && !imageFailed && !asset.coverUrl && asset.url
       ? `${withImageCacheBust(asset.url, cacheToken)}#t=0.1`
@@ -309,7 +309,7 @@ function MiniThumb({
   );
 }
 
-/* ─────────────────── Beat 行（可折叠） ─────────────────── */
+/* ─────────────────── Beat row (collapsible) ─────────────────── */
 
 const A = "freezone.assetPanel";
 
@@ -411,7 +411,7 @@ function BeatRow({
   );
 }
 
-/* ─────────────────── 剧集（可折叠） ─────────────────── */
+/* ─────────────────── Episode (collapsible) ─────────────────── */
 
 function EpisodeSection({
   episode,
@@ -476,7 +476,7 @@ function EpisodeSection({
   );
 }
 
-/* ─────────────────── Beat 面板（新设计） ─────────────────── */
+/* ─────────────────── Beat panel (new design) ─────────────────── */
 
 function DefaultCanvasBeatPanel({
   beatContext,
@@ -519,7 +519,7 @@ function DefaultCanvasBeatPanel({
   );
 }
 
-/* ─────────────────── 主面板 ─────────────────── */
+/* ─────────────────── Main panel ─────────────────── */
 
 export function AssetLibraryPanel({
   project,
@@ -547,9 +547,9 @@ export function AssetLibraryPanel({
   ];
 
   const [panelTab, setPanelTab] = useState<PanelTab>("canvases");
-  // 后台可以按用户组关掉「虾集(主线)」;关掉后左侧的「主线资产」tab 也要一起隐藏
-  //(「项目画布」保留),否则顶部导航没了虾集、这里却还能翻出主线的资产。
-  // 加载中先按可用处理,与顶部导航一致。
+  // The backend can turn off "Market (mainline)" per user group; when off, the "Mainline Assets" tab on the left must be hidden too
+  // (the "Project canvases" tab stays), otherwise the top nav has no Market but the mainline assets could still be browsed here.
+  // While loading, treat it as available, consistent with the top nav.
   const productSurfaces = useProductSurfaces();
   const mainlineAvailable =
     surfaceAccess(productSurfaces.data, "mainline")?.available ?? productSurfaces.isPending;
@@ -565,12 +565,12 @@ export function AssetLibraryPanel({
   ];
   const [tab, setTab] = useState<AssetTab>("beat");
   const [query, setQuery] = useState("");
-  // 侧栏的「资产库」只读，写操作都在弹窗里；tab 条右端常驻一个入口，不管当前停在
-  // 哪个 tab 都能打开。
+  // The sidebar "Asset Library" is read-only and all writes happen in the dialog; one entry stays at the right end of the tab bar
+  // so it can be opened whichever tab is current.
   const [assetManagerOpen, setAssetManagerOpen] = useState(false);
   const queryClient = useQueryClient();
   const hasPresetLabel = hasLegacyPresetCanvasMetadata(metadata);
-  // 替换/提交成功后自增,用于强制重新拉取素材列表。
+  // Incremented after a replace/commit succeeds, to force refetching the asset list.
   const [internalReloadToken, setInternalReloadToken] = useState(0);
   const [internalCollapsed, setInternalCollapsed] = useState(true);
   const collapsed = collapsedProp ?? internalCollapsed;
@@ -641,8 +641,8 @@ export function AssetLibraryPanel({
 
   const assets = useMemo(
     () => buildLibraryAssets({ project, metadata, projectAssets, beatContext, canvasKind }),
-    // 素材 label 是在这里拼好的（见 normalizeMainlineAssetLabel / 导演世界打包），
-    // 所以切语言后要重算，否则列表还挂着上一门语言的标题。
+    // Asset labels are assembled here (see normalizeMainlineAssetLabel / director world packaging),
+    // so recompute after a language switch, otherwise the list keeps titles in the previous language.
     [project, metadata, projectAssets, beatContext, canvasKind, i18n.language],
   );
   const assetPreviewCacheToken = `${internalReloadToken}:${reloadToken ?? 0}`;
@@ -663,7 +663,7 @@ export function AssetLibraryPanel({
     });
   }, [assets, query, tab]);
 
-  // —— 拖拽节点替换素材 ——
+  // -- Drag a node to replace an asset --
   const pendingReplace = useAssetDropStore((s) => s.pendingReplace);
   const clearPendingReplace = useAssetDropStore((s) => s.clearPendingReplace);
   const [replaceBusyId, setReplaceBusyId] = useState<string | null>(null);
@@ -680,8 +680,8 @@ export function AssetLibraryPanel({
       const target = assetToPushTarget(asset.source);
       if (!target) {
         const src = asset.source as Record<string, unknown>;
-        // 开发者日志，不进界面
-        console.warn("[freezone] 无法推断替换目标", asset.label, asset.source); // i18n-exempt
+        // Developer log, not shown in the UI
+        console.warn("[freezone] cannot infer replacement target", asset.label, asset.source); // i18n-exempt
         onReplaced?.(
           null,
           t(`${A}.replaceTargetUnknown`, {
@@ -719,7 +719,7 @@ export function AssetLibraryPanel({
       setReplaceBusyId(asset.id);
       promoteToAsset(project, sourceUrl, target, { mark_stale: false })
         .then((result) => {
-          // 重新拉取素材列表,让左侧缩略图同步成最新资产。
+          // Refetch the asset list so the left thumbnails sync to the latest assets.
           setInternalReloadToken((t) => t + 1);
           onReplaced?.({ target, result }, t(`${A}.replaceDone`, { label: asset.label }));
         })
@@ -755,8 +755,8 @@ export function AssetLibraryPanel({
       <aside
         className="pointer-events-none absolute inset-y-3 left-3 z-30 overflow-visible"
       >
-        {/* 面板外控制栏：保留 main 的折叠/资产管理入口，同时让开 Freezone
-            左上角固定的「工作流/故事板」视图切换开关。 */}
+        {/* Control bar outside the panel: keeps main's collapse/asset-management entries, and also leaves room for the Freezone
+            top-left fixed "Workflow/Storyboard" view toggle. */}
         <div
           className="pointer-events-auto absolute top-[52px] z-30 flex flex-col gap-2 transition-[left] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           style={{ left: collapsed ? 16 : 316 }}
@@ -806,19 +806,19 @@ export function AssetLibraryPanel({
           </div>
         </div>
 
-        {/* 画布内悬浮的玻璃面板：四周留出画布间距，收起时连同左侧间距完整滑出。 */}
+        {/* Glass panel floating over the canvas: spaced from the canvas edges, and slides out completely with the left spacing when collapsed. */}
         <div
           className={`flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--ui-radius-lg)] border border-white/[0.10] bg-[rgb(var(--surface-rgb)/0.78)] shadow-[0_18px_52px_rgba(0,0,0,0.34)] backdrop-blur-[20px] transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
             collapsed
               ? "pointer-events-none -translate-x-[calc(100%+12px)]"
               : "pointer-events-auto translate-x-0"
           }`}
-          // marginTop 56：同上，给左上角那颗视图切换开关让出顶部窄带（把手在 52，卡片
-          // 比它再低 4px，沿用原来「把手比卡片高 4px」的相对关系）。
+          // marginTop 56: same as above, leaves the top strip for the top-left view toggle (handle at 52, cards
+          // 4px lower than it, keeping the original relative relation that the handle is 4px higher than the cards).
           style={{ width: 288, marginLeft: 16, marginTop: 56, marginBottom: 16, height: 'calc(100% - 72px)' }}
         >
-          {/* ─ 面板 Tab 栏 ── 与下面的画布条同一种下划线 tab，后续加新 tab 只往
-              panelTabItems 里塞一项即可 */}
+          {/* - Panel tab bar -- the same underline tabs as the canvas strip below; to add a new tab later just
+              add one item to panelTabItems */}
           <Tabs
             value={panelTab}
             onValueChange={(value) => setPanelTab(value as PanelTab)}
@@ -830,7 +830,7 @@ export function AssetLibraryPanel({
                   <TabsTrigger
                     key={item.id}
                     value={item.id}
-                    // 文本起点与下方画布选择器对齐；下划线只覆盖文字宽度，颜色走语义主色。
+                    // Text start aligns with the canvas picker below; the underline only covers the text width, and the color uses the semantic primary.
                     className="h-full flex-none rounded-none px-0.5 text-xs text-white/45 after:inset-x-0.5 after:!h-px after:bg-primary hover:text-white/75 data-active:text-white dark:text-white/45 dark:hover:text-white/75 dark:data-active:text-white group-data-horizontal/tabs:after:bottom-0"
                   >
                     {item.label}
@@ -842,7 +842,7 @@ export function AssetLibraryPanel({
 
           {panelTab === "library" && mainlineAvailable ? (
             <>
-              {/* ── 分类标签 + 搜索（固定头部） ── */}
+              {/* -- Category tags + search (fixed header) -- */}
               <div className="sticky top-0 z-10">
                 <div className="ui-scrollbar-hidden flex items-center gap-4 overflow-x-auto px-2 pt-2.5 pb-2">
                   {tabCounts.map((item) => (
@@ -875,7 +875,7 @@ export function AssetLibraryPanel({
                 </div>
               </div>
 
-              {/* ─ 列表内容 ── */}
+              {/* - List content -- */}
               {error ? (
                 <div className="mx-3 mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
                   {t(`${A}.loadFailed`, { error })}
@@ -924,8 +924,8 @@ export function AssetLibraryPanel({
         </div>
       </aside>
 
-      {/* 纯管理态：卡片进入详情并承接单项操作，不复用节点选材的勾选/确认语义。
-          关掉后让侧栏重拉，新建文件夹、上传或删除会立即反映出来。 */}
+      {/* Management-only mode: the card enters its detail and takes single-item actions, without reusing the checkbox/confirm semantics of node asset picking.
+          After closing, the sidebar refetches so new folders, uploads or deletions show immediately. */}
       <AssetLibraryModal
         mode="manage"
         open={assetManagerOpen}
@@ -946,7 +946,7 @@ export function AssetLibraryPanel({
   );
 }
 
-/* ─────────────────── 辅助组件 ─────────────────── */
+/* ─────────────────── Helper components ─────────────────── */
 
 function BeatContextPanel({
   metadata,
@@ -1040,7 +1040,7 @@ function PresetBeatPanel({
   );
 }
 
-/* ─────────────────── AssetCard（非 beat tab 用） ─────────────────── */
+/* ─────────────────── AssetCard (for non-beat tabs) ─────────────────── */
 
 function AssetCard({
   asset,
@@ -1064,7 +1064,7 @@ function AssetCard({
     Boolean(thumbUrl) &&
     (!isThreeD || Boolean(asset.coverUrl)) &&
     (!isVideo || Boolean(asset.coverUrl));
-  // 视频没有后端封面时，用 <video> 抓首帧当缩略图。
+  // When a video has no backend cover, grab the first frame with <video> as the thumbnail.
   const videoPosterUrl =
     isVideo && !asset.coverUrl && asset.url
       ? `${withImageCacheBust(asset.url, cacheToken)}#t=0.1`
@@ -1268,7 +1268,7 @@ function createAssetDragImage(source: HTMLElement, asset: LibraryAsset): HTMLEle
   return preview;
 }
 
-/* ─────────────────── 纯逻辑函数（与原版一致） ─────────────────── */
+/* ─────────────────── Pure logic functions (same as the original) ─────────────────── */
 
 function buildLibraryAssets({
   project,
@@ -1686,8 +1686,8 @@ function fromFreezoneAsset(
     url: asset.url,
     director_control_bundle: asset.director_control_bundle ?? meta.director_control_bundle,
   });
-  // 后端在 v2 把 3GS 归到 scenes，但 FreezoneProjectAsset.tab 仍保留 "director" 以兼容旧
-  // payload —— 这里前端兜底归一化，避免遗留路径塞进已删除的 tab。
+  // In v2 the backend files 3GS under scenes, but FreezoneProjectAsset.tab still keeps "director" for compatibility with old
+  // payloads - the frontend normalizes here as a fallback so legacy paths do not land in a deleted tab.
   const normalizedTab = tabForFreezoneAsset(asset);
   return {
     id: asset.id || asset.rel_path || (asset.url as string),
@@ -1715,7 +1715,7 @@ function fromFreezoneAsset(
       from_beat_context: flags.fromBeatContext,
       mainline_context: asset.mainline_context,
       ...(directorControlBundle ? { director_control_bundle: directorControlBundle } : {}),
-      // 后端给出的 canonical 提交目标与可推送标记;assetToPushTarget 优先用 slot_target。
+      // The canonical commit target and pushable flag given by the backend; assetToPushTarget prefers slot_target.
       slot_target: asset.slot_target ?? undefined,
       pushable: asset.pushable,
     },
@@ -1774,35 +1774,12 @@ function fromPresetReference(ref: PresetReference): LibraryAsset {
 }
 
 /**
- * 后端下发的资产 label 里还留着「成图/首帧」这一代旧措辞，这里统一改口成「分镜」。
- * 被搜的是后端字符串本身，不是界面文案，所以这几处保持中文；等后端也改成稳定 code
- * 之后整个函数就可以撤掉。
+ * The backend now sends stable asset labels, so only the role-specific current-frame label is localized here;
+ * any other label is passed through unchanged.
  */
 function normalizeMainlineAssetLabel(label: string, role: string | undefined): string {
   if (role === "current_frame") return i18n.t(`${A}.currentFrame`);
-  // i18n-exempt-start
-  return replaceText(
-    replaceText(
-      replaceText(
-        replaceText(
-          replaceText(String(label || ""), "成图/首帧", "分镜"),
-          "成图/分镜",
-          "分镜",
-        ),
-        "成图首帧",
-        "分镜",
-      ),
-      "当前成图",
-      "当前分镜",
-    ),
-    "成图候选",
-    "分镜候选",
-  );
-  // i18n-exempt-end
-}
-
-function replaceText(value: string, search: string, replacement: string): string {
-  return value.split(search).join(replacement);
+  return String(label || "");
 }
 
 function normalizeMediaType(
@@ -2007,7 +1984,7 @@ function isThreeDAsset(asset: LibraryAsset): boolean {
   return false;
 }
 
-/** 视口中心在画布坐标系里的位置；拿不到视口尺寸时退回原点附近的固定点。 */
+/** Viewport center in canvas coordinates; falls back to a fixed point near the origin when the viewport size is unavailable. */
 function viewportCenter(
   store: ReturnType<typeof useCanvasStore.getState>,
 ): { x: number; y: number } {
@@ -2122,15 +2099,15 @@ function assetToDragPayload(asset: LibraryAsset): CanvasAssetDragPayload | null 
   return { kind: "image", label: asset.label, url: asset.url, aspectRatio: asset.aspectRatio, source: sourceMeta, mainlineContext: mainline };
 }
 
-/** 资产库条目 → 画布节点 payload。库里只有图/视频/音频三种，没有 3D。 */
+/** Asset library entry -> canvas node payload. The library only has image/video/audio, no 3D. */
 function libraryItemToDragPayload(entry: LibraryItem): CanvasAssetDragPayload | null {
   if (!entry.url) return null;
   return {
     kind: entry.media,
     label: entry.name,
     url: entry.url,
-    // 溯源信息按需最小化：够 commit / 替换时认出「这是资产库来的」即可，不把整条
-    // 库记录塞进节点(里面还带着 image_urls 之类会过期的字段)。
+    // Keep provenance minimal: enough for commit / replace to recognize "this came from the asset library", without stuffing the whole
+    // library record into the node (it also carries fields like image_urls that expire).
     source: {
       origin: "asset_library",
       asset_library_id: entry.id,
@@ -2140,12 +2117,12 @@ function libraryItemToDragPayload(entry: LibraryItem): CanvasAssetDragPayload | 
 }
 
 /**
- * 量素材的真实宽高比，给不出就返回 null。
+ * Measure the asset's real aspect ratio; return null if it cannot be determined.
  *
- * 资产库的条目只存了 URL，没有尺寸；不带 aspectRatio 建出来的图片/视频节点一律
- * 按 1:1 铺开，宽图就会上下留两条黑边（节点内是 object-contain）。
+ * Asset library entries only store a URL, no size; image/video nodes created without aspectRatio all lay out
+ * at 1:1, so wide images get black bars above and below (inside the node it is object-contain).
  *
- * 加载失败或太慢都当量不出来处理——发到画布不该被一张坏图卡住。
+ * A load failure or too slow counts as not measurable - sending to the canvas should not be stuck by one bad image.
  */
 function measureAspectRatio(payload: CanvasAssetDragPayload): Promise<string | null> {
   if (payload.kind !== "image" && payload.kind !== "video") return Promise.resolve(null);
@@ -2181,10 +2158,10 @@ function measureAspectRatio(payload: CanvasAssetDragPayload): Promise<string | n
 }
 
 /**
- * 节点建出来大概多大——只用来排网格，不写进节点。
+ * Roughly how big the node will be once built - only used to lay out the grid, not written into the node.
  *
- * 图片节点的尺寸跟着比例走（最小短边 300），视频和音频节点是各自组件里的固定
- * 尺寸，这里跟着写一份常量即可：排版差几像素没关系，别让节点压在一起就行。
+ * Image node size follows the ratio (minimum short side 300); video and audio nodes have fixed sizes in their own
+ * components, so a constant copy here is enough: a few pixels of layout error don't matter, just don't let nodes overlap.
  */
 function spawnedNodeSize(payload: CanvasAssetDragPayload): { width: number; height: number } {
   if (payload.kind === "audio") return { width: 480, height: 210 };
@@ -2196,13 +2173,13 @@ function spawnedNodeSize(payload: CanvasAssetDragPayload): { width: number; heig
 }
 
 /**
- * 把整个文件夹发到画布：素材在视口中心铺成网格，再编成一个组，组名 = 文件夹名。
+ * Send a whole folder to the canvas: lay the assets out as a grid at the viewport center, then make them a group named after the folder.
  *
- * 不复用 addAssetToCanvas 的逐个落位——那个函数每次都拿同一份 store 快照做碰撞
- * 检测，连发多个时新节点互相看不见，会叠在一起。这里一次算好整块网格。
+ * Do not reuse addAssetToCanvas's one-by-one placement - that function does collision detection against the same store
+ * snapshot every time, so when sending several in a row the new nodes cannot see each other and pile up. Here the whole grid is computed at once.
  *
- * 网格按每个节点的实际尺寸排（列宽取该列最宽、行高取该行最高），因为节点大小是
- * 跟着图片比例走的，用一个固定格子会让竖图互相压住。
+ * The grid is laid out by each node's actual size (column width is the widest in the column, row height the tallest in the row), because node size
+ * follows the image ratio, and a fixed cell would make portrait images overlap.
  */
 async function sendAssetFolderToCanvas(folder: AssetFolder): Promise<void> {
   const payloads = folder.items
@@ -2249,7 +2226,7 @@ async function sendAssetFolderToCanvas(folder: AssetFolder): Promise<void> {
     return spawnAssetNode(store, payload, { x, y });
   });
 
-  // groupNodes 要求 ≥2 个成员，单个素材成不了组、保持独立节点即可。
+  // groupNodes requires >=2 members; a single asset cannot form a group and stays an independent node.
   const groupId =
     ids.length >= 2 ? store.groupNodes(ids, { label: folder.label }) : null;
   store.requestFocusNode(groupId ?? ids[0]);
@@ -2257,10 +2234,10 @@ async function sendAssetFolderToCanvas(folder: AssetFolder): Promise<void> {
 }
 
 /**
- * 把单条资产库素材发到画布：量一次真实比例，落在视口中心（带碰撞避让），然后聚焦。
+ * Send a single asset library item to the canvas: measure the real ratio once, land at the viewport center (with collision avoidance), then focus.
  *
- * 不复用 sendAssetFolderToCanvas —— 那个是整柜铺网格再编组，单条走同一条路会得到
- * 一个只有一个成员的组。
+ * Do not reuse sendAssetFolderToCanvas - that lays a whole cabinet out as a grid then groups it, and a single item
+ * going the same path would produce a group with one member.
  */
 async function sendLibraryItemToCanvas(entry: LibraryItem): Promise<void> {
   const payload = libraryItemToDragPayload(entry);

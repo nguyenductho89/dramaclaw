@@ -15,8 +15,8 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。chip 是脱离 React 的
-// 裸 DOM，拿不到 useTranslation 的 t，只能在模块级取。
+// This uses the default i18next instance (the one `@/i18n` initializes). Chips are bare DOM outside
+// React and cannot get the `t` from useTranslation, so it can only be taken at module level.
 import i18n from 'i18next';
 
 
@@ -30,16 +30,16 @@ export interface MentionCandidate {
   imageUrl: string;
   index: number;
   /**
-   * 视频引用的源地址。没有静态首帧图（imageUrl 为空）时，缩略图回退到一个
-   * muted 静止 <video preload="metadata">，由浏览器自动定位首帧——与引用行
-   * 的视频 chip 同一套渲染。
+   * Source URL of a video reference. When there is no static first-frame image (imageUrl is empty), the thumbnail falls back to a
+   * muted still <video preload="metadata">, whose first frame the browser positions automatically — the same rendering as the video chip
+   * in the reference row.
    */
   videoUrl?: string;
-  /** 音频引用的源地址。音频没有缩略图，chip 改为可点击播放的 ▶ 按钮。 */
+  /** Source URL of an audio reference. Audio has no thumbnail; the chip becomes a clickable ▶ play button. */
   audioUrl?: string;
   /**
-   * 仅展示用的文件名（音频 chip 显示为 `音频_<displayName>`）。序列化仍用
-   * `name`（含编号），传给后端的 `@音频N` 不变。
+   * File name for display only (an audio chip shows as `audio_<displayName>`). Serialization still uses
+   * `name` (with the number); the `@audio1` sent to the backend is unchanged.
    */
   displayName?: string | null;
 }
@@ -54,31 +54,31 @@ interface PromptMentionEditorProps {
   onCompositionEnd?: (next: string) => void;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   /**
-   * 钉在正文最前面的**内联原子块**（故事板的功能 chip）。渲染进 contenteditable
-   * 里一个 `contenteditable=false` 的宿主 span（React portal），因此它在视觉和光标
-   * 行为上就是输入框里的一个「字符」：文字接在它后面同一行流动，光标能越过它，
-   * 在它后面按退格就把它删掉——删除动作本身不改 prompt 文本，只回调
-   * `onLeadingChipDelete` 让宿主去改自己的状态。不传则整套逻辑不生效。
+   * An **inline atomic block** pinned at the very start of the body (the storyboard's feature chip). It renders into a
+   * `contenteditable=false` host span inside the contenteditable (React portal), so visually and in caret
+   * behavior it is a single "character" in the input: text flows after it on the same line, the caret can cross it,
+   * and pressing backspace after it deletes it — the deletion itself does not change the prompt text, it only calls back
+   * `onLeadingChipDelete` so the host updates its own state. If not passed, none of this logic takes effect.
    */
   leadingChip?: ReactNode;
   onLeadingChipDelete?: () => void;
   /**
-   * 打开替换选单时按需读取当前画布中尚未引用的素材，避免所有宿主节点长期订阅
-   * 整个 nodes 数组。
+   * When the replace menu opens, read on demand the assets on the canvas not yet referenced, so that no host node long-term subscribes to
+   * the whole nodes array.
    */
   getMaterials?: () => readonly ReferenceMaterialOption[];
-  /** 把画布素材接成本节点引用；返回 false 表示未建立引用。 */
+  /** Connect a canvas asset as this node's reference; returning false means no reference was established. */
   onAttachMaterial?: (nodeId: string) => boolean;
 }
 
 export interface PromptMentionEditorHandle {
   insertTextAtCursor: (text: string) => void;
   /**
-   * 光标处插入一个 @ 引用 chip（引用行上的 @ 按钮走这条）。
+   * Insert an @ reference chip at the caret (the @ button on the reference row goes through this).
    *
-   * 不走 insertTextAtCursor('@图片1 ')：那是纯文本，序列化虽然一样，但要等到下一次
-   * 外部 value 变化才会被 rebuildDOM 认成 chip——commitChange 刚把新串写进
-   * lastSerializedRef，回流时 sync 那步会直接 return。用户看到的是一串裸文字。
+   * Does not use insertTextAtCursor('@image1 '): that is plain text, and although the serialization is the same, it is only recognized as a chip by rebuildDOM on the next
+   * external value change — commitChange has just written the new string into
+   * lastSerializedRef, so the sync step returns directly on reflow. The user sees a string of bare text.
    */
   insertMentionAtCursor: (candidate: MentionCandidate) => void;
   focus: () => void;
@@ -86,7 +86,7 @@ export interface PromptMentionEditorHandle {
 
 // Visible row count before the popover starts scrolling. The full filtered
 // list is still rendered — see the `max-h` + `overflow-y-auto` on the
-// container below — so callers with >6 references (e.g. video 图片参考 takes
+// container below — so callers with >6 references (e.g. video image-reference takes
 // up to 9) can still pick a later one.
 const POPOVER_MAX_VISIBLE = 6;
 // Each row is ~40px (py-1.5 + h-7 image + 1px borders). Computed once so the
@@ -99,25 +99,25 @@ function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// 前端展示用：把 mention 的「图片1 / 音频2」去掉尾号，统一显示为「图片 / 音频」。
-// 仅影响显示——序列化仍用 dataset.name（含编号），传给后端的 prompt 保持 @图片N。
+// Frontend display only: strip the trailing number from a mention's "image1 / audio2" so it shows uniformly as "image / audio".
+// Affects display only — serialization still uses dataset.name (with the number), and the prompt sent to the backend keeps @imageN.
 export function mentionDisplayLabel(name: string): string {
   return name.replace(/\d+$/, '') || name;
 }
 
-// 音频和文本 chip 带上文件/节点显示名（图片/视频有缩略图，无需名称辅助识别）。
-// 序列化不受影响（仍走 dataset.name）。这是「完整」标签，用于 title / 候选列表。
+// Audio and text chips carry the file/node display name (images/videos have thumbnails and need no name to be identified).
+// Serialization is unaffected (still dataset.name). This is the "full" label, used for title / candidate list.
 export function mentionChipLabel(candidate: MentionCandidate): string {
   const base = mentionDisplayLabel(candidate.name);
   const file = candidate.displayName?.trim();
-  if ((candidate.audioUrl || candidate.name.startsWith('文本')) && file) { // i18n-exempt -- canonical @mention protocol token
+  if ((candidate.audioUrl || candidate.name.startsWith('text')) && file) {
     return `${base}_${file}`;
   }
   return base;
 }
 
-// chip 内可见标签最多 10 个字符，超出用省略号；完整名走 title。按码点切，避免把
-// 代理对（emoji 等）切坏。
+// The visible label inside a chip is at most 10 characters, with an ellipsis beyond that; the full name goes in title. Cut by code point to avoid
+// breaking surrogate pairs (emoji etc.).
 const CHIP_LABEL_MAX_CHARS = 10;
 
 export function truncateChipLabel(text: string, max = CHIP_LABEL_MAX_CHARS): string {
@@ -144,7 +144,7 @@ function buildChipElement(candidate: MentionCandidate): HTMLElement {
     span.appendChild(img);
   } else if (candidate.videoUrl) {
     span.title = i18n.t('canvas.mentionChip.doubleClickReplace');
-    // 没有静态首帧图时，用 muted 静止 <video> 显示首帧——与候选行 / 引用行一致。
+    // With no static first-frame image, show the first frame with a muted still <video> — consistent with the candidate rows / reference row.
     const video = document.createElement('video');
     video.src = candidate.videoUrl;
     video.muted = true;
@@ -153,8 +153,8 @@ function buildChipElement(candidate: MentionCandidate): HTMLElement {
     video.draggable = false;
     span.appendChild(video);
   } else if (candidate.audioUrl) {
-    // 音频没有缩略图：放一个可点击的 ▶/⏸ 播放按钮（::before 画图标，播放态由
-    // chip 上的 data-audio-playing 切换）。hover 时 title 给出完整文件名。
+    // Audio has no thumbnail: place a clickable ▶/⏸ play button (the icon is drawn by ::before; the playing state is toggled by
+    // data-audio-playing on the chip). On hover, title gives the full file name.
     span.classList.add('mention-chip-audio');
     span.title = i18n.t('canvas.mentionChip.clickToPlay', { label });
     const play = document.createElement('span');
@@ -169,9 +169,9 @@ function buildChipElement(candidate: MentionCandidate): HTMLElement {
   labelEl.className = 'mention-chip-label';
   labelEl.textContent = truncateChipLabel(label);
   span.appendChild(labelEl);
-  // hover 时顶掉缩略图的替换按钮。「这处 @ 可以换成别的素材」以前只有双击能发现，
-  // 等于没有；图片 / 视频把它放在缩略图的位置（CSS 里 hover 互换），音频那格已经
-  // 被播放键占着，就挂到标签后面。
+  // A replace button that takes over the thumbnail on hover. "This @ can be swapped for another asset" used to be discoverable only by
+  // double-click, which is as good as absent; for images / videos it sits where the thumbnail is (swapped on hover in CSS), while the audio cell is
+  // already taken by the play button, so it hangs after the label.
   const swap = document.createElement('span');
   swap.className = 'mention-chip-swap';
   swap.dataset.mentionSwap = '';
@@ -288,7 +288,7 @@ function serialize(root: HTMLElement): string {
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as HTMLElement;
-    // 前置 chip 宿主：只是挂在 DOM 里的一个展示节点，不属于 prompt 文本。
+    // Leading chip host: just a display node hung in the DOM, not part of the prompt text.
     if (el.dataset.leadChip !== undefined) return;
     if (el.dataset.mention) {
       out += '@' + (el.dataset.name ?? '');
@@ -310,10 +310,10 @@ function serialize(root: HTMLElement): string {
 }
 
 /**
- * 这一下按键是不是「删掉前置 chip」：
- * - 光标塌缩在 chip 之后、且中间没有任何字符/元素 → 退格删 chip；
- * - 光标塌缩在 chip 之前 → Delete 删 chip；
- * - 有选区时一律返回 false，交给浏览器整段删，`handleInput` 里再兜底通知宿主。
+ * Whether this keystroke is "deleting the leading chip":
+ * - caret collapsed after the chip with no character/element in between → Backspace deletes the chip;
+ * - caret collapsed before the chip → Delete deletes the chip;
+ * - with a selection always return false, leave it to the browser to delete the whole span, and `handleInput` notifies the host as a fallback.
  */
 function isLeadChipDeletion(root: HTMLElement, host: HTMLElement, key: string): boolean {
   const sel = window.getSelection();
@@ -334,7 +334,7 @@ function isLeadChipDeletion(root: HTMLElement, host: HTMLElement, key: string): 
   probe.setStartAfter(host);
   probe.setEnd(range.startContainer, range.startOffset);
   const between = probe.cloneContents();
-  // 中间只剩空文本节点才算「紧挨着」；有字符或有 <br> 都说明该删的是那个东西。
+  // Only an empty text node in between counts as "adjacent"; any character or <br> means the thing to delete is that one.
   return (between.textContent ?? '') === '' && between.childElementCount === 0;
 }
 
@@ -402,27 +402,27 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
     const editorRef = useRef<HTMLDivElement | null>(null);
     const lastSerializedRef = useRef<string>('');
     const isComposingRef = useRef(false);
-    // 单个共享 <audio>：点击音频 chip 播放/暂停该引用；切到别条会先停掉上一条。
+    // A single shared <audio>: clicking an audio chip plays/pauses that reference; switching to another stops the previous one first.
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const playingUrlRef = useRef<string | null>(null);
     const [mention, setMention] = useState<MentionContext | null>(null);
     const [activeIdx, setActiveIdx] = useState(0);
     const [hover, setHover] = useState<HoverState | null>(null);
-    // 双击已有的 @ chip → 打开候选列表「就地替换」该引用（锚定在被双击的 chip 上）。
-    // 与 `mention`（输入 @ 触发的插入）互斥：一个开另一个必置空。
+    // Double-click an existing @ chip → open the candidate list to "replace in place" that reference (anchored on the double-clicked chip).
+    // Mutually exclusive with `mention` (insertion triggered by typing @): opening one must clear the other.
     const [replaceTarget, setReplaceTarget] = useState<{
       el: HTMLElement;
       rect: DOMRect;
-      /** 打开那一刻的素材快照，见 getMaterials。 */
+      /** Snapshot of assets at the moment of opening; see getMaterials. */
       materials: readonly ReferenceMaterialOption[];
     } | null>(null);
-    // 选了一条还没引用的素材：宿主先建边，等它出现在 candidates 里（有了编号）之后
-    // 才好把 chip 换过去——在那之前我们连该写 @图片几都不知道。
+    // Picked an asset that is not yet referenced: the host first creates the edge, and only after it appears in candidates (with a number)
+    // can the chip be swapped — before that we do not even know which @imageN to write.
     const pendingAttachRef = useRef<{ el: HTMLElement; key: string } | null>(null);
     const popoverRef = useRef<HTMLDivElement | null>(null);
 
-    // 前置 chip 的宿主节点：DOM 节点自己造、自己保管（React 只往里 portal 内容），
-    // 这样 `rebuildDOM` 清空重建后把同一个节点插回去即可，portal 目标始终不变。
+    // Host node of the leading chip: the DOM node is made and kept by us (React only portals content into it),
+    // so after `rebuildDOM` clears and rebuilds, re-inserting the same node suffices and the portal target never changes.
     const leadHostRef = useRef<HTMLSpanElement | null>(null);
     const [leadHost, setLeadHost] = useState<HTMLSpanElement | null>(null);
     const hasLeadingChip = leadingChip !== undefined && leadingChip !== null;
@@ -455,7 +455,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       if (value === lastSerializedRef.current) return;
       rebuildDOM(el, value, candidates);
       lastSerializedRef.current = value;
-      ensureLeadHost(); // 重建把宿主一起清掉了，插回正文最前面
+      ensureLeadHost(); // The rebuild cleared the host too; insert it back at the very start of the body
     }, [value, candidates, ensureLeadHost]);
 
     useLayoutEffect(() => {
@@ -506,7 +506,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
         range.deleteContents();
         const chip = buildChipElement(candidate);
         range.insertNode(chip);
-        // 和从候选列表插入一样补一个尾随空格，光标落在它后面，接着打字不会黏在 chip 上。
+        // As with inserting from the candidate list, add a trailing space with the caret after it, so continued typing does not stick to the chip.
         const space = document.createTextNode(' ');
         chip.parentNode?.insertBefore(space, chip.nextSibling);
         if (selection) {
@@ -539,9 +539,9 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
         .forEach((el) => el.removeAttribute('data-audio-playing'));
     }, []);
 
-    // 点击音频 chip 的 ▶ 按钮：播放/暂停该引用。再次点正在播放的同一条 → 暂停；
-    // 点另一条 → 先停上一条再播。播放成功后给 chip 打 data-audio-playing（::before
-    // 切到 ⏸），结束时清掉。
+    // Click the ▶ button of an audio chip: play/pause that reference. Clicking the same one that is playing again → pause;
+    // clicking another → stop the previous one first, then play. After successful playback the chip gets data-audio-playing (::before
+    // switches to ⏸), cleared when it ends.
     const toggleAudio = useCallback(
       (chip: HTMLElement) => {
         const url = chip.dataset.audioUrl;
@@ -593,12 +593,12 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
 
     const handleInput = useCallback(() => {
       if (isComposingRef.current) return;
-      // 一旦开始打字就退出「替换」态，回到正常输入 / 插入流程。
+      // Once typing starts, leave "replace" mode and return to the normal input / insert flow.
       setReplaceTarget(null);
       commitChange();
       setMention(detectMention());
-      // 全选删除之类的整段删除由浏览器执行，宿主节点会被一起带走——这里兜底通知，
-      // 否则 chip 从视觉上没了，节点上的功能却还挂着。
+      // Whole-span deletions such as select-all-delete are executed by the browser and take the host node with them — notify as a fallback here,
+      // otherwise the chip is visually gone while the feature on the node still hangs on.
       const el = editorRef.current;
       const host = leadHostRef.current;
       if (hasLeadingChip && el && host && !el.contains(host)) {
@@ -664,8 +664,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       [mention, commitChange],
     );
 
-    // 就地替换被双击的 chip：用新候选造一个 chip 顶替旧节点，光标落到其后，
-    // 然后重新序列化提交。引用队列不变 —— 只是这个 mention 改指向另一个已有资源。
+    // Replace the double-clicked chip in place: build a chip from the new candidate to take over the old node, put the caret after it,
+    // then re-serialize and commit. The reference queue is unchanged — only this mention is re-pointed to another existing resource.
     const replaceChip = useCallback(
       (chipEl: HTMLElement, candidate: MentionCandidate) => {
         const el = editorRef.current;
@@ -687,8 +687,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       [commitChange],
     );
 
-    // 在某颗 chip 下方打开替换选单。两个入口共用：hover 出来的替换图标，和双击
-    // chip（老习惯，留着）。
+    // Open the replace menu below a chip. Shared by two entries: the hover-revealed replace icon, and double-click on the
+    // chip (an old habit, kept).
     const openReplaceFor = useCallback(
       (chip: HTMLElement) => {
         const materials = getMaterials?.() ?? [];
@@ -701,7 +701,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       [candidates.length, getMaterials],
     );
 
-    // 双击 @ chip → 在它下方打开候选列表，快速替换该引用，省去「删 chip 再 @」。
+    // Double-click an @ chip → open the candidate list below it to quickly replace that reference, saving "delete the chip and @ again".
     const handleDoubleClick = useCallback(
       (event: ReactMouseEvent<HTMLDivElement>) => {
         const chip = (event.target as HTMLElement | null)?.closest('.mention-chip');
@@ -713,10 +713,10 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       [openReplaceFor],
     );
 
-    // 选了一条画布素材：先让宿主建边，再等它带着编号进入 candidates。
-    // 建边期间 prompt 文本没变，rebuildDOM 不会跑，所以这里握着的 chip 元素仍然有效。
-    // 建边被拒（比如超了素材上限，宿主已经弹过 toast）就别留 pending——留下的话，
-    // 用户过一阵子从别的入口把同一个节点连上时，这颗早就失去上下文的 chip 会被悄悄改掉。
+    // Picked a canvas asset: first let the host create the edge, then wait for it to enter candidates with a number.
+    // While the edge is being created the prompt text does not change and rebuildDOM does not run, so the chip element held here stays valid.
+    // If edge creation is rejected (e.g. the asset limit was exceeded and the host already showed a toast), do not leave a pending —
+    // if it stayed, when the user later connects the same node from another entry, this chip long since stripped of context would be silently changed.
     const attachMaterial = useCallback(
       (chipEl: HTMLElement, nodeId: string) => {
         setReplaceTarget(null);
@@ -727,7 +727,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       [onAttachMaterial],
     );
 
-    // 替换态下，点击 popover 以外的任意地方都关闭它（捕获阶段，先于 React 冒泡）。
+    // In replace mode, clicking anywhere outside the popover closes it (capture phase, ahead of React bubbling).
     useEffect(() => {
       if (!replaceTarget) return;
       const onDocMouseDown = (event: MouseEvent) => {
@@ -741,10 +741,10 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       return () => document.removeEventListener('mousedown', onDocMouseDown, true);
     }, [replaceTarget]);
 
-    // 新引用连上后 candidates 会多出这一条（带好编号），这时才把 chip 换过去。
-    // 只等这一轮：边已经建成了，candidates 必然在同一次更新里重算，这时还找不到它
-    // 就是宿主根本给不出这个候选（例如两个节点指向同一张图，编号只认第一个），
-    // 那就到此为止——继续挂着只会在很久以后误改一颗无关的 chip。
+    // After a new reference is connected candidates gains this entry (with its number), and only then is the chip swapped.
+    // Wait for this one round only: the edge is already built, so candidates must have been recomputed in the same update; if it is still not found,
+    // the host simply cannot supply this candidate (e.g. two nodes point to the same image and the numbering only recognizes the first),
+    // so stop here — leaving it pending would only wrongly change an unrelated chip long afterwards.
     useEffect(() => {
       const pending = pendingAttachRef.current;
       if (!pending) return;
@@ -756,8 +756,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
     const handleKeyDown = useCallback(
       (event: ReactKeyboardEvent<HTMLDivElement>) => {
         event.stopPropagation();
-        // 前置 chip 像个字符一样被退格删掉：拦下这一下按键，自己通知宿主，别让
-        // 浏览器去动 DOM（它删的是宿主 span，React portal 会跟着失去落点）。
+        // The leading chip is deleted by backspace like a character: intercept this keystroke and notify the host ourselves, so the
+        // browser does not touch the DOM (it would delete the host span, and the React portal would lose its landing point).
         if (hasLeadingChip && (event.key === 'Backspace' || event.key === 'Delete')) {
           const el = editorRef.current;
           const host = leadHostRef.current;
@@ -875,8 +875,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
         Math.max(8, hover.rect.left),
         window.innerWidth - PREVIEW_SIZE - 8,
       );
-      // 浮层用 -translate-y-full 把自身抬到 chip 上方,top 只需落在 chip 顶边稍上,
-      // 这样高度按图/视频原始宽高比自适应,不再裁成正方形。
+      // The popover lifts itself above the chip with -translate-y-full; top only needs to fall slightly above the chip's top edge,
+      // so the height adapts to the image/video's original aspect ratio and is no longer cropped to a square.
       const top = hover.rect.top - 8;
       return { left, top };
     }, [hover]);
@@ -889,8 +889,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
           suppressContentEditableWarning
           className={`prompt-mention-editor cursor-text ${className ?? ''}`}
           data-placeholder={placeholder ?? ''}
-          // 有前置 chip 时编辑器不再是 :empty，占位符那条 CSS 失效——补一个标记，
-          // 让占位文案改由 ::after 接在 chip 后面同一行显示（对标 liblib）。
+          // When there is a leading chip the editor is no longer :empty and the placeholder CSS stops working — add a marker
+          // so the placeholder text is shown by ::after on the same line after the chip (matching liblib).
           {...(hasLeadingChip && value.length === 0 ? { 'data-text-empty': '' } : {})}
           spellCheck={false}
           onInput={handleInput}
@@ -913,9 +913,9 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
           onMouseOver={handleMouseOver}
           onMouseOut={handleMouseOut}
         />
-        {/* chip 内容用 portal 渲进 contenteditable 里的宿主 span：DOM 上它在输入框
-            内部（所以跟着文字排版、能被光标越过），React 树上它是编辑器的兄弟节点
-            （所以点击/悬停不会误触编辑器自己的那几个 handler）。 */}
+        {/* The chip content is portaled into the host span inside the contenteditable: in the DOM it is inside the input
+            (so it flows with the text and the caret can cross it), while in the React tree it is a sibling of the editor
+            (so clicking/hovering does not accidentally trigger the editor's own handlers). */}
         {leadHost && leadingChip ? createPortal(leadingChip, leadHost) : null}
         {(mention || replaceTarget) && popoverStyle && filtered.length > 0
           && createPortal(
@@ -963,7 +963,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
                     />
                   ) : (
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-white/[0.06] text-[13px] text-accent">
-                      {candidate.name.startsWith('文本') ? 'T' : '♪'} {/* i18n-exempt -- canonical @mention protocol token */}
+                      {candidate.name.startsWith('text') ? 'T' : '♪'}
                     </span>
                   )}
                   <span className="flex-1 truncate">{mentionChipLabel(candidate)}</span>

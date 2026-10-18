@@ -73,7 +73,7 @@ function deriveSingle(
   if (stage === "script") {
     // Script readiness is gauged by the visual description: every beat (incl.
     // silent / action shots that carry no spoken line) is "ready" once it has a
-    // 画面描述. Spoken text (narration_segment) is optional and intentionally
+    // Visual description. Spoken text (narration_segment) is optional and intentionally
     // not required here. See script-beat-preview's readiness display.
     if (beat.visual_description && beat.visual_description.trim().length > 0) {
       return "ready";

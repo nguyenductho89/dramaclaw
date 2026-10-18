@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 系统各功能使用的 LLM 映射定义。
-// 每个功能对应后端一个 *_MODEL 环境变量，前端允许用户为其覆盖模型。
-// 结构化任务由后端统一关闭推理，不提供逐功能思考强度配置。
+// Definitions of the LLM mappings used by each system feature.
+// Each feature maps to a backend *_MODEL environment variable, and the frontend lets the user override the model.
+// Structured tasks have reasoning turned off by the backend, so there is no per-feature thinking-effort setting.
 
 export interface FeatureModelDef {
-  /** 稳定 id，对应后端 *_MODEL 环境变量前缀，如 GLOBAL_VIDEO_OPTIMIZER。 */
+  /** Stable id, matching the backend *_MODEL env var prefix, e.g. GLOBAL_VIDEO_OPTIMIZER. */
   id: string;
-  /** 后端默认模型名，用作下拉「默认」项的展示与初始可用模型池。 */
+  /** The backend default model name, used for the "Default" dropdown entry and as the initial available model pool. */
   defaultModel: string;
-  /** 该功能会向上游 LLM 发送图片，需要选择支持视觉输入的模型。 */
+  /** This feature sends images to the upstream LLM, so a model with vision input must be selected. */
   requiresVision?: boolean;
 }
 
 export interface FeatureModelGroup {
-  /** 分组 key，用于拼接 i18n： settings.modelConfig.featureModels.groups.<key>。 */
+  /** Group key, used to build the i18n key settings.modelConfig.featureModels.groups.<key>. */
   key: string;
   features: readonly FeatureModelDef[];
 }
@@ -123,8 +123,8 @@ function productFeature(id: string): FeatureModelDef {
 }
 
 /**
- * 设置界面的产品入口分组。这里只决定展示位置；系统默认模型顺序、渠道映射
- * 和后端环境变量仍由 FEATURE_MODEL_GROUPS 决定，避免界面改名影响运行逻辑。
+ * Product entry groups in the settings UI. This only decides where things are shown; the system default model order, channel mapping
+ * and backend env vars are still decided by FEATURE_MODEL_GROUPS, so renaming in the UI cannot affect runtime logic.
  */
 export const FEATURE_MODEL_PRODUCT_GROUPS: readonly FeatureModelGroup[] = [
   {
@@ -166,7 +166,7 @@ export const FEATURE_MODEL_PRODUCT_GROUPS: readonly FeatureModelGroup[] = [
   { key: "xiage", features: [productFeature("STYLE_ANALYZER")] },
 ];
 
-/** 所有功能的默认模型（去重），用作「可用模型」池的预填值。 */
+/** Default models of all features (deduplicated), used to pre-fill the "available models" pool. */
 export const DEFAULT_AVAILABLE_MODELS: readonly string[] = Array.from(
   new Set(FEATURE_MODEL_GROUPS.flatMap((g) => g.features.map((f) => f.defaultModel)))
 );

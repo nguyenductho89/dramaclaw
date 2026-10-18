@@ -5,12 +5,12 @@ import type { TFunction } from "i18next";
 import type { FormatCheck, FormatCheckIssue } from "@/lib/queries/ingest";
 
 /**
- * 剧本格式预检的文案本地化。
+ * Localization of the screenplay format pre-check copy.
  *
- * 后端 `screenplay_quality.py` 只产中文串（summary/message/fix），英文界面下会
- * 原样漏出中文。它同时带了 `summary_code` / `issue.code` / `params`，所以这里按
- * code 查 i18n，把后端那份中文当 defaultValue —— 新增了后端 code 而前端还没补
- * key 时，退回中文而不是显示成裸 key。
+ * The backend `screenplay_quality.py` emits English strings (summary/message/fix). It also carries
+ * `summary_code` / `issue.code` / `params`, so here the locale entries are looked up by
+ * code with the backend text as defaultValue - when a new backend code is added before the frontend
+ * key exists, the backend text is shown instead of a bare key.
  */
 
 const SLOT_LABEL_KEYS: Record<string, string> = {
@@ -38,8 +38,8 @@ function asString(value: unknown): string {
 }
 
 /**
- * 重拼「建议写成这样」的示例。后端拼好的那份是中文（含「地点：」和 [日/夜] 之类
- * 的中文占位符），只有 header/location 这些用户原文可以直接复用。
+ * Re-assemble the "suggested format" example. The one the backend builds contains a location line and placeholders
+ * like [day/night]; only the user's original header/location text can be reused as is.
  */
 function buildSuggestion(params: Record<string, unknown>, t: TFunction): string {
   const header = asString(params.header);
@@ -67,9 +67,9 @@ function buildSuggestion(params: Record<string, unknown>, t: TFunction): string 
 function localizeIssue(issue: FormatCheckIssue, t: TFunction): FormatCheckIssue {
   const params = (issue.params ?? {}) as Record<string, unknown>;
 
-  // 行级场景头问题：三个 code 共用「场景头 X 缺少 Y」这一句，靠 params.header 区分
-  // ——同一个 code(scene_headers_missing_time / missing_interior_exterior)在报告级
-  // 还有一条不带 header 的通用文案，两者不能共用 key。
+  // Row-level scene header issues: the three codes share one sentence ("scene header X is missing Y"), distinguished by params.header
+  // - the same code (scene_headers_missing_time / missing_interior_exterior) also has a generic
+  // report-level message without a header at the report level, so the two cannot share a key.
   if (asString(params.header)) {
     const missing = asStringArray(params.missing_slots)
       .map((slot) => SLOT_LABEL_KEYS[slot])

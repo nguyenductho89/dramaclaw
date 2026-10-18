@@ -1,6 +1,6 @@
-"""TTS 语音合成模块。
+"""TTS speech synthesis module.
 
-使用 Edge TTS 生成中文语音。
+Uses Edge TTS to generate speech.
 """
 
 import asyncio
@@ -139,8 +139,8 @@ async def complete_audio_operation(
 ) -> None:
     if not lease.claim.won:
         return
-    # 同步音频没有上游作业号（HandleKind.LOCAL_RESULT），这里就是 None——原先填的
-    # 那个占位串只是能骗过「非空」检查的字面量。真结果引用在下面的 result_ref。
+    # Synchronous audio has no upstream job id (HandleKind.LOCAL_RESULT), so this is None here -- the placeholder
+    # string used before was just a literal that fooled the "non-empty" check. The real result reference is result_ref below.
     accepted = await lease.port.mark_accepted(
         operation_id=lease.claim.operation.operation_id,
         transition_token=lease.claim.transition_token,
@@ -156,7 +156,7 @@ async def complete_audio_operation(
 
 
 class TTSParams(BaseModel):
-    """TTS 参数。"""
+    """TTS parameters."""
 
     text: str
     voice: str = "en-US-AriaNeural"
@@ -166,7 +166,7 @@ class TTSParams(BaseModel):
 
 
 class TTSResult(BaseModel):
-    """TTS 生成结果。"""
+    """TTS generation result."""
 
     success: bool
     audio_path: Optional[str] = None
@@ -176,7 +176,7 @@ class TTSResult(BaseModel):
 
 
 class VoiceInfo(BaseModel):
-    """语音信息。"""
+    """Voice information."""
 
     name: str
     short_name: str
@@ -211,14 +211,14 @@ RECOMMENDED_VOICES = {
 
 
 class EdgeTTSGenerator:
-    """Edge TTS 语音生成器。
+    """Edge TTS voice generator.
 
-    使用微软 Edge TTS 服务生成高质量中文语音。
+    Uses the Microsoft Edge TTS service to generate high-quality speech.
 
-    示例:
+    Example:
         >>> generator = EdgeTTSGenerator()
         >>> result = await generator.generate(
-        ...     text="这是一段测试文本",
+        ...     text="This is a test text",
         ...     output_path="output/audio.mp3"
         ... )
     """
@@ -230,12 +230,12 @@ class EdgeTTSGenerator:
         pitch: Optional[str] = None,
         egress_context: TrustedEgressContext | None = None,
     ):
-        """初始化生成器。
+        """Initialize the generator.
 
         Args:
-            voice: 语音名称，默认从配置读取
-            rate: 语速调整（如 "+10%", "-5%"）
-            pitch: 音调调整（如 "+5Hz", "-10Hz"）
+            voice: voice name; defaults to the configured value
+            rate: speaking-rate adjustment (e.g. "+10%", "-5%")
+            pitch: pitch adjustment (e.g. "+5Hz", "-10Hz")
         """
         self.egress_context = egress_context
         if egress_context is None:
@@ -258,18 +258,18 @@ class EdgeTTSGenerator:
         generate_subtitle: bool = True,
         **kwargs,
     ) -> TTSResult:
-        """生成语音。
+        """Generate speech.
 
         Args:
-            text: 要合成的文本
-            output_path: 输出音频路径（.mp3）
-            voice: 语音名称（覆盖默认值）
-            rate: 语速调整
-            pitch: 音调调整
-            generate_subtitle: 是否生成字幕文件
+            text: text to synthesize
+            output_path: output audio path (.mp3)
+            voice: voice name (overrides the default)
+            rate: speaking-rate adjustment
+            pitch: pitch adjustment
+            generate_subtitle: whether to generate a subtitle file
 
         Returns:
-            生成结果
+            Generation result
         """
         context = self.egress_context
         if (
@@ -305,15 +305,15 @@ class EdgeTTSGenerator:
 
         transport_started = False
         try:
-            # 确保输出目录存在
+            # Make sure the output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            # 使用参数或默认值
+            # Use the argument or the default
             use_voice = voice or self.voice
             use_rate = rate or self.rate
             use_pitch = pitch or self.pitch
 
-            # 创建通信对象
+            # Create the communicate object
             communicate = edge_tts.Communicate(
                 text,
                 use_voice,
@@ -321,7 +321,7 @@ class EdgeTTSGenerator:
                 pitch=use_pitch,
             )
 
-            # 生成音频
+            # Generate the audio
             subtitle_path = None
             if generate_subtitle:
                 subtitle_path = output_path.rsplit(".", 1)[0] + ".srt"
@@ -336,7 +336,7 @@ class EdgeTTSGenerator:
                             # edge-tts 7.x uses SentenceBoundary and feed()
                             submaker.feed(chunk)
 
-                # 保存字幕（SRT 格式）
+                # Save subtitles (SRT format)
                 srt_content = submaker.get_srt()
                 if srt_content:
                     with open(subtitle_path, "w", encoding="utf-8") as sub_file:
@@ -345,7 +345,7 @@ class EdgeTTSGenerator:
                 transport_started = True
                 await communicate.save(output_path)
 
-            # 获取音频时长
+            # Get the audio duration
             duration = await self._get_audio_duration(output_path)
 
             result = TTSResult(
@@ -374,7 +374,7 @@ class EdgeTTSGenerator:
             )
 
     async def _get_audio_duration(self, audio_path: str) -> float:
-        """获取音频时长。"""
+        """Get the audio duration."""
         try:
             result = run_project_subprocess(
                 [
@@ -404,15 +404,15 @@ class EdgeTTSGenerator:
         output_dir: str,
         filename_prefix: str = "audio",
     ) -> list[TTSResult]:
-        """批量生成语音。
+        """Generate speech in batch.
 
         Args:
-            texts: 文本列表
-            output_dir: 输出目录
-            filename_prefix: 文件名前缀
+            texts: list of texts
+            output_dir: output directory
+            filename_prefix: filename prefix
 
         Returns:
-            生成结果列表
+            List of generation results
         """
         os.makedirs(output_dir, exist_ok=True)
         results = []
@@ -425,13 +425,13 @@ class EdgeTTSGenerator:
         return results
 
     async def list_voices(self, locale: str = "en-US") -> list[VoiceInfo]:
-        """列出可用语音。
+        """List available voices.
 
         Args:
-            locale: 语言区域代码
+            locale: locale code
 
         Returns:
-            语音信息列表
+            List of voice information
         """
         try:
             import edge_tts
@@ -456,14 +456,14 @@ class EdgeTTSGenerator:
 
 
 class CosyVoiceTTSGenerator:
-    """阿里云 CosyVoice TTS 生成器。
+    """Alibaba Cloud CosyVoice TTS generator.
 
-    使用 DashScope SDK 调用 CosyVoice 模型生成高质量中文语音。
+    Uses the DashScope SDK to call the CosyVoice model to generate high-quality speech.
 
-    示例:
+    Example:
         >>> generator = CosyVoiceTTSGenerator()
         >>> result = await generator.generate(
-        ...     text="这是一段测试文本",
+        ...     text="This is a test text",
         ...     output_path="output/audio.mp3"
         ... )
     """
@@ -476,13 +476,13 @@ class CosyVoiceTTSGenerator:
         speech_rate: Optional[float] = None,
         egress_context: TrustedEgressContext | None = None,
     ):
-        """初始化生成器。
+        """Initialize the generator.
 
         Args:
-            model: 模型名称，默认从配置读取
-            voice: 音色名称，默认从配置读取
-            api_key: DashScope API Key，默认从配置读取
-            speech_rate: 语速倍率 [0.5, 2.0]，默认从配置读取
+            model: model name; defaults to the configured value
+            voice: voice name; defaults to the configured value
+            api_key: DashScope API Key; defaults to the configured value
+            speech_rate: speech-rate multiplier [0.5, 2.0]; defaults to the configured value
         """
         self.egress_context = egress_context
         if egress_context is None:
@@ -508,17 +508,17 @@ class CosyVoiceTTSGenerator:
         speech_rate: Optional[float] = None,
         **kwargs,
     ) -> TTSResult:
-        """生成语音。
+        """Generate speech.
 
         Args:
-            text: 要合成的文本
-            output_path: 输出音频路径（.mp3）
-            voice: 音色名称（覆盖默认值）
-            generate_subtitle: 是否生成字幕文件（CosyVoice 暂不支持）
-            speech_rate: 语速倍率（覆盖默认值，用于 dialogue beat）
+            text: text to synthesize
+            output_path: output audio path (.mp3)
+            voice: voice name (overrides the default)
+            generate_subtitle: whether to generate a subtitle file (not yet supported by CosyVoice)
+            speech_rate: speech-rate multiplier (overrides the default, used for dialogue beats)
 
         Returns:
-            生成结果
+            Generation result
         """
         if self.egress_context is not None:
             code = (
@@ -536,7 +536,7 @@ class CosyVoiceTTSGenerator:
                 error="dashscope not installed. Run: pip install dashscope",
             )
 
-        # 检查 API Key
+        # Check the API Key
         if not self.api_key:
             return TTSResult(
                 success=False,
@@ -548,7 +548,7 @@ class CosyVoiceTTSGenerator:
         dashscope.api_key = self.api_key
 
         try:
-            # 确保输出目录存在
+            # Make sure the output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             use_voice = voice or self.voice
@@ -556,7 +556,7 @@ class CosyVoiceTTSGenerator:
                 speech_rate if speech_rate is not None else self.speech_rate
             )
 
-            # 创建回调处理器（带完成信号）
+            # Create the callback handler (with a completion signal)
             import threading
 
             class FileCallback(ResultCallback):
@@ -582,7 +582,7 @@ class CosyVoiceTTSGenerator:
                 def on_close(self):
                     if self.file:
                         self.file.close()
-                    self.completed.set()  # 信号完成
+                    self.completed.set()  # signal completion
 
             callback = FileCallback(output_path)
             synthesizer = SpeechSynthesizer(
@@ -592,10 +592,10 @@ class CosyVoiceTTSGenerator:
                 callback=callback,
             )
 
-            # 调用 API（回调在后台线程执行）
+            # Call the API (the callback runs in a background thread)
             synthesizer.call(text)
 
-            # 异步等待回调完成（不阻塞事件循环）
+            # Wait asynchronously for the callback to finish (without blocking the event loop)
             loop = asyncio.get_event_loop()
             completed = await loop.run_in_executor(
                 None, lambda: callback.completed.wait(timeout=60)
@@ -612,7 +612,7 @@ class CosyVoiceTTSGenerator:
                     error="CosyVoice provider failed",
                 )
 
-            # 验证文件已生成且非空
+            # Verify the file was generated and is non-empty
             if not os.path.exists(output_path):
                 return TTSResult(
                     success=False,
@@ -625,7 +625,7 @@ class CosyVoiceTTSGenerator:
                     error="Audio file is empty (0 bytes)",
                 )
 
-            # 获取音频时长
+            # Get the audio duration
             duration = await self._get_audio_duration(output_path)
             if duration == 0.0:
                 return TTSResult(
@@ -648,7 +648,7 @@ class CosyVoiceTTSGenerator:
             )
 
     async def _get_audio_duration(self, audio_path: str) -> float:
-        """获取音频时长。"""
+        """Get the audio duration."""
         try:
             result = run_project_subprocess(
                 [
@@ -677,15 +677,15 @@ class CosyVoiceTTSGenerator:
         output_dir: str,
         filename_prefix: str = "audio",
     ) -> list[TTSResult]:
-        """批量生成语音。
+        """Generate speech in batch.
 
         Args:
-            texts: 文本列表
-            output_dir: 输出目录
-            filename_prefix: 文件名前缀
+            texts: list of texts
+            output_dir: output directory
+            filename_prefix: filename prefix
 
         Returns:
-            生成结果列表
+            List of generation results
         """
         os.makedirs(output_dir, exist_ok=True)
         results = []
@@ -699,9 +699,9 @@ class CosyVoiceTTSGenerator:
 
 
 class MockTTSGenerator:
-    """模拟 TTS 生成器（用于测试）。
+    """Mock TTS generator (for testing).
 
-    不调用真实 API，生成空音频文件。
+    Does not call a real API; generates empty audio files.
     """
 
     def __init__(self):
@@ -713,14 +713,14 @@ class MockTTSGenerator:
         output_path: str,
         **kwargs,
     ) -> TTSResult:
-        """生成模拟音频。"""
+        """Generate mock audio."""
         try:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             # Estimated duration (~2.6 spoken words per second).
             duration = max(len(text.split()), 1) / 2.6
 
-            # 创建一个简单的静音 MP3（用 ffmpeg）
+            # Create a simple silent MP3 (using ffmpeg)
             try:
                 import subprocess
 
@@ -745,11 +745,11 @@ class MockTTSGenerator:
             except (TaskCancelled, TaskTimedOut):
                 raise
             except Exception:
-                # 如果 ffmpeg 不可用，创建空文件
+                # If ffmpeg is unavailable, create an empty file
                 with open(output_path, "wb") as f:
                     f.write(b"")
 
-            # 创建字幕文件（SRT 格式）
+            # Create a subtitle file (SRT format)
             subtitle_path = output_path.rsplit(".", 1)[0] + ".srt"
             with open(subtitle_path, "w", encoding="utf-8") as f:
                 f.write("1\n")
@@ -777,7 +777,7 @@ class MockTTSGenerator:
         output_dir: str,
         filename_prefix: str = "audio",
     ) -> list[TTSResult]:
-        """批量生成模拟语音。"""
+        """Generate mock speech in batch."""
         os.makedirs(output_dir, exist_ok=True)
         results = []
 
@@ -796,16 +796,16 @@ def create_tts_generator(
     voice: Optional[str] = None,
     egress_context: TrustedEgressContext | None = None,
 ):
-    """创建 TTS 生成器。
+    """Create a TTS generator.
 
     Args:
-        provider: TTS 提供者 (cosyvoice, edge, ...)，默认从配置读取
-        use_mock: 是否使用模拟生成器
-        model: 自定义模型名称（仅部分提供商支持）
-        voice: 自定义音色名称
+        provider: TTS provider (cosyvoice, edge, ...); defaults to the configured value
+        use_mock: whether to use the mock generator
+        model: custom model name (supported by some providers only)
+        voice: custom voice name
 
     Returns:
-        TTS 生成器实例
+        TTS generator instance
     """
     if use_mock:
         return MockTTSGenerator()

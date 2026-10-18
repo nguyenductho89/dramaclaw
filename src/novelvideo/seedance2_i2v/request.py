@@ -23,11 +23,7 @@ def clean_reference_list(values: list[str] | tuple[str, ...] | None) -> list[str
 
 def normalize_seedance2_prompt(prompt: str) -> str:
     return (
-        str(prompt or "")
-        .replace("@图片", "图片")
-        .replace("@视频", "视频")
-        .replace("@音频", "音频")
-        .strip()
+        re.sub(r"@(image|video|audio)(?=\d)", r"\1", str(prompt or "")).strip()
     )
 
 
@@ -85,18 +81,18 @@ def _validate_prompt_reference_numbers(
     audio_count: int,
 ) -> None:
     limits = {
-        "图片": int(image_count),
-        "视频": int(video_count),
-        "音频": int(audio_count),
+        "image": int(image_count),
+        "video": int(video_count),
+        "audio": int(audio_count),
     }
     for label, limit in limits.items():
-        for match in re.finditer(rf"@?{label}(\d+)", str(prompt or "")):
+        for match in re.finditer(rf"(?<![A-Za-z])@?{label}(\d+)", str(prompt or "")):
             number = int(match.group(1))
             if 1 <= number <= limit:
                 continue
             marker = f"{label}{number}"
             raise ValueError(
-                f"提示词引用了 {marker}，但当前请求只发送了 {limit} 个{label}素材。"
+                f"The prompt references {marker}, but the request only sends {limit} {label} asset(s)."
             )
 
 

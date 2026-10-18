@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 把上游节点按用户在「引用资源」行里手动拖出来的顺序（`referenceOrder`）排序。
- * 在 `referenceOrder` 里出现的节点按其下标排前面；没出现的（新连进来的）按「连接
- * 顺序」接在已排序的后面，即后引用的图片始终排在先引用的之后——**不**按画布 y 位置，
- * 否则在上方新连入的图片会插到下方旧图前面（序号 1/2 错乱）。仅用户手动拖动才改顺序。
- * 入参 `nodes` 已是连接时序（`useUpstreamNodes` 按上游边的追加顺序返回），用它的下标
- * 作为「未手动排序」节点之间的回退次序。chip 显示、图片N/音频N 编号、提交顺序三处
- * 都走这个函数，保证可视顺序与提交顺序始终一致。
+ * Sorts upstream nodes by the order the user manually dragged them into in the "references" row (`referenceOrder`).
+ * Nodes present in `referenceOrder` come first by their index; those absent (newly connected) follow the sorted ones in
+ * connection order, so a later-referenced image always sorts after an earlier-referenced one — **not** by canvas y position,
+ * otherwise an image newly connected above would be inserted before an older image below (indices 1/2 get scrambled). Only a manual drag changes the order.
+ * The input `nodes` is already in connection order (`useUpstreamNodes` returns them in the append order of upstream edges); its index
+ * is the fallback order among "not manually ordered" nodes. Chip display, image1/audio1 numbering and submission order
+ * all go through this function so the visual order always matches the submission order.
  */
 /**
- * 按「连线顺序」（edges 数组里边的追加顺序）收集某节点的一跳上游节点。
+ * Collects a node's one-hop upstream nodes in "edge order" (the append order of edges in the edges array).
  *
- * UI 编号（@图片N / 引用行 chip，走 useUpstreamNodes）与提交时收集 references
- * 必须用同一个函数：曾经提交侧按 `state.nodes.filter(...)`（节点创建顺序）收集，
- * 先创建但后连线的节点会被排到 references 前面，prompt 里的 @图片1 在后端就
- * 指向另一张图（后端按 references 里图片的位置解释 图片N）。执行依赖
- * (`dependency_for`) 只控制先后，不属于可消费的上游参考。
+ * The UI numbering (@image1 / reference-row chips, via useUpstreamNodes) and the references collected at submission
+ * must use the same function: submission once collected with `state.nodes.filter(...)` (node creation order),
+ * so a node created first but connected later was ordered before others in references, and @image1 in the prompt
+ * pointed to a different image on the backend (the backend interprets imageN by the image's position in references). Execution dependencies
+ * (`dependency_for`) only control ordering and are not consumable upstream references.
  */
 type UpstreamEdge = {
   source: string;
@@ -47,10 +47,10 @@ export function upstreamNodesInEdgeOrder<T extends { id: string }>(
 }
 
 /**
- * 图片节点提交给后端的参考图有序列表：节点自带参考图（用户直接上传到节点上的）
- * 排第 1，上游连线的图按序接在后面，URL 去重（自带图与某张上游图同 URL 时保留
- * 最前的位置）。后端按位置解释 图片N，所以 @图片N 编号、mention 重排基线、提交
- * 三处必须共用这一份列表 —— 否则自带参考图会占掉第 1 位，让所有 @图片N 偏移 1。
+ * The ordered list of reference images an image node submits to the backend: the node's own reference images (uploaded directly onto the node)
+ * come first, upstream-connected images follow in order, with URL dedupe (when an own image and an upstream image share a URL, the
+ * earliest position is kept). The backend interprets imageN by position, so the @imageN numbering, the mention-remap baseline and the submission
+ * must share this single list — otherwise the own reference images take slot 1 and shift every @imageN by one.
  */
 export function orderedReferenceUrlsWithOwnFirst(
   ownReferenceUrl: string | null,

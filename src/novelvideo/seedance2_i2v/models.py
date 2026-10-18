@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 SEEDANCE2_PROMPT_GUIDANCE_TEMPLATE_KEYS = frozenset(
-    {"subject", "scene", "lighting", "camera", "style", "no_subtitle"}
+    {"subject", "scene", "lighting", "camera", "style", "no_subtitles"}
 )
 
 

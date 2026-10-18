@@ -1,7 +1,7 @@
-"""API 共享依赖。
+"""Shared API dependencies.
 
-提供路径计算、Store 创建等公共函数。
-项目级 API 必须先解析为 ProjectContext；username/project 只保留给路径显示与脚本工具。
+Provides common helpers such as path computation and Store creation.
+Project-level APIs must first resolve a ProjectContext; username/project are kept only for path display and script tooling.
 """
 
 import contextlib
@@ -47,12 +47,12 @@ class ProjectResolution:
 
 
 def get_user_base_dir(username: str) -> Path:
-    """获取用户根目录。"""
+    """Get the user root directory."""
     return Path(OUTPUT_DIR) / username
 
 
 def get_user_project_roots(username: str) -> tuple[Path, Path]:
-    """获取用户项目根目录（state 为主，兼容 output）。"""
+    """Get the user's project root directory (state first, output kept for compatibility)."""
     return (
         Path(STATE_DIR) / username,
         Path(OUTPUT_DIR) / username,
@@ -60,7 +60,7 @@ def get_user_project_roots(username: str) -> tuple[Path, Path]:
 
 
 def list_user_projects(username: str) -> list[str]:
-    """列出用户的全部项目名（state 为主，兼容 output）。"""
+    """List all project names of the user (state first, output kept for compatibility)."""
     project_names: set[str] = set()
     for user_root in get_user_project_roots(username):
         if not user_root.exists():
@@ -91,7 +91,7 @@ def project_exists(username: str, project: str) -> bool:
 
 
 def get_project_dir(username: str, project: str) -> Path:
-    """获取项目目录，不存在则抛 404。"""
+    """Get the project directory; raise 404 if it does not exist."""
     project_dir = get_project_paths(username, project).output_dir
     if not project_exists(username, project):
         raise HTTPException(status_code=404, detail=f"Project '{project}' not found")
@@ -125,14 +125,14 @@ async def resolve_project_scope(
 
 
 def may_run_asset_repair(ctx: ProjectContext | None) -> bool:
-    """存量资产名自愈能不能在这个请求里跑。
+    """Whether existing-asset-name self-healing may run within this request.
 
-    自愈会 ``shutil.move`` 资产目录、改 SQLite 主键、刷 ``updated_at``——这是一次写操作，
-    却挂在 ``required_role="viewer"`` 的列表接口上：只读协作者打开一次资产页就会替整个
-    项目做迁移。把它收到 editor 及以上，只读的人看到的还是原样（他们本来也删不掉、生不
-    出图），第一个有写权限的人打开资产页时统一治好。
+    Self-healing does ``shutil.move`` on asset directories, rewrites SQLite primary keys, and refreshes ``updated_at`` -- this is a write operation,
+    yet it hangs off a list endpoint with ``required_role="viewer"``: a read-only collaborator opening the asset page once would migrate the whole
+    project. Restrict it to editor and above; read-only users still see things as they were (they could not delete or generate
+    images anyway), and the first user with write permission to open the asset page heals everything in one go.
 
-    ``ctx`` 为 ``None`` 是单机 / CE 路径，没有协作者概念，按有写权限处理。
+    ``ctx`` being ``None`` is the single-machine / CE path, which has no collaborator concept and is treated as having write permission.
     """
 
     if ctx is None:
@@ -141,7 +141,7 @@ def may_run_asset_repair(ctx: ProjectContext | None) -> bool:
 
 
 def validate_project_name(name: str):
-    """验证项目名称格式。"""
+    """Validate the project name format."""
     if len(name) > 64:
         raise HTTPException(
             status_code=400,
@@ -160,17 +160,17 @@ def validate_project_name(name: str):
 
 
 def get_output_dir(username: str, project: str) -> str:
-    """获取项目输出目录（绝对路径字符串，供 task backend 使用）。"""
+    """Get the project output directory (absolute path string, for the task backend)."""
     return str(Path(OUTPUT_DIR) / username / project)
 
 
 def get_state_dir(username: str, project: str) -> str:
-    """获取项目状态目录（绝对路径字符串，供 task backend 使用）。"""
+    """Get the project state directory (absolute path string, for the task backend)."""
     return str(Path(STATE_DIR) / username / project)
 
 
 def get_runtime_dir(username: str, project: str) -> str:
-    """获取项目运行时目录（绝对路径字符串，供 task backend 使用）。"""
+    """Get the project runtime directory (absolute path string, for the task backend)."""
     return str(Path(RUNTIME_DIR) / username / project)
 
 
@@ -202,10 +202,10 @@ async def _close_on_init_failure(store: "Any", *steps: "Any") -> "Any":
 
 
 async def make_cognee_store(username: str, project: str) -> "CogneeStore":
-    """按请求创建 CogneeStore 实例。
+    """Create a CogneeStore instance per request.
 
-    旧 API/任务路径仍直接 await 这个函数；FastAPI dependency 使用下面的
-    ``*_store_scope`` 包装，避免一次性改动所有调用点。
+    Legacy API/task paths still await this function directly; FastAPI dependencies use the
+    ``*_store_scope`` wrappers below, to avoid changing every call site at once.
     """
     from novelvideo.cognee import CogneeStore
 
@@ -222,7 +222,7 @@ async def make_sqlite_store(
     *,
     load_graph_state: bool = True,
 ) -> "SQLiteStore":
-    """按请求创建 SQLiteStore 实例。"""
+    """Create a SQLiteStore instance per request."""
     from novelvideo.sqlite_store import SQLiteStore
 
     project_name = f"{username}/{project}"
@@ -328,13 +328,13 @@ async def _make_sqlite_store_for_context_scope(
 sqlite_store_scope = asynccontextmanager(_make_sqlite_store_scope)
 cognee_store_scope = asynccontextmanager(_make_cognee_store_scope)
 
-#: ``async with`` 作用域版的 :func:`make_sqlite_store_for_context`。
+#: ``async with`` scoped version of :func:`make_sqlite_store_for_context`.
 #:
-#: 裸 factory 把关闭的责任丢给每个调用点，路由里于是散落着一遍遍手抄的
-#: ``try/finally`` + ``getattr(store, "close", None)``——抄漏一处就是一条泄漏的
-#: SQLite 连接，而且是静默的。已解析出 ``ProjectContext`` 的读取路径应该用这个，
-#: 它同时透传 ``load_graph_state``：只读 beats 的路径传 ``False``，省掉三次整表
-#: 读出来的角色/分集/道具缓存水合。
+#: The bare factory leaves the responsibility of closing to each call site, so routes are littered with hand-copied
+#: ``try/finally`` + ``getattr(store, "close", None)`` -- miss one copy and you leak a
+#: SQLite connection, silently. Read paths that already resolved a ``ProjectContext`` should use this,
+#: which also passes through ``load_graph_state``: read-only beats paths pass ``False``, saving three whole-table
+#: reads that hydrate the character/episode/prop caches.
 sqlite_store_for_context_scope = asynccontextmanager(_make_sqlite_store_for_context_scope)
 
 
@@ -342,7 +342,7 @@ async def get_sqlite_store(
     project: str,
     user: dict = Depends(get_api_user),
 ) -> AsyncIterator["SQLiteStore"]:
-    """FastAPI dependency: 当前 project_id 作用域的 SQLiteStore。"""
+    """FastAPI dependency: SQLiteStore scoped to the current project_id."""
     ctx = await resolve_project_context(
         user=user,
         project_id=project,
@@ -361,7 +361,7 @@ async def get_cognee_store(
     project: str,
     user: dict = Depends(get_api_user),
 ) -> AsyncIterator["CogneeStore"]:
-    """FastAPI dependency: 当前 project_id 作用域的 CogneeStore。"""
+    """FastAPI dependency: CogneeStore scoped to the current project_id."""
     ctx = await resolve_project_context(
         user=user,
         project_id=project,

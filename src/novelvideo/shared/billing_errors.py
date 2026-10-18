@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 INSUFFICIENT_CREDITS_CODE = "INSUFFICIENT_CREDITS"
-INSUFFICIENT_CREDITS_MESSAGE = "积分不足，请联系管理员充值"
+INSUFFICIENT_CREDITS_MESSAGE = "Insufficient credits. Please contact your administrator to top up."
 BILLING_RULE_NOT_CONFIGURED_CODE = "BILLING_RULE_NOT_CONFIGURED"
-BILLING_RULE_NOT_CONFIGURED_MESSAGE = "计费规则未配置，请联系管理员设置积分规则"
+BILLING_RULE_NOT_CONFIGURED_MESSAGE = "Billing rule is not configured. Please contact your administrator to set up credit rules."
 FEATURE_BILLING_IDENTITY_INVALID_CODE = "FEATURE_BILLING_IDENTITY_INVALID"
-FEATURE_BILLING_IDENTITY_INVALID_MESSAGE = "计费身份无效或无法确定，请联系管理员"
+FEATURE_BILLING_IDENTITY_INVALID_MESSAGE = "Billing identity is invalid or cannot be determined. Please contact your administrator."
 FEATURE_BILLING_IDENTITY_REASON_MAX_LENGTH = 512
 GENERATION_BILLING_UNITS = {
     "call",

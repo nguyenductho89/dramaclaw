@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: Elastic-2.0
  * Copyright (c) 2026 ClaymoreLab
  *
- * 下载页样式。与登录页同属对外落地页,不走应用内主题 token:
- * 这一页锁死深色,配色取自品牌 DC 标本身的材质 —— 镀锌钢板(锌灰刻度)
- * 加锈蚀氧化(锈橙)。静止态的锈橙只给 hero 的 DC 字样、「你的系统」标记、
- * 主下载按钮、hero 底部校准条和预览里渲染中的节点;其余只能是焦点环和
- * hover 反馈。偏离主规范的边界见 DESIGN.md 的 Scope & Exceptions。
+ * Download page styles. A public landing page like the login page, it does not use the in-app theme tokens:
+ * this page is locked to dark, with colors taken from the material of the brand DC mark itself - galvanized steel (zinc-gray ticks)
+ * plus rust oxidation (rust orange). At rest the rust orange is reserved for the hero's DC lettering, the "your system" marker,
+ * the primary download button, the hero's bottom calibration bar and the rendering node in the preview; elsewhere it can only be the focus ring and
+ * hover feedback. Deviations from the main spec are in DESIGN.md's Scope & Exceptions.
  */
 
 .page {
@@ -39,8 +39,8 @@
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "Cascadia Mono",
     "Roboto Mono", monospace;
 
-  /* 应用外壳把 html/body/#root 锁成 height:100% + overflow:hidden(固定视口的
-     工作台布局),落地页得自己开一个滚动容器,否则整页滚不动。 */
+  /* The app shell locks html/body/#root to height:100% + overflow:hidden (a fixed-viewport
+     workbench layout), so the landing page has to open its own scroll container, otherwise the whole page cannot scroll. */
   height: 100%;
   overflow-y: auto;
   overscroll-behavior-y: contain;
@@ -78,7 +78,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 区块眉标:中文名 / 英文名,右侧补一条发丝线拉满宽度 */
+/* Section eyebrow: primary name / secondary name, with a hairline on the right filling the width */
 .eyebrow {
   display: flex;
   align-items: center;
@@ -122,7 +122,7 @@
   padding-block: clamp(64px, 10vh, 112px);
 }
 
-/* ── 顶栏 ───────────────────────────────────────── */
+/* ── Top bar ───────────────────────────────────────── */
 .top {
   position: sticky;
   top: 0;
@@ -133,7 +133,7 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-/* 顶栏不跟内容区共用居中容器:品牌贴页面左上角,GitHub 贴右上角。 */
+/* The top bar does not share the centered container with the content: the brand hugs the top-left of the page, GitHub the top-right. */
 .topInner {
   display: flex;
   align-items: center;
@@ -211,7 +211,7 @@
   overflow: hidden;
 }
 
-/* 顶光:一束很淡的锌白模拟机身打光,底下压一点锈橙 */
+/* Top light: a very faint zinc-white simulating light on the chassis, with a touch of rust orange pressed underneath */
 .hero::before {
   content: "";
   position: absolute;
@@ -223,8 +223,8 @@
     radial-gradient(30% 70% at 50% 0%, rgba(217, 96, 58, 0.07), transparent 72%);
 }
 
-/* 宽屏两栏:左边文案,右边下载卡片,免得内容全挤在左半边、右边空一整片。
-   窄屏(<1040px)回落成单栏,卡片跟在文案下面。 */
+/* Wide screens use two columns: copy on the left, download card on the right, so the content is not all crammed into the left half with the right a blank stretch.
+   Narrow screens (<1040px) fall back to a single column, with the card under the copy. */
 .heroInner {
   position: relative;
   display: grid;
@@ -240,7 +240,7 @@
   }
 }
 
-/* 右栏顶部与左栏字标齐平,不让卡片浮在半空。 */
+/* The top of the right column is flush with the wordmark in the left column, so the card does not float in mid-air. */
 .heroAside {
   padding-top: 6px;
 }
@@ -267,7 +267,7 @@
   color: var(--zinc);
 }
 
-/* 与登录页同一句 slogan:中文主句在上,英文副线宽字距排在下,DC 挑出来上重音。 */
+/* The same slogan as the login page: the main line on top, the secondary line in wide letter-spacing underneath, with DC picked out in accent. */
 .heroSlogan {
   display: flex;
   flex-wrap: wrap;
@@ -308,14 +308,14 @@
   color: var(--text);
 }
 
-/* ── 平台卡 ─────────────────────────────────────── */
+/* ── Platform card ─────────────────────────────────── */
 .platforms {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s2);
 }
 
-/* 进了右栏就只有一列宽度,两张卡改成上下叠。 */
+/* In the right column there is only one column of width, so the two cards stack vertically. */
 @media (min-width: 1040px) {
   .platforms {
     grid-template-columns: minmax(0, 1fr);
@@ -383,7 +383,7 @@
   color: var(--rust);
 }
 
-/* 读数表:像机身上的铭牌 */
+/* Readout table: like a nameplate on the chassis */
 .readout {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -448,7 +448,7 @@
   border-color: var(--rust-hot);
 }
 
-/* ── 校准条:全页唯一横贯的高饱和元素 ───────────── */
+/* ── Calibration bar: the only high-saturation element spanning the whole page ───────────── */
 .strip {
   position: relative;
   margin-top: clamp(56px, 9vh, 96px);
@@ -473,7 +473,7 @@
   transition: width 1400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── 界面窗口 ───────────────────────────────────── */
+/* ── Interface window ───────────────────────────────── */
 .shotFrame {
   margin: var(--s4) 0 0;
   border: 1px solid var(--line);
@@ -522,7 +522,7 @@
   color: var(--dim-deep);
 }
 
-/* ── 能力四宫格 ─────────────────────────────────── */
+/* ── Capability four-grid ──────────────────────────── */
 .capabilityGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
@@ -567,7 +567,7 @@
   color: var(--dim);
 }
 
-/* ── 版本 + 更新日志 ────────────────────────────── */
+/* ── Version + changelog ───────────────────────────── */
 .releaseGrid {
   display: grid;
   grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
@@ -609,8 +609,8 @@
   color: var(--zinc);
 }
 
-/* SHA-512 是 88 个 base64 字符,塞不进上面那张两列 dl。单独一行,整段可见
-   不做省略号 —— 核验的动作就是原样比对,截断了这块就白放了。 */
+/* SHA-512 is 88 base64 characters and does not fit in the two-column dl above. A separate row, fully visible
+   with no ellipsis - verification means comparing exactly, and truncating it would defeat the purpose. */
 .checksum {
   margin-top: 16px;
   padding-top: 14px;
@@ -663,7 +663,7 @@
   color: var(--dim-deep);
 }
 
-/* 更新日志是真时间序,所以左列的日期刻度是信息而不是装饰 */
+/* The changelog is a true time sequence, so the date ticks in the left column are information rather than decoration */
 .changelog {
   list-style: none;
   margin: 0;
@@ -686,7 +686,7 @@
   border-bottom: 0;
 }
 
-/* 左栏:版本号在上(读得见),发布日期在下(次要)。 */
+/* Left column: version on top (readable), release date underneath (secondary). */
 .changelogMeta {
   padding-top: 2px;
   font-family: var(--mono);
@@ -802,7 +802,7 @@
   color: var(--text);
 }
 
-/* ── 页脚 ───────────────────────────────────────── */
+/* ── Footer ───────────────────────────────────────── */
 .footer {
   padding: var(--s4) 0 var(--s5);
   border-top: 1px solid var(--line-soft);
@@ -847,7 +847,7 @@
   color: var(--dim-deep);
 }
 
-/* ── 进场 ───────────────────────────────────────── */
+/* ── Entrance ─────────────────────────────────────── */
 .rise {
   opacity: 0;
   transform: translateY(18px);

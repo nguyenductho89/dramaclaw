@@ -27,7 +27,7 @@ class DocumentParseError(ValueError):
 
 
 def supported_novel_extensions_label() -> str:
-    return "、".join(SUPPORTED_NOVEL_EXTENSION_ORDER)
+    return ", ".join(SUPPORTED_NOVEL_EXTENSION_ORDER)
 
 
 def is_supported_novel_path(path: str | Path) -> bool:
@@ -68,8 +68,8 @@ def load_novel_text(path: str | Path) -> str:
         except UnicodeDecodeError as exc:
             raise DocumentParseError(
                 source_format=suffix.lstrip(".") or "unknown",
-                location="文件编码",
-                reason="仅支持 UTF-8 或 GBK 编码的文本文件",
+                location="file encoding",
+                reason="Only UTF-8 or GBK encoded text files are supported",
                 raw_exception=exc,
             ) from exc
 
@@ -78,10 +78,10 @@ def load_novel_text(path: str | Path) -> str:
 
     raise DocumentParseError(
         source_format=suffix.lstrip(".") or "unknown",
-        location="文件类型",
+        location="file type",
         reason=(
-            f"不支持的文件类型: {suffix or '无扩展名'}，"
-            f"当前支持: {supported_novel_extensions_label()}"
+            f"Unsupported file type: {suffix or 'no extension'}, "
+            f"currently supported: {supported_novel_extensions_label()}"
         ),
     )
 
@@ -92,8 +92,8 @@ def parse_docx(path: Path) -> str:
     except ImportError as exc:
         raise DocumentParseError(
             source_format="docx",
-            location="依赖",
-            reason="缺少 python-docx，无法解析 Word 文档",
+            location="dependency",
+            reason="python-docx is missing; cannot parse Word documents",
             raw_exception=exc,
         ) from exc
 
@@ -102,8 +102,8 @@ def parse_docx(path: Path) -> str:
     except Exception as exc:
         raise DocumentParseError(
             source_format="docx",
-            location="文档",
-            reason="无法打开 Word 文档",
+            location="document",
+            reason="Unable to open the Word document",
             raw_exception=exc,
         ) from exc
 
@@ -114,8 +114,8 @@ def parse_docx(path: Path) -> str:
         except Exception as exc:
             raise DocumentParseError(
                 source_format="docx",
-                location=f"段落 {index}",
-                reason="读取段落失败",
+                location=f"paragraph {index}",
+                reason="Failed to read paragraph",
                 raw_exception=exc,
             ) from exc
         if text:
@@ -130,8 +130,8 @@ def parse_docx(path: Path) -> str:
         except Exception as exc:
             raise DocumentParseError(
                 source_format="docx",
-                location=f"表格 {table_index}",
-                reason="读取表格失败",
+                location=f"table {table_index}",
+                reason="Failed to read table",
                 raw_exception=exc,
             ) from exc
 

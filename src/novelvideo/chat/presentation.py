@@ -280,7 +280,7 @@ def split_ui_specs_from_text(
                 specs.append(canonicalize_ui_spec(value))
         except ValueError as exc:
             log_error(exc, body)
-            return "（json-render 格式校验失败：模型返回的 ui-spec 不是合法 canonical JSON，已阻止展示。请重新生成。）"
+            return "(json-render validation failed: the ui-spec returned by the model is not valid canonical JSON, so it was blocked from display. Please regenerate.)"
         return ""
 
     display_text = UI_SPEC_BLOCK_RE.sub(replace_block, text)

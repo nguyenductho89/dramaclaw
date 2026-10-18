@@ -2,11 +2,11 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 风格图片地址的唯一解析点。
+ * The single resolution point for style image URLs.
  *
- * 图片不随仓库发布:后端配 STYLE_GALLERY_ASSET_BASE(OSS/CDN 域名)后由接口
- * 下发前缀,这里直接拼。assetBase 为空时回落到同源 /style-gallery/ —— 那个
- * 目录默认是空的,交给 StyleAssetImage 显示占位块。
+ * Images are not shipped with the repo: once the backend configures STYLE_GALLERY_ASSET_BASE (OSS/CDN domain), the API
+ * hands out the prefix and it is concatenated here. When assetBase is empty it falls back to same-origin /style-gallery/ — that
+ * directory is empty by default, so StyleAssetImage shows a placeholder block.
  */
 export function resolveStyleAssetUrl(rel: string, assetBase: string): string {
   if (!rel) return '';

@@ -63,11 +63,11 @@ def ensure_bootstrap() -> None:
     edition = runtime_env.edition()
     dsn = os.environ.get("ST_CONTROL_PLANE_DSN", "").strip()
     if edition not in {"ce", "ee"}:
-        raise RuntimeError("ST_EDITION 无效：仅支持 ce 或 ee")
+        raise RuntimeError("Invalid ST_EDITION: only ce or ee is supported")
     if dsn and edition == "ce":
         raise RuntimeError(
-            "ST_CONTROL_PLANE_DSN 与 ST_EDITION=ce 同时设置(矛盾配置):"
-            "有控制面 DSN 即 EE,声明 CE 即应无 DSN——请二选一"
+            "ST_CONTROL_PLANE_DSN and ST_EDITION=ce are both set (contradictory configuration): "
+            "a control-plane DSN means EE and declaring CE means no DSN -- pick one"
         )
     if dsn:
         for ep in entry_points(group="novelvideo.ports_bootstrap"):
@@ -75,9 +75,9 @@ def ensure_bootstrap() -> None:
         missing = [name for name in _EE_REQUIRED_PORTS if name not in _PORTS]
         if missing:
             raise RuntimeError(
-                "ST_CONTROL_PLANE_DSN 已设置但 EE 端口不完整，缺失: "
+                "ST_CONTROL_PLANE_DSN is set but the EE ports are incomplete, missing: "
                 + ", ".join(missing)
-                + "（入口点组 novelvideo.ports_bootstrap 未发现或注册不全）"
+                + " (entry point group novelvideo.ports_bootstrap not found or registered incompletely)"
             )
         _BOOTSTRAPPED = True
         return
@@ -87,4 +87,4 @@ def ensure_bootstrap() -> None:
         register_local_ports()
         _BOOTSTRAPPED = True
         return
-    raise RuntimeError("ST_EDITION=ee 但缺 ST_CONTROL_PLANE_DSN，拒绝启动")
+    raise RuntimeError("ST_EDITION=ee but ST_CONTROL_PLANE_DSN is missing; refusing to start")

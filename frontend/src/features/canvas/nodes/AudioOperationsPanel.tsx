@@ -57,31 +57,31 @@ import { requiresCustomVoiceSelection } from './audioVoicePolicy';
 
 const PANEL_GAP_PX = 12;
 const PANEL_OVERHANG_PX = 60;
-// 「放大」后用居中弹窗展示，弹窗宽度（高度随内容，文本框更高见下方 textarea）。
+// After "enlarge", shown in a centered dialog; this is the dialog width (height follows content, see the textarea below for the taller text box).
 const PANEL_EXPANDED_WIDTH_PX = 760;
 const AUDIO_INPUT_LABEL_CLASS = 'text-[12px] font-medium text-text-muted/90';
 const AUDIO_INPUT_FIELD_CLASS =
   'nodrag nowheel w-full rounded-[10px] border border-white/[0.08] bg-transparent px-3 text-[13px] text-text-dark outline-none transition-colors placeholder:text-text-muted/70 hover:border-white/[0.12] focus:border-white/20';
 
-// music 模式时长默认 30s（对齐后端 music_length_ms 默认 30000）。
+// In music mode the default duration is 30s (aligned with the backend music_length_ms default 30000).
 export const DEFAULT_MUSIC_LENGTH_MS = 30000;
 const AUDIO_SPEECH_FEATURE_KEY = 'freezone.audio_speech';
 const AUDIO_MUSIC_FEATURE_KEY = 'freezone.audio_music';
-// 音乐时长下拉样式：暗色画布风格 + min-width 兜底,避免画布缩放/窄触发器时
-// 菜单按触发器屏幕宽渲染导致选项被 truncate 成「1…」。
+// Music duration dropdown style: dark canvas look + min-width fallback, so that when the canvas is zoomed / the trigger is narrow
+// the menu rendered at the trigger's screen width does not truncate options to "1…".
 const MUSIC_LENGTH_SELECT_CLASS =
   '!h-8 !w-[116px] !rounded-[8px] !border-white/[0.1] !bg-white/[0.04] !px-3 !text-[13px] !text-text-dark hover:!border-white/20';
 const MUSIC_LENGTH_SELECT_MENU_CLASS =
   '!z-[260] !min-w-[140px] !border-white/10 !bg-[#202024] !text-text-dark shadow-[0_14px_34px_rgba(0,0,0,0.5)]';
-// 音乐时长预设（毫秒）。后端范围 3000–600000，这里给常用档位。
+// Music duration presets (milliseconds). The backend range is 3000–600000; common tiers are offered here.
 export const MUSIC_LENGTH_PRESETS: ReadonlyArray<{ ms: number; label: string; labelKey: string }> = [
-  { ms: 30000, label: '30秒', labelKey: 'node.audioPanel.musicLength.30s' },
-  { ms: 60000, label: '1分钟', labelKey: 'node.audioPanel.musicLength.1m' },
-  { ms: 120000, label: '2分钟', labelKey: 'node.audioPanel.musicLength.2m' },
-  { ms: 180000, label: '3分钟', labelKey: 'node.audioPanel.musicLength.3m' },
-  { ms: 240000, label: '4分钟', labelKey: 'node.audioPanel.musicLength.4m' },
-  { ms: 300000, label: '5分钟', labelKey: 'node.audioPanel.musicLength.5m' },
-  { ms: 600000, label: '10分钟', labelKey: 'node.audioPanel.musicLength.10m' },
+  { ms: 30000, label: '30s', labelKey: 'node.audioPanel.musicLength.30s' },
+  { ms: 60000, label: '1 min', labelKey: 'node.audioPanel.musicLength.1m' },
+  { ms: 120000, label: '2 min', labelKey: 'node.audioPanel.musicLength.2m' },
+  { ms: 180000, label: '3 min', labelKey: 'node.audioPanel.musicLength.3m' },
+  { ms: 240000, label: '4 min', labelKey: 'node.audioPanel.musicLength.4m' },
+  { ms: 300000, label: '5 min', labelKey: 'node.audioPanel.musicLength.5m' },
+  { ms: 600000, label: '10 min', labelKey: 'node.audioPanel.musicLength.10m' },
 ];
 
 export function musicBillingSecondsFromMs(ms: number): number {
@@ -102,15 +102,15 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const [isTranslating, setIsTranslating] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
-  // 音色设置默认收起，参考 libtv：控制行的设置按钮点开后才展示音色卡。
+  // The voice settings are collapsed by default, following libtv: the voice card shows only after the control row's settings button is opened.
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
-  // music 模式：高级设置（音乐时长等）默认收起，点底部设置按钮展开。
+  // Music mode: advanced settings (music duration etc.) are collapsed by default; click the bottom settings button to expand.
   const [showMusicSettings, setShowMusicSettings] = useState(false);
-  // 'music'：文字生成音乐(走 /freezone/audio/eleven-music)；缺省/'speech'：克隆音频(TTS)。
+  // 'music': text-to-music (via /freezone/audio/eleven-music); default/'speech': cloned audio (TTS).
   const isMusic = data.audioKind === 'music';
   const voiceMissing = requiresCustomVoiceSelection(data);
-  // 生成逻辑(含失败重试)抽到 useAudioGeneration，与节点本体的重试共用同一实现。
+  // Generation logic (including failure retry) is extracted into useAudioGeneration, sharing one implementation with the node body's retry.
   const {
     generate: handleSubmit,
     effectivePrompt,
@@ -148,8 +148,8 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
   const text = useMemo(() => deriveAudioText(data), [data]);
   const emotionPrompt = data.emotionPrompt ?? '';
 
-  // 本地草稿 + composition 守卫——避免 store 直绑导致 IME 候选被打断。
-  // 同 docs/changes/2026-05-12-image-gen-ime-fix.md 的修复模式。
+  // Local draft + composition guard — avoids binding the store directly, which would interrupt IME candidates.
+  // Same fix pattern as docs/changes/2026-05-12-image-gen-ime-fix.md.
   const [textDraft, setTextDraft] = useState(text);
   const isComposingTextRef = useRef(false);
   useEffect(() => {
@@ -164,10 +164,10 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
     setEmotionDraft(emotionPrompt);
   }, [emotionPrompt]);
 
-  // 收集上游 text 内容 —— 音频节点上游只允许文本节点（textAnnotation /
-  // script），用 graphContentResolver 统一拿到 `text` 字段后过滤出非空项。
-  // 注意：上游文本「不回显」进输入框（textarea 只反映用户本地输入），仅作为引用
-  // chip 展示；提交时由 useAudioGeneration.effectivePrompt 拼接进最终 prompt。
+  // Collect upstream text content — only text nodes (textAnnotation /
+  // script) are allowed upstream of an audio node; graphContentResolver yields the `text` field uniformly, then non-empty entries are kept.
+  // Note: upstream text is "not echoed" into the input (the textarea reflects only the user's local input) and is shown only as a reference
+  // chip; at submit time useAudioGeneration.effectivePrompt concatenates it into the final prompt.
   const upstreamContents = useUpstreamContents(nodeId);
   const upstreamTextContents = useMemo(
     () =>
@@ -213,8 +213,8 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
       const result = await fetchFreezoneTextTranslateResult(project, ref.job_id);
       handleTextChange(result.translated_text);
     } catch (error) {
-      // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-      // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+      // A polling timeout is not a generation failure: the backend is still running and the node's task handle can still resume.
+      // Writing an error banner would mark a live task as failed and clear the handle.
       if (isTaskPollTimeoutError(error)) {
         notifyTaskStillRunning(t);
         return;
@@ -225,7 +225,7 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
     }
   }, [handleTextChange, isGenerating, isTranslating, modelTaskAccess.blocked, t, text]);
 
-  // 文本框为空但引用了非空文本时也允许提交（effectivePrompt 会回退到上游引用）。
+  // Submit is also allowed when the text box is empty but a non-empty text is referenced (effectivePrompt falls back to the upstream reference).
   const submitDisabled =
     isGenerating || billingRuleMissing || modelTaskAccess.blocked ||
     effectivePrompt.length === 0;
@@ -448,7 +448,7 @@ export function AudioOperationsPanel({ nodeId, data }: AudioOperationsPanelProps
 }
 
 // ---------------------------------------------------------------------------
-// 通用 icon 按钮
+// Generic icon button
 // ---------------------------------------------------------------------------
 
 interface IconButtonProps {
@@ -476,7 +476,7 @@ function IconButton({ children, onClick, disabled, active, title }: IconButtonPr
 }
 
 // ---------------------------------------------------------------------------
-// 子面板：音色设置（只剩音色卡 + 切换按钮）
+// Sub-panel: voice settings (only the voice card + switch button remain)
 // ---------------------------------------------------------------------------
 
 interface AudioVoiceSettingsPanelProps {
@@ -485,10 +485,10 @@ interface AudioVoiceSettingsPanelProps {
 }
 
 // ---------------------------------------------------------------------------
-// music 高级设置面板：音乐时长（带说明 tooltip + 预设下拉）
+// Music advanced settings panel: music duration (with an explanatory tooltip + preset dropdown)
 // ---------------------------------------------------------------------------
 
-// 布尔设置开关，沿用画布里 VideoNode 的拨动开关样式（暗色面板下清晰可见）。
+// Boolean setting switch, reusing the toggle style of VideoNode in the canvas (clearly visible on the dark panel).
 function MusicSettingToggle({
   checked,
   onChange,
@@ -526,7 +526,7 @@ function MusicSettingToggle({
   );
 }
 
-// 设置项标签后的「?」说明（hover 弹 tooltip）。
+// The "?" hint after a setting label (shows a tooltip on hover).
 function MusicSettingHelp({ text }: { text: string }) {
   const { t } = useTranslation();
   return (
@@ -625,8 +625,8 @@ function AudioMusicSettingsPanel({
 function AudioVoiceSettingsPanel({ nodeId, data }: AudioVoiceSettingsPanelProps) {
   const { t } = useTranslation();
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
-  // 默认音色的拉取放在 AudioNode 里完成（音频节点一挂载就会触发）；这里只负责展示。
-  // 显示兜底改为「加载中…」而不是「项目解说人」——避免在 references 落地前误导用户。
+  // Fetching the default voice is done inside AudioNode (triggered as soon as the audio node mounts); this only handles display.
+  // The display fallback is "Loading…" rather than "Project narrator" — to avoid misleading the user before references land.
   const voiceLabel = data.voiceLabel ?? t('node.audioPanel.voiceLoading');
   const voiceLanguage = data.voiceLanguage ?? '';
   const currentRef: AudioVoiceRef = data.voiceRef ?? { scope: 'project_narrator' };

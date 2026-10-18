@@ -111,7 +111,7 @@ export const VideoComposeNode = memo(
 
     const handleAutoCompose = useCallback(async () => {
       if (!project || !canAutoCompose) {
-        throw new Error("自动合成至少需要 1 个视频和共计 2 个已完成媒体节点");
+        throw new Error("Auto compose needs at least 1 video and 2 completed media nodes in total");
       }
       const draft = data.draftTimeline as ComposeTimelineState | undefined;
       const timeline = await resolveUnknownClipDurations(
@@ -119,9 +119,9 @@ export const VideoComposeNode = memo(
           ? reconcileDraftWithUpstream(draft, seedNodeIds)
           : buildInitialTimeline(seedNodeIds),
       );
-      if (!hasExportableClips(timeline)) throw new Error("视频合成没有可用素材");
+      if (!hasExportableClips(timeline)) throw new Error("Video compose has no usable material");
       if (hasOverlappingVideoClips(timeline)) {
-        throw new Error("视频轨道存在重叠片段，请先在时间线中调整");
+        throw new Error("Video track has overlapping clips; adjust them in the timeline first");
       }
       updateNodeData(id, {
         isGenerating: true,
@@ -147,7 +147,7 @@ export const VideoComposeNode = memo(
           "freezone_video_compose",
           ref.job_id,
         );
-        if (!result.url) throw new Error("视频合成完成但未返回成片地址");
+        if (!result.url) throw new Error("Video compose finished but returned no output URL");
         const resultCoverUrl = result.cover_url ?? timeline.cover?.url ?? null;
         const store = useCanvasStore.getState();
         const existingResult = store.nodes.find((node) =>
@@ -211,7 +211,7 @@ export const VideoComposeNode = memo(
         if (action === "open_video_compose_modal") {
           publishNodeActionAccepted(requestId, id, action);
           if (!handleOpen()) {
-            publishNodeActionError(requestId, id, action, "视频合成至少需要 2 个已完成视频输入");
+            publishNodeActionError(requestId, id, action, "Video compose needs at least 2 completed video inputs");
             return;
           }
           publishNodeActionSuccess(requestId, id, action, { openedUiAction: true });
@@ -258,7 +258,7 @@ export const VideoComposeNode = memo(
         <div
           className={`relative flex h-full w-full flex-col overflow-hidden rounded-[var(--node-radius)] border ${CANVAS_NODE_INPUT_SURFACE_CLASS} transition-colors ${cardToneClass}`}
         >
-          {/* 入口节点只负责打开时间线编辑器；合成结果在下游视频节点承载。 */}
+          {/* The entry node only opens the timeline editor; the compose result is carried by the downstream video node. */}
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-5 py-4 text-center">
             <button
               type="button"
@@ -290,8 +290,8 @@ export const VideoComposeNode = memo(
             }
             onClose={() => setEditorOpen(false)}
             onComposed={(url, coverUrl) => {
-              // 合成完成：在本节点下游新建一个视频节点承载结果，并连边、聚焦。
-              // 封面（若设置）写进结果视频节点 + 本合成节点的 previewImageUrl。
+              // Compose finished: create a video node downstream of this node to carry the result, then connect the edge and focus.
+              // The cover (if set) is written to the result video node + this compose node's previewImageUrl.
               const store = useCanvasStore.getState();
               const position = store.findNodePosition(id, 580, 380);
               const newId = store.addNode(CANVAS_NODE_TYPES.video, position, {

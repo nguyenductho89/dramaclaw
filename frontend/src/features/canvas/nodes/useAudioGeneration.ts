@@ -47,8 +47,8 @@ function normalizeMusicPrompt(prompt: string): string {
 }
 
 /**
- * 老节点数据可能还带着 segments（旧版分段编辑器留下的）。新版直接读 `text`，
- * 没的话回退去拼 segments — 这样老节点打开后用户就能继续编辑。
+ * Old node data may still carry segments (left by the old segment editor). The new version reads `text` directly,
+ * and falls back to joining segments if it is absent — so users can keep editing after opening an old node.
  */
 export function deriveAudioText(data: AudioNodeData): string {
   if (typeof data.text === 'string') return data.text;
@@ -61,9 +61,9 @@ export function deriveAudioText(data: AudioNodeData): string {
 }
 
 /**
- * 音频节点的生成逻辑——提交按钮（面板）和失败重试（节点本体）共用。
- * 把生成放进 hook 而非面板组件，是因为面板只在节点被选中时渲染；节点本体需要
- * 在未选中时也能触发重试，且失败信息持久化在节点数据里跨虚拟化重挂存活。
+ * Generation logic of the audio node — shared by the submit button (panel) and failure retry (node body).
+ * Generation lives in a hook rather than the panel component because the panel renders only when the node is selected; the node body needs
+ * to trigger retry while unselected too, and the failure info is persisted in node data, surviving virtualized remounts.
  */
 export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
@@ -86,10 +86,10 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
           : {
               audioUrl: null,
               durationMs: null,
-              generationError: '背景音乐节点已修正，请重新生成音乐',
+              generationError: 'Background music node was corrected; please regenerate the music',
               workflowResultStale: true,
               workflowInvalidatedAt: new Date().toISOString(),
-              workflowInvalidationReason: '音频类型由语音修正为背景音乐',
+              workflowInvalidationReason: 'Audio type was corrected from speech to background music',
             }),
       });
     }
@@ -109,8 +109,8 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
     resolvedMusicLengthMs,
     updateNodeData,
   ]);
-  // 有效 prompt：上游引用的文本不回显进输入框，仅在提交时与本地输入「拼接」成最终
-  // prompt（上游在前、本地在后，与 joinUpstreamText 一致用空行分隔，过滤空段）。
+  // Effective prompt: upstream referenced text is not echoed into the input; at submit time it is "concatenated" with the local input into the final
+  // prompt (upstream first, local after, separated by blank lines like joinUpstreamText, empty segments filtered).
   const ownText = deriveAudioText(data);
   const hasInvalidSpeechInstruction =
     !isMusic && isSpeechGenerationInstruction(ownText);
@@ -119,10 +119,10 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
       updateNodeData(nodeId, {
         audioUrl: null,
         durationMs: null,
-        generationError: '旁白节点缺少实际朗读文案，请填写旁白正文后重新生成',
+        generationError: 'The narration node has no actual text to read aloud; fill in the narration body and regenerate',
         workflowResultStale: true,
         workflowInvalidatedAt: new Date().toISOString(),
-        workflowInvalidationReason: '旁白生成说明不能作为朗读正文',
+        workflowInvalidationReason: 'Narration generation notes cannot be used as the read-aloud body',
       });
     }
   }, [data.audioUrl, hasInvalidSpeechInstruction, nodeId, updateNodeData]);
@@ -130,8 +130,8 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
     .filter((segment) => segment.length > 0)
     .join('\n\n');
   const emotionPrompt = data.emotionPrompt ?? '';
-  // 组织成员没有发起模型任务的资格时不放行。面板与节点本体的重试共用这个 hook，
-  // 所以门控放在这里，两条入口都盖到。
+  // Do not let through when an organization member is not eligible to start model tasks. The panel and the node body's retry share this hook,
+  // so the gate lives here and covers both entry points.
   const modelTaskAccess = useModelTaskAccess();
   const { t } = useTranslation();
 
@@ -140,9 +140,9 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
     skipped?: boolean;
     reason?: string;
   }> => {
-    // 画布批量命令会在同一轮里先写节点参数、再立即执行动作。React props 可能尚未
-    // 完成下一次渲染，因此这里必须以 store 中的最新节点数据为准，避免漏掉用户刚在
-    // 选择器中确认的自定义声线并把本次生成误判为跳过。
+    // A canvas batch command writes node params first and then immediately runs the action in the same turn. React props may not
+    // have finished the next render, so the latest node data in the store must be authoritative here, to avoid missing the custom voice the user just
+    // confirmed in the picker and misjudging this generation as skipped.
     const latestNode = useCanvasStore.getState().nodes.find((node) => node.id === nodeId);
     const runtimeData = (latestNode?.data as AudioNodeData | undefined) ?? data;
     const runtimeAudioKind = resolveAudioKind(runtimeData);
@@ -250,7 +250,7 @@ export function useAudioGeneration(nodeId: string, data: AudioNodeData) {
               safeFallbackPrompt: speechFallbackPrompt,
             });
       if (!trimmed) {
-        throw new Error('没有可朗读的旁白或对白');
+        throw new Error('There is no narration or dialogue to read aloud');
       }
       const ref = runtimeIsMusic
         ? await submitFreezoneAudioMusic(project, {

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""端口闭合守栏（cp-port）。
+"""Port-closure guard (cp-port).
 
-本仓库须能在 ST_EDITION=ce / 无 DSN 下独立运行——所有 ports.* 能力都由本地实现
-（novelvideo.ports.local.*）满足，不依赖任何外部适配器。本守栏做端口闭合校验：
+This repository must run standalone under ST_EDITION=ce / without a DSN -- every ports.*
+capability is satisfied by a local implementation (novelvideo.ports.local.*), with no
+dependency on any external adapter. This guard performs the port-closure check:
 
-  1. ensure_bootstrap() 成功（不缺端口、不报矛盾配置）；
-  2. 11 个门面 getter 全部解析，且实现类落在 novelvideo.ports.local.*
-     （命中 novelvideo_ee / supertale_admin / novelvideo.control_plane 即外部实现）；
-  3. 入口点组 novelvideo.ports_bootstrap 为空——安装里不得混入外部适配器包。
+  1. ensure_bootstrap() succeeds (no missing ports, no contradictory configuration);
+  2. All 11 facade getters resolve, and the implementation classes live under novelvideo.ports.local.*
+     (hitting novelvideo_ee / supertale_admin / novelvideo.control_plane means an external implementation);
+  3. The entry-point group novelvideo.ports_bootstrap is empty -- no external adapter package may be mixed into the install.
 
-任一不满足 → 退出码 1。与 import-lint（lint_ce_imports.py）互补：
-import-lint 防「源码层」直接 import，本守栏防「运行期/打包层」端口被外部实现兜底。
+Any failure -> exit code 1. Complements import-lint (lint_ce_imports.py):
+import-lint prevents direct imports at the "source level", while this guard prevents ports from
+being backed by an external implementation at the "runtime / packaging level".
 """
 from __future__ import annotations
 
@@ -18,15 +20,15 @@ import os
 import sys
 from importlib.metadata import entry_points
 
-# 端口实现必须落在此前缀下（本地实现）
+# Port implementations must live under this prefix (local implementations)
 EXPECTED_LOCAL_PREFIX = "novelvideo.ports.local"
-# 实现类模块命中以下任一前缀即判定为外部实现
+# An implementation class module matching any prefix below is judged an external implementation
 FORBIDDEN_IMPL_PREFIXES = (
     "novelvideo_ee",
     "supertale_admin",
     "novelvideo.control_plane",
 )
-# novelvideo.ports.__all__ 暴露的 11 个门面 getter（与 _EE_REQUIRED_PORTS 一一对应）
+# The 11 facade getters exposed by novelvideo.ports.__all__ (one-to-one with _EE_REQUIRED_PORTS)
 FACADE_GETTERS = (
     "get_auth_port",
     "get_auth_session_port",
@@ -47,17 +49,17 @@ def _impl_module(impl: object) -> str:
 
 
 def _classify(module: str) -> str | None:
-    """返回违规原因；合规返回 None。"""
+    """Return the violation reason; return None if compliant."""
     for prefix in FORBIDDEN_IMPL_PREFIXES:
         if module == prefix or module.startswith(f"{prefix}."):
-            return f"外部实现（{module}）"
+            return f"external implementation ({module})"
     if module != EXPECTED_LOCAL_PREFIX and not module.startswith(f"{EXPECTED_LOCAL_PREFIX}."):
-        return f"非本地实现（{module}，期望 {EXPECTED_LOCAL_PREFIX}.*）"
+        return f"non-local implementation ({module}, expected {EXPECTED_LOCAL_PREFIX}.*)"
     return None
 
 
 def main() -> int:
-    # 强制纯 CE 模式，确保确定性（不受调用方 env 干扰）
+    # Force pure CE mode for determinism (unaffected by the caller's env)
     os.environ["ST_EDITION"] = "ce"
     os.environ.pop("ST_CONTROL_PLANE_DSN", None)
 
@@ -66,20 +68,20 @@ def main() -> int:
 
     try:
         ensure_bootstrap()
-    except Exception as exc:  # noqa: BLE001 — 启动失败本身即闭合失败
-        print(f"✖ ensure_bootstrap() 在纯 CE 模式下失败：{exc}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001 -- a bootstrap failure is itself a closure failure
+        print(f"✖ ensure_bootstrap() failed in pure CE mode: {exc}", file=sys.stderr)
         return 1
 
     failures: list[str] = []
     for name in FACADE_GETTERS:
         getter = getattr(ports, name, None)
         if getter is None:
-            failures.append(f"{name}: 门面缺失（novelvideo.ports 未暴露）")
+            failures.append(f"{name}: facade missing (not exposed by novelvideo.ports)")
             continue
         try:
             impl = getter()
         except Exception as exc:  # noqa: BLE001
-            failures.append(f"{name}: 解析抛错 {exc.__class__.__name__}: {exc}")
+            failures.append(f"{name}: resolution raised {exc.__class__.__name__}: {exc}")
             continue
         module = _impl_module(impl)
         reason = _classify(module)
@@ -92,21 +94,21 @@ def main() -> int:
     if eps:
         joined = ", ".join(f"{ep.name}={ep.value}" for ep in eps)
         failures.append(
-            f"入口点组 novelvideo.ports_bootstrap 非空（安装混入外部适配器）：{joined}"
+            f"entry-point group novelvideo.ports_bootstrap is non-empty (external adapters mixed into the install): {joined}"
         )
 
     if failures:
-        print(f"\n✖ 端口闭合失败，{len(failures)} 项：", file=sys.stderr)
+        print(f"\n✖ Port closure failed, {len(failures)} item(s):", file=sys.stderr)
         for item in failures:
             print(f"  {item}", file=sys.stderr)
         print(
-            "\n所有端口须由 novelvideo.ports.local.* 满足，"
-            "不得依赖外部适配器或 novelvideo.ports_bootstrap 入口点。",
+            "\nAll ports must be satisfied by novelvideo.ports.local.*, "
+            "with no dependency on external adapters or the novelvideo.ports_bootstrap entry point.",
             file=sys.stderr,
         )
         return 1
 
-    print(f"\n✓ 端口闭合：{len(FACADE_GETTERS)} 个端口均由本地实现满足，无外部依赖。")
+    print(f"\n✓ Port closure: all {len(FACADE_GETTERS)} ports are satisfied by local implementations, with no external dependencies.")
     return 0
 
 

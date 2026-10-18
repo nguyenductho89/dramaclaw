@@ -18,18 +18,29 @@
     "confirm": "Confirm creation"
   },
   "referenceValidation": {
-    "firstFrame": "First frame", "lastFrame": "Last frame",
-    "title": "Reference media does not meet model requirements", "hint": "Correct the listed media before generating. Locate opens the corresponding canvas node.", "locate": "Locate media",
-    "image": "Image", "audio": "Audio", "video": "Video",
+    "firstFrame": "First frame",
+    "lastFrame": "Last frame",
+    "title": "Reference media does not meet model requirements",
+    "hint": "Correct the listed media before generating. Locate opens the corresponding canvas node.",
+    "locate": "Locate media",
+    "image": "Image",
+    "audio": "Audio",
+    "video": "Video",
     "format": "Actual format: {{actual}}; supported: {{expected}}.",
     "unreadable": "Unable to read or identify this media. Please upload a valid file.",
     "maxMB": "Actual size: {{actual}} MB; maximum: {{expected}} MB.",
-    "minWidth": "Width: {{actual}} px; minimum: {{expected}} px.", "maxWidth": "Width: {{actual}} px; maximum: {{expected}} px.",
-    "minHeight": "Height: {{actual}} px; minimum: {{expected}} px.", "maxHeight": "Height: {{actual}} px; maximum: {{expected}} px.",
-    "minAspectRatio": "Aspect ratio: {{actual}}; minimum: {{expected}}.", "maxAspectRatio": "Aspect ratio: {{actual}}; maximum: {{expected}}.",
-    "minFPS": "Frame rate: {{actual}} fps; minimum: {{expected}} fps.", "maxFPS": "Frame rate: {{actual}} fps; maximum: {{expected}} fps.",
-    "minDuration": "Duration: {{actual}} s; each clip must be at least {{expected}} s.", "maxDuration": "Duration: {{actual}} s; each clip must be at most {{expected}} s.",
-    "totalMinDuration": "Total reference duration: {{actual}} s; minimum: {{expected}} s.", "totalMaxDuration": "Total reference duration: {{actual}} s; maximum: {{expected}} s."
+    "minWidth": "Width: {{actual}} px; minimum: {{expected}} px.",
+    "maxWidth": "Width: {{actual}} px; maximum: {{expected}} px.",
+    "minHeight": "Height: {{actual}} px; minimum: {{expected}} px.",
+    "maxHeight": "Height: {{actual}} px; maximum: {{expected}} px.",
+    "minAspectRatio": "Aspect ratio: {{actual}}; minimum: {{expected}}.",
+    "maxAspectRatio": "Aspect ratio: {{actual}}; maximum: {{expected}}.",
+    "minFPS": "Frame rate: {{actual}} fps; minimum: {{expected}} fps.",
+    "maxFPS": "Frame rate: {{actual}} fps; maximum: {{expected}} fps.",
+    "minDuration": "Duration: {{actual}} s; each clip must be at least {{expected}} s.",
+    "maxDuration": "Duration: {{actual}} s; each clip must be at most {{expected}} s.",
+    "totalMinDuration": "Total reference duration: {{actual}} s; minimum: {{expected}} s.",
+    "totalMaxDuration": "Total reference duration: {{actual}} s; maximum: {{expected}} s."
   },
   "app": {
     "title": "SuperTale",
@@ -455,7 +466,6 @@
     }
   },
   "header": {
-    "partyFounding105": "庆祝建党105周年",
     "settings": "Settings",
     "settingsWithWarning": "Settings, missing configuration",
     "settingsWarningBubble": "Missing setup",
@@ -464,32 +474,31 @@
     "account": {
       "open": "Open account menu",
       "changeAvatar": "Change avatar",
-        "changePassword": "Change password",
-        "setPassword": "Set password",
-        "selectLanguage": "Select language",
-        "languageChinese": "中文",
-        "languageEnglish": "English",
-        "languageVietnamese": "Tiếng Việt",
-        "phoneBinding": {
-          "title": "Bind phone number",
-          "description": "Verify your current password and phone to link it to this account. You can then sign in by code. The phone cannot be changed or unlinked.",
-          "submit": "Confirm binding",
-          "success": "Phone linked. Your existing account and password still work.",
-          "inUse": "This phone belongs to another account and cannot be linked. Accounts are not merged automatically.",
-          "alreadyBound": "This account already has a phone. Refresh the page.",
-          "error": "Could not link the phone. Try again."
-        },
-        "avatarDialog": {
-          "title": "Change avatar",
-          "description": "Choose an image for your avatar. A clear square image works best.",
-          "previewHint": "Currently using the account initial avatar",
-          "choose": "Choose image",
-          "replace": "Replace image",
-          "fileHint": "PNG, JPG, WebP, or GIF",
-          "save": "Save avatar",
-          "saving": "Saving…",
-          "error": "Avatar upload failed, please try again"
-        },
+      "changePassword": "Change password",
+      "setPassword": "Set password",
+      "selectLanguage": "Select language",
+      "languageEnglish": "English",
+      "languageVietnamese": "Tiếng Việt",
+      "phoneBinding": {
+        "title": "Bind phone number",
+        "description": "Verify your current password and phone to link it to this account. You can then sign in by code. The phone cannot be changed or unlinked.",
+        "submit": "Confirm binding",
+        "success": "Phone linked. Your existing account and password still work.",
+        "inUse": "This phone belongs to another account and cannot be linked. Accounts are not merged automatically.",
+        "alreadyBound": "This account already has a phone. Refresh the page.",
+        "error": "Could not link the phone. Try again."
+      },
+      "avatarDialog": {
+        "title": "Change avatar",
+        "description": "Choose an image for your avatar. A clear square image works best.",
+        "previewHint": "Currently using the account initial avatar",
+        "choose": "Choose image",
+        "replace": "Replace image",
+        "fileHint": "PNG, JPG, WebP, or GIF",
+        "save": "Save avatar",
+        "saving": "Saving…",
+        "error": "Avatar upload failed, please try again"
+      },
       "passwordDialog": {
         "title": "Change password",
         "description": "Changing your password signs you out on every device. Sign in again with the new password.",
@@ -659,7 +668,7 @@
         "codeXia": "Glow shield!",
         "codeNing": "Calm buff!",
         "founderMedal": "Badge flex!",
-        "redStar": "红星闪闪！",
+        "redStar": "Red star twinkling!",
         "darkKnightMask": "Night mode!",
         "azuMask": "Mask ready!",
         "redBow": "Cute crit!",
@@ -1430,7 +1439,20 @@
       },
       "loading": "Loading canvas...",
       "syncFailed": "Canvas sync failed",
-      "retry": "Retry"
+      "retry": "Retry",
+      "validateCanvasCommand": "Validate canvas command",
+      "commandValidation": "Command validation",
+      "invalidCanvasCommand": "Invalid canvas command",
+      "externalAgent": "External agent",
+      "canvasContext": "Canvas context",
+      "viewSwitch": "Switch canvas view",
+      "newAgent": "New agent",
+      "hideAgentHistory": "Hide agent history",
+      "showAgentHistory": "Show agent history",
+      "resizeChat": "Resize chat width",
+      "resizeAgentHistory": "Resize agent history width",
+      "searchSessions": "Search sessions...",
+      "noMatchingAgent": "No matching agent"
     },
     "assetBrowser": {
       "loading": "Loading…",
@@ -1472,6 +1494,77 @@
       "metaFetchFailed": "Failed to read the director metadata: {{status}}",
       "metaInvalid": "The director metadata is malformed",
       "missingTargetPath": "The director composite was written but has no target path"
+    },
+    "cmd": {
+      "createNode": "Create node",
+      "addNextNode": "Add downstream node",
+      "updateNode": "Update node",
+      "deleteNode": "Delete node",
+      "clearCanvas": "Clear canvas",
+      "disconnect": "Disconnect",
+      "connect": "Create connection",
+      "arrangeLayout": "Arrange layout",
+      "createGroup": "Create group",
+      "moveNode": "Move node",
+      "selectNode": "Select node",
+      "translateText": "Translate text",
+      "reversePrompt": "Reverse image to prompt",
+      "textToVideo": "Text to video",
+      "storyScript": "Generate story script",
+      "openUploadPicker": "Open upload picker",
+      "generateImage": "Generate image",
+      "generateAudio": "Generate audio",
+      "openVoicePicker": "Open voice picker",
+      "generateVideo": "Generate video",
+      "runSkill": "Run skill",
+      "openVideoCompose": "Open video compose",
+      "autoComposeVideo": "Auto-compose video",
+      "openDirectorWorld": "Open director world",
+      "generate3gs": "Generate 3GS world",
+      "openSplitStoryboard": "Open panel extraction",
+      "matting": "Matting",
+      "upscale": "Upscale",
+      "outpaint": "Outpaint",
+      "scene360": "Generate 360 panorama",
+      "gridMultiCamera": "Generate multi-camera 9-grid",
+      "gridPlotFour": "Generate 4-panel plot grid",
+      "gridFaceThreeView": "Generate face three-view",
+      "gridProductThreeView": "Generate product three-view",
+      "gridSerialStoryboard25": "Generate 25-frame serial storyboard",
+      "gridCinematicLight": "Generate cinematic lighting correction",
+      "gridCharacterThreeView": "Generate character three-view",
+      "gridSceneSettingSheet": "Generate scene setting sheet",
+      "gridProjection3sLater": "Project frame 3 seconds later",
+      "gridProjection5sEarlier": "Project frame 5 seconds earlier",
+      "openVideoViewer": "Open video",
+      "downloadVideo": "Download video",
+      "openVideoClip": "Open video clip",
+      "openVideoUpscale": "Open video upscale",
+      "analyzeVideoStory": "Analyze video",
+      "audioSeparate": "Separate audio and video",
+      "downloadAudio": "Download audio",
+      "subtitleEraseSmart": "Smart subtitle removal",
+      "subtitleEraseBox": "Box-select subtitle removal",
+      "capturePanoCurrent": "Capture current 360 view",
+      "capturePano2x2": "Capture 360 four views",
+      "capturePano4x3": "Capture 360 twelve views",
+      "downloadImage": "Download image",
+      "panoSetBackground": "Set as current background",
+      "resetPanoView": "Reset 360 view",
+      "syncBeatContext": "Sync shot context",
+      "openNodeAction": "Open node action",
+      "openMainlineProjection": "Open mainline canvas",
+      "runWorkflow": "Run workflow",
+      "canvasOperation": "Canvas operation",
+      "validateCanvasCommand": "Validate canvas command",
+      "workflowAlreadyRunning": "Workflow is already running; duplicate start ignored",
+      "workflowExistsSkipped": "Workflow already exists; duplicate creation skipped",
+      "workflowNodeReused": "Reused existing workflow node",
+      "invalidConnectionSkipped": "Skipped invalid connection",
+      "workflowCompletedNoRegen": "Workflow already completed; not regenerated",
+      "workflowGroup": "Workflow group",
+      "prevShotTailFrame": "Previous shot tail frame",
+      "skippedAlreadyDone": "{{label}} (already has a result, skipped)"
     }
   },
   "theme": {
@@ -1503,7 +1596,6 @@
       "orgDepartureSweep": "Credits reclaimed on departure",
       "orgRefundSweep": "Refunded credits reclaimed after departure",
       "orgTransfer": "Organization credit adjustment",
-
       "orgRecharge": "Organization credit recharge",
       "personalRecharge": "Credit recharge",
       "paymentReceived": "Payment received, credits added",
@@ -2203,7 +2295,8 @@
       "homeAttire": "Home attire",
       "casualWear": "Casual wear",
       "formalWear": "Formal wear",
-      "courtDress": "Court dress"
+      "courtDress": "Court dress",
+      "default": "Default"
     }
   },
   "auth": {
@@ -4493,7 +4586,7 @@
       "exportZip": "Export ZIP",
       "composeEpisode": "Compose Episode",
       "recomposeEpisode": "Re-compose",
-      "composeTitle": "Confirm compose 「{{title}}」",
+      "composeTitle": "Confirm compose \"{{title}}\"",
       "composeDesc": "Concatenate all beat video clips into a complete episode. This may take a few minutes.",
       "composeDescSubtitles": " (with subtitles)",
       "composeDescBgm": " (with BGM)",
@@ -4740,7 +4833,6 @@
   "titleBar": {
     "back": "Back",
     "switchToEnglish": "English",
-    "switchToChinese": "中文",
     "minimize": "Minimize",
     "maximize": "Maximize",
     "close": "Close"
@@ -5710,6 +5802,41 @@
       "close": "Close",
       "free": "Free",
       "generate": "Generate"
+    },
+    "assetBoard": {
+      "keyElement": {
+        "labelWithCategory": "Key element · {{category}}",
+        "set": "Set key element",
+        "current": "Current",
+        "clear": "Remove key element"
+      },
+      "detailToolbar": {
+        "more": "More",
+        "moreActions": "More actions",
+        "download": "Download",
+        "regenerate": "Regenerate",
+        "regenerateTitle": "Resubmit this generation (retry after failure)",
+        "gridTemplates": "Grid templates",
+        "gridTemplatesTitle": "Generate from this image with a grid / multi-view template",
+        "composedVideo": "Composed video",
+        "upscaleName": "Upscale ({{resolution}})",
+        "edit": "Edit",
+        "editNeedsTwo": "At least 2 ready upstream video assets are required",
+        "editOpen": "Open the video compose timeline",
+        "upscale": "Upscale",
+        "upscaleTitle": "Increase resolution (creates an upscale result node on the canvas)",
+        "fullscreen": "Fullscreen",
+        "fullscreenTitle": "Play fullscreen",
+        "resolution": "Resolution",
+        "submitUpscale": "Submit upscale",
+        "submitUpscaleTitle": "Create an upscale result node on the canvas and submit the task"
+      }
+    },
+    "keyElement": {
+      "character": "Character",
+      "scene": "Scene",
+      "object": "Object",
+      "other": "Other"
     }
   },
   "tool": {
@@ -7891,7 +8018,7 @@
       "provider": "Provider",
       "providerAliyunOss": "Aliyun OSS",
       "providerCloudinary": "Cloudinary (Free)",
-      "providerHint": "With this provider we suggest leaving 「Fully-managed asset upload」 off; the free tier has a bandwidth quota, so use it only for point-to-point editing / uploads.",
+      "providerHint": "With this provider we suggest leaving \"Fully-managed asset upload\" off; the free tier has a bandwidth quota, so use it only for point-to-point editing / uploads.",
       "currentPlan": "Current upload plan",
       "status": "Current config",
       "source": "Source: {{source}}",
@@ -7995,11 +8122,11 @@
     "downloadPresetPaths": "Download Preset Paths",
     "downloadPresetPathsDesc": "Used by node toolbar download menu for quick-save directories (up to 8).",
     "storyboardGenKeepStyleConsistent": "Keep grid variants aligned with references",
-    "storyboardGenKeepStyleConsistentDesc": "When enabled, multi-variant grid prompt appends \"图片风格与参考图保持一致\".",
+    "storyboardGenKeepStyleConsistentDesc": "When enabled, multi-variant grid prompt appends \"Keep the image style consistent with the reference images\".",
     "storyboardGenDisableTextInImage": "Disallow descriptive text in grid variants",
-    "storyboardGenDisableTextInImageDesc": "When enabled, multi-variant grid prompt appends \"禁止添加描述文本\".",
+    "storyboardGenDisableTextInImageDesc": "When enabled, multi-variant grid prompt appends \"Do not add descriptive text\".",
     "ignoreAtTagWhenCopyingAndGenerating": "Ignore @ tags when copying/saving text",
-    "ignoreAtTagWhenCopyingAndGeneratingDesc": "When enabled, copied text and embedded grid metadata remove tags like \"@图1\"; generation requests only remove \"@\" and keep \"图1\".",
+    "ignoreAtTagWhenCopyingAndGeneratingDesc": "When enabled, copied text and embedded grid metadata remove tags like \"@image1\"; generation requests only remove \"@\" and keep \"image1\".",
     "useUploadFilenameAsNodeTitle": "Use uploaded filename as node title",
     "useUploadFilenameAsNodeTitleDesc": "When enabled, newly uploaded images use the file name as the node title by default (still editable via double-click).",
     "downloadPathPlaceholder": "Input folder path, e.g. /Users/name/Pictures/BeatWorkbench or D:\\\\Images\\\\BeatWorkbench",
@@ -8017,7 +8144,6 @@
     "aboutVersionLabel": "Version",
     "aboutVersionUnknown": "Unknown",
     "aboutAuthorLabel": "Author",
-    "aboutAuthor": "痕继痕迹",
     "aboutRepositoryLabel": "Repository",
     "autoCheckUpdateOnLaunch": "Auto check updates on launch",
     "autoCheckUpdateOnLaunchDesc": "Check for updates once every time the app starts.",
@@ -8028,7 +8154,7 @@
     "showStoryboardGenAdvancedRatioControls": "Show advanced grid ratio controls",
     "showStoryboardGenAdvancedRatioControlsDesc": "When enabled, show cell/overall ratio info and the Overall/Cell mode switch. When disabled, multi-variant grid uses cell-ratio mode by default.",
     "storyboardGenAutoInferEmptyFrame": "Auto infer empty variants",
-    "storyboardGenAutoInferEmptyFrameDesc": "When enabled, empty grid cells automatically append \"依据之前的内容进行推测\" during generation prompt construction.",
+    "storyboardGenAutoInferEmptyFrameDesc": "When enabled, empty grid cells automatically append \"Infer from the previous content\" during generation prompt construction.",
     "showNodePrice": "Show node price in the header",
     "showNodePriceDesc": "Continuously estimate the current run cost from the selected model, resolution, and extra options.",
     "priceDisplayCurrencyMode": "Display currency",
@@ -8326,6 +8452,54 @@
       "characterFallback": "Character {{index}}",
       "roleLabel": "Role",
       "descriptionLabel": "Description"
+    },
+    "panel": {
+      "mentionType": {
+        "text": "Text",
+        "image": "Image",
+        "video": "Video",
+        "audio": "Audio",
+        "reference": "Reference"
+      },
+      "nodeMenu": {
+        "title": "Nodes",
+        "empty": "No matching nodes"
+      },
+      "skillEmpty": {
+        "summarize": {
+          "label": "Summarize canvas as a Skill",
+          "prompt": "Summarize the current canvas into a reusable Skill"
+        },
+        "create": {
+          "label": "Create a Skill with the Agent",
+          "prompt": "Help me create a Skill:"
+        }
+      },
+      "batch": {
+        "progress": "Batch progress {{settled}}/{{expected}}",
+        "running": "{{count}} running",
+        "waiting": "{{count}} waiting",
+        "failed": "{{failed}}/{{expected}} tasks failed"
+      },
+      "emptyAgentReply": "This turn did not receive a valid reply from Shrimp Director. Please try again later.",
+      "taskBatch": {
+        "episode": "Episode {{episode}}",
+        "label": {
+          "video_one": "video",
+          "video_other": "videos",
+          "firstFrame_one": "first frame",
+          "firstFrame_other": "first frames",
+          "sketchGrid_one": "sketch grid",
+          "sketchGrid_other": "sketch grids",
+          "task_one": "task",
+          "task_other": "tasks"
+        },
+        "allDone": "✅ {{prefix}}All {{count}} {{label}} finished generating. You can ask me to review the results or continue to the next step.",
+        "completedOf": "{{completed}}/{{total}} completed",
+        "failedCount": "{{count}} failed",
+        "cancelledCount": "{{count}} cancelled",
+        "ended": "{{prefix}}{{label}} batch finished: {{details}}. Check Task Center for details before continuing."
+      }
     }
   },
   "productSurface": {
@@ -8430,7 +8604,6 @@
     "invalidFile": "Choose a complete HTML document",
     "fileTooLarge": "HTML file must not exceed 2 MiB",
     "uploadRecoveryConflict": "A previous upload completed for this node with different content. Re-select the original file to recover it, or create a new HTML node for this file.",
-
     "references": "Connected inputs",
     "activeCanvasRequired": "Open a project canvas first",
     "readyToGenerate": "Enter webpage requirements and generate, or run the workflow",
@@ -8506,6 +8679,16 @@
       "preview": "Will send",
       "lastSent": "Last sent",
       "inputs": "Inputs"
+    }
+  },
+  "canvasNodes": {
+    "stylePicker": {
+      "other": "Other",
+      "title": "Style",
+      "clear": "Clear",
+      "close": "Close",
+      "loading": "Loading…",
+      "empty": "No style templates yet"
     }
   }
 }

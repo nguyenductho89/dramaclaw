@@ -22,27 +22,27 @@ def test_release_notes_parser_selects_locale_and_stable_ids() -> None:
         "---\n"
         "# v1.0.2\n"
         "\n"
-        "## user-facing highlights (zh)\r\n"
-        "*   **标题  一** :  正文   一\r\n"
+        "## user-facing highlights (vi)\r\n"
+        "*   **Tiêu  đề  một** :  Nội   dung   một\r\n"
         "- **:** should be skipped\r\n"
         "```md\r\n"
-        "- **围栏内**: 不解析\r\n"
+        "- **Trong khối mã**: không phân tích\r\n"
         "```\r\n"
-        "### zh nested heading should not stop a level-2 section\r\n"
-        "- **标题二**: 正文二\r\n"
+        "### vi nested heading should not stop a level-2 section\r\n"
+        "- **Tiêu đề hai**: Nội dung hai\r\n"
         "## User-facing Highlights (en)\n"
         "- **Title One**: Body One\n"
         "## Fixes\n"
         "- **Hidden**: not included\n"
     )
 
-    parsed = parse(body, "v1.0.2", locale="zh")
+    parsed = parse(body, "v1.0.2", locale="vi")
 
     assert parsed.version == "1.0.2"
     assert parsed.attention == "high"
-    assert [item.title for item in parsed.items] == ["标题 一", "标题二"]
-    assert [item.body for item in parsed.items] == ["正文 一", "正文二"]
-    assert parsed.items[0].id == "release:v1.0.2:ab74958d"
+    assert [item.title for item in parsed.items] == ["Tiêu đề một", "Tiêu đề hai"]
+    assert [item.body for item in parsed.items] == ["Nội dung một", "Nội dung hai"]
+    assert parsed.items[0].id == "release:v1.0.2:11aa3a6b"
     assert all(item.kind == "release" and item.icon == "sparkles" for item in parsed.items)
 
     en = parse(body, "v1.0.2", locale="en")
@@ -55,7 +55,7 @@ def test_release_notes_parser_falls_back_and_requires_tag_for_items() -> None:
 
     body = "# v1.0.2\n\n## User-facing Highlights (en)\n- **Only English**: fallback\n"
 
-    assert [item.title for item in parse(body, "v1.0.2", locale="zh").items] == [
+    assert [item.title for item in parse(body, "v1.0.2", locale="vi").items] == [
         "Only English"
     ]
     assert parse(body, None, locale="en").items == []
@@ -68,10 +68,10 @@ def test_packaged_release_notes_are_bilingual_and_match_pyproject_version() -> N
     expected_version = pyproject["project"]["version"]
     body = Path("src/novelvideo/release-notes.md").read_text(encoding="utf-8")
 
-    assert "## User-facing Highlights (zh)" in body
+    assert "## User-facing Highlights (vi)" in body
     assert "## User-facing Highlights (en)" in body
     validate_version_marker(body, expected_version)
-    assert parse(body, f"v{expected_version}", locale="zh", allow_locale_fallback=False).items
+    assert parse(body, f"v{expected_version}", locale="vi", allow_locale_fallback=False).items
     assert parse(body, f"v{expected_version}", locale="en", allow_locale_fallback=False).items
 
 
@@ -107,7 +107,7 @@ def test_built_wheel_contains_parseable_release_notes_artifact(tmp_path: Path) -
         body = wheel.read("novelvideo/release-notes.md").decode("utf-8")
 
     validate_version_marker(body, expected_version)
-    assert parse(body, f"v{expected_version}", locale="zh", allow_locale_fallback=False).items
+    assert parse(body, f"v{expected_version}", locale="vi", allow_locale_fallback=False).items
     assert parse(body, f"v{expected_version}", locale="en", allow_locale_fallback=False).items
 
 
@@ -131,8 +131,8 @@ async def test_local_release_feed_reads_notes_and_silently_degrades_github(tmp_p
         "---\n"
         "# v1.0.2\n"
         "\n"
-        "## User-facing Highlights (zh)\n"
-        "- **当前功能**: 离线也可见\n"
+        "## User-facing Highlights (vi)\n"
+        "- **Tính năng hiện tại**: xem được cả khi ngoại tuyến\n"
         "## User-facing Highlights (en)\n"
         "- **Current feature**: works offline\n",
         encoding="utf-8",
@@ -148,13 +148,13 @@ async def test_local_release_feed_reads_notes_and_silently_degrades_github(tmp_p
         notes_path=notes,
         version_reader=lambda: "1.0.2",
         github_fetcher=failing_fetcher,
-    ).current(locale="zh")
+    ).current(locale="vi")
 
     assert calls == 1
     assert feed.source == "local_file"
     assert feed.current_version == "1.0.2"
     assert feed.current_tag == "v1.0.2"
-    assert [item.title for item in feed.current_items] == ["当前功能"]
+    assert [item.title for item in feed.current_items] == ["Tính năng hiện tại"]
     assert feed.update_available is False
     assert feed.latest_tag is None
 
@@ -286,7 +286,7 @@ def test_release_feed_port_falls_back_to_noop_when_unregistered() -> None:
 
     _PORTS.pop("release_feed", None)
 
-    feed = asyncio.run(get_release_feed_port().current(locale="zh"))
+    feed = asyncio.run(get_release_feed_port().current(locale="vi"))
     assert feed.source == "none"
     assert feed.current_items == []
     assert feed.update_available is False

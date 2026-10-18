@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -91,41 +92,41 @@ import { downloadUrlAsFile } from '@/lib/browserDownload';
 import { readUrl } from '@/lib/url-params';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-// 按钮组件本体在 AssetBoardToolbarButton（打断与 AssetBoardImageEditMenu 的循环
-// import）；这里再导出一次，保持既有 import 路径（文本/视频工具条等）不变。
+// The button component lives in AssetBoardToolbarButton (breaking the cycle with AssetBoardImageEditMenu's
+// import); re-exported here so existing import paths (text/video toolbars etc.) stay unchanged.
 export { DetailToolbarButton };
 
-// 「...」更多菜单的项样式（面板 rounded-lg、项 hover bg-white/5，与本分支体系一致）。
+// Item styles of the "..." more menu (panel rounded-lg, item hover bg-white/5, consistent with this branch's system).
 const MORE_MENU_ITEM_CLASS =
   'flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white/80 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-45';
 
-/** 「...」更多菜单里的叶子动作项（图片是高清/裁剪/旋转，视频头部是节点操作）。 */
+/** Leaf action item in the "..." more menu (for images: upscale/crop/rotate; for the video header: node actions). */
 interface MoreMenuAction {
   kind: 'action';
   key: string;
   icon: LucideIcon;
   label: string;
-  /** 进行中：图标换 spinner 并禁用（与工具条按钮同款反馈，如抠图在途）。 */
+  /** In progress: the icon becomes a spinner and is disabled (same feedback as toolbar buttons, e.g. matting in flight). */
   busy?: boolean;
-  /** 处于「已展开/已激活」态（如历史列表打开时高亮该项）。 */
+  /** In the "expanded/active" state (e.g. highlighted while the history list is open). */
   active?: boolean;
   onSelect: () => void;
 }
 
-/** 「...」更多菜单里的展开型子菜单项（宫格模板：点/悬停展开 9 个模板）。 */
+/** Expandable submenu item in the "..." more menu (grid templates: click/hover to expand 9 templates). */
 interface MoreMenuSubmenu {
   kind: 'submenu';
   key: string;
   icon: LucideIcon;
   label: string;
-  /** 有在途提交时展示的替代文案（如「多机位九宫格」）；非空即显示 spinner。 */
+  /** Alternate text shown while a submission is in flight (e.g. "Multi-camera 3x3"); non-empty shows a spinner. */
   pendingLabel?: string | null;
   disabled?: boolean;
-  /** 子项只有文字 + 右侧灰字：飞出面板窄（140px），再塞图标会把标签挤成两行。 */
+  /** Sub-items are text + gray text on the right only: the fly-out panel is narrow (140px), and adding an icon would squeeze the label onto two lines. */
   children: Array<{
     key: string;
     label: string;
-    /** 右侧灰字（如「当前」）。 */
+    /** Gray text on the right (e.g. "Current"). */
     hint?: string;
     onSelect: () => void;
   }>;
@@ -135,11 +136,11 @@ export type MoreMenuEntry = MoreMenuAction | MoreMenuSubmenu;
 
 const MORE_MENU_CLOSE_DELAY_MS = 140;
 
-/** 二级菜单飞出面板的最小宽度与它跟父项之间的缝（算坐标要用，所以是数字不是 class）。 */
+/** Minimum width of the submenu fly-out panel and its gap to the parent item (used to compute coordinates, hence numbers not classes). */
 const SUBMENU_MIN_WIDTH = 140;
 const SUBMENU_GAP = 6;
 
-/** 展开中的二级菜单：哪一项 + 飞出面板的 fixed 坐标。 */
+/** The submenu being expanded: which item + the fixed coordinates of the fly-out panel. */
 interface SubmenuPlacement {
   key: string;
   top: number;
@@ -147,14 +148,13 @@ interface SubmenuPlacement {
 }
 
 /**
- * 算二级菜单飞出面板的位置：顶边与父项对齐，默认往**右**开（用户指定的方向）。
+ * Compute the position of the submenu fly-out panel: top edge aligned with the parent item, opening to the **right** by default (the direction the user specified).
+ * It is computed rather than `absolute left-full` because the storyboard overlay is itself a z-30 positioned layer,
+ * and no z-index inside it can get above the right-hand z-45 chat drawer - a pure-CSS panel opening to the right
+ * is covered by the drawer (user feedback: "it is blocked"). So the panel is portaled to body and placed with fixed coordinates,
+ * so it can float above the drawer.
  *
- * 之所以要算而不是 `absolute left-full`：故事板 overlay 自己是 z-30 的定位层，
- * 里面再高的 z-index 也翻不过右侧 z-45 的对话抽屉——纯 CSS 定位的面板一开到右边
- * 就被抽屉盖住（用户反馈「被挡住了」）。所以面板 portal 到 body、用 fixed 坐标摆，
- * 才能浮在抽屉之上。
- *
- * 右边真的顶到视口边（窄窗口）时翻到左边，宁可换向也不要半截露在屏幕外。
+ * When the right side really hits the viewport edge (narrow window) it flips to the left; better to change direction than to be half off-screen.
  */
 function placeSubmenu(key: string, anchor: HTMLElement): SubmenuPlacement {
   const rect = anchor.getBoundingClientRect();
@@ -167,10 +167,10 @@ function placeSubmenu(key: string, anchor: HTMLElement): SubmenuPlacement {
 }
 
 /**
- * 「设置关键元素」子菜单项：把本节点标记为关键元素并归类（人物/场景/物品/其他）
- * 或取消。标记只写节点 data.keyElementCategory（见 domain/keyElements），故事板
- * 顶部关键元素栏据此常驻。图片工具条的「...」与视频详情头部的「...」共用这一份，
- * 保证两处的文案、当前态标记与取消项完全一致。
+ * "Set key element" submenu item: mark this node as a key element and categorize it (character/scene/object/other)
+ * or remove the mark. The mark only writes the node's data.keyElementCategory (see domain/keyElements), and the key element bar
+ * at the top of the storyboard stays pinned accordingly. The image toolbar's "..." and the video detail header's "..." share this one,
+ * keeping labels, current-state marker and the remove item identical in both places.
  */
 export function keyElementMenuEntry(
   node: CanvasNode,
@@ -181,12 +181,12 @@ export function keyElementMenuEntry(
     kind: 'submenu',
     key: 'keyElement',
     icon: Star,
-    label: current ? `关键元素 · ${KEY_ELEMENT_CATEGORY_LABEL[current]}` : '设置关键元素',
+    label: current ? i18n.t('canvas.assetBoard.keyElement.labelWithCategory', { category: KEY_ELEMENT_CATEGORY_LABEL[current] }) : i18n.t('canvas.assetBoard.keyElement.set'),
     children: [
       ...KEY_ELEMENT_CATEGORY_KEYS.map((category) => ({
         key: `key-${category}`,
         label: KEY_ELEMENT_CATEGORY_LABEL[category],
-        hint: current === category ? '当前' : undefined,
+        hint: current === category ? i18n.t('canvas.assetBoard.keyElement.current') : undefined,
         onSelect: () =>
           updateNodeData(node.id, { keyElementCategory: category } as Partial<CanvasNodeData>),
       })),
@@ -194,7 +194,7 @@ export function keyElementMenuEntry(
         ? [
             {
               key: 'key-clear',
-              label: '取消关键元素',
+              label: i18n.t('canvas.assetBoard.keyElement.clear'),
               onSelect: () =>
                 updateNodeData(node.id, { keyElementCategory: null } as Partial<CanvasNodeData>),
             },
@@ -205,32 +205,32 @@ export function keyElementMenuEntry(
 }
 
 /**
- * 详情里的「...」更多菜单：把低频操作从常显按钮收进一个悬停展开的下拉面板。图片工具条
- * 那颗装编辑三项（高清/裁剪/旋转），详情头部那颗装节点级操作（设置关键元素等）。宫格
- * 模板不在此列——它是常显工具条上的独立下拉按钮（用户要求）。
+ * The "..." more menu in detail: tucks low-frequency actions from always-visible buttons into a hover-expanded dropdown panel. The image toolbar's
+ * one holds the three edit items (upscale/crop/rotate), the detail header's one holds node-level actions (set key element etc.). Grid
+ * templates are not in this list - they are a standalone dropdown button on the always-visible toolbar (user request).
  *
- * - hover 为主：移入图标或面板都保持打开，移出延迟 {@link MORE_MENU_CLOSE_DELAY_MS}ms
- *   收起（防抖，避免掠过即闪）；点击图标也可切换开关。
- * - 键盘可达：focus 落到触发器/任一项即展开（onFocus 冒泡），焦点整体离开则收起，
- *   Esc 收起并把焦点还给触发器。
- * - 面板绝对定位于触发器下方、右对齐，z-50 高于详情正文；样式对齐本分支体系。
- * - 二级菜单（submenu）向**右侧**飞出成独立面板、顶边与父项对齐，而不是就地把子项撑
- *   在父项下面（用户指定的参照样式与方向）。面板 portal 到 body 用 fixed 坐标摆，
- *   见 {@link placeSubmenu}——留在这棵树里会被右侧对话抽屉盖住。
- * - 叶子项点击后不主动关闭（悬停菜单惯例：移开/Esc 才收），保证连续操作与在途反馈可见。
+ * - Mainly hover: moving into the icon or panel keeps it open, moving out collapses after a delay of {@link MORE_MENU_CLOSE_DELAY_MS}ms
+ *   (debounced, so passing over does not flash); clicking the icon also toggles it.
+ * - Keyboard accessible: focus landing on the trigger/any item expands it (onFocus bubbles), and focus leaving as a whole collapses it;
+ *   Esc collapses and returns focus to the trigger.
+ * - The panel is absolutely positioned below the trigger, right-aligned, z-50 above the detail body; styles match this branch's system.
+ * - The submenu flies out to the **right** as a standalone panel with its top edge aligned to the parent item, instead of expanding the sub-items
+ *   in place under the parent (the reference style and direction the user specified). The panel is portaled to body and placed with fixed coordinates,
+ *   see {@link placeSubmenu} - staying in this tree it would be covered by the right chat drawer.
+ * - Leaf items do not close the menu on click (hover menu convention: only moving away/Esc closes), so continuous actions and in-flight feedback stay visible.
  */
 export function DetailMoreMenu({
   entries,
   triggerClassName,
-  triggerLabel = '更多',
+  triggerLabel = i18n.t('canvas.assetBoard.detailToolbar.more'),
 }: {
   entries: MoreMenuEntry[];
-  /** 触发器样式：默认工具条按钮；详情头部那颗传 header 图标按钮的类。 */
+  /** Trigger style: the default toolbar button; the one in the detail header passes the header icon button's class. */
   triggerClassName?: string;
   /**
-   * 触发器的可及名称。图片详情里头部与工具条各有一颗「...」（前者是节点操作、
-   * 后者是素材操作），叫同一个名字会让读屏与测试都分不清，所以头部那颗传
-   * 「节点操作」。
+   * Accessible name of the trigger. An image detail has a "..." in both the header and the toolbar (the former for node actions,
+   * the latter for asset actions); the same name would confuse screen readers and tests alike, so the header one passes
+   * "Node actions".
    */
   triggerLabel?: string;
 }): ReactElement {
@@ -262,19 +262,19 @@ export function DetailMoreMenu({
       setSubmenu(null);
     }, MORE_MENU_CLOSE_DELAY_MS);
   }, [clearCloseTimer]);
-  // 卸载时清掉未触发的收起定时器（详情按 key={node.id} 整体重挂载会走这里）。
+  // On unmount clear any pending collapse timer (the detail remounts as a whole by key={node.id}, which goes through here).
   useEffect(() => clearCloseTimer, [clearCloseTimer]);
 
-  /** 展开某个二级菜单，并按锚点当场算好它的 fixed 坐标（见 placeSubmenu）。 */
+  /** Expand a submenu and compute its fixed coordinates from the anchor on the spot (see placeSubmenu). */
   const openSubmenu = useCallback((key: string, anchor: HTMLElement) => {
     setSubmenu(placeSubmenu(key, anchor));
   }, []);
 
   const handleBlur = useCallback(
     (event: FocusEvent<HTMLDivElement>) => {
-      // 焦点整体离开菜单（下一焦点既不在 wrapper 内、也不在飞出的二级面板内）→
-      // 收起。二级面板 portal 到了 body，DOM 上不再是 wrapper 的后代，所以要单独问
-      // 它一句，否则 Tab 进子项的瞬间菜单就自己关了。
+      // Focus leaves the menu as a whole (the next focus is neither inside the wrapper nor inside the flown-out submenu panel) ->
+      // collapse. The submenu panel is portaled to body and is no longer a DOM descendant of the wrapper, so it must be asked
+      // separately, otherwise the menu would close itself the instant Tab moves into a sub-item.
       const next = event.relatedTarget as Node | null;
       if (event.currentTarget.contains(next)) return;
       if (submenuRef.current?.contains(next)) return;
@@ -317,7 +317,7 @@ export function DetailMoreMenu({
       </button>
       {open && (
         <div
-          aria-label="更多操作"
+          aria-label={i18n.t('canvas.assetBoard.detailToolbar.moreActions')}
           className="absolute right-0 top-full z-50 mt-1.5 min-w-[210px] rounded-lg border border-white/10 bg-[#2e2e2e] p-1 text-white/85 shadow-xl"
         >
           {entries.map((entry) => {
@@ -348,15 +348,15 @@ export function DetailMoreMenu({
                       <Icon className="h-4 w-4 shrink-0" />
                     )}
                     <span className="flex-1">{entry.pendingLabel ?? entry.label}</span>
-                    {/* 箭头不随展开转 90°：面板是侧边飞出的，朝右的箭头本来就指着它去的方向。 */}
+                    {/* The arrow does not rotate 90 degrees on expand: the panel flies out sideways, and the right-pointing arrow already points the way it goes. */}
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
                   </button>
                   {placement &&
                     createPortal(
-                      // portal 到 body + fixed 坐标：故事板 overlay 是 z-30 的定位层，
-                      // 留在里面的面板翻不过右侧 z-45 的对话抽屉（见 placeSubmenu）。
-                      // 鼠标从父项横穿那道缝进面板会先触发 wrapper 的 onMouseLeave，
-                      // 所以这里自己接住 enter/leave，把收起定时器按掉。
+                      // Portaled to body + fixed coordinates: the storyboard overlay is a z-30 positioned layer,
+                      // and a panel left inside it cannot get above the right-hand z-45 chat drawer (see placeSubmenu).
+                      // Moving the mouse across the gap from the parent item into the panel first fires the wrapper's onMouseLeave,
+                      // so enter/leave are caught here to cancel the collapse timer.
                       <div
                         ref={submenuRef}
                         aria-label={entry.label}
@@ -412,39 +412,39 @@ export function DetailMoreMenu({
   );
 }
 
-// 宫格模板清单（与 NodeActionToolbar.gridActions 同源：label 即 zh 翻译值，提交时
-// label 同时作为展示 prompt 下发——真正的模板由 key→mode 映射决定）。
-// 这里不挂算力：点一项只是**建节点**，不花钱；价钱在新节点的 ↑ 按钮上按当前
-// 模型/参数活价显示（AssetBoardImageGenForm），在这儿标价反而像是点了就扣。
+// Grid template list (same source as NodeActionToolbar.gridActions: the label is the translated value, and on submit
+// the label is also sent as the display prompt - the real template is decided by the key -> mode mapping).
+// No compute cost is attached here: clicking an item only **creates a node** and costs nothing; the price is shown live on the new node's up button
+// by the current model/params (AssetBoardImageGenForm); pricing it here would look like clicking charges.
 const GRID_ACTION_DEFS: Array<{
   key: GridActionKey;
   icon: LucideIcon;
   label: string;
 }> = [
-  { key: 'multiCameraGrid', icon: Grid3x3, label: '多机位九宫格' },
-  { key: 'plotFourGrid', icon: Grid2x2, label: '剧情推演四宫格' },
-  { key: 'faceThreeView', icon: User, label: '角色脸部三视图' },
-  { key: 'productThreeView', icon: Package, label: '产品三视图' },
-  { key: 'serialStoryboard25', icon: LayoutDashboard, label: '25宫格连贯分镜' },
-  { key: 'cinematicLightCorrection', icon: Film, label: '电影级光影校正' },
-  { key: 'characterThreeView', icon: Users, label: '角色三视图生成' },
-  { key: 'sceneSettingSheet', icon: Mountain, label: '场景设定图' },
-  { key: 'frameProjection3sLater', icon: FastForward, label: '画面推演 - 3秒后' },
-  { key: 'frameProjection5sEarlier', icon: Rewind, label: '画面推演 - 5秒前' },
+  { key: 'multiCameraGrid', icon: Grid3x3, get label() { return i18n.t('nodeToolbar.gridMenu.multiCameraGrid'); } },
+  { key: 'plotFourGrid', icon: Grid2x2, get label() { return i18n.t('nodeToolbar.gridMenu.plotFourGrid'); } },
+  { key: 'faceThreeView', icon: User, get label() { return i18n.t('nodeToolbar.gridMenu.faceThreeView'); } },
+  { key: 'productThreeView', icon: Package, get label() { return i18n.t('nodeToolbar.gridMenu.productThreeView'); } },
+  { key: 'serialStoryboard25', icon: LayoutDashboard, get label() { return i18n.t('nodeToolbar.gridMenu.serialStoryboard25'); } },
+  { key: 'cinematicLightCorrection', icon: Film, get label() { return i18n.t('nodeToolbar.gridMenu.cinematicLightCorrection'); } },
+  { key: 'characterThreeView', icon: Users, get label() { return i18n.t('nodeToolbar.gridMenu.characterThreeView'); } },
+  { key: 'sceneSettingSheet', icon: Mountain, get label() { return i18n.t('nodeToolbar.gridMenu.sceneSettingSheet'); } },
+  { key: 'frameProjection3sLater', icon: FastForward, get label() { return i18n.t('nodeToolbar.gridMenu.frameProjection3sLater'); } },
+  { key: 'frameProjection5sEarlier', icon: Rewind, get label() { return i18n.t('nodeToolbar.gridMenu.frameProjection5sEarlier'); } },
 ];
 
 /**
- * 图片详情工具条。常显：下载 / 失败重试 / 全景 / 多角度 / 重打光 / 宫格模板；
- * **高清 / 裁剪 / 旋转** 收进最右那颗「...」更多菜单（悬停展开）。
+ * Image detail toolbar. Always visible: download / retry on failure / panorama / multi-angle / relight / grid templates;
+ * **upscale / crop / rotate** are tucked into the "..." more menu on the far right (expands on hover).
  *
- * 用户拍板的两处删减：
- * - 原来那颗「编辑」下拉没了，它的三项就是现在「...」里的内容；
- * - 原来「...」里的 抠图 / 裁剪(工具弹窗) / 标注 / 分格抽取 / 历史 全部移除。
- *   注意「历史」一并没了 —— 生成失败的节点从此没有「回到上一次成功结果」的入口。
+ * Two removals decided by the user:
+ * - the old "Edit" dropdown is gone; its three items are now what is inside "...";
+ * - matting / crop (tool dialog) / annotate / cell extraction / history are all removed from the old "...".
+ *   Note that "history" is gone too - a node whose generation failed no longer has an entry to "go back to the last successful result".
  *
- * @param onOpenNode 建出新节点后把详情切过去（同头部「创建副本」那条路径）。
- *   宫格模板与「... → 高清」都是「先建节点、按 ↑ 才提交」，不切详情用户就
- *   看不出发生了什么。
+ * @param onOpenNode after creating a new node, switch the detail to it (same path as the header's "create copy").
+ *   Grid templates and "... -> upscale" are both "create the node first, submit on up button"; without switching the detail the user
+ *   could not tell what happened.
  */
 export function AssetBoardImageDetailToolbar({
   node,
@@ -460,15 +460,15 @@ export function AssetBoardImageDetailToolbar({
   const canRegenerate = canRegenerateExportImageNode(data);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // 编辑三项（高清/裁剪/旋转）：条目进下面的「...」，编辑器弹窗随 overlays 挂出。
-  // imageEdit 节点不给图片编辑入口（同工作流 NodeActionToolbar 的显隐语义）。
+  // The three edit items (upscale/crop/rotate): the entries go in the "..." below, and the editor dialogs are mounted with overlays.
+  // An imageEdit node gets no image edit entry (same show/hide semantics as the workflow NodeActionToolbar).
   const { entries: editEntries, overlays: editOverlays } = useAssetBoardImageEditActions({
     node,
     imageSource: isImageEdit ? null : imageSource,
     onOpenNode,
   });
 
-  // 文件名推断沿用 NodeActionToolbar.resolveImageDownloadFilename 的规则。
+  // File name inference follows NodeActionToolbar.resolveImageDownloadFilename's rules.
   const handleDownload = useCallback(async () => {
     if (!imageSource || isDownloading) return;
     const sourceFileName =
@@ -485,39 +485,39 @@ export function AssetBoardImageDetailToolbar({
     }
   }, [data.displayName, data.sourceFileName, imageSource, isDownloading, node.id]);
 
-  // 点功能 = **先建节点、不提交**（对标 liblib）：在下游建一个空的图片生成节点，
-  // 节点名 = 功能名，输入框里带一枚可关可切的功能 chip；详情随即切到新节点，
-  // 用户改完提示词/参考图/比例（或在功能框里换个功能）按 ↑ 才真正提交。
+  // Clicking a feature = **create the node first, do not submit** (matches liblib): create an empty image generation node downstream,
+  // the node name = the feature name, with a closable/switchable feature chip in the input box; the detail then switches to the new node,
+  // and the user submits with the up button after editing the prompt/reference images/ratio (or switching the feature in the feature box).
   //
-  // 这条只改故事板的交互形态：工作流侧的「确认即提交」（GridActionConfirmOverlay
-  // + submitGridTemplateAction）一行没动，能力完全一样。
+  // This only changes the storyboard's interaction: the workflow side's "confirm to submit" (GridActionConfirmOverlay
+  // + submitGridTemplateAction) is untouched, with exactly the same capability.
   const handleGridAction = useCallback(
     (def: (typeof GRID_ACTION_DEFS)[number]) => {
       if (!imageSource) return;
       const newNodeId = spawnAssetBoardImageOpNode(node.id, imageSource, def.key);
       if (!newNodeId) return;
-      // 低成本视口预定位（M7）：保活挂载的 Canvas 先把视口对准新节点，用户切回
-      // 工作流时不用自己找。
+      // Low-cost viewport pre-positioning (M7): the kept-alive Canvas first aims the viewport at the new node, so the user
+      // does not have to find it when switching back to the workflow.
       useCanvasStore.getState().requestFocusNode(newNodeId);
       onOpenNode?.(newNodeId);
     },
     [imageSource, node.id, onOpenNode],
   );
 
-  // 「...」更多菜单的条目就是编辑三项（高清/裁剪/旋转），全部来自
-  // useAssetBoardImageEditActions。原来住在这里的 抠图 / 裁剪(工具弹窗) / 标注 /
-  // 分格抽取 / 历史 已按用户要求整体移除（能力本身仍在工作流侧 NodeActionToolbar）。
-  // 宫格模板是常显下拉按钮，不进菜单；「设置关键元素」是节点级操作，在详情头部那颗
-  // 「...」里（四栏一致，见 AssetBoardDetail）。
+  // The entries of the "..." more menu are the three edit items (upscale/crop/rotate), all from
+  // useAssetBoardImageEditActions. Matting / crop (tool dialog) / annotate /
+  // cell extraction / history that used to live here were removed as a whole at the user's request (the capabilities themselves remain in the workflow-side NodeActionToolbar).
+  // Grid templates are an always-visible dropdown button, not in the menu; "Set key element" is a node-level action, in the detail header's
+  // "..." (consistent across the four columns, see AssetBoardDetail).
 
   return (
     <div className="flex flex-col gap-2">
-      {/* 居中：工具条是详情的操作行，媒体本身也是居中的，左对齐会让这行孤零零
-          吊在左上角（用户要求）。 */}
+      {/* Centered: the toolbar is the detail's action row and the media itself is centered too; left alignment would leave this row
+      hanging alone in the top-left (user request). */}
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         <DetailToolbarButton
           icon={Download}
-          label="下载"
+          label={i18n.t('canvas.assetBoard.detailToolbar.download')}
           busy={isDownloading}
           disabled={!imageSource}
           onClick={() => void handleDownload()}
@@ -525,31 +525,31 @@ export function AssetBoardImageDetailToolbar({
         {canRegenerate && (
           <DetailToolbarButton
             icon={RefreshCw}
-            label="重新生成"
+            label={i18n.t('canvas.assetBoard.detailToolbar.regenerate')}
             busy={isGenerating}
-            title="重新提交这次生成（失败重试）"
+            title={i18n.t('canvas.assetBoard.detailToolbar.regenerateTitle')}
             onClick={() => void regenerateExportImageNode(node.id)}
           />
         )}
-        {/* 常显第二批图片操作（全景 / 多角度 / 重打光）。按钮落在本行，失败兜底文案
-            用 w-full 自动换到下一行。显隐与工作流 NodeActionToolbar 同源：imageEdit
-            节点不给图片编辑入口，无图源不显示。 */}
+        {/* Second batch of always-visible image actions (panorama / multi-angle / relight). Buttons sit on this row; the failure fallback text
+        uses w-full to wrap onto the next row automatically. Show/hide has the same source as the workflow NodeActionToolbar: an imageEdit
+        node gets no image edit entry, and nothing shows without an image source. */}
         {!isImageEdit && imageSource && (
           <AssetBoardImageOps node={node} imageSource={imageSource} />
         )}
-        {/* 宫格模板：常显下拉按钮（从「...」菜单挪出来，用户要求）。点开列 9 个模板，
-            选中即在下游建一个同名的空图片节点并把详情切过去——不再当场提交，
-            用户在新节点的输入框里确认（或换功能）后按 ↑ 才真正生成。 */}
+        {/* Grid templates: an always-visible dropdown button (moved out of the "..." menu, user request). Opens a list of 9 templates;
+        selecting one creates an empty image node of the same name downstream and switches the detail to it - no longer submitting on the spot,
+        the user confirms (or switches feature) in the new node's input box and presses up to actually generate. */}
         {!isImageEdit && imageSource && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title="基于本图套用宫格 / 多视图模板生成"
+                title={i18n.t('canvas.assetBoard.detailToolbar.gridTemplatesTitle')}
                 className={DETAIL_TOOLBAR_BUTTON_CLASS}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                宫格模板
+                {i18n.t('canvas.assetBoard.detailToolbar.gridTemplates')}
                 <ChevronDown className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>
@@ -574,18 +574,18 @@ export function AssetBoardImageDetailToolbar({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        {/* 「...」更多菜单：高清 / 裁剪 / 旋转（悬停展开，见组件注释）。
-            条目被 preset_managed 过滤到一个不剩、或本身没图可编辑时整颗不渲染
-            ——否则点开是个空面板。 */}
+        {/* "..." more menu: upscale / crop / rotate (expands on hover, see the component comment).
+        Not rendered at all when the entries are all filtered out by preset_managed or there is no image to edit
+        - otherwise opening it would show an empty panel. */}
         {editEntries.length > 0 && <DetailMoreMenu entries={editEntries} />}
       </div>
-      {/* 裁剪 / 旋转编辑器（portal 弹窗），跟着上面那三项一起来自同一个 hook。 */}
+      {/* Crop / rotate editors (portal dialogs), coming from the same hook as the three items above. */}
       {editOverlays}
     </div>
   );
 }
 
-/** 节点片源：videoUrl 优先，其次高清/去字幕等写回的 resultVideoUrl。 */
+/** Node video source: videoUrl first, then resultVideoUrl written back by upscale/subtitle removal etc. */
 function videoSourceUrlOf(node: CanvasNode): string | null {
   const data = node.data as Record<string, unknown>;
   if (typeof data.videoUrl === 'string' && data.videoUrl) return data.videoUrl;
@@ -593,25 +593,25 @@ function videoSourceUrlOf(node: CanvasNode): string | null {
   return null;
 }
 
-/** 生成失败过的节点。 */
+/** Nodes whose generation has failed. */
 function hasFailedGeneration(node: CanvasNode): boolean {
   const data = node.data as Record<string, unknown>;
   return typeof data.generationError === 'string' && data.generationError.trim().length > 0;
 }
 
 /**
- * 图片详情工具条有没有可用操作。没有就别渲染整条——空节点（还没出图）上的
- * 下载/编辑/宫格全要图源，摆一排灰按钮只是噪音（用户要求）。
- * 两个例外：
- * - 导出图节点生成失败时没图源，但「重新生成」正是这时候要点的；
- * - 其余生成失败的节点同样留着整条，让「重新生成」一类不吃图源的入口有地方待。
- *   注意「历史」已随「...」菜单改版整体移除（用户要求），失败节点从此没有
- *   「回到上一次成功结果」的入口——同视频侧的取舍。
+ * Whether the image detail toolbar has any usable action. If none, do not render the whole bar - on an empty node (no image yet),
+ * download/edit/grid all need an image source, and a row of gray buttons is just noise (user request).
+ * Two exceptions:
+ * - when an export image node fails to generate it has no image source, but "Regenerate" is exactly what is needed then;
+ * - other nodes whose generation failed also keep the whole bar, so entries that do not need an image source such as "Regenerate" have a place.
+ *   Note "history" was removed with the "..." menu redesign (user request), so failed nodes no longer have an entry to
+ *   "go back to the last successful result" - the same trade-off as the video side.
  */
 export function hasImageDetailActions(node: CanvasNode): boolean {
-  // 还没出图的高清结果节点：resolveNodeSourceImageUrl 会摸到它存的**源图**
-  // （previewImageUrl），据此摆出一排「下载/编辑/全景…」等于把待放大的原图当成
-  // 这个节点的产物在操作。这里先短路——它眼下唯一该做的事是下方那张卡片按 ↑。
+  // A not-yet-produced upscale result node: resolveNodeSourceImageUrl would reach the **source image** it stores
+  // (previewImageUrl), so showing a row of "download/edit/panorama..." would operate on the original to be enlarged as if it were
+  // this node's product. Short-circuit here first - the only thing it should do right now is the up button on the card below.
   if (isPendingUpscaleNode(node)) return false;
   return (
     Boolean(resolveNodeSourceImageUrl(node)) ||
@@ -621,29 +621,29 @@ export function hasImageDetailActions(node: CanvasNode): boolean {
 }
 
 /**
- * 视频详情工具条有没有可用操作。同上：没片源的视频节点整条不渲染。
- * 唯一的例外是合成节点——它的「剪辑」靠上游素材而非自身片源，自己还没出片也留着
- * （素材不够时按钮自带「需要至少 2 个已就绪的上游视频素材」的说明）。
+ * Whether the video detail toolbar has any usable action. Same as above: a video node without a source renders no bar at all.
+ * The only exception is the compose node - its "Edit" relies on upstream materials rather than its own source, so it stays even before it has produced a video
+ * (when materials are insufficient the button itself explains "at least 2 ready upstream video assets are required").
  *
- * 生成失败的节点不再是例外：工具条砍到「剪辑/高清/下载/全屏」四项后（用户要求），
- * 不要求片源的「历史」没了，留下来也只是四颗全灰的按钮。
+ * Failed generation nodes are no longer an exception: after the toolbar was cut to four items "Edit/Upscale/Download/Fullscreen" (user request),
+ * "history", which did not require a source, is gone, and keeping it would just be four all-gray buttons.
  */
 export function hasVideoDetailActions(node: CanvasNode): boolean {
   return Boolean(videoSourceUrlOf(node)) || isVideoComposeNode(node);
 }
 
 /**
- * 工具条外壳：与画布节点工具条同一表面（CANVAS_NODE_TOOLBAR_SURFACE_CLASS），只是
- * 内边距收一档——它要塞进详情头部那行。圆角同样按 10px 走，不做全胶囊（用户反馈）。
+ * Toolbar shell: the same surface as the canvas node toolbar (CANVAS_NODE_TOOLBAR_SURFACE_CLASS), just with
+ * one step less padding - it has to fit in the detail header row. Corners also follow 10px, no full pill (user feedback).
  */
 const VIDEO_FLOAT_PILL_CLASS =
   `flex items-center gap-0.5 rounded-[10px] p-1 ${CANVAS_NODE_TOOLBAR_SURFACE_CLASS}`;
 
-/** 工具条里的按钮：无边框（外壳已提供表面），图标可单独成键；h-6 让整条贴着头部行高。 */
+/** A button in the toolbar: borderless (the shell already provides the surface), the icon can be its own key; h-6 keeps the whole bar flush with the header row height. */
 const VIDEO_FLOAT_BUTTON_CLASS =
   'inline-flex h-6 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
 
-/** 浮动工具条上的一颗按钮（label 只在 showLabel 时出字，否则退化成纯图标键）。 */
+/** A button on the floating toolbar (label only shows with showLabel, otherwise it degrades to an icon-only key). */
 function VideoFloatButton({
   icon: Icon,
   label,
@@ -664,7 +664,7 @@ function VideoFloatButton({
   return (
     <button
       type="button"
-      // 纯图标键没有可见文案，aria-label 兜住读屏与测试的可及名。
+      // An icon-only key has no visible text; aria-label covers the accessible name for screen readers and tests.
       aria-label={label}
       title={title ?? label}
       disabled={disabled || busy}
@@ -678,23 +678,23 @@ function VideoFloatButton({
 }
 
 /**
- * 视频详情的浮动工具条：**剪辑 / 高清 / 下载 / 全屏** 四项（用户要求砍到这四个，
- * 其余视频功能——智能去字幕 / 翻译提示词 / 历史 / 剪辑轨道 / 解析 / 分离音视频 /
- * 截帧 / 替换视频 / 框选擦除——已从故事板移除，工作流侧 NodeActionToolbar 不受影响）。
+ * The floating toolbar of the video detail: four items **Edit / Upscale / Download / Fullscreen** (cut to these four at the user's request;
+ * the other video features - smart subtitle removal / prompt translation / history / edit track / analysis / audio-video separation /
+ * frame capture / video replace / box-select erase - were removed from the storyboard; the workflow-side NodeActionToolbar is unaffected).
  *
- * 形态也跟着换了：不再是详情头部下方那条常显按钮行，而是一颗居中的胶囊
- * （对齐 liblib），**hover 到视频详情才浮现**。它落在详情头部标题与右侧图标之间那段
- * 空白里——压在画面上会把视频挡掉一截（用户反馈）。悬停上下文由 AssetBoardDetail
- * 的根 `group/detail` 给（具名 group：详情里还有别的 group-hover，共用匿名 group
- * 会互相误触发）；配置面板或合成弹窗开着时钉住不隐藏，否则鼠标一移开，正在填的
- * 高清参数就跟着消失。
+ * The form changed too: no longer an always-visible button row below the detail header, but a centered pill
+ * (matching liblib) that **appears on hover over the video detail**. It sits in the blank space between the detail header title and the right icons
+ * - covering the picture would block part of the video (user feedback). The hover context is provided by AssetBoardDetail's
+ * root `group/detail` (a named group: the detail has other group-hover, and sharing the anonymous group
+ * would trigger each other by mistake); while the config panel or compose dialog is open it is pinned and not hidden, otherwise once the mouse moves away, the upscale
+ * parameters being filled in would disappear with it.
  */
 export function AssetBoardVideoDetailToolbar({
   node,
   playerRef,
 }: {
   node: CanvasNode;
-  /** 详情正文里那个活的 <video>：「全屏」直接对它发 requestFullscreen。 */
+  /** The live <video> in the detail body: "Fullscreen" calls requestFullscreen on it directly. */
   playerRef?: RefObject<HTMLVideoElement | null>;
 }): ReactElement {
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
@@ -713,13 +713,13 @@ export function AssetBoardVideoDetailToolbar({
   const project = readUrl().project;
   const canvasId = readUrl().canvas ?? 'default';
 
-  // 视频合成入口的可用性：合成节点沿用工作流「≥2 个有片源的上游视频」门槛；
-  // 普通视频节点以自身为素材种子，只要有片源即可。
-  // 用响应式 selector 取代 useMemo 里的 getState() 快照 —— 后者只在依赖
-  // （isCompose/node.id）变化时重算，上游视频在详情打开期间才生成完成不会
-  // 触发重渲染，「剪辑」按钮会一直卡在禁用态。selector 返回 number，
-  // Zustand 用 Object.is 去重，值不变不会多渲染；只订阅这一个派生值，
-  // 不会因为 store 里其它无关字段变化而多渲染。
+  // Availability of the video compose entry: a compose node keeps the workflow's ">= 2 upstream videos with a source" threshold;
+  // a plain video node uses itself as the material seed, needing only a source.
+  // A reactive selector replaces the getState() snapshot in useMemo - the latter only recomputes when its dependencies
+  // (isCompose/node.id) change, so an upstream video finishing generation while the detail is open would not
+  // trigger a re-render and the "Edit" button would stay disabled. The selector returns a number,
+  // which Zustand dedupes with Object.is, so an unchanged value does not re-render; subscribing to only this one derived value
+  // means no extra renders from changes to other unrelated store fields.
   const composeUpstreamVideoCount = useCanvasStore((state) => {
     if (!isCompose) return 0;
     const byId = new Map(state.nodes.map((candidate) => [candidate.id, candidate]));
@@ -737,7 +737,7 @@ export function AssetBoardVideoDetailToolbar({
       setComposeSeeds([node.id]);
       return;
     }
-    // 与 VideoComposeNode 相同的种子推导：上游有片源的视频/音频节点按 y 排序。
+    // Same seed derivation as VideoComposeNode: upstream video/audio nodes with a source, sorted by y.
     const state = useCanvasStore.getState();
     const byId = new Map(state.nodes.map((candidate) => [candidate.id, candidate]));
     const seeds = state.edges
@@ -756,14 +756,14 @@ export function AssetBoardVideoDetailToolbar({
 
   const handleComposed = useCallback(
     (url: string, coverUrl: string | null) => {
-      // 与 VideoComposeNode.onComposed 同语义：下游建视频节点承载结果并连边；
-      // 合成节点还会聚焦新节点并回写 resultVideoUrl/previewImageUrl。
+      // Same semantics as VideoComposeNode.onComposed: create a video node downstream to carry the result and connect an edge;
+      // a compose node also focuses the new node and writes back resultVideoUrl/previewImageUrl.
       const store = useCanvasStore.getState();
       const position = store.findNodePosition(node.id, 580, 380);
       const newId = store.addNode(CANVAS_NODE_TYPES.video, position, {
         videoUrl: url,
         previewImageUrl: coverUrl,
-        displayName: '合成视频',
+        displayName: i18n.t('canvas.assetBoard.detailToolbar.composedVideo'),
         sourceFileName: null,
       } as Partial<CanvasNodeData>);
       store.addEdge(node.id, newId);
@@ -782,7 +782,7 @@ export function AssetBoardVideoDetailToolbar({
 
   const handleDownload = useCallback(async () => {
     if (!videoUrl || isDownloading) return;
-    // 文件名推断沿用 NodeActionToolbar 视频下载的规则。
+    // File name inference follows NodeActionToolbar's video download rules.
     const sourceFileName =
       typeof data.sourceFileName === 'string' && data.sourceFileName.trim().length > 0
         ? data.sourceFileName
@@ -801,19 +801,19 @@ export function AssetBoardVideoDetailToolbar({
 
   const handleUpscaleSubmit = useCallback(() => {
     if (!videoUrl || isSubmittingUpscale) return;
-    // 沿用工作流「先建 isUpscaleNode 结果节点」语义，配置在详情选好后直接提交。
-    const displayName = `高清（${VIDEO_UPSCALE_RESOLUTION_LABEL[upscaleResolution]}）`;
+    // Follows the workflow semantics of "create the isUpscaleNode result node first"; the config is submitted directly once chosen in the detail.
+    const displayName = i18n.t('canvas.assetBoard.detailToolbar.upscaleName', { resolution: VIDEO_UPSCALE_RESOLUTION_LABEL[upscaleResolution] });
     const upscaleNodeId = createVideoUpscaleResultNode(node.id, {
       sourceUrl: videoUrl,
       displayName,
       resolution: upscaleResolution,
     });
     if (!upscaleNodeId) return;
-    // 配置行收起后，工具条「高清」按钮转为 spinner 直到 submit settle——
-    // 与翻译/去字幕/宫格的进行中反馈风格一致（结果落新建的画布节点）。
+    // After the config row collapses, the toolbar "Upscale" button becomes a spinner until submit settles -
+    // the same in-progress feedback style as translate/subtitle removal/grid (the result lands on a newly created canvas node).
     setUpscaleOpen(false);
     setIsSubmittingUpscale(true);
-    // 低成本视口预定位（M7）：结果节点已同步建好，立即对焦（见 handleMatte 注释）。
+    // Low-cost viewport pre-positioning (M7): the result node is already created synchronously, focus it immediately (see the handleMatte comment).
     useCanvasStore.getState().requestFocusNode(upscaleNodeId);
     void submitVideoUpscale(upscaleNodeId, {
       sourceUrl: videoUrl,
@@ -821,9 +821,9 @@ export function AssetBoardVideoDetailToolbar({
     }).finally(() => setIsSubmittingUpscale(false));
   }, [isSubmittingUpscale, node.id, upscaleResolution, videoUrl]);
 
-  // 全屏：直接对正文那个活的播放器发 requestFullscreen（不是把详情面板整块放大——
-  // 用户要的是「看片」）。iOS Safari 的 <video> 没有标准 API，退到它自家的
-  // webkitEnterFullscreen。
+  // Fullscreen: call requestFullscreen directly on the live player in the body (not enlarging the whole detail panel -
+  // the user wants to "watch the video"). iOS Safari's <video> has no standard API, so fall back to its own
+  // webkitEnterFullscreen.
   const handleFullscreen = useCallback(() => {
     const player = playerRef?.current;
     if (!player) return;
@@ -840,14 +840,14 @@ export function AssetBoardVideoDetailToolbar({
     (player as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen?.();
   }, [playerRef]);
 
-  // 配置面板 / 合成弹窗开着时，工具条从「hover 才出现」切成钉住常显。
+  // While the config panel / compose dialog is open, the toolbar switches from "appear on hover" to pinned always visible.
   const pinned = upscaleOpen || composeSeeds !== null;
 
   return (
     <>
-      {/* 默认透明 + 不吃指针，鼠标移进详情面板或键盘焦点落进来才浮现。opacity 而非
-          hidden——visibility:hidden 会让按钮 Tab 不到，键盘用户就再也够不着这四个功能；
-          也正因为占位不变，浮现/隐藏不会把头部撑一下。 */}
+      {/* Transparent by default + ignores the pointer; appears when the mouse moves into the detail panel or keyboard focus lands in it. opacity rather than
+      hidden - visibility:hidden would make the buttons untabbable, and keyboard users could never reach these four features;
+      also because the footprint stays the same, appearing/hiding does not push the header around. */}
       <div
         className={`relative shrink-0 transition-opacity duration-150 ${
           pinned
@@ -858,49 +858,49 @@ export function AssetBoardVideoDetailToolbar({
         <div className={VIDEO_FLOAT_PILL_CLASS}>
           <VideoFloatButton
             icon={Scissors}
-            label="剪辑"
+            label={i18n.t('canvas.assetBoard.detailToolbar.edit')}
             showLabel
             disabled={!project || !canOpenCompose}
             title={
               isCompose && !canOpenCompose
-                ? '需要至少 2 个已就绪的上游视频素材'
-                : '打开视频合成时间线'
+                ? i18n.t('canvas.assetBoard.detailToolbar.editNeedsTwo')
+                : i18n.t('canvas.assetBoard.detailToolbar.editOpen')
             }
             onClick={openCompose}
           />
           {isVideo && (
             <VideoFloatButton
               icon={ImageUpscale}
-              label="高清"
+              label={i18n.t('canvas.assetBoard.detailToolbar.upscale')}
               showLabel
               busy={isSubmittingUpscale}
               disabled={!videoUrl}
-              title="放大分辨率（在画布上新建高清结果节点）"
+              title={i18n.t('canvas.assetBoard.detailToolbar.upscaleTitle')}
               onClick={() => setUpscaleOpen((open) => !open)}
             />
           )}
           <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-white/12" />
           <VideoFloatButton
             icon={Download}
-            label="下载"
+            label={i18n.t('canvas.assetBoard.detailToolbar.download')}
             busy={isDownloading}
             disabled={!videoUrl}
             onClick={() => void handleDownload()}
           />
           <VideoFloatButton
             icon={Maximize2}
-            label="全屏"
+            label={i18n.t('canvas.assetBoard.detailToolbar.fullscreen')}
             disabled={!videoUrl}
-            title="全屏播放"
+            title={i18n.t('canvas.assetBoard.detailToolbar.fullscreenTitle')}
             onClick={handleFullscreen}
           />
         </div>
 
-        {/* 高清配置：吊在胶囊正下方的浮层（原来是详情里独占一行的配置行——工具条
-            挪进头部之后，那一行没地方摆了）。z-50 压过下方正文。 */}
+        {/* Upscale config: a floating layer hanging right below the pill (it used to be a config row taking a whole line in the detail - after the toolbar
+        moved into the header, there was no place for that row). z-50 above the body below. */}
         {upscaleOpen && isVideo && (
           <div className="absolute left-1/2 top-full z-50 mt-2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#282828] px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
-            <span className="text-[12px] text-white/40">分辨率</span>
+            <span className="text-[12px] text-white/40">{i18n.t('canvas.assetBoard.detailToolbar.resolution')}</span>
             <div className="inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/[0.04] p-0.5">
               {VIDEO_UPSCALE_RESOLUTIONS.map((value) => (
                 <button
@@ -919,28 +919,28 @@ export function AssetBoardVideoDetailToolbar({
             </div>
             <DetailToolbarButton
               icon={Wand2}
-              label="提交高清"
+              label={i18n.t('canvas.assetBoard.detailToolbar.submitUpscale')}
               busy={isSubmittingUpscale}
               disabled={!videoUrl}
-              title="在画布上新建高清结果节点并提交任务"
+              title={i18n.t('canvas.assetBoard.detailToolbar.submitUpscaleTitle')}
               onClick={handleUpscaleSubmit}
             />
           </div>
         )}
       </div>
 
-      {/* 弹窗留在悬停层之外：它是全屏 portal 级的东西，跟着工具条一起淡入淡出
-          没有意义，也不该被 pointer-events 的开关波及。 */}
+      {/* The dialog stays outside the hover layer: it is a full-screen portal-level thing, fading in/out with the toolbar
+      makes no sense and it should not be affected by the pointer-events switch. */}
       {composeSeeds !== null && project && (
         <VideoComposeModal
           project={project}
           canvasId={canvasId}
           seedNodeIds={composeSeeds}
-          // 与 VideoComposeNode.tsx 同语义（不再按 isCompose 分叉）：普通视频节点
-          // 打开「剪辑」也在自己的 node.data.draftTimeline 上读写草稿——
-          // VideoNodeData 本就带 [key: string]: unknown 索引签名，此前普通视频节点
-          // 走的是「关闭即丢草稿」的降级路径（M4）。onPersistDraft 在弹窗卸载时
-          // 无条件调用（见 VideoComposeModal 的 unmount effect），故这里始终注入。
+          // Same semantics as VideoComposeNode.tsx (no longer branching on isCompose): a plain video node
+          // opening "Edit" also reads/writes the draft on its own node.data.draftTimeline -
+          // VideoNodeData already has a [key: string]: unknown index signature; previously plain video nodes
+          // took the degraded path of "close = lose the draft" (M4). onPersistDraft is called unconditionally
+          // when the dialog unmounts (see VideoComposeModal's unmount effect), so it is always injected here.
           initialTimeline={(data.draftTimeline as ComposeTimelineState | undefined) ?? null}
           onPersistDraft={(timeline) =>
             updateNodeData(node.id, { draftTimeline: timeline } as Partial<CanvasNodeData>)

@@ -1,7 +1,7 @@
-"""Freezone 路由辅助函数。
+"""Freezone route helper functions.
 
-把 `src/novelvideo/api/routes/freezone.py` 里的纯辅助逻辑抽离出来，
-让路由文件更聚焦于接口本身。
+Pure helper logic extracted from `src/novelvideo/api/routes/freezone.py`
+so the route file can focus on the endpoints themselves.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ FREEZONE_IMAGE_CAMERA_OPTIONS = {
 
 
 def resolve_freezone_image_provider(provider: Optional[str], *, strict: bool = True) -> str:
-    """把 Freezone 图片 provider 归一化到当前支持的 SuperTale 范围内。"""
+    """Normalize a Freezone image provider into the currently supported SuperTale range."""
     if provider and provider.strip():
         normalized = provider.strip().lower()
         if normalized not in SUPPORTED_FREEZONE_IMAGE_PROVIDERS:
@@ -120,7 +120,7 @@ def get_freezone_image_style_templates() -> list[dict]:
 
 
 def get_freezone_image_style_manifest_version() -> str:
-    """清单版本号,随下发接口一起给前端,方便排查图片/提示词对不上的情况。"""
+    """Manifest version, sent to the frontend with the delivery endpoint to help debug image/prompt mismatches."""
     return get_style_manifest_version()
 
 
@@ -128,24 +128,24 @@ _ASSET_BASE_WARNED = False
 
 
 def get_freezone_image_style_asset_base() -> str:
-    """风格图片的地址前缀。
+    """Address prefix for style images.
 
-    图片不随仓库发布,必须由这个环境变量指向 OSS/CDN 前缀,前端按
-    `<前缀>/<清单里的相对路径>` 拼绝对地址。留空则前端回落到同源
-    `/style-gallery/`,而那个目录默认是空的 —— 图墙会显示占位块。
+    Images are not shipped with the repo; this environment variable must point at an OSS/CDN prefix, and the frontend
+    builds absolute addresses as `<prefix>/<relative path in the manifest>`. If left empty, the frontend falls back to the same-origin
+    `/style-gallery/`, which is empty by default -- the image wall will show placeholder blocks.
     """
     base = os.environ.get("STYLE_GALLERY_ASSET_BASE", "").strip()
-    # 没配就是一整墙占位块,而前端没法区分「没配」和「图挂了」。这里出一条日志,
-    # 让部署方在看到空图墙时能直接定位到是环境变量没配,而不是去查 CDN。
-    # 只在首次下发时警告一次,避免每次拉清单都刷屏。
+    # If unset, the whole wall is placeholder blocks, and the frontend cannot tell "not configured" from "images broken". Emit a log line here
+    # so that when deployers see an empty image wall they can pinpoint the unset environment variable instead of investigating the CDN.
+    # Warn only once, on the first delivery, to avoid flooding the log on every manifest fetch.
     global _ASSET_BASE_WARNED
     if not base and not _ASSET_BASE_WARNED:
         _ASSET_BASE_WARNED = True
         logger.warning(
-            "STYLE_GALLERY_ASSET_BASE 未配置,风格图墙将只显示占位块。"
-            "请把它指向存放封面/示例图的 OSS/CDN 前缀,"
-            "并确认该域名已加进前端 CSP 的 img-src 白名单"
-            "(frontend/docker/nginx.conf.template)。"
+            "STYLE_GALLERY_ASSET_BASE is not configured; the style image wall will only show placeholder blocks. "
+            "Point it at the OSS/CDN prefix that holds the covers/sample images, "
+            "and make sure that domain has been added to the frontend CSP img-src allowlist "
+            "(frontend/docker/nginx.conf.template)."
         )
     return base
 
@@ -184,10 +184,10 @@ def merge_prompt_with_camera(prompt: str, camera: Optional[FreezoneImageCameraCo
 
 
 def resolve_freezone_image_style_template(style: Optional[FreezoneImageStyleConfig]) -> Optional[dict]:
-    """未知 id 静默忽略,不报错。
+    """Unknown ids are silently ignored, without raising.
 
-    风格库换代后旧 id 会作废,已存画布节点里保存的旧 id 不应该让生成整个失败,
-    降级成「这次不加风格」即可,前端 chip 也会回落显示「风格」。
+    After a style library generation change, old ids become void; an old id saved in an existing canvas node should not make generation fail as a whole,
+    it should just degrade to "no style this time", and the frontend chip also falls back to showing "Style".
     """
     if style is None:
         return None
@@ -205,7 +205,7 @@ def build_style_prompt(style: Optional[FreezoneImageStyleConfig]) -> str:
     if template is None:
         return ""
     return (
-        "风格模板:\n"
+        "Style template:\n"
         f"- {template['label']}\n"
         f"- {template['style_prompt']}"
     )
@@ -240,7 +240,7 @@ def split_provider_and_model(
     *,
     fallback_model: Optional[str] = None,
 ) -> tuple[Optional[str], Optional[str]]:
-    """解析 Freezone 图片模型。"""
+    """Resolve a Freezone image model."""
     model_text = str(model or "").strip()
     if model_text:
         if model_text in IMAGE_GENERATION_SELECTIONS:
@@ -277,7 +277,7 @@ def start_freezone_gen_job(
     reference_paths = resolve_url_list(project_dir, reference_urls)
     ensure_existing_paths(reference_paths, field_name="reference")
 
-    raise HTTPException(503, "freezone gen task requires project task backend（当前 runner: Celery）")
+    raise HTTPException(503, "freezone gen task requires project task backend (current runner: Celery)")
 
 
 def start_freezone_edit_job(
@@ -306,7 +306,7 @@ def start_freezone_edit_job(
     extra_paths = resolve_url_list(project_dir, extra_reference_urls)
     ensure_existing_paths(extra_paths, field_name="reference")
 
-    raise HTTPException(503, "freezone edit task requires project task backend（当前 runner: Celery）")
+    raise HTTPException(503, "freezone edit task requires project task backend (current runner: Celery)")
 
 
 def notes_suffix(*, style: str, notes: str, user_prompt: str) -> str:
@@ -684,7 +684,7 @@ def prepare_padded_outpaint_base(
     project_dir: Path,
     target_aspect_ratio: str,
 ) -> Path:
-    """先给原图补白到更大的画布，再让基于 edit 的 outpaint 能向外扩展。"""
+    """Pad the original image to a larger canvas first, so an edit-based outpaint can extend outward."""
     from PIL import Image
 
     src = source_path

@@ -4,11 +4,11 @@ attention: low
 ---
 # v2.0.6
 
-## User-facing Highlights (zh)
+## User-facing Highlights (vi)
 
-- **视频延长**: 支持在已配置相应模型时延长画布中的视频，并保留原视频画幅。
-- **视频画质与帧率增强**: 可通过已配置的模型调整视频分辨率和帧率，并选择智能插帧等处理方式。
-- **音视频分离输出 MP3**: 提取的音频改为 MP3 格式，便于用作支持该格式的模型参考音频。
+- **Kéo dài video**: Kéo dài video trên canvas khi đã cấu hình model tương ứng, đồng thời giữ nguyên tỉ lệ khung hình gốc.
+- **Nâng cao chất lượng và tốc độ khung hình video**: Dùng các model đã cấu hình để điều chỉnh độ phân giải và tốc độ khung hình, bao gồm cả nội suy khung hình.
+- **Tách âm thanh xuất MP3**: Âm thanh được tách ra nay ở định dạng MP3, dùng được làm âm thanh tham chiếu cho các model hỗ trợ định dạng này.
 
 ## User-facing Highlights (en)
 
@@ -18,9 +18,9 @@ attention: low
 
 ## Fixes
 
-- 音视频分离现在实际转码为 MP3，并继续兼容已有的 M4A 结果 (#631)。
+- Audio separation now actually transcodes to MP3 and stays compatible with existing M4A results (#631).
 
 ## Improvements
 
-- 新增可配置的视频延长模式及对应画布入口 (#662)。
-- 新增模型驱动的视频增强流程，并完善任务恢复时的节点状态同步 (#716)。
+- Added a configurable video extension mode and the matching canvas entry point (#662).
+- Added a model-driven video enhancement flow and improved node-state sync when tasks resume (#716).

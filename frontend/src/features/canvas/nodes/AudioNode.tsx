@@ -69,9 +69,9 @@ const MIN_HEIGHT = 190;
 const MAX_WIDTH = 900;
 const MAX_HEIGHT = 360;
 
-// 仅允许音频文件。`accept="audio/*"` 只是选择器提示，用户选「所有文件」或拖拽
-// 仍能塞进 mp4 等非音频；这里按 mime + 扩展名硬校验（mp4 等视频被拒，m4a 等
-// 仍放行——含 mime 为空/异常的音频用扩展名兜底）。
+// Only audio files are allowed. `accept="audio/*"` is just a picker hint; choosing "All files" or dragging
+// can still slip in non-audio such as mp4; so we hard-validate by mime + extension (mp4 and other video is rejected, m4a and the like
+// still pass — audio with an empty/odd mime falls back to the extension).
 const AUDIO_UPLOAD_EXTENSIONS = new Set([
   'mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac', 'weba', 'wma',
   'aiff', 'aif', 'caf', 'amr',
@@ -85,10 +85,10 @@ function isAudioFile(file: File): boolean {
 
 function isVoicePrerequisiteError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /(?:声线未配置|缺少.*声线|请先配置或选择声线|上传或录制.*音频)/u.test(message); // i18n-exempt -- backend errors
+  return /(?:voice (?:is )?not configured|missing .*voice|configure or select a voice|upload or record .*audio|voice_narrator_missing)/i.test(message);
 }
 
-// 只合并同时发生的请求；settled 后立即失效，避免空结果在上传声线后仍被复用。
+// Only merges concurrent requests; invalidated right after settling so an empty result is not reused after a voice is uploaded.
 const getCachedAudioReferences = createInFlightRequestCache(
   fetchFreezoneAudioReferences,
 );
@@ -102,7 +102,7 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
   const { isGenerating, task } = useNodeGenerationTaskState(data);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const [voicePickerInitialTab, setVoicePickerInitialTab] = useState<'library' | 'mine'>('library');
-  // 重试用与面板提交同一套生成逻辑（hook）。
+  // Retry uses the same generation logic (hook) as the panel submit.
   const { generate } = useAudioGeneration(id, data);
   useEffect(() => {
     return subscribeNodeAction(({ nodeId, action, parameters, requestId }) => {
@@ -131,12 +131,12 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
                 isGenerating: false,
                 generationStartedAt: null,
                 voiceAvailable: false,
-                generationError: '未选择可用自定义声线，已跳过生成', // i18n-exempt -- workflow payload
+                generationError: 'No usable custom voice selected; generation skipped',
               });
               publishNodeActionSuccess(requestId, id, action, {
                 skipped: true,
                 reason: 'missing_custom_voice',
-                agent_instruction: '未选择自定义声线，本音频节点已跳过，继续其它工作流节点。', // i18n-exempt -- agent protocol
+                agent_instruction: 'No custom voice selected; this audio node was skipped. Continue with the other workflow nodes.',
               });
               return;
             }
@@ -148,13 +148,13 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
         publishNodeActionAccepted(requestId, id, action);
         void (async () => {
           const project = readUrl().project;
-          if (!project) throw new Error('缺少项目 ID，无法翻译音频文本');
+          if (!project) throw new Error('Missing project ID; cannot translate the audio text');
           const latest = useCanvasStore.getState().nodes.find((node) => node.id === id);
           if (latest?.type !== CANVAS_NODE_TYPES.audio) {
-            throw new Error('音频节点不存在');
+            throw new Error('Audio node does not exist');
           }
           const text = deriveAudioText(latest.data as AudioNodeData).trim();
-          if (!text) throw new Error('音频节点没有可翻译文本');
+          if (!text) throw new Error('Audio node has no text to translate');
           const translated = await translateNodeText(project, {
             text,
             nodeId: id,
@@ -175,8 +175,8 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
   }, [generate, id, updateNodeData]);
 
 
-  // 任务流(SSE)回报失败时把错误持久化进节点数据 + 清 isGenerating——覆盖刷新后、
-  // 节点未选中、handleSubmit promise 已随旧页面销毁等 catch 没跑到的情况。
+  // When the task stream (SSE) reports a failure, persist the error into the node data + clear isGenerating — covering cases where
+  // the catch never ran after a refresh, with the node unselected, or after the handleSubmit promise died with the old page.
   useEffect(() => {
     if (task && task.status === 'failed' && task.error) {
       if (data.generationError !== task.error || data.isGenerating) {
@@ -190,7 +190,7 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
 
   const generationError =
     typeof data.generationError === 'string' ? data.generationError.trim() : '';
-  // 仅在「未生成 + 无音频 + 有错误」时作为失败态展示，避免遮住成功结果。
+  // Shown as the failed state only when "not generated + no audio + has an error", so a successful result is never covered.
   const hasGenerationError =
     !isGenerating && !data.audioUrl && generationError.length > 0;
 
@@ -210,9 +210,9 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
   );
   const currentVoiceRef: AudioVoiceRef = data.voiceRef ?? { scope: 'project_narrator' };
   const speechMode = data.speechMode ?? 'clone';
-  // 上传一份本地音频到后端 freezone — 复用通用 upload 端点（后端不区分 mime）。
-  // 上传成功后落 audioUrl/sourceFileName 进 store，AudioOperationsPanel 那边
-  // 也会自动 pick 到这份音频做后续处理。
+  // Upload a local audio file to the backend freezone — reuses the generic upload endpoint (the backend does not distinguish mime).
+  // After a successful upload, audioUrl/sourceFileName land in the store, and AudioOperationsPanel
+  // automatically picks this audio up for follow-up processing.
   const processFile = useCallback(
     async (file: File) => {
       if (!isAudioFile(file)) {
@@ -230,7 +230,7 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
         updateNodeData(id, {
           audioUrl: uploaded.url,
           sourceFileName: file.name,
-          // 重置 duration —— 让 <audio onLoadedMetadata> 在新文件加载时重新写入。
+          // Reset duration — so <audio onLoadedMetadata> writes it again when the new file loads.
           durationMs: null,
           isUploading: false,
         });
@@ -242,12 +242,12 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
     [id, t, updateNodeData],
   );
 
-  // 「上传资源」菜单上传音频时，UploadNode 会先把自己转成音频节点，再把 File 投递
-  // 过来。File 本体走 pendingExternalFiles 暂存、挂载时补投 —— 低缩放档下本节点先
-  // 以 LOD shell 挂载，只订阅事件会漏掉投递（见 useExternalFileHandoff）。
+  // When audio is uploaded via the "Upload resource" menu, UploadNode first converts itself into an audio node and then hands the File
+  // over. The File itself is staged in pendingExternalFiles and delivered on mount — at low zoom this node first
+  // mounts as an LOD shell, and subscribing to events alone would miss the handoff (see useExternalFileHandoff).
   const consumeExternalFile = useCallback(
     (file: File) => {
-      // 类型校验统一交给 processFile（含非音频拒绝 + toast 提示）。
+      // Type validation is delegated to processFile (including non-audio rejection + toast).
       void processFile(file);
     },
     [processFile],
@@ -258,19 +258,19 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
     updateNodeInternals(id);
   }, [id, resolvedHeight, resolvedWidth, updateNodeInternals]);
 
-  // 节点挂载后若没有显式音色，则拉一次音色库 references 并落到第一条。
-  // 放在 AudioNode 而非 AudioOperationsPanel 里，是因为 panel 只在
-  // `selected && !audioUrl` 才挂载——新建后若没立刻被点中，panel 不会渲染，
-  // 初始化 effect 永远跑不到。AudioNode 一进画布就 mount，能稳定触发。
+  // After the node mounts, if there is no explicit voice, fetch the voice library references once and settle on the first one.
+  // This lives in AudioNode rather than AudioOperationsPanel because the panel only mounts when
+  // `selected && !audioUrl` — if a new node is not selected right away, the panel never renders and
+  // the initialization effect never runs. AudioNode mounts as soon as it enters the canvas, so it triggers reliably.
   //
-  // "没有显式音色" = voiceRef 缺失 *或* 仍是历史工厂兜底（纯
-  // `{ scope: 'project_narrator' }`，无 characterName/identityId/slot/voiceId），
-  // 兼容 2026-05-19 之前持久化的旧节点。
+  // "No explicit voice" = voiceRef is missing *or* is still the legacy factory fallback (a bare
+  // `{ scope: 'project_narrator' }` with no characterName/identityId/slot/voiceId),
+  // compatible with old nodes persisted before 2026-05-19.
   //
-  // 不要在外面拿 useRef 守"只跑一次"——StrictMode 下第一遍 effect 起 fetch、
-  // cleanup 把 cancelled 翻 true，第二遍 effect 见 ref 已置位直接 bail，第一遍
-  // 闭包等回来又被 cancelled 挡住，结果谁都写不进 store。请求级去重交给
-  // `getCachedAudioReferences` 的 promise cache。
+  // Do not guard "run only once" with an outer useRef — under StrictMode the first effect pass starts the fetch,
+  // cleanup flips cancelled to true, the second pass sees the ref already set and bails, and when the first pass's
+  // closure returns it is blocked by cancelled, so nobody writes to the store. Request-level dedupe is left to
+  // the promise cache of `getCachedAudioReferences`.
   useEffect(() => {
     if (data.audioKind === 'music' || speechMode !== 'clone') return;
     const v = data.voiceRef;
@@ -318,10 +318,10 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
         };
         const nextLabel = first.label ?? '';
         const nextLanguage = first.language ?? '';
-        // 若算出来的默认音色跟当前已经一致就跳过：当首条 reference 本身就是裸
-        // project_narrator（与"工厂兜底"同形）时，写入会再次触发本 effect，而两道
-        // 守卫都把这种形状当成"仍需初始化"，于是每次渲染都写一个新对象 →
-        // 无限重渲染把浏览器卡死。这道相等性判断是断开死循环的关键。
+        // Skip if the computed default voice already equals the current one: when the first reference is itself a bare
+        // project_narrator (same shape as the "factory fallback"), writing re-triggers this effect, and both
+        // guards treat that shape as "still needs initialization", so every render writes a new object →
+        // infinite re-rendering freezes the browser. This equality check is what breaks the loop.
         if (
           cur != null &&
           cur.scope === ref.scope &&
@@ -391,8 +391,8 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
         maxHeight={MAX_HEIGHT}
       />
 
-      {/* 音频节点不再作为上传入口（空状态/替换均移除）：上传音频请通过「上传节点」
-          或把音频文件拖入画布；外部投递仍走 canvasEventBus 'audio-node/external-file'。 */}
+      {/* The audio node is no longer an upload entry (empty state / replace both removed): upload audio via the "Upload node"
+          or drag the audio file into the canvas; external handoff still goes through canvasEventBus 'audio-node/external-file'. */}
 
       <div
         className={`relative flex h-full w-full items-center justify-center ${audioSource ? 'overflow-hidden' : 'overflow-visible'} rounded-[var(--node-radius)] border ${CANVAS_NODE_PANEL_SURFACE_CLASS} transition-colors ${cardToneClass}`}
@@ -414,7 +414,7 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
             onPlayingChange={(playing) => setNodeMediaActive(id, playing)}
           />
         ) : hasGenerationError ? (
-          // 失败态：与 ImageGenNode/VideoNode 一致（headline + 可滚动错误文本 + 共用重试按钮）。
+          // Failed state: consistent with ImageGenNode/VideoNode (headline + scrollable error text + shared retry button).
           <div className="nodrag flex flex-col items-center px-5 text-center">
             <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-red-200">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-300/90" />
@@ -442,9 +442,9 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
         )}
       </div>
 
-      {/* 节点一旦有音频内容（手动上传 or TTS 合成），就不再展示底部操作区 ——
-          这条规则覆盖手动上传 / TTS 合成完成两种情况。
-          想要重新合成只能先清掉音频（暂时通过删节点重建）。 */}
+      {/* Once the node has audio content (manual upload or TTS synthesis), the bottom operations area is no longer shown —
+          this rule covers both manual upload and completed TTS synthesis.
+          To re-synthesize you must first clear the audio (for now, by deleting and recreating the node). */}
       {selected && !isBoxSelecting && !data.audioUrl && (
         <AudioOperationsPanel nodeId={id} data={data} />
       )}

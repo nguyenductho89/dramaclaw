@@ -23,6 +23,17 @@ _CHAT_RUN_LOCK_HEARTBEAT_SECONDS = 30.0
 _CHAT_RUN_LOCK_BIRTH_GRACE_SECONDS = 5.0
 
 
+class UserChatBusyError(RuntimeError):
+    """Raised when the current user already has an AI chat run in progress."""
+
+    code = "user_chat_busy"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The current user already has an AI chat in progress; please try again later."
+        )
+
+
 def _parse_iso_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -189,11 +200,11 @@ def acquire_chat_run_lock(
                 read_chat_run_lock_file(path)
             )
             if not existing_lock_id and chat_run_lock_file_is_new(path):
-                raise RuntimeError("当前用户已有 AI 对话正在处理中，请稍后再试。")
+                raise UserChatBusyError()
             if existing_lock_id and owner_is_active(
                 owner_id, owner_pid, started_at, updated_at
             ):
-                raise RuntimeError("当前用户已有 AI 对话正在处理中，请稍后再试。")
+                raise UserChatBusyError()
             remove_chat_run_lock_file(path)
             continue
         try:
@@ -207,7 +218,7 @@ def acquire_chat_run_lock(
                 pass
             remove_chat_run_lock_file(path)
             raise
-    raise RuntimeError("当前用户已有 AI 对话正在处理中，请稍后再试。")
+    raise UserChatBusyError()
 
 
 def release_chat_run_lock(path: Path, lock_id: str) -> None:

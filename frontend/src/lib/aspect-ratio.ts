@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * Single source of truth for project画幅 (aspect ratio) derivations.
+ * Single source of truth for project aspect ratio (frame format) derivations.
  *
  * The whole UI follows ONE orientation per project. Every concrete value the
  * app needs — CSS aspect box, display label, crop ratio, generation params —

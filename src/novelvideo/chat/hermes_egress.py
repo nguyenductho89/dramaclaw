@@ -38,17 +38,17 @@ LEGACY_ENVIRONMENT_CREDENTIAL_MODE = "legacy_environment"
 GATEWAY_CREDENTIAL_MODE_ENV = "DRAMACLAW_GATEWAY_CREDENTIAL_MODE"
 
 HOME_SCOPE_EGRESS_PROJECT_ID = "__home__"
-"""home 态出网身份用的 project 哨兵值（本模块只定义，暂无产品代码消费）。
+"""Project sentinel value for the home-scope egress identity (defined here only; no product code consumes it yet).
 
-home 态的 chat 会话同时受两个互斥约束挤压：
-`agent_sessions.current_project_id` 在 home 态必须是 NULL（EE 侧 agent_sessions
-迁移上的 home-project-null CHECK），而 `TrustedEgressContext.project_id` 有非空
-不变量（`egress_context.py` 的 `__post_init__` 必填字段循环）。同一个值满足不了
-两边，所以出网身份与会话身份被拆成两个形参：会话侧继续传 `None`，出网侧传本哨兵。
+A chat session in home scope is squeezed by two mutually exclusive constraints:
+`agent_sessions.current_project_id` must be NULL in home scope (the home-project-null CHECK in the
+EE-side agent_sessions migration), while `TrustedEgressContext.project_id` has a non-empty
+invariant (the required-field loop in `__post_init__` of `egress_context.py`). One value cannot satisfy
+both sides, so the egress identity and the session identity are split into two parameters: the session side keeps passing `None`, and the egress side passes this sentinel.
 
-写进账本是合法的：EE 侧的 egress_operations 迁移把 `project_id` 定义成 TEXT NOT NULL，
-只校验 `btrim(...) <> ''`，**没有指向 projects 的外键**，所以哨兵不需要对应一条真实
-project 记录。真实 project id 是 ULID（26 位 Crockford base32），取值域与本哨兵不相交。
+Writing it into the ledger is legal: the EE-side egress_operations migration defines `project_id` as TEXT NOT NULL,
+checks only `btrim(...) <> ''`, and has **no foreign key to projects**, so the sentinel does not need a matching real
+project record. Real project ids are ULIDs (26-char Crockford base32); their value domain is disjoint from this sentinel.
 """
 
 

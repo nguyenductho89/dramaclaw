@@ -33,7 +33,7 @@ CANVAS_FORMAT_REPAIR_PROMPT = (
     "completed) and canvas_receipts=[]."
 )
 
-_REPLY_CONTRACT_FAILURE = "回复未通过操作结果校验："
+_REPLY_CONTRACT_FAILURE = "The reply did not pass operation result validation: "
 
 CANVAS_REPLY_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -90,9 +90,9 @@ def _parse_canvas_envelope(text: str) -> tuple[dict[str, Any] | None, str]:
     try:
         reply = json.loads(text)
     except (TypeError, ValueError):
-        return None, _REPLY_CONTRACT_FAILURE + "未返回结构化结果，请重试。"
+        return None, _REPLY_CONTRACT_FAILURE + "No structured result was returned; please retry."
     if not isinstance(reply, dict):
-        return None, _REPLY_CONTRACT_FAILURE + "结果格式无效，请重试。"
+        return None, _REPLY_CONTRACT_FAILURE + "The result format is invalid; please retry."
     message = reply.get("message")
     mode = reply.get("mode")
     if (
@@ -103,7 +103,7 @@ def _parse_canvas_envelope(text: str) -> tuple[dict[str, Any] | None, str]:
         or mode not in {"read_only", "mutation", "blocked"}
         or not isinstance(reply.get("canvas_receipts"), list)
     ):
-        return None, _REPLY_CONTRACT_FAILURE + "结果格式无效，请重试。"
+        return None, _REPLY_CONTRACT_FAILURE + "The result format is invalid; please retry."
     return reply, ""
 
 
@@ -123,34 +123,34 @@ def finalize_canvas_reply(
     """
     states = set(attempts.values())
     if "failed" in states:
-        return "画布操作未完成：" + (
-            failure or "没有收到所有操作的成功画布写入回执，请重试。"
+        return "Canvas operation incomplete: " + (
+            failure or "Not every operation received a successful canvas write receipt; please retry."
         )
     if "timeout" in states:
-        return "画布操作等待超时：未收到执行回执，请确认画布连接后重试。"
+        return "Canvas operation timed out: no execution receipt was received; check the canvas connection and retry."
     if "cancelled" in states:
-        return "画布操作已取消，未完成全部操作。"
+        return "Canvas operation cancelled; not all operations were completed."
     if states - {"succeeded"}:
-        return "画布操作等待确认或执行回执，尚未完成。"
+        return "Canvas operation is waiting for confirmation or an execution receipt and is not complete yet."
     if draft_ready and not attempts:
-        return "工作流草稿已准备完成，等待你确认后创建画布节点；尚未执行生成。"
+        return "The workflow draft is ready; it is waiting for your confirmation before canvas nodes are created. Nothing has been generated yet."
     reply, envelope_error = _parse_canvas_envelope(text)
     if reply is None:
         return envelope_error
     message, mode, claims = reply["message"], reply["mode"], reply["canvas_receipts"]
     if mode == "mutation":
         if not attempts or not claims:
-            return "画布操作未完成：本轮没有可验证的画布写入回执，请重试。"
+            return "Canvas operation incomplete: this turn has no verifiable canvas write receipt; please retry."
         references = set()
         for claim in claims:
             reference = _claim_reference(claim)
             if reference is None or reference not in receipts:
-                return "画布操作未完成：成功声明与本轮写入回执不匹配，请重试。"
+                return "Canvas operation incomplete: the success claim does not match this turn's write receipts; please retry."
             references.add(reference)
         if references != receipts:
-            return "画布操作未完成：成功声明未覆盖本轮全部写入回执，请重试。"
+            return "Canvas operation incomplete: the success claim does not cover all of this turn's write receipts; please retry."
     elif claims or attempts:
-        return _REPLY_CONTRACT_FAILURE + "操作声明与工具结果不一致，请重试。"
+        return _REPLY_CONTRACT_FAILURE + "The operation claim is inconsistent with the tool results; please retry."
     return message.strip()
 
 

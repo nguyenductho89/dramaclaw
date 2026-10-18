@@ -169,7 +169,7 @@ def _media_ui_spec(
         if not src:
             continue
         key = f"media_{index}"
-        title = str(item.get("title") or item.get("label") or f"媒体 {index}").strip()
+        title = str(item.get("title") or item.get("label") or f"Media {index}").strip()
         description = str(item.get("description") or "").strip()
         props: dict[str, Any] = {"src": src, "alt": title, "title": title}
         if description:
@@ -294,47 +294,42 @@ def _infer_display_tool_call_from_text(
     recent_context = "\n".join(previous_assistant[-2:] if previous_assistant else [])
     context_text = "\n".join([prompt_text, str(assistant_text or ""), recent_context])
     context_lower = context_text.casefold()
-    progress_terms = ("进度", "状态", "任务", "做到哪", "做到哪儿", "当前情况")
-    if any(term in prompt_text for term in progress_terms):
+    progress_terms = ("progress", "status", "task", "how far", "current situation")
+    if any(term in prompt_lower for term in progress_terms):
         return None
     display_terms = (
-        "展示",
-        "显示",
-        "查看",
-        "看",
-        "全部显示",
         "show",
         "display",
         "view",
     )
     if not any(term in prompt_lower for term in display_terms):
         return None
-    prompt_mentions_sketch = "草图" in prompt_text or "sketch" in prompt_lower
-    context_mentions_sketch = "草图" in context_text or "sketch" in context_lower
+    prompt_mentions_sketch = "sketch" in prompt_lower
+    context_mentions_sketch = "sketch" in context_lower
     short_followup = len(prompt_text.strip()) <= 20 and any(
-        term in prompt_text for term in ("全部", "继续", "下一页", "更多")
+        term in prompt_lower for term in ("all", "continue", "next page", "more")
     )
     if not prompt_mentions_sketch and not (short_followup and context_mentions_sketch):
         return None
 
     episode = 1
     episode_match = re.search(
-        r"(?:第\s*(\d+)\s*集|ep(?:isode)?\s*\.?\s*(\d+))",
+        r"ep(?:isode)?\s*\.?\s*(\d+)",
         context_text,
         re.IGNORECASE,
     )
     if episode_match:
-        raw_episode = episode_match.group(1) or episode_match.group(2)
+        raw_episode = episode_match.group(1)
         try:
             episode = max(1, int(raw_episode))
         except (TypeError, ValueError):
             episode = 1
     wants_sketch_candidates = any(
-        term in context_text for term in ("草图候选", "候选草图", "图池", "备选草图")
+        term in context_lower for term in ("sketch candidate", "candidate sketch", "sketch pool", "alternative sketch")
     )
     if wants_sketch_candidates:
         beat_match = re.search(
-            r"(?:beat|Beat|BEAT)\s*\.?\s*(\d+)|第\s*(\d+)\s*(?:个|张)?\s*beat|Beat\s*(\d+)",
+            r"(?:beat|Beat|BEAT)\s*\.?\s*(\d+)",
             context_text,
             re.IGNORECASE,
         )
@@ -445,8 +440,8 @@ async def _fallback_display_tool_ui_specs(
                     media_items.append(
                         {
                             "src": video_url,
-                            "title": f"第 {episode} 集成片",
-                            "description": "最终合成视频",
+                            "title": f"Episode {episode} final cut",
+                            "description": "Final composited video",
                         }
                     )
             if not media_items:
@@ -486,8 +481,8 @@ async def _fallback_display_tool_ui_specs(
                     media_items.append(
                         {
                             "src": sketch_url,
-                            "title": f"Beat {beat_number} 草图",
-                            "description": "草图",
+                            "title": f"Beat {beat_number} sketch",
+                            "description": "Sketch",
                             "aspectRatio": "3/4",
                         }
                     )
@@ -495,8 +490,8 @@ async def _fallback_display_tool_ui_specs(
                     media_items.append(
                         {
                             "src": frame_url,
-                            "title": f"Beat {beat_number} 首帧",
-                            "description": "首帧",
+                            "title": f"Beat {beat_number} first frame",
+                            "description": "First frame",
                             "aspectRatio": "3/4",
                         }
                     )
@@ -534,9 +529,9 @@ async def _fallback_display_tool_ui_specs(
                 media_items.append(
                     {
                         "src": src,
-                        "title": f"Beat {beat} 草图候选",
+                        "title": f"Beat {beat} sketch candidate",
                         "description": (
-                            "过期候选" if candidate.get("stale") else "草图候选"
+                            "Stale candidate" if candidate.get("stale") else "Sketch candidate"
                         ),
                         "aspectRatio": "3/4",
                     }
@@ -584,7 +579,7 @@ async def _fallback_display_tool_ui_specs(
                         media_items.append(
                             {
                                 "src": src,
-                                "title": f"{scene_name or '场景'} · {kind}",
+                                "title": f"{scene_name or 'Scene'} · {kind}",
                                 "description": scene.get("description")
                                 or scene.get("environment_prompt")
                                 or "",
@@ -640,7 +635,7 @@ async def _fallback_display_tool_ui_specs(
                         media_items.append(
                             {
                                 "src": portrait_url,
-                                "title": name or "角色肖像",
+                                "title": name or "Character portrait",
                                 "description": role,
                                 "aspectRatio": "3/4",
                             }
@@ -692,7 +687,7 @@ async def _fallback_display_tool_ui_specs(
                                 or identity.get("name")
                                 or identity.get("identity_id")
                                 or name
-                                or "身份图"
+                                or "Identity image"
                             )
                             identity_name_match = _matches_any_display_text(
                                 [
@@ -792,12 +787,12 @@ async def _fallback_display_tool_ui_specs(
                         {
                             "src": video_url,
                             "poster": frame_url,
-                            "title": f"Beat {beat_number} 视频",
+                            "title": f"Beat {beat_number} video",
                         }
                     )
                 if audio_url:
                     audio_items.append(
-                        {"src": audio_url, "title": f"Beat {beat_number} 音频"}
+                        {"src": audio_url, "title": f"Beat {beat_number} audio"}
                     )
             if media_type == "audio":
                 limited = _limit_display_items(audio_items, args, 20)

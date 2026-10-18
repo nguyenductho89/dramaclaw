@@ -204,7 +204,7 @@ class InlineTaskBackend:
             beat_num=beat_num,
             scope=scope,
             progress=0.0,
-            current_task="任务已进入队列",
+            current_task="Task queued",
             metadata=metadata,
             status="queued",
             expected_task_id=state.task_id,
@@ -385,11 +385,11 @@ class InlineTaskBackend:
             beat_num=task_state.beat_num,
             scope=task_state.scope,
             progress=task_state.progress,
-            current_task="任务已取消",
+            current_task="Task cancelled",
             status="cancelled",
             expected_task_id=task_state.task_id,
         )
-        # taskkill/killpg 是阻塞调用(Windows 上可达秒级),不得占事件循环
+        # taskkill/killpg are blocking calls (up to seconds on Windows) and must not occupy the event loop
         await asyncio.get_running_loop().run_in_executor(
             None, kill_task_processes, task_state.task_id
         )

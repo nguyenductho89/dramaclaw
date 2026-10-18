@@ -69,7 +69,7 @@ describe("resolveChatTaskBatchSummary", () => {
       cancelled: 0,
     });
     expect(buildChatTaskBatchNotification(summary!)).toBe(
-      "第 1 集视频批次已结束：完成 2/3，失败 1。请在任务中心查看详情后再继续。",
+      "Episode 1: video batch finished: 2/3 completed, 1 failed. Check Task Center for details before continuing.",
     );
   });
 
@@ -83,7 +83,7 @@ describe("resolveChatTaskBatchSummary", () => {
     const summary = resolveChatTaskBatchSummary(tasks, tasks[2]);
 
     expect(buildChatTaskBatchNotification(summary!)).toBe(
-      "✅ 第 1 集 3 个视频已全部生成完成。你可以让我查看结果，或继续下一步。",
+      "✅ Episode 1: All 3 videos finished generating. You can ask me to review the results or continue to the next step.",
     );
   });
 
@@ -103,7 +103,7 @@ describe("resolveChatTaskBatchSummary", () => {
       completed: 9,
     });
     expect(buildChatTaskBatchNotification(summary!)).toBe(
-      "✅ 第 1 集 9 个视频已全部生成完成。你可以让我查看结果，或继续下一步。",
+      "✅ Episode 1: All 9 videos finished generating. You can ask me to review the results or continue to the next step.",
     );
   });
 
@@ -117,7 +117,7 @@ describe("resolveChatTaskBatchSummary", () => {
     const summary = resolveChatTaskBatchSummary(tasks, tasks[2]);
 
     expect(buildChatTaskBatchNotification(summary!)).toBe(
-      "✅ 第 1 集 3 个首帧已全部生成完成。你可以让我查看结果，或继续下一步。",
+      "✅ Episode 1: All 3 first frames finished generating. You can ask me to review the results or continue to the next step.",
     );
   });
 
@@ -139,7 +139,7 @@ describe("resolveChatTaskBatchSummary", () => {
     const summary = resolveChatTaskBatchSummary(tasks, tasks[2]);
 
     expect(buildChatTaskBatchNotification(summary!)).toBe(
-      "✅ 第 1 集 3 个草图网格已全部生成完成。你可以让我查看结果，或继续下一步。",
+      "✅ Episode 1: All 3 sketch grids finished generating. You can ask me to review the results or continue to the next step.",
     );
   });
 

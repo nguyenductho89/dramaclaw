@@ -4,7 +4,7 @@ export type LoginCommunityWork = {
   id: string;
   /** Literal display title (the source video's name). */
   title: string;
-  /** Literal short description (from the work's 简介.txt; empty if none). */
+  /** Literal short description (from the work's synopsis file; empty if none). */
   description: string;
   likes: number;
   cover: string;
@@ -15,18 +15,17 @@ export type LoginCommunityWork = {
 const CDN_BASE = "https://nfg-web-assets.cdnfg.com/dramaclaw";
 
 // Build a CDN media URL from a human-readable path. `encodeURI` percent-encodes
-// the CJK characters, spaces and 《》 in the filenames (the CDN serves them
+// non-ASCII characters, spaces and brackets in the filenames (the CDN serves them
 // percent-encoded) while leaving the `https://` and the `/` separators intact.
 function cdn(path: string): string {
   return encodeURI(`${CDN_BASE}/${path}`);
 }
 
-// i18n-exempt-start —— title / description 是作品自己的片名和简介（见类型上的
-// “Literal …” 注释），属于展示内容而非界面文案。
+// Display content (the works' own titles and synopses), not UI text.
 export const loginCommunityWorks: LoginCommunityWork[] = [
   {
     id: "neon-patrol",
-    title: "鲁班",
+    title: "Luban",
     description: "",
     likes: 124,
     cover: cdn("luban/luban-cover.png"),
@@ -35,9 +34,9 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "glass-signal",
-    title: "归灵司",
+    title: "Guilingsi",
     description:
-      "全城反光物同时作祟，人脸凭空消融！归灵司最强收灵人陆灵犀奉命调查，却发现自己竟是这场灵祸的源头——镜灵千年寻主",
+      "Every reflective surface in the city is haunted and faces dissolve into thin air! Lu Lingxi, the Guilingsi's best spirit-catcher, is sent to investigate, only to discover that she herself is the source of the spirit plague: the mirror spirit has spent a thousand years searching for its master.",
     likes: 33,
     cover: cdn("guilingsi/guilingsi-cover.png"),
     preview: cdn("guilingsi/guilingsi-ep01.mp4"),
@@ -45,8 +44,8 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "silent-arcade",
-    title: "师兄你怎么不舔了",
-    description: "堂堂天道宗掌门林渊，重生第一件事，就是拒绝当舔狗！",
+    title: "Senior Brother, Why Did You Stop Simping?",
+    description: "Lin Yuan, head of the mighty Heavenly Dao Sect, is reborn, and the very first thing he does is refuse to be a simp!",
     likes: 71,
     cover: cdn("shixiong-butianle/shixiong-butianle-cover.png"),
     preview: cdn("shixiong-butianle/shixiong-butianle-ep01.mp4"),
@@ -54,9 +53,9 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "floating-market",
-    title: "天命不可欺",
+    title: "Fate Cannot Be Deceived",
     description:
-      "大婚当日，内忧外患同时爆发，太庙送上一本回到现代的“归乡之法”，并告诉了云知之一个惊人的秘密……",
+      "On the wedding day, troubles at home and abroad erupt at once. The Imperial Ancestral Temple offers a book of \"ways home\" to the modern world, and tells Yun Zhizhi a shocking secret...",
     likes: 95,
     cover: cdn("tianmingbukeqi/tianmingbukeqi-cover.png"),
     preview: cdn("tianmingbukeqi/tianmingbukeqi-ep02.mp4"),
@@ -64,8 +63,8 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "last-take",
-    title: "乌龙仙途",
-    description: "穿越十八年终于激活了飞升系统，结果系统是个坑货",
+    title: "The Bungled Path to Immortality",
+    description: "After eighteen years of transmigration the ascension system finally activates, only to turn out to be a dud.",
     likes: 118,
     cover: cdn("wulongxiantu/wulongxiantu-cover.png"),
     preview: cdn("wulongxiantu/wulongxiantu-ep01.mp4"),
@@ -73,7 +72,7 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "paper-city",
-    title: "非遗㑇舞",
+    title: "Intangible Heritage Nuo Dance",
     description: "",
     likes: 57,
     cover: cdn("feiyi-zhouwu/feiyi-zhouwu-cover.png"),
@@ -82,7 +81,7 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "rainy-night",
-    title: "3D动漫混剪",
+    title: "3D Anime Montage",
     description: "",
     likes: 42,
     cover: "/login-community/rainy-night.jpg",
@@ -91,7 +90,7 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
   },
   {
     id: "ember-crown",
-    title: "动态打斗",
+    title: "Dynamic Fight",
     description: "",
     likes: 86,
     cover: "/login-community/ember-crown.jpg",
@@ -99,4 +98,3 @@ export const loginCommunityWorks: LoginCommunityWork[] = [
     gradient: "linear-gradient(135deg, #1f1b2e 0%, #8d3b2f 48%, #f0a23a 100%)",
   },
 ];
-// i18n-exempt-end

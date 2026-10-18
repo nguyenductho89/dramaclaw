@@ -35,13 +35,13 @@ def detect_sketch_colors(
     """Detect which palette colors actually appear in the image; return the set of keys present.
 
     Args:
-            image_path: image path
-            color_map: {identity_id: "#HEX COLOR_NAME"} mapping
-            threshold: minimum ratio of color pixels to total pixels (default 1%)
-            region: optional crop region (left, top, right, bottom)
+        image_path: image path
+        color_map: {identity_id: "#HEX COLOR_NAME"} mapping
+        threshold: minimum ratio of color pixels to total pixels (default 1%)
+        region: optional crop region (left, top, right, bottom)
 
     Returns:
-            Set of identity_ids present in the image
+        Set of identity_ids present in the image
     """
     img = Image.open(image_path).convert("RGB")
     if region:
@@ -159,16 +159,16 @@ def annotate_sketch_with_identities(
     - Top right: detected character color swatch + char tag
 
     Args:
-            image_path: sketch path
+        image_path: sketch path
         color_map: {identity_id: "#HEX COLOR_NAME"}
-            beat_numbers: list of beat numbers, one per panel
-            rows: number of grid rows
-            cols: number of grid columns
-            output_path: output path; auto-generated when None
-            tag_map: {identity_id: "[TAG]"} character tag mapping
+        beat_numbers: list of beat numbers, one per panel
+        rows: number of grid rows
+        cols: number of grid columns
+        output_path: output path; auto-generated when None
+        tag_map: {identity_id: "[TAG]"} character tag mapping
 
     Returns:
-            Path of the annotated image
+        Path of the annotated image
     """
     img = Image.open(image_path).convert("RGB")
     annotated = img.copy()

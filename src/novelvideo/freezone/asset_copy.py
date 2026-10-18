@@ -1,16 +1,16 @@
-"""跨项目素材拷贝：把源项目的一个文件复制成目标项目 `freezone/_uploads/` 下的新文件。
+"""Cross-project asset copy: copy one file from a source project into a new file under the target project's `freezone/_uploads/`.
 
-跨项目粘贴节点时，节点 data 里的 URL 还指向源项目。之前前端要把每个文件
-fetch 下来再 POST 到目标项目的 upload 接口，字节走两遍；这里改成后端直接拷：
+When a node is pasted across projects, the URLs in the node data still point at the source project. Previously the frontend had to
+fetch every file and POST it to the target project's upload endpoint, moving the bytes twice; the backend now copies directly:
 
-1. 生产环境 `OUTPUT_DIR` 是 ossfs 挂载，优先让 OSS 在服务端 CopyObject，字节不
-   经过 pod；
-2. OSS 不可用、源对象还没写回（或还是旧版本）、单对象超过 CopyObject 上限、拷完
-   在挂载点上看不见——都回退成普通文件系统拷贝，正确性不依赖 OSS。
+1. In production `OUTPUT_DIR` is an ossfs mount, so prefer a server-side OSS CopyObject, which keeps the bytes
+   off the pod;
+2. If OSS is unavailable, the source object has not been written back yet (or is still an old version), a single object exceeds the CopyObject limit, or the copy is
+   not visible on the mount afterwards, fall back to a plain filesystem copy, so correctness does not depend on OSS.
 
-URL 解析只认 `/static/projects/<pid>/<rel>` 与 `/api/v1/projects/<pid>/media/<rel>`
-两种同源 canonical 形式；`/static/<user>/<project>/...` 这类老式路径拿不到项目 id，
-本来也不会出现在需要跨项目授权的场景里，一律不认。
+URL parsing only accepts the two same-origin canonical forms `/static/projects/<pid>/<rel>` and `/api/v1/projects/<pid>/media/<rel>`;
+legacy paths such as `/static/<user>/<project>/...` carry no project id,
+and never occur in scenarios that need cross-project authorization anyway, so they are always rejected.
 """
 
 from __future__ import annotations
@@ -29,12 +29,12 @@ logger = logging.getLogger("novelvideo.freezone.asset_copy")
 MAX_SOURCES_PER_REQUEST = 200
 MAX_SOURCE_URL_LENGTH = 2048
 
-# 目标文件名 = 时间戳前缀(23) + 源文件名；源文件名再长也截到这个数，免得撞上文件系统
-# 单段 255 字节的上限——`safe_upload_filename` 把非 ASCII 全换成 `_`，字符数即字节数。
+# Target file name = timestamp prefix (23) + source file name; a long source name is truncated to this length so it cannot hit the filesystem
+# 255-byte per-segment limit; `safe_upload_filename` replaces all non-ASCII with `_`, so character count equals byte count.
 _MAX_TARGET_BASENAME = 120
 _MAX_KEPT_EXTENSION = 16
 
-# OSS 单次 CopyObject 只支持 1 GB 以内的对象；更大的走 UploadPartCopy，这里不做。
+# OSS single-shot CopyObject only supports objects up to 1 GB; larger ones would need UploadPartCopy, which is not done here.
 _OSS_COPY_OBJECT_LIMIT_BYTES = 1024 * 1024 * 1024
 
 _STATIC_PREFIX = "/static/projects/"
@@ -46,7 +46,7 @@ FailureReason = Literal["invalid_source", "not_found", "forbidden", "unavailable
 
 
 class AssetCopyError(Exception):
-    """单个源文件失败；`reason` 会原样回给前端，不带路径细节。"""
+    """A single source file failed; `reason` is returned to the frontend verbatim, without path details."""
 
     def __init__(self, reason: FailureReason, detail: str = ""):
         super().__init__(detail or reason)
@@ -54,16 +54,16 @@ class AssetCopyError(Exception):
 
 
 def parse_project_asset_url(url: str) -> tuple[str, str] | None:
-    """把同源素材 URL 拆成 `(project_id, 项目内相对路径)`；不认的形式返回 None。"""
+    """Split a same-origin asset URL into `(project_id, project-relative path)`; return None for unrecognized forms."""
     raw = (url or "").strip()
     if not raw or "\\" in raw:
         return None
     try:
         parts = urlsplit(raw)
     except ValueError:
-        # `http://[` 这类畸形 URL：urlsplit 自己就会炸（Invalid IPv6 URL），同样不是本站文件。
+        # Malformed URLs such as `http://[`: urlsplit itself raises (Invalid IPv6 URL); they are not files of this site either.
         return None
-    # 只接受同源路径：带 scheme/netloc 的（含 data:/blob:/协议相对形式）都不是本站文件。
+    # Only same-origin paths are accepted: anything with a scheme/netloc (including data:/blob:/protocol-relative forms) is not a file of this site.
     if parts.scheme or parts.netloc:
         return None
     path = parts.path
@@ -83,7 +83,7 @@ def parse_project_asset_url(url: str) -> tuple[str, str] | None:
         return None
     if not rel or "\\" in rel:
         return None
-    # 解码后冒出来的控制字符（`%00` 等）不是文件名，Path 也会在 resolve 时炸掉。
+    # Control characters (such as `%00`) that appear after decoding are not file names, and Path would also blow up on resolve.
     if _has_control_chars(project_id) or _has_control_chars(rel):
         return None
     return project_id, rel
@@ -94,12 +94,12 @@ def _has_control_chars(value: str) -> bool:
 
 
 def resolve_source_file(project_dir: Path, rel: str) -> Path:
-    """把项目内相对路径落成真实文件；越界或不是普通文件都按失败处理。"""
+    """Resolve a project-relative path to a real file; out-of-bounds paths and non-regular files count as failures."""
     try:
         root = project_dir.resolve()
         candidate = (project_dir / rel).resolve()
     except (OSError, ValueError, RuntimeError) as exc:
-        # 空字节、超长路径、符号链接环……都是这一条源坏了，不是整批坏了。
+        # Null bytes, over-long paths, symlink loops, ... all mean this one source is bad, not the whole batch.
         raise AssetCopyError("invalid_source", f"unresolvable path {rel!r}: {exc}") from exc
     if candidate == root or not candidate.is_relative_to(root):
         raise AssetCopyError("invalid_source", f"path escapes project: {rel!r}")
@@ -113,7 +113,7 @@ def resolve_source_file(project_dir: Path, rel: str) -> Path:
 
 
 def bounded_upload_basename(name: str, limit: int = _MAX_TARGET_BASENAME) -> str:
-    """把源文件名截到 `limit` 个字符以内，尽量保住扩展名。"""
+    """Truncate the source file name to at most `limit` characters, preserving the extension where possible."""
     base = (name or "").split("/")[-1].split("\\")[-1] or "upload"
     if len(base) <= limit:
         return base
@@ -124,7 +124,7 @@ def bounded_upload_basename(name: str, limit: int = _MAX_TARGET_BASENAME) -> str
 
 
 def allocate_target_path(target_dir: Path, source_name: str) -> Path:
-    """在目标 `_uploads/` 下给源文件挑一个还不存在的新名字。"""
+    """Pick a new, not-yet-existing name for the source file under the target `_uploads/`."""
     base = bounded_upload_basename(source_name)
     try:
         target = target_dir / safe_upload_filename(base)
@@ -149,17 +149,17 @@ def _copy_via_oss(source: Path, target: Path) -> bool:
         return False
     if size > _OSS_COPY_OBJECT_LIMIT_BYTES:
         return False
-    # ossfs 写回有延迟：刚落盘的源文件可能还没成为 OSS 对象（CopyObject 会 404），
-    # 原地覆盖过的文件则可能 OSS 上还是旧版本、大小都一样——只有确认远端就是本地
-    # 这个版本才敢让 OSS 拷，否则旧内容会被当成功结果永久留在目标项目里。
+    # ossfs write-back is delayed: a just-written source file may not be an OSS object yet (CopyObject would 404),
+    # and a file overwritten in place may still be an old version on OSS with the same size; only let OSS copy it
+    # once the remote is confirmed to be this local version, otherwise stale content would be kept in the target project as a "successful" result.
     if not oss_client.object_matches_local(source_key, source):
         return False
     try:
         bucket.copy_object(bucket.bucket_name, source_key, target_key)
-    except Exception as exc:  # noqa: BLE001 - 任何 OSS 异常都退回文件系统拷贝
+    except Exception as exc:  # noqa: BLE001 - any OSS exception falls back to a filesystem copy
         logger.warning("OSS copy_object failed %s -> %s: %s", source_key, target_key, exc)
         return False
-    # 挂载点上必须能看到（并且大小对得上），否则返回给前端的 URL 会 404。
+    # It must be visible on the mount (with a matching size), otherwise the URL returned to the frontend would 404.
     try:
         visible = target.is_file() and target.stat().st_size == size
     except OSError:
@@ -170,7 +170,7 @@ def _copy_via_oss(source: Path, target: Path) -> bool:
 
 
 def copy_project_file(source: Path, target: Path) -> CopyMethod:
-    """把 `source` 复制到 `target`，优先 OSS 服务端拷贝，失败回退文件系统。"""
+    """Copy `source` to `target`, preferring a server-side OSS copy and falling back to the filesystem on failure."""
     target.parent.mkdir(parents=True, exist_ok=True)
     if _copy_via_oss(source, target):
         return "oss"

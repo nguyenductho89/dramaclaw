@@ -224,15 +224,15 @@ def _master_prompt(
   - The delta wins over the base reference for every change it explicitly declares, including structural damage.
   - If a base-scene reference image is attached, use it as the before-state and identity anchor; preserve only the architecture, fixtures, materials, and camera orientation that the delta does not change."""
     else:
-        time_instruction = """- IGNORE mood/time-of-day phrases in the text (深夜/昏暗/光晕/街灯/萧瑟/暖色荧光 etc.) when picking lighting;
+        time_instruction = """- IGNORE mood/time-of-day phrases in the text (late night / dim / halo / street lamps / desolate / warm fluorescent etc.) when picking lighting;
   use a neutral, eye-level establishing exposure unless the text explicitly says the location IS literally outdoors at night."""
     front_anchor = f"""- ANCHOR THE FRONT WALL FROM THE TEXT:
-  - Read the SCENE DESCRIPTION carefully for the keyword "正面" / "front side" / "主面" / "主入口" / "正前方".
-  - Whatever the text describes as the FRONT side (正面) IS the wall the camera looks at in this image.
-  - If the text says "正面是 X" (e.g. "正面是明档厨房"), then X is the main feature visible across the back of the frame.
-  - Do NOT swap front and back: do not put 正面 content behind the camera and 背面 content in front.
-  - The text labels "背面" / "后面" describe what is BEHIND the camera and must NOT appear in this image at all.
-  - The text labels "左侧" / "右侧" describe side walls/zones visible as partial left/right coverage.
+  - Read the SCENE DESCRIPTION carefully for the keyword "front side" / "main side" / "main entrance" / "directly ahead".
+  - Whatever the text describes as the FRONT side IS the wall the camera looks at in this image.
+  - If the text says "the front is X" (e.g. "the front is an open kitchen"), then X is the main feature visible across the back of the frame.
+  - Do NOT swap front and back: do not put front-side content behind the camera and back-side content in front.
+  - The text labels "back side" / "rear" describe what is BEHIND the camera and must NOT appear in this image at all.
+  - The text labels "left side" / "right side" describe side walls/zones visible as partial left/right coverage.
 {time_instruction}"""
 
     return f"""Generate ONE master reference image for this scene.
@@ -279,7 +279,7 @@ INPUT PRIORITIES (this is the geometry contract):
 1. Front half + visible side-half fixtures: take directly from the master image.
 2. Back half + remaining side zones + entrances + windows + exits + off-frame fixtures:
    take from the SCENE CONTEXT text. Read every positional cue
-   (前/后/左/右/back/front/side/通往/出入口/门/窗/玻璃门/街道/巷子/通道/角落).
+   (back/front/left/right/side/leads to/entrance/exit/door/window/glass door/street/alley/passage/corner).
 3. Style/material is irrelevant for this top-down floorplan — only the master's geometry matters.
 4. On conflict, the master overrides text only for visible front-half regions; for off-frame
    regions, the text is the only ground truth."""
@@ -366,10 +366,10 @@ def _reverse_master_prompt(
     has_master_reference: bool = False,
     base_scene: NovelScene | None = None,
 ) -> str:
-    # 有 master 参考图时不注入 PROJECT STYLE PRESET 文本：master 已经按项目风格生成，
-    # reverse 直接 match master 的实际像素（STRICT STYLE LOCK 段）。两个风格通道
-    # 同时存在会让模型在"项目风格文本"和"master pixels"之间摇摆。
-    # 仅在没有 master 参考图（fallback 纯文本驱动）时才需要文字描述项目风格。
+    # When a master reference image is present, do not inject the PROJECT STYLE PRESET text: master was already generated in the project style,
+    # and reverse matches master's actual pixels directly (STRICT STYLE LOCK section). Having both style channels
+    # at once makes the model waver between the "project style text" and the "master pixels".
+    # Only when there is no master reference image (fallback, purely text-driven) is a text description of the project style needed.
     if has_master_reference:
         style_block = (
             "STYLE SOURCE:\n"
@@ -426,11 +426,11 @@ COMPOSITION:
 - Eye-level horizon, wide ~160-180° horizontal coverage matching the master coverage model:
   back center plus roughly half of the left side and half of the right side.
 - Camera position = same as REFERENCE 1's camera, facing the {back_word} (the side the
-  SCENE DESCRIPTION labels as 背面 / back / 后).
+  SCENE DESCRIPTION labels as back / rear).
 - The {back_word} is the dominant feature filling the central area of the frame.
 - The front-facing focal subject of REFERENCE 1 is now BEHIND the camera, so it does not
   need to be in this image. Show the back-facing content instead.
-- If the SCENE DESCRIPTION text describes specific items on the back side (e.g. "背面是 X"),
+- If the SCENE DESCRIPTION text describes specific items on the back side (e.g. "the back is X"),
   those items should be the focal content of this image.
 
 REVERSE COVERAGE:
@@ -454,7 +454,7 @@ REQUIRED EDGE OVERLAP (HARD RULE):
 CENTER REGION — NEW CONTENT:
 - The central region of this reverse shows what is BEHIND master's camera (the {back_word}
   and surrounding back-side environment). This content is NOT visible in REFERENCE 1.
-- Fill the center from the SCENE DESCRIPTION's 背面 / back-side notes, while keeping
+- Fill the center from the SCENE DESCRIPTION's back-side notes, while keeping
   master's exact style / lighting / material vocabulary.
 - Do NOT invent objects absent from both master and the SCENE DESCRIPTION just to "make
   the reverse different". If the back side has nothing notable, show a quiet open
@@ -472,8 +472,8 @@ STRICT STYLE LOCK — REFERENCE 1 IS THE ONLY VISUAL ANCHOR:
 - Do NOT shift the time of day. If REFERENCE 1 looks like day, reverse must look like day.
 
 IGNORE TEXT DESCRIPTORS THAT WOULD BREAK STYLE LOCK:
-- IGNORE any mood / time-of-day descriptors in the SCENE DESCRIPTION (深夜 / 昏暗 / 光晕 /
-  街灯 / 萧瑟 / 局促 / 暖色荧光 / 营业 etc.). These are story notes, not visual ground truth.
+- IGNORE any mood / time-of-day descriptors in the SCENE DESCRIPTION (late night / dim / halo /
+  street lamps / desolate / cramped / warm fluorescent / open for business etc.). These are story notes, not visual ground truth.
 - The only visual ground truth for lighting & style is REFERENCE 1's pixels.
 
 CLOSED-WORLD CONSTRAINT:
@@ -638,7 +638,7 @@ async def generate_scene_reference_image(
         )
         if not references:
             raise RuntimeError(
-                f"场景「{scene.name}」缺少 master 参考图，无法生成 spatial_layout。请先生成 master。"
+                f"Scene \"{scene.name}\" has no master reference image, so spatial_layout cannot be generated. Generate the master first."
             )
         has_master_reference = True
     elif kind == "reverse_master":
@@ -648,8 +648,8 @@ async def generate_scene_reference_image(
         )
         if not references:
             raise RuntimeError(
-                f"场景「{scene.name}」缺少 master 参考图，无法生成 reverse_master。"
-                "请先生成 master。"
+                f"Scene \"{scene.name}\" has no master reference image, so reverse_master cannot be generated. "
+                "Generate the master first."
             )
         has_master_reference = True
     elif kind == "master":

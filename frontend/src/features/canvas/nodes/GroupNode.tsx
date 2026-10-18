@@ -89,8 +89,8 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
   const isStoryboard = data.storyboardGroup === true;
   const showIndex = isStoryboard && data.storyboardShowIndex === true;
 
-  // 只订阅本组自身节点 + 其成员节点(useShallow 逐元素比较)。groupPosition / board /
-  // childGeometrySignature 都只依赖这些;拖动组外无关节点时本 GroupNode 不再重渲染。
+  // Subscribe only to this group's own node + its member nodes (useShallow element-wise comparison). groupPosition / board /
+  // childGeometrySignature depend only on these; dragging unrelated nodes outside the group no longer re-renders this GroupNode.
   const groupScopedNodes = useCanvasStore(
     useShallow((state) => state.nodes.filter((node) => node.id === id || node.parentId === id))
   );
@@ -400,8 +400,8 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
       : null;
   const projectionStatus = useCanvasProjectionStatus(projectionKey);
   const projectionIsStale = projectionStatus?.stale === true;
-  // 黄色呼吸边框是「这个组来自主线」的常驻标识，不是只有待更新时才亮；有更新时
-  // 换成更亮更快的那一档。两个 class 都动 border-color，只能二选一。
+  // The yellow breathing border is a permanent marker for "this group comes from the mainline", not lit only when an update is pending; when there is an update
+  // it switches to a brighter, faster tier. Both classes animate border-color, so only one of them can be used.
   const projectionFrameClass = projectionIsStale
     ? 'projection-stale-frame'
     : projectionKey
@@ -415,7 +415,7 @@ export const GroupNode = memo(({ id, data, selected }: GroupNodeProps) => {
         backgroundColor:
           (!isStoryboard && groupColorBackground(data.backgroundColor)) ||
           'var(--group-node-bg)',
-        // 选中时让选中高亮边框生效，未选中时用组配色描边。
+        // When selected, let the selection highlight border take effect; when unselected, outline with the group color.
         borderColor:
           !isStoryboard && !selected
             ? groupColorBorder(data.backgroundColor)

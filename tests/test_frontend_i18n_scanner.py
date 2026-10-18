@@ -1,7 +1,10 @@
-"""`scripts/check_frontend_i18n.py` 的豁免区间标记校验。
+"""Exemption range marker validation for `scripts/check_frontend_i18n.py`, plus locale parity.
 
-review #447：扫描器遇到 `i18n-exempt-start` 后不校验是否闭合，漏写 `-end` 会让
-该文件其后所有中文静默跳过，检查仍以 0 命中通过——棘轮静默失效。
+review #447: after `i18n-exempt-start` the scanner did not verify it was closed, so a
+missing `-end` silently skipped all CJK after it in that file while the check still
+passed with 0 hits, silently disabling the ratchet.
+
+CJK samples are written as \\u escapes so this file itself stays free of CJK.
 """
 from __future__ import annotations
 
@@ -26,7 +29,7 @@ def _load_scanner():
 
 
 def _run_scan_in(tmp_path: Path, source: str):
-    """在临时目录里造一个 frontend/src 树再扫——扫描器读的是相对路径。"""
+    """Build a frontend/src tree in a temp dir and scan it; the scanner reads relative paths."""
     src = tmp_path / "frontend" / "src"
     src.mkdir(parents=True)
     (src / "sample.ts").write_text(source, encoding="utf-8")
@@ -44,12 +47,12 @@ def test_unclosed_exempt_block_is_reported(tmp_path):
         tmp_path,
         'const a = "x";\n'
         "// i18n-exempt-start\n"
-        'const table = { 日: "day" };\n'
-        'const leaked = "这行是真的硬编码文案";\n',
+        'const table = { \u65e5: "day" };\n'
+        'const leaked = "\u8fd9\u884c\u662f\u771f\u7684\u786c\u7f16\u7801";\n',
     )
-    # 未闭合时后面的中文确实被跳过了（这正是危险所在）……
+    # With the block unclosed, the CJK after it really is skipped (that is exactly the danger)...
     assert hits == {}
-    # ……所以必须由标记校验来兜住。
+    # ...so the marker validation has to catch it.
     assert len(errors) == 1
     assert "i18n-exempt-start" in errors[0]
     assert "sample.ts:2" in errors[0]
@@ -58,7 +61,7 @@ def test_unclosed_exempt_block_is_reported(tmp_path):
 def test_stray_exempt_end_is_reported(tmp_path):
     _, errors = _run_scan_in(tmp_path, 'const a = "x";\n// i18n-exempt-end\n')
     assert len(errors) == 1
-    assert "没有对应的 i18n-exempt-start" in errors[0]
+    assert "has no matching i18n-exempt-start" in errors[0]
 
 
 def test_nested_exempt_start_is_reported(tmp_path):
@@ -66,23 +69,23 @@ def test_nested_exempt_start_is_reported(tmp_path):
         tmp_path,
         "// i18n-exempt-start\n// i18n-exempt-start\n// i18n-exempt-end\n",
     )
-    assert any("嵌套" in e for e in errors)
+    assert any("nested" in e for e in errors)
 
 
 def test_balanced_exempt_block_is_clean(tmp_path):
     hits, errors = _run_scan_in(
         tmp_path,
         "// i18n-exempt-start\n"
-        'const table = { 日: "day" };\n'
+        'const table = { \u65e5: "day" };\n'
         "// i18n-exempt-end\n"
-        'const leaked = "这行要被抓到";\n',
+        'const leaked = "\u8fd9\u884c\u8981\u88ab\u6293\u5230";\n',
     )
     assert errors == []
     assert [lineno for lineno, _ in hits["frontend/src/sample.ts"]] == [4]
 
 
 def test_marker_error_fails_the_check_even_with_write(tmp_path, capsys):
-    """标记破损时连 `--write` 都不能通过：否则会把「少报后的计数」固化进 allowlist。"""
+    """With broken markers even `--write` must fail, otherwise the under-reported counts would be frozen into the allowlist."""
     src = tmp_path / "frontend" / "src"
     src.mkdir(parents=True)
     (src / "sample.ts").write_text("// i18n-exempt-start\n", encoding="utf-8")
@@ -95,3 +98,29 @@ def test_marker_error_fails_the_check_even_with_write(tmp_path, capsys):
         assert not (tmp_path / "scripts" / "frontend_i18n_allowlist.json").exists()
     finally:
         os.chdir(cwd)
+
+
+def test_en_and_vi_locale_key_sets_match():
+    """The real locale files must define identical key sets (no raw keys rendered)."""
+    module = _load_scanner()
+    cwd = os.getcwd()
+    os.chdir(REPO_ROOT)
+    try:
+        assert module.check_locale_parity() == []
+    finally:
+        os.chdir(cwd)
+
+
+def test_locale_parity_reports_missing_keys(tmp_path):
+    for lang, body in (("en", '{"a": {"b": "x"}, "c": "y"}'), ("vi", '{"a": {"b": "x"}}')):
+        folder = tmp_path / "frontend" / "public" / "locales" / lang
+        folder.mkdir(parents=True)
+        (folder / "translation.json").write_text(body, encoding="utf-8")
+    module = _load_scanner()
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        errors = module.check_locale_parity()
+    finally:
+        os.chdir(cwd)
+    assert errors == ["locales/vi: missing key c (present in en)"]

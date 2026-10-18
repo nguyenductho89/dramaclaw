@@ -27,17 +27,17 @@ function metaString(t: TaskState, key: string): string {
 }
 
 /**
- * 任务类型名。后端 `task_type_label` / `display_name` 都是中文，英文界面下不能直接用；
- * 词条里有 `tasks.types.<task_type>` 就以词条为准，没有才退回后端那份（新任务类型上线
- * 时前端还没补词条，宁可显示中文也别显示裸 key）。
+ * Task type name. The backend `task_type_label` / `display_name` are both English fallbacks and cannot be used directly in other UI languages;
+ * if the locale has `tasks.types.<task_type>` the entry wins, and only otherwise does it fall back to the backend text (when a new task type goes live
+ * before the frontend adds an entry, better to show the English text than a bare key).
  */
 export const taskTypeLabel = (t: TaskState, tFn: TFn): string =>
   tFn(`tasks.types.${t.task_type}`, { defaultValue: t.task_type_label || t.task_type });
 
 export const displayLabel = (t: TaskState, tFn: TFn): string => {
-  // display_name_localizable === false 表示这串是用户自定义名称（画布名、素材名之类），
-  // 翻译反而是错的，原样显示。后端默认给 true：它自己拼的和 freezone/scripts 的
-  // task_display 传的都是写死中文，英文界面下必须在这里按 task_type / metadata 重拼。
+  // display_name_localizable === false means the string is a user-defined name (canvas name, asset name and the like),
+  // where translating would be wrong, so it is shown as is. The backend defaults to true: both what it builds itself and what freezone/scripts'
+  // task_display passes in are fixed English, so it has to be rebuilt here from task_type / metadata.
   if (t.display_name && t.display_name_localizable === false) return t.display_name;
 
   const typeLabel = taskTypeLabel(t, tFn);
@@ -67,8 +67,8 @@ export const displayLabel = (t: TaskState, tFn: TFn): string => {
   }
 
   const parts = [typeLabel];
-  // 场景任务（360 全景等）的 display_name 原本是「生成 360 全景 · 场景名」，重拼时
-  // 不带上 scene_name 就把场景名弄丢了。scene_name 是场景标识，不翻译。
+  // The display_name of scene tasks (360 panorama etc.) was originally "Generate 360 panorama - scene name", and rebuilding
+  // without scene_name would lose the scene name. scene_name is a scene identifier and is not translated.
   if (sceneName) parts.push(sceneName);
   if (t.episode > 0) parts.push(`ep${t.episode}`);
   if (t.beat_num != null) parts.push(`beat ${t.beat_num}`);
@@ -77,11 +77,11 @@ export const displayLabel = (t: TaskState, tFn: TFn): string => {
 };
 
 /**
- * 后端 run_core 收尾时把 current_task 写成中文「完成」（还有历史上的 completed/done），
- * 前端原样回显就成了英文界面里的一处中文。终态只认状态词条，别回显这几个哨兵值；
- * 其余进度文案仍是后端实时给的内容，照原样显示。
+ * When run_core finishes it writes current_task as "Completed" (and historically completed/done),
+ * and echoing it as is would put untranslated text in other UI languages. For terminal states only the status entry is used; these sentinel values are not echoed;
+ * other progress text is still whatever the backend provides in real time, shown as is.
  */
-const TERMINAL_CURRENT_TASK_SENTINELS = new Set(["完成", "completed", "done"]); // i18n-exempt —— 后端哨兵值
+const TERMINAL_CURRENT_TASK_SENTINELS = new Set(["completed", "done"]);
 
 export const currentTaskText = (
   t: {
@@ -99,8 +99,8 @@ export const currentTaskText = (
   if (terminal && TERMINAL_CURRENT_TASK_SENTINELS.has(raw.toLowerCase())) {
     return tFn(`taskCenter.status.${t.status}`);
   }
-  // 后端给了 code 就按词条翻；没给的（历史任务、还没迁移的调用点）照旧回显
-  // 后端那句中文，所以迁移可以一处一处来，不用一次改完所有 415 处。
+  // If the backend gives a code it is translated through the locale entries; otherwise (historical tasks, call sites not yet migrated) the
+  // backend text is echoed as before, so migration can be done one place at a time instead of changing all 415 at once.
   if (t.current_task_code) {
     return tFn(t.current_task_code, {
       defaultValue: raw,
@@ -111,12 +111,12 @@ export const currentTaskText = (
 };
 
 /**
- * 把一批日志压成已翻译的字符串数组。
+ * Compresses a batch of logs into a translated string array.
  *
- * 结构化条目只在「后端 → 前端入口」这一层存在：解析响应时立刻翻成字符串，
- * 下游所有消费点（join、逐行比较、滚动 buffer）继续按 string[] 处理，不用
- * 跟着改。代价是切语言时已经拿到手的旧日志不会重译 —— 进度日志本来就是流式
- * 的，切完语言后新来的行就是新语言，任务中心也会重新拉取。
+ * Structured entries only exist at the "backend -> frontend entry" layer: when the response is parsed they are immediately translated into strings,
+ * and all downstream consumers (join, line-by-line comparison, rolling buffer) keep treating it as string[] with no need
+ * to change. The cost is that old logs already in hand are not re-translated when switching language - progress logs are streamed anyway,
+ * lines arriving after the switch are in the new language, and the task center refetches as well.
  */
 export const taskLogLines = (logs: unknown, tFn: TFn): string[] =>
   Array.isArray(logs)
@@ -126,12 +126,12 @@ export const taskLogLines = (logs: unknown, tFn: TFn): string[] =>
     : [];
 
 /**
- * 任务日志的读取入口：优先结构化的 `logs_i18n`，没有再回落到 `logs`。
+ * Entry point for reading task logs: prefer the structured `logs_i18n`, and fall back to `logs` otherwise.
  *
- * `logs` 的公开契约一直是 `string[]`（老前端直接 `logs.join("\n")`），所以后端
- * 不能把 `{text, code, params}` 塞回那个字段——滚动发布期间新后端配老前端就会
- * 显示成 `[object Object]`。带 code 的那份走 `logs_i18n`，只有认识它的前端才读。
- * 反过来，老后端不发 `logs_i18n`，这里就直接用 `logs` 里的中文，同样不用原子部署。
+ * The public contract of `logs` has always been `string[]` (old frontends do `logs.join("\n")` directly), so the backend
+ * must not stuff `{text, code, params}` back into that field - during a rolling deploy a new backend with an old frontend would
+ * display `[object Object]`. The version with a code goes through `logs_i18n`, which only frontends that know it read.
+ * Conversely, an old backend does not send `logs_i18n`, and here `logs` is used directly, so atomic deploys are not needed either.
  */
 export const taskLogLinesOf = (
   source: { logs?: unknown; logs_i18n?: unknown } | null | undefined,

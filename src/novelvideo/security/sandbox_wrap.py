@@ -382,14 +382,14 @@ def _deny_write_block(paths: Iterable[Path]) -> str:
 
 
 def _sandbox_required() -> bool:
-    """多租户/生产必须强制沙箱,不允许裸跑。
+    """Multi-tenant / production must enforce the sandbox; running bare is not allowed.
 
-    两个独立触发条件,满足其一即视为"必须沙箱":
-    - ``SUPERTALE_ENV=production`` —— 显式生产标记;
-    - ``ST_CONTROL_PLANE_DSN`` 非空 —— EE 控制面已接入,即多用户模式。
+    Two independent trigger conditions; satisfying either means "sandbox required":
+    - ``SUPERTALE_ENV=production`` -- the explicit production marker;
+    - ``ST_CONTROL_PLANE_DSN`` non-empty -- the EE control plane is connected, i.e. multi-user mode.
 
-    刻意不只依赖容易漏配的 ``SUPERTALE_ENV``:只要连了控制面(EE),哪怕忘了设
-    生产标记,也必须 fail-close。
+    Deliberately not relying only on ``SUPERTALE_ENV``, which is easy to misconfigure: as long as the control plane (EE) is connected, even if the
+    production marker was forgotten, it must fail-close.
     """
     if os.environ.get("SUPERTALE_ENV", "").strip().lower() == "production":
         return True
@@ -399,7 +399,7 @@ def _sandbox_required() -> bool:
 
 
 def _dev_unsandboxed_opt_in() -> bool:
-    """本地无沙箱开发必须走醒目的显式开关,而不是静默降级。"""
+    """Local development without a sandbox must go through a conspicuous explicit switch rather than silently degrading."""
     return os.environ.get("SUPERTALE_ALLOW_UNSANDBOXED", "").strip().lower() in {
         "1",
         "true",
@@ -409,18 +409,18 @@ def _dev_unsandboxed_opt_in() -> bool:
 
 
 def _linux_sandbox_active() -> bool:
-    """Linux 沙箱是否被**显式激活**(默认关)。
+    """Whether the Linux sandbox is **explicitly activated** (off by default).
 
-    codex 的 managed ``restricted`` 文件系统是 allow-only:它没有 deny-entry,无法
-    表达 macOS 那套"broad-read 再挖掉 peer 数据根"。实测(#349 review)证实,一旦把
-    读范围从 ``root`` 收窄,codex/bwrap 连自身 re-exec 都跑不起来——所以 **peer 目录的
-    读机密性在 profile 层堵不住**,只能靠部署拓扑(worker 只挂当前用户的 slice /
-    per-user mount namespace)来关闭。在那套隔离真正落地(#346 P1②)之前激活沙箱,
-    会给多租户一个**假的读隔离**(能读他人 state/output/runtime 并经网络带出)。
+    Codex's managed ``restricted`` filesystem is allow-only: it has no deny-entry and cannot
+    express the macOS scheme of "broad-read, then carve out the peer data roots". Testing (#349 review) confirmed that once the
+    read scope is narrowed from ``root``, codex/bwrap cannot even re-exec itself -- so **read confidentiality of peer directories cannot be
+    closed at the profile layer** and can only be closed by deployment topology (the worker mounts only the current user's slice /
+    per-user mount namespace). Activating the sandbox before that isolation actually lands (#346 P1-2)
+    would give multi-tenancy a **fake read isolation** (able to read other users' state/output/runtime and exfiltrate it over the network).
 
-    因此激活是**显式 opt-in**:只有部署方确认"已经只挂当前用户 slice"时才设
-    ``SUPERTALE_LINUX_SANDBOX=1``。默认不激活 → 走 ``_fallback_or_raise``:EE fail-close
-    (拒绝裸跑,即拒绝以假隔离运行),CE 单租户按 opt-in 降级/拒绝(单租户无跨用户风险)。
+    Activation is therefore an **explicit opt-in**: set ``SUPERTALE_LINUX_SANDBOX=1`` only when the deployer confirms that
+    "only the current user's slice is mounted". When not activated by default -> ``_fallback_or_raise``: EE fail-close
+    (refuse to run bare, i.e. refuse to run with fake isolation), CE single-tenant degrades/refuses per opt-in (single-tenant has no cross-user risk).
     """
     return os.environ.get("SUPERTALE_LINUX_SANDBOX", "").strip().lower() in {
         "1",
@@ -437,8 +437,8 @@ def _fallback_or_raise(cmd: list[str], reason: str) -> list[str]:
             f"refusing to run Hermes worker unsandboxed"
         )
     if not _dev_unsandboxed_opt_in():
-        # CE 本地开发也默认 fail-close:必须显式开 SUPERTALE_ALLOW_UNSANDBOXED=1
-        # 才允许裸跑,杜绝"漏配就静默无沙箱"。
+        # CE local development also fail-closes by default: SUPERTALE_ALLOW_UNSANDBOXED=1 must be set explicitly
+        # to allow running bare, eliminating "silently no sandbox when misconfigured".
         raise RuntimeError(
             f"sandbox unavailable ({reason}) and SUPERTALE_ALLOW_UNSANDBOXED is not "
             f"set; refusing to run unsandboxed. Set SUPERTALE_ALLOW_UNSANDBOXED=1 to "

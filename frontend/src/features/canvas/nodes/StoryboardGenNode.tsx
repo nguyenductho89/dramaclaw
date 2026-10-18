@@ -107,9 +107,9 @@ interface PickerAnchor {
 
 const PICKER_FALLBACK_ANCHOR: PickerAnchor = { left: 8, top: 8 };
 
-// 分镜节点永远把渲染好的宫格图作为参考图一起提交，所以模式恒为图生图。
-// 目录参数按 modes 过滤，不给模式的话声明了 modes 的参数在控件里不显示、
-// 提交时也会被后端丢掉。
+// The storyboard node always submits the rendered grid image as a reference image, so the mode is always image-to-image.
+// Catalog params are filtered by modes; without a mode, params that declare modes are not shown in the controls
+// and are also dropped by the backend on submit.
 const STORYBOARD_GENERATION_MODE = 'image_to_image';
 
 const STORYBOARD_NODE_HORIZONTAL_PADDING_PX = 24;
@@ -475,7 +475,7 @@ function toCssAspectRatio(aspectRatio: string): string {
 }
 
 /**
- * 将 ImageSize 解析为像素宽度
+ * Resolve ImageSize into a pixel width
  */
 function resolveSizeToPixels(size: string): number {
   const sizeMap: Record<string, number> = {
@@ -488,9 +488,9 @@ function resolveSizeToPixels(size: string): number {
 }
 
 /**
- * 生成网格图片的 dataURL
- * 根据用户设置的分辨率、行列数和比例生成白底黑线的网格图
- * 用于帮助 API 更好地生成宫格候选
+ * Generate the dataURL of the grid image
+ * Generates a grid image with white background and black lines from the user's resolution, row/column counts and ratio
+ * to help the API generate grid candidates better
  */
 function generateGridImageDataUrl(
   aspectRatio: string,
@@ -503,11 +503,11 @@ function generateGridImageDataUrl(
   const ratioWNum = parseFloat(ratioW);
   const ratioHNum = parseFloat(ratioH);
 
-  // 根据分辨率计算画布的总像素尺寸
+  // Compute the canvas's total pixel size from the resolution
   const totalPixels = resolveSizeToPixels(resolution);
 
-  // 根据比例计算画布的实际宽高
-  // 宽度 = 总像素，高度根据比例计算
+  // Compute the canvas's actual width and height from the ratio
+  // width = total pixels, height computed from the ratio
   const canvasWidth = totalPixels;
   const canvasHeight = Math.round(totalPixels * (ratioHNum / ratioWNum));
   const thickness = Math.max(
@@ -515,11 +515,11 @@ function generateGridImageDataUrl(
     Math.round((Math.min(canvasWidth, canvasHeight) * lineThicknessPercent) / 100)
   );
 
-  // 计算单个格子的像素尺寸
+  // Compute the pixel size of a single cell
   const cellWidth = canvasWidth / cols;
   const cellHeight = canvasHeight / rows;
 
-  // 创建 canvas 并绘制
+  // Create the canvas and draw
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
@@ -529,15 +529,15 @@ function generateGridImageDataUrl(
     throw new Error('Failed to create canvas context');
   }
 
-  // 白色背景
+  // White background
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 黑色线条
+  // Black lines
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = thickness;
 
-  // 绘制内部垂直线 (不包含最左边和最右边)
+  // Draw the inner vertical lines (excluding the leftmost and rightmost)
   for (let i = 1; i < cols; i++) {
     const x = i * cellWidth;
     ctx.beginPath();
@@ -546,7 +546,7 @@ function generateGridImageDataUrl(
     ctx.stroke();
   }
 
-  // 绘制内部水平线 (不包含最上边和最下边)
+  // Draw the inner horizontal lines (excluding the top and bottom)
   for (let i = 1; i < rows; i++) {
     const y = i * cellHeight;
     ctx.beginPath();
@@ -620,7 +620,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
       incomingImages.map((imageUrl, index) => ({
         imageUrl,
         displayUrl: resolveImageDisplayUrl(imageUrl),
-        label: `图${index + 1}`, // i18n-exempt —— 与 prompt 里的 @图N 成对
+        label: `image${index + 1}`,
       })),
     [incomingImages]
   );
@@ -629,7 +629,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
     [incomingImageItems]
   );
 
-  // 模型清单与每个模型的分辨率 / 比例 / 额外参数都来自后台「媒体模型」配置。
+  // The model list and each model's resolution / ratio / extra params all come from the admin "Media models" config.
   const {
     models: imageModels,
     getModel,
@@ -637,8 +637,8 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
     isLoading: imageModelsLoading,
   } = useCatalogImageModels();
 
-  // 后台没配任何图片模型时 getModel 返回 undefined。占位定义只用来把选择器撑住，
-  // 提交由 imageModelsEmpty 拦死（后端对空目录直接 409）。
+  // getModel returns undefined when the admin has configured no image model. The placeholder definition only keeps the picker standing;
+  // submission is blocked by imageModelsEmpty (the backend answers 409 for an empty catalog).
   const selectedModel =
     useMemo(() => getModel(nodeData.model), [getModel, nodeData.model])
     ?? EMPTY_CATALOG_IMAGE_MODEL;
@@ -888,9 +888,9 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
 
   // Sync model, size, aspect ratio with node data
   useEffect(() => {
-    // 目录没落定（models 还是兜底列表）或后台压根没配模型时不要回写：此刻
-    // selectedModel 是兜底首项 / 占位定义，写进去等于把用户真正选中的模型冲掉，
-    // 而且这一步是持久化的，目录回来也救不回来。
+    // Do not write back while the catalog has not settled (models is still the fallback list) or the admin configured no models at all: at that moment
+    // selectedModel is the fallback first item / placeholder definition, and writing it would wash out the model the user really selected,
+    // and this step is persisted, so it cannot be recovered when the catalog comes back.
     if (imageModelsLoading || imageModelsEmpty) return;
     if (nodeData.model !== selectedModel.id) {
       updateNodeData(id, { model: selectedModel.id });
@@ -977,30 +977,30 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
     const { gridRows, gridCols, frames } = nodeData;
     const parts: string[] = [];
 
-    // 下面拼的是发给模型的 prompt，不是界面文案，跟着界面语言走反而会让出图不稳。
+    // What is assembled below is the prompt sent to the model, not UI copy; following the UI language would make image output unstable.
     // i18n-exempt-start
     const promptDirectives: string[] = [
-      `生成一张${gridRows}×${gridCols}的${gridRows * gridCols}宫格多版本候选图，每一格是独立候选画面`,
+      `Generate one ${gridRows}×${gridCols} grid of ${gridRows * gridCols} candidate variations, where each cell is an independent candidate image`,
     ];
     if (storyboardGenKeepStyleConsistent) {
-      promptDirectives.push('图片风格与参考图保持一致');
+      promptDirectives.push('Keep the image style consistent with the reference images');
     }
     if (storyboardGenDisableTextInImage) {
-      promptDirectives.push('禁止添加描述文本');
+      promptDirectives.push('Do not add descriptive text');
     }
-    parts.push(`${promptDirectives.join('，')}。`);
+    parts.push(`${promptDirectives.join(', ')}.`);
 
     frames.forEach((frame, index) => {
       const frameDescription = frameDescriptionDraftsRef.current[frame.id] ?? frame.description;
       const sanitizedDescription = sanitizeStoryboardPromptText(frameDescription);
       if (!sanitizedDescription) {
         if (storyboardGenAutoInferEmptyFrame) {
-          parts.push(`候选${index + 1}：依据之前的内容进行推测`);
+          parts.push(`Candidate ${index + 1}: infer from the previous content`);
         }
         return;
       }
 
-      parts.push(`候选${index + 1}：${sanitizedDescription}`);
+      parts.push(`Candidate ${index + 1}: ${sanitizedDescription}`);
     });
     // i18n-exempt-end
 
@@ -1053,7 +1053,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
     if (!nodeData) {
       return;
     }
-    // 组织成员没有发起模型任务的资格时不放行：后端会拒，这里先说清楚原因。
+    // Do not let through when an organization member is not eligible to start model tasks: the backend would reject, so state the reason here first.
     if (modelTaskAccess.blocked) {
       if (modelTaskAccess.message) setError(modelTaskAccess.message);
       return;
@@ -1070,8 +1070,8 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
         safeCols,
         selectedResolution.value
       );
-      // 先把本地渲染的网格上传换成后端 URL——画布节点数据不能存 base64
-      // （会膨胀 PUT 体积、拖慢画布）。上传失败时回退 dataUrl 兜底。
+      // First swap the locally rendered grid for a backend URL by uploading — canvas node data must not store base64
+      // (it inflates the PUT size and slows the canvas). If the upload fails, fall back to the dataUrl.
       const gridImageUrl = await uploadLocalImageToBackend(
         gridImageDataUrl,
         `storyboard-grid-preview-${id}-${Date.now()}.png`
@@ -1101,8 +1101,8 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
       return;
     }
 
-    // 后台一个图片模型都没配时不放行（上面的网格预览是纯本地渲染，不受影响）：
-    // selectedModel 此时是占位定义，提交出去后端 `_resolve_catalog_request` 直接 409。
+    // Do not let through when the admin configured no image model (the grid preview above is purely local rendering and unaffected):
+    // selectedModel is then a placeholder definition, and once submitted the backend `_resolve_catalog_request` answers 409 right away.
     if (imageModelsEmpty) {
       const errorMessage = t('node.storyboardGen.noImageModelConfigured');
       setError(errorMessage);
@@ -1153,7 +1153,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
 
     // Build the grid + re-submittable payload up front (synchronously) so it can
     // be persisted on the result node no matter where a failure happens — a
-    // pre-submit throw or an async task failure. The 重试 button keys off
+    // pre-submit throw or an async task failure. The retry button keys off
     // generationRequestPayload, so it must always be present once the result node
     // exists, otherwise a failed node has no way back.
     const gridImageDataUrl = generateGridImageDataUrl(
@@ -1183,8 +1183,8 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
       aspectRatio: resolvedRequestAspectRatio,
       referenceImages: allReferenceImages,
       extraParams: effectiveExtraParams,
-      // 目录声明的动态参数（model_params），与 ImageGenNode 同一口径：原样提交，
-      // 模式不匹配的键由后端 `_resolve_catalog_request` 过滤。
+      // Dynamic params declared by the catalog (model_params), on the same basis as ImageGenNode: submitted as is,
+      // keys that do not match the mode are filtered by the backend `_resolve_catalog_request`.
       modelParams: nodeData.modelParams,
       generationMode: STORYBOARD_GENERATION_MODE,
       nodeId: id,
@@ -1221,8 +1221,8 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
         generationDebugContext,
         generationRequestPayload: regenerationPayload,
         generationStoryboardMetadata: storyboardMetadata,
-        // 后端任务句柄：jobId 只活在本次会话的内存 Map 里，脱离监听后靠这三个
-        // 字段刷新重接（见 SubmittedImageJob / generationTaskDescriptor）。
+        // Backend task handle: jobId lives only in this session's in-memory Map; after detaching from the listener these three
+        // fields drive refresh-and-reattach (see SubmittedImageJob / generationTaskDescriptor).
         ...generationTaskDescriptor(ref),
       });
     } catch (generationError) {
@@ -1266,7 +1266,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
         generationJobId: null,
         generationProviderId: null,
         generationClientSessionId: null,
-        // Keep the payload + grid metadata so 重试 stays available even when the
+        // Keep the payload + grid metadata so retry stays available even when the
         // request throws before a job is created.
         generationRequestPayload: regenerationPayload,
         generationStoryboardMetadata: storyboardMetadata,
@@ -1381,7 +1381,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
       return;
     }
 
-    const marker = `@图${imageIndex + 1}`; // i18n-exempt —— 后端解析的引用 token
+    const marker = `@image${imageIndex + 1}`;
     const currentDescription = frameDescriptionDraftsRef.current[frame.id] ?? frame.description;
     const cursor = pickerCursor ?? currentDescription.length;
     const { nextText: nextDescription, nextCursor } = insertReferenceToken(
@@ -1712,11 +1712,11 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
             selectedAspectRatio={selectedAspectRatio}
             aspectRatioOptions={aspectRatioOptions}
             onModelChange={(modelId) =>
-              // 目录参数是按模型声明的，换模型后旧值多半在新模型的 schema 里不存在，
-              // 带着走会被后端判成 unknown model parameters。一并清掉。
+              // Catalog params are declared per model; after switching models the old values mostly do not exist in the new model's schema,
+              // and carrying them along would be judged unknown model parameters by the backend. Clear them all.
               //
-              // 老的 extraParams 同理：里面的 quality 是按模型能力挑的，网关还会把它
-              // 原样发下去；不清就会拿上一个模型的画质档位去请求新模型。
+              // The old extraParams likewise: quality inside it is picked per model capability, and the gateway sends it
+              // through as is; without clearing, the new model would be requested with the previous model's quality tier.
               updateNodeData(id, { model: modelId, modelParams: {}, extraParams: {} })
             }
             onResolutionChange={(resolution) =>
@@ -1771,7 +1771,7 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
             panelRenderMode="inline"
             inlinePanelClassName="absolute bottom-full left-0 z-[80] mb-2"
           />
-          {/* 后台「媒体模型」声明的动态参数。没声明时该组件自己返回 null。 */}
+          {/* Dynamic params declared by the admin "Media models". The component returns null itself when none are declared. */}
           <MediaModelParameterChip
             parameters={selectedModel.requestParameters}
             values={nodeData.modelParams}

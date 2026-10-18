@@ -63,17 +63,17 @@ async def ingest_source_text_structured(
             on_log(message)
 
     if not Path(novel_path).exists():
-        raise FileNotFoundError(f"文件不存在: {novel_path}")
+        raise FileNotFoundError(f"File not found: {novel_path}")
 
-    report(_PROGRESS["read"], lmsg("tasks.progress.ingest.reading", "读取并校验原文..."))
-    log(lmsg("tasks.log.ingest.readingFile", f"读取文件: {novel_path}", path=str(novel_path)))
+    report(_PROGRESS["read"], lmsg("tasks.progress.ingest.reading", "Reading and validating source text..."))
+    log(lmsg("tasks.log.ingest.readingFile", f"Reading file: {novel_path}", path=str(novel_path)))
     content = load_novel_text(novel_path)
     if not content.strip():
-        raise ValueError("小说内容为空，无法导入")
+        raise ValueError("The novel is empty and cannot be imported")
     log(
         lmsg(
             "tasks.log.ingest.readComplete",
-            f"文件读取完成: {len(content)} 字符",
+            f"File read complete: {len(content)} characters",
             charCount=len(content),
         )
     )
@@ -83,24 +83,24 @@ async def ingest_source_text_structured(
         from novelvideo.utils.screenplay_quality import assess_screenplay_scene_headers
 
         if assess_screenplay_scene_headers(content).status == "missing":
-            raise ValueError("精品剧必须包含场景头，请补充后重新导入")
+            raise ValueError("A premium drama must contain scene headings; add them and re-import")
     report(
         _PROGRESS["validated"],
-        lmsg("tasks.progress.ingest.validated", "原文校验完成"),
+        lmsg("tasks.progress.ingest.validated", "Source text validated"),
     )
 
     report(
         _PROGRESS["chunked"],
-        lmsg("tasks.progress.ingest.chunking", "切分原文..."),
+        lmsg("tasks.progress.ingest.chunking", "Splitting source text..."),
     )
     chunks = chunk_source_text(content, template)
     if not chunks:
-        raise ValueError("原文切分结果为空，无法分析")
+        raise ValueError("Source text split produced no chunks and cannot be analyzed")
     section_type = chunks[0].section_type
     log(
         lmsg(
             "tasks.log.ingest.chunked",
-            f"确定性切分完成: {len(chunks)} 个片段（{section_type}）",
+            f"Deterministic split complete: {len(chunks)} chunks ({section_type})",
             chunkCount=len(chunks),
             sectionType=section_type,
         )
@@ -108,7 +108,7 @@ async def ingest_source_text_structured(
 
     report(
         _PROGRESS["planned"],
-        lmsg("tasks.progress.ingest.planning", "记录分析计划..."),
+        lmsg("tasks.progress.ingest.planning", "Recording analysis plan..."),
     )
     digest = source_sha256(content)
     reused = await store.get_reusable_analysis_run(
@@ -124,7 +124,7 @@ async def ingest_source_text_structured(
         log(
             lmsg(
                 "tasks.log.ingest.planReused",
-                f"复用已有分析计划: {run_id}",
+                f"Reusing existing analysis plan: {run_id}",
                 runId=run_id,
             )
         )
@@ -142,7 +142,7 @@ async def ingest_source_text_structured(
         log(
             lmsg(
                 "tasks.log.ingest.planRecorded",
-                f"分析计划已记录: {run_id}",
+                f"Analysis plan recorded: {run_id}",
                 runId=run_id,
             )
         )
@@ -150,14 +150,14 @@ async def ingest_source_text_structured(
     # novel.txt is the public success marker and therefore lands last.
     report(
         _PROGRESS["save"],
-        lmsg("tasks.progress.ingest.saving", "保存导入结果..."),
+        lmsg("tasks.progress.ingest.saving", "Saving import result..."),
     )
     store.save_novel_content(content)
-    log(lmsg("tasks.log.ingest.sourceSaved", "原文已保存"))
+    log(lmsg("tasks.log.ingest.sourceSaved", "Source text saved"))
 
     report(
         _PROGRESS["complete"],
-        lmsg("tasks.progress.ingest.complete", "导入完成"),
+        lmsg("tasks.progress.ingest.complete", "Import complete"),
     )
     return {
         "char_count": len(content),

@@ -6,6 +6,7 @@ import { HTML_ARTIFACT_OPEN_EVENT, HTML_ARTIFACT_REFERENCE_EVENT, HTML_ARTIFACT_
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Clapperboard,
@@ -181,11 +182,11 @@ interface FreezoneShellProps {
   project: SupertaleProjectSummary;
   canvasId: string;
   /**
-   * 画布是否是当前正在看的页面。顶栏切到「虾集」时宿主不再卸载本组件，只把
-   * active 置 false（见 FreezoneCanvasHost）——保活换来的是切换不掉帧，代价是
-   * 得手动交出那些「只有前台该做」的事：全局快捷键（透传成 Canvas 的
-   * suspended）和两条轮询。默认 true，让直接挂载 FreezoneShell 的调用方
-   * （测试、未来的独立入口）保持原来的行为。
+   * Whether the canvas is the page currently in view. When the top bar switches to "Shrimp Market"
+   * the host no longer unmounts this component; it only sets active=false (see FreezoneCanvasHost).
+   * Keep-alive avoids dropped frames on switching, at the cost of manually handing off everything
+   * that only the foreground should do: global shortcuts (passed through as Canvas `suspended`)
+   * and the two polls. Defaults to true so callers mounting FreezoneShell directly keep the old behavior.
    */
   active?: boolean;
 }
@@ -209,31 +210,32 @@ const FREEZONE_AGENT_HISTORY_WIDTH_MAX = 360;
 // but Freezone currently defines one Agent session per canvas.
 const FREEZONE_MULTI_AGENT_SESSION_UI_ENABLED = false;
 /**
- * 抽屉最多能挤到只剩这么宽的左侧内容。
- * - 工作流（浮层）：画布可以任意窄，360 只是别让它彻底消失。
- * - 故事板（挤占）：三栏各有 200px 下限 + 两条 12px 分隔 + 容器 px-4，
- *   低于 680 三栏就会被 min-width 顶出容器、右栏被裁掉。
+ * The narrowest the left content may be squeezed to by the drawer.
+ * - Workflow (overlay): the canvas can be arbitrarily narrow; 360 just keeps it from vanishing.
+ * - Storyboard (squeeze): three columns with a 200px minimum each + two 12px dividers + container px-4;
+ *   below 680 the columns get pushed out of the container by min-width and the right one is clipped.
  */
 const FREEZONE_CHAT_MIN_CONTENT_WIDTH = 360;
 const FREEZONE_CHAT_MIN_BOARD_CONTENT_WIDTH = 680;
 /**
- * 抽屉内两栏的宽度走 CSS 变量（挂在 <aside> 上，两栏继承着读）。
- * 这样拖拽时只需要改外壳这一个元素的 style，就能同时驱动外壳与内部两栏，
- * 全程不碰 React —— 见 startPaneResize 里的 paint()。
+ * The two inner pane widths of the drawer are driven by CSS variables (set on <aside>, read by both panes).
+ * While dragging, only this one shell element's style needs updating to drive the shell and both
+ * inner panes at once, without touching React - see paint() in startPaneResize.
  */
 const CHAT_PANE_WIDTH_VAR = "--freezone-chat-pane-width";
 const AGENT_HISTORY_PANE_WIDTH_VAR = "--freezone-agent-history-pane-width";
 /**
- * 虾导两种摆法：停靠右侧（通高抽屉，顶栏等据 --freezone-dock-width 让位）或浮窗
- * （圆角悬浮窗压在内容上，可拖动，谁也不挤）。用户在聊天头部切换，偏好存本地。
+ * The assistant drawer has two layouts: docked to the right (full-height drawer; the top bar etc. yield
+ * according to --freezone-dock-width) or floating (rounded window over the content, draggable, squeezes nothing).
+ * The user switches in the chat header; the preference is stored locally.
  */
 type FreezoneChatDockMode = "docked" | "floating";
 const FREEZONE_CHAT_DOCK_MODE_STORAGE_KEY = "freezone.chatDock.mode";
-/** 浮窗位置按「右边距 + 上边距」存：左缘拖宽时右边不动，与停靠态的拖宽手感一致。 */
+/** The floating window position is stored as right margin + top margin, so dragging the left edge wider keeps the right edge fixed, matching the docked feel. */
 const FREEZONE_CHAT_FLOAT_POS_STORAGE_KEY = "freezone.chatDock.floatPos";
 const FREEZONE_CHAT_FLOAT_HEIGHT = 720;
 const FREEZONE_CHAT_FLOAT_MARGIN = 12;
-/** 上下各让开顶栏（48px）与底部任务状态条（36px），浮窗不被它们压住。 */
+/** Leave room for the top bar (48px) and the bottom task status bar (36px) so the floating window is not covered. */
 const FREEZONE_CHAT_FLOAT_MIN_TOP = 56;
 const FREEZONE_CHAT_FLOAT_BOTTOM_RESERVE = 44;
 const FREEZONE_CHAT_FLOAT_DEFAULT_POS = { right: 24, top: FREEZONE_CHAT_FLOAT_MIN_TOP + 8 };
@@ -241,17 +243,17 @@ const EXTERNAL_CANVAS_COMMAND_POLL_MS = 800;
 const EXTERNAL_CANVAS_REVISION_POLL_MS = 2_000;
 
 /**
- * 左上角「工作流 / 故事板」切换开关的两颗键。
- * 只画图标，文案走 hover 提示 + aria-label（用户要求：文字胶囊太占画布）。
- * 顺序即视觉顺序——滑块位移按下标算（第 2 颗 translate-x-7）。
+ * The two keys of the top-left "Workflow / Storyboard" toggle.
+ * Icons only; the text goes in the hover tooltip + aria-label (the text capsules took too much canvas).
+ * Order is visual order - the slider offset is computed from the index (the 2nd key is translate-x-7).
  */
 const FREEZONE_VIEW_MODE_TABS: ReadonlyArray<{
   mode: FreezoneViewMode;
   icon: LucideIcon;
   label: string;
 }> = [
-  { mode: "workflow", icon: Workflow, label: "工作流" },
-  { mode: "board", icon: Clapperboard, label: "故事板" },
+  { mode: "workflow", icon: Workflow, label: "Workflow" },
+  { mode: "board", icon: Clapperboard, label: "Storyboard" },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -287,7 +289,7 @@ function storeChatDockMode(mode: FreezoneChatDockMode): void {
   try {
     window.localStorage.setItem(FREEZONE_CHAT_DOCK_MODE_STORAGE_KEY, mode);
   } catch {
-    // 存不下只是下次回到默认停靠，不影响本次切换。
+    // If it cannot be stored, the next visit simply returns to the default dock; this switch is unaffected.
   }
 }
 
@@ -317,9 +319,9 @@ function storeChatFloatPos(pos: { right: number; top: number }): void {
 }
 
 /**
- * 虾画 agent 的开合状态：持久化到 localStorage，刷新/重进画布后恢复，避免工作流中
- * 一刷新就丢掉已打开的对话。key 同样避开 `supertale-` 前缀（会被 reset-region-state
- * 的清扫误删）——开合只是 UI 偏好，跨区域保留没问题。
+ * Open/closed state of the canvas agent: persisted to localStorage and restored after refresh or
+ * re-entering the canvas, so a refresh mid-workflow does not drop an open conversation. The key also
+ * avoids the `supertale-` prefix (reset-region-state sweeps would wipe it) - open/closed is just a UI preference.
  */
 const CHAT_OPEN_STORAGE_KEY = "st.freezone.chatOpen";
 
@@ -337,7 +339,7 @@ function storeChatOpen(open: boolean): void {
   try {
     window.localStorage.setItem(CHAT_OPEN_STORAGE_KEY, open ? "1" : "0");
   } catch {
-    // storage full / unavailable — 开合状态就不持久化
+    // storage full / unavailable — open/closed state is simply not persisted
   }
 }
 
@@ -468,7 +470,7 @@ function canvasCommandValidationFailureResult(errors: string[]): CanvasChatComma
         commandIndex: -1,
         type: "validate",
         status: "error",
-        label: "校验画布命令",
+        label: i18n.t("freezone.shell.validateCanvasCommand"),
         error: errors.join("; "),
       },
     ],
@@ -734,11 +736,11 @@ export function shouldClearProjectionStatuses({
   canvasId: string;
   hydratedCanvasId: string | null;
   projectionKeyCount: number;
-  /** 省略即不校验项目（旧调用方 / 单画布场景）。 */
+  /** When omitted the project is not checked (legacy callers / single-canvas scenarios). */
   project?: string;
   hydratedProject?: string | null;
 }): boolean {
-  // 个人画布跨项目同 id，只比 canvasId 认不出「还停在上一个项目的数据上」。
+  // Personal canvases share the same id across projects, so comparing canvasId alone cannot detect "still on the previous project's data".
   if (project !== undefined && hydratedProject !== project) return true;
   return hydratedCanvasId !== canvasId || projectionKeyCount === 0;
 }
@@ -794,8 +796,8 @@ export function shouldSkipProjectionStatusRevision({
   project?: string;
 }): boolean {
   if (lastChecked?.canvasId !== canvasId) return false;
-  // revision 是每张画布自己的小整数，跨项目撞号是常事；不比项目就会把「上一个
-  // 项目已经查过 rev 5」当成「这个项目的 rev 5 也查过」，真正的拉取被跳掉。
+  // revision is a small per-canvas integer, and collisions across projects are common; without comparing
+  // the project, "the previous project already checked rev 5" would be mistaken for "this project's rev 5 was checked too", skipping the real pull.
   if (project !== undefined && lastChecked.project !== project) return false;
   return lastChecked.revision === revision && lastChecked.refreshToken === refreshToken;
 }
@@ -930,7 +932,7 @@ function stringOrUndefined(value: unknown): string | undefined {
 
 /**
  * Mounts the shared xyflow canvas inside the SuperTale Beat Workbench shell.
- * Canvas switching lives inside the left AssetLibraryPanel (主线资产 / 画布 tabs).
+ * Canvas switching lives inside the left AssetLibraryPanel (Mainline Assets / Canvas tabs).
  * Commit still lives on eligible canvas nodes. Sync status is
  * intentionally not shown — `useCanvasSync` still loads + persists via
  * /api/v1/projects/<project_id>/freezone/canvases and surfaces conflict /
@@ -940,7 +942,7 @@ function stringOrUndefined(value: unknown): string | undefined {
  * video-ref/3GS triggers, and the top-right Beat Workbench task entry.
  */
 const canvasKey = (projectId: string, canvasId: string) => `${projectId}::${canvasId}`;
-/** 上一次真正画出来的画布；跨挂载保留，用来判断重进时能否直接复用 store 里的内容。 */
+/** The canvas that was last actually drawn; kept across mounts to decide whether re-entry can reuse the store contents directly. */
 let lastRenderedCanvasKey: string | null = null;
 
 export function FreezoneShell({
@@ -1014,16 +1016,16 @@ export function FreezoneShell({
   const syncingProjectionRef = useRef<string | null>(null);
   const removingProjectionRef = useRef<string | null>(null);
   const emittedExternalCanvasCommandKeysRef = useRef<Set<string>>(new Set());
-  // 顶栏在「虾画 / 虾集」之间切换会整体卸载再挂载本组件，但画布数据留在全局 store 里。
-  // 如果这里从 false 起步，回到虾画就会先把画面换成「正在加载画布…」，等 hydrate 回来
-  // 才重新画出来 —— 看着就是卡。同一个画布重进时直接渲染 store 里的既有内容，
-  // hydrate 期间只叠一层轻量 overlay。
+  // Switching the top bar between "Canvas" and "Market" unmounts then remounts this component, but the canvas data
+  // stays in the global store. Starting from false here would first replace the view with "Loading canvas...",
+  // and only redraw after hydrate returns - which looks janky. Re-entering the same canvas renders the existing
+  // store content directly, with only a light overlay during hydrate.
   //
-  // 存的是「已经画出来的是哪一张」而不是一个 boolean：本组件没有 key，换画布走的是
-  // 同一个实例重跑 effect，用 boolean 的话它一旦为 true 就再也回不去，于是切到新画布
-  // 时旧画布的几百个节点会一直挂在屏幕上（只蒙一层半透明遮罩），直到新内容替换上来
-  // ——「卸旧的」和「挂新的」并进同一次提交，这正是切换卡顿的主因。按画布记之后，
-  // 换画布这一帧立刻回到全屏 loading，卸载与挂载被拆成两次提交。
+  // What is stored is "which canvas was already drawn" rather than a boolean: this component has no key, so switching
+  // canvases reruns the effect on the same instance; with a boolean, once true it would never go back, and the old
+  // canvas's hundreds of nodes would stay on screen (under a translucent mask) until the new content replaces them -
+  // unmounting the old and mounting the new in one commit is the main cause of switch jank. Recording per canvas
+  // returns to the full-screen loading immediately on the switching frame, splitting unmount and mount into two commits.
   const currentCanvasKey = canvasKey(projectId, canvasId);
   const [renderedCanvasKey, setRenderedCanvasKey] = useState<string | null>(() =>
     lastRenderedCanvasKey === currentCanvasKey &&
@@ -1032,7 +1034,7 @@ export function FreezoneShell({
       : null,
   );
   if (renderedCanvasKey !== null && renderedCanvasKey !== currentCanvasKey) {
-    // render 阶段同组件 setState 是 React 认可的「派生状态」写法，本次提交即生效。
+    // Setting same-component state during render is the React-sanctioned "derived state" pattern; it takes effect in this commit.
     setRenderedCanvasKey(null);
   }
   const hasRenderedCanvas = renderedCanvasKey === currentCanvasKey;
@@ -1044,8 +1046,8 @@ export function FreezoneShell({
     refreshToken: number;
     project: string;
   } | null>(null);
-  // 这三处 projection 状态本来靠「换项目必然 remount」复位；_app.tsx 把项目 id 从
-  // routeTransitionKey 里摘掉之后 freezone 不再重挂，只能自己按 项目+画布 复位。
+  // These three projection states used to reset because switching projects always remounted; since _app.tsx
+  // removed the project id from routeTransitionKey, freezone no longer remounts, so it resets itself per project + canvas.
   const [projectionScopeKey, setProjectionScopeKey] = useState(currentCanvasKey);
   if (projectionScopeKey !== currentCanvasKey) {
     setProjectionScopeKey(currentCanvasKey);
@@ -1053,10 +1055,10 @@ export function FreezoneShell({
     setProjectionMonitoringExpired(false);
     lastProjectionStatusRevisionRef.current = null;
   }
-  // 上面这些弹窗/浮层状态装的是「项目 A 的某个素材」，同样靠 remount 复位。不再
-  // 重挂之后，如果开着提交 / 建身份 / 蒙版面板用浏览器前进后退切到项目 B，面板
-  // 会继续摆着 A 的素材，可提交按钮拿到的却是新的 projectId —— 等于把 A 的资源
-  // 写进 B。换项目就一律关掉，换画布不动（换画布本来就不重挂，行为没变）。
+  // The dialog/overlay states above hold "some asset of project A" and also relied on remounting to reset. Without
+  // remounting, if a commit / create-identity / mask panel is open and browser back/forward switches to project B,
+  // the panel keeps showing A's asset while the commit button gets the new projectId - writing A's resource into B.
+  // So always close them on a project change; a canvas change leaves them alone (it never remounted, so behavior is unchanged).
   const [projectScopeId, setProjectScopeId] = useState(projectId);
   if (projectScopeId !== projectId) {
     setProjectScopeId(projectId);
@@ -1068,13 +1070,13 @@ export function FreezoneShell({
   }
 
   const [viewMode, setViewMode] = useFreezoneViewMode();
-  // 懒挂载：首次切到故事板才 mount AssetBoardView，之后保活（visible 切 visibility）。
+  // Lazy mount: AssetBoardView mounts the first time the storyboard is opened, then stays alive (visible toggles visibility).
   const [boardMounted, setBoardMounted] = useState(viewMode === "board");
   const handleViewModeChange = useCallback(
     (mode: FreezoneViewMode) => {
       if (mode === "board") {
         setBoardMounted(true);
-        // 进入故事板默认展开虾导，便于直接对着素材开聊。
+        // Entering the storyboard expands the assistant by default so the user can chat right against the assets.
         setChatOpen(true);
       }
       setViewMode(mode);
@@ -1211,8 +1213,8 @@ export function FreezoneShell({
     deliveredSelectionAttachmentKeyRef.current = currentCanvasSelectionAttachmentKey;
     setPendingChatAttachments([currentCanvasSelectionAttachment]);
   }, [chatOpen, currentCanvasSelectionAttachment, currentCanvasSelectionAttachmentKey]);
-  // 开合状态落盘：刷新/重进画布后由 useState(loadChatOpen) 恢复。所有开关路径
-  // （手动按钮、命令自动展开、空白点击）都经由 chatOpen，故一个 effect 全覆盖。
+  // Persist the open/closed state: restored via useState(loadChatOpen) after refresh or re-entering the canvas.
+  // All toggle paths (manual button, command auto-expand, blank click) go through chatOpen, so one effect covers them.
   useEffect(() => {
     storeChatOpen(chatOpen);
   }, [chatOpen]);
@@ -1226,8 +1228,8 @@ export function FreezoneShell({
   const handleBlankPaneClick = useCallback(() => {
     setAssetPanelCollapsed(true);
     setDebugPanelOpen(false);
-    // 点画布空白不再自动关闭虾画 agent：用户要求它只能靠面板右上角的关闭按钮
-    // （onOpenChange(false)）手动关，避免工作流中误点空白就丢掉对话。
+    // Clicking the blank canvas no longer auto-closes the canvas agent: it can only be closed manually via the
+    // panel's top-right close button (onOpenChange(false)), so a stray click mid-workflow does not drop the conversation.
   }, []);
 
   useEffect(() => {
@@ -1238,10 +1240,10 @@ export function FreezoneShell({
     prefetchFreezoneVideoCameraTemplates(projectId);
   }, [projectId]);
 
-  // 依赖里带 active，是因为离开虾画时地址栏的 ?canvas= 会跟着路由一起没掉，而
-  // 保活之后 canvasId / projectId 都是钉住不变的 —— 切回来这个 effect 不会重跑，
-  // 结果就是屏幕上开着某张画布，地址栏却是光秃秃的 /freezone，复制出去的链接
-  // 打不开这张画布。非激活时直接跳过：那会儿地址栏归虾集管。
+  // `active` is in the dependencies because the address bar's ?canvas= disappears with the route when leaving the canvas,
+  // and with keep-alive canvasId / projectId stay pinned - this effect would not rerun on switching back, leaving a
+  // canvas on screen with a bare /freezone address bar, and copied links could not open this canvas.
+  // Skip when inactive: the address bar then belongs to the Market.
   useEffect(() => {
     if (!active) return;
     rememberLastCanvas(projectId, canvasId);
@@ -1251,11 +1253,11 @@ export function FreezoneShell({
   }, [active, canvasId, projectId]);
 
   useEffect(() => {
-    // 必须连 hydratedProject 一起比：个人画布 id 由用户名推出，跨项目是同一个
-    // canvasId，而换项目那一次提交里 sync.* 还是上一个项目的值（useCanvasSync 的
-    // hydrate effect 只是「排队」把 status 改成 loading，闭包里读到的仍是 ready）。
-    // 少比这一项，换项目时会被当成「新画布已经画出来了」，全屏 loading 直接不出现，
-    // 露给用户的是刚被清空的画布加一层半透明遮罩。
+    // Must compare hydratedProject too: personal canvas ids derive from the username, so the same canvasId spans
+    // projects, and in the commit that switches project sync.* still holds the previous project's values (the
+    // useCanvasSync hydrate effect only "queues" the status change to loading; the closure still reads ready).
+    // Skipping this comparison treats a project switch as "the new canvas is already drawn", the full-screen loading
+    // never appears, and the user sees the just-cleared canvas under a translucent mask.
     if (
       sync.status === "ready" &&
       sync.hydratedCanvasId === canvasId &&
@@ -1268,10 +1270,10 @@ export function FreezoneShell({
 
   useEffect(() => {
     if (!mcpDirectCanvasApplyEnabled()) return;
-    // 在虾集时不轮询：保活期间画布没人看，没必要为它占着请求配额。
-    // `active` 在依赖里，切回虾画会重跑本 effect —— 末尾那次立即调用就顺带
-    // 补上了「离开这段时间里画布有没有被别处改过」的新鲜度检查。以前靠整体
-    // 重新挂载触发 hydrate 来保证这件事，保活之后这里是唯一的补偿点。
+    // Do not poll while in Market: nobody is looking at the canvas during keep-alive, so no need to hold request quota.
+    // `active` is in the dependencies, so switching back reruns this effect and the immediate call at the end also
+    // covers "was the canvas modified elsewhere while away". This used to be guaranteed by a full remount triggering
+    // hydrate; with keep-alive this is the only compensation point.
     if (!active) return;
     if (
       sync.status !== "ready" ||
@@ -1336,9 +1338,9 @@ export function FreezoneShell({
     [sync.metadata],
   );
   useEffect(() => {
-    // 同上：保活期间停掉 30s 一次的投影状态刷新。它只负责踩节拍（本身不发请求，
-    // 是 bump token 让下面那个 effect 去拉），所以切回来的即时补拉由后面专门的
-    // 「重新激活」effect 负责——这里重启定时器只保证之后的节拍继续。
+    // Same as above: during keep-alive, stop the 30s projection-status refresh. It only keeps the beat (it issues no
+    // request itself; it bumps a token and the effect below pulls), so the immediate catch-up on switching back is
+    // handled by the dedicated "reactivate" effect - restarting the timer here only keeps later beats going.
     if (!active) return;
     if (projectionMonitoringExpired) return;
     if (!shouldFetchProjectionStatuses({
@@ -1368,10 +1370,9 @@ export function FreezoneShell({
     sync.revision,
     sync.status,
   ]);
-  // 从虾集切回虾画时补一次投影状态。下面那个拉取 effect 用
-  // (canvasId, revision, refreshToken) 去重，光把 `active` 加进它的依赖并不会
-  // 真的重新拉；推一下 token 才是它认的信号。只在 false → true 这一沿触发，
-  // 避免每次依赖变化都多打一发请求。
+  // Refresh projection status when switching from Market back to Canvas. The fetch effect below dedups by
+  // (canvasId, revision, refreshToken), so merely adding `active` to its dependencies would not refetch; bumping the
+  // token is the signal it recognizes. Only trigger on the false -> true edge, to avoid an extra request on every dependency change.
   const wasActiveRef = useRef(active);
   useEffect(() => {
     const reactivated = active && !wasActiveRef.current;
@@ -1506,9 +1507,9 @@ export function FreezoneShell({
     }
   }, [canvasId, projectId, sync, t]);
 
-  // 节点 toolbar 上的 Commit 按钮通过 canvasEventBus 触发；这里订阅、查节点、
-  // 推 CommitDialog。比 AssetLibraryPanel 的 Commit 宽松：任何带 imageUrl 的
-  // 节点都允许提交，slot_target 只是给 dialog 一个 default，缺失也能让用户手选目标。
+  // The Commit button on the node toolbar fires through canvasEventBus; subscribe here, look up the node,
+  // and push CommitDialog. More lenient than AssetLibraryPanel's Commit: any node with an imageUrl may be committed,
+  // slot_target is only a default for the dialog, and a missing one still lets the user pick a target manually.
   useEffect(() => {
     return canvasEventBus.subscribe("freezone/commit-node", ({ nodeId, auto, successMessage }) => {
       const node = useCanvasStore.getState().nodes.find((n) => n.id === nodeId);
@@ -1516,7 +1517,7 @@ export function FreezoneShell({
         setToast(t("freezone.shell.nodeNoCommittable"));
         return;
       }
-      // 泛化:不再只认 imageUrl,而是按节点类型推断媒体 url(图像/视频/音频/3GS)。
+      // Generalized: no longer only imageUrl; infer the media url by node type (image/video/audio/3GS).
       const info = deriveNodeDropInfo(node);
       if (!info?.sourceUrl) {
         setToast(t("freezone.shell.nodeNoCommittable"));
@@ -1671,11 +1672,11 @@ export function FreezoneShell({
     });
   }, []);
 
-  // 画布节点 / 故事板卡片、详情头部的「添加到对话」——两个视图是同一份节点数据的
-  // 两种投影，所以入口只发事件，落地统一收在这里（追加行内 mention + 展开聊天），
-  // 避免两边各写一套后行为漂移。和 @ 菜单同一套模型：不选中画布节点、不出引用条，
-  // 而是把 @[节点名](id) 行内 chip 插进虾导 draft（drain 见 SuperChatPanel）。
-  // 过滤画布上已不存在的 id：全是幽灵就不展开聊天。
+  // "Add to chat" from canvas nodes / storyboard cards / detail headers - both views are two projections of the same
+  // node data, so the entry only emits an event and the landing is handled here (append an inline mention + expand chat),
+  // avoiding behavior drift from two separate implementations. Same model as the @ menu: no canvas node selection and no
+  // reference bar; an inline @[node name](id) chip is inserted into the assistant draft instead (drained in SuperChatPanel).
+  // Filter out ids that no longer exist on the canvas: if all are ghosts, do not expand the chat.
   useEffect(() => {
     return canvasEventBus.subscribe("freezone/add-nodes-to-chat", ({ nodeIds }) => {
       const onCanvas = new Set(useCanvasStore.getState().nodes.map((node) => node.id));
@@ -1725,7 +1726,7 @@ export function FreezoneShell({
         canvasId,
         agentId,
         status: "running",
-        labels: ["命令校验"],
+        labels: [i18n.t("freezone.shell.commandValidation")],
         receivedAt: eventReceivedAt,
         surfaceOrder: eventReceivedAt,
         externalMcpCommand: isExternalMcpCommand,
@@ -1744,8 +1745,8 @@ export function FreezoneShell({
 
       if (envelopes.length === 0) {
         const errors = [
-          "画布命令格式无效或不属于当前画布，前端未执行。",
-          "无法解析 canvas_chat_commands.v1 命令；请检查 command 字段是否在正确层级。",
+          "Canvas command format is invalid or does not belong to the current canvas; the frontend did not execute it.",
+          "Unable to parse the canvas_chat_commands.v1 command; check that the command field is at the correct level.",
         ];
         console.warn("[freezone-canvas-command] frame rejected: no valid envelope", {
           bridgeKey,
@@ -1759,7 +1760,7 @@ export function FreezoneShell({
           canvasId,
           agentId,
           status: "failed",
-          labels: ["命令校验"],
+          labels: [i18n.t("freezone.shell.commandValidation")],
           errors,
           receivedAt: eventReceivedAt + 1,
           surfaceOrder: eventReceivedAt + 1,
@@ -1786,8 +1787,8 @@ export function FreezoneShell({
               commandIndex: -1,
               type: "validate",
               status: "error",
-              label: "画布命令无效",
-              error: "无法解析 canvas_chat_commands.v1 命令；请检查 command 字段是否在正确层级。",
+              label: i18n.t("freezone.shell.invalidCanvasCommand"),
+              error: "Unable to parse the canvas_chat_commands.v1 command; check that the command field is at the correct level.",
             },
           ],
         };
@@ -1839,7 +1840,7 @@ export function FreezoneShell({
       );
       if (!validation.ok) {
         const errors = [
-          "画布命令预校验失败，前端未展示确认卡，也未执行。",
+          "Canvas command pre-validation failed; the frontend showed no confirmation card and did not execute it.",
           ...validation.issues.map((issue) => `${issue.path}: ${issue.message}`),
         ];
         console.warn("[freezone-canvas-command] validation failed", {
@@ -1856,7 +1857,7 @@ export function FreezoneShell({
           canvasId,
           agentId,
           status: "failed",
-          labels: ["命令校验"],
+          labels: [i18n.t("freezone.shell.commandValidation")],
           errors,
           receivedAt: eventReceivedAt + 1,
           surfaceOrder: eventReceivedAt + 1,
@@ -1917,7 +1918,7 @@ export function FreezoneShell({
         canvasId,
         agentId,
         status: "done",
-        labels: ["命令校验"],
+        labels: [i18n.t("freezone.shell.commandValidation")],
         receivedAt: eventReceivedAt + 1,
         surfaceOrder: eventReceivedAt + 1,
         externalMcpCommand: isExternalMcpCommand,
@@ -2016,7 +2017,7 @@ export function FreezoneShell({
           window.dispatchEvent(new CustomEvent(SUPERCHAT_CANVAS_COMMAND_EVENT, {
             detail: {
               frame,
-              anchorTextPrefix: "外部 Agent",
+              anchorTextPrefix: i18n.t("freezone.shell.externalAgent"),
               receivedAt: now + index,
               externalMcpCommand: true,
             },
@@ -2076,7 +2077,7 @@ export function FreezoneShell({
           canvasId,
           agentId,
           responses: [],
-          errors: ["无法解析 canvas_context_request.v1 请求。"],
+          errors: ["Unable to parse the canvas_context_request.v1 request."],
         });
         setChatOpen(true);
         return;
@@ -2114,7 +2115,7 @@ export function FreezoneShell({
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error || "unknown error");
-          const errors = [`读取画布上下文失败：${message}`];
+          const errors = [`Failed to read canvas context: ${message}`];
           emitCanvasContextActivity({
             turnId,
             anchorTextPrefix,
@@ -2122,7 +2123,7 @@ export function FreezoneShell({
             canvasId,
             agentId,
             status: "failed",
-            labels: ["画布上下文"],
+            labels: [i18n.t("freezone.shell.canvasContext")],
             errors,
             receivedAt: Date.now(),
           });
@@ -2185,9 +2186,9 @@ export function FreezoneShell({
     void DEFAULT_NODE_WIDTH; // unused but keep import alive
   };
 
-  // 不用 status === "loading" 判定：换画布那一帧 status 还停在旧画布的 "ready"，
-  // 等 hydrate effect 跑完才翻成 loading，中间那一帧会露出旧画布。改成「只要还没画
-  // 出当前这张就挡着」，失败态除外——那两层遮罩要能被看见和点。
+  // Do not decide by status === "loading": on the frame the canvas switches, status is still the old canvas's "ready",
+  // and only flips to loading after the hydrate effect runs, exposing the old canvas for one frame. Block whenever the
+  // current canvas has not been drawn yet, except in failed states - those two overlays must stay visible and clickable.
   const showBlockingLoading =
     !hasRenderedCanvas && sync.status !== "error" && sync.status !== "conflict";
   const showLoadingOverlay = sync.status === "loading" && hasRenderedCanvas;
@@ -2204,9 +2205,8 @@ export function FreezoneShell({
               canvasId={canvasId}
               onBlankPaneClick={handleBlankPaneClick}
               controlsPlacement="bottom-right"
-              // 保活到虾集时也算 suspended：Canvas 的 6 处 window/document 键盘
-              // 监听（含 capture 阶段）都读这个开关，否则在虾集的输入框里打字会
-              // 被画布快捷键截走。
+              // Keep-alive in Market also counts as suspended: Canvas's 6 window/document keyboard listeners (including the
+              // capture phase) all read this switch; otherwise typing in a Market input would be intercepted by canvas shortcuts.
               suspended={!active || viewMode === "board" || Boolean(htmlTarget)}
             />
           )}
@@ -2229,10 +2229,10 @@ export function FreezoneShell({
           )}
           <BackupStatusIndicator status={sync.backupStatus} />
           {active && sync.status === "ready" && sync.hydratedCanvasId === canvasId && (
-            // 自带 15s 轮询，保活期间不挂载。
+            // Has its own 15s polling; not mounted during keep-alive.
             <WorkflowRunRecoveryBar projectId={projectId} canvasId={canvasId} />
           )}
-          {/* 调试面板暂时隐藏，恢复时去掉 `false &&` 即可 */}
+          {/* Debug panel temporarily hidden; remove `false &&` to restore */}
           {false && import.meta.env.DEV && (
             <CanvasDebugPanel
               project={projectId}
@@ -2269,33 +2269,33 @@ export function FreezoneShell({
               setToast(message);
             }}
           />
-          {/* 故事板视图：懒挂载 + 保活（对标 liblib，秒切且滚动/筛选状态保留）。 */}
+          {/* Storyboard view: lazy mount + keep-alive (switches instantly while preserving scroll/filter state). */}
           {!showBlockingLoading && boardMounted && (
             <AssetBoardView
-              // 必须带上 active：故事板保活用的是 `visibility: visible`
-              // （AssetBoardView.tsx:435），会穿透宿主容器上的 invisible ——
-              // 不接这个开关，故事板视图下切到虾集，它会浮在虾集页面上。
-              // 顺带也停掉它对 canvas store 的订阅和媒体播放（paused={!visible}）。
+              // Must pass active: the storyboard keep-alive uses `visibility: visible`
+              // (AssetBoardView.tsx:435), which pierces the host container's invisible -
+              // without this switch, switching to Market from the storyboard view would float it over the Market page.
+              // It also stops its subscription to the canvas store and media playback (paused={!visible}).
               visible={active && viewMode === "board" && !htmlTarget}
               onLocateNode={handleLocateNode}
             />
           )}
-          {/* 工作流/故事板 切换开关：左上角悬浮，压在故事板 overlay(z-30) 之上。
-              只留图标、不带文字（用户要求）——原来是两颗 88px 宽的文字胶囊悬在画布
-              正上方，把画面正中那一条压掉了；文案改由 hover 提示给出，读屏走
-              aria-label。提示用 shadcn Tooltip 而不是原生 title：原生要悬停约一秒才
-              出，样式也和产品其它悬浮说明不统一（同 AddNodeToChatButton 的取舍）。
+          {/* Workflow/Storyboard toggle: floats top-left, above the storyboard overlay (z-30).
+              Icons only, no text - the earlier two 88px-wide text capsules hovered right over the canvas and covered
+              the center strip; the labels are now given by hover tooltip and read by screen readers via
+              aria-label. The tooltip uses shadcn Tooltip rather than native title: native needs about a second of hover to appear
+              and its style differs from other product tooltips (same trade-off as AddNodeToChatButton).
 
-              left-4：对齐故事板内容区的 px-4 左内边距，两个视图切来切去开关不跳位；
-              工作流态那侧素材抽屉的把手/卡片已下移让开这条顶部窄带（AssetLibraryPanel）。
-              选中态样式仍对齐头部「虾画/虾集」产品切换（project-header-navigation.tsx
-              的 ProjectHeaderNavigation）：手写胶囊 + 滑块，滑块宽度跟着按钮收成 44px。
-              容器底色沿用硬编码 #262626（与故事板背景同色），圆角按 10px 走圆角矩形。 */}
+                  left-4: aligns with the storyboard content's px-4 left padding so the toggle does not jump between views;
+                  in workflow mode the side asset drawer's handle/cards have moved down to clear this top strip (AssetLibraryPanel).
+                  The selected-state style still matches the header's Canvas/Market product switch (project-header-navigation.tsx
+                  ProjectHeaderNavigation): hand-drawn capsule + slider, slider width shrinks to 44px with the buttons.
+                  The container background keeps the hard-coded #262626 (same as the storyboard background), with 10px rounded corners. */}
           {!showBlockingLoading && !htmlTarget && (
             <div className="absolute left-4 top-1.5 z-40">
               <TooltipProvider delay={80}>
                 <nav
-                  aria-label="画布视图切换"
+                  aria-label={t("freezone.shell.viewSwitch")}
                   className="relative flex h-8 items-center rounded-[10px] bg-[#262626] p-0.5 shadow-lg"
                 >
                   <span
@@ -2316,8 +2316,8 @@ export function FreezoneShell({
                             aria-label={label}
                             aria-pressed={viewMode === mode}
                             className={cn(
-                              // w-11：只有图标不代表要挤成 28px 方块——键位宽一点更好点、
-                              // 也更像一条分段控件（用户反馈「胶囊宽度要宽一点」）。
+                              // w-11: icon-only does not mean squeezing into a 28px square - wider keys are easier to hit
+                              // and look more like a segmented control (user feedback: "the capsule width should be wider").
                               "relative z-10 inline-flex h-7 w-11 items-center justify-center rounded-[8px] transition-colors",
                               viewMode === mode
                                 ? "text-background"
@@ -2328,7 +2328,7 @@ export function FreezoneShell({
                       >
                         <Icon className="size-4" />
                       </TooltipTrigger>
-                      {/* side=bottom：开关贴着内容区顶边，提示朝上会被顶栏盖住。 */}
+                      {/* side=bottom: the toggle sits against the content's top edge; a tooltip pointing up would be covered by the top bar. */}
                       <TooltipContent side="bottom">{label}</TooltipContent>
                     </Tooltip>
                   ))}
@@ -2351,13 +2351,13 @@ export function FreezoneShell({
             onPendingNodeMentionsConsumed={handlePendingChatNodeMentionsConsumed}
             open={chatOpen}
             onOpenChange={handleChatOpenChange}
-            // 抽屉会往 <html> 上广播 --freezone-dock-width，顶栏 / 任务状态条 / 任务
-            // 面板据此整条往左收。以前离开虾画会整棵卸载、effect 清理顺手把变量删掉；
-            // 保活之后没人卸载，虾集的顶栏就一直挂着虾导抽屉的让位量（顶栏被挤窄、
-            // 虾画·虾集 与右上角那组入口整体左移）。所以非激活时按「抽屉没开」广播。
+            // The drawer broadcasts --freezone-dock-width on <html>; the top bar / task status bar / task panel shrink left
+            // accordingly. Leaving the canvas used to unmount everything and effect cleanup removed the variable; with keep-alive
+            // nothing unmounts, so the Market top bar would keep the assistant drawer's yield (top bar squeezed narrow, the
+            // Canvas/Market switch and the top-right entries shifted left). So when inactive, broadcast as "drawer not open".
             hostActive={active}
-            // 故事板：抽屉挤占左侧内容宽度（对标 liblib）；工作流：浮在画布上，
-            // 画布视口不受影响（否则每次开合聊天都会让 ReactFlow 重排一次视口）。
+            // Storyboard: the drawer squeezes the left content width; workflow: it floats over the canvas and the canvas
+            // viewport is unaffected (otherwise every chat open/close would make ReactFlow re-layout the viewport).
             pushesContent={viewMode === "board" || Boolean(htmlTarget)}
             title={t("freezone.chat.title")}
             description={t("freezone.chat.description")}
@@ -2454,12 +2454,12 @@ function FreezoneChatDock({
   onPendingNodeMentionsConsumed: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** true=抽屉在 flex 行里占位（左侧内容被挤窄）；false=纯浮层，左侧内容不动。 */
+  /** true = the drawer takes space in the flex row (left content is squeezed); false = pure overlay, left content stays put. */
   pushesContent: boolean;
   title: string;
   description: string;
   toggleLabel: string;
-  /** 画布是否在前台。false 时抽屉不再向全局广播让位宽度（见下方 effect）。 */
+  /** Whether the canvas is in the foreground. When false the drawer stops broadcasting the yield width globally (see the effect below). */
   hostActive: boolean;
 }) {
   const { t } = useTranslation();
@@ -2486,7 +2486,7 @@ function FreezoneChatDock({
   );
   const [resizingPane, setResizingPane] = useState<"chat" | "history" | null>(null);
   const [dockMode, setDockMode] = useState<FreezoneChatDockMode>(loadChatDockMode);
-  // 窄屏走 Sheet，没有浮窗一说。
+  // Narrow screens use a Sheet; there is no floating window.
   const floating = isDesktop && dockMode === "floating";
   const [floatPos, setFloatPos] = useState(loadChatFloatPos);
   const [draggingFloat, setDraggingFloat] = useState(false);
@@ -2608,7 +2608,7 @@ function FreezoneChatDock({
     document.body.style.userSelect = "none";
     setResizingPane(pane);
 
-    // 浮窗不挤占画布，只需在视口里留出左右边距；停靠态才要给画布预留最小宽度。
+    // The floating window does not squeeze the canvas and only needs side margins in the viewport; docked mode must reserve a minimum canvas width.
     const reservedWidth = floating ? FREEZONE_CHAT_FLOAT_MARGIN * 2 : minContentWidth;
     const clampChatWidth = (value: number) => {
       const maxByViewport = Math.max(
@@ -2633,9 +2633,9 @@ function FreezoneChatDock({
       );
     };
 
-    // 拖拽期绕开 React：只改 DOM 宽度（外壳 width + 两条内栏读的 CSS 变量），
-    // 松手才回写 state / 落库。每动一下就 setState 的话，整棵 SuperChatPanel
-    // （消息列表 + 输入区）都要重渲染，一帧根本画不完，手感就是拖不动、跟不上手。
+    // While dragging, bypass React: only change the DOM width (shell width + the CSS variables the two inner panes read);
+    // write back state / persist only on release. A setState on every move would re-render the whole SuperChatPanel
+    // (message list + input) and a frame could never finish, making the drag feel stuck and laggy.
     let nextChatWidth = startChatWidth;
     let nextHistoryWidth = startHistoryWidth;
     let pointerX = startX;
@@ -2661,8 +2661,8 @@ function FreezoneChatDock({
         aside.style.setProperty(AGENT_HISTORY_PANE_WIDTH_VAR, `${nextHistoryWidth}px`);
       }
       if (spacerRef.current) spacerRef.current.style.width = `${dockWidth}px`;
-      // 顶栏 / 底部状态条也在同一帧让位（过渡已被压成 0ms），否则它们会拖在手后面。
-      // 浮窗不占位，也就不让位。
+      // The top bar / bottom status bar yield in the same frame (the transition is compressed to 0ms), otherwise they trail behind the hand.
+      // The floating window takes no space, so it yields nothing.
       if (!floating) {
         document.documentElement.style.setProperty(
           FREEZONE_DOCK_WIDTH_VAR,
@@ -2674,8 +2674,8 @@ function FreezoneChatDock({
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId !== pointerId) return;
       pointerX = moveEvent.clientX;
-      // 一帧只画一次：高刷鼠标/触控板一帧能推十几个 pointermove，逐个改宽度
-      // 等于一帧做十几次布局，白烧的那部分永远不会被显示出来。
+      // Paint once per frame: a high-refresh mouse/trackpad can push a dozen pointermoves per frame, and changing width
+      // each time means a dozen layouts per frame; the wasted work is never displayed.
       if (frame === 0) frame = window.requestAnimationFrame(paint);
     };
 
@@ -2698,8 +2698,8 @@ function FreezoneChatDock({
       }
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      // 取消掉的那帧里还压着最后一次 pointermove，先补算再落库，
-      // 否则松手瞬间宽度会回跳一帧。
+      // The cancelled frame still holds the last pointermove; compute it first, then persist,
+      // otherwise the width jumps back one frame the moment the pointer is released.
       measure();
       setChatWidth(nextChatWidth);
       setAgentHistoryWidth(nextHistoryWidth);
@@ -2738,8 +2738,8 @@ function FreezoneChatDock({
           variant="ghost"
           size="icon-sm"
           onClick={handleHeaderAddAgent}
-          aria-label="新建 Agent"
-          title="新建 Agent"
+          aria-label={t("freezone.shell.newAgent")}
+          title={t("freezone.shell.newAgent")}
           className="text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
         >
           <Plus className="size-4" />
@@ -2752,8 +2752,8 @@ function FreezoneChatDock({
           size="icon-sm"
           onClick={() => setAgentHistoryOpen((value) => !value)}
           aria-pressed={agentHistoryOpen}
-          aria-label={agentHistoryOpen ? "收起历史 Agent" : "打开历史 Agent"}
-          title={agentHistoryOpen ? "收起历史 Agent" : "打开历史 Agent"}
+          aria-label={agentHistoryOpen ? t("freezone.shell.hideAgentHistory") : t("freezone.shell.showAgentHistory")}
+          title={agentHistoryOpen ? t("freezone.shell.hideAgentHistory") : t("freezone.shell.showAgentHistory")}
           className={cn(
             "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
             agentHistoryOpen && "bg-white/[0.08] text-foreground",
@@ -2853,14 +2853,14 @@ function FreezoneChatDock({
     return () => window.clearTimeout(timeout);
   }, [isDesktop, open, shouldKeepPanelMounted]);
 
-  // 抽屉总宽（聊天 + 可选的历史 Agent 栏，中间 8px 分隔条）。占位块用同一个值，
-  // 保证被挤窄的左侧内容与抽屉严丝合缝。
+  // Total drawer width (chat + optional history-agent column, with an 8px divider in between). The placeholder block
+  // uses the same value so the squeezed left content fits the drawer exactly.
   const dockWidth = agentHistoryOpen ? chatWidth + agentHistoryWidth + 8 : chatWidth;
   const resizing = resizingPane !== null;
 
-  // 抽屉是通高浮层（压在顶栏之上），挤不动任何人，只能广播「右边被我占了多少」，
-  // 让横贯整屏的顶栏 / 底部状态条 / 任务面板自己往左收——右上角那组入口就跟着
-  // 让位。协议与消费方见 ./dockOffset。
+  // The drawer is a full-height overlay (above the top bar) and squeezes no one; it can only broadcast "how much of the
+  // right side I occupy" so the full-width top bar / bottom status bar / task panel shrink left themselves - the
+  // top-right entries yield with them. See ./dockOffset for the protocol and consumers.
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty(
@@ -2874,7 +2874,7 @@ function FreezoneChatDock({
     };
   }, [dockWidth, floating, hostActive, isDesktop, minContentWidth, panelVisible]);
 
-  // 浮窗要跟着窗口尺寸重新钳位，否则缩窗后标题栏可能跑出可视区、再也拖不回来。
+  // The floating window must re-clamp to the window size, otherwise after shrinking the window the title bar can leave the viewport and never be dragged back.
   useEffect(() => {
     if (!floating) return;
     const handleResize = () => setViewportSize({ width: window.innerWidth, height: window.innerHeight });
@@ -2883,8 +2883,8 @@ function FreezoneChatDock({
     return () => window.removeEventListener("resize", handleResize);
   }, [floating]);
 
-  // 可用高度是硬上限：矮窗口里宁可浮窗变矮，也不能压住底部状态区或越出视口、
-  // 让输入框够不着。
+  // The available height is a hard cap: in a short window the floating window should get shorter rather than cover the
+  // bottom status area or overflow the viewport, leaving the input unreachable.
   const floatHeight = Math.max(
     0,
     Math.min(
@@ -2907,11 +2907,11 @@ function FreezoneChatDock({
       ),
     ),
   }), [floatHeight]);
-  // 每次渲染现钳：viewportSize 变化会触发重渲染，钳位本身读实时的 window 尺寸。
+  // Clamp on every render: viewportSize changes trigger a re-render, and clamping reads the live window size.
   const renderedFloatPos = clampFloatPos(floatPos, dockWidth);
 
-  // 浮窗靠聊天头部拖动。按在头部的按钮/菜单上不算拖（交给按钮自己）。
-  // 与拖宽同理：拖动期间只改 DOM 的 right/top，松手才回写 state、落库。
+  // The floating window drags by the chat header. Pressing a button/menu in the header does not count as a drag (left to the button).
+  // Same as width dragging: only change the DOM right/top while dragging, write back state and persist on release.
   const startFloatDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     if (!floating || event.button !== 0) return;
     const target = event.target as HTMLElement | null;
@@ -2968,8 +2968,8 @@ function FreezoneChatDock({
     window.addEventListener("blur", cleanup);
   }, [clampFloatPos, dockWidth, floating, renderedFloatPos]);
 
-  // 拖宽期间把让位动画压成 0ms：留着 300ms 缓动的话，每一帧都会重排一段新的缓动，
-  // 顶栏边缘会像橡皮筋一样吊在抽屉后面。
+  // While width-dragging, compress the yield animation to 0ms: a 300ms easing would schedule a fresh easing every frame,
+  // and the top-bar edge would trail behind the drawer like a rubber band.
   useEffect(() => {
     if (!resizing) return;
     const root = document.documentElement;
@@ -3025,11 +3025,11 @@ function FreezoneChatDock({
     );
   }
 
-  // CSS 侧再兜一层：换窗口尺寸、或带着一个宽抽屉从工作流切到故事板时，存下来的
-  // 宽度可能已经超额——这里直接压回去，而不是改写用户的宽度偏好。
+  // A CSS-side backstop: after resizing the window, or switching from workflow to storyboard with a wide drawer, the stored
+  // width may already exceed the limit - clamp it here instead of rewriting the user's width preference.
   const dockMaxWidth = `calc(100vw - ${minContentWidth}px)`;
-  // 开合 / 收起历史栏时宽度平滑过渡；拖拽期必须整条关掉——拖的是同一个 width，
-  // 留着过渡就等于给每一帧都排一段 300ms 缓动，手感变成「橡皮筋拖后腿」。
+  // Width transitions smoothly on open/close / collapsing the history column; it must be fully disabled while dragging - the same
+  // width is being dragged, and keeping the transition would schedule a 300ms easing every frame, making it feel like a rubber band.
   const dockTransition = resizing
     ? "transition-none"
     : "transition-[opacity,transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
@@ -3052,9 +3052,9 @@ function FreezoneChatDock({
           onClick={() => onOpenChange(true)}
         />
       )}
-      {/* 故事板：在 flex 行里占一格，把 <main>(flex-1) 挤窄——抽屉本身仍是绝对定位
-          的浮层，正好盖住这一格。这样开合/拖宽只动这个占位块，抽屉内部布局与工作流
-          态共用同一份代码。拖拽中关掉宽度过渡，否则跟手会有一帧延迟。 */}
+      {/* Storyboard: takes one slot in the flex row, squeezing <main>(flex-1) narrower - the drawer itself is still an
+          absolutely positioned overlay that exactly covers this slot. So open/close/resize only moves this placeholder, and the
+          drawer's internal layout shares one code path with workflow mode. The width transition is off while dragging, else following lags a frame. */}
       {pushesContent && !floating && (
         <div
           ref={spacerRef}
@@ -3071,23 +3071,22 @@ function FreezoneChatDock({
       <aside
         ref={asideRef}
         className={cn(
-          // 贴右边、通屏高（对标 liblib）：fixed 而不是 absolute——抽屉要从屏幕
-          // 最顶铺到最底，而不是只占内容区那一段。顶栏/任务面板/底部状态条不靠 z 压，
-          // 是靠 --freezone-dock-width 自己整条往左收（见 dockOffset），两边宽度用同一个
-          // clamp，稳态下压根不重叠。
-          // z 必须 <50：shadcn 的浮层（下拉/选择/气泡/提示/弹窗）都 portal 到 body 且
-          // 定位层是 isolate z-50，抽屉一旦到 50 以上，抽屉内所有菜单都会被自己的实底
-          // 盖住 —— 表现就是「点了没反应」。45 只要高过任务面板(z-40)与其遮罩(z-30)即可。
-          // 浮窗：同一个 fixed 外壳改成圆角悬浮窗，位置/高度走 style；拖头部移动。
+          // Pinned right, full height: fixed rather than absolute - the drawer must span from the very top to the very bottom of
+          // the screen, not just the content area. The top bar / task panel / bottom status bar are not pushed aside by z, but
+          // shrink left by --freezone-dock-width themselves (see dockOffset); both sides use the same clamp, so in steady state they never overlap.
+          // z must be <50: shadcn overlays (dropdown/select/popover/tooltip/dialog) all portal to body with an isolate z-50
+          // positioning layer; once the drawer is above 50, every menu inside it is covered by its own solid background -
+          // which looks like "clicking does nothing". 45 only needs to exceed the task panel (z-40) and its mask (z-30).
+          // Floating: the same fixed shell becomes a rounded floating window, position/height via style; drag the header to move.
           floating
             ? "fixed z-[45] hidden flex-col overflow-hidden rounded-2xl border border-white/[0.12] shadow-[0_24px_64px_rgba(0,0,0,0.55)] lg:flex [&_[data-freezone-chat-drag-handle]]:cursor-grab"
             : "fixed inset-y-0 right-0 z-[45] hidden flex-col overflow-hidden border-l border-white/[0.12] shadow-none lg:flex",
           draggingFloat && "[&_[data-freezone-chat-drag-handle]]:cursor-grabbing",
-          // 实底 #212121（用户指定）：比故事板面板的 #262626 再深一档，agent 抽屉不再是半透明
-          // 毛玻璃。顺带把 backdrop-blur-2xl 一起去掉——通高的大半径模糊每帧都要
-          // 重新光栅化，是拖宽「跟不上手」的主因，实底之后它也没有可模糊的东西了。
-          // 浮窗例外：压在画布/预览图上，半透明 + 模糊能透出底下的内容（对标参考稿）。
-          // 浮窗只有 720px 高、面积小，模糊的光栅化成本比通高抽屉低得多。
+          // Solid #212121 (user specified): one step darker than the storyboard panel's #262626; the agent drawer is no longer a translucent
+          // frosted glass. backdrop-blur-2xl is removed too - a large-radius blur over a full-height area must be re-rasterized every
+          // frame, the main cause of resizing not keeping up with the hand, and with a solid background there is nothing to blur anyway.
+          // Exception for the floating window: over the canvas/preview, translucency + blur shows the content below (matching the reference design).
+          // The floating window is only 720px tall with a small area, so the blur's rasterization cost is far lower than the full-height drawer's.
           floating ? "bg-[#212121]/25 backdrop-blur-md" : "bg-[#212121]",
           dockTransition,
           panelVisible
@@ -3099,16 +3098,16 @@ function FreezoneChatDock({
         aria-label={title}
         onPointerDown={startFloatDrag}
       >
-        {/* 命中区整条压在面板内侧（12px）：外壳是 overflow-hidden，把手往画布那侧
-            平移出去的部分会被裁掉——连同命中区一起裁，原来 -translate-x-1 的写法
-            实际只剩 4px 能抓，这也是「拖起来别扭」的一半原因。
-            视觉只是贴着左描边的一条细线：hover 加粗提亮、拖拽中保持高亮。 */}
+        {/* The hit area sits entirely inside the panel edge (12px): the shell is overflow-hidden, so any part of the handle
+            translated out toward the canvas would be clipped along with its hit area - the old -translate-x-1 left only
+            4px grabbable, which was half the reason dragging felt awkward.
+            Visually it is just a thin line along the left border: thicker and brighter on hover, kept highlighted while dragging. */}
         <div
           className="group absolute inset-y-0 left-0 z-30 flex w-3 cursor-col-resize touch-none items-stretch justify-start"
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整聊天宽度"
-          title="调整聊天宽度"
+          aria-label={t("freezone.shell.resizeChat")}
+          title={t("freezone.shell.resizeChat")}
           onPointerDown={(event) => startPaneResize("chat", event)}
         >
           <span
@@ -3130,8 +3129,8 @@ function FreezoneChatDock({
               className="group relative z-20 flex w-2 shrink-0 cursor-col-resize touch-none items-stretch justify-center bg-white/[0.03] transition-colors hover:bg-white/[0.08]"
               role="separator"
               aria-orientation="vertical"
-              aria-label="调整历史 Agent 宽度"
-              title="调整历史 Agent 宽度"
+              aria-label={t("freezone.shell.resizeAgentHistory")}
+              title={t("freezone.shell.resizeAgentHistory")}
               onPointerDown={(event) => startPaneResize("history", event)}
             >
               <span
@@ -3144,10 +3143,10 @@ function FreezoneChatDock({
           )}
           <div
             className={cn(
-              // 与聊天区同底色：靠那条左描边分栏就够了。旧的 zinc-950/45 是叠在
-              // 半透明抽屉上的一层压暗，抽屉换实底后它会变成一块明显更黑的侧栏。
+              // Same background as the chat area: the left border is enough to divide the columns. The old zinc-950/45 was a darkening layer over
+              // the translucent drawer; with a solid drawer background it would become a noticeably blacker sidebar.
               "min-h-0 overflow-hidden border-l border-white/[0.08] bg-[#212121]",
-              // 与外壳同一条时间线：收起/展开一起走 300ms，拖拽期一起关掉。
+              // On the same timeline as the shell: collapse/expand run 300ms together, and both are turned off during dragging.
               resizing
                 ? "transition-none"
                 : "transition-[width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -3194,7 +3193,7 @@ function FreezoneAgentHistoryPanel({
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="搜索会话..."
+          placeholder={i18n.t("freezone.shell.searchSessions")}
           className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
       </label>
@@ -3207,8 +3206,8 @@ function FreezoneAgentHistoryPanel({
               type="button"
               onClick={() => onSelect(agent.id)}
               className={cn(
-                // 列表行不是卡片:圆角压到 6px、行高收一档,底色也别拉太亮 —— 0.14 的
-                // 填充在近黑面板上是一整块灰,选中态靠左侧竖条认就够了。
+                // A list row is not a card: corner radius down to 6px, row height one step smaller, and don't brighten the background too much - a 0.14
+                // fill is one big gray block on a near-black panel; the left vertical bar is enough to show the selected state.
                 "relative flex min-h-[44px] w-full flex-col items-start justify-center rounded-md px-3 py-2 text-left transition-colors",
                 active
                   ? "bg-white/[0.08] text-white before:absolute before:inset-y-2 before:left-0 before:w-px before:rounded-full before:bg-white/70"
@@ -3233,7 +3232,7 @@ function FreezoneAgentHistoryPanel({
         })}
         {visibleAgents.length === 0 && (
           <div className="px-2 py-8 text-center text-xs text-zinc-500">
-            没有匹配的 Agent
+            {i18n.t("freezone.shell.noMatchingAgent")}
           </div>
         )}
       </div>
@@ -3246,7 +3245,7 @@ function FreezoneAgentHistoryPanel({
           onClick={onAdd}
         >
           <Plus className="mr-1.5 size-4" />
-          新建 Agent
+          {i18n.t("freezone.shell.newAgent")}
         </Button>
       )}
     </div>
@@ -3263,16 +3262,16 @@ function formatAgentHistoryTime(timestamp: number): string {
 }
 
 /**
- * 虾导入口的位置（相对容器右下角的 right/bottom 偏移，px）。
- * 注意 key 不用 `supertale-` 前缀——那个前缀会被 reset-region-state 的
- * localStorage 清扫误删；这只是个 UI 位置偏好，跨区域保留没问题。
+ * Position of the assistant entry (right/bottom offsets relative to the container's bottom-right corner, px).
+ * Note the key avoids the `supertale-` prefix - that prefix is wiped by the reset-region-state localStorage
+ * sweep; this is only a UI position preference and is fine to keep across regions.
  */
 const CHAT_LAUNCHER_POS_STORAGE_KEY = "st.freezone.chatLauncherPos";
 const CHAT_LAUNCHER_VISUAL_WIDTH = 96;
 const CHAT_LAUNCHER_VISUAL_HEIGHT = 35;
 const CHAT_LAUNCHER_HIT_HEIGHT = 44;
 const CHAT_LAUNCHER_MARGIN = 8;
-/** 默认抬到 MiniMap（约 150px 高 + 15px 边距）上方，避免挡住画布缩略图。 */
+/** Raised above the MiniMap by default (about 150px tall + 15px margin) so it does not cover the canvas thumbnail. */
 const CHAT_LAUNCHER_DEFAULT_POS = { right: 16, bottom: 180 };
 const CHAT_LAUNCHER_DRAG_THRESHOLD = 4;
 
@@ -3303,7 +3302,7 @@ function FreezoneChatToggleButton({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [entered, setEntered] = useState(false);
   const [pos, setPos] = useState(loadChatLauncherPos);
-  // 拖拽后抑制紧随 pointerup 的 click，避免拖完顺手把面板打开。
+  // Suppress the click right after pointerup following a drag, so finishing a drag does not open the panel.
   const suppressClickRef = useRef(false);
 
   useEffect(() => {
@@ -3311,8 +3310,8 @@ function FreezoneChatToggleButton({
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  // 挂载时把存下来的位置钳回容器内——窗口缩小后旧坐标可能在可视区外，
-  // 按钮一旦飞出去就再也拖不回来了。
+  // On mount, clamp the stored position back into the container - after shrinking the window the old coordinates may be
+  // outside the viewport, and once the button flies out it can never be dragged back.
   useEffect(() => {
     const parent = buttonRef.current?.offsetParent as HTMLElement | null;
     if (!parent) return;
@@ -3625,7 +3624,7 @@ function CanvasConflictOverlay({
   const { t } = useTranslation();
   const [savingCopy, setSavingCopy] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
-  // Read once on mount so the "下载本地 JSON" button always renders against
+  // Read once on mount so the "Download local JSON" button always renders against
   // the snapshot captured at the moment the 409 fired, even if a later save
   // would have rewritten it.
   const snapshot = useMemo(() => readConflictSnapshot(), [readConflictSnapshot]);
@@ -3747,12 +3746,12 @@ function BackupStatusIndicator({
 }
 
 /**
- * 换画布期间的全屏遮挡层。
+ * Full-screen blocking layer while switching canvases.
  *
- * 刻意做成盖在 Canvas 之上的不透明层，而不是把 Canvas 换掉：ReactFlow 实例必须
- * 一直活着，hydrate 才能在挂节点之前先把相机摆到新画布的位置（见 useCanvasSync
- * 的 savedViewport 一段）。同时它也吃掉指针事件——底下的画布这会儿是空的，任何
- * 落到它身上的操作都会被随后的 setCanvasData 盖掉。
+ * Deliberately an opaque layer on top of Canvas rather than swapping Canvas out: the ReactFlow instance must stay
+ * alive so hydrate can first place the camera at the new canvas's position before mounting nodes (see the savedViewport
+ * section of useCanvasSync). It also swallows pointer events - the canvas underneath is empty at that moment, and any
+ * action landing on it would be overwritten by the following setCanvasData.
  */
 function CanvasLoadingScreen() {
   const { t } = useTranslation();
@@ -3764,8 +3763,8 @@ function CanvasLoadingScreen() {
 }
 
 function CanvasLoadingOverlay() {
-  // hydrate 还在飞时画布上的编辑既不会入队保存，也会被随后的 setCanvasData(remote)
-  // 整个盖掉。所以这层遮罩必须真的吃掉指针事件，不能只是视觉上蒙一层。
+  // While hydrate is in flight, edits on the canvas are neither queued for saving nor survive the following
+  // setCanvasData(remote) overwrite. So this mask must really swallow pointer events, not just dim visually.
   return (
     <div
       className="absolute inset-0 z-20 cursor-wait bg-bg-dark/10 backdrop-blur-[1px]"

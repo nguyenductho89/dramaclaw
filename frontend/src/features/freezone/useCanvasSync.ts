@@ -81,32 +81,32 @@ const DRAFT_DEBOUNCE_MS = 300;
 const LOCK_BUSY_MAX_RETRIES = 1;
 export const FREEZONE_HYDRATE_RELEASE_GRACE_MS = 50;
 /**
- * 已结算的 hydrate 结果保留多久可复用。顶栏在「虾画 / 虾集」之间来回切时会整体
- * 卸载再挂载画布，复用能省掉一趟往返的全量拉取。仅在期间没有任何本地编辑
- * （userEditsSinceHydrate === 0）时复用。
+ * How long a settled hydrate result may be reused. Switching the top bar between "Canvas" / "Market" unmounts then
+ * remounts the canvas, and reuse saves a full round-trip fetch. Only reused when there were no local edits
+ * in the meantime (userEditsSinceHydrate === 0).
  *
- * 窗口刻意压得很短：复用的 payload 连同它的 revision 一起被当成最新的，期间别的
- * 标签页或协作者改了同一张画布，我们既画的是旧内容，之后保存还会撞 409。10 秒够
- * 覆盖「切过去又立刻切回来」，再长就是拿正确性换手感了。
+ * The window is deliberately short: the reused payload and its revision are treated as the latest; if another tab or
+ * collaborator changed the same canvas meanwhile, we would draw stale content and later saves would hit 409. 10 seconds
+ * covers "switch away and immediately back"; longer would trade correctness for feel.
  */
 export const FREEZONE_HYDRATE_SETTLED_REUSE_MS = 10_000;
 
 /**
- * store 里当前装着哪张画布的内容。跨组件挂载保留（FreezoneShell 没有 key，切画布
- * 是同一个实例重跑 effect），用来区分两种情况：
- *   - 换画布：旧内容必须在发请求之前就卸掉，否则卸载与挂载会并进同一次提交；
- *   - 同一张画布重进（顶栏虾画/虾集来回切）：store 里就是要的内容，清空只会白闪。
+ * Which canvas's content the store currently holds. Kept across component mounts (FreezoneShell has no key, so switching
+ * canvases reruns the effect on the same instance), to distinguish two cases:
+ *   - switching canvases: the old content must be unmounted before the request, else unmount and mount merge into one commit;
+ *   - re-entering the same canvas (top-bar Canvas/Market toggle): the store already holds the wanted content, clearing only flashes.
  */
 let storeCanvasKey: string | null = null;
 
 /**
- * 谁拥有某张画布的 undo 镜像。读完即弃的清理挪进 scheduleIdle 之后，回调可能在
- * 切走之后才跑；这期间用户完全可能已经切回来并编辑过，盘上那份镜像属于新的一次
- * hydrate，旧回调再清就是把人家刚写的 undo 栈删了。
+ * Who owns a canvas's undo mirror. The read-and-discard cleanup was moved behind scheduleIdle, so the callback may run
+ * after the user switched away; meanwhile the user may have switched back and edited, and the mirror on disk then belongs
+ * to the new hydrate - the stale callback clearing it would delete the undo stack they just wrote.
  */
 /**
- * 没存过相机时的落点。与 canvasStore 的 currentViewport 初值、ReactFlow 的默认
- * 视口一致 —— 也就是「重挂一个全新 ReactFlow」原本会给到的位置。
+ * Landing position when no camera was stored. Matches canvasStore's initial currentViewport and ReactFlow's default
+ * viewport - i.e. where a freshly remounted ReactFlow would have put it.
  */
 const DEFAULT_HYDRATE_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 
@@ -124,13 +124,13 @@ function ownsHydrate(key: string, seq: number): boolean {
 }
 
 function storeKeyOf(project: string, canvasId: string): string {
-  // 分隔符写成转义形式：源码里真放一个 0x00 会让 GitHub 把整个 .ts 认成 binary，
-  // PR diff、代码搜索和一部分扫描工具都会直接跳过这个文件。
+  // The separator is written in escaped form: a literal 0x00 in the source makes GitHub treat the whole .ts as binary,
+  // so PR diffs, code search and some scanners would skip this file.
   return `${project}\u0000${canvasId}`;
 }
 
 /**
- * 把一段与「把画布画出来」无关的工作挪出关键路径。timeout 兜底保证再忙也会跑到。
+ * Moves work unrelated to "drawing the canvas" off the critical path. The timeout fallback guarantees it runs however busy things are.
  */
 function scheduleIdle(run: () => void, timeout = 2_000): void {
   if (typeof window.requestIdleCallback === "function") {
@@ -142,7 +142,7 @@ function scheduleIdle(run: () => void, timeout = 2_000): void {
 
 let prunePending = false;
 
-/** 整页生命周期内只调度一次旧草稿清理，且一旦排上队就让它跑完。 */
+/** Schedule the legacy draft cleanup only once per page lifetime, and once queued let it run to completion. */
 function schedulePruneOnce(): void {
   if (prunePending) return;
   prunePending = true;
@@ -323,10 +323,10 @@ function statusFromError(err: unknown): number | null {
  * touch it, so they no longer trigger a full PUT.
  */
 /**
- * 逐节点/逐边的指纹缓存。store 的更新是不可变的：一次选中、一次拖拽只会替换受影响的
- * 那几个节点对象，其余节点对象的引用不变。按对象身份缓存分片后，签名的代价就从
- * 「每次变更都 stringify 整张图」降到「只 stringify 真正变了的那几个节点」——画布里
- * 有几十个图片/视频节点时，这是切页那一帧卡死的主要来源。
+ * Per-node / per-edge fingerprint cache. Store updates are immutable: one selection or drag only replaces the affected
+ * node objects while the other node objects keep their references. Caching slices by object identity drops the signature
+ * cost from "stringify the whole graph on every change" to "stringify only the nodes that really changed" - with dozens of
+ * image/video nodes on the canvas this was the main source of the frozen frame on page switch.
  */
 const nodeSignatureCache = new WeakMap<object, string>();
 const edgeSignatureCache = new WeakMap<object, string>();
@@ -686,7 +686,7 @@ interface CanvasSyncResult {
   metadata: Record<string, unknown> | null;
   revision: number | null;
   hydratedCanvasId: string | null;
-  /** 与 `hydratedCanvasId` 同时更新的项目 id；跨项目同名画布只能靠它区分。 */
+  /** Project id updated together with `hydratedCanvasId`; same-named canvases across projects can only be told apart by it. */
   hydratedProject: string | null;
   /**
    * Reported by the backend on the last save. `null` means we have not
@@ -704,7 +704,7 @@ interface CanvasSyncResult {
   restoreMainlineDefault: (options?: { bestEffort?: boolean }) => Promise<string>;
   /**
    * Read the conflict snapshot stashed by the 409 path. Returns `null` if no
-   * snapshot exists for the current canvas. Used by the overlay's "下载本地
+   * snapshot exists for the current canvas. Used by the overlay's "Download local
    * JSON" button.
    */
   readConflictSnapshot: () => ConflictSnapshot | null;
@@ -728,9 +728,9 @@ export function useCanvasSync(
   const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
   const [revision, setRevision] = useState<number | null>(null);
   const [hydratedCanvasId, setHydratedCanvasId] = useState<string | null>(null);
-  // 与 hydratedCanvasId 成对更新，永远在同一个事件里 set，所以两者不会撕裂。
-  // 个人画布的 id 由用户名推出（personalCanvasIdForUsername），跨项目是同一个 id，
-  // 光看 canvasId 分不出「换了项目」，必须连项目一起报出去。
+  // Updated in pairs with hydratedCanvasId and always set in the same event, so the two cannot tear.
+  // A personal canvas id derives from the username (personalCanvasIdForUsername) and is the same id across projects,
+  // so canvasId alone cannot tell "the project changed"; the project must be reported too.
   const [hydratedProject, setHydratedProject] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   // Surfaced backup status from the most recent save. The hook always
@@ -853,7 +853,7 @@ export function useCanvasSync(
   };
 
   // Stash local edits to localStorage so the user can grab them via the
-  // conflict overlay's "下载本地 JSON" button even after they refresh.
+  // conflict overlay's "Download local JSON" button even after they refresh.
   const snapshotConflict = (args: SaveArgs) => {
     writeConflictSnapshot({
       canvas_id: args.canvasId,
@@ -1015,8 +1015,8 @@ export function useCanvasSync(
       revisionRef.current = remoteRevision;
       setRevision(remoteRevision);
       canvasEnvelopeRef.current = canvasEnvelopeFromRemote(remote);
-      // 读取期诊断:后端报的历史外项目引用交给节点遮罩显示 + 一键修复。整表替换,
-      // 上一张画布的诊断绝不能留到这一张(干净画布不带这个字段 = 全清)。
+      // Read-time diagnostics: out-of-project history references reported by the backend are handed to the node mask for display + one-click repair.
+      // Replace the whole table: the previous canvas's diagnostics must never carry over (a clean canvas has no such field = clear all).
       publishForeignMediaRefs(project, canvasId, remote.foreign_media ?? []);
       lastSignatureRef.current = nextSignature;
       lastRemoteNodeCountRef.current = remoteNodes.length;
@@ -1094,9 +1094,9 @@ export function useCanvasSync(
   // ---- 1. Hydrate ---- //
   useEffect(() => {
     let cancelled = false;
-    // 清理旧草稿要遍历并解析整个 localStorage（草稿动辄几 MB），放在挂载的关键路径上
-    // 会直接卡住切页那一帧；挪到空闲期做，它跟本次 hydrate 没有先后依赖。整页只跑一次，
-    // 且不随卸载取消 —— 否则「进画布不到两秒就切走」这种最常见的路径永远清理不到。
+    // Cleaning old drafts has to traverse and parse the whole localStorage (drafts are often several MB); on the mount critical
+    // path it would stall the page-switch frame, so do it when idle - it has no ordering dependency on this hydrate. Runs once per
+    // page and is not cancelled on unmount - otherwise the common path "leave the canvas within two seconds" would never clean up.
     schedulePruneOnce();
     const hydrateFlight = acquireHydrateFlight(project, canvasId, reloadKey);
     setSyncStatus("loading");
@@ -1117,17 +1117,17 @@ export function useCanvasSync(
     // session owns save scheduling from now on, and the old one can no longer
     // write to anything this canvas reads.
     startSaveSession();
-    // 换画布时先把旧内容卸掉，别等 hydrate 回来。
+    // On a canvas switch, unmount the old content first instead of waiting for hydrate to return.
     //
-    // FreezoneShell 没有 key，切画布走的是「同一个组件重跑 effect」，所以在这里不
-    // 清空的话，旧画布的几百个节点会一直挂着，直到 setCanvasData 把新内容换上去
-    // ——React 会把「卸载 N 个旧的」和「挂载 M 个新的」并进同一次同步提交，实测
-    // 350 节点一次冻 ~1.4s。提前清空把它拆成两次：本次提交只卸载（随后画面是
-    // FreezoneShell 的全屏 loading），等请求回来再单独挂载。
+    // FreezoneShell has no key, so switching canvases reruns the effect on the same component; if we do not clear here,
+    // the old canvas's hundreds of nodes stay mounted until setCanvasData swaps in the new content - React merges
+    // "unmount N old" and "mount M new" into one synchronous commit, measured at ~1.4s freeze for 350 nodes. Clearing early
+    // splits it into two: this commit only unmounts (the screen then shows FreezoneShell's full-screen loading), and the
+    // new content is mounted separately once the request returns.
     //
-    // 只在确实换了画布时清：同一张画布重进（顶栏虾画/虾集来回切）store 里就是要
-    // 的内容，清掉只会白闪一下。写盘与自动保存全部被 switchingRef 挡住（见
-    // decideSaveAction 的 switching 分支），空 store 不会外泄成一次覆盖保存。
+    // Only clear when the canvas really changed: re-entering the same canvas (top-bar Canvas/Market toggle) means the store already
+    // holds the wanted content and clearing only flashes. Disk writes and autosave are all blocked by switchingRef (see the switching
+    // branch of decideSaveAction), so the empty store cannot leak out as an overwriting save.
     if (
       storeCanvasKey !== storeKeyOf(project, canvasId) &&
       useCanvasStore.getState().nodes.length > 0
@@ -1149,8 +1149,8 @@ export function useCanvasSync(
         revisionRef.current = remoteRevision;
         setRevision(remoteRevision);
         canvasEnvelopeRef.current = canvasEnvelopeFromRemote(remote);
-        // 读取期诊断:后端报的历史外项目引用交给节点遮罩显示 + 一键修复。整表替换,
-        // 上一张画布的诊断绝不能留到这一张(干净画布不带这个字段 = 全清)。
+        // Read-time diagnostics: out-of-project history references reported by the backend are handed to the node mask for display + one-click repair.
+        // Replace the whole table: the previous canvas's diagnostics must never carry over (a clean canvas has no such field = clear all).
         publishForeignMediaRefs(project, canvasId, remote.foreign_media ?? []);
         const nodes = (remote.nodes ?? []) as Parameters<typeof setCanvasData>[0];
         const edges = (remote.edges ?? []) as Parameters<typeof setCanvasData>[1];
@@ -1185,8 +1185,8 @@ export function useCanvasSync(
           lastSignatureRef.current = canvasContentSignature(nodes, edges);
           hydratedRef.current = true;
           switchingRef.current = false;
-          // 与远端分支同理：相机先落位（此刻 store 是空的，代价接近零），节点再
-          // 按最终的缩放档一次挂上，并且先出 shell 分批补齐。
+          // Same as the remote branch: place the camera first (the store is empty now, cost near zero), then mount the nodes
+          // once at the final zoom tier, shell first, and fill in batches.
           const draftViewport = isViewport(draftDecision.draft.viewport)
             ? draftDecision.draft.viewport
             : readStoredViewport(project, canvasId) ??
@@ -1239,26 +1239,26 @@ export function useCanvasSync(
         // was during the last content edit. Fall back to the backend value only
         // when there's no local copy (fresh browser / cross-device).
         //
-        // 相机必须先于节点落位。原来这里在 setCanvasData 之后再用一个 rAF 把视口
-        // 推给 ReactFlow，于是新画布的节点是「按上一张画布的相机」挂载的：视口裁剪
-        // 算的是错的一批，一帧后相机跳到正确位置又要重算；缩放跨过
-        // LOW_DETAIL_ZOOM_THRESHOLD 时连 onlyRenderVisibleElements 的开关也跟着翻，
-        // 一次切换要挂两三波。此刻 store 已被上面清空，设视口没有任何节点要重排，
-        // 代价接近零；等下面挂节点时缩放档与裁剪窗口都已是最终值，只挂一次。
+        // The camera must be placed before the nodes. This used to push the viewport to ReactFlow in an rAF after setCanvasData,
+        // so the new canvas's nodes were mounted "under the previous canvas's camera": viewport culling was computed wrongly for one
+        // batch, then the camera jumped to the right place a frame later and had to recompute; when zoom crossed
+        // LOW_DETAIL_ZOOM_THRESHOLD even the onlyRenderVisibleElements switch flipped, so one switch mounted two or three waves.
+        // The store has just been cleared above, so setting the viewport reflows no nodes and the cost is near zero; by the time
+        // nodes mount below, both the zoom tier and the culling window are final, so they mount only once.
         const savedViewport =
           readStoredViewport(project, canvasId) ??
           (isViewport(remote.viewport) ? remote.viewport : null);
-        // 没存过相机也必须显式落位：新建画布明确存的是 viewport: null，老数据也
-        // 可能没有。Canvas 现在跨项目常驻，不再靠重挂拿到一个全新的 ReactFlow
-        // 实例，这里不复位就会继续用上一张画布的坐标和缩放 —— 节点可能整个落在
-        // 屏幕外，lowDetail 档也是上一张画布的。
+        // Even with no stored camera we must place it explicitly: a new canvas explicitly stores viewport: null, and old data
+        // may lack it too. Canvas now stays resident across projects and no longer gets a fresh ReactFlow instance by remounting;
+        // without a reset it would keep using the previous canvas's coordinates and zoom - the nodes may land entirely off
+        // screen, and the lowDetail tier would also be the previous canvas's.
         const hydrateViewport = savedViewport ?? DEFAULT_HYDRATE_VIEWPORT;
         lastSavedViewportRef.current = hydrateViewport;
         setViewportState(hydrateViewport);
         reactFlow.setViewport(hydrateViewport, { duration: 0 });
-        // 裁剪开关要跟着相机一起走，否则节点会按上一张画布的缩放档挂一整波。
+        // The culling switch must move together with the camera, else the nodes mount a whole wave at the previous canvas's zoom tier.
         notifyCanvasHydrateViewport(hydrateViewport.zoom);
-        // 这一次挂载的节点先出 shell，再由升级队列每帧 3 个补成完整组件。
+        // The nodes mounted this time come out as shells first, then the upgrade queue completes them 3 per frame.
         beginCanvasHydrateBurst();
         setCanvasData(nodes, edges);
         storeCanvasKey = storeKeyOf(project, canvasId);
@@ -1274,26 +1274,25 @@ export function useCanvasSync(
         // otherwise (edited on another device, backend newer) we'd let the user
         // undo into a state that never existed here.
         //
-        // 放到空闲期做：readStoredHistory 是一次同步的 JSON.parse（草稿动辄几 MB），
-        // restoreHistory 还要把最多 100 个快照逐个跑 normalizeCanvasData（每个快照
-        // 几百个节点、每个节点一次 createDefaultData）。这一整块和「把画布画出来」
-        // 没有先后依赖——画布刚出现的那一刻用户不可能已经按下 undo——留在关键路径上
-        // 只是白白拉长切换那一帧。
+        // Do this when idle: readStoredHistory is a synchronous JSON.parse (drafts are often several MB), and
+        // restoreHistory runs normalizeCanvasData over up to 100 snapshots (hundreds of nodes each, one createDefaultData per
+        // node). This whole block has no ordering dependency on "drawing the canvas" - the user cannot have pressed undo at the
+        // moment the canvas first appears - so keeping it on the critical path only lengthens the switching frame.
         const hydratedSignature = lastSignatureRef.current;
         scheduleIdle(() => {
           // Read-once: the mirror only exists to bridge this refresh. Drop it
           // whether or not it was usable so undo stacks don't accumulate per
           // canvas. The write effect re-persists it once the user edits again.
-          // 这张画布已经被更晚的一次 hydrate 接管（切走又切回来），盘上的镜像归
-          // 那一次所有，无论本次是否 cancelled 都不该动。
+          // This canvas has already been taken over by a later hydrate (switched away and back); the mirror on disk belongs
+          // to that one and must not be touched regardless of whether this run was cancelled.
           if (!ownsHydrate(hydrateKey, hydrateToken)) return;
           if (cancelled) {
             clearStoredHistory(project, canvasId);
             return;
           }
           const storedHistory = readStoredHistory(project, canvasId);
-          // 空闲期跑意味着中间可能已经有一次真实编辑；那次编辑的快照已经进了
-          // history，这时再整体替换会把它吞掉，所以只在完全没编辑过时恢复。
+          // Running when idle means a real edit may already have happened; that edit's snapshot is already in
+          // history, and replacing wholesale now would swallow it, so only restore when nothing has been edited.
           if (
             storedHistory &&
             storedHistory.signature === hydratedSignature &&
@@ -1301,10 +1300,10 @@ export function useCanvasSync(
           ) {
             restoreHistory({ past: storedHistory.past, future: storedHistory.future });
           }
-          // 空闲期可能已经晚于 edit-gated 的镜像写入（那个 effect 400ms 防抖，而
-          // hydrate 之后主线程正忙着每帧升级 3 个壳）。这时候盘上那份镜像是用户
-          // 刚才那次编辑写的、不是我们要读完即弃的那份，清掉就等于把他的跨刷新
-          // undo 栈删了。
+          // The idle run may be later than the edit-gated mirror write (that effect debounces 400ms, and after
+          // hydrate the main thread is busy upgrading 3 shells per frame). Then the mirror on disk is what the user's edit just
+          // wrote, not the one we meant to read and discard, and clearing it would delete their cross-refresh
+          // undo stack.
           if (useCanvasStore.getState().userEditsSinceHydrate === 0) {
             clearStoredHistory(project, canvasId);
           }
@@ -1405,8 +1404,8 @@ export function useCanvasSync(
   // Save fires when the persisted canvas shape (nodes/edges) or the
   // shotMetadata changes — never on pure view-state churn.
   useEffect(() => {
-    // 跨项目粘贴期间（canvasAutosaveHold）攒下的保存：草稿照写，PUT 等素材拷进本项目、
-    // URL 改写完再发，源项目的 URL 就不会先落库一次。
+    // Saves accumulated during a cross-project paste (canvasAutosaveHold): drafts are still written, but the PUT is sent only after the assets
+    // are copied into this project and the URLs rewritten, so the source project's URLs never land in the database first.
     let saveDeferredByHold = false;
     const triggerSave = () => {
       if (!hydratedRef.current || switchingRef.current) return;
@@ -1440,12 +1439,12 @@ export function useCanvasSync(
       if (state.viewportBookmarks !== prev.viewportBookmarks) {
         triggerSave();
       }
-      // store 里还住着视口、选中、弹窗等纯视图状态，它们的变更不可能改到 nodes/edges。
-      // 数组引用没变就直接放行，连签名都不用算 —— 切页时这里是热点。
+      // The store also holds pure view state such as viewport, selection and dialogs, whose changes cannot touch nodes/edges.
+      // If the array references are unchanged, let it through without even computing the signature - this is a hotspot on page switch.
       if (state.nodes === prev.nodes && state.edges === prev.edges) {
-        // 抑制标志总是紧挨着 applyCanvasDataEdit 设的（同步，中间插不进别的变更），
-        // 所以这里必须顺手消费掉：万一那次程序化改写产出的数组原样未变，标志留到
-        // 下一次就会把用户真正的编辑连保存带草稿一起吞了。
+        // The suppression flag is always set right after applyCanvasDataEdit (synchronously, nothing else can slip in between),
+        // so it must be consumed here: if that programmatic rewrite happens to produce unchanged arrays, the flag would linger
+        // to the next change and swallow the user's real edit, both the save and the draft.
         suppressNextCanvasAutosaveRef.current = false;
         return;
       }
@@ -1618,7 +1617,7 @@ export function useCanvasSync(
   const retry = () => {
     // The user picked "refresh" on the conflict overlay — discard the local
     // snapshot so a future 409 starts fresh. If they wanted to keep it, they
-    // would have clicked the "下载本地 JSON" button first.
+    // would have clicked the "Download local JSON" button first.
     clearConflictSnapshot(canvasId);
     clearCanvasDraft(project, canvasId);
     setReloadKey((k) => k + 1);
@@ -1740,7 +1739,7 @@ export function useCanvasSync(
 
 interface SaveArgs {
   project: string;
-  /** 保存链路上的所有文案都要跟着界面语言走，由 hook 从 useTranslation 传下来。 */
+  /** All copy on the save path must follow the UI language; it is passed down from useTranslation by the hook. */
   t: TFn;
   canvasId: string;
   nodes: unknown[];
@@ -1876,7 +1875,7 @@ async function performSave(
    * new canvas's state.
    */
   dispatchGeneration: number,
-  /** 已经为「外项目媒体引用」自愈过几轮。只允许一轮,见 handleSaveError。 */
+  /** How many rounds of self-healing have already run for "out-of-project media references". Only one round is allowed, see handleSaveError. */
   mediaScopeAttempt = 0,
 ): Promise<boolean> {
   const payload = buildSavePayload({
@@ -2001,7 +2000,7 @@ function consumeSaveResponse(
   }
   const backupStatus: CanvasBackupStatus | undefined = response.backup_status;
   // Always publish the latest server-reported backup_status so the UI can
-  // surface or clear "备份中" / "备份失败" indicators in lock-step with the
+  // surface or clear "Backing up" / "Backup failed" indicators in lock-step with the
   // wire response. Treat undefined as "no information" (legacy backend);
   // "synced" / "disabled" are silent in the UI.
   args.publishBackupStatus?.(backupStatus ?? null);
@@ -2101,9 +2100,9 @@ async function handleSaveError(
       return true;
     }
     case "media_scope": {
-      // 后端拦下了本次新引入的外项目媒体引用(静态资源按 URL 里的项目 id 独立鉴权,
-      // 存下去就是给其他成员一片 403)。可以自愈:把素材拷进本项目、改掉引用再重试。
-      // 只自愈一轮——第二次还被拒说明拷贝或改写没生效,再转一圈就是死循环。
+      // The backend blocked the newly introduced out-of-project media reference (static assets are authorized independently by the project id in the URL;
+      // saving it would give other members a 403). It can self-heal: copy the assets into this project, rewrite the references and retry.
+      // Heal only one round - if the second attempt is still rejected, the copy or rewrite did not take effect, and looping again is an endless loop.
       if (mediaScopeAttempt > 0) {
         dropPendingId();
         args.setError(args.t("freezone.canvasSync.mediaScopeMismatch"));
@@ -2117,7 +2116,7 @@ async function handleSaveError(
           (useCanvasStore.getState().nodes.find((node) => node.id === id)?.data ??
             null) as never,
         updateNodeData: (id, patch) => {
-          // 这是修复既有数据,不是用户操作:不进撤销栈。
+          // This repairs existing data, it is not a user action: do not push onto the undo stack.
           useCanvasStore
             .getState()
             .updateNodeData(id, patch, { recordHistory: false });
@@ -2127,8 +2126,8 @@ async function handleSaveError(
         return false;
       }
       if (repair.retryable) {
-        // 拷贝这一趟没走通(网络/5xx),不是"这些素材拷不了"。一个字段都没被改，
-        // 原 URL 原样留着,报个错让用户重试就行——置空是不可逆的,不能拿它换一次抖动。
+        // This copy round did not go through (network/5xx); it does not mean "these assets cannot be copied". No field was changed,
+        // the original URLs are left as they are, just report an error so the user retries - clearing them is irreversible and must not be traded for a flicker.
         dropPendingId();
         args.setError(args.t("freezone.canvasSync.mediaScopeRetryable"));
         args.setStatus("error");
@@ -2140,13 +2139,13 @@ async function handleSaveError(
         repair,
       );
       if (repairedNodes === (args.nodes as unknown)) {
-        // 一处都没改到(节点已删 / 字段被用户换过 / 路径对不上):重试也一样会被拒。
+        // Nothing was changed (node deleted / field replaced by the user / path mismatch): retrying would be rejected the same way.
         dropPendingId();
         args.setError(args.t("freezone.canvasSync.mediaScopeMismatch"));
         args.setStatus("error");
         return false;
       }
-      // 载荷变了就必须换 client_save_id:沿用旧的会撞上后端的幂等记录,回 409。
+      // If the payload changed we must use a new client_save_id: reusing the old one would hit the backend's idempotency record and return 409.
       const retryClientSaveId = generateClientSaveId();
       args.pendingClientSaveIdRef.current = retryClientSaveId;
       args.pendingClientSaveIdSignatureRef.current = null;

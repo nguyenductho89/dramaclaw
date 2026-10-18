@@ -10,7 +10,7 @@
  * `useTaskController` reconciles a card against the live `/tasks` list by
  * comparing `key.scope` to the row's stored `scope`. That stored scope is the
  * hashed value above, so the FE reconcile key MUST reproduce the exact same
- * hash — a human-readable placeholder like `scene:大学宿舍:pano` never matches,
+ * hash - a human-readable placeholder like `scene:Dorm:pano` never matches,
  * which silently drops the loading state after a refresh.
  */
 

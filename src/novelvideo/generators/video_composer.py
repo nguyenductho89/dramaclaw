@@ -1,6 +1,6 @@
-"""视频合成模块。
+"""Video composition module.
 
-使用 FFmpeg + MoviePy 生成视频。
+Generates video using FFmpeg + MoviePy.
 """
 
 import os
@@ -42,7 +42,7 @@ def _drawtext_fontfile_arg() -> str:
 
 
 class SceneAsset(BaseModel):
-    """场景素材。"""
+    """Scene asset."""
 
     scene_number: int
     image_path: str
@@ -54,7 +54,7 @@ class SceneAsset(BaseModel):
 
 
 class VideoResult(BaseModel):
-    """视频生成结果。"""
+    """Video generation result."""
 
     success: bool
     video_path: Optional[str] = None
@@ -63,7 +63,7 @@ class VideoResult(BaseModel):
 
 
 class KenBurnsEffect:
-    """Ken Burns 效果配置。"""
+    """Ken Burns effect configuration."""
 
     ZOOM_IN = "zoom_in"
     ZOOM_OUT = "zoom_out"
@@ -74,30 +74,30 @@ class KenBurnsEffect:
 
     @staticmethod
     def get_ffmpeg_filter(effect: str, duration: float, width: int, height: int) -> str:
-        """获取 FFmpeg 滤镜字符串。
+        """Get the FFmpeg filter string.
 
         Args:
-            effect: 效果类型
-            duration: 时长（秒）
-            width: 输出宽度
-            height: 输出高度
+            effect: effect type
+            duration: duration (seconds)
+            width: output width
+            height: output height
 
         Returns:
-            FFmpeg 滤镜字符串
+            FFmpeg filter string
         """
-        # 计算帧数
+        # Compute frame count
         fps = 30
         frames = int(duration * fps)
 
         if effect == KenBurnsEffect.ZOOM_IN:
-            # 从 100% 缩放到 120%
+            # Zoom from 100% to 120%
             return (
                 f"scale=8000:-1,"
                 f"zoompan=z='min(zoom+0.001,1.2)':d={frames}:x='iw/2-(iw/zoom/2)':"
                 f"y='ih/2-(ih/zoom/2)':s={width}x{height}:fps={fps}"
             )
         elif effect == KenBurnsEffect.ZOOM_OUT:
-            # 从 120% 缩放到 100%
+            # Zoom from 120% to 100%
             return (
                 f"scale=8000:-1,"
                 f"zoompan=z='if(lte(zoom,1.0),1.2,max(1.001,zoom-0.001))':d={frames}:"
@@ -116,21 +116,21 @@ class KenBurnsEffect:
                 f"y='ih/2-(ih/zoom/2)':s={width}x{height}:fps={fps}"
             )
         else:
-            # 默认：静态显示
+            # Default: static display
             return f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2"
 
 
 class VideoComposer:
-    """视频合成器。
+    """Video composer.
 
-    将图像、音频、字幕合成为视频。
+    Composes images, audio, and subtitles into a video.
 
-    示例:
+    Example:
         >>> composer = VideoComposer()
         >>> result = await composer.compose_episode(
         ...     scenes=scenes,
         ...     output_path="output/ep01.mp4",
-        ...     title="第一集"
+        ...     title="Episode 1"
         ... )
     """
 
@@ -140,12 +140,12 @@ class VideoComposer:
         height: Optional[int] = None,
         fps: Optional[int] = None,
     ):
-        """初始化合成器。
+        """Initialize the composer.
 
         Args:
-            width: 视频宽度
-            height: 视频高度
-            fps: 帧率
+            width: video width
+            height: video height
+            fps: frame rate
         """
         config = get_video_config()
         self.width = width or config["width"]
@@ -164,31 +164,31 @@ class VideoComposer:
         add_end_card: bool = True,
         ken_burns: bool = True,
     ) -> VideoResult:
-        """合成单集视频。
+        """Compose a single-episode video.
 
         Args:
-            scenes: 场景素材列表
-            output_path: 输出路径
-            title: 标题（用于片头）
-            add_title_card: 是否添加片头
-            add_end_card: 是否添加片尾
-            ken_burns: 是否使用 Ken Burns 效果
+            scenes: list of scene assets
+            output_path: output path
+            title: title (used for the title card)
+            add_title_card: whether to add a title card
+            add_end_card: whether to add an end card
+            ken_burns: whether to use the Ken Burns effect
 
         Returns:
-            合成结果
+            Composition result
         """
         try:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            # 创建临时目录
+            # Create a temporary directory
             with tempfile.TemporaryDirectory() as temp_dir:
                 scene_videos = []
 
-                # 为每个场景创建视频片段
+                # Create a video clip for each scene
                 for i, scene in enumerate(scenes):
                     scene_video = os.path.join(temp_dir, f"scene_{i:03d}.mp4")
 
-                    # 选择 Ken Burns 效果
+                    # Pick a Ken Burns effect
                     effect = None
                     if ken_burns:
                         effects = [
@@ -199,7 +199,7 @@ class VideoComposer:
                         ]
                         effect = effects[i % len(effects)]
 
-                    # 创建场景视频
+                    # Create the scene video
                     success = await self._create_scene_video(
                         scene=scene,
                         output_path=scene_video,
@@ -209,21 +209,21 @@ class VideoComposer:
                     if success:
                         scene_videos.append(scene_video)
 
-                # 添加片头
+                # Add the title card
                 if add_title_card and title:
                     title_video = os.path.join(temp_dir, "title.mp4")
                     if not await self._create_title_card(normalize_video_title(title), title_video):
                         return VideoResult(success=False, error="failed to create title card")
                     scene_videos.insert(0, title_video)
 
-                # 添加片尾
+                # Add the end card
                 if add_end_card:
                     end_video = os.path.join(temp_dir, "end.mp4")
                     if not await self._create_end_card(end_video):
                         return VideoResult(success=False, error="failed to create end card")
                     scene_videos.append(end_video)
 
-                # 合并所有片段
+                # Merge all clips
                 if not scene_videos:
                     return VideoResult(success=False, error="no scene videos were created")
                 if not await self._concat_videos(scene_videos, output_path):
@@ -231,12 +231,12 @@ class VideoComposer:
                 if not os.path.isfile(output_path) or os.path.getsize(output_path) <= 0:
                     return VideoResult(success=False, error="output file was not created")
 
-                # 计算总时长
+                # Compute total duration
                 total_duration = sum(s.duration_seconds for s in scenes)
                 if add_title_card:
-                    total_duration += 3.0  # 片头 3 秒
+                    total_duration += 3.0  # title card 3 seconds
                 if add_end_card:
-                    total_duration += 2.0  # 片尾 2 秒
+                    total_duration += 2.0  # end card 2 seconds
 
                 return VideoResult(
                     success=True,
@@ -258,18 +258,18 @@ class VideoComposer:
         output_path: str,
         effect: Optional[str] = None,
     ) -> bool:
-        """创建单个场景的视频。
+        """Create the video for a single scene.
 
         Args:
-            scene: 场景素材
-            output_path: 输出路径
-            effect: Ken Burns 效果
+            scene: scene asset
+            output_path: output path
+            effect: Ken Burns effect
 
         Returns:
-            是否成功
+            Whether it succeeded
         """
         try:
-            # 构建 FFmpeg 命令
+            # Build the FFmpeg command
             if effect:
                 video_filter = KenBurnsEffect.get_ffmpeg_filter(
                     effect, scene.duration_seconds, self.width, self.height
@@ -309,21 +309,21 @@ class VideoComposer:
         except (TaskCancelled, TaskTimedOut):
             raise
         except Exception as e:
-            print(f"创建场景视频失败: {e}")
+            print(f"Failed to create scene video: {e}")
             return False
 
     async def _create_title_card(self, title: str, output_path: str) -> bool:
-        """创建片头。
+        """Create the title card.
 
         Args:
-            title: 标题文本
-            output_path: 输出路径
+            title: title text
+            output_path: output path
 
         Returns:
-            是否成功
+            Whether it succeeded
         """
         try:
-            # 使用 FFmpeg 创建带文字的片头
+            # Use FFmpeg to create a title card with text
             duration = 3.0
             text_file = output_path + ".title.txt"
             Path(text_file).write_text(normalize_video_title(title), encoding="utf-8")
@@ -367,18 +367,18 @@ class VideoComposer:
                 pass
 
     async def _create_end_card(self, output_path: str) -> bool:
-        """创建片尾。
+        """Create the end card.
 
         Args:
-            output_path: 输出路径
+            output_path: output path
 
         Returns:
-            是否成功
+            Whether it succeeded
         """
         try:
             duration = 2.0
             text_file = output_path + ".end.txt"
-            Path(text_file).write_text("敬请期待下集", encoding="utf-8")
+            Path(text_file).write_text("To be continued", encoding="utf-8")
 
             cmd = [
                 "ffmpeg",
@@ -442,17 +442,17 @@ class VideoComposer:
         return result.returncode == 0
 
     async def _concat_videos(self, video_paths: list[str], output_path: str) -> bool:
-        """合并多个视频。
+        """Merge multiple videos.
 
         Args:
-            video_paths: 视频路径列表
-            output_path: 输出路径
+            video_paths: list of video paths
+            output_path: output path
 
         Returns:
-            是否成功
+            Whether it succeeded
         """
         try:
-            # 创建文件列表
+            # Create the file list
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".txt", delete=False
             ) as f:
@@ -484,7 +484,7 @@ class VideoComposer:
         except (TaskCancelled, TaskTimedOut):
             raise
         except Exception as e:
-            print(f"合并视频失败: {e}")
+            print(f"Failed to merge videos: {e}")
             return False
 
     async def add_subtitles(
@@ -494,19 +494,19 @@ class VideoComposer:
         output_path: str,
         style: str = "FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2",
     ) -> VideoResult:
-        """为视频添加字幕。
+        """Add subtitles to a video.
 
         Args:
-            video_path: 视频路径
-            subtitle_path: 字幕路径（.srt 或 .vtt）
-            output_path: 输出路径
-            style: 字幕样式
+            video_path: video path
+            subtitle_path: subtitle path (.srt or .vtt)
+            output_path: output path
+            style: subtitle style
 
         Returns:
-            处理结果
+            Processing result
         """
         try:
-            # 转换 VTT 到 ASS 格式（如果需要）
+            # Convert VTT to ASS format (if needed)
             if subtitle_path.endswith(".vtt"):
                 ass_path = subtitle_path.rsplit(".", 1)[0] + ".ass"
                 await self._vtt_to_ass(subtitle_path, ass_path)
@@ -546,7 +546,7 @@ class VideoComposer:
             )
 
     async def _vtt_to_ass(self, vtt_path: str, ass_path: str) -> bool:
-        """将 VTT 转换为 ASS 格式。"""
+        """Convert VTT to ASS format."""
         try:
             cmd = [
                 "ffmpeg",
@@ -564,9 +564,9 @@ class VideoComposer:
 
 
 class MoviePyComposer:
-    """使用 MoviePy 的视频合成器。
+    """Video composer using MoviePy.
 
-    提供更灵活的视频编辑能力。
+    Provides more flexible video editing capabilities.
     """
 
     def __init__(
@@ -575,7 +575,7 @@ class MoviePyComposer:
         height: int = 1080,
         fps: int = 30,
     ):
-        """初始化合成器。"""
+        """Initialize the composer."""
         self.width = width
         self.height = height
         self.fps = fps
@@ -586,7 +586,7 @@ class MoviePyComposer:
         output_path: str,
         title: Optional[str] = None,
     ) -> VideoResult:
-        """使用 MoviePy 合成视频。"""
+        """Compose a video using MoviePy."""
         try:
             from moviepy.editor import (
                 AudioFileClip,
@@ -604,7 +604,7 @@ class MoviePyComposer:
         try:
             clips = []
 
-            # 添加片头
+            # Add the title card
             if title:
                 title_clip = (
                     TextClip(
@@ -620,26 +620,26 @@ class MoviePyComposer:
                 )
                 clips.append(title_clip)
 
-            # 处理每个场景
+            # Process each scene
             for scene in scenes:
-                # 加载图片
+                # Load the image
                 img_clip = (
                     ImageClip(scene.image_path)
                     .set_duration(scene.duration_seconds)
                     .resize((self.width, self.height))
                 )
 
-                # 加载音频
+                # Load the audio
                 audio_clip = AudioFileClip(scene.audio_path)
 
-                # 组合
+                # Combine
                 video_clip = img_clip.set_audio(audio_clip)
                 clips.append(video_clip)
 
-            # 添加片尾
+            # Add the end card
             end_clip = (
                 TextClip(
-                    "敬请期待下集",
+                    "To be continued",
                     fontsize=48,
                     color="white",
                     bg_color="black",
@@ -651,10 +651,10 @@ class MoviePyComposer:
             )
             clips.append(end_clip)
 
-            # 合并
+            # Merge
             final_clip = concatenate_videoclips(clips, method="compose")
 
-            # 导出
+            # Export
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             final_clip.write_videofile(
                 output_path,
@@ -663,7 +663,7 @@ class MoviePyComposer:
                 audio_codec="aac",
             )
 
-            # 清理
+            # Clean up
             final_clip.close()
             for clip in clips:
                 clip.close()
@@ -682,13 +682,13 @@ class MoviePyComposer:
 
 
 def create_video_composer(use_moviepy: bool = False):
-    """创建视频合成器。
+    """Create a video composer.
 
     Args:
-        use_moviepy: 是否使用 MoviePy（否则使用 FFmpeg）
+        use_moviepy: whether to use MoviePy (otherwise FFmpeg)
 
     Returns:
-        视频合成器实例
+        Video composer instance
     """
     if use_moviepy:
         return MoviePyComposer()
@@ -702,31 +702,31 @@ async def adjust_video_duration(
     output_path: Optional[str] = None,
     method: str = "auto",
 ) -> str:
-    """调整视频时长到目标值。
+    """Adjust the video duration to the target value.
 
-    用于首尾帧模式生成的固定 5 秒视频适配实际 TTS 时长。
+    Used to fit the fixed 5-second video generated in first/last-frame mode to the actual TTS duration.
 
-    策略：
-    - 目标 < 源时长：裁剪末尾
-    - 目标 > 源时长：
-        - 变速拉伸（最多 1.5x，避免明显失真）
-        - 超过 1.5x 时冻结最后一帧填充
+    Strategy:
+    - target < source duration: trim the end
+    - target > source duration:
+        - Speed-stretch (at most 1.5x, to avoid visible distortion)
+        - Beyond 1.5x, freeze the last frame to fill
 
     Args:
-        video_path: 源视频路径
-        target_duration: 目标时长（秒）
-        output_path: 输出路径（默认覆盖源文件）
-        method: 调整方法
-            - "auto": 自动选择最佳方法
-            - "trim": 只裁剪（目标较短时）
-            - "speed": 只变速（目标较长时）
-            - "freeze": 冻结最后一帧填充（目标较长时）
+        video_path: source video path
+        target_duration: target duration (seconds)
+        output_path: output path (defaults to overwriting the source file)
+        method: adjustment method
+            - "auto": pick the best method automatically
+            - "trim": trim only (when the target is shorter)
+            - "speed": change speed only (when the target is longer)
+            - "freeze": freeze the last frame to fill (when the target is longer)
 
     Returns:
-        输出视频路径
+        Output video path
     """
     if output_path is None:
-        # 使用临时文件然后覆盖
+        # Use a temporary file, then overwrite
         import tempfile
         temp_fd, temp_path = tempfile.mkstemp(suffix=".mp4")
         os.close(temp_fd)
@@ -735,7 +735,7 @@ async def adjust_video_duration(
     else:
         should_replace = False
 
-    # 获取源视频时长
+    # Get the source video duration
     probe_cmd = [
         "ffprobe",
         "-v", "error",
@@ -747,20 +747,20 @@ async def adjust_video_duration(
     try:
         source_duration = float(result.stdout.strip())
     except ValueError:
-        source_duration = 5.0  # 默认 5 秒
+        source_duration = 5.0  # default 5 seconds
 
-    print(f"[adjust_video_duration] 源时长: {source_duration:.2f}s, 目标: {target_duration:.2f}s")
+    print(f"[adjust_video_duration] Source duration: {source_duration:.2f}s, target: {target_duration:.2f}s")
 
-    # 计算时长差异
+    # Compute the duration difference
     duration_diff = abs(target_duration - source_duration)
     if duration_diff < 0.1:
-        # 时长足够接近，无需调整
-        print("[adjust_video_duration] 时长足够接近，无需调整")
+        # Durations are close enough; no adjustment needed
+        print("[adjust_video_duration] Durations are close enough, no adjustment needed")
         return video_path
 
     if target_duration < source_duration:
-        # 目标较短：裁剪末尾
-        print(f"[adjust_video_duration] 裁剪视频: {source_duration:.2f}s -> {target_duration:.2f}s")
+        # Target is shorter: trim the end
+        print(f"[adjust_video_duration] Trimming video: {source_duration:.2f}s -> {target_duration:.2f}s")
         cmd = [
             "ffmpeg",
             "-y",
@@ -771,15 +771,15 @@ async def adjust_video_duration(
             output_path,
         ]
     else:
-        # 目标较长：需要拉伸
+        # Target is longer: needs stretching
         stretch_ratio = target_duration / source_duration
-        print(f"[adjust_video_duration] 拉伸比例: {stretch_ratio:.2f}x")
+        print(f"[adjust_video_duration] Stretch ratio: {stretch_ratio:.2f}x")
 
         if stretch_ratio <= 1.5 or method == "speed":
-            # 变速拉伸（减慢播放）
-            # setpts: 视频时间戳，atempo: 音频速度
-            speed_factor = 1 / stretch_ratio  # 0.5 = 慢 2 倍
-            print(f"[adjust_video_duration] 变速拉伸: {speed_factor:.2f}x 速度")
+            # Speed-stretch (slow down playback)
+            # setpts: video timestamps, atempo: audio speed
+            speed_factor = 1 / stretch_ratio  # 0.5 = 2x slower
+            print(f"[adjust_video_duration] Speed stretch: {speed_factor:.2f}x speed")
             cmd = [
                 "ffmpeg",
                 "-y",
@@ -794,12 +794,12 @@ async def adjust_video_duration(
                 output_path,
             ]
         else:
-            # 冻结最后一帧填充
+            # Freeze the last frame to fill
             freeze_duration = target_duration - source_duration
-            print(f"[adjust_video_duration] 冻结最后一帧: {freeze_duration:.2f}s")
+            print(f"[adjust_video_duration] Freezing last frame: {freeze_duration:.2f}s")
 
-            # 使用 tpad 滤镜冻结最后一帧
-            freeze_frames = int(freeze_duration * 30)  # 假设 30fps
+            # Use the tpad filter to freeze the last frame
+            freeze_frames = int(freeze_duration * 30)  # assume 30fps
             cmd = [
                 "ffmpeg",
                 "-y",
@@ -811,14 +811,14 @@ async def adjust_video_duration(
                 output_path,
             ]
 
-    # 执行命令
+    # Run the command
     result = _run_video_subprocess(cmd)
 
     if result.returncode != 0:
-        print(f"[adjust_video_duration] FFmpeg 错误: {result.stderr[:500]}")
-        return video_path  # 失败时返回原视频
+        print(f"[adjust_video_duration] FFmpeg error: {result.stderr[:500]}")
+        return video_path  # return the original video on failure
 
-    # 如果需要覆盖源文件
+    # If the source file needs to be overwritten
     if should_replace:
         import shutil
         shutil.move(output_path, video_path)
@@ -828,13 +828,13 @@ async def adjust_video_duration(
 
 
 def get_video_duration(video_path: str) -> float:
-    """获取视频时长。
+    """Get the video duration.
 
     Args:
-        video_path: 视频文件路径
+        video_path: video file path
 
     Returns:
-        时长（秒）
+        Duration (seconds)
     """
     cmd = [
         "ffprobe",

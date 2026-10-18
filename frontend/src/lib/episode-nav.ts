@@ -45,7 +45,7 @@ export interface BeatSubTabDef {
   labelKey: string;
   icon: LucideIcon;
   /**
-   * Legacy stage this sub-tab surfaces. `null` for the 文案 tab which is
+   * Legacy stage this sub-tab surfaces. `null` for the script tab which is
    * cross-cutting beat metadata editing.
    */
   stageId: Exclude<StageId, "compose"> | null;

@@ -18,10 +18,10 @@ export function backendErrorCodeToastMessage(
 }
 
 /**
- * 排队接口成功时的 toast 文案。
+ * Toast text for a successful queued-task response.
  *
- * 后端给了 message_code 就按词条翻，没给的（还没迁移的接口）照旧回显 message
- * 里那句中文 —— 和进度/日志走同一套约定，接口可以一个一个迁。
+ * If the backend sends a message_code it is translated through the locale entries; otherwise (endpoints not migrated yet)
+ * the message text is echoed as is, the same convention as progress/log messages, so endpoints can be migrated one by one.
  */
 export function taskResponseToastMessage(
   response: {
@@ -102,17 +102,17 @@ export class BillingRuleNotConfiguredError extends BackendStatusError {
   }
 }
 
-// 下面这两段合成的是 Error 对象自带的 message，只在拿不到 t 的地方兜底；界面上
-// 真正显示的是 backendErrorToastMessage()，它按同样的措辞查 common.*QueueFull 词条。
-// api-errors 位于 api/client 的依赖里，把 @/i18n 拉进来会在测试里二次 init i18next，
-// 所以这里保留中文兜底，不入词条。
+// The two blocks below build the Error object's own message and are only a fallback where `t` is unavailable; the UI
+// actually shows backendErrorToastMessage(), which uses the same wording via the common.*QueueFull locale entries.
+// api-errors sits in the dependency chain of api/client, and pulling @/i18n in would init i18next a second time in tests,
+// so the English fallback is kept here instead of in the locale files.
 // i18n-exempt-start
 function queueLabelForPlainMessage(queueKind: string): string {
-  if (queueKind === "default") return "默认";
-  if (queueKind === "image") return "图片";
-  if (queueKind === "video") return "视频";
-  if (queueKind === "world") return "世界";
-  if (queueKind === "ffmpeg") return "合成";
+  if (queueKind === "default") return "default";
+  if (queueKind === "image") return "image";
+  if (queueKind === "video") return "video";
+  if (queueKind === "world") return "world";
+  if (queueKind === "ffmpeg") return "compose";
   return queueKind;
 }
 
@@ -123,15 +123,15 @@ function taskQueueLimitPlainMessage(
   const queueLabel = queueLabelForPlainMessage(queueKind);
   switch (limitScope) {
     case "user":
-      return `你在当前${queueLabel}队列的任务已达个人上限`;
+      return `You have reached your personal ${queueLabel} queue limit`;
     case "channel":
-      return `当前组织${queueLabel}队列已满`;
+      return `The current organization's ${queueLabel} queue is full`;
     case "platform":
-      return `平台${queueLabel}队列已满`;
+      return `The platform ${queueLabel} queue is full`;
     case "global_lane_queue":
-      return `当前节点${queueLabel}队列已满`;
+      return `The current node's ${queueLabel} queue is full`;
     default:
-      return `当前项目${queueLabel}队列已满`;
+      return `The current project's ${queueLabel} queue is full`;
   }
 }
 // i18n-exempt-end
@@ -239,7 +239,7 @@ export function errorFromBackendBody(status: number, body: unknown, fallback: st
   if (typeof detail === "string" && detail.trim()) {
     return new BackendStatusError(detail, status, body);
   }
-  // FastAPI HTTPException 带结构化 detail（如技能接口的 SkillErrorEnvelope）。
+  // FastAPI HTTPException carries a structured detail (e.g. SkillErrorEnvelope from the skill endpoints).
   if (detail && typeof detail === "object") {
     const { message: detailMessage, user_action_hint: hint } = detail as {
       message?: unknown;
@@ -268,7 +268,7 @@ async function safeJsonFromResponse(response: Response): Promise<unknown> {
 
 async function backendError(error: unknown): Promise<Error | null> {
   if (!(error instanceof HTTPError)) return null;
-  // ky 2 会先把错误响应体解析到 error.data（此时 response 已读完），与 api/client 的 beforeError 一致。
+  // ky 2 parses the error body into error.data first (the response is already consumed), consistent with beforeError in api/client.
   const data = (error as HTTPError & { data?: unknown }).data;
   const body = data !== undefined ? data : await safeJsonFromResponse(error.response);
   return errorFromBackendBody(error.response.status, body, error.message);
@@ -296,7 +296,7 @@ export async function jsonWithBackendError<T>(request: Promise<Response>): Promi
  * gateway. Sketch/render/video failures surface as a RuntimeError whose text
  * embeds the gateway response, e.g.
  *
- *   草图重生未生成可用图片（...）: HTTP 429: ...; body={"error":{"code":"huimeng_low_quality_skipped","type":"channel_policy",...}}
+ *   sketch regeneration produced no usable image (...): HTTP 429: ...; body={"error":{"code":"huimeng_low_quality_skipped","type":"channel_policy",...}}
  *
  * A `channel_policy` rejection is a *route-layer* refusal (the gateway skipped
  * the channel before dispatching, e.g. low-quality sketch regen), NOT real
@@ -467,7 +467,7 @@ export function classifyGatewayError(
     /content[_-]?policy[_-]?violation/i.test(raw)
     || /moderation[_-]?blocked/i.test(raw)
     || /failed safety review/i.test(raw)
-    || /内容未通过安全审核/i.test(raw)
+    || /content_moderation_blocked/i.test(raw)
   ) {
     return "content_policy";
   }
@@ -481,7 +481,7 @@ export function classifyGatewayError(
 /**
  * Turn a raw task-error string into a user-facing toast message, giving
  * `channel_policy` and real rate-limit failures their own explanation instead
- * of leaking the generic "…未生成可用图片: HTTP 429: …body={…}" blob.
+ * of leaking the generic "...no usable image: HTTP 429: ...body={...}" blob.
  */
 export function humanizeTaskError(
   raw: string | null | undefined,
@@ -490,7 +490,7 @@ export function humanizeTaskError(
   const fallback = raw && raw.trim() ? raw : t("common.error");
   if (raw && /billing rule is not configured/i.test(raw)) {
     return t("common.billingRuleNotConfigured", {
-      defaultValue: "计费规则未配置，请联系管理员设置积分规则",
+      defaultValue: "Billing rules are not configured. Contact an administrator to set up credit rules.",
     });
   }
   const reviewMessage = raw ? humanReviewAssetMessage(raw, t) : null;

@@ -1,4 +1,4 @@
-"""Durable server-side coordinator for outer 虾导 episode auto mode."""
+"""Durable server-side coordinator for outer Director Agent episode auto mode."""
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ INITIAL_GRACE_SECONDS = 5.0
 LEASE_SECONDS = 45.0
 HEARTBEAT_SECONDS = 10.0
 _MISSING_CHARACTER_PORTRAIT_RE = re.compile(
-    r"请先为角色[「“\"](?P<character>.+?)[」”\"]生成\s*Portrait（面部特写）"
+    r'Generate a Portrait \(face close-up\) for character ["\u201c](?P<character>.+?)["\u201d] first'
 )
 
 
@@ -414,7 +414,7 @@ def _task_label(task: TaskState) -> str:
         character = str(result.get("character_name") or "").strip()
         if not character and len(scope_parts) > 1:
             character = scope_parts[1]
-        return f"{character}肖像" if character else "角色肖像"
+        return f"{character} portrait" if character else "Character portrait"
     if task.task_type == "identity_image":
         character = str(result.get("character_name") or "").strip()
         identity = str(result.get("identity_name") or "").strip()
@@ -423,43 +423,43 @@ def _task_label(task: TaskState) -> str:
         if not identity and len(scope_parts) > 3:
             identity = scope_parts[3]
         if character and identity:
-            return f"{character}「{identity}」身份图"
-        return f"{character or identity or '角色'}身份图"
+            return f'{character} "{identity}" identity image'
+        return f"{character or identity or 'Character'} identity image"
     if task.task_type == "single_video" and task.beat_num:
-        return f"第 {task.episode} 集 Beat {task.beat_num} 视频"
+        return f"Episode {task.episode} Beat {task.beat_num} video"
     labels = {
-        "ingest_fast": "项目摄入",
-        "build_characters": "角色构建",
-        "build_props": "道具构建",
-        "build_episodes": "剧集规划",
-        "identity_planner": "身份规划",
-        "character_portrait": "角色肖像",
-        "identity_image": "身份图生成",
-        "script_writer": "剧本生成",
-        "content_rewriter": "解说改写",
-        "literal_script_writer": "解说稿生成",
-        "director_notes": "导演说明",
-        "build_scenes": "场景规划",
-        "episode_scene_planner": "本集场景规划",
-        "episode_prop_planner": "本集道具规划",
-        "scene_reference_asset": "场景参考图",
-        "prop_reference_asset": "道具参考图",
-        "sketch_grid_generation": "草图网格",
-        "sketch_generation": "草图生成",
-        "sketch_regen": "草图重生成",
-        "grid_regenerate": "草图网格重生成",
-        "mainline_sketch_from_context": "草图生成",
-        "mainline_frame_from_context": "首帧生成",
-        "ai_identity_detection": "身份检测",
-        "global_optimize_video": "全局优化",
-        "selected_regen": "首帧生成",
-        "render_plan": "渲染规划",
-        "system_voice_setup": "系统声线准备",
-        "audio_generation_indextts2": "音频生成",
-        "indextts2_audio_generation": "音频生成",
-        "audio_generation": "音频生成",
-        "single_video": "视频生成",
-        "compose_episode": "成片合成",
+        "ingest_fast": "Project ingest",
+        "build_characters": "Character build",
+        "build_props": "Prop build",
+        "build_episodes": "Episode planning",
+        "identity_planner": "Identity planning",
+        "character_portrait": "Character portrait",
+        "identity_image": "Identity image generation",
+        "script_writer": "Script generation",
+        "content_rewriter": "Narration rewrite",
+        "literal_script_writer": "Narration script generation",
+        "director_notes": "Director notes",
+        "build_scenes": "Scene planning",
+        "episode_scene_planner": "Episode scene planning",
+        "episode_prop_planner": "Episode prop planning",
+        "scene_reference_asset": "Scene reference image",
+        "prop_reference_asset": "Prop reference image",
+        "sketch_grid_generation": "Sketch grid",
+        "sketch_generation": "Sketch generation",
+        "sketch_regen": "Sketch regeneration",
+        "grid_regenerate": "Sketch grid regeneration",
+        "mainline_sketch_from_context": "Sketch generation",
+        "mainline_frame_from_context": "First-frame generation",
+        "ai_identity_detection": "Identity detection",
+        "global_optimize_video": "Global optimization",
+        "selected_regen": "First-frame generation",
+        "render_plan": "Render planning",
+        "system_voice_setup": "System voice setup",
+        "audio_generation_indextts2": "Audio generation",
+        "indextts2_audio_generation": "Audio generation",
+        "audio_generation": "Audio generation",
+        "single_video": "Video generation",
+        "compose_episode": "Episode composition",
     }
     return labels.get(task.task_type, task.task_type)
 
@@ -547,7 +547,7 @@ class DirectorAutoCoordinator:
         *,
         username: str,
         project_id: str,
-        reason: str = "等待用户确认是否修改",
+        reason: str = "Waiting for the user to confirm whether to modify",
     ) -> DirectorAutoRun | None:
         """Suspend future auto steps without cancelling any queued/running task."""
 
@@ -557,7 +557,7 @@ class DirectorAutoCoordinator:
         if run.status == "awaiting_confirmation":
             return run
         if run.status != "running":
-            raise ValueError("本集自动当前未在运行，不能进入修改确认状态")
+            raise ValueError("Episode auto is not currently running and cannot enter the modification-confirmation state")
         updated = DirectorAutoRun(
             **{
                 **asdict(run),
@@ -589,7 +589,7 @@ class DirectorAutoCoordinator:
             self._ensure_worker(run)
             return run
         if run.status != "awaiting_confirmation":
-            raise ValueError("只有等待修改确认的本集自动任务可以恢复")
+            raise ValueError("Only an episode auto run that is awaiting modification confirmation can be resumed")
         updated = DirectorAutoRun(
             **{
                 **asdict(run),
@@ -793,9 +793,9 @@ class DirectorAutoCoordinator:
                 run_id=run.run_id,
                 username=run.username,
                 project_id=run.project_id,
-                reason=f"项目权限校验失败：{exc}",
+                reason=f"Project permission check failed: {exc}",
             )
-            await self._notify(run, "本集自动已暂停：当前用户已无权继续修改该项目。")
+            await self._notify(run, "Episode auto paused: the current user no longer has permission to modify this project.")
             return False
         # A user-driven turn and a durable continuation share the same project
         # lock. Wait instead of treating ordinary chat activity as auto failure.
@@ -811,16 +811,16 @@ class DirectorAutoCoordinator:
                 run_id=run.run_id,
                 username=run.username,
                 project_id=run.project_id,
-                reason="等待虾导空闲超时",
+                reason="Timed out waiting for the Director Agent to become idle",
             )
-            await self._notify(run, "本集自动已暂停：虾导长时间处于忙碌状态。")
+            await self._notify(run, "Episode auto paused: the Director Agent has been busy for too long.")
             return False
         prompt = instruction or (
-            "第 {episode} 集成片合成已完成。请只读取并展示正式成片，然后简短收口；不要启动新的写任务。"
+            "Episode {episode} composition is complete. Only read and show the official final cut, then wrap up briefly; do not start any new write task."
             if final_delivery
             else (
-                "只继续第 {episode} 集的下一步。不得启动、修改或推进其他集；"
-                "如果第 {episode} 集已经完成最终合成，只展示并收口。"
+                "Only continue with the next step of episode {episode}. Do not start, modify, or advance other episodes; "
+                "if episode {episode} has already finished final composition, only show it and wrap up."
             )
         ).format(episode=run.episode)
         prompt += (
@@ -846,7 +846,7 @@ class DirectorAutoCoordinator:
                 "The user chose uploaded/recorded custom voices. Never substitute system voices. "
                 "If required custom voices are still missing at voice_setup, call "
                 "dramaclaw_control_episode_auto(action='pause'), then explain the missing items and "
-                "ask the user to upload or record them in 虾塘. Do not start audio generation."
+                "ask the user to upload or record them in the character workbench. Do not start audio generation."
                 "\n[/DRAMACLAW_VOICE_POLICY]"
             )
         turn_id = f"director-auto-{run.run_id}-{uuid.uuid4().hex[:10]}"
@@ -880,7 +880,7 @@ class DirectorAutoCoordinator:
                 project_state_dir=ctx.state_dir,
                 surface="director",
                 turn_id=turn_id,
-                route_prompt="自动继续下一步",
+                route_prompt="Auto-continue to the next step",
             )
             return saw_write
         except Exception as exc:  # noqa: BLE001
@@ -891,7 +891,7 @@ class DirectorAutoCoordinator:
                 project_id=run.project_id,
                 reason=str(exc),
             )
-            await self._notify(run, "本集自动已暂停：虾导继续执行失败，请检查服务状态后重试。")
+            await self._notify(run, "Episode auto paused: the Director Agent failed to continue; check the service status and retry.")
             return False
 
     async def _run(self, run_id: str, username: str, project_id: str) -> None:
@@ -958,16 +958,16 @@ class DirectorAutoCoordinator:
                             return
                         await self._notify(
                             recovering,
-                            f"检测到{_task_label(failed)}缺少前置肖像，正在自动补生成「{character}」肖像。",
+                            f"Detected that {_task_label(failed)} is missing its prerequisite portrait; automatically generating the portrait for \"{character}\".",
                         )
                         if not await self._owns_run(run_id):
                             return
                         wrote = await self._agent_continue(
                             recovering,
                             instruction=(
-                                f"自动修复第 {run.episode} 集身份图前置条件：失败信息明确指出角色"
-                                f"「{character}」缺少 Portrait（面部特写）。请只读确认后，仅启动该角色"
-                                "的一个 Portrait 生成任务；不要重试身份图，不要启动其他步骤，不要询问用户确认。"
+                                f"Auto-repair of the episode {run.episode} identity-image prerequisite: the failure explicitly says character "
+                                f"\"{character}\" is missing a Portrait (face close-up). After a read-only confirmation, start exactly one Portrait generation task for that character "
+                                "only; do not retry the identity image, do not start any other step, and do not ask the user for confirmation."
                             ),
                         )
                         if wrote:
@@ -981,12 +981,12 @@ class DirectorAutoCoordinator:
                             run_id=run_id,
                             username=username,
                             project_id=project_id,
-                            reason=f"无法自动补生成「{character}」肖像",
+                            reason=f"Cannot automatically generate the portrait for \"{character}\"",
                             terminal_task_id=failed.task_id,
                         )
                         await self._notify(
                             recovering,
-                            f"本集自动已暂停：未能启动「{character}」肖像生成，请检查角色肖像配置。",
+                            f"Episode auto paused: could not start portrait generation for \"{character}\"; check the character portrait configuration.",
                         )
                         return
                     await self._pause_owned(
@@ -998,16 +998,16 @@ class DirectorAutoCoordinator:
                     )
                     await self._notify(
                         updated,
-                        f"本集自动已暂停：{_task_label(failed)}{('已取消' if failed.status == 'cancelled' else '失败')}，{reason}。",
+                        f"Episode auto paused: {_task_label(failed)} {('was cancelled' if failed.status == 'cancelled' else 'failed')}, {reason}.",
                     )
                     return
                 compose = next((task for task in terminal if task.task_type == "compose_episode"), None)
                 if len(terminal) == 1:
-                    summary = f"✅ {_task_label(terminal[0])}已完成。"
+                    summary = f"✅ {_task_label(terminal[0])} completed."
                 else:
-                    summary = f"✅ 本批 {len(terminal)} 个任务已完成。"
+                    summary = f"✅ This batch of {len(terminal)} tasks completed."
                 if compose is not None:
-                    await self._notify(updated, f"{summary}正在展示第 {run.episode} 集成片。")
+                    await self._notify(updated, f"{summary} Showing the final cut of episode {run.episode}.")
                     if not await self._owns_run(run_id):
                         return
                     await self._agent_continue(updated, final_delivery=True)
@@ -1020,7 +1020,7 @@ class DirectorAutoCoordinator:
                         return
                     await self._broadcast_status(completed)
                     return
-                await self._notify(updated, f"{summary}本集自动正在继续下一步。")
+                await self._notify(updated, f"{summary} Episode auto is continuing to the next step.")
                 if not await self._owns_run(run_id):
                     return
                 await self._agent_continue(updated)
@@ -1038,9 +1038,9 @@ class DirectorAutoCoordinator:
                         run_id=run_id,
                         username=username,
                         project_id=project_id,
-                        reason="自动续跑未产生新的任务",
+                        reason="Auto-continue produced no new task",
                     )
-                    await self._notify(run, "本集自动已暂停：当前步骤没有产生新的生成任务，请检查前置条件。")
+                    await self._notify(run, "Episode auto paused: the current step produced no new generation task; check the prerequisites.")
                     return
                 taskless_continuations += 1
                 if not await self._owns_run(run_id):
@@ -1054,9 +1054,9 @@ class DirectorAutoCoordinator:
                         run_id=run_id,
                         username=username,
                         project_id=project_id,
-                        reason="自动续跑未产生写任务",
+                        reason="Auto-continue produced no write task",
                     )
-                    await self._notify(run, "本集自动已暂停：虾导没有启动新的生成步骤，请检查当前前置条件。")
+                    await self._notify(run, "Episode auto paused: the Director Agent did not start a new generation step; check the current prerequisites.")
                     return
                 await asyncio.sleep(POLL_SECONDS)
                 continue

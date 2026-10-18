@@ -80,8 +80,8 @@ function StoryCell({ row, col, onCommit }: StoryCellProps) {
   const value = row[col.key];
 
   if (col.key === 'keyframeUrl') {
-    // 关键帧是图片列，沿用只读 —— 替换需要文件选择器 / URL 输入，是另一
-    // 条交互，等用户后续提（同 scriptNode 角色图列的处理）。
+    // Keyframes are an image column and stay read-only — replacing needs a file picker / URL input, which is a separate
+    // interaction to be requested later (same handling as scriptNode's character image column).
     const url = typeof value === 'string' ? value : null;
     if (!url) return <span className="text-text-muted/60">—</span>;
     return (
@@ -241,8 +241,8 @@ export const VideoStoryNode = memo(({ id, data, selected, width, height }: Video
   const hasError = Boolean(data.analysisError);
   const hasRows = rows.length > 0;
 
-  // 表格单元格编辑：把编辑后的值写回 data.rows[idx][colKey]。
-  // keyframeUrl 列在 StoryCell 里走只读分支，不会调到这里。
+  // Table cell editing: write the edited value back to data.rows[idx][colKey].
+  // keyframeUrl column takes the read-only branch in StoryCell and never reaches here.
   const handleCellCommit = useCallback(
     (rowIndex: number, colKey: keyof VideoStoryRow, nextValue: string) => {
       const existing = rows[rowIndex];

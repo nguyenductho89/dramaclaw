@@ -1,10 +1,10 @@
-"""Freezone 视频节点辅助逻辑。
+"""Freezone video node helpers.
 
-包含：
-- 文生视频运镜模板库
-- 角色素材库本地持久化
-- 视频提示词组装
-- 全能参考输入校验
+Includes:
+- text-to-video camera movement template library
+- local persistence of the character asset library
+- video prompt assembly
+- omni-reference input validation
 """
 
 from __future__ import annotations
@@ -32,63 +32,63 @@ from novelvideo.video_duration import (
 VIDEO_CAMERA_TEMPLATES: list[dict[str, str]] = [
     {
         "id": "locked_off",
-        "name": "固定镜头",
-        "prompt": "镜头固定，机位稳定，不推不摇不移，由角色和环境自然完成表演。",
+        "name": "Locked-off shot",
+        "prompt": "The camera is locked off with a stable position: no push, pan or move; the performance is carried naturally by the characters and the environment.",
     },
     {
         "id": "follow_tracking",
-        "name": "跟随拍摄",
-        "prompt": "镜头持续跟随主体移动，保持主角始终处于视觉中心，运动自然顺滑。",
+        "name": "Follow shot",
+        "prompt": "The camera continuously follows the subject as it moves, keeping the protagonist at the visual center, with natural and smooth motion.",
     },
     {
         "id": "orbit_up",
-        "name": "盘旋抬升",
-        "prompt": "镜头围绕主体盘旋，同时缓慢抬升，营造空间展开和情绪提升。",
+        "name": "Orbit and rise",
+        "prompt": "The camera orbits the subject while slowly rising, creating a sense of space unfolding and emotional lift.",
     },
     {
         "id": "orbit_down",
-        "name": "盘旋下降",
-        "prompt": "镜头围绕主体盘旋，同时缓慢下降，营造压迫感和沉浸式包围。",
+        "name": "Orbit and descend",
+        "prompt": "The camera orbits the subject while slowly descending, creating a sense of pressure and an immersive enclosure.",
     },
     {
         "id": "tilt_up",
-        "name": "镜头上摇",
-        "prompt": "镜头从下往上平滑上摇，逐步揭示主体上方信息与空间高度。",
+        "name": "Tilt up",
+        "prompt": "The camera tilts up smoothly from below, gradually revealing the information above the subject and the height of the space.",
     },
     {
         "id": "tilt_down",
-        "name": "镜头下摇",
-        "prompt": "镜头从上往下平滑下摇，逐步聚焦主体动作与地面细节。",
+        "name": "Tilt down",
+        "prompt": "The camera tilts down smoothly from above, gradually focusing on the subject's action and the details on the ground.",
     },
     {
         "id": "pan_left",
-        "name": "镜头左摇",
-        "prompt": "镜头向左平滑横摇，带出画面左侧环境与叙事信息。",
+        "name": "Pan left",
+        "prompt": "The camera pans smoothly to the left, bringing in the environment and narrative information on the left side of the frame.",
     },
     {
         "id": "pan_right",
-        "name": "镜头右摇",
-        "prompt": "镜头向右平滑横摇，带出画面右侧环境与叙事信息。",
+        "name": "Pan right",
+        "prompt": "The camera pans smoothly to the right, bringing in the environment and narrative information on the right side of the frame.",
     },
     {
         "id": "pedestal_up",
-        "name": "镜头上升",
-        "prompt": "镜头整体垂直上升，视角逐步抬高，增强空间层次和临场感。",
+        "name": "Pedestal up",
+        "prompt": "The whole camera rises vertically, gradually raising the viewpoint to strengthen spatial layering and a sense of presence.",
     },
     {
         "id": "pedestal_down",
-        "name": "镜头下降",
-        "prompt": "镜头整体垂直下降，视角逐步压低，强化人物压迫和沉浸感。",
+        "name": "Pedestal down",
+        "prompt": "The whole camera descends vertically, gradually lowering the viewpoint to intensify the pressure on the character and the immersion.",
     },
     {
         "id": "truck_left",
-        "name": "镜头左移",
-        "prompt": "镜头整体向左平移，保持运镜稳定，突出场景横向调度。",
+        "name": "Truck left",
+        "prompt": "The whole camera slides to the left, keeping the movement steady and emphasizing the lateral staging of the scene.",
     },
     {
         "id": "truck_right",
-        "name": "镜头右移",
-        "prompt": "镜头整体向右平移，保持运镜稳定，突出场景横向调度。",
+        "name": "Truck right",
+        "prompt": "The whole camera slides to the right, keeping the movement steady and emphasizing the lateral staging of the scene.",
     },
 ]
 
@@ -110,8 +110,6 @@ LEGACY_FREEZONE_VIDEO_LABEL_ALIASES: dict[str, str] = {
     "huimeng seedance 1.0 pro fast": "newapi_seedance-1.0-pro-fast",
     "huimeng seedance 1.5 pro": "newapi_seedance-1.5-pro",
     "seedance 1.0 fast": "newapi_seedance-1.0-pro-fast",
-    "seedance 1.5 有声": "newapi_seedance-1.5-pro",
-    "seedance 1.5 无声": "newapi_seedance-1.5-pro",
 }
 
 FREEZONE_DEFAULT_VIDEO_BACKEND = "newapi_seedance-2.0-fast"
@@ -386,7 +384,7 @@ def is_freezone_seedance2_backend(backend: str | None) -> bool:
 
 
 def is_freezone_seedance_backend(backend: str | None) -> bool:
-    """任何代际的 Seedance（1.0/1.5/2.x）——参考图尺寸规则只对它们成立。"""
+    """Seedance of any generation (1.0/1.5/2.x) -- the reference image size rules only hold for them."""
     text = str(backend or "").strip()
     if text in {"seedance_2", "seedance_fast"}:
         return True
@@ -422,8 +420,8 @@ def _coarse_mark_region(mark: dict[str, Any]) -> str:
             px = float(box_x) + float(box_width) / 2.0
             py = float(box_y) + float(box_height) / 2.0
     if isinstance(px, (int, float)) and isinstance(py, (int, float)):
-        horizontal = "左侧" if px < 0.33 else "右侧" if px > 0.66 else "中部"
-        vertical = "上方" if py < 0.33 else "下方" if py > 0.66 else "中间"
+        horizontal = "left" if px < 0.33 else "right" if px > 0.66 else "center"
+        vertical = "top" if py < 0.33 else "bottom" if py > 0.66 else "middle"
         return f"{horizontal}{vertical}"
     return ""
 
@@ -441,9 +439,9 @@ def format_video_marks(marks: list[dict[str, Any]] | None) -> str:
         region = _coarse_mark_region(mark)
         note = str(mark.get("note") or "").strip()
         suffix_parts = [part for part in [region, note] if part]
-        suffix = f"（{'，'.join(suffix_parts)}）" if suffix_parts else ""
+        suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
         lines.append(f"- {label}{suffix}")
-    return "重点元素标记：\n" + "\n".join(lines)
+    return "Key element marks:\n" + "\n".join(lines)
 
 
 def build_freezone_video_prompt(
@@ -457,13 +455,13 @@ def build_freezone_video_prompt(
 
     template = get_video_camera_template(camera_template_id)
     if template:
-        parts.append(f"运镜模板：{template['name']}。{template['prompt']}")
+        parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
 
     if character_names:
-        joined = "、".join(name for name in character_names if name)
+        joined = ", ".join(name for name in character_names if name)
         if joined:
             parts.append(
-                f"角色一致性要求：保持 {joined} 的外观、服装和身份特征稳定一致。"
+                f"Character consistency requirement: keep the appearance, clothing and identity traits of {joined} stable and consistent."
             )
 
     marks_block = format_video_marks(marks)
@@ -471,7 +469,7 @@ def build_freezone_video_prompt(
         parts.append(marks_block)
 
     parts.append(
-        "输出要求：生成单条连贯视频镜头，动作自然，运动平滑，避免闪烁、变形、跳帧和主体身份漂移。"
+        "Output requirement: generate a single coherent video shot with natural action and smooth motion, avoiding flicker, deformation, frame skipping and subject identity drift."
     )
     return "\n".join(part for part in parts if part)
 
@@ -490,7 +488,7 @@ def build_freezone_image_to_video_prompt(
 
     template = get_video_camera_template(camera_template_id)
     if template:
-        parts.append(f"运镜模板：{template['name']}。{template['prompt']}")
+        parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
 
     marks_block = format_video_marks(marks)
     if marks_block:
@@ -498,16 +496,16 @@ def build_freezone_image_to_video_prompt(
 
     if int(reference_image_count or 1) > 1:
         parts.append(
-            "图片参考约束：综合参考多张输入图片，优先保持主体身份、外观、服装、场景线索与整体风格一致，"
-            "不要把多张图拼贴成多画面。"
+            "Image reference constraint: combine the multiple input images, prioritizing consistent subject identity, appearance, clothing, scene cues and overall style, "
+            "and do not collage the images into a multi-panel picture."
         )
     else:
         parts.append(
-            "图片参考约束：把输入图片作为主体、外观、色调、质感和整体风格参考，由提示词主导视频内容；"
-            "不要强制把输入图片锁定为视频第一帧。"
+            "Image reference constraint: use the input images as references for subject, appearance, color tone, texture and overall style, with the prompt driving the video content; "
+            "do not force the input image to be locked as the first frame of the video."
         )
     parts.append(
-        "输出要求：生成单条连贯视频镜头，动作自然，运动平滑，避免闪烁、变形、跳帧和主体身份漂移。"
+        "Output requirement: generate a single coherent video shot with natural action and smooth motion, avoiding flicker, deformation, frame skipping and subject identity drift."
     )
     return "\n".join(part for part in parts if part)
 
@@ -522,10 +520,10 @@ def build_freezone_video_extend_prompt(
     parts = [str(user_prompt or "").strip()]
     template = get_video_camera_template(camera_template_id)
     if template:
-        parts.append(f"运镜模板：{template['name']}。{template['prompt']}")
+        parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
     parts.append(
-        "视频延长要求：从输入视频的结尾继续生成，保持主体身份、场景、光线、镜头运动、"
-        "声音与叙事连续，不要重做或编辑输入视频已有内容。"
+        "Video extension requirement: continue generating from the end of the input video, keeping subject identity, scene, lighting, camera movement, "
+        "sound and narrative continuous, without redoing or editing what the input video already contains."
     )
     return "\n".join(part for part in parts if part)
 
@@ -545,7 +543,7 @@ def build_freezone_keyframe_video_prompt(
 
     template = get_video_camera_template(camera_template_id)
     if template:
-        parts.append(f"运镜模板：{template['name']}。{template['prompt']}")
+        parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
 
     marks_block = format_video_marks(marks)
     if marks_block:
@@ -553,19 +551,19 @@ def build_freezone_keyframe_video_prompt(
 
     if has_first_frame and has_last_frame:
         parts.append(
-            "首尾帧约束：严格从首帧自然过渡到尾帧，保持主体身份、构图逻辑、光线与场景连续。"
+            "First/last frame constraint: transition strictly and naturally from the first frame to the last frame, keeping subject identity, compositional logic, lighting and scene continuous."
         )
     elif has_first_frame:
         parts.append(
-            "首帧约束：严格继承输入图片中的主体、构图、服装、光线和场景信息，把输入图作为视频首帧参考。"
+            "First frame constraint: strictly inherit the subject, composition, clothing, lighting and scene information of the input image, and use the input image as the first-frame reference of the video."
         )
     elif has_last_frame:
         parts.append(
-            "尾帧约束：以输入图片作为目标收束画面，确保镜头最终自然落到该主体状态和构图。"
+            "Last frame constraint: use the input image as the target closing frame, making sure the shot finally lands naturally on that subject state and composition."
         )
 
     parts.append(
-        "输出要求：生成单条连贯视频镜头，动作自然，运动平滑，避免闪烁、变形、跳帧、主体身份漂移和首尾帧跳变。"
+        "Output requirement: generate a single coherent video shot with natural action and smooth motion, avoiding flicker, deformation, frame skipping, subject identity drift and first/last frame jumps."
     )
     return "\n".join(part for part in parts if part)
 
@@ -581,22 +579,22 @@ def build_freezone_omni_video_prompt(
     parts = [str(user_prompt or "").strip()]
 
     if theme and theme.strip():
-        parts.append(f"主题要求：{theme.strip()}")
+        parts.append(f"Theme requirement: {theme.strip()}")
 
     template = get_video_camera_template(camera_template_id)
     if template:
-        parts.append(f"运镜模板：{template['name']}。{template['prompt']}")
+        parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
 
     marks_block = format_video_marks(marks)
     if marks_block:
         parts.append(marks_block)
 
     parts.append(
-        "全能参考模式要求：综合文本、图像、视频、音频、文件和网页链接参考进行统一建模，"
-        "优先保持主体身份、场景连续性、风格一致性和动作自然性。"
+        "Omni-reference mode requirement: model the text, image, video, audio, file and web link references together, "
+        "prioritizing subject identity, scene continuity, style consistency and natural action."
     )
     counts = summarize_omni_reference_counts(reference_items or [])
-    single_video_reference_instruction = "这是视频参考生成新的视频，不是视频编辑。"
+    single_video_reference_instruction = "This is generating a new video from a video reference, not video editing."
     if (
         counts["video_count"] == 1
         and counts["image_count"] == 0
@@ -607,7 +605,7 @@ def build_freezone_omni_video_prompt(
     ):
         parts.append(single_video_reference_instruction)
     parts.append(
-        "输出要求：生成单条连贯视频镜头，动作自然，运动平滑，避免闪烁、变形、跳帧和主体身份漂移。"
+        "Output requirement: generate a single coherent video shot with natural action and smooth motion, avoiding flicker, deformation, frame skipping and subject identity drift."
     )
     return "\n".join(part for part in parts if part)
 
@@ -655,9 +653,9 @@ def validate_omni_reference_limits(
         raise ValueError("reference_file and reference_link are mutually exclusive")
 
 
-# 火山 Seedance 对参考图的硬规则（从 400 报文里实测）：
+# Hard rules of Volcengine Seedance for reference images (measured from 400 responses):
 #   `[InvalidParameter.HeightTooSmall] Height must be between 300px and 6000px.`
-# 宽高比 0.4~2.5 与 seedance2_i2v/assets.py 里分镜路径用的同一组数字。
+# Aspect ratio 0.4~2.5 is the same pair of numbers used by the storyboard path in seedance2_i2v/assets.py.
 MIN_OMNI_REFERENCE_IMAGE_PX = 300
 MAX_OMNI_REFERENCE_IMAGE_PX = 6000
 MIN_OMNI_REFERENCE_IMAGE_ASPECT = 0.4
@@ -665,13 +663,13 @@ MAX_OMNI_REFERENCE_IMAGE_ASPECT = 2.5
 
 
 def _read_reference_image_size(path: Path) -> tuple[int, int] | None:
-    """只读文件头拿尺寸；读不出（文件不存在 / 不是图片）返回 None 交给厂商判。"""
+    """Read only the file header to get the size; if it cannot be read (file missing / not an image), return None and leave it to the vendor to judge."""
     try:
         from PIL import Image
 
         with Image.open(path) as img:
             width, height = img.size
-    except Exception:  # noqa: BLE001 - 任何读取失败都不该替厂商拦请求
+    except Exception:  # noqa: BLE001 - never block a request on behalf of the vendor because of any read failure
         return None
     if width <= 0 or height <= 0:
         return None
@@ -686,10 +684,10 @@ def validate_omni_reference_image_dimensions(
     min_aspect: float = MIN_OMNI_REFERENCE_IMAGE_ASPECT,
     max_aspect: float = MAX_OMNI_REFERENCE_IMAGE_ASPECT,
 ) -> None:
-    """参考图尺寸兜底校验，入队前拦住厂商必拒的图，省掉一次预扣 + 上传 + 退款。
+    """Fallback validation of reference image sizes: block images the vendor will certainly reject before enqueueing, saving one pre-deduction + upload + refund.
 
-    与 `validate_omni_reference_audio_durations` 同一口径：读不出尺寸的条目**不参与判定**。
-    先报边长越界，再报宽高比，两类同时出现时只报前者。
+    Same convention as `validate_omni_reference_audio_durations`: entries whose size cannot be read **do not take part in the judgment**.
+    Out-of-range side length is reported first, then aspect ratio; when both occur, only the former is reported.
     """
     out_of_range: list[str] = []
     bad_aspect: list[str] = []
@@ -711,12 +709,12 @@ def validate_omni_reference_image_dimensions(
             bad_aspect.append(f"{label} ({width}x{height}, {aspect:.2f})")
     if out_of_range:
         raise ValueError(
-            f"参考图尺寸不符合要求，宽度和高度需在 {min_px} 至 {max_px} 像素之间: "
+            f"Reference image size does not meet the requirements: width and height must be between {min_px} and {max_px} pixels: "
             + ", ".join(out_of_range)
         )
     if bad_aspect:
         raise ValueError(
-            f"参考图宽高比需在 {min_aspect:g} 至 {max_aspect:g} 之间: "
+            f"Reference image aspect ratio must be between {min_aspect:g} and {max_aspect:g}: "
             + ", ".join(bad_aspect)
         )
 
@@ -803,35 +801,35 @@ async def run_trusted_freezone_video_gen(
         raise RuntimeError("video generation returned success without output")
     return output_path
 
-# 全能参考音频时长：厂商（doubao-seedance-2-0 / r2v）有**两条互相独立**的规则，
-# 两条都以 400 打回，只卡其中一条就等于没卡：
-#   1. 逐条：`[InvalidParameter.DurationTooShort] Duration must be between 1.8s and 15.2s`
-#   2. 总和：`the parameter audio total duration (seconds) specified in the request must
+# Omni-reference audio duration: the vendor (doubao-seedance-2-0 / r2v) has **two independent** rules,
+# both rejected with a 400, so checking only one of them is as good as checking neither:
+#   1. Per item: `[InvalidParameter.DurationTooShort] Duration must be between 1.8s and 15.2s`
+#   2. Total: `the parameter audio total duration (seconds) specified in the request must
 #      be less than or equal to 15.2 for model doubao-seedance-2-0 in r2v`
 #
-# 第 2 条是 2026-08-06 从 3060 环境两次失败任务里实测抓到的
-# （freezone_video_gen/01KZ5R8ZZZY9M8T9F01H159RP7，gen_mode=allReference）。在那之前
-# 前后端都只按第 1 条判定，3 条各 6s 每条都合法、总计 18s 必被厂商拒——用户白等一轮。
-# 别再把总时长这条当成「我们自己臆想的规则」删掉。
+# Rule 2 was measured on 2026-08-06 from two failed tasks in the 3060 environment
+# (freezone_video_gen/01KZ5R8ZZZY9M8T9F01H159RP7, gen_mode=allReference). Before that,
+# both frontend and backend judged only by rule 1: three clips of 6s each are all individually legal, yet the 18s total is certain to be rejected by the vendor -- the user waited for nothing.
+# Do not delete the total-duration rule again as "a rule we imagined ourselves".
 MIN_OMNI_REFERENCE_AUDIO_SECONDS = 1.8
 MAX_OMNI_REFERENCE_AUDIO_SECONDS = 15.2
 MAX_OMNI_REFERENCE_AUDIO_TOTAL_SECONDS = 15.2
 
 
 def _format_seconds(value: float) -> str:
-    """按毫秒精度展示，去掉无意义尾随 0：15.2 → `15.2`、6.0 → `6`、1.799 → `1.799`。
+    """Display with millisecond precision, dropping meaningless trailing zeros: 15.2 -> `15.2`, 6.0 -> `6`, 1.799 -> `1.799`.
 
-    不能 `round(x, 1)`：15.201 显示成「15.2」时，用户看到的正好是合法边界值却被告知
-    越界，只会怀疑我们算错了。前端 `formatClipSeconds` 是同一口径。
+    Do not use `round(x, 1)`: when 15.201 is displayed as "15.2", the user sees exactly the legal boundary value yet is told
+    it is out of range, and can only suspect that we miscalculated. The frontend `formatClipSeconds` follows the same convention.
     """
     return f"{value:.3f}".rstrip("0").rstrip(".")
 
 
 def _exceeds(value: float, limit: float) -> bool:
-    """`value > limit`，但先归整到毫秒。
+    """`value > limit`, but first normalized to milliseconds.
 
-    浮点和会自己漂出去：6 + 6 + 3.2 == 15.200000000000001，裸比较会把一组正好顶格
-    15.2s 的合法音频判成超限。
+    Floating-point sums drift on their own: 6 + 6 + 3.2 == 15.200000000000001, and a bare comparison would judge a set of legal audio that exactly hits the
+    15.2s cap as over the limit.
     """
     return round(value - limit, 3) > 0
 
@@ -845,17 +843,17 @@ def validate_omni_reference_audio_durations(
     total_max_seconds: float | None = MAX_OMNI_REFERENCE_AUDIO_TOTAL_SECONDS,
     media_label: str = "audio",
 ) -> None:
-    """全能参考音频时长兜底校验，入参是 `(标签, 秒数)`，秒数 None = 探测不出。
+    """Fallback validation of omni-reference audio durations; the input is `(label, seconds)`, with seconds None = could not be probed.
 
-    探测不出的条目**不参与判定**：ffprobe 缺失 / 文件读不了时，宁可放过去让厂商判，
-    也不要凭空拦死一次正常提交。这让总和成为**下界**，但判定方向仍然安全——漏算只会
-    让和更小，所以「算出来超了」必定真超，不存在因此产生的误拦。
+    Entries that cannot be probed **do not take part in the judgment**: when ffprobe is missing or a file cannot be read, better to let it through and let the vendor decide
+    than to block a normal submission out of thin air. This makes the total a **lower bound**, but the direction of the judgment stays safe -- an omission can only
+    make the sum smaller, so "computed to exceed" is certainly a true excess, and no false block can result.
 
-    三个上限各自可以传 `None` = **这项不判定**。逐条边界（1.8~15.2s）是从 Seedance 2.0
-    的报文里实测出来的，只对它成立；管理员在目录里配了总时长、但模型不是 2.0 时，调用方
-    应当把 min/max 传 None ——拿 2.0 的数字去卡别家模型就是凭空 400。
+    Each of the three limits may be passed as `None` = **this item is not judged**. The per-item bound (1.8~15.2s) was measured from the Seedance 2.0
+    responses and only holds for it; when an admin configures a total duration in the catalog but the model is not 2.0, the caller
+    should pass None for min/max -- applying the 2.0 numbers to other vendors' models would be a made-up 400.
 
-    太短 → 单条太长 → 总和太长，逐类上报；同时越界时报一类比混在一起列更好读。
+    Too short -> a single item too long -> total too long, reported by category; when several are out of range at once, reporting one category at a time reads better than listing them mixed together.
     """
     measured = [
         (label, float(seconds))
@@ -891,7 +889,7 @@ def validate_omni_reference_audio_durations(
             + _clips(too_long)
         )
     total = sum(value for _, value in measured)
-    # 总时长下限只有在每一条素材都成功探测时才可判定；漏测会让和偏小，不能据此误拦。
+    # The lower bound on total duration can only be judged when every clip was probed successfully; a missed probe makes the sum smaller and must not cause a false block.
     if (
         total_min_seconds is not None
         and len(measured) == len(durations)
@@ -914,21 +912,21 @@ def video_character_library_path(project_dir: Path) -> Path:
     return freezone_root(project_dir) / "video_character_library.json"
 
 
-# 关键区只是两份小 JSON 的读改写，正常毫秒级；等这么久还拿不到说明持锁方卡死了。
+# The critical section is just a read-modify-write of two small JSON files, normally milliseconds; if the lock still cannot be acquired after this long, the holder is stuck.
 _LIBRARY_LOCK_TIMEOUT_SECONDS = 30.0
 _LIBRARY_LOCK_RETRY_INTERVAL_SECONDS = 0.02
 
 
 @contextmanager
 def _library_lock(project_dir: Path) -> Iterator[None]:
-    """串行化资产库两份 JSON（条目 + 文件夹）的「读→改→写」。
+    """Serialize the "read -> modify -> write" of the two asset-library JSON files (items + folders).
 
-    API 多 worker 进程下，并发登记各自读到同一份旧列表、再整份写回，后写的会把
-    先写的冲掉——一次上传 4 张只剩 2 张。条目和文件夹共用一把锁，因为删文件夹
-    要同时改两份文件。锁不可重入：持锁期间不要再调用本模块其它加锁的函数。
+    With multiple API worker processes, concurrent registrations each read the same stale list and write the whole list back, so the later write
+    wipes out the earlier one -- upload 4 and only 2 remain. Items and folders share one lock, because deleting a folder
+    has to change both files at once. The lock is not reentrant: while holding it, do not call other locking functions in this module.
 
-    用 portalocker 而不是 fcntl：Windows 没有 fcntl，取不到锁就必须报错，绝不能
-    静默放行。非阻塞 + 重试是因为 Windows 的阻塞锁自带固定超时，行为和 POSIX 不一致。
+    portalocker is used rather than fcntl: Windows has no fcntl, and failing to take the lock must raise, never
+    be silently let through. Non-blocking + retry is used because Windows blocking locks carry a fixed timeout, which behaves differently from POSIX.
     """
     lock_path = freezone_root(project_dir) / "video_character_library.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -939,7 +937,7 @@ def _library_lock(project_dir: Path) -> Iterator[None]:
                 portalocker.lock(lock_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
                 break
             except portalocker.exceptions.AlreadyLocked as exc:
-                # 仅竞争重试；其余锁故障（如不支持锁的挂载）立即上抛。
+                # Retry only on contention; other lock failures (e.g. a mount that does not support locks) are re-raised immediately.
                 if time.monotonic() >= deadline:
                     raise TimeoutError(
                         f"asset library lock busy: {lock_path}"
@@ -952,9 +950,9 @@ def _library_lock(project_dir: Path) -> Iterator[None]:
 
 
 def _write_json_atomic(path: Path, data: Any) -> None:
-    """先写临时文件再 os.replace，读方永远看不到写了一半的 JSON。
+    """Write a temp file first, then os.replace, so readers never see a half-written JSON.
 
-    load_* 遇到解析失败会返回空列表，半截文件一旦被读到再写回，整个库就清空了。
+    load_* returns an empty list on a parse failure, and once a truncated file is read and written back, the whole library is wiped.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_path = tempfile.mkstemp(prefix=f"{path.name}.", suffix=".tmp", dir=path.parent)
@@ -990,15 +988,15 @@ def save_video_character_library(
 
 LIBRARY_CATEGORIES = ("other", "character", "scene", "prop", "style", "audio")
 
-# 资产库目录树。文件夹（保存位置）和类目（标签）是两个独立维度：类目只管
-# 「这素材是干嘛的」，文件夹管「它放在哪」。系统文件夹两个——主线同步来的一律
-# 收进 mainline；本地上传缺省落在 other（前端显示为「待分类资产」）。类目 key
-# 同时充当同名系统文件夹的 key，这样老条目（没有 folder 字段）按类目归位即可，
-# 不需要数据迁移。用户新建的文件夹用随机 id，不会和这些保留 key 撞上。
+# Asset library directory tree. Folders (save location) and categories (labels) are two independent dimensions: a category only says
+# "what this asset is for", while a folder says "where it is put". There are two system folders -- everything synced from the mainline always goes
+# into mainline; local uploads default to other (the frontend shows it as "Unsorted assets"). A category key
+# also serves as the key of the same-named system folder, so old items (with no folder field) can be placed by category,
+# with no data migration. User-created folders use random ids and cannot collide with these reserved keys.
 MAINLINE_FOLDER_KEY = "mainline"
 RESERVED_FOLDER_KEYS = (MAINLINE_FOLDER_KEY, *LIBRARY_CATEGORIES)
-# 与前端 assetLibraryItems.ts 的系统文件夹名保持一致，防止用户建出同名文件夹。
-RESERVED_FOLDER_NAMES = ("主线", "待分类资产", "其它", "人物", "场景", "物品", "风格", "音效")
+# Keep in sync with the system folder names in the frontend assetLibraryItems.ts, to prevent users from creating folders with the same names.
+RESERVED_FOLDER_NAMES = ("Mainline", "Unsorted assets", "Other", "Characters", "Scenes", "Props", "Style", "Sound effects")
 FOLDER_NAME_MAX_LEN = 20
 
 
@@ -1007,7 +1005,7 @@ def video_character_folders_path(project_dir: Path) -> Path:
 
 
 def load_video_character_folders(project_dir: Path) -> list[dict[str, Any]]:
-    """读用户自建的资产库文件夹（系统文件夹不落盘，由前端按保留 key 生成）。"""
+    """Read the user-created asset library folders (system folders are not persisted; the frontend generates them from reserved keys)."""
     path = video_character_folders_path(project_dir)
     if not path.exists():
         return []
@@ -1025,7 +1023,7 @@ def save_video_character_folders(project_dir: Path, folders: list[dict[str, Any]
 
 
 def add_video_character_folder(project_dir: Path, *, name: str) -> dict[str, Any]:
-    """新建一个资产库文件夹。重名（含系统文件夹名）直接拒绝，避免目录里两个同名项。"""
+    """Create an asset library folder. A duplicate name (including system folder names) is rejected outright, to avoid two same-named entries in the directory."""
     clean = name.strip()
     with _library_lock(project_dir):
         folders = load_video_character_folders(project_dir)
@@ -1041,7 +1039,7 @@ def add_video_character_folder(project_dir: Path, *, name: str) -> dict[str, Any
 
 
 def _validate_folder_name(clean: str, folders: list[dict[str, Any]], *, skip_id: str = "") -> None:
-    """新建/重命名共用的一套校验：非空、不超长、不撞系统名、不与其它文件夹重名。"""
+    """Validation shared by create/rename: non-empty, not too long, not colliding with system names, not duplicating another folder."""
     if not clean:
         raise ValueError("folder name is required")
     if len(clean) > FOLDER_NAME_MAX_LEN:
@@ -1062,10 +1060,10 @@ def update_video_character_folder(
     name: str | None = None,
     cover: str | None = None,
 ) -> dict[str, Any] | None:
-    """改名 / 换封面。只动传进来的字段，两者都不传视作空操作。
+    """Rename / change the cover. Only the passed fields are touched; passing neither is treated as a no-op.
 
-    封面存的是素材本身的 URL（前端从文件夹里挑一张），所以不需要额外的文件管理；
-    素材被删掉后封面会指向失效 URL，前端按缺省封面渲染即可。
+    The cover stores the URL of the asset itself (the frontend picks one from the folder), so no extra file management is needed;
+    after the asset is deleted the cover points to a dead URL, and the frontend simply renders the default cover.
     """
     with _library_lock(project_dir):
         folders = load_video_character_folders(project_dir)
@@ -1083,10 +1081,10 @@ def update_video_character_folder(
 
 
 def delete_video_character_folder(project_dir: Path, folder_id: str) -> int | None:
-    """整柜清空：删掉文件夹本身，连同落在里面的素材条目。
+    """Empty the whole cabinet: delete the folder itself along with the asset items inside it.
 
-    返回被删掉的素材条数；文件夹不存在时返回 ``None``。系统文件夹（主线/类目同名
-    目录）不落盘，也就永远走不到这里——路由层按 id 找不到直接 404。
+    Returns the number of asset items deleted; returns ``None`` if the folder does not exist. System folders (the mainline / same-named category
+    directories) are not persisted, so they never reach here -- the route layer finds no such id and returns 404 directly.
     """
     with _library_lock(project_dir):
         folders = load_video_character_folders(project_dir)
@@ -1103,7 +1101,7 @@ def delete_video_character_folder(project_dir: Path, folder_id: str) -> int | No
 
 
 def library_folder_keys(project_dir: Path) -> set[str]:
-    """当前可用作「保存位置」的文件夹 key：系统保留 key + 用户自建文件夹 id。"""
+    """Folder keys currently usable as a "save location": the reserved system keys + user-created folder ids."""
     keys = set(RESERVED_FOLDER_KEYS)
     for folder in load_video_character_folders(project_dir):
         keys.add(str(folder.get("id")))
@@ -1117,11 +1115,11 @@ def _resolve_library_folder(
     source: str,
     category: str,
 ) -> str:
-    """定出条目落在哪个文件夹，与前端 assetLibraryItems.ts 的归位逻辑保持一致。
+    """Decide which folder an item lands in, consistent with the placement logic of the frontend assetLibraryItems.ts.
 
-    显式指定优先；其次沿用条目已有的位置（重复同步/重复登记不能把用户挪好的
-    位置冲掉）；最后兜底——主线同步来的进 mainline，本地上传按类目进同名系统
-    文件夹（没归类的就是 other，即「待分类资产」）。
+    An explicit value takes priority; next, keep the position the item already has (repeated sync/registration must not wash out a
+    position the user has arranged); finally the fallback -- items synced from the mainline go into mainline, local uploads go by category into the same-named system
+    folder (unclassified ones are other, i.e. "Unsorted assets").
     """
     if folder:
         return str(folder)
@@ -1141,10 +1139,10 @@ def _resolve_library_category(
     source: str,
     media: str,
 ) -> str:
-    """定出条目的用途类目，与前端 assetLibraryItems.ts 的 deriveCategory 保持一致。
+    """Decide the usage category of an item, consistent with deriveCategory in the frontend assetLibraryItems.ts.
 
-    优先用显式传入的类目；其次沿用条目已有的类目（主线重复同步不能把用户归好的
-    类冲掉）；最后按来源/媒介兜底——人物/场景/道具对号入座，音频归音效，其余归其它。
+    An explicitly passed category takes priority; next, keep the category the item already has (repeated mainline sync must not wash out a category the user has
+    sorted); finally fall back by source/medium -- characters/scenes/props match their kind, audio goes to sound effects, the rest goes to other.
     """
     if category in LIBRARY_CATEGORIES:
         return str(category)
@@ -1170,9 +1168,9 @@ def _upsert_library_item(
     category: str | None = None,
     folder: str | None = None,
 ) -> dict[str, Any]:
-    """纯内存 upsert：按 id 就地更新或追加 ``items``，返回写入的条目。
+    """Pure in-memory upsert: update in place by id or append to ``items``, returning the written item.
 
-    不做任何磁盘 IO，供单条登记与批量同步复用（后者一次读、一次写即可）。
+    Does no disk IO, shared by single registration and batch sync (the latter needs only one read and one write).
     """
     now = datetime.now().isoformat()
     urls = list(image_urls or [])
@@ -1226,12 +1224,12 @@ def add_video_character_library_item(
     category: str | None = None,
     folder: str | None = None,
 ) -> dict[str, Any]:
-    """把一条素材登记到资产库。
+    """Register one asset in the asset library.
 
-    图片走 ``image_urls``，视频/音频走 ``video_url`` / ``audio_url``。``item_id``
-    非空时按 id upsert（主线同步用稳定合成 id，重复同步是更新而非新增）。
-    ``category`` 是用途类目（标签），``folder`` 是保存位置，两者互不影响，缺省时
-    分别按来源/媒介、按类目兜底推导。
+    Images go through ``image_urls``, video/audio go through ``video_url`` / ``audio_url``. When ``item_id`` is
+    non-empty, upsert by id (mainline sync uses stable synthetic ids, so repeated sync updates rather than adds).
+    ``category`` is the usage category (label) and ``folder`` is the save location; the two do not affect each other, and when omitted they are
+    derived by source/medium and by category respectively.
     """
     with _library_lock(project_dir):
         items = load_video_character_library(project_dir)
@@ -1251,18 +1249,18 @@ def add_video_character_library_item(
     return item
 
 
-# 资产名只用于展示，给个宽松上限防止有人贴一整段文案进来把列表撑爆。
+# Asset names are for display only; give a generous cap so that nobody can paste a whole block of copy and blow up the list.
 LIBRARY_ITEM_NAME_MAX_LEN = 60
 
 
 def rename_video_character_library_item(
     project_dir: Path, item_id: str, *, name: str
 ) -> dict[str, Any] | None:
-    """给资产库条目改名。条目不存在返回 ``None``，名字非法抛 ``ValueError``。
+    """Rename an asset library item. Returns ``None`` if the item does not exist; raises ``ValueError`` if the name is invalid.
 
-    只动 ``name`` 和 ``updated_at``：URL / 类目 / 保存位置一概不碰，画布上已经引用
-    该素材的节点不受影响。和文件夹改名不同，素材名不要求唯一——同名素材在库里是
-    常态（同一角色的多张参考图）。
+    Only ``name`` and ``updated_at`` are touched: URL / category / save location are left alone, and nodes on the canvas that already reference
+    the asset are unaffected. Unlike folder renaming, asset names need not be unique -- same-named assets in the library are
+    normal (multiple reference images of the same character).
     """
     clean = name.strip()
     if not clean:
@@ -1295,13 +1293,13 @@ def sync_mainline_assets_into_library(
     *,
     assets: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """把主线资产（已解析好 name/url/media/source/id）幂等写进资产库。
+    """Idempotently write mainline assets (name/url/media/source/id already resolved) into the asset library.
 
-    ``assets`` 每项形如 ``{"id","name","media","source","url"}``。用稳定合成 id
-    upsert，因此重复同步只更新 URL、不产生重复条目。返回同步后的完整库。
+    Each entry of ``assets`` looks like ``{"id","name","media","source","url"}``. Upsert by stable synthetic id,
+    so repeated sync only updates URLs and produces no duplicate items. Returns the full library after the sync.
 
-    整个批次只读一次、写一次库文件（内存里逐条 upsert），避免 N 条资产触发
-    N 次全量 load+save 的 O(N²) IO。
+    The whole batch reads the library file once and writes it once (per-item upsert in memory), avoiding the O(N^2) IO of
+    N assets triggering N full load+save cycles.
     """
     with _library_lock(project_dir):
         items = load_video_character_library(project_dir)

@@ -125,13 +125,13 @@ def resolve_default_assets(project_output: Path, episode: int, beat: int) -> Dem
         first_frame_path=project_output / "frames" / episode_key / f"beat_{beat:02d}.png",
         last_frame_path=project_output / "frames" / episode_key / f"beat_{beat + 1:02d}.png",
         character_reference_path=(
-            project_output / "assets" / "characters" / "陆辰" / "identities" / "书店老板时期.png"
+            project_output / "assets" / "characters" / "Lu Chen" / "identities" / "bookstore_owner.png"
         ),
-        scene_reference_path=project_output / "assets" / "scenes" / "地下室" / "anchor.png",
+        scene_reference_path=project_output / "assets" / "scenes" / "basement" / "anchor.png",
         second_scene_reference_path=project_output
         / "assets"
         / "scenes"
-        / "青鹿河·老码头"
+        / "qinglu_river_old_dock"
         / "anchor.png",
         storyboard_reference_path=(
             project_output / "sketches" / episode_key / f"beat_{beat:02d}.png"
@@ -159,7 +159,7 @@ def _identity_from_beat(beat: dict[str, Any]) -> tuple[str, str]:
         strict=False,
     )
     if not identities:
-        return "主体", "身份造型"
+        return "Subject", "identity look"
 
     character, identity_id = next(iter(identities.items()))
     identity_name = identity_id.split("_", 1)[1] if "_" in identity_id else identity_id
@@ -180,9 +180,9 @@ def build_seedance2_prompt_atoms(
         atoms.append(
             Seedance2PromptAtom(
                 atom_type="first_frame",
-                label="起始画面",
-                source_label="首帧",
-                preserve=("起始构图", "人物当前位置", "最终视觉风格"),
+                label="Opening frame",
+                source_label="first frame",
+                preserve=("opening composition", "current character position", "final visual style"),
             )
         )
 
@@ -193,10 +193,10 @@ def build_seedance2_prompt_atoms(
             Seedance2PromptAtom(
                 atom_type="identity",
                 label=identity_name,
-                source_label=f"图片{reference_index}",
+                source_label=f"@image{reference_index}",
                 target=character,
-                preserve=("脸型", "年龄感", "发型", "眼镜", "服装", "气质"),
-                ignore=("背景", "姿势", "构图"),
+                preserve=("face shape", "apparent age", "hairstyle", "glasses", "clothing", "demeanor"),
+                ignore=("background", "pose", "composition"),
             )
         )
         reference_index += 1
@@ -205,10 +205,10 @@ def build_seedance2_prompt_atoms(
         atoms.append(
             Seedance2PromptAtom(
                 atom_type="scene",
-                label="地下室空间",
-                source_label=f"图片{reference_index}",
-                preserve=("地下室空间", "旧书架", "潮湿砖墙", "冷暗光线"),
-                ignore=("人物", "临时道具"),
+                label="basement space",
+                source_label=f"@image{reference_index}",
+                preserve=("basement space", "old bookshelves", "damp brick walls", "cold dim lighting"),
+                ignore=("characters", "temporary props"),
             )
         )
         reference_index += 1
@@ -217,10 +217,10 @@ def build_seedance2_prompt_atoms(
         atoms.append(
             Seedance2PromptAtom(
                 atom_type="scene",
-                label="旧木结构补充",
-                source_label=f"图片{reference_index}",
-                preserve=("旧木结构", "石板路", "潮湿陈旧质感"),
-                ignore=("人物", "主体场景替换"),
+                label="old wooden structure supplement",
+                source_label=f"@image{reference_index}",
+                preserve=("old wooden structures", "flagstone road", "damp aged texture"),
+                ignore=("characters", "replacing the main scene"),
             )
         )
         reference_index += 1
@@ -229,10 +229,10 @@ def build_seedance2_prompt_atoms(
         atoms.append(
             Seedance2PromptAtom(
                 atom_type="storyboard",
-                label="分镜构图",
-                source_label=f"图片{reference_index}",
-                preserve=("构图", "人物站位", "姿势", "镜头角度", "画面重心"),
-                ignore=("黑白线稿风格", "草图线条", "简化五官"),
+                label="storyboard composition",
+                source_label=f"@image{reference_index}",
+                preserve=("composition", "character placement", "pose", "camera angle", "visual center of gravity"),
+                ignore=("black-and-white line-art style", "sketch lines", "simplified facial features"),
             )
         )
 
@@ -240,16 +240,16 @@ def build_seedance2_prompt_atoms(
         [
             Seedance2PromptAtom(
                 atom_type="motion",
-                label="动作",
+                label="motion",
                 content=(
                     _text(beat.get("video_prompt")),
-                    "[0-1s] 保持起始构图，人物低头翻动旧书，动作克制。",
-                    "[1-3s] 镜头缓慢向前推，书页轻微翻动，人物呼吸放轻，肩背紧绷。",
+                    "[0-1s] Hold the opening composition; the character lowers their head and turns the pages of an old book, restrained.",
+                    "[1-3s] The camera pushes in slowly, the pages stir slightly, the character breathes softly, shoulders and back tense.",
                 ),
             ),
             Seedance2PromptAtom(
                 atom_type="visual",
-                label="画面",
+                label="visuals",
                 content=(
                     _text(beat.get("visual_description")),
                     _text(beat.get("scene_description")),
@@ -258,16 +258,16 @@ def build_seedance2_prompt_atoms(
             ),
             Seedance2PromptAtom(
                 atom_type="audio",
-                label="声音",
-                content=("地下室环境声", "雨声", "纸页摩擦声", "轻微呼吸声"),
-                ignore=("旁白", "新增对白"),
+                label="sound",
+                content=("basement ambience", "rain", "paper rustling", "faint breathing"),
+                ignore=("narration", "added dialogue"),
             ),
             Seedance2PromptAtom(
                 atom_type="constraints",
-                label="约束",
+                label="constraints",
                 content=(
-                    "不要生成分屏、拼贴、证件照或参考图展示墙。",
-                    "不要新增无关人物，不要改变陆辰的年龄、服装主色或眼镜特征。",
+                    "Do not generate split screens, collages, ID photos, or a reference-image display wall.",
+                    "Do not add unrelated characters, and do not change Lu Chen's age, main clothing color, or glasses.",
                 ),
             ),
         ]
@@ -277,28 +277,31 @@ def build_seedance2_prompt_atoms(
 
 def _reference_line(atom: Seedance2PromptAtom) -> str | None:
     if atom.atom_type == "first_frame":
-        return "- 首帧：作为起始构图和人物当前位置。"
+        return "- First frame: use as the opening composition and the character's current position."
     if atom.atom_type == "identity":
-        preserved = "、".join(atom.preserve)
-        ignored = "、".join(atom.ignore)
+        preserved = ", ".join(atom.preserve)
+        ignored = ", ".join(atom.ignore)
         return (
-            f"- {atom.source_label}：身份原子，只用于锚定"
-            f"{atom.target}“{atom.label}”的身份造型，包括{preserved}；"
-            f"不要参考{ignored}。"
+            f"- {atom.source_label}: identity atom, used only to anchor the identity look "
+            f'of {atom.target} "{atom.label}", including {preserved}; '
+            f"do not reference {ignored}."
         )
-    if atom.atom_type == "scene" and atom.label == "地下室空间":
+    if atom.atom_type == "scene" and atom.label == "basement space":
         return (
-            f"- {atom.source_label}：场景原子，只用于地下室空间、旧书架、潮湿砖墙和冷暗光线。"
+            f"- {atom.source_label}: scene atom, used only for the basement space, old bookshelves, "
+            "damp brick walls, and cold dim lighting."
         )
     if atom.atom_type == "scene":
         return (
-            f"- {atom.source_label}：场景补充原子，只用于旧木结构、石板路和潮湿陈旧质感，"
-            "不改变地下室主体场景。"
+            f"- {atom.source_label}: scene supplement atom, used only for old wooden structures, "
+            "the flagstone road, and damp aged texture; "
+            "it does not change the main basement scene."
         )
     if atom.atom_type == "storyboard":
         return (
-            f"- {atom.source_label}：分镜原子，只用于构图、人物站位、姿势、镜头角度和画面重心；"
-            "不要继承黑白线稿风格、草图线条或简化五官。"
+            f"- {atom.source_label}: storyboard atom, used only for composition, character placement, "
+            "pose, camera angle, and visual center of gravity; "
+            "do not inherit the black-and-white line-art style, sketch lines, or simplified facial features."
         )
     return None
 
@@ -321,32 +324,32 @@ def render_seedance2_prompt_from_atoms(
 
     return "\n".join(
         [
-            f"生成 {duration} 秒 {ratio} 写实悬疑短剧镜头。",
+            f"Generate a {duration}-second {ratio} realistic suspense short-drama shot.",
             "",
-            "参考素材原子约束：",
+            "Reference atom constraints:",
             *reference_lines,
-            "不要生成分屏、拼贴、证件照或参考图展示墙。",
-            "不要新增无关人物，不要改变陆辰的年龄、服装主色或眼镜特征。",
+            "Do not generate split screens, collages, ID photos, or a reference-image display wall.",
+            "Do not add unrelated characters, and do not change Lu Chen's age, main clothing color, or glasses.",
             "",
-            "剧情与画面信息：",
-            f"- 动作核心：{video_prompt}",
-            f"- 画面描述：{visual_description}",
-            f"- 场景：{scene_description}",
-            f"- 道具：{props_description}",
+            "Plot and visual information:",
+            f"- Core action: {video_prompt}",
+            f"- Visual description: {visual_description}",
+            f"- Scene: {scene_description}",
+            f"- Props: {props_description}",
             "",
-            "镜头：",
-            "[0-1s] 保持首帧构图，人物低头翻动旧书，动作克制。",
-            "[1-3s] 镜头缓慢向前推，书页轻微翻动，人物呼吸放轻，肩背紧绷。",
+            "Shots:",
+            "[0-1s] Hold the first-frame composition; the character lowers their head and turns the pages of an old book, restrained.",
+            "[1-3s] The camera pushes in slowly, the pages stir slightly, the character breathes softly, shoulders and back tense.",
             (
-                f"[3-{duration}s] 人物手指停在关键物件或破旧封面上，"
-                "光线微闪，定格在发现异常的瞬间。"
+                f"[3-{duration}s] The character's finger stops on a key object or the worn cover, "
+                "the light flickers faintly, freezing on the moment something odd is discovered."
             ),
             "",
-            "声音：",
-            "地下室环境声、雨声、纸页摩擦声和轻微呼吸声，不要旁白，不要新增对白。",
+            "Sound:",
+            "Basement ambience, rain, paper rustling, and faint breathing; no narration, no added dialogue.",
             "",
-            "风格：",
-            "写实电影质感，低照度，冷灰绿色阴影，细节稳定，动作克制。",
+            "Style:",
+            "Realistic cinematic texture, low light, cold gray-green shadows, stable detail, restrained motion.",
         ]
     )
 

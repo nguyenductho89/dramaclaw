@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 蒙版导出（供视觉模型识别）：源图 + 涂抹区半透明红色高亮。
-// 后端把它当作 Image 2 的编辑参考——红色只是标注区域用，模型不会把红色画进结果。
-// 旧做法是「白底 + 透明孔洞」，编辑区只存在于 alpha 通道，模型 RGB 里看是整张纯白 → 定位失败。
+// Mask export (for vision models): source image + semi-transparent red highlight on painted areas.
+// The backend uses it as the edit reference for Image 2 - red only marks the region, and the model does not draw red into the result.
+// The old approach was "white background + transparent holes": the edit region lived only in the alpha channel, and in the model's RGB it was all plain white -> localization failed.
 //
-// EraseOverlay / RedrawOverlay / MaskEditor 三个蒙版生产者共用这里，保证导出格式一致，
-// 后端只需维护单一契约（红色高亮）。
+// EraseOverlay / RedrawOverlay / MaskEditor, the three mask producers, share this so the export format is consistent,
+// and the backend only maintains a single contract (red highlight).
 
-/** 涂抹区归一后的固定颜色：均匀半透明红 rgba(255,0,0,0.6)。0.6 × 255 ≈ 153。 */
+/** The fixed color painted areas are normalized to: uniform semi-transparent red rgba(255,0,0,0.6). 0.6 x 255 ~ 153. */
 export const MASK_HIGHLIGHT_RGBA = { r: 255, g: 0, b: 0, a: 153 } as const;
 
 /**
- * 低于此 alpha 的像素视为「未涂抹」。与 hasMask 检测保持一致（> 8 = 涂过）。
- * 笔刷本身以 alpha≈140（0.55）绘制，抗锯齿边缘从 0 爬升，这里把整个笔迹足印算作涂抹区。
+ * Pixels below this alpha count as "unpainted". Kept consistent with the hasMask check (> 8 = painted).
+ * The brush itself draws at alpha ~140 (0.55) and the anti-aliased edge ramps up from 0; here the whole stroke footprint counts as painted.
  */
 export const MASK_ALPHA_THRESHOLD = 8;
 
 /**
- * 就地二值化一段 straight-alpha RGBA 缓冲：涂抹区 → 均匀半透明红，其余 → 全透明。
+ * Binarizes a straight-alpha RGBA buffer in place: painted areas -> uniform semi-transparent red, everything else -> fully transparent.
  *
- * 为什么必须二值化：笔刷以 alpha 0.55 叠加绘制，段接头/重叠处 alpha 爬到 ~0.80，
- * mask 通道本身深浅不均。若直接 `source-in` 一个 rgba(255,0,0,0.6)，Porter-Duff
- * "in" 会让输出 alpha = 0.6 × mask_alpha（单笔 0.33 / 叠加 0.48），不均匀原样保留。
- * 先把 mask alpha 拍平成 0/1，再写固定红，才能得到真正均匀的高亮。
+ * Why binarization is required: the brush draws at alpha 0.55, and at segment joints/overlaps alpha climbs to ~0.80,
+ * so the mask channel itself is uneven. If `source-in` were applied directly with rgba(255,0,0,0.6), Porter-Duff
+ * "in" would make the output alpha = 0.6 x mask_alpha (0.33 single stroke / 0.48 overlap), preserving the unevenness.
+ * Flatten the mask alpha to 0/1 first, then write the fixed red, to get a truly uniform highlight.
  *
- * 纯函数（不碰 canvas），便于单测。
+ * Pure function (does not touch canvas), easy to unit test.
  */
 export function binarizeMaskToRed(
   data: Uint8ClampedArray,
@@ -45,10 +45,10 @@ export function binarizeMaskToRed(
 }
 
 /**
- * 由源图 + 蒙版画布合成红色高亮蒙版 PNG。
+ * Composites a red-highlight mask PNG from the source image + mask canvas.
  *
- * @param baseImage 已加载的源图（HTMLImageElement 或已绘制源图的 canvas）
- * @param maskCanvas 用户涂抹的蒙版画布（涂抹区为半透明红，尺寸即输出尺寸）
+ * @param baseImage The loaded source image (HTMLImageElement or a canvas with the source image already drawn)
+ * @param maskCanvas The mask canvas painted by the user (painted areas are semi-transparent red; its size is the output size)
  */
 export async function buildRedHighlightMaskBlob(
   baseImage: CanvasImageSource,
@@ -61,11 +61,11 @@ export async function buildRedHighlightMaskBlob(
   out.height = h;
   const ctx = out.getContext('2d');
   if (!ctx) throw new Error('ctx');
-  // 1) 源图打底 —— 给视觉模型真实 RGB 内容。
+  // 1) Source image as the base - gives the vision model real RGB content.
   ctx.drawImage(baseImage, 0, 0, w, h);
-  // 2) 把涂抹区二值化成均匀半透明红，叠到源图上。
-  //    只对 mask 画布做 getImageData（本地绘制、不会 taint），源图仍走 drawImage/toBlob，
-  //    CORS 行为与旧代码一致。
+  // 2) Binarize the painted areas into uniform semi-transparent red and overlay them on the source image.
+  //    getImageData is only called on the mask canvas (locally drawn, never tainted); the source image still goes through drawImage/toBlob,
+  //    so CORS behavior is the same as the old code.
   const overlay = document.createElement('canvas');
   overlay.width = w;
   overlay.height = h;

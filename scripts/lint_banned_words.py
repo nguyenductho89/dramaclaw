@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""发布前禁用词 lint（REPO-07）。
+"""Pre-release banned-word lint (REPO-07).
 
-dramaclaw-ce 采用 Elastic License v2（源码可得 / source-available），**不是开源**。
-对外文本不得把本项目称为“开源 / open source”，以免与 OSI 开源定位混淆。
+dramaclaw-ce is licensed under the Elastic License v2 (source-available) and is **not open source**.
+Public-facing text must not call this project "open source" (in English or Chinese), to avoid
+confusion with the OSI open-source definition.
 
-用法：
-    python scripts/lint_banned_words.py            # 扫全部被跟踪的文档/文本
-    python scripts/lint_banned_words.py a.md b.md  # 只扫指定文件（供 pre-commit）
+Usage:
+    python scripts/lint_banned_words.py            # scan all tracked docs/text
+    python scripts/lint_banned_words.py a.md b.md  # scan only the given files (for pre-commit)
 
-放行：在该行加注释标记 `banned-word-allow`，即可豁免——用于 LICENSE-FAQ 等
-需要明确写“这不是开源 / not open source”的说明性文本。
+Allow: add the comment marker `banned-word-allow` to a line to exempt it -- for explanatory
+text such as the LICENSE-FAQ that must explicitly say "this is not open source".
 
-命中任一禁用词 → 退出码 1。
+Any banned word hit -> exit code 1.
 """
 from __future__ import annotations
 
@@ -22,21 +23,22 @@ from pathlib import Path
 
 from ce_allowlist import inline_marker, skip_paths
 
-# 禁用词（中英、大小写不敏感、允许 open-source / open source / opensource）
+# Banned words (English and Chinese, case-insensitive, allowing open-source / open source / opensource).
+# The Chinese term for "open source" is built from unicode escapes so this file contains no literal CJK.
 BANNED = [
-    ("开源", re.compile("开源")),
+    ("\u5f00\u6e90", re.compile("\u5f00\u6e90")),
     ("open source", re.compile(r"open[\s\-_]?source", re.IGNORECASE)),
 ]
 
-# 行内豁免标记（说明性文本可写“不是开源”）——从 ce-allowlist.toml 统一取
+# Inline exemption marker (explanatory text may say "not open source") -- taken from ce-allowlist.toml
 ALLOW_MARKER = inline_marker()
 
-# 扫描的文本/文档扩展名
+# Text/doc extensions to scan
 TEXT_SUFFIXES = {".md", ".markdown", ".mdx", ".txt", ".rst", ".html", ".htm"}
-# 无扩展名但需扫描的文件名前缀
+# Filename prefixes without an extension that still need scanning
 TEXT_STEMS = ("README", "LICENSE", "NOTICE", "CONTRIBUTING", "GOVERNANCE", "CHANGELOG")
 
-# 永远跳过的路径（lint 自身与其规则文档会“提到”这些词）——从 ce-allowlist.toml 统一取
+# Paths that are always skipped (the lint itself and its rule docs "mention" these words) -- taken from ce-allowlist.toml
 SKIP_PATHS = skip_paths("banned-words")
 
 
@@ -82,16 +84,16 @@ def main(argv: list[str]) -> int:
     for path in collect_targets(argv):
         for lineno, label, snippet in scan(path):
             total += 1
-            print(f"{path}:{lineno}: 禁用词「{label}」  ┆ {snippet}")
+            print(f"{path}:{lineno}: banned word \"{label}\"  | {snippet}")
     if total:
         print(
-            f"\n✖ 命中 {total} 处禁用词。dramaclaw-ce 不是开源（ELv2 source-available）；"
-            f"对外文本请改用“源码可得 / source-available”。\n"
-            f"  说明性文本（如“这不是开源”）可在该行加注释标记 `{ALLOW_MARKER}` 豁免。",
+            f"\n✖ {total} banned word hit(s). dramaclaw-ce is not open source (ELv2 source-available); "
+            f'use "source-available" in public-facing text instead.\n'
+            f'  Explanatory text (such as "this is not open source") may add the comment marker `{ALLOW_MARKER}` to exempt the line.',
             file=sys.stderr,
         )
         return 1
-    print("✓ 无禁用词。")
+    print("✓ No banned words.")
     return 0
 
 

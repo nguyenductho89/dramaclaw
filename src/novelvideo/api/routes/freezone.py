@@ -1,7 +1,7 @@
-"""Freezone REST 接口。
+"""Freezone REST API.
 
-所有接口统一挂在 `/api/v1/projects/{project}/freezone/*` 下，并沿用
-SuperTale 现有鉴权约定（`Depends(get_api_user)`）。
+All endpoints are mounted under `/api/v1/projects/{project}/freezone/*` and follow
+the existing SuperTale auth convention (`Depends(get_api_user)`).
 """
 
 from __future__ import annotations
@@ -452,12 +452,12 @@ async def _resolve_freezone_project(
     required_role: str = "editor",
     require_home_node: bool = True,
 ) -> tuple[ProjectContext, str, str, Path, str]:
-    """解析 freezone 项目上下文。
+    """Resolve the freezone project context.
 
-    `require_home_node=False` 只给画布那 13 条路由用（B2 步 11，按 `TCP-P60` 收窄）。
-    这一道守卫是**全部 72 条 freezone 路由**共用的，删掉它等于连另外 58 条读写
-    `Path(ctx.output_dir)` 本地文件、既无租约也无共享存储交代的路由一起放开，
-    与 B2 §6.3「逐个撤、不批量撤」冲突；故默认值保持 `True`，逐个调用点撤。
+    `require_home_node=False` is used only by the 13 canvas routes (B2 step 11, narrowed per `TCP-P60`).
+    This guard is shared by **all 72 freezone routes**; removing it would also open up the other 58 routes that read and write
+    `Path(ctx.output_dir)` local files with neither a lease nor a shared-storage story,
+    which conflicts with B2 §6.3 "lift one at a time, never in bulk"; so the default stays `True` and call sites are lifted one by one.
     """
     ctx = await resolve_project_context(
         user=user,
@@ -869,9 +869,9 @@ async def _start_or_enqueue_freezone_video_gen(
     if normalized_mode == "video_edit":
         if not video_input_paths or input_video_duration_seconds <= 0:
             raise HTTPException(400, "video editing requires a readable source video")
-        # 视频编辑的输出时长跟随主输入视频。输入和输出沿用同一套整秒
-        # 计费口径，不为视频编辑额外引入向上取整规则；发给 NewAPI 的
-        # 最终协议仍会强制使用 duration=auto。
+        # The output duration of video editing follows the primary input video. Input and output use the same whole-second
+        # billing basis, and no extra round-up rule is introduced for video editing; the final protocol sent to NewAPI
+        # still forces duration=auto.
         effective_duration_seconds = max(
             int(math.floor(input_video_duration_seconds)),
             1,
@@ -1064,8 +1064,8 @@ async def _start_or_enqueue_freezone_gen_job(
     prompt_text = _merge_prompt_with_style_and_camera(prompt, style, camera)
     display_payload = {
         "task_family": "freezone_canvas",
-        "task_label": "自由生成图片",
-        "display_name": "自由生成图片",
+        "task_label": "Free image generation",
+        "display_name": "Free image generation",
         **(task_display or {}),
     }
     if ctx is not None:
@@ -1153,9 +1153,9 @@ async def _collect_mainline_typed_reference_urls(
     scene nodes connected to the mainline skill node).
 
     Without this, prior behavior was:
-      - prompt text included "角色身份: A, B" but no PNG was uploaded,
+      - prompt text included "Character identities: A, B" but no PNG was uploaded,
       - LLM had no visual anchor for identity / prop -> identity drift,
-      - users found this surprising ("我标了 detected_identities 为什么没用").
+      - users found this surprising ("I tagged detected_identities, why did it have no effect").
     """
     from novelvideo.freezone.presets import _identity_character, _identity_name
 
@@ -1177,8 +1177,8 @@ async def _collect_mainline_typed_reference_urls(
                     continue
                 name = str(name)
                 known_character_names.append(name)
-                # 记录 character 默认 age_group + 每个 identity 自己的 age_group,
-                # 用于判定 age variant(identity.age_group ≠ character.age_group 即变体)。
+                # Record the character's default age_group + each identity's own age_group,
+                # used to decide the age variant (identity.age_group != character.age_group means a variant).
                 char_age = str(
                     getattr(c, "age_group", "")
                     or (c.get("age_group") if isinstance(c, dict) else "")
@@ -1216,15 +1216,15 @@ async def _collect_mainline_typed_reference_urls(
             path = canonical_identity_path(project_dir, character, identity_name)
             if not path.exists() or not path.is_file():
                 # Age variant identity (identity.age_group ≠ character.age_group)
-                # 缺自己的 canonical 时,**不** fallback 到主 character portrait —
-                # 主 portrait 通常是 youth 形态,中年/老年变体拿它当 reference 会
-                # 触发 identity drift (LLM 看到 youth 脸 → 产出 youth-like)。
-                # 跟 presets.py:4229 age-variant fallback 规则保持一致。
+                # When its own canonical is missing, do **not** fall back to the main character portrait --
+                # the main portrait is usually the youth form, and using it as the reference for middle-aged/elder variants would
+                # trigger identity drift (the LLM sees a youth face -> produces youth-like output).
+                # Consistent with the age-variant fallback rule at presets.py:4229.
                 identity_age = identity_age_by_id.get(identity_id, "")
                 char_age = character_age_by_name.get(character, "")
                 is_age_variant = bool(identity_age and identity_age != char_age)
                 if is_age_variant:
-                    continue  # 这次 inject 跳过这个 identity ref;LLM 靠 prompt 文字解析
+                    continue  # Skip this identity ref for this inject; the LLM relies on parsing the prompt text
                 # fallback to character portrait so LLM at least has a face
                 path = canonical_portrait_path(project_dir, character)
             if path.exists() and path.is_file():
@@ -1372,7 +1372,7 @@ def _standalone_identity_prompt_parts(identity_name: str) -> tuple[str, str, str
 
 
 def _standalone_beat_context_identity_names(beat_context: dict) -> list[str]:
-    # 「无角色出场」哨兵以下划线开头，不能按「角色_身份」拆分，也不是真实角色。
+    # The "no character on screen" sentinel starts with an underscore; it must not be split as "character_identity" and is not a real character.
     return real_detected_identities(
         _list_text_values(
             beat_context.get("detected_identities") or beat_context.get("detectedIdentities")
@@ -1881,15 +1881,15 @@ async def _start_or_enqueue_mainline_sketch_from_context_job(
             "beat_number": int(beat),
             "image_path": base_paths[0],
             "base_id": scene_id or "canvas background",
-            "label": str((task_display or {}).get("source_label") or "背景"),
+            "label": str((task_display or {}).get("source_label") or "Background"),
             "source_level": "selected_background_image",
         }
     ]
     job_id = _new_job_id()
     display_payload = {
         "task_family": "mainline_skill",
-        "task_label": "生成草图",
-        "display_name": "生成草图",
+        "task_label": "Generate sketch",
+        "display_name": "Generate sketch",
         **(task_display or {}),
     }
     if ctx is not None:
@@ -2034,7 +2034,7 @@ async def _start_or_enqueue_mainline_frame_from_context_job(
             "beat_number": int(beat),
             "image_path": reference_paths[0],
             "base_id": scene_id or "canvas background",
-            "label": "背景",
+            "label": "Background",
             "source_level": "selected_background_image",
         }
         if background_reference_mode == "material_only":
@@ -2062,7 +2062,7 @@ async def _start_or_enqueue_mainline_frame_from_context_job(
                 "beat_number": int(beat),
                 "image_path": item["image_path"],
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2084,7 +2084,7 @@ async def _start_or_enqueue_mainline_frame_from_context_job(
                 "beat_number": int(beat),
                 "image_path": item["image_path"],
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2095,7 +2095,7 @@ async def _start_or_enqueue_mainline_frame_from_context_job(
                 "beat_number": int(beat),
                 "image_path": path_text,
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2105,8 +2105,8 @@ async def _start_or_enqueue_mainline_frame_from_context_job(
     job_id = _new_job_id()
     display_payload = {
         "task_family": "mainline_skill",
-        "task_label": "渲染分镜",
-        "display_name": "渲染分镜",
+        "task_label": "Render shots",
+        "display_name": "Render shots",
         **(task_display or {}),
     }
     if ctx is not None:
@@ -2289,7 +2289,7 @@ async def _start_or_enqueue_standalone_frame_from_context_job(
             "panel_index": 0,
             "image_path": reference_paths[0],
             "base_id": scene_id or "canvas background",
-            "label": "背景",
+            "label": "Background",
             "source_level": "selected_background_image",
         }
         if background_reference_mode == "material_only":
@@ -2317,7 +2317,7 @@ async def _start_or_enqueue_standalone_frame_from_context_job(
                 "panel_index": 0,
                 "image_path": item["image_path"],
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2339,7 +2339,7 @@ async def _start_or_enqueue_standalone_frame_from_context_job(
                 "panel_index": 0,
                 "image_path": item["image_path"],
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2350,7 +2350,7 @@ async def _start_or_enqueue_standalone_frame_from_context_job(
                 "panel_index": 0,
                 "image_path": path_text,
                 "base_id": f"canvas reference {generic_ref_index}",
-                "label": f"画布参考 {generic_ref_index}",
+                "label": f"Canvas reference {generic_ref_index}",
                 "source_level": "canvas_reference_image",
             }
         )
@@ -2360,8 +2360,8 @@ async def _start_or_enqueue_standalone_frame_from_context_job(
     job_id = _new_job_id()
     display_payload = {
         "task_family": "mainline_skill",
-        "task_label": "渲染分镜",
-        "display_name": "渲染分镜",
+        "task_label": "Render shots",
+        "display_name": "Render shots",
         **(task_display or {}),
     }
     if ctx is not None:
@@ -2440,10 +2440,10 @@ async def _start_or_enqueue_mainline_direct_sketch_task(
             "node_id": node_id or "",
             "billing": {"feature_key": "mainline.director_control_to_sketch"},
             "task_family": "mainline_skill",
-            "task_label": "导演合成图转草图",
-            "display_name": f"导演合成图转草图 · EP{episode} / Beat {beat}",
-            "source_label": "导演合成图",
-            "target_label": "当前草图",
+            "task_label": "Director composite to sketch",
+            "display_name": f"Director composite to sketch · EP{episode} / Beat {beat}",
+            "source_label": "Director composite",
+            "target_label": "Current sketch",
             **(task_display or {}),
         },
     )
@@ -2512,10 +2512,10 @@ async def _start_or_enqueue_mainline_director_control_sketch_job(
                 projection_payload=projection_payload,
             ),
             "task_family": "mainline_skill",
-            "task_label": "导演合成图转草图",
-            "display_name": f"导演合成图转草图 · EP{episode} / Beat {beat}",
-            "source_label": "导演合成图",
-            "target_label": "当前草图候选",
+            "task_label": "Director composite to sketch",
+            "display_name": f"Director composite to sketch · EP{episode} / Beat {beat}",
+            "source_label": "Director composite",
+            "target_label": "Current sketch candidate",
             **(task_display or {}),
             **projection_payload,
         },
@@ -2573,10 +2573,10 @@ async def _start_or_enqueue_mainline_beat_sketch_task(
             "node_id": node_id or "",
             "billing": _mainline_image_task_billing(config, is_sketch=True),
             "task_family": "mainline_skill",
-            "task_label": "生成草图",
-            "display_name": f"生成草图 · EP{episode} / Beat {beat}",
-            "source_label": "Beat 上下文",
-            "target_label": "当前草图",
+            "task_label": "Generate sketch",
+            "display_name": f"Generate sketch · EP{episode} / Beat {beat}",
+            "source_label": "Beat context",
+            "target_label": "Current sketch",
             **(task_display or {}),
         },
     )
@@ -2698,8 +2698,8 @@ async def _start_or_enqueue_mainline_scene_360_task(
             ),
             "size": image_size or MAINLINE_SCENE_360_IMAGE_SIZE,
             "quality": quality or "medium",
-            # 画布报价时带了目录身份就必须原样传下来，否则前端按目录规则报价、
-            # 后端按旧的 image_selection 规则扣费，两边价格对不上。
+            # When the canvas quote carries a catalog identity it must be passed through verbatim, otherwise the frontend quotes by catalog rules
+            # while the backend charges by the old image_selection rules, and the two prices do not match.
             **({"catalog_id": catalog_id} if catalog_id else {}),
             **({"pricing_model": resolved_model} if catalog_id else {}),
         },
@@ -2745,10 +2745,10 @@ async def _start_or_enqueue_mainline_scene_360_task(
                 else {}
             ),
             "task_family": "mainline_skill",
-            "task_label": "生成 360 全景",
-            "display_name": f"生成 360 全景 · {scene_id}",
-            "source_label": "场景 Master + Reverse",
-            "target_label": "360 全景",
+            "task_label": "Generate 360 panorama",
+            "display_name": f"Generate 360 panorama · {scene_id}",
+            "source_label": "Scene Master + Reverse",
+            "target_label": "360 panorama",
             **(task_display or {}),
         },
     )
@@ -2837,8 +2837,8 @@ async def _start_or_enqueue_freezone_edit_job(
     prompt_text = _merge_prompt_with_style_and_camera(prompt, style, camera)
     display_payload = {
         "task_family": "freezone_canvas",
-        "task_label": "编辑图片",
-        "display_name": "编辑图片",
+        "task_label": "Edit image",
+        "display_name": "Edit image",
         **(task_display or {}),
     }
     if ctx is not None:
@@ -2865,8 +2865,8 @@ async def _start_or_enqueue_freezone_edit_job(
                 "model_id": model_id or "",
                 "catalog_id": catalog_id or "",
                 "gen_mode": gen_mode or "",
-                # 目录动态参数与它的 schema 一起下发给 runner；schema 是 runner
-                # 把参数写进网关请求体（requestPath）的唯一依据，只带值没有用。
+                # The catalog dynamic parameters are sent to the runner together with their schema; the schema is the runner's
+                # only basis for writing the parameters into the gateway request body (requestPath), and values alone are useless.
                 **({"model_params": model_params} if model_params else {}),
                 **({"request_schema": request_schema} if request_schema else {}),
                 **({"billing": billing} if billing else {}),
@@ -3215,11 +3215,11 @@ _SKILL_RUN_ID_RE = re.compile(r"^[a-zA-Z0-9_.:\-]{1,128}$")
 
 
 def _cap_mainline_scene_360_image_size(requested: str | None) -> str:
-    """360 全景取 min(前端档位, 2K)。
+    """The 360 panorama takes min(frontend tier, 2K).
 
-    上限保留：主线 360 slot 一直按 2K 产出，4K 只是徒增成本。
-    但低于上限的档位必须原样透传 —— 画布面板按媒体模型目录里那一档报价，
-    目录只给 1K 的模型如果被抬到 2K，报价与执行、乃至与网关能力都对不上。
+    The cap is kept: the mainline 360 slot has always been produced at 2K, and 4K only adds cost.
+    But tiers below the cap must be passed through verbatim -- the canvas panel quotes by the tier in the media model catalog,
+    and a model whose catalog only offers 1K, if bumped to 2K, would mismatch quote, execution, and even gateway capability.
     """
     value = _IMAGE_SIZE_TIER_BY_CASEFOLD.get((requested or "").strip().casefold())
     if value is None:
@@ -5206,7 +5206,7 @@ def _workflow_draft_api_data(
             "submitted": "wait_for_canvas_receipt",
             "confirmed": "inspect_workflow_run",
         }.get(state, "inspect_draft"),
-        message="草稿与画布确认状态；不代表媒体生成已完成。",
+        message="Draft and canvas confirmation state; does not mean media generation has completed.",
     )
     return result
 
@@ -5902,8 +5902,8 @@ async def generate_freezone_recipe_text(
             raise HTTPException(
                 status_code=504,
                 detail=(
-                    "Recipe 文本生成超时：模型在规定时间内未返回结果，请稍后重试。"
-                    "本轮未继续执行下游节点。"
+                    "Recipe text generation timed out: the model returned no result within the allotted time. Please try again later. "
+                    "Downstream nodes were not executed in this round."
                 ),
             ) from exc
         logger.exception("freezone Recipe text generation failed")
@@ -5932,7 +5932,7 @@ def _is_recipe_text_generation_timeout(exc: BaseException) -> bool:
 
 
 # ============================================================
-# 图片处理：上传
+# Image processing: upload
 # ============================================================
 
 REFERENCE_FILE_MAX_BYTES = 100 * 1024 * 1024
@@ -6003,7 +6003,7 @@ async def freezone_upload(
     file: Annotated[UploadFile, File()],
     user: dict = Depends(get_api_user),
 ):
-    """把外部资源上传保存到 `freezone/_uploads/`。"""
+    """Upload and save an external resource to `freezone/_uploads/`."""
     return await _save_freezone_upload(project, file, user)
 
 
@@ -6013,7 +6013,7 @@ async def freezone_reference_file_upload(
     file: Annotated[UploadFile, File()],
     user: dict = Depends(get_api_user),
 ):
-    """保存视频模型参考文件，并限制为不超过 100 MB。"""
+    """Save a video model reference file, limited to at most 100 MB."""
     return await _save_freezone_upload(
         project,
         file,
@@ -6031,12 +6031,12 @@ async def freezone_copy_assets_from_project(
     body: FreezoneAssetCopyRequest,
     user: dict = Depends(get_api_user),
 ):
-    """跨项目粘贴：把源项目的素材拷进本项目的 `freezone/_uploads/`。
+    """Cross-project paste: copy assets from the source project into this project's `freezone/_uploads/`.
 
-    前端只报「这些 URL 要拷到当前项目」，字节不再经过浏览器：OSS 可用时在服务端
-    CopyObject，否则文件系统拷贝。目标项目要 editor，每个源项目要 viewer；单条失败
-    只记进 `failed`（reason 为 invalid_source / not_found / forbidden / unavailable /
-    copy_failed），不影响同批其它文件。本来就属于目标项目的 URL 原样跳过。
+    The frontend only reports "these URLs should be copied into the current project"; the bytes no longer pass through the browser: when OSS is available, a server-side
+    CopyObject is used, otherwise a filesystem copy. The target project needs editor and each source project needs viewer; a single failure
+    is only recorded in `failed` (reason is invalid_source / not_found / forbidden / unavailable /
+    copy_failed) and does not affect other files in the same batch. URLs that already belong to the target project are skipped as-is.
     """
     ctx, _username, _project_name, project_dir, _output_dir = await _resolve_freezone_project(
         project, user
@@ -6065,7 +6065,7 @@ async def freezone_copy_assets_from_project(
         source_projects[project_id] = result
         return result
 
-    # 第一遍：解析 + 授权 + 定位源文件，同一个源文件只排一次拷贝。
+    # Pass 1: parse + authorize + locate source files; each source file is scheduled for copying only once.
     jobs: dict[Path, tuple[Path, list[str]]] = {}
     for raw_url in dict.fromkeys(body.sources):
         parsed = parse_project_asset_url(raw_url)
@@ -6079,7 +6079,7 @@ async def freezone_copy_assets_from_project(
         if isinstance(source, str):
             failed.append({"source": raw_url, "reason": source})
             continue
-        # 准备阶段（定位源文件、给目标起名）的任何异常都只算这一条失败，别拖垮整批。
+        # Any exception in the preparation phase (locating the source file, naming the target) counts only as this one failure; do not take down the whole batch.
         try:
             source_path = resolve_source_file(Path(source.output_dir), rel)
             job = jobs.get(source_path)
@@ -6094,7 +6094,7 @@ async def freezone_copy_assets_from_project(
             continue
         job[1].append(raw_url)
 
-    # 第二遍：有限并发地拷，失败的把半成品清掉。
+    # Pass 2: copy with bounded concurrency, and clean up half-finished output on failure.
     semaphore = asyncio.Semaphore(_ASSET_COPY_CONCURRENCY)
 
     async def _copy_one(source_path: Path, target: Path) -> str | None:
@@ -6139,7 +6139,7 @@ async def freezone_three_d_viewer_screenshot(
     body: FreezoneThreeDViewerScreenshotRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存内置 3D viewer 普通截图到 Freezone 输出目录。"""
+    """Save a regular screenshot of the built-in 3D viewer to the Freezone output directory."""
 
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -6187,7 +6187,7 @@ async def freezone_gen(
     body: FreezoneGenRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：启动文生图任务，返回可供 SSE 追踪的 `task_key`。"""
+    """Image processing: start a text-to-image task and return a `task_key` traceable via SSE."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -6267,7 +6267,7 @@ async def freezone_sketch_from_context(
     body: FreezoneSketchFromContextRequest,
     user: dict = Depends(get_api_user),
 ):
-    """主线上下文：从 Beat / 背景 / 导演合成图生成草图候选。"""
+    """Mainline context: generate sketch candidates from Beat / background / director composite."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -6280,17 +6280,17 @@ async def freezone_sketch_from_context(
     )
     source_url = (body.source_url or "").strip()
     source_label = {
-        "beat": "Beat 上下文",
-        "selected_background": "当前背景",
-        "director_combined": "导演合成图",
-        "background_candidate": "背景候选",
-    }.get(body.source_kind, "输入参考")
+        "beat": "Beat context",
+        "selected_background": "Current background",
+        "director_combined": "Director composite",
+        "background_candidate": "Background candidate",
+    }.get(body.source_kind, "Input reference")
     task_display = {
         "task_family": "mainline_skill",
-        "task_label": "生成草图",
-        "display_name": f"生成草图 · EP{body.episode} / Beat {body.beat}",
+        "task_label": "Generate sketch",
+        "display_name": f"Generate sketch · EP{body.episode} / Beat {body.beat}",
         "source_label": source_label,
-        "target_label": "当前草图",
+        "target_label": "Current sketch",
         "skill_id": "freezone.sketch_from_context",
     }
     if body.source_kind == "director_combined":
@@ -6308,7 +6308,7 @@ async def freezone_sketch_from_context(
             task_display={
                 **task_display,
                 "skill_id": "freezone.sketch_from_director_combined",
-                "source_label": "导演合成图",
+                "source_label": "Director composite",
             },
         )
     if source_url:
@@ -6349,7 +6349,7 @@ async def freezone_frame_from_context(
     body: FreezoneFrameFromContextRequest,
     user: dict = Depends(get_api_user),
 ):
-    """主线上下文：从草图和可选背景生成分镜候选。"""
+    """Mainline context: generate shot candidates from a sketch and optional background."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -6379,10 +6379,10 @@ async def freezone_frame_from_context(
         node_id=body.node_id or None,
         task_display={
             "task_family": "mainline_skill",
-            "task_label": "渲染分镜",
-            "display_name": f"渲染分镜 · EP{body.episode} / Beat {body.beat}",
-            "source_label": "草图 + 背景 + 身份/道具",
-            "target_label": "当前分镜",
+            "task_label": "Render shots",
+            "display_name": f"Render shots · EP{body.episode} / Beat {body.beat}",
+            "source_label": "Sketch + background + identity/props",
+            "target_label": "Current shot",
             "skill_id": "freezone.frame_from_context",
         },
     )
@@ -6398,7 +6398,7 @@ async def freezone_scene_360(
     body: FreezoneScene360Request,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：基于场景 master 源图生成 2:1 的 360 全景候选图。"""
+    """Image processing: generate a 2:1 360 panorama candidate image from the scene master source image."""
     ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -6409,9 +6409,9 @@ async def freezone_scene_360(
     scene_id = _infer_scene_id_from_master_path(base_path, project_dir)
     if not scene_id:
         raise HTTPException(400, "could not infer scene_id from reference_url")
-    # 与 /freezone/gen 同一口径：EE 里目录是权威的，模型和目录身份都要在目录里
-    # 对得上才放行。原来这条路由直接采信 body —— 客户端可以随便报一个便宜的
-    # catalog_id 配一个贵的 model，报价按前者、执行按后者。
+    # Same basis as /freezone/gen: in EE the catalog is authoritative, and both the model and the catalog identity must
+    # match in the catalog to be let through. This route used to trust the body directly -- a client could report a cheap
+    # catalog_id paired with an expensive model, quoted by the former and executed by the latter.
     _schema, _params, catalog_entry = await _resolve_catalog_request(
         "image",
         body.catalog_id or body.model,
@@ -6419,9 +6419,9 @@ async def freezone_scene_360(
         mode="image_to_image",
         requester_user_id=ctx.requester_user_id,
     )
-    # 只取模型：这条老路由的 provider 是 scene_360_builder 那边按环境变量解析的
-    # （`resolve_scene_360_image_provider`），不走网关那套 provider/model 组合，
-    # 所以这里必须发裸 apiModel，不能带 provider 前缀。
+    # Take the model only: the provider of this old route is resolved by scene_360_builder from environment variables
+    # (`resolve_scene_360_image_provider`) and does not go through the gateway's provider/model combination,
+    # so a bare apiModel must be sent here, without a provider prefix.
     _catalog_provider, catalog_model = _catalog_image_execution_selection(
         catalog_entry,
         requested_provider=None,
@@ -6435,12 +6435,12 @@ async def freezone_scene_360(
         "master_url": body.reference_url,
         "reverse_url": body.reverse_reference_url,
         "model": catalog_model or body.model or FREEZONE_DEFAULT_IMAGE_MODEL,
-        # 画布面板按所选模型实际支持的档位报价并把它发下来；这里在 2K 上限内
-        # 原样使用，否则「报价 1K、执行 2K」，媒体模型目录配的分辨率在这条路由
-        # 等于没生效。
+        # The canvas panel quotes by the tiers the selected model actually supports and sends that down; within the 2K cap here it
+        # is used verbatim, otherwise "quote 1K, execute 2K" and the resolution configured in the media model catalog
+        # would have no effect on this route.
         "image_size": _cap_mainline_scene_360_image_size(body.image_size),
         "quality": body.quality,
-        # 计费身份以目录条目为准，不采信 body —— 它直接决定按哪条目录规则扣费。
+        # The billing identity follows the catalog entry and does not trust the body -- it directly determines which catalog rule is charged.
         "catalog_id": _catalog_entry_id(catalog_entry) or body.catalog_id or None,
         # Only an entry resolved by the server catalog may authorize a dynamic
         # execution model. A client-supplied legacy catalog_id is billing data,
@@ -6450,10 +6450,10 @@ async def freezone_scene_360(
         "node_id": body.node_id or None,
         "task_display": {
             "task_family": "mainline_skill",
-            "task_label": "生成 360 全景",
-            "display_name": f"生成 360 全景 · {scene_id or '场景'}",
+            "task_label": "Generate 360 panorama",
+            "display_name": f"Generate 360 panorama · {scene_id or 'scene'}",
             "source_label": "Master + Reverse",
-            "target_label": "360 全景",
+            "target_label": "360 panorama",
             "skill_id": "freezone.scene_360",
         },
     }
@@ -6484,12 +6484,12 @@ async def freezone_ai_staging_prop(
     request = dict(request)
     request.pop("api_key", None)
     request.pop("base_url", None)
-    # 出网侧的闸门（`task_backend/subprocesses.py:122-128`，经
-    # `staging_prop_ai.py:233`）读的是 ambient context，而 `_MODEL_GATEWAY_CONTEXT`
-    # 的生产 set 点全在 worker 侧、请求路径上一个都没有。于是这道闸门此前永远读到
-    # `None`、永远放行，组织用户的调用落在平台 `MODEL_API_KEY` 上（台账 EG-17）。
-    # 绑定能穿过 `_run_ai_staging_prop` 的 `asyncio.to_thread`，因为它复制
-    # contextvars（`model_gateway_runtime.py:52-54`）；`run_in_executor` 不会。
+    # The egress-side gate (`task_backend/subprocesses.py:122-128`, via
+    # `staging_prop_ai.py:233`) reads the ambient context, but all production set points of `_MODEL_GATEWAY_CONTEXT`
+    # are on the worker side, none on the request path. So this gate has always read
+    # `None` and always let things through, and organization users' calls landed on the platform `MODEL_API_KEY` (ledger EG-17).
+    # The binding can cross the `asyncio.to_thread` of `_run_ai_staging_prop` because it copies
+    # contextvars (`model_gateway_runtime.py:52-54`); `run_in_executor` does not.
     from novelvideo.api.egress_binding import request_egress_scope
     from novelvideo.ports.authz import AuthzError
     from novelvideo.task_backend.subprocesses import EgressBoundaryError
@@ -6502,10 +6502,10 @@ async def freezone_ai_staging_prop(
         try:
             result = await _run_ai_staging_prop(request)
         except EgressBoundaryError as exc:
-            # `EgressBoundaryError` 也是 `RuntimeError` 子类，没有这一支时组织拒绝
-            # 会被下面压成裸 502 + 自由文本，前端拿不到机器码。同形先例见 :353-358。
-            # 这一支必须在 `except RuntimeError` **之前**，且 `AuthzError`（自身也是
-            # `RuntimeError` 子类）由 app 级 handler 渲染成契约化 4xx。
+            # `EgressBoundaryError` is also a `RuntimeError` subclass; without this branch an organization rejection
+            # would be squashed below into a bare 502 + free text, and the frontend would get no machine code. Same-shape precedent at :353-358.
+            # This branch must come **before** `except RuntimeError`, and `AuthzError` (itself a
+            # `RuntimeError` subclass) is rendered by the app-level handler into a contract 4xx.
             raise AuthzError(exc.code) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -6577,11 +6577,11 @@ async def freezone_skill_run(
             if skill_id == "freezone.sketch_from_director_combined":
                 reference_role = "director_combined"
                 reference_input = _required_input(grouped, reference_role)
-                source_label = "导演合成图"
+                source_label = "Director composite"
             else:
                 reference_role = "background"
                 reference_input = _required_input(grouped, reference_role)
-                source_label = "背景"
+                source_label = "Background"
             reference_url = _required_image_url(reference_input, reference_role)
             reference_paths = _resolve_url_list(project_dir, [reference_url])
             model = str(parameters.get("model") or FREEZONE_DEFAULT_IMAGE_MODEL)
@@ -6611,10 +6611,10 @@ async def freezone_skill_run(
                 canvas_id=body.canvas_id,
                 node_id=body.skill_node_id,
                 task_display={
-                    "task_label": "生成草图",
-                    "display_name": "生成草图",
+                    "task_label": "Generate sketch",
+                    "display_name": "Generate sketch",
                     "source_label": source_label,
-                    "target_label": "草图候选",
+                    "target_label": "Sketch candidate",
                     "skill_id": skill_id,
                 },
             )
@@ -6636,10 +6636,10 @@ async def freezone_skill_run(
                     node_id=body.skill_node_id,
                     task_display={
                         "task_family": "mainline_skill",
-                        "task_label": "导演合成图转草图",
-                        "display_name": f"导演合成图转草图 · EP{episode} / Beat {beat}",
-                        "source_label": "导演合成图",
-                        "target_label": "当前草图候选",
+                        "task_label": "Director composite to sketch",
+                        "display_name": f"Director composite to sketch · EP{episode} / Beat {beat}",
+                        "source_label": "Director composite",
+                        "target_label": "Current sketch candidate",
                         "skill_id": skill_id,
                     },
                 )
@@ -6659,10 +6659,10 @@ async def freezone_skill_run(
                     node_id=body.skill_node_id,
                     task_display={
                         "task_family": "mainline_skill",
-                        "task_label": "生成草图",
-                        "display_name": f"生成草图 · EP{episode} / Beat {beat}",
-                        "source_label": "背景",
-                        "target_label": "当前草图",
+                        "task_label": "Generate sketch",
+                        "display_name": f"Generate sketch · EP{episode} / Beat {beat}",
+                        "source_label": "Background",
+                        "target_label": "Current sketch",
                         "skill_id": skill_id,
                     },
                 )
@@ -6705,10 +6705,10 @@ async def freezone_skill_run(
                 node_id=body.skill_node_id,
                 task_display={
                     "task_family": "mainline_skill",
-                    "task_label": "渲染分镜",
-                    "display_name": "渲染分镜",
-                    "source_label": "草图 + 背景 + 身份/道具",
-                    "target_label": "分镜候选",
+                    "task_label": "Render shots",
+                    "display_name": "Render shots",
+                    "source_label": "Sketch + background + identity/props",
+                    "target_label": "Shot candidate",
                     "skill_id": "freezone.frame_from_context",
                 },
             )
@@ -6737,10 +6737,10 @@ async def freezone_skill_run(
                 node_id=body.skill_node_id,
                 task_display={
                     "task_family": "mainline_skill",
-                    "task_label": "渲染分镜",
-                    "display_name": f"渲染分镜 · EP{episode} / Beat {beat}",
-                    "source_label": "草图 + 背景 + 身份/道具",
-                    "target_label": "当前分镜",
+                    "task_label": "Render shots",
+                    "display_name": f"Render shots · EP{episode} / Beat {beat}",
+                    "source_label": "Sketch + background + identity/props",
+                    "target_label": "Current shot",
                     "skill_id": "freezone.frame_from_context",
                 },
             )
@@ -6751,7 +6751,7 @@ async def freezone_skill_run(
         scene_id = _scene_id_from_scene_master_input(scene_master)
         description = _build_scene_360_prompt(scene_id)
         if scene_prompt:
-            description = f"{description}\n\n场景提示词：{scene_prompt}"
+            description = f"{description}\n\nScene prompt: {scene_prompt}"
         if auto_commit:
             accepted = await _start_or_enqueue_mainline_scene_360_task(
                 ctx=ctx,
@@ -6947,7 +6947,7 @@ async def freezone_multi_view(
     body: FreezoneCharacterMultiViewRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：基于单张源图做多角度重构 / 机位重定位。"""
+    """Image processing: multi-angle reconstruction / camera repositioning based on a single source image."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -6982,7 +6982,7 @@ async def freezone_relight(
     body: FreezoneRelightRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：打光。基于源图和打光参考图的光照重塑接口。"""
+    """Image processing: relighting. Lighting reshaping endpoint based on a source image and a lighting reference image."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7019,13 +7019,13 @@ async def freezone_template_edit(
     body: FreezoneTemplateEditRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：九宫格下拉菜单统一编辑接口。"""
+    """Image processing: unified editing endpoint for the grid dropdown menu."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
-    # 与 /freezone/edit 同一口径：EE 里目录是权威的，模型和目录身份都要在目录里
-    # 对得上才放行。原来这条路由直接采信 body —— 客户端可以随便报一个便宜的
-    # catalog_id 配一个贵的 model，报价按前者、执行按后者。
+    # Same basis as /freezone/edit: in EE the catalog is authoritative, and both the model and the catalog identity must
+    # match in the catalog to be let through. This route used to trust the body directly -- a client could report a cheap
+    # catalog_id paired with an expensive model, quoted by the former and executed by the latter.
     _schema, _params, catalog_entry = await _resolve_catalog_request(
         "image",
         body.catalog_id or body.model,
@@ -7033,9 +7033,9 @@ async def freezone_template_edit(
         mode="image_to_image",
         requester_user_id=ctx.requester_user_id,
     )
-    # provider 也一并取目录条目的：这条路由和 /freezone/edit 共用
-    # `_start_or_enqueue_freezone_edit_job`，它会按 provider/model 走网关，
-    # 目录里配的 openrouter 模型再按默认 provider 路由就送错家了。
+    # The provider is also taken from the catalog entry: this route shares
+    # `_start_or_enqueue_freezone_edit_job` with /freezone/edit, which goes through the gateway by provider/model,
+    # and an openrouter model configured in the catalog would be sent to the wrong vendor if routed via the default provider.
     execution_provider, execution_model = _catalog_image_execution_selection(
         catalog_entry,
         requested_provider=None,
@@ -7057,9 +7057,9 @@ async def freezone_template_edit(
         provider=execution_provider,
         model=execution_model or body.model or FREEZONE_DEFAULT_IMAGE_MODEL,
         quality=body.quality or "medium",
-        # 画布报价时带了目录身份就必须原样传下来，否则前端按目录规则报价、
-        # 后端按旧的 image_selection 规则扣费，两边价格对不上。
-        # 身份以目录条目为准，不采信 body —— 它直接决定按哪条目录规则扣费。
+        # When the canvas quote carries a catalog identity it must be passed through verbatim, otherwise the frontend quotes by catalog rules
+        # while the backend charges by the old image_selection rules, and the two prices do not match.
+        # The identity follows the catalog entry and does not trust the body -- it directly determines which catalog rule is charged.
         catalog_id=_catalog_entry_id(catalog_entry) or body.catalog_id or None,
         billing_feature_key="freezone.image_grid",
         billing_operation=body.mode,
@@ -7073,7 +7073,7 @@ async def freezone_image_camera_options(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：返回摄像机参数选项列表。"""
+    """Image processing: return the list of camera parameter options."""
     await _resolve_freezone_project(project, user, required_role="viewer")
     return {"ok": True, "data": _get_freezone_image_camera_options()}
 
@@ -7085,13 +7085,13 @@ async def freezone_image_style_templates(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：返回风格模板列表(默认内置清单,可用 STYLE_GALLERY_MANIFEST 覆盖)。
+    """Image processing: return the list of style templates (default built-in list, overridable via STYLE_GALLERY_MANIFEST).
 
-    `data` 必须保持**裸列表**。这个端点同时服务多个仓库的前端,而它们的 `apiCall`
-    只拆一层 `{ok, data}` 信封、不校验 `data` 的形状;一旦把 `data` 换成对象,所有
-    没跟进的调用方一句 `templates.find(...)` 就抛 `is not a function`,冒泡到根错误
-    边界变成整页「页面加载失败」。清单元信息因此挂在信封同级 —— 只取 `data` 的老
-    客户端会自然忽略这些多余字段,新客户端另行读取。
+    `data` must remain a **bare list**. This endpoint serves the frontends of several repositories, and their `apiCall`
+    only unwraps one layer of the `{ok, data}` envelope without validating the shape of `data`; once `data` is changed to an object, every
+    caller that did not follow up would throw `is not a function` on `templates.find(...)`, bubbling up to the root error
+    boundary and becoming a whole-page "page failed to load". The list metadata is therefore attached at the envelope level -- old
+    clients that only take `data` naturally ignore these extra fields, and new clients read them separately.
     """
     await _resolve_freezone_project(project, user, required_role="viewer")
     return {
@@ -7122,7 +7122,7 @@ async def freezone_image_to_3gs(
     body: FreezoneImageTo3GSRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：把 Freezone 图片节点作为 SHARP 输入，生成 Freezone 3GS PLY。"""
+    """Image processing: use a Freezone image node as SHARP input to generate a Freezone 3GS PLY."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7202,7 +7202,7 @@ async def freezone_upscale(
     body: FreezoneUpscaleRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：高清放大接口。"""
+    """Image processing: upscale endpoint."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7257,10 +7257,10 @@ async def freezone_outpaint(
     body: FreezoneOutpaintRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：扩图接口。
+    """Image processing: outpainting endpoint.
 
-    做法是先把原图补白到目标宽高比，再复用现有图片编辑任务，
-    让模型去生成新暴露出来的外部区域，而不是简单拉伸原图。
+    The approach is to first pad the original image to the target aspect ratio and then reuse the existing image-edit task,
+    letting the model generate the newly exposed outer region instead of simply stretching the original image.
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -7326,7 +7326,7 @@ async def freezone_redraw(
     body: FreezoneRedrawRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：重绘接口。"""
+    """Image processing: inpainting endpoint."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7415,7 +7415,7 @@ async def freezone_redraw(
 
 
 # ============================================================
-# 视频处理：抽帧 / 镜头分析
+# Video processing: frame extraction / shot analysis
 # ============================================================
 
 
@@ -7425,7 +7425,7 @@ async def freezone_extract_frames(
     body: FreezoneExtractFramesRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：从视频中抽取关键帧，返回任务 `task_key`。"""
+    """Video processing: extract keyframes from a video and return a task `task_key`."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7460,7 +7460,7 @@ async def freezone_analyze_shots(
     body: FreezoneAnalyzeShotsRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：分析一组关键帧的镜头内容，返回任务 `task_key`。"""
+    """Video processing: analyze the shot content of a set of keyframes and return a task `task_key`."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7503,7 +7503,7 @@ async def freezone_analyze_video_story(
     body: FreezoneAnalyzeVideoStoryRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：抽帧并解析视频故事，返回任务 `task_key`。"""
+    """Video processing: extract frames and parse the video story, returning a task `task_key`."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7534,7 +7534,7 @@ async def freezone_analyze_video_story(
 
 
 # ============================================================
-# 文本工具：中英互译
+# Text tools: translation
 # ============================================================
 
 
@@ -7629,7 +7629,7 @@ def _start_freezone_text_translate_task(
     )
 
     async def _runner() -> None:
-        logs = ["开始翻译文本"]
+        logs = ["Starting text translation"]
         try:
             task_manager.update_progress(
                 task_type,
@@ -7684,7 +7684,7 @@ def _start_freezone_text_translate_task(
                 scope=job_id,
                 result=result,
                 current_task="completed",
-                logs=["文本翻译完成"],
+                logs=["Text translation complete"],
                 metadata=metadata,
             )
         except Exception as exc:
@@ -7711,7 +7711,7 @@ def _start_freezone_text_translate_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
                 metadata=metadata,
             )
 
@@ -7755,7 +7755,7 @@ def _start_freezone_text_generate_task(
                 scope=job_id,
                 progress=0.1,
                 current_task="generating_text",
-                logs=["开始生成文本"],
+                logs=["Starting text generation"],
             )
             model, generated_text = await generate_freezone_text(prompt=prompt)
             payload = {"generated_text": generated_text, "model": model}
@@ -7790,7 +7790,7 @@ def _start_freezone_text_generate_task(
                 scope=job_id,
                 result=result,
                 current_task="completed",
-                logs=["文本生成完成"],
+                logs=["Text generation complete"],
                 metadata=metadata,
             )
         except Exception as exc:
@@ -7816,7 +7816,7 @@ def _start_freezone_text_generate_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
                 metadata=metadata,
             )
 
@@ -7833,7 +7833,7 @@ async def freezone_text_generate(
     body: FreezoneTextGenerateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """文本节点：根据用户要求生成可继续编辑的自由文本。"""
+    """Text node: generate free-form text that can be edited further, based on user requirements."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7900,7 +7900,7 @@ async def freezone_text_translate(
     body: FreezoneTextTranslateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """文本工具：中英文互译，供各类节点编写提示词时直接调用。"""
+    """Text tool: translation, called directly by various nodes when writing prompts."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -7949,7 +7949,7 @@ async def freezone_text_translate(
 
 
 def _read_freezone_text_file(path: Path) -> str:
-    """读取 Freezone 文本节点的源文本文件。"""
+    """Read the source text file of a Freezone text node."""
     for encoding in ("utf-8", "utf-8-sig", "gb18030"):
         try:
             return path.read_text(encoding=encoding)
@@ -7982,7 +7982,7 @@ def _audio_separate_audio_output_path(project_dir: Path, job_id: str) -> Path:
     output_dir = outputs_dir(project_dir, "freezone_audio_separate")
     audio_path = output_dir / f"{job_id}.mp3"
     legacy_path = output_dir / f"{job_id}.m4a"
-    # 历史任务产出的是 .m4a，结果查询继续可用。
+    # Historical tasks produced .m4a, and result queries continue to work.
     return legacy_path if not audio_path.exists() and legacy_path.exists() else audio_path
 
 
@@ -8091,7 +8091,7 @@ def _start_freezone_video_compose_task(
                 scope=job_id,
                 progress=0.05,
                 current_task="validating_timeline",
-                logs=["开始合成视频时间线"],
+                logs=["Starting video timeline composition"],
             )
             from novelvideo.freezone.jobs import run_freezone_video_compose
 
@@ -8118,7 +8118,7 @@ def _start_freezone_video_compose_task(
                     "cover_url": body.cover_url or None,
                 },
                 current_task="completed",
-                logs=["视频合成完成"],
+                logs=["Video composition complete"],
             )
         except Exception as exc:
             task_manager.fail_task(
@@ -8129,7 +8129,7 @@ def _start_freezone_video_compose_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
             )
 
     asyncio.create_task(_runner())
@@ -8160,7 +8160,7 @@ def _start_freezone_video_erase_task(
                 scope=job_id,
                 progress=0.05,
                 current_task="analyzing_video",
-                logs=["开始视频擦除处理"],
+                logs=["Starting video erase processing"],
             )
             from novelvideo.freezone.jobs import run_freezone_video_erase
 
@@ -8186,7 +8186,7 @@ def _start_freezone_video_erase_task(
                     "meta": meta,
                 },
                 current_task="completed",
-                logs=["视频擦除完成"],
+                logs=["Video erase complete"],
             )
         except Exception as exc:
             task_manager.fail_task(
@@ -8197,7 +8197,7 @@ def _start_freezone_video_erase_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
             )
 
     asyncio.create_task(_runner())
@@ -8235,7 +8235,7 @@ def _start_freezone_video_upscale_task(
                 scope=job_id,
                 progress=0.05,
                 current_task="upscaling_video",
-                logs=["开始视频高清处理"],
+                logs=["Starting video enhancement processing"],
             )
             from novelvideo.freezone.jobs import run_freezone_video_upscale
 
@@ -8266,7 +8266,7 @@ def _start_freezone_video_upscale_task(
                     "meta": meta,
                 },
                 current_task="completed",
-                logs=["视频高清处理完成"],
+                logs=["Video enhancement complete"],
             )
         except Exception as exc:
             task_manager.fail_task(
@@ -8277,7 +8277,7 @@ def _start_freezone_video_upscale_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
             )
 
     asyncio.create_task(_runner())
@@ -8309,7 +8309,7 @@ def _start_freezone_audio_separate_task(
                 scope=job_id,
                 progress=0.05,
                 current_task="separating_audio_video",
-                logs=["开始音视频分离"],
+                logs=["Starting audio/video separation"],
             )
             from novelvideo.freezone.jobs import run_freezone_audio_separate
 
@@ -8334,7 +8334,7 @@ def _start_freezone_audio_separate_task(
                 scope=job_id,
                 result=result,
                 current_task="completed",
-                logs=["音视频分离完成"],
+                logs=["Audio/video separation complete"],
             )
         except Exception as exc:
             task_manager.fail_task(
@@ -8345,7 +8345,7 @@ def _start_freezone_audio_separate_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
             )
 
     asyncio.create_task(_runner())
@@ -8378,7 +8378,7 @@ def _start_freezone_audio_speech_task(
                 scope=job_id,
                 progress=0.05,
                 current_task="preparing_audio_speech",
-                logs=["开始文本生成语音"],
+                logs=["Starting text-to-speech"],
             )
             task_manager.update_progress(
                 task_type,
@@ -8388,11 +8388,11 @@ def _start_freezone_audio_speech_task(
                 scope=job_id,
                 progress=0.2,
                 current_task="calling_tts_provider",
-                logs=["正在调用 TTS 服务"],
+                logs=["Calling the TTS service"],
             )
             voice_ref_payload = body.voice_ref.model_dump() if body.voice_ref else None
             store = await make_sqlite_store(username, project)
-            # 同进程执行也走同一条投射路径，好让两个入口读到的项目态形状一致。
+            # In-process execution also goes through the same projection path, so that both entry points read the same project-state shape.
             projector = _installed_task_projector()
             projection = None
             if projector is not None:
@@ -8453,7 +8453,7 @@ def _start_freezone_audio_speech_task(
                 scope=job_id,
                 result=result_payload,
                 current_task="completed",
-                logs=["文本生成语音完成"],
+                logs=["Text-to-speech complete"],
             )
         except Exception as exc:
             task_manager.fail_task(
@@ -8464,7 +8464,7 @@ def _start_freezone_audio_speech_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
             )
         finally:
             close = getattr(store, "close", None) if store is not None else None
@@ -8475,10 +8475,10 @@ def _start_freezone_audio_speech_task(
 
 
 FREEZONE_AUDIO_AGE_GROUP_LABELS = {
-    "child": "幼年",
-    "youth": "青年",
-    "middle": "中年",
-    "elder": "老年",
+    "child": "child",
+    "youth": "youth",
+    "middle": "middle-aged",
+    "elder": "elder",
 }
 
 
@@ -8569,7 +8569,7 @@ def _freezone_character_audio_refs(
             project_id=project_id,
             project_dir=project_dir,
             scope="character_default",
-            label=f"{character_name} · 默认声线",
+            label=f"{character_name} · Default voice",
             path=str(getattr(character, "reference_audio_path", "") or ""),
             sha256=str(getattr(character, "reference_audio_sha256", "") or ""),
             updated_at=str(getattr(character, "reference_audio_updated_at", "") or ""),
@@ -8592,7 +8592,7 @@ def _freezone_character_audio_refs(
                     project_id=project_id,
                     project_dir=project_dir,
                     scope="character_age_group",
-                    label=f"{character_name} · {slot_label}声线",
+                    label=f"{character_name} · {slot_label} voice",
                     path=str(entry.get("path", "") or ""),
                     sha256=str(entry.get("sha256", "") or ""),
                     updated_at=str(entry.get("updated_at", "") or ""),
@@ -8613,7 +8613,7 @@ def _freezone_character_audio_refs(
             project_id=project_id,
             project_dir=project_dir,
             scope="identity",
-            label=f"{character_name} · {identity_name or identity_id}声线",
+            label=f"{character_name} · {identity_name or identity_id} voice",
             path=str(getattr(identity, "reference_audio_path", "") or ""),
             sha256=str(getattr(identity, "reference_audio_sha256", "") or ""),
             updated_at=str(getattr(identity, "reference_audio_updated_at", "") or ""),
@@ -8640,7 +8640,7 @@ def _freezone_character_audio_refs(
                 project_id=project_id,
                 project_dir=project_dir,
                 scope="identity_resolved",
-                label=f"{character_name} · {identity_name or identity_id}实际声线",
+                label=f"{character_name} · {identity_name or identity_id} resolved voice",
                 path=resolved_path,
                 sha256=resolved.sha256,
                 character_name=character_name,
@@ -8680,7 +8680,7 @@ async def freezone_audio_references(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取 Freezone 音频节点可用的账号级音色、项目解说人与角色参考音频。"""
+    """Get the account-level voices, project narrator, and character reference audio available to a Freezone audio node."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
     )
@@ -8713,7 +8713,7 @@ async def freezone_audio_references(
         project_id=ctx.project_id,
         project_dir=project_dir,
         scope="project_narrator",
-        label="项目解说人声线",
+        label="Project narrator voice",
         path=narrator_descriptor.get("path", ""),
         sha256=narrator_descriptor.get("sha256", ""),
         updated_at=narrator_descriptor.get("updated_at", ""),
@@ -8763,16 +8763,16 @@ async def freezone_audio_references(
 async def create_freezone_audio_voice(
     project: str,
     file: Annotated[
-        UploadFile, File(description="参考音频文件，支持 mp3/wav/m4a/aac/ogg/webm")
+        UploadFile, File(description="Reference audio file; supports mp3/wav/m4a/aac/ogg/webm")
     ],
-    name: Annotated[str, Form(description="音色名称，用于音色选择弹窗展示")] = "",
+    name: Annotated[str, Form(description="Voice name, shown in the voice selection dialog")] = "",
     user: dict = Depends(get_api_user),
 ):
-    """创建账号级“我的音色”。
+    """Create an account-level "My voice".
 
-    这个接口不会写入项目解说人、角色默认声线、年龄段声线或身份声线；
-    它只把参考音频保存到账号级 Freezone 音色库。生成音频时传
-    `voice_ref={"scope":"user_custom","voice_id":"..."}` 即可使用。
+    This endpoint does not write to the project narrator, character default voice, age-group voice, or identity voice;
+    it only saves the reference audio to the account-level Freezone voice library. When generating audio, pass
+    `voice_ref={"scope":"user_custom","voice_id":"..."}` to use it.
     """
     ctx, username, _project_name, _project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -8828,10 +8828,10 @@ def _resolve_story_script_character_refs(
     character_refs: list[FreezoneStoryScriptCharacterRef],
     project_dir: Path,
 ) -> tuple[list[dict], list[str]]:
-    """把角色参考拆成「给模型的角色卡」和「本地图片路径」。
+    """Split character references into a "character card for the model" and "local image paths".
 
-    外链或解析不出本地文件的图片仍然保留在角色卡里（回填 URL 时照样能用），
-    只是不会作为附件送进视觉模型。
+    Images that are external links or whose local file cannot be resolved are still kept in the character card (usable when backfilling the URL),
+    but are not sent to the vision model as attachments.
     """
     refs: list[dict] = []
     image_paths: list[str] = []
@@ -8882,7 +8882,7 @@ def _start_freezone_story_script_task(
     )
 
     async def _runner() -> None:
-        logs = ["开始生成故事脚本"]
+        logs = ["Starting story script generation"]
         try:
             task_manager.update_progress(
                 task_type,
@@ -8895,8 +8895,8 @@ def _start_freezone_story_script_task(
                 logs=logs,
             )
             if character_image_paths:
-                # 有角色参考图就走视觉模型，让角色描述照着图写；
-                # 纯文本模式仍走原来的 story-script 文本别名。
+                # With character reference images use the vision model so that character descriptions follow the images;
+                # plain-text mode still uses the original story-script text alias.
                 data = await generate_freezone_story_script_with_vision(
                     character_image_paths=character_image_paths,
                     source_text=source_text,
@@ -8945,7 +8945,7 @@ def _start_freezone_story_script_task(
                 scope=job_id,
                 result=result,
                 current_task="completed",
-                logs=["故事脚本生成完成"],
+                logs=["Story script generation complete"],
                 metadata=metadata,
             )
         except Exception as exc:
@@ -8972,7 +8972,7 @@ def _start_freezone_story_script_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
                 metadata=metadata,
             )
 
@@ -8989,7 +8989,7 @@ async def freezone_story_script_generate(
     body: FreezoneStoryScriptGenerateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """文本工具：根据上传剧本内容生成结构化故事脚本表。"""
+    """Text tool: generate a structured story script table from uploaded script content."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -9017,8 +9017,8 @@ async def freezone_story_script_generate(
         body.character_refs, project_dir
     )
 
-    # 视频 / 角色图本身就是主输入，这时不再强制要求剧本文本
-    # （issue #207：以前只认 source_text，前端只好把提示词当剧本塞进来）。
+    # Video / character images are themselves the main input, in which case script text is no longer required
+    # (issue #207: previously only source_text was accepted, so the frontend had to stuff the prompt in as the script).
     if not source_text and video_path is None and not character_image_paths:
         raise HTTPException(
             400, "source_text, source_url, video_url or character_refs is required"
@@ -9052,8 +9052,8 @@ async def freezone_story_script_generate(
                 },
             )
         if video_path is not None:
-            # 抽帧要落盘并生成 /static 地址，没有 ProjectContext 就拼不出 URL。
-            # 与 analyze-video-story 等视频任务保持一致的前置要求。
+            # Frame extraction must be written to disk and produce a /static URL, and without a ProjectContext no URL can be built.
+            # Same prerequisite as video tasks such as analyze-video-story.
             _raise_project_context_required("freezone_story_script")
         _start_freezone_story_script_task(
             username=username,
@@ -9112,7 +9112,7 @@ def _start_freezone_image_reverse_prompt_task(
     )
 
     async def _runner() -> None:
-        logs = ["开始反推图片提示词"]
+        logs = ["Starting image prompt reverse-engineering"]
         try:
             task_manager.update_progress(
                 task_type,
@@ -9158,7 +9158,7 @@ def _start_freezone_image_reverse_prompt_task(
                 scope=job_id,
                 result=result,
                 current_task="completed",
-                logs=["图片提示词反推完成"],
+                logs=["Image prompt reverse-engineering complete"],
                 metadata=metadata,
             )
         except Exception as exc:
@@ -9183,7 +9183,7 @@ def _start_freezone_image_reverse_prompt_task(
                 scope=job_id,
                 error=str(exc),
                 current_task="failed",
-                logs=[f"错误: {exc}"],
+                logs=[f"Error: {exc}"],
                 metadata=metadata,
             )
 
@@ -9191,7 +9191,7 @@ def _start_freezone_image_reverse_prompt_task(
 
 
 # ============================================================
-# 视频处理：文生视频 / 运镜模板 / 角色库
+# Video processing: text-to-video / camera-move templates / character library
 # ============================================================
 
 
@@ -9258,7 +9258,7 @@ async def _scoped_media_model_catalog(
 
     clean_user_id = str(requester_user_id or "").strip()
     if not clean_user_id:
-        raise HTTPException(401, "无法确认当前用户身份")
+        raise HTTPException(401, "Unable to confirm the current user identity")
     try:
         return await catalog.list_models_for_user(
             media_type,
@@ -9269,9 +9269,9 @@ async def _scoped_media_model_catalog(
     except Exception as exc:  # noqa: BLE001 - cross-edition port boundary
         code = str(getattr(exc, "code", "") or "")
         if code == "MEDIA_MODEL_SCOPE_DENIED":
-            raise HTTPException(403, "当前账号无权使用媒体模型") from None
+            raise HTTPException(403, "The current account is not allowed to use media models") from None
         logger.exception("failed to resolve scoped media model catalog")
-        raise HTTPException(503, "媒体模型目录暂不可用，请稍后重试") from None
+        raise HTTPException(503, "The media model catalog is temporarily unavailable. Please try again later") from None
 
 
 _SERVER_MANAGED_MEDIA_MODEL_PARAMETER_KEYS = frozenset({"thinking_level"})
@@ -9304,11 +9304,11 @@ def _public_media_model_catalog(
 def _media_model_unavailable(
     media_type: str, catalog: list[dict[str, Any]]
 ) -> HTTPException:
-    media_label = "图片" if media_type == "image" else "视频"
+    media_label = "image" if media_type == "image" else "video"
     detail = (
-        f"当前没有可用的{media_label}模型，请联系管理员或刷新后重试"
+        f"No {media_label} model is currently available. Please contact an administrator or refresh and try again"
         if not catalog
-        else "该媒体模型未对当前组织开放、已停用或不存在，请刷新后选择其他模型"
+        else "This media model is not open to the current organization, has been disabled, or does not exist. Please refresh and choose another model"
     )
     return HTTPException(409, detail)
 
@@ -9619,24 +9619,24 @@ def _catalog_reference_duration_bounds(
 def _catalog_audio_total_duration_max(
     capabilities: dict[str, Any] | None,
 ) -> float | None:
-    """目录里配的全能参考音频**总时长**上限（秒），没配返回 None。
+    """Upper limit (in seconds) of the **total duration** of omni-reference audio configured in the catalog; None if not configured.
 
-    与 `_catalog_reference_limits` 同一套「目录优先」的口径，只是这里允许小数
-    （15.2 本身就不是整数）。非正数 / 非数字 / inf / nan 一律当没配——写入侧
-    `media_model_request_schema` 已经挡了这些，但目录条目也可能是那道校验存在之前落的库，
-    读出来再挡一次才不会让 inf 静默关掉整个上限。
+    Same "catalog first" basis as `_catalog_reference_limits`, except fractions are allowed here
+    (15.2 is not an integer). Non-positive / non-numeric / inf / nan are all treated as not configured -- the write side
+    `media_model_request_schema` already blocks these, but catalog entries may also have been stored before that validation existed,
+    and blocking once more on read keeps inf from silently turning off the whole limit.
 
-    刻意**不在这里兜底**成 15.2：调用方要靠「有没有配」来决定这个模型该不该受管，
-    在这里默默返回 15.2 就分不清「管理员配了 15.2」和「压根没配」。
+    Deliberately **no fallback to 15.2 here**: callers rely on "whether it is configured" to decide if this model should be governed,
+    and silently returning 15.2 here would make "the administrator configured 15.2" indistinguishable from "not configured at all".
     """
     return _catalog_reference_duration_bounds(capabilities, "audio")[3]
 
 
 async def _probe_reference_audio_seconds(path: str) -> float | None:
-    """ffprobe 读音频时长，读不出返回 None（校验器会跳过这条）。
+    """Read audio duration with ffprobe; return None if it cannot be read (the validator skips this entry).
 
-    不能改用 `utils.media_io.get_audio_duration`：它探测失败时返回 **5.0**，一个正好
-    合法的值，会把兜底变成静默放行。这里要的就是「不知道」和「知道」分得清。
+    Do not switch to `utils.media_io.get_audio_duration`: on probe failure it returns **5.0**, a perfectly
+    valid value, which would turn the fallback into a silent pass. What is wanted here is to tell "unknown" and "known" apart.
     """
     from novelvideo.seedance2_i2v.character_voice_storage import (
         probe_voice_sample_duration_seconds,
@@ -9645,7 +9645,7 @@ async def _probe_reference_audio_seconds(path: str) -> float | None:
 
     try:
         return float(await call_blocking(probe_voice_sample_duration_seconds, path))
-    except Exception as exc:  # ffprobe 缺失 / 文件损坏 / 权限，都只是「测不出」
+    except Exception as exc:  # ffprobe missing / corrupted file / permissions are all just "cannot be measured"
         logger.warning(
             "[freezone] reference audio duration probe failed: %s (%s)", path, exc
         )
@@ -9658,7 +9658,7 @@ async def _validate_catalog_reference_audio_items(
     capabilities: dict[str, Any] | None,
     backend: str,
 ) -> None:
-    """按媒体目录校验参考音频时长；旧 Seedance 2.0 目录保留历史兜底。"""
+    """Validate reference audio duration against the media catalog; the legacy Seedance 2.0 catalog keeps its historical fallback."""
     audio_items = [item for item in reference_items if item["type"] == "audio"]
     if not audio_items:
         return
@@ -9737,8 +9737,8 @@ async def _resolve_video_processing_model(
     )
     entry = _video_processing_entry(catalog, mode)
     if entry is None:
-        label = "视频超分" if mode == "video_upscale" else "视频帧率调整"
-        raise HTTPException(409, f"当前没有可用的{label}模型，请联系管理员配置")
+        label = "video upscaling" if mode == "video_upscale" else "video frame-rate adjustment"
+        raise HTTPException(409, f"No {label} model is currently available. Please contact an administrator to configure one")
     identifier = _catalog_entry_id(entry)
     schema, params, resolved = await _resolve_catalog_request(
         "video",
@@ -9817,7 +9817,7 @@ async def freezone_video_camera_templates(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：返回文生视频运镜模板库。"""
+    """Video processing: return the text-to-video camera-move template library."""
     await _resolve_freezone_project(project, user, required_role="viewer")
     return {"ok": True, "data": get_video_camera_templates()}
 
@@ -9827,7 +9827,7 @@ async def freezone_video_models(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：返回和 NovelVideo 视频模型下拉一致的可见模型。"""
+    """Video processing: return the visible models consistent with the NovelVideo video model dropdown."""
     ctx, _username, _project_name, _project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
     )
@@ -9852,7 +9852,7 @@ async def freezone_image_models(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：返回和 NovelVideo 图片模型下拉一致的可见模型。"""
+    """Image processing: return the visible models consistent with the NovelVideo image model dropdown."""
     ctx, _username, _project_name, _project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
     )
@@ -9889,7 +9889,7 @@ async def freezone_mark_detect(
     body: FreezoneMarkDetectRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：识别单张图片中点击点或框选区域的局部元素标记。"""
+    """Image processing: recognize local element marks from a click point or box selection in a single image."""
     ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -9919,10 +9919,10 @@ async def freezone_mark_detect(
         or ""
     )
     billing_project_id = str(getattr(ctx, "project_id", "") or project)
-    # 出网身份必须绑在**积分预留之前**。`request_egress_scope` 的入口会因组织侧
-    # 真实拒绝抛 AuthzError；开在预留之后，一次拒绝就留下一笔已扣未退的预留——
-    # 那正是本条目要修的「两侧不同步」病。作用域一直覆盖到 detect 与结算返回。
-    # 非组织身份（平台／个人／CE local／灰度未开）下它什么都不绑，路径不变。
+    # The egress identity must be bound **before the credit reservation**. The entry of `request_egress_scope` raises AuthzError on a
+    # real organization-side rejection; if opened after the reservation, one rejection leaves a deducted-but-unrefunded reservation --
+    # exactly the "two sides out of sync" bug this item fixes. The scope covers everything through detect and the settlement return.
+    # Under a non-organization identity (platform / personal / CE local / gray rollout off) it binds nothing and the path is unchanged.
     from novelvideo.api.egress_binding import request_egress_scope
 
     async with request_egress_scope(
@@ -9984,11 +9984,11 @@ async def freezone_mark_detect(
                     logger.exception(
                         "Failed to settle interrupted Freezone mark detection feature credit reservation"
                     )
-            # 组织拒绝不得压成裸 5xx。两者都是 RuntimeError 子类，原来一起被吞成
-            # `HTTPException(500, ...)`，前端只拿到一句自由文本。照 `:353-358` 的
-            # 既有裁定办：上抛后由 `app.py:210-232` 的 handler 渲染契约信封，机器码
-            # 原样透传（表里没有的码按设计回落 403，`ports/authz.py:47`）。
-            # 放在退还逻辑之后：拒绝时预留照样被退。
+            # Organization rejections must not be squashed into a bare 5xx. Both are RuntimeError subclasses and were previously swallowed together into
+            # `HTTPException(500, ...)`, leaving the frontend with only a free-text sentence. Follow the existing ruling at `:353-358`:
+            # re-raise so the handler at `app.py:210-232` renders the contract envelope, with the machine code
+            # passed through as-is (codes not in the table fall back to 403 by design, `ports/authz.py:47`).
+            # Placed after the refund logic: on rejection the reservation is still refunded.
             from novelvideo.ports.authz import AuthzError
             from novelvideo.task_backend.subprocesses import EgressBoundaryError
 
@@ -10043,7 +10043,7 @@ async def freezone_image_reverse_prompt(
     body: FreezoneImageReversePromptRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：异步反推图片提示词。"""
+    """Image processing: async reverse-engineering of image prompts."""
     from novelvideo.api.routes.model_credits import (
         freezone_image_reverse_prompt_task_billing,
     )
@@ -10111,7 +10111,7 @@ async def freezone_video_character_library(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：获取文生视频角色素材库。"""
+    """Video processing: get the text-to-video character asset library."""
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
     )
@@ -10126,7 +10126,7 @@ async def freezone_add_video_character_library_item(
     body: FreezoneVideoCharacterLibraryItemRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：把上传好的素材登记到资产库（图片/视频/音频）。"""
+    """Video processing: register uploaded assets in the asset library (image/video/audio)."""
     ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -10156,7 +10156,7 @@ async def freezone_add_video_character_library_item(
         for url in body.image_urls:
             _require_local(url, "image")
 
-    # 保存位置必须是已存在的文件夹；主线是同步产物，不接受上传。
+    # The save location must be an existing folder; the mainline is a synchronous artifact and does not accept uploads.
     if body.folder:
         if body.folder == MAINLINE_FOLDER_KEY:
             raise HTTPException(400, "cannot upload into the mainline folder")
@@ -10184,7 +10184,7 @@ async def freezone_asset_library_folders(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：列出用户自建的资产库文件夹（系统文件夹由前端按保留 key 生成）。"""
+    """Video processing: list user-created asset library folders (system folders are generated by the frontend from reserved keys)."""
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
     )
@@ -10200,7 +10200,7 @@ async def freezone_add_asset_library_folder(
     body: FreezoneAssetLibraryFolderRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：新建一个资产库文件夹。"""
+    """Video processing: create a new asset library folder."""
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -10221,20 +10221,20 @@ async def freezone_update_asset_library_folder(
     body: FreezoneAssetLibraryFolderPatchRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：给资产库文件夹改名或换封面。系统文件夹没有实体记录，一律 404。"""
+    """Video processing: rename an asset library folder or change its cover. System folders have no entity record, so always 404."""
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
     if body.cover:
-        # 封面只能是本项目 static 下的素材。这个字段会被所有打开资产库的协作者当
-        # <img src> 渲染，放行外链等于让别人的浏览器替你去访问第三方地址（referrer
-        # 和 IP 都带过去）。和录入素材那条路由的 _require_local 同一套要求。
+        # The cover can only be an asset under this project's static. This field is rendered as <img src> by every collaborator who opens the asset library,
+        # and allowing external links would make other people's browsers visit third-party addresses on your behalf (referrer
+        # and IP included). Same requirement as _require_local in the asset-ingest route.
         try:
             cover_path = resolve_static_url_to_path(body.cover, project_dir)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         if not cover_path.exists():
-            # 只回传进来的 URL：cover_path 是绝对路径，带用户名和落盘目录。
+            # Return only the incoming URL: cover_path is an absolute path carrying the username and on-disk directory.
             raise HTTPException(404, f"cover not found: {body.cover}")
     try:
         folder = update_video_character_folder(
@@ -10256,10 +10256,10 @@ async def freezone_delete_asset_library_folder(
     folder_id: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：删掉一个自建文件夹，柜内素材条目一并从资产库移除。
+    """Video processing: delete a user-created folder; asset entries inside it are removed from the asset library together.
 
-    只删索引，磁盘上的素材文件保留——画布节点可能还引用着同一个 URL，真删文件会
-    造成裂图。孤儿文件归项目级清理负责，不在这条路由的职责里。
+    Only the index is deleted and asset files on disk are kept -- canvas nodes may still reference the same URL, and truly deleting the file would
+    cause broken images. Orphan files are the responsibility of project-level cleanup, not this route.
     """
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10278,9 +10278,9 @@ async def freezone_sync_asset_library_from_mainline(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：把主线的人物/场景/道具参考图与人物语音幂等同步进资产库。
+    """Video processing: idempotently sync the mainline character/scene/prop reference images and character voices into the asset library.
 
-    走稳定合成 id（``mainline:<kind>:<name>``），重复同步只更新 URL、不产生重复。
+    Uses stable synthetic ids (``mainline:<kind>:<name>``); repeated syncs only update the URL and produce no duplicates.
     """
     ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10298,7 +10298,7 @@ async def freezone_sync_asset_library_from_mainline(
 
     assets: list[dict[str, Any]] = []
 
-    # 人物：肖像 → 图片；参考语音 → 音频
+    # Characters: portrait -> image; reference voice -> audio
     for character in store.get_all_characters():
         name = getattr(character, "name", "") or ""
         if not name:
@@ -10314,9 +10314,9 @@ async def freezone_sync_asset_library_from_mainline(
                     "url": portrait_url,
                 }
             )
-        # 走全站统一的三级声线级联（身份覆盖 → 年龄段预设 → 角色默认），并让
-        # resolve_character_voice 负责把项目相对/绝对路径解析成真实存在的绝对路径，
-        # 避免这里手拼 project_dir / rel 时对绝对路径拼错、静默丢音。
+        # Use the site-wide three-level voice cascade (identity override -> age-group preset -> character default), and let
+        # resolve_character_voice resolve project-relative/absolute paths into real existing absolute paths,
+        # avoiding hand-built project_dir / rel here that mis-joins absolute paths and silently drops audio.
         voice = resolve_character_voice(project_dir=project_dir, character=character)
         if voice.audio_path is not None:
             voice_url = _static_url(voice.audio_path)
@@ -10331,7 +10331,7 @@ async def freezone_sync_asset_library_from_mainline(
                     }
                 )
 
-    # 场景：master → 图片
+    # Scenes: master -> image
     scenes = await store.list_scenes()
     for scene in scenes:
         name = getattr(scene, "name", "") or ""
@@ -10349,7 +10349,7 @@ async def freezone_sync_asset_library_from_mainline(
                 }
             )
 
-    # 道具：reference → 图片
+    # Props: reference -> image
     props = await store.list_props()
     for prop in props:
         name = getattr(prop, "name", "") or ""
@@ -10381,11 +10381,11 @@ async def freezone_rename_video_character_library_item(
     body: FreezoneAssetLibraryItemPatchRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：给资产库条目改名。
+    """Video processing: rename an asset library entry.
 
-    只改展示名，素材地址不动——画布上已经引用该素材的节点照旧可用。主线同步来的
-    条目也能改，但下次「从主线同步」会按主线名字覆盖回去，前端据此只对本地上传的
-    条目开放这个入口。
+    Only the display name changes and the asset URL is untouched -- canvas nodes that already reference the asset keep working. Entries synced from the mainline
+    can also be renamed, but the next "sync from mainline" will overwrite them back to the mainline name, so the frontend only
+    exposes this entry point for locally uploaded entries.
     """
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10408,7 +10408,7 @@ async def freezone_delete_video_character_library_item(
     item_id: str,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：删除角色素材库条目。"""
+    """Video processing: delete a character library entry."""
     _ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -10424,12 +10424,12 @@ async def freezone_video_gen(
     body: FreezoneVideoGenRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：文生视频。
+    """Video processing: text-to-video.
 
-    `model` 可选，前端应优先使用 `/api/v1/projects/{project}/freezone/video/models`
-    返回的模型名称列表作为入参。
+    `model` is optional; the frontend should prefer the list of model names returned by `/api/v1/projects/{project}/freezone/video/models`
+    as input.
 
-    运镜通过模板库和补充提示词控制，角色库通过已上传的人物参考图提供身份一致性。
+    Camera movement is controlled through the template library and the additional prompt; the character library provides identity consistency via uploaded character reference images.
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10474,7 +10474,7 @@ async def freezone_video_gen(
 
     character_reference_paths = _resolve_url_list(project_dir, character_reference_urls)
     reference_items = [
-        {"type": "image", "path": path, "role": "角色参考"}
+        {"type": "image", "path": path, "role": "character reference"}
         for path in character_reference_paths
     ]
     final_prompt = build_freezone_video_prompt(
@@ -10537,16 +10537,16 @@ def _image_output_source(project_dir, ctx, username, project_name, url) -> str:
         f"/static/{username}/{project_name}/",
     )
     if not path.startswith(prefixes) or ".." in Path(path).parts:
-        raise HTTPException(400, "素材必须属于当前项目")
+        raise HTTPException(400, "The asset must belong to the current project")
     try:
         paths = _resolve_url_list(project_dir, [url])
     except ValueError as exc:
-        raise HTTPException(400, "素材必须是当前项目内的有效路径") from exc
+        raise HTTPException(400, "The asset must be a valid path inside the current project") from exc
     if len(paths) != 1:
-        raise HTTPException(400, "素材不存在")
+        raise HTTPException(400, "The asset does not exist")
     source = Path(paths[0]).resolve()
     if not source.is_relative_to(project_dir.resolve()) or not source.is_file():
-        raise HTTPException(400, "素材不存在或不属于当前项目")
+        raise HTTPException(400, "The asset does not exist or does not belong to the current project")
     return str(source)
 
 
@@ -10556,7 +10556,7 @@ async def freezone_image_animate(
     body: FreezoneImageAnimateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """将当前项目的画布图片作为锁定首帧，生成固定规格的动态图。"""
+    """Use a canvas image of the current project as the locked first frame to generate a fixed-spec animated image."""
     ctx, username, project_name, project_dir, output_dir = await _resolve_freezone_project(
         project, user
     )
@@ -10583,8 +10583,8 @@ async def freezone_image_animate(
             project_dir=project_dir,
             output_dir=output_dir,
             job_id=_new_job_id(),
-            prompt="保持首帧的主体、构图、画风与背景稳定，仅添加自然轻微的循环动作。镜头固定，无切换，无新增元素。",
-            reference_items=[{"type": "image", "path": source_paths[0], "role": "首帧"}],
+            prompt="Keep the subject, composition, art style, and background of the first frame stable, adding only natural, subtle looping motion. Fixed camera, no cuts, no new elements.",
+            reference_items=[{"type": "image", "path": source_paths[0], "role": "first frame"}],
             aspect_ratio=supported_image_aspect_ratio(
                 source_paths[0],
                 _image_animate_ratio_options(model, capabilities),
@@ -10605,8 +10605,8 @@ async def freezone_image_animate(
             generation_attempt_id=body.generation_attempt_id,
             model_id=model,
             catalog_id=_catalog_entry_id(capabilities) or None,
-            # 当前模型目录的关键帧能力统一为 first_last_frame；仅提供首帧
-            # 是该模式的合法子集，不走已废弃的单独 first_frame 模式。
+            # The keyframe capability of the current model catalog is unified as first_last_frame; providing only the first frame
+            # is a legal subset of that mode, and the deprecated standalone first_frame mode is not used.
             gen_mode="first_last_frame",
             requested_gen_mode="firstLastFrame",
             model_params=model_params,
@@ -10625,7 +10625,7 @@ async def freezone_image_vectorize(
     body: FreezoneImageVectorizeRequest,
     user: dict = Depends(get_api_user),
 ):
-    """将当前项目的图片节点异步转换为 SVG。"""
+    """Asynchronously convert an image node of the current project to SVG."""
     ctx, username, project_name, project_dir, _output_dir = await _resolve_freezone_project(
         project, user, required_role="editor"
     )
@@ -10662,11 +10662,11 @@ async def freezone_video_i2v(
     body: FreezoneImageToVideoRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：图片驱动视频。
+    """Video processing: image-driven video.
 
-    统一承接：
-    - 单图图生视频（单张图片参考，不锁定第一帧）
-    - 多图图片参考视频
+    Handles uniformly:
+    - Single-image image-to-video (one image reference, first frame not locked)
+    - Multi-image image-reference video
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10730,7 +10730,7 @@ async def freezone_video_i2v(
         )
 
     reference_items = [
-        {"type": "image", "path": path, "role": "图片参考"} for path in source_paths
+        {"type": "image", "path": path, "role": "image reference"} for path in source_paths
     ]
     final_prompt = build_freezone_image_to_video_prompt(
         user_prompt=body.prompt,
@@ -10792,9 +10792,9 @@ async def freezone_video_keyframes(
     body: FreezoneKeyframeVideoRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：关键帧视频。
+    """Video processing: keyframe video.
 
-    接受仅首帧、首帧+尾帧或仅尾帧；至少需要提供一个。
+    Accepts first frame only, first frame + last frame, or last frame only; at least one must be provided.
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -10862,9 +10862,9 @@ async def freezone_video_keyframes(
 
     reference_items = []
     if first_path:
-        reference_items.append({"type": "image", "path": first_path, "role": "首帧"})
+        reference_items.append({"type": "image", "path": first_path, "role": "first frame"})
     if last_path:
-        reference_items.append({"type": "image", "path": last_path, "role": "尾帧"})
+        reference_items.append({"type": "image", "path": last_path, "role": "last frame"})
 
     final_prompt = build_freezone_keyframe_video_prompt(
         user_prompt=body.prompt,
@@ -10885,7 +10885,7 @@ async def freezone_video_keyframes(
             job_id=job_id,
             prompt=final_prompt,
             reference_items=reference_items,
-            # 关键帧画幅跟随首帧；仅尾帧时跟随尾帧，不接受固定比例。
+            # Keyframe aspect follows the first frame; with last frame only it follows the last frame, and no fixed ratio is accepted.
             aspect_ratio="auto",
             resolution=normalize_video_resolution_for_backend(
                 backend,
@@ -10929,9 +10929,9 @@ async def freezone_video_omni_gen(
     body: FreezoneVideoOmniGenRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：全能参考文生视频。
+    """Video processing: omni-reference text-to-video.
 
-    支持文本、图像、视频、音频、文件和公开网页链接混合输入。
+    Supports mixed input of text, images, video, audio, files, and public web links.
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -11051,7 +11051,7 @@ async def freezone_video_omni_gen(
             }
         )
 
-    # 音频时长必须在预扣积分和投递任务之前校验。
+    # Audio duration must be validated before pre-deducting credits and dispatching the task.
     try:
         await _validate_catalog_reference_audio_items(
             reference_items,
@@ -11128,9 +11128,9 @@ async def freezone_video_edit(
     body: FreezoneVideoEditRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：视频编辑。
+    """Video processing: video editing.
 
-    输入 1 个源视频，并按目录能力发送参考图片和独立参考音频。
+    Takes 1 source video and sends reference images and standalone reference audio according to catalog capabilities.
     """
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
@@ -11194,12 +11194,12 @@ async def freezone_video_edit(
         )
 
     reference_items: list[dict[str, str]] = [
-        {"type": "video", "path": video_paths[0], "role": "视频编辑源"}
+        {"type": "video", "path": video_paths[0], "role": "video edit source"}
     ]
     for path in image_paths:
-        reference_items.append({"type": "image", "path": path, "role": "图片参考"})
+        reference_items.append({"type": "image", "path": path, "role": "image reference"})
     for path in audio_paths:
-        reference_items.append({"type": "audio", "path": path, "role": "配乐参考"})
+        reference_items.append({"type": "audio", "path": path, "role": "music reference"})
 
     try:
         await _validate_catalog_reference_audio_items(
@@ -11228,7 +11228,7 @@ async def freezone_video_edit(
             job_id=job_id,
             prompt=final_prompt,
             reference_items=reference_items,
-            # 视频编辑的画幅与输出时长均跟随源视频；用户只选择分辨率。
+            # Both the aspect and the output duration of video editing follow the source video; the user only chooses the resolution.
             aspect_ratio="auto",
             resolution=normalize_video_resolution_for_backend(
                 backend,
@@ -11268,7 +11268,7 @@ async def freezone_video_extend(
     body: FreezoneVideoExtendRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：从一个源视频的结尾继续生成指定时长。"""
+    """Video processing: continue generating a specified duration from the end of a source video."""
 
     ctx, username, project_name, project_dir, output_dir = await _resolve_freezone_project(
         project, user
@@ -11309,7 +11309,7 @@ async def freezone_video_extend(
         raise HTTPException(400, "this model does not support video references")
 
     reference_items = [
-        {"type": "video", "path": video_paths[0], "role": "视频延长源"}
+        {"type": "video", "path": video_paths[0], "role": "video extension source"}
     ]
     final_prompt = build_freezone_video_extend_prompt(
         user_prompt=body.prompt,
@@ -11326,7 +11326,7 @@ async def freezone_video_extend(
             job_id=job_id,
             prompt=final_prompt,
             reference_items=reference_items,
-            # 延长任务沿用源视频画幅，但时长表示新生成片段的长度。
+            # The extension task keeps the source video's aspect, but the duration denotes the length of the newly generated clip.
             aspect_ratio="auto",
             resolution=normalize_video_resolution_for_backend(
                 backend,
@@ -11371,11 +11371,11 @@ async def freezone_video_erase(
     body: FreezoneVideoEraseRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：智能去字幕 / 框选擦除。
+    """Video processing: smart subtitle removal / box-selection erase.
 
-    当前为稳定的一期实现：
-    - `smart_subtitle`：自动估计底部字幕区域后执行视频擦除
-    - `box`：按前端传入的固定框执行区域擦除
+    Currently a stable first-phase implementation:
+    - `smart_subtitle`: automatically estimate the bottom subtitle region and then perform video erase
+    - `box`: perform region erase with the fixed box passed in by the frontend
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -11458,10 +11458,10 @@ async def _prepare_video_upscale(
     try:
         source_meta = await probe_video_stream(str(source_path))
     except RuntimeError as exc:
-        raise HTTPException(400, f"无法读取源视频信息: {exc}") from exc
+        raise HTTPException(400, f"Unable to read source video info: {exc}") from exc
     target_long_edge = VIDEO_UPSCALE_TARGET_LONG_EDGES[body.resolution]
     if max(int(source_meta["width"]), int(source_meta["height"])) >= target_long_edge:
-        raise HTTPException(400, "目标分辨率必须高于源视频分辨率")
+        raise HTTPException(400, "The target resolution must be higher than the source video resolution")
 
     upscale = await _resolve_video_processing_model(
         "video_upscale",
@@ -11473,9 +11473,9 @@ async def _prepare_video_upscale(
             "video_frame_rate",
             requester_user_id=requester_user_id,
         )
-    for label, model in (("视频超分", upscale), ("视频帧率调整", frame_rate)):
+    for label, model in (("video upscaling", upscale), ("video frame-rate adjustment", frame_rate)):
         if model is not None and body.resolution not in model["resolution_options"]:
-            raise HTTPException(400, f"当前{label}模型不支持 {body.resolution} 分辨率")
+            raise HTTPException(400, f"The current {label} model does not support {body.resolution} resolution")
     processing_models = {
         "upscale_backend": upscale["backend"],
         "upscale_model_params": upscale["model_params"],
@@ -11530,7 +11530,7 @@ async def freezone_video_upscale(
     body: FreezoneVideoUpscaleRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：目录驱动的视频超分、慢放与补帧流水线。"""
+    """Video processing: catalog-driven video upscaling, slow-motion, and frame interpolation pipeline."""
     ctx, username, project_name, project_dir, _output_dir = await _resolve_freezone_project(
         project, user
     )
@@ -11597,7 +11597,7 @@ async def freezone_video_upscale_probe(
     source_url: str = Query(...),
     user: dict = Depends(get_api_user),
 ):
-    """读取源视频参数，供增强面板过滤无效的目标档位。"""
+    """Read source video parameters so the enhancement panel can filter invalid target tiers."""
     ctx, _username, _project_name, project_dir, _output_dir = await _resolve_freezone_project(
         project, user, required_role="viewer"
     )
@@ -11612,7 +11612,7 @@ async def freezone_video_upscale_probe(
     try:
         metadata = await probe_video_stream(str(source_path))
     except RuntimeError as exc:
-        raise HTTPException(400, f"无法读取源视频信息: {exc}") from exc
+        raise HTTPException(400, f"Unable to read source video info: {exc}") from exc
     catalog = await _scoped_media_model_catalog(
         "video", requester_user_id=ctx.requester_user_id,
     )
@@ -11635,11 +11635,11 @@ async def freezone_audio_separate(
     body: FreezoneAudioSeparateRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：音视频分离。
+    """Video processing: audio/video separation.
 
-    当前轻量版会同时产出：
-    - 提取出的纯音频
-    - 去掉音轨后的无声视频
+    The current lightweight version produces both:
+    - The extracted pure audio
+    - The silent video with the audio track removed
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -11703,7 +11703,7 @@ async def freezone_audio_speech(
     body: FreezoneAudioSpeechRequest,
     user: dict = Depends(get_api_user),
 ):
-    """Freezone 音频节点：文本生成语音。"""
+    """Freezone audio node: text-to-speech."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -11782,8 +11782,8 @@ async def freezone_audio_speech(
                 freezone_audio_task_billing,
             )
 
-            # 音色解析要读的项目态在这里定型：投递方就是存放该项目的那台机器，
-            # 执行方不必再回头读项目库。没装投射器时返回空片段，payload 逐字不变。
+            # The project state needed for voice resolution is fixed here: the dispatcher is the machine that stores the project,
+            # so the executor need not read the project database again. When no projector is installed an empty fragment is returned and the payload is verbatim unchanged.
             projection_payload = await _task_projection_payload(
                 ctx=ctx,
                 username=username,
@@ -11862,7 +11862,7 @@ async def freezone_audio_eleven_music(
     body: FreezoneAudioMusicRequest,
     user: dict = Depends(get_api_user),
 ):
-    """Freezone 音频节点：文本生成音乐。"""
+    """Freezone audio node: text-to-music."""
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -11941,13 +11941,13 @@ async def freezone_video_compose(
     body: FreezoneVideoComposeRequest,
     user: dict = Depends(get_api_user),
 ):
-    """视频处理：按时间线描述异步导出成片。
+    """Video processing: asynchronously export the final video from a timeline description.
 
-    当前为 MVP 版本：
-    - 支持顺序视频片段裁剪与拼接
-    - 支持时间线空隙自动补黑场
-    - 支持附加音频轨混音
-    - 暂不支持重叠视频轨、转场和复杂特效
+    Currently an MVP version:
+    - Supports sequential video clip trimming and concatenation
+    - Supports automatically filling gaps in the timeline with black
+    - Supports mixing an additional audio track
+    - Overlapping video tracks, transitions, and complex effects are not supported yet
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -12053,7 +12053,7 @@ async def freezone_edit(
     body: FreezoneEditRequest,
     user: dict = Depends(get_api_user),
 ):
-    """图片处理：启动图生图 / 图编辑任务，返回 `task_key`。"""
+    """Image processing: start an image-to-image / image-edit task and return a `task_key`."""
     ctx, username, project_name, project_dir, output_dir = (
         await _resolve_freezone_project(project, user)
     )
@@ -12129,10 +12129,10 @@ async def freezone_job_result(
     job_id: str,
     user: dict = Depends(get_api_user),
 ):
-    """任务完成后，通过这个接口解析最终产物 URL。
+    """After a task completes, resolve the final artifact URL through this endpoint.
 
-    前端通过 `/projects/{project_id}/tasks/stream` 的 SSE 知道任务是否完成；
-    这个接口只负责把 `(task_type, job_id)` 翻译成实际的 `/static/...` URL。
+    The frontend learns whether a task is complete via the SSE of `/projects/{project_id}/tasks/stream`;
+    this endpoint only translates `(task_type, job_id)` into the actual `/static/...` URL.
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
@@ -12554,7 +12554,7 @@ async def freezone_skill_run_result(
 
 
 # ============================================================
-# 画布（F5）
+# Canvas (F5)
 # ============================================================
 
 
@@ -12966,9 +12966,9 @@ def _merge_restored_preset_canvas(
     final_node_ids = new_node_ids | {
         str(n.get("id")) for n in preserved_nodes if n.get("id")
     }
-    # preset-managed 节点之间的 edge 归 preset 管 — 旧 preset emit 过、新 preset
-    # 不 emit 了的(比如 edge 方向反转、删了 workflow trigger 等)就该消失。
-    # 不然旧 edge 会跟新 edge 共存,画布出现重复/交叉连线 (X 形)。
+    # Edges between preset-managed nodes are owned by the preset -- edges the old preset emitted but the new preset
+    # no longer emits (e.g. edge direction reversed, workflow trigger deleted) should disappear.
+    # Otherwise old edges coexist with new edges and the canvas shows duplicate/crossing lines (X shape).
     preset_managed_node_ids = {
         str(n.get("id"))
         for n in [*new_nodes, *preserved_nodes]
@@ -13034,15 +13034,15 @@ def _is_replaceable_projection_node(node: dict, projection_key: str) -> bool:
 def _projection_is_intact_in_payload(
     existing_payload: dict | None, projection_key: str
 ) -> bool:
-    """画布里这个投影是不是还「成组」的。
+    """Whether this projection on the canvas is still "grouped".
 
-    facts_signature 只描述上游事实（角色/分镜的内容），完全看不到画布自己的结构。
-    组节点一旦丢了——历史 id 撞车被别人的组顶掉、迁移后成员脱离 parent——上游事实又
-    没变，refresh 就会一路 noop，散落的成员永远收不回组里。所以 noop 之前还得确认
-    结构是完好的。
+    facts_signature only describes upstream facts (the content of characters/shots) and cannot see the canvas's own structure at all.
+    Once a group node is lost -- a historical id collision displaced it by another, or members detached from the parent after a migration -- upstream facts
+    are unchanged, so refresh would noop all the way and scattered members could never be gathered back into the group. So before noop we must also confirm
+    that the structure is intact.
 
-    判据：该 projection_key 的每个成员节点都挂在同一个属于自己的组节点下。没有成员
-    时视为完好（没有可修的东西）。
+    Criterion: every member node of this projection_key hangs under the same group node that belongs to it. With no members
+    it is considered intact (nothing to repair).
     """
     if not isinstance(existing_payload, dict):
         return True
@@ -13431,12 +13431,12 @@ def _stamp_projection_key(payload: dict, projection_key: str) -> None:
 
 
 def _projection_group_id(projection_key: str) -> str:
-    """一个 projection_key 一个组 id。
+    """One group id per projection_key.
 
-    slug 只是给人看的可读部分，是**有损**的：中文角色名会被整段换成 ``_`` 再 strip
-    掉，``asset:character:林小满`` 和 ``asset:character:顾南城`` 都会塌成
-    ``asset_character``——两个角色于是共用一个组 id，第二个人进虾画时组名被顶掉、
-    两个人的节点挤进同一个组。唯一性一律交给 key 的稳定摘要来保证。
+    The slug is only a human-readable part and is **lossy**: Chinese character names are replaced wholesale with ``_`` and then stripped,
+    so ``asset:character:Alice`` and ``asset:character:Bob`` can collapse to
+    ``asset_character`` -- two characters would then share one group id, the group name of the second would be displaced when entering the canvas,
+    and both characters' nodes would be crammed into one group. Uniqueness is guaranteed entirely by the stable digest of the key.
     """
     slug = re.sub(r"[^A-Za-z0-9]+", "_", projection_key).strip("_").lower()[:35]
     digest = canvas_store.canvas_request_hash({"projection_key": projection_key})[:12]
@@ -13462,9 +13462,9 @@ def _projection_group_label(body: ProjectionPresetCanvasRequest) -> str:
     return body.projection_key
 
 
-# 各节点类型的实际渲染尺寸（前端 CSS 里的设计宽高）。preset 产出的节点大多不带
-# width/height/style，兜底值 320x180 比真实渲染小一大截，组框按它算出来就会把成员
-# 夹成一堆（成员带 extent:"parent"，React Flow 会把它们钳回小框里）。
+# Actual rendered size of each node type (design width/height in the frontend CSS). Most nodes produced by presets carry no
+# width/height/style, and the fallback 320x180 is much smaller than the real rendering, so group frames computed from it would
+# squeeze members into a heap (members carry extent:"parent", and React Flow would clamp them back into the small frame).
 _NODE_DESIGN_SIZES: dict[str, tuple[float, float]] = {
     "textAnnotationNode": (440.0, 320.0),
     "uploadNode": (320.0, 350.0),
@@ -13484,10 +13484,10 @@ _DEFAULT_NODE_DESIGN_SIZE = (320.0, 200.0)
 
 
 def _node_display_size(node: dict) -> tuple[float, float]:
-    """节点的渲染尺寸，优先取前端量出来的真值。
+    """Rendered size of a node, preferring the measured value from the frontend.
 
-    measured 是前端把节点渲染出来后回写的实际盒子，最准；其次是显式 width/height，
-    再次是 style，最后按节点类型取设计尺寸。
+    measured is the actual box the frontend writes back after rendering the node, the most accurate; next is explicit width/height,
+    then style, and finally the design size by node type.
     """
     style = node.get("style") if isinstance(node.get("style"), dict) else {}
     measured = node.get("measured") if isinstance(node.get("measured"), dict) else {}
@@ -13868,11 +13868,11 @@ async def create_canvas_from_preset(
     body: PresetCanvasRequest,
     user: dict = Depends(get_api_user),
 ):
-    """根据项目上下文创建一个预填充画布。
+    """Create a prefilled canvas from the project context.
 
-    这不是会话资源，而是一个无状态工厂接口。
-    如果项目里已有相同 preset 的画布，会复用最近更新的那张，避免同一主线入口
-    不断生成副本。
+    This is not a session resource but a stateless factory endpoint.
+    If the project already has a canvas of the same preset, the most recently updated one is reused, to avoid the same mainline entry
+    producing copies over and over.
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(
@@ -14219,8 +14219,8 @@ async def build_projection_from_preset(
         project_dir=project_dir,
         body=body,
     )
-    # 前端「同步更新」把这些节点直接写进内存画布，不经过读画布的补全；
-    # beat 上下文缺 projectId 会被当成 standalone，这里和读画布保持一致。
+    # The frontend "sync update" writes these nodes directly into the in-memory canvas without going through the completion done when reading the canvas;
+    # a beat context missing projectId would be treated as standalone, so this stays consistent with canvas reads.
     _stamp_canvas_mainline_context_project_id(payload, ctx.project_id)
     metadata = payload.get("metadata")
     return {
@@ -14276,7 +14276,7 @@ async def project_canvas_from_preset(
             != incoming_facts_signature
         ):
             return None
-        # 事实没变但组散了：照样得重建，否则这张画布再也回不到成组状态。
+        # Facts unchanged but the group scattered: still must rebuild, otherwise this canvas could never return to the grouped state.
         if not _projection_is_intact_in_payload(existing_payload, body.projection_key):
             return None
         revision = (
@@ -14654,7 +14654,7 @@ async def projection_status(
             continue
         stored_signature = projection.get("facts_signature")
         stored_signature = stored_signature if isinstance(stored_signature, str) else ""
-        # 组散了也算 stale：上游事实一致但画布结构坏了，同样需要一次 refresh 才能修。
+        # A scattered group also counts as stale: upstream facts match but the canvas structure is broken, and a refresh is equally needed to repair it.
         intact = _projection_is_intact_in_payload(existing, projection_key)
         statuses.append(
             {
@@ -14782,15 +14782,15 @@ async def get_canvas(project: str, canvas_id: str, user: dict = Depends(get_api_
         project_dir=project_dir,
     )
     response = {"ok": True, "data": migrated_payload or {"nodes": [], "edges": []}}
-    # B2 §3.9 O2:最近有别人写过就带一句提示,零额外往返——判断只用刚读出来的
-    # 那份载荷。字段挂在 `data` 之外,画布契约(`CanvasPayload`)一个字节不变(B2-6)。
+    # B2 §3.9 O2: if someone else wrote recently, include a hint, with zero extra round trips -- the judgment uses only the
+    # payload just read. The field is attached outside `data`, leaving the canvas contract (`CanvasPayload`) byte-for-byte unchanged (B2-6).
     editing_by = canvas_store.canvas_editing_hint(
         payload, viewer_id=_canvas_actor_id(user)
     )
     if editing_by:
         response["editing_by"] = editing_by
-    # 历史遗留的外项目引用不拦保存,只在读取期报出来:前端据此把节点显示成
-    # 「素材属于其他项目」并给修复入口,不再只给一片裂图。同样挂在 `data` 之外。
+    # Legacy cross-project references do not block saving and are only reported at read time: the frontend uses this to render the node as
+    # "asset belongs to another project" and offer a repair entry, instead of just a field of broken images. Also attached outside `data`.
     foreign_media = scan_foreign_media_refs(response["data"], project_id=ctx.project_id)
     if foreign_media:
         response["foreign_media"] = [ref.as_dict() for ref in foreign_media]
@@ -15604,7 +15604,7 @@ async def _settle_delivered_agent_product_task(
                 "model_evidence": operation.get("model_evidence") or {},
                 "result_ref": operation.get("result_ref") or {},
             },
-            current_task="完成（晚到结果已对账）",
+            current_task="Completed (late result reconciled)",
             metadata={"settlement_status": "reconciled", "error_code": None},
             expected_task_id=expected_task_id,
         )
@@ -15648,7 +15648,7 @@ async def _settle_failed_agent_product_task(
             error=error,
             current_task=lmsg(
                 "tasks.progress.workflowDraftDeliveryFailed",
-                "Agent 交付工作流草稿失败",
+                "Agent failed to deliver the workflow draft",
             ),
             metadata={
                 "operation_status": "failed",
@@ -16297,7 +16297,7 @@ async def get_canvas_workflow_runs(
                 task_status in {"submitting", "queued", "running"}
                 and task.progress >= 1.0
                 and str(task.current_task or "").strip().lower()
-                in {"完成", "completed", "done"}
+                in {"completed", "done"}
             ):
                 task_status = "completed"
             task_key = project_task_state_key(
@@ -16647,8 +16647,8 @@ async def restore_canvas_history(
             user=user,
         )
         _stamp_canvas_mainline_context_project_id(prepared, project)
-        # 回滚也是一次写入：旧版本里的外项目引用不能借着「恢复历史」重新落库(SuperTale#192)。
-        # 与 PUT 同一条判据——只拦相对当前版本新引入的，当前版本已有的照常放行。
+        # A rollback is also a write: cross-project references in old versions must not be re-persisted via "restore history" (SuperTale#192).
+        # Same criterion as PUT -- only block those newly introduced relative to the current version; those the current version already has pass as usual.
         reject_new_foreign_media_refs(prepared, existing=existing, project_id=ctx.project_id)
         return prepared
 
@@ -16868,10 +16868,10 @@ async def put_canvas(
             user=user,
         )
         _stamp_canvas_mainline_context_project_id(prepared, project)
-        # 静态资源按 URL 里的项目 id 独立鉴权:画布存下别的项目的媒体地址,源项目成员
-        # 看着一切正常,换个同样合法的本项目成员打开就是整片 403(SuperTale#192)。
-        # 只拦本次新引入的,库里已有的历史脏引用照常放行——否则一个脏节点就能把整张
-        # 老画布永久锁死,而那些画布正是本守卫要解决的问题的受害者。
+        # Static assets are authorized independently by the project id in the URL: a canvas that stores another project's media URL looks fine to source-project
+        # members, but opening it as another equally legitimate member of this project yields a whole page of 403 (SuperTale#192).
+        # Only block what is newly introduced this time; historical dirty references already in the library pass as usual -- otherwise a single dirty node could lock
+        # a whole old canvas permanently, and such canvases are exactly the victims of the problem this guard solves.
         reject_new_foreign_media_refs(prepared, existing=existing, project_id=ctx.project_id)
         return prepared
 
@@ -16892,7 +16892,7 @@ async def put_canvas(
             allow_empty_overwrite=body.allow_empty_overwrite,
         )
     except CanvasMediaScopeError as exc:
-        # 前端据此调 assets/copy 把素材拷进本项目,改写节点后重试保存(自愈)。
+        # The frontend uses this to call assets/copy to copy the asset into this project, rewrite the node and retry saving (self-healing).
         raise HTTPException(
             422,
             {
@@ -17006,7 +17006,7 @@ async def delete_canvas(
 
 
 # ============================================================
-# Commit 到 canonical slot（Freezone → Slot）
+# Commit to canonical slot (Freezone -> Slot)
 # ============================================================
 
 
@@ -17466,7 +17466,7 @@ def _is_freezone_scene_library_role(role: str) -> bool:
 
 
 DIRECTOR_CAPTURE_FILES: tuple[tuple[str, str, str], ...] = (
-    ("combined.png", "director_combined", "3GS 导演合成图"),
+    ("combined.png", "director_combined", "3GS director composite"),
     ("selected_background.png", "selected_background", "selected background"),
     ("env_only.png", "director_env", "3GS environment plate"),
     ("env_actor_only.png", "director_env_actor", "3GS actor blocking plate"),
@@ -17672,11 +17672,11 @@ async def freezone_director_capture_manifest(
     node_id: Optional[str] = None,
     user: dict = Depends(get_api_user),
 ):
-    """返回某个 beat 当前的 3GS director capture 状态。
+    """Return the current 3GS director capture state of a beat.
 
-    这是 Freezone 和 PlayCanvas 3GS 导演台之间的桥接接口：
-    调用方可以先打开 `editor_url`，在导演台里导出控制帧，
-    然后再次调用这个接口，把导出的文件转成画布节点使用。
+    This is the bridge endpoint between Freezone and the PlayCanvas 3GS director desk:
+    the caller can first open `editor_url`, export control frames in the director desk,
+    and then call this endpoint again to turn the exported files into canvas nodes.
 
     Pure read — no side effects. Callers that need the env_only.png →
     selected_background.png mirror (e.g. frontend right after the user
@@ -17796,7 +17796,7 @@ async def freezone_scene_assets_for_beat(
     """Lazy thumbnail/source pool for a beat's "selected_background" slot.
 
     Drag-in / popover use case: when the user spawns a `selected_background`
-    slot node (via drag from another canvas, or by clicking "选源" on the
+    slot node (via drag from another canvas, or by clicking "Select source" on the
     node's popover), the frontend needs to enumerate the scene's available
     source assets (`scene_master.png` / `scene_reverse_master.png` /
     pano 360 / 3GS PLY) so the user can pick which one to crop into the
@@ -17881,10 +17881,10 @@ async def freezone_scene_assets_for_beat(
 async def freezone_push(
     project: str, body: PushRequest, user: dict = Depends(get_api_user)
 ):
-    """把 Freezone candidate 媒体写回主流程 canonical slot。
+    """Write a Freezone candidate media back to the mainline canonical slot.
 
-    源文件通常来自 `freezone/_outputs/`，也允许来自同项目作用域内的其他静态资源。
-    写入前会自动备份已有目标文件。
+    The source file usually comes from `freezone/_outputs/`, but may also come from other static assets within the same project scope.
+    Existing target files are automatically backed up before writing.
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -17920,8 +17920,8 @@ async def freezone_push(
         )
 
     if body.target.kind in {"identity", "identity_costume", "identity_portrait"}:
-        # F5 收尾逻辑：尽量提示 cognee_store 刷新 identity 记录。
-        # 磁盘文件才是真正的数据源，这里只是 best-effort 同步。
+        # F5 finishing logic: try to prompt cognee_store to refresh the identity record.
+        # The disk file is the real data source; this is only a best-effort sync.
         try:
             store = await make_cognee_store_for_context(ctx)
             character = body.target.character
@@ -17994,11 +17994,11 @@ async def list_freezone_assets(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """列出当前项目作用域下可供 Freezone 使用的 canonical assets。
+    """List the canonical assets under the current project scope that Freezone can use.
 
-    SQLiteStore 负责项目事实数据，PathResolver 负责磁盘路径解析。
-    返回里同时保留 `exists` 和 `url`，这样调用方可以区分：
-    “这是一个已知资产概念” 和 “这是一个当前可直接引用的文件”。
+    SQLiteStore owns the project fact data and PathResolver owns on-disk path resolution.
+    The return keeps both `exists` and `url`, so callers can tell apart:
+    "this is a known asset concept" and "this is a file that can currently be referenced directly".
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
@@ -18034,7 +18034,7 @@ async def list_freezone_assets(
                 tab="characters",
                 kind="audio",
                 role="character_voice",
-                label=f"{character.name} / 默认声线",
+                label=f"{character.name} / Default voice",
                 sublabel=character.name,
                 stored_path=str(getattr(character, "reference_audio_path", "") or ""),
                 meta={
@@ -18067,7 +18067,7 @@ async def list_freezone_assets(
                         tab="characters",
                         kind="audio",
                         role="character_age_group_voice",
-                        label=f"{character.name} / {slot_label}声线",
+                        label=f"{character.name} / {slot_label} voice",
                         sublabel=character.name,
                         stored_path=str(entry.get("path", "") or ""),
                         meta={
@@ -18169,7 +18169,7 @@ async def list_freezone_assets(
                     tab="characters",
                     kind="audio",
                     role="identity_voice",
-                    label=f"{character.name} / {identity_name}声线",
+                    label=f"{character.name} / {identity_name} voice",
                     sublabel=character.name,
                     stored_path=str(
                         getattr(identity, "reference_audio_path", "") or ""
@@ -18255,18 +18255,18 @@ async def list_freezone_assets(
                     (
                         "master",
                         "scene_3gs_master_ply",
-                        f"{scene_name} / 3D 世界（正面）",
+                        f"{scene_name} / 3D world (front)",
                     ),
                     (
                         "reverse",
                         "scene_3gs_reverse_ply",
-                        f"{scene_name} / 3D 世界（背面）",
+                        f"{scene_name} / 3D world (back)",
                     ),
-                    ("pano", "scene_3gs_pano_ply", f"{scene_name} / 3D 世界（360）"),
+                    ("pano", "scene_3gs_pano_ply", f"{scene_name} / 3D world (360)"),
                     (
                         "custom",
                         "scene_3gs_custom_scene",
-                        f"{scene_name} / 3D 世界（自定义）",
+                        f"{scene_name} / 3D world (custom)",
                     ),
                 ]:
                     ply_path = stage_manifest_module.resolve_ply_path(
@@ -18336,11 +18336,11 @@ async def list_freezone_beat_context_assets(
     beat: Optional[int] = None,
     user: dict = Depends(get_api_user),
 ):
-    """列出 default/project 画布可用的 novelvideo Beat 上下文资产。
+    """List the novelvideo Beat context assets available to default/project canvases.
 
-    这个接口只聚合 novelvideo canonical 产物，不扫描 `freezone/_uploads`
-    或 `freezone/_outputs`。用于 default 画布展示全局 Beat 资源；具体 Beat
-    预设画布仍可继续读取 canvas `metadata.references`。
+    This endpoint only aggregates novelvideo canonical artifacts and does not scan `freezone/_uploads`
+    or `freezone/_outputs`. It is used by the default canvas to show global Beat resources; specific Beat
+    preset canvases can still read canvas `metadata.references`.
     """
     ctx, username, project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user, required_role="viewer")
@@ -18521,11 +18521,11 @@ async def freezone_create_identity_asset(
     body: CreateIdentityAssetRequest,
     user: dict = Depends(get_api_user),
 ):
-    """从选中的 Freezone 图片创建一个新的角色 identity。
+    """Create a new character identity from a selected Freezone image.
 
-    这个接口故意和 `/freezone/push` 分开：
-    `push` 是覆盖已有 canonical slot，
-    这里则是新建一个全新的 identity slot，并注册进项目存储。
+    This endpoint is deliberately separate from `/freezone/push`:
+    `push` overwrites an existing canonical slot,
+    while this creates a brand-new identity slot and registers it in project storage.
     """
     ctx, username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
@@ -18614,7 +18614,7 @@ async def freezone_create_identity_asset(
 
 @router.post("/projects/{project}/freezone/init", tags=[TAG_FREEZONE_BOOTSTRAP])
 async def init_freezone(project: str, user: dict = Depends(get_api_user)):
-    """懒创建 Freezone 目录树，可重复调用且幂等。"""
+    """Lazily create the Freezone directory tree; safe to call repeatedly (idempotent)."""
     ctx, _username, _project_name, project_dir, _output_dir = (
         await _resolve_freezone_project(project, user)
     )

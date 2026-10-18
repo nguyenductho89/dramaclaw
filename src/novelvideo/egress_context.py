@@ -66,17 +66,19 @@ class TrustedEgressContext:
 
 
 def ambient_egress_context() -> TrustedEgressContext | None:
-    """本次请求作用域上绑定的身份，供调用点漏传 `egress_context=` 时兜底。
+    """Identity bound to the current request scope, used as a fallback when a call site forgets to pass `egress_context=`.
 
-    出网闸门通过可选参数携带身份，于是「平台任务，允许」和「调用点忘了穿参数」
-    被压成同一个 `None`，闸门无法区分——组织流量因此拿平台凭据直连上游、记到
-    平台账上，正是这套闸门要防的事。任务派发点（`task_backend/run_core.py`）
-    已把身份绑定在请求作用域上，闸门在 kwargs 无上下文时回落到这里即可区分。
+    The egress gate carries identity via an optional argument, so "platform task, allowed" and "call site forgot
+    to pass the argument" collapse into the same `None` and the gate cannot tell them apart. Organization traffic
+    would then reach upstream with platform credentials and be billed to the platform account, which is exactly what
+    this gate exists to prevent. The task dispatcher (`task_backend/run_core.py`) already binds the identity to the
+    request scope, so when kwargs carry no context the gate can fall back to it here.
 
-    只在 kwargs 无上下文时才回落；显式传入的仍然优先，语义不变。CLI 等非任务
-    路径本就没有绑定，这里返回 `None`，调用点各自决定是放行还是拒绝。
+    The fallback applies only when kwargs carry no context; an explicitly passed value still wins, so semantics
+    are unchanged. Non-task paths such as the CLI have no binding, so this returns `None` and each call site decides
+    whether to allow or reject.
 
-    导入必须惰性：`model_gateway_runtime` 在模块级导入本模块。
+    The import must stay lazy: `model_gateway_runtime` imports this module at module level.
     """
 
     from novelvideo.model_gateway_runtime import current_model_gateway_context
@@ -85,13 +87,14 @@ def ambient_egress_context() -> TrustedEgressContext | None:
 
 
 def ambient_organization_egress_context() -> TrustedEgressContext | None:
-    """同上，但只在作用域身份是**组织**时回落，否则仍返回 `None`。
+    """Same as above, but falls back only when the scoped identity is an **organization**; otherwise returns `None`.
 
-    多数闸门只分「组织 / 其余」两支，平台身份在那里与 `None` 同义；但有几处
-    把「有身份且非组织」当作错误（如 `generators/indextts2_fal.py` 的 `generate`
-    在 `self.egress_context` 非组织时直接判 `ORG_EGRESS_DENIED`）。若回落把平台
-    身份塞进去，平台流量会被自己的组织闸门拒掉——修 fail-open 反倒修出 fail-closed
-    的误伤。回落只补组织这一支，平台与个人路径逐字不变。
+    Most gates only distinguish "organization / everything else", where a platform identity is equivalent to `None`.
+    A few places treat "has an identity and is not an organization" as an error (for example `generate` in
+    `generators/indextts2_fal.py` rejects with `ORG_EGRESS_DENIED` as soon as `self.egress_context` is not an
+    organization). If the fallback injected the platform identity, platform traffic would be rejected by its own
+    organization gate, so fixing fail-open would introduce a fail-closed false positive. The fallback fills only the
+    organization branch; platform and personal paths stay byte-for-byte identical.
     """
 
     context = ambient_egress_context()

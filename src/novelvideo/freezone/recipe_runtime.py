@@ -810,8 +810,8 @@ def _validate_text_result_fidelity(
     This narrow guard applies only to the built-in general-text display-copy
     contract. Ordinary creative text recipes remain unconstrained.
     """
-    if recipe_id != "general-text" or "展示文案" not in user_goal:
+    if recipe_id != "general-text" or "display copy" not in user_goal.lower():
         return
     source = f"{node_prompt}\n{user_goal}"
-    if "杯" in source and "杯" not in content:
+    if "cup" in source.lower() and "cup" not in content.lower():
         raise RecipeRuntimeError("generated copy omitted the explicitly requested product subject")

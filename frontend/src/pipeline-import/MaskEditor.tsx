@@ -160,10 +160,10 @@ export function MaskEditor({
   };
 
   /**
-   * 蒙版导出（供视觉模型识别）：源图 + 涂抹区二值化后的均匀半透明红高亮，见 mask-highlight.ts。
-   * 后端 /freezone/redraw 对所有 mask_url 一律套用「红色高亮」prompt，EraseOverlay /
-   * RedrawOverlay / MaskEditor 三个生产者必须导出同一格式；旧的「白底 + 透明孔洞」会让模型
-   * 去找一个 RGB 里根本不存在的红色区域 → 定位失败。
+   * Mask export (for vision models): source image + the painted area binarized into a uniform semi-transparent red highlight, see mask-highlight.ts.
+   * The backend /freezone/redraw applies the "red highlight" prompt to every mask_url, so EraseOverlay /
+   * RedrawOverlay / MaskEditor, the three producers, must export the same format; the old "white background + transparent holes" would make the model
+   * look for a red region that does not exist in RGB -> localization failed.
    */
   const buildMaskBlob = async (): Promise<Blob> => {
     const mask = maskCanvasRef.current;

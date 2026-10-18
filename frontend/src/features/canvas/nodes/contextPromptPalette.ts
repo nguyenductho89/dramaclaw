@@ -62,17 +62,17 @@ export function buildContextPromptPaletteForNode(
 }
 
 /**
- * 点一下就插进提示词输入框的那句话。它跟着上游镜头上下文一起发给模型，
- * 模型认的是这套中文表述，跟界面语言无关。
+ * The sentence inserted into the prompt input on click. It is sent to the model together with the upstream shot context,
+ * and the model recognizes this fixed English phrasing regardless of the UI language.
  */
 // i18n-exempt-start
 export function contextPromptPaletteInsertionText(entry: ContextPromptPaletteEntry): string {
   if (entry.kind === "actor") {
-    if (!entry.named) return `${entry.color} 标记的人物`;
-    return `${entry.color} 标记的人物「${entry.label}」`;
+    if (!entry.named) return `${entry.color}-marked character`;
+    return `${entry.color}-marked character "${entry.label}"`;
   }
-  if (!entry.named) return `${entry.color} 标记的道具`;
-  return `${entry.color} 标记的道具「${entry.label}」`;
+  if (!entry.named) return `${entry.color}-marked prop`;
+  return `${entry.color}-marked prop "${entry.label}"`;
 }
 // i18n-exempt-end
 

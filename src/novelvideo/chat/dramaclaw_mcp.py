@@ -357,7 +357,7 @@ def _mcp_error_result(name: str, payload: dict[str, Any]) -> types.CallToolResul
     body.setdefault("ok", False)
     body.setdefault("status", "tool_failed")
     body.setdefault("retryable", False)
-    body.setdefault("next_action", "检查错误字段后再重试")
+    body.setdefault("next_action", "Check the error fields, then retry")
     encoded = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
     schema = _output_schema_for_tool(name)
     structured = _normalize_structured_result(schema, body)
@@ -418,14 +418,14 @@ def _workflow_schema_recovery_instruction(tool_name: str) -> str | None:
     }:
         return None
     return (
-        "WorkflowPlan 校验失败。先按 message/path 指出的字段逐项修正，不要逐个猜删其它字段。"
-        "不要提交单节点探测、空 edges 或 compact Intent。"
-        "请保留同一份完整节点清单和所有边；每个可执行节点必须把"
-        "workflowCatalog.recipeId 放在节点 data 内。确认所有 edge 的 source/target"
-        "都对应 nodes[].id。提交前由 Agent 检查整图连通性；独立 Beat/镜头分支应通过"
-        "非执行型公共输入根节点扇出连接，不能要求用户说明内部连线，也不能把需要故障"
-        "隔离的兄弟分支串行连接。连线兼容性不明确时先读取 link type catalog，禁止猜测"
-        "类型或反复试编译。恢复编译成功后立即用同一计划提交创建。"
+        "WorkflowPlan validation failed. Fix the fields named by message/path one by one; do not guess and delete other fields. "
+        "Do not submit single-node probes, empty edges, or a compact Intent. "
+        "Keep the same complete node list and all edges; every executable node must put "
+        "workflowCatalog.recipeId inside the node's data. Confirm that every edge's source/target "
+        "matches a nodes[].id. Before submitting, the Agent checks connectivity of the whole graph; independent Beat/shot branches should be connected by fanning out from "
+        "a non-executing shared input root node, never by asking the user to explain internal links, and never by chaining sibling branches that need failure "
+        "isolation in series. When link compatibility is unclear, read the link type catalog first; do not guess "
+        "types or recompile repeatedly. Once compilation succeeds again, submit the creation with the same plan immediately."
     )
 
 

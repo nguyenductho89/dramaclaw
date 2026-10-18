@@ -4,11 +4,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* 让 Tailwind 扫描 dramaclaw-spec-render 包的 dist，生成它用到的任意值工具类
-   （w-[148px]/h-[198px]/shrink-0 等业务尺寸类），否则 ui-spec 图廊布局会塌。 */
+/* Let Tailwind scan the dist of the dramaclaw-spec-render package so the arbitrary-value utilities it uses are generated
+   (business size classes like w-[148px]/h-[198px]/shrink-0); otherwise the ui-spec gallery layout collapses. */
 @source "../node_modules/dramaclaw-spec-render/dist";
 
-/* Digits-only subset of Ark Pixel (方舟像素), SIL OFL 1.1. See /fonts/OFL.txt. */
+/* Digits-only subset of Ark Pixel, SIL OFL 1.1. See /fonts/OFL.txt. */
 @font-face {
   font-family: "PikoCountdownPixel";
   src: url("/fonts/piko-countdown-pixel.woff") format("woff");
@@ -65,8 +65,8 @@
   --radius: 1rem;
   --tracking-normal: 0em;
   --spacing: 0.25rem;
-  --font-family-ui-default: "Noto Sans SC", "Noto Sans CJK SC", "Noto Sans CJK JP", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, "Segoe UI", sans-serif;
-  --font-family-ui-macos: "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif;
+  --font-family-ui-default: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-family-ui-macos: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   --bg-rgb: 255 255 255;
   --surface-rgb: 245 245 245;
   --border-rgb: 224 224 224;
@@ -350,7 +350,7 @@
   background: rgba(148, 163, 184, 0.5);
 }
 
-/* 只显示纵向滚动条，隐藏横向滚动条（height:0）。横向仍可滚动（手势/滚轮），只是不显示条。 */
+/* Show only the vertical scrollbar and hide the horizontal one (height:0). Horizontal scrolling still works (gesture/wheel), just without a visible bar. */
 .ui-scrollbar-vertical {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.56) transparent;
@@ -370,10 +370,10 @@
   background: rgba(148, 163, 184, 0.5);
 }
 
-/* 大纲行：行尾操作浮在名字上面（不挤开它），hover 时把名字右端淡出。
-   换成「hover 才占位」会让文字宽度突变、截断位置跟着跳一下，一列几十行同时抖很廉价。
-   写在这里而不是 Tailwind 任意值里：`[-webkit-mask-image:...]` 这种带前导连字符的
-   任意属性 Tailwind 的类名扫描器提不出来，构建产物里根本不会有这条规则。 */
+/* Outline row: the trailing actions float over the name (without pushing it), and the right end of the name fades on hover.
+   Switching to "reserve space only on hover" would make the text width jump and the truncation point shift, so dozens of rows in a column would jitter.
+   Written here rather than as a Tailwind arbitrary value: an arbitrary property with a leading hyphen such as `[-webkit-mask-image:...]`
+   cannot be extracted by Tailwind's class-name scanner, so the rule would never appear in the build output. */
 .ui-outline-row-name {
   transition:
     -webkit-mask-image 150ms linear,
@@ -479,7 +479,7 @@
   border-radius: 3px;
 }
 
-/* 长文件名（音频_<文件名>）超出后用省略号截断，hover 时 chip 的 title 给出全名。 */
+/* Long file names (audio_<file name>) are truncated with an ellipsis when they overflow; on hover the chip title gives the full name. */
 .mention-chip-label {
   display: inline-block;
   max-width: 150px;
@@ -493,8 +493,8 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* hover 时把缩略图换成替换按钮：@ 引用能改指向这件事，藏在双击里没人找得到。
-   音频 chip 的缩略图位置被播放键占着，替换键排在标签后面（见 buildChipElement）。 */
+/* On hover the thumbnail is swapped for a replace button: the fact that an @ reference can be re-pointed is buried in double-click and nobody finds it.
+   The audio chip's thumbnail slot is occupied by the play button, so the replace button goes after the label (see buildChipElement). */
 .mention-chip-swap {
   display: none;
   align-items: center;
@@ -528,7 +528,7 @@
   display: inline-flex;
 }
 
-/* 音频引用：可点击的 ▶ / ⏸ 播放按钮（无缩略图）。 */
+/* Audio reference: clickable play / pause button (no thumbnail). */
 .mention-chip-audio-play {
   display: inline-flex;
   align-items: center;
@@ -572,8 +572,8 @@
   color: var(--canvas-node-input-placeholder);
 }
 
-/* 输入框内的前置 chip（故事板功能 chip）的宿主：contenteditable=false 的内联块，
-   跟文字同一行排版，光标能越过它、退格能删掉它（删除由 JS 拦截后回调宿主）。 */
+/* Host of the leading chip inside the input (storyboard feature chip): an inline block with contenteditable=false,
+   laid out on the same line as the text; the caret can cross it and backspace can delete it (deletion is intercepted by JS and handed back to the host). */
 .prompt-lead-chip {
   display: inline-flex;
   vertical-align: middle;
@@ -581,8 +581,8 @@
   user-select: none;
 }
 
-/* 功能 chip 本体：尺寸/圆角/字号与同处一个输入框的 @ 引用 chip（.mention-chip）
-   对齐，只把左边换成一枚实心品牌色图标徽标——对标 liblib。 */
+/* Feature chip body: size / radius / font size are aligned with the @ reference chip (.mention-chip) in the same input,
+   only the left side is replaced with a solid brand-color icon badge. */
 .prompt-op-chip {
   display: inline-flex;
   align-items: center;
@@ -632,8 +632,8 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* 有前置 chip 时编辑器不是 :empty，上面那两条占位符规则不生效。改用 ::after，
-   占位文案就接在 chip 右边同一行——和 liblib 的「chip + 功能说明」一致。 */
+/* When a leading chip exists the editor is not :empty, so the two placeholder rules above do not apply. Use ::after instead,
+   so the placeholder text follows on the same line to the right of the chip ("chip + feature description"). */
 .prompt-mention-editor[data-text-empty]::after {
   content: attr(data-placeholder);
   color: rgba(160, 160, 170, 0.7);
@@ -646,23 +646,23 @@
 
 .react-flow__node {
   border-radius: var(--node-radius);
-  /* 整块节点都可拖（主体没有 nodrag，drag 从任意处都能起手），但过去只有标题栏
-     有抓手光标——画布缩小后标题栏太小，很难对准去拖。这里让 hover 到节点任意位置
-     都显示抓手，明确「可拖」。内部按钮/输入框等交互元素自带 cursor（pointer/text）
-     会就近覆盖，不受影响。 */
+  /* The whole node is draggable (the body has no nodrag, so a drag can start anywhere), but previously only the title bar
+     showed a grab cursor; after zooming out the title bar is tiny and hard to aim at. Here hovering anywhere on the node
+     shows the grab cursor to make "draggable" explicit. Interactive elements inside such as buttons/inputs carry their own cursor (pointer/text)
+     which overrides it locally and is unaffected. */
   cursor: grab;
 }
 
-/* 拖动中（React Flow 给被拖节点挂 .dragging）改成握拳。用 .react-flow 祖先选择器
-   抬高优先级，避免被 .selection 等同特异性规则盖掉，与上面平移的处理一致。 */
+/* While dragging (React Flow adds .dragging to the dragged node) switch to a closed fist. The .react-flow ancestor selector
+   raises specificity so it is not overridden by equal-specificity rules such as .selection, consistent with the panning handling above. */
 .react-flow .react-flow__node.dragging {
   cursor: grabbing;
 }
 
-/* 节点拖动专注模式：只隐藏临时操作 chrome，不卸载组件、不清空 selection，
-   因此输入草稿、面板展开状态和松手后的工具栏恢复都不受影响。吸附引导线不在
-   此列表中，会继续提供必要的对齐反馈。body 级选择器同时覆盖 portal 到 body 的
-   下拉面板和提示层。 */
+/* Node-drag focus mode: hide only temporary action chrome, without unmounting components or clearing the selection,
+   so input drafts, panel expansion state and toolbar restoration after release are unaffected. Snap guide lines are not in
+   this list and keep providing the necessary alignment feedback. The body-level selector also covers the dropdown
+   panels and tooltip layers portaled to body. */
 body.canvas-node-drag-focus .react-flow__node-toolbar,
 body.canvas-node-drag-focus .react-flow__resize-control,
 body.canvas-node-drag-focus .react-flow__handle,
@@ -742,10 +742,10 @@ body.canvas-node-drag-focus [role="listbox"] {
   }
 }
 
-/* 框选选区：拖拽时画出的选区，以及框选完成后包住所有选中节点的外框。
-   React Flow 默认是蓝色点线框，这里统一改成与右键框选一致的白色虚线框。
-   用 .react-flow 祖先选择器抬高优先级，确保盖过懒加载 chunk 里后注入的
-   @xyflow/react 默认样式。 */
+/* Marquee selection: the box drawn while dragging, and the outer frame wrapping all selected nodes after the marquee ends.
+   React Flow defaults to a blue dotted frame; here it is unified to the same white dashed frame as right-click marquee.
+   The .react-flow ancestor selector raises specificity to make sure it overrides the default
+   @xyflow/react styles injected later by lazy-loaded chunks. */
 .react-flow .react-flow__selection,
 .react-flow .react-flow__nodesselection-rect {
   background: rgba(255, 255, 255, 0.04);
@@ -753,17 +753,17 @@ body.canvas-node-drag-focus [role="listbox"] {
   border-radius: 6px;
 }
 
-/* 按住鼠标中键（滚轮）拖动平移画布时显示抓取手。
-   selectionOnDrag + panOnDrag={[1]} 会让 pane 恒带 .selection 类，其默认
-   cursor: pointer 定义在 .dragging 之后、特异性相同，会盖掉抓取手光标。
-   这里用 .react-flow 祖先选择器抬高优先级，平移中改回 grabbing。 */
+/* Show the grab hand while panning the canvas by dragging with the middle mouse button (wheel).
+   selectionOnDrag + panOnDrag={[1]} keep the pane permanently carrying the .selection class, whose default
+   cursor: pointer is defined after .dragging with the same specificity and would override the grab cursor.
+   The .react-flow ancestor selector raises specificity here and switches back to grabbing while panning. */
 .react-flow .react-flow__pane.dragging {
   cursor: grabbing;
 }
 
-/* 抓手工具（H）下左键拖到节点上也是在平移画布。节点本身已经是 grab（见上面的
-   .react-flow__node），这里只补平移中的握拳——节点在 pane 的子树里，用 .dragging
-   的 pane 当祖先就能盖住节点自己的 grab。 */
+/* With the hand tool (H), dragging with the left button onto a node also pans the canvas. The node itself is already grab (see
+   .react-flow__node above); only the closed fist during panning is added here: nodes are in the pane's subtree, so using the .dragging
+   pane as ancestor overrides the node's own grab. */
 [data-canvas-tool='hand'] .react-flow__pane.dragging .react-flow__node {
   cursor: grabbing;
 }
@@ -774,9 +774,9 @@ body.canvas-node-drag-focus [role="listbox"] {
   box-sizing: border-box;
   border: 0 !important;
   background: rgb(148 163 184) !important;
-  /* 小球只作为边的锚点 / 「+」连线的起止位置，已是 pointer-events:none（仅靠「+」
-     操作连线）。视觉上隐藏所有节点的小球——边照常按 handle 位置渲染，「+」照常连线
-     与创建新节点。opacity 不被各节点 Handle 的 className（仅设 bg/border/size）覆盖。 */
+  /* The handle dots only serve as edge anchors / start and end of "+" connections and are already pointer-events:none (connections are made only via "+").
+     Visually hide the handle dots of all nodes: edges still render at handle positions, "+" still connects
+     and creates new nodes. opacity is not overridden by each node Handle's className (which only sets bg/border/size). */
   opacity: 0 !important;
   pointer-events: none;
   z-index: 30;
@@ -798,21 +798,20 @@ body.canvas-node-drag-focus [role="listbox"] {
   box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.35), 0 0 14px rgba(96, 165, 250, 0.65);
 }
 
-/* 拖连线落点反馈（对标 libtv）：把连线从节点 A 拖到节点 B，当连线进入 B 的可接受
-   区域时，B 要有两段动画——① 节点整体轻微「顶出/放大」的偏移；② 边框跑一圈流动光线，
-   明确提示「松手即可连到这里」。过去普通节点的 handle 被全局 opacity:0 隐藏，React Flow
-   的 connectingto 高亮根本看不见，落点毫无反馈显得很僵硬。
+/* Feedback when dropping a dragged connection: when a connection is dragged from node A to node B and enters B's acceptable
+   area, B plays two animations: (1) the whole node is nudged "out/enlarged" slightly; (2) a flowing light runs around the border,
+   clearly signaling "release to connect here". Previously the handles of ordinary nodes were hidden by the global opacity:0,
+   so React Flow's connectingto highlight was invisible and the drop point gave no feedback, which felt stiff.
 
-   两条触发路径都命中：
-   - `.canvas-node-drop-target`：手动「+」自绘连线，落点由 Canvas.tsx 在 dragMove 时
-     命中合法目标后直接给节点 wrapper 加/摘这个类（手动连线不走 RF 原生连线，拿不到
-     connectingto/valid）。
-   - `:has(.connectingto.valid)`：技能节点等 pointer-events 可交互的 handle 走 RF 原生
-     连线，RF 会给目标 handle 挂 connectingto+valid（valid = 吸附中且 isValidConnection
-     通过），用 :has() 把它提升到节点层。
+   Both trigger paths are hit:
+   - `.canvas-node-drop-target`: manual "+" self-drawn connection; Canvas.tsx adds/removes this class on the node wrapper
+     right after hitting a legal target during dragMove (manual connections do not use RF's native connection, so connectingto/valid is unavailable).
+   - `:has(.connectingto.valid)`: handles that are pointer-events interactive, such as skill nodes, use RF's native
+     connection; RF puts connectingto+valid on the target handle (valid = snapping and isValidConnection
+     passed), and :has() lifts it to the node level.
 
-   注意不要在 .react-flow__node wrapper 上直接改 transform——RF 用 inline
-   transform:translate 给节点定位，会被覆盖；偏移只作用在子节点 `> *`，流动边框走 ::after。 */
+   Note: do not change transform directly on the .react-flow__node wrapper: RF positions nodes with inline
+   transform:translate, which would be overridden; the offset applies only to the child `> *`, and the flowing border uses ::after. */
 @property --canvas-node-flow-angle {
   syntax: "<angle>";
   inherits: false;
@@ -825,15 +824,15 @@ body.canvas-node-drag-focus [role="listbox"] {
   z-index: 20;
 }
 
-/* ① 偏移动画：顶出 + 轻微放大，settle 后保持（forwards），松开摘类即复位。 */
+/* (1) Offset animation: nudge out + slight enlarge, kept after settling (forwards), reset when the class is removed. */
 .react-flow__node.canvas-node-drop-target > *,
 .react-flow__node:has(.react-flow__handle.connectingto.valid) > * {
   animation: canvas-node-droptarget-nudge 240ms var(--ease-out-quint) forwards;
   transform-origin: center;
 }
 
-/* ② 流动光线：conic 渐变裁成一圈边框（mask 抠掉中心只留描边），角度无限旋转，
-   一道亮光沿边框跑。外面再叠一层柔和外发光坐实「激活」。 */
+/* (2) Flowing light: a conic gradient clipped into a border ring (mask cuts out the center leaving only the stroke), the angle rotates endlessly,
+   a bright streak runs along the border. A soft outer glow is layered on top to confirm "active". */
 .react-flow__node.canvas-node-drop-target::after,
 .react-flow__node:has(.react-flow__handle.connectingto.valid)::after {
   content: "";
@@ -841,7 +840,7 @@ body.canvas-node-drag-focus [role="listbox"] {
   inset: 0;
   border-radius: inherit;
   padding: 1.5px;
-  /* 白色核心负责清晰度，前后用画布主题色过渡；压低峰值与光晕，避免在暗色画布上刺眼。 */
+  /* The white core handles clarity, with transitions to the canvas theme color before and after; the peak and halo are lowered to avoid glare on a dark canvas. */
   background: conic-gradient(
     from var(--canvas-node-flow-angle),
     transparent 0deg,
@@ -853,10 +852,10 @@ body.canvas-node-drag-focus [role="listbox"] {
     transparent 350deg,
     transparent 360deg
   );
-  /* 把 conic 渐变裁成一圈「描边」：content-box 层与整框层做差集（exclude/xor），
-     只留 padding 那 1.5px 的边环，其余镂空。必须同时给 -webkit- 和标准两套：
-     只写标准 mask-composite 却用 -webkit-mask 图层，Chromium 会因标准层缺失而
-     不做裁剪，::after 直接铺成一整块彩色发光块（光线就「不在边框上」了）。 */
+  /* Clip the conic gradient into a "stroke" ring: the content-box layer and the full-box layer are differenced (exclude/xor),
+     leaving only the 1.5px padding ring and hollowing out the rest. Both -webkit- and standard must be given:
+     writing only the standard mask-composite while using a -webkit-mask layer makes Chromium skip clipping because the standard layer is missing,
+     and ::after fills a whole colored glow block (so the light is "not on the border"). */
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -868,7 +867,7 @@ body.canvas-node-drag-focus [role="listbox"] {
   box-shadow: 0 0 8px color-mix(in oklch, var(--primary) 16%, transparent);
   pointer-events: none;
   transform-origin: center;
-  /* 边框环与卡片本体 `> *` 跑同一份 nudge，确保放大时两者始终重合、描边贴边不漂移。 */
+  /* The border ring runs the same nudge as the card body `> *`, so they always coincide when enlarged and the stroke hugs the edge without drifting. */
   animation:
     canvas-node-border-flow 1.8s linear infinite,
     canvas-node-droptarget-nudge 240ms var(--ease-out-quint) forwards;
@@ -898,13 +897,13 @@ body.canvas-node-drag-focus [role="listbox"] {
   }
 }
 
-/* ---- 画布 LOD：平移期 / 低缩放的合成开销降级 --------------------------------
+/* ---- Canvas LOD: lowering compositing cost while panning / at low zoom --------------------------------
  *
- * 实测（69 节点 / zoom 0.1）：基线 p90 帧时 26.6ms —— 正好两个 vsync 周期，
- * 即每 10 帧固定丢 1 帧。backdrop-filter 每帧要重采样背景，无法缓存成静态贴图；
- * box-shadow / filter 同样吃光栅化预算。关掉这三样 + 视频层后 p90 回到 14.1ms。
+ * Measured (69 nodes / zoom 0.1): baseline p90 frame time 26.6ms, exactly two vsync periods,
+ * i.e. one frame dropped every 10 frames. backdrop-filter resamples the background every frame and cannot be cached as a static texture;
+ * box-shadow / filter likewise eat the rasterization budget. After disabling these three plus the video layer p90 returns to 14.1ms.
  *
- * 只在手势进行中和低缩放档生效，稳态高缩放下画面完全不变。
+ * Only effective during gestures and at low zoom; the steady high-zoom view is completely unchanged.
  */
 .dc-canvas--panning .react-flow__viewport *,
 .dc-canvas--low-detail .react-flow__viewport * {
@@ -913,19 +912,19 @@ body.canvas-node-drag-focus [role="listbox"] {
   box-shadow: none !important;
 }
 
-/* filter 单独放：节点里有用 filter 做「生成中」灰度/亮度反馈的，手势期间照样
- * 可以省掉，但低缩放档下节点太小、状态色块是唯一可读信息，保留不砍。 */
+/* The filter is separated: some nodes use filter for "generating" grayscale/brightness feedback; during gestures it can still be
+ * dropped, but at low zoom nodes are tiny and status color blocks are the only readable information, so it is kept. */
 .dc-canvas--panning .react-flow__viewport * {
   filter: none !important;
 }
 
-/* 手势期间连线的虚线流动动画照样在跑，每帧都要重画一次路径。停掉。 */
+/* The dashed-line flow animation of connections keeps running during gestures and redraws the path every frame. Stop it. */
 .dc-canvas--panning .react-flow__edge-path {
   animation: none !important;
 }
 
-/* 低缩放档节点外壳（withLodShell）。刻意朴素：整块画布此档下每帧的渲染树遍历
- * 成本与元素数量成正比，外壳保持每节点 ≤4 个元素。 */
+/* Low-zoom node shell (withLodShell). Deliberately plain: the render-tree traversal cost of the whole canvas at this zoom per frame
+ * is proportional to the element count, so the shell stays at 4 elements per node or fewer. */
 .dc-lod-shell {
   position: relative;
   overflow: hidden;
@@ -944,7 +943,7 @@ body.canvas-node-drag-focus [role="listbox"] {
   pointer-events: none;
 }
 
-/* 生成/上传中角标：低缩放下节点本体只有几十像素，用醒目的呼吸圆点表达状态。 */
+/* Generating/uploading badge: at low zoom the node body is only a few dozen pixels, so a prominent breathing dot expresses the status. */
 .dc-lod-shell__busy {
   position: absolute;
   top: 20px;
@@ -957,7 +956,7 @@ body.canvas-node-drag-focus [role="listbox"] {
   animation: dc-lod-busy-pulse 1.2s ease-in-out infinite;
 }
 
-/* 手势期间统一停掉动画（同上面 edge 动画的理由）。 */
+/* During gestures all animations are stopped (same reasoning as the edge animation above). */
 .dc-canvas--panning .dc-lod-shell__busy {
   animation: none;
 }
@@ -1017,9 +1016,9 @@ body.canvas-node-drag-focus [role="listbox"] {
   animation: projection-stale-frame-pulse 1.8s ease-in-out infinite;
 }
 
-/* 主线投影组的常驻身份标识：黄色呼吸边框。有更新时换成上面那档更亮更快的
-   projection-stale-frame（外加「有新更新」角标），两者互斥——同时挂会抢
-   border-color。 */
+/* Persistent identity marker of the main-line projection group: a yellow breathing border. When there is an update, the brighter and faster
+   projection-stale-frame tier above is used instead (plus a "new update" badge); the two are mutually exclusive: attaching both would fight over
+   border-color. */
 @keyframes projection-frame-pulse {
   0%,
   100% {

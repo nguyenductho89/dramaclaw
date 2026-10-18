@@ -65,7 +65,7 @@ PANO_VIEW_REF_ORDER = (
 
 def _normalize_name(value: str) -> str:
     text = (value or "").strip()
-    text = re.sub(r"[·•．。,:：，、／/（）()\\-]+", "", text)
+    text = re.sub(r"[·•.,:/()\\-]+", "", text)
     return text.lower()
 
 
@@ -458,7 +458,7 @@ class AssetResolver:
             text_description = _pick_text(
                 build_scene_effective_prompt(scene_obj, base_scene_obj) if scene_obj else "",
                 variant_description,
-                "，".join(v for v in [lighting, atmosphere] if v),
+                ", ".join(v for v in [lighting, atmosphere] if v),
                 beat.get("time_of_day", "") or "",
                 scene_name,
             )

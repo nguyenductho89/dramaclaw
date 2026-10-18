@@ -2,13 +2,13 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 内置视觉风格 preset 的 id → i18n key。
+ * Built-in visual style preset id -> i18n key.
  *
- * 后端 `src/novelvideo/styles/presets/*.json` 里的 `label` 是中文单语，直接渲染会
- * 让英文界面出现「写实古装剧」。preset id 是稳定的，所以显示名一律按 id 查这里的
- * key；只有用户自建的风格（查不到 id）才回落到后端给的 name/label。
+ * The `label` in the backend `src/novelvideo/styles/presets/*.json` is Chinese-only, and rendering it directly would
+ * show Chinese in the English UI. The preset id is stable, so the display name is always looked up here by id
+ * ; only user-created styles (id not found) fall back to the backend's name/label.
  *
- * 顺序即导入页下拉框的展示顺序，第一项是默认风格。
+ * The order is the order of the import page dropdown, and the first entry is the default style.
  */
 export const BUILTIN_VISUAL_STYLES: readonly { value: string; labelKey: string }[] = [
   { value: "chinese_period_drama", labelKey: "ingest.visualStyles.chinesePeriodDrama" },

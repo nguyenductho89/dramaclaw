@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from "i18next";
 import type { ChatAttachment, ChatMessage, ChatMessagePart, ChatRole } from "@/features/superchat/types";
 import { hasStructuredContent } from "@/features/superchat/spec-extract";
 
 const INTERNAL_CONTEXT_BLOCK_RE =
   /\n?\[((?:DRAMACLAW|SUPERTALE)_[A-Z0-9_]+)\][\s\S]*?\[\/\1\]\n?/g;
-const EMPTY_AGENT_REPLY_TEXT = "这轮操作没有收到虾导的有效回复，请稍后重试。";
 const EMPTY_AGENT_REPLY_PLACEHOLDERS = new Set([
   "(hermes returned no content)",
   "(agent returned no content)",
@@ -61,13 +61,17 @@ function isHiddenToolStatusName(name: string): boolean {
   return normalized === "tool search" || normalized === "tool describe";
 }
 
+export function emptyAgentReplyText(): string {
+  return i18n.t("superchat.panel.emptyAgentReply");
+}
+
 function stripInternalContextBlocks(text: string): string {
   return text.replace(INTERNAL_CONTEXT_BLOCK_RE, "\n").trim();
 }
 
 function normalizeDisplayText(text: string): string {
   const trimmed = text.trim();
-  return EMPTY_AGENT_REPLY_PLACEHOLDERS.has(trimmed) ? EMPTY_AGENT_REPLY_TEXT : text;
+  return EMPTY_AGENT_REPLY_PLACEHOLDERS.has(trimmed) ? emptyAgentReplyText() : text;
 }
 
 function textFromContent(content: unknown): string {

@@ -1,4 +1,4 @@
-"""NovelVideo 工具模块。"""
+"""NovelVideo utility modules."""
 
 from .logging import tool_logger, set_verbose, is_verbose
 

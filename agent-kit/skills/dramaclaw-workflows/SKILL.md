@@ -234,7 +234,7 @@ including `480P` whenever the schema lists it.
 Route between the normal draft flow and the exact topology path in this priority order:
 
 1. An explicit planner instruction wins. When the user names the standard planner or a Skill's
-   standard flow ("use the standard planner", "按标准模板"), submit a compact Intent to
+   standard flow ("use the standard planner", "use the standard template"), submit a compact Intent to
    `freezone_prepare_workflow(intent=...)` even if the message also lists nodes and dependencies:
    compare the listed topology with that Skill's standard template first, and treat a same-shape
    list (same stages, order, and dependencies) as a restatement of the template, not a custom

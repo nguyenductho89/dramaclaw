@@ -78,8 +78,8 @@ type Pano360ViewerNodeProps = NodeProps & {
   selected?: boolean;
 };
 
-// 上游链接节点（upload / imageGen / imageEdit / exportImage / storyboardGen）
-// 都可能给我们提供全景贴图。
+// Upstream linked nodes (upload / imageGen / imageEdit / exportImage / storyboardGen)
+// may all provide us with the panorama texture.
 function upstreamPanoUrl(node: CanvasNode | undefined | null): string | null {
   if (!node) return null;
   if (isImageGenNode(node)) {
@@ -121,11 +121,11 @@ const DIRECTION_OFFSETS: Record<string, number> = {
   seam: -180,
 };
 
-// 帧名会落到画布节点的显示文本上，但这几张表是模块级常量、取不到 t，
-// 所以只存 i18n key，等 captureToGroup 真正建节点时再翻译。
+// Frame names end up in the display text of canvas nodes, but these tables are module-level constants that cannot reach t,
+// so only i18n keys are stored, translated when captureToGroup actually creates the nodes.
 type CaptureFrameSpec = { yawOffset: number; pitch: number; labelKeys: string[] };
 
-// 2×2：四个水平方向，平视，排成两列两行。
+// 2×2: four horizontal directions at eye level, laid out in two columns and two rows.
 const GRID_2X2_FRAMES: CaptureFrameSpec[] = [
   { yawOffset: DIRECTION_OFFSETS.front, pitch: 0, labelKeys: ['node.pano360.dir.front'] },
   { yawOffset: DIRECTION_OFFSETS.right, pitch: 0, labelKeys: ['node.pano360.dir.right'] },
@@ -133,7 +133,7 @@ const GRID_2X2_FRAMES: CaptureFrameSpec[] = [
   { yawOffset: DIRECTION_OFFSETS.left, pitch: 0, labelKeys: ['node.pano360.dir.left'] },
 ];
 
-// 4×3：四个方向 × 三个俯仰（上 / 平 / 下），共 12 张，每行一个俯仰。
+// 4×3: four directions × three pitches (up / level / down), 12 images in total, one pitch per row.
 const GRID_4X3_DIRS: { offset: number; nameKey: string }[] = [
   { offset: DIRECTION_OFFSETS.front, nameKey: 'node.pano360.dir.front' },
   { offset: DIRECTION_OFFSETS.right, nameKey: 'node.pano360.dir.right' },
@@ -153,7 +153,7 @@ const GRID_4X3_FRAMES: CaptureFrameSpec[] = GRID_4X3_PITCHES.flatMap((pitch) =>
   })),
 );
 
-// 把任意比例的截图中心裁剪成 16:9，落到画布上的图片节点统一是宽屏格式。
+// Center-crop a screenshot of any ratio to 16:9, so image nodes landing on the canvas are uniformly widescreen.
 async function cropDataUrlTo16x9(
   dataUrl: string,
   width: number,
@@ -331,10 +331,10 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
   const addPanoCaptureGroup = useCanvasStore((state) => state.addPanoCaptureGroup);
   const selectedNodeId = useCanvasStore((state) => state.selectedNodeId);
 
-  // 组合选中 / 多选时 React Flow 也会把组内子节点标记为 selected，但此时不应唤醒
-  // 全景交互（拖拽 / 滚轮）或弹出截图工具栏 —— 那属于「误激活 360 节点」。仅当本节点
-  // 是画布上唯一选中项（selectedNodeId === id）时才算真正激活；节点边框高亮仍走
-  // 原始 selected，组合选中时依旧能看到子节点被框选。
+  // With group selection / multi-select React Flow also marks the group's child nodes as selected, but then the panorama interaction should not be woken up
+  // (drag / wheel) nor the screenshot toolbar popped up — that would be "wrongly activating the 360 node". It counts as truly activated only when this node
+  // is the sole selected item on the canvas (selectedNodeId === id); the node border highlight still follows
+  // the original selected, so with group selection the child nodes can still be seen box-selected.
   const isActive = Boolean(selected) && selectedNodeId === id;
 
   const resolvedWidth = Math.max(900, resolveNodeDimension(width, 900));
@@ -344,7 +344,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
   // node drags don't re-render this node. See useUpstreamGraph.
   const upstreamNodes = useUpstreamNodes(id);
 
-  // 上游节点连过来的图片 URL，沿用项目里"按 y 坐标升序"的惯例。
+  // Image URLs connected from upstream nodes, following the project convention of "ascending by y coordinate".
   const upstreamPano = useMemo(() => {
     const upstream = [...upstreamNodes];
     upstream.sort((a, b) => (a.position?.y ?? 0) - (b.position?.y ?? 0));
@@ -357,7 +357,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     return null;
   }, [upstreamNodes]);
 
-  // 上游图变化 → 同步进 data.imageUrl，便于保存 / 截图标签。
+  // Upstream image changes → sync into data.imageUrl, convenient for saving / screenshot labels.
   useEffect(() => {
     if (upstreamPano) {
       if (
@@ -368,8 +368,8 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
       }
       return;
     }
-    // 没有上游连接时，保留节点自带的 imageUrl（例如预设直接塞进来的全景图）；
-    // 只有当前图本来就来自上游（sourceNodeId 有值）才在断连后清掉。
+    // With no upstream connection, keep the node's own imageUrl (e.g. a panorama a preset stuffed in directly);
+    // clear it after disconnecting only if the current image came from upstream (sourceNodeId has a value).
     if (data.sourceNodeId) {
       updateNodeData(id, { imageUrl: null, sourceNodeId: null });
     }
@@ -386,8 +386,8 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
   dataRef.current = data;
   const selectedRef = useRef(isActive);
   selectedRef.current = isActive;
-  // PSV 自己的全屏状态（跨浏览器可靠，不依赖 document.fullscreenElement —— 后者在
-  // Safari/WebKit/模拟全屏下可能为 null，导致全屏内拖拽判定直接失败）。
+  // PSV's own fullscreen state (reliable across browsers, independent of document.fullscreenElement — the latter can be
+  // null in Safari/WebKit/simulated fullscreen, making the in-fullscreen drag check fail outright).
   const isFsRef = useRef(false);
 
   const [status, setStatus] = useState<string>('');
@@ -401,19 +401,19 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
   const [isCapturing, setIsCapturing] = useState(false);
   const [planetBackup, setPlanetBackup] = useState<{ fov: number; yawDeg: number; pitchDeg: number } | null>(null);
 
-  // 显示用 URL 走项目里的 /static 代理。
+  // The display URL goes through the project's /static proxy.
   const displayUrl = useMemo(
     () => (data.imageUrl ? resolveImageDisplayUrl(data.imageUrl) : null),
     [data.imageUrl],
   );
 
   const applyCorrectionOn = useCallback((viewer: Viewer) => {
-    // PSV 的 setOption('sphereCorrection') 直接访问 meshContainer.rotation，
-    // 而 meshContainer 是 setPanorama → setTexture 才创建的。在首次加载完成
-    // 之前调用（比如 panorama 还在 Loading 时用户拖了校正 slider）会抛
-    // "Cannot read properties of undefined (reading 'rotation')"。
-    // 这里依靠 viewer.state.ready 守护；slider 改的值已经写进 dataRef，
-    // setPanorama.then 与 'ready' 回调都会拿最新值再 apply，不会丢。
+    // PSV's setOption('sphereCorrection') directly accesses meshContainer.rotation,
+    // and meshContainer is created only by setPanorama → setTexture. Calling it before the first load completes
+    // (e.g. the user drags the correction slider while the panorama is still Loading) throws
+    // "Cannot read properties of undefined (reading 'rotation')".
+    // Guarded here by viewer.state.ready; the slider's value is already written to dataRef,
+    // and both setPanorama.then and the 'ready' callback apply the latest value, so nothing is lost.
     if (!viewer.state.ready) return;
     const { roll, pitch, yaw } = dataRef.current.sphereCorrectionDeg;
     viewer.setOption('sphereCorrection', {
@@ -440,12 +440,12 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     applyFovOn(viewer, fovDeg);
   }, [applyFovOn]);
 
-  // 创建 / 切图。每次 displayUrl 变化时：清理旧 viewer，重新建一个 + 挂监听 + 加载。
-  // StrictMode 下 effect 会跑两次：第一次 cleanup 销毁 Viewer A、第二次创建 Viewer B。
-  // 不能让 Viewer A 的 listener 在 destroy 后仍然访问 viewerRef.current（那时它已经
-  // 指向 Viewer B），否则 ready 回调里的 applyCorrection 会在 Viewer B 还没创建 mesh
-  // 时调用 setSphereCorrection → meshContainer === undefined → "Cannot read properties
-  // of undefined (reading 'rotation')"。
+  // Create / switch images. On every displayUrl change: clean up the old viewer, create a new one + attach listeners + load.
+  // Under StrictMode the effect runs twice: the first cleanup destroys Viewer A, the second creates Viewer B.
+  // Viewer A's listener must not keep accessing viewerRef.current after destroy (by then it
+  // points to Viewer B), otherwise applyCorrection in the ready callback would call setSphereCorrection
+  // before Viewer B has created its mesh → meshContainer === undefined → "Cannot read properties
+  // of undefined (reading 'rotation')".
   useEffect(() => {
     const host = viewerHostRef.current;
     if (!host) return;
@@ -463,10 +463,10 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     let cancelled = false;
     let viewer: Viewer | null = null;
 
-    // 把 Viewer 构造推迟到下一帧：StrictMode 下 mount→cleanup→mount 会在
-    // 同一个微任务里跑完两轮，先 cancelAnimationFrame 再创建 —— 第一轮 RAF
-    // 还没 fire 就被 cancel，整个 viewer 链路只走第二轮真正存活的 mount。
-    // 等价于「断开重连」时只跑一次干净的 effect，避开了双实例污染。
+    // Defer the Viewer construction to the next frame: under StrictMode mount→cleanup→mount runs both rounds
+    // in the same microtask, so cancelAnimationFrame first and then create — the first round's RAF
+    // is cancelled before it fires, and the whole viewer chain takes only the second, truly surviving mount.
+    // Equivalent to running just one clean effect on "disconnect and reconnect", avoiding double-instance pollution.
     const rafId = requestAnimationFrame(() => {
       if (cancelled) return;
       try {
@@ -476,13 +476,13 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
           navbar: false,
           minFov: FOV_MIN,
           maxFov: FOV_MAX,
-          // 拖拽旋转 / 滚轮缩放都走 PSV 原生：窗口内随节点选中开关，全屏时由 PSV 的
-          // fullscreen 事件强制打开（见下方 v.addEventListener('fullscreen')）。
+          // Drag rotation / wheel zoom both use PSV natively: inside the window toggled with node selection, in fullscreen forced on by PSV's
+          // fullscreen event (see v.addEventListener('fullscreen') below).
           mousemove: isActive,
           mousewheel: isActive,
-          // 全屏下用方向键 / WASD 转视野、+- 缩放（C 方案）。
+          // In fullscreen use arrow keys / WASD to turn the view and +- to zoom (plan C).
           keyboard: 'fullscreen',
-          // 覆写默认映射，补上 WASD（含 shift 大写形态）。
+          // Override the default mapping to add WASD (including the shift uppercase form).
           keyboardActions: {
             ArrowUp: ROTATE_UP,
             ArrowDown: ROTATE_DOWN,
@@ -501,10 +501,10 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
             '+': ZOOM_IN,
             '-': ZOOM_OUT,
           },
-          // 全局关掉默认 transition —— 切图时也不再做旧→新的 fade+rotation 过渡。
-          // 单图查看器没必要，而且能避开 PSV 在某些时序下 transition.rotation 的 NPE。
-          // PSV 类型签名说 TransitionOptions | undefined，但运行时（CONFIG_PARSERS）
-          // 显式支持 null，比类型更准 —— 直接 cast。
+          // Turn off the default transition globally — switching images no longer does an old→new fade+rotation transition.
+          // A single-image viewer does not need it, and this avoids PSV's transition.rotation NPE in some timings.
+          // PSV's type signature says TransitionOptions | undefined, but at runtime (CONFIG_PARSERS)
+          // explicitly supports null, which is more accurate than the type — just cast.
           defaultTransition: null as unknown as undefined,
           rendererParameters: { preserveDrawingBuffer: true },
         });
@@ -519,9 +519,9 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
       setViewerError('');
 
       const v = viewer;
-      // 所有 listener 都从闭包取 `v`，不从 viewerRef 现读 —— viewerRef 可能已经
-      // 被后续 effect 覆盖成另一个实例。`cancelled` 也用闭包，防止 destroyed viewer
-      // 的延迟回调更新 React state。
+      // All listeners take `v` from the closure rather than reading viewerRef live — viewerRef may already
+      // have been overwritten by a later effect with another instance. `cancelled` also uses the closure, preventing a destroyed viewer's
+      // delayed callback from updating React state.
       v.addEventListener('ready', () => {
         if (cancelled) return;
         setStatus(t('node.pano360.status.ready'));
@@ -554,7 +554,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
         const fov = zoomToFov(zoomLevel);
         setLivePos((prev) => ({ ...prev, fovDeg: fov }));
       });
-      // PSV 的全屏开关（跨浏览器可靠）：全屏内即便节点没选中，也强制打开拖拽 + 滚轮。
+      // PSV's fullscreen switch (reliable across browsers): in fullscreen, drag + wheel are forced on even if the node is not selected.
       v.addEventListener('fullscreen', ({ fullscreenEnabled }: { fullscreenEnabled: boolean }) => {
         isFsRef.current = fullscreenEnabled;
         const on = fullscreenEnabled || selectedRef.current;
@@ -563,10 +563,10 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
       });
 
       setStatus(t('node.pano360.status.loading'));
-      // showLoader: false 这里其实只对「之后」的切图生效（PSV 源码 line 6148
-      // 是 `||`，首次加载会被 `!state.ready` 强制 show loader）。真正不让 PSV
-      // 的 loader 卡住的，是 viewerHost 上的 `[&_.psv-loader-container]:!hidden`
-      // CSS，从渲染层直接切断；这里保留 false 是 belt-and-suspenders。
+      // showLoader: false here actually only takes effect for "later" image switches (PSV source line 6148
+      // is `||`, and the first load is forced to show the loader by `!state.ready`). What truly keeps PSV's
+      // loader from getting stuck is the `[&_.psv-loader-container]:!hidden`
+      // CSS on viewerHost, cutting it off at the render layer; false is kept here as belt-and-suspenders.
       v.setPanorama(displayUrl, { showLoader: false, transition: false })
         .then(() => {
           if (cancelled) return;
@@ -595,8 +595,8 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyCorrectionOn, applyFovOn, displayUrl]);
 
-  // 拖拽 + 滚轮：未选中时关掉让画布事件透传；全屏时强制开启（全屏下节点可能并非
-  // selected）。全屏状态以 PSV 自己的事件（isFsRef）为准；进出全屏由那个事件同步。
+  // Drag + wheel: turned off when unselected so canvas events pass through; forced on in fullscreen (the node may not be
+  // selected in fullscreen). The fullscreen state follows PSV's own event (isFsRef); entering/leaving fullscreen is synced by that event.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -605,20 +605,20 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     viewer.setOption('mousewheel', on);
   }, [isActive, displayUrl]);
 
-  // 「无限拖拽」叠加层（不替换 PSV 原生拖拽，只是叠在上面）：
-  //   按下左键 → 请求 Pointer Lock（隐藏并锁定光标）。
-  //   锁定成功后，光标的 clientX/Y 被冻结，PSV 原生拖拽算出的位移恒为 0（自然失效），
-  //   改由这里用 movementX/Y 增量旋转 —— 鼠标永不撞到屏幕边缘，可一口气连续转。
-  //   锁定失败（被拒/被策略禁用）则什么都不做，PSV 原生有边界拖拽照常兜底，不会卡死。
-  // 用 capture 阶段挂 mousedown，确保先于子节点 / React 的 stopPropagation 触发。
+  // "Infinite drag" overlay (does not replace PSV native drag, just sits on top):
+  //   Press left button → request Pointer Lock (hide and lock the cursor).
+  //   After locking succeeds, the cursor's clientX/Y are frozen, the displacement PSV native drag computes is always 0 (naturally disabled),
+  //   and rotation is driven here by movementX/Y increments instead — the mouse never hits the screen edge and can turn continuously in one go.
+  //   If locking fails (rejected / disabled by policy) do nothing; PSV native bounded drag still serves as the fallback, no deadlock.
+  // Attach mousedown in the capture phase to make sure it fires ahead of child nodes / React's stopPropagation.
   useEffect(() => {
     const host = viewerHostRef.current;
     if (!host) return;
 
-    // 我们自己记录是否「正在拖拽」（左键按下到抬起）。不能只靠
-    // document.pointerLockElement 判断旋转 —— 浏览器对「刚请求就退出」有节流，
-    // 选中态下的一次单击可能让锁请求成功、exitPointerLock 没生效，锁就留住了；
-    // 之后随便移动鼠标都会产生 movementX/Y → 画面一直转（且光标被隐藏）。
+    // We record ourselves whether "dragging" (left button down to up). We cannot rely on
+    // document.pointerLockElement alone to judge rotation — browsers throttle "request then exit immediately",
+    // so a single click in the selected state may succeed in the lock request while exitPointerLock does not take effect, and the lock stays;
+    // afterwards any mouse movement produces movementX/Y → the view keeps turning (and the cursor is hidden).
     let dragging = false;
 
     const radPerPx = () => {
@@ -634,14 +634,14 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     };
 
     const onMouseDown = (event: MouseEvent) => {
-      if (event.button !== 0) return; // 仅左键
-      // 全屏内总是启用；窗口内仅当节点选中时启用。用 PSV 的全屏状态，不依赖
-      // document.fullscreenElement（Safari/WebKit/模拟全屏下可能为 null）。
+      if (event.button !== 0) return; // Left button only
+      // Always enabled in fullscreen; inside the window enabled only when the node is selected. Use PSV's fullscreen state, not depending on
+      // document.fullscreenElement (can be null in Safari/WebKit/simulated fullscreen).
       if (!isFsRef.current && !selectedRef.current) return;
-      // 控制面板 / 自定义按钮（nodrag）、PSV 导航栏上的按下不劫持。
+      // Presses on the control panel / custom buttons (nodrag) and the PSV navbar are not hijacked.
       if ((event.target as HTMLElement | null)?.closest('.nodrag, .psv-navbar')) return;
       dragging = true;
-      // 锁全屏元素（全屏下只接受全屏元素或其后代）；拿不到就锁 host。
+      // Lock the fullscreen element (in fullscreen only the fullscreen element or its descendants are accepted); fall back to locking the host.
       const fsEl = (document.fullscreenElement ||
         (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
         null) as HTMLElement | null;
@@ -652,20 +652,20 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
           (ret as Promise<void>).catch(() => {});
         }
       } catch {
-        /* 不支持 / 被拒 —— PSV 原生拖拽兜底 */
+        /* Unsupported / rejected — PSV native drag as fallback */
       }
     };
 
     const onMove = (event: MouseEvent) => {
       const lockEl = document.pointerLockElement as HTMLElement | null;
-      if (!lockEl) return; // 仅在指针锁定时接管旋转
-      // 只有「锁定的元素属于本节点」才接管旋转 —— 否则画布上每个查看器都挂了
-      // window mousemove，拖一个会把所有查看器一起转。窗口内锁的是 host；
-      // 全屏内锁的是 host 里的 PSV 容器（host.contains 覆盖）。
+      if (!lockEl) return; // Take over rotation only while the pointer is locked
+      // Take over rotation only when "the locked element belongs to this node" — otherwise every viewer on the canvas has attached a
+      // window mousemove, and dragging one would turn all viewers together. In the window the host is locked;
+      // in fullscreen the PSV container inside the host is locked (covered by host.contains).
       if (lockEl !== host && !host.contains(lockEl)) return;
       if (!dragging) {
-        // 锁属于本节点、但我们并不在拖拽（多半是上面说的「单击残留锁」）。
-        // 主动退出，恢复光标并停止旋转，而不是继续吃 movementX/Y 转画面。
+        // The lock belongs to this node but we are not dragging (mostly the "leftover lock after a single click" mentioned above).
+        // Exit actively, restoring the cursor and stopping rotation, instead of continuing to consume movementX/Y to turn the view.
         document.exitPointerLock();
         return;
       }
@@ -717,7 +717,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     viewerRef.current?.toggleFullscreen();
   }, []);
 
-  // 把当前视角的 yaw / pitch 烘焙进校正参数。
+  // Bake the current view's yaw / pitch into the correction parameters.
   const lockCurrentView = useCallback(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -785,7 +785,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     setPlanetBackup(null);
   }, [planetBackup, setFovDeg]);
 
-  // 校正参数导出为 JSON，复制到剪贴板（替代了原 viewer 的 /__dramaclaw 接口）。
+  // Export the correction parameters as JSON and copy to the clipboard (replacing the original viewer's /__dramaclaw endpoint).
   const buildCorrectionEntry = useCallback(() => {
     const { roll, pitch, yaw } = dataRef.current.sphereCorrectionDeg;
     const front = dataRef.current.frontYawDeg;
@@ -859,12 +859,12 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     }
   }, [addPanoCaptureGroup, data.imageUrl, getViewerCanvas, id, requestFocusNode]);
 
-  // "用作背景源": 把当前 viewer 视角(yaw/pitch/fov 决定的画面)16:9 crop 后
-  // 先生成当前背景候选节点,再走主线 commit 写入 selected_background。
-  // 跟 snapCurrent 区别: snapCurrent 只生成普通截图节点;这里生成的是可提交的
-  // 主线候选节点。
-  // Viewer 本身就是 cropper(用户用 yaw/pitch/fov 取景),所以不需要额外
-  // BackgroundCropperDialog — 用户已经在 viewer 里把"想要的 16:9 框"调好了。
+  // "Use as background source": crop the current viewer view (the frame decided by yaw/pitch/fov) to 16:9,
+  // first generate the current-background candidate node, then go through the mainline commit to write selected_background.
+  // Difference from snapCurrent: snapCurrent only generates a plain screenshot node; what is generated here is a committable
+  // mainline candidate node.
+  // The Viewer itself is the cropper (the user frames with yaw/pitch/fov), so no extra
+  // BackgroundCropperDialog is needed — the user has already adjusted the "16:9 frame they want" in the viewer.
   const snapAsBackgroundAnchor = useCallback(async () => {
     const viewer = viewerRef.current;
     if (!viewer || !data.imageUrl) return;
@@ -888,7 +888,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
         canvas.width,
         canvas.height,
       );
-      // dataUrl → Blob (fetch trick 比 atob 干净)
+      // dataUrl → Blob (the fetch trick is cleaner than atob)
       // CSP `connect-src 'self'` blocks fetching data: URLs in production.
       const blob = dataUrlToBlob(cropped.dataUrl);
       await uploadAndAutoCommitSelectedBackgroundCandidate(
@@ -924,8 +924,8 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
     [getViewerCanvas],
   );
 
-  // 多方向截图：逐帧捕获后，每张都落成独立的图片节点，并放进一个前端展示用的
-  // 分组里（不新建组合节点类型）。yaw 以用户设定的「正前方」为基准。
+  // Multi-direction screenshot: capture frame by frame, then each becomes an independent image node, placed into a frontend-display
+  // group (no new group node type is created). yaw is based on the "front" the user set.
   const captureToGroup = useCallback(
     async (cols: number, frames: CaptureFrameSpec[], fov: number, groupName: string) => {
       const viewer = viewerRef.current;
@@ -1083,7 +1083,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
       style={containerStyle}
       onClick={handleNodeClick}
     >
-      {/* 截图工具栏：放在节点正上方（删除 pill 已隐藏，可贴近节点）。 */}
+      {/* Screenshot toolbar: placed directly above the node (the delete pill is hidden, so it can sit close to the node). */}
       <ReactFlowNodeToolbar
         nodeId={id}
         isVisible={isActive && Boolean(data.imageUrl)}
@@ -1103,8 +1103,8 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
             <Grid3x3 className="h-4 w-4" />
           </PanoToolbarButton>
           <span className="mx-1 h-5 w-px bg-white/15" aria-hidden />
-          {/* 用作背景源: viewer 本身是 cropper,截当前 view 16:9 区域写
-              beat selected_background.png(不开 dialog)。仅在镜头上下文有效。 */}
+          {/* Use as background source: the viewer itself is the cropper, cropping the current view's 16:9 region and writing
+              beat selected_background.png (no dialog). Valid only in a shot context. */}
           <PanoToolbarButton
             onClick={snapAsBackgroundAnchor}
             disabled={isCapturing}
@@ -1132,19 +1132,19 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
       />
 
       <div className="flex h-full w-full overflow-hidden rounded-[var(--node-radius)] bg-[#282828]">
-        {/* 渲染区。激活时 PSV 独占拖拽 / 滚轮（nopan nowheel + stopPropagation），
-            未激活时让事件透传，画布 pan / zoom / 选中节点正常工作。 */}
+        {/* Render area. When active, PSV exclusively takes drag / wheel (nopan nowheel + stopPropagation);
+            when inactive events pass through, and canvas pan / zoom / node selection work normally. */}
         <div className="relative flex-1 min-w-0">
-          {/* 两个 PSV 视觉覆盖我们都要切掉：
-              - `[&_.psv-loader-container]:!hidden`：PSV 自带 loader 在
-                AbortError 路径下不会 hide（源码 line 6134 `isAbortError`
-                短路 done()），从 DOM 层永久切断。
-              - `[&_.psv-container]:[background:transparent_!important]`：
-                PSV 默认给 container 一个白→灰径向渐变（index.css line 17-25），
-                走的是 `background:` shorthand（背景图像）。不能用
-                `bg-transparent`（那只改 background-color，干不掉
-                background-image）。必须用 arbitrary 整组覆盖。
-              header 的 status 文本是唯一加载状态来源。 */}
+          {/* We must cut off two PSV visual overlays:
+              - `[&_.psv-loader-container]:!hidden`: PSV's own loader is not hidden
+                on the AbortError path (source line 6134 `isAbortError`
+                short-circuits done()), so cut it off permanently at the DOM layer.
+              - `[&_.psv-container]:[background:transparent_!important]`:
+                PSV by default gives the container a white→gray radial gradient (index.css line 17-25),
+                using the `background:` shorthand (background image). You cannot use
+                `bg-transparent` (that only changes background-color and cannot kill
+                background-image). The whole group must be overridden with an arbitrary value.
+              The header's status text is the only source of loading state. */}
           <div
             ref={viewerHostRef}
             className={`pano360-viewer-host absolute inset-0 bg-black [&_.psv-loader-container]:!hidden [&_.psv-container]:[background:transparent_!important] ${isActive ? 'nopan nowheel' : ''}`}
@@ -1166,7 +1166,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
             </div>
           ) : null}
 
-          {/* 左上角实时数值 HUD */}
+          {/* Live value HUD at the top left */}
           {data.imageUrl ? (
             <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/34 px-2.5 py-1 text-[10px] tabular-nums text-white/74 backdrop-blur-sm">
               yaw {livePos.yawDeg.toFixed(1)}° · pitch {livePos.pitchDeg.toFixed(1)}° · fov {liveFov.toFixed(0)}°{focal ? ` · ${focal}mm` : ''}
@@ -1203,7 +1203,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
             </div>
           ) : null}
 
-          {/* 顶部右侧：面板折叠 */}
+          {/* Top right: panel collapse */}
           <button
             type="button"
             onClick={(event) => {
@@ -1218,7 +1218,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
           </button>
         </div>
 
-        {/* 右侧控制面板 */}
+        {/* Right control panel */}
         {isPanelOpen ? (
           <div
             className="pano360-control-panel nopan nowheel flex h-full w-[336px] shrink-0 flex-col gap-4 overflow-y-auto overflow-x-hidden border-l border-white/[0.08] bg-[#191a1f]/94 p-4 text-[12px] text-text-dark backdrop-blur-sm"
@@ -1247,7 +1247,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
               </div>
             </section>
 
-            {/* 校正 */}
+            {/* Correction */}
             <section className="flex flex-col gap-2">
               <header className="flex items-center justify-between gap-3 text-[11px] font-medium text-text-dark/72">
                 <span>{t('node.pano360.sphereCorrection')}</span>
@@ -1291,7 +1291,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
               </div>
             </section>
 
-            {/* 方向 */}
+            {/* Direction */}
             <section className="flex flex-col gap-2">
               <header className="flex items-center justify-between gap-3 text-[11px] font-medium text-text-dark/72">
                 <span>{t('node.pano360.front')}</span>
@@ -1316,7 +1316,7 @@ export const Pano360ViewerNode = memo(({ id, data, selected, width, height }: Pa
               </div>
             </section>
 
-            {/* 小行星 / 截图 / 导出 */}
+            {/* Little planet / screenshot / export */}
             <section className="flex flex-col gap-2">
               <header className="text-[11px] font-medium text-text-dark/72">{t('node.pano360.effectsAndExport')}</header>
               <div className="flex flex-wrap gap-1.5">

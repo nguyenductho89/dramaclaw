@@ -180,9 +180,9 @@ async def run_freezone_mask_edit(
     if egress_context is None:
         egress_context = ambient_organization_egress_context()
     if egress_context is not None and egress_context.is_organization:
-        # 与 run_freezone_edit 同一口径：组织下不读本地目录配置。
-        # `get_grid_generation_config` 可能返回非 newapi provider，而组织出网闸门
-        # （`nanobanana_grid.py:138-139`）对非 newapi 一律 ORG_EGRESS_DENIED。
+        # Same convention as run_freezone_edit: under an organization, local directory configuration is not read.
+        # `get_grid_generation_config` may return a non-newapi provider, while the organization egress gate
+        # (`nanobanana_grid.py:138-139`) always returns ORG_EGRESS_DENIED for non-newapi providers.
         cfg = {
             "provider": "newapi",
             "api_key": "request-scoped",
@@ -223,10 +223,10 @@ async def run_freezone_mask_edit(
         )
     except Exception as exc:
         raise RuntimeError(
-            f"{provider_name} 图像擦除失败：{redact_secrets(exc)}"
+            f"{provider_name} image erase failed: {redact_secrets(exc)}"
         ) from exc
     if not out.exists():
-        raise RuntimeError(f"{provider_name} 图像擦除未生成输出文件")
+        raise RuntimeError(f"{provider_name} image erase produced no output file")
     return out
 
 
@@ -359,9 +359,9 @@ async def run_freezone_edit(
             model_override=model,
             image_size_override=image_size,
         )
-    # 与 run_freezone_gen 同一口径：目录声明的动态参数按 schema 里的 requestPath
-    # 写进网关请求体。少了这两行，图编辑侧的 model_params 会在这里被丢掉。
-    # 组织支同样要带上——请求作用域凭据只换掉出网身份，不改请求体形状。
+    # Same convention as run_freezone_gen: dynamic parameters declared by the catalog are written into the gateway request body
+    # at the requestPath in the schema. Without these two lines, the model_params of the image-edit side would be dropped here.
+    # The organization branch must carry them too -- request-scoped credentials only swap the egress identity, not the request body shape.
     cfg["newapi_model_params"] = model_params or {}
     cfg["newapi_request_schema"] = request_schema or {}
     await generate_reference_edit_image(
@@ -680,7 +680,7 @@ async def _run_video_processing_model(
         output_path=str(output_path),
         aspect_ratio="auto",
         duration=max(1, math.ceil(duration)),
-        references=[ShotReference("video", str(source_path), "源视频")],
+        references=[ShotReference("video", str(source_path), "source video")],
         gen_mode=mode,
         processing_metadata=processing_metadata,
         egress_context=egress_context,
@@ -1609,7 +1609,7 @@ async def run_freezone_audio_separate(
 
     output_dir = outputs_dir(project_dir, "freezone_audio_separate")
     output_dir.mkdir(parents=True, exist_ok=True)
-    # MP3 而非 AAC/.m4a：分离出的音频常被接到视频模型当参考音频，Seedance 不收 m4a。
+    # MP3 rather than AAC/.m4a: the separated audio is often wired into a video model as reference audio, and Seedance does not accept m4a.
     audio_path = output_dir / f"{job_id}.mp3"
     mute_video_path = output_dir / f"{job_id}_mute.mp4"
 
@@ -1670,13 +1670,13 @@ async def run_freezone_video_gen(
     model_params: Optional[dict[str, Any]] = None,
     request_schema: Optional[dict[str, Any]] = None,
 ) -> Path:
-    """Freezone 文生视频。
+    """Freezone text-to-video.
 
-    统一承接 Freezone 视频生成，支持：
-    - 纯 prompt 文生视频
-    - prompt + 角色参考图
-    - 首帧 / 尾帧参考
-    - 原生音频开关（由具体模型决定）
+    Single entry point for Freezone video generation, supporting:
+    - plain prompt text-to-video
+    - prompt + character reference images
+    - first-frame / last-frame references
+    - native audio switch (decided by the specific model)
     """
     out = outputs_dir(project_dir, "freezone_video_gen") / f"{job_id}.mp4"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1727,7 +1727,7 @@ async def run_freezone_video_gen(
                 (
                     ref
                     for ref in references
-                    if ref.type == "image" and "首帧" in str(ref.role or "")
+                    if ref.type == "image" and "first frame" in str(ref.role or "").lower().replace("_", " ")
                 ),
                 None,
             )
@@ -1775,22 +1775,22 @@ async def run_freezone_video_gen(
 
 
 # ============================================================
-# Extract frames (M1a) — 视频拉片
+# Extract frames (M1a) -- video breakdown
 # ============================================================
 
 
 def sort_extracted_frames_by_pts(paths: Iterable[Path]) -> list[Path]:
-    """按文件名尾部的数值排序抽帧结果，而不是按字典序。
+    """Sort extracted frames by the numeric tail of the file name rather than lexicographically.
 
-    ``-frame_pts true`` 让 ffmpeg 把 ``%03d`` 填成该帧的 PTS 而不是递增计数，
-    于是文件名位数不固定：字典序会把 ``scene_1000.png`` 排到 ``scene_900.png``
-    前面，送进模型的关键帧顺序和 ``keyframe_index`` 映射就全乱了。
+    ``-frame_pts true`` makes ffmpeg fill ``%03d`` with the frame PTS instead of an incrementing counter,
+    so the number of digits in file names varies: lexicographic order would put ``scene_1000.png`` ahead of ``scene_900.png``,
+    scrambling the keyframe order sent to the model and the ``keyframe_index`` mapping.
     """
 
     def sort_key(path: Path) -> tuple[int, int, str]:
         match = re.search(r"(\d+)$", path.stem)
         if match is None:
-            # 没有数字后缀的（理论上不该出现）排到最后，按名字兜底。
+            # Names without a numeric suffix (should not occur in theory) go last, ordered by name.
             return (1, 0, path.name)
         return (0, int(match.group(1)), path.name)
 
@@ -1862,24 +1862,25 @@ async def run_freezone_extract_frames(
 
 
 # ============================================================
-# Analyze shots (M1b) — Gemini Vision 拆分镜
+# Analyze shots (M1b) -- Gemini Vision shot breakdown
 # ============================================================
 
 
-SHOT_ANALYSIS_PROMPT = """你是一个专业的电影分镜师。下面给你一组视频关键帧（按时间顺序），请逐帧分析每帧的电影语言。
+SHOT_ANALYSIS_PROMPT = """You are a professional film storyboard artist. Below is a set of video keyframes (in chronological order). Analyze the cinematic language of each frame one by one.
 
-对每帧输出一个 JSON 对象，字段：
-- shot_type: 景别（"特写" | "近景" | "中景" | "全景" | "远景" | "大远景"）
-- angle: 镜头角度（"平视" | "俯拍" | "仰拍" | "鸟瞰" | "倾斜" 等）
-- camera_movement: 推测的运镜（"静止" | "推镜" | "拉镜" | "摇镜" | "移镜" | "升降" | "跟镜" 等，没有上下文则填"静止"）
-- subject_action: 主体动作的简短描述（中文，<= 20 字，没有主体则"环境镜头"）
-- mood: 氛围（"温馨" | "紧张" | "压抑" | "明快" | "孤独" 等）
-- color_tone: 色调（"暖色调" | "冷色调" | "高饱和" | "低饱和" | "黑白" 等）
-- suggested_prompt: 一句中文文生图 prompt，用于让 AI 重现这帧的视觉风格（包含上面所有元素，<= 80 字）
+For each frame output one JSON object with these fields:
+- shot_type: shot size ("close-up" | "medium close-up" | "medium shot" | "full shot" | "long shot" | "extreme long shot")
+- angle: camera angle ("eye level" | "high angle" | "low angle" | "bird's-eye" | "dutch tilt", etc.)
+- camera_movement: inferred camera movement ("static" | "push in" | "pull out" | "pan" | "tracking" | "crane" | "follow", etc.; use "static" when there is no context)
+- subject_action: short description of the subject's action (<= 20 words; use "environment shot" if there is no subject)
+- mood: atmosphere ("warm" | "tense" | "oppressive" | "bright" | "lonely", etc.)
+- color_tone: color tone ("warm tone" | "cool tone" | "high saturation" | "low saturation" | "black and white", etc.)
+- suggested_prompt: one text-to-image prompt that lets an AI recreate the visual style of this frame (include all the elements above, <= 80 words)
 
-输出格式严格为 JSON 数组（不要任何解释 / markdown 包裹），第 i 个元素对应第 i 帧。例如：
+Write all free-text fields in the same language as any text visible in the frames (English if there is none).
+Output strictly a JSON array (no explanation, no markdown wrapper); the i-th element corresponds to the i-th frame. Example:
 [
-  {"shot_type": "近景", "angle": "平视", "camera_movement": "静止", "subject_action": "环境镜头", "mood": "明快", "color_tone": "高饱和", "suggested_prompt": "..."},
+  {"shot_type": "medium close-up", "angle": "eye level", "camera_movement": "static", "subject_action": "environment shot", "mood": "bright", "color_tone": "high saturation", "suggested_prompt": "..."},
   ...
 ]
 """
@@ -1889,52 +1890,52 @@ def build_video_story_analysis_prompt(
     *, frame_count: int, duration_sec: Optional[float] = None
 ) -> str:
     duration_hint = (
-        f"视频总时长约 {duration_sec:.2f} 秒。"
-        f"请把 start_time/end_time 分配在 0 到 {duration_sec:.2f} 秒之间。"
+        f"The total video duration is about {duration_sec:.2f} seconds. "
+        f"Distribute start_time/end_time between 0 and {duration_sec:.2f} seconds."
         if duration_sec and duration_sec > 0
         else (
-            "未知视频总时长。请根据关键帧顺序给出相对合理的 "
-            "start_time/end_time，第一镜从 0 开始。"
+            "The total video duration is unknown. Give reasonably plausible "
+            "start_time/end_time based on the keyframe order, with the first shot starting at 0."
         )
     )
-    return f"""你是专业影视导演和分镜解析师。下面给你 {frame_count} 张
-按时间顺序抽取的视频关键帧，请解析成 libtv 风格的“视频故事”表。
+    return f"""You are a professional film director and storyboard analyst. Below are {frame_count} video keyframes
+extracted in chronological order. Parse them into a libtv-style "video story" table.
 
 {duration_hint}
 
-要求：
-- 不要逐帧机械描述，要把连续关键帧归纳成 3-12 个叙事镜头/动作段落。
-- 保持同一视频内部的故事连续性：谁在做什么，发生了什么变化，
-  镜头如何推进。
-- 时间字段使用数字秒，duration = end_time - start_time。
-- 画面描述写清主体、动作、环境、构图、情绪、重要道具。
-- 叙事内容写这一镜在故事中的作用，而不是重复画面描述。
-- 图生视频提示词和视频运动提示词用英文，适合直接用于视频生成。
-- 背景音乐、人声/音效用中文，简洁描述。
-- 关键帧使用输入帧序号，1 到 {frame_count}。
-- 如果看不出声音，不要编对白，只写可由画面推断的音效/氛围。
-- 严格输出 JSON 对象，不要 markdown，不要解释。
+Requirements:
+- Do not describe frame by frame mechanically; group consecutive keyframes into 3-12 narrative shots/action segments.
+- Keep story continuity within the video: who is doing what, what changes,
+  how the camera progresses.
+- Time fields use numeric seconds, duration = end_time - start_time.
+- Visual descriptions state the subject, action, environment, composition, emotion and important props clearly.
+- Narrative content states what this shot does in the story, rather than repeating the visual description.
+- Image-to-video prompts and video motion prompts are in English, suitable for direct use in video generation.
+- Background music and voice/sound effects are described concisely, in the same language as any text visible in the frames (English if there is none).
+- Keyframes use the input frame indices, 1 to {frame_count}.
+- If no sound can be made out, do not invent dialogue; write only sound effects/atmosphere that can be inferred from the picture.
+- Output strictly a JSON object, with no markdown and no explanation.
 
 JSON schema:
 {{
-  "title": "中文短标题",
-  "summary": "中文一句话概括视频故事",
-  "duration": 数字秒或 null,
+  "title": "short title",
+  "summary": "one-sentence summary of the video story",
+  "duration": numeric seconds or null,
   "shots": [
     {{
       "shot": 1,
       "start_time": 0.0,
       "end_time": 1.2,
       "duration": 1.2,
-      "visual_description": "中文画面描述",
-      "narrative": "中文叙事内容",
-      "shot_size": "特写/近景/中近景/中景/全景/远景/大远景",
-      "camera_angle": "平视/俯拍/仰拍/倾斜/高角度/低角度",
-      "camera_movement": "固定/推镜/拉镜/摇镜/移镜/跟镜/手持/缓慢推进",
-      "focus_depth": "浅景深/中等景深/深景深",
-      "lighting": "中文光线描述",
-      "background_music": "中文背景音乐建议",
-      "voice_sound": "中文人声或音效",
+      "visual_description": "visual description",
+      "narrative": "narrative content",
+      "shot_size": "close-up/medium close-up/medium shot/full shot/long shot/extreme long shot",
+      "camera_angle": "eye level/high angle/low angle/dutch tilt",
+      "camera_movement": "static/push in/pull out/pan/tracking/follow/handheld/slow push",
+      "focus_depth": "shallow depth of field/medium depth of field/deep depth of field",
+      "lighting": "lighting description",
+      "background_music": "background music suggestion",
+      "voice_sound": "voice or sound effects",
       "image_prompt": "English image-to-video visual prompt",
       "motion_prompt": "English motion prompt",
       "keyframes": [1, 2]
@@ -1970,8 +1971,8 @@ async def run_freezone_analyze_shots(
         resolve_freezone_vision_model,
     )
 
-    # 与 `image_node.reverse_prompt_from_image` 同一口径：出网 helper 在函数体内
-    # 引进来，不放模块级——leaf 模块的导入面本身是分类契约的一部分。
+    # Same convention as `image_node.reverse_prompt_from_image`: the egress helper is imported inside the function body,
+    # not at module level -- the import surface of a leaf module is itself part of the classification contract.
     from novelvideo.freezone.presets import (
         abandon_freezone_vision_egress,
         complete_freezone_vision_egress,
@@ -2051,9 +2052,9 @@ async def run_freezone_analyze_shots(
         elif not isinstance(analyses, list):
             raise RuntimeError(f"{used_provider} response is not a list")
     except BaseException:
-        # 出网点一抛就到不了 complete_*，claim 会停在 dispatching 等收割器。
-        # 这里恒 submitted=True：帧字节在 claim 之前就读完了（digest 要用），claim
-        # 与提交之间没有会抛的步骤，所以任何失败都发生在「已经交出去、结果不明」之后。
+        # If the egress point raises, complete_* is never reached and the claim would stay in dispatching waiting for the reaper.
+        # submitted=True always holds here: the frame bytes are fully read before the claim (the digest needs them), and between claim
+        # and submission there is no step that can raise, so any failure happens after "handed off, outcome unknown".
         await abandon_freezone_vision_egress(vision_egress, submitted=True)
         raise
     await complete_freezone_vision_egress(vision_egress, result=text)

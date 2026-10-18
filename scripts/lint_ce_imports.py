@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
-"""导入守栏（import-lint，硬零）。
+"""Import guard (import-lint, hard zero).
 
-下列模块不属于本仓库，任何导入都不得出现。硬零：命中即失败，无 baseline 留存。
+The modules below do not belong to this repository and no import of them may appear. Hard zero:
+a hit fails outright, with no baseline carried over.
 
-扫描对象（AST，覆盖顶层/惰性导入）：
-  - src/novelvideo/**/*.py 的静态 import / from-import
-  - importlib.import_module(...) / __import__(...) 的字面量字符串
-  - pyproject.toml 里所有字符串（entry-points / scripts 等元数据）
+Scan targets (AST, covering top-level and lazy imports):
+  - static import / from-import in src/novelvideo/**/*.py
+  - literal strings in importlib.import_module(...) / __import__(...)
+  - all strings in pyproject.toml (metadata such as entry-points / scripts)
 
-禁止的模块前缀：
+Forbidden module prefixes:
   - novelvideo_ee
   - supertale_admin
-  - novelvideo.control_plane（含 `from novelvideo import control_plane`）
+  - novelvideo.control_plane (including `from novelvideo import control_plane`)
 
-用法：
-    python scripts/lint_ce_imports.py            # 扫全仓（CI 默认）
-    python scripts/lint_ce_imports.py --root .   # 指定根
+Usage:
+    python scripts/lint_ce_imports.py            # scan the whole repo (CI default)
+    python scripts/lint_ce_imports.py --root .   # specify the root
 
-命中任一禁止导入 → 退出码 1，并打印 file:line 与导入内容。
+Any forbidden import -> exit code 1, printing file:line and the import.
 """
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# 禁止的模块前缀：命中即违规。规则为「等于前缀」或「以 前缀. 开头」。
+# Forbidden module prefixes: a hit is a violation. The rule is "equals the prefix" or "starts with prefix.".
 FORBIDDEN_PREFIXES = (
     "novelvideo_ee",
     "supertale_admin",
@@ -89,7 +90,7 @@ def _scan_python(root: Path) -> list[Finding]:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except SyntaxError as exc:
-            raise SystemExit(f"无法解析 {path}: {exc}") from exc
+            raise SystemExit(f"Cannot parse {path}: {exc}") from exc
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -138,10 +139,10 @@ def _scan_metadata(root: Path) -> list[Finding]:
     try:
         metadata = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
-        raise SystemExit(f"无法解析 {path}: {exc}") from exc
+        raise SystemExit(f"Cannot parse {path}: {exc}") from exc
     findings: list[Finding] = []
     for value in _iter_toml_strings(metadata):
-        module = value.split(":", 1)[0]  # entry-point 形如 "pkg.mod:obj"
+        module = value.split(":", 1)[0]  # entry-points look like "pkg.mod:obj"
         if _is_forbidden(module):
             findings.append(
                 Finding("pyproject.toml", _line_for_text(path, value), "metadata", module)
@@ -156,22 +157,22 @@ def scan(root: Path = REPO_ROOT) -> list[Finding]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="CE import-lint（硬零）")
+    parser = argparse.ArgumentParser(description="CE import-lint (hard zero)")
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
     args = parser.parse_args(argv)
 
     findings = scan(args.root)
     if not findings:
-        print("✓ import-lint：无禁止导入。")
+        print("✓ import-lint: no forbidden imports.")
         return 0
 
-    print(f"✖ 命中 {len(findings)} 处禁止导入：", file=sys.stderr)
+    print(f"✖ {len(findings)} forbidden import(s) found:", file=sys.stderr)
     for finding in findings:
         print(f"  {finding.describe()}", file=sys.stderr)
     print(
-        "\n禁止前缀："
+        "\nForbidden prefixes: "
         + " / ".join(FORBIDDEN_PREFIXES)
-        + "\n相关能力只能通过 novelvideo.ports.* 抽象消费，不得直接 import。",
+        + "\nThe related capabilities may only be consumed through the novelvideo.ports.* abstractions, never imported directly.",
         file=sys.stderr,
     )
     return 1

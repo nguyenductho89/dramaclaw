@@ -2,9 +2,9 @@
 // Copyright (c) 2026 ClaymoreLab
 import type { Spec as SpecRenderSpec } from "dramaclaw-spec-render";
 import type { ChatMessage } from "@/features/superchat/types";
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This takes the default i18next instance (the one `@/i18n` initializes). We do not import `@/i18n`
+// itself because that module also pulls in react-i18next / HttpBackend; putting it on this
+// widely imported low-level path would make every test that mocks react-i18next blow up at import time.
 import i18n from "i18next";
 
 
@@ -607,15 +607,15 @@ function looksLikeVideoUrl(value: string): boolean {
 
 function statusBadgeVariant(status: string): string {
   const normalized = status.toLowerCase();
-  // 下面比对的是后端 / 模型给的状态原文，不是界面文案，跟着界面语言走就认不出来了。
+  // The comparison below is against the raw status text from the backend / model, not UI copy; following the UI language would fail to recognize it.
   // i18n-exempt-start
-  if (["failed", "error", "失败"].some((item) => normalized.includes(item))) {
+  if (["failed", "error", "thất bại", "lỗi"].some((item) => normalized.includes(item))) {
     return "danger";
   }
-  if (["complete", "completed", "done", "完成"].some((item) => normalized.includes(item))) {
+  if (["complete", "completed", "done", "hoàn tất", "hoàn thành"].some((item) => normalized.includes(item))) {
     return "success";
   }
-  if (["running", "pending", "生成中", "处理中"].some((item) => normalized.includes(item))) {
+  if (["running", "pending", "đang chạy", "đang xử lý"].some((item) => normalized.includes(item))) {
     return "info";
   }
   // i18n-exempt-end

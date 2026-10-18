@@ -261,5 +261,5 @@ async def call_freezone_vision_model(
     )
     text = str(result.output or "").strip()
     if not text:
-        raise RuntimeError("视觉模型返回空内容")
+        raise RuntimeError("The vision model returned empty content")
     return model, text

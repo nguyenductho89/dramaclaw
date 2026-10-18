@@ -457,9 +457,10 @@ async def execute_organization_gateway_request(
         )
         raise
 
-    # 这里没有上游作业号可留：网关同步提交，返回体不带 provider 侧的作业标识。
-    # 原先拿本行自己的 `operation_id` 填两列，只是为了骗过旧 CHECK 的「非空」判据，
-    # 读上去像「留了上游句柄」，实则是自引用。HandleKind.NONE 把这件事写在行上。
+    # There is no upstream job id to keep here: the gateway submits synchronously and the response body
+    # carries no provider-side job identifier. Previously this row filled both columns with its own `operation_id`
+    # only to satisfy the old CHECK's "non-empty" test, which read like "kept an upstream handle" but was a
+    # self-reference. HandleKind.NONE records that fact on the row.
     accepted = await operation_port.mark_accepted(
         operation_id=operation.operation_id,
         transition_token=transition_token,
@@ -531,7 +532,7 @@ async def execute_organization_gateway_stream(
     accepted = None
     try:
         async with stream_factory(credential) as response:
-            # 流式同样没有上游作业号，见上面同函数族的说明。
+            # Streaming likewise has no upstream job id; see the note in the sibling function above.
             accepted = await operation_port.mark_accepted(
                 operation_id=operation.operation_id,
                 transition_token=transition_token,

@@ -89,11 +89,11 @@ const IMAGE_TOOL_NODE_TYPES = new Set<CanvasNodeType>([
 
 const IMAGE_ACTION_SIZE_OPTIONS = ["1K", "2K", "4K"] as const;
 const GENERATOR_PROMPT_DESCRIPTION =
-  "If this node has upstream text connected with prompt_for, this prompt is combined with upstream prompt_for text during generation; avoid duplicating the same content in both places. Prefer putting long editable prompts in the upstream input_text node, and use this field only for short non-overlapping modifiers or leave it empty. If this node has upstream image references, use @图片1, @图片2, etc. in the prompt to bind specific top reference thumbnails by their left-to-right order. For multiple images, declare each referenced image's role instead of saying only \"use the references\".";
+  "If this node has upstream text connected with prompt_for, this prompt is combined with upstream prompt_for text during generation; avoid duplicating the same content in both places. Prefer putting long editable prompts in the upstream input_text node, and use this field only for short non-overlapping modifiers or leave it empty. If this node has upstream image references, use @image1, @image2, etc. in the prompt to bind specific top reference thumbnails by their left-to-right order. For multiple images, declare each referenced image's role instead of saying only \"use the references\".";
 const GENERATE_IMAGE_ACTION_DESCRIPTION =
-  "Submit this image generation node using its current prompt/references. Before running, ensure upstream image references that matter are explicitly bound in the prompt with @图片N and each reference role is clear. This runs the same frontend flow as pressing the node submit button.";
+  "Submit this image generation node using its current prompt/references. Before running, ensure upstream image references that matter are explicitly bound in the prompt with @imageN and each reference role is clear. This runs the same frontend flow as pressing the node submit button.";
 const GENERATE_VIDEO_ACTION_DESCRIPTION =
-  "Submit this video node using its current prompt/references/generation mode. Before running, ensure upstream image references that matter are explicitly bound in the prompt with @图片N and each reference role is clear; this is especially important for imageReference, firstLastFrame, and allReference modes. This runs the same frontend flow as pressing the node submit button.";
+  "Submit this video node using its current prompt/references/generation mode. Before running, ensure upstream image references that matter are explicitly bound in the prompt with @imageN and each reference role is clear; this is especially important for imageReference, firstLastFrame, and allReference modes. This runs the same frontend flow as pressing the node submit button.";
 
 function hasString(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
@@ -152,28 +152,28 @@ function imageModelParameterSchema(): CanvasEditableFieldSchema {
   const snapshot = getFreezoneImageModelsSnapshot();
   return {
     type: "enum",
-    label: "模型",
+    label: "Model",
     options: snapshot.models.map((model) => model.id),
     option_labels: modelOptionLabels(snapshot.models),
     source: "GET /api/v1/projects/{project}/freezone/image/models",
     loading: snapshot.isLoading,
     fallback: snapshot.isFallback,
-    description: "可选。必须使用 options 里的模型 id；不填使用该动作默认模型，不要写口语名或后端 apiModel。",
+    description: "Optional. Must use a model id from options; if omitted, the action default model is used. Do not use colloquial names or the backend apiModel.",
   };
 }
 
 const UPSCALE_PARAMETER_SCHEMA = {
   scale_factor: {
     type: "number",
-    label: "放大倍率",
+    label: "Upscale factor",
     options: [2, 4, 6],
-    description: "默认 2。",
+    description: "Default 2.",
   },
   image_size: {
     type: "enum",
-    label: "画质",
+    label: "Quality",
     options: IMAGE_ACTION_SIZE_OPTIONS,
-    description: "默认 2K。",
+    description: "Default 2K.",
   },
   get model() {
     return imageModelParameterSchema();
@@ -183,21 +183,21 @@ const UPSCALE_PARAMETER_SCHEMA = {
 const OUTPAINT_PARAMETER_SCHEMA = {
   target_aspect_ratio: {
     type: "enum",
-    label: "目标比例",
+    label: "Target aspect ratio",
     options: ["original", "1:1", "4:3", "3:4", "16:9", "9:16"],
-    description: "默认 original。",
+    description: "Default original.",
   },
   num_images: {
     type: "number",
-    label: "生成数量",
+    label: "Count",
     options: [1, 2, 3, 4],
-    description: "默认 1。",
+    description: "Default 1.",
   },
   image_size: {
     type: "enum",
-    label: "画质",
+    label: "Quality",
     options: IMAGE_ACTION_SIZE_OPTIONS,
-    description: "默认 2K。",
+    description: "Default 2K.",
   },
   get model() {
     return imageModelParameterSchema();
@@ -207,14 +207,14 @@ const OUTPAINT_PARAMETER_SCHEMA = {
 const VIDEO_UPSCALE_PARAMETER_SCHEMA = {
   resolution: {
     type: "enum",
-    label: "分辨率",
+    label: "Resolution",
     options: VIDEO_UPSCALE_RESOLUTIONS,
     option_labels: {
       "1080p": "1080P",
       "2k": "2K",
       "4k": "4K",
     },
-    description: "默认 1080p。",
+    description: "Default 1080p.",
   },
 };
 
@@ -223,14 +223,14 @@ function videoUpscaleEditableSchema(node: CanvasNode): Record<string, CanvasEdit
     upscaleResolution?: unknown;
   };
   return {
-    displayName: { type: "string", label: "显示名称" },
+    displayName: { type: "string", label: "Display name" },
     upscaleResolution: {
       type: "enum",
-      label: "分辨率",
+      label: "Resolution",
       options: VIDEO_UPSCALE_RESOLUTIONS,
       option_labels: VIDEO_UPSCALE_RESOLUTION_LABEL,
       current_value: typeof data.upscaleResolution === "string" ? data.upscaleResolution : "1080p",
-      description: "视频高清处理面板里的目标分辨率；修改高清分辨率时更新 upscaleResolution。",
+      description: "Target resolution in the video upscale panel; update upscaleResolution when changing the upscale resolution.",
     },
   };
 }
@@ -273,24 +273,24 @@ const KNOWN_SKILL_DEFINITIONS: Record<string, SkillDefinition> = {
   "freezone.sketch_from_context": {
     id: "freezone.sketch_from_context",
     provider: "freezone_mainline",
-    display_name: "根据当前背景生成草图",
-    description: "根据 Beat 上下文和当前背景生成主线草图候选。",
+    display_name: "Generate sketch from current background",
+    description: "Generate mainline sketch candidates from the Beat context and the current background.",
     inputs: [minimalInput("beat_context", true), minimalInput("background", true)],
     outputs: [],
   },
   "freezone.sketch_from_director_combined": {
     id: "freezone.sketch_from_director_combined",
     provider: "freezone_mainline",
-    display_name: "从导演合成图生成草图",
-    description: "从 Beat 上下文和导演合成图生成主线草图候选。",
+    display_name: "Generate sketch from director composite",
+    description: "Generate mainline sketch candidates from the Beat context and the director composite.",
     inputs: [minimalInput("beat_context", true), minimalInput("director_combined", true)],
     outputs: [],
   },
   "freezone.frame_from_context": {
     id: "freezone.frame_from_context",
     provider: "freezone_mainline",
-    display_name: "从镜头上下文生成分镜",
-    description: "根据 Beat 上下文、草图和参考素材生成主线分镜候选。",
+    display_name: "Generate storyboard from shot context",
+    description: "Generate mainline storyboard candidates from the Beat context, sketch and reference materials.",
     inputs: [
       minimalInput("beat_context", true),
       minimalInput("sketch", true),
@@ -303,24 +303,24 @@ const KNOWN_SKILL_DEFINITIONS: Record<string, SkillDefinition> = {
   "freezone.set_selected_background": {
     id: "freezone.set_selected_background",
     provider: "freezone_mainline",
-    display_name: "设为当前背景",
-    description: "将明确指定的图片设为当前 Beat 的背景。",
+    display_name: "Set as current background",
+    description: "Set the explicitly specified image as the current Beat background.",
     inputs: [minimalInput("beat_context", true), minimalInput("source_image", true)],
     outputs: [],
   },
   "freezone.set_director_combined": {
     id: "freezone.set_director_combined",
     provider: "freezone_mainline",
-    display_name: "设为导演合成图",
-    description: "将明确指定的图片设为当前 Beat 的 3GS 导演合成图。",
+    display_name: "Set as director composite",
+    description: "Set the explicitly specified image as the current Beat 3GS director composite.",
     inputs: [minimalInput("beat_context", true), minimalInput("source_image", true)],
     outputs: [],
   },
   "freezone.scene_360": {
     id: "freezone.scene_360",
     provider: "freezone_mainline",
-    display_name: "生成场景 360 全景",
-    description: "根据场景主图生成 2:1 场景全景候选。",
+    display_name: "Generate scene 360 panorama",
+    description: "Generate 2:1 scene panorama candidates from the scene master image.",
     inputs: [
       minimalInput("scene", false),
       minimalInput("scene_master", true),
@@ -331,8 +331,8 @@ const KNOWN_SKILL_DEFINITIONS: Record<string, SkillDefinition> = {
   "agent.review_frame": {
     id: "agent.review_frame",
     provider: "agent",
-    display_name: "审核分镜",
-    description: "根据 Beat 上下文审核分镜候选。",
+    display_name: "Review storyboard",
+    description: "Review storyboard candidates against the Beat context.",
     inputs: [minimalInput("beat_context", true), minimalInput("frame", true)],
     outputs: [],
   },
@@ -356,14 +356,14 @@ const IMAGE_LIKE_SKILL_INPUT_ROLES = new Set<SkillInputRole>([
 ]);
 
 const SKILL_INPUT_ROLE_LABELS: Partial<Record<SkillInputRole, string>> = {
-  background: "背景",
-  director_combined: "导演合成图",
-  frame: "分镜",
-  scene: "场景",
-  scene_master: "场景主图",
-  scene_reverse_master: "场景反打图",
-  sketch: "草图",
-  source_image: "源图片",
+  background: "background",
+  director_combined: "director composite",
+  frame: "storyboard frame",
+  scene: "scene",
+  scene_master: "scene master",
+  scene_reverse_master: "scene reverse master",
+  sketch: "sketch",
+  source_image: "source image",
 };
 
 function skillRunReadinessForCatalog(
@@ -387,7 +387,7 @@ function skillRunReadinessForCatalog(
     if (!input.required) continue;
     const matched = resolvedInputs.filter((item) => item.role === input.role);
     if (matched.length === 0) {
-      const reason = `必需输入 ${input.role} 未连接。`;
+      const reason = `Required input ${input.role} is not connected.`;
       blockedReasons.push(reason);
       preconditions.push({
         type: "required_input",
@@ -401,7 +401,7 @@ function skillRunReadinessForCatalog(
       const ready = matched.some((item) => item.beat_context || item.mainline_context?.length);
       if (!ready) {
         const sourceIds = matched.map((item) => item.node_id);
-        const reason = `必需输入 beat_context 未提供有效 Beat 上下文。`;
+        const reason = `Required input beat_context did not provide a valid Beat context.`;
         blockedReasons.push(reason);
         preconditions.push({
           type: "required_upstream_context",
@@ -419,7 +419,7 @@ function skillRunReadinessForCatalog(
       if (!ready) {
         const sourceIds = matched.map((item) => item.node_id);
         const roleLabel = SKILL_INPUT_ROLE_LABELS[input.role] ?? input.role;
-        const reason = `${input.role} 输入尚未就绪：上游${roleLabel}节点缺少 imageUrl。`;
+        const reason = `Input ${input.role} is not ready: the upstream ${roleLabel} node is missing imageUrl.`;
         blockedReasons.push(reason);
         preconditions.push({
           type: "required_upstream_output",
@@ -518,14 +518,14 @@ function imageModelSchema(node: CanvasNode): CanvasEditableFieldSchema {
   const snapshot = getFreezoneImageModelsSnapshot();
   return {
     type: "enum",
-    label: "模型",
+    label: "Model",
     options: snapshot.models.map((model) => model.id),
     option_labels: modelOptionLabels(snapshot.models),
     source: "GET /api/v1/projects/{project}/freezone/image/models",
     loading: snapshot.isLoading,
     fallback: snapshot.isFallback,
     current_value: (node.data as { model?: unknown }).model ?? null,
-    description: "图片模型必须使用 options 里的 model id；不要使用口语名或后端 apiModel，例如不要写 nanobanana。",
+    description: "Image models must use a model id from options; do not use colloquial names or the backend apiModel, e.g. do not write nanobanana.",
   };
 }
 
@@ -541,9 +541,9 @@ function imageSizeSchema(node: CanvasNode): CanvasEditableFieldSchema {
     .map((value) => value.trim()).filter(Boolean);
   return {
     type: "enum",
-    label: "分辨率",
+    label: "Resolution",
     options: options.length > 0 ? options : [...IMAGE_SIZE_OPTIONS],
-    description: "使用所选图片模型目录返回的原始分辨率选项。",
+    description: "Use the raw resolution options returned by the selected image model catalog.",
   };
 }
 
@@ -552,11 +552,11 @@ function imageQualitySchema(node: CanvasNode): CanvasEditableFieldSchema {
   const options = (model?.qualityOptions ?? []).map((value) => value.trim()).filter(Boolean);
   return {
     type: "enum",
-    label: "画质",
+    label: "Quality",
     options: model ? options : [...IMAGE_QUALITY_OPTIONS],
     description: model && options.length === 0
-      ? "所选模型不支持画质档位；请省略 quality。"
-      : "仅使用所选图片模型支持的画质档位。",
+      ? "The selected model does not support quality tiers; omit quality."
+      : "Only use quality tiers supported by the selected image model.",
   };
 }
 
@@ -565,7 +565,7 @@ function imageAspectRatioSchema(node: CanvasNode, label: string): CanvasEditable
     .map((value) => value.trim()).filter(Boolean);
   return {
     type: "enum",
-    label: "比例",
+    label: "Aspect ratio",
     options: options.length > 0 ? options : [...IMAGE_ASPECT_RATIO_OPTIONS],
     description: label,
   };
@@ -575,14 +575,14 @@ function videoModelSchema(node: CanvasNode): CanvasEditableFieldSchema {
   const snapshot = getFreezoneVideoModelsSnapshot();
   return {
     type: "enum",
-    label: "模型",
+    label: "Model",
     options: snapshot.models.map((model) => model.id),
     option_labels: modelOptionLabels(snapshot.models),
     source: "GET /api/v1/projects/{project}/freezone/video/models",
     loading: snapshot.isLoading,
     fallback: snapshot.isFallback,
     current_value: (node.data as { model?: unknown }).model ?? null,
-    description: "视频模型必须使用 options 里的 model id；不要使用口语名或后端 apiModel。",
+    description: "Video models must use a model id from options; do not use colloquial names or the backend apiModel.",
   };
 }
 
@@ -595,10 +595,10 @@ function videoAspectRatioSchema(node: CanvasNode): CanvasEditableFieldSchema {
   const options = (model?.ratioOptions ?? []).map((value) => value.trim()).filter(Boolean);
   return {
     type: "enum",
-    label: "视频比例",
+    label: "Video aspect ratio",
     options: options.length > 0 ? options : [...VIDEO_ASPECT_RATIO_OPTIONS],
     current_value: (node.data as { aspectRatio?: unknown }).aspectRatio ?? "auto",
-    description: "视频节点底部参数里的比例；修改视频比例时更新 aspectRatio，不要改模型来间接实现。",
+    description: "Aspect ratio in the video node bottom parameters; update aspectRatio when changing the video ratio, do not change the model to achieve it indirectly.",
   };
 }
 
@@ -615,10 +615,10 @@ function videoQualitySchema(node: CanvasNode): CanvasEditableFieldSchema {
   const resolvedOptions = options.length > 0 ? options : [...VIDEO_QUALITY_OPTIONS];
   return {
     type: "enum",
-    label: "清晰度",
+    label: "Definition",
     options: resolvedOptions,
     current_value: (node.data as { quality?: unknown }).quality ?? null,
-    description: "视频节点底部参数里的清晰度；使用所选模型目录返回的原始分辨率选项。",
+    description: "Definition in the video node bottom parameters; use the raw resolution options returned by the selected model catalog.",
   };
 }
 
@@ -636,13 +636,13 @@ function videoDurationSchema(node: CanvasNode): CanvasEditableFieldSchema {
     ? Number(currentModel?.maxDuration)
     : null;
   const durationHint = [minDuration, maxDuration].every((value) => typeof value === "number")
-    ? `当前模型支持 ${minDuration}-${maxDuration} 秒。`
-    : "当前模型的可用时长区间由前端节点约束。";
+    ? `The current model supports ${minDuration}-${maxDuration} seconds.`
+    : "The available duration range of the current model is constrained by the frontend node.";
   return {
     type: "number",
-    label: "时长秒数",
+    label: "Duration (seconds)",
     current_value: (node.data as { durationSec?: unknown }).durationSec ?? null,
-    description: `${durationHint} 修改时更新 durationSec。`,
+    description: `${durationHint} Update durationSec when changing it.`,
   };
 }
 
@@ -660,7 +660,7 @@ function videoGenModeSchema(node: CanvasNode): CanvasEditableFieldSchema {
     : [];
   return {
     type: "enum",
-    label: "视频生成模式",
+    label: "Video generation mode",
     options,
     option_labels: Object.fromEntries(
       options.map((mode) => [mode, i18next.t(`node.videoNode.tabs.${mode}`)]),
@@ -668,7 +668,7 @@ function videoGenModeSchema(node: CanvasNode): CanvasEditableFieldSchema {
     loading: snapshot.isLoading,
     current_value: (node.data as { genMode?: unknown }).genMode ?? "textToVideo",
     description:
-      "仅可使用当前节点所选模型的 options；切换模型后必须重新查询模式选项，不得套用其他节点的模式。决定视频节点如何消费上游输入。textToVideo=只用当前提示词；imageToVideo=以单张图片作为整体画面参考；firstFrame=以单张图片锁定首帧（与 imageToVideo 不等价，用户指定哪种就保持哪种，不要互相替换）；firstLastFrame=需要首帧和尾帧；allReference=可同时参考图片/视频/音频；imageReference=以图片作为参考约束。改视频模式时更新 genMode，不要把“模式”误改成 model。",
+      "Only use the options of the model selected on the current node; after switching models you must re-query the mode options and must not reuse another node's modes. Determines how the video node consumes upstream inputs. textToVideo = current prompt only; imageToVideo = a single image as the overall visual reference; firstFrame = a single image locks the first frame (not equivalent to imageToVideo; keep whichever the user specified and do not substitute one for the other); firstLastFrame = needs first and last frames; allReference = may reference images/videos/audio together; imageReference = images as reference constraints. When changing the video mode update genMode; do not mistakenly change model for \"mode\".",
   };
 }
 
@@ -676,7 +676,7 @@ function audioVoiceRefSchema(node: CanvasNode): CanvasEditableFieldSchema {
   const data = node.data as { voiceRef?: unknown };
   return {
     type: "object",
-    label: "音色引用",
+    label: "Voice reference",
     source: "canvas_context_request.v1 audio_voice_options",
     context_request: {
       schema_version: "canvas_context_request.v1",
@@ -684,7 +684,7 @@ function audioVoiceRefSchema(node: CanvasNode): CanvasEditableFieldSchema {
     },
     current_value: data.voiceRef ?? null,
     description:
-      "音频节点在 speechMode=clone 时使用 voiceRef 对象选择音色，不使用 voiceId 字符串。更换音色前必须先返回 context_request 指定的 canvas_context_request.v1；拿到 options 后，把选项里的 data 原样用于 update_node_data，并同时设置 speechMode=clone。不要用 run_node_action 获取音色选项。",
+      "When speechMode=clone the audio node selects a voice with a voiceRef object, not a voiceId string. Before changing the voice you must first return the canvas_context_request.v1 specified by context_request; once you have the options, use the option data as-is in update_node_data and also set speechMode=clone. Do not use run_node_action to fetch voice options.",
   };
 }
 
@@ -729,28 +729,28 @@ function beatContextEditableSchema(node: CanvasNode): Record<string, CanvasEdita
   return {
     visual_description: {
       type: "string",
-      label: "起始画面",
+      label: "Start frame",
       current_value:
         stringOrNull(editFields.visual_description) ??
         stringOrNull(snapshot.visualDescription) ??
         stringOrNull(data.content) ??
         "",
-      description: "镜头上下文节点的起始画面草稿。只修改画布本地草稿；如需写回主线，请使用界面中的手动入口。",
+      description: "Draft of the start frame of the shot context node. Only modifies the local canvas draft; to write back to the mainline, use the manual entry in the UI.",
     },
     scene_ref: {
       type: "object",
-      label: "场景",
+      label: "Scene",
       options: sceneOptions,
       current_value: { scene_id: currentSceneId, variant_id: currentVariantId },
-      description: "镜头上下文节点的场景草稿，格式为 {scene_id, variant_id}。只允许修改这个字段，不要修改出场身份或出场道具。",
+      description: "Scene draft of the shot context node, formatted as {scene_id, variant_id}. Only this field may be modified; do not modify the appearing identities or props.",
     },
     time_of_day: {
       type: "enum",
-      label: "时间",
+      label: "Time",
       options: ["", ...STANDARD_TIME_OF_DAY_OPTIONS],
-      option_labels: { "": "未设置" },
+      option_labels: { "": "Not set" },
       current_value: currentTimeOfDay,
-      description: "镜头上下文节点的时间草稿。必须从枚举中选择；空字符串表示未设置。",
+      description: "Time draft of the shot context node. Must be chosen from the enum; an empty string means not set.",
     },
   };
 }
@@ -761,12 +761,12 @@ function editableSchemaForNode(node: CanvasNode): Record<string, CanvasEditableF
     case CANVAS_NODE_TYPES.textAnnotation:
       return {
         displayName: { type: "string", label: "Display name" },
-        title: { type: "string", label: "标题" },
-        content: { type: "string", label: "内容" },
-        text: { type: "string", label: "文本" },
+        title: { type: "string", label: "Title" },
+        content: { type: "string", label: "Content" },
+        text: { type: "string", label: "Text" },
         semanticOutputRole: {
           type: "enum",
-          label: "语义输出角色",
+          label: "Semantic output role",
           options: ["planning_text", "input_text", "context_text"],
           description:
             "How downstream nodes should interpret this text: planning_text for briefs, outlines, notes, or planning material; input_text for direct prompts or scripts consumed by generators; context_text for auxiliary background, constraints, style guides, or reference notes.",
@@ -776,33 +776,33 @@ function editableSchemaForNode(node: CanvasNode): Record<string, CanvasEditableF
       return beatContextEditableSchema(node);
     case CANVAS_NODE_TYPES.imageGen:
       return {
-        displayName: { type: "string", label: "显示名称" },
-        prompt: { type: "string", label: "提示词", description: GENERATOR_PROMPT_DESCRIPTION },
-        negativePrompt: { type: "string", label: "反向提示词" },
+        displayName: { type: "string", label: "Display name" },
+        prompt: { type: "string", label: "Prompt", description: GENERATOR_PROMPT_DESCRIPTION },
+        negativePrompt: { type: "string", label: "Negative prompt" },
         model: imageModelSchema(node),
         size: imageSizeSchema(node),
         quality: imageQualitySchema(node),
-        aspectRatio: imageAspectRatioSchema(node, "图片节点底部参数里的比例；修改分辨率时不要顺手改比例。"),
-        count: { type: "enum", label: "生成数量", options: [...IMAGE_COUNT_OPTIONS] },
+        aspectRatio: imageAspectRatioSchema(node, "Aspect ratio in the image node bottom parameters; do not change the ratio when changing the resolution."),
+        count: { type: "enum", label: "Count", options: [...IMAGE_COUNT_OPTIONS] },
       };
     case CANVAS_NODE_TYPES.imageEdit:
       return {
-        displayName: { type: "string", label: "显示名称" },
-        prompt: { type: "string", label: "提示词", description: GENERATOR_PROMPT_DESCRIPTION },
-        negativePrompt: { type: "string", label: "反向提示词" },
+        displayName: { type: "string", label: "Display name" },
+        prompt: { type: "string", label: "Prompt", description: GENERATOR_PROMPT_DESCRIPTION },
+        negativePrompt: { type: "string", label: "Negative prompt" },
         model: imageModelSchema(node),
         size: imageSizeSchema(node),
         quality: imageQualitySchema(node),
-        requestAspectRatio: imageAspectRatioSchema(node, "图片编辑节点使用 requestAspectRatio 保存目标比例。"),
-        count: { type: "enum", label: "生成数量", options: [...IMAGE_COUNT_OPTIONS] },
+        requestAspectRatio: imageAspectRatioSchema(node, "The image edit node stores the target ratio in requestAspectRatio."),
+        count: { type: "enum", label: "Count", options: [...IMAGE_COUNT_OPTIONS] },
       };
     case CANVAS_NODE_TYPES.video:
       if ((node.data as { isUpscaleNode?: unknown }).isUpscaleNode === true) {
         return videoUpscaleEditableSchema(node);
       }
       return {
-        displayName: { type: "string", label: "显示名称" },
-        prompt: { type: "string", label: "提示词", description: GENERATOR_PROMPT_DESCRIPTION },
+        displayName: { type: "string", label: "Display name" },
+        prompt: { type: "string", label: "Prompt", description: GENERATOR_PROMPT_DESCRIPTION },
         genMode: videoGenModeSchema(node),
         model: videoModelSchema(node),
         aspectRatio: videoAspectRatioSchema(node),
@@ -810,105 +810,105 @@ function editableSchemaForNode(node: CanvasNode): Record<string, CanvasEditableF
         durationSec: videoDurationSchema(node),
         generateAudio: {
           type: "boolean",
-          label: "生成音频",
+          label: "Generate audio",
           current_value: (node.data as { generateAudio?: unknown }).generateAudio ?? false,
         },
         humanReview: {
           type: "boolean",
-          label: "真人审核",
+          label: "Real-person review",
           current_value: (node.data as { humanReview?: unknown }).humanReview ?? false,
-          description: "图生视频时在模型支持的情况下启用真人内容审核。",
+          description: "Enable real-person content review for image-to-video when the model supports it.",
         },
         count: {
           type: "enum",
-          label: "生成数量",
+          label: "Count",
           options: [...VIDEO_COUNT_OPTIONS],
           current_value: (node.data as { count?: unknown }).count ?? 1,
         },
       };
     case CANVAS_NODE_TYPES.audio:
       return {
-        displayName: { type: "string", label: "显示名称" },
+        displayName: { type: "string", label: "Display name" },
         audioKind: {
           type: "enum",
-          label: "音频类型",
+          label: "Audio kind",
           options: ["speech", "music"],
-          description: "speech 表示文本转语音；music 表示文字生成音乐。",
+          description: "speech means text-to-speech; music means text-to-music.",
         },
         speechMode: {
           type: "enum",
-          label: "语音模式",
+          label: "Speech mode",
           options: ["clone"],
           description:
-            "仅 audioKind=speech 时生效。虾画只使用自定义声线；未选择有效 voiceRef 时跳过语音生成。",
+            "Only effective when audioKind=speech. The canvas only uses custom voices; speech generation is skipped when no valid voiceRef is selected.",
         },
-        text: { type: "string", label: "文本" },
-        emotionPrompt: { type: "string", label: "情绪提示" },
+        text: { type: "string", label: "Text" },
+        emotionPrompt: { type: "string", label: "Emotion prompt" },
         voiceRef: audioVoiceRefSchema(node),
         voiceLabel: {
           type: "string",
-          label: "音色名称",
-          description: "音色展示名，通常随 voiceRef 一起从 audio_voice_options 选项的 data 中写入。",
+          label: "Voice name",
+          description: "Voice display name, usually written together with voiceRef from the data of an audio_voice_options option.",
         },
         voiceLanguage: {
           type: "string",
-          label: "语言",
-          description: "音色语言标签，通常随 voiceRef 一起从 audio_voice_options 选项的 data 中写入。",
+          label: "Language",
+          description: "Voice language tag, usually written together with voiceRef from the data of an audio_voice_options option.",
         },
         musicLengthMs: {
           type: "number",
-          label: "音乐时长毫秒",
-          description: "仅 audioKind=music 时生效；页面默认 30000ms。",
+          label: "Music duration (ms)",
+          description: "Only effective when audioKind=music; the page default is 30000ms.",
         },
         forceInstrumental: {
           type: "boolean",
-          label: "纯音乐",
-          description: "仅 audioKind=music 时生效；默认 true。",
+          label: "Instrumental",
+          description: "Only effective when audioKind=music; default true.",
         },
         respectSectionsDurations: {
           type: "boolean",
-          label: "遵守段落时长",
-          description: "仅 audioKind=music 时生效；默认 true。",
+          label: "Respect segment duration",
+          description: "Only effective when audioKind=music; default true.",
         },
       };
     case CANVAS_NODE_TYPES.script:
       return {
-        displayName: { type: "string", label: "显示名称" },
+        displayName: { type: "string", label: "Display name" },
         prompt: {
           type: "string",
-          label: "生成提示词",
-          description: "故事脚本生成节点的主要输入；普通自由格式文本请使用 textAnnotationNode.content。",
+          label: "Generation prompt",
+          description: "Main input of the story script generation node; for ordinary free-form text use textAnnotationNode.content.",
         },
-        content: { type: "string", label: "内容" },
+        content: { type: "string", label: "Content" },
       };
     case CANVAS_NODE_TYPES.videoCompose:
       return {
-        displayName: { type: "string", label: "显示名称" },
-        title: { type: "string", label: "标题" },
+        displayName: { type: "string", label: "Display name" },
+        title: { type: "string", label: "Title" },
       };
     case CANVAS_NODE_TYPES.threeDWorld:
       return {
-        displayName: { type: "string", label: "显示名称" },
+        displayName: { type: "string", label: "Display name" },
         prompt: {
           type: "string",
-          label: "提示词",
-          description: "3D 世界节点的备注/生成提示；当前 3GS 生成主要依赖上游图片。",
+          label: "Prompt",
+          description: "Notes/generation hint of the 3D world node; current 3GS generation mainly relies on the upstream image.",
         },
         plyKind: {
           type: "enum",
-          label: "3GS 来源类型",
+          label: "3GS source type",
           options: ["master", "reverse", "pano"],
-          description: "master/reverse 生成单面 3GS；pano 表示上游是 360 全景图。",
+          description: "master/reverse generate a single-face 3GS; pano means the upstream is a 360 panorama.",
         },
       };
     case CANVAS_NODE_TYPES.skill:
       return {
-        displayName: { type: "string", label: "显示名称" },
-        parameters: { type: "object", label: "参数" },
+        displayName: { type: "string", label: "Display name" },
+        parameters: { type: "object", label: "Parameters" },
       };
     case CANVAS_NODE_TYPES.htmlArtifact:
       return {
-        displayName: { type: "string", label: "显示名称" },
+        displayName: { type: "string", label: "Display name" },
         prompt: {
           type: "string",
           label: "Webpage requirements",
@@ -917,7 +917,7 @@ function editableSchemaForNode(node: CanvasNode): Record<string, CanvasEditableF
         },
       };
     default:
-      return { displayName: { type: "string", label: "显示名称" } };
+      return { displayName: { type: "string", label: "Display name" } };
   }
 }
 
@@ -968,7 +968,7 @@ function addChatCommandActions(node: CanvasNode, actions: CanvasNodeActionCatalo
       command_type: "update_node_data",
       description:
         node.type === CANVAS_NODE_TYPES.beatContext
-          ? `更新镜头上下文节点草稿字段。只允许 data 包含 ${BEAT_CONTEXT_AGENT_EDITABLE_FIELDS.join(", ")}；出场身份和出场道具不开放给 agent 编辑。`
+          ? `Update the draft fields of the shot context node. data may only contain ${BEAT_CONTEXT_AGENT_EDITABLE_FIELDS.join(", ")}; appearing identities and props are not open to agent editing.`
           : "Update editable data fields on this node. Reserved mainline/projection fields are ignored.",
       parameters: {
         node_id: node.id,
@@ -994,7 +994,7 @@ function addChatCommandActions(node: CanvasNode, actions: CanvasNodeActionCatalo
       action: "sync_beat_context_to_mainline",
       execution: "manual_ui",
       command_type: "run_node_action",
-      description: "把当前镜头上下文节点草稿同步到主线。该主线写入目前只能由用户在界面中手动确认，Agent 不得执行。",
+      description: "Sync the current shot context node draft to the mainline. This mainline write can currently only be confirmed manually by the user in the UI; the Agent must not execute it.",
       parameters: {
         node_id: node.id,
       },
@@ -1032,7 +1032,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       execution: "manual_ui",
       command_type: "run_node_action",
       description:
-        "打开分格抽取面板，让用户手动设置行列/分隔线并执行抽取。This only opens the UI and does not directly generate a new storyboard image.",
+        "Open the panel-extraction panel so the user can manually set rows/columns/dividers and run the extraction. This only opens the UI and does not directly generate a new storyboard image.",
       parameters: { node_id: node.id, tool_type: NODE_TOOL_TYPES.splitStoryboard },
     },
     {
@@ -1040,7 +1040,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       execution: "frontend_node",
       command_type: "run_node_action",
       description:
-        "抠图 / 去背景 / 移除背景 / 透明背景：Run foreground matting on this image node, create a transparent-background PNG, and add a downstream export image node.",
+        "Matting / background removal / transparent background: Run foreground matting on this image node, create a transparent-background PNG, and add a downstream export image node.",
       parameters: { node_id: node.id },
     },
     {
@@ -1085,7 +1085,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       action: "run_scene360_tool",
       execution: "frontend_node",
       command_type: "run_node_action",
-      description: "全景 / 360 全景：submit 360 panorama generation from this image node with default parameters. Creates an export image node and a 360 viewer node. Use this when the user asks to use the panorama feature.",
+      description: "Panorama / 360 panorama: submit 360 panorama generation from this image node with default parameters. Creates an export image node and a 360 viewer node. Use this when the user asks to use the panorama feature.",
       parameters: {
         node_id: node.id,
         result_policy: "spawn_child",
@@ -1096,7 +1096,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       action: "open_multi_angle_tool",
       execution: "manual_ui",
       command_type: "run_node_action",
-      description: "多维度 / 多角度 / 多视图 / 多视角：open the multi-angle panel for this image node. Current chat can request this to open the UI; it does not directly run generation or export.",
+      description: "Multi-angle / multi-view: open the multi-angle panel for this image node. Current chat can request this to open the UI; it does not directly run generation or export.",
       parameters: { node_id: node.id },
     },
     {
@@ -1146,7 +1146,7 @@ function addImageToolActions(node: CanvasNode, actions: CanvasNodeActionCatalogE
       execution: "frontend_node",
       command_type: "run_node_action",
       description:
-        "Generate a new 25-frame serial storyboard image from this image node with default parameters. Does not open UI. 不是分格抽取；如果用户说“分格抽取/抽取分格/打开分格”，use open_split_storyboard_tool instead.",
+        "Generate a new 25-frame serial storyboard image from this image node with default parameters. Does not open UI. This is not panel extraction; if the user says "panel extraction / extract panels / open panel split", use open_split_storyboard_tool instead.",
       parameters: { node_id: node.id, grid_action: "serialStoryboard25", result_policy: "spawn_child" },
     },
     {
@@ -1240,7 +1240,7 @@ function addFrontendNodeActions(
       execution: "manual_ui",
       command_type: "run_node_action",
       description:
-        "打开该上传节点的本地文件选择器。用户选择文件后，前端复用上传节点原流程处理，并把选择/上传结果返回给 agent；agent 不能直接指定本地文件路径。",
+        "Open the local file picker of this upload node. After the user picks a file, the frontend reuses the upload node's original flow and returns the selection/upload result to the agent; the agent cannot specify a local file path directly.",
       parameters: {
         node_id: node.id,
         accept: uploadPickerAcceptForNode(node),
@@ -1270,8 +1270,8 @@ function addFrontendNodeActions(
         preconditions: readiness.preconditions,
         blocked_reasons: readiness.blockedReasons,
         instruction: readiness.canRunNow
-          ? "can_run_now=true，可以 emit run_node_action 执行此技能。"
-          : "can_run_now=false 时不要 emit run_node_action；先完成 blocked_reasons 指向的上游输入后再重新请求 node_action_catalog 或 validate_canvas_commands。",
+          ? "can_run_now=true; you may emit run_node_action to run this skill."
+          : "When can_run_now=false do not emit run_node_action; first complete the upstream inputs pointed to by blocked_reasons, then re-request node_action_catalog or validate_canvas_commands.",
         description:
           "Run this skill node only after required upstream inputs are connected and completed. The frontend submits the skill and creates output nodes when results are ready.",
         parameters: {

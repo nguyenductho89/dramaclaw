@@ -13,7 +13,7 @@ import {
   NODE_TEXT_CONTROL_TRIGGER_CLASS,
 } from '@/features/canvas/ui/nodeControlStyles';
 
-/** 缩略图接管的是 ready 态,所以这颗 chip 只需要覆盖其余四种。 */
+/** The thumbnail takes over the ready state, so this chip only needs to cover the other four. */
 export type StyleTriggerChipState = Exclude<StyleSelectionState, 'ready'>;
 
 const STYLE_TRIGGER_CHIP_KEYS: Record<
@@ -36,15 +36,15 @@ const STYLE_TRIGGER_CHIP_KEYS: Record<
 };
 
 export interface StyleTriggerChipProps {
-  /** 省略等于 none —— 没选风格的常态。 */
+  /** Omitted equals none — the normal case of no style selected. */
   state?: StyleTriggerChipState;
   onOpen: () => void;
 }
 
 /**
- * 没选到风格时占位的入口 chip；真选中并查到模板后由缩略图接管,不再占顶排位置。
- * 「查不到」不等于「没选」：加载中/加载失败/id 失效都要如实说,否则用户会以为
- * 自己没选风格,而那个 id 其实照样跟着生成请求走。
+ * Placeholder entry chip shown when no style is selected; once a style is really selected and its template found, the thumbnail takes over and it no longer occupies the top row.
+ * "Not found" does not mean "not selected": loading / load failure / stale id must all be reported honestly, otherwise the user would think
+ * they selected no style, while that id is in fact still sent along with the generation request.
  */
 export function StyleTriggerChip({
   state = 'none',
@@ -80,7 +80,7 @@ export interface StyleThumbnailProps {
   onClear: () => void;
 }
 
-/** 选中的风格在输入框里留一张封面：点开图墙、hover 出名字和清除按钮。 */
+/** The selected style keeps a cover in the input box: click to open the gallery, hover to show the name and the clear button. */
 export function StyleThumbnail({
   template,
   assetBase,
@@ -126,7 +126,7 @@ export function StyleThumbnail({
           <X className="h-3 w-3" strokeWidth={2.5} />
         </button>
       </div>
-      {/* 缩略图只有 48px 放不下文字,名字放到 hover 浮层里。 */}
+      {/* The thumbnail is only 48px and cannot fit text, so the name goes in the hover popover. */}
       <span className="pointer-events-none absolute left-full top-1/2 z-10 ml-1.5 hidden max-w-[160px] -translate-y-1/2 truncate whitespace-nowrap rounded bg-black/85 px-1.5 py-0.5 text-[11px] font-medium text-text-dark shadow-sm group-hover/stylethumb:block">
         {template.label}
       </span>

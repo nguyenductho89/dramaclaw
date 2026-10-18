@@ -1,9 +1,9 @@
-"""NovelVideo 统一存储层 - SQLite + Cognee。
+"""NovelVideo unified storage layer - SQLite + Cognee.
 
-核心理念：
-- 结构化数据（Character, Episode, VisualBeat）存入 SQLite
-- 知识图谱 + 向量检索由 Cognee（Kuzu）管理
-- 每个项目 = 文件系统上的一个目录，零远程依赖
+Core idea:
+- Structured data (Character, Episode, VisualBeat) is stored in SQLite
+- The knowledge graph + vector retrieval are managed by Cognee (Kuzu)
+- Each project = one directory on the filesystem, no remote dependencies
 """
 
 import asyncio
@@ -14,7 +14,7 @@ import json
 from datetime import date, datetime
 from uuid import UUID
 
-# 重要：必须先导入 config，在 cognee 被导入之前设置环境变量
+# Important: config must be imported first so env vars are set before cognee is imported
 from .config import init_cognee  # noqa: F401
 from novelvideo.i18n_message import MessageLike, lmsg
 from novelvideo.config import get_newapi_structured_output_litellm_kwargs
@@ -45,7 +45,7 @@ from novelvideo.project_config import ensure_cognee_embedding_binding_in_state_d
 from novelvideo.sqlite_store import SQLiteStore
 from novelvideo.utils.document_parsers import load_novel_text
 
-# 路径计算工具函数 — canonical implementation lives in utils.path_resolver.
+# Path helper functions - canonical implementation lives in utils.path_resolver.
 from novelvideo.utils.path_resolver import (  # noqa: F401
     compute_portrait_path,
     compute_identity_path,
@@ -93,18 +93,18 @@ def _json_list_payload(values: list[str]) -> str:
 
 
 class CogneeStore:
-    """统一存储层 - SQLite + Cognee。
+    """Unified storage layer - SQLite + Cognee.
 
-    使用方式：
+    Usage:
         store = CogneeStore("hongloumeng")
         await store.initialize()
 
-        # 导入小说并提取角色
+        # Import the novel and extract characters
         await store.ingest_and_extract(novel_path)
 
-        # 查询角色（支持别名）
-        char = await store.get_character("皇后")  # 返回姜裳宁
-        prompt = char.face_prompt  # 直接获取面部 Prompt
+        # Look up a character (aliases supported)
+        char = await store.get_character("the Queen")  # returns the canonical character
+        prompt = char.face_prompt  # get the face prompt directly
     """
 
     def __init__(
@@ -118,13 +118,13 @@ class CogneeStore:
         self.dataset_name = f"novelvideo_{project_name}"
         self._owns_sqlite_store = sqlite_store is None
 
-        # 缓存（从 SQLite 加载）
+        # Cache (loaded from SQLite)
         self._characters: Dict[str, NovelCharacter] = {}
         self._episodes: Dict[int, NovelEpisode] = {}
         self._props: Dict[str, NovelProp] = {}
         self._alias_index: Dict[str, str] = {}  # alias -> primary_name
 
-        # 项目目录
+        # Project directory
         sqlite_project_dir = (
             str(getattr(sqlite_store, "project_dir", "") or "") if sqlite_store else ""
         )
@@ -238,7 +238,7 @@ class CogneeStore:
         return store
 
     def _share_sqlite_caches(self) -> None:
-        """让 SQLiteStore 和当前 store 共享同一组内存缓存。"""
+        """Make SQLiteStore and the current store share the same in-memory caches."""
         store = self.__dict__.get("sqlite_store")
         if store is None:
             return
@@ -248,7 +248,7 @@ class CogneeStore:
         store._alias_index = self._alias_index
 
     def _sync_sqlite_caches(self) -> None:
-        """将 SQLiteStore 当前缓存同步回共享缓存。"""
+        """Sync the current SQLiteStore cache back to the shared cache."""
         store = self._ensure_sqlite_store()
         character_cache = dict(store._characters)
         episode_cache = dict(store._episodes)
@@ -264,19 +264,15 @@ class CogneeStore:
         self._alias_index.update(alias_cache)
         self._share_sqlite_caches()
 
-    # 已知的风格前缀（用于清洗历史数据）
+    # Known style prefixes (used to clean historical data)
     _STYLE_PREFIXES = [
-        "写实古装剧风格，",
-        "写实古装剧风格,",
         "anime style,",
-        "anime风格，",
-        "动漫风格，",
         "realistic style,",
         "chinese period drama style,",
     ]
 
     def _clean_style_prefix(self, prompt: str) -> str:
-        """清理 base_prompt 中的风格前缀。"""
+        """Strip the style prefix from base_prompt."""
         if not prompt:
             return prompt
         for prefix in self._STYLE_PREFIXES:
@@ -286,7 +282,7 @@ class CogneeStore:
 
     @staticmethod
     def _normalize_alias_lookup(value: str) -> str:
-        """统一别名查找键，降低空格/大小写差异导致的失配。"""
+        """Unify the alias lookup key to reduce mismatches caused by whitespace/case differences."""
         return " ".join((value or "").replace("\u3000", " ").strip().lower().split())
 
     @property
@@ -395,12 +391,12 @@ class CogneeStore:
             runs = [result]
 
         if not runs:
-            raise RuntimeError(f"{stage_name}失败: Cognee 返回空结果")
+            raise RuntimeError(f"{stage_name} failed: Cognee returned an empty result")
 
         errors: List[str] = []
         for run in runs:
             if run is None:
-                errors.append(f"{stage_name}失败: Cognee 返回空结果")
+                errors.append(f"{stage_name} failed: Cognee returned an empty result")
                 continue
 
             status = read_field(run, "status")
@@ -410,16 +406,16 @@ class CogneeStore:
             if nested:
                 detail = truncate(payload)
                 detail = f"{detail}; data item failures: " + " | ".join(nested[:3])
-                errors.append(f"{stage_name}失败({status_text}): {detail}")
+                errors.append(f"{stage_name} failed ({status_text}): {detail}")
                 continue
             if not is_completed_status(status):
                 detail = truncate(payload)
                 errors.append(
-                    f"{stage_name}失败({status_text or 'unknown status'}): {detail}"
+                    f"{stage_name} failed ({status_text or 'unknown status'}): {detail}"
                 )
 
         if errors:
-            raise RuntimeError("；".join(errors))
+            raise RuntimeError("; ".join(errors))
 
     async def _run_cognee_pipeline_with_retry(
         self,
@@ -458,17 +454,17 @@ class CogneeStore:
             except Exception as exc:
                 last_error = exc
                 if attempt + 1 < attempts:
-                    log(f"{stage_name}失败，准备重试(1/1): {exc}")
+                    log(f"{stage_name} failed, preparing to retry (1/1): {exc}")
                     await asyncio.sleep(0)
                     continue
                 raise
 
         if last_error is not None:
             raise last_error
-        raise RuntimeError(f"{stage_name}失败: unknown error")
+        raise RuntimeError(f"{stage_name} failed: unknown error")
 
     async def _ensure_db(self):
-        """确保数据库连接已建立。
+        """Make sure the database connection is established.
 
         SQLite lifecycle and project-fact schema are owned by SQLiteStore.
         CogneeStore does not hold a raw SQLite connection.
@@ -477,21 +473,21 @@ class CogneeStore:
         return await store._ensure_db()
 
     async def initialize(self):
-        """初始化 SQLite 数据库和 Cognee 配置。
+        """Initialize the SQLite database and the Cognee configuration.
 
-        structured_v1 项目降级为纯 SQLite 门面而不是抛异常：生产中有大量
-        runner 和 API 依赖（肖像、参考图、剧本、分镜、视频、Freezone 等）只把
-        本类当 SQLite 门面使用，完全不需要图谱。在这里硬失败会让这些路径在
-        新项目上全线 500。图谱能力本身由 ``_require_cognee`` 单独把守。
+        structured_v1 projects degrade to a pure SQLite facade instead of raising: in production many
+        runners and APIs (portraits, reference images, scripts, storyboards, videos, Freezone, etc.) only use
+        this class as a SQLite facade and do not need the graph at all. A hard failure here would make those paths
+        500 across the board on new projects. The graph capability itself is guarded separately by ``_require_cognee``.
         """
-        # 必须先判定 track，再决定是否绑定 embedding：
-        # ensure_cognee_embedding_binding_in_state_dir() 会为缺字段的项目回填
-        # 绑定并写回 project_config.json，一旦调用就再也退不回去了。
+        # The track must be decided first, before deciding whether to bind the embedding:
+        # ensure_cognee_embedding_binding_in_state_dir() backfills the binding for projects missing the field
+        # and writes it back to project_config.json; once called it cannot be undone.
         if is_structured_pipeline(self.state_dir):
             self.__dict__["_cognee_enabled_flag"] = False
             await self._ensure_db()
             console.print(
-                f"[dim]存储层已初始化 (structured_v1, 无图谱, db: {self.db_path})[/dim]"
+                f"[dim]Storage layer initialized (structured_v1, no graph, db: {self.db_path})[/dim]"
             )
             return
 
@@ -501,7 +497,7 @@ class CogneeStore:
         self.cognee_embedding_dimensions = embedding_binding.dimensions
         init_cognee()
 
-        # 初始化项目 SQLite；Cognee 图谱上下文独立设置。
+        # Initialize the project SQLite; the Cognee graph context is set up independently.
         await self._ensure_db()
 
         # Cognee's graph/vector contexts are task-local, while DramaClaw adds
@@ -512,13 +508,13 @@ class CogneeStore:
                 with self.embedding_model_scope():
                     await setup()
             except Exception as e:
-                # cognee 0.5.3 bug: 重复初始化时 CREATE TABLE data 报 already exists
+                # cognee 0.5.3 bug: repeated initialization raises "CREATE TABLE data already exists"
                 if "already exists" in str(e):
                     pass
                 else:
                     raise
 
-            # 确保当前用户拥有该 dataset
+            # Make sure the current user owns the dataset
             with preserve_st_env():
                 from cognee.modules.pipelines.layers.resolve_authorized_user_datasets import (
                     resolve_authorized_user_datasets,
@@ -532,11 +528,11 @@ class CogneeStore:
                     pass
                 else:
                     console.print(
-                        f"[yellow]⚠️ dataset 权限注册失败（非致命）: {e}[/yellow]"
+                        f"[yellow]⚠️ dataset permission registration failed (non-fatal): {e}[/yellow]"
                     )
 
         console.print(
-            f"[dim]存储层已初始化 (dataset: {self.dataset_name}, db: {self.db_path})[/dim]"
+            f"[dim]Storage layer initialized (dataset: {self.dataset_name}, db: {self.db_path})[/dim]"
         )
 
     async def close(self) -> None:
@@ -545,37 +541,37 @@ class CogneeStore:
             await self._ensure_sqlite_store().close()
 
     # ============================================================
-    # 内容存储（替代 Redis）
+    # Content storage (replaces Redis)
     # ============================================================
 
     def save_novel_content(self, content: str) -> None:
-        """将小说原文保存到文件。"""
+        """Save the original novel text to a file."""
         self.sqlite_store.save_novel_content(content)
         novel_path = Path(self.project_dir) / "novel.txt"
-        print(f"[store] 原文已保存: {novel_path} ({len(content)} 字符)")
+        print(f"[store] Original text saved: {novel_path} ({len(content)} chars)")
 
     def load_novel_content(self) -> Optional[str]:
-        """从文件加载小说原文。"""
+        """Load the original novel text from a file."""
         return self.sqlite_store.load_novel_content()
 
     async def save_episode_content(self, ep_num: int, content: str) -> None:
-        """保存单集内容到 SQLite episodes.raw_content。"""
+        """Save single-episode content to SQLite episodes.raw_content."""
         await self.sqlite_store.save_episode_content(ep_num, content)
 
     async def load_episode_content(self, ep_num: int) -> Optional[str]:
-        """从 SQLite 加载单集内容。"""
+        """Load single-episode content from SQLite."""
         return await self.sqlite_store.load_episode_content(ep_num)
 
     async def get_episode_content_count(self) -> int:
-        """获取有原文内容的剧集数量。"""
+        """Get the number of episodes that have original content."""
         return await self.sqlite_store.get_episode_content_count()
 
     async def clear_episode_contents(self) -> int:
-        """清除所有剧集的原文内容。"""
+        """Clear the original content of all episodes."""
         return await self.sqlite_store.clear_episode_contents()
 
     # ============================================================
-    # 导入和提取
+    # Import and extraction
     # ============================================================
 
     async def ingest_novel_fast(
@@ -586,7 +582,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> dict:
-        """快速导入，并独占当前项目的 Cognee/Ladybug 图谱。"""
+        """Quick import, exclusively holding the Cognee/Ladybug graph of the current project."""
         self._require_cognee("Cognee graph ingest")
         async with ladybug_graph_access(self.state_dir, read_only=False):
             return await self._ingest_novel_fast_locked(
@@ -605,7 +601,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> dict:
-        """在项目图谱锁内构建 Cognee 图谱，不提取角色/剧集。"""
+        """Build the Cognee graph inside the project graph lock, without extracting characters/episodes."""
 
         def report(progress: float, task: MessageLike):
             if on_progress:
@@ -617,28 +613,28 @@ class CogneeStore:
             console.print(f"[dim]{message}[/dim]")
 
         if not Path(novel_path).exists():
-            raise FileNotFoundError(f"文件不存在: {novel_path}")
+            raise FileNotFoundError(f"File not found: {novel_path}")
 
         from .config import init_cognee
 
         report(
             INGEST_PROGRESS_MILESTONES["read"],
-            lmsg("tasks.progress.ingest.reading", "读取并校验原文..."),
+            lmsg("tasks.progress.ingest.reading", "Reading and validating the original text..."),
         )
         log(
             lmsg(
                 "tasks.log.ingest.readingFile",
-                f"读取文件: {novel_path}",
+                f"Reading file: {novel_path}",
                 path=str(novel_path),
             )
         )
         content = load_novel_text(novel_path)
         if not content.strip():
-            raise ValueError("小说内容为空，无法导入")
+            raise ValueError("The novel content is empty and cannot be imported")
         log(
             lmsg(
                 "tasks.log.ingest.readComplete",
-                f"文件读取完成: {len(content)} 字符",
+                f"File read complete: {len(content)} chars",
                 charCount=len(content),
             )
         )
@@ -650,82 +646,82 @@ class CogneeStore:
             )
 
             if assess_screenplay_scene_headers(content).status == "missing":
-                raise ValueError("精品剧必须包含场景头，请补充后重新导入")
+                raise ValueError("A premium drama screenplay must include scene headings; add them and re-import")
 
         os.environ["COGNEE_TELEMETRY_ENABLED"] = "false"
 
         if not os.getenv("LLM_API_KEY") and not os.getenv("OPENAI_API_KEY"):
             raise ValueError(
-                "LLM API key 未设置。请在 .env 文件中添加:\n" "  OPENAI_API_KEY=your_key_here"
+                "LLM API key is not set. Add this to the .env file:\n" "  OPENAI_API_KEY=your_key_here"
             )
 
         if rebuild:
-            report(INGEST_PROGRESS_MILESTONES["prune"], "清理旧图谱...")
-            # novel.txt 是前端和后续流水线判断“已导入”的持久标志。旧图谱已经
-            # 清除前必须先让旧标志失效：即使清理中途失败，也不能继续显示成功。
+            report(INGEST_PROGRESS_MILESTONES["prune"], "Cleaning up the old graph...")
+            # novel.txt is the persistent flag the frontend and later pipelines use to decide "already imported". The old graph is
+            # about to be cleared, so the old flag must be invalidated first: even if cleanup fails midway, success must not keep being shown.
             imported_novel_path = Path(self.project_dir) / "novel.txt"
             imported_novel_path.unlink(missing_ok=True)
             delete_graph_preview(self.state_dir)
-            log("清除 cognee 图谱数据...")
+            log("Clearing cognee graph data...")
             await self._prune_cognee_only()
 
-        # 重建时必须先清理旧存储，再初始化 Cognee 的数据库连接。
+        # On rebuild, the old storage must be cleaned up before initializing the Cognee database connection.
         init_cognee()
 
-        # Step 1: 添加原文到 Cognee
-        report(INGEST_PROGRESS_MILESTONES["parse"], "解析原文...")
-        log("Step 1/3: 导入原文到 Cognee...")
+        # Step 1: add the original text to Cognee
+        report(INGEST_PROGRESS_MILESTONES["parse"], "Parsing the original text...")
+        log("Step 1/3: importing the original text into Cognee...")
         await self._run_cognee_pipeline_with_retry(
-            stage_name="原文导入",
+            stage_name="Source import",
             operation=lambda: cognee.add(content, dataset_name=self.dataset_name),
             log=log,
         )
-        log("原文导入完成")
-        report(INGEST_PROGRESS_MILESTONES["parsed"], "原文解析完成")
+        log("Source import complete")
+        report(INGEST_PROGRESS_MILESTONES["parsed"], "Original text parsed")
         await asyncio.sleep(0)
 
-        # Step 2: 构建知识图谱
-        report(INGEST_PROGRESS_MILESTONES["graph"], "构建知识图谱...")
-        log("Step 2/3: 构建知识图谱（这可能需要几分钟）...")
+        # Step 2: build the knowledge graph
+        report(INGEST_PROGRESS_MILESTONES["graph"], "Building the knowledge graph...")
+        log("Step 2/3: building the knowledge graph (this may take a few minutes)...")
         await self._run_cognee_pipeline_with_retry(
-            stage_name="知识图谱构建",
+            stage_name="Knowledge graph build",
             operation=lambda: cognee.cognify(datasets=[self.dataset_name]),
             log=log,
         )
-        log("知识图谱构建完成")
+        log("Knowledge graph build complete")
 
         if not await self._dataset_graph_has_nodes():
-            raise RuntimeError("知识图谱构建失败：未生成任何图谱节点")
-        log("知识图谱校验完成")
-        report(INGEST_PROGRESS_MILESTONES["graph_validated"], "知识图谱校验完成")
+            raise RuntimeError("Knowledge graph build failed: no graph nodes were generated")
+        log("Knowledge graph validation complete")
+        report(INGEST_PROGRESS_MILESTONES["graph_validated"], "Knowledge graph validated")
 
-        # Step 3: 创建向量索引（memify）
-        report(INGEST_PROGRESS_MILESTONES["index"], "创建向量索引...")
-        log("Step 3/3: 创建向量索引（用于三元组检索）...")
+        # Step 3: create the vector index (memify)
+        report(INGEST_PROGRESS_MILESTONES["index"], "Creating the vector index...")
+        log("Step 3/3: creating the vector index (used for triple retrieval)...")
         await self._run_cognee_pipeline_with_retry(
-            stage_name="向量索引创建",
+            stage_name="Vector index creation",
             operation=lambda: cognee.memify(dataset=self.dataset_name),
             log=log,
         )
-        log("向量索引创建完成")
-        report(INGEST_PROGRESS_MILESTONES["indexed"], "向量索引创建完成")
+        log("Vector index creation complete")
+        report(INGEST_PROGRESS_MILESTONES["indexed"], "Vector index created")
 
         # API workers render this bounded sidecar and never open Ladybug merely
         # for graph visualization.  Persist it before novel.txt, because the
         # latter is the public "import succeeded" marker.
-        report(INGEST_PROGRESS_MILESTONES["preview"], "生成图谱预览...")
+        report(INGEST_PROGRESS_MILESTONES["preview"], "Generating the graph preview...")
         await self.materialize_graph_preview()
-        log("知识图谱预览已保存")
-        report(INGEST_PROGRESS_MILESTONES["preview_saved"], "图谱预览已保存")
+        log("Knowledge graph preview saved")
+        report(INGEST_PROGRESS_MILESTONES["preview_saved"], "Graph preview saved")
 
-        # 原文落库放在图谱构建成功之后：失败时不留下"已导入"的痕迹。
-        # /chapters 仅凭已存原文判定"导入完成"，若提前落库，cognify/memify 失败
-        # 仍会让界面误报导入成功且锁死重新上传入口。
-        report(INGEST_PROGRESS_MILESTONES["save"], "保存导入结果...")
+        # Persist the original text only after the graph build succeeds: on failure no "already imported" trace is left behind.
+        # /chapters decides "import complete" purely from the stored original text; if it were persisted earlier, a cognify/memify failure
+        # would still make the UI wrongly report a successful import and lock the re-upload entry.
+        report(INGEST_PROGRESS_MILESTONES["save"], "Saving the import result...")
         self.save_novel_content(content)
-        log("原文已保存到文件")
+        log("Original text saved to file")
 
-        report(INGEST_PROGRESS_MILESTONES["complete"], "导入完成")
+        report(INGEST_PROGRESS_MILESTONES["complete"], "Import complete")
 
         return {
             "char_count": len(content),
@@ -738,7 +734,7 @@ class CogneeStore:
         async with ladybug_graph_access(self.state_dir, read_only=True):
             snapshot = await self.get_graph_snapshot(max_nodes=max_nodes)
             if not snapshot.get("nodes"):
-                raise RuntimeError("知识图谱预览生成失败：未读取到任何图谱节点")
+                raise RuntimeError("Knowledge graph preview generation failed: no graph nodes were read")
             write_graph_preview(self.state_dir, snapshot)
             return snapshot
 
@@ -992,10 +988,10 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelCharacter]:
-        """从图谱补充角色（分阶段架构第二步）。
+        """Supplement characters from the graph (step 2 of the staged architecture).
 
-        图谱构建只负责发现缺失的基础角色。已有角色可能已经有用户编辑、
-        身份图、声线和资产配置，不能被一次图谱重扫覆盖。
+        The graph build is only responsible for discovering missing base characters. Existing characters may already have user edits,
+        identity graphs, voices and asset configuration, and must not be overwritten by a single graph rescan.
         """
         self._require_cognee("graph character build")
         from .pipeline import extract_characters_from_graph
@@ -1010,8 +1006,8 @@ class CogneeStore:
             console.print(f"[dim]{message}[/dim]")
 
         novel_text = require_imported_novel(self.project_dir)
-        report(0.1, "从图谱提取人物节点...")
-        log("从图谱提取角色候选...")
+        report(0.1, "Extracting character nodes from the graph...")
+        log("Extracting character candidates from the graph...")
         with self.embedding_model_scope():
             characters = await extract_characters_from_graph(
                 dataset_name=self.dataset_name,
@@ -1023,14 +1019,14 @@ class CogneeStore:
             )
 
         if not characters:
-            log("⚠️ 图谱提取无结果，保留现有角色数据")
-            report(1.0, "提取无结果")
+            log("⚠️ Graph extraction returned nothing; keeping existing character data")
+            report(1.0, "Extraction returned nothing")
             return []
 
-        log(f"从图谱提取了 {len(characters)} 个角色")
+        log(f"Extracted {len(characters)} characters from the graph")
 
-        report(0.8, "保存新增角色...")
-        log("保存新增角色到数据库...")
+        report(0.8, "Saving newly added characters...")
+        log("Saving newly added characters to the database...")
         added: list[NovelCharacter] = []
         skipped = 0
         for char in characters:
@@ -1039,15 +1035,15 @@ class CogneeStore:
                 continue
             await self.add_character(char)
             added.append(char)
-        log(f"已新增 {len(added)} 个角色，跳过已有 {skipped} 个")
+        log(f"Added {len(added)} characters, skipped {skipped} existing")
 
-        report(1.0, "角色提取完成")
-        log(f"角色提取完成: 新增 {len(added)} 个，已有 {skipped} 个")
+        report(1.0, "Character extraction complete")
+        log(f"Character extraction complete: {len(added)} added, {skipped} existing")
 
         return added
 
     async def _delete_old_characters(self) -> int:
-        """删除所有角色。"""
+        """Delete all characters."""
         await self._ensure_db()
         return await self.sqlite_store.delete_all_characters()
 
@@ -1057,7 +1053,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelEpisode]:
-        """规划剧集（分阶段架构第三步）。"""
+        """Plan episodes (step 3 of the staged architecture)."""
         from .pipeline import extract_episodes_with_characters
 
         def report(progress: float, task: MessageLike):
@@ -1069,24 +1065,24 @@ class CogneeStore:
                 on_log(message)
             console.print(f"[dim]{message}[/dim]")
 
-        # 获取原文内容
-        log(lmsg("tasks.log.source.loading", "从文件加载原文..."))
+        # Get the original text
+        log(lmsg("tasks.log.source.loading", "Loading the original text from file..."))
         novel_content = require_imported_novel(self.project_dir)
         log(
             lmsg(
                 "tasks.log.source.loaded",
-                f"原文加载完成: {len(novel_content)} 字符",
+                f"Original text loaded: {len(novel_content)} chars",
                 charCount=len(novel_content),
             )
         )
 
-        # 获取已确认的角色列表
+        # Get the confirmed character list
         character_names = list(self._characters.keys())
-        log(f"已知角色: {len(character_names)} 个")
+        log(f"Known characters: {len(character_names)}")
 
-        # P1: 规划
-        report(0.1, "规划剧集...")
-        log(f"开始规划 {target_episodes} 集...")
+        # P1: planning
+        report(0.1, "Planning episodes...")
+        log(f"Planning {target_episodes} episodes...")
 
         episodes = await extract_episodes_with_characters(
             novel_content,
@@ -1096,21 +1092,21 @@ class CogneeStore:
             project_name=self.project_name,
         )
 
-        log(f"LLM 返回 {len(episodes)} 集")
+        log(f"LLM returned {len(episodes)} episodes")
 
-        # P2: 原子替换旧规划。删除和写入必须在同一事务中完成，避免任务
-        # 取消或 Worker 退出后只剩一张空 episodes 表。
+        # P2: atomically replace the old plan. Deletion and writing must complete in the same transaction, to avoid
+        # being left with an empty episodes table after a task cancellation or Worker exit.
         old_episode_count = len(self._episodes)
-        report(0.85, "保存新剧集...")
-        log("保存新剧集到数据库...")
+        report(0.85, "Saving new episodes...")
+        log("Saving new episodes to the database...")
         await self.replace_episodes(episodes)
-        log(f"已原子替换 {old_episode_count} 个旧剧集")
+        log(f"Atomically replaced {old_episode_count} old episodes")
 
         if len(self._episodes) != len(episodes):
-            log(f"⚠️ 警告：内存缓存 ({len(self._episodes)}) 与返回结果 ({len(episodes)}) 不一致")
+            log(f"⚠️ Warning: in-memory cache ({len(self._episodes)}) is inconsistent with the returned result ({len(episodes)})")
 
-        report(1.0, "剧集规划完成")
-        log(f"剧集规划完成: {len(episodes)} 集，编号: {list(self._episodes.keys())}")
+        report(1.0, "Episode planning complete")
+        log(f"Episode planning complete: {len(episodes)} episodes, numbers: {list(self._episodes.keys())}")
 
         return episodes
 
@@ -1121,7 +1117,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelEpisode]:
-        """从小说章节结构创建剧集（章节映射模式）。
+        """Create episodes from the novel chapter structure (chapter-mapping mode)."""
 
         Chapter mapping reads the source text and writes SQLite; it never
         touches the graph, so the implementation lives on SQLiteStore where
@@ -1143,7 +1139,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelEpisode]:
-        """基于事件的剧集规划（支持章节拆分）。"""
+        """Event-based episode planning (supports chapter splitting)."""
         from novelvideo.cognee.chapter_detector import ChapterDetector
         from novelvideo.cognee.event_extractor import EventExtractor
 
@@ -1156,37 +1152,37 @@ class CogneeStore:
                 on_log(message)
             console.print(f"[dim]{message}[/dim]")
 
-        # 1. 加载原文并检测章节
-        log(lmsg("tasks.log.source.loading", "从文件加载原文..."))
+        # 1. Load the original text and detect chapters
+        log(lmsg("tasks.log.source.loading", "Loading the original text from file..."))
         novel_text = require_imported_novel(self.project_dir)
 
         log(
             lmsg(
                 "tasks.log.source.loaded",
-                f"原文加载完成: {len(novel_text)} 字符",
+                f"Original text loaded: {len(novel_text)} chars",
                 charCount=len(novel_text),
             )
         )
 
-        # 清理剧集内容
+        # Clean up episode content
         await self.clear_episode_contents()
 
-        report(0.1, "检测章节结构...")
+        report(0.1, "Detecting chapter structure...")
         detector = ChapterDetector()
         chapters = detector.detect(novel_text)
 
         if not chapters:
-            raise ValueError("未检测到章节标记，请使用章节映射模式")
+            raise ValueError("No chapter markers detected; please use chapter-mapping mode")
 
-        log(f"检测到 {len(chapters)} 个章节，目标 {target_episodes} 集")
+        log(f"Detected {len(chapters)} chapters, target {target_episodes} episodes")
 
-        # 提取所有事件
+        # Extract all events
         extractor = EventExtractor()
         all_events: List[NovelEvent] = []
 
         for i, chapter in enumerate(chapters):
             progress = 0.1 + 0.3 * (i / len(chapters))
-            report(progress, f"提取第 {chapter.number} 章事件...")
+            report(progress, f"Extracting events of chapter {chapter.number}...")
 
             events = await extractor.extract_events(
                 chapter_num=chapter.number,
@@ -1194,30 +1190,30 @@ class CogneeStore:
                 on_log=log,
             )
             all_events.extend(events)
-            log(f"第 {chapter.number} 章: {len(events)} 个事件")
+            log(f"Chapter {chapter.number}: {len(events)} events")
 
-        log(f"共提取 {len(all_events)} 个事件")
+        log(f"Extracted {len(all_events)} events in total")
 
-        # 事件存储在内存中（不再写 Redis）
-        report(0.45, "存储事件...")
+        # Events are kept in memory (no longer written to Redis)
+        report(0.45, "Storing events...")
 
-        # AI 分配事件到剧集
-        report(0.5, "AI 规划剧集分配...")
-        log("AI 分配事件到剧集...")
+        # AI assigns events to episodes
+        report(0.5, "AI planning episode assignment...")
+        log("AI assigning events to episodes...")
         episode_assignments = await self._assign_events_to_episodes(
             all_events, target_episodes, on_log=log
         )
 
-        # 创建 NovelEpisode 并合并原文
+        # Create NovelEpisode and merge the original text
         episodes = []
         for ep_num, event_ids in episode_assignments.items():
             progress = 0.7 + 0.1 * (ep_num / target_episodes)
-            report(progress, f"创建第 {ep_num} 集...")
+            report(progress, f"Creating episode {ep_num}...")
 
             ep_events = [e for e in all_events if e.event_id in event_ids]
 
             if not ep_events:
-                log(f"⚠️ 第 {ep_num} 集没有分配到事件，跳过")
+                log(f"⚠️ Episode {ep_num} was assigned no events, skipping")
                 continue
 
             combined_content = "\n\n---\n\n".join(e.content for e in ep_events if e.content)
@@ -1231,7 +1227,7 @@ class CogneeStore:
 
             episode = NovelEpisode(
                 number=ep_num,
-                title=f"第{ep_num}集",
+                title=f"Episode {ep_num}",
                 chapter_start=chapter_start,
                 chapter_end=chapter_end,
                 raw_content=combined_content,
@@ -1247,14 +1243,14 @@ class CogneeStore:
             )
             episodes.append(episode)
 
-        # P2: 剧集与对应原文一起原子替换。
+        # P2: atomically replace episodes together with their corresponding original text.
         old_episode_count = len(self._episodes)
-        report(0.88, "保存到数据库...")
+        report(0.88, "Saving to the database...")
         await self.replace_episodes(episodes)
-        log(f"已原子替换 {old_episode_count} 个旧剧集")
+        log(f"Atomically replaced {old_episode_count} old episodes")
 
-        report(1.0, "事件级规划完成")
-        log(f"事件级规划完成: {len(episodes)} 集")
+        report(1.0, "Event-level planning complete")
+        log(f"Event-level planning complete: {len(episodes)} episodes")
 
         return episodes
 
@@ -1264,7 +1260,7 @@ class CogneeStore:
         target_episodes: int,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> Dict[int, List[str]]:
-        """AI 将事件分配到剧集。"""
+        """AI assigns events to episodes."""
         import json
         import litellm
 
@@ -1283,19 +1279,19 @@ class CogneeStore:
                 }
             )
 
-        prompt = f"""将以下 {len(events)} 个事件分配到 {target_episodes} 集中。
+        prompt = f"""Assign the following {len(events)} events to {target_episodes} episodes.
 
-事件列表：
+Event list:
 {json.dumps(event_summaries, ensure_ascii=False, indent=2)}
 
-分配原则：
-1. 保持因果关系：有 causes 关系的事件尽量在同一集或相邻集
-2. 叙事完整性：每集应有完整的小叙事弧
-3. 均衡分配：每集事件数量大致相当（平均 {len(events) // target_episodes} 个）
-4. 悬念设置：每集最后的事件适合作为 cliffhanger
-5. 按顺序分配：事件的顺序不能打乱
+Assignment principles:
+1. Preserve causality: events linked by causes should be in the same or adjacent episodes where possible
+2. Narrative completeness: each episode should have a complete small narrative arc
+3. Balanced distribution: each episode should have roughly the same number of events (about {len(events) // target_episodes} on average)
+4. Suspense: the last event of each episode should work as a cliffhanger
+5. Assign in order: the order of events must not be shuffled
 
-请返回 JSON 格式：
+Return JSON in this format:
 {{
     "assignments": {{
         "1": ["ch1_e1", "ch1_e2"],
@@ -1304,10 +1300,10 @@ class CogneeStore:
     }}
 }}
 
-只返回 JSON，不要有其他内容。"""
+Return JSON only, with nothing else."""
 
         try:
-            log("调用 LLM 分配事件...")
+            log("Calling LLM to assign events...")
             response = await litellm.acompletion(
                 model=os.environ.get("LLM_MODEL", "gpt-4o"),
                 messages=[{"role": "user", "content": prompt}],
@@ -1319,11 +1315,11 @@ class CogneeStore:
             result = json.loads(response.choices[0].message.content)
             assignments = {int(k): v for k, v in result.get("assignments", {}).items()}
 
-            log(f"LLM 分配完成: {len(assignments)} 集")
+            log(f"LLM assignment complete: {len(assignments)} episodes")
             return assignments
 
         except Exception as e:
-            log(f"LLM 分配失败: {e}，使用均匀分配")
+            log(f"LLM assignment failed: {e}, using even distribution")
             assignments = {}
             events_per_episode = max(1, len(events) // target_episodes)
             for i, event in enumerate(events):
@@ -1334,7 +1330,7 @@ class CogneeStore:
             return assignments
 
     async def add_episodes(self, episodes: List[NovelEpisode]) -> None:
-        """批量添加剧集到 SQLite。"""
+        """Batch-add episodes to SQLite."""
         await self.sqlite_store.add_episodes(episodes)
         self._sync_sqlite_caches()
 
@@ -1350,30 +1346,30 @@ class CogneeStore:
         target_episodes: int = 10,
         on_progress: Optional[Callable[[float, str], None]] = None,
     ) -> dict:
-        """导入小说文本 + 提取角色 + 规划剧集。"""
+        """Import the novel text + extract characters + plan episodes."""
 
         def report(progress: float, task: MessageLike):
             if on_progress:
                 on_progress(progress, task)
 
         if not Path(novel_path).exists():
-            raise FileNotFoundError(f"文件不存在: {novel_path}")
+            raise FileNotFoundError(f"File not found: {novel_path}")
 
-        console.print("[bold]Step 1/3: 导入原文并构建 Cognee 图谱...[/bold]")
+        console.print("[bold]Step 1/3: importing the original text and building the Cognee graph...[/bold]")
         fast_result = await self.ingest_novel_fast(
             novel_path,
             rebuild=rebuild,
             on_progress=lambda p, t: report(p * 0.3, t),
         )
 
-        report(0.3, "提取角色...")
-        console.print("[bold]Step 2/3: 从图谱提取角色...[/bold]")
+        report(0.3, "Extracting characters...")
+        console.print("[bold]Step 2/3: extracting characters from the graph...[/bold]")
         characters = await self.build_characters_from_graph(
             on_progress=lambda p, t: report(0.3 + p * 0.3, t),
         )
 
-        report(0.6, "规划剧集...")
-        console.print("[bold]Step 3/3: 规划剧集...[/bold]")
+        report(0.6, "Planning episodes...")
+        console.print("[bold]Step 3/3: planning episodes...[/bold]")
         from novelvideo.agents.episode_planner import EpisodePlannerAgent
 
         planner = EpisodePlannerAgent(self)
@@ -1383,7 +1379,7 @@ class CogneeStore:
         )
         await self.replace_episodes(episodes)
 
-        report(1.0, "导入完成")
+        report(1.0, "Import complete")
 
         return {
             "char_count": fast_result["char_count"],
@@ -1393,15 +1389,15 @@ class CogneeStore:
         }
 
     # ============================================================
-    # 查询
+    # Queries
     # ============================================================
 
     def resolve_name(self, name: str) -> str:
-        """解析别名为主名称。"""
+        """Resolve an alias to the primary name."""
         return self._alias_index.get(name, name)
 
     def get_cached_prop(self, name: str) -> Optional[NovelProp]:
-        """从当前缓存获取道具（支持别名查找）。"""
+        """Get a prop from the current cache (alias lookup supported)."""
         raw_name = str(name or "").strip()
         if not raw_name:
             return None
@@ -1432,29 +1428,29 @@ class CogneeStore:
         return self.sqlite_store._normalize_prop_menu_items(prop_menu)
 
     def get_character(self, name: str) -> Optional[NovelCharacter]:
-        """获取角色（支持别名）。"""
+        """Get a character (aliases supported)."""
         primary = self.resolve_name(name)
         return self._characters.get(primary)
 
     def get_character_prompt(self, name: str) -> Optional[str]:
-        """获取角色的面部 Prompt（支持别名）。"""
+        """Get a character's face prompt (aliases supported)."""
         char = self.get_character(name)
         return char.face_prompt if char else None
 
     def get_episode(self, number: int) -> Optional[NovelEpisode]:
-        """获取剧集。"""
+        """Get an episode."""
         return self._episodes.get(number)
 
     def get_all_characters(self) -> List[NovelCharacter]:
-        """获取所有角色。"""
+        """Get all characters."""
         return list(self._characters.values())
 
     def get_all_episodes(self) -> List[NovelEpisode]:
-        """获取所有剧集。"""
+        """Get all episodes."""
         return sorted(self._episodes.values(), key=lambda e: e.number)
 
     async def search(self, query: str, mode: str = "graph", top_k: int = 10) -> str:
-        """语义检索。"""
+        """Semantic search."""
         self._require_cognee("graph search")
         async with ladybug_graph_access(self.state_dir, read_only=True):
             with preserve_st_env():
@@ -1478,9 +1474,9 @@ class CogneeStore:
                         top_k=top_k,
                     )
             except DatasetNotFoundError:
-                return "暂无相关数据，请先运行 cognee-ingest 导入小说"
+                return "No relevant data yet; run cognee-ingest to import the novel first"
             except Exception as e:
-                return f"搜索出错: {str(e)}"
+                return f"Search error: {str(e)}"
 
         if isinstance(result, list):
             parts = []
@@ -1514,8 +1510,8 @@ class CogneeStore:
         return str(value)
 
     async def load_graph_state(self) -> None:
-        """从 SQLite 加载角色和剧集到内存缓存。"""
-        print("[load_graph_state] 从 SQLite 加载...")
+        """Load characters and episodes from SQLite into the in-memory cache."""
+        print("[load_graph_state] Loading from SQLite...")
         try:
             await self.sqlite_store.load_graph_state()
             self._sync_sqlite_caches()
@@ -1528,10 +1524,10 @@ class CogneeStore:
                 episode.prop_menu = self._normalize_prop_menu_items(episode.prop_menu)
 
             print(
-                f"[load_graph_state] 加载完成: 角色={len(self._characters)}, 剧集={len(self._episodes)}, 道具={len(self._props)}"
+                f"[load_graph_state] Load complete: characters={len(self._characters)}, episodes={len(self._episodes)}, props={len(self._props)}"
             )
         except Exception as e:
-            print(f"[load_graph_state] 加载失败: {e}，使用空数据")
+            print(f"[load_graph_state] Load failed: {e}, using empty data")
             self._characters.clear()
             self._episodes.clear()
             self._props.clear()
@@ -1539,19 +1535,19 @@ class CogneeStore:
             self._share_sqlite_caches()
 
     # ============================================================
-    # 添加/更新
+    # Add/update
     # ============================================================
 
     async def add_character(self, character: NovelCharacter):
-        """添加角色到 SQLite。"""
+        """Add a character to SQLite."""
         await self.sqlite_store.add_character(character)
         self._sync_sqlite_caches()
 
     async def update_character(self, name: str, **updates) -> None:
-        """更新角色属性。"""
+        """Update character attributes."""
         char = self.get_character(name)
         if not char:
-            raise ValueError(f"角色 {name} 不存在")
+            raise ValueError(f"Character {name} does not exist")
 
         for key, value in updates.items():
             if hasattr(char, key):
@@ -1566,20 +1562,20 @@ class CogneeStore:
 
         # Re-save entire character
         await self.add_character(char)
-        console.print(f"[green]已更新角色: {name}[/green]")
+        console.print(f"[green]Character updated: {name}[/green]")
 
     async def rename_character(self, old_name: str, new_name: str) -> None:
-        """重命名角色。"""
+        """Rename a character."""
         await self.sqlite_store.rename_character(old_name, new_name)
         self._sync_sqlite_caches()
 
     async def delete_character(self, name: str) -> None:
-        """删除角色。"""
+        """Delete a character."""
         await self.sqlite_store.delete_character(name)
         self._sync_sqlite_caches()
 
     # ============================================================
-    # 身份管理
+    # Identity management
     # ============================================================
 
     async def add_character_identity(
@@ -1587,7 +1583,7 @@ class CogneeStore:
         character_name: str,
         identity: CharacterIdentity,
     ) -> None:
-        """为角色添加一个新身份。"""
+        """Add a new identity to a character."""
         await self.sqlite_store.add_character_identity(character_name, identity)
         self._sync_sqlite_caches()
 
@@ -1597,7 +1593,7 @@ class CogneeStore:
         identity_id: str,
         **updates,
     ) -> None:
-        """更新角色的某个身份。"""
+        """Update an identity of a character."""
         await self.sqlite_store.update_character_identity(character_name, identity_id, **updates)
         self._sync_sqlite_caches()
 
@@ -1606,12 +1602,12 @@ class CogneeStore:
         character_name: str,
         identity_id: str,
     ) -> None:
-        """删除角色的某个身份。"""
+        """Delete an identity of a character."""
         await self.sqlite_store.delete_character_identity(character_name, identity_id)
         self._sync_sqlite_caches()
 
     async def _cascade_identity_change(self, old_id: str, new_id: str | None = None):
-        """级联更新所有 episode 的 identity_ids。"""
+        """Cascade-update identity_ids of all episodes."""
         for ep in self._episodes.values():
             ids = ep.identity_ids
             if old_id in ids:
@@ -1629,10 +1625,10 @@ class CogneeStore:
         character_name: str,
         identity_id: str,
     ) -> bool:
-        """删除身份图片，保留身份本身。"""
+        """Delete the identity image, keeping the identity itself."""
         char = self.get_character(character_name)
         if not char:
-            raise ValueError(f"角色 {character_name} 不存在")
+            raise ValueError(f"Character {character_name} does not exist")
 
         identities = char.identities
         target_identity = None
@@ -1642,7 +1638,7 @@ class CogneeStore:
                 break
 
         if not target_identity:
-            raise ValueError(f"身份 {identity_id} 不存在")
+            raise ValueError(f"Identity {identity_id} does not exist")
 
         image_path = compute_identity_path(
             Path(self.project_dir),
@@ -1650,25 +1646,25 @@ class CogneeStore:
             target_identity.identity_name,
         )
         if not image_path:
-            console.print(f"[yellow]身份 {identity_id} 没有图片[/yellow]")
+            console.print(f"[yellow]Identity {identity_id} has no image[/yellow]")
             return False
 
         image_file = Path(image_path)
         if image_file.exists():
             image_file.unlink()
-            console.print(f"[green]已删除图片文件: {image_path}[/green]")
+            console.print(f"[green]Image file deleted: {image_path}[/green]")
             return True
 
-        console.print(f"[yellow]图片文件不存在: {image_path}[/yellow]")
+        console.print(f"[yellow]Image file does not exist: {image_path}[/yellow]")
         return False
 
     def get_identity_for_alias(
         self,
         alias: str,
     ) -> Optional[CharacterIdentity]:
-        """根据别名获取对应的身份。
+        """Get the identity matching an alias.
 
-        无剧集上下文时只在角色只有一个身份时返回；多身份角色必须由上层提供 episode 级约束。
+        Without episode context, only returns when the character has a single identity; for multi-identity characters the upper layer must provide an episode-level constraint.
         """
         char = self.get_character(alias)
         if not char:
@@ -1678,7 +1674,7 @@ class CogneeStore:
         return char.identities[0]
 
     async def add_episode(self, episode: NovelEpisode):
-        """添加单个剧集。"""
+        """Add a single episode."""
         await self.add_episodes([episode])
         self._episodes[episode.number] = episode
 
@@ -1696,14 +1692,14 @@ class CogneeStore:
             self._episodes[episode_number] = refreshed
 
     async def update_episode(self, episode_number: int, **updates) -> None:
-        """更新剧集属性。"""
+        """Update episode attributes."""
         episode = self.get_episode(episode_number)
         if not episode:
             print(
-                f"[update_episode] 剧集 {episode_number} 不在 _episodes 缓存中! 缓存 keys={list(self._episodes.keys())}",
+                f"[update_episode] Episode {episode_number} is not in the _episodes cache! cache keys={list(self._episodes.keys())}",
                 flush=True,
             )
-            raise ValueError(f"剧集 {episode_number} 不存在")
+            raise ValueError(f"Episode {episode_number} does not exist")
 
         old_number = episode.number
         persisted = await self.sqlite_store.get_episode_from_graph(episode_number)
@@ -1720,7 +1716,7 @@ class CogneeStore:
                     setattr(episode, field_name, getattr(persisted, field_name))
 
         print(
-            f"[update_episode] ep{episode_number} 更新前: identity_ids={episode.identity_ids}, updates={list(updates.keys())}",
+            f"[update_episode] ep{episode_number} before update: identity_ids={episode.identity_ids}, updates={list(updates.keys())}",
             flush=True,
         )
 
@@ -1732,10 +1728,10 @@ class CogneeStore:
             elif hasattr(episode, key):
                 setattr(episode, key, value)
             else:
-                print(f"[update_episode] 警告: ep{episode_number} 没有属性 {key}", flush=True)
+                print(f"[update_episode] Warning: ep{episode_number} has no attribute {key}", flush=True)
 
         print(
-            f"[update_episode] ep{episode_number} 更新后: identity_ids={episode.identity_ids}",
+            f"[update_episode] ep{episode_number} after update: identity_ids={episode.identity_ids}",
             flush=True,
         )
 
@@ -1745,21 +1741,21 @@ class CogneeStore:
             self._episodes[new_number] = episode
 
         await self.add_episodes([episode])
-        console.print(f"[green]已更新剧集: 第{episode.number}集[/green]")
+        console.print(f"[green]Episode updated: Episode {episode.number}[/green]")
 
     def get_sketch_colors(self, episode_number: int) -> dict:
-        """从 episode 读取 sketch_colors。"""
+        """Read sketch_colors from the episode."""
         return self.sqlite_store.get_sketch_colors(episode_number)
 
     async def set_sketch_colors(self, episode_number: int, colors: dict) -> None:
-        """将 sketch_colors 写入 episode。"""
+        """Write sketch_colors into the episode."""
         await self.sqlite_store.set_sketch_colors(episode_number, colors)
         self._sync_sqlite_caches()
 
     async def set_beat_detected_identities(
         self, episode_number: int, detections: dict[int, list[str]]
     ) -> int:
-        """批量写入 per-beat 检测身份。"""
+        """Batch-write the per-beat detected identities."""
         count = await self.sqlite_store.set_beat_detected_identities(episode_number, detections)
         print(f"[store] set_beat_detected_identities: ep{episode_number} updated {count} beats")
         return count
@@ -1767,29 +1763,29 @@ class CogneeStore:
     async def set_beat_detected_props(
         self, episode_number: int, detections: dict[int, list[str]]
     ) -> int:
-        """批量写入 per-beat 检测道具。"""
+        """Batch-write the per-beat detected props."""
         count = await self.sqlite_store.set_beat_detected_props(episode_number, detections)
         print(f"[store] set_beat_detected_props: ep{episode_number} updated {count} beats")
         return count
 
     async def add_visual_beats(self, beats: List[NovelVisualBeat]):
-        """添加视觉节拍到 SQLite (delegates to SQLiteStore)."""
+        """Add a visual beat to SQLite (delegates to SQLiteStore)."""
         await self._ensure_db()
         await self.sqlite_store.add_visual_beats(beats)
 
     async def delete_beats_for_episode(self, episode_number: int) -> int:
-        """删除指定剧集的所有 Beat。"""
+        """Delete all Beats of the specified episode."""
         return await self._delete_old_beats_for_episode(episode_number)
 
     async def _delete_old_beats_for_episode(self, episode_number: int) -> int:
-        """删除指定剧集的所有 Beat。"""
+        """Delete all Beats of the specified episode."""
         deleted = await self.sqlite_store.delete_beats_for_episode(episode_number)
         if deleted > 0:
-            console.print(f"[dim]已删除第 {episode_number} 集的 {deleted} 个旧 Beat[/dim]")
+            console.print(f"[dim]Deleted {deleted} old Beats of episode {episode_number}[/dim]")
         return deleted
 
     # ============================================================
-    # Scene: 从图谱构建
+    # Scene: build from the graph
     # ============================================================
 
     async def build_scenes_from_graph(
@@ -1797,10 +1793,10 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelScene]:
-        """从 Cognee 图谱补充基础场景。
+        """Supplement base scenes from the Cognee graph.
 
-        这里只补缺失的基础场景；已有基础场景和派生 plate 都是资产事实，
-        不能被一次图谱重扫清空或覆盖。
+        This only fills in missing base scenes; existing base scenes and derived plates are asset facts
+        and must not be cleared or overwritten by a single graph rescan.
         """
         self._require_cognee("graph scene build")
         from .pipeline import extract_scenes_from_graph
@@ -1815,8 +1811,8 @@ class CogneeStore:
             console.print(f"[dim]{message}[/dim]")
 
         require_imported_novel(self.project_dir)
-        report(0.1, "从图谱提取场景节点...")
-        log("从图谱提取基础场景候选...")
+        report(0.1, "Extracting scene nodes from the graph...")
+        log("Extracting base scene candidates from the graph...")
         with self.embedding_model_scope():
             scenes = await extract_scenes_from_graph(
                 dataset_name=self.dataset_name,
@@ -1828,13 +1824,13 @@ class CogneeStore:
             )
 
         if not scenes:
-            log("⚠️ 图谱提取无结果，保留现有场景数据")
-            report(1.0, "提取无结果")
+            log("⚠️ Graph extraction returned nothing; keeping existing scene data")
+            report(1.0, "Extraction returned nothing")
             return []
 
-        log(f"从图谱提取了 {len(scenes)} 个场景")
-        report(0.8, "保存新增场景...")
-        log("保存新增场景到数据库...")
+        log(f"Extracted {len(scenes)} scenes from the graph")
+        report(0.8, "Saving newly added scenes...")
+        log("Saving newly added scenes to the database...")
         from .pipeline import should_repair_scene_placeholder
 
         added: list[NovelScene] = []
@@ -1863,20 +1859,20 @@ class CogneeStore:
             await self.sqlite_store.add_scene(scene)
             added.append(scene)
         log(
-            f"已新增 {len(added)} 个场景，修复占位描述 {repaired} 个，"
-            f"跳过已有 {skipped} 个"
+            f"Added {len(added)} scenes, repaired {repaired} placeholder descriptions, "
+            f"skipped {skipped} existing"
         )
 
-        report(1.0, "场景提取完成")
+        report(1.0, "Scene extraction complete")
         log(
-            f"场景提取完成: 新增 {len(added)} 个，修复 {repaired} 个，"
-            f"已有 {skipped} 个"
+            f"Scene extraction complete: {len(added)} added, {repaired} repaired, "
+            f"{skipped} existing"
         )
 
         return added
 
     # ============================================================
-    # Prop: 从图谱构建
+    # Prop: build from the graph
     # ============================================================
 
     async def build_props_from_graph(
@@ -1884,7 +1880,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelProp]:
-        """从图谱构建道具（分阶段架构第二步）。"""
+        """Build props from the graph (step 2 of the staged architecture)."""
         self._require_cognee("graph prop build")
         from .pipeline import extract_props_from_graph
 
@@ -1897,7 +1893,7 @@ class CogneeStore:
                 on_log(message)
             console.print(f"[dim]{message}[/dim]")
 
-        report(0.05, "收集已有道具数据...")
+        report(0.05, "Collecting existing prop data...")
         existing_prop_aliases: dict[str, list[str]] = {}
         canonical_prop_hints: set[str] = set()
         canonical_prop_alias_targets: dict[str, set[str]] = {}
@@ -1924,14 +1920,14 @@ class CogneeStore:
                 for entry in prop_assets_dir.iterdir()
                 if entry.is_dir() and entry.name.strip()
             )
-        log(f"收集了 {len(canonical_prop_hints)} 个已有道具线索")
+        log(f"Collected {len(canonical_prop_hints)} existing prop hints")
 
-        # P1: 提取新道具
-        report(0.1, "从图谱提取道具节点...")
-        log("从图谱提取道具候选...")
+        # P1: extract new props
+        report(0.1, "Extracting prop nodes from the graph...")
+        log("Extracting prop candidates from the graph...")
         novel_text = self.load_novel_content()
         if novel_text:
-            log(f"已加载原文全文用于辅助道具提取: {len(novel_text)} 字符")
+            log(f"Loaded the full original text to assist prop extraction: {len(novel_text)} chars")
         with self.embedding_model_scope():
             props = await extract_props_from_graph(
                 dataset_name=self.dataset_name,
@@ -1943,13 +1939,13 @@ class CogneeStore:
             )
 
         if not props:
-            log("⚠️ 图谱提取无结果，保留现有道具数据")
-            report(1.0, "提取无结果")
+            log("⚠️ Graph extraction returned nothing; keeping existing prop data")
+            report(1.0, "Extraction returned nothing")
             return []
 
-        log(f"从图谱提取了 {len(props)} 个道具")
+        log(f"Extracted {len(props)} props from the graph")
 
-        # P1.5: 保留已有更具体的道具名，避免重建时退化成泛名（如 办公纸箱 -> 纸箱）
+        # P1.5: keep existing more specific prop names, to avoid regressing to a generic name on rebuild (e.g. "office carton" -> "carton")
         used_prop_names: set[str] = set()
         for prop in props:
             if not prop.name:
@@ -1988,7 +1984,7 @@ class CogneeStore:
                         ]
                     )
                 )
-                log(f"保留更具体的已有道具名: {original_name} -> {prop.name}")
+                log(f"Keeping the existing more specific prop name: {original_name} -> {prop.name}")
             if prop.name in existing_prop_aliases:
                 prop.aliases = list(
                     dict.fromkeys(
@@ -2003,30 +1999,30 @@ class CogneeStore:
                     )
                 )
             used_prop_names.add(prop.name)
-        report(0.8, "清理旧道具数据...")
+        report(0.8, "Cleaning up old prop data...")
         try:
             deleted = await self.sqlite_store.delete_all_props()
-            log(f"已删除 {deleted} 个旧道具")
+            log(f"Deleted {deleted} old props")
         except Exception as e:
-            log(f"删除旧道具失败: {e}")
+            log(f"Failed to delete old props: {e}")
 
-        report(0.85, "保存新道具...")
-        log("保存新道具到数据库...")
+        report(0.85, "Saving new props...")
+        log("Saving new props to the database...")
         for prop in props:
             await self.sqlite_store.add_prop(prop)
-        log(f"已保存 {len(props)} 个道具")
+        log(f"Saved {len(props)} props")
 
-        report(1.0, "道具提取完成")
-        log(f"道具提取完成: {len(props)} 个")
+        report(1.0, "Prop extraction complete")
+        log(f"Prop extraction complete: {len(props)} props")
 
         return props
 
     async def attach_beats_to_episode(self, episode_number: int, beats: List[NovelVisualBeat]):
-        """将视觉节拍关联到指定剧集（SQLite 中通过 episode_number 自动关联）。"""
-        pass  # beats 表已有 episode_number 外键
+        """Associate visual beats with the specified episode (automatically linked via episode_number in SQLite)."""
+        pass  # the beats table already has an episode_number foreign key
 
     async def persist_beats_from_script(self, episode_number: int, beats_data: List[dict]):
-        """从脚本数据持久化 Beats。"""
+        """Persist Beats from script data."""
         existing_rows = await self.get_beats_for_episode(episode_number)
         existing_by_num = {beat.beat_number: beat for beat in existing_rows}
         await self._do_persist_beats(episode_number, beats_data, existing_by_num=existing_by_num)
@@ -2036,7 +2032,7 @@ class CogneeStore:
         episode_number: int,
         beats_data: List[dict],
     ) -> int:
-        """只更新 beats 的缺失字段。"""
+        """Only update the missing fields of beats."""
         return await self.sqlite_store.patch_beats_missing_fields(episode_number, beats_data)
 
     async def _episode_asset_ref_scope(self, episode_number: int) -> tuple[set[str], set[str]]:
@@ -2089,7 +2085,7 @@ class CogneeStore:
         beats_data: List[dict],
         existing_by_num: Dict[int, NovelVisualBeat] | None = None,
     ):
-        """实际执行 Beat 持久化。"""
+        """Actually perform Beat persistence."""
         existing_by_num = existing_by_num or {}
         keep_numbers = {
             int(b.get("beat_number", 0)) for b in beats_data if int(b.get("beat_number", 0))
@@ -2186,18 +2182,18 @@ class CogneeStore:
             await self.add_visual_beats(beats)
 
     # ============================================================
-    # Phase 2: 组装 dict / persist NarrationScript
+    # Phase 2: assemble dict / persist NarrationScript
     # ============================================================
 
     async def get_script_as_dict(self, episode_number: int) -> Optional[Dict]:
-        """从 SQLite 组装与 JSON 兼容的脚本 dict，替代 load_script()。"""
+        """Assemble a JSON-compatible script dict from SQLite, replacing load_script()."""
         return await self.sqlite_store.get_script_as_dict(episode_number)
 
     async def persist_narration_script(self, script) -> None:
-        """接收 NarrationScript，映射 VisualBeat 字段到 SQLite，删旧插新。
+        """Accept a NarrationScript, map VisualBeat fields to SQLite, delete old and insert new.
 
         Args:
-            script: NarrationScript 实例 (from novelvideo.models)
+            script: NarrationScript instance (from novelvideo.models)
         """
         allowed_identity_ids, allowed_prop_ids = await self._episode_asset_ref_scope(
             script.episode_number
@@ -2247,49 +2243,49 @@ class CogneeStore:
         await self.add_visual_beats(beats)
 
     # ============================================================
-    # SQLite 辅助方法
+    # SQLite helper methods
     # ============================================================
 
     async def _update_character_field(self, name: str, field: str, value: Any) -> bool:
-        """更新角色的单个字段。"""
+        """Update a single field of a character."""
         updated = await self.sqlite_store._update_character_field(name, field, value)
         self._sync_sqlite_caches()
         return updated
 
     async def list_characters(self) -> List[NovelCharacter]:
-        """列出所有角色。"""
+        """List all characters."""
         return await self.sqlite_store.list_characters()
 
     async def list_episodes(self) -> List[NovelEpisode]:
-        """列出所有剧集。"""
+        """List all episodes."""
         return await self.sqlite_store.list_episodes()
 
     async def list_visual_beats(self) -> List[NovelVisualBeat]:
-        """列出所有视觉节拍。"""
+        """List all visual beats."""
         return await self.sqlite_store.list_visual_beats()
 
     async def list_beat_asset_refs(self) -> List[BeatAssetRefRow]:
-        """每个 beat 的资产引用字段（只取六列，不构造 Beat 对象）。"""
+        """Asset reference fields of each beat (only six columns, without constructing Beat objects)."""
         return await self.sqlite_store.list_beat_asset_refs()
 
     async def get_character_from_graph(self, name: str) -> Optional[NovelCharacter]:
-        """从 SQLite 获取角色（兼容旧接口名）。"""
+        """Get a character from SQLite (compatible with the old interface name)."""
         return await self.sqlite_store.get_character_from_graph(name)
 
     async def get_episode_from_graph(self, number: int) -> Optional[NovelEpisode]:
-        """从 SQLite 获取剧集（兼容旧接口名）。"""
+        """Get an episode from SQLite (compatible with the old interface name)."""
         return await self.sqlite_store.get_episode_from_graph(number)
 
     async def count_beats_by_episode(self) -> Dict[int, int]:
-        """每集的 Beat 数（一次分组查询，不构造 Beat 对象）。"""
+        """Beat count of each episode (one grouped query, without constructing Beat objects)."""
         return await self.sqlite_store.count_beats_by_episode()
 
     async def get_beats_for_episode(self, number: int) -> List[NovelVisualBeat]:
-        """获取指定剧集的所有 Beat。"""
+        """Get all Beats of the specified episode."""
         return await self.sqlite_store.get_beats_for_episode(number)
 
     async def get_beats_as_dicts(self, episode_number: int) -> List[Dict[str, Any]]:
-        """从 SQLite 获取 Beats，返回与 JSON 格式兼容的字典列表。"""
+        """Get Beats from SQLite, returning a list of dicts compatible with the JSON format."""
         return await self.sqlite_store.get_beats_as_dicts(episode_number)
 
     async def get_beat_prompts(
@@ -2297,7 +2293,7 @@ class CogneeStore:
         episode_number: int,
         beat_number: int | None = None,
     ) -> Dict[str, Optional[str]]:
-        """获取单个 Beat 的视频提示词字段。"""
+        """Get the video prompt fields of a single Beat."""
         return await self.sqlite_store.get_beat_prompts(episode_number, beat_number)
 
     async def update_beat_asset(
@@ -2320,7 +2316,7 @@ class CogneeStore:
         duration_seconds: float | None = None,
         is_manual_shot: bool | None = None,
     ) -> bool:
-        """更新 Beat 的资源字段。"""
+        """Update the resource fields of a Beat."""
         return await self.sqlite_store.update_beat_asset(
             episode_number=episode_number,
             beat_number=beat_number,
@@ -2342,25 +2338,25 @@ class CogneeStore:
         )
 
     async def delete_manual_beat(self, episode_number: int, beat_number: int) -> bool:
-        """删除单个手工分镜 beat（is_manual_shot=1 才会被删）。"""
+        """Delete a single manual storyboard beat (only deleted when is_manual_shot=1)."""
         return await self.sqlite_store.delete_manual_beat(episode_number, beat_number)
 
     def format_character_context(self, character: NovelCharacter) -> str:
-        aliases = ", ".join(character.aliases) if character.aliases else "无"
+        aliases = ", ".join(character.aliases) if character.aliases else "none"
         lines = [
             f"## {character.name}",
-            f"- 角色定位: {character.role or '未知'}",
-            f"- 性别: {character.gender or '未知'}",
-            f"- 别名: {aliases}",
+            f"- Role: {character.role or 'unknown'}",
+            f"- Gender: {character.gender or 'unknown'}",
+            f"- Aliases: {aliases}",
         ]
         if character.description:
-            lines.append(f"- 描述: {character.description}")
+            lines.append(f"- Description: {character.description}")
         if character.face_prompt:
-            lines.append(f"- 面部 Prompt: {character.face_prompt}")
+            lines.append(f"- Face prompt: {character.face_prompt}")
         if character.identities:
-            lines.append("- 可用身份:")
-            lines.append(f"  - character_name 填: {character.name}")
-            lines.append("  - 可选 identity_id:")
+            lines.append("- Available identities:")
+            lines.append(f"  - character_name: {character.name}")
+            lines.append("  - Selectable identity_id:")
             for identity in character.identities:
                 desc = ""
                 if identity.appearance_details:
@@ -2375,35 +2371,35 @@ class CogneeStore:
 
     def format_episode_context(self, episode: NovelEpisode) -> str:
         lines = [
-            f"## 第 {episode.number} 集: {episode.title}",
-            f"- 内容摘要: {episode.content_summary}",
-            f"- 主要冲突: {episode.main_conflict}",
-            f"- 关键事件: {', '.join(episode.key_events) if episode.key_events else '无'}",
-            f"- 出场角色: {', '.join(episode.character_names) if episode.character_names else '未知'}",
+            f"## Episode {episode.number}: {episode.title}",
+            f"- Content summary: {episode.content_summary}",
+            f"- Main conflict: {episode.main_conflict}",
+            f"- Key events: {', '.join(episode.key_events) if episode.key_events else 'none'}",
+            f"- Characters present: {', '.join(episode.character_names) if episode.character_names else 'unknown'}",
         ]
         if episode.cliffhanger:
-            lines.append(f"- 结尾悬念: {episode.cliffhanger}")
+            lines.append(f"- Cliffhanger: {episode.cliffhanger}")
         return "\n".join(lines)
 
     async def _prune_cognee_only(self):
-        """只清除 cognee 图谱数据，保留 SQLite 数据。"""
-        # 清理 cognee_system（包含 LanceDB 向量、Kuzu 图谱、cognee 元数据）
+        """Clear only the cognee graph data, keeping the SQLite data."""
+        # Clean up cognee_system (contains LanceDB vectors, the Kuzu graph and cognee metadata)
         import shutil
 
         cognee_dir = os.path.join(self.state_dir, "cognee_system")
         if os.path.exists(cognee_dir):
             shutil.rmtree(cognee_dir)
-            console.print(f"[green]已清理 cognee 数据: {cognee_dir}[/green]")
+            console.print(f"[green]Cleaned cognee data: {cognee_dir}[/green]")
 
     async def delete_project_data(self):
-        """删除当前项目的所有 SQLite 数据。"""
+        """Delete all SQLite data of the current project."""
         try:
             await self.sqlite_store.delete_project_data()
             self._sync_sqlite_caches()
 
-            console.print(f"[green]已删除项目 '{self.project_name}' 的所有数据[/green]")
+            console.print(f"[green]Deleted all data of project '{self.project_name}'[/green]")
         except Exception as e:
-            console.print(f"[red]删除数据失败: {e}[/red]")
+            console.print(f"[red]Failed to delete data: {e}[/red]")
             self._characters.clear()
             self._episodes.clear()
             self._props.clear()
@@ -2411,7 +2407,7 @@ class CogneeStore:
             raise
 
     # ============================================================
-    # 便捷属性
+    # Convenience properties
     # ============================================================
 
     @property
@@ -2424,12 +2420,12 @@ class CogneeStore:
 
 
 # ============================================================
-# 工厂函数
+# Factory function
 # ============================================================
 
 
 async def create_cognee_store(project_name: str) -> CogneeStore:
-    """创建并初始化 CogneeStore。"""
+    """Create and initialize CogneeStore."""
     store = CogneeStore(project_name)
     await store.initialize()
     await store.load_graph_state()

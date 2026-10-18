@@ -163,10 +163,10 @@ class _WorkerSlot:
     active_turns: int = 0
     authz_generation: int = 0
     one_shot: bool = False
-    # 出网身份，与上面的会话身份 (`scope_kind`/`project_id`) 是两套东西。
-    # 记在 slot 上只为一件事：`_rotate_slot_locked` 重建 worker 时必须带着它们，
-    # 否则替换出来的 worker 走 `authorization is None` 分支，静默退回部署级
-    # `NEWAPI_API_KEY`——组织身份被洗掉，不报错也不留痕（OI-54 同一种病）。
+    # Egress identity, which is a separate thing from the session identity above (`scope_kind`/`project_id`).
+    # It is recorded on the slot for one reason: `_rotate_slot_locked` must carry it when rebuilding the worker,
+    # otherwise the replacement worker takes the `authorization is None` branch and silently falls back to the deployment-level
+    # `NEWAPI_API_KEY`: the organization identity is washed out with no error and no trace (the same disease as OI-54).
     egress_project_id: str | None = None
     requester_user_id: str | None = None
     # No authorization is kept. It carries a real API key, and a slot outlives
@@ -1017,10 +1017,10 @@ class HermesPool:
         if authorization is not None:
             if not egress_project_id:
                 raise EgressBoundaryError("TASK_ENVELOPE_INVALID")
-            # 身份复核要有独立来源才叫复核。取 `authorization.context` 自己的值，
-            # `build_hermes_child_env` 里那次 `_strict_admission` 就退化成 `x != x`
-            # 恒真通过。缺了就拒，**不得回落成 `authorization.context.requester_user_id`**
-            # ——那等于把刚修好的洞原样填回去。
+            # An identity re-check only counts as a re-check with an independent source. Take the value from `authorization.context` itself;
+            # otherwise the `_strict_admission` in `build_hermes_child_env` degenerates into `x != x`,
+            # which always passes. Reject if it is missing, and **never fall back to `authorization.context.requester_user_id`**
+            # - that would put the freshly fixed hole straight back.
             if not requester_user_id:
                 raise EgressBoundaryError("TASK_ENVELOPE_INVALID")
             agent_token_env = {
@@ -1056,9 +1056,9 @@ class HermesPool:
             "NOVELVIDEO_RUNTIME_DIR": str(config.RUNTIME_DIR),
             "ST_EDITION": os.environ.get("ST_EDITION", "ce"),
             "DRAMACLAW_FREEZONE_TOOL_RESULT_DIR": str(home / "tmp" / "freezone-tool-results"),
-            # 绝不把控制面数据库凭据传进 Hermes 子进程:worker 只经短期 agent token
-            # 走 HTTP API,拿到 DSN 会让插件/依赖的任意代码执行缺陷绕开业务鉴权直连库。
-            # (凭据化启动路径 build_hermes_child_env 本就不带 DSN,这里对齐旧分支。)
+            # Never pass control-plane database credentials to the Hermes child process: the worker only goes through the short-lived agent token
+            # to the HTTP API; handing it a DSN would let an arbitrary code-execution flaw in a plugin/dependency bypass business authorization and reach the database directly.
+            # (The credentialed startup path build_hermes_child_env never carried a DSN anyway; this aligns the legacy branch.)
             "DRAMACLAW_USERNAME": username,
             "DRAMACLAW_USER": username,
             "DRAMACLAW_AGENT_TOKEN": token.value,

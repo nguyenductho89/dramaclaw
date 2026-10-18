@@ -145,10 +145,10 @@ export function useTaskStream(options: UseTaskStreamOptions): TaskStreamState {
             );
           }
           if (showCompleteToast) {
-            // 用本地化后的那份，不是 data.current_task —— run_core 收尾时固定写
-            // current_task="完成"，直接回显就是英文界面里的一处中文。currentTaskText
-            // 已经把这个终态哨兵换成了状态词条；它为空（后端没给文案）时也要走词条，
-            // 硬编码的 "Task completed" 在中文界面同样是错的。
+            // Use the localized one, not data.current_task - run_core always writes
+            // current_task="Completed" at the end, and echoing it directly puts untranslated text in other UI languages. currentTaskText
+            // already swaps that terminal sentinel for the status entry; when it is empty (the backend gave no text) the entry must be used too,
+            // and a hard-coded "Task completed" would be wrong in the other languages too.
             toast.success(currentTask || t("taskCenter.status.completed"));
           }
           onCompleteRef.current?.(data.result);

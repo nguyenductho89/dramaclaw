@@ -75,21 +75,21 @@ class OperationState(str, Enum):
 
 
 class HandleKind(str, Enum):
-    """一次出网操作**能拿到什么样的句柄**——由调用方在 claim 时声明。
+    """What kind of handle an outbound operation **can obtain** -- declared by the caller at claim time.
 
-    这是判别式：终态里 `provider_job_id` / `result_ref` 各自允许什么形状，由类别
-    决定，DB 侧的 `egress_operations_output_check` 照此判。原先只有一条「非空」
-    检查，占位串就能满足它，等于没有保证。
+    This is a discriminator: which shapes `provider_job_id` / `result_ref` may take in a terminal state is
+    decided by the kind, and the DB-side `egress_operations_output_check` judges accordingly. Previously there was only a "non-empty"
+    check, which a placeholder string could satisfy, amounting to no guarantee at all.
     """
 
     PROVIDER_JOB = "provider_job"
-    """有上游异步作业：accepted 起就必须留下上游作业号，completed 还要有结果引用。"""
+    """Has an upstream async job: from accepted on, the upstream job id must be kept, and completed also needs a result reference."""
 
     LOCAL_RESULT = "local_result"
-    """没有上游作业，但有真实结果引用（如同步音频落盘的路径）。"""
+    """No upstream job, but a real result reference (e.g. the path of synchronously written audio)."""
 
     NONE = "none"
-    """纯服务内部副作用：两列都没有真值可填，于是要求两列都是 NULL。"""
+    """Purely service-internal side effect: neither column has a real value to fill, so both columns must be NULL."""
 
 
 class EgressOperationError(RuntimeError):
@@ -112,8 +112,8 @@ class OperationSpec:
     credential_id: str
     credential_version: int
     request_digest: str
-    # 必填、无默认值：给默认值就把「我声明它没有句柄」和「我忘了写」压回同一个
-    # 值，新约束会重新退化成 OI-49 那种「读上去像保证」的东西。
+    # Required, no default: a default would collapse "I declare it has no handle" and "I forgot to write it" into the same
+    # value, and the new constraint would degrade back into the OI-49 kind of "reads like a guarantee".
     handle_kind: HandleKind
 
     def __post_init__(self) -> None:
@@ -136,8 +136,8 @@ class OperationSpec:
 
     @property
     def operation_key(self) -> str:
-        # handle_kind 刻意**不在**身份里：它描述的是这次操作留什么句柄，不是它
-        # 是哪一次操作。放进来会让存量行的 replay 整体失配。
+        # handle_kind is deliberately **not** part of the identity: it describes what handle this operation leaves behind, not which
+        # operation it is. Including it would make replay of existing rows mismatch wholesale.
         identity = {
             "organization_id": self.organization_id,
             "project_id": self.project_id,
@@ -198,9 +198,9 @@ class EgressOperationPort(Protocol):
         operation_id: str,
         transition_token: str,
         expected_version: int,
-        # None 不是「忘了传」：类别写在行上，DB 是权威，`local_result` 与 `none`
-        # 本来就没有上游作业号可填。这与 OI-48 谴责的「用可选参数当身份载体」不是
-        # 一回事——那里 None 意味着信息丢失，这里 None 是一个被约束校验的声明。
+        # None is not "forgot to pass": the kind is written on the row and the DB is authoritative; `local_result` and `none`
+        # simply have no upstream job id to fill. This is not the same thing as the "optional parameter as identity carrier" condemned by OI-48
+        # -- there None meant lost information, here None is a declaration checked by a constraint.
         provider_job_id: str | None,
         requester_user_id: str | None = None,
         membership_id: str | None = None,
@@ -231,18 +231,18 @@ async def record_unknown_outcome(
     claim: OperationClaimResult,
     capability: str,
 ) -> None:
-    """出网调用失败后尽力把行收敛到 `unknown`；收不了就记一条日志，绝不改变控制流。
+    """After an outbound call fails, make a best effort to converge the row to `unknown`; if it cannot, log a line and never change control flow.
 
-    住在这里而不是各调用点，是因为三条服务出网路径（relay / newapi 管理面 / 备份同步）
-    的收尾代码原本**逐字相同**，而它们各自的注释里已经记着同一类漏检命中过一次
-    （「原先从 `dispatching` 直跳 completed」）。同一段话抄三遍就会漏改三处里的两处。
+    It lives here rather than at each call site because the epilogue code of the three service egress paths (relay / newapi admin plane / backup sync)
+    was originally **verbatim identical**, and their own comments already record that the same class of missed check was hit once
+    ("previously jumped straight from `dispatching` to completed"). Copying the same passage three times means missing two of the three edits.
 
-    **不抛**：出网已经失败了，台账写不进去不该把它变成另一种失败——调用方对台账无能为力，
-    分裂成两种错误只会让上层更难处理。行的收敛由库内收割器兜底（EE
-    `0066_egress_operation_reaper`），但那要过一整个租约周期，在那之前这条日志是唯一线索。
+    **Does not raise**: the outbound call has already failed, and being unable to write the ledger should not turn it into a different failure -- the caller can do nothing about the ledger,
+    and splitting into two kinds of errors would only make it harder for upper layers. Row convergence is backstopped by the in-DB reaper (EE
+    `0066_egress_operation_reaper`), but that takes a whole lease period, and until then this log line is the only clue.
 
-    日志只出 `operation_id` / `capability` / 异常类型名（OI-45 护栏）：凭条是这行的写入
-    授权，被吞的异常本体可能带签名 URL 或密钥，所以取类型不取 `str(exc)`。
+    The log emits only `operation_id` / `capability` / the exception type name (OI-45 guardrail): the receipt is this row's write
+    authorization, and the swallowed exception itself may carry signed URLs or secrets, so take the type rather than `str(exc)`.
     """
 
     try:
@@ -252,8 +252,8 @@ async def record_unknown_outcome(
             expected_version=claim.operation.version,
         )
     except Exception as error:
-        # 字段插在消息里而不是 `extra=`：默认 formatter 不打 extra，那样的日志读起来
-        # 与今天的「什么都没有」没有区别。
+        # Fields go into the message rather than `extra=`: the default formatter does not print extra, so such a log would read
+        # no differently from today's "nothing at all".
         logger.warning(
             "egress operation %s (%s) stays in dispatching: "
             "mark_unknown failed with %s; it will be collected by the reaper",

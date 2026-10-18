@@ -349,8 +349,8 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
   const [pickerCursor, setPickerCursor] = useState<number | null>(null);
   const [pickerActiveIndex, setPickerActiveIndex] = useState(0);
   const [pickerAnchor, setPickerAnchor] = useState<PickerAnchor>(PICKER_FALLBACK_ANCHOR);
-  // 双击命中的 @图N token 区间：非 null 时 picker 处于「替换」态，选中候选会替换这段
-  // 而不是在光标处插入。覆盖「换一张引用图」的快捷操作（免去先删 @图N 再 @ 重选）。
+  // The range of the @image1 token hit by a double-click: when non-null the picker is in "replace" mode and the selected candidate replaces this span
+  // instead of being inserted at the caret. Covers the "swap a reference image" shortcut (no need to delete @image1 first and re-@).
   const [replaceTokenRange, setReplaceTokenRange] = useState<
     { start: number; end: number } | null
   >(null);
@@ -380,15 +380,15 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     () => joinUpstreamText(upstreamContents),
     [upstreamContents]
   );
-  // 上游所有 image / video URL（含 ImageGen 结果、VideoNode 视频等
-  // graphImageResolver 不识别的类型），与 incomingImages 合并去重后
-  // 一起送进后端 reference_urls。
+  // All upstream image / video URLs (including ImageGen results, VideoNode videos and other types
+  // graphImageResolver does not recognize), merged with incomingImages and deduped,
+  // then sent to the backend together as reference_urls.
   const upstreamReferenceUrls = useMemo(
     () => collectUpstreamReferenceUrls(upstreamContents),
     [upstreamContents]
   );
 
-  // 反查每个上游 URL 来自哪个直接上游节点，用于「取消引用」精确定位连线。
+  // Reverse-lookup which direct upstream node each upstream URL comes from, to precisely locate the edge for "remove reference".
   const imageUrlToNodeId = useMemo(() => {
     const map = new Map<string, string>();
     upstreamContents.forEach((content) => {
@@ -403,13 +403,13 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
 
   const detachUpstream = useDetachUpstream(id);
 
-  // 「图N」是写进 prompt、由后端解析的引用 token，不是界面文案，不翻译。
+  // "image1" is a reference token written into the prompt and parsed by the backend, not UI copy, so it is not translated.
   const incomingImageItems = useMemo(
     () =>
       incomingImages.map((imageUrl, index) => ({
         imageUrl,
         displayUrl: resolveImageDisplayUrl(imageUrl),
-        label: `图${index + 1}`, // i18n-exempt
+        label: `image${index + 1}`,
         sourceNodeId: imageUrlToNodeId.get(imageUrl),
       })),
     [incomingImages, imageUrlToNodeId]
@@ -419,7 +419,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     [incomingImageItems]
   );
 
-  // 模型清单与每个模型的分辨率 / 比例 / 额外参数都来自后台「媒体模型」配置。
+  // The model list and each model's resolution / ratio / extra params all come from the admin "Media models" config.
   const {
     models: imageModels,
     getModel,
@@ -427,8 +427,8 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     isLoading: imageModelsLoading,
   } = useCatalogImageModels();
 
-  // 后台一个图片模型都没配时 getModel 返回 undefined。占位定义只用来把选择器撑住，
-  // 提交由 imageModelsEmpty 拦死（后端对空目录直接 409）。
+  // getModel returns undefined when the admin has configured no image model. The placeholder definition only keeps the picker standing;
+  // submission is blocked by imageModelsEmpty (the backend answers 409 for an empty catalog).
   const selectedModel =
     useMemo(() => getModel(data.model), [getModel, data.model])
     ?? EMPTY_CATALOG_IMAGE_MODEL;
@@ -556,9 +556,9 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     updateNodeData(id, { prompt: nextPrompt });
   }, [id, updateNodeData]);
 
-  // 让 prompt 里的 @图N 始终跟随上游图片引用编号：删除 / 重排 / 新增引用连线后，
-  // 「图N」会重新编号，这里把 prompt 里的数字一并重写、被删引用的 mention 移除。
-  // 有序基线 = incomingImages（去重 URL、连接顺序，与「图N」编号一致）。
+  // Keep @image1 in the prompt following the upstream image reference numbering: after deleting / reordering / adding reference edges,
+  // "image1" is renumbered; here the numbers in the prompt are rewritten accordingly and mentions of deleted references are removed.
+  // Ordered baseline = incomingImages (deduped URLs, connection order, consistent with the "image1" numbering).
   const applyPromptRemap = useCallback(
     (next: string) => {
       setPromptDraft(next);
@@ -568,7 +568,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
   );
   useReferenceMentionSync(
     promptDraft,
-    [{ prefix: "图", ids: incomingImages }], // i18n-exempt —— 后端解析的引用前缀
+    [{ prefix: "image", ids: incomingImages }],
     applyPromptRemap,
   );
 
@@ -582,9 +582,9 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
   }, [data.capabilityParams, id, updateNodeData]);
 
   useEffect(() => {
-    // 目录没落定（models 还是兜底列表）或后台压根没配模型时不要回写：此刻
-    // selectedModel 是兜底首项 / 占位定义，写进去等于把用户真正选中的模型冲掉，
-    // 而且这一步是持久化的，目录回来也救不回来。
+    // Do not write back while the catalog has not settled (models is still the fallback list) or the admin configured no models at all: at that moment
+    // selectedModel is the fallback first item / placeholder definition, and writing it would wash out the model the user really selected,
+    // and this step is persisted, so it cannot be recovered when the catalog comes back.
     if (imageModelsLoading || imageModelsEmpty) return;
     if (data.model !== selectedModel.id) {
       updateNodeData(id, { model: selectedModel.id });
@@ -639,22 +639,22 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    // 组织成员没有发起模型任务的资格时不放行：后端会拒，这里先说清楚原因。
+    // Do not let through when an organization member is not eligible to start model tasks: the backend would reject, so state the reason here first.
     if (modelTaskAccess.blocked) {
       if (modelTaskAccess.message) setError(modelTaskAccess.message);
       return;
     }
-    // 后台没配任何图片模型时不放行：selectedModel 是占位定义，提交出去后端
-    // `_resolve_catalog_request` 直接 409，不如在这里说清楚。
+    // Do not let through when the admin configured no image model: selectedModel is a placeholder definition, and once submitted the backend
+    // `_resolve_catalog_request` answers 409 right away, so it is better to say so here.
     if (imageModelsEmpty) {
       const errorMessage = t('node.imageEdit.noModelAvailable');
       setError(errorMessage);
       void showErrorDialog(errorMessage, t('common.error'));
       return;
     }
-    const ownPrompt = promptDraft.replace(/@(?=图\d+)/g, '').trim(); // i18n-exempt
-    // 「实时读取上游」：上游 text 节点（文本/脚本/图生 prompt 等）的内容
-    // 在每次 submit 时自动前置到 prompt，用户不必手动复制。
+    const ownPrompt = promptDraft.replace(/@(?=image\d+)/g, '').trim();
+    // "Read upstream live": the content of upstream text nodes (text / script / image-to-prompt etc.)
+    // is automatically prepended to the prompt on every submit, so the user need not copy it by hand.
     const fallbackPrompt = [upstreamTextJoined, ownPrompt]
       .filter((s) => s.length > 0)
       .join('\n\n');
@@ -730,7 +730,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     );
 
     // Resolve aspect ratio + build the re-submittable payload BEFORE the submit
-    // try/catch, so the payload is in scope on the failure path too. The 重试
+    // try/catch, so the payload is in scope on the failure path too. The retry
     // button keys off generationRequestPayload, so a failed result node must
     // always carry it — otherwise there's no way to re-trigger generation.
     let resolvedRequestAspectRatio = selectedAspectRatio.value;
@@ -755,16 +755,16 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
       prompt,
       model: requestResolution.requestModel,
       modelId: selectedModel.id,
-      // 用推导后的模式，不是裸 `data.generationMode` —— 没手动选过模式时后者是
-      // undefined，后端拿不到模式就按「无模式」过滤，声明了 modes 的目录参数会被
-      // 整批丢掉。UI 上高亮的也是这个推导值，两边必须同一个口径。
+      // Use the derived mode, not the bare `data.generationMode` — when no mode was ever chosen manually the latter is
+      // undefined, the backend gets no mode and filters as "no mode", and catalog params that declare modes are
+      // all dropped. The UI highlights this derived value too, so both sides must use the same basis.
       generationMode,
       size: selectedResolution.value,
       aspectRatio: resolvedRequestAspectRatio,
       referenceImages: mergedReferenceImages,
       extraParams: effectiveExtraParams,
-      // 目录声明的动态参数（model_params），与 ImageGenNode 同一口径：原样提交，
-      // 模式不匹配的键由后端 `_resolve_catalog_request` 过滤。
+      // Dynamic params declared by the catalog (model_params), on the same basis as ImageGenNode: submitted as is,
+      // keys that do not match the mode are filtered by the backend `_resolve_catalog_request`.
       modelParams: data.modelParams,
       capabilityId: data.capabilityId,
       nodeId: id,
@@ -797,8 +797,8 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
         generationClientSessionId: CURRENT_RUNTIME_SESSION_ID,
         generationDebugContext,
         generationRequestPayload: regenerationPayload,
-        // 后端任务句柄：jobId 只活在本次会话的内存 Map 里，脱离监听后靠这三个
-        // 字段刷新重接（见 SubmittedImageJob / generationTaskDescriptor）。
+        // Backend task handle: jobId lives only in this session's in-memory Map; after detaching from the listener these three
+        // fields drive refresh-and-reattach (see SubmittedImageJob / generationTaskDescriptor).
         ...generationTaskDescriptor(ref),
       });
     } catch (generationError) {
@@ -842,7 +842,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
         generationJobId: null,
         generationProviderId: null,
         generationClientSessionId: null,
-        // Keep the payload so 重试 stays available even when the request throws
+        // Keep the payload so retry stays available even when the request throws
         // before a job is created.
         generationRequestPayload: regenerationPayload,
         generationError: displayErrorMessage,
@@ -904,13 +904,13 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
   };
 
   const insertImageReference = useCallback((imageIndex: number) => {
-    const marker = `@图${imageIndex + 1}`; // i18n-exempt —— 后端解析的引用 token
+    const marker = `@image${imageIndex + 1}`;
     const currentPrompt = promptDraftRef.current;
     let nextPrompt: string;
     let nextCursor: number;
     if (replaceTokenRange) {
-      // 双击替换：把命中的 @图N token 段整体换成新 marker，引用队列不变，只是该
-      // mention 改指向另一张已有的引用图。
+      // Double-click replace: swap the hit @image1 token span wholesale for a new marker; the reference queue is unchanged, only this
+      // mention is re-pointed to another existing reference image.
       ({ nextText: nextPrompt, nextCursor } = replaceReferenceToken(
         currentPrompt,
         replaceTokenRange,
@@ -939,13 +939,13 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
     });
   }, [commitPromptDraft, pickerCursor, replaceTokenRange]);
 
-  // 双击 textarea 里的 @图N token → 在它下方打开 picker「替换」该引用。
+  // Double-click an @image1 token in the textarea → open the picker below it to "replace" that reference.
   const handlePromptDoubleClick = (event: ReactMouseEvent<HTMLTextAreaElement>) => {
     if (incomingImages.length === 0) return;
     const textarea = event.currentTarget;
     const selStart = textarea.selectionStart ?? 0;
     const selEnd = textarea.selectionEnd ?? selStart;
-    // 双击会选中 token 里的某个「词」(如「图1」)，用区间重叠判定命中哪个 @图N。
+    // A double-click selects one "word" of the token (such as "image1"); use range overlap to decide which @image1 was hit.
     const hit = findReferenceTokenAtSelection(
       promptDraftRef.current,
       selStart,
@@ -1116,7 +1116,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
         onTitleChange={(nextTitle) => updateNodeData(id, { displayName: nextTitle })}
       />
 
-      {/* 根容器有 p-2，往里挪一格才落在图片区里而不是压在卡片边框上。 */}
+      {/* The root container has p-2; move in one step so it lands inside the image area rather than on the card border. */}
       <AddNodeToChatButton nodeId={id} className="right-3 top-3" />
 
       <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border ${CANVAS_NODE_INPUT_SURFACE_CLASS} ${CANVAS_NODE_INPUT_FRAME_CLASS}`}>
@@ -1430,7 +1430,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
             value={promptDraft}
             onChange={(event) => {
               const nextValue = event.target.value;
-              // 打字会改变 token 位置，替换态的区间随之失效 → 退出替换、关闭 picker。
+              // Typing shifts token positions, so the range in replace mode becomes invalid → leave replace mode and close the picker.
               if (replaceTokenRange) {
                 setReplaceTokenRange(null);
                 setShowImagePicker(false);
@@ -1500,12 +1500,12 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
           selectedAspectRatio={selectedAspectRatio}
           aspectRatioOptions={aspectRatioOptions}
           onModelChange={(modelId) => {
-            // 目录参数是按模型声明的，换模型后旧值多半在新模型的 schema 里不存在，
-            // 带着走会被后端判成 unknown model parameters。一并清掉。
+            // Catalog params are declared per model; after switching models the old values mostly do not exist in the new model's schema,
+            // and carrying them along would be judged unknown model parameters by the backend. Clear them all.
             //
-            // 老的 extraParams 同理：里面的 quality / enable_web_search 都是按模型
-            // 的能力挑的，网关还会把 quality 原样发下去；不清就会拿上一个模型的
-            // 画质档位去请求新模型。
+            // The old extraParams likewise: quality / enable_web_search inside them are picked per model
+            // capability, and the gateway sends quality through as is; without clearing, the new model would be
+            // requested with the previous model's quality tier.
             updateNodeData(id, { model: modelId, modelParams: {}, extraParams: {} });
           }}
           onResolutionChange={(resolution) => {
@@ -1541,7 +1541,7 @@ export const ImageEditNode = memo(({ id, data, selected, width, height }: ImageE
           paramsChipClassName={NODE_CONTROL_PARAMS_CHIP_CLASS}
         />
 
-        {/* 后台「媒体模型」声明的动态参数。没声明时该组件自己返回 null。 */}
+        {/* Dynamic params declared by the admin "Media models". The component returns null itself when none are declared. */}
         <MediaModelParameterChip
           parameters={selectedModel.requestParameters}
           values={data.modelParams}

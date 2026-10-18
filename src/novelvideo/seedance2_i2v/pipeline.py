@@ -81,9 +81,9 @@ def _references_from_paths(
 ) -> list[ShotReference]:
     references: list[ShotReference] = []
     for index, path in enumerate(image_paths, start=1):
-        references.append(ShotReference("image", path, f"图片{index}"))
+        references.append(ShotReference("image", path, f"image{index}"))
     for index, path in enumerate(audio_paths, start=1):
-        references.append(ShotReference("audio", path, f"音频{index}"))
+        references.append(ShotReference("audio", path, f"audio{index}"))
     return references
 
 
@@ -108,18 +108,21 @@ def _selected_audio_assets(assets: list[Seedance2ResolvedAsset]) -> list[Seedanc
 
 
 def _validate_reference_audio_request(audio_paths: list[str]) -> None:
-    """Seedance2 参考音频的条数 + 时长校验。
+    """Validate the count and duration of Seedance2 reference audios.
 
-    时长判定复用画布那条 `validate_omni_reference_audio_durations`：厂商规则是同一套
-    （逐条 1.8~15.2s、再加一条总时长），两边各写一遍必然会漂——本次故障的根因就是前端
-    和后端对同一条规则的理解走散了。这里只多做两件事：把 ffprobe 的 ValueError 收成
-    `None`（测不出就不判，与画布同口径），以及把英文报错包回中文并补上「去哪儿改」。
+    Duration checks reuse the canvas rule `validate_omni_reference_audio_durations`:
+    the vendor rule is one shared set (1.8-15.2s per clip plus a total duration), and
+    writing it twice makes the two sides drift apart, which was the root cause of an
+    earlier incident where frontend and backend disagreed. This only adds two things:
+    ffprobe ValueErrors become `None` (unmeasurable clips are not judged, same as the
+    canvas) and the error is wrapped with a "where to fix it" hint.
 
-    总时长仍用本模块的 15.0s 而不是厂商的 15.2s：这条路径的参考声线本来就该是 3-5s 的
-    样例，收紧 0.2s 不会误伤，而放宽是产品口径变化，不该顺手做。
+    The total still uses this module's 15.0s rather than the vendor's 15.2s: reference
+    voices on this path are meant to be 3-5s samples, so tightening by 0.2s never hurts,
+    while loosening it would be a product decision that should not happen incidentally.
     """
     if len(audio_paths) > MAX_SEEDANCE2_REFERENCE_AUDIOS:
-        raise ValueError("Seedance2 参考音频最多 3 段")
+        raise ValueError("Seedance2 allows at most 3 reference audio clips")
 
     def _probe(path: str) -> float | None:
         try:
@@ -127,9 +130,9 @@ def _validate_reference_audio_request(audio_paths: list[str]) -> None:
         except ValueError:
             return None
 
-    # 标签与 `_build_shot_references` 一致，用户在报错里看到的「音频2」能对上提示词里的。
+    # Labels match `_build_shot_references`, so the "audio2" shown in an error matches the prompt.
     measured = [
-        (f"音频{index}", _probe(path)) for index, path in enumerate(audio_paths, start=1)
+        (f"audio{index}", _probe(path)) for index, path in enumerate(audio_paths, start=1)
     ]
     try:
         validate_omni_reference_audio_durations(
@@ -138,7 +141,7 @@ def _validate_reference_audio_request(audio_paths: list[str]) -> None:
         )
     except ValueError as exc:
         raise ValueError(
-            f"Seedance2 参考音频时长不合规（{exc}），请回到角色工作台把参考声线裁剪到 3-5 秒"
+            f"Seedance2 reference audio duration is invalid ({exc}); go back to the character workbench and trim the reference voice to 3-5 seconds"
         ) from exc
 
 
@@ -164,17 +167,17 @@ def _validate_dialogue_final_prompt(
     ]
     if missing_lines:
         raise ValueError(
-            "Seedance2 最终提示词缺少台词内容："
-            + "、".join(str(item) for item in missing_lines[:3])
+            "The Seedance2 final prompt is missing dialogue: "
+            + ", ".join(str(item) for item in missing_lines[:3])
         )
 
     audio_labels = [
         asset.reference_label
         for asset in _selected_audio_assets(assets)
-        if asset.reference_label.startswith("音频")
+        if asset.reference_label.startswith("audio")
     ]
     if not audio_labels or any(label not in final_prompt for label in audio_labels):
-        raise ValueError("Seedance2 最终提示词缺少参考声线，请在台词描述中写明对应音频编号")
+        raise ValueError("The Seedance2 final prompt is missing a reference voice; mention the matching audio number in the dialogue description")
 
 
 def collect_seedance2_video_prereq_errors(
@@ -217,7 +220,7 @@ def collect_seedance2_video_prereq_errors(
                 Seedance2VideoPrereqError(
                     beat_number=beat_number,
                     key="reference_audios",
-                    label="Seedance2 参考音频最多 3 段，请减少同一 Beat 的 speaker 或合并台词",
+                    label="Seedance2 allows at most 3 reference audio clips; reduce the speakers in this Beat or merge the dialogue",
                     media_type="audio",
                     path="",
                     reason="reference_audio_count_exceeded",
@@ -232,7 +235,7 @@ def collect_seedance2_video_prereq_errors(
                 Seedance2VideoPrereqError(
                     beat_number=beat_number,
                     key=asset.key,
-                    label=f"{asset.label}（{asset.note}）" if asset.note else asset.label,
+                    label=f"{asset.label} ({asset.note})" if asset.note else asset.label,
                     media_type=asset.media_type,
                     path=str(asset.path),
                     reason=reason,
@@ -290,7 +293,7 @@ async def prepare_seedance2_generation_inputs(
         beat_number = int(beat.get("beat_number") or 0)
         prefix = f"Beat {beat_number} " if beat_number else ""
         raise ValueError(
-            f"{prefix}Seedance 2.0 最终提示词为空，请先在 Seedance 2.0 Prompt 面板生成或填写最终提示词"
+            f"{prefix}The Seedance 2.0 final prompt is empty; generate or enter it in the Seedance 2.0 Prompt panel first"
         )
     config.final_prompt = final_prompt
     assets = apply_prompt_audio_selection(assets, final_prompt)

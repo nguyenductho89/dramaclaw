@@ -3,25 +3,25 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * 顶栏菜单切页时的 loading 门闸。
+ * Loading gate for page switches from the top bar menu.
  *
- * 换页在这里是一次**同步**的重渲染：tanstack router 的状态全走
- * useSyncExternalStore，React 会把 startTransition 里的更新降级成同步 flush，
- * 于是从「点下按钮」到「新页面 commit」是一个不可打断的长任务 —— 中间浏览器
- * 一帧都画不出来。所以光挂一个 `isLoading` 遮罩是没用的：它和新页面在同一个
- * commit 里出现又消失，用户看到的仍然是画面卡死一下然后突然换页。
+ * A page switch here is one **synchronous** re-render: all tanstack router state goes through
+ * useSyncExternalStore, and React downgrades updates inside startTransition to a synchronous flush,
+ * so from "button pressed" to "new page committed" is one uninterruptible long task - the browser
+ * cannot paint a single frame in between. So just mounting an `isLoading` overlay is useless: it appears and disappears
+ * in the same commit as the new page, and the user still sees the screen freeze for a moment and then suddenly switch.
  *
- * 这里的做法是主动把长任务切开：先只更新遮罩，等浏览器真的把它画上屏，再开始
- * 跳转。代价是多等两帧（约 30ms，感知不到），换来的是「点击 → loading → 新
- * 页面」而不是一帧卡顿。遮罩的淡入和转圈都只动 opacity / transform，跳转把主
- * 线程堵死的那几百毫秒里由合成器接着放，所以 loading 本身不会跟着卡住。
- *
- * 快速切换不会闪：遮罩的淡入带 150ms 延迟（见 routes/_app.tsx），页面在这之前
- * 就换好了的话，它从头到尾都是全透明的。
+ * The approach here is to split the long task on purpose: update only the overlay first, and start the navigation
+ * once the browser has really painted it. The cost is waiting two extra frames (about 30ms, imperceptible), in exchange for
+ * "click -> loading -> new page" instead of a one-frame hitch. The overlay's fade-in and spinner only animate opacity / transform;
+ * during the few hundred milliseconds the navigation blocks the main thread, the compositor keeps playing them,
+ * so the loading indicator itself does not freeze.
+ * Fast switches do not flash: the overlay fade-in has a 150ms delay (see routes/_app.tsx), and if the page
+ * is already switched before that, it stays fully transparent the whole time.
  */
 type Phase = "idle" | "armed" | "navigating";
 
-/** 跳转迟迟不落地时的兜底时长 —— 宁可遮罩早退，也不能把界面永远糊住。 */
+/** Fallback duration when navigation never lands - better to dismiss the overlay early than to blur the UI forever. */
 const SAFETY_TIMEOUT_MS = 5000;
 
 let phase: Phase = "idle";
@@ -52,10 +52,10 @@ function clearScheduled(): void {
 }
 
 /**
- * 先亮 loading，再跳转。`navigate` 里放实际的 router 跳转调用。
+ * Show loading first, then navigate. Put the actual router navigation call in `navigate`.
  *
- * 只该用在会换掉整页内容的导航上（顶栏「虾画 / 虾集」、虾集子页菜单）。改
- * search 参数这类原地更新别用，白等两帧还要闪一下遮罩。
+ * Only use this for navigations that replace the whole page content (top bar "Freezone / Library", Library sub-page menu). Do not use it for
+ * in-place updates such as changing search params; waiting two frames for nothing and flashing the overlay is wasteful.
  */
 export function beginRouteSwitch(navigate: () => void): void {
   if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
@@ -66,9 +66,9 @@ export function beginRouteSwitch(navigate: () => void): void {
   setPhase("armed");
   firstFrame = window.requestAnimationFrame(() => {
     firstFrame = 0;
-    // 两层 rAF 不是保险起见：第一层的回调跑在「这一帧画出来之前」，遮罩虽然
-    // 已经进了 DOM 却还没上屏，这时候跳转等于白铺垫。第二层才能确定它画过了、
-    // 合成器也拿到了这一层。
+    // The two rAF layers are not a precaution: the first layer's callback runs "before this frame is painted", so the overlay
+    // is in the DOM but not on screen yet, and navigating then would be wasted groundwork. Only the second layer guarantees it was painted
+    // and the compositor has picked up this layer.
     secondFrame = window.requestAnimationFrame(() => {
       secondFrame = 0;
       setPhase("navigating");
@@ -79,12 +79,12 @@ export function beginRouteSwitch(navigate: () => void): void {
 }
 
 /**
- * 新页面已经渲染出来（或跳转失败），撤掉遮罩。
+ * The new page has rendered (or navigation failed); remove the overlay.
  *
- * 只处理已经发车的那一次（`navigating`）。`armed` 说明有更新的一次点击正等着
- * 发车：调用方是「路由落地」这个事件，而上一次跳转落地的瞬间，用户完全可能刚
- * 点下第二个菜单还在那两帧等待里 —— 这时候把 rAF 取消掉，等于把他刚点的那下
- * 悄悄吞了，人停在上一页且没有任何反馈。
+ * Only handles the navigation that has already departed (`navigating`). `armed` means a newer click is waiting
+ * to depart: the caller is the "route landed" event, and at the instant the previous navigation lands the user may well have just
+ * clicked a second menu item and still be in those two frames of waiting - cancelling the rAF then would
+ * silently swallow the click they just made, leaving them on the previous page with no feedback.
  */
 export function endRouteSwitch(): void {
   if (phase !== "navigating") return;
@@ -103,7 +103,7 @@ function getSnapshot(): Phase {
   return phase;
 }
 
-/** 遮罩是否该显示。 */
+/** Whether the overlay should be shown. */
 export function useRouteSwitchPending(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot) !== "idle";
 }

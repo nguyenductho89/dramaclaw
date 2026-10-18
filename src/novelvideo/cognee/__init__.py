@@ -1,21 +1,21 @@
-"""NovelVideo Cognee 统一存储模块。
+"""NovelVideo unified Cognee storage module.
 
-核心理念：所有实体直接存入 Cognee 图谱，不需要额外的 JSON 存储。
+Core idea: all entities are stored directly in the Cognee graph; no extra JSON storage is needed.
 
-使用方式：
+Usage:
     from novelvideo.cognee import CogneeStore, NovelCharacter, NovelEpisode
 
     store = await create_cognee_store("hongloumeng")
 
-    # 导入小说并构建图谱角色/剧集
+    # Ingest a novel and build the graph characters/episodes
     await store.ingest_novel("hongloumeng.txt")
 
-    # 查询角色（支持别名）
-    char = store.get_character("皇后")  # 返回姜裳宁
-    prompt = char.face_prompt  # 直接获取面部 Prompt
+    # Look up a character (aliases supported)
+    char = store.get_character("the Queen")  # returns the canonical character
+    prompt = char.face_prompt  # get the face prompt directly
 """
 
-# 重要：必须先导入 config，在 cognee 被导入之前设置环境变量
+# Important: config must be imported first so env vars are set before cognee is imported
 from .config import init_cognee, get_cognee_status
 
 from .store import CogneeStore, create_cognee_store
@@ -36,11 +36,11 @@ from .pipeline import (
 from .tools import create_episode_planner_tools
 
 __all__ = [
-    # 存储
+    # Storage
     "CogneeStore",
     "create_cognee_store",
 
-    # 实体
+    # Entities
     "NovelCharacter",
     "NovelEpisode",
     "NovelEvent",
@@ -57,7 +57,7 @@ __all__ = [
     # Tools
     "create_episode_planner_tools",
 
-    # 配置
+    # Config
     "init_cognee",
     "get_cognee_status",
 ]

@@ -56,7 +56,6 @@ NON_RETRYABLE_ERROR_MARKERS = {
 RETRYABLE_ERROR_MARKERS = {
     "timed out",
     "timeout",
-    "超时",
     "econnreset",
     "connection reset",
     "bad_response_body",
@@ -200,7 +199,7 @@ def classify_workflow_error(error: str | None) -> tuple[str, bool]:
         marker in normalized for marker in RETRYABLE_ERROR_MARKERS
     ):
         return "transient_upstream", True
-    if "产物" in normalized and ("不存在" in normalized or "缺失" in normalized):
+    if "artifact" in normalized and ("does not exist" in normalized or "missing" in normalized):
         return "artifact_missing", False
     return "execution", False
 
@@ -217,51 +216,51 @@ def workflow_error_diagnostics(error: str | None) -> dict[str, Any]:
         else f"{category}:{normalized_message[:500]}"
     )
     if category == "authentication":
-        user_message = "模型服务认证失败，请检查渠道地址和密钥后重试。"
+        user_message = "Model service authentication failed. Check the channel address and key, then retry."
     elif category == "model_unavailable":
-        user_message = "当前渠道没有可用的目标模型，请更换模型或配置渠道。"
+        user_message = "The current channel has no usable target model. Switch models or configure the channel."
     elif category == "quota_exhausted":
-        user_message = "当前模型渠道额度已用尽，请补充额度或切换渠道。"
+        user_message = "The current model channel quota is exhausted. Add quota or switch channels."
     elif category == "content_policy":
         if "outputvideosensitivecontentdetected" in normalized_message:
             user_message = (
-                "内容安全审核未通过（输出视频）：模型拒绝了本次生成结果，"
-                "请调整敏感情节或画面描述后重试。"
+                "Content safety review failed (output video): the model rejected this generation result. "
+                "Adjust sensitive plot points or scene descriptions and retry."
             )
         elif "outputimagesensitivecontentdetected" in normalized_message:
             user_message = (
-                "内容安全审核未通过（输出图片）：模型拒绝了本次生成结果，"
-                "请调整敏感内容描述后重试。"
+                "Content safety review failed (output image): the model rejected this generation result. "
+                "Adjust the sensitive content description and retry."
             )
         elif "inputimagesensitivecontentdetected" in normalized_message:
             user_message = (
-                "内容安全审核未通过（输入图片）：如包含已获授权的真人，"
-                "请开启真人素材审核后重试。"
+                "Content safety review failed (input image): if it contains an authorized real person, "
+                "enable real-person asset review and retry."
             )
         else:
             user_message = (
-                "内容安全审核未通过：模型拒绝了本次生成请求，"
-                "请调整提示词或更换素材后重试。"
+                "Content safety review failed: the model rejected this generation request. "
+                "Adjust the prompt or change the assets and retry."
             )
     elif category == "invalid_request":
         if "video total duration" in normalized_message:
-            user_message = "输入视频总时长超过当前模型限制，请缩短素材或拆分生成。"
+            user_message = "The total input video duration exceeds the current model limit. Shorten the assets or split the generation."
         elif "audio_url is required" in normalized_message:
             user_message = (
-                "当前音频模型需要参考音频，请上传样音或切换为无需样音的模型。"
+                "The current audio model requires reference audio. Upload a sample or switch to a model that needs none."
             )
         else:
-            user_message = "生成参数不符合当前模型要求，请调整节点参数后重试。"
+            user_message = "The generation parameters do not meet the current model requirements. Adjust the node parameters and retry."
     elif category == "artifact_missing":
-        user_message = "任务已结束但没有找到有效产物，请重新生成该节点。"
+        user_message = "The task ended but no valid artifact was found. Regenerate this node."
     elif category == "attempt_ended":
-        user_message = "本次节点执行已结束，无法继续提交，请重新运行该节点。"
+        user_message = "This node execution has ended and can no longer be submitted. Rerun the node."
     elif category == "transient_upstream":
-        user_message = "上游模型服务暂时不可用，系统可稍后重试。"
+        user_message = "The upstream model service is temporarily unavailable. The system may retry later."
     elif category == "unknown":
-        user_message = "生成任务失败，但没有返回具体错误。"
+        user_message = "The generation task failed, but no specific error was returned."
     else:
-        user_message = "节点生成失败，请检查节点输入和模型配置后重试。"
+        user_message = "Node generation failed. Check the node inputs and model configuration, then retry."
     return {
         "error_category": category,
         "retryable": retryable,
@@ -330,7 +329,7 @@ def _validate_action_artifact(
         value for key, value in candidates if _is_output_artifact_key(key)
     ]
     if not media_candidates:
-        return "unverified", "任务已结束但没有可核验的持久化产物。"
+        return "unverified", "The task ended but there is no verifiable persisted artifact."
     missing_local_paths: list[str] = []
     for value in media_candidates:
         lowered = value.lower()
@@ -344,7 +343,7 @@ def _validate_action_artifact(
             return "valid", None
         missing_local_paths.append(value)
     if missing_local_paths:
-        return "missing", f"任务完成但产物文件不存在：{missing_local_paths[0]}"
+        return "missing", f"The task completed but the artifact file does not exist: {missing_local_paths[0]}"
     return "unverified", None
 
 
@@ -1618,7 +1617,7 @@ def reconcile_workflow_runs_with_tasks(
                 if task_status not in TERMINAL_TASK_STATUSES:
                     continue
                 if task_status in {"failed", "cancelled"}:
-                    error = str(task.get("error") or "生成任务失败").strip()
+                    error = str(task.get("error") or "Generation task failed").strip()
                     if task_status == "failed" and workflow_media_failure_awaits_retry(
                         project_dir=project_dir, run=payload, action=item, error=error
                     ):

@@ -24,8 +24,8 @@ BLOCKED_ROOTS = {
 MODE_ALIASES = {
     "textToVideo": "text_to_video",
     "firstFrame": "first_frame",
-    # 画布「图生视频」是单张图片参考：图片影响整体画面，但不锁定第一帧。
-    # 真正的首帧模式由首尾帧入口按槽位派生为 first_frame。
+    # Canvas "image to video" takes a single reference image: it influences the overall frame but does not lock the first frame.
+    # The true first-frame mode is derived as first_frame from the slot by the first/last-frame entry.
     "imageToVideo": "image_to_video",
     "firstLastFrame": "first_last_frame",
     "imageReference": "image_reference",

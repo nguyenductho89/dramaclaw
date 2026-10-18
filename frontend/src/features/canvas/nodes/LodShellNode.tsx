@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 画布低缩放档（zoom < LOW_DETAIL_ZOOM_THRESHOLD）的节点轻量外壳。
+ * Lightweight shell for nodes at the canvas low-zoom tier (zoom < LOW_DETAIL_ZOOM_THRESHOLD).
  *
- * 为什么存在：实测（300 节点 / zoom 0.1）快速平移只有 ~20fps，且主线程时间不在
- * JS、不在绘制（图片全部隐藏帧率不变、节点整体 visibility:hidden 也不变），而在
- * 「每帧 transform 变更后，渲染管线要遍历移动子树下全部 ~13.5k 个活元素」——成本
- * 与渲染树规模成正比，与画什么无关。把每个节点的 ~45 个元素换成这里的 ~4 个后，
- * 同一画布实测回到满帧（75fps）。
+ * Why it exists: measured (300 nodes / zoom 0.1) fast panning ran at only ~20fps, and the main-thread time was neither in
+ * JS nor in painting (hiding all images left the frame rate unchanged, and so did visibility:hidden on whole nodes); it was in
+ * "after each frame's transform change, the rendering pipeline walks all ~13.5k live elements under the moved subtree" — the cost
+ * is proportional to the render tree size and independent of what is drawn. After replacing each node's ~45 elements with the ~4 here,
+ * the same canvas measured back at full frame rate (75fps).
  *
- * 为什么是「替换渲染」而不是 CSS content-visibility：挂载时就处于隐藏态的节点，
- * React Flow 首测会把 handle 的 getBoundingClientRect 全零写成「存在但错误」的
- * handleBounds（@xyflow/system getHandleBounds），边会集体锚到视口左上角且永不
- * 自愈（ResizeObserver 只看根盒子尺寸）。shell 渲染的是真实 <Handle>，位置与完整
- * 组件完全一致（Left/Right + 垂直居中，id 恒为 'target'/'source'，全局 CSS 本来
- * 就 opacity:0），首测天然正确，跨档切换也无需强制重测。
+ * Why "replace rendering" rather than CSS content-visibility: for nodes that are already hidden at mount,
+ * React Flow's first measurement writes the handle's all-zero getBoundingClientRect as "present but wrong"
+ * handleBounds (@xyflow/system getHandleBounds), so edges all anchor to the viewport's top-left and never
+ * self-heal (ResizeObserver only watches the root box size). The shell renders real <Handle>s, with positions identical to the full
+ * component (Left/Right + vertically centered, id always 'target'/'source', and global CSS already
+ * sets opacity:0), so the first measurement is naturally correct and switching tiers needs no forced re-measure.
  *
- * 豁免见 [[canvasLod]] 的 LOD_SHELL_EXEMPT_TYPES 与媒体活跃信号。
+ * For exemptions see LOD_SHELL_EXEMPT_TYPES in [[canvasLod]] and the media-active signal.
  */
 import {
   memo,
@@ -55,12 +55,12 @@ import {
 import type { CanvasNodeType } from '@/features/canvas/domain/canvasNodes';
 
 /**
- * 未测量且未显式设尺寸的节点（首屏恢复在低缩放档、且从未被渲染过）的兜底尺寸。
- * 与各组件的 DEFAULT_WIDTH/HEIGHT 对齐；只影响首帧盒子大小，放大跨档后完整组件
- * 渲染会触发 ResizeObserver 重测自动纠正。
+ * Fallback size for nodes that are unmeasured and have no explicit size (restored at first paint in the low-zoom tier and never rendered).
+ * Aligned with each component's DEFAULT_WIDTH/HEIGHT; it only affects the first-frame box size, and once zoomed in across the tier the full component
+ * renders and triggers a ResizeObserver re-measure that corrects it automatically.
  */
-// 导出只为让测试上棘轮：新增节点类型要么在这里登记尺寸，要么进 LOD 豁免名单，
-// 漏了就会拿 400×300 的通用兜底，首屏低缩放下盒子明显不对。
+// Exported only so tests can ratchet: a new node type must either register its size here or join the LOD exemption list,
+// otherwise it gets the generic 400×300 fallback and the box is visibly wrong at first paint in low zoom.
 export const SHELL_FALLBACK_SIZES: Partial<Record<string, { width: number; height: number }>> = {
   vectorSvgNode: { width: 360, height: 192 },
   animatedGifNode: { width: 360, height: 192 },
@@ -94,20 +94,20 @@ type ShellData = {
 };
 
 /**
- * shell 里的图喂哪一档变体，按这一格实际要多少设备像素来挑。
+ * Which variant tier the image in the shell is fed, picked by how many device pixels this cell actually needs.
  *
- * shell 只在 zoom < 0.35 出现，此时最宽的节点（900px）也只占屏幕 315 CSS px，
- * 常见的 imageNode 更是 203 px；而这一档恰恰是节点最多的时候——一屏几十上百
- * 个。解码成本只看源图像素数，所以原图在这里是纯浪费：一张 5504x3072 要付
- * 16.9MP，换成 320px 变体是 0.06MP。
+ * The shell appears only at zoom < 0.35, where even the widest node (900px) takes only 315 CSS px on screen,
+ * and the common imageNode only 203 px; yet this tier is exactly when there are the most nodes — dozens to hundreds
+ * on one screen. Decode cost depends only on source pixel count, so the original is pure waste here: one 5504x3072 pays
+ * 16.9MP, versus 0.06MP for a 320px variant.
  *
- * 前端只请求生产会预热的 320px thumb。超过预算的节点主体会使用原图；LOD shell
- * 仍固定回落 thumb，因为它只在低缩放、大量节点同时出现时使用，避免同时解码几十
- * 上百张完整原图。
+ * The frontend only requests the 320px thumb that production pre-warms. Nodes over budget use the original in the node body; the LOD shell
+ * still always falls back to the thumb, because it is used only at low zoom with many nodes at once, avoiding decoding dozens
+ * to hundreds of full originals at the same time.
  *
- * 变体不适用时（blob: 预览、遗留路径、抓帧 data:）withMediaVariant 原样返回，
- * 行为与改动前一致。shell 不接 onLoad、不测尺寸、不进查看器/导出，所以这里
- * 没有节点主体那套「先知道真实尺寸才能换」的顾虑。
+ * When a variant does not apply (blob: preview, legacy path, captured-frame data:) withMediaVariant returns as is,
+ * behaving as before the change. The shell has no onLoad, does not measure size, and does not enter the viewer/export, so here there is
+ * none of the node body's concern about "knowing the real size before swapping".
  */
 function resolveShellImage(
   type: string,
@@ -128,8 +128,8 @@ function resolveShellImage(
     case 'exportImageNode':
       return pick(data.imageUrl, data.previewImageUrl);
     case 'videoNode':
-      // 优先离屏抓帧的静态首帧（见 videoFrameCapture），没有再回落封面字段。
-      return null; // 视频走 lodStill 订阅，在组件里处理
+      // Prefer the static first frame captured off-screen (see videoFrameCapture), and fall back to the cover field otherwise.
+      return null; // Video goes through the lodStill subscription, handled in the component
     default:
       return pick(data.previewImageUrl);
   }
@@ -146,11 +146,11 @@ function LodShell({ type, id, data, selected, width, height }: {
   const fallback = SHELL_FALLBACK_SIZES[type] ?? DEFAULT_SHELL_SIZE;
   const w = width ?? fallback.width;
   const h = height ?? fallback.height;
-  // 一格盖不住时也继续喂 thumb：shell 的整个前提就是节点太多、不能同时解原图。
+  // Even when one cell cannot cover it, keep feeding the thumb: the whole premise of the shell is that there are too many nodes to decode originals at once.
   const variant = useNodeBodyVariant({ width: w, height: h }) ?? 'thumb';
 
-  // 视频缩略图：订阅模块级抓帧缓存；节点从未挂载过完整组件时（首屏即低缩放），
-  // 这里负责把抓帧任务排进空闲队列，不依赖完整组件出现过。
+  // Video thumbnail: subscribe to the module-level frame-capture cache; when the node never mounted the full component (low zoom at first paint),
+  // this queues the capture task into the idle queue, without depending on the full component ever having appeared.
   const videoSource =
     type === 'videoNode' && data.videoUrl ? resolveImageDisplayUrl(data.videoUrl) : null;
   const lodStill = useSyncExternalStore(subscribeLodStills, () =>
@@ -192,16 +192,16 @@ const lowDetailSelector = (state: { transform: [number, number, number] }) =>
   isLowDetailZoom(state.transform[2]);
 
 /**
- * 把节点组件包成「低缩放档渲染 shell、其余渲染原组件」。
+ * Wraps a node component as "render the shell at the low-zoom tier, render the original component otherwise".
  *
- * selector 返回 boolean，平移中 transform[0]/[1] 每帧变但返回值不变，不会造成
- * 每帧重渲染；只在缩放跨过阈值那一次全体切换。切换即完整组件的 mount/unmount，
- * 与 onlyRenderVisibleElements 的视口裁剪同构——组件早已被要求把重要状态放
- * store/模块级缓存（各组件内注释多处言明），此处不引入新的状态丢失面。
+ * The selector returns a boolean; during panning transform[0]/[1] change every frame but the return value does not, so there is no
+ * per-frame re-render; everything switches only once when zoom crosses the threshold. A switch is a mount/unmount of the full component,
+ * isomorphic with onlyRenderVisibleElements viewport culling — components were long required to keep important state in the
+ * store / module-level caches (stated in many in-component comments), so no new state-loss surface is introduced here.
  */
-// 各节点组件的 props 都是自家收窄过的 XxxNodeProps（interface data 不满足
-// Record<string, unknown> 的结构约束），这里与 React Flow 的 NodeTypes 一样按
-// 宽类型接收；运行期 React Flow 传入的本来就是完整 NodeProps。
+// Each node component's props are its own narrowed XxxNodeProps (the interface data does not satisfy the structural constraint of
+// Record<string, unknown>); here, like React Flow's NodeTypes, they are accepted as a wide type;
+// at runtime React Flow passes in full NodeProps anyway.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyNodeComponent = ComponentType<any>;
 
@@ -212,27 +212,27 @@ export function withLodShell(
   const exempt = LOD_SHELL_EXEMPT_TYPES.has(type);
   const Wrapped = (props: NodeProps) => {
     const lowDetail = useStore(lowDetailSelector);
-    // 画布单选中的节点（canvasStore.selectedNodeId）不 shell：
-    //   - 低缩放下新建节点（放置流程会 setSelectedNode(newNodeId)）要立即以完整
-    //     组件出现——shell 是无标题的小灰块，10% 下用户会以为「没创建上」；
-    //   - 低缩放下点选节点（React Flow 选中经 onSelectionChange 同步回
-    //     selectedNodeId）要能唤出完整组件和操作面板，与拆分前行为一致。
-    // 框选/全选不会写 selectedNodeId（多选时同步为 null），不会击穿降级。
-    // selector 返回 boolean 且只在自己被选中/取消时翻转，无重渲染风暴。
+    // The node singly selected on the canvas (canvasStore.selectedNodeId) is not shelled:
+    //   - A node created at low zoom (the placement flow calls setSelectedNode(newNodeId)) must appear immediately as the full
+    //     component — the shell is a small untitled gray block, and at 10% the user would think "it was not created";
+    //   - Clicking a node at low zoom (React Flow selection syncs back to selectedNodeId via
+    //     onSelectionChange) must be able to summon the full component and operations panel, as before the split.
+    // Box-select / select-all do not write selectedNodeId (synced to null on multi-select), so the downgrade is not broken through.
+    // The selector returns a boolean that flips only when this node is selected/deselected, so no re-render storm.
     const isActiveSelection = useCanvasStore(
       (state) => state.selectedNodeId === props.id
     );
     const wantShell =
       lowDetail && !exempt && !isActiveSelection && !isNodeMediaActive(props.id);
 
-    // shell → 完整组件的切换永远经过升级队列（每帧限量放行，手势中不放行）：
-    //   - 手势进行中新挂载的节点（视口裁剪把它换进来的）从 shell 起步，避免
-    //     快速平移时每秒几十次完整挂载造成的稳态掉帧尖刺；
-    //   - 缩放升档时视口内的所有 shell 分批升级，摊平原先单次提交的长帧。
-    //   - 换画布 hydrate 首帧挂载的节点（见 canvasLod 的 hydrate burst）：几百个
-    //     节点同一次提交挂完是切画布卡顿的主要来源，先出 shell 再分批补齐。
-    // 反方向（完整 → shell）立即生效：降档必须与裁剪开关同一提交（见 Canvas
-    // 的 applyLowDetailClass 注释），且换成 shell 本身就便宜。
+    // The shell → full component switch always goes through the upgrade queue (a limited number per frame, none during gestures):
+    //   - Nodes newly mounted during a gesture (swapped in by viewport culling) start from the shell, avoiding
+    //     the steady-state frame-drop spikes of dozens of full mounts per second during fast panning;
+    //   - On zoom-in all shells in the viewport upgrade in batches, flattening the long frame of a single commit.
+    //   - Nodes mounted in the first frame of a canvas hydrate (see the hydrate burst in canvasLod): hundreds of
+    //     nodes mounting in one commit is the main source of lag when switching canvases; shells appear first, then fill in batches.
+    // The opposite direction (full → shell) takes effect immediately: the downgrade must land in the same commit as the culling switch (see the Canvas
+    // applyLowDetailClass comment), and swapping to the shell is cheap anyway.
     const [heldShell, setHeldShell] = useState(
       () =>
         wantShell ||
@@ -241,18 +241,18 @@ export function withLodShell(
           (isCanvasGestureActive() || isCanvasHydrateBurstActive()))
     );
     if (wantShell && !heldShell) {
-      // render 阶段同组件 setState 是 React 认可的「派生状态」写法，立即重渲染。
+      // Same-component setState during render is the React-sanctioned "derived state" pattern, re-rendering immediately.
       setHeldShell(true);
     }
     useEffect(() => {
       if (!heldShell || wantShell) return;
-      // 返回的取消函数在卸载/重新降档时把自己撤出队列。
+      // The returned cancel function removes itself from the queue on unmount / re-downgrade.
       return requestShellUpgrade(() => setHeldShell(false));
     }, [heldShell, wantShell]);
 
-    // 跨项目粘贴的素材占位遮罩、参考拾取遮罩都挂在每个节点上（shell 档也要有）：
-    // `.react-flow__node` 本身是定位元素，遮罩用 inset-0 就精确贴合这个节点的盒子，
-    // 不必在画布层重算 positionAbsolute × zoom。不在拾取态时它渲染 null。
+    // The placeholder mask for assets pasted across projects and the reference-pick mask both hang on every node (the shell tier needs them too):
+    // `.react-flow__node` is itself a positioned element, so the mask with inset-0 fits this node's box exactly,
+    // with no need to recompute positionAbsolute × zoom at the canvas layer. When not in pick state it renders null.
     if (heldShell) {
       return (
         <>

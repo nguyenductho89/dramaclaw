@@ -637,9 +637,9 @@ def template_isomorphism(skill_id: str, plan: Any) -> dict[str, Any]:
         data = node.get("data") if isinstance(node.get("data"), dict) else {}
         unit: dict[str, Any] = {
             "title": _node_text(node, "title", "name", "label", "displayName")
-            or f"内容段 {index + 1}",
+            or f"Content segment {index + 1}",
             "prompt": _node_text(node, "prompt", "description", "content")
-            or f"内容段 {index + 1}",
+            or f"Content segment {index + 1}",
         }
         if narrations[index] is not None:
             unit["narration"] = narrations[index]
@@ -1442,10 +1442,10 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
             ratio = re.sub(r"\s+", "", ratio_match.group(1))
             return _allowed_inferred_option(parameter, ratio)
         aliases = (
-            (("竖屏", "竖版", "vertical", "portrait"), "9:16"),
-            (("横屏", "横版", "landscape"), "16:9"),
-            (("方形", "正方形", "square"), "1:1"),
-            (("宽画幅", "超宽屏", "ultrawide"), "21:9"),
+            (("vertical", "portrait"), "9:16"),
+            (("horizontal", "landscape"), "16:9"),
+            (("square",), "1:1"),
+            (("widescreen", "ultrawide", "ultra-wide"), "21:9"),
         )
         for keywords, value in aliases:
             if any(keyword in lowered for keyword in keywords):
@@ -1455,26 +1455,26 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
         if any(
             keyword in lowered
             for keyword in (
-                "只创建",
-                "仅创建",
-                "不执行",
-                "不自动执行",
-                "不要执行",
-                "手动执行",
+                "create only",
+                "only create",
+                "do not execute",
+                "do not auto-execute",
+                "do not run",
+                "manual execution",
             )
         ):
             return _allowed_inferred_option(parameter, "manual")
         if any(
             keyword in lowered
-            for keyword in ("自动执行", "自动运行", "直接执行", "直接生成")
+            for keyword in ("auto-execute", "auto execution", "auto-run", "execute directly", "generate directly")
         ):
             return _allowed_inferred_option(parameter, "auto")
 
     if parameter_id == "voice_mode":
         voice_aliases = (
-            (("无对白", "不要对白", "纯音乐"), "no_dialogue"),
-            (("旁白", "解说"), "voiceover"),
-            (("对白", "对话"), "dialogue"),
+            (("no dialogue", "no dialog", "instrumental", "music only"), "no_dialogue"),
+            (("narration", "voiceover", "voice-over"), "voiceover"),
+            (("dialogue", "dialog"), "dialogue"),
         )
         for keywords, value in voice_aliases:
             if any(keyword in lowered for keyword in keywords):
@@ -1482,7 +1482,7 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
 
     if parameter_id in {"duration", "duration_seconds"}:
         duration_match = re.search(
-            r"(?<!\d)(\d{1,4})\s*(?:秒|s\b|sec(?:ond)?s?\b)", lowered
+            r"(?<!\d)(\d{1,4})\s*(?:s\b|sec(?:ond)?s?\b)", lowered
         )
         if duration_match:
             seconds = int(duration_match.group(1))
@@ -1505,7 +1505,7 @@ def _infer_parameter_value(parameter: dict[str, Any], user_goal: str) -> Any:
         "beat_count",
     }:
         count_match = re.search(
-            r"(?<!\d)(\d{1,2})\s*(?:张|幅|屏|个|段|条|镜头|镜)(?!\d)", goal
+            r"(?<!\d)(\d{1,2})\s*(?:images?|pictures?|frames?|screens?|items?|segments?|clips?|shots?|scenes?)\b(?!\d)", goal, re.IGNORECASE
         )
         if count_match:
             return int(count_match.group(1))
@@ -1788,9 +1788,9 @@ def get_workflow_skill(args: dict[str, Any]) -> dict[str, Any]:
             ),
         },
         "message": (
-            "已加载完整 Workflow Skill 包，可直接规划 freezone_workflow_plan.v1。"
+            "Loaded the complete Workflow Skill package; you can plan freezone_workflow_plan.v1 directly."
             if input_contract["ready_for_planning"]
-            else "已加载 Workflow Skill，但必须先补全或修正 input_contract。"
+            else "Loaded the Workflow Skill, but input_contract must be completed or corrected first."
         ),
     }
 
@@ -1992,18 +1992,18 @@ def _standard_outline_prompt(
     for index, unit in enumerate(units, 1):
         if not isinstance(unit, dict):
             continue
-        title = _text(unit.get("title")) or f"第{index}段"
+        title = _text(unit.get("title")) or f"Segment {index}"
         prompt = _text(unit.get("prompt"))
         narration = _text(unit.get("narration"))
-        parts = [f"{title}："]
+        parts = [f"{title}:"]
         if prompt:
             parts.append(prompt)
         if narration:
-            parts.append(f"旁白：{narration}")
+            parts.append(f"Narration: {narration}")
         briefs.append(" ".join(parts))
     if not briefs:
         return user_goal
-    return f"{user_goal}\n逐段事实与旁白（必须完整保留）：\n" + "\n".join(briefs)
+    return f"{user_goal}\nPer-segment facts and narration (must be preserved in full):\n" + "\n".join(briefs)
 
 
 def _standard_skill_items(
@@ -2021,7 +2021,7 @@ def _standard_skill_items(
         items.append(
             _planned_item(
                 item_id="creative_outline",
-                title="广告创意大纲",
+                title="Ad creative outline",
                 prompt=user_goal,
                 recipe_id="video-ad-creative-outline",
                 depends_on=["workflow_input"],
@@ -2031,8 +2031,8 @@ def _standard_skill_items(
         items.append(
             _planned_item(
                 item_id="product_reference",
-                title="商品视觉锚点",
-                prompt=f"{user_goal}，生成稳定一致的商品主体参考图",
+                title="Product visual anchor",
+                prompt=f"{user_goal}. Generate a stable, consistent reference image of the product subject",
                 recipe_id="general-image",
                 depends_on=["creative_outline"],
                 reference_inputs=["creative_outline"],
@@ -2058,7 +2058,7 @@ def _standard_skill_items(
                 items.append(
                     _planned_item(
                         item_id=f"clip_{index}",
-                        title=f"{unit['title']}视频",
+                        title=f"{unit['title']} video",
                         prompt=unit["prompt"],
                         recipe_id="video-clip-generation",
                         depends_on=dependencies,
@@ -2071,7 +2071,7 @@ def _standard_skill_items(
                 items.append(
                     _planned_item(
                         item_id=f"voice_{index}",
-                        title=f"{unit['title']}旁白",
+                        title=f"{unit['title']} narration",
                         prompt=unit["narration"],
                         narration=unit["narration"],
                         recipe_id="general-audio",
@@ -2090,7 +2090,7 @@ def _standard_skill_items(
     items.append(
         _planned_item(
             item_id="outline",
-            title="内容规划",
+            title="Content plan",
             prompt=(
                 _standard_outline_prompt(
                     skill_id=skill_id, user_goal=user_goal, units=units
@@ -2107,32 +2107,32 @@ def _standard_skill_items(
         asset_specs = (
             (
                 "characters",
-                "角色设定",
-                "提取主要角色、身份、外形、服装和跨镜头连续性要求",
+                "Character profiles",
+                "Extract the main characters, identities, appearance, costumes and cross-shot continuity requirements",
                 "drama-character-extraction",
                 "character_assets",
-                "角色身份图",
-                "根据角色设定生成稳定的角色身份与转面参考图",
+                "Character identity images",
+                "Generate stable character identity and turnaround reference images from the character profiles",
                 "drama-character-turnaround",
             ),
             (
                 "scenes",
-                "场景设定",
-                "提取主要场景、空间关系、时代信息和统一视觉风格",
+                "Scene profiles",
+                "Extract the main scenes, spatial relationships, period information and a unified visual style",
                 "drama-scene-extraction",
                 "scene_assets",
-                "场景参考图",
-                "根据场景设定生成稳定的场景视觉参考图",
+                "Scene reference images",
+                "Generate stable scene visual reference images from the scene profiles",
                 "drama-scene-image",
             ),
             (
                 "props",
-                "道具设定",
-                "提取关键道具、外观细节、持有关系和剧情用途",
+                "Prop profiles",
+                "Extract the key props, appearance details, ownership relationships and plot purposes",
                 "drama-prop-extraction",
                 "prop_assets",
-                "道具参考图",
-                "根据道具设定生成稳定的关键道具参考图",
+                "Prop reference images",
+                "Generate stable key-prop reference images from the prop profiles",
                 "drama-prop-image",
             ),
         )
@@ -2150,7 +2150,7 @@ def _standard_skill_items(
                 _planned_item(
                     item_id=text_id,
                     title=text_title,
-                    prompt=f"{user_goal}。{text_prompt}",
+                    prompt=f"{user_goal}. {text_prompt}",
                     recipe_id=text_recipe,
                     depends_on=["outline"],
                     stage=text_id,
@@ -2173,7 +2173,7 @@ def _standard_skill_items(
             items.append(
                 _planned_item(
                     item_id=source_id,
-                    title=f"{unit['title']}镜头设计",
+                    title=f"{unit['title']} shot design",
                     prompt=unit["prompt"],
                     recipe_id="drama-shot-group-detail",
                     depends_on=["outline", "characters", "scenes", "props"],
@@ -2184,7 +2184,7 @@ def _standard_skill_items(
             items.append(
                 _planned_item(
                     item_id=frame_id,
-                    title=f"{unit['title']}首帧",
+                    title=f"{unit['title']} first frame",
                     prompt=unit["prompt"],
                     recipe_id="general-image",
                     depends_on=[
@@ -2208,7 +2208,7 @@ def _standard_skill_items(
             items.append(
                 _planned_item(
                     item_id=source_id,
-                    title=f"{unit['title']}画面",
+                    title=f"{unit['title']} visual",
                     prompt=unit["prompt"],
                     recipe_id="general-image",
                     depends_on=["outline"],
@@ -2227,7 +2227,7 @@ def _standard_skill_items(
         items.append(
             _planned_item(
                 item_id=f"clip_{index}",
-                title=f"{unit['title']}视频",
+                title=f"{unit['title']} video",
                 prompt=unit["prompt"],
                 recipe_id="general-video",
                 depends_on=video_dependencies,
@@ -2252,11 +2252,11 @@ def _standard_skill_items(
             items.append(
                 _planned_item(
                     item_id=f"voice_{index}",
-                    title=f"{unit['title']}旁白",
+                    title=f"{unit['title']} narration",
                     prompt=(
                         narration
-                        or "只朗读上游镜头设计输出中的 narration、voiceover、"
-                        "dialogue 或 speech_text 正文，不朗读制作说明。"
+                        or "Read aloud only the narration, voiceover, "
+                        "dialogue or speech_text body from the upstream shot design output; do not read production notes."
                     ),
                     narration=narration,
                     recipe_id=(
@@ -2276,8 +2276,8 @@ def _standard_skill_items(
         items.append(
             _planned_item(
                 item_id="background_music",
-                title="背景音乐",
-                prompt=f"{user_goal}，生成与情绪节奏匹配的纯音乐",
+                title="Background music",
+                prompt=f"{user_goal}, generate instrumental music matching the emotional rhythm",
                 recipe_id="drama-background-music",
                 depends_on=["outline"],
                 stage="audio",
@@ -2305,7 +2305,7 @@ def _standard_planner_units(
             raw_unit = {}
         number = index + 1
         title = (
-            _text(raw_unit.get("title") or raw_unit.get("name")) or f"内容段 {number}"
+            _text(raw_unit.get("title") or raw_unit.get("name")) or f"Content segment {number}"
         )
         prompt = (
             _text(
@@ -2313,7 +2313,7 @@ def _standard_planner_units(
                 or raw_unit.get("description")
                 or raw_unit.get("goal")
             )
-            or f"{user_goal}，第 {number} 段：{title}"
+            or f"{user_goal}, segment {number}: {title}"
         )
         narration = _text(
             raw_unit.get("narration")
@@ -2375,16 +2375,16 @@ def _confirmed_input_guidance(
     visual_style = _text(resolved_inputs.get("visual_style"))
     if (
         visual_style
-        and visual_style.casefold() != "未指定"
+        and visual_style.casefold() != "unspecified"
         and skill_id == "short-drama-quick"
     ):
         parts.append(
-            f"已确认视觉风格为「{visual_style}」；角色、场景、分镜、首帧和视频必须保持该风格。"
+            f"Confirmed visual style: \"{visual_style}\"; characters, scenes, storyboards, first frames and videos must keep this style."
         )
     character_method = _text(resolved_inputs.get("character_input_method"))
     if character_method and skill_id == "pixar-ip-ad-video":
         parts.append(
-            f"已确认角色来源为「{character_method}」；不得回退到预设角色或改用未确认的角色来源。"
+            f"Confirmed character source: \"{character_method}\"; do not fall back to a preset character or switch to an unconfirmed character source."
         )
     return " ".join(parts)
 
@@ -2605,8 +2605,8 @@ def _expand_standard_skill_intent(
                     ),
                 )
             if narration == title or re.fullmatch(
-                r"(?:这是)?(?:短剧|视频)?的?第?[一二三四五六七八九十\d]+段(?:旁白|解说)[。.!！]?",
-                narration,
+                r"(?:this is )?(?:the )?(?:short drama |video )?(?:(?:segment|part|section|unit)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:narration|voice-?over)|(?:narration|voice-?over)\s+(?:for|of)\s+(?:the\s+)?(?:segment|part|section|unit)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))[.!]?",
+                narration, re.IGNORECASE,
             ):
                 return (
                     intent,
@@ -2618,8 +2618,8 @@ def _expand_standard_skill_intent(
                         hint=(
                             "Write the exact sentence(s) the voice-over should speak "
                             "aloud for this unit, in the user's language. Placeholders "
-                            'like "第一段旁白" / "这是短剧的第二段解说" and unit titles '
-                            'are rejected. Example: "深夜的便利店，只有他一个人。" '
+                            'like "Segment one narration" / "This is the narration for part two" and unit titles '
+                            'are rejected. Example: "The convenience store at midnight, with only him inside." '
                             "If include_audio was not requested by the user, set "
                             "include_audio=false instead of inventing narration."
                         ),
@@ -2719,12 +2719,12 @@ def _compile_dynamic_recipe_items_intent(
         {
             "id": "workflow_input",
             "node_type": "textAnnotationNode",
-            "name": "用户需求 / 输入素材",
+            "name": "User request / input materials",
             "description": user_goal,
             "stage": "input",
             "data": {
-                "displayName": "用户需求 / 输入素材",
-                "title": "用户需求 / 输入素材",
+                "displayName": "User request / input materials",
+                "title": "User request / input materials",
                 "content": user_goal,
                 "prompt": user_goal,
                 "workflowCatalogRole": "user_input",
@@ -2863,8 +2863,8 @@ def _compile_dynamic_recipe_items_intent(
                 path=f"items.{index}.narration",
                 hint=(
                     "Set items[].narration to the exact spoken sentence(s), e.g. "
-                    '"深夜的便利店，只有他一个人。" — an instruction such as '
-                    '"为这段视频生成旁白" is not narration and is rejected.'
+                    '"The convenience store at midnight, with only him inside." -- an instruction such as '
+                    '"Generate narration for this video" is not narration and is rejected.'
                 ),
             )
         node = _intent_item_node(
@@ -3049,14 +3049,14 @@ def _compile_dynamic_recipe_items_intent(
                 {
                     "id": compose_id,
                     "node_type": "videoComposeNode",
-                    "name": "成片合成",
-                    "description": "汇总视频片段、配乐和旁白，进入时间线完成最终编排。",
+                    "name": "Final composition",
+                    "description": "Combine the video clips, music and narration, and enter the timeline to finish the final arrangement.",
                     "stage": "compose",
                     "data": {
-                        "displayName": "成片合成",
-                        "title": "成片合成",
-                        "content": "汇总视频片段、配乐和旁白，进入时间线完成最终编排。",
-                        "prompt": "汇总视频片段、配乐和旁白，进入时间线完成最终编排。",
+                        "displayName": "Final composition",
+                        "title": "Final composition",
+                        "content": "Combine the video clips, music and narration, and enter the timeline to finish the final arrangement.",
+                        "prompt": "Combine the video clips, music and narration, and enter the timeline to finish the final arrangement.",
                         # Keep the intent's semantic source order. Canvas node ids
                         # are allocated later, so the frontend resolves these plan
                         # ids through each node's workflowPlanNodeId.
@@ -3180,7 +3180,7 @@ def _dynamic_default_model(recipe: dict[str, Any]) -> str:
     ).lower()
     return (
         "suno_music"
-        if any(token in searchable for token in ("music", "bgm", "音乐", "配乐"))
+        if any(token in searchable for token in ("music", "bgm"))
         else "edge-tts"
     )
 
@@ -3210,7 +3210,7 @@ def _intent_audio_kind(item: dict[str, Any], recipe: dict[str, Any] | None) -> s
         "music"
         if any(
             token in searchable
-            for token in ("background_music", "bgm", "背景音乐", "配乐", "纯音乐")
+            for token in ("background_music", "bgm", "instrumental")
         )
         else "speech"
     )
@@ -3222,9 +3222,9 @@ def _looks_like_speech_generation_instruction(value: Any) -> bool:
         return False
     return bool(
         re.search(
-            r"(?:根据|基于|使用|提取|将).{0,40}(?:旁白|文案|脚本|广告词).{0,40}"
-            r"(?:生成|制作|转换|合成).{0,12}(?:旁白|配音|语音|音频)"
-            r"|(?:生成|制作).{0,20}(?:旁白配音|语音音频)",
+            r"(?:based on|using|extract|convert)\s.{0,40}(?:narration|copy|script|ad copy).{0,40}"
+            r"(?:generate|create|produce|convert|synthesize)\s.{0,12}(?:narration|voice-?over|speech|audio)"
+            r"|(?:generate|create|make|produce)\s.{0,20}(?:voice-?over narration|speech audio|narration audio)",
             text,
             re.IGNORECASE,
         )
@@ -3239,10 +3239,10 @@ def _duration_ms(value: Any) -> int | None:
     text = _text(value).lower()
     if not text:
         return None
-    minute_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:分钟|分|min(?:ute)?s?)", text)
+    minute_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:min(?:ute)?s?)", text)
     if minute_match:
         return int(float(minute_match.group(1)) * 60_000)
-    second_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:秒|s(?:ec(?:ond)?s?)?)", text)
+    second_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)", text)
     if second_match:
         return int(float(second_match.group(1)) * 1000)
     return None
@@ -3632,9 +3632,6 @@ def _is_redundant_compose_item(item_id: str, item: dict[str, Any]) -> bool:
         return True
     title = _text(item.get("title")).strip().lower()
     return title in {
-        "最终合成",
-        "成片合成",
-        "最终成片合成",
         "final compose",
         "final composition",
     }
@@ -4055,9 +4052,9 @@ def _noncanonical_video_duration_blockers(nodes: list[Any]) -> list[dict[str, st
 
 
 _SOCIAL_IMAGE_RECIPE_PLATFORMS = {
-    "social-xiaohongshu-image": "小红书",
-    "social-douyin-cover": "抖音",
-    "social-weibo-wechat-image": "微博/微信",
+    "social-xiaohongshu-image": "Xiaohongshu",
+    "social-douyin-cover": "Douyin",
+    "social-weibo-wechat-image": "Weibo/WeChat",
     "social-ig-post": "Instagram",
 }
 
@@ -4172,7 +4169,7 @@ def _pixar_character_source_errors(
         )
         prompt = _text(data.get("prompt") or node.get("prompt"))
         if (confirmed_method and confirmed_method != method) or (
-            "自定义角色" in prompt and method != "自定义角色"
+            "Custom character" in prompt and method != "Custom character"
         ):
             return [{
                 "path": "inputs.character_input_method",
@@ -4186,7 +4183,7 @@ def _quick_drama_visual_style_blockers(
 ) -> list[dict[str, str]]:
     """Require a confirmed style in each executable visual task's prompt context."""
     style = _text(visual_style)
-    if not style or style.casefold() == "未指定":
+    if not style or style.casefold() == "unspecified":
         return []
     nodes = plan.get("nodes") if isinstance(plan.get("nodes"), list) else []
     edges = plan.get("edges") if isinstance(plan.get("edges"), list) else []
@@ -4849,7 +4846,7 @@ def _load_json_dir(path: Path) -> list[dict[str, Any]]:
 def _catalog_label(skill: dict[str, Any]) -> str:
     return (
         _text(skill.get("name") or skill.get("label") or skill.get("id"))
-        or "配置工作流"
+        or "Configured workflow"
     )
 
 

@@ -231,7 +231,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
         parameters={
             "aspect_ratio": {
                 "type": "enum",
-                "label": "比例",
+                "label": "Aspect ratio",
                 "default": "2:3",
                 "options": ["2:3", "16:9"],
             },
@@ -274,12 +274,12 @@ _REGISTRY: dict[str, SkillDefinition] = {
         id="freezone.sketch_from_director_combined",
         provider="freezone_mainline",
         capabilities=_FREEZONE_MAINLINE_CAPABILITIES,
-        display_name="从导演合成图生成草图",
-        description="从 Beat 上下文和导演合成图生成主线草图候选。",
+        display_name="Generate sketch from director composite",
+        description="Generate mainline sketch candidates from the Beat context and the director composite image.",
         parameters={
             "aspect_ratio": {
                 "type": "enum",
-                "label": "比例",
+                "label": "Aspect ratio",
                 "default": "2:3",
                 "options": ["2:3", "16:9"],
             },
@@ -294,7 +294,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
             ),
             _input(
                 "director_combined",
-                "导演合成图",
+                "Director composite image",
                 required=True,
                 cardinality="single",
                 accepts=_image_accepts(
@@ -323,13 +323,13 @@ _REGISTRY: dict[str, SkillDefinition] = {
         parameters={
             "quality": {
                 "type": "enum",
-                "label": "质量",
+                "label": "Quality",
                 "default": "medium",
                 "options": ["low", "medium", "high"],
             },
             "background_reference_mode": {
                 "type": "enum",
-                "label": "背景参考模式",
+                "label": "Background reference mode",
                 "default": "material_only",
                 "options": ["material_only", "scene_anchor"],
             },
@@ -398,7 +398,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
         id="freezone.set_selected_background",
         provider="freezone_mainline",
         capabilities=_FREEZONE_MAINLINE_CAPABILITIES,
-        display_name="设为当前背景",
+        display_name="Set as current background",
         description=(
             "Set a Beat-owned selected background from an explicit image source. "
             "This is deterministic and does not call an image model."
@@ -413,7 +413,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
             ),
             _input(
                 "source_image",
-                "背景来源图",
+                "Background source image",
                 required=True,
                 cardinality="single",
                 accepts=_image_accepts(
@@ -437,7 +437,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
         outputs=[
             SkillOutputSpec(
                 role="selected_background",
-                label="当前背景",
+                label="Current background",
                 media_type="image",
                 node_type="imageGenNode",
                 pushable=False,
@@ -448,7 +448,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
         id="freezone.set_director_combined",
         provider="freezone_mainline",
         capabilities=_FREEZONE_MAINLINE_CAPABILITIES,
-        display_name="设为导演合成图",
+        display_name="Set as director composite",
         description=(
             "Set a Beat-owned 3GS director combined image from an explicit image source. "
             "This is deterministic and does not call an image model."
@@ -463,7 +463,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
             ),
             _input(
                 "source_image",
-                "导演合成图来源",
+                "Director composite source",
                 required=True,
                 cardinality="single",
                 accepts=_image_accepts(
@@ -481,7 +481,7 @@ _REGISTRY: dict[str, SkillDefinition] = {
         outputs=[
             SkillOutputSpec(
                 role="director_combined",
-                label="导演合成图",
+                label="Director composite",
                 media_type="image",
                 node_type="imageGenNode",
                 pushable=True,

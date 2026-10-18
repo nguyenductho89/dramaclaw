@@ -67,11 +67,11 @@ function invalidateCompletedAssetQueries(
       queryClient.invalidateQueries({
         queryKey: queryKeys.beats(projectId, task.episode),
       });
-      // 拆镜是 beat_count 从 0 变成 N 的那一步，分集列表的镜头数角标读它。
+      // Splitting shots is the step where beat_count goes from 0 to N, which the shot-count badge in the episode list reads.
       queryClient.invalidateQueries({ queryKey: queryKeys.episodes(projectId) });
-      // 拆镜整集重写 beats，身份/场景/道具的引用关系随之改变。资产索引挂在项目级
-      // key 上，逐集失效 beats 够不着它；而 staleTime 只标记陈旧、不会自动重取，
-      // 停在资产详情不动的用户会一直看着旧的使用位置。
+      // Splitting shots rewrites all beats of the episode, and the reference relations of identities/scenes/props change with it. The asset index hangs on a project-level
+      // key that invalidating beats episode by episode cannot reach; and staleTime only marks data stale without refetching automatically,
+      // so a user parked on the asset detail would keep seeing the old usage locations.
       invalidateAssetReferences(queryClient, projectId);
       queryClient.invalidateQueries({
         queryKey: queryKeys.pipelineStatus(projectId),

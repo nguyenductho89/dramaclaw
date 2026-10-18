@@ -87,14 +87,14 @@ export function Header({ ambientBackground = false }: { ambientBackground?: bool
   const accountAnchorRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountPanelRef = useRef<HTMLDivElement | null>(null);
-  // 面板由点击/键盘打开时「钉住」：此时鼠标移开不再收走它。悬停打开的面板不钉。
+  // A panel opened by click/keyboard is "pinned": moving the mouse away no longer closes it. Hover-opened panels are not pinned.
   const accountPanelPinnedRef = useRef(false);
   const settingsAnchorRef = useRef<HTMLDivElement | null>(null);
   const { username, displayName: storedDisplayName, logout } = useAuthStore();
   const queryClient = useQueryClient();
-  // 退出登录是 SPA 内部跳转（不刷新页面），必须一并清掉 React Query 缓存和
-  // 用户级 zustand/localStorage 状态，否则换账号登录后 projectSummaries 等
-  // 查询还在 staleTime 内，新账号会直接看到上一个账号的项目列表。
+  // Logout is an in-SPA navigation (no page reload), so the React Query cache and
+  // user-level zustand/localStorage state must be cleared too; otherwise after switching accounts,
+  // queries such as projectSummaries are still within staleTime and the new account sees the previous account's project list.
   const handleLogout = async () => {
     await logout();
     resetUserSessionState({ queryClient });
@@ -224,8 +224,8 @@ export function Header({ ambientBackground = false }: { ambientBackground?: bool
   };
 
   const scheduleCloseAccountPanel = () => {
-    // 钉住的面板只由 Escape、面板外交互或选中某一项关闭 —— 鼠标掠过就收走的话,
-    // 触屏和键盘用户点开后根本读不完里面的内容(公告中心现在只在这儿)。
+    // A pinned panel is closed only by Escape, interaction outside it, or choosing an item; if a mouse pass-over closed it,
+    // touch and keyboard users could not finish reading it after opening (the announcement center lives only here now).
     if (accountPanelPinnedRef.current) return;
     clearAccountCloseTimer();
     accountCloseTimerRef.current = window.setTimeout(() => {
@@ -248,9 +248,9 @@ export function Header({ ambientBackground = false }: { ambientBackground?: bool
     openAccountPanel();
   };
 
-  // 账号面板是 header 里唯一的公告中心入口,必须在指针、触屏和键盘下都能开关。
-  // 面板 portal 到 body,不在触发器的 DOM 子树里,所以「点到外面」「焦点移到外面」
-  // 只能在 document 上判定。
+  // The account panel is the only entry to the announcement center in the header and must open/close with pointer, touch and keyboard.
+  // The panel is portaled to body and is not in the trigger's DOM subtree, so "click outside" and "focus moved outside"
+  // can only be decided on document.
   useEffect(() => {
     if (!accountPanelOpen) return;
     const isInsideAccountUi = (target: EventTarget | null) =>
@@ -281,8 +281,8 @@ export function Header({ ambientBackground = false }: { ambientBackground?: bool
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountPanelOpen]);
 
-  // 面板挂在 body 末尾,Tab 不会从触发器走进去。点击/键盘打开时把焦点送进第一项,
-  // 否则键盘用户能打开面板却够不到里面的公告中心。悬停打开的面板不抢焦点。
+  // The panel is mounted at the end of body, so Tab does not lead into it from the trigger. When opened by click/keyboard, focus is sent to the first item,
+  // otherwise keyboard users can open the panel but not reach the announcement center. Hover-opened panels do not steal focus.
   useEffect(() => {
     if (!accountPanelOpen || !accountPanelPinnedRef.current) return;
     accountPanelRef.current
@@ -323,9 +323,9 @@ export function Header({ ambientBackground = false }: { ambientBackground?: bool
   };
 
   return (
-    // marginRight：自由画布的虾导抽屉打开时是一块通屏高的浮层，会盖住顶栏右侧。
-    // 顶栏整条往左收，右上角那组入口（设置/通知/伙伴/算力/头像）与中间的 虾画/虾集
-    // 就跟着往左靠，仍然可见可点（对标 liblib）。抽屉没开时变量不存在 → 0px，原样。
+    // marginRight: when the free-canvas Xiadao drawer is open it is a full-height overlay that covers the right side of the top bar.
+    // The whole top bar shifts left so the right-hand group (settings/notifications/companion/credits/avatar) and the middle nav
+    // follow it and stay visible and clickable. When the drawer is closed the variable is absent -> 0px, unchanged.
     <div
       className={`relative z-20 shrink-0 text-sidebar-foreground ${
         ambientBackground ? "bg-transparent" : "bg-background/58 backdrop-blur-xl"
@@ -598,7 +598,6 @@ function useFloatingBubblePosition(
 // The account menu renders one row per entry in `SUPPORTED`, so adding a
 // locale means adding it there plus its label key here — no JSX to touch.
 const LANGUAGE_LABEL_KEYS: Record<Supported, string> = {
-  zh: "header.account.languageChinese",
   en: "header.account.languageEnglish",
   vi: "header.account.languageVietnamese",
 };

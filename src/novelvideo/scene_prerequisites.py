@@ -33,14 +33,14 @@ from __future__ import annotations
 from typing import Any
 
 SCENE_CATALOG_BUILDING_CODE = "SCENE_CATALOG_BUILDING"
-SCENE_CATALOG_BUILDING_MESSAGE = "场景正在构建，请完成后再规划场景"
+SCENE_CATALOG_BUILDING_MESSAGE = "Scenes are being built; wait for it to finish before planning scenes"
 
 SCENE_BUILD_NOT_APPLICABLE_CODE = "SCENE_BUILD_NOT_APPLICABLE"
-SCENE_BUILD_NOT_APPLICABLE_MESSAGE = "解说剧场景将在分集规划时按需生成，无需提前构建"
+SCENE_BUILD_NOT_APPLICABLE_MESSAGE = "Narrated-drama scenes are generated on demand during episode planning; no upfront build is needed"
 
 SCENE_PLANNING_RUNNING_CODE = "SCENE_PLANNING_RUNNING"
 # Project-wide: the planner holding the build back may be another episode's.
-SCENE_PLANNING_RUNNING_MESSAGE = "有分集场景正在规划，请完成后再构建场景"
+SCENE_PLANNING_RUNNING_MESSAGE = "Episode scenes are being planned; wait for it to finish before building scenes"
 
 # The planner task type, named here rather than imported, so this module stays
 # free of the task backend and can be used from both the API and the runners.
@@ -65,7 +65,7 @@ class SceneBuildNotApplicableError(ScenePlanningPrerequisiteError):
 
     A screenplay names every location in its scene headings, so a full-text pass
     produces a reusable catalogue. Narrated prose has no equivalent marker — the
-    same room is "公司", "那家公司", "郑氏集团的办公室" — so a full-text sweep
+    same room is "the company", "that company", "the office of the Zheng Group" — so a full-text sweep
     would be guessing, and the build defers to per-episode planning, where the
     question is scoped to one chapter.
 

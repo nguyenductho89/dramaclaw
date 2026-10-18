@@ -851,7 +851,7 @@ class ClaudeSdkThread:
                                 text="".join(assistant_parts),
                             )
                         elif stream_event["type"] == "tool_start":
-                            tool_lines.append(f"调用工具：{stream_event['name']}")
+                            tool_lines.append(f"Calling tool: {stream_event['name']}")
                             yield ChatBackendEvent(
                                 type="tool_update",
                                 thread_id=self.id,
@@ -932,13 +932,13 @@ class ClaudeSdkThread:
                             type="complete",
                             thread_id=self.id,
                             text=(final_result or "".join(assistant_parts)).strip()
-                            or "已中断。",
+                            or "Interrupted.",
                         )
                         return
 
             assistant_text = (
                 final_result or "".join(assistant_parts)
-            ).strip() or "已执行，但没有返回正文。"
+            ).strip() or "Executed, but no body text was returned."
             yield ChatBackendEvent(
                 type="complete", thread_id=self.id, text=assistant_text
             )
@@ -1054,7 +1054,7 @@ class ClaudeCliThread:
                             text="".join(assistant_parts),
                         )
                     elif stream_event["type"] == "tool_start":
-                        tool_lines.append(f"调用工具：{stream_event['name']}")
+                        tool_lines.append(f"Calling tool: {stream_event['name']}")
                         yield ChatBackendEvent(
                             type="tool_update",
                             thread_id=self.id,
@@ -1091,7 +1091,7 @@ class ClaudeCliThread:
 
             assistant_text = (
                 final_result or "".join(assistant_parts)
-            ).strip() or "已执行，但没有返回正文。"
+            ).strip() or "Executed, but no body text was returned."
             yield ChatBackendEvent(
                 type="complete", thread_id=self.id, text=assistant_text
             )
@@ -1108,7 +1108,7 @@ class ClaudeCliThread:
         async for event in self.stream(prompt):
             if event.type == "complete":
                 text = str(event.text or "").strip()
-        return ChatRunResult(thread_id=self.id, text=text or "已执行，但没有返回正文。")
+        return ChatRunResult(thread_id=self.id, text=text or "Executed, but no body text was returned.")
 
 
 def _codex_thread_config(
@@ -1758,14 +1758,14 @@ class CodexThread:
                             )
                         if payload.turn.status == TurnStatus.interrupted:
                             final_response = (
-                                "".join(assistant_parts).strip() or "已中断。"
+                                "".join(assistant_parts).strip() or "Interrupted."
                             )
                             final_disposition = "cancelled"
                         else:
                             final_response = (
                                 _codex_final_response_from_items(items)
                                 or "".join(assistant_parts).strip()
-                                or "已执行，但没有返回正文。"
+                                or "Executed, but no body text was returned."
                             )
                             final_disposition = "completed"
                 finally:
@@ -1810,7 +1810,7 @@ class CodexThread:
                             ChatBackendEvent(
                                 type="complete",
                                 thread_id=self.id,
-                                text="已中断。",
+                                text="Interrupted.",
                             ),
                         )
                     )
@@ -1882,9 +1882,9 @@ class CodexThread:
                             )
 
                     timeout_message = (
-                        "等待用户确认超时，请重新提交确认卡。"
+                        "Timed out waiting for user confirmation; please resubmit the confirmation card."
                         if timeout_kind == "user-input"
-                        else "Codex App Server 响应超时，请重试。"
+                        else "Codex App Server response timed out; please retry."
                     )
                     timeout_error = {
                         "message": timeout_message,

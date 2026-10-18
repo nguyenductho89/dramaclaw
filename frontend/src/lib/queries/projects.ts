@@ -237,9 +237,9 @@ export function useAddProjectGrant(project: string) {
           json: { principal_type: "user", ...payload },
         })
         .json<OkResponse<ProjectGrant>>(),
-    // 成员数只有前端在数，数的就是这份名单。这里把刷新 await 掉：不然 mutation
-    // 先结束、refetch 还在路上，那个窗口里 isLoading 仍是 false、data 还是加人
-    // 之前的旧数量，下一次添加就可能真的越过上限。
+    // The member count is only computed by the frontend, from exactly this list. The refresh is awaited here: otherwise the mutation
+    // finishes first while the refetch is still in flight, and in that window isLoading is still false and data is still the old
+    // count from before the member was added, so the next add could really exceed the cap.
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.projectGrants(project) }),

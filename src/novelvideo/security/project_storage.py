@@ -1,21 +1,21 @@
-"""统一的项目存储目录归属校验。
+"""Unified ownership validation of project storage directories.
 
-所有对项目 output/state/runtime **整树**的移动或删除,必须先经过本模块。
-目的:即使数据库记录被篡改、旧迁移写坏路径、或程序缺陷导致路径异常,也绝不
-能移动或删除属于其他用户(或数据根、用户根等宽泛目录)的文件。
+Every move or delete of the **whole tree** of a project's output/state/runtime must go through this module first.
+Goal: even if database records are tampered with, an old migration wrote bad paths, or a program defect makes paths abnormal, files belonging to
+other users (or broad directories such as the data root or user root) can never be moved or deleted.
 
-规范布局为 ``<root>/<owner_username>/<project>`` 或
-``<root>/_orgs/<organization>/<owner_username>/<project>`` ,其中三类 root
-分别是 ``config.OUTPUT_DIR`` / ``config.STATE_DIR`` / ``config.RUNTIME_DIR`` 。
+The canonical layout is ``<root>/<owner_username>/<project>`` or
+``<root>/_orgs/<organization>/<owner_username>/<project>``, where the three kinds of root
+are ``config.OUTPUT_DIR`` / ``config.STATE_DIR`` / ``config.RUNTIME_DIR`` respectively.
 
-校验规则(任一不满足即拒绝,调用方必须放弃移动/删除任何目录):
+Validation rules (reject if any is not satisfied; the caller must give up moving/deleting any directory):
 
-1. 路径必须精确匹配项目记录中冻结的 owner、project 和 organization 范围;
-2. 三类目录各自只能落在对应的数据根内;
-3. root 之下的每一层存储边界都不能是符号链接
-   (防止用可写目录里的软链接把删除引到别处);
-4. 路径不得等于数据根或 owner 用户根;
-5. 三个目录必须互不相同,且互不为对方的祖先。
+1. The path must exactly match the owner, project, and organization scope frozen in the project record;
+2. Each of the three directory kinds may only fall inside its corresponding data root;
+3. No storage boundary level below the root may be a symlink
+   (to prevent a symlink in a writable directory from redirecting deletion elsewhere);
+4. The path must not equal the data root or the owner user root;
+5. The three directories must be distinct from each other and none may be an ancestor of another.
 """
 
 from __future__ import annotations
@@ -28,12 +28,12 @@ from novelvideo import config
 
 
 class ProjectStorageOwnershipError(Exception):
-    """项目存储目录未通过归属校验;禁止移动或删除。"""
+    """The project storage directories failed ownership validation; moving or deleting is forbidden."""
 
 
 @dataclass(frozen=True, slots=True)
 class ValidatedProjectStorage:
-    """通过校验后的三类目录(均为 resolve 后的真实路径)。"""
+    """The three directory kinds after validation (all resolved real paths)."""
 
     output_dir: Path
     state_dir: Path
@@ -44,7 +44,7 @@ class ValidatedProjectStorage:
 
 
 def _roots() -> dict[str, Path]:
-    # 动态读取,而非 import 时绑定:根目录可被配置或测试改写。
+    # Read dynamically rather than bound at import time: the root directories can be reconfigured or rewritten by tests.
     return {
         "output": Path(config.OUTPUT_DIR),
         "state": Path(config.STATE_DIR),
@@ -150,10 +150,10 @@ def assert_owned_project_storage(
     state_dir: str | Path,
     runtime_dir: str | Path,
 ) -> ValidatedProjectStorage:
-    """校验三类项目目录归属;通过则返回 resolve 后的真实路径,否则抛出。
+    """Validate ownership of the three project directory kinds; return resolved real paths on success, otherwise raise.
 
-    调用方必须只在本函数成功返回后才移动/删除返回的路径,任一校验失败都不得
-    对任何目录执行破坏性操作。
+    The caller must move/delete the returned paths only after this function returns successfully; if any validation fails, no
+    destructive operation may be performed on any directory.
     """
     suffix = _expected_suffix(
         owner_username=owner_username,

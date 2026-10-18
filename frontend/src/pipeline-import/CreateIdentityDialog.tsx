@@ -14,7 +14,7 @@ interface CreateIdentityDialogProps {
   onSuccess: (message: string) => void;
 }
 
-// age_group 的取值是后端存的枚举，直接当英文标签显示；只有空值那档需要文案。
+// The age_group values are the enum stored by the backend and are shown directly as English labels; only the empty value needs copy.
 const AGE_OPTIONS = ["", "child", "youth", "middle", "elder"];
 
 export function CreateIdentityDialog({

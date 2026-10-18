@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { createContext, useContext, useId } from "react";
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it into this widely imported low-level
+// chain would make every test that mocks react-i18next blow up at import time.
 import i18n from "i18next";
 
 import { cn } from "@/lib/utils";
@@ -38,8 +38,8 @@ export function formatCreditPromotionLabel(
   if (!Number.isFinite(basisPoints) || basisPoints <= 0 || basisPoints >= 10_000) {
     return null;
   }
-  // 中文按「几折」说，英文按「off 多少」说，两种说法的数字不一样：7000bp 是
-  // 「7 折」也是「30% off」。两个数都算好丢给词条，让语言自己挑要哪个。
+  // Some languages express a discount as "N tenths" and others as "X% off", and the two numbers differ: 7000bp is
+  // "7 tenths" and also "30% off". Both numbers are computed and handed to the locale entry so each language picks the one it needs.
   const discount = (basisPoints / 1_000).toFixed(2).replace(/\.?0+$/, "");
   const percentOff = (100 - basisPoints / 100).toFixed(2).replace(/\.?0+$/, "");
   return i18n.t(

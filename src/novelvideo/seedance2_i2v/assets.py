@@ -218,7 +218,7 @@ def _split_identity_label(identity_id: str) -> tuple[str, str]:
 
 def _identity_display_label(identity_id: str) -> str:
     character, identity = _split_identity_label(identity_id)
-    return f"{character}（{identity}）" if identity else character
+    return f"{character} ({identity})" if identity else character
 
 
 def _identity_asset_path(project_output: Path, identity_id: str) -> Path:
@@ -318,7 +318,7 @@ def _join_unique_text_parts(parts: list[str]) -> str:
         if text and text not in seen:
             seen.add(text)
             result.append(text)
-    return "；".join(result)
+    return "; ".join(result)
 
 
 def _scene_asset_names(project_output: Path) -> set[str]:
@@ -341,7 +341,7 @@ def _beat_scene_label(project_output: Path, beat: dict[str, Any]) -> str:
     location = _text(beat.get("location"))
     if location:
         return location
-    return _text(beat.get("scene_description")).split("，", 1)[0] or "未识别场景"
+    return _text(beat.get("scene_description")).split(",", 1)[0] or "Unrecognized scene"
 
 
 def _scene_asset_path(project_output: Path, beat: dict[str, Any]) -> Path:
@@ -432,9 +432,9 @@ def validate_seedance2_reference_audio(path: Path) -> tuple[str, str]:
     except ValueError:
         return "", ""
     if duration < MIN_SEEDANCE2_VOICE_REFERENCE_SECONDS:
-        return "", f"当前 {duration:.1f} 秒，建议裁剪到 3-5 秒。"
+        return "", f"Currently {duration:.1f}s; trimming to 3-5 seconds is recommended."
     if duration > MAX_SEEDANCE2_VOICE_REFERENCE_SECONDS:
-        return "", f"当前 {duration:.1f} 秒，建议裁剪到 3-5 秒。"
+        return "", f"Currently {duration:.1f}s; trimming to 3-5 seconds is recommended."
     return "", ""
 
 
@@ -629,7 +629,7 @@ def _identity_prompt_fallback(identity_id: str, characters: list[Any]) -> str:
     if not body_type:
         body_type = _text(getattr(character, "body_type", ""))
     parts = [part for part in (face_prompt, appearance, body_type) if part]
-    return "，".join(parts) or _identity_display_label(identity_id)
+    return ", ".join(parts) or _identity_display_label(identity_id)
 
 
 def _speaker_matches_character(speaker: str, character: Any) -> bool:
@@ -671,8 +671,8 @@ def _voice_asset_label(character: Any, identity: Any | None) -> str:
     character_name = _text(getattr(character, "name", ""))
     identity_name = _text(getattr(identity, "identity_name", "")) if identity is not None else ""
     if identity_name:
-        return f"{character_name} · {identity_name}声线"
-    return f"{character_name}声线"
+        return f"{character_name} · {identity_name} voice"
+    return f"{character_name} voice"
 
 
 def _voice_asset_key(character: Any, identity: Any | None) -> str:
@@ -766,7 +766,7 @@ def _dialogue_voice_assets(
             refs.append(
                 {
                     "key": key,
-                    "label": f"{display_name}声线",
+                    "label": f"{display_name} voice",
                     "path": missing_path,
                     "identity_id": _text(speaker) or display_name,
                 }
@@ -825,7 +825,7 @@ def _narration_voice_asset(
     )
     return {
         "key": "voice:narrator",
-        "label": "项目解说声线",
+        "label": "Project narrator voice",
         "path": path,
         "identity_id": NARRATOR_SPEAKER,
     }
@@ -872,9 +872,9 @@ def build_seedance2_project_assets(
         image_number = next_image_number if use else None
         if image_number:
             next_image_number += 1
-        reference_label = f"图片{image_number}" if image_number else "未发送"
+        reference_label = f"image{image_number}" if image_number else "not_sent"
         asset_note = (
-            f"{note}；{validation_error}"
+            f"{note}; {validation_error}"
             if validation_error and note
             else (validation_error or note)
         )
@@ -920,7 +920,7 @@ def build_seedance2_project_assets(
         if audio_number:
             next_audio_number += 1
         asset_note = (
-            f"{note}；{validation_note}" if validation_note and note else (validation_note or note)
+            f"{note}; {validation_note}" if validation_note and note else (validation_note or note)
         )
         assets.append(
             Seedance2ResolvedAsset(
@@ -931,7 +931,7 @@ def build_seedance2_project_assets(
                 exists=exists,
                 selected=use,
                 request_field="reference_audios" if use else "",
-                reference_label=f"音频{audio_number}" if audio_number else "未发送",
+                reference_label=f"audio{audio_number}" if audio_number else "not_sent",
                 note=asset_note,
                 audio_number=audio_number,
                 identity_id=identity_id,
@@ -952,11 +952,11 @@ def build_seedance2_project_assets(
     if mode == Seedance2I2VMode.FIRST_FRAME:
         add_image(
             key="first_frame",
-            label=f"首帧 render · Beat {beat_num}",
+            label=f"First-frame render · Beat {beat_num}",
             path=first_frame_path,
             selected=True,
             request_field="image_url",
-            note="首帧模式只发送这一张首帧图，不混用参考图。",
+            note="First-frame mode sends only this first-frame image and does not mix in reference images.",
             crop_source_path=first_frame_source,
         )
         return assets
@@ -974,7 +974,7 @@ def build_seedance2_project_assets(
         )
         add_image(
             key="first_frame",
-            label=f"首帧 render · Beat {beat_num}",
+            label=f"First-frame render · Beat {beat_num}",
             path=first_frame_path,
             selected=True,
             request_field="first_frame_image",
@@ -982,7 +982,7 @@ def build_seedance2_project_assets(
         )
         add_image(
             key="last_frame",
-            label=f"尾帧 render · Beat {next_beat_num or beat_num + 1}",
+            label=f"Last-frame render · Beat {next_beat_num or beat_num + 1}",
             path=last_frame_path,
             selected=bool(next_beat_num),
             request_field="last_frame_image",
@@ -992,11 +992,11 @@ def build_seedance2_project_assets(
 
     add_image(
         key="first_frame",
-        label=f"当前 render · Beat {beat_num}",
+        label=f"Current render · Beat {beat_num}",
         path=first_frame_path,
         selected=True,
         request_field="reference_images",
-        note="多参考模式下作为参考图发送，不作为严格首帧。",
+        note="Sent as a reference image in multi-reference mode, not as a strict first frame.",
     )
 
     resolved_characters = (
@@ -1026,7 +1026,7 @@ def build_seedance2_project_assets(
             path=_identity_asset_path(project_output, identity_id),
             selected=True,
             request_field="reference_images",
-            note="有图时作为角色身份图保持一致；无图时使用身份提示词生成造型。",
+            note="With an image, it is sent as the character identity image to keep the look consistent; without one, the identity prompt generates the look.",
             identity_id=identity_id,
             required=False,
             fallback_text=identity_fallback,
@@ -1053,11 +1053,11 @@ def build_seedance2_project_assets(
         )
         prop_scope = "global" if is_global_prop else "episode"
         prop_fallback = _prop_prompt_fallback(prop_id, resolved_props, menu_meta)
-        label_prefix = "全局道具" if prop_scope == "global" else "剧集道具"
+        label_prefix = "Global prop" if prop_scope == "global" else "Episode prop"
         note = (
-            "全局道具有图时作为参考保持造型、材质和细节一致；无图时使用道具提示词约束。"
+            "With an image, the global prop is sent as a reference to keep shape, material, and details consistent; without one, the prop prompt constrains it."
             if prop_scope == "global"
-            else "剧集道具使用道具提示词约束造型、材质和细节。"
+            else "The episode prop prompt constrains shape, material, and details."
         )
         add_image(
             key=f"prop:{prop_id}",
@@ -1075,11 +1075,11 @@ def build_seedance2_project_assets(
     location, scene_path = _beat_scene_asset(project_output, beat)
     add_image(
         key=f"scene:{location}",
-        label=f"场景锚点 · {location}",
+        label=f"Scene anchor · {location}",
         path=scene_path,
         selected=True,
         request_field="reference_images",
-        note="用于约束场景结构、材质和空间关系。",
+        note="Constrains scene structure, materials, and spatial relationships.",
     )
 
     audio_type = normalize_seedance2_audio_type(beat)
@@ -1095,7 +1095,7 @@ def build_seedance2_project_assets(
                 path=voice_asset["path"],
                 selected=True,
                 identity_id=voice_asset["identity_id"],
-                note="Seedance 2.0 多参考模式只发送角色参考声线，不预生成台词音频。",
+                note="Seedance 2.0 multi-reference mode only sends the character reference voice and does not pre-generate dialogue audio.",
             )
     elif audio_type == "narration":
         voice_asset = _narration_voice_asset(
@@ -1109,7 +1109,7 @@ def build_seedance2_project_assets(
             path=voice_asset["path"],
             selected=True,
             identity_id=voice_asset["identity_id"],
-            note="Seedance 2.0 解说只发送参考声线，不预生成解说音频。",
+            note="Seedance 2.0 narration only sends the reference voice and does not pre-generate narration audio.",
         )
 
     return assets
@@ -1168,7 +1168,7 @@ def append_seedance2_user_reference_assets(
                 exists=item_path.exists(),
                 selected=item_path.exists() and not validation_error,
                 request_field="reference_images",
-                reference_label=f"图片{image_count}",
+                reference_label=f"image{image_count}",
                 validation_error=validation_error,
             )
         )
@@ -1184,7 +1184,7 @@ def append_seedance2_user_reference_assets(
                 exists=item_path.exists(),
                 selected=item_path.exists(),
                 request_field="reference_audios",
-                reference_label=f"音频{audio_count}",
+                reference_label=f"audio{audio_count}",
             )
         )
 
@@ -1198,7 +1198,7 @@ def apply_prompt_audio_selection(
     prompt_text = str(final_prompt or "")
     result: list[Seedance2ResolvedAsset] = []
     for asset in assets:
-        if asset.media_type != "audio" or not asset.reference_label.startswith("音频"):
+        if asset.media_type != "audio" or not asset.reference_label.startswith("audio"):
             result.append(asset)
             continue
         should_send = (

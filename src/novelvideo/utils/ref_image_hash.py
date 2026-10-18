@@ -45,8 +45,8 @@ class RefImageHasher:
             and entry.get("size") == size
             and entry.get("mtime_ns") == mtime_ns
             and isinstance(entry.get("sha256"), str)
-            # racily-clean 防御(同 git):mtime 太新鲜时文件系统时间戳粒度
-            # (NTFS ~10ms tick)可能掩盖快速重写,不信任缓存。
+            # racily-clean defense (same as git): when mtime is too fresh, the filesystem timestamp granularity
+            # (NTFS ~10ms tick) may mask a quick rewrite, so do not trust the cache.
             and time.time_ns() - mtime_ns > 2_000_000_000
         ):
             return str(entry["sha256"])

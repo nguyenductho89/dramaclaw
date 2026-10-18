@@ -555,8 +555,8 @@ function SourceActionButton({
   );
 }
 
-// 这些输入口最容易被「拖了素材却没接上」误伤（落点不准 / 不知道往哪接），
-// 未绑定时给个更显眼的把手 + 提示文案，降低误操作。
+// These input ports are the easiest to get wrong ("dragged an asset but never connected it": inaccurate drop / unclear where to connect),
+// so when unbound a more visible handle + hint text is shown to reduce mistakes.
 const EMPHASIZED_INPUT_ROLES = new Set<string>([
   'source_image',
   'scene_master',
@@ -632,8 +632,8 @@ export const SkillNode = memo(({ id, data, width, selected }: SkillNodeProps) =>
   const addNode = useCanvasStore((state) => state.addNode);
   const addEdgeWithData = useCanvasStore((state) => state.addEdgeWithData);
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
-  // 只订阅与本节点相连的边、以及入边的源节点。useShallow 逐元素比较,使得拖动「无关」
-  // 节点时本 SkillNode 不再重渲染 —— 边对象在拖拽中引用稳定,源节点只在自身变化时换引用。
+  // Subscribe only to edges connected to this node and the source nodes of incoming edges. useShallow compares element-wise, so dragging "unrelated"
+  // nodes no longer re-renders this SkillNode — edge objects keep stable references during drags, and source nodes change reference only when they themselves change.
   const incomingEdges = useCanvasStore(
     useShallow((state) => state.edges.filter((edge) => edge.target === id))
   );
@@ -1160,7 +1160,7 @@ export const SkillNode = memo(({ id, data, width, selected }: SkillNodeProps) =>
         const taskKey = typeof data.generationTaskKey === 'string' ? data.generationTaskKey : '';
         if (taskKey) {
           await awaitTaskCompletion(taskKey, projectId, {
-            // 续接时用持久化的类型取同一份预算（见 pollTimeoutForTaskType）。
+            // On resume, use the persisted type to get the same budget (see pollTimeoutForTaskType).
             taskType:
               typeof data.generationTaskType === 'string' ? data.generationTaskType : null,
           });
@@ -1416,8 +1416,8 @@ export const SkillNode = memo(({ id, data, width, selected }: SkillNodeProps) =>
       }
       const currentNode = useCanvasStore.getState().nodes.find((node) => node.id === id);
       const currentStartedAt = (currentNode?.data as { generationStartedAt?: unknown } | undefined)?.generationStartedAt;
-      // 提交即被后端拒绝（4xx，任务未创建）属于「先去补操作」的提示，用 toast；
-      // 任务跑起来之后的失败仍挂在节点上，离开再回来也看得到。
+      // A submission rejected by the backend immediately (4xx, task not created) is a "go fix something first" hint, shown with a toast;
+      // failures after the task started still stay on the node and remain visible after leaving and coming back.
       const rejectedOnSubmit = !runAccepted && isClientRejection(error);
       if (rejectedOnSubmit) {
         toast.error(backendErrorToastMessage(error, t), { duration: 8_000 });
@@ -1618,9 +1618,9 @@ export const SkillNode = memo(({ id, data, width, selected }: SkillNodeProps) =>
                 const usesRowHandles = referenceHandles.length > 0;
                 const emphasizedInput = EMPHASIZED_INPUT_ROLES.has(input.role);
                 const noReferenceLabel = input.role === 'identity' && beatContextReferences.noCharacter
-                  ? t('viewer.threeD.skillInputNoCharacter', { defaultValue: '无角色' })
+                  ? t('viewer.threeD.skillInputNoCharacter', { defaultValue: 'No character' })
                   : input.role === 'prop' && beatContextReferences.noProp
-                    ? t('viewer.threeD.skillInputNoProp', { defaultValue: '无道具' })
+                    ? t('viewer.threeD.skillInputNoProp', { defaultValue: 'No prop' })
                     : null;
                 const renderBoundChip = (edge: CanvasEdge) => {
                   const sourceNode = nodeById.get(edge.source);

@@ -27,7 +27,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-_CJK = re.compile(r"[　-鿿豈-﫿＀-￯]")
+_CJK = re.compile(r"[\u3000-\u9fff\uf900-\ufaff\uff00-\uffef]")
 
 
 def est_tokens(text: str) -> int:

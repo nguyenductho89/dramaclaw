@@ -68,13 +68,13 @@ import { useCanvasStore } from "@/stores/canvasStore";
 export type CanvasOutlineItem = {
   id: string;
   kind: "node" | "group";
-  /** 组用组名，普通节点用节点显示名。 */
+  /** Groups use the group name; ordinary nodes use the node display name. */
   name: string;
   type: CanvasNodeType;
   thumbUrl: string | null;
-  /** 下载用的原始资源地址；没有可下载内容时为 null。 */
+  /** Original resource URL for download; null when there is nothing downloadable. */
   mediaUrl: string | null;
-  /** 名字之外的一行副信息（类型 · 生成时间）；没什么可说的时候是 null。 */
+  /** A secondary line beyond the name (type · generation time); null when there is nothing to say. */
   meta: string | null;
   children: CanvasOutlineItem[];
 };
@@ -103,7 +103,7 @@ const NODE_TYPE_ICON: Record<CanvasNodeType, LucideIcon> = {
   [CANVAS_NODE_TYPES.style]: Palette,
 };
 
-/** 缩略图取节点自己的画面；视频/音频这类没有静帧的走图标兜底。 */
+/** The thumbnail uses the node's own picture; video/audio without a still fall back to an icon. */
 function outlineThumbUrl(node: CanvasNode): string | null {
   const imageUrl = resolveNodeSourceImageUrl(node);
   if (imageUrl) {
@@ -113,33 +113,33 @@ function outlineThumbUrl(node: CanvasNode): string | null {
   if (typeof preview === "string" && preview) {
     return preview;
   }
-  // 全景查看器这类不是「图片节点」但原件就是一张图的，直接拿它的原件当缩略图。
+  // Things like the panorama viewer are not "image nodes" but their original is a single image, so use the original as the thumbnail.
   const asset = resolveNodePrimaryAsset(node);
   return asset?.kind === "image" ? asset.url : null;
 }
 
 /**
- * 下载拿的是原件，走全局那张「节点 → 原始资产」映射（`resolveNodePrimaryAsset`），
- * 不在这里自己认字段：视频合成的成片在 `resultVideoUrl`、视频故事的源片在
- * `sourceVideoUrl`、3D 世界的包在 `plyUrl`，而它们身上都同时挂着封面图，自己认一遍
- * 就会把海报当成片下载给用户。没有原件的节点（文本、脚本等）回落到画面本身。
+ * Download fetches the original, via the global "node -> original asset" mapping (`resolveNodePrimaryAsset`),
+ * without recognizing fields here: a composed video's result is in `resultVideoUrl`, a video story's source in
+ * `sourceVideoUrl`, a 3D world's package in `plyUrl`, and all of them also carry a cover image, so recognizing
+ * fields by hand would download the poster as the video. Nodes without an original (text, scripts, etc.) fall back to their own picture.
  */
 function outlineMediaUrl(node: CanvasNode): string | null {
   return resolveNodePrimaryAsset(node)?.url ?? outlineThumbUrl(node);
 }
 
 /**
- * 副信息只补名字没说的那部分：
- * 名字被用户改过（或本来就是提示词）时补类型，名字本身就是默认类型名时不重复一遍；
- * 再补一个创建时刻，用来区分「同一条提示词生成三次」这种连名字带类型都一样的行。
+ * The secondary line only supplies what the name does not say:
+ * add the type when the name was edited by the user (or is a prompt), and do not repeat it when the name is already the default type name;
+ * then add a creation time, to tell apart rows like "the same prompt generated three times" whose name and type are identical.
  *
- * 时刻读的是 `createdAt` 而**不是** `generationStartedAt`：后者是临时字段，每条生成
- * 链路在成功和失败时都会把它写回 null（见 VideoNode / ImageGenNode / 各 Overlay），
- * 只在转圈那几十秒里看得见，跑完就蒸发——恰恰在事后回头找「谁是谁」的那一刻什么
- * 都不剩。`createdAt` 由 nodeFactory 在建节点时落一次，之后没人改。
+ * The time reads `createdAt`, **not** `generationStartedAt`: the latter is a temporary field that every generation
+ * chain writes back to null on success and failure (see VideoNode / ImageGenNode / each Overlay), visible only during
+ * the few dozen seconds of spinning and gone once finished - exactly when you look back to find "which is which"
+ * nothing is left. `createdAt` is set once by nodeFactory when the node is created and never changed afterwards.
  *
- * 用绝对时刻而不是「3 分钟前」：相对时间要么算 Date.now() 污染纯函数，要么显示的是
- * 上次渲染那一刻的旧值。加字段之前存的老画布没有 createdAt，那些行退回只显示类型。
+ * Use an absolute time rather than "3 minutes ago": relative time either calls Date.now() and pollutes the pure function, or shows
+ * the stale value from the last render. Old canvases saved before the field was added have no createdAt; those rows fall back to the type only.
  */
 function outlineMeta(
   node: CanvasNode,
@@ -183,8 +183,8 @@ function toOutlineItem(node: CanvasNode, t: TFunction): CanvasOutlineItem {
 }
 
 /**
- * 把画布节点压成一棵大纲树：组变成文件夹（名字就是组名），组内成员挂在它下面，
- * 其余节点平铺在顶层。父节点找不到（或父节点不是组）的一律回到顶层，不丢节点。
+ * Flatten canvas nodes into an outline tree: groups become folders (the name is the group name) with members under them,
+ * and the other nodes are laid flat at the top level. Nodes whose parent is missing (or not a group) go back to the top level, so no node is lost.
  */
 export function buildCanvasOutline(nodes: CanvasNode[], t: TFunction): CanvasOutlineItem[] {
   const items = new Map<string, CanvasOutlineItem>();
@@ -206,7 +206,7 @@ export function buildCanvasOutline(nodes: CanvasNode[], t: TFunction): CanvasOut
   return roots;
 }
 
-/** 组里可能还套着组，计数要把深层成员也算进去。 */
+/** Groups may be nested; the count must include deep members too. */
 export function countOutlineNodes(items: CanvasOutlineItem[]): number {
   return items.reduce(
     (total, item) => total + (item.kind === "node" ? 1 : 0) + countOutlineNodes(item.children),
@@ -215,14 +215,14 @@ export function countOutlineNodes(items: CanvasOutlineItem[]): number {
 }
 
 /**
- * 前序展开成 id 列表：父一定排在自己的成员前面。
- * duplicateNodesAsSiblings 靠这个顺序把成员的 parentId 重指到新克隆的组上。
+ * Pre-order expansion into an id list: a parent always comes before its members.
+ * duplicateNodesAsSiblings relies on this order to re-point the members' parentId to the newly cloned group.
  */
 export function collectOutlineIds(item: CanvasOutlineItem): string[] {
   return [item.id, ...item.children.flatMap(collectOutlineIds)];
 }
 
-/** 下载一个组＝下载它所有层级里带资源的成员。 */
+/** Downloading a group = downloading all its members, at every level, that carry resources. */
 export function collectOutlineDownloads(item: CanvasOutlineItem): CanvasOutlineItem[] {
   const self = item.kind === "node" && item.mediaUrl ? [item] : [];
   return [...self, ...item.children.flatMap(collectOutlineDownloads)];
@@ -231,8 +231,8 @@ export function collectOutlineDownloads(item: CanvasOutlineItem): CanvasOutlineI
 export type CanvasOutlineRowEntry = { item: CanvasOutlineItem; depth: number };
 
 /**
- * 按当前折叠状态把树压成「屏幕上从上到下的行」。
- * 虚拟化只能按下标取行，递归渲染的结构在这里走不通。
+ * Flatten the tree into "rows from top to bottom on screen" according to the current collapse state.
+ * Virtualization can only fetch rows by index, so a recursively rendered structure does not work here.
  */
 export function flattenCanvasOutline(
   items: CanvasOutlineItem[],
@@ -249,7 +249,7 @@ export function flattenCanvasOutline(
   return out;
 }
 
-/** 展开/收起全部要知道树里有哪些组，含嵌套组。 */
+/** Expand/collapse all needs to know which groups are in the tree, including nested groups. */
 export function collectOutlineGroupIds(items: CanvasOutlineItem[]): string[] {
   return items.flatMap((item) =>
     item.kind === "group" ? [item.id, ...collectOutlineGroupIds(item.children)] : [],
@@ -270,9 +270,9 @@ export type CanvasOutlineFilterKey =
   | "webpage";
 
 /**
- * 类型筛选按「用户眼里的东西」分档，不是逐个节点类型列出来——
- * 图片生成/编辑/导出在列表里长得一样，拆开只会让菜单变成一面墙。
- * 组不在这里：文件夹是容器，筛类型时只看它装了什么。
+ * Type filtering is bucketed by "what the user sees", not by listing each node type -
+ * image generation/edit/export look the same in the list, and splitting them would turn the menu into a wall.
+ * Groups are not here: a folder is a container, and when filtering by type only what it holds matters.
  */
 export const CANVAS_OUTLINE_FILTERS: ReadonlyArray<{
   key: CanvasOutlineFilterKey;
@@ -289,7 +289,7 @@ export const CANVAS_OUTLINE_FILTERS: ReadonlyArray<{
       CANVAS_NODE_TYPES.exportImage,
       CANVAS_NODE_TYPES.vectorSvg,
       CANVAS_NODE_TYPES.animatedGif,
-      // 风格节点不独立存在，它是图片节点所选风格的投影，跟着图片一起筛。
+      // Style nodes do not exist independently; they are a projection of the style selected on an image node and are filtered together with the image.
       CANVAS_NODE_TYPES.style,
     ],
   },
@@ -318,11 +318,11 @@ export function outlineFilterTypes(key: CanvasOutlineFilterKey): readonly Canvas
 }
 
 /**
- * 模糊匹配：先看是不是子串，不是就退化成「按顺序出现即可」的子序列匹配，
- * 这样 "img107" 也能命中 "Image 107 - 副本"。空关键词一律算命中。
+ * Fuzzy matching: first check for a substring, otherwise degrade to subsequence matching (characters only need to appear in order),
+ * so "img107" can also hit "Image 107 - copy". An empty keyword always matches.
  *
- * 子序列还额外要求命中位置挤在一起：不然拿整段提示词当名字的节点里，
- * 随便两个字都能在几百字里前后凑出来，一搜就全中，等于没筛。
+ * A subsequence additionally requires the matched positions to be close together: otherwise in a node whose name is a whole prompt,
+ * any two characters can be found in order within hundreds of characters, everything matches, and the filter is useless.
  */
 export function matchesOutlineQuery(name: string, query: string): boolean {
   const needle = query.trim().toLowerCase();
@@ -350,8 +350,8 @@ export function matchesOutlineQuery(name: string, query: string): boolean {
 }
 
 /**
- * 按类型 + 关键词过滤大纲。组只要还剩成员就保留（只留下命中的成员）；
- * 没成员命中但组名自己命中时整组保留，这样搜文件夹名能一次看到里面全部东西。
+ * Filter the outline by type + keyword. A group is kept as long as it still has members (only the matching members are kept);
+ * when no member matches but the group name itself matches, the whole group is kept, so searching a folder name shows everything inside at once.
  */
 export function filterCanvasOutline(
   items: CanvasOutlineItem[],
@@ -381,9 +381,9 @@ export function filterCanvasOutline(
 }
 
 /**
- * 大纲只关心「有哪些节点、叫什么、挂在谁下面、缩略图是什么」，不关心坐标。
- * 拖动画布时 nodes 每帧换新引用，直接订阅 nodes 会让这张几百行的表跟着每帧重渲；
- * 订阅这个签名后，只有真正影响列表的字段变了才会重渲。
+ * The outline only cares about "which nodes exist, what they are called, who they hang under, what the thumbnail is", not coordinates.
+ * While dragging the canvas, nodes gets a new reference every frame, and subscribing to nodes directly would re-render this table of hundreds of rows each frame;
+ * after subscribing to this signature, it only re-renders when a field that actually affects the list changes.
  */
 export function canvasOutlineSignature(nodes: CanvasNode[]): string {
   return nodes
@@ -396,8 +396,8 @@ export function canvasOutlineSignature(nodes: CanvasNode[]): string {
         resolveNodeDisplayName(type, node.data),
         (isGroupNode(node) ? null : outlineThumbUrl(node)) ?? "",
         (isGroupNode(node) ? null : outlineMediaUrl(node)) ?? "",
-        // 签名只用来判「画布变了没」，不进界面，所以取语言无关的原始值 ——
-        // 换语言不该让签名变，那是 useMemo 的 t 依赖去管的事。
+        // The signature only decides "did the canvas change" and never reaches the UI, so it takes language-independent raw values -
+        // switching language should not change the signature; that is the job of the t dependency of useMemo.
         String((node.data as { createdAt?: unknown }).createdAt ?? ""),
       ].join("\u0001");
     })
@@ -406,7 +406,7 @@ export function canvasOutlineSignature(nodes: CanvasNode[]): string {
 
 const FILE_EXTENSION_PATTERN = /\.([a-z0-9]{2,5})$/i;
 
-/** 下载文件名：先用上传时的原名，其次「显示名 + 从 URL 猜到的后缀」。 */
+/** Download file name: first the original name from upload, otherwise "display name + extension guessed from the URL". */
 function outlineDownloadFilename(item: CanvasOutlineItem, url: string): string {
   const node = useCanvasStore.getState().nodes.find((candidate) => candidate.id === item.id);
   const sourceFileName = (node?.data as { sourceFileName?: unknown } | undefined)?.sourceFileName;
@@ -423,13 +423,13 @@ export function CanvasOutlineList({
   leading,
 }: {
   collapsed?: boolean;
-  /** 塞在工具栏最左边的东西（画布选择器）。给了就顶掉「画布元素」那个标签。 */
+  /** Content placed at the far left of the toolbar (the canvas picker). When given it replaces the "canvas elements" label. */
   leading?: ReactNode;
 } = {}) {
   const { t } = useTranslation();
-  // 抽屉收起是纯 CSS 位移，组件不卸载 —— 不短路的话，用户收起抽屉拖画布时，这条
-  // 签名照样每帧把几百个节点(含可能几百字符的提示词名)拼成大字符串然后丢掉。
-  // 返回常量 "" 时 zustand 判等不重渲；展开那一拍再重新算一次即可。
+  // Collapsing the drawer is a pure CSS translation and the component does not unmount - without short-circuiting, while the user drags the canvas
+  // with the drawer collapsed this signature would still concatenate hundreds of nodes (including prompt names of possibly hundreds of characters) into a big string every frame, then discard it.
+  // Returning the constant "" makes zustand's equality check skip the re-render; recompute once when it expands.
   const signature = useCanvasStore((state) =>
     collapsed ? "" : canvasOutlineSignature(state.nodes),
   );
@@ -441,7 +441,7 @@ export function CanvasOutlineList({
   const [query, setQuery] = useState("");
 
   const outline = useMemo(
-    // signature 变了才重建；节点从 store 现取，免得把 nodes 也订阅进来。
+    // Rebuild only when the signature changes; read nodes fresh from the store so nodes is not subscribed too.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     () => buildCanvasOutline(useCanvasStore.getState().nodes, t),
     [signature, t],
@@ -454,7 +454,7 @@ export function CanvasOutlineList({
   );
   const total = useMemo(() => countOutlineNodes(visible), [visible]);
 
-  // 筛选/搜索时无视折叠状态，否则命中的东西可能藏在收起的组里。
+  // Ignore the collapse state when filtering/searching, otherwise a hit might be hidden inside a collapsed group.
   const effectiveCollapsed = filtering ? NO_COLLAPSED_GROUPS : collapsedGroupIds;
   const rows = useMemo(
     () => flattenCanvasOutline(visible, effectiveCollapsed),
@@ -462,8 +462,8 @@ export function CanvasOutlineList({
   );
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  // 小画布照常整棵渲染：jsdom 里滚动容器高度恒为 0，虚拟化会一行都不渲染，
-  // 门槛之下走原路才不会把渲染测试和「打开就能截到内容」一起废掉。
+  // Small canvases render the whole tree as usual: in jsdom the scroll container height is always 0 and virtualization would render no rows at all;
+  // taking the original path below the threshold keeps this from breaking the render tests and "open and see content right away" screenshots.
   const virtualized = rows.length > OUTLINE_VIRTUALIZE_THRESHOLD;
   const virtualizer = useVirtualizer({
     count: virtualized ? rows.length : 0,
@@ -500,8 +500,8 @@ export function CanvasOutlineList({
     });
   }, []);
 
-  // 选中走 ReactFlow 的 select change：canvasStore 会把它同步成 selectedNodeId，
-  // 直接改 selectedNodeId 会被 Canvas 的反向同步覆盖掉。
+  // Selection goes through ReactFlow's select change: canvasStore syncs it into selectedNodeId,
+  // and changing selectedNodeId directly would be overwritten by Canvas's reverse sync.
   const focusNode = useCallback((nodeId: string) => {
     const store = useCanvasStore.getState();
     store.onNodesChange(
@@ -514,7 +514,7 @@ export function CanvasOutlineList({
     store.requestFocusNode(nodeId);
   }, []);
 
-  // 复制组时要连成员一起给，而且父必须排在成员前面（collectOutlineIds 是前序）。
+  // When duplicating a group the members must be passed too, with the parent before the members (collectOutlineIds is pre-order).
   const duplicateItem = useCallback((item: CanvasOutlineItem) => {
     useCanvasStore.getState().duplicateNodesAsSiblings(collectOutlineIds(item));
   }, []);
@@ -525,13 +525,13 @@ export function CanvasOutlineList({
     if (!name || name === item.name) {
       return;
     }
-    // 组框的名字历史上写在 label 上，两处都写才不会改完又被旧字段盖回去。
+    // A group frame's name was historically written on label; write both so an edit is not overwritten back by the old field.
     useCanvasStore
       .getState()
       .updateNodeData(item.id, item.kind === "group" ? { displayName: name, label: name } : { displayName: name });
   }, []);
 
-  // 组下载没有打包接口，就按成员顺序一个个存；某个失败不影响后面的。
+  // There is no packaged download for groups, so save one by one in member order; a failure of one does not affect the later ones.
   const downloadItem = useCallback(async (item: CanvasOutlineItem) => {
     const targets = collectOutlineDownloads(item);
     for (const target of targets) {
@@ -544,7 +544,7 @@ export function CanvasOutlineList({
     }
   }, []);
 
-  // 两条渲染路径（整棵 / 开窗）共用同一组回调，别在两处各写一遍。
+  // The two render paths (whole tree / windowed) share one set of callbacks; do not write them twice.
   const rowProps = {
     collapsedGroupIds: effectiveCollapsed,
     selectedNodeId,
@@ -564,7 +564,7 @@ export function CanvasOutlineList({
           <OutlineSearchInput value={query} onChange={setQuery} onClose={closeSearch} />
         ) : (
           <>
-            {/* 有画布选择器时它就是这行的身份，再挂一个「画布元素」是同义反复 */}
+            {/* When there is a canvas picker it is this row's identity; adding a "canvas elements" label as well would be redundant */}
             {leading ?? (
               <span className="shrink-0 text-[10px] font-semibold tracking-[0.09em] text-text-muted/85">
                 {t("freezone.canvasOutline.title")}
@@ -579,7 +579,7 @@ export function CanvasOutlineList({
                 )}
                 onClick={toggleAllGroups}
               >
-                {/* 收起态露出树枝（点了会展开），展开态露出收拢的箭头 */}
+                {/* Collapsed shows the branch (clicking expands), expanded shows the collapse arrow */}
                 {allCollapsed ? (
                   <ListTree className="h-3.5 w-3.5" />
                 ) : (
@@ -612,8 +612,8 @@ export function CanvasOutlineList({
           </OutlineIconButton>
         )}
       </div>
-      {/* 横向留白挪到行上（见 ROW_INSET_PX），行才能铺满容器宽度——
-          hover 的底色是画在行上的，容器留白会把它从左边削掉一块。 */}
+      {/* The horizontal padding is moved onto the row (see ROW_INSET_PX) so the row can fill the container width -
+          the hover background is painted on the row, and container padding would shave a piece off its left. */}
       <div
         ref={scrollRef}
         className="ui-scrollbar-vertical min-h-0 flex-1 overflow-y-auto pb-2 pl-1 pr-2"
@@ -659,12 +659,12 @@ export function CanvasOutlineList({
 const NO_COLLAPSED_GROUPS: ReadonlySet<string> = new Set();
 
 /**
- * 行高写死，虚拟化才能不量高度直接按下标定位。
- * stride 比行高多 1px，那 1px 就是行与行之间的缝——hover 底色不会和上下黏成一片。
+ * Row height is hard-coded so virtualization can position by index without measuring.
+ * The stride is 1px more than the row height; that 1px is the gap between rows - the hover background does not stick together with the rows above and below.
  */
-/** 对应行上的 `h-11`（44px）+ `mb-px`（1px）。改一处就要同步另一处。 */
+/** Corresponds to `h-11` (44px) + `mb-px` (1px) on the row. Change one and the other must follow. */
 const OUTLINE_ROW_STRIDE_PX = 45;
-/** 这个数量以下整棵渲染：开窗的收益抵不过它在 jsdom / 首帧上的那点别扭。 */
+/** Below this count render the whole tree: the gain of windowing does not outweigh its awkwardness in jsdom / on the first frame. */
 const OUTLINE_VIRTUALIZE_THRESHOLD = 60;
 
 const HEADER_ICON_BUTTON_CLASS =
@@ -673,7 +673,7 @@ const HEADER_ICON_BUTTON_CLASS =
 const TOOLTIP_CONTENT_CLASS =
   "z-[130] rounded-md border border-[var(--ui-border-soft)] bg-surface-dark px-2 py-1 text-[11px] text-text-dark shadow-lg";
 
-/** 工具条上的图标按钮：hover 弹自绘 tooltip，不用浏览器那个慢半拍的原生 title。 */
+/** Icon button on the toolbar: hover shows a custom tooltip instead of the browser's slow native title. */
 function OutlineIconButton({
   label,
   onClick,
@@ -709,7 +709,7 @@ function OutlineIconButton({
 const FILTER_MENU_CONTENT_CLASS =
   "z-[120] min-w-[132px] border-[var(--ui-border-soft)] bg-[rgba(var(--surface-rgb)/0.95)] text-text-dark shadow-none backdrop-blur-3xl";
 
-/** 类型筛选：搜索框展开时收成一个图标，让位给输入框。 */
+/** Type filter: collapses into an icon when the search box is expanded, yielding to the input. */
 function OutlineTypeFilter({
   compact,
   value,
@@ -730,7 +730,7 @@ function OutlineTypeFilter({
           <button
             type="button"
             aria-label={t("freezone.canvasOutline.filter")}
-            title={compact ? `${t("freezone.canvasOutline.filter")}：${label}` : undefined}
+            title={compact ? `${t("freezone.canvasOutline.filter")}: ${label}` : undefined}
             className={
               "inline-flex h-6 shrink-0 items-center gap-1 px-1 text-[11px] transition-colors hover:text-text-dark " +
               (active
@@ -758,7 +758,7 @@ function OutlineTypeFilter({
             <DropdownMenuRadioItem
               key={filter.key}
               value={filter.key}
-              // base-ui 的单选项默认不关菜单，这里选完就该收起来
+              // base-ui's single-select items do not close the menu by default; close it once an item is chosen.
               closeOnClick
               className="rounded-[var(--ui-radius-lg)] text-xs text-text-dark focus:bg-[rgb(var(--text-rgb)/0.075)] focus:text-text-dark"
             >
@@ -789,7 +789,7 @@ function OutlineSearchInput({
         autoFocus
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          // 画布层监听全局按键，搜索框里的输入不能漏过去。
+          // The canvas layer listens to global keys; typing in the search box must not leak through.
           event.stopPropagation();
           if (event.key === "Escape") onClose();
         }}
@@ -820,14 +820,14 @@ type OutlineRowProps = {
   onDownload: (item: CanvasOutlineItem) => void;
 };
 
-/** 行内左侧留白：缩略图照旧离面板 8px，hover 底色能多往左铺 4px 包住它。 */
+/** Left padding inside the row: the thumbnail is still 8px from the panel, and the hover background can extend 4px further left to wrap it. */
 const ROW_INSET_PX = 4;
 
 const THUMB_CLASS =
-  // ring 而不是 border：border 会把 36px 撑成 38px，和空缩略图的图标框对不齐。
+  // ring rather than border: border would stretch 36px to 38px and misalign with the empty thumbnail's icon box.
   "relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[rgb(var(--text-rgb)/0.05)] ring-1 ring-inset ring-[rgb(var(--text-rgb)/0.09)]";
 
-/** 缩略图本身就是内容的类型，再叠一个「图片」角标纯属噪音。 */
+/** The thumbnail is itself the type of content; adding an "image" badge on top is just noise. */
 const PLAIN_IMAGE_TYPES: ReadonlySet<CanvasNodeType> = new Set([
   CANVAS_NODE_TYPES.upload,
   CANVAS_NODE_TYPES.imageEdit,
@@ -854,11 +854,11 @@ const CanvasOutlineRow = memo(function CanvasOutlineRow(props: OutlineRowProps) 
   const collapsed = collapsedGroupIds.has(item.id);
 
   const rowClass =
-    // h-11 / mb-px 必须和 OUTLINE_ROW_STRIDE_PX 对上：虚拟化不量高度，直接按 stride 定位。
-    // 这里不能写 `h-[${...}px]` 之类的模板串——Tailwind 扫的是源码里的字面量，
-    // 运行时拼出来的类名不会进产物（和 mask-image 那次同一个坑）。
+    // h-11 / mb-px must match OUTLINE_ROW_STRIDE_PX: virtualization does not measure height and positions by stride.
+    // Do not write a template string like `h-[${...}px]` here - Tailwind scans literals in the source,
+    // and class names assembled at runtime do not reach the output (the same pitfall as the mask-image one).
     "ui-outline-row group/row relative mb-px flex h-11 w-full items-center gap-2 rounded-[8px] pr-1.5 transition-colors duration-150 " +
-    // 选中使用产品主色的低透明度层，hover 保持中性，不用额外竖线重复表达状态。
+    // Selection uses a low-opacity layer of the product primary color, hover stays neutral, and no extra vertical bar repeats the state.
     (selected
       ? "bg-primary/[0.14] ring-1 ring-inset ring-primary/20"
       : "hover:bg-[rgb(var(--text-rgb)/0.05)]");
@@ -888,8 +888,8 @@ const CanvasOutlineRow = memo(function CanvasOutlineRow(props: OutlineRowProps) 
           ) : (
             <OutlineNodeIcon type={item.type} />
           )}
-          {/* 有画面的节点光看缩略图分不出是视频还是 3D——而兜底图标只在没画面时才露脸，
-              恰好是最不需要提示的那一档。 */}
+          {/* For a node with a picture, the thumbnail alone cannot tell video from 3D - and the fallback icon only shows when there is no picture,
+              which is exactly the case that needs the hint least. */}
           {item.thumbUrl && !PLAIN_IMAGE_TYPES.has(item.type) ? (
             <OutlineTypeBadge type={item.type} />
           ) : null}
@@ -898,7 +898,7 @@ const CanvasOutlineRow = memo(function CanvasOutlineRow(props: OutlineRowProps) 
     );
 
   const body = renaming ? (
-    // 改名时整行不能再是 <button>，输入框不允许嵌在按钮里。
+    // While renaming, the whole row can no longer be a <button>; an input is not allowed inside a button.
     <div className={leadClass}>
       {lead}
       <OutlineRenameInput
@@ -926,8 +926,8 @@ const CanvasOutlineRow = memo(function CanvasOutlineRow(props: OutlineRowProps) 
         >
           {item.name}
         </span>
-        {/* 名字撞车时（同一条提示词生成三次）靠这行分辨谁是谁——见 outlineMeta，
-            时刻来自持久的 createdAt，别改回跑完就被清空的 generationStartedAt */}
+        {/* When names collide (the same prompt generated three times) this line tells them apart - see outlineMeta;
+            the time comes from the persistent createdAt, do not change it back to generationStartedAt which is cleared once the run finishes */}
         {item.meta && (
           <span className="truncate text-xs leading-4 text-text-muted/75">{item.meta}</span>
         )}
@@ -955,7 +955,7 @@ function OutlineNodeIcon({ type }: { type: CanvasNodeType }) {
   return <Icon className="h-3.5 w-3.5 text-text-muted" />;
 }
 
-/** 缩略图右下角的类型角标，压在画面上所以要自带一层底。 */
+/** The type badge at the thumbnail's bottom-right; it sits over the picture so it brings its own background. */
 function OutlineTypeBadge({ type }: { type: CanvasNodeType }) {
   const Icon = NODE_TYPE_ICON[type] ?? ImageIcon;
   return (
@@ -965,11 +965,11 @@ function OutlineTypeBadge({ type }: { type: CanvasNodeType }) {
   );
 }
 
-/** hover 才露出来的那组操作：更多菜单 + 定位，参照 libtv 的行尾布局。 */
+/** The group of actions revealed only on hover: more menu + locate, following libtv's row-end layout. */
 function OutlineRowActions({ item, onFocusNode, onDuplicate, onStartRename, onDownload }: OutlineRowProps) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
-  // 菜单关闭时 base-ui 会把焦点抢回触发按钮，所以改名要等它关干净了再挂输入框。
+  // When the menu closes base-ui steals focus back to the trigger button, so renaming waits until it has fully closed before mounting the input.
   const renameQueuedRef = useRef(false);
   const downloadable = collectOutlineDownloads(item).length > 0;
   const iconButtonClass =
@@ -978,7 +978,7 @@ function OutlineRowActions({ item, onFocusNode, onDuplicate, onStartRename, onDo
   return (
     <div
       className={
-        // 浮在名字上而不是挤开它，配合 NAME_FADE_CLASS 的淡出，hover 时行内一格都不动。
+        // Float over the name instead of pushing it aside; together with NAME_FADE_CLASS's fade-out, nothing in the row moves on hover.
         "absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity duration-150 group-hover/row:opacity-100 " +
         (menuOpen ? "opacity-100" : "pointer-events-none opacity-0 group-hover/row:pointer-events-auto")
       }
@@ -1051,7 +1051,7 @@ function OutlineRenameInput({
   onCancel: (itemId: string | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  // 挂载后的第一拍不认失焦：这时候的 blur 只可能是别处在抢焦点，不是用户点走了。
+  // Do not honor blur on the first beat after mount: a blur then can only mean something else is stealing focus, not that the user clicked away.
   const readyRef = useRef(false);
   const [value, setValue] = useState(item.name);
 

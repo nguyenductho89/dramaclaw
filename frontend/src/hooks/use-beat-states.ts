@@ -25,7 +25,7 @@ export function useBeatStates(project: string, episode: number): UseBeatStatesRe
   // Filter at the query layer so poll ticks that don't touch this episode
   // don't produce a new tasks reference that would cascade into a re-derive.
   const tasksRes = useTasks({ project, episode });
-  // 精品剧 (spine_template === "drama") bakes narration into the rendered video,
+  // Premium drama (spine_template === "drama") bakes narration into the rendered video,
   // so per-beat audio is not a compose prerequisite for it.
   const configRes = useProject(project);
   const requireAudio = configRes.data?.data?.spine_template !== "drama";
@@ -72,7 +72,7 @@ function computeCounts(
   // video files per beat are required. Sketch is an upstream input to video
   // generation — once the video clip exists, compose (which concatenates
   // clips + audio) no longer needs the sketch/keyframe image.
-  // 精品剧 (requireAudio === false) embeds narration in the video, so audio is
+  // Premium drama (requireAudio === false) embeds narration in the video, so audio is
   // not a compose blocker for it.
   const missing: EpisodeCounts["compose"]["missing"] = [];
   for (const [beatNumStr, stagesState] of Object.entries(states)) {

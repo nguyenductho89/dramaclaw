@@ -33,7 +33,7 @@ function task(overrides: Partial<TaskState> = {}): TaskState {
     scope: null,
     status: "completed",
     progress: 1,
-    current_task: "完成",
+    current_task: "Done",
     result: null,
     error: null,
     logs: [],
@@ -120,14 +120,14 @@ describe("director episode auto mode", () => {
     const decision = decideDirectorAutoTask(state, task({
       task_type: "character_portrait",
       episode: 0,
-      scope: "character:苏糖:portrait",
-      task_key: "character_portrait/project/0/苏糖",
+      scope: "character:Sutang:portrait",
+      task_key: "character_portrait/project/0/Sutang",
     }));
     expect(decision).toMatchObject({ action: "continue", episode: 1 });
   });
 
   it("marks UI auto approval without mentioning Agent credits", () => {
-    const text = directorAutoRunTransportText("继续下一步");
+    const text = directorAutoRunTransportText("Continue to the next step");
     expect(text).toContain("mode=episode_auto");
     expect(text).toContain("one-write-per-turn");
     expect(text).toContain("never applies Agent-credit billing");
@@ -150,18 +150,18 @@ describe("director episode auto mode", () => {
   });
 
   it("recognizes positive start phrases but rejects negated ones", () => {
-    expect(isDirectorEpisodeAutoStartIntent("开始生成第 1 集")).toBe(true);
-    expect(isDirectorEpisodeAutoStartIntent("确认")).toBe(true);
-    expect(isDirectorEpisodeAutoStartIntent("继续吧")).toBe(true);
-    expect(isDirectorEpisodeAutoStartIntent("先不要开始")).toBe(false);
-    expect(isDirectorEpisodeAutoStartIntent("看看当前状态")).toBe(false);
+    expect(isDirectorEpisodeAutoStartIntent("Start generating episode 1")).toBe(true);
+    expect(isDirectorEpisodeAutoStartIntent("Confirm")).toBe(true);
+    expect(isDirectorEpisodeAutoStartIntent("Tiếp tục nhé")).toBe(true);
+    expect(isDirectorEpisodeAutoStartIntent("Do not start yet")).toBe(false);
+    expect(isDirectorEpisodeAutoStartIntent("Show me the current status")).toBe(false);
   });
 
   it("uses a confirmation-only transport instruction before activation", () => {
-    const text = directorAutoConfirmationTransportText("开始");
+    const text = directorAutoConfirmationTransportText("Start");
     expect(text).toContain("required second confirmation");
     expect(text).toContain("Do not call any write, generation, or mutation tool");
-    expect(text).toContain("继续 or 确认");
+    expect(text).toContain("Continue or Confirm");
   });
 
   it("keeps a suspended intervention inside the same auto session", () => {
@@ -177,52 +177,52 @@ describe("director episode auto mode", () => {
   });
 
   it("asks the agent to resume after a declined modification without cancelling tasks", () => {
-    const text = directorAutoInterventionTransportText("不改了，继续自动");
+    const text = directorAutoInterventionTransportText("Never mind, keep running automatically");
     expect(text).toContain("action='resume'");
     expect(text).toContain("action='pause'");
     expect(text).toContain("must not be cancelled");
   });
 
   it("requires the agent to suspend before asking about a possible modification", () => {
-    const text = directorAutoRunTransportText("这个镜头换成夜景呢");
+    const text = directorAutoRunTransportText("Can this shot be changed to a night scene?");
     expect(text).toContain("action='suspend'");
     expect(text).toContain("do not perform that mutation yet");
   });
 
   it("does not treat ordinary user messages as automatic next-step commands", () => {
-    const text = directorAutoUserMessageTransportText("现在做到哪了");
+    const text = directorAutoUserMessageTransportText("Where are we now?");
     expect(text).toContain("do not start the next mainline task merely because this message arrived");
     expect(text).toContain("read only");
     expect(text).toContain("action='suspend'");
   });
 
   it("requires an explicit voice policy when preflight finds missing voices", () => {
-    const text = directorAutoConfirmationTransportText("开始", {
+    const text = directorAutoConfirmationTransportText("Start", {
       voiceChoiceRequired: true,
-      voiceErrors: ["解说声线缺失"],
+      voiceErrors: ["Narrator voice missing"],
     });
-    expect(text).toContain("系统声线");
-    expect(text).toContain("自定义声线");
-    expect(text).toContain("解说声线缺失");
-    expect(directorAutoVoiceChoiceTransportText("确认")).toContain("Do not start episode auto");
+    expect(text).toContain("System voice");
+    expect(text).toContain("Custom voice");
+    expect(text).toContain("Narrator voice missing");
+    expect(directorAutoVoiceChoiceTransportText("Confirm")).toContain("Do not start episode auto");
   });
 
   it("recognizes an explicit system or custom voice choice", () => {
-    expect(resolveDirectorVoicePolicy("使用系统声线继续")).toBe("system");
-    expect(resolveDirectorVoicePolicy("系统声一")).toBe("system");
-    expect(resolveDirectorVoicePolicy("使用系统声音")).toBe("system");
-    expect(resolveDirectorVoicePolicy("我去虾塘上传或录制")).toBe("custom");
-    expect(resolveDirectorVoicePolicy("使用自定义声音")).toBe("custom");
-    expect(resolveDirectorVoicePolicy("你说系统还是自定义？")).toBeNull();
+    expect(resolveDirectorVoicePolicy("Continue with the system voice")).toBe("system");
+    expect(resolveDirectorVoicePolicy("Giọng hệ thống")).toBe("system");
+    expect(resolveDirectorVoicePolicy("Use system voices")).toBe("system");
+    expect(resolveDirectorVoicePolicy("I will upload or record one in Shrimp Pond")).toBe("custom");
+    expect(resolveDirectorVoicePolicy("Use a custom voice")).toBe("custom");
+    expect(resolveDirectorVoicePolicy("Do you mean the system one or the custom one?")).toBeNull();
   });
 
   it("emphasizes only the two labels inside a voice-choice prompt", () => {
     expect(emphasizeDirectorVoiceChoiceLabels(
-      "1）系统声线；2）自定义声线。请回复 系统声线 或 自定义声线。",
+      "1) System voice; 2) Custom voice. Please reply System voice or Custom voice.",
     )).toBe(
-      "1）**系统声线**；2）**自定义声线**。请回复 **系统声线** 或 **自定义声线**。",
+      "1) **System voice**; 2) **Custom voice**. Please reply **System voice** or **Custom voice**.",
     );
-    expect(emphasizeDirectorVoiceChoiceLabels("当前使用系统声线。"))
-      .toBe("当前使用系统声线。");
+    expect(emphasizeDirectorVoiceChoiceLabels("Currently using the system voice."))
+      .toBe("Currently using the system voice.");
   });
 });

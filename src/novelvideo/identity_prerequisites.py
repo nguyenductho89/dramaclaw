@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 IDENTITY_CHARACTERS_REQUIRED_CODE = "IDENTITY_CHARACTERS_REQUIRED"
-IDENTITY_CHARACTERS_REQUIRED_MESSAGE = "请先从知识图谱构建角色，再规划身份"
+IDENTITY_CHARACTERS_REQUIRED_MESSAGE = "Build characters from the knowledge graph before planning identities"
 IDENTITY_CHARACTERS_BUILDING_CODE = "IDENTITY_CHARACTERS_BUILDING"
-IDENTITY_CHARACTERS_BUILDING_MESSAGE = "角色正在构建，请完成后再规划身份"
+IDENTITY_CHARACTERS_BUILDING_MESSAGE = "Characters are being built; wait for it to finish before planning identities"
 
 
 class IdentityPlanningPrerequisiteError(ValueError):

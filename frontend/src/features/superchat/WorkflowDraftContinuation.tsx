@@ -171,10 +171,10 @@ export function WorkflowDraftContinuation({ messages, projectId, canvasId, busy,
       }
       const display = t(current.run_after_create ? "workflowDraftContinuation.confirmRunMessage" : "workflowDraftContinuation.confirmMessage");
       // i18n-exempt-start: internal agent transport, not UI copy
-      const transport = `${display}。请调用 freezone_confirm_workflow_draft，参数为 ${JSON.stringify({
+      const transport = `${display}. Call freezone_confirm_workflow_draft with parameters ${JSON.stringify({
         project_id: projectId, canvas_id: canvasId, draft_id: current.draft_id,
         revision: current.revision,
-      })}。使用这份已确认草稿，不要重新准备方案。等待真实画布回执后再报告创建结果。`; // i18n-exempt
+      })}. Use this confirmed draft; do not prepare the plan again. Wait for the real canvas receipt before reporting the creation result.`; // i18n-exempt
       // i18n-exempt-end
       if (!await onConfirm(display, transport)) throw new Error("not sent");
       if (scopeRef.current === currentScope) setAwaitingTurn(true);
@@ -216,7 +216,7 @@ export function WorkflowDraftContinuation({ messages, projectId, canvasId, busy,
     {(draft.preview?.external_inputs?.length ?? 0) > 0 &&
       <p className="mt-2 text-muted-foreground">{t("workflowDraftContinuation.referenceImages")}: {draft.preview!.external_inputs!.map(
         (source) => source.display_name || source.node_id,
-      ).join("、")}</p>}
+      ).join(", ")}</p>}
     {error && <p role="alert" className="mt-2">{error}</p>}
     <div className="mt-3 flex justify-end gap-2">
       <button type="button" className="tap-button" disabled={busy || sending !== null} onClick={() => void cancel()}>

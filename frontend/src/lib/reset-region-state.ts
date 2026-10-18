@@ -15,8 +15,8 @@ const PRESERVE_KEYS = new Set<string>([
   "i18nextLng",
 ]);
 
-// 退出登录（换账号）时额外保留：区域选择是设备/部署级偏好而非用户态，换账号
-// 不应强迫用户重选区域。区域切换流程仍然要清它（切完会立刻写入新值）。
+// Extra keys kept on logout (account switch): the region selection is a device/deployment-level preference, not user state, and switching accounts
+// should not force the user to re-pick a region. The region-switch flow still has to clear it (a new value is written right after).
 const LOGOUT_PRESERVE_KEYS = new Set<string>([
   ...PRESERVE_KEYS,
   "supertale-region",
@@ -62,13 +62,13 @@ export function resetRegionState(deps: { queryClient: QueryClient }): void {
 }
 
 /**
- * 退出登录 / 换账号时的用户态清理：与区域切换同一套（zustand 各用户级 store、
- * React Query 缓存、localStorage 前缀清扫），但保留区域选择。
+ * User-state cleanup on logout / account switch: same set as the region switch (per-user zustand stores,
+ * the React Query cache, localStorage prefix sweep), but the region selection is kept.
  *
- * 为什么必须清 queryClient：手动退出是 SPA 内部跳转（不刷新页面），QueryClient
- * 常驻内存；projectSummaries 等查询的 key 不含用户名且有 staleTime，换账号登录
- * 后缓存仍在新鲜期内，React Query 连请求都不发 —— B 会一直看到 A 的项目列表，
- * 直到手动刷新。
+ * Why queryClient must be cleared: manual logout is an in-SPA navigation (no page refresh), and the QueryClient
+ * stays resident in memory; queries such as projectSummaries have keys without the username and have a staleTime, so after logging in as another account
+ * the cache is still fresh and React Query does not even send a request - B would keep seeing A's project list
+ * until a manual refresh.
  */
 export function resetUserSessionState(deps: { queryClient: QueryClient }): void {
   resetSessionScopedState(deps, LOGOUT_PRESERVE_KEYS);

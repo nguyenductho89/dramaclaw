@@ -12,10 +12,10 @@ import portalocker
 
 from novelvideo.freezone.paths import CANVAS_ID_RE, canvases_dir
 
-# 关键区耗时埋点开关,默认关(CE 单机每次保存多一行 stdout 是噪音)。
-# 通道是 print(flush=True) 而不是 logging: api 进程的 root logger 从未被配置过,
-# INFO 在 logger 层就被丢弃;worker 里 celery 才会接管 root。stdout 是取锁的三种
-# 进程(api / celery worker / backup CLI)里唯一行为一致的通道。
+# Switch for timing instrumentation of the critical section; off by default (in single-node CE every save would add a stdout line of noise).
+# The channel is print(flush=True) rather than logging: the api process root logger is never configured,
+# so INFO is dropped at the logger layer, and celery only takes over root inside the worker. stdout is the only channel that behaves identically
+# across the three processes that take the lock (api / celery worker / backup CLI).
 _TIMING = os.environ.get("ST_CANVAS_LOCK_TIMING") == "1"
 
 
@@ -62,8 +62,8 @@ def canvas_write_lock(
                 portalocker.lock(fh, portalocker.LOCK_EX | portalocker.LOCK_NB)
                 break
             except portalocker.exceptions.AlreadyLocked as exc:
-                # 仅竞争(EAGAIN/ERROR_LOCK_VIOLATION)重试;其余锁故障
-                # (如不支持锁的挂载)立即上抛,不得伪装成 CanvasLockBusy。
+                # Retry only on contention (EAGAIN/ERROR_LOCK_VIOLATION); other lock failures
+                # (e.g. a mount that does not support locks) are re-raised immediately and must not be disguised as CanvasLockBusy.
                 if time.monotonic() >= deadline:
                     raise CanvasLockBusy(canvas_id) from exc
                 time.sleep(retry_interval_seconds)

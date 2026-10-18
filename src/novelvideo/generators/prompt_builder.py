@@ -1,18 +1,18 @@
-"""统一提示词模板构建器。
+"""Unified prompt template builder.
 
-所有网格生成模式共享核心组件，通过模式参数调整差异。
+All grid generation modes share the core components; differences are adjusted through the mode parameter.
 
-模式:
-- RENDER: Sketch + Render 模式，基于草图渲染
-- SKETCH: 草图模式，专业分镜线稿风格，简化面部与服装轮廓
+Modes:
+- RENDER: Sketch + Render mode, renders from a sketch
+- SKETCH: sketch mode, professional storyboard line-art style, simplified faces and clothing outlines
 
-共同组件:
-- 比例指令: Generate a {aspect_ratio} aspect ratio image.
-- 网格声明: ASCII 布局 + panel 尺寸
-- 角色定义: Character names + reference mode
-- Identity Lock: 同一角色 = 同一人
-- 风格约束: style_keywords + avoid_keywords
-- Panel 描述: 视觉描述 + temporal framing
+Shared components:
+- Aspect-ratio instruction: Generate a {aspect_ratio} aspect ratio image.
+- Grid declaration: ASCII layout + panel size
+- Character definitions: Character names + reference mode
+- Identity Lock: same character = same person
+- Style constraints: style_keywords + avoid_keywords
+- Panel description: visual description + temporal framing
 """
 
 import hashlib
@@ -63,10 +63,10 @@ def _animation_medium_label(style_ref: StyleRef) -> str:
 
 
 def _resolve_prop_marker_tags(text: str) -> str:
-    """将 [[prop_id]] 道具锚点替换为“语义名 + 可见 tag”。
+    """Replace [[prop_id]] prop anchors with "semantic name + visible tag".
 
-    只输出 tag 会丢掉“纸箱/马/车”等物体语义，模型容易把彩色块误读成
-    平板、屏幕或任意几何体。草图里需要同时保留 prop 名和 marker tag。
+    Outputting only the tag loses object semantics such as "carton/horse/car", and the model easily misreads colored blocks as
+    tablets, screens, or arbitrary geometry. The sketch must keep both the prop name and the marker tag.
     """
     if not text:
         return text
@@ -79,22 +79,22 @@ def _resolve_prop_marker_tags(text: str) -> str:
 
 
 class PromptMode(Enum):
-    """提示词模式。"""
+    """Prompt mode."""
 
-    RENDER = "render"  # Sketch + Render 模式
-    SKETCH = "sketch"  # 草图模式
-    ACTION_STORYBOARD = "action_storyboard"  # Action beat 分镜草图（5×5 连续动作序列）
+    RENDER = "render"  # Sketch + Render mode
+    SKETCH = "sketch"  # sketch mode
+    ACTION_STORYBOARD = "action_storyboard"  # Action beat storyboard sketch (5x5 continuous action sequence)
 
 
 @dataclass
 class GridConfig:
-    """网格配置。"""
+    """Grid configuration."""
 
     rows: int
     cols: int
     aspect_ratio: str = "1:1"  # "9:16", "1:1", "21:9"
-    image_aspect_ratio: str = ""  # 实际图片比例（two-pass 时与 aspect_ratio 不同）
-    is_portrait_panel: bool = False  # panel 是否为竖屏
+    image_aspect_ratio: str = ""  # actual image ratio (differs from aspect_ratio in two-pass)
+    is_portrait_panel: bool = False  # whether the panel is portrait
 
     @property
     def total_panels(self) -> int:
@@ -102,8 +102,8 @@ class GridConfig:
 
     @property
     def panel_dimensions(self) -> tuple:
-        """根据 aspect_ratio 和网格尺寸估算 panel 尺寸。"""
-        # 基于常用配置
+        """Estimate the panel size from aspect_ratio and the grid dimensions."""
+        # Based on common configurations
         if self.aspect_ratio == "9:16":
             if self.rows >= 4:
                 total_width, total_height = 3072, 5504  # 4K
@@ -126,7 +126,7 @@ class GridConfig:
 
 @dataclass
 class CharacterConfig:
-    """角色配置。"""
+    """Character configuration."""
 
     name: str
     face_prompt: str = ""
@@ -138,21 +138,21 @@ class CharacterConfig:
     reference_mode: str = "prompt_only"  # composite, portrait_only, prompt_only
     identity_appearances: dict = field(
         default_factory=dict
-    )  # {"婚后时期": "灰粉色...", "少女时期": "白色校服..."}
+    )  # {"adult": "dusty pink ...", "teen": "white school uniform ..."}
     sketch_color: str = ""
     identity_sketch_colors: dict = field(
         default_factory=dict
-    )  # {"婚后时期": "#4A90D9 ICE BLUE", ...}
-    identity_ref_images: dict = field(default_factory=dict)  # {"幼年时期": "/path/to/portrait.png"}
+    )  # {"adult": "#4A90D9 ICE BLUE", ...}
+    identity_ref_images: dict = field(default_factory=dict)  # {"child": "/path/to/portrait.png"}
     identity_face_prompts: dict = field(
         default_factory=dict
-    )  # {"幼年时期": "六七岁幼童，圆润小脸..."}
-    identity_body_types: dict = field(default_factory=dict)  # {"幼年时期": "petite child build"}
+    )  # {"child": "six- or seven-year-old child, round little face ..."}
+    identity_body_types: dict = field(default_factory=dict)  # {"child": "petite child build"}
 
 
 @dataclass
 class StyleConfig:
-    """风格配置。"""
+    """Style configuration."""
 
     style_name: str = IMAGE_DEFAULT_STYLE
     project_dir: str = ""
@@ -169,7 +169,7 @@ class StyleConfig:
             self.style_keywords = preset.get("style_instructions", "")
             self.avoid_keywords = preset.get("avoid_instructions", "")
             self.panel_tag = preset.get("style_tag", self.panel_tag)
-            # 移除与多角色 grid 冲突的指令
+            # Remove instructions that conflict with the multi-character grid
             if self.avoid_keywords:
                 self.avoid_keywords = self.avoid_keywords.replace(
                     "Ensure only one character unless explicitly requested.", ""
@@ -182,7 +182,7 @@ class StyleConfig:
 
 @dataclass
 class PromptContext:
-    """提示词上下文。"""
+    """Prompt context."""
 
     grid: GridConfig
     characters: Dict[str, CharacterConfig]
@@ -194,14 +194,14 @@ class PromptContext:
     panel_detected_keys: Optional[Dict[int, set]] = (
         None  # {panel_index(0-based): detected identity keys}
     )
-    resolved_render_chars: List[str] = field(default_factory=list)  # Render 模式最终参考图顺序
+    resolved_render_chars: List[str] = field(default_factory=list)  # final reference-image order for Render mode
     scene_refs: Dict[int, List[Any]] = field(
         default_factory=dict
     )  # {panel_index(1-based): [ResolvedAssetRef]}
     prop_asset_refs: Dict[int, List[Any]] = field(
         default_factory=dict
     )  # {panel_index(1-based): [ResolvedAssetRef]}
-    sketch_colors: Dict[str, str] = field(default_factory=dict)  # 共享调色盘：identity_id → color
+    sketch_colors: Dict[str, str] = field(default_factory=dict)  # shared palette: identity_id -> color
     prop_marker_colors: Dict[str, str] = field(
         default_factory=dict
     )  # global prop_id -> marker color
@@ -222,49 +222,48 @@ def default_ethnicity_instruction(ethnicity: str) -> str:
 
 
 # =============================================================================
-# 组件构建器
+# Component builders
 # =============================================================================
 
 
 class PromptComponents:
-    """提示词组件构建器（所有模式共享）。"""
+    """Prompt component builder (shared by all modes)."""
 
     _SPATIAL_ENVIRONMENT_HINTS = (
-        "台阶上",
-        "台阶下",
-        "栏杆后",
-        "栏杆前",
-        "远处",
-        "近处",
-        "前景",
-        "后景",
-        "背景中央",
-        "左右两侧",
-        "左侧",
-        "右侧",
-        "一上一下",
-        "高处",
-        "低处",
-        "尽头",
-        "对面",
-        "包围",
-        "围住",
+        "above the steps",
+        "below the steps",
+        "behind the railing",
+        "in front of the railing",
+        "in the distance",
+        "nearby",
+        "foreground",
+        "background",
+        "center of the background",
+        "on both sides",
+        "left side",
+        "right side",
+        "one above the other",
+        "high up",
+        "down low",
+        "at the end",
+        "opposite",
+        "surrounding",
+        "encircling",
     )
     _SHOT_CUE_VARIANTS = {
-        "特写": ("【特写】", "[特写]", "特写"),
-        "近景": ("【近景】", "[近景]", "近景"),
-        "中景": ("【中景】", "[中景]", "中景"),
-        "远景": ("【远景】", "[远景]", "远景"),
-        "全景": ("【全景】", "[全景]", "全景"),
-        "俯拍": ("【俯拍】", "[俯拍]", "俯拍"),
-        "仰拍": ("【仰拍】", "[仰拍]", "仰拍"),
-        "平视": ("【平视】", "[平视]", "平视"),
-        "过肩": ("【过肩】", "[过肩]", "过肩", "过肩镜头"),
-        "第一人称画面": ("【第一人称画面】", "[第一人称画面]", "第一人称画面"),
-        "空镜": ("【空镜】", "[空镜]", "空镜"),
-        "黑屏": ("【黑屏】", "[黑屏]", "黑屏"),
-        "监控视角": ("【监控视角】", "[监控视角]", "监控视角", "监控画面"),
-        "屏幕画面": ("【屏幕画面】", "[屏幕画面]", "屏幕画面"),
+        "close_up": ("[close_up]", "close_up"),
+        "medium_close": ("[medium_close]", "medium_close"),
+        "medium": ("[medium]", "medium"),
+        "long": ("[long]", "long"),
+        "wide": ("[wide]", "wide"),
+        "high_angle": ("[high_angle]", "high_angle"),
+        "low_angle": ("[low_angle]", "low_angle"),
+        "eye_level": ("[eye_level]", "eye_level"),
+        "over_shoulder": ("[over_shoulder]", "over_shoulder"),
+        "empty": ("[empty]", "empty"),
+        "black": ("[black]", "black"),
+        "cctv": ("[cctv]", "cctv"),
+        "screen": ("[screen]", "screen"),
     }
 
     @staticmethod
@@ -291,10 +290,10 @@ class PromptComponents:
         beats: List[dict],
         use_detected_identities: bool = False,
     ) -> dict[str, set[str]]:
-        """从 beats 收集 char_name → identity_id 映射。
+        """Collect the char_name -> identity_id mapping from beats.
 
         Returns:
-            {角色名: {identity_id_1, identity_id_2, ...}}
+            {character_name: {identity_id_1, identity_id_2, ...}}
         """
         result: dict[str, set[str]] = {}
         for beat in beats:
@@ -451,7 +450,7 @@ class PromptComponents:
         identity_id: str,
         characters: Dict[str, CharacterConfig],
     ) -> str:
-        """Resolve an identity id like 角色_时期 back to the base character name."""
+        """Resolve an identity id like name_default back to the base character name."""
 
         text = str(identity_id or "").strip()
         if not text:
@@ -465,33 +464,33 @@ class PromptComponents:
 
     @staticmethod
     def derive_body_descriptor(char_cfg: CharacterConfig) -> str:
-        """从 body_type/gender 推断体型描述（Sketch 用）。"""
+        """Infer a body-type description from body_type/gender (used by Sketch)."""
         if char_cfg.body_type.strip():
             gender = char_cfg.gender.strip()
-            if gender in ("女", "女性", "female"):
+            if gender == "female":
                 return f"FEMALE, {char_cfg.body_type.strip()}"
-            elif gender in ("男", "男性", "male"):
+            elif gender == "male":
                 return f"MALE, {char_cfg.body_type.strip()}"
             return char_cfg.body_type.strip()
         gender = char_cfg.gender.strip()
-        if gender in ("女", "女性", "female"):
+        if gender == "female":
             return "FEMALE, slender build"
-        elif gender in ("男", "男性", "male"):
+        elif gender == "male":
             return "MALE, athletic build"
         fp = char_cfg.face_prompt
         if fp:
-            if "女性" in fp[:10]:
+            if "female" in fp[:10].lower():
                 return "FEMALE, slender build"
-            elif "男性" in fp[:10]:
+            elif "male" in fp[:10].lower():
                 return "MALE, athletic build"
         return "person"
 
     @staticmethod
     def compute_char_tag(char_name: str, identity_id: str | None = None) -> str:
-        """计算角色标签（拼音首字母大写 + hash 后缀）。
+        """Compute the character tag (uppercase pinyin initials + hash suffix).
 
-        当提供 identity_id 时，hash 基于 identity_id，
-        使同一角色的不同身份产生不同 tag。
+        When identity_id is provided, the hash is based on identity_id,
+        so different identities of the same character produce different tags.
         """
         from novelvideo.utils.identity_resolver import compute_char_tag as _compute
 
@@ -499,12 +498,12 @@ class PromptComponents:
 
     @staticmethod
     def format_environment_reference(set_desc: str) -> str:
-        """将置景描述重写为单段环境参考，避免强化空间关系。"""
+        """Rewrite the set description into a single-paragraph environment reference, avoiding reinforcing spatial relationships."""
         if not set_desc.strip():
             return "(environment only)"
 
         phrases = [
-            part.strip(" ，,、；;。") for part in re.split(r"[，,、；;]", set_desc) if part.strip()
+            part.strip(" ,;.") for part in re.split(r"[,;]", set_desc) if part.strip()
         ]
         filtered = [
             part
@@ -513,10 +512,10 @@ class PromptComponents:
         ]
         kept = filtered or phrases
 
-        desc = "，".join(kept)
+        desc = ", ".join(kept)
         return (
-            f"环境参考：{desc}\n"
-            "⚠️ 空间关系以草图为准；环境元素只能适配既有构图，不得新增层级、景深或站位信息。"
+            f"Environment reference: {desc}\n"
+            "⚠️ Spatial relationships follow the sketch; environment elements may only adapt to the existing composition and must not add layering, depth of field, or staging information."
         )
 
     @staticmethod
@@ -599,15 +598,9 @@ class PromptComponents:
         text = visual_desc.lower()
         hints: list[str] = []
 
-        sit_keywords = ("坐", "坐在", "seat", "seated", "sit", "sitting", "bench")
-        table_keywords = ("桌", "桌上", "桌面", "餐桌", "table", "desk", "booth", "counter")
+        sit_keywords = ("seat", "seated", "sit", "sitting", "bench")
+        table_keywords = ("table", "desk", "booth", "counter")
         dining_keywords = (
-            "面",
-            "面条",
-            "吃",
-            "喝",
-            "筷子",
-            "碗",
             "eat",
             "eating",
             "drink",
@@ -615,14 +608,13 @@ class PromptComponents:
             "bowl",
             "chopsticks",
             "can",
-            "易拉罐",
         )
-        across_keywords = ("相对而坐", "对坐", "对面", "面对面", "互相看向", "看向对方")
-        background_keywords = ("背景中", "身后", "后方", "侧后方", "远处", "背后")
-        stand_keywords = ("起身", "站起身", "准备起身", "站了起来", "stand up", "rise")
-        exit_keywords = ("走出", "走出了", "离开", "门外", "转身走出", "walk out", "exit")
+        across_keywords = ("sitting opposite", "sit across", "across from", "facing each other", "look at each other")
+        background_keywords = ("in the background", "behind him", "behind her", "behind them", "in the distance", "farther back")
+        stand_keywords = ("stand up", "stands up", "get up", "rise")
+        exit_keywords = ("walk out", "walks out", "exit", "leave", "outside the door")
         prop_markers = PromptComponents._collect_prop_marker_ids([beat])
-        speaker_keywords = ("广播", "喇叭", "speaker", "announcement", "广播器")
+        speaker_keywords = ("speaker", "announcement", "loudspeaker", "broadcast")
         has_table_zone = any(keyword in visual_desc for keyword in table_keywords) or any(
             keyword in text for keyword in table_keywords if keyword.isascii()
         )
@@ -772,16 +764,6 @@ class PromptComponents:
         combined = visual_desc.lower()
 
         close_keywords = (
-            "特写",
-            "近景",
-            "半身",
-            "脸部",
-            "面部",
-            "表情",
-            "手部",
-            "手上",
-            "局部",
-            "细节",
             "close-up",
             "close up",
             "tight",
@@ -791,14 +773,6 @@ class PromptComponents:
             "portrait",
         )
         wide_keywords = (
-            "全景",
-            "远景",
-            "空镜",
-            "建立镜头",
-            "环境全景",
-            "街景",
-            "内景全貌",
-            "外景全貌",
             "wide",
             "wide-shot",
             "wide shot",
@@ -807,21 +781,6 @@ class PromptComponents:
             "long shot",
         )
         move_keywords = (
-            "走",
-            "走向",
-            "走出",
-            "走进",
-            "进入",
-            "离开",
-            "穿过",
-            "穿行",
-            "跑",
-            "奔跑",
-            "起身",
-            "站起",
-            "站起来",
-            "从",
-            "到",
             "toward",
             "through",
             "across",
@@ -913,18 +872,18 @@ class PromptComponents:
 
     @staticmethod
     def build_aspect_ratio_instruction(ctx: PromptContext) -> str:
-        """构建比例指令（所有模式开头）。
+        """Build the aspect-ratio instruction (opens every mode).
 
-        使用 image_aspect_ratio（实际输出比例），two-pass Pass 1 时为 1:1。
+        Uses image_aspect_ratio (the actual output ratio); it is 1:1 in two-pass Pass 1.
         """
         ar = ctx.grid.image_aspect_ratio or ctx.grid.aspect_ratio
         return f"Generate a {ar} aspect ratio image."
 
     @staticmethod
     def build_grid_ascii(rows: int, cols: int, is_portrait_panel: bool = False) -> str:
-        """生成无边框的网格位置标记图。
+        """Generate a borderless grid position marker map.
 
-        使用 [N] 标记代替 box-drawing 字符，避免引导模型画出视觉分隔线。
+        Uses [N] markers instead of box-drawing characters to avoid prompting the model to draw visual divider lines.
         """
         lines = []
         for row in range(rows):
@@ -937,12 +896,12 @@ class PromptComponents:
     def build_grid_declaration(
         ctx: PromptContext, prefix: str = "", skip_intro: bool = False
     ) -> str:
-        """构建网格声明。
+        """Build the grid declaration.
 
         Args:
-            ctx: 提示词上下文
-            prefix: 前缀文本（可选）
-            skip_intro: 是否跳过 "Make a ..." 开头（当 prefix 已包含网格声明时使用）
+            ctx: prompt context
+            prefix: prefix text (optional)
+            skip_intro: whether to skip the "Make a ..." opening (use when the prefix already contains the grid declaration)
         """
         rows, cols = ctx.grid.rows, ctx.grid.cols
         total_panels = ctx.grid.total_panels
@@ -954,7 +913,7 @@ class PromptComponents:
         else:
             intro = ""
 
-        # 当 skip_intro=True 时，不生成 "Make a ..." 开头（避免与 prefix 重复）
+        # When skip_intro=True, do not generate the "Make a ..." opening (avoids duplicating the prefix)
         if skip_intro:
             grid_intro = ""
         elif rows == 1 and cols == 1:
@@ -997,9 +956,9 @@ PANEL SHAPE CONSTRAINT (CRITICAL):
     def extract_panel_characters(
         beats: List[dict], characters: Dict[str, CharacterConfig]
     ) -> List[str]:
-        """按 panel 出场顺序返回角色名列表（去重）。
+        """Return the list of character names in panel appearance order (deduplicated).
 
-        支持 {{角色名}} 和 {{identity_id}}（如 {{苏清晏_少女}}）两种格式。
+        Supports both {{character_name}} and {{identity_id}} (e.g. {{Alice_teen}}) formats.
         """
         ordered_chars = []
         sorted_char_names = sorted(characters.keys(), key=len, reverse=True)
@@ -1019,10 +978,10 @@ PANEL SHAPE CONSTRAINT (CRITICAL):
     def extract_panel_characters_from_detected(
         beats: List[dict], characters: Dict[str, "CharacterConfig"]
     ) -> List[str]:
-        """Render 模式：按 detected_identities 出场顺序返回角色名列表（去重）。
+        """Render mode: return the list of character names in detected_identities appearance order (deduplicated).
 
-        与 extract_panel_characters 对称，但读取 beat["detected_identities"]
-        而非 visual_description 中的 {{}} 标记。
+        Symmetric with extract_panel_characters, but reads beat["detected_identities"]
+        instead of the {{}} markers in visual_description.
         """
         ordered_chars: List[str] = []
         sorted_char_names = sorted(characters.keys(), key=len, reverse=True)
@@ -1041,12 +1000,12 @@ PANEL SHAPE CONSTRAINT (CRITICAL):
     def build_identity_lock(
         ctx: PromptContext, ordered_chars: List[str] = None, compact: bool = False
     ) -> str:
-        """构建身份锁定规则。
+        """Build identity lock rules.
 
         Args:
-            ctx: 提示词上下文
-            ordered_chars: 排序后的角色列表
-            compact: True 时输出精简 3 行版本（Render 模式用，避免脸部约束重复）
+            ctx: prompt context
+            ordered_chars: sorted list of characters
+            compact: when True, output the compact 3-line version (used by Render mode to avoid duplicated face constraints)
         """
         if not ctx.characters:
             return ""
@@ -1054,7 +1013,7 @@ PANEL SHAPE CONSTRAINT (CRITICAL):
         if ordered_chars is None:
             ordered_chars = PromptComponents.extract_panel_characters(ctx.beats, ctx.characters)
 
-        # 检查是否有参考图角色
+        # Check whether any character has a reference image
         has_ref = any(
             ctx.characters.get(c) and ctx.characters[c].reference_path for c in ordered_chars
         )
@@ -1119,11 +1078,11 @@ PANEL SHAPE CONSTRAINT (CRITICAL):
 
     @staticmethod
     def build_task_declaration(ctx: PromptContext, skip_ascii: bool = False) -> str:
-        """构建任务声明（合并比例、网格、风格、panel 数量约束）。
+        """Build the task declaration (merges aspect ratio, grid, style, and panel-count constraints).
 
         Args:
-            ctx: 提示词上下文
-            skip_ascii: 跳过 ASCII 布局图（Render 模式有草图作为布局参考）
+            ctx: prompt context
+            skip_ascii: skip the ASCII layout map (Render mode has the sketch as the layout reference)
         """
         rows, cols = ctx.grid.rows, ctx.grid.cols
         total = ctx.grid.total_panels
@@ -1157,17 +1116,17 @@ ONE continuous image. ZERO visible boundaries between regions."""
         include_face_desc: bool = True,
         include_silhouette: bool = False,
     ) -> str:
-        """构建图片-角色映射（含角色描述）。
+        """Build the image-to-character mapping (including character descriptions).
 
-        在角色名后添加 face_prompt 或 base_prompt 描述，
-        帮助模型更好地理解角色特征。
+        Append the face_prompt or base_prompt description after the character name,
+        to help the model better understand character features.
 
         Args:
-            ctx: 提示词上下文
-            ordered_chars: 排序后的角色列表
-            include_sketch: 是否包含 SKETCH 行（Normal 模式无草图，设为 False）
-            include_face_desc: 是否包含脸部文字描述
-            include_silhouette: 是否在 Image 行前加服装轮廓锚点（Render 模式用，帮助模型在灰度草图中识别角色）
+            ctx: prompt context
+            ordered_chars: sorted list of characters
+            include_sketch: whether to include the SKETCH line (False for Normal mode, which has no sketch)
+            include_face_desc: whether to include the textual face description
+            include_silhouette: whether to prefix the Image line with a clothing-silhouette anchor (used by Render mode to help the model recognize characters in a grayscale sketch)
         """
         lines = ["REFERENCE IMAGES:"]
         img_idx = 1
@@ -1425,7 +1384,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             img_idx += 1
 
         if include_sketch and not sketch_first:
-            # img_idx == 1 意味着没有角色参考图，只有草图
+            # img_idx == 1 means there are no character reference images, only the sketch
             if img_idx == 1:
                 sketch_hint = "this is the base drawing — keep all composition and poses, apply character details from descriptions below"
             else:
@@ -1434,7 +1393,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
                 f"  Image {img_idx} (LAST attached image) = SKETCH TO COLORIZE ({sketch_hint})"
             )
 
-        # 为 prompt_only 角色添加纯文字描述段落
+        # Add a text-only description paragraph for prompt_only characters
         char_identity_ids = PromptComponents._collect_char_identity_ids(
             ctx.beats,
             use_detected_identities=(ctx.mode == PromptMode.RENDER),
@@ -1444,7 +1403,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             char_cfg = ctx.characters.get(char_name)
             if not char_cfg:
                 continue
-            # 跳过已在 REFERENCE IMAGES 中出现的角色（有图的）
+            # Skip characters already present in REFERENCE IMAGES (those with images)
             if char_cfg.reference_mode != "prompt_only" and char_cfg.reference_path:
                 continue
             desc_parts = []
@@ -1641,19 +1600,19 @@ ONE continuous image. ZERO visible boundaries between regions."""
         char_names: List[str],
         include_sketch: bool = True,
     ) -> str:
-        """构建合并的 JSON 格式 references + hard_constraints 块。
+        """Build the merged JSON-format references + hard_constraints block.
 
-        采用 slot 编号 + purpose 字段的结构化格式，提高角色一致性。
+        Uses a structured format with slot numbers + purpose fields to improve character consistency.
 
         Args:
-            ctx: 提示词上下文
-            ordered_chars: 按 visual_description 中 {{角色名}} 出场顺序排列的角色列表
-            char_names: 角色名列表（用于 hard_constraints）
-            include_sketch: 是否包含 SKETCH 条目（Render 模式为 True）
+            ctx: prompt context
+            ordered_chars: list of characters in the order of {{character_name}} appearance in visual_description
+            char_names: list of character names (used for hard_constraints)
+            include_sketch: whether to include the SKETCH entry (True for Render mode)
         """
         references = {}
 
-        # 分类角色：composite vs 其他
+        # Classify characters: composite vs. others
         composite_chars = []
         other_chars_json = []
         for char_name in ordered_chars:
@@ -1668,7 +1627,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
         slot = 1
 
         if len(composite_chars) >= 4:
-            # 多人模式：合并为 1 个 slot，保留每个角色完整上传 sheet。
+            # Multi-character mode: merge into 1 slot, keeping each character's full uploaded sheet.
             char_entries = []
             for char_name in composite_chars:
                 char_cfg = ctx.characters.get(char_name)
@@ -1691,7 +1650,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             }
             slot += 1
         else:
-            # 单人模式：完整上传多视图 sheet，不假设固定 panel 数或顺序。
+            # Single-character mode: upload the full multi-view sheet without assuming a fixed panel count or order.
             for char_name in composite_chars:
                 char_cfg = ctx.characters.get(char_name)
                 ref_obj = {
@@ -1709,7 +1668,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
                 references[char_name] = ref_obj
                 slot += 1
 
-        # portrait_only 角色照常
+        # portrait_only characters as usual
         for char_name in other_chars_json:
             char_cfg = ctx.characters.get(char_name)
             ref_obj = {
@@ -1726,7 +1685,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             references[char_name] = ref_obj
             slot += 1
 
-        # SKETCH 作为 composition 参考（仅 Render 模式）
+        # SKETCH as the composition reference (Render mode only)
         if include_sketch:
             references["SKETCH"] = {
                 "slot": slot,
@@ -1739,7 +1698,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
                 "note": "Sketch contains storyboard faces for expression/pose reference — use CHARACTER references for facial IDENTITY, not sketch",
             }
 
-        # 为 prompt_only 角色添加纯文字描述
+        # Add text-only descriptions for prompt_only characters
         text_only_characters = {}
         for char_name in ordered_chars:
             char_cfg = ctx.characters.get(char_name)
@@ -1759,7 +1718,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             if desc.get("visual_description") or desc.get("outfit"):
                 text_only_characters[char_name] = desc
 
-        # 构建 hard_constraints
+        # Build hard_constraints
         panel_count = ctx.grid.total_panels
         hard_constraints = [
             f"Exactly {panel_count} panels required.",
@@ -1768,7 +1727,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
             f"Character identity consistency across ALL panels is PARAMOUNT: {', '.join(char_names)}",
         ]
 
-        # 合并为单个 JSON
+        # Merge into a single JSON
         result = {"references": references, "hard_constraints": hard_constraints}
         if text_only_characters:
             result["text_only_characters"] = text_only_characters
@@ -1777,8 +1736,8 @@ ONE continuous image. ZERO visible boundaries between regions."""
 
     @staticmethod
     def build_fusion_rules(ctx: PromptContext = None, ordered_chars: List[str] = None) -> str:
-        """融合规则（强化否定，防止 Sketch 风格泄漏）。"""
-        # 收集当前 grid 中出现的参考模式
+        """Fusion rules (strengthened negation, to prevent Sketch style leakage)."""
+        # Collect the reference modes present in the current grid
         has_composite = False
         has_portrait = False
         has_prompt_only = False
@@ -1792,7 +1751,7 @@ ONE continuous image. ZERO visible boundaries between regions."""
                 elif char_cfg.reference_mode == "prompt_only" or not char_cfg.reference_path:
                     has_prompt_only = True
                 else:
-                    # portrait (有参考图但只有脸)
+                    # portrait (has a reference image but only the face)
                     has_portrait = True
 
         has_any_ref = has_composite or has_portrait
@@ -1876,11 +1835,11 @@ ONE continuous image. ZERO visible boundaries between regions."""
 
     @staticmethod
     def build_constraints(ctx: PromptContext, include_face_reminder: bool = True) -> str:
-        """约束部分。
+        """Constraints section.
 
         Args:
-            ctx: 提示词上下文
-            include_face_reminder: 是否包含脸部身份提醒行（Render 模式设为 False 避免重复）
+            ctx: prompt context
+            include_face_reminder: whether to include the face identity reminder line (False for Render mode to avoid duplication)
         """
         lines = [
             "CONSTRAINTS:",
@@ -1975,14 +1934,14 @@ ONE continuous image. ZERO visible boundaries between regions."""
 
     @staticmethod
     def build_temporal_framing() -> str:
-        """构建时间帧约束（视频首帧）。"""
+        """Build the temporal framing constraint (video first frame)."""
         return """TEMPORAL FRAMING (CRITICAL FOR VIDEO):
 Each panel is the FIRST FRAME of a video clip. For dynamic actions:
-- "turns around" (转身) → show character's BACK (before turning)
-- "stands up" (站起) → show character SEATED (before standing)
-- "looks up" (抬头) → show character looking DOWN (before looking up)
-- "opens door" (开门) → show door CLOSED (before opening)
-- "walks in" (走进) → show character at the DOORWAY (before entering)
+- "turns around" → show character's BACK (before turning)
+- "stands up" → show character SEATED (before standing)
+- "looks up" → show character looking DOWN (before looking up)
+- "opens door" → show door CLOSED (before opening)
+- "walks in" → show character at the DOORWAY (before entering)
 Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
@@ -1990,9 +1949,9 @@ Show the STARTING pose, NOT the ending result."""
         beats: List[dict],
         total_panels: int,
     ) -> dict:
-        """将 beats 按 scene_id 归组，返回 {scene_id: {panels, time_of_day}}。
+        """Group beats by scene_id and return {scene_id: {panels, time_of_day}}.
 
-        只处理前 total_panels 个 beat，避免越界 region。
+        Only the first total_panels beats are processed, to avoid out-of-range regions.
         """
         actual_beats = beats[:total_panels]
         scene_panels: dict = {}
@@ -2014,14 +1973,14 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def _format_panel_list(panels: list) -> str:
-        """将 panel 列表格式化为紧凑的 range 表达式。
+        """Format a panel list as a compact range expression.
 
-        少于等于 5 个用 & 连接，多于 5 个用 range 表达。
-        如 [1,2,3,5,6,8] → '1-3, 5-6, 8 (6 panels)'
+        Five or fewer are joined with &; more than five use range notation.
+        e.g. [1,2,3,5,6,8] -> '1-3, 5-6, 8 (6 panels)'
         """
         if len(panels) <= 5:
             return " & ".join(str(p) for p in panels)
-        # 构建 ranges
+        # Build ranges
         ranges = []
         start = panels[0]
         end = panels[0]
@@ -2036,7 +1995,7 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_scene_continuity(beats: List[dict], total_panels: int) -> str:
-        """动态生成场景连续性指令。"""
+        """Dynamically generate scene continuity instructions."""
         scene_panels = PromptComponents._group_beats_by_scene(beats, total_panels)
 
         lines = ["SCENE CONTINUITY (CRITICAL):"]
@@ -2075,13 +2034,13 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_scene_continuity_for_sketch(beats: List[dict], total_panels: int) -> str:
-        """场景连续性指令（草图专用版本）。
+        """Scene continuity instructions (sketch-only version).
 
-        相比 build_scene_continuity：
+        Compared with build_scene_continuity:
         - "COPY-PASTE identical" → "SAME layout and structure"
-        - 移除 color temperature 规则（灰度无色温）
-        - 新增线条一致性规则
-        - 保留场景分组和环境描述
+        - Remove the color temperature rule (grayscale has no color temperature)
+        - Add a line consistency rule
+        - Keep scene grouping and environment descriptions
         """
         scene_panels = PromptComponents._group_beats_by_scene(beats, total_panels)
 
@@ -2110,7 +2069,7 @@ Show the STARTING pose, NOT the ending result."""
                     f"- Panels {panel_str}: IDENTICAL background environment — same layout, structures, and objects in same positions. Only character poses and camera angles change."
                 )
 
-        # 补充 placeholder panels
+        # Add placeholder panels
         actual_count = min(len(beats), total_panels)
         if actual_count < total_panels:
             placeholder_panels = list(range(actual_count + 1, total_panels + 1))
@@ -2128,11 +2087,11 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_scene_environment_hints(beats: List[dict], total_panels: int) -> str:
-        """生成精简的场景环境提示（Render 模式用，不含冗余规则）。
+        """Generate a compact scene environment hint (used by Render mode, without redundant rules).
 
-        Render 模式已有草图作为构图参考，只需环境描述辅助渲染风格。
+        Render mode already has the sketch as the composition reference; only the environment description is needed to aid the rendering style.
         """
-        # location_description 已移除，环境描述不再可用
+        # location_description has been removed; environment descriptions are no longer available
         return ""
 
     @staticmethod
@@ -2140,10 +2099,10 @@ Show the STARTING pose, NOT the ending result."""
         ctx: PromptContext,
         ordered_chars: Optional[List[str]] = None,
     ) -> str:
-        """基于颜色的角色识别映射（替代 staging 文字识别）。"""
+        """Color-based character identification mapping (replaces staging text identification)."""
         lines = ["CHARACTER COLOR IDENTIFICATION (match sketch colors to character references):"]
 
-        # 收集 beats 中的 identity_ids（与 build_reference_map 相同逻辑）
+        # Collect identity_ids from beats (same logic as build_reference_map)
         char_identity_ids = PromptComponents._collect_char_identity_ids(
             ctx.beats,
             use_detected_identities=(ctx.mode == PromptMode.RENDER),
@@ -2180,25 +2139,25 @@ Show the STARTING pose, NOT the ending result."""
 
         def _gender_label(value: str) -> str:
             g = (value or "").strip().lower()
-            if g in ("男", "男性", "male"):
+            if g == "male":
                 return "MALE"
-            if g in ("女", "女性", "female"):
+            if g == "female":
                 return "FEMALE"
             return ""
 
         def _appearance_source(cfg, suffix: str = "") -> str:
-            """根据参考模式返回外观来源提示。"""
+            """Return an appearance-source hint based on the reference mode."""
             identity_ref = cfg.identity_ref_images.get(suffix, "") if suffix else ""
             if identity_ref or (cfg.reference_mode == "composite" and cfg.reference_path):
                 return "Apply face, body build, and costume from reference image."
             elif cfg.reference_mode != "prompt_only" and cfg.reference_path:
-                # portrait: 脸从图来，衣服从 WEAR 文字来
+                # portrait: face comes from the image, clothing from the WEAR text
                 return (
                     "Apply face from reference image, body build from character identity, "
                     "costume from WEAR text description."
                 )
             else:
-                # prompt_only: 全靠文字
+                # prompt_only: entirely from text
                 return "Apply face, body build, and costume from CHARACTER DESCRIPTIONS text."
 
         def _reference_binding(color_name: str, char_name: str, tag: str) -> str:
@@ -2226,7 +2185,7 @@ Show the STARTING pose, NOT the ending result."""
             base_lock = "Gender and body type are LOCKED — do NOT change."
 
             if identity_ids and char_cfg.identity_sketch_colors:
-                # 有身份级颜色：每个身份一行
+                # With identity-level colors: one line per identity
                 for iid in sorted(identity_ids):
                     suffix = iid.split("_", 1)[1] if "_" in iid else iid
                     color = char_cfg.identity_sketch_colors.get(suffix, "")
@@ -2246,7 +2205,7 @@ Show the STARTING pose, NOT the ending result."""
                     if body_type:
                         lines.append(f"  Body build: {body_type}.")
             else:
-                # 无身份级颜色：用角色级颜色
+                # Without identity-level colors: use the character-level color
                 color = char_cfg.sketch_color
                 if not color:
                     continue
@@ -2326,22 +2285,22 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_panel_roster(ctx: PromptContext) -> str:
-        """构建极简 Panel 角色名单（替代完整的 visual_description）。
+        """Build a minimal Panel roster (replaces the full visual_description).
 
-        Sketch 已包含所有视觉内容，render 只需知道每个 panel 有哪些角色
-        以便映射 identity lock。同时提供全局或 per-panel 的 time_of_day 作为光照提示。
+        The sketch already contains all the visual content; render only needs to know which characters are in each panel
+        to map the identity lock. It also provides a global or per-panel time_of_day as a lighting hint.
         """
         lines = []
         total_panels = ctx.grid.total_panels
         actual_beats = ctx.beats[:total_panels]
 
-        # 收集 per-panel time_of_day
+        # Collect per-panel time_of_day
         panel_tods = []
         for beat in actual_beats:
             tod = beat.get("time_of_day", "")
             panel_tods.append(tod)
 
-        # 收集 scene_id：继承前一个 panel 的 scene_id（与 build_panel_flow 相同逻辑）
+        # Collect scene_id: inherit the previous panel's scene_id (same logic as build_panel_flow)
         panel_scenes = []
         prev_scene = None
         for beat in actual_beats:
@@ -2352,7 +2311,7 @@ Show the STARTING pose, NOT the ending result."""
             panel_scenes.append(scene_id)
 
         for i, beat in enumerate(actual_beats, start=1):
-            # per-panel 出场角色：直接用 detected_identities（草图工作台颜色检测结果）
+            # per-panel appearing characters: use detected_identities directly (sketch workbench color detection results)
             markers = real_detected_identities(beat.get("detected_identities") or [])
             char_color_lines = []
             for marker in markers:
@@ -2363,7 +2322,7 @@ Show the STARTING pose, NOT the ending result."""
                         identity_id = marker if "_" in marker else None
                         tag = PromptComponents.compute_char_tag(char_name, identity_id=identity_id)
 
-                        # 解析颜色
+                        # Parse the color
                         color = ""
                         if identity_id:
                             suffix = (
@@ -2382,11 +2341,11 @@ Show the STARTING pose, NOT the ending result."""
                         else:
                             hex_code, color_name = "", "?"
 
-                        # 性别标签
+                        # Gender label
                         g = char_cfg.gender.strip()
-                        if g in ("女", "女性", "female"):
+                        if g == "female":
                             gender_label = "FEMALE"
-                        elif g in ("男", "男性", "male"):
+                        elif g == "male":
                             gender_label = "MALE"
                         else:
                             gender_label = g.upper() if g else ""
@@ -2429,18 +2388,18 @@ Show the STARTING pose, NOT the ending result."""
                 panel_desc_lines = [f"Scene: {panel_scenes[i - 1]}"]
             if ctx.scene_refs.get(i):
                 panel_desc_lines.append(
-                    "⚠️ 静态环境以场景锚图为准；角色位置和姿态以草图为准；道具只能适配既有构图，不得重建或改写场景。"
+                    "⚠️ The static environment follows the scene anchor image; character positions and poses follow the sketch; props may only adapt to the existing composition and must not rebuild or rewrite the scene."
                 )
                 if any(
                     PromptComponents._is_rough_render_scene_ref(ref)
                     for ref in ctx.scene_refs.get(i, [])
                 ):
                     panel_desc_lines.append(
-                        "⚠️ 当前场景锚图是粗糙 3D Gaussian Splatting/env_only 参考：只保留同机位关系和材质线索，必须清理 Gaussian-splat 噪声、浮点杂点、模糊、破边、投影接缝和扭曲纹理。"
+                        "⚠️ The current scene anchor image is a rough 3D Gaussian Splatting/env_only reference: keep only the same-camera relationship and material cues, and clean up Gaussian-splat noise, floating specks, blur, broken edges, projection seams, and distorted textures."
                     )
             else:
                 panel_desc_lines.append(
-                    "⚠️ 无场景锚图时才使用场景文字；空间关系以草图为准；环境元素只能适配既有构图，不得新增层级、景深或站位信息。"
+                    "⚠️ Use the scene text only when there is no scene anchor image; spatial relationships follow the sketch; environment elements may only adapt to the existing composition and must not add layering, depth of field, or staging information."
                 )
             panel_desc = "\n".join(panel_desc_lines)
 
@@ -2456,7 +2415,7 @@ Show the STARTING pose, NOT the ending result."""
                 lines.append(header)
                 lines.extend(f"  {line}" for line in panel_desc.splitlines())
 
-        # 填充不足的 panels
+        # Pad insufficient panels
         if len(actual_beats) < total_panels:
             for i in range(len(actual_beats) + 1, total_panels + 1):
                 lines.append(
@@ -2513,7 +2472,7 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_panel_flow(beats: List[dict]) -> str:
-        """生成面板过渡关系。"""
+        """Generate panel transition relationships."""
         if len(beats) < 2:
             return ""
 
@@ -2542,7 +2501,7 @@ Show the STARTING pose, NOT the ending result."""
 
     @staticmethod
     def build_seamless_constraint(total: int) -> str:
-        """构建无缝图像约束块。"""
+        """Build the seamless image constraint block."""
         return f"""SEAMLESS GRID REQUIREMENT:
 All {total} regions form ONE image with NO drawn grid lines, borders, or gutters.
 Different scenes may have different backgrounds — transitions between scenes should be natural, not separated by lines.
@@ -2550,7 +2509,7 @@ Regions must touch edge-to-edge with ZERO borders, frames, or dividing lines."""
 
     @staticmethod
     def build_style_section(ctx: PromptContext) -> str:
-        """构建风格约束。"""
+        """Build style constraints."""
         avoid_section = f"AVOID: {ctx.style.avoid_keywords}" if ctx.style.avoid_keywords else ""
         finish_line = (
             "Dynamic cinematic lighting, consistent animation finish."
@@ -2566,12 +2525,12 @@ LAYOUT: ONE CONTINUOUS IMAGE. ZERO visible boundaries between regions. No border
 
 
 # =============================================================================
-# 模式策略
+# Mode strategies
 # =============================================================================
 
 
 class RenderModeStrategy:
-    """Render 模式：基于草图渲染（使用文本格式，效果更稳定）。"""
+    """Render mode: render from the sketch (text format, more stable)."""
 
     def build(self, ctx: PromptContext, components: PromptComponents) -> str:
         rows, cols = ctx.grid.rows, ctx.grid.cols
@@ -2587,7 +2546,7 @@ class RenderModeStrategy:
             "Do NOT inherit or preserve a reference image's CG, beauty-filter, illustrated, or over-retouched rendering look; re-render the same person in the project's scene preset."
         )
 
-        # Render 专用开头：一句话讲清任务 + 对象 + 比例
+        # Render-specific opening: one sentence covering the task + subject + ratio
         render_opening = f"""Colorize this {rows}×{cols} storyboard SKETCH (first attached image / Image 1) into a full-color continuous image with {total} seamless regions. Each panel MUST be {panel_hint}.
 
 STYLE: {ctx.style.style_keywords}
@@ -2600,13 +2559,13 @@ Image 1 / SKETCH IS the base drawing — preserve ALL composition, crop, poses, 
 ⚠️ HARD CONSTRAINT: {total-1} regions = FAIL. {total+1} regions = FAIL. Only {total} = PASS.
 ONE continuous image. ZERO visible boundaries between regions."""
 
-        # Render 模式：严格按 detected_identities 出场顺序，不回退 visual_description 标记
+        # Render mode: strictly follow the detected_identities appearance order, no fallback to visual_description markers
         ordered_chars = components.extract_panel_characters_from_detected(ctx.beats, ctx.characters)
         ctx.resolved_render_chars = list(ordered_chars)
         constraints = components.build_constraints(ctx, include_face_reminder=False)
 
         parts = [
-            render_opening,  # Section 0+1: 合并的任务声明
+            render_opening,  # Section 0+1: merged task declaration
             components.build_reference_map(
                 ctx, ordered_chars, include_face_desc=False, include_silhouette=False
             ),
@@ -2623,14 +2582,14 @@ ONE continuous image. ZERO visible boundaries between regions."""
 
 
 def _panel_ar_hint(aspect_ratio: str, rows: int, cols: int) -> str:
-    """根据整图比例和网格几何，推算单面板的朝向提示。
+    """Infer the orientation hint of a single panel from the whole-image ratio and the grid geometry.
 
-    对于 NxN 网格，每个 panel 的比例 = 整图比例。
+    For an NxN grid, each panel's ratio = the whole-image ratio.
     """
     from math import gcd
 
     w_ratio, h_ratio = map(int, aspect_ratio.split(":"))
-    # NxN 网格时 panel 比例 = 整图比例
+    # For an NxN grid the panel ratio = the whole-image ratio
     panel_w, panel_h = w_ratio, h_ratio
     if rows != cols:
         panel_w = w_ratio * rows
@@ -2646,13 +2605,13 @@ def _panel_ar_hint(aspect_ratio: str, rows: int, cols: int) -> str:
 
 
 class SketchModeStrategy:
-    """Sketch 模式：伯里曼构造解剖风格 + 颜色编码。"""
+    """Sketch mode: Bridgman constructive-anatomy style + color coding."""
 
     def build(self, ctx: PromptContext, components: PromptComponents) -> str:
         rows, cols = ctx.grid.rows, ctx.grid.cols
         total_panels = ctx.grid.total_panels
 
-        # ASCII 布局（Sketch 模式使用竖屏 panel）
+        # ASCII layout (Sketch mode uses portrait panels)
         ascii_layout = components.build_grid_ascii(rows, cols, ctx.grid.is_portrait_panel)
 
         panel_hint = (
@@ -2661,12 +2620,12 @@ class SketchModeStrategy:
             else "SQUARE (1:1)"
         )
 
-        # ----- 先构建角色颜色信息（COLOR LAW 和 intro 都需要） -----
+        # ----- First build the character color info (needed by both COLOR LAW and the intro) -----
         char_lines = []
-        char_names_for_color_law = []  # 用于 COLOR LAW 点名
+        char_names_for_color_law = []  # used to name characters in COLOR LAW
         prop_lines = []
         local_prop_lines = []
-        tag_color_map: dict[str, str] = {}  # tag → color_name（仅角色）
+        tag_color_map: dict[str, str] = {}  # tag -> color_name (characters only)
         prop_tag_color_map: dict[str, str] = {}  # prop tag -> marker color
         prop_color_lines: list[str] = []
         identity_tag_map: dict[str, str] = {}  # identity_id → tag
@@ -2746,13 +2705,13 @@ class SketchModeStrategy:
                     return parts[1] if len(parts) > 1 else parts[0]
 
                 def _identity_body_desc(suffix):
-                    """获取身份级 body_desc（优先使用身份级 body_type）。"""
+                    """Get the identity-level body_desc (prefer the identity-level body_type)."""
                     override = char_cfg.identity_body_types.get(suffix, "")
                     if override:
                         gender = char_cfg.gender.strip()
-                        if gender in ("女", "女性", "female"):
+                        if gender == "female":
                             return f"FEMALE, {override}"
-                        elif gender in ("男", "男性", "male"):
+                        elif gender == "male":
                             return f"MALE, {override}"
                         return override
                     return body_desc
@@ -2873,7 +2832,7 @@ class SketchModeStrategy:
                     else:
                         director_staging_lines.append(f"- draw user object: {label}")
 
-        # COLOR LAW 区块（点名角色/道具）
+        # COLOR LAW block (names characters/props)
         colored_targets = [*char_names_for_color_law, *prop_tag_color_map.keys()]
         prop_block = ""
         if local_prop_lines:
@@ -3046,8 +3005,8 @@ This environment anchor defines the visible background. The panel visual_descrip
 Keep scene lines minimal and clean — this is still a storyboard sketch, not a rendered scene.
 """.strip()
             elif ctx.mode == PromptMode.SKETCH:
-                # Sketch 模式：scene 参考只作为 STYLE ANCHOR（线条/材质/光照/调色风格），
-                # 不锁几何也不锁机位。每个 panel 的相机和构图完全由 visual_description 驱动。
+                # Sketch mode: the scene reference serves only as a STYLE ANCHOR (lines/materials/lighting/palette style),
+                # it locks neither geometry nor camera position. Each panel's camera and composition are driven entirely by visual_description.
                 scene_geometry_block = """
 SCENE STYLE ANCHOR (NOT a geometry constraint):
 The attached scene reference image is a STYLE ANCHOR for sketch generation, NOT a camera or layout constraint.
@@ -3197,12 +3156,12 @@ Backgrounds are minimal contextual black/gray line art based on attached scene r
 
         action_pose_block = """ACTION BLOCKING RULE:
 - Treat the panel visual_description as the action source of truth.
-- If the panel description contains physical action verbs (walk, leave, enter, turn, stand up, sit down, lift, carry, push, pull, open, cross, step, run, fall, reach; or Chinese equivalents like 走出/离开/进入/转身/站起/坐下/抱起/搬起/推/拉/打开/跨出/跑/摔倒), draw the figure in an action pose instead of a neutral standing icon.
+- If the panel description contains physical action verbs (walk, leave, enter, turn, stand up, sit down, lift, carry, push, pull, open, cross, step, run, fall, reach), draw the figure in an action pose instead of a neutral standing icon.
 - If the visual_description explicitly specifies shot size, framing, close-up, upper body, camera angle, POV, empty shot, or blackout, obey that framing first. Do not add extra body parts, thresholds, or environmental cues that the written framing excludes.
 - If the visual_description explicitly says a character holds/carries/lifts a named prop, show the prop contact clearly inside the written framing.
 - Do not use arrows, text labels, speed lines, or comic motion effects to explain movement."""
 
-        # ----- 主体 intro -----
+        # ----- Subject intro -----
         if has_director_scene_refs and has_director_blocking_refs:
             intro_action = (
                 f"Edit the attached 3GS combined background in place into a {rows}x{cols} scene sketch. "
@@ -3275,7 +3234,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
 {ascii_layout}
 """
 
-        # Panel 描述
+        # Panel descriptions
         lines = []
         actual_beats = ctx.beats[:total_panels]
 
@@ -3283,12 +3242,12 @@ LAYOUT (CRITICAL - MUST BE EXACT):
             visual_desc = beat.get("visual_description", "")
             visual_desc = _resolve_prop_marker_tags(visual_desc)
 
-            # 草图路径：剥离颜色词（颜色由标记系统控制，避免污染调色盘）
+            # Sketch path: strip color words (color is controlled by the marker system, to avoid polluting the palette)
             from novelvideo.utils.text_utils import strip_color_words
 
             visual_desc = strip_color_words(visual_desc)
 
-            # 替换 {{}} 标记为 identity_id（兼容 {{identity_id}} 和 {{角色名}}）
+            # Replace {{}} markers with identity_id (compatible with {{identity_id}} and {{character_name}})
             from novelvideo.utils.identity_resolver import (
                 resolve_visual_description_markers,
                 build_identity_to_char_map,
@@ -3299,11 +3258,10 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                 visual_desc, ctx.characters, id_to_char, use_identity_id=True
             )
 
-            visual_desc = visual_desc.rstrip("。！？，、；：")
 
-            # Sketch 模式：Nanobanana 自主构图（Master Director），不注入导演手册的镜头语言
+            # Sketch mode: Nanobanana composes on its own (Master Director); the director handbook camera language is not injected
             panel_desc = visual_desc
-            # 默认 sketch 不再注入大段 BLOCKING 约束；仅在 render 模式或 3GS director 修图模式下保留几何约束
+            # By default sketch no longer injects large BLOCKING constraints; geometric constraints are kept only in render mode or 3GS director retouch mode
             blocking_hints = (
                 []
                 if ctx.mode == PromptMode.SKETCH
@@ -3316,7 +3274,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                 )
             )
 
-            # 兜底扫描 ctx.characters，替换残余的裸角色名
+            # Fallback scan of ctx.characters, replacing any remaining bare character names
             if ctx.characters:
                 from novelvideo.models import extract_char_identities_from_markers
 
@@ -3334,7 +3292,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                         else:
                             panel_desc = re.sub(safe_pattern, "", panel_desc)
 
-            # 在 tag 后注入颜色名，强化命名角色可见性
+            # Inject the color name after the tag to reinforce visibility of named characters
             for tag, color_name in tag_color_map.items():
                 if tag in panel_desc:
                     panel_desc = panel_desc.replace(tag, f"{tag} ({color_name})")
@@ -3348,7 +3306,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                 panel_desc = f"{panel_desc} | BLOCKING: {' '.join(blocking_hints)}"
             lines.append(f"- **Panel {i}**: {panel_desc}")
 
-        # 填充不足的 panels（使用明确的占位符，避免模型自作主张）
+        # Pad insufficient panels (use an explicit placeholder so the model does not improvise)
         if len(actual_beats) < total_panels:
             for i in range(len(actual_beats) + 1, total_panels + 1):
                 if rough_gpt_sketch:
@@ -3450,7 +3408,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
 
         seamless = components.build_seamless_constraint(total_panels)
 
-        # 构建角色/道具 → 出现 panel 编号映射
+        # Build the character/prop -> appearance panel number mapping
         tag_panels: dict[str, list[int]] = {}
         prop_panels: dict[str, list[int]] = {}
         if ctx.characters or prop_label_map:
@@ -3472,7 +3430,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                     if prop_tag in prop_label_map:
                         prop_panels.setdefault(prop_tag, []).append(i)
 
-        # 计算角色数量用于 checklist
+        # Compute the character count for the checklist
         num_chars = len(char_lines)
         if char_names_for_color_law:
             color_check = (
@@ -3501,7 +3459,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
             )
             color_check = f"{color_check}\n{prop_color_check}" if color_check else prop_color_check
 
-        # 角色出现 panel 对照表
+        # Character appearance panel lookup table
         panel_map_lines = []
         for tag, color_name in tag_color_map.items():
             panels = tag_panels.get(tag, [])
@@ -3523,7 +3481,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
                     panel_map_lines.append(f"- {prop_tag} must appear in panels: {panel_text}")
         panel_map_str = "\n".join(panel_map_lines)
 
-        # 动态取第一个实际 tag 作为 checklist 示例
+        # Dynamically take the first actual tag as the checklist example
         example_tag = "[TRY_2ec7]"
         if char_lines:
             import re as _re
@@ -3547,7 +3505,7 @@ LAYOUT (CRITICAL - MUST BE EXACT):
         final_checklist = f"""⚠️ FINAL CHECKLIST:
 - ZERO text/labels/numbers on image
 - DO NOT draw character tags {example_tag} etc. on the image — these are script references only
-- Location tags like [场景名] and time tags like [时间] are for YOUR reference only — NEVER render them as text overlays on the image
+- Location tags like [scene_name] and time tags like [time] are for YOUR reference only — NEVER render them as text overlays on the image
 - EXACTLY {rows}x{cols} = {total_panels} panels, all EQUAL SIZE
 - ONE continuous image, NO borders between panels
 {color_check}
@@ -3635,16 +3593,16 @@ As the director, you have strong creative freedom over shot size, angle, framing
 
 
 # =============================================================================
-# Action Storyboard 模式
+# Action Storyboard mode
 # =============================================================================
 
 
 class ActionStoryboardStrategy:
-    """Action Storyboard 模式：将一段动作描述拆解为 25 格连续分镜序列。
+    """Action Storyboard mode: break a single action description into a 25-panel continuous storyboard sequence.
 
-    与普通 SKETCH 模式的区别：
-    - 所有 25 个 panel 是同一段动作的**连续分镜序列**（不是不同 beat）
-    - 从左到右、从上到下展现动作从起始到结束的完整过程
+    Differences from regular SKETCH mode:
+    - All 25 panels are a **continuous storyboard sequence** of the same action (not different beats)
+    - Shows the complete course of the action from start to end, left to right and top to bottom
     """
 
     def build(self, ctx: PromptContext, components: PromptComponents) -> str:
@@ -3658,12 +3616,12 @@ class ActionStoryboardStrategy:
             else "SQUARE (1:1)"
         )
 
-        # 从 beats[0] 中获取 action_description（由调用方注入）
+        # Get action_description from beats[0] (injected by the caller)
         action_description = ""
         if ctx.beats:
             action_description = ctx.beats[0].get("visual_description", "")
 
-        # 构建角色颜色信息（复用 Sketch 的颜色编码逻辑）
+        # Build character color info (reuse Sketch's color-coding logic)
         char_lines = []
         char_names_for_color_law = []
         prop_lines = []
@@ -3718,7 +3676,7 @@ COLOR-CODED CHARACTERS:
                 f"{chr(10).join(prop_lines)}\n"
             )
 
-        # 替换 action_description 中的 {{}} 为 tag
+        # Replace {{}} in action_description with tags
         resolved_action = action_description
         if ctx.characters:
             from novelvideo.utils.identity_resolver import (
@@ -3785,12 +3743,12 @@ CHOREOGRAPHY GUIDELINES:
 
 
 # =============================================================================
-# 统一入口
+# Unified entry point
 # =============================================================================
 
 
 class UnifiedPromptBuilder:
-    """统一提示词构建器。"""
+    """Unified prompt builder."""
 
     def __init__(self, ctx: PromptContext):
         self.ctx = ctx
@@ -3802,13 +3760,13 @@ class UnifiedPromptBuilder:
         }
 
     def build(self) -> str:
-        """构建完整提示词（根据模式选择策略）。"""
+        """Build the complete prompt (choose the strategy by mode)."""
         strategy = self._strategies[self.ctx.mode]
         return strategy.build(self.ctx, self.components)
 
 
 # =============================================================================
-# 辅助函数
+# Helper functions
 # =============================================================================
 
 
@@ -4261,26 +4219,26 @@ def create_prompt_context(
     image_provider: str = "",
     image_model: str = "",
 ) -> PromptContext:
-    """创建提示词上下文的便捷函数。
+    """Convenience function to create a prompt context.
 
     Args:
-        mode: 提示词模式
-        beats: Beat 数据列表
-        rows: 网格行数
-        cols: 网格列数
-        character_map: 角色映射 {角色名: {...}}
-        style: 风格名称
-        ethnicity: 种族
-        aspect_ratio: 宽高比（可选，自动推断）
-        is_portrait_panel: 是否竖屏 panel（可选，自动推断）
+        mode: prompt mode
+        beats: list of Beat data
+        rows: number of grid rows
+        cols: number of grid columns
+        character_map: character mapping {character_name: {...}}
+        style: style name
+        ethnicity: ethnicity
+        aspect_ratio: aspect ratio (optional, inferred automatically)
+        is_portrait_panel: whether the panel is portrait (optional, inferred automatically)
 
     Returns:
-        PromptContext 实例
+        PromptContext instance
     """
-    # 自动推断 aspect_ratio 和 is_portrait_panel
+    # Automatically infer aspect_ratio and is_portrait_panel
     from novelvideo.generators.nanobanana_grid import REGEN_MODE_CONFIGS, SKETCH_GRID_CONFIG
 
-    # Sketch 模式：使用独立配置
+    # Sketch mode: use a separate configuration
     if mode == PromptMode.SKETCH:
         if aspect_ratio is None:
             aspect_ratio = SKETCH_GRID_CONFIG["aspect_ratio"]
@@ -4290,7 +4248,7 @@ def create_prompt_context(
             is_portrait_panel = panel_ar < 0.9
     else:
         if aspect_ratio is None:
-            # 从 REGEN_MODE_CONFIGS 查找匹配 (rows, cols) 的配置
+            # Look up the config matching (rows, cols) in RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS
             for _mk, _cfg in REGEN_MODE_CONFIGS.items():
                 if _cfg["rows"] == rows and _cfg["cols"] == cols:
                     aspect_ratio = _cfg["aspect_ratio"]
@@ -4311,7 +4269,7 @@ def create_prompt_context(
         is_portrait_panel=is_portrait_panel,
     )
 
-    # 转换 character_map 为 CharacterConfig
+    # Convert character_map to CharacterConfig
     characters = {}
     if character_map:
         for char_name, info in character_map.items():
@@ -4335,7 +4293,7 @@ def create_prompt_context(
                 identity_body_types=info.get("identity_body_types", {}),
             )
 
-    # 创建风格配置
+    # Create the style config
     style_config = StyleConfig(
         style_name=style or IMAGE_DEFAULT_STYLE,
         project_dir=project_dir,

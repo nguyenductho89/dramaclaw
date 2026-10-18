@@ -1,12 +1,12 @@
 {
-  "_note": "本地宠物目录。加宠物：把官网下载的精灵图放到 public/petdex/<slug>.webp，并在 pets 里加一条。spritesheetUrl 用同源 /petdex/ 路径。仅收录自有/无版权争议的角色——请勿加入第三方版权角色（公开仓库即侵权证据上网）。",
+  "_note": "Local pet catalog. To add a pet: put the spritesheet downloaded from the official site at public/petdex/<slug>.webp and add an entry to pets. spritesheetUrl uses the same-origin /petdex/ path. Only include original or copyright-clear characters; do not add third-party copyrighted characters (a public repo is evidence of infringement).",
   "pets": [
-    { "slug": "zhizhi", "displayName": "枝枝", "spritesheetUrl": "/petdex/zhizhi.webp" },
-    { "slug": "yinyue-2", "displayName": "银月", "spritesheetUrl": "/petdex/yinyue-2.webp", "submittedBy": "is_coward" },
-    { "slug": "gugugaga-2", "displayName": "咕咕嘎嘎", "spritesheetUrl": "/petdex/gugugaga-2.webp", "submittedBy": "c u." }
+    { "slug": "zhizhi", "displayName": "Zhizhi", "spritesheetUrl": "/petdex/zhizhi.webp" },
+    { "slug": "yinyue-2", "displayName": "Yinyue", "spritesheetUrl": "/petdex/yinyue-2.webp", "submittedBy": "is_coward" },
+    { "slug": "gugugaga-2", "displayName": "Gugugaga", "spritesheetUrl": "/petdex/gugugaga-2.webp", "submittedBy": "c u." }
   ],
-  "_hidden_note": "暂时隐藏、后面再打开的宠物。加载器只读 pets，这里的条目不会显示。恢复：把对应条目移回上面的 pets 数组。",
+  "_hidden_note": "Pets hidden for now, to be re-enabled later. The loader only reads pets; entries here are not shown. To restore, move the entry back into the pets array above.",
   "_hidden": [
-    { "slug": "lulu-capybara-2", "displayName": "噜噜", "spritesheetUrl": "/petdex/lulu-capybara-2.webp", "submittedBy": "gitcjp" }
+    { "slug": "lulu-capybara-2", "displayName": "Lulu", "spritesheetUrl": "/petdex/lulu-capybara-2.webp", "submittedBy": "gitcjp" }
   ]
 }

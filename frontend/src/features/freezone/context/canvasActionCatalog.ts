@@ -191,7 +191,7 @@ function videoUiCapability(
 export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   {
     id: "freezone.image.generate",
-    display_name: "图片生成",
+    display_name: "Image generation",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.imageGen,
     inputs: [
@@ -224,7 +224,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.video.generate",
-    display_name: "视频生成",
+    display_name: "Video generation",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.video,
     inputs: [
@@ -265,7 +265,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.audio.generate",
-    display_name: "音频生成",
+    display_name: "Audio generation",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.audio,
     inputs: [
@@ -299,7 +299,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
       modes: ["speech", "music"],
       data_fields: {
         audioKind: "speech | music",
-        speechMode: "clone（仅自定义声线；未选择时跳过）", // i18n-exempt -- agent schema description
+        speechMode: "clone (custom voices only; skipped when none is selected)", // i18n-exempt -- agent schema description
         text: "string",
         emotionPrompt: "string",
         musicLengthMs: "number",
@@ -310,7 +310,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.text.translate",
-    display_name: "文本翻译",
+    display_name: "Text translation",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.textAnnotation,
     inputs: [
@@ -341,7 +341,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.image.reverse_prompt",
-    display_name: "图片反推提示词",
+    display_name: "Image reverse prompt",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.textAnnotation,
     inputs: [
@@ -382,7 +382,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.text.to_video",
-    display_name: "文本生成视频",
+    display_name: "Text to video",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.textAnnotation,
     inputs: [
@@ -416,7 +416,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.text.story_script",
-    display_name: "故事脚本生成",
+    display_name: "Story script generation",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.script,
     inputs: [
@@ -453,7 +453,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.director_world.open",
-    display_name: "打开导演世界",
+    display_name: "Open director world",
     execution: "manual_ui",
     node_type: CANVAS_NODE_TYPES.threeDWorld,
     inputs: [
@@ -480,7 +480,7 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   },
   {
     id: "freezone.image.to_3gs",
-    display_name: "图片转 3GS 世界",
+    display_name: "Image to 3GS world",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.threeDWorld,
     inputs: [
@@ -513,12 +513,12 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
       target_node_type: CANVAS_NODE_TYPES.threeDWorld,
       source_kind_field: "plyKind",
       source_kind_options: ["master", "reverse", "pano"],
-      note: "需要先把图片节点连接到 threeDWorldNode，再对 threeDWorldNode 运行 generate_3gs_world。",
+      note: "Connect the image node to a threeDWorldNode first, then run generate_3gs_world on the threeDWorldNode.",
     },
   },
   {
     id: "freezone.image.edit.reference",
-    display_name: "参考图生图",
+    display_name: "Reference image to image",
     execution: "frontend_node",
     node_type: CANVAS_NODE_TYPES.imageEdit,
     inputs: [
@@ -551,61 +551,61 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
       create_node_type: CANVAS_NODE_TYPES.imageEdit,
     },
   },
-  imageUiCapability("ui.open_crop_tool", "裁剪", "open_crop_tool"),
-  imageUiCapability("ui.download_image", "下载图片", "download_image"),
-  imageUiCapability("ui.open_annotate_tool", "标注", "open_annotate_tool"),
-  imageUiCapability("ui.open_split_storyboard_tool", "分格抽取", "open_split_storyboard_tool"),
+  imageUiCapability("ui.open_crop_tool", "Crop", "open_crop_tool"),
+  imageUiCapability("ui.download_image", "Download image", "download_image"),
+  imageUiCapability("ui.open_annotate_tool", "Annotate", "open_annotate_tool"),
+  imageUiCapability("ui.open_split_storyboard_tool", "Panel extraction", "open_split_storyboard_tool"),
   imageUiCapability(
     "ui.run_matting_tool",
-    "抠图",
+    "Matting",
     "run_matting_tool",
-    "抠图 / 去背景 / 移除背景 / 透明背景：对源图片执行前景抠图，生成透明背景 PNG 结果图。",
+    "Matting / background removal / transparent background: run foreground matting on the source image and produce a transparent-background PNG result.",
   ),
-  imageUiCapability("ui.run_upscale_tool", "高清放大", "run_upscale_tool"),
-  imageUiCapability("ui.open_redraw_tool", "重绘", "open_redraw_tool"),
-  imageUiCapability("ui.open_erase_tool", "擦除", "open_erase_tool"),
-  imageUiCapability("ui.run_outpaint_tool", "扩图", "run_outpaint_tool"),
+  imageUiCapability("ui.run_upscale_tool", "Upscale", "run_upscale_tool"),
+  imageUiCapability("ui.open_redraw_tool", "Redraw", "open_redraw_tool"),
+  imageUiCapability("ui.open_erase_tool", "Erase", "open_erase_tool"),
+  imageUiCapability("ui.run_outpaint_tool", "Outpaint", "run_outpaint_tool"),
   imageUiCapability(
     "ui.run_scene360_tool",
-    "生成 360 全景",
+    "Generate 360 panorama",
     "run_scene360_tool",
-    "全景 / 360 全景：提交图片节点的 360 全景生成，并创建全景结果图和 360 查看器节点。",
+    "Panorama / 360 panorama: submit 360 panorama generation for the image node, and create the panorama result image and a 360 viewer node.",
   ),
   imageUiCapability(
     "ui.open_multi_angle_tool",
-    "多维度 / 多角度 / 多视图 / 多视角",
+    "Multi-angle / multi-view",
     "open_multi_angle_tool",
-    "多维度 / 多角度 / 多视图 / 多视角：打开图片节点的多维度面板。",
+    "Multi-angle / multi-view: open the multi-angle panel of the image node.",
   ),
-  imageUiCapability("ui.open_light_tool", "打光", "open_light_tool"),
-  imageUiCapability("ui.open_rotate_tool", "旋转", "open_rotate_tool"),
-  imageUiCapability("ui.run_grid_multi_camera", "多机位九宫格", "run_grid_multi_camera"),
-  imageUiCapability("ui.run_grid_plot_four", "剧情四宫格", "run_grid_plot_four"),
-  imageUiCapability("ui.run_grid_face_three_view", "面部三视图", "run_grid_face_three_view"),
-  imageUiCapability("ui.run_grid_product_three_view", "产品三视图", "run_grid_product_three_view"),
-  imageUiCapability("ui.run_grid_serial_storyboard_25", "连续分镜 25 格", "run_grid_serial_storyboard_25"),
-  imageUiCapability("ui.run_grid_cinematic_light_correction", "电影感光影修正", "run_grid_cinematic_light_correction"),
-  imageUiCapability("ui.run_grid_character_three_view", "角色三视图", "run_grid_character_three_view"),
-  imageUiCapability("ui.run_grid_scene_setting_sheet", "场景设定图", "run_grid_scene_setting_sheet"),
-  imageUiCapability("ui.run_grid_frame_projection_3s_later", "推演 3 秒后画面", "run_grid_frame_projection_3s_later"),
-  imageUiCapability("ui.run_grid_frame_projection_5s_earlier", "推演 5 秒前画面", "run_grid_frame_projection_5s_earlier"),
-  videoUiCapability("ui.open_video_viewer", "视频查看", "open_video_viewer"),
-  videoUiCapability("ui.open_video_clip_tool", "视频剪辑", "open_video_clip_tool"),
-  videoUiCapability("ui.open_video_upscale_tool", "视频高清增强", "open_video_upscale_tool", {
+  imageUiCapability("ui.open_light_tool", "Lighting", "open_light_tool"),
+  imageUiCapability("ui.open_rotate_tool", "Rotate", "open_rotate_tool"),
+  imageUiCapability("ui.run_grid_multi_camera", "Multi-camera 9-grid", "run_grid_multi_camera"),
+  imageUiCapability("ui.run_grid_plot_four", "4-panel plot grid", "run_grid_plot_four"),
+  imageUiCapability("ui.run_grid_face_three_view", "Face three-view", "run_grid_face_three_view"),
+  imageUiCapability("ui.run_grid_product_three_view", "Product three-view", "run_grid_product_three_view"),
+  imageUiCapability("ui.run_grid_serial_storyboard_25", "25-frame serial storyboard", "run_grid_serial_storyboard_25"),
+  imageUiCapability("ui.run_grid_cinematic_light_correction", "Cinematic lighting correction", "run_grid_cinematic_light_correction"),
+  imageUiCapability("ui.run_grid_character_three_view", "Character three-view", "run_grid_character_three_view"),
+  imageUiCapability("ui.run_grid_scene_setting_sheet", "Scene setting sheet", "run_grid_scene_setting_sheet"),
+  imageUiCapability("ui.run_grid_frame_projection_3s_later", "Project frame 3 seconds later", "run_grid_frame_projection_3s_later"),
+  imageUiCapability("ui.run_grid_frame_projection_5s_earlier", "Project frame 5 seconds earlier", "run_grid_frame_projection_5s_earlier"),
+  videoUiCapability("ui.open_video_viewer", "Video viewer", "open_video_viewer"),
+  videoUiCapability("ui.open_video_clip_tool", "Video clip", "open_video_clip_tool"),
+  videoUiCapability("ui.open_video_upscale_tool", "Video upscale", "open_video_upscale_tool", {
     mediaType: "video",
     nodeKind: "candidate",
     pushable: true,
   }),
-  videoUiCapability("ui.run_video_analyze_story", "视频故事分析", "run_video_analyze_story", {
+  videoUiCapability("ui.run_video_analyze_story", "Video story analysis", "run_video_analyze_story", {
     execution: "frontend_node",
     mediaType: "text",
     nodeKind: "text",
   }),
-  videoUiCapability("ui.run_audio_separate", "音视频分离", "run_audio_separate", {
+  videoUiCapability("ui.run_audio_separate", "Audio/video separation", "run_audio_separate", {
     execution: "frontend_node",
   }),
-  videoUiCapability("ui.open_video_subtitle_erase_smart", "智能去字幕", "open_video_subtitle_erase_smart"),
-  videoUiCapability("ui.open_video_subtitle_erase_box", "框选去字幕", "open_video_subtitle_erase_box"),
+  videoUiCapability("ui.open_video_subtitle_erase_smart", "Smart subtitle removal", "open_video_subtitle_erase_smart"),
+  videoUiCapability("ui.open_video_subtitle_erase_box", "Box-select subtitle removal", "open_video_subtitle_erase_box"),
 ];
 
 export function buildCanvasActionCatalog(nodes: CanvasNode[], edges: CanvasEdge[] = []): CanvasActionCatalog {

@@ -14,26 +14,26 @@ _SPEC.loader.exec_module(build_style_gallery)
 
 
 def test_clean_style_prompt_strips_dangling_trailing_punctuation() -> None:
-    raw = "  日式生活流治愈影像，氛围平缓治愈，影视专业标准，  "
+    raw = "  Japanese slice-of-life healing imagery, calm and soothing mood, professional cinematic standard,  "
 
     assert (
         build_style_gallery.clean_style_prompt(raw)
-        == "日式生活流治愈影像，氛围平缓治愈，影视专业标准"
+        == "Japanese slice-of-life healing imagery, calm and soothing mood, professional cinematic standard"
     )
 
 
 def test_clean_style_prompt_keeps_internal_line_breaks() -> None:
-    raw = "90年代新写实主义电影，纯胶片质感\n\n构图平实自然，年代感准确\n"
+    raw = "Nineties neo-realist film, pure film texture\n\nPlain natural composition, accurate period feel\n"
 
     assert build_style_gallery.clean_style_prompt(raw) == (
-        "90年代新写实主义电影，纯胶片质感\n构图平实自然，年代感准确"
+        "Nineties neo-realist film, pure film texture\nPlain natural composition, accurate period feel"
     )
 
 
 def test_clean_style_prompt_keeps_sentence_ending_period() -> None:
-    raw = "权力博弈的宿命感，高级电影质感。"
+    raw = "A fateful sense of power struggle, premium cinematic texture."
 
-    assert build_style_gallery.clean_style_prompt(raw) == "权力博弈的宿命感，高级电影质感。"
+    assert build_style_gallery.clean_style_prompt(raw) == "A fateful sense of power struggle, premium cinematic texture."
 
 
 def test_style_meta_covers_all_styles_with_unique_ids() -> None:
@@ -43,17 +43,18 @@ def test_style_meta_covers_all_styles_with_unique_ids() -> None:
     assert len({item["id"] for item in meta}) == 45
     assert len({item["src"] for item in meta}) == 45
     assert {item["category"] for item in meta} == {
-        "古装", "都市", "年代", "生活", "科幻", "类型", "写意",
-        # 第二批素材带来的三个新类目
-        "动画", "绘画", "神话",
+        "period", "urban", "era", "lifestyle", "scifi", "genre", "expressive",
+        # The three new categories that came with the second asset batch
+        "animation", "painting", "myth",
     }
 
 
 def test_style_meta_order_groups_categories() -> None:
-    """同一类目必须连续成块 —— 图墙「全部」视图直接按这个顺序铺卡片。
+    """Each category must form one contiguous block -- the wall's "All" view lays cards out in this order.
 
-    断言的是「每个类目恰好一段」而不是逐项枚举 45 条:后者每加一套风格就要重写
-    一遍,断言的却还是同一件事。类目出现顺序一并锁住,它就是筛选 tab 的顺序。
+    It asserts "exactly one run per category" rather than enumerating all 45 entries: the
+    latter would need rewriting every time a style is added while still asserting the same
+    thing. The order in which categories appear is locked too; it is the filter tab order.
     """
     import itertools
 
@@ -61,16 +62,16 @@ def test_style_meta_order_groups_categories() -> None:
     runs = [(key, len(list(group))) for key, group in itertools.groupby(categories)]
 
     assert runs == [
-        ("古装", 3),
-        ("都市", 4),
-        ("年代", 10),
-        ("生活", 2),
-        ("科幻", 5),
-        ("类型", 5),
-        ("写意", 2),
-        ("动画", 4),
-        ("绘画", 7),
-        ("神话", 3),
+        ("period", 3),
+        ("urban", 4),
+        ("era", 10),
+        ("lifestyle", 2),
+        ("scifi", 5),
+        ("genre", 5),
+        ("expressive", 2),
+        ("animation", 4),
+        ("painting", 7),
+        ("myth", 3),
     ]
 
 
@@ -85,11 +86,11 @@ def test_render_manifest_matches_the_loader_format() -> None:
     entries = [
         {
             "id": "demo",
-            "label": "示例",
-            "category": "都市",
+            "label": "Example",
+            "category": "urban",
             "cover": "demo/cover.webp",
             "samples": ["demo/female.webp"],
-            "style_prompt": "示例提示词",
+            "style_prompt": "Example prompt",
         }
     ]
 
@@ -97,12 +98,12 @@ def test_render_manifest_matches_the_loader_format() -> None:
     parsed = json.loads(text)
 
     assert text.endswith("\n")
-    assert "示例" in text, "中文不该被转成 \\uXXXX"
+    assert "Example" in text
     assert parsed == {"version": "2026-08-07", "templates": entries}
 
 
 def test_shipped_manifest_matches_style_meta() -> None:
-    """脚本的 STYLE_META 与仓库里那份内置清单必须同步,否则重跑脚本会悄悄换掉风格库。"""
+    """The script's STYLE_META must stay in sync with the built-in manifest in the repo, otherwise rerunning the script silently swaps the style library."""
     shipped = json.loads(
         (
             REPO_ROOT / "src" / "novelvideo" / "freezone" / "style_templates.json"
@@ -113,7 +114,7 @@ def test_shipped_manifest_matches_style_meta() -> None:
         item["id"] for item in build_style_gallery.STYLE_META
     ]
     assert [item["label"] for item in shipped["templates"]] == [
-        item["src"] for item in build_style_gallery.STYLE_META
+        item["label"] for item in build_style_gallery.STYLE_META
     ]
     assert [item["category"] for item in shipped["templates"]] == [
         item["category"] for item in build_style_gallery.STYLE_META
@@ -123,9 +124,14 @@ def test_shipped_manifest_matches_style_meta() -> None:
 def _make_style_dir(
     root: Path,
     cover_name: str,
-    person_names: tuple[str, ...] = ("女.png", "少.png", "男.png", "老.png"),
+    person_names: tuple[str, ...] = (
+        "female.png",
+        "youth.png",
+        "male.png",
+        "elder.png",
+    ),
 ) -> Path:
-    style_dir = root / "某风格"
+    style_dir = root / "some_style"
     style_dir.mkdir()
     for name in (*person_names, cover_name):
         (style_dir / name).write_bytes(b"")
@@ -133,39 +139,40 @@ def _make_style_dir(
 
 
 def test_sample_files_accept_both_batches_person_naming() -> None:
-    """两批素材的人物图命名不同,同一个输出位置要能认下两种。"""
+    """The two batches name character images differently; one output slot must accept both."""
     by_output = {dst: names for names, dst in build_style_gallery.SAMPLE_FILES}
 
-    assert by_output["female.webp"] == ("女.png", "女青年.png")
-    assert by_output["male.webp"] == ("男.png", "男青年.png")
-    assert "女青年.png" in build_style_gallery.SAMPLE_SOURCE_NAMES
+    assert by_output["female.webp"] == ("female.png", "female_young.png")
+    assert by_output["male.webp"] == ("male.png", "male_young.png")
+    assert "female_young.png" in build_style_gallery.SAMPLE_SOURCE_NAMES
 
 
 def test_locate_cover_ignores_second_batch_person_images(tmp_path: Path) -> None:
-    """第二批封面普遍取简称(60海报/海报.png),得靠排除人物图后剩的唯一 PNG 兜底。
+    """Second-batch covers commonly use short names (sixties_poster/poster.png); the only PNG left after excluding character images is the fallback.
 
-    人物图若因为改名没被认出来,这里就会变成「多张候选」而报错 —— 正是这条要挡住的。
+    If character images were not recognized after a rename, this would turn into "several
+    candidates" and error out -- which is exactly what this test guards against.
     """
     style_dir = _make_style_dir(
         tmp_path,
-        "海报.png",
-        person_names=("女青年.png", "少.png", "男青年.png", "老.png"),
+        "poster.png",
+        person_names=("female_young.png", "youth.png", "male_young.png", "elder.png"),
     )
 
-    assert build_style_gallery.locate_cover(style_dir, "60海报").name == "海报.png"
+    assert build_style_gallery.locate_cover(style_dir, "sixties_poster").name == "poster.png"
 
 
 def test_locate_cover_prefers_the_file_named_after_the_style(tmp_path: Path) -> None:
-    style_dir = _make_style_dir(tmp_path, "某风格.png")
+    style_dir = _make_style_dir(tmp_path, "some_style.png")
 
-    assert build_style_gallery.locate_cover(style_dir, "某风格").name == "某风格.png"
+    assert build_style_gallery.locate_cover(style_dir, "some_style").name == "some_style.png"
 
 
 def test_locate_cover_falls_back_to_the_only_non_sample_png(tmp_path: Path) -> None:
-    """飞书导出里 纪实写实 的封面被误命名为 复古叙事.png,按剩下那张唯一的 PNG 取。"""
-    style_dir = _make_style_dir(tmp_path, "复古叙事.png")
+    """In the Feishu export the documentary_realism cover was misnamed retro_narrative.png; take the only remaining PNG."""
+    style_dir = _make_style_dir(tmp_path, "retro_narrative.png")
 
-    assert build_style_gallery.locate_cover(style_dir, "某风格").name == "复古叙事.png"
+    assert build_style_gallery.locate_cover(style_dir, "some_style").name == "retro_narrative.png"
 
 
 def test_locate_cover_refuses_to_guess_between_several_candidates(
@@ -173,8 +180,8 @@ def test_locate_cover_refuses_to_guess_between_several_candidates(
 ) -> None:
     import pytest
 
-    style_dir = _make_style_dir(tmp_path, "甲.png")
-    (style_dir / "乙.png").write_bytes(b"")
+    style_dir = _make_style_dir(tmp_path, "alpha.png")
+    (style_dir / "beta.png").write_bytes(b"")
 
     with pytest.raises(SystemExit):
-        build_style_gallery.locate_cover(style_dir, "某风格")
+        build_style_gallery.locate_cover(style_dir, "some_style")

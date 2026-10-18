@@ -1,4 +1,4 @@
-"""项目三类目录路径统一管理。"""
+"""Unified management of the three project directory kinds."""
 
 import shutil
 import sqlite3
@@ -10,7 +10,7 @@ _SQLITE_MAGIC = b"SQLite format 3\x00"
 
 
 class ProjectPaths:
-    """统一管理项目的 output/state/runtime 目录。"""
+    """Manages the project output/state/runtime directories in one place."""
 
     # Sidecar files are consolidated into the main .db by VACUUM INTO, so we
     # deliberately skip them during migration.
@@ -160,7 +160,7 @@ class ProjectPaths:
         return self.state_dir / ".migrated"
 
     def bootstrap_from_legacy_output(self) -> None:
-        """将旧单目录布局中的状态/运行时文件复制到新目录（仅首次）。"""
+        """Copy state/runtime files from the old single-directory layout into the new directories (first time only)."""
         if self._migration_marker.exists():
             return
         if not self.has_legacy_payload():

@@ -36,7 +36,7 @@ def _split_range(source: str, start: int, end: int) -> list[tuple[int, int]]:
         window = source[start:limit]
         boundary = window.rfind("\n") + 1
         if boundary <= 0:
-            sentence_ends = list(re.finditer(r"[.!?。！？](?:\s|$)", window))
+            sentence_ends = list(re.finditer(r"[.!?](?:\s|$)", window))
             boundary = sentence_ends[-1].end() if sentence_ends else 0
         if boundary <= 0:
             spaces = list(re.finditer(r"\s+", window))

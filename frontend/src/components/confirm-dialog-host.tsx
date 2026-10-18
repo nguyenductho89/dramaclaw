@@ -25,7 +25,7 @@ export interface ConfirmDialogOptions {
   confirmText?: string;
   cancelText?: string;
   confirmVariant?: React.ComponentProps<typeof Button>["variant"];
-  /** 只是通知一件事、没有第二条路可选时，把取消键收掉，别让人以为还能反悔。 */
+  /** When only notifying and there is no second option, drop the cancel button so nobody thinks they can still back out. */
   hideCancel?: boolean;
 }
 
@@ -50,7 +50,7 @@ export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
   });
 }
 
-/** 只通知、不询问的那一档：单个「好的」按钮，await 它等的是「看到了」。 */
+/** The notify-only tier, no question asked: a single "OK" button; awaiting it waits for "seen". */
 export function alertDialog(
   options: Omit<ConfirmDialogOptions, "cancelText" | "hideCancel">,
 ): Promise<void> {

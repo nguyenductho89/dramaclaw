@@ -1,6 +1,6 @@
-"""分集规划修复 Agent。
+"""Episode plan fixer Agent.
 
-使用 LLM 智能修复分集规划问题，同时保留规则修复作为基础。
+Uses an LLM to intelligently fix episode plan issues, while keeping rule-based fixes as the baseline.
 """
 
 import copy
@@ -26,230 +26,230 @@ from novelvideo.agents.episode_reviewer import (
 
 
 # =============================================================================
-# Patch-based Fixer Prompt（新版，精准修复）
+# Patch-based Fixer Prompt (new version, precise fixes)
 # =============================================================================
 
 
-PATCH_FIXER_PROMPT = """# 你是专业的短视频分集规划修复员
+PATCH_FIXER_PROMPT = """# You are a professional short-video episode plan fixer
 
-## ⚠️ 核心原则：精准修复
+## ⚠️ Core principle: precise fixes
 
-**只输出需要修改的字段！** 不要重新生成整个规划。
+**Output only the fields that need changing!** Do not regenerate the entire plan.
 
-对于每个问题，明确指出：
-1. 哪一集 (episode_number)
-2. 哪个字段 (field)
-3. 新值 (new_value)
-4. 修复理由 (reason)
+For each issue, state clearly:
+1. Which episode (episode_number)
+2. Which field (field)
+3. The new value (new_value)
+4. The reason for the fix (reason)
 
-## 可修改的字段
+## Fields that can be changed
 
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| `title` | 集标题 | "皇后寺庙遇亡夫？" |
-| `summary` | 内容摘要 | "皇后在寺庙遇到..." |
-| `cliffhanger` | 结尾悬念 | "他究竟是谁？" |
-| `characters` | 出场角色（逗号分隔） | "姜裳宁,谢成,冯有章" |
-| `chapter_start` | 起始章节 | "3" |
-| `chapter_end` | 结束章节 | "5" |
-| `key_events` | 关键事件（逗号分隔） | "皇后回宫,揭露真相" |
+| Field | Description | Example |
+|-------|-------------|---------|
+| `title` | Episode title | "The Empress Meets Her Dead Husband at the Temple?" |
+| `summary` | Content summary | "At the temple the Empress runs into..." |
+| `cliffhanger` | Ending suspense | "Who on earth is he?" |
+| `characters` | Characters appearing (comma-separated) | "Jiang Shangning,Xie Cheng,Feng Youzhang" |
+| `chapter_start` | Starting chapter | "3" |
+| `chapter_end` | Ending chapter | "5" |
+| `key_events` | Key events (comma-separated) | "Empress returns to the palace,Truth is revealed" |
 
-## 修复流程
+## Fix workflow
 
-### 第一步：分析问题
+### Step 1: Analyze the issues
 
-仔细阅读审核报告中的问题，分类：
+Read the issues in the review report carefully and classify them:
 
-| 问题类型 | 修复策略 |
-|---------|---------|
-| 无效角色名 | 只修改 `characters` 字段，替换为有效名称 |
-| 叙事断裂 | 修改 `summary` 添加过渡，或调整 `chapter_start/chapter_end` |
-| 悬念较弱 | 只修改 `cliffhanger` 字段 |
-| 标题不吸引 | 只修改 `title` 字段 |
+| Issue type | Fix strategy |
+|------------|--------------|
+| Invalid character name | Change only the `characters` field, replacing with a valid name |
+| Narrative discontinuity | Change `summary` to add a transition, or adjust `chapter_start/chapter_end` |
+| Weak suspense | Change only the `cliffhanger` field |
+| Unappealing title | Change only the `title` field |
 
-### 第二步：生成补丁
+### Step 2: Generate patches
 
-对于每个需要修复的字段，生成一个 EpisodePatch：
+For each field that needs fixing, generate one EpisodePatch:
 
 ```json
 {
   "episode_number": 2,
   "field": "characters",
-  "new_value": "姜裳宁,谢成",
-  "reason": "移除无效角色'昭婕妤'"
+  "new_value": "Jiang Shangning,Xie Cheng",
+  "reason": "Removed the invalid character 'Consort Zhao'"
 }
 ```
 
-### 第三步：验证
+### Step 3: Verify
 
-- 检查补丁是否足够解决问题
-- 不要添加不必要的修改
-- 不要改动没问题的字段
+- Check that the patches are sufficient to solve the problem
+- Do not add unnecessary changes
+- Do not touch fields that have no problem
 
-## 工具使用
+## Tool usage
 
-修复前可调用工具确认正确信息：
+Before fixing you may call tools to confirm correct information:
 
-| 工具 | 用途 |
-|------|------|
-| `get_all_characters()` | 获取有效角色名列表 |
-| `get_chapter_content(start, end)` | 获取章节内容 |
-| `check_continuity(ep1, ep2)` | 检查两集连贯性 |
+| Tool | Purpose |
+|------|---------|
+| `get_all_characters()` | Get the list of valid character names |
+| `get_chapter_content(start, end)` | Get chapter content |
+| `check_continuity(ep1, ep2)` | Check continuity between two episodes |
 
-## 输出要求
+## Output requirements
 
-返回 FixPlan，只包含需要修改的补丁：
+Return a FixPlan containing only the patches that need changing:
 
 ```json
 {
   "patches": [
-    {"episode_number": 2, "field": "characters", "new_value": "姜裳宁,谢成", "reason": "..."},
+    {"episode_number": 2, "field": "characters", "new_value": "Jiang Shangning,Xie Cheng", "reason": "..."},
     {"episode_number": 3, "field": "cliffhanger", "new_value": "...", "reason": "..."}
   ],
-  "summary": "修复了2个问题：移除无效角色，加强悬念"
+  "summary": "Fixed 2 issues: removed an invalid character, strengthened the suspense"
 }
 ```
 
-**重要**:
-1. 只输出需要修改的字段
-2. 不要重复原有内容
-3. 不要引入新问题
+**Important**:
+1. Output only the fields that need changing
+2. Do not repeat existing content
+3. Do not introduce new problems
 """
 
 
 # =============================================================================
-# 旧版 Prompt（保留向后兼容）
+# Legacy prompt (kept for backward compatibility)
 # =============================================================================
 
 
-EPISODE_FIXER_PROMPT = """# 你是专业的短视频分集规划修复员
+EPISODE_FIXER_PROMPT = """# You are a professional short-video episode plan fixer
 
-## 修复优先级
+## Fix priorities
 
-| 优先级 | 问题类型 | 说明 |
-|--------|----------|------|
-| 1 | 叙事连贯性 | 故事线必须通顺，这是最重要的 |
-| 2 | 人物弧线 | 保持角色发展逻辑一致 |
-| 3 | 悬念设置 | 每集结尾要能留住观众 |
-| 4 | 节奏控制 | 张弛有度，高潮分布合理 |
-| 5 | 格式规范 | 章节范围、角色名等技术问题 |
+| Priority | Issue type | Description |
+|----------|------------|-------------|
+| 1 | Narrative coherence | The storyline must flow; this matters most |
+| 2 | Character arcs | Keep character development logically consistent |
+| 3 | Suspense | Each episode's ending must hold the audience |
+| 4 | Pacing | Balanced tension and release, well-distributed climaxes |
+| 5 | Format | Technical issues such as chapter ranges and character names |
 
-## 修复原则
+## Fix principles
 
-1. **最小修改原则**: 只修复问题部分，保持原有优点
-2. **保持风格一致**: 修复内容要与原规划风格统一
-3. **验证修复效果**: 修复后不能引入新问题
-4. **给出修复理由**: 说明为什么这样修复
+1. **Minimal-change principle**: fix only the problem parts and keep the existing strengths
+2. **Keep the style consistent**: fixed content must match the style of the original plan
+3. **Verify the fix**: a fix must not introduce new problems
+4. **Give the reason**: explain why it was fixed this way
 
-## 工具使用
+## Tool usage
 
-在修复过程中，你可以调用以下工具获取上下文：
+During fixing you may call the following tools for context:
 
-| 工具 | 用途 |
-|------|------|
-| `get_chapter_content(start, end)` | 获取章节内容，用于生成准确的标题/摘要 |
-| `get_character_state(name, episode)` | 获取角色在某集的状态 |
-| `generate_cliffhanger(episode, context)` | 为某集生成合适的悬念 |
-| `improve_title(episode, context)` | 改进某集的标题 |
-| `check_continuity(ep1, ep2)` | 检查两集之间的连贯性 |
+| Tool | Purpose |
+|------|---------|
+| `get_chapter_content(start, end)` | Get chapter content, to write accurate titles/summaries |
+| `get_character_state(name, episode)` | Get a character's state in a given episode |
+| `generate_cliffhanger(episode, context)` | Generate a suitable cliffhanger for an episode |
+| `improve_title(episode, context)` | Improve an episode's title |
+| `check_continuity(ep1, ep2)` | Check continuity between two episodes |
 
-## 常见问题修复策略
+## Common fix strategies
 
-### 1. 叙事断裂 (NARRATIVE_DISCONTINUITY)
-- 调用 `get_chapter_content` 理解情节
-- 调整集与集之间的章节划分
-- 添加过渡内容到摘要中
+### 1. Narrative discontinuity (NARRATIVE_DISCONTINUITY)
+- Call `get_chapter_content` to understand the plot
+- Adjust the chapter split between episodes
+- Add transitional content to the summary
 
-### 2. 节奏问题 (PACING_ISSUE)
-- 分析高潮点分布
-- 重新分配章节，让高潮更均匀
-- 确保不连续出现多个平淡集
+### 2. Pacing issues (PACING_ISSUE)
+- Analyze the distribution of climaxes
+- Reallocate chapters so climaxes are more even
+- Make sure several bland episodes do not occur in a row
 
-### 3. 人物弧线断裂 (CHARACTER_ARC_BROKEN)
-- 调用 `get_character_state` 检查角色发展
-- 调整角色出场安排
-- 修改摘要以体现角色发展
+### 3. Broken character arc (CHARACTER_ARC_BROKEN)
+- Call `get_character_state` to check character development
+- Adjust character appearance arrangements
+- Revise the summary to reflect character development
 
-### 4. 悬念较弱 (WEAK_CLIFFHANGER)
-- 调用 `generate_cliffhanger` 生成新悬念
-- 悬念要具体、有画面感
-- 要能引发观众好奇心
+### 4. Weak cliffhanger (WEAK_CLIFFHANGER)
+- Call `generate_cliffhanger` to generate a new cliffhanger
+- The suspense should be concrete and visual
+- It should provoke audience curiosity
 
-### 5. 标题不吸引人 (POOR_TITLE / MISSING_TITLE)
-- 调用 `improve_title` 获取建议
-- 标题要体现冲突或悬念
-- 使用疑问句或感叹句效果更好
+### 5. Unappealing title (POOR_TITLE / MISSING_TITLE)
+- Call `improve_title` for suggestions
+- The title should convey conflict or suspense
+- Questions or exclamations work better
 
-### 6. 章节问题 (CHAPTER_GAP / OVERLAP)
-- 调整 chapter_start 和 chapter_end
-- 确保覆盖所有章节
-- 不要有重叠
+### 6. Chapter issues (CHAPTER_GAP / OVERLAP)
+- Adjust chapter_start and chapter_end
+- Make sure all chapters are covered
+- No overlaps
 
-### 7. 角色名问题 (INVALID_CHARACTER)
-- 使用已分析的角色名替换
-- 如果找不到匹配，尝试模糊匹配
-- 实在无法匹配则删除该角色
+### 7. Character name issues (INVALID_CHARACTER)
+- Replace with analyzed character names
+- If no match is found, try fuzzy matching
+- If it truly cannot be matched, remove the character
 
-## 输出要求
+## Output requirements
 
-返回修复后的 SeriesPlan，包含所有剧集的完整信息。
-每个 EpisodePlan 应包含：
-- number: 集数
-- title: 标题（修复后）
-- chapter_start, chapter_end: 章节范围（修复后）
-- summary: 摘要（修复后）
-- key_events: 关键事件
-- characters: 出场角色（使用有效名称）
-- cliffhanger: 结尾悬念（修复后）
+Return the fixed SeriesPlan, containing the complete information of all episodes.
+Each EpisodePlan should contain:
+- number: episode number
+- title: title (after fixing)
+- chapter_start, chapter_end: chapter range (after fixing)
+- summary: summary (after fixing)
+- key_events: key events
+- characters: characters appearing (using valid names)
+- cliffhanger: ending cliffhanger (after fixing)
 
-**重要**:
-1. 保持原有优点不变
-2. 只修改有问题的部分
-3. 修复后检查是否引入新问题
+**Important**:
+1. Keep the existing strengths unchanged
+2. Change only the problematic parts
+3. After fixing, check whether new problems were introduced
 """
 
 
 # =============================================================================
-# Patch-based 修复模型（精准修复，只改需要改的部分）
+# Patch-based fix models (precise fixes, change only what needs changing)
 # =============================================================================
 
 
 class EpisodePatch(BaseModel):
-    """单集修复补丁。
+    """Fix patch for a single episode.
 
-    只描述需要修改的字段，未提及的字段保持不变。
+    Describes only the fields that need changing; unmentioned fields stay as they are.
     """
 
-    episode_number: int = Field(description="要修复的集数")
+    episode_number: int = Field(description="Episode number to fix")
     field: str = Field(
-        description="要修改的字段: title/summary/cliffhanger/characters/chapter_start/chapter_end/key_events"
+        description="Field to change: title/summary/cliffhanger/characters/chapter_start/chapter_end/key_events"
     )
     new_value: str = Field(
-        description="新值（对于 characters/key_events，用逗号分隔多个值）"
+        description="New value (for characters/key_events, separate multiple values with commas)"
     )
-    reason: str = Field(description="修复理由（简短说明）")
+    reason: str = Field(description="Fix reason (brief)")
 
 
 class FixPlan(BaseModel):
-    """修复计划（只包含需要修改的部分）。
+    """Fix plan (contains only the parts that need changing).
 
-    比 FixedSeriesPlan 更精准，只输出变更的字段，
-    避免 LLM 在生成完整规划时引入新问题。
+    More precise than FixedSeriesPlan: outputs only the changed fields,
+    avoiding new problems the LLM could introduce when generating a complete plan.
     """
 
     patches: list[EpisodePatch] = Field(
-        description="修复补丁列表（只列出需要修改的字段）"
+        description="List of fix patches (only the fields that need changing)"
     )
-    summary: str = Field(default="", description="修复总结")
+    summary: str = Field(default="", description="Fix summary")
 
 
 # =============================================================================
-# 旧模型（保留用于向后兼容）
+# Legacy models (kept for backward compatibility)
 # =============================================================================
 
 
 class FixedEpisodePlan(BaseModel):
-    """修复后的单集规划（旧模型，向后兼容）。"""
+    """Fixed single-episode plan (legacy model, backward compatible)."""
 
     number: int
     title: str
@@ -262,26 +262,26 @@ class FixedEpisodePlan(BaseModel):
 
 
 class FixedSeriesPlan(BaseModel):
-    """修复后的系列规划（旧模型，向后兼容）。"""
+    """Fixed series plan (legacy model, backward compatible)."""
 
     total_episodes: int
     episodes: list[FixedEpisodePlan] = Field(default_factory=list)
-    fix_notes: str = Field(default="", description="修复说明")
+    fix_notes: str = Field(default="", description="Fix notes")
 
 
 # =============================================================================
-# LLM Agent 创建
+# LLM Agent creation
 # =============================================================================
 
 
 def create_episode_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
-    """创建分集规划修复 Agent（旧版，输出完整规划）。
+    """Create the episode plan fixer Agent (legacy version, outputs the full plan).
 
     Args:
-        tools: 修复工具函数列表
+        tools: List of fix tool functions
 
     Returns:
-        配置好的 Agent
+        A configured Agent
     """
     return Agent(
         get_pydantic_model(),
@@ -289,23 +289,23 @@ def create_episode_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
         tools=tools or [],
         output_type=FixedSeriesPlan,
         model_settings=get_newapi_structured_output_model_settings(),
-        name="分集规划修复员",
+        name="Episode plan fixer",
     )
 
 
 def create_patch_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
-    """创建 Patch-based 修复 Agent（新版，只输出补丁）。
+    """Create a patch-based fixer Agent (new version, outputs patches only).
 
-    优点：
-    - 精准修复，只改需要改的字段
-    - 避免重新生成时引入新问题
-    - 输出更小，响应更快
+    Advantages:
+    - Precise fixes: only changes the fields that need changing
+    - Avoids introducing new problems when regenerating
+    - Smaller output, faster response
 
     Args:
-        tools: 修复工具函数列表
+        tools: List of fix tool functions
 
     Returns:
-        配置好的 Agent
+        A configured Agent
     """
     return Agent(
         get_pydantic_model(),
@@ -313,29 +313,29 @@ def create_patch_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
         tools=tools or [],
         output_type=FixPlan,
         model_settings=get_newapi_structured_output_model_settings(),
-        name="分集规划修复员",
+        name="Episode plan fixer",
     )
 
 
 def apply_patches(plan: "SeriesPlan", fix_plan: FixPlan) -> "SeriesPlan":
-    """将补丁应用到规划上。
+    """Apply patches to a plan.
 
     Args:
-        plan: 原规划
-        fix_plan: 修复计划（包含补丁列表）
+        plan: The original plan
+        fix_plan: The fix plan (containing the list of patches)
 
     Returns:
-        修复后的规划（深拷贝）
+        The fixed plan (deep copy)
     """
     fixed = copy.deepcopy(plan)
 
-    # 按集数建立索引
+    # Index by episode number
     episode_map = {ep.number: ep for ep in fixed.episodes}
 
     for patch in fix_plan.patches:
         ep = episode_map.get(patch.episode_number)
         if not ep:
-            print(f"  [Patch] 警告: 第 {patch.episode_number} 集不存在，跳过")
+            print(f"  [Patch] Warning: episode {patch.episode_number} does not exist, skipping")
             continue
 
         field = patch.field.lower()
@@ -349,37 +349,37 @@ def apply_patches(plan: "SeriesPlan", fix_plan: FixPlan) -> "SeriesPlan":
             elif field == "cliffhanger":
                 ep.cliffhanger = value
             elif field == "characters":
-                # 逗号分隔的角色列表
+                # Comma-separated character list
                 ep.characters = [c.strip() for c in value.split(",") if c.strip()]
             elif field == "key_events":
-                # 逗号分隔的事件列表
+                # Comma-separated event list
                 ep.key_events = [e.strip() for e in value.split(",") if e.strip()]
             elif field == "chapter_start":
                 ep.chapter_start = int(value)
             elif field == "chapter_end":
                 ep.chapter_end = int(value)
             else:
-                print(f"  [Patch] 警告: 未知字段 '{field}'，跳过")
+                print(f"  [Patch] Warning: unknown field '{field}', skipping")
                 continue
 
-            print(f"  [Patch] 第 {patch.episode_number} 集.{field} ← {value[:30]}{'...' if len(value) > 30 else ''}")
+            print(f"  [Patch] Episode {patch.episode_number}.{field} <- {value[:30]}{'...' if len(value) > 30 else ''}")
 
         except Exception as e:
-            print(f"  [Patch] 错误: 应用补丁到第 {patch.episode_number} 集.{field} 失败: {e}")
+            print(f"  [Patch] Error: failed to apply patch to episode {patch.episode_number}.{field}: {e}")
 
     return fixed
 
 
 # =============================================================================
-# 规则修复器（保留，用于基础修复）
+# Rule-based fixer (kept, used for basic fixes)
 # =============================================================================
 
 
 class EpisodePlanFixer:
-    """分集规划规则修复器。
+    """Rule-based episode plan fixer.
 
-    提供基础的规则修复，作为 LLM 修复的补充。
-    主要修复：章节间隔/重叠、角色名映射、缺失字段填充。
+    Provides basic rule-based fixes, complementing the LLM fix.
+    Main fixes: chapter gaps/overlaps, character name mapping, filling missing fields.
     """
 
     FUZZY_MATCH_THRESHOLD = 0.6
@@ -391,20 +391,20 @@ class EpisodePlanFixer:
         available_characters: set[str],
         total_chapters: Optional[int] = None,
     ) -> "SeriesPlan":
-        """规则修复分集规划。
+        """Rule-based fix of the episode plan.
 
         Args:
-            plan: 待修复的分集规划
-            issues: 问题列表
-            available_characters: 已分析的角色名集合
-            total_chapters: 小说总章节数
+            plan: The episode plan to fix
+            issues: List of issues
+            available_characters: Set of analyzed character names
+            total_chapters: Total number of chapters in the novel
 
         Returns:
-            修复后的规划（深拷贝）
+            The fixed plan (deep copy)
         """
         fixed = copy.deepcopy(plan)
 
-        # 按问题类型分组
+        # Group by issue type
         chapter_issues = [
             i for i in issues
             if i.issue_type in (
@@ -428,15 +428,15 @@ class EpisodePlanFixer:
             )
         ]
 
-        # 1. 修复章节问题
+        # 1. Fix chapter issues
         if chapter_issues:
             self._fix_chapter_issues(fixed, total_chapters)
 
-        # 2. 修复角色名问题
+        # 2. Fix character name issues
         if character_issues:
             self._fix_character_names(fixed, available_characters)
 
-        # 3. 修复结构问题
+        # 3. Fix structural issues
         if structure_issues:
             self._fix_structure_issues(fixed, structure_issues)
 
@@ -447,14 +447,14 @@ class EpisodePlanFixer:
         plan: "SeriesPlan",
         total_chapters: Optional[int],
     ) -> None:
-        """修复章节问题。"""
+        """Fix chapter issues."""
         if not plan.episodes:
             return
 
-        # 按章节起始排序
+        # Sort by chapter start
         plan.episodes.sort(key=lambda e: e.chapter_start)
 
-        # 修复超出范围的章节
+        # Fix out-of-range chapters
         if total_chapters:
             for ep in plan.episodes:
                 if ep.chapter_start < 1:
@@ -462,17 +462,17 @@ class EpisodePlanFixer:
                 if ep.chapter_end > total_chapters:
                     ep.chapter_end = total_chapters
 
-        # 修复章节范围无效的问题
+        # Fix invalid chapter ranges
         for ep in plan.episodes:
             if ep.chapter_start > ep.chapter_end:
                 ep.chapter_start, ep.chapter_end = ep.chapter_end, ep.chapter_start
 
-        # 修复间隔和重叠
+        # Fix gaps and overlaps
         for i in range(len(plan.episodes) - 1):
             current = plan.episodes[i]
             next_ep = plan.episodes[i + 1]
 
-            # 修复间隔
+            # Fix gaps
             if next_ep.chapter_start > current.chapter_end + 1:
                 gap_start = current.chapter_end + 1
                 gap_end = next_ep.chapter_start - 1
@@ -485,20 +485,20 @@ class EpisodePlanFixer:
                     current.chapter_end = mid - 1
                     next_ep.chapter_start = mid
 
-            # 修复重叠
+            # Fix overlaps
             if next_ep.chapter_start <= current.chapter_end:
                 next_ep.chapter_start = current.chapter_end + 1
 
-        # 确保第一集从第 1 章开始
+        # Ensure the first episode starts at chapter 1
         if plan.episodes and plan.episodes[0].chapter_start > 1:
             plan.episodes[0].chapter_start = 1
 
-        # 确保最后一集覆盖到最后一章
+        # Ensure the last episode covers through the last chapter
         if plan.episodes and total_chapters:
             if plan.episodes[-1].chapter_end < total_chapters:
                 plan.episodes[-1].chapter_end = total_chapters
 
-        # 重新编号
+        # Renumber
         for i, ep in enumerate(plan.episodes):
             ep.number = i + 1
 
@@ -507,7 +507,7 @@ class EpisodePlanFixer:
         plan: "SeriesPlan",
         available_characters: set[str],
     ) -> None:
-        """修复角色名问题。"""
+        """Fix character name issues."""
         if not available_characters:
             return
 
@@ -527,7 +527,7 @@ class EpisodePlanFixer:
                     if match:
                         fixed_characters.append(match)
 
-            # 去重并保持顺序
+            # Deduplicate while preserving order
             seen = set()
             ep.characters = [c for c in fixed_characters if not (c in seen or seen.add(c))]
 
@@ -536,19 +536,19 @@ class EpisodePlanFixer:
         name: str,
         available_characters: set[str],
     ) -> Optional[str]:
-        """模糊匹配角色名。"""
+        """Fuzzy-match a character name."""
         if not available_characters:
             return None
 
         if name in available_characters:
             return name
 
-        # 包含匹配
+        # Containment match
         for char in available_characters:
             if name in char or char in name:
                 return char
 
-        # 相似度匹配
+        # Similarity match
         matches = difflib.get_close_matches(
             name,
             list(available_characters),
@@ -566,7 +566,7 @@ class EpisodePlanFixer:
         plan: "SeriesPlan",
         issues: list[EpisodePlanIssue],
     ) -> None:
-        """修复结构问题。"""
+        """Fix structural issues."""
         issues_by_ep: dict[int, list[EpisodePlanIssue]] = {}
         for issue in issues:
             if issue.episode_number:
@@ -586,105 +586,120 @@ class EpisodePlanFixer:
                     self._fix_missing_cliffhanger(ep)
 
     def _fix_missing_title(self, ep: "EpisodePlan") -> None:
-        """修复缺失的标题。"""
-        if ep.title and ep.title.strip() and ep.title != f"第{ep.number}集":
+        """Fix a missing title."""
+        if (
+            ep.title
+            and ep.title.strip()
+            and ep.title != f"Episode {ep.number}"
+        ):
             return
 
-        # 从 summary 生成
+        # Generate from summary
         if ep.summary and len(ep.summary) > 10:
-            # 提取摘要中的关键词作为标题
+            # Extract keywords from the summary as the title
             title = self._extract_title_from_summary(ep.summary)
             if title:
                 ep.title = title
                 return
 
-        # 从 key_events 生成
+        # Generate from key_events
         if ep.key_events:
             event = ep.key_events[0]
-            title = event[:15].strip()
-            while title and title[-1] in "，。！？、；：":
+            title = event[:40].strip()
+            while title and title[-1] in ",.!?;: ":
                 title = title[:-1]
             if title:
                 ep.title = title
                 return
 
-        # 从 cliffhanger 生成
+        # Generate from cliffhanger
         if ep.cliffhanger:
-            title = ep.cliffhanger[:15].strip()
-            while title and title[-1] in "，。！？、；：":
+            title = ep.cliffhanger[:40].strip()
+            while title and title[-1] in ",.!?;: ":
                 title = title[:-1]
             if title:
-                ep.title = title + "？"
+                ep.title = title + "?"
                 return
 
-        ep.title = f"第{ep.number}集：风云再起"
+        ep.title = f"Episode {ep.number}: Storm Rising"
 
     def _extract_title_from_summary(self, summary: str) -> Optional[str]:
-        """从摘要中提取标题。"""
-        # 尝试提取有冲突感的短语
-        keywords = ["发现", "决定", "揭示", "面对", "遭遇", "秘密", "真相", "危机", "转折"]
+        """Extract a title from the summary."""
+        # Try to extract a phrase with a sense of conflict
+        keywords = [
+            "discover",
+            "decide",
+            "reveal",
+            "face",
+            "encounter",
+            "secret",
+            "truth",
+            "crisis",
+            "turning point",
+        ]
 
+        lowered = summary.lower()
         for kw in keywords:
-            if kw in summary:
-                # 找到关键词位置，截取前后内容
-                idx = summary.find(kw)
-                start = max(0, idx - 5)
-                end = min(len(summary), idx + 10)
+            if kw in lowered:
+                # Find the keyword position and take the surrounding text
+                idx = lowered.find(kw)
+                start = max(0, idx - 20)
+                end = min(len(summary), idx + 40)
                 title = summary[start:end].strip()
 
-                # 清理标点
-                while title and title[0] in "，。！？、；：":
+                # Clean up punctuation
+                while title and title[0] in ",.!?;: ":
                     title = title[1:]
-                while title and title[-1] in "，。！？、；：":
+                while title and title[-1] in ",.!?;: ":
                     title = title[:-1]
 
                 if len(title) >= 4:
                     return title
 
-        # 直接取前 12 个字
-        title = summary[:12].strip()
-        while title and title[-1] in "，。！？、；：":
+        # Otherwise take the first 40 characters directly
+        title = summary[:40].strip()
+        while title and title[-1] in ",.!?;: ":
             title = title[:-1]
 
         return title if len(title) >= 4 else None
 
     def _fix_missing_summary(self, ep: "EpisodePlan") -> None:
-        """修复缺失的摘要。"""
+        """Fix a missing summary."""
         if ep.summary and len(ep.summary.strip()) >= 10:
             return
 
         if ep.key_events:
-            ep.summary = "。".join(ep.key_events[:3])
-            if not ep.summary.endswith("。"):
-                ep.summary += "。"
+            ep.summary = ". ".join(ep.key_events[:3])
+            if not ep.summary.endswith("."):
+                ep.summary += "."
             return
 
-        ep.summary = f"第 {ep.chapter_start}-{ep.chapter_end} 章内容。"
+        ep.summary = f"Content of chapters {ep.chapter_start}-{ep.chapter_end}."
 
     def _fix_missing_cliffhanger(self, ep: "EpisodePlan") -> None:
-        """修复缺失的悬念。"""
+        """Fix a missing cliffhanger."""
         if ep.cliffhanger and len(ep.cliffhanger.strip()) >= 5:
             return
 
-        # 从 key_events 的最后一个事件生成
+        # Build from the last key event
         if ep.key_events:
             last_event = ep.key_events[-1]
-            ep.cliffhanger = last_event + "，接下来会发生什么？"
+            ep.cliffhanger = last_event + ", what will happen next?"
             return
 
-        # 从 summary 的最后一句生成
+        # Build from the last sentence of the summary
         if ep.summary:
-            sentences = ep.summary.replace("！", "。").replace("？", "。").split("。")
+            sentences = ep.summary.replace("!", ".").replace("?", ".").split(".")
             sentences = [s.strip() for s in sentences if s.strip()]
             if sentences:
                 ep.cliffhanger = sentences[-1] + "..."
                 return
 
-        ep.cliffhanger = "故事将如何发展？敬请期待..."
+        ep.cliffhanger = "How will the story unfold? Stay tuned..."
 
 
 def create_episode_plan_fixer() -> EpisodePlanFixer:
-    """创建分集规划规则修复器。"""
+    """Create the rule-based episode plan fixer."""
     return EpisodePlanFixer()
 
 

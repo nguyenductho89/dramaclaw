@@ -153,11 +153,11 @@ export function ComposerWaitingStatus({
 
   const liveActivityLabel = activityLabel?.trim() || "";
   const displayLabels = slotLabels.map((item) => {
-    const normalized = item.replace(/[.。…\s]+$/u, "");
+    const normalized = item.replace(/[.…\s]+$/u, "");
     if (variant !== "default" || !liveActivityLabel || elapsedSeconds < 10) return normalized;
     if (elapsedSeconds >= 45) {
       return t("aiAssistant.waitingStageVeryLong", {
-        label: normalized.replace(/^正在/u, ""),
+        label: normalized.replace(/^(?:Currently |Đang )/iu, ""),
         seconds: elapsedSeconds,
       });
     }

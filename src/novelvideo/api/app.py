@@ -130,7 +130,7 @@ def create_app() -> FastAPI:
             status_code=429,
             content={
                 "ok": False,
-                "error": f"当前项目 {exc.queue_kind} 队列任务已满，请等待已有任务完成后再提交",
+                "error": f"The {exc.queue_kind} queue for this project is full. Wait for existing tasks to finish before submitting again.",
                 "data": {
                     "project_id": exc.project_id,
                     "queue_kind": exc.queue_kind,
@@ -153,8 +153,8 @@ def create_app() -> FastAPI:
             content={
                 "ok": False,
                 "error": (
-                    f"你在当前项目 {exc.queue_kind} 队列任务已满，"
-                    "请等待自己的任务完成后再提交"
+                    f"Your {exc.queue_kind} queue for this project is full. "
+                    "Wait for your own tasks to finish before submitting again."
                 ),
                 "data": {
                     "project_id": exc.project_id,
@@ -178,7 +178,7 @@ def create_app() -> FastAPI:
             status_code=429,
             content={
                 "ok": False,
-                "error": f"当前节点 {exc.queue_kind} 队列已满，请稍后再提交",
+                "error": f"The {exc.queue_kind} queue for this node is full. Please try again later.",
                 "data": {
                     "project_id": exc.project_id,
                     "queue_kind": exc.queue_kind,
@@ -198,13 +198,13 @@ def create_app() -> FastAPI:
         limit_scope = "platform" if exc.scope_kind == "platform" else "channel"
         log_task_limit_rejection(exc, limit_scope=limit_scope)
         if exc.scope_kind == "platform":
-            # 共享池(``org_id is None``)拦下的是不归属任何渠道的请求,对他们
-            # 说"渠道"没有对应概念;而池子是全平台共享的,"等待已有任务完成"
-            # 也无从等起 —— 撞闸的人自己可能一个任务都没在跑。
-            message = f"当前平台 {exc.queue_kind} 队列任务已满，请稍后再试"
+            # The shared pool (``org_id is None``) rejects requests that belong to no channel; the concept of
+            # "channel" means nothing to them, and the pool is shared platform-wide, so "wait for existing tasks to finish"
+            # makes no sense either -- the blocked user may not have any task running at all.
+            message = f"The platform {exc.queue_kind} queue is full. Please try again later."
         else:
             message = (
-                f"当前渠道 {exc.queue_kind} 队列任务已满，请等待已有任务完成后再提交"
+                f"The {exc.queue_kind} queue for this channel is full. Wait for existing tasks to finish before submitting again."
             )
         return JSONResponse(
             status_code=429,
@@ -234,8 +234,8 @@ def create_app() -> FastAPI:
             content={
                 "ok": False,
                 "error": (
-                    f"你在 {exc.queue_kind} 队列的在途任务已满，"
-                    "请等待自己的任务完成后再提交"
+                    f"Your in-flight tasks in the {exc.queue_kind} queue are at the limit. "
+                    "Wait for your own tasks to finish before submitting again."
                 ),
                 "data": {
                     "requester_user_id": exc.requester_user_id,
@@ -330,7 +330,7 @@ def create_app() -> FastAPI:
                             status_code=200,
                             content={
                                 "ok": False,
-                                "error": "参考音频超过 5MB 上限，请压缩或裁剪后重新上传",
+                                "error": "Reference audio exceeds the 5MB limit. Compress or trim it and upload again.",
                                 "data": {
                                     "code": "freezone_audio_voice_too_large",
                                     "field": "file",
@@ -471,9 +471,9 @@ def create_app() -> FastAPI:
             status_code=410,
         )
 
-    # 原生/便携部署(无 nginx)时由后端直接伺服 SPA:设 DRAMACLAW_FRONTEND_DIST
-    # 指向前端构建产物目录才挂载;Docker/EE 路径不设该变量,行为不变。
-    # 挂在所有路由之后,/api、/healthz、/static 仍然优先命中。
+    # Native/portable deployment (no nginx): the backend serves the SPA directly. Mount only when DRAMACLAW_FRONTEND_DIST
+    # points at the frontend build output directory; Docker/EE paths do not set this variable, so behavior is unchanged.
+    # Mounted after all routes, so /api, /healthz, /static still match first.
     frontend_dist = os.environ.get("DRAMACLAW_FRONTEND_DIST", "").strip()
     if frontend_dist and Path(frontend_dist).is_dir():
         from fastapi.staticfiles import StaticFiles
@@ -482,8 +482,8 @@ def create_app() -> FastAPI:
         class _SpaStaticFiles(StaticFiles):
             """SPA fallback: unknown extensionless paths serve index.html.
 
-            StaticFiles 未命中时 raise HTTPException(404)(仅 dist 含 404.html
-            时才返回 404 响应),回落必须捕获异常;带扩展名的缺失资产照常 404。
+            When StaticFiles misses it raises HTTPException(404) (a 404 response is returned only if dist
+            contains 404.html), so the fallback must catch the exception; missing assets with an extension still 404 as usual.
             """
 
             async def get_response(self, path: str, scope):  # type: ignore[override]

@@ -1,7 +1,7 @@
-"""视频池索引管理模块。
+"""Video pool index management module.
 
-管理所有生成的视频版本，提供统一的索引和检索功能。
-参考 pool_indexer.py 的模式，但无 grid/cell 逻辑，大幅简化。
+Manages every generated video version and provides unified indexing and lookup.
+Follows the pool_indexer.py pattern but has no grid/cell logic, so it is much simpler.
 """
 
 import json
@@ -40,13 +40,13 @@ def _save_video_pool_index_unlocked(pool: VideoPoolIndex, index_path: Path) -> N
 
 
 def load_video_pool_index(videos_ep_dir: Path) -> Optional[VideoPoolIndex]:
-    """读取视频池索引。
+    """Read the video pool index.
 
     Args:
-        videos_ep_dir: 视频集目录，如 output/user/project/videos/beats/ep001
+        videos_ep_dir: episode video directory, e.g. output/user/project/videos/beats/ep001
 
     Returns:
-        VideoPoolIndex 对象，不存在返回 None
+        VideoPoolIndex object; None if it does not exist
     """
     index_path = _state_video_pool_index_path(videos_ep_dir)
     with index_file_lock(index_path):
@@ -58,11 +58,11 @@ def load_video_pool_index(videos_ep_dir: Path) -> Optional[VideoPoolIndex]:
 
 
 def save_video_pool_index(pool: VideoPoolIndex, videos_ep_dir: Path) -> None:
-    """序列化写入视频池索引。
+    """Serialize and write the video pool index.
 
     Args:
-        pool: VideoPoolIndex 对象
-        videos_ep_dir: 视频集目录
+        pool: VideoPoolIndex object
+        videos_ep_dir: episode video directory
     """
     index_path = _state_video_pool_index_path(videos_ep_dir)
     with index_file_lock(index_path):
@@ -83,40 +83,40 @@ def add_video_to_pool(
     backend: str = "comfyui",
     prompt: str = "",
 ) -> VideoPoolEntry:
-    """将视频添加到视频池。
+    """Add a video to the video pool.
 
-    1. 创建 pool/ 目录
-    2. 生成 timestamp ID
-    3. 复制源视频到 pool/
-    4. 更新 index
+    1. Create the pool/ directory
+    2. Generate a timestamp ID
+    3. Copy the source video into pool/
+    4. Update the index
 
     Args:
-        videos_ep_dir: 视频集目录
-        episode: 集数
-        beat_num: Beat 编号
-        source_video_path: 源视频路径（canonical 位置）
-        duration: 视频时长
-        video_mode: 视频模式
-        backend: 后端名称
-        prompt: 提示词
+        videos_ep_dir: episode video directory
+        episode: episode number
+        beat_num: beat number
+        source_video_path: source video path (canonical location)
+        duration: video duration
+        video_mode: video mode
+        backend: backend name
+        prompt: prompt text
 
     Returns:
-        新创建的 VideoPoolEntry
+        The newly created VideoPoolEntry
     """
     source_video_path = Path(source_video_path)
     pool_dir = videos_ep_dir / "pool"
     pool_dir.mkdir(parents=True, exist_ok=True)
 
-    # 生成 timestamp 和 ID
+    # Generate timestamp and ID
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     entry_id = f"beat_{beat_num:02d}_{timestamp}"
     pool_filename = f"{entry_id}.mp4"
     pool_path = pool_dir / pool_filename
 
-    # 复制源视频到 pool（源文件保留在 canonical 位置）
+    # Copy the source video into the pool (the source file stays in its canonical location)
     shutil.copy2(str(source_video_path), str(pool_path))
 
-    # 创建条目
+    # Create the entry
     entry = VideoPoolEntry(
         id=entry_id,
         beat_num=beat_num,
@@ -138,11 +138,11 @@ def add_video_to_pool(
         if pool_index is None:
             pool_index = VideoPoolIndex(episode=episode)
 
-        # 添加条目并更新 beat_assignments
+        # Add the entry and update beat_assignments
         pool_index.videos.append(entry)
         pool_index.beat_assignments[str(beat_num)] = entry_id
 
-        # 保存
+        # Save
         _save_video_pool_index_unlocked(pool_index, index_path)
 
     return entry
@@ -153,19 +153,19 @@ def assign_video_to_beat(
     beat_num: int,
     pool_entry_id: str,
 ) -> bool:
-    """用户从池中选择旧版本时调用。
+    """Called when the user picks an older version from the pool.
 
-    1. 加载 index，找到 entry
-    2. 复制 pool/{entry.video_path} -> beat_{NN}.mp4（覆盖 canonical）
-    3. 更新 beat_assignments
+    1. Load the index and find the entry
+    2. Copy pool/{entry.video_path} -> beat_{NN}.mp4 (overwriting the canonical file)
+    3. Update beat_assignments
 
     Args:
-        videos_ep_dir: 视频集目录
-        beat_num: Beat 编号
-        pool_entry_id: 池条目 ID
+        videos_ep_dir: episode video directory
+        beat_num: beat number
+        pool_entry_id: pool entry ID
 
     Returns:
-        是否成功
+        Whether it succeeded
     """
     index_path = _state_video_pool_index_path(videos_ep_dir)
     with index_file_lock(index_path):
@@ -185,11 +185,11 @@ def assign_video_to_beat(
         if not pool_path.exists():
             return False
 
-        # 覆盖 canonical 位置
+        # Overwrite the canonical location
         canonical_path = videos_ep_dir / f"beat_{beat_num:02d}.mp4"
         shutil.copy2(str(pool_path), str(canonical_path))
 
-        # 更新 assignment
+        # Update the assignment
         pool_index.beat_assignments[str(beat_num)] = pool_entry_id
         _save_video_pool_index_unlocked(pool_index, index_path)
 
@@ -200,14 +200,14 @@ def delete_video_from_pool(
     videos_ep_dir: Path,
     pool_entry_id: str,
 ) -> bool:
-    """删除池中的视频版本。
+    """Delete a video version from the pool.
 
     Args:
-        videos_ep_dir: 视频集目录
-        pool_entry_id: 池条目 ID
+        videos_ep_dir: episode video directory
+        pool_entry_id: pool entry ID
 
     Returns:
-        是否成功
+        Whether it succeeded
     """
     index_path = _state_video_pool_index_path(videos_ep_dir)
     with index_file_lock(index_path):
@@ -223,15 +223,15 @@ def delete_video_from_pool(
         if entry is None:
             return False
 
-        # 删除 pool 文件
+        # Delete the pool file
         pool_path = videos_ep_dir / "pool" / entry.video_path
         if pool_path.exists():
             pool_path.unlink()
 
-        # 从 index 移除
+        # Remove from the index
         pool_index.videos = [v for v in pool_index.videos if v.id != pool_entry_id]
 
-        # 如果该条目是当前 assignment，清除
+        # If this entry is the current assignment, clear it
         for beat_key, assigned_id in list(pool_index.beat_assignments.items()):
             if assigned_id == pool_entry_id:
                 del pool_index.beat_assignments[beat_key]

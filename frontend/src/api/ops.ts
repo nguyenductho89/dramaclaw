@@ -277,9 +277,9 @@ export interface FreezoneGenerationHistoryRecord {
   media_type: string;
   /** Raw task result payload; shape varies by task_type. */
   result: Record<string, unknown>;
-  /** 注册表模型 id（还原时回填 data.model）。旧记录无此字段。 */
+  /** Registry model id (backfilled into data.model on restore). Absent on old records. */
   model?: string;
-  /** 生成模式（视频 genMode / 图片 generationMode）。旧记录无此字段。 */
+  /** Generation mode (video genMode / image generationMode). Absent on old records. */
   gen_mode?: string;
 }
 
@@ -370,9 +370,9 @@ export interface FreezoneGenPayload extends FreezoneNodeContext {
   provider?: FreezoneProvider | null;
   /** Override the provider's default model (e.g. "gpt-image-2"). */
   model?: string | null;
-  /** 注册表模型 id（还原用；与 provider 拆分后的 model 串不同）。 */
+  /** Registry model id (for restore; differs from the model string after the provider split). */
   modelId?: string | null;
-  /** 生成模式（还原用）：text_to_image / image_to_image / all_reference / image_reference。 */
+  /** Generation mode (for restore): text_to_image / image_to_image / all_reference / image_reference. */
   genMode?: string | null;
   /** Only honored by openai gpt-image-2 (low / medium / high / auto). */
   quality?: string | null;
@@ -442,7 +442,7 @@ export interface FreezoneVideoGenPayload extends FreezoneNodeContext {
   generateAudio?: boolean;
   /** Backend model id, e.g. huimeng_seedance20_fast / seedance_pro. */
   model?: string;
-  /** 文生视频入口的固定业务模式。 */
+  /** Fixed business mode of the text-to-video entry. */
   genMode: "textToVideo";
   /**
    * Real-person material review. Set `true` when the input contains real
@@ -583,7 +583,7 @@ export interface FreezoneVideoKeyframesPayload extends FreezoneNodeContext {
   durationSeconds?: number;
   generateAudio?: boolean;
   model?: string;
-  /** 关键帧业务模式。首尾帧可只提供首帧、只提供尾帧或同时提供。 */
+  /** Keyframe business mode. Provide only the first frame, only the last frame, or both. */
   genMode: "firstFrame" | "firstLastFrame";
   /** See {@link FreezoneVideoGenPayload.humanReview}. */
   humanReview?: boolean;
@@ -630,7 +630,7 @@ export async function submitFreezoneVideoKeyframes(
 
 // /freezone/video/i2v ----------------------------------------------------- //
 //
-// Unified endpoint for single-image 图生视频 and multi-image 图片参考. Both
+// Unified endpoint for single-image image-to-video and multi-image image reference. Both
 // use image_reference provider semantics and never occupy the first-frame slot.
 
 export interface FreezoneVideoI2vPayload extends FreezoneNodeContext {
@@ -691,25 +691,25 @@ export async function submitFreezoneVideoI2v(
 
 // /freezone/video/video-edit ---------------------------------------------- //
 //
-// 视频编辑：1 个源视频，并按媒体目录能力附带参考图片 / 独立参考音频。
+// Video editing: 1 source video, plus reference images / separate reference audio depending on media catalog capabilities.
 
 export interface FreezoneVideoEditPayload extends FreezoneNodeContext {
-  /** 源视频静态地址，必填。 */
+  /** Static URL of the source video, required. */
   videoUrl: string;
-  /** 0-5 张参考图静态地址。 */
+  /** Static URLs of 0-5 reference images. */
   imageUrls?: string[];
-  /** 独立参考音频静态地址；数量和时长上限由媒体模型目录决定。 */
+  /** Static URLs of separate reference audio; count and duration limits come from the media model catalog. */
   audioUrls?: string[];
   prompt?: string;
   cameraTemplateId?: string | null;
   marks?: FreezoneVideoMark[];
   resolution?: FreezoneVideoResolution;
-  /** 视频编辑音频策略：auto 自动 / origin 保留原声。 */
+  /** Video-edit audio policy: auto = automatic / origin = keep the original audio. */
   audioSetting?: "auto" | "origin";
   generateAudio?: boolean;
   /** default newapi_happyhorse-1.0. */
   model?: string;
-  /** 视频编辑入口的固定业务模式。 */
+  /** Fixed business mode of the video-edit entry. */
   genMode: "videoEdit";
   humanReview?: boolean;
 }
@@ -754,13 +754,13 @@ export async function submitFreezoneVideoEdit(
 // /freezone/video/video-extend -------------------------------------------- //
 
 export interface FreezoneVideoExtendPayload extends FreezoneNodeContext {
-  /** 待延长的源视频静态地址，必填。 */
+  /** Static URL of the source video to extend, required. */
   videoUrl: string;
-  /** 源视频结束后要继续生成的内容。 */
+  /** What to generate after the source video ends. */
   prompt: string;
   cameraTemplateId?: string | null;
   resolution?: FreezoneVideoResolution;
-  /** 新生成延长片段的时长。 */
+  /** Duration of the newly generated extension clip. */
   durationSeconds?: number;
   generateAudio?: boolean;
   model?: string;
@@ -816,7 +816,7 @@ export interface FreezoneVideoOmniGenPayload extends FreezoneNodeContext {
   generateAudio?: boolean;
   /** default huimeng_seedance20_fast per backend default. */
   model?: string;
-  /** 全能参考入口的固定业务模式。 */
+  /** Fixed business mode of the omni-reference entry. */
   genMode: "allReference";
   /** See {@link FreezoneVideoGenPayload.humanReview}. */
   humanReview?: boolean;
@@ -881,9 +881,9 @@ export async function submitFreezoneGen(
   const style = payload.style?.templateId
     ? { template_id: payload.style.templateId }
     : null;
-  // 后端只能按静态路径打开引用图：任何 `data:` base64 先上传换成上传 URL，
-  // 其余 http(s)/static 原样保留（仅剥掉 `?v=` 缓存串）。统一在此兜底，
-  // 避免各调用方漏做净化把 base64 塞进 reference_urls。
+  // The backend can only open reference images by static path: any `data:` base64 is first uploaded and replaced with an upload URL,
+  // other http(s)/static URLs are kept as-is (only the `?v=` cache string is stripped). This is the single safety net here,
+  // so individual callers cannot forget to sanitize and put base64 into reference_urls.
   const referenceUrls = await ensureBackendImageUrls(
     project,
     payload.referenceUrls,
@@ -974,7 +974,7 @@ export interface FreezoneVideoComposeItemPayload {
   volume?: number;
   muted?: boolean;
   /**
-   * Playback rate (变速). 1 = original speed. ⚠️ Only honored if the BE compose
+   * Playback rate (speed ramp). 1 = original speed. ⚠️ Only honored if the BE compose
    * endpoint implements it; otherwise the field is ignored (export stays 1×).
    */
   speed?: number;
@@ -995,8 +995,8 @@ export interface FreezoneVideoComposePayload {
   backgroundColor?: string;
   keepOriginalAudio?: boolean;
   /**
-   * 封面图 URL（已上传到后端的稳定地址）。后端支持时会把它挂成 MP4 的封面流
-   * （attached_pic，不改正片时长）；不支持时忽略，前端缩略图仍用同一个 url。
+   * Cover image URL (a stable address already uploaded to the backend). When the backend supports it, it is attached to the MP4 as a cover stream
+   * (attached_pic, which does not change the main duration); otherwise it is ignored and the frontend thumbnail still uses the same url.
    */
   coverUrl?: string | null;
   tracks: FreezoneVideoComposeTrackPayload[];
@@ -1045,7 +1045,7 @@ export async function submitFreezoneVideoCompose(
  */
 export interface FreezoneAudioSeparatePayload {
   sourceUrl: string;
-  /** 目标 beat;给定后分离出的音频会带上 beat_audio slot_target,可直接 commit。 */
+  /** Target beat; when given, the separated audio carries the beat_audio slot_target and can be committed directly. */
   targetEpisode?: number;
   targetBeat?: number;
 }
@@ -1480,9 +1480,9 @@ export interface FreezoneVideoModelInfo extends ReferenceMediaLimits {
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;
   /**
-   * 参考音频**总时长**上限（秒）。厂商 r2v 除了逐条 1.8~15.2s，还另有一条总和限制
-   * （见 videoModelCapabilities 里的说明），这项就是它的后台可配值；没配时前端按
-   * 15.2s 兜底。允许小数，别当成整数字段处理。
+   * Upper limit of the **total duration** of reference audio (seconds). Besides the per-clip 1.8~15.2s, the vendor r2v has a separate total limit
+   * (see the note in videoModelCapabilities); this is its admin-configurable value. When unset the frontend falls back to
+   * 15.2s. Fractions are allowed, so do not treat it as an integer field.
    */
   referenceAudioTotalMaxSeconds?: number | null;
   referenceVideoMinSeconds?: number | null;
@@ -1678,7 +1678,7 @@ export async function fetchFreezoneVideoModels(
 export interface FreezoneVideoCameraTemplate {
   /** Stable id used by the picker + sent to backend as `camera_template_id`. */
   id: string;
-  /** Display label (e.g. "镜头下降"). */
+  /** Display label (e.g. "Camera descends"). */
   label: string;
   /** Prompt fragment prepended to the user's prompt when this template is active. */
   promptFragment: string;
@@ -1748,9 +1748,9 @@ export interface FreezoneEditPayload extends FreezoneNodeContext {
   imageSize?: string;
   provider?: FreezoneProvider | null;
   model?: string | null;
-  /** 注册表模型 id（还原用；与 provider 拆分后的 model 串不同）。 */
+  /** Registry model id (for restore; differs from the model string after the provider split). */
   modelId?: string | null;
-  /** 生成模式（还原用）：text_to_image / image_to_image / all_reference / image_reference。 */
+  /** Generation mode (for restore): text_to_image / image_to_image / all_reference / image_reference. */
   genMode?: string | null;
   quality?: string | null;
 }
@@ -1759,7 +1759,7 @@ export async function submitFreezoneEdit(
   project: string,
   payload: FreezoneEditPayload,
 ): Promise<FreezoneJobRef> {
-  // 基准图与额外引用图同样必须是后端可解析的静态 URL，base64 先上传。
+  // The base image and extra reference images must likewise be static URLs the backend can resolve; base64 is uploaded first.
   const baseUrl = await ensureBackendImageUrl(project, payload.baseUrl);
   const extraReferenceUrls = await ensureBackendImageUrls(
     project,
@@ -1862,13 +1862,13 @@ export async function submitFreezoneFrameFromContext(
 
 // /freezone/image-to-3gs --------------------------------------------------- //
 
-/** SHARP / 3GS 来源类型；master/reverse 单面 SOG，pano 用 360 全景生成。 */
+/** SHARP / 3GS source type; master/reverse are single-sided SOG, pano uses 360 panorama generation. */
 export type FreezoneImageTo3GSKind = "master" | "reverse" | "pano";
 
 export interface FreezoneImageTo3GSPayload extends FreezoneNodeContext {
-  /** 源图静态地址，通常来自 Freezone 图片节点。 */
+  /** Static URL of the source image, usually from a Freezone image node. */
   sourceUrl: string;
-  /** 默认 master；当前 3D 世界节点仅使用 master。 */
+  /** Defaults to master; the current 3D world node only uses master. */
   sourceKind?: FreezoneImageTo3GSKind;
 }
 
@@ -1952,11 +1952,11 @@ export type FreezoneRedrawAspectRatio =
   | "9:16";
 
 /**
- * 重绘接口自身接受的比例取值（与后端 `FreezoneRedrawRequest.aspect_ratio` 的
- * Literal 保持一致）。
+ * Aspect-ratio values accepted by the redraw endpoint itself (kept consistent with the
+ * Literal of the backend `FreezoneRedrawRequest.aspect_ratio`).
  *
- * 这不是某个模型的能力，而是接口契约：即便后台给模型配了别的比例档位，重绘也
- * 只能提交这几个值，所以前端取「模型配置 ∩ 接口契约」。
+ * This is not a model capability but an API contract: even if the admin configures other ratios for a model, redraw can
+ * only submit these values, so the frontend takes "model config ∩ API contract".
  */
 export const FREEZONE_REDRAW_ASPECT_RATIOS: readonly FreezoneRedrawAspectRatio[] = [
   "original",
@@ -1969,7 +1969,7 @@ export const FREEZONE_REDRAW_ASPECT_RATIOS: readonly FreezoneRedrawAspectRatio[]
 
 export interface FreezoneRedrawPayload {
   sourceUrl: string;
-  /** Optional mask static URL. Transparent pixels = editable region (局部重绘). */
+  /** Optional mask static URL. Transparent pixels = editable region (inpainting). */
   maskUrl?: string | null;
   prompt?: string;
   aspectRatio?: FreezoneRedrawAspectRatio;
@@ -2137,7 +2137,7 @@ export interface FreezoneRelightPayload {
   smartMode?: boolean;
   brightness?: number;
   colorHex?: string;
-  /** 色温（开尔文）。后端 `color_temperature_kelvin: int | null`，范围 1500-10000。 */
+  /** Color temperature (Kelvin). Backend `color_temperature_kelvin: int | null`, range 1500-10000. */
   colorTemperatureKelvin?: number | null;
   keyLightDirection?: FreezoneRelightKeyLightDirection;
   rimLight?: boolean;
@@ -2150,7 +2150,7 @@ export async function submitFreezoneRelight(
   project: string,
   payload: FreezoneRelightPayload,
 ): Promise<FreezoneJobRef> {
-  // 源图与光照参考图都要走静态 URL，base64 先上传。
+  // Both the source image and the lighting reference image go through static URLs; base64 is uploaded first.
   const sourceUrl = await ensureBackendImageUrl(project, payload.sourceUrl);
   const lightingReferenceUrl = payload.lightingReferenceUrl
     ? await ensureBackendImageUrl(project, payload.lightingReferenceUrl)
@@ -2179,10 +2179,10 @@ export async function submitFreezoneRelight(
 
 // /freezone/scene-360 ----------------------------------------------------- //
 
-/** @deprecated 全景输出由后端固定为 2:1；保留类型仅兼容旧画布数据。 */
+/** @deprecated Panorama output is fixed to 2:1 by the backend; the type is kept only for old canvas data. */
 export type FreezoneScene360AspectRatio = "2:1" | "21:9";
 
-/** @deprecated 全景输出由后端固定为 2:1。 */
+/** @deprecated Panorama output is fixed to 2:1 by the backend. */
 export const FREEZONE_SCENE_360_ASPECT_RATIOS: readonly FreezoneScene360AspectRatio[] =
   ["2:1", "21:9"];
 
@@ -2192,27 +2192,27 @@ export const DEFAULT_FREEZONE_SCENE_360_ASPECT_RATIO: FreezoneScene360AspectRati
 export interface FreezoneScene360Payload {
   referenceUrl: string;
   imageSize?: string;
-  /** @deprecated 后端固定输出 2:1，不再把该值写入请求。 */
+  /** @deprecated The backend fixes the output to 2:1; this value is no longer written into the request. */
   aspectRatio?: FreezoneScene360AspectRatio;
   model?: string;
-  /** 媒体模型目录身份，后端据此按目录定价规则计费（与前端报价同口径）。 */
+  /** Media model catalog identity; the backend bills by catalog pricing rules from it (same basis as the frontend quote). */
   catalogId?: string;
   quality?: string;
   mode?: "candidate" | "commit";
 }
 
 /**
- * **单图 360 (simple pipeline)** — 老路径,只把一张图当 reference 走通用
- * 图编辑生成 panorama。不做 master/reverse overlap 分析、空间合约、缝合,
- * 适合 freezone 自由画布上 \"拿任一张图试试 360\" 的快速生成。
+ * **Single-image 360 (simple pipeline)** — the old path: it treats one image as a reference and runs the generic
+ * image-edit generation of a panorama. No master/reverse overlap analysis, spatial contract or stitching;
+ * suited to quick generation on the freezone free canvas ("try 360 on any image").
  * Asset-scoped scene 360 generation uses
- * {@link submitFreezoneScene360FromMaster} (复杂工作流),不是这条。
+ * {@link submitFreezoneScene360FromMaster} (the complex workflow), not this one.
  */
 export async function submitFreezoneScene360(
   project: string,
   payload: FreezoneScene360Payload,
 ): Promise<FreezoneJobRef> {
-  // 参考图必须是后端可解析的静态 URL，base64 先上传。
+  // The reference image must be a static URL the backend can resolve; base64 is uploaded first.
   const referenceUrl = await ensureBackendImageUrl(project, payload.referenceUrl);
   return await apiCall<FreezoneJobRef>(
     `projects/${encodeURIComponent(project)}/freezone/scene-360`,
@@ -2222,8 +2222,8 @@ export async function submitFreezoneScene360(
         reference_url: referenceUrl,
         image_size: payload.imageSize ?? "2K",
         mode: payload.mode ?? "candidate",
-        // 360 的最终产物合同固定为 2:1；上游比例适配属于后端实现细节。
-        // 面板上没有模型选择器，报价和执行必须使用同一个固定模型。
+        // The final 360 output contract is fixed at 2:1; upstream ratio adaptation is a backend implementation detail.
+        // The panel has no model selector, so the quote and execution must use the same fixed model.
         ...(payload.model ? { model: payload.model } : {}),
         ...(payload.catalogId ? { catalog_id: payload.catalogId } : {}),
         ...(payload.quality ? { quality: payload.quality } : {}),
@@ -2236,7 +2236,7 @@ export async function submitFreezoneScene360(
 
 export interface ScenePanoFromMasterPayload {
   sceneId: string;
-  /** 后端会自动 fallback 到 text 如果 master 不存在;FE 默认传 'master'。 */
+  /** The backend automatically falls back to text if master does not exist; the FE passes 'master' by default. */
   source?: "master" | "text";
   style?: string;
   provider?: string;
@@ -2247,20 +2247,20 @@ export interface ScenePanoFromMasterPayload {
 }
 
 /**
- * **复杂场景 360 工作流 (complex pipeline)** — 走 stage_asset
+ * **Complex scene 360 workflow (complex pipeline)** — runs the stage_asset
  * `pano_from_master` step:
- *  - 读 scene 的 master + reverse_master 文件
- *  - 跑 overlap analyzer (master/reverse 边缘融合分析)
- *  - 跑 spatial contract analyzer (空间合约)
- *  - 调 BuilderGPT/supertale_scene_360_gpt_image2.py 生成 pano_360.png
- *  - 写到 stage_manifest canonical 路径 (跟资产画布 pano viewer 同一份文件)
+ *  - reads the scene's master + reverse_master files
+ *  - runs the overlap analyzer (master/reverse edge-blend analysis)
+ *  - runs the spatial contract analyzer
+ *  - calls BuilderGPT/supertale_scene_360_gpt_image2.py to generate pano_360.png
+ *  - writes to the stage_manifest canonical path (the same file as the asset canvas pano viewer)
  *
  * Asset-scoped scene 360 generation uses this complex path, not the simple
  * `/freezone/scene-360` endpoint.
  *
- * 注: 走的是 scenes 路由 (不是 freezone 路由),所以返回的是
- * `{ok, task_type:"stage_asset", task_key, scope, task_id, backend}` 结构 —
- * cast 成 FreezoneJobRef shape (task_key + job_id + task_type) 给上层用。
+ * Note: this goes through the scenes route (not the freezone route), so the response is the
+ * `{ok, task_type:"stage_asset", task_key, scope, task_id, backend}` structure —
+ * cast to the FreezoneJobRef shape (task_key + job_id + task_type) for upper layers.
  */
 export async function submitFreezoneScene360FromMaster(
   project: string,
@@ -2321,7 +2321,7 @@ export interface FreezoneTemplateEditPayload {
   prompt?: string;
   imageSize?: string;
   model?: string;
-  /** 媒体模型目录身份，后端据此按目录定价规则计费（与前端报价同口径）。 */
+  /** Media model catalog identity; the backend bills by catalog pricing rules from it (same basis as the frontend quote). */
   catalogId?: string;
   quality?: string;
 }
@@ -2339,7 +2339,7 @@ export async function submitFreezoneTemplateEdit(
         mode: payload.mode,
         prompt: payload.prompt ?? "",
         image_size: payload.imageSize ?? "2K",
-        // 同 scene-360：报价按目录首模型算，执行也必须用同一个模型/画质。
+        // Same as scene-360: the quote uses the first catalog model, and execution must use the same model/quality.
         ...(payload.model ? { model: payload.model } : {}),
         ...(payload.catalogId ? { catalog_id: payload.catalogId } : {}),
         ...(payload.quality ? { quality: payload.quality } : {}),
@@ -2421,12 +2421,12 @@ export async function fetchFreezoneReversePromptResult(
 // /freezone/audio/references + /freezone/audio/speech -------------------- //
 
 /**
- * 后端定义的声线 scope。
- * - project_narrator: 项目解说人
- * - character_default: 角色默认声线
- * - character_age_group: 角色年龄段声线（需要 slot）
- * - identity: 身份自己的声线（需要 identity_id）
- * - identity_resolved: 按 身份→年龄段→角色默认 兜底解析后的实际声线
+ * Voice scope defined by the backend.
+ * - project_narrator: project narrator
+ * - character_default: character default voice
+ * - character_age_group: character age-group voice (needs slot)
+ * - identity: the identity's own voice (needs identity_id)
+ * - identity_resolved: the actual voice resolved by fallback identity -> age group -> character default
  */
 export type FreezoneAudioVoiceRefScope =
   | "project_narrator"
@@ -2438,43 +2438,43 @@ export type FreezoneAudioVoiceRefScope =
 
 export interface FreezoneAudioVoiceRef {
   scope: FreezoneAudioVoiceRefScope;
-  /** scope=character_* / identity* 时必填，匹配项目角色名。 */
+  /** Required when scope=character_* / identity*; matches the project character name. */
   characterName?: string;
-  /** scope=identity / identity_resolved 时必填。 */
+  /** Required when scope=identity / identity_resolved. */
   identityId?: string;
-  /** scope=character_age_group 时必填：child/youth/middle/elder。 */
+  /** Required when scope=character_age_group: child/youth/middle/elder. */
   slot?: string;
-  /** scope=user_custom 时必填：来自 GET/POST /freezone/audio/voices。 */
+  /** Required when scope=user_custom: from GET/POST /freezone/audio/voices. */
   voiceId?: string;
 }
 
 /**
- * `GET /freezone/audio/references` 返回的单条记录。openapi 没给 schema（{}），
- * 这里按后端 description 推测，UI 防御性读取——遇到陌生字段就忽略。
+ * A single record returned by `GET /freezone/audio/references`. openapi gives no schema ({}),
+ * so this is inferred from the backend description; the UI reads defensively and ignores unknown fields.
  */
 export interface FreezoneAudioReferenceItem {
   scope: FreezoneAudioVoiceRefScope;
-  /** scope=character_* 或 identity* 时有值。 */
+  /** Present when scope=character_* or identity*. */
   character_name?: string | null;
-  /** scope=identity / identity_resolved 时有值。 */
+  /** Present when scope=identity / identity_resolved. */
   identity_id?: string | null;
-  /** scope=character_age_group 时有值：child/youth/middle/elder。 */
+  /** Present when scope=character_age_group: child/youth/middle/elder. */
   slot?: string | null;
-  /** scope=user_custom 时有值：账号级音色 ID（来自 POST /freezone/audio/voices）。 */
+  /** Present when scope=user_custom: account-level voice ID (from POST /freezone/audio/voices). */
   voice_id?: string | null;
-  /** 展示名（后端给的，若没给前端兜底拼）。 */
+  /** Display name (from the backend; the frontend falls back to composing one if missing). */
   label?: string | null;
-  /** 语言/腔调说明。 */
+  /** Language / accent description. */
   language?: string | null;
-  /** 性别（如果后端给）。 */
+  /** Gender (if the backend provides it). */
   gender?: string | null;
-  /** 预览音频静态 URL（如果后端给）。 */
+  /** Preview audio static URL (if the backend provides it). */
   preview_url?: string | null;
   [key: string]: unknown;
 }
 
 export interface FreezoneAudioReferencesResult {
-  /** 项目内可用的声线引用列表。 */
+  /** List of voice references available in the project. */
   available: FreezoneAudioReferenceItem[];
   [key: string]: unknown;
 }
@@ -2485,7 +2485,7 @@ export async function fetchFreezoneAudioReferences(
   const payload = await apiCall<unknown>(
     `projects/${encodeURIComponent(project)}/freezone/audio/references`,
   );
-  // 容错：后端可能直接返回数组、或 { available: [...] }，或 { items: [...] }。
+  // Fault tolerance: the backend may return an array directly, or { available: [...] }, or { items: [...] }.
   if (Array.isArray(payload)) {
     return { available: payload as FreezoneAudioReferenceItem[] };
   }
@@ -2505,17 +2505,17 @@ export async function fetchFreezoneAudioReferences(
 }
 
 export interface FreezoneAudioSpeechPayload extends FreezoneNodeContext {
-  /** 要合成的台词 / 旁白文本。 */
+  /** Dialogue / narration text to synthesize. */
   text: string;
-  /** preset 无需参考音频；clone 使用 voiceRef 克隆声音。 */
+  /** preset needs no reference audio; clone uses voiceRef to clone the voice. */
   speechMode?: "preset" | "clone";
   presetModel?: string;
   presetVoice?: string;
-  /** 情绪提示词，留空则用项目解说风格。例："紧张、压低声音、带一点恐惧感"。 */
+  /** Emotion prompt; if empty the project narration style is used. Example: "tense, lowered voice, a hint of fear". */
   emotionPrompt?: string;
-  /** 声线引用；不传则用项目默认解说人。 */
+  /** Voice reference; if omitted the project default narrator is used. */
   voiceRef?: FreezoneAudioVoiceRef | null;
-  /** 目标 beat;给定后生成的音频会带上 beat_audio slot_target,可直接 commit。 */
+  /** Target beat; when given, the generated audio carries the beat_audio slot_target and can be committed directly. */
   targetEpisode?: number;
   targetBeat?: number;
 }
@@ -2555,27 +2555,27 @@ export async function submitFreezoneAudioSpeech(
 // /freezone/audio/eleven-music ------------------------------------------- //
 
 /**
- * 文本生成音乐请求。除 input 外全部可选，不传走后端默认。
- * model / response_format / output_format 不需要前端传（走后端默认 LingShan-MU-11 / mp3 /
- * mp3_44100_128），故不在此暴露。
+ * Text-to-music request. Everything except input is optional; omitted fields use backend defaults.
+ * model / response_format / output_format need not be sent by the frontend (backend defaults LingShan-MU-11 / mp3 /
+ * mp3_44100_128), so they are not exposed here.
  */
 export interface FreezoneAudioMusicPayload extends FreezoneNodeContext {
-  /** 音乐描述 prompt（风格、乐器、氛围等）；映射到后端 `input`。 */
+  /** Music description prompt (style, instruments, mood, etc.); maps to backend `input`. */
   prompt: string;
-  /** 生成长度（毫秒），范围 3000–600000，留空走后端默认 30000。 */
+  /** Length in milliseconds, range 3000-600000; if empty the backend default 30000 is used. */
   musicLengthMs?: number;
-  /** 是否强制纯音乐，留空走后端默认 true。 */
+  /** Whether to force instrumental only; if empty the backend default true is used. */
   forceInstrumental?: boolean;
-  /** 是否严格遵守音乐段落时长策略，留空走后端默认 true。 */
+  /** Whether to strictly follow the music section duration policy; if empty the backend default true is used. */
   respectSectionsDurations?: boolean;
-  /** 目标 beat;给定后生成的音频会带上 beat_audio slot_target,可直接 commit。 */
+  /** Target beat; when given, the generated audio carries the beat_audio slot_target and can be committed directly. */
   targetEpisode?: number;
   targetBeat?: number;
 }
 
 /**
- * 文本生成音乐。返回异步任务句柄，结果用
- * fetchFreezoneJobResult('freezone_audio_eleven_music') 取。
+ * Text-to-music. Returns an async job handle; fetch the result with
+ * fetchFreezoneJobResult('freezone_audio_eleven_music').
  */
 export async function submitFreezoneAudioMusic(
   project: string,
@@ -2600,13 +2600,13 @@ export async function submitFreezoneAudioMusic(
 
 // /freezone/audio/voices ------------------------------------------------- //
 //
-// 「我的音色」(scope=user_custom) 的列表统一通过 /freezone/audio/references
-// 拿（混在 available[] 里，按 scope 过滤）。这里只保留 POST：上传一段音频克
-// 隆出账号级音色。
+// The list of "my voices" (scope=user_custom) is fetched uniformly through /freezone/audio/references
+// (mixed into available[], filtered by scope). Only POST is kept here: upload a piece of audio to clone
+// an account-level voice.
 
 /**
- * POST /freezone/audio/voices 的响应。openapi 是空对象，按推测字段定义。
- * 调用方一般只需要 `voice_id`，其它仅用于上传后即时展示。
+ * Response of POST /freezone/audio/voices. openapi is an empty object, so fields are defined by inference.
+ * Callers generally only need `voice_id`; the rest is only for immediate display after upload.
  */
 export interface FreezoneAudioVoiceItem {
   voice_id: string;
@@ -2618,7 +2618,7 @@ export interface FreezoneAudioVoiceItem {
 }
 
 export interface CreateFreezoneAudioVoiceOptions {
-  /** 同 uploadFreezoneImage：上传大文件时用 false 关闭 ky 默认 30s 超时。 */
+  /** Same as uploadFreezoneImage: pass false for large uploads to disable ky's default 30s timeout. */
   timeoutMs?: number | false;
 }
 
@@ -2717,8 +2717,8 @@ export async function submitFreezoneTextTranslate(
 
 export interface FreezoneTextTranslateResult {
   translated_text: string;
-  source_language: "zh" | "en";
-  target_language: "zh" | "en";
+  source_language: "en" | "vi";
+  target_language: "en" | "vi";
   node_type: FreezoneTextTranslateNodeType;
 }
 
@@ -2733,33 +2733,33 @@ export async function fetchFreezoneTextTranslateResult(
 
 // /freezone/text/story-script -------------------------------------------- //
 
-/** 角色参考输入项（角色生成脚本用）。 */
+/** Character reference input item (used by the character generation script). */
 export interface FreezoneStoryScriptCharacterRef {
-  /** 角色名或角色标签。 */
+  /** Character name or character label. */
   name?: string;
-  /** 可选：已有角色描述。 */
+  /** Optional: existing character description. */
   description?: string;
-  /** 角色参考图静态 URL（/static/...）。 */
+  /** Character reference image static URL (/static/...). */
   imageUrl?: string;
-  /** 可选：角色定位或叙事功能（如「女主」）。 */
+  /** Optional: character role or narrative function (e.g. "female lead"). */
   role?: string;
 }
 
 export interface FreezoneStoryScriptPayload extends FreezoneNodeContext {
   /**
-   * 文本输入：剧本 / 情节文本。后端要求 source_text / source_url / video_url /
-   * character_refs 至少给一个。
+   * Text input: script / plot text. The backend requires at least one of source_text / source_url / video_url /
+   * character_refs.
    */
   sourceText?: string;
-  /** 文本资源静态 URL，后端拉取后走生成流程。 */
+  /** Static URL of a text resource; the backend fetches it and runs the generation flow. */
   sourceUrl?: string;
-  /** 视频输入：已上传视频的静态 URL，后端会先解析视频再生成同样的故事脚本表。 */
+  /** Video input: static URL of an uploaded video; the backend parses the video first and then generates the same story script table. */
   videoUrl?: string;
-  /** 视频总时长（秒），让脚本表的时间戳更准。 */
+  /** Total video duration (seconds), to make the script table timestamps more accurate. */
   durationSec?: number;
-  /** 角色参考输入：无文本 / 视频时，基于角色图和描述生成故事脚本表。 */
+  /** Character reference input: with no text / video, generate the story script table from character images and descriptions. */
   characterRefs?: FreezoneStoryScriptCharacterRef[];
-  /** 用户额外补充的提示词（steering），例如风格、镜头偏好等。 */
+  /** Extra prompt supplied by the user (steering), e.g. style or shot preferences. */
   prompt?: string;
 }
 
@@ -2790,10 +2790,10 @@ export async function submitFreezoneStoryScript(
 }
 
 /**
- * 故事脚本表的一行。字段名必须和后端 `FreezoneStoryScriptRow`
- * （`src/novelvideo/api/schemas.py`）逐字对齐 —— 早期前端用的是
- * `character` / `action` 这类简写，后端从来没发过这些 key，表格里就只显示
- * 「-」（issue #207）。
+ * One row of the story script table. Field names must align with the backend `FreezoneStoryScriptRow`
+ * (`src/novelvideo/api/schemas.py`) character for character — early frontends used
+ * shorthand like `character` / `action`, which the backend never sent, so the table only showed
+ * "-" (issue #207).
  */
 export interface FreezoneStoryScriptRow {
   shot_no?: string | number | null;
@@ -2801,15 +2801,15 @@ export interface FreezoneStoryScriptRow {
   visual_description?: string | null;
   character_1?: string | null;
   character_description_1?: string | null;
-  /** 角色图1 URL，由后端按角色名匹配 character_refs 回填。 */
+  /** Character image 1 URL, backfilled by the backend by matching the character name against character_refs. */
   character_image_1?: string | null;
   character_2?: string | null;
   character_description_2?: string | null;
-  /** 角色图2 URL，由后端按角色名匹配 character_refs 回填。 */
+  /** Character image 2 URL, backfilled by the backend by matching the character name against character_refs. */
   character_image_2?: string | null;
-  /** 参考图 URL，视频参考模式下由后端按 keyframe_index 回填对应关键帧。 */
+  /** Reference image URL; in video reference mode the backend backfills the corresponding keyframe by keyframe_index. */
   reference?: string | null;
-  /** 视频参考模式下这一镜对应的输入关键帧序号（1-based，0 表示无）。 */
+  /** In video reference mode, the input keyframe index of this shot (1-based, 0 = none). */
   keyframe_index?: number | null;
   shot?: string | null;
   character_action?: string | null;
@@ -2826,7 +2826,7 @@ export interface FreezoneStoryScriptRow {
 export interface FreezoneStoryScriptResult {
   title?: string | null;
   rows: FreezoneStoryScriptRow[];
-  /** 视频参考模式下抽出的关键帧静态 URL，按顺序对应 keyframe_index。 */
+  /** Static URL of keyframes extracted in video reference mode, in order of keyframe_index. */
   frame_urls?: string[] | null;
 }
 
@@ -2908,14 +2908,14 @@ export interface FreezoneAssetCopyFailure {
 }
 
 export interface FreezoneAssetCopyResult {
-  /** 源 URL（原字符串）→ 目标项目里的新 URL。 */
+  /** Source URL (original string) -> new URL in the target project. */
   mapping: Record<string, string>;
   failed: FreezoneAssetCopyFailure[];
 }
 
 /**
- * 跨项目粘贴：让后端把 `sources`（源项目的同源素材 URL）拷进 `project`。
- * 字节不经过浏览器；OSS 部署下是服务端 CopyObject。单条失败只体现在 `failed` 里。
+ * Cross-project paste: have the backend copy `sources` (same-origin asset URLs of the source project) into `project`.
+ * Bytes do not pass through the browser; on OSS deployments this is a server-side CopyObject. A single failure only shows up in `failed`.
  */
 export async function copyFreezoneAssets(
   project: string,
@@ -3083,7 +3083,7 @@ export type FreezoneAssetLibrarySource =
   | "scene"
   | "prop";
 
-/** 用途类目。老条目没有该字段，读取侧按 source/media 兜底推导。 */
+/** Purpose category. Old entries lack this field; the read side derives it from source/media. */
 export type FreezoneAssetLibraryCategory =
   | "other"
   | "character"
@@ -3093,13 +3093,13 @@ export type FreezoneAssetLibraryCategory =
   | "audio";
 
 /**
- * 用户自建的资产库文件夹。系统文件夹（主线 / 待分类资产 / 各类目同名目录）不落盘，
- * 由前端按保留 key 生成，只有这里的自建文件夹会从后端读回来。
+ * User-created asset library folders. System folders (main line / unsorted assets / same-named directories per category) are not persisted;
+ * the frontend generates them from reserved keys, and only the user-created folders here are read back from the backend.
  */
 export interface FreezoneAssetLibraryFolder {
   id: string;
   name: string;
-  /** 封面图 URL，取自文件夹内某个素材；没设过时为空,前端画默认文件夹图标。 */
+  /** Cover image URL, taken from an asset in the folder; empty if never set, and the frontend draws the default folder icon. */
   cover?: string | null;
   created_at?: string;
 }
@@ -3110,7 +3110,7 @@ export interface FreezoneVideoCharacterLibraryItem {
   media?: FreezoneAssetLibraryMedia;
   source?: FreezoneAssetLibrarySource;
   category?: FreezoneAssetLibraryCategory;
-  /** 保存位置：系统文件夹 key 或自建文件夹 id。老条目没有，读取侧按类目兜底。 */
+  /** Save location: system folder key or user-created folder id. Old entries lack it; the read side derives it from the category. */
   folder?: string;
   image_urls?: string[];
   video_url?: string | null;
@@ -3178,7 +3178,7 @@ export async function createFreezoneAssetLibraryFolder(
   );
 }
 
-/** 改名 / 换封面。只传要改的字段,另一个原样保留。 */
+/** Rename / change cover. Send only the fields to change; the other is kept as is. */
 export async function updateFreezoneAssetLibraryFolder(
   project: string,
   folderId: string,
@@ -3190,7 +3190,7 @@ export async function updateFreezoneAssetLibraryFolder(
   );
 }
 
-/** 整柜清空:删掉文件夹连同里面的素材。返回被删掉的素材条数。 */
+/** Empty the whole cabinet: delete the folder together with the assets inside. Returns the number of assets deleted. */
 export async function deleteFreezoneAssetLibraryFolder(
   project: string,
   folderId: string,
@@ -3202,8 +3202,8 @@ export async function deleteFreezoneAssetLibraryFolder(
 }
 
 /**
- * 把主线的人物/场景/道具参考图与人物语音幂等同步进资产库。后端按稳定合成 id
- * upsert,重复同步只更新不重复。返回同步后的完整库(apiCall 会解包 data)。
+ * Idempotently sync main-line character/scene/prop reference images and character voices into the asset library. The backend upserts by a stable composite id,
+ * so repeated syncs only update, no duplicates. Returns the full library after sync (apiCall unwraps data).
  */
 export async function syncFreezoneAssetLibraryFromMainline(
   project: string,

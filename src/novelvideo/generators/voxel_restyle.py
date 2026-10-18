@@ -2,7 +2,7 @@
 
 Architecture (after experimentation):
     voxel_shot.png          ← single image input: defines composition + camera
-    project.visual_style    ← text: defines visual style (guoman_fantasy / anime / 写实 / etc.)
+    project.visual_style    ← text: defines visual style (guoman_fantasy / anime / photoreal / etc.)
         ↓ HuiMeng image-2 (1K, low) — cheap + supports single-image edit
     <ts>_styled.png
 
@@ -62,59 +62,59 @@ def _build_prompt(scene_id: str, preset: dict, extra_context: str = "", has_mast
     `has_master`=True means the call site is sending master.png as image 2.
     `has_master`=False falls back to preset style text.
     """
-    # 不回退到 label：label 含时代词（写实古装剧/民国年代剧）会把题材内容塞回重绘 prompt。
+    # Do not fall back to label: the label contains era words (e.g. photoreal period drama), which would push genre content back into the repaint prompt.
     style_tag = preset.get("style_tag") or "PHOTOREALISTIC"
     style_instructions = preset.get("style_instructions") or ""
 
-    scene_line = f"场景: {scene_id} 室内。" if scene_id else ""
+    scene_line = f"Scene: {scene_id} interior." if scene_id else ""
 
     if has_master:
-        return f"""【图像修复任务】用图 2（master 参考图）的材质质感来修复图 1（一张低分辨率体素渲染图）。
+        return f"""[Image repair task] Use the material quality of Image 2 (the master reference image) to repair Image 1 (a low-resolution voxel render).
 
-▸ 这是 image inpainting / image restoration，不是重新生成、不是换镜头、不是 fusion。
+▸ This is image inpainting / image restoration — not regeneration, not a camera change, not fusion.
 
-▸ 图 1 = 损坏的图：构图、镜头、画面比例、所有物体的位置和大小都是正确的，但表面被粗糙的体素块占据，需要被"修复"成真实材质。
-▸ 图 2 = 高质量参考：告诉你"修复后"应该长什么样的——材质、纹理、颜色、光照、prop 细节、wear/grime。
+▸ Image 1 = the damaged image: composition, camera, aspect ratio, and the position and size of every object are all correct, but the surfaces are covered by coarse voxel blocks that must be "repaired" into real materials.
+▸ Image 2 = the high-quality reference: it tells you what the result should look like after repair — materials, textures, colors, lighting, prop details, wear/grime.
 
-▸ 修复硬规则（严格遵守，不得违反）：
-  1. **保留图 1 的镜头/构图/物体位置——一个像素都不许动。**
-  2. **修复后的所有材质必须和图 2 一模一样**：
-     - 图 2 是什么瓷砖、什么木纹、什么不锈钢、什么菜单牌纸张、什么红色饭名块、什么调色板——你的输出必须和图 2 在这些维度上 1:1 完全相同。
-     - 不是"风格相近"，不是"取材自"，是"和 master 完全一致"。
-     - 不要发明任何图 2 里没有的材质或颜色。
-     - 不要改变图 2 的材质饱和度、对比度、纹理粗细。
-     - 把图 2 的每个表面想象成贴图，按照图 1 的几何"贴"上去。
+▸ Hard repair rules (follow strictly, no exceptions):
+  1. **Preserve the camera/composition/object positions of Image 1 — do not move a single pixel.**
+  2. **Every repaired material must be identical to Image 2**:
+     - Whatever tile, wood grain, stainless steel, menu-board paper, red dish-name blocks, or color palette Image 2 has — your output must match Image 2 1:1 in all of these respects.
+     - Not "similar in style", not "inspired by" — "exactly the same as the master".
+     - Do not invent any material or color that is not in Image 2.
+     - Do not change the material saturation, contrast, or texture coarseness of Image 2.
+     - Imagine every surface of Image 2 as a texture map, "pasted" onto the geometry of Image 1.
 
-▸ 像素级 mapping（图 1 体素 → 图 2 材质）：
-   · 图 1 青色/深蓝的墙 → 用图 2 的瓷砖纹理 + 勾缝
-   · 图 1 木色的桌子、橱柜、长椅 → 用图 2 的木纹
-   · 图 1 灰色的厨房工作台 → 用图 2 的不锈钢
-   · 图 1 红色/蓝色的小凳子 → 用图 2 的凳子色和材质
-   · 图 1 米黄/红色的菜单牌 → 用图 2 的菜单牌纸张+字体+红块
-   · 图 1 顶部白色长条 → 用图 2 的荧光灯/灯管
+▸ Pixel-level mapping (Image 1 voxels → Image 2 materials):
+   · Cyan/dark-blue walls in Image 1 → use the tile texture + grout of Image 2
+   · Wood-colored tables, cabinets, benches in Image 1 → use the wood grain of Image 2
+   · Gray kitchen counters in Image 1 → use the stainless steel of Image 2
+   · Red/blue small stools in Image 1 → use the stool colors and materials of Image 2
+   · Beige/red menu boards in Image 1 → use the menu-board paper + font + red blocks of Image 2
+   · White strips at the top of Image 1 → use the fluorescent tubes/lights of Image 2
 
-▸ 禁止：
-   · 不要采用图 2 的镜头角度（图 2 只提供材质，不提供构图）
-   · 不要新增、删除、移动任何物体
-   · 不要漂移材质细节（图 2 的菜单牌是几个红块就是几个红块）
+▸ Forbidden:
+   · Do not adopt the camera angle of Image 2 (Image 2 provides materials only, not composition)
+   · Do not add, remove, or move any object
+   · Do not drift material details (if the menu board in Image 2 has a few red blocks, it has exactly that many red blocks)
 
 ▸ {scene_line}
 
-▸ 输出：一张图。图 1 的精确构图 + 图 2 的精确材质。"""
+▸ Output: one image. The exact composition of Image 1 + the exact materials of Image 2."""
 
     # No-master fallback: use preset style instructions instead.
-    return f"""【图像修复任务】把图 1（体素渲染）修复成 {style_tag} 风格的写实图。
+    return f"""[Image repair task] Repair Image 1 (a voxel render) into a realistic image in {style_tag} style.
 
-▸ 保留图 1 的构图、镜头、所有物体位置和大小——一个像素都不动。
-▸ 把图 1 中粗糙的体素块表面替换成真实材质（木、金属、瓷砖、布料、玻璃），按以下风格指南：
+▸ Preserve the composition, camera, and the position and size of every object in Image 1 — do not move a single pixel.
+▸ Replace the coarse voxel-block surfaces in Image 1 with real materials (wood, metal, tile, fabric, glass), following this style guide:
 
 STYLE TAG: {style_tag}
 {style_instructions}
 
 {scene_line}
 
-▸ 不要改变镜头，不要新增/删除/移动任何物体。
-▸ 输出：图 1 的精确构图，{style_tag} 风格的精细材质。"""
+▸ Do not change the camera; do not add/remove/move any object.
+▸ Output: the exact composition of Image 1, with fine {style_tag}-style materials."""
 
 
 async def render_voxel_shot_styled(
@@ -145,7 +145,7 @@ async def render_voxel_shot_styled(
     voxel_shot_path = Path(voxel_shot_path)
     output_path = Path(output_path)
     if not voxel_shot_path.exists():
-        raise FileNotFoundError(f"voxel_shot_path 不存在: {voxel_shot_path}")
+        raise FileNotFoundError(f"voxel_shot_path does not exist: {voxel_shot_path}")
 
     # Resolve style id
     style_id = (visual_style or "").strip()

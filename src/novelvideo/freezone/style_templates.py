@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""短剧风格模板清单的加载与兜底。
+"""Loading and fallback for the short-drama style template manifest.
 
-模板正文(标签、分类、封面/示例图相对路径、提示词)放在 `style_templates.json`,
-随包发布;运维想换一套风格库时把 `STYLE_GALLERY_MANIFEST` 指到外部文件即可,
-不必改代码重新发版 —— 和图片走 `STYLE_GALLERY_ASSET_BASE` 是同一个思路。
+The template bodies (label, category, cover/sample image relative paths, prompt) live in `style_templates.json`,
+shipped with the package; when ops wants to swap in a different style library, it is enough to point `STYLE_GALLERY_MANIFEST` at an external file,
+with no code change or re-release -- the same idea as images going through `STYLE_GALLERY_ASSET_BASE`.
 
-外部清单读坏了(文件不在、JSON 语法错、字段缺失)一律降级回内置那份并打一条
-warning:风格是锦上添花的能力,不该因为一个配置文件把出图接口整个拖死。内置
-那份读不出来才抛 —— 那是打包坏了,必须吵。
+If the external manifest is broken (file missing, JSON syntax error, missing fields), always degrade to the built-in one and emit a
+warning: styles are a nice-to-have capability and must not drag the whole image endpoint down because of one config file. Only when the built-in
+one cannot be read do we raise -- that means the packaging is broken, and it must be loud.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 MANIFEST_ENV = "STYLE_GALLERY_MANIFEST"
 BUILTIN_MANIFEST_PATH = Path(__file__).with_name("style_templates.json")
 
-# 每条模板必须有的非空字符串字段。samples 允许为空列表(只有封面也能用)。
+# Non-empty string fields every template must have. samples may be an empty list (a cover alone is usable).
 _REQUIRED_TEXT_FIELDS = ("id", "label", "category", "cover", "style_prompt")
 
 _CacheKey = tuple[Any, ...]
@@ -32,7 +32,7 @@ _cache: Optional[tuple[_CacheKey, str, list[dict]]] = None
 
 
 class StyleManifestError(ValueError):
-    """清单结构不合法。"""
+    """The manifest structure is invalid."""
 
 
 def _manifest_path() -> Path:
@@ -43,7 +43,7 @@ def _manifest_path() -> Path:
 
 
 def _cache_key(path: Path) -> _CacheKey:
-    """带上 mtime/size:运维原地替换清单文件后下一次请求就能生效。"""
+    """Include mtime/size: after ops replaces the manifest file in place, the next request takes effect."""
     try:
         stat = path.stat()
     except OSError:
@@ -52,34 +52,34 @@ def _cache_key(path: Path) -> _CacheKey:
 
 
 def _parse_manifest(raw: Any) -> tuple[str, list[dict]]:
-    """接受 `{"version": ..., "templates": [...]}`,也接受裸数组。"""
+    """Accept `{"version": ..., "templates": [...]}`, and also a bare array."""
     if isinstance(raw, list):
         version, templates = "", raw
     elif isinstance(raw, dict):
         version = str(raw.get("version") or "")
         templates = raw.get("templates")
     else:
-        raise StyleManifestError("清单顶层必须是对象或数组")
+        raise StyleManifestError("The manifest top level must be an object or an array")
 
     if not isinstance(templates, list) or not templates:
-        raise StyleManifestError("templates 必须是非空数组")
+        raise StyleManifestError("templates must be a non-empty array")
 
     seen: set[str] = set()
     parsed: list[dict] = []
     for index, item in enumerate(templates):
         if not isinstance(item, dict):
-            raise StyleManifestError(f"第 {index} 条模板不是对象")
+            raise StyleManifestError(f"Template #{index} is not an object")
         for field in _REQUIRED_TEXT_FIELDS:
             value = item.get(field)
             if not isinstance(value, str) or not value.strip():
-                raise StyleManifestError(f"第 {index} 条模板缺少字段 {field}")
+                raise StyleManifestError(f"Template #{index} is missing field {field}")
         samples = item.get("samples", [])
         if not isinstance(samples, list) or any(
             not isinstance(sample, str) or not sample.strip() for sample in samples
         ):
-            raise StyleManifestError(f"模板 {item['id']} 的 samples 必须是字符串数组")
+            raise StyleManifestError(f"samples of template {item['id']} must be an array of strings")
         if item["id"] in seen:
-            raise StyleManifestError(f"模板 id 重复: {item['id']}")
+            raise StyleManifestError(f"Duplicate template id: {item['id']}")
         seen.add(item["id"])
         parsed.append(
             {
@@ -110,9 +110,9 @@ def _load() -> tuple[str, list[dict]]:
         version, templates = _read_manifest(path)
     except (OSError, ValueError) as exc:
         if path == BUILTIN_MANIFEST_PATH:
-            raise RuntimeError(f"内置风格清单不可用: {path}") from exc
+            raise RuntimeError(f"Built-in style manifest unavailable: {path}") from exc
         logger.warning(
-            "[freezone] 风格清单 %s 不可用(%s),回落到内置清单", path, exc
+            "[freezone] Style manifest %s unavailable (%s), falling back to the built-in manifest", path, exc
         )
         version, templates = _read_manifest(BUILTIN_MANIFEST_PATH)
 
@@ -121,14 +121,14 @@ def _load() -> tuple[str, list[dict]]:
 
 
 def reset_style_template_cache() -> None:
-    """改环境变量或原地换文件后强制重读;测试用。"""
+    """Force a re-read after changing the environment variable or replacing the file in place; for tests."""
     global _cache
     _cache = None
 
 
 def load_style_templates() -> list[dict]:
-    # 每条都复制一份再给出去。只 list() 外层挡不住 `item["label"] = ...` 这类
-    # 改动 —— 那会顺着缓存污染后面每一次请求。清单就 45 条,复制不值一提。
+    # Copy each entry before handing it out. A shallow list() of the outer level cannot stop mutations like `item["label"] = ...`
+    # -- those would poison every later request through the cache. The manifest is only 45 entries, so copying is negligible.
     return [{**item, "samples": list(item["samples"])} for item in _load()[1]]
 
 

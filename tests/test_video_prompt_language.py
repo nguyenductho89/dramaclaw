@@ -21,7 +21,7 @@ class _TextAgent:
     ("language", "required", "forbidden"),
     [
         ("en", "English", "Chinese (中文) only"),
-        ("zh", "中文", "English only"),
+        ("vi", "Vietnamese", "English only"),
     ],
 )
 def test_global_video_optimizer_applies_language_to_system_and_task(

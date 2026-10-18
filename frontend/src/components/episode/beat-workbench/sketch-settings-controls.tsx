@@ -85,7 +85,10 @@ export function SketchModelSelect({
         }}
         disabled={disabled || options.length === 0}
       >
-        <SelectTrigger className={cn(WORKBENCH_SELECT_TRIGGER_CLASS, "w-28")}>
+        <SelectTrigger
+          className={cn(WORKBENCH_SELECT_TRIGGER_CLASS, "w-48")}
+          title={selectedLabel}
+        >
           <SelectValue>{() => selectedLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent
@@ -98,6 +101,7 @@ export function SketchModelSelect({
             <SelectItem
               key={value}
               value={value}
+              title={label}
               className={WORKBENCH_SELECT_ITEM_CLASS}
             >
               {label}

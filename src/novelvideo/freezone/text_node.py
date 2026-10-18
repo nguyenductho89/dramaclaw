@@ -212,10 +212,10 @@ class FreezoneTranslationResult(BaseModel):
     """Structured translation result produced by the LLM."""
 
     translated_text: str = Field(description="Translated prompt text.")
-    source_language: Literal["zh", "en"] = Field(
+    source_language: Literal["en", "vi"] = Field(
         description="Dominant natural language detected from the source text."
     )
-    target_language: Literal["zh", "en"] = Field(
+    target_language: Literal["en", "vi"] = Field(
         description="Opposite target language used for translation."
     )
 
@@ -368,10 +368,10 @@ async def translate_freezone_text(
     text: str,
     node_type: Literal["generic", "image", "video", "audio", "text"] = "generic",
     egress_context: TrustedEgressContext | None = None,
-) -> tuple[str, Literal["zh", "en"], Literal["zh", "en"]]:
+) -> tuple[str, Literal["en", "vi"], Literal["en", "vi"]]:
     """执行 Freezone 中英互译。"""
     if not text or not text.strip():
-        return "", "zh", "en"
+        return "", "en", "vi"
 
     task = build_freezone_translation_task(
         text=text,
@@ -382,9 +382,9 @@ async def translate_freezone_text(
     with model_gateway_request_scope(egress_context):
         response = await get_freezone_translation_agent().run(task)
     result = response.output
-    target_language: Literal["zh", "en"] = result.target_language
+    target_language: Literal["en", "vi"] = result.target_language
     if target_language == result.source_language:
-        target_language = "zh" if result.source_language == "en" else "en"
+        target_language = "vi" if result.source_language == "en" else "en"
     return (
         result.translated_text.strip(),
         result.source_language,

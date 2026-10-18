@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -32,6 +33,7 @@ from novelvideo.utils.screenplay_scene_parser import (
     split_screenplay_lines,
 )
 from novelvideo.utils.source_language import (
+    EN_LIKE_LANGUAGES,
     AssetLanguage,
     asset_language_instruction,
     detect_asset_language,
@@ -405,7 +407,7 @@ class LiteralScriptWritingWorkflow:
         self._identity_section = ""
         self._scene_section = ""
         self._prop_section = ""
-        self._output_language: AssetLanguage = "zh"
+        self._output_language: AssetLanguage = "en"
         self.last_review_passed = True
         self.last_review_summary = "逐行剧本模式"
         self.last_degraded_lines: list[int] = []
@@ -856,7 +858,7 @@ class LiteralScriptWritingWorkflow:
             speaker_kind="character",
             visual_description=(
                 "This line could not be generated; please complete it manually."
-                if self._output_language == "en"
+                if self._output_language in EN_LIKE_LANGUAGES
                 else "该行未能生成，请手动补充。"
             ),
             scene_id="",
@@ -876,7 +878,7 @@ class LiteralScriptWritingWorkflow:
             fallback_speaker = speaker
             visual_description = (
                 f"{speaker} speaks."
-                if self._output_language == "en"
+                if self._output_language in EN_LIKE_LANGUAGES
                 else f"{speaker}开口说话。"
             )
         elif speaker and is_non_character:
@@ -901,7 +903,7 @@ class LiteralScriptWritingWorkflow:
         if len(visual_description) < 5:
             visual_description = (
                 f"Visual source line: {visual_description or 'blank line'}"
-                if self._output_language == "en"
+                if self._output_language in EN_LIKE_LANGUAGES
                 else f"画面保留原文：{visual_description or '空白行'}"
             )
 

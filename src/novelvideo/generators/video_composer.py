@@ -30,9 +30,11 @@ def normalize_video_title(title: str) -> str:
 
 def _drawtext_fontfile_arg() -> str:
     for path in (
-        "/System/Library/Fonts/PingFang.ttc",
-        "/System/Library/Fonts/STHeiti Medium.ttc",
+        # Latin fonts with full Vietnamese diacritics coverage.
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
     ):
         if os.path.exists(path):
             return f":fontfile={path}"

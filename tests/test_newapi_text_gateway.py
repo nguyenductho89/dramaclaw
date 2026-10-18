@@ -512,7 +512,7 @@ def test_global_video_optimizer_wraps_plain_text_output_locally(monkeypatch, tmp
         "prompt": "镜头缓缓推近，黑衣男子抬手推门。",
     }
     task = seen["user_prompt"][0]
-    assert "Output the Chinese motion prompt directly" in task
+    assert "Output the English motion prompt directly" in task
     assert "Output JSON" not in task
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from novelvideo.cognee.pipeline import (
-    SCENE_FALLBACK_FINGERPRINT,
+    SCENE_FALLBACK_FINGERPRINT_EN,
     _ensure_directional_environment_prompt,
     _has_required_scene_environment_headings,
     normalize_scene_environment_prompt,
@@ -75,7 +75,7 @@ def test_a_valid_contract_reaches_storage_intact():
         context_lines=["▲张秉权坐在办公桌后翻看文件。"],
     )
     assert "磨砂玻璃木门" in kept
-    assert SCENE_FALLBACK_FINGERPRINT not in kept
+    assert SCENE_FALLBACK_FINGERPRINT_EN not in kept
 
 
 def test_the_fallback_never_quotes_the_rejected_prompt():
@@ -88,7 +88,7 @@ def test_the_fallback_never_quotes_the_rejected_prompt():
         time_of_day="",
         context_lines=["▲张秉权坐在办公桌后翻看文件。"],
     )
-    assert SCENE_FALLBACK_FINGERPRINT in generated
+    assert SCENE_FALLBACK_FINGERPRINT_EN in generated
     assert rejected not in generated
     # Evidence comes from the script instead.
     assert "翻看文件" in generated
@@ -102,7 +102,7 @@ def test_the_fallback_still_applies_without_any_usable_text():
         time_of_day="",
         context_lines=[],
     )
-    assert SCENE_FALLBACK_FINGERPRINT in generated
+    assert SCENE_FALLBACK_FINGERPRINT_EN in generated
 
 
 def test_english_fallback_keeps_fixed_headings_but_uses_english_bodies():

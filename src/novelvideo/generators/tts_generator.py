@@ -159,7 +159,7 @@ class TTSParams(BaseModel):
     """TTS 参数。"""
 
     text: str
-    voice: str = "zh-CN-XiaoxiaoNeural"
+    voice: str = "en-US-AriaNeural"
     rate: str = "+0%"
     pitch: str = "+0Hz"
     volume: str = "+0%"
@@ -184,20 +184,29 @@ class VoiceInfo(BaseModel):
     locale: str
 
 
-# 推荐的中文语音
+# Recommended Edge TTS voices per supported language (English / Vietnamese).
+# Edge only ships two vi-VN voices (one female, one male).
+DEFAULT_EDGE_VOICES = {"en": "en-US-AriaNeural", "vi": "vi-VN-HoaiMyNeural"}
+
+EDGE_VOICE_LOCALES = {"en": "en-US", "vi": "vi-VN"}
+
 RECOMMENDED_VOICES = {
-    # 女声
-    "xiaoxiao": "zh-CN-XiaoxiaoNeural",  # 活泼女声（默认）
-    "xiaoyi": "zh-CN-XiaoyiNeural",  # 温柔女声
-    "xiaoxuan": "zh-CN-XiaoxuanNeural",  # 知性女声
-    "xiaomo": "zh-CN-XiaomoNeural",  # 成熟女声
-    "xiaorui": "zh-CN-XiaoruiNeural",  # 儿童女声
-    "xiaoshuang": "zh-CN-XiaoshuangNeural",  # 可爱女声
-    # 男声
-    "yunxi": "zh-CN-YunxiNeural",  # 成熟男声
-    "yunjian": "zh-CN-YunjianNeural",  # 解说男声
-    "yunyang": "zh-CN-YunyangNeural",  # 新闻男声
-    "yunhao": "zh-CN-YunhaoNeural",  # 广告男声
+    "en": {
+        # female
+        "aria": "en-US-AriaNeural",  # default, lively
+        "jenny": "en-US-JennyNeural",  # friendly
+        "michelle": "en-US-MichelleNeural",  # warm
+        "ana": "en-US-AnaNeural",  # child
+        # male
+        "guy": "en-US-GuyNeural",  # mature
+        "davis": "en-US-DavisNeural",  # calm
+        "christopher": "en-US-ChristopherNeural",  # narrator
+        "eric": "en-US-EricNeural",  # news
+    },
+    "vi": {
+        "hoaimy": "vi-VN-HoaiMyNeural",  # female
+        "namminh": "vi-VN-NamMinhNeural",  # male
+    },
 }
 
 
@@ -235,7 +244,7 @@ class EdgeTTSGenerator:
             self.rate = rate or config["rate"]
             self.pitch = pitch or config["pitch"]
         else:
-            self.voice = voice or "zh-CN-XiaoxiaoNeural"
+            self.voice = voice or DEFAULT_EDGE_VOICES["en"]
             self.rate = rate or "+0%"
             self.pitch = pitch or "+0Hz"
 
@@ -386,7 +395,7 @@ class EdgeTTSGenerator:
         except (TaskCancelled, TaskTimedOut):
             raise
         except Exception:
-            # 估算：中文约 3 字/秒
+            # Unknown duration: callers fall back to a words-per-second estimate.
             return 0.0
 
     async def generate_batch(
@@ -415,7 +424,7 @@ class EdgeTTSGenerator:
 
         return results
 
-    async def list_voices(self, locale: str = "zh-CN") -> list[VoiceInfo]:
+    async def list_voices(self, locale: str = "en-US") -> list[VoiceInfo]:
         """列出可用语音。
 
         Args:
@@ -708,8 +717,8 @@ class MockTTSGenerator:
         try:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            # 估算时长（中文约 3 字/秒）
-            duration = len(text) / 3.0
+            # Estimated duration (~2.6 spoken words per second).
+            duration = max(len(text.split()), 1) / 2.6
 
             # 创建一个简单的静音 MP3（用 ffmpeg）
             try:
@@ -828,23 +837,27 @@ def create_tts_generator(
         return CosyVoiceTTSGenerator(model=model, voice=voice)
 
 
-def get_voice_by_style(style: str) -> str:
-    """根据风格获取推荐语音。
+def get_voice_by_style(style: str, language: str = "en") -> str:
+    """Return the recommended Edge voice for a style in the given language.
 
     Args:
-        style: 风格名称（narrator, storyteller, news, child, etc.）
-
-    Returns:
-        语音名称
+        style: narrator, storyteller, news, child, gentle, mature_female, mature_male
+        language: "en" or "vi"
     """
+    if language == "vi":
+        style_mapping = {
+            "narrator": "vi-VN-NamMinhNeural",
+            "news": "vi-VN-NamMinhNeural",
+            "mature_male": "vi-VN-NamMinhNeural",
+        }
+        return style_mapping.get(style, DEFAULT_EDGE_VOICES["vi"])
     style_mapping = {
-        "narrator": "zh-CN-YunjianNeural",  # 解说风格
-        "storyteller": "zh-CN-XiaoxiaoNeural",  # 讲故事风格
-        "news": "zh-CN-YunyangNeural",  # 新闻播报风格
-        "child": "zh-CN-XiaoruiNeural",  # 儿童风格
-        "gentle": "zh-CN-XiaoyiNeural",  # 温柔风格
-        "mature_female": "zh-CN-XiaomoNeural",  # 成熟女声
-        "mature_male": "zh-CN-YunxiNeural",  # 成熟男声
+        "narrator": "en-US-ChristopherNeural",
+        "storyteller": "en-US-AriaNeural",
+        "news": "en-US-EricNeural",
+        "child": "en-US-AnaNeural",
+        "gentle": "en-US-JennyNeural",
+        "mature_female": "en-US-MichelleNeural",
+        "mature_male": "en-US-GuyNeural",
     }
-
-    return style_mapping.get(style, "zh-CN-XiaoxiaoNeural")
+    return style_mapping.get(style, DEFAULT_EDGE_VOICES["en"])

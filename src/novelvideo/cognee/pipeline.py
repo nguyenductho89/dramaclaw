@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+
 import hashlib
 import json
 import re
@@ -22,6 +23,7 @@ from novelvideo.utils.bounded_concurrency import (
     map_bounded,
 )
 from novelvideo.utils.source_language import (
+    EN_LIKE_LANGUAGES,
     AssetLanguage,
     asset_language_instruction,
     detect_asset_language,
@@ -785,7 +787,7 @@ def _ensure_directional_environment_prompt(
     scene_type: str,
     time_of_day: str,
     context_lines: list[str],
-    output_language: AssetLanguage = "zh",
+    output_language: AssetLanguage = "en",
 ) -> str:
     """Ensure graph-built scene prompts are usable as a 360 spatial contract."""
     text = str(prompt or "").strip()
@@ -798,11 +800,11 @@ def _ensure_directional_environment_prompt(
     if not evidence:
         evidence = (
             f"{scene_name}, {scene_type or 'interior'} scene"
-            if output_language == "en"
+            if output_language in EN_LIKE_LANGUAGES
             else f"{scene_name}，{scene_type or 'interior'} 场景"
         )
     type_label = scene_type or "interior"
-    if output_language == "en":
+    if output_language in EN_LIKE_LANGUAGES:
         return "\n".join(
             [
                 f"正面：Use the main entrance, main wall, main fixture, or primary activity area that best identifies \"{scene_name}\" as the front view; use the source evidence \"{evidence}\" to define fixed structures and visual anchors.",

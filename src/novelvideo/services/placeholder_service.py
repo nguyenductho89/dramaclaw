@@ -32,7 +32,7 @@ async def resolve_character_names(
 def replace_placeholders_with_names(
     text: str,
     name_map: dict[str, str],
-    language: str = "zh",
+    language: str = "en",
     identity_to_name: dict[str, str] | None = None,
 ) -> str:
     """Replace {{alias}} or {{identity_id}} placeholders with display names."""
@@ -47,7 +47,7 @@ def replace_placeholders_with_names(
         for identity_id, real_name in identity_to_name.items():
             result = result.replace(f"{{{{{identity_id}}}}}", real_name)
 
-    fallback = "角色" if language == "zh" else "the character"
+    fallback = "the character"
     return re.sub(r"\{\{[^}]+\}\}", fallback, result)
 
 

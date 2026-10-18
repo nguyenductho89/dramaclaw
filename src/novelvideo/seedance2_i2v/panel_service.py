@@ -1032,7 +1032,7 @@ def _seedance2_default_prompt(
     config: Any,
     assets: list[Seedance2ResolvedAsset],
     text_overlay: dict[str, Any],
-    language: str = "zh",
+    language: str = "en",
 ) -> str:
     return build_seedance2_prompt_draft(
         mode=config.mode,
@@ -1121,7 +1121,7 @@ def _seedance2_prompt_inputs_hash(
     config: Any,
     beat: dict[str, Any],
     assets: list[Seedance2ResolvedAsset],
-    language: str = "zh",
+    language: str = "en",
 ) -> str:
     return compute_seedance2_prompt_inputs_hash(
         mode=config.mode,

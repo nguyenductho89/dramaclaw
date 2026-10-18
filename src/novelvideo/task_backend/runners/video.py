@@ -709,7 +709,7 @@ async def _run_global_optimize_video_async(
     beats = list(payload.get("beats") or [])
     characters = list(payload.get("characters") or [])
     output_dir = str(payload.get("output_dir") or ctx.output_dir)
-    language = str(payload.get("language") or "zh")
+    language = str(payload.get("language") or "en")
     manager = get_task_manager()
 
     def log(message: str, *, progress: float | None = None) -> None:

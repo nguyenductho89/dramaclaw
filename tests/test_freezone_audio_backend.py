@@ -622,7 +622,7 @@ async def test_freezone_audio_preset_speech_does_not_require_reference_voice(
         {
             "output_path": freezone_audio_speech_output_path(tmp_path, "speech-preset-1"),
             "input_text": "欢迎使用运动相机。",
-            "voice": "zh-CN-XiaoxiaoNeural",
+            "voice": "en-US-AriaNeural",
             "egress_context": local_egress_context,
         }
     ]
@@ -651,12 +651,12 @@ async def test_edge_preset_writer_forwards_egress_context(
     await audio_node._write_edge_tts_speech(
         output_path=tmp_path / "speech.mp3",
         input_text="测试旁白。",
-        voice="zh-CN-XiaoxiaoNeural",
+        voice="en-US-AriaNeural",
         egress_context=local_egress_context,
     )
 
     assert captured == {
-        "voice": "zh-CN-XiaoxiaoNeural",
+        "voice": "en-US-AriaNeural",
         "egress_context": local_egress_context,
     }
 

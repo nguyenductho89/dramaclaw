@@ -487,7 +487,7 @@ async def test_eg16b_edge_accepts_only_trusted_local_context_and_isolates_secret
     assert events == ["claim", "edge_stream", "accepted", "completed"]
     assert captured == {
         "text": "hello",
-        "voice": "zh-CN-XiaoxiaoNeural",
+        "voice": "en-US-AriaNeural",
         "rate": "+0%",
         "pitch": "+0Hz",
     }

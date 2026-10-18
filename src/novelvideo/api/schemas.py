@@ -186,7 +186,7 @@ class Seedance2PromptGenerateRequest(BaseModel):
 
 
 class BeatVideoPromptGenerateRequest(BaseModel):
-    language: str = "zh"
+    language: str = "en"
 
 
 class MiniMaxH3PromptGenerateRequest(BaseModel):
@@ -1933,8 +1933,8 @@ class FreezoneTextGenerateRequest(BaseModel):
 
 class FreezoneTextTranslateData(BaseModel):
     translated_text: str
-    source_language: Literal["zh", "en"]
-    target_language: Literal["zh", "en"]
+    source_language: Literal["en", "vi"]
+    target_language: Literal["en", "vi"]
     node_type: Literal["generic", "image", "video", "audio", "text"]
 
 

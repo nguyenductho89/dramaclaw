@@ -67,9 +67,9 @@ async def test_translate_freezone_text_trusts_model_detected_direction(
 
             class Response:
                 output = FreezoneTranslationResult(
-                    translated_text="生成一个 NovelVideo 节拍的故事板草图面板。",
+                    translated_text="Tạo một khung phác thảo storyboard cho nhịp NovelVideo.",
                     source_language="en",
-                    target_language="zh",
+                    target_language="vi",
                 )
 
             return Response()
@@ -85,9 +85,9 @@ async def test_translate_freezone_text_trusts_model_detected_direction(
 
     assert "You must decide whether the dominant natural language" in captured["task"]
     assert "[CM_6932]" in captured["task"]
-    assert translated == "生成一个 NovelVideo 节拍的故事板草图面板。"
+    assert translated == "Tạo một khung phác thảo storyboard cho nhịp NovelVideo."
     assert source_language == "en"
-    assert target_language == "zh"
+    assert target_language == "vi"
 
 
 @pytest.mark.asyncio
@@ -98,9 +98,9 @@ async def test_translate_freezone_text_flips_invalid_same_language_result(
         async def run(self, _task: str):
             class Response:
                 output = FreezoneTranslationResult(
-                    translated_text="雨夜街头",
-                    source_language="zh",
-                    target_language="zh",
+                    translated_text="Đường phố đêm mưa",
+                    source_language="vi",
+                    target_language="vi",
                 )
 
             return Response()
@@ -110,12 +110,12 @@ async def test_translate_freezone_text_flips_invalid_same_language_result(
     )
 
     translated, source_language, target_language = await translate_freezone_text(
-        text="雨夜街头",
+        text="Đường phố đêm mưa",
         node_type="image",
     )
 
-    assert translated == "雨夜街头"
-    assert source_language == "zh"
+    assert translated == "Đường phố đêm mưa"
+    assert source_language == "vi"
     assert target_language == "en"
 
 

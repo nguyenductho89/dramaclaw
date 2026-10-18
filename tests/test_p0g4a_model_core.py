@@ -600,7 +600,7 @@ async def test_c1_eg18a_pos_freezone_text_binds_only_trusted_identity(
             return SimpleNamespace(
                 output=text_node.FreezoneTranslationResult(
                     translated_text="hello",
-                    source_language="zh",
+                    source_language="vi",
                     target_language="en",
                 )
             )
@@ -609,12 +609,12 @@ async def test_c1_eg18a_pos_freezone_text_binds_only_trusted_identity(
     context = _organization_context()
 
     result = await text_node.translate_freezone_text(
-        text="你好",
+        text="Xin chào",
         node_type="text",
         egress_context=context,
     )
 
-    assert result == ("hello", "zh", "en")
+    assert result == ("hello", "vi", "en")
     assert seen == [context]
     assert runtime.current_model_gateway_context() is None
 

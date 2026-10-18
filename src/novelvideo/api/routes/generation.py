@@ -39,7 +39,6 @@ from novelvideo.api.schemas import (
     MiniMaxH3PromptGenerateRequest,
     RenderReviewRequest,
     QwenEditPromptGenerateRequest,
-    QwenEditPrompts,
     PoolSelectRequest,
     VideoPoolSelectRequest,
     GridCutRequest,
@@ -58,7 +57,11 @@ from novelvideo.api.schemas import (
     Seedance2AssetCropRequest,
     Seedance2AssetDeleteRequest,
 )
-from novelvideo.utils.source_language import detect_episode_asset_language
+from novelvideo.utils.source_language import (
+    detect_asset_language,
+    detect_episode_asset_language,
+    language_name,
+)
 from novelvideo.api.viewer_manifests import (
     build_director_stage_manifest,
     build_pano_viewer_manifest,
@@ -5235,13 +5238,6 @@ async def generate_single_video(
     return {"ok": False, "error": "单条视频生成需要 project context"}
 
 
-_VIETNAMESE_DIACRITICS_RE = re.compile(
-    "[ăâđêôơưĂÂĐÊÔƠƯ]|"
-    "[àáạảãằắặẳẵầấậẩẫèéẹẻẽềếệểễìíịỉĩòóọỏõồốộổỗờớợởỡùúụủũừứựửữỳýỵỷỹ]",
-    re.IGNORECASE,
-)
-
-
 _H3_IDENTITY_MARKER_RE = re.compile(r"\{\{([^}]+)\}\}\s*")
 
 
@@ -5302,23 +5298,15 @@ def _h3_parse_dialogue_segment(
 
 
 def _detect_h3_dialogue_language(text: str) -> str:
-    """Best-effort language tag for a MiniMax H3 `<d>[Language] ...</d>`
-    line. This repo's general asset-language contract
-    (`utils/source_language.detect_asset_language`) only distinguishes
-    zh/en, but H3's dialogue tag needs the actual spoken language name
-    (e.g. a Vietnamese short drama with Chinese-language source
-    narration/dialogue still needs `[Chinese]`, not `[Vietnamese]`) — so
-    this checks script/diacritics directly instead of reusing that
-    contract."""
+    """Language name for a MiniMax H3 `<d>[Language] ...</d>` line.
+
+    Uses the shared asset-language contract (English / Vietnamese); empty
+    dialogue keeps the historical Vietnamese default.
+    """
     sample = str(text or "")
     if not sample.strip():
         return "Vietnamese"
-    if _VIETNAMESE_DIACRITICS_RE.search(sample):
-        return "Vietnamese"
-    han = sum(1 for ch in sample if "一" <= ch <= "鿿")
-    if han:
-        return "Chinese"
-    return "English"
+    return language_name(detect_asset_language(sample))
 
 
 def _h3_char_name_for_identity(identity_id: str, character_map: dict) -> str:

@@ -16,7 +16,7 @@ from novelvideo.utils.debug_context import (
     create_debug_context,
     validate_episode_consistency,
 )
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import EN_LIKE_LANGUAGES, asset_language_instruction
 
 
 VIDEO_PROMPT_BUILDER_INSTRUCTIONS_EN = """# I2V Motion Director (SuperPower)
@@ -74,7 +74,7 @@ Output the motion prompt directly. No explanation. No markdown.
 """
 
 
-def create_video_prompt_builder_agent(language: str = "zh") -> Agent:
+def create_video_prompt_builder_agent(language: str = "en") -> Agent:
     """创建视频提示词生成 Agent。"""
     from novelvideo.config import get_superpower_pydantic_model
 
@@ -115,7 +115,7 @@ class VideoPromptBuilder:
         """返回上一次生成视频提示词时使用的上下文。"""
         return self._last_context
 
-    def _get_agent(self, language: str = "zh") -> Agent:
+    def _get_agent(self, language: str = "en") -> Agent:
         """获取指定语言的 Agent（懒加载）。"""
         if language not in self._agents:
             self._agents[language] = create_video_prompt_builder_agent(language)
@@ -153,7 +153,7 @@ class VideoPromptBuilder:
         self,
         duration: float = 5.0,
         frame_prompt: str = "",
-        language: str = "zh",
+        language: str = "en",
         frame_image_path: Optional[str] = None,
         beat_number: int | None = None,
         episode_number: int | None = None,
@@ -216,7 +216,7 @@ class VideoPromptBuilder:
             language=language,
         )
 
-        language_label = "English" if language == "en" else "中文"
+        language_label = "English" if language in EN_LIKE_LANGUAGES else "中文"
         log_agent_start(
             "视频提示词生成师",
             f"生成运动描述 ({duration:.1f}秒, {language_label})",
@@ -257,7 +257,7 @@ class VideoPromptBuilder:
                 raise RuntimeError("AI 返回空内容")
 
             # 长度校验：英文更长，放宽到 500 字符
-            max_len = 500 if language == "en" else 200
+            max_len = 500 if language in EN_LIKE_LANGUAGES else 200
             if len(result) > max_len:
                 raise RuntimeError(f"AI 返回内容过长 ({len(result)}字)，可能解析异常")
 
@@ -276,7 +276,7 @@ class VideoPromptBuilder:
             log_agent_end("视频提示词生成师", success=True, result=f"{len(result)}字")
             # dialogue beat：追加台词内容
             if audio_type == "dialogue" and dialogue_line:
-                if language == "en":
+                if language in EN_LIKE_LANGUAGES:
                     result = f'{result} Says: "{dialogue_line}"'
                 else:
                     result = f"{result}，说：{dialogue_line}"
@@ -297,10 +297,10 @@ class VideoPromptBuilder:
         narration,
         audio_type,
         dialogue_line,
-        language="zh",
+        language="en",
     ) -> str:
         """构建英文 task 模板 (SuperPower)。"""
-        if language == "en":
+        if language in EN_LIKE_LANGUAGES:
             output_label = "English"
             sentence_target = "4-6 sentences"
             if duration <= 4:
@@ -398,10 +398,10 @@ Output the motion prompt in {output_label} directly. No explanation.
     def _fallback_build(
         self,
         duration: float,
-        language: str = "zh",
+        language: str = "en",
     ) -> str:
         """回退方案：根据规则生成默认运动提示词。"""
-        if language == "en":
+        if language in EN_LIKE_LANGUAGES:
             return "The character moves naturally as the camera follows the action."
         return "角色自然动作，姿态变化，自然镜头运动"
 

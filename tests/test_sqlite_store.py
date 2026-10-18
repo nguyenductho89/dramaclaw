@@ -252,7 +252,7 @@ async def test_build_scenes_from_graph_repairs_its_own_boilerplate(
         time_of_day="",
         context_lines=["▲张秉权坐在办公桌后翻看文件。"],
     )
-    assert pipeline.SCENE_FALLBACK_FINGERPRINT in boilerplate
+    assert pipeline.SCENE_FALLBACK_FINGERPRINT_EN in boilerplate
 
     await tmp_project.sqlite_store.add_scene(
         NovelScene(
@@ -287,7 +287,7 @@ async def test_build_scenes_from_graph_repairs_its_own_boilerplate(
 
     assert added == []  # a repair is not an addition
     scene = await tmp_project.sqlite_store.get_scene("主任办公室")
-    assert pipeline.SCENE_FALLBACK_FINGERPRINT not in scene.environment_prompt
+    assert pipeline.SCENE_FALLBACK_FINGERPRINT_EN not in scene.environment_prompt
     assert "单位标识" in scene.environment_prompt
     # Only the prompt moved; generated assets and human notes stay put.
     assert scene.spatial_layout_image == "/generated/plate.png"

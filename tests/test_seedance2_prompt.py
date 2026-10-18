@@ -59,9 +59,9 @@ def test_seedance2_prompt_draft_keeps_request_params_out_of_prompt():
     assert "生成4秒" not in prompt
     assert "9:16" not in prompt
     assert "720p" not in prompt
-    assert "图片1作为起始状态和整体构图依据" in prompt
-    assert "图片2中的陆辰" in prompt
-    assert "环境为地下室_雨夜" in prompt
+    assert "Use 图片1 as the starting state and overall composition reference" in prompt
+    assert "keep the appearance of 陆辰 consistent with 图片2" in prompt
+    assert "The environment is 地下室_雨夜" in prompt
     assert "几天前，地下室中" in prompt
     assert "动作克制" in prompt
     assert "@" not in prompt
@@ -84,7 +84,7 @@ def test_seedance2_prompt_draft_includes_dialogue_text():
     )
 
     assert "别回头，跟我走" in prompt
-    assert "台词" in prompt
+    assert "Dialogue" in prompt
 
 
 def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_to_base():
@@ -115,8 +115,8 @@ def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_
         prompt_guidance="",
     )
 
-    assert "环境为客厅" in prompt
-    assert "目标场景状态：客厅_漏水" in prompt
+    assert "The environment is 客厅" in prompt
+    assert "target scene state: 客厅_漏水" in prompt
 
 
 def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_to_base():
@@ -148,9 +148,9 @@ def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_t
         prompt_guidance="",
     )
 
-    assert "环境为客厅" in prompt
-    assert "目标场景状态：客厅_漏水" in prompt
-    assert "目标时间：夜晚" in prompt
+    assert "The environment is 客厅" in prompt
+    assert "target scene state: 客厅_漏水" in prompt
+    assert "target time: 夜晚" in prompt
 
 
 def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
@@ -200,11 +200,11 @@ def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
     )
 
     assert "面馆男青年" in prompt
-    assert "参考音频1声线" in prompt
+    assert "uses the voice from 音频1" in prompt
     assert "现在啥事儿没有啊？" in prompt
     assert "放下右手的筷子" in prompt
     assert "面馆女青年" in prompt
-    assert "参考音频2声线" in prompt
+    assert "uses the voice from 音频2" in prompt
     assert "你知道研发部的主管杜晨吗？" in prompt
 
 
@@ -241,11 +241,11 @@ def test_seedance2_dialogue_draft_delegates_ambiguous_prose_to_ai():
         prompt_guidance="",
     )
 
-    assert "请语义区分动作说明和实际说出的台词" in prompt
-    assert "实际台词必须逐字完整保留" in prompt
-    assert "本 Beat 说话角色为丫鬟" in prompt
-    assert "丫鬟参考音频1声线" in prompt
-    assert "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样。" in prompt
+    assert "distinguish action directions from spoken dialogue" in prompt
+    assert "preserve every spoken word verbatim" in prompt
+    assert "the speaking character in this Beat is 丫鬟" in prompt
+    assert "丫鬟 uses the voice from 音频1" in prompt
+    assert "（清脆出声，探头打趣）说起来你和赵小王爷长得一模一样" in prompt
 
 
 def test_seedance2_dialogue_validation_checks_explicit_lines_and_audio_labels():
@@ -443,9 +443,9 @@ def test_seedance2_prompt_uses_identity_text_when_reference_image_is_missing():
         text_overlay=None,
     )
 
-    assert "面馆男青年造型按提示词生成：男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽" in prompt
+    assert "generate 面馆男青年's appearance from this description: 男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽" in prompt
     assert (
-        "画面呈现面馆男青年（男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽）放下易拉罐" in prompt
+        "The scene shows 面馆男青年（男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽）放下易拉罐" in prompt
     )
 
 
@@ -490,7 +490,7 @@ def test_seedance2_prompt_binds_prop_marker_to_reference_image():
         prompt_guidance="",
     )
 
-    assert "图片2中的TOKEN道具" in prompt
+    assert "keep the shape, material, and details of the TOKEN prop consistent with 图片2" in prompt
     assert "[[TOKEN]]" not in prompt
 
 
@@ -524,8 +524,8 @@ def test_seedance2_prompt_uses_prop_fallback_when_reference_image_is_missing():
         prompt_guidance="",
     )
 
-    assert "易拉罐道具按提示词生成：红色铝制饮料罐，表面有细小水珠和拉环结构" in prompt
-    assert "桌面上放着易拉罐（红色铝制饮料罐，表面有细小水珠和拉环结构）" in prompt
+    assert "generate the 易拉罐 prop from this description: 红色铝制饮料罐，表面有细小水珠和拉环结构" in prompt
+    assert "The scene shows 桌面上放着易拉罐（红色铝制饮料罐，表面有细小水珠和拉环结构）" in prompt
 
 
 def test_seedance2_prompt_composer_task_exposes_prop_assets_and_fallbacks():
@@ -633,7 +633,7 @@ def test_seedance2_prompt_composer_task_includes_scene_ref_and_dialogue_text():
     assert '"variant_id"' not in task
     assert '"dialogue": "谢铮低声说：' in task
     assert "别回头，跟我走" in task
-    assert "实际台词必须逐字完整保留" in task
+    assert "Preserve spoken dialogue verbatim" in task
 
 
 def test_seedance2_prompt_hash_ignores_request_only_video_params():
@@ -758,7 +758,7 @@ async def test_seedance2_prompt_composer_accepts_plain_text_output(monkeypatch):
 
     class FakeAgent:
         async def run(self, task):
-            assert "只输出最终 prompt" in task
+            assert "Output only the final prompt." in task
             return SimpleNamespace(output="  根据图片1生成一段电影感视频。  ")
 
     monkeypatch.setattr(
@@ -824,8 +824,9 @@ def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens()
             },
             "en",
         ),
-        ({"visual_description": "知薇穿过长廊。"}, "zh"),
-        ({"visual_description": "美咲は廊下を歩く。"}, "zh"),
+        ({"visual_description": "知薇穿过长廊。"}, "en"),
+        ({"visual_description": "美咲は廊下を歩く。"}, "en"),
+        ({"visual_description": "Cô ấy bước qua hành lang dài."}, "vi"),
     ],
 )
 def test_seedance2_language_uses_script_fields_and_ignores_generated_prompt(
@@ -858,7 +859,7 @@ async def test_seedance2_english_generation_keeps_english_fallback():
     assert "画面呈现" not in result.prompt
 
 
-async def test_seedance2_english_fallback_omits_chinese_freeform_guidance():
+async def test_seedance2_english_fallback_keeps_non_vietnamese_freeform_guidance():
     from novelvideo.seedance2_i2v.models import Seedance2I2VMode
     from novelvideo.seedance2_i2v.prompt import generate_seedance2_prompt
 
@@ -877,7 +878,8 @@ async def test_seedance2_english_fallback_omits_chinese_freeform_guidance():
 
     assert result.used_ai is False
     assert "The scene shows Maya opens the door." in result.prompt
-    assert "镜头" not in result.prompt
+    # Non-Vietnamese text is treated as English now, so freeform guidance is kept.
+    assert "镜头：缓慢推进" in result.prompt
 
 
 async def test_seedance2_english_fallback_localizes_structured_guidance():
@@ -903,6 +905,7 @@ async def test_seedance2_english_fallback_localizes_structured_guidance():
         "Camera: Specify shot size, viewpoint, movement speed, and direction "
         "so the camera move is clear and executable."
     ) in result.prompt
+    # The Chinese template text is never emitted for English output.
     assert "镜头" not in result.prompt
 
 

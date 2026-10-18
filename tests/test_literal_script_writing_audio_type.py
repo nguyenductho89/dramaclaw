@@ -518,7 +518,7 @@ async def test_literal_workflow_falls_back_per_line_and_continues(monkeypatch):
     assert len(script.beats) == 2
     assert script.beats[0].audio_type == "dialogue"
     assert script.beats[0].narration_segment == "走。"
-    assert script.beats[0].visual_description == "谢铮开口说话。"
+    assert script.beats[0].visual_description == "谢铮 speaks."
     assert script.beats[1].visual_description == "屋内烛火轻轻摇晃。"
     assert store.persisted is script
     assert workflow.last_degraded_lines == [1]
@@ -560,7 +560,7 @@ async def test_literal_workflow_does_not_retry_content_filter_and_uses_placehold
     assert len(script.beats) == 2
     assert script.beats[0].audio_type == "silence"
     assert script.beats[0].narration_segment == ""
-    assert script.beats[0].visual_description == "该行未能生成，请手动补充。"
+    assert script.beats[0].visual_description == "This line could not be generated; please complete it manually."
     assert "匕首" not in script.beats[0].model_dump_json()
     assert script.beats[1].visual_description == "屋内烛火轻轻摇晃。"
     assert "沈晚握紧匕首。" not in agent.prompts[1]
@@ -602,7 +602,7 @@ async def test_literal_workflow_does_not_send_unprocessed_next_line(monkeypatch)
     assert agent.calls == 2
     assert "沈晚握紧匕首。" not in agent.prompts[0]
     assert script.beats[0].visual_description == "屋内烛火轻轻摇晃。"
-    assert script.beats[1].visual_description == "该行未能生成，请手动补充。"
+    assert script.beats[1].visual_description == "This line could not be generated; please complete it manually."
     assert workflow.last_degraded_lines == [2]
 
 

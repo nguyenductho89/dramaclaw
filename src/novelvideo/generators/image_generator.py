@@ -1067,7 +1067,7 @@ class MockImageGenerator:
         # 添加文字
         text = f"Mock Image\n{prompt[:50]}..."
         try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 24)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
         except Exception:
             font = ImageFont.load_default()
 

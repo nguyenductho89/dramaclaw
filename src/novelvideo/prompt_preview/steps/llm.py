@@ -128,7 +128,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
 
 def _language(scope: PreviewScope) -> str:
     text = _novel_text(scope)
-    return detect_asset_language(text) if text else "zh"
+    return detect_asset_language(text) if text else "en"
 
 
 def _system_only(step: str, label: str, builder, note: str) -> StepSpec:

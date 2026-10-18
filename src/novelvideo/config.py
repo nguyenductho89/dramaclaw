@@ -957,7 +957,7 @@ def get_character_image_model() -> str:
 # =============================================================================
 
 TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "cosyvoice")  # 默认 CosyVoice
-EDGE_TTS_VOICE = os.environ.get("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
+EDGE_TTS_VOICE = os.environ.get("EDGE_TTS_VOICE", "en-US-AriaNeural")
 VOLCENGINE_TTS_ENDPOINT = os.environ.get(
     "VOLCENGINE_TTS_ENDPOINT", "https://openspeech.bytedance.com/api/v1/tts"
 )
@@ -970,15 +970,15 @@ DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
 # CosyVoice 语速倍率（范围 [0.5, 2.0]，1.0 为标准速度）
 COSYVOICE_SPEECH_RATE = float(os.environ.get("COSYVOICE_SPEECH_RATE", "1.2"))
 
-# TTS 语速估算（实测 1.0x 均值 4.45 字/秒 × 1.3x 加速 ≈ 5.8 字/秒）
-TTS_CHARS_PER_SECOND = float(os.environ.get("TTS_CHARS_PER_SECOND", "5.8"))
+# TTS pace estimate in spoken words per second (narration, accelerated).
+TTS_WORDS_PER_SECOND = float(os.environ.get("TTS_WORDS_PER_SECOND", "3.0"))
 
 # Dialogue beat TTS 配置（角色台词使用不同语速）
 COSYVOICE_DIALOGUE_SPEECH_RATE = float(
     os.environ.get("COSYVOICE_DIALOGUE_SPEECH_RATE", "1.0")
 )
-TTS_DIALOGUE_CHARS_PER_SECOND = float(
-    os.environ.get("TTS_DIALOGUE_CHARS_PER_SECOND", "4.45")
+TTS_DIALOGUE_WORDS_PER_SECOND = float(
+    os.environ.get("TTS_DIALOGUE_WORDS_PER_SECOND", "2.5")
 )
 
 

@@ -12,7 +12,7 @@ import pytest
 
 from novelvideo.cognee.pipeline import (
     SCENE_ENRICHMENT_CACHE_TYPE,
-    SCENE_FALLBACK_FINGERPRINT,
+    SCENE_FALLBACK_FINGERPRINT_EN,
     StoreSceneBuildCache,
     _ensure_directional_environment_prompt,
     enrich_scene_environment_from_context,
@@ -577,7 +577,7 @@ def test_the_generated_fallback_is_never_cacheable():
     Caching it would freeze boilerplate in as the permanent answer: every later
     rebuild would replay it and never retry the model.
     """
-    assert SCENE_FALLBACK_FINGERPRINT in FALLBACK_PROMPT
+    assert SCENE_FALLBACK_FINGERPRINT_EN in FALLBACK_PROMPT
     assert not is_cacheable_scene_prompt(FALLBACK_PROMPT)
 
 

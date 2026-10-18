@@ -45,7 +45,7 @@ USER_VOICE_SCOPE = "user_custom"
 DEFAULT_PRESET_TTS_MODEL = "edge-tts"
 LEGACY_PRESET_TTS_MODELS = {"qwen3-tts-flash", "LingShan-TTS-2"}
 EDGE_PRESET_VOICE_ALIASES = {
-    "Serena": "zh-CN-XiaoxiaoNeural",
+    "Serena": "en-US-AriaNeural",
 }
 VOICE_FILE_UNREADABLE_MESSAGE = "声线文件无法读取，请重新选择或检查文件是否完整"
 

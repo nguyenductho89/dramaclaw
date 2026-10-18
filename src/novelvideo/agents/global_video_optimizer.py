@@ -15,7 +15,7 @@ from pydantic_ai.output import NativeOutput
 from PIL import Image as PILImage
 
 from novelvideo.brainclaw_contract import BrainClawProfile
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import EN_LIKE_LANGUAGES, asset_language_instruction
 
 
 class ReviewResult(BaseModel):
@@ -178,7 +178,7 @@ def create_global_video_reviewer_agent(language: str = "en") -> Agent:
     )
 
 
-def create_global_video_optimizer_agent(language: str = "zh") -> Agent:
+def create_global_video_optimizer_agent(language: str = "en") -> Agent:
     """创建全局视频优化 Agent。"""
     from novelvideo.config import get_newapi_text_pydantic_model
 
@@ -210,7 +210,7 @@ class GlobalVideoPromptOptimizer:
         self._agents: dict[str, Agent] = {}
         self._review_agent: Optional[Agent] = None
 
-    def _get_agent(self, language: str = "zh") -> Agent:
+    def _get_agent(self, language: str = "en") -> Agent:
         if language not in self._agents:
             self._agents[language] = create_global_video_optimizer_agent(language)
         return self._agents[language]
@@ -255,7 +255,7 @@ class GlobalVideoPromptOptimizer:
         beat: dict,
         sketch_image_path: str,
         character_color_map: dict,
-        language: str = "zh",
+        language: str = "en",
         prev_beat: dict | None = None,
         next_beat: dict | None = None,
         prev_prompt: str | None = None,
@@ -348,7 +348,7 @@ class GlobalVideoPromptOptimizer:
                 position_hint += "Vary shot scale and angle from adjacent beats to create visual rhythm."
 
         language_instruction = asset_language_instruction(language)
-        output_label = "English" if language == "en" else "Chinese"
+        output_label = "English" if language in EN_LIKE_LANGUAGES else "Chinese"
         task = f"""Generate a first-frame motion prompt for Beat {bn}. You see the sketch frame for this beat.
 {position_hint}
 ## Character Color Mapping
@@ -401,8 +401,8 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         if audio_type == "dialogue":
             line = beat.get("narration_segment", "")
             if line and line not in result["prompt"]:
-                dialogue_prefix = "Says:" if language == "en" else "说："
-                separator = " " if language == "en" else "，"
+                dialogue_prefix = "Says:" if language in EN_LIKE_LANGUAGES else "说："
+                separator = " " if language in EN_LIKE_LANGUAGES else "，"
                 result["prompt"] = (
                     f"{result['prompt']}{separator}{dialogue_prefix} {line}"
                 )
@@ -417,7 +417,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         sketch_image_paths: list[str],
         character_color_map: dict,
         total_beats: int,
-        language: str = "zh",
+        language: str = "en",
         beats: list[dict] | None = None,
         sketches_dir: str | None = None,
         progress_callback=None,

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import io
 
-import pytest
 from PIL import Image
 
 from novelvideo.generators import nanobanana_grid as grid

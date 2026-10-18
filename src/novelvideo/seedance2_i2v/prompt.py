@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import hashlib
 import json
 import re
@@ -17,6 +18,7 @@ from novelvideo.models import (
 from novelvideo.seedance2_i2v.models import Seedance2I2VMode
 from novelvideo.seedance2_i2v.spoken_dialogue import speaker_display_name
 from novelvideo.utils.source_language import (
+    EN_LIKE_LANGUAGES,
     AssetLanguage,
     asset_language_instruction,
     detect_asset_language,
@@ -109,18 +111,18 @@ def _beat_spoken_text(beat: dict[str, Any]) -> str:
 
 
 def _beat_spoken_label(
-    beat: dict[str, Any], language: AssetLanguage = "zh"
+    beat: dict[str, Any], language: AssetLanguage = "en"
 ) -> str:
     if _text(beat.get("audio_type")) == "dialogue" or _text(beat.get("dialogue")):
-        return "Dialogue" if language == "en" else "台词"
-    return "Narration" if language == "en" else "旁白/解说"
+        return "Dialogue" if language in EN_LIKE_LANGUAGES else "台词"
+    return "Narration" if language in EN_LIKE_LANGUAGES else "旁白/解说"
 
 
-def _clean_sentence(value: Any, language: AssetLanguage = "zh") -> str:
+def _clean_sentence(value: Any, language: AssetLanguage = "en") -> str:
     text = _sentence_text(value)
     if not text:
         return ""
-    return f"{text}." if language == "en" else f"{text}。"
+    return f"{text}." if language in EN_LIKE_LANGUAGES else f"{text}。"
 
 
 def _asset_value(asset: Any, name: str, default: Any = "") -> Any:
@@ -157,7 +159,7 @@ def _desired_scene_ref_label(beat: dict[str, Any]) -> str:
 def _scene_ref_label(
     beat: dict[str, Any],
     assets: list[Any] | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     asset_label = _selected_scene_asset_label(assets)
     desired_label = _desired_scene_ref_label(beat)
@@ -167,25 +169,25 @@ def _scene_ref_label(
         if desired_label and desired_label != asset_label:
             details.append(
                 f"target scene state: {desired_label}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"目标场景状态：{desired_label}"
             )
         if desired_time:
             details.append(
                 f"target time: {desired_time}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"目标时间：{desired_time}"
             )
         if details:
-            separator = "; " if language == "en" else "；"
+            separator = "; " if language in EN_LIKE_LANGUAGES else "；"
             return f"{asset_label} ({separator.join(details)})"
         return asset_label
     if desired_label and desired_time:
-        if language == "en":
+        if language in EN_LIKE_LANGUAGES:
             return f"{desired_label} (target time: {desired_time})"
         return f"{desired_label}（目标时间：{desired_time}）"
     if desired_time:
-        return f"target time: {desired_time}" if language == "en" else f"目标时间：{desired_time}"
+        return f"target time: {desired_time}" if language in EN_LIKE_LANGUAGES else f"目标时间：{desired_time}"
     return desired_label
 
 
@@ -203,8 +205,8 @@ def normalize_seedance2_editor_prompt(prompt: str) -> str:
 def _guidance_matches_language(guidance: str, language: AssetLanguage) -> bool:
     """Keep rule-based fallbacks inside the supported output-language contract."""
 
-    if language == "en":
-        return detect_asset_language(guidance) == "en"
+    if language in EN_LIKE_LANGUAGES:
+        return detect_asset_language(guidance) in EN_LIKE_LANGUAGES
     if re.search(r"[\u3040-\u30ff\uac00-\ud7af]", guidance):
         return False
     return bool(re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", guidance))
@@ -350,7 +352,7 @@ def _prop_prompt_fallbacks(assets: list[Any] | None) -> dict[str, str]:
 def _beat_spoken_prompt_fragment(
     beat: dict[str, Any],
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     spoken = _beat_spoken_text(beat)
     if not spoken:
@@ -363,7 +365,7 @@ def _beat_spoken_prompt_fragment(
             continue
         identity_id = _text(_asset_value(asset, "identity_id"))
         title = speaker_display_name(identity_id) or _text(_asset_value(asset, "label"))
-        if language == "en":
+        if language in EN_LIKE_LANGUAGES:
             voice_references.append(
                 f"{title} uses the voice from {label}"
                 if title
@@ -379,19 +381,19 @@ def _beat_spoken_prompt_fragment(
     if speaker:
         context.append(
             f"the speaking character in this Beat is {speaker}"
-            if language == "en"
+            if language in EN_LIKE_LANGUAGES
             else f"本 Beat 说话角色为{speaker}"
         )
     if voice_references:
         context.append(
             "voice mapping: " + ", ".join(dict.fromkeys(voice_references))
-            if language == "en"
+            if language in EN_LIKE_LANGUAGES
             else "声线对应：" + "、".join(dict.fromkeys(voice_references))
         )
-    context_text = ("; " if language == "en" else "；").join(context)
+    context_text = ("; " if language in EN_LIKE_LANGUAGES else "；").join(context)
     if context_text:
-        context_text = f"; {context_text}" if language == "en" else f"；{context_text}"
-    if language == "en":
+        context_text = f"; {context_text}" if language in EN_LIKE_LANGUAGES else f"；{context_text}"
+    if language in EN_LIKE_LANGUAGES:
         return (
             "Original dialogue and performance text (distinguish action directions "
             "from spoken dialogue; preserve every spoken word verbatim"
@@ -406,7 +408,7 @@ def _beat_spoken_prompt_fragment(
 def _text_with_identity_references(
     text: Any,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     identity_labels = _identity_reference_labels(assets)
     identity_fallbacks = _identity_prompt_fallbacks(assets)
@@ -418,7 +420,7 @@ def _text_with_identity_references(
         if image_label:
             return (
                 f"{character} from {image_label}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{image_label}中的{character}"
             )
         fallback_text = identity_fallbacks.get(identity_id)
@@ -432,7 +434,7 @@ def _text_with_identity_references(
 def _text_with_asset_references(
     text: Any,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     prop_labels = _prop_reference_labels(assets)
     prop_fallbacks = _prop_prompt_fallbacks(assets)
@@ -443,7 +445,7 @@ def _text_with_asset_references(
         if image_label:
             return (
                 f"the {prop_id} prop from {image_label}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{image_label}中的{prop_id}道具"
             )
         fallback_text = prop_fallbacks.get(prop_id)
@@ -459,7 +461,7 @@ def _reference_sentence_for_assets(
     *,
     mode: Seedance2I2VMode | str,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     mode = Seedance2I2VMode(mode)
     image_parts: list[str] = []
@@ -477,7 +479,7 @@ def _reference_sentence_for_assets(
         if media_type == "audio" or label.startswith("音频"):
             audio_parts.append(
                 f"{label} as {title or 'an audio reference'}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}作为{title or '声音参考'}"
             )
             continue
@@ -485,21 +487,21 @@ def _reference_sentence_for_assets(
         if mode == Seedance2I2VMode.FIRST_FRAME:
             image_parts.append(
                 f"{label} as the first frame"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}作为首帧画面"
             )
             continue
         if mode == Seedance2I2VMode.FIRST_LAST_FRAME and key == "last_frame":
             image_parts.append(
                 f"{label} as the last frame"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}作为尾帧画面"
             )
             continue
         if key == "first_frame":
             image_parts.append(
                 f"{label} as the starting state and overall composition reference"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}作为起始状态和整体构图依据"
             )
             continue
@@ -507,32 +509,32 @@ def _reference_sentence_for_assets(
             character, _identity = _split_identity_label(identity_id)
             image_parts.append(
                 f"keep the appearance of {character} consistent with {label}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}中的{character}形象保持人物特征一致"
             )
             continue
         if prop_id:
             image_parts.append(
                 f"keep the shape, material, and details of the {prop_id} prop consistent with {label}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}中的{prop_id}道具保持物体造型、材质和细节一致"
             )
             continue
         if key.startswith("scene:"):
             image_parts.append(
                 f"{label} as the reference for {title or 'the scene'}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{label}作为{title or '场景'}参考"
             )
             continue
         if note:
             image_parts.append(
-                f"{label} for {note}" if language == "en" else f"{label}用于{note}"
+                f"{label} for {note}" if language in EN_LIKE_LANGUAGES else f"{label}用于{note}"
             )
             continue
         image_parts.append(
             f"{label} as {title or 'a visual reference'}"
-            if language == "en"
+            if language in EN_LIKE_LANGUAGES
             else f"{label}作为{title or '参考图'}"
         )
 
@@ -548,17 +550,17 @@ def _reference_sentence_for_assets(
             character, _identity = _split_identity_label(identity_id)
             image_parts.append(
                 f"generate {character}'s appearance from this description: {fallback_text}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{character}造型按提示词生成：{fallback_text}"
             )
         elif prop_id:
             image_parts.append(
                 f"generate the {prop_id} prop from this description: {fallback_text}"
-                if language == "en"
+                if language in EN_LIKE_LANGUAGES
                 else f"{prop_id}道具按提示词生成：{fallback_text}"
             )
 
-    if language == "en":
+    if language in EN_LIKE_LANGUAGES:
         if mode == Seedance2I2VMode.FIRST_LAST_FRAME and len(image_parts) >= 2:
             base = f"Use {image_parts[0]} and {image_parts[1]}, with a natural video transition"
         elif mode == Seedance2I2VMode.FIRST_FRAME and image_parts:
@@ -591,7 +593,7 @@ def _reference_sentence_for_assets(
 
 def build_text_overlay_prompt_fragment(
     text_overlay: dict[str, Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     overlay = text_overlay or {}
     if not overlay.get("enabled"):
@@ -608,7 +610,7 @@ def build_text_overlay_prompt_fragment(
     timing = _sentence_text(overlay.get("timing")) or "全片持续"
     style = _sentence_text(overlay.get("style")) or "干净易读"
     speaker = _text(overlay.get("speaker"))
-    if language == "en":
+    if language in EN_LIKE_LANGUAGES:
         kind_label = {
             "ad_copy": "advertising copy",
             "subtitle": "subtitle",
@@ -645,7 +647,7 @@ def build_seedance2_prompt_draft(
     prompt_guidance: str = "",
     prompt_guidance_template_keys: list[str] | tuple[str, ...] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     """Build a model-facing draft prompt without API-only video params."""
 
@@ -677,7 +679,7 @@ def build_seedance2_prompt_draft(
     manual = normalize_seedance2_editor_prompt(manual_prompt_reference)
 
     lines = [_clean_sentence(reference, language)]
-    if language == "en":
+    if language in EN_LIKE_LANGUAGES:
         if visual:
             lines.append(_clean_sentence(f"The scene shows {_sentence_text(visual)}", language))
         if scene:
@@ -733,7 +735,7 @@ def compute_seedance2_prompt_inputs_hash(
     text_overlay: dict[str, Any] | None,
     prompt_guidance: str = "",
     prompt_guidance_template_keys: list[str] | tuple[str, ...] | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     """Hash only prompt-relevant inputs, excluding request-only video controls."""
 
@@ -776,7 +778,7 @@ def build_seedance2_prompt_composer_task(
     draft_prompt: str,
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     payload = {
         "mode": Seedance2I2VMode(mode).value,
@@ -805,7 +807,7 @@ def build_seedance2_prompt_composer_task(
         "rule_based_draft_prompt": normalize_seedance2_editor_prompt(draft_prompt),
     }
     language_rule = asset_language_instruction(language)
-    if language == "en":
+    if language in EN_LIKE_LANGUAGES:
         return (
             "Write the final Seedance 2.0 image-to-video prompt from the JSON below.\n\n"
             "Hard requirements:\n"
@@ -840,7 +842,7 @@ def build_seedance2_prompt_composer_task(
     )
 
 
-def create_seedance2_prompt_composer_agent(language: AssetLanguage = "zh"):
+def create_seedance2_prompt_composer_agent(language: AssetLanguage = "en"):
     from pydantic_ai import Agent
 
     from novelvideo.config import get_newapi_text_pydantic_model
@@ -870,7 +872,7 @@ async def compose_seedance2_prompt_with_agent(
     draft_prompt: str,
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> str:
     agent = create_seedance2_prompt_composer_agent(language)
     result = await agent.run(
@@ -903,7 +905,7 @@ async def generate_seedance2_prompt(
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
     composer: Seedance2PromptComposer | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = "en",
 ) -> Seedance2PromptGeneration:
     """Generate a Seedance 2.0 prompt, preferring AI and falling back to rules."""
 

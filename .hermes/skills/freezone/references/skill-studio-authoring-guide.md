@@ -1,585 +1,585 @@
-# 虾画 Skill Studio 作者指南
+# DramaClaw Skill Studio Authoring Guide
 
-这份指南用于 Skill Studio 创建、编辑、总结、沉淀或保存 Skill / Recipe 的场景，包括：
+This guide applies when Skill Studio creates, edits, summarizes, distills, or saves a Skill / Recipe, including:
 
-- 用户从零描述一个想要的新 Skill / Recipe。
-- 用户根据某个工具、节点能力或 tool schema 创建 Skill / Recipe。
-- 用户明确要求把当前虾画画布、当前流程、选中节点或已有工作流总结、沉淀、保存、转成 Skill / Recipe。
+- The user describes a brand-new Skill / Recipe from scratch.
+- The user creates a Skill / Recipe from a tool, a node capability, or a tool schema.
+- The user explicitly asks to summarize, distill, save, or convert the current DramaClaw canvas, the current flow, the selected nodes, or an existing workflow into a Skill / Recipe.
 
-目标不是把字段填满，也不是描述画布里“有什么节点”，而是提炼这套能力“为什么能复用”。好的 Skill 应该让下一次类似项目能按同一方法规划、生成、审核和局部返工。
+The goal is not to fill in every field, and not to describe "which nodes are on the canvas". It is to extract why this capability is reusable. A good Skill lets the next similar project be planned, generated, reviewed, and partially reworked with the same method.
 
-## 0. 先判定来源模式
+## 0. Determine the source mode first
 
-在做 capability modeling、读取画布或提问前，必须先判定本轮 Skill Studio 的来源模式。当前处在虾画界面、前端注入了 canvas ontology，并不等于用户要从当前画布沉淀 Skill。
+Before capability modeling, reading the canvas, or asking questions, you must determine the source mode of this Skill Studio round. Being inside the DramaClaw UI with a canvas ontology injected by the frontend does not mean the user wants to distill a Skill from the current canvas.
 
 ### `new_from_user_brief`
 
-用户说“我想做 / 新建 / 创建 / 制作一个 X Skill / Recipe”，但没有明确说“当前画布 / 当前流程 / 选中节点 / 这个项目 / 这个工作流 / 已有工作流”时，默认是从用户简述创建新 Skill。
+When the user says "I want to make / create / build an X Skill / Recipe" without explicitly saying "the current canvas / the current flow / the selected nodes / this project / this workflow / an existing workflow", the default is to create a new Skill from the user's brief.
 
-规则：
+Rules:
 
-- 主来源是用户文字和后续回答。
-- 当前画布只能作为环境背景，不是内容证据。
-- 不要读取节点详情、节点 schema、连线目录或把 ontology 当案例事实。
-- 不要让当前画布影响 Skill 名称、关键词、description、Recipe 边界或约束。
-- 不要问“是否保留当前项目具体案例 / 当前品牌 / 当前角色 / 当前剧情”。
-- 如果用户简述很短，先问 3-5 个高层问题，覆盖主题/领域、受众/场景、输出范围、风格/语气、工作流粒度。
+- The primary source is the user's text and later answers.
+- The current canvas is environmental background only, not content evidence.
+- Do not read node details, node schemas, or the link catalog, and do not treat the ontology as case facts.
+- Do not let the current canvas influence the Skill name, keywords, description, Recipe boundaries, or constraints.
+- Do not ask "keep the specific case / brand / characters / plot of the current project?".
+- If the user's brief is short, first ask 3-5 high-level questions covering topic/domain, audience/scenario, output scope, style/tone, and workflow granularity.
 
 ### `distill_from_canvas`
 
-只有当用户明确说“把当前画布 / 当前流程 / 选中节点 / 这个项目 / 这个工作流 / 已有工作流总结、沉淀、保存、转成 Skill / Recipe”时，才进入画布沉淀。
+Only when the user explicitly says to summarize, distill, save, or convert "the current canvas / the current flow / the selected nodes / this project / this workflow / an existing workflow" into a Skill / Recipe do you enter canvas distillation.
 
-规则：
+Rules:
 
-- 问任何画布沉淀问题前，必须先调用 `freezone_get_canvas_ontology` 读取画布证据。不要用 canvas summary 作为 Skill Studio 提问依据。
-- 如果 ontology 缺少风格、prompt、关键媒体或依赖关系证据，再补读少数关键节点详情，例如主角色锚点、道具锚点、核心分镜、最终合成节点。不要没读 ontology 就直接提问。
-- 先做 `canvas_workflow_analysis` 和 `prompt_evidence_analysis`。
-- 首轮问题必须基于画布证据生成 2-4 个高质量问题；每题通常给 3-5 个用户看得懂的选项，除非确实只有二选一。不要固定只问“保留具体案例还是抽象模板”和“复用方式”两个问题。
-- 提问前先识别当前制作风格和可复用协议，例如制作类型、视觉风格、镜头/构图语言、角色/道具锚点、分镜或视频阶段、音频/合成规则、硬约束和可变输入。问题和选项要带出这些识别结果，不要只说“当前案例”。
-- 面向用户提问时不要出现 `Recipe`、`Recipes`、`配方`、`allowed_recipe_ids`、`workflow_templates`、`videoCompose`、`schema` 等内部实现词；用“能力模块”“执行步骤”“复用方式”“细粒度复用”“简化复用”等产品语言表达。
-- 面向用户的所有 Skill Studio 内容必须跟随用户当前语言：用户用中文就用自然中文，用户用英文就用自然英文。分析摘要、问题、选项、进度说明和工具后的自然语言回复都要一致；不要中英混杂。中文用户场景下，不要输出英文小标题或英文过渡句，例如 `Prompt evidence`、`creative contract`、`Let me check`、`Now I'll submit`。
-- 问题卡片前先用一句话说明你基于画布看到了什么，例如“我看到这张画布像是一个广告短片流程：先固定角色和道具，再做分镜，再生成逐镜视频，最后加音频并合成。”不要暴露 ontology、schema 或工具名。
-- 仍然不要只按节点类型摘要。
+- Before asking any canvas-distillation question, you must call `freezone_get_canvas_ontology` to read the canvas evidence. Do not use the canvas summary as the basis for Skill Studio questions.
+- If the ontology lacks evidence for style, prompts, key media, or dependencies, read the details of a few key nodes, such as the main character anchor, prop anchors, core storyboard, and the final composition node. Never ask questions without reading the ontology first.
+- Do `canvas_workflow_analysis` and `prompt_evidence_analysis` first.
+- The first round of questions must be 2-4 high-quality questions based on the canvas evidence; each usually offers 3-5 options the user can understand, unless it is genuinely a two-way choice. Do not always ask only the two fixed questions "keep the specific case or abstract template" and "reuse mode".
+- Before asking, identify the current production style and the reusable protocol, such as production type, visual style, shot/composition language, character/prop anchors, storyboard or video stages, audio/composition rules, hard constraints, and variable inputs. Questions and options should surface these findings instead of just saying "the current case".
+- When asking the user, do not use internal implementation terms such as `Recipe`, `Recipes`, `allowed_recipe_ids`, `workflow_templates`, `videoCompose`, or `schema`; use product language such as "capability module", "execution steps", "reuse mode", "fine-grained reuse", and "simplified reuse".
+- All user-facing Skill Studio content must follow the user's current language: if the user writes in Chinese, answer in natural Chinese; if in English, in natural English. Analysis summaries, questions, options, progress notes, and the natural-language reply after tool calls must all be consistent; do not mix languages. Do not emit headings or transitions in a language the user is not using, for example `Prompt evidence`, `creative contract`, `Let me check`, `Now I'll submit`, when the user is writing in another language.
+- Before the question cards, state in one sentence what you saw on the canvas, for example "This canvas looks like an ad short flow: lock the characters and props first, then storyboard, then generate shot-by-shot video, and finally add audio and compose." Do not expose the ontology, schema, or tool names.
+- Still do not summarize only by node type.
 
 ### `edit_existing_catalog`
 
-当用户要修改已有 Skill / Recipe、刚保存的配置或当前草稿时，来源是已有配置/草稿，不是当前画布。需要时读取已保存配置，再做局部编辑或追问。
+When the user wants to modify an existing Skill / Recipe, a configuration just saved, or the current draft, the source is the existing configuration/draft, not the current canvas. Read the saved configuration when needed, then make a local edit or ask a follow-up.
 
-规则：
+Rules:
 
-- 当前草稿/已保存配置只是被修改对象，不是用户的修改意图。
-- 不要从草稿内容、Recipe 结构、字段缺陷或你自己的优化判断里推断用户想改什么。
-- 用户只点击“让 AI 调整”或只选择“基本信息 / 输入参数 / 能力模块内容 / 约束规则 / 质量标准 / 执行流程”等泛泛分类时，不能直接改草稿，必须继续追问一个更具体的问题。
-- 只有用户明确给出“改哪个目标 + 怎么改”时，才能调用 `freezone_patch_agent_catalog_draft` 或替换对应 Skill / Recipe。
-- 未获得明确修改方向前，禁止自行拆分/合并步骤，禁止增删 Recipe，禁止改引用关系，禁止把内部结构优化包装成“你希望……”。
+- The current draft/saved configuration is only the object being modified, not the user's modification intent.
+- Do not infer what the user wants to change from the draft content, the Recipe structure, field defects, or your own optimization judgment.
+- If the user only clicks "Let AI adjust" or only picks a generic category such as "basic info / input parameters / capability module content / constraints / quality standards / execution flow", you must not change the draft directly; keep asking a more specific question.
+- Only when the user explicitly states "which target + how to change it" may you call `freezone_patch_agent_catalog_draft` or replace the corresponding Skill / Recipe.
+- Until an explicit modification direction is given, do not split/merge steps on your own, do not add or remove Recipes, do not change reference relationships, and do not dress up internal structural optimizations as "you would like...".
 
-## 1. 先做 capability modeling
+## 1. Do capability modeling first
 
-无论来源是用户一句话、tool schema，还是当前画布，都先在内部完成 `capability modeling`。不要直接沿着 schema 字段逐项生成。
+Whether the source is a one-line user brief, a tool schema, or the current canvas, complete `capability modeling` internally first. Do not generate field by field along the schema.
 
-必须先判断：
+You must first determine:
 
-- **目标用户**：这个 Skill 帮谁解决什么具体创作问题。
-- **输入来源**：用户文字、已有节点、参考图、视频片段、音频、项目资产或画布上下文。
-- **输出物**：最终产物是提示词、文案、图片、视频、音频、合成结果，还是可执行工作流。
-- **执行路径**：能力应该拆成哪些阶段，哪些阶段可并行，哪些阶段必须等待上游。
-- **质量闸门**：每个阶段什么算合格，什么必须返工。
-- **失败/返工策略**：用户改一处时，是重做全部，还是只重做某个能力模块、节点或片段。
-- **可复用边界**：哪些是本次案例变量，哪些是跨项目方法。
+- **Target user**: which concrete creative problem this Skill solves for whom.
+- **Input sources**: user text, existing nodes, reference images, video clips, audio, project assets, or canvas context.
+- **Outputs**: whether the final product is a prompt, copy, image, video, audio, a composed result, or an executable workflow.
+- **Execution path**: which stages the capability should be split into, which can run in parallel, and which must wait for upstream.
+- **Quality gates**: what counts as passing at each stage and what must be reworked.
+- **Failure/rework strategy**: when the user changes one thing, whether to redo everything or only a given capability module, node, or clip.
+- **Reuse boundary**: which parts are case variables for this run and which are cross-project methods.
 
-如果做不到这些判断，先问 1-2 个高层问题，而不是问字段名。
+If you cannot make these judgments, ask 1-2 high-level questions instead of asking about field names.
 
-## 2. 不要被 tool schema 带偏
+## 2. Do not be led astray by the tool schema
 
-tool schema 只说明字段能填什么，不说明一个好 Skill 应该怎么思考。
+A tool schema only says what fields can be filled in; it does not say how a good Skill should think.
 
-硬规则：
+Hard rules:
 
 - Do not treat tool schemas as authoring guidance.
 - schema fields are final serialization constraints, not the creative plan.
-- 不要把 schema 字段逐项问用户，例如 id、category、action_keys、system_prompt、node_type、requires_source_media。
-- 不要把 tool schema 里的参数名搬进用户可见问题。
-- 不要把 Recipe 写成字段说明书。
-- 不要因为 schema 里有某个字段，就强行生成空泛内容填进去。
+- Do not ask the user about schema fields one by one, e.g. id, category, action_keys, system_prompt, node_type, requires_source_media.
+- Do not carry parameter names from the tool schema into user-visible questions.
+- Do not write a Recipe as a field manual.
+- Do not force vague filler content into a field just because the schema has it.
 
-正确顺序：
+Correct order:
 
-1. 先做 `capability modeling`。
-2. 再决定 Skill / Recipe 的能力边界。
-3. 先提交内部 outline，记录复用目标、Skill 级约束、计划阶段、Recipe 复用/新建决策和预计 Recipe 数量。
-4. 再写执行路径、质量闸门和返工规则。
-5. 最后才把结果序列化进 schema 字段。
+1. Do `capability modeling` first.
+2. Then decide the capability boundaries of the Skill / Recipe.
+3. Submit the internal outline first, recording the reuse goal, Skill-level constraints, planned stages, Recipe reuse/new decisions, and the expected Recipe count.
+4. Then write the execution path, quality gates, and rework rules.
+5. Only last serialize the result into schema fields.
 
-outline 是写 JSON 前的架构拆分，不是用户可见文案。包含 Recipe 的新草稿必须先调用 `freezone_put_agent_catalog_draft_outline`，再调用 `freezone_begin_agent_catalog_draft`。不要跳过 outline 直接 begin。复用已有 Recipe 时，只把它的 id 写进 Skill 的 `allowed_recipe_ids`，不要再调用 `freezone_put_agent_catalog_recipe` 提交一遍；`expected_recipe_count` 只统计本次需要新建的 Recipe chunk。
+The outline is an architectural breakdown before writing JSON, not user-visible copy. A new draft that contains Recipes must call `freezone_put_agent_catalog_draft_outline` first and then `freezone_begin_agent_catalog_draft`. Do not skip the outline and begin directly. When reusing an existing Recipe, only write its id into the Skill's `allowed_recipe_ids`; do not call `freezone_put_agent_catalog_recipe` to submit it again; `expected_recipe_count` counts only the Recipe chunks that need to be newly created this time.
 
-outline 中每个 `reuse=new` 阶段必须写 `new_recipe_craft_gap`。这个字段只写“为什么现有 Recipe 的执行工艺不够”，不要写“因为当前 Skill 风格/题材/品牌不同”。有效的 craft gap 应说明已有 Recipe 在加工对象、加工动作、产物形态、关键结构、约束边界或下游用途上哪里不匹配。工艺缺口不只看输入/输出格式，也要看该阶段在工作流中的职责：如果阶段产物会作为后续节点的稳定依据、审核闸门、拆分依据或合成素材，Recipe 必须覆盖这种职责边界；不能只因为 `output_kind` 相同，就复用只做通用生成或通用增强的 Recipe。如果去掉当前风格、题材、品牌和一次性案例变量后说不出这些差异，就应复用已有 Recipe，把风格和领域约束写进 Skill。
+Every `reuse=new` stage in the outline must include `new_recipe_craft_gap`. This field only says "why the execution craft of existing Recipes is insufficient"; do not write "because the current Skill's style/topic/brand is different". A valid craft gap explains where an existing Recipe does not match in the object processed, the processing action, the product form, the key structure, the constraint boundary, or the downstream use. The craft gap is not only about input/output format; it also considers the stage's responsibility in the workflow: if a stage's product serves as a stable basis, review gate, splitting basis, or composition material for later nodes, the Recipe must cover that responsibility boundary; you cannot reuse a Recipe that only does generic generation or generic enhancement merely because `output_kind` is the same. If you cannot state these differences after removing the current style, topic, brand, and one-off case variables, reuse the existing Recipe and write the style and domain constraints into the Skill.
 
-`reuse=existing` 不是默认选择。复用已有 Recipe 前，必须先确认当前阶段和已有 Recipe 的执行工艺一致：它们处理的是同类对象，做的是同类加工，产出的是同类中间产物，并以相同方式供下游使用。名称相似、节点类型相同、都属于角色/道具/分镜，不能单独作为复用依据。若当前阶段需要“单张可引用锚点”，而已有 Recipe 产出“多角度模卡/多视角参考图”，这是产物形态和下游用途不同，应新建更匹配的 Recipe 或选择其他 Recipe。
+`reuse=existing` is not the default. Before reusing an existing Recipe, confirm that the current stage and the existing Recipe have the same execution craft: they process the same kind of object, perform the same kind of processing, produce the same kind of intermediate product, and serve downstream in the same way. Similar names, the same node type, or both belonging to character/prop/storyboard cannot by themselves justify reuse. If the current stage needs a "single referenceable anchor" while the existing Recipe produces a "multi-angle model sheet / multi-view reference", the product form and downstream use differ, so create a better-matching Recipe or choose another one.
 
-outline 里的 `id` 是阶段 ID，`recipe_id` 是这个阶段对应的 Catalog Recipe ID。两者都必须保持工艺化和中性：描述加工对象、加工动作或产物形态，不要写当前 Skill 的视觉风格、题材、品牌、角色名、产品名或一次性案例。`reuse=existing` 时，`recipe_id` 必须精确写已有 Recipe ID；`reuse=new` 时，`recipe_id` 是准备新建的 Recipe ID，也必须按可复用工艺命名。
+In the outline, `id` is the stage ID and `recipe_id` is the Catalog Recipe ID corresponding to that stage. Both must stay craft-oriented and neutral: describe the object processed, the processing action, or the product form; do not write the current Skill's visual style, topic, brand, character names, product names, or one-off case. For `reuse=existing`, `recipe_id` must be exactly the existing Recipe ID; for `reuse=new`, `recipe_id` is the Recipe ID about to be created and must also be named after a reusable craft.
 
-outline 里的新建 Recipe 名称、reason 和 `new_recipe_craft_gap` 也必须只描述工艺，不要把 Skill 的视觉风格、题材或一次性案例写进 Recipe。风格应写进 Skill 的 `planning.prompt_guide`、`planning.conduct_rules` 和 `evaluation`。Recipe 名称应描述加工对象、产物形态或使用场景，而不是描述当前 Skill 的审美身份。
+The names, reasons, and `new_recipe_craft_gap` of newly created Recipes in the outline must also describe craft only; do not write the Skill's visual style, topic, or one-off case into a Recipe. Style belongs in the Skill's `planning.prompt_guide`, `planning.conduct_rules`, and `evaluation`. A Recipe name should describe the object processed, the product form, or the usage scenario, not the aesthetic identity of the current Skill.
 
-坏输出通常长这样：
+Bad output usually looks like this:
 
-- “Skill 名称是什么？”
-- “Skill 分类是什么？”
-- “是否保存固定节点拓扑？”
-- “请提供 action_keys。”
-- “你是一位专业设计师，负责生成高质量内容。”
+- "What is the Skill name?"
+- "What is the Skill category?"
+- "Save a fixed node topology?"
+- "Please provide action_keys."
+- "You are a professional designer responsible for generating high-quality content."
 
-这些看起来规整，但不能显著提高后续生成质量。
+These look tidy but do not meaningfully improve later generation quality.
 
-## 3. 从画布沉淀时先做 canvas_workflow_analysis
+## 3. When distilling from the canvas, do canvas_workflow_analysis first
 
-生成草稿前，先在内部完成 `canvas_workflow_analysis`。这个分析不要原样展示给用户，但必须驱动后续问题和草稿。
+Before generating a draft, complete `canvas_workflow_analysis` internally. Do not show this analysis to the user verbatim, but it must drive the later questions and the draft.
 
-全画布沉淀时，先读全局上下文：
+When distilling the whole canvas, read the global context first:
 
-- 问题卡片前必须先调用 `freezone_get_canvas_ontology` 完成画布证据读取。
-- 不要用 `freezone_summarize_canvas` 代替 ontology；summary 太薄，不能作为 Skill Studio 提问依据。
+- Before the question cards you must call `freezone_get_canvas_ontology` to finish reading the canvas evidence.
+- Do not use `freezone_summarize_canvas` in place of the ontology; the summary is too thin to serve as the basis for Skill Studio questions.
 - Do not read every node detail one by one.
-- 只有 ontology 缺少草稿必需字段时，才补读少数关键节点详情，例如主角色锚点、核心分镜、最终合成节点。
-- 不要为了“更详细了解画布”把所有节点逐个 `get_node_detail`；这会拖慢流程并把 Skill Studio 变成噪音很大的节点巡检。
-- 如果没有 ontology 证据，不要调用 `freezone_request_user_clarification` 去问带风格判断、流程判断或适用范围的问题；应先调用 `freezone_get_canvas_ontology`。
+- Only when the ontology lacks fields required for the draft, read the details of a few key nodes, such as the main character anchor, core storyboard, and final composition node.
+- Do not call `get_node_detail` on every node just to "understand the canvas in more detail"; that slows the flow and turns Skill Studio into a noisy node inspection.
+- If there is no ontology evidence, do not call `freezone_request_user_clarification` to ask questions involving style judgments, flow judgments, or applicable scope; call `freezone_get_canvas_ontology` first.
 
-必须分析：
+You must analyze:
 
-- **拓扑主链路**：从源设定、参考图、提示词、生成节点到合成/终稿的主要路径。
-- **并行分支**：角色、道具、场景、分镜、视频片段、音频等是否并行准备。
-- **汇合点**：哪些节点汇入分镜、视频片段、音频或合成节点。
-- **重复约束**：从多个节点 prompt 中抽取反复出现的硬规则，例如主体外观锁定、视角/比例要求、禁止变形、关键标识清晰、收尾规则。
-- **prompt_evidence_analysis**：先从节点 prompt、媒体事实、文件名、引用关系和边中抽取重复证据，再总结拓扑。由这些证据归纳当前场景的 `domain_contract` 或 `creative_contract`，不要从 displayName 或节点类型直接推断。
-- **skill_identity_analysis**：在 prompt evidence 之后决定 Skill 身份。把证据词分成 `case_variables`、`reusable_protocol_terms`、`output_format_terms`、`use_case_terms`、`workflow_method_terms`，用于生成名称、ID、描述和关键词。
-- **decision_matrix**：提问前必须把证据分到这些层，不要混在一起：
-  - `production_method`：这套流程产出什么，以及通过哪些阶段产出，例如“角色锚点 + 道具锚点 + 分镜草图 + 逐镜视频 + 音频 + 最终成片”。
-  - `visual_language`：有证据支撑的视觉/叙事风格。不要从节点名、品类或单个词硬猜；如果只有“光影”等泛词，标记为证据不足，向用户询问要保留的视觉方向。
-  - `case_variables`：当前品牌、角色、产品、故事、台词等一次性内容。
-  - `reusable_protocol`：阶段顺序、锚点继承、审核闸门、分支汇合、返工范围等可复用方法。
-  - `hard_constraints`：不能破坏的规则，例如角色一致性、道具单视角、指定画幅、分镜必须先确认。
-  - `start_options`：每次使用前应该让用户选择的参数，例如画幅、镜头数、是否保留 Logo、音频模式、执行方式。
-  - `applicability_scope`：适用范围。这个通常后置，不要在首题就问“覆盖哪些品类”。
-- **比例和时长事实**：按节点实际字段与媒体宽高归纳，不要只看 displayName。
-- **审核闸门**：识别哪些阶段需要用户确认，哪些阶段可并行，哪些阶段必须等待上游完成。
-- **可复用边界**：区分项目专属信息和可抽象方法。品牌名、角色名、具体台词通常是可替换变量；阶段顺序、引用规则、质量闸门通常是可复用能力。
+- **Main topology chain**: the main path from source settings, reference images, prompts, and generation nodes to composition/final cut.
+- **Parallel branches**: whether characters, props, scenes, storyboards, video clips, audio, etc. are prepared in parallel.
+- **Merge points**: which nodes feed into storyboard, video clip, audio, or composition nodes.
+- **Repeated constraints**: hard rules that recur across multiple node prompts, such as subject appearance lock, viewpoint/proportion requirements, no-deformation rules, key marks being clearly visible, and closing rules.
+- **prompt_evidence_analysis**: first extract repeated evidence from node prompts, media facts, filenames, reference relationships, and edges, then summarize the topology. Derive the scenario's `domain_contract` or `creative_contract` from this evidence; do not infer it directly from displayName or node type.
+- **skill_identity_analysis**: after the prompt evidence, decide the Skill identity. Classify evidence terms into `case_variables`, `reusable_protocol_terms`, `output_format_terms`, `use_case_terms`, and `workflow_method_terms`, used to produce the name, ID, description, and keywords.
+- **decision_matrix**: before asking questions, sort the evidence into these layers; do not mix them:
+  - `production_method`: what this flow produces and through which stages, e.g. "character anchors + prop anchors + storyboard sketches + shot-by-shot video + audio + final film".
+  - `visual_language`: visual/narrative style supported by evidence. Do not guess from node names, categories, or single words; if there are only generic words such as "lighting", mark it as insufficient evidence and ask the user which visual direction to keep.
+  - `case_variables`: one-off content such as the current brand, characters, product, story, and lines.
+  - `reusable_protocol`: reusable methods such as stage order, anchor inheritance, review gates, branch merging, and rework scope.
+  - `hard_constraints`: rules that must not be broken, such as character consistency, single-view props, specified aspect ratio, and storyboard needing confirmation first.
+  - `start_options`: parameters the user should choose before each use, such as aspect ratio, shot count, whether to keep the logo, audio mode, and execution mode.
+  - `applicability_scope`: the applicable scope. This usually comes later; do not ask "which categories does it cover" in the first question.
+- **Aspect ratio and duration facts**: derive from the nodes' actual fields and media dimensions, not just displayName.
+- **Review gates**: identify which stages need user confirmation, which can run in parallel, and which must wait for upstream completion.
+- **Reuse boundary**: separate project-specific information from abstractable methods. Brand names, character names, and specific lines are usually replaceable variables; stage order, reference rules, and quality gates are usually reusable capabilities.
 
-不要只按节点类型做摘要。`imageGenNode -> videoNode -> audioNode -> videoComposeNode` 只是实现形态，不是 Skill 价值。
+Do not summarize by node type only. `imageGenNode -> videoNode -> audioNode -> videoComposeNode` is just an implementation shape, not the value of the Skill.
 
-## 4. 首轮问题只问高价值抽象选择
+## 4. First-round questions ask only high-value abstract choices
 
-如果用户没有明确说“用默认推荐配置”“直接生成”“不要问”，可以先问高层问题。问题必须帮助决定抽象边界，并且必须匹配来源模式。
+If the user has not explicitly said "use the default recommended configuration", "just generate", or "don't ask", you may ask high-level questions first. Questions must help decide the abstraction boundary and must match the source mode.
 
-`new_from_user_brief` 的推荐问题：
+Recommended questions for `new_from_user_brief`:
 
-- **主题/领域**：这个 Skill 要服务哪个主题、行业、内容类型或任务场景？
-- **受众/使用场景**：最终内容给谁看，在哪个平台、渠道、课堂、团队或业务场景使用？
-- **输出范围**：Skill 要产出策划、脚本、分镜、提示词、图片、视频、音频、合成计划，还是完整工作流？
-- **风格/语气**：需要什么情绪、审美、表达尺度、合规边界或品牌/人设语气？
-- **工作流细致程度**：希望把关键步骤分别沉淀成可单独复用的能力模块，还是先做较少步骤的端到端流程？
+- **Topic/domain**: which topic, industry, content type, or task scenario should this Skill serve?
+- **Audience/usage scenario**: who will watch the final content, and on which platform, channel, classroom, team, or business scenario will it be used?
+- **Output scope**: should the Skill produce planning, scripts, storyboards, prompts, images, video, audio, a composition plan, or a complete workflow?
+- **Style/tone**: what emotion, aesthetic, level of expression, compliance boundary, or brand/persona tone is needed?
+- **Workflow granularity**: should key steps be distilled into separately reusable capability modules, or should it start as an end-to-end flow with fewer steps?
 
-`new_from_user_brief` 不要问：
+Do not ask these for `new_from_user_brief`:
 
-- 是否保留当前项目的具体案例。
-- 是否保留当前品牌、角色、剧情或节点结构。
-- 是否读取当前画布作为来源。
+- Whether to keep the specific case of the current project.
+- Whether to keep the current brand, characters, plot, or node structure.
+- Whether to read the current canvas as a source.
 
-`distill_from_canvas` 的推荐问题：
+Recommended questions for `distill_from_canvas`:
 
-- **下次主要复用什么？**：先问这套流程要沉淀成什么方法，而不是先问适用品类。例如“复用完整短片制作流程：角色/道具先定稿，再做分镜、逐镜视频、音频和成片”“复用核心步骤：角色/道具/分镜/视频保持，音频和成片按需处理”“只复用轻量短片方法：适合快速生成类似广告片”。
-- **哪些效果必须保持？**：把识别出的视觉/叙事风格作为可读选项，选项必须引用画布证据；如果证据不足，选项应是“每次由用户指定视觉方向”“参考当前画面但不写死风格”“让我补充要保留的视觉风格”，不要硬写“光影风格广告”这种空泛识别。
-- **下次可以替换哪些内容？**：当前角色、品牌、道具、剧情是固定样例、默认样例，还是都让用户每次指定？选项要说明对下次使用的影响，例如“角色和产品都可替换，但制作流程保持一致”。
-- **复用方式要多细？**：选择细粒度复用、标准复用或轻量复用。细粒度可分别沉淀角色锚点、道具锚点、分镜、逐镜视频、音频等；标准复用保留关键阶段；轻量复用只保留端到端短片方法。不要在问题文案里说 Recipe，也不要把最终合成作为用户要选择的粒度项。
-- **哪些规则不能变？**：用用户能理解的话询问必须保留的质量规则，例如角色一致、道具角度固定、分镜先确认、视频片段时长一致、品牌露出清晰。不要直接用“硬约束”做标题。
-- **每次开始前要确认什么？**：询问画幅、镜头数量、时长、是否保留品牌 Logo、音频模式、执行方式等用户可感知选择。不要直接用“开始前选项”做标题。
-- **适用范围**：只在前几项已经清楚后再问。不要首题就问“覆盖哪些产品广告”。更好的问法是“这套方法主要给哪些项目复用”，选项从方法出发，例如“产品角色化广告短片”“品牌 IP 角色短片”“带参考图和道具锚点的短视频流程”。
+- **What will be mainly reused next time?**: first ask what method this flow should be distilled into, rather than the applicable category. For example: "reuse the complete short-film production flow: lock characters/props first, then storyboard, shot-by-shot video, audio, and final film"; "reuse the core steps: keep characters/props/storyboard/video, handle audio and final film as needed"; "reuse only a lightweight short-film method: suited to quickly generating similar ad films".
+- **Which effects must be kept?**: present the identified visual/narrative style as readable options, and each option must cite canvas evidence; if the evidence is insufficient, the options should be "the user specifies the visual direction each time", "refer to the current visuals but do not hard-code a style", and "let me add the visual style to keep", rather than hard-writing a vague identification such as "lighting-style ad".
+- **What can be replaced next time?**: whether the current characters, brand, props, and plot are fixed samples, default samples, or are specified by the user each time. Options should explain the effect on the next use, e.g. "characters and product can both be replaced, but the production flow stays the same".
+- **How fine should the reuse be?**: choose fine-grained, standard, or lightweight reuse. Fine-grained can separately distill character anchors, prop anchors, storyboard, shot-by-shot video, audio, etc.; standard keeps the key stages; lightweight keeps only the end-to-end short-film method. Do not say Recipe in the question text, and do not make final composition a granularity item for the user to choose.
+- **Which rules must not change?**: ask in terms the user understands about quality rules that must be kept, e.g. character consistency, fixed prop angle, storyboard confirmed first, consistent video clip duration, clear brand exposure. Do not use "hard constraints" directly as the title.
+- **What to confirm before each start?**: ask about user-perceivable choices such as aspect ratio, shot count, duration, whether to keep the brand logo, audio mode, and execution mode. Do not use "start options" directly as the title.
+- **Applicable scope**: ask only after the previous items are clear. Do not ask "which product ads does it cover" in the first question. A better phrasing is "which projects will mainly reuse this method", with options derived from the method, e.g. "character-driven product ad short", "brand IP character short", "short-video flow with reference images and prop anchors".
 
-提问质量规则：
+Question quality rules:
 
-- 每个问题只问一个决策，不要把风格、硬约束、执行阶段和最终成片规则塞进同一个选项。
-- 一个选项如果超过一行半，通常说明它混入了太多决策，应拆成多选项或下一题。
-- 选项应体现画布证据，但不能直接复述节点列表。用户看到后应能判断“下次使用会怎么变”。
-- 选项文案要说明选择后的效果，不要说实现细节。例如写“下次换产品时，角色和道具可以重新指定，但分镜到成片的流程保持一致”，不要写“case_variables 变成 input_parameters”。
-- 不要用“问题 1 / 问题 2 / 问题 3”作为标题；标题本身要是用户能理解的问题。
-- 不要把“最终汇入合成节点”这种内部说法暴露给用户；可以说“最终统一合成为一条完整短片，不把零散片段当最终结果”。
-- 不要用“通用广告”“光影风格”“工作流模板”这类空泛词替代真正的制作方法。
+- Each question asks for only one decision; do not stuff style, hard constraints, execution stages, and final-film rules into the same option.
+- An option longer than a line and a half usually mixes in too many decisions and should be split into more options or a next question.
+- Options should reflect canvas evidence but must not simply restate the node list. After reading them, the user should be able to judge "how it will change next time".
+- Option copy should state the effect of the choice, not implementation details. For example write "when you change the product next time, characters and props can be re-specified, but the flow from storyboard to final film stays the same", not "case_variables become input_parameters".
+- Do not use "Question 1 / Question 2 / Question 3" as titles; the title itself should be a question the user understands.
+- Do not expose internal phrasing such as "finally feeds into the composition node"; say instead "finally composed into one complete short film, not leaving loose clips as the final result".
+- Do not replace the real production method with vague words such as "generic ad", "lighting style", or "workflow template".
 
-不要把首轮问题浪费在低层字段：
+Do not waste the first-round questions on low-level fields:
 
-- 不要先问 Skill 名称。
-- 不要先问 Skill 分类。
-- 不要先问固定拓扑；具体节点数量和依赖由每次运行的动态计划决定。
-- 不要问 id、action_keys、system_prompt、node_type、schema、link_type、模型参数。
+- Do not ask for the Skill name first.
+- Do not ask for the Skill category first.
+- Do not ask about a fixed topology first; the concrete node count and dependencies are decided by the dynamic plan of each run.
+- Do not ask about id, action_keys, system_prompt, node_type, schema, link_type, or model parameters.
 
-这些字段应由 Agent 从画布和用户选择中推断。只有用户明确要求改名称或分类时才询问。
+These fields should be inferred by the Agent from the canvas and the user's choices. Ask only when the user explicitly asks to change the name or category.
 
-## 5. 生成草稿的最低质量线
+## 5. Minimum quality bar for a generated draft
 
-生成出的 Skill 至少要包含：
+A generated Skill must include at least:
 
-- **Skill 描述**：说明可复用能力，而不是复述当前案例。
-- **Skill 身份**：名称、ID、description 和 triggers.keywords 必须来自 `skill_identity_analysis`，不能只由工作流方法或节点类型决定。
-- **planning.planning_notes**：从动态规划规则开始，写清阶段顺序、任务类型、action_keys、依赖约束、可并行规则、审核/等待行为和比例策略。
-- **planning.conduct_rules**：写硬执行规则，例如先锁角色再做道具，分镜审批后才能生成视频，合成前必须有视频/音频输入。
-- **锚点拓扑规则**：如果某些主体、资产或参考必须跨阶段保持一致，必须写清要建立或复用哪些锚点，以及哪些下游阶段必须引用同一个锚点。
-- **evaluation.domain_constraints**：写从画布事实提炼出的硬约束，不写空泛评价。
-- **domain_contract / creative_contract**：把当前场景最影响质量的复用协议写入 planning / conduct_rules / evaluation 和 Recipe 质量标准。不要新增 schema 字段，也不要只塞进某个 Recipe prompt。
-- **动态拓扑约束**：说明本 Skill 在运行时如何决定节点数量、依赖、并行分支、审核闸门与终端合成，不保存固定工作流模板。
-- **Recipes**：先复用现有能力模块，再按缺口新建；按能力边界拆分，而不是机械按节点类型拆分。
+- **Skill description**: explain the reusable capability instead of restating the current case.
+- **Skill identity**: the name, ID, description, and triggers.keywords must come from `skill_identity_analysis`, and cannot be determined only by the workflow method or node types.
+- **planning.planning_notes**: start from the dynamic planning rules, stating clearly the stage order, task types, action_keys, dependency constraints, parallelizable rules, review/wait behavior, and aspect ratio strategy.
+- **planning.conduct_rules**: write hard execution rules, e.g. lock the characters before the props, video can be generated only after the storyboard is approved, video/audio inputs are required before composition.
+- **Anchor topology rules**: if certain subjects, assets, or references must stay consistent across stages, state which anchors to establish or reuse and which downstream stages must reference the same anchor.
+- **evaluation.domain_constraints**: write hard constraints distilled from canvas facts, not vague evaluations.
+- **domain_contract / creative_contract**: write the reuse protocol that most affects quality in the current scenario into planning / conduct_rules / evaluation and the Recipe quality standards. Do not add schema fields, and do not tuck it into a single Recipe prompt only.
+- **Dynamic topology constraints**: explain how this Skill decides node count, dependencies, parallel branches, review gates, and terminal composition at runtime; do not save a fixed workflow template.
+- **Recipes**: reuse existing capability modules first, then create new ones for gaps; split by capability boundary, not mechanically by node type.
 
-## 6. Skill Identity 与抽象边界
+## 6. Skill Identity and abstraction boundary
 
-抽象不是抹平。用户选择“抽象成通用模板”时，Agent 应删除不可复用的案例变量，但保留最能代表这套能力的可复用协议、产物形态和使用场景。
+Abstraction is not flattening. When the user chooses "abstract into a general template", the Agent should remove non-reusable case variables but keep the reusable protocol, product form, and usage scenario that best represent this capability.
 
-先把 prompt evidence 中的词分成五类：
+First classify the terms in the prompt evidence into five categories:
 
-- `case_variables`：具体品牌名、具体人物/角色名、具体产品名、一次性剧情、一次性台词、项目专属口号。抽象模板中应删除、参数化或降为示例。
-- `reusable_protocol_terms`：跨项目可复用的创作协议、领域口径、风格语言、规则边界、声音人设、玩法机制、审核标准。抽象模板中应保留。
-- `output_format_terms`：Skill 产物形态，例如短片、海报、分镜表、报告、课件、音频、游戏资产、合成计划。
-- `use_case_terms`：使用场景，例如品牌广告、教学讲解、合规审查、数据复盘、角色设定、产品展示。
-- `workflow_method_terms`：内部方法，例如角色锚定、道具锚定、分镜参考、逐镜生成、音频混合、质量闸门。
+- `case_variables`: specific brand names, specific person/character names, specific product names, one-off plots, one-off lines, and project-specific slogans. In an abstract template, delete, parameterize, or demote them to examples.
+- `reusable_protocol_terms`: cross-project reusable creative protocols, domain conventions, style language, rule boundaries, voice personas, gameplay mechanics, and review standards. Keep them in an abstract template.
+- `output_format_terms`: the Skill's product forms, e.g. short film, poster, storyboard table, report, courseware, audio, game assets, composition plan.
+- `use_case_terms`: usage scenarios, e.g. brand ad, teaching explanation, compliance review, data retrospective, character design, product showcase.
+- `workflow_method_terms`: internal methods, e.g. character anchoring, prop anchoring, storyboard reference, shot-by-shot generation, audio mixing, quality gates.
 
-Skill 名称、ID、description 和 `triggers.keywords` 必须优先组合：
+The Skill name, ID, description, and `triggers.keywords` must prefer combining:
 
 ```text
 reusable_protocol_terms + output_format_terms + use_case_terms
 ```
 
-`workflow_method_terms` 可以补充，但不能独占 Skill 身份。不要把一个有明确领域协议的 Skill 命名成只有“角色驱动”“分镜流程”“数据处理”“文档生成”这类内部方法词。
+`workflow_method_terms` may supplement but cannot monopolize the Skill identity. Do not name a Skill that has a clear domain protocol with only internal method words such as "character-driven", "storyboard flow", "data processing", or "document generation".
 
-关键词必须覆盖四类：
+Keywords must cover four categories:
 
-- **protocol keywords**：可复用协议词。
-- **output format keywords**：产物形态词。
-- **use case keywords**：应用场景词。
-- **workflow method keywords**：工作流方法词。
+- **protocol keywords**: reusable protocol terms.
+- **output format keywords**: product form terms.
+- **use case keywords**: application scenario terms.
+- **workflow method keywords**: workflow method terms.
 
-坏模式：
+Bad patterns:
 
-- 名称只来自节点拓扑或流程方法。
-- 抽象模板时把可复用协议词和案例变量一起删除。
-- keywords 只剩品牌变量，或只剩流程节点词。
-- description 第一屏只描述“先 A 再 B 再 C”，没有说明这套能力适合什么协议、产物和场景。
+- The name comes only from the node topology or workflow method.
+- When abstracting a template, deleting reusable protocol terms together with case variables.
+- Keywords contain only brand variables, or only flow node words.
+- The first screen of the description only says "first A, then B, then C", without saying which protocol, product, and scenario this capability suits.
 
-## 7. 主观决策边界
+## 7. Subjective decision boundary
 
-Skill 只固化“换一个作者也应该得到同样答案”的规则。会因作者、审美或本次目标而变化的选择，不要写死进 Skill。
+A Skill only freezes the rules for which "a different author should reach the same answer". Choices that vary with the author, aesthetics, or the goal of this run should not be hard-coded into the Skill.
 
-- 可复现规则：资产锚点、引用关系、禁项、素材依赖、阶段前置条件、输出规格来源。
-- 主观选择：具体镜头数量、节奏快慢、单个镜头构图、某个候选造型偏好。
+- Reproducible rules: asset anchors, reference relationships, prohibitions, material dependencies, stage preconditions, and the source of output specs.
+- Subjective choices: the specific shot count, pacing, composition of a single shot, and preference among candidate looks.
 
-主观选择有两条承接方式：
+There are two ways to handle subjective choices:
 
-- **问用户**：结构性选择会改变 Graph，或者无法并列比较时，先用问题卡确认。
-- **出候选**：可以并列比较的产出，让运行时按数量、评价标准或用户选择处理，不要把个人偏好写成硬规则。
+- **Ask the user**: when a structural choice would change the Graph or cannot be compared side by side, confirm with a question card first.
+- **Offer candidates**: for outputs that can be compared side by side, let the runtime handle them by count, evaluation criteria, or user choice; do not write personal preference as a hard rule.
 
-## 8. Recipe 拆分原则
+## 8. Recipe splitting principles
 
-Recipe 的边界应对应可复用能力模块。生成草稿前先看当前已启用的 catalog summary；如果摘要缺失或不够判断，先调用 `freezone_list_agent_catalog(kind="recipes", query=...)` 读取紧凑 Recipe 摘要，再判断已有 Recipe 是否能覆盖同一阶段工艺。能复用就复用，只有真实工艺缺口才新建。确认复用/新建决策后，把结果写进 `freezone_put_agent_catalog_draft_outline`，并设置 `catalog_checked=true`。outline 里的 `reuse=existing` 表示使用已保存 Recipe，不需要提交 Recipe chunk；`reuse=new` 才需要后续 `freezone_put_agent_catalog_recipe`。
+A Recipe's boundary should correspond to a reusable capability module. Before generating a draft, look at the currently enabled catalog summary; if the summary is missing or insufficient, call `freezone_list_agent_catalog(kind="recipes", query=...)` to read a compact Recipe summary first, then judge whether an existing Recipe covers the same stage craft. Reuse where possible, and create new ones only for real craft gaps. After confirming the reuse/new decisions, write the result into `freezone_put_agent_catalog_draft_outline` and set `catalog_checked=true`. In the outline, `reuse=existing` means use a saved Recipe and no Recipe chunk needs to be submitted; only `reuse=new` needs a later `freezone_put_agent_catalog_recipe`.
 
-判断顺序：
+Order of judgment:
 
-1. 先列出本 Skill 真正需要的执行阶段。
-2. 再对照现有 Recipe 的 name、output_kind、action_keys、planning_prompt 和 result_summary。
-3. 比较执行工艺，而不是只比较名称、节点类型、`output_kind` 或大类标签。工艺包括：加工对象、加工动作、产物形态、关键结构、约束边界、下游用途和工作流职责。
-4. 工艺相同就复用已有 Recipe；风格、题材、品牌不同，不等于必须新建 Recipe。
-5. 工艺不同就不要复用。尤其是阶段产物会承担后续一致性锚点、审核闸门、拆分依据或合成素材时，不能复用只覆盖通用生成、通用增强或普通内容整理的 Recipe。
-6. 只有现有 Recipe 无法表达这个阶段，或强行复用会让 Recipe 变得含糊、误导、过度泛化时，才新建 Recipe。
-7. 每个新建 Recipe 决策都要在 outline 的 `new_recipe_craft_gap` 写清工艺缺口；没有具体缺口就改为复用已有 Recipe。
-8. `allowed_recipe_ids` 只写本 Skill 实际可执行链路需要的 Recipe id。它是运行白名单，不是“相关 Recipe 大合集”。
+1. First list the execution stages this Skill actually needs.
+2. Then compare against the name, output_kind, action_keys, planning_prompt, and result_summary of existing Recipes.
+3. Compare execution craft, not just names, node types, `output_kind`, or broad category labels. Craft includes: the object processed, the processing action, the product form, the key structure, the constraint boundary, the downstream use, and the workflow responsibility.
+4. If the craft is the same, reuse the existing Recipe; a different style, topic, or brand does not mean a new Recipe is required.
+5. If the craft differs, do not reuse. In particular, when a stage product will serve as a later consistency anchor, review gate, splitting basis, or composition material, you cannot reuse a Recipe that only covers generic generation, generic enhancement, or plain content organization.
+6. Create a new Recipe only when no existing Recipe can express this stage, or forcing reuse would make a Recipe vague, misleading, or over-generalized.
+7. Every new-Recipe decision must state the craft gap in the outline's `new_recipe_craft_gap`; if there is no concrete gap, switch to reusing an existing Recipe.
+8. `allowed_recipe_ids` lists only the Recipe ids needed by this Skill's actual executable chain. It is a runtime allowlist, not a "collection of related Recipes".
 
-Skill 和 Recipe 的分工：
+Division of labor between Skill and Recipe:
 
-- Skill 负责风格身份、领域规则、开始前选项、执行阶段、审核闸门、素材继承、返工边界和允许使用哪些 Recipe。
-- Recipe 负责一个阶段的提示词/指令生成工艺，例如如何把上游角色设定整理成角色锚点提示词，如何把分镜表转成逐镜视频提示词。
-- Recipe 不负责保存本 Skill 的视觉风格。新建 Recipe 的 `id`、`name`、`system_prompt`、`must_have_items`、`planning_prompt` 和 `result_summary` 都不要写当前 Skill 的风格词、审美词、题材名或案例变量；它们会在运行时从 Skill 的 `prompt_guide`、`conduct_rules`、用户输入和上游节点继承。
-- Recipe 文案里不要写“不要覆盖 Skill 注入的风格约束”“这个 Recipe 只负责……”这类内部协作话术。应该直接写任务语言：输入什么、输出什么、必须包含什么、什么算失败。
-- Recipe 的 id 和名称必须匹配真实颗粒度。不要把包含领域规则的 Recipe 命名成过度通用的阶段名。
+- The Skill owns style identity, domain rules, start-of-run options, execution stages, review gates, asset inheritance, rework boundaries, and which Recipes are allowed.
+- A Recipe owns the prompt/instruction-generation craft of one stage, e.g. how to turn upstream character settings into a character anchor prompt, or how to turn a storyboard table into shot-by-shot video prompts.
+- A Recipe does not store this Skill's visual style. A new Recipe's `id`, `name`, `system_prompt`, `must_have_items`, `planning_prompt`, and `result_summary` must not contain the current Skill's style words, aesthetic words, topic names, or case variables; these are inherited at runtime from the Skill's `prompt_guide`, `conduct_rules`, user input, and upstream nodes.
+- Do not write internal collaboration phrasing in Recipe copy such as "do not override the style constraints injected by the Skill" or "this Recipe is only responsible for...". Write directly in task language: what comes in, what goes out, what must be included, and what counts as failure.
+- A Recipe's id and name must match its real granularity. Do not give a Recipe that contains domain rules an overly generic stage name.
 
-常见拆分：
+Common splits:
 
-- **主体锚定**：把主要对象或关键视觉资产锁定成可复用参考。
-- **辅助资产锚定**：生成会被后续阶段反复引用的独立资产或关系资产。
-- **风格锁定/创意简报**：整合视觉、语气、结构、表达边界和禁止事项。
-- **分镜/场景拆解**：把叙事框架扩展成面板、镜头、台词和行动号召。
-- **视频片段生成**：按分镜段落生成多个短片段，并保持节点引用链完整。
-- **音频/音乐生成**：生成音效、旁白、BGM 或音乐规格。
-- **合成计划**：如需 AI 辅助剪辑决策，用文本 Recipe 生成片段顺序、音频层级、转场、时长和输出比例计划；真正的最终合成由运行时动态计划创建终端 `videoComposeNode`。
+- **Subject anchoring**: lock the main object or key visual asset into a reusable reference.
+- **Auxiliary asset anchoring**: generate independent or relational assets that later stages will reference repeatedly.
+- **Style lock / creative brief**: consolidate visuals, tone, structure, expression boundaries, and prohibitions.
+- **Storyboard / scene breakdown**: expand the narrative framework into panels, shots, lines, and calls to action.
+- **Video clip generation**: generate multiple short clips per storyboard segment while keeping the node reference chain intact.
+- **Audio/music generation**: generate sound effects, narration, BGM, or music specs.
+- **Composition plan**: if AI-assisted editing decisions are needed, use a text Recipe to produce the clip order, audio levels, transitions, duration, and output aspect ratio plan; the actual final composition is created at runtime by the dynamic plan as a terminal `videoComposeNode`.
 
-不要把 `videoCompose`、最终媒体合成、最终成片组装作为 Recipe 拆分选项，也不要把终端合成步骤计入 Recipe 数量。正确表达是“3 个 Recipe + 最终 videoCompose 工作流步骤”，不是“包含合成的 4 个 Recipe”。
+Do not offer `videoCompose`, final media composition, or final film assembly as Recipe splitting options, and do not count the terminal composition step in the Recipe count. The correct phrasing is "3 Recipes + a final videoCompose workflow step", not "4 Recipes including composition".
 
-不要只生成“图片 Recipe / 视频 Recipe / 音频 Recipe”这种按节点类型命名的泛化模块。它们通常太弱。
+Do not generate only generic modules named by node type such as "image Recipe / video Recipe / audio Recipe". They are usually too weak.
 
-也不要为了凑步骤自动加入前置文本 Recipe。只有当运行时真的需要创建对应文本节点，并且后续节点会消费这个文本结果时，才把它放进 `allowed_recipe_ids`。如果 Skill 已经用开始前选项和规划规则承载这些决策，就不要再建或引用这类 Recipe。
+Also do not automatically add a preceding text Recipe just to pad steps. Put one in `allowed_recipe_ids` only when the runtime really needs to create the corresponding text node and later nodes will consume that text result. If the Skill already carries those decisions via start-of-run options and planning rules, do not create or reference such a Recipe.
 
-不要创建“全局规格”“最终规格”“输入分析”这类中转 Recipe 来搬运画幅、时长、风格、素材策略或执行方式。这些权威信息应来自 `input_parameters`、`planning.prompt_guide`、`planning.conduct_rules` 和已确认输入；Recipe 只处理自己这一阶段的提示词生成工艺。
+Do not create relay Recipes such as "global spec", "final spec", or "input analysis" to carry aspect ratio, duration, style, material strategy, or execution mode. That authoritative information should come from `input_parameters`, `planning.prompt_guide`, `planning.conduct_rules`, and confirmed inputs; a Recipe only handles the prompt-generation craft of its own stage.
 
-Recipe 里不要写阶段推进话术，例如“确认后进入下一阶段”“本阶段完成后再生成下游”。阶段顺序、暂停、自动推进和返工边界属于 Skill 的 `planning.conduct_rules` 与运行时授权。
+Do not write stage-advancing phrasing in a Recipe, such as "enter the next stage after confirmation" or "generate downstream after this stage completes". Stage order, pausing, auto-advancing, and rework boundaries belong to the Skill's `planning.conduct_rules` and runtime authorization.
 
-### Recipe 复用范围判断
+### Judging Recipe reuse scope
 
-Recipe 不是越通用越好。抽象时先问：去掉当前 Skill 的风格、题材和一次性案例变量后，这个阶段还剩不剩清楚的工艺？
+A Recipe is not better the more generic it is. When abstracting, first ask: after removing the current Skill's style, topic, and one-off case variables, is there still a clear craft left in this stage?
 
-- 如果剩下的是明确的输入结构、输出结构、质量标准和失败边界，可以做共享 Recipe。
-- 如果剩下的只有“稳定、清晰、可复用、质量好”这类虚词，说明抽太空了，应保留更具体的 Recipe 边界。
-- 如果 Recipe 内容包含明确领域规则，ID 和名称必须体现这个可复用范围，不要假装成全平台通用能力。
-- 如果未来可能会出现更通用版本，也不要先占用过泛 ID；当前 Recipe 先按真实职责命名，未来再新增真正通用的版本。
+- If what remains is a clear input structure, output structure, quality standard, and failure boundary, it can be a shared Recipe.
+- If what remains is only vague words like "stable, clear, reusable, high quality", the abstraction is too empty and a more specific Recipe boundary should be kept.
+- If a Recipe's content contains clear domain rules, its ID and name must reflect that reusable scope; do not pretend it is a platform-wide generic capability.
+- If a more generic version may appear in the future, do not claim an over-generic ID now; name the current Recipe by its real responsibility and add a truly generic version later.
 
-复用已有 Recipe 时同样按工艺判断。先用一句内部判断说清：这个阶段要把什么对象加工成什么产物，以及这个产物后面怎么用。再对照候选 Recipe 的 `planning_prompt`、`result_summary` 和 `must_have_items`。如果候选 Recipe 的产物形态、关键结构或下游用途不同，即使名字很像，也不要复用。
+Reusing an existing Recipe is also judged by craft. First state in one internal sentence what object this stage processes into what product, and how that product is used afterward. Then compare against the candidate Recipe's `planning_prompt`, `result_summary`, and `must_have_items`. If the candidate Recipe's product form, key structure, or downstream use differs, do not reuse it even if the names are similar.
 
-复用已有 Recipe 前，必须先过三问：
+Before reusing an existing Recipe, it must pass three questions:
 
-1. **输出是不是同一种东西？** 例如单张锚点图、三视图模卡、多宫格分镜、单段视频提示词、音频层提示词、计划文本，这些不是同一种输出。
-2. **下游是不是用同一种方式使用它？** 例如全链路锁定源、普通参考图、分镜依据、视频素材输入、音频层或终端结果，这些用途不同会改变工艺。
-3. **Recipe 自己是否必须写入当前 Skill 的风格、题材或案例才成立？** 如果必须写入，先把这些内容移回 Skill 的 `planning.prompt_guide`、`planning.conduct_rules` 或 `evaluation`，再判断剩下的工艺是否仍匹配。
+1. **Is the output the same kind of thing?** For example, a single anchor image, a three-view model sheet, a multi-grid storyboard, a single video-clip prompt, an audio-layer prompt, and a plan text are not the same kind of output.
+2. **Does downstream use it in the same way?** For example, a full-chain lock source, a plain reference image, a storyboard basis, a video material input, an audio layer, or a terminal result; different uses change the craft.
+3. **Must the Recipe itself write in the current Skill's style, topic, or case to hold up?** If so, first move that content back into the Skill's `planning.prompt_guide`, `planning.conduct_rules`, or `evaluation`, then judge whether the remaining craft still matches.
 
-三问里任意一个答案是否定，就不要写 `reuse=existing`。`reuse=existing` 的 `reason` 必须能说明这三问的匹配点，不能只写“同工艺”“同为角色/道具/分镜/视频”“已有类似 Recipe”。
+If any of the three answers is no, do not write `reuse=existing`. The `reason` for `reuse=existing` must explain the matching points on all three questions, and cannot just say "same craft", "both are character/prop/storyboard/video", or "a similar Recipe already exists".
 
-## 9. domain_contract / creative_contract 写法
+## 9. How to write domain_contract / creative_contract
 
-从画布沉淀 Skill 时，不要只总结“有什么节点”。必须先做 `prompt_evidence_analysis`：从节点 prompt、媒体宽高/时长、source filename、引用关系和边中提取重复证据，再归纳当前场景的 `domain_contract` 或 `creative_contract`。
+When distilling a Skill from the canvas, do not just summarize "which nodes there are". You must first do `prompt_evidence_analysis`: extract repeated evidence from node prompts, media dimensions/duration, source filenames, reference relationships, and edges, then derive the scenario's `domain_contract` or `creative_contract`.
 
-这个 contract 不是新 schema 字段，而是要落进现有字段：
+This contract is not a new schema field; it must land in existing fields:
 
-- `planning.planning_notes`：说明协议如何影响执行路径和阶段顺序。
-- `planning.conduct_rules`：写成硬执行规则。
-- `evaluation.domain_constraints`：写成可检查的质量约束。
-- `planning.planning_notes` / `planning.conduct_rules`：写明阶段继承、例外、禁止事项与动态依赖规则。
-- Recipe `system_prompt` / `must_have_items`：写入该 Recipe 需要保留或转换的证据。
+- `planning.planning_notes`: explain how the protocol affects the execution path and stage order.
+- `planning.conduct_rules`: write it as hard execution rules.
+- `evaluation.domain_constraints`: write it as checkable quality constraints.
+- `planning.planning_notes` / `planning.conduct_rules`: state stage inheritance, exceptions, prohibitions, and dynamic dependency rules.
+- Recipe `system_prompt` / `must_have_items`: write the evidence that the Recipe needs to preserve or transform.
 
-不同领域的 contract 可能不同，先用通用描述表达，不要急着套具体案例：
+Contracts differ across domains. Express them in generic terms first and do not rush to fit a specific case:
 
-- 视觉广告：视觉语言、表演风格、品牌调性、阶段性风格例外、合成不生成新风格。
-- 数据分析：指标口径、时间范围、单位、过滤条件、图表解释边界。
-- 法律/合规：管辖地、条款依据、风险等级、不可替代律师意见等边界。
-- 教学内容：年级、知识点、讲解节奏、练习难度、禁用超纲概念。
-- 游戏资产：视角、比例、动作规范、碰撞/状态规则、UI 反馈规则。
-- 音频内容：声音人设、语速、情绪、音色、禁用噪声或冲突音乐。
+- Visual ads: visual language, performance style, brand tone, stage-specific style exceptions, composition does not generate new style.
+- Data analysis: metric definitions, time range, units, filter conditions, chart interpretation boundaries.
+- Legal/compliance: jurisdiction, clause basis, risk level, boundaries such as not substituting for a lawyer's opinion.
+- Teaching content: grade level, knowledge points, explanation pace, exercise difficulty, forbidding out-of-syllabus concepts.
+- Game assets: viewpoint, proportion, action conventions, collision/state rules, UI feedback rules.
+- Audio content: voice persona, speaking rate, emotion, timbre, forbidden noise or conflicting music.
 
-写 contract 时至少区分三层：
+When writing a contract, distinguish at least three layers:
 
-- **全局语言**：整个 Skill 都要保持的视觉、文本、声音或行为口径。
-- **阶段例外**：某些阶段需要使用不同呈现方式、不同粒度或不同审核规则。
-- **继承规则**：下游阶段必须沿用哪些上游结果，哪些内容不能重新发明。
+- **Global language**: the visual, text, sound, or behavioral register the whole Skill must maintain.
+- **Stage exceptions**: stages that need a different presentation, granularity, or review rules.
+- **Inheritance rules**: which upstream results downstream stages must reuse and what must not be reinvented.
 
-不要只写“保持风格一致”“质量要好”这类空泛句。它们太弱，无法指导不同阶段做不同处理。
+Do not write only vague sentences like "keep the style consistent" or "quality must be good". They are too weak to guide different handling at different stages.
 
-## 10. Recipe system_prompt 写法
+## 10. How to write a Recipe system_prompt
 
-Recipe `system_prompt` 不是角色扮演套话。它必须与 `output_kind` 的执行契约一致：
+A Recipe `system_prompt` is not role-play boilerplate. It must match the execution contract of its `output_kind`:
 
-- `output_kind=text` 时，当前 Agent / LLM 直接生成可交付的最终文本，不再把结果交给另一个文本模型续写。
-- `output_kind=image/video/audio` 时，当前 Agent / LLM 把上游输入转换成对应媒体生成节点可执行的提示词或指令；它不直接生成最终媒体。
+- When `output_kind=text`, the current Agent / LLM directly generates the deliverable final text and does not hand the result to another text model to continue.
+- When `output_kind=image/video/audio`, the current Agent / LLM converts the upstream input into a prompt or instruction executable by the corresponding media generation node; it does not generate the final media itself.
 
-必须写清：
+It must state clearly:
 
-- 【输入来源】：来自用户文字、当前画布、选中节点、上游媒体还是前一步 Recipe。
-- 【任务目标】：文字 Recipe 要产出什么最终文本，或媒体 Recipe 要产出什么下游生成指令。
-- 【输出结构要求】：最终文本或媒体生成指令必须包含哪些模块。
-- 【质量标准】：可检查、可返工的标准。
-- 【禁止事项/约束】：不要做什么，哪些错误会污染下游。
+- [Input sources]: whether they come from user text, the current canvas, selected nodes, upstream media, or the previous Recipe.
+- [Task goal]: for a text Recipe, what final text to produce; for a media Recipe, what downstream generation instruction to produce.
+- [Output structure requirements]: which modules the final text or media generation instruction must contain.
+- [Quality standards]: checkable standards that can trigger rework.
+- [Prohibitions/constraints]: what not to do and which mistakes would pollute downstream.
 
-写 Recipe 时遵守优先级：用户本轮要求 > 已确认输入 > Skill 强约束 > Recipe 工艺 > 默认值。Recipe 不得声明自己高于用户输入、已确认规格或 Skill 强约束。
+When writing a Recipe, follow this priority: this round's user request > confirmed inputs > Skill hard constraints > Recipe craft > defaults. A Recipe must not claim to rank above user input, confirmed specs, or Skill hard constraints.
 
-不要只写：
+Do not write only:
 
 ```text
-你是一位专业导演，擅长生成高质量视频提示词。
+You are a professional director who excels at generating high-quality video prompts.
 ```
 
-应写成：
+Write it like:
 
 ```text
-你将把上游分镜表、角色锚点和道具锚点，转换成单段 videoGeneration 节点可执行的视频提示词。输出必须包含角色一致性、引用来源、镜头动作、音效、时长、比例和负向约束。重要：你的输出是一条提示词/指令，将被送入下游 videoGeneration 节点执行；不要自己生成最终视频内容。
+You will convert the upstream storyboard table, character anchors, and prop anchors into a video prompt executable by a single videoGeneration node. The output must include character consistency, reference sources, shot action, sound effects, duration, aspect ratio, and negative constraints. Important: your output is a single prompt/instruction that will be fed to the downstream videoGeneration node for execution; do not generate the final video content yourself.
 ```
 
-## 11. 动态工作流规划要求
+## 11. Dynamic workflow planning requirements
 
-Skill 不保存固定节点拓扑。每次运行时，Agent 根据用户本次目标、输入素材、Skill 规则和可用 Recipe，生成完整的 `freezone_workflow_plan.v1`。
+A Skill does not store a fixed node topology. At each run, the Agent generates a complete `freezone_workflow_plan.v1` based on the user's goal for this run, input materials, Skill rules, and available Recipes.
 
-Skill 草稿必须提供足够明确的规划约束：
+A Skill draft must provide sufficiently explicit planning constraints:
 
-- 阶段顺序和允许并行的阶段。
-- 每个阶段允许使用的 Recipe `action_keys`。
-- 上游输入、素材继承和引用规则。
-- 需要建立或复用的锚点，以及哪些下游节点必须引用同一锚点。
-- 节点数量如何由本次需求决定。
-- 图片、视频等媒体的默认比例与阶段例外。
-- 审批、等待、质量闸门和局部返工边界。
-- 需要最终合成时，终端 `videoComposeNode` 的输入条件。
+- Stage order and the stages allowed to run in parallel.
+- The Recipe `action_keys` each stage is allowed to use.
+- Upstream inputs, material inheritance, and reference rules.
+- The anchors to establish or reuse, and which downstream nodes must reference the same anchor.
+- How the node count is determined by the current requirements.
+- Default aspect ratios of media such as images and video, and stage exceptions.
+- Approval, waiting, quality gates, and partial-rework boundaries.
+- When final composition is needed, the input conditions of the terminal `videoComposeNode`.
 
-`videoCompose` 不是 Recipe：
+`videoCompose` is not a Recipe:
 
-- 不要为 `videoCompose` 创建 Recipe。
-- 不要声称 Recipe 会直接驱动 `videoComposeNode` 生成内容。
-- 如需 AI 辅助剪辑决策，创建 `textGeneration` Recipe 生成合成计划，再由动态 WorkflowPlan 添加终端合成节点。
-- 终端合成只能消费已生成的视频和音频资产，不能把策划文本或普通 prompt 当作媒体输入。
+- Do not create a Recipe for `videoCompose`.
+- Do not claim a Recipe will directly drive a `videoComposeNode` to generate content.
+- If AI-assisted editing decisions are needed, create a `textGeneration` Recipe to produce the composition plan, and let the dynamic WorkflowPlan add the terminal composition node.
+- Terminal composition can only consume already generated video and audio assets; it cannot treat planning text or ordinary prompts as media input.
 
-动态计划必须显式携带每个可执行节点的 `recipeId`，并通过 Skill 的 Recipe 白名单和 WorkflowPlan 契约校验后才能创建画布节点。
+The dynamic plan must explicitly carry each executable node's `recipeId`, and canvas nodes can be created only after it passes the Skill's Recipe allowlist and the WorkflowPlan contract validation.
 
-## 12. 从提示词抽硬约束
+## 12. Extracting hard constraints from prompts
 
-画布 prompt 中重复出现的短语通常比节点名更重要。必须提炼成可执行规则。
+Phrases that repeat across canvas prompts are usually more important than node names. They must be distilled into executable rules.
 
-示例类型：
+Example types:
 
-- 主体外观、结构或身份限制 -> 主体属性校验和负向提示词规则。
-- 同一主体不能重复、变形或被重新发明 -> 跨阶段一致性和锚点引用规则。
-- 关键资产的视角、比例或展示范围 -> 资产锚定和构图规则。
-- 某阶段必须使用独立呈现方式 -> 阶段风格闸门。
-- 收尾、交付或终稿要求 -> 最终产物规则。
-- 明确参考上游结果 -> 节点引用链完整性规则。
+- Restrictions on a subject's appearance, structure, or identity -> subject attribute checks and negative-prompt rules.
+- The same subject must not be duplicated, deformed, or reinvented -> cross-stage consistency and anchor reference rules.
+- Viewpoint, proportion, or display scope of key assets -> asset anchoring and composition rules.
+- A stage must use an independent presentation -> stage style gate.
+- Closing, delivery, or final-cut requirements -> final product rules.
+- Explicit references to upstream results -> node reference chain integrity rules.
 
-不要把这些压缩成“保持风格一致”。那不是可执行规则。
+Do not compress these into "keep the style consistent". That is not an executable rule.
 
-## 13. 比例和媒体事实
+## 13. Aspect ratio and media facts
 
-比例要从节点字段和媒体宽高一起判断。
+Judge the aspect ratio from both the node fields and the media dimensions.
 
-- 角色/产品道具常见是 1:1。
-- 分镜可能是 16:9。
-- 视频节点的字段和实际宽高可能不一致；如果宽高是 720x1280，应识别为竖屏事实，并在 planning 里写清“字段默认”和“实际输出”差异。
-- 如果 workflow 有多种比例，不要把所有 task type 都写成同一个默认比例；需要用户每次控制的主比例写成 `input_parameters` 的开始前选项，变体写入 workflow step。
+- Characters/product props are commonly 1:1.
+- Storyboards may be 16:9.
+- A video node's field and its actual dimensions may differ; if the dimensions are 720x1280, recognize it as a vertical-orientation fact and state the difference between the "field default" and the "actual output" in planning.
+- If a workflow has multiple aspect ratios, do not write every task type with the same default ratio; write the primary ratio that the user needs to control each run as a start-of-run option in `input_parameters`, and write variants into workflow steps.
 
-## 14. 输出时避免低质量模式
+## 14. Avoid low-quality patterns in the output
 
-不要输出这些模式：
+Do not produce these patterns:
 
-- 只按节点类型总结：“先图片，再视频，再音频，再合成”。
-- Skill 名称、ID 或关键词只按 workflow_method_terms 生成，缺少可复用协议、产物形态和使用场景。
-- Recipe system_prompt 只是角色扮演套话：“你是一位专业导演/设计师”。
-- 评价标准只有“风格一致”“质量良好”“广告感强”。
-- planning_notes 只罗列阶段名称，没有说明动态节点数量、依赖、并行和审核规则。
-- 把强风格只写成模糊风格字段，没有形成可执行的 creative_contract。
-- 把当前品牌和角色硬编码到所有字段，导致无法复用。
-- 把所有 Recipe 都写成同一种 prompt compiler，没有区分输入、输出和质量闸门。
-- 创建规格中转 Recipe 来重复保存画幅、时长、风格、素材策略或执行方式。
-- 在 Recipe 里写“确认后进入下一阶段”这类阶段推进指令。
-- 把主观审美选择写成 Skill 硬规则，导致每次运行拓扑和结果都被固定。
-- 只在文字里说“保持主体一致”，没有在 planning 里写清锚点建立、复用和下游引用关系。
-- 把 tool schema 字段描述当成 Skill 内容。
-- 首轮问题围绕 id、category、action_keys、node_type、schema 字段展开。
-- 为 `videoCompose` 创建 prompt Recipe，或声称 Recipe 会直接驱动 `videoComposeNode` 生成最终视频。
+- Summarizing only by node type: "first image, then video, then audio, then composition".
+- A Skill name, ID, or keywords generated only from workflow_method_terms, lacking the reusable protocol, product form, and usage scenario.
+- A Recipe system_prompt that is just role-play boilerplate: "You are a professional director/designer".
+- Evaluation standards that are only "consistent style", "good quality", "strong ad feel".
+- planning_notes that merely list stage names without stating the dynamic node count, dependencies, parallelism, and review rules.
+- Writing a strong style only as a vague style field, without forming an executable creative_contract.
+- Hard-coding the current brand and characters into all fields, making reuse impossible.
+- Writing all Recipes as the same kind of prompt compiler, without distinguishing inputs, outputs, and quality gates.
+- Creating spec relay Recipes that repeatedly store aspect ratio, duration, style, material strategy, or execution mode.
+- Writing stage-advancing instructions such as "enter the next stage after confirmation" in a Recipe.
+- Writing subjective aesthetic choices as Skill hard rules, so that the topology and results are fixed on every run.
+- Saying only in text "keep the subject consistent" without stating the anchor establishment, reuse, and downstream references in planning.
+- Treating tool schema field descriptions as Skill content.
+- Building the first-round questions around id, category, action_keys, node_type, or schema fields.
+- Creating a prompt Recipe for `videoCompose`, or claiming a Recipe will directly drive `videoComposeNode` to generate the final video.
 
-好的输出应让用户看到：这不是一份摘要，而是一套可以再次执行的创作工艺。
+Good output should let the user see that this is not a summary but a creative craft that can be executed again.
 
-## 15. 字段写法速查
+## 15. Field-writing quick reference
 
-这一节是序列化前的落地检查。先完成前面的能力建模和复用判断，再按这里填字段；不要反过来按字段生成内容。
+This section is the pre-serialization landing check. Complete the earlier capability modeling and reuse judgments first, then fill the fields here; do not generate content field by field in the reverse direction.
 
-### `planning` 三字段分工
+### Division of labor among the three `planning` fields
 
-- `planning.prompt_guide` 写全局创作口径：风格语言、语气、材质/声音/结构要求、语言要求、阶段例外和跨阶段表达方式。换一种风格或表达协议就要改的内容，优先放这里。
-- `planning.planning_notes` 写动态 Graph 规划：阶段路径、任务类型、动作 key、依赖、并行、锚点建立与复用、输入参数如何影响节点数量和比例。它是给 Hermes 规划图用的，不是节点提示词模板。
-- `planning.conduct_rules` 写硬行为边界：确认点、禁止跳步、素材继承、锚点引用、局部返工、成本/风险边界和硬禁项。它不是普通审美描述，也不是 Recipe 输出模板。
+- `planning.prompt_guide` holds the global creative register: style language, tone, material/sound/structure requirements, language requirements, stage exceptions, and cross-stage expression. Anything that would change when switching style or expression protocol goes here first.
+- `planning.planning_notes` holds dynamic Graph planning: the stage path, task types, action keys, dependencies, parallelism, anchor establishment and reuse, and how input parameters affect node count and aspect ratio. It is for Hermes to plan the graph, not a node prompt template.
+- `planning.conduct_rules` holds hard behavioral boundaries: confirmation points, no skipping steps, material inheritance, anchor references, partial rework, cost/risk boundaries, and hard prohibitions. It is not ordinary aesthetic description nor a Recipe output template.
 
-如果一句话是在描述“结果应该长什么样”，通常进 `prompt_guide`；如果是在描述“图应该怎么建”，通常进 `planning_notes`；如果是在描述“绝对不能怎么做”，通常进 `conduct_rules`。
+If a sentence describes "what the result should look like", it usually goes in `prompt_guide`; if it describes "how the graph should be built", it usually goes in `planning_notes`; if it describes "what must absolutely not be done", it usually goes in `conduct_rules`.
 
-### Skill 字段
+### Skill fields
 
-| 字段 | 应该写什么 | 不要写什么 |
+| Field | What to write | What not to write |
 | --- | --- | --- |
-| `schema_version` | 固定写 `dramaclaw.workflow-skill.v1`。 | 不要让用户选择，不要自创新版本。 |
-| `version` | 新建通常从 `1.0.0` 开始；编辑已有时保留或按实际改动递增。 | 不要写日期、模型版本或 Hermes 版本。 |
-| `id` | 小写短横线 ID，来自可复用协议、产物形态和使用场景。 | 不要只写节点方法词；不要带当前项目名、角色名、空格或中文。 |
-| `name` | 用户看得懂的技能名称，突出适用场景和最终产物。 | 不要显示内部方法名或 ID；不要把节点顺序当名称。 |
-| `description` | 一句话说明这个 Skill 适合什么创作任务、能稳定产出什么。 | 不要复述节点顺序；不要写“管理 Agent 行为”这类内部说明。 |
-| `category` | 业务分类，例如 `video`、`image`、`audio`、`text`、`workflow`、`general`。 | 不要写节点类型、模型名或项目名。 |
-| `triggers.keywords` | 覆盖四类词：协议词、产物词、使用场景词、工作流方法词。 | 不要只放品牌变量，或只放“分镜、视频、音频”。 |
-| `triggers.node_scopes` | 只写可触发的 catalog scope：`textGeneration`、`imageGeneration`、`videoGeneration`、`audioGeneration`。完整工作流可按主要输入/输出覆盖多个。 | 不要写 `imageGenNode`、`videoNode`、`videoComposeNode` 等画布节点类型。 |
-| `allowed_recipe_ids` | 本 Skill 真实执行链路允许使用的 Recipe 白名单。先复用已有 Recipe，缺口才新建。 | 不要塞“可能相关”的 Recipe；不要加入运行时不会创建或不会被下游消费的前置步骤；不要加入由固定画布组件完成的非 Recipe 动作。 |
-| `input_parameters` | 每次运行前用户可变的选择，例如画幅、数量、时长、开关、执行方式。 | 不要写 schema/version/model/provider；不要把一次性案例变量硬编码到 planning。 |
-| `planning.planning_notes` | 从可执行路径开始：阶段顺序、任务类型、动作 key、依赖、并行、等待/确认、输入参数如何影响流程、锚点建立与复用、最终产物条件。后面再写继承规则。 | 不要只写“先 A 再 B”；不要保存固定节点 ID 或固定 topology；不要把非 Recipe 动作当 Recipe。 |
-| `planning.prompt_guide` | 写全局创作口径：风格语言、叙事语气、材质/声音/结构要求、语言要求、阶段例外。 | 不要写工具调用说明；不要把字段解释给 Agent；不要只写空泛形容词。 |
-| `planning.conduct_rules` | 写硬执行规则：先后顺序、审核闸门、素材继承、锚点引用、禁止提前生成、局部返工范围、规格和成本/风险边界。 | 不要只写审美原则；不要写“建议尽量”。 |
-| `evaluation.rating_bands` | 写分数锚点，描述不同分数代表的可见质量差异。 | 不要所有档位都写“质量较好/一般/较差”。 |
-| `evaluation.quality_threshold` | 写可接受的最低分数，例如 `0.8`。 | 不要当成百分比字符串。 |
-| `evaluation.domain_constraints` | 写可检查的领域约束，例如主体一致、引用完整、阶段确认、输出规格满足要求。 | 不要写空泛口号，例如“风格统一、质量好”。 |
-| `evaluation.visual_review_items` / `text_review_items` | 写审查维度、权重和判定说明。视觉 Skill 至少覆盖主体一致性、构图、风格、清晰度；文本 Skill 覆盖结构、事实、语气、可执行性。 | 不要把所有权重都堆到“整体效果”。 |
+| `schema_version` | Fixed `dramaclaw.workflow-skill.v1`. | Do not let the user choose; do not invent new versions. |
+| `version` | New ones usually start from `1.0.0`; when editing existing ones, keep or bump according to the actual change. | Do not write dates, model versions, or Hermes versions. |
+| `id` | Lowercase hyphenated ID derived from the reusable protocol, product form, and usage scenario. | Do not use only node method words; do not include the current project name, character names, spaces, or non-ASCII characters. |
+| `name` | A Skill name the user understands, highlighting the applicable scenario and final product. | Do not show internal method names or the ID; do not use node order as the name. |
+| `description` | One sentence saying what creative task this Skill suits and what it can reliably produce. | Do not restate the node order; do not write internal notes such as "manages Agent behavior". |
+| `category` | Business category, e.g. `video`, `image`, `audio`, `text`, `workflow`, `general`. | Do not write node types, model names, or project names. |
+| `triggers.keywords` | Cover four categories of words: protocol, product, usage scenario, workflow method. | Do not include only brand variables, or only "storyboard, video, audio". |
+| `triggers.node_scopes` | Only triggerable catalog scopes: `textGeneration`, `imageGeneration`, `videoGeneration`, `audioGeneration`. A complete workflow may cover several by primary input/output. | Do not write canvas node types such as `imageGenNode`, `videoNode`, `videoComposeNode`. |
+| `allowed_recipe_ids` | The allowlist of Recipes this Skill's real execution chain may use. Reuse existing Recipes first; create new ones only for gaps. | Do not stuff in "possibly related" Recipes; do not add preceding steps that the runtime will not create or downstream will not consume; do not add non-Recipe actions completed by fixed canvas components. |
+| `input_parameters` | Choices the user may vary before each run, e.g. aspect ratio, count, duration, switches, execution mode. | Do not write schema/version/model/provider; do not hard-code one-off case variables into planning. |
+| `planning.planning_notes` | Start from the executable path: stage order, task types, action keys, dependencies, parallelism, waiting/confirmation, how input parameters affect the flow, anchor establishment and reuse, final product conditions. Write inheritance rules afterward. | Do not write only "first A then B"; do not save fixed node IDs or a fixed topology; do not treat non-Recipe actions as Recipes. |
+| `planning.prompt_guide` | Write the global creative register: style language, narrative tone, material/sound/structure requirements, language requirements, stage exceptions. | Do not write tool-call instructions; do not explain fields to the Agent; do not write only vague adjectives. |
+| `planning.conduct_rules` | Write hard execution rules: order, review gates, material inheritance, anchor references, no early generation, partial rework scope, spec and cost/risk boundaries. | Do not write only aesthetic principles; do not write "try to if possible". |
+| `evaluation.rating_bands` | Write score anchors describing the visible quality differences between scores. | Do not write "fairly good / average / poor quality" for every band. |
+| `evaluation.quality_threshold` | Write the minimum acceptable score, e.g. `0.8`. | Do not treat it as a percentage string. |
+| `evaluation.domain_constraints` | Write checkable domain constraints, e.g. subject consistency, complete references, stage confirmation, output specs met. | Do not write vague slogans such as "consistent style, good quality". |
+| `evaluation.visual_review_items` / `text_review_items` | Write review dimensions, weights, and judging notes. A visual Skill covers at least subject consistency, composition, style, and clarity; a text Skill covers structure, facts, tone, and executability. | Do not pile all weights onto "overall effect". |
 
-### `input_parameters` 写法
+### How to write `input_parameters`
 
-每个参数都要让用户知道“这次运行会怎么变”。
+Every parameter must let the user know "how this run will change".
 
-- `id`：稳定英文 ID，例如 `aspect_ratio`、`shot_count`、`audio_mode`。
-- `label`：用户可读名称，例如“画面比例”“分镜数量”“音频模式”。
-- `type`：按输入形态选 `single_select`、`multi_select`、`text`、`number`、`boolean`。
-- `required`：没有默认值且会影响工作流能否继续时才设为 `true`。
-- `default`：给安全默认值；画幅、时长、数量这类常用项应尽量有默认值。
-- `options`：只保留一个选项值列表，直接写用户能理解的可选值；不要拆成“内部值”和“显示文案”两套。
+- `id`: a stable English ID, e.g. `aspect_ratio`, `shot_count`, `audio_mode`.
+- `label`: a user-readable name, e.g. "Aspect ratio", "Shot count", "Audio mode".
+- `type`: choose `single_select`, `multi_select`, `text`, `number`, or `boolean` by input form.
+- `required`: set `true` only when there is no default value and it affects whether the workflow can continue.
+- `default`: provide a safe default; common items such as aspect ratio, duration, and count should have defaults where possible.
+- `options`: keep only one list of option values, written directly as values the user understands; do not split into an "internal value" and a "display text".
 
-不要把模型偏好、供应商、成本策略、Schema 版本做成开始前选项。每次运行可能变化、且用户能理解其影响的结果控制，优先放这里。
+Do not make model preference, vendor, cost strategy, or Schema version a start-of-run option. Result controls that may change each run and whose impact the user understands should go here first.
 
-### Recipe 字段
+### Recipe fields
 
-| 字段 | 应该写什么 | 不要写什么 |
+| Field | What to write | What not to write |
 | --- | --- | --- |
-| `schema_version` | 固定写 `dramaclaw.recipe.v1`。 | 不要让用户选择，不要自创新版本。 |
-| `version` | 新建通常从 `1.0.0` 开始；编辑已有时保留或按实际改动递增。 | 不要写模型版本。 |
-| `id` | 反映真实工艺颗粒度。通用工艺用通用名；领域工艺用能说明边界的领域名。 | 不要把包含明确领域规则的 Recipe 命名成过泛 ID。 |
-| `name` | 用户可读的阶段能力名称，说明这个阶段产出什么。 | 不要显示 action key 或节点类型。 |
-| `output_kind` | 该 Recipe 的业务产物类型：`text` 直接产出最终文本；`image`、`video`、`audio` 产出对应媒体节点的生成提示词。 | 不要用画布节点名；不要把 `text` 当作二次文本生成提示词。 |
-| `action_keys` | 与该阶段动作匹配的稳定 key，通常与 id 或阶段动作一致。 | 不要放多个不相关动作；不要把 Skill id 塞进来。 |
-| `system_prompt` | 当前 LLM 的执行说明。`text` 必须指导它直接产出最终文本；媒体类型必须指导它产出下游媒体节点可执行的提示词/指令。两类都必须包含输入来源、任务目标、输出结构、质量标准、禁止事项。 | 文字 Recipe 不要要求二次模型调用；媒体 Recipe 不要冒充已经生成最终媒体；不要写“不要覆盖 Skill 风格”这种内部协作话术；不要只写角色扮演套话。 |
-| `must_have_items` | 这个阶段业务产物必须包含的结构模块。 | 不要只写风格形容词；不要写调度步骤。 |
-| `planning_prompt` | 一句业务说明，格式类似“根据 X，生成/提取/改写 Y。” | 不要解释什么时候调用、下游怎么连、节点怎么排；不要写阶段推进。 |
-| `result_summary` | 一句或短语说明该 Recipe 输出什么业务结果。 | 不要写“送入 imageGeneration 节点”“供下游执行”等机制话。 |
-| `requires_source_media` | 这个阶段必须引用图片/视频/音频素材时为 `true`，例如逐镜视频需要分镜/角色/道具参考。纯文本规划通常为 `false`。 | 不要因为可能有参考素材就设 true；只有缺素材会无法正确执行时才设 true。 |
+| `schema_version` | Fixed `dramaclaw.recipe.v1`. | Do not let the user choose; do not invent new versions. |
+| `version` | New ones usually start from `1.0.0`; when editing existing ones, keep or bump according to the actual change. | Do not write model versions. |
+| `id` | Reflect the real craft granularity. Use a generic name for a generic craft; use a domain name that conveys the boundary for a domain craft. | Do not give a Recipe containing clear domain rules an overly generic ID. |
+| `name` | A user-readable stage capability name stating what this stage produces. | Do not show action keys or node types. |
+| `output_kind` | The business product type of the Recipe: `text` directly produces final text; `image`, `video`, `audio` produce the generation prompt for the corresponding media node. | Do not use canvas node names; do not treat `text` as a prompt for a second text generation. |
+| `action_keys` | Stable keys matching this stage's actions, usually the same as the id or the stage action. | Do not put in multiple unrelated actions; do not stuff in the Skill id. |
+| `system_prompt` | The execution instructions for the current LLM. `text` must guide it to directly produce the final text; media types must guide it to produce a prompt/instruction executable by the downstream media node. Both must include input sources, task goal, output structure, quality standards, and prohibitions. | A text Recipe must not require a second model call; a media Recipe must not pretend the final media has been generated; do not write internal collaboration phrasing such as "do not override the Skill style"; do not write only role-play boilerplate. |
+| `must_have_items` | The structural modules the business product of this stage must contain. | Do not write only style adjectives; do not write scheduling steps. |
+| `planning_prompt` | One sentence of business description, in a form like "Based on X, generate/extract/rewrite Y." | Do not explain when to call it, how downstream connects, or how nodes are arranged; do not write stage advancement. |
+| `result_summary` | One sentence or phrase stating what business result the Recipe outputs. | Do not write mechanism phrasing such as "feed into the imageGeneration node" or "for downstream execution". |
+| `requires_source_media` | `true` when this stage must reference image/video/audio material, e.g. shot-by-shot video needs storyboard/character/prop references. Pure text planning is usually `false`. | Do not set true just because reference material might exist; set true only when missing material would make correct execution impossible. |
 
-Recipe 字段不要承载 Skill 风格。凡是换一个视觉风格、审美、题材或案例后就要改的内容，优先放到 Skill 的 `planning.prompt_guide`、`planning.conduct_rules` 或 `evaluation`。Recipe 只写这个阶段如何加工输入、输出什么结构、什么算失败。`id/name` 可体现稳定的领域工艺、产物形态或使用场景，但不要体现当前 Skill 专属的风格身份。
+Recipe fields must not carry the Skill's style. Anything that would change when switching visual style, aesthetics, topic, or case goes first into the Skill's `planning.prompt_guide`, `planning.conduct_rules`, or `evaluation`. A Recipe only states how this stage processes input, what structure it outputs, and what counts as failure. `id/name` may reflect a stable domain craft, product form, or usage scenario, but not the style identity specific to the current Skill.
 
-### Recipe `system_prompt` 的推荐骨架
+### Recommended skeleton for a Recipe `system_prompt`
 
-#### 图片、视频、音频 Recipe
+#### Image, video, and audio Recipes
 
 ```text
-【角色设定】
-你负责把上游输入整理成 <节点类型> 节点可执行的提示词/指令。
+[Role]
+You turn the upstream input into a prompt/instruction executable by a <node type> node.
 
-【输入来源】
-- 用户本次目标或开始前选项
-- 已确认的上游文本/媒体/参考素材
-- 当前阶段必须继承的约束
+[Input sources]
+- The user's goal for this run or start-of-run options
+- Confirmed upstream text/media/reference material
+- Constraints that the current stage must inherit
 
-【任务目标】
-生成一条完整的 <imageGeneration/videoGeneration/audioGeneration> 节点提示词/指令，用于……
+[Task goal]
+Generate one complete <imageGeneration/videoGeneration/audioGeneration> node prompt/instruction, used to...
 
-重要：你的输出是一条提示词/指令，将被送入下游 <node_type> 节点执行；不要自己生成最终内容。
+Important: your output is a single prompt/instruction that will be fed to the downstream <node_type> node for execution; do not generate the final content yourself.
 
-【输出结构要求】
+[Output structure requirements]
 1. ...
 2. ...
 
-【质量标准】
+[Quality standards]
 - ...
 
-【禁止事项/约束】
+[Prohibitions/constraints]
 - ...
 ```
 
-#### 文字 Recipe
+#### Text Recipe
 
 ```text
-【角色设定】
-你负责根据上游输入直接生成可交付的最终文本。
+[Role]
+You directly generate the deliverable final text from the upstream input.
 
-【输入来源】
-- 用户本次目标或开始前选项
-- 已确认的上游文本/媒体/参考素材
-- 当前阶段必须继承的约束
+[Input sources]
+- The user's goal for this run or start-of-run options
+- Confirmed upstream text/media/reference material
+- Constraints that the current stage must inherit
 
-【任务目标】
-直接生成完整的 <文本产物类型>，用于……
+[Task goal]
+Directly generate the complete <text product type>, used to...
 
-重要：输出就是本阶段的最终文本结果，不需要也不得要求另一个文本模型继续生成。
+Important: the output is the final text result of this stage; no other text model needs to, or may be asked to, continue generating.
 
-【输出结构要求】
+[Output structure requirements]
 1. ...
 2. ...
 
-【质量标准】
+[Quality standards]
 - ...
 
-【禁止事项/约束】
+[Prohibitions/constraints]
 - ...
 ```
 
-这里的“当前阶段必须继承的约束”必须写成业务语言，不要写成“继承 Skill prompt_guide”这类内部协作话术。
+"Constraints that the current stage must inherit" here must be written in business language, not in internal collaboration phrasing such as "inherit the Skill prompt_guide".
 
-### 共享 Recipe 与领域 Recipe 的判断标准
+### Criteria for shared Recipes versus domain Recipes
 
-- 如果不同 Skill 只是风格、题材、语气或行业不同，但阶段输入、输出结构、质量标准和风险边界相同，优先复用 Recipe。
-- 如果某个阶段包含明确领域规则，或输入结构、输出结构、质量标准、审核边界明显不同，就新建领域 Recipe。
-- 如果某个前置步骤只是在 Skill 里做规划或确认，并不会创建可被下游消费的节点，就不要把它放进 `allowed_recipe_ids`。
+- If different Skills differ only in style, topic, tone, or industry, but the stage input, output structure, quality standards, and risk boundaries are the same, prefer reusing the Recipe.
+- If a stage contains clear domain rules, or its input structure, output structure, quality standards, or review boundaries clearly differ, create a domain Recipe.
+- If a preceding step only does planning or confirmation within the Skill and does not create a node that downstream can consume, do not put it in `allowed_recipe_ids`.
 
-### 完稿前自检
+### Self-check before finalizing
 
-调用 `freezone_finish_agent_catalog_draft` 前，先做一次内部自检；发现明确问题时直接修正，不要把问题留给用户：
+Before calling `freezone_finish_agent_catalog_draft`, do an internal self-check; when you find a clear problem, fix it directly instead of leaving it to the user:
 
-- 每个 Recipe 是否只负责一个可执行阶段。如果一条 Recipe 要同时产出两个或多个下游节点，应拆分。
-- 音频 Recipe 是否只负责旁白、音效、BGM 等音频层；不要把最终视频合成写进音频 Recipe。
-- Skill 已经有开始前选项时，Recipe 不要写死对应数量、比例、时长等可变值。
-- 风格、题材、品牌、角色身份和全局质量口径是否放在 Skill；Recipe 只保留本阶段输入、输出结构、质量标准和失败边界。
-- 新建 Recipe 的 id/name/result_summary 是否没有夹带当前 Skill 的风格身份。若名称换一种风格就必须改，说明它写进了 Skill 风格，应改成描述工艺的名称，把风格移回 Skill。
-- 如果 Recipe 抽象后只剩“稳定、清晰、可复用、高质量”等虚词，说明抽得太空，应保留更具体的领域边界和名称。
+- Whether each Recipe is responsible for only one executable stage. If a Recipe would produce two or more downstream nodes at once, split it.
+- Whether audio Recipes are responsible only for audio layers such as narration, sound effects, and BGM; do not write final video composition into an audio Recipe.
+- When the Skill already has start-of-run options, the Recipe must not hard-code the corresponding variable values such as count, aspect ratio, and duration.
+- Whether style, topic, brand, character identity, and global quality register live in the Skill; the Recipe keeps only this stage's input, output structure, quality standards, and failure boundary.
+- Whether a new Recipe's id/name/result_summary carry none of the current Skill's style identity. If the name would have to change when switching style, it has style from the Skill baked in; change it to a craft-describing name and move the style back to the Skill.
+- If a Recipe is left with only vague words like "stable, clear, reusable, high quality" after abstraction, it is too empty; keep a more specific domain boundary and name.
 
-字段落地时始终遵守这条线：**厚 Skill 写观感、资产策略、阶段原则和质量标准；Recipe 写可复用阶段工艺；Schema 保持薄，不新增字段。**
+When landing fields, always follow this line: **a thick Skill carries look-and-feel, asset strategy, stage principles, and quality standards; a Recipe carries the reusable stage craft; the Schema stays thin and gets no new fields.**

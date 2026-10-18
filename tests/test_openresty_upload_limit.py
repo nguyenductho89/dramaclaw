@@ -54,7 +54,7 @@ def test_freezone_audio_voice_oversize_returns_business_error() -> None:
     assert response.status_code == 200
     assert response.json() == {
         "ok": False,
-        "error": "参考音频超过 5MB 上限，请压缩或裁剪后重新上传",
+        "error": "Reference audio exceeds the 5MB limit. Compress or trim it and upload again.",
         "data": {
             "code": "freezone_audio_voice_too_large",
             "field": "file",

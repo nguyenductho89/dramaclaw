@@ -14,36 +14,36 @@ import {
 describe('extractSpeakableAudioText', () => {
   it('keeps narration and dialogue while dropping production instructions', () => {
     expect(extractSpeakableAudioText(`
-      【时长】79s
-      【旁白】（低沉、缓慢）深夜的便利店，只有他一个人。
-      【店员】（惊恐低语）它在看我。
-      【环境音】冰柜压缩机低频运转
-      【音效】心跳声渐强
-      【配乐】低频不安氛围音乐
-    `)).toBe('深夜的便利店，只有他一个人。\n\n它在看我。');
+      [Duration]79s
+      [Narration] (low, slow) The convenience store at night, with only him inside.
+      [Clerk] (terrified whisper) It is watching me.
+      [Ambience] Low-frequency hum of the freezer compressor
+      [SFX] Heartbeat growing louder
+      [Soundtrack] Low uneasy ambient music
+    `)).toBe('The convenience store at night, with only him inside.\n\nIt is watching me.');
   });
 
   it('drops plain control lines and timeline prefixes', () => {
     expect(extractSpeakableAudioText(`
-      时长：79s
-      情绪：紧张
-      0-5s：欢迎来到今天的节目。
+      Duration: 79s
+      Mood: tense
+      0-5s: Welcome to today's show.
       79s
-    `)).toBe('欢迎来到今天的节目。');
+    `)).toBe('Welcome to today\'s show.');
   });
 
   it('preserves ordinary unstructured speech text', () => {
-    expect(extractSpeakableAudioText('你好，欢迎回来。')).toBe('你好，欢迎回来。');
+    expect(extractSpeakableAudioText('Hello, welcome back.')).toBe('Hello, welcome back.');
   });
 
   it('recovers a workflow BGM node that was incorrectly stored as speech', () => {
     expect(resolveAudioKind({
       audioKind: 'speech',
-      title: '背景音乐',
-      text: '为 15 秒广告创作背景音乐',
+      title: 'Background music',
+      text: 'Compose background music for a 15 second ad',
       workflowCatalog: {
         promptBuilder: {
-          planItem: { id: 'bgm', title: '背景音乐' },
+          planItem: { id: 'bgm', title: 'Background music' },
         },
       },
     })).toBe('music');
@@ -52,35 +52,35 @@ describe('extractSpeakableAudioText', () => {
   it('does not reinterpret narration as music from its body text', () => {
     expect(resolveAudioKind({
       audioKind: 'speech',
-      title: '广告旁白',
-      text: '欢迎收看这支背景音乐主题广告。',
+      title: 'Ad narration',
+      text: 'Welcome to this ad on the background music theme.',
     })).toBe('speech');
   });
 
   it('rejects a narration-generation instruction as speakable text', () => {
     const instruction =
-      '根据广告脚本中的旁白文案，生成女声旁白配音，语调优雅温柔，节奏配合15秒广告';
+      'Based on the narration copy in the ad script, generate a female narration voiceover with an elegant, gentle tone, paced to a 15 second ad';
     expect(isSpeechGenerationInstruction(instruction)).toBe(true);
     expect(extractSpeakableAudioText(instruction)).toBe('');
   });
 
   it('rejects workflow narration placeholders instead of speaking them literally', () => {
-    expect(extractSpeakableAudioText('这是短剧的第一段旁白')).toBe('');
+    expect(extractSpeakableAudioText('This is the short drama\'s first narration')).toBe('');
     expect(extractSpeakableAudioText('This is the second narration')).toBe('');
   });
 
   it('uses only the pre-filtered narration when Recipe compilation times out', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'timeout_fallback',
-      compiledPrompt: '你是短剧配音导演。请根据脚本生成旁白。\n\n真正的旁白。',
-      safeFallbackPrompt: '真正的旁白。',
-    })).toBe('真正的旁白。');
+      compiledPrompt: 'You are a short-drama voice director. Based on the script, generate narration voiceover.\n\nReal narration.',
+      safeFallbackPrompt: 'Real narration.',
+    })).toBe('Real narration.');
   });
 
   it('stops timeout fallback submission when no safe narration exists', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'timeout_fallback',
-      compiledPrompt: '你是短剧配音导演。请根据脚本生成旁白。',
+      compiledPrompt: 'You are a short-drama voice director. Based on the script, generate narration voiceover.',
       safeFallbackPrompt: '',
     })).toBe('');
   });
@@ -88,115 +88,115 @@ describe('extractSpeakableAudioText', () => {
   it('uses a successful Recipe compilation result for speech', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '【旁白】编译后的安全旁白。',
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('编译后的安全旁白。');
+      compiledPrompt: '[Narration] Compiled safe narration.',
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Compiled safe narration.');
   });
 
   it('extracts only explicitly labelled speech from a general-audio production brief', () => {
-    const compiled = '女声普通话旁白，情绪温柔，时长 3 秒。朗读文本：欢迎使用。';
-    expect(extractExplicitSpeakableAudioText(compiled)).toBe('欢迎使用。');
+    const compiled = 'Female narration, gentle mood, 3 seconds. Reading text: Welcome.';
+    expect(extractExplicitSpeakableAudioText(compiled)).toBe('Welcome.');
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
       compiledPrompt: compiled,
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始文本。',
-    })).toBe('欢迎使用。');
+      safeFallbackPrompt: 'Original text.',
+    })).toBe('Welcome.');
   });
 
   it('stops explicit speech collection when another production field starts', () => {
     const compiled = [
-      '朗读文本：',
+      'Reading text:',
       '<speech_text>',
-      '欢迎使用。',
-      '他说：快跑。',
+      'Welcome.',
+      'He said: run!',
       '</speech_text>',
-      '情感：温柔',
-      '音色描述：温柔女声',
+      'Emotion: gentle',
+      'Voice timbre: gentle female voice',
     ].join('\n');
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
       compiledPrompt: compiled,
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始文本。',
-    })).toBe('欢迎使用。\n\n他说：快跑。');
+      safeFallbackPrompt: 'Original text.',
+    })).toBe('Welcome.\n\nHe said: run!');
   });
 
   it('falls back safely when structured speech markers are missing', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '朗读文本：\n他说：快跑。\n情感：温柔',
+      compiledPrompt: 'Reading text:\nHe said: run!\nEmotion: gentle',
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('原始旁白。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Original narration.');
   });
 
   it('accepts a speech start marker on the same line as its label', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '朗读文本：<speech_text>\n欢迎使用。\n</speech_text>\n情感：温柔',
+      compiledPrompt: 'Reading text: <speech_text>\nWelcome.\n</speech_text>\nEmotion: gentle',
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('欢迎使用。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Welcome.');
   });
 
   it('rejects incomplete speech markers before legacy fallback', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '朗读文本：<speech_text>\n欢迎使用。',
+      compiledPrompt: 'Reading text: <speech_text>\nWelcome.',
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('原始旁白。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Original narration.');
   });
 
   it('accepts an unlabelled model result from the direct-speech Recipe', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '他说：快跑。',
+      compiledPrompt: 'He said: run!',
       recipeIds: ['drama-shot-voice'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('他说：快跑。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('He said: run!');
   });
 
   it('rejects labelled production output from the direct-speech Recipe', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '【音色】温柔女声',
+      compiledPrompt: '[Timbre] gentle female voice',
       recipeIds: ['drama-shot-voice'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('原始旁白。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Original narration.');
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '制作要求：句尾自然收音。',
+      compiledPrompt: 'Production requirements: end sentences with a natural fade.',
       recipeIds: ['drama-shot-voice'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('原始旁白。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Original narration.');
   });
 
   it('does not accept unlabelled production output from a general audio Recipe', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '温柔女声，节奏舒缓。',
+      compiledPrompt: 'Gentle female voice, relaxed pace.',
       recipeIds: ['general-audio'],
-      safeFallbackPrompt: '原始旁白。',
-    })).toBe('原始旁白。');
+      safeFallbackPrompt: 'Original narration.',
+    })).toBe('Original narration.');
   });
 
   it('falls back to source speech when a model result has no explicit speech field', () => {
     expect(resolveSafeSpeechSubmissionText({
       compileMode: 'model',
-      compiledPrompt: '女声普通话旁白，情绪温柔，时长 3 秒。',
-      safeFallbackPrompt: '欢迎使用。',
-    })).toBe('欢迎使用。');
+      compiledPrompt: 'Female narration, gentle mood, 3 seconds.',
+      safeFallbackPrompt: 'Welcome.',
+    })).toBe('Welcome.');
   });
 
   it('sets BGM one second longer than the requested video duration', () => {
     expect(resolveMusicLengthMs({
       audioKind: 'music',
-      text: '生成优雅背景音乐',
+      text: 'Generate elegant background music',
       workflowCatalog: {
         promptBuilder: {
-          userGoal: '制作一条 15 秒竖屏广告',
+          userGoal: 'Produce a 15 second vertical ad',
         },
       },
     })).toBe(16_000);

@@ -772,18 +772,11 @@ RUNPOD_H3_UNET_REF2VA = os.environ.get(
 RUNPOD_H3_UNET_FL2VA = os.environ.get(
     "RUNPOD_H3_UNET_FL2VA", "minimax_h3_fl2va_pruned_int8_convrot.safetensors"
 )
-# The endpoint runs on Ampere (A40/A6000, pool AMPERE_48), which has INT8
-# tensor cores but no FP4/FP8 ones: the old `..._nvfp4_awq` text encoder had to
-# be emulated there (slow), while `int8_convrot` (same format as the DiT files
-# above) runs natively. Both files come from `Comfy-Org/MiniMax-H3` and must
-# exist on the Network Volume before this default is deployed; to roll back
-# set RUNPOD_H3_TEXT_ENCODER=qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors and
-# RUNPOD_H3_VIDEO_VAE=minimax_h3_video_vae_fp16.safetensors in `.env`.
 RUNPOD_H3_TEXT_ENCODER = os.environ.get(
-    "RUNPOD_H3_TEXT_ENCODER", "qwen3vl_32b_minimax_h3_int8_convrot.safetensors"
+    "RUNPOD_H3_TEXT_ENCODER", "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
 )
 RUNPOD_H3_VIDEO_VAE = os.environ.get(
-    "RUNPOD_H3_VIDEO_VAE", "minimax_h3_video_vae_int8_convrot.safetensors"
+    "RUNPOD_H3_VIDEO_VAE", "minimax_h3_video_vae_fp16.safetensors"
 )
 RUNPOD_H3_AUDIO_VAE = os.environ.get(
     "RUNPOD_H3_AUDIO_VAE", "minimax_h3_audio_vae_fp32.safetensors"

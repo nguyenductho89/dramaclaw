@@ -9,8 +9,8 @@ description = "SuperTale Community Edition API and video pipeline"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = "Elastic-2.0"
-# License 正文按 REUSE 惯例只保留在 LICENSES/(无根 LICENSE 副本),显式指向它,
-# 避免 hatchling 默认 glob(LICENSE*)在根目录找不到文件。
+# The license text is kept only in LICENSES/ per REUSE convention (no root LICENSE copy); point to it explicitly,
+# so that hatchling's default glob (LICENSE*) does not fail to find a file at the root.
 license-files = ["LICENSES/Elastic-2.0.txt"]
 authors = [
     { name = "Eric" }
@@ -105,16 +105,16 @@ dev = [
 target-version = "py311"
 
 [tool.ruff.lint]
-# 显式冻结规则集为 ruff 默认（pycodestyle 错误 + pyflakes），
-# 避免 ruff 升级引入新规则时门禁漂移。扩规则需单独 PR。
+# Explicitly freeze the rule set to the ruff default (pycodestyle errors + pyflakes),
+# so that a ruff upgrade introducing new rules does not make the gate drift. Expanding the rules needs a separate PR.
 select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
-# wsgi 必须先执行 load_project_dotenv() 再导入 app，属有意的导入顺序依赖（永久豁免）
+# wsgi must run load_project_dotenv() before importing app, an intentional import-order dependency (permanent exemption)
 "src/novelvideo/api/wsgi.py" = ["E402"]
-# ―――― 以下为存量豁免基线（2026-07-07 快照：196 处 / 61 文件）――――
-# 门禁只管新增代码：新文件、以及下列文件中新增的其他规则违例会被拦截。
-# 治理旧账时：修完某文件的某规则后删除对应条目，防止回潮。
+# ---- Below is the baseline of legacy exemptions (2026-07-07 snapshot: 196 hits / 61 files) ----
+# The gate only governs new code: new files, and other rule violations newly added in the files below, are blocked.
+# When paying down old debt: after fixing a rule in a file, delete the corresponding entry to prevent regression.
 "src/novelvideo/agents/episode_fixer.py" = ["E402"]
 "src/novelvideo/agents/episode_planner.py" = ["F401"]
 "src/novelvideo/agents/episode_reviewer.py" = ["E402", "F401", "F541"]
@@ -198,9 +198,9 @@ name = "da2"
 version = "0.1.0"
 requires-dist = []
 
-# ml-sharp(`sharp`)上游依赖含 gsplat(渲染器,常需 CUDA 编译);SHARP 预测路径不用
-# gsplat(已核:CE 与 sharp.models 均不 import 它)。这里覆盖 sharp 的依赖元数据、
-# 去掉 gsplat,使 CPU/无 CUDA 环境(含 CE Docker)能干净安装;其余依赖原样保留。
+# The ml-sharp (`sharp`) upstream dependencies include gsplat (a renderer that often needs CUDA compilation); the SHARP prediction path does not use
+# gsplat (verified: neither CE nor sharp.models imports it). This overrides sharp's dependency metadata and
+# drops gsplat so that CPU / no-CUDA environments (including CE Docker) can install cleanly; the other dependencies are kept as-is.
 [[tool.uv.dependency-metadata]]
 name = "sharp"
 version = "0.1"

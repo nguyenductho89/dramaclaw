@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 扩图面板：报价、UI 显示、提交必须用同一个分辨率档位。
+// Outpaint panel: the quote, the UI display and the submission must use the same resolution tier.
 //
-// 面板上的 `imageSize` 是用户上一次挑的原始值，默认 '2K'。后台给某个模型只配了
-// 别的档位时，`pickAllowedOption` 会把它收敛成 effectiveImageSize —— 下拉框显示的
-// 是收敛值、报价算的也是收敛值，唯独提交带的是那个越界的原始值：用户看到 A、
-// 按 A 计费、后端收到 B（还可能因为不在目录档位里直接被判非法）。
+// The panel's `imageSize` is the raw value the user picked last time, defaulting to '2K'. When the backend configures only
+// other tiers for a model, `pickAllowedOption` converges it to effectiveImageSize -- the dropdown shows
+// the converged value and the quote uses the converged value too, only the submission carried the out-of-range raw value: the user saw A,
+// was billed for A, and the backend received B (which could even be judged invalid outright for not being in the catalog tiers).
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OutpaintEditorOverlay } from "@/features/canvas/ui/OutpaintEditorOverlay";
 import type { CanvasNode } from "@/features/canvas/domain/canvasNodes";
 
-// NodeToolbar 要挂在真的 ReactFlow store 上才渲染内容，这里只关心工具条里的按钮，
-// 用透传壳替掉即可。
+// NodeToolbar renders content only when mounted on a real ReactFlow store; here only the buttons in the toolbar matter,
+// so a pass-through shell replaces it.
 vi.mock("@xyflow/react", () => ({
   NodeToolbar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Position: { Top: "top", Bottom: "bottom" },
@@ -23,7 +23,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// 后台只给这个模型配了 1K / 4K —— 面板默认的 '2K' 不在档位里。
+// The backend configured only 1K / 4K for this model -- the panel's default '2K' is not among the tiers.
 const CATALOG_MODEL = {
   id: "studio-image-v1",
   providerId: "openrouter" as const,
@@ -39,7 +39,7 @@ type ImageCatalogState = {
   error: Error | null;
 };
 
-/** 默认给一条正常目录；单个用例可以改成加载中 / 拉取失败 / 权威空目录。 */
+/** Provides a normal catalog by default; an individual case can switch to loading / fetch failed / authoritative empty catalog. */
 const LOADED_CATALOG: ImageCatalogState = {
   models: [CATALOG_MODEL],
   isLoading: false,
@@ -49,8 +49,8 @@ const LOADED_CATALOG: ImageCatalogState = {
 
 let imageCatalogState: ImageCatalogState = LOADED_CATALOG;
 
-// 只替换取数的 hook；`isAuthoritativeEmptyCatalog` 是纯函数判据，面板正是
-// 靠它决定禁不禁用提交，必须留真实实现。
+// Only the data-fetching hook is replaced; `isAuthoritativeEmptyCatalog` is a pure predicate that the panel
+// uses to decide whether to disable submit, so the real implementation must stay.
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/features/canvas/hooks/useFreezoneImageModels")
@@ -121,19 +121,19 @@ beforeEach(() => {
   useGenerationCreditCost.mockReturnValue({ data: undefined, error: null });
 });
 
-describe("扩图面板的分辨率档位", () => {
-  it("提交的是收敛后的档位，不是越界的原始选择", async () => {
+describe("outpaint panel resolution tiers", () => {
+  it("submits the converged tier, not the out-of-range raw selection", async () => {
     renderOverlay();
     fireEvent.click(screen.getByTitle("outpaintEditor.submit"));
 
     await waitFor(() => expect(submitFreezoneOutpaint).toHaveBeenCalled());
     const body = submitFreezoneOutpaint.mock.calls[0][1] as Record<string, unknown>;
-    // 默认状态是 '2K'，但该模型只配了 1K / 4K → 必须落到首个可用档位 '1K'。
+    // The default state is '2K', but the model has only 1K / 4K configured -> it must land on the first available tier '1K'.
     expect(body.imageSize).toBe("1K");
     expect(body.imageSize).not.toBe("2K");
   });
 
-  it("报价与提交用同一个档位", async () => {
+  it("the quote and the submission use the same tier", async () => {
     renderOverlay();
     const quoteOptions = useGenerationCreditCost.mock.calls[0][2] as {
       params: Record<string, unknown>;
@@ -142,13 +142,13 @@ describe("扩图面板的分辨率档位", () => {
 
     await waitFor(() => expect(submitFreezoneOutpaint).toHaveBeenCalled());
     const body = submitFreezoneOutpaint.mock.calls[0][1] as Record<string, unknown>;
-    // 报价接口收到什么档位，后端就按什么档位扣费；提交必须一模一样。
+    // Whatever tier the quote endpoint receives is the tier the backend bills; the submission must be exactly the same.
     expect(body.imageSize).toBe(quoteOptions.params.size);
   });
 
-  it("用户显式选中的档位在允许范围内时原样提交", async () => {
+  it("a tier explicitly picked by the user is submitted as-is when within the allowed range", async () => {
     renderOverlay();
-    // 打开分辨率下拉（触发器上显示的就是当前收敛值 1K），挑一个模型确实支持的档位。
+    // Open the resolution dropdown (the trigger shows the current converged value 1K) and pick a tier the model really supports.
     fireEvent.click(screen.getByText("1K"));
     fireEvent.click(screen.getByText("4K"));
     fireEvent.click(screen.getByTitle("outpaintEditor.submit"));
@@ -159,19 +159,19 @@ describe("扩图面板的分辨率档位", () => {
   });
 });
 
-describe("扩图面板的权威空目录", () => {
-  it("后台一个图片模型都没配时禁用提交，点了也不发请求", () => {
+describe("outpaint panel authoritative empty catalog", () => {
+  it("disables submit and sends no request when the backend has no image model configured", () => {
     imageCatalogState = { models: [], isLoading: false, isFallback: false, error: null };
     renderOverlay();
-    // 原来这里还挂着 `?? SHARED_MODELS.find(...)`：目录明明是空的，面板却拿前端
-    // 硬编码的模型顶上去，用户点下去只会收到后端 409。
+    // This used to carry `?? SHARED_MODELS.find(...)`: the catalog was clearly empty, yet the panel propped itself up with the frontend's
+    // hard-coded model, and a user clicking would only receive a 409 from the backend.
     const button = screen.getByTitle("modelParams.noModelsAvailable");
     expect(button).toBeDisabled();
     fireEvent.click(button);
     expect(submitFreezoneOutpaint).not.toHaveBeenCalled();
   });
 
-  it("拉取失败回落到兜底列表时照常可提交", async () => {
+  it("submit still works when a fetch failure falls back to the fallback list", async () => {
     imageCatalogState = {
       models: [CATALOG_MODEL],
       isLoading: false,

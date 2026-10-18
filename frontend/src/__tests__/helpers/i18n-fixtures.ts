@@ -46,7 +46,3 @@ function makeT(lang: "vi" | "en", table: unknown) {
 
 export const enT = makeT("en", enTranslation);
 export const viT = makeT("vi", viTranslation);
-/** @deprecated Chinese UI was removed; aliases to English so stale imports still compile. */
-export const zhT = enT;
-/** @deprecated see zhT. */
-export const zhTranslation = enTranslation;

@@ -26,9 +26,9 @@ FROM python:3.12-slim
 ARG CODEX_REF
 COPY --from=vtracer-builder /usr/local/cargo/bin/vtracer /usr/local/bin/vtracer
 
-# 项目全程用 uv 管理(与 host 一致)。Dockerfile 也用 uv,使 uv.lock 锁版本 +
-# [[tool.uv.dependency-metadata]] override(da2 的 torch==2.5.0 冲突、sharp 的 gsplat)
-# 生效——pip 不认这些 override,会在 da2/world 解析冲突时 build 失败。
+# The project is managed with uv throughout (consistent with the host). The Dockerfile also uses uv, so that uv.lock pins versions +
+# the [[tool.uv.dependency-metadata]] overrides (da2's torch==2.5.0 conflict, sharp's gsplat)
+# take effect - pip ignores these overrides and the build would fail on da2/world resolution conflicts.
 RUN pip install --no-cache-dir uv
 
 ENV ST_EDITION=ce \
@@ -76,8 +76,8 @@ RUN set -eux; \
 
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
-# license 正文按 REUSE 惯例只存于 LICENSES/(pyproject license-files 指向它),
-# hatchling 构建 wheel 时需要这份文件在上下文中。
+# The license text lives only in LICENSES/ per REUSE convention (pyproject license-files points to it),
+# and hatchling needs this file in the build context when building the wheel.
 COPY LICENSES ./LICENSES
 COPY NOTICE ./NOTICE
 COPY src ./src
@@ -99,18 +99,18 @@ RUN set -eux; \
     command -v bwrap; \
     codex-linux-sandbox --help >/dev/null
 
-# 资产完整性兜底(等价原 wheel 检查):login 媒体须随 src 带入(.dockerignore 已 ! 放行)。
+# Asset integrity safeguard (equivalent to the original wheel check): login media must be carried in with src (.dockerignore already allows it via !).
 RUN test -f src/novelvideo/assets/login_bgm.mp3 \
     && test -f src/novelvideo/assets/login_bg_v1.mp4 \
     && test -f src/novelvideo/assets/login_bg_v2.mp4 \
     && test -f src/novelvideo/assets/login_bg_v3.mp4
 
-# 可选 3DGS/SHARP「world」特性。默认精简镜像。INSTALL_WORLD=1 时:
-#   - node + @playcanvas/splat-transform(PLY→SOG,MIT)装到 PATH
-#   - uv sync --extra world(torch/sharp@apple/ml-sharp/da2/…;经 uv override 去 gsplat
-#     + 化解 da2 torch 冲突,与 host `uv sync --extra world` 完全一致)
-# 模型权重不烤进镜像:运行时自动下载到可写卷(Apple 研究许可,绝不再分发)。
-# 注:slim base 为 CPU;GPU 加速需 CUDA base + nvidia runtime。
+# Optional 3DGS/SHARP "world" feature. Slim image by default. With INSTALL_WORLD=1:
+#   - node + @playcanvas/splat-transform (PLY->SOG, MIT) installed onto PATH
+#   - uv sync --extra world (torch/sharp@apple/ml-sharp/da2/...; gsplat removed via uv override
+#     + da2 torch conflict resolved, fully identical to host `uv sync --extra world`)
+# Model weights are not baked into the image: they are downloaded at runtime into a writable volume (Apple research license, never redistributed).
+# Note: the slim base is CPU; GPU acceleration needs a CUDA base + nvidia runtime.
 ARG INSTALL_WORLD=0
 # The SDK declares its stock runtime as a dependency. Remove that unused
 # binary so an operator cannot bypass CODEX_BIN and re-enable metadata logs.

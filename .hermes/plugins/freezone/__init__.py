@@ -1,7 +1,7 @@
-"""Hermes 的 Freezone 画布工具入口。
+"""Entry point of the Freezone canvas tools for Hermes.
 
-这些工具名是虾画和 Agent 的稳定集成点。Handler 保持轻量：
-读上下文、预校验、写命令都尽量转交给前端画布桥接层处理。
+These tool names are the stable integration point between Shrimp Canvas and the Agent. Handlers stay lightweight:
+reading context, pre-validation and writing commands are handed to the frontend canvas bridge wherever possible.
 """
 
 from __future__ import annotations
@@ -179,7 +179,7 @@ _REVISION_CONFLICT_CANVAS_BLOCKS: set[tuple[str, str]] = set()
 _SKILL_STUDIO_DEFAULT_SKILL_SCHEMA_VERSION = "dramaclaw.workflow-skill.v1"
 _SKILL_STUDIO_DEFAULT_SKILL_VERSION = "1.0.0"
 
-_SKILL_STUDIO_REAL_TOOL_CALL_INSTRUCTION = "不要用普通文本回复，不要把工具调用、参数块或代码块写进聊天内容；请直接调用对应工具。"
+_SKILL_STUDIO_REAL_TOOL_CALL_INSTRUCTION = "Do not reply with plain text and do not write tool calls, parameter blocks or code blocks into the chat content; call the corresponding tool directly."
 
 
 def _generation_answer_scope(
@@ -266,7 +266,7 @@ def _revision_conflict_write_error(project: str | None, canvas: str | None) -> d
         "status": "canvas_revision_confirmation_required",
         "code": "canvas_revision_confirmation_required",
         "error": "canvas writes are blocked until the current workflow draft revision is explicitly confirmed",
-        "user_message": "画布版本发生变化，请先查看并明确确认最新工作流版本；本次未执行画布操作。",
+        "user_message": "The canvas version has changed. Review and explicitly confirm the latest workflow version first; no canvas operation was performed this time.",
         "retryable": False,
         "agent_instruction": (
             "Do not issue another canvas write. Read the current workflow draft and show its "
@@ -299,9 +299,9 @@ def _skill_studio_agent_instruction(
     next_step: str, progress: str, notes: list[str] | None = None
 ) -> str:
     parts = [
-        f"下一步必须调用 {next_step}",
-        f"当前进度：{progress}",
-        f"注意：{_SKILL_STUDIO_REAL_TOOL_CALL_INSTRUCTION}",
+        f"The next step must call {next_step}",
+        f"Current progress: {progress}",
+        f"Note: {_SKILL_STUDIO_REAL_TOOL_CALL_INSTRUCTION}",
     ]
     for note in notes or []:
         clean_note = note.strip()
@@ -674,7 +674,7 @@ def _canvas_selection_required(candidates: list[dict[str, Any]], *, reason: str)
         {
             "ok": False,
             "code": "canvas_selection_required",
-            "message": "需要选择目标画布后才能执行该画布操作。",
+            "message": "A target canvas must be selected before this canvas operation can run.",
             "reason": reason,
             "candidate_count": len(candidates),
             "candidates": candidates[:10],
@@ -692,7 +692,7 @@ def _no_canvas_candidate(reason: str) -> str:
         {
             "ok": False,
             "code": "canvas_not_found",
-            "message": "没有找到可操作的虾画画布，请先在浏览器中创建或打开一个画布。",
+            "message": "No operable Shrimp Canvas canvas was found. Create or open a canvas in the browser first.",
             "reason": reason,
             "agent_instruction": (
                 "Ask the user to open or create a Freezone canvas, then retry with a canvas_id."
@@ -706,7 +706,7 @@ def _canvas_context_unavailable(error: dict[str, Any] | None) -> str:
         {
             "ok": False,
             "code": "canvas_context_unavailable",
-            "message": "无法读取本地项目或画布列表，请确认 dramaclaw-ce API 已启动并可访问。",
+            "message": "Unable to read the local project or canvas list. Make sure the dramaclaw-ce API is running and reachable.",
             "error": error,
             "agent_instruction": (
                 "Do not retry the canvas write tool yet. Ask the user to start the local "
@@ -1055,15 +1055,26 @@ def _workflow_bypass_clarification_error(
             }
         )
     ).lower()
-    workflow_markers = ("workflow", "工作流", "workflowplan", "workflow plan")
-    bypass_markers = ("bypass", "绕过", "不经过", "跳过", "避开")
+    workflow_markers = ("workflow", "workflowplan", "workflow plan", "luồng công việc", "quy trình")
+    bypass_markers = (
+        "bypass",
+        "circumvent",
+        "skip",
+        "avoid",
+        "without going through",
+        "bỏ qua",
+        "vòng qua",
+        "tránh",
+    )
     direct_canvas_markers = (
         "direct canvas",
         "canvas command",
         "freezone_emit_canvas_command",
-        "直接在画布",
-        "直接创建节点",
-        "直接画布",
+        "directly on the canvas",
+        "create nodes directly",
+        "directly create nodes",
+        "trực tiếp trên canvas",
+        "tạo node trực tiếp",
     )
     if not (
         any(marker in text for marker in workflow_markers)
@@ -1216,17 +1227,17 @@ def _handle_request_user_clarification(args: dict[str, Any], **_: Any) -> str:
         "video_count": "video_variants_per_node",
     }
     generation_question_titles = {
-        "image_model": "图片模型",
-        "image_aspect_ratio": "图片比例",
-        "image_resolution": "图片分辨率",
-        "image_quality": "图片画质",
-        "image_variants_per_node": "图片生成数量",
-        "video_model": "视频模型",
-        "video_aspect_ratio": "视频比例",
-        "video_resolution": "视频分辨率",
-        "video_duration_seconds": "视频时长",
-        "video_generate_audio": "视频声音",
-        "video_variants_per_node": "视频生成数量",
+        "image_model": "Image model",
+        "image_aspect_ratio": "Image aspect ratio",
+        "image_resolution": "Image resolution",
+        "image_quality": "Image quality",
+        "image_variants_per_node": "Images per generation",
+        "video_model": "Video model",
+        "video_aspect_ratio": "Video aspect ratio",
+        "video_resolution": "Video resolution",
+        "video_duration_seconds": "Video duration",
+        "video_generate_audio": "Video sound",
+        "video_variants_per_node": "Videos per generation",
     }
     answers = args.get("answers")
     if not isinstance(answers, dict):
@@ -1437,7 +1448,7 @@ def _handle_request_user_clarification(args: dict[str, Any], **_: Any) -> str:
                     "status": "generation_parameter_questions_invalid",
                     "code": "generation_parameter_questions_invalid",
                     "error": (
-                        "图片和视频生成参数不能合并成推荐设置；必须按缺失字段分别展示选项"
+                        "Image and video generation parameters cannot be merged into a recommended setting; options must be shown separately for each missing field"
                     ),
                     "required_question_ids": {
                         "image": [
@@ -1521,11 +1532,11 @@ def _handle_request_user_clarification(args: dict[str, Any], **_: Any) -> str:
         delivery_resolution = generation_preferences.get("delivery_resolution")
         if isinstance(delivery_resolution, str) and delivery_resolution.strip():
             description_parts.append(
-                f"{delivery_resolution.strip()} 是成片交付清晰度；视频节点生成分辨率按模型能力单独选择。"
+                f"{delivery_resolution.strip()} is the final-cut delivery resolution; the video node generation resolution is chosen separately according to model capability."
             )
         if generation_preferences and not recommended_answers:
             description_parts.append(
-                "当前推荐模型无法满足已明确的声音或画面规格，请逐项选择兼容配置。"
+                "The currently recommended model cannot meet the explicit sound or picture specification; choose a compatible configuration item by item."
             )
         result = _emit_clarification_event(
             project,
@@ -1640,58 +1651,60 @@ def _skill_studio_lint_draft(
     warnings: list[str] = []
     has_shot_count = _skill_studio_has_input_parameter(skill, "shot_count")
     multi_output_markers = (
-        "输出两条",
-        "输出2条",
-        "分别生成角色",
-        "分别生成道具",
-        "同时生成角色",
-        "同时生成道具",
-        "多个执行节点",
-        "多个节点",
-        "两个节点",
-        "两个 image",
-        "两个image",
-        "两张图",
+        "output two",
+        "output 2",
+        "generate characters separately",
+        "generate props separately",
+        "generate characters and props at the same time",
+        "multiple execution nodes",
+        "multiple nodes",
+        "two nodes",
+        "two image",
+        "two images",
+        "xuất hai",
+        "nhiều node",
     )
     fixed_grid_markers = (
-        "固定 9 宫格",
-        "固定9宫格",
-        "固定九宫格",
-        "固定 9 个分镜",
-        "固定9个分镜",
+        "fixed 9-grid",
+        "fixed 9 grid",
+        "fixed nine-grid",
+        "fixed 9 storyboard",
+        "fixed 9 shots",
+        "lưới 9 ô cố định",
     )
     audio_compose_markers = (
-        "最终成片",
-        "最终合成",
-        "合成为",
-        "合成所有",
-        "所有视频和音频",
-        "videoCompose",
+        "final cut",
+        "final composition",
+        "compose into",
+        "compose all",
+        "all video and audio",
+        "ghép thành phim",
+        "videocompose",
         "video compose",
     )
     for recipe in recipes:
         if not isinstance(recipe, dict):
             continue
-        recipe_id = str(recipe.get("id") or "").strip() or "未命名 Recipe"
-        text = _skill_studio_collect_text(recipe)
+        recipe_id = str(recipe.get("id") or "").strip() or "Unnamed Recipe"
+        text = _skill_studio_collect_text(recipe).lower()
         compact_text = text.replace(" ", "")
         if (
             any(marker in text for marker in multi_output_markers)
-            or "分别生成角色" in compact_text
+            or "generatecharactersseparately" in compact_text
         ):
             warnings.append(
-                f"Recipe「{recipe_id}」可能一次生成多个执行节点。建议拆成单一阶段 Recipe。"
+                f"Recipe \"{recipe_id}\" may generate multiple execution nodes at once. Consider splitting it into single-stage Recipes."
             )
         if has_shot_count and any(marker in text for marker in fixed_grid_markers):
             warnings.append(
-                f"Recipe「{recipe_id}」固定了九宫格，但 Skill 已有分镜数量输入。建议让数量跟随开始前选项。"
+                f"Recipe \"{recipe_id}\" fixes a nine-grid, but the Skill already has a shot count input. Consider letting the count follow the pre-start option."
             )
         output_kind = str(recipe.get("output_kind") or "").strip().lower()
         if output_kind == "audio" and any(
             marker in text for marker in audio_compose_markers
         ):
             warnings.append(
-                f"Recipe「{recipe_id}」是音频输出，但包含最终合成说明。音频 Recipe 应只负责音频层，合成由动态计划处理。"
+                f"Recipe \"{recipe_id}\" has audio output but contains final-composition instructions. An audio Recipe should handle only the audio layer; composition is handled by the dynamic plan."
             )
     return warnings
 
@@ -1716,10 +1729,10 @@ def _skill_studio_outline_new_recipe_gap_errors(stages: list[Any]) -> list[str]:
         if not _skill_studio_stage_requires_recipe_chunk(stage):
             continue
         if not isinstance(stage, dict):
-            errors.append("未命名阶段")
+            errors.append("Unnamed stage")
             continue
         recipe_id = str(
-            stage.get("recipe_id") or stage.get("id") or "未命名阶段"
+            stage.get("recipe_id") or stage.get("id") or "Unnamed stage"
         ).strip()
         craft_gap = _skill_studio_new_recipe_craft_gap(stage)
         if not craft_gap:
@@ -1841,14 +1854,14 @@ def _handle_put_agent_catalog_draft_outline(args: dict[str, Any], **_: Any) -> s
             "type": "skill_studio.status",
             "skill_studio_session_id": session_id,
             "status": "draft_outline_ready",
-            "message": "已完成 Skill / Recipe 分工方案",
+            "message": "Skill / Recipe division plan completed",
             "outline": outline,
         },
         agent_instruction=(
-            "Skill 方案已通过。"
-            "只提交本次新建的 Recipe；复用的已有 Recipe 已经写在 allowed_recipe_ids 里。"
-            f"下一步必须调用 freezone_begin_agent_catalog_draft，expected_recipe_count={outline['expected_recipe_count']}，"
-            f"skill_studio_session_id={session_id}。"
+            "The Skill plan has passed. "
+            "Submit only the Recipes newly created this time; reused existing Recipes are already listed in allowed_recipe_ids. "
+            f"The next step must call freezone_begin_agent_catalog_draft, expected_recipe_count={outline['expected_recipe_count']}, "
+            f"skill_studio_session_id={session_id}."
         ),
     )
 
@@ -2103,7 +2116,7 @@ def _handle_begin_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
             "type": "skill_studio.status",
             "skill_studio_session_id": session_id,
             "status": "draft_begin",
-            "message": "正在创建草稿结构...",
+            "message": "Creating the draft structure...",
             "operations": operations,
         },
         tool_name="freezone_begin_agent_catalog_draft",
@@ -2205,31 +2218,31 @@ def _handle_put_agent_catalog_skill(args: dict[str, Any], **_: Any) -> str:
             )
             agent_instruction = _skill_studio_agent_instruction(
                 (
-                    f"freezone_put_agent_catalog_recipe，index={next_missing_index}，"
-                    f"skill_studio_session_id={session_id}。"
+                    f"freezone_put_agent_catalog_recipe, index={next_missing_index}, "
+                    f"skill_studio_session_id={session_id}."
                 ),
-                f"Skill 已提交；Recipe 已提交 {submitted} / {expected}；剩余 {remaining} 个。",
+                f"Skill submitted; Recipes submitted {submitted} / {expected}; {remaining} remaining.",
                 [
-                    "提交新建 Recipe 时，使用 outline 里的中性工艺级 recipe_id。",
-                    "不要把 Skill 的风格、题材、品牌、角色、产品或一次性案例词写进 Recipe 的 id/name/content。",
-                    "现在不要调用 freezone_finish_agent_catalog_draft。",
-                    "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                    "When submitting a new Recipe, use the neutral craft-level recipe_id from the outline.",
+                    "Do not write the Skill's style, genre, brand, characters, products or one-off case words into the Recipe id/name/content.",
+                    "Do not call freezone_finish_agent_catalog_draft now.",
+                    "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
                 ],
             )
         else:
             agent_instruction = _skill_studio_agent_instruction(
-                f"freezone_finish_agent_catalog_draft，skill_studio_session_id={session_id}。",
-                f"Skill 已提交；Recipe 已提交 {submitted} / {expected}。",
+                f"freezone_finish_agent_catalog_draft, skill_studio_session_id={session_id}.",
+                f"Skill submitted; Recipes submitted {submitted} / {expected}.",
                 [
-                    "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                    "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
                 ],
             )
     else:
         agent_instruction = _skill_studio_agent_instruction(
-            f"freezone_finish_agent_catalog_draft，skill_studio_session_id={session_id}。",
-            "Skill 已提交，本次不需要提交 Recipe。",
+            f"freezone_finish_agent_catalog_draft, skill_studio_session_id={session_id}.",
+            "Skill submitted; no Recipe needs to be submitted this time.",
             [
-                "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
             ],
         )
     return _emit_skill_studio_progress_event(
@@ -2239,7 +2252,7 @@ def _handle_put_agent_catalog_skill(args: dict[str, Any], **_: Any) -> str:
             "type": "skill_studio.status",
             "skill_studio_session_id": session_id,
             "status": "draft_skill_ready",
-            "message": "已生成 Skill 基础配置",
+            "message": "Skill base configuration generated",
         },
         agent_instruction=agent_instruction,
     )
@@ -2313,7 +2326,7 @@ def _handle_put_agent_catalog_recipe(args: dict[str, Any], **_: Any) -> str:
         return tool_result(persisted_session)
     expected = int(draft.get("expected_recipe_count") or 0)
     if expected > 0:
-        message = f"已生成 Recipe {index + 1} / {expected}"
+        message = f"Recipe {index + 1} / {expected} generated"
         count_payload = {"recipe_count": expected}
         remaining = max(0, expected - len(recipes))
         if remaining > 0:
@@ -2327,33 +2340,33 @@ def _handle_put_agent_catalog_recipe(args: dict[str, Any], **_: Any) -> str:
             )
             agent_instruction = _skill_studio_agent_instruction(
                 (
-                    f"freezone_put_agent_catalog_recipe，index={next_missing_index}，"
-                    f"skill_studio_session_id={session_id}。"
+                    f"freezone_put_agent_catalog_recipe, index={next_missing_index}, "
+                    f"skill_studio_session_id={session_id}."
                 ),
-                f"Recipe 已提交 {len(recipes)} / {expected}；剩余 {remaining} 个。",
+                f"Recipes submitted {len(recipes)} / {expected}; {remaining} remaining.",
                 [
-                    "提交新建 Recipe 时，使用 outline 里的中性工艺级 recipe_id。",
-                    "不要把 Skill 的风格、题材、品牌、角色、产品或一次性案例词写进 Recipe 的 id/name/content。",
-                    "现在不要调用 freezone_finish_agent_catalog_draft。",
-                    "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                    "When submitting a new Recipe, use the neutral craft-level recipe_id from the outline.",
+                    "Do not write the Skill's style, genre, brand, characters, products or one-off case words into the Recipe id/name/content.",
+                    "Do not call freezone_finish_agent_catalog_draft now.",
+                    "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
                 ],
             )
         else:
             agent_instruction = _skill_studio_agent_instruction(
-                f"freezone_finish_agent_catalog_draft，skill_studio_session_id={session_id}。",
-                f"全部预期 Recipe 已提交；Recipe 已提交 {len(recipes)} / {expected}。",
+                f"freezone_finish_agent_catalog_draft, skill_studio_session_id={session_id}.",
+                f"All expected Recipes submitted; Recipes submitted {len(recipes)} / {expected}.",
                 [
-                    "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                    "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
                 ],
             )
     else:
-        message = f"已生成第 {index + 1} 个 Recipe"
+        message = f"Recipe #{index + 1} generated"
         count_payload = {}
         agent_instruction = _skill_studio_agent_instruction(
-            "freezone_put_agent_catalog_recipe 提交剩余 Recipe；全部计划 Recipe 提交完后，调用 freezone_finish_agent_catalog_draft。",
-            f"Recipe 已提交 {len(recipes)} 个，未声明预期总数。",
+            "freezone_put_agent_catalog_recipe to submit the remaining Recipes; after all planned Recipes are submitted, call freezone_finish_agent_catalog_draft.",
+            f"{len(recipes)} Recipes submitted; the expected total was not declared.",
             [
-                "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
             ],
         )
     return _emit_skill_studio_progress_event(
@@ -2491,12 +2504,12 @@ def _skill_patch_message(patch_ops: list[Any]) -> str:
             first_path = str(op.get("path") or "")
             break
     if first_path.startswith("/triggers/keywords"):
-        return "已更新 Skill 触发关键词"
+        return "Skill trigger keywords updated"
     if first_path.startswith("/description"):
-        return "已更新 Skill 说明"
+        return "Skill description updated"
     if first_path.startswith("/planning"):
-        return "已更新 Skill 规划策略"
-    return "已更新 Skill 草稿"
+        return "Skill planning strategy updated"
+    return "Skill draft updated"
 
 
 def _validate_recipe_patch_paths(recipe_id: str, patch_ops: list[Any]) -> None:
@@ -2586,7 +2599,7 @@ def _handle_patch_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
                 raise _DraftPatchError(f"Recipe is not an object: {recipe_id}")
             if _is_remove_entire_recipe_patch(patch_ops):
                 recipes.pop(recipe_index)
-                message = f"已移除 Recipe：{recipe_id}"
+                message = f"Recipe removed: {recipe_id}"
                 patched_payload = {
                     "target": "recipe",
                     "recipe_id": recipe_id,
@@ -2596,7 +2609,7 @@ def _handle_patch_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
             else:
                 _validate_recipe_patch_paths(recipe_id, patch_ops)
                 recipes[recipe_index] = _apply_json_pointer_patch(recipe, patch_ops)
-                message = f"已更新 Recipe：{recipe_id}"
+                message = f"Recipe updated: {recipe_id}"
                 patched_payload = {
                     "target": "recipe",
                     "recipe_id": recipe_id,
@@ -2625,11 +2638,11 @@ def _handle_patch_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
             **patched_payload,
         },
         agent_instruction=_skill_studio_agent_instruction(
-            f"freezone_finish_agent_catalog_draft，skill_studio_session_id={session_id}。",
-            f"{message}。",
+            f"freezone_finish_agent_catalog_draft, skill_studio_session_id={session_id}.",
+            f"{message}.",
             [
-                "不要用普通文本解释本次修改；更新后的完整草稿必须通过 finish 工具重新展示给用户。",
-                "不要向用户复述工具字段；不要调用 skill_view、skills_list、tool_search 或 tool_describe；不要处理斜杠命令或内部状态名。",
+                "Do not explain this modification in plain text; the complete updated draft must be shown to the user again through the finish tool.",
+                "Do not repeat tool fields to the user; do not call skill_view, skills_list, tool_search or tool_describe; do not handle slash commands or internal status names.",
             ],
         ),
     )
@@ -2698,7 +2711,7 @@ def _handle_finish_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
     warnings = list(_safe_list(draft.get("warnings")))
     if expected_recipe_count and len(recipes) != expected_recipe_count:
         warnings.append(
-            f"Recipe 数量为 {len(recipes)}，与预期 {expected_recipe_count} 不一致。"
+            f"The number of Recipes is {len(recipes)}, which differs from the expected {expected_recipe_count}."
         )
     seen_recipe_ids: set[str] = set()
     duplicate_recipe_ids: list[str] = []
@@ -2714,9 +2727,9 @@ def _handle_finish_agent_catalog_draft(args: dict[str, Any], **_: Any) -> str:
             seen_recipe_ids.add(recipe_id)
         deduped_reversed.append(recipe)
     if duplicate_recipe_ids:
-        duplicate_summary = "、".join(sorted(set(duplicate_recipe_ids)))
+        duplicate_summary = ", ".join(sorted(set(duplicate_recipe_ids)))
         warnings.append(
-            f"检测到重复 Recipe ID，已保留最后一次提交的版本：{duplicate_summary}。"
+            f"Duplicate Recipe IDs detected; the last submitted version was kept: {duplicate_summary}."
         )
         recipes = list(reversed(deduped_reversed))
     if skill:
@@ -2905,7 +2918,7 @@ def _catalog_query_tokens(query: str) -> list[str]:
     tokens = [
         token.strip()
         for token in re.split(
-            r"[\s,，、/|;；:：()（）\[\]{}<>《》\"'`]+", query.lower()
+            r"[\s,/|;:()\[\]{}<>\"'`]+", query.lower()
         )
         if len(token.strip()) >= 2
     ]
@@ -3421,21 +3434,29 @@ _WORKFLOW_LIKE_NODE_TYPES = {
 }
 
 _WORKFLOW_HINTS = (
-    "工作流",
     "workflow",
-    "广告",
-    "投放",
-    "产品",
-    "商品",
-    "短剧",
-    "小说",
-    "故事",
+    "luồng công việc",
+    "advert",
+    "ad video",
+    "promotion",
+    "product",
+    "commodity",
+    "short drama",
+    "novel",
+    "story",
     "mv",
-    "音乐视频",
-    "文生",
-    "图生",
-    "视频",
-    "音频",
+    "music video",
+    "text to",
+    "text-to",
+    "image to",
+    "image-to",
+    "video",
+    "audio",
+    "quảng cáo",
+    "sản phẩm",
+    "phim ngắn",
+    "tiểu thuyết",
+    "câu chuyện",
 )
 
 
@@ -3803,10 +3824,10 @@ _RECOMMENDED_GENERATION_MODEL_VALUES = {
     "default",
     "recommend",
     "recommended",
-    "推荐",
-    "推荐模型",
-    "默认",
-    "自动",
+    "recommended model",
+    "đề xuất",
+    "mặc định",
+    "tự động",
 }
 
 
@@ -4421,10 +4442,10 @@ _VIDEO_MODE_CATALOG_VALUES = {
     "allReference": "all_reference",
 }
 _VIDEO_MODE_LABELS = {
-    "firstFrame": "首帧生成视频",
-    "imageToVideo": "图片生成视频",
-    "imageReference": "图片参考生成视频",
-    "allReference": "全参考生成视频",
+    "firstFrame": "Video from first frame",
+    "imageToVideo": "Video from image",
+    "imageReference": "Video from image reference",
+    "allReference": "Video from all references",
 }
 
 
@@ -4499,7 +4520,7 @@ def _workflow_generation_mode_clarification(
         {
             "id": mode,
             "label": _VIDEO_MODE_LABELS[mode],
-            "description": "让图片节点产物作为视频节点的生成输入。",
+            "description": "Use the image node output as the generation input of the video node.",
         }
         for mode in compatible
     ]
@@ -4512,8 +4533,8 @@ def _workflow_generation_mode_clarification(
         "required_choice": "video_generation_mode",
         "question": {
             "id": "video_generation_mode",
-            "title": "确认视频生成方式",
-            "prompt": "当前技能要求图片节点实际输入视频节点，请选择兼容的视频生成方式。",
+            "title": "Confirm the video generation mode",
+            "prompt": "The current skill requires the image node to actually feed the video node; choose a compatible video generation mode.",
             "mode": "single",
             "options": options,
         },
@@ -4556,7 +4577,7 @@ def _generation_parameters_required_result(
         "missing_parameters": missing,
         "required_choices": required_choices,
         "clarification": {
-            "title": "确认图片和视频生成参数",
+            "title": "Confirm image and video generation parameters",
             "allow_skip": False,
         },
         "agent_instruction": (
@@ -4749,15 +4770,15 @@ def _approval_required_for_commands(commands: list[Any]) -> tuple[bool, list[str
     }
     costly_or_ui = {"run_node_action", "run_workflow", "open_mainline_projection"}
     if any(command_type in destructive for command_type in command_types):
-        reasons.append("包含删除类画布操作")
+        reasons.append("Includes delete-type canvas operations")
     if any(command_type in mutating for command_type in command_types):
-        reasons.append("包含画布结构或内容变更")
+        reasons.append("Includes canvas structure or content changes")
     if any(command_type in costly_or_ui for command_type in command_types):
-        reasons.append("包含运行节点动作、生成任务或打开/映射主线内容")
+        reasons.append("Includes running node actions, generation tasks, or opening/mapping mainline content")
     if command_count > 1:
-        reasons.append(f"包含 {command_count} 个批量画布操作")
+        reasons.append(f"Includes {command_count} batched canvas operations")
     if any(command_type == "group_nodes" for command_type in command_types):
-        reasons.append("包含分组结构变更")
+        reasons.append("Includes group structure changes")
     return bool(reasons), reasons
 
 
@@ -4861,7 +4882,7 @@ def _create_mcp_canvas_approval(
             "reasons": reasons,
             "expires_at_ms": expires_at_ms,
             "summary": payload["summary"],
-            "message": "该画布操作需要用户在 Codex 对话中确认后才能执行。",
+            "message": "This canvas operation can run only after the user confirms it in the Codex conversation.",
             "agent_instruction": (
                 "Ask the user to confirm this canvas operation in the Codex chat. "
                 "If the user confirms, call freezone_confirm_canvas_action with approval_id. "
@@ -4976,7 +4997,7 @@ def _dispatch_mcp_approved_frontend_commands(
         "project_id": project,
         "canvas_id": canvas,
         "message": "Frontend canvas command timed out before reporting a result.",
-        "user_message": "画布操作等待超时，前端没有回写执行结果。",
+        "user_message": "The canvas operation timed out waiting; the frontend did not write back an execution result.",
         "agent_instruction": (
             "Do not claim success. Tell the user the frontend canvas command timed out and ask "
             "them to keep the Freezone page open or retry."
@@ -5066,7 +5087,7 @@ def _dispatch_frontend_canvas_commands(
         "project_id": project,
         "canvas_id": canvas,
         "message": "Canvas command timed out before the frontend reported a result.",
-        "user_message": "画布操作等待超时，已自动取消，没有应用新的画布变更。",
+        "user_message": "The canvas operation timed out waiting and was cancelled automatically; no new canvas changes were applied.",
         "agent_instruction": (
             "Do not claim success. Tell the user the canvas command timed out and ask "
             "them to retry after checking the canvas connection."
@@ -5293,7 +5314,7 @@ def _create_group_node(
         "id": group_id,
         "type": "groupNode",
         "position": {"x": group_x, "y": group_y},
-        "data": {"displayName": label or "工作流", "label": label or "工作流"},
+        "data": {"displayName": label or "Workflow", "label": label or "Workflow"},
         "width": width,
         "height": height,
         "style": {"width": width, "height": height},
@@ -5477,7 +5498,7 @@ def _direct_apply_canvas_commands(
                     nodes=nodes,
                     nodes_by_id=nodes_by_id,
                     node_ids=node_ids,
-                    label=str(command.get("label") or "工作流"),
+                    label=str(command.get("label") or "Workflow"),
                 )
                 command_results.append(
                     {
@@ -5974,7 +5995,7 @@ def _handle_prepare_workflow_plan_draft(args: dict[str, Any], **_: Any) -> str:
                 "status": "dynamic_workflow_plan_required",
                 "code": "dynamic_workflow_plan_required",
                 "error": "plan must be a complete freezone_workflow_plan.v1 object",
-                "message": "当前仅支持动态工作流，请先基于 Skill 和 Recipe 生成完整 WorkflowPlan。",
+                "message": "Only dynamic workflows are supported now; first generate a complete WorkflowPlan from the Skill and Recipes.",
                 "agent_instruction": (
                     "Load the selected Skill with freezone_get_workflow_skill, "
                     "author one complete freezone_workflow_plan.v1 with explicit Recipe ids, "
@@ -6451,11 +6472,11 @@ def _normalize_workflow_intent_arg(
         "ok": False,
         "status": "workflow_intent_object_required",
         "code": "workflow_intent_object_required",
-        "error": "intent 必须是结构化对象，不能是字符串或代码片段。",
+        "error": "intent must be a structured object, not a string or a code snippet.",
         "expected": {
             "schema_version": "freezone_workflow_intent.v1",
-            "skill_id": "已选 Workflow Skill 的 id",
-            "user_goal": "用户的原始工作流目标",
+            "skill_id": "id of the selected Workflow Skill",
+            "user_goal": "the user's original workflow goal",
         },
         "agent_instruction": (
             "Do not call execute_code and do not serialize intent as a string. "
@@ -6884,7 +6905,7 @@ def _handle_prepare_workflow_draft(args: dict[str, Any], **_: Any) -> str:
                 "ok": False,
                 "status": "wrong_workflow_draft_tool",
                 "code": "wrong_workflow_draft_tool",
-                "error": "准备草稿不接受 draft_id；请使用 freezone_patch_workflow_draft 或 freezone_confirm_workflow_draft。",
+                "error": "Preparing a draft does not accept draft_id; use freezone_patch_workflow_draft or freezone_confirm_workflow_draft.",
                 "agent_instruction": (
                     "Do not retry freezone_prepare_workflow_draft with draft_id. "
                     "Use freezone_patch_workflow_draft for changes or "
@@ -6901,7 +6922,7 @@ def _handle_prepare_workflow_draft(args: dict[str, Any], **_: Any) -> str:
                 "ok": False,
                 "status": "workflow_intent_required",
                 "code": "workflow_intent_required",
-                "error": "必须提供完整的 intent 对象。",
+                "error": "A complete intent object must be provided.",
                 "agent_instruction": (
                     "Read the selected Workflow Skill, then call this tool with a structured "
                     "intent object."
@@ -7010,7 +7031,7 @@ def _handle_patch_workflow_draft(args: dict[str, Any], **_: Any) -> str:
         except (TypeError, ValueError):
             problems.append("expected_revision must be an integer")
     if problems:
-        # 一次性报出全部参数问题并给出完整签名，避免模型逐个试错。
+        # Report all parameter problems at once with the full signature so the model does not retry one by one.
         return tool_result(
             {
                 "ok": False,
@@ -7662,7 +7683,7 @@ def _handle_confirm_workflow_draft(args: dict[str, Any], **_: Any) -> str:
                 "ok": False,
                 "status": "workflow_draft_revision_conflict",
                 "error": "workflow draft revision changed before confirmation",
-                "user_message": "工作流草稿在你确认后已被修改，本次确认未创建任何节点，请查看最新方案后重新确认。",
+                "user_message": "The workflow draft was modified after your confirmation; no nodes were created this time. Review the latest plan and confirm again.",
                 "retryable": False,
                 "current_revision": current_payload.get("revision"),
                 "agent_instruction": (
@@ -7687,7 +7708,7 @@ def _handle_confirm_workflow_draft(args: dict[str, Any], **_: Any) -> str:
                 "ok": False,
                 "status": "workflow_draft_execution_policy_changed",
                 "error": "Patch the draft and confirm its new revision to change run_after_create.",
-                "user_message": "工作流草稿的执行方式需要先更新草稿再确认，本次确认未创建任何节点。",
+                "user_message": "The execution mode of the workflow draft must be updated in the draft before confirming; no nodes were created this time.",
                 "retryable": True,
                 "current_revision": current_payload.get("revision"),
                 "run_after_create": bool(current_payload.get("run_after_create")),
@@ -10018,7 +10039,7 @@ _SKILL_STUDIO_INPUT_PARAMETER_SCHEMA = {
 _SKILL_STUDIO_SKILL_SCHEMA = {
     "type": "object",
     "description": (
-        "Complete 虾画 Skill catalog draft. Do not include Recipe drafts inside skill; "
+        "Complete Shrimp Canvas Skill catalog draft. Do not include Recipe drafts inside skill; "
         "put any Recipe drafts in the tool's top-level recipes parameter."
     ),
     "properties": {
@@ -10166,7 +10187,7 @@ _SKILL_STUDIO_SKILL_SCHEMA = {
 _SKILL_STUDIO_RECIPE_SCHEMA = {
     "type": "object",
     "allOf": [_HTML_RECIPE_FORMAT_CONSTRAINT],
-    "description": "Complete 虾画 Recipe catalog draft.",
+    "description": "Complete Shrimp Canvas Recipe catalog draft.",
     "properties": {
         "id": {
             "type": "string",
@@ -10187,14 +10208,14 @@ _SKILL_STUDIO_RECIPE_SCHEMA = {
         "system_prompt": {
             "type": "string",
             "description": (
-                "Recipe 节点级 system_prompt 必须按 output_kind 区分职责。"
-                "text Recipe 要求当前 LLM 直接输出最终交付文本（正文、脚本、大纲或摘要），"
-                "不能输出交给另一个 textGeneration 节点执行的二阶段指令。"
-                "image/video/audio Recipe 指导当前 LLM 根据用户目标、上游输出和参考素材，"
-                "写出送入对应节点的完整提示词/指令，而不是把固定的最终提示词作为 system_prompt。"
-                "必须包含【角色设定】、【输入来源】、【任务目标】、【输出结构要求】、"
-                "【质量标准】和【禁止事项/约束】。文字 Recipe 的输出结构描述最终文本；"
-                "媒体 Recipe 的输出结构描述生成提示词中的主体、场景、构图、风格和负面约束。"
+                "The node-level system_prompt of a Recipe must separate responsibilities by output_kind. "
+                "A text Recipe requires the current LLM to directly output the final deliverable text (body copy, script, outline or summary), "
+                "and must not output second-stage instructions for another textGeneration node to execute. "
+                "An image/video/audio Recipe guides the current LLM to write, from the user goal, upstream output and reference material, "
+                "the complete prompt/instruction sent to the corresponding node, rather than using a fixed final prompt as the system_prompt. "
+                "It must contain [Role], [Input sources], [Task goal], [Output structure requirements], "
+                "[Quality standards] and [Prohibitions/constraints]. For a text Recipe the output structure describes the final text; "
+                "for a media Recipe the output structure describes the subject, scene, composition, style and negative constraints of the generation prompt."
             ),
         },
         "must_have_items": {
@@ -10209,7 +10230,7 @@ _SKILL_STUDIO_RECIPE_SCHEMA = {
             "type": "string",
             "description": (
                 "Non-empty short business description of what this Recipe node does. "
-                "Use the style '根据 X，生成/提取/改写 Y。'. Do not describe scheduling "
+                "Use the style 'Based on X, generate/extract/rewrite Y.'. Do not describe scheduling "
                 "mechanics, downstream nodes, workflow internals, or when to call the Recipe."
             ),
         },
@@ -10217,7 +10238,7 @@ _SKILL_STUDIO_RECIPE_SCHEMA = {
             "type": "string",
             "description": (
                 "Non-empty short business description of this Recipe node's output, such as "
-                "'3:4 竖版数码产品科技感详情图' or '家乡文化海报图片生成指令'. "
+                "'3:4 vertical tech-style detail image of a digital product' or 'hometown culture poster image generation instruction'. "
                 "Do not mention downstream execution, imageGeneration handoff, planner behavior, "
                 "or workflow mechanics."
             ),
@@ -10295,7 +10316,7 @@ _NODE_TYPE_DESCRIPTION = (
     "Use freezone_group_nodes/group_nodes for grouping existing nodes. "
     "Use textAnnotationNode for ordinary briefs, copy, notes, "
     "prompts, and free-form text. Use scriptNode only for explicit structured script "
-    "tables or script-generation workflows. Use threeDWorldNode for 导演世界; "
+    "tables or script-generation workflows. Use threeDWorldNode for the director world; "
     "directorWorldNode is not a valid node type."
 )
 
@@ -10579,7 +10600,7 @@ TOOLS = (
         }, ["import_id"]),
         _handle_get_skill_import,
     ),
-    # 读全局画布上下文。
+    # Read the global canvas context.
     (
         "freezone_get_canvas_ontology",
         _schema(
@@ -10742,7 +10763,7 @@ TOOLS = (
         "freezone_present_agent_catalog_draft",
         _schema(
             "freezone_present_agent_catalog_draft",
-            "Legacy small-draft path for presenting an editable Skill/Recipe catalog draft for 虾画 Skill Studio. Prefer the chunked draft tools for normal Skill Studio drafts: begin, put skill, put each recipe, then finish. Do not paste final JSON in prose and do not claim it is saved.",
+            "Legacy small-draft path for presenting an editable Skill/Recipe catalog draft for Shrimp Canvas Skill Studio. Prefer the chunked draft tools for normal Skill Studio drafts: begin, put skill, put each recipe, then finish. Do not paste final JSON in prose and do not claim it is saved.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -10780,7 +10801,7 @@ TOOLS = (
         "freezone_put_agent_catalog_draft_outline",
         _schema(
             "freezone_put_agent_catalog_draft_outline",
-            "Submit the internal 虾画 Skill Studio capability outline before creating a chunked draft. Use this after modeling the reusable Skill goal, Skill-level constraints, planned executable stages, and existing Recipe reuse. For create drafts with Recipes, call this before freezone_begin_agent_catalog_draft.",
+            "Submit the internal Shrimp Canvas Skill Studio capability outline before creating a chunked draft. Use this after modeling the reusable Skill goal, Skill-level constraints, planned executable stages, and existing Recipe reuse. For create drafts with Recipes, call this before freezone_begin_agent_catalog_draft.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -10847,7 +10868,7 @@ TOOLS = (
         "freezone_begin_agent_catalog_draft",
         _schema(
             "freezone_begin_agent_catalog_draft",
-            "Begin a chunked 虾画 Skill Studio draft. Before calling this, decide the target number of Recipe chunks and pass expected_recipe_count, using 0 only when this draft intentionally has no Recipes. This tool only emits progress and does not wait for user confirmation.",
+            "Begin a chunked Shrimp Canvas Skill Studio draft. Before calling this, decide the target number of Recipe chunks and pass expected_recipe_count, using 0 only when this draft intentionally has no Recipes. This tool only emits progress and does not wait for user confirmation.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -10907,7 +10928,7 @@ TOOLS = (
         "freezone_put_agent_catalog_skill",
         _schema(
             "freezone_put_agent_catalog_skill",
-            "Submit the Skill chunk for the current 虾画 Skill Studio draft. Do not include Recipe drafts inside skill.",
+            "Submit the Skill chunk for the current Shrimp Canvas Skill Studio draft. Do not include Recipe drafts inside skill.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -10924,7 +10945,7 @@ TOOLS = (
         "freezone_put_agent_catalog_recipe",
         _schema(
             "freezone_put_agent_catalog_recipe",
-            "Submit one Recipe chunk for the current 虾画 Skill Studio draft. Call once per Recipe instead of passing all recipes in one tool call.",
+            "Submit one Recipe chunk for the current Shrimp Canvas Skill Studio draft. Call once per Recipe instead of passing all recipes in one tool call.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -10945,7 +10966,7 @@ TOOLS = (
         "freezone_patch_agent_catalog_draft",
         _schema(
             "freezone_patch_agent_catalog_draft",
-            "Apply small JSON Pointer patches for local edits to the current 虾画 Skill Studio draft session. For local edits, prefer this tool over regenerating unchanged Skill/Recipe chunks. Use put_skill or put_recipe only when replacing an entire object. Always finish with freezone_finish_agent_catalog_draft after patching.",
+            "Apply small JSON Pointer patches for local edits to the current Shrimp Canvas Skill Studio draft session. For local edits, prefer this tool over regenerating unchanged Skill/Recipe chunks. Use put_skill or put_recipe only when replacing an entire object. Always finish with freezone_finish_agent_catalog_draft after patching.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -11003,7 +11024,7 @@ TOOLS = (
         "freezone_finish_agent_catalog_draft",
         _schema(
             "freezone_finish_agent_catalog_draft",
-            "Finish a chunked 虾画 Skill Studio draft, assemble previously submitted chunks, and present the editable draft card. Do not pass the full Skill/Recipe catalog in this call; this schema intentionally has no skill or recipes parameters.",
+            "Finish a chunked Shrimp Canvas Skill Studio draft, assemble previously submitted chunks, and present the editable draft card. Do not pass the full Skill/Recipe catalog in this call; this schema intentionally has no skill or recipes parameters.",
             {
                 "skill_studio_session_id": {
                     "type": "string",
@@ -11027,7 +11048,7 @@ TOOLS = (
         "freezone_list_agent_catalog",
         _schema(
             "freezone_list_agent_catalog",
-            "List compact saved 虾画 Skill or Recipe summaries for Skill Studio discovery and reuse. Read-only: does not return full Recipe system_prompt, does not save catalog files, does not execute workflows, and does not write canvas nodes. Use query to find reusable Recipes before creating new ones.",
+            "List compact saved Shrimp Canvas Skill or Recipe summaries for Skill Studio discovery and reuse. Read-only: does not return full Recipe system_prompt, does not save catalog files, does not execute workflows, and does not write canvas nodes. Use query to find reusable Recipes before creating new ones.",
             {
                 "kind": {
                     "type": "string",
@@ -11055,7 +11076,7 @@ TOOLS = (
         "freezone_get_saved_skill",
         _schema(
             "freezone_get_saved_skill",
-            "Read one existing saved 虾画 Skill configuration by id for Skill Studio editing. Read-only: does not save catalog files, does not execute workflows, and does not write canvas nodes. Use this when revising a saved Skill and conversation history only has the saved id or an incomplete draft.",
+            "Read one existing saved Shrimp Canvas Skill configuration by id for Skill Studio editing. Read-only: does not save catalog files, does not execute workflows, and does not write canvas nodes. Use this when revising a saved Skill and conversation history only has the saved id or an incomplete draft.",
             {
                 "skill_id": {
                     "type": "string",
@@ -11070,7 +11091,7 @@ TOOLS = (
         "freezone_get_saved_recipe",
         _schema(
             "freezone_get_saved_recipe",
-            "Read one existing saved 虾画 Recipe configuration by id for Skill Studio editing. Read-only: does not save catalog files, does not execute workflows, and does not write canvas nodes. Use this when revising a saved Recipe and conversation history only has the saved id or an incomplete draft.",
+            "Read one existing saved Shrimp Canvas Recipe configuration by id for Skill Studio editing. Read-only: does not save catalog files, does not execute workflows, and does not write canvas nodes. Use this when revising a saved Recipe and conversation history only has the saved id or an incomplete draft.",
             {
                 "recipe_id": {
                     "type": "string",
@@ -11099,7 +11120,7 @@ TOOLS = (
         ),
         _handle_selection,
     ),
-    # 读节点级上下文。
+    # Read node-level context.
     (
         "freezone_get_node_detail",
         _schema(
@@ -11519,7 +11540,7 @@ TOOLS = (
         ),
         _handle_prepare_workflow_plan_draft,
     ),
-    # 写入前预校验。
+    # Pre-validation before writing.
     (
         "freezone_validate_canvas_commands",
         _schema(
@@ -11538,7 +11559,7 @@ TOOLS = (
         ),
         _handle_validate_commands,
     ),
-    # 写入画布命令：默认用批量入口一次提交；只有用户明确要求单个操作时才用后面的单步工具。
+    # Write canvas commands: submit once through the batch entry by default; use the single-step tools below only when the user explicitly asks for a single operation.
     (
         "freezone_emit_canvas_command",
         _schema(
@@ -11587,7 +11608,7 @@ TOOLS = (
         ),
         _handle_cancel_canvas_action,
     ),
-    # 单步写入工具：只用于用户明确要求 exactly one 的节点、连线、编辑或动作。
+    # Single-step write tools: only for nodes, links, edits or actions the user explicitly asks for exactly one of.
     (
         "freezone_create_node",
         _schema(
@@ -11810,7 +11831,7 @@ TOOLS = (
         "freezone_open_mainline_projection",
         _schema(
             "freezone_open_mainline_projection",
-            "Mainline -> canvas only. Open/map/project a mainline episode, beat, or asset into the user's personal Freezone canvas. This mirrors the frontend 虾画/虾画编辑 toolbar button: the frontend asks the user to confirm, then opens the projected canvas. Use this when the user asks to open/map mainline content into 虾画/Freezone; do not use slot-candidate tools for this direction, and do not use this tool to submit canvas nodes back to the mainline. If the user asks to map a category such as 人物/身份/肖像/场景/道具 but does not provide an exact asset name/id, first call freezone_get_mainline_projection_assets for that category, using asset_kind=character for all people/identity/portrait requests, then pass the selected candidate's projection_request to this tool.",
+            "Mainline -> canvas only. Open/map/project a mainline episode, beat, or asset into the user's personal Freezone canvas. This mirrors the frontend Shrimp Canvas / Edit in Shrimp Canvas toolbar button: the frontend asks the user to confirm, then opens the projected canvas. Use this when the user asks to open/map mainline content into Shrimp Canvas/Freezone; do not use slot-candidate tools for this direction, and do not use this tool to submit canvas nodes back to the mainline. If the user asks to map a category such as characters/identities/portraits/scenes/props but does not provide an exact asset name/id, first call freezone_get_mainline_projection_assets for that category, using asset_kind=character for all people/identity/portrait requests, then pass the selected candidate's projection_request to this tool.",
             {
                 **_SCOPE_PROPS,
                 "scope": {
@@ -11829,7 +11850,7 @@ TOOLS = (
                 "primary_slot": {
                     "type": "string",
                     "enum": _MAINLINE_PRIMARY_SLOT_VALUES,
-                    "description": "For beat scope: sketch for 草图, frame for 分镜, render for default/render.",
+                    "description": "For beat scope: sketch for sketches, frame for storyboard frames, render for default/render.",
                 },
                 "asset_kind": {
                     "type": "string",

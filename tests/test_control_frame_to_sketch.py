@@ -31,16 +31,16 @@ async def test_director_control_frame_to_sketch_accepts_newapi_provider(monkeypa
                 "beats": [
                     {
                         "beat_number": 3,
-                        "visual_description": "测试画面",
+                        "visual_description": "test scene",
                     }
                 ],
-                "sketch_colors": {"测试": "#ff0000"},
+                "sketch_colors": {"test": "#ff0000"},
                 "scene_menu": [],
                 "prop_menu": [],
             }
 
         def get_sketch_colors(self, _episode):
-            return {"测试": "#ff0000"}
+            return {"test": "#ff0000"}
 
         def get_all_characters(self):
             return []

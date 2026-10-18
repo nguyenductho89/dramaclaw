@@ -10,30 +10,30 @@ import ce_allowlist  # noqa: E402
 
 
 def test_manifest_well_formed() -> None:
-    """每条豁免必须写明 path / guards / reason，且 guards 取自已知集合。"""
+    """Every exemption must state path / guards / reason, and guards must come from the known set."""
     data = ce_allowlist.load()
     assert data["marker"]["inline"].strip()
     known = set(ce_allowlist.known_guards())
-    assert known, "guards.known 不应为空"
+    assert known, "guards.known must not be empty"
     for entry in ce_allowlist.skip_entries():
-        assert {"path", "guards", "reason"} <= entry.keys(), f"豁免缺字段: {entry}"
-        assert entry["reason"].strip(), f"豁免缺 reason: {entry}"
-        assert entry["guards"], f"豁免缺 guards: {entry}"
-        assert set(entry["guards"]) <= known, f"未知 guard: {entry}"
+        assert {"path", "guards", "reason"} <= entry.keys(), f"exemption missing fields: {entry}"
+        assert entry["reason"].strip(), f"exemption missing reason: {entry}"
+        assert entry["guards"], f"exemption missing guards: {entry}"
+        assert set(entry["guards"]) <= known, f"unknown guard: {entry}"
 
 
 def test_no_stale_skip_paths() -> None:
-    """登记的豁免路径必须真实存在——防止白名单随文件删改而腐烂。"""
+    """Registered exemption paths must really exist - keeps the allowlist from rotting as files are deleted or renamed."""
     stale = [
         entry["path"]
         for entry in ce_allowlist.skip_entries()
         if not (REPO_ROOT / entry["path"]).is_file()
     ]
-    assert stale == [], "白名单指向不存在的文件（请清理）：\n" + "\n".join(stale)
+    assert stale == [], "allowlist points to files that do not exist (please clean up):\n" + "\n".join(stale)
 
 
 def test_linters_consume_manifest() -> None:
-    """漂移守卫：两个 linter 的有效豁免必须来自清单，且关键自指条目在册。"""
+    """Drift guard: the effective exemptions of both linters must come from the manifest, and the key self-referential entries must be registered."""
     from lint_banned_words import ALLOW_MARKER as BW_MARKER
     from lint_banned_words import SKIP_PATHS as BW_SKIPS
     from lint_ee_terms import ALLOW_MARKER as EE_MARKER
@@ -44,7 +44,7 @@ def test_linters_consume_manifest() -> None:
     assert EE_MARKER == marker
     assert BW_SKIPS == ce_allowlist.skip_paths("banned-words")
     assert EE_SKIPS == ce_allowlist.skip_paths("ee-terms")
-    # 规则文件与清单自身必须自豁免，否则会自我命中
+    # The rule files and the manifest itself must self-exempt, otherwise they hit themselves
     assert "scripts/lint_ee_terms.py" in EE_SKIPS
     assert "ce-allowlist.toml" in EE_SKIPS
     assert "scripts/lint_banned_words.py" in BW_SKIPS

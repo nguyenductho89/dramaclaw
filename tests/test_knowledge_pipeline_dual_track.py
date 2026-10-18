@@ -179,12 +179,12 @@ async def test_structured_store_still_works_as_a_sqlite_facade(structured_store)
         await structured_store.initialize()
         await structured_store.load_graph_state()
 
-        await structured_store.add_character(NovelCharacter(name="林默"))
-        assert structured_store.get_character("林默") is not None
+        await structured_store.add_character(NovelCharacter(name="lin_mo"))
+        assert structured_store.get_character("lin_mo") is not None
         assert structured_store.character_count == 1
 
-        structured_store.save_novel_content("正文")
-        assert structured_store.load_novel_content() == "正文"
+        structured_store.save_novel_content("body text")
+        assert structured_store.load_novel_content() == "body text"
     finally:
         await structured_store.close()
 

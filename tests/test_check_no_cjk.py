@@ -9,8 +9,8 @@ spec = importlib.util.spec_from_file_location("check_no_cjk", SCRIPT)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
-HAN = "中文"
-FULLWIDTH_COMMA = "，"
+HAN = "\u4e2d\u6587"
+FULLWIDTH_COMMA = "\uff0c"
 
 
 def test_detects_han_and_fullwidth_punctuation(tmp_path):

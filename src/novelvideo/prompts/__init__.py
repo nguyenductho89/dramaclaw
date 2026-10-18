@@ -1,6 +1,6 @@
-"""NovelVideo Prompt 模块。
+"""NovelVideo prompts module.
 
-定义各 Agent 的 System Prompt。
+Defines the system prompt of each agent.
 """
 
-# 后续实现
+# To be implemented

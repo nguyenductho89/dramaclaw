@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 360 全景 / 宫格动作两个面板：提交必须带上报价时用的那个模型与档位。
+// The 360 panorama / grid action panels: submission must carry the same model and tier used for quoting.
 //
-// 单测 `resolveFixedFeatureModelRequest` 只能证明解析结果自洽；这两个面板真正
-// 出过的问题是解析完了根本没往 payload 里放 —— 所以断言必须落在 ops helper 收到
-// 的 payload 上。
+// Unit-testing `resolveFixedFeatureModelRequest` can only prove the resolved result is self-consistent; what these two panels
+// actually got wrong was never putting the resolved result into the payload -- so assertions must land on the payload the ops helper
+// receives.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,7 +22,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// 目录第一款故意不是 360 使用的 G2，验证后台排序不会改变 360 执行模型。
+// The first catalog entry is deliberately not the G2 that 360 uses, verifying that backend ordering does not change the 360 execution model.
 const CATALOG_MODEL = {
   catalogId: "cat-77",
   id: "studio-image-v1",
@@ -52,7 +52,7 @@ type ImageCatalogState = {
   error: Error | null;
 };
 
-/** 默认给一条正常目录；单个用例可以改成加载中 / 拉取失败 / 权威空目录。 */
+/** Provides a normal catalog by default; an individual case can switch to loading / fetch failed / authoritative empty catalog. */
 const LOADED_CATALOG: ImageCatalogState = {
   models: [CATALOG_MODEL, SCENE_360_MODEL],
   isLoading: false,
@@ -62,8 +62,8 @@ const LOADED_CATALOG: ImageCatalogState = {
 
 let imageCatalogState: ImageCatalogState = LOADED_CATALOG;
 
-// 只替换取数的 hook；`isAuthoritativeEmptyCatalog` 是纯函数判据，面板正是
-// 靠它决定禁不禁用提交，必须留真实实现。
+// Only the data-fetching hook is replaced; `isAuthoritativeEmptyCatalog` is a pure predicate that the panel
+// uses to decide whether to disable submit, so the real implementation must stay.
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/features/canvas/hooks/useFreezoneImageModels")
@@ -117,7 +117,7 @@ const JOB_REF = {
   task_key: "freezone_scene_360:j-1",
 };
 
-/** 报价 hook 拿到的 params（第三个入参）。 */
+/** The params the quote hook received (the third argument). */
 function quotedParams(): Record<string, unknown> {
   const options = useGenerationCreditCost.mock.calls[0][2] as {
     params: Record<string, unknown>;
@@ -134,8 +134,8 @@ beforeEach(() => {
   useGenerationCreditCost.mockReturnValue({ data: undefined, error: null });
 });
 
-describe("360 全景面板", () => {
-  it("固定使用 LingShan-G2，并且提交与报价参数一致", async () => {
+describe("360 panorama panel", () => {
+  it("always uses LingShan-G2, and the submission matches the quote parameters", async () => {
     render(
       <Scene360Overlay node={NODE} imageSource="https://x/src.png?t=1" onClose={() => {}} />,
     );
@@ -150,14 +150,14 @@ describe("360 全景面板", () => {
     expect(payload.quality).toBe("medium");
     expect(payload).not.toHaveProperty("aspectRatio");
     expect(screen.queryByText("21:9")).not.toBeInTheDocument();
-    // 与报价同源。
+    // Same source as the quote.
     expect(payload.imageSize).toBe(quoted.size);
     expect(payload.quality).toBe(quoted.quality);
     expect(payload.model).toBe(quoted.image_selection);
     expect(payload.catalogId).toBe(quoted.catalog_id);
   });
 
-  it("目录没有 LingShan-G2 时禁用提交，不回落到第一款模型", () => {
+  it("disables submit when the catalog has no LingShan-G2, without falling back to the first model", () => {
     imageCatalogState = {
       models: [CATALOG_MODEL],
       isLoading: false,
@@ -173,19 +173,19 @@ describe("360 全景面板", () => {
     expect(submitFreezoneScene360).not.toHaveBeenCalled();
   });
 
-  it("后台一个图片模型都没配时禁用提交，点了也不发请求", () => {
+  it("disables submit and sends no request when the backend has no image model configured", () => {
     imageCatalogState = { models: [], isLoading: false, isFallback: false, error: null };
     render(
       <Scene360Overlay node={NODE} imageSource="https://x/src.png?t=1" onClose={() => {}} />,
     );
-    // 这个面板没有模型选择器，提交下去后端 `_resolve_catalog_request` 只会回 409。
+    // This panel has no model selector, and submitting would only get a 409 from the backend `_resolve_catalog_request`.
     const button = screen.getByTitle("modelParams.noModelsAvailable");
     expect(button).toBeDisabled();
     fireEvent.click(button);
     expect(submitFreezoneScene360).not.toHaveBeenCalled();
   });
 
-  it("目录还在路上时不算「没模型」，不许闪一下不可用", () => {
+  it("while the catalog is still loading it does not count as \"no model\" and must not flash unavailable", () => {
     imageCatalogState = {
       models: [SCENE_360_MODEL],
       isLoading: true,
@@ -199,16 +199,16 @@ describe("360 全景面板", () => {
   });
 });
 
-describe("宫格动作面板", () => {
+describe("grid action panel", () => {
   const REQUEST: GridActionRequest = {
     nodeId: NODE.id,
     key: "multiCameraGrid",
-    label: "多机位九宫格",
-    prompt: "生成九宫格多机位",
+    label: "Multi-Camera 3x3",
+    prompt: "Generate a nine-grid multi-camera view",
     cost: 0,
   };
 
-  it("提交带上报价用的模型、目录身份、尺寸与画质", async () => {
+  it("submission carries the model, catalog identity, size and quality used for quoting", async () => {
     render(
       <GridActionConfirmOverlay
         node={NODE}
@@ -230,12 +230,12 @@ describe("宫格动作面板", () => {
     expect(payload.quality).toBe(quoted.quality);
     expect(payload.model).toBe(quoted.image_selection);
     expect(payload.catalogId).toBe(quoted.catalog_id);
-    // mode 只属于报价维度，不能混进模型字段。
+    // mode belongs only to the quote dimension and must not be mixed into the model field.
     expect(payload.mode).toBe("multi_camera_nine_grid");
     expect(quoted.mode).toBe("multi_camera_nine_grid");
   });
 
-  it("后台一个图片模型都没配时禁用提交，点了也不发请求", () => {
+  it("disables submit and sends no request when the backend has no image model configured", () => {
     imageCatalogState = { models: [], isLoading: false, isFallback: false, error: null };
     render(
       <GridActionConfirmOverlay
@@ -251,7 +251,7 @@ describe("宫格动作面板", () => {
     expect(submitFreezoneTemplateEdit).not.toHaveBeenCalled();
   });
 
-  it("拉取失败回落到兜底列表时照常可提交", async () => {
+  it("submit still works when a fetch failure falls back to the fallback list", async () => {
     imageCatalogState = {
       models: [CATALOG_MODEL],
       isLoading: false,

@@ -129,7 +129,7 @@ async def test_newapi_video_processing_request_uses_canonical_metadata(
         aspect_ratio="auto",
         poll_interval=0,
         max_polls=1,
-        references=[ShotReference("video", str(source), "源视频")],
+        references=[ShotReference("video", str(source), "source video")],
         gen_mode="video_frame_rate",
         processing_metadata={
             "target_fps": 60,

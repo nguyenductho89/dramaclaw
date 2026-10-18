@@ -48,7 +48,7 @@ async def project(tmp_path):
     state_dir = tmp_path / "user" / "project"
     _write_config(state_dir, {KNOWLEDGE_PIPELINE_KEY: KNOWLEDGE_PIPELINE_STRUCTURED})
     store = await _open_store(state_dir)
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     try:
         yield store, state_dir
     finally:
@@ -60,13 +60,13 @@ async def project(tmp_path):
 
 async def test_patch_touches_only_the_named_columns(project):
     store, state_dir = project
-    await store.patch_episode(1, scene_menu=[{"scene_id": "客厅"}])
-    await store.patch_episode(1, identity_ids=["林默:default"])
+    await store.patch_episode(1, scene_menu=[{"scene_id": "living_room"}])
+    await store.patch_episode(1, identity_ids=["lin_mo:default"])
 
     reopened = await _open_store(state_dir)
     try:
         episode = await reopened.get_episode_from_graph(1)
-        assert episode.identity_ids == ["林默:default"]
+        assert episode.identity_ids == ["lin_mo:default"]
         assert episode.scene_menu  # survived the identity write
     finally:
         await reopened.close()
@@ -75,7 +75,7 @@ async def test_patch_touches_only_the_named_columns(project):
 async def test_an_empty_list_really_clears_the_column(project):
     """Omitting a field leaves its column alone; an empty list clears it."""
     store, state_dir = project
-    await store.patch_episode(1, prop_menu=[{"prop_id": "怀表"}])
+    await store.patch_episode(1, prop_menu=[{"prop_id": "pocket_watch"}])
     await store.patch_episode(1, prop_menu=[])
 
     reopened = await _open_store(state_dir)
@@ -118,8 +118,8 @@ async def test_two_workers_writing_different_menus_do_not_overwrite_each_other(
         assert worker_b.get_episode(1) is not None
 
         await asyncio.gather(
-            worker_a.patch_episode(1, scene_menu=[{"scene_id": "客厅"}]),
-            worker_b.patch_episode(1, prop_menu=[{"prop_id": "怀表"}]),
+            worker_a.patch_episode(1, scene_menu=[{"scene_id": "living_room"}]),
+            worker_b.patch_episode(1, prop_menu=[{"prop_id": "pocket_watch"}]),
         )
     finally:
         await worker_a.close()
@@ -142,10 +142,10 @@ async def test_three_concurrent_planners_all_survive(project):
     workers = [await _open_store(state_dir) for _ in range(3)]
     try:
         await asyncio.gather(
-            workers[0].patch_episode(1, scene_menu=[{"scene_id": "客厅"}]),
-            workers[1].patch_episode(1, prop_menu=[{"prop_id": "怀表"}]),
+            workers[0].patch_episode(1, scene_menu=[{"scene_id": "living_room"}]),
+            workers[1].patch_episode(1, prop_menu=[{"prop_id": "pocket_watch"}]),
             workers[2].patch_episode(
-                1, identity_ids=["林默:default"], character_names=["林默"]
+                1, identity_ids=["lin_mo:default"], character_names=["lin_mo"]
             ),
         )
     finally:
@@ -157,8 +157,8 @@ async def test_three_concurrent_planners_all_survive(project):
         episode = await verifier.get_episode_from_graph(1)
         assert episode.scene_menu
         assert episode.prop_menu
-        assert episode.identity_ids == ["林默:default"]
-        assert episode.character_names == ["林默"]
+        assert episode.identity_ids == ["lin_mo:default"]
+        assert episode.character_names == ["lin_mo"]
     finally:
         await verifier.close()
 
@@ -166,11 +166,11 @@ async def test_three_concurrent_planners_all_survive(project):
 async def test_whole_row_update_is_still_available_for_replacement(project):
     """patch_episode adds a path; it does not take over whole-row writes."""
     store, state_dir = project
-    await store.update_episode(1, title="改名后的标题")
+    await store.update_episode(1, title="Renamed title")
 
     reopened = await _open_store(state_dir)
     try:
-        assert (await reopened.get_episode_from_graph(1)).title == "改名后的标题"
+        assert (await reopened.get_episode_from_graph(1)).title == "Renamed title"
     finally:
         await reopened.close()
 
@@ -295,9 +295,9 @@ async def test_structured_identity_planning_uses_the_column_patch(tmp_path):
 
     store = _planner_store(tmp_path / "structured", structured=True)
     planner = IdentityPlanner(store)
-    await planner._write_episode_identities(1, identity_ids=["林默:default"])
+    await planner._write_episode_identities(1, identity_ids=["lin_mo:default"])
 
-    assert store.sqlite_store.patched == [(1, {"identity_ids": ["林默:default"]})]
+    assert store.sqlite_store.patched == [(1, {"identity_ids": ["lin_mo:default"]})]
     assert store.sqlite_store.updated == []
 
 
@@ -311,9 +311,9 @@ async def test_legacy_identity_planning_also_uses_the_column_patch(tmp_path):
 
     store = _planner_store(tmp_path / "legacy", structured=False)
     planner = IdentityPlanner(store)
-    await planner._write_episode_identities(1, identity_ids=["林默:default"])
+    await planner._write_episode_identities(1, identity_ids=["lin_mo:default"])
 
-    assert store.sqlite_store.patched == [(1, {"identity_ids": ["林默:default"]})]
+    assert store.sqlite_store.patched == [(1, {"identity_ids": ["lin_mo:default"]})]
     assert store.sqlite_store.updated == []
 
 

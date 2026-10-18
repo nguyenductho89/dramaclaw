@@ -33,9 +33,9 @@ def _restore_tools_registry_modules():
 
 _MINIMAL_ECOMMERCE_SKILL = {
     "id": "ecommerce-product",
-    "name": "电商产品图",
+    "name": "E-commerce product image",
     "version": 6,
-    "description": "测试用电商产品图 Skill",
+    "description": "E-commerce product image Skill for tests",
     "enabled": True,
     "triggers": {"node_scopes": ["imageGeneration"]},
     "allowed_recipe_ids": ["ecommerce-ad-image", "general-image"],
@@ -44,7 +44,7 @@ _MINIMAL_ECOMMERCE_SKILL = {
 _MINIMAL_ECOMMERCE_RECIPES = [
     {
         "id": "ecommerce-ad-image",
-        "name": "电商广告图",
+        "name": "E-commerce advertisement image",
         "version": 5,
         "enabled": True,
         "output_kind": "image",
@@ -52,7 +52,7 @@ _MINIMAL_ECOMMERCE_RECIPES = [
     },
     {
         "id": "general-image",
-        "name": "通用图片",
+        "name": "General image",
         "version": 1,
         "enabled": True,
         "output_kind": "image",
@@ -291,7 +291,7 @@ def _install_workflow_draft_api(monkeypatch, plugin, project_dir: Path) -> None:
                     "configured": True,
                     "exact": True,
                     "required_credits": 12,
-                    "display": "12 积分",
+                    "display": "12 credits",
                     "allowed": True,
                 },
             }
@@ -661,12 +661,12 @@ def test_workflow_compiler_output_satisfies_plugin_write_shape_contract():
                         "id": "input-root",
                         "node_type": "textAnnotationNode",
                         "stage": "input",
-                        "data": {"displayName": "公共输入"},
+                        "data": {"displayName": "Shared input"},
                     },
                     {
                         "id": "beat-image",
                         "node_type": "imageGenNode",
-                        "data": {"prompt": "生成首帧"},
+                        "data": {"prompt": "Generate first frame"},
                     },
                 ],
                 "edges": [
@@ -724,10 +724,10 @@ def test_freezone_agent_rules_bound_content_policy_remediation() -> None:
         encoding="utf-8"
     )
 
-    assert "内容安全失败不是提示词诊断" in skill
-    assert "禁止靠猜词反复改写提示词" in skill
-    assert "内容安全失败不可自动重试" in skill
-    assert "修改后再次失败就暂停" in skill
+    assert "A content-safety failure is not a prompt diagnosis" in skill
+    assert "never repeatedly rewrite prompts by guessing words" in skill
+    assert "a content-safety failure must not be retried automatically" in skill
+    assert "If it fails again after the change, pause" in skill
     assert "If it reports content_policy, stop" in plugin
 
 
@@ -797,7 +797,7 @@ def test_external_generation_preflight_blocks_missing_downstream_parameters(
                     {
                         "id": "image",
                         "type": "imageGenNode",
-                        "data": {"displayName": "首帧", "aspectRatio": "16:9"},
+                        "data": {"displayName": "First frame", "aspectRatio": "16:9"},
                     },
                 ],
                 "edges": [{"source": "brief", "target": "image"}],
@@ -825,7 +825,7 @@ def test_external_generation_preflight_blocks_missing_downstream_parameters(
         {
             "node_id": "image",
             "node_type": "imageGenNode",
-            "display_name": "首帧",
+            "display_name": "First frame",
             "fields": ["model", "size", "quality", "count"],
         }
     ]
@@ -856,7 +856,7 @@ def test_generation_preflight_models_add_next_alias_before_running_media(monkeyp
             "client_id": "watercolor-result",
             "node_type": "imageGenNode",
             "data": {
-                "displayName": "水彩结果",
+                "displayName": "Watercolor result",
                 "aspectRatio": "1:1",
             },
         },
@@ -877,7 +877,7 @@ def test_generation_preflight_models_add_next_alias_before_running_media(monkeyp
         {
             "node_id": "watercolor-result",
             "node_type": "imageGenNode",
-            "display_name": "水彩结果",
+            "display_name": "Watercolor result",
             "fields": ["model", "size", "quality", "count"],
         }
     ]
@@ -1140,7 +1140,7 @@ def test_handwritten_workflow_batch_cannot_bypass_dynamic_plan():
                 {
                     "type": "create_node",
                     "node_type": "textAnnotationNode",
-                    "data": {"displayName": "广告视频工作流"},
+                    "data": {"displayName": "Advertising video workflow"},
                 },
                 {"type": "create_node", "node_type": "imageGenNode"},
                 {"type": "create_node", "node_type": "videoNode"},
@@ -1164,18 +1164,18 @@ def test_clarification_cannot_offer_workflow_plan_bypass(monkeypatch):
 
     result = plugin._handle_request_user_clarification(
         {
-            "title": "选择工作流创建方式",
-            "description": "当前 WorkflowPlan 缺少必需阶段，请选择处理方式。",
+            "title": "Choose how to create the workflow",
+            "description": "The current WorkflowPlan lacks a required stage; choose how to handle it.",
             "questions": [
                 {
                     "id": "creation_mode",
-                    "title": "如何创建？",
+                    "title": "How to create it?",
                     "mode": "single",
                     "options": [
                         {
                             "id": "direct",
-                            "label": "严格保留节点",
-                            "description": "不经过工作流草稿，直接在画布创建节点。",
+                            "label": "Strictly keep nodes",
+                            "description": "Create nodes directly on the canvas without going through the workflow draft.",
                         }
                     ],
                 }
@@ -1686,12 +1686,12 @@ def test_workflow_confirmation_clarifies_before_claiming_task(monkeypatch, tmp_p
     plugin = _load_plugin_module()
     _install_workflow_draft_api(monkeypatch, plugin, tmp_path)
     compiled = {"ok": True, "skill_id": "video-ad", "plan": {
-        "summary": "广告", "nodes": [{"id": "input", "node_type": "textAnnotationNode",
+        "summary": "advertisement", "nodes": [{"id": "input", "node_type": "textAnnotationNode",
                                      "stage": "input"}], "edges": [],
     }}
     monkeypatch.setattr(plugin, "compile_workflow_intent", lambda _: compiled)
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
     })
     monkeypatch.setattr(plugin, "_external_generation_parameter_preflight", lambda *args: {
         "ok": False, "status": "clarification_required",
@@ -1722,7 +1722,7 @@ def test_workflow_draft_can_be_prepared_patched_and_confirmed_once(
         nodes = [
             {
                 "id": "workflow_input",
-                "name": "用户需求",
+                "name": "User requirement",
                 "node_type": "textAnnotationNode",
                 "stage": "input",
             },
@@ -1747,7 +1747,7 @@ def test_workflow_draft_can_be_prepared_patched_and_confirmed_once(
             "plan": {
                 "summary": intent["user_goal"],
                 "inputs": dict(intent.get("inputs") or {}),
-                "phases": ["脚本", "视频"],
+                "phases": ["script", "video"],
                 "nodes": nodes,
                 "edges": [],
             },
@@ -1767,7 +1767,7 @@ def test_workflow_draft_can_be_prepared_patched_and_confirmed_once(
                 {
                     "type": "create_node",
                     "node_type": "textAnnotationNode",
-                    "data": {"displayName": "用户需求"},
+                    "data": {"displayName": "User requirement"},
                 }
             ],
         },
@@ -1791,8 +1791,8 @@ def test_workflow_draft_can_be_prepared_patched_and_confirmed_once(
             "operation_id": "op-workflow-result",
             "intent": {
                 "skill_id": "video-ad",
-                "user_goal": "制作广告",
-                "items": ["开场", "卖点"],
+                "user_goal": "Make an advertisement",
+                "items": ["Opening", "Selling point"],
             },
             "run_after_create": True,
         }
@@ -1817,7 +1817,7 @@ def test_workflow_draft_can_be_prepared_patched_and_confirmed_once(
         {
             "draft_id": prepared["draft_id"],
             "expected_revision": 1,
-            "changes": {"items": ["开场", "卖点", "收尾"]},
+            "changes": {"items": ["Opening", "Selling point", "Ending"]},
         }
     )
 
@@ -1904,7 +1904,7 @@ def test_workflow_draft_prepare_stops_when_live_model_catalog_is_unavailable(
             "operation_id": "op-workflow-result",
             "intent": {
                 "skill_id": "ecommerce-product",
-                "user_goal": "生成商品图",
+                "user_goal": "Generate product image",
             },
         }
     )
@@ -1971,7 +1971,7 @@ def test_workflow_draft_confirm_stops_when_live_model_catalog_becomes_unavailabl
             "operation_id": "op-workflow-result",
             "intent": {
                 "skill_id": "ecommerce-product",
-                "user_goal": "生成商品图",
+                "user_goal": "Generate product image",
             },
         }
     )
@@ -1994,7 +1994,7 @@ def test_workflow_draft_rejects_json_intent_string(monkeypatch, tmp_path):
         "skill_id": "video-ad",
         "edge_count": 0,
         "plan": {
-            "summary": "广告",
+            "summary": "advertisement",
             "inputs": {},
             "phases": [],
             "nodes": [],
@@ -2006,7 +2006,7 @@ def test_workflow_draft_rejects_json_intent_string(monkeypatch, tmp_path):
         {
             "schema_version": "freezone_workflow_intent.v1",
             "skill_id": "video-ad",
-            "user_goal": "制作广告",
+            "user_goal": "Make an advertisement",
         },
         ensure_ascii=False,
     )
@@ -2053,7 +2053,7 @@ def test_workflow_draft_requires_canonical_argument_shapes(monkeypatch, tmp_path
         "skill_id": "video-ad",
         "edge_count": 0,
         "plan": {
-            "summary": "广告",
+            "summary": "advertisement",
             "inputs": {},
             "phases": [],
             "nodes": [],
@@ -2071,7 +2071,7 @@ def test_workflow_draft_requires_canonical_argument_shapes(monkeypatch, tmp_path
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "skill_id": "video-ad",
-            "user_goal": "制作广告",
+            "user_goal": "Make an advertisement",
             "planner": {"deliverable": "video", "units": []},
         }
     )
@@ -2085,7 +2085,7 @@ def test_workflow_draft_requires_canonical_argument_shapes(monkeypatch, tmp_path
             "intent": {
                 "schema_version": "freezone_workflow_intent.v1",
                 "skill_id": "video-ad",
-                "user_goal": "制作广告",
+                "user_goal": "Make an advertisement",
                 "planner": {"mode": "standard", "deliverable": "video", "units": []},
             },
         }
@@ -2096,13 +2096,13 @@ def test_workflow_draft_requires_canonical_argument_shapes(monkeypatch, tmp_path
         {
             "draft_id": prepared["draft_id"],
             "expected_revision": 1,
-            "patch": {"skill_id": "video-ad", "user_goal": "改成 30 秒"},
+            "patch": {"skill_id": "video-ad", "user_goal": "Change to 30 seconds"},
         }
     )
     assert alias_patch["ok"] is False
     assert alias_patch["status"] == "workflow_draft_patch_args_invalid"
 
-    # 真正不可修改的字段仍然打回,并附可修改字段清单与纠正指令。
+    # Fields that truly cannot be modified are still rejected, with the list of modifiable fields and a correction instruction attached.
     rejected = plugin._handle_patch_workflow_draft(
         {
             "draft_id": prepared["draft_id"],
@@ -2124,13 +2124,13 @@ def test_workflow_draft_concurrent_confirmation_emits_once(monkeypatch, tmp_path
         "skill_id": "video-ad",
         "edge_count": 0,
         "plan": {
-            "summary": "广告",
+            "summary": "advertisement",
             "inputs": {},
             "phases": [],
             "nodes": [
                 {
                     "id": "input",
-                    "name": "输入",
+                    "name": "Input",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
                 }
@@ -2161,7 +2161,7 @@ def test_workflow_draft_concurrent_confirmation_emits_once(monkeypatch, tmp_path
     monkeypatch.setattr(plugin, "_emit_canvas_commands", fake_emit)
     prepared = plugin._handle_prepare_workflow_draft(
         {
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         }
     )
     confirm_args = {"draft_id": prepared["draft_id"], "revision": 1}
@@ -2189,13 +2189,13 @@ def test_workflow_draft_timeout_is_persisted_without_duplicate_submission(
         "skill_id": "video-ad",
         "edge_count": 0,
         "plan": {
-            "summary": "广告",
+            "summary": "advertisement",
             "inputs": {},
             "phases": [],
             "nodes": [
                 {
                     "id": "input",
-                    "name": "输入",
+                    "name": "Input",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
                 }
@@ -2223,7 +2223,7 @@ def test_workflow_draft_timeout_is_persisted_without_duplicate_submission(
     monkeypatch.setattr(plugin, "_emit_canvas_commands", fake_emit)
     prepared = plugin._handle_prepare_workflow_draft(
         {
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         }
     )
     confirm_args = {"draft_id": prepared["draft_id"], "revision": 1}
@@ -2245,13 +2245,13 @@ def test_workflow_draft_patch_rejects_skill_replacement(monkeypatch, tmp_path):
         "skill_id": "video-ad",
         "edge_count": 0,
         "plan": {
-            "summary": "广告",
+            "summary": "advertisement",
             "inputs": {},
             "phases": [],
             "nodes": [
                 {
                     "id": "input",
-                    "name": "输入",
+                    "name": "Input",
                     "node_type": "textAnnotationNode",
                     "stage": "input",
                 }
@@ -2262,7 +2262,7 @@ def test_workflow_draft_patch_rejects_skill_replacement(monkeypatch, tmp_path):
     monkeypatch.setattr(plugin, "compile_workflow_intent", lambda _intent: compiled)
     prepared = plugin._handle_prepare_workflow_draft(
         {
-            "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+            "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         }
     )
 
@@ -2692,7 +2692,7 @@ def test_workflow_graph_defaults_speech_audio_to_preset_voice():
                     {
                         "id": "narration",
                         "node_type": "audioNode",
-                        "data": {"text": "欢迎观看"},
+                        "data": {"text": "Welcome to watch"},
                     }
                 ],
                 "edges": [],
@@ -2752,9 +2752,9 @@ def test_compiled_workflow_timeline_role_passes_plan_submission_schema(monkeypat
     _install_minimal_builtin_catalog(monkeypatch, catalog)
     plugin = _load_plugin_module()
     compiled = catalog.compile_workflow_intent({
-        "skill_id": "ecommerce-product", "user_goal": "产品图",
-        "items": [{"id": "product", "title": "产品", "recipe_id": "general-image",
-                   "prompt": "产品图", "timeline_role": "act1_setup"}],
+        "skill_id": "ecommerce-product", "user_goal": "product image",
+        "items": [{"id": "product", "title": "Product", "recipe_id": "general-image",
+                   "prompt": "product image", "timeline_role": "act1_setup"}],
     })
     assert compiled["ok"] is True
     plan = compiled["plan"]
@@ -2854,7 +2854,7 @@ def test_freezone_plugin_reads_saved_skill_and_recipe(monkeypatch):
                 "ok": True,
                 "data": [
                     {"id": "other-skill"},
-                    {"id": "home-culture-poster", "description": "完整 Skill 配置"},
+                    {"id": "home-culture-poster", "description": "Complete Skill configuration"},
                 ],
             }
         if path == "/api/v1/freezone/agent-config/recipes":
@@ -2863,7 +2863,7 @@ def test_freezone_plugin_reads_saved_skill_and_recipe(monkeypatch):
                 "data": [
                     {
                         "id": "home-culture-poster-image",
-                        "system_prompt": "完整 Recipe 配置",
+                        "system_prompt": "Complete Recipe configuration",
                     },
                 ],
             }
@@ -2878,10 +2878,10 @@ def test_freezone_plugin_reads_saved_skill_and_recipe(monkeypatch):
 
     assert skill["ok"] is True
     assert skill["kind"] == "skills"
-    assert skill["item"]["description"] == "完整 Skill 配置"
+    assert skill["item"]["description"] == "Complete Skill configuration"
     assert recipe["ok"] is True
     assert recipe["kind"] == "recipes"
-    assert recipe["item"]["system_prompt"] == "完整 Recipe 配置"
+    assert recipe["item"]["system_prompt"] == "Complete Recipe configuration"
 
 
 def test_freezone_plugin_lists_agent_catalog_summaries(monkeypatch):
@@ -2896,22 +2896,22 @@ def test_freezone_plugin_lists_agent_catalog_summaries(monkeypatch):
                 "data": [
                     {
                         "id": "ad-character-anchor",
-                        "name": "广告 IP 角色锚点",
-                        "description": "角色立绘提示词",
+                        "name": "Advertisement IP character anchor",
+                        "description": "Character portrait prompt",
                         "enabled": True,
                         "output_kind": "image",
                         "action_keys": ["character-anchor"],
-                        "result_summary": "角色锚点图",
-                        "system_prompt": "完整 Recipe prompt 不应出现在列表摘要里",
+                        "result_summary": "Character anchor image",
+                        "system_prompt": "The full Recipe prompt should not appear in the list summary",
                     },
                     {
                         "id": "video-audio-layer",
-                        "name": "广告音频层",
-                        "description": "配音和音效",
+                        "name": "Advertisement audio layer",
+                        "description": "Voiceover and sound effects",
                         "enabled": False,
                         "output_kind": "audio",
                         "action_keys": ["audio-layer"],
-                        "system_prompt": "也不应出现",
+                        "system_prompt": "Should not appear either",
                     },
                 ],
             }
@@ -2920,7 +2920,7 @@ def test_freezone_plugin_lists_agent_catalog_summaries(monkeypatch):
     monkeypatch.setattr(plugin, "_request", fake_request)
 
     listed = handlers["freezone_list_agent_catalog"](
-        {"kind": "recipes", "query": "角色"}
+        {"kind": "recipes", "query": "character"}
     )
 
     assert listed["ok"] is True
@@ -2929,15 +2929,15 @@ def test_freezone_plugin_lists_agent_catalog_summaries(monkeypatch):
     assert listed["items"] == [
         {
             "id": "ad-character-anchor",
-            "name": "广告 IP 角色锚点",
-            "description": "角色立绘提示词",
+            "name": "Advertisement IP character anchor",
+            "description": "Character portrait prompt",
             "enabled": True,
             "schema_version": "",
             "version": "",
             "output_kind": "image",
             "node_type": "imageGenNode",
             "action_keys": ["character-anchor"],
-            "result_summary": "角色锚点图",
+            "result_summary": "Character anchor image",
             "requires_source_media": False,
             "force_enhancement": False,
             "builtin": False,
@@ -2961,38 +2961,38 @@ def test_freezone_plugin_list_agent_catalog_token_search_ranks_partial_matches(
                 "data": [
                     {
                         "id": "general-image",
-                        "name": "通用图片",
-                        "description": "基础图片生成",
+                        "name": "General image",
+                        "description": "Basic image generation",
                         "enabled": True,
                         "output_kind": "image",
                         "action_keys": ["image"],
                     },
                     {
                         "id": "video-audio-layer",
-                        "name": "视频音频层",
-                        "description": "配音、音效和背景音乐",
+                        "name": "Video audio layer",
+                        "description": "Voiceover, sound effects and background music",
                         "enabled": True,
                         "output_kind": "audio",
                         "action_keys": ["audio-layer"],
-                        "result_summary": "音频层",
+                        "result_summary": "Audio layer",
                     },
                     {
                         "id": "storyboard-shot-video",
-                        "name": "分镜单段视频",
-                        "description": "根据 storyboard 生成 video 片段",
+                        "name": "Storyboard single-segment video",
+                        "description": "Generate video clips from the storyboard",
                         "enabled": True,
                         "output_kind": "video",
                         "action_keys": ["shot-video"],
-                        "result_summary": "逐镜视频",
+                        "result_summary": "Shot-by-shot video",
                     },
                     {
                         "id": "video-storyboard-grid",
-                        "name": "多宫格分镜图",
-                        "description": "生成 storyboard grid",
+                        "name": "Multi-grid storyboard image",
+                        "description": "Generate storyboard grid",
                         "enabled": True,
                         "output_kind": "image",
                         "action_keys": ["storyboard"],
-                        "result_summary": "分镜图",
+                        "result_summary": "Storyboard image",
                     },
                 ],
             }
@@ -3026,12 +3026,12 @@ def test_freezone_plugin_list_agent_catalog_returns_fallback_summaries_when_quer
                 "data": [
                     {
                         "id": "video-storyboard-grid",
-                        "name": "多宫格分镜图",
+                        "name": "Multi-grid storyboard image",
                         "enabled": True,
                     },
                     {
                         "id": "storyboard-shot-video",
-                        "name": "分镜单段视频",
+                        "name": "Storyboard single-segment video",
                         "enabled": True,
                     },
                 ],
@@ -3061,8 +3061,8 @@ def test_freezone_plugin_lists_agent_catalog_reports_available_ids(monkeypatch):
             return {
                 "ok": True,
                 "data": [
-                    {"id": "lego-video", "name": "乐高小人动画短片", "enabled": True},
-                    {"id": "pixar-video", "name": "皮克斯广告短片", "enabled": True},
+                    {"id": "lego-video", "name": "Lego minifigure animated short film", "enabled": True},
+                    {"id": "pixar-video", "name": "Pixar advertising short film", "enabled": True},
                 ],
             }
         raise AssertionError(path)
@@ -3070,7 +3070,7 @@ def test_freezone_plugin_lists_agent_catalog_reports_available_ids(monkeypatch):
     monkeypatch.setattr(plugin, "_request", fake_request)
 
     listed = handlers["freezone_list_agent_catalog"](
-        {"kind": "skills", "query": "不存在"}
+        {"kind": "skills", "query": "nonexistent"}
     )
 
     assert listed["ok"] is True
@@ -3101,7 +3101,7 @@ def test_freezone_plugin_clarification_tool_waits_for_frontend_result(monkeypatc
             "clarification_status": "answered",
             "bridge_key": key,
             "answers": {
-                "scope": {"option_ids": ["workflow"], "custom_text": "偏海报"},
+                "scope": {"option_ids": ["workflow"], "custom_text": "poster-leaning"},
             },
             "message": "User submitted clarification answers.",
         }
@@ -3117,13 +3117,13 @@ def test_freezone_plugin_clarification_tool_waits_for_frontend_result(monkeypatc
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "clarification_id": "clarify_01",
-            "title": "先确认方向",
+            "title": "Confirm the direction first",
             "questions": [
                 {
                     "id": "scope",
-                    "title": "主要做什么？",
+                    "title": "What is the main purpose?",
                     "mode": "multiple",
-                    "options": [{"id": "workflow", "label": "工作流自动化"}],
+                    "options": [{"id": "workflow", "label": "Workflow automation"}],
                     "allow_custom": True,
                 }
             ],
@@ -3243,8 +3243,8 @@ def test_clarification_rejects_project_outside_bound_session(monkeypatch):
 
     result = handlers["freezone_request_user_clarification"]({
         "project_id": "project-b", "canvas_id": "canvas-a",
-        "questions": [{"id": "scope", "title": "主要做什么？",
-                       "options": [{"id": "workflow", "label": "工作流"}]}],
+        "questions": [{"id": "scope", "title": "What is the main purpose?",
+                       "options": [{"id": "workflow", "label": "workflow"}]}],
     })
 
     assert result["ok"] is False
@@ -3281,9 +3281,9 @@ def test_clarification_timeout_result_tells_agent_how_to_resume(monkeypatch):
 
     result = _clarification_handler(plugin)({
         "project_id": "project-a", "canvas_id": "canvas-a",
-        "clarification_id": "clarify_timeout", "title": "先确认方向",
-        "questions": [{"id": "scope", "title": "主要做什么？",
-                       "options": [{"id": "workflow", "label": "工作流"}]}],
+        "clarification_id": "clarify_timeout", "title": "Confirm the direction first",
+        "questions": [{"id": "scope", "title": "What is the main purpose?",
+                       "options": [{"id": "workflow", "label": "workflow"}]}],
     })
 
     assert result["ok"] is False
@@ -3358,8 +3358,8 @@ def test_clarification_resume_keeps_waiting_on_unanswered_card(monkeypatch):
     plugin = _load_plugin_module()
     stored_event = {
         "type": "assistant.clarification.request", "clarification_id": "clarify_wait",
-        "questions": [{"id": "scope", "title": "主要做什么？",
-                       "options": [{"id": "workflow", "label": "工作流"}]}],
+        "questions": [{"id": "scope", "title": "What is the main purpose?",
+                       "options": [{"id": "workflow", "label": "workflow"}]}],
         "allow_recommended": False, "allow_skip": True, "answers": {},
     }
     monkeypatch.setattr(plugin, "find_clarification_bridge_message", lambda **_kw: {
@@ -3392,9 +3392,9 @@ def test_clarification_resume_with_only_ids_collects_ordinary_late_answer(monkey
     plugin = _load_plugin_module()
     stored_event = {
         "type": "assistant.clarification.request", "clarification_id": "clarify_bare",
-        "title": "先确认方向",
-        "questions": [{"id": "scope", "title": "主要做什么？",
-                       "options": [{"id": "workflow", "label": "工作流"}]}],
+        "title": "Confirm the direction first",
+        "questions": [{"id": "scope", "title": "What is the main purpose?",
+                       "options": [{"id": "workflow", "label": "workflow"}]}],
         "allow_recommended": False, "allow_skip": True, "answers": {},
     }
     monkeypatch.setattr(plugin, "find_clarification_bridge_message", lambda **_kw: {
@@ -3403,7 +3403,7 @@ def test_clarification_resume_with_only_ids_collects_ordinary_late_answer(monkey
             "ok": True, "status": "clarification_frontend_result",
             "tool_call_status": "completed", "clarification_status": "answered",
             "bridge_key": "clarify-key-bare",
-            "answers": {"scope": {"option_ids": ["workflow"], "custom_text": "偏海报"}},
+            "answers": {"scope": {"option_ids": ["workflow"], "custom_text": "poster-leaning"}},
         },
     })
     monkeypatch.setattr(plugin, "put_pending_clarification_event",
@@ -3473,8 +3473,8 @@ def test_clarification_without_existing_card_still_emits_a_fresh_one(monkeypatch
 
     result = _clarification_handler(plugin)({
         "project_id": "project-a", "canvas_id": "canvas-a", "clarification_id": "clarify_new",
-        "questions": [{"id": "scope", "title": "主要做什么？",
-                       "options": [{"id": "workflow", "label": "工作流"}]}],
+        "questions": [{"id": "scope", "title": "What is the main purpose?",
+                       "options": [{"id": "workflow", "label": "workflow"}]}],
     })
 
     assert result["ok"] is True
@@ -3494,16 +3494,16 @@ def test_external_generation_clarification_rejects_bundled_settings(monkeypatch)
 
     result = handlers["freezone_request_user_clarification"](
         {
-            "title": "确认视频生成选项",
+            "title": "Confirm video generation options",
             "questions": [
                 {
                     "id": "video_settings",
-                    "title": "视频设置",
+                    "title": "Video settings",
                     "options": [
                         {
                             "id": "recommended",
-                            "label": "推荐设置",
-                            "description": "9:16、高清、5 秒并生成环境音",
+                            "label": "Recommended settings",
+                            "description": "9:16, HD, 5 seconds with ambient sound",
                         }
                     ],
                 }
@@ -3539,10 +3539,10 @@ def test_external_generation_clarification_filters_server_managed_thinking_quest
     result = handlers["freezone_request_user_clarification"](
         {
             "questions": [
-                {"id": "image_model", "title": "图片模型", "options": [{"id": "m"}]},
-                {"id": "video_model", "title": "视频模型", "options": [{"id": "v"}]},
-                {"id": "image_quality", "title": "图片画质", "options": [{"id": "low"}]},
-                {"id": "thinking_level", "title": "思考等级", "options": [{"id": "low"}]},
+                {"id": "image_model", "title": "Image model", "options": [{"id": "m"}]},
+                {"id": "video_model", "title": "Video model", "options": [{"id": "v"}]},
+                {"id": "image_quality", "title": "Image quality", "options": [{"id": "low"}]},
+                {"id": "thinking_level", "title": "Thinking level", "options": [{"id": "low"}]},
             ]
         }
     )
@@ -3591,9 +3591,9 @@ def test_generation_clarification_fills_titles_live_sources_and_legacy_count_ali
         "image_variants_per_node",
     ]
     assert [question["title"] for question in questions] == [
-        "图片模型",
-        "图片画质",
-        "图片生成数量",
+        "Image model",
+        "Image quality",
+        "Images per generation",
     ]
     assert [question["options_source"] for question in questions] == [
         "image_models",
@@ -3646,7 +3646,7 @@ def test_generation_clarification_ignores_agent_authored_questions(monkeypatch):
         "generation_media_types": ["image", "video"],
         "questions": [{
             "id": "topic",
-            "title": "这 5 段视频的主题内容是什么？",
+            "title": "What is the theme of these 5 video segments?",
             "allow_custom": True,
         }],
     })
@@ -3842,7 +3842,7 @@ def test_generation_recommendation_uses_explicit_specs_and_keeps_delivery_separa
     assert recommended["video_generate_audio"] == {"option_ids": ["true"]}
     assert recommended["video_resolution"] == {"option_ids": ["720P"]}
     assert "1080p" in events[0]["description"]
-    assert "交付" in events[0]["description"]
+    assert "delivery" in events[0]["description"]
 
     handlers["freezone_request_user_clarification"]({
         "project_id": "project-a", "generation_media_types": ["video"],
@@ -4089,7 +4089,7 @@ def test_generation_recommendation_hides_one_click_when_explicit_audio_is_unsupp
 
     assert events[0]["allow_recommended"] is False
     assert "recommended_answers" not in events[0]
-    assert "声音" in events[0]["description"]
+    assert "sound" in events[0]["description"]
 
 
 def test_unsupported_explicit_audio_rejects_stale_recommended_receipt(monkeypatch):
@@ -4440,7 +4440,7 @@ def test_generation_clarification_recommended_draft_writeback_uses_server_answer
     _install_workflow_draft_api(monkeypatch, plugin, tmp_path)
     handlers = {name: handler for name, _schema, handler in plugin.TOOLS}
     monkeypatch.setattr(plugin, "compile_workflow_intent", lambda intent: {
-        "ok": True, "skill_id": "video-ad", "plan": {"summary": "广告", "nodes": [{
+        "ok": True, "skill_id": "video-ad", "plan": {"summary": "advertisement", "nodes": [{
             "id": "image-1", "node_type": "imageGenNode", "stage": "image",
             "data": {"model": (intent.get("inputs") or {}).get("image_model", "recommended")},
         }], "edges": []},
@@ -4459,7 +4459,7 @@ def test_generation_clarification_recommended_draft_writeback_uses_server_answer
         else original_request(method, path, **kwargs)
     ))
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
     })
 
     result = handlers["freezone_request_user_clarification"]({
@@ -4544,7 +4544,7 @@ def test_generation_clarification_writes_answers_to_same_draft(
     def fake_compile(intent):
         inputs = intent.get("inputs") or {}
         return {"ok": True, "skill_id": "video-ad", "plan": {
-            "summary": "广告", "nodes": [{
+            "summary": "advertisement", "nodes": [{
                 "id": "image-1", "node_type": "imageGenNode", "stage": "image",
                 "data": {
                     "model": inputs.get("image_model", "image-a"),
@@ -4573,7 +4573,7 @@ def test_generation_clarification_writes_answers_to_same_draft(
         lambda *_args, **_kwargs: pytest.fail("clarification must not write canvas commands"),
     )
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
     })
 
     result = handlers["freezone_request_user_clarification"]({
@@ -4619,7 +4619,7 @@ def test_generation_clarification_rejects_partial_answers_without_patch(monkeypa
         }
     )
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
     })
 
     result = handlers["freezone_request_user_clarification"]({
@@ -4651,7 +4651,7 @@ def test_prepare_workflow_maps_raw_generation_answers(monkeypatch, tmp_path):
         plugin, "_workflow_runtime_preflight", lambda *_args, **_kwargs: {"blockers": []}
     )
     result = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         "generation_answers": {
             "image_model": {"option_ids": ["image-a"]},
             "image_aspect_ratio": {"option_ids": ["9:16"]},
@@ -4681,7 +4681,7 @@ def test_prepare_workflow_rejects_incomplete_generation_answers(monkeypatch):
     )
     result = plugin._handle_prepare_workflow_draft({
         "project_id": "project-a", "canvas_id": "canvas-a",
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         "generation_answers": {"image_model": {"option_ids": ["image-a"]}},
     })
 
@@ -5462,7 +5462,7 @@ def test_generation_clarification_rejects_stale_draft_before_card(monkeypatch, t
         lambda *_args: pytest.fail("stale draft must not show a card"),
     )
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
     })
 
     result = handlers["freezone_request_user_clarification"]({
@@ -5505,7 +5505,7 @@ def test_generation_clarification_keeps_draft_when_execution_preflight_fails(
                         "code": "generation_parameters_required"},
     )
     prepared = plugin._handle_prepare_workflow_draft({
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         "run_after_create": True,
     })
 
@@ -5538,7 +5538,7 @@ def test_unified_prepare_maps_raw_generation_answers(monkeypatch):
     monkeypatch.setattr(plugin, "_request", fake_request)
     result = plugin._handle_prepare_workflow({
         "project_id": "project-a", "canvas_id": "canvas-a", "operation_id": "op-a",
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         "generation_answers": {
             "image_model": {"option_ids": ["image-a"]},
             "image_aspect_ratio": {"option_ids": ["9:16"]},
@@ -5589,7 +5589,7 @@ def test_unified_prepare_recovers_plan_identity_and_reserved_text_stage(monkeypa
                     "node_type": "textAnnotationNode",
                     "data": {
                         "stage": "asset",
-                        "prompt": "提取角色设定",
+                        "prompt": "Extract character settings",
                         "workflowCatalog": {
                             "recipeId": "drama-character-extraction"
                         },
@@ -5764,7 +5764,7 @@ def test_unified_prepare_accepts_generation_clarification_receipt(monkeypatch):
         "project_id": "project-a", "canvas_id": "canvas-a", "operation_id": "op-a",
         "plan": {
             "schema_version": "freezone_workflow_plan.v1",
-            "summary": "对白镜头",
+            "summary": "Dialogue shot",
             "skill": {"id": "video-ad"},
             "nodes": [{"id": "shot-1", "node_type": "videoNode", "data": {
                 "workflowCatalog": {"recipeId": "shot-video"},
@@ -5867,11 +5867,11 @@ def test_external_generation_clarification_accepts_separate_resolution_question(
     monkeypatch.setattr(plugin, "_emit_clarification_event", fake_emit)
     result = handlers["freezone_request_user_clarification"](
         {
-            "title": "确认视频清晰度",
+            "title": "Confirm video clarity",
             "questions": [
                 {
                     "id": "video_resolution",
-                    "title": "视频清晰度",
+                    "title": "Video clarity",
                     "options": [
                         {"id": "480P", "label": "480P"},
                         {"id": "720P", "label": "720P"},
@@ -5923,8 +5923,8 @@ def test_freezone_plugin_clarification_tool_generates_missing_id(monkeypatch):
             "questions": [
                 {
                     "id": "scope",
-                    "title": "主要做什么？",
-                    "options": [{"id": "workflow", "label": "工作流自动化"}],
+                    "title": "What is the main purpose?",
+                    "options": [{"id": "workflow", "label": "Workflow automation"}],
                 }
             ],
         }
@@ -5978,8 +5978,8 @@ def test_freezone_plugin_skill_studio_draft_tool_waits_for_frontend_result(monke
             "mode": "create",
             "skill": {"id": "demo_skill"},
             "recipes": [{"id": "demo_recipe"}],
-            "summary": "草稿已生成",
-            "warnings": ["检查 ID"],
+            "summary": "Draft generated",
+            "warnings": ["Check ID"],
         }
     )
 
@@ -6029,19 +6029,19 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "mode": "create",
-            "reuse_goal": "公益短片工作流",
+            "reuse_goal": "Public-service short film workflow",
             "stages": [
                 {
                     "id": "story-outline",
                     "recipe_id": "story-outline",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少公益故事的输入结构和输出结构。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input and output structure of a public-service story.",
                 },
                 {
                     "id": "video-render",
                     "recipe_id": "video-render",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少公益视频生成的质量检查和失败边界。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the quality checks and failure boundary of public-service video generation.",
                 },
             ],
             "expected_recipe_count": 2,
@@ -6054,7 +6054,7 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "mode": "create",
-            "summary": "正在生成公益短片 Skill",
+            "summary": "Generating the public-service short film Skill",
             "expected_recipe_count": 2,
         }
     )
@@ -6063,7 +6063,7 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
-            "skill": {"id": "public-service-video", "description": "公益短片 Skill"},
+            "skill": {"id": "public-service-video", "description": "Public-service short film Skill"},
         }
     )
     recipe_1 = handlers["freezone_put_agent_catalog_recipe"](
@@ -6072,7 +6072,7 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "index": 0,
-            "recipe": {"id": "story-outline", "name": "故事大纲"},
+            "recipe": {"id": "story-outline", "name": "Story outline"},
         }
     )
     recipe_2 = handlers["freezone_put_agent_catalog_recipe"](
@@ -6081,7 +6081,7 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "index": 1,
-            "recipe": {"id": "video-render", "name": "视频生成"},
+            "recipe": {"id": "video-render", "name": "Video generation"},
         }
     )
     finished = handlers["freezone_finish_agent_catalog_draft"](
@@ -6096,26 +6096,26 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
     assert begin["ok"] is True
     assert skill["ok"] is True
     assert skill["agent_instruction"].startswith(
-        "下一步必须调用 freezone_put_agent_catalog_recipe"
+        "The next step must call freezone_put_agent_catalog_recipe"
     )
-    assert "剩余 2 个" in skill["agent_instruction"]
+    assert "2 remaining" in skill["agent_instruction"]
     assert (
-        "下一步必须调用 freezone_put_agent_catalog_recipe" in skill["agent_instruction"]
+        "The next step must call freezone_put_agent_catalog_recipe" in skill["agent_instruction"]
     )
     assert "index=0" in skill["agent_instruction"]
-    assert "中性工艺级 recipe_id" in skill["agent_instruction"]
-    assert "不要把 Skill 的风格" in skill["agent_instruction"]
+    assert "neutral craft-level recipe_id" in skill["agent_instruction"]
+    assert "Do not write the Skill's style" in skill["agent_instruction"]
     assert (
-        "现在不要调用 freezone_finish_agent_catalog_draft" in skill["agent_instruction"]
+        "Do not call freezone_finish_agent_catalog_draft now" in skill["agent_instruction"]
     )
     assert recipe_1["ok"] is True
     assert recipe_1["agent_instruction"].startswith(
-        "下一步必须调用 freezone_put_agent_catalog_recipe"
+        "The next step must call freezone_put_agent_catalog_recipe"
     )
-    assert "中性工艺级 recipe_id" in recipe_1["agent_instruction"]
+    assert "neutral craft-level recipe_id" in recipe_1["agent_instruction"]
     assert recipe_2["ok"] is True
     assert recipe_2["agent_instruction"].startswith(
-        "下一步必须调用 freezone_finish_agent_catalog_draft"
+        "The next step must call freezone_finish_agent_catalog_draft"
     )
     assert finished["ok"] is True
     assert wait_keys == [("skill-studio-6", 600)]
@@ -6130,16 +6130,16 @@ def test_freezone_plugin_skill_studio_chunked_draft_tools_emit_progress_and_fini
     ]
     assert pending_events[0]["event"]["status"] == "draft_outline_ready"
     assert pending_events[1]["event"]["status"] == "draft_begin"
-    assert pending_events[2]["event"]["message"] == "已生成 Skill 基础配置"
-    assert "下一步必须调用 freezone_put_agent_catalog_recipe" in (
+    assert pending_events[2]["event"]["message"] == "Skill base configuration generated"
+    assert "The next step must call freezone_put_agent_catalog_recipe" in (
         pending_events[2]["event"]["debug"]["agent_instruction"]
     )
-    assert pending_events[3]["event"]["message"] == "已生成 Recipe 1 / 2"
+    assert pending_events[3]["event"]["message"] == "Recipe 1 / 2 generated"
     assert (
-        "不要把工具调用、参数块或代码块写进聊天内容"
+        "do not write tool calls, parameter blocks or code blocks into the chat content"
         in pending_events[3]["event"]["debug"]["agent_instruction"]
     )
-    assert pending_events[4]["event"]["message"] == "已生成 Recipe 2 / 2"
+    assert pending_events[4]["event"]["message"] == "Recipe 2 / 2 generated"
     draft_event = pending_events[-1]["event"]
     assert draft_event["skill"]["id"] == "public-service-video"
     assert [recipe["id"] for recipe in draft_event["recipes"]] == [
@@ -6196,13 +6196,13 @@ def test_freezone_plugin_begin_agent_catalog_draft_inherits_outline_expected_cou
         {
             **base_args,
             "mode": "create",
-            "reuse_goal": "广告短片工作流",
+            "reuse_goal": "Advertising short film workflow",
             "stages": [
                 {
                     "id": "storyboard",
                     "recipe_id": "ad-storyboard",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少全片分镜的输入结构和输出结构。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input and output structure of whole-film storyboards.",
                 }
             ],
             "expected_recipe_count": 1,
@@ -6214,22 +6214,22 @@ def test_freezone_plugin_begin_agent_catalog_draft_inherits_outline_expected_cou
         {**base_args, "mode": "create"}
     )
     recipe = handlers["freezone_put_agent_catalog_recipe"](
-        {**base_args, "index": 0, "recipe": {"id": "ad-storyboard", "name": "广告分镜"}}
+        {**base_args, "index": 0, "recipe": {"id": "ad-storyboard", "name": "Advertisement storyboard"}}
     )
     skill = handlers["freezone_put_agent_catalog_skill"](
-        {**base_args, "skill": {"id": "ad-video", "description": "广告短片 Skill"}}
+        {**base_args, "skill": {"id": "ad-video", "description": "Advertising short film Skill"}}
     )
 
     assert begin["ok"] is True
     assert recipe["ok"] is True
-    assert pending_events[2]["event"]["message"] == "已生成 Recipe 1 / 1"
+    assert pending_events[2]["event"]["message"] == "Recipe 1 / 1 generated"
     assert skill["ok"] is True
-    assert "Recipe 已提交 1 / 1" in skill["agent_instruction"]
+    assert "Recipes submitted 1 / 1" in skill["agent_instruction"]
     assert (
-        "下一步必须调用 freezone_finish_agent_catalog_draft"
+        "The next step must call freezone_finish_agent_catalog_draft"
         in skill["agent_instruction"]
     )
-    assert "本次不需要提交 Recipe" not in skill["agent_instruction"]
+    assert "no Recipe needs to be submitted this time" not in skill["agent_instruction"]
 
 
 def test_freezone_plugin_draft_outline_allows_create_flow_and_reaches_final_draft(
@@ -6263,14 +6263,14 @@ def test_freezone_plugin_draft_outline_allows_create_flow_and_reaches_final_draf
         {
             **base_args,
             "mode": "create",
-            "reuse_goal": "把当前广告短片流程沉淀成可复用 Skill",
-            "skill_level_constraints": ["皮克斯 3D 风格放在 Skill"],
+            "reuse_goal": "Consolidate the current advertising short film flow into a reusable Skill",
+            "skill_level_constraints": ["Put the Pixar 3D style in the Skill"],
             "stages": [
                 {
                     "id": "story-outline",
                     "recipe_id": "story-outline",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少广告短片故事大纲的输入结构和输出结构。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input and output structure of an advertising short film story outline.",
                 },
             ],
             "expected_recipe_count": 1,
@@ -6289,7 +6289,7 @@ def test_freezone_plugin_draft_outline_allows_create_flow_and_reaches_final_draf
             "index": 0,
             "recipe": {
                 "id": "story-outline",
-                "name": "故事大纲",
+                "name": "Story outline",
                 "output_kind": "text",
             },
         }
@@ -6300,7 +6300,7 @@ def test_freezone_plugin_draft_outline_allows_create_flow_and_reaches_final_draf
     assert begin["ok"] is True
     draft_event = pending_events[-1]["event"]
     assert (
-        draft_event["outline"]["reuse_goal"] == "把当前广告短片流程沉淀成可复用 Skill"
+        draft_event["outline"]["reuse_goal"] == "Consolidate the current advertising short film flow into a reusable Skill"
     )
     assert draft_event["outline"]["expected_recipe_count"] == 1
 
@@ -6330,19 +6330,19 @@ def test_freezone_plugin_draft_outline_counts_only_new_recipe_chunks(monkeypatch
         {
             **base_args,
             "mode": "create",
-            "reuse_goal": "复用广告短片制作流程",
+            "reuse_goal": "Reuse the advertising short film production flow",
             "stages": [
                 {
                     "id": "character-anchor",
                     "recipe_id": "pixar-character-anchor",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少广告 IP 角色锚点的输入结构和失败边界。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input structure and failure boundary of an advertising IP character anchor.",
                 },
                 {
                     "id": "prop-anchor",
                     "recipe_id": "brand-prop-anchor",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少品牌道具植入的输出结构和质量检查。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the output structure and quality checks of brand prop placement.",
                 },
                 {
                     "id": "storyboard",
@@ -6374,7 +6374,7 @@ def test_freezone_plugin_draft_outline_counts_only_new_recipe_chunks(monkeypatch
     assert outline["ok"] is True
     assert outline["agent_instruction"].count("expected_recipe_count=2") == 1
     assert begin["ok"] is True
-    assert skill["agent_instruction"].count("Recipe 已提交 0 / 2") == 1
+    assert skill["agent_instruction"].count("Recipes submitted 0 / 2") == 1
     outline_event = pending_events[0]["event"]
     assert outline_event["status"] == "draft_outline_ready"
 
@@ -6388,20 +6388,20 @@ def test_freezone_plugin_draft_outline_requires_craft_gap_for_new_recipes():
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_missing_craft_gap_outline",
             "mode": "create",
-            "reuse_goal": "把皮克斯 3D 广告短片沉淀成可复用 Skill",
-            "skill_level_constraints": ["皮克斯 3D 风格放在 Skill"],
+            "reuse_goal": "Consolidate the Pixar 3D advertising short film into a reusable Skill",
+            "skill_level_constraints": ["Put the Pixar 3D style in the Skill"],
             "stages": [
                 {
                     "id": "pixar-character-anchor",
                     "recipe_id": "pixar-character-anchor",
                     "reuse": "new",
-                    "reason": "皮克斯卡通渲染风格的角色立绘是此 Skill 的核心特色，现有 Recipe 不含此风格",
+                    "reason": "The Pixar cartoon-rendered character portrait is a core feature of this Skill, and no existing Recipe has this style",
                 },
                 {
                     "id": "storyboard",
                     "recipe_id": "video-storyboard-grid",
                     "reuse": "existing",
-                    "reason": "已有通用多宫格分镜 Recipe，可直接复用",
+                    "reason": "A general multi-grid storyboard Recipe already exists and can be reused directly",
                 },
             ],
             "expected_recipe_count": 2,
@@ -6436,24 +6436,24 @@ def test_freezone_plugin_draft_outline_accepts_new_recipe_with_craft_gap(monkeyp
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_with_craft_gap_outline",
             "mode": "create",
-            "reuse_goal": "把广告 IP 角色短片沉淀成可复用 Skill",
-            "skill_level_constraints": ["视觉风格放在 Skill"],
+            "reuse_goal": "Consolidate the advertising IP character short film into a reusable Skill",
+            "skill_level_constraints": ["Put the visual style in the Skill"],
             "stages": [
                 {
                     "id": "ad-ip-character-anchor",
                     "recipe_id": "ad-ip-character-anchor",
                     "reuse": "new",
-                    "reason": "需要广告 IP 角色锚点工艺",
+                    "reason": "Needs the advertising IP character anchor craft",
                     "new_recipe_craft_gap": (
-                        "现有角色锚点缺少广告 IP 角色的输入结构、输出结构和失败边界："
-                        "必须拆出职业标识、品牌隔离、后续引用锁定，并禁止把产品卖点混入角色主体。"
+                        "The existing character anchor lacks the input structure, output structure and failure boundary of an advertising IP character: "
+                        "Must split out occupation marker, brand isolation and later reference locking, and forbid mixing product selling points into the character subject."
                     ),
                 },
                 {
                     "id": "storyboard",
                     "recipe_id": "video-storyboard-grid",
                     "reuse": "existing",
-                    "reason": "已有通用分镜图工艺可复用",
+                    "reason": "A general storyboard-image craft already exists and can be reused",
                 },
             ],
             "expected_recipe_count": 2,
@@ -6498,13 +6498,13 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
         {
             **base_args,
             "mode": "create",
-            "reuse_goal": "结构化视频生成",
+            "reuse_goal": "Structured video generation",
             "stages": [
                 {
                     "id": recipe_id,
                     "recipe_id": recipe_id,
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少该阶段的输入输出契约。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input/output contract of this stage.",
                 }
                 for recipe_id in ("anchor-assets", "storyboard-plan", "audio-layer")
             ],
@@ -6520,7 +6520,7 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
             **base_args,
             "skill": {
                 "id": "light-shadow-ad-video",
-                "name": "光影广告短片",
+                "name": "Light-and-shadow advertising short film",
                 "input_parameters": [
                     {"id": "shot_count", "type": "number", "default": 6}
                 ],
@@ -6533,9 +6533,9 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
             "index": 0,
             "recipe": {
                 "id": "anchor-assets",
-                "name": "锚点资产",
+                "name": "Anchor assets",
                 "output_kind": "image",
-                "system_prompt": "输出两条提示词，分别生成角色锚点和道具锚点。",
+                "system_prompt": "Output two prompts that generate the character anchor and the prop anchor separately.",
             },
         }
     )
@@ -6545,9 +6545,9 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
             "index": 1,
             "recipe": {
                 "id": "storyboard-plan",
-                "name": "分镜图",
+                "name": "Storyboard image",
                 "output_kind": "image",
-                "system_prompt": "生成固定 9 宫格分镜草图。",
+                "system_prompt": "Generate a fixed 9-grid storyboard sketch.",
             },
         }
     )
@@ -6557,9 +6557,9 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
             "index": 2,
             "recipe": {
                 "id": "audio-layer",
-                "name": "音频层",
+                "name": "Audio layer",
                 "output_kind": "audio",
-                "system_prompt": "生成配音和音效，并把所有视频和音频合成为最终成片。",
+                "system_prompt": "Generate voiceover and sound effects, and compose all video and audio into the final cut.",
             },
         }
     )
@@ -6567,9 +6567,9 @@ def test_freezone_plugin_finish_agent_catalog_draft_warns_structural_recipe_issu
     handlers["freezone_finish_agent_catalog_draft"](base_args)
 
     warnings = pending_events[-1]["event"]["warnings"]
-    assert any("可能一次生成多个执行节点" in warning for warning in warnings)
-    assert any("固定了九宫格" in warning for warning in warnings)
-    assert any("音频输出" in warning and "最终合成" in warning for warning in warnings)
+    assert any("may generate multiple execution nodes at once" in warning for warning in warnings)
+    assert any("fixes a nine-grid" in warning for warning in warnings)
+    assert any("has audio output" in warning and "final-composition" in warning for warning in warnings)
 
 
 def test_freezone_plugin_chunked_draft_skill_result_directs_first_recipe_before_finish(
@@ -6596,13 +6596,13 @@ def test_freezone_plugin_chunked_draft_skill_result_directs_first_recipe_before_
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "mode": "create",
-            "reuse_goal": "公益短片工作流",
+            "reuse_goal": "Public-service short film workflow",
             "stages": [
                 {
                     "id": f"recipe-{index}",
                     "recipe_id": f"recipe-{index}",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少该阶段的输入结构和输出结构。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input and output structure of this stage.",
                 }
                 for index in range(5)
             ],
@@ -6624,20 +6624,20 @@ def test_freezone_plugin_chunked_draft_skill_result_directs_first_recipe_before_
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
-            "skill": {"id": "public-service-video", "description": "公益短片 Skill"},
+            "skill": {"id": "public-service-video", "description": "Public-service short film Skill"},
         }
     )
 
     instruction = result["agent_instruction"]
-    assert "下一步必须调用 freezone_put_agent_catalog_recipe" in instruction
-    assert "当前进度：Skill 已提交；Recipe 已提交 0 / 5；剩余 5 个。" in instruction
-    assert "Recipe 已提交 0 / 5" in instruction
-    assert "剩余 5 个" in instruction
+    assert "The next step must call freezone_put_agent_catalog_recipe" in instruction
+    assert "Current progress: Skill submitted; Recipes submitted 0 / 5; 5 remaining." in instruction
+    assert "Recipes submitted 0 / 5" in instruction
+    assert "5 remaining" in instruction
     assert "index=0" in instruction
-    assert "不要用普通文本回复" in instruction
-    assert "不要把工具调用、参数块或代码块写进聊天内容" in instruction
-    assert "请直接调用对应工具" in instruction
-    assert "现在不要调用 freezone_finish_agent_catalog_draft" in instruction
+    assert "Do not reply with plain text" in instruction
+    assert "do not write tool calls, parameter blocks or code blocks into the chat content" in instruction
+    assert "call the corresponding tool directly" in instruction
+    assert "Do not call freezone_finish_agent_catalog_draft now" in instruction
 
 
 def test_freezone_plugin_chunked_draft_skill_without_recipes_directs_finish(
@@ -6664,7 +6664,7 @@ def test_freezone_plugin_chunked_draft_skill_without_recipes_directs_finish(
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "mode": "create",
-            "reuse_goal": "多阶段工作流",
+            "reuse_goal": "Multi-stage workflow",
             "stages": [
                 {
                     "id": f"recipe-{index}",
@@ -6691,13 +6691,13 @@ def test_freezone_plugin_chunked_draft_skill_without_recipes_directs_finish(
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
-            "skill": {"id": "public-service-video", "description": "公益短片 Skill"},
+            "skill": {"id": "public-service-video", "description": "Public-service short film Skill"},
         }
     )
 
     instruction = result["agent_instruction"]
-    assert "本次不需要提交 Recipe" in instruction
-    assert "下一步必须调用 freezone_finish_agent_catalog_draft" in instruction
+    assert "no Recipe needs to be submitted this time" in instruction
+    assert "The next step must call freezone_finish_agent_catalog_draft" in instruction
     assert "freezone_put_agent_catalog_recipe" not in instruction
 
 
@@ -6737,13 +6737,13 @@ def test_freezone_plugin_chunked_draft_rejects_recipe_outside_generation_manifes
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "index": 0,
-            "recipe": {"id": "story-outline", "name": "故事大纲"},
+            "recipe": {"id": "story-outline", "name": "Story outline"},
         }
     )
 
     assert result["ok"] is False
     assert result["status"] == "recipe_generate_operation_required"
-    assert pending_events[-1]["event"]["message"] == "正在创建草稿结构..."
+    assert pending_events[-1]["event"]["message"] == "Creating the draft structure..."
 
 
 def test_freezone_plugin_chunked_draft_recipe_result_directs_next_recipe_before_finish(
@@ -6770,13 +6770,13 @@ def test_freezone_plugin_chunked_draft_recipe_result_directs_next_recipe_before_
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "mode": "create",
-            "reuse_goal": "多阶段工作流",
+            "reuse_goal": "Multi-stage workflow",
             "stages": [
                 {
                     "id": f"recipe-{index}",
                     "recipe_id": f"recipe-{index}",
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少该阶段的输入结构和输出结构。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input and output structure of this stage.",
                 }
                 for index in range(6)
             ],
@@ -6809,20 +6809,20 @@ def test_freezone_plugin_chunked_draft_recipe_result_directs_next_recipe_before_
             "canvas_id": "canvas-a",
             "skill_studio_session_id": "skill_studio_01",
             "index": 4,
-            "recipe": {"id": "audio-layer", "name": "音频层"},
+            "recipe": {"id": "audio-layer", "name": "Audio layer"},
         }
     )
 
     instruction = result["agent_instruction"]
-    assert "剩余 1 个" in instruction
+    assert "1 remaining" in instruction
     assert "freezone_put_agent_catalog_recipe" in instruction
     assert "index=5" in instruction
-    assert "不要用普通文本回复" in instruction
-    assert "不要把工具调用、参数块或代码块写进聊天内容" in instruction
-    assert "请直接调用对应工具" in instruction
-    assert "不要调用 skill_view" in instruction
-    assert "不要处理斜杠命令" in instruction
-    assert "现在不要调用 freezone_finish_agent_catalog_draft" in instruction
+    assert "Do not reply with plain text" in instruction
+    assert "do not write tool calls, parameter blocks or code blocks into the chat content" in instruction
+    assert "call the corresponding tool directly" in instruction
+    assert "do not call skill_view" in instruction
+    assert "do not handle slash commands" in instruction
+    assert "Do not call freezone_finish_agent_catalog_draft now" in instruction
 
 
 def test_freezone_plugin_recipe_only_manifest_admits_and_delivers_each_recipe(
@@ -6868,13 +6868,13 @@ def test_freezone_plugin_recipe_only_manifest_admits_and_delivers_each_recipe(
     handlers["freezone_put_agent_catalog_draft_outline"](
         {
             **base,
-            "reuse_goal": "只生成节点工艺",
+            "reuse_goal": "Generate node craft only",
             "stages": [
                 {
                     "id": recipe_id,
                     "recipe_id": recipe_id,
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少该阶段的输入输出契约。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input/output contract of this stage.",
                 }
                 for recipe_id in ("recipe-a", "recipe-b")
             ],
@@ -6916,13 +6916,13 @@ def _begin_catalog_create_with_recipes(handlers, base_args, recipe_ids):
         {
             **base_args,
             "mode": "create",
-            "reuse_goal": "结构化内容生成",
+            "reuse_goal": "Structured content generation",
             "stages": [
                 {
                     "id": recipe_id,
                     "recipe_id": recipe_id,
                     "reuse": "new",
-                    "new_recipe_craft_gap": "现有 Recipe 缺少该阶段的输入输出契约。",
+                    "new_recipe_craft_gap": "The existing Recipe lacks the input/output contract of this stage.",
                 }
                 for recipe_id in recipe_ids
             ],
@@ -7115,7 +7115,7 @@ def test_freezone_plugin_patch_draft_skill_keywords_preserves_recipes(monkeypatc
             **base_args,
             "skill": {
                 "id": "public-service-video",
-                "triggers": {"keywords": ["公益短片", "公益广告"]},
+                "triggers": {"keywords": ["public-service short film", "public-service advertisement"]},
             },
         }
     )
@@ -7138,7 +7138,7 @@ def test_freezone_plugin_patch_draft_skill_keywords_preserves_recipes(monkeypatc
                 {
                     "op": "replace",
                     "path": "/triggers/keywords",
-                    "value": ["公益短片", "公益视频"],
+                    "value": ["public-service short film", "public-service video"],
                 }
             ],
         }
@@ -7148,22 +7148,22 @@ def test_freezone_plugin_patch_draft_skill_keywords_preserves_recipes(monkeypatc
     assert patched["ok"] is True
     assert patched["status"] == "draft_patch_applied"
     assert patched["agent_instruction"].startswith(
-        "下一步必须调用 freezone_finish_agent_catalog_draft"
+        "The next step must call freezone_finish_agent_catalog_draft"
     )
     assert (
-        "更新后的完整草稿必须通过 finish 工具重新展示给用户"
+        "the complete updated draft must be shown to the user again through the finish tool"
         in patched["agent_instruction"]
     )
-    assert pending_events[-2]["event"]["message"] == "已更新 Skill 触发关键词"
+    assert pending_events[-2]["event"]["message"] == "Skill trigger keywords updated"
     assert pending_events[-2]["event"]["debug"]["agent_instruction"].startswith(
-        "下一步必须调用 freezone_finish_agent_catalog_draft"
+        "The next step must call freezone_finish_agent_catalog_draft"
     )
     draft_events = [
         item["event"]
         for item in pending_events
         if item["event"]["type"] == "skill_studio.draft"
     ]
-    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["公益短片", "公益视频"]
+    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["public-service short film", "public-service video"]
     assert [recipe["id"] for recipe in draft_events[-1]["recipes"]] == [
         "story-outline",
         "video-render",
@@ -7205,14 +7205,14 @@ def test_freezone_plugin_patch_draft_recipe_system_prompt_by_recipe_id(monkeypat
         {
             **base_args,
             "index": 0,
-            "recipe": {"id": "story-outline", "system_prompt": "旧大纲提示词"},
+            "recipe": {"id": "story-outline", "system_prompt": "Old outline prompt"},
         }
     )
     handlers["freezone_put_agent_catalog_recipe"](
         {
             **base_args,
             "index": 1,
-            "recipe": {"id": "video-script", "system_prompt": "旧脚本提示词"},
+            "recipe": {"id": "video-script", "system_prompt": "Old script prompt"},
         }
     )
     handlers["freezone_finish_agent_catalog_draft"](base_args)
@@ -7226,22 +7226,22 @@ def test_freezone_plugin_patch_draft_recipe_system_prompt_by_recipe_id(monkeypat
             "target": "recipe",
             "recipe_id": "video-script",
             "patch": [
-                {"op": "replace", "path": "/system_prompt", "value": "新脚本提示词"}
+                {"op": "replace", "path": "/system_prompt", "value": "New script prompt"}
             ],
         }
     )
     handlers["freezone_finish_agent_catalog_draft"](base_args)
 
     assert patched["ok"] is True
-    assert pending_events[-2]["event"]["message"] == "已更新 Recipe：video-script"
+    assert pending_events[-2]["event"]["message"] == "Recipe updated: video-script"
     draft_events = [
         item["event"]
         for item in pending_events
         if item["event"]["type"] == "skill_studio.draft"
     ]
     assert [recipe["system_prompt"] for recipe in draft_events[-1]["recipes"]] == [
-        "旧大纲提示词",
-        "新脚本提示词",
+        "Old outline prompt",
+        "New script prompt",
     ]
 
 
@@ -7295,7 +7295,7 @@ def test_freezone_plugin_patch_draft_removes_entire_recipe_by_recipe_id(monkeypa
 
     assert result["ok"] is True
     assert result["removed"] is True
-    assert pending_events[-2]["event"]["message"] == "已移除 Recipe：video-script"
+    assert pending_events[-2]["event"]["message"] == "Recipe removed: video-script"
     draft_events = [
         item["event"]
         for item in pending_events
@@ -7337,7 +7337,7 @@ def test_freezone_plugin_patch_draft_invalid_path_does_not_mutate(monkeypatch):
             **base_args,
             "skill": {
                 "id": "public-service-video",
-                "triggers": {"keywords": ["公益短片", "公益广告"]},
+                "triggers": {"keywords": ["public-service short film", "public-service advertisement"]},
             },
         }
     )
@@ -7347,7 +7347,7 @@ def test_freezone_plugin_patch_draft_invalid_path_does_not_mutate(monkeypatch):
             **base_args,
             "target": "skill",
             "patch": [
-                {"op": "replace", "path": "/triggers/missing/0", "value": "公益视频"}
+                {"op": "replace", "path": "/triggers/missing/0", "value": "public-service video"}
             ],
         }
     )
@@ -7361,7 +7361,7 @@ def test_freezone_plugin_patch_draft_invalid_path_does_not_mutate(monkeypatch):
         for item in pending_events
         if item["event"]["type"] == "skill_studio.draft"
     ]
-    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["公益短片", "公益广告"]
+    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["public-service short film", "public-service advertisement"]
 
 
 def test_freezone_plugin_patch_draft_rejects_recipe_root_path_with_guidance(
@@ -7403,7 +7403,7 @@ def test_freezone_plugin_patch_draft_rejects_recipe_root_path_with_guidance(
             "index": 0,
             "recipe": {
                 "id": "public-welfare-storyboard-images",
-                "must_have_items": ["旧字段"],
+                "must_have_items": ["old field"],
             },
         }
     )
@@ -7417,7 +7417,7 @@ def test_freezone_plugin_patch_draft_rejects_recipe_root_path_with_guidance(
                 {
                     "op": "replace",
                     "path": "/recipes/public-welfare-storyboard-images/must_have_items",
-                    "value": ["新字段"],
+                    "value": ["new field"],
                 }
             ],
         }
@@ -7436,7 +7436,7 @@ def test_freezone_plugin_patch_draft_rejects_recipe_root_path_with_guidance(
         for item in pending_events
         if item["event"]["type"] == "skill_studio.draft"
     ]
-    assert draft_events[-1]["recipes"][0]["must_have_items"] == ["旧字段"]
+    assert draft_events[-1]["recipes"][0]["must_have_items"] == ["old field"]
 
 
 def test_freezone_plugin_patch_draft_removes_keyword_list_item(monkeypatch):
@@ -7472,7 +7472,7 @@ def test_freezone_plugin_patch_draft_removes_keyword_list_item(monkeypatch):
             **base_args,
             "skill": {
                 "id": "public-service-video",
-                "triggers": {"keywords": ["公益短片", "公益广告", "纪录片"]},
+                "triggers": {"keywords": ["public-service short film", "public-service advertisement", "documentary"]},
             },
         }
     )
@@ -7491,7 +7491,7 @@ def test_freezone_plugin_patch_draft_removes_keyword_list_item(monkeypatch):
         for item in pending_events
         if item["event"]["type"] == "skill_studio.draft"
     ]
-    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["公益短片", "纪录片"]
+    assert draft_events[-1]["skill"]["triggers"]["keywords"] == ["public-service short film", "documentary"]
 
 
 def test_freezone_plugin_skill_studio_tool_schemas_expose_nested_contracts():
@@ -7722,10 +7722,10 @@ def test_freezone_plugin_skill_studio_tool_schemas_expose_nested_contracts():
         "description"
     ]
     assert (
-        "text Recipe 要求当前 LLM 直接输出最终交付文本"
+        "A text Recipe requires the current LLM to directly output the final deliverable text"
         in recipe_system_prompt_description
     )
-    assert "二阶段指令" in recipe_system_prompt_description
+    assert "second-stage instructions" in recipe_system_prompt_description
     assert recipe_item["properties"]["output_kind"]["enum"] == [
         "text",
         "image",
@@ -7745,15 +7745,15 @@ def test_freezone_plugin_skill_studio_tool_schemas_expose_nested_contracts():
     system_prompt_description = recipe_item["properties"]["system_prompt"][
         "description"
     ]
-    assert "节点" in system_prompt_description
-    assert "提示词/指令" in system_prompt_description
-    assert "text Recipe 不直接写正文成品" not in system_prompt_description
-    assert "送入对应节点" in system_prompt_description
-    assert "终端生成型" not in system_prompt_description
-    assert "不要把所有 Recipe 都写成 prompt compiler" not in system_prompt_description
-    assert "角色设定" in system_prompt_description
-    assert "输出结构" in system_prompt_description
-    assert "禁止事项" in system_prompt_description
+    assert "node" in system_prompt_description
+    assert "prompt/instruction" in system_prompt_description
+    assert "A text Recipe does not directly write the finished body copy" not in system_prompt_description
+    assert "sent to the corresponding node" in system_prompt_description
+    assert "terminal generation type" not in system_prompt_description
+    assert "Do not write every Recipe as a prompt compiler" not in system_prompt_description
+    assert "[Role]" in system_prompt_description
+    assert "[Output structure requirements]" in system_prompt_description
+    assert "[Prohibitions/constraints]" in system_prompt_description
     planning_prompt_description = recipe_item["properties"]["planning_prompt"][
         "description"
     ]
@@ -7761,7 +7761,7 @@ def test_freezone_plugin_skill_studio_tool_schemas_expose_nested_contracts():
         "description"
     ]
     assert "short business description" in planning_prompt_description
-    assert "根据 X" in planning_prompt_description
+    assert "Based on X" in planning_prompt_description
     assert "Do not describe scheduling mechanics" in planning_prompt_description
     assert "short business description" in result_summary_description
     assert "Do not mention downstream execution" in result_summary_description
@@ -7777,10 +7777,10 @@ def test_freezone_get_workflow_skill_includes_current_user_agent_config(monkeypa
             return [
                 {
                     "id": "custom-fruit-ad",
-                    "name": "自定义水果广告",
-                    "description": "用户导入的水果广告工作流",
+                    "name": "Custom fruit advertisement",
+                    "description": "Fruit advertisement workflow imported by the user",
                     "_catalog_source": "user",
-                    "triggers": {"keywords": ["水果广告"]},
+                    "triggers": {"keywords": ["fruit advertisement"]},
                     "allowed_recipe_ids": ["custom-fruit-outline"],
                 }
             ]
@@ -7788,10 +7788,10 @@ def test_freezone_get_workflow_skill_includes_current_user_agent_config(monkeypa
             return [
                 {
                     "id": "custom-fruit-outline",
-                    "name": "水果广告创意",
+                    "name": "Fruit advertisement idea",
                     "_catalog_source": "user",
                     "generationType": "text",
-                    "system_prompt": "输出一条提示词/指令。",
+                    "system_prompt": "Output one prompt/instruction.",
                 }
             ]
         raise AssertionError(kind)
@@ -7850,14 +7850,14 @@ def test_freezone_canvas_command_slim_result_omits_large_details():
                 "type": "create_node",
                 "client_id": "outline",
                 "node_type": "textAnnotationNode",
-                "data": {"displayName": "生成广告创意大纲"},
+                "data": {"displayName": "Generate advertising creative outline"},
             },
             {"type": "create_edge"},
             {
                 "type": "create_node",
                 "client_id": "storyboard",
                 "node_type": "imageGenNode",
-                "data": {"displayName": "多宫格分镜图"},
+                "data": {"displayName": "Multi-grid storyboard image"},
             },
         ],
     )
@@ -7869,12 +7869,12 @@ def test_freezone_canvas_command_slim_result_omits_large_details():
         {
             "client_id": "outline",
             "node_type": "textAnnotationNode",
-            "displayName": "生成广告创意大纲",
+            "displayName": "Generate advertising creative outline",
         },
         {
             "client_id": "storyboard",
             "node_type": "imageGenNode",
-            "displayName": "多宫格分镜图",
+            "displayName": "Multi-grid storyboard image",
         },
     ]
     assert "copy every non-empty displayName" in summary["agent_instruction"]
@@ -8374,7 +8374,7 @@ def test_revision_conflict_blocks_follow_up_canvas_writes_until_explicit_confirm
 
     assert result["ok"] is False
     assert result["status"] == "canvas_revision_confirmation_required"
-    assert "未执行画布操作" in result["user_message"]
+    assert "no canvas operation was performed" in result["user_message"]
 
     plugin._clear_canvas_revision_conflict("project-a", "canvas-a")
     # The guard is the only concern of this regression test; the next stage
@@ -8603,7 +8603,7 @@ def test_freezone_mcp_default_create_node_uses_frontend_bridge(monkeypatch):
             "project_id": "project-a",
             "canvas_id": "canvas-a",
             "node_type": "videoNode",
-            "data": {"displayName": "视频节点"},
+            "data": {"displayName": "Video node"},
         }
     )
 
@@ -8767,7 +8767,7 @@ def test_freezone_plugin_mainline_projection_assets_normalizes_people_to_charact
     result = asset_handler(
         {
             "asset_kinds": ["identity", "portrait", "character_identity", "prop"],
-            "query": "陈默",
+            "query": "Chen Mo",
             "limit": 12,
         }
     )
@@ -8777,7 +8777,7 @@ def test_freezone_plugin_mainline_projection_assets_normalizes_people_to_charact
         {
             "type": "mainline_projection_assets",
             "asset_kinds": ["character", "prop"],
-            "query": "陈默",
+            "query": "Chen Mo",
             "limit": 12,
         }
     ]
@@ -8810,11 +8810,11 @@ def test_external_skill_import_submits_background_task_without_canvas_write(monk
     monkeypatch.setenv('DRAMACLAW_PROJECT', 'project')
     calls = []
     monkeypatch.setattr(module, '_request', lambda method, path, **kwargs: calls.append((method, path, kwargs)) or {'ok': True, 'data': {'batch_id': 'b', 'items': []}})
-    result = module._handle_import_external_skill({'project_id': 'p/a', 'name': 'SKILL.md', 'markdown': '# 文案'})
+    result = module._handle_import_external_skill({'project_id': 'p/a', 'name': 'SKILL.md', 'markdown': '# Copy'})
     if isinstance(result, str):
         result = json.loads(result)
     assert calls[0][0:2] == ('POST', '/projects/p%2Fa/freezone/skill-imports')
-    assert base64.b64decode(calls[0][2]['body']['files'][0]['content_base64']).decode() == '# 文案'
+    assert base64.b64decode(calls[0][2]['body']['files'][0]['content_base64']).decode() == '# Copy'
     assert result['status'] == 'skill_import_submitted'
     assert result['batch_id'] == 'b'
     schema = next(schema for name, schema, _handler in module.TOOLS if name == 'freezone_import_external_skill')
@@ -8894,7 +8894,7 @@ def test_confirm_draft_revision_conflict_requires_fresh_user_confirmation(monkey
     assert "freezone_get_workflow" in result["agent_instruction"]
     assert "explicitly confirm" in result["agent_instruction"]
     assert "Never confirm current_revision" in result["agent_instruction"]
-    assert result["user_message"] and "重新确认" in result["user_message"]
+    assert result["user_message"] and "confirm again" in result["user_message"]
     schema = next(
         schema for name, schema, _handler in plugin.TOOLS
         if name == "freezone_confirm_workflow_draft"
@@ -8964,7 +8964,7 @@ def test_direct_apply_resolves_add_next_client_alias_for_later_commands(monkeypa
                 "source_node_id": "selected-image",
                 "client_id": "watercolor-result",
                 "node_type": "imageGenNode",
-                "data": {"prompt": "水彩"},
+                "data": {"prompt": "watercolor"},
             },
             {
                 "type": "update_node_data",
@@ -8980,7 +8980,7 @@ def test_direct_apply_resolves_add_next_client_alias_for_later_commands(monkeypa
     created = next(
         node for node in saved[0]["nodes"] if node["type"] == "imageGenNode"
     )
-    assert created["data"] == {"prompt": "水彩", "count": 1}
+    assert created["data"] == {"prompt": "watercolor", "count": 1}
 
 
 @pytest.mark.parametrize(
@@ -9062,7 +9062,7 @@ def test_workflow_adapter_forwards_standard_clarification_from_api(monkeypatch, 
             {"node_id": "shot-2", "node_type": "videoNode", "fields": ["durationSec"]},
         ],
         "required_choices": {"video": ["duration_seconds", "generate_audio"]},
-        "clarification": {"title": "确认图片和视频生成参数", "allow_skip": False},
+        "clarification": {"title": "Confirm image and video generation parameters", "allow_skip": False},
         "preflight": {"status": "blocked", "blockers": [], "warnings": []},
         "retryable": True,
         "next_action": "request_user_clarification",
@@ -9210,8 +9210,8 @@ def test_workflow_http_error_handles_non_json_and_empty_body(monkeypatch, body):
     "body,expected",
     [
         (
-            {"detail": "媒体模型目录暂不可用，请稍后重试"},
-            "媒体模型目录暂不可用，请稍后重试",
+            {"detail": "The media model catalog is temporarily unavailable; please try again later"},
+            "The media model catalog is temporarily unavailable; please try again later",
         ),
         ({"error": "model catalog unavailable"}, "model catalog unavailable"),
         ({"detail": "Bearer private-token"}, "Service Unavailable"),

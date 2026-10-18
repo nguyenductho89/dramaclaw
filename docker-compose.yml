@@ -1,11 +1,11 @@
-# DramaClaw CE — 源码构建（默认入口）：api、web 用本地 checkout 构建，网关用旁边的 dramaclaw-gateway checkout 构建，三件全部本地产出。
+# DramaClaw CE - source build (default entry): api and web are built from the local checkout, the gateway from the adjacent dramaclaw-gateway checkout; all three are produced locally.
 #   git clone https://github.com/dramaclaw/dramaclaw-gateway.git ../dramaclaw-gateway
 #   cp .env.example .env && docker compose up -d --build
-# 运行定义（env / 端口 / 卷 / 健康检查）全部 extends 自 docker-compose.release.yml，这里增加 build、本地镜像名与源码运行时覆盖。
-# 只想拉已发布镜像：docker compose -f docker-compose.release.yml up -d
-# 网关源码默认取 ../dramaclaw-gateway（与本仓并排的 clone，改代码直接改那里）；放在别处或想让 Docker 直接从 git 拉：
-#   .env 设 DRAMACLAW_GATEWAY_SRC=<路径> 或 DRAMACLAW_GATEWAY_SRC=https://github.com/dramaclaw/dramaclaw-gateway.git#main
-# 本地构建的镜像命名为 dramaclaw-local/*，不会覆盖本机缓存里的 claymorelab/* 发布镜像。
+# The runtime definition (env / ports / volumes / healthchecks) is all extended from docker-compose.release.yml; this file adds build, local image names and source-runtime overrides.
+# To just pull the published images: docker compose -f docker-compose.release.yml up -d
+# The gateway source defaults to ../dramaclaw-gateway (a clone next to this repo; edit code there directly); if it lives elsewhere or you want Docker to pull straight from git:
+#   set DRAMACLAW_GATEWAY_SRC=<path> or DRAMACLAW_GATEWAY_SRC=https://github.com/dramaclaw/dramaclaw-gateway.git#main in .env
+# Locally built images are named dramaclaw-local/* and do not overwrite the published claymorelab/* images in the local cache.
 services:
   api:
     extends:
@@ -19,9 +19,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # 默认精简镜像。要 3DGS/SHARP「world」特性（torch/gsplat/sharp/da2 + SOG 工具）：
+      # Slim image by default. For the 3DGS/SHARP "world" feature (torch/gsplat/sharp/da2 + SOG tools):
       #   INSTALL_WORLD=1 docker compose up -d --build
-      # 注：权重运行时下载不入镜像；slim base 为 CPU，GPU 加速需 CUDA base；Mac Docker 无 GPU。
+      # Note: weights are downloaded at runtime and not baked into the image; the slim base is CPU, GPU acceleration needs a CUDA base; Mac Docker has no GPU.
       args:
         INSTALL_WORLD: "${INSTALL_WORLD:-0}"
         # Keep the reviewed Hermes fork available for explicit fallback.
@@ -44,7 +44,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
 
-# extends 不带顶层 volumes，需在此重申（名字与 release 文件一致，数据卷共用）。
+# extends does not carry top-level volumes, so they are restated here (same names as the release file; the data volumes are shared).
 volumes:
   ce-data:
   newapi-data:

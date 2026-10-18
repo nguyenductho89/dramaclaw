@@ -10,10 +10,10 @@ from lint_ce_imports import scan  # noqa: E402
 
 
 def test_ce_has_no_ee_imports() -> None:
-    """本仓不得 import 不属于它的包（novelvideo_ee / supertale_admin /
-    novelvideo.control_plane）。硬零：出现即失败。CI 同步守门见
-    .github/workflows/ce-import-lint.yml。"""
+    """This repo must not import packages that do not belong to it (novelvideo_ee / supertale_admin /
+    novelvideo.control_plane). Hard zero: any occurrence fails. The CI gate is
+    .github/workflows/ce-import-lint.yml."""
     findings = scan(REPO_ROOT)
-    assert findings == [], "CE 出现禁止的 EE 导入：\n" + "\n".join(
+    assert findings == [], "CE contains forbidden EE imports:\n" + "\n".join(
         f.describe() for f in findings
     )

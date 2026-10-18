@@ -17,7 +17,7 @@ from novelvideo.utils.source_language import (
         ("Tu marches.", "en"),
         ("", "en"),
         # Han text is no longer a supported source language: fall back to en.
-        ("第一场 客厅 日 内", "en"),
+        ("\u7b2c\u4e00\u573a \u5ba2\u5385 \u65e5 \u5185", "en"),
         ("Nói cho tôi biết bạn đang ở đâu.", "vi"),
         ("Cô bé mở cửa và bước vào phòng khách.", "vi"),
         ("INT. PHÒNG KHÁCH - NGÀY\nNam mở cửa.", "vi"),

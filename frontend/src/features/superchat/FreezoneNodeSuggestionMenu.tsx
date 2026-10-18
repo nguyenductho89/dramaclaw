@@ -35,6 +35,7 @@ export function FreezoneNodeSuggestionMenu({
   onSelect,
   onReachEnd,
 }: FreezoneNodeSuggestionMenuProps) {
+  const { t } = useTranslation();
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const visible = items.slice(0, visibleCount);
   itemRefs.current.length = visible.length;

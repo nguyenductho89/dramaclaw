@@ -20,13 +20,13 @@ def test_json_log_value_keeps_diagnostic_fields_json_safe() -> None:
             assert mode == "python"
             return {
                 "api_key": "hm-7neo-rDyL-example",
-                "prompt": "保留完整提示词",
+                "prompt": "keep the full prompt",
                 "binary": b"not-stored-verbatim",
             }
 
     assert llm_instrumentation._json_log_value(Result()) == {
         "api_key": "hm-7neo-rDyL-example",
-        "prompt": "保留完整提示词",
+        "prompt": "keep the full prompt",
         "binary": {"type": "bytes", "size_bytes": 19},
     }
 
@@ -35,9 +35,9 @@ def test_json_log_value_summarizes_binary_content_without_image_bytes() -> None:
     png_bytes = b"\x89PNG\r\n\x1a\n" + (b"frame-data" * 128)
     frames = [BinaryContent(data=png_bytes, media_type="image/png") for _ in range(10)]
 
-    logged = llm_instrumentation._json_log_value(["分析这些视频关键帧", *frames])
+    logged = llm_instrumentation._json_log_value(["Analyze these video keyframes", *frames])
 
-    assert logged[0] == "分析这些视频关键帧"
+    assert logged[0] == "Analyze these video keyframes"
     assert logged[1:] == [
         {
             "type": "BinaryContent",
@@ -72,7 +72,7 @@ def test_json_log_value_recurses_through_message_history_dataclasses() -> None:
         parts=[
             UserPromptPart(
                 content=[
-                    "保留完整提示词",
+                    "keep the full prompt",
                     BinaryContent(data=png_bytes, media_type="image/png"),
                 ]
             )
@@ -85,7 +85,7 @@ def test_json_log_value_recurses_through_message_history_dataclasses() -> None:
         "content"
     ]
     assert content == [
-        "保留完整提示词",
+        "keep the full prompt",
         {
             "type": "BinaryContent",
             "media_type": "image/png",
@@ -93,7 +93,7 @@ def test_json_log_value_recurses_through_message_history_dataclasses() -> None:
         },
     ]
     serialized = json.dumps(logged, ensure_ascii=False)
-    assert "保留完整提示词" in serialized
+    assert "keep the full prompt" in serialized
     assert "private-frame-data" not in serialized
     assert "BinaryContent(data=" not in serialized
 
@@ -107,13 +107,13 @@ def test_json_log_value_summarizes_binary_nested_in_pydantic_model() -> None:
 
     media_bytes = b"private-pydantic-media" * 256
     deps = RequestDeps(
-        prompt="保留 Pydantic 提示词",
+        prompt="keep Pydantic prompt",
         attachment=BinaryContent(data=media_bytes, media_type="image/png"),
     )
 
     logged = llm_instrumentation._json_log_value(deps)
 
-    assert logged["prompt"] == "保留 Pydantic 提示词"
+    assert logged["prompt"] == "keep Pydantic prompt"
     assert logged["attachment"]["data"] == {
         "type": "bytes",
         "size_bytes": len(media_bytes),

@@ -11,16 +11,16 @@ import { render } from '@testing-library/react';
 import { useCallback, useRef, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
-// createSnapAlignDragSession 把 positionOffset 算成
-// `getInternalNode(id).internals.positionAbsolute - node.position`，并在整段拖动里
-// 复用这个值。只有当会话建立的那一帧里，两个来源取自同一帧，offset 才是纯粹的父级
-// 偏移；否则首帧位移会被混进 offset，之后每条吸附线都整体偏移。
+// createSnapAlignDragSession computes positionOffset as
+// `getInternalNode(id).internals.positionAbsolute - node.position` and reuses
+// that value throughout the whole drag. Only when both sources are taken from the same frame in which the session is established is the offset a pure parent
+// offset; otherwise the first-frame displacement gets mixed into the offset and every snap line afterwards shifts as a whole.
 //
-// 这条契约依赖 React Flow 的更新顺序：拖动循环改的是 getDragItems() 复制出来的
-// dragItem（内含全新的 internals 对象），updateNodePositions 只负责把 change 交给
-// onNodesChange，两者都不会写 nodeLookup。nodeLookup 的 positionAbsolute 只在受控
-// nodes 重新流入时刷新。所以 onNodesChange 里读到的 positionAbsolute 不会领先受控
-// store。这里用真实拖动链路把该顺序钉住，升级 React Flow 时如果变了就会红。
+// This contract depends on React Flow's update order: the drag loop modifies the dragItem copied out by getDragItems()
+// (which contains a brand-new internals object), and updateNodePositions only hands the change to
+// onNodesChange; neither writes nodeLookup. The positionAbsolute of nodeLookup is refreshed only when the controlled
+// nodes flow back in. So the positionAbsolute read inside onNodesChange never runs ahead of the controlled
+// store. The real drag path is used here to pin this order down, so it turns red if it changes when React Flow is upgraded.
 
 class StubResizeObserver {
   observe() {}
@@ -29,8 +29,8 @@ class StubResizeObserver {
 }
 
 function installDomStubs() {
-  // jsdom 缺这两样：React Flow 用 ResizeObserver 量节点，用 DOMMatrixReadOnly.m22
-  // 读缩放。走 Object.assign 赋值，免得为签名差异散一堆 ts-expect-error。
+  // jsdom lacks these two: React Flow measures nodes with ResizeObserver and reads the zoom with DOMMatrixReadOnly.m22.
+  // Assign via Object.assign to avoid scattering ts-expect-error over signature differences.
   Object.assign(globalThis, {
     ResizeObserver: StubResizeObserver,
     DOMMatrixReadOnly: class {
@@ -68,7 +68,7 @@ function Harness({ frames }: { frames: Frame[] }) {
         const internal = rf.getInternalNode(change.id);
         const stored = nodesRef.current.find((n) => n.id === change.id);
         if (!internal || !stored) continue;
-        // 采样必须发生在 applyNodesChange 之前——Canvas.tsx 建立吸附会话的时机同此。
+        // Sampling must happen before applyNodesChange -- the same timing at which Canvas.tsx establishes the snap session.
         frames.push({
           changePosition: { ...change.position },
           internalAbsolute: { ...internal.internals.positionAbsolute },
@@ -91,8 +91,8 @@ function Harness({ frames }: { frames: Frame[] }) {
   );
 }
 
-// jsdom 不接受构造参数里的 view，但 d3-drag 的 nodrag() 会读 event.view.document，
-// 所以构造后再补一个 view 属性。
+// jsdom does not accept view in the constructor arguments, but d3-drag's nodrag() reads event.view.document,
+// so a view property is added after construction.
 function dispatchMouse(type: string, target: EventTarget, clientX: number) {
   const event = new MouseEvent(type, {
     bubbles: true,
@@ -106,8 +106,8 @@ function dispatchMouse(type: string, target: EventTarget, clientX: number) {
   target.dispatchEvent(event);
 }
 
-describe('snap-align 依赖的拖动帧顺序', () => {
-  it('会话建立那一帧，internals.positionAbsolute 不领先受控 store', () => {
+describe('drag frame order that snap-align depends on', () => {
+  it('in the frame where the session is established, internals.positionAbsolute does not run ahead of the controlled store', () => {
     installDomStubs();
     const frames: Frame[] = [];
 
@@ -125,13 +125,13 @@ describe('snap-align 依赖的拖动帧顺序', () => {
 
     expect(frames.length).toBeGreaterThan(0);
 
-    // 首帧 = 吸附会话建立的那一帧。positionAbsolute 必须还等于受控 store 的位置，
-    // 而不是本帧的新坐标——否则 positionOffset 会把首帧位移吃进去。
+    // First frame = the frame in which the snap session is established. positionAbsolute must still equal the controlled store's position,
+    // not this frame's new coordinates -- otherwise positionOffset would swallow the first-frame displacement.
     const first = frames[0];
     expect(first.internalAbsolute).toEqual(first.storePosition);
     expect(first.changePosition).not.toEqual(first.storePosition);
 
-    // 这个节点没有父级，所以推导出来的 offset 必须是 0，不能带上首帧位移。
+    // This node has no parent, so the derived offset must be 0 and must not carry the first-frame displacement.
     const positionOffset = {
       x: first.internalAbsolute.x - first.storePosition.x,
       y: first.internalAbsolute.y - first.storePosition.y,

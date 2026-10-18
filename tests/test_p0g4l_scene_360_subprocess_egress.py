@@ -423,7 +423,7 @@ def test_organization_skips_the_openrouter_vlm_children(
     """Under an organization, even if OPENROUTER_API_KEY is present, the two VLM side subprocesses must not start.
 
     They are OpenRouter-direct with no corresponding gateway capability bit; on the platform they only run when a Key is configured
-    and silently skip when not, so organizations reuse this well-worn branch and the 360 main flow still produces images as usual."""
+    and silently skip when not, so organizations reuse this well-worn branch and the 360 main flow still produces images as usual.
     """
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-present")
@@ -473,7 +473,7 @@ def test_child_fails_closed_when_org_mode_lacks_a_credential(
     """With the mode flag but no credential received it must raise an error, and not fall back to the platform Key in settings.db.
 
     "No credential received" and "this is a platform task" must be distinguishable - the presence of the credential itself cannot serve as the flag,
-    otherwise it is the OI-48 "parameter present but not picked up" replayed in another place."""
+    otherwise it is the OI-48 "parameter present but not picked up" replayed in another place.
     """
 
     from novelvideo.director_world import scene_360_builder

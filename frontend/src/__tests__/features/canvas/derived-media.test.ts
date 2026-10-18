@@ -114,7 +114,7 @@ describe('derived media task lifecycle', () => {
       'p',
       { task_type: 'freezone_video_gen', task_key: 'parent', job_id: 'video-job' },
       update,
-    )).rejects.toThrow('转换任务未创建');
+    )).rejects.toThrow('Video generated, but GIF conversion did not start. Retry conversion.');
 
     expect(update).toHaveBeenCalledWith({ sourceVideoUrl: '/video.mp4' });
     expect(mocks.apiCall).not.toHaveBeenCalled();

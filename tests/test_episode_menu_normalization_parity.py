@@ -28,21 +28,21 @@ async def stores(tmp_path):
     await s.load_graph_state()
 
     await s.add_scene(
-        NovelScene(name="郑家别墅客厅", aliases=["郑家客厅", "客厅"])
+        NovelScene(name="Zheng Villa Living Room", aliases=["Zheng Living Room", "Living Room"])
     )
-    await s.add_scene(NovelScene(name="主任办公室"))
+    await s.add_scene(NovelScene(name="Director Office"))
     await s.add_prop(
         NovelProp(
-            name="怀表",
-            aliases=["金怀表"],
+            name="Pocket Watch",
+            aliases=["Golden Pocket Watch"],
             prop_type="object",
-            visual_prompt="一只旧金怀表",
-            description="祖传怀表",
-            owner="郑玉琴",
+            visual_prompt="An old golden pocket watch",
+            description="Family heirloom pocket watch",
+            owner="Zheng Yuqin",
         )
     )
     await s.load_graph_state()
-    await s.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await s.add_episodes([NovelEpisode(number=1, title="Episode One")])
 
     from novelvideo.cognee.store import CogneeStore
 
@@ -64,26 +64,26 @@ async def _row(store, column: str):
 
 MENUS = [
     # An alias, resolved to the canonical scene name.
-    {"scene_menu": [{"scene_id": "郑家客厅"}]},
+    {"scene_menu": [{"scene_id": "Zheng Living Room"}]},
     # Case and spacing variants of the same alias.
-    {"scene_menu": [{"scene_id": " 客厅 "}]},
+    {"scene_menu": [{"scene_id": " Living Room "}]},
     # A derived scene keeps its base and variant.
     {
         "scene_menu": [
-            {"scene_id": "郑家别墅客厅_暴雨版", "base_scene_id": "郑家别墅客厅",
-             "variant_id": "暴雨版"}
+            {"scene_id": "Zheng Villa Living Room_Storm", "base_scene_id": "Zheng Villa Living Room",
+             "variant_id": "Storm"}
         ]
     },
     # Duplicates collapse.
-    {"scene_menu": [{"scene_id": "主任办公室"}, {"scene_id": "主任办公室"}]},
+    {"scene_menu": [{"scene_id": "Director Office"}, {"scene_id": "Director Office"}]},
     # An unknown scene passes through untouched.
-    {"scene_menu": [{"scene_id": "查无此地"}]},
+    {"scene_menu": [{"scene_id": "Nowhere Found"}]},
     # A prop alias resolves and backfills type, prompt, description and owner.
-    {"prop_menu": [{"prop_id": "金怀表"}]},
+    {"prop_menu": [{"prop_id": "Golden Pocket Watch"}]},
     # Duplicate props collapse.
-    {"prop_menu": [{"prop_id": "怀表"}, {"prop_id": "怀表"}]},
+    {"prop_menu": [{"prop_id": "Pocket Watch"}, {"prop_id": "Pocket Watch"}]},
     # An unknown prop keeps whatever the caller supplied.
-    {"prop_menu": [{"prop_id": "长剑", "prop_type": "weapon"}]},
+    {"prop_menu": [{"prop_id": "Long Sword", "prop_type": "weapon"}]},
     # Emptying a menu is a real update, not a no-op.
     {"scene_menu": []},
     {"prop_menu": []},
@@ -107,8 +107,8 @@ async def test_patch_and_legacy_write_produce_identical_menus(stores, menu):
 async def test_the_patch_leaves_the_other_menu_alone(stores):
     """The whole point: writing one menu must not re-serialise the other."""
     _, sqlite = stores
-    await sqlite.patch_episode(1, scene_menu=[{"scene_id": "主任办公室"}])
-    await sqlite.patch_episode(1, prop_menu=[{"prop_id": "怀表"}])
+    await sqlite.patch_episode(1, scene_menu=[{"scene_id": "Director Office"}])
+    await sqlite.patch_episode(1, prop_menu=[{"prop_id": "Pocket Watch"}])
 
     assert await _row(sqlite, "scene_menu_json")
     assert await _row(sqlite, "prop_menu_json")
@@ -125,15 +125,15 @@ async def test_editing_an_unrelated_field_leaves_the_menus_alone(stores):
     plain field edits go through the patch too.
     """
     _, sqlite = stores
-    await sqlite.patch_episode(1, scene_menu=[{"scene_id": "主任办公室"}])
-    await sqlite.patch_episode(1, prop_menu=[{"prop_id": "怀表"}])
+    await sqlite.patch_episode(1, scene_menu=[{"scene_id": "Director Office"}])
+    await sqlite.patch_episode(1, prop_menu=[{"prop_id": "Pocket Watch"}])
 
-    await sqlite.patch_episode(1, title="改名后的标题")
+    await sqlite.patch_episode(1, title="Renamed title")
 
     assert await _row(sqlite, "scene_menu_json")
     assert await _row(sqlite, "prop_menu_json")
     episode = await sqlite.get_episode_from_graph(1)
-    assert episode.title == "改名后的标题"
+    assert episode.title == "Renamed title"
 
 
 async def test_an_identity_cascade_leaves_the_menus_alone(stores):
@@ -143,22 +143,22 @@ async def test_an_identity_cascade_leaves_the_menus_alone(stores):
     legacy, sqlite = stores
     await sqlite.add_character(
         NovelCharacter(
-            name="林默",
-            identities=[CharacterIdentity(identity_id="林默_default", character_name="林默", identity_name="default")],
+            name="Lin Mo",
+            identities=[CharacterIdentity(identity_id="Lin Mo_default", character_name="Lin Mo", identity_name="default")],
         )
     )
     await sqlite.load_graph_state()
     await sqlite.patch_episode(
         1,
-        identity_ids=["林默_default"],
-        scene_menu=[{"scene_id": "主任办公室"}],
-        prop_menu=[{"prop_id": "怀表"}],
+        identity_ids=["Lin Mo_default"],
+        scene_menu=[{"scene_id": "Director Office"}],
+        prop_menu=[{"prop_id": "Pocket Watch"}],
     )
 
-    await sqlite._cascade_identity_change("林默_default", "林默_雨夜")
+    await sqlite._cascade_identity_change("Lin Mo_default", "Lin Mo_rainy_night")
 
     episode = await sqlite.get_episode_from_graph(1)
-    assert episode.identity_ids == ["林默_雨夜"]
+    assert episode.identity_ids == ["Lin Mo_rainy_night"]
     assert await _row(sqlite, "scene_menu_json"), "the cascade wiped the scene menu"
     assert await _row(sqlite, "prop_menu_json"), "the cascade wiped the prop menu"
 
@@ -182,11 +182,11 @@ async def test_the_legacy_facade_can_cascade_an_identity_rename(stores):
     legacy, sqlite = stores
     await sqlite.add_character(
         NovelCharacter(
-            name="林默",
+            name="Lin Mo",
             identities=[
                 CharacterIdentity(
-                    identity_id="林默_default",
-                    character_name="林默",
+                    identity_id="Lin Mo_default",
+                    character_name="Lin Mo",
                     identity_name="default",
                 )
             ],
@@ -195,18 +195,18 @@ async def test_the_legacy_facade_can_cascade_an_identity_rename(stores):
     await legacy.load_graph_state()
     await sqlite.patch_episode(
         1,
-        identity_ids=["林默_default"],
-        scene_menu=[{"scene_id": "主任办公室"}],
+        identity_ids=["Lin Mo_default"],
+        scene_menu=[{"scene_id": "Director Office"}],
     )
     await legacy.load_graph_state()
 
-    await legacy._cascade_identity_change("林默_default", "林默_雨夜")
+    await legacy._cascade_identity_change("Lin Mo_default", "Lin Mo_rainy_night")
 
     episode = await sqlite.get_episode_from_graph(1)
-    assert episode.identity_ids == ["林默_雨夜"]
+    assert episode.identity_ids == ["Lin Mo_rainy_night"]
     assert await _row(sqlite, "scene_menu_json"), "the cascade wiped the scene menu"
     # The facade's cached copy must reflect its own write.
-    assert legacy.get_episode(1).identity_ids == ["林默_雨夜"]
+    assert legacy.get_episode(1).identity_ids == ["Lin Mo_rainy_night"]
 
 
 async def test_both_stores_expose_the_same_episode_write_methods():

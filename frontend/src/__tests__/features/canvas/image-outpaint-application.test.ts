@@ -40,7 +40,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('imageOutpaint application（扩图提交编排）', () => {
+describe('imageOutpaint application (outpaint submission orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneOutpaint.mockReset();
@@ -49,12 +49,12 @@ describe('imageOutpaint application（扩图提交编排）', () => {
     seedSourceNode();
   });
 
-  it('单图：建 isGenerating 结果节点并连边 → 提交（去 query 源 url）→ 回填 url', async () => {
+  it('single image: builds an isGenerating result node and wires the edge -> submits (query-stripped source url) -> fills the url back', async () => {
     submitFreezoneOutpaint.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/op.png' } });
 
     const result = outpaintImage('src-1', '/static/src.png?sig=x', {
-      displayName: '扩图',
+      displayName: 'Outpaint',
       targetAspectRatio: '16:9',
       imageSize: '2K',
       numImages: 1,
@@ -68,8 +68,8 @@ describe('imageOutpaint application（扩图提交编排）', () => {
     const created = state.nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '扩图',
-      // target != original → 用目标比例。
+      displayName: 'Outpaint',
+      // target != original -> use the target ratio.
       aspectRatio: '16:9',
       resultKind: 'generic',
       isGenerating: true,
@@ -95,13 +95,13 @@ describe('imageOutpaint application（扩图提交编排）', () => {
     });
   });
 
-  it('original 比例：继承源节点 aspectRatio；N 张建 N 个节点各发一次单图请求', async () => {
+  it('original ratio: inherits the source node aspectRatio; N images build N nodes, each sending one single-image request', async () => {
     submitFreezoneOutpaint.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: {} });
     fetchFreezoneJobResult.mockResolvedValue({ url: '/static/op.png' });
 
     const result = outpaintImage('src-1', '/static/src.png', {
-      displayName: '扩图',
+      displayName: 'Outpaint',
       targetAspectRatio: 'original',
       imageSize: '2K',
       numImages: 3,
@@ -115,17 +115,17 @@ describe('imageOutpaint application（扩图提交编排）', () => {
     expect(first?.data).toMatchObject({ aspectRatio: '1:1' });
 
     await result?.completion;
-    // 后端单次仅 1 张：N=3 发 3 次单图请求（num_images 恒为 1）。
+    // The backend handles only 1 image per call: N=3 sends 3 single-image requests (num_images is always 1).
     expect(submitFreezoneOutpaint).toHaveBeenCalledTimes(3);
     expect(submitFreezoneOutpaint.mock.calls[0][1]).toMatchObject({ numImages: 1 });
   });
 
-  it('缺 project → 返回 null，不建节点', () => {
+  it('missing project -> returns null and creates no node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(
       outpaintImage('src-1', '/static/src.png', {
-        displayName: '扩图',
+        displayName: 'Outpaint',
         targetAspectRatio: '1:1',
         imageSize: '2K',
         numImages: 1,
@@ -135,11 +135,11 @@ describe('imageOutpaint application（扩图提交编排）', () => {
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('单图失败 → 错误写回该结果节点', async () => {
+  it('single-image failure -> the error is written back to that result node', async () => {
     submitFreezoneOutpaint.mockRejectedValue(new Error('outpaint boom'));
 
     const result = outpaintImage('src-1', '/static/src.png', {
-      displayName: '扩图',
+      displayName: 'Outpaint',
       targetAspectRatio: '1:1',
       imageSize: '2K',
       numImages: 1,

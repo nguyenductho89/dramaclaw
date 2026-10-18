@@ -26,7 +26,7 @@ function audioNode(audioUrl: string): CanvasNode {
     position: { x: 0, y: 0 },
     data: {
       audioUrl,
-      displayName: '旁白',
+      displayName: 'Narrator',
       durationMs: null,
     },
   } as CanvasNode;
@@ -68,7 +68,7 @@ function draft(sourceUrl: string): ComposeTimelineState {
         nodeId: 'audio-1',
         kind: 'audio',
         sourceUrl,
-        displayName: '旁白',
+        displayName: 'Narrator',
         thumbUrl: null,
         durationMs: 79_000,
         timelineStartMs: 1_500,
@@ -184,7 +184,7 @@ describe('reconcileDraftWithUpstream', () => {
       data: {
         ...audioNode('/music.mp3').data,
         audioKind: 'music',
-        displayName: '广告配乐',
+        displayName: 'Ad score',
         durationMs: 30_000,
       },
     } as CanvasNode;
@@ -283,7 +283,7 @@ describe('resolveUnknownClipDurations', () => {
     };
   }
 
-  // jsdom 不加载媒体：元素既不触发 loadedmetadata 也不触发 error，正是网络卡住的情形。
+  // jsdom does not load media: the element fires neither loadedmetadata nor error, which is exactly the stalled-network situation.
   it('fails a stalled video probe after the timeout instead of hanging', async () => {
     vi.useFakeTimers();
     const pending = resolveUnknownClipDurations(unknownDurationState('video'));

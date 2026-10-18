@@ -42,7 +42,7 @@ describe("DirectorControlBundleBadge", () => {
       />,
     );
 
-    expect(screen.getByText("导演合成")).toBeInTheDocument();
+    expect(screen.getByText("Director composite")).toBeInTheDocument();
   });
 
   it("does not render for ordinary images", () => {

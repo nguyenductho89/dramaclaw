@@ -49,14 +49,14 @@ def test_manual_shot_segments_only_include_missing_manual_sketches(tmp_path):
         return {"scene_id": scene_id}
 
     beats = [
-        {"beat_number": 1, "shot_order": 10, "scene_ref": _scene("地下室")},
-        {"beat_number": 41, "shot_order": 15, "is_manual_shot": True, "scene_ref": _scene("地下室")},
-        {"beat_number": 44, "shot_order": 17, "is_manual_shot": True, "scene_ref": _scene("镇口")},
-        {"beat_number": 42, "shot_order": 18, "is_manual_shot": True, "scene_ref": _scene("地下室")},
-        {"beat_number": 2, "shot_order": 20, "scene_ref": _scene("地下室")},
-        {"beat_number": 3, "shot_order": 30, "scene_ref": _scene("镇口")},
-        {"beat_number": 43, "shot_order": 35, "is_manual_shot": True, "scene_ref": _scene("镇口")},
-        {"beat_number": 4, "shot_order": 40, "scene_ref": _scene("镇口")},
+        {"beat_number": 1, "shot_order": 10, "scene_ref": _scene("basement")},
+        {"beat_number": 41, "shot_order": 15, "is_manual_shot": True, "scene_ref": _scene("basement")},
+        {"beat_number": 44, "shot_order": 17, "is_manual_shot": True, "scene_ref": _scene("town_entrance")},
+        {"beat_number": 42, "shot_order": 18, "is_manual_shot": True, "scene_ref": _scene("basement")},
+        {"beat_number": 2, "shot_order": 20, "scene_ref": _scene("basement")},
+        {"beat_number": 3, "shot_order": 30, "scene_ref": _scene("town_entrance")},
+        {"beat_number": 43, "shot_order": 35, "is_manual_shot": True, "scene_ref": _scene("town_entrance")},
+        {"beat_number": 4, "shot_order": 40, "scene_ref": _scene("town_entrance")},
     ]
     (tmp_path / "beat_42.png").write_bytes(b"existing")
 
@@ -69,16 +69,16 @@ def test_storyboard_manual_sketch_beats_exclude_manual_space_maps():
     from novelvideo.manual_shots import storyboard_beats_for_manual_sketches
 
     beats = [
-        {"beat_number": 1, "visual_description": "普通镜头"},
+        {"beat_number": 1, "visual_description": "ordinary shot"},
         {
             "beat_number": 41,
             "is_manual_shot": True,
-            "visual_description": "[space_map] 二楼平面图",
+            "visual_description": "[space_map] second-floor plan",
         },
         {
             "beat_number": 42,
             "is_manual_shot": True,
-            "visual_description": "手工补一个表情",
+            "visual_description": "manually add an expression",
         },
     ]
 
@@ -94,7 +94,7 @@ def test_manual_sketch_mode_reuses_normal_sketch_grid_split():
 
     for count in range(1, 9):
         beats = [
-            {"beat_number": idx, "visual_description": f"手工镜头 {idx}"}
+            {"beat_number": idx, "visual_description": f"manual shot {idx}"}
             for idx in range(1, count + 1)
         ]
 
@@ -107,14 +107,14 @@ def test_srt_timing_advances_across_silent_manual_shots():
     from novelvideo.manual_shots import build_subtitle_timing_entries
 
     beats = [
-        {"beat_number": 1, "narration_segment": "第一句", "audio_duration": 5.0},
+        {"beat_number": 1, "narration_segment": "first line", "audio_duration": 5.0},
         {
             "beat_number": 41,
             "narration_segment": "",
             "duration_seconds": 3.0,
             "is_manual_shot": True,
         },
-        {"beat_number": 2, "narration_segment": "第二句", "audio_duration": 4.0},
+        {"beat_number": 2, "narration_segment": "second line", "audio_duration": 4.0},
     ]
 
     entries = build_subtitle_timing_entries(
@@ -123,8 +123,8 @@ def test_srt_timing_advances_across_silent_manual_shots():
     )
 
     assert entries == [
-        (1, 0.0, 5.0, "第一句"),
-        (2, 8.0, 12.0, "第二句"),
+        (1, 0.0, 5.0, "first line"),
+        (2, 8.0, 12.0, "second line"),
     ]
 
 
@@ -209,27 +209,27 @@ async def test_sqlite_manual_shot_fields_roundtrip_and_sort(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
 
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
             NovelVisualBeat(
                 beat_number=41,
                 episode_number=1,
                 narration="",
-                visual_description="手工补一个眼神特写",
+                visual_description="manually add an eye close-up",
                 shot_order=15,
                 duration_seconds=3.0,
                 is_manual_shot=True,
@@ -247,7 +247,7 @@ async def test_sqlite_manual_shot_fields_roundtrip_and_sort(tmp_path):
     assert manual["is_manual_shot"] is True
 
 
-@pytest.mark.skip(reason="v2.0: location/set_description/dump_set_description不存在；scene_ref 替代")
+@pytest.mark.skip(reason="v2.0: location/set_description/dump_set_description do not exist; replaced by scene_ref")
 @pytest.mark.asyncio
 async def test_insert_manual_shot_inherits_previous_scene_and_uses_new_asset_id(tmp_path):
     from novelvideo.manual_shots import insert_manual_shot
@@ -258,27 +258,27 @@ async def test_insert_manual_shot_inherits_previous_scene_and_uses_new_asset_id(
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
-                location="宫门",
-                location_description="朱红宫门",
-                time_of_day="黄昏",
-                set_description=dump_set_description("石阶湿冷", "玉佩"),
+                location="palace_gate",
+                location_description="vermilion palace gate",
+                time_of_day="dusk",
+                set_description=dump_set_description("cold damp stone steps", "jade_pendant"),
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
-                location="宫门",
-                location_description="朱红宫门",
-                time_of_day="夜晚",
+                location="palace_gate",
+                location_description="vermilion palace gate",
+                time_of_day="night",
             ),
         ]
     )
@@ -287,7 +287,7 @@ async def test_insert_manual_shot_inherits_previous_scene_and_uses_new_asset_id(
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="苏清柔抬眼",
+        visual_description="Su Qingrou looks up",
         duration_seconds=3.0,
     )
     beats = await store.get_beats_as_dicts(1)
@@ -297,13 +297,13 @@ async def test_insert_manual_shot_inherits_previous_scene_and_uses_new_asset_id(
     assert [beat["beat_number"] for beat in beats] == [1, 3, 2]
     assert beats[1]["narration_segment"] == ""
     assert beats[1]["is_manual_shot"] is True
-    assert beats[1]["location"] == "宫门"
-    assert beats[1]["location_description"] == "朱红宫门"
-    assert beats[1]["time_of_day"] == "黄昏"
-    assert beats[1]["set_description"] == dump_set_description("石阶湿冷", "玉佩")
+    assert beats[1]["location"] == "palace_gate"
+    assert beats[1]["location_description"] == "vermilion palace gate"
+    assert beats[1]["time_of_day"] == "dusk"
+    assert beats[1]["set_description"] == dump_set_description("cold damp stone steps", "jade_pendant")
 
 
-@pytest.mark.skip(reason="v2.0: location/set_description/dump_set_description不存在；scene_ref 替代")
+@pytest.mark.skip(reason="v2.0: location/set_description/dump_set_description do not exist; replaced by scene_ref")
 @pytest.mark.asyncio
 async def test_insert_manual_shot_accepts_dialog_defaults_and_overrides(tmp_path):
     from novelvideo.manual_shots import insert_manual_shot
@@ -314,21 +314,21 @@ async def test_insert_manual_shot_accepts_dialog_defaults_and_overrides(tmp_path
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
-                location="地下室",
-                time_of_day="夜晚",
+                location="basement",
+                time_of_day="night",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
         ]
@@ -338,13 +338,13 @@ async def test_insert_manual_shot_accepts_dialog_defaults_and_overrides(tmp_path
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="补一个近景",
+        visual_description="manually add a medium close-up",
         duration_seconds=4.0,
-        location="书房",
+        location="study",
         location_description="",
-        time_of_day="清晨",
-        set_description=dump_set_description("木质书房", "旧书"),
-        detected_identities=["苏清柔_日常"],
+        time_of_day="dawn",
+        set_description=dump_set_description("wooden study", "old books"),
+        detected_identities=["SuQingrou_daily"],
     )
 
     beats = await store.get_beats_as_dicts(1)
@@ -353,10 +353,10 @@ async def test_insert_manual_shot_accepts_dialog_defaults_and_overrides(tmp_path
     assert manual["beat_number"] == 3
     assert manual["narration_segment"] == ""
     assert manual["duration_seconds"] == 4.0
-    assert manual["location"] == "书房"
-    assert manual["time_of_day"] == "清晨"
-    assert manual["set_description"] == dump_set_description("木质书房", "旧书")
-    assert manual["detected_identities"] == ["苏清柔_日常"]
+    assert manual["location"] == "study"
+    assert manual["time_of_day"] == "dawn"
+    assert manual["set_description"] == dump_set_description("wooden study", "old books")
+    assert manual["detected_identities"] == ["SuQingrou_daily"]
 
 
 @pytest.mark.asyncio
@@ -369,21 +369,21 @@ async def test_insert_manual_shot_derives_identities_from_own_visual_description
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="王大爷刹车",
-                visual_description="{{王大爷_镇民时期}}扶着三轮车",
-                detected_identities_json='["王大爷_镇民时期"]',
+                narration="Grandpa Wang hits the brakes",
+                visual_description="{{GrandpaWang_townsfolk}} steadies the tricycle",
+                detected_identities_json='["GrandpaWang_townsfolk"]',
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="医院消息传来",
-                visual_description="病房内气氛压抑",
+                narration="News arrives from the hospital",
+                visual_description="The atmosphere in the ward is oppressive",
             ),
         ]
     )
@@ -392,13 +392,13 @@ async def test_insert_manual_shot_derives_identities_from_own_visual_description
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="{{陆辰_书店老板时期}}低头看向机械表",
+        visual_description="{{LuChen_bookstore_owner}} looks down at the mechanical watch",
     )
 
     beats = await store.get_beats_as_dicts(1)
     manual = beats[1]
 
-    assert manual["detected_identities"] == ["陆辰_书店老板时期"]
+    assert manual["detected_identities"] == ["LuChen_bookstore_owner"]
 
 
 @pytest.mark.asyncio
@@ -411,20 +411,20 @@ async def test_insert_manual_shot_persists_explicit_detected_props(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
-                visual_description="{{陆辰_青年}}站在仓库里",
+                narration="first line",
+                visual_description="{{LuChen_young_adult}} stands in the warehouse",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
-                visual_description="仓库门关闭",
+                narration="second line",
+                visual_description="The warehouse door closes",
             ),
         ]
     )
@@ -433,11 +433,11 @@ async def test_insert_manual_shot_persists_explicit_detected_props(tmp_path):
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="{{陆辰_青年}}拿起[[玉佩]]",
-        detected_props=["玉佩", "录音笔"],
+        visual_description="{{LuChen_young_adult}} picks up [[jade_pendant]]",
+        detected_props=["jade_pendant", "voice_recorder"],
     )
 
-    assert new_beat["detected_props"] == ["玉佩", "录音笔"]
+    assert new_beat["detected_props"] == ["jade_pendant", "voice_recorder"]
 
 
 @pytest.mark.asyncio
@@ -450,20 +450,20 @@ async def test_insert_manual_shot_derives_props_from_visual_description_markers(
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
-                visual_description="桌上放着[[录音笔]]",
+                narration="first line",
+                visual_description="[[voice_recorder]] lies on the table",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
-                visual_description="灯光熄灭",
+                narration="second line",
+                visual_description="The lights go out",
             ),
         ]
     )
@@ -472,10 +472,10 @@ async def test_insert_manual_shot_derives_props_from_visual_description_markers(
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="空镜头扫过[[录音笔]]和[[玉佩]]，再回到[[录音笔]]",
+        visual_description="An empty shot sweeps over [[voice_recorder]] and [[jade_pendant]], then returns to [[voice_recorder]]",
     )
 
-    assert new_beat["detected_props"] == ["录音笔", "玉佩"]
+    assert new_beat["detected_props"] == ["voice_recorder", "jade_pendant"]
 
 
 @pytest.mark.asyncio
@@ -488,19 +488,19 @@ async def test_insert_manual_shot_accepts_scene_ref_and_optional_narration(tmp_p
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
         ]
@@ -510,17 +510,17 @@ async def test_insert_manual_shot_accepts_scene_ref_and_optional_narration(tmp_p
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="补一个插入镜头",
-        scene_ref={"scene_id": "兰州拉面馆_夜晚"},
+        visual_description="manually add an insert shot",
+        scene_ref={"scene_id": "lanzhou_noodle_shop_night"},
         audio_type="narration",
-        narration_segment="插入镜头旁白",
+        narration_segment="insert shot narration",
     )
 
     beats = await store.get_beats_as_dicts(1)
     manual = beats[1]
 
-    assert manual["narration_segment"] == "插入镜头旁白"
-    assert manual["scene_ref"]["scene_id"] == "兰州拉面馆_夜晚"
+    assert manual["narration_segment"] == "insert shot narration"
+    assert manual["scene_ref"]["scene_id"] == "lanzhou_noodle_shop_night"
 
 
 @pytest.mark.asyncio
@@ -533,19 +533,19 @@ async def test_insert_manual_shot_persists_audio_type_and_speaker(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
         ]
@@ -555,10 +555,10 @@ async def test_insert_manual_shot_persists_audio_type_and_speaker(tmp_path):
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="谢铮抬眼开口",
+        visual_description="Xie Zheng looks up and speaks",
         audio_type="dialogue",
-        speaker="谢铮_青年时期",
-        narration_segment="走。",
+        speaker="XieZheng_young_adult",
+        narration_segment="Go.",
     )
 
     beats = await store.get_beats_as_dicts(1)
@@ -566,8 +566,8 @@ async def test_insert_manual_shot_persists_audio_type_and_speaker(tmp_path):
 
     assert manual["is_manual_shot"] is True
     assert manual["audio_type"] == "dialogue"
-    assert manual["speaker"] == "谢铮_青年时期"
-    assert manual["narration_segment"] == "走。"
+    assert manual["speaker"] == "XieZheng_young_adult"
+    assert manual["narration_segment"] == "Go."
 
 
 @pytest.mark.asyncio
@@ -580,19 +580,19 @@ async def test_insert_manual_shot_accepts_dialogue_without_speaker(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
         ]
@@ -602,10 +602,10 @@ async def test_insert_manual_shot_accepts_dialogue_without_speaker(tmp_path):
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="陆辰在仓库门口回头",
+        visual_description="Lu Chen looks back at the warehouse door",
         audio_type="dialogue",
         speaker=None,
-        narration_segment="别回头。",
+        narration_segment="Do not look back.",
     )
 
     beats = await store.get_beats_as_dicts(1)
@@ -614,7 +614,7 @@ async def test_insert_manual_shot_accepts_dialogue_without_speaker(tmp_path):
     assert manual["is_manual_shot"] is True
     assert manual["audio_type"] == "dialogue"
     assert manual["speaker"] == ""
-    assert manual["narration_segment"] == "别回头。"
+    assert manual["narration_segment"] == "Do not look back."
 
 
 @pytest.mark.asyncio
@@ -627,20 +627,20 @@ async def test_insert_manual_shot_at_front_allocates_order_before_first_beat(tmp
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
                 shot_order=10,
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
                 shot_order=20,
             ),
@@ -651,7 +651,7 @@ async def test_insert_manual_shot_at_front_allocates_order_before_first_beat(tmp
         store,
         episode_number=1,
         after_beat_number=None,
-        visual_description="片头补一个环境空镜",
+        visual_description="manually add an establishing empty shot at the opening",
         duration_seconds=3.0,
     )
     beats = await store.get_beats_as_dicts(1)
@@ -672,19 +672,19 @@ async def test_insert_manual_shot_does_not_reuse_existing_asset_number(tmp_path)
     (project_dir / "sketches" / "ep001" / "beat_03.png").write_bytes(b"stale")
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
             ),
         ]
@@ -694,7 +694,7 @@ async def test_insert_manual_shot_does_not_reuse_existing_asset_number(tmp_path)
         store,
         episode_number=1,
         after_beat_number=1,
-        visual_description="补一个镜头",
+        visual_description="manually add a shot",
         duration_seconds=3.0,
     )
 
@@ -711,13 +711,13 @@ async def test_delete_manual_shot_removes_only_manual_beat(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
                 shot_order=10,
             ),
@@ -725,7 +725,7 @@ async def test_delete_manual_shot_removes_only_manual_beat(tmp_path):
                 beat_number=41,
                 episode_number=1,
                 narration="",
-                visual_description="手工补一个镜头",
+                visual_description="manually add a shot",
                 shot_order=15,
                 duration_seconds=3.0,
                 is_manual_shot=True,
@@ -733,7 +733,7 @@ async def test_delete_manual_shot_removes_only_manual_beat(tmp_path):
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
                 shot_order=20,
             ),
@@ -756,20 +756,20 @@ async def test_delete_manual_shot_rejects_normal_beat(tmp_path):
     project_dir.mkdir(parents=True)
     store = SQLiteStore("user/project", output_dir=str(project_dir), state_dir=str(project_dir))
     await store._ensure_db()
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode One")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(
                 beat_number=1,
                 episode_number=1,
-                narration="第一句",
+                narration="first line",
                 visual_description="A",
                 shot_order=10,
             ),
             NovelVisualBeat(
                 beat_number=2,
                 episode_number=1,
-                narration="第二句",
+                narration="second line",
                 visual_description="B",
                 shot_order=20,
             ),
@@ -782,7 +782,7 @@ async def test_delete_manual_shot_rejects_normal_beat(tmp_path):
     assert [beat["beat_number"] for beat in await store.get_beats_as_dicts(1)] == [1, 2]
 
 
-@pytest.mark.skip(reason="v2.0: SketchModeStrategy 提示词模板已重写，feature 分支断言不再适用")
+@pytest.mark.skip(reason="v2.0: the SketchModeStrategy prompt template was rewritten; the feature-branch assertions no longer apply")
 def test_sketch_prompt_treats_manual_panels_as_normal_visual_descriptions():
     from novelvideo.generators.prompt_builder import (
         GridConfig,
@@ -798,10 +798,10 @@ def test_sketch_prompt_treats_manual_panels_as_normal_visual_descriptions():
         characters={},
         style=StyleConfig(style_keywords="test", avoid_keywords=""),
         beats=[
-            {"beat_number": 1, "visual_description": "普通画面"},
+            {"beat_number": 1, "visual_description": "ordinary frame"},
             {
                 "beat_number": 41,
-                "visual_description": "手工补眼神",
+                "visual_description": "manually add a gaze",
                 "is_manual_shot": True,
             },
         ],
@@ -811,8 +811,8 @@ def test_sketch_prompt_treats_manual_panels_as_normal_visual_descriptions():
     prompt = SketchModeStrategy().build(ctx, PromptComponents())
 
     assert "Read each panel's scene description, then DIRECT the shot yourself" in prompt
-    assert "Panel 1**: 普通画面" in prompt
+    assert "Panel 1**: ordinary frame" in prompt
     assert "Panel 1** [MANDATORY SHOT DIRECTIVE]" not in prompt
     assert "Panel 2** [MANDATORY SHOT DIRECTIVE]" not in prompt
-    assert "Panel 2**: 手工补眼神" in prompt
+    assert "Panel 2**: manually add a gaze" in prompt
     assert "DIRECT the shot yourself" in prompt

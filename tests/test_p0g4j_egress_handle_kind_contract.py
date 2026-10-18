@@ -68,7 +68,7 @@ class StateMachineOperations:
     """A stand-in with a real state machine: `completed` can only come from `accepted`, the same rule as the real definer.
 
     The SECURITY DEFINER function at `0039:294-338` judges exactly this way. If the stand-in is not built to match, illegal transitions
-    on the service path are never seen in tests - which is exactly why this defect survived to today."""
+    on the service path are never seen in tests - which is exactly why this defect survived to today.
     """
 
     def __init__(self) -> None:
@@ -176,7 +176,7 @@ def test_operation_key_ignores_handle_kind() -> None:
     """The kind **must not** enter the identity dict, otherwise the replay of existing claims would mismatch as a whole.
 
     Pin the digest constant already at `tests/ports/test_egress_operations.py:57`: that it did not change
-    shows the replay semantics of existing rows were not moved by this change."""
+    shows the replay semantics of existing rows were not moved by this change.
     """
 
     assert (
@@ -192,7 +192,7 @@ def test_every_claim_site_declares_a_handle_kind() -> None:
     """Each of the 8 production construction sites declares it explicitly; adding one that does not declare is red.
 
     Only literal `HandleKind.X` is accepted: indirect lookup defers the kind to runtime, and then you cannot tell here
-    what it actually declares."""
+    what it actually declares.
     """
 
     declared: dict[str, str] = {}
@@ -222,7 +222,7 @@ def test_every_claim_site_declares_a_handle_kind() -> None:
 async def test_service_paths_reach_completed_through_accepted() -> None:
     """The NewAPI service path must go through dispatching->accepted->completed in full, with no fake value left in either column.
 
-    Right now they `mark_completed` straight from `dispatching`, which is P0001 on the real DB."""
+    Right now they `mark_completed` straight from `dispatching`, which is P0001 on the real DB.
     """
 
     from novelvideo.newapi_provisioner import (
@@ -353,7 +353,7 @@ def test_no_placeholder_operation_handles_remain() -> None:
 def test_no_operation_id_is_reused_as_its_own_upstream_handle() -> None:
     """`model_gateway_runtime.py` once used `operation_id` as a self-referencing handle - that is not a handle.
 
-    A self-reference passes the "non-empty" check but carries zero information; it was the fifth place missed when OI-49 was registered."""
+    A self-reference passes the "non-empty" check but carries zero information; it was the fifth place missed when OI-49 was registered.
     """
 
     from novelvideo import model_gateway_runtime

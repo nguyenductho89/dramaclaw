@@ -40,7 +40,7 @@ function seedSourceNode() {
   useCanvasStore.getState().setCanvasData(nodes, []);
 }
 
-describe('imageScene360 application（全景生成编排）', () => {
+describe('imageScene360 application (panorama generation orchestration)', () => {
   beforeEach(() => {
     readUrl.mockReturnValue({ project: 'proj-1', canvas: 'canvas-1' });
     submitFreezoneScene360.mockReset();
@@ -49,12 +49,12 @@ describe('imageScene360 application（全景生成编排）', () => {
     seedSourceNode();
   });
 
-  it('建全景候选节点并连边 → 提交 → 回填 url + 建 pano360 查看器节点', async () => {
+  it('builds the panorama candidate node and wires the edge -> submits -> fills the url back + builds a pano360 viewer node', async () => {
     submitFreezoneScene360.mockResolvedValue(JOB_REF);
     awaitTaskCompletion.mockResolvedValue({ result: { output_url: '/static/pano.png' } });
 
     const result = scene360Image('src-1', '/static/src.png?sig=x', {
-      displayName: '360°全景图',
+      displayName: '360° panorama',
       aspectRatio: '2:1',
     });
 
@@ -64,7 +64,7 @@ describe('imageScene360 application（全景生成编排）', () => {
     const created = state.nodes.find((node) => node.id === nodeId);
     expect(created?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(created?.data).toMatchObject({
-      displayName: '360°全景图',
+      displayName: '360° panorama',
       aspectRatio: '2:1',
       output_role: 'scene_360_candidate',
       media_kind: 'pano360',
@@ -86,7 +86,7 @@ describe('imageScene360 application（全景生成编排）', () => {
       isGenerating: false,
       generationError: null,
     });
-    // 候选节点下游建了一个 pano360Viewer 并连边。
+    // A pano360Viewer is built downstream of the candidate node and wired by an edge.
     const viewer = done.nodes.find(
       (node) => node.type === CANVAS_NODE_TYPES.pano360Viewer,
     );
@@ -96,23 +96,23 @@ describe('imageScene360 application（全景生成编排）', () => {
     ).toBe(true);
   });
 
-  it('缺 project → 返回 null，不建节点', () => {
+  it('missing project -> returns null and creates no node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(
       scene360Image('src-1', '/static/src.png', {
-        displayName: '360°全景图',
+        displayName: '360° panorama',
         aspectRatio: '2:1',
       }),
     ).toBeNull();
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('提交失败 → 错误写回候选节点，不建查看器', async () => {
+  it('submit failure -> the error is written back to the candidate node and no viewer is built', async () => {
     submitFreezoneScene360.mockRejectedValue(new Error('pano boom'));
 
     const result = scene360Image('src-1', '/static/src.png', {
-      displayName: '360°全景图',
+      displayName: '360° panorama',
       aspectRatio: '21:9',
     });
     await result?.completion;

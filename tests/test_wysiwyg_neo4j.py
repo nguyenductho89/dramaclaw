@@ -1,14 +1,14 @@
-"""WYSIWYG 一致性测试 — Neo4j / Main 分支版。
+"""WYSIWYG consistency test - Neo4j / Main branch version.
 
-验证三条路径的角色排序一致性:
-1. build_reference_map 的 Image N 编号 (prompt 路径)
-2. generate_grid 的 API 附件顺序 (API 路径)
-3. handle_export_grid_prompt 的 img_idx 编号 (导出 UI 路径)
+Verifies that character ordering is consistent across the three paths:
+1. the Image N numbering of build_reference_map (prompt path)
+2. the API attachment order of generate_grid (API path)
+3. the img_idx numbering of handle_export_grid_prompt (export UI path)
 
-Main 分支没有 extract_panel_characters_from_detected，
-Render 模式下 character_map 用 detected_identities 顺序构建，
-但 build_reference_map / generate_grid 用 extract_panel_characters({{}} 标记) 重排。
-导出 UI 直接遍历 character_map.items()，不重排 → 预期不一致 bug。
+The Main branch has no extract_panel_characters_from_detected;
+in Render mode character_map is built in detected_identities order,
+but build_reference_map / generate_grid reorder using extract_panel_characters ({{}} markers).
+The export UI iterates character_map.items() directly without reordering -> an expected inconsistency bug.
 
 Usage:
     uv run python -m pytest tests/test_wysiwyg_neo4j.py -v --tb=short
@@ -48,7 +48,7 @@ def _find_output_root() -> Path:
     return here.parent / "output"
 
 
-# 非项目目录（系统/共享资源）
+# Non-project directories (system/shared resources)
 _SKIP_DIRS = {
     "assets", "audio", "cognee_system", "frames", "graph",
     "images", "scripts", "style-examples", "videos",
@@ -166,8 +166,8 @@ def build_test_character_map(
     """Build character_map dict matching build_character_map_for_grid behavior.
 
     Dict insertion order follows collected_chars order:
-    - use_detected_identities=True  → detected_identities 出场序
-    - use_detected_identities=False → {{}} 标记出场序
+    - use_detected_identities=True  -> detected_identities appearance order
+    - use_detected_identities=False -> {{}} marker appearance order
     """
     char_dict_for_extract = {c["name"]: None for c in characters if c.get("name")}
 
@@ -427,8 +427,8 @@ def simulate_export_ui_order_fixed(
 ) -> Dict[int, str]:
     """Simulate fixed handle_export_grid_prompt img_idx numbering.
 
-    修复后: 用 _ordered_chars (extract_panel_characters_from_detected) 排序，
-    与 build_reference_map / generate_grid 一致。
+    After the fix: sort with _ordered_chars (extract_panel_characters_from_detected),
+    consistent with build_reference_map / generate_grid.
     """
     img_idx = 1
     result: Dict[int, str] = {}
@@ -436,7 +436,7 @@ def simulate_export_ui_order_fixed(
         result[img_idx] = "SKETCH"
         img_idx += 1
 
-    # 按 ordered_chars 顺序（修复后与 prompt/API 一致）
+    # In ordered_chars order (consistent with prompt/API after the fix)
     composite_chars = [
         cn for cn in ordered_chars
         if cn in character_map
@@ -465,7 +465,7 @@ def simulate_export_ui_order_fixed(
         result[img_idx] = PromptComponents.compute_char_tag(cn)
         img_idx += 1
 
-    # Identity ref images — 按 ordered_chars 顺序
+    # Identity ref images - in ordered_chars order
     for cn in ordered_chars:
         id_ref_imgs = character_map.get(cn, {}).get("identity_ref_images", {})
         for suffix in sorted(id_ref_imgs.keys()):
@@ -513,10 +513,10 @@ _TEST_IDS = [f"{c[0]}/ep{c[2]:03d}" for c in _TEST_CASES]
 def _make_ctx_and_ordered(beats, characters, project_dir, sketch_colors):
     """Create PromptContext + ordered_chars for Render mode.
 
-    修复后: Render 模式统一用 extract_panel_characters_from_detected 排序。
-    character_map 也用 detected_identities 顺序构建。
+    After the fix: Render mode uniformly sorts with extract_panel_characters_from_detected.
+    character_map is also built in detected_identities order.
     """
-    # character_map 用 detected_identities 顺序（= Render 模式 build_character_map_for_grid）
+    # character_map in detected_identities order (= Render-mode build_character_map_for_grid)
     character_map = build_test_character_map(
         characters, beats, project_dir, sketch_colors,
         use_detected_identities=True,
@@ -534,7 +534,7 @@ def _make_ctx_and_ordered(beats, characters, project_dir, sketch_colors):
         ethnicity="Chinese",
     )
 
-    # 修复后统一用 extract_panel_characters_from_detected
+    # After the fix, uniformly use extract_panel_characters_from_detected
     ordered = PromptComponents.extract_panel_characters_from_detected(
         beats[: rows * cols], ctx.characters
     )
@@ -546,13 +546,13 @@ def _make_ctx_and_ordered(beats, characters, project_dir, sketch_colors):
 
 
 # ---------------------------------------------------------------------------
-# Test 1: extract_panel_characters 返回有效角色
+# Test 1: extract_panel_characters returns valid characters
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_extract_panel_characters_valid(case):
-    """extract_panel_characters 和 _from_detected 返回的角色名必须存在于角色列表中。"""
+    """The character names returned by extract_panel_characters and _from_detected must exist in the character list."""
     label, project_dir, ep_num, beats, characters, sc = case
     char_names = {c["name"] for c in characters}
 
@@ -560,14 +560,14 @@ def test_extract_panel_characters_valid(case):
         c["name"]: CharacterConfig(name=c["name"]) for c in characters
     }
 
-    # Sketch 模式: {{}} 标记
+    # Sketch mode: {{}} markers
     sketch_chars = PromptComponents.extract_panel_characters(beats, char_cfg_dict)
     for cn in sketch_chars:
         assert cn in char_names, (
             f"[{label}/ep{ep_num}] Sketch extracted unknown char: {cn}"
         )
 
-    # Render 模式: detected_identities
+    # Render mode: detected_identities
     render_chars = PromptComponents.extract_panel_characters_from_detected(
         beats, char_cfg_dict
     )
@@ -584,9 +584,9 @@ def test_extract_panel_characters_valid(case):
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_reference_map_matches_api_attachment(case):
-    """build_reference_map Image N 必须与 generate_grid API 附件顺序一致。
+    """build_reference_map Image N must be consistent with the generate_grid API attachment order.
 
-    两者都用 extract_panel_characters 排序，预期一致。
+    Both sort with extract_panel_characters; consistency is expected.
     """
     label, project_dir, ep_num, beats, characters, sc = case
 
@@ -634,16 +634,16 @@ def test_reference_map_matches_api_attachment(case):
 
 # ---------------------------------------------------------------------------
 # Test 3: Export UI img_idx == build_reference_map Image N
-#          *** 预期 FAIL — main 的 export UI 用 character_map.items() 不重排 ***
+#          *** Expected FAIL - main's export UI uses character_map.items() without reordering ***
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_export_ui_matches_reference_map(case):
-    """Export UI img_idx 必须与 build_reference_map Image N 一致。
+    """Export UI img_idx must be consistent with build_reference_map Image N.
 
-    修复后: export UI 用 _ordered_chars (extract_panel_characters_from_detected) 排序，
-    与 build_reference_map / generate_grid 一致。预期全部 PASS。
+    After the fix: the export UI sorts with _ordered_chars (extract_panel_characters_from_detected),
+    consistent with build_reference_map / generate_grid. All expected to PASS.
     """
     label, project_dir, ep_num, beats, characters, sc = case
 
@@ -659,10 +659,10 @@ def test_export_ui_matches_reference_map(case):
     )
     path_a = parse_reference_map_image_order(ref_map_text)
 
-    # Path C: export UI (修复后用 ordered_chars 排序)
+    # Path C: export UI (sorted with ordered_chars after the fix)
     path_c = simulate_export_ui_order_fixed(ordered, cmap, has_sketch=True)
 
-    # 比较角色数量和顺序（忽略 tag hash 差异，只比较角色名）
+    # Compare character count and order (ignore tag hash differences, compare character names only)
     def _tag_to_char_name(tag: str) -> str:
         """Extract character name root from tag like [SSS_9af9] or COMBINED:..."""
         if tag == "SKETCH":
@@ -683,7 +683,7 @@ def test_export_ui_matches_reference_map(case):
         f"  ordered_chars: {ordered}"
     )
 
-    # SKETCH 应该是第一张构图底图
+    # SKETCH should be the first composition base image
     sketch_a = max((i for i, t in path_a.items() if t == "SKETCH"), default=None)
     sketch_c = max((i for i, t in path_c.items() if t == "SKETCH"), default=None)
     if sketch_a is not None and sketch_c is not None:
@@ -695,13 +695,13 @@ def test_export_ui_matches_reference_map(case):
 
 
 # ---------------------------------------------------------------------------
-# Test 4: build_panel_roster 不应包含 Image N 引用
+# Test 4: build_panel_roster should not contain Image N references
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_panel_roster_no_image_n(case):
-    """build_panel_roster 输出不应包含 'Image N' 字符串。"""
+    """The build_panel_roster output should not contain the string 'Image N'."""
     label, project_dir, ep_num, beats, characters, sc = case
 
     ctx, ordered, cmap = _make_ctx_and_ordered(
@@ -719,13 +719,13 @@ def test_panel_roster_no_image_n(case):
 
 
 # ---------------------------------------------------------------------------
-# Test 5: build_identity_lock(compact=True) 不应包含 Image N 引用
+# Test 5: build_identity_lock(compact=True) should not contain Image N references
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_compact_identity_lock_no_image_n(case):
-    """Render 模式 compact identity lock 不应包含 'Image N' 字符串。"""
+    """The Render-mode compact identity lock should not contain the string 'Image N'."""
     label, project_dir, ep_num, beats, characters, sc = case
 
     ctx, ordered, cmap = _make_ctx_and_ordered(
@@ -743,17 +743,17 @@ def test_compact_identity_lock_no_image_n(case):
 
 
 # ---------------------------------------------------------------------------
-# Test 6: build_panel_roster 的 tag→img 映射用 extract_panel_characters,
-#          但 per-panel 内容用 detected_identities — 验证覆盖一致
+# Test 6: the tag->img mapping of build_panel_roster uses extract_panel_characters,
+#          but per-panel content uses detected_identities - verify coverage consistency
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(not _TEST_CASES, reason="No project data found")
 @pytest.mark.parametrize("case", _TEST_CASES, ids=_TEST_IDS)
 def test_panel_roster_covers_detected_identities(case):
-    """build_panel_roster 的 tag→img 映射必须覆盖所有 detected_identities 中的角色。
+    """The tag->img mapping of build_panel_roster must cover all characters in detected_identities.
 
-    BUG 场景: 角色在 detected_identities 中出现但未在 {{}} 标记中出现,
-    tag→img 映射中找不到该角色 → 不完整映射。
+    BUG scenario: a character appears in detected_identities but not in the {{}} markers,
+    the character cannot be found in the tag->img mapping -> incomplete mapping.
     """
     label, project_dir, ep_num, beats, characters, sc = case
 
@@ -766,7 +766,7 @@ def test_panel_roster_covers_detected_identities(case):
     rows, cols = 2, 2
     panel_beats = beats[: rows * cols]
 
-    # 从 detected_identities 提取出场角色名
+    # Extract appearing character names from detected_identities
     detected_char_names = set()
     for beat in panel_beats:
         for did in beat.get("detected_identities") or []:
@@ -774,7 +774,7 @@ def test_panel_roster_covers_detected_identities(case):
             if name in {c["name"] for c in characters}:
                 detected_char_names.add(name)
 
-    # 从 extract_panel_characters ({{}} 标记) 提取
+    # Extract from extract_panel_characters ({{}} markers)
     char_cfg_dict = {
         c["name"]: CharacterConfig(name=c["name"]) for c in characters
     }
@@ -782,7 +782,7 @@ def test_panel_roster_covers_detected_identities(case):
         PromptComponents.extract_panel_characters(panel_beats, char_cfg_dict)
     )
 
-    # 所有 detected 角色应在 marker 提取结果中出现（或在 character_map 中）
+    # All detected characters should appear in the marker extraction result (or in character_map)
     missing = detected_char_names - marker_chars - set(cmap.keys())
     if missing:
         pytest.fail(

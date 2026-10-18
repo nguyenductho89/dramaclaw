@@ -18,12 +18,12 @@ function seedNodes() {
 describe('selectNodeExclusively', () => {
   beforeEach(seedNodes);
 
-  it('同时写 React Flow 的 selected 和 store 的 selectedNodeId', () => {
+  it('writes both React Flow selected and the store selectedNodeId', () => {
     selectNodeExclusively('b');
 
     const state = useCanvasStore.getState();
-    // 只写 selectedNodeId 是不够的：节点操作面板门控的是 selected，而 Canvas 的
-    // 「RF → store」同步 effect 会立刻把没人 selected 的 selectedNodeId 抹成 null。
+    // Writing only selectedNodeId is not enough: the node operation panel is gated on selected, and the Canvas
+    // "RF -> store" sync effect would immediately wipe a selectedNodeId that nobody has selected to null.
     expect(state.nodes.map((node) => [node.id, Boolean(node.selected)])).toEqual([
       ['a', false],
       ['b', true],
@@ -31,7 +31,7 @@ describe('selectNodeExclusively', () => {
     expect(state.selectedNodeId).toBe('b');
   });
 
-  it('节点已经不在画布上就什么都不做', () => {
+  it('does nothing when the node is no longer on the canvas', () => {
     selectNodeExclusively('gone');
 
     const state = useCanvasStore.getState();

@@ -9,18 +9,18 @@ describe('CanvasFileDropOverlay', () => {
   it('presents a compact, non-blocking drop target with supported media', () => {
     const { rerender } = render(<CanvasFileDropOverlay isVisible />);
 
-    const status = screen.getByRole('status', { name: '释放文件以添加到画布' });
+    const status = screen.getByRole('status', { name: 'Drop files to add them to the canvas' });
     expect(status).toHaveClass('pointer-events-none');
     expect(status).toHaveClass('opacity-100');
     expect(status).toHaveClass('visible');
     expect(status).toHaveAttribute('aria-hidden', 'false');
     expect(status.children).toHaveLength(1);
     expect(status.querySelector('.border-dashed')).toBeNull();
-    expect(screen.getByText('释放到画布')).toBeInTheDocument();
-    expect(screen.getByText('将在当前位置自动创建对应节点')).toBeInTheDocument();
-    expect(screen.getByText('图片')).toBeInTheDocument();
-    expect(screen.getByText('视频')).toBeInTheDocument();
-    expect(screen.getByText('音频')).toBeInTheDocument();
+    expect(screen.getByText('Drop onto the canvas')).toBeInTheDocument();
+    expect(screen.getByText('Matching nodes are created at this position')).toBeInTheDocument();
+    expect(screen.getByText('Image')).toBeInTheDocument();
+    expect(screen.getByText('Video')).toBeInTheDocument();
+    expect(screen.getByText('Audio')).toBeInTheDocument();
 
     rerender(<CanvasFileDropOverlay isVisible={false} />);
     expect(status).toHaveClass('opacity-0');

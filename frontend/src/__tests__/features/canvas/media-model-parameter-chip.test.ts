@@ -11,7 +11,7 @@ import {
 const parameters: MediaModelParameterDefinition[] = [
   {
     key: 'thinking_level',
-    label: '思考等级',
+    label: 'Thinking level',
     control: 'select',
     requestPath: 'thinking_level',
     options: ['low', 'medium', 'high'],
@@ -19,7 +19,7 @@ const parameters: MediaModelParameterDefinition[] = [
   },
   {
     key: 'style',
-    label: '风格',
+    label: 'Style',
     control: 'select',
     requestPath: 'style',
     options: ['natural', 'vivid'],

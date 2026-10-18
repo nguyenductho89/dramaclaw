@@ -11,7 +11,7 @@ function sceneNode(role: string) {
     data: {
       imageUrl: "/scene.png",
       __freezone_source: { role },
-      slot_target: { kind: role, scene_id: "厨房" },
+      slot_target: { kind: role, scene_id: "Kitchen" },
     },
   };
 }

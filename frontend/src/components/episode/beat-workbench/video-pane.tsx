@@ -36,6 +36,7 @@ import {
   useCropSeedance2Asset,
   useDeleteSeedance2Asset,
   useGenerateBeatVideoPrompt,
+  useGenerateMiniMaxH3Prompt,
   useGenerateSeedance2Prompt,
   useRegenerateBeatVideo,
   useUploadSeedance2Asset,
@@ -277,6 +278,7 @@ export function VideoPane({
   const regenerate = useRegenerateBeatVideo(project, episode);
   const generateBeatVideoPrompt = useGenerateBeatVideoPrompt(project, episode);
   const generateSeedance2Prompt = useGenerateSeedance2Prompt(project, episode);
+  const generateMiniMaxH3Prompt = useGenerateMiniMaxH3Prompt(project, episode);
   const uploadSeedance2Asset = useUploadSeedance2Asset(project, episode);
   const deleteSeedance2Asset = useDeleteSeedance2Asset(project, episode);
   const cropSeedance2Asset = useCropSeedance2Asset(project, episode);
@@ -1034,6 +1036,47 @@ export function VideoPane({
         showHappyHorseConfig || showGrokVideoConfig
           ? t("episode.workbench.video.seedance2SubjectPromptGenerated")
           : t("episode.workbench.video.seedance2PromptGenerated"),
+      );
+    } catch (error) {
+      toast.error(backendErrorToastMessage(error, t));
+    }
+  };
+  // Dev-only: MiniMax H3's own rewrite route (vision-capable, assembles the
+  // official six-section format server-side) — NOT `handleGenerateSeedance2Prompt`
+  // above, which writes Seedance2-style prose into the exact same shared
+  // `final_prompt` field and is wrong for this backend (see `showRunpodH3Config`'s
+  // comment and `video-review-dialog.tsx`'s auto-rewrite-on-open, which calls
+  // the same mutation this does).
+  const handleGenerateMiniMaxH3Prompt = async () => {
+    const triggeredBeatNumber = beat.beat_number;
+    try {
+      const res = await generateMiniMaxH3Prompt.mutateAsync({
+        beatNum: triggeredBeatNumber,
+        duration: seedance2Draft.duration,
+        promptGuidance: seedance2Draft.prompt_guidance,
+      });
+      if (!res.ok) {
+        toast.error(res.error || t("episode.workbench.video.seedance2PromptGenerateFailed"));
+        return;
+      }
+      if (currentBeatNumberRef.current !== triggeredBeatNumber) {
+        toast.success(
+          t("episode.workbench.video.seedance2PromptGeneratedOtherBeat", {
+            n: triggeredBeatNumber,
+          }),
+        );
+        return;
+      }
+      const next = {
+        ...seedance2DraftRef.current,
+        final_prompt: res.prompt,
+        prompt_source: "minimax_h3",
+      };
+      seedance2DraftRef.current = next;
+      setSeedance2Draft(next);
+      void seedance2Status.refetch?.();
+      toast.success(
+        t("episode.workbench.video.seedance2PromptGenerated"),
       );
     } catch (error) {
       toast.error(backendErrorToastMessage(error, t));
@@ -2544,7 +2587,9 @@ export function VideoPane({
                     htmlFor={`${seedance2Id}-prompt`}
                     className="text-[11px] text-muted-foreground/78"
                   >
-                    {showGrokVideoConfig
+                    {showRunpodH3Config
+                      ? t("episode.workbench.video.h3PromptLabel")
+                      : showGrokVideoConfig
                       ? t("episode.workbench.video.grokPromptLabel")
                       : showHappyHorseConfig
                       ? t("episode.workbench.video.subjectPromptLabel")
@@ -2600,24 +2645,42 @@ export function VideoPane({
                 <Button
                   size="xs"
                   variant="outline"
-                  disabled={generateSeedance2Prompt.isPending}
-                  onClick={handleGenerateSeedance2Prompt}
+                  disabled={
+                    showRunpodH3Config
+                      ? generateMiniMaxH3Prompt.isPending
+                      : generateSeedance2Prompt.isPending
+                  }
+                  onClick={
+                    showRunpodH3Config
+                      ? () => void handleGenerateMiniMaxH3Prompt()
+                      : handleGenerateSeedance2Prompt
+                  }
                   className={MEDIA_PRIMARY_ACTION_BUTTON_CLASS}
                 >
-                  {generateSeedance2Prompt.isPending ? (
+                  {(showRunpodH3Config
+                    ? generateMiniMaxH3Prompt.isPending
+                    : generateSeedance2Prompt.isPending) ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <WandSparkles className="size-3" />
                   )}
-                  {showGrokVideoConfig
+                  {showRunpodH3Config
+                    ? t("episode.workbench.video.generateH3Prompt")
+                    : showGrokVideoConfig
                     ? t("episode.workbench.video.generateGrokPrompt")
                     : showHappyHorseConfig
                     ? t("episode.workbench.video.generateSubjectPrompt")
                     : t("episode.workbench.video.seedance2GeneratePrompt")}
-                  <CreditCostInline
-                    display={seedance2PromptCostDisplay}
-                    promotion={seedance2PromptCost.data?.data.promotion}
-                  />
+                  {/* H3 isn't billed through DramaClaw credits (see
+                      `_single_video_billing_metadata`'s `_is_runpod_h3_backend`
+                      branch) — the Seedance2-prompt credit cost shown for
+                      every other backend here doesn't apply to it. */}
+                  {!showRunpodH3Config && (
+                    <CreditCostInline
+                      display={seedance2PromptCostDisplay}
+                      promotion={seedance2PromptCost.data?.data.promotion}
+                    />
+                  )}
                 </Button>
                 {regenTask.started ? (
                   <Button

@@ -816,6 +816,13 @@ export interface VideoReviewData {
   lint: VideoReviewLintItem[];
   worker_status: unknown;
   input_fingerprint: string;
+  /** True when the stored prompt isn't actually MiniMax H3-shaped yet (it's
+   * still whatever Seedance2/HappyHorse/Grok prose last lived in the same
+   * shared `final_prompt` field, or empty) — `lint` is empty in that case
+   * rather than reporting the same "missing every section" errors against
+   * text that was never meant to be H3. The review dialog should generate
+   * one (AI rewrite) instead of showing it as broken. */
+  needs_h3_prompt?: boolean;
 }
 
 export type VideoReviewResponse = VideoReviewData | ErrorResponse;
@@ -861,6 +868,7 @@ export function useGenerateMiniMaxH3Prompt(project: string, episode: number) {
     mutationFn: ({
       beatNum,
       duration,
+      promptGuidance,
     }: {
       beatNum: number;
       // Matches whatever duration `/video/review` is currently showing, so
@@ -869,12 +877,20 @@ export function useGenerateMiniMaxH3Prompt(project: string, episode: number) {
       // own duration resolution (independent of the review dialog's) can
       // silently disagree and the lint flags a timestamp mismatch.
       duration?: number;
+      /** Free-text director notes (the panel's "AI writing guidance" box) —
+       * advisory only, passed through to the rewriter's `director_guidance`. */
+      promptGuidance?: string;
     }) =>
       jsonWithBackendError<MiniMaxH3PromptResponse>(
         api.post(
           p`api/v1/projects/${project}/episodes/${episode}/beats/${beatNum}/minimax-h3-prompt/generate`,
           {
-            json: duration !== undefined ? { duration } : {},
+            json: {
+              ...(duration !== undefined ? { duration } : {}),
+              ...(promptGuidance !== undefined
+                ? { prompt_guidance: promptGuidance }
+                : {}),
+            },
             throwHttpErrors: false,
           },
         ),

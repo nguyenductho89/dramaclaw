@@ -3994,8 +3994,10 @@
         "happyHorseInspector": "HappyHorse Inspector",
         "grokPromptLabel": "Prompt Grok",
         "subjectPromptLabel": "Prompt chủ thể",
+        "h3PromptLabel": "Prompt MiniMax H3",
         "generateGrokPrompt": "Tạo prompt Grok",
         "generateSubjectPrompt": "Tạo prompt chủ thể",
+        "generateH3Prompt": "Tạo prompt MiniMax H3",
         "seedance2CropTitleWithAspect": "Cắt {{aspect}}",
         "seedance2CropDragHandle": "Di chuyển vùng cắt"
       },
@@ -4005,6 +4007,7 @@
         "reviewFailed": "Xem trước thất bại",
         "frame": "Khung hình đầu",
         "frameMissing": "Thiếu khung hình đầu",
+        "generatingInitialPrompt": "Beat này chưa có prompt MiniMax H3, đang tự tạo…",
         "backendLabel": "Backend",
         "modeLabel": "Chế độ",
         "durationLabel": "Thời lượng",

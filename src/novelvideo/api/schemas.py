@@ -197,6 +197,10 @@ class MiniMaxH3PromptGenerateRequest(BaseModel):
     # the beat's duration and the written prompt would describe a clip
     # longer or shorter than what actually gets submitted.
     duration: Optional[float] = None
+    # Free-text director notes from the review dialog's prompt-guidance box
+    # (the same field other video backends call `prompt_guidance`) — passed
+    # through to `MiniMaxH3BeatContext.director_guidance`. Advisory only.
+    prompt_guidance: Optional[str] = None
 
 
 class QwenEditPrompts(BaseModel):

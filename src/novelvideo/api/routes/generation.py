@@ -792,6 +792,23 @@ def _is_runpod_h3_backend(video_backend: str | None) -> bool:
     return str(video_backend or "").strip() == "runpod_minimax_h3"
 
 
+_H3_STRUCTURED_PROMPT_RE = re.compile(
+    r"^(subject_definitions|integrated_multimodal_description):\s*$", re.MULTILINE
+)
+
+
+def _is_h3_structured_prompt(text: str | None) -> bool:
+    """True when `text` already has the shape of an assembled MiniMax H3
+    prompt (ref2va's `subject_definitions:` or fl2va's
+    `integrated_multimodal_description:` section header) — as opposed to,
+    e.g., a Seedance2/HappyHorse/Grok prose prompt sitting in the same
+    shared `final_prompt` field. Used by `review_single_video` to decide
+    whether the stored prompt is worth linting as H3 at all, rather than
+    reporting the same "missing every section" wall of errors for text
+    that was never meant to be H3 in the first place."""
+    return bool(_H3_STRUCTURED_PROMPT_RE.search(str(text or "")))
+
+
 def _seedance2_api_resolution(resolution: str | None) -> str:
     text = str(resolution or "").strip()
     if text in {"480p", "720p", "1080p"}:
@@ -5456,6 +5473,7 @@ async def review_single_video(
     lint_issues: list[dict[str, str]] = []
     prompt_source = ""
     worker_status: dict[str, Any] | None = None
+    needs_h3_prompt = False
 
     if is_runpod_h3:
         from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
@@ -5483,16 +5501,32 @@ async def review_single_video(
             for i, r in enumerate(resolved_refs)
         ]
         mode = "ref2va" if references_out else "fl2va"
-        lint = lint_minimax_h3_prompt(
-            prompt,
-            mode=mode,
-            reference_count=len(references_out) + 1,
-            duration_seconds=video_duration,
-            expects_dialogue=str(beat.get("audio_type") or "") == "dialogue",
-        )
-        lint_issues = [
-            {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
-        ]
+
+        # The stored `final_prompt` is a shared field with every other
+        # video backend (Seedance2/HappyHorse/Grok) — whatever is sitting
+        # there by default is virtually never an actual H3 prompt (it's
+        # whichever backend's panel the user last used), and linting that
+        # text against H3's six-section format just reproduces the exact
+        # same wall of "missing every section" errors every single time.
+        # Only lint once there's something that is actually H3-shaped (an
+        # LLM rewrite, a fallback-template rewrite, or a hand edit of one
+        # of those); otherwise tell the caller to generate one instead of
+        # showing a pile of errors for text that was never meant to be H3.
+        if prompt_source == "minimax_h3" or _is_h3_structured_prompt(prompt):
+            lint = lint_minimax_h3_prompt(
+                prompt,
+                mode=mode,
+                reference_count=len(references_out) + 1,
+                duration_seconds=video_duration,
+                expects_dialogue=str(beat.get("audio_type") or "") == "dialogue",
+            )
+            lint_issues = [
+                {"severity": i.severity, "code": i.code, "message": i.message}
+                for i in lint.issues
+            ]
+        else:
+            needs_h3_prompt = True
+            prompt = ""
 
         from novelvideo.config import _runpod_h3_video_configured
 
@@ -5535,6 +5569,7 @@ async def review_single_video(
         "lint": lint_issues,
         "worker_status": worker_status,
         "input_fingerprint": fingerprint,
+        "needs_h3_prompt": needs_h3_prompt,
     }
 
 
@@ -5570,14 +5605,15 @@ async def generate_minimax_h3_prompt(
 
     from novelvideo.agents.minimax_h3_prompt_builder import (
         MiniMaxH3BeatContext,
-        MiniMaxH3PromptResult,
         MiniMaxH3Reference,
+        build_fallback_minimax_h3_prompt,
         build_minimax_h3_prompt,
     )
     from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
     from novelvideo.manual_shots import resolve_target_video_duration
     from novelvideo.seedance2_i2v.models import parse_seedance2_config
     from novelvideo.utils.path_resolver import PathResolver
+    from novelvideo.video_duration import video_duration_bounds_for_backend
 
     paths = PathResolver(output_dir, episode_num)
     frame_path = paths.first_frame_for_video(beat_num)
@@ -5595,6 +5631,15 @@ async def generate_minimax_h3_prompt(
     else:
         audio_duration = await _api_audio_duration_seconds(output_dir, episode_num, beat_num)
         video_duration = resolve_target_video_duration(beat, audio_duration)
+    # Clamp to H3's own provider bounds (its frame grid is 124-294 frames at
+    # 24fps, ~5.17-12.25s — see `video_duration.py`) before it ever reaches
+    # the prompt: a beat whose natural duration is e.g. 32s (common for a
+    # narration-only beat ingested at chapter granularity) would otherwise
+    # make the assembler write a last timestamp far past what the clip can
+    # actually hold.
+    h3_min, h3_max = video_duration_bounds_for_backend("runpod_minimax_h3")
+    if h3_min is not None:
+        video_duration = max(float(h3_min), min(float(h3_max), video_duration))
 
     beat_index = beats.index(beat)
     prev_beat = beats[beat_index - 1] if beat_index > 0 else None
@@ -5654,65 +5699,68 @@ async def generate_minimax_h3_prompt(
         existing_video_prompt=_legacy_video_prompt_for_mode(
             beat, beat.get("video_mode", "first_frame")
         ),
+        director_guidance=str(body.prompt_guidance or ""),
         first_frame_path=str(frame_path),
         references=references,
     )
 
-    def _lint(prompt_text: str):
-        return lint_minimax_h3_prompt(
-            prompt_text,
-            mode=context.mode,
-            reference_count=len(references) + 1,
-            duration_seconds=video_duration,
-            expects_dialogue=audio_type == "dialogue",
-        )
-
-    # Up to 3 automatic self-correction retries (4 attempts total) — this
-    # rewriter's output has shown real run-to-run variance under a vision +
-    # "thinking mode" model: dropped dialogue, an uncited `<Picture N>`,
-    # stray quotes around `<d>`, and even an outright schema-validation
-    # failure from pydantic-ai ("Exceeded maximum output retries") on a
-    # malformed response. Each retry feeds back exactly what was wrong
-    # with the previous attempt (when there was one) and keeps whichever
-    # attempt had the fewest lint errors; an attempt that raises is
-    # treated as "worse than any attempt that returned something".
-    max_retries = 3
-    best_result: MiniMaxH3PromptResult | None = None
-    best_lint = None
+    # The structural format (section headers, `<Picture N>` numbering,
+    # `[Shot 1]`, `<d>` tags) is now assembled deterministically by
+    # `assemble_minimax_h3_prompt` — the LLM only contributes content, so
+    # it can no longer produce the format-level lint errors that used to
+    # need several self-correction retries to shake out. The only thing
+    # left worth retrying is an outright failed call (bad network, quota,
+    # a malformed response pydantic-ai couldn't validate at all); after
+    # that, fall back to a no-LLM template built straight from the beat's
+    # own text — still guaranteed to pass every structural check, just
+    # plainer than a successful vision call. See the builder module's
+    # docstring for the full rationale.
+    max_llm_attempts = 2
+    result = None
     last_exc: Exception | None = None
     retry_context = context
-    for attempt in range(1 + max_retries):
+    for attempt in range(max_llm_attempts):
         try:
-            attempt_result = await build_minimax_h3_prompt(retry_context)
+            result = await build_minimax_h3_prompt(retry_context)
+            break
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
             retry_context = context.model_copy(
                 update={
                     "retry_feedback": (
                         "Your previous attempt failed to produce valid output "
-                        f"at all ({exc}). Write the plan and the full prompt "
-                        "more carefully this time, following the schema and "
-                        "every rule exactly."
+                        f"at all ({exc}). Follow the schema and every rule "
+                        "exactly this time."
                     )
                 }
             )
             continue
-        attempt_lint = _lint(attempt_result.final_prompt)
-        if best_lint is None or len(attempt_lint.errors) < len(best_lint.errors):
-            best_result, best_lint = attempt_result, attempt_lint
-        if not attempt_lint.errors or attempt_lint.errors[0].code == "empty":
-            # Clean (or an outright-empty attempt isn't worth retrying
-            # against) — stop here rather than spend the remaining budget.
-            break
-        retry_context = context.model_copy(
-            update={
-                "retry_feedback": "\n".join(f"- {issue.message}" for issue in attempt_lint.errors)
-            }
-        )
 
-    if best_result is None:
-        return {"ok": False, "error": f"MiniMax H3 prompt 生成失败: {last_exc}"}
-    result, lint = best_result, best_lint
+    fallback_used = result is None
+    if fallback_used:
+        result = build_fallback_minimax_h3_prompt(context)
+
+    lint = lint_minimax_h3_prompt(
+        result.final_prompt,
+        mode=context.mode,
+        reference_count=len(references) + 1,
+        duration_seconds=video_duration,
+        expects_dialogue=audio_type == "dialogue",
+    )
+    lint_issues = [
+        {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
+    ]
+    if fallback_used:
+        lint_issues.insert(
+            0,
+            {
+                "severity": "warning",
+                "code": "fallback_template",
+                "message": (
+                    f"AI 生成失败（{last_exc}），已用基础模板代替，建议检查后再确认或重试。"
+                ),
+            },
+        )
 
     h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
     h3_config.final_prompt = result.final_prompt
@@ -5730,9 +5778,7 @@ async def generate_minimax_h3_prompt(
         "ok": True,
         "prompt": result.final_prompt,
         "plan": result.plan.model_dump(),
-        "lint": [
-            {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
-        ],
+        "lint": lint_issues,
         "mode": context.mode,
         "references": [
             {"tag": r.tag, "name": r.name, "appearance_details": r.appearance_details}

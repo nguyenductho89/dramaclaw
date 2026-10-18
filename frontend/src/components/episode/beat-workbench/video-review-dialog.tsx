@@ -86,6 +86,10 @@ export function VideoReviewDialog({
   // handled separately) — never on every background refetch, or the user's
   // in-progress edit would be clobbered.
   const promptSeededRef = useRef(false);
+  // Guards the auto-rewrite-on-open below: fire at most once per
+  // dialog-open/beat-switch, even though the review this depends on can
+  // itself re-fire (e.g. after `fetchReview(res.prompt)` below).
+  const autoRewriteFiredRef = useRef(false);
 
   // `reviewBody.seedance2ConfigJson` is a snapshot of the parent's local
   // draft state taken whenever `video-pane.tsx` last rendered — it does NOT
@@ -109,6 +113,7 @@ export function VideoReviewDialog({
 
   useEffect(() => {
     promptSeededRef.current = false;
+    autoRewriteFiredRef.current = false;
     if (!open) return;
     fetchReview();
     // Re-fetch only on a genuine open transition (including a re-open after
@@ -156,6 +161,28 @@ export function VideoReviewDialog({
     }
   };
 
+  // The beat's stored prompt is a field shared with every other video
+  // backend (Seedance2/HappyHorse/Grok) — most of the time, opening this
+  // dialog for the first time on a beat finds that shared field still
+  // holding whatever those backends' prose last wrote there (or nothing at
+  // all), not an actual MiniMax H3 prompt. Rather than show that as a wall
+  // of "missing every section" lint errors and make the user click AI
+  // rewrite themselves every single time, generate one automatically as
+  // soon as the review confirms there isn't a usable H3 prompt yet.
+  useEffect(() => {
+    if (
+      !open ||
+      !review?.needs_h3_prompt ||
+      autoRewriteFiredRef.current ||
+      aiRewriteMutation.isPending
+    ) {
+      return;
+    }
+    autoRewriteFiredRef.current = true;
+    void handleAiRewrite();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, review?.needs_h3_prompt]);
+
   const handleStartWorker = async () => {
     try {
       const res = await startWorker.mutateAsync();
@@ -183,6 +210,10 @@ export function VideoReviewDialog({
   const frameSrc = review?.frame_path ? resolveMediaUrl(review.frame_path) : null;
   const workerData = workerStatus.data?.data;
   const workerOff = Boolean(workerData && workerData.configured && !workerData.running);
+  // True while the auto-rewrite-on-open effect above is generating the
+  // first H3 prompt for this beat (or hasn't started yet, in the one
+  // render between the review coming back and that effect firing).
+  const generatingInitialPrompt = Boolean(review?.needs_h3_prompt) && !editedPrompt.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -237,6 +268,13 @@ export function VideoReviewDialog({
                 <div className="rounded-[8px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                   <AlertTriangle className="mr-1 inline size-3" />
                   {t("episode.workbench.videoReview.frameMissing")}
+                </div>
+              )}
+
+              {generatingInitialPrompt && (
+                <div className="flex items-center gap-2 rounded-[8px] border border-white/[0.075] bg-white/[0.02] px-3 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {t("episode.workbench.videoReview.generatingInitialPrompt")}
                 </div>
               )}
 
@@ -395,7 +433,13 @@ export function VideoReviewDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={loading || !review || lintErrors.length > 0}
+            disabled={
+              loading ||
+              !review ||
+              lintErrors.length > 0 ||
+              generatingInitialPrompt ||
+              aiRewriteMutation.isPending
+            }
           >
             {t("episode.workbench.videoReview.confirm")}
           </Button>

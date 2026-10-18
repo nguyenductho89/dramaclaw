@@ -1,9 +1,9 @@
-"""草图颜色检测与标注模块。
+"""Sketch color detection and annotation module.
 
-检测草图中实际存在的调色板颜色，用于：
-1. 过滤 render prompt 中不存在的角色
-2. 导出预览时标注角色身份
-3. 网格放大查看时标注 beat number + 角色身份
+Detects which palette colors actually appear in a sketch, used to:
+1. Filter out characters that are absent from the render prompt
+2. Annotate character identities when exporting previews
+3. Annotate beat number + character identity in the zoomed-in grid view
 """
 
 import colorsys
@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def _hex_to_hsv(hex_code: str) -> tuple[float, float, float]:
-    """将 #RRGGBB 转换为 HSV (h: 0-360, s: 0-1, v: 0-1)。"""
+    """Convert #RRGGBB to HSV (h: 0-360, s: 0-1, v: 0-1)."""
     hex_code = hex_code.lstrip("#")
     r = int(hex_code[0:2], 16) / 255
     g = int(hex_code[2:4], 16) / 255
@@ -32,16 +32,16 @@ def detect_sketch_colors(
     verbose: bool = False,
     verbose_label: str = "",
 ) -> set[str]:
-    """检测图片中实际存在的调色板颜色，返回存在的 key 集合。
+    """Detect which palette colors actually appear in the image; return the set of keys present.
 
     Args:
-        image_path: 图片路径
-        color_map: {identity_id: "#HEX COLOR_NAME"} 映射
-        threshold: 颜色像素占总像素比阈值（默认 1%）
-        region: 可选裁剪区域 (left, top, right, bottom)
+            image_path: image path
+            color_map: {identity_id: "#HEX COLOR_NAME"} mapping
+            threshold: minimum ratio of color pixels to total pixels (default 1%)
+            region: optional crop region (left, top, right, bottom)
 
     Returns:
-        存在于图片中的 identity_id 集合
+            Set of identity_ids present in the image
     """
     img = Image.open(image_path).convert("RGB")
     if region:
@@ -49,19 +49,19 @@ def detect_sketch_colors(
 
     pixels = np.array(img).reshape(-1, 3).astype(np.float32) / 255.0
 
-    # 转 HSV
+    # Convert to HSV
     # vectorized rgb_to_hsv
     r, g, b = pixels[:, 0], pixels[:, 1], pixels[:, 2]
     maxc = np.maximum(np.maximum(r, g), b)
     minc = np.minimum(np.minimum(r, g), b)
     diff = maxc - minc
 
-    # 排除黑/白/灰/暗像素（纯灰线条 diff≈0.02，浅色色块 diff≈0.08-0.15，饱和色块 diff>0.22）
+    # Exclude black/white/gray/dark pixels (plain gray lines diff~0.02, light color blocks diff~0.08-0.15, saturated color blocks diff>0.22)
     mask = (maxc > 0.15) & (minc < 0.85) & (diff > 0.06)
     if mask.sum() == 0:
         return set()
 
-    # 计算色相 (仅对有效像素)
+    # Compute hue (valid pixels only)
     r_m, g_m, b_m = r[mask], g[mask], b[mask]
     maxc_m, diff_m = maxc[mask], diff[mask]
 
@@ -87,10 +87,10 @@ def detect_sketch_colors(
         hex_code = parts[0]
         target_h, target_s, target_v = _hex_to_hsv(hex_code)
 
-        # 色相环距离
+        # Hue circle distance
         hue_diff = np.minimum(np.abs(hue - target_h), 360 - np.abs(hue - target_h))
 
-        # 饱和度 + 明度容差（草图中同一角色可能画得偏淡/偏深）
+        # Saturation + value tolerance (the same character may be drawn lighter/darker in a sketch)
         sat_diff = np.abs(sat - target_s)
         val_diff = np.abs(val - target_v)
 
@@ -118,7 +118,7 @@ def detect_sketch_colors_per_panel(
     beat_numbers: list[int] = None,
     threshold: float = 0.008,
 ) -> dict[int, set[str]]:
-    """对网格图的每个 panel 分别检测颜色。
+    """Detect colors separately for each panel of a grid image.
 
     Returns:
         {panel_index_or_beat_number: set_of_detected_identity_ids}
@@ -152,23 +152,23 @@ def annotate_sketch_with_identities(
     tag_map: dict[str, str] = None,
     per_panel_identities: list[list[str]] = None,
 ) -> str:
-    """在草图副本上标注检测到的角色身份。不修改原图。
+    """Annotate detected character identities on a copy of the sketch. The original image is not modified.
 
-    每个 panel：
-    - 左上角：B{n} (beat number)
-    - 右上角：检测到的角色色块 + char tag
+    Each panel:
+    - Top left: B{n} (beat number)
+    - Top right: detected character color swatch + char tag
 
     Args:
-        image_path: 草图路径
+            image_path: sketch path
         color_map: {identity_id: "#HEX COLOR_NAME"}
-        beat_numbers: 每个 panel 的 beat 编号列表
-        rows: 网格行数
-        cols: 网格列数
-        output_path: 输出路径，None 时自动生成
-        tag_map: {identity_id: "[TAG]"} 角色标签映射
+            beat_numbers: list of beat numbers, one per panel
+            rows: number of grid rows
+            cols: number of grid columns
+            output_path: output path; auto-generated when None
+            tag_map: {identity_id: "[TAG]"} character tag mapping
 
     Returns:
-        标注后图片的路径
+            Path of the annotated image
     """
     img = Image.open(image_path).convert("RGB")
     annotated = img.copy()
@@ -203,7 +203,7 @@ def annotate_sketch_with_identities(
         py = r_idx * panel_h
         region = (px, py, px + panel_w, py + panel_h)
 
-        # 左上角：Beat number
+        # Top left: beat number
         if beat_numbers and i < len(beat_numbers):
             label = f"B{beat_numbers[i]}"
             x, y = px + 4, py + 2
@@ -211,13 +211,13 @@ def annotate_sketch_with_identities(
                 draw.text((x + dx, y + dy), label, fill="black", font=font)
             draw.text((x, y), label, fill="white", font=font)
 
-        # 右上角：角色色块 + 身份名（优先用已有的 detected_identities）
+        # Top right: character swatch + identity name (prefer existing detected_identities)
         if per_panel_identities is not None and i < len(per_panel_identities):
             detected = per_panel_identities[i]
         else:
             detected = detect_sketch_colors(image_path, color_map, threshold=0.01, region=region)
         if detected:
-            tag_x = px + panel_w - 6  # 从右侧开始
+            tag_x = px + panel_w - 6  # start from the right edge
             tag_y = py + 4
             for identity_id in sorted(detected):
                 color_str = color_map.get(identity_id, "")
@@ -227,7 +227,7 @@ def annotate_sketch_with_identities(
                 hex_code = parts[0]
                 color_name = parts[1] if len(parts) > 1 else ""
 
-                # 显示 char tag（ASCII，PIL 可渲染）
+                # Show char tag (ASCII, renderable by PIL)
                 display_name = (tag_map or {}).get(identity_id, identity_id)
 
                 text = f" {display_name} "
@@ -235,18 +235,18 @@ def annotate_sketch_with_identities(
                 text_w = bbox[2] - bbox[0]
                 text_h = bbox[3] - bbox[1]
 
-                # 色块位置（右对齐）
+                # Swatch position (right-aligned)
                 block_x = tag_x - text_w - 14
                 block_y = tag_y
 
-                # 色块圆角矩形
+                # Rounded-rectangle swatch
                 swatch_size = text_h
                 draw.rounded_rectangle(
                     [block_x, block_y, block_x + swatch_size, block_y + swatch_size],
                     radius=3, fill=hex_code, outline="white", width=1,
                 )
 
-                # 文字（黑色描边 + 白色）
+                # Text (black outline + white)
                 tx = block_x + swatch_size + 2
                 ty = block_y
                 for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:

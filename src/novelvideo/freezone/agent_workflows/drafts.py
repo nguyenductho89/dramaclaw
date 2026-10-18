@@ -40,7 +40,7 @@ def build_workflow_draft_patch(
                     "compiled": deepcopy(payload["compiled"]),
                     "last_changes": {"run_after_create": policy},
                     "run_after_create": policy}, None
-    # 模型常把 skill_id/draft_id 原样回显进 changes；等值回显不是修改,直接忽略。
+    # Models often echo skill_id/draft_id verbatim into changes; an equal echo is not a modification, so ignore it.
     changes = {
         key: value
         for key, value in changes.items()
@@ -144,5 +144,5 @@ def public_workflow_draft(
         ),
         "last_changes": deepcopy(payload.get("last_changes") or {}),
         "expires_at": payload.get("expires_at"),
-        "message": "工作流方案草稿已准备完成，可继续调整或确认创建。",
+        "message": "The workflow draft is ready. You can keep adjusting it or confirm creation.",
     }

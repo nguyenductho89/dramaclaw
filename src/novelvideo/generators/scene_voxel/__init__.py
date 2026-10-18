@@ -110,13 +110,13 @@ async def generate_scene_voxel_world(
     out_dir = voxel_world_output_dir(project_dir, scene_name)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    _progress(0.05, "检查 vengi-voxconvert...")
+    _progress(0.05, "Checking vengi-voxconvert...")
     if not is_available():
         raise RuntimeError(
             "vengi-voxconvert not found. Install from https://vengi-voxel.github.io/vengi/"
         )
 
-    _progress(0.10, "k-means 提取参考图调色板...")
+    _progress(0.10, "Extracting reference palette with k-means...")
     image_paths = [master_path]
     if reverse_path and Path(reverse_path).exists():
         image_paths.append(Path(reverse_path))
@@ -125,10 +125,10 @@ async def generate_scene_voxel_world(
     palette_json_path.write_text(
         json.dumps(palette, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    _log(f"调色板提示 {len(palette)} 色 → {palette_json_path}")
+    _log(f"Palette hint: {len(palette)} colors -> {palette_json_path}")
 
-    _progress(0.25, "VLM 写 Python 构建脚本（master + reverse → build_script.py）...")
-    _log("调用 codegen agent (master + reverse → Python source)...")
+    _progress(0.25, "VLM writing Python build script (master + reverse -> build_script.py)...")
+    _log("Calling codegen agent (master + reverse -> Python source)...")
     script_source = await generate_build_script(
         scene=scene,
         master_path=master_path,
@@ -138,11 +138,11 @@ async def generate_scene_voxel_world(
     script_path = out_dir / "build_script.py"
     script_path.write_text(script_source, encoding="utf-8")
     _log(
-        f"build_script.py 写入 {script_path} ({len(script_source)} chars, "
+        f"build_script.py written to {script_path} ({len(script_source)} chars, "
         f"{script_source.count(chr(10))} lines)"
     )
 
-    _progress(0.55, "subprocess 执行构建脚本 → world.vox...")
+    _progress(0.55, "Running build script in subprocess -> world.vox...")
     vox_path = out_dir / "world.vox"
     _run_build_script(script_path, vox_path, timeout=300)
     vox_size = vox_path.stat().st_size
@@ -153,7 +153,7 @@ async def generate_scene_voxel_world(
     vox_to_glb(vox_path, glb_path)
     _log(f"world.glb: {glb_path} ({glb_path.stat().st_size} bytes)")
 
-    _progress(1.0, "完成")
+    _progress(1.0, "Done")
     return {
         "script_path": str(script_path),
         "vox_path": str(vox_path),

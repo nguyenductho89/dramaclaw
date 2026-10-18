@@ -37,8 +37,8 @@ class HuimengTaskFailed(RuntimeError):
     """HuiMeng reported a terminal failed status."""
 
 
-# mimetypes 在 Windows 上读注册表(.wav -> audio/wav),与 POSIX 内置表
-# (audio/x-wav)不一致;上游契约按 POSIX 值固定。
+# On Windows mimetypes reads the registry (.wav -> audio/wav), which differs from the POSIX
+# built-in table (audio/x-wav); the upstream contract is pinned to the POSIX value.
 _MIME_BY_EXT = {".wav": "audio/x-wav"}
 
 
@@ -273,18 +273,18 @@ def validate_huimeng_media_download(
     url: str = "",
 ) -> None:
     """Reject empty or obvious non-media CDN responses before writing artifacts."""
-    label = "图片" if expected_media_type == "image" else "视频"
+    label = "image" if expected_media_type == "image" else "video"
     content_type = str(content_type or "").split(";", 1)[0].strip().lower()
     context = f" ({url})" if url else ""
     if not content:
-        raise RuntimeError(f"HuiMeng 下载结果为空{context}")
+        raise RuntimeError(f"HuiMeng download result is empty{context}")
     if content_type.startswith("text/") or content_type in {
         "application/json",
         "application/problem+json",
         "application/xml",
     }:
         raise RuntimeError(
-            f"HuiMeng 下载结果不是有效{label}: content-type={content_type or 'unknown'}{context}"
+            f"HuiMeng download result is not a valid {label}: content-type={content_type or 'unknown'}{context}"
         )
     if expected_media_type == "image":
         if content_type.startswith("image/") or content.startswith(
@@ -303,7 +303,7 @@ def validate_huimeng_media_download(
         if content.startswith(b"RIFF") and content[8:12] == b"AVI ":
             return
     raise RuntimeError(
-        f"HuiMeng 下载结果不是有效{label}: content-type={content_type or 'unknown'}{context}"
+        f"HuiMeng download result is not a valid {label}: content-type={content_type or 'unknown'}{context}"
     )
 
 

@@ -1,4 +1,4 @@
-"""自动检测小说章节结构。"""
+"""Automatically detect the chapter structure of a novel."""
 import re
 from dataclasses import dataclass
 from typing import List, Optional
@@ -8,59 +8,56 @@ from novelvideo.utils.screenplay_quality import extract_screenplay_candidate_lin
 
 @dataclass
 class ChapterInfo:
-    """章节信息。"""
-    number: int           # 章节序号
-    title: Optional[str]  # 章节标题（如果有）
-    start_line: int       # 起始行号
-    end_line: int         # 结束行号
-    content: str          # 章节内容
-    is_fallback: bool = False  # 是否为“未检测到章节时自动按单章回退”
+    """Chapter information."""
+    number: int           # chapter number
+    title: Optional[str]  # chapter title (if any)
+    start_line: int       # first line index
+    end_line: int         # end line index
+    content: str          # chapter content
+    is_fallback: bool = False  # True when no chapters were detected and the text fell back to a single chapter
 
 
 class ChapterDetector:
-    """检测小说章节结构。
+    """Detect the chapter structure of a novel.
 
-    支持多种章节标记格式：
-    - 第X章: "第一章", "第10章", "《书名》第1章"
-    - 第X集: "第一集", "第10集"
-    - Chapter N: "Chapter 1", "Chapter 10"
+    Supported chapter marker formats:
+    - Chapter N: "Chapter 1", "Chapter 10", "Chapter One"
+    - Chương N: "Chương 1"
     - Episode N: "Episode 1"
+    - Tập N: "Tập 1"
+    - Part N / Phần N: "Part 2", "Phần 2"
 
-    使用示例:
+    Example:
         detector = ChapterDetector()
         chapters = detector.detect(novel_text)
-        print(f"检测到 {len(chapters)} 个章节")
+        print(f"Detected {len(chapters)} chapters")
         for ch in chapters:
-            print(f"第{ch.number}章: {len(ch.content)} 字")
+            print(f"Chapter {ch.number}: {len(ch.content)} chars")
     """
 
-    # 支持的章节标题模式（优先级从高到低）
-    # 只匹配标题行开头，避免把对白/旁白里的“原著第X章”误切成新章节。
-    # 标题编号后面必须是行尾、空白或常见标题分隔符；
-    # 空白后接正文句子时再用标题尾部形态排除，避免把“第一集 已经结束。”
-    # /“Episode 1 Ends here.” 这类正文句子误切成新章节。
+    # Chapter title patterns (highest priority first).
+    # Only the beginning of a title line is matched, so "the original Chapter 3"
+    # inside dialogue/narration is not mistaken for a new chapter.
+    # The number must be followed by end-of-line, whitespace or a common title
+    # separator; after whitespace, sentence-like tails are rejected so that body
+    # sentences such as "Episode 1 Ends here." are not split as chapters.
+    _TAIL = r"(?=$|[\s:(\[\-\u2014\u2013.])"
+    _KEYWORDS = ("Chapter", "Chương", "Episode", "Tập", "Part", "Phần")
     PATTERNS = [
-        r"^(?:#{1,6}\s*)?(?:《[^》\n]{1,40}》\s*)?第\s*([一二三四五六七八九十百千\d]+)\s*章(?=$|[\s:：《（(【\[\-—–、.。．])",
-        r"^(?:#{1,6}\s*)?(?:《[^》\n]{1,40}》\s*)?第\s*([一二三四五六七八九十百千\d]+)\s*集(?=$|[\s:：《（(【\[\-—–、.。．])",
-        r"^(?:#{1,6}\s*)?Chapter\s*(\d+)(?=$|[\s:：(\[\-—–.。．])",
-        r"^(?:#{1,6}\s*)?Episode\s*(\d+)(?=$|[\s:：(\[\-—–.。．])",
+        r"^(?:#{1,6}\s*)?" + kw + r"\s*" + r"(\d+)" + _TAIL for kw in _KEYWORDS
+    ] + [
+        r"^(?:#{1,6}\s*)?" + kw + r"[ \t]+([A-Za-z]+(?:-[A-Za-z]+)?)" + _TAIL for kw in _KEYWORDS
     ]
 
-    # 中文数字到阿拉伯数字的映射
-    CN_NUM_MAP = {
-        "零": 0, "〇": 0,
-        "一": 1, "壹": 1,
-        "二": 2, "贰": 2, "两": 2,
-        "三": 3, "叁": 3,
-        "四": 4, "肆": 4,
-        "五": 5, "伍": 5,
-        "六": 6, "陆": 6,
-        "七": 7, "柒": 7,
-        "八": 8, "捌": 8,
-        "九": 9, "玖": 9,
-        "十": 10, "拾": 10,
-        "百": 100, "佰": 100,
-        "千": 1000, "仟": 1000,
+    _UNITS = {
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+        "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+        "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+        "nineteen": 19,
+    }
+    _TENS = {
+        "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+        "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
     }
 
     def detect(self, text: str) -> List[ChapterInfo]:

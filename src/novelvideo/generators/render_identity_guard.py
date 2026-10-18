@@ -40,15 +40,15 @@ def render_ai_detection_error(
     if not missing:
         return None
     if standalone_beat_context:
-        # 画布独立镜头没有剧集 beat 可去「草图」检测，beat 号恒为 0，只能在节点上改。
+        # Standalone canvas shots have no episode beat to run sketch detection on; the beat number is always 0, so the fix has to happen on the node.
         return (
-            "渲染分镜前请先在「镜头上下文」节点的「出场身份」里选择出场角色。"
-            "如果确实没有出场角色，请选择「无角色出场」。"
+            "Before rendering the storyboard, select the appearing characters under \"Appearing identities\" on the \"Shot context\" node. "
+            "If no character appears, select \"No characters appear\"."
         )
     beat_numbers = ", ".join(f"#{_beat_get(beat, 'beat_number', '?')}" for beat in missing)
     return (
-        "Render 前请先到「草图」点击「AI 检测」识别出场身份，"
-        "或在「更多 > 出场身份」手工标注。"
-        f"以下 beat 尚未检测/标注：{beat_numbers}。"
-        "如果确实没有出场角色，请选择「无角色出场」。"
+        "Before Render, go to \"Sketch\" and click \"AI detect\" to identify the appearing identities, "
+        "or annotate them manually under \"More > Appearing identities\". "
+        f"These beats are not yet detected/annotated: {beat_numbers}. "
+        "If no character appears, select \"No characters appear\"."
     )

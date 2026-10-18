@@ -1,6 +1,6 @@
-"""NovelVideo 生成器模块。
+"""NovelVideo generator modules.
 
-包含图像生成、语音合成、视频合成等功能。
+Covers image generation, speech synthesis, video composition, and more.
 """
 
 from .image_generator import (

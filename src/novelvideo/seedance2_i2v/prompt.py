@@ -38,37 +38,19 @@ class Seedance2PromptGeneration:
 Seedance2PromptComposer = Callable[..., Awaitable[str]]
 
 
-SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, dict[AssetLanguage, str]] = {
-    "subject": {
-        "zh": "主体：明确画面核心人物或物体、当前动作和状态，避免多个主体争抢焦点。",
-        "en": "Subject: Define the primary character or object, its current action and state, and avoid competing focal subjects.",
-    },
-    "scene": {
-        "zh": "场景：补充空间背景、地点关系、关键道具和环境材质，保持与参考图一致。",
-        "en": "Scene: Describe the spatial background, location relationships, key props, and environmental materials while staying consistent with the references.",
-    },
-    "lighting": {
-        "zh": "光影：描述主光源、明暗层次、色温和氛围，避免忽明忽暗。",
-        "en": "Lighting: Describe the key light, tonal layers, color temperature, and atmosphere while avoiding unintended flicker.",
-    },
-    "camera": {
-        "zh": "镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
-        "en": "Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
-    },
-    "style": {
-        "zh": "风格：限定画面质感、时代感、色彩倾向和真实度，避免风格漂移。",
-        "en": "Style: Define visual texture, period, color direction, and realism to prevent style drift.",
-    },
-    "no_subtitle": {
-        "zh": "无字幕：避免生成任何文字或字幕，保持画面纯净。",
-        "en": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean.",
-    },
+SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, str] = {
+    "subject": "Subject: Define the primary character or object, its current action and state, and avoid competing focal subjects.",
+    "scene": "Scene: Describe the spatial background, location relationships, key props, and environmental materials while staying consistent with the references.",
+    "lighting": "Lighting: Describe the key light, tonal layers, color temperature, and atmosphere while avoiding unintended flicker.",
+    "camera": "Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
+    "style": "Style: Define visual texture, period, color direction, and realism to prevent style drift.",
+    "no_subtitles": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean.",
 }
 
 
 SEEDANCE2_COMPOSER_SYSTEM_PROMPT = """You write image-to-video prompts for Seedance 2.0.
 Use the fixed asset manifest, storyboard context, user guidance, and rule-based draft to write the final Seedance 2.0 prompt.
-Asset order is fixed. Only use existing reference tokens such as 图片1 and 音频1 from the asset manifest.
+Asset order is fixed. Only use existing reference tokens such as image1 and audio1 from the asset manifest.
 Never add or reorder image/audio reference numbers, and do not output @ symbols.
 Do not force every asset into the prompt; reference only assets that materially help the current shot.
 Duration, resolution, aspect ratio, and human-review controls are API parameters and must not appear in the prompt.
@@ -114,8 +96,7 @@ def _beat_spoken_label(
     beat: dict[str, Any], language: AssetLanguage = "en"
 ) -> str:
     if _text(beat.get("audio_type")) == "dialogue" or _text(beat.get("dialogue")):
-        return "Dialogue" if language in EN_LIKE_LANGUAGES else "台词"
-    return "Narration" if language in EN_LIKE_LANGUAGES else "旁白/解说"
+    XX
 
 
 def _clean_sentence(value: Any, language: AssetLanguage = "en") -> str:

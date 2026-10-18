@@ -23,37 +23,31 @@ class ResizeObserverMock {
 }
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
-// 波形播放器要 canvas 2D 上下文；jsdom 未实现 → 返回 null（播放器对 null 有早退兜底）。
+// The waveform player needs a canvas 2D context; jsdom does not implement it -> returns null (the player has an early-exit fallback for null).
 HTMLCanvasElement.prototype.getContext = vi.fn(
   () => null,
 ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
-// 波形播放器挂载后会 fetch(src) 解码波形；jsdom 里让它挂起不 settle —— 否则
-// 解码在测试结束后才 reject 并 console.warn，会在环境拆除时报 onUserConsoleLog
-// pending。scrubber（role=slider）不依赖解码结果，照常渲染。
+// After mounting, the waveform player fetches (src) to decode the waveform; in jsdom make it hang without settling -- otherwise
+// the decode only rejects after the test ends and console.warn, which reports onUserConsoleLog
+// pending during environment teardown. The scrubber (role=slider) does not depend on the decode result and renders as usual.
 vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
 
 vi.mock('@/lib/model-task-access', () => ({
   useModelTaskAccess: () => ({ blocked: false, denialReason: null, message: null }),
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
-  }),
-}));
-
 vi.mock('@/lib/queries/generation-credit-cost', () => ({
   useGenerationCreditCost: () => ({ data: undefined }),
 }));
 
-// 提交要求 URL 里有 project（否则 useAudioGeneration.generate 直接早退）。
+// Submission requires a project in the URL (otherwise useAudioGeneration.generate returns early).
 vi.mock('@/lib/url-params', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/url-params')>()),
   readUrl: () => ({ project: 'demo-project', canvas: 'default' }),
 }));
 
-// 永不 settle 的 promise：提交后保住生成中/在途态，便于断言编排入参与登记表。
+// A never-settling promise: keeps the generating/in-flight state after submission so the orchestration input and registry can be asserted.
 const NEVER = new Promise<never>(() => {});
 vi.mock('@/api/ops', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api/ops')>()),
@@ -71,7 +65,7 @@ function audioNode(data: Record<string, unknown>): CanvasNode {
     id: 'audio-1',
     type: CANVAS_NODE_TYPES.audio,
     position: { x: 0, y: 0 },
-    data: { displayName: '背景音乐', ...data },
+    data: { displayName: 'Background music', ...data },
   } as CanvasNode;
 }
 
@@ -80,96 +74,96 @@ function textNode(): CanvasNode {
     id: 'txt-1',
     type: CANVAS_NODE_TYPES.textAnnotation,
     position: { x: 0, y: 100 },
-    data: { displayName: '锚点清单', content: '品牌：光影' },
+    data: { displayName: 'Anchor list', content: 'Brand: Light & Shadow' },
   } as CanvasNode;
 }
 
 function detailPanel() {
-  return screen.getByRole('region', { name: '资产详情' });
+  return screen.getByRole('region', { name: 'Asset details' });
 }
 
-describe('AssetBoard 音频进主从详情', () => {
+describe('AssetBoard audio in master-detail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetAssetBoardAudioOpsStateForTest();
   });
 
-  it('点音频 chip（已有资源）→ 中间波形播放器 + 底部可编辑生成表单；左侧文本栏，切换器在顶栏', () => {
-    seed([audioNode({ audioUrl: '/static/a.mp3', text: '悠扬旋律' }), textNode()]);
+  it('clicking an audio chip (with media) -> waveform player in the middle + editable generation form at the bottom; text column on the left, switcher in the top bar', () => {
+    seed([audioNode({ audioUrl: '/static/a.mp3', text: 'Melodious tune' }), textNode()]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    // 三栏总览：文本栏在场。
-    expect(screen.getByText('文本')).toBeInTheDocument();
+    // Three-column overview: the text column is present.
+    expect(screen.getByText('Text')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
 
     const detail = detailPanel();
-    // 中间：大波形播放器（scrubber）。
+    // Middle: the large waveform player (scrubber).
     expect(within(detail).getByRole('slider', { name: 'Audio waveform scrubber' })).toBeInTheDocument();
-    // 底部：可编辑的生成表单（背景音乐节点按音乐语义展示）。
-    expect(within(detail).getByPlaceholderText('描述想要的音乐：风格、乐器、节奏、氛围…')).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: /重新生成/ })).toBeInTheDocument();
-    // 定位入口已从详情面板整体移除。
-    expect(within(detail).queryByRole('button', { name: /在画布中定位/ })).not.toBeInTheDocument();
-    // 音频详情左侧 = 文本栏（切换器）；音频切换器在顶栏音频标签，不在左侧。图片/视频栏消失。
-    expect(screen.getByText('音频')).toBeInTheDocument(); // 顶栏音频标签
-    expect(screen.getByText('文本')).toBeInTheDocument(); // 左侧文本栏切换器
-    expect(screen.getByText('锚点清单')).toBeInTheDocument();
-    expect(screen.queryByText('图片')).not.toBeInTheDocument();
-    expect(screen.queryByText('视频')).not.toBeInTheDocument();
+    // Bottom: the editable generation form (the background-music node is shown with music semantics).
+    expect(within(detail).getByPlaceholderText('Describe the music you want: style, instruments, rhythm, mood...')).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: /Regenerate/ })).toBeInTheDocument();
+    // The locate entry was removed from the detail panel entirely.
+    expect(within(detail).queryByRole('button', { name: /Locate on canvas/ })).not.toBeInTheDocument();
+    // Audio detail left side = text column (switcher); the audio switcher is the audio tab in the top bar, not on the left. The image/video columns disappear.
+    expect(screen.getByText('Audio')).toBeInTheDocument(); // top-bar audio tab
+    expect(screen.getByText('Text')).toBeInTheDocument(); // left text column switcher
+    expect(screen.getByText('Anchor list')).toBeInTheDocument();
+    expect(screen.queryByText('Images')).not.toBeInTheDocument();
+    expect(screen.queryByText('Videos')).not.toBeInTheDocument();
   });
 
-  it('空音频节点（无 audioUrl）→ 详情中间显示占位，下方仍挂表单（可从零生成）', () => {
-    seed([audioNode({ audioUrl: null, text: '悠扬旋律' })]);
+  it('empty audio node (no audioUrl) -> the detail shows a placeholder in the middle, with the form still mounted below (can generate from scratch)', () => {
+    seed([audioNode({ audioUrl: null, text: 'Melodious tune' })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
 
     const detail = detailPanel();
-    // 无波形（没有 src），走空占位文案。
+    // No waveform (no src), so the empty placeholder text is used.
     expect(within(detail).queryByRole('slider', { name: 'Audio waveform scrubber' })).not.toBeInTheDocument();
-    expect(within(detail).getByText('待确认后生成')).toBeInTheDocument();
-    // 表单照旧在，按钮语义是「生成」（未生成过）。
-    expect(within(detail).getByPlaceholderText('描述想要的音乐：风格、乐器、节奏、氛围…')).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: /^生成$/ })).toBeInTheDocument();
+    expect(within(detail).getByText('Generates after confirmation')).toBeInTheDocument();
+    // The form is still there, and the button means "Generate" (never generated).
+    expect(within(detail).getByPlaceholderText('Describe the music you want: style, instruments, rhythm, mood...')).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: /^Generate$/ })).toBeInTheDocument();
   });
 
-  it('背景音乐填了文本 → 点「生成」走音乐生成提交，在途登记表记 generate', async () => {
-    seed([audioNode({ audioUrl: null, text: '你好' })]);
+  it('background music with text filled -> clicking "Generate" submits music generation, and the in-flight registry records generate', async () => {
+    seed([audioNode({ audioUrl: null, text: 'Hello' })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioMusic).toHaveBeenCalled());
     const [project, payload] = vi.mocked(submitFreezoneAudioMusic).mock.calls[0];
     expect(project).toBe('demo-project');
-    expect(payload.prompt).toBe('你好');
-    // 详情按 key=nodeId 重挂也不重复提交：在途态放模块级登记表。
+    expect(payload.prompt).toBe('Hello');
+    // Remounting the detail by key=nodeId does not resubmit: the in-flight state lives in a module-level registry.
     await waitFor(() => expect(inFlightAudioOps.get('audio-1')).toBe('generate'));
   });
 
-  it('语音生成只提交可朗读正文，不朗读时长和音效说明', async () => {
+  it('speech generation submits only the speakable body, not the duration or sound-effect notes', async () => {
     seed([audioNode({
-      displayName: '旁白',
+      displayName: 'Narrator',
       audioUrl: null,
-      text: '【时长】79s\n【旁白】（低沉）真正的旁白。\n【音效】雷声',
+      text: '[Duration]79s\n[Narration](low-pitched) Real narration.\n[SFX]thunder',
       speechMode: 'clone',
       voiceAvailable: true,
       voiceRef: { scope: 'user_custom', voiceId: 'voice-1' },
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalled());
     const [, payload] = vi.mocked(submitFreezoneAudioSpeech).mock.calls[0];
-    expect(payload.text).toBe('真正的旁白。');
+    expect(payload.text).toBe('Real narration.');
   });
 
-  it('通用语音 Recipe 编译超时时只提交安全旁白，不朗读编译器制作指令', async () => {
+  it('generic speech Recipe compile timeout submits only the safe narration, not the compiler\'s production instructions', async () => {
     vi.mocked(compileFreezoneRecipePrompt).mockImplementation(async (payload) => {
-      const prompt = '你是短剧配音导演。请根据脚本生成旁白。\n\n真正的旁白。';
+      const prompt = 'You are a short-drama voice director. Based on the script, generate narration voiceover.\n\nReal narration.';
       payload.onCompileMetadata?.({
         mode: 'timeout_fallback',
         prompt,
@@ -178,35 +172,35 @@ describe('AssetBoard 音频进主从详情', () => {
       return prompt;
     });
     seed([audioNode({
-      displayName: '旁白',
+      displayName: 'Narrator',
       audioKind: 'speech',
       audioUrl: null,
-      text: '女声普通话旁白，情绪温柔，时长 3 秒。朗读文本：真正的旁白。',
+      text: 'Female narration, gentle mood, 3 seconds. Reading text: Real narration.',
       speechMode: 'clone',
       voiceAvailable: true,
       voiceRef: { scope: 'user_custom', voiceId: 'voice-1' },
       workflowCatalog: { recipeId: 'general-audio' },
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalled());
     expect(compileFreezoneRecipePrompt).toHaveBeenCalledTimes(1);
     const [, payload] = vi.mocked(submitFreezoneAudioSpeech).mock.calls[0];
-    expect(payload.text).toBe('真正的旁白。');
-    expect(useCanvasStore.getState().nodes[0]?.data.text).toBe('真正的旁白。');
+    expect(payload.text).toBe('Real narration.');
+    expect(useCanvasStore.getState().nodes[0]?.data.text).toBe('Real narration.');
   });
 
-  it('general-audio 正常编译后只提交标记的朗读正文', async () => {
+  it('general-audio submits only the marked speakable body after a normal compile', async () => {
     vi.mocked(compileFreezoneRecipePrompt).mockImplementation(async (payload) => {
       const prompt = [
-        '朗读文本：<speech_text>',
-        '欢迎使用。',
-        '他说：快跑。',
+        'Reading text: <speech_text>',
+        'Welcome.',
+        'He said: run!',
         '</speech_text>',
-        '情感：温柔',
+        'Emotion: gentle',
       ].join('\n');
       payload.onCompileMetadata?.({
         mode: 'model',
@@ -216,127 +210,127 @@ describe('AssetBoard 音频进主从详情', () => {
       return prompt;
     });
     seed([audioNode({
-      displayName: '旁白',
+      displayName: 'Narrator',
       audioKind: 'speech',
       audioUrl: null,
-      text: '欢迎使用。',
+      text: 'Welcome.',
       speechMode: 'clone',
       voiceAvailable: true,
       voiceRef: { scope: 'user_custom', voiceId: 'voice-1' },
       workflowCatalog: { recipeId: 'general-audio' },
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalled());
     expect(compileFreezoneRecipePrompt).toHaveBeenCalledTimes(1);
     const [, payload] = vi.mocked(submitFreezoneAudioSpeech).mock.calls[0];
-    expect(payload.text).toBe('欢迎使用。\n\n他说：快跑。');
-    expect(useCanvasStore.getState().nodes[0]?.data.text).toBe('欢迎使用。\n\n他说：快跑。');
+    expect(payload.text).toBe('Welcome.\n\nHe said: run!');
+    expect(useCanvasStore.getState().nodes[0]?.data.text).toBe('Welcome.\n\nHe said: run!');
   });
 
-  it('旧预设音色节点保留原来的语音模式和音色', async () => {
+  it('legacy preset-voice nodes keep their original speech mode and voice', async () => {
     seed([audioNode({
-      displayName: '旁白', audioKind: 'speech', audioUrl: null,
-      text: '欢迎回来。', speechMode: 'preset',
+      displayName: 'Narrator', audioKind: 'speech', audioUrl: null,
+      text: 'Welcome back.', speechMode: 'preset',
       presetVoice: 'Serena', presetModel: 'edge-tts', voiceAvailable: false,
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalledTimes(1));
     expect(vi.mocked(submitFreezoneAudioSpeech).mock.calls[0][1]).toMatchObject({
-      speechMode: 'preset', presetVoice: 'Serena', presetModel: 'edge-tts', text: '欢迎回来。',
+      speechMode: 'preset', presetVoice: 'Serena', presetModel: 'edge-tts', text: 'Welcome back.',
     });
   });
 
-  it('旧节点缺少音色字段时保留项目旁白回退', async () => {
+  it('legacy nodes missing voice fields keep the project narrator fallback', async () => {
     seed([audioNode({
-      displayName: '旁白', audioKind: 'speech', audioUrl: null, text: '欢迎回来。',
+      displayName: 'Narrator', audioKind: 'speech', audioUrl: null, text: 'Welcome back.',
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalledTimes(1));
     expect(vi.mocked(submitFreezoneAudioSpeech).mock.calls[0][1]).toMatchObject({
-      speechMode: 'clone', voiceRef: { scope: 'project_narrator' }, text: '欢迎回来。',
+      speechMode: 'clone', voiceRef: { scope: 'project_narrator' }, text: 'Welcome back.',
     });
   });
 
-  it('新建语音节点仍须先选音色，保存重载后也不会回退为旧节点', async () => {
+  it('a new speech node still requires picking a voice first, and does not fall back to a legacy node after save and reload', async () => {
     seed([]);
     const id = useCanvasStore.getState().addNode(CANVAS_NODE_TYPES.audio, { x: 0, y: 0 }, {
-      displayName: '新语音', audioKind: 'speech', text: '欢迎回来。',
+      displayName: 'New voice', audioKind: 'speech', text: 'Welcome back.',
     });
     const saved = JSON.parse(JSON.stringify(useCanvasStore.getState().nodes)) as CanvasNode[];
     seed(saved);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '新语音' }));
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'New voice' }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
     await waitFor(() => expect(
       useCanvasStore.getState().nodes.find(node => node.id === id)?.data.generationError,
-    ).toBe('node.audioNode.selectVoiceFirst'));
+    ).toBe('No custom voice selected; generation was skipped'));
     expect(submitFreezoneAudioSpeech).not.toHaveBeenCalled();
   });
 
-  it('drama-shot-voice 逐字提交一次自定义音色 TTS，且不编译 Recipe', async () => {
+  it('drama-shot-voice submits custom-voice TTS once verbatim, without compiling a Recipe', async () => {
     seed([audioNode({
-      displayName: '旁白',
+      displayName: 'Narrator',
       audioKind: 'speech',
       audioUrl: null,
-      text: '他说：快跑。',
+      text: 'He said: run!',
       speechMode: 'clone',
       voiceAvailable: true,
       voiceRef: { scope: 'user_custom', voiceId: 'voice-1' },
       workflowCatalog: { recipeId: 'drama-shot-voice' },
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalled());
     expect(compileFreezoneRecipePrompt).not.toHaveBeenCalled();
     expect(submitFreezoneAudioSpeech).toHaveBeenCalledTimes(1);
     const [, payload] = vi.mocked(submitFreezoneAudioSpeech).mock.calls[0];
-    expect(payload.text).toBe('他说：快跑。');
+    expect(payload.text).toBe('He said: run!');
     expect(payload.speechMode).toBe('clone');
     expect(payload.voiceRef).toEqual({ scope: 'user_custom', voiceId: 'voice-1' });
   });
 
-  it('非精确 drama-shot-voice 绑定不得借用逐字直通', async () => {
-    vi.mocked(compileFreezoneRecipePrompt).mockResolvedValue('【旁白】他说：快跑。');
+  it('a non-exact drama-shot-voice binding must not borrow the verbatim passthrough', async () => {
+    vi.mocked(compileFreezoneRecipePrompt).mockResolvedValue('[Narration] He said: run!');
     seed([audioNode({
-      displayName: '旁白',
+      displayName: 'Narrator',
       audioKind: 'speech',
       audioUrl: null,
-      text: '他说：快跑。',
+      text: 'He said: run!',
       voiceAvailable: true,
       voiceRef: { scope: 'user_custom', voiceId: 'voice-1' },
       workflowCatalog: { recipeId: 'drama-shot-voice-extra' },
     })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
 
-    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^生成$/ }));
+    fireEvent.click(within(detailPanel()).getByRole('button', { name: /^Generate$/ }));
 
     await waitFor(() => expect(submitFreezoneAudioSpeech).toHaveBeenCalled());
     expect(compileFreezoneRecipePrompt).toHaveBeenCalledTimes(1);
     expect(submitFreezoneAudioSpeech).toHaveBeenCalledTimes(1);
   });
 
-  it('故事板隐藏（visible=false）→ 命令波形播放器暂停内部 <audio>', () => {
+  it('storyboard hidden (visible=false) -> commands the waveform player to pause its inner <audio>', () => {
     const pauseSpy = vi
       .spyOn(window.HTMLMediaElement.prototype, 'pause')
       .mockImplementation(() => {});
-    seed([audioNode({ audioUrl: '/static/a.mp3', text: '悠扬旋律' })]);
+    seed([audioNode({ audioUrl: '/static/a.mp3', text: 'Melodious tune' })]);
     const { rerender } = render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
     expect(within(detailPanel()).getByRole('slider', { name: 'Audio waveform scrubber' })).toBeInTheDocument();
 
-    // 保活隐藏：视图切走后播放器仍挂载，但 paused=!visible 命令内部 <audio> 停下。
+    // Keep-alive hiding: after the view switches away the player stays mounted, but paused=!visible commands the inner <audio> to stop.
     pauseSpy.mockClear();
     rerender(<AssetBoardView visible={false} onLocateNode={vi.fn()} />);
     expect(pauseSpy).toHaveBeenCalled();
@@ -344,50 +338,50 @@ describe('AssetBoard 音频进主从详情', () => {
     pauseSpy.mockRestore();
   });
 
-  it('切换音频详情 A→B → 波形播放器按 key 换实例（防 isPlaying 状态串）', () => {
+  it('switching audio detail A->B -> the waveform player swaps instance by key (prevents isPlaying state leaking)', () => {
     seed([
-      { id: 'audio-1', type: CANVAS_NODE_TYPES.audio, position: { x: 0, y: 0 }, data: { displayName: '背景音乐', audioUrl: '/static/a.mp3' } } as CanvasNode,
-      { id: 'audio-2', type: CANVAS_NODE_TYPES.audio, position: { x: 0, y: 100 }, data: { displayName: '旁白', audioUrl: '/static/b.mp3' } } as CanvasNode,
+      { id: 'audio-1', type: CANVAS_NODE_TYPES.audio, position: { x: 0, y: 0 }, data: { displayName: 'Background music', audioUrl: '/static/a.mp3' } } as CanvasNode,
+      { id: 'audio-2', type: CANVAS_NODE_TYPES.audio, position: { x: 0, y: 100 }, data: { displayName: 'Narrator', audioUrl: '/static/b.mp3' } } as CanvasNode,
     ]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
 
-    // 打开 A 的详情，拿到当前 <audio> DOM 节点。
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
+    // Open A's detail and grab the current <audio> DOM node.
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
     const audioA = detailPanel().querySelector('audio');
     expect(audioA?.getAttribute('src')).toBe('/static/a.mp3');
 
-    // 在左侧音频条点 B → 切换详情。key={node.id} 强制换实例：<audio> 应是全新 DOM
-    // 节点（若缺 key，React 只改同一 <audio> 的 src，isPlaying 状态会串到 B）。
-    fireEvent.click(screen.getByRole('button', { name: '旁白' }));
+    // Click B in the left audio strip -> switch the detail. key={node.id} forces a new instance: <audio> should be a brand-new DOM
+    // node (without the key, React would only change the src of the same <audio>, and isPlaying state would leak to B).
+    fireEvent.click(screen.getByRole('button', { name: 'Narrator' }));
     const audioB = detailPanel().querySelector('audio');
     expect(audioB?.getAttribute('src')).toBe('/static/b.mp3');
     expect(audioB).not.toBe(audioA);
   });
 
-  it('× 关闭详情 → 回三栏布局', () => {
-    seed([audioNode({ audioUrl: '/static/a.mp3', text: '悠扬旋律' }), textNode()]);
+  it('x close details -> back to the three-column layout', () => {
+    seed([audioNode({ audioUrl: '/static/a.mp3', text: 'Melodious tune' }), textNode()]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
-    expect(screen.queryByRole('region', { name: '资产详情' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
+    expect(screen.queryByRole('region', { name: 'Asset details' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '关闭详情' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
 
-    expect(screen.queryByRole('region', { name: '资产详情' })).not.toBeInTheDocument();
-    expect(screen.getByText('文本')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Asset details' })).not.toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
   });
 
-  it('音频切换器在顶栏音频标签：进详情后 chip 仍可点切换（无内联操作面开关）', () => {
-    seed([audioNode({ audioUrl: '/static/a.mp3', text: '悠扬旋律' })]);
+  it('the audio switcher is the audio tab in the top bar: after entering the detail the chip can still be clicked to switch (no inline operations toggle)', () => {
+    seed([audioNode({ audioUrl: '/static/a.mp3', text: 'Melodious tune' })]);
     render(<AssetBoardView visible onLocateNode={vi.fn()} />);
-    // 顶栏音频标签只有大方块 chip，没有旧的「音频操作」开关。
-    expect(screen.queryByRole('button', { name: /音频操作/ })).not.toBeInTheDocument();
+    // The top-bar audio tab has only big square chips, without the old "Audio actions" toggle.
+    expect(screen.queryByRole('button', { name: /Audio actions/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '背景音乐' }));
-    // 进详情后音频切换器留在顶栏音频标签：仍是一处「音频」标题（顶栏标签），左侧是文本栏。
-    expect(screen.getAllByText('音频')).toHaveLength(1);
-    // 依然没有内联操作面开关（表单已进详情）。
-    expect(screen.queryByRole('button', { name: /音频操作/ })).not.toBeInTheDocument();
-    // 音频切换器仍可点（chip 保留在顶栏）。
-    expect(screen.getByRole('button', { name: '背景音乐' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Background music' }));
+    // After entering the detail the audio switcher stays in the top-bar audio tab: still a single "Audio" heading (top-bar tab), with the text column on the left.
+    expect(screen.getAllByText('Audio')).toHaveLength(1);
+    // Still no inline operations toggle (the form moved into the detail).
+    expect(screen.queryByRole('button', { name: /Audio actions/ })).not.toBeInTheDocument();
+    // The audio switcher is still clickable (the chip stays in the top bar).
+    expect(screen.getByRole('button', { name: 'Background music' })).toBeInTheDocument();
   });
 });

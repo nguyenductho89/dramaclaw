@@ -28,7 +28,7 @@ EXEMPT_MARKER = "no-cjk-exempt"
 MAX_BYTES = 2_000_000
 
 # Han (basic, ext A, compatibility), CJK symbols/punctuation, fullwidth forms.
-CJK = re.compile("[㐀-䶿一-鿿豈-﫿　-〿＀-￯]")
+CJK = re.compile("[\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff\\u3000-\\u303f\\uff00-\\uffef]")
 
 SKIP_SUFFIXES = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".mp4", ".mp3", ".wav",

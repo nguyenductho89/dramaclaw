@@ -1537,9 +1537,9 @@ def strip_scene_heading_suffix(name: str) -> str:
     interior marker, which the parser also returns as its own field. Removing it
     is the whole of what a per-block model call used to buy here.
 
-    The rules already exist — ``clean_scene_name_and_time`` handles the attached,
-    separated and spaced forms and refuses to strip when the result would not be
-    a name any more — so this only discards the time it also returns.
+    The rules already exist — ``clean_scene_name_and_time`` handles the separated
+    and spaced forms and refuses to strip when the result would not be a name any
+    more — so this only discards the time it also returns.
     """
     cleaned, _time_of_day = clean_scene_name_and_time(str(name or "").strip(), "")
     return cleaned or str(name or "").strip()
@@ -1591,9 +1591,9 @@ def _scene_recall_is_covered(
     located must still be reachable, as a name, an alias, or the same name with
     its heading markers stripped.
 
-    The test stays strict — an attached "INT" is genuinely ambiguous ("Van INT"
-    is a place, "Zheng's Office INT" is a marker) so a merge across one is not
-    recognised here and does send the build down the fallback. That is now
+    The test stays strict: it only recognises a location when it is reachable
+    by exact name, alias or the heading-marker-stripped name. A looser merge is
+    not recognised here and does send the build down the fallback. That is now
     affordable: the fallback is deterministic and costs no model call, and
     adjudication performs the same merge downstream with occurrence counts to
     decide it on.

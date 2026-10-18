@@ -44,15 +44,15 @@ def _patch_project_resolution(
 
 def test_build_freezone_translation_task_mentions_languages_and_node_type() -> None:
     task = build_freezone_translation_task(
-        text="手持镜头，雨夜街头，人物缓慢向前走。",
+        text="Handheld shot, a rainy night street, the character walks slowly forward.",
         node_type="video",
     )
 
-    assert "视频节点提示词" in task
-    assert "Simplified Chinese" in task
+    assert "Video node prompt" in task
+    assert "Vietnamese" in task
     assert "English" in task
     assert "You must decide whether the dominant natural language" in task
-    assert "手持镜头" in task
+    assert "Handheld shot" in task
 
 
 @pytest.mark.asyncio
@@ -79,7 +79,7 @@ async def test_translate_freezone_text_trusts_model_detected_direction(
     )
 
     translated, source_language, target_language = await translate_freezone_text(
-        text="Generate ONE storyboard sketch panel for this NovelVideo beat. 颜色法则：保留 [CM_6932]",
+        text="Generate ONE storyboard sketch panel for this NovelVideo beat. Color rule: keep [CM_6932]",
         node_type="image",
     )
 
@@ -164,39 +164,39 @@ async def test_generate_freezone_text_returns_configured_model_and_text(
 ) -> None:
     class FakeAgent:
         async def run(self, prompt: str):
-            assert prompt == "写一段雨夜重逢的短故事"
+            assert prompt == "Write a short story about a reunion on a rainy night"
 
             class Response:
-                output = "雨落在旧车站的铁轨上，她终于等到了那班迟来的列车。"
+                output = "Rain fell on the rails of the old station, and she finally caught the delayed train."
 
             return Response()
 
     monkeypatch.setattr("novelvideo.freezone.text_node.get_freezone_text_writer_agent", FakeAgent)
 
-    model, text = await generate_freezone_text(prompt="  写一段雨夜重逢的短故事  ")
+    model, text = await generate_freezone_text(prompt="  Write a short story about a reunion on a rainy night  ")
 
     assert model == FREEZONE_TEXT_WRITER_MODEL == "brainclaw"
-    assert text.startswith("雨落在旧车站")
+    assert text.startswith("Rain fell on the rails")
 
 
 def test_build_freezone_story_script_task_mentions_required_columns() -> None:
     task = build_freezone_story_script_task(
-        source_text="沈昭昭在深夜办公室醒来。",
-        prompt="节奏要快，压迫感强",
+        source_text="Mia wakes up in the office late at night.",
+        prompt="Fast pace, strong sense of pressure",
     )
 
-    assert "镜号" in task
-    assert "画面描述" in task
-    assert "视频运动提示词" in task
-    assert "角色图1" in task
-    assert "沈昭昭" in task
-    assert "节奏要快" in task
-    assert "括号分段" in task
-    assert "分镜提示词必须像高质量图像生成提示词" in task
-    assert "最好严格按 8 段写" in task
-    assert "最好严格按 6 段写" in task
-    assert "第二段尽量直接使用或轻改角色描述1" in task
-    assert "技术参数段尽量保留" in task
+    assert "shot number" in task
+    assert "visual description" in task
+    assert "video motion prompt" in task
+    assert "character image 1" in task
+    assert "Mia" in task
+    assert "Fast pace" in task
+    assert "bracketed-segments format" in task
+    assert "The shot prompt must read like a high-quality image-generation prompt" in task
+    assert "write the shot prompt strictly in 8 segments" in task
+    assert "write the video motion prompt strictly in 6 segments" in task
+    assert "the second segment of the shot prompt should directly use or lightly adapt character description 1" in task
+    assert "keep the technical parameters segment of the shot prompt" in task
 
 
 @pytest.mark.asyncio
@@ -220,7 +220,7 @@ async def test_freezone_text_translate_route_returns_task_id(
     result = await freezone_routes.freezone_text_translate(
         project="58",
         body=freezone_routes.FreezoneTextTranslateRequest(
-            text="电影感特写，雨夜街头",
+            text="Cinematic close-up, a rainy night street",
             node_type="image",
         ),
         user={"username": "admin"},
@@ -228,7 +228,7 @@ async def test_freezone_text_translate_route_returns_task_id(
 
     assert result["ok"] is True
     assert result["data"]["task_type"] == "freezone_text_translate"
-    assert captured["text"] == "电影感特写，雨夜街头"
+    assert captured["text"] == "Cinematic close-up, a rainy night street"
     assert captured["node_type"] == "image"
 
 
@@ -251,7 +251,7 @@ async def test_freezone_text_generate_route_returns_task_id(
     result = await freezone_routes.freezone_text_generate(
         project="58",
         body=freezone_routes.FreezoneTextGenerateRequest(
-            prompt="写一段雨夜重逢的短故事",
+            prompt="Write a short story about a reunion on a rainy night",
             canvas_id="canvas_a",
             node_id="node_text",
         ),
@@ -260,7 +260,7 @@ async def test_freezone_text_generate_route_returns_task_id(
 
     assert result["ok"] is True
     assert result["data"]["task_type"] == "freezone_text_generate"
-    assert captured["prompt"] == "写一段雨夜重逢的短故事"
+    assert captured["prompt"] == "Write a short story about a reunion on a rainy night"
     assert captured["canvas_id"] == "canvas_a"
     assert captured["node_id"] == "node_text"
 
@@ -321,15 +321,15 @@ async def test_freezone_story_script_route_uses_source_text(
     result = await freezone_routes.freezone_story_script_generate(
         project="58",
         body=freezone_routes.FreezoneStoryScriptGenerateRequest(
-            source_text="沈昭昭在深夜办公室醒来。"
+            source_text="Mia wakes up in the office late at night."
         ),
         user={"username": "admin"},
     )
 
     assert result["ok"] is True
     assert result["data"]["task_type"] == "freezone_story_script"
-    assert captured["source_text"] == "沈昭昭在深夜办公室醒来。"
-    assert captured["prompt"] == "根据我上传的剧本生成一个完整的故事脚本"
+    assert captured["source_text"] == "Mia wakes up in the office late at night."
+    assert captured["prompt"] == "Generate a complete story script from the script I uploaded"
     assert captured["model"] == "newapi_gemini_flash"
 
 
@@ -341,7 +341,7 @@ async def test_freezone_story_script_route_reads_source_url_file(
     project_dir = tmp_path / "project"
     source = project_dir / "freezone" / "_uploads" / "script.txt"
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text("沈昭昭在深夜办公室醒来。", encoding="utf-8")
+    source.write_text("Mia wakes up in the office late at night.", encoding="utf-8")
 
     _patch_project_resolution(monkeypatch, project_dir)
     monkeypatch.setattr(
@@ -370,14 +370,14 @@ async def test_freezone_story_script_route_reads_source_url_file(
 
     assert result["ok"] is True
     assert result["data"]["task_type"] == "freezone_story_script"
-    assert captured["source_text"] == "沈昭昭在深夜办公室醒来。"
+    assert captured["source_text"] == "Mia wakes up in the office late at night."
 
 
 def test_story_script_request_keeps_video_and_character_fields() -> None:
-    """issue #207 回归：前端发的视频 / 角色参考字段不能再被 Pydantic 静默丢掉。
+    """issue #207 regression: the video / character reference fields sent by the frontend must no longer be silently dropped by Pydantic.
 
-    这些字段以前没在模型里声明，``extra="ignore"`` 会把它们连同 duration_sec 一起
-    吃掉，于是「视频参考生成分镜脚本」从头到尾都没把视频交给模型。
+    These fields used to be undeclared in the model, and ``extra="ignore"`` swallowed them together with duration_sec,
+    so the "video-reference storyboard script" never handed the video to the model from start to finish.
     """
     body = freezone_routes.FreezoneStoryScriptGenerateRequest.model_validate(
         {
@@ -385,18 +385,18 @@ def test_story_script_request_keeps_video_and_character_fields() -> None:
             "duration_sec": 15.0,
             "character_refs": [
                 {
-                    "name": "沈昭昭",
+                    "name": "Mia",
                     "image_url": "/static/admin/58/freezone/_uploads/shen.png",
-                    "role": "女主",
+                    "role": "female lead",
                 }
             ],
-            "prompt": "生成视频脚本",
+            "prompt": "Generate a video script",
         }
     )
 
     assert body.video_url == "/static/admin/58/freezone/_uploads/clip.mp4"
     assert body.duration_sec == 15.0
-    assert body.character_refs[0].name == "沈昭昭"
+    assert body.character_refs[0].name == "Mia"
     assert body.character_refs[0].image_url.endswith("shen.png")
 
 
@@ -430,7 +430,7 @@ async def test_freezone_story_script_route_enqueues_video_reference(
         body=freezone_routes.FreezoneStoryScriptGenerateRequest(
             video_url="/static/admin/58/freezone/_uploads/clip.mp4",
             duration_sec=15.0,
-            prompt="生成视频脚本",
+            prompt="Generate a video script",
         ),
         user={"username": "admin"},
     )
@@ -440,8 +440,8 @@ async def test_freezone_story_script_route_enqueues_video_reference(
     assert payload["video_path"] == video.as_posix()
     assert payload["duration_sec"] == 15.0
     assert payload["max_frames"] == 20
-    assert payload["prompt"] == "生成视频脚本"
-    # 视频是主输入，不再要求前端把提示词伪装成剧本正文。
+    assert payload["prompt"] == "Generate a video script"
+    # The video is the main input, and the frontend is no longer required to disguise the prompt as script body text.
     assert payload["source_text"] == ""
 
 
@@ -472,18 +472,18 @@ async def test_freezone_story_script_route_forwards_character_refs(
         body=freezone_routes.FreezoneStoryScriptGenerateRequest(
             character_refs=[
                 freezone_routes.FreezoneStoryScriptCharacterRef(
-                    name="沈昭昭",
+                    name="Mia",
                     image_url="/static/admin/58/freezone/_uploads/shen.png",
-                    role="女主",
+                    role="female lead",
                 )
             ],
-            prompt="生成一段职场逆袭脚本",
+            prompt="Generate a workplace comeback script",
         ),
         user={"username": "admin"},
     )
 
     assert result["ok"] is True
-    assert captured["character_refs"][0]["name"] == "沈昭昭"
+    assert captured["character_refs"][0]["name"] == "Mia"
     assert captured["character_image_paths"] == [portrait.as_posix()]
 
 
@@ -509,14 +509,14 @@ async def test_freezone_story_script_route_rejects_empty_input(
 def test_build_freezone_video_story_script_task_describes_the_real_video() -> None:
     task = build_freezone_video_story_script_task(
         frame_count=6,
-        prompt="生成视频脚本",
+        prompt="Generate a video script",
         duration_sec=15.0,
     )
 
     assert "6" in task
     assert "15" in task
     assert "keyframe_index" in task
-    assert "生成视频脚本" in task
+    assert "Generate a video script" in task
 
 
 @pytest.mark.asyncio
@@ -547,13 +547,13 @@ async def test_generate_story_script_with_vision_attaches_frames(
 
     await generate_freezone_story_script_with_vision(
         frame_paths=frames,
-        prompt="生成视频脚本",
+        prompt="Generate a video script",
         duration_sec=15.0,
     )
 
     messages = captured["messages"]
     assert isinstance(messages[0], str)
-    # 三张关键帧必须真的作为附件送进模型，而不是只在提示词里被提一句。
+    # The three keyframes must really be sent to the model as attachments, not merely mentioned in the prompt.
     assert len(messages) == 1 + len(frames)
     assert all(
         getattr(item, "media_type", None) == "image/jpeg" for item in messages[1:]
@@ -566,17 +566,17 @@ async def test_generate_story_script_with_vision_attaches_frames(
 def test_build_freezone_character_story_script_task_uses_prompt_as_story() -> None:
     task = build_freezone_character_story_script_task(
         image_count=2,
-        prompt="以这两个角色生成一段雪山对决",
-        character_refs=[{"name": "宁姚"}, {"name": "青衣剑客"}],
+        prompt="Generate a snow mountain duel with these two characters",
+        character_refs=[{"name": "Nora"}, {"name": "Blue Swordsman"}],
     )
 
-    assert "2 张角色参考图" in task
-    assert "以这两个角色生成一段雪山对决" in task
-    # 角色图模式没有关键帧，必须明确要求 keyframe_index 填 0，别乱指帧。
-    assert "keyframe_index 一律填 0" in task
-    assert "宁姚" in task
-    assert "青衣剑客" in task
-    assert "关键帧" not in task.replace("没有关键帧可以回填", "")
+    assert "2 character reference images" in task
+    assert "Generate a snow mountain duel with these two characters" in task
+    # Character-image mode has no keyframes, so it must explicitly require keyframe_index to be 0, and not point at frames arbitrarily.
+    assert "Always put 0 in keyframe_index" in task
+    assert "Nora" in task
+    assert "Blue Swordsman" in task
+    assert "keyframes" not in task.replace("this mode has no keyframes to backfill", "")
 
 
 @pytest.mark.asyncio
@@ -584,8 +584,8 @@ async def test_generate_story_script_with_vision_accepts_character_images_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # 前端一旦挂了素材就只发提示词、把 source_text 留空；
-    # 「仅角色图」这一路以前会在这里抛 ValueError，任务必挂。
+    # Once the frontend attaches assets it sends only the prompt and leaves source_text empty;
+    # the "character images only" path used to throw ValueError here, and the task was bound to fail.
     portrait = tmp_path / "ningyao.png"
     Image.new("RGB", (640, 960), (24, 48, 96)).save(portrait)
     captured: dict[str, object] = {}
@@ -607,15 +607,15 @@ async def test_generate_story_script_with_vision_accepts_character_images_only(
     await generate_freezone_story_script_with_vision(
         character_image_paths=[portrait],
         source_text="",
-        prompt="以这个角色生成一段雪山对决",
-        character_refs=[{"name": "宁姚", "image_url": "/static/ningyao.png"}],
+        prompt="Generate a snow mountain duel with this character",
+        character_refs=[{"name": "Nora", "image_url": "/static/ningyao.png"}],
     )
 
     messages = captured["messages"]
     task = messages[0]
     assert isinstance(task, str)
-    assert "角色参考图" in task
-    assert "以这个角色生成一段雪山对决" in task
+    assert "character reference images" in task
+    assert "Generate a snow mountain duel with this character" in task
     assert len(messages) == 2
     assert getattr(messages[1], "media_type", None) == "image/jpeg"
     with Image.open(io.BytesIO(messages[1].data)) as compacted:
@@ -624,21 +624,21 @@ async def test_generate_story_script_with_vision_accepts_character_images_only(
 
 def test_bind_story_script_assets_fills_frames_and_character_images() -> None:
     data = FreezoneStoryScriptGenerateData(
-        title="猫猫散步",
+        title="Cat Takes a Walk",
         rows=[
             FreezoneStoryScriptRow(
                 shot_no=1,
                 duration=4,
-                visual_description="猫从画面左侧走入",
-                character_1="香蕉猫",
+                visual_description="The cat walks in from the left of the frame",
+                character_1="Banana Cat",
                 keyframe_index=2,
             ),
             FreezoneStoryScriptRow(
                 shot_no=2,
                 duration=4,
-                visual_description="猫停下回头",
-                character_1="香蕉猫_特写",
-                character_2="路人",
+                visual_description="The cat stops and looks back",
+                character_1="Banana Cat_closeup",
+                character_2="Passerby",
                 keyframe_index=1,
             ),
         ],
@@ -648,15 +648,15 @@ def test_bind_story_script_assets_fills_frames_and_character_images() -> None:
         data,
         frame_urls=["/static/f1.png", "/static/f2.png"],
         character_refs=[
-            {"name": "香蕉猫", "image_url": "/static/cat.png"},
-            {"name": "路人", "image_url": "/static/passerby.png"},
+            {"name": "Banana Cat", "image_url": "/static/cat.png"},
+            {"name": "Passerby", "image_url": "/static/passerby.png"},
         ],
     )
 
     assert data.rows[0].reference == "/static/f2.png"
     assert data.rows[1].reference == "/static/f1.png"
     assert data.rows[0].character_image_1 == "/static/cat.png"
-    # 模型把角色名写成带后缀的稳定 ID 时仍要匹配上。
+    # It must still match when the model writes the character name as a stable ID with a suffix.
     assert data.rows[1].character_image_1 == "/static/cat.png"
     assert data.rows[1].character_image_2 == "/static/passerby.png"
 
@@ -666,13 +666,13 @@ def test_bind_story_script_assets_falls_back_to_row_order_on_bad_index() -> None
         title="",
         rows=[
             FreezoneStoryScriptRow(
-                shot_no=1, duration=3, visual_description="第一镜", keyframe_index=99
+                shot_no=1, duration=3, visual_description="First shot", keyframe_index=99
             ),
             FreezoneStoryScriptRow(
-                shot_no=2, duration=3, visual_description="第二镜", keyframe_index=0
+                shot_no=2, duration=3, visual_description="Second shot", keyframe_index=0
             ),
             FreezoneStoryScriptRow(
-                shot_no=3, duration=3, visual_description="第三镜", keyframe_index=0
+                shot_no=3, duration=3, visual_description="Third shot", keyframe_index=0
             ),
         ],
     )
@@ -681,7 +681,7 @@ def test_bind_story_script_assets_falls_back_to_row_order_on_bad_index() -> None
 
     assert data.rows[0].reference == "/static/f1.png"
     assert data.rows[1].reference == "/static/f2.png"
-    # 帧数不够时多出来的镜头留空，而不是循环复用一张图。
+    # When there are not enough frames, the extra shots are left empty, rather than reusing one image cyclically.
     assert data.rows[2].reference == ""
 
 
@@ -690,13 +690,13 @@ def test_bind_story_script_assets_binds_sole_character_image() -> None:
         title="",
         rows=[
             FreezoneStoryScriptRow(
-                shot_no=1, duration=3, visual_description="第一镜", character_1="女主角"
+                shot_no=1, duration=3, visual_description="First shot", character_1="Heroine"
             )
         ],
     )
 
     bind_story_script_assets(
-        data, character_refs=[{"name": "沈昭昭", "image_url": "/static/shen.png"}]
+        data, character_refs=[{"name": "Mia", "image_url": "/static/shen.png"}]
     )
 
     assert data.rows[0].character_image_1 == "/static/shen.png"
@@ -718,12 +718,12 @@ async def test_freezone_story_script_job_result_returns_json_payload(
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "title": "我在盛唐写天下",
+        "title": "Writing the World in the Tang Dynasty",
         "rows": [
             {
                 "shot_no": 1,
                 "duration": 4,
-                "visual_description": "现代深夜，沈昭昭在办公室过度劳累加班。",
+                "visual_description": "Late at night in the modern day, Mia is overworked in the office.",
                 "character_1": "",
                 "character_description_1": "",
                 "character_image_1": "",
@@ -735,8 +735,8 @@ async def test_freezone_story_script_job_result_returns_json_payload(
                 "lighting_mood": "",
                 "sound": "",
                 "dialogue": "",
-                "shot_prompt": "近景特写",
-                "video_motion_prompt": "缓慢推进",
+                "shot_prompt": "close-up",
+                "video_motion_prompt": "slow push-in",
             }
         ],
     }
@@ -757,7 +757,7 @@ async def test_freezone_story_script_job_result_returns_json_payload(
     )
 
     assert result["ok"] is True
-    assert result["data"]["title"] == "我在盛唐写天下"
+    assert result["data"]["title"] == "Writing the World in the Tang Dynasty"
     assert result["data"]["rows"][0]["shot_no"] == 1
 
 
@@ -813,7 +813,7 @@ async def test_freezone_text_generate_job_result_returns_json_payload(
     out = project_dir / "freezone" / "_outputs" / "freezone_text_generate" / f"{job_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_text": "雨夜旧车站里，一封迟到的信改变了所有人的选择。",
+        "generated_text": "In the old station on a rainy night, a belated letter changed everyone's choices.",
         "model": "DC-freezone-text-writer-LLM",
     }
     out.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -852,7 +852,7 @@ async def test_freezone_image_reverse_prompt_job_result_returns_json_payload(
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "prompt": "雨夜街头，电影感近景特写，人物侧脸被霓虹照亮",
+        "prompt": "A rainy night street, cinematic close-up, the character's profile lit by neon",
     }
     out.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
@@ -871,4 +871,4 @@ async def test_freezone_image_reverse_prompt_job_result_returns_json_payload(
     )
 
     assert result["ok"] is True
-    assert result["data"]["prompt"].startswith("雨夜街头")
+    assert result["data"]["prompt"].startswith("A rainy night street")

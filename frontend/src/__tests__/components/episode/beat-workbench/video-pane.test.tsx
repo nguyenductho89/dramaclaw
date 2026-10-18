@@ -19,11 +19,11 @@ const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
+    lng: "vi",
+    fallbackLng: "vi",
     interpolation: { escapeValue: false },
     resources: {
-      zh: {
+      vi: {
         translation: {
           common: {
             confirm: "Confirm",
@@ -369,7 +369,7 @@ vi.mock("@/lib/queries/video", () => ({
       data: {
         options: [
           {
-            label: "已生成音频 · beat_01.mp3",
+            label: "Audio generated · beat_01.mp3",
             path: "/project/audio/ep001/beat_01.mp3",
             rel_path: "audio/ep001/beat_01.mp3",
           },
@@ -418,9 +418,9 @@ vi.mock("@/lib/queries/video", () => ({
         voice: {
           required: true,
           ready: true,
-          label: "声线就绪",
-          detail: "陆辰_青年时期",
-          speaker: "陆辰_青年时期",
+          label: "Voice ready",
+          detail: "Lu Chen_young_adult",
+          speaker: "Lu Chen_young_adult",
         },
         prompt: {
           ready: true,
@@ -431,7 +431,7 @@ vi.mock("@/lib/queries/video", () => ({
           text_overlay: {
             enabled: true,
             kind: "caption",
-            content: "鹿镇北口",
+            content: "North gate of Deer Town",
             placement: "center",
             timing: "auto",
             style: "white text",
@@ -449,12 +449,12 @@ vi.mock("@/lib/queries/video", () => ({
             videoQueryMockState.seedance2AssetsOverride ?? [
             {
               key: "first_frame",
-              label: "当前 render · Beat 1",
+              label: "Current render · Beat 1",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片1",
-              note: "多参考模式下作为参考图发送",
+              reference_label: "image1",
+              note: "Sent as a reference image in multi-reference mode",
               path: "frames/ep001/beat_01.png",
               url: "/static/demo/frames/ep001/beat_01.png",
               crop_source_path: "frames/ep001/beat_01.png",
@@ -463,12 +463,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:2",
-              label: "手动素材 2",
+              label: "Manual asset 2",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片2",
-              note: "手动参考图",
+              reference_label: "image2",
+              note: "Manual reference image",
               path: "seedance2/manual_02.png",
               url: "/static/demo/seedance2/manual_02.png",
               can_crop: true,
@@ -476,12 +476,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:3",
-              label: "手动素材 3",
+              label: "Manual asset 3",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片3",
-              note: "手动参考图",
+              reference_label: "image3",
+              note: "Manual reference image",
               path: "seedance2/manual_03.png",
               url: "/static/demo/seedance2/manual_03.png",
               can_crop: true,
@@ -489,12 +489,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:4",
-              label: "手动素材 4",
+              label: "Manual asset 4",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片4",
-              note: "手动参考图",
+              reference_label: "image4",
+              note: "Manual reference image",
               path: "seedance2/manual_04.png",
               url: "/static/demo/seedance2/manual_04.png",
               can_crop: true,
@@ -502,12 +502,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:5",
-              label: "手动素材 5",
+              label: "Manual asset 5",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片5",
-              note: "手动参考图",
+              reference_label: "image5",
+              note: "Manual reference image",
               path: "seedance2/manual_05.png",
               url: "/static/demo/seedance2/manual_05.png",
               can_crop: true,
@@ -515,12 +515,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:6",
-              label: "手动素材 6",
+              label: "Manual asset 6",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片6",
-              note: "手动参考图",
+              reference_label: "image6",
+              note: "Manual reference image",
               path: "seedance2/manual_06.png",
               url: "/static/demo/seedance2/manual_06.png",
               can_crop: true,
@@ -528,12 +528,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "manual:image:7",
-              label: "手动素材 7",
+              label: "Manual asset 7",
               media_type: "image",
               selected: true,
               exists: true,
-              reference_label: "Image 片7",
-              note: "手动参考图",
+              reference_label: "image7",
+              note: "Manual reference image",
               path: "seedance2/manual_07.png",
               url: "/static/demo/seedance2/manual_07.png",
               can_crop: true,
@@ -541,12 +541,12 @@ vi.mock("@/lib/queries/video", () => ({
             },
             {
               key: "returned_last_frame",
-              label: "返回尾帧 · Beat 1",
+              label: "Returned last frame · Beat 1",
               media_type: "image",
               selected: false,
               exists: true,
               reference_label: "Last frame",
-              note: "Seedance2 返回尾帧",
+              note: "Seedance2 returned last frame",
               path: "seedance2/beat_01_last_frame.png",
               url: "/static/demo/seedance2/beat_01_last_frame.png",
               can_crop: false,
@@ -556,12 +556,12 @@ vi.mock("@/lib/queries/video", () => ({
               ? [
                   {
                     key: "voice:narrator",
-                    label: "项目解说声线",
+                    label: "Project narrator voice",
                     media_type: "audio",
                     selected: true,
                     exists: true,
                     reference_label: "Audio 1",
-                    note: "Seedance2 解说参考声线",
+                    note: "Seedance2 narrator reference voice",
                     path: "assets/narrator/voice.mp3",
                     url: "/static/demo/assets/narrator/voice.mp3",
                     abs_path: "/project/assets/narrator/voice.mp3",
@@ -572,13 +572,13 @@ vi.mock("@/lib/queries/video", () => ({
                 ]
               : []),
             {
-              key: "identity:陆辰_青年时期",
-              label: "陆辰 · 青年时期",
+              key: "identity:Lu Chen_young_adult",
+              label: "Lu Chen · Young adult",
               media_type: "image",
               selected: false,
               exists: false,
-              reference_label: "未发送",
-              note: "有图时作为角色身份图保持一致",
+              reference_label: "not_sent",
+              note: "Used as the character identity image for consistency when an image exists",
             },
           ]).filter(
             (asset) =>
@@ -637,10 +637,10 @@ function makeBeat(overrides: Partial<Beat> = {}): Beat {
   return {
     beat_number: 1,
     narration_segment: "Narration",
-    visual_description: "画面",
+    visual_description: "Visual",
     audio_type: "narration",
     video_mode: "first_frame",
-    detected_identities: ["陆辰_青年时期"],
+    detected_identities: ["Lu Chen_young_adult"],
     video_prompt: "base video prompt",
     keyframe_prompt: "",
     frame_url: "/static/frame.png",
@@ -768,9 +768,9 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(screen.queryByText("Seedance2 Inspector")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Video prompt")).toHaveValue("base video prompt");
     expect(screen.getByRole("button", { name: /Reference details/ })).toBeInTheDocument();
-    expect(screen.getByText("当前 render · Beat 1")).toBeInTheDocument();
-    expect(screen.queryByText("手动素材 2")).not.toBeInTheDocument();
-    expect(screen.queryByText("项目解说声线")).not.toBeInTheDocument();
+    expect(screen.getByText("Current render · Beat 1")).toBeInTheDocument();
+    expect(screen.queryByText("Manual asset 2")).not.toBeInTheDocument();
+    expect(screen.queryByText("Project narrator voice")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload asset" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Generation mode")).not.toBeInTheDocument();
 
@@ -829,7 +829,7 @@ describe("VideoPane Seedance2 inspector", () => {
       task_type: "beat_video_prompt",
       task_id: "task-prompt-1",
       task_key: "task:beat_video_prompt:project:proj_123:1:beat:1",
-      message: "Ep 1 ·  Beat 1 提示词生成已入队",
+      message: "Ep 1 Beat 1 prompt generation queued",
     });
     renderPane(
       makeBeat({ video_mode: "first_frame", video_prompt: "" }),
@@ -850,7 +850,7 @@ describe("VideoPane Seedance2 inspector", () => {
 
   it("shows a missing-media prerequisite without starting task tracking", async () => {
     const user = userEvent.setup();
-    const message = "Beat 1 缺少草图或首帧，请先生成草图或预览";
+    const message = "Beat 1 is missing a sketch or first frame, generate a sketch or preview first";
     generateBeatVideoPromptMock.mockRejectedValueOnce(
       new BackendStatusError(message, 409, {
         ok: false,
@@ -946,7 +946,7 @@ describe("VideoPane Seedance2 inspector", () => {
     const user = userEvent.setup();
     regenerateMock.mockResolvedValueOnce({
       ok: false,
-      error: "Beat 1 不是 dialogue，Seedance 1.5 有声只允许用于 dialogue beat",
+      error: "Beat 1 is not dialogue; Seedance 1.5 with audio is only allowed for dialogue beats",
     });
     renderPane();
 
@@ -954,7 +954,7 @@ describe("VideoPane Seedance2 inspector", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(toast.error).toHaveBeenCalledWith(
-      "Beat 1 不是 dialogue，Seedance 1.5 有声只允许用于 dialogue beat",
+      "Beat 1 is not dialogue; Seedance 1.5 with audio is only allowed for dialogue beats",
     );
     expect(taskStartMock).not.toHaveBeenCalled();
   });
@@ -1008,7 +1008,7 @@ describe("VideoPane Seedance2 inspector", () => {
   it("disables dialogue-only backends by the current beat audio type", () => {
     const dialogueOnlyBackend = {
       value: "seedance_pro",
-      label: "Seedance 1.5 有声",
+      label: "Seedance 1.5 with audio",
       is_default: false,
       is_seedance2: false,
       dialogue_only: true,
@@ -1033,25 +1033,25 @@ describe("VideoPane Seedance2 inspector", () => {
 
     expect(screen.getByText("Seedance2 Inspector")).toBeInTheDocument();
     expect(screen.queryByText("Media status")).not.toBeInTheDocument();
-    expect(screen.queryByText("Prompt 状态")).not.toBeInTheDocument();
-    expect(screen.queryByText("配置状态")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prompt status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Config status")).not.toBeInTheDocument();
     expect(screen.getByText("Video versions (2)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Reference details/ })).toHaveAttribute(
       "aria-expanded",
       "true",
     );
-    expect(screen.getByText("Image 片1")).toBeInTheDocument();
-    expect(screen.getByText("手动素材 7")).toBeInTheDocument();
-    expect(screen.getByText("当前 render · Beat 1")).toBeInTheDocument();
-    expect(screen.getByText("陆辰 · 青年时期")).toBeInTheDocument();
-    expect(screen.getByText("有图时作为角色身份图保持一致")).toBeInTheDocument();
+    expect(screen.getByText("image1")).toBeInTheDocument();
+    expect(screen.getByText("Manual asset 7")).toBeInTheDocument();
+    expect(screen.getByText("Current render · Beat 1")).toBeInTheDocument();
+    expect(screen.getByText("Lu Chen · Young adult")).toBeInTheDocument();
+    expect(screen.getByText("Used as the character identity image for consistency when an image exists")).toBeInTheDocument();
     expect(screen.getByText("Reference image")).toBeInTheDocument();
     expect(screen.getByText("Missing image")).toBeInTheDocument();
-    expect(screen.queryByText("未发送")).not.toBeInTheDocument();
+    expect(screen.queryByText("not_sent")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload asset" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "插入引用" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Insert reference" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Crop" }).length).toBeGreaterThan(0);
-    expect(screen.getByText("声线就绪")).toBeInTheDocument();
+    expect(screen.getByText("Voice ready")).toBeInTheDocument();
     expect(screen.getAllByText("4 sent / 1 missing").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Screen text" })).not.toBeInTheDocument();
     expect(
@@ -1072,21 +1072,21 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane();
     expandSeedance2References();
 
-    expect(screen.getByAltText("当前 render · Beat 1")).toHaveAttribute(
+    expect(screen.getByAltText("Current render · Beat 1")).toHaveAttribute(
       "src",
       "/static/demo/frames/ep001/beat_01.png",
     );
-    expect(screen.getByAltText("手动素材 2")).toHaveAttribute(
+    expect(screen.getByAltText("Manual asset 2")).toHaveAttribute(
       "src",
       "/static/demo/seedance2/manual_02.png",
     );
     expect(
-      screen.getByAltText("手动素材 2").closest("[data-seedance2-reference-tile]"),
+      screen.getByAltText("Manual asset 2").closest("[data-seedance2-reference-tile]"),
     ).toHaveClass("aspect-square", "w-[6.75rem]");
     expect(
-      screen.getByAltText("手动素材 2").closest("[data-seedance2-reference-tile]")?.parentElement,
+      screen.getByAltText("Manual asset 2").closest("[data-seedance2-reference-tile]")?.parentElement,
     ).toHaveClass("grid-cols-[repeat(auto-fill,minmax(6.75rem,6.75rem))]");
-    expect(screen.getByAltText("手动素材 2")).toHaveClass("object-cover");
+    expect(screen.getByAltText("Manual asset 2")).toHaveClass("object-cover");
   });
 
   it("hides the audio media status when disabled for drama projects", () => {
@@ -1254,7 +1254,7 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(screen.queryByLabelText("X")).not.toBeInTheDocument();
 
     const image = screen
-      .getAllByAltText("当前 render · Beat 1")
+      .getAllByAltText("Current render · Beat 1")
       .find((element) => element.closest('[role="dialog"]'));
     if (!image) throw new Error("crop image not found");
     Object.defineProperty(image, "naturalWidth", {
@@ -1305,7 +1305,7 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(await screen.findByText("Crop 16:9")).toBeInTheDocument();
 
     const image = screen
-      .getAllByAltText("当前 render · Beat 1")
+      .getAllByAltText("Current render · Beat 1")
       .find((element) => element.closest('[role="dialog"]'));
     if (!image) throw new Error("crop image not found");
     Object.defineProperty(image, "naturalWidth", {
@@ -1343,12 +1343,12 @@ describe("VideoPane Seedance2 inspector", () => {
     videoQueryMockState.seedance2AssetsOverride = [
       {
         key: "first_frame",
-        label: "当前 render · Beat 1",
+        label: "Current render · Beat 1",
         media_type: "image",
         selected: true,
         exists: true,
-        reference_label: "Image 片1",
-        note: "首帧模式只发送这一张首帧图，不混用参考图。",
+        reference_label: "image1",
+        note: "First-frame mode sends only this one first-frame image and does not mix in reference images.",
         path: "video_inputs/ep001/beat_01/first_frame.png",
         url: "/static/demo/video_inputs/ep001/beat_01/first_frame.png",
         abs_path: "/project/video_inputs/ep001/beat_01/first_frame.png",
@@ -1373,7 +1373,7 @@ describe("VideoPane Seedance2 inspector", () => {
     await user.click(screen.getAllByRole("button", { name: "Crop" })[0]);
     await screen.findByRole("dialog");
     const cropImage = screen
-      .getAllByAltText("当前 render · Beat 1")
+      .getAllByAltText("Current render · Beat 1")
       .find((element) => element.closest('[role="dialog"]'));
     if (!cropImage) throw new Error("crop image not found");
     expect(cropImage).toHaveAttribute("src", "/static/demo/frames/ep001/beat_01.png");
@@ -1415,7 +1415,7 @@ describe("VideoPane Seedance2 inspector", () => {
     expandSeedance2References();
 
     const audioTile = screen
-      .getByText("项目解说声线")
+      .getByText("Project narrator voice")
       .closest("[data-seedance2-reference-tile]");
     if (!audioTile) throw new Error("audio tile not found");
     await user.click(within(audioTile as HTMLElement).getByRole("button", { name: "Crop" }));
@@ -1462,7 +1462,7 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane(makeBeat({ seedance2_config_json: "" }));
 
     fireEvent.change(screen.getByLabelText("Seedance2.0 subject prompt"), {
-      target: { value: "@图片1 @图片2 " },
+      target: { value: "@image1 @image2 " },
     });
     await waitForSeedance2Autosave();
 
@@ -1470,7 +1470,7 @@ describe("VideoPane Seedance2 inspector", () => {
     const config = JSON.parse(payload.data.seedance2_config_json);
     // The trailing separator must survive the save → re-parse → draft-reset
     // round-trip, otherwise the next reference glues onto the last one.
-    expect(config.final_prompt).toBe("@图片1 @图片2 ");
+    expect(config.final_prompt).toBe("@image1 @image2 ");
   });
 
   it("defaults new Seedance2 drafts to the project render aspect", async () => {
@@ -1495,7 +1495,7 @@ describe("VideoPane Seedance2 inspector", () => {
     fireEvent.change(textarea, { target: { value: "@" } });
     expect(await screen.findByText("Reference candidates")).toBeInTheDocument();
     fireEvent.keyDown(textarea, { key: "Enter" });
-    await waitFor(() => expect(textarea.value).toContain("@图片1"));
+    await waitFor(() => expect(textarea.value).toContain("@image1"));
   });
 
   it("navigates @ mention candidates with arrows and inserts on Tab", async () => {
@@ -1507,7 +1507,7 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(await screen.findByText("Reference candidates")).toBeInTheDocument();
     fireEvent.keyDown(textarea, { key: "ArrowDown" });
     fireEvent.keyDown(textarea, { key: "Tab" });
-    await waitFor(() => expect(textarea.value).toContain("@图片2"));
+    await waitFor(() => expect(textarea.value).toContain("@image2"));
   });
 
   it("keeps already-inserted references available in the @ mention dropdown", async () => {
@@ -1515,12 +1515,12 @@ describe("VideoPane Seedance2 inspector", () => {
     const textarea = (await screen.findByLabelText(
       "Seedance2.0 subject prompt",
     )) as HTMLTextAreaElement;
-    fireEvent.change(textarea, { target: { value: "@图片1 @" } });
+    fireEvent.change(textarea, { target: { value: "@image1 @" } });
     expect(await screen.findByText("Reference candidates")).toBeInTheDocument();
     fireEvent.keyDown(textarea, { key: "Enter" });
     // Selecting a mention appends a trailing space so the next keystroke can't
     // glue onto it.
-    await waitFor(() => expect(textarea.value).toBe("@图片1 @图片1 "));
+    await waitFor(() => expect(textarea.value).toBe("@image1 @image1 "));
   });
 
   it("normalizes legacy unmarked first_frame Seedance2 configs to the NiceGUI multimodal default", async () => {
@@ -1603,8 +1603,8 @@ describe("VideoPane Seedance2 inspector", () => {
   it("does not render manual Seedance2 save actions", () => {
     renderPane();
 
-    expect(screen.queryByRole("button", { name: "保存配置" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "保存prompt" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save config" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save prompt" })).not.toBeInTheDocument();
   });
 
   it("keeps Seedance2 API audio generation enabled by default", async () => {
@@ -1647,7 +1647,7 @@ describe("VideoPane Seedance2 inspector", () => {
     );
 
     const image = screen
-      .getAllByAltText("返回尾帧 · Beat 1")
+      .getAllByAltText("Returned last frame · Beat 1")
       .find((element) => element.closest("[data-seedance2-returned-last-frame]"));
     if (!image) throw new Error("returned last frame image not found");
     const panel = image.closest("[data-seedance2-returned-last-frame]");
@@ -1696,12 +1696,12 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane();
 
     fireEvent.change(screen.getByLabelText("Seedance2.0 subject prompt"), {
-      target: { value: "镜头推进 @" },
+      target: { value: "Camera pushes in @" },
     });
     expect(screen.getByText("Reference candidates")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "@图片1" }));
+    await user.click(screen.getByRole("button", { name: "@image1" }));
 
-    expect(screen.getByLabelText("Seedance2.0 subject prompt")).toHaveValue("镜头推进 @图片1 ");
+    expect(screen.getByLabelText("Seedance2.0 subject prompt")).toHaveValue("Camera pushes in @image1 ");
   });
 
   it("appends a space when picking consecutive references via the popover", async () => {
@@ -1712,12 +1712,12 @@ describe("VideoPane Seedance2 inspector", () => {
     ) as HTMLTextAreaElement;
 
     fireEvent.change(textarea, { target: { value: "@" } });
-    await user.click(screen.getByRole("button", { name: "@图片1" }));
-    expect(textarea).toHaveValue("@图片1 ");
+    await user.click(screen.getByRole("button", { name: "@image1" }));
+    expect(textarea).toHaveValue("@image1 ");
 
-    fireEvent.change(textarea, { target: { value: "@图片1 @" } });
-    await user.click(screen.getByRole("button", { name: "@图片2" }));
-    expect(textarea).toHaveValue("@图片1 @图片2 ");
+    fireEvent.change(textarea, { target: { value: "@image1 @" } });
+    await user.click(screen.getByRole("button", { name: "@image2" }));
+    expect(textarea).toHaveValue("@image1 @image2 ");
   });
 
   it("keeps a space after every popover pick when typing @ between them", async () => {
@@ -1736,17 +1736,17 @@ describe("VideoPane Seedance2 inspector", () => {
 
     await user.click(textarea);
     await user.type(textarea, "@");
-    await user.click(screen.getByRole("button", { name: "@图片1" }));
+    await user.click(screen.getByRole("button", { name: "@image1" }));
     await user.type(textarea, "@");
-    await user.click(screen.getByRole("button", { name: "@图片2" }));
+    await user.click(screen.getByRole("button", { name: "@image2" }));
 
-    expect(textarea.value).toBe("@图片1 @图片2 ");
+    expect(textarea.value).toBe("@image1 @image2 ");
   });
 
   it("inserts an @ reference when dragging a reference image into the prompt editor", () => {
     renderPane();
     expandSeedance2References();
-    const image = screen.getByAltText("手动素材 2");
+    const image = screen.getByAltText("Manual asset 2");
     const textarea = screen.getByLabelText("Seedance2.0 subject prompt");
     const data = new Map<string, string>();
     const dataTransfer = {
@@ -1759,7 +1759,7 @@ describe("VideoPane Seedance2 inspector", () => {
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("existing seedance2 prompt\n@图片2 ");
+    expect(textarea).toHaveValue("existing seedance2 prompt\n@image2 ");
   });
 
   it("makes uploaded image and audio reference tiles draggable", () => {
@@ -1767,10 +1767,10 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane();
     expandSeedance2References();
     const imageTile = screen
-      .getByText("手动素材 2")
+      .getByText("Manual asset 2")
       .closest("[data-seedance2-reference-tile]");
     const audioTile = screen
-      .getByText("项目解说声线")
+      .getByText("Project narrator voice")
       .closest("[data-seedance2-reference-tile]");
     if (!imageTile) throw new Error("image tile not found");
     if (!audioTile) throw new Error("audio tile not found");
@@ -1788,7 +1788,7 @@ describe("VideoPane Seedance2 inspector", () => {
     fireEvent.dragStart(audioTile, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("existing seedance2 prompt\n@音频1 ");
+    expect(textarea).toHaveValue("existing seedance2 prompt\n@audio1 ");
   });
 
   it("inserts a dragged @ reference at the prompt cursor position", () => {
@@ -1796,12 +1796,12 @@ describe("VideoPane Seedance2 inspector", () => {
       makeBeat({
         seedance2_config_json: JSON.stringify({
           mode: "multimodal_reference",
-          final_prompt: "参考作为起始构图",
+          final_prompt: "Reference as the starting composition",
         }),
       }),
     );
     expandSeedance2References();
-    const image = screen.getByAltText("手动素材 2");
+    const image = screen.getByAltText("Manual asset 2");
     const textarea = screen.getByLabelText("Seedance2.0 subject prompt") as HTMLTextAreaElement;
     const data = new Map<string, string>();
     const dataTransfer = {
@@ -1812,11 +1812,11 @@ describe("VideoPane Seedance2 inspector", () => {
     };
 
     textarea.focus();
-    textarea.setSelectionRange(2, 2);
+    textarea.setSelectionRange(9, 9);
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("参考@图片2 作为起始构图");
+    expect(textarea).toHaveValue("Reference@image2  as the starting composition");
   });
 
   it("uses the prompt cursor position from before dragging the image tile steals focus", () => {
@@ -1824,12 +1824,12 @@ describe("VideoPane Seedance2 inspector", () => {
       makeBeat({
         seedance2_config_json: JSON.stringify({
           mode: "multimodal_reference",
-          final_prompt: "参考作为起始构图",
+          final_prompt: "Reference as the starting composition",
         }),
       }),
     );
     expandSeedance2References();
-    const image = screen.getByAltText("手动素材 2");
+    const image = screen.getByAltText("Manual asset 2");
     const textarea = screen.getByLabelText("Seedance2.0 subject prompt") as HTMLTextAreaElement;
     const data = new Map<string, string>();
     const dataTransfer = {
@@ -1840,19 +1840,19 @@ describe("VideoPane Seedance2 inspector", () => {
     };
 
     textarea.focus();
-    textarea.setSelectionRange(2, 2);
+    textarea.setSelectionRange(9, 9);
     fireEvent.select(textarea);
     fireEvent.blur(textarea);
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("参考@图片2 作为起始构图");
+    expect(textarea).toHaveValue("Reference@image2  as the starting composition");
   });
 
   it("inserts a dragged reference even when the prompt already mentions it", () => {
     renderPane();
     expandSeedance2References();
-    const image = screen.getByAltText("手动素材 2");
+    const image = screen.getByAltText("Manual asset 2");
     const textarea = screen.getByLabelText("Seedance2.0 subject prompt");
     const data = new Map<string, string>();
     const dataTransfer = {
@@ -1862,11 +1862,11 @@ describe("VideoPane Seedance2 inspector", () => {
       dropEffect: "",
     };
 
-    fireEvent.change(textarea, { target: { value: "已有 @图片2" } });
+    fireEvent.change(textarea, { target: { value: "Existing @image2" } });
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("已有 @图片2 @图片2 ");
+    expect(textarea).toHaveValue("Existing @image2 @image2 ");
   });
 
   it("accepts browser image drags whose dragover data lacks the custom reference type", () => {
@@ -1874,14 +1874,14 @@ describe("VideoPane Seedance2 inspector", () => {
     const textarea = screen.getByLabelText("Seedance2.0 subject prompt");
     const dataTransfer = {
       types: ["text/plain"],
-      getData: vi.fn((type: string) => (type === "text/plain" ? "@图片2" : "")),
+      getData: vi.fn((type: string) => (type === "text/plain" ? "@image2" : "")),
       dropEffect: "",
     };
 
     expect(fireEvent.dragOver(textarea, { dataTransfer })).toBe(false);
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("existing seedance2 prompt\n@图片2 ");
+    expect(textarea).toHaveValue("existing seedance2 prompt\n@image2 ");
   });
 
   it("hides screen text overlay controls and disables stale overlay config on save", async () => {
@@ -1892,11 +1892,11 @@ describe("VideoPane Seedance2 inspector", () => {
           text_overlay: {
             enabled: true,
             kind: "speech_bubble",
-            content: "鹿镇北口",
-            placement: "画面下方居中",
-            timing: "全片持续",
-            style: "干净易读",
-            speaker: "陆辰_青年时期",
+            content: "North gate of Deer Town",
+            placement: "bottom center",
+            timing: "throughout the clip",
+            style: "clean and readable",
+            speaker: "Lu Chen_young_adult",
           },
         }),
       }),
@@ -1914,11 +1914,11 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(config.text_overlay).toMatchObject({
       enabled: false,
       kind: "speech_bubble",
-      content: "鹿镇北口",
-      placement: "画面下方居中",
-      timing: "全片持续",
-      style: "干净易读",
-      speaker: "陆辰_青年时期",
+      content: "North gate of Deer Town",
+      placement: "bottom center",
+      timing: "throughout the clip",
+      style: "clean and readable",
+      speaker: "Lu Chen_young_adult",
     });
   });
 
@@ -2034,11 +2034,11 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane();
 
     const guidance = screen.getByLabelText("AI writing guidance");
-    fireEvent.change(guidance, { target: { value: "保持 @" } });
+    fireEvent.change(guidance, { target: { value: "Keep @" } });
     expect(screen.getByText("Reference candidates")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "@图片1" }));
+    await user.click(screen.getByRole("button", { name: "@image1" }));
 
-    expect(guidance).toHaveValue("保持 @图片1 ");
+    expect(guidance).toHaveValue("Keep @image1 ");
   });
 
   it("inserts a dragged reference into the custom prompt field", () => {
@@ -2046,7 +2046,7 @@ describe("VideoPane Seedance2 inspector", () => {
     renderPane();
     expandSeedance2References();
     const audioTile = screen
-      .getByText("项目解说声线")
+      .getByText("Project narrator voice")
       .closest("[data-seedance2-reference-tile]");
     if (!audioTile) throw new Error("audio tile not found");
     const guidance = screen.getByLabelText("AI writing guidance");
@@ -2058,11 +2058,11 @@ describe("VideoPane Seedance2 inspector", () => {
       dropEffect: "",
     };
 
-    fireEvent.change(guidance, { target: { value: "声音参考：" } });
+    fireEvent.change(guidance, { target: { value: "Voice reference: " } });
     fireEvent.dragStart(audioTile, { dataTransfer });
     fireEvent.drop(guidance, { dataTransfer });
 
-    expect(guidance).toHaveValue("声音参考：@音频1 ");
+    expect(guidance).toHaveValue("Voice reference: @audio1 ");
   });
 
   it("places the AI optimize button in the main prompt input field", () => {
@@ -2104,11 +2104,11 @@ describe("VideoPane Seedance2 inspector", () => {
       makeBeat({
         narration_segment: "She raises her phone.",
         visual_description: "Ji-won walks through the subway corridor.",
-        video_prompt: "遗留中文提示词不应影响语言判断。",
+        video_prompt: "Legacy prompt text must not affect language detection.",
       }),
     );
     await act(async () => {
-      await i18n.changeLanguage("zh");
+      await i18n.changeLanguage("vi");
     });
 
     await user.click(screen.getByRole("button", { name: "Lens" }));
@@ -2133,7 +2133,7 @@ describe("VideoPane Seedance2 inspector", () => {
       "Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
     );
     await act(async () => {
-      await i18n.changeLanguage("zh");
+      await i18n.changeLanguage("vi");
     });
   });
 

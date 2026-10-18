@@ -132,17 +132,17 @@ async def test_video_edit_forwards_configured_independent_audio(
         {
             "type": "video",
             "path": "https://example.com/source.mp4",
-            "role": "视频编辑源",
+            "role": "video edit source",
         },
         {
             "type": "image",
             "path": "https://example.com/style.png",
-            "role": "图片参考",
+            "role": "image reference",
         },
         {
             "type": "audio",
             "path": "https://example.com/music.mp3",
-            "role": "配乐参考",
+            "role": "music reference",
         },
     ]
     assert captured["validated_audio_items"] == captured["start"]["reference_items"]
@@ -160,7 +160,7 @@ async def test_video_extend_uses_source_video_auto_ratio_and_requested_duration(
         "project",
         FreezoneVideoExtendRequest(
             video_url="https://example.com/source.mp4",
-            prompt="继续生成五秒，人物走出房门",
+            prompt="Continue for five seconds as the character walks out of the room",
             duration_seconds=7,
             model="catalog-video",
         ),
@@ -175,10 +175,10 @@ async def test_video_extend_uses_source_video_auto_ratio_and_requested_duration(
         {
             "type": "video",
             "path": "https://example.com/source.mp4",
-            "role": "视频延长源",
+            "role": "video extension source",
         }
     ]
-    assert "视频延长要求" in captured["start"]["prompt"]
+    assert "Video extension requirement" in captured["start"]["prompt"]
 
 
 @pytest.mark.asyncio
@@ -190,12 +190,12 @@ async def test_omni_video_forwards_document_reference(
     await freezone_routes.freezone_video_omni_gen(
         "project",
         FreezoneVideoOmniGenRequest(
-            prompt="根据产品说明生成广告",
+            prompt="Generate an ad from the product description",
             references=[
                 {
                     "type": "file",
                     "url": "https://example.com/product.PDF?download=1",
-                    "role": "产品说明",
+                    "role": "product description",
                 }
             ],
             model="catalog-video",
@@ -210,7 +210,7 @@ async def test_omni_video_forwards_document_reference(
         {
             "type": "file",
             "path": "https://example.com/product.PDF?download=1",
-            "role": "产品说明",
+            "role": "product description",
         }
     ]
 
@@ -224,12 +224,12 @@ async def test_omni_video_forwards_public_link_reference(
     await freezone_routes.freezone_video_omni_gen(
         "project",
         FreezoneVideoOmniGenRequest(
-            prompt="根据页面内容生成新闻短片",
+            prompt="Generate a news clip from the page content",
             references=[
                 {
                     "type": "link",
                     "url": "https://example.com/news/wan-3",
-                    "role": "网页参考",
+                    "role": "web page reference",
                 }
             ],
             model="catalog-video",
@@ -241,7 +241,7 @@ async def test_omni_video_forwards_public_link_reference(
         {
             "type": "link",
             "path": "https://example.com/news/wan-3",
-            "role": "网页参考",
+            "role": "web page reference",
         }
     ]
 
@@ -256,7 +256,7 @@ async def test_omni_video_rejects_file_and_link_together(
         await freezone_routes.freezone_video_omni_gen(
             "project",
             FreezoneVideoOmniGenRequest(
-                prompt="生成介绍视频",
+                prompt="Generate an intro video",
                 references=[
                     {"type": "file", "url": "https://example.com/brief.pdf"},
                     {"type": "link", "url": "https://example.com/brief"},
@@ -312,7 +312,7 @@ async def test_image_to_video_uses_one_reference_image_not_first_frame(
     assert captured["start"]["gen_mode"] == "image_reference"
     assert captured["start"]["requested_gen_mode"] == "imageToVideo"
     assert captured["start"]["reference_items"] == [
-        {"type": "image", "path": "https://example.com/ref.png", "role": "图片参考"}
+        {"type": "image", "path": "https://example.com/ref.png", "role": "image reference"}
     ]
 
 
@@ -511,7 +511,7 @@ async def test_keyframe_route_preserves_selected_mode_for_all_frame_combinations
     assert captured["start"]["duration_seconds"] == 5
     assert captured["start"]["last_frame_path"] == last_url
     first_items = [
-        item for item in captured["start"]["reference_items"] if item["role"] == "首帧"
+        item for item in captured["start"]["reference_items"] if item["role"] == "first frame"
     ]
     assert (first_items[0]["path"] if first_items else None) == expected_image_path
 

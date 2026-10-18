@@ -4,32 +4,32 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type AudioWaveformPlayerProps = {
   src: string;
-  /** 已知时长(毫秒),用于在波形解码完成前先渲染滑块范围。 */
+  /** Known duration (milliseconds), used to render the slider range before waveform decoding finishes. */
   durationMs?: number | null;
-  /** 元数据加载后回传真实时长(毫秒)。 */
+  /** Passes back the real duration (milliseconds) after metadata loads. */
   onLoadedDuration?: (ms: number) => void;
   /**
-   * 命令式暂停:变为 true 时停掉内部 `<audio>`(不回绕进度、不自动续播)。
-   * optional 且默认 undefined —— 不传 = 保持现状,工作流 AudioNode 侧零影响;
-   * 故事板详情用它在整体隐藏(保活)时把音频与视频一并停下。
+   * Imperative pause: when it becomes true, stop the internal `<audio>` (no rewinding of progress, no auto-resume).
+   * optional and defaults to undefined - not passing = keep the status quo, zero impact on the workflow AudioNode side;
+   * the storyboard detail uses it to stop audio and video together when the whole thing is hidden (kept-alive).
    */
   paused?: boolean;
   /**
-   * 播放态变化回调。播放态是本组件的内部 state,而画布的 LOD 换壳决策发生在
-   * 节点组件之外(withLodShell),读不到,所以要往外抛一份。卸载时保证补一次
-   * false,避免留下陈旧的「播放中」标记。
+   * Playback state change callback. The playback state is this component's internal state, while the canvas LOD shell-swap decision happens outside
+   * the node component (withLodShell) and cannot read it, so it has to be thrown outward. On unmount it is guaranteed to emit
+   * false once more, avoiding leaving a stale "playing" marker.
    */
   onPlayingChange?: (playing: boolean) => void;
 };
 
-// 模块级波形峰值缓存:同一 src 只解码一次。decodeAudioData 开销不小,
-// 且节点重渲染 / 重新挂载很频繁,缓存能避免重复拉取与解码。
-// 加 LRU 上限,防止画布里音频节点很多 / 长会话不断换素材时无界增长。
+// Module-level waveform peaks cache: the same src is decoded only once. decodeAudioData is not cheap,
+// and nodes re-render / remount very often, so the cache avoids repeated fetching and decoding.
+// With an LRU cap, preventing unbounded growth when the canvas has many audio nodes / long sessions keep swapping materials.
 const PEAKS_CACHE_MAX = 80;
 const peaksCache = new Map<string, Float32Array>();
 
 function cachePeaks(src: string, peaks: Float32Array): void {
-  // 命中即刷新到「最近使用」末尾。
+  // A hit refreshes it to the end of "most recently used".
   peaksCache.delete(src);
   peaksCache.set(src, peaks);
   while (peaksCache.size > PEAKS_CACHE_MAX) {
@@ -41,9 +41,9 @@ function cachePeaks(src: string, peaks: Float32Array): void {
 
 const ACCENT = 'rgb(56, 189, 248)';
 const TRACK = 'rgba(255, 255, 255, 0.22)';
-const PX_PER_SEC = 72; // 波形滚动缩放:每秒占用的像素宽度
-const BUCKETS_PER_SEC = 140; // 峰值采样密度
-const BAR_STEP = 3; // 相邻波形条的像素间距
+const PX_PER_SEC = 72; // Waveform scroll scale: pixel width per second
+const BUCKETS_PER_SEC = 140; // Peak sampling density
+const BAR_STEP = 3; // Pixel gap between adjacent waveform bars
 const BAR_WIDTH = 2;
 
 function formatTime(seconds: number): string {
@@ -56,7 +56,7 @@ function formatTime(seconds: number): string {
   return `${mm}:${ss}`;
 }
 
-/** 把解码后的音频降采样成 [0,1] 区间的峰值数组,用于绘制波形条。 */
+/** Downsample the decoded audio into an array of peaks in the [0,1] range, used to draw waveform bars. */
 function computePeaks(buffer: AudioBuffer): Float32Array {
   const channel = buffer.getChannelData(0);
   const bucketCount = Math.max(1, Math.ceil(buffer.duration * BUCKETS_PER_SEC));
@@ -74,7 +74,7 @@ function computePeaks(buffer: AudioBuffer): Float32Array {
     peaks[i] = peak;
     if (peak > max) max = peak;
   }
-  // 归一化,放大较安静的素材便于观看。
+  // Normalize, amplifying quieter material for easier viewing.
   if (max > 0) {
     for (let i = 0; i < peaks.length; i += 1) {
       peaks[i] = Math.min(1, peaks[i] / max);
@@ -103,10 +103,10 @@ export function AudioWaveformPlayer({
   const [peaksVersion, setPeaksVersion] = useState(0);
   const [hovered, setHovered] = useState(false);
 
-  // ---- 播放态外抛 ----------------------------------------------------------
-  // 回调走 ref:调用方常传内联箭头函数,直接进依赖会让下面的 effect 每次渲染
-  // 重跑,把卸载兜底的 false 误发出去。这个 effect 必须声明在下面那个之前,
-  // 同一次提交里 ref 才是新的。
+  // ---- Playback state outward emission ----------------------------------------------
+  // The callback goes through a ref: callers often pass inline arrow functions, and putting it directly in the dependencies would make the effect below rerun
+  // on every render, wrongly emitting the unmount fallback false. This effect must be declared before the one below,
+  // so the ref is fresh in the same commit.
   const onPlayingChangeRef = useRef(onPlayingChange);
   useEffect(() => {
     onPlayingChangeRef.current = onPlayingChange;
@@ -114,19 +114,19 @@ export function AudioWaveformPlayer({
   useEffect(() => {
     onPlayingChangeRef.current?.(isPlaying);
     if (!isPlaying) return;
-    // 播放中被卸载(视口裁剪 / LOD 换壳)时 <audio> 不会派发 pause 事件,
-    // 这里补一次 false,否则外部会留下永久的「播放中」标记。
+    // Unmounted while playing (viewport culling / LOD shell swap): <audio> does not dispatch a pause event,
+    // so emit false once here, otherwise the outside is left with a permanent "playing" marker.
     return () => {
       onPlayingChangeRef.current?.(false);
     };
   }, [isPlaying]);
 
-  // ---- 解码波形峰值 --------------------------------------------------------
+  // ---- Decode waveform peaks --------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
     const cached = peaksCache.get(src);
     if (cached) {
-      cachePeaks(src, cached); // 刷新到最近使用,避免热素材被 LRU 误淘汰
+      cachePeaks(src, cached); // Refresh to most recently used, so a hot asset is not wrongly evicted by the LRU
       peaksRef.current = cached;
       setPeaksVersion((v) => v + 1);
       return;
@@ -152,7 +152,7 @@ export function AudioWaveformPlayer({
         }
         setPeaksVersion((v) => v + 1);
       } catch (err) {
-        // CORS / 不支持的容器等情况:留空波形,播放仍可用。
+        // CORS / unsupported containers etc.: leave the waveform blank, and playback still works.
         console.warn('[audio-waveform] decode failed', err);
       }
     })();
@@ -162,7 +162,7 @@ export function AudioWaveformPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
-  // ---- 播放进度驱动 --------------------------------------------------------
+  // ---- Playback progress driving ----------------------------------------------------
   useEffect(() => {
     if (!isPlaying) return;
     let raf = 0;
@@ -175,14 +175,14 @@ export function AudioWaveformPlayer({
     return () => cancelAnimationFrame(raf);
   }, [isPlaying]);
 
-  // ---- 命令式暂停(上层保活隐藏等) ------------------------------------------
-  // paused 变 true → 停内部 <audio>；<audio> 的 onPause 会把 isPlaying 归零。
-  // 不传(undefined)时此 effect 不产生任何动作,现有调用方行为不变。
+  // ---- Imperative pause (upper-layer kept-alive hiding etc.) ------------------------
+  // paused becomes true -> stop the internal <audio>; <audio>'s onPause zeroes isPlaying.
+  // When not passed (undefined) this effect does nothing, and existing callers' behavior is unchanged.
   useEffect(() => {
     if (paused) audioRef.current?.pause();
   }, [paused]);
 
-  // ---- 绘制波形 ------------------------------------------------------------
+  // ---- Draw the waveform ------------------------------------------------------------
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -221,7 +221,7 @@ export function AudioWaveformPlayer({
       ctx.fillStyle = x <= center ? ACCENT : TRACK;
       const radius = BAR_WIDTH / 2;
       const top = midY - h / 2;
-      // 圆角条
+      // Rounded bars
       ctx.beginPath();
       ctx.roundRect(x - BAR_WIDTH / 2, top, BAR_WIDTH, h, radius);
       ctx.fill();
@@ -241,7 +241,7 @@ export function AudioWaveformPlayer({
     return () => ro.disconnect();
   }, [draw]);
 
-  // ---- 播放控制 ------------------------------------------------------------
+  // ---- Playback controls ------------------------------------------------------------
   const togglePlay = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -274,7 +274,7 @@ export function AudioWaveformPlayer({
     [duration],
   );
 
-  // ---- 拖拽刷碟(以中心播放头为基准的相对滚动) ----------------------------
+  // ---- Drag scrub (relative scrolling based on the center playhead) ------------------
   const dragState = useRef<{ startX: number; startTime: number } | null>(null);
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -289,7 +289,7 @@ export function AudioWaveformPlayer({
     (event: React.PointerEvent<HTMLDivElement>) => {
       const state = dragState.current;
       if (!state) return;
-      // 向左拖 → 时间前进(波形向左滚动)。
+      // Drag left -> time advances (the waveform scrolls left).
       const deltaTime = (state.startX - event.clientX) / PX_PER_SEC;
       seekTo(state.startTime + deltaTime);
     },
@@ -328,9 +328,9 @@ export function AudioWaveformPlayer({
       />
 
       <div className="flex h-[76%] max-h-[168px] w-full flex-col justify-center">
-        {/* 波形刷碟区 */}
+        {/* Waveform scrub area */}
         <div className="relative flex h-[52%] min-h-[70px] max-h-[92px] w-full shrink-0 items-center justify-center">
-          {/* 左右边缘渐隐 */}
+          {/* Edge fade on the left and right */}
           <div
             className="pointer-events-none absolute inset-0 z-20"
             style={{
@@ -355,7 +355,7 @@ export function AudioWaveformPlayer({
           >
             <canvas ref={canvasRef} className="block h-full w-full" />
 
-            {/* 中心固定播放头 */}
+            {/* Fixed center playhead */}
             <div className="group/head pointer-events-none absolute inset-y-[10%] left-1/2 z-30 flex -translate-x-1/2 flex-col items-center px-1">
               <svg width="10" height="6" viewBox="0 0 10 6" className="shrink-0">
                 <path d="M0 0h10L5 6z" fill={ACCENT} />
@@ -383,7 +383,7 @@ export function AudioWaveformPlayer({
           </div>
         </div>
 
-        {/* 播放控制 */}
+        {/* Playback controls */}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 pt-3">
           <div className="flex items-center justify-center gap-6">
             <button

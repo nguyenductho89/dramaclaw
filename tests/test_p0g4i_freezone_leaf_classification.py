@@ -1,24 +1,24 @@
-"""freezone leaf 分发：判据是「是否出网」，不是「签名长什么样」。
+"""freezone leaf dispatch: the criterion is "does it go out to the network", not "what the signature looks like".
 
-`_call_freezone_leaf` 原先用 `inspect.signature` 判 leaf 是否接受
-`egress_context`，不接受且信封属组织即抛 `InvalidTaskEnvelope`。签名形状不是
-出网与否的证据，于是两个方向同时错：
+`_call_freezone_leaf` used to use `inspect.signature` to judge whether a leaf accepts
+`egress_context`, and raised `InvalidTaskEnvelope` when it did not and the envelope belonged to an organization. The signature shape is not
+evidence of egress or not, so it was wrong in both directions at once:
 
-- **误拦**：原有 5 个纯本地 ffmpeg leaf（`run_freezone_extract_frames` /
+- **False block**: the 5 original pure-local ffmpeg leaves (`run_freezone_extract_frames` /
   `run_freezone_video_upscale` / `run_freezone_video_compose` /
-  `run_freezone_video_erase` / `run_freezone_audio_separate`，均为
-  `egress-inventory.md:54` 的 EG-20a `service/local`，不出网、不取凭证）没有
-  该形参，组织成员一律撞 `invalid task envelope`——用户报的「上传视频接脚本
-  生成器、任务停在 ffmpeg 抽取关键帧」就是这条。
-- **漏放**：`VAR_KEYWORD` 被算作「接受 context」，`**kwargs` leaf 会被判合规，
-  context 被吞进 kwargs 袋子里静默失效。
+  `run_freezone_video_erase` / `run_freezone_audio_separate`, all EG-20a `service/local`
+  of `egress-inventory.md:54`, with no egress and no credentials) lacked
+  that parameter, so organization members always hit `invalid task envelope` -- the user-reported "upload a video into the script
+  generator, and the task stops at ffmpeg keyframe extraction" is exactly this.
+- **False pass**: `VAR_KEYWORD` was counted as "accepts the context", so a `**kwargs` leaf was judged compliant,
+  and the context was swallowed into the kwargs bag and silently lost.
 
-改法是分发器内一张显式表，键由**调用点**提供。不能用「函数对象 → 分类」：
-19 个调用点的 import 都在 runner 函数体内，测试 monkeypatch 后拿到的是假对象，
-模块级建的对象表必然查不中；`leaf.__name__` 同理。
+The fix is an explicit table inside the dispatcher, whose keys are supplied by the **call site**. "Function object -> classification" cannot be used:
+the imports of all 19 call sites are inside the runner function bodies, so after monkeypatching the test gets fake objects,
+and an object table built at module level would never hit; `leaf.__name__` is the same.
 
-未列入表的 leaf 在组织上下文下**照旧抛**——默认仍 fail-closed（OI-47 护栏 a，
-OI-32 已裁定同族 fail-closed 为有意设计）。
+A leaf not listed in the table is **still thrown** under an organization context -- the default is still fail-closed (OI-47 guardrail a,
+and OI-32 has ruled the same-family fail-closed to be intentional design).
 """
 
 from __future__ import annotations
@@ -40,8 +40,8 @@ from novelvideo.ports.model_credentials import CredentialReference
 from novelvideo.project_context import ProjectContext
 from novelvideo.task_backend.envelope import InvalidTaskEnvelope
 
-# `run_freezone_video_upscale` 已升级为网关模型流水线，因而从本地表迁到 NETWORK；
-# 它仍保留 task 级计费豁免，因为两个模型调用分别走模型额度，避免重复计费。
+# `run_freezone_video_upscale` has been upgraded to a gateway model pipeline, so it moved from the local table to NETWORK;
+# it still keeps the task-level billing exemption, because the two model calls each go through the model quota, to avoid double billing.
 AUDITED_LOCAL_LEAVES = frozenset(
     {
         "run_freezone_audio_separate",
@@ -123,11 +123,11 @@ async def test_local_ffmpeg_leaf_runs_under_an_organization_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """本地抽帧对组织必须放行——这条红的时候就是用户报的那个故障。
+    """Local frame extraction must be let through for organizations -- when this is red, it is exactly the failure the user reported.
 
-    假 leaf 刻意照抄真实签名（`jobs.py:1412` 无 `egress_context` 形参）。用带
-    `egress_context` 的假 leaf 测不出这个缺陷：既有 seam 用例正是那样写的，所以
-    它全绿而线上在拒人。
+    The fake leaf deliberately copies the real signature (`jobs.py:1412` has no `egress_context` parameter). A fake leaf with
+    `egress_context` cannot detect this defect: the existing seam cases were written that way, so
+    they are all green while production is rejecting people.
     """
 
     from novelvideo.task_backend.runners import freezone
@@ -176,15 +176,15 @@ async def test_unclassified_leaf_is_denied_under_an_organization_context(
     tmp_path: Path,
     leaf_shape: str,
 ) -> None:
-    """表外 leaf 照旧抛：默认 fail-closed 没有被历次改动放松（护栏 a）。
+    """A leaf outside the table is still thrown: the default fail-closed has not been loosened by successive changes (guardrail a).
 
-    样本刻意用一个**表里不存在的名字**直接打分发器，而不是借某个真实 leaf 的
-    DENIED 分类——借真实 leaf 时，那条 leaf 一旦被接上出网上下文改判 NETWORK
-    （OI-56 ① 就是），这条护栏用例会跟着失去覆盖。现在它只依赖「未分类」本身。
+    The sample deliberately uses a **name that does not exist in the table** and hits the dispatcher directly, rather than borrowing some real leaf's
+    DENIED classification -- when borrowing a real leaf, once that leaf is wired to the egress context and reclassified as NETWORK
+    (OI-56 item 1 is exactly that), this guardrail case would lose coverage along with it. Now it depends only on "unclassified" itself.
 
-    两种签名形状都必须拒。`var_keyword` 那条是原判据的漏洞所在：`inspect.signature`
-    把 `**kwargs` 算作「接受 context」，于是把一个未分类的出网 leaf 放行，context
-    被吞进袋子里静默失效。分类判据不看签名，两条同拒。
+    Both signature shapes must be rejected. The `var_keyword` one is where the original criterion leaked: `inspect.signature`
+    counts `**kwargs` as "accepts the context", so an unclassified egress leaf was let through, and the context
+    was swallowed into the bag and silently lost. The classification criterion does not look at the signature, and rejects both.
     """
 
     from novelvideo.task_backend.runners.freezone import (
@@ -227,12 +227,12 @@ async def test_mask_edit_leaf_receives_the_organization_egress_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """图像擦除对组织必须**到达** leaf，且 leaf 手里拿到的是组织身份（OI-56 ①）。
+    """Image erase must **reach** the leaf for organizations, and what the leaf holds must be the organization identity (OI-56 item 1).
 
-    它真出网（`jobs.py:190` 调 `generate_reference_edit_image`），此前因没有
-    `egress_context` 形参而被判 DENIED，组织下落 `_call_freezone_leaf` 兜底分支抛
-    `InvalidTaskEnvelope`。「到达」不够——断言必须落到 leaf 收到的 context 上，
-    否则等于复制 OI-48 那种「有形参没接住」的形状。
+    It really goes out to the network (`jobs.py:190` calls `generate_reference_edit_image`), and previously, with no
+    `egress_context` parameter, it was judged DENIED, and under an organization it fell to the `_call_freezone_leaf` fallback branch and threw
+    `InvalidTaskEnvelope`. "Reaching" is not enough -- the assertion must land on the context the leaf receives,
+    otherwise it replicates the shape of OI-48, "has the parameter but does not catch it".
     """
 
     from novelvideo.task_backend.runners import freezone
@@ -296,10 +296,10 @@ async def test_analyze_shots_leaf_receives_the_organization_egress_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
-    """Vision 分析对组织必须到达 leaf，且拿到组织身份（OI-56 ②）。
+    """Vision analysis must reach the leaf for organizations, and get the organization identity (OI-56 item 2).
 
-    它有两个入口：`freezone_analyze` 与 `freezone_video_story`，后者会先跑完
-    ffmpeg 抽帧再撞上拒绝——白烧一遍算力。
+    It has two entry points: `freezone_analyze` and `freezone_video_story`, and the latter runs through
+    ffmpeg frame extraction first and only then hits the rejection -- burning compute for nothing.
     """
 
     from novelvideo.task_backend.runners import freezone
@@ -352,9 +352,9 @@ async def test_analyze_shots_leaf_receives_the_organization_egress_context(
 
 
 def test_local_table_is_exactly_the_audited_leaves() -> None:
-    """本地表严格匹配当前仍不出网的 leaf（护栏 b）。
+    """The local table strictly matches the leaves that still do not go out to the network (guardrail b).
 
-    每一条都对到 EG-20a，且与 EE 计费豁免集 `feature_billing.py:389-399` 同源。
+    Every one maps to EG-20a and shares the same source as the EE billing exemption set `feature_billing.py:389-399`.
     """
 
     from novelvideo.task_backend.runners.freezone import (
@@ -373,9 +373,9 @@ def test_local_table_is_exactly_the_audited_leaves() -> None:
         FREEZONE_LEAF_EGRESS[name].eg_id == "EG-20a" for name in AUDITED_LOCAL_LEAVES
     )
 
-    # DENIED 桶同样锁死：它不是「待办清单」，往里塞新名字等于悄悄扩大拒绝面。
-    # OI-56 把最后两条（mask_edit / analyze_shots）接上出网上下文后，这个桶空了——
-    # 未分类的 leaf 照旧走 `_call_freezone_leaf` 的兜底拒绝，不需要在表里挂名字。
+    # The DENIED bucket is locked down too: it is not a "to-do list", and stuffing new names into it quietly widens the rejection surface.
+    # After OI-56 wired the last two (mask_edit / analyze_shots) to the egress context, this bucket became empty --
+    # unclassified leaves still go through the fallback rejection of `_call_freezone_leaf`, with no need to list names in the table.
     denied = {
         name
         for name, rule in FREEZONE_LEAF_EGRESS.items()
@@ -385,11 +385,11 @@ def test_local_table_is_exactly_the_audited_leaves() -> None:
 
 
 def test_every_rule_names_a_well_formed_atomic_eg_id() -> None:
-    """`eg_id` 必须长得像清单里的原子 ID，占位串一律不许过。
+    """`eg_id` must look like an atomic ID in the inventory, and placeholder strings are never allowed through.
 
-    `generate_freezone_audio_eleven_music` 曾挂着 `"EG-未登记"` 活过一整轮：唯一
-    断言到字面量的只有 5 个本地 leaf 的 `"EG-20a"`，别的写什么都没人管（OI-56 ③）。
-    这条只做形状校验——跨仓核对 EE `egress-inventory.md` 不是单测能干的事。
+    `generate_freezone_audio_eleven_music` once survived a whole round hanging a `"EG-unregistered"`: the only
+    assertion that hit a literal was the 5 local leaves' `"EG-20a"`, and nobody checked whatever else was written (OI-56 item 3).
+    This case only validates the shape -- cross-repo checking of the EE `egress-inventory.md` is not something a unit test can do.
     """
 
     import re
@@ -401,18 +401,18 @@ def test_every_rule_names_a_well_formed_atomic_eg_id() -> None:
         for name, rule in FREEZONE_LEAF_EGRESS.items()
         if not re.fullmatch(r"EG-\d+[a-z]?", rule.eg_id)
     }
-    assert not malformed, f"这些 eg_id 不是原子 ID：{malformed}"
+    assert not malformed, f"These eg_id values are not atomic IDs: {malformed}"
 
 
 def test_classification_matches_the_real_leaf_signatures() -> None:
-    """遍历**真实** leaf 对象断言其分类自洽——用假 leaf 挡不住同类回潮。
+    """Walk the **real** leaf objects and assert their classification is self-consistent -- fake leaves cannot stop the same kind of regression.
 
-    「声明 `egress_context`」与「判为 NETWORK」必须双向等价：NETWORK 不声明则
-    分发器塞不进去（TypeError）；LOCAL／DENIED 声明了则说明它其实会出网、分类错。
-    DENIED 一旦补上形参就该改判 NETWORK，这条会在那时逼人改表（OI-56 的出口）。
+    "Declares `egress_context`" and "classified as NETWORK" must be equivalent in both directions: a NETWORK leaf that does not declare it
+    cannot receive it from the dispatcher (TypeError); a LOCAL/DENIED leaf that declares it is actually going out to the network and is misclassified.
+    Once DENIED gets the parameter it should be reclassified as NETWORK, and this case will force a table edit then (the exit of OI-56).
 
-    `**kwargs` 一律不算数：吞进袋子里的 context 等于没传，这正是原判据
-    `VAR_KEYWORD` 分支的漏洞。
+    `**kwargs` never counts: a context swallowed into the bag is as good as not passed, which is exactly the leak
+    in the `VAR_KEYWORD` branch of the original criterion.
     """
 
     from novelvideo.task_backend.runners.freezone import (
@@ -430,19 +430,19 @@ def test_classification_matches_the_real_leaf_signatures() -> None:
             for parameter in parameters.values()
         )
 
-        assert not has_var_keyword, f"{rule.module}.{name} 用 **kwargs 吞掉了分类契约"
+        assert not has_var_keyword, f"{rule.module}.{name} swallows the classification contract with **kwargs"
         if rule.egress is LeafEgress.NETWORK:
-            assert declares_context, f"{rule.module}.{name} 判为出网却不收 egress_context"
+            assert declares_context, f"{rule.module}.{name} is classified as egress but does not accept egress_context"
         else:
             assert not declares_context, (
-                f"{rule.module}.{name} 判为 {rule.egress.value} 却收 egress_context"
+                f"{rule.module}.{name} is classified as {rule.egress.value} but accepts egress_context"
             )
 
 
 def test_every_dispatch_site_names_a_classified_leaf() -> None:
-    """20 个调用点逐个对到表里；新增未分类的调用点即红。
+    """The 20 call sites are matched into the table one by one; a new unclassified call site turns it red.
 
-    `leaf_name` 是必填位置参数，不是可选项——漏传是 `TypeError`，不是静默放行。
+    `leaf_name` is a required positional argument, not optional -- omitting it is a `TypeError`, not a silent pass.
     """
 
     from novelvideo.task_backend.runners import freezone
@@ -459,36 +459,36 @@ def test_every_dispatch_site_names_a_classified_leaf() -> None:
             continue
         if node.func.id != "_call_freezone_leaf":
             continue
-        assert len(node.args) >= 3, "调用点没有显式声明 leaf_name"
+        assert len(node.args) >= 3, "The call site does not explicitly declare leaf_name"
         leaf_name = node.args[2]
         assert isinstance(leaf_name, ast.Constant) and isinstance(
             leaf_name.value, str
-        ), "leaf_name 必须是字面量，间接取值等于没有分类"
+        ), "leaf_name must be a literal; indirect lookup is as good as no classification"
         named.append(leaf_name.value)
 
-    # 19 → 20：`origin/staging` 的 f33ac189（#279）带进来的
-    # `generate_freezone_text`，正是上一条用例点名预言的那个形状。
+    # 19 -> 20: `generate_freezone_text`, brought in by f33ac189 (#279) of `origin/staging`,
+    # is exactly the shape the previous case named in its prediction.
     assert len(named) == 20
     assert set(named) <= set(FREEZONE_LEAF_EGRESS)
 
 
-# `novelvideo.freezone.jobs` / `.text_node` 里唯二被 runner 直接调用的非 leaf：
-# `ensure_freezone_dirs`（`jobs.py:358-378`，只 mkdir）与 `bind_story_script_assets`
-# （`text_node.py:606-`，只回填 URL 字符串）。两个都不出网、不取凭证，逐个核过。
+# The only two non-leaf names in `novelvideo.freezone.jobs` / `.text_node` called directly by runners:
+# `ensure_freezone_dirs` (`jobs.py:358-378`, only mkdir) and `bind_story_script_assets`
+# (`text_node.py:606-`, only backfills URL strings). Neither goes out to the network or takes credentials, checked one by one.
 NON_LEAF_HELPERS = frozenset({"ensure_freezone_dirs", "bind_story_script_assets"})
 
 
 def test_no_leaf_module_import_reaches_the_network_around_the_dispatcher() -> None:
-    """凡从 leaf 所在模块引进来的名字，要么已分类、要么是核过的本地助手。
+    """Every name imported from a leaf's module is either classified or a checked local helper.
 
-    上一条用例数的是**调用点**，挡不住新 leaf 干脆不走分发器：直接
-    `from novelvideo.freezone.text_node import generate_freezone_text` 然后
-    `await generate_freezone_text(...)`，调用点计数纹丝不动，分类表也不必改，
-    而组织身份就这么绕过了闸门。`origin/staging` 的 `f33ac189`
-    （Freezone AI text generation, #279）正是这个形状，合并进来当天就会发生。
+    The previous case counted **call sites**, which cannot stop a new leaf from simply not going through the dispatcher: directly
+    `from novelvideo.freezone.text_node import generate_freezone_text` and then
+    `await generate_freezone_text(...)`, the call-site count does not move, the classification table needs no change,
+    and the organization identity bypasses the gate just like that. `f33ac189` of `origin/staging`
+    (Freezone AI text generation, #279) is exactly this shape, and would have happened the day it was merged.
 
-    判据不写死模块清单——leaf 所在模块由分类表自己的 `rule.module` 给出，表长
-    出新模块，覆盖面自动跟上。
+    The criterion does not hard-code the module list -- the leaf modules are given by the classification table's own `rule.module`, so as the table grows
+    new modules, the coverage follows automatically.
     """
 
     from novelvideo.task_backend.runners import freezone
@@ -509,10 +509,10 @@ def test_no_leaf_module_import_reaches_the_network_around_the_dispatcher() -> No
         if name not in FREEZONE_LEAF_EGRESS and name not in NON_LEAF_HELPERS
     }
     assert not unclassified, (
-        f"这些名字来自 leaf 模块却没有分类，组织身份到不了它们的出网点：{unclassified}"
+        f"These names come from leaf modules but have no classification, so the organization identity cannot reach their egress points: {unclassified}"
     )
 
-    # 已分类的 leaf 只许作为 `_call_freezone_leaf` 的实参出现，不许被直接调用。
+    # A classified leaf may only appear as an argument of `_call_freezone_leaf` and must not be called directly.
     called_directly = sorted(
         {
             node.func.id
@@ -522,17 +522,17 @@ def test_no_leaf_module_import_reaches_the_network_around_the_dispatcher() -> No
             and node.func.id in FREEZONE_LEAF_EGRESS
         }
     )
-    assert not called_directly, f"这些 leaf 绕过了分发器：{called_directly}"
+    assert not called_directly, f"These leaves bypass the dispatcher: {called_directly}"
 
 
 def test_organization_identity_reaches_the_image_egress_gate_through_the_scope() -> None:
-    """`convert_control_frame_to_sketch` 判为 NETWORK 的依据，必须由用例证实。
+    """The basis for classifying `convert_control_frame_to_sketch` as NETWORK must be confirmed by a case.
 
-    它补了 `egress_context` 形参，但**不**继续穿进 `generate_grid`——那是 39 个
-    参数的方法且无该形参，穿进去等于对整条内部链路做 OI-48 式扫荡（护栏 c）。
-    不需要穿：OI-48 已在 `run_core.py:695` 对所有 runner 派发做了中心绑定，而
-    `nanobanana_grid.py:128-137` 的组织闸门在显式参数为 None 时读作用域。这条钉
-    住那个前提；它若红，说明「不穿参数」的收窄不成立，得回头做显式下传。
+    It gained an `egress_context` parameter, but does **not** keep threading it into `generate_grid` -- that is a method with 39
+    parameters and no such parameter, and threading it in would amount to an OI-48-style sweep of the whole internal chain (guardrail c).
+    No threading is needed: OI-48 already did a central binding for all runner dispatch at `run_core.py:695`, and
+    the organization gate at `nanobanana_grid.py:128-137` reads the scope when the explicit argument is None. This case pins
+    that premise; if it goes red, the narrowing of "not threading the parameter" does not hold and explicit pass-down must be done.
     """
 
     import asyncio

@@ -41,7 +41,7 @@ describe("identity create query hook", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/identities",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/identities",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({

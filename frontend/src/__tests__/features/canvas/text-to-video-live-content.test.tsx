@@ -126,23 +126,23 @@ describe("text-to-video live content", () => {
     expect(videoNode).toBeDefined();
 
     const resolver = new DefaultGraphContentResolver();
-    useCanvasStore.getState().updateNodeData("text-1", { content: "第一版故事" });
+    useCanvasStore.getState().updateNodeData("text-1", { content: "First version of the story" });
     let state = useCanvasStore.getState();
     let inputs = resolver.collectInputContents(
       videoNode!.id,
       state.nodes,
       state.edges,
     );
-    expect(inputs.map((input) => input.text).filter(Boolean)).toEqual(["第一版故事"]);
+    expect(inputs.map((input) => input.text).filter(Boolean)).toEqual(["First version of the story"]);
 
-    useCanvasStore.getState().updateNodeData("text-1", { content: "修改后的故事" });
+    useCanvasStore.getState().updateNodeData("text-1", { content: "Revised story" });
     state = useCanvasStore.getState();
     inputs = resolver.collectInputContents(
       videoNode!.id,
       state.nodes,
       state.edges,
     );
-    expect(inputs.map((input) => input.text).filter(Boolean)).toEqual(["修改后的故事"]);
+    expect(inputs.map((input) => input.text).filter(Boolean)).toEqual(["Revised story"]);
     expect(videoNode?.data.prompt).toBe("");
   });
 });

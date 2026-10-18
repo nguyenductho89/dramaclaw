@@ -211,12 +211,12 @@ async def test_direct_instance_denies_organization_before_transport(
 
 
 def test_direct_backends_deny_organization_bound_only_by_request_scope() -> None:
-    """忘了穿 `egress_context=` 时，闸门要回落到请求作用域，而不是放行。
+    """When `egress_context=` is forgotten, the gate must fall back to the request scope instead of letting the call through.
 
-    上面两条既有用例都显式传参，所以它们证明不了「调用点漏传」这个形状。
-    而漏传恰恰是最可能发生的：这两族闸门（`_deny_direct_organization_video`
-    与 `_direct_video_context_denied`）的上下文都只从 kwargs 取，漏一个参数
-    就等于组织流量拿平台凭据直连上游、记到平台账上。
+    The two existing cases above both pass the argument explicitly, so they cannot prove the "call site forgot to pass it" shape.
+    Yet a forgotten argument is exactly the most likely failure: the context of both gate families (`_deny_direct_organization_video`
+    and `_direct_video_context_denied`) is taken only from kwargs, so one missing argument
+    means organization traffic reaches upstream directly with platform credentials and is billed to the platform account.
     """
     from novelvideo.generators.video_generator import (
         VideoEgressError,
@@ -238,7 +238,7 @@ def test_direct_backends_deny_organization_bound_only_by_request_scope() -> None
                     create_video_generator(backend, **kwargs)
                 assert exc_info.value.code == "ORG_EGRESS_DENIED", backend
 
-        # 反向对照：平台作用域不受影响，回落不得变成一律拒绝。
+        # Reverse control: the platform scope is unaffected; the fallback must not turn into a blanket denial.
         with model_gateway_request_scope(_context("platform")):
             assert create_video_generator(backend, **kwargs) is not None
         assert create_video_generator(backend, **kwargs) is not None
@@ -248,7 +248,7 @@ def test_direct_backends_deny_organization_bound_only_by_request_scope() -> None
 async def test_direct_instance_denies_organization_bound_only_by_request_scope(
     tmp_path: Path,
 ) -> None:
-    """实例侧同理：`generate()` 漏传 `egress_context=` 也必须被作用域拦下。"""
+    """Same on the instance side: a `generate()` that forgets `egress_context=` must also be stopped by the scope."""
     from novelvideo.generators.video_generator import (
         SeedanceVideoGenerator,
         VideoEgressError,

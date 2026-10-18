@@ -1,34 +1,34 @@
-"""只允许具备共享存储语义的画布路由撤掉 home node 守卫。
+"""Only canvas routes with shared-storage semantics may drop the home node guard.
 
-方案文档（`B2-canvas-placement-free.md` §6.4 步 11）的原话是「撤掉
-`api/routes/freezone.py:326` 的 home node 守卫」。**照字面删是错的**，
-`TCP-P60` 已把范围收窄成「按调用点逐个撤」，理由本文件用可执行的形式钉住：
+The plan document (`B2-canvas-placement-free.md` Section 6.4 step 11) says, in its own words, "remove
+the home node guard at `api/routes/freezone.py:326`". **Deleting it literally is wrong**:
+`TCP-P60` already narrowed the scope to "remove it call site by call site", and this file pins the reasoning down in executable form:
 
-- 那一行（集成线上已漂到 `:331`，在 `_resolve_freezone_project` 内）
-  **不是画布路由的守卫，是 freezone 全部路由的守卫** —— 本文件
-  `test_only_canvas_routes_opt_out_of_the_home_node_guard` 现场点数：
-  `@router.` 当前共 99 条，其中 `tags=[TAG_FREEZONE_CANVAS]` 只有 25 条。
-- 删那一行 ＝ 一次性放开另外 74 条读写 `Path(ctx.output_dir)` 本地项目文件、
-  **既没有租约也没有共享存储交代**的路由，与 §6.3 的「逐个撤、不批量撤」直接冲突。
+- That line (it has drifted to `:331` on the integration line, inside `_resolve_freezone_project`)
+  **is not the guard of the canvas routes, it is the guard of all freezone routes** -- this file's
+  `test_only_canvas_routes_opt_out_of_the_home_node_guard` counts on the spot:
+  `@router.` currently appears 99 times, of which `tags=[TAG_FREEZONE_CANVAS]` is only 25.
+- Deleting that line = opening up, in one go, the other 74 routes that read and write local project files via `Path(ctx.output_dir)` with
+  **neither a lease nor a shared-storage handoff**, which directly conflicts with Section 6.3's "remove one by one, never in bulk".
 
-故落地形态是给 `_resolve_freezone_project` 加一个**带默认值 `True` 的关键字参数**
-`require_home_node`（形制照它自己签名里已有的 `*, required_role: str = "editor"`），
-只在明确白名单中的 placement-free 画布路由调用点显式传 `False`。仍写入项目本地
-SQLite 的 workflow draft/run 路由不在白名单中，必须保留默认 Home Node 守卫。
+So the landing form is to add to `_resolve_freezone_project` a **keyword argument `require_home_node` with default `True`**
+(patterned on the `*, required_role: str = "editor"` already in its own signature),
+passing `False` explicitly only at the call sites of placement-free canvas routes in the explicit allowlist. Workflow draft/run routes that still write the project-local
+SQLite are not in the allowlist and must keep the default Home Node guard.
 
-四条用例分工：
+Division of labor among the four cases:
 
-1. `test_default_still_rejects_a_non_home_node_project` —— 不传新参数时行为逐字不变
-   （错误体照 `tests/test_project_context.py:35` 的既有断言口径）。
+1. `test_default_still_rejects_a_non_home_node_project` -- behavior is unchanged to the letter when the new argument is not passed
+   (the error body follows the existing assertion convention in `tests/test_project_context.py:35`).
 2. `test_canvas_read_route_passes_the_home_node_guard` /
-   `test_canvas_write_route_passes_the_home_node_guard` —— 白名单里挑读写各一条，
-   在非 home node 上**过得了这道守卫**。只断言这一件：真正落盘还依赖共享存储，
-   那是 `dispatch-and-branching.md` §11 第 4 行的交接项，不在本 EU 内。
-3. `test_non_canvas_freezone_routes_are_still_blocked_on_a_non_home_node` ——
-   另外 76 条挑 3 条，**仍然被拦**且错误体逐字相同。
-4. `test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard` —— AST 静态护栏
-   （双向）：传 `require_home_node=False` 的调用点必须且只能位于明确白名单。
-   形制照同目录 `tests/test_freezone_canvas_route_to_thread.py:180` 的 AST 不变量。
+   `test_canvas_write_route_passes_the_home_node_guard` -- pick one read and one write from the allowlist,
+   which **get past this guard** on a non-home node. Only this one thing is asserted: actually writing to disk still depends on shared storage,
+   which is a handoff item in row 4 of Section 11 of `dispatch-and-branching.md`, outside this EU.
+3. `test_non_canvas_freezone_routes_are_still_blocked_on_a_non_home_node` --
+   Of the other 76, pick 3, which are **still blocked** with the identical error body.
+4. `test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard` -- an AST static guardrail
+   (two-way): call sites passing `require_home_node=False` must be, and may only be, in the explicit allowlist.
+   Patterned on the AST invariant of `tests/test_freezone_canvas_route_to_thread.py:180` in the same directory.
 """
 
 from __future__ import annotations
@@ -45,16 +45,16 @@ from novelvideo.project_context import ProjectContext
 
 ROUTES_SOURCE = Path("src/novelvideo/api/routes/freezone.py")
 
-# 守卫的错误体真源：`project_context.py:50-58`。
+# Source of truth for the guard's error body: `project_context.py:50-58`.
 HOME_NODE_REJECTION_CODE = "project_not_on_this_node"
-# `_resolve_freezone_project` 传给守卫的字面量，别的用例可能在断言它。
+# The literal `_resolve_freezone_project` passes to the guard; other cases may be asserting on it.
 FREEZONE_OPERATION = "access freezone project files"
 
 USER = {"id": "owner_1", "username": "admin"}
 
 
 def _remote_ctx(tmp_path: Path) -> ProjectContext:
-    """一个「项目不在本节点」的上下文，形状照 `test_freezone_canvas_route_to_thread.py:48`。"""
+    """A context of "project not on this node", shaped after `test_freezone_canvas_route_to_thread.py:48`."""
 
     return ProjectContext(
         project_id="proj_freezone",
@@ -75,7 +75,7 @@ def _remote_ctx(tmp_path: Path) -> ProjectContext:
 
 
 def _patch_remote_project(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ProjectContext:
-    """只打桩控制面解析，**真守卫原样留在链路里**（这正是被测对象）。"""
+    """Stub only the control-plane resolution, **leaving the real guard in the chain as is** (this is exactly what is under test)."""
 
     ctx = _remote_ctx(tmp_path)
     ctx.output_dir.mkdir(parents=True, exist_ok=True)
@@ -101,14 +101,14 @@ def _assert_home_node_rejection(exc: HTTPException, ctx: ProjectContext) -> None
 def _assert_not_a_home_node_rejection(exc: BaseException | None) -> None:
     if isinstance(exc, HTTPException) and isinstance(exc.detail, dict):
         assert exc.detail.get("code") != HOME_NODE_REJECTION_CODE, (
-            "画布路由仍然被 home node 守卫拦住了"
+            "The canvas route is still blocked by the home node guard"
         )
 
 
 async def test_default_still_rejects_a_non_home_node_project(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """不传新参数 ＝ 今天的行为，逐字不变（76 条非画布路由靠这个默认值不改一行）。"""
+    """Not passing the new argument = today's behavior, unchanged to the letter (the 76 non-canvas routes rely on this default without changing a line)."""
 
     ctx = _patch_remote_project(monkeypatch, tmp_path)
 
@@ -121,7 +121,7 @@ async def test_default_still_rejects_a_non_home_node_project(
 async def test_canvas_read_route_passes_the_home_node_guard(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`get_canvas`（`:11537`）在非 home node 上不再被守卫拦。"""
+    """`get_canvas` (`:11537`) is no longer blocked by the guard on a non-home node."""
 
     _patch_remote_project(monkeypatch, tmp_path)
 
@@ -131,7 +131,7 @@ async def test_canvas_read_route_passes_the_home_node_guard(
             canvas_id="never_written",
             user=USER,
         )
-    except HTTPException as exc:  # pragma: no cover - 只在回潮时走到
+    except HTTPException as exc:  # pragma: no cover - only reached on regression
         _assert_not_a_home_node_rejection(exc)
         raise
 
@@ -139,9 +139,9 @@ async def test_canvas_read_route_passes_the_home_node_guard(
 async def test_canvas_write_route_passes_the_home_node_guard(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`put_canvas`（`:11775`）在非 home node 上不再被守卫拦。
+    """`put_canvas` (`:11775`) is no longer blocked by the guard on a non-home node.
 
-    只断言过得了守卫这一件事 —— 落盘本身还依赖共享存储（交接项）。
+    Only the one thing of getting past the guard is asserted -- writing to disk itself still depends on shared storage (a handoff item).
     """
 
     _patch_remote_project(monkeypatch, tmp_path)
@@ -153,7 +153,7 @@ async def test_canvas_write_route_passes_the_home_node_guard(
             body=CanvasPayload(nodes=[{"id": "n1"}], edges=[], metadata={}),
             user=USER,
         )
-    except HTTPException as exc:  # pragma: no cover - 只在回潮时走到
+    except HTTPException as exc:  # pragma: no cover - only reached on regression
         _assert_not_a_home_node_rejection(exc)
         raise
 
@@ -185,7 +185,7 @@ async def test_workflow_run_route_remains_home_node_bound(
 async def test_non_canvas_freezone_routes_are_still_blocked_on_a_non_home_node(
     handler_name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """另外 76 条一行不改：仍然被拦，错误体逐字相同。"""
+    """The other 76 change not a line: still blocked, with the identical error body."""
 
     ctx = _patch_remote_project(monkeypatch, tmp_path)
     handler = getattr(freezone_routes, handler_name)
@@ -248,7 +248,7 @@ PLACEMENT_FREE_CANVAS_ROUTES = {
 
 
 def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> None:
-    """双向棘轮：opt-out 只许出现在明确的 placement-free 白名单中。"""
+    """Two-way ratchet: opt-out may only appear in the explicit placement-free allowlist."""
 
     tree = ast.parse(ROUTES_SOURCE.read_text(encoding="utf-8"), filename=str(ROUTES_SOURCE))
 
@@ -275,7 +275,7 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
             opt_outs_inside_routes.update(call for call in resolver_calls if _opts_out_of_the_guard(call))
         else:
             assert [call.lineno for call in resolver_calls if _opts_out_of_the_guard(call)] == [], (
-                f"非画布路由 {node.name} 传了 require_home_node=False"
+                f"Non-canvas route {node.name} passed require_home_node=False"
             )
 
     all_opt_outs = {
@@ -287,8 +287,8 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
         and _opts_out_of_the_guard(call)
     }
 
-    # 合并后新增 video-extend、upscale/quote、upscale/probe 三条非画布路由。
-    # 画布路由数保持 staging 的 31 条，home-node opt-out 白名单仍逐项检查。
+    # After the merge, three non-canvas routes were added: video-extend, upscale/quote and upscale/probe.
+    # The number of canvas routes stays at staging's 31, and the home-node opt-out allowlist is still checked item by item.
     assert router_decorators == 113
     assert len(canvas_routes) == 31
 
@@ -297,7 +297,7 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
     assert canvas_routes["cancel_canvas_workflow_draft"]
     assert not any(_opts_out_of_the_guard(call) for call in canvas_routes["cancel_canvas_workflow_draft"])
 
-    # 正向：白名单路由必须全部、且每一处调用都 opt-out。
+    # Forward: allowlisted routes must all opt out, at every call site.
     missing = {
         name: [call.lineno for call in calls if not _opts_out_of_the_guard(call)]
         for name, calls in canvas_routes.items()
@@ -306,7 +306,7 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
     }
     assert missing == {}
 
-    # 仍落项目本地 SQLite 的画布路由不得 opt-out。
+    # Canvas routes that still write the project-local SQLite must not opt out.
     unexpected = {
         name: [call.lineno for call in calls if _opts_out_of_the_guard(call)]
         for name, calls in canvas_routes.items()
@@ -315,7 +315,7 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
     }
     assert unexpected == {}
 
-    # 反向：全文件的 opt-out 一个都不许落在画布路由之外（含模块级 helper）。
+    # Reverse: not a single opt-out in the whole file may fall outside canvas routes (including module-level helpers).
     assert {call.lineno for call in all_opt_outs} == {
         call.lineno for call in opt_outs_inside_routes
     }

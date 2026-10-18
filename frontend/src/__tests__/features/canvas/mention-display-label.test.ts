@@ -5,20 +5,20 @@ import { describe, expect, it } from "vitest";
 import { mentionDisplayLabel } from "@/features/canvas/nodes/PromptMentionEditor";
 
 describe("mentionDisplayLabel", () => {
-  it("strips the trailing number so 图片1/图片2/... all show as 图片", () => {
-    expect(mentionDisplayLabel("图片1")).toBe("图片");
-    expect(mentionDisplayLabel("图片2")).toBe("图片");
-    expect(mentionDisplayLabel("图片10")).toBe("图片");
+  it("strips the trailing number so image1/image2/... all show as image", () => {
+    expect(mentionDisplayLabel("image1")).toBe("image");
+    expect(mentionDisplayLabel("image2")).toBe("image");
+    expect(mentionDisplayLabel("image10")).toBe("image");
   });
 
   it("does the same for audio mentions", () => {
-    expect(mentionDisplayLabel("音频1")).toBe("音频");
-    expect(mentionDisplayLabel("音频3")).toBe("音频");
+    expect(mentionDisplayLabel("audio1")).toBe("audio");
+    expect(mentionDisplayLabel("audio3")).toBe("audio");
   });
 
   it("leaves names without a trailing number unchanged", () => {
-    expect(mentionDisplayLabel("图片")).toBe("图片");
-    expect(mentionDisplayLabel("音频")).toBe("音频");
+    expect(mentionDisplayLabel("image")).toBe("image");
+    expect(mentionDisplayLabel("audio")).toBe("audio");
   });
 
   it("falls back to the original name when stripping would empty it", () => {

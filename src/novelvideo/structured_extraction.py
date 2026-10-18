@@ -98,7 +98,7 @@ _POSSESSIVE_PREFIX_RE = re.compile(r"^(?:your|my|his|her|their|our|its)\s+", re.
 _ALIAS_NAME = r"[^\W\d_][\w'’.-]*(?:\s+[^\W\d_][\w'’.-]*){0,3}"
 _ALIAS_PATTERNS = [
     re.compile(
-        rf"(?P<a>{_ALIAS_NAME})\s*,?\s*(?i:also known as|a\.k\.a\.|aka|better known as|formerly known as|"
+        rf"(?P<a>{_ALIAS_NAME})\s*,?\s*(?:(?:is|was|are)\s+)?(?i:also known as|a\.k\.a\.|aka|better known as|formerly known as|"
         rf"real name is|whose real name is|nicknamed|also called|còn gọi là|còn có tên là|tên thật là|"
         rf"bí danh là|biệt danh là|hay gọi là)\s+(?P<b>{_ALIAS_NAME})"
     ),

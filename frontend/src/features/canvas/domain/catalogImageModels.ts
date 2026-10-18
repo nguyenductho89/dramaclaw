@@ -2,20 +2,20 @@
 // Copyright (c) 2026 ClaymoreLab
 
 /**
- * 把后台「媒体模型」下发的图片模型目录，适配成画布旧节点（分镜 / 图片编辑）
- * 与 `ModelParamsControls` 使用的 `ImageModelDefinition` 形状。
+ * Adapt the image model catalog delivered by the backend "media models" to the shape of `ImageModelDefinition` used by the old canvas nodes
+ * (storyboard / image edit) and `ModelParamsControls`.
  *
- * 这两个节点原本读的是 `features/canvas/models` 里的静态注册表，模型清单、
- * 分辨率、画面比例、额外参数全写死在前端。现在这些都改由目录下发：
- * - 清单 → `useFreezoneImageModels()`（失败时回退到 ProviderModelPicker 的兜底列表）
- * - 分辨率 / 比例 → 条目的 resolutionOptions / ratioOptions（见 mediaModelOptions）
- * - 额外参数 → 条目 request.parameters 的控件声明
+ * These two nodes used to read the static registry in `features/canvas/models`, with the model list,
+ * resolutions, aspect ratios and extra parameters all hard-coded in the frontend. Now these are all delivered by the catalog:
+ * - list -> `useFreezoneImageModels()` (falls back to ProviderModelPicker's fallback list on failure)
+ * - resolution / ratio -> the entry's resolutionOptions / ratioOptions (see mediaModelOptions)
+ * - extra parameters -> the control declarations in the entry's request.parameters
  */
 
 import { useMemo } from 'react';
-// 这里取的是 i18next 默认实例（`@/i18n` 初始化的就是它）。不 import `@/i18n`
-// 本身，是因为那个模块会顺带拉进 react-i18next / HttpBackend，把它塞进这条被
-// 到处 import 的底层链路上，会让所有 mock 掉 react-i18next 的测试在 import 期炸掉。
+// This uses the default i18next instance (the one `@/i18n` initializes). `@/i18n` itself is not imported,
+// because that module also pulls in react-i18next / HttpBackend, and putting it on this widely imported low-level chain
+// would make every test that mocks react-i18next blow up at import time.
 import i18n from 'i18next';
 
 import type { MediaModelRequestSchema } from '@/api/ops';
@@ -33,10 +33,10 @@ import {
 } from '@/features/canvas/domain/mediaModelOptions';
 
 /**
- * 适配所需的目录条目字段。
+ * Catalog entry fields needed for adaptation.
  *
- * 用结构类型而不是直接引 `FreezoneImageModelInfo`，是因为兜底列表 `ModelOption`
- * 的 providerId 比目录的 `FreezoneProvider` 更宽（含视频供应商），两者都要能进来。
+ * A structural type is used instead of directly referencing `FreezoneImageModelInfo`, because the fallback list `ModelOption`
+ * has a providerId wider than the catalog's `FreezoneProvider` (including video providers), and both must be accepted.
  */
 export interface CatalogImageModelEntry {
   id: string;
@@ -49,10 +49,10 @@ export interface CatalogImageModelEntry {
   request?: MediaModelRequestSchema;
 }
 
-/** 目录没给分辨率时，节点默认想要的档位（仍需落在实际可选档位里）。 */
+/** The resolution tier a node wants by default when the catalog gives none (it must still fall within the actually selectable tiers). */
 const PREFERRED_DEFAULT_RESOLUTION = '2k';
 
-/** 把一条目录条目适配成节点用的 `ImageModelDefinition`。 */
+/** Adapt one catalog entry into the `ImageModelDefinition` used by nodes. */
 export function toImageModelDefinition(
   info: CatalogImageModelEntry,
 ): ImageModelDefinition {
@@ -64,9 +64,9 @@ export function toImageModelDefinition(
     value,
     label: value,
   }));
-  // 目录参数原样带给 `MediaModelParameterChip`，不再翻译成静态注册表的
-  // `extraParamsSchema`（见 ImageModelDefinition.requestParameters 的注释：那次翻译
-  // 会把 multiselect 拍成单选、把数字/布尔选项拍成字符串，而且值最后根本没提交）。
+  // Catalog parameters are passed as is to `MediaModelParameterChip`, no longer translated into the static registry's
+  // `extraParamsSchema` (see the note on ImageModelDefinition.requestParameters: that translation
+  // flattened multiselect into single select, flattened numeric/boolean options into strings, and the values were in the end not even submitted).
   const parameters = info.request?.parameters ?? [];
 
   return {
@@ -87,12 +87,11 @@ export function toImageModelDefinition(
     resolutions,
     ...(parameters.length > 0 ? { requestParameters: parameters } : {}),
     resolveRequest: ({ referenceImageCount }) => ({
-      // 必须带上 provider 前缀：`freezoneAiGateway.splitProviderModel` 按**第一个**
-      // `/` 拆 provider/model。只给裸 apiModel 的话，`huimeng_gpt_image2` 这类无斜杠
-      // 的会丢掉 provider（回落到后端 env），而 OpenRouter 那种自带命名空间的
-      // `google/gemini-2.5-flash-image-preview` 更会被截成 `gemini-...`，与目录里
-      // 配置的模型对不上，后端 `_catalog_image_execution_selection` 直接 400。
-      // 加前缀后拆出来正是 (openrouter, google/gemini-2.5-flash-image-preview)。
+      // The provider prefix must be included: `freezoneAiGateway.splitProviderModel` splits provider/model at the **first**
+      // `/`. With a bare apiModel, ones without a slash such as `huimeng_gpt_image2` would lose the provider (falling back to the backend env), and ones with their own namespace like OpenRouter's
+      // `google/gemini-2.5-flash-image-preview` would be cut into `gemini-...`, which does not match the model
+      // configured in the catalog, and the backend `_catalog_image_execution_selection` returns 400 outright.
+      // With the prefix added, what is split out is exactly (openrouter, google/gemini-2.5-flash-image-preview).
       requestModel: `${info.providerId}/${info.apiModel}`,
       modeLabel: i18n.t(
         referenceImageCount > 0
@@ -104,24 +103,24 @@ export function toImageModelDefinition(
 }
 
 export interface CatalogImageModels {
-  /** 目录里的全部图片模型，已适配成 `ImageModelDefinition`。权威空目录时为空数组。 */
+  /** All image models in the catalog, already adapted to `ImageModelDefinition`. An empty array for an authoritative empty catalog. */
   models: ImageModelDefinition[];
   /**
-   * 按节点上存的 model id 取模型。
+   * Get a model by the model id stored on the node.
    *
-   * 兜底链：精确 id → 历史 id 别名 → apiModel 同名 → 目录首个模型。节点上可能
-   * 存着后台已经下线的模型，这时落回第一个可用模型而不是崩掉。
+   * Fallback chain: exact id -> historical id alias -> same-named apiModel -> first catalog model. The node may
+   * store a model the backend has taken offline, in which case it falls back to the first available model rather than crashing.
    *
-   * 权威空目录（`isEmpty`）时返回 undefined —— 没有任何模型可选是一个必须让调用方
-   * 看见的状态，不能拿兜底模型把它盖掉。
+   * For an authoritative empty catalog (`isEmpty`) return undefined - having no model to choose is a state the caller must
+   * see, and it must not be covered up with a fallback model.
    */
   getModel: (modelId: string | null | undefined) => ImageModelDefinition | undefined;
-  /** 目录还在路上。此时 `models` 是兜底列表，别拿它做「有没有模型」的判断。 */
+  /** The catalog is on its way. At this point `models` is the fallback list, and do not use it to judge "whether there are models". */
   isLoading: boolean;
   /**
-   * 后台**确实**一个图片模型都没配（接口成功返回空列表），不是拉取失败兜底。
-   * 为 true 时必须禁用提交：后端 `_resolve_catalog_request` 对空目录直接 409，
-   * 让用户挑一个前端硬编码的模型再收一个报错，是最糟的体验。
+   * The backend **really** has not configured a single image model (the endpoint succeeded and returned an empty list), not a fetch-failure fallback.
+   * When true, submission must be disabled: the backend `_resolve_catalog_request` returns 409 straight away for an empty catalog,
+   * and letting the user pick a frontend hard-coded model only to receive an error is the worst experience.
    */
   isEmpty: boolean;
 }
@@ -129,13 +128,13 @@ export interface CatalogImageModels {
 export function useCatalogImageModels(): CatalogImageModels {
   const { models: catalog, isLoading, isFallback } = useFreezoneImageModels();
   return useMemo(() => {
-    // 「拉取失败」和「后台就是没配」必须分开：
-    // - 失败（isFallback）→ `useFreezoneImageModels` 已经把 SHARED_MODELS 塞进来了，
-    //   catalog 非空，照常用，用户还能继续干活；
-    // - 加载中 → 同上，先用兜底撑住，别闪一下「无可用模型」；
-    // - 成功但返回空（isFallback=false 且非加载中）→ 这是后台的**权威答案**。
-    //   此前这里无条件回落到 SHARED_MODELS，等于把「没配模型」伪装成「有模型」，
-    //   用户选中一个前端硬编码的模型、点生成，才被后端 409 顶回来。
+    // "Fetch failed" and "the backend simply has not configured" must be kept apart:
+    // - failure (isFallback) -> `useFreezoneImageModels` has already put SHARED_MODELS in,
+    //   the catalog is non-empty, use it as usual, and the user can keep working;
+    // - loading -> same as above, prop up with the fallback first, do not flash "no available models";
+    // - success but empty (isFallback=false and not loading) -> this is the backend's **authoritative answer**.
+    //   Previously this fell back to SHARED_MODELS unconditionally, disguising "no model configured" as "models exist",
+    //   and the user picked a frontend hard-coded model, clicked generate, and was only then bounced back by the backend with 409.
     const isEmpty = isAuthoritativeEmptyCatalog({
       models: catalog,
       isLoading,
@@ -165,11 +164,11 @@ export function useCatalogImageModels(): CatalogImageModels {
 }
 
 /**
- * 权威空目录下给节点撑场面的占位定义。
+ * A placeholder definition to prop up nodes under an authoritative empty catalog.
  *
- * 只为让比例 / 分辨率这些选择器有东西可读，**绝不可用于提交** —— 提交路径由
- * `isEmpty` 拦死。故意不复用 `SHARED_MODELS[0]`：拿一个真模型名当占位，用户会
- * 以为它可用，正是这次要修掉的那种误导。
+ * Only so that selectors such as ratio / resolution have something to read, **never to be used for submission** - the submission path is
+ * blocked dead by `isEmpty`. Deliberately not reusing `SHARED_MODELS[0]`: putting a real model name as a placeholder would make the user
+ * think it is usable, exactly the kind of misleading this fix removes.
  */
 export const EMPTY_CATALOG_IMAGE_MODEL: ImageModelDefinition = toImageModelDefinition({
   id: '',

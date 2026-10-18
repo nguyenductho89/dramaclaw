@@ -21,20 +21,20 @@ def per_scene_enrichment(monkeypatch):
     )
 
 
-def test_normalize_time_of_day_maps_classical_terms_to_closed_choices():
-    assert normalize_time_of_day("亥时") == "夜晚"
-    assert normalize_time_of_day("三更") == "夜晚"
-    assert normalize_time_of_day("深夜") == "夜晚"
-    assert normalize_time_of_day("凌晨") == "夜晚"
-    assert normalize_time_of_day("拂晓") == "清晨"
-    assert normalize_time_of_day("午时") == "正午"
-    assert normalize_time_of_day("日") == "白天"
-    assert normalize_time_of_day("白天") == "白天"
+def test_normalize_time_of_day_maps_aliases_to_closed_choices():
+    assert normalize_time_of_day("midnight") == "night"
+    assert normalize_time_of_day("late night") == "night"
+    assert normalize_time_of_day("daybreak") == "dawn"
+    assert normalize_time_of_day("midday") == "noon"
+    assert normalize_time_of_day("evening") == "dusk"
+    assert normalize_time_of_day("daytime") == "day"
+    assert normalize_time_of_day("day") == "day"
+    assert normalize_time_of_day("buổi sáng") == "morning"
 
 
 def test_time_of_day_agent_outputs_expose_closed_enum_schema():
 
-    expected = ["无", "清晨", "上午", "正午", "午后", "白天", "黄昏", "夜晚"]
+    expected = ["none", "dawn", "morning", "noon", "afternoon", "day", "dusk", "night"]
 
     block_schema = NormalizedSceneBlock.model_json_schema()["properties"]["time_of_day"]
 
@@ -46,10 +46,10 @@ def test_time_of_day_agent_no_value_round_trips_to_internal_empty_string():
     block = NormalizedSceneBlock(
         episode_number=3,
         scene_no="1",
-        raw_header="3-1、凤鸣皇城·苏鸾寝殿 无 无",
-        location="凤鸣皇城·苏鸾寝殿",
-        time_of_day="无",
-        interior_exterior="无",
+        raw_header="3-1 Phoenix City Bedchamber none none",
+        location="Phoenix City Bedchamber",
+        time_of_day="none",
+        interior_exterior="none",
         characters=[],
         aliases=[],
         scene_type="interior",
@@ -65,81 +65,74 @@ def test_time_of_day_agent_outputs_normalize_before_literal_validation():
     block = NormalizedSceneBlock(
         episode_number=3,
         scene_no="1",
-        raw_header="3-1、凤鸣皇城·苏鸾寝殿 亥时 内",
-        location="凤鸣皇城·苏鸾寝殿",
-        time_of_day="亥时",
-        interior_exterior="内",
+        raw_header="3-1 Phoenix City Bedchamber midnight INT",
+        location="Phoenix City Bedchamber",
+        time_of_day="midnight",
+        interior_exterior="int",
         characters=[],
         aliases=[],
         scene_type="interior",
         evidence_lines=[],
         content_lines=[],
     )
-    assert block.time_of_day == "夜晚"
+    assert block.time_of_day == "night"
 
 
-def test_clean_scene_name_and_time_removes_trailing_classical_time():
-    name, tod = clean_scene_name_and_time("凤鸣皇城·苏鸾寝殿 亥时", "")
+def test_clean_scene_name_and_time_removes_trailing_time_word():
+    name, tod = clean_scene_name_and_time("Phoenix City Bedchamber midnight", "")
 
-    assert name == "凤鸣皇城·苏鸾寝殿"
-    assert tod == "夜晚"
-
-
-def test_clean_scene_name_and_time_removes_attached_night_token_after_location():
-    name, tod = clean_scene_name_and_time("凤鸣皇城·废弃粮仓夜", "")
-
-    assert name == "凤鸣皇城·废弃粮仓"
-    assert tod == "夜晚"
+    assert name == "Phoenix City Bedchamber"
+    assert tod == "night"
 
 
-def test_clean_scene_name_and_time_removes_attached_time_after_parenthesized_location_note():
-    name, tod = clean_scene_name_and_time("御花园（东侧）夜", "")
+def test_clean_scene_name_and_time_removes_dash_separated_night_token():
+    name, tod = clean_scene_name_and_time("Phoenix City Arena Outer Wall - night", "")
 
-    assert name == "御花园（东侧）"
-    assert tod == "夜晚"
-
-
-def test_clean_scene_name_and_time_preserves_non_location_phrase_ending_with_single_time():
-    name, tod = clean_scene_name_and_time("除夕夜", "")
-
-    assert name == "除夕夜"
-    assert tod == ""
+    assert name == "Phoenix City Arena Outer Wall"
+    assert tod == "night"
 
 
-def test_clean_scene_name_and_time_removes_attached_multi_char_time_token():
-    name, tod = clean_scene_name_and_time("凤鸣皇城·废弃粮仓深夜", "")
+def test_clean_scene_name_and_time_removes_comma_separated_night_token():
+    name, tod = clean_scene_name_and_time("Arena Outer Wall, night", "")
 
-    assert name == "凤鸣皇城·废弃粮仓"
-    assert tod == "夜晚"
+    assert name == "Arena Outer Wall"
+    assert tod == "night"
 
 
 def test_clean_scene_name_and_time_removes_dot_separated_night_token():
-    name, tod = clean_scene_name_and_time("凤鸣皇城·演武场外墙·夜", "")
+    name, tod = clean_scene_name_and_time("Arena Outer Wall · night", "")
 
-    assert name == "凤鸣皇城·演武场外墙"
-    assert tod == "夜晚"
+    assert name == "Arena Outer Wall"
+    assert tod == "night"
 
 
-def test_clean_scene_name_and_time_removes_nakaguro_separated_night_token():
-    name, tod = clean_scene_name_and_time("演武场外墙・夜", "")
+def test_clean_scene_name_and_time_removes_spaced_interior_exterior_marker():
+    name, tod = clean_scene_name_and_time("Zheng Office INT", "")
 
-    assert name == "演武场外墙"
-    assert tod == "夜晚"
+    assert name == "Zheng Office"
+    assert tod == ""
+
+
+def test_clean_scene_name_and_time_preserves_phrase_that_only_contains_a_time_word():
+    name, tod = clean_scene_name_and_time("Night Market Square", "")
+
+    assert name == "Night Market Square"
+    assert tod == ""
 
 
 def test_clean_scene_name_and_time_preserves_specific_location_anchor():
-    name, tod = clean_scene_name_and_time("春熙路的3D大屏下", "")
+    name, tod = clean_scene_name_and_time("Under the 3D Big Screen on Chunxi Road", "")
 
-    assert name == "春熙路的3D大屏下"
+    assert name == "Under the 3D Big Screen on Chunxi Road"
     assert tod == ""
 
 
 @pytest.mark.parametrize(
     ("raw_name", "expected_name", "expected_time"),
     [
-        ("Seoul Subway Station 11:47 PM", "Seoul Subway Station", "夜晚"),
-        ("Living Room - NIGHT", "Living Room", "夜晚"),
-        ("Park, daytime", "Park", "白天"),
+        ("Seoul Subway Station 11:47 PM", "Seoul Subway Station", "night"),
+        ("Living Room - NIGHT", "Living Room", "night"),
+        ("Park, daytime", "Park", "day"),
         ("Studio 54", "Studio 54", ""),
     ],
 )
@@ -156,50 +149,56 @@ def test_normalized_scene_block_validator_cleans_location_time():
     block = NormalizedSceneBlock(
         episode_number=3,
         scene_no="1",
-        raw_header="3-1、凤鸣皇城·苏鸾寝殿 亥时 内",
-        location="凤鸣皇城·苏鸾寝殿 亥时",
+        raw_header="3-1 Phoenix City Bedchamber midnight INT",
+        location="Phoenix City Bedchamber midnight",
         time_of_day="",
-        interior_exterior="内",
-        characters=["苏糖", "沈晚"],
+        interior_exterior="int",
+        characters=["Su Tang", "Shen Wan"],
         aliases=[],
         scene_type="interior",
-        evidence_lines=["3-1、凤鸣皇城·苏鸾寝殿 亥时 内"],
-        content_lines=["△烛火跳动。"],
+        evidence_lines=["3-1 Phoenix City Bedchamber midnight INT"],
+        content_lines=["Candlelight flickers."],
     )
 
-    assert block.location == "凤鸣皇城·苏鸾寝殿"
-    assert block.time_of_day == "夜晚"
+    assert block.location == "Phoenix City Bedchamber"
+    assert block.time_of_day == "night"
 
 
 def test_scene_heading_suffix_strip_removes_time_markers():
     """The name cleanup a per-block model call used to be needed for."""
     from novelvideo.cognee.pipeline import strip_scene_heading_suffix
 
-    assert strip_scene_heading_suffix("演武场外墙·夜") == "演武场外墙"
-    assert strip_scene_heading_suffix("演武场外墙・夜") == "演武场外墙"
-    assert strip_scene_heading_suffix("凤鸣皇城·废弃粮仓夜") == "凤鸣皇城·废弃粮仓"
+    assert strip_scene_heading_suffix("Arena Outer Wall - night") == "Arena Outer Wall"
+    assert strip_scene_heading_suffix("Arena Outer Wall, night") == "Arena Outer Wall"
+    assert (
+        strip_scene_heading_suffix("Phoenix City Granary night")
+        == "Phoenix City Granary"
+    )
 
 
 def test_scene_heading_suffix_strip_never_generalizes_a_location():
     """It removes heading markers, never part of the place itself."""
     from novelvideo.cognee.pipeline import strip_scene_heading_suffix
 
-    assert strip_scene_heading_suffix("兰州拉面馆") == "兰州拉面馆"
-    assert strip_scene_heading_suffix("春熙路的3D大屏下") == "春熙路的3D大屏下"
+    assert strip_scene_heading_suffix("Lanzhou Noodle House") == "Lanzhou Noodle House"
+    assert (
+        strip_scene_heading_suffix("Under the 3D Big Screen on Chunxi Road")
+        == "Under the 3D Big Screen on Chunxi Road"
+    )
 
 
-def test_an_attached_interior_marker_is_left_for_adjudication():
-    """"商务车内" is a place; "郑玉琴办公室内" is a marker. One rule cannot tell.
+def test_a_spaced_interior_marker_is_stripped_from_the_name():
+    """"Zheng Office INT" is the same room as "Zheng Office".
 
-    Deciding between them needs every candidate in view at once — whether a
-    sibling spelling exists, and which one the script uses more — which is what
-    adjudication has and a name-cleanup rule does not.
+    In English and Vietnamese the marker is always a separate word, so removing
+    it never eats part of a place name ("Interior Design Studio" keeps its
+    leading word because the marker is only stripped at the end).
     """
     from novelvideo.cognee.pipeline import strip_scene_heading_suffix
 
-    assert strip_scene_heading_suffix("商务车内") == "商务车内"
-    assert strip_scene_heading_suffix("郑家别墅外") == "郑家别墅外"
-    assert strip_scene_heading_suffix("郑玉琴办公室内") == "郑玉琴办公室内"
+    assert strip_scene_heading_suffix("Zheng Office INT") == "Zheng Office"
+    assert strip_scene_heading_suffix("Zheng Villa EXT") == "Zheng Villa"
+    assert strip_scene_heading_suffix("Interior Design Studio") == "Interior Design Studio"
 
 
 def test_scene_candidates_fill_missing_episode_from_raw_header():
@@ -210,28 +209,28 @@ def test_scene_candidates_fill_missing_episode_from_raw_header():
             NormalizedSceneBlock(
                 episode_number=0,
                 scene_no="1",
-                raw_header="3-1、凤鸣皇城·苏鸾寝殿 夜 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="夜",
-                interior_exterior="内",
-                characters=["苏糖"],
-                aliases=["苏鸾寝殿"],
+                raw_header="3-1 Phoenix City Bedchamber night INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="night",
+                interior_exterior="int",
+                characters=["Su Tang"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["3-1、凤鸣皇城·苏鸾寝殿 夜 内"],
-                content_lines=["△苏糖醒来。"],
+                evidence_lines=["3-1 Phoenix City Bedchamber night INT"],
+                content_lines=["Su Tang wakes up."],
             ),
             NormalizedSceneBlock(
                 episode_number=0,
                 scene_no="1",
-                raw_header="5-1、凤鸣皇城·苏鸾寝殿 亥时 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="亥时",
-                interior_exterior="内",
-                characters=["沈晚"],
-                aliases=["苏鸾寝殿"],
+                raw_header="5-1 Phoenix City Bedchamber midnight INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="midnight",
+                interior_exterior="int",
+                characters=["Shen Wan"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["5-1、凤鸣皇城·苏鸾寝殿 亥时 内"],
-                content_lines=["△沈晚推门。"],
+                evidence_lines=["5-1 Phoenix City Bedchamber midnight INT"],
+                content_lines=["Shen Wan pushes the door open."],
             ),
         ]
     )
@@ -265,9 +264,9 @@ async def test_single_normalizer_keeps_a_parsed_english_location_verbatim():
         NormalizedSceneHeader(
             episode_number=1,
             scene_no="1",
-            location="中央图书馆",
-            time_of_day="白天",
-            interior_exterior="内",
+            location="Main Hall Library",
+            time_of_day="day",
+            interior_exterior="int",
         )
     )
 
@@ -296,9 +295,9 @@ async def test_batch_normalizer_keeps_each_parsed_english_location_verbatim():
                     index=0,
                     episode_number=1,
                     scene_no="1",
-                    location="中央图书馆",
-                    time_of_day="白天",
-                    interior_exterior="内",
+                    location="Main Hall Library",
+                    time_of_day="day",
+                    interior_exterior="int",
                 )
             ]
         )
@@ -327,16 +326,16 @@ async def test_standard_headings_are_normalized_without_a_model_call():
             raise AssertionError("a standard heading must not reach the model")
 
     scenes = await normalize_screenplay_scenes(
-        "1-1 寝殿 夜 内\n人物：悟空\n悟空：师父。\n"
-        "1-2 山门 日 外\n人物：悟空、童子\n△悟空走出山门。",
+        "1-1 Bedchamber night INT\nCharacters: Wukong\nWukong: Master.\n"
+        "1-2 Temple Gate day EXT\nCharacters: Wukong, Acolyte\nWukong walks out of the temple gate.",
         agent=_NeverCalled(),
     )
 
-    assert [scene.location for scene in scenes] == ["寝殿", "山门"]
-    assert [scene.interior_exterior for scene in scenes] == ["内", "外"]
+    assert [scene.location for scene in scenes] == ["Bedchamber", "Temple Gate"]
+    assert [scene.interior_exterior for scene in scenes] == ["int", "ext"]
     assert [scene.content_lines for scene in scenes] == [
-        ["悟空：师父。"],
-        ["△悟空走出山门。"],
+        ["Wukong: Master."],
+        ["Wukong walks out of the temple gate."],
     ]
 
 
@@ -357,13 +356,13 @@ async def test_headings_the_parser_cannot_resolve_go_to_the_model_in_one_batch()
                     scenes=[
                         BatchSceneHeaderItem(
                             index=0, episode_number=3, scene_no="1",
-                            location="凤鸣皇城·苏鸾寝殿", time_of_day="亥时",
-                            interior_exterior="内", aliases=["苏鸾寝殿"],
+                            location="Phoenix City Bedchamber", time_of_day="night",
+                            interior_exterior="int", aliases=["Luan Bedchamber"],
                         ),
                         BatchSceneHeaderItem(
                             index=1, episode_number=3, scene_no="2",
-                            location="御花园", time_of_day="日",
-                            interior_exterior="外",
+                            location="Imperial Garden", time_of_day="day",
+                            interior_exterior="ext",
                         ),
                     ]
                 )
@@ -373,21 +372,21 @@ async def test_headings_the_parser_cannot_resolve_go_to_the_model_in_one_batch()
     # Neither heading states interior/exterior, so the parser cannot finish
     # either one and both must travel to the model.
     scenes = await normalize_screenplay_scenes(
-        "3-1、凤鸣皇城·苏鸾寝殿\n人物：苏糖、沈晚、锦绣\n△寝殿内，床帐放下。\n"
-        "3-2、御花园\n人物：苏糖\n△苏糖走过回廊。",
+        "3-1 Phoenix City Bedchamber night\nCharacters: Su Tang, Shen Wan, Jin Xiu\nInside the bedchamber, the bed curtains are lowered.\n"
+        "3-2 Imperial Garden day\nCharacters: Su Tang\nSu Tang walks through the corridor.",
         agent=agent,
     )
 
     # Both unresolved headings travelled in a single request.
     assert len(agent.prompts) == 1
-    assert "凤鸣皇城·苏鸾寝殿" in agent.prompts[0]
-    assert "御花园" in agent.prompts[0]
+    assert "Phoenix City Bedchamber" in agent.prompts[0]
+    assert "Imperial Garden" in agent.prompts[0]
 
     assert len(scenes) == 2
     by_location = {scene.location: scene for scene in scenes}
-    assert by_location["凤鸣皇城·苏鸾寝殿"].time_of_day == "夜晚"
-    assert by_location["凤鸣皇城·苏鸾寝殿"].characters == ["苏糖", "沈晚", "锦绣"]
-    assert by_location["凤鸣皇城·苏鸾寝殿"].content_lines == ["△寝殿内，床帐放下。"]
+    assert by_location["Phoenix City Bedchamber"].time_of_day == "night"
+    assert by_location["Phoenix City Bedchamber"].characters == ["Su Tang", "Shen Wan", "Jin Xiu"]
+    assert by_location["Phoenix City Bedchamber"].content_lines == ["Inside the bedchamber, the bed curtains are lowered."]
 
 
 @pytest.mark.asyncio
@@ -401,28 +400,28 @@ async def test_extract_scenes_from_script_prefers_ai_normalized_blocks(monkeypat
             NormalizedSceneBlock(
                 episode_number=1,
                 scene_no="1",
-                raw_header="1-1、凤鸣皇城·苏鸾寝殿 深夜 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="深夜",
-                interior_exterior="内",
-                characters=["苏糖"],
-                aliases=["苏鸾寝殿"],
+                raw_header="1-1 Phoenix City Bedchamber night INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="night",
+                interior_exterior="int",
+                characters=["Su Tang"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["1-1、凤鸣皇城·苏鸾寝殿 深夜 内"],
-                content_lines=["△苏糖猛地从床榻上坐起。"],
+                evidence_lines=["1-1 Phoenix City Bedchamber night INT"],
+                content_lines=["Su Tang sits bolt upright in bed."],
             ),
             NormalizedSceneBlock(
                 episode_number=3,
                 scene_no="1",
-                raw_header="3-1、凤鸣皇城·苏鸾寝殿 亥时 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="亥时",
-                interior_exterior="内",
-                characters=["苏糖", "沈晚", "锦绣"],
-                aliases=["苏鸾寝殿"],
+                raw_header="3-1 Phoenix City Bedchamber night INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="night",
+                interior_exterior="int",
+                characters=["Su Tang", "Shen Wan", "Jin Xiu"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["3-1、凤鸣皇城·苏鸾寝殿 亥时 内"],
-                content_lines=["△寝殿内，床帐放下。"],
+                evidence_lines=["3-1 Phoenix City Bedchamber night INT"],
+                content_lines=["Inside the bedchamber, the bed curtains are lowered."],
             ),
         ]
 
@@ -431,8 +430,8 @@ async def test_extract_scenes_from_script_prefers_ai_normalized_blocks(monkeypat
             name=kwargs["scene_name"],
             aliases=kwargs.get("aliases") or [],
             scene_type=kwargs["scene_type"],
-            environment_prompt="正面：寝殿床榻与床帐。\n左侧：屏风。\n右侧：窗台。\n背面：殿门。",
-            description="公主寝殿",
+            environment_prompt="Front: The bed and bed curtains.\nLeft: A folding screen.\nRight: A windowsill.\nBack: The hall door.",
+            description="The princess's bedchamber",
         )
 
     monkeypatch.setattr(pipeline, "normalize_screenplay_scenes", fake_normalize)
@@ -443,16 +442,16 @@ async def test_extract_scenes_from_script_prefers_ai_normalized_blocks(monkeypat
     )
 
     scenes = await pipeline.extract_scenes_from_script(
-        "1-1、凤鸣皇城·苏鸾寝殿 深夜 内\n△苏糖醒来。\n"
-        "3-1、凤鸣皇城·苏鸾寝殿 亥时 内\n△刺杀开始。"
+        "1-1 Phoenix City Bedchamber night INT\nSu Tang wakes up.\n"
+        "3-1 Phoenix City Bedchamber night INT\nThe assassination begins."
     )
 
     assert len(scenes) == 1
-    assert scenes[0].name == "凤鸣皇城·苏鸾寝殿"
-    assert scenes[0].aliases == ["苏鸾寝殿"]
+    assert scenes[0].name == "Phoenix City Bedchamber"
+    assert scenes[0].aliases == ["Luan Bedchamber"]
     assert scenes[0].scene_type == "interior"
     assert scenes[0].time_of_day == ""
-    assert "observed_times: 夜晚×2" in scenes[0].notes
+    assert "observed_times: night×2" in scenes[0].notes
 
 
 @pytest.mark.asyncio
@@ -468,15 +467,15 @@ async def test_extract_scenes_from_script_falls_back_when_ai_returns_partial_blo
             NormalizedSceneBlock(
                 episode_number=1,
                 scene_no="1",
-                raw_header="1-1、凤鸣皇城·苏鸾寝殿 深夜 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="深夜",
-                interior_exterior="内",
-                characters=["苏糖"],
-                aliases=["苏鸾寝殿"],
+                raw_header="1-1 Phoenix City Bedchamber night INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="night",
+                interior_exterior="int",
+                characters=["Su Tang"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["1-1、凤鸣皇城·苏鸾寝殿 深夜 内"],
-                content_lines=["△苏糖醒来。"],
+                evidence_lines=["1-1 Phoenix City Bedchamber night INT"],
+                content_lines=["Su Tang wakes up."],
             )
         ]
 
@@ -486,7 +485,7 @@ async def test_extract_scenes_from_script_falls_back_when_ai_returns_partial_blo
             name=kwargs["scene_name"],
             aliases=kwargs.get("aliases") or [],
             scene_type=kwargs["scene_type"],
-            environment_prompt="正面：主体。\n左侧：侧墙。\n右侧：侧墙。\n背面：入口。",
+            environment_prompt="Front: Main subject.\nLeft: Side wall.\nRight: Side wall.\nBack: Entrance.",
             description="",
         )
 
@@ -498,17 +497,17 @@ async def test_extract_scenes_from_script_falls_back_when_ai_returns_partial_blo
     )
 
     scenes = await pipeline.extract_scenes_from_script(
-        "1-1、凤鸣皇城·苏鸾寝殿 深夜 内\n"
-        "人物：苏糖\n"
-        "△苏糖醒来。\n\n"
-        "1-2、凤鸣皇城·御花园 清晨 外\n"
-        "人物：苏糖、沈晚\n"
-        "△两人在花径边低声交谈。"
+        "1-1 Phoenix City Bedchamber night INT\n"
+        "Characters: Su Tang\n"
+        "Su Tang wakes up.\n\n"
+        "1-2 Phoenix City Imperial Garden dawn EXT\n"
+        "Characters: Su Tang, Shen Wan\n"
+        "The two talk in low voices beside the flower path."
     )
 
     assert [scene.name for scene in scenes] == [
-        "凤鸣皇城·苏鸾寝殿",
-        "凤鸣皇城·御花园",
+        "Phoenix City Bedchamber",
+        "Phoenix City Imperial Garden",
     ]
 
 
@@ -527,7 +526,7 @@ async def test_extract_scenes_from_script_falls_back_when_ai_returns_empty(monke
             name=kwargs["scene_name"],
             aliases=kwargs.get("aliases") or [],
             scene_type=kwargs["scene_type"],
-            environment_prompt="正面：场景主体。\n左侧：侧向空间。\n右侧：侧向空间。\n背面：反向空间。",
+            environment_prompt="Front: Scene subject.\nLeft: Side space.\nRight: Side space.\nBack: Reverse space.",
         )
 
     monkeypatch.setattr(pipeline, "normalize_screenplay_scenes", fake_normalize)
@@ -538,11 +537,11 @@ async def test_extract_scenes_from_script_falls_back_when_ai_returns_empty(monke
     )
 
     scenes = await pipeline.extract_scenes_from_script(
-        "3-1、凤鸣皇城·苏鸾寝殿 亥时 内\n人物：苏糖、沈晚\n△烛火跳动。"
+        "3-1 Phoenix City Bedchamber night INT\nCharacters: Su Tang, Shen Wan\nCandlelight flickers."
     )
 
     assert len(scenes) == 1
-    assert scenes[0].name == "凤鸣皇城·苏鸾寝殿"
+    assert scenes[0].name == "Phoenix City Bedchamber"
 
 
 @pytest.mark.asyncio
@@ -558,28 +557,28 @@ async def test_extract_scenes_from_script_falls_back_when_ai_merges_distinct_loc
             NormalizedSceneBlock(
                 episode_number=1,
                 scene_no="1",
-                raw_header="1-1、凤鸣皇城·苏鸾寝殿 深夜 内",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="深夜",
-                interior_exterior="内",
-                characters=["苏糖"],
-                aliases=["苏鸾寝殿"],
+                raw_header="1-1 Phoenix City Bedchamber night INT",
+                location="Phoenix City Bedchamber",
+                time_of_day="night",
+                interior_exterior="int",
+                characters=["Su Tang"],
+                aliases=["Luan Bedchamber"],
                 scene_type="interior",
-                evidence_lines=["1-1、凤鸣皇城·苏鸾寝殿 深夜 内"],
-                content_lines=["△苏糖醒来。"],
+                evidence_lines=["1-1 Phoenix City Bedchamber night INT"],
+                content_lines=["Su Tang wakes up."],
             ),
             NormalizedSceneBlock(
                 episode_number=1,
                 scene_no="2",
-                raw_header="1-2、凤鸣皇城·御花园 清晨 外",
-                location="凤鸣皇城·苏鸾寝殿",
-                time_of_day="清晨",
-                interior_exterior="外",
-                characters=["苏糖", "沈晚"],
-                aliases=["苏鸾寝殿"],
+                raw_header="1-2 Phoenix City Imperial Garden dawn EXT",
+                location="Phoenix City Bedchamber",
+                time_of_day="dawn",
+                interior_exterior="ext",
+                characters=["Su Tang", "Shen Wan"],
+                aliases=["Luan Bedchamber"],
                 scene_type="exterior",
-                evidence_lines=["1-2、凤鸣皇城·御花园 清晨 外"],
-                content_lines=["△两人在花径边低声交谈。"],
+                evidence_lines=["1-2 Phoenix City Imperial Garden dawn EXT"],
+                content_lines=["The two talk in low voices beside the flower path."],
             ),
         ]
 
@@ -589,7 +588,7 @@ async def test_extract_scenes_from_script_falls_back_when_ai_merges_distinct_loc
             name=kwargs["scene_name"],
             aliases=kwargs.get("aliases") or [],
             scene_type=kwargs["scene_type"],
-            environment_prompt="正面：主体。\n左侧：侧墙。\n右侧：侧墙。\n背面：入口。",
+            environment_prompt="Front: Main subject.\nLeft: Side wall.\nRight: Side wall.\nBack: Entrance.",
             description="",
         )
 
@@ -601,15 +600,15 @@ async def test_extract_scenes_from_script_falls_back_when_ai_merges_distinct_loc
     )
 
     scenes = await pipeline.extract_scenes_from_script(
-        "1-1、凤鸣皇城·苏鸾寝殿 深夜 内\n"
-        "人物：苏糖\n"
-        "△苏糖醒来。\n\n"
-        "1-2、凤鸣皇城·御花园 清晨 外\n"
-        "人物：苏糖、沈晚\n"
-        "△两人在花径边低声交谈。"
+        "1-1 Phoenix City Bedchamber night INT\n"
+        "Characters: Su Tang\n"
+        "Su Tang wakes up.\n\n"
+        "1-2 Phoenix City Imperial Garden dawn EXT\n"
+        "Characters: Su Tang, Shen Wan\n"
+        "The two talk in low voices beside the flower path."
     )
 
     assert [scene.name for scene in scenes] == [
-        "凤鸣皇城·苏鸾寝殿",
-        "凤鸣皇城·御花园",
+        "Phoenix City Bedchamber",
+        "Phoenix City Imperial Garden",
     ]

@@ -1,21 +1,21 @@
 """C1 for OI-54 S4 (OI-61): the chat WS project turn must bind its own egress identity.
 
-`_MODEL_GATEWAY_CONTEXT`（`model_gateway_runtime.py:30-33`）的全部生产 set 点都在
-worker 侧，请求路径上一个都没有。于是组织用户在 chat 里发一句话时，出网闸门读到
-`None`，hermes 子进程拿到的是部署级 `NEWAPI_API_KEY`
-（`hermes_pool.py:584` 的 `effective_gateway_credentials()`）——平台替组织垫真实算力。
+All production set points of `_MODEL_GATEWAY_CONTEXT` (`model_gateway_runtime.py:30-33`) are on the
+worker side, and none is on the request path. So when an organization user sends a message in chat, the egress gate reads
+`None`, and the hermes subprocess gets the deployment-level `NEWAPI_API_KEY`
+(`effective_gateway_credentials()` at `hermes_pool.py:584`) -- the platform pays for real compute on the organization's behalf.
 
-`service.py:3588` 的组织分支 S3 就写好了，但今天永远进不去：没人传 `egress_context`。
-本文件**从 `/api/v1/chat/ws` 入口进**，观察 hermes 子进程 env 里到底是谁的 Key。
+The organization branch at `service.py:3588` was written by S3 but can never be entered today: nobody passes `egress_context`.
+This file **enters from the `/api/v1/chat/ws` entry** and observes whose Key is actually in the hermes subprocess env.
 
-**测试自己不绑上下文**：本文件刻意不出现 `model_gateway_request_scope` /
-`build_request_egress_context`——绑定必须由产品代码完成，测试只观察结果。
-那是 OI-54 登记在案的假绿写法。
+**The test does not bind the context itself**: this file deliberately does not use `model_gateway_request_scope` /
+`build_request_egress_context` -- the binding must be done by product code, and the test only observes the result.
+That is a fake-green pattern recorded in OI-54.
 
-**范围声明**：CE 单机不注册 `egress_operations` 端口
-（`ports/local/__init__.py` 的 ports 元组里没有它），所以 C1-02 用仓内既有的
-`tests/support/egress_ledger.py` 替身把 claim 钉到端口边界；真库落行的纵向由 EE
-`tests/b2b/` 补。chat 路径没有成功侧状态迁移，所以只断言 claim，不断言终态。
+**Scope statement**: CE single-machine does not register the `egress_operations` port
+(it is not in the ports tuple of `ports/local/__init__.py`), so C1-02 uses the in-repo existing
+`tests/support/egress_ledger.py` stand-in to pin the claim at the port boundary; the vertical of rows landing in a real database is supplemented by EE
+`tests/b2b/`. The chat path has no success-side state transition, so only the claim is asserted, not the terminal state.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from support.egress_ledger import LedgerDouble
 
 pytestmark = pytest.mark.m08
 
-# 登录名与 user_id 刻意不同：身份判定只认 user_id（C1-06 钉这条）。
+# The login name and user_id deliberately differ: identity determination recognizes only user_id (C1-06 pins this).
 _USERNAME = "alice"
 _USER_ID = "user-id-9"
 _PROJECT_ID = "project-chat-71"
@@ -302,7 +302,7 @@ def harness(monkeypatch, tmp_path):
     monkeypatch.setattr(pool, "_project_env", fake_project_env)
     monkeypatch.setattr(hermes_pool, "pool", pool)
 
-    # 观察点：leaf 看到的 ambient 出网身份。
+    # Observation point: the ambient egress identity seen by the leaf.
     observed_contexts: list[object] = []
     real_get_for_user = pool.get_for_user
 
@@ -335,7 +335,7 @@ def harness(monkeypatch, tmp_path):
 
 
 def _use_authz(monkeypatch, port) -> None:
-    # `egress_binding.py:46` 在函数体内惰性取端口，所以打模块属性即可。
+    # `egress_binding.py:46` lazily fetches the port inside the function body, so patching the module attribute is enough.
     monkeypatch.setattr(ports, "get_authz_port", lambda: port)
 
 
@@ -351,13 +351,13 @@ _DRAIN_EVENT = "__drain__"
 _DRAIN_REPLY = f"unsupported event: {_DRAIN_EVENT}"
 
 
-def _send_project_turn(harness, *, text: str = "画个分镜") -> list[dict]:
+def _send_project_turn(harness, *, text: str = "Draw a storyboard") -> list[dict]:
     """Drive one project-scope turn through `/api/v1/chat/ws` and drain its frames.
 
-    收帧不能停在 `chat.done`：`_stream_project_turn` 的 `finally` 先发 `chat.done`，
-    异常才冒到 WS 主循环变成 `error` 帧。停在 `chat.done` 会把拒绝读成成功。
-    这里在收到 `chat.done` 后再发哨兵事件。活跃回合有独立的客户端事件接收器，
-    提前发送会被它消费；等回合结束后发送，才能由 WS 主循环确认帧已收全。
+    Receiving frames must not stop at `chat.done`: the `finally` of `_stream_project_turn` sends `chat.done` first,
+    and only afterwards does the exception bubble up to the WS main loop and become an `error` frame. Stopping at `chat.done` would read a rejection as success.
+    Here a sentinel event is sent after `chat.done` is received. The active turn has an independent client-event receiver,
+    and sending early would be consumed by it; sending after the turn ends lets the WS main loop confirm that all frames were received.
     """
     frames: list[dict] = []
     with harness.client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -411,11 +411,11 @@ def test_c1_01_project_turn_launches_hermes_with_the_org_key(harness):
     _assert_worker_env_is_keyless(harness.envs[0])
     _assert_last_turn_key(harness, ORG_KEY_CANARY)
     assert harness.envs[0]["NEWAPI_BASE_URL"] == _ORG_BASE_URL
-    # 喂给 admit_model_task 的必须是 user_id，不是登录名。
+    # What is fed to admit_model_task must be user_id, not the login name.
     assert [call[0] for call in authz.calls] == [_USER_ID]
     assert len(credentials.admissions) == 1
     assert credentials.admissions[0].requester_user_id == _USER_ID
-    # 绑定确实由产品代码完成：leaf 取号时 ambient 上下文非空。
+    # The binding was indeed done by product code: the ambient context is non-empty when the leaf takes its number.
     assert harness.observed and harness.observed[0] is not None
     assert harness.observed[0].task_type == _TASK_TYPE
     assert harness.observed[0].project_id == _PROJECT_ID
@@ -425,7 +425,7 @@ def test_c1_01_project_turn_launches_hermes_with_the_org_key(harness):
 
 
 def test_c1_02_project_turn_leaves_a_claim_on_the_egress_ledger(harness):
-    """出网必须留痕。chat 路径没有成功侧状态迁移，所以只断言 claim，不断言终态。"""
+    """Egress must leave a trace. The chat path has no success-side state transition, so only the claim is asserted, not the terminal state."""
     _use_authz(harness.monkeypatch, _Authz(kind="organization"))
     _credentials, ledger = _use_org_credentials(harness.monkeypatch)
 
@@ -434,7 +434,7 @@ def test_c1_02_project_turn_leaves_a_claim_on_the_egress_ledger(harness):
     assert frames[-1]["type"] == "chat.done", frames
     assert len(ledger.claims) == 1, ledger.claims
     spec = ledger.claims[0]
-    # 账本侧的 capability 与绑定侧的 task_type 必须是同一个字符串（EG-07 口径）。
+    # The capability on the ledger side and the task_type on the binding side must be the same string (EG-07 basis).
     assert spec.capability == _TASK_TYPE
     assert spec.organization_id == "org-chat-3"
     assert spec.project_id == _PROJECT_ID
@@ -446,7 +446,7 @@ def test_c1_02_project_turn_leaves_a_claim_on_the_egress_ledger(harness):
 
 
 def test_c1_03_platform_identity_path_is_unchanged(harness):
-    """看门测试：非组织身份下什么都不绑，子进程 env 走既有平台路径。"""
+    """Watchdog test: under a non-organization identity nothing is bound, and the subprocess env follows the existing platform path."""
     _use_authz(harness.monkeypatch, _Authz(kind="platform"))
     credentials, ledger = _use_org_credentials(harness.monkeypatch)
 
@@ -458,7 +458,7 @@ def test_c1_03_platform_identity_path_is_unchanged(harness):
     _assert_worker_env_is_keyless(harness.envs[0])
     _assert_last_turn_key(harness, PLATFORM_KEY_CANARY)
     assert ORG_KEY_CANARY not in str(harness.envs[0])
-    # 平台路径逐字节不变：不绑上下文、不解组织凭证、不动账本。
+    # The platform path is byte-for-byte unchanged: no context bound, no organization credentials resolved, no ledger touched.
     assert harness.observed == [None]
     assert credentials.admissions == []
     assert ledger.claims == []
@@ -469,7 +469,7 @@ def test_c1_03_platform_identity_path_is_unchanged(harness):
 
 
 def test_c1_04_gray_disabled_behaves_exactly_like_the_platform_path(harness):
-    """灰度关＝平台语义：不绑、不拒，与 C1-03 同结果。"""
+    """Gray rollout off = platform semantics: no binding, no rejection, same result as C1-03."""
     authz = _RaisingAuthz("P0_GRAY_DISABLED")
     _use_authz(harness.monkeypatch, authz)
     credentials, ledger = _use_org_credentials(harness.monkeypatch)
@@ -492,7 +492,7 @@ def test_c1_04_gray_disabled_behaves_exactly_like_the_platform_path(harness):
 
 
 def test_c1_05_real_denial_is_not_squashed_into_the_platform_path(harness):
-    """`ORG_MEMBERSHIP_INACTIVE` 是真拒绝，不得被压成 `None` 当作「非组织，放行」。"""
+    """`ORG_MEMBERSHIP_INACTIVE` is a real rejection and must not be squashed into `None` and treated as "not an organization, allow"."""
     authz = _RaisingAuthz("ORG_MEMBERSHIP_INACTIVE")
     _use_authz(harness.monkeypatch, authz)
     _use_org_credentials(harness.monkeypatch)
@@ -503,7 +503,7 @@ def test_c1_05_real_denial_is_not_squashed_into_the_platform_path(harness):
     errors = [f for f in frames if f.get("type") == "error"]
     assert len(errors) == 1, frames
     assert errors[0]["message"] == str(AuthzError("ORG_MEMBERSHIP_INACTIVE"))
-    # 拒绝就是拒绝：一个 hermes worker 都不许起。
+    # A rejection is a rejection: not a single hermes worker may be started.
     assert harness.envs == []
     assert current_model_gateway_context() is None
 
@@ -512,7 +512,7 @@ def test_c1_05_real_denial_is_not_squashed_into_the_platform_path(harness):
 
 
 def test_c1_06_identity_is_decided_by_user_id_not_by_login_name(harness):
-    """登录名与 user_id 是两个值。判定只认 user_id，env 里才是登录名。"""
+    """The login name and user_id are two different values. Determination recognizes only user_id; the env holds the login name."""
     authz = _Authz(kind="organization")
     _use_authz(harness.monkeypatch, authz)
     credentials, ledger = _use_org_credentials(harness.monkeypatch)
@@ -523,23 +523,23 @@ def test_c1_06_identity_is_decided_by_user_id_not_by_login_name(harness):
     assert frames[-1]["type"] == "chat.done", frames
     _assert_worker_env_is_keyless(harness.envs[0])
     _assert_last_turn_key(harness, ORG_KEY_CANARY)
-    # 判定侧一律 user_id；登录名一次都不许出现在身份判定入参里。
+    # The determination side always uses user_id; the login name must never appear in the identity determination inputs.
     assert [call[0] for call in authz.calls] == [_USER_ID]
     assert _USERNAME not in [call[0] for call in authz.calls]
     assert [a.requester_user_id for a in credentials.admissions] == [_USER_ID]
     assert harness.observed[0].requester_user_id == _USER_ID
     assert ledger.claims[0].organization_id == "org-chat-3"
-    # 子进程 env 里的 DRAMACLAW_USER 仍是登录名——那是 workspace 口径，不是身份口径。
+    # DRAMACLAW_USER in the subprocess env is still the login name -- that is the workspace basis, not the identity basis.
     assert harness.envs[0]["DRAMACLAW_USER"] == _USERNAME
 
 
 # --- C1-07 -----------------------------------------------------------------
 #
-# 这两条是**接缝守卫测试**，不是链路测试（链路由 C1-01/02/06/08 覆盖）。
-# 刻意直调，因为路由造不出这个形状：`TrustedEgressContext.__post_init__`
-# （`egress_context.py:36-47`）要求 `requester_user_id` 非空，而路由把同一个
-# `project_ctx.requester_user_id` 同时喂给绑定工厂和 service，两边永远相等。
-# 纵深防御的价值恰恰在于挡住「上游哪天变了」，所以它必须在接缝上被钉住。
+# These two are **seam-guard tests**, not chain tests (the chain is covered by C1-01/02/06/08).
+# Deliberately called directly, because the route cannot construct this shape: `TrustedEgressContext.__post_init__`
+# (`egress_context.py:36-47`) requires `requester_user_id` to be non-empty, while the route feeds the same
+# `project_ctx.requester_user_id` to both the binding factory and the service, so the two sides are always equal.
+# The value of defense in depth is exactly in blocking "someday upstream changes", so it must be pinned at the seam.
 
 
 def _org_context() -> object:
@@ -563,7 +563,7 @@ def _org_context() -> object:
 
 @pytest.mark.asyncio
 async def test_c1_07a_missing_requester_user_id_is_refused_not_backfilled(harness):
-    """`egress_context` 非 None 而 `requester_user_id` 为空 → 拒，不得回落成登录名。"""
+    """`egress_context` non-None while `requester_user_id` is empty -> reject, must not fall back to the login name."""
     from novelvideo.chat.hermes_egress import EgressBoundaryError
 
     _use_authz(harness.monkeypatch, _Authz(kind="organization"))
@@ -576,7 +576,7 @@ async def test_c1_07a_missing_requester_user_id_is_refused_not_backfilled(harnes
         await harness.chat_service.stream_assistant_reply(
             _USERNAME,
             _PROJECT_ID,
-            "画个分镜",
+            "Draw a storyboard",
             _on_event,
             project_dir=harness.ctx.output_dir,
             project_state_dir=harness.ctx.state_dir,
@@ -585,7 +585,7 @@ async def test_c1_07a_missing_requester_user_id_is_refused_not_backfilled(harnes
         )
 
     assert excinfo.value.code == "TASK_ENVELOPE_INVALID"
-    # 没有回落成 username：既没解凭证，也没起 worker，更没落账。
+    # Did not fall back to username: no credentials resolved, no worker started, and nothing written to the ledger.
     assert credentials.admissions == []
     assert ledger.claims == []
     assert harness.envs == []
@@ -593,7 +593,7 @@ async def test_c1_07a_missing_requester_user_id_is_refused_not_backfilled(harnes
 
 @pytest.mark.asyncio
 async def test_c1_07b_pool_rechecks_identity_against_an_independent_source(harness):
-    """pool 层的身份复核必须有独立来源，否则那次 `_strict_admission` 是 `x != x`。"""
+    """The pool-layer identity re-check must have an independent source, otherwise that `_strict_admission` is `x != x`."""
     from novelvideo.chat import hermes_pool
     from novelvideo.chat.hermes_egress import (
         EgressBoundaryError,
@@ -630,12 +630,12 @@ async def test_c1_07b_pool_rechecks_identity_against_an_independent_source(harne
         kwargs.update(overrides)
         return harness.pool._build_env(home, _USERNAME, token, **kwargs)
 
-    # `build_hermes_child_env` 的调用探针。
-    # 光断言「抛了 TASK_ENVELOPE_INVALID」钉不住 pool 自己那两道守卫：
-    # `build_hermes_child_env` 里的 `_strict_admission`（`hermes_egress.py:78-82`）
-    # 对同样的输入会抛出**同一个错误码**，守卫删掉后行为一模一样。
-    # 纵深防御的语义是「在到达下游之前就拒」，所以这里钉的是**次序**：
-    # 身份不全时，下游根本不许被调用到。
+    # Call probe of `build_hermes_child_env`.
+    # Merely asserting "TASK_ENVELOPE_INVALID was raised" cannot pin the pool's own two guards:
+    # `_strict_admission` inside `build_hermes_child_env` (`hermes_egress.py:78-82`)
+    # raises the **same error code** for the same input, and behavior is identical once the guard is deleted.
+    # The semantics of defense in depth is "reject before reaching downstream", so what is pinned here is the **order**:
+    # when the identity is incomplete, downstream must not be called at all.
     real_build_child_env = hermes_pool.build_hermes_child_env
     child_env_calls: list[dict] = []
 
@@ -645,25 +645,25 @@ async def test_c1_07b_pool_rechecks_identity_against_an_independent_source(harne
 
     harness.monkeypatch.setattr(hermes_pool, "build_hermes_child_env", _spy)
 
-    # 正向：来源一致时照常构造，且确实走到了下游。
+    # Positive: with consistent sources it constructs as usual and does reach downstream.
     _assert_worker_env_is_keyless(_build())
     assert len(child_env_calls) == 1
 
-    # 缺 egress_project_id → S3 那道 fail-closed 守卫，且必须**先于**下游触发。
+    # Missing egress_project_id -> the S3 fail-closed guard, and it must fire **before** downstream.
     with pytest.raises(EgressBoundaryError) as missing_project:
         _build(egress_project_id=None)
     assert missing_project.value.code == "TASK_ENVELOPE_INVALID"
-    assert len(child_env_calls) == 1, "身份不全时 build_hermes_child_env 不得被调用"
+    assert len(child_env_calls) == 1, "build_hermes_child_env must not be called when the identity is incomplete"
 
-    # 缺 requester_user_id → 拒，不得回落成 authorization.context 自己的值。
-    # 同样必须先于下游触发。
+    # Missing requester_user_id -> reject, must not fall back to the value of authorization.context itself.
+    # It must likewise fire before downstream.
     with pytest.raises(EgressBoundaryError) as missing_user:
         _build(requester_user_id="")
     assert missing_user.value.code == "TASK_ENVELOPE_INVALID"
-    assert len(child_env_calls) == 1, "身份不全时 build_hermes_child_env 不得被调用"
+    assert len(child_env_calls) == 1, "build_hermes_child_env must not be called when the identity is incomplete"
 
-    # 来源不一致 → 拒。这条是「复核不再自证」的唯一证据：
-    # 若 `requester_user_id` 仍取自 `authorization.context`，这里会静默通过。
+    # Inconsistent sources -> reject. This is the only evidence of "the re-check no longer vouches for itself":
+    # if `requester_user_id` were still taken from `authorization.context`, this would silently pass here.
     with pytest.raises(EgressBoundaryError) as mismatched_user:
         _build(requester_user_id="user-id-somebody-else")
     assert mismatched_user.value.code == "TASK_ENVELOPE_INVALID"
@@ -677,12 +677,12 @@ async def test_c1_07b_pool_rechecks_identity_against_an_independent_source(harne
 
 
 def test_c1_08_worker_prewarm_does_not_replace_the_active_org_turn(harness):
-    """并发预热复用无密钥 worker，且不得改变活动回合的组织凭据。"""
+    """Concurrent prewarm reuses the keyless worker and must not change the organization credentials of the active turn."""
     _use_authz(harness.monkeypatch, _Authz(kind="organization"))
     _use_org_credentials(harness.monkeypatch)
 
     async def second_tab_prewarm() -> None:
-        # 第二个标签页连上来时路由做的事，一字不差。
+        # Exactly what the route does when a second tab connects.
         await harness.chat_service.prewarm_chat_backend(
             _USERNAME, project=_PROJECT_ID
         )
@@ -692,7 +692,7 @@ def test_c1_08_worker_prewarm_does_not_replace_the_active_org_turn(harness):
     frames = _send_project_turn(harness)
 
     assert [f for f in frames if f.get("type") == "error"] == [], frames
-    # 凭据已改为逐轮传递，同源预热无需轮换 worker。
+    # Credentials are now passed per turn, so same-source prewarm needs no worker rotation.
     assert len(harness.envs) == 1, harness.envs
     assert harness.auth_sessions.created == 1
     _assert_worker_env_is_keyless(harness.envs[0])
@@ -739,7 +739,7 @@ def test_route_and_backend_fixture_are_wired(harness):
     from novelvideo.chat.service import _chat_backend
 
     assert _chat_backend() == "hermes"
-    # 入口是产品路由本身，不是测试自搭的 app。
+    # The entry is the product route itself, not an app the test built on its own.
     ws_routes = [
         route
         for route in harness.chat_routes.router.routes
@@ -747,6 +747,6 @@ def test_route_and_backend_fixture_are_wired(harness):
     ]
     assert len(ws_routes) == 1
     assert ws_routes[0].endpoint is harness.chat_routes.chat_ws
-    # 且 `/api/v1/chat/ws` 真的能连上（其余用例都走这条）。
+    # And `/api/v1/chat/ws` can really be connected (all the other cases go through this route).
     with harness.client.websocket_connect("/api/v1/chat/ws") as websocket:
         assert websocket.receive_json()["type"] == "scope.changed"

@@ -59,15 +59,15 @@ def test_assign_sketch_colors_preserves_existing_when_identity_set_changes():
 
 def test_prop_marker_colors_preserve_existing_when_prop_set_changes():
     beats = [
-        {"visual_description": "男人抱起[[新道具]]，旁边没有旧道具。"},
+        {"visual_description": "A man picks up [[new_prop]]; there is no old prop beside him."},
     ]
     prop_menu = [
         {
-            "prop_id": "旧道具",
+            "prop_id": "old_prop",
             "is_global_asset": True,
             "marker_color": "#0D47A1 ROYAL BLUE",
         },
-        {"prop_id": "新道具", "is_global_asset": True},
+        {"prop_id": "new_prop", "is_global_asset": True},
     ]
 
     colors = _global_prop_marker_colors(
@@ -76,15 +76,15 @@ def test_prop_marker_colors_preserve_existing_when_prop_set_changes():
         assign_missing=True,
     )
 
-    assert colors["新道具"] != "#0D47A1 ROYAL BLUE"
+    assert colors["new_prop"] != "#0D47A1 ROYAL BLUE"
 
-    beats_with_old = [{"visual_description": "[[旧道具]] 和 [[新道具]] 同时出现。"}]
+    beats_with_old = [{"visual_description": "[[old_prop]] and [[new_prop]] appear together."}]
     colors_with_old = _global_prop_marker_colors(
         beats_with_old,
         prop_menu=prop_menu,
         assign_missing=True,
     )
-    assert colors_with_old["旧道具"] == "#0D47A1 ROYAL BLUE"
+    assert colors_with_old["old_prop"] == "#0D47A1 ROYAL BLUE"
 
 
 def test_incremental_color_assignment_does_not_force_full_sketch_clean():
@@ -104,7 +104,7 @@ def test_first_prop_after_existing_identity_does_not_force_full_sketch_clean():
     previous = {"identity:Hero_A": "#FF00FF FLUORESCENT MAGENTA"}
     current = {
         "identity:Hero_A": "#FF00FF FLUORESCENT MAGENTA",
-        "prop:账单": "#0D47A1 ROYAL BLUE",
+        "prop:invoice": "#0D47A1 ROYAL BLUE",
     }
 
     assert _color_assignment_requires_full_sketch_clean(previous, current) is False

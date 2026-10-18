@@ -1,38 +1,38 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 从视频 URL 抓取单帧的公共设施。
+ * Common facility for capturing a single frame from a video URL.
  *
- * 两个消费方：
- *   1. 「抓取当前帧 / 首帧 / 末帧」用户操作 —— 要原尺寸 PNG，用完即上传。
- *   2. 画布低缩放档（LOD）的静态缩略图 —— 要小尺寸 JPEG，进模块级缓存长期复用。
+ * Two consumers:
+ *   1. The user action "capture current frame / first frame / last frame" - needs a full-size PNG, uploaded right after use.
+ *   2. The static thumbnails at the canvas low-zoom tier (LOD) - need small JPEGs, kept in a module-level cache for long-term reuse.
  *
- * 两者共用同一套离屏 <video> 管道：跨域 CDN 媒体（生产环境 `/projects/.../media/*`
- * 会被后端 302 到预签名 OSS）必须带 CORS 加载，否则画进 canvas 会污染，导出直接抛。
- * 判定统一走 [[mediaNeedsCrossOrigin]]。
+ * Both share the same offscreen <video> pipeline: cross-origin CDN media (in production `/projects/.../media/*`
+ * gets a 302 from the backend to a presigned OSS) must be loaded with CORS, otherwise drawing it into a canvas taints it and the export throws.
+ * The decision goes uniformly through [[mediaNeedsCrossOrigin]].
  *
- * 刻意不复用画布上正在展示的那个 <video>：它没有设 crossOrigin（一旦某个媒体源没回
- * CORS 头，设了会让视频加载失败、整个节点变黑，代价远大于少一张缩略图），所以从它
- * 身上抓帧在生产环境必然污染失败。离屏元素没有这个顾虑——加载失败只是少一张图。
+ * Deliberately not reusing the <video> being shown on the canvas: it has no crossOrigin set (once a media source does not return
+ * CORS headers, setting it would make the video fail to load and the whole node go black, a cost far greater than missing one thumbnail), so capturing frames
+ * from it necessarily fails by tainting in production. An offscreen element has no such concern - a load failure only means one image is missing.
  */
 
 import { mediaNeedsCrossOrigin } from '@/features/canvas/application/imageData';
 
 type VideoFrameOptions = {
   /**
-   * 默认 `auto`：用户主动触发的抓帧要尽快出结果。LOD 缩略图改用 `metadata`，
-   * 只拉够解出首帧的字节，避免为一张 320px 的图下整段视频。
+   * Default `auto`: a user-triggered frame capture should produce a result as fast as possible. LOD thumbnails use `metadata`,
+   * fetching only enough bytes to decode the first frame, avoiding downloading a whole video for a 320px image.
    */
   preload?: 'auto' | 'metadata';
-  /** 超时后 reject 并释放并发槽位。不传则永不超时（保持既有抓帧行为不变）。 */
+  /** Reject on timeout and release the concurrency slot. When not passed it never times out (keeping the existing frame capture behavior unchanged). */
   timeoutMs?: number;
 };
 
 /**
- * 起一个离屏 <video>，seek 到指定秒数，等该帧解码完成后交给 `render` 处理。
+ * Start an offscreen <video>, seek to the specified second, wait for that frame to finish decoding, then hand it to `render`.
  *
- * `render` 拿到的 video 元素在回调返回（或其 Promise settle）后即被回收，
- * 不要把它存下来异步使用。
+ * The video element `render` receives is reclaimed after the callback returns (or its Promise settles),
+ * so do not store it for asynchronous use.
  */
 async function withVideoFrame<T>(
   src: string,
@@ -124,7 +124,7 @@ async function withVideoFrame<T>(
 }
 
 /**
- * 把视频某一帧抓成原尺寸 PNG blob。供「抓取首帧/末帧/当前帧」等用户操作使用。
+ * Capture one video frame as a full-size PNG blob. For user actions such as "capture first/last/current frame".
  */
 export async function captureVideoFrameBlob(
   src: string,
@@ -153,36 +153,36 @@ export async function captureVideoFrameBlob(
 }
 
 /* ------------------------------------------------------------------------- *
- * 低缩放档（LOD）静态缩略图
+ * Low-zoom tier (LOD) static thumbnails
  *
- * 画布缩到 0.35 以下时，视频节点里的 <video> 会被换成这里产出的静态图：每个
- * <video> 都是一个独立合成层，数量随可见节点数线性增长，实测只有连同视频层一起
- * 降级才能把 p90 帧时从 26ms 拉回 14ms（见 [[canvasLod]] 的实测数据）。
+ * When the canvas is zoomed below 0.35, the <video> in video nodes is replaced with the static image produced here: each
+ * <video> is an independent compositing layer, whose count grows linearly with visible nodes, and measurement shows only degrading together with the video layers
+ * brings p90 frame time back from 26ms to 14ms (see the measured data in [[canvasLod]]).
  * ------------------------------------------------------------------------- */
 
-/** 低缩放档下节点在屏幕上不到 140px，320px 宽的缩略图绰绰有余。 */
+/** At the low-zoom tier a node is under 140px on screen, so a 320px-wide thumbnail is more than enough. */
 const LOD_STILL_WIDTH = 320;
 
-/** t=0 在部分浏览器是黑帧或干脆不绘制，取 0.1s（与画布其它封面用法一致）。 */
+/** t=0 is a black/unpainted frame in some browsers, so take 0.1s (consistent with the other cover usages on the canvas). */
 const LOD_STILL_SEEK_SEC = 0.1;
 
-/** ~320px JPEG 单张约 15–25KB，400 条上限对应几 MB 量级，可接受。 */
+/** A ~320px JPEG is about 15-25KB each, and the 400-entry cap corresponds to a few MB, acceptable. */
 const LOD_STILL_CACHE_LIMIT = 400;
 
 /**
- * 同时最多跑 2 个离屏抓帧。
+ * At most 2 offscreen frame captures run at the same time.
  *
- * 这是纯粹的背景预热任务，不能跟用户正在等的请求抢带宽和解码器；画布上可能同时
- * 挂着几十个视频节点，不设闸门会一次性发起几十路视频加载。
+ * This is a pure background warm-up task and must not compete for bandwidth and decoders with requests the user is waiting for; the canvas may have
+ * dozens of video nodes mounted at once, and without a gate it would launch dozens of video loads at once.
  */
 const LOD_STILL_MAX_CONCURRENT = 2;
 
-/** 单次抓帧超时。卡住的媒体不能长期占着并发槽位。 */
+/** Timeout for a single frame capture. Stuck media must not occupy a concurrency slot for long. */
 const LOD_STILL_TIMEOUT_MS = 15_000;
 
-/** key = 视频 URL；value = dataURL，或 null 表示「试过但拿不到」。 */
+/** key = video URL; value = dataURL, or null meaning "tried but could not get it". */
 const lodStills = new Map<string, string | null>();
-/** 已排队或正在抓的 URL，用于去重。 */
+/** URLs queued or being captured, used for dedup. */
 const lodInFlight = new Set<string>();
 const lodQueue: string[] = [];
 let lodActiveCount = 0;
@@ -198,7 +198,7 @@ function scheduleIdle(run: () => void): void {
 
 function commitLodStill(src: string, still: string | null): void {
   if (lodStills.size >= LOD_STILL_CACHE_LIMIT && !lodStills.has(src)) {
-    // Map 保持插入顺序，最早写入的先出局。
+    // Map keeps insertion order, and the earliest written is evicted first.
     const oldest = lodStills.keys().next();
     if (!oldest.done) lodStills.delete(oldest.value);
   }
@@ -227,8 +227,8 @@ async function runLodCapture(src: string): Promise<void> {
       { preload: 'metadata', timeoutMs: LOD_STILL_TIMEOUT_MS },
     );
   } catch {
-    // 加载失败 / 跨域污染 / 超时：记 null，渲染侧降级成占位块，且不再重试——
-    // 失败往往是媒体源本身的属性，重试只会反复拉流。
+    // Load failure / cross-origin tainting / timeout: record null, the render side degrades to a placeholder block, and no retry -
+    // failure is often a property of the media source itself, and retrying would only pull the stream repeatedly.
     still = null;
   }
   commitLodStill(src, still);
@@ -250,9 +250,9 @@ function pumpLodQueue(): void {
 }
 
 /**
- * 读缓存里的缩略图。`null` = 还没有（尚未抓到，或确认抓不到）。
+ * Read the thumbnail from the cache. `null` = none yet (not captured yet, or confirmed uncapturable).
  *
- * 同步返回且对同一入参返回稳定的原始值，可直接用作 `useSyncExternalStore` 的快照。
+ * Returns synchronously and returns a stable primitive for the same input, usable directly as a `useSyncExternalStore` snapshot.
  */
 export function getLodStill(src: string | null | undefined): string | null {
   if (!src) return null;
@@ -260,10 +260,10 @@ export function getLodStill(src: string | null | undefined): string | null {
 }
 
 /**
- * 请求为该视频准备一张缩略图。幂等：已有结论或已在队列里都会直接返回。
+ * Request a thumbnail be prepared for this video. Idempotent: if a conclusion exists or it is already queued it returns directly.
  *
- * 刻意不区分当前缩放档——低缩放档下画布上根本不挂 <video>，等到那时才开始抓，
- * 用户会先看到一屏占位块。在节点挂载时就排进空闲队列，缩小时缩略图已经就位。
+ * Deliberately not distinguishing the current zoom tier - at the low-zoom tier no <video> is mounted on the canvas at all, and starting to capture only then
+ * would make the user first see a screen of placeholder blocks. Queueing into the idle queue when the node mounts means the thumbnail is already in place by the time of zooming out.
  */
 export function requestLodStill(src: string | null | undefined): void {
   if (!src) return;
@@ -273,7 +273,7 @@ export function requestLodStill(src: string | null | undefined): void {
   pumpLodQueue();
 }
 
-/** 缓存写入时回调；返回取消订阅函数。 */
+/** Called back when the cache is written; returns the unsubscribe function. */
 export function subscribeLodStills(listener: () => void): () => void {
   lodListeners.add(listener);
   return () => {

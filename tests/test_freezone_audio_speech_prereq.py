@@ -36,7 +36,7 @@ async def test_missing_voice_returns_409_without_allocating_or_enqueuing(
         return ctx, "owner", "demo", tmp_path, str(tmp_path)
 
     async def missing_voice(**_kwargs):
-        raise VoicePrerequisiteError("项目解说人声线未配置，请上传或录制解说人音频")
+        raise VoicePrerequisiteError("The project narrator voice is not configured; upload or record narrator audio")
 
     def allocate_job() -> str:
         calls["job"] += 1
@@ -58,7 +58,7 @@ async def test_missing_voice_returns_409_without_allocating_or_enqueuing(
 
     response = await freezone.freezone_audio_speech(
         "proj",
-        FreezoneAudioSpeechRequest(text="旁白"),
+        FreezoneAudioSpeechRequest(text="narration"),
         user={"username": "viewer"},
     )
 
@@ -66,7 +66,7 @@ async def test_missing_voice_returns_409_without_allocating_or_enqueuing(
     assert json.loads(response.body) == {
         "ok": False,
         "code": "voice_prereq_required",
-        "error": "项目解说人声线未配置，请上传或录制解说人音频",
+        "error": "The project narrator voice is not configured; upload or record narrator audio",
     }
     assert calls == {"job": 0, "enqueue": 0}
     store.close.assert_awaited_once()
@@ -117,7 +117,7 @@ async def test_valid_voice_is_resolved_before_job_allocation_and_enqueue(
     result = await freezone.freezone_audio_speech(
         "proj",
         FreezoneAudioSpeechRequest(
-            text="旁白",
+            text="narration",
             voice_ref=FreezoneAudioVoiceRef(scope="user_custom", voice_id="fv_viewer"),
         ),
         user={"username": "viewer"},
@@ -162,7 +162,7 @@ async def test_preset_voice_skips_reference_voice_prerequisite(
     result = await freezone.freezone_audio_speech(
         "proj",
         FreezoneAudioSpeechRequest(
-            text="系统声音旁白",
+            text="System voice narration",
             speech_mode="preset",
             preset_model="edge-tts",
             preset_voice="Serena",
@@ -190,7 +190,7 @@ async def test_explicit_voice_directory_is_a_structured_prerequisite_error(
     voice_directory = tmp_path / "voice-directory"
     voice_directory.mkdir()
     character = SimpleNamespace(
-        name="主角",
+        name="Hero",
         reference_audio_path=voice_directory.name,
         reference_audio_sha256="",
     )
@@ -199,13 +199,13 @@ async def test_explicit_voice_directory_is_a_structured_prerequisite_error(
         list_characters=AsyncMock(return_value=[character]),
     )
 
-    with pytest.raises(VoicePrerequisiteError, match="角色默认声线不可用"):
+    with pytest.raises(VoicePrerequisiteError, match="Character default voice is unavailable"):
         await resolve_speech_voice(
             store=store,
             username="owner",
             project="demo",
             project_dir=tmp_path,
-            voice_ref={"scope": "character_default", "character_name": "主角"},
+            voice_ref={"scope": "character_default", "character_name": "Hero"},
         )
 
 
@@ -219,7 +219,7 @@ async def test_explicit_voice_read_error_is_a_structured_prerequisite_error(
     voice_file = tmp_path / "voice.wav"
     voice_file.write_bytes(b"voice")
     character = SimpleNamespace(
-        name="主角",
+        name="Hero",
         reference_audio_path=voice_file.name,
         reference_audio_sha256="cached-sha",
     )
@@ -241,10 +241,10 @@ async def test_explicit_voice_read_error_is_a_structured_prerequisite_error(
             username="owner",
             project="demo",
             project_dir=tmp_path,
-            voice_ref={"scope": "character_default", "character_name": "主角"},
+            voice_ref={"scope": "character_default", "character_name": "Hero"},
         )
 
-    assert str(exc_info.value) == "声线文件无法读取，请重新选择或检查文件是否完整"
+    assert str(exc_info.value) == "The voice file cannot be read; reselect it or check that the file is intact"
     assert str(leaked_path) not in str(exc_info.value)
 
 
@@ -282,7 +282,7 @@ async def test_user_custom_cached_sha_still_probes_file_readability(
             voice_ref={"scope": "user_custom", "voice_id": voice_id},
         )
 
-    assert str(exc_info.value) == "声线文件无法读取，请重新选择或检查文件是否完整"
+    assert str(exc_info.value) == "The voice file cannot be read; reselect it or check that the file is intact"
     assert str(leaked_path) not in str(exc_info.value)
 
 
@@ -314,7 +314,7 @@ async def test_user_custom_directory_is_rejected_off_the_event_loop_thread(
     monkeypatch.setattr(audio_node, "resolve_user_audio_voice", tracked_resolver)
     store = SimpleNamespace(state_dir=tmp_path, list_characters=AsyncMock())
 
-    with pytest.raises(audio_node.VoicePrerequisiteError, match="用户音色文件不存在"):
+    with pytest.raises(audio_node.VoicePrerequisiteError, match="User voice file does not exist"):
         await audio_node.resolve_speech_voice(
             store=store,
             username="viewer",

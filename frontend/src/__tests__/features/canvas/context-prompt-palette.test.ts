@@ -17,11 +17,11 @@ function beatContext(overrides: Partial<MainlineContext> = {}): MainlineContext 
     beat: 2,
     label: "EP1 / Beat 2",
     sketchColors: {
-      "identity:面馆男青年_青年时期": "#FF00FF",
-      "identity:面馆女青年_青年时期": "#00E5FF",
+      "identity:diner_young_man_young_adult": "#FF00FF",
+      "identity:diner_young_woman_young_adult": "#00E5FF",
     },
     propMarkerColors: {
-      "prop:纸箱": "#B71C1C",
+      "prop:carton": "#B71C1C",
     },
     ...overrides,
   };
@@ -35,8 +35,8 @@ describe("context prompt palette", () => {
     expect(palette.propEntries).toHaveLength(10);
     expect(palette.actorEntries[0]).toEqual({
       kind: "actor",
-      id: "identity:面馆男青年_青年时期",
-      label: "面馆男青年_青年时期",
+      id: "identity:diner_young_man_young_adult",
+      label: "diner_young_man_young_adult",
       named: true,
       color: "#FF00FF",
     });
@@ -49,8 +49,8 @@ describe("context prompt palette", () => {
     });
     expect(palette.propEntries[0]).toEqual({
       kind: "prop",
-      id: "prop:纸箱",
-      label: "纸箱",
+      id: "prop:carton",
+      label: "carton",
       named: true,
       color: "#B71C1C",
     });
@@ -61,7 +61,7 @@ describe("context prompt palette", () => {
       {
         kind: "scene",
         projectId: "project-1",
-        sceneId: "兰州拉面馆",
+        sceneId: "noodle_shop",
       },
     ]);
 
@@ -101,8 +101,8 @@ describe("context prompt palette", () => {
     );
 
     expect(palette.hasEntries).toBe(true);
-    expect(palette.actorEntries[0].label).toBe("面馆男青年_青年时期");
-    expect(palette.propEntries[0].label).toBe("纸箱");
+    expect(palette.actorEntries[0].label).toBe("diner_young_man_young_adult");
+    expect(palette.propEntries[0].label).toBe("carton");
   });
 
   it("falls back to a standalone BeatContextNode beat_context palette", () => {
@@ -117,10 +117,10 @@ describe("context prompt palette", () => {
               schema: "beat_context.v1",
               source: "standalone",
               sketch_colors: {
-                "女主_雨衣": "#FF00FF",
+                "heroine_raincoat": "#FF00FF",
               },
               prop_marker_colors: {
-                "红伞": "#B71C1C",
+                "red_umbrella": "#B71C1C",
               },
             },
           },
@@ -135,8 +135,8 @@ describe("context prompt palette", () => {
       "image-gen-1",
     );
 
-    expect(palette.actorEntries[0].label).toBe("女主_雨衣");
-    expect(palette.propEntries[0].label).toBe("红伞");
+    expect(palette.actorEntries[0].label).toBe("heroine_raincoat");
+    expect(palette.propEntries[0].label).toBe("red_umbrella");
   });
 
   it("still exposes the default palettes when multiple canvas beat palettes exist", () => {
@@ -175,22 +175,22 @@ describe("context prompt palette", () => {
     expect(
       contextPromptPaletteInsertionText({
         kind: "actor",
-        id: "identity:面馆男青年_青年时期",
-        label: "面馆男青年_青年时期",
+        id: "identity:diner_young_man_young_adult",
+        label: "diner_young_man_young_adult",
         named: true,
         color: "#FF00FF",
       }),
-    ).toBe("#FF00FF 标记的人物「面馆男青年_青年时期」");
+    ).toBe('#FF00FF-marked character "diner_young_man_young_adult"');
 
     expect(
       contextPromptPaletteInsertionText({
         kind: "prop",
-        id: "prop:纸箱",
-        label: "纸箱",
+        id: "prop:carton",
+        label: "carton",
         named: true,
         color: "#B71C1C",
       }),
-    ).toBe("#B71C1C 标记的道具「纸箱」");
+    ).toBe('#B71C1C-marked prop "carton"');
   });
 
   it("builds insertion text without names for anonymous palette colors", () => {
@@ -202,7 +202,7 @@ describe("context prompt palette", () => {
         named: false,
         color: "#FF00FF",
       }),
-    ).toBe("#FF00FF 标记的人物");
+    ).toBe("#FF00FF-marked character");
 
     expect(
       contextPromptPaletteInsertionText({
@@ -212,6 +212,6 @@ describe("context prompt palette", () => {
         named: false,
         color: "#B71C1C",
       }),
-    ).toBe("#B71C1C 标记的道具");
+    ).toBe("#B71C1C-marked prop");
   });
 });

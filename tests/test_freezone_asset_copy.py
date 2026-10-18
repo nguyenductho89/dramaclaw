@@ -1,14 +1,14 @@
-"""跨项目粘贴：后端把源项目文件拷进目标项目，前端不再「下载一遍再上传一遍」。
+"""Cross-project paste: the backend copies source-project files into the target project, and the frontend no longer "downloads once and uploads once".
 
-之前的链路是浏览器 fetch 源项目 `/static/projects/<src>/…` 再 POST 到目标项目的
-`freezone/upload`：字节走两遍、大视频窗口期很长，且后端完全不知道这是一次跨项目
-复制，也就没有任何归属校验。现在前端只报「把这些 URL 拷到当前项目」，后端：
+The previous chain was the browser fetching the source project `/static/projects/<src>/...` and then POSTing it to the target project's
+`freezone/upload`: bytes moved twice, big videos had a long window, and the backend did not know at all that this was a cross-project
+copy, so there was no ownership validation whatsoever. Now the frontend only reports "copy these URLs to the current project", and the backend:
 
-- 解析 URL 得到源项目 id 与项目内相对路径（只认同源的 canonical 形式）；
-- 对源项目校验 viewer、对目标项目校验 editor；
-- 优先让 OSS 在服务端 CopyObject（字节不经过 pod），OSS 不可用 / 对象未就绪 /
-  拷完在挂载点上看不见时回退成文件系统拷贝；
-- 返回旧 URL → 新 URL 的映射，单条失败只记进 `failed`，不拖累整批。
+- parses the URL to get the source project id and the project-relative path (only the same-origin canonical form is accepted);
+- validates viewer on the source project and editor on the target project;
+- prefers having OSS do a server-side CopyObject (bytes do not go through the pod), and when OSS is unavailable / the object is not ready /
+  the copy is not visible on the mount afterwards, falls back to a filesystem copy;
+- returns the mapping from old URL to new URL, where a single failure is recorded only into `failed` and does not drag down the whole batch.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from novelvideo.project_context import ProjectContext
 from novelvideo.utils import oss_client
 
 # ---------------------------------------------------------------------------
-# URL 解析
+# URL parsing
 # ---------------------------------------------------------------------------
 
 
@@ -79,7 +79,7 @@ def test_parse_project_asset_url_rejects_everything_else(url):
 
 
 # ---------------------------------------------------------------------------
-# 源文件定位（防目录穿越）
+# Source file location (guarding against directory traversal)
 # ---------------------------------------------------------------------------
 
 
@@ -107,7 +107,7 @@ def test_resolve_source_file_rejects_missing_or_non_regular_files(tmp_path: Path
 
 
 def test_resolve_source_file_turns_path_errors_into_per_source_failures(tmp_path: Path):
-    """空字节、超长文件名这类 Path 层面的异常也只算这一条失败，不能往上炸。"""
+    """Path-level exceptions such as null bytes and over-long file names also count as only this one failure, and must not blow up the caller."""
     project_dir = tmp_path / "output" / "alice" / "demo"
     (project_dir / "freezone").mkdir(parents=True)
 
@@ -121,12 +121,12 @@ def test_resolve_source_file_turns_path_errors_into_per_source_failures(tmp_path
 
 
 # ---------------------------------------------------------------------------
-# 目标命名
+# Target naming
 # ---------------------------------------------------------------------------
 
 
 def test_allocate_target_path_bounds_the_filename_length(tmp_path: Path):
-    """234 字节的源文件名本身合法，加上时间戳前缀就超 255 了；截短而不是让 exists() 炸。"""
+    """A 234-byte source file name is legal by itself, but adding the timestamp prefix exceeds 255; truncate it rather than let exists() blow up."""
     long_name = "x" * 230 + ".png"
     target = asset_copy.allocate_target_path(tmp_path, long_name)
 
@@ -134,7 +134,7 @@ def test_allocate_target_path_bounds_the_filename_length(tmp_path: Path):
     assert not target.exists()
     assert target.name.endswith(".png")
     assert len(target.name.encode()) <= 255
-    # 时间戳前缀之后紧跟被截短的原名。
+    # The truncated original name follows right after the timestamp prefix.
     assert target.name.split("_", 3)[3].startswith("xxxxxxxx")
 
 
@@ -158,16 +158,16 @@ def test_bounded_upload_basename(name, expected):
 
 
 # ---------------------------------------------------------------------------
-# 拷贝：OSS 直拷优先，文件系统回退
+# Copy: OSS direct copy first, filesystem fallback
 # ---------------------------------------------------------------------------
 
 
 class _FakeBucket:
-    """够用的 oss2.Bucket 替身：CopyObject 后（可选）在挂载点上「显形」目标文件。
+    """An oss2.Bucket stand-in that is good enough: after CopyObject, (optionally) "reveals" the target file on the mount point.
 
-    `remote` 指定 OSS 上真正存着的字节（默认与挂载点上的源文件一致），`remote_mtime`
-    指定对象的 Last-Modified（默认「现在」，即已写回）。`crc` / `etag` 控制 head 里带哪些
-    校验和：默认两者都按远端字节算；`etag="multipart"` 模拟分片上传的 `<md5>-<n>` 形式。
+    `remote` specifies the bytes OSS really stores (by default identical to the source file on the mount), and `remote_mtime`
+    specifies the object's Last-Modified (by default "now", i.e. already written back). `crc` / `etag` control which
+    checksums the head carries: by default both are computed from the remote bytes; `etag="multipart"` simulates the `<md5>-<n>` form of multipart uploads.
     """
 
     bucket_name = "bkt"
@@ -266,7 +266,7 @@ def test_copy_project_file_prefers_a_server_side_oss_copy(tmp_path, monkeypatch)
 
 
 def test_copy_project_file_falls_back_when_the_source_is_not_in_oss_yet(tmp_path, monkeypatch):
-    """ossfs 写回有延迟：刚上传的源文件可能还没到 OSS，此时不能 CopyObject。"""
+    """ossfs write-back is delayed: a just-uploaded source file may not have reached OSS yet, so CopyObject must not be used."""
     source, target = _two_files(tmp_path, monkeypatch)
     bucket = _FakeBucket(exists=False)
     monkeypatch.setattr(oss_client, "get_bucket", lambda: bucket)
@@ -280,9 +280,9 @@ def test_copy_project_file_falls_back_when_the_source_is_not_in_oss_yet(tmp_path
 def test_copy_project_file_falls_back_when_the_oss_object_is_a_stale_same_size_version(
     tmp_path, monkeypatch, mtime_offset
 ):
-    """源文件被原地覆盖、ossfs 还没写回：OSS 上是旧版本且大小相同。只看「对象存在 +
-    目标大小对得上」会把旧内容当成功结果永久留在目标项目里；Last-Modified 差一两秒
-    甚至比本地更新（时钟偏差）也判不准。判定按内容校验和来，与时间戳无关。"""
+    """The source file is overwritten in place and ossfs has not written back: OSS holds an old version of the same size. Looking only at "object exists +
+    target size matches" would keep the old content in the target project permanently as a successful result; a Last-Modified that differs by a second or two
+    or is even newer than the local one (clock skew) cannot be judged reliably either. The judgment goes by content checksum, independent of timestamps."""
     source, target = _two_files(tmp_path, monkeypatch)
     source.write_bytes(b"NEW!")
     bucket = _FakeBucket(remote=b"OLD!", remote_mtime=source.stat().st_mtime + mtime_offset)
@@ -294,7 +294,7 @@ def test_copy_project_file_falls_back_when_the_oss_object_is_a_stale_same_size_v
 
 
 def test_copy_project_file_accepts_a_matching_single_part_etag_without_crc(tmp_path, monkeypatch):
-    """没有 CRC 头时退而比 ETag：单次上传的对象 ETag 就是内容 MD5。"""
+    """Without a CRC header, compare the ETag instead: the ETag of a single-shot upload is the content MD5."""
     source, target = _two_files(tmp_path, monkeypatch)
     bucket = _FakeBucket(crc=False)
     monkeypatch.setattr(oss_client, "get_bucket", lambda: bucket)
@@ -307,7 +307,7 @@ def test_copy_project_file_accepts_a_matching_single_part_etag_without_crc(tmp_p
 def test_copy_project_file_falls_back_when_only_a_multipart_etag_is_available(
     tmp_path, monkeypatch
 ):
-    """分片上传的 ETag 不是内容 MD5，又没有 CRC → 无法确认版本，回退。"""
+    """The ETag of a multipart upload is not the content MD5, and with no CRC either -> the version cannot be confirmed, so fall back."""
     source, target = _two_files(tmp_path, monkeypatch)
     bucket = _FakeBucket(crc=False, etag="multipart")
     monkeypatch.setattr(oss_client, "get_bucket", lambda: bucket)
@@ -339,7 +339,7 @@ def test_copy_project_file_falls_back_when_the_oss_object_size_differs(tmp_path,
 def test_copy_project_file_falls_back_when_the_bucket_cannot_confirm_the_version(
     tmp_path, monkeypatch
 ):
-    """拿不到 head（老 SDK / 替身没实现）就当不确定：宁可多走一次文件系统拷贝。"""
+    """If head cannot be obtained (old SDK / the stand-in does not implement it), treat it as uncertain: better to take one more filesystem copy."""
     source, target = _two_files(tmp_path, monkeypatch)
 
     class _NoHead:
@@ -360,7 +360,7 @@ def test_copy_project_file_falls_back_when_the_bucket_cannot_confirm_the_version
 def test_copy_project_file_falls_back_when_the_copy_is_invisible_on_the_mount(
     tmp_path, monkeypatch
 ):
-    """CopyObject 成功但挂载点上看不到目标文件（负缓存等）→ 走文件系统兜底，别返回一个 404 的 URL。"""
+    """CopyObject succeeds but the target file is not visible on the mount point (negative cache, etc.) -> take the filesystem fallback, and do not return a URL that 404s."""
     source, target = _two_files(tmp_path, monkeypatch)
     bucket = _FakeBucket(materialize=False)
     monkeypatch.setattr(oss_client, "get_bucket", lambda: bucket)
@@ -384,7 +384,7 @@ def test_copy_project_file_falls_back_when_oss_copy_raises(tmp_path, monkeypatch
 
 
 # ---------------------------------------------------------------------------
-# 路由
+# Routes
 # ---------------------------------------------------------------------------
 
 USER = {"id": "user_bob", "username": "bob"}
@@ -410,7 +410,7 @@ def _ctx(tmp_path: Path, project_id: str, *, owner: str, name: str, role: str) -
 
 
 def _patch_projects(monkeypatch: pytest.MonkeyPatch, ctxs: dict[str, ProjectContext]) -> None:
-    """只打桩控制面：角色校验照真函数来，守卫与落盘原样留在链路里。"""
+    """Stub only the control plane: the role check follows the real function, and the guard and disk write remain in the chain as is."""
 
     async def fake_resolve_project_context(
         *, user, project_id=None, project_name=None, required_role="viewer"
@@ -452,7 +452,7 @@ async def test_copy_route_copies_source_assets_into_the_target_uploads_dir(
     data = result["data"]
     assert data["failed"] == []
     mapping = data["mapping"]
-    # 带不带 cache-bust 查询串都要映射到，且同一个源文件只拷一次。
+    # Both with and without a cache-bust query string must be mapped, and the same source file is copied only once.
     assert set(mapping) == {f"{image}?v=1", image, video}
     assert mapping[f"{image}?v=1"] == mapping[image]
     for new_url in mapping.values():
@@ -469,7 +469,7 @@ async def test_copy_route_reports_per_source_failures_without_failing_the_batch(
 ) -> None:
     monkeypatch.setattr(oss_client, "get_bucket", lambda: None)
     source_ctx = _ctx(tmp_path, "proj_src", owner="alice", name="rigeng", role="viewer")
-    # 请求者不是这个项目的成员：控制面给的角色是空。
+    # The requester is not a member of this project: the role given by the control plane is empty.
     foreign_ctx = _ctx(tmp_path, "proj_foreign", owner="carol", name="private", role="")
     target_ctx = _ctx(tmp_path, "proj_dst", owner="bob", name="vlog", role="editor")
     target_ctx.output_dir.mkdir(parents=True)
@@ -503,10 +503,10 @@ async def test_copy_route_reports_per_source_failures_without_failing_the_batch(
         unknown_project: "not_found",
         external: "invalid_source",
     }
-    # 本来就属于目标项目的 URL：既不用拷，也不算失败。
+    # A URL that already belongs to the target project: no need to copy, and it does not count as a failure.
     assert already_here not in data["mapping"]
     assert already_here not in failed
-    # 失败的源不能在目标项目留下半成品：目录里只有那一个成功拷过来的文件。
+    # A failed source must not leave a half-finished product in the target project: the directory holds only that one successfully copied file.
     uploads = list((target_ctx.output_dir / "freezone" / "_uploads").iterdir())
     assert [p.read_bytes() for p in uploads] == [b"ok"]
 
@@ -514,10 +514,10 @@ async def test_copy_route_reports_per_source_failures_without_failing_the_batch(
 async def test_copy_route_isolates_preparation_failures_to_the_single_asset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """准备阶段（解析 URL、定位源文件、给目标起名）炸了也只算那一条失败。
+    """The preparation phase (parsing the URL, locating the source file, naming the target) blowing up also counts as only that one failure.
 
-    之前 `http://[` 在 urlsplit 就抛 ValueError、`bad%00.png` 在 resolve 时抛 ValueError、234 字节的合法文件名加上时间戳前缀后
-    `exists()` 抛 OSError，都会在任何拷贝开始前终止整批，同批 good.png 也迁不过去。
+    Previously `http://[` raised ValueError in urlsplit, `bad%00.png` raised ValueError at resolve, and a legal 234-byte file name with the timestamp prefix added made
+    `exists()` raise OSError; each would terminate the whole batch before any copy began, so even good.png in the same batch could not be migrated.
     """
     monkeypatch.setattr(oss_client, "get_bucket", lambda: None)
     source_ctx = _ctx(tmp_path, "proj_src", owner="alice", name="rigeng", role="viewer")
@@ -529,7 +529,7 @@ async def test_copy_route_isolates_preparation_failures_to_the_single_asset(
     assert len(long_name) == 234
     long_asset = _source_asset(source_ctx, f"freezone/_uploads/{long_name}", b"long")
     null_byte = f"/static/projects/{source_ctx.project_id}/freezone/_uploads/bad%00.png"
-    malformed = "http://["  # urlsplit 自己会抛 ValueError: Invalid IPv6 URL
+    malformed = "http://["  # urlsplit itself raises ValueError: Invalid IPv6 URL
 
     result = await freezone_routes.freezone_copy_assets_from_project(
         project="proj_dst",

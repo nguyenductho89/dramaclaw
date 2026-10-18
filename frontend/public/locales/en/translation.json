@@ -6022,7 +6022,9 @@
         "fillTextFirst": "Fill in the text to synthesize first",
         "regenerate": "Regenerate",
         "generate": "Generate"
-      }
+      },
+      "referenceImage": "Reference image",
+      "storyboardTableSummary": "Storyboard table · {{count}} shots"
     },
     "keyElement": {
       "character": "Character",
@@ -6036,6 +6038,12 @@
       "missingProject": "The current URL has no project; cannot submit generation",
       "noUpscaleImage": "The target node has no image to upscale",
       "noGenerateImage": "The target node has no image to generate from"
+    },
+    "spawnGroup": {
+      "textToVideo": "Text-to-video group",
+      "imageToPrompt": "Image reverse-prompt group",
+      "textToMusic": "Text-to-music group",
+      "cloneAudio": "Clone audio group"
     }
   },
   "tool": {

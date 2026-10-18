@@ -14,8 +14,8 @@ const ids = (nodes: Node[]) => nodes.map((node) => node.id);
 
 describe("sortUpstreamByReferenceOrder", () => {
   it("keeps newly connected nodes in connection order, ignoring canvas y position", () => {
-    // 回归用例:旧图(red,先引用,在画布下方 y=900)应排在新图(grid,后引用,
-    // 在画布上方 y=0)之前。曾经按 y 排序会把上方的新图错误地放到第 1 位。
+    // Regression case: the old image (red, referenced first, at y=900 below on the canvas) should sort before the new image (grid, referenced later,
+    // at y=0 above on the canvas). Sorting by y once wrongly put the upper new image in position 1.
     const connectionOrder: Node[] = [
       { id: "red", position: { y: 900 } },
       { id: "grid", position: { y: 0 } },
@@ -39,8 +39,8 @@ describe("sortUpstreamByReferenceOrder", () => {
   });
 
   it("places manually-ordered nodes first, then unordered ones in connection order", () => {
-    // b 被手动拖到首位;a 和后来连入的 c、d 都不在 referenceOrder 里,
-    // 应按连接顺序(输入数组顺序)接在 b 之后。
+    // b was manually dragged to the first position; a and the later-connected c, d are not in referenceOrder,
+    // and should follow b in connection order (input array order).
     const connectionOrder: Node[] = [
       { id: "a", position: { y: 50 } },
       { id: "b", position: { y: 999 } },
@@ -67,11 +67,11 @@ describe("sortUpstreamByReferenceOrder", () => {
 
 describe("upstreamNodesInEdgeOrder", () => {
   it("returns upstream nodes in edge-connection order, not nodes-array order", () => {
-    // 回归用例：@图片N 编号按连线顺序（useUpstreamNodes），提交曾按 nodes 数组
-    // 顺序收集 —— 先创建但后连线的 gen 节点会被错误排到 references[0]，导致
-    // prompt 里的 @图片1 在后端指向另一张图。两边必须走同一个函数。
+    // Regression case: @imageN numbering follows connection order (useUpstreamNodes), while submission once collected in nodes array
+    // order — a gen node created first but connected later was wrongly ordered to references[0], making
+    // @image1 in the prompt point to another image on the backend. Both sides must go through the same function.
     const nodes: Node[] = [
-      { id: "gen" }, // 创建最早（nodes 数组第 1 位），但最后才连线
+      { id: "gen" }, // created earliest (position 1 of the nodes array), but connected last
       { id: "upload-a" },
       { id: "upload-b" },
     ];
@@ -122,8 +122,8 @@ describe("upstreamNodesInEdgeOrder", () => {
 
 describe("orderedReferenceUrlsWithOwnFirst", () => {
   it("puts the node's own reference image first, upstream images after", () => {
-    // 回归用例：图片节点自带参考图时，提交给后端的第 1 张就是它 —— @图片N
-    // 编号必须也把它算作图片1，否则 prompt 里所有 @图片N 到后端整体偏移 1。
+    // Regression case: when an image node carries its own reference image, it is the 1st one submitted to the backend — the @imageN
+    // numbering must count it as image1 too, otherwise all @imageN in the prompt shift by 1 on the backend.
     expect(
       orderedReferenceUrlsWithOwnFirst("own.png", ["a.png", "b.png"]),
     ).toEqual(["own.png", "a.png", "b.png"]);

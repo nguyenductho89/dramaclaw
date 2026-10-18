@@ -5908,7 +5908,9 @@
         "fillTextFirst": "Hãy nhập văn bản cần tổng hợp trước",
         "regenerate": "Tạo lại",
         "generate": "Tạo"
-      }
+      },
+      "referenceImage": "Ảnh tham chiếu",
+      "storyboardTableSummary": "Bảng phân cảnh · {{count}} cảnh quay"
     },
     "keyElement": {
       "character": "Nhân vật",
@@ -5922,6 +5924,12 @@
       "missingProject": "URL hiện tại thiếu project; không thể gửi tác vụ tạo",
       "noUpscaleImage": "Node đích không có ảnh để nâng độ phân giải",
       "noGenerateImage": "Node đích không có ảnh để tạo"
+    },
+    "spawnGroup": {
+      "textToVideo": "Nhóm văn bản thành video",
+      "imageToPrompt": "Nhóm tạo prompt từ ảnh",
+      "textToMusic": "Nhóm văn bản thành nhạc",
+      "cloneAudio": "Nhóm nhân bản âm thanh"
     }
   },
   "tool": {

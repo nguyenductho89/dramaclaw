@@ -11,7 +11,7 @@ function rect(top: number, left = 400, height = 24) {
 }
 
 describe('placeAnchoredMenu', () => {
-  it('下方放得下就开在下方，高度按内容给满', () => {
+  it('opens below when there is room below, giving the full content height', () => {
     const geometry = placeAnchoredMenu({
       anchorRect: rect(200),
       width: 236,
@@ -25,8 +25,8 @@ describe('placeAnchoredMenu', () => {
     expect(geometry.maxHeight).toBe(300);
   });
 
-  it('贴着视口下沿时翻到触发元素上方，而不是掉出屏幕', () => {
-    // 操作面板贴在底边：chip 下面只剩 40px，塞不下 300px 的选单。
+  it('flips above the trigger element when hugging the bottom of the viewport, rather than falling off screen', () => {
+    // The operations panel hugs the bottom edge: only 40px remain below the chip, which cannot fit a 300px menu.
     const geometry = placeAnchoredMenu({
       anchorRect: rect(736),
       width: 236,
@@ -36,12 +36,12 @@ describe('placeAnchoredMenu', () => {
 
     expect(geometry.placement).toBe('above');
     expect(geometry.maxHeight).toBe(300);
-    // 上边缘在视口内，下边缘正好落在触发元素上方。
+    // The top edge is inside the viewport, and the bottom edge lands exactly above the trigger element.
     expect(geometry.top).toBe(432);
     expect(geometry.top + geometry.maxHeight).toBeLessThanOrEqual(736 - 4);
   });
 
-  it('下方装不满但仍比上方宽裕：留在下方并收缩，不来回翻', () => {
+  it('does not fill below but is still roomier than above: stays below and shrinks, no flipping back and forth', () => {
     const geometry = placeAnchoredMenu({
       anchorRect: rect(300),
       width: 236,
@@ -55,7 +55,7 @@ describe('placeAnchoredMenu', () => {
     expect(geometry.top + geometry.maxHeight).toBeLessThanOrEqual(800 - 8);
   });
 
-  it('翻到上方也放不满时收缩高度，让选单自己滚，不越出视口', () => {
+  it('shrinks the height when it does not fit above either, letting the menu scroll itself rather than exceed the viewport', () => {
     const geometry = placeAnchoredMenu({
       anchorRect: rect(200),
       width: 236,
@@ -69,7 +69,7 @@ describe('placeAnchoredMenu', () => {
     expect(geometry.top).toBe(8);
   });
 
-  it('上下都逼仄时留在下方，且整体压回视口内', () => {
+  it('stays below when both sides are cramped, and is pressed back into the viewport as a whole', () => {
     const geometry = placeAnchoredMenu({
       anchorRect: rect(60),
       width: 236,
@@ -83,7 +83,7 @@ describe('placeAnchoredMenu', () => {
     expect(geometry.top + geometry.maxHeight).toBeLessThanOrEqual(160 - 8);
   });
 
-  it('横向仍然夹在视口内', () => {
+  it('still clamps horizontally inside the viewport', () => {
     expect(
       placeAnchoredMenu({
         anchorRect: rect(200, 1150),

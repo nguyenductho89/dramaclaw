@@ -38,7 +38,7 @@ describe("character generation model selection", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/portrait-async",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/portrait-async",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({ ok: true, task_id: "task-portrait" });
@@ -58,7 +58,7 @@ describe("character generation model selection", () => {
   it("surfaces backend queue-limit errors when generating a character portrait", async () => {
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/portrait-async",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/portrait-async",
         () =>
           HttpResponse.json(
             {
@@ -91,7 +91,7 @@ describe("character generation model selection", () => {
   it("surfaces backend queue-limit errors when generating a scene master", async () => {
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/scenes/%E5%8A%9E%E5%85%AC%E5%AE%A4/master/generate-async",
+        "http://localhost:3000/api/v1/projects/demo/scenes/Office/master/generate-async",
         () =>
           HttpResponse.json(
             {
@@ -163,7 +163,7 @@ describe("character generation model selection", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/identities/id-1/generate-async",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/identities/id-1/generate-async",
         async ({ request }) => {
           requestedPath = new URL(request.url).pathname;
           body = await request.json();
@@ -183,7 +183,7 @@ describe("character generation model selection", () => {
 
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(requestedPath).toBe(
-      "/api/v1/projects/demo/characters/%E7%A7%A6/identities/id-1/generate-async",
+      "/api/v1/projects/demo/characters/Qin/identities/id-1/generate-async",
     );
     expect(body).toEqual({ model: "openrouter_nanobanana2" });
   });
@@ -192,7 +192,7 @@ describe("character generation model selection", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/identities/id-1/portrait/generate-async",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/identities/id-1/portrait/generate-async",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({ ok: true, task_id: "task-identity-portrait" });

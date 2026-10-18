@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Elastic-2.0
 # Copyright (c) 2026 ClaymoreLab
-"""画布媒体引用的作用域守卫。
+"""Scope guard for canvas media references.
 
-判定只有一条：媒体 URL 里的 project id ≠ 画布所属项目 = 外项目引用。不看个人/组织，
-所以源项目的所有者本人也绕不过去——静态资源本来就按 URL 里的项目 id 独立鉴权，
-换个合法成员打开就是 403。
+There is only one criterion: the project id in the media URL != the project the canvas belongs to = a foreign-project reference. Personal/organization is not considered,
+so even the owner of the source project cannot get around it -- static resources are authorized independently by the project id in the URL,
+and opening it as another legitimate member yields 403.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ def _node(node_id: str, data: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 扫描
+# Scanning
 # ---------------------------------------------------------------------------
 
 
@@ -78,7 +78,7 @@ def test_scan_ignores_everything_that_is_not_a_project_asset_url() -> None:
                 {
                     "imageUrl": "data:image/png;base64,AAAA",
                     "videoUrl": "https://cdn.example.com/a.mp4",
-                    # legacy 形式没有项目 id，后端已经 410，也没法按项目授权。
+                    # The legacy form has no project id, the backend already returns 410, and it cannot be authorized by project either.
                     "posterUrl": "/static/alice/rigeng/a.png",
                     "title": "/static/projects/proj_src/not-a-url-field.png",
                 },
@@ -92,18 +92,18 @@ def test_scan_ignores_everything_that_is_not_a_project_asset_url() -> None:
 @pytest.mark.parametrize(
     "url",
     [
-        # 浏览器先归一化点段再发请求，守卫按字面量看就会把它当本项目资源放行。
+        # The browser normalizes dot segments before sending the request; a guard looking at the literal would treat it as a resource of this project and let it through.
         "/static/projects/proj_dst/../proj_src/a.png",
         "/static/projects/proj_dst/nested/../../proj_src/a.png",
-        # `%2e%2e` 在 URL 规范里同样是双点段。
+        # `%2e%2e` is likewise a double-dot segment under the URL spec.
         "/static/projects/proj_dst/%2e%2e/proj_src/a.png",
-        # 写成绝对形式的同一张图，浏览器取的还是同一个受保护路径。
+        # The same image written in absolute form still fetches the same protected path in the browser.
         "https://app.example.test/static/projects/proj_src/a.png",
         "//app.example.test/static/projects/proj_src/a.png",
     ],
 )
 def test_scan_sees_through_url_forms_that_resolve_to_another_project(url: str) -> None:
-    """判定必须跟浏览器实际会取哪个地址一致，否则守卫就是可以绕过去的。"""
+    """The judgment must agree with which address the browser will actually fetch, otherwise the guard can be bypassed."""
     payload = {"nodes": [_node("n1", {"imageUrl": url})]}
 
     refs = scan_foreign_media_refs(payload, project_id="proj_dst")
@@ -120,7 +120,7 @@ def test_scan_still_accepts_the_absolute_form_of_the_canvas_own_media() -> None:
 
 
 def test_scan_walks_nested_node_data() -> None:
-    """叠卡画册 / 分镜帧把 URL 藏在数组和子对象里，字段白名单靠不住。"""
+    """The stacked-card album / shot frames hide URLs in arrays and sub-objects, so a field whitelist is unreliable."""
     payload = {
         "nodes": [
             _node(
@@ -165,7 +165,7 @@ def test_scan_survives_a_payload_without_usable_nodes() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 守卫：只拦本次新引入的
+# Guard: block only what is newly introduced this time
 # ---------------------------------------------------------------------------
 
 
@@ -179,13 +179,13 @@ def test_guard_rejects_a_newly_introduced_foreign_reference() -> None:
 
 
 def test_guard_lets_a_reference_that_is_already_stored_through() -> None:
-    """生产上那些 403 的老画布还得能存能编辑，否则一个脏节点就把整张画布锁死。"""
+    """Old canvases that return 403 in production must still be saveable and editable, otherwise a single dirty node locks the whole canvas."""
     stored_url = "/static/projects/proj_src/a.png"
     existing = {"nodes": [_node("n1", {"imageUrl": stored_url})]}
     incoming = {
         "nodes": [
             _node("n1", {"imageUrl": stored_url}),
-            _node("n2", {"label": "新加的干净节点"}),
+            _node("n2", {"label": "A newly added clean node"}),
         ]
     }
 
@@ -193,7 +193,7 @@ def test_guard_lets_a_reference_that_is_already_stored_through() -> None:
 
 
 def test_guard_matches_stored_references_by_url_not_by_node() -> None:
-    """老 URL 挪到别的节点上（拖动重组）不算新引入。"""
+    """Moving an old URL to another node (drag-regroup) does not count as newly introduced."""
     stored_url = "/static/projects/proj_src/a.png"
     existing = {"nodes": [_node("n1", {"imageUrl": stored_url})]}
     incoming = {"nodes": [_node("n9", {"imageUrl": stored_url})]}
@@ -218,7 +218,7 @@ def test_guard_still_rejects_a_new_reference_next_to_a_grandfathered_one() -> No
 
 
 def test_guard_ignores_the_cache_bust_query_when_matching_stored_references() -> None:
-    """`?v=` 每次读都可能被重新盖一遍，不能因此把老引用当成新引入。"""
+    """`?v=` may be re-stamped on every read, so old references must not be treated as newly introduced because of it."""
     existing = {"nodes": [_node("n1", {"imageUrl": "/static/projects/proj_src/a.png?v=1"})]}
     incoming = {"nodes": [_node("n1", {"imageUrl": "/static/projects/proj_src/a.png?v=2"})]}
 
@@ -232,7 +232,7 @@ def test_guard_accepts_a_canvas_whose_media_all_belongs_to_the_project() -> None
 
 
 # ---------------------------------------------------------------------------
-# 路由
+# Routes
 # ---------------------------------------------------------------------------
 
 USER = {"id": "user_bob", "username": "bob"}
@@ -270,7 +270,7 @@ def _patch_project(monkeypatch: pytest.MonkeyPatch, ctx: ProjectContext) -> None
 
 
 def _node_payload(url: str | None, *, node_id: str = "n1") -> list[dict]:
-    data: dict = {"label": "节点"}
+    data: dict = {"label": "Node"}
     if url is not None:
         data["imageUrl"] = url
     return [{"id": node_id, "type": "image", "position": {"x": 0, "y": 0}, "data": data}]
@@ -336,7 +336,7 @@ async def test_put_canvas_accepts_media_that_belongs_to_the_project(
 async def test_put_canvas_rejects_even_the_source_project_owner(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """判定只看 URL 里的项目 id：源素材是自己的也一样拦，否则组织画布又会存下别人读不到的引用。"""
+    """The judgment looks only at the project id in the URL: even when the source asset is your own it is blocked, otherwise an organization canvas would again store references others cannot read."""
     _patch_project(monkeypatch, _ctx(tmp_path, "proj_dst", owner="bob"))
 
     with pytest.raises(HTTPException) as excinfo:
@@ -348,7 +348,7 @@ async def test_put_canvas_rejects_even_the_source_project_owner(
 async def test_put_canvas_still_saves_a_canvas_that_already_carried_a_foreign_reference(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """生产上那些 403 老画布：一个历史脏节点不能把整张画布锁成永远存不了。"""
+    """Old canvases that return 403 in production: one historical dirty node must not lock the whole canvas so it can never be saved."""
     ctx = _ctx(tmp_path, "proj_dst")
     _patch_project(monkeypatch, ctx)
     state_dir = Path(ctx.state_dir)
@@ -381,12 +381,12 @@ async def test_put_canvas_still_saves_a_canvas_that_already_carried_a_foreign_re
 async def test_restore_rejects_a_foreign_reference_that_only_exists_in_the_old_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """回滚也是一次写入：已经清干净的画布不能靠「恢复历史」把外项目引用重新写回去。"""
+    """A rollback is also a write: a canvas already cleaned up cannot write foreign-project references back via "restore history"."""
     ctx = _ctx(tmp_path, "proj_dst")
     _patch_project(monkeypatch, ctx)
     state_dir = Path(ctx.state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
-    # 旧版本带脏引用(守卫上线前存下的)，直接落库绕过 PUT。
+    # The old version carries dirty references (stored before the guard went live), and is written to the database directly, bypassing PUT.
     canvas_store.save_canvas(
         state_dir,
         "default",
@@ -400,7 +400,7 @@ async def test_restore_rejects_a_foreign_reference_that_only_exists_in_the_old_v
             "edges": [],
         },
     )
-    # 用户把它清干净：脏节点换成本项目素材，旧版本进历史。
+    # The user cleans it up: the dirty node is replaced with an asset of this project, and the old version enters history.
     saved = await freezone_routes.put_canvas(
         project="proj_dst",
         canvas_id="default",
@@ -424,7 +424,7 @@ async def test_restore_rejects_a_foreign_reference_that_only_exists_in_the_old_v
     assert excinfo.value.status_code == 422
     assert excinfo.value.detail["code"] == "canvas_media_scope_mismatch"
     assert [ref["url"] for ref in excinfo.value.detail["refs"]] == [FOREIGN]
-    # 拦下就不能落库。
+    # Once blocked it must not be written to the database.
     stored = canvas_store.read_canvas(state_dir, "default")
     assert stored["revision"] == revision
     assert stored["nodes"][0]["data"]["imageUrl"] == LOCAL
@@ -433,7 +433,7 @@ async def test_restore_rejects_a_foreign_reference_that_only_exists_in_the_old_v
 async def test_restore_still_allows_rolling_back_a_canvas_that_already_carries_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """当前版本本来就带着同一处脏引用时，回滚照常——判据跟 PUT 一致，只拦新引入的。"""
+    """When the current version already carries the same dirty reference, rollback proceeds as usual -- the criterion is consistent with PUT, blocking only what is newly introduced."""
     ctx = _ctx(tmp_path, "proj_dst")
     _patch_project(monkeypatch, ctx)
     state_dir = Path(ctx.state_dir)
@@ -476,7 +476,7 @@ async def test_restore_still_allows_rolling_back_a_canvas_that_already_carries_o
 async def test_get_canvas_reports_the_foreign_media_references_it_serves(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """读取期诊断：前端据此显示「素材属于其他项目」，不再只给一片裂图。"""
+    """Read-time diagnostics: the frontend uses this to show "asset belongs to another project" instead of just a field of broken images."""
     ctx = _ctx(tmp_path, "proj_dst")
     _patch_project(monkeypatch, ctx)
     state_dir = Path(ctx.state_dir)

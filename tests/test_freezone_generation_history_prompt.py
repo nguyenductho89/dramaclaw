@@ -45,7 +45,7 @@ def test_freezone_video_history_persists_prompt(tmp_path: Path) -> None:
     payload = {
         "node_id": "video_1",
         "canvas_id": "default",
-        "prompt": "电影级武侠风，深夜古街，斗笠侠客。",
+        "prompt": "Cinematic wuxia style, an old street at midnight, a swordsman in a straw hat.",
     }
     rec = _append_freezone_video_node_history(
         ctx=ctx,
@@ -74,14 +74,14 @@ def test_freezone_video_history_keeps_per_version_prompt_after_edit(
     _append_freezone_video_node_history(
         ctx=ctx,
         project_dir=project_dir,
-        payload={**base, "prompt": "旧提示词"},
+        payload={**base, "prompt": "old prompt"},
         job_id="job_old",
         result={"output_url": "/static/old.mp4"},
     )
     _append_freezone_video_node_history(
         ctx=ctx,
         project_dir=project_dir,
-        payload={**base, "prompt": "新提示词"},
+        payload={**base, "prompt": "new prompt"},
         job_id="job_new",
         result={"output_url": "/static/new.mp4"},
     )
@@ -90,8 +90,8 @@ def test_freezone_video_history_keeps_per_version_prompt_after_edit(
         project_dir=project_dir, canvas_id="default", node_id="video_1"
     )
     by_job = {r["job_id"]: r for r in stored}
-    assert by_job["job_old"]["prompt"] == "旧提示词"
-    assert by_job["job_new"]["prompt"] == "新提示词"
+    assert by_job["job_old"]["prompt"] == "old prompt"
+    assert by_job["job_new"]["prompt"] == "new prompt"
 
 
 def test_freezone_video_history_omits_prompt_when_absent(tmp_path: Path) -> None:
@@ -114,14 +114,14 @@ def test_freezone_image_history_persists_prompt(tmp_path: Path) -> None:
     rec = _append_node_history(
         ctx=ctx,
         project_dir=project_dir,
-        payload={"node_id": "img_1", "canvas_id": "default", "prompt": "图片提示词"},
+        payload={"node_id": "img_1", "canvas_id": "default", "prompt": "image prompt"},
         task_type="freezone_gen",
         job_id="job_i1",
         media_type="image",
         result={"output_url": "/static/i.png"},
     )
     assert rec is not None
-    assert rec["prompt"] == "图片提示词"
+    assert rec["prompt"] == "image prompt"
 
 
 def test_image_history_falls_back_to_input_key(tmp_path: Path) -> None:
@@ -130,14 +130,14 @@ def test_image_history_falls_back_to_input_key(tmp_path: Path) -> None:
     rec = _append_node_history(
         ctx=ctx,
         project_dir=tmp_path / "proj",
-        payload={"node_id": "n1", "canvas_id": "default", "input": "配音文本"},
+        payload={"node_id": "n1", "canvas_id": "default", "input": "voiceover text"},
         task_type="freezone_audio_gen",
         job_id="job_a1",
         media_type="audio",
         result={"output_url": "/static/a.mp3"},
     )
     assert rec is not None
-    assert rec["prompt"] == "配音文本"
+    assert rec["prompt"] == "voiceover text"
 
 
 # ---- shared builder ----
@@ -179,14 +179,14 @@ def test_api_route_helper_persists_prompt(tmp_path: Path) -> None:
         job_id="job_s1",
         status="completed",
         media_type="text",
-        prompt="故事脚本提示词",
+        prompt="story script prompt",
         result={"output_format": "json"},
     )
     assert rec is not None
-    assert rec["prompt"] == "故事脚本提示词"
+    assert rec["prompt"] == "story script prompt"
     stored = read_generation_history(
         project_dir=project_dir, canvas_id="default", node_id="story_1"
     )
-    assert stored[-1]["prompt"] == "故事脚本提示词"
+    assert stored[-1]["prompt"] == "story script prompt"
     # the dead prompt_preview field is no longer emitted
     assert "prompt_preview" not in stored[-1]

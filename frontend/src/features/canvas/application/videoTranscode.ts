@@ -1,21 +1,21 @@
 /**
- * 上传前的视频编码归一化（纯前端，不占服务端资源）。
+ * Video encoding normalization before upload (pure frontend, using no server resources).
  *
- * 背景：飞书录屏 / iPhone 拍摄等来源默认是 HEVC (H.265)。Windows Edge 没装
- * 「HEVC 视频扩展」时解不了码——画布上表现为节点黑屏、只有时长和声音
- * （Chrome 107+ 自带硬件 HEVC 解码所以看不出问题）。Web 端唯一稳妥的组合是
- * H.264 (avc) + AAC，所以凡视频轨不是 avc 的，上传前先在浏览器里转一遍。
+ * Background: sources such as Feishu screen recordings / iPhone footage default to HEVC (H.265). Windows Edge without the
+ * "HEVC Video Extensions" installed cannot decode it - on the canvas this shows as a black node with only duration and sound
+ * (Chrome 107+ ships hardware HEVC decoding so the problem is not visible there). The only safe combination on the web is
+ * H.264 (avc) + AAC, so any video track that is not avc is first converted in the browser before upload.
  *
- * 两条路径：
- * 1. 快路径（mediabunny + WebCodecs）：浏览器能解源编码时，硬解 + 硬编 H.264，
- *    通常数倍速于实时，不下载任何 wasm。
- * 2. 兜底（ffmpeg.wasm 单线程，动态 import 单独 chunk）：浏览器解不了源编码时
- *    （典型就是 Edge 遇到 HEVC——WebCodecs 用的就是浏览器自带解码器，同样解不了）
- *    纯软件转码。慢（约 0.2~0.5x 实时），靠节点上的进度 loading 兜住体验。
- *    注意页面只设了 COOP 没设 COEP（见 matteWorker.ts），没有 SharedArrayBuffer，
- *    只能用单线程核心。
+ * Two paths:
+ * 1. Fast path (mediabunny + WebCodecs): when the browser can decode the source codec, hardware decode + hardware encode H.264,
+ *    usually several times faster than real time, downloading no wasm.
+ * 2. Fallback (ffmpeg.wasm single-threaded, dynamically imported as a separate chunk): when the browser cannot decode the source codec
+ *    (typically Edge meeting HEVC - WebCodecs uses the browser's built-in decoder, which equally cannot decode it)
+ *    pure software transcoding. Slow (about 0.2~0.5x real time), relying on the progress loading on the node to cushion the experience.
+ *    Note that the page sets only COOP and not COEP (see matteWorker.ts), so there is no SharedArrayBuffer,
+ *    and only the single-threaded core can be used.
  *
- * 任何一步失败都返回原文件——转码是尽力而为的兼容性优化，不能挡住上传。
+ * If any step fails the original file is returned - transcoding is a best-effort compatibility optimization and must not block upload.
  */
 
 import {
@@ -32,14 +32,14 @@ import {
 
 export interface EnsureWebSafeVideoResult {
   file: File;
-  /** true = 发生了转码，file 是新生成的 H.264 mp4。 */
+  /** true = transcoding happened and file is the newly generated H.264 mp4. */
   transcoded: boolean;
 }
 
-/** 超过这个体积不做纯前端转码（wasm/内存都扛不住），原样上传。 */
+/** Above this size pure-frontend transcoding is not done (wasm/memory cannot cope), and the file is uploaded as is. */
 const MAX_TRANSCODE_BYTES = 800 * 1024 * 1024;
 
-/** mp4 里所有浏览器都放心的音频编码；此外的（pcm/ac3…）跟着视频一起重编成 AAC。 */
+/** Audio codecs that every browser is comfortable with in mp4; others (pcm/ac3...) are re-encoded to AAC together with the video. */
 const WEB_SAFE_AUDIO = new Set(["aac", "mp3", "opus"]);
 
 function toMp4Name(name: string): string {
@@ -56,7 +56,7 @@ async function transcodeWithWebCodecs(
     const audioTrack = await input.getPrimaryAudioTrack();
     const audioCodec = audioTrack ? await audioTrack.getCodec() : null;
     const output = new Output({
-      // faststart：moov 放前面，OSS 直链流式播放不用等整个文件。
+      // faststart: put moov first, so direct OSS links can stream without waiting for the whole file.
       format: new Mp4OutputFormat({ fastStart: "in-memory" }),
       target: new BufferTarget(),
     });
@@ -64,8 +64,8 @@ async function transcodeWithWebCodecs(
       input,
       output,
       video: { codec: "avc", bitrate: QUALITY_HIGH },
-      // AAC/MP3 直通不重编；其余（pcm、ac3…）重编成 AAC。opus 在 mp4 里 Safari
-      // 不认，也归一到 AAC。
+      // AAC/MP3 pass through without re-encoding; others (pcm, ac3...) are re-encoded to AAC. Opus in mp4 is not recognized by Safari,
+      // so it is also normalized to AAC.
       audio:
         audioCodec && !["aac", "mp3"].includes(audioCodec)
           ? { codec: "aac", bitrate: 128_000 }
@@ -91,10 +91,10 @@ async function transcodeWithWebCodecs(
 }
 
 /**
- * ffmpeg.wasm 兜底转码（尽力而为）：动态 import 单独 chunk，转成 H.264 mp4。
- * 用于两种场景——(1) WebCodecs 快路径失败；(2) mediabunny 连容器都解析不了
- * （mxf/avi/ts 等专业或老容器，浏览器同样播不了，只能靠 ffmpeg 全能解封装）。
- * 连 ffmpeg 都失败才原样上传。
+ * ffmpeg.wasm fallback transcoding (best effort): dynamically imported as a separate chunk, converting to an H.264 mp4.
+ * Used in two scenarios - (1) the WebCodecs fast path fails; (2) mediabunny cannot even parse the container
+ * (professional or old containers such as mxf/avi/ts, which browsers equally cannot play, and only ffmpeg's universal demuxing can handle them).
+ * Only if even ffmpeg fails is the file uploaded as is.
  */
 async function transcodeViaFfmpegBestEffort(
   file: File,
@@ -114,10 +114,10 @@ async function transcodeViaFfmpegBestEffort(
 }
 
 /**
- * 检测编码，需要时在浏览器内转成 H.264+AAC 的 mp4。
+ * Detect the codec and, when needed, convert in the browser to an mp4 with H.264+AAC.
  *
- * onProgress 收 0..1；两条路径都会回调。返回的 transcoded 供调用方决定
- * 是否替换本地预览 blob（Edge 上源 HEVC 的 blob 预览同样是黑的）。
+ * onProgress receives 0..1; both paths call back. The returned transcoded lets the caller decide
+ * whether to replace the local preview blob (on Edge a blob preview of an HEVC source is black too).
  */
 export async function ensureWebSafeVideo(
   file: File,
@@ -144,8 +144,8 @@ export async function ensureWebSafeVideo(
     const audioTrack = await probe.getPrimaryAudioTrack();
     audioCodec = audioTrack ? await audioTrack.getCodec() : null;
   } catch (error) {
-    // 容器 mediabunny 解析不了（mxf/avi/ts 等专业或老容器）：浏览器多半也播不了，
-    // 不能原样放行——交给 ffmpeg.wasm 全能解封装转成 H.264 mp4。
+    // A container mediabunny cannot parse (professional or old containers such as mxf/avi/ts): the browser most likely cannot play it either,
+    // so it must not be waved through as is - hand it to ffmpeg.wasm's universal demuxing to convert into an H.264 mp4.
     console.warn("[video-transcode] probe failed, trying ffmpeg fallback", error);
     probeFailed = true;
   } finally {
@@ -165,7 +165,7 @@ export async function ensureWebSafeVideo(
     `[video-transcode] source codec video=${videoCodec} audio=${audioCodec} → h264/aac (decodable=${canDecodeSource})`,
   );
 
-  // 快路径：源能被 WebCodecs 解码，且 H.264 编码可用（几乎所有 Chromium/Safari）。
+  // Fast path: the source can be decoded by WebCodecs and H.264 encoding is available (almost all Chromium/Safari).
   if (canDecodeSource && (await canEncodeVideo("avc", { width, height }))) {
     try {
       const converted = await transcodeWithWebCodecs(file, onProgress);
@@ -175,6 +175,6 @@ export async function ensureWebSafeVideo(
     }
   }
 
-  // 兜底：ffmpeg.wasm 单线程软解软编（Edge 无 HEVC 解码器等场景）。
+  // Fallback: ffmpeg.wasm single-threaded software decode and encode (scenarios such as Edge without an HEVC decoder).
   return transcodeViaFfmpegBestEffort(file, onProgress);
 }

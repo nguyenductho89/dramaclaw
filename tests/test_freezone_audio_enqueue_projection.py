@@ -70,14 +70,14 @@ def speech_harness(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     payloads: list[dict] = []
     store = _FakeCharacterStore(
         [
-            _character("小明"),
-            _character("旁白主角", is_main=True),
-            _character("路人甲"),
+            _character("Alex"),
+            _character("Narrator_Lead", is_main=True),
+            _character("Passerby"),
         ]
     )
     store.project_dir = str(project_dir)
     store.state_dir = str(tmp_path / "state" / "alice" / "demo")
-    voice_path = project_dir / "assets" / "voices" / "小明.wav"
+    voice_path = project_dir / "assets" / "voices" / "Alex.wav"
     voice_path.parent.mkdir(parents=True, exist_ok=True)
     voice_path.write_bytes(b"voice")
     ctx = SimpleNamespace(
@@ -147,8 +147,8 @@ def projector_absent():
 
 def _speech_body(**overrides) -> FreezoneAudioSpeechRequest:
     body = {
-        "text": "旁白响起。",
-        "voice_ref": FreezoneAudioVoiceRef(scope="character_default", character_name="小明"),
+        "text": "The narration begins.",
+        "voice_ref": FreezoneAudioVoiceRef(scope="character_default", character_name="Alex"),
     }
     body.update(overrides)
     return FreezoneAudioSpeechRequest(**body)
@@ -172,8 +172,8 @@ async def test_speech_payload_gains_the_projection_when_installed(
     fields = projection["fields"]
     assert fields["narration_style"] == "first_person"
     assert fields["narrator_reference_audio"]["path"] == "assets/voices/narrator.wav"
-    assert fields["voice_character"]["name"] == "小明"
-    assert fields["narrator_main_character"]["name"] == "旁白主角"
+    assert fields["voice_character"]["name"] == "Alex"
+    assert fields["narrator_main_character"]["name"] == "Narrator_Lead"
 
 
 @pytest.mark.asyncio
@@ -184,8 +184,8 @@ async def test_speech_projection_carries_only_the_characters_actually_consulted(
     payload = await _enqueue_speech(speech_harness)
 
     blob = json.dumps(payload["projection"], ensure_ascii=False)
-    assert "路人甲" not in blob
-    assert blob.count("小明") >= 1
+    assert "Passerby" not in blob
+    assert blob.count("Alex") >= 1
     assert speech_harness.store.list_characters_calls == 2
 
 
@@ -232,10 +232,10 @@ async def test_oversized_speech_projection_raises_on_the_enqueue_side(
     from novelvideo.task_backend.projection import MAX_PROJECTION_BYTES
 
     speech_harness.store._characters = [
-        _character("小明", description="x" * (MAX_PROJECTION_BYTES + 1024))
+        _character("Alex", description="x" * (MAX_PROJECTION_BYTES + 1024))
     ]
 
-    with pytest.raises(ValueError, match="投射超出体积上限"):
+    with pytest.raises(ValueError, match="Projection exceeds the size limit"):
         await _enqueue_speech(speech_harness)
 
     assert speech_harness.payloads == []
@@ -265,7 +265,7 @@ async def test_inline_speech_path_builds_the_same_projection(
             mime_type="audio/mpeg",
             model="indextts2",
             voice_source="character_default",
-            voice_sha256="sha-小明",
+            voice_sha256="sha-Alex",
         )
 
     failures: list[str] = []
@@ -306,7 +306,7 @@ async def test_inline_speech_path_builds_the_same_projection(
     projection = seen["projection"]
     assert projection is not None
     assert projection.task_type == TASK_TYPE
-    assert projection.require("voice_character")["name"] == "小明"
+    assert projection.require("voice_character")["name"] == "Alex"
     assert projection.require("narration_style") == "first_person"
 
 

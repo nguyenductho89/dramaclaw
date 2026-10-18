@@ -35,9 +35,9 @@ export interface GraphImageResolver {
 }
 
 /**
- * 单条「上游节点内容」记录。所有可能字段都是可选的，调用方按需取用。
- * `text` 来自任何带 prompt / content 的上游节点，`imageUrl` / `videoUrl` /
- * `audioUrl` 来自素材类节点。
+ * A single "upstream node content" record. All possible fields are optional, and callers take what they need.
+ * `text` comes from any upstream node carrying prompt / content, and `imageUrl` / `videoUrl` /
+ * `audioUrl` come from material-type nodes.
  */
 export interface UpstreamContent {
   nodeId: string;
@@ -61,20 +61,20 @@ export interface GraphContentResolver {
 export interface GenerateImagePayload {
   prompt: string;
   model: string;
-  /** 注册表模型 id（还原用），与后端请求模型串区分。 */
+  /** Registry model id (for restoration), distinguished from the backend request model string. */
   modelId?: string;
-  /** 生成模式（还原用）。 */
+  /** Generation mode (for restoration). */
   generationMode?: string;
   size: string;
   aspectRatio: string;
   referenceImages?: string[];
   extraParams?: Record<string, unknown>;
   /**
-   * 后台「媒体模型」声明的动态参数取值，原样作为 `model_params` 提交，由后端
-   * `media_model_request_schema` 按目录声明校验。
+   * Dynamic parameter values declared by the backend "media models", submitted as `model_params` as is, and validated by the backend
+   * `media_model_request_schema` against the catalog declaration.
    *
-   * 与 `extraParams` 分开：那个是前端静态注册表的老结构，网关只从里面读 quality，
-   * 其余键一律丢弃 —— 目录参数塞进去等于白填。
+   * Kept apart from `extraParams`: that is the old structure of the frontend static registry, where the gateway reads only quality from it
+   * and discards all other keys - stuffing catalog parameters into it would be filling them in for nothing.
    */
   modelParams?: Record<string, unknown>;
   capabilityId?: string;
@@ -93,15 +93,15 @@ export interface GenerateImagePayload {
 }
 
 /**
- * submitGenerateImageJob 的返回值。
+ * The return value of submitGenerateImageJob.
  *
- * 两个 id 的生命周期完全不同,不能只留一个:
- * - `jobId` 是 gateway 的进程内 Map 键,只服务 Canvas.tsx 那个轮询循环,刷新即失效;
- * - `ref` 是后端任务句柄,落到节点上（见 generationTaskDescriptor）才是刷新后
- *   resumeNodeGeneration 找回结果的唯一线索。
+ * The lifecycles of the two ids are entirely different, and keeping only one is not enough:
+ * - `jobId` is the gateway's in-process Map key, serving only that polling loop in Canvas.tsx, and invalid after a refresh;
+ * - `ref` is the backend task handle, and persisting it on the node (see generationTaskDescriptor) is the only clue
+ *   for resumeNodeGeneration to find the result after a refresh.
  *
- * 早先这里只回 jobId,于是脱离监听后除了重新提交别无他法——擦除/重绘那条路径
- * 一直是对的（见 regenerateFreezoneRedrawNode）,这里补齐口径。
+ * Earlier this returned only jobId, so after detaching from listening there was no way out other than resubmitting - the erase/redraw path
+ * has always been right (see regenerateFreezoneRedrawNode), and this brings it in line.
  */
 export interface SubmittedImageJob {
   jobId: string;
@@ -161,16 +161,16 @@ export interface CanvasEventMap {
     file: File;
   };
   /**
-   * 「上传资源」菜单、画布拖拽、视频节点「外部素材」等外部入口注入 File 给
-   * upload 节点。图片/视频/音频都收 —— UploadNode 订阅侧接的是三类分流器
-   * handleMediaFile，视频与音频会原地 convertNodeType 变形成 video/audio 节点
-   * （不换 id，先连的边不丢）。非媒体文件会被静默丢弃，投递方应自行先过滤。
+   * External entries such as the "Upload resource" menu, canvas drag-and-drop, and the video node's "external materials" inject a File into the
+   * upload node. Images/videos/audio are all accepted - the UploadNode subscription side uses a three-way dispatcher
+   * handleMediaFile, and videos and audio morph in place via convertNodeType into video/audio nodes
+   * (the id is unchanged, so the edge connected first is not lost). Non-media files are silently discarded, and the sender should filter first by itself.
    *
-   * File 本体的载体是 [[pendingExternalFiles]] 的模块级暂存，payload 里刻意不带
-   * file：投递方必须 stashExternalFile + 发事件两件都做，事件本身只是「敲一下已
-   * 挂载的节点」，消费方（useExternalFileHandoff）只认暂存里的东西。原因是总线无
-   * 重放，而低缩放档下新节点先以 LOD shell 挂载，完整组件挂上订阅时早发的事件已经
-   * 丢了。payload 不带 file 是为了让「只 publish 不 stash」这种写法压根编译不过。
+   * The carrier of the File itself is the module-level staging of [[pendingExternalFiles]], and the payload deliberately does not carry
+   * file: the sender must do both stashExternalFile + emit the event; the event itself is only "poke an already
+   * mounted node", and the consumer (useExternalFileHandoff) only trusts what is in staging. The reason is that the bus has no
+   * replay, and at the low-zoom tier a new node first mounts as an LOD shell, so by the time the full component attaches its subscription an early-sent event is already
+   * lost. The payload not carrying file is so that the pattern "publish without stash" does not compile at all.
    */
   'upload-node/external-file': {
     nodeId: string;
@@ -179,15 +179,15 @@ export interface CanvasEventMap {
     nodeId: string;
   };
   /**
-   * 「上传资源」菜单等外部入口注入 File 给 video 节点（仅视频）。
-   * 同 upload-node/external-file：File 走 [[pendingExternalFiles]] 暂存，不进 payload。
+   * External entries such as the "Upload resource" menu inject a File into the video node (video only).
+   * Same as upload-node/external-file: the File goes through [[pendingExternalFiles]] staging and does not enter the payload.
    */
   'video-node/external-file': {
     nodeId: string;
   };
   /**
-   * 「上传资源」菜单等外部入口注入 File 给 audio 节点（仅音频）。
-   * 同 upload-node/external-file：File 走 [[pendingExternalFiles]] 暂存，不进 payload。
+   * External entries such as the "Upload resource" menu inject a File into the audio node (audio only).
+   * Same as upload-node/external-file: the File goes through [[pendingExternalFiles]] staging and does not enter the payload.
    */
   'audio-node/external-file': {
     nodeId: string;
@@ -197,27 +197,27 @@ export interface CanvasEventMap {
     title?: string;
   };
   /**
-   * 节点 toolbar 上的 Commit 按钮触发：把该节点的图写回主流程对应 slot。
-   * FreezoneShell 监听后查节点、推 CommitDialog；toolbar 只负责发事件。
+   * Triggered by the Commit button on the node toolbar: write the node's image back to the matching slot of the main flow.
+   * FreezoneShell listens, looks up the node and pushes CommitDialog; the toolbar only emits the event.
    */
   'freezone/commit-node': {
     nodeId: string;
     auto?: boolean;
     successMessage?: string;
   };
-  /** 投影 group toolbar 触发：刷新该 projection，不让 toolbar 直接改画布状态。 */
+  /** Triggered by the projection group toolbar: refresh that projection, without the toolbar changing canvas state directly. */
   'freezone/projection-sync': {
     projectionKey: string;
   };
-  /** 投影 group toolbar 触发：移除该 projection，不走普通 deleteNode。 */
+  /** Triggered by the projection group toolbar: remove that projection, without going through the ordinary deleteNode. */
   'freezone/projection-remove': {
     projectionKey: string;
   };
-  /** 画布 toolbar 触发：把当前选中节点作为引用加入 Freezone 聊天输入框。 */
+  /** Triggered by the canvas toolbar: add the currently selected node as a reference into the Freezone chat input box. */
   'freezone/add-nodes-to-chat': {
     nodeIds: string[];
   };
-  /** 聊天触发低风险节点 UI 动作；实际执行由 Canvas/SelectedNodeOverlay 复用现有 toolbar handler。 */
+  /** Chat triggers a low-risk node UI action; actual execution is done by Canvas/SelectedNodeOverlay reusing the existing toolbar handlers. */
   'freezone/run-node-action': {
     nodeId: string;
     action: string;
@@ -225,7 +225,7 @@ export interface CanvasEventMap {
     executionMode?: 'single' | 'workflow';
     requestId?: string;
   };
-  /** 带 requestId 的节点动作执行完成后回报给聊天命令调度器。 */
+  /** After a node action carrying a requestId finishes, report back to the chat command dispatcher. */
   'freezone/node-action-result': {
     requestId: string;
     nodeId: string;
@@ -234,13 +234,13 @@ export interface CanvasEventMap {
     error?: string;
     output?: Record<string, unknown>;
   };
-  /** 节点已接手带 requestId 的动作；用于区分“正在生成”和“事件无人处理”。 */
+  /** The node has taken over an action carrying a requestId; used to tell "generating" apart from "the event has no handler". */
   'freezone/node-action-accepted': {
     requestId: string;
     nodeId: string;
     action: string;
   };
-  /** 主线资产已在节点内部直接写入，通知素材库重拉。 */
+  /** The main-line asset has been written directly inside the node, notify the asset library to re-fetch. */
   'freezone/assets-updated': undefined;
 }
 

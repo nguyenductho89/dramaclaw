@@ -1,19 +1,19 @@
-"""TCP-EU-C4 · 画布互斥的版本接缝 ＋ 落盘围栏（CE 半边）。
+"""TCP-EU-C4 · the version seam of the canvas mutex + the write-to-disk fence (CE half).
 
-设计真源 `docs/org-billing-ai-development/task-control-plane/B2-canvas-placement-free.md`
-§3.3.3（落盘围栏）、§3.7（换 context manager，不重写 `save_canvas`）、§3.8（版本接缝）。
+Design source of truth `docs/org-billing-ai-development/task-control-plane/B2-canvas-placement-free.md`
+Section 3.3.3 (write-to-disk fence), Section 3.7 (swap the context manager, do not rewrite `save_canvas`), Section 3.8 (version seam).
 
-本模块只证 **CE 侧**的三件事，一条 Postgres 都不碰：
+This module proves only three things on the **CE side**, touching not a single Postgres:
 
-1. 接缝存在且**默认退化成今天的文件锁** —— 回滚动作是「不注入 EE 实现」（§6.4 步 5），
-   所以「没注入」必须是合法状态，且行为与今天逐字相同（B2-8/B2-9）。
-2. `atomic_write_json` 的 `fence=` 落在「临时文件已 fsync、`os.replace` 还没发生」之间
-   （§3.3.3）。挪一行就等于没有围栏，所以这里用**观察落点**而不是观察调用次数。
-3. 围栏覆盖面的**静态断言**：`atomic_write_json` 的每一条写路径要么带 `fence=`，
-   要么在 §3.3.3 那张表里被显式豁免；外加 `soft_delete_canvas` 的
-   `path.replace(target)`（不走 `atomic_write_json` 的那个不可逆落盘）之前必须显式再挂一道。
+1. The seam exists and **degrades by default to today's file lock** -- the rollback action is "do not inject the EE implementation" (Section 6.4 step 5),
+   so "not injected" must be a legal state with behavior identical to today to the letter (B2-8/B2-9).
+2. The `fence=` of `atomic_write_json` lands between "the temp file has been fsynced" and "`os.replace` has not happened yet"
+   (Section 3.3.3). Moving it one line means no fence at all, so this uses **observing the landing point** rather than observing the call count.
+3. A **static assertion** of fence coverage: every write path of `atomic_write_json` either carries `fence=`,
+   or is explicitly exempted in the table of Section 3.3.3; in addition, `soft_delete_canvas`'s
+   `path.replace(target)` (the irreversible write that does not go through `atomic_write_json`) must be explicitly fenced beforehand.
 
-EE 的租约实现、自旋契约与跨进程判据在 EE 仓 `tests/b2b/test_canvas_write_lease_client.py`。
+The EE lease implementation, spin contract and cross-process criteria are in the EE repo `tests/b2b/test_canvas_write_lease_client.py`.
 """
 
 from __future__ import annotations
@@ -35,8 +35,8 @@ from novelvideo.ports.local.canvas_mutex import FileLockCanvasWriteMutex
 
 
 # ---------------------------------------------------------------------------
-# 测试替身：一个记账用的互斥端口。它不做任何互斥 —— 本模块要证的是「接缝把该调
-# 的都调了」，真正的互斥语义归 EE 仓那份用例。
+# Test stand-in: a bookkeeping mutex port. It does no mutual exclusion -- what this module proves is "the seam calls everything
+# it should", while the real mutual exclusion semantics belong to the cases in the EE repo.
 # ---------------------------------------------------------------------------
 
 
@@ -69,7 +69,7 @@ class _RecordingMutex:
 
 @pytest.fixture()
 def injected_mutex():
-    """注入一个记账端口，测试结束后把注册表恢复原状。"""
+    """Inject a bookkeeping port, and restore the registry to its original state after the test."""
 
     previous = ports_registry._PORTS.get("canvas_write_mutex")
 
@@ -99,7 +99,7 @@ def _seed_canvas(
 
 
 # ---------------------------------------------------------------------------
-# 错误面：`CanvasLeaseLost` 继承 `CanvasLockBusy`，于是路由零改动（§3.3.3）
+# Error surface: `CanvasLeaseLost` inherits `CanvasLockBusy`, so the routes need zero changes (Section 3.3.3)
 # ---------------------------------------------------------------------------
 
 
@@ -109,12 +109,12 @@ def test_canvas_lease_lost_is_a_canvas_lock_busy() -> None:
     exc = CanvasLeaseLost("default")
 
     assert exc.canvas_id == "default"
-    # 类型上仍可区分：日志与用例要能把「等不到租约」和「写到一半丢了租约」分开统计。
+    # Still distinguishable by type: logs and cases must be able to count "could not get the lease" separately from "lost the lease halfway through the write".
     assert str(exc) != str(CanvasLockBusy("default"))
 
 
 # ---------------------------------------------------------------------------
-# 接缝：默认退化成今天的文件锁（回滚 ＝ 不注入）
+# Seam: degrades by default to today's file lock (rollback = do not inject)
 # ---------------------------------------------------------------------------
 
 
@@ -133,8 +133,8 @@ def test_ce_canvas_mutex_signature_has_no_catch_all_kwargs() -> None:
 
 
 def test_canvas_write_mutex_is_not_an_ee_required_port() -> None:
-    # 进了 `_EE_REQUIRED_PORTS` 就等于「没装 EE 适配器的构建拒绝启动」，
-    # 与 §6.4 步 5 的回滚口径（不注入 EE 实现）直接冲突。
+    # Being put into `_EE_REQUIRED_PORTS` would mean "a build without the EE adapter refuses to start",
+    # which directly conflicts with the rollback convention of Section 6.4 step 5 (do not inject the EE implementation).
     assert "canvas_write_mutex" not in ports_registry._EE_REQUIRED_PORTS
 
 
@@ -143,7 +143,7 @@ def test_ce_fence_is_a_no_op(tmp_path: Path) -> None:
     mutex = FileLockCanvasWriteMutex()
 
     with mutex.write_mutex(project_dir, "default") as guard:
-        # flock 不会中途丢，所以 CE 的围栏什么都不做（§3.7）。
+        # flock is never lost midway, so the CE fence does nothing (Section 3.7).
         assert guard.reassert() is None
         assert guard.reassert() is None
 
@@ -182,12 +182,12 @@ def test_save_canvas_behaviour_is_byte_identical_without_injection(
 
     assert result.payload["revision"] == 2
     assert json.loads(canvas_file.read_text(encoding="utf-8"))["revision"] == 2
-    # 未注入时锁文件仍然是 CE 的那把（B2-9）。
+    # When not injected, the lock file is still the CE one (B2-9).
     assert (project_dir / "freezone" / "canvases" / "_locks" / "default.lock").exists()
 
 
 # ---------------------------------------------------------------------------
-# 接缝：四个取锁点全部改走端口
+# Seam: all four lock acquisition points are switched to go through the port
 # ---------------------------------------------------------------------------
 
 
@@ -209,7 +209,7 @@ def test_save_canvas_takes_the_injected_mutex(tmp_path: Path, injected_mutex) ->
 
     assert mutex.entered == [(project_dir, "default")]
     assert mutex.exited == [(project_dir, "default")]
-    # 注入之后 CE 的锁文件不再被创建 —— 端口换掉的是整个互斥机制，不是叠一层。
+    # After injection the CE lock file is no longer created -- the port replaces the whole mutual exclusion mechanism, not layered on top.
     assert not (project_dir / "freezone" / "canvases" / "_locks").exists()
 
 
@@ -265,7 +265,7 @@ def test_soft_delete_canvas_takes_the_injected_mutex(
 
 
 # ---------------------------------------------------------------------------
-# 围栏：落点、命中、丢租约
+# Fence: landing point, hit, lost lease
 # ---------------------------------------------------------------------------
 
 
@@ -282,7 +282,7 @@ def test_fence_runs_after_fsync_and_before_replace(tmp_path: Path) -> None:
 
     canvas_store.atomic_write_json(path, {"revision": 2}, fence=fence)
 
-    # 围栏跑的时候：临时文件已经在盘上（已 fsync），正式文件一个字节都没被碰过。
+    # While the fence runs: the temp file is already on disk (fsynced), and the real file has not been touched by a single byte.
     assert observed["target"] == {"revision": 1}
     assert len(observed["tmp_files"]) == 1
     assert json.loads(path.read_text(encoding="utf-8")) == {"revision": 2}
@@ -323,7 +323,7 @@ def test_save_canvas_fences_and_a_lost_lease_does_not_land(
 
     assert mutex.fence_calls == ["default"]
     assert json.loads(canvas_file.read_text(encoding="utf-8"))["revision"] == 1
-    # 租约丢了也要把租约放掉（`finally`）。
+    # Even if the lease is lost, the lease must be released (`finally`).
     assert mutex.exited == [(project_dir, "default")]
 
 
@@ -337,22 +337,22 @@ def test_soft_delete_fences_before_the_irreversible_replace(
     with pytest.raises(CanvasLeaseLost):
         canvas_store.soft_delete_canvas(project_dir, "default", deleted_by="alice")
 
-    # `path.replace(target)` 是不可逆的：围栏必须挂在它**之前**（§3.3.3）。
+    # `path.replace(target)` is irreversible: the fence must be hooked **before** it (Section 3.3.3).
     assert canvas_file.exists()
     assert not canvas_file.with_name("default.deleted.json").exists()
 
 
 # ---------------------------------------------------------------------------
-# 围栏覆盖面：静态断言（判据是「这一步会不会让别人的写永久消失」，B2-11）
+# Fence coverage: static assertion (the criterion is "will this step make someone else's write vanish permanently", B2-11)
 # ---------------------------------------------------------------------------
 
 
-# §3.3.3 的表：只有这两处**故意**不挂围栏，各带一条理由。
+# The table of Section 3.3.3: only these two places **deliberately** have no fence, each with a reason.
 _UNFENCED_BY_DESIGN = {
-    # 台账写在画布 rename 之后：此刻已经赢了竞态，围栏只会把「赢了但没记台账」
-    # 变成「赢了且抛异常」。丢一条台账 ＝ 下次重放退化成一次真实保存。
+    # The ledger is written after the canvas rename: at this point the race is already won, and a fence would only turn "won but ledger not recorded"
+    # into "won and raised". Losing one ledger entry = the next replay degrades into one real save.
     "append_idempotency_entry",
-    # 墓碑跟在 `path.replace(target)` 之后，同一个关键区内已经过了不可逆点。
+    # The tombstone follows `path.replace(target)`, and within the same critical section it has already passed the irreversible point.
     "soft_delete_canvas",
 }
 _MUST_BE_FENCED = {"ensure_default_canvas", "save_canvas", "restore_canvas_version"}
@@ -395,7 +395,7 @@ def test_every_atomic_write_json_call_site_is_fenced_or_exempt() -> None:
     }
 
     assert unfenced == _UNFENCED_BY_DESIGN, (
-        "每一条 `atomic_write_json` 写路径要么带 `fence=`，要么在 §3.3.3 的豁免表里"
+        "Every `atomic_write_json` write path either carries `fence=`, or is in the exemption table of Section 3.3.3"
     )
 
 
@@ -429,6 +429,6 @@ def test_soft_delete_reasserts_before_path_replace() -> None:
         and node.func.attr == "reassert"
     ]
 
-    assert len(replace_lines) == 1, "本用例假设 `path.replace(target)` 只有一处"
-    assert reassert_lines, "`soft_delete_canvas` 必须在不可逆落盘前显式挂一道围栏"
+    assert len(replace_lines) == 1, "This case assumes `path.replace(target)` appears in only one place"
+    assert reassert_lines, "`soft_delete_canvas` must explicitly hook a fence before the irreversible write to disk"
     assert min(reassert_lines) < replace_lines[0]

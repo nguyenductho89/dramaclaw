@@ -63,8 +63,8 @@ describe("TextAnnotationNode clone-audio content", () => {
           position: { x: 0, y: 0 },
           data: {
             mode: "textToMusic",
-            content: "原朗读文本",
-            instruction: "AI 创作提示词",
+            content: "Original read-aloud text",
+            instruction: "AI creation prompt",
           },
         },
         {
@@ -91,8 +91,8 @@ describe("TextAnnotationNode clone-audio content", () => {
         type={CANVAS_NODE_TYPES.textAnnotation}
         data={{
           mode: "textToMusic",
-          content: "原朗读文本",
-          instruction: "AI 创作提示词",
+          content: "Original read-aloud text",
+          instruction: "AI creation prompt",
         }}
         selected
         dragging={false}
@@ -106,14 +106,14 @@ describe("TextAnnotationNode clone-audio content", () => {
       />,
     );
 
-    fireEvent.change(screen.getByDisplayValue("原朗读文本"), {
-      target: { value: "新的朗读文本" },
+    fireEvent.change(screen.getByDisplayValue("Original read-aloud text"), {
+      target: { value: "New read-aloud text" },
     });
 
     const state = useCanvasStore.getState();
     const textNode = state.nodes.find((node) => node.id === "text-1");
-    expect(textNode?.data.content).toBe("新的朗读文本");
-    expect(textNode?.data.instruction).toBe("AI 创作提示词");
+    expect(textNode?.data.content).toBe("New read-aloud text");
+    expect(textNode?.data.instruction).toBe("AI creation prompt");
 
     const inputs = new DefaultGraphContentResolver().collectInputContents(
       "audio-1",
@@ -121,6 +121,6 @@ describe("TextAnnotationNode clone-audio content", () => {
       state.edges,
     );
     expect(inputs).toHaveLength(1);
-    expect(inputs[0]?.text).toBe("新的朗读文本");
+    expect(inputs[0]?.text).toBe("New read-aloud text");
   });
 });

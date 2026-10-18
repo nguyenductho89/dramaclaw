@@ -8,7 +8,7 @@ import { TaskStatusBar } from "@/components/task-center/status-bar";
 import { useTaskCenterStore } from "@/task-center/store";
 import { sampleTask } from "@/__mocks__/msw/handlers/tasks";
 import enTranslation from "../../../../public/locales/en/translation.json";
-import zhTranslation from "../../../../public/locales/zh/translation.json";
+import viTranslation from "../../../../public/locales/vi/translation.json";
 
 function renderBar(onOpenPikoStation?: () => void) {
   return render(
@@ -27,12 +27,12 @@ beforeAll(async () => {
       fallbackLng: "en",
       resources: {
         en: { translation: enTranslation },
-        zh: { translation: zhTranslation },
+        vi: { translation: viTranslation },
       },
     });
   }
   i18n.addResourceBundle("en", "translation", enTranslation, true, true);
-  i18n.addResourceBundle("zh", "translation", zhTranslation, true, true);
+  i18n.addResourceBundle("vi", "translation", viTranslation, true, true);
   await i18n.changeLanguage("en");
 });
 

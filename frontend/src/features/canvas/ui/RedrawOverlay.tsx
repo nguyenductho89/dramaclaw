@@ -75,12 +75,12 @@ interface RedrawOverlayProps {
 
 type Tool = 'brush' | 'rect' | 'eraser';
 
-// 「保持原图比例」不是某个模型的能力，而是重绘接口自带的语义，永远排在
-// 后台配置的比例档位之前。其余档位来自选中模型的目录配置。
+// "Keep the original aspect ratio" is not the capability of a model but semantics built into the redraw endpoint, and always comes before the
+// ratio tiers configured in the backend. The remaining tiers come from the selected model's catalog config.
 const ORIGINAL_ASPECT_RATIO: FreezoneRedrawAspectRatio = 'original';
 
 const NUM_IMAGE_OPTIONS = [1, 2, 3, 4] as const;
-// 数量 > 1 时多个结果节点纵向错开摆放的间距。
+// Spacing by which multiple result nodes are staggered vertically when count > 1.
 const RESULT_STACK_GAP = 24;
 const BRUSH_MIN = 4;
 const BRUSH_MAX = 200;
@@ -128,20 +128,20 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
   const [modelId, setModelId] = useState<string>(DEFAULT_SHARED_MODEL_ID);
   const imageCatalog = useFreezoneImageModels();
   const availableModels = imageCatalog.models;
-  // 后台确实一个图片模型都没配时禁止提交：后端 `_resolve_catalog_request`
-  // 对空目录直接 409，让用户点一下再收报错是最糟的体验。
+  // Submission is forbidden when the backend has really configured not a single image model: the backend `_resolve_catalog_request`
+  // returns 409 straight away for an empty catalog, and making the user click once only to receive an error is the worst experience.
   const catalogIsEmpty = isAuthoritativeEmptyCatalog(imageCatalog);
   const [imageSize, setImageSize] = useState<string>('2K');
   const [numImages, setNumImages] = useState<number>(1);
   const [aspectRatio, setAspectRatio] = useState<FreezoneRedrawAspectRatio>(
     ORIGINAL_ASPECT_RATIO,
   );
-  // 目录为空时故意让 selectedModel 保持 undefined。原来这里尾巴上还挂着
-  // `?? SHARED_MODELS.find(...)`，等于把前端硬编码的模型当成可用模型复活，
-  // 正是「后台没配模型，界面照样显示能用」的来源。
+  // When the catalog is empty, deliberately leave selectedModel undefined. There used to be a trailing
+  // `?? SHARED_MODELS.find(...)` here, which revives the frontend hard-coded model as an available one -
+  // exactly the source of "the backend configured no model yet the UI still looks usable".
   const selectedModel =
     availableModels.find((m) => m.id === modelId) ?? availableModels[0];
-  // 尺寸 / 比例 / 画质全部跟随后台对该模型的配置，换模型时把越界的旧选择收回。
+  // Size / ratio / quality all follow the backend's config for that model, and out-of-range old selections are pulled back when the model changes.
   const sizeOptions = useMemo(() => resolveModelSizeOptions(selectedModel), [selectedModel]);
   const aspectRatioOptions = useMemo<FreezoneRedrawAspectRatio[]>(() => {
     const configured = resolveModelAspectOptions(selectedModel).filter(
@@ -411,8 +411,8 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
     [canvasToImageCoords, commitRect, recomputeHasMask, tool],
   );
 
-  // 蒙版导出（供视觉模型识别）：源图 + 涂抹区二值化后的均匀半透明红高亮，见 mask-highlight.ts。
-  // baseCanvas 在加载源图时已绘制。
+  // Mask export (for vision models to recognize): the source image + the brushed area binarized into a uniform semi-transparent red highlight, see mask-highlight.ts.
+  // baseCanvas was already drawn when the source image was loaded.
   const buildMaskBlob = useCallback(async (): Promise<Blob> => {
     const mask = maskCanvasRef.current;
     const baseCanvas = baseCanvasRef.current;
@@ -421,7 +421,7 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
     return await buildRedHighlightMaskBlob(baseCanvas, mask);
   }, []);
 
-  // 建一个 loading 结果节点并连边，立即返回节点 id（同步，不等待上传/生成）。
+  // Build a loading result node and connect an edge, returning the node id immediately (synchronous, not waiting for upload/generation).
   const createRedrawNode = useCallback(
     (sourceAspectRatio: string, masked: boolean, position: { x: number; y: number }) => {
       const generationStartedAt = Date.now();
@@ -455,7 +455,7 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
     [addEdge, addNode, node],
   );
 
-  // 针对已建好的节点提交单图重绘（num_images=1）→ 轮询 → 回填。
+  // Submit a single-image redraw (num_images=1) for the already built node -> poll -> backfill.
   const runRedrawGeneration = useCallback(
     async (
       project: string,
@@ -490,8 +490,8 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
           ...GENERATION_ERROR_CLEARED_PATCH,
         });
       } catch (err) {
-        // 轮询超时 ≠ 生成失败：后端还在跑，节点上的任务句柄仍可续接。
-        // 写错误横幅会把一个还活着的任务标成失败，并清掉句柄。
+        // A poll timeout != generation failure: the backend is still running and the task handle on the node can still be resumed.
+        // Writing an error banner would mark a live task as failed and clear the handle.
         if (isTaskPollTimeoutError(err)) {
           notifyTaskStillRunning(t);
           return;
@@ -510,7 +510,7 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
-    // 按钮已经禁用，这里再挡一道：没有可用模型就绝不该发出请求。
+    // The button is already disabled, so block once more here: with no available model a request must never be sent.
     if (catalogIsEmpty) {
       setError(t('modelParams.noModelsAvailable'));
       return;
@@ -537,8 +537,8 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
       EXPORT_RESULT_NODE_LAYOUT_HEIGHT,
     );
 
-    // 后端 redraw 单次仅出 1 张：选了 N 张就建 N 个 loading 节点（纵向错开），
-    // 蒙版只上传一次、多张共用，再各自发起 N 次单图请求、独立轮询/回填/报错。
+    // The backend redraw produces only 1 image at a time: choosing N images builds N loading nodes (staggered vertically),
+    // the mask is uploaded only once and shared by all, then N single-image requests are launched each with independent polling/backfill/error reporting.
     const count = Math.max(1, numImages);
     const nodeIds = Array.from({ length: count }, (_unused, i) =>
       createRedrawNode(sourceAspectRatio, hasMask, {
@@ -551,7 +551,7 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
 
     try {
       const sourceUrl = baseUrlRef.current;
-      // 蒙版只需上传一次，多张共用同一份。
+      // The mask only needs uploading once, shared by all the images.
       let maskUrl: string | null = null;
       if (hasMask) {
         const maskBlob = await buildMaskBlob();
@@ -566,7 +566,7 @@ export const RedrawOverlay = memo(({ node, imageSource, onClose }: RedrawOverlay
         void runRedrawGeneration(project, id, sourceUrl, maskUrl, apiModel),
       );
     } catch (err) {
-      // 蒙版上传等前置步骤失败：把所有占位节点标记为失败。
+      // A prerequisite step such as mask upload failed: mark all the placeholder nodes as failed.
       const message = err instanceof Error ? err.message : String(err);
       console.error('[redraw] submit failed', err);
       nodeIds.forEach((id) =>

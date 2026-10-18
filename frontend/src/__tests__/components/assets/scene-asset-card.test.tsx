@@ -8,15 +8,15 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { SceneAssetCard } from "@/components/assets/scene-asset-card";
 import type { SceneAsset } from "@/types/scene";
 
-import { zhTranslation } from "../../helpers/i18n-fixtures";
+import { enTranslation } from "../../helpers/i18n-fixtures";
 
 const i18n = i18next.createInstance();
 
 beforeAll(async () => {
   await i18n.use(initReactI18next).init({
-    lng: "zh",
-    fallbackLng: "zh",
-    resources: { zh: { translation: zhTranslation } },
+    lng: "en",
+    fallbackLng: "en",
+    resources: { en: { translation: enTranslation } },
     interpolation: { escapeValue: false },
   });
 });

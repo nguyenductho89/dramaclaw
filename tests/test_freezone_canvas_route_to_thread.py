@@ -1,20 +1,20 @@
-"""HTTP 路径上的画布保存必须通过异步适配器移出事件循环。
+"""Canvas saves on the HTTP path must move off the event loop through the async adapter.
 
-`save_canvas` 会同步等待当前配置的画布写互斥并执行同步文件 I/O。四个异步 HTTP
-handler 必须 `await canvas_store.save_canvas_async(...)`，不得直接调用同步的
-`save_canvas`；互斥的等待算法和作用范围由注入的端口实现决定，不属于本模块契约。
+`save_canvas` synchronously waits for the currently configured canvas write mutex and performs synchronous file I/O. The four async HTTP
+handlers must `await canvas_store.save_canvas_async(...)` and must not call the synchronous
+`save_canvas` directly; the mutex wait algorithm and scope are decided by the injected port implementation and are not part of this module's contract.
 
-两条用例分工：
+Division of labor between the two cases:
 
-1. `test_put_canvas_keeps_the_event_loop_alive_while_lock_is_held` —— 真锁争用
-   ＋ 真 handler，证 `:11639` 那处确实走了线程。心跳探针沿用
-   `tests/test_freezone_canvas_save_to_thread.py` 的形状，那边的对照组
-   `test_sync_save_canvas_freezes_the_event_loop` 已经证明它够灵敏
-   （同步路径下心跳恰好是 0 次）。
-2. `test_freezone_routes_never_call_save_canvas_synchronously` —— AST 不变量，
-   把另外三处（`:10868` / `:11055` / `:11193`，其请求体要跑完整套 preset /
-   projection 组装才够得到保存）一并钉死，并防回潮。形制照
-   `tests/test_billing_fatal_predicate_invariant.py:19`。
+1. `test_put_canvas_keeps_the_event_loop_alive_while_lock_is_held` -- real lock contention
+   + the real handler, proving that the place at `:11639` really goes through a thread. The heartbeat probe reuses the shape of
+   `tests/test_freezone_canvas_save_to_thread.py`, whose control group
+   `test_sync_save_canvas_freezes_the_event_loop` has already proven it sensitive enough
+   (under the synchronous path the heartbeat is exactly 0 ticks).
+2. `test_freezone_routes_never_call_save_canvas_synchronously` -- an AST invariant,
+   pinning down the other three places as well (`:10868` / `:11055` / `:11193`, whose request bodies have to run through the whole preset /
+   projection assembly before they reach the save) and guarding against regression. Patterned on
+   `tests/test_billing_fatal_predicate_invariant.py:19`.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ ROUTES_SOURCE = Path("src/novelvideo/api/routes/freezone.py")
 
 
 def _project_ctx(tmp_path: Path) -> ProjectContext:
-    """照 `tests/test_freezone_image_backend.py:53` 的既有形状。"""
+    """Follows the existing shape of `tests/test_freezone_image_backend.py:53`."""
 
     return ProjectContext(
         project_id="proj_freezone",
@@ -61,7 +61,7 @@ def _project_ctx(tmp_path: Path) -> ProjectContext:
 
 
 def _patch_freezone_project(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """打桩项目解析，返回画布真正落盘的那个目录（`:9581` 取的是 `ctx.state_dir`）。"""
+    """Stub project resolution, returning the directory where the canvas is really written (`:9581` takes `ctx.state_dir`)."""
 
     ctx = _project_ctx(tmp_path)
 
@@ -94,7 +94,7 @@ def _seed_canvas(canvas_project_dir: Path) -> Path:
 
 
 def _hold_lock_for(canvas_project_dir: Path, seconds: float) -> threading.Thread:
-    """另一个持有者占住画布锁，模拟被争用的保存。"""
+    """Another holder occupies the canvas lock, simulating a contended save."""
 
     acquired = threading.Event()
 
@@ -110,7 +110,7 @@ def _hold_lock_for(canvas_project_dir: Path, seconds: float) -> threading.Thread
 
 
 class _Heartbeat:
-    """在事件循环上每 10ms 跳一次；循环被冻住时它一次都跳不了。"""
+    """Ticks every 10ms on the event loop; when the loop is frozen it cannot tick even once."""
 
     def __init__(self) -> None:
         self.ticks = 0
@@ -138,7 +138,7 @@ class _Heartbeat:
 async def test_put_canvas_keeps_the_event_loop_alive_while_lock_is_held(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`:11639` 的判据：保存被争用时，同一 worker 上别的工作照常推进。"""
+    """The `:11639` criterion: when a save is contended, other work on the same worker keeps advancing as usual."""
 
     canvas_project_dir = _patch_freezone_project(monkeypatch, tmp_path)
     canvas_file = _seed_canvas(canvas_project_dir)
@@ -162,7 +162,7 @@ async def test_put_canvas_keeps_the_event_loop_alive_while_lock_is_held(
 
         assert result["data"]["revision"] == 2
         assert blocked_seconds >= HOLD_SECONDS / 2
-        # 0.3s / 10ms ≈ 30 次；压到 10 次仍然只有「循环没停」才可能达到。
+        # 0.3s / 10ms is about 30 ticks; even pressed down to 10, only "the loop did not stop" can reach it.
         assert heartbeat.ticks >= 10
 
     holder.join(timeout=5.0)
@@ -172,10 +172,10 @@ async def test_put_canvas_keeps_the_event_loop_alive_while_lock_is_held(
 
 
 def test_freezone_routes_never_call_save_canvas_synchronously() -> None:
-    """四个调用点必须全是 `await canvas_store.save_canvas_async(...)`。
+    """All four call sites must be `await canvas_store.save_canvas_async(...)`.
 
-    `save_canvas` 本体保留且仍是同步函数（B2-8：CLI / 备份进程照旧直接调它），
-    这条只管路由模块。
+    The `save_canvas` itself remains and is still a synchronous function (B2-8: the CLI / backup process still call it directly),
+    and this case concerns only the route module.
     """
 
     tree = ast.parse(ROUTES_SOURCE.read_text(encoding="utf-8"), filename=str(ROUTES_SOURCE))

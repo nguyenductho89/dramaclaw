@@ -47,7 +47,7 @@ His mother fell silent for a long time after hearing it.
 
 def _padded(body: str) -> str:
     """Pad a chapter past the packing target so it stays its own chunk."""
-    return body + "\n" + "Filler narration. " * 640 + "\n"
+    return body + "\n" + "Filler. " * 400 + "\n"
 
 
 NARRATED_MULTI = (
@@ -96,8 +96,8 @@ def _disable_appearance_enrichment(monkeypatch) -> None:
 
 def test_normalize_strips_punctuation_noise_without_altering_the_name():
     assert normalize_character_name("\u3000Lin Mo:") == "Lin Mo"
-    assert normalize_character_name(""Su Qing"") == "Su Qing"
-    assert normalize_character_name("Lin  Mo") == "Lin  Mo"
+    assert normalize_character_name('"Su Qing"') == "Su Qing"
+    assert normalize_character_name("Lin Mo") == "Lin Mo"
 
 
 def test_titles_and_kinship_terms_are_generic():
@@ -137,7 +137,7 @@ def test_explicit_alias_statements_are_detected():
     assert ("Lin Mo", "Xiao Mo") in find_explicit_aliases(
         "Lin Mo, also known as Xiao Mo. The villagers all call him that.", ["Lin Mo", "Xiao Mo"]
     )
-    assert ("Xiao Jue", "Your Majesty") in find_explicit_aliases("Xiao Jue, better known as His Majesty.", ["Xiao Jue", "Your Majesty"])
+    assert ("Xiao Jue", "Your Majesty") in find_explicit_aliases("Xiao Jue, better known as Your Majesty.", ["Xiao Jue", "Your Majesty"])
 
 
 def test_an_alias_statement_mid_sentence_does_not_swallow_the_prose():
@@ -224,7 +224,7 @@ def test_a_name_only_the_scene_heading_lists_is_accepted():
         chunk_id="c0",
         chunk_index=0,
         section_type="scene",
-        section_label="第1场",
+        section_label="Scene 1",
         source_start=0,
         source_end=5,
         text="He pushed open the door.",
@@ -873,7 +873,7 @@ def test_oversized_parts_keep_a_recognisable_section_label():
     text = "Chapter 1 Homecoming\n\n" + "Lin Mo returned to his hometown." * 3000
     chunks = chunk_source_text(text, "narrated")
     assert all(chunk.chunk_id.startswith("chapter-0000-p") for chunk in chunks)
-    assert all("第1章" in chunk.section_label for chunk in chunks)
+    assert all("Chapter 1" in chunk.section_label for chunk in chunks)
 
 
 def test_short_chapters_are_packed_into_one_call():
@@ -1158,7 +1158,7 @@ async def test_adjudication_failure_keeps_the_rule_result():
         merged, agent=AdjudicatorAgent(explode=True), on_log=logs.append
     )
     assert {item.name for item in result} == {"Zheng Yuqin", "Mrs. Zheng"}
-    assert any("adjudication failed" in line for line in logs)
+    assert any("adjudication failed" in line.lower() for line in logs)
 
 
 async def test_rarely_seen_candidates_get_source_context():
@@ -1271,7 +1271,7 @@ async def test_scene_adjudication_failure_keeps_every_scene():
         scenes, agent=SceneAdjudicatorAgent(explode=True), on_log=logs.append
     )
     assert len(result) == 2
-    assert any("adjudication failed" in line for line in logs)
+    assert any("adjudication failed" in line.lower() for line in logs)
 
 
 async def test_scene_prompt_reports_how_often_each_heading_is_used():
@@ -1283,8 +1283,8 @@ async def test_scene_prompt_reports_how_often_each_heading_is_used():
     await adjudicate_scenes(
         scenes, occurrences={"Director's office": 18, "Zheng Villa living room": 16}, agent=agent
     )
-    assert "appears 18 场" in agent.prompt
-    assert "appears 16 场" in agent.prompt
+    assert "appears in 18 scenes" in agent.prompt
+    assert "appears in 16 scenes" in agent.prompt
 
 
 def test_scene_heading_counts_come_from_the_script():
@@ -1298,7 +1298,7 @@ def test_scene_heading_counts_come_from_the_script():
     )
     counts = _scene_heading_counts(script)
     assert counts.get("Lin family living room") == 2
-    assert counts.get("alley entrance") == 1
+    assert counts.get("Alley entrance") == 1
 
 
 # ── resume after an outage, and source-change invalidation ──────────────────
@@ -1746,11 +1746,11 @@ def test_one_occurrence_in_an_overlap_counts_once():
     # Two chunks whose spans overlap across the mention, exactly as
     # _split_oversized produces them.
     left = SourceChunk(
-        chunk_id="c0", chunk_index=0, section_type="chapter", section_label="上",
+        chunk_id="c0", chunk_index=0, section_type="chapter", section_label="Part 1",
         source_start=0, source_end=seam + 6, text=source[: seam + 6],
     )
     right = SourceChunk(
-        chunk_id="c1", chunk_index=1, section_type="chapter", section_label="下",
+        chunk_id="c1", chunk_index=1, section_type="chapter", section_label="Part 2",
         source_start=seam - 4, source_end=len(source), text=source[seam - 4 :],
     )
     assert right.source_start < left.source_end, "the fixture must overlap"
@@ -1783,8 +1783,9 @@ def test_one_occurrence_in_an_overlap_counts_once():
 def test_the_same_appellation_at_two_real_positions_still_wins():
     """Deduplicating by position must not silently disable voting."""
     source = "Zheng Yuqin walked into the living room. Mrs. Zheng nodded. Later Mrs. Zheng spoke again."
-    first = _chunk(source[:12], chunk_id="c0", start=0)
-    second = _chunk(source[12:], chunk_id="c1", start=12)
+    split = source.index(" Later")
+    first = _chunk(source[:split], chunk_id="c0", start=0)
+    second = _chunk(source[split:], chunk_id="c1", start=split)
 
     def claim(chunk, owner):
         return (
@@ -2169,8 +2170,8 @@ async def test_a_new_character_is_published_with_its_face_and_voice(
     assert character.face_prompt == "Female, in her twenties, long black hair, almond eyes"
     assert character.role == "protagonist"
     assert character.body_type == "slender and tall"
-    # "female", not "女": the structured extractor writes the English form, and
-    # a lookup that only knows the Chinese one gives every woman a male voice.
+    # "female", not a localized word: the structured extractor writes the English form, and
+    # a lookup that only knows one spelling gives every woman a male voice.
     assert character.fish_voice_id == "voice-yf"
 
 
@@ -2274,7 +2275,7 @@ async def test_a_rebuild_never_overwrites_a_face_the_user_wrote(
 
 
 def test_the_voice_lookup_reads_both_spellings_of_a_gender(monkeypatch):
-    """legacy writes 男/女, structured_v1 writes male/female; both select a voice."""
+    """legacy writes a localized gender word, structured_v1 writes male/female; both select a voice."""
     from novelvideo.config import get_fish_voice_id
 
     monkeypatch.setattr(
@@ -2282,9 +2283,9 @@ def test_the_voice_lookup_reads_both_spellings_of_a_gender(monkeypatch):
         {"youth_female": "voice-yf", "youth_male": "voice-ym"},
     )
     assert get_fish_voice_id("youth", "female") == "voice-yf"
-    assert get_fish_voice_id("youth", "女") == "voice-yf"
+    assert get_fish_voice_id("youth", "nữ") == "voice-yf"
     assert get_fish_voice_id("youth", "male") == "voice-ym"
-    assert get_fish_voice_id("youth", "男") == "voice-ym"
+    assert get_fish_voice_id("youth", "nam") == "voice-ym"
 
 
 async def test_the_character_bible_reaches_the_stage_that_writes_faces():

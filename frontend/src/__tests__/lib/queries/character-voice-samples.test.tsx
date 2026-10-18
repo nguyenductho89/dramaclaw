@@ -45,7 +45,7 @@ describe("character voice sample query hooks", () => {
   it("fetches default and age voice slots", async () => {
     server.use(
       http.get(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples",
         () =>
           HttpResponse.json({
             ok: true,
@@ -93,7 +93,7 @@ describe("character voice sample query hooks", () => {
     let contentType = "";
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/default/upload",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/default/upload",
         async ({ request }) => {
           contentType = request.headers.get("content-type") ?? "";
           return HttpResponse.json({
@@ -129,7 +129,7 @@ describe("character voice sample query hooks", () => {
 
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/default/upload",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/default/upload",
         () =>
           HttpResponse.json({
             ok: true,
@@ -175,7 +175,7 @@ describe("character voice sample query hooks", () => {
   it("invalidates audio billing quotes after a character voice changes", async () => {
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/default/upload",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/default/upload",
         () =>
           HttpResponse.json({
             ok: true,
@@ -205,7 +205,7 @@ describe("character voice sample query hooks", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/youth/record",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/youth/record",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({
@@ -229,7 +229,7 @@ describe("character voice sample query hooks", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/default/trim",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/default/trim",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({
@@ -262,7 +262,7 @@ describe("character voice sample query hooks", () => {
     let called = false;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples/child/delete",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples/child/delete",
         () => {
           called = true;
           return HttpResponse.json({

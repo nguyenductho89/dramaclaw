@@ -41,7 +41,7 @@ def test_project_config_defaults_to_drama(tmp_path, monkeypatch):
     monkeypatch.setattr(
         style_service.StyleService,
         "get_style_labels",
-        lambda username=None, project=None: {"chinese_period_drama": "古装"},
+        lambda username=None, project=None: {"chinese_period_drama": "Period drama"},
     )
 
     assert pc.load_project_config("alice", "demo")["spine_template"] == "drama"
@@ -303,7 +303,7 @@ async def test_start_ingest_allows_spine_template_change_during_rebuild(
     saved = {"spine_template": "drama"}
     uploads = tmp_path / "uploads"
     uploads.mkdir()
-    (uploads / "novel.txt").write_text("正文", encoding="utf-8")
+    (uploads / "novel.txt").write_text("body text", encoding="utf-8")
 
     monkeypatch.setattr(ingest, "resolve_project_scope", _project_scope_resolver(tmp_path))
 
@@ -338,7 +338,7 @@ async def test_start_ingest_rejects_spine_template_change_without_rebuild(
 
     uploads = tmp_path / "uploads"
     uploads.mkdir()
-    (uploads / "novel.txt").write_text("正文", encoding="utf-8")
+    (uploads / "novel.txt").write_text("body text", encoding="utf-8")
 
     monkeypatch.setattr(ingest, "resolve_project_scope", _project_scope_resolver(tmp_path))
 
@@ -349,7 +349,7 @@ async def test_start_ingest_rejects_spine_template_change_without_rebuild(
     )
 
     assert response["ok"] is False
-    assert "重新导入" in response["error"]
+    assert "re-import" in response["error"]
 
 
 @pytest.mark.asyncio
@@ -362,7 +362,7 @@ async def test_start_ingest_rejects_headerless_premium_drama_before_saving(
     uploads.mkdir()
     source_canary = "PRIVATE-SCREENPLAY-CONTENT-CANARY"
     (uploads / "novel.txt").write_text(
-        f"第一集\n孙悟空走进寝房，看见师父正在休息。{source_canary}",
+        f"Episode 1\nWukong walks into the bedroom and sees his master resting.{source_canary}",
         encoding="utf-8",
     )
     saved: dict = {}
@@ -401,7 +401,7 @@ async def test_start_ingest_rejects_prose_ending_in_outside_as_headerless_drama(
     uploads = tmp_path / "uploads"
     uploads.mkdir()
     (uploads / "novel.txt").write_text(
-        "第一集\n孙悟空快步走到门外\n他发现师父已经离开。",
+        "Episode 1\nWukong hurries outside\nHe finds that his master has left.",
         encoding="utf-8",
     )
     saved: dict = {}
@@ -431,7 +431,7 @@ async def test_start_ingest_accepts_standard_premium_drama(monkeypatch, tmp_path
     uploads = tmp_path / "uploads"
     uploads.mkdir()
     (uploads / "script.txt").write_text(
-        "第一集\n1-1 菩提寝房 夜 内\n孙悟空：师父。",
+        "Episode 1\n1-1 Bodhi Bedroom NIGHT INT\nWukong: Master.",
         encoding="utf-8",
     )
     monkeypatch.setattr(ingest, "resolve_project_scope", _project_scope_resolver(tmp_path))
@@ -455,13 +455,13 @@ async def test_start_ingest_accepts_repairable_premium_drama(monkeypatch, tmp_pa
     (uploads / "script.txt").write_text(
         "\n".join(
             [
-                "第一集",
-                "场次：1",
-                "地点：菩提寝房",
-                "时间：夜",
-                "内外景：内",
-                "人物：孙悟空",
-                "孙悟空：师父。",
+                "Episode 1",
+                "Scene 1",
+                "Location: Bodhi Bedroom",
+                "Time: night",
+                "INT/EXT: INT",
+                "Characters: Wukong",
+                "Wukong: Master.",
             ]
         ),
         encoding="utf-8",

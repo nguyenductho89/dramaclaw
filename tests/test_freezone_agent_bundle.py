@@ -13,15 +13,15 @@ def _skill_payload(item_id: str = "community-video", **overrides) -> dict:
     payload = {
         "schema_version": "dramaclaw.workflow-skill.v1",
         "id": item_id,
-        "name": "社区视频 Skill",
+        "name": "Community Video Skill",
         "version": "1.0.0",
-        "description": "根据用户素材动态生成社区视频工作流。",
+        "description": "Dynamically generate a community video workflow from the user's assets.",
         "category": "video",
-        "triggers": {"keywords": ["社区视频"], "node_scopes": ["textGeneration", "imageGeneration"]},
+        "triggers": {"keywords": ["community video"], "node_scopes": ["textGeneration", "imageGeneration"]},
         "input_parameters": [
             {
                 "id": "aspect_ratio",
-                "label": "画幅",
+                "label": "Aspect ratio",
                 "type": "single_select",
                 "required": True,
                 "default": "16:9",
@@ -30,14 +30,14 @@ def _skill_payload(item_id: str = "community-video", **overrides) -> dict:
         ],
         "allowed_recipe_ids": ["community-brief"],
         "planning": {
-            "planning_notes": "动态执行路径：根据用户输入和素材决定文本规划与图片生成阶段。",
-            "prompt_guide": "保持中文输出。",
-            "conduct_rules": ["高成本生成前等待用户确认。"],
+            "planning_notes": "Dynamic execution path: decide the text planning and image generation stages from the user input and assets.",
+            "prompt_guide": "Keep the output in the user's language.",
+            "conduct_rules": ["Wait for user confirmation before high-cost generation."],
         },
         "evaluation": {
-            "rating_bands": [{"score": 5, "description": "结果可用"}],
+            "rating_bands": [{"score": 5, "description": "Usable result"}],
             "quality_threshold": 4,
-            "domain_constraints": ["不得虚构用户素材事实"],
+            "domain_constraints": ["Do not invent facts about the user's assets"],
         },
     }
     payload.update(overrides)
@@ -48,14 +48,14 @@ def _recipe_payload(item_id: str = "community-brief", **overrides) -> dict:
     payload = {
         "schema_version": "dramaclaw.recipe.v1",
         "id": item_id,
-        "name": "社区简报",
+        "name": "Community Brief",
         "version": "1.0.0",
         "output_kind": "text",
         "action_keys": ["community-brief"],
-        "system_prompt": "根据用户输入直接生成最终视频简报。",
-        "must_have_items": ["主题", "画幅"],
-        "planning_prompt": "根据用户目标生成最终视频简报。",
-        "result_summary": "最终视频简报。",
+        "system_prompt": "Generate the final video brief directly from the user input.",
+        "must_have_items": ["Theme", "Aspect ratio"],
+        "planning_prompt": "Generate the final video brief from the user goal.",
+        "result_summary": "Final video brief.",
     }
     payload.update(overrides)
     return payload
@@ -65,9 +65,9 @@ def _bundle_payload(**overrides) -> dict:
     payload = {
         "schema_version": "dramaclaw.skill-bundle.v1",
         "id": "community-video",
-        "name": "社区视频 Skill",
+        "name": "Community Video Skill",
         "version": "1.0.0",
-        "description": "社区视频动态工作流。",
+        "description": "Community video dynamic workflow.",
         "author": "DramaClaw",
         "license": "CC-BY-4.0",
         "min_dramaclaw_version": "1.0.0",
@@ -150,7 +150,7 @@ def test_validate_agent_bundle_rejects_dangerous_fields(isolated_catalog: Path) 
 
 
 def test_validate_agent_bundle_rejects_secrets(isolated_catalog: Path) -> None:
-    recipe = _recipe_payload(system_prompt="请使用 sk-live-secret 生成提示词")
+    recipe = _recipe_payload(system_prompt="Please use sk-live-secret to generate the prompt")
     bundle = _bundle_payload(recipes=[recipe])
 
     with pytest.raises(ValueError, match="possible secret"):
@@ -158,7 +158,7 @@ def test_validate_agent_bundle_rejects_secrets(isolated_catalog: Path) -> None:
 
 
 def test_validate_agent_bundle_rejects_supplier_model_names(isolated_catalog: Path) -> None:
-    recipe = _recipe_payload(system_prompt="请固定使用 gpt-image-2 生成")
+    recipe = _recipe_payload(system_prompt="Please always use gpt-image-2 to generate")
     bundle = _bundle_payload(recipes=[recipe])
 
     with pytest.raises(ValueError, match="supplier model name"):
@@ -246,9 +246,9 @@ def test_export_agent_bundle_preserves_imported_bundle_metadata(isolated_catalog
         skill_id="community-video",
         bundle_meta={
             "id": "community-video",
-            "name": "我的本地显示名",
+            "name": "My local display name",
             "version": "9.9.9",
-            "description": "本地导出默认描述",
+            "description": "Local export default description",
             "author": "Local User",
             "license": "Proprietary",
             "min_dramaclaw_version": "1.0.0",
@@ -256,7 +256,7 @@ def test_export_agent_bundle_preserves_imported_bundle_metadata(isolated_catalog
         },
     )
 
-    assert exported["name"] == "社区视频 Skill"
+    assert exported["name"] == "Community Video Skill"
     assert exported["version"] == "2.1.0"
     assert exported["author"] == "Original Creator"
     assert exported["license"] == "CC-BY-NC-4.0"
@@ -280,9 +280,9 @@ def test_export_agent_bundle_uses_default_author_and_license(isolated_catalog: P
         skill_id="community-video",
         bundle_meta={
             "id": "community-video",
-            "name": "社区视频 Skill",
+            "name": "Community Video Skill",
             "version": "1.0.0",
-            "description": "社区视频动态工作流。",
+            "description": "Community video dynamic workflow.",
             "author": "",
             "license": "",
             "min_dramaclaw_version": "1.0.0",
@@ -314,9 +314,9 @@ def test_export_agent_bundle_uses_current_version_when_minimum_is_missing(
         skill_id="community-video",
         bundle_meta={
             "id": "community-video",
-            "name": "社区视频 Skill",
+            "name": "Community Video Skill",
             "version": "1.0.0",
-            "description": "社区视频动态工作流。",
+            "description": "Community video dynamic workflow.",
             "author": "",
             "license": "",
         },
@@ -345,9 +345,9 @@ def test_export_builtin_agent_bundle_uses_dramaclaw_author(isolated_catalog: Pat
         skill_id="community-video",
         bundle_meta={
             "id": "community-video",
-            "name": "社区视频 Skill",
+            "name": "Community Video Skill",
             "version": "1.0.0",
-            "description": "社区视频动态工作流。",
+            "description": "Community video dynamic workflow.",
             "author": "",
             "license": "",
             "min_dramaclaw_version": "1.0.0",
@@ -400,7 +400,7 @@ def test_install_agent_bundle_renames_conflicting_recipe_and_rewrites_skill_refe
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="recipes",
-        payload=_recipe_payload("community-brief", system_prompt="本地已有不同提示词。"),
+        payload=_recipe_payload("community-brief", system_prompt="A different prompt already exists locally."),
     )
     bundle = _bundle_payload(
         id="second-video",
@@ -426,7 +426,7 @@ def test_install_agent_bundle_reuses_existing_renamed_recipe_when_content_matche
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="recipes",
-        payload=_recipe_payload("community-brief", system_prompt="本地已有不同提示词。"),
+        payload=_recipe_payload("community-brief", system_prompt="A different prompt already exists locally."),
     )
     agent_config_store.save_user_agent_config_item(
         username="alice",
@@ -452,12 +452,12 @@ def test_install_agent_bundle_increments_recipe_suffix_until_available(
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="recipes",
-        payload=_recipe_payload("community-brief", system_prompt="本地已有不同提示词。"),
+        payload=_recipe_payload("community-brief", system_prompt="A different prompt already exists locally."),
     )
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="recipes",
-        payload=_recipe_payload("community-brief--second-video", system_prompt="另一个不同提示词。"),
+        payload=_recipe_payload("community-brief--second-video", system_prompt="Another different prompt."),
     )
     bundle = _bundle_payload(
         id="second-video",
@@ -488,9 +488,9 @@ def test_export_agent_bundle_includes_allowed_recipes(isolated_catalog: Path) ->
         skill_id="community-video",
         bundle_meta={
             "id": "community-video",
-            "name": "社区视频 Skill",
+            "name": "Community Video Skill",
             "version": "1.0.0",
-            "description": "社区视频动态工作流。",
+            "description": "Community video dynamic workflow.",
             "author": "DramaClaw",
             "license": "CC-BY-4.0",
             "min_dramaclaw_version": "1.0.0",

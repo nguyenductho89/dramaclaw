@@ -6,20 +6,20 @@ import { I18nextProvider, initReactI18next } from "react-i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NovelFormatDialog } from "@/components/ingest/NovelFormatDialog";
-import { enTranslation, zhTranslation } from "../../helpers/i18n-fixtures";
+import { enTranslation, viTranslation } from "../../helpers/i18n-fixtures";
 
 /**
  * The samples in the format dialog are "copy this" templates, one set each for English and Vietnamese: the parser reads the same keywords,
  * but showing Vietnamese users English-only content would be no help. What is pinned here is that "the samples follow the UI language".
  */
-async function renderIn(lng: "zh" | "en") {
+async function renderIn(lng: "vi" | "en") {
   const i18n = i18next.createInstance();
   await i18n.use(initReactI18next).init({
     lng,
     fallbackLng: lng,
     interpolation: { escapeValue: false },
     resources: {
-      zh: { translation: zhTranslation },
+      vi: { translation: viTranslation },
       en: { translation: enTranslation },
     },
   });
@@ -59,7 +59,7 @@ describe("NovelFormatDialog", () => {
 
     // INT./EXT. cannot land on a single interior/exterior value, and one such scene pulls the whole script from
     // standard down to repairable, so it belongs to "repairable" rather than "complete". It corresponds to the backend
-    // tests/test_screenplay_scene_parser.py::test_int_ext_heading_is_repairable_not_complete。
+    // tests/test_screenplay_scene_parser.py::test_int_ext_heading_is_repairable_not_complete.
     expect(spec).not.toContain("INT./EXT.");
     expect(repairable).toContain("SCENE 1 - SEOUL SUBWAY STATION");
     expect(repairable).toContain("INT./EXT. MOVING TAXI - DAY");
@@ -71,15 +71,15 @@ describe("NovelFormatDialog", () => {
 
     expect(shown).toContain("MIDNIGHT");
     // The English UI must not leak the Vietnamese sample.
-    expect(shown).not.toContain("SEOUL SUBWAY STATION");
+    expect(shown).not.toContain("GA TÀU ĐIỆN NGẦM SEOUL");
   });
 
-  it("keeps the Chinese production-format sample in the Chinese UI", async () => {
-    const { baseElement } = await renderIn("zh");
+  it("shows the Vietnamese sample in the Vietnamese UI", async () => {
+    const { baseElement } = await renderIn("vi");
     const shown = baseElement.textContent ?? "";
 
     expect(shown).toContain("INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT");
     expect(shown).toContain("JI-WON: Có ai ở đây không?");
-    expect(shown).not.toContain("SEOUL SUBWAY STATION");
+    expect(shown).not.toContain("INT. SEOUL SUBWAY STATION");
   });
 });

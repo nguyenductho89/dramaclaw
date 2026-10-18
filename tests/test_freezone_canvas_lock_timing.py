@@ -1,12 +1,12 @@
-"""B2 步 1 · `canvas_write_lock` 的等待/持有耗时埋点。
+"""B2 step 1 - wait/hold timing instrumentation of `canvas_write_lock`.
 
-判据来自 `B2-canvas-placement-free.md` §3.3.1 步 B ＋ §6.4 步 1：
+The criteria come from `B2-canvas-placement-free.md` Section 3.3.1 step B + Section 6.4 step 1:
 
-- 开关 `ST_CANVAS_LOCK_TIMING` **默认关**，关闭时零输出（B2-8 / 总图 F8「CE 行为零变化」）；
-- 开启时**每次取锁一行**、字段齐（`canvas_id` / `wait_ms` / `held_ms`）；
-- 通道必须是 **stdout `print(flush=True)`**，不是 `logging` —— §3.3.1 的告警框实测：
-  api 进程 root logger 是裸的，`logger.info` 在 logger 层就被丢弃，一行都到不了 Loki。
-  所以「默认关 / 开启有输出」这两条**用子进程验**，才同时盖住 env 解析与 stdout 通道。
+- The switch `ST_CANVAS_LOCK_TIMING` is **off by default**, and produces zero output when off (B2-8 / master figure F8 "zero CE behavior change");
+- When on, **one line per lock acquisition** with all fields (`canvas_id` / `wait_ms` / `held_ms`);
+- The channel must be **stdout `print(flush=True)`**, not `logging` -- measured in the Section 3.3.1 warning box:
+  the api process root logger is bare, `logger.info` is dropped at the logger layer, and not a single line reaches Loki.
+  So the two checks "off by default / output when on" are **verified in a subprocess**, which covers both env parsing and the stdout channel.
 """
 
 from __future__ import annotations
@@ -59,19 +59,19 @@ def _run_child(tmp_path: Path, *, timing: str | None) -> list[str]:
 
 
 def test_canvas_lock_timing_is_silent_when_switch_is_unset(tmp_path: Path) -> None:
-    """开关未设置 → 零输出（CE 单机默认路径，B2-8）。"""
+    """Switch unset -> zero output (CE single-node default path, B2-8)."""
 
     assert _run_child(tmp_path, timing=None) == []
 
 
 def test_canvas_lock_timing_is_silent_when_switch_is_not_one(tmp_path: Path) -> None:
-    """只有精确的 `1` 才开；`0` 一律当关（不留一个模糊的开关面）。"""
+    """Only an exact `1` turns it on; `0` always counts as off (leaving no ambiguous switch surface)."""
 
     assert _run_child(tmp_path, timing="0") == []
 
 
 def test_canvas_lock_timing_emits_one_complete_line_per_acquire(tmp_path: Path) -> None:
-    """开启时每次取锁一行、字段齐，且走的是 stdout（子进程里 logging 拿不到）。"""
+    """When on, one line per lock acquisition with all fields, going through stdout (logging cannot capture it in the subprocess)."""
 
     lines = _run_child(tmp_path, timing="1")
 
@@ -87,9 +87,9 @@ def test_canvas_lock_timing_emits_one_complete_line_per_acquire(tmp_path: Path) 
 def test_canvas_lock_timing_measures_wait_and_held_separately(
     tmp_path: Path, capsys, monkeypatch
 ) -> None:
-    """`wait_ms` 量争用、`held_ms` 量关键区 —— 两个数各定一件事（§3.3.1 第四个决定）。
+    """`wait_ms` measures contention and `held_ms` measures the critical section -- each number decides one thing (Section 3.3.1, fourth decision).
 
-    `held_ms` 定 TTL，`wait_ms` 定「3s 自旋上限够不够」，所以它们必须是两个独立的数。
+    `held_ms` sets the TTL, and `wait_ms` decides "is the 3s spin cap enough", so they must be two independent numbers.
     """
 
     monkeypatch.setattr(canvas_lock, "_TIMING", True)
@@ -119,9 +119,9 @@ def test_canvas_lock_timing_measures_wait_and_held_separately(
     waits = sorted(float(match.group("wait_ms")) for match in parsed)
     helds = sorted(float(match.group("held_ms")) for match in parsed)
 
-    # 持有者零等待；争用者等到持有者放手（0.15s 减去 set() 之前的那一小段）。
+    # The holder waits zero; the contender waits until the holder lets go (0.15s minus the short stretch before set()).
     assert waits[0] < 50.0
     assert waits[1] >= 80.0
-    # 关键区耗时：争用者睡 0.05s，持有者睡 0.15s，两个数不许被糊成一个。
+    # Critical-section time: the contender sleeps 0.05s and the holder sleeps 0.15s; the two numbers must not be blurred into one.
     assert helds[0] >= 40.0
     assert helds[1] >= 140.0

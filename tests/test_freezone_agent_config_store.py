@@ -27,14 +27,14 @@ def _skill_payload(
         "triggers": {"keywords": [item_id], "node_scopes": ["textGeneration"]},
         "allowed_recipe_ids": ["test-recipe"],
         "planning": {
-            "planning_notes": "根据用户目标动态规划。",
+            "planning_notes": "Plan dynamically from the user goal.",
             "prompt_guide": "",
-            "conduct_rules": ["仅创建本次计划需要的节点。"],
+            "conduct_rules": ["Create only the nodes this plan needs."],
         },
         "evaluation": {
-            "rating_bands": [{"score": 10, "description": "结果完整可用"}],
+            "rating_bands": [{"score": 10, "description": "Complete and usable result"}],
             "quality_threshold": 7,
-            "domain_constraints": ["遵循用户目标"],
+            "domain_constraints": ["Follow the user goal"],
         },
     }
 
@@ -47,9 +47,9 @@ def _recipe_payload(item_id: str, *, name: str | None = None) -> dict:
         "version": "1.0.0",
         "output_kind": "text",
         "action_keys": [item_id],
-        "system_prompt": "根据输入直接生成最终文本结果。",
-        "planning_prompt": "根据用户目标生成最终文本结果。",
-        "result_summary": "最终文本结果。",
+        "system_prompt": "Generate the final text result directly from the input.",
+        "planning_prompt": "Generate the final text result from the user goal.",
+        "result_summary": "Final text result.",
     }
 
 
@@ -86,7 +86,7 @@ def test_user_agent_config_items_are_account_scoped(
     saved = agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="skills",
-        payload=_skill_payload("story-skill", description="故事类规则"),
+        payload=_skill_payload("story-skill", description="Story rules"),
     )
 
     assert saved["id"] == "story-skill"
@@ -100,7 +100,7 @@ def test_user_agent_config_items_are_account_scoped(
         / "story-skill.json"
     )
     assert target.exists()
-    assert json.loads(target.read_text(encoding="utf-8"))["description"] == "故事类规则"
+    assert json.loads(target.read_text(encoding="utf-8"))["description"] == "Story rules"
 
     listed = agent_config_store.list_user_agent_config_items("alice", "skills")
     assert [item["id"] for item in listed] == ["story-skill"]
@@ -118,14 +118,14 @@ def test_agent_config_items_include_builtin_catalog_with_user_override(
     skill_root.mkdir(parents=True)
     (skill_root / "story-skill.json").write_text(
         json.dumps(
-            _skill_payload("story-skill", description="内置故事规则"),
+            _skill_payload("story-skill", description="Built-in story rules"),
             ensure_ascii=False,
         ),
         encoding="utf-8",
     )
     (skill_root / "image-skill.json").write_text(
         json.dumps(
-            _skill_payload("image-skill", description="内置图像规则", category="image"),
+            _skill_payload("image-skill", description="Built-in image rules", category="image"),
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -136,7 +136,7 @@ def test_agent_config_items_include_builtin_catalog_with_user_override(
         kind="skills",
         payload=_skill_payload(
             "story-skill",
-            description="用户故事规则",
+            description="User story rules",
             category="custom",
         ),
     )
@@ -144,7 +144,7 @@ def test_agent_config_items_include_builtin_catalog_with_user_override(
     listed = agent_config_store.list_user_agent_config_items("alice", "skills")
 
     assert [item["id"] for item in listed] == ["story-skill", "image-skill"]
-    assert listed[0]["description"] == "用户故事规则"
+    assert listed[0]["description"] == "User story rules"
     assert listed[0]["_catalog_source"] == "user"
     assert listed[0]["_catalog_base_source"] == "builtin"
     assert listed[1]["_catalog_source"] == "builtin"
@@ -163,14 +163,14 @@ def test_project_catalog_overrides_builtin_and_supports_array_files(
     (project_root / "skills").mkdir(parents=True)
     (project_root / "recipes").mkdir(parents=True)
     (builtin_root / "skills" / "video-skill.json").write_text(
-        json.dumps(_skill_payload("video-skill", description="旧名称")),
+        json.dumps(_skill_payload("video-skill", description="Old name")),
         encoding="utf-8",
     )
     (project_root / "skills" / "video-skill.json").write_text(
         json.dumps(
             {
-                **_skill_payload("video-skill", description="项目名称"),
-                "name": "项目名称",
+                **_skill_payload("video-skill", description="Project name"),
+                "name": "Project name",
             },
             ensure_ascii=False,
         ),
@@ -184,7 +184,7 @@ def test_project_catalog_overrides_builtin_and_supports_array_files(
     skills = agent_config_store.list_user_agent_config_items("alice", "skills")
     recipes = agent_config_store.list_user_agent_config_items("alice", "recipes")
 
-    assert skills[0]["name"] == "项目名称"
+    assert skills[0]["name"] == "Project name"
     assert [item["id"] for item in recipes] == ["recipe-a", "recipe-b"]
 
 
@@ -200,24 +200,24 @@ def test_agent_config_cache_invalidates_when_catalog_file_changes(
     target = skill_root / "story-skill.json"
     target.write_text(
         json.dumps(
-            _skill_payload("story-skill", description="第一版"), ensure_ascii=False
+            _skill_payload("story-skill", description="First version"), ensure_ascii=False
         ),
         encoding="utf-8",
     )
 
     first = agent_config_store.list_user_agent_config_items("alice", "skills")
-    assert first[0]["description"] == "第一版"
-    first[0]["description"] = "调用方不应污染缓存"
+    assert first[0]["description"] == "First version"
+    first[0]["description"] = "The caller must not pollute the cache"
 
     target.write_text(
         json.dumps(
-            _skill_payload("story-skill", description="第二版更长"), ensure_ascii=False
+            _skill_payload("story-skill", description="Second version, longer"), ensure_ascii=False
         ),
         encoding="utf-8",
     )
 
     second = agent_config_store.list_user_agent_config_items("alice", "skills")
-    assert second[0]["description"] == "第二版更长"
+    assert second[0]["description"] == "Second version, longer"
 
 
 def test_builtin_agent_config_item_can_be_hidden_by_user_overlay(
@@ -231,7 +231,7 @@ def test_builtin_agent_config_item_can_be_hidden_by_user_overlay(
     skill_root.mkdir(parents=True)
     (skill_root / "story-skill.json").write_text(
         json.dumps(
-            _skill_payload("story-skill", description="内置故事规则"),
+            _skill_payload("story-skill", description="Built-in story rules"),
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -271,7 +271,7 @@ def test_builtin_agent_config_item_merges_partial_user_overlay(
     skill_root.mkdir(parents=True)
     (skill_root / "story-skill.json").write_text(
         json.dumps(
-            _skill_payload("story-skill", description="内置故事规则"),
+            _skill_payload("story-skill", description="Built-in story rules"),
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -281,7 +281,7 @@ def test_builtin_agent_config_item_merges_partial_user_overlay(
         kind="skills",
         payload=_skill_payload(
             "story-skill",
-            description="内置故事规则",
+            description="Built-in story rules",
             enabled=False,
         ),
     )
@@ -290,7 +290,7 @@ def test_builtin_agent_config_item_merges_partial_user_overlay(
 
     assert len(listed) == 1
     assert listed[0]["id"] == "story-skill"
-    assert listed[0]["description"] == "内置故事规则"
+    assert listed[0]["description"] == "Built-in story rules"
     assert listed[0]["enabled"] is False
     assert listed[0]["_catalog_source"] == "user"
     assert listed[0]["_catalog_base_source"] == "builtin"
@@ -315,22 +315,22 @@ def test_agent_config_items_sort_user_then_customized_then_builtin_by_mtime(
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="skills",
-        payload=_skill_payload("custom-a", description="定制旧"),
+        payload=_skill_payload("custom-a", description="Custom old"),
     )
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="skills",
-        payload=_skill_payload("user-old", description="用户旧"),
+        payload=_skill_payload("user-old", description="User old"),
     )
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="skills",
-        payload=_skill_payload("custom-b", description="定制新"),
+        payload=_skill_payload("custom-b", description="Custom new"),
     )
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="skills",
-        payload=_skill_payload("user-new", description="用户新"),
+        payload=_skill_payload("user-new", description="User new"),
     )
     user_root = agent_config_store.user_agent_config_dir("alice", "skills")
     mtimes = {
@@ -370,7 +370,7 @@ def test_invalid_builtin_catalog_files_are_ignored(
     (recipe_root / "not-json.json").write_text("{", encoding="utf-8")
     (recipe_root / "valid-recipe.json").write_text(
         json.dumps(
-            _recipe_payload("valid-recipe", name="内置 Recipe"),
+            _recipe_payload("valid-recipe", name="Built-in Recipe"),
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -410,7 +410,7 @@ def test_user_agent_config_item_can_be_deleted(
     agent_config_store.save_user_agent_config_item(
         username="alice",
         kind="recipes",
-        payload=_recipe_payload("ad-recipe", name="广告 Recipe"),
+        payload=_recipe_payload("ad-recipe", name="Ad Recipe"),
     )
 
     deleted = agent_config_store.delete_user_agent_config_item(
@@ -510,9 +510,9 @@ def test_text_skill_studio_draft_saves_final_text_recipe_and_reference(
     )
     recipe = _recipe_payload("chinese-condense")
     recipe["system_prompt"] = (
-        "【角色设定】中文编辑。【输入来源】用户原文。【任务目标】直接输出一句话摘要。"
-        "【输出结构要求】仅输出最终摘要。【质量标准】保留人物、时间、地点和事件。"
-        "【禁止事项/约束】不新增事实。"
+        "[Role] A copy editor. [Input sources] The user's original text. [Task goal] Directly output a one-sentence summary."
+        "[Output structure requirements] Output only the final summary. [Quality standards] Keep the people, time, place and events."
+        "[Prohibitions / constraints] Do not add facts."
     )
     skill = _skill_payload("chinese-condense-skill")
     skill["allowed_recipe_ids"] = [recipe["id"]]
@@ -538,7 +538,7 @@ def test_text_skill_studio_draft_saves_final_text_recipe_and_reference(
     saved_skill = next(item for item in skills if item["id"] == skill["id"])
     assert saved_skill["allowed_recipe_ids"] == [recipe["id"]]
 
-    recipe["system_prompt"] = "将被送入下游 textGeneration"
+    recipe["system_prompt"] = "will be fed into downstream textGeneration"
     with pytest.raises(ValueError, match="final deliverable"):
         agent_config_store.save_user_agent_config_item(
             username="alice", kind="recipes", payload=recipe

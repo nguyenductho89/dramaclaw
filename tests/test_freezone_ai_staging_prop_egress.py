@@ -1,22 +1,22 @@
 """C1 for OI-54 S2: request-path egress identity on freezone/ai-staging-prop.
 
-从 HTTP 入口进（`create_app()` + `TestClient`），**不**直接调 `_run_ai_staging_prop`
-或底层闸门——现状的病正是「单元绿、链路漏」：`tests/test_p0_gray_execution_boundaries.py:509`
-的 EG-17 单测早就绿着，因为它手工把 `egress_context=` 喂给 `generate_ai_staging_prop`；
-而 HTTP 请求路径从不绑定 ambient context，于是
-`task_backend/subprocesses.py:122-128` 的闸门永远读到 `None`、永远放行。
+Enter from the HTTP entry point (`create_app()` + `TestClient`), and do **not** call `_run_ai_staging_prop` directly
+or the underlying gate -- the current illness is exactly "units green, chain leaking": the EG-17 unit test at `tests/test_p0_gray_execution_boundaries.py:509`
+has long been green, because it hand-feeds `egress_context=` to `generate_ai_staging_prop`;
+while the HTTP request path never binds the ambient context, so
+the gate at `task_backend/subprocesses.py:122-128` always reads `None` and always lets it through.
 
-关于假 `AuthzPort`：CE 单机的真实现 `LocalAuthz`（`ports/local/__init__.py:63-78`）
-只会产 `kind="local"`，**不可能**产 organization 身份，所以组织分支在 CE 内除了替换
-authz 端口之外没有别的到达方式。替换点与 S0 的 `tests/test_request_egress_binding.py:113`、
-`tests/test_p0g4c_video_egress.py:803` 是同一个 seam，且被替换的只有**身份来源**：
-`request_egress_scope`、`require_direct_model_egress_allowed` 闸门、
-`asyncio.to_thread` 的 contextvar 复制、app 级 `AuthzError` handler 全部是真的。
-组织身份走真库真密文的纵向由 EE 侧覆盖。
+About the fake `AuthzPort`: the real CE single-node implementation `LocalAuthz` (`ports/local/__init__.py:63-78`)
+only ever produces `kind="local"` and **cannot** produce an organization identity, so within CE the organization branch has no way to be reached other than replacing
+the authz port. The replacement point is the same seam as S0's `tests/test_request_egress_binding.py:113` and
+`tests/test_p0g4c_video_egress.py:803`, and only the **identity source** is replaced:
+`request_egress_scope`, the `require_direct_model_egress_allowed` gate,
+the contextvar copy of `asyncio.to_thread`, and the app-level `AuthzError` handler are all real.
+The vertical of an organization identity going through a real DB and real ciphertext is covered on the EE side.
 
-本文件刻意**不出现** `model_gateway_request_scope`：绑定必须由产品代码完成，测试只
-通过 `current_model_gateway_context()` 观察结果（测试自己绑上下文正是 OI-54 记录的
-假绿写法）。
+This file deliberately **does not use** `model_gateway_request_scope`: the binding must be done by product code, and the test only
+observes the result through `current_model_gateway_context()` (having the test bind the context itself is exactly the
+false-green pattern recorded in OI-54).
 """
 
 from __future__ import annotations
@@ -39,11 +39,11 @@ _ENDPOINT = f"/api/v1/projects/{_PROJECT_ID}/freezone/ai-staging-prop"
 _TASK_TYPE = "freezone_ai_staging_prop"
 
 
-# --- 假 authz 端口（只替换身份来源，见模块 docstring） -----------------------
+# --- Fake authz port (replaces only the identity source, see the module docstring) -----------------------
 
 
 def _admission(*, kind: str, user_id: str, root_task_id: str) -> AdmissionContext:
-    """回显调用方传入的 id，与两个真实实现一致（EE port.py:169、CE LocalAuthz）。"""
+    """Echo the id passed in by the caller, consistent with the two real implementations (EE port.py:169, CE LocalAuthz)."""
     organization = kind == "organization"
     return AdmissionContext(
         requester_user_id=user_id,
@@ -91,19 +91,19 @@ def _use_authz(monkeypatch: pytest.MonkeyPatch, port: object) -> None:
     monkeypatch.setattr(ports, "get_authz_port", lambda: port)
 
 
-# --- HTTP 夹具 --------------------------------------------------------------
+# --- HTTP fixtures --------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
 def no_real_network(monkeypatch) -> dict[str, int]:
-    """兜底：本文件任何测试都不得真的出网。
+    """Safety net: no test in this file may actually go out to the network.
 
-    RED 阶段实测（修复前）：C1-02 的**组织身份**请求真的打到了 NewAPI 网关并拿回
-    `status_code: 401 ... new_api_error` —— 那是 fail-open 的实证，同时也意味着一次
-    回归就会让 CI 发出真实的、按量计费的调用。这里做进程级拦截。
+    Measured in the RED phase (before the fix): the C1-02 **organization-identity** request really hit the NewAPI gateway and got back
+    `status_code: 401 ... new_api_error` -- that is empirical proof of fail-open, and it also means one
+    regression would make CI issue real, metered calls. Process-level interception is done here.
 
-    它**不替代** C1-04 的断言：C1-04 读的就是这里的计数器。`TestClient` 自己走
-    `ASGITransport`，不受影响。
+    It **does not replace** the C1-04 assertion: C1-04 reads exactly the counter here. `TestClient` goes through
+    `ASGITransport` itself and is unaffected.
     """
     counters = {"transport": 0}
 
@@ -122,7 +122,7 @@ def no_real_network(monkeypatch) -> dict[str, int]:
 
 @pytest.fixture()
 def client(monkeypatch, tmp_path) -> TestClient:
-    """真 `create_app()`：app 级 `AuthzError` handler（app.py:210-233）必须在链路里。"""
+    """Real `create_app()`: the app-level `AuthzError` handler (app.py:210-233) must be in the chain."""
     from novelvideo.api.app import create_app
     from novelvideo.api.auth import get_api_user
     from novelvideo.api.routes import freezone
@@ -153,7 +153,7 @@ def client(monkeypatch, tmp_path) -> TestClient:
 
 
 def _probe(monkeypatch, *, result: dict | None = None) -> dict:
-    """替换 `generate_ai_staging_prop`，在**线程内侧**记下 ambient context。"""
+    """Replace `generate_ai_staging_prop`, recording the ambient context **inside the thread**."""
     from novelvideo.api.routes import freezone
 
     seen: dict[str, object] = {"calls": 0, "context": "<never called>", "request": None}
@@ -172,11 +172,11 @@ def _probe(monkeypatch, *, result: dict | None = None) -> dict:
 
 
 def test_c1_01_organization_identity_crosses_to_thread(client, monkeypatch) -> None:
-    """绑定必须穿过 `asyncio.to_thread`（freezone.py:4542-4543）到达出网侧。"""
+    """The binding must cross `asyncio.to_thread` (freezone.py:4542-4543) to reach the egress side."""
     _use_authz(monkeypatch, _StubAuthz(kind="organization"))
     seen = _probe(monkeypatch)
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
 
     assert seen["calls"] == 1, response.json()
     context = seen["context"]
@@ -191,10 +191,10 @@ def test_c1_01_organization_identity_crosses_to_thread(client, monkeypatch) -> N
 
 
 def test_c1_02_organization_is_denied_with_contracted_code(client, monkeypatch) -> None:
-    """真闸门 + 真 handler：组织身份下端点稳定拒绝，码是 ORG_EGRESS_DENIED。"""
+    """Real gate + real handler: under an organization identity the endpoint rejects stably, with code ORG_EGRESS_DENIED."""
     _use_authz(monkeypatch, _StubAuthz(kind="organization"))
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 403, body
@@ -206,10 +206,10 @@ def test_c1_02_organization_is_denied_with_contracted_code(client, monkeypatch) 
 
 
 def test_c1_03_denial_is_not_a_bare_502(client, monkeypatch) -> None:
-    """钉住 §2.4：`EgressBoundaryError` 是 `RuntimeError` 子类，不得被压成裸 502。"""
+    """Pin down Section 2.4: `EgressBoundaryError` is a `RuntimeError` subclass and must not be flattened into a bare 502."""
     _use_authz(monkeypatch, _StubAuthz(kind="organization"))
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code != 502, body
@@ -222,7 +222,7 @@ def test_c1_03_denial_is_not_a_bare_502(client, monkeypatch) -> None:
 def test_c1_04_denied_before_any_egress_side_effect(
     client, monkeypatch, no_real_network
 ) -> None:
-    """`egress-inventory.md:17-23` 的 submit 前副作用契约：拒绝必须发生在提交前。"""
+    """The pre-submit side-effect contract of `egress-inventory.md:17-23`: the rejection must happen before submission."""
     from novelvideo.director_world import staging_prop_ai
 
     _use_authz(monkeypatch, _StubAuthz(kind="organization"))
@@ -245,7 +245,7 @@ def test_c1_04_denied_before_any_egress_side_effect(
     monkeypatch.setattr(staging_prop_ai, "run_staging_prop_agent", count_run)
     monkeypatch.setattr(subprocess, "Popen", count_popen)
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
 
     assert response.status_code == 403, response.text
     assert counters == {"agent": 0, "run": 0, "popen": 0}
@@ -256,11 +256,11 @@ def test_c1_04_denied_before_any_egress_side_effect(
 
 
 def test_c1_05_platform_path_is_unchanged(client, monkeypatch) -> None:
-    """看门测试：平台身份下什么都不绑，端点行为逐字节不变。"""
+    """Watchdog test: under a platform identity nothing is bound, and the endpoint behavior is byte-for-byte unchanged."""
     _use_authz(monkeypatch, _StubAuthz(kind="platform"))
     seen = _probe(monkeypatch, result={"ok": True, "prop": {"id": "p1"}})
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 200, body
@@ -270,7 +270,7 @@ def test_c1_05_platform_path_is_unchanged(client, monkeypatch) -> None:
 
 
 def test_c1_05b_platform_passes_the_real_gate(client, monkeypatch) -> None:
-    """同上，但走**真的** `generate_ai_staging_prop`：真闸门必须放行平台身份。"""
+    """Same as above, but going through the **real** `generate_ai_staging_prop`: the real gate must let the platform identity through."""
     from novelvideo.director_world import staging_prop_ai
 
     _use_authz(monkeypatch, _StubAuthz(kind="platform"))
@@ -280,12 +280,12 @@ def test_c1_05b_platform_passes_the_real_gate(client, monkeypatch) -> None:
     monkeypatch.setenv("NEWAPI_API_KEY", "platform-key")
 
     async def fake_run(_request, **_kwargs):
-        return {"name": "一匹马"}
+        return {"name": "a horse"}
 
     monkeypatch.setattr(staging_prop_ai, "run_staging_prop_agent", fake_run)
 
     response = client.post(
-        _ENDPOINT, json={"user_hint": "让他骑马", "crosshair_target": {}}
+        _ENDPOINT, json={"user_hint": "let him ride a horse", "crosshair_target": {}}
     )
     body = response.json()
 
@@ -298,11 +298,11 @@ def test_c1_05b_platform_passes_the_real_gate(client, monkeypatch) -> None:
 
 
 def test_c1_06_gray_disabled_binds_nothing(client, monkeypatch) -> None:
-    """灰度关＝平台语义（egress_binding.py:70-71）：不抛、不绑。"""
+    """Gray switch off = platform semantics (egress_binding.py:70-71): no raise, no binding."""
     _use_authz(monkeypatch, _RaisingAuthz("P0_GRAY_DISABLED"))
     seen = _probe(monkeypatch, result={"ok": True, "prop": {"id": "p1"}})
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 200, body
@@ -315,7 +315,7 @@ def test_c1_06_gray_disabled_binds_nothing(client, monkeypatch) -> None:
 
 
 def test_c1_07_real_authz_denial_propagates(client, monkeypatch) -> None:
-    """身份解析阶段的拒绝上抛为契约化 403，且根本不进出网。"""
+    """A rejection at the identity resolution stage is thrown up as a contractual 403, and never enters egress at all."""
     from novelvideo.api.routes import freezone
 
     _use_authz(monkeypatch, _RaisingAuthz("ORG_MEMBERSHIP_INACTIVE"))
@@ -328,7 +328,7 @@ def test_c1_07_real_authz_denial_propagates(client, monkeypatch) -> None:
 
     monkeypatch.setattr(freezone, "_run_ai_staging_prop", spy)
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 403, body
@@ -336,7 +336,7 @@ def test_c1_07_real_authz_denial_propagates(client, monkeypatch) -> None:
     assert calls["n"] == 0
 
 
-# --- C1-08 （负向：不相干的错误不得被本切片改掉） ----------------------------
+# --- C1-08 (negative: unrelated errors must not be changed by this slice) ----------------------------
 
 
 def test_c1_08_unrelated_runtime_error_still_502(client, monkeypatch) -> None:
@@ -349,32 +349,32 @@ def test_c1_08_unrelated_runtime_error_still_502(client, monkeypatch) -> None:
 
     monkeypatch.setattr(freezone, "_run_ai_staging_prop", boom)
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 502, body
     assert "boom" in str(body.get("detail"))
 
 
-# --- C1-09 （负向：`ok` 为假仍走原来的 502 分支） ----------------------------
+# --- C1-09 (negative: a false `ok` still goes through the original 502 branch) ----------------------------
 
 
 def test_c1_09_not_ok_result_still_502(client, monkeypatch) -> None:
     _use_authz(monkeypatch, _StubAuthz(kind="platform"))
     _probe(monkeypatch, result={"ok": False, "error": "nope"})
 
-    response = client.post(_ENDPOINT, json={"user_hint": "一匹马"})
+    response = client.post(_ENDPOINT, json={"user_hint": "a horse"})
     body = response.json()
 
     assert response.status_code == 502, body
     assert "nope" in str(body.get("detail"))
 
 
-# --- C1-10 （负向：凭证剥离防线未被本切片碰坏） ------------------------------
+# --- C1-10 (negative: the credential-stripping defense is not broken by this slice) ------------------------------
 
 
 def test_c1_10_credentials_are_still_stripped(client, monkeypatch) -> None:
-    """freezone.py:4553-4558 的「never accept credentials from an HTTP payload」。"""
+    """The "never accept credentials from an HTTP payload" of freezone.py:4553-4558."""
     _use_authz(monkeypatch, _StubAuthz(kind="platform"))
     seen = _probe(monkeypatch)
 
@@ -383,7 +383,7 @@ def test_c1_10_credentials_are_still_stripped(client, monkeypatch) -> None:
         json={
             "api_key": "attacker-key",
             "base_url": "http://attacker.test/v1",
-            "user_hint": "一匹马",
+            "user_hint": "a horse",
         },
     )
 
@@ -392,4 +392,4 @@ def test_c1_10_credentials_are_still_stripped(client, monkeypatch) -> None:
     assert forwarded is not None
     assert "api_key" not in forwarded
     assert "base_url" not in forwarded
-    assert forwarded["user_hint"] == "一匹马"
+    assert forwarded["user_hint"] == "a horse"

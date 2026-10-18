@@ -86,7 +86,7 @@ describe("CharacterVoicePanel", () => {
   it("renders default and age voice slots with inherited status and actions", async () => {
     server.use(
       http.get(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples",
         () =>
           HttpResponse.json({
             ok: true,
@@ -177,7 +177,7 @@ describe("CharacterVoicePanel", () => {
   it("warns when the default voice is missing", async () => {
     server.use(
       http.get(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples",
         () =>
           HttpResponse.json({
             ok: true,
@@ -210,7 +210,7 @@ describe("CharacterVoicePanel", () => {
   it("shows an error instead of crashing when the voice API returns ok false", async () => {
     server.use(
       http.get(
-        "http://localhost:3000/api/v1/projects/demo/characters/%E7%A7%A6/voice-samples",
+        "http://localhost:3000/api/v1/projects/demo/characters/Qin/voice-samples",
         () =>
           HttpResponse.json({
             ok: false,

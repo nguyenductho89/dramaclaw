@@ -429,7 +429,7 @@ async def test_standalone_frame_skill_render_without_identities_fails_typed_befo
         )
 
     assert calls == []
-    assert "镜头上下文" in str(exc_info.value)
+    assert "Shot context" in str(exc_info.value)
     error, payload, handled = run_core._project_task_failure_for_exception(exc_info.value)
     assert handled is True
     assert payload == {"error_code": "RENDER_IDENTITY_DETECTION_REQUIRED"}

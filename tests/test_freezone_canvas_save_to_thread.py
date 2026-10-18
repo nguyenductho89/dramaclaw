@@ -1,14 +1,14 @@
-"""验证同步画布保存的异步适配器不会阻塞事件循环（B2-10）。
+"""Verify that the async adapter of the synchronous canvas save does not block the event loop (B2-10).
 
-`save_canvas` 会同步等待当前配置的画布写互斥并执行同步文件 I/O；异步调用方必须
-通过 `save_canvas_async` 把完整保存路径移出事件循环。本模块使用 CE 文件锁的定频
-重试制造可控争用；文件锁只是测试手段，不代表其它互斥实现的等待算法或作用范围。
+`save_canvas` synchronously waits for the currently configured canvas write mutex and performs synchronous file I/O; async callers must
+move the complete save path off the event loop through `save_canvas_async`. This module uses the fixed-frequency
+retry of the CE file lock to create controllable contention; the file lock is only a test device and does not represent the wait algorithm or scope of other mutex implementations.
 
-测试策略：
+Test strategy:
 
-1. 用事件循环心跳代表与保存无关的工作，锁争用期间心跳仍须推进。
-2. 持有文件锁 0.3 秒，既能稳定暴露同步阻塞，又不会触发文件锁自己的等待上限。
-3. 保留同步调用的对照组，证明同一个心跳探针对阻塞足够敏感。
+1. Use an event-loop heartbeat to stand for work unrelated to the save; the heartbeat must keep advancing during lock contention.
+2. Hold the file lock for 0.3 seconds, which both exposes synchronous blocking reliably and does not trigger the file lock's own wait cap.
+3. Keep a control group of the synchronous call, proving that the same heartbeat probe is sensitive enough to blocking.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _save_kwargs() -> dict:
 
 
 def _hold_lock_for(project_dir: Path, seconds: float) -> tuple[threading.Thread, threading.Event]:
-    """另一个持有者占住画布锁 `seconds` 秒，模拟被争用的保存。"""
+    """Another holder occupies the canvas lock for `seconds` seconds, simulating a contended save."""
 
     acquired = threading.Event()
 
@@ -77,7 +77,7 @@ def _hold_lock_for(project_dir: Path, seconds: float) -> tuple[threading.Thread,
 
 
 class _Heartbeat:
-    """在事件循环上每 10ms 跳一次；循环被冻住时它一次都跳不了。"""
+    """Ticks every 10ms on the event loop; when the loop is frozen it cannot tick even once."""
 
     def __init__(self) -> None:
         self.ticks = 0
@@ -103,10 +103,10 @@ class _Heartbeat:
 
 
 async def test_sync_save_canvas_freezes_the_event_loop(tmp_path: Path) -> None:
-    """对照组：同步调用会把循环整个冻住（§3.9 N3 的危害本体）。
+    """Control group: the synchronous call freezes the whole loop (the harm itself of Section 3.9 N3).
 
-    这条**不是**要被修掉的行为——`save_canvas` 仍然是同步函数，CLI 与备份进程
-    照旧直接调它（B2-8 CE 行为零变化）。它在这里是为了证明心跳测得够灵敏。
+    This is **not** a behavior to be fixed -- `save_canvas` is still a synchronous function, and the CLI and backup process
+    still call it directly as before (B2-8 CE behavior zero change). It is here to prove the heartbeat is measured sensitively enough.
     """
 
     project_dir = tmp_path / "project"
@@ -127,7 +127,7 @@ async def test_sync_save_canvas_freezes_the_event_loop(tmp_path: Path) -> None:
 
 
 async def test_save_canvas_async_keeps_the_event_loop_alive(tmp_path: Path) -> None:
-    """B2-10 的判据：保存被争用时，事件循环照常推进别的工作。"""
+    """The B2-10 criterion: when a save is contended, the event loop keeps advancing other work as usual."""
 
     project_dir = tmp_path / "project"
     _seed_canvas(project_dir)
@@ -143,7 +143,7 @@ async def test_save_canvas_async_keeps_the_event_loop_alive(tmp_path: Path) -> N
 
         assert result.payload["revision"] == 2
         assert blocked_seconds >= HOLD_SECONDS / 2
-        # 0.3s / 10ms ≈ 30 次；压到 10 次仍然只有「循环没停」才可能达到。
+        # 0.3s / 10ms is about 30 ticks; even pressed down to 10, only "the loop did not stop" can reach it.
         assert heartbeat.ticks >= 10
 
     holder.join(timeout=5.0)
@@ -155,7 +155,7 @@ async def test_save_canvas_async_keeps_the_event_loop_alive(tmp_path: Path) -> N
 async def test_save_canvas_async_returns_the_same_result_as_the_sync_call(
     tmp_path: Path,
 ) -> None:
-    """接缝只换执行位置，不换返回形状（B2-6 HTTP 契约零变化的前提）。"""
+    """The seam changes only the execution location, not the return shape (the premise of B2-6 zero HTTP contract change)."""
 
     async_dir = tmp_path / "async_project"
     sync_dir = tmp_path / "sync_project"
@@ -174,17 +174,17 @@ async def test_save_canvas_async_returns_the_same_result_as_the_sync_call(
 async def test_save_canvas_async_propagates_canvas_lock_busy(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """负向：错误面不许被包装改写，`CanvasLockBusy` 必须原样穿出来。
+    """Negative: the error surface must not be wrapped or rewritten; `CanvasLockBusy` must come through as is.
 
-    路由那 10 处 `except (CanvasStoreError, CanvasLockBusy)` 靠的就是这一点；
-    接缝把它换成别的异常（或裹一层 `ExceptionGroup`），503 就会变成 500。
-    打桩取锁而不是真的等满 3s 自旋——超时本身已由
-    `tests/test_freezone_canvas_store.py:331` 覆盖，这里要证的是穿透。
-    （打桩手法照 `tests/test_backup_files_sync.py:204` 的既有形状。）
+    The 10 `except (CanvasStoreError, CanvasLockBusy)` in the routes rely on exactly this;
+    if the seam replaces it with another exception (or wraps it in an `ExceptionGroup`), the 503 would become a 500.
+    Stub the lock acquisition instead of really waiting out the full 3s spin -- the timeout itself is already covered by
+    `tests/test_freezone_canvas_store.py:331`, and what is to be proven here is the pass-through.
+    (The stubbing technique follows the existing shape of `tests/test_backup_files_sync.py:204`.)
 
-    `TCP-EU-C4` 把取锁挪到了 `canvas_write_mutex` 端口后面（B2 §3.8 版本接缝），
-    打桩点跟着挪到端口上（`TCP-P41`）。要证的东西一个字没变：取不到锁时抛出来的
-    还是那个 `CanvasLockBusy`，没有被包装、也没有被裹进 `ExceptionGroup`。
+    `TCP-EU-C4` moved lock acquisition behind the `canvas_write_mutex` port (B2 Section 3.8 version seam),
+    and the stub point moved to the port accordingly (`TCP-P41`). What is to be proven has not changed by a word: when the lock cannot be acquired, what is thrown
+    is still that very `CanvasLockBusy`, neither wrapped nor enclosed in an `ExceptionGroup`.
     """
 
     project_dir = tmp_path / "project"

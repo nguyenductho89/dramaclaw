@@ -50,7 +50,7 @@ describe("asset query hooks", () => {
     let body: unknown = null;
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/scenes/%E7%9A%87%E5%AE%AB%E5%A4%A7%E6%AE%BF/pano/generate-async",
+        "http://localhost:3000/api/v1/projects/demo/scenes/Palace%20Hall/pano/generate-async",
         async ({ request }) => {
           body = await request.json();
           return HttpResponse.json({
@@ -94,7 +94,7 @@ describe("asset query hooks", () => {
   it("starts a prop reference generation task", async () => {
     server.use(
       http.post(
-        "http://localhost:3000/api/v1/projects/demo/props/%E4%B8%83%E6%98%9F%E5%89%91/reference/generate-async",
+        "http://localhost:3000/api/v1/projects/demo/props/Seven%20Star%20Sword/reference/generate-async",
         () =>
           HttpResponse.json({
             ok: true,

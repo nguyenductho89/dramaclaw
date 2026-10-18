@@ -25,8 +25,8 @@ describe("reference media errors", () => {
     expect(referenceIssues(new Error("other"))).toEqual([]);
   });
   it("matches decoded relative media paths without basename ambiguity", () => {
-    expect(matchesReference("/api/v1/projects/p/media/freezone/%E5%9B%BE.png", "freezone/图.png")).toBe(true);
-    expect(matchesReference("/media/other/图.png", "freezone/图.png")).toBe(false);
+    expect(matchesReference("/api/v1/projects/p/media/freezone/%C3%A9.png", "freezone/é.png")).toBe(true);
+    expect(matchesReference("/media/other/é.png", "freezone/é.png")).toBe(false);
     expect(matchesReference("/media/x.png?secret=yes", "")).toBe(false);
   });
   it("prefers the uploaded filename over a generic canvas node title", () => {

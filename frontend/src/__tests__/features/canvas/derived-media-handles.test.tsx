@@ -44,7 +44,7 @@ describe("derived media edge endpoints", () => {
           .querySelector(".react-flow__handle.source")
           ?.getAttribute("data-handleid"),
       ).toBe("source");
-      expect(container.textContent).not.toMatch(/下载|删除|重新生成/);
+      expect(container.textContent).not.toMatch(/Download|Delete|Regenerate/);
     },
   );
 });

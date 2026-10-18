@@ -23,7 +23,7 @@ InteriorExterior = Literal["int", "ext", "none"]
 _NORMALIZER_BATCH_SIZE = 20
 
 ENGLISH_TIME_SUFFIX_RE = re.compile(
-    r"^(?P<location>.+?)(?:\s*[-–—,]\s*|\s+)"
+    r"^(?P<location>.+?)(?:\s*[-–—,·]\s*|\s+)"
     r"(?P<time>"
     r"\d{1,2}(?::\d{2})?\s*(?:AM|PM)|\d{1,2}:\d{2}|"
     r"daytime|nighttime|day|night|morning|afternoon|evening|"

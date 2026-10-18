@@ -1117,7 +1117,7 @@ class CogneeStore:
         on_progress: Optional[Callable[[float, str], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> List[NovelEpisode]:
-        """Create episodes from the novel chapter structure (chapter-mapping mode)."""
+        """Create episodes from the novel chapter structure (chapter-mapping mode).
 
         Chapter mapping reads the source text and writes SQLite; it never
         touches the graph, so the implementation lives on SQLiteStore where

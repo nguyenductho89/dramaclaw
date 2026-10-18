@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/getting-started/configuring-models.md)
-
 # Configuring Models
 
 DramaClaw CE uses a NewAPI-compatible gateway for text, vision, embedding, image, video, and audio models. Model settings are stored in the local CE `settings.db`. Secrets are never returned to the browser; only masked saved-state previews are shown.

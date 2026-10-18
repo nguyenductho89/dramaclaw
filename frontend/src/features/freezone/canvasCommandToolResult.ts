@@ -10,14 +10,14 @@ type CanvasApplyStatus = "accepted" | "applied" | "pending" | "partially_applied
 
 const workflowResultSyncPendingMessage = () => i18next.t(
   "freezone.chat.workflowOutputSyncPendingMessage",
-  { defaultValue: "工作流已完成，画布节点产物待同步；请稍后刷新画布核对结果，暂勿重复生成。" },
+  { defaultValue: "The workflow finished, but the canvas output is still syncing. Refresh the canvas later to check the result; do not generate it again yet." },
 );
 const WORKFLOW_RESULT_SYNC_PENDING_HINT =
   "The server workflow completed, but the canvas node output is not visible yet. " +
   "Do not claim the artifact is ready. Do not rerun generation. Ask the user to wait and refresh the canvas.";
 const workflowReconciliationPendingMessage = () => i18next.t(
   "freezone.chat.workflowReconciliationPendingMessage",
-  { defaultValue: "画布产物已生成，服务端仍在核对任务产物；请稍后检查运行状态，暂勿重复生成。" },
+  { defaultValue: "The canvas output is visible, but the server is still verifying the task artifact. Check the run status later; do not generate it again yet." },
 );
 const WORKFLOW_RECONCILIATION_PENDING_HINT =
   "The canvas output is visible, but the server is still verifying the task artifact. " +
@@ -232,7 +232,7 @@ function buildCanvasCommandToolResultPayload({
   const userMessage = accepted
     ? undefined
     : cancelled
-    ? "画布操作已取消，没有应用到画布。"
+    ? i18next.t("freezone.cmdMsg.cancelled")
     : canvasApplyStatus === "pending"
       ? reconciliationPending ? workflowReconciliationPendingMessage() : workflowResultSyncPendingMessage()
     : canvasApplyStatus === "failed"
@@ -270,11 +270,11 @@ function buildCanvasCommandToolResultPayload({
     message: accepted
       ? "Canvas command was submitted to the canvas."
       : cancelled
-      ? "画布操作已取消，没有应用到画布。"
+      ? i18next.t("freezone.cmdMsg.cancelled")
       : canvasApplyStatus === "pending"
         ? userMessage ?? workflowResultSyncPendingMessage()
       : canvasApplyStatus === "failed"
-        ? userMessage ?? "画布操作没有完成，我会换一种方式再试。"
+        ? userMessage ?? i18next.t("freezone.cmdMsg.incomplete")
         : "Frontend executor reported the canvas command result.",
     ...(userMessage ? { user_message: userMessage } : {}),
     ...(agentHint ? { agent_hint: agentHint } : {}),

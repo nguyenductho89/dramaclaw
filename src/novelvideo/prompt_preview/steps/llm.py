@@ -50,10 +50,10 @@ async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
 
     text, chunks = _chunks(scope)
     if text is None:
-        return empty("characters", "llm", "请先导入原文 / Import the source text first")
+        return empty("characters", "llm", "Import the source text first")
     chunk = next((c for c in chunks if c.chunk_id == target), None)
     if chunk is None:
-        return empty("characters", "llm", f"找不到片段 / Chunk not found: {target}")
+        return empty("characters", "llm", f"Chunk not found: {target}")
     language = detect_asset_language(text)
     return PromptPreview(
         step="characters",
@@ -72,7 +72,7 @@ async def _characters_build(scope: PreviewScope, target: str) -> PromptPreview:
 
 
 async def _identity_targets(scope: PreviewScope) -> list[PreviewTarget]:
-    return [PreviewTarget("pass_a", "Pass A · 默认身份 / default identities")]
+    return [PreviewTarget("pass_a", "default identities")]
 
 
 async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
@@ -85,10 +85,10 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
     episodes = await scope.store.list_episodes()
     episode = next((e for e in episodes if e.number == scope.episode), None)
     if episode is None:
-        return empty("identity_plan", "llm", "找不到该集 / Episode not found")
+        return empty("identity_plan", "llm", "Episode not found")
     content = str(await scope.store.load_episode_content(episode.number) or "")
     if not content.strip():
-        return empty("identity_plan", "llm", "该集还没有原文内容 / This episode has no source content yet")
+        return empty("identity_plan", "llm", "This episode has no source content yet")
     # The store's in-memory character cache is only filled with the full graph state, which the
     # preview route skips, so resolve names from the rows themselves.
     characters = await scope.store.list_characters()
@@ -163,17 +163,17 @@ def _optimizer_system(language: str) -> tuple[str, str]:
     )
 
 
-register(StepSpec("characters", "角色提取 / Character extraction", "llm",
+register(StepSpec("characters", "Character extraction", "llm",
                   targets_fn=_characters_targets, build_fn=_characters_build))
-register(StepSpec("identity_plan", "身份规划 / Identity planning", "llm", needs_episode=True,
+register(StepSpec("identity_plan", "Identity planning", "llm", needs_episode=True,
                   targets_fn=_identity_targets, build_fn=_identity_build))
 register(_system_only(
-    "script", "脚本生成 / Script", _script_system,
+    "script", "Script", _script_system,
     "每一行的用户提示词依赖前面各行的选择，运行时逐行拼装；这里只显示系统提示词。"
     " / The per-line user prompt depends on earlier lines and is assembled at run time; only the system prompt is shown.",
 ))
 register(_system_only(
-    "global_optimize", "全局视频优化 / Global optimize", _optimizer_system,
+    "global_optimize", "Global optimize", _optimizer_system,
     "每个分镜的用户提示词依赖草图图像与角色颜色映射，运行时拼装；这里只显示系统提示词。"
     " / The per-beat user prompt needs the sketch image and colour map at run time; only the system prompt is shown.",
 ))

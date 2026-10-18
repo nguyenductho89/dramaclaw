@@ -21,8 +21,8 @@ class BlockWorldUnavailable(RuntimeError):
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             message
-            or "voxel DirectorWorld 生成需要 Node.js 运行时。CE 镜像 INSTALL_WORLD=1 已内置；"
-            "host 运行需自行安装 node。"
+            or "voxel DirectorWorld generation requires a Node.js runtime. The CE image has it built in with INSTALL_WORLD=1; "
+            "when running on the host, install node yourself."
         )
 
 
@@ -730,7 +730,7 @@ def camera_presets_from_bounds(bounds: dict[str, list[int]]) -> list[dict[str, A
     return [
         {
             "id": "front_overview",
-            "label": "正面全景",
+            "label": "Front overview",
             "position": [
                 round(cx, 2),
                 round(cy + 3, 2),
@@ -741,7 +741,7 @@ def camera_presets_from_bounds(bounds: dict[str, list[int]]) -> list[dict[str, A
         },
         {
             "id": "left_side",
-            "label": "左侧机位",
+            "label": "Left side",
             "position": [
                 round(min_x - span_x * 0.55, 2),
                 round(cy + 2, 2),
@@ -752,14 +752,14 @@ def camera_presets_from_bounds(bounds: dict[str, list[int]]) -> list[dict[str, A
         },
         {
             "id": "interior_corner",
-            "label": "室内角落",
+            "label": "Interior corner",
             "position": [round(max_x + 4, 2), round(cy + 1.2, 2), round(min_z - 4, 2)],
             "target": [round(cx, 2), round(cy, 2), round(cz, 2)],
             "fov": 62,
         },
         {
             "id": "top_down",
-            "label": "俯视布局",
+            "label": "Top-down layout",
             "position": [
                 round(cx, 2),
                 round(max_y + max(span_x, span_z) * 0.95, 2),

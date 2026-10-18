@@ -23,7 +23,7 @@ function optionKey(optionValue: string): string {
   return optionValue.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
-/** 技能来源分组的标题（「主线技能」「Agent 技能」…）。 */
+/** Titles of the skill provider groups ("Mainline skills", "Agent skills", ...). */
 export function translateSkillProviderLabel(provider: SkillProvider, t: TFunction): string {
   return t(`viewer.threeD.skillProviderLabels.${provider}`);
 }

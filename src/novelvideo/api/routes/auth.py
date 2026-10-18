@@ -1,4 +1,4 @@
-"""认证端点：登出 / 当前用户信息。"""
+"""Auth endpoints: logout / current user info."""
 
 import logging
 

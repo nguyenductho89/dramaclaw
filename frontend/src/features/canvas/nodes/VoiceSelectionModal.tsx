@@ -24,9 +24,9 @@ import { readUrl } from '@/lib/url-params';
 import { CANVAS_NODE_INPUT_PLACEHOLDER_CLASS } from '@/features/canvas/ui/nodeFrameStyles';
 
 const PAGE_SIZE = 20;
-// 后端 freezone-audio 支持的音频扩展（与 openapi 描述一致）。
-// 既用作 <input accept> 的扩展白名单，也用作前端兜底校验，避免浏览器
-// 把 accept="audio/*" 当成纯提示忽略掉、让用户选到视频/其它格式。
+// Audio extensions supported by the backend freezone-audio (consistent with the openapi description).
+// Used both as the extension allowlist of <input accept> and as a frontend fallback validation, so browsers
+// do not treat accept="audio/*" as a pure hint and ignore it, letting the user pick video/other formats.
 const ALLOWED_AUDIO_EXTENSIONS = [
   '.mp3',
   '.wav',
@@ -52,12 +52,12 @@ const ACCEPT_ATTRIBUTE = [
   ...ALLOWED_AUDIO_EXTENSIONS,
 ].join(',');
 
-// 参考音频体积上限,与后端 freezone-audio 的 5MB 限制对齐
-// (后端超限会返回 {code:"freezone_audio_voice_too_large", limit:5242880})。
-// 必须前端先卡:超限的 body 仍会被发出去,后端读不完整个 body 就提前回包 +
-// 关连接,浏览器在「请求体还没传完」时遇到连接关闭会直接判定为网络错误、
-// 丢弃那条 200 的友好提示,用户只看到一句没头没尾的 network error。前置校验
-// 让超大文件根本不发请求,避开这个时序坑。
+// Upper size limit of reference audio, aligned with the backend freezone-audio 5MB limit
+// (when exceeded the backend returns {code:"freezone_audio_voice_too_large", limit:5242880}).
+// The frontend must block first: an oversized body would still be sent, and the backend replies early and
+// closes the connection before reading the whole body; when the browser meets a connection close while "the request body is not fully sent"
+// it judges a network error outright, discarding that friendly 200 message, and the user only sees a bare network error. A pre-check
+// keeps oversized files from sending any request at all, avoiding this timing trap.
 const MAX_VOICE_FILE_BYTES = 5_242_880; // 5MB
 const MAX_VOICE_FILE_MB = 5;
 
@@ -67,8 +67,8 @@ function isAllowedAudioFile(file: File): boolean {
     lowerName.endsWith(ext),
   );
   if (!hasAllowedExt) return false;
-  // MIME 不可靠（有时为空、有时是 video/webm 这种）：扩展名通过后，再用
-  // MIME 做兜底——若浏览器给了 video/* 这种明确错的类型，仍然拒绝。
+  // MIME is unreliable (sometimes empty, sometimes something like video/webm): after the extension passes, use
+  // MIME as a fallback — if the browser gives a clearly wrong type such as video/*, still reject.
   if (file.type && file.type.startsWith('video/')) return false;
   return true;
 }
@@ -120,7 +120,7 @@ export function VoiceSelectionModal({
     }
   }, [t]);
 
-  // ESC 关闭
+  // ESC closes
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -130,14 +130,14 @@ export function VoiceSelectionModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // 打开时拉一次（音色库 + 我的音色共享同一份 references 数据）
+  // Fetch once on open (the voice library + My voices share the same references data)
   useEffect(() => {
     if (!open) return;
     setTab(initialTab);
     void reload();
   }, [initialTab, open, reload]);
 
-  // 音色库 = available 完整字段；我的音色 = available 里 scope=user_custom 的子集。
+  // Voice library = the full fields of available; My voices = the subset of available with scope=user_custom.
   const libraryItems = items;
   const myItems = useMemo(
     () => items.filter((it) => it.scope === 'user_custom'),
@@ -235,7 +235,7 @@ function TabsRow({ tab, onChange }: TabsRowProps) {
 }
 
 // ---------------------------------------------------------------------------
-// 音色库 tab — 调 references 接口，客户端搜索 + 分页
+// Voice library tab — calls the references endpoint, client-side search + pagination
 // ---------------------------------------------------------------------------
 
 interface LibraryTabProps {
@@ -305,9 +305,9 @@ function LibraryTab({ currentRef, onPick, items, loading, error }: LibraryTabPro
         {!loading &&
           !error &&
           pageItems.map((item, idx) => {
-            // voiceId 必须带上 —— user_custom scope 全靠它区分，漏了的话
-            // 同一 scope 的多条 ref 会撞同一个 key（参考 voiceRefKey），
-            // 列表里所有用户音色都会被错误地标成"已选"。
+            // voiceId must be included — the user_custom scope relies on it entirely to tell entries apart; without it
+            // multiple refs of the same scope would collide on the same key (see voiceRefKey),
+            // and all user voices in the list would be wrongly marked as "selected".
             const ref: AudioVoiceRef = {
               scope: item.scope,
               characterName: item.character_name ?? undefined,
@@ -347,7 +347,7 @@ function LibraryTab({ currentRef, onPick, items, loading, error }: LibraryTabPro
 }
 
 // ---------------------------------------------------------------------------
-// 我的音色 tab — 列表 + 上传
+// My voices tab — list + upload
 // ---------------------------------------------------------------------------
 
 interface MyVoicesTabProps {
@@ -380,7 +380,7 @@ function MyVoicesTab({
   const handleFileChange = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      // 复位 input，使得连续上传同一文件也能触发 change
+      // Reset the input so uploading the same file consecutively still triggers change
       e.target.value = '';
       if (!file) return;
       if (!isAllowedAudioFile(file)) {
@@ -401,14 +401,14 @@ function MyVoicesTab({
       }
       setUploading(true);
       try {
-        // 文件名（去扩展名）作为默认音色名，避免空字符串。
+        // The file name (without extension) serves as the default voice name, avoiding an empty string.
         const stem = file.name.replace(/\.[^/.]+$/, '');
         await createFreezoneAudioVoice(project, file, stem || undefined);
         await onReload();
       } catch (err) {
         const raw = err instanceof Error ? err.message : '';
-        // ky 的 NetworkError 文案是英文原文（"Request failed due to a network
-        // error: ..."）。多数情况是文件偏大导致连接被提前关闭,给一句可读提示。
+        // ky's NetworkError message is the original English text ("Request failed due to a network
+        // error: ..."). Mostly the file is too large and the connection was closed early; give a readable hint.
         const friendly = /network error/i.test(raw)
           ? t('node.voiceModal.uploadNetworkError', { limit: MAX_VOICE_FILE_MB })
           : raw || t('node.voiceModal.uploadFailed');
@@ -532,7 +532,7 @@ function MyVoicesTab({
 }
 
 // ---------------------------------------------------------------------------
-// 共用：toolbar / list / row / pagination
+// Shared: toolbar / list / row / pagination
 // ---------------------------------------------------------------------------
 
 function ToolbarRow({ children }: { children: React.ReactNode }) {

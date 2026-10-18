@@ -485,7 +485,7 @@ function CharacterIdentityBadges({
               )}
             >
               <span className="truncate">{identity.identity_name}</span>
-              {/* 身份名是生成内容（角色自己的叫法），不翻；年龄段是 code，跟着界面语言走。 */}
+              {/* The identity name is generated content (the character's own name for it) and is not translated; the age group is a code and follows the UI language. */}
               {identity.age_group ? (
                 <span className="shrink-0 rounded-[4px] border border-white/10 px-1 text-[10px] leading-4 text-muted-foreground/80">
                   {ageGroupLabel(identity.age_group, t)}

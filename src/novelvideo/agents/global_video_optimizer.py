@@ -1,6 +1,6 @@
-"""全局视频提示词优化 Agent。
+"""Global video prompt optimization Agent.
 
-分析整集草图网格 + 角色颜色映射，一次性为所有 Beat 生成 first_frame 运动提示词。
+Analyzes the whole-episode sketch grid + character color mapping and generates first_frame motion prompts for all Beats in one pass.
 """
 
 import io
@@ -15,11 +15,11 @@ from pydantic_ai.output import NativeOutput
 from PIL import Image as PILImage
 
 from novelvideo.brainclaw_contract import BrainClawProfile
-from novelvideo.utils.source_language import EN_LIKE_LANGUAGES, asset_language_instruction
+from novelvideo.utils.source_language import asset_language_instruction, language_name
 
 
 class ReviewResult(BaseModel):
-    """审核结果。"""
+    """Review result."""
 
     needs_fix: bool
     reason: str
@@ -27,11 +27,11 @@ class ReviewResult(BaseModel):
 
 
 class BeatIdentity(BaseModel):
-    """单个 Beat 的角色识别结果。"""
+    """Character identification result for a single Beat."""
 
-    beat_number: int = Field(description="Beat 编号")
+    beat_number: int = Field(description="Beat number")
     identities: list[str] = Field(
-        default_factory=list, description="识别到的 identity_id 列表，无角色则为空"
+        default_factory=list, description="List of identified identity_ids; empty if there are no characters"
     )
 
 
@@ -119,26 +119,26 @@ Output a strict JSON object with no explanation or markdown:
 
 
 def _normalize_gender_label(value: str) -> str:
-    """将仓库内常见性别值归一化为英文标签。"""
+    """Normalize the gender values common in the repo into English labels."""
     g = (value or "").strip().lower()
-    if g in ("男", "男性", "male"):
+    if g == "male":
         return "male"
-    if g in ("女", "女性", "female"):
+    if g == "female":
         return "female"
     return ""
 
 
 def _combine_identity_prompt(face_prompt: str, appearance: str) -> str:
-    """对齐单个 SuperPower 路径：使用 face_prompt + appearance_details。"""
+    """Align with the single SuperPower path: use face_prompt + appearance_details."""
     face_prompt = (face_prompt or "").strip()
     appearance = (appearance or "").strip()
     if face_prompt and appearance:
-        return f"{face_prompt}，{appearance}"
+        return f"{face_prompt}, {appearance}"
     return face_prompt or appearance
 
 
 def _format_color_mapping_descriptor(info: dict) -> str:
-    """构建颜色映射里的外观描述，显式带上性别/体型约束。"""
+    """Build the appearance description in the color mapping, explicitly carrying the gender / body-type constraints."""
     parts: list[str] = []
 
     gender = _normalize_gender_label(info.get("gender", ""))
@@ -158,7 +158,7 @@ def _format_color_mapping_descriptor(info: dict) -> str:
 
 
 def create_global_video_reviewer_agent(language: str = "en") -> Agent:
-    """创建全局视频审核 Agent。"""
+    """Create the global video review Agent."""
     from novelvideo.config import (
         get_newapi_structured_output_model_settings,
         get_superpower_pydantic_model,
@@ -179,7 +179,7 @@ def create_global_video_reviewer_agent(language: str = "en") -> Agent:
 
 
 def create_global_video_optimizer_agent(language: str = "en") -> Agent:
-    """创建全局视频优化 Agent。"""
+    """Create the global video optimization Agent."""
     from novelvideo.config import get_newapi_text_pydantic_model
 
     legacy_model = os.environ.get("GLOBAL_VIDEO_MODEL", "").strip()
@@ -200,10 +200,10 @@ def create_global_video_optimizer_agent(language: str = "en") -> Agent:
 
 
 class GlobalVideoPromptOptimizer:
-    """全局视频提示词优化器。
+    """Global video prompt optimizer.
 
-    将整集草图网格和角色颜色映射发给 AI，
-    由 AI 一次性生成每个 Beat 的 first_frame 运动提示词。
+    Sends the whole-episode sketch grid and the character color mapping to the AI,
+    which generates the first_frame motion prompt of every Beat in one pass.
     """
 
     def __init__(self):
@@ -216,7 +216,7 @@ class GlobalVideoPromptOptimizer:
         return self._agents[language]
 
     def _compress_image(self, image_path: str, compress_quality: int = 70) -> bytes:
-        """压缩图片并返回 bytes。"""
+        """Compress the image and return bytes."""
         img = PILImage.open(image_path)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
@@ -227,14 +227,14 @@ class GlobalVideoPromptOptimizer:
         compressed_size = len(image_bytes)
         ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
         print(
-            f"[GlobalVideoOptimizer] 压缩图片: {os.path.basename(image_path)}: "
+            f"[GlobalVideoOptimizer] Compressed image: {os.path.basename(image_path)}: "
             f"{original_size / 1024:.0f}KB → {compressed_size / 1024:.0f}KB "
-            f"({ratio:.0f}% 压缩)"
+            f"({ratio:.0f}% smaller)"
         )
         return image_bytes
 
     def _build_identity_to_color(self, character_color_map: dict) -> dict[str, str]:
-        """构建 identity_id → color label 的反向映射。"""
+        """Build the reverse mapping from identity_id to color label."""
         identity_to_color = {}
         for color_key, info in character_color_map.items():
             identity = info.get("identity", info.get("name", ""))
@@ -261,12 +261,12 @@ class GlobalVideoPromptOptimizer:
         prev_prompt: str | None = None,
         total_beats: int = 0,
     ) -> dict:
-        """为单个 beat 生成导演级视频提示词。
+        """Generate a director-level video prompt for a single beat.
 
         Args:
-            beat: beat 数据 (visual_description, narration_segment, etc.)
-            sketch_image_path: 该 beat 的草图帧路径
-            character_color_map: 角色颜色→外貌映射
+            beat: beat data (visual_description, narration_segment, etc.)
+            sketch_image_path: path to this beat's sketch frame
+            character_color_map: character color -> appearance mapping
 
         Returns:
             {"beat_number": int, "video_mode": "first_frame", "prompt": str}
@@ -348,7 +348,7 @@ class GlobalVideoPromptOptimizer:
                 position_hint += "Vary shot scale and angle from adjacent beats to create visual rhythm."
 
         language_instruction = asset_language_instruction(language)
-        output_label = "English" if language in EN_LIKE_LANGUAGES else "Chinese"
+        output_label = language_name(language)
         task = f"""Generate a first-frame motion prompt for Beat {bn}. You see the sketch frame for this beat.
 {position_hint}
 ## Character Color Mapping
@@ -371,7 +371,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
 
         # Load and compress the sketch image
         if not os.path.exists(sketch_image_path):
-            raise RuntimeError(f"草图帧不存在: {sketch_image_path}")
+            raise RuntimeError(f"Sketch frame does not exist: {sketch_image_path}")
 
         image_bytes = self._compress_image(sketch_image_path)
         image_content = BinaryContent(data=image_bytes, media_type="image/jpeg")
@@ -385,11 +385,11 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         response = await agent.run(user_prompt)
 
         if not response.output:
-            raise RuntimeError(f"Beat {bn}: AI 返回空内容")
+            raise RuntimeError(f"Beat {bn}: AI returned empty content")
 
         prompt = response.output.strip()
         if not prompt:
-            raise RuntimeError(f"Beat {bn}: AI 返回空内容")
+            raise RuntimeError(f"Beat {bn}: AI returned empty content")
 
         result = {
             "beat_number": bn,
@@ -401,11 +401,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         if audio_type == "dialogue":
             line = beat.get("narration_segment", "")
             if line and line not in result["prompt"]:
-                dialogue_prefix = "Says:" if language in EN_LIKE_LANGUAGES else "说："
-                separator = " " if language in EN_LIKE_LANGUAGES else "，"
-                result["prompt"] = (
-                    f"{result['prompt']}{separator}{dialogue_prefix} {line}"
-                )
+                result["prompt"] = f"{result['prompt']} Says: {line}"
 
         print(
             f"[GlobalVideoOptimizer] Beat {bn}: prompt generated ({len(result['prompt'])} chars)"
@@ -422,22 +418,22 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         sketches_dir: str | None = None,
         progress_callback=None,
     ) -> list[dict]:
-        """优化整集所有 Beat 的视频提示词（逐 beat 调用 optimize_single_beat）。
+        """Optimize the video prompts of all Beats in the episode (calls optimize_single_beat per beat).
 
         Args:
-            sketch_image_paths: 草图网格图片路径列表 (legacy, used as fallback)
-            character_color_map: 角色颜色→外貌映射
-            total_beats: 总 beat 数
-            language: 输出语言
-            beats: beat 数据列表
-            sketches_dir: 草图帧目录路径，用于查找单帧
-            progress_callback: 进度回调 fn(beat_num, total)
+            sketch_image_paths: list of sketch grid image paths (legacy, used as fallback)
+            character_color_map: character color -> appearance mapping
+            total_beats: total number of beats
+            language: output language
+            beats: list of beat data
+            sketches_dir: sketch frame directory path, used to find single frames
+            progress_callback: progress callback fn(beat_num, total)
 
         Returns:
             [{"beat_number": int, "video_mode": str, "prompt": str}, ...]
         """
         if not beats:
-            raise RuntimeError("beats 参数不能为空")
+            raise RuntimeError("The beats argument must not be empty")
 
         validated = []
         sorted_beats = sorted(beats, key=lambda b: b.get("beat_number", 0))
@@ -456,7 +452,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
                         break
 
             if not sketch_path:
-                print(f"[GlobalVideoOptimizer] Beat {bn}: 无单帧草图，跳过")
+                print(f"[GlobalVideoOptimizer] Beat {bn}: no single-frame sketch, skipping")
                 continue
 
             # prev/next beat for continuity
@@ -477,7 +473,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
                 validated.append(result)
                 prev_prompt = result["prompt"]
             except Exception as e:
-                print(f"[GlobalVideoOptimizer] Beat {bn}: 优化失败 ({e})")
+                print(f"[GlobalVideoOptimizer] Beat {bn}: optimization failed ({e})")
 
             if progress_callback:
                 progress_callback(bn, len(sorted_beats), i + 1)
@@ -492,17 +488,17 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         character_color_map: dict,
         log_fn=None,
     ) -> list[dict]:
-        """逐 beat 审核提示词与草图帧是否一致，不一致则自动修正。
+        """Review beat by beat whether the prompt matches the sketch frame, and fix it automatically if not.
 
         Args:
-            results: optimize() 返回的结果列表
-            beats: beat 数据列表（含 visual_description, narration_segment）
-            sketches_dir: 草图帧目录路径
-            character_color_map: 角色颜色→外貌映射
-            log_fn: 日志回调函数
+            results: result list returned by optimize()
+            beats: list of beat data (including visual_description, narration_segment)
+            sketches_dir: sketch frame directory path
+            character_color_map: character color -> appearance mapping
+            log_fn: log callback function
 
         Returns:
-            更新后的 results 列表
+            The updated results list
         """
         if self._review_agent is None:
             self._review_agent = create_global_video_reviewer_agent("en")
@@ -521,10 +517,10 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
             video_mode = result["video_mode"]
             prompt = result["prompt"]
 
-            # 查找草图帧
+            # Find the sketch frame
             sketch_file = sketches_path / f"beat_{beat_num:02d}.png"
             if not sketch_file.exists():
-                _log(f"Beat {beat_num}: 草图帧不存在，跳过审核")
+                _log(f"Beat {beat_num}: sketch frame does not exist, skipping review")
                 continue
 
             beat = beats_by_num.get(beat_num, {})
@@ -537,7 +533,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
             if audio_type == "dialogue":
                 narration_label = format_beat_narration(audio_type, speaker, narration)
             else:
-                narration_label = f"旁白: {narration}"
+                narration_label = f"Narration: {narration}"
 
             try:
                 image_bytes = self._compress_image(str(sketch_file))
@@ -545,22 +541,22 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
 
                 dialogue_hint = ""
                 if audio_type == "dialogue":
-                    dialogue_hint = "\n- ⚠️ 此 Beat 为角色台词，prompt 中需描述说话动作（张嘴说话等）。台词由系统追加。"
+                    dialogue_hint = "\n- ⚠️ This Beat is a character line; the prompt must describe the speaking action (mouth moving as they speak, etc.). The line itself is appended by the system."
 
-                review_task = f"""审核 Beat {beat_num} 的视频提示词是否与草图画面吻合。
+                review_task = f"""Review whether the video prompt of Beat {beat_num} matches the sketch frame.
 
-## 角色颜色映射
+## Character color mapping
 {color_map_text}
 
-## 当前视频策略
+## Current video strategy
 - video_mode: {video_mode}
 - prompt: {prompt}
 
-## Beat 上下文
-- 画面描述: {visual_desc}
+## Beat context
+- Visual description: {visual_desc}
 - {narration_label}{dialogue_hint}
 
-请对比草图画面与 prompt，判断是否需要修正。prompt 必须从草图这一帧之后开始，不能描述抵达这一帧之前发生的动作。直接输出 JSON 对象。"""
+Compare the sketch frame with the prompt and decide whether a fix is needed. The prompt must start from after this sketch frame and must not describe actions that happen before reaching it. Output the JSON object directly."""
 
                 response = await self._review_agent.run([review_task, image_content])
 
@@ -569,23 +565,23 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
                     if review.needs_fix:
                         result["prompt"] = review.prompt or prompt
                         fixed_count += 1
-                        _log(f"Beat {beat_num}: ✏️ 已修正 — {review.reason}")
+                        _log(f"Beat {beat_num}: ✏️ fixed — {review.reason}")
                     else:
-                        _log(f"Beat {beat_num}: ✅ 通过审核")
+                        _log(f"Beat {beat_num}: ✅ review passed")
                 else:
-                    _log(f"Beat {beat_num}: 审核返回空，跳过")
+                    _log(f"Beat {beat_num}: review returned empty, skipping")
 
             except Exception as e:
-                _log(f"Beat {beat_num}: 审核异常 ({e})，保留原 prompt")
+                _log(f"Beat {beat_num}: review error ({e}), keeping the original prompt")
 
-        _log(f"审核完成：{fixed_count}/{len(results)} 个 Beat 已修正")
+        _log(f"Review complete: {fixed_count}/{len(results)} Beats fixed")
         return results
 
     def _build_color_map_text(self, character_color_map: dict) -> str:
-        """将角色颜色映射构建为文本描述（颜色→外貌描述，不含角色名）。"""
+        """Build the character color mapping into a text description (color -> appearance description, without character names)."""
         lines = []
         for color_key, info in character_color_map.items():
-            # color_key 格式: "#4A90D9 ICE BLUE"
+            # color_key format: "#4A90D9 ICE BLUE"
             parts = color_key.split(" ", 1)
             hex_code = parts[0] if parts else color_key
             color_name = parts[1] if len(parts) > 1 else ""
@@ -604,24 +600,24 @@ def prepare_global_optimizer_input(
     episode: int,
     project: str,
 ) -> tuple[list[str], dict, int]:
-    """准备全局优化器的输入数据。
+    """Prepare the input data for the global optimizer.
 
     Returns:
         (sketch_paths, character_color_map, total_beats)
 
-    1. 找草图网格: grids/ep{ep}/sketch/ 下的 grid 图片
-    2. 构建颜色映射: build_character_map_for_grid() →
-       提取 identity_sketch_colors + identity_appearances
+    1. Find the sketch grid: the grid images under grids/ep{ep}/sketch/
+    2. Build the color mapping: build_character_map_for_grid() →
+       extract identity_sketch_colors + identity_appearances
     """
     from novelvideo.utils.path_resolver import PathResolver
 
     resolver = PathResolver(output_dir, episode)
     total_beats = len(beats)
 
-    # 1. 从 sketches/ep{N}/ 收集已确认的草图，拼成网格
+    # 1. Collect the confirmed sketches from sketches/ep{N}/ and combine them into a grid
     sketch_paths = _try_combine_frames_to_grid(resolver, beats, output_dir, episode)
 
-    # 2. 构建角色颜色→外貌映射
+    # 2. Build the character color -> appearance mapping
     character_color_map = _build_color_appearance_map(
         beats, characters, output_dir, project, episode=episode
     )
@@ -630,14 +626,14 @@ def prepare_global_optimizer_input(
 
 
 def _try_combine_frames_to_grid(resolver, beats, output_dir, episode) -> list[str]:
-    """尝试将单帧拼接为网格。优先从 sketches/ 读取当前选中的草图。"""
+    """Try to combine single frames into a grid. Prefers the currently selected sketches from sketches/."""
     try:
         from novelvideo.generators.grid_splitter import combine_to_grid
 
-        sketches_dir = resolver.sketches_dir()  # sketches/ep001/ — 当前选中的草图
-        sketch_pool_dir = resolver.sketch_dir()  # grids/ep001/sketch/ — 输出目录
+        sketches_dir = resolver.sketches_dir()  # sketches/ep001/ — the currently selected sketches
+        sketch_pool_dir = resolver.sketch_dir()  # grids/ep001/sketch/ — output directory
 
-        # 只从 sketches/ 收集当前选中的草图
+        # Only collect the currently selected sketches from sketches/
         frame_paths = []
         for b in sorted(beats, key=lambda x: x.get("beat_number", 0)):
             beat_num = b.get("beat_number", 0)
@@ -647,7 +643,7 @@ def _try_combine_frames_to_grid(resolver, beats, output_dir, episode) -> list[st
                     frame_paths.append(str(candidate))
                     break
 
-        if len(frame_paths) >= 4:  # 至少 4 帧才拼
+        if len(frame_paths) >= 4:  # Only combine with at least 4 frames
             rows = 5
             cols = 5
             if len(frame_paths) <= 9:
@@ -659,11 +655,11 @@ def _try_combine_frames_to_grid(resolver, beats, output_dir, episode) -> list[st
             sketch_pool_dir.mkdir(parents=True, exist_ok=True)
             combine_to_grid(frame_paths, grid_path, rows=rows, cols=cols)
             print(
-                f"[GlobalOptimizer] 草图网格已保存: {grid_path} ({len(frame_paths)} 帧, {rows}x{cols})"
+                f"[GlobalOptimizer] Sketch grid saved: {grid_path} ({len(frame_paths)} frames, {rows}x{cols})"
             )
             return [str(grid_path)]
     except Exception as e:
-        print(f"[prepare_global_optimizer_input] 拼接草图失败: {e}")
+        print(f"[prepare_global_optimizer_input] Failed to combine sketches: {e}")
 
     return []
 
@@ -677,10 +673,10 @@ def _build_color_appearance_map(
     episode: int | None = None,
     cognee_store=None,
 ) -> dict:
-    """从 build_character_map_for_grid 提取角色颜色→外貌映射。"""
+    """Extract the character color -> appearance mapping from build_character_map_for_grid."""
     from novelvideo.services.character_ref_service import build_character_map_for_grid
 
-    # sketch_colors 只从 SQLite/Cognee store 读取。
+    # sketch_colors are read only from the SQLite/Cognee store.
     _sc = None
     if cognee_store and episode:
         _sc = cognee_store.get_sketch_colors(episode) or None
@@ -742,7 +738,7 @@ Output a JSON array of objects, one per panel:
 
 
 def _create_identity_detector_agent() -> Agent:
-    """创建 AI 角色颜色识别 Agent。"""
+    """Create the AI character color identification Agent."""
     from novelvideo.config import (
         get_newapi_structured_output_model_settings,
         get_newapi_text_pydantic_model,
@@ -759,7 +755,7 @@ def _create_identity_detector_agent() -> Agent:
         system_prompt=AI_IDENTITY_DETECTOR_INSTRUCTIONS,
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=NativeOutput(list[BeatIdentity]),
-        name="角色颜色识别",
+        name="Character color identification",
     )
 
 
@@ -768,19 +764,19 @@ async def detect_identities_by_ai(
     color_identity_map: dict[str, str],
     total_beats: int,
 ) -> dict[int, list[str]]:
-    """AI 视觉识别每个 beat 的共享颜色标记，仅基于图片+颜色映射，无文本上下文。
+    """AI visually identifies the shared color markers of each beat, based only on the images + color mapping, with no text context.
 
     Args:
-        sketch_image_paths: 草图网格图片路径列表
-        color_identity_map: {"#4A90D9 ICE BLUE": "沈知薇_嫡女时期" / "办公纸箱", ...}
-        total_beats: 总 beat 数
+        sketch_image_paths: list of sketch grid image paths
+        color_identity_map: {"#4A90D9 ICE BLUE": "Shen Zhiwei_young_lady" / "office cardboard box", ...}
+        total_beats: total number of beats
 
     Returns:
         {beat_number: [marker_id, ...]}
     """
     agent = _create_identity_detector_agent()
 
-    # 构建颜色映射文本
+    # Build the color mapping text
     lines = []
     for color_key, identity_id in color_identity_map.items():
         parts = color_key.split(" ", 1)
@@ -799,7 +795,7 @@ Output a JSON array of objects, one per panel:
 [{{"beat_number": 1, "identities": ["identity_A"]}}, {{"beat_number": 2, "identities": []}}, ...]
 Use an empty identities array for panels with no colored markers."""
 
-    # 准备图片
+    # Prepare the images
     images = []
     for path in sketch_image_paths:
         if os.path.exists(path):
@@ -813,37 +809,37 @@ Use an empty identities array for panels with no colored markers."""
                     BinaryContent(data=buffer.getvalue(), media_type="image/jpeg")
                 )
             except Exception as e:
-                print(f"[detect_identities_by_ai] 加载图片失败: {path}, {e}")
+                print(f"[detect_identities_by_ai] Failed to load image: {path}, {e}")
 
     if not images:
-        raise RuntimeError("没有可用的草图网格图片")
+        raise RuntimeError("No sketch grid images are available")
 
     print(
-        f"[detect_identities_by_ai] 发送 {len(images)} 张网格图片, {total_beats} beats"
+        f"[detect_identities_by_ai] Sending {len(images)} grid images, {total_beats} beats"
     )
     response = await agent.run([task] + images)
 
     if not response.output:
-        raise RuntimeError("AI 返回空内容")
+        raise RuntimeError("AI returned empty content")
 
-    # structured output: response.output 直接是 list[BeatIdentity]
+    # structured output: response.output is directly a list[BeatIdentity]
     beat_identities: list[BeatIdentity] = response.output
     result: dict[int, list[str]] = {
         bi.beat_number: bi.identities for bi in beat_identities
     }
 
     print(
-        f"[detect_identities_by_ai] 识别结果: { {k: v for k, v in sorted(result.items())} }"
+        f"[detect_identities_by_ai] Identification result: { {k: v for k, v in sorted(result.items())} }"
     )
     return result
 
 
-# 模块级单例
+# Module-level singleton
 _global_video_optimizer: Optional[GlobalVideoPromptOptimizer] = None
 
 
 def get_global_video_optimizer() -> GlobalVideoPromptOptimizer:
-    """获取 GlobalVideoPromptOptimizer 单例。"""
+    """Get the GlobalVideoPromptOptimizer singleton."""
     global _global_video_optimizer
     if _global_video_optimizer is None:
         _global_video_optimizer = GlobalVideoPromptOptimizer()

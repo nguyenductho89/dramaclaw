@@ -80,10 +80,10 @@ async def _system_voice_content(
             generate_subtitle=False,
         )
         if not result.success or not output_path.exists():
-            raise RuntimeError(result.error or f"系统声线生成失败：{voice}")
+            raise RuntimeError(result.error or f"System voice generation failed: {voice}")
     content = output_path.read_bytes()
     if not content:
-        raise RuntimeError(f"系统声线生成结果为空：{voice}")
+        raise RuntimeError(f"System voice generation returned an empty result: {voice}")
     cache[voice] = content
     return content
 
@@ -122,7 +122,7 @@ async def prepare_missing_system_voices(
             speaker = str(beat.get("speaker") or "").strip()
             character = _matching_character(speaker, characters)
             if character is None:
-                unresolved_speakers.add(speaker or "未指定说话身份")
+                unresolved_speakers.add(speaker or "Unspecified speaking identity")
             else:
                 character_targets[character.name] = character
 
@@ -170,7 +170,7 @@ async def prepare_missing_system_voices(
                 sha256=voice_content_sha256(content),
             )
             prepared.append(
-                {"target": "项目解说人", "voice": narrator_voice, "slot": "narrator"}
+                {"target": "Project narrator", "voice": narrator_voice, "slot": "narrator"}
             )
 
     for character_name, character in character_targets.items():
@@ -211,7 +211,7 @@ async def prepare_missing_system_voices(
         mode="sync_changed",
     )
     for speaker in sorted(unresolved_speakers):
-        detail = f"未找到说话身份对应角色：{speaker}"
+        detail = f"No character found for the speaking identity: {speaker}"
         if detail not in remaining:
             remaining.append(detail)
     return {
@@ -219,4 +219,6 @@ async def prepare_missing_system_voices(
         "prepared_count": len(prepared),
         "remaining_errors": remaining,
         "ready": not remaining,
+        # Stable code the frontend branches on when system voices are still required.
+        "code": "" if not remaining else "system_voice_required",
     }

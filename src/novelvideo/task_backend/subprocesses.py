@@ -300,8 +300,8 @@ def _kill_process_group(proc: subprocess.Popen) -> None:
     if proc.poll() is not None:
         return
     if os.name == "nt":
-        # Windows 没有 killpg;taskkill /T 按父子关系终止整棵进程树,
-        # 对齐 POSIX 进程组语义(cancel/deadline 必须连孙进程一起杀)。
+        # Windows has no killpg; taskkill /T terminates the whole process tree by parent-child relationship,
+        # matching POSIX process-group semantics (cancel/deadline must kill grandchild processes as well).
         with contextlib.suppress(Exception):
             subprocess.run(
                 ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
@@ -420,12 +420,12 @@ def run_project_subprocess(
     poll_seconds: float = 0.1,
 ) -> subprocess.CompletedProcess:
     """Run a subprocess in its own process group and kill it on cancel/deadline."""
-    # 这里**不**回落到作用域身份：本参数的含义是「调用方已为这条组织命令备好
-    # 受限启动策略」，属调用方准备工作，不是策略判决。全仓 16 个调用点只有
-    # `freezone/jobs.py:503` 传了 `restricted_policy`，回落会让其余 15 处
-    # （`video_composer.py:22`、`video_generator.py:113` 等本地 ffmpeg）对组织
-    # 一律 `ORG_SERVICE_EGRESS_DENIED`——那些命令不带凭据也不出网，拒掉是功能
-    # 损坏而非安全收益。真正的凭据出网闸门是 `build_model_child_env`，它已回落。
+    # This does **not** fall back to the scope identity: this parameter means "the caller has already prepared
+    # a restricted launch policy for this organization command", which is the caller's preparation work, not a policy verdict. Of the 16 call sites in the repo only
+    # `freezone/jobs.py:503` passes `restricted_policy`; falling back would make the other 15
+    # (local ffmpeg in `video_composer.py:22`, `video_generator.py:113`, etc.) always return
+    # `ORG_SERVICE_EGRESS_DENIED` for organizations - those commands carry no credentials and do not go out to the network, so denying them is broken
+    # functionality rather than a security gain. The real credentialed egress gate is `build_model_child_env`, which already falls back.
     restricted = (
         type(egress_context) is TrustedEgressContext and egress_context.is_organization
     )

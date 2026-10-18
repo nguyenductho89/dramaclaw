@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/guides/troubleshooting.md)
-
 # Troubleshooting
 
 > Common failures and how to diagnose them when self-hosting DramaClaw CE. Check the logs first: `docker compose logs -f api`, or the terminal output of `novelvideo api` during local development.
@@ -55,4 +52,4 @@
 
 ## Related
 
-- [Installation guide](../getting-started/installation.md) ｜ [Quickstart](../getting-started/quickstart.md) ｜ [Self-hosting handbook](self-hosting.md)
+- [Installation guide](../getting-started/installation.md) | [Quickstart](../getting-started/quickstart.md) | [Self-hosting handbook](self-hosting.md)

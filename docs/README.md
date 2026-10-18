@@ -1,9 +1,7 @@
-# DramaClaw Documentation · 文档
+# DramaClaw Documentation
 
-**[English](./en/README.md)**  ·  **[简体中文](./zh/README.md)**
+**[English](./en/README.md)**  ·  **[Tiếng Việt](./vi/pipeline/README.md)**
 
 ---
 
-DramaClaw's documentation is available in both languages — pick one above.
-
-DramaClaw 文档提供中英双语，请在上方选择语言。
+The main documentation is in English. A Vietnamese description of the production pipeline is available under `vi/pipeline`.

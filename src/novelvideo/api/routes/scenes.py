@@ -95,19 +95,14 @@ class _EmptyScenePackageError(ValueError):
 
 
 _SCENE_TIME_TOKENS = {
-    "清晨",
-    "晨",
-    "上午",
-    "正午",
-    "午",
-    "午后",
-    "下午",
-    "黄昏",
-    "傍晚",
-    "夜晚",
-    "夜",
-    "白天",
-    "日",
+    "dawn",
+    "morning",
+    "noon",
+    "afternoon",
+    "day",
+    "dusk",
+    "evening",
+    "night",
 }
 
 
@@ -188,7 +183,7 @@ async def _start_or_enqueue_stage_asset(
             "queue": queued.queue,
         }
 
-    raise RuntimeError("片场资产生成需要 project context")
+    raise RuntimeError("Stage asset generation requires a project context")
 
 
 def _scene_reference_billing_metadata(model_selection: str) -> dict[str, Any]:
@@ -263,7 +258,7 @@ async def _start_or_enqueue_scene_pano(
     params: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
     if ctx is None:
-        raise RuntimeError("场景全景生成需要 project context")
+        raise RuntimeError("Scene panorama generation requires a project context")
 
     scope = stage_asset_scope(scene_name, step)
     queued = await get_task_backend().enqueue_project_task(
@@ -297,15 +292,15 @@ def _scene_360_description(scene: NovelScene) -> str:
     ).strip()
     return "\n".join(
         [
-            f"场景名称：{scene.name}",
-            f"场景类型：{scene.scene_type}",
-            "环境描述是完整场景空间合同：应说明正面、背面、左侧、右侧、天花/天空、地面和固定物件关系。",
-            "master 图代表正面半区：正面中心 + 左侧一半 + 右侧一半，并提供视觉风格锚点。",
-            "reverse 图应代表背面半区：背面中心 + 左侧另一半 + 右侧另一半。",
-            "360 需要把 environment_prompt 的四向空间合同展开成完整连续空间。",
-            "如果某些方向没有明确写出，请基于场景类型和 master 视觉风格合理补全，"
-            "但不要把正面物件机械复制到每个方向。",
-            "环境描述：",
+            f"Scene name: {scene.name}",
+            f"Scene type: {scene.scene_type}",
+            "The environment description is the complete spatial contract of the scene: it should state the relationships among front, back, left, right, ceiling/sky, ground, and fixed objects.",
+            "The master image represents the front half: front center + left half + right half, and provides the visual style anchor.",
+            "The reverse image should represent the back half: back center + the other left half + the other right half.",
+            "The 360 must expand the four-direction spatial contract of environment_prompt into a complete continuous space.",
+            "If some directions are not explicitly described, complete them reasonably based on the scene type and the master visual style, "
+            "but do not mechanically copy front-side objects to every direction.",
+            "Environment description:",
             environment_prompt,
         ]
     )
@@ -609,11 +604,11 @@ def _move_dir_if_exists(old_dir: Path, new_dir: Path) -> None:
 
 
 def _rename_scene_asset_dirs(project_dir: Path, old_name: str, new_name: str) -> None:
-    # 走 move_asset_dir 而不是直接拼路径：存量自愈传进来的 old_name 是没消毒过的库里
-    # 旧值，``../../config.json`` 拼出来的源路径在资产根之外。
+    # Go through move_asset_dir instead of joining paths directly: the old_name passed in by legacy self-healing is an unsanitized old value from the database,
+    # and a source path joined from ``../../config.json`` lies outside the asset root.
     move_asset_dir(project_dir / "assets" / "scenes", old_name, new_name)
 
-    # stage_dir 自己过 safe_name（会把点全剥掉），拼不出爬到 director_worlds 之外的路径。
+    # stage_dir passes through safe_name itself (which strips all dots), so a path climbing out of director_worlds cannot be built.
     old_stage_root = stage_manifest.stage_dir(project_dir, old_name).parent
     new_stage_root = stage_manifest.stage_dir(project_dir, new_name).parent
     _move_dir_if_exists(old_stage_root, new_stage_root)
@@ -774,9 +769,9 @@ async def _is_derived_scene(store: SQLiteStore, scene_name: str) -> bool:
 async def _derived_scene_guard_error(store: SQLiteStore, scene_name: str) -> str:
     derived_names = await _derived_scene_names_for(store, scene_name)
     if derived_names:
-        preview = "、".join(derived_names[:5])
+        preview = ", ".join(derived_names[:5])
         suffix = "…" if len(derived_names) > 5 else ""
-        return f"场景「{scene_name}」存在派生场景：{preview}{suffix}；请先处理派生场景"
+        return f"Scene '{scene_name}' has derived scenes: {preview}{suffix}; handle the derived scenes first"
     return ""
 
 
@@ -793,31 +788,31 @@ def _scene_plate_preview_payload(
     if not has_time:
         render_status = "no_time"
         render_relight = False
-        render_label = f"Render：将使用 {resolved_scene_name}，锁图光"
-        seedance_label = f"Seedance2：将喂入 {resolved_scene_name}，提示词时间：无"
+        render_label = f"Render: will use {resolved_scene_name}, lighting locked to the image"
+        seedance_label = f"Seedance2: will feed {resolved_scene_name}, prompt time: none"
     elif planned_scene_name and planned_scene_name != resolved_scene_name:
         render_status = "planned_missing"
         render_relight = True
         render_label = (
-            f"Render：已规划 {planned_scene_name} 但暂无图，将使用 "
-            f"{resolved_scene_name}，relight 到 {time_of_day}"
+            f"Render: {planned_scene_name} is planned but has no image yet; will use "
+            f"{resolved_scene_name}, relight to {time_of_day}"
         )
         seedance_label = (
-            f"Seedance2：将喂入 {resolved_scene_name}，提示词时间：{time_of_day}"
+            f"Seedance2: will feed {resolved_scene_name}, prompt time: {time_of_day}"
         )
     elif time_baked:
         render_status = "time_baked"
         render_relight = False
-        render_label = f"Render：将使用 {resolved_scene_name}，锁图光"
+        render_label = f"Render: will use {resolved_scene_name}, lighting locked to the image"
         seedance_label = (
-            f"Seedance2：将喂入 {resolved_scene_name}，提示词时间：{time_of_day}"
+            f"Seedance2: will feed {resolved_scene_name}, prompt time: {time_of_day}"
         )
     else:
         render_status = "relight"
         render_relight = True
-        render_label = f"Render：将使用 {resolved_scene_name}，relight 到 {time_of_day}"
+        render_label = f"Render: will use {resolved_scene_name}, relight to {time_of_day}"
         seedance_label = (
-            f"Seedance2：将喂入 {resolved_scene_name}，提示词时间：{time_of_day}"
+            f"Seedance2: will feed {resolved_scene_name}, prompt time: {time_of_day}"
         )
 
     return {
@@ -862,13 +857,13 @@ def _compose_scene_asset_name(
 
 
 async def _heal_path_unsafe_scene_names(store: SQLiteStore, project_dir: Path) -> dict[str, str]:
-    """修好库里名字带斜杠的存量场景。
+    """Repair legacy scenes in the database whose names contain slashes.
 
-    模型层的 ``NovelScene.sanitize_name`` 只管新数据；那道闸加上之前落库的
-    ``家中客厅/哥哥卧室`` 还躺在表里，它的 ``{name}`` 接口全是 404，删不掉也生不出源图。
+    ``NovelScene.sanitize_name`` of the model layer only governs new data; with that gate in place, previously stored
+    ``living room/brother's bedroom`` still sits in the table, all of its ``{name}`` endpoints return 404, and it can neither be deleted nor have a source image generated.
 
-    调用方要先过 ``may_run_asset_repair``：这是一次写操作（搬目录 + 改主键），不该由
-    只读协作者的一次页面加载触发。
+    Callers must first pass ``may_run_asset_repair``: this is a write operation (moving directories + changing the primary key) and must not be triggered by
+    a read-only collaborator's page load.
     """
 
     def move_assets(old_name: str, new_name: str) -> None:
@@ -1000,7 +995,7 @@ async def get_scene_pano_manifest(
         mode="scene",
     )
     if manifest is None:
-        return {"ok": False, "error": "当前场景没有 360 全景资产"}
+        return {"ok": False, "error": "The current scene has no 360 panorama asset"}
     return {"ok": True, "data": manifest.model_dump(exclude_none=True)}
 
 
@@ -1029,7 +1024,7 @@ async def update_scene_pano_correction(
         mode="scene",
     )
     if manifest is None:
-        return {"ok": False, "error": "当前场景没有 360 全景资产"}
+        return {"ok": False, "error": "The current scene has no 360 panorama asset"}
     return {"ok": True, "data": manifest.model_dump(exclude_none=True)}
 
 
@@ -1052,7 +1047,7 @@ async def get_scene_director_stage_manifest(
         mode="scene",
     )
     if manifest is None:
-        return {"ok": False, "error": "当前场景没有 3GS 资产"}
+        return {"ok": False, "error": "The current scene has no 3GS asset"}
     return {"ok": True, "data": manifest.model_dump(exclude_none=True)}
 
 
@@ -1177,8 +1172,8 @@ async def create_scene(
     ctx, username, project_name, project_dir, _output_dir, store = (
         await _resolve_scene_project(project, user)
     )
-    # 在查重之前消毒：留到 add_scene 再改名的话，两个只差斜杠的名字会双双通过查重，
-    # 后写的那个把先写的静默覆盖掉。
+    # Sanitize before the duplicate check: if renaming is left to add_scene, two names differing only by a slash would both pass the duplicate check,
+    # and the later write would silently overwrite the earlier one.
     name = path_safe_asset_name(
         _compose_scene_asset_name(
             body.name,
@@ -1247,8 +1242,8 @@ async def update_scene(
     )
     if next_base:
         requested_name = structured_name
-    # 在挪目录之前消毒：store.rename_scene 里也会消毒，但目录迁移先于它执行，
-    # 不在这里统一就会出现「库里 a_b、盘上 a/b」的错位。
+    # Sanitize before moving the directory: store.rename_scene also sanitizes, but the directory migration runs before it,
+    # and without unifying here there would be a mismatch of "a_b in the database, a/b on disk".
     requested_name = path_safe_asset_name(str(requested_name or "").strip())
     if requested_name and requested_name != scene.name:
         guard_error = await _derived_scene_guard_error(store, scene.name)
@@ -1342,11 +1337,11 @@ async def build_scenes(project: str, user: dict = Depends(get_api_user)):
             "task_key": project_task_state_key("build_scenes", ctx.project_id, 0),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": "场景补充任务已进入队列",
+            "message": "Scene supplement task queued",
             "message_code": "tasks.toast.scenesBuildQueued",
         }
 
-    return {"ok": False, "error": "场景补充需要 project context"}
+    return {"ok": False, "error": "Scene supplement requires a project context"}
 
 
 @router.post("/projects/{project}/scenes/{name}/master/upload")
@@ -1497,10 +1492,10 @@ async def _start_scene_reference_task(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"场景「{scene.name}」{kind} 生成任务已进入队列",
+            "message": f"Scene '{scene.name}' {kind} generation task queued",
         }
 
-    return {"ok": False, "error": "场景参考图生成需要 project context"}
+    return {"ok": False, "error": "Scene reference image generation requires a project context"}
 
 
 @router.post("/projects/{project}/scenes/{name}/pano/upload")
@@ -1661,10 +1656,10 @@ async def _start_3gs_single_face_task(
         if not compute_scene_reverse_master_path(project_dir, scene.name):
             return {
                 "ok": False,
-                "error": "缺少 reverse_master.png，请先生成 reverse master",
+                "error": "reverse_master.png is missing. Generate the reverse master first",
             }
     elif not compute_scene_master_path(project_dir, scene.name):
-        return {"ok": False, "error": "缺少 master.png，请先上传或生成场景源图"}
+        return {"ok": False, "error": "master.png is missing. Upload or generate the scene source image first"}
 
     params = {
         "source_kind": source_kind,
@@ -1701,7 +1696,7 @@ async def _start_3gs_single_face_task(
         "scope": scope,
         "source": source_kind,
         **(queued or {}),
-        "message": f"场景「{scene.name}」{source_kind} → SOG 任务已启动",
+        "message": f"Scene '{scene.name}' {source_kind} -> SOG task started",
     }
 
 
@@ -1748,7 +1743,7 @@ async def generate_scene_3gs_pano_ply(
     if scene is None:
         return {"ok": False, "error": f"Scene '{name}' not found"}
     if stage_manifest.resolve_pano_path(project_dir, scene.name) is None:
-        return {"ok": False, "error": "缺少 pano_360.png，请先上传或生成 360 全景"}
+        return {"ok": False, "error": "pano_360.png is missing. Upload or generate the 360 panorama first"}
 
     params = {
         "geometry_mode": "pano-depth",
@@ -1791,7 +1786,7 @@ async def generate_scene_3gs_pano_ply(
         "scope": scope,
         "source": "pano",
         **(queued or {}),
-        "message": f"场景「{scene.name}」360 → SOG 任务已启动",
+        "message": f"Scene '{scene.name}' 360 -> SOG task started",
     }
 
 
@@ -1842,5 +1837,5 @@ async def generate_scene_pano(
         "scope": scope,
         "source": source,
         **(queued or {}),
-        "message": f"场景「{scene.name}」360 全景生成任务已启动",
+        "message": f"Scene '{scene.name}' 360 panorama generation task started",
     }

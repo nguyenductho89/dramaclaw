@@ -1,6 +1,6 @@
-"""NovelVideo 配置模块。
+"""NovelVideo configuration module.
 
-独立的配置系统，不依赖 SuperScript。
+A standalone configuration system with no dependency on SuperScript.
 """
 
 import os
@@ -15,11 +15,11 @@ from novelvideo.official_defaults import (
 )
 from novelvideo.shared.runtime_env import is_ce_effective, uses_local_ce_runtime
 
-# 加载环境变量（必须在任何其他导入之前）
+# Load environment variables (must come before any other import)
 load_dotenv()
 
 # =============================================================================
-# 模型提供商配置
+# Model provider configuration
 # =============================================================================
 
 PROVIDER_PRESETS = {
@@ -455,7 +455,7 @@ def get_superpower_pydantic_model(
 
 
 def get_model_info() -> dict:
-    """获取当前模型配置信息。"""
+    """Get the current model configuration info."""
     provider = os.environ.get("MODEL_PROVIDER", "volcengine").lower()
     provider = PROVIDER_ALIASES.get(provider, provider)
     preset = PROVIDER_PRESETS.get(provider, {})
@@ -468,34 +468,34 @@ def get_model_info() -> dict:
     }
 
 
-# Redis 配置
+# Redis configuration
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 
 
 # =============================================================================
-# 基础配置
+# Basic configuration
 # =============================================================================
 
-# 数据根目录，三类子目录 (output/state/runtime) 默认基于此目录派生
+# Data root directory; the three subdirectory kinds (output/state/runtime) are derived from it by default
 DATA_ROOT = os.path.abspath(os.environ.get("NOVELVIDEO_DATA_ROOT", "."))
 
-# 使用绝对路径，确保 task worker 也能找到正确的目录
+# Use absolute paths so that task workers also find the right directories
 OUTPUT_DIR = os.path.abspath(
     os.environ.get("NOVELVIDEO_OUTPUT_DIR", os.path.join(DATA_ROOT, "output"))
 )
 
-# 状态文件目录 (data.db, cognee_system/, project_config.json)
+# State file directory (data.db, cognee_system/, project_config.json)
 STATE_DIR = os.path.abspath(
     os.environ.get("NOVELVIDEO_STATE_DIR", os.path.join(DATA_ROOT, "state"))
 )
 
-# 运行时临时目录 (日志、staging、temp panels)
+# Runtime temporary directory (logs, staging, temp panels)
 RUNTIME_DIR = os.path.abspath(
     os.environ.get("NOVELVIDEO_RUNTIME_DIR", os.path.join(DATA_ROOT, "runtime"))
 )
 
 # =============================================================================
-# OSS presign 配置
+# OSS presign configuration
 # =============================================================================
 
 OSS_ENDPOINT = os.environ.get("OSS_ENDPOINT")
@@ -533,7 +533,7 @@ OSS_STATIC_PRESIGN_EXPIRES = int(os.environ.get("OSS_STATIC_PRESIGN_EXPIRES", "3
 
 
 # =============================================================================
-# IndexTTS2 配置
+# IndexTTS2 configuration
 # =============================================================================
 
 INDEXTTS2_PROVIDER = (
@@ -761,7 +761,7 @@ def _runpod_qwen21_render_configured() -> bool:
 # <d>[Vietnamese] dialogue + PDD 8-step acceleration + R2 mp4 with muxed
 # audio; see `movies/NgoaiTinhCongSo` in the photoreal project and
 # `.claude/CLAUDE.md`). Model files below come from that project's
-# `scripts/設定.json`; ported graph lives in `runpod_minimax_h3_video.py`.
+# `scripts/settings.json`; ported graph lives in `runpod_minimax_h3_video.py`.
 RUNPOD_H3_VIDEO_ENDPOINT_ID = os.environ.get(
     "RUNPOD_H3_VIDEO_ENDPOINT_ID", RUNPOD_QWEN_IMAGE_ENDPOINT_ID
 )
@@ -821,7 +821,7 @@ PROP_REF_IMAGE_MODEL = os.environ.get("PROP_REF_IMAGE_MODEL", "")
 
 
 # =============================================================================
-# 火山引擎图像生成配置
+# Volcano Engine image generation configuration
 # =============================================================================
 
 VOLCENGINE_VISUAL_API_KEY = os.environ.get(
@@ -838,12 +838,12 @@ IMAGE_DEFAULT_WIDTH = int(os.environ.get("IMAGE_DEFAULT_WIDTH", "1440"))
 IMAGE_DEFAULT_HEIGHT = int(os.environ.get("IMAGE_DEFAULT_HEIGHT", "2560"))
 IMAGE_DEFAULT_STYLE = os.environ.get("IMAGE_DEFAULT_STYLE", "chinese_period_drama")
 
-# 角色参考图生成模型选择
-# "nanobanana" - 使用 Nano Banana Pro (Gemini)，与网格生成同一模型，一致性更好
-# "seedream" - 使用 Seedream 4.5 (火山引擎)，质量高但与网格生成跨模型
+# Model selection for character reference image generation
+# "nanobanana" - use Nano Banana Pro (Gemini), the same model as grid generation, for better consistency
+# "seedream" - use Seedream 4.5 (Volcano Engine), high quality but a different model from grid generation
 CHARACTER_IMAGE_MODEL = os.environ.get("CHARACTER_IMAGE_MODEL", "nanobanana")
 
-# 风格预设统一由 src/novelvideo/styles/presets/*.json 提供。
+# Style presets are provided uniformly by src/novelvideo/styles/presets/*.json.
 
 
 def get_style_preset(
@@ -854,13 +854,13 @@ def get_style_preset(
     project_dir: str | None = None,
     state_dir: str | Path | None = None,
 ) -> dict:
-    """获取视觉风格预设配置。
+    """Get the visual style preset configuration.
 
     Args:
-        style: 风格名称，默认使用 IMAGE_DEFAULT_STYLE
+        style: style name; defaults to IMAGE_DEFAULT_STYLE
 
     Returns:
-        风格预设字典
+        Style preset dict
     """
     style = style or IMAGE_DEFAULT_STYLE
 
@@ -879,7 +879,7 @@ def get_style_preset(
 
 
 # =============================================================================
-# LLM 临时媒体中转（给 newAPI/视觉模型拉取本地参考图）
+# Temporary LLM media relay (lets newAPI / vision models fetch local reference images)
 # =============================================================================
 
 MEDIA_RELAY_PROVIDER = (
@@ -899,10 +899,10 @@ CLOUDINARY_RELAY_FOLDER = os.environ.get("CLOUDINARY_RELAY_FOLDER", "")
 
 
 def get_style_labels() -> dict[str, str]:
-    """获取风格 ID -> 显示标签的映射。
+    """Get the style ID -> display label mapping.
 
     Returns:
-        {style_id: label} 字典
+        {style_id: label} dict
     """
     from novelvideo.services.style_service import StyleService
 
@@ -910,10 +910,10 @@ def get_style_labels() -> dict[str, str]:
 
 
 def list_available_styles() -> list[dict]:
-    """列出所有可用风格（预设 + 自定义）。
+    """List all available styles (presets + custom).
 
     Returns:
-        风格列表，每项包含 {id, name, label, type}
+        Style list; each item contains {id, name, label, type}
     """
     from novelvideo.services.style_service import StyleService
 
@@ -921,7 +921,7 @@ def list_available_styles() -> list[dict]:
 
 
 def get_image_config() -> dict:
-    """获取图像生成配置。"""
+    """Get the image generation configuration."""
     from novelvideo.services.style_service import StyleService
 
     all_styles = StyleService.list_all_styles()
@@ -944,36 +944,36 @@ def get_image_config() -> dict:
 
 
 def get_character_image_model() -> str:
-    """获取角色参考图生成模型类型。
+    """Get the character reference image generation model type.
 
     Returns:
-        "nanobanana" 或 "seedream"
+        "nanobanana" or "seedream"
     """
     return CHARACTER_IMAGE_MODEL
 
 
 # =============================================================================
-# TTS 配置
+# TTS configuration
 # =============================================================================
 
-TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "cosyvoice")  # 默认 CosyVoice
+TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "cosyvoice")  # defaults to CosyVoice
 EDGE_TTS_VOICE = os.environ.get("EDGE_TTS_VOICE", "en-US-AriaNeural")
 VOLCENGINE_TTS_ENDPOINT = os.environ.get(
     "VOLCENGINE_TTS_ENDPOINT", "https://openspeech.bytedance.com/api/v1/tts"
 )
 
-# CosyVoice 配置（阿里云 DashScope）
+# CosyVoice configuration (Alibaba Cloud DashScope)
 COSYVOICE_MODEL = os.environ.get("COSYVOICE_MODEL", "cosyvoice-v3-flash")
 COSYVOICE_VOICE = os.environ.get("COSYVOICE_VOICE", "longxiaoxia_v3")
 DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
 
-# CosyVoice 语速倍率（范围 [0.5, 2.0]，1.0 为标准速度）
+# CosyVoice speech-rate multiplier (range [0.5, 2.0]; 1.0 is standard speed)
 COSYVOICE_SPEECH_RATE = float(os.environ.get("COSYVOICE_SPEECH_RATE", "1.2"))
 
 # TTS pace estimate in spoken words per second (narration, accelerated).
 TTS_WORDS_PER_SECOND = float(os.environ.get("TTS_WORDS_PER_SECOND", "3.0"))
 
-# Dialogue beat TTS 配置（角色台词使用不同语速）
+# Dialogue beat TTS configuration (character lines use a different speech rate)
 COSYVOICE_DIALOGUE_SPEECH_RATE = float(
     os.environ.get("COSYVOICE_DIALOGUE_SPEECH_RATE", "1.0")
 )
@@ -983,7 +983,7 @@ TTS_DIALOGUE_WORDS_PER_SECOND = float(
 
 
 def get_tts_config() -> dict:
-    """获取 TTS 配置。"""
+    """Get the TTS configuration."""
     return {
         "provider": TTS_PROVIDER,
         # Edge TTS
@@ -1001,13 +1001,13 @@ def get_tts_config() -> dict:
 
 
 # =============================================================================
-# Fish Audio S2 配置（情感语音合成）
+# Fish Audio S2 configuration (emotional speech synthesis)
 # =============================================================================
 
 FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY")
 FISH_AUDIO_SPEED = float(os.environ.get("FISH_AUDIO_SPEED", "1.0"))
 
-# Fish Audio 声音预设 (8 种: age_group × gender)
+# Fish Audio voice presets (8 kinds: age_group x gender)
 FISH_VOICE_PRESETS = {
     "child_male": os.environ.get("FISH_VOICE_CHILD_MALE", ""),
     "child_female": os.environ.get("FISH_VOICE_CHILD_FEMALE", ""),
@@ -1021,19 +1021,19 @@ FISH_VOICE_PRESETS = {
 
 
 def get_fish_voice_id(age_group: str, gender: str) -> str:
-    """根据年龄段+性别获取预设 voice ID。
+    """Get the preset voice ID by age group + gender.
 
-    两条抽取路写出的性别写法不同：legacy 的角色补全提示词要的是「男/女」,
-    structured_v1 的抽取器要的是 ``male``/``female``。只认中文会把每一个
-    structured 项目的女性角色都配成男声，所以两种写法都要认。
+    The two extraction paths write gender differently: the legacy character-completion prompt asks for "male/female"
+    in a localized form, while the structured_v1 extractor asks for ``male``/``female``. Recognizing only one spelling would give every
+    female character of a structured project a male voice, so both spellings are recognized.
     """
     text = str(gender or "").strip().lower()
-    gender_key = "female" if ("女" in text or "female" in text) else "male"
+    gender_key = "female" if ("nữ" in text or "female" in text) else "male"
     return FISH_VOICE_PRESETS.get(f"{age_group}_{gender_key}", "")
 
 
 # =============================================================================
-# 视频合成配置
+# Video composition configuration
 # =============================================================================
 
 FFMPEG_PATH = os.environ.get("FFMPEG_PATH", "ffmpeg")
@@ -1048,7 +1048,7 @@ KEN_BURNS_ZOOM_RANGE = (1.0, 1.15)
 KEN_BURNS_PAN_SPEED = 0.02
 
 # =============================================================================
-# AI 视频生成配置（图生视频）
+# AI video generation configuration (image-to-video)
 # =============================================================================
 
 
@@ -1057,7 +1057,7 @@ def _csv_env(name: str, default: str) -> list[str]:
     return [item for item in values if item]
 
 
-# newAPI 视频网关。VIDEO_BACKEND 使用 newapi_<model> 时会通过 NEWAPI_BASE_URL 调用。
+# newAPI video gateway. When VIDEO_BACKEND uses newapi_<model>, calls go through NEWAPI_BASE_URL.
 NEWAPI_VIDEO_MODELS = _csv_env(
     "NEWAPI_VIDEO_MODELS",
     "seedance-1.0-pro-fast,seedance-1.5-pro,seedance-2.0,seedance-2.0-fast,seedance-2.0-value,seedance-2.0-fast-value,happyhorse-1.0,seedance-2.0-mini",
@@ -1077,11 +1077,11 @@ NEWAPI_VIDEO_DURATION_BOUNDS = os.environ.get(
     "seedance-1.0-pro-fast:2-12,seedance-1.5-pro:4-12,seedance-2.0:4-15,seedance-2.0-fast:4-15,seedance-2.0-value:4-15,seedance-2.0-fast-value:4-15,happyhorse-1.0:3-15,seedance-2.0-mini:4-15",
 ).strip()
 
-# 视频生成后端: newapi_seedance-1.0-pro-fast (默认), newapi_seedance-2.0-fast,
+# Video generation backend: newapi_seedance-1.0-pro-fast (default), newapi_seedance-2.0-fast,
 # comfyui, seedance_fast, seedance_pro, seedance_pro_silent, grok_720
 VIDEO_BACKEND = os.environ.get("VIDEO_BACKEND", f"newapi_{DEFAULT_VIDEO_MODEL}")
 
-# Seedance 模型（火山方舟）
+# Seedance models (Volcano Ark)
 SEEDANCE_FAST_MODEL = os.environ.get(
     "SEEDANCE_FAST_MODEL", "doubao-seedance-1-0-pro-fast-251015"
 )
@@ -1089,40 +1089,40 @@ SEEDANCE_PRO_MODEL = os.environ.get(
     "SEEDANCE_PRO_MODEL", "doubao-seedance-1-5-pro-251215"
 )
 
-# HuiMeng 视频聚合 API
+# HuiMeng video aggregation API
 HUIMENGI_BASE_URL = os.environ.get("HUIMENGI_BASE_URL", "https://api.huimengi.com")
 HUIMENGI_VIDEO_RESOLUTION = os.environ.get("HUIMENGI_VIDEO_RESOLUTION", "720p")
 HUIMENGI_VIDEO_GENERATE_AUDIO = os.environ.get(
     "HUIMENGI_VIDEO_GENERATE_AUDIO", "false"
 ).lower() in ("true", "1", "yes")
 
-# ComfyUI 本地视频生成服务
+# ComfyUI local video generation service
 COMFYUI_VIDEO_URL = os.environ.get("COMFYUI_VIDEO_URL", "http://localhost:9527")
 
-# ComfyUI 工作流类型: gguf (低显存，~8GB) 或 fp8 (高质量，~16GB)
-# - gguf: 使用 GGUF 量化模型，适合显存较小的 GPU
-# - fp8: 使用 fp8 精度模型，质量更好，支持 FLF (首尾帧) 模式
+# ComfyUI workflow type: gguf (low VRAM, ~8GB) or fp8 (high quality, ~16GB)
+# - gguf: uses GGUF-quantized models, suited to GPUs with less VRAM
+# - fp8: uses fp8-precision models, better quality, supports FLF (first/last frame) mode
 COMFYUI_WORKFLOW = os.environ.get("COMFYUI_WORKFLOW", "gguf")
 
-# ComfyUI 是否使用 SSL（HTTPS/WSS），云服务器通常需要开启
+# Whether ComfyUI uses SSL (HTTPS/WSS); cloud servers usually need it enabled
 COMFYUI_USE_SSL = os.environ.get("COMFYUI_USE_SSL", "false").lower() in (
     "true",
     "1",
     "yes",
 )
 
-# 默认视频分辨率（竖屏）
+# Default video resolution (portrait)
 VIDEO_RESOLUTION = os.environ.get("VIDEO_RESOLUTION", "720x1280")
 
-# 分辨率预设
+# Resolution presets
 VIDEO_RESOLUTION_PRESETS = {
-    "720x1280": {"width": 720, "height": 1280, "label": "720p 竖屏"},
-    "1080x1920": {"width": 1080, "height": 1920, "label": "1080p 竖屏"},
+    "720x1280": {"width": 720, "height": 1280, "label": "720p portrait"},
+    "1080x1920": {"width": 1080, "height": 1920, "label": "1080p portrait"},
 }
 
 
 def get_video_generation_config() -> dict:
-    """获取 AI 视频生成（图生视频）配置。"""
+    """Get the AI video generation (image-to-video) configuration."""
     resolution = VIDEO_RESOLUTION_PRESETS.get(
         VIDEO_RESOLUTION, VIDEO_RESOLUTION_PRESETS["720x1280"]
     )
@@ -1145,7 +1145,7 @@ def get_video_generation_config() -> dict:
 
 
 def get_video_config() -> dict:
-    """获取视频配置。"""
+    """Get the video configuration."""
     return {
         "ffmpeg_path": FFMPEG_PATH,
         "fps": VIDEO_FPS,
@@ -1160,7 +1160,7 @@ def get_video_config() -> dict:
 
 
 # =============================================================================
-# 图像生成配置（Google / OpenRouter / OpenAI / HuiMeng）
+# Image generation configuration (Google / OpenRouter / OpenAI / HuiMeng)
 # =============================================================================
 
 GOOGLE_AI_API_KEY = os.environ.get("GOOGLE_AI_API_KEY")
@@ -1174,8 +1174,8 @@ OPENROUTER_NANOBANANA2_MODEL = os.environ.get(
     "OPENROUTER_NANOBANANA2_MODEL", "google/gemini-3.1-flash-image-preview"
 )
 
-# 图像生成 Provider: "google" / "openrouter" / "openai" / "huimeng"
-# OpenRouter 价格: $0.002/图 (2K) vs Google 官方 $0.134/图 (2K)
+# Image generation Provider: "google" / "openrouter" / "openai" / "huimeng"
+# OpenRouter price: $0.002/image (2K) vs official Google $0.134/image (2K)
 _NANOBANANA_PROVIDER_EXPLICIT = "NANOBANANA_PROVIDER" in os.environ
 NANOBANANA_PROVIDER = os.environ.get("NANOBANANA_PROVIDER", "openrouter")
 
@@ -1505,46 +1505,46 @@ LEGACY_IMAGE_GENERATION_SELECTION_ALIASES = {
     "seedream": "newapi_gpt_image2",
 }
 
-# 网格生成模式配置
-# 竖屏 Panel 模式（每格竖屏，适合 I2V）：
-# "1x1" - 单张生成（1K 分辨率，panel 高度 1376）
-# "1x3" - 横向三格（panel 高度 877，竖屏 0.78）
-# "1x4" - 横向四格（panel 高度 1097，竖屏 0.58）官方推荐 3-4 panel comic
-# "3x2" - 6 panels（panel 高度 1365 ✓，竖屏 0.84）
-# "4x3" - 12 panels（panel 高度 1024 ✓，竖屏 0.75）最优
-# "5x4" - 20 panels（panel 高度 819，竖屏 0.70）
-# 正方形 Panel 模式：
-# "2x2" - 紧凑四格
-# "3x3" - 分批生成（更稳定）
-# "4x4" - 分批生成（中等，panel 高度 1024 ✓）
-# "5x5" - 批量生成，最大 25 面板
+# Grid generation mode configuration
+# Portrait panel modes (each cell is portrait, suited to I2V):
+# "1x1" - single image (1K resolution, panel height 1376)
+# "1x3" - three cells in a row (panel height 877, portrait 0.78)
+# "1x4" - four cells in a row (panel height 1097, portrait 0.58), officially recommended 3-4 panel comic
+# "3x2" - 6 panels (panel height 1365 ✓, portrait 0.84)
+# "4x3" - 12 panels (panel height 1024 ✓, portrait 0.75), optimal
+# "5x4" - 20 panels (panel height 819, portrait 0.70)
+# Square panel modes:
+# "2x2" - compact four cells
+# "3x3" - batched generation (more stable)
+# "4x4" - batched generation (medium, panel height 1024 ✓)
+# "5x5" - bulk generation, at most 25 panels
 GRID_MODE = os.environ.get("GRID_MODE", "1x1")
 
-# 网格尺寸配置表
-# 格式: mode -> (rows, cols, batch_size)
+# Grid size configuration table
+# Format: mode -> (rows, cols, batch_size)
 MODE_CONFIG = {
-    # 竖屏 Panel 模式（每格竖屏，适合 I2V）
+    # Portrait panel modes (each cell is portrait, suited to I2V)
     "1x1": (1, 1, 1),
-    "1x2": (1, 2, 2),  # panel 0.89 竖屏
-    "1x3": (1, 3, 3),  # panel 0.78 竖屏 ✓
-    "1x4": (1, 4, 4),  # panel 0.58 竖屏 ✓ 官方推荐
-    "3x2": (3, 2, 6),  # panel 0.84 竖屏, 高度 1365 ✓
-    "4x3": (4, 3, 12),  # panel 0.75 竖屏 ✓ 最优
-    "5x4": (5, 4, 20),  # panel 0.70 竖屏 ✓
-    # 正方形 Panel 模式
+    "1x2": (1, 2, 2),  # panel 0.89 portrait
+    "1x3": (1, 3, 3),  # panel 0.78 portrait ✓
+    "1x4": (1, 4, 4),  # panel 0.58 portrait ✓ officially recommended
+    "3x2": (3, 2, 6),  # panel 0.84 portrait, height 1365 ✓
+    "4x3": (4, 3, 12),  # panel 0.75 portrait ✓ optimal
+    "5x4": (5, 4, 20),  # panel 0.70 portrait ✓
+    # Square panel modes
     "2x2": (2, 2, 4),
     "3x3": (3, 3, 9),
     "4x4": (4, 4, 16),
     "5x5": (5, 5, 25),
 }
 
-# 网格尺寸配置（根据 GRID_MODE 自动设置）
+# Grid size configuration (set automatically from GRID_MODE)
 if GRID_MODE in MODE_CONFIG:
     GRID_ROWS, GRID_COLS, GRID_BATCH_SIZE = MODE_CONFIG[GRID_MODE]
 else:
-    # 默认使用 1x1
+    # Default to 1x1
     GRID_ROWS, GRID_COLS, GRID_BATCH_SIZE = 1, 1, 1
-GRID_TOTAL_PANELS = 25  # 动态优化时的最大面板数
+GRID_TOTAL_PANELS = 25  # maximum number of panels for dynamic optimization
 
 
 def image_generation_selection_options() -> dict[str, str]:
@@ -1820,23 +1820,23 @@ def get_grid_generation_config(
     model_override: str | None = None,
     image_size_override: str | None = None,
 ) -> dict:
-    """获取网格生成配置。
+    """Get the grid generation configuration.
 
-    支持四种 Provider:
-    - google: 直连 Google AI Studio (GOOGLE_AI_API_KEY)
-    - openrouter: 通过 OpenRouter 代理 (OPENROUTER_API_KEY)，成本降低 60 倍
-    - openai: 通过 OpenAI Image API (OPENAI_API_KEY)，默认 gpt-image-2
-    - huimeng: 通过 HuiMeng Tasks API (HUIMENGI_API_KEY)
+    Four Providers are supported:
+    - google: direct Google AI Studio (GOOGLE_AI_API_KEY)
+    - openrouter: via the OpenRouter proxy (OPENROUTER_API_KEY), 60x lower cost
+    - openai: via the OpenAI Image API (OPENAI_API_KEY), default gpt-image-2
+    - huimeng: via the HuiMeng Tasks API (HUIMENGI_API_KEY)
 
-    环境变量:
+    Environment variables:
     - NANOBANANA_PROVIDER: "google" / "openrouter" / "openai" / "huimeng"
     - GOOGLE_AI_API_KEY: Google AI Studio API Key
     - OPENROUTER_API_KEY: OpenRouter API Key
     - OPENAI_API_KEY: OpenAI API Key
     - HUIMENGI_API_KEY: HuiMeng API Key
-    - OPENAI_IMAGE_MODEL: OpenAI Image API 模型，默认 gpt-image-2
-    - HUIMENG_IMAGE_MODEL: HuiMeng 图片模型，默认 image-2
-    - DEFAULT_SKETCH_IMAGE_SELECTION / DEFAULT_RENDER_IMAGE_SELECTION: UI 默认图片源
+    - OPENAI_IMAGE_MODEL: OpenAI Image API model, default gpt-image-2
+    - HUIMENG_IMAGE_MODEL: HuiMeng image model, default image-2
+    - DEFAULT_SKETCH_IMAGE_SELECTION / DEFAULT_RENDER_IMAGE_SELECTION: default image source in the UI
     """
     if (
         selection_override is None
@@ -1874,12 +1874,12 @@ def get_sketch_generation_config(
     selection_override: str | None = None,
     model_override: str | None = None,
 ) -> dict:
-    """获取草图工作台网格生成配置。
+    """Get the sketch workbench grid generation configuration.
 
-    优先级:
-    1. 显式 DEFAULT_SKETCH_IMAGE_SELECTION（新选择表）
-    2. 显式 NANOBANANA_PROVIDER / NANOBANANA_MODEL（旧环境变量兼容）
-    3. 通用 get_grid_generation_config()
+    Priority:
+    1. Explicit DEFAULT_SKETCH_IMAGE_SELECTION (new selection table)
+    2. Explicit NANOBANANA_PROVIDER / NANOBANANA_MODEL (legacy environment variable compatibility)
+    3. The generic get_grid_generation_config()
     """
     selection = selection_override
     if selection is None:
@@ -1904,7 +1904,7 @@ def get_render_generation_config(
     selection_override: str | None = None,
     model_override: str | None = None,
 ) -> dict:
-    """获取首帧渲染图像配置。"""
+    """Get the first-frame render image configuration."""
     selection = selection_override
     if selection is None:
         selection = (
@@ -1921,52 +1921,52 @@ def get_render_generation_config(
 
 
 # =============================================================================
-# 草图（Sketch）路径管理
+# Sketch path management
 # =============================================================================
 
 
 def get_sketch_dir(project_name: str, episode: int) -> str:
-    """获取整集草图存放目录。
+    """Get the directory holding the whole-episode sketches.
 
     Args:
-        project_name: 项目名称（如 admin/test1）
-        episode: 集数
+        project_name: project name (e.g. admin/test1)
+        episode: episode number
 
     Returns:
-        草图目录路径，如 output/admin/test1/grids/ep001/sketch
+        Sketch directory path, e.g. output/admin/test1/grids/ep001/sketch
     """
     base_dir = os.path.abspath(os.path.join(OUTPUT_DIR, project_name))
     return os.path.join(base_dir, "grids", f"ep{episode:03d}", "sketch")
 
 
 def get_sketch_path(project_name: str, episode: int, sketch_index: int = 1) -> str:
-    """获取整集草图路径（已弃用，保留向后兼容）。
+    """Get the whole-episode sketch path (deprecated, kept for backward compatibility).
 
-    新模式下草图文件名为 sketch_b{start}-{end}_{rows}x{cols}.jpg，
-    建议使用 list_sketch_files() 遍历草图目录。
+    In the new mode the sketch file name is sketch_b{start}-{end}_{rows}x{cols}.jpg;
+    use list_sketch_files() to walk the sketch directory.
 
     Args:
-        project_name: 项目名称（如 admin/test1）
-        episode: 集数
-        sketch_index: 草图索引（1-based），默认为 1
+        project_name: project name (e.g. admin/test1)
+        episode: episode number
+        sketch_index: sketch index (1-based), defaults to 1
 
     Returns:
-        草图目录路径（新模式下返回目录而非具体文件）
+        Sketch directory path (in the new mode a directory is returned rather than a specific file)
     """
     return get_sketch_dir(project_name, episode)
 
 
 def list_sketch_files(project_name: str, episode: int) -> list[str]:
-    """列出指定集的所有草图文件。
+    """List all sketch files of the given episode.
 
-    支持新命名约定: sketch_b{start}-{end}_{rows}x{cols}.jpg
+    Supports the new naming convention: sketch_b{start}-{end}_{rows}x{cols}.jpg
 
     Args:
-        project_name: 项目名称
-        episode: 集数
+        project_name: project name
+        episode: episode number
 
     Returns:
-        草图文件路径列表（按文件名排序）
+        List of sketch file paths (sorted by file name)
     """
     sketch_dir = get_sketch_dir(project_name, episode)
     if not os.path.exists(sketch_dir):
@@ -1980,20 +1980,20 @@ def list_sketch_files(project_name: str, episode: int) -> list[str]:
 
 
 # =============================================================================
-# 项目管理
+# Project management
 # =============================================================================
 
 
 def get_project_dir(project_name: str) -> str:
-    """获取项目输出目录。"""
+    """Get the project output directory."""
     return os.path.join(OUTPUT_DIR, project_name)
 
 
 def ensure_project_dirs(project_name: str) -> dict[str, str]:
-    """确保项目目录结构存在，返回资源目录路径。
+    """Ensure the project directory structure exists and return the assets directory path.
 
-    `project_name` 可为 `username/project` 或历史单目录格式 `project`。
-    当包含用户名时，会同时确保 output/state/runtime 三类目录存在。
+    `project_name` may be `username/project` or the legacy single-directory format `project`.
+    When it contains a username, the output/state/runtime directories are all ensured to exist.
     """
     base_dir = os.path.abspath(get_project_dir(project_name))
 
@@ -2012,7 +2012,7 @@ def ensure_project_dirs(project_name: str) -> dict[str, str]:
         "characters": os.path.join(base_dir, "assets", "characters"),
         "scripts": os.path.join(base_dir, "scripts"),
         "images": os.path.join(base_dir, "images"),
-        "frames": os.path.join(base_dir, "frames"),  # 首帧图片
+        "frames": os.path.join(base_dir, "frames"),  # first-frame images
         "audio": os.path.join(base_dir, "audio"),
         "videos": os.path.join(base_dir, "videos"),
     }

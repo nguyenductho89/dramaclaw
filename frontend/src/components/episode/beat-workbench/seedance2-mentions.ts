@@ -3,8 +3,8 @@
 import { buildMentionRegex } from "@/lib/mention-markers";
 
 /**
- * Seedance2 参考素材的最小形状：reference_label 是后端分配的「图片N / 音频N」（会随
- * 增删/重排重新编号），url/key 用作素材的稳定身份。
+ * Minimal shape of a Seedance2 reference asset: reference_label is the backend-assigned "image N / audio N" (renumbered
+ * on add/remove/reorder), and url/key serve as the asset's stable identity.
  */
 export interface Seedance2ReferenceAssetLike {
   reference_label: string;
@@ -13,8 +13,8 @@ export interface Seedance2ReferenceAssetLike {
   key: string;
 }
 
-// 素材身份：用 URL（语义「提示词按素材 URL 引用」），回退 path / key 以防 URL 缺失。
-// 删除 / 重排其它素材时，留下来的素材 URL 不变，故能稳定对号。
+// Asset identity: use the URL (semantics: "prompts reference assets by URL"), falling back to path / key if the URL is missing.
+// When other assets are deleted / reordered, the surviving assets' URLs do not change, so they can be matched stably.
 export function seedance2AssetIdentity(
   asset: Seedance2ReferenceAssetLike,
 ): string {
@@ -22,11 +22,11 @@ export function seedance2AssetIdentity(
 }
 
 export interface Seedance2LabelIdentityMaps {
-  /** 图片N → 素材身份(URL)。 */
+  /** image N -> asset identity (URL). */
   labelToIdentity: Map<string, string>;
-  /** 素材身份(URL) → 图片N。 */
+  /** asset identity (URL) -> image N. */
   identityToLabel: Map<string, string>;
-  /** 全部 label，用于建匹配正则。 */
+  /** All labels, used to build the matching regex. */
   labels: string[];
 }
 
@@ -63,21 +63,21 @@ export function sameSeedance2LabelIdentity(
 }
 
 /**
- * 按素材身份(URL)把提示词里的 `@图片N / @音频N` 重新对号——让 mention 始终跟着它
- * 引用的素材走，而不是被写死的编号绑死：
- * - prev 能定位到身份、且该身份在 current 里仍在 → 改成它当前的 label（图片2→图片1）。
- * - 身份已不存在（素材被删） → 删掉该 mention 及其后随的一个空格。
- * - prev 里定位不到（手动输入的未知 label，或本就是当前 label） → 原样保留。
+ * Re-aligns `@image N / @audio N` in the prompt by asset identity (URL) - so a mention always follows the asset
+ * it references, instead of being bound to a hard-coded number:
+ * - prev can locate the identity and that identity is still in current -> rewrite to its current label (image2 -> image1).
+ * - the identity no longer exists (asset deleted) -> remove the mention and the single space following it.
+ * - prev cannot locate it (a manually typed unknown label, or it already is the current label) -> keep as is.
  *
- * 一次扫描原串，按 prev 身份独立映射，不会出现 2→1、3→2 之间的串号。后端拿到的仍是
- * 图片N（本函数只在前端把编号对齐到当前素材列表）。
+ * Scans the original string once and maps each prev identity independently, so there is no cross-talk among 2->1, 3->2. What the backend still receives is
+ * image N (this function only aligns the numbering to the current asset list in the frontend).
  */
 export function remapSeedance2Mentions(
   text: string,
   prev: Seedance2LabelIdentityMaps,
   current: Seedance2LabelIdentityMaps,
 ): string {
-  // 用 prev + current 的 label 并集建正则，保证文本里的旧 label 能被匹配到。
+  // Build the regex from the union of prev + current labels, so old labels in the text can be matched.
   const knownLabels = Array.from(new Set([...prev.labels, ...current.labels]));
   const pattern = buildMentionRegex(knownLabels);
   if (!pattern) return text;
@@ -99,7 +99,7 @@ export function remapSeedance2Mentions(
     }
     const nextLabel = current.identityToLabel.get(identity);
     if (nextLabel === undefined) {
-      // 素材被删 → 连同后随一个空格一起去掉。
+      // Asset deleted -> remove it together with the single space that follows.
       lastIndex = text[end] === " " ? end + 1 : end;
       continue;
     }

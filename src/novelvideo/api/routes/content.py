@@ -1,4 +1,4 @@
-"""原文、改写稿与解说 adapter 端点。"""
+"""Source text, rewritten script, and narration adapter endpoints."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ async def get_raw_content(
     user: dict = Depends(get_api_user),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """读取指定集的原文。"""
+    """Read the source text of a specified episode."""
     content = await store.load_episode_content(episode_num) or ""
     return {"ok": True, "data": {"episode": episode_num, "content": content}}
 
@@ -53,7 +53,7 @@ async def put_raw_content(
     user: dict = Depends(require_project_scope("projects:write")),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """保存指定集的原文。"""
+    """Save the source text of a specified episode."""
     logger.info("[%s] EP%d put_raw_content: %d chars", project, episode_num, len(body.content))
     await store.save_episode_content(episode_num, body.content)
     return {"ok": True, "data": {"episode": episode_num, "length": len(body.content)}}
@@ -66,7 +66,7 @@ async def get_adapted_content(
     user: dict = Depends(get_api_user),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """读取指定集的改写稿。未保存时返回空串。"""
+    """Read the rewritten script of a specified episode. Returns an empty string if not saved."""
     content = await store.load_adapted_content(episode_num)
     return {"ok": True, "data": {"episode": episode_num, "content": content}}
 
@@ -79,7 +79,7 @@ async def put_adapted_content(
     user: dict = Depends(require_project_scope("projects:write")),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """保存指定集的改写稿。集不存在时返回 400。"""
+    """Save the rewritten script of a specified episode. Returns 400 if the episode does not exist."""
     logger.info(
         "[%s] EP%d put_adapted_content: %d chars",
         project,
@@ -100,7 +100,7 @@ async def delete_adapted_content(
     user: dict = Depends(require_project_scope("projects:write")),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """清空指定集的改写稿，回退到原文。"""
+    """Clear the rewritten script of a specified episode, falling back to the source text."""
     logger.info("[%s] EP%d delete_adapted_content", project, episode_num)
     try:
         await store.save_adapted_content(episode_num, "")
@@ -117,16 +117,16 @@ async def generate_rewrite(
     user: dict = Depends(require_project_scope("projects:write")),
     store: SQLiteStore = Depends(get_sqlite_store),
 ):
-    """同步执行“原文 → 逐行解说工作稿”，并保存到 adapted_content。
+    """Synchronously run "source text -> line-by-line narration working draft" and save it to adapted_content.
 
-    这里故意不搬旧任务实现；2.0 后续可以把这个 adapter 包进
-    新任务系统，但 adapter 与存储契约先稳定下来。
+    The old task implementation is deliberately not carried over here; 2.0 can later wrap this adapter into
+    the new task system, but the adapter and storage contract are stabilized first.
     """
     raw_content = (await store.load_episode_content(episode_num) or "").strip()
     if not raw_content:
         return {
             "ok": False,
-            "error": f"第 {episode_num} 集尚未有原文，请先填写 raw-content",
+            "error": f"Episode {episode_num} has no source text yet. Fill in raw-content first",
         }
 
     resolved = await resolve_project_scope(project, user, required_role="editor")
@@ -239,7 +239,7 @@ async def generate_rewrite(
 
 
 def _resolve_narrator_main_name(store: SQLiteStore) -> str:
-    """从 store 里找 is_main=True 的解说主角名；没有返回空串。"""
+    """Find the name of the is_main=True narration protagonist from the store; return an empty string if none."""
     for character in store.get_all_characters():
         if getattr(character, "is_main", False):
             return character.name or ""

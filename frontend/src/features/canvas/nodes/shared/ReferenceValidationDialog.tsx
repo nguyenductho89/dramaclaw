@@ -6,8 +6,8 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { CircleAlert, MapPin } from "lucide-react";
 import { formatAudioDurationSeconds, type AudioDurationRejection } from "./videoModelCapabilities";
 
-const FIRST_FRAME_ROLES = new Set(["首帧", "first_frame"]); // i18n-exempt: backend role values
-const LAST_FRAME_ROLES = new Set(["尾帧", "last_frame"]); // i18n-exempt: backend role values
+const FIRST_FRAME_ROLES = new Set(["first_frame"]);
+const LAST_FRAME_ROLES = new Set(["last_frame"]);
 
 export interface ReferenceIssue {
   media: string;

@@ -3,18 +3,18 @@
   "id": "outdoor-stage-duel-storyboard",
   "enabled": true,
   "version": "1.0.0",
-  "name": "舞台对决分镜",
+  "name": "Stage Duel Storyboard",
   "output_kind": "text",
   "action_keys": [
     "outdoor-stage-duel-storyboard"
   ],
-  "system_prompt": "你将根据已确认的创意规格、开始前选项、用户素材分析和确认记录，直接生成 Storyboard。你的输出就是最终分镜；只输出成品，不要解释。\n\n最终输出必须包含中文 Markdown，并使用【分镜设计】作为阶段标题。先输出【Key Elements】表格：element_id、类型、名称、来源、外观/场景/能力描述、需绑定/需生成、确认状态。每个项目至少包含 element scene、Element_Character_A、Element_Character_B；观众 POV 是 shot 约束，禁止创建 audience POV key element。\n\n再输出【Shot List】表格：每条目标视频只创建 1 个 shot。列包含 clip_id、shot_id、舞台坐标系、三层构图、Character A 站位/动作、Character B 站位/反应、能力冲突中心、Beat 1、Beat 2、Beat 3、Beat 4、Final beat、观众阵营反应、相机运动、引用元素、Audio_BGM、Audio_VO、确认状态。Beat 是同一个一镜到底长镜头里的节奏升级，不是多个 shot，不得写秒数、hard cut、switch angle、new shot 或 camera cut。\n\n每个 Beat 必须包含 A 动作、B 反应/防守/反击、两者之间或中心舞台的可见爆点、观众第一视角反应。命中反馈必须写半步后退、滑步、重心降低、护脸、弯膝、支撑或恢复平衡，不得只写“被击中”。末尾写：请确认/修改/重生成分镜，确认后进入【关键元素】阶段。",
+  "system_prompt": "You will directly generate the Storyboard from the confirmed creative specification, the pre-start options, the analysis of the user's assets and the confirmation records. Your output is the final storyboard; output only the finished product, with no explanation.\n\nThe final output must be Markdown in the same language as the user's input, using [Storyboard Design] as the stage title. First output the [Key Elements] table: element_id, type, name, source, appearance / scene / ability description, bind needed / generate needed, confirmation status. Each project contains at least element scene, Element_Character_A and Element_Character_B; the audience POV is a shot constraint, and creating an audience POV key element is forbidden.\n\nThen output the [Shot List] table: create only 1 shot per target video. The columns include clip_id, shot_id, stage coordinate system, three-layer composition, Character A position/action, Character B position/reaction, ability clash center, Beat 1, Beat 2, Beat 3, Beat 4, Final beat, faction audience reaction, camera movement, referenced elements, Audio_BGM, Audio_VO, confirmation status. A Beat is a rhythm escalation within the same single-take long shot, not multiple shots, and must not contain seconds, hard cut, switch angle, new shot or camera cut.\n\nEach Beat must contain A's action, B's reaction / defense / counterattack, the visible burst between the two or at the center of the stage, and the audience's first-person reaction. Hit feedback must write a half-step back, a slide step, a lowered center of gravity, shielding the face, bent knees, bracing or regaining balance, and not merely \"got hit\". At the end write: please confirm / modify / regenerate the storyboard; after confirmation, proceed to the [Key Elements] stage.",
   "must_have_items": [
-    "【Key Elements】",
-    "【Shot List】",
+    "[Key Elements]",
+    "[Shot List]",
     "Element_Character_A",
     "Element_Character_B",
-    "三层构图",
+    "Three-layer composition",
     "Beat 1",
     "Beat 2",
     "Beat 3",
@@ -22,8 +22,8 @@
     "Audio_BGM",
     "Audio_VO"
   ],
-  "planning_prompt": "直接生成户外舞台双人对决 Storyboard、Key Elements、单镜 Beat 结构和音频层规划。",
-  "result_summary": "户外舞台观众 POV 双人对决分镜。",
+  "planning_prompt": "Directly generate the outdoor stage two-person duel Storyboard, Key Elements, single-shot Beat structure and audio layer plan.",
+  "result_summary": "Outdoor stage audience-POV two-person duel storyboard.",
   "requires_source_media": false,
   "force_enhancement": false,
   "skip_detail_check": true

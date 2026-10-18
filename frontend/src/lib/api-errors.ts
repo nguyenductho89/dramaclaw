@@ -106,7 +106,6 @@ export class BillingRuleNotConfiguredError extends BackendStatusError {
 // actually shows backendErrorToastMessage(), which uses the same wording via the common.*QueueFull locale entries.
 // api-errors sits in the dependency chain of api/client, and pulling @/i18n in would init i18next a second time in tests,
 // so the English fallback is kept here instead of in the locale files.
-// i18n-exempt-start
 function queueLabelForPlainMessage(queueKind: string): string {
   if (queueKind === "default") return "default";
   if (queueKind === "image") return "image";
@@ -134,7 +133,6 @@ function taskQueueLimitPlainMessage(
       return `The current project's ${queueLabel} queue is full`;
   }
 }
-// i18n-exempt-end
 
 function taskLaneLimitScope(value: unknown): TaskLaneLimitScope | null {
   if (

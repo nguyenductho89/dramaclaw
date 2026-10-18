@@ -100,7 +100,7 @@ def lint_qwen_edit_render_prompt(
     result = LintResult()
     text = prompt or ""
     if not text.strip():
-        result.issues.append(LintIssue("error", "empty", "Prompt rỗng"))
+        result.issues.append(LintIssue("error", "empty", "Prompt is empty"))
         return result
 
     if "\n" in text:
@@ -108,13 +108,13 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "error",
                 "newline",
-                "Prompt chứa xuống dòng — theo chuẩn Qwen-Image-Edit, Rewritten phải là 1 dòng",
+                "Prompt contains a line break — per the Qwen-Image-Edit standard, Rewritten must be a single line",
             )
         )
 
     if len(text) > MAX_PROMPT_CHARS:
         result.issues.append(
-            LintIssue("error", "too_long", f"Prompt quá dài ({len(text)}/{MAX_PROMPT_CHARS} ký tự)")
+            LintIssue("error", "too_long", f"Prompt is too long ({len(text)}/{MAX_PROMPT_CHARS} characters)")
         )
 
     has_picture_1 = "Picture 1" in text
@@ -124,19 +124,19 @@ def lint_qwen_edit_render_prompt(
 
     if not has_picture_1:
         result.issues.append(
-            LintIssue("error", "missing_picture_1", 'Thiếu "Picture 1" — Qwen-Image-Edit-2511 chỉ nhận ảnh qua tag "Picture N" này')
+            LintIssue("error", "missing_picture_1", 'Missing "Picture 1" — Qwen-Image-Edit-2511 only accepts images through "Picture N" tags')
         )
     if stage in ("full", "inpaint"):
         if not has_picture_2:
             result.issues.append(
-                LintIssue("error", "missing_picture_2", 'Thiếu "Picture 2" — prompt phải nói rõ phần tử của ảnh nào theo quy tắc Multi-Image')
+                LintIssue("error", "missing_picture_2", 'Missing "Picture 2" — the prompt must say which image each element comes from, per the Multi-Image rule')
             )
     elif stage == "scene_only" and has_picture_2:
         result.issues.append(
             LintIssue(
                 "error",
                 "unexpected_picture_2",
-                'stage="scene_only" chỉ có 1 ảnh đính kèm (Picture 1) — prompt không nên nhắc "Picture 2"',
+                'stage="scene_only" has only 1 attached image (Picture 1) — the prompt should not mention "Picture 2"',
             )
         )
 
@@ -145,7 +145,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "error",
                 "legacy_image_tag",
-                'Prompt dùng "image 1"/"image 2" — ComfyUI node TextEncodeQwenImageEditPlus chèn token theo tên "Picture N", phải dùng đúng tên đó',
+                'Prompt uses "image 1"/"image 2" — the ComfyUI node TextEncodeQwenImageEditPlus inserts tokens by the name "Picture N", so that exact name must be used',
             )
         )
 
@@ -154,7 +154,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "error",
                 "layout_word",
-                "Có từ grid/panel/storyboard/collage/region — Qwen-Image-Edit-2511 đã từng hiểu nhầm thành ghép nhiều khung ảnh",
+                "Contains grid/panel/storyboard/collage/region wording — Qwen-Image-Edit-2511 has misread this as a multi-frame composite before",
             )
         )
 
@@ -163,7 +163,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "warning",
                 "missing_lead_verb",
-                "Câu đầu không bắt đầu bằng động từ chỉ thị (Replace/Convert/Change/...) như mẫu chính thức",
+                "The first sentence does not start with an instruction verb (Replace/Convert/Change/...) as in the official template",
             )
         )
 
@@ -172,7 +172,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "warning",
                 "mannequin_color_word",
-                "Có tên màu tracking của mannequin (magenta/fuchsia/...) — model có thể hiểu nhầm là màu quần áo thật",
+                "Contains a mannequin tracking color name (magenta/fuchsia/...) — the model may mistake it for a real clothing color",
             )
         )
 
@@ -181,7 +181,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "warning",
                 "missing_photorealistic",
-                "Không thấy từ 'photorealistic' — nên có câu phong cách ở cuối theo quy tắc Style Conversion",
+                "No 'photorealistic' wording found — a style sentence should come at the end per the Style Conversion rule",
             )
         )
 
@@ -190,7 +190,7 @@ def lint_qwen_edit_render_prompt(
             LintIssue(
                 "warning",
                 "inpaint_describes_action",
-                "Prompt inpaint mô tả hành động/tư thế (standing/sitting/lecturing/...) — tư thế đã bị khoá bởi mask, mô tả này có nguy cơ gán nhầm hành động của người khác cho identity đang ghép",
+                "The inpaint prompt describes actions/poses (standing/sitting/lecturing/...) — the pose is already locked by the mask, and this description risks assigning another person's action to the identity being composited",
             )
         )
 

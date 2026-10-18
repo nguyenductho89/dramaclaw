@@ -21,7 +21,7 @@ from novelvideo.config import OUTPUT_DIR
 # Demo defaults for standalone/manual runs. In production stage_asset_tasks
 # always passes absolute --master/--reverse/--output-dir, so these are never used.
 PROJECT_DIR = Path(OUTPUT_DIR) / "admin/xuanchuanpian"
-DEFAULT_SCENE_NAME = "兰州拉面馆"
+DEFAULT_SCENE_NAME = "Lanzhou Noodle Shop"
 DEFAULT_SCENE_DIR = PROJECT_DIR / "assets/scenes" / DEFAULT_SCENE_NAME
 DEFAULT_MASTER = DEFAULT_SCENE_DIR / "master.png"
 DEFAULT_REVERSE = DEFAULT_SCENE_DIR / "reverse_master.png"

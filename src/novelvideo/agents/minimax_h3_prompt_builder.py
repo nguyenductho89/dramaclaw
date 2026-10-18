@@ -408,7 +408,7 @@ _STRIP_SHOT_RE = re.compile(r"\[Shot\s*\d+\]", re.IGNORECASE)
 _STRIP_AUDIO_RE = re.compile(r"<Audio\s*\d+>", re.IGNORECASE)
 _STRIP_DIALOGUE_TAG_RE = re.compile(r"</?d>", re.IGNORECASE)
 _STRIP_SECTION_HEADER_RE = re.compile(r"^[a-z_]+:\s*$", re.MULTILINE)
-_QUOTE_CHARS_RE = re.compile(r'["“”「」『』]')
+_QUOTE_CHARS_RE = re.compile(r'["\u201c\u201d]')
 _DEFAULT_VOICE_DESC = "a natural voice, speaking at a normal pace"
 
 

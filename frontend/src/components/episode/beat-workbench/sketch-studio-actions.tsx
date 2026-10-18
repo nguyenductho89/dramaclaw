@@ -124,7 +124,7 @@ export function SketchColorLegend({
 
 /**
  * Right-edge cluster for the filterbar: sketch color palette pills plus the
- * two episode-wide sketch actions (AI 检测 / 重新配色). Kept together so the
+ * two episode-wide sketch actions (AI detect / recolor). Kept together so the
  * palette sits next to the button that mutates it — matches the NiceGUI
  * layout where these three elements share a row.
  *
@@ -212,7 +212,7 @@ export function SketchStudioActions({
 
   return (
     <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-xs">
-      {/* 配色胶囊 */}
+      {/* Color scheme pill */}
       {hasVisibleLegend && (
         <div className="flex items-center gap-1">
           {entries.length > 0 && (
@@ -273,7 +273,7 @@ export function SketchStudioActions({
         </div>
       )}
 
-      {/* AI检测结果 */}
+      {/* AI detection result */}
       {hasVisibleDetectionSummary && (
         <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/8 px-2 py-0.5 text-[11px] leading-none text-primary/90">
           <Wand2 className="size-3 shrink-0" />
@@ -294,7 +294,7 @@ export function SketchStudioActions({
         <span className="mx-0.5 h-4 w-px bg-border/40" aria-hidden />
       )}
 
-      {/* 画廊按钮 */}
+      {/* Gallery button */}
       {showGridGalleryActions && (onOpenGridGallery || onOpenRenderGridGallery) && (
         <div className="flex items-center gap-1">
           {onOpenGridGallery && (

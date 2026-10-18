@@ -57,48 +57,48 @@ const ACTIVE_TASK_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
   "running",
 ]);
 
-// 文案不落 `public/locales/*`（不在本切片 ownership 内），走仓内既有的
-// `t(key, { defaultValue })` 内联兜底形制（先例 `batch-panel.tsx:570-572`）。
-// 四种 reason 必须是四条真的不一样的话 —— 用户能不能自己解掉，取决于撞的是
-// 哪条闸：当前项目、自己的任务、同渠道别人的任务、还是整个平台。
+// The copy does not go into `public/locales/*` (outside this slice's ownership); it uses the existing in-repo
+// `t(key, { defaultValue })` inline-fallback form (precedent `batch-panel.tsx:570-572`).
+// The four reasons must be four genuinely different sentences - whether the user can resolve it themselves depends on
+// which gate was hit: the current project, their own tasks, other people's tasks on the same channel, or the whole platform.
 const PARTIAL_REASON_COPY: Record<
   RejectedDispatch["reason"],
   { key: string; defaultValue: string }
 > = {
   project: {
     key: "episode.renderPlan.partial.reason.project",
-    defaultValue: "当前项目并发已满：剩余 {{fail}} 格要等该项目已有任务完成",
+    defaultValue: "The current project's concurrency is full: the remaining {{fail}} cells must wait for existing tasks of this project to finish",
   },
   channel: {
     key: "episode.renderPlan.partial.reason.channel",
-    defaultValue: "渠道并发已满：剩余 {{fail}} 格要等同渠道的任务腾出位置",
+    defaultValue: "Channel concurrency is full: the remaining {{fail}} cells must wait for tasks on the same channel to free up a slot",
   },
   platform: {
     key: "episode.renderPlan.partial.reason.platform",
-    defaultValue: "平台整体并发已满：剩余 {{fail}} 格要等平台腾出位置",
+    defaultValue: "Platform-wide concurrency is full: the remaining {{fail}} cells must wait for the platform to free up a slot",
   },
   user: {
     key: "episode.renderPlan.partial.reason.user",
-    defaultValue: "你的并发已满：剩余 {{fail}} 格要等你自己的任务先跑完",
+    defaultValue: "Your concurrency is full: the remaining {{fail}} cells must wait for your own tasks to finish first",
   },
 };
 
 /**
- * 一次尽力投递之后的残局。
+ * The leftover state after one best-effort delivery.
  *
- * `entries` 是**被拒的 plan 条目逐字**（不是重算出来的）：后端 fanout 有序、
- * 撞闸即 break，所以被拒的必是 `resolved_grids` 的尾段，取法就是
- * `slice(task_ids.length)`（TCP-P63；在前端重算 `selection_scope` 会复制后端的
- * 哈希真源）。`shapeOk` 记住那条长度断言 —— 不成立就只报信息，不重投。
+ * `entries` are the **rejected plan entries verbatim** (not recomputed): the backend fanout is ordered
+ * and breaks when it hits a gate, so the rejected ones must be the tail of `resolved_grids`, obtained by
+ * `slice(task_ids.length)` (TCP-P63; recomputing `selection_scope` in the frontend would duplicate the backend's
+ * hash source of truth). `shapeOk` remembers that length assertion - if it does not hold, only report information and do not resubmit.
  */
 interface PartialDispatchState {
-  /** 本轮真的投出去了几格。 */
+  /** How many cells were actually submitted this round. */
   ok: number;
   rejected: RejectedDispatch[];
   entries: PlanEntry[];
-  /** 本轮投出去的 task id，用来从既有轮询里看「在途下降」。 */
+  /** Task ids submitted this round, used to watch "in flight decreasing" from the existing polling. */
   watchTaskIds: string[];
-  /** 自动重投的那**一**轮是否已经用掉（此后只剩手动「继续」）。 */
+  /** Whether the **one** automatic resubmit round has been used up (afterwards only the manual "Continue" remains). */
   autoUsed: boolean;
   shapeOk: boolean;
 }
@@ -137,10 +137,10 @@ export function RenderPlanDialog({
   const [staleBanner, setStaleBanner] = useState<"input" | "plan" | null>(null);
   const [partial, setPartial] = useState<PartialDispatchState | null>(null);
   const [retrying, setRetrying] = useState(false);
-  // 复用**既有**的任务轮询：`skipToken` 表示这个订阅永远不自己发请求，只订阅
-  // `queryKeys.tasks(project)` 这份缓存 —— 写它的是页面上已经挂着的 `useTasks`
-  // （`batch-panel.tsx:392`，本对话框正是它渲染出来的）。这样既不新起定时器，
-  // 也不用把 `queries/tasks.ts` 那条 import 链（`@/i18n` / confirm-dialog）拽进来。
+  // Reuses the **existing** task polling: `skipToken` means this subscription never issues requests itself and only subscribes to the
+  // `queryKeys.tasks(project)` cache - which is written by the `useTasks` already mounted on the page
+  // (`batch-panel.tsx:392`, which is exactly what renders this dialog). This starts no new timer
+  // and does not pull the `queries/tasks.ts` import chain (`@/i18n` / confirm-dialog) in.
   const tasksCache = useQuery({
     queryKey: queryKeys.tasks(project),
     queryFn: skipToken,
@@ -244,8 +244,8 @@ export function RenderPlanDialog({
   }, [open, defaultForceOneByOne, beatIndices, aspectMode, project, episode]);
 
   /**
-   * 消化一次 execute 的结果。`allowAuto` 只在**第一轮**为真 —— 自动重投至多一轮，
-   * 之后一律退回手动「继续」（任务书三条不许自由发挥的第 3 条）。
+   * Digests the result of one execute. `allowAuto` is true only in the **first round** - automatic resubmit is at most one round,
+   * after which it always falls back to the manual "Continue" (item 3 of the three things the brief says not to improvise).
    */
   const applyExecuteResult = (data: RenderExecuteResult, allowAuto: boolean) => {
     const taskIds = data.task_ids ?? [];
@@ -267,8 +267,8 @@ export function RenderPlanDialog({
       entries,
       watchTaskIds: taskIds,
       autoUsed: !allowAuto,
-      // 尾段长度对不上就说明「有序 + break」这个前提不成立了，宁可不投：
-      // 猜错会重复投递已经在跑的格子（= 双计费）。
+      // If the tail length does not match, the premise "ordered + break" no longer holds, and it is better not to submit:
+      // guessing wrong would resubmit cells that are already running (= double billing).
       shapeOk:
         entries.length > 0 &&
         entries.length === rejected.length &&
@@ -277,13 +277,13 @@ export function RenderPlanDialog({
   };
 
   /**
-   * 只重投被拒的那部分，两步：
-   *  1. `/render/plan` 带**恰好是**被拒条目 beats 并集的 `beat_indices`，拿一份新的
-   *     `input_fingerprint`（多一个少一个都会被后端 `_custom_render_plan_error` 判
-   *     400 `invalid_custom_plan`）。
-   *  2. `/render/execute` 带 `custom_plan: true` ＋ 逐字的被拒条目。`custom_plan`
-   *     分支不重新分组，每格的 `entry_scope` 才会与被拒的那次逐字相同；走重算分支
-   *     会把子集重新编组，格子与任何一条被拒 scope 都对不上。
+   * Resubmit only the rejected part, in two steps:
+   *  1. `/render/plan` with `beat_indices` that is **exactly** the union of the rejected entries' beats, to get a fresh
+   *     `input_fingerprint` (one more or one fewer is judged by the backend `_custom_render_plan_error` as
+   *     400 `invalid_custom_plan`).
+   *  2. `/render/execute` with `custom_plan: true` + the rejected entries verbatim. The `custom_plan`
+   *     branch does not regroup, so each cell's `entry_scope` is identical to the rejected one; the recompute branch
+   *     would regroup the subset, and the cells would match none of the rejected scopes.
    */
   const redispatch = async (state: PartialDispatchState) => {
     if (!state.shapeOk || retrying) return;
@@ -329,7 +329,7 @@ export function RenderPlanDialog({
     }
   };
 
-  // 自动重投的触发器：**复用既有轮询**，看本轮投出去的任务是否已全部离开在途。
+  // Trigger for automatic resubmit: **reuse the existing polling** and see whether the tasks submitted this round have all left the in-flight state.
   useEffect(() => {
     if (!open || retrying) return;
     if (!partial || partial.autoUsed || !partial.shapeOk) return;
@@ -338,8 +338,8 @@ export function RenderPlanDialog({
     for (const row of taskRows) {
       if (row.task_id) byId.set(row.task_id, row.status);
     }
-    // 「至少见过一次」守卫：轮询还没把这批任务带回来时不下判断。宁可不自动投
-    // （用户还有「继续」兜底），也不能把「没见到」误读成「已经跑完」。
+    // "Seen at least once" guard: no judgement is made until polling has brought this batch of tasks back. Better not to auto-submit
+    // (the user still has "Continue" as a fallback) than to misread "not seen" as "already finished".
     if (!partial.watchTaskIds.every((id) => byId.has(id))) return;
     if (partial.watchTaskIds.some((id) => ACTIVE_TASK_STATUSES.has(byId.get(id)!))) return;
     const snapshot = { ...partial, autoUsed: true };
@@ -415,7 +415,7 @@ export function RenderPlanDialog({
       const copy = PARTIAL_REASON_COPY[reason];
       if (!copy) {
         return t("episode.renderPlan.partial.reason.unknown", {
-          defaultValue: "部分任务暂未投递",
+          defaultValue: "Some tasks have not been submitted yet",
         });
       }
       return t(copy.key, { defaultValue: copy.defaultValue, fail });
@@ -498,7 +498,7 @@ export function RenderPlanDialog({
           >
             <AlertTriangle className="mr-1 inline size-3" />
             {t("episode.renderPlan.partial.summary", {
-              defaultValue: "已投 {{ok}} / 被拒 {{fail}}",
+              defaultValue: "Submitted {{ok}} / rejected {{fail}}",
               ok: partial.ok,
               fail: partial.rejected.length,
             })}
@@ -537,14 +537,14 @@ export function RenderPlanDialog({
               onClick={() => void redispatch(partial)}
               disabled={retrying || loading}
             >
-              {t("episode.renderPlan.partial.continue", { defaultValue: "继续" })}
+              {t("episode.renderPlan.partial.continue", { defaultValue: "Continue" })}
             </AlertDialogAction>
           )}
           <AlertDialogAction
             variant="outline"
             onClick={handleConfirm}
-            // 已经部分投出去之后，主按钮必须锁死：再点一次就是整批重放
-            // （前 k 个还活着 → 去重锁挡不住重复计费）。重投只能走「继续」。
+            // After a partial submit, the primary button must be locked: clicking again would replay the whole batch
+            // (the first k are still alive -> the dedupe lock cannot stop duplicate billing). Resubmit can only go through "Continue".
             disabled={loading || !plan || !!partial}
             className="relative pr-11 transition-transform active:scale-95"
           >

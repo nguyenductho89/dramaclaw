@@ -88,7 +88,7 @@
       "config": {
         "request": {
           "endpoint": "images/generations",
-          "parameters": [{"key": "watermark", "label": "生成水印", "control": "select", "options": [0], "requestPath": "metadata.watermark"}]
+          "parameters": [{"key": "watermark", "label": "Watermark", "control": "select", "options": [0], "requestPath": "metadata.watermark"}]
         },
         "minPixels": 3686400,
         "ratioOptions": ["1:1", "4:3", "3:4", "9:16", "16:9", "2:3", "3:2", "21:9"],
@@ -136,9 +136,9 @@
         "request": {
           "endpoint": "video/generations",
           "parameters": [
-            {"key": "prompt_extend", "label": "智能改写", "control": "switch", "default": true, "requestPath": "metadata.prompt_extend"},
-            {"key": "seed", "label": "随机种子", "control": "number", "min": 0, "max": 2147483647, "requestPath": "metadata.seed"},
-            {"key": "watermark", "label": "生成水印", "control": "switch", "default": false, "requestPath": "metadata.watermark"}
+            {"key": "prompt_extend", "label": "Prompt rewrite", "control": "switch", "default": true, "requestPath": "metadata.prompt_extend"},
+            {"key": "seed", "label": "Seed", "control": "number", "min": 0, "max": 2147483647, "requestPath": "metadata.seed"},
+            {"key": "watermark", "label": "Watermark", "control": "switch", "default": false, "requestPath": "metadata.watermark"}
           ]
         },
         "minDuration": 2,
@@ -173,9 +173,9 @@
         "request": {
           "endpoint": "video/generations",
           "parameters": [
-            {"key": "prompt_extend", "label": "智能改写", "control": "switch", "default": true, "requestPath": "metadata.prompt_extend"},
-            {"key": "seed", "label": "随机种子", "control": "number", "min": 0, "max": 2147483647, "requestPath": "metadata.seed"},
-            {"key": "watermark", "label": "生成水印", "control": "switch", "default": false, "requestPath": "metadata.watermark"}
+            {"key": "prompt_extend", "label": "Prompt rewrite", "control": "switch", "default": true, "requestPath": "metadata.prompt_extend"},
+            {"key": "seed", "label": "Seed", "control": "number", "min": 0, "max": 2147483647, "requestPath": "metadata.seed"},
+            {"key": "watermark", "label": "Watermark", "control": "switch", "default": false, "requestPath": "metadata.watermark"}
           ]
         },
         "minDuration": 2,
@@ -210,7 +210,7 @@
         "request": {
           "endpoint": "video/generations",
           "parameters": [
-            {"key": "output_format", "label": "输出格式", "control": "select", "options": ["mp4", "mov"], "requestPath": "metadata.output_format"}
+            {"key": "output_format", "label": "Output format", "control": "select", "options": ["mp4", "mov"], "requestPath": "metadata.output_format"}
           ]
         },
         "humanReview": true,

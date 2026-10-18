@@ -1,4 +1,4 @@
-"""T4: 对比选择。"""
+"""T4: comparison selection."""
 
 import logging
 import time
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SketchComparer:
-    """对比 N 张候选草图，输出排序。"""
+    """Compare N candidate sketches and output a ranking."""
 
     def __init__(self):
         self._agent: Agent | None = None
@@ -32,7 +32,7 @@ class SketchComparer:
                 output_type=CompareResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="导演级分镜评审",
+                name="Director-level storyboard reviewer",
             )
         return self._agent
 
@@ -50,13 +50,13 @@ class SketchComparer:
         ref_section = ""
         if reference_paths:
             ref_section = (
-                f"\n\n以下先展示 {len(reference_paths)} 张已选定的参考图（用于风格一致性对比），然后是候选草图。"
+                f"\n\nThe {len(reference_paths)} already selected reference images are shown first (for style consistency comparison), followed by the candidate sketches."
             )
 
         task = (
-            f"对比以下候选草图，选择最适合此 beat 的一张。\n"
-            f"画面描述: {safe_desc}\n"
-            f"共 {len(candidate_paths)} 张候选。"
+            f"Compare the candidate sketches below and select the one that best suits this beat.\n"
+            f"Picture description: {safe_desc}\n"
+            f"{len(candidate_paths)} candidates in total."
             f"{ref_section}"
         )
 
@@ -64,12 +64,12 @@ class SketchComparer:
 
         if reference_paths:
             for i, ref_path in enumerate(reference_paths, 1):
-                prompt_parts.append(f"\n--- 参考图 {i} ---")
+                prompt_parts.append(f"\n--- Reference image {i} ---")
                 ref_bytes = compress_image(ref_path)
                 prompt_parts.append(BinaryContent(data=ref_bytes, media_type="image/jpeg"))
 
         for i, (pool_id, img_path) in enumerate(candidate_paths, 1):
-            prompt_parts.append(f"\n--- 候选 {i} (ID: {pool_id}) ---")
+            prompt_parts.append(f"\n--- Candidate {i} (ID: {pool_id}) ---")
             img_bytes = compress_image(img_path)
             prompt_parts.append(BinaryContent(data=img_bytes, media_type="image/jpeg"))
 

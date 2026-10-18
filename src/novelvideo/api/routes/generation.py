@@ -2488,11 +2488,17 @@ def _audio_billing_payload(
 def _voice_prereq_error_response(errors: list[str]) -> dict:
     preview = "; ".join(errors[:5])
     suffix = " ..." if len(errors) > 5 else ""
-    return {
+    response: dict = {
         "ok": False,
         "code": "voice_prereq_required",
         "error": f"{preview}{suffix}",
     }
+    if any(
+        "narrator" in str(error).lower() and "voice" in str(error).lower()
+        for error in errors
+    ):
+        response["reason_code"] = "voice_narrator_missing"
+    return response
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/audio/system-voices/prepare")

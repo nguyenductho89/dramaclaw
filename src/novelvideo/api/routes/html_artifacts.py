@@ -97,7 +97,7 @@ async def _with_history(store, artifact, scope):
                                 idempotency_key=record['id'])
     except (CanvasLockBusy, OSError):
         # Source is saved: do not invite a duplicate create/update on retry.
-        return {**artifact, 'warnings': ['网页已保存，但节点历史记录失败，请稍后重试。']}
+        return {**artifact, 'warnings': ['The page was saved, but recording the node history failed. Please try again later.']}
     return artifact
 
 

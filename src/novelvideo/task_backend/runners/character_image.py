@@ -36,13 +36,7 @@ def _safe_asset_name(name: str) -> str:
 def _strip_known_style_prefix(prompt: str) -> str:
     text = str(prompt or "").strip()
     prefixes = [
-        "写实古装剧风格，",
-        "写实古装剧风格,",
         "anime style,",
-        "anime风格，",
-        "动漫风格，",
-        "蜘蛛宇宙风格，",
-        "蜘蛛宇宙风格,",
         "realistic style,",
         "chinese period drama style,",
     ]
@@ -66,7 +60,7 @@ def _archive_existing_asset(path: Path) -> Path | None:
 
 def _replace_canonical_asset(source_path: Path, target_path: Path) -> Path:
     if not source_path.exists() or source_path.stat().st_size <= 0:
-        raise RuntimeError("图像模型未返回有效文件")
+        raise RuntimeError("The image model did not return a valid file")
     target_path.parent.mkdir(parents=True, exist_ok=True)
     archived = _archive_existing_asset(target_path)
     try:
@@ -128,7 +122,7 @@ async def _run_character_image(
             logs=[current_task],
         )
 
-    update(0.10, "加载角色数据...")
+    update(0.10, "Loading character data...")
     store = CogneeStore(
         ctx.owner_project_label,
         output_dir=str(output_dir),
@@ -139,11 +133,11 @@ async def _run_character_image(
     try:
         character = await store.get_character_from_graph(character_name)
         if character is None:
-            raise RuntimeError(f"找不到角色: {character_name}")
+            raise RuntimeError(f"Character not found: {character_name}")
         project_config = load_project_config_file_from_state_dir(ctx.state_dir)
         ethnicity = project_config.get("ethnicity", "Chinese")
 
-        update(0.25, "准备生成参数...")
+        update(0.25, "Preparing generation parameters...")
         if mode == "portrait":
             output_path = await _generate_character_portrait(
                 character=character,
@@ -189,7 +183,7 @@ async def _run_character_image(
                 egress_context=egress_context,
             )
         else:
-            raise RuntimeError(f"未知角色图像生成模式: {mode}")
+            raise RuntimeError(f"Unknown character image generation mode: {mode}")
         if mode == "portrait":
             await store.sqlite_store.touch_character_asset(character.name)
         return {
@@ -220,13 +214,13 @@ async def _generate_character_portrait(
 
     face_prompt = str(character.face_prompt or "").strip()
     if not face_prompt:
-        raise RuntimeError("请先设置面部特征 (face_prompt)")
+        raise RuntimeError("Set the face features (face_prompt) first")
     char_assets_dir = output_dir / "assets" / "characters" / character.name
     portrait_path = char_assets_dir / "portrait.png"
     temp_dir = char_assets_dir / f".tmp_portrait_{_asset_suffix()}"
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
-        update(0.45, "调用图像模型生成角色 Portrait...")
+        update(0.45, "Calling the image model to generate the character Portrait...")
         paths = await generate_character_reference_unified(
             character_name=character.name,
             appearance_prompt=_strip_known_style_prefix(face_prompt),
@@ -244,7 +238,7 @@ async def _generate_character_portrait(
             egress_context=egress_context,
         )
         if not paths:
-            raise RuntimeError("角色 Portrait 生成失败")
+            raise RuntimeError("Character Portrait generation failed")
         return _replace_canonical_asset(Path(paths[0]), portrait_path)
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -270,17 +264,17 @@ async def _generate_identity_portrait(
 
     identity = _find_identity(character, identity_id, identity_name)
     if identity is None:
-        raise RuntimeError(f"找不到身份: {identity_id or identity_name}")
+        raise RuntimeError(f"Identity not found: {identity_id or identity_name}")
     face_prompt = str(identity.face_prompt or "").strip()
     if not face_prompt:
-        raise RuntimeError("该身份无 face_prompt，无需独立 Portrait")
+        raise RuntimeError("This identity has no face_prompt, so no standalone Portrait is needed")
     safe_name = _safe_asset_name(identity.identity_name)
     id_dir = output_dir / "assets" / "characters" / character.name / "identities"
     portrait_path = id_dir / f"{character.name}_{safe_name}_portrait.png"
     temp_dir = id_dir / f".tmp_identity_portrait_{safe_name}_{_asset_suffix()}"
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
-        update(0.45, "调用图像模型生成身份 Portrait...")
+        update(0.45, "Calling the image model to generate the identity Portrait...")
         paths = await generate_character_reference_unified(
             character_name=character.name,
             appearance_prompt=_strip_known_style_prefix(face_prompt),
@@ -299,7 +293,7 @@ async def _generate_identity_portrait(
             egress_context=egress_context,
         )
         if not paths:
-            raise RuntimeError("身份 Portrait 生成失败")
+            raise RuntimeError("Identity Portrait generation failed")
         _replace_canonical_asset(Path(paths[0]), portrait_path)
         await store.update_character_identity(
             character.name,
@@ -334,7 +328,7 @@ async def _generate_identity_image(
 
     identity = _find_identity(character, identity_id, identity_name)
     if identity is None:
-        raise RuntimeError(f"找不到身份: {identity_id or identity_name}")
+        raise RuntimeError(f"Identity not found: {identity_id or identity_name}")
 
     appearance_details = str(identity.appearance_details or "").strip()
     costume_image = compute_identity_costume_path(
@@ -346,7 +340,7 @@ async def _generate_identity_image(
     has_costume_image = bool(costume_image and Path(costume_image).exists())
     has_identity_portrait = bool(identity_portrait and Path(identity_portrait).exists())
     if not appearance_details and not has_costume_image:
-        raise RuntimeError("请先设置身份服装描述或上传服装参考图")
+        raise RuntimeError("Set the identity outfit description or upload an outfit reference image first")
 
     safe_name = _safe_asset_name(identity.identity_name)
     char_assets_dir = output_dir / "assets" / "characters" / character.name
@@ -372,11 +366,11 @@ async def _generate_identity_image(
     else:
         portrait_path = char_assets_dir / "portrait.png"
         if not portrait_path.exists():
-            raise RuntimeError(f"请先为角色「{character.name}」生成 Portrait（面部特写）")
+            raise RuntimeError(f'Generate a Portrait (face close-up) for character "{character.name}" first')
         identity_prompt = "" if has_costume_image else appearance_details
         reference_image_path = str(portrait_path)
 
-    update(0.45, "调用图像模型生成身份图...")
+    update(0.45, "Calling the image model to generate the identity image...")
     try:
         result = await generate_identity_image_unified(
             character_name=character.name,
@@ -398,7 +392,7 @@ async def _generate_identity_image(
         )
         success = bool(result.get("success", False)) if isinstance(result, dict) else bool(result)
         if not success:
-            raise RuntimeError("身份图生成失败")
+            raise RuntimeError("Identity image generation failed")
         return _replace_canonical_asset(temp_output_path, output_path)
     finally:
         temp_output_path.unlink(missing_ok=True)

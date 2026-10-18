@@ -1,4 +1,4 @@
-"""验证工具函数：图片压缩、beat 数据读取、图片查找。"""
+"""Verification utility functions: image compression, beat data reading, image lookup."""
 
 import io
 from pathlib import Path
@@ -7,11 +7,11 @@ from PIL import Image as PILImage
 
 
 def compress_image(image_path: str, quality: int = 60, max_long_edge: int = 1024) -> bytes:
-    """压缩图片为 JPEG bytes，长边限制 max_long_edge。
+    """Compress an image to JPEG bytes, limiting the long edge to max_long_edge.
 
     Raises:
-        FileNotFoundError: 图片文件不存在
-        ValueError: 图片格式损坏或无法识别
+        FileNotFoundError: the image file does not exist
+        ValueError: the image format is corrupted or unrecognized
     """
     try:
         img = PILImage.open(image_path)
@@ -38,7 +38,7 @@ async def load_all_beats(
     cognee_store=None,
     sqlite_store=None,
 ) -> list[dict]:
-    """读取整集所有 beat 数据，只允许从 SQLite/Cognee store 读取。"""
+    """Read the data of all beats of the whole episode; reading is only allowed from the SQLite/Cognee store."""
     store = sqlite_store or cognee_store
     if store:
         try:
@@ -63,25 +63,25 @@ def safe_resolve_under(base_dir: Path, candidate: Path) -> Path | None:
 
 
 def find_sketch_for_beat(project_dir: Path, episode_num: int, beat_num: int) -> Path | None:
-    """查找 beat 对应的草图文件（取最新的时间戳版本）。"""
+    """Find the sketch file of a beat (the latest timestamp version)."""
     sketch_dir = project_dir / "grids" / f"ep{episode_num:03d}" / "sketch"
     if not sketch_dir.exists():
         return None
-    # 草图文件名格式: beat_{NN}_t{timestamp}.png
+    # Sketch file name format: beat_{NN}_t{timestamp}.png
     pattern = f"beat_{beat_num:02d}_t*.png"
     matches = sorted(sketch_dir.glob(pattern))
     if matches:
-        return matches[-1]  # 取最新的
+        return matches[-1]  # take the latest
     return None
 
 
 def find_active_sketch_for_beat(project_dir: Path, episode_num: int, beat_num: int) -> Path | None:
-    """查找当前选中的草图文件。"""
+    """Find the currently selected sketch file."""
     sketch = project_dir / "sketches" / f"ep{episode_num:03d}" / f"beat_{beat_num:02d}.png"
     return sketch if sketch.exists() else None
 
 
 def find_frame_for_beat(project_dir: Path, episode_num: int, beat_num: int) -> Path | None:
-    """查找 beat 对应的首帧文件。"""
+    """Find the first-frame file of a beat."""
     frame = project_dir / "frames" / f"ep{episode_num:03d}" / f"beat_{beat_num:02d}.png"
     return frame if frame.exists() else None

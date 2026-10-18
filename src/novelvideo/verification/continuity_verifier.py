@@ -1,4 +1,4 @@
-"""连贯性评估。"""
+"""Continuity evaluation."""
 
 import logging
 import time
@@ -32,7 +32,7 @@ class ContinuityVerifier:
                 output_type=ContinuityResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="分镜连贯性审核员",
+                name="Storyboard continuity reviewer",
             )
         return self._agent
 
@@ -75,13 +75,13 @@ class ContinuityVerifier:
                 safe_desc = sanitize_prompt_input(beat_data.get("visual_description", ""))
                 scene_id = sanitize_prompt_input(beat_scene_id(beat_data))
                 desc_lines.append(
-                    f"Beat {beat_num}: {safe_desc}" + (f" [场景: {scene_id}]" if scene_id else "")
+                    f"Beat {beat_num}: {safe_desc}" + (f" [Scene: {scene_id}]" if scene_id else "")
                 )
 
             task = (
-                f"检查以下 {len(window)} 个连续 beat 的叙事连贯性:\n"
+                f"Check the narrative continuity of the following {len(window)} consecutive beats:\n"
                 + "\n".join(desc_lines)
-                + "\n\n以下图片按 beat 顺序排列。"
+                + "\n\nThe images below are arranged in beat order."
             )
             prompt_parts: list = [task]
             for beat_num, sketch_path, _ in window:

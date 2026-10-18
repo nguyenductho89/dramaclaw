@@ -1,4 +1,4 @@
-"""小说上传 & 导入端点。"""
+"""Novel upload & import endpoints."""
 
 import logging
 import os
@@ -125,10 +125,10 @@ async def get_ingest_knowledge_graph(
 
 
 def _unsupported_format_response(filename: str) -> dict:
-    suffix = Path(filename).suffix.lower() or "无扩展名"
+    suffix = Path(filename).suffix.lower() or "no extension"
     return {
         "ok": False,
-        "error": f"不支持的文件类型: {suffix}，当前支持: {supported_novel_extensions_label()}",
+        "error": f"Unsupported file type: {suffix}. Currently supported: {supported_novel_extensions_label()}",
         "error_type": "unsupported",
     }
 
@@ -145,7 +145,7 @@ def _file_too_large_response(
     limit_label = _format_file_size_limit(limit_bytes)
     return {
         "ok": False,
-        "error": f"文件超过 {limit_label} 上限，请压缩文件或拆分正文后重新上传。",
+        "error": f"The file exceeds the {limit_label} limit. Compress the file or split the body text and upload again.",
         "error_type": "file_too_large",
         "data": {"limit_bytes": limit_bytes},
     }
@@ -155,8 +155,8 @@ def _text_too_large_response(actual_chars: int) -> dict:
     return {
         "ok": False,
         "error": (
-            f"正文共 {actual_chars:,} 字，超过单次导入上限 "
-            f"{MAX_NOVEL_IMPORT_CHARS:,} 字。请拆分后重新上传。"
+            f"The body text has {actual_chars:,} characters, exceeding the single-import limit of "
+            f"{MAX_NOVEL_IMPORT_CHARS:,} characters. Split it and upload again."
         ),
         "error_type": "text_too_large",
         "data": {
@@ -182,7 +182,7 @@ def _upload_novel_sync(
 
     safe_name = sanitize_upload_filename(filename)
     if not is_safe_upload_target(uploads_dir, safe_name):
-        return {"ok": False, "error": "非法文件名"}
+        return {"ok": False, "error": "Invalid file name"}
     if not is_supported_novel_path(safe_name):
         return _unsupported_format_response(safe_name)
     dest = uploads_dir / safe_name
@@ -224,7 +224,7 @@ def _upload_novel_sync(
             )
             return {
                 "ok": False,
-                "error": f"解析章节失败: {exc}",
+                "error": f"Failed to parse chapters: {exc}",
                 "error_type": "parse",
                 "format": exc.source_format,
                 "detail": str(exc),
@@ -233,7 +233,7 @@ def _upload_novel_sync(
             logger.warning(
                 "[%s] failed to build chapter preview", project, exc_info=True
             )
-            return {"ok": False, "error": "解析章节失败"}
+            return {"ok": False, "error": "Failed to parse chapters"}
 
         has_chapters = bool(preview.get("chapters"))
         format_check = build_import_format_check(
@@ -244,7 +244,7 @@ def _upload_novel_sync(
         if not has_chapters:
             return {
                 "ok": False,
-                "error": "解析章节失败: 未检测到有效章节内容",
+                "error": "Failed to parse chapters: no valid chapter content detected",
                 "format_check": format_check,
             }
 
@@ -254,7 +254,7 @@ def _upload_novel_sync(
             logger.exception(
                 "[%s] failed to persist uploaded novel: %s", project, safe_name
             )
-            return {"ok": False, "error": "保存上传文件失败"}
+            return {"ok": False, "error": "Failed to save the uploaded file"}
 
         data.update(preview)
         data["format_check"] = format_check
@@ -278,7 +278,7 @@ async def upload_novel(
     spine_template: Annotated[str | None, Form()] = None,
     user: dict = Depends(get_api_user),
 ):
-    """上传小说文件到项目的 uploads/ 目录。"""
+    """Upload a novel file to the project's uploads/ directory."""
     logger.info("[%s] upload_novel: %s", project, file.filename)
     resolved = await resolve_project_scope(project, user, required_role="editor")
     return await _run_ingest_upload_operation(
@@ -296,7 +296,7 @@ async def upload_novel(
 async def start_ingest(
     project: str, body: IngestStart, user: dict = Depends(require_scope("tasks:submit"))
 ):
-    """触发小说导入（构建知识图谱）。"""
+    """Trigger novel import (build the knowledge graph)."""
     logger.info("[%s] start_ingest: %s (rebuild=%s)", project, body.filename, body.rebuild)
     resolved = await resolve_project_scope(project, user, required_role="editor")
     ctx = resolved.ctx
@@ -304,7 +304,7 @@ async def start_ingest(
     uploads_dir = project_dir / "uploads"
     safe_name = sanitize_upload_filename(body.filename)
     if safe_name != body.filename or not is_safe_upload_target(uploads_dir, safe_name):
-        return {"ok": False, "error": "非法文件名"}
+        return {"ok": False, "error": "Invalid file name"}
     if not is_supported_novel_path(safe_name):
         return _unsupported_format_response(safe_name)
     novel_path = uploads_dir / safe_name
@@ -322,7 +322,7 @@ async def start_ingest(
                 shutil.copy2(imported_novel_path, novel_path)
             except OSError:
                 logger.exception("[%s] failed to preserve legacy novel source", project)
-                return {"ok": False, "error": "无法保存历史原文，请重新上传后再导入"}
+                return {"ok": False, "error": "Cannot save the historical source text. Upload again and then import"}
 
     if not novel_path.exists():
         return {"ok": False, "error": f"File '{body.filename}' not found in uploads/"}
@@ -332,7 +332,7 @@ async def start_ingest(
             return _file_too_large_response(MAX_NOVEL_IMPORT_BYTES)
     except OSError:
         logger.warning("[%s] failed to stat uploaded novel", project, exc_info=True)
-        return {"ok": False, "error": "无法读取上传文件，请重新上传后再导入"}
+        return {"ok": False, "error": "Cannot read the uploaded file. Upload again and then import"}
 
     try:
         content = load_novel_text(novel_path)
@@ -342,7 +342,7 @@ async def start_ingest(
     except DocumentParseError as exc:
         return {
             "ok": False,
-            "error": f"解析章节失败: {exc}",
+            "error": f"Failed to parse chapters: {exc}",
             "error_type": "parse",
             "format": exc.source_format,
             "detail": str(exc),
@@ -353,7 +353,7 @@ async def start_ingest(
             project,
             exc_info=True,
         )
-        return {"ok": False, "error": "解析章节失败"}
+        return {"ok": False, "error": "Failed to parse chapters"}
 
     current_project_config = load_project_config_file_from_state_dir(resolved.state_dir)
     requested_spine_template = str(
@@ -413,7 +413,7 @@ async def start_ingest(
     project_config_updates = {"ingest_source_filename": safe_name}
     if body.spine_template is not None:
         if not body.rebuild:
-            return {"ok": False, "error": "项目类型只能在重新导入时修改"}
+            return {"ok": False, "error": "The project type can only be changed when re-importing"}
         project_config_updates.update(
             {
                 "spine_template": body.spine_template,
@@ -447,7 +447,7 @@ async def start_ingest(
             "task_key": project_task_state_key("ingest_fast", ctx.project_id, 0),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"导入任务已进入队列: {safe_name}",
+            "message": f"Import task queued: {safe_name}",
         }
 
-    return {"ok": False, "error": "导入需要 project context"}
+    return {"ok": False, "error": "Import requires a project context"}

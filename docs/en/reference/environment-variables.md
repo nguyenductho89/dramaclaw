@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/reference/environment-variables.md)
-
 # Environment Variables Reference
 
 > Configuration is injected through a `.env` file in the project root (copied from `.env.example`). **`.env.example` is the authoritative, complete set with per-item comments**; this page groups the most commonly used variables and their defaults by category for quick reference.
@@ -81,4 +78,4 @@ See the [telemetry notes](../guides/telemetry.md) for details. By default none o
 ## Related
 
 - Full list with comments: `.env.example` in the repo root
-- [Quickstart](../getting-started/quickstart.md) ｜ [Configuring Model Providers](../getting-started/configuring-models.md) ｜ [Self-Hosting Manual](../guides/self-hosting.md)
+- [Quickstart](../getting-started/quickstart.md) | [Configuring Model Providers](../getting-started/configuring-models.md) | [Self-Hosting Manual](../guides/self-hosting.md)

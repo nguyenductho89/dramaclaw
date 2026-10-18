@@ -41,8 +41,8 @@ export const EXPORT_RESULT_NODE_DEFAULT_WIDTH = 480;
 export const EXPORT_RESULT_NODE_LAYOUT_HEIGHT = 360;
 export const EXPORT_RESULT_NODE_MIN_WIDTH = 300;
 export const EXPORT_RESULT_NODE_MIN_HEIGHT = 300;
-// 缩放下限刻意小于创建/紧凑尺寸，否则节点缩不到比初始更小（配合 keepAspectRatio
-// 时短边为绑定约束，按比例换算后宽屏/竖屏都能缩到一个一致的小框）。
+// The resize lower bound is deliberately smaller than the creation/compact size, otherwise a node cannot shrink below its initial size (with keepAspectRatio
+// the short side is the binding constraint, and after ratio conversion landscape/portrait both shrink to a consistent small box).
 export const EXPORT_RESULT_NODE_RESIZE_MIN_EDGE = 140;
 
 export const IMAGE_SIZES = ['0.5K', '1K', '2K', '4K'] as const;
@@ -69,27 +69,26 @@ export interface NodeDisplayData {
    */
   workflowActionRunning?: boolean;
   workflowActionStartedAt?: number | null;
-  /** 关键元素分类：用户把该节点标记为关键元素并归类（见 domain/keyElements）。
-   *  纯展示元数据、画布级持久化、工作流侧不读——未标记为 undefined/null。 */
+  /** Key element category: the user marks this node as a key element and categorizes it (see domain/keyElements).
+   *  Display-only metadata, persisted at canvas level, not read by the workflow side - undefined/null when unmarked. */
   keyElementCategory?: KeyElementCategory | null;
-  /** 未命名节点的自动序号：新建时写入，默认名后拼上它（「文本1」「文本2」…），
-   *  避免同类型节点重名。用户改了 displayName 后这个序号就不再露出。
-   *  见 domain/nodeDisplay 的 getDefaultNodeDisplayName / nextAutoTitleIndex。 */
+  /** Auto sequence number for unnamed nodes: written at creation and appended to the default name ("Text 1", "Text 2"...),
+   *  avoiding duplicate names among nodes of the same type. Once the user edits displayName this number is no longer shown.
+   *  See getDefaultNodeDisplayName / nextAutoTitleIndex in domain/nodeDisplay. */
   autoTitleIndex?: number;
   /**
-   * 节点被创建出来的时刻（epoch ms），由 nodeFactory 落，之后没人改。
+   * The moment the node was created (epoch ms), written by nodeFactory and never changed afterwards.
+   * Unlike `generationStartedAt`, this field is **persistent**: the latter is written back to
+   * null after each generation pipeline finishes and exists only during the tens of seconds of spinning, leaving nothing afterwards. The sidebar outline relies on this field to tell
+   * apart same-named nodes from "generating the same prompt three times", so the generation flow must never touch it.
    *
-   * 和 `generationStartedAt` 的区别是这个字段**持久**：后者每条生成链路跑完都会写回
-   * null，只在转圈那几十秒里存在，事后回头看什么都不剩。侧栏大纲靠这个字段区分
-   * 「同一条提示词生成三次」的重名节点，所以它绝对不能被生成流程碰。
-   *
-   * 老画布里的节点没有这个字段（加字段之前存的），读的时候要当 undefined 处理。
+   * Nodes in old canvases (saved before the field was added) lack it and must be treated as undefined when read.
    */
   createdAt?: number | null;
   /**
-   * 跨项目粘贴带进来的节点在素材拷进本项目之前 / 失败之后的标记（见
-   * application/crossProjectAssets）。`'copying'` 期间媒体字段一律为 null——源项目的
-   * URL 不会出现在 store 或落库数据里；填回目标项目地址后字段即摘除。
+   * Marker for nodes brought in by a cross-project paste, before the assets are copied into this project / after a failure (see
+   * application/crossProjectAssets). While `'copying'` the media fields are always null - the source project's
+   * URL never appears in the store or persisted data; the field is removed once the target project address is filled in.
    */
   assetMigration?: 'copying' | 'failed';
   [key: string]: unknown;
@@ -134,9 +133,9 @@ export interface VideoNodeData extends NodeDisplayData {
   videoUrl: string | null;
   previewImageUrl?: string | null;
   /**
-   * 节点被作为「上游视频引用素材」使用（例如脚本节点 spawn 出来的）。
-   * 此时只显示视频本体 + 顶部 toolbar（剪辑/高清/解析/...），
-   * 不渲染底部生成操作面板（Mode tabs / prompt / 提交）。
+   * The node is used as an "upstream video reference asset" (e.g. spawned by a script node).
+   * Only the video itself + the top toolbar (edit/upscale/parse/...) are shown,
+   * and the bottom generation panel (mode tabs / prompt / submit) is not rendered.
    */
   referenceOnly?: boolean;
   aspectRatio: string;
@@ -154,7 +153,7 @@ export interface VideoNodeData extends NodeDisplayData {
   isClipMode?: boolean;
   clipStartMs?: number | null;
   clipEndMs?: number | null;
-  // subtitle erase (libtv-style 智能去字幕) ----------------------------------
+  // subtitle erase (libtv-style smart subtitle removal) ----------------------------------
   /** `smart` = auto-estimate bottom subtitle band; `box` = user-drawn region. */
   subtitleEraseMode?: 'smart' | 'box' | null;
   /** Box coords normalized 0..1 against the source frame. Only set in 'box' mode. */
@@ -162,9 +161,9 @@ export interface VideoNodeData extends NodeDisplayData {
   // generation fields (libtv-style operation panel)
   prompt?: string;
   /**
-   * 生成数量 > 1 时一次生成的全部结果 URL（含主视频）。节点收拢时渲染成
-   * 叠卡画册（同图片节点），videoUrl 始终等于其中被选为主视频的那条。
-   * 单条生成时为空。
+   * All result URLs (including the main video) when generation count > 1. When collapsed the node renders as
+   * a stacked-card album (same as the image node); videoUrl always equals the one chosen as the main video.
+   * Empty for single generation.
    */
   generationBatch?: string[] | null;
   genMode?: VideoGenMode;
@@ -174,19 +173,19 @@ export interface VideoNodeData extends NodeDisplayData {
   generateAudio?: boolean;
   modelParams?: Record<string, unknown>;
   /**
-   * 真人素材审核开关。仅 Seedance 2.0 视频模型展示。开启后请求体里
-   * `human_review: true`，素材含真实人脸时降低被拦截概率（不保证通过、可能增加审核时间）。
-   * 默认 false / 不展示时不发送。
+   * Real-person asset review switch. Shown only for Seedance 2.0 video models. When enabled the request body carries
+   * `human_review: true`, lowering the chance of being blocked when assets contain real faces (no guarantee of passing; review may take longer).
+   * Not sent when default false / not shown.
    */
   humanReview?: boolean;
   sceneOptimize?: Seedance2SceneOptimize;
   count?: VideoGenCount;
-  /** id of a [[cameraMovementPresets]] entry — libtv-style 运镜 preset. */
+  /** id of a [[cameraMovementPresets]] entry — libtv-style camera movement preset. */
   cameraMovement?: string | null;
   /**
-   * 用户手动拖拽调整后的上游引用顺序(上游节点 id 列表)。决定参考 chips 的展示顺序、
-   * 「图片N / 音频N」编号,以及提交给后端的 reference/首尾帧 顺序。未列入的上游节点
-   * (如新接入的)排在其后,按节点 y 坐标兜底。
+   * Upstream reference order manually adjusted by dragging (list of upstream node ids). Decides the display order of reference chips,
+   * the "Image N / Audio N" numbering, and the reference / first-last-frame order submitted to the backend. Upstream nodes not listed
+   * (e.g. newly connected) come after, falling back to the node y coordinate.
    */
   referenceOrder?: string[];
   /** Uploaded document reference for all-reference generation. */
@@ -198,58 +197,58 @@ export interface VideoNodeData extends NodeDisplayData {
   generationStartedAt?: number | null;
   generationDurationMs?: number;
   generationError?: string | null;
-  // 视频高清（upscale）标记 ----------------------------------------------------
-  // 视频节点「高清」操作 spawn 的视频节点带这些字段：复用 video 节点的播放器 / 角标 /
-  // 尺寸（与普通视频节点一致），但用 isUpscaleNode 抑制底部生成面板，改走选中时常驻的
-  // VideoUpscaleEditorOverlay（提交 submitFreezoneVideoUpscale，高清结果回写到本节点
-  // videoUrl）。
-  /** 标记此视频节点是「视频高清」节点（参数面板 + upscale 提交，而非常规生成）。 */
+  // Video upscale markers ----------------------------------------------------
+  // Video nodes spawned by a video node's "Upscale" action carry these fields: they reuse the video node's player / badge /
+  // size (same as plain video nodes), but isUpscaleNode suppresses the bottom generation panel and uses the
+  // VideoUpscaleEditorOverlay that stays while selected instead (submitting submitFreezoneVideoUpscale; the upscale result is written back to this node's
+  // videoUrl).
+  /** Marks this video node as a "video upscale" node (parameter panel + upscale submission, not regular generation). */
   isUpscaleNode?: boolean;
-  /** 待高清的上游视频静态地址。 */
+  /** Static address of the upstream video to upscale. */
   upscaleSourceUrl?: string;
-  /** 目标清晰度档位。 */
+  /** Target resolution tier. */
   upscaleResolution?: '1080p' | '2k' | '4k';
-  /** 降噪强度。 */
+  /** Denoise strength. */
   upscaleDenoise?: 'none' | '1x' | '2x';
   /**
-   * 故事板详情「剪辑」为该视频节点自身打开合成时间线时的草稿（关闭弹窗时写回，
-   * 重开/刷新后恢复）。语义与 {@link VideoComposeNodeData.draftTimeline} 一致，
-   * 结构为 `ComposeTimelineState`，这里存 unknown 以免领域层反向依赖 compose 特性层。
+   * Draft timeline when the storyboard detail "Edit" opens the compose timeline for this video node itself (written back when the dialog closes,
+   * restored on reopen/refresh). Same semantics as {@link VideoComposeNodeData.draftTimeline},
+   * structured as `ComposeTimelineState`; stored as unknown here so the domain layer does not depend back on the compose feature layer.
    */
   draftTimeline?: unknown;
-  /** 目标帧率；auto 保持源帧率。 */
+  /** Target frame rate; auto keeps the source frame rate. */
   upscaleTargetFps?: 'auto' | 30 | 60 | 90;
-  /** 慢放倍率；auto 保持原速。 */
+  /** Slow-motion factor; auto keeps the original speed. */
   upscaleSlowdown?: 'auto' | '2x';
-  /** 帧率调整时是否启用智能插帧。 */
+  /** Whether to enable smart frame interpolation when adjusting the frame rate. */
   upscaleSmartInterpolation?: boolean;
-  /** 源视频场景类型。 */
+  /** Scene type of the source video. */
   upscaleScene?: 'realistic' | 'anime';
-  /** 是否启用人脸专项增强。 */
+  /** Whether to enable dedicated face enhancement. */
   upscaleFaceEnhance?: boolean;
   [key: string]: unknown;
 }
 
 /**
- * 「视频合成」节点。把 ≥2 个上游视频节点（可选音频节点）连进来后，打开 libtv 风格
- * 的时间线剪辑器（{@link VideoComposeModal}）编排导出。最终合成走后端
- * `submitFreezoneVideoCompose`，导出地址回写到 `resultVideoUrl`。
+ * "Video compose" node. After >= 2 upstream video nodes (optionally audio nodes) are connected, opens a libtv-style
+ * timeline editor ({@link VideoComposeModal}) to arrange and export. The final compose goes through the backend
+ * `submitFreezoneVideoCompose`, and the export address is written back to `resultVideoUrl`.
  */
 export interface VideoComposeNodeData extends NodeDisplayData {
-  /** 最近一次合成导出的视频 url。 */
+  /** The video url of the latest compose export. */
   resultVideoUrl?: string | null;
-  /** 结果视频的封面（暂未生成时为空）。 */
+  /** Cover of the result video (empty while not yet generated). */
   previewImageUrl?: string | null;
-  /** 上次使用的导出分辨率。 */
+  /** The export resolution used last time. */
   resolution?: '720p' | '1080p';
   /**
-   * 合成编辑器的草稿时间线（关闭弹窗时写回，重开/刷新后恢复）。结构为
-   * `ComposeTimelineState`，这里存 unknown 以免领域层反向依赖 compose 特性层。
+   * Draft timeline of the compose editor (written back when the dialog closes, restored on reopen/refresh). Structured as
+   * `ComposeTimelineState`; stored as unknown here so the domain layer does not depend back on the compose feature layer.
    */
   draftTimeline?: unknown;
   /**
-   * 动态工作流声明的合成输入顺序。值为 workflowPlanNodeId，而非画布 UUID；
-   * 前端据此恢复镜头语义顺序，避免把布局位置当作播放顺序。
+   * Compose input order declared by the dynamic workflow. Values are workflowPlanNodeId, not canvas UUIDs;
+   * the frontend uses it to restore the shot-semantic order, avoiding treating layout position as playback order.
    */
   compositionInputOrder?: string[];
   [key: string]: unknown;
@@ -269,11 +268,11 @@ export interface ExportImageNodeData extends NodeImageData {
 
 export interface GroupNodeData extends NodeDisplayData {
   label: string;
-  /** 组背景色（基础 hex，见 groupColors.ts）。空/缺省走默认底色。 */
+  /** Group background color (base hex, see groupColors.ts). Empty/absent uses the default base color. */
   backgroundColor?: string | null;
   /**
-   * Marks a group created via "合并分镜组" — its members are laid out as an
-   * ordered shot (分镜) grid (宫格). Plain "打组" groups leave this unset.
+   * Marks a group created via "Merge storyboard group" — its members are laid out as an
+   * ordered shot grid. Plain "Group" groups leave this unset.
    */
   storyboardGroup?: boolean;
   /** Cell aspect ratio key for the storyboard grid, e.g. "16:9". */
@@ -292,16 +291,16 @@ export type TextNodeMode =
   | 'writing'
   | 'textToVideo'
   | 'imageToPrompt'
-  // textToMusic: 历史命名,实为「克隆音频」(语音克隆 TTS),派生语音音频节点。
+  // textToMusic: a historical name that actually means "clone audio" (voice-cloning TTS), deriving a speech audio node.
   | 'textToMusic'
-  // textToMusicGen: 「文字生成音乐」,派生 audioKind='music' 的音频节点(走 /freezone/audio/music)。
+  // textToMusicGen: "text to music", deriving an audio node with audioKind='music' (via /freezone/audio/music).
   | 'textToMusicGen';
 
 export interface TextAnnotationNodeData extends NodeDisplayData {
   content: string;
   /**
-   * 节点被作为「上游引用素材」使用（例如脚本节点 spawn 出来的）。
-   * 此时只显示编辑卡片，不渲染 mode 列表 / 模型选择 / 提交按钮。
+   * The node is used as an "upstream reference asset" (e.g. spawned by a script node).
+   * Only the edit card is shown; the mode list / model selection / submit button are not rendered.
    */
   referenceOnly?: boolean;
   /**
@@ -313,13 +312,13 @@ export interface TextAnnotationNodeData extends NodeDisplayData {
   mode?: TextNodeMode;
   model?: string;
   /**
-   * 用户已从能力 picker 选过一次（如「文字生成音乐」派生了下游音频节点）。
-   * 置真后该文本节点恒为纯文本编辑区，空内容时也不再退回显示「试试」picker。
+   * The user has already chosen once from the capability picker (e.g. "text to music" derived a downstream audio node).
+   * When true this text node is always a plain-text editing area, and no longer falls back to the "Try" picker when empty.
    */
   pickerDismissed?: boolean;
   extraParams?: Record<string, unknown>;
   isGenerating?: boolean;
-  /** 反推提示词等异步任务的开始时间戳，喂给生成中 loading 覆盖层模拟进度。 */
+  /** Start timestamp of async tasks such as reverse-prompt, feeding the generating loading overlay's simulated progress. */
   generationStartedAt?: number | null;
   [key: string]: unknown;
 }
@@ -358,7 +357,7 @@ export interface ImageEditNodeData extends NodeImageData {
   requestAspectRatio?: string;
   generationMode?: 'text_to_image' | 'image_to_image' | 'all_reference' | 'image_reference';
   extraParams?: Record<string, unknown>;
-  /** 后台「媒体模型」目录声明的动态参数取值，提交时作为 `model_params` 上送。 */
+  /** Dynamic parameter values declared by the backend "media model" catalog, sent as `model_params` on submit. */
   modelParams?: Record<string, unknown>;
   capabilityId?: string;
   capabilityParams?: Record<string, unknown>;
@@ -403,9 +402,9 @@ export interface ImageGenNodeData extends NodeImageData {
   model: string;
   size: ImageSize;
   /**
-   * 生成数量 > 1 时一次生成的全部结果 URL（含主图）。节点收拢时渲染成
-   * 叠卡画册（卡片边缘从主图后探出），imageUrl 始终等于其中被选为主图
-   * 的那张。单张生成时为空。
+   * All result URLs (including the main image) when generation count > 1. When collapsed the node renders as a
+   * stacked-card album (cards peek out from behind the main image), and imageUrl always equals the one
+   * chosen as the main image. Empty for single-image generation.
    */
   generationBatch?: string[] | null;
   /** Quality preset for image2 models; defaults to 'medium' when unset. */
@@ -419,14 +418,14 @@ export interface ImageGenNodeData extends NodeImageData {
   /** User-uploaded reference image, fed into the generation request. */
   referenceImageUrl?: string | null;
   /**
-   * 故事板「功能」节点：在图片详情里点了某个一图流功能（宫格模板 / 全景 /
-   * 多角度 / 打光）后建出来的空节点带这个 key，输入框里显示成可关闭的功能 chip，
-   * ↑ 提交时走对应能力而不是常规文生图。值域见 application/assetBoardImageOps 的
-   * `AssetBoardImageOpKey`（这里不 import，domain 不依赖 application）。
-   * 清空（关掉 chip）后节点退化为普通图片生成节点。
+   * Storyboard "feature" node: the empty node built after clicking a one-image feature in the image detail (grid template / panorama /
+   * multi-angle / lighting) carries this key; the input box shows it as a closable feature chip,
+   * and submitting with the up button goes through the matching capability instead of regular text-to-image. For the value domain see `AssetBoardImageOpKey` in
+   * application/assetBoardImageOps (not imported here, the domain does not depend on application).
+   * After it is cleared (chip closed) the node degrades to a plain image generation node.
    */
   imageOpKey?: string | null;
-  /** 功能节点的源图 URL（= 点功能时那张图），提交时作为 source_url 下发。 */
+  /** Source image URL of a feature node (= the image when the feature was clicked), sent as source_url on submit. */
   imageOpSourceUrl?: string | null;
   /** Present/mainline workflow nodes can auto-commit their generated image to slot_target. */
   autoCommitOnGenerate?: boolean;
@@ -492,7 +491,7 @@ export interface StoryboardGenNodeData {
   size: ImageSize;
   requestAspectRatio: string;
   extraParams?: Record<string, unknown>;
-  /** 后台「媒体模型」目录声明的动态参数取值，提交时作为 `model_params` 上送。 */
+  /** Dynamic parameter values declared by the backend "media model" catalog, sent as `model_params` on submit. */
   modelParams?: Record<string, unknown>;
   imageUrl: string | null;
   previewImageUrl?: string | null;
@@ -509,9 +508,9 @@ export type AudioTextSegment =
   | { type: 'filler'; token: string };
 
 /**
- * 后端 freezone-audio 声线引用：scope 必填，character_name / identity_id / slot
- * 视 scope 而定。与 ops.ts 中的 `FreezoneAudioVoiceRef` 同构，但这里保留前端
- * 自带的 camelCase 字段，避免节点数据被序列化为 snake_case。
+ * Backend freezone-audio voice reference: scope is required, while character_name / identity_id / slot
+ * depend on scope. Isomorphic with `FreezoneAudioVoiceRef` in ops.ts, but the frontend keeps its own
+ * camelCase fields here so node data is not serialized as snake_case.
  */
 export interface AudioVoiceRef {
   scope:
@@ -524,7 +523,7 @@ export interface AudioVoiceRef {
   characterName?: string;
   identityId?: string;
   slot?: string;
-  /** scope=user_custom 时必填：账号级我的音色 ID（来自 /freezone/audio/voices）。 */
+  /** Required when scope=user_custom: account-level "my voice" ID (from /freezone/audio/voices). */
   voiceId?: string;
 }
 
@@ -534,50 +533,50 @@ export interface AudioNodeData extends NodeDisplayData {
   durationMs?: number | null;
   isUploading?: boolean;
   /**
-   * 音频节点的生成类型：
-   * - 'speech'(默认/缺省)：克隆音频,文本转语音(/freezone/audio/speech),用 voiceRef/语气词。
-   * - 'music'：文字生成音乐(/freezone/audio/eleven-music),用 text 作为音乐描述 prompt。
+   * Generation type of the audio node:
+   * - 'speech' (default/absent): clone audio, text to speech (/freezone/audio/speech), using voiceRef/tone words.
+   * - 'music': text to music (/freezone/audio/eleven-music), using text as the music description prompt.
    */
   audioKind?: 'speech' | 'music';
   /**
-   * speech 模式的音色来源：
-   * - preset：系统音色，直接文生语音，不需要参考音频。
-   * - clone：项目/角色/账号声线，需要已有参考音频。
+   * Voice source in speech mode:
+   * - preset: system voice, direct text-to-speech, no reference audio needed.
+   * - clone: project/character/account voice, needs existing reference audio.
    */
   speechMode?: 'preset' | 'clone';
   presetVoice?: string;
   presetModel?: string;
   /** New/converted nodes use explicit voice selection; absent on historical canvas nodes. */
   voicePolicyConfirmed?: boolean;
-  /** music 模式：生成长度(毫秒),范围 3000–600000,缺省按后端默认 30000。 */
+  /** music mode: generation length (ms), range 3000-600000, defaulting to the backend default 30000 when absent. */
   musicLengthMs?: number;
-  /** music 模式：是否强制纯音乐(force_instrumental),缺省 true。 */
+  /** music mode: whether to force instrumental (force_instrumental), default true when absent. */
   forceInstrumental?: boolean;
-  /** music 模式：是否严格遵守音乐段落时长策略(respect_sections_durations),缺省 true。 */
+  /** music mode: whether to strictly follow the music section duration policy (respect_sections_durations), default true when absent. */
   respectSectionsDurations?: boolean;
   // operations panel (TTS) ---------------------------------------------------
-  /** 要合成的纯文本。新字段，未来主用。 */
+  /** Plain text to synthesize. New field, the main one going forward. */
   text?: string;
-  /** 旧字段：分段编辑器留下的 segments；保留只为兼容老节点数据。 */
+  /** Legacy field: segments left by the segment editor; kept only for compatibility with old node data. */
   segments?: AudioTextSegment[];
   /**
-   * 语气词（情绪提示词）。用户自由输入，提交时映射到后端 `emotion_prompt`。
-   * 示例："紧张、压低声音、带一点恐惧感"。留空时后端按项目解说风格走默认。
+   * Tone words (emotion prompt). Free user input, mapped to the backend `emotion_prompt` on submit.
+   * Example: "tense, hushed, with a hint of fear". When empty the backend uses the project's narration style default.
    */
   emotionPrompt?: string;
-  /** 选中的声线引用（freezone-audio references 接口里的一条记录）。 */
+  /** The selected voice reference (a record from the freezone-audio references endpoint). */
   voiceRef?: AudioVoiceRef | null;
-  /** 最近一次声线列表加载是否确认至少存在一条可用声线；缺省表示尚未确认。 */
+  /** Whether the latest voice list load confirmed at least one usable voice; absent means not yet confirmed. */
   voiceAvailable?: boolean;
-  /** 当前声线的展示名（缓存自 references 接口，避免每次选完都要重新拉列表）。 */
+  /** Display name of the current voice (cached from the references endpoint, avoiding a reload of the list after each selection). */
   voiceLabel?: string;
-  /** 当前声线的语言标签（来自 references；可空）。 */
+  /** Language label of the current voice (from references; may be empty). */
   voiceLanguage?: string;
   isGenerating?: boolean;
   generationStartedAt?: number | null;
   /**
-   * 生成失败信息。持久化到节点数据（而非面板本地 state），这样画布虚拟化
-   * 卸载/重挂后仍能展示错误 + 重试，不会因组件重建而丢失。成功/开始时清空。
+   * Generation failure info. Persisted into node data (not panel-local state), so after canvas virtualization
+   * unmount/remount the error + retry can still be shown and is not lost when components are rebuilt. Cleared on success/start.
    */
   generationError?: string | null;
   /** Transient: which format the download menu is currently transcoding to. */
@@ -586,37 +585,37 @@ export interface AudioNodeData extends NodeDisplayData {
 }
 
 export interface VideoStoryRow {
-  /** 镜号 — 1-based shot index, optional because some payloads only sequence rows by array order. */
+  /** Shot number — 1-based shot index, optional because some payloads only sequence rows by array order. */
   shotNumber?: number | string | null;
-  /** 开始时间 (HH:MM:SS or seconds, kept as string for display flexibility). */
+  /** Start time (HH:MM:SS or seconds, kept as string for display flexibility). */
   startTime?: string | null;
-  /** 结束时间. */
+  /** End time. */
   endTime?: string | null;
-  /** 时长 (e.g. "1.2s"). */
+  /** Duration (e.g. "1.2s"). */
   duration?: string | null;
-  /** 画面描述. */
+  /** Visual description. */
   visualDescription?: string | null;
-  /** 叙事内容. */
+  /** Narrative content. */
   narrative?: string | null;
-  /** 景别. */
+  /** Shot size. */
   shotSize?: string | null;
-  /** 摄影机角度. */
+  /** Camera angle. */
   cameraAngle?: string | null;
-  /** 摄影机运动. */
+  /** Camera movement. */
   cameraMovement?: string | null;
-  /** 焦距与景深. */
+  /** Focal length and depth of field. */
   focalAndDof?: string | null;
-  /** 光线. */
+  /** Lighting. */
   lighting?: string | null;
-  /** 背景音乐. */
+  /** Background music. */
   backgroundMusic?: string | null;
-  /** 人声/音效. */
+  /** Vocals / sound effects. */
   voiceAndSfx?: string | null;
-  /** 图像生成提示词. */
+  /** Image generation prompt. */
   imagePrompt?: string | null;
-  /** 视频运动提示词. */
+  /** Video motion prompt. */
   videoMotionPrompt?: string | null;
-  /** 关键帧静态 URL. */
+  /** Static URL of the keyframe. */
   keyframeUrl?: string | null;
   /** Raw backend row kept around so we can render fields we didn't normalize. */
   raw?: Record<string, unknown>;
@@ -629,7 +628,7 @@ export interface VideoStoryNodeData extends NodeDisplayData {
   /** Last successful raw payload from the backend for debug/regen. */
   rawResult?: Record<string, unknown> | null;
   isAnalyzing?: boolean;
-  /** 解析开始时间戳,用于 loading 遮罩的进度百分比模拟。 */
+  /** Analysis start timestamp, used to simulate the progress percentage of the loading overlay. */
   analysisStartedAt?: number | null;
   analysisError?: string | null;
   [key: string]: unknown;
@@ -638,64 +637,63 @@ export interface VideoStoryNodeData extends NodeDisplayData {
 export type ScriptGenAction = 'fromScript' | 'fromVideoRef' | 'fromCharacter';
 
 export interface ScriptNodeData extends NodeDisplayData {
-  /** 操作区输入的剧情/参考说明文本 */
+  /** Story / reference description text entered in the operation area */
   prompt?: string;
-  /** 选中的脚本生成模型 id（前端写死，后端接口未提供） */
+  /** Id of the selected script generation model (hard-coded by the frontend, not provided by the backend API) */
   model?: string;
-  /** 用户最近一次点击的快捷动作（不影响提交，仅用于 UI 高亮 / 默认提示） */
+  /** The quick action the user clicked last (does not affect submission, only used for UI highlight / default hint) */
   lastAction?: ScriptGenAction | null;
-  /** 生成结果（freezone story-script 接口返回的 { title, rows[] }）。 */
+  /** Generation result ({ title, rows[] } returned by the freezone story-script endpoint). */
   scriptResult?: unknown;
-  /** 最近一次生成的标题，便于在节点头展示。 */
+  /** Title of the latest generation, convenient to show in the node header. */
   scriptTitle?: string | null;
   isGenerating?: boolean;
   generationStartedAt?: number | null;
   generationDurationMs?: number;
-  /** 最近一次生成失败的错误信息，渲染在节点本体上（提交面板取消选中后仍可见）。 */
+  /** Error message of the latest failed generation, rendered on the node body (still visible after the submit panel is deselected). */
   generationError?: string | null;
   [key: string]: unknown;
 }
 
 /**
- * 360° 全景查看器节点。
- *
- * 视图状态（viewYawDeg / viewPitchDeg）只是 Photo Sphere Viewer 渲染时的"当前
- * 视角"，不参与持久化（用户每次打开节点都会回到 yaw=0/pitch=0）。
- * 持久化的是"校正"参数：sphereCorrectionDeg 把贴图旋到水平，frontYawDeg 把
- * 渲染坐标系里的"正前方"对齐到场景的真正前方，fovDeg 是默认 FOV。
+ * 360 panorama viewer node.
+ * View state (viewYawDeg / viewPitchDeg) is only the "current view" when Photo Sphere Viewer renders,
+ * and does not take part in persistence (every time the user opens the node it returns to yaw=0/pitch=0).
+ * What is persisted are the "correction" parameters: sphereCorrectionDeg rotates the texture to horizontal, frontYawDeg aligns the
+ * "front" of the render coordinate system to the scene's real front, and fovDeg is the default FOV.
  */
 export interface Pano360ViewerNodeData extends NodeDisplayData {
   imageUrl: string | null;
   previewImageUrl?: string | null;
-  /** 上游连接节点 id，仅用作 audit。 */
+  /** Upstream connected node id, used only for audit. */
   sourceNodeId?: string | null;
-  /** 球面贴图校正（角度制，roll/pitch/yaw 都是 [-180, 180]，pitch 内部裁到 [-90, 90]）。 */
+  /** Sphere texture correction (in degrees, roll/pitch/yaw all in [-180, 180], pitch clamped internally to [-90, 90]). */
   sphereCorrectionDeg: { roll: number; pitch: number; yaw: number };
-  /** 场景里"正前方"对应的 yaw（角度制，[-180, 180]）。 */
+  /** The yaw corresponding to the scene's "front" (in degrees, [-180, 180]). */
   frontYawDeg: number;
-  /** 默认 FOV，单位°，范围 [FOV_MIN, FOV_MAX] = [5, 170]。 */
+  /** Default FOV, in degrees, range [FOV_MIN, FOV_MAX] = [5, 170]. */
   fovDeg: number;
-  /** 最后一次截图导出的 JSON，便于排错；非持久化生命周期。 */
+  /** JSON of the last screenshot export, for debugging; not part of the persisted lifecycle. */
   lastExportedEntry?: Record<string, unknown> | null;
   [key: string]: unknown;
 }
 
 /**
- * 3D 世界节点。图片上游走 freezone/image-to-3gs：普通图用 source_kind="master"，
- * 360 全景图用 source_kind="pano"。节点也可以直接把 360 图作为 pano360 source
- * 加入导演世界取景。生成完成后优先写 `sources`，`plyUrl`/`panoUrl` 继续作为
- * 节点本地快捷字段。
+ * 3D world node. Image upstreams go through freezone/image-to-3gs: plain images use source_kind="master",
+ * 360 panoramas use source_kind="pano". The node can also add a 360 image directly as a pano360 source
+ * for director-world framing. After generation completes `sources` is written first, with `plyUrl`/`panoUrl` remaining as
+ * the node's local shortcut fields.
  */
 export interface ThreeDWorldNodeData extends NodeDisplayData {
-  /** 用户提示词（操作面板下方输入）。 */
+  /** User prompt (entered below the operation panel). */
   prompt?: string;
-  /** 模型 id。模型当前未对接，前端写死为 'marble-1.1'。 */
+  /** Model id. The model is not integrated yet, so the frontend hard-codes 'marble-1.1'. */
   model?: string;
-  /** image-to-3gs 异步任务的 task_key，用于 await + UI 状态显示。 */
+  /** task_key of the image-to-3gs async task, used for await + UI state display. */
   taskKey?: string | null;
-  /** 后端 SHARP 跑完后返回的 3GS 包静态地址，优先 SOG，兼容旧 PLY。 */
+  /** Static address of the 3GS package returned after the backend SHARP run finishes; SOG preferred, old PLY still compatible. */
   plyUrl?: string | null;
-  /** 360 全景图作为世界 source 时使用；只能转向取景，不能做真实空间移动。 */
+  /** Used when a 360 panorama is a world source; it can only turn to frame, not move through real space. */
   panoUrl?: string | null;
   /** Director World sources, kept in manifest-native source shape. */
   sources?: DirectorWorldSource[];
@@ -705,28 +703,28 @@ export interface ThreeDWorldNodeData extends NodeDisplayData {
   scenesBySourceId?: Record<string, unknown>;
   /** Per-source object layers, mapped to manifest snake_case when supported. */
   layersBySourceId?: Record<string, DirectorObjectLayer>;
-  /** 来源节点 id，仅用于 audit。 */
+  /** Source node id, used only for audit. */
   sourceNodeId?: string | null;
-  /** 来源类型：image / text — 决定提交走哪条 API。 */
+  /** Source type: image / text — decides which API the submission goes through. */
   sourceKind?: 'image' | 'text' | null;
-  /** image-to-3gs 的来源类型（后端 source_kind 字段）：
-   * master/reverse 生成单面 3GS，pano 走 360 全景。默认 master。 */
+  /** Source type of image-to-3gs (the backend source_kind field):
+   * master/reverse generate a single-face 3GS, pano goes through the 360 panorama. Default master. */
   plyKind?: 'master' | 'reverse' | 'pano';
   isGenerating?: boolean;
   generationStartedAt?: number | null;
   generationDurationMs?: number;
-  /** 错误消息（提交或 task 失败时显示）。 */
+  /** Error message (shown when submission or the task fails). */
   errorMessage?: string | null;
   /**
-   * 节点缩略图。从素材库加入时灌入同场景的 scene image 作为封面；上游
-   * 图片节点连上后优先用上游图，没上游则回落到 previewImageUrl，再没有
-   * 才显示 Orbit 占位。
+   * Node thumbnail. When added from the asset library, the scene image of the same scene is filled in as the cover; once an upstream
+   * image node is connected the upstream image takes priority, with no upstream it falls back to previewImageUrl, and only when that is also absent
+   * is the Orbit placeholder shown.
    */
   previewImageUrl?: string | null;
   /**
-   * 3D viewer 内部编辑状态的快照（actors / props / staging + 相机视角）。
-   * 用户按 viewer sidebar 的「保存场景编辑」按钮时写入；下次进入 viewer 自动恢复。
-   * 结构是 viewer engine 自己定义的 `ThreeDSceneSnapshot`，对画布 store 透明。
+   * Snapshot of the 3D viewer's internal editing state (actors / props / staging + camera view).
+   * Written when the user presses the viewer sidebar's "Save scene edits" button; restored automatically on the next viewer entry.
+   * The structure is defined by the viewer engine itself as `ThreeDSceneSnapshot`, transparent to the canvas store.
    */
   scene?: unknown;
   [key: string]: unknown;
@@ -776,9 +774,9 @@ export interface HtmlArtifactNodeData extends NodeDisplayData {
 }
 
 /**
- * 画布上的「风格节点」：图片节点 `styleTemplateId` 在画布上的投影，本身不参与
- * 生成请求（提交时读的仍是下游图片节点的 `styleTemplateId`）。建/改/删由
- * [[styleNodeSync]] 的对账规则驱动，用户不能从菜单单独创建一个。
+ * "Style node" on the canvas: the projection of an image node's `styleTemplateId` onto the canvas; it does not take part in
+ * generation requests itself (submission still reads the downstream image node's `styleTemplateId`). Create/edit/delete are driven by
+ * the reconciliation rules of [[styleNodeSync]]; users cannot create one separately from a menu.
  */
 export interface StyleNodeData extends NodeDisplayData {
   styleTemplateId: string | null;
@@ -866,12 +864,12 @@ export function isExportImageNode(
 }
 
 /**
- * 「还没出图的高清放大结果节点」：`createUpscaleResultNode` 预建、用户还没按 ↑ 提交
- * （或任务尚未回填）的那种。
+ * "Upscale result node with no image yet": the kind pre-created by `createUpscaleResultNode`, where the user has not yet pressed up to submit
+ * (or the task has not yet filled back).
  *
- * 这类节点的 `previewImageUrl` 存的是**待放大的源图**，用来给编辑器当参照；但它不是
- * 这个节点的内容。谁把它当缩略图渲染出来，用户就会以为那已经是放大后的效果——所以
- * 凡是「这个节点长什么样 / 有没有素材可操作」的判断都要先问过这里，答案是没有。
+ * The `previewImageUrl` of such a node stores the **source image to be enlarged**, used as a reference for the editor; but it is not
+ * this node's content. If anyone renders it as a thumbnail, the user would think it is already the enlarged result - so
+ * every judgment about "what this node looks like / whether it has material to operate on" must ask here first, and the answer is no.
  */
 export function isPendingUpscaleNode(node: CanvasNode | null | undefined): boolean {
   if (!isExportImageNode(node)) return false;
@@ -1003,9 +1001,9 @@ export function nodeHasImage(node: CanvasNode | null | undefined): boolean {
 }
 
 // The single image an image-bearing node's toolbar/tools should act on.
-// imageGen has no generated result until the user hits 生成, but an uploaded
-// 参考图 (referenceImageUrl) is still the image shown on the node — operations
-// like 抠图 / 裁剪 / 分格抽取 should target it, matching ImageGenNode's previewUrl
+// imageGen has no generated result until the user hits Generate, but an uploaded
+// reference image (referenceImageUrl) is still the image shown on the node — operations
+// like matting / crop / cell extraction should target it, matching ImageGenNode's previewUrl
 // fallback order (imageUrl → previewImageUrl → referenceImageUrl).
 export function resolveNodeSourceImageUrl(
   node: CanvasNode | null | undefined

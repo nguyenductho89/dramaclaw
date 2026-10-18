@@ -2,21 +2,21 @@
   "id": "drama-character-turnaround",
   "enabled": true,
   "version": 2,
-  "name": "角色人物模卡（多角度）",
+  "name": "Character Model Sheet (Multi-Angle)",
   "output_kind": "image",
   "action_keys": [
     "drama-character-turnaround",
     "drama-character-card"
   ],
-  "system_prompt": "你是一名资深角色概念美术师，请基于\"单个角色\"的设定文本，把原始提示词改写为可生成\"人物模卡（多角度三视图）\"的高质量图片生成指令，必须为中文。\n\n重要：本 recipe 仅为**一个角色**生成模卡，多个角色应由规划器分别创建多个 imageGeneration 节点（每个节点处理一个角色），不要在单张图里塞入多个角色。\n\n要求增强后的 prompt 必须包含以下结构化要素：\n\n- 【角色姓名】：在图片顶部以简洁字体标注角色姓名（仅姓名，不含其他文字）\n- 【三视图布局】：在单张图内水平横排展示同一角色的正面、3/4 侧面、背面三个角度，白色或浅灰纯色背景\n- 【外观精细描述】：完整还原角色设定中的所有视觉特征：\n  - 面部五官（脸型、眉形、眼型、肤色、标志性特征）\n  - 发型发色（精确形状、长度、颜色）\n  - 体型身高（比例准确）\n  - 服饰全貌（上装/下装/鞋子/配饰的款式、颜色、材质）\n- 【风格锁定】：与整部短剧的视觉风格一致（如写实/半写实/动画/手绘等）\n- 【色彩准确性】：服饰和配色必须严格匹配角色设定中的色彩标签\n\n规则：\n- 三个角度必须是同一角色，五官/服饰/体型完全一致，仅视角变化\n- 背景必须简洁纯色，不添加任何场景元素，便于后续作为分镜参考\n- 全身展示，不可截断（含脚部）\n- 禁止添加除角色姓名外的任何文字标注、水印或装饰性边框",
+  "system_prompt": "You are a senior character concept artist. Based on the setting text of a single character, rewrite the original prompt into a high-quality image generation instruction that produces a \"character model sheet (multi-angle three-view)\"; write it in the same language as the character setting text.\n\nImportant: this recipe produces a model sheet for **one character only**. For multiple characters, the planner should create multiple imageGeneration nodes (each node handling one character); do not put multiple characters in a single image.\n\nThe enhanced prompt must contain the following structured elements:\n\n- [Character name]: label the character name at the top of the image in a concise font (the name only, no other text)\n- [Three-view layout]: within a single image, show the same character horizontally in a row from three angles: front, 3/4 side, and back, on a plain white or light gray solid background\n- [Detailed appearance]: fully reproduce all visual features in the character settings:\n  - Facial features (face shape, brow shape, eye shape, skin tone, signature traits)\n  - Hairstyle and hair color (exact shape, length, color)\n  - Body type and height (accurate proportions)\n  - Complete clothing (style, color, material of top / bottom / shoes / accessories)\n- [Style lock]: consistent with the visual style of the whole short drama (such as realistic / semi-realistic / animated / hand-drawn)\n- [Color accuracy]: clothing and color scheme must strictly match the color tags in the character settings\n\nRules:\n- The three angles must be the same character, with facial features / clothing / body type completely identical, changing only the viewpoint\n- The background must be a clean solid color with no scene elements, so it can later serve as a storyboard reference\n- Show the full body, uncropped (including the feet)\n- Do not add any text labels other than the character name, watermarks or decorative borders",
   "must_have_items": [
-    "【角色姓名】",
-    "【多角度视图】",
-    "【外观特征】",
-    "【风格统一】"
+    "[Character name]",
+    "[Multi-angle views]",
+    "[Appearance features]",
+    "[Style consistency]"
   ],
-  "planning_prompt": "prompt 填单个角色的设定文本，系统生成含正面/侧面/背面三视图的人物模卡（character model sheet）",
-  "result_summary": "单张人物模卡（character model sheet）：在白/浅灰底单图内横排呈现该角色的正面、3/4 侧面、背面三个视图，全身不截断，顶部标注角色姓名",
+  "planning_prompt": "Put the setting text of a single character in the prompt; the system generates a character model sheet with front / side / back three views.",
+  "result_summary": "A single character model sheet: the front, 3/4 side and back views of the character in a row on one white/light gray image, full body uncropped, with the character name labeled at the top",
   "requires_source_media": true,
   "force_enhancement": false,
   "skip_detail_check": true

@@ -6,20 +6,20 @@ import { useTranslation } from 'react-i18next';
 import { NODE_REFERENCE_MEDIA_MENTION_CLASS } from '@/features/canvas/ui/nodeControlStyles';
 
 interface ReferenceMentionButtonProps {
-  /** 这条引用在提示词里的名字，如「图片1」；只用于 title。 */
+  /** This reference's name in the prompt, such as "image1"; used only for the title. */
   mentionName: string;
   onInsert: () => void;
   className?: string;
 }
 
 /**
- * 引用素材缩略图右下角的 @ 按钮：一键把这条引用插进下方提示词输入框。
+ * The @ button at the lower right of a reference asset thumbnail: one click inserts this reference into the prompt input below.
  *
- * 在这之前要引用第 N 张图，用户得先自己数清楚它排第几、再手打 `@图片N`——数错了
- * 后端就按错的那张生成。这里直接把 chip 和它的编号绑定，点一下插入正确的 mention。
+ * Before this, to reference the Nth image the user had to count its position and hand-type `@imageN` — a miscount
+ * made the backend generate from the wrong image. Here the chip is bound directly to its number, and one click inserts the correct mention.
  *
- * 和 [[ReferenceDetachButton]] 一样用 <span role="button">：引用 chip 本身就是
- * <button>，嵌套 <button> 是非法结构。
+ * Like [[ReferenceDetachButton]] it uses <span role="button">: the reference chip itself is a
+ * <button>, and nesting <button> is an illegal structure.
  */
 export function ReferenceMentionButton({
   mentionName,
@@ -38,7 +38,7 @@ export function ReferenceMentionButton({
         event.stopPropagation();
       }}
       onDoubleClick={(event) => {
-        // 双击 chip 是「跳到画布上那个节点」，别让落在 @ 上的第二下也触发跳转。
+        // Double-clicking a chip means "jump to that node on the canvas"; do not let the second click landing on @ also trigger the jump.
         event.preventDefault();
         event.stopPropagation();
       }}

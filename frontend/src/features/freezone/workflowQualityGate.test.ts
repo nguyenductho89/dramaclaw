@@ -10,11 +10,11 @@ describe('workflowQualityGate', () => {
       imageUrl: '/image.png',
       count: 4,
       generationBatch: ['/1.png', '/2.png'],
-    })).toContain('数量不足');
+    })).toContain('insufficient');
     expect(deterministicNodeOutputIssue('generate_video', {
       videoUrl: '/video.mp4',
       durationMs: 0,
-    })).toContain('时长无效');
+    })).toContain('invalid');
   });
 
   it('accepts valid output metadata', () => {

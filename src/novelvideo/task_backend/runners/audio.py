@@ -56,8 +56,8 @@ async def _run_system_voice_setup(
         SYSTEM_VOICE_SETUP_TASK_TYPE,
         episode,
         progress=0.05,
-        current_task="正在匹配系统声线",
-        logs=["开始准备缺失的系统声线"],
+        current_task="Matching system voices",
+        logs=["Starting to prepare the missing system voices"],
     )
     try:
         result = await prepare_missing_system_voices(
@@ -69,15 +69,15 @@ async def _run_system_voice_setup(
         )
         if not result.get("ready"):
             errors = list(result.get("remaining_errors") or [])
-            detail = "；".join(str(error) for error in errors[:5])
-            raise RuntimeError(detail or "系统声线准备后仍有缺失项")
+            detail = "; ".join(str(error) for error in errors[:5])
+            raise RuntimeError(detail or "Some system voices are still missing after preparation")
         manager.update_progress_for_project(
             ctx,
             SYSTEM_VOICE_SETUP_TASK_TYPE,
             episode,
             progress=1.0,
-            current_task="系统声线准备完成",
-            logs=[f"已准备 {int(result.get('prepared_count') or 0)} 项系统声线"],
+            current_task="System voices prepared",
+            logs=[f"Prepared {int(result.get('prepared_count') or 0)} system voice(s)"],
         )
         return result
     finally:
@@ -163,9 +163,9 @@ async def _run_indextts2_audio(
             "log_callback": on_log,
         }
         egress_context = _extract_trusted_egress_context(envelope)
-        # 与 runners/freezone.py 的 _call_freezone_leaf 同理：只有组织任务携带受信任的
-        # 组织出网身份走网关；平台与本地任务保持无组织上下文的直连语义，否则
-        # IndexTTS2FalClient.generate 会把非组织身份判为 ORG_EGRESS_DENIED。
+        # Same reasoning as `_call_freezone_leaf` in runners/freezone.py: only organization tasks carry a trusted
+        # organization egress identity through the gateway; platform and local tasks keep the direct-connect semantics without an organization context, otherwise
+        # IndexTTS2FalClient.generate would judge a non-organization identity as ORG_EGRESS_DENIED.
         if egress_context is not None and egress_context.is_organization:
             generation_kwargs["egress_context"] = egress_context
         result = await run_indextts2_beat_audio_generation(
@@ -173,8 +173,8 @@ async def _run_indextts2_audio(
         )
         if result.generated == 0 and result.failed:
             raise RuntimeError(
-                "音频生成失败：没有生成可用结果；"
-                f"最后错误：{result.failed[-1]}"
+                "Audio generation failed: no usable result was produced; "
+                f"last error: {result.failed[-1]}"
             )
         skipped = (
             result.skipped_existing

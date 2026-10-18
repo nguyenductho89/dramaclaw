@@ -1,4 +1,4 @@
-"""项目 CRUD 端点。"""
+"""Project CRUD endpoints."""
 
 import asyncio
 import logging
@@ -83,8 +83,8 @@ logger = logging.getLogger("novelvideo.api.projects")
 
 router = APIRouter()
 VOICE_SOURCE_ROOTS = ("audio", "seedance2_uploads", "assets", "uploads")
-NARRATOR_VOICE_MODE_EXPLANATION = "第一人称解说使用解说主角声线；第三人称解说使用项目解说声线。"
-SUPPORTED_VOICE_SAMPLE_COPY = "仅支持 mp3 / wav / m4a / aac / ogg"
+NARRATOR_VOICE_MODE_EXPLANATION = "First-person narration uses the narrator protagonist voice; third-person narration uses the project narrator voice."
+SUPPORTED_VOICE_SAMPLE_COPY = "Only mp3 / wav / m4a / aac / ogg are supported"
 _PROJECT_SUMMARY_CONCURRENCY = 2
 _project_summary_limiter_var: RunVar[anyio.CapacityLimiter] = RunVar(
     "project_summary_limiter"
@@ -214,10 +214,10 @@ def _narrator_voice_sample_path(project_dir: str | Path, filename: str) -> Path:
 
 
 def _validated_owned_dirs(record: ProjectRecord) -> list[Path]:
-    """校验三类目录确属 owner,返回去重后的真实路径;校验失败直接抛出。
+    """Verify that the three directories truly belong to the owner and return de-duplicated real paths; raise directly on failure.
 
-    这是所有对项目整树的移动/删除的唯一入口,任一目录不在
-    ``<root>/<owner>/`` 下即拒绝,禁止碰任何目录。
+    This is the only entry point for moving/deleting a project's whole tree; if any directory is not under
+    ``<root>/<owner>/`` it is rejected, and touching any directory is forbidden.
     """
     validated = assert_owned_project_storage(
         owner_username=record.owner_username,
@@ -249,8 +249,8 @@ def _restore_quarantined_project_dirs(quarantined: list[tuple[Path, Path]]) -> N
         if not quarantine.exists():
             continue
         if original.exists():
-            # 恢复隔离目录时,若原位置已被并发创建/重建占用,绝不递归删除它 ——
-            # 那可能是另一个操作合法写入的新数据。保留双方并报警,交由人工处置。
+            # When restoring the quarantine directory, if the original location has been occupied by a concurrent create/rebuild, never recursively delete it --
+            # it may be new data legitimately written by another operation. Keep both sides, raise an alert, and leave it to manual handling.
             logger.error(
                 "cannot restore isolated dir %s: original path already exists; "
                 "leaving quarantine %s in place for manual recovery",
@@ -269,8 +269,8 @@ def _quarantine_project_dirs(
 ) -> list[tuple[Path, Path]]:
     """Atomically detach project directories before releasing their registry name.
 
-    仅在 ``record`` 的三类目录全部通过归属校验后才移动;任一目录不属于
-    ``record.owner_username`` 时抛出,不移动任何目录。
+    Move only after all three directories of ``record`` pass ownership validation; if any directory does not belong to
+    ``record.owner_username``, raise and move no directory.
     """
     recorded_dirs = (
         Path(record.output_dir),
@@ -321,11 +321,11 @@ def _delete_quarantined_project_dirs(quarantined: list[tuple[Path, Path]]) -> No
 
 def _narrator_identity_detail(resolution) -> str:
     if not resolution.character_name:
-        return "未配置解说主角"
+        return "No narrator protagonist configured"
     if resolution.identity_name:
-        return f"{resolution.character_name}（{resolution.identity_name}）"
+        return f"{resolution.character_name} ({resolution.identity_name})"
     if resolution.identity_id:
-        return f"{resolution.character_name}（{resolution.identity_id}）"
+        return f"{resolution.character_name} ({resolution.identity_id})"
     return resolution.character_name
 
 
@@ -334,14 +334,14 @@ def _narrator_voice_display_lines(
     resolution,
     project_dir: str | Path,
 ) -> dict[str, str]:
-    # heading / explanation 是展示文案，前端按 *_code 查词条渲染，中文串只当兜底
-    # （前端还没补词条、或老客户端）。detail 里混着路径和后端报错，保持原样。
+    # heading / explanation are display copy; the frontend looks up entries by *_code, and the English string is only a fallback
+    # (when the frontend has no entry yet, or for old clients). detail mixes paths and backend errors and is kept as is.
     if style == "first_person":
         detail = _narrator_identity_detail(resolution)
         return {
-            "heading": "第一人称解说主角声线",
+            "heading": "First-person narrator protagonist voice",
             "heading_code": "assets.narratorVoice.heading.firstPerson",
-            "detail": f"当前为第一人称：使用 {detail}",
+            "detail": f"Currently first-person: using {detail}",
             "explanation": NARRATOR_VOICE_MODE_EXPLANATION,
             "explanation_code": "assets.narratorVoice.explanation.firstPerson",
         }
@@ -349,12 +349,13 @@ def _narrator_voice_display_lines(
     if resolution.audio_path:
         detail = _project_relative_path(project_dir, resolution.audio_path)
     else:
-        detail = resolution.error or "第三人称项目解说声线未配置"
+        detail = resolution.error or "Third-person project narrator voice is not configured"
     return {
-        "heading": "第三人称项目解说声线",
+        "heading": "Third-person project narrator voice",
         "heading_code": "assets.narratorVoice.heading.thirdPerson",
         "detail": detail,
-        "explanation": "第三人称解说使用项目级声线；所有非对白 Beat 使用同一声线。",
+        "code": "" if resolution.audio_path else "voice_narrator_missing",
+        "explanation": "Third-person narration uses the project-level voice; all non-dialogue Beats use the same voice.",
         "explanation_code": "assets.narratorVoice.explanation.thirdPerson",
     }
 
@@ -423,9 +424,9 @@ def _persist_narrator_voice_content(
     content: bytes,
 ) -> Path:
     if not is_supported_voice_sample(filename):
-        raise ValueError(f"{SUPPORTED_VOICE_SAMPLE_COPY}（收到：{filename or '未知文件'}）")
+        raise ValueError(f"{SUPPORTED_VOICE_SAMPLE_COPY} (received: {filename or 'unknown file'})")
     if not content:
-        raise ValueError("音频内容为空")
+        raise ValueError("Audio content is empty")
 
     target = _narrator_voice_sample_path(project_dir, filename)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -506,7 +507,7 @@ def _copy_narrator_voice_content(*, ctx: ProjectContext, source_path: str) -> Pa
         or not source.is_file()
         or source.suffix.lower() not in VOICE_SAMPLE_EXTENSIONS
     ):
-        raise ValueError("请选择项目内有效的音频文件")
+        raise ValueError("Select a valid audio file inside the project")
     return _persist_narrator_voice_content(
         state_dir=ctx.state_dir,
         project_dir=ctx.output_dir,
@@ -570,20 +571,20 @@ def _trim_narrator_voice_content(
     stored = load_narrator_reference_audio_from_state_dir(state_dir)
     source = Path(stored.get("path", ""))
     if not str(source):
-        raise ValueError("请先上传解说声线")
+        raise ValueError("Upload the narrator voice first")
     if not source.is_absolute():
         source = project_dir / source
     source = source.resolve()
     try:
         source.relative_to(project_dir.resolve())
     except ValueError as exc:
-        raise ValueError("请选择项目内有效的音频文件") from exc
+        raise ValueError("Select a valid audio file inside the project") from exc
     if (
         not source.exists()
         or not source.is_file()
         or source.suffix.lower() not in VOICE_SAMPLE_EXTENSIONS
     ):
-        raise ValueError("请选择项目内有效的音频文件")
+        raise ValueError("Select a valid audio file inside the project")
 
     content, _filename = trim_voice_sample_content(
         source.read_bytes(),
@@ -609,9 +610,9 @@ def _trim_narrator_voice_content(
 def _project_voice_source_label(rel_path: str) -> str:
     filename = Path(rel_path).name
     if rel_path.startswith("audio/"):
-        return f"已生成音频 · {filename}"
+        return f"Generated audio · {filename}"
     if rel_path.startswith("assets/"):
-        return f"资产音频 · {filename}"
+        return f"Asset audio · {filename}"
     return f"{filename} · {rel_path}"
 
 
@@ -707,7 +708,7 @@ async def list_project_summaries(
 async def create_project(
     body: ProjectCreate, user: dict = Depends(require_scope("projects:write"))
 ):
-    """创建新项目。"""
+    """Create a new project."""
     logger.info("create_project: %s", body.name)
     validate_project_name(body.name)
     user_id = await user_id_from_api_user(user)
@@ -785,7 +786,7 @@ async def create_project(
 
 @router.get("/projects/{project}")
 async def get_project(project: str, user: dict = Depends(get_api_user)):
-    """获取项目配置。"""
+    """Get the project config."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="viewer")
     require_project_home_node(ctx, operation="read project config")
     config = load_project_config_from_state_dir(
@@ -832,7 +833,7 @@ async def update_project(
     body: ProjectUpdate,
     user: dict = Depends(require_scope("projects:write")),
 ):
-    """更新项目配置。"""
+    """Update the project config."""
     logger.info("[%s] update_project: %s", project, list(body.model_dump(exclude_none=True).keys()))
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     require_project_home_node(ctx, operation="update project config")
@@ -859,13 +860,13 @@ async def update_project(
                 status_code=400,
                 content={
                     "ok": False,
-                    "error": "项目类型已锁定；如需切换请重新导入",
+                    "error": "The project type is locked; re-import to switch it",
                 },
             )
         if body.aspect_ratio is None:
             updates["aspect_ratio"] = default_aspect_ratio_for_spine_template(body.spine_template)
 
-    # 校验 visual_style 合法性
+    # Validate that visual_style is legal
     if body.visual_style is not None:
         from novelvideo.services.style_service import StyleService
 
@@ -897,7 +898,7 @@ async def get_narrator_voice(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取项目解说声线状态。"""
+    """Get the project narrator voice status."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="viewer")
     store = await make_sqlite_store_for_context(ctx)
     return {
@@ -908,7 +909,7 @@ async def get_narrator_voice(
 
 @router.get("/projects/{project}/narrator-voice/sources")
 async def list_narrator_voice_sources(project: str, user: dict = Depends(get_api_user)):
-    """列出项目内可复制为解说声线的音频。"""
+    """List the audio inside the project that can be copied as the narrator voice."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="viewer")
     require_project_home_node(ctx, operation="list project voice files")
     return {"ok": True, "data": {"options": _project_voice_source_options(ctx.output_dir)}}
@@ -920,7 +921,7 @@ async def upload_narrator_voice(
     file: UploadFile = File(...),
     user: dict = Depends(get_api_user),
 ):
-    """上传第三人称项目解说声线。"""
+    """Upload the third-person project narrator voice."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     store = await make_sqlite_store_for_context(ctx)
     try:
@@ -946,7 +947,7 @@ async def record_narrator_voice(
     body: CharacterVoiceRecordRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存浏览器录音为第三人称项目解说声线。"""
+    """Save a browser recording as the third-person project narrator voice."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     store = await make_sqlite_store_for_context(ctx)
     try:
@@ -969,7 +970,7 @@ async def copy_project_audio_as_narrator_voice(
     body: NarratorVoiceCopyRequest,
     user: dict = Depends(get_api_user),
 ):
-    """从项目内已有音频复制为第三人称项目解说声线。"""
+    """Copy existing audio inside the project as the third-person project narrator voice."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     store = await make_sqlite_store_for_context(ctx)
     try:
@@ -992,7 +993,7 @@ async def trim_narrator_voice(
     body: NarratorVoiceTrimRequest,
     user: dict = Depends(get_api_user),
 ):
-    """裁剪第三人称项目解说声线并写回项目声线槽位。"""
+    """Trim the third-person project narrator voice and write it back to the project voice slot."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     store = await make_sqlite_store_for_context(ctx)
     try:
@@ -1017,7 +1018,7 @@ async def delete_narrator_voice(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """移除第三人称项目解说声线。"""
+    """Remove the third-person project narrator voice."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="editor")
     store = await make_sqlite_store_for_context(ctx)
     payload = await _run_narrator_voice_update(
@@ -1128,7 +1129,7 @@ async def purge_project(
     project: str,
     user: dict = Depends(require_scope("projects:purge")),
 ):
-    """永久删除项目目录；只允许对已进入回收站的项目执行。"""
+    """Permanently delete the project directory; only allowed for projects already in the trash."""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="owner")
     require_project_home_node(ctx, operation="purge project files")
 

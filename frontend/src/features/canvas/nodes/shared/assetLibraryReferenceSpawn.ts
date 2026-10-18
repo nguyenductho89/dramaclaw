@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
+import i18n from 'i18next';
+
 import {
   CANVAS_NODE_TYPES,
   type VideoNodeData,
@@ -7,16 +9,16 @@ import {
 import type { AssetLibrarySelection } from '@/features/canvas/ui/AssetLibraryModal';
 import { useCanvasStore } from '@/stores/canvasStore';
 
-/** 目标节点没有量到的高度时的兜底（= ImageGenNode 的 DEFAULT_HEIGHT）。 */
+/** Fallback when the target node's height was not measured (= ImageGenNode's DEFAULT_HEIGHT). */
 const FALLBACK_TARGET_HEIGHT = 360;
-/** 同上，视频侧（= VideoNode 的 DEFAULT_HEIGHT）。 */
+/** Same as above, video side (= VideoNode's DEFAULT_HEIGHT). */
 const FALLBACK_VIDEO_TARGET_HEIGHT = 380;
 const UPLOAD_WIDTH = 320;
 const UPLOAD_HEIGHT = 240;
 const GAP_X = 40;
 const GAP_Y = 24;
 
-/** 竖排摞在目标节点左侧的第 idx 个参考节点的落点。 */
+/** Drop point of the idx-th reference node stacked vertically to the left of the target node. */
 function stackedSpawnPositions(
   target: { position: { x: number; y: number }; height?: number | null },
   count: number,
@@ -30,11 +32,11 @@ function stackedSpawnPositions(
 }
 
 /**
- * 从资产库选中的图片生成上游 upload 参考节点：每选一张建一个 upload 节点，竖排
- * 摞在目标节点左侧，再连线到目标节点作为参考图（多图参考直接进 reference_urls）。
+ * Generate upstream upload reference nodes from images selected in the asset library: one upload node per selected image, stacked
+ * vertically to the left of the target node, then connected to the target node as reference images (multi-image references go straight into reference_urls).
  *
- * 全程只碰 canvasStore（无 React Flow 上下文），因此工作流节点（ImageGenNode）与
- * 故事板详情里的生成表单可以共用同一份编排——两处「资产库」chip 的行为完全一致。
+ * It touches only canvasStore throughout (no React Flow context), so the workflow node (ImageGenNode) and
+ * the generation form in the storyboard detail can share the same orchestration — the "Asset library" chips in both places behave identically.
  */
 export function spawnAssetLibraryReferences(
   targetNodeId: string,
@@ -65,18 +67,18 @@ export function spawnAssetLibraryReferences(
     state.addEdge(newId, targetNodeId);
     newIds.push(newId);
   });
-  state.autoGroupSpawn(targetNodeId, newIds, { label: '资产参考组' });
+  state.autoGroupSpawn(targetNodeId, newIds, { label: i18n.t('node.imageGen.assetReferenceGroup') });
 }
 
 /**
- * 视频节点版：资产库三类素材都收，按媒体类型建不同的上游节点——
- * - 图片 → upload 节点（imageUrl）；
- * - 视频 → `referenceOnly` 的 video 节点（能播放本体、被 isVideoNode 识别，
- *   下游据此自动切 videoEdit；早期建的 upload 节点塞 videoUrl 既不显示也不被识别）；
- * - 音频 → audio 节点（audioUrl）。
+ * Video node version: all three kinds of library assets are accepted, and different upstream nodes are created by media type —
+ * - image → upload node (imageUrl);
+ * - video → a `referenceOnly` video node (can play the video itself, recognized by isVideoNode,
+ *   so downstream auto-switches to videoEdit; the early upload node stuffed with videoUrl neither displayed nor was recognized);
+ * - audio → audio node (audioUrl).
  *
- * 与图片版同样只碰 canvasStore（无 React Flow 上下文），故工作流的 VideoNode 与
- * 故事板详情的视频生成表单共用这一份编排，两处「资产库」chip 行为完全一致。
+ * Like the image version it touches only canvasStore (no React Flow context), so the workflow's VideoNode and
+ * the video generation form in the storyboard detail share this one orchestration, and the "Asset library" chips in both places behave identically.
  */
 export function spawnVideoAssetLibraryReferences(
   targetNodeId: string,
@@ -86,7 +88,7 @@ export function spawnVideoAssetLibraryReferences(
   const state = useCanvasStore.getState();
   const self = state.nodes.find((n) => n.id === targetNodeId);
   if (!self) return;
-  // 新建的引用视频节点继承目标节点的比例，避免播放器按默认比例把素材裁歪。
+  // A newly created reference video node inherits the target node's ratio, so the player does not crop the asset skewed at the default ratio.
   const aspectRatio = (self.data as { aspectRatio?: unknown }).aspectRatio;
   const { baseX, startY } = stackedSpawnPositions(
     self,
@@ -125,5 +127,5 @@ export function spawnVideoAssetLibraryReferences(
     state.addEdge(newId, targetNodeId);
     newIds.push(newId);
   });
-  state.autoGroupSpawn(targetNodeId, newIds, { label: '资产参考组' });
+  state.autoGroupSpawn(targetNodeId, newIds, { label: i18n.t('node.imageGen.assetReferenceGroup') });
 }

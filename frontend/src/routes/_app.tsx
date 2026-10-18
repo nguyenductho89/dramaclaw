@@ -96,14 +96,14 @@ function AppLayout() {
   })();
   const isAssistantPage = /^\/projects\/[^/]+\/assistant$/.test(pathname);
   const routeSwitchPending = useRouteSwitchPending();
-  // 撤遮罩要认 resolvedLocation 而不是 location：后者在 beforeLoad 里就变了，
-  // 那时候渲染出来的还是旧页面，照它撤等于遮罩白挂。resolvedLocation 是路由在
-  // 新页面 commit 之后的 layout effect 里才写的，正好是「新页面已经在屏幕上」。
+  // Removing the overlay must rely on resolvedLocation rather than location: the latter already changes in beforeLoad,
+  // when the old page is still what is rendered, and removing the overlay by it would make the overlay pointless. resolvedLocation is written by the router
+  // in a layout effect after the new page commits, which is exactly "the new page is already on screen".
   const resolvedPathname = useRouterState({
     select: (s) => s.resolvedLocation?.pathname ?? "",
   });
-  // useLayoutEffect 而不是 useEffect：passive effect 可能排到绘制之后，遮罩会
-  // 在新页面上多留一帧。
+  // useLayoutEffect instead of useEffect: a passive effect may be scheduled after paint, and the overlay
+  // would stay one extra frame on top of the new page.
   useLayoutEffect(() => {
     endRouteSwitch();
   }, [resolvedPathname]);
@@ -282,19 +282,19 @@ function AppLayout() {
                 </motion.div>
               </main>
               <PromptPreviewPanel project={canonicalProject} />
-              {/* 必须挂在被 re-key 的 motion.div 外面：key 里带着 $section，
-                  放进去就等于每次切换重建一遍画布，保活也就没了意义。作为
-                  <main> 的后继兄弟绝对定位，在虾画时正好盖住它。 */}
+              {/* Must be mounted outside the re-keyed motion.div: the key contains $section,
+                  putting it inside would rebuild the canvas on every switch, and keeping it alive would be pointless. As a following
+                  sibling of <main> it is absolutely positioned, and covers it exactly while on the freezone. */}
               <FreezoneCanvasHost />
               {routeSwitchPending ? (
                 <div
                   role="status"
                   className="animate-in fade-in-0 absolute inset-0 z-30 flex items-center justify-center bg-background/75"
-                  // 延迟 150ms 才开始淡入：换得快的页面在这之前就好了，遮罩全程
-                  // 透明，不会闪一下。fill-mode both 是让延迟期间保持在 opacity:0，
-                  // 否则默认 fill-mode:none 会先按 1 画出来。
-                  // 写成内联而不是 delay-150 / fill-mode-both 类，是为了压过
-                  // animate-in 的 animation 简写，不用管 @utility 的入层顺序。
+                  // Fade-in starts only after a 150ms delay: pages that switch fast are already done before then, and the overlay stays
+                  // transparent throughout, so no flash. fill-mode both keeps it at opacity:0 during the delay,
+                  // otherwise the default fill-mode:none would first paint it at 1.
+                  // Written inline instead of the delay-150 / fill-mode-both classes, to override
+                  // the animate-in animation shorthand without caring about the @utility layer order.
                   style={{
                     animationDelay: "150ms",
                     animationDuration: "200ms",

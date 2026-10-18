@@ -29,23 +29,23 @@ def _recipe(index: int) -> dict[str, Any]:
     kinds = ("text", "image", "video", "audio", "html")
     kind = kinds[index % len(kinds)]
     labels = {
-        "text": ("script translation", "翻译 剧本 字幕"),
-        "image": ("character turnaround", "角色 双视图 人物"),
-        "video": ("video reference endframe", "视频参考 末帧 连续镜头"),
-        "audio": ("voice narration", "旁白 音轨 配乐"),
-        "html": ("interactive storyboard", "分镜 交互 html"),
+        "text": ("script translation", "translate screenplay subtitles"),
+        "image": ("character turnaround", "character dual view figure"),
+        "video": ("video reference endframe", "video reference last frame continuous shot"),
+        "audio": ("voice narration", "narration audio track score"),
+        "html": ("interactive storyboard", "storyboard interactive html"),
     }
-    label, chinese = labels[kind]
+    label, synonyms = labels[kind]
     return {
         "id": f"benchmark-{kind}-{index:05d}",
         "version": 1,
         "name": f"{label} {index}",
-        "description": f"{label}; {chinese}; recipe {index}",
+        "description": f"{label}; {synonyms}; recipe {index}",
         "enabled": True,
         "output_kind": "text" if kind == "html" else kind,
         **({"output_format": "html"} if kind == "html" else {}),
         "action_keys": [f"{kind}.generate"],
-        "system_prompt": (f"Synthetic benchmark definition {index}: {label} {chinese}\n" + ("输入媒体必须来自已连接素材；输出一条完整生成提示词；遵守确认的结构与禁止事项。" * 40)),
+        "system_prompt": (f"Synthetic benchmark definition {index}: {label} {synonyms}\n" + ("Input media must come from connected material; output one complete generation prompt; follow the confirmed structure and prohibitions. " * 40)),
     }
 
 
@@ -53,23 +53,23 @@ def make_recipes(size: int) -> list[dict[str, Any]]:
     if size < TASK_COUNT:
         raise ValueError(f"size must be at least {TASK_COUNT}")
     recipes = [_recipe(index) for index in range(size)]
-    # The expected records cover Chinese, end-frame, and video-reference recall.
+    # The expected records cover synonym, end-frame, and video-reference recall.
     recipes[0].update(
         id="benchmark-video-reference-endframe",
-        name="视频参考末帧视频生成",
-        description="视频参考 输入 与 末帧 图片 连续镜头 视频生成",
+        name="Video generation from reference and last frame",
+        description="video reference input and last frame image continuous shot video generation",
         output_kind="video",
     )
     recipes[1].update(
         id="benchmark-character-dual-view",
-        name="角色双视图 image",
-        description="角色 单张 左右双视图 人物 image",
+        name="Character dual view image",
+        description="character single left-right dual view figure image",
         output_kind="image",
     )
     recipes[2].update(
         id="benchmark-narration-bgm",
-        name="旁白与背景音乐",
-        description="旁白 配乐 BGM 音轨 连续",
+        name="Narration and background music",
+        description="narration score BGM audio track continuous",
         output_kind="audio",
     )
     return recipes
@@ -77,10 +77,10 @@ def make_recipes(size: int) -> list[dict[str, Any]]:
 
 def make_tasks() -> list[dict[str, Any]]:
     templates = (
-        ("video", ["视频参考 末帧", "连续镜头 视频", "video reference endframe"], "benchmark-video-reference-endframe"),
-        ("image", ["角色 双视图", "人物 左右", "character turnaround"], "benchmark-character-dual-view"),
-        ("audio", ["旁白 配乐", "BGM 音轨", "voice narration"], "benchmark-narration-bgm"),
-        ("text", ["翻译 剧本", "字幕", "script translation"], "benchmark-text-00005"),
+        ("video", ["video reference last frame", "continuous shot video", "video reference endframe"], "benchmark-video-reference-endframe"),
+        ("image", ["character dual view", "figure left right", "character turnaround"], "benchmark-character-dual-view"),
+        ("audio", ["narration score", "BGM audio track", "voice narration"], "benchmark-narration-bgm"),
+        ("text", ["translate screenplay", "subtitles", "script translation"], "benchmark-text-00005"),
     )
     tasks: list[dict[str, Any]] = []
     for index in range(TASK_COUNT):

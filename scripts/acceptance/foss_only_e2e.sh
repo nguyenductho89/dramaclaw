@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M10-D FOSS_ONLY 手动闸：CE 小说 -> MP4，LLM 用真实 key，媒体生成走 --mock。
+# M10-D FOSS_ONLY manual gate: CE novel -> MP4, LLM with a real key, media generation via --mock.
 set -euo pipefail
 
 PROJECT=${FOSS_ONLY_PROJECT:-foss_e2e}

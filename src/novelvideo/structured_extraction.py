@@ -235,9 +235,9 @@ def normalize_character_name(value: str) -> str:
     cleaned = (value or "").replace("\u3000", " ").strip()
     cleaned = cleaned.strip(":,.·\"'()[]")
     return " ".join(cleaned.split())
-    Scripts routinely introduce someone as "Principal Wu Xiande" and then call them
-    "Wu Xiande". Treating those as two people would create duplicate characters,
-    each with its own primary key and asset directory.
+
+
+def is_generic_address(name: str) -> bool:
     """Whether a name refers to a role rather than a specific person.
 
     A possessive prefix does not make a kinship term specific: "your mom" and
@@ -253,8 +253,8 @@ def normalize_character_name(value: str) -> str:
 def title_qualified_of(long_name: str, short_name: str) -> bool:
     """Whether ``long_name`` is ``short_name`` plus only job titles.
 
-    Scripts routinely introduce someone as "校长吴显德" and then call them
-    "吴显德". Treating those as two people would create duplicate characters,
+    Scripts routinely introduce someone as "Principal Wu Xiande" and then call them
+    "Wu Xiande". Treating those as two people would create duplicate characters,
     each with its own primary key and asset directory.
     """
     long_normalized = normalize_character_name(long_name)
@@ -271,9 +271,9 @@ def title_qualified_of(long_name: str, short_name: str) -> bool:
     # a title, so the two names are not the same person.
     changed = True
     while remainder and changed:
-        prose that window opens mid-sentence: "Everyone knows Lin Mo, also known as Xiao Mo" captured
-        "Everyone knows Lin Mo" as a name. Matching against the names extraction really
-        produced turns that back into "Lin Mo"; ``suffix`` says which end of the
+        changed = False
+        lowered = remainder.lower()
+        for token in sorted(TITLE_TOKENS, key=len, reverse=True):
             if lowered.startswith(token) and (
                 len(lowered) == len(token) or not lowered[len(token)].isalnum()
             ):
@@ -293,9 +293,9 @@ def _resolve_side(capture: str, known: dict[str, str], *, suffix: bool) -> str:
     """Trim one side of an alias match down to a name that was actually found.
 
     The patterns take up to four words either side of the marker, and in running
-    prose that window opens mid-sentence: "大家都知道林默又名小默" captured
-    "家都知道林默" as a name. Matching against the names extraction really
-    produced turns that back into "林默"; ``suffix`` says which end of the
+prose that window opens mid-sentence: "Everyone knows Lin Mo, also known as Xiao Mo" captured
+"Everyone knows Lin Mo" as a name. Matching against the names extraction really
+produced turns that back into "Lin Mo"; ``suffix`` says which end of the
     capture the name sits at, since the left side runs up to the marker and the
     right side away from it.
     """
@@ -776,20 +776,42 @@ async def _maybe_await(value: Any) -> Any:
 
 # A candidate the model may fold into another. Anything better attested than
 # this stands on its own: a wrong merge destroys a character silently, while a
+# wrong split leaves a visible duplicate the user can remove.
+_MERGEABLE_EVIDENCE_CEILING = 2
+
+# Same idea for locations, counted in scenes rather than evidence spans.
+_MERGEABLE_SCENE_OCCURRENCES = 2
+
+# Enough of the text to recognise who is being talked about, without resending
+# the script.
+_ADJUDICATION_SAMPLE_QUOTES = 3
+
+# Below this many mentions, a candidate is more likely an alias than a person in
+# its own right, so it gets source context rather than a bare quote.
+_CONTEXT_WINDOW_EVIDENCE_THRESHOLD = 6
+_CONTEXT_WINDOW_CHARS = 220
+
+# A contested appellation needs this many distinct source positions before it
+# is awarded to anyone. A single occurrence is one turn of phrase, which is
+# not enough to overrule a competing claim.
+_APPELLATION_MIN_OCCURRENCES = 2
+
+
+class SamePersonGroup(BaseModel):
     canonical_name: str = Field(description="Primary name of the group; must come from the candidate list")
     alias_names: list[str] = Field(
         default_factory=list, description="Other candidate names referring to the same person; must come from the candidate list"
     )
     reason: str = Field(default="", description="Basis for the decision, citing clues from the evidence")
 
-# Enough of the text to recognise who is being talked about, without resending
-# the script.
-_ADJUDICATION_SAMPLE_QUOTES = 3
 
+class CharacterAdjudication(BaseModel):
+    groups: list[SamePersonGroup] = Field(default_factory=list)
+    non_characters: list[str] = Field(
         default_factory=list, description="Candidates that are not people at all, e.g. titles, groups, insults"
-# its own right, so it gets source context rather than a bare quote.
-_CONTEXT_WINDOW_EVIDENCE_THRESHOLD = 6
-_CONTEXT_WINDOW_CHARS = 220
+    )
+
+
 ADJUDICATION_SYSTEM_PROMPT = """You are a character-merge adjudicator.
 
 The input is the character candidates extracted chunk by chunk from the same work; each candidate comes with its number of occurrences in the source text and a few source quotes.
@@ -806,28 +828,6 @@ Rules:
 - Titles, job titles, groups and insults (such as "young lady", "campus bully", "jinx"), if they are only used to address a known character,
   should be folded into that character; if you cannot tell who they point to, put them in non_characters.
 - If unsure, do not merge and do not put the candidate in non_characters. A missed merge only leaves a duplicate; a wrong merge destroys data."""
-    groups: list[SamePersonGroup] = Field(default_factory=list)
-    non_characters: list[str] = Field(
-        default_factory=list, description="根本不是人物的候选，例如称号、群体、骂人的话"
-    )
-
-
-ADJUDICATION_SYSTEM_PROMPT = """你是角色归一裁决器。
-
-输入是从同一部作品中逐段抽取出的角色候选，每个候选附带它在原文中的出现次数和几条原文引用。
-
-你的任务只有两件：
-1. 判断哪些候选其实指向同一个人，把它们归为一组，并选出主名。
-2. 指出哪些候选根本不是人物。
-
-规则：
-- 只能使用输入中出现过的候选名，不许发明新名字。
-- canonical_name 必须是该组候选之一，优先选原文中出现次数最多、最像正式姓名的那个。
-- 只有证据确实支持时才合并。"陈总"和"陈青"要有线索表明是同一人才能合并。
-- 两个都有大量独立证据、且看不出关联的候选，不要合并。
-- 称号、职务、群体、骂人的话（如"大小姐""校霸""扫把星"）如果只是用来称呼某个已知角色，
-  应该并入那个角色；如果无法确定指向谁，放进 non_characters。
-- 不确定就不要合并，也不要放进 non_characters。漏合并只是留下重复项，错合并会毁掉数据。"""
 
 
 def _create_adjudication_agent(agent: Any = None):
@@ -837,19 +837,19 @@ def _create_adjudication_agent(agent: Any = None):
     from pydantic_ai import Agent
 
     from novelvideo.config import (
-    A quote on its own rarely proves identity: "Xiaoyang, you got into trouble again" does not
-    contain "Zheng Xuyang". What does prove it is the surrounding text, where the
+        get_newapi_structured_output_model_settings,
+        get_newapi_text_pydantic_model,
     )
 
     return Agent(
         get_newapi_text_pydantic_model(
             "CHARACTER_BUILD_MODEL",
             "gemini-3-flash-preview",
-        detail = f"- {item.name} (appears {len(item.evidence)} times)"
+            capability="text.generate.agent",
         ),
-            detail += f", gender {item.gender}"
+        system_prompt=ADJUDICATION_SYSTEM_PROMPT,
         model_settings=get_newapi_structured_output_model_settings(),
-            detail += f", {item.description}"
+        output_type=CharacterAdjudication,
         name="Structured Character Adjudicator",
     )
 
@@ -859,19 +859,19 @@ def _adjudication_prompt(
 ) -> str:
     """Describe every candidate, with enough context to link nicknames to names.
 
-                lines.append(f"    Context: ...{window}...")
-    contain "郑旭阳". What does prove it is the surrounding text, where the
-                lines.append(f"    Source: {evidence['evidence_text']}")
+    A quote on its own rarely proves identity: "Xiaoyang, you got into trouble again" does not
+    contain "Zheng Xuyang". What does prove it is the surrounding text, where the
+    formal name almost always appears nearby. Rarely-seen candidates therefore
     get a window of the source around their occurrences — the same co-occurrence
-        "Below are the character candidates from the same work. Candidates with few occurrences are usually a nickname, "
-        "job title or honorific of a major character; use the context to decide who each one points to:\n" + "\n".join(lines)
+    signal a graph search would surface, taken straight from the text.
+    """
     lines: list[str] = []
     for item in merged:
-        detail = f"- {item.name}（出现 {len(item.evidence)} 次）"
+        detail = f"- {item.name} (appears {len(item.evidence)} times)"
         if item.gender:
-            detail += f"，性别 {item.gender}"
+            detail += f", gender {item.gender}"
         if item.description:
-            detail += f"，{item.description}"
+            detail += f", {item.description}"
         lines.append(detail)
 
         rare = len(item.evidence) <= _CONTEXT_WINDOW_EVIDENCE_THRESHOLD
@@ -881,16 +881,16 @@ def _adjudication_prompt(
                 start = max(0, int(evidence["source_start"]) - _CONTEXT_WINDOW_CHARS)
                 end = min(len(source_text), int(evidence["source_end"]) + _CONTEXT_WINDOW_CHARS)
                 window = source_text[start:end].replace("\n", " ")
-                lines.append(f"    上下文：…{window}…")
+                lines.append(f"    Context: ...{window}...")
             else:
-                lines.append(f"    原文：{evidence['evidence_text']}")
+                lines.append(f"    Source: {evidence['evidence_text']}")
     return (
-        "以下是同一部作品的角色候选。出现次数少的候选通常是某个主要角色的"
-        "昵称、职务或称号，请利用上下文判断它指向谁：\n" + "\n".join(lines)
+        "Below are the character candidates from the same work. Candidates with few occurrences are usually a nickname, "
+        "job title or honorific of a major character; use the context to decide who each one points to:\n" + "\n".join(lines)
     )
 
 
-    chunk reveals that "Mrs. Zheng" is "Zheng Yuqin" -- that only shows up when the whole
+def _roster_protects(name: str, roster: set[str]) -> bool:
     """Whether a scene's cast list names this character.
 
     A cast list is written by the author, not inferred, so a name appearing in
@@ -911,8 +911,8 @@ async def adjudicate_characters(
 ) -> list[MergedCharacter]:
     """Resolve cross-chunk identity that per-chunk extraction cannot see.
 
-        log(f"⚠️ Adjudication failed, keeping the rule-based merge result: {exc}")
-    chunk reveals that "郑太" is "郑玉琴" — that only shows up when the whole
+    Rules can merge identical names and stated aliases, but nothing in a single
+    chunk reveals that "Mrs. Zheng" is "Zheng Yuqin" -- that only shows up when the whole
     candidate set is considered at once. This is one call over the candidates
     and their evidence, not another pass over the source.
 
@@ -933,7 +933,7 @@ async def adjudicate_characters(
             _adjudication_prompt(merged, source_text)
         )).output
     except Exception as exc:  # noqa: BLE001 - degrade to the rule-only result
-        log(f"⚠️ 归一裁决失败，保留规则归一结果: {exc}")
+        log(f"⚠️ Adjudication failed, keeping the rule-based merge result: {exc}")
         return merged
 
     cast = roster or set()
@@ -950,9 +950,9 @@ async def adjudicate_characters(
             by_name[name]
             for name in (
                 normalize_character_name(n)
-                    f"  Refused to merge {secondary.name} → {primary.name}: "
-                    f"{len(secondary.evidence)} piece(s) of evidence"
-                    f"{', and appears in the scene cast list' if _roster_protects(secondary.name, cast) else ''}"
+                for n in [group.canonical_name, *group.alias_names]
+            )
+            if name in by_name and by_name[name].name not in removed
         ]
         if len(members) < 2:
             continue
@@ -968,19 +968,19 @@ async def adjudicate_characters(
             ),
         )
         for secondary in members:
-            log(f"  Merged {secondary.name} → {primary.name}")
+            if secondary is primary or secondary.name in removed:
                 continue
             if not may_merge_away(secondary):
                 log(
-                    f"  拒绝归并 {secondary.name} → {primary.name}："
-                    f"证据 {len(secondary.evidence)} 条"
-                    f"{'，且出现在场次人物栏' if _roster_protects(secondary.name, cast) else ''}"
+                    f"  Refused to merge {secondary.name} → {primary.name}: "
+                    f"{len(secondary.evidence)} piece(s) of evidence"
+                    f"{', and appears in the scene cast list' if _roster_protects(secondary.name, cast) else ''}"
                 )
                 continue
-            log(f"  Adjudicator considers this not a character (recorded only, not removed): {item.name}")
+            primary.aliases.add(secondary.name)
             primary.aliases |= secondary.aliases
             primary.aliases.discard(primary.name)
-    log(f"Adjudication complete: {len(merged)} → {len(survivors)} characters")
+            primary.evidence.extend(secondary.evidence)
             primary.chunk_ids |= secondary.chunk_ids
             primary.ambiguous_with |= secondary.ambiguous_with
             primary.ambiguous_with -= primary.aliases
@@ -990,7 +990,7 @@ async def adjudicate_characters(
             if not primary.description:
                 primary.description = secondary.description
             removed.add(secondary.name)
-    # none of them quotable -- a screenplay writes "ZHENG JIAYUE" and what she does, not
+            log(f"  Merged {secondary.name} → {primary.name}")
 
     # Reported, never acted on. Every candidate here already survived
     # verification against the source, so discarding one trades a visible
@@ -999,26 +999,48 @@ async def adjudicate_characters(
     for name in result.non_characters:
         item = by_name.get(normalize_character_name(name))
         if item is not None and item.name not in removed:
-            log(f"  裁决认为不是角色（仅记录，未删除）：{item.name}")
+            log(f"  Adjudicator considers this not a character (recorded only, not removed): {item.name}")
 
     survivors = [item for item in merged if item.name not in removed]
-    log(f"裁决完成: {len(merged)} → {len(survivors)} 个角色")
-    name: str = Field(description="Primary character name; must exactly match the given character name")
-    role: str = Field(default="", description="Character role, e.g. protagonist, best friend, ex-boyfriend, empress")
-    is_main: bool = Field(default=False, description="Whether this is the narration protagonist / first-person narrator")
+    log(f"Adjudication complete: {len(merged)} → {len(survivors)} characters")
+    return sorted(survivors, key=lambda item: (-len(item.evidence), item.name))
+
+
 # ── character appearance ────────────────────────────────────────────────────
-        default="youth", description="Age group; must be one of child / youth / middle / elder"
+#
 # Extraction and appearance are two different contracts, deliberately kept
-    body_type: str = Field(default="", description="Body type description, e.g. slender and tall, sturdy and muscular, petite and delicate")
+# apart.  Extraction is evidence-bound: every field it reports has to appear
 # verbatim in the span it came from, which is what stops an invented character
-        default="", description="Pure facial feature description (hairstyle, eyes, skin tone, face shape), no clothing"
-# none of them quotable — a screenplay writes "郑家悦" and what she does, not
+# from entering the table.  A face prompt, a role, a build and an age band are
+    # none of them quotable -- a screenplay writes "ZHENG JIAYUE" and what she does, not
 # what her jaw looks like — so folding them into CharacterCandidate would mean
 # relaxing the very guard that makes extraction trustworthy.
 #
 # So this stage runs after the cast is settled, takes only names that already
 # survived verification, and is allowed to write what the source implies rather
 # than what it states.  It is the half of legacy's CharacterEnrichment that
+# structured extraction never carried over; scenes have had their equivalent
+# since the beginning (``enrich_scene_environments_batched``), which is why
+# scene builds produce usable prompts and character builds did not.
+
+
+class CharacterAppearance(BaseModel):
+    name: str = Field(description="Primary character name; must exactly match the given character name")
+    role: str = Field(default="", description="Character role, e.g. protagonist, best friend, ex-boyfriend, empress")
+    is_main: bool = Field(default=False, description="Whether this is the narration protagonist / first-person narrator")
+    age_group: str = Field(
+        default="youth", description="Age group; must be one of child / youth / middle / elder"
+    )
+    body_type: str = Field(default="", description="Body type description, e.g. slender and tall, sturdy and muscular, petite and delicate")
+    face_prompt: str = Field(
+        default="", description="Pure facial feature description (hairstyle, eyes, skin tone, face shape), no clothing"
+    )
+
+
+class CharacterAppearanceList(BaseModel):
+    characters: list[CharacterAppearance] = Field(default_factory=list)
+
+
 CHARACTER_APPEARANCE_SYSTEM_PROMPT = """You are a character appearance designer. The input is a set of characters already confirmed in a work, together with source-text excerpts about them.
 
 Fill in the appearance design for each character. Reasonable inference is allowed in this step, but it must be consistent with the given source excerpts and must not contradict the source text.
@@ -1037,28 +1059,6 @@ For each character give:
    ⚠️ Never describe clothing, accessories or scenes in face_prompt. Clothing is handled separately by later identity planning.
 
 Do not add, remove or merge characters. Return exactly as many as the input gives."""
-class CharacterAppearanceList(BaseModel):
-    characters: list[CharacterAppearance] = Field(default_factory=list)
-
-
-CHARACTER_APPEARANCE_SYSTEM_PROMPT = """你是角色形象设定师。输入是一部作品中已经确认的角色，以及原文中关于他们的片段。
-
-为每个角色补全形象设定。这一步允许合理推断，但推断必须与给出的原文片段一致，不要与原文冲突。
-role、body_type、face_prompt 必须使用用户消息指定的输出语言。
-
-对每个角色给出：
-1. name: 必须与输入给出的角色名逐字一致，不要改写、翻译或合并。
-2. role: 角色定位（如：主角、闺蜜、前男友、皇后、班主任）。
-3. is_main: 是否为解说主角/第一人称叙述者。整批里最多只有一个 true；判断不了就全填 false。
-4. age_group: 必须是 child（儿童）/ youth（青年）/ middle（中年）/ elder（老年）之一。
-   同一角色的幼年/老年形态不拆分，取他在故事中最主要时期对应的年龄段。
-5. body_type: 体型描述。
-6. face_prompt: 纯面部特征描述。
-   格式：[性别]，[年龄段]，[发型发色]，[眼睛特征]，[肤色]，[脸型/骨骼]
-   示例："女性，二十多岁，黑色长发马尾，黑色杏眼，小麦肤色，瓜子脸"
-   ⚠️ 绝对不要在 face_prompt 中描述服装、配饰或场景。服装由后续身份规划单独处理。
-
-不要新增角色，不要删除角色，不要合并角色。输入给几个就返回几个。"""
 
 
 def _create_character_appearance_agent(agent: Any = None):
@@ -1418,7 +1418,7 @@ async def enrich_character_appearances(
                         item.description,
                         *sorted(item.aliases),
                         *_appearance_quotes(item),
-            log(f"Reusing {len(results)} character appearance designs, no model call")
+                    ]
                 ),
             ]
         )
@@ -1432,46 +1432,46 @@ async def enrich_character_appearances(
 
     if cache is not None:
         stored = await _maybe_await(
-    synopsis_section = f"\n\n[Original synopsis and character-setting text of the script]\n{synopsis}" if synopsis else ""
+            cache.get(CHARACTER_APPEARANCE_CACHE_TYPE, list(keys.values()))
         )
         for item in merged:
-        aliases = ", ".join(sorted(item.aliases)) or "none"
-        quotes = "\n".join(f"- {quote}" for quote in _appearance_quotes(item)) or "- none"
+            payload = (stored or {}).get(keys[item.name])
+            appearance = appearance_from_cache_payload(payload) if payload else None
             if appearance is not None:
-            f"### Character: {item.name}\n"
-            f"Aliases: {aliases}\n"
-            f"Gender: {item.gender or 'unknown'}\n"
-            f"Known description: {item.description or 'none'}\n"
-            f"Source excerpts:\n{quotes}"
+                results[item.name] = appearance
+        if results:
+            log(f"Reusing {len(results)} character appearance designs, no model call")
+
+    pending = [item for item in merged if item.name not in results]
     narrator_key = narrator_cache_key([keys[name] for name in order])
 
     if not pending:
         await _settle_narrator_nomination(results, order, cache, narrator_key, keys)
         return results
-            + "\n\nFill in the appearance design for each of the characters below. "
-            "name must exactly match the given character name; do not merge or omit any:\n\n"
+
+    llm = _create_character_appearance_agent(agent)
     # A screenplay's pre-scene block is its character bible — it names hair,
     # build and bearing outright. Extraction already chunks it, but only as one
     # span among many; handing it to this stage whole is what legacy did, and
     # it is the densest appearance source the source text has.
-    synopsis_section = f"\n\n【剧本梗概与人物设定原文】\n{synopsis}" if synopsis else ""
+    synopsis_section = f"\n\n[Original synopsis and character-setting text of the script]\n{synopsis}" if synopsis else ""
 
     def describe(item: "MergedCharacter") -> str:
-        aliases = "、".join(sorted(item.aliases)) or "无"
-        quotes = "\n".join(f"- {quote}" for quote in _appearance_quotes(item)) or "- 无"
+        aliases = ", ".join(sorted(item.aliases)) or "none"
+        quotes = "\n".join(f"- {quote}" for quote in _appearance_quotes(item)) or "- none"
         return (
-            f"### 角色：{item.name}\n"
-            log(f"⚠️ Character appearance design failed ({len(batch)} characters): {exc}")
-            f"性别：{item.gender or '未知'}\n"
-            f"已知描述：{item.description or '无'}\n"
-            f"原文片段：\n{quotes}"
+            f"### Character: {item.name}\n"
+            f"Aliases: {aliases}\n"
+            f"Gender: {item.gender or 'unknown'}\n"
+            f"Known description: {item.description or 'none'}\n"
+            f"Source excerpts:\n{quotes}"
         )
 
     async def run_batch(batch: list["MergedCharacter"]) -> dict[str, CharacterAppearance]:
         prompt = (
             asset_language_instruction(language)
-            + "\n\n请为下面每一个角色补全形象设定，"
-            "name 必须与给出的角色名完全一致，不要合并或遗漏：\n\n"
+            + "\n\nFill in the appearance design for each of the characters below. "
+            "name must exactly match the given character name; do not merge or omit any:\n\n"
             + "\n\n".join(describe(item) for item in batch)
             + synopsis_section
         )
@@ -1483,7 +1483,7 @@ async def enrich_character_appearances(
                 for entry in (result.characters or [])
             }
         except Exception as exc:  # noqa: BLE001 - a failed batch degrades, never raises
-            log(f"⚠️ 角色形象设定失败（{len(batch)} 个角色）：{exc}")
+            log(f"⚠️ Character appearance design failed ({len(batch)} characters): {exc}")
             return produced
 
         for item in batch:
@@ -1518,8 +1518,8 @@ async def enrich_character_appearances(
                 cache.save(
                     CHARACTER_APPEARANCE_CACHE_TYPE,
                     {
-        log(f"⚠️ {len(missing)} characters got no appearance design; face prompts left empty: {', '.join(missing[:5])}")
-    log(f"Appearance design complete: {len(results)}/{len(merged)} characters")
+                        keys[name]: appearance_to_cache_payload(appearance)
+                        for name, appearance in produced.items()
                     },
                 )
             )
@@ -1529,17 +1529,39 @@ async def enrich_character_appearances(
         pending[start : start + _APPEARANCE_BATCH_SIZE]
         for start in range(0, len(pending), _APPEARANCE_BATCH_SIZE)
     ]
-    canonical_name: str = Field(description="Primary name of the group; must come from the candidate list")
+    outcomes = await map_bounded(
         batches,
-        default_factory=list, description="Other candidate names referring to the same location; must come from the candidate list"
+        run_batch,
         limit=default_llm_concurrency() if concurrency is None else concurrency,
-    reason: str = Field(default="", description="Basis for the decision")
+    )
     for outcome in outcomes:
         if isinstance(outcome, dict):
             results.update(outcome)
 
     missing = [item.name for item in merged if item.name not in results]
     if missing:
+        log(f"⚠️ {len(missing)} characters got no appearance design; face prompts left empty: {', '.join(missing[:5])}")
+    log(f"Appearance design complete: {len(results)}/{len(merged)} characters")
+
+    await _settle_narrator_nomination(results, order, cache, narrator_key, keys)
+    return results
+
+
+# ── scene adjudication ──────────────────────────────────────────────────────
+
+
+class SameLocationGroup(BaseModel):
+    canonical_name: str = Field(description="Primary name of the group; must come from the candidate list")
+    alias_names: list[str] = Field(
+        default_factory=list, description="Other candidate names referring to the same location; must come from the candidate list"
+    )
+    reason: str = Field(default="", description="Basis for the decision")
+
+
+class SceneAdjudication(BaseModel):
+    groups: list[SameLocationGroup] = Field(default_factory=list)
+
+
 SCENE_ADJUDICATION_SYSTEM_PROMPT = """You are a scene-merge adjudicator.
 
 The input is the location candidates parsed from the scene headings of the same screenplay; each comes with the number of scenes it appears in.
@@ -1555,28 +1577,6 @@ Rules:
   "Zheng family villa living room" and "Zheng family villa dining room" are two scenes, and so are "outside the Zheng family villa" and "Zheng family villa living room".
 - Time, weather and damage state do not make a new location, but the candidates here are already base locations, so ignore those.
 - If unsure, do not merge. Keeping one extra duplicate scene only costs redundant assets; a wrong merge makes two different dramatic locations share one scene image."""
-    reason: str = Field(default="", description="判定依据")
-
-
-class SceneAdjudication(BaseModel):
-    groups: list[SameLocationGroup] = Field(default_factory=list)
-
-
-SCENE_ADJUDICATION_SYSTEM_PROMPT = """你是场景归一裁决器。
-
-输入是从同一部剧本的场次头中解析出的地点候选，每个附带它在剧本中出现的场次数。
-
-你的任务只有一件：判断哪些候选其实是同一个物理地点，把它们归为一组并选出主名。
-
-规则：
-- 只能使用输入中出现过的候选名，不许发明新名字。
-- canonical_name 必须是该组候选之一，优先选出现场次最多、最完整具体的那个。
-- 同一地点的不同写法要合并，例如“舞蹈室镜子前”和“舞蹈室照镜子”，
-  “郑玉琴办公室”和“郑玉琴办公室内”，“学校教室”和“名门高级人才学院教室”。
-- 同一建筑里的不同房间是不同地点，绝不能合并：
-  “郑家别墅客厅”和“郑家别墅餐厅”是两个场景，“郑家别墅外”和“郑家别墅客厅”也是。
-- 时间、天气、损毁状态不构成新地点，但这里的候选都已经是基础地点，不用管这些。
-- 不确定就不要合并。多留一个重复场景只是资产冗余，错误合并会让两处戏共用一个场景图。"""
 
 
 def _create_scene_adjudication_agent(agent: Any = None):
@@ -1597,7 +1597,7 @@ def _create_scene_adjudication_agent(agent: Any = None):
             capability="text.generate.agent",
         ),
         system_prompt=SCENE_ADJUDICATION_SYSTEM_PROMPT,
-    "Zheng Yuqin's office" and "inside Zheng Yuqin's office". Each spelling otherwise becomes its own
+        model_settings=get_newapi_structured_output_model_settings(),
         output_type=SceneAdjudication,
         name="Structured Scene Adjudicator",
     )
@@ -1615,11 +1615,11 @@ async def adjudicate_scenes(
     agent: Any = None,
     on_log: Optional[Callable[[str], None]] = None,
     cache: Any = None,
-        f"- {scene.name} (appears in {counts.get(scene.name, 0)} scenes)"
-        f"{', aliases ' + ', '.join(scene.aliases) if scene.aliases else ''}"
+) -> list:
+    """Fold differently-written spellings of one location into a single scene.
 
     Scene headings are written by hand, so the same room appears as
-    "郑玉琴办公室" and "郑玉琴办公室内". Each spelling otherwise becomes its own
+    "Zheng Yuqin's office" and "inside Zheng Yuqin's office". Each spelling otherwise becomes its own
     base scene with its own generated art.
 
     Unlike character adjudication this never drops a candidate. A duplicate
@@ -1637,8 +1637,8 @@ async def adjudicate_scenes(
     counts = occurrences or {}
     by_name = {scene.name: scene for scene in scenes}
     listing = "\n".join(
-        f"- {scene.name}（出现 {counts.get(scene.name, 0)} 场）"
-        f"{'，别名 ' + '、'.join(scene.aliases) if scene.aliases else ''}"
+        f"- {scene.name} (appears in {counts.get(scene.name, 0)} scenes)"
+        f"{', aliases ' + ', '.join(scene.aliases) if scene.aliases else ''}"
         for scene in scenes
     )
 
@@ -1648,15 +1648,15 @@ async def adjudicate_scenes(
     cache_key = hashlib.sha256(
         json.dumps(
             {"v": SCENE_ADJUDICATION_CACHE_VERSION, "listing": listing},
-                log(f"Reusing the previous scene adjudication grouping: {len(groups)} groups, no model call")
+            ensure_ascii=False,
             sort_keys=True,
         ).encode("utf-8")
     ).hexdigest()
 
-                "Below are the location candidates from the same screenplay:\n" + listing
+    groups: list | None = None
     if cache is not None:
         payload = (
-            log(f"⚠️ Scene adjudication failed, keeping the original scenes: {exc}")
+            await cache.get(SCENE_ADJUDICATION_CACHE_TYPE, [cache_key])
         ).get(cache_key)
         if payload:
             try:
@@ -1670,15 +1670,15 @@ async def adjudicate_scenes(
             except (TypeError, ValueError, AttributeError):
                 groups = None
             if groups is not None:
-                log(f"复用上次场景裁决分组：{len(groups)} 组，未调用模型")
+                log(f"Reusing the previous scene adjudication grouping: {len(groups)} groups, no model call")
 
     if groups is None:
         try:
             result = (await _create_scene_adjudication_agent(agent).run(
-                "以下是同一部剧本的地点候选：\n" + listing
+                "Below are the location candidates from the same screenplay:\n" + listing
             )).output
         except Exception as exc:  # noqa: BLE001 - degrade to the unmerged result
-            log(f"⚠️ 场景归一裁决失败，保留原始场景: {exc}")
+            log(f"⚠️ Scene adjudication failed, keeping the original scenes: {exc}")
             return scenes
         groups = list(result.groups)
         if cache is not None:
@@ -1700,8 +1700,8 @@ async def adjudicate_scenes(
 
     removed: set[str] = set()
     for group in groups:
-                    f"  Refused to merge scene {secondary.name} → {primary.name}: "
-                    f"appears in {counts.get(secondary.name, 0)} scenes"
+        members = [
+            by_name[name]
             for name in (
                 str(n or "").strip()
                 for n in [group.canonical_name, *group.alias_names]
@@ -1710,10 +1710,10 @@ async def adjudicate_scenes(
         ]
         if len(members) < 2:
             continue
-            log(f"  Merged scene {secondary.name} → {primary.name}")
+
         # Decided here rather than by the model: the spelling the script uses
         # most is the canonical one.
-    log(f"Scene adjudication complete: {len(scenes)} → {len(survivors)}")
+        primary = max(members, key=lambda s: counts.get(s.name, 0))
         for secondary in members:
             if secondary is primary or secondary.name in removed:
                 continue
@@ -1722,8 +1722,8 @@ async def adjudicate_scenes(
             # pointing at another room's art.
             if counts.get(secondary.name, 0) > _MERGEABLE_SCENE_OCCURRENCES:
                 log(
-                    f"  拒绝归并场景 {secondary.name} → {primary.name}："
-                    f"出现 {counts.get(secondary.name, 0)} 场"
+                    f"  Refused to merge scene {secondary.name} → {primary.name}: "
+                    f"appears in {counts.get(secondary.name, 0)} scenes"
                 )
                 continue
             merged_aliases = list(primary.aliases)
@@ -1732,8 +1732,8 @@ async def adjudicate_scenes(
                     merged_aliases.append(candidate)
             primary.aliases = merged_aliases
             removed.add(secondary.name)
-            log(f"  归并场景 {secondary.name} → {primary.name}")
+            log(f"  Merged scene {secondary.name} → {primary.name}")
 
     survivors = [scene for scene in scenes if scene.name not in removed]
-    log(f"场景裁决完成: {len(scenes)} → {len(survivors)} 个")
+    log(f"Scene adjudication complete: {len(scenes)} → {len(survivors)}")
     return survivors

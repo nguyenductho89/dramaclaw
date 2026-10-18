@@ -429,22 +429,23 @@ async def convert_control_frame_to_sketch(
     projection: Any = None,
     egress_context: TrustedEgressContext | None = None,
 ) -> dict[str, Any]:
-    """把控制帧转成草图。**会出网**：下游经 NanoBananaGridGenerator 请求图像 provider。
+    """Convert a control frame into a sketch. **This leaves the network**: downstream it requests the image provider via NanoBananaGridGenerator.
 
-    `egress_context` 声明的是这个事实——`freezone.py:FREEZONE_LEAF_EGRESS` 判本函数
-    为 NETWORK 的依据就是它，没有它签名就在谎称「本函数不出网」。
+    `egress_context` declares exactly that fact — the reason `freezone.py:FREEZONE_LEAF_EGRESS`
+    classifies this function as NETWORK is this parameter; without it the signature would be lying that "this function does not leave the network".
 
-    它**不**继续往 `generate_grid` 里传：那个方法 39 个形参、没有这一项，穿进去等于
-    对整条内部链路做一次签名扫荡。也不需要——身份已由
-    `task_backend/run_core.py:695` 的 `model_gateway_scope_for_runner(envelope)` 在
-    派发处中心绑定，`nanobanana_grid.py:_call_newapi_image_api_with_egress`（`generate_grid`
-    的 newapi 分支经它出网）在显式参数为 None 时读作用域。
+    It is **not** passed further down into `generate_grid`: that method has 39 parameters and none for this,
+    so threading it through would mean a signature sweep over the whole internal call chain. It is also unnecessary — the identity is already
+    bound centrally at the dispatch site by `model_gateway_scope_for_runner(envelope)` in `task_backend/run_core.py:695`,
+    and `nanobanana_grid.py:_call_newapi_image_api_with_egress` (through which the newapi branch of `generate_grid`
+    leaves the network) reads that scope when the explicit argument is None.
 
-    这条前提在 OI-52 修好之前对本路径是**假的**：`generate_grid` 当时根本不经过任何
-    闸门，组织流量在这里无 claim、无组织凭证。钉住它的是
-    `tests/test_p0g4i_freezone_leaf_classification.py`（作用域可达）与
-    `tests/test_p0g4k_grid_family_image_egress.py`（`generate_grid` 真的读了它），
-    不是默认成立。
+    Before OI-52 was fixed, this premise was **false** for this path: `generate_grid` passed through no gate at all,
+    so organization traffic had no claim and no organization credentials here. What pins it down is
+    `tests/test_p0g4i_freezone_leaf_classification.py` (the scope is reachable) and
+    `tests/test_p0g4k_grid_family_image_egress.py` (`generate_grid` really reads it),
+    not an assumed default.
+    """
     """
 
     del egress_context

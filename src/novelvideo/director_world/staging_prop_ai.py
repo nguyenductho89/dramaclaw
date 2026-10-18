@@ -384,9 +384,7 @@ def default_position(crosshair_target: dict[str, Any]) -> list[float]:
 
 def default_scale(user_hint: str, shape_hint: str) -> list[float]:
     hint = user_hint.lower()
-    if any(token in user_hint for token in ["巨人", "怪兽", "恐龙"]) or any(
-        token in hint for token in ["giant", "monster", "dinosaur"]
-    ):
+    if any(token in hint for token in ["giant", "monster", "dinosaur"]):
         return [2.2, 4.0, 1.2]
     return list(
         SHAPE_HINT_DEFAULT_SCALES.get(
@@ -401,23 +399,23 @@ def infer_semantic_label(user_hint: str, generated: dict[str, Any]) -> str:
         return raw.lower().replace("-", "_")
     text = f"{user_hint} {generated.get('name') or ''} {raw}".lower()
     mappings = [
-        (["独角兽", "unicorn"], "unicorn"),
-        (["马", "horse"], "horse"),
-        (["鹿", "deer"], "deer"),
-        (["牛", "cow"], "cow"),
-        (["恐龙", "dinosaur"], "dinosaur"),
-        (["大炮", "火炮", "cannon", "artillery"], "cannon"),
-        (["飞机", "airplane", "plane"], "airplane"),
-        (["飞船", "airship", "spaceship"], "airship"),
-        (["轿子", "sedan"], "sedan_chair"),
-        (["马车", "carriage"], "carriage"),
-        (["法拉利", "ferrari"], "ferrari"),
-        (["跑车", "sports car", "sportscar"], "sports_car"),
-        (["推车", "cart"], "cart"),
-        (["纸箱堆", "箱堆", "box pile"], "box_pile"),
-        (["纸箱", "箱", "box"], "box"),
-        (["巨人", "giant"], "giant"),
-        (["怪兽", "monster"], "monster"),
+        (["unicorn"], "unicorn"),
+        (["horse"], "horse"),
+        (["deer"], "deer"),
+        (["cow"], "cow"),
+        (["dinosaur"], "dinosaur"),
+        (["cannon", "artillery"], "cannon"),
+        (["airplane", "plane"], "airplane"),
+        (["airship", "spaceship"], "airship"),
+        (["sedan"], "sedan_chair"),
+        (["carriage"], "carriage"),
+        (["ferrari"], "ferrari"),
+        (["sports car", "sportscar"], "sports_car"),
+        (["cart"], "cart"),
+        (["box pile"], "box_pile"),
+        (["box"], "box"),
+        (["giant"], "giant"),
+        (["monster"], "monster"),
     ]
     for tokens, semantic_label in mappings:
         if any(token in text for token in tokens):
@@ -435,28 +433,26 @@ def infer_shape_hint(
         return raw
     hint = user_hint.lower()
     text = f"{hint} {semantic_label}".lower()
-    wants_mount = any(token in user_hint for token in ["骑", "骑着", "乘"]) or any(
+    wants_mount = any(
         token in text for token in ["ride", "riding", "mount", "mounted"]
     )
     if any(
         token in text
-        for token in ["马", "horse", "unicorn", "deer", "cow", "dinosaur", "quadruped"]
+        for token in ["horse", "unicorn", "deer", "cow", "dinosaur", "quadruped"]
     ):
         return (
             "quadruped_mount"
             if wants_mount or "dinosaur" not in text
             else "generic_large"
         )
-    if any(token in text for token in ["大炮", "火炮", "cannon", "artillery"]):
+    if any(token in text for token in ["cannon", "artillery"]):
         return "wheeled_artillery"
-    if any(token in text for token in ["飞机", "飞船", "airplane", "plane", "airship"]):
+    if any(token in text for token in ["airplane", "plane", "airship"]):
         return "flying_craft"
     if any(
         token in text
         for token in [
-            "法拉利",
             "ferrari",
-            "跑车",
             "sports_car",
             "sports car",
             "sportscar",
@@ -464,12 +460,13 @@ def infer_shape_hint(
     ):
         return "sports_car"
     if any(
-        token in text for token in ["轿子", "马车", "车", "sedan", "carriage", "cart"]
+        token in text
+        for token in ["sedan", "carriage", "cart", "car", "vehicle"]
     ):
         return "long_vehicle"
-    if any(token in text for token in ["堆", "pile"]):
+    if any(token in text for token in ["pile", "stack"]):
         return "pile"
-    if any(token in text for token in ["箱", "box"]):
+    if any(token in text for token in ["crate", "box"]):
         return "box"
     return "generic_large"
 
@@ -575,7 +572,7 @@ def normalize_prop(
     user_hint = str(request.get("user_hint") or "").strip()
     hint_lower = user_hint.lower()
     name = str(
-        generated.get("name") or generated.get("prop_id") or user_hint or "staging道具"
+        generated.get("name") or generated.get("prop_id") or user_hint or "staging prop"
     )
     prop_id = stable_prop_id(str(generated.get("prop_id") or name))
     semantic_label = infer_semantic_label(user_hint, generated)
@@ -590,9 +587,8 @@ def normalize_prop(
         or default_scale(user_hint, shape_hint),
     )
     generated_relation = str(generated.get("relation_intent") or "").strip()
-    wants_mount_relation = shape_hint == "quadruped_mount" and (
-        any(token in user_hint for token in ["骑", "骑着", "乘"])
-        or any(token in hint_lower for token in ["ride", "riding", "mount", "mounted"])
+    wants_mount_relation = shape_hint == "quadruped_mount" and any(
+        token in hint_lower for token in ["ride", "riding", "mount", "mounted"]
     )
     return {
         "prop_id": prop_id,

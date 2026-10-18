@@ -108,7 +108,7 @@ async def _run_single_video_async(
     output_dir = str(payload.get("output_dir") or ctx.output_dir)
 
     manager = get_task_manager()
-    _log(manager, ctx, envelope, f"开始生成 Beat {beat_num} 视频")
+    _log(manager, ctx, envelope, f"Starting video generation for Beat {beat_num}")
 
     from novelvideo.generators.video_generator import (
         ShotReference,
@@ -137,8 +137,8 @@ async def _run_single_video_async(
     egress_context = envelope.get("__trusted_egress_context")
     if egress_context is not None:
         gen_kwargs["egress_context"] = egress_context
-    # 非 seedance2 后端（含 seedance-1.5-pro）的清晰度走构造参数透传；
-    # seedance2 的清晰度在 prepare 阶段并入 seedance2_config，无需在此重复。
+    # For non-seedance2 backends (including seedance-1.5-pro), the resolution is passed through constructor parameters;
+    # seedance2's resolution is merged into seedance2_config during the prepare stage, so it need not be repeated here.
     single_resolution = config.get("resolution")
     if single_resolution and not is_seedance2_backend:
         gen_kwargs["resolution"] = str(single_resolution)
@@ -154,7 +154,7 @@ async def _run_single_video_async(
             episode,
             beat_num=beat_num,
             progress=value,
-            current_task=f"生成 Beat {beat_num} 视频",
+            current_task=f"Generating video for Beat {beat_num}",
         )
 
     if video_mode == "keyframe" and last_frame_path and not is_seedance2_backend:
@@ -236,7 +236,7 @@ async def _run_single_video_async(
 
     result = await video_gen.generate(**generate_kwargs)
     if result.status.value != "done":
-        raise RuntimeError(result.error or "视频生成失败")
+        raise RuntimeError(result.error or "Video generation failed")
 
     video_pool_id = None
     try:
@@ -254,7 +254,7 @@ async def _run_single_video_async(
         )
         video_pool_id = entry.id
     except Exception as exc:  # noqa: BLE001
-        on_log(f"添加到视频池失败 (非致命): {exc}")
+        on_log(f"Failed to add to the video pool (non-fatal): {exc}")
 
     task_result = {
         "video_path": video_path.as_posix(),
@@ -383,7 +383,7 @@ async def _run_video_generation_async(
             "video_generation",
             episode,
             progress=index / max(1, len(beats)),
-            current_task=f"生成 Beat {beat_num} 视频...",
+            current_task=f"Generating video for Beat {beat_num}...",
         )
         frame_path = paths.first_frame_for_video(
             beat_num,
@@ -394,7 +394,7 @@ async def _run_video_generation_async(
                 ctx,
                 "video_generation",
                 episode,
-                logs=[f"Beat {beat_num} 缺少首帧，跳过: {frame_path}"],
+                logs=[f"Beat {beat_num} is missing its first frame, skipping: {frame_path}"],
             )
             continue
 
@@ -526,7 +526,7 @@ def run_compose_episode(
                 "compose_episode",
                 episode,
                 progress=index / max(1, len(beats)),
-                current_task=f"合成 Beat {beat_num}...",
+                current_task=f"Composing Beat {beat_num}...",
             )
             cmd = ["ffmpeg", "-y", "-i", str(video_path)]
             has_embedded_audio = False
@@ -557,7 +557,7 @@ def run_compose_episode(
                     ctx,
                     "compose_episode",
                     episode,
-                    logs=[f"Beat {beat_num} 使用独立音频: {audio_path.name}"],
+                    logs=[f"Beat {beat_num} uses standalone audio: {audio_path.name}"],
                 )
             else:
                 has_embedded_audio = _video_has_audio_stream(
@@ -591,7 +591,7 @@ def run_compose_episode(
                     ctx,
                     "compose_episode",
                     episode,
-                    logs=[f"Beat {beat_num} 使用视频内置音轨"],
+                    logs=[f"Beat {beat_num} uses the video's built-in audio track"],
                 )
             elif not audio_path.exists():
                 cmd.extend(
@@ -629,11 +629,11 @@ def run_compose_episode(
                     ctx,
                     "compose_episode",
                     episode,
-                    logs=[f"Beat {beat_num} 合成失败: {result.stderr[:500]}"],
+                    logs=[f"Beat {beat_num} composition failed: {result.stderr[:500]}"],
                 )
 
         if not video_clips:
-            raise RuntimeError("没有可用的视频片段")
+            raise RuntimeError("No usable video clips")
 
         check_cancel()
         cmd = ["ffmpeg", "-y"]
@@ -680,7 +680,7 @@ def run_compose_episode(
         result = run_checked(cmd, default_timeout_seconds=30 * 60)
         check_cancel()
         if result.returncode != 0:
-            raise RuntimeError(f"拼接失败: {result.stderr[:500]}")
+            raise RuntimeError(f"Concatenation failed: {result.stderr[:500]}")
 
     return {
         "video_path": output_path.as_posix(),
@@ -722,7 +722,7 @@ async def _run_global_optimize_video_async(
             logs=[message],
         )
 
-    log("开始全局视频提示词优化（仅 first_frame）...", progress=0.02)
+    log("Starting global video prompt optimization (first_frame only)...", progress=0.02)
     store = CogneeStore(
         ctx.owner_project_label,
         output_dir=output_dir,
@@ -740,7 +740,7 @@ async def _run_global_optimize_video_async(
             project=ctx.project_name,
         )
         if not sketch_paths:
-            raise RuntimeError("找不到草图网格，请先生成草图")
+            raise RuntimeError("Sketch grid not found; generate sketches first")
 
         resolver = PathResolver(output_dir, episode)
         sketches_dir = str(resolver.sketches_dir())
@@ -753,7 +753,7 @@ async def _run_global_optimize_video_async(
         for index, beat in enumerate(sorted_beats):
             beat_num = int(beat.get("beat_number") or 0)
             log(
-                f"Beat {beat_num}/{len(sorted_beats)}: 生成视频提示词...",
+                f"Beat {beat_num}/{len(sorted_beats)}: generating the video prompt...",
                 progress=0.2 + 0.7 * index / max(1, len(sorted_beats)),
             )
             sketch_path = None
@@ -763,7 +763,7 @@ async def _run_global_optimize_video_async(
                     sketch_path = candidate
                     break
             if not sketch_path:
-                log(f"Beat {beat_num}: 无草图帧，跳过")
+                log(f"Beat {beat_num}: no sketch frame, skipping")
                 continue
 
             prev_beat = sorted_beats[index - 1] if index > 0 else None
@@ -796,16 +796,16 @@ async def _run_global_optimize_video_async(
                 prev_prompt = prompt
             except Exception as exc:  # noqa: BLE001
                 failure_messages.append(f"Beat {beat_num}: {exc}")
-                log(f"Beat {beat_num}: 生成失败 ({exc})")
+                log(f"Beat {beat_num}: generation failed ({exc})")
 
         if updated_count == 0:
-            error = f"全局优化失败：0/{len(sorted_beats)} 个 Beat 生成成功"
+            error = f"Global optimization failed: 0/{len(sorted_beats)} Beats generated successfully"
             if failure_messages:
-                error = f"{error}；最后错误：{failure_messages[-1]}"
+                error = f"{error}; last error: {failure_messages[-1]}"
             raise RuntimeError(error)
 
         log(
-            f"全局优化完成：成功更新 {updated_count}/{len(sorted_beats)} 个 Beat",
+            f"Global optimization complete: successfully updated {updated_count}/{len(sorted_beats)} Beats",
             progress=1.0,
         )
         return {"optimized": updated_count, "beats": beats}
@@ -849,9 +849,9 @@ def _omni_video_edit_hint(payload: dict[str, Any], error: Exception) -> str | No
     ):
         return None
     return (
-        "Seedance 将该提示词判定为视频编辑，输出比例和时长需跟随源视频。"
-        "请改用「视频编辑」模式，或改写提示词以明确生成新视频。"
-        "用于编辑的源视频需为 4–30 秒。"
+        "Seedance judged this prompt to be video editing, so the output ratio and duration must follow the source video. "
+        'Switch to "Video editing" mode, or rewrite the prompt to clearly request a new video. '
+        "The source video used for editing must be 4-30 seconds long."
     )
 
 
@@ -873,8 +873,8 @@ async def _run_freezone_video_gen_async(
         0,
         scope=job_id,
         progress=0.1,
-        current_task="调用视频生成器...",
-        logs=["开始 freezone 视频生成"],
+        current_task="Calling the video generator...",
+        logs=["Starting freezone video generation"],
     )
 
     trusted_context = envelope.get("__trusted_egress_context")
@@ -970,7 +970,7 @@ async def _run_freezone_video_gen_async(
                 job_id,
                 exc,
             )
-            result["gif_enqueue_error"] = "GIF 转换任务未能启动，请重试转换。"
+            result["gif_enqueue_error"] = "The GIF conversion task could not be started; please retry the conversion."
     history_record = _append_freezone_video_node_history(
         ctx=ctx,
         project_dir=project_dir,

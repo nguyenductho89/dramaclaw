@@ -47,12 +47,12 @@ async def _portrait_targets(scope: PreviewScope) -> list[PreviewTarget]:
 async def _portrait_build(scope: PreviewScope, target: str) -> PromptPreview:
     character = next((c for c in await _characters(scope) if c.name == target), None)
     if character is None:
-        return empty("portraits", "image", f"找不到角色 / Character not found: {target}")
+        return empty("portraits", "image", f"Character not found: {target}")
     face_prompt = str(getattr(character, "face_prompt", "") or "").strip()
     audit = scope.project_dir / "prompts" / "characters" / f"{character.name}_portrait.prompt.txt"
     last = read_last_sent(audit)
     if not face_prompt:
-        out = empty("portraits", "image", "请先设置面部特征 face_prompt / Set face_prompt first")
+        out = empty("portraits", "image", "Set face_prompt first")
         out.target_label, out.last_sent = character.name, last
         return out
     style, style_kw, avoid_kw, ethnicity = _style_inputs(scope)
@@ -132,7 +132,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
         None,
     )
     if character is None or identity is None:
-        return empty("identity_images", "image", f"找不到身份 / Identity not found: {target}")
+        return empty("identity_images", "image", f"Identity not found: {target}")
     audit = (
         scope.project_dir
         / "prompts"
@@ -143,7 +143,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
     prompt, has_costume, has_portrait = _identity_prompt(scope, character, identity)
     label = f"{character.name} / {identity.identity_name}"
     if not prompt and not has_costume:
-        out = empty("identity_images", "image", "请先设置身份服装描述或上传服装参考图 / Set appearance_details or costume image")
+        out = empty("identity_images", "image", "Set appearance_details or costume image")
         out.target_label, out.last_sent = label, last
         return out
     style, style_kw, avoid_kw, ethnicity = _style_inputs(scope)
@@ -180,7 +180,7 @@ async def _identity_build(scope: PreviewScope, target: str) -> PromptPreview:
     )
 
 
-register(StepSpec("portraits", "肖像生成 / Portraits", "image",
+register(StepSpec("portraits", "Portraits", "image",
                   targets_fn=_portrait_targets, build_fn=_portrait_build))
-register(StepSpec("identity_images", "身份图生成 / Identity images", "image",
+register(StepSpec("identity_images", "Identity images", "image",
                   targets_fn=_identity_targets, build_fn=_identity_build))

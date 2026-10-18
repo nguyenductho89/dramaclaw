@@ -1,4 +1,4 @@
-"""风格管理端点。"""
+"""Style management endpoints."""
 
 import logging
 from pathlib import Path
@@ -55,10 +55,10 @@ def style_analysis_billing_params() -> dict[str, Any]:
 
 @router.get("/styles")
 async def list_styles(
-    project: str | None = Query(None, description="项目名；提供时返回该项目的自定义风格"),
+    project: str | None = Query(None, description="Project name; when provided, returns that project's custom styles"),
     user: dict = Depends(get_api_user),
 ):
-    """列出所有风格（预设 + 自定义）。"""
+    """List all styles (presets + custom)."""
     from novelvideo.services.style_service import StyleService
 
     username = user["username"]
@@ -89,10 +89,10 @@ async def list_styles(
 @router.get("/styles/{style_id}")
 async def get_style(
     style_id: str,
-    project: str | None = Query(None, description="项目名"),
+    project: str | None = Query(None, description="Project name"),
     user: dict = Depends(get_api_user),
 ):
-    """获取风格详情。"""
+    """Get style details."""
     from novelvideo.services.style_service import StyleService
 
     username = user["username"]
@@ -124,10 +124,10 @@ async def get_style(
 @router.get("/styles/{style_id}/preview")
 async def get_style_preview(
     style_id: str,
-    project: str | None = Query(None, description="项目名"),
+    project: str | None = Query(None, description="Project name"),
     user: dict = Depends(get_api_user),
 ):
-    """返回预设风格的参考预览图。"""
+    """Return the reference preview image of a preset style."""
     from novelvideo.services.style_service import StyleService
 
     username = user["username"]
@@ -151,16 +151,16 @@ async def get_style_preview(
         )
         if style:
             if not project or not getattr(style, "preview_path", None):
-                return {"ok": False, "error": "自定义风格暂无参考图"}
+                return {"ok": False, "error": "The custom style has no reference image yet"}
             preview_path = (resolved.project_dir / style.preview_path).resolve()
             if not preview_path.is_relative_to(resolved.project_dir.resolve()) or not preview_path.exists():
-                return {"ok": False, "error": "自定义风格参考图不存在"}
+                return {"ok": False, "error": "The custom style reference image does not exist"}
             return FileResponse(path=str(preview_path), media_type="image/*")
         return {"ok": False, "error": f"Style '{style_id}' not found"}
 
     preview_path = StyleService.PRESETS_DIR / f"{style_id}.png"
     if not preview_path.exists():
-        return {"ok": False, "error": f"预设风格 '{style_id}' 暂无参考图"}
+        return {"ok": False, "error": f"Preset style '{style_id}' has no reference image yet"}
 
     return FileResponse(
         path=str(preview_path),
@@ -171,7 +171,7 @@ async def get_style_preview(
 
 @router.post("/styles")
 async def create_style(body: dict, user: dict = Depends(get_api_user)):
-    """创建自定义风格。"""
+    """Create a custom style."""
     from novelvideo.services.style_service import StyleService
     from novelvideo.models import StyleConfig
 
@@ -183,7 +183,7 @@ async def create_style(body: dict, user: dict = Depends(get_api_user)):
         return {"ok": False, "error": "Project is required"}
     resolved = await resolve_project_scope(project, user, required_role="editor")
 
-    # 检查是否与预设冲突
+    # Check for conflicts with presets
     if StyleService.get_preset(style_id):
         return {"ok": False, "error": f"Cannot override preset style '{style_id}'"}
 
@@ -213,25 +213,25 @@ async def create_style(body: dict, user: dict = Depends(get_api_user)):
             state_dir=resolved.state_dir,
         )
         if not success:
-            return {"ok": False, "error": "保存自定义风格失败"}
+            return {"ok": False, "error": "Failed to save the custom style"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
-    return {"ok": True, "data": {"id": style_id, "message": "风格已创建"}}
+    return {"ok": True, "data": {"id": style_id, "message": "Style created"}}
 
 
 @router.delete("/styles/{style_id}")
 async def delete_style(
     style_id: str,
-    project: str | None = Query(None, description="项目名"),
+    project: str | None = Query(None, description="Project name"),
     user: dict = Depends(get_api_user),
 ):
-    """删除自定义风格。"""
+    """Delete a custom style."""
     from novelvideo.services.style_service import StyleService
 
-    # 不允许删除预设
+    # Presets may not be deleted
     if StyleService.get_preset(style_id):
         return {"ok": False, "error": "Cannot delete preset styles"}
 
@@ -248,14 +248,14 @@ async def delete_style(
     if not success:
         return {"ok": False, "error": f"Custom style '{style_id}' not found"}
 
-    return {"ok": True, "data": {"id": style_id, "message": "风格已删除"}}
+    return {"ok": True, "data": {"id": style_id, "message": "Style deleted"}}
 
 
 @router.post("/styles/{style_id}/preview")
 async def preview_style(
     style_id: str, body: StylePreviewRequest, user: dict = Depends(get_api_user)
 ):
-    """使用指定风格生成预览图。"""
+    """Generate a preview image with the specified style."""
     from novelvideo.services.style_service import StyleService
 
     username = user["username"]
@@ -281,7 +281,7 @@ async def preview_style(
     from novelvideo.generators.image_generator import generate_character_reference_unified
     import tempfile
 
-    # 使用临时目录生成预览图
+    # Generate the preview image in a temporary directory
     tmp_dir = tempfile.mkdtemp(prefix="style_preview_")
 
     try:
@@ -317,7 +317,7 @@ async def analyze_style(
     style_id: str = Form(""),
     user: dict = Depends(get_api_user),
 ):
-    """上传参考图片，AI 分析并提取风格参数。"""
+    """Upload a reference image; AI analyzes it and extracts style parameters."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     from novelvideo.services.style_service import StyleService
     from novelvideo.generators.style_analyzer import StyleAnalyzer
@@ -431,7 +431,7 @@ async def upload_style_preview(
     style_id: str = Form(...),
     user: dict = Depends(get_api_user),
 ):
-    """立即保存自定义风格参考图，不等待 AI 风格分析。"""
+    """Save the custom style reference image immediately, without waiting for AI style analysis."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     from novelvideo.services.style_service import StyleService
 

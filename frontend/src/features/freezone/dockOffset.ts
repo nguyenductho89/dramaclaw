@@ -3,35 +3,35 @@
 import type { CSSProperties } from "react";
 
 /**
- * 画布 agent 抽屉的「全局让位」协议。
+ * The "global yield" protocol of the canvas agent drawer.
  *
- * 抽屉本身是通高的 fixed 浮层（对标 liblib：打开时从屏幕最顶一直铺到最底，压在
- * 顶栏之上），所以它没法再靠 flex 把别人挤窄——只能反过来广播「右边被我占了多少」，
- * 由那些横贯整屏的全局条自己往左收：
- * - 顶栏（含右上角设置/通知/伙伴/算力/头像那一组，以及虾画·虾集导航）
- * - 底部任务状态条 / 展开的任务面板
+ * The drawer itself is a full-height fixed overlay (like liblib: when open it spans from the very top of the screen to the very bottom, above
+ * the top bar), so it can no longer squeeze others narrower via flex - it can only broadcast, conversely, "how much of the right side I occupy",
+ * and the full-width global bars shrink left by themselves:
+ * - the top bar (including the top-right settings/notifications/buddy/compute/avatar group, and the Canvas/Market navigation)
+ * - the bottom task status bar / the expanded task panel
  *
- * 变量挂在 `<html>` 上而不是走 React context：拖宽抽屉时每帧只改这一个字符串，
- * 顶栏就能跟着手走，不必让整棵组件树重渲染。抽屉没开、或不在自由画布页时变量
- * 不存在，`var(..., 0px)` 兜底 → 所有宿主保持原样。
+ * The variable is set on `<html>` rather than via React context: while dragging the drawer width only this one string changes per frame,
+ * so the top bar can follow the hand without re-rendering the whole component tree. When the drawer is not open, or not on the free-canvas page, the variable
+ * does not exist and the `var(..., 0px)` fallback leaves every host unchanged.
  */
 export const FREEZONE_DOCK_WIDTH_VAR = "--freezone-dock-width";
 
 /**
- * 让位动画时长。开合抽屉时是 300ms（与抽屉自身缓动同款），拖宽时抽屉会把它压成
- * 0ms——否则每帧都排一段 300ms 缓动，顶栏边缘会橡皮筋一样吊在手后面。
+ * Yield animation duration. 300ms when opening/closing the drawer (same easing as the drawer itself); while dragging the width the drawer compresses it to
+ * 0ms - otherwise a 300ms easing is scheduled every frame and the top-bar edge trails behind the hand like a rubber band.
  */
 export const FREEZONE_DOCK_TRANSITION_VAR = "--freezone-dock-transition";
 
-/** 只让位、不接管过渡：留给自己已有 transition 的宿主（任务面板的展开动画）。 */
+/** Yield only, do not take over the transition: for hosts that already have their own transition (the task panel's expand animation). */
 export const FREEZONE_DOCK_OFFSET_STYLE: CSSProperties = {
   marginRight: `var(${FREEZONE_DOCK_WIDTH_VAR}, 0px)`,
 };
 
 /**
- * 让位 + 跟抽屉同款缓动。`transitionProperty` 里额外带上 background-color，是因为
- * 内联样式会整条盖掉宿主 class 上的 `transition-colors`（底部状态条的 hover 变色
- * 靠它）。
+ * Yield + the same easing as the drawer. `transitionProperty` additionally includes background-color, because
+ * inline styles override the host class's `transition-colors` wholesale (the bottom status bar's hover color change
+ * relies on it).
  */
 export const FREEZONE_DOCK_OFFSET_ANIMATED_STYLE: CSSProperties = {
   ...FREEZONE_DOCK_OFFSET_STYLE,
@@ -41,9 +41,9 @@ export const FREEZONE_DOCK_OFFSET_ANIMATED_STYLE: CSSProperties = {
 };
 
 /**
- * 抽屉宽度的 CSS 表达式：与抽屉自己的 `maxWidth` 用同一条夹取，保证「窗口太窄被
- * 压回去」时顶栏让出的位置不会比抽屉实际宽。夹取交给 CSS 做，换窗口尺寸时不需要
- * 任何 JS 参与。
+ * The CSS expression for the drawer width: it uses the same clamp as the drawer's own `maxWidth`, ensuring that when "the window is too narrow and
+ * squeezes it back" the room the top bar gives up is never wider than the drawer actually is. The clamp is left to CSS, so changing the window size needs
+ * no JS involvement.
  */
 export function freezoneDockOffsetCss(dockWidth: number, minContentWidth: number): string {
   return `min(${dockWidth}px, calc(100vw - ${minContentWidth}px))`;

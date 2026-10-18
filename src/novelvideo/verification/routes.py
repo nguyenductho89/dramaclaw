@@ -1,4 +1,4 @@
-"""验证 API 路由。"""
+"""Verification API routes."""
 
 import json
 import logging
@@ -86,19 +86,19 @@ async def verify_beat(
     body: VerifyRequest,
     user: dict = Depends(get_api_user),
 ):
-    """验证单个 beat 的草图/首帧是否匹配描述。"""
+    """Verify whether the sketch/first frame of a single beat matches the description."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_beat: project=%s ep=%d beat=%d type=%s", project, episode_num, beat_num, body.type)
     store = await make_sqlite_store_for_context(resolved.ctx)
 
-    # 1. 读取 beat 数据
+    # 1. Read the beat data
     try:
         beat = await _load_beat_data(store, episode_num, beat_num)
     except (FileNotFoundError, IndexError) as e:
         return {"ok": False, "error": str(e)}
 
-    # 2. 找到对应图片
+    # 2. Find the corresponding image
     if body.type == "sketch":
         image_path = find_sketch_for_beat(project_dir, episode_num, beat_num)
     elif body.type == "frame":
@@ -109,20 +109,20 @@ async def verify_beat(
     if not image_path:
         return {"ok": False, "error": f"No {body.type} image found for beat {beat_num}"}
 
-    # 路径安全检查
+    # Path safety check
     if not image_path.resolve().is_relative_to(project_dir.resolve()):
         return {"ok": False, "error": "Image path outside project directory"}
 
-    # 3. 加载颜色映射（用于角色动作归属验证）
+    # 3. Load the color mapping (used to verify action attribution to characters)
     color_mapping: dict[str, str] = {}
     scenes = []
     try:
         color_mapping = store.get_sketch_colors(episode_num) or {}
         scenes = await store.list_scenes()
     except Exception:
-        pass  # 无颜色映射/场景列表时退化为原有行为
+        pass  # fall back to the original behavior when there is no color mapping/scene list
 
-    # 4. 调用验证
+    # 4. Run the verification
     visual_desc = beat.get("visual_description", "")
     named_characters = re.findall(r"\{\{([^}]+)\}\}", visual_desc)
     camera_context = beat.get("keyframe_prompt") or beat.get("video_prompt", "")
@@ -151,7 +151,7 @@ async def verify_beat(
         logger.error("verify_beat failed: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 5. 构建响应数据
+    # 5. Build the response data
     data = {
         **result.model_dump(),
         "beat_number": beat_num,
@@ -160,7 +160,7 @@ async def verify_beat(
         "description_used": beat.get("visual_description", ""),
     }
 
-    # 6. 格式化可读报告 + 持久化
+    # 6. Format the readable report + persist it
     data["report_text"] = format_verification_report(result.model_dump(), beat_num, body.type)
     report_path = save_verify_report(project_dir, episode_num, beat_num, body.type, data)
     data["report_path"] = report_path.relative_to(project_dir).as_posix()
@@ -175,7 +175,7 @@ async def start_sketch_edit_execute(
     body: SketchEditExecuteRequest = SketchEditExecuteRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """启动 episode 级 sketch edit execute 后台任务。"""
+    """Start an episode-level sketch edit execute background task."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     ctx = resolved.ctx
     project_dir = resolved.project_dir
@@ -231,12 +231,12 @@ async def start_sketch_edit_execute(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集 sketch edit execute 任务已进入队列",
+            "message": f"Sketch edit execute task for episode {episode_num} has been queued",
         }
 
     return {
         "ok": False,
-        "error": "sketch edit execute 需要 project context",
+        "error": "sketch edit execute requires a project context",
         "task_type": "sketch_edit_execute",
         "scope": scope,
         "labels_jsonl": labels_path.relative_to(project_dir).as_posix(),
@@ -251,7 +251,7 @@ async def verify_consistency(
     body: ConsistencyVerifyRequest = ConsistencyVerifyRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """检查整集跨 beat 的角色/服装一致性。支持 verify_type="sketch"(默认) 或 "frame"。"""
+    """Check cross-beat character/clothing consistency for the whole episode. Supports verify_type="sketch" (default) or "frame"."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_consistency: project=%s ep=%d type=%s", project, episode_num, body.verify_type)
@@ -266,7 +266,7 @@ async def verify_consistency(
         logger.error("verify_consistency failed: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 报告类型区分
+    # Distinguish the report type
     report_type = "frame_consistency" if body.verify_type == "frame" else "consistency"
     data["report_text"] = format_consistency_report(data, episode_num)
     report_path = save_verify_report(project_dir, episode_num, None, report_type, data)
@@ -282,19 +282,19 @@ async def verify_frame(
     beat_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """验证单个 beat 的首帧渲染质量（对比草图）。"""
+    """Verify the first-frame render quality of a single beat (compared against the sketch)."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_frame: project=%s ep=%d beat=%d", project, episode_num, beat_num)
     store = await make_sqlite_store_for_context(resolved.ctx)
 
-    # 1. 读取 beat 数据
+    # 1. Read the beat data
     try:
         beat = await _load_beat_data(store, episode_num, beat_num)
     except (FileNotFoundError, IndexError) as e:
         return {"ok": False, "error": str(e)}
 
-    # 2. 找到首帧和草图
+    # 2. Find the first frame and the sketch
     frame_path = find_frame_for_beat(project_dir, episode_num, beat_num)
     if not frame_path:
         return {"ok": False, "error": f"No frame image found for beat {beat_num}"}
@@ -303,14 +303,14 @@ async def verify_frame(
     if not sketch_path:
         return {"ok": False, "error": f"No sketch image found for beat {beat_num} (needed for comparison)"}
 
-    # 路径安全检查
+    # Path safety check
     resolved_project = project_dir.resolve()
     if not frame_path.resolve().is_relative_to(resolved_project):
         return {"ok": False, "error": "Frame path outside project directory"}
     if not sketch_path.resolve().is_relative_to(resolved_project):
         return {"ok": False, "error": "Sketch path outside project directory"}
 
-    # 3. 读取项目视觉风格
+    # 3. Read the project visual style
     project_style = ""
     project_config_path = project_dir / "config.json"
     if project_config_path.exists():
@@ -320,7 +320,7 @@ async def verify_frame(
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning("Failed to load config.json for project style: %s", e)
 
-    # 4. 调用验证
+    # 4. Run the verification
     visual_desc = beat.get("visual_description", "")
     verifier = FrameVerifier()
     try:
@@ -334,7 +334,7 @@ async def verify_frame(
         logger.error("verify_frame failed: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 5. 构建响应数据
+    # 5. Build the response data
     data = {
         **result.model_dump(),
         "beat_number": beat_num,
@@ -344,7 +344,7 @@ async def verify_frame(
         "description_used": visual_desc,
     }
 
-    # 6. 格式化可读报告 + 持久化
+    # 6. Format the readable report + persist it
     data["report_text"] = format_verification_report(result.model_dump(), beat_num, "frame")
     report_path = save_verify_report(project_dir, episode_num, beat_num, "frame", data)
     data["report_path"] = report_path.relative_to(project_dir).as_posix()
@@ -353,7 +353,7 @@ async def verify_frame(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T3: 内容匹配评分
+# T3: content-match scoring
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -365,7 +365,7 @@ async def score_beat(
     body: SketchScoreRequest = SketchScoreRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """T3: 对单个 beat 的草图进行内容匹配评分。"""
+    """T3: score the content match of a single beat's sketch."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("score_beat: project=%s ep=%d beat=%d", project, episode_num, beat_num)
@@ -376,7 +376,7 @@ async def score_beat(
     except (FileNotFoundError, IndexError) as e:
         return {"ok": False, "error": str(e)}
 
-    # 找到草图（支持指定 pool_id）
+    # Find the sketch (a specified pool_id is supported)
     if body.pool_id:
         from novelvideo.generators.pool_indexer import load_pool_index
 
@@ -395,11 +395,11 @@ async def score_beat(
         if not image_path:
             return {"ok": False, "error": f"No sketch found for beat {beat_num}"}
 
-    # 路径安全检查
+    # Path safety check
     if not image_path.resolve().is_relative_to(project_dir.resolve()):
         return {"ok": False, "error": "Image path outside project directory"}
 
-    # 加载颜色映射
+    # Load the color mapping
     color_mapping: dict[str, str] = {}
     try:
         color_mapping = store.get_sketch_colors(episode_num) or {}
@@ -436,7 +436,7 @@ async def score_batch(
     body: ScoreBatchRequest = ScoreBatchRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """T3 批量: 对指定 beat 的所有候选草图打分。"""
+    """T3 batch: score all candidate sketches of the specified beat."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("score_batch: project=%s ep=%d beats=%s", project, episode_num, body.beat_numbers)
@@ -470,7 +470,7 @@ async def score_batch(
         beat = beats[beat_num - 1]
         visual_desc = beat.get("visual_description", "")
 
-        # 获取候选
+        # Get the candidates
         if body.score_all_candidates:
             candidates = pool.filter_by_beat_and_type(beat_num, "sketch")
         else:
@@ -504,7 +504,7 @@ async def score_batch(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T4: 对比选择
+# T4: comparison selection
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -516,7 +516,7 @@ async def compare_beat(
     body: CompareRequest,
     user: dict = Depends(get_api_user),
 ):
-    """T4: 对比多张候选草图，选择最佳。"""
+    """T4: compare multiple candidate sketches and select the best one."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("compare_beat: project=%s ep=%d beat=%d pools=%s", project, episode_num, beat_num, body.pool_ids)
@@ -537,7 +537,7 @@ async def compare_beat(
     if not pool:
         return {"ok": False, "error": "No pool index found"}
 
-    # 解析候选路径
+    # Resolve the candidate paths
     candidate_paths: list[tuple[str, str]] = []
     for pool_id in body.pool_ids:
         cell_path = pool.get_cell_path(pool_id)
@@ -548,7 +548,7 @@ async def compare_beat(
             return {"ok": False, "error": f"Image file not found: {cell_path}"}
         candidate_paths.append((pool_id, str(full_path)))
 
-    # 解析参考图路径
+    # Resolve the reference image paths
     reference_paths: list[str] = []
     for ref_id in body.reference_pool_ids:
         cell_path = pool.get_cell_path(ref_id)
@@ -568,7 +568,7 @@ async def compare_beat(
         logger.error("compare_beat failed: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 映射 selected_index → selected_pool_id
+    # Map selected_index -> selected_pool_id
     selected_pool_id = ""
     if 1 <= result.selected_index <= len(body.pool_ids):
         selected_pool_id = body.pool_ids[result.selected_index - 1]
@@ -584,7 +584,7 @@ async def compare_beat(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T6: 连贯性评估
+# T6: continuity evaluation
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -595,7 +595,7 @@ async def verify_continuity(
     body: ContinuityRequest = ContinuityRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """T6: 检查相邻 beat 之间的叙事连贯性。"""
+    """T6: check the narrative continuity between adjacent beats."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_continuity: project=%s ep=%d range=%s window=%d", project, episode_num, body.beat_range, body.window_size)
@@ -623,7 +623,7 @@ async def verify_continuity(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T7: 相似度检测
+# T7: similarity detection
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -633,7 +633,7 @@ async def verify_similarity(
     episode_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """T7: 像素级草图相似度检测（零 LLM 成本）。"""
+    """T7: pixel-level sketch similarity detection (zero LLM cost)."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_similarity: project=%s ep=%d", project, episode_num)
@@ -653,7 +653,7 @@ async def verify_similarity(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 编排端点: 一站式草图择优
+# Orchestration endpoint: one-stop sketch selection
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -664,19 +664,19 @@ async def sketch_select(
     body: SketchSelectRequest = SketchSelectRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """编排端点: 一站式草图择优 — 加载候选 → T1/T2 淘汰 → T3 评分 → T4 对比 → 输出选择。"""
+    """Orchestration endpoint: one-stop sketch selection - load candidates -> T1/T2 elimination -> T3 scoring -> T4 comparison -> output the selection."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("sketch_select: project=%s ep=%d", project, episode_num)
 
-    # 加载 beats
+    # Load beats
     try:
         store = await make_sqlite_store_for_context(resolved.ctx)
         beats = await load_all_beats(project_dir, episode_num, sqlite_store=store)
     except FileNotFoundError as e:
         return {"ok": False, "error": str(e)}
 
-    # 加载 pool index
+    # Load the pool index
     from novelvideo.generators.pool_indexer import load_pool_index
 
     grids_dir = project_dir / "grids" / f"ep{episode_num:03d}"
@@ -684,14 +684,14 @@ async def sketch_select(
     if not pool:
         return {"ok": False, "error": "No pool index found. Generate sketches first."}
 
-    # 加载颜色映射
+    # Load the color mapping
     sketch_colors: dict[str, str] = {}
     try:
         sketch_colors = store.get_sketch_colors(episode_num) or {}
     except Exception:
         logger.exception("failed to load sketch_colors from SQLite")
 
-    # 执行编排
+    # Run the orchestration
     from .sketch_selector import run_sketch_select
 
     try:
@@ -739,7 +739,7 @@ async def sketch_select(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T8: 全局分镜审片
+# T8: global storyboard review
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -749,7 +749,7 @@ async def verify_episode_overview(
     episode_num: int,
     user: dict = Depends(get_api_user),
 ):
-    """T8: 导演视角全局分镜审片 — 整集草图拼网格图，一次 LLM 调用评估整体表现。"""
+    """T8: global storyboard review from the director's perspective - stitch the whole episode's sketches into a grid image and evaluate the overall performance in one LLM call."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_episode_overview: project=%s ep=%d", project, episode_num)
@@ -778,12 +778,12 @@ async def verify_sketch_colors(
     body: ColorVerifyRequest = ColorVerifyRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """Step 12.4: 草图颜色交叉验证 — 检测草图中角色颜色是否与剧本预期一致。"""
+    """Step 12.4: sketch color cross-validation - detect whether the character colors in the sketch match what the screenplay expects."""
     resolved = await _resolve_verification_project(project, user, required_role="viewer")
     project_dir = resolved.project_dir
     logger.info("verify_sketch_colors: project=%s ep=%d", project, episode_num)
 
-    # 1. 加载 beats
+    # 1. Load beats
     try:
         store = await make_sqlite_store_for_context(resolved.ctx)
         beats = await load_all_beats(project_dir, episode_num, sqlite_store=store)
@@ -793,7 +793,7 @@ async def verify_sketch_colors(
         logger.error("verify_sketch_colors: failed to load beats: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 2. 加载 sketch_colors
+    # 2. Load sketch_colors
     sketch_colors: dict[str, str] = {}
     try:
         sketch_colors = store.get_sketch_colors(episode_num) or {}
@@ -803,7 +803,7 @@ async def verify_sketch_colors(
     if not sketch_colors:
         return {"ok": False, "error": "No sketch_colors found. Run Step 12.3 (assign-colors) first."}
 
-    # 3. 执行验证
+    # 3. Run the verification
     try:
         result = verify_episode_sketch_colors(
             project_dir,
@@ -817,7 +817,7 @@ async def verify_sketch_colors(
         logger.error("verify_sketch_colors failed: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}
 
-    # 4. 格式化报告 + 持久化
+    # 4. Format the report + persist it
     data = result.model_dump()
     data["report_text"] = format_color_verify_report(data, episode_num)
     report_path = save_verify_report(project_dir, episode_num, None, "sketch_colors", data)

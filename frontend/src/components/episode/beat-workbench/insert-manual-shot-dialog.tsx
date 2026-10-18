@@ -222,11 +222,11 @@ export function InsertManualShotDialog({
         ? normalizedVisual
         : EMPTY_MANUAL_SHOT_VISUAL_DESCRIPTION;
     const identityList = identitiesText
-      .split(/[,，]/)
+      .split(/[,\uFF0C]/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     const propList = propsText
-      .split(/[,，]/)
+      .split(/[,\uFF0C]/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     const detectedIdentities =
@@ -466,7 +466,7 @@ export function InsertManualShotDialog({
 
             <Field
               label={t("episode.workbench.insertManual.sceneVariant", {
-                defaultValue: "变体",
+                defaultValue: "Variant",
               })}
             >
               <Select
@@ -480,21 +480,21 @@ export function InsertManualShotDialog({
               >
                 <SelectTrigger
                   aria-label={t("episode.workbench.insertManual.sceneVariant", {
-                    defaultValue: "变体",
+                    defaultValue: "Variant",
                   })}
                   className={`h-8 w-full text-xs ${FIELD_SURFACE_CLASS}`}
                 >
                   <SelectValue>
                     {locationVariant ||
                       t("episode.workbench.insertManual.noSceneVariant", {
-                        defaultValue: "无变体",
+                        defaultValue: "No variant",
                       })}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_VARIANT_SENTINEL}>
                     {t("episode.workbench.insertManual.noSceneVariant", {
-                      defaultValue: "无变体",
+                      defaultValue: "No variant",
                     })}
                   </SelectItem>
                   {locationVariantChoices.map((variant) => (
@@ -563,7 +563,7 @@ export function InsertManualShotDialog({
 
             <Field
               label={t("episode.workbench.insertManual.props", {
-                defaultValue: "出场道具",
+                defaultValue: "Props in shot",
               })}
             >
               <Input
@@ -576,10 +576,10 @@ export function InsertManualShotDialog({
                   placeholderProps
                     ? t("episode.workbench.insertManual.propsPlaceholder", {
                         example: placeholderProps,
-                        defaultValue: "逗号分隔，如 {{example}}；留空自动从画面描述提取",
+                        defaultValue: "Comma-separated, e.g. {{example}}; leave empty to extract automatically from the visual description",
                       })
                     : t("episode.workbench.insertManual.propsPlaceholderEmpty", {
-                        defaultValue: "逗号分隔道具ID；留空自动从画面描述提取",
+                        defaultValue: "Comma-separated prop IDs; leave empty to extract automatically from the visual description",
                       })
                 }
                 className={INPUT_CLASS}

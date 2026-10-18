@@ -1,9 +1,9 @@
-"""草图姿势编辑后端工具。
+"""Backend utilities for sketch pose editing.
 
-- 根据身份颜色提取单个火柴人 mask + bbox
-- 基于 bbox 的启发式骨架初始化
-- 提供 OpenPose 18 点风格的姿势预设
-- 保存为纯白底 + 火柴人骨架
+- Extract a single stick figure's mask + bbox from an identity color
+- Heuristic skeleton initialization based on the bbox
+- Provide OpenPose 18-point style pose presets
+- Save as a pure white background + stick-figure skeleton
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ def _n(x: float, y: float) -> dict[str, float]:
 
 POSE_PRESETS: dict[str, dict[str, Any]] = {
     "standing_front": {
-        "label": "站立-正面",
+        "label": "Standing - front",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -88,7 +88,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "standing_side_left": {
-        "label": "站立-左侧",
+        "label": "Standing - left side",
         "joints": {
             "nose": _n(230, 78),
             "neck": _n(256, 118),
@@ -111,7 +111,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "standing_side_right": {
-        "label": "站立-右侧",
+        "label": "Standing - right side",
         "joints": {
             "nose": _n(282, 78),
             "neck": _n(256, 118),
@@ -134,7 +134,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "arms_open": {
-        "label": "张开双臂",
+        "label": "Arms spread",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -157,7 +157,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "hand_on_hip_left": {
-        "label": "左手叉腰",
+        "label": "Left hand on hip",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -180,7 +180,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "hand_on_hip_right": {
-        "label": "右手叉腰",
+        "label": "Right hand on hip",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -203,7 +203,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "running": {
-        "label": "奔跑",
+        "label": "Running",
         "joints": {
             "nose": _n(250, 76),
             "neck": _n(256, 118),
@@ -226,7 +226,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "sitting": {
-        "label": "坐姿",
+        "label": "Sitting",
         "joints": {
             "nose": _n(256, 96),
             "neck": _n(256, 136),
@@ -249,7 +249,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "jump": {
-        "label": "跳跃",
+        "label": "Jumping",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -272,7 +272,7 @@ POSE_PRESETS: dict[str, dict[str, Any]] = {
         },
     },
     "kick": {
-        "label": "踢腿",
+        "label": "Kicking",
         "joints": {
             "nose": _n(256, 78),
             "neck": _n(256, 118),
@@ -357,7 +357,7 @@ def _load_image_modules():
         import numpy as np
         from PIL import Image, ImageDraw
     except Exception as e:  # pragma: no cover - runtime dependency
-        raise RuntimeError("姿势编辑依赖 Pillow 和 numpy") from e
+        raise RuntimeError("Pose editing requires Pillow and numpy") from e
     return np, Image, ImageDraw
 
 
@@ -480,7 +480,7 @@ def _compute_bbox(mask) -> tuple[int, int, int, int]:
     np, _, _ = _load_image_modules()
     ys, xs = np.where(mask)
     if len(xs) == 0 or len(ys) == 0:
-        raise ValueError("未找到指定颜色的火柴人")
+        raise ValueError("No stick figure of the specified color was found")
     return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
 
 
@@ -654,7 +654,7 @@ def save_clean_sketch(
     pose_list: list[tuple[str, dict[str, Any]]],
     strokes: list[dict[str, Any]] | None = None,
 ) -> None:
-    """保存干净的草图：纯白底 + 铅笔线稿 + 火柴人。"""
+    """Save a clean sketch: pure white background + pencil line art + stick figures."""
     _, Image, ImageDraw = _load_image_modules()
 
     orig = Image.open(image_path)
@@ -717,11 +717,11 @@ def save_clean_sketch(
 
 
 def save_edited_sketch(image_path: str, data_url: str) -> None:
-    """保存前端导出的当前草图画布。"""
+    """Save the current sketch canvas exported by the frontend."""
     _, Image, _ = _load_image_modules()
 
     if not data_url or "," not in data_url:
-        raise ValueError("无效的草图导出数据")
+        raise ValueError("Invalid sketch export data")
 
     _, encoded = data_url.split(",", 1)
     raw = base64.b64decode(encoded)

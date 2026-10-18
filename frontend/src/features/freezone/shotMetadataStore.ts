@@ -53,15 +53,15 @@ export const useShotMetadataStore = create<ShotMetadataState>((set) => ({
  */
 export function renderShotMetadataForPrompt(shot: ShotMetadata): string {
   const parts: string[] = [];
-  // 这些字段名直接拼进发给模型的提示词，锁中文；界面上的镜头参数标签另有词条。
+  // These field names are assembled directly into the prompt sent to the model; the shot parameter labels in the UI have their own locale entries.
   // i18n-exempt-start
   const labelMap: Record<keyof ShotMetadata, string> = {
-    shot_type: "景别",
-    angle: "镜头角度",
-    camera_movement: "运镜",
-    subject_action: "主体动作",
-    mood: "氛围",
-    color_tone: "色调",
+    shot_type: "Shot type",
+    angle: "Camera angle",
+    camera_movement: "Camera movement",
+    subject_action: "Subject action",
+    mood: "Mood",
+    color_tone: "Color tone",
     extra: "",
   };
   // i18n-exempt-end
@@ -78,7 +78,7 @@ export function renderShotMetadataForPrompt(shot: ShotMetadata): string {
     }
   }
   if (parts.length === 0) return "";
-  return `\n[镜头参数]\n${parts.join("\n")}`; // i18n-exempt —— 提示词里的段落头
+  return `\n[Shot parameters]\n${parts.join("\n")}`; // i18n-exempt -- section header in the prompt
 }
 
 /**
@@ -90,9 +90,9 @@ export function renderShotMetadataForPrompt(shot: ShotMetadata): string {
  *   a portrait
  *
  *   [shot]
- *   shot_type: 中景
- *   angle: 仰拍
- *   mood: 紧张
+ *   shot_type: medium
+ *   angle: low angle
+ *   mood: tense
  *   [/shot]
  *   ```
  *

@@ -77,8 +77,8 @@
   gap: 24px;
 }
 
-/* 安装包下载：与「商务联系」同一套 hover 浮层结构，只是面板里换成两个平台条目。
-   ::after 是悬停缓冲区，鼠标从触发器移到面板的路上不会穿帮收起。 */
+/* Installer download: the same hover-panel structure as "Business Contact", only with two platform entries in the panel.
+   ::after is the hover buffer, so the panel does not collapse as the mouse travels from the trigger to the panel. */
 .desktopDownload {
   position: relative;
   display: inline-flex;
@@ -193,7 +193,7 @@
   opacity: 0.9;
 }
 
-/* 公告、商务、更多统一为图标 + 两字标签；完整动作名称保留在 aria-label。 */
+/* Announcement, business and more share an icon + two-character label; the full action name stays in aria-label. */
 .announcement {
   position: relative;
   display: inline-flex;
@@ -220,9 +220,9 @@
   transition: color 160ms ease;
 }
 
-/* 图标只有 17px（移动端 16px），命中区域靠这层透明伪元素撑到 24×24 的最小目标
-   尺寸。不直接给按钮设宽高，是因为它在 .stageActions 里跟文字项并排，撑大盒子
-   会把顶栏的间距推歪。 */
+/* The icon is only 17px (16px on mobile), and the hit area is stretched to the 24x24 minimum target size by this transparent pseudo-element.
+   The button itself is not given a width/height, because it sits beside text items in .stageActions and enlarging the box
+   would throw off the top bar spacing. */
 .announcementTrigger::after {
   content: "";
   position: absolute;
@@ -249,8 +249,8 @@
   color: rgba(255, 255, 255, 0.94);
 }
 
-/* 仅有未读公告时打点；打开公告中心后熄灭，新公告到达时重新出现。
-   外圈描边压在深色顶栏上，滚动到浅色画面时也不会糊掉。 */
+/* Dot only when there are unread announcements; extinguished after opening the announcement center, reappears when a new one arrives.
+   The outer ring stroke holds up against the dark top bar and does not blur when scrolled onto light imagery. */
 .announcementDot {
   position: absolute;
   top: -2px;
@@ -264,8 +264,8 @@
     0 0 8px rgba(255, 77, 79, 0.62);
 }
 
-/* Base UI 的 Dialog 把 Backdrop 和 Popup 渲染成兄弟节点，所以居中得由 Popup 自己
-   负责，backdrop 只管铺满和压暗。 */
+/* Base UI's Dialog renders Backdrop and Popup as sibling nodes, so centering has to be done by the Popup itself,
+   while the backdrop only fills the screen and darkens it. */
 .announcementOverlay {
   position: fixed;
   inset: 0;
@@ -306,8 +306,8 @@
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 进出场只改这两个状态，Base UI 开关时会自己把属性挂上再摘掉。走 CSS 过渡而不是
-   JS 动画，是为了让 prefers-reduced-motion 真的能关掉它。 */
+/* Enter/exit only changes these two states; Base UI attaches and removes the attribute itself when opening/closing. Uses a CSS transition rather than
+   JS animation, so that prefers-reduced-motion can really switch it off. */
 .announcementDialog[data-starting-style],
 .announcementDialog[data-ending-style] {
   opacity: 0;
@@ -2032,9 +2032,9 @@
     transform: none;
   }
 
-  /* 公告弹窗的进出场是 Base UI 挂在 data-starting-style / data-ending-style 上的
-     CSS 过渡，所以这里关掉过渡就真的不动了。注意别把 .announcementDialog 的
-     transform 整个清成 none —— translate(-50%, -50%) 是它的居中方式，不是动效。 */
+  /* The announcement dialog's enter/exit is a CSS transition that Base UI attaches to data-starting-style / data-ending-style,
+     so turning the transition off here really stops it from moving. Note do not clear the whole transform of .announcementDialog
+     to none - translate(-50%, -50%) is its centering mechanism, not a motion effect. */
   .announcementOverlay,
   .announcementDialog {
     transition: none;

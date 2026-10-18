@@ -1,14 +1,14 @@
-"""Nano Banana Pro 角色参考图生成模块。
+"""Nano Banana Pro character reference image generation module.
 
-使用 Google AI Studio (Gemini) 生成角色参考图，
-与网格生成使用同一模型，确保角色视觉一致性。
+Uses Google AI Studio (Gemini) to generate character reference images,
+with the same model as grid generation, ensuring visual consistency of characters.
 
-核心技术：Identity Locking（身份锁定）
-- 参考图是"身份锚点"，不是姿势模板
-- 保持: 面部结构、五官比例、表情、整体相似度
-- 变化: 服装、背景、姿势、角度、光线
+Core technique: Identity Locking
+- The reference image is an "identity anchor", not a pose template
+- Keep: facial structure, feature proportions, expression, overall likeness
+- Change: clothing, background, pose, angle, lighting
 
-参考资料:
+References:
 - https://github.com/aimikoda/nano-banana-pro-prompts
 - https://replicate.com/blog/how-to-prompt-nano-banana-pro
 """
@@ -73,9 +73,9 @@ def create_composite_reference(
     fullbody_path: str,
     output_path: str,
 ) -> str:
-    """将 Portrait（面部特写）和全身图拼接成复合参考图。
+    """Stitch the Portrait (face close-up) and the full-body image into a composite reference image.
 
-    复合图布局：
+    Composite layout:
     ┌─────────────┬─────────────┐
     │   LEFT      │   RIGHT     │
     │   PANEL     │   PANEL     │
@@ -85,22 +85,22 @@ def create_composite_reference(
     └─────────────┴─────────────┘
 
     Args:
-        portrait_path: Portrait 面部特写图路径
-        fullbody_path: 全身图路径
-        output_path: 复合图输出路径
+        portrait_path: path of the Portrait face close-up image
+        fullbody_path: path of the full-body image
+        output_path: output path of the composite image
 
     Returns:
-        输出路径
+        Output path
     """
     from PIL import Image
 
     portrait = Image.open(portrait_path)
     fullbody = Image.open(fullbody_path)
 
-    # 统一高度（取较大者）
+    # Unify the height (take the larger one)
     target_height = max(portrait.height, fullbody.height)
 
-    # 调整尺寸保持比例
+    # Resize while keeping proportions
     p_ratio = portrait.width / portrait.height
     portrait_resized = portrait.resize(
         (int(target_height * p_ratio), target_height), Image.Resampling.LANCZOS
@@ -111,21 +111,21 @@ def create_composite_reference(
         (int(target_height * f_ratio), target_height), Image.Resampling.LANCZOS
     )
 
-    # 拼接：Portrait 在左，Fullbody 在右
+    # Stitch: Portrait on the left, Fullbody on the right
     total_width = portrait_resized.width + fullbody_resized.width
     composite = Image.new("RGB", (total_width, target_height))
     composite.paste(portrait_resized, (0, 0))
     composite.paste(fullbody_resized, (portrait_resized.width, 0))
 
-    # 保存
+    # Save
     composite.save(output_path, "PNG")
-    print(f"[NanoBanana Character] 复合图已生成: {output_path} ({total_width}x{target_height})")
+    print(f"[NanoBanana Character] Composite image generated: {output_path} ({total_width}x{target_height})")
 
     return output_path
 
 
 class CharacterReferenceResult(BaseModel):
-    """角色参考图生成结果。"""
+    """Character reference image generation result."""
 
     success: bool
     character_name: str
@@ -133,23 +133,23 @@ class CharacterReferenceResult(BaseModel):
     primary_reference: str = Field(default="")
     error: Optional[str] = None
     generation_time: float = 0.0
-    # Dry Run 模式返回的 Prompt 信息
+    # Prompt info returned in Dry Run mode
     prompt: Optional[str] = None
     prompt_file: Optional[str] = None
 
 
 class NanoBananaCharacterGenerator:
-    """Nano Banana Pro 角色 portrait 生成器。
+    """Nano Banana Pro character portrait generator.
 
-    与网格生成器使用同一模型（Gemini），确保角色视觉一致性。
-    当前仅负责生成 portrait / identity anchor。
-    四视图 reference sheet 走 generate_identity_with_reference()。
+    Uses the same model (Gemini) as the grid generator, ensuring visual consistency of characters.
+    Currently only responsible for generating the portrait / identity anchor.
+    The four-view reference sheet goes through generate_identity_with_reference().
 
-    示例:
+    Example:
         >>> generator = NanoBananaCharacterGenerator()
         >>> result = await generator.generate_character_portrait(
-        ...     character_name="姜裳宁",
-        ...     character_prompt="女性，20岁，黑发盘髻，柳叶眉，杏眼，红唇，古装汉服",
+        ...     character_name="Jiang Shangning",
+        ...     character_prompt="Female, 20 years old, black hair in a bun, willow-leaf eyebrows, almond eyes, red lips, ancient-style Hanfu",
         ...     output_dir="output/characters/jiangsn"
         ... )
     """
@@ -161,10 +161,10 @@ class NanoBananaCharacterGenerator:
         selection: Optional[str] = None,
         egress_context: TrustedEgressContext | None = None,
     ):
-        """初始化生成器。
+        """Initialize the generator.
 
         Args:
-            api_key: API Key，默认从环境变量读取
+            api_key: API Key; read from the environment by default
         """
         if (
             egress_context is not None
@@ -223,33 +223,33 @@ class NanoBananaCharacterGenerator:
         style: str = None,
         output_dir: str = None,
         ethnicity: str = "Chinese",
-        prompt_only: bool = False,  # Dry Run 模式：只生成提示词，不调用 API
+        prompt_only: bool = False,  # Dry Run mode: only generate prompts, do not call the API
         project_dir: str = "",
         state_dir: str = "",
         usage_task_type: str = "character_portrait",
         usage_scope: str = "",
         identity_name: str = "",
     ) -> CharacterReferenceResult:
-        """生成角色 portrait / identity anchor。
+        """Generate the character portrait / identity anchor.
 
         Args:
-            character_name: 角色名称
-            character_prompt: 角色外貌描述 Prompt
-            character_tag: 角色唯一短标签（用于 Prompt 中的身份标记）
-            style: 风格名称，默认使用全局配置
-            output_dir: 输出目录
-            ethnicity: 角色种族（默认 "Chinese"），用于确保生成正确的面部特征
+            character_name: character name
+            character_prompt: character appearance description prompt
+            character_tag: unique short character tag (used as the identity marker in the prompt)
+            style: style name; defaults to the global config
+            output_dir: output directory
+            ethnicity: character ethnicity (default "Chinese"), used to ensure correct facial features
 
         Returns:
             CharacterReferenceResult
         """
         start_time = time.time()
 
-        # 使用全局默认风格
+        # Use the global default style
         if style is None:
             style = IMAGE_DEFAULT_STYLE
 
-        # 确保输出目录存在
+        # Make sure the output directory exists
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
@@ -264,7 +264,7 @@ class NanoBananaCharacterGenerator:
 
                 client = genai.Client(api_key=self.api_key)
 
-            # 获取风格预设
+            # Get the style preset
             style_preset = get_style_preset(
                 style,
                 project_dir=project_dir,
@@ -273,12 +273,12 @@ class NanoBananaCharacterGenerator:
             style_keywords = style_preset.get("style_instructions", "")
             negative_keywords = style_preset.get("avoid_instructions", "")
 
-            # 生成角色标签（如果未提供）
+            # Generate the character tag (if not provided)
             if not character_tag:
-                # 从角色名生成简短标签
+                # Generate a short tag from the character name
                 character_tag = self._generate_character_tag(character_name)
 
-            print(f"[NanoBanana Character] 生成 {character_name} 正面基准图...")
+            print(f"[NanoBanana Character] Generating front base image for {character_name}...")
 
             front_prompt = self._build_character_prompt(
                 character_name=character_name,
@@ -292,7 +292,7 @@ class NanoBananaCharacterGenerator:
                 ethnicity=ethnicity,
             )
 
-            # 保存 prompt 到文件（审计用）
+            # Save the prompt to a file (for auditing)
             if output_dir:
                 if project_dir:
                     prompts_dir = Path(project_dir) / "prompts" / "characters"
@@ -301,11 +301,11 @@ class NanoBananaCharacterGenerator:
                 prompts_dir.mkdir(parents=True, exist_ok=True)
                 prompt_file = prompts_dir / f"{character_name}_portrait.prompt.txt"
                 prompt_file.write_text(front_prompt, encoding="utf-8")
-                print(f"[NanoBanana Character] Prompt 已保存: {prompt_file}")
+                print(f"[NanoBanana Character] Prompt saved: {prompt_file}")
 
-            # Prompt-Only 模式：只生成提示词，跳过 API 调用
+            # Prompt-Only mode: only generate the prompt, skip the API call
             if prompt_only:
-                print(f"[NanoBanana Character] Prompt-Only 模式，跳过 API 调用")
+                print(f"[NanoBanana Character] Prompt-Only mode, skipping API call")
                 return CharacterReferenceResult(
                     success=True,
                     character_name=character_name,
@@ -338,25 +338,25 @@ class NanoBananaCharacterGenerator:
             )
 
             if portrait_bytes and portrait_ref_path:
-                print(f"[NanoBanana Character] Portrait 已生成: {portrait_ref_path}")
+                print(f"[NanoBanana Character] Portrait generated: {portrait_ref_path}")
             else:
                 if usage_recorded and project_output_dir:
                     update_image_request_status(
                         project_output_dir=project_output_dir,
                         request_id=request_id,
                         status="failed",
-                        error_message="生成正面基准图失败",
+                        error_message="Failed to generate front base image",
                     )
                 return CharacterReferenceResult(
                     success=False,
                     character_name=character_name,
-                    error="生成正面基准图失败",
+                    error="Failed to generate front base image",
                     generation_time=time.time() - start_time,
                 )
 
             generation_time = time.time() - start_time
             print(
-                f"[NanoBanana Character] {character_name} portrait 生成完成，耗时 {generation_time:.1f}s"
+                f"[NanoBanana Character] {character_name} portrait generation complete, took {generation_time:.1f}s"
             )
             if usage_recorded and project_output_dir:
                 update_image_request_status(
@@ -379,12 +379,12 @@ class NanoBananaCharacterGenerator:
                     project_output_dir=project_output_dir,
                     request_id=request_id,
                     status="failed",
-                    error_message="请安装 google-genai: pip install google-genai",
+                    error_message="Please install google-genai: pip install google-genai",
                 )
             return CharacterReferenceResult(
                 success=False,
                 character_name=character_name,
-                error="请安装 google-genai: pip install google-genai",
+                error="Please install google-genai: pip install google-genai",
                 generation_time=time.time() - start_time,
             )
         except Exception as e:
@@ -421,7 +421,7 @@ class NanoBananaCharacterGenerator:
         usage_scope: str = "",
         identity_name: str = "",
     ) -> CharacterReferenceResult:
-        """兼容旧接口，内部统一转 portrait-first 机制。"""
+        """Compatible with the old interface; internally unified to the portrait-first mechanism."""
         _ = views, face_only
         return await self.generate_character_portrait(
             character_name=character_name,
@@ -455,21 +455,21 @@ class NanoBananaCharacterGenerator:
         usage_scope: str = "",
         identity_name: str = "",
     ) -> CharacterReferenceResult:
-        """基于角色基准图生成身份参考图（Identity Locking）。
+        """Generate an identity reference image from the character base image (Identity Locking).
 
-        使用角色的正面基准图作为身份锚点，保持面部一致性，
-        只变换服装、背景等身份特定的外观。
-        统一生成 4 面板 reference sheet（全脸特写 + 正面全身 + 45° 三分全身 + 背面全身）。
+        Uses the character's front base image as the identity anchor to keep the face consistent,
+        changing only identity-specific looks such as clothing and background.
+        Always generates a 4-panel reference sheet (full face close-up + front full body + 45-degree three-quarter full body + back full body).
 
         Args:
-            character_name: 角色名称
-            identity_prompt: 身份外貌描述（服装、场景等）
-            reference_image_path: 角色正面基准图路径
-            output_path: 输出图片路径
-            character_tag: 角色唯一短标签
-            style: 风格名称
-            ethnicity: 角色种族（默认 "Chinese"），用于确保生成正确的面部特征
-            dry_run: 是否仅生成 Prompt 不生成图片（默认 False）
+            character_name: character name
+            identity_prompt: identity appearance description (clothing, scene, etc.)
+            reference_image_path: path of the character front base image
+            output_path: output image path
+            character_tag: unique short character tag
+            style: style name
+            ethnicity: character ethnicity (default "Chinese"), used to ensure correct facial features
+            dry_run: whether to generate only the prompt without images (default False)
 
         Returns:
             CharacterReferenceResult
@@ -491,7 +491,7 @@ class NanoBananaCharacterGenerator:
 
                 client = genai.Client(api_key=self.api_key)
 
-            # 获取风格预设
+            # Get the style preset
             style_preset = get_style_preset(
                 style,
                 project_dir=project_dir,
@@ -504,10 +504,10 @@ class NanoBananaCharacterGenerator:
                 character_tag = self._generate_character_tag(character_name)
 
             print(
-                f"[NanoBanana Character] 基于基准图生成 {character_name} 身份图（4面板: 正面+三分+背面）..."
+                f"[NanoBanana Character] Generating identity image for {character_name} from the base image (4 panels: front + three-quarter + back)..."
             )
 
-            # 构建 Identity Locked Prompt（4 面板: 全脸 + 正面 + 45° 三分 + 背面）
+            # Build the Identity Locked Prompt (4 panels: full face + front + 45-degree three-quarter + back)
             has_costume_ref = bool(costume_image_path and os.path.exists(costume_image_path))
             prompt = self._build_identity_locked_prompt(
                 character_name=character_name,
@@ -523,29 +523,29 @@ class NanoBananaCharacterGenerator:
                 has_costume_reference=has_costume_ref,
             )
 
-            # 保存 prompt 到文件（审计用）
+            # Save the prompt to a file (for auditing)
             prompt_file = None
             if output_path:
                 if project_dir:
                     prompts_dir = Path(project_dir) / "prompts" / "characters"
                 else:
-                    # output_path: output/{username}/{project}/assets/characters/{角色名}/identities/{身份名}.png
+                    # output_path: output/{username}/{project}/assets/characters/{character_name}/identities/{identity_name}.png
                     prompts_dir = (
                         Path(output_path).parent.parent.parent.parent.parent
                         / "prompts"
                         / "characters"
                     )
                 prompts_dir.mkdir(parents=True, exist_ok=True)
-                # 从 output_path 提取身份名
+                # Extract the identity name from output_path
                 prompt_file = (
                     prompts_dir / f"{character_name}_identity_{resolved_identity_name}.prompt.txt"
                 )
                 prompt_file.write_text(prompt, encoding="utf-8")
-                print(f"[NanoBanana Character] Identity Prompt 已保存: {prompt_file}")
+                print(f"[NanoBanana Character] Identity Prompt saved: {prompt_file}")
 
-            # Dry Run 模式：仅生成 Prompt，不生成图片
+            # Dry Run mode: only generate the prompt, no images
             if dry_run:
-                print(f"[NanoBanana Character] Dry Run 模式，跳过图片生成")
+                print(f"[NanoBanana Character] Dry Run mode, skipping image generation")
                 return CharacterReferenceResult(
                     success=True,
                     character_name=character_name,
@@ -568,7 +568,7 @@ class NanoBananaCharacterGenerator:
                 )
                 usage_recorded = True
 
-            # 加载参考图（年龄变体等无参考图场景允许为空）
+            # Load the reference image (may be empty for scenarios without one, such as age variants)
             ref_image = None
             ref_image_bytes = None
             if reference_image_path and os.path.exists(reference_image_path):
@@ -577,30 +577,30 @@ class NanoBananaCharacterGenerator:
                     return CharacterReferenceResult(
                         success=False,
                         character_name=character_name,
-                        error=f"无法加载参考图: {reference_image_path}",
+                        error=f"Cannot load reference image: {reference_image_path}",
                         generation_time=time.time() - start_time,
                     )
                 with open(reference_image_path, "rb") as f:
                     ref_image_bytes = f.read()
             else:
-                print(f"[NanoBanana Character] 无参考图，从文字描述独立生成")
+                print(f"[NanoBanana Character] No reference image, generating independently from the text description")
 
-            # 加载服装参考图（如果有）
+            # Load the costume reference image (if any)
             costume_image = None
             costume_image_bytes = None
             if costume_image_path and os.path.exists(costume_image_path):
                 costume_image = self._load_image_as_part(costume_image_path)
                 with open(costume_image_path, "rb") as f:
                     costume_image_bytes = f.read()
-                print(f"[NanoBanana Character] 已加载服装参考图: {costume_image_path}")
+                print(f"[NanoBanana Character] Costume reference image loaded: {costume_image_path}")
 
-            # 统一流程：生成 body 到临时文件 → 拼接 portrait → 删 temp
-            aspect_ratio = "16:9"  # 4面板: 全脸+正+三分+背面
+            # Unified flow: generate the body to a temp file -> stitch the portrait -> delete temp
+            aspect_ratio = "16:9"  # 4 panels: full face + front + three-quarter + back
             image_size = "1K"
-            body_label = "4面板 reference sheet"
+            body_label = "4-panel reference sheet"
 
             temp_body_path = output_path.replace(".png", "_body_temp.png")
-            print(f"[NanoBanana Character] 生成{body_label}到临时文件: {temp_body_path}")
+            print(f"[NanoBanana Character] Generating {body_label} to temp file: {temp_body_path}")
 
             image_bytes = await self._generate_with_reference(
                 client=client,
@@ -617,15 +617,15 @@ class NanoBananaCharacterGenerator:
             )
 
             if image_bytes:
-                # 直接使用 sheet 作为身份参考图（零拼接，天然一致）
+                # Use the sheet directly as the identity reference image (zero stitching, naturally consistent)
                 import shutil
 
                 shutil.move(temp_body_path, output_path)
-                print(f"[NanoBanana Character] {body_label}已保存: {output_path}")
+                print(f"[NanoBanana Character] {body_label} saved: {output_path}")
 
                 generation_time = time.time() - start_time
                 print(
-                    f"[NanoBanana Character] 复合身份图已生成: {output_path}，耗时 {generation_time:.1f}s"
+                    f"[NanoBanana Character] Composite identity image generated: {output_path}, took {generation_time:.1f}s"
                 )
                 if usage_recorded and project_output_dir:
                     update_image_request_status(
@@ -646,12 +646,12 @@ class NanoBananaCharacterGenerator:
                         project_output_dir=project_output_dir,
                         request_id=request_id,
                         status="failed",
-                        error_message=f"生成{body_label}失败",
+                        error_message=f"Failed to generate {body_label}",
                     )
                 return CharacterReferenceResult(
                     success=False,
                     character_name=character_name,
-                    error=f"生成{body_label}失败",
+                    error=f"Failed to generate {body_label}",
                     generation_time=time.time() - start_time,
                 )
 
@@ -683,26 +683,26 @@ class NanoBananaCharacterGenerator:
         project_dir: str = "",
         state_dir: str = "",
     ) -> CharacterReferenceResult:
-        """生成 Face+Body 复合参考图（C1 优化）。
+        """Generate a Face+Body composite reference image (C1 optimization).
 
-        生成一张包含面部特写和全身的并排图像，用于更强的身份锁定。
-        这是 Nano Banana Pro 官方推荐的最佳实践。
+        Generates a side-by-side image containing a face close-up and a full body, for stronger identity locking.
+        This is the best practice officially recommended for Nano Banana Pro.
 
-        参考资料:
+        References:
         - https://imaginewithrashid.com/how-to-create-consistent-characters-using-gemini-nano-banana-pro/
         - "Start by using Nano Banana Pro to generate a side-by-side image:
            a close-up face on the left and a full-body view on the right"
 
         Args:
-            character_name: 角色名称
-            character_prompt: 角色外貌描述 Prompt
-            character_tag: 角色唯一短标签
-            style: 风格名称，默认使用全局配置
-            output_dir: 输出目录
-            ethnicity: 角色种族（默认 "Chinese"）
+            character_name: character name
+            character_prompt: character appearance description prompt
+            character_tag: unique short character tag
+            style: style name; defaults to the global config
+            output_dir: output directory
+            ethnicity: character ethnicity (default "Chinese")
 
         Returns:
-            CharacterReferenceResult，primary_reference 指向复合图
+            CharacterReferenceResult, with primary_reference pointing to the composite image
         """
         start_time = time.time()
 
@@ -719,7 +719,7 @@ class NanoBananaCharacterGenerator:
 
                 client = genai.Client(api_key=self.api_key)
 
-            # 获取风格预设
+            # Get the style preset
             style_preset = get_style_preset(
                 style,
                 project_dir=project_dir,
@@ -731,9 +731,9 @@ class NanoBananaCharacterGenerator:
             if not character_tag:
                 character_tag = self._generate_character_tag(character_name)
 
-            print(f"[NanoBanana Character] 生成 {character_name} 复合参考图 (Face+Body)...")
+            print(f"[NanoBanana Character] Generating composite reference image (Face+Body) for {character_name}...")
 
-            # 构建复合参考图 Prompt（核心 C1 优化）
+            # Build the composite reference image prompt (core C1 optimization)
             prompt = f"""Generate a SIDE-BY-SIDE composite reference image for character identity locking.
 
 CHARACTER: {character_tag} ({character_name})
@@ -789,7 +789,7 @@ MUST AVOID:
 - Do NOT include multiple characters
 """
 
-            # 保存 prompt 到文件（审计用）
+            # Save the prompt to a file (for auditing)
             if output_dir:
                 if project_dir:
                     prompts_dir = Path(project_dir) / "prompts" / "characters"
@@ -798,9 +798,9 @@ MUST AVOID:
                 prompts_dir.mkdir(parents=True, exist_ok=True)
                 prompt_file = prompts_dir / f"{character_name}_composite.prompt.txt"
                 prompt_file.write_text(prompt, encoding="utf-8")
-                print(f"[NanoBanana Character] Composite Prompt 已保存: {prompt_file}")
+                print(f"[NanoBanana Character] Composite Prompt saved: {prompt_file}")
 
-            # 生成复合图（使用 16:9 宽幅比例）
+            # Generate the composite image (using the 16:9 wide ratio)
             composite_path = (
                 os.path.join(output_dir, "reference_composite.png") if output_dir else None
             )
@@ -816,13 +816,13 @@ MUST AVOID:
                 return CharacterReferenceResult(
                     success=False,
                     character_name=character_name,
-                    error="API 未返回图像数据",
+                    error="API returned no image data",
                     generation_time=time.time() - start_time,
                 )
 
             generation_time = time.time() - start_time
             print(
-                f"[NanoBanana Character] 复合参考图已生成: {composite_path}，耗时 {generation_time:.1f}s"
+                f"[NanoBanana Character] Composite reference image generated: {composite_path}, took {generation_time:.1f}s"
             )
 
             return CharacterReferenceResult(
@@ -837,7 +837,7 @@ MUST AVOID:
             return CharacterReferenceResult(
                 success=False,
                 character_name=character_name,
-                error="请安装 google-genai: pip install google-genai",
+                error="Please install google-genai: pip install google-genai",
                 generation_time=time.time() - start_time,
             )
         except Exception as e:
@@ -849,22 +849,22 @@ MUST AVOID:
             )
 
     def _generate_character_tag(self, character_name: str) -> str:
-        """从角色名生成唯一标签。
+        """Generate a unique tag from the character name.
 
-        使用完整角色名 + 全名哈希确保唯一性和可读性。
+        Uses the full character name + a hash of the full name to ensure uniqueness and readability.
 
         Args:
-            character_name: 角色全名
+            character_name: full character name
 
         Returns:
-            标签，如 '[叙述者_a1b2]'、'[叙述者母亲_0305]'
+            Tag, e.g. '[Narrator_a1b2]', '[NarratorMother_0305]'
         """
         import hashlib
 
-        # 生成全名哈希后4位作为唯一后缀
+        # Use the last 4 characters of the full-name hash as the unique suffix
         name_hash = hashlib.md5(character_name.encode("utf-8")).hexdigest()[:4]
 
-        # 使用完整角色名，避免长名字被截断
+        # Use the full character name so long names are not truncated
         return f"[{character_name}_{name_hash}]"
 
     @classmethod
@@ -897,18 +897,18 @@ MUST AVOID:
         state_dir: str = "",
         ethnicity: str = "Chinese",
     ) -> str:
-        """构建 portrait 生成 Prompt。
+        """Build the portrait generation prompt.
 
         Args:
-            character_name: 角色名称
-            character_prompt: 角色外貌描述
-            character_tag: 角色唯一标签
-            style_keywords: 风格关键词
-            negative_keywords: 负面关键词
-            ethnicity: 角色种族（默认 "Chinese"）
+            character_name: character name
+            character_prompt: character appearance description
+            character_tag: unique character tag
+            style_keywords: style keywords
+            negative_keywords: negative keywords
+            ethnicity: character ethnicity (default "Chinese")
 
         Returns:
-            完整的生成 Prompt
+            Complete generation prompt
         """
         family, _ = StyleService.get_style_branch(
             style_name or IMAGE_DEFAULT_STYLE,
@@ -1025,20 +1025,20 @@ A second reference image is provided showing the target costume/clothing.
         ethnicity: str = "Chinese",
         has_costume_reference: bool = False,
     ) -> str:
-        """构建 4 面板 reference sheet Prompt（全脸特写 + 正面全身 + 45° 三分全身 + 背面全身）。
+        """Build the 4-panel reference sheet prompt (full face close-up + front full body + 45-degree three-quarter full body + back full body).
 
-        使用参考图作为身份锚点，一次性生成包含面部特写、正面全身、三分视角全身和背面全身的 sheet，
-        零拼接、天然一致。
+        Uses the reference image as the identity anchor to generate, in one pass, a sheet containing a face close-up, front full body, three-quarter full body, and back full body,
+        with zero stitching and natural consistency.
 
         Args:
-            character_name: 角色名称
-            character_prompt: 角色外貌描述
-            character_tag: 角色唯一标签
-            target_view: 目标视角
-            style_keywords: 风格关键词
-            negative_keywords: 负面关键词
-            ethnicity: 角色种族（默认 "Chinese"）
-            full_body: 是否生成全身像（默认 True）
+            character_name: character name
+            character_prompt: character appearance description
+            character_tag: unique character tag
+            target_view: target view
+            style_keywords: style keywords
+            negative_keywords: negative keywords
+            ethnicity: character ethnicity (default "Chinese")
+            full_body: whether to generate a full-body shot (default True)
 
         Returns:
             4-panel reference sheet Prompt
@@ -1166,17 +1166,17 @@ STRICT REQUIREMENTS (MUST AVOID):
         aspect_ratio: str = "3:4",
         image_size: str = "1K",
     ) -> Optional[bytes]:
-        """生成单张图像（无参考图）。
+        """Generate a single image (no reference image).
 
         Args:
-            client: Google AI 客户端（OpenRouter 模式下可为 None）
-            prompt: 生成 Prompt
-            output_path: 输出路径
-            aspect_ratio: 图像宽高比（默认 "3:4"）
-            image_size: 图像尺寸（默认 "1K"）
+            client: Google AI client (may be None in OpenRouter mode)
+            prompt: generation prompt
+            output_path: output path
+            aspect_ratio: image aspect ratio (default "3:4")
+            image_size: image size (default "1K")
 
         Returns:
-            图像字节数据，失败返回 None
+            Image byte data; None on failure
         """
         image_size = self.force_image_size or image_size
         if self.egress_context is not None and self.egress_context.is_organization:
@@ -1206,8 +1206,8 @@ STRICT REQUIREMENTS (MUST AVOID):
             image_bytes = None
 
             if self.provider == "openrouter":
-                # OpenRouter 模式
-                print(f"[NanoBanana Character] 调用 OpenRouter ({self.model}) 生成图像...")
+                # OpenRouter mode
+                print(f"[NanoBanana Character] Calling OpenRouter ({self.model}) to generate image...")
                 openrouter_image_config = {
                     "aspect_ratio": aspect_ratio,
                     "image_size": normalize_image_size(image_size, provider="openrouter"),
@@ -1220,17 +1220,17 @@ STRICT REQUIREMENTS (MUST AVOID):
                     image_config=openrouter_image_config,
                 )
                 print(
-                    f"[NanoBanana Character] _generate_single_image OpenRouter 返回类型: {type(result)}, 值: {str(result)[:200]}"
+                    f"[NanoBanana Character] _generate_single_image OpenRouter returned type: {type(result)}, value: {str(result)[:200]}"
                 )
                 if isinstance(result, tuple):
                     image_bytes, _text_response, error_detail = result
                     if not image_bytes and error_detail:
-                        print(f"[NanoBanana Character] OpenRouter 失败详情: {error_detail}")
+                        print(f"[NanoBanana Character] OpenRouter failure details: {error_detail}")
                         raise RuntimeError(error_detail)
                 else:
                     image_bytes = result
             elif self.provider == "huimeng":
-                print(f"[NanoBanana Character] 调用 HuiMeng ({self.model}) 生成图像...")
+                print(f"[NanoBanana Character] Calling HuiMeng ({self.model}) to generate image...")
                 image_bytes, _text_response, error_detail = await _call_huimeng_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1242,10 +1242,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     },
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] HuiMeng 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] HuiMeng failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "openai":
-                print(f"[NanoBanana Character] 调用 OpenAI Image API ({self.model}) 生成图像...")
+                print(f"[NanoBanana Character] Calling OpenAI Image API ({self.model}) to generate image...")
                 image_bytes, _text_response, error_detail = await _call_openai_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1261,10 +1261,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     },
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] OpenAI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] OpenAI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "newapi":
-                print(f"[NanoBanana Character] 调用 DramaClawAPI ({self.model}) 生成图像...")
+                print(f"[NanoBanana Character] Calling DramaClawAPI ({self.model}) to generate image...")
                 image_bytes, _text_response, error_detail = await _call_newapi_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1282,10 +1282,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     delivery_state=(image_delivery_state := {}),
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] DramaClawAPI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] DramaClawAPI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "gemini_webai":
-                print(f"[NanoBanana Character] 调用 Gemini WebAI ({self.model}) 生成图像...")
+                print(f"[NanoBanana Character] Calling Gemini WebAI ({self.model}) to generate image...")
                 image_bytes, _text_response, error_detail = await _call_webai_chat_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1294,10 +1294,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] Gemini WebAI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] Gemini WebAI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "qwen":
-                print(f"[NanoBanana Character] 调用 Qwen Image ({self.model}) 生成图像...")
+                print(f"[NanoBanana Character] Calling Qwen Image ({self.model}) to generate image...")
                 image_bytes, _text_response, error_detail = await _call_qwen_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1310,10 +1310,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] Qwen Image 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] Qwen Image failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "runpod_qwen":
-                print(f"[NanoBanana Character] 调用 RunPod Qwen Image 2.1 生成图像...")
+                print(f"[NanoBanana Character] Calling RunPod Qwen Image 2.1 to generate image...")
                 image_bytes, _text_response, error_detail = await _call_runpod_qwen_image_api(
                     api_key=self.api_key,
                     model=self.model,
@@ -1326,13 +1326,13 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] RunPod Qwen Image 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] RunPod Qwen Image failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             else:
-                # Google 直连模式
+                # Google direct mode
                 from google.genai import types
 
-                # gemini-3 支持 image_size，gemini-2.5 不支持
+                # gemini-3 supports image_size; gemini-2.5 does not
                 is_gemini3 = "gemini-3" in self.model
                 if is_gemini3:
                     image_config = types.ImageConfig(
@@ -1354,16 +1354,16 @@ STRICT REQUIREMENTS (MUST AVOID):
                     ),
                 )
 
-                # 提取图像数据
+                # Extract the image data
                 if not response.candidates:
-                    print(f"[NanoBanana Character] API 响应无 candidates: {response}")
+                    print(f"[NanoBanana Character] API response has no candidates: {response}")
                     return None
 
                 candidate = response.candidates[0]
                 if not candidate.content:
                     finish_reason = getattr(candidate, "finish_reason", "unknown")
                     print(
-                        f"[NanoBanana Character] API 响应无 content, finish_reason={finish_reason}"
+                        f"[NanoBanana Character] API response has no content, finish_reason={finish_reason}"
                     )
                     if hasattr(candidate, "safety_ratings") and candidate.safety_ratings:
                         for rating in candidate.safety_ratings:
@@ -1372,7 +1372,7 @@ STRICT REQUIREMENTS (MUST AVOID):
 
                 if not candidate.content.parts:
                     print(
-                        f"[NanoBanana Character] API 响应 content.parts 为空: {candidate.content}"
+                        f"[NanoBanana Character] API response content.parts is empty: {candidate.content}"
                     )
                     return None
 
@@ -1380,15 +1380,15 @@ STRICT REQUIREMENTS (MUST AVOID):
                     if hasattr(part, "inline_data") and part.inline_data:
                         image_bytes = part.inline_data.data
                         break
-                    # 打印文本响应（如果有）
+                    # Print the text response (if any)
                     if hasattr(part, "text") and part.text:
-                        print(f"[NanoBanana Character] API 文本响应: {part.text[:300]}")
+                        print(f"[NanoBanana Character] API text response: {part.text[:300]}")
 
             if not image_bytes:
-                print(f"[NanoBanana Character] API 未返回图像数据")
+                print(f"[NanoBanana Character] API returned no image data")
                 return None
 
-            # 保存文件
+            # Save the file
             if output_path:
                 output_dir = os.path.dirname(output_path)
                 if output_dir:
@@ -1404,7 +1404,7 @@ STRICT REQUIREMENTS (MUST AVOID):
                 raise
             if isinstance(e, RuntimeError):
                 raise
-            print(f"[NanoBanana Character] 生成失败: {e}")
+            print(f"[NanoBanana Character] Generation failed: {e}")
             return None
 
     async def _generate_with_reference(
@@ -1413,28 +1413,28 @@ STRICT REQUIREMENTS (MUST AVOID):
         prompt: str,
         reference_image,
         output_path: Optional[str] = None,
-        reference_image_bytes: bytes = None,  # OpenRouter 模式需要原始字节
+        reference_image_bytes: bytes = None,  # OpenRouter mode needs the raw bytes
         reference_image_name: str = "",
         aspect_ratio: str = "3:4",
         image_size: str = "1K",
-        additional_images: list = None,  # 额外参考图 Part 对象列表（Google 模式）
-        additional_image_bytes: list = None,  # 额外参考图字节列表（OpenRouter 模式）
+        additional_images: list = None,  # list of extra reference image Part objects (Google mode)
+        additional_image_bytes: list = None,  # list of extra reference image bytes (OpenRouter mode)
         additional_image_names: list[str] = None,
     ) -> Optional[bytes]:
-        """使用参考图生成图像（Identity Locking）。
+        """Generate an image using a reference image (Identity Locking).
 
         Args:
-            client: Google AI 客户端（OpenRouter 模式下可为 None）
-            prompt: 生成 Prompt
-            reference_image: 参考图 Part 对象（Google 模式用）
-            output_path: 输出路径
-            reference_image_bytes: 参考图原始字节（OpenRouter 模式用）
-            reference_image_name: 参考图文件名或路径（OpenAI/newAPI 用于保留后缀/MIME）
-            aspect_ratio: 图像宽高比（默认 "3:4"）
-            image_size: 图像尺寸（默认 "1K"）
+            client: Google AI client (may be None in OpenRouter mode)
+            prompt: generation prompt
+            reference_image: reference image Part object (used in Google mode)
+            output_path: output path
+            reference_image_bytes: raw bytes of the reference image (used in OpenRouter mode)
+            reference_image_name: reference image filename or path (used by OpenAI/newAPI to keep the extension/MIME)
+            aspect_ratio: image aspect ratio (default "3:4")
+            image_size: image size (default "1K")
 
         Returns:
-            图像字节数据，失败返回 None
+            Image byte data; None on failure
         """
         image_size = self.force_image_size or image_size
 
@@ -1482,9 +1482,9 @@ STRICT REQUIREMENTS (MUST AVOID):
             image_bytes = None
 
             if self.provider == "openrouter":
-                # OpenRouter 模式
+                # OpenRouter mode
                 print(
-                    f"[NanoBanana Character] 调用 OpenRouter ({self.model}) 生成图像（带参考图）..."
+                    f"[NanoBanana Character] Calling OpenRouter ({self.model}) to generate image (with reference image)..."
                 )
                 openrouter_image_config = {
                     "aspect_ratio": aspect_ratio,
@@ -1504,17 +1504,17 @@ STRICT REQUIREMENTS (MUST AVOID):
                     image_config=openrouter_image_config,
                 )
                 print(
-                    f"[NanoBanana Character] _generate_with_reference OpenRouter 返回类型: {type(result)}, 值: {str(result)[:200]}"
+                    f"[NanoBanana Character] _generate_with_reference OpenRouter returned type: {type(result)}, value: {str(result)[:200]}"
                 )
                 if isinstance(result, tuple):
                     image_bytes, _text_response, error_detail = result
                     if not image_bytes and error_detail:
-                        print(f"[NanoBanana Character] OpenRouter 失败详情: {error_detail}")
+                        print(f"[NanoBanana Character] OpenRouter failure details: {error_detail}")
                         raise RuntimeError(error_detail)
                 else:
                     image_bytes = result
             elif self.provider == "huimeng":
-                print(f"[NanoBanana Character] 调用 HuiMeng ({self.model}) 生成图像（带参考图）...")
+                print(f"[NanoBanana Character] Calling HuiMeng ({self.model}) to generate image (with reference image)...")
                 ref_images = []
                 if reference_image_bytes:
                     ref_images.append(reference_image_bytes)
@@ -1531,11 +1531,11 @@ STRICT REQUIREMENTS (MUST AVOID):
                     },
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] HuiMeng 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] HuiMeng failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "openai":
                 print(
-                    f"[NanoBanana Character] 调用 OpenAI Image API ({self.model}) 生成图像（带参考图）..."
+                    f"[NanoBanana Character] Calling OpenAI Image API ({self.model}) to generate image (with reference image)..."
                 )
                 ref_images = []
                 if reference_image_bytes:
@@ -1564,10 +1564,10 @@ STRICT REQUIREMENTS (MUST AVOID):
                     },
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] OpenAI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] OpenAI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "newapi":
-                print(f"[NanoBanana Character] 调用 DramaClawAPI ({self.model}) 生成图像（带参考图）...")
+                print(f"[NanoBanana Character] Calling DramaClawAPI ({self.model}) to generate image (with reference image)...")
                 ref_images = []
                 if reference_image_bytes:
                     ref_images.append(_named_image_ref(reference_image_bytes, reference_image_name))
@@ -1597,11 +1597,11 @@ STRICT REQUIREMENTS (MUST AVOID):
                     delivery_state=(image_delivery_state := {}),
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] DramaClawAPI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] DramaClawAPI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "gemini_webai":
                 print(
-                    f"[NanoBanana Character] 调用 Gemini WebAI ({self.model}) 生成图像（带参考图）..."
+                    f"[NanoBanana Character] Calling Gemini WebAI ({self.model}) to generate image (with reference image)..."
                 )
                 ref_images = []
                 if reference_image_bytes:
@@ -1623,11 +1623,11 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] Gemini WebAI 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] Gemini WebAI failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "qwen":
                 print(
-                    f"[NanoBanana Character] 调用 Qwen Image ({self.model}) 生成图像（带参考图）..."
+                    f"[NanoBanana Character] Calling Qwen Image ({self.model}) to generate image (with reference image)..."
                 )
                 ref_images = []
                 if reference_image_bytes:
@@ -1653,11 +1653,11 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] Qwen Image 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] Qwen Image failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             elif self.provider == "runpod_qwen":
                 print(
-                    f"[NanoBanana Character] 调用 RunPod Qwen Image 2.1 生成图像（带参考图）..."
+                    f"[NanoBanana Character] Calling RunPod Qwen Image 2.1 to generate image (with reference image)..."
                 )
                 ref_images = []
                 if reference_image_bytes:
@@ -1683,20 +1683,20 @@ STRICT REQUIREMENTS (MUST AVOID):
                     base_url=self.base_url,
                 )
                 if not image_bytes and error_detail:
-                    print(f"[NanoBanana Character] RunPod Qwen Image 失败详情: {error_detail}")
+                    print(f"[NanoBanana Character] RunPod Qwen Image failure details: {error_detail}")
                     raise RuntimeError(error_detail)
             else:
-                # Google 直连模式
+                # Google direct mode
                 from google.genai import types
 
-                # 统一先文后图，和 Google 官方示例及其他生成链保持一致
+                # Always text first, then images, consistent with the official Google examples and the other generation chains
                 contents = [prompt]
                 if reference_image:
                     contents.append(reference_image)
                 if additional_images:
                     contents.extend(additional_images)
 
-                # gemini-3 支持 image_size，gemini-2.5 不支持
+                # gemini-3 supports image_size; gemini-2.5 does not
                 is_gemini3 = "gemini-3" in self.model
                 if is_gemini3:
                     image_config = types.ImageConfig(
@@ -1718,16 +1718,16 @@ STRICT REQUIREMENTS (MUST AVOID):
                     ),
                 )
 
-                # 提取图像数据
+                # Extract the image data
                 if not response.candidates:
-                    print(f"[NanoBanana Character] API 响应无 candidates: {response}")
+                    print(f"[NanoBanana Character] API response has no candidates: {response}")
                     return None
 
                 candidate = response.candidates[0]
                 if not candidate.content:
                     finish_reason = getattr(candidate, "finish_reason", "unknown")
                     print(
-                        f"[NanoBanana Character] API 响应无 content, finish_reason={finish_reason}"
+                        f"[NanoBanana Character] API response has no content, finish_reason={finish_reason}"
                     )
                     if hasattr(candidate, "safety_ratings") and candidate.safety_ratings:
                         for rating in candidate.safety_ratings:
@@ -1736,7 +1736,7 @@ STRICT REQUIREMENTS (MUST AVOID):
 
                 if not candidate.content.parts:
                     print(
-                        f"[NanoBanana Character] API 响应 content.parts 为空: {candidate.content}"
+                        f"[NanoBanana Character] API response content.parts is empty: {candidate.content}"
                     )
                     return None
 
@@ -1744,15 +1744,15 @@ STRICT REQUIREMENTS (MUST AVOID):
                     if hasattr(part, "inline_data") and part.inline_data:
                         image_bytes = part.inline_data.data
                         break
-                    # 打印文本响应（如果有）
+                    # Print the text response (if any)
                     if hasattr(part, "text") and part.text:
-                        print(f"[NanoBanana Character] API 文本响应: {part.text[:300]}")
+                        print(f"[NanoBanana Character] API text response: {part.text[:300]}")
 
             if not image_bytes:
-                print(f"[NanoBanana Character] API 未返回图像数据")
+                print(f"[NanoBanana Character] API returned no image data")
                 return None
 
-            # 保存文件
+            # Save the file
             if output_path:
                 output_dir = os.path.dirname(output_path)
                 if output_dir:
@@ -1768,34 +1768,34 @@ STRICT REQUIREMENTS (MUST AVOID):
                 raise
             if isinstance(e, RuntimeError):
                 raise
-            print(f"[NanoBanana Character] 生成失败: {e}")
+            print(f"[NanoBanana Character] Generation failed: {e}")
             return None
 
     def _load_image_as_part(self, image_path: str, compress_quality: int = 60):
-        """加载图像作为 Gemini API 的 Part（带 JPEG 压缩）。
+        """Load an image as a Gemini API Part (with JPEG compression).
 
         Args:
-            image_path: 图像路径
-            compress_quality: JPEG 压缩质量 (1-100)，设为 0 或 None 禁用压缩
+            image_path: image path
+            compress_quality: JPEG compression quality (1-100); set to 0 or None to disable compression
 
         Returns:
-            Gemini Part 对象
+            Gemini Part object
         """
         try:
             from PIL import Image
             import io
 
-            # 加载图片
+            # Load the image
             img = Image.open(image_path)
             original_size = os.path.getsize(image_path)
 
-            # 压缩为 JPEG（如果启用）
+            # Compress to JPEG (if enabled)
             if compress_quality and compress_quality > 0:
-                # 转为 RGB（JPEG 不支持 alpha）
+                # Convert to RGB (JPEG does not support alpha)
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
 
-                # 压缩到内存
+                # Compress into memory
                 buffer = io.BytesIO()
                 img.save(buffer, format="JPEG", quality=compress_quality, optimize=True)
                 image_data = buffer.getvalue()
@@ -1804,12 +1804,12 @@ STRICT REQUIREMENTS (MUST AVOID):
                 compressed_size = len(image_data)
                 ratio = (1 - compressed_size / original_size) * 100
                 print(
-                    f"[压缩] {os.path.basename(image_path)}: "
+                    f"[compress] {os.path.basename(image_path)}: "
                     f"{original_size/1024:.0f}KB → {compressed_size/1024:.0f}KB "
-                    f"({ratio:.0f}% 压缩)"
+                    f"({ratio:.0f}% compression)"
                 )
             else:
-                # 不压缩，直接读取原文件
+                # No compression; read the original file directly
                 with open(image_path, "rb") as f:
                     image_data = f.read()
 
@@ -1828,17 +1828,17 @@ STRICT REQUIREMENTS (MUST AVOID):
             return types.Part.from_bytes(data=image_data, mime_type=mime_type)
 
         except Exception as e:
-            print(f"[NanoBanana Character] 加载参考图失败: {image_path}, {e}")
+            print(f"[NanoBanana Character] Failed to load reference image: {image_path}, {e}")
             return None
 
 
 def create_character_generator(api_key: Optional[str] = None) -> NanoBananaCharacterGenerator:
-    """创建角色生成器。
+    """Create a character generator.
 
     Args:
         api_key: Google AI API Key
 
     Returns:
-        NanoBananaCharacterGenerator 实例
+        NanoBananaCharacterGenerator instance
     """
     return NanoBananaCharacterGenerator(api_key=api_key)

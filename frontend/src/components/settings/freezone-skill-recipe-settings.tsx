@@ -67,10 +67,10 @@ const NODE_SCOPE_OPTIONS = [
 ] as const;
 
 const NODE_SCOPE_LABELS: Record<(typeof NODE_SCOPE_OPTIONS)[number], string> = {
-  textGeneration: "文本生成",
-  imageGeneration: "图片生成",
-  videoGeneration: "视频生成",
-  audioGeneration: "音频生成",
+  textGeneration: "settings.freezoneCatalog.nodeScopes.textGeneration",
+  imageGeneration: "settings.freezoneCatalog.nodeScopes.imageGeneration",
+  videoGeneration: "settings.freezoneCatalog.nodeScopes.videoGeneration",
+  audioGeneration: "settings.freezoneCatalog.nodeScopes.audioGeneration",
 };
 
 function getBodyPortalContainer() {
@@ -212,7 +212,7 @@ export function FreezoneSkillRecipeSettings({
     const cleanPayload = stripCatalogMetadata(payload);
     const validation = validateFreezoneAgentConfigPayload(kind, cleanPayload);
     if (!validation.ok) {
-      toast.error(`${t("settings.freezoneCatalog.saveFailed")}：${validation.message}`);
+      toast.error(`${t("settings.freezoneCatalog.saveFailed")}: ${validation.message}`);
       return;
     }
     try {
@@ -261,7 +261,7 @@ export function FreezoneSkillRecipeSettings({
       });
       toast.success(t("settings.freezoneCatalog.deleted"));
     } catch (error) {
-      const detail = error instanceof Error && error.message ? `：${error.message}` : "";
+      const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
       toast.error(`${t("settings.freezoneCatalog.deleteFailed")}${detail}`);
     }
   };
@@ -344,7 +344,7 @@ export function FreezoneSkillRecipeSettings({
       downloadJson(bundle, `${item.id}-bundle.json`);
       toast.success(t("settings.freezoneCatalog.bundleExported"));
     } catch (error) {
-      const message = error instanceof Error && error.message ? `：${error.message}` : "";
+      const message = error instanceof Error && error.message ? `: ${error.message}` : "";
       toast.error(`${t("settings.freezoneCatalog.bundleExportFailed")}${message}`);
     }
   };
@@ -398,7 +398,7 @@ export function FreezoneSkillRecipeSettings({
       }
       toast.success(t("settings.freezoneCatalog.imported"));
     } catch (error) {
-      const message = error instanceof Error && error.message ? `：${error.message}` : "";
+      const message = error instanceof Error && error.message ? `: ${error.message}` : "";
       toast.error(`${t("settings.freezoneCatalog.importFailed")}${message}`);
     } finally {
       if (importInputRef.current) {
@@ -422,7 +422,7 @@ export function FreezoneSkillRecipeSettings({
         }),
       );
     } catch (error) {
-      const message = error instanceof Error && error.message ? `：${error.message}` : "";
+      const message = error instanceof Error && error.message ? `: ${error.message}` : "";
       toast.error(`${t("settings.freezoneCatalog.bundleImportFailed")}${message}`);
     } finally {
       if (bundleImportInputRef.current) {
@@ -1519,7 +1519,7 @@ function parseOptionalNumericDraft(value: string) {
 
 function splitDraftList(value: string) {
   return value
-    .split(/[\n,，]/)
+    .split(/[\n,\uFF0C]/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -1614,6 +1614,7 @@ function TagInputField({
   required?: boolean;
   value: string[];
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
   const editInputRef = useRef<HTMLInputElement | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1668,7 +1669,7 @@ function TagInputField({
             {editingIndex === index ? (
               <input
                 ref={editInputRef}
-                aria-label={`编辑 ${tag}`}
+                aria-label={t("settings.freezoneCatalog.tags.edit", { tag })}
                 value={editingDraft}
                 onChange={(event) => setEditingDraft(event.target.value)}
                 onBlur={commitEditTag}
@@ -1695,7 +1696,7 @@ function TagInputField({
             ) : (
               <button
                 type="button"
-                aria-label={`编辑 ${tag}`}
+                aria-label={t("settings.freezoneCatalog.tags.edit", { tag })}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => beginEditTag(index, tag)}
                 className={cn(
@@ -1708,7 +1709,7 @@ function TagInputField({
             )}
             <button
               type="button"
-              aria-label={`删除 ${tag}`}
+              aria-label={t("settings.freezoneCatalog.tags.remove", { tag })}
               onClick={() => removeTag(index)}
               className="grid size-3.5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -1725,7 +1726,7 @@ function TagInputField({
               addDraft();
               return;
             }
-            if (event.key === "," || event.key === "，") {
+            if (event.key === "," || event.key === "\uFF0C") {
               event.preventDefault();
               addDraft();
               return;
@@ -1769,6 +1770,7 @@ function AllowedRecipesEditor({
   pickerOpen: boolean;
   value: string[];
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [manualRecipeId, setManualRecipeId] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -1825,7 +1827,7 @@ function AllowedRecipesEditor({
         <div className="flex items-center gap-3 px-3 py-2.5">
           <button
             type="button"
-            aria-label={expanded ? "收起关联 Recipes" : "展开关联 Recipes"}
+            aria-label={expanded ? t("settings.freezoneCatalog.recipeLinks.collapse") : t("settings.freezoneCatalog.recipeLinks.expand")}
             onClick={() => setExpanded((value) => !value)}
             className="flex min-w-0 flex-1 items-center gap-2 text-left"
           >
@@ -1838,8 +1840,10 @@ function AllowedRecipesEditor({
               <span className="block text-xs font-medium text-foreground">{label}</span>
               <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
                 {linkedIds.length > 0
-                  ? `已关联 ${linkedIds.length} 个 Recipe${missingRecipeCount > 0 ? `，${missingRecipeCount} 个未找到配置` : ""}`
-                  : "这个 Skill 暂时没有关联 Recipe"}
+                  ? missingRecipeCount > 0
+                    ? t("settings.freezoneCatalog.recipeLinks.linkedSummaryMissing", { count: linkedIds.length, missing: missingRecipeCount })
+                    : t("settings.freezoneCatalog.recipeLinks.linkedSummary", { count: linkedIds.length })
+                  : t("settings.freezoneCatalog.recipeLinks.none")}
               </span>
             </span>
           </button>
@@ -1851,7 +1855,7 @@ function AllowedRecipesEditor({
             className="h-8 shrink-0"
           >
             <Plus className="size-3.5" />
-            添加 Recipe
+            {t("settings.freezoneCatalog.recipeLinks.addRecipe")}
           </Button>
         </div>
         {hint ? (
@@ -1884,7 +1888,7 @@ function AllowedRecipesEditor({
                         </span>
                       </div>
                       <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-                        {recipe?.description || "未找到本地 Recipe 配置，保存时仍会保留这个关联 ID。"}
+                        {recipe?.description || t("settings.freezoneCatalog.recipeLinks.missingConfig")}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -1897,11 +1901,11 @@ function AllowedRecipesEditor({
                         className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <Eye className="size-3.5" />
-                        查看
+                        {t("settings.freezoneCatalog.recipeLinks.view")}
                       </Button>
                       <button
                         type="button"
-                        aria-label={`移除 ${recipeId}`}
+                        aria-label={t("settings.freezoneCatalog.recipeLinks.removeRecipe", { id: recipeId })}
                         onClick={() => removeRecipe(recipeId)}
                         className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
                       >
@@ -1913,7 +1917,7 @@ function AllowedRecipesEditor({
               })
             ) : (
               <div className="px-3 py-3 text-xs text-muted-foreground">
-                这个 Skill 暂时没有关联 Recipe
+                {t("settings.freezoneCatalog.recipeLinks.none")}
               </div>
             )}
           </div>
@@ -1926,11 +1930,11 @@ function AllowedRecipesEditor({
           className="max-w-[520px] gap-0 overflow-hidden rounded-lg border-border bg-black p-0"
         >
           <DialogHeader className="border-b border-border px-5 py-4">
-            <DialogTitle className="text-base">添加 Recipe</DialogTitle>
+            <DialogTitle className="text-base">{t("settings.freezoneCatalog.recipeLinks.addRecipe")}</DialogTitle>
           </DialogHeader>
           <div className="p-5">
             <div className="mb-3 grid gap-2 rounded-md border border-border/70 bg-white/[0.02] p-3">
-              <div className="text-[11px] font-medium text-foreground">手动添加 ID</div>
+              <div className="text-[11px] font-medium text-foreground">{t("settings.freezoneCatalog.recipeLinks.manualAddId")}</div>
               <div className="flex gap-2">
                 <Input
                   value={manualRecipeId}
@@ -1941,7 +1945,7 @@ function AllowedRecipesEditor({
                       addManualRecipe();
                     }
                   }}
-                  placeholder="输入 Recipe ID"
+                  placeholder={t("settings.freezoneCatalog.recipeLinks.recipeIdPlaceholder")}
                   className="h-9 rounded-md border-input/80 bg-input/20 text-foreground"
                 />
                 <Button
@@ -1950,7 +1954,7 @@ function AllowedRecipesEditor({
                   disabled={!manualRecipeId.trim()}
                   onClick={addManualRecipe}
                 >
-                  添加
+                  {t("settings.freezoneCatalog.recipeLinks.add")}
                 </Button>
               </div>
             </div>
@@ -1959,7 +1963,7 @@ function AllowedRecipesEditor({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索 Recipe"
+                placeholder={t("settings.freezoneCatalog.recipeLinks.searchRecipe")}
                 className="h-9 rounded-md border-input/80 bg-input/20 pl-9 text-foreground"
               />
             </div>
@@ -1986,20 +1990,20 @@ function AllowedRecipesEditor({
                       </span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-                      {recipe.description || "暂无描述"}
+                      {recipe.description || t("settings.freezoneCatalog.recipeLinks.noDescription")}
                     </p>
                   </button>
                 ))
               ) : (
                 <div className="px-3 py-8 text-center text-xs text-muted-foreground">
-                  没有可添加的 Recipe
+                  {t("settings.freezoneCatalog.recipeLinks.noRecipesToAdd")}
                 </div>
               )}
             </div>
           </div>
           <DialogFooter className="border-t border-border px-5 py-4">
             <Button type="button" variant="outline" onClick={() => onPickerOpenChange(false)}>
-              关闭
+              {t("settings.freezoneCatalog.recipeLinks.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2015,6 +2019,7 @@ function RecipeDetailDrawer({
   onClose: () => void;
   recipe: ManagedCatalogItem | null;
 }) {
+  const { t } = useTranslation();
   if (!recipe) return null;
   const payload = recipe.payload;
   const actionKeys = getStringArray(payload.action_keys);
@@ -2025,7 +2030,7 @@ function RecipeDetailDrawer({
 
   return (
     <div className="absolute inset-0 z-20 flex justify-end bg-black/35">
-      <button type="button" aria-label="关闭 Recipe 详情背景" className="flex-1" onClick={onClose} />
+      <button type="button" aria-label={t("settings.freezoneCatalog.recipeLinks.closeDetailBackdrop")} className="flex-1" onClick={onClose} />
       <aside className="flex h-full w-[min(430px,92vw)] flex-col border-l border-border bg-black shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0">
@@ -2046,7 +2051,7 @@ function RecipeDetailDrawer({
           </div>
           <button
             type="button"
-            aria-label="关闭 Recipe 详情"
+            aria-label={t("settings.freezoneCatalog.recipeLinks.closeDetail")}
             onClick={onClose}
             className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
           >
@@ -2054,16 +2059,16 @@ function RecipeDetailDrawer({
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <RecipeDetailBlock title="描述">
-            <p>{recipe.description || "暂无描述"}</p>
+          <RecipeDetailBlock title={t("settings.freezoneCatalog.recipeLinks.description")}>
+            <p>{recipe.description || t("settings.freezoneCatalog.recipeLinks.noDescription")}</p>
           </RecipeDetailBlock>
           {resultSummary ? (
-            <RecipeDetailBlock title="结果摘要">
+            <RecipeDetailBlock title={t("settings.freezoneCatalog.recipeLinks.resultSummary")}>
               <p>{resultSummary}</p>
             </RecipeDetailBlock>
           ) : null}
           {planningPrompt ? (
-            <RecipeDetailBlock title="规划提示">
+            <RecipeDetailBlock title={t("settings.freezoneCatalog.recipeLinks.planningHint")}>
               <p>{planningPrompt}</p>
             </RecipeDetailBlock>
           ) : null}
@@ -2079,7 +2084,7 @@ function RecipeDetailDrawer({
             </RecipeDetailBlock>
           ) : null}
           {mustHaveItems.length > 0 ? (
-            <RecipeDetailBlock title="必含项">
+            <RecipeDetailBlock title={t("settings.freezoneCatalog.recipeLinks.mustInclude")}>
               <ul className="space-y-1">
                 {mustHaveItems.map((item) => (
                   <li key={item} className="rounded bg-white/[0.04] px-2 py-1">
@@ -2420,6 +2425,7 @@ function NodeScopeOptionsField({
   onChange: (value: string[]) => void;
   value: string[];
 }) {
+  const { t } = useTranslation();
   const selected = Array.isArray(value) ? value.filter(Boolean) : [];
   const selectedSet = new Set(selected);
 
@@ -2452,7 +2458,7 @@ function NodeScopeOptionsField({
                 onCheckedChange={(nextChecked) => toggleScope(scope, nextChecked === true)}
               />
               <span className="min-w-0">
-                <span className="block text-xs font-medium">{NODE_SCOPE_LABELS[scope]}</span>
+                <span className="block text-xs font-medium">{t(NODE_SCOPE_LABELS[scope])}</span>
                 {" "}
                 <span className="block truncate font-mono text-[10px] text-muted-foreground">
                   {scope}
@@ -2911,8 +2917,8 @@ export function CommunitySkillDialog({
                     <button
                       type="button"
                       className={cn(
-                        // 全窗统一走纯白 + 透明度分层：muted-foreground 是带蓝调的
-                        // 中灰(oklch .66)，压在 #070808 上发闷，用户要求改白。
+                        // The whole window uses pure white + opacity layering: muted-foreground has a blue tint,
+                        // a mid-gray (oklch .66) that looks dull on #070808, and the user asked for white.
                         "rounded-[6px] px-1.5 py-1 text-base leading-6 transition hover:bg-white/[0.055]",
                         !isMine ? "text-white" : "text-white/60 hover:text-white/85",
                       )}
@@ -2929,7 +2935,7 @@ export function CommunitySkillDialog({
                     )}
                     onClick={() => onModeChange?.("mine")}
                   >
-                    我的
+                    {t("settings.freezoneCatalog.mine")}
                   </button>
                 </div>
               ) : (
@@ -2972,8 +2978,8 @@ export function CommunitySkillDialog({
                   type="button"
                   onClick={() => setActiveFilter(key)}
                   className={cn(
-                    // 圆角写死 px：本项目 --radius=1rem，rounded-md 实际 14px，
-                    // 这排小筛选片会圆成胶囊（用户要求收小）。
+                    // Corner radius is hard-coded in px: this project has --radius=1rem, so rounded-md is actually 14px,
+                    // and this row of small filter chips would turn into pills (the user asked for them to be smaller).
                     "rounded-[6px] border px-3 py-1.5 text-xs transition-colors",
                     active
                       ? "border-border bg-white/[0.08] text-white"
@@ -3024,10 +3030,10 @@ export function CommunitySkillDialog({
               <div className="grid h-full min-h-80 place-items-center text-center">
                 <div>
                   <p className="text-sm font-medium text-white">
-                    这里暂时没有 Skill
+                    {t("settings.freezoneCatalog.noSkillsHere")}
                   </p>
                   <p className="mx-auto mt-1 max-w-[360px] text-xs leading-relaxed text-white/70">
-                    可以先让虾导总结当前画布，或描述工作流来创建自己的 Skill。
+                    {t("settings.freezoneCatalog.noSkillsHint")}
                   </p>
                 </div>
               </div>
@@ -3036,8 +3042,8 @@ export function CommunitySkillDialog({
                 {visibleLocalItems.map((item) => (
                   <article
                     key={item.id}
-                    // hover 整条给反馈（用户要求）：只提亮底色和描边，不换指针——
-                    // 可点的只有右侧「使用」，整条并不是按钮。
+                    // The whole row gives hover feedback (user request): only the background and border brighten, the pointer is unchanged -
+                    // only the "Use" on the right is clickable, the row itself is not a button.
                     className="group/skill-card flex min-h-[104px] items-center gap-3 rounded-md border border-border/70 bg-white/[0.015] px-3 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
                   >
                     <div className="grid size-14 shrink-0 place-items-center rounded-md border border-white/[0.08] bg-white/[0.04] text-xs text-white/55 transition-colors group-hover/skill-card:bg-white/[0.07] group-hover/skill-card:text-white/75">
@@ -3067,7 +3073,7 @@ export function CommunitySkillDialog({
                       className="shrink-0"
                       onClick={() => onSelectLocalSkill?.(item.id)}
                     >
-                      使用
+                      {t("settings.freezoneCatalog.use")}
                     </Button>
                   </article>
                 ))}
@@ -3469,7 +3475,7 @@ function CatalogList({
               ) : null}
               {item.customized ? (
                 <span className="shrink-0 rounded border border-white/[0.08] bg-white/[0.025] px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground/70">
-                  {t("settings.freezoneCatalog.customizedShort", { defaultValue: "定制" })}
+                  {t("settings.freezoneCatalog.customizedShort", { defaultValue: "Custom" })}
                 </span>
               ) : null}
             </div>

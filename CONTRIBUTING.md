@@ -1,60 +1,60 @@
-# 贡献指南
+# Contributing Guide
 
-感谢你考虑为 DramaClaw 贡献。无论是修 bug、补文档还是加功能，都欢迎。
+Thank you for considering contributing to DramaClaw. Whether it is fixing a bug, improving the docs, or adding a feature, all contributions are welcome.
 
-## 开始之前
+## Before you start
 
-- 请先读 [行为准则](CODE_OF_CONDUCT.md)。
-- 关于许可：本项目采用 [Elastic License 2.0](LICENSE)（source available）。**提交贡献前，请花一分钟读 [LICENSE](LICENSE) 与下方的[贡献者协议](#贡献者协议)。**
-- 安全问题请勿走公开 issue，见 [SECURITY.md](SECURITY.md)。
+- Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first.
+- About licensing: this project uses the [Elastic License 2.0](LICENSE) (source available). **Before submitting a contribution, please take a minute to read the [LICENSE](LICENSE) and the [Contributor Agreement](#contributor-agreement) below.**
+- Do not report security issues through public issues; see [SECURITY.md](SECURITY.md).
 
-## 报告 Bug / 提功能建议
+## Reporting bugs / suggesting features
 
-- **Bug**：开一个 [Bug 报告](https://github.com/dramaclaw/dramaclaw/issues/new?template=bug_report.yml)，附复现步骤、运行环境、相关日志。
-- **功能建议**：开一个 [功能建议](https://github.com/dramaclaw/dramaclaw/issues/new?template=feature_request.yml)，说清场景与动机。
-- 不确定从哪入手？看带 [`good first issue`](https://github.com/dramaclaw/dramaclaw/labels/good%20first%20issue) 标签的 issue。
+- **Bug**: open a [Bug report](https://github.com/dramaclaw/dramaclaw/issues/new?template=bug_report.yml) with reproduction steps, runtime environment, and relevant logs.
+- **Feature suggestion**: open a [Feature request](https://github.com/dramaclaw/dramaclaw/issues/new?template=feature_request.yml) that explains the scenario and motivation.
+- Not sure where to start? Look at issues labeled [`good first issue`](https://github.com/dramaclaw/dramaclaw/labels/good%20first%20issue).
 
-## 提交 PR
+## Submitting a PR
 
-### 本地开发
+### Local development
 
 ```bash
 git clone https://github.com/dramaclaw/dramaclaw.git
 cd dramaclaw
 uv sync
-cp .env.example .env      # 按文档配置模型网关
+cp .env.example .env      # configure the model gateway per the docs
 uv run novelvideo api --port 8780
 ```
 
-### 流程
+### Workflow
 
-1. Fork 仓库，从 `main` 切一个主题分支；
-2. 改动 + 自测（`uv run pytest`）；
-3. 提交信息清晰（建议 [Conventional Commits](https://www.conventionalcommits.org/)），并对**每个 commit** 用 `git commit -s` 附上 DCO 签署（见 [开发者原产证书](#开发者原产证书dco)）；
-4. 开 PR，关联对应 issue，简述改动与验证方式。
+1. Fork the repository and create a topic branch from `main`;
+2. Make your changes and test them (`uv run pytest`);
+3. Write clear commit messages (we suggest [Conventional Commits](https://www.conventionalcommits.org/)), and add a DCO sign-off to **every commit** with `git commit -s` (see [Developer Certificate of Origin](#developer-certificate-of-origin-dco));
+4. Open a PR, link the related issue, and briefly describe the change and how you verified it.
 
-## 贡献者协议
+## Contributor Agreement
 
-向本项目提交贡献，即表示你同意：
+By submitting a contribution to this project, you agree that:
 
-a. 维护方可按需调整本项目所采用的许可证（更严格或更宽松）；
-b. 你贡献的代码可用于商业用途，包括但不限于 DramaClaw 的云 / 托管业务运营。
+a. The maintainers may adjust the license adopted by this project as needed (stricter or more permissive);
+b. The code you contribute may be used commercially, including but not limited to operating DramaClaw's cloud / hosted business.
 
-> 这一条让 DramaClaw 能在 source-available 许可下，把社区贡献也用于官方托管/商业版本——这是「同一套代码、社区与商业不分叉」得以成立的前提。提交贡献即视为接受，无需另外签署。
+> This clause lets DramaClaw, under a source-available license, also use community contributions in the official hosted/commercial edition. It is the premise for "one codebase, with the community and commercial editions not diverging". Submitting a contribution counts as acceptance; no separate signature is needed.
 
-## 开发者原产证书（DCO）
+## Developer Certificate of Origin (DCO)
 
-本项目要求所有贡献通过 DCO（Developer Certificate of Origin 1.1，全文见 [`DCO`](./DCO)）签署 —— **每个 commit 都必须带 `Signed-off-by` 行**，以此声明你有权按本项目许可提交该贡献。
+This project requires all contributions to be signed off under the DCO (Developer Certificate of Origin 1.1, full text in [`DCO`](./DCO)). **Every commit must carry a `Signed-off-by` line**, declaring that you have the right to submit the contribution under this project's license.
 
-最简单的方式是提交时加 `-s`，git 会用你的 `user.name` / `user.email` 自动补上签署行：
+The simplest way is to add `-s` when committing; git will append the sign-off line using your `user.name` / `user.email`:
 
 ```bash
-git commit -s -m "fix: ……"
-# 自动生成：Signed-off-by: Your Name <you@example.com>
+git commit -s -m "fix: ..."
+# Automatically generates: Signed-off-by: Your Name <you@example.com>
 ```
 
-补签历史 commit：`git rebase --signoff <base>`。CI（`.github/workflows/dco.yml` 调 `scripts/check_dco.py`）会校验 PR 内每个 commit，缺签署会标红。
+To sign off historical commits: `git rebase --signoff <base>`. CI (`.github/workflows/dco.yml` calling `scripts/check_dco.py`) checks every commit in a PR, and a missing sign-off turns the check red.
 
-## 获取帮助
+## Getting help
 
-[Discussions](https://github.com/dramaclaw/dramaclaw/discussions) ｜ [Issues](https://github.com/dramaclaw/dramaclaw/issues)
+[Discussions](https://github.com/dramaclaw/dramaclaw/discussions) | [Issues](https://github.com/dramaclaw/dramaclaw/issues)

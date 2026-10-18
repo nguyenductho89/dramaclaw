@@ -995,7 +995,14 @@
     "workflowRecovery": {
       "safetyReviewFailed": "Some nodes did not pass safety review",
       "editPrompt": "Edit prompt",
-      "skipNode": "Skip node"
+      "skipNode": "Skip node",
+      "title": "Unfinished workflow found",
+      "progress": "{{completed}}/{{total}} completed, {{remaining}} nodes remaining",
+      "retryFailedOnly": "Retry failed only",
+      "continueDownstream": "Continue downstream",
+      "dismiss": "Dismiss for now",
+      "resumeFailed": "Failed to resume execution",
+      "retryNodeFailed": "Node retry failed"
     },
     "canvases": {
       "defaultSection": "Default canvas",
@@ -1565,6 +1572,28 @@
       "workflowGroup": "Workflow group",
       "prevShotTailFrame": "Previous shot tail frame",
       "skippedAlreadyDone": "{{label}} (already has a result, skipped)"
+    },
+    "voiceLabel": {
+      "projectNarrator": "Project narrator",
+      "customVoice": "Custom voice",
+      "character": "Character",
+      "ageGroup": "Age group",
+      "identity": "Identity",
+      "voice": "Voice",
+      "characterDefault": "{{name}} (default voice)",
+      "identityOwn": "{{name}} (own voice)",
+      "identityResolved": "{{name}} (resolved voice)"
+    },
+    "cmdMsg": {
+      "incomplete": "The canvas operation did not complete; I'll try another way.",
+      "recipeTimeout": "Recipe text generation timed out: the model returned no result in time. Please retry later. Downstream nodes were not executed this round.",
+      "cancelled": "The canvas operation was cancelled and nothing was applied to the canvas.",
+      "modelUnavailable": "The selected generation model is unavailable. Pick one of the models supported by the current canvas and I'll modify it accordingly.",
+      "textNeedsPromptLink": "The text must first be connected to the image node as a generation prompt; I'll handle it using an executable prompt source.",
+      "cannotConnect": "These two nodes cannot be connected that way; I'll use a connection type the canvas supports.",
+      "nodeNotFound": "I couldn't find the node to operate on. Please select a node first, or tell me which one.",
+      "notEditable": "Some content of this node cannot be modified directly; I'll use an editing method it supports.",
+      "protocolDetail": "The canvas operation did not complete; I'll try another executable way based on the current canvas rules."
     }
   },
   "theme": {
@@ -2259,7 +2288,8 @@
     },
     "genders": {
       "male": "Male",
-      "female": "Female"
+      "female": "Female",
+      "other": "Other"
     },
     "roles": {
       "lead": "Lead",
@@ -5830,7 +5860,49 @@
         "resolution": "Resolution",
         "submitUpscale": "Submit upscale",
         "submitUpscaleTitle": "Create an upscale result node on the canvas and submit the task"
-      }
+      },
+      "detail": {
+        "referenceAssets": "Reference assets",
+        "durationSec": "{{count}}s",
+        "zoomView": "View enlarged",
+        "prompt": "Prompt",
+        "generatingPercent": "Generating {{percent}}%...",
+        "generating": "Generating",
+        "assetDetail": "Asset details",
+        "back": "Back",
+        "nodeActions": "Node actions",
+        "duplicate": "Create copy",
+        "delete": "Delete",
+        "closeDetail": "Close details",
+        "nodeGone": "This node no longer exists"
+      },
+      "filter": {
+        "all": "All",
+        "final": "Final",
+        "clip": "Clips"
+      },
+      "column": {
+        "text": "Text",
+        "image": "Images",
+        "video": "Videos"
+      },
+      "empty": {
+        "text": "No text nodes on the canvas yet",
+        "image": "No image nodes on the canvas yet",
+        "video": "No video nodes on the canvas yet",
+        "videoNoMatch": "No videos match the current filter"
+      },
+      "filterVideos": "Filter videos",
+      "switchColumn": "Switch column",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "finalBadge": "Final",
+      "failed": "Failed",
+      "generating": "Generating",
+      "generatingPercent": "Generating {{percent}}%...",
+      "durationSec": "{{count}}s",
+      "locateOnCanvas": "Locate on canvas",
+      "pendingConfirm": "Generates after confirmation"
     },
     "keyElement": {
       "character": "Character",
@@ -7677,7 +7749,45 @@
         "copyRawJson": "Copy JSON",
         "rawJsonCopied": "Recipe JSON copied",
         "rawJsonCopyFailed": "Copy failed; copy manually"
-      }
+      },
+      "nodeScopes": {
+        "textGeneration": "Text generation",
+        "imageGeneration": "Image generation",
+        "videoGeneration": "Video generation",
+        "audioGeneration": "Audio generation"
+      },
+      "tags": {
+        "edit": "Edit {{tag}}",
+        "remove": "Delete {{tag}}"
+      },
+      "recipeLinks": {
+        "collapse": "Collapse linked Recipes",
+        "expand": "Expand linked Recipes",
+        "linkedSummary": "{{count}} Recipe linked",
+        "linkedSummaryMissing": "{{count}} Recipe linked, {{missing}} with no config found",
+        "none": "This Skill has no linked Recipe yet",
+        "addRecipe": "Add Recipe",
+        "missingConfig": "Local Recipe config not found. The linked ID is still kept when you save.",
+        "view": "View",
+        "removeRecipe": "Remove {{id}}",
+        "manualAddId": "Add by ID",
+        "recipeIdPlaceholder": "Enter Recipe ID",
+        "add": "Add",
+        "searchRecipe": "Search Recipes",
+        "noDescription": "No description",
+        "noRecipesToAdd": "No Recipe available to add",
+        "close": "Close",
+        "closeDetailBackdrop": "Close Recipe details backdrop",
+        "closeDetail": "Close Recipe details",
+        "description": "Description",
+        "resultSummary": "Result summary",
+        "planningHint": "Planning hint",
+        "mustInclude": "Must include"
+      },
+      "mine": "Mine",
+      "noSkillsHere": "No Skill here yet",
+      "noSkillsHint": "Ask Xia Director to summarize the current canvas first, or describe a workflow to create your own Skill.",
+      "use": "Use"
     },
     "modelConfig": {
       "title": "Model Config",
@@ -8499,6 +8609,392 @@
         "failedCount": "{{count}} failed",
         "cancelledCount": "{{count}} cancelled",
         "ended": "{{prefix}}{{label}} batch finished: {{details}}. Check Task Center for details before continuing."
+      },
+      "tools": {
+        "freezone_emit_canvas_command": {
+          "title": "Prepare canvas operation",
+          "description": "Generate an executable canvas modification command"
+        },
+        "freezone_create_node": {
+          "title": "Create node",
+          "description": "Prepare to create a canvas node"
+        },
+        "freezone_add_next_node": {
+          "title": "Append node",
+          "description": "Prepare to create a downstream node after a node"
+        },
+        "freezone_update_node_data": {
+          "title": "Update node",
+          "description": "Prepare to modify node data"
+        },
+        "freezone_create_edge": {
+          "title": "Create connection",
+          "description": "Prepare to connect two canvas nodes"
+        },
+        "freezone_delete_nodes": {
+          "title": "Delete nodes",
+          "description": "Prepare to delete canvas nodes"
+        },
+        "freezone_clear_canvas": {
+          "title": "Clear canvas",
+          "description": "Prepare to clear ordinary canvas nodes and connections"
+        },
+        "freezone_delete_edges": {
+          "title": "Remove connections",
+          "description": "Prepare to disconnect canvas links"
+        },
+        "freezone_move_nodes": {
+          "title": "Move nodes",
+          "description": "Prepare to move canvas nodes"
+        },
+        "freezone_layout_nodes": {
+          "title": "Arrange layout",
+          "description": "Prepare to arrange the canvas node layout"
+        },
+        "freezone_group_nodes": {
+          "title": "Create group",
+          "description": "Prepare to put nodes into a visual group"
+        },
+        "freezone_select_nodes": {
+          "title": "Select nodes",
+          "description": "Prepare to select or focus canvas nodes"
+        },
+        "freezone_run_node_action": {
+          "title": "Run node action",
+          "description": "Prepare to run a node frontend action"
+        },
+        "freezone_get_canvas_ontology": {
+          "title": "Read canvas ontology",
+          "description": "Get the detailed ontology of the current canvas"
+        },
+        "freezone_get_canvas_snapshot": {
+          "title": "Read canvas",
+          "description": "Get the nodes and connections of the current canvas"
+        },
+        "freezone_get_selection": {
+          "title": "Read selection",
+          "description": "Get the currently selected canvas nodes"
+        },
+        "freezone_get_node_detail": {
+          "title": "Read node",
+          "description": "Get the details of a single node"
+        },
+        "freezone_get_neighbor_graph": {
+          "title": "Read upstream/downstream",
+          "description": "Get the neighboring relationships of a node"
+        },
+        "freezone_get_node_action_catalog": {
+          "title": "Read node capabilities",
+          "description": "Get the actions available to a single node"
+        },
+        "freezone_get_node_create_schema": {
+          "title": "Read creation parameters",
+          "description": "Get the node creation parameters"
+        },
+        "freezone_get_audio_voice_options": {
+          "title": "Read voices",
+          "description": "Get the voice options of an audio node"
+        },
+        "freezone_get_slot_candidates": {
+          "title": "Read slots",
+          "description": "Get the slots that can currently be submitted"
+        },
+        "freezone_get_mainline_projection_assets": {
+          "title": "Read mainline assets",
+          "description": "Get the mainline assets that can be mapped onto the canvas"
+        },
+        "freezone_get_canvas_action_catalog": {
+          "title": "Query canvas capabilities",
+          "description": "Get the canvas-level action catalog"
+        },
+        "freezone_get_canvas_command_catalog": {
+          "title": "Read command rules",
+          "description": "Get the field rules of batch canvas commands"
+        },
+        "freezone_get_link_type_catalog": {
+          "title": "Read link types",
+          "description": "Get the link types of ordinary nodes"
+        },
+        "freezone_validate_canvas_commands": {
+          "title": "Validate canvas commands",
+          "description": "Pre-validate canvas_chat_commands"
+        },
+        "freezone_summarize_canvas": {
+          "title": "Summarize canvas",
+          "description": "Prepare a summary of the current canvas structure"
+        }
+      },
+      "toolTitles": {
+        "skill": "Load Skill",
+        "list_workflows": "Read available workflows",
+        "freezone_get_workflow_skill": "Load Workflow Skill",
+        "freezone_prepare_workflow_draft": "Generate workflow draft",
+        "freezone_confirm_workflow_draft": "Submit to canvas",
+        "freezone_request_user_clarification": "Confirm generation parameters",
+        "freezone_list_agent_catalog": "Read Skill / Recipe list",
+        "freezone_get_saved_skill": "Read Skill config",
+        "freezone_get_saved_recipe": "Read Recipe config",
+        "freezone_put_agent_catalog_draft_outline": "Outline Skill plan",
+        "freezone_begin_agent_catalog_draft": "Create Skill draft",
+        "freezone_put_agent_catalog_skill": "Generate Skill config",
+        "freezone_put_agent_catalog_recipe": "Generate Recipe config",
+        "freezone_patch_agent_catalog_draft": "Adjust Skill draft",
+        "freezone_finish_agent_catalog_draft": "Show Skill draft",
+        "fallback": "Run tool"
+      },
+      "toolMeta": {
+        "project": "Project",
+        "canvas": "Canvas",
+        "nodes": "Nodes",
+        "links": "Links",
+        "read": "Read: {{label}}",
+        "validate": "Validate: {{label}}",
+        "entry": "{{name}}: {{value}}"
+      },
+      "copied": "Copied",
+      "copyFailed": "Copy failed",
+      "canvasContext": {
+        "fallback": "Canvas context",
+        "validating": "Validating canvas commands",
+        "validateFailed": "Canvas command validation failed",
+        "validated": "Canvas commands validated",
+        "reading": "Reading {{label}}",
+        "readFailed": "Failed to read {{label}}",
+        "readDone": "Read {{label}}"
+      },
+      "status": {
+        "running": "In progress",
+        "failed": "Failed",
+        "done": "Done"
+      },
+      "contextUsage": "Context usage",
+      "toolRuntime": {
+        "clarificationRequired": "Waiting for generation parameters",
+        "clarificationPaused": "Waiting for answer paused",
+        "retryOutline": "Skill plan needs to be outlined again",
+        "retryWorkflowDraft": "Workflow draft needs to be regenerated",
+        "running": "Running: {{title}}",
+        "failed": "{{title}} failed",
+        "done": "{{title}} done"
+      },
+      "thinking": {
+        "active": "Thinking",
+        "done": "Thought process"
+      },
+      "executionPlan": "Execution plan",
+      "stepN": "Step {{index}}",
+      "analyzing": "Analyzing current information",
+      "moreOperations": "{{count}} more operations will run together after confirmation",
+      "approval": {
+        "defaultRecipeLabel": "Workflow copy Recipe",
+        "defaultVoiceLabel": "Project default voice",
+        "videoParams": "Video parameters: {{aspectRatio}} · {{quality}} · {{duration}}s · {{audio}}",
+        "aspectRatio": "Aspect ratio",
+        "quality": "Quality",
+        "videoDuration": "Video duration",
+        "planSummary": "The Agent plans to run {{count}} operations. They will be applied to the canvas only after you confirm.",
+        "badgeExecuting": "Running",
+        "badgeConfirm": "Confirm",
+        "generationSettings": "Generation settings",
+        "writtenAfterConfirm": "Written to nodes together after confirmation",
+        "humanReviewTitle": "Input images may contain real people",
+        "humanReviewDesc": "Detected {{count}} image-to-video nodes. Human review will be enabled after confirmation when the model supports it.",
+        "humanReview": "Human review",
+        "image": "Image",
+        "imageModel": "Image model",
+        "imageAspect": "Image aspect ratio",
+        "autoAspect": "Auto ratio",
+        "imageResolution": "Image resolution",
+        "imageCount": "Image count",
+        "imageCountOption": "{{count}}",
+        "video": "Video",
+        "videoModel": "Video model",
+        "videoCount": "Video count",
+        "videoCountOption": "{{count}}",
+        "upscaleResolution": "HD resolution",
+        "autoCancelIn": "Auto-cancels in {{seconds}}s",
+        "cancel": "Cancel",
+        "pendingTitle": "Canvas operations awaiting confirmation"
+      },
+      "canvas": {
+        "expired": "Canvas operation expired",
+        "cancelledStep": "Cancelled",
+        "cancelled": "Canvas operation cancelled",
+        "generateImageFailed": "Image generation failed",
+        "generateVideoFailed": "Video generation failed",
+        "failed": "Canvas operation failed",
+        "timeoutAutoCancelled": "Canvas operation timed out and was cancelled automatically",
+        "executionDone": "Canvas execution complete, {{count}} done",
+        "execution": "Canvas execution",
+        "collapse": "Collapse",
+        "executedCount": "{{count}} done",
+        "newNode": "New node: {{id}}",
+        "node": "Node: {{id}}",
+        "action": "Action: {{action}}",
+        "appliedCount": "Applied {{count}} canvas operations",
+        "rerun": "Run again"
+      },
+      "plan": {
+        "nodeType": {
+          "node": "Node",
+          "image": "Image node",
+          "video": "Video node",
+          "text": "Text node",
+          "audio": "Audio node",
+          "script": "Script node"
+        },
+        "createNode": "Create {{type}}",
+        "addNextNode": "Add downstream {{type}}",
+        "updateNodeData": "Update node parameters",
+        "deleteNodes": "Delete nodes",
+        "deleteEdges": "Disconnect",
+        "createEdge": "Create connection",
+        "layoutNodes": "Arrange layout",
+        "groupNodes": "Create plain group",
+        "moveNodes": "Move nodes",
+        "selectNodes": "Select nodes",
+        "generateImage": "Generate image",
+        "generateVideo": "Generate video",
+        "openVideoCompose": "Open video composition",
+        "autoComposeVideo": "Auto-compose video",
+        "openVideoViewer": "Open video",
+        "runNodeAction": "Run node action",
+        "openMainline": "Open mainline Shrimp Canvas",
+        "canvasOperation": "Canvas operation",
+        "primary": {
+          "mainlineAsset": "Mainline asset",
+          "currentCanvas": "Current canvas"
+        },
+        "detail": {
+          "position": "Position: {{x}}, {{y}}",
+          "upstream": "Upstream: {{id}}",
+          "autoConnect": "Auto-connect",
+          "kv": "{{key}}: {{value}}",
+          "action": "Action: {{action}}",
+          "scope": "Scope: {{scope}}",
+          "episode": "Episode: {{episode}}",
+          "target": "Target: {{target}}",
+          "assetKind": "Asset type: {{kind}}",
+          "mode": "Mode: {{mode}}",
+          "count": "Count: {{count}}",
+          "allNodes": "Scope: all nodes on the current canvas",
+          "name": "Name: {{name}}"
+        }
+      },
+      "skillFields": {
+        "skill": {
+          "keywords": "Trigger keywords",
+          "inputParameters": "Options before starting",
+          "node_scopes": "Node types",
+          "metaPlanningHints": "Planner hints",
+          "promptStyleGuide": "Style guide",
+          "behaviorRules": "Behavior rules",
+          "passingScore": "Passing score",
+          "domainRules": "Domain rules",
+          "ratingBands": "Rating bands",
+          "visualReviewItems": "Visual review items",
+          "textReviewItems": "Copy review items"
+        },
+        "recipe": {
+          "name": "Name",
+          "output_kind": "Output type",
+          "action_keys": "Action types",
+          "must_have_items": "Required elements",
+          "planning_prompt": "Planner prompt",
+          "result_summary": "Output summary",
+          "requires_source_media": "Requires upstream multimodal input",
+          "enabled": "Enabled",
+          "force_enhancement": "Force enhancement",
+          "skip_detail_check": "Skip detail check"
+        }
+      },
+      "inputType": {
+        "single": "Single choice",
+        "multi": "Multiple choice",
+        "number": "Number",
+        "boolean": "Toggle",
+        "text": "Text",
+        "fallback": "Parameter"
+      },
+      "skillDraft": {
+        "editItem": "Edit {{item}}",
+        "deleteItem": "Delete {{item}}",
+        "unnamedOption": "Unnamed option",
+        "supplement": "Additional: {{text}}",
+        "notSelected": "Not selected",
+        "skipped": "Skipped",
+        "usedRecommended": "Used recommended configuration",
+        "questionN": "Question {{index}}",
+        "footer": {
+          "submitted": "Added to Shrimp Canvas Skills / Recipes",
+          "cancelled": "Cancelled; this draft will not be saved",
+          "revisionPending": "AI is adjusting; add the direction of change in the follow-up questions",
+          "default": "You can expand each item to fine-tune before saving"
+        },
+        "answerSubmitted": "Answers submitted · {{answered}} / {{total}}",
+        "studioChoice": "Skill Studio selection",
+        "submitted": "Submitted"
+      },
+      "questions": {
+        "submittedNoConfig": "Submitted; no displayable question configuration was included.",
+        "next": "Next question",
+        "submitChoices": "Submit selections",
+        "continueWithCurrent": "Continue with current selections",
+        "needInfo": "We need a bit more information from you",
+        "previous": "Previous question",
+        "hintMultiple": "Multiple choice; you can also add more",
+        "hintSingle": "Choose a direction; you can also add more",
+        "multiple": "Multiple",
+        "optionN": "Option {{index}}",
+        "otherPlaceholder": "Other additions...",
+        "noQuestions": "No questions to choose from",
+        "selectedCount": "{{selected}} selected · {{answered}} / {{total}}",
+        "skip": "Skip",
+        "useRecommended": "Use recommended configuration",
+        "answerTitle": "Question answers",
+        "completeAll": "Please complete all selections",
+        "jsonInvalidSubmit": "Invalid JSON format; check it before submitting",
+        "jsonMustBeObject": "The draft must be a JSON object",
+        "jsonInvalidAdjust": "Invalid JSON format; check it before adjusting",
+        "draftTitle": "Skill / Recipe draft",
+        "modeEdit": "Edit",
+        "modeNew": "New",
+        "completed": "Completed",
+        "missing": "Missing",
+        "continueChat": "After you continue the conversation, the Agent can fill in the missing parts based on the current draft.",
+        "noDescription": "No description",
+        "basicInfo": "Basic information",
+        "keywordPlaceholder": "Type a keyword and press Enter",
+        "optionCount": "{{count}} options",
+        "defaultValue": "Default {{value}}",
+        "required": "Required",
+        "planningStrategy": "Planning strategy",
+        "rulePlaceholder": "Type a rule and press Enter",
+        "evaluationCriteria": "Evaluation criteria",
+        "listPlaceholder": "Separate with commas or line breaks",
+        "scorePlaceholder": "e.g. 8: consistent style and accurate cultural elements",
+        "visualItemPlaceholder": "e.g. Style consistency (0.35): does it match the visual style",
+        "textItemPlaceholder": "e.g. Copy shareability (0.4): is the headline memorable",
+        "reusedRecipes": "Reused Recipes ({{count}})",
+        "readOnly": "Read-only",
+        "notFound": "Not found",
+        "htmlPage": "HTML page",
+        "type": "Type",
+        "recipeIdMissing": "This ID was not found in the current local Recipe list; confirm the configuration exists before saving.",
+        "noName": "No name matched",
+        "noType": "No type matched",
+        "noActionType": "No action type matched",
+        "noSystemPrompt": "No system prompt matched",
+        "noMustHave": "No required items matched",
+        "noPlanningPrompt": "No planning prompt matched",
+        "noResultSummary": "No result summary matched",
+        "typePlaceholder": "Type a type and press Enter",
+        "elementPlaceholder": "Type an element and press Enter",
+        "viewRawJson": "View raw JSON",
+        "incompleteNotSaved": "Draft incomplete; it will not be saved this turn",
+        "aiAdjust": "Let AI adjust",
+        "confirmAdd": "Confirm and add",
+        "enteringStudio": "Entering Skill Studio..."
       }
     }
   },

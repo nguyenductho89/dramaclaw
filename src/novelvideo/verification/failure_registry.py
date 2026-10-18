@@ -56,12 +56,12 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "text rendered inside the storyboard panel?"
         ),
         "prevention_rule": (
-            "Sketch 生成 prompt 不得把 audio_type / speaker 等字段名当成画面内容；"
-            "dialogue beat 的 panel 不应该出现对话气泡或文字。"
+            "Sketch generation prompts must not treat field names such as audio_type / speaker as picture content; "
+            "the panel of a dialogue beat must not contain speech bubbles or text."
         ),
         "correction_template": (
-            "删除画面内所有英文对话气泡、DIALOGUE 标签和 speaker 代号文字，"
-            "保留人物动作和身份色。"
+            "Remove all English speech bubbles, DIALOGUE labels and speaker code text from the picture, "
+            "keeping the character actions and identity colors."
         ),
         "negative_prompt_clause": (
             "Do not render any English text, dialogue bubble, 'DIALOGUE' label, "
@@ -78,10 +78,10 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "grid index number rendered directly inside the panel image?"
         ),
         "prevention_rule": (
-            "Edit prompt 不得让模型把 panel 索引 / beat 编号写进图内。"
+            "Edit prompts must not make the model write the panel index / beat number into the image."
         ),
         "correction_template": (
-            "删除画面内的 'beat N' / 'Panel N' / 数字索引 / 网格标签等文字。"
+            "Remove text such as 'beat N' / 'Panel N' / numeric indexes / grid labels from the picture."
         ),
         "negative_prompt_clause": (
             "Do not render panel index numbers, 'beat N', 'Panel N', 'eat N', "
@@ -105,12 +105,12 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "stick figure with simple line features, answer 'no'."
         ),
         "prevention_rule": (
-            "保持 stick-figure 线稿故事板风格：圆头、单线躯干、色块身体；"
-            "不画发型 / 五官细节 / 衣物材质 / 阴影。"
+            "Keep the stick-figure line-art storyboard style: round head, single-line torso, color-block body; "
+            "do not draw hairstyle / facial feature details / clothing texture / shadows."
         ),
         "correction_template": (
-            "改回最小 stick-figure 线稿：圆头、单线躯干、纯色身体块；"
-            "删除发型、五官、衣物材质、阴影。"
+            "Revert to a minimal stick-figure line art: round head, single-line torso, flat-color body block; "
+            "remove hairstyle, facial features, clothing texture and shadows."
         ),
         "negative_prompt_clause": (
             "Keep every panel as a minimal stick-figure storyboard: round head, "
@@ -131,10 +131,10 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "empty grid slot?"
         ),
         "prevention_rule": (
-            "Edit grid 中空出的 cell 必须提示模型留白，不得自由补画。"
+            "Cells left empty in an Edit grid must prompt the model to leave them blank and not freely fill them in."
         ),
         "correction_template": (
-            "空 cell 保持纯白或 solid blank；不得包含任何人物 / 道具 / 背景。"
+            "Empty cells stay pure white or solid blank; they must not contain any characters / props / background."
         ),
         "negative_prompt_clause": (
             "If any panel slot is marked EMPTY in the instructions, render it as "
@@ -154,10 +154,10 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "numerals)?"
         ),
         "prevention_rule": (
-            "画面内不得出现拟声词、英文气泡、标签、水印、标牌、或任何非场景内文字。"
+            "The picture must not contain onomatopoeia, English speech bubbles, labels, watermarks, signboards, or any text that is not inside the scene."
         ),
         "correction_template": (
-            "删除画面内所有文字 / 标签 / 水印 / 标牌。"
+            "Remove all text / labels / watermarks / signboards from the picture."
         ),
         "negative_prompt_clause": (
             "Do not render any text, letters, numerals, labels, captions, "
@@ -177,10 +177,10 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "belong in a close-up?"
         ),
         "prevention_rule": (
-            "近景 / 特写 / 台词头肩景 beat 必须收紧到人物，背景保持空或简单色块。"
+            "Close-up / tight / dialogue head-and-shoulders beats must be tightened onto the character, with the background kept empty or a simple color block."
         ),
         "correction_template": (
-            "改成纯头肩近景 / 胸上景，主体占画面主体；删除桌面碗筷和背景环境。"
+            "Change to a pure head-and-shoulders close shot / chest-up shot with the subject filling the frame; remove tabletop dishes and the background environment."
         ),
         "negative_prompt_clause": (
             "For close-up / head-and-shoulders / dialogue close-up panels, keep "
@@ -197,14 +197,14 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "identity color within a single panel, causing identity ambiguity?"
         ),
         "prevention_rule": (
-            "同一画面内，每个命名身份色最多对应一个人物；多余同色人物要删除或改为灰色。"
+            "Within one panel, each named identity color maps to at most one character; extra same-color characters must be removed or changed to gray."
         ),
         "correction_template": (
-            "删除指令必须带空间锚 + 计数断言，否则模型会保留原图全部主体。"
-            "模板：\"删除画面 <空间锚：最左侧 / 右桌 / 后景 等> 的 <颜色> 身份色人物。"
-            "画面必须恰好剩 <N> 个人物：<N 个身份 + hex 色>。"
-            "不得保留任何多余 <颜色> 身份色人物。\" "
-            "尤其在重复主体紧贴排列且没有天然空间分隔时，走 1x1 polish 单格模式效果最好。"
+            "A removal instruction must carry a spatial anchor + a count assertion, otherwise the model keeps all subjects of the original image. "
+            "Template: \"Remove the <color> identity-color character at <spatial anchor: far left / right table / background etc.> of the picture. "
+            "Exactly <N> characters must remain in the picture: <N identities + hex colors>. "
+            "No extra <color> identity-color character may be kept.\" "
+            "Especially when repeated subjects are packed tightly with no natural spatial separation, the 1x1 polish single-cell mode works best."
         ),
         "negative_prompt_clause": (
             "Within one panel, each named identity color may appear on at most "
@@ -223,11 +223,11 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "shifted in a way that breaks continuity within the same scene?"
         ),
         "prevention_rule": (
-            "同场景内 beat 应参考已接受草图、场景主图、360/cubemap，"
-            "保持明显的座位、桌位、前后景、机位轴线连续性。"
+            "Beats within the same scene should refer to accepted sketches, the scene master image and the 360/cubemap, "
+            "to keep seat, table position, foreground/background and camera-axis continuity clearly consistent."
         ),
         "correction_template": (
-            "参照可见连续性来源还原本 beat 的座位 / 桌位 / 前后景关系。"
+            "Restore this beat's seat / table position / foreground-background relationships by referring to the visible continuity sources."
         ),
         "negative_prompt_clause": (
             "When editing a beat in a continuing scene, preserve visible continuity "
@@ -246,10 +246,10 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "re-staged from a new angle?"
         ),
         "prevention_rule": (
-            "director 层编辑不应无理由翻 180 度轴线；camera axis / 主视点方向应参考可见连续性来源。"
+            "Director-layer edits must not flip the 180-degree axis without reason; the camera axis / main viewpoint direction should refer to the visible continuity sources."
         ),
         "correction_template": (
-            "恢复可见连续性来源里的机位侧 / 主视点方向；不要无理由跨 180 度轴线。"
+            "Restore the camera side / main viewpoint direction from the visible continuity sources; do not cross the 180-degree axis without reason."
         ),
         "negative_prompt_clause": (
             "Preserve the scene's established camera axis and main viewpoint "
@@ -267,21 +267,21 @@ _SEED_FAILURE_MODES: list[dict[str, Any]] = [
             "(close-up / medium / wide), does any anchor character appear in "
             "the frame who — by the scene's 180° line and camera axis — "
             "should be behind the camera or off-screen at this framing? "
-            "Also flag when the shot scale the script asks for (【特写】/"
-            "【近景】) contradicts the framing actually rendered."
+            "Also flag when the shot scale the script asks for ([close_up]/"
+            "[medium_close]) contradicts the framing actually rendered."
         ),
         "prevention_rule": (
-            "写 edit_instruction 前必须根据当前草图、前后已接受草图、场景主图和 "
-            "360/cubemap 判断本 beat 的 shot scale 下哪些人物应可见。"
-            "凡按可见连续性应不可见的人物，edit_instruction 必须明写"
-            "\"不要渲染 <该人物>——本角度他在相机后方 / 轴线另一侧\"。"
+            "Before writing edit_instruction you must judge, from the current sketch, the accepted sketches before and after, the scene master image and "
+            "the 360/cubemap, which characters should be visible at this beat's shot scale. "
+            "For any character who should not be visible according to visible continuity, edit_instruction must state explicitly "
+            "\"Do not render <that character> - from this angle he is behind the camera / on the other side of the axis\"."
         ),
         "correction_template": (
-            "参照可见连续性来源：<identity> 位于 <空间位置>；本 beat 的 "
-            "<shot_scale> / <angle_tag> 下他不可见。"
-            "修法：\"删除画面中的 <identity>；本角度 <他的 seat_tag> "
-            "位于相机后方 / 180° 线另一侧，不得渲染。\" "
-            "保留当前 beat 要求可见的其他人物 + 可见连续性元素（桌位、道具、背景轮廓）。"
+            "Visible continuity source: <identity> is located at <spatial position>; under this beat's "
+            "<shot_scale> / <angle_tag> he is not visible. "
+            "Fix: \"Remove <identity> from the picture; from this angle <his seat_tag> "
+            "is behind the camera / on the other side of the 180-degree line and must not be rendered.\" "
+            "Keep the other characters this beat requires to be visible + the visible continuity elements (table position, props, background silhouette)."
         ),
         "negative_prompt_clause": (
             "Respect the scene's camera axis and 180° line. Do not render "

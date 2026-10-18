@@ -1,8 +1,8 @@
 name: ee-terms
 
-# REPO-10：禁用包名守栏（硬零）。源码/配置/文档出现不属于本仓的包名即 exit 1。
-# 与 import-lint 互补：import-lint 抓 import 语句，本守栏抓字符串/注释/文档/配置层面。
-# 纯标准库 + git，无需安装依赖。
+# REPO-10: banned package-name guard (hard zero). Any package name that does not belong to this repository in source/config/docs exits 1.
+# Complements import-lint: import-lint catches import statements, while this guard catches the string/comment/doc/config level.
+# Pure standard library + git; no dependencies to install.
 
 on:
   push:
@@ -19,8 +19,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # REPO-11：先校验统一白名单（ce-allowlist.toml）结构完整且无腐烂豁免，
-      # 再跑依赖它的 EE 敏感词 lint。
+      # REPO-11: first validate that the unified allowlist (ce-allowlist.toml) is structurally complete with no rotten exemptions,
+      # then run the EE sensitive-word lint that depends on it.
       - name: Validate CE allowlist
         run: python3 scripts/ce_allowlist.py
       - name: Lint forbidden package names

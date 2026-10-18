@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 //
-// 左侧面板「资产库」tab 的内容：项目级资产库的浏览，两级——先文件夹，点进去
-// 看条目，顶上有面包屑退回。
+// Content of the left panel's "Asset Library" tab: browsing the project-level asset library, two levels - folders first, click in
+// to see items, with a breadcrumb on top to go back.
 //
-// 与 AssetLibraryModal 的关系：条目归一化和文件夹分法共用
-// `@/features/canvas/ui/assetLibraryItems`，所以两边看到的目录结构始终一致。
-// 条目右侧的「…」给出发送到画布 / 下载 / 重命名 / 删除四件事——这些都是单条素材
-// 的即时操作，一个菜单就够。上传、建文件夹、从主线同步仍然只在弹窗里做：它们要
-// 选文件、挑保存位置、看进度条，300px 的侧栏放不下。
+// Relation to AssetLibraryModal: item normalization and folder grouping share
+// `@/features/canvas/ui/assetLibraryItems`, so both sides always see the same directory structure.
+// The "..." on the right of an item offers send to canvas / download / rename / delete - all immediate single-asset
+// operations, one menu is enough. Upload, create folder and sync from mainline remain only in the dialog: they need
+// file picking, choosing a save location and a progress bar, which a 300px sidebar cannot hold.
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
@@ -55,16 +55,16 @@ import { AssetLibraryNewFolderDialog } from "@/features/canvas/ui/AssetLibraryNe
 
 interface AssetLibraryBrowserProps {
   project: string;
-  /** 不传表示当前场景没有画布可发，菜单里就不出现「发送到画布」。 */
+  /** Omit to mean the current scene has no canvas to send to, so "Send to canvas" does not appear in the menu. */
   onSendToCanvas?: (entry: LibraryItem) => void;
 }
 
-// 和大纲面板的行内菜单同款——同一个侧栏里的两个「…」不该长得不一样。
+// Same style as the outline panel's row menu - two "..." in the same sidebar should not look different.
 const MENU_CONTENT_CLASS =
   "z-[120] min-w-[132px] border-[var(--ui-border-soft)] bg-[rgba(var(--surface-rgb)/0.95)] text-text-dark shadow-none backdrop-blur-3xl";
 const MENU_ITEM_CLASS =
   "gap-2 rounded-[var(--ui-radius-lg)] text-xs text-text-dark focus:bg-[rgb(var(--text-rgb)/0.075)] focus:text-text-dark";
-/** 删除项的红色由 DropdownMenuItem 的 destructive variant 给，这里不能再压文字色。 */
+/** The red of the delete item comes from DropdownMenuItem's destructive variant; the text color must not be overridden here. */
 const MENU_ITEM_DANGER_CLASS = "gap-2 rounded-[var(--ui-radius-lg)] text-xs";
 
 export function AssetLibraryBrowser({
@@ -169,7 +169,7 @@ export function AssetLibraryBrowser({
     );
   }
 
-  // 库为空、也没建过文件夹时不摆两个空目录，直接说清入口在弹窗里，省得用户在侧栏里找上传。
+  // When the library is empty and no folder was ever created, do not show two empty directories; just say the entry is in the dialog, so users don't hunt for upload in the sidebar.
   if (items.length === 0 && (foldersQuery.data?.length ?? 0) === 0) {
     return (
       <div className="min-h-0 flex-1 px-4 py-6 text-center text-[11px] leading-relaxed text-white/25">
@@ -180,7 +180,7 @@ export function AssetLibraryBrowser({
 
   return (
     <>
-      {/* ── 面包屑（进了文件夹才有） ── */}
+      {/* -- Breadcrumb (only after entering a folder) -- */}
       {openFolder ? (
         <div className="flex shrink-0 items-center gap-1 px-3 pt-2.5 pb-1.5 text-xs text-white/40">
           <button
@@ -200,11 +200,11 @@ export function AssetLibraryBrowser({
       ) : null}
 
       <div className="ui-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1.5">
-        {/* ── 根目录：文件夹列表 ── */}
+        {/* -- Root: folder list -- */}
         {!openFolder
           ? folders.map((folder) => {
-              // 封面口径和弹窗一致（folderCoverUrl：自定义封面优先，否则取第一张图），
-              // 两处别各算各的——同一个文件夹在两个视图里长得不一样最费解。
+              // The cover rule matches the dialog (folderCoverUrl: custom cover first, otherwise the first image),
+              // the two places must not each compute their own - the same folder looking different in two views is the most confusing.
               const cover = folderCoverUrl(folder);
               return (
                 <button
@@ -238,7 +238,7 @@ export function AssetLibraryBrowser({
             })
           : null}
 
-        {/* ── 文件夹内：条目列表 ── */}
+        {/* -- Inside a folder: item list -- */}
         {openFolder && openFolder.items.length === 0 ? (
           <div className="px-2 py-6 text-center text-[11px] text-white/25">
             {t("freezone.assetBrowser.folderEmpty", { name: openFolder.label })}
@@ -271,7 +271,7 @@ export function AssetLibraryBrowser({
                     playsInline
                     preload="none"
                   />
-                  {/* 视频没有 poster 时是一片黑，补个角标让它和图片区分开 */}
+                  {/* A video without a poster is a black slab; add a badge to tell it apart from images */}
                   <span className="pointer-events-none absolute left-0.5 top-0.5 rounded bg-black/55 p-0.5 text-white/90">
                     <VideoIcon className="h-2.5 w-2.5" />
                   </span>
@@ -314,10 +314,10 @@ export function AssetLibraryBrowser({
 }
 
 /**
- * 条目的「…」菜单。
+ * The item's "..." menu.
  *
- * 主线同步来的素材不给改名/删除——改了名下次「从主线同步」会按主线名字覆盖回去，
- * 删了也会在下次同步时原样长回来，摆上去只会让人以为坏了。
+ * Assets synced from the mainline cannot be renamed/deleted - a rename would be overwritten by the mainline name at the next "sync from mainline",
+ * and a deletion would grow back as-is at the next sync; showing them would only make people think it is broken.
  */
 function AssetItemMenu({
   entry,
@@ -341,8 +341,8 @@ function AssetItemMenu({
     <DropdownMenu
       open={open}
       onOpenChange={setOpen}
-      // 重命名弹窗和删除确认都要抢焦点，跟菜单关闭时把焦点还给触发按钮撞在一起会闪，
-      // 所以这两项排队到菜单彻底收完再执行（下载/发送到画布不开弹窗，可以立即走）。
+      // The rename dialog and delete confirmation both grab focus, and colliding with the menu returning focus to the trigger button on close would flicker,
+      // so these two items are queued until the menu has fully closed (download / send to canvas open no dialog and can run immediately).
       onOpenChangeComplete={(next) => {
         if (next) return;
         const queued = queuedRef.current;
@@ -355,8 +355,8 @@ function AssetItemMenu({
           <button
             type="button"
             aria-label={t("canvas.assetLibrary.folderMoreAria", { label: entry.name || t("freezone.assetBrowser.itemFallbackName") })}
-            // 平时藏起来，hover 或键盘聚焦才出现；自己的菜单开着时常驻，
-            // 否则鼠标一移到菜单上按钮就消失了。
+            // Hidden normally, shown on hover or keyboard focus; kept visible while its own menu is open,
+            // otherwise the button would vanish as soon as the mouse moves onto the menu.
             className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] text-white/45 transition-colors hover:bg-white/[0.10] hover:text-white focus-visible:opacity-100 ${
               open
                 ? "bg-white/[0.10] text-white opacity-100"

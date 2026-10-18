@@ -1,4 +1,4 @@
-"""首帧渲染质量验证：对比草图与高清首帧，检测畸变/丢失/风格偏移。"""
+"""First-frame render quality verification: compare the sketch with the HD first frame and detect distortion/loss/style drift."""
 
 import logging
 import time
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FrameVerifier:
-    """首帧渲染质量验证。"""
+    """First-frame render quality verification."""
 
     def __init__(self):
         self._agent: Agent | None = None
@@ -32,7 +32,7 @@ class FrameVerifier:
                 output_type=VerificationResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="首帧质量审核员",
+                name="First-frame quality reviewer",
             )
         return self._agent
 
@@ -43,21 +43,21 @@ class FrameVerifier:
         visual_description: str,
         project_style: str = "",
     ) -> VerificationResult:
-        """验证首帧渲染质量。
+        """Verify the first-frame render quality.
 
         Args:
-            frame_path: 首帧（高清渲染）文件路径
-            sketch_path: 对应草图（线稿）文件路径，用于对比
-            visual_description: beat 的 visual_description 字段
-            project_style: 项目视觉风格（如 realistic, anime 等）
+            frame_path: First-frame (HD render) file path
+            sketch_path: Path of the corresponding sketch (line art), used for comparison
+            visual_description: The beat's visual_description field
+            project_style: Project visual style (e.g. realistic, anime)
         """
         safe_desc = sanitize_prompt_input(visual_description)
         safe_style = sanitize_prompt_input(project_style)
-        style_line = f"\n项目视觉风格: {safe_style}" if safe_style else ""
+        style_line = f"\nProject visual style: {safe_style}" if safe_style else ""
         task = (
-            f"验证首帧渲染质量。\n"
-            f"画面描述: {safe_desc}{style_line}\n\n"
-            f"以下两张图：第一张是草图（内容参考），第二张是首帧（检查目标）。"
+            f"Verify the first-frame render quality.\n"
+            f"Picture description: {safe_desc}{style_line}\n\n"
+            f"Two images follow: the first is the sketch (content reference), the second is the first frame (the target to check)."
         )
 
         try:

@@ -98,7 +98,7 @@ it('exposes the named handles used by manual and workflow connections',()=>{
 it('shows connected input names in the generation panel',()=>{render(<HtmlArtifactNode {...props({workflowCatalog:{recipeId:'r'}})}/>);expect(screen.getByTitle('Coffee copy')).toBeTruthy();});
 
 it('keeps reference thumbnails free of an extra mention button while rendering inline mentions',()=>{
- render(<HtmlArtifactNode {...props({prompt:'Use @文本1 ',workflowCatalog:{recipeId:'r'}})}/>);
+ render(<HtmlArtifactNode {...props({prompt:'Use @text1 ',workflowCatalog:{recipeId:'r'}})}/>);
  expect(screen.queryByTitle('canvas.reference.mention')).toBeNull();
  expect(document.querySelector('[data-mention="copy"]')).toBeTruthy();
 });

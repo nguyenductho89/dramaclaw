@@ -123,8 +123,8 @@ export function SingleBeatPanel({
   const beatTextScope = saveScopes.beatText(project, episode, beat.beat_number);
   const textSaveState = useSaveState(beatTextScope);
 
-  // 精品剧 (spine_template === "drama") bakes narration into the rendered video
-  // and has no standalone audio stage — hide the 音频 section for it.
+  // Premium drama (spine_template === "drama") bakes narration into the rendered video
+  // and has no standalone audio stage - hide the audio section for it.
   const sections =
     spineTemplate === "drama"
       ? SECTIONS.filter((section) => section.id !== "audio")

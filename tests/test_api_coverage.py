@@ -184,14 +184,14 @@ def test_api_coverage_report_groups_uncovered_and_baseline_external_paths(tmp_pa
     )
     text = result.report_path.read_text(encoding="utf-8")
 
-    assert "覆盖 1/3" in text
-    assert "归一化命中数 1" in text
+    assert "Covered 1/3" in text
+    assert "Normalized hits 1" in text
     assert "| M04 | 1 | 1 | 100.0% |" in text
     assert "tests/test_characters.py::test_list" in text
-    assert "## 零覆盖红名单" in text
+    assert "## Zero-coverage red list" in text
     assert "- `/api/v1/auth/login`" in text
     assert "- `/api/v1/projects/{project}/scenes`" in text
-    assert "## 基线外路径告警" in text
+    assert "## Out-of-baseline path warnings" in text
     assert "- `/api/v1/projects/demo/custom`" in text
     assert "- `/api/v1/missing`" in text
 
@@ -229,8 +229,8 @@ def test_api_coverage_report_normalizes_path_converters(tmp_path) -> None:
     assert result.covered == 1
     assert result.total == 1
     assert result.normalized_hits == 1
-    assert "覆盖 1/1" in text
-    assert "## 基线外路径告警\n\n无" in text
+    assert "Covered 1/1" in text
+    assert "## Out-of-baseline path warnings\n\nNone" in text
     assert "- `/api/v1/projects/{project}/media/{file_path}` -> `tests/test_m09.py::test_media`" in text
 
 
@@ -255,8 +255,8 @@ def test_dc_coverage_ce_generates_report_with_character_coverage() -> None:
     if not report_path.is_absolute():
         report_path = REPO_ROOT / report_path
     text = report_path.read_text(encoding="utf-8")
-    coverage_line = next(line for line in text.splitlines() if line.startswith("覆盖 "))
-    total_covered = int(coverage_line.removeprefix("覆盖 ").split("/", 1)[0])
+    coverage_line = next(line for line in text.splitlines() if line.startswith("Covered "))
+    total_covered = int(coverage_line.removeprefix("Covered ").split("/", 1)[0])
     assert total_covered >= 49
     m04_line = next(line for line in text.splitlines() if line.startswith("| M04 |"))
     covered = int(m04_line.split("|")[3].strip())

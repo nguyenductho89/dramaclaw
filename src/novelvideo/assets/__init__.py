@@ -1,6 +1,6 @@
-"""NovelVideo 资产管理模块。
+"""NovelVideo asset management module.
 
-管理角色形象库、场景模板等资产。
+Manages assets such as the character image library and scene templates.
 """
 
-# 后续实现
+# To be implemented

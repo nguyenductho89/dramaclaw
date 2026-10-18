@@ -206,14 +206,14 @@ def prepare_sketch_select_context(
     project_dir = project_dir.expanduser().resolve()
     output_path = output_path.expanduser().resolve()
 
-    _notify(progress_callback, 0.05, "读取脚本")
+    _notify(progress_callback, 0.05, "Reading script")
     payload = load_script_payload(project_dir, episode_num)
     payload.setdefault("episode_number", episode_num)
     beats = [beat for beat in list(payload.get("beats") or []) if not _is_space_map_beat(beat)]
     if limit > 0:
         beats = beats[:limit]
 
-    _notify(progress_callback, 0.18, "准备 select_run 目录")
+    _notify(progress_callback, 0.18, "Preparing select_run directory")
     run_dir = _prepare_select_run_dir(project_dir, episode_num)
     compressed_dir = run_dir / COMPRESSED_DIRNAME
     previous_select_results = _move_previous_select_results(project_dir, episode_num, run_dir)
@@ -226,7 +226,7 @@ def prepare_sketch_select_context(
         beat_number = int(beat.get("beat_number") or 0)
         if beat_number <= 0:
             continue
-        _notify(progress_callback, 0.18 + (index / total) * 0.62, f"压缩 beat {beat_number} 当前草图")
+        _notify(progress_callback, 0.18 + (index / total) * 0.62, f"Compressing current sketch of beat {beat_number}")
         current_selected = selected_dir / f"beat_{beat_number:02d}.png"
         compressed_path = compressed_dir / f"beat_{beat_number:02d}.jpg"
         current_selected_path = ""
@@ -268,7 +268,7 @@ def prepare_sketch_select_context(
             }
         )
 
-    _notify(progress_callback, 0.88, "写入 select_context.json")
+    _notify(progress_callback, 0.88, "Writing select_context.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     result = {
         "project_dir": str(project_dir),
@@ -315,8 +315,8 @@ def prepare_sketch_select_context(
         **previous_select_results,
         "output_json": str(output_path),
     }
-    _log(log_callback, f"已生成 {len(beat_rows)} 条 current-only select context")
-    _notify(progress_callback, 1.0, "完成")
+    _log(log_callback, f"Generated {len(beat_rows)} current-only select context entries")
+    _notify(progress_callback, 1.0, "Done")
     return summary
 
 
@@ -335,7 +335,7 @@ def prepare_storyboard_director_context(
     project_dir = project_dir.expanduser().resolve()
     output_path = output_path.expanduser().resolve()
 
-    _notify(progress_callback, 0.05, "读取脚本")
+    _notify(progress_callback, 0.05, "Reading script")
     payload = load_script_payload(project_dir, episode_num)
     payload.setdefault("episode_number", episode_num)
     beats = [beat for beat in list(payload.get("beats") or []) if not _is_space_map_beat(beat)]
@@ -345,7 +345,7 @@ def prepare_storyboard_director_context(
     if limit > 0:
         beats = beats[:limit]
 
-    _notify(progress_callback, 0.16, "准备 storyboard director 目录")
+    _notify(progress_callback, 0.16, "Preparing storyboard director directory")
     run_dir = _prepare_storyboard_director_run_dir(project_dir, episode_num)
     compressed_dir = run_dir / COMPRESSED_DIRNAME
 
@@ -358,7 +358,7 @@ def prepare_storyboard_director_context(
         beat_number = int(beat.get("beat_number") or 0)
         if beat_number <= 0:
             continue
-        _notify(progress_callback, 0.16 + (index / total) * 0.5, f"压缩 beat {beat_number} 当前草图")
+        _notify(progress_callback, 0.16 + (index / total) * 0.5, f"Compressing current sketch of beat {beat_number}")
         current_selected = selected_dir / f"beat_{beat_number:02d}.png"
         compressed_path = compressed_dir / f"beat_{beat_number:02d}.jpg"
         current_selected_path = ""
@@ -390,7 +390,7 @@ def prepare_storyboard_director_context(
             }
         )
 
-    _notify(progress_callback, 0.75, "生成 overview grid")
+    _notify(progress_callback, 0.75, "Generating overview grid")
     overview_grid_path = run_dir / "overview_grid.jpg"
     overview_grid = ""
     if compressed_paths:
@@ -404,7 +404,7 @@ def prepare_storyboard_director_context(
         )
         overview_grid = str(overview_grid_path.resolve())
 
-    _notify(progress_callback, 0.9, "写入 director_context.json")
+    _notify(progress_callback, 0.9, "Writing director_context.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     result = {
         "project_dir": str(project_dir),
@@ -432,6 +432,6 @@ def prepare_storyboard_director_context(
         "overview_grid_path": overview_grid,
         "output_json": str(output_path),
     }
-    _log(log_callback, f"已生成 {len(beat_rows)} 条 storyboard director context")
-    _notify(progress_callback, 1.0, "完成")
+    _log(log_callback, f"Generated {len(beat_rows)} storyboard director context entries")
+    _notify(progress_callback, 1.0, "Done")
     return summary

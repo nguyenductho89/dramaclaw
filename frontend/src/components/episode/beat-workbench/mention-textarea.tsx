@@ -41,8 +41,8 @@ function buildSegments(text: string, labels: string[]): Segment[] {
 }
 
 /**
- * 找出与 [selStart, selEnd] 选区重叠的 `@<label>` mention token —— 双击 textarea 时
- * 浏览器会选中 token 里的某个「词」，据此定位用户双击的是哪个 mention。无命中返回 null。
+ * Finds the `@<label>` mention token that overlaps the [selStart, selEnd] selection - when double-clicking the textarea
+ * the browser selects some "word" inside the token, and this locates which mention the user double-clicked. Returns null when nothing matches.
  */
 export function findMentionTokenAtSelection(
   text: string,
@@ -68,7 +68,7 @@ interface MentionTextareaProps
   value: string;
   mentionLabels?: string[];
   inputClassName?: string;
-  // label（不含 @，如「图片1」）→ 预览图 URL。hover 到对应 @mention 高亮块时弹出小图预览。
+  // label (without @, e.g. "image1") -> preview image URL. A small image preview pops up when hovering the matching @mention highlight block.
   mentionPreviews?: Record<string, string>;
 }
 
@@ -104,15 +104,15 @@ export function MentionTextarea({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [mention, setMention] = React.useState<MentionState | null>(null);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  // 双击命中的 @mention token 区间：非 null 时 picker 处于「替换」态，选中候选会替换
-  // 这段而不是在光标处插入（与 mention 插入态互斥）。
+  // Range of the @mention token hit by a double-click: when non-null the picker is in "replace" mode, and choosing a candidate replaces
+  // this span instead of inserting at the cursor (mutually exclusive with mention insertion mode).
   const [replaceRange, setReplaceRange] = React.useState<{
     start: number;
     end: number;
   } | null>(null);
-  // hover 到某个 @mention 高亮块时的预览图。用「底边锚定」（bottom 距视口底）让预览
-  // 紧贴在文字上方、向上生长——横图实际高度比容器矮，若用 top 锚定会在文字与图之间
-  // 留出空隙。
+  // Preview image shown when hovering an @mention highlight block. Uses "bottom anchoring" (bottom measured from the viewport bottom) so the preview
+  // sits right above the text and grows upward - a landscape image is actually shorter than its container, and with top anchoring a gap would
+  // be left between the text and the image.
   const hoverLabelRef = React.useRef<string | null>(null);
   const [preview, setPreview] = React.useState<
     { url: string; left: number; bottom: number } | null
@@ -122,8 +122,8 @@ export function MentionTextarea({
     mentionPreviews && Object.keys(mentionPreviews).length > 0,
   );
 
-  // backdrop 的 <mark> 是 pointer-events-none，无法直接 hover；改在 textarea 的
-  // mousemove 里按各 mark 的屏幕矩形做命中测试，命中带预览图的 mention 就弹小图。
+  // The backdrop's <mark> is pointer-events-none and cannot be hovered directly; instead, in the textarea's
+  // mousemove a hit test is done against each mark's screen rect, and a mention that has a preview image pops up the small image.
   const handleTextareaMouseMove = (
     event: React.MouseEvent<HTMLTextAreaElement>,
   ) => {
@@ -157,7 +157,7 @@ export function MentionTextarea({
         Math.max(8, hitRect.left),
         window.innerWidth - MENTION_PREVIEW_SIZE - 8,
       );
-      // 预览底边落在文字上沿上方 6px，向上生长，始终贴着 mention。
+      // The preview's bottom edge sits 6px above the top of the text and grows upward, always hugging the mention.
       const bottom = window.innerHeight - hitRect.top + 6;
       setPreview({ url, left, bottom });
     } else {
@@ -189,7 +189,7 @@ export function MentionTextarea({
   );
 
   const filteredLabels = React.useMemo(() => {
-    // 替换态：列出全部候选（不按 query 过滤），供用户挑新的素材。
+    // Replace mode: list all candidates (not filtered by query), for the user to pick a new asset.
     if (replaceRange) {
       return mentionLabels.filter(Boolean).slice(0, 8);
     }
@@ -205,7 +205,7 @@ export function MentionTextarea({
     setActiveIndex(0);
   }, [mention?.query, replaceRange]);
 
-  // 替换态下点 picker 以外的地方就退出（捕获阶段，先于候选 onMouseDown）。
+  // In replace mode, clicking anywhere outside the picker exits (capture phase, before the candidate onMouseDown).
   React.useEffect(() => {
     if (!replaceRange) return;
     const onDocMouseDown = (event: MouseEvent) => {
@@ -221,7 +221,7 @@ export function MentionTextarea({
 
   const detectMention = (text: string, caret: number) => {
     const before = text.slice(0, caret);
-    const match = before.match(/(^|[\s，,。！？；;：:、（(])@([^\s@]*)$/);
+    const match = before.match(/(^|[\s\uFF0C,\u3002\uFF01\uFF1F\uFF1B;\uFF1A:\u3001\uFF08(])@([^\s@]*)$/);
     if (!match) {
       setMention(null);
       return;
@@ -273,8 +273,8 @@ export function MentionTextarea({
     });
   };
 
-  // 双击替换：把命中的 @<oldLabel> token 段整体换成 @<label>（不带尾随空格——原 token
-  // 后面的文本保持不动），引用对象随之改变。
+  // Double-click replace: swap the whole matched @<oldLabel> token span for @<label> (without a trailing space - the text after the
+  // original token stays untouched), and the referenced object changes accordingly.
   const replaceMention = (label: string) => {
     const textarea = textareaRef.current;
     if (!textarea || !replaceRange) return;
@@ -299,7 +299,7 @@ export function MentionTextarea({
     }
   };
 
-  // 双击 @图片N/@音频N → 在下方打开候选 picker「替换」该引用，省去「删 token 再 @」。
+  // Double-clicking @image N / @audio N -> opens the candidate picker below to "replace" that reference, saving the "delete token then @" steps.
   const handleDoubleClick = (event: React.MouseEvent<HTMLTextAreaElement>) => {
     if (mentionLabels.length === 0) return;
     const textarea = event.currentTarget;
@@ -322,7 +322,7 @@ export function MentionTextarea({
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // 打字会改变 token 位置，替换态区间随之失效 → 退出替换。
+    // Typing changes token positions, so the replace-mode range becomes invalid -> exit replace mode.
     if (replaceRange) setReplaceRange(null);
     const textarea = event.currentTarget;
     const normalized = normalizeMentionSeparatorSpaces(
@@ -364,7 +364,7 @@ export function MentionTextarea({
       }
       // Enter / Tab / Space all confirm the highlighted candidate — Space lets
       // you commit a query in one motion, and the inserted mention carries its
-      // own trailing space anyway. 替换态下 Space 不应触发（避免误改），仅 Enter/Tab。
+      // own trailing space anyway. In replace mode Space should not trigger (to avoid accidental changes), only Enter/Tab.
       if (
         event.key === "Enter" ||
         event.key === "Tab" ||

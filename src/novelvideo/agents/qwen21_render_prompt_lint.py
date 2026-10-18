@@ -30,7 +30,7 @@ _IMAGE_TAG_RE = re.compile(r"<image(\d+)>")
 _IMAGE_TAG_NEAR_RE = re.compile(r"<\s*image\s*\d+\s*>", re.IGNORECASE)
 _MALFORMED_WRAPPER_RE = re.compile(r"\[image\d+\]|\{image\d+\}|<img\d+>", re.IGNORECASE)
 _LEGACY_TAG_RE = re.compile(
-    r"\bPicture\s+\d+\b|\bimage\s+\d\b|\bthe\s+(first|second|third)\s+image\b|图\s*\d|第[一二三]张图",
+    r"\bPicture\s+\d+\b|\bimage\s+\d\b|\bthe\s+(first|second|third)\s+image\b",
     re.IGNORECASE,
 )
 _BANNED_LAYOUT_WORDS_RE = re.compile(
@@ -53,13 +53,13 @@ _PHOTOREALISTIC_RE = re.compile(r"photorealistic|photograph", re.IGNORECASE)
 # BabyStories beat 7's AI-rewritten scene prompt ("strictly preserving
 # their exact poses").
 _PRESERVATION_RE = re.compile(r"unchanged|keep|preserv|retain", re.IGNORECASE)
-_PROHIBITION_RE = re.compile(r"\b(do not|don't|never)\b|禁止", re.IGNORECASE)
+_PROHIBITION_RE = re.compile(r"\b(do not|don't|never)\b", re.IGNORECASE)
 # Deliberately excludes "slightly" — legitimate for a precise spatial
 # degree ("facing slightly left"), not uncertainty, and real AI-rewrite
 # output uses it this way often enough to be a pure false positive
 # (confirmed 2026-10-18, BabyStories beat 7).
 _HEDGING_RE = re.compile(r"\b(maybe|possibly|perhaps)\b|either .* or", re.IGNORECASE)
-_CJK_RE = re.compile(r"[一-鿿]")
+_CJK_RE = re.compile("[\u4e00-\u9fff]")
 _VIETNAMESE_DIACRITICS_RE = re.compile(
     "[ăâđêôơưĂÂĐÊÔƠƯ]|"
     "[àáạảãằắặẳẵầấậẩẫèéẹẻẽềếệểễìíịỉĩòóọỏõồốộổỗờớợởỡùúụủũừứựửữỳýỵỷỹ]",
@@ -103,7 +103,7 @@ def lint_qwen21_render_prompt(
     result = LintResult()
     text = prompt or ""
     if not text.strip():
-        result.issues.append(LintIssue("error", "empty", "Prompt rỗng"))
+        result.issues.append(LintIssue("error", "empty", "Prompt is empty"))
         return result
 
     if "\n" in text:
@@ -111,13 +111,13 @@ def lint_qwen21_render_prompt(
             LintIssue(
                 "error",
                 "newline",
-                "Prompt chứa xuống dòng — theo chuẩn chính thức, output phải là 1 đoạn văn liên tục",
+                "Prompt contains a line break — per the official standard, the output must be one continuous paragraph",
             )
         )
 
     if len(text) > MAX_PROMPT_CHARS:
         result.issues.append(
-            LintIssue("error", "too_long", f"Prompt quá dài ({len(text)}/{MAX_PROMPT_CHARS} ký tự)")
+            LintIssue("error", "too_long", f"Prompt is too long ({len(text)}/{MAX_PROMPT_CHARS} characters)")
         )
 
     tags = [int(n) for n in _IMAGE_TAG_RE.findall(text)]
@@ -128,24 +128,24 @@ def lint_qwen21_render_prompt(
     if stage in ("full", "inpaint"):
         if not has_image1:
             result.issues.append(
-                LintIssue("error", "missing_image1_tag", "Thiếu <image1> — stage này cần Multi-Image (N=2)")
+                LintIssue("error", "missing_image1_tag", "Missing <image1> — this stage needs Multi-Image input (N=2)")
             )
         if not has_image2:
             result.issues.append(
-                LintIssue("error", "missing_image2_tag", "Thiếu <image2> — stage này cần Multi-Image (N=2)")
+                LintIssue("error", "missing_image2_tag", "Missing <image2> — this stage needs Multi-Image input (N=2)")
             )
     elif stage == "scene_only" and tags:
         result.issues.append(
             LintIssue(
                 "error",
                 "unexpected_tag",
-                'stage="scene_only" chỉ có 1 ảnh đính kèm — quy tắc chính thức: input 1 ảnh KHÔNG được gắn tag <imageN>',
+                'stage="scene_only" has only 1 attached image — official rule: single-image input must NOT carry <imageN> tags',
             )
         )
 
     if out_of_range:
         result.issues.append(
-            LintIssue("error", "tag_out_of_range", f"Có tag ngoài phạm vi (chỉ dùng <image1>/<image2>): {out_of_range}")
+            LintIssue("error", "tag_out_of_range", f"Tags out of range (only <image1>/<image2> are allowed): {out_of_range}")
         )
 
     has_malformed = bool(_MALFORMED_WRAPPER_RE.search(text)) or len(
@@ -153,7 +153,7 @@ def lint_qwen21_render_prompt(
     ) != len(_IMAGE_TAG_RE.findall(text))
     if has_malformed:
         result.issues.append(
-            LintIssue("error", "malformed_tag", 'Tag sai định dạng — phải đúng y nguyên "<image1>"/"<image2>" (chữ thường, không khoảng trắng)')
+            LintIssue("error", "malformed_tag", 'Malformed tag — it must be exactly "<image1>"/"<image2>" (lowercase, no spaces)')
         )
 
     if _LEGACY_TAG_RE.search(text):
@@ -161,73 +161,73 @@ def lint_qwen21_render_prompt(
             LintIssue(
                 "error",
                 "legacy_tag",
-                'Dùng "Picture N"/"image 1"/"the first image"/... — Qwen-Image 2.1 không tự chèn token như Edit-2511, quy tắc chính thức bắt buộc đúng "<image1>"/"<image2>"',
+                'Uses "Picture N"/"image 1"/"the first image"/... — Qwen-Image 2.1 does not auto-insert tokens like Edit-2511, and the official rule requires exactly "<image1>"/"<image2>"',
             )
         )
 
     if _BANNED_LAYOUT_WORDS_RE.search(text):
         result.issues.append(
-            LintIssue("error", "layout_word", "Có từ grid/panel/storyboard/collage/region — đây là 1 ảnh đơn, không phải bố cục nhiều khung")
+            LintIssue("error", "layout_word", "Contains grid/panel/storyboard/collage/region wording — this is a single image, not a multi-frame layout")
         )
 
     if _RESOLUTION_TOKEN_RE.search(text):
         result.issues.append(
-            LintIssue("error", "resolution_token", 'Có token tỉ lệ/độ phân giải (vd "9:16", "2K") — quy tắc chính thức: "output size is decided downstream, not by you"')
+            LintIssue("error", "resolution_token", 'Contains an aspect-ratio/resolution token (e.g. "9:16", "2K") — official rule: "output size is decided downstream, not by you"')
         )
 
     if _WRAPPER_OUTPUT_RE.search(text):
         result.issues.append(
-            LintIssue("error", "wrapper_output", 'Output có vẻ bọc JSON/code fence/heading/còn sót tag <think> — quy tắc chính thức: chỉ 1 đoạn văn thuần, không bọc gì cả (khác Edit-2511\'s {"Rewritten":...})')
+            LintIssue("error", "wrapper_output", 'Output looks wrapped in JSON/a code fence/a heading/a leftover <think> tag — official rule: a single plain paragraph with no wrapper (unlike Edit-2511\'s {"Rewritten":...})')
         )
 
     if not _INSTRUCTION_VERB_RE.search(text.strip()):
         result.issues.append(
-            LintIssue("warning", "missing_lead_verb", "Câu đầu không bắt đầu bằng động từ chỉ thị (Replace/Convert/Change/...)")
+            LintIssue("warning", "missing_lead_verb", "The first sentence does not start with an instruction verb (Replace/Convert/Change/...)")
         )
 
     if not _PHOTOREALISTIC_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "missing_medium_conversion", "Không thấy từ 'photorealistic'/'photograph' — nên nêu rõ việc chuyển từ sketch sang ảnh thật")
+            LintIssue("warning", "missing_medium_conversion", "No 'photorealistic'/'photograph' wording found — the sketch-to-photo conversion should be stated explicitly")
         )
 
     if not _PRESERVATION_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "missing_preservation_clause", "Không thấy câu giữ nguyên (unchanged/keep/preserve) cho phần nội dung không chỉnh sửa")
+            LintIssue("warning", "missing_preservation_clause", "No preservation clause (unchanged/keep/preserve) found for the content that is not being edited")
         )
 
     if '"' in text:
         result.issues.append(
-            LintIssue("warning", "quoted_text", 'Có dấu ngoặc kép — theo quy tắc chính thức, ngoặc kép chỉ dành cho chữ sẽ HIỂN THỊ trong ảnh, beat render không cần chữ trên ảnh')
+            LintIssue("warning", "quoted_text", 'Contains double quotes — per the official rule, quotes are only for text that will be DISPLAYED in the image, and a render beat needs no text in the image')
         )
 
     if _CJK_RE.search(text) or _VIETNAMESE_DIACRITICS_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "non_english_prose", "Có chữ Hán/dấu tiếng Việt trong phần mô tả — nên viết tiếng Anh (language decision A)")
+            LintIssue("warning", "non_english_prose", "Non-English text (CJK characters or Vietnamese diacritics) in the description — write it in English (language decision A)")
         )
 
     if _PROHIBITION_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "prohibition_phrasing", 'Dùng câu phủ định (do not/never) — quy tắc chính thức khuyên diễn đạt khẳng định ("keep X unchanged")')
+            LintIssue("warning", "prohibition_phrasing", 'Uses negative phrasing (do not/never) — the official rule recommends affirmative wording ("keep X unchanged")')
         )
 
     if _HEDGING_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "hedging", "Có từ mập mờ (maybe/possibly/either...or) — quy tắc chính thức: quyết đoán, không để ngỏ phương án")
+            LintIssue("warning", "hedging", "Contains hedging words (maybe/possibly/either...or) — official rule: be decisive and do not leave options open")
         )
 
     if _MANNEQUIN_COLOR_WORDS_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "mannequin_color_word", "Có tên màu tracking của mannequin (magenta/fuchsia/...) — model có thể hiểu nhầm là màu quần áo thật")
+            LintIssue("warning", "mannequin_color_word", "Contains a mannequin tracking color name (magenta/fuchsia/...) — the model may mistake it for a real clothing color")
         )
 
     if stage == "inpaint" and _ACTION_VERB_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "inpaint_describes_action", "Prompt inpaint mô tả hành động/tư thế — tư thế đã bị khoá bởi mask, mô tả này có nguy cơ gán nhầm hành động của người khác")
+            LintIssue("warning", "inpaint_describes_action", "The inpaint prompt describes actions/poses — the pose is already locked by the mask, and this description risks assigning another person's action")
         )
 
     if _VERBAL_FACE_DESCRIPTION_RE.search(text):
         result.issues.append(
-            LintIssue("warning", "verbal_face_description", "Mô tả khuôn mặt bằng chữ (eye color/jawline/...) — quy tắc chính thức: identity nên trỏ vào <image2>, không mô tả bằng lời")
+            LintIssue("warning", "verbal_face_description", "Describes the face in words (eye color/jawline/...) — official rule: identity should point to <image2>, not be described verbally")
         )
 
     return result

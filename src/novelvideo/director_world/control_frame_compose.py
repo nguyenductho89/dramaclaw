@@ -87,20 +87,22 @@ def compose_combined(
     composite.save(out_path, optimize=True)
     create_control_frame_layers(target_dir)
 
-    # Mirror env_only → selected_background.png. selected_background.png 是本
-    # beat 对外唯一"当前背景 slot",downstream(sketch_from_context / frame 上色 /
-    # freezone canvas 投影)统一从这里读。
-    # env_only.png 继续保留为 compose pipeline 的内部输入 artifact
-    # (control_frame_layers 等仍直接读它),但用户/freezone 视角的"当前背景"
-    # 就是这个 mirror 出来的 selected_background.png。这样 cropper 路径
-    # (master/reverse/360-snap/3GS-导演台 export) 和 director compose 路径都写
-    # 同一个 canonical slot,避免两份并存导致的一致性问题。
+    # Mirror env_only → selected_background.png. selected_background.png is this
+    # beat's single outward-facing "current background slot"; downstream
+    # (sketch_from_context / frame coloring / freezone canvas projection)
+    # all read from here.
+    # env_only.png is kept as an internal input artifact of the compose pipeline
+    # (control_frame_layers etc. still read it directly), but the user/freezone
+    # view of the "current background" is this mirrored selected_background.png.
+    # That way the cropper paths (master/reverse/360-snap/3GS director-desk export)
+    # and the director compose path all write the same canonical slot, avoiding
+    # the consistency problems of keeping two copies side by side.
     selected_bg_path = target_dir / "selected_background.png"
     try:
         shutil.copyfile(env_only_path, selected_bg_path)
     except Exception:
-        # 不阻塞 compose 主流程;即便 mirror 失败 combined.png 仍可用。
-        # 下游 reader 拿不到 selected_background 时自然 fallback 到旧值或缺失态。
+        # Do not block the main compose flow; combined.png stays usable even if the mirror fails.
+        # When downstream readers cannot get selected_background they naturally fall back to the old value or a missing state.
         pass
 
     return out_path

@@ -1,6 +1,6 @@
-"""角色修复 Agent。
+"""Character fixer Agent.
 
-根据审核报告修复角色问题：合并重复、删除泛称、修正身份。
+Fixes character problems according to the review report: merge duplicates, delete generic names, correct identities.
 """
 
 from typing import Callable, Optional
@@ -15,78 +15,77 @@ from novelvideo.config import (
 
 
 class FixAction(BaseModel):
-    """修复操作记录。"""
+    """Fix action record."""
 
-    action: str = Field(description="操作类型: merge/delete/update")
-    target: str = Field(description="操作目标")
-    result: str = Field(description="操作结果")
-    success: bool = Field(default=True, description="是否成功")
+    action: str = Field(description="Action type: merge/delete/update")
+    target: str = Field(description="Action target")
+    result: str = Field(description="Action result")
+    success: bool = Field(default=True, description="Whether it succeeded")
 
 
 class CharacterFixReport(BaseModel):
-    """角色修复报告。"""
-
+    """Character fix report."""
     fixed: list[FixAction] = Field(default_factory=list)
-    summary: str = Field(default="", description="修复总结")
-    total_actions: int = Field(default=0, description="总操作数")
-    success_count: int = Field(default=0, description="成功数")
+    summary: str = Field(default="", description="Fix summary")
+    total_actions: int = Field(default=0, description="Total number of actions")
+    success_count: int = Field(default=0, description="Number of successes")
 
     @property
     def all_success(self) -> bool:
-        """是否全部成功。"""
+        """Whether everything succeeded."""
         return all(f.success for f in self.fixed)
 
 
-FIXER_INSTRUCTIONS = """你是一个角色修复专家。
+FIXER_INSTRUCTIONS = """You are a character fixing expert.
 
-## 任务
-根据审核报告修复角色问题。
+## Task
+Fix character problems according to the review report.
 
-## 工具
-- tool_merge_characters(primary_name, alias_names): 合并重复角色
-  - primary_name: 保留的主角色名
-  - alias_names: 要合并的别名，逗号分隔（如 "皇后娘娘,娘娘"）
+## Tools
+- tool_merge_characters(primary_name, alias_names): merge duplicate characters
+  - primary_name: the primary character name to keep
+  - alias_names: the aliases to merge, comma-separated (e.g. "the Empress,Your Majesty")
 
-- tool_delete_character(name): 删除角色
-  - 用于删除泛称或无效角色
+- tool_delete_character(name): delete a character
+  - Used to delete generic or invalid characters
 
-- tool_update_character_field(name, field, value): 更新角色字段
-  - field 可以是: gender, role, personality 等
+- tool_update_character_field(name, field, value): update a character field
+  - field can be: gender, role, personality, etc.
 
-- tool_get_character_detail(name): 获取角色详情
-  - 用于确认修复前的状态
+- tool_get_character_detail(name): get character details
+  - Used to confirm the state before fixing
 
-## 工作流程
-1. 读取审核报告中的问题
-2. 对每个问题：
-   - duplicate: 调用 tool_merge_characters 合并
-   - generic: 调用 tool_delete_character 删除
-   - identity_error: 调用 tool_update_character_field 修正
-3. 每个操作后确认结果
-4. 输出修复报告
+## Workflow
+1. Read the issues in the review report
+2. For each issue:
+   - duplicate: call tool_merge_characters to merge
+   - generic: call tool_delete_character to delete
+   - identity_error: call tool_update_character_field to correct
+3. Confirm the result after each action
+4. Output the fix report
 
-## 输出格式
-返回 JSON 格式的修复报告：
-- fixed: 操作列表，每个操作包含 action、target、result、success
-- summary: 修复总结
-- total_actions: 总操作数
-- success_count: 成功数
+## Output format
+Return a fix report in JSON format:
+- fixed: list of actions, each containing action, target, result, success
+- summary: fix summary
+- total_actions: total number of actions
+- success_count: number of successes
 
-## 注意事项
-- 合并角色时，选择更具体的名字作为 primary（如"净臻"而非"小和尚"）
-- 删除前先用 tool_get_character_detail 确认
-- 每个操作都要记录是否成功
+## Notes
+- When merging characters, pick the more specific name as primary (e.g. "Jingzhen" rather than "the young monk")
+- Confirm with tool_get_character_detail before deleting
+- Record whether every action succeeded
 """
 
 
 def create_character_fixer_agent(tools: Optional[list[Callable]] = None) -> Agent:
-    """创建角色修复 Agent。
+    """Create the character fixer Agent.
 
     Args:
-        tools: 角色修复工具列表
+        tools: List of character fixing tools
 
     Returns:
-        Agent: 配置好的角色修复 Agent
+        Agent: a configured character fixer Agent
     """
     return Agent(
         get_pydantic_model(),
@@ -94,19 +93,19 @@ def create_character_fixer_agent(tools: Optional[list[Callable]] = None) -> Agen
         output_type=CharacterFixReport,
         model_settings=get_newapi_structured_output_model_settings(),
         tools=tools or [],
-        name="角色修复员",
+        name="Character fixer",
     )
 
 
-# 默认实例（延迟初始化）
+# Default instance (lazily initialized)
 _fixer_agent = None
 
 
 def get_character_fixer_agent() -> Agent:
-    """获取角色修复 Agent 单例（无工具版本）。
+    """Get the character fixer Agent singleton (version without tools).
 
     Returns:
-        Agent: 角色修复 Agent 实例
+        Agent: the character fixer Agent instance
     """
     global _fixer_agent
     if _fixer_agent is None:

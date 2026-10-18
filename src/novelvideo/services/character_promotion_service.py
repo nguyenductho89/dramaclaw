@@ -7,16 +7,16 @@ from typing import Any
 from novelvideo.models import NovelCharacter
 
 _NON_SPECIFIC_CHARACTER_LABELS = {
-    "无",
-    "暂无",
-    "无人物",
-    "无出场人物",
-    "众人",
-    "群众",
-    "人群",
-    "路人",
-    "旁人",
-    "所有人",
+    "none",
+    "n/a",
+    "no characters",
+    "no cast",
+    "everyone",
+    "crowd",
+    "the crowd",
+    "passerby",
+    "bystander",
+    "all",
 }
 
 
@@ -37,7 +37,7 @@ async def promote_scene_characters_to_global(
     """Create global characters for explicit scene-header cast names.
 
     The caller must pass only structured screenplay cast labels, such as
-    ``出场人物`` parsed from scene headers. This helper intentionally does not
+    ``Cast`` parsed from scene headers. This helper intentionally does not
     infer names from prose.
     """
     add_character = getattr(store, "add_character", None)

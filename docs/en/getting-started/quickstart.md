@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/getting-started/quickstart.md)
-
 # Quickstart
 
 > Run DramaClaw locally and produce your first result.

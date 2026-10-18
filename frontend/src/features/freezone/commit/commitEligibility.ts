@@ -3,9 +3,9 @@
 import { isSlotTarget } from "../../canvas/domain/mainlineNodeTypes.ts";
 
 /**
- * 从节点 data 里取出「可提交的媒体源 URL」,按媒体类型回退:
- * 图片 → 视频 → 音频 → 文件/3GS/GLB。供 Commit 入口(FreezoneShell)与
- * CommitDialog 共用,避免一处支持音频、一处仍只读图片。
+ * Extract the "committable media source URL" from node data, falling back by media type:
+ * image -> video -> audio -> file/3GS/GLB. Shared by the Commit entry (FreezoneShell) and
+ * CommitDialog, so that one place does not support audio while the other still reads only images.
  */
 export function getCommitSourceUrl(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;

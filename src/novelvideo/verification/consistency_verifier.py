@@ -1,4 +1,4 @@
-"""全局验证：跨 beat 角色/服装一致性检查。"""
+"""Global verification: cross-beat character/clothing consistency check."""
 
 import logging
 import time
@@ -38,17 +38,17 @@ class ConsistencyVerifier:
                 output_type=ConsistencyResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="角色一致性审核员",
+                name="Character consistency reviewer",
             )
         return self._agent
 
     def _load_identity_appearances(
         self, project_dir: Path,
     ) -> dict[str, str]:
-        """从项目配置中加载 Identity 的 appearance_details。
+        """Load the appearance_details of Identities from the project config.
 
         Returns:
-            {identity_id: appearance_details} 映射
+            {identity_id: appearance_details} mapping
         """
         import json
 
@@ -58,7 +58,7 @@ class ConsistencyVerifier:
             return identity_appearances
 
         for char_file in characters_dir.glob("*.json"):
-            # 路径安全检查：确保文件在 project_dir 内
+            # Path safety check: make sure the file is inside project_dir
             if not char_file.resolve().is_relative_to(project_dir.resolve()):
                 logger.warning("Skipping file outside project dir: %s", char_file)
                 continue
@@ -81,18 +81,18 @@ class ConsistencyVerifier:
         verify_type: str = "sketch",
         sqlite_store=None,
     ) -> dict:
-        """检查整集角色/服装一致性。
+        """Check the character/clothing consistency of the whole episode.
 
-        按角色 identity 分组，将同一角色的多张图片一起发给 LLM。
-        返回增强版结果：分维度评分，face/clothing 分离。
+        Group by character identity and send multiple images of the same character to the LLM together.
+        Return the enhanced result: scored by dimension, with face/clothing separated.
         """
         project_dir = Path(project_dir)
         beats = await load_all_beats(project_dir, episode_num, sqlite_store=sqlite_store)
 
-        # 加载 Identity 外观设定
+        # Load the Identity appearance settings
         identity_appearances = self._load_identity_appearances(project_dir)
 
-        # 按 identity_id 分组：{identity_id: [(beat_num, image_path, char_name)]}
+        # Group by identity_id: {identity_id: [(beat_num, image_path, char_name)]}
         identity_beats: dict[str, list[tuple[int, str, str]]] = defaultdict(list)
         for beat in beats:
             beat_num = beat["beat_number"]
@@ -101,7 +101,7 @@ class ConsistencyVerifier:
             img = find_fn(project_dir, episode_num, beat_num)
             if not img:
                 continue
-            # 路径安全检查：确保图片在 project_dir 内
+            # Path safety check: make sure the image is inside project_dir
             safe_img = safe_resolve_under(project_dir, img)
             if not safe_img:
                 logger.warning("Skipping image outside project dir: %s", img)
@@ -109,7 +109,7 @@ class ConsistencyVerifier:
             for char_name, identity_id in identities.items():
                 identity_beats[identity_id].append((beat_num, str(safe_img), char_name))
 
-        # 只检查出现在 2+ beat 中的角色
+        # Only check characters that appear in 2+ beats
         agent = self._get_agent()
         all_reports: list[CharacterConsistencyReport] = []
 
@@ -117,7 +117,7 @@ class ConsistencyVerifier:
             if len(appearances) < 2:
                 continue
 
-            # 最多取 6 张图避免 token 过多
+            # Take at most 6 images to avoid too many tokens
             sampled = appearances if len(appearances) <= 6 else [
                 appearances[0],
                 appearances[len(appearances) // 4],
@@ -130,19 +130,19 @@ class ConsistencyVerifier:
             char_name = sampled[0][2]
             beat_nums = [s[0] for s in sampled]
 
-            # 构建任务文本，包含 Identity 外观设定
+            # Build the task text, including the Identity appearance setting
             appearance_ref = ""
             if identity_id in identity_appearances:
                 safe_appearance = sanitize_prompt_input(identity_appearances[identity_id])
-                appearance_ref = f"\n\nIdentity 外观设定参考：\n{safe_appearance}"
+                appearance_ref = f"\n\nIdentity appearance setting reference:\n{safe_appearance}"
 
             safe_char_name = sanitize_prompt_input(char_name)
             safe_identity_id = sanitize_prompt_input(identity_id)
             task = (
-                f"检查角色「{safe_char_name}」（身份: {safe_identity_id}）在以下 beat 中的外观一致性：\n"
-                f"Beat 编号: {beat_nums}\n"
-                f"以下图片按 beat 顺序排列，请对比同一角色在不同画面中是否一致。\n"
-                f"请按维度（face, hair, skin_tone, gender, clothing_style, clothing_color, accessories, body_type）逐一评分。"
+                f"Check the appearance consistency of character \"{safe_char_name}\" (identity: {safe_identity_id}) in the following beats:\n"
+                f"Beat numbers: {beat_nums}\n"
+                f"The images below are arranged in beat order; compare whether the same character is consistent across the different pictures.\n"
+                f"Score each dimension (face, hair, skin_tone, gender, clothing_style, clothing_color, accessories, body_type) one by one."
                 f"{appearance_ref}"
             )
 
@@ -163,16 +163,16 @@ class ConsistencyVerifier:
                 all(r.passed for r in output.characters), elapsed,
             )
 
-            # 收集各角色报告
+            # Collect each character report
             for report in output.characters:
                 all_reports.append(report)
 
         overall_passed = all(r.passed for r in all_reports) if all_reports else True
 
-        # 构建返回字典
-        summary = "未发现角色一致性问题"
+        # Build the return dict
+        summary = "No character consistency issues found"
         if all_reports:
-            summary = getattr(output, "summary", "角色一致性检查完成")
+            summary = getattr(output, "summary", "Character consistency check complete")
         return {
             "total_beats": len(beats),
             "characters": [r.model_dump() for r in all_reports],

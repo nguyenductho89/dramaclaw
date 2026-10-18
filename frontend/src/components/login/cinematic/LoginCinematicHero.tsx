@@ -19,7 +19,7 @@ const GITHUB_URL = "https://github.com/dramaclaw/dramaclaw";
 const GITHUB_REPO = "dramaclaw/dramaclaw";
 const FALLBACK_GITHUB_STARS = 574;
 
-// 桌面端下载入口暂时隐藏；组件与样式全部保留，改回 true 即可恢复。
+// The desktop download entry is hidden for now; the component and styles are all kept, flip back to true to restore it.
 const SHOW_DESKTOP_DOWNLOAD = false;
 
 let cachedStars: number | null = null;
@@ -47,7 +47,7 @@ function useGithubStars(repo: string): number {
         }
       })
       .catch(() => {
-        /* Star 数仅作展示，失败时保留兜底值。 */
+        /* The star count is display-only; the fallback value is kept on failure. */
       });
     return () => {
       active = false;
@@ -58,7 +58,7 @@ function useGithubStars(repo: string): number {
 }
 
 /**
- * Installer downloads, in the header next to 商务联系 / Star. The detected
+ * Installer downloads, in the header next to Business Contact / Star. The detected
  * platform is listed first so the common case is the first thing under the
  * cursor, but both stay one click away — no OS sniffing dead-ends.
  */
@@ -131,7 +131,7 @@ export function LoginCinematicHeader({
     >
       <Brand />
       <div className={styles.stageActions}>
-        {/* 桌面端下载入口暂时隐藏，改回 true 即可恢复（组件代码保留）。 */}
+        {/* The desktop download entry is hidden for now, flip back to true to restore it (component code is kept). */}
         {SHOW_DESKTOP_DOWNLOAD && <DesktopDownload />}
         <AnnouncementEntry />
         <div

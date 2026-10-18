@@ -1,6 +1,6 @@
-"""剧本生成与 Beat 编辑端点。
+"""Script generation and Beat editing endpoints.
 
-2.0 主线以 SQLite/Cognee 为唯一脚本状态源；不再读写 scripts/epXXX_script.json。
+In 2.0 the mainline uses SQLite/Cognee as the only script state source; scripts/epXXX_script.json is no longer read or written.
 """
 
 import logging
@@ -97,7 +97,7 @@ def _require_beat_video_prompt_prerequisites(
         current_path = _first_existing_path(paths.frame(beat_num), paths.sketch(beat_num))
         if not current_path:
             raise VideoPromptPrerequisiteError(
-                f"Beat {beat_num} 缺少首帧或草图，请先生成预览或草图"
+                f"Beat {beat_num} is missing a first frame or sketch. Generate a preview or sketch first"
             )
         next_beat_num = int((next_beat or {}).get("beat_number") or beat_num + 1)
         next_path = _first_existing_path(
@@ -105,14 +105,14 @@ def _require_beat_video_prompt_prerequisites(
         )
         if not next_path:
             raise VideoPromptPrerequisiteError(
-                f"Beat {next_beat_num} 缺少首帧或草图，请先生成预览或草图"
+                f"Beat {next_beat_num} is missing a first frame or sketch. Generate a preview or sketch first"
             )
         return
 
     current_path = _first_existing_path(paths.sketch(beat_num), paths.frame(beat_num))
     if not current_path:
         raise VideoPromptPrerequisiteError(
-            f"Beat {beat_num} 缺少草图或首帧，请先生成草图或预览"
+            f"Beat {beat_num} is missing a sketch or first frame. Generate a sketch or preview first"
         )
 
 
@@ -128,7 +128,7 @@ async def _generate_single_beat_video_prompt(
     next_beat: dict[str, Any] | None = None,
     language: str = "en",
 ) -> str:
-    """为 1.x 首帧视频模式生成单 Beat SuperPower 运动提示词。"""
+    """Generate a SuperPower motion prompt for a single Beat in 1.x first-frame video mode."""
     from novelvideo.agents.global_video_optimizer import (
         _build_color_appearance_map,
         get_global_video_optimizer,
@@ -140,7 +140,7 @@ async def _generate_single_beat_video_prompt(
     sketch_image_path = _first_existing_path(paths.sketch(beat_num), paths.frame(beat_num))
     if not sketch_image_path:
         raise VideoPromptPrerequisiteError(
-            f"Beat {beat_num} 缺少草图或首帧，请先生成草图或预览"
+            f"Beat {beat_num} is missing a sketch or first frame. Generate a sketch or preview first"
         )
 
     beats = list(all_beats or [beat])
@@ -180,7 +180,7 @@ async def _generate_single_beat_keyframe_prompt(
     next_beat: dict[str, Any],
     language: str = "en",
 ) -> str:
-    """为 1.x 首尾帧模式生成单 Beat 过渡提示词。"""
+    """Generate a transition prompt for a single Beat in 1.x first+last-frame mode."""
     from novelvideo.agents.keyframe_prompt_builder import get_keyframe_prompt_builder
     from novelvideo.models import format_beat_narration
     from novelvideo.utils.path_resolver import PathResolver
@@ -194,11 +194,11 @@ async def _generate_single_beat_keyframe_prompt(
     )
     if not first_frame_path:
         raise VideoPromptPrerequisiteError(
-            f"Beat {beat_num} 缺少首帧或草图，请先生成预览或草图"
+            f"Beat {beat_num} is missing a first frame or sketch. Generate a preview or sketch first"
         )
     if not last_frame_path:
         raise VideoPromptPrerequisiteError(
-            f"Beat {next_beat_num} 缺少首帧或草图，请先生成预览或草图"
+            f"Beat {next_beat_num} is missing a first frame or sketch. Generate a preview or sketch first"
         )
 
     audio_type = str(beat.get("audio_type") or "narration")
@@ -243,7 +243,7 @@ async def _resolve_beat_video_prompt_target(
     )
     field = "keyframe_prompt" if video_mode == "keyframe" else "video_prompt"
     if field == "keyframe_prompt" and next_beat is None:
-        raise ValueError("这是最后一个 Beat，无法生成首尾帧过渡提示词")
+        raise ValueError("This is the last Beat; a first+last-frame transition prompt cannot be generated")
     return target, next_beat, field
 
 
@@ -311,7 +311,7 @@ async def _generate_and_save_beat_video_prompt(
 
 @router.get("/projects/{project}/episodes/{episode_num}/script")
 async def get_script(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """获取指定集数的剧本。"""
+    """Get the script of a specified episode."""
     resolved = await resolve_project_scope(project, user, required_role="viewer")
 
     try:
@@ -324,7 +324,7 @@ async def get_script(project: str, episode_num: int, user: dict = Depends(get_ap
         if script_data:
             return {"ok": True, "data": script_data}
     except Exception as exc:
-        logger.exception("从 store 读取剧本失败: episode=%s", episode_num)
+        logger.exception("Failed to read the script from the store: episode=%s", episode_num)
         raise HTTPException(status_code=500, detail=f"Script store read failed: {exc}") from exc
 
     return {"ok": True, "data": None, "message": "Script not generated yet"}
@@ -337,7 +337,7 @@ async def generate_script(
     body: ScriptGenerateRequest | None = None,
     user: dict = Depends(get_api_user),
 ):
-    """生成指定集数的剧本。"""
+    """Generate the script of a specified episode."""
     logger.info("[%s] EP%d generate_script", project, episode_num)
     resolved = await resolve_project_scope(project, user, required_role="editor")
     ctx = resolved.ctx
@@ -354,12 +354,12 @@ async def generate_script(
         return {
             "ok": False,
             "code": "identity_plan_required",
-            "error": f"第 {episode_num} 集尚未规划角色身份，请先规划身份",
+            "error": f"Episode {episode_num} has no planned character identities yet. Plan identities first",
         }
 
     config = {}
 
-    # 启动前清理旧 sketch 展示文件，确保即使任务失败画廊也不展示旧草图
+    # Clear old sketch display files before starting, so the gallery never shows old sketches even if the task fails
     from novelvideo.utils.path_resolver import PathResolver
 
     paths = PathResolver(output_dir, episode_num)
@@ -381,10 +381,10 @@ async def generate_script(
             "task_key": project_task_state_key("script_writer", ctx.project_id, episode_num),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集剧本生成任务已进入队列",
+            "message": f"Episode {episode_num} script generation task queued",
         }
 
-    return {"ok": False, "error": "剧本生成需要 project context"}
+    return {"ok": False, "error": "Script generation requires a project context"}
 
 
 @router.patch("/projects/{project}/episodes/{episode_num}/beats/{beat_num}")
@@ -395,7 +395,7 @@ async def update_beat(
     body: BeatUpdate,
     user: dict = Depends(get_api_user),
 ):
-    """编辑指定 Beat。"""
+    """Edit a specified Beat."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     logger.info(
         "[%s] EP%d update_beat: beat=%d, fields=%s",
@@ -450,7 +450,7 @@ async def update_beat(
             raise RuntimeError(f"Beat {beat_num} was not updated")
     except Exception as exc:
         logger.exception(
-            "Beat 保存失败: episode=%s beat=%s", episode_num, beat_num
+            "Failed to save Beat: episode=%s beat=%s", episode_num, beat_num
         )
         raise HTTPException(status_code=500, detail=f"Beat store update failed: {exc}") from exc
 
@@ -465,7 +465,7 @@ async def generate_beat_video_prompt(
     body: BeatVideoPromptGenerateRequest | None = None,
     user: dict = Depends(get_api_user),
 ):
-    """AI 生成 1.x 单个 Beat 的视频提示词并保存。"""
+    """AI-generate the video prompt of a single 1.x Beat and save it."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     body = body or BeatVideoPromptGenerateRequest()
 
@@ -521,7 +521,7 @@ async def generate_beat_video_prompt(
                 "field": field,
                 "language": language,
                 "output_dir": str(resolved.output_dir),
-                "display_name": f"生成提示词 · EP{episode_num} / Beat {beat_num}",
+                "display_name": f"Generate prompt · EP{episode_num} / Beat {beat_num}",
             },
         )
         return {
@@ -536,7 +536,7 @@ async def generate_beat_video_prompt(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集 Beat {beat_num} 提示词生成已入队",
+            "message": f"Episode {episode_num} Beat {beat_num} prompt generation queued",
         }
 
     try:
@@ -554,7 +554,7 @@ async def generate_beat_video_prompt(
         return {"ok": False, "error": str(exc)}
     except Exception as exc:
         logger.exception(
-            "Beat 视频提示词生成失败: episode=%s beat=%s", episode_num, beat_num
+            "Failed to generate Beat video prompt: episode=%s beat=%s", episode_num, beat_num
         )
         raise HTTPException(status_code=500, detail=f"Beat video prompt generation failed: {exc}") from exc
 
@@ -572,7 +572,7 @@ async def generate_seedance2_prompt(
     body: Seedance2PromptGenerateRequest | None = None,
     user: dict = Depends(get_api_user),
 ):
-    """AI 生成单个 Beat 的 Seedance2 final_prompt 并保存回配置 JSON。"""
+    """AI-generate the Seedance2 final_prompt of a single Beat and save it back to the config JSON."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     project_dir = resolved.project_dir
     body = body or Seedance2PromptGenerateRequest()
@@ -609,7 +609,7 @@ async def generate_seedance2_prompt(
     config = parse_seedance2_config(target.get("seedance2_config_json"))
     mode = getattr(config.mode, "value", str(config.mode))
     if mode == "first_last_frame" and next_beat is None:
-        return {"ok": False, "error": "这是最后一个 Beat，无法使用首尾帧模式"}
+        return {"ok": False, "error": "This is the last Beat; first+last-frame mode cannot be used"}
 
     usage_meter = get_usage_meter()
     ctx = getattr(resolved, "ctx", None)
@@ -766,7 +766,7 @@ async def save_script(
     body: ScriptSaveRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存（覆盖）指定集数的完整剧本。"""
+    """Save (overwrite) the complete script of a specified episode."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
     logger.info("[%s] EP%d save_script: %d beats", project, episode_num, len(body.beats))
 
@@ -786,7 +786,7 @@ async def save_script(
     try:
         await store.persist_beats_from_script(episode_num, normalized_beats)
     except Exception as e:
-        logger.exception("完整脚本保存后回写图谱失败: episode=%s", episode_num)
+        logger.exception("Failed to write back to the graph after saving the full script: episode=%s", episode_num)
         raise HTTPException(
             status_code=500,
             detail=f"Script store sync failed: {e}",

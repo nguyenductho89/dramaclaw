@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../zh/README.md)
-
 # Documentation
 
 ## Getting Started

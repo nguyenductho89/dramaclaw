@@ -1,13 +1,13 @@
-"""NanoBananaPro 网格生成模块。
+"""NanoBananaPro grid generation module.
 
-使用 Google AI Studio (Gemini Pro Image) 生成网格图，
-Sketch 模式使用 3x3 网格（每张 9 panel 位），按 beat 顺序分块，自动产出 ceil(N/9) 张网格。
+Uses Google AI Studio (Gemini Pro Image) to generate grid images.
+Sketch mode uses a 3x3 grid (9 panel slots per image), chunked in beat order, automatically producing ceil(N/9) grids.
 
-生成流程:
-1. 从 beats 数据构建网格 Prompt
-2. 调用 NanoBananaPro API 生成网格图
-3. 使用 grid_splitter 分割成独立分镜
-4. 使用 Seedream 图生图做高清修复
+Generation flow:
+1. Build the grid prompt from the beats data
+2. Calling NanoBananaPro API to generate grid image
+3. Split into individual shots with grid_splitter
+4. Use Seedream image-to-image for high-definition restoration
 """
 
 import asyncio
@@ -485,13 +485,13 @@ def _global_prop_marker_colors(
             gaps.append(min(diff, 360 - diff))
         return min(gaps)
 
-    # Prop 用专用调色板 PROP_MARKER_PALETTE（深色 / 非荧光），跟角色调色板（荧光高饱和）
-    # 形成 value contrast。即使色相意外接近，亮度/饱和度差异让 prop 仍能跟 character 视觉分开。
+    # Props use the dedicated PROP_MARKER_PALETTE (dark / non-fluorescent), contrasting in value
+    # with the character palette (fluorescent, high saturation). Even if hues happen to be close, the brightness/saturation difference keeps props visually distinct from characters.
     not_used = [item for item in PROP_MARKER_PALETTE if item[0].lower() not in used_hexes]
-    # 视觉上跟已用色色相差 ≥60° 才"安全"；不够则退化用未占用 hex 全集，最后兜底全 prop 调色板
+    # Visually "safe" only if the hue differs from used colors by >=60 degrees; otherwise fall back to the full set of unused hex values, and finally to the whole prop palette
     safe = [item for item in not_used if _min_hue_gap(item[0]) >= 60.0]
     available = safe or not_used or list(PROP_MARKER_PALETTE)
-    # 按距离已用色相由远到近排序，让最反差的色优先被选
+    # Sort from farthest to nearest used hue, so the most contrasting colors are picked first
     available = sorted(available, key=lambda it: -_min_hue_gap(it[0]))
 
     colors: dict[str, str] = {}
@@ -715,7 +715,7 @@ def _extract_openai_unknown_parameter(error_detail: str) -> str:
 
 
 def _truncate_openrouter_debug(value: object, limit: int = 240) -> str:
-    """截断 OpenRouter 调试字段，避免日志过长。"""
+    """Truncate OpenRouter debug fields to keep logs short."""
     text = str(value or "")
     if len(text) <= limit:
         return text
@@ -723,7 +723,7 @@ def _truncate_openrouter_debug(value: object, limit: int = 240) -> str:
 
 
 async def _check_openrouter_image_capability(api_key: str, model: str) -> tuple[bool, str]:
-    """检查 OpenRouter 模型是否声明支持 image output。"""
+    """Check whether an OpenRouter model declares image output support."""
     import httpx
 
     cache_key = f"{model}:{hashlib.sha1((api_key or '').encode('utf-8')).hexdigest()[:8]}"
@@ -748,7 +748,7 @@ async def _check_openrouter_image_capability(api_key: str, model: str) -> tuple[
         models = result.get("data", [])
         model_info = next((item for item in models if item.get("id") == model), None)
         if not model_info:
-            detail = f"模型 {model} 不在 OpenRouter /models 列表中，跳过 image capability 预检"
+            detail = f"Model {model} is not in the OpenRouter /models list; skipping the image capability pre-check"
             print(f"[OpenRouter] {detail}")
             outcome = (True, detail)
             _OPENROUTER_IMAGE_CAPABILITY_CACHE[cache_key] = outcome
@@ -765,7 +765,7 @@ async def _check_openrouter_image_capability(api_key: str, model: str) -> tuple[
         _OPENROUTER_IMAGE_CAPABILITY_CACHE[cache_key] = outcome
         return outcome
     except Exception as exc:
-        detail = "image capability 预检失败，跳过阻断: " f"{type(exc).__name__}: {exc!r}"
+        detail = "image capability pre-check failed, not blocking: " f"{type(exc).__name__}: {exc!r}"
         print(f"[OpenRouter] {detail}")
         outcome = (True, detail)
         _OPENROUTER_IMAGE_CAPABILITY_CACHE[cache_key] = outcome
@@ -779,17 +779,17 @@ def clamp_image_size(size: str) -> str:
 
 
 # =============================================================================
-# Sketch 模式配置
+# Sketch mode configuration
 # =============================================================================
-# Sketch 默认比例（向后兼容）
+# Sketch default ratio (backward compatible)
 DEFAULT_SKETCH_ASPECT_RATIO = "2:3"
 
 # =============================================================================
-# 再生模式配置表（Regen Mode Configs）
+# Regen mode configuration table (Regen Mode Configs)
 # =============================================================================
-# mode_key 格式: "{rows}x{cols}_{aspect_ratio_normalized}"
-# 唯一全局配置表，所有 pool 引用此表
-# 后续需要新比例时（如 1x1_16-9 横屏），直接在此表新增即可
+# mode_key format: "{rows}x{cols}_{aspect_ratio_normalized}"
+# The single global configuration table; all pools reference this table
+# When a new ratio is needed later (e.g. 1x1_16-9 landscape), just add it to this table
 
 REGEN_MODE_CONFIGS: Dict[str, dict] = {
     "1x1_1-1": {
@@ -1044,7 +1044,7 @@ REGEN_MODE_CONFIGS: Dict[str, dict] = {
         "capacity": 25,
         "model": "nanobanana",
     },
-    # Sketch 专用
+    # Sketch-specific
     "1x1_1-1_sketch": {
         "rows": 1,
         "cols": 1,
@@ -1309,7 +1309,7 @@ def get_sketch_nxn_modes(
     return result
 
 
-# Sketch 默认 mode_key，其余信息从 REGEN_MODE_CONFIGS 查表
+# Sketch default mode_key; other info is looked up from RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS
 SKETCH_DEFAULT_MODE_KEY = get_sketch_default_mode_key()
 PLANNER_VERSION = "2026-04-18-v1"
 
@@ -1398,9 +1398,9 @@ def compute_input_fingerprint(
 
 
 def cell_aspect_ratio(mode_key: str) -> Optional[str]:
-    """计算 mode_key 中单个 cell 的实际宽高比字符串。
+    """Compute the actual aspect-ratio string of a single cell in a mode_key.
 
-    公式: cell 比例 = (W × rows) : (H × cols)，其中 W:H 是 grid 整体比例。
+    Formula: cell ratio = (W x rows) : (H x cols), where W:H is the overall grid ratio.
     """
     from math import gcd
 
@@ -1415,14 +1415,14 @@ def cell_aspect_ratio(mode_key: str) -> Optional[str]:
 
 
 def sketch_pass1_mode_key(target_mode_key: str) -> Optional[str]:
-    """给定目标 sketch mode_key，返回同尺寸的 1:1 sketch mode_key（用于 two-pass）。
+    """Given a target sketch mode_key, return the 1:1 sketch mode_key of the same size (used for two-pass).
 
-    已禁用 two-pass：所有比例（含 5x5 2:3）均直接 one-pass 生成。
+    two-pass is disabled: all ratios (including 5x5 2:3) are generated directly in one pass.
     """
     return None
 
 
-# 从 SKETCH_DEFAULT_MODE_KEY 派生（向后兼容）
+# Derived from SKETCH_DEFAULT_MODE_KEY (backward compatible)
 _sketch_cfg = REGEN_MODE_CONFIGS[SKETCH_DEFAULT_MODE_KEY]
 SKETCH_GRID_CONFIG = {
     "rows": _sketch_cfg["rows"],
@@ -1430,10 +1430,10 @@ SKETCH_GRID_CONFIG = {
     "aspect_ratio": _sketch_cfg["aspect_ratio"],
     "image_size": _sketch_cfg["image_size"],
 }
-# 5x5 每张 25 beats，1 张即可覆盖整集
+# 5x5 holds 25 beats per image, so 1 image covers a whole episode
 SKETCH_GRID_PLAN = [SKETCH_GRID_CONFIG] * 1
 
-# 草图再生只允许 NxN + 1:1 模式
+# Sketch regeneration only allows NxN + 1:1 modes
 SKETCH_REGEN_MODE_KEYS = [
     "1x1_1-1",
     "1x1_1-1_sketch",
@@ -1463,9 +1463,9 @@ SKETCH_REGEN_MODE_KEYS = [
 ]
 
 # =============================================================================
-# 统一积木池：pool 即资源清单，用完即止
+# Unified building-block pool: the pool is the resource list, used until exhausted
 # =============================================================================
-# 预置池子模板（* N 生成实际资源清单）
+# Preset pool templates (* N produces the actual resource list)
 LOCATION_POOL_TEMPLATE = ["2x4_4-3", "2x3_1-1", "2x2_2-3", "1x2_4-3", "1x1_2-3"]
 LANDSCAPE_RENDER_POOL_TEMPLATE = [
     "4x4_16-9",
@@ -1474,19 +1474,19 @@ LANDSCAPE_RENDER_POOL_TEMPLATE = [
     "1x1_16-9",
 ]
 
-# 默认模式 pool（与场景分组相同）
+# Default mode pool (same as scene grouping)
 DEFAULT_POOL_TEMPLATE = ["2x4_4-3", "2x3_1-1", "2x2_2-3", "1x2_4-3", "1x1_2-3"]
-# 角色分组 pool
+# Character grouping pool
 CHARACTER_POOL_2 = ["2x4_4-3", "2x3_1-1", "2x2_2-3", "1x2_4-3", "1x1_2-3"]
 CHARACTER_POOL_3 = ["2x4_4-3", "2x3_1-1", "2x2_2-3", "1x2_4-3", "1x1_2-3"]
 
-# 铁律：>=3 个有参考图的角色引用时，只能用 1x1（不能用网格）
+# Iron rule: with >=3 character references that have reference images, only 1x1 may be used (no grid)
 MANY_CHARS_REF_THRESHOLD = 3
 MANY_CHARS_MAX_CAPACITY = 1
 
 
 def _cap_pool_for_many_chars(pool: list, composite_count: int) -> list:
-    """当 composite 角色数 >= 阈值时，过滤池子到 capacity <= 上限。"""
+    """When the composite character count >= the threshold, filter the pool to capacity <= the limit."""
     if composite_count >= MANY_CHARS_REF_THRESHOLD:
         capped = [
             mk for mk in pool if REGEN_MODE_CONFIGS[mk]["capacity"] <= MANY_CHARS_MAX_CAPACITY
@@ -1496,7 +1496,7 @@ def _cap_pool_for_many_chars(pool: list, composite_count: int) -> list:
 
 
 def _count_batch_composite_chars(beats: list, character_map: dict) -> int:
-    """统计一批 beats 中出现的唯一 composite 角色数量。"""
+    """Count the unique composite characters appearing in a batch of beats."""
     all_chars = set()
     for beat in beats:
         all_chars |= _get_beat_visual_composite_chars(beat, character_map)
@@ -1510,12 +1510,12 @@ def _smart_repack_beats(
     overrides: dict = None,
     loc: str = "",
 ) -> list:
-    """智能拆分：将 beats 按 composite 角色数分成连续子组，每组 n_comp < 阈值。
+    """Smart split: divide beats into consecutive subgroups by composite character count, each with n_comp < threshold.
 
-    当一批 beats 合计 n_comp >= 3 时，不是一刀切全部 cap 到 1x2，
-    而是贪心扫描：连续 beats 合并 composite 集合，只在真正达到阈值时断开。
-    每个子组用完整 pool pack（因为子组内 n_comp < 3），
-    只有单个 beat 本身 >= 3 时才用 capped pool。
+    When a batch of beats has a total n_comp >= 3, instead of capping everything to 1x2 at once,
+    scan greedily: consecutive beats merge their composite sets, breaking only when the threshold is actually reached.
+    Each subgroup is packed with the full pool (since n_comp < 3 within the subgroup),
+    and only a single beat that is itself >= 3 uses the capped pool.
     """
     if not beats:
         return []
@@ -1529,7 +1529,7 @@ def _smart_repack_beats(
         merged = current_chars | beat_chars
 
         if len(merged) >= MANY_CHARS_REF_THRESHOLD and current_group:
-            # 当前 beat 会让 n_comp 超标，先 flush 已有组
+            # The current beat would push n_comp over the limit; flush the existing group first
             groups.append(current_group)
             current_group = [beat]
             current_chars = set(beat_chars)
@@ -1540,14 +1540,14 @@ def _smart_repack_beats(
     if current_group:
         groups.append(current_group)
 
-    # 合并角色集相同的子组（如 B1-6{唐若瑜,陆洲} 和 B17-18{唐若瑜,陆洲}）
+    # Merge subgroups with the same character set (e.g. B1-6{Alice,Bob} and B17-18{Alice,Bob})
     merged_groups: List[List[dict]] = []
     merged_charsets: List[frozenset] = []
     for group in groups:
         chars = frozenset()
         for beat in group:
             chars = chars | _get_beat_visual_composite_chars(beat, character_map)
-        # 找已有的同角色集组合并
+        # Find an existing group with the same character set to merge into
         found = False
         for i, existing_chars in enumerate(merged_charsets):
             if (
@@ -1555,7 +1555,7 @@ def _smart_repack_beats(
                 or (chars | existing_chars) == existing_chars
                 or (chars | existing_chars) == chars
             ):
-                # 角色集相同或是子集，检查合并后是否仍 < 阈值
+                # Same character set or a subset; check whether the merged result is still < threshold
                 union = chars | existing_chars
                 if len(union) < MANY_CHARS_REF_THRESHOLD:
                     merged_groups[i].extend(group)
@@ -1566,16 +1566,16 @@ def _smart_repack_beats(
             merged_groups.append(list(group))
             merged_charsets.append(chars)
 
-    # 合并后按首 beat_number 排序每组内的 beats
+    # After merging, sort the beats within each group by first beat_number
     for group in merged_groups:
         group.sort(key=lambda b: b.get("beat_number", 0))
 
-    # 对每个子组用合适的 pool pack
+    # Pack each subgroup with a suitable pool
     result = []
     for group in merged_groups:
         n_comp = _count_batch_composite_chars(group, character_map)
         if n_comp >= MANY_CHARS_REF_THRESHOLD:
-            # 单个 beat 本身就 >= 3 composite，用 capped pool
+            # A single beat that is itself >= 3 composite, use the capped pool
             capped = _cap_pool_for_many_chars(list(pool_template), n_comp)
             if loc:
                 result.extend(_pack_location_beats(group, loc, capped, overrides or {}))
@@ -1584,7 +1584,7 @@ def _smart_repack_beats(
                 mode_keys = pack_beats(len(group), pool)
                 result.extend(mode_keys)
         else:
-            # n_comp < 3，用完整 pool
+            # n_comp < 3, use the full pool
             if loc:
                 result.extend(
                     _pack_location_beats(group, loc, list(pool_template), overrides or {})
@@ -1598,9 +1598,9 @@ def _smart_repack_beats(
 
 
 def pad_to_aspect_ratio(panel, target_aspect: str, fill_color=(220, 220, 220)):
-    """panel 上下/左右补白到目标比例。不裁剪、不拉伸。
-    如果 panel 已经比目标更宽/更高，原样返回（不裁剪）。
-    白色填充，并向内覆盖几像素盖住 AI 生成的边框线。"""
+    """Pad the panel top/bottom or left/right with white to the target ratio. No cropping, no stretching.
+    If the panel is already wider/taller than the target, return it as-is (no cropping).
+    Fills with white, and overlaps a few pixels inward to cover the border lines drawn by the AI."""
     from PIL import Image, ImageDraw
 
     w, h = panel.size
@@ -1609,30 +1609,30 @@ def pad_to_aspect_ratio(panel, target_aspect: str, fill_color=(220, 220, 220)):
     current_ratio = w / h
 
     if abs(current_ratio - target_ratio) < 0.08:
-        return panel  # 已匹配（0.5K 小 panel trim 后比例会有几 % 偏移）
+        return panel  # already matches (a small 0.5K panel can be a few % off in ratio after trimming)
 
     white = (255, 255, 255)
-    # 向内覆盖像素数：盖住原图边缘的边框线
+    # Number of pixels to overlap inward: covers the border line at the edge of the original image
     overlap = max(6, min(w, h) // 60)
 
     if current_ratio > target_ratio:
-        # panel 更宽 → 需要加高（上下补白）
+        # Panel is wider -> needs more height (pad top/bottom)
         new_h = int(w / target_ratio)
         result = Image.new("RGB", (w, new_h), white)
         py = (new_h - h) // 2
         result.paste(panel, (0, py))
-        # 白色覆盖原图顶部 / 底部 overlap 行
+        # White overlay on the top / bottom overlap rows of the original image
         draw = ImageDraw.Draw(result)
         draw.rectangle([0, py, w - 1, py + overlap - 1], fill=white)
         draw.rectangle([0, py + h - overlap, w - 1, py + h - 1], fill=white)
         return result
     else:
-        # panel 更高 → 需要加宽（左右补白）
+        # Panel is taller -> needs more width (pad left/right)
         new_w = int(h * target_ratio)
         result = Image.new("RGB", (new_w, h), white)
         px = (new_w - w) // 2
         result.paste(panel, (px, 0))
-        # 白色覆盖原图左侧 / 右侧 overlap 列
+        # White overlay on the left / right overlap columns of the original image
         draw = ImageDraw.Draw(result)
         draw.rectangle([px, 0, px + overlap - 1, h - 1], fill=white)
         draw.rectangle([px + w - overlap, 0, px + w - 1, h - 1], fill=white)
@@ -1640,24 +1640,24 @@ def pad_to_aspect_ratio(panel, target_aspect: str, fill_color=(220, 220, 220)):
 
 
 def pack_beats(total_beats: int, pool: list[str]) -> list[str]:
-    """贪心 bin-pack：优先减少网格数量。
+    """Greedy bin-pack: prefer reducing the number of grids.
 
-    策略：先尝试找一个能装下所有 beats 的最小网格；
-    找不到时取最大网格装满，剩余递归。
+    Strategy: first try to find the smallest grid that fits all beats;
+    if none is found, take the largest grid, fill it, and recurse on the remainder.
     """
     if total_beats <= 0:
         return [pool[0]] if pool else []
 
-    # 去重并按容量从小到大排序
-    unique_modes = list(dict.fromkeys(pool))  # 保序去重
+    # Deduplicate and sort by capacity ascending
+    unique_modes = list(dict.fromkeys(pool))  # order-preserving dedupe
     by_cap_asc = sorted(unique_modes, key=lambda mk: REGEN_MODE_CONFIGS[mk]["capacity"])
 
-    # 1. 尝试用单个网格装下所有 beats（选最小能装下的）
+    # 1. Try to fit all beats in a single grid (pick the smallest that fits)
     for mk in by_cap_asc:
         if REGEN_MODE_CONFIGS[mk]["capacity"] >= total_beats:
             return [mk]
 
-    # 2. 装不下 → 取最大网格，剩余递归
+    # 2. Does not fit -> take the largest grid, recurse on the remainder
     largest = by_cap_asc[-1]
     largest_cap = REGEN_MODE_CONFIGS[largest]["capacity"]
     remaining = total_beats - largest_cap
@@ -1665,13 +1665,13 @@ def pack_beats(total_beats: int, pool: list[str]) -> list[str]:
 
 
 # =============================================================================
-# 场景分组比例覆盖表
+# Scene grouping ratio override table
 # =============================================================================
 # aspect_mode → {(rows, cols): (aspect_ratio, image_size)}
-# 只列出需要覆盖默认查找的 grid size
+# Only list the grid sizes that need to override the default lookup
 LOCATION_ASPECT_CONFIGS = {
     "9:16": {
-        # 2x2 不覆盖，走 SQUARE 默认 1:1
+        # 2x2 is not overridden; it uses the SQUARE default 1:1
     },
     "1:1": {
         (2, 2): ("1:1", "2K"),
@@ -1681,10 +1681,10 @@ LOCATION_ASPECT_CONFIGS = {
 
 
 def parse_regen_mode(mode_key: str) -> tuple:
-    """解析再生模式 key，返回 (rows, cols, aspect_ratio, image_size)。
+    """Parse a regeneration mode key and return (rows, cols, aspect_ratio, image_size).
 
     Args:
-        mode_key: 如 '1x1_9-16', '2x2_1-1'
+        mode_key: e.g. '1x1_9-16', '2x2_1-1'
 
     Returns:
         (rows, cols, aspect_ratio, image_size)
@@ -1702,10 +1702,10 @@ def get_default_mode_for_grid(grid_size: str) -> str:
 
 
 def get_regen_modes_for_grid(grid_size: str) -> list:
-    """获取指定 grid_size 的所有模式 key 列表。
+    """Get the list of all mode keys for the given grid_size.
 
     Args:
-        grid_size: 如 '1x1', '2x2'
+        grid_size: e.g. '1x1', '2x2'
 
     Returns:
         [mode_key, ...]
@@ -1714,22 +1714,22 @@ def get_regen_modes_for_grid(grid_size: str) -> list:
 
 
 def grid_mode_to_mode_key(grid_mode: str) -> str:
-    """将简单 grid_mode (如 '3x3') 转换为带比例的 mode_key (如 '3x3_1-1')。
+    """Convert a simple grid_mode (e.g. '3x3') to a mode_key with ratio (e.g. '3x3_1-1').
 
-    从 REGEN_MODE_CONFIGS 查找匹配的 mode_key。
-    已经是 mode_key 格式的（含 '_'）直接返回。
+    Looks up the matching mode_key in RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS.
+    Returns directly if it is already in mode_key format (contains '_').
     """
-    # 已经包含比例信息（如 '3x3_1-1'），直接返回
+    # Already contains ratio info (e.g. '3x3_1-1'); return directly
     if "_" in grid_mode:
         return grid_mode
     parts = grid_mode.split("x")
     if len(parts) != 2:
-        return grid_mode  # loc 等特殊模式
+        return grid_mode  # special modes such as loc
     try:
         rows, cols = int(parts[0]), int(parts[1])
     except ValueError:
         return grid_mode
-    # 从 REGEN_MODE_CONFIGS 查找第一个匹配 (rows, cols) 的 mode_key
+    # Find the first mode_key in RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS matching (rows, cols)
     for mk, cfg in REGEN_MODE_CONFIGS.items():
         if cfg["rows"] == rows and cfg["cols"] == cols:
             return mk
@@ -1751,43 +1751,43 @@ def _render_pool_template_for_aspect(aspect_mode: str) -> list[str]:
 
 
 # =============================================================================
-# Shot-Level Grid 配置（v2.0 Shot-Centric）
+# Shot-Level Grid configuration (v2.0 Shot-Centric)
 # =============================================================================
-# Shot 内 N 个 beats → 1 个 Grid，作为 Seedance 2.0 的 @图片 分镜参考
-# 仅使用已验证的格式（Seedance 2.0 理解的 Grid 布局）
+# N beats in a Shot -> 1 Grid, used as the @image storyboard reference of Seedance 2.0
+# Only verified formats are used (Grid layouts understood by Seedance 2.0)
 
 SHOT_GRID_CONFIGS: Dict[int, dict] = {
     1: {
         "rows": 1, "cols": 1, "aspect_ratio": "9:16", "image_size": "1K", "order_hint": "",
     },
     2: {
-        "rows": 1, "cols": 2, "aspect_ratio": "16:9", "image_size": "2K", "order_hint": "从左到右",
+        "rows": 1, "cols": 2, "aspect_ratio": "16:9", "image_size": "2K", "order_hint": "left to right",
     },
     3: {
-        "rows": 1, "cols": 3, "aspect_ratio": "21:9", "image_size": "2K", "order_hint": "从左到右",
+        "rows": 1, "cols": 3, "aspect_ratio": "21:9", "image_size": "2K", "order_hint": "left to right",
     },
     4: {
         "rows": 2,
         "cols": 2,
         "aspect_ratio": "1:1",
         "image_size": "2K",
-        "order_hint": "从左到右从上到下",
+        "order_hint": "left to right, top to bottom",
     },
     5: {
         "rows": 3,
         "cols": 3,
         "aspect_ratio": "1:1",
         "image_size": "4K",
-        "order_hint": "从左到右从上到下，前5格",
+        "order_hint": "left to right, top to bottom, first 5 cells",
     },
 }
 
 
 def get_shot_grid_config(beat_count: int) -> dict:
-    """获取 Shot 级 Grid 配置。
+    """Get the Shot-level Grid configuration.
 
     Args:
-        beat_count: Shot 内 beat 数量（1-5）
+        beat_count: number of beats in the Shot (1-5)
 
     Returns:
         {"rows", "cols", "aspect_ratio", "image_size", "order_hint"}
@@ -1797,50 +1797,50 @@ def get_shot_grid_config(beat_count: int) -> dict:
 
 
 class GridGenerationRequest(BaseModel):
-    """网格生成请求。
+    """Grid generation request.
 
-    参考模式由上游 build_character_map_for_grid() 决定：
-    - composite: 复合参考图（Portrait + Fullbody 拼接），锁脸 + 锁服装
-    - portrait_only: 仅面部特写，锁脸，服装由 appearance_details 文字控制
-    - prompt_only: 无参考图，完全由提示词控制
+    The reference mode is decided upstream by build_character_map_for_grid():
+    - composite: composite reference image (Portrait + Fullbody stitched), locks face + clothing
+    - portrait_only: face close-up only, locks the face; clothing is controlled by the appearance_details text
+    - prompt_only: no reference image, fully controlled by the prompt
     """
 
-    beats: List[dict] = Field(description="Beats 数据列表（每张网格最多25个，不足留空）")
+    beats: List[dict] = Field(description="List of Beats data (up to 25 per grid; leave empty if fewer)")
     character_map: Dict[str, dict] = Field(
         default_factory=dict,
-        description="""角色映射 {角色名: {
+        description="""Character mapping {character_name: {
             'character_tag': ...,
             'base_prompt': ...,
             'appearance_details': ...,
-            'portrait_path': ...,  # 面部特写图（用于锁脸）
-            'ref_path': ...,  # 参考图路径
+            'portrait_path': ...,  # face close-up image (used to lock the face)
+            'ref_path': ...,  # reference image path
             'reference_mode': ...,  # composite / portrait_only / prompt_only
         }}""",
     )
     style: str = Field(
         default=None,
-        description="全局风格 (chinese_period_drama, anime, realistic)，默认使用 IMAGE_DEFAULT_STYLE",
+        description="Global style (chinese_period_drama, anime, realistic); defaults to IMAGE_DEFAULT_STYLE",
     )
-    episode: int = Field(description="集数")
+    episode: int = Field(description="Episode number")
     ethnicity: str = Field(
         default="Chinese",
-        description="角色默认种族 (Chinese, Korean, Japanese, Western, etc.)",
+        description="Default character ethnicity (Chinese, Korean, Japanese, Western, etc.)",
     )
 
 
 class GridGenerationResult(BaseModel):
-    """网格生成结果。"""
+    """Grid generation result."""
 
     success: bool
     grid_image_path: Optional[str] = None
     grid_image_bytes: Optional[bytes] = None
     error: Optional[str] = None
     generation_time: float = 0.0
-    # 用于单网格重新生成时的元数据
-    beat_start_index: Optional[int] = None  # 该网格对应的起始 beat 索引 (0-based)
-    beat_count: Optional[int] = None  # 该网格实际的 beat 数量（不含填充）
-    grid_rows: Optional[int] = None  # 网格行数
-    grid_cols: Optional[int] = None  # 网格列数
+    # Metadata used when regenerating a single grid
+    beat_start_index: Optional[int] = None  # start beat index of this grid (0-based)
+    beat_count: Optional[int] = None  # actual number of beats in this grid (excluding padding)
+    grid_rows: Optional[int] = None  # number of grid rows
+    grid_cols: Optional[int] = None  # number of grid columns
 
 
 def filter_character_map_for_beats(
@@ -1848,21 +1848,21 @@ def filter_character_map_for_beats(
     beats: list,
     scene_refs: dict[int, list[Any]] | None = None,
 ) -> dict:
-    """过滤角色映射为当前 beats 中实际出场角色。
+    """Filter the character map to the characters that actually appear in the current beats.
 
-    只保留在 beats visual_description 中 {{角色名}} 出现的角色。
+    Only keeps characters whose {{character_name}} appears in the beats' visual_description.
 
     Returns:
-        过滤后的 character_map（新 dict，不修改原始数据）
+        The filtered character_map (a new dict; the original data is not modified)
     """
     panel_chars = PromptComponents.extract_panel_characters(beats, character_map)
 
-    # 只保留出场角色
+    # Keep only characters that appear
     filtered = {k: dict(v) for k, v in character_map.items() if k in panel_chars}
 
     non_panel = [c for c in character_map if c not in filtered]
     if non_panel:
-        print(f"[filter_character_map] 过滤非出场角色: {non_panel}")
+        print(f"[filter_character_map] Filtering out characters not appearing: {non_panel}")
 
     return filtered
 
@@ -1881,11 +1881,11 @@ def build_color_map_from_character_map(
     character_map: dict,
     sketch_colors: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """从 character_map + sketch_colors 构建 {key: "#HEX COLOR_NAME"} 颜色映射。
+    """Build a {key: "#HEX COLOR_NAME"} color map from character_map + sketch_colors.
 
     Returns:
-        {identity_key: "#HEX COLOR_NAME"}。
-        角色 key 格式为 "char_name_suffix" 或 "char_name"。
+        {identity_key: "#HEX COLOR_NAME"}.
+        Character key format is "char_name_suffix" or "char_name".
     """
     color_map = {}
     for char_name, info in character_map.items():
@@ -2020,7 +2020,7 @@ def detect_panel_characters(
     cols: int,
     sketch_colors: dict[str, str] | None = None,
 ) -> dict[int, set[str]]:
-    """Per-panel 颜色检测，返回每个 panel 检测到的角色 key。
+    """Per-panel color detection, returning the character keys detected in each panel.
 
     Returns:
         {panel_index(0-based): set of detected color_map keys}
@@ -2039,13 +2039,13 @@ def filter_character_map_by_sketch(
     sketch_image_path: str,
     sketch_colors: dict[str, str] | None = None,
 ) -> dict:
-    """检测草图颜色，过滤不存在的角色。
+    """Detect sketch colors and filter out characters that are absent.
 
-    保留 prompt_only 和无 sketch_color 的角色（无法通过颜色判断）。
-    仅过滤有 sketch_color 但颜色在草图中不存在的角色。
+    Keeps prompt_only characters and those without a sketch_color (they cannot be judged by color).
+    Only filters characters that have a sketch_color but whose color does not exist in the sketch.
 
     Returns:
-        过滤后的 character_map（新 dict）
+        The filtered character_map (a new dict)
     """
     from novelvideo.generators.sketch_color_detector import detect_sketch_colors
 
@@ -2053,7 +2053,7 @@ def filter_character_map_by_sketch(
     if not color_map:
         return dict(character_map)
 
-    # 构建 char_to_keys 映射
+    # Build the char_to_keys mapping
     char_to_keys = {}
     for char_name, info in character_map.items():
         keys = []
@@ -2078,7 +2078,7 @@ def filter_character_map_by_sketch(
             removed.append(char_name)
 
     if removed:
-        print(f"[filter_by_sketch] 草图中未检测到颜色，移除角色: {removed}")
+        print(f"[filter_by_sketch] No colors detected in the sketch, removing characters: {removed}")
 
     return filtered
 
@@ -2087,10 +2087,10 @@ def load_precomputed_panel_detected(
     beat_numbers: list[int],
     beats_data: list[dict],
 ) -> dict[int, set[str] | None]:
-    """从 beat 数据中读取 detected_identities，转换为 panel_detected 格式。
+    """Read detected_identities from the beat data and convert to the panel_detected format.
 
     Returns:
-        {panel_index(0-based): set of identity keys}，未检测的 panel 值为 None
+        {panel_index (0-based): set of identity keys}; panels not detected have the value None
     """
     beat_map = {b.get("beat_number"): b for b in (beats_data or [])}
     result = {}
@@ -2105,7 +2105,7 @@ def filter_character_map_by_precomputed(
     character_map: dict,
     panel_detected: dict[int, set[str] | None],
 ) -> dict:
-    """根据预计算结果过滤 character_map：只保留在任一 panel 中出现的角色。"""
+    """Filter character_map by precomputed results: keep only characters that appear in any panel."""
     if not panel_detected or all(v is None for v in panel_detected.values()):
         return {}
 
@@ -2133,7 +2133,7 @@ def filter_character_map_by_precomputed(
             removed.append(char_name)
 
     if removed:
-        print(f"[filter_by_precomputed] 预计算未检测到，移除角色: {removed}")
+        print(f"[filter_by_precomputed] Not detected by precomputation, removing characters: {removed}")
 
     return filtered
 
@@ -2144,11 +2144,11 @@ def resolve_render_reference_order(
     grid_capacity: int,
     valid_character_map: dict,
 ) -> list[str]:
-    """统一 Render 模式参考图顺序。
+    """Unified Render-mode reference image order.
 
     Single source of truth:
-    1. 只复用 prompt_builder 在 build() 阶段解析出的顺序
-    2. 缺失即报错，禁止运行时重新推导导致所见非所得
+    1. Only reuse the order resolved by prompt_builder during the build() stage
+    2. Raise an error if missing; forbid re-deriving at runtime, which would break WYSIWYG
     """
     if not valid_character_map:
         return []
@@ -2173,29 +2173,29 @@ def crop_sketch_panels(
     beat_sketch_paths: Dict[int, str] = None,
     target_aspect: str = None,
 ) -> str:
-    """从草图中按 beat 编号提取 panel，拼接成目标布局。
+    """Extract panels from the sketch by beat number and stitch them into the target layout.
 
-    导出和生成共用此函数，确保所见即所得（WYSIWYG）。
+    Used by both export and generation to ensure WYSIWYG.
 
     Args:
-        sketch_path: 草图文件路径或草图目录路径
-        beat_numbers: 实际 beat 编号列表（1-based），如 [2, 5, 8]
-        target_rows: 目标网格行数
-        target_cols: 目标网格列数
-        output_path: 输出文件路径
-        label_beats: 是否在每个 panel 左上角标注 beat 编号
-        beat_sketch_paths: {beat_num: full_path} 从图片池取的 per-beat 草图路径
-        target_aspect: 目标比例（如 "9:16"），非空时补白到该比例
+        sketch_path: sketch file path or sketch directory path
+        beat_numbers: list of actual beat numbers (1-based), e.g. [2, 5, 8]
+        target_rows: target number of grid rows
+        target_cols: target number of grid columns
+        output_path: output file path
+        label_beats: whether to label the beat number at the top left of each panel
+        beat_sketch_paths: {beat_num: full_path} per-beat sketch paths taken from the image pool
+        target_aspect: target ratio (e.g. "9:16"); when non-empty, pad with white to that ratio
 
     Returns:
-        保存后的图片路径
+        Path of the saved image
     """
     from PIL import Image
     from novelvideo.generators.grid_splitter import _trim_outer_border
     import numpy as np
 
     def _trim_panel(panel_img):
-        """裁掉单个 panel 的白边。"""
+        """Trim the white border of a single panel."""
         gray_arr = np.array(panel_img.convert("L"))
         trimmed, _ = _trim_outer_border(panel_img, gray_arr)
         return trimmed
@@ -2206,7 +2206,7 @@ def crop_sketch_panels(
     pool_hit = 0
 
     for beat_num in beat_numbers:
-        # 优先从图片池取单个 beat 草图
+        # Prefer taking the single-beat sketch from the image pool
         if beat_sketch_paths and beat_num in beat_sketch_paths:
             pool_img = Image.open(beat_sketch_paths[beat_num])
             pool_img = _trim_panel(pool_img)
@@ -2221,18 +2221,18 @@ def crop_sketch_panels(
             panels.append(pool_img)
             pool_hit += 1
         else:
-            # 无草图 → 灰色占位
+            # No sketch -> gray placeholder
             if panel_width:
                 panels.append(Image.new("RGB", (panel_width, panel_height), (128, 128, 128)))
 
     if pool_hit > 0:
         now = time.time()
         if now - getattr(crop_sketch_panels, "_last_log_t", 0.0) >= 5.0:
-            print(f"[crop_sketch_panels] 从图片池取 {pool_hit}/{len(beat_numbers)} 个 beat 草图")
+            print(f"[crop_sketch_panels] Took {pool_hit}/{len(beat_numbers)} beat sketches from the image pool")
             crop_sketch_panels._last_log_t = now
 
     if not panels or panel_width is None:
-        raise ValueError(f"无法从草图中提取 beat {beat_numbers}")
+        raise ValueError(f"Cannot extract beat {beat_numbers} from the sketch")
 
     target_width = target_cols * panel_width
     target_height = target_rows * panel_height
@@ -2247,7 +2247,7 @@ def crop_sketch_panels(
         y = r * panel_height
         result_img.paste(panel, (x, y))
 
-    # 画面板间分割线
+    # Draw the dividing lines between panels
     if target_rows > 1 or target_cols > 1:
         from PIL import ImageDraw as _ImageDraw
 
@@ -2261,7 +2261,7 @@ def crop_sketch_panels(
             _y = r * panel_height
             _draw.line([(0, _y), (target_width, _y)], fill=_line_color, width=_line_w)
 
-    # 在每个 panel 左上角标注 beat 编号
+    # Label the beat number at the top left of each panel
     if label_beats and beat_numbers:
         from PIL import ImageDraw, ImageFont
 
@@ -2279,7 +2279,7 @@ def crop_sketch_panels(
             x = c * panel_width + 4
             y = r * panel_height + 2
             label = f"B{beat_num}"
-            # 黑色描边 + 白色文字，确保可读
+            # Black outline + white text to ensure readability
             for dx, dy in [(-1, -1), (-1, 1), (1, -1), (1, 1), (-2, 0), (2, 0), (0, -2), (0, 2)]:
                 draw.text((x + dx, y + dy), label, fill="black", font=font)
             draw.text((x, y), label, fill="white", font=font)
@@ -2290,68 +2290,68 @@ def crop_sketch_panels(
 
 
 def get_optimal_grid_size(beat_count: int, max_grid: int = 16) -> tuple[int, int]:
-    """根据 beat 数量选择最优网格大小，最小化黑色填充。
+    """Choose the optimal grid size by beat count, minimizing black padding.
 
-    注意：此函数已被 perfect_grid_split() 替代用于批量生成。
-    保留此函数用于向后兼容和单网格重新生成。
+    Note: this function has been replaced by perfect_grid_split() for batch generation.
+    Kept for backward compatibility and single-grid regeneration.
 
     Args:
-        beat_count: 需要填充的 beat 数量
-        max_grid: 最大网格容量
+        beat_count: number of beats to fill
+        max_grid: maximum grid capacity
 
     Returns:
-        (rows, cols) 元组
+        (rows, cols) tuple
     """
     if beat_count <= 0:
-        return (1, 1)  # 最小网格：单张
+        return (1, 1)  # smallest grid: a single image
 
-    # 可用网格（按容量从小到大排列）
-    # 包含竖屏 Panel 模式: 1x4=4, 3x2=6, 4x3=12, 5x4=20
+    # Available grids (sorted by capacity ascending)
+    # Includes portrait-panel modes: 1x4=4, 3x2=6, 4x3=12, 5x4=20
     grid_options = [
         (1, 1),  # 1
         (1, 3),  # 3
-        (1, 4),  # 4  竖屏 panel (21:9 宽屏)
+        (1, 4),  # 4  portrait panels (21:9 wide)
         (2, 2),  # 4
-        (3, 2),  # 6  竖屏 panel
+        (3, 2),  # 6  portrait panels
         (3, 3),  # 9
-        (4, 3),  # 12 竖屏 panel
-        (5, 3),  # 15 竖屏 panel
+        (4, 3),  # 12 portrait panels
+        (5, 3),  # 15 portrait panels
         (4, 4),  # 16
-        (5, 4),  # 20 竖屏 panel
+        (5, 4),  # 20 portrait panels
         (5, 5),  # 25
     ]
 
     for rows, cols in grid_options:
         capacity = rows * cols
-        # 跳过超过最大限制的网格
+        # Skip grids exceeding the maximum limit
         if capacity > max_grid:
             continue
         if beat_count <= capacity:
             return (rows, cols)
 
-    # 超过所有可用网格，返回最大允许的网格
+    # Exceeds all available grids; return the largest allowed grid
     for rows, cols in reversed(grid_options):
         if rows * cols <= max_grid:
             return (rows, cols)
 
-    # 默认返回 1x1
+    # Default to 1x1
     return (1, 1)
 
 
 def perfect_grid_split(total_beats: int, max_grid: int = 12) -> list[str]:
-    """完美分割 beats，使每个网格都正好填满，不需要任何填充 panel。
+    """Perfectly split beats so that every grid is exactly filled, needing no padding panels.
 
-    内部代理到 pack_beats，使用无限池。
+    Delegates internally to pack_beats, using an unlimited pool.
 
     Args:
-        total_beats: 总 beat 数量
-        max_grid: 最大网格容量（如 12 表示最大 4x3）
+        total_beats: total number of beats
+        max_grid: maximum grid capacity (e.g. 12 means at most 4x3)
 
     Returns:
-        mode_key 列表，如 ["3x2_9-16", "1x1_9-16"]
+        List of mode_keys, e.g. ["3x2_9-16", "1x1_9-16"]
     """
     template = DEFAULT_POOL_TEMPLATE
-    # 过滤超过 max_grid 的，然后 * 100 生成无限池
+    # Filter out those exceeding max_grid, then * 100 to produce an unlimited pool
     pool = [mk for mk in template if REGEN_MODE_CONFIGS[mk]["capacity"] <= max_grid] * 100
     if not pool:
         smallest = min(template, key=lambda mk: REGEN_MODE_CONFIGS[mk]["capacity"])
@@ -2365,23 +2365,23 @@ def scene_grid_split(
     pool_template: List[str] | None = None,
     character_map: Dict[str, dict] | None = None,
 ) -> List[dict]:
-    """按 scene_id 分组 beats，每组用最少网格数覆盖。
+    """Group beats by scene_id, covering each group with the fewest grids.
 
-    将同一 scene_id 的 beat 聚合到同一网格，减少跨网格场景漂移。
-    每个 scene_id 组根据 beat 数量自动选择最优网格尺寸。
+    Aggregates beats of the same scene_id into the same grid, reducing cross-grid scene drift.
+    Each scene_id group automatically picks the best grid size based on its beat count.
 
-    积木块序列: 2x2(4), 1x3(3), 1x2(2), 1x1(1)
-    2x2 是最大网格，与 2K 1:1 配合效果最佳。
+    Building-block sequence: 2x2(4), 1x3(3), 1x2(2), 1x1(1)
+    2x2 is the largest grid and works best with 2K 1:1.
 
     Args:
-        all_beats: 所有 beat 数据（含 scene_id / beat_number 字段）
-        aspect_mode: 比例模式（"9:16", "1:1" 等），用于覆盖特定网格尺寸的比例
-        pool_template: 自定义积木池模板，优先于 aspect_mode 选择
+        all_beats: all beat data (with scene_id / beat_number fields)
+        aspect_mode: ratio mode ("9:16", "1:1", etc.), used to override the ratio for specific grid sizes
+        pool_template: custom building-block pool template, takes precedence over aspect_mode selection
 
     Returns:
-        网格计划列表，每项：
+        List of grid plans, each item:
         {
-            "scene_id": "家·餐厅",
+            "scene_id": "Home - Dining Room",
             "rows": 2, "cols": 2,
             "mode_key": "2x2_1-1",
             "beats": [beat_dict, ...],
@@ -2397,24 +2397,24 @@ def scene_grid_split(
         template = LOCATION_POOL_TEMPLATE
     overrides = LOCATION_ASPECT_CONFIGS.get(aspect_mode, {})
 
-    # 1. 按 scene_id 聚合，保持首次出现顺序
+    # 1. Aggregate by scene_id, keeping first-appearance order
     location_groups: OrderedDict[str, List[dict]] = OrderedDict()
     for beat in all_beats:
-        loc = beat_scene_id(beat) or "未知场景"
+        loc = beat_scene_id(beat) or "Unknown scene"
         if loc not in location_groups:
             location_groups[loc] = []
         location_groups[loc].append(beat)
 
-    # 1.5 粗粒度合并（家·客厅 + 家·餐厅 → 家）
+    # 1.5 Coarse merge (Home - Living Room + Home - Dining Room -> Home)
     location_groups = _coalesce_locations(location_groups)
 
-    # 2. 对每个 scene_id 组，按 per-beat composite 数细分后分别 pack
+    # 2. For each scene_id group, subdivide by per-beat composite count and pack separately
     result = []
     for loc, beats in location_groups.items():
         if character_map:
-            # 按 per-beat composite 角色数分成轻量组（<= 2）和重量组（>= 3）
-            light_beats = []  # <= 2 composite → 先用完整 pool，再 post-process
-            heavy_beats = []  # >= 3 composite → cap 到 2x2
+            # Split by per-beat composite character count into light groups (<= 2) and heavy groups (>= 3)
+            light_beats = []  # <= 2 composite -> use the full pool first, then post-process
+            heavy_beats = []  # >= 3 composite -> capped to 2x2
             for beat in beats:
                 n = len(_get_beat_visual_composite_chars(beat, character_map))
                 if n >= MANY_CHARS_REF_THRESHOLD:
@@ -2422,7 +2422,7 @@ def scene_grid_split(
                 else:
                     light_beats.append(beat)
 
-            # 轻量组：智能 repack（按 composite 连续分组，尽量用大网格）
+            # Light groups: smart repack (group by consecutive composite counts, using larger grids where possible)
             if light_beats:
                 light_entries = _pack_location_beats(
                     light_beats,
@@ -2436,7 +2436,7 @@ def scene_grid_split(
                         grid_cc >= MANY_CHARS_REF_THRESHOLD
                         and len(entry["beats"]) > MANY_CHARS_MAX_CAPACITY
                     ):
-                        # 智能拆分：按 composite 连续分组，≤2 的子组用完整 pool
+                        # Smart split: group by consecutive composite counts; subgroups with <=2 use the full pool
                         result.extend(
                             _smart_repack_beats(
                                 entry["beats"],
@@ -2448,7 +2448,7 @@ def scene_grid_split(
                         )
                     else:
                         result.append(entry)
-            # 重量组：智能 repack
+            # Heavy groups: smart repack
             if heavy_beats:
                 result.extend(
                     _smart_repack_beats(
@@ -2469,7 +2469,7 @@ def scene_grid_split(
                 )
             )
 
-    # 3. 合并小网格：连续的 1-beat 网格合并成更大的网格
+    # 3. Merge small grids: merge consecutive 1-beat grids into larger grids
     result = _merge_small_grids(result, template, character_map)
 
     return result
@@ -2480,17 +2480,17 @@ def _merge_small_grids(
     pool_template: List[str],
     character_map: Dict[str, dict] | None = None,
 ) -> List[dict]:
-    """合并连续的小网格（1-2 beat）为更大的网格，减少 1x1 碎片。
+    """Merge consecutive small grids (1-2 beats) into larger grids, reducing 1x1 fragments.
 
-    策略：扫描连续的小网格（capacity <= 2），累积 beats 后用 pack_beats
-    重新分配到更大的网格（优先 2x3、2x2、1x2）。
-    合并后仍遵守铁律：>= 3 composite 角色时 capacity <= 2。
+    Strategy: scan consecutive small grids (capacity <= 2), accumulate beats, then use pack_beats
+    to reassign them to larger grids (preferring 2x3, 2x2, 1x2).
+    After merging, the iron rule still applies: with >= 3 composite characters, capacity <= 2.
     """
     merged = []
-    small_buffer = []  # 暂存同 scene_id 的连续小网格
+    small_buffer = []  # temporarily holds consecutive small grids of the same scene_id
 
     def flush_buffer():
-        """将累积的小网格 beats 重新 pack 成更大的网格。"""
+        """Repack the beats of the accumulated small grids into larger grids."""
         if not small_buffer:
             return
         all_beats = []
@@ -2499,7 +2499,7 @@ def _merge_small_grids(
 
         combined_loc = small_buffer[0].get("scene_id", "")
 
-        # 铁律检查：合并后的 beats 如果 composite 角色 >= 阈值，用 smart_repack
+        # Iron rule check: if the merged beats' composite characters >= threshold, use smart_repack
         if character_map:
             n_comp = _count_batch_composite_chars(all_beats, character_map)
             if n_comp >= MANY_CHARS_REF_THRESHOLD:
@@ -2514,7 +2514,7 @@ def _merge_small_grids(
                 )
                 return
 
-        # 正常合并：用 pack_beats 重新分配
+        # Normal merge: reassign with pack_beats
         pool = pool_template * 100
         mode_keys = pack_beats(len(all_beats), pool)
 
@@ -2548,12 +2548,12 @@ def _merge_small_grids(
                 small_buffer = []
             small_buffer.append(entry)
         else:
-            # 遇到大网格，先 flush 之前的小网格
+            # Hit a large grid; flush the previous small grids first
             flush_buffer()
             small_buffer = []
             merged.append(entry)
 
-    # flush 尾部
+    # Flush the tail
     flush_buffer()
 
     return merged
@@ -2565,7 +2565,7 @@ def _pack_location_beats(
     pool_template: List[str],
     overrides: dict,
 ) -> List[dict]:
-    """将一个场景子组的 beats pack 成网格 entries。"""
+    """Pack the beats of one scene subgroup into grid entries."""
     pool = pool_template * 100
     mode_keys = pack_beats(len(beats), pool)
     entries = []
@@ -2672,11 +2672,11 @@ def build_regen_plan(
 
 
 def _get_beat_visual_composite_chars(beat: dict, character_map: dict) -> frozenset:
-    """从 visual_description 的 {{}} 标记提取实际绘制的有参考图角色。
+    """Extract the characters with reference images that are actually drawn, from the {{}} markers in visual_description.
 
-    Render 场景优先使用 detected_identities，确保铁律拆分与上色/导出使用同一套角色来源。
-    若无 detected_identities，再回退到 visual_description 的 {{}} 标记。
-    包括 composite 和 portrait_only 模式（都有参考图占 image slot）。
+    Render scenes prefer detected_identities, so the iron-rule split uses the same character source as coloring/export.
+    If there is no detected_identities, fall back to the {{}} markers in visual_description.
+    Includes both composite and portrait_only modes (both occupy an image slot with a reference image).
     """
     ref_names = sorted(
         [
@@ -2707,14 +2707,14 @@ def _flush_to_grids(
     beats: List[dict],
     composite_count: int,
 ) -> List[dict]:
-    """将一组 beats 打包为一个或多个网格 entry。"""
+    """Pack a group of beats into one or more grid entries."""
     if not beats:
         return []
     if composite_count <= 2:
-        template = CHARACTER_POOL_2  # 最大 2x2
+        template = CHARACTER_POOL_2  # at most 2x2
     else:
-        template = CHARACTER_POOL_3  # 最大 2x2
-    # 铁律
+        template = CHARACTER_POOL_3  # at most 2x2
+    # Iron rule
     template = _cap_pool_for_many_chars(template, composite_count)
     pool = list(template) * 100
     mode_keys = pack_beats(len(beats), pool)
@@ -2745,27 +2745,27 @@ def character_grid_split(
     all_beats: List[dict],
     character_map: Dict[str, dict],
 ) -> List[dict]:
-    """按 composite 角色全局分组 beats，自动选择网格尺寸。
+    """Group beats globally by composite characters, automatically choosing grid sizes.
 
-    三阶段算法：
-    1. 分类：按 visual_description 的 {{}} 标记提取 composite 角色数
-       - >2 chars → overflow（≤2x2 pool）
-       - 0 chars  → empty（就近吸收）
-       - 1-2 chars → normal（配对分组）
-    2. 贪心 set-cover 配对：全局聚合同角色对的所有 beats
-    3. pack 到网格：≤2 chars → CHARACTER_POOL_2（最大2x2），>2 chars → CHARACTER_POOL_3（最大2x2）
+    Three-phase algorithm:
+    1. Classify: extract the composite character count from the {{}} markers in visual_description
+       - >2 chars -> overflow (<=2x2 pool)
+       - 0 chars  -> empty (absorbed by the nearest group)
+       - 1-2 chars -> normal (paired grouping)
+    2. Greedy set-cover pairing: globally aggregate all beats of the same character pair
+    3. Pack into grids: <=2 chars -> CHARACTER_POOL_2 (at most 2x2), >2 chars -> CHARACTER_POOL_3 (at most 2x2)
 
     Args:
-        all_beats: 所有 beat 数据（含 visual_description / beat_number 字段）
-        character_map: 角色映射 {角色名: {reference_mode, ...}}
+        all_beats: all beat data (with visual_description / beat_number fields)
+        character_map: character mapping {character_name: {reference_mode, ...}}
 
     Returns:
-        网格计划列表，格式与 scene_grid_split 对齐
+        List of grid plans, in the same format as scene_grid_split
     """
     if not all_beats:
         return []
 
-    # ── 阶段 1：分类 ──
+    # ── Phase 1: classify ──
     overflow_beats: List[dict] = []  # >2 composite chars
     empty_beats: List[dict] = []  # 0 composite chars
     normal_beats: List[Tuple[int, dict, frozenset]] = []  # (index, beat, chars)
@@ -2779,13 +2779,13 @@ def character_grid_split(
         else:
             normal_beats.append((idx, beat, chars))
 
-    # ── 阶段 2：贪心 set-cover 配对 ──
-    # 收集所有出现过的 1-char 和 2-char 候选对
+    # ── Phase 2: greedy set-cover pairing ──
+    # Collect all 1-char and 2-char candidate pairs that appear
     all_char_sets: set = set()
     for _, _, chars in normal_beats:
         all_char_sets.add(chars)
 
-    # 枚举所有可能的 pair（1 或 2 个角色的组合）
+    # Enumerate all possible pairs (combinations of 1 or 2 characters)
     all_single_chars = set()
     for cs in all_char_sets:
         all_single_chars |= cs
@@ -2800,7 +2800,7 @@ def character_grid_split(
     pair_groups: List[Tuple[frozenset, List[dict]]] = []  # (pair, beats)
 
     while True:
-        # 找覆盖最多未分配 beats 的 pair
+        # Find the pair that covers the most unassigned beats
         best_pair = None
         best_indices = []
         for pair in candidate_pairs:
@@ -2819,7 +2819,7 @@ def character_grid_split(
         group_beats = [normal_beats[i][1] for i in best_indices]
         pair_groups.append((best_pair, group_beats))
 
-    # ── empty beats 就近吸收到最近的 pair group ──
+    # ── empty beats are absorbed by the nearest pair group ──
     if empty_beats and pair_groups:
         for eb in empty_beats:
             eb_num = eb.get("beat_number", 0)
@@ -2833,19 +2833,19 @@ def character_grid_split(
                         best_group_idx = gi
             pair_groups[best_group_idx][1].append(eb)
     elif empty_beats:
-        # 没有 pair group，empty beats 自成一组
+        # No pair group; empty beats form their own group
         pair_groups.append((frozenset(), empty_beats))
 
-    # ── 阶段 3：pack 到网格 ──
+    # ── Phase 3: pack into grids ──
     result: List[dict] = []
 
     # pair groups → 4x4
     for pair, beats in pair_groups:
-        # 按 beat_number 排序保持顺序
+        # Sort by beat_number to keep order
         beats.sort(key=lambda b: b.get("beat_number", 0))
         result.extend(_flush_to_grids(beats, len(pair)))
 
-    # overflow → 批量 flush，让 pack_beats 自动打包
+    # overflow -> batch flush, letting pack_beats pack automatically
     if overflow_beats:
         overflow_beats.sort(key=lambda b: b.get("beat_number", 0))
         max_cc = max(
@@ -2853,16 +2853,16 @@ def character_grid_split(
         )
         result.extend(_flush_to_grids(overflow_beats, max_cc))
 
-    # 按首个 beat_number 排序
+    # Sort by first beat_number
     result.sort(key=lambda g: g["beat_numbers"][0] if g["beat_numbers"] else 0)
 
     return result
 
 
 def sketch_grid_split(total_beats: int) -> list[tuple[int, int]]:
-    """Sketch 模式专用分割：返回 1x 5x5 单张网格（共 25 panel 位）。
+    """Dedicated Sketch-mode split: return 1x one 5x5 grid (25 panel slots in total).
 
-    按 SKETCH_GRID_PLAN 顺序分配，beats 不足时只使用需要的网格数量。
+    Allocated in SKETCH_GRID_PLAN order; when beats are insufficient, only the needed number of grids is used.
     """
     plan = []
     remaining = total_beats
@@ -2876,10 +2876,10 @@ def sketch_grid_split(total_beats: int) -> list[tuple[int, int]]:
 
 
 def _coalesce_locations(location_groups):
-    """按 · 前缀合并细粒度场景组为粗粒度。
+    """Merge fine-grained scene groups into coarse ones by the prefix before the dot.
 
-    "家·客厅", "家·餐厅" → "家"
-    无 · 的场景保持原样。保持首次出现顺序。
+    "Home - Living Room", "Home - Dining Room" -> "Home"
+    Scenes without a dot are kept as-is. First-appearance order is kept.
     """
     from collections import OrderedDict
 
@@ -2894,7 +2894,7 @@ def _coalesce_locations(location_groups):
     return coarse
 
 
-# (capacity, mode_key, rows, cols) — 按 capacity 升序
+# (capacity, mode_key, rows, cols) -- sorted by capacity ascending
 SKETCH_NXN_MODES = get_sketch_nxn_modes()
 
 
@@ -2983,10 +2983,10 @@ async def _generate_image(
     ref_paths = list(reference_image_paths or [])
     context = _validate_egress_context(egress_context)
     if context is None:
-        # claim 本身不漏（`_prepare_organization_image_egress` 自己回落到作用域），漏的是
-        # 转发给叶子的身份：`context` 留成 None，参考图中继就静默走平台分支而不是
-        # `relay_tenant_image_bytes_from_context`。只补组织这一支——把平台身份也回落
-        # 进去，会让平台流量撞上组织 deny 闸门（OI-48 的房规）。
+        # The claim itself does not leak (`_prepare_organization_image_egress` falls back to the scope on its own); what leaks is
+        # the identity forwarded to the leaf: leaving `context` as None makes the reference-image relay silently take the platform branch instead of
+        # `relay_tenant_image_bytes_from_context`. Only the organization branch is filled in -- also falling back the platform identity
+        # would make platform traffic hit the organization deny gate (the house rule of OI-48).
         context = ambient_organization_egress_context()
     configured_provider = (
         str((config or {}).get("provider") or "newapi").strip().lower()
@@ -3150,23 +3150,23 @@ async def _generate_image(
 
 
 def _pick_nxn_mode(n: int, aspect_ratio: str = DEFAULT_SKETCH_ASPECT_RATIO):
-    """选最小能装下 n beats 的 NxN 模式。"""
+    """Pick the smallest NxN mode that fits n beats."""
     modes = get_sketch_nxn_modes(aspect_ratio)
     for cap, mk, r, c in modes:
         if n <= cap:
             return mk, r, c, cap
-    # fallback 到最大模式
+    # Fall back to the largest mode
     cap, mk, r, c = modes[-1]
     return mk, r, c, cap
 
 
 def _group_beats_by_location(beats: List[dict]):
-    """按 scene_id 字段分组 beats，保持出现顺序。返回 (scene_id, beats_list) 的列表。"""
+    """Group beats by the scene_id field, keeping appearance order. Returns a list of (scene_id, beats_list)."""
     from collections import OrderedDict
 
     groups: OrderedDict = OrderedDict()
     for b in beats:
-        loc = beat_scene_id(b) or "未知"
+        loc = beat_scene_id(b) or "Unknown"
         groups.setdefault(loc, []).append(b)
     return list(groups.items())
 
@@ -3184,7 +3184,7 @@ def sketch_scene_grid_split(
     all_beats: List[dict],
     aspect_ratio: str = DEFAULT_SKETCH_ASPECT_RATIO,
 ) -> List[dict]:
-    """草图：严格按 scene 切分，再为每个 scene 选择最小可容纳网格。"""
+    """Sketch: split strictly by scene, then choose the smallest grid that fits for each scene."""
     modes = get_sketch_nxn_modes(aspect_ratio)
     max_cap = modes[-1][0]
     all_beats = [beat for beat in (all_beats or []) if not _is_space_map_beat(beat)]
@@ -3229,16 +3229,16 @@ def sketch_scene_grid_split(
 def find_sketch_for_beat_range(
     sketch_dir: str, beat_start: int, beat_end: int
 ) -> Optional[Tuple[str, int, int]]:
-    """在草图目录中查找覆盖指定 beat 范围的草图文件。
+    """Find the sketch file covering the given beat range in the sketch directory.
 
     Args:
-        sketch_dir: 草图目录路径
-        beat_start: 起始 beat 编号（1-based）
-        beat_end: 结束 beat 编号（1-based，含）
+        sketch_dir: sketch directory path
+        beat_start: starting beat number (1-based)
+        beat_end: ending beat number (1-based, inclusive)
 
     Returns:
-        (文件路径, rows, cols) 或 None。
-        文件命名约定: sketch_b{start}-{end}_{rows}x{cols}.jpg
+        (file path, rows, cols) or None.
+        File naming convention: sketch_b{start}-{end}_{rows}x{cols}.jpg
     """
     candidates = []
     for f in Path(sketch_dir).glob("sketch_b*_*x*.jpg"):
@@ -3255,7 +3255,7 @@ def find_sketch_for_beat_range(
             continue
     if not candidates:
         return None
-    # 选择覆盖范围最小的（最精确匹配）
+    # Choose the one with the smallest coverage range (the most precise match)
     candidates.sort(key=lambda x: x[0])
     _, path, rows, cols = candidates[0]
     return path, rows, cols
@@ -3268,32 +3268,32 @@ async def _call_openrouter_image_api(
     reference_images: list[bytes] | None = None,
     image_config: dict | None = None,
 ) -> tuple[bytes | None, str, str]:
-    """通过 OpenRouter API 调用 Gemini 图像生成。
+    """Call Gemini image generation through the OpenRouter API.
 
     Returns:
         (image_bytes, text_response, error_detail)
-        - image_bytes: 生成的图像 bytes，失败返回 None
-        - text_response: provider 返回的文本内容（如 panel hints JSON）
-        - error_detail: 失败原因摘要，成功时为空字符串
+        - image_bytes: generated image bytes; None on failure
+        - text_response: text content returned by the provider (e.g. panel hints JSON)
+        - error_detail: failure summary; an empty string on success
 
     Args:
         api_key: OpenRouter API Key
-        model: 模型名称（如 google/gemini-3-pro-image-preview）
-        prompt: 图像生成提示词
-        reference_images: 参考图像列表（bytes 格式）
-        image_config: 图像配置（aspect_ratio, image_size）
+        model: model name (e.g. google/gemini-3-pro-image-preview)
+        prompt: image generation prompt
+        reference_images: list of reference images (bytes format)
+        image_config: image config (aspect_ratio, image_size)
     """
     import httpx
 
     base_url = "https://openrouter.ai/api/v1"
 
-    # 构建 content 数组（按 OpenRouter 官方建议：文本在前，图片在后）
+    # Build the content array (per the official OpenRouter advice: text first, images after)
     content = []
 
-    # 先添加文本提示词
+    # Add the text prompt first
     content.append({"type": "text", "text": prompt})
 
-    # 再添加参考图（如果有）
+    # Then add the reference images (if any)
     if reference_images:
         for img_bytes in reference_images:
             img_b64 = base64.b64encode(img_bytes).decode("utf-8")
@@ -3307,7 +3307,7 @@ async def _call_openrouter_image_api(
         "modalities": ["image", "text"],
     }
 
-    # 添加 image_config
+    # Add image_config
     if image_config:
         effective_image_size = normalize_image_size(
             image_config.get("image_size", "1K"),
@@ -3328,7 +3328,7 @@ async def _call_openrouter_image_api(
     try:
         supports_image, capability_detail = await _check_openrouter_image_capability(api_key, model)
         if not supports_image:
-            detail = f"OpenRouter 模型未声明 image output 支持: {capability_detail}"
+            detail = f"OpenRouter model does not declare image output support: {capability_detail}"
             print(f"[OpenRouter] {detail}")
             return None, "", detail
 
@@ -3342,21 +3342,21 @@ async def _call_openrouter_image_api(
 
             result = response.json()
 
-            # 提取图像
+            # Extract the image
             choices = result.get("choices", [])
             if not choices:
-                print(f"[OpenRouter] 响应无 choices: {_truncate_openrouter_debug(result)}")
-                return None, "", "响应无 choices"
+                print(f"[OpenRouter] Response has no choices: {_truncate_openrouter_debug(result)}")
+                return None, "", "Response has no choices"
 
             message = choices[0].get("message", {})
 
-            # 提取文本和图像（兼容多种 OpenRouter 响应格式）
+            # Extract text and images (compatible with several OpenRouter response formats)
             text_content = ""
             image_data_url = ""
 
             content = message.get("content", "")
             if isinstance(content, list):
-                # content 是 list[{type, text/image_url}]
+                # content is list[{type, text/image_url}]
                 text_parts = []
                 for part in content:
                     if not isinstance(part, dict):
@@ -3372,9 +3372,9 @@ async def _call_openrouter_image_api(
                 text_content = content
 
             if text_content:
-                print(f"[OpenRouter] 文本响应: {text_content[:500]}")
+                print(f"[OpenRouter] Text response: {text_content[:500]}")
 
-            # 优先从 message.images 取图（旧格式）
+            # Prefer taking the image from message.images (legacy format)
             images = message.get("images", [])
             if images:
                 url = images[0].get("image_url", {}).get("url", "")
@@ -3382,19 +3382,19 @@ async def _call_openrouter_image_api(
                     image_data_url = url
 
             if not image_data_url:
-                print(f"[OpenRouter] 响应无图像: {_truncate_openrouter_debug(message)}")
-                detail = "模型未返回图像"
+                print(f"[OpenRouter] Response has no image: {_truncate_openrouter_debug(message)}")
+                detail = "Model returned no image"
                 if text_content:
-                    detail = f"{detail}，仅返回文本: {text_content[:200]}"
+                    detail = f"{detail}, text only: {text_content[:200]}"
                 return None, text_content or "", detail
 
-            # 提取 base64 部分
+            # Extract the base64 part
             _, b64_data = image_data_url.split(",", 1)
             return base64.b64decode(b64_data), text_content or "", ""
 
     except httpx.HTTPStatusError as e:
         print(
-            "[OpenRouter] HTTP 错误: "
+            "[OpenRouter] HTTP error: "
             f"{e.response.status_code} - {_truncate_openrouter_debug(e.response.text, limit=500)}"
         )
         body = _truncate_openrouter_debug(e.response.text, limit=280)
@@ -3407,8 +3407,8 @@ async def _call_openrouter_image_api(
         if is_fatal_billing_error(e):
             raise
         detail = f"{type(e).__name__}: {e!r}"
-        print(f"[OpenRouter] 请求异常: {detail}")
-        return None, "", f"请求异常: {detail}"
+        print(f"[OpenRouter] Request error: {detail}")
+        return None, "", f"Request error: {detail}"
 
 
 async def _call_openai_image_api(
@@ -3543,7 +3543,7 @@ async def _call_openai_image_api(
                 unknown_parameter = _extract_openai_unknown_parameter(detail)
                 if unknown_parameter and unknown_parameter in request_options:
                     print(
-                        f"[OpenAI Image] 参数 {unknown_parameter!r} 不被当前端点接受，" "移除后重试"
+                        f"[OpenAI Image] Parameter {unknown_parameter!r} is not accepted by the current endpoint, " "retrying after removing it"
                     )
                     request_options.pop(unknown_parameter, None)
                     continue
@@ -3560,7 +3560,7 @@ async def _call_openai_image_api(
                 if transient_error and _attempt < 3:
                     wait_seconds = 2**_attempt
                     print(
-                        f"[OpenAI Image] 暂时性错误，{wait_seconds}s 后重试 "
+                        f"[OpenAI Image] Transient error, retrying in {wait_seconds}s "
                         f"({_attempt + 1}/4): {detail}"
                     )
                     await asyncio.sleep(wait_seconds)
@@ -3599,8 +3599,8 @@ async def _call_openai_image_api(
         if is_fatal_billing_error(exc):
             raise
         detail = f"{type(exc).__name__}: {exc!r}"
-        print(f"[OpenAI Image] 请求异常: {detail}")
-        return None, "", f"请求异常: {detail}"
+        print(f"[OpenAI Image] Request error: {detail}")
+        return None, "", f"Request error: {detail}"
 
 
 async def _call_newapi_image_api(
@@ -3920,10 +3920,10 @@ async def _call_newapi_image_api(
                 )
                 return image_bytes, "", ""
             if image_url:
-                # NewAPI 返 URL 而非 b64 时,要二次 GET 拉图。这个 await 是常见的
-                # "newapi 已生成但任务还在 await" hang 点 —— 用单独的短 timeout
-                # (60s),避免落入外层 client 的 600s global timeout 拖很久。
-                # 加 phase log 让 hang 时能定位卡在哪。
+                # When NewAPI returns a URL instead of b64, a second GET is needed to fetch the image. This await is a common
+                # "newapi has generated but the task is still awaiting" hang point -- use a separate short timeout
+                # (60s) to avoid falling into the outer client's 600s global timeout and hanging for a long time.
+                # Add phase logs so a hang can be located.
                 logger.info("DramaClawAPI image GET url start: %s", image_url[:120])
                 async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as fetch:
                     image_response = await fetch.get(image_url)
@@ -4015,7 +4015,7 @@ async def _call_newapi_image_api(
         error_context = _newapi_context_for_error(request_context)
         detail = f"{type(exc).__name__}: {exc!r}; {error_context}"
         logger.warning("DramaClawAPI image request exception: %s", detail)
-        return None, "", f"请求异常: {detail}"
+        return None, "", f"Request error: {detail}"
 
 
 def _reference_image_bytes(
@@ -4047,15 +4047,15 @@ async def _call_newapi_image_api_with_egress(
     delivery_state: dict[str, bool | str] | None = None,
     read_copied_bytes: bool = True,
 ) -> tuple[bytes | None, str, str]:
-    """grid 家族的出网闸门（OI-52）：把 `_generate_image` 已验证的形状装到叶子外围。
+    """Egress gate for the grid family (OI-52): wraps the leaf with the shape already verified by `_generate_image`.
 
-    闸门装在**调用点**而不是叶子内部，因为叶子复原不出 `capability`、归一化前的
-    `image_size`、fallback 前的 `quality`，也拿不到结果引用；而 `_generate_image`
-    与 `scene_reference_images.py` 已经在叶子上方 claim 过，叶子内再 claim 一次会以
-    同键不同 digest 撞成 `EGRESS_OPERATION_CONFLICT`。
+    The gate is installed at the **call site** rather than inside the leaf, because the leaf cannot recover `capability`, the
+    `image_size` before normalization, the `quality` before fallback, nor obtain the result reference; and `_generate_image`
+    and `scene_reference_images.py` already claim above the leaf, and claiming again inside the leaf would collide as
+    `EGRESS_OPERATION_CONFLICT` with the same key but a different digest.
 
-    非组织身份走逐字节透传：叶子收到的实参与没有这层包装时完全一致，
-    `tests/test_newapi_image_gateway.py` 的直调因此不受影响。
+    Non-organization identities pass through byte for byte: the leaf receives arguments identical to those without this wrapper,
+    so the direct calls in `tests/test_newapi_image_gateway.py` are unaffected.
     """
 
     context = _validate_egress_context(egress_context)
@@ -4088,9 +4088,9 @@ async def _call_newapi_image_api_with_egress(
         "image_size": str(config.get("image_size") or ""),
         "quality": str(config.get("quality") or ""),
     }
-    # 同一 envelope 内可以有多次同 capability 的图像操作（`_render_single_panel_gemini`
-    # 用 asyncio.gather 扇出 N 路），`envelope_id` 当 business_task_id 会把它们压成同一
-    # 个操作键。这个 helper 带请求内序号，且在 envelope 重投递时可复现。
+    # One envelope can contain several image operations with the same capability (`_render_single_panel_gemini`
+    # fans out N paths with asyncio.gather); using `envelope_id` as business_task_id would squash them into the same
+    # operation key. This helper carries an in-request sequence number and is reproducible when the envelope is redelivered.
     state = await _prepare_organization_image_egress(
         egress_context=context,
         provider="newapi",
@@ -4130,8 +4130,8 @@ async def _call_newapi_image_api_with_egress(
         await _mark_unknown()
         raise
     if not image_bytes and not (delivery_state and delivery_state.get("copied")):
-        # 叶子把传输失败压成 `(None, "", error)`，操作已经出过网但没有可用结果，
-        # 只能落 unknown——不能当没发生过，否则重试会以同键再 claim 一次。
+        # The leaf squashes transport failures into `(None, "", error)`; the operation did go out but there is no usable result,
+        # so it can only be recorded as unknown -- it cannot be treated as never having happened, or a retry would claim again with the same key.
         await _mark_unknown()
         return image_bytes, text, error
     digest = (
@@ -5968,7 +5968,7 @@ def _qwen21_compose_identity_name_map(character_map: Dict[str, dict], beat: dict
 
 def _qwen21_compose_normalize_prop_name(value: str) -> str:
     text = (value or "").strip()
-    text = re.sub(r"[·•．。,:：，、／/（）()\\-]+", "", text)
+    text = re.sub(r"[·•.,:;/()\\-]+", "", text)
     return text.lower()
 
 
@@ -6097,7 +6097,7 @@ def _build_qwen21_compose_plan(
         None,
     )
     if scene_ref is None:
-        return None, "Qwen 2.1 compose 需要场景主图（场景参考图未配置或文件缺失）"
+        return None, "Qwen 2.1 compose requires a scene master image (the scene reference image is not configured or the file is missing)"
 
     identity_refs = qwen_edit_identity_references(character_map, beat)
     prop_image_refs = [
@@ -6113,8 +6113,8 @@ def _build_qwen21_compose_plan(
         keep_props = max(0, MAX_REFERENCE_IMAGES - 1 - len(identity_refs))
         dropped = len(prop_image_refs) - keep_props
         print(
-            f"[Qwen21Compose] 参考图超过 {MAX_REFERENCE_IMAGES} 张上限，"
-            f"丢弃 {dropped} 个道具参考（优先保留场景+身份）"
+            f"[Qwen21Compose] Reference images exceed the limit of {MAX_REFERENCE_IMAGES}, "
+            f"dropping {dropped} prop references (scene + identity are kept first)"
         )
         prop_image_refs = prop_image_refs[:keep_props]
 
@@ -6123,7 +6123,7 @@ def _build_qwen21_compose_plan(
         with open(scene_path, "rb") as f:
             scene_bytes = f.read()
     except OSError as exc:
-        return None, f"Qwen 2.1 compose 场景主图读取失败: {exc}"
+        return None, f"Qwen 2.1 compose failed to read the scene master image: {exc}"
 
     from novelvideo.config import RUNPOD_QWEN21_COMPOSE_CROP_TO_MODE_ASPECT
 
@@ -6591,21 +6591,21 @@ async def _call_huimeng_image_api(
 
 
 class NanoBananaGridGenerator:
-    """NanoBananaPro 网格生成器。
+    """NanoBananaPro grid generator.
 
-    支持多种模式（统一使用批量生成，动态优化）:
-    - "1x1": 单张生成（1K 分辨率）
-    - "1x3": 横向三格
-    - "2x2": 紧凑四格
-    - "3x3": 分批生成多个 3x3 网格
-    - "4x4": 中等平衡
-    - "5x5": 批量生成，最大 25 个分镜（动态优化）
+    Supports several modes (all use batch generation with dynamic optimization):
+    - "1x1": single image generation (1K resolution)
+    - "1x3": three cells in a row
+    - "2x2": compact four cells
+    - "3x3": generate multiple 3x3 grids in batches
+    - "4x4": balanced medium size
+    - "5x5": batch generation, up to 25 shots (dynamic optimization)
 
-    使用 Google AI Studio 的 Gemini Pro Image 模型生成分镜网格。
+    Uses the Gemini Pro Image model of Google AI Studio to generate storyboard grids.
 
-    示例:
+    Example:
         >>> generator = NanoBananaGridGenerator()
-        >>> # 3x3 模式批量生成
+        >>> # 3x3 mode batch generation
         >>> results = await generator.generate_grid_batch(
         ...     all_beats=beats_data,
         ...     character_map=char_map,
@@ -6614,10 +6614,10 @@ class NanoBananaGridGenerator:
     """
 
     def __init__(self, api_key: Optional[str] = None, config: Optional[dict] = None):
-        """初始化生成器。
+        """Initialize the generator.
 
         Args:
-            api_key: Google AI API Key，默认从环境变量读取
+            api_key: Google AI API Key; read from the environment by default
         """
         config = config or get_grid_generation_config()
         self.provider = config.get("provider", "google")
@@ -6666,10 +6666,10 @@ class NanoBananaGridGenerator:
                 key_name = "GOOGLE_AI_API_KEY"
             raise ValueError(f"API key not set. Set {key_name} environment variable.")
 
-        # EG-09b（OI-52）：组织只许经网关出图。这条判决 `_prepare_organization_image_egress`
-        # 早就有，但 grid 家族的调用点不经过它，于是对 `generate_grid` 这些入口从未生效。
-        # 提到构造点是因为那 6 个入口共用 `self.provider` 选分支，一处判就够。
-        # 只对组织身份生效——平台/个人走 direct provider 行为不变。
+        # EG-09b (OI-52): organizations may only generate images through the gateway. This verdict in `_prepare_organization_image_egress`
+        # has long existed, but the call sites of the grid family do not go through it, so it never took effect for entry points like `generate_grid`.
+        # It is lifted to the construction point because those 6 entry points share `self.provider` to pick a branch, so one check is enough.
+        # Only effective for organization identities -- platform/personal direct provider behavior is unchanged.
         if self.provider != "newapi" and ambient_organization_egress_context() is not None:
             raise EgressError("ORG_EGRESS_DENIED")
 
@@ -6682,92 +6682,92 @@ class NanoBananaGridGenerator:
         scene_menu: list[dict] | list | None = None,
         prop_menu: list[dict] | list | None = None,
         sketch_colors: Dict[str, str] = None,
-        style: str = None,  # 默认使用全局风格配置
+        style: str = None,  # defaults to the global style configuration
         output_path: Optional[str] = None,
         ethnicity: str = "Chinese",
-        rows: int = None,  # 可配置行数，默认使用配置值
-        cols: int = None,  # 可配置列数，默认使用配置值
-        sketch: bool = False,  # 是否生成草图模式
-        prompt_only: bool = False,  # Dry Run 模式：只生成提示词，不调用 API
-        beat_start_index: int = 0,  # Render 模式：当前 grid 的 beat 起始索引（用于从 sketch 切片）
-        total_episode_beats: int = 0,  # Render 模式：整集 beat 总数（用于计算 sketch 尺寸）
-        location_beat_numbers: List[int] = None,  # 场景分组的原始 beat 编号（1-based）
+        rows: int = None,  # configurable row count, defaults to the configured value
+        cols: int = None,  # configurable column count, defaults to the configured value
+        sketch: bool = False,  # whether to generate in sketch mode
+        prompt_only: bool = False,  # Dry Run mode: only generate prompts, do not call the API
+        beat_start_index: int = 0,  # Render mode: start beat index of the current grid (used to slice the sketch)
+        total_episode_beats: int = 0,  # Render mode: total beats in the episode (used to compute the sketch size)
+        location_beat_numbers: List[int] = None,  # original beat numbers of the scene group (1-based)
         explicit_episode_number: Optional[
             int
-        ] = None,  # 调用方已知的集数，避免从路径反推
+        ] = None,  # episode number known to the caller, avoids deriving it from the path
         scene_refs_override: dict[int, list[Any]] | None = None,
         prop_refs_override: dict[int, list[Any]] | None = None,
-        sketch_dir: str = "",  # 草图目录路径（由调用方通过 PathResolver 计算）
+        sketch_dir: str = "",  # sketch directory path (computed by the caller via PathResolver)
         aspect_ratio_override: Optional[
             str
-        ] = None,  # 覆盖 aspect_ratio（再生模式使用）
-        image_size_override: Optional[str] = None,  # 覆盖 image_size（再生模式使用）
-        mode_key: Optional[str] = None,  # mode_key 查表取 aspect_ratio/image_size
+        ] = None,  # overrides aspect_ratio (used by regeneration mode)
+        image_size_override: Optional[str] = None,  # overrides image_size (used by regeneration mode)
+        mode_key: Optional[str] = None,  # mode_key lookup for aspect_ratio/image_size
         prompt_aspect_ratio: Optional[
             str
-        ] = None,  # 覆盖 prompt 中的比例（two-pass: 图用 1:1，prompt 用 9:16）
-        beat_sketch_paths: dict = None,  # {beat_num: full_path} 从图片池取的 per-beat 草图路径
-        sketch_aspect_padding: bool = False,  # 草图补白到目标比例
-        force_image_size: Optional[str] = None,  # 强制覆盖 image_size（如 "0.5K"）
-        use_director_refs: bool = False,  # 是否优先使用 beat 级导演参考图
-        director_sheet_path: Optional[str] = None,  # 当前 grid 的 DirectorWorld sheet
+        ] = None,  # overrides the ratio in the prompt (two-pass: image uses 1:1, prompt uses 9:16)
+        beat_sketch_paths: dict = None,  # {beat_num: full_path} per-beat sketch paths taken from the image pool
+        sketch_aspect_padding: bool = False,  # pad the sketch with white to the target ratio
+        force_image_size: Optional[str] = None,  # force-override image_size (e.g. "0.5K")
+        use_director_refs: bool = False,  # whether to prefer beat-level director reference images
+        director_sheet_path: Optional[str] = None,  # DirectorWorld sheet of the current grid
         director_ref_beat_numbers: Optional[
             List[int]
-        ] = None,  # 仅这些 beat 使用导演参考
+        ] = None,  # only these beats use director references
         director_control_frames_dir: str | Path | None = None,
         qwen_edit_prompts: Optional[dict] = None,  # runpod_qwen_edit only — saved/AI-rewritten/hand-edited prompt override, per beat
     ) -> GridGenerationResult:
-        """生成网格图。
+        """Generate a grid image.
 
-        参考模式由上游 build_character_map_for_grid() 决定：
-        - composite: 复合参考图（Portrait + Fullbody 拼接），锁脸 + 锁服装
-        - portrait_only: 仅面部特写，锁脸，服装由 appearance_details 文字控制
-        - prompt_only: 无参考图，完全由提示词控制
+        The reference mode is decided upstream by build_character_map_for_grid():
+        - composite: composite reference image (Portrait + Fullbody stitched), locks face + clothing
+        - portrait_only: face close-up only, locks the face; clothing is controlled by the appearance_details text
+        - prompt_only: no reference image, fully controlled by the prompt
 
         Args:
-            beats: Beats 数据列表（不足网格容量用黑色填充）
-            character_map: 角色映射 {角色名: {
+            beats: list of Beats data (padded with black when below the grid capacity)
+            character_map: character mapping {character_name: {
                 'character_tag': ...,
                 'base_prompt': ...,
                 'appearance_details': ...,
-                'portrait_path': ...,  # 面部特写图（用于锁脸）
-                'ref_path': ...,  # 参考图路径
+                'portrait_path': ...,  # face close-up image (used to lock the face)
+                'ref_path': ...,  # reference image path
                 'reference_mode': ...,  # composite / portrait_only / prompt_only
             }}
-            style: 全局风格名称 (chinese_period_drama, anime, realistic)，
-                   默认使用 IMAGE_DEFAULT_STYLE
-            output_path: 输出路径
-            ethnicity: 角色默认种族（默认 "Chinese"），用于确保生成正确的面部特征
-            rows: 网格行数（默认使用配置值）
-            cols: 网格列数（默认使用配置值）
+            style: global style name (chinese_period_drama, anime, realistic),
+                   defaults to IMAGE_DEFAULT_STYLE
+            output_path: output path
+            ethnicity: default character ethnicity (default "Chinese"), used to ensure correct facial features
+            rows: number of grid rows (defaults to the configured value)
+            cols: number of grid columns (defaults to the configured value)
 
         Returns:
             GridGenerationResult
         """
-        # 使用传入的 rows/cols 或默认配置值
+        # Use the passed rows/cols or the default configured values
         rows = rows or self.rows
         cols = cols or self.cols
         grid_capacity = rows * cols
         start_time = time.time()
         character_map = character_map or {}
-        previous_grid_path = None  # Render 模式会在内部设置草图路径
+        previous_grid_path = None  # Render mode sets the sketch path internally
 
-        # 使用全局默认风格
+        # Use the global default style
         if style is None:
             style = IMAGE_DEFAULT_STYLE
-        print(f"[NanoBananaPro] 使用风格: {style}, 网格: {rows}x{cols}")
+        print(f"[NanoBananaPro] Using style: {style}, grid: {rows}x{cols}")
 
         if len(beats) < 1:
             return GridGenerationResult(
                 success=False,
-                error="需要至少 1 个 beat，当前没有 beats",
+                error="At least 1 beat is required; there are currently no beats",
                 generation_time=time.time() - start_time,
             )
 
-        # 如果不足网格容量，后面会用黑色填充
+        # If below the grid capacity, black padding is used later
         actual_beat_count = min(len(beats), grid_capacity)
         print(
-            f"[NanoBananaPro] 有效 beats: {actual_beat_count}/{grid_capacity}，不足部分用黑色填充"
+            f"[NanoBananaPro] Valid beats: {actual_beat_count}/{grid_capacity}, the remainder is padded with black"
         )
         if not sketch and sketch_dir:
             detection_error = render_ai_detection_error(beats[:grid_capacity])
@@ -6782,14 +6782,14 @@ class NanoBananaGridGenerator:
         try:
             types = None
             client = None
-            # 初始化客户端（仅 Google 直连需要）
+            # Initialize the client (only needed for Google direct)
             if self.provider == "google":
                 from google.genai import types
                 from google import genai
 
                 client = genai.Client(api_key=self.api_key)
 
-            # 验证参考图存在 - 信任上游 reference_mode，只做文件存在性确认
+            # Verify the reference images exist - trust the upstream reference_mode, only confirm the files exist
             valid_character_map = {}
             for char_name, info in character_map.items():
                 char_info = dict(info)
@@ -6801,7 +6801,7 @@ class NanoBananaGridGenerator:
                 ):
                     char_info["reference_path"] = ref_path
                     char_info["reference_mode"] = "composite"
-                    print(f"[NanoBananaPro] {char_name}: 复合图模式 -> {ref_path}")
+                    print(f"[NanoBananaPro] {char_name}: composite image mode -> {ref_path}")
                     valid_character_map[char_name] = char_info
                     continue
 
@@ -6809,20 +6809,20 @@ class NanoBananaGridGenerator:
                     char_info["reference_path"] = ref_path
                     char_info["reference_mode"] = "portrait_only"
                     print(
-                        f"[NanoBananaPro] {char_name}: Portrait 模式（仅锁脸）-> {ref_path}"
+                        f"[NanoBananaPro] {char_name}: Portrait mode (face lock only) -> {ref_path}"
                     )
                     valid_character_map[char_name] = char_info
                     continue
 
                 char_info["reference_path"] = None
                 char_info["reference_mode"] = "prompt_only"
-                print(f"[NanoBananaPro] {char_name}: 提示词模式（无参考图）")
+                print(f"[NanoBananaPro] {char_name}: prompt mode (no reference image)")
                 valid_character_map[char_name] = char_info
 
-            # 1. 构建网格 Prompt
-            # 分流：Sketch 模式 vs Render 模式
-            # 统一使用 UnifiedPromptBuilder 以确保导出和生成使用相同的提示词
-            is_render_mode = False  # 标记是否为 Render 模式
+            # 1. Build the grid prompt
+            # Branch: Sketch mode vs Render mode
+            # Always use UnifiedPromptBuilder so export and generation use the same prompt
+            is_render_mode = False  # flag marking Render mode
             compose_plan: Optional[Qwen21ComposePlan] = None  # runpod_qwen21_compose only
             project_dir = _infer_project_dir(output_path, sketch_dir)
             episode_number = (
@@ -6883,7 +6883,7 @@ class NanoBananaGridGenerator:
                             continue
                     refs = scene_refs.setdefault(panel_idx, [])
                     refs.insert(0, director_sheet_ref)
-            # 过滤为当前网格出场角色。scene_refs 先解析，后续可按参考图上下文收窄角色集。
+            # Filter to the characters appearing in the current grid. scene_refs are resolved first; the character set can later be narrowed by the reference-image context.
             if sketch:
                 valid_character_map = filter_character_map_for_beats(
                     valid_character_map,
@@ -6896,14 +6896,14 @@ class NanoBananaGridGenerator:
                 )
                 if has_director_sheet:
                     print(
-                        f"[DirectorSheet] 使用 DirectorWorld sheet: {director_sheet_path}"
+                        f"[DirectorSheet] Using DirectorWorld sheet: {director_sheet_path}"
                     )
                 elif actual_beat_count != 1 or rows != 1 or cols != 1:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            "导演参考图模式只支持单 beat 1x1；"
-                            "批量草图请先导出对应 DirectorWorld 控制图。"
+                            "Director reference mode only supports a single beat 1x1; "
+                            "for batch sketches, export the corresponding DirectorWorld control images first."
                         ),
                         generation_time=time.time() - start_time,
                     )
@@ -6913,8 +6913,8 @@ class NanoBananaGridGenerator:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            "导演单镜缺少 beat 级 3GS control frame；"
-                            "草图主线不再回退到旧场景参考图。"
+                            "Director single shot is missing the beat-level 3GS control frame; "
+                            "the sketch main line no longer falls back to the old scene reference images."
                         ),
                         generation_time=time.time() - start_time,
                     )
@@ -6930,18 +6930,18 @@ class NanoBananaGridGenerator:
             )
 
             if sketch:
-                # Sketch 模式使用 UnifiedPromptBuilder（与导出逻辑一致）
-                print("[NanoBananaPro] 进入 Sketch 模式")
+                # Sketch mode uses UnifiedPromptBuilder (consistent with the export logic)
+                print("[NanoBananaPro] Entering Sketch mode")
 
-                # 当前网格的全局 beat 范围 (1-based)
+                # Global beat range of the current grid (1-based)
                 grid_beat_start = beat_start_index + 1
                 grid_beat_end = beat_start_index + grid_capacity
 
-                # prompt_aspect_ratio 优先（two-pass 时图用 1:1 但 prompt 写 2:3）
+                # prompt_aspect_ratio takes precedence (in two-pass the image uses 1:1 but the prompt writes 2:3)
                 _prompt_ar = prompt_aspect_ratio or (
                     REGEN_MODE_CONFIGS[mode_key]["aspect_ratio"] if mode_key else None
                 )
-                # image_aspect_ratio = 实际输出比例（two-pass Pass1 时为 1:1，否则与 prompt_ar 相同）
+                # image_aspect_ratio = actual output ratio (1:1 in two-pass Pass 1, otherwise the same as prompt_ar)
                 _image_ar = (
                     REGEN_MODE_CONFIGS[mode_key]["aspect_ratio"] if mode_key else ""
                 )
@@ -6987,14 +6987,14 @@ class NanoBananaGridGenerator:
                 # (`elif self.provider == "runpod_qwen21_compose":` further
                 # down): every other branch in this chain either requires a
                 # sketch (`if sketch:`) or a sketch directory
-                # (`elif sketch_dir:`, falls through to the hard "需要 sketch
-                # 或 sketch_dir" error at the bottom otherwise) — this mode
+                # (`elif sketch_dir:`, falls through to the hard "generate_grid() requires
+                # the sketch or sketch_dir argument" error at the bottom otherwise) -- this mode
                 # has neither, by design.
-                print("[NanoBananaPro] 进入 Qwen 2.1 Compose 模式（无草图）")
+                print("[NanoBananaPro] Entering Qwen 2.1 Compose mode (no sketch)")
                 if len(beats[:grid_capacity]) != 1 or grid_capacity != 1:
                     return GridGenerationResult(
                         success=False,
-                        error="Qwen 2.1 compose 仅支持单 beat 1x1 渲染",
+                        error="Qwen 2.1 compose only supports single-beat 1x1 rendering",
                         generation_time=time.time() - start_time,
                     )
                 compose_plan, compose_err = _build_qwen21_compose_plan(
@@ -7014,10 +7014,10 @@ class NanoBananaGridGenerator:
                 is_render_mode = True
 
             elif sketch_dir:
-                # Render 模式：通过 find_sketch_for_beat_range 在草图目录中定位对应的草图
+                # Render mode: locate the matching sketch in the sketch directory via find_sketch_for_beat_range
                 sketch_dir_path = sketch_dir
 
-                # 确定 beat 编号列表 — 始终从 beats 自身提取，避免与外部参数不同步
+                # Determine the beat number list -- always extracted from the beats themselves, to avoid drifting out of sync with external parameters
                 actual_beats = beats[:grid_capacity]
                 actual_beat_numbers = [
                     _generation_beat_number(b, i) for i, b in enumerate(actual_beats)
@@ -7034,21 +7034,21 @@ class NanoBananaGridGenerator:
                 )
                 if sketch_result is None and not has_all_pool_sketches:
                     print(
-                        f"[Render] 警告：未找到覆盖 beat {beat_range_start}-{beat_range_end} 的草图"
+                        f"[Render] Warning: no sketch found covering beats {beat_range_start}-{beat_range_end}"
                     )
 
                 if sketch_result or has_all_pool_sketches:
-                    print("[NanoBananaPro] 进入 Render 模式 (基于草图渲染)")
+                    print("[NanoBananaPro] Entering Render mode (render from sketch)")
                     if has_all_pool_sketches:
                         print(
-                            f"[Render] 使用图片池草图: {len(beat_sketch_paths)} 个 beat"
+                            f"[Render] Using image-pool sketches: {len(beat_sketch_paths)} beats"
                         )
                     elif sketch_result:
                         sketch_file, s_rows, s_cols = sketch_result
-                        print(f"[Render] 使用草图: {sketch_file} ({s_rows}x{s_cols})")
+                        print(f"[Render] Using sketch: {sketch_file} ({s_rows}x{s_cols})")
                     is_render_mode = True
 
-                    # Render 模式：先切片草图，再用颜色检测过滤角色
+                    # Render mode: slice the sketch first, then filter characters by color detection
                     if output_path:
                         temp_dir = Path(output_path).parent
                     else:
@@ -7071,14 +7071,14 @@ class NanoBananaGridGenerator:
                         target_aspect=target_aspect,
                     )
                     print(
-                        f"[Render] 草图切片: beat_numbers={actual_beat_numbers} -> {rows}x{cols}"
+                        f"[Render] Sketch sliced: beat_numbers={actual_beat_numbers} -> {rows}x{cols}"
                     )
-                    print(f"[Render] 子草图已保存: {sub_sketch_path}")
+                    print(f"[Render] Sub-sketch saved: {sub_sketch_path}")
 
-                    # 用切片后的草图作为参考
+                    # Use the sliced sketch as the reference
                     previous_grid_path = sub_sketch_path
 
-                    # 读取预计算的 per-beat 身份检测结果（草图工作台已完成检测）
+                    # Read the precomputed per-beat identity detection results (already done in the sketch workbench)
                     _panel_det = load_precomputed_panel_detected(
                         actual_beat_numbers, beats
                     )
@@ -7086,7 +7086,7 @@ class NanoBananaGridGenerator:
                         valid_character_map, _panel_det
                     )
 
-                    # 使用 UnifiedPromptBuilder（与导出逻辑一致）
+                    # Use UnifiedPromptBuilder (consistent with the export logic)
                     ctx = create_prompt_context(
                         mode=PromptMode.RENDER,
                         beats=beats[:grid_capacity],
@@ -7109,16 +7109,16 @@ class NanoBananaGridGenerator:
                     builder = UnifiedPromptBuilder(ctx)
                     prompt = builder.build()
                 else:
-                    # 草图未找到，明确报错终止（不 fallback）
-                    msg = f"Render 模式需要草图但未找到覆盖 beat {beat_range_start}-{beat_range_end} 的草图"
+                    # Sketch not found; fail explicitly (no fallback)
+                    msg = f"Render mode requires a sketch, but none was found covering beats {beat_range_start}-{beat_range_end}"
                     print(f"[NanoBananaPro] ❌ {msg}")
                     return GridGenerationResult(
                         success=False,
                         error=msg,
                     )
             else:
-                # 需要草图或草图目录
-                msg = "generate_grid() 需要 sketch 或 sketch_dir 参数"
+                # A sketch or sketch directory is required
+                msg = "generate_grid() requires the sketch or sketch_dir argument"
                 print(f"[NanoBananaPro] ❌ {msg}")
                 return GridGenerationResult(
                     success=False,
@@ -7126,11 +7126,11 @@ class NanoBananaGridGenerator:
                 )
 
             print(
-                f"[NanoBananaPro] 构建 Prompt 完成，共 {len(beats[:grid_capacity])} 个分镜"
+                f"[NanoBananaPro] Prompt built, {len(beats[:grid_capacity])} shots in total"
             )
 
-            # 保存 prompt 到文件（审计用）
-            # 目录结构: grids/ep001/2x2/prompts/grid_01.prompt.txt
+            # Save the prompt to a file (for auditing)
+            # Directory structure: grids/ep001/2x2/prompts/grid_01.prompt.txt
             if output_path:
                 grid_dir = Path(output_path).parent  # grids/ep001/2x2
                 prompts_dir = grid_dir / "prompts"  # grids/ep001/2x2/prompts
@@ -7138,12 +7138,12 @@ class NanoBananaGridGenerator:
                 grid_basename = Path(output_path).stem  # "grid_01"
                 prompt_file = prompts_dir / f"{grid_basename}.prompt.txt"
                 prompt_file.write_text(prompt, encoding="utf-8")
-                print(f"[NanoBananaPro] Grid Prompt 已保存: {prompt_file}")
+                print(f"[NanoBananaPro] Grid Prompt saved: {prompt_file}")
 
-            # Prompt-Only 模式：只生成提示词，跳过 API 调用
+            # Prompt-Only mode: only generate the prompt, skip the API call
             if prompt_only:
-                print("[NanoBananaPro] Prompt-Only 模式，跳过 API 调用")
-                # 在 Render 模式下，显示 sketch 切片信息（用于验证）
+                print("[NanoBananaPro] Prompt-Only mode, skipping the API call")
+                # In Render mode, show the sketch slicing info (for verification)
                 if is_render_mode:
                     sketch_capacity = (
                         SKETCH_GRID_CONFIG["rows"] * SKETCH_GRID_CONFIG["cols"]
@@ -7151,10 +7151,10 @@ class NanoBananaGridGenerator:
                     local_offset = beat_start_index % sketch_capacity
                     end_index = local_offset + len(beats[:grid_capacity])
                     print(
-                        f"[NanoBananaPro] [Render 预览] 草图 {SKETCH_GRID_CONFIG['rows']}x{SKETCH_GRID_CONFIG['cols']}"
+                        f"[NanoBananaPro] [Render preview] Sketch {SKETCH_GRID_CONFIG['rows']}x{SKETCH_GRID_CONFIG['cols']}"
                     )
                     print(
-                        f"[NanoBananaPro] [Render 预览] 本地切片: [{local_offset}:{end_index}] (共 {end_index - local_offset} panels)"
+                        f"[NanoBananaPro] [Render preview] Local slice: [{local_offset}:{end_index}] ({end_index - local_offset} panels in total)"
                     )
                 return GridGenerationResult(
                     success=True,
@@ -7223,19 +7223,19 @@ class NanoBananaGridGenerator:
                 usage_recorded = True
 
             # =================================================================
-            # Render 模式 / Sketch 模式（统一使用单次 API 调用）
+            # Render mode / Sketch mode (a single API call for both)
             # =================================================================
 
-            # 2. 准备参考图
-            # 按照 Google 官方文档：prompt 在前，图像连续排列在后
+            # 2. Prepare the reference images
+            # Per the official Google docs: prompt first, images in a row after
             # https://ai.google.dev/gemini-api/docs/image-generation
-            contents = [prompt]  # prompt 放在最前面
+            contents = [prompt]  # prompt goes first
             submitted_refs: list[dict] = []
 
-            # Render 模式：草图必须是 Image 1。它是唯一构图底图；角色/场景/道具只提供身份和材质。
-            # Render 模式传角色/身份/场景/道具；Sketch 模式只传场景参考图。
-            # 道具在草图阶段只保留名称和 marker 颜色，不传道具参考图，避免最终
-            # 材质/三视图干扰 blocking。
+            # Render mode: the sketch must be Image 1. It is the only composition base; character/scene/prop only provide identity and materials.
+            # Render mode passes character/identity/scene/prop; Sketch mode passes only scene references.
+            # In the sketch stage props keep only the name and marker color, and prop reference images are not passed, to avoid the final
+            # material/three-view interfering with blocking.
             if not sketch and previous_grid_path and os.path.exists(previous_grid_path):
                 previous_grid_image = self._load_image_as_part(previous_grid_path)
                 if previous_grid_image:
@@ -7253,7 +7253,7 @@ class NanoBananaGridGenerator:
                         }
                     )
                     print(
-                        "[NanoBananaPro] 添加草图底图 (Image 1 composition lock): "
+                        "[NanoBananaPro] Added sketch base image (Image 1 composition lock): "
                         f"{previous_grid_path}"
                     )
 
@@ -7291,7 +7291,7 @@ class NanoBananaGridGenerator:
                     ctx, beats, grid_capacity, valid_character_map
                 )
 
-                print(f"[NanoBananaPro] 角色参考图顺序: {ordered_chars}")
+                print(f"[NanoBananaPro] Character reference image order: {ordered_chars}")
                 self._append_reference_parts_from_plan(
                     contents,
                     ctx,
@@ -7318,17 +7318,17 @@ class NanoBananaGridGenerator:
                     json.dumps(submitted_payload, ensure_ascii=False, indent=2),
                     encoding="utf-8",
                 )
-                print(f"[NanoBananaPro] Submitted Prompt/Refs 已保存: {submitted_file}")
+                print(f"[NanoBananaPro] Submitted Prompt/Refs saved: {submitted_file}")
 
-            # contents 结构:
-            # - Render 模式: [prompt, char/scene/prop refs..., sketch(最后)]
-            # - 普通 Sketch 模式: [prompt]
-            # - Director Sketch 模式: [prompt, director scene/prop refs...]
+            # contents structure:
+            # - Render mode: [prompt, char/scene/prop refs..., sketch (last)]
+            # - Regular Sketch mode: [prompt]
+            # - Director Sketch mode: [prompt, director scene/prop refs...]
 
-            # 3. 调用 API
-            # 从 mode_key 或 REGEN_MODE_CONFIGS 查找宽高比和分辨率
+            # 3. Call the API
+            # Look up the aspect ratio and resolution from mode_key or RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS
             if aspect_ratio_override:
-                # 再生模式：使用显式指定的 aspect_ratio 和 image_size
+                # Regeneration mode: use the explicitly specified aspect_ratio and image_size
                 aspect_ratio = aspect_ratio_override
                 image_size = image_size_override or "2K"
             elif mode_key:
@@ -7336,11 +7336,11 @@ class NanoBananaGridGenerator:
                 aspect_ratio = _cfg["aspect_ratio"]
                 image_size = _cfg["image_size"]
             elif sketch:
-                # Sketch 模式：使用独立配置
+                # Sketch mode: use a separate configuration
                 aspect_ratio = SKETCH_GRID_CONFIG["aspect_ratio"]
                 image_size = SKETCH_GRID_CONFIG["image_size"]
             else:
-                # 从 (rows, cols) 在 REGEN_MODE_CONFIGS 中查找
+                # Look up in RE/tmp/claude-0/-home-user-dramaclaw/57eb0762-a929-5d0a-b399-64cb7e8d2633/scratchpad/gen_MODE_CONFIGS from (rows, cols)
                 _found = False
                 for _mk, _cfg in REGEN_MODE_CONFIGS.items():
                     if _cfg["rows"] == rows and _cfg["cols"] == cols:
@@ -7368,12 +7368,12 @@ class NanoBananaGridGenerator:
                 image_size = force_image_size
 
             if self.provider == "openrouter":
-                # ===== OpenRouter 分支 =====
+                # ===== OpenRouter branch =====
                 effective_image_size = normalize_image_size(
                     image_size, provider="openrouter"
                 )
                 print(
-                    f"[NanoBananaPro] 调用 OpenRouter ({self.model}) 生成网格图 (分辨率: {effective_image_size}, 比例: {aspect_ratio})..."
+                    f"[NanoBananaPro] Calling OpenRouter ({self.model}) to generate grid image (resolution: {effective_image_size}, ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(contents)
                 image_bytes, or_text, or_error = await _call_openrouter_image_api(
@@ -7386,13 +7386,13 @@ class NanoBananaGridGenerator:
                     },
                 )
                 if not image_bytes:
-                    message = "OpenRouter API 未返回图像数据"
+                    message = "OpenRouter API returned no image data"
                     if or_error:
                         message = f"{message}: {or_error}"
                     return _usage_fail(message)
             elif self.provider == "huimeng":
                 print(
-                    f"[HuiMeng Images] 调用 {self.model} 生成网格图 (比例: {aspect_ratio})..."
+                    f"[HuiMeng Images] Calling {self.model} to generate grid image (ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(contents)
                 image_bytes, _text, huimeng_error = await _call_huimeng_image_api(
@@ -7407,17 +7407,17 @@ class NanoBananaGridGenerator:
                     },
                 )
                 if not image_bytes:
-                    message = "HuiMeng Images 未返回图像数据"
+                    message = "HuiMeng Images returned no image data"
                     if huimeng_error:
                         message = f"{message}: {huimeng_error}"
                     return _usage_fail(message)
             elif self.provider == "openai":
-                # ===== OpenAI Image API 分支 =====
+                # ===== OpenAI Image API branch =====
                 openai_image_size = "1K" if sketch else image_size
                 openai_size = resolve_openai_image_size(aspect_ratio, openai_image_size)
                 print(
-                    f"[NanoBananaPro] 调用 OpenAI Image API ({self.model}) 生成网格图 "
-                    f"(size: {openai_size}, 比例: {aspect_ratio})..."
+                    f"[NanoBananaPro] Calling OpenAI Image API ({self.model}) to generate grid image "
+                    f"(size: {openai_size}, ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -7440,7 +7440,7 @@ class NanoBananaGridGenerator:
                     },
                 )
                 if not image_bytes:
-                    message = "OpenAI Image API 未返回图像数据"
+                    message = "OpenAI Image API returned no image data"
                     if openai_error:
                         message = f"{message}: {openai_error}"
                     return _usage_fail(message)
@@ -7449,8 +7449,8 @@ class NanoBananaGridGenerator:
                     image_size, provider="newapi"
                 )
                 print(
-                    f"[DramaClawAPI Images] 调用 {self.model} 生成网格图 "
-                    f"(分辨率: {effective_image_size}, 比例: {aspect_ratio})..."
+                    f"[DramaClawAPI Images] Calling {self.model} to generate grid image "
+                    f"(resolution: {effective_image_size}, ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -7478,13 +7478,13 @@ class NanoBananaGridGenerator:
                     delivery_state=(image_delivery_state := {}),
                 )
                 if not image_bytes:
-                    message = "DramaClawAPI Images 未返回图像数据"
+                    message = "DramaClawAPI Images returned no image data"
                     if newapi_error:
                         message = f"{message}: {newapi_error}"
                     return _usage_fail(message)
             elif self.provider == "gemini_webai":
                 print(
-                    f"[NanoBananaPro] 调用 Gemini WebAI ({self.model}) 生成网格图 (比例: {aspect_ratio})..."
+                    f"[NanoBananaPro] Calling Gemini WebAI ({self.model}) to generate grid image (ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -7502,14 +7502,14 @@ class NanoBananaGridGenerator:
                     base_url=self.base_url,
                 )
                 if not image_bytes:
-                    message = "Gemini WebAI 未返回图像数据"
+                    message = "Gemini WebAI returned no image data"
                     if webai_error:
                         message = f"{message}: {webai_error}"
                     return _usage_fail(message)
             elif self.provider == "qwen":
                 print(
-                    f"[NanoBananaPro] 调用 Qwen Image ({self.model}) 生成网格图 "
-                    f"(分辨率: {image_size}, 比例: {aspect_ratio})..."
+                    f"[NanoBananaPro] Calling Qwen Image ({self.model}) to generate grid image "
+                    f"(resolution: {image_size}, ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -7528,14 +7528,14 @@ class NanoBananaGridGenerator:
                     base_url=self.base_url,
                 )
                 if not image_bytes:
-                    message = "Qwen Image 未返回图像数据"
+                    message = "Qwen Image returned no image data"
                     if qwen_error:
                         message = f"{message}: {qwen_error}"
                     return _usage_fail(message)
             elif self.provider == "runpod_qwen":
                 print(
-                    f"[NanoBananaPro] 调用 RunPod Qwen Image 2.1 生成网格图 "
-                    f"(分辨率: {image_size}, 比例: {aspect_ratio})..."
+                    f"[NanoBananaPro] Calling RunPod Qwen Image 2.1 to generate grid image "
+                    f"(resolution: {image_size}, ratio: {aspect_ratio})..."
                 )
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -7554,7 +7554,7 @@ class NanoBananaGridGenerator:
                     base_url=self.base_url,
                 )
                 if not image_bytes:
-                    message = "RunPod Qwen Image 未返回图像数据"
+                    message = "RunPod Qwen Image returned no image data"
                     if runpod_qwen_error:
                         message = f"{message}: {runpod_qwen_error}"
                     return _usage_fail(message)
@@ -7566,15 +7566,15 @@ class NanoBananaGridGenerator:
                 # Qwen-specific prompt is used instead of the shared
                 # storyboard-grid prompt (see build_qwen_edit_render_prompt).
                 print(
-                    f"[NanoBananaPro] 调用 RunPod Qwen Image Edit 2511 生成网格图 "
-                    f"(比例: {aspect_ratio}, multi_character={self.qwen_edit_multi_character})..."
+                    f"[NanoBananaPro] Calling RunPod Qwen Image Edit 2511 to generate grid image "
+                    f"(ratio: {aspect_ratio}, multi_character={self.qwen_edit_multi_character})..."
                 )
                 _prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
                     include_mime=True,
                 )
                 if not ref_bytes:
-                    return _usage_fail("RunPod Qwen Image Edit 2511 缺少草图输入")
+                    return _usage_fail("RunPod Qwen Image Edit 2511 is missing the sketch input")
                 _canvas_bytes, _canvas_mime = ref_bytes[0]
                 _qwen_edit_prompts_used: dict = {}
                 if self.qwen_edit_multi_character:
@@ -7641,7 +7641,7 @@ class NanoBananaGridGenerator:
                     except NameError:
                         pass
                 if not image_bytes:
-                    message = "RunPod Qwen Image Edit 2511 未返回图像数据"
+                    message = "RunPod Qwen Image Edit 2511 returned no image data"
                     if runpod_edit_error:
                         message = f"{message}: {runpod_edit_error}"
                     return _usage_fail(message)
@@ -7654,17 +7654,17 @@ class NanoBananaGridGenerator:
                 # runpod_qwen_edit branch above exactly; only the
                 # API caller/prompt builder/multi-character wrapper differ.
                 if sketch:
-                    return _usage_fail("Qwen Image 2.1 render selection 只能用于 Render 阶段")
+                    return _usage_fail("The Qwen Image 2.1 render selection can only be used in the Render stage")
                 print(
-                    f"[NanoBananaPro] 调用 RunPod Qwen Image 2.1 (render) 生成网格图 "
-                    f"(比例: {aspect_ratio}, multi_character={self.qwen_edit_multi_character})..."
+                    f"[NanoBananaPro] Calling RunPod Qwen Image 2.1 (render) to generate grid image "
+                    f"(ratio: {aspect_ratio}, multi_character={self.qwen_edit_multi_character})..."
                 )
                 _prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
                     include_mime=True,
                 )
                 if not ref_bytes:
-                    return _usage_fail("RunPod Qwen Image 2.1 render 缺少草图输入")
+                    return _usage_fail("RunPod Qwen Image 2.1 render is missing the sketch input")
                 _canvas_bytes, _canvas_mime = ref_bytes[0]
                 _qwen21_prompts_used: dict = {}
                 if self.qwen_edit_multi_character:
@@ -7728,7 +7728,7 @@ class NanoBananaGridGenerator:
                     except NameError:
                         pass
                 if not image_bytes:
-                    message = "RunPod Qwen Image 2.1 render 未返回图像数据"
+                    message = "RunPod Qwen Image 2.1 render returned no image data"
                     if runpod_qwen21_error:
                         message = f"{message}: {runpod_qwen21_error}"
                     return _usage_fail(message)
@@ -7746,10 +7746,10 @@ class NanoBananaGridGenerator:
                 # (reference_images[0] generically becomes `image_1`,
                 # whether it's a sketch or — here — a scene background).
                 if sketch or compose_plan is None:
-                    return _usage_fail("Qwen Image 2.1 compose selection 只能用于 Render 阶段")
+                    return _usage_fail("The Qwen Image 2.1 compose selection can only be used in the Render stage")
                 print(
-                    f"[NanoBananaPro] 调用 RunPod Qwen Image 2.1 (compose, 无草图) 生成图像 "
-                    f"({len(compose_plan.reference_images)} 张参考图)..."
+                    f"[NanoBananaPro] Calling RunPod Qwen Image 2.1 (compose, no sketch) to generate image "
+                    f"({len(compose_plan.reference_images)} reference images)..."
                 )
                 (
                     image_bytes,
@@ -7778,50 +7778,50 @@ class NanoBananaGridGenerator:
                     except NameError:
                         pass
                 if not image_bytes:
-                    message = "RunPod Qwen Image 2.1 compose 未返回图像数据"
+                    message = "RunPod Qwen Image 2.1 compose returned no image data"
                     if runpod_qwen21_error:
                         message = f"{message}: {runpod_qwen21_error}"
                     return _usage_fail(message)
             else:
-                # ===== Google 直连分支 =====
-                # 根据模型选择配置：gemini-3 支持 image_size，gemini-2.5 不支持
+                # ===== Google direct branch =====
+                # Pick the config by model: gemini-3 supports image_size, gemini-2.5 does not
                 is_gemini3 = "gemini-3" in self.model
                 if is_gemini3:
                     effective_image_size = normalize_image_size(
                         image_size, provider="google"
                     )
                     print(
-                        f"[NanoBananaPro] 调用 {self.model} 生成网格图 (分辨率: {effective_image_size}, 比例: {aspect_ratio})..."
+                        f"[NanoBananaPro] Calling {self.model} to generate grid image (resolution: {effective_image_size}, ratio: {aspect_ratio})..."
                     )
                     image_config = types.ImageConfig(
                         aspect_ratio=aspect_ratio,
                         image_size=effective_image_size,
                     )
                 else:
-                    # gemini-2.5-flash-image 不支持 image_size 参数
+                    # gemini-2.5-flash-image does not support the image_size parameter
                     print(
-                        f"[NanoBananaPro] 调用 {self.model} 生成网格图 (比例: {aspect_ratio})..."
+                        f"[NanoBananaPro] Calling {self.model} to generate grid image (ratio: {aspect_ratio})..."
                     )
                     image_config = types.ImageConfig(
                         aspect_ratio=aspect_ratio,
                     )
 
-                # 配置 thinking（网页版默认开启，API 需要显式配置）
-                # 注意: image-preview 模型不支持 thinking
+                # Configure thinking (on by default in the web version; the API needs explicit configuration)
+                # Note: image-preview models do not support thinking
                 is_image_model = "image-preview" in self.model
                 if is_image_model:
-                    # image-preview 模型不支持 thinking
+                    # image-preview models do not support thinking
                     thinking_config = None
                 elif is_gemini3:
-                    # Gemini 3 用 thinking_level
+                    # Gemini 3 uses thinking_level
                     thinking_config = types.ThinkingConfig(
                         thinking_level=types.ThinkingLevel.HIGH
                     )
                 else:
-                    # Gemini 2.5 模型使用 thinking_budget（最小 128）
+                    # Gemini 2.5 models use thinking_budget (minimum 128)
                     thinking_config = types.ThinkingConfig(thinking_budget=1024)
 
-                # 构建配置
+                # Build the config
                 gen_config = types.GenerateContentConfig(
                     response_modalities=["IMAGE", "TEXT"],
                     image_config=image_config,
@@ -7840,50 +7840,50 @@ class NanoBananaGridGenerator:
                     config=gen_config,
                 )
 
-                # 4. 提取图像数据
+                # 4. Extract the image data
                 image_bytes = None
 
-                # 检查响应结构
+                # Check the response structure
                 if not response.candidates:
-                    print(f"[NanoBananaPro] API 响应无 candidates: {response}")
-                    return _usage_fail(f"API 响应无 candidates: {response}")
+                    print(f"[NanoBananaPro] API response has no candidates: {response}")
+                    return _usage_fail(f"API response has no candidates: {response}")
 
                 candidate = response.candidates[0]
                 if not candidate.content:
                     print(
-                        f"[NanoBananaPro] candidate 无 content: finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
+                        f"[NanoBananaPro] candidate has no content: finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
                     )
-                    # 打印安全评级（如果有）
+                    # Print safety ratings (if any)
                     if (
                         hasattr(candidate, "safety_ratings") and candidate.safety_ratings
                     ):
                         for rating in candidate.safety_ratings:
                             print(f"[NanoBananaPro] safety_rating: {rating}")
                     return _usage_fail(
-                        f"API 响应无 content, finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
+                        f"API response has no content, finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
                     )
 
                 if not candidate.content.parts:
                     print(
-                        f"[NanoBananaPro] content 无 parts: {candidate.content}, finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
+                        f"[NanoBananaPro] content has no parts: {candidate.content}, finish_reason={getattr(candidate, 'finish_reason', 'unknown')}"
                     )
-                    # 打印完整 candidate 对象以便调试
-                    print(f"[NanoBananaPro] 完整 candidate: {candidate}")
-                    return _usage_fail("API 响应 content 无 parts")
+                    # Print the full candidate object for debugging
+                    print(f"[NanoBananaPro] Full candidate: {candidate}")
+                    return _usage_fail("API response content has no parts")
 
                 text_parts = []
                 for part in candidate.content.parts:
                     if hasattr(part, "inline_data") and part.inline_data:
                         image_bytes = part.inline_data.data
-                    # 收集文本响应
+                    # Collect the text response
                     if hasattr(part, "text") and part.text:
                         text_parts.append(part.text)
-                        print(f"[NanoBananaPro] API 文本响应: {part.text[:500]}")
+                        print(f"[NanoBananaPro] API text response: {part.text[:500]}")
 
                 if not image_bytes:
-                    return _usage_fail("API 未返回图像数据")
+                    return _usage_fail("API returned no image data")
 
-            # 5. 保存文件
+            # 5. Save the file
             if output_path:
                 output_dir = os.path.dirname(output_path)
                 if output_dir:
@@ -7891,9 +7891,9 @@ class NanoBananaGridGenerator:
                 if not (self.provider == "newapi" and image_delivery_state.get("copied")):
                     with open(output_path, "wb") as f:
                         f.write(image_bytes)
-                print(f"[NanoBananaPro] 网格图已保存: {output_path}")
+                print(f"[NanoBananaPro] Grid image saved: {output_path}")
 
-                # 5.1 后处理：移除面板间缝隙并覆盖
+                # 5.1 Post-processing: remove the gaps between panels and overwrite
                 try:
                     from novelvideo.generators.grid_splitter import remove_grid_gaps
                     from PIL import Image as PILImage
@@ -7902,22 +7902,22 @@ class NanoBananaGridGenerator:
                     processed_grid = remove_grid_gaps(grid_img, rows, cols)
                     if processed_grid is not grid_img:
                         processed_grid.save(output_path)
-                    # 更新 image_bytes 以保持返回值一致
+                    # Update image_bytes to keep the return value consistent
                     with open(output_path, "rb") as f:
                         image_bytes = f.read()
-                    print(f"[NanoBananaPro] Gap removal 后处理完成: {output_path}")
+                    print(f"[NanoBananaPro] Gap removal post-processing complete: {output_path}")
                 except Exception as e:
-                    print(f"[NanoBananaPro] Gap removal 失败，保留原图: {e}")
+                    print(f"[NanoBananaPro] Gap removal failed, keeping the original image: {e}")
 
             generation_time = time.time() - start_time
-            print(f"[NanoBananaPro] 生成完成，耗时 {generation_time:.1f}s")
+            print(f"[NanoBananaPro] Generation complete, took {generation_time:.1f}s")
 
             return _usage_success(output_path, image_bytes)
 
         except ImportError:
             return GridGenerationResult(
                 success=False,
-                error="请安装 google-genai: pip install google-genai",
+                error="Please install google-genai: pip install google-genai",
                 generation_time=time.time() - start_time,
             )
         except Exception as e:
@@ -7950,20 +7950,20 @@ class NanoBananaGridGenerator:
         ethnicity: str = "Chinese",
         mode_key: str = "5x5_2-3_sketch",
     ) -> GridGenerationResult:
-        """为 action beat 生成 5×5 连续分镜草图网格。
+        """Generate a 5x5 continuous storyboard sketch grid for an action beat.
 
-        与 generate_grid 的区别：
-        - 所有 25 个 panel 是同一段动作的连续分镜序列（非不同 beat）
-        - 使用 ACTION_STORYBOARD prompt 模式
-        - 固定 5×5 网格
+        Differences from generate_grid:
+        - All 25 panels are a continuous storyboard sequence of the same action (not different beats)
+        - Uses the ACTION_STORYBOARD prompt mode
+        - Fixed 5x5 grid
 
         Args:
-            action_description: 动作描述（含 {{identity_id}} 标记）
-            character_map: 角色映射（用于颜色编码）
-            style: 风格名称
-            output_path: 输出路径
-            ethnicity: 角色种族
-            mode_key: 网格模式（默认 5x5_2-3_sketch）
+            action_description: action description (with {{identity_id}} markers)
+            character_map: character mapping (used for color coding)
+            style: style name
+            output_path: output path
+            ethnicity: character ethnicity
+            mode_key: grid mode (default 5x5_2-3_sketch)
 
         Returns:
             GridGenerationResult
@@ -7977,9 +7977,9 @@ class NanoBananaGridGenerator:
         mode_cfg = REGEN_MODE_CONFIGS.get(mode_key, REGEN_MODE_CONFIGS["5x5_2-3_sketch"])
         rows = mode_cfg["rows"]
         cols = mode_cfg["cols"]
-        print(f"[ActionGrid] 生成 {rows}x{cols} 动作分镜, 风格: {style}")
+        print(f"[ActionGrid] Generating {rows}x{cols} action storyboard, style: {style}")
 
-        # 构建伪 beat 列表（单个 action beat 扩展为 25 panel 占位）
+        # Build a pseudo beat list (a single action beat expanded into 25 panel placeholders)
         action_beat = {
             "beat_number": 1,
             "visual_description": action_description,
@@ -7988,10 +7988,10 @@ class NanoBananaGridGenerator:
         }
         beats = [action_beat]
 
-        # 过滤角色映射为动作描述中出场角色
+        # Filter the character map to the characters appearing in the action description
         valid_character_map = filter_character_map_for_beats(character_map, beats)
 
-        # 构建 ACTION_STORYBOARD prompt
+        # Build the ACTION_STORYBOARD prompt
         style_family, animation_subtype = StyleService.get_style_branch(
             style or IMAGE_DEFAULT_STYLE
         )
@@ -8046,7 +8046,7 @@ class NanoBananaGridGenerator:
                 if not image_bytes:
                     return GridGenerationResult(
                         success=False,
-                        error=f"OpenRouter API 未返回图片: {error_detail or ''}".strip(),
+                        error=f"OpenRouter API returned no image: {error_detail or ''}".strip(),
                         generation_time=time.time() - start_time,
                     )
             elif self.provider == "huimeng":
@@ -8061,7 +8061,7 @@ class NanoBananaGridGenerator:
                 if not image_bytes:
                     return GridGenerationResult(
                         success=False,
-                        error=f"HuiMeng Images 未返回图片: {error_detail or ''}".strip(),
+                        error=f"HuiMeng Images returned no image: {error_detail or ''}".strip(),
                         generation_time=time.time() - start_time,
                     )
             elif self.provider == "openai":
@@ -8084,7 +8084,7 @@ class NanoBananaGridGenerator:
                 if not image_bytes:
                     return GridGenerationResult(
                         success=False,
-                        error=f"OpenAI Image API 未返回图片: {error_detail or ''}".strip(),
+                        error=f"OpenAI Image API returned no image: {error_detail or ''}".strip(),
                         generation_time=time.time() - start_time,
                     )
             elif self.provider == "newapi":
@@ -8110,7 +8110,7 @@ class NanoBananaGridGenerator:
                 if not image_bytes:
                     return GridGenerationResult(
                         success=False,
-                        error=f"DramaClawAPI Images 未返回图片: {error_detail or ''}".strip(),
+                        error=f"DramaClawAPI Images returned no image: {error_detail or ''}".strip(),
                         generation_time=time.time() - start_time,
                     )
             else:
@@ -8140,7 +8140,7 @@ class NanoBananaGridGenerator:
             if not image_bytes:
                 return GridGenerationResult(
                     success=False,
-                    error="API 未返回图片",
+                    error="API returned no image",
                     generation_time=time.time() - start_time,
                 )
 
@@ -8163,7 +8163,7 @@ class NanoBananaGridGenerator:
                     with open(output_path, "rb") as f:
                         image_bytes = f.read()
                 except Exception as e:
-                    print(f"[ActionGrid] Gap removal 失败，保留原图: {e}")
+                    print(f"[ActionGrid] Gap removal failed, keeping the original image: {e}")
 
             generation_time = time.time() - start_time
             print(f"[ActionGrid] 生成完成，耗时 {generation_time:.1f}s")
@@ -8273,7 +8273,7 @@ class NanoBananaGridGenerator:
             contents = [prompt, ref_image]
 
             if self.provider == "openrouter":
-                # ===== OpenRouter 分支 =====
+                # ===== OpenRouter branch =====
                 print(f"[Reformat] 调用 OpenRouter ({self.model}) 转换 → {target_aspect} ...")
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(contents)
                 image_bytes, _or_text, _or_error = await _call_openrouter_image_api(
@@ -8291,9 +8291,9 @@ class NanoBananaGridGenerator:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            f"[Reformat] OpenRouter API 未返回图像数据: {_or_error}"
+                            f"[Reformat] OpenRouter API returned no image data: {_or_error}"
                             if _or_error
-                            else "[Reformat] OpenRouter API 未返回图像数据"
+                            else "[Reformat] OpenRouter API returned no image data"
                         ),
                         generation_time=time.time() - start_time,
                     )
@@ -8311,14 +8311,14 @@ class NanoBananaGridGenerator:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            f"[Reformat] HuiMeng Images 未返回图像数据: {huimeng_error}"
+                            f"[Reformat] HuiMeng Images returned no image data: {huimeng_error}"
                             if huimeng_error
-                            else "[Reformat] HuiMeng Images 未返回图像数据"
+                            else "[Reformat] HuiMeng Images returned no image data"
                         ),
                         generation_time=time.time() - start_time,
                     )
             elif self.provider == "openai":
-                # ===== OpenAI Image API 分支 =====
+                # ===== OpenAI Image API branch =====
                 print(f"[Reformat] 调用 OpenAI Image API ({self.model}) 转换 → {target_aspect} ...")
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -8339,9 +8339,9 @@ class NanoBananaGridGenerator:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            f"[Reformat] OpenAI Image API 未返回图像数据: {openai_error}"
+                            f"[Reformat] OpenAI Image API returned no image data: {openai_error}"
                             if openai_error
-                            else "[Reformat] OpenAI Image API 未返回图像数据"
+                            else "[Reformat] OpenAI Image API returned no image data"
                         ),
                         generation_time=time.time() - start_time,
                     )
@@ -8370,14 +8370,14 @@ class NanoBananaGridGenerator:
                     return GridGenerationResult(
                         success=False,
                         error=(
-                            f"[Reformat] DramaClawAPI Images 未返回图像数据: {newapi_error}"
+                            f"[Reformat] DramaClawAPI Images returned no image data: {newapi_error}"
                             if newapi_error
-                            else "[Reformat] DramaClawAPI Images 未返回图像数据"
+                            else "[Reformat] DramaClawAPI Images returned no image data"
                         ),
                         generation_time=time.time() - start_time,
                     )
             else:
-                # ===== Google 直连分支 =====
+                # ===== Google direct branch =====
                 from google import genai
                 from google.genai import types
 
@@ -8407,7 +8407,7 @@ class NanoBananaGridGenerator:
                     config=gen_config,
                 )
 
-                # 提取图像
+                # Extract the image
                 image_bytes = None
                 if not response.candidates or not response.candidates[0].content:
                     return GridGenerationResult(
@@ -8424,7 +8424,7 @@ class NanoBananaGridGenerator:
                 if not image_bytes:
                     return GridGenerationResult(
                         success=False,
-                        error="[Reformat] API 未返回图像数据",
+                        error="[Reformat] API returned no image data",
                         generation_time=time.time() - start_time,
                     )
 
@@ -8437,7 +8437,7 @@ class NanoBananaGridGenerator:
                     f.write(image_bytes)
 
             generation_time = time.time() - start_time
-            print(f"[Reformat] 完成 → {output_path}，耗时 {generation_time:.1f}s")
+            print(f"[Reformat] done -> {output_path}，耗时 {generation_time:.1f}s")
 
             return GridGenerationResult(
                 success=True,
@@ -8869,7 +8869,7 @@ class NanoBananaGridGenerator:
                 )
                 continue
 
-            # 提取图像
+            # Extract the image
             image_bytes = None
             if (
                 response.response
@@ -8885,12 +8885,12 @@ class NanoBananaGridGenerator:
                 results.append(
                     GridGenerationResult(
                         success=False,
-                        error=f"Batch 响应 {i} 未返回图像数据",
+                        error=f"Batch 响应 {i} returned no image data",
                     )
                 )
                 continue
 
-            # 保存文件
+            # Save the file
             if output_path:
                 output_dir = os.path.dirname(output_path)
                 if output_dir:
@@ -9052,7 +9052,7 @@ class NanoBananaGridGenerator:
             start_idx = processed_beats + 1
             end_idx = processed_beats + actual_beat_count
 
-            # 角色过滤交给 generate_grid 内部完成，避免批量阶段重复解析引用。
+            # Character filtering is left to generate_grid internally, to avoid批量阶段重复解析引用。
             batch_character_map = character_map
             print(
                 f"[NanoBananaPro Batch] 网格 {batch_idx + 1} 候选角色: "
@@ -9066,7 +9066,7 @@ class NanoBananaGridGenerator:
                     f"[NanoBananaPro Batch] 警告: 网格 {batch_idx + 1} beat 数量不匹配 ({len(batch_beats)} vs {batch_capacity})"
                 )
 
-            # 生成网格图路径
+            # generate grid image路径
             output_path = None
             if output_dir:
                 output_path = str(Path(output_dir) / f"grid_{batch_idx + 1:02d}.png")
@@ -9215,7 +9215,7 @@ class NanoBananaGridGenerator:
                 f"网格: {target_batch_rows}x{target_batch_cols})"
             )
 
-        # 角色过滤交给 generate_grid 内部完成，避免重生阶段重复解析引用。
+        # Character filtering is left to generate_grid internally, to avoid重生阶段重复解析引用。
         batch_character_map = character_map
         print(
             f"[NanoBananaPro Regen] 网格 {grid_index + 1} 候选角色: "
@@ -9229,7 +9229,7 @@ class NanoBananaGridGenerator:
                 f"({len(target_batch_beats)} vs {batch_capacity})"
             )
 
-        # 生成网格图路径
+        # generate grid image路径
         output_path = None
         if output_dir:
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -9299,7 +9299,7 @@ class NanoBananaGridGenerator:
             }:
                 compress_quality = 0
 
-            # 加载图片
+            # Load the image
             img = Image.open(image_path)
             original_size = os.path.getsize(image_path)
             original_dimensions = img.size
@@ -9319,13 +9319,13 @@ class NanoBananaGridGenerator:
                         f"{new_size[0]}x{new_size[1]}"
                     )
 
-            # 压缩为 JPEG（如果启用）
+            # Compress to JPEG (if enabled)
             if compress_quality and compress_quality > 0:
-                # 转为 RGB（JPEG 不支持 alpha）
+                # Convert to RGB (JPEG does not support alpha)
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
 
-                # 压缩到内存
+                # Compress into memory
                 buffer = io.BytesIO()
                 img.save(buffer, format="JPEG", quality=compress_quality, optimize=True)
                 image_data = buffer.getvalue()
@@ -9345,7 +9345,7 @@ class NanoBananaGridGenerator:
                     image_data = buffer.getvalue()
                     mime_type = "image/png"
                 else:
-                    # 不压缩，直接读取原文件
+                    # No compression; read the original file directly
                     with open(image_path, "rb") as f:
                         image_data = f.read()
 
@@ -9739,7 +9739,7 @@ SCENE: {scene_desc}
 STYLE: {style}. {style_finish}
 CRITICAL: Keep exact composition from sketch. Only add color, texture, and lighting."""
 
-            # 输出路径
+            # Output path
             panel_output_path = os.path.join(temp_dir, f"render_panel_{panel_idx}.png")
 
             print(
@@ -9840,7 +9840,7 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
 
         try:
             if self.provider == "openrouter":
-                # ===== OpenRouter 分支 =====
+                # ===== OpenRouter branch =====
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(contents)
                 image_bytes, _, _ = await _call_openrouter_image_api(
                     api_key=self.api_key,
@@ -9873,7 +9873,7 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
                     print(f"[HuiMeng Render] 失败: {error_detail}")
                 return None
             elif self.provider == "openai":
-                # ===== OpenAI Image API 分支 =====
+                # ===== OpenAI Image API branch =====
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
                     include_mime=True,
@@ -9946,7 +9946,7 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
                         f.write(image_bytes)
                     return output_path
                 if error_detail:
-                    print(f"[Render] Gemini WebAI 失败详情: {error_detail}")
+                    print(f"[Render] Gemini WebAI failure details: {error_detail}")
                 return None
             elif self.provider == "qwen":
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
@@ -9973,7 +9973,7 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
                         f.write(image_bytes)
                     return output_path
                 if error_detail:
-                    print(f"[Render] Qwen Image 失败详情: {error_detail}")
+                    print(f"[Render] Qwen Image failure details: {error_detail}")
                 return None
             elif self.provider == "runpod_qwen":
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
@@ -10000,10 +10000,10 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
                         f.write(image_bytes)
                     return output_path
                 if error_detail:
-                    print(f"[Render] RunPod Qwen Image 失败详情: {error_detail}")
+                    print(f"[Render] RunPod Qwen Image failure details: {error_detail}")
                 return None
             else:
-                # ===== Google 直连分支 =====
+                # ===== Google direct branch =====
                 from google import genai
                 from google.genai import types
 
@@ -10022,7 +10022,7 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
                 )
 
                 if response.candidates:
-                    # 提取图像
+                    # Extract the image
                     for part in response.candidates[0].content.parts:
                         if part.inline_data:
                             image_bytes = base64.b64decode(part.inline_data.data)
@@ -10060,11 +10060,11 @@ CRITICAL: Keep exact composition from sketch. Only add color, texture, and light
         """
         from PIL import Image
 
-        # 使用全局默认风格
+        # Use the global default style
         if style is None:
             style = IMAGE_DEFAULT_STYLE
 
-        # 获取风格预设
+        # Get the style preset
         style_preset = get_style_preset(
             style, project_dir=str(_infer_project_dir(output_path, input_path) or "")
         )
@@ -10096,7 +10096,7 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
             print(f"[NanoBananaPro Upscale] 处理: {input_path}")
 
             if self.provider == "openrouter":
-                # ===== OpenRouter 分支 =====
+                # ===== OpenRouter branch =====
                 # 提取参考图 bytes
                 ref_bytes = []
                 if hasattr(ref_image, "inline_data") and ref_image.inline_data:
@@ -10110,9 +10110,9 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                 )
                 if not image_bytes:
                     raise ValueError(
-                        f"OpenRouter API 未返回图像数据: {or_error}"
+                        f"OpenRouter API returned no image data: {or_error}"
                         if or_error
-                        else "OpenRouter API 未返回图像数据"
+                        else "OpenRouter API returned no image data"
                     )
 
                 # 保存为临时文件并缩放
@@ -10138,9 +10138,9 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                 )
                 if not image_bytes:
                     raise ValueError(
-                        f"HuiMeng Images 未返回图像数据: {huimeng_error}"
+                        f"HuiMeng Images returned no image data: {huimeng_error}"
                         if huimeng_error
-                        else "HuiMeng Images 未返回图像数据"
+                        else "HuiMeng Images returned no image data"
                     )
 
                 temp_path = output_path + ".tmp.png"
@@ -10174,9 +10174,9 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                 )
                 if not image_bytes:
                     raise ValueError(
-                        f"OpenAI Image API 未返回图像数据: {openai_error}"
+                        f"OpenAI Image API returned no image data: {openai_error}"
                         if openai_error
-                        else "OpenAI Image API 未返回图像数据"
+                        else "OpenAI Image API returned no image data"
                     )
 
                 temp_path = output_path + ".tmp.png"
@@ -10215,9 +10215,9 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                 )
                 if not image_bytes and not image_delivery_state.get("copied"):
                     raise ValueError(
-                        f"DramaClawAPI Images 未返回图像数据: {newapi_error}"
+                        f"DramaClawAPI Images returned no image data: {newapi_error}"
                         if newapi_error
-                        else "DramaClawAPI Images 未返回图像数据"
+                        else "DramaClawAPI Images returned no image data"
                     )
 
                 temp_path = output_path + ".tmp.png"
@@ -10231,13 +10231,13 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                 print(f"[NanoBananaPro Upscale] 完成: {output_path}")
                 return Path(output_path)
             else:
-                # ===== Google 直连分支 =====
+                # ===== Google direct branch =====
                 from google import genai
                 from google.genai import types
 
                 client = genai.Client(api_key=self.api_key)
 
-                # gemini-3 支持 image_size，gemini-2.5 不支持
+                # gemini-3 supports image_size; gemini-2.5 does not
                 is_gemini3 = "gemini-3" in self.model
                 if is_gemini3:
                     image_config = types.ImageConfig(
@@ -10259,7 +10259,7 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                     ),
                 )
 
-                # 提取图像
+                # Extract the image
                 for part in response.candidates[0].content.parts:
                     if hasattr(part, "inline_data") and part.inline_data:
                         # 保存为临时文件
@@ -10278,7 +10278,7 @@ CRITICAL: The output must look like a higher-resolution vertical crop/extension 
                         print(f"[NanoBananaPro Upscale] 完成: {output_path}")
                         return Path(output_path)
 
-                raise ValueError("API 未返回图像数据")
+                raise ValueError("API returned no image data")
 
         except Exception as e:
             print(f"[NanoBananaPro Upscale] 失败: {e}")
@@ -10341,7 +10341,7 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                             print(f"[StylePreview] 添加参考图: {ref_path}")
 
             if self.provider == "openrouter":
-                # ===== OpenRouter 分支 =====
+                # ===== OpenRouter branch =====
                 print(f"[StylePreview] 调用 OpenRouter ({self.model}) 生成预览图...")
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(contents)
                 image_bytes, _, _ = await _call_openrouter_image_api(
@@ -10362,9 +10362,9 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                     image_config={"aspect_ratio": "9:16", "image_size": "1K"},
                 )
                 if not image_bytes and error_detail:
-                    print(f"[StylePreview] HuiMeng 失败详情: {error_detail}")
+                    print(f"[StylePreview] HuiMeng failure details: {error_detail}")
             elif self.provider == "openai":
-                # ===== OpenAI Image API 分支 =====
+                # ===== OpenAI Image API branch =====
                 print(f"[StylePreview] 调用 OpenAI Image API ({self.model}) 生成预览图...")
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
                     contents,
@@ -10382,7 +10382,7 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                     },
                 )
                 if not image_bytes and error_detail:
-                    print(f"[StylePreview] OpenAI 失败详情: {error_detail}")
+                    print(f"[StylePreview] OpenAI failure details: {error_detail}")
             elif self.provider == "newapi":
                 print(f"[StylePreview] 调用 DramaClawAPI Images ({self.model}) 生成预览图...")
                 prompt_text, ref_bytes = self._extract_ref_bytes_from_contents(
@@ -10405,9 +10405,9 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                     delivery_state=(image_delivery_state := {}),
                 )
                 if not image_bytes and error_detail:
-                    print(f"[StylePreview] DramaClawAPI 失败详情: {error_detail}")
+                    print(f"[StylePreview] DramaClawAPI failure details: {error_detail}")
             else:
-                # ===== Google 直连分支 =====
+                # ===== Google direct branch =====
                 from google import genai
                 from google.genai import types
 
@@ -10437,7 +10437,7 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                     ),
                 )
 
-                # 提取图像数据
+                # Extract the image data
                 image_bytes = None
                 if response.candidates and response.candidates[0].content:
                     for part in response.candidates[0].content.parts:
@@ -10446,9 +10446,9 @@ OUTPUT: Single high-quality image, no watermarks, no text overlays.
                             break
 
             if not image_bytes:
-                raise ValueError("API 未返回图像数据")
+                raise ValueError("API returned no image data")
 
-            # 保存文件（如果指定了输出路径）
+            # Save the file（如果指定了输出路径）
             if output_path:
                 output_dir = os.path.dirname(output_path)
                 if output_dir:
@@ -10606,7 +10606,7 @@ async def regenerate_selected_beats(
         grid_beats = selected_beats[beat_offset : beat_offset + grid_beat_count]
         beat_offset += grid_beat_count
 
-        # 输出路径
+        # Output path
         output_path = str(
             Path(output_dir) / f"regen_{mode_key}_g{grid_idx:02d}_{regen_id}.png"
         )

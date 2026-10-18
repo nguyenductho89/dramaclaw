@@ -136,7 +136,7 @@ import {
 } from "@/features/canvas/nodes/VideoNode";
 
 
-// 「放大」后用居中弹窗展示，给提示词编辑更舒适的空间。
+// After "enlarge", shown in a centered dialog, giving more comfortable room for prompt editing.
 const OPERATIONS_PANEL_EXPANDED_HEIGHT = 560;
 const OPERATIONS_PANEL_EXPANDED_WIDTH = 1040;
 
@@ -151,7 +151,7 @@ const MODE_TABS: ReadonlyArray<{ key: VideoGenMode; labelKey: string }> = [
   { key: "videoExtend", labelKey: "node.videoNode.tabs.videoExtend" },
 ];
 
-// HappyHorse 的入口顺序：文生视频 → 首帧 → 图生视频 → 图片参考 → 视频编辑。
+// HappyHorse entry order: text-to-video → first frame → image-to-video → image reference → video edit.
 const HAPPYHORSE_TAB_ORDER: ReadonlyArray<VideoGenMode> = [
   "textToVideo",
   "firstFrame",
@@ -176,14 +176,14 @@ const VIDEO_COUNT_OPTION_BASE_CLASS =
   "block w-full rounded-[6px] px-3 py-1.5 text-left text-xs transition-colors";
 const VIDEO_MODE_POPOVER_CLASS =
   `nodrag nowheel fixed z-[10000] w-[132px] overflow-visible p-1 ${NODE_FLOATING_PANEL_SURFACE_CLASS}`;
-// 禁用模式的 hover 提示气泡：悬浮在菜单右侧，深色圆角小胶囊，与设计稿一致。
+// Hover hint bubble for disabled modes: floats to the right of the menu, a dark rounded capsule, consistent with the design.
 const VIDEO_MODE_TOOLTIP_CLASS =
   "pointer-events-none absolute left-full top-1/2 z-[10001] ml-2 -translate-y-1/2 " +
   "whitespace-nowrap rounded-md bg-[#1f1f22] px-2.5 py-1.5 text-[11px] font-medium " +
   "text-white/90 shadow-lg ring-1 ring-white/10";
 
-// 音频引用 chip 的展示文件名：优先节点的 displayName，否则从 audioUrl 取末段文件名。
-// 仅用于前端展示（音频_<文件名>），不影响序列化给后端的 @音频N。
+// Display file name of an audio reference chip: prefer the node's displayName, otherwise take the last file-name segment from audioUrl.
+// For frontend display only (audio_<file name>); does not affect the @audio1 serialized to the backend.
 function audioReferenceFileName(item: {
   displayName?: string | null;
   audioUrl: string;
@@ -232,7 +232,7 @@ interface VideoOperationsPanelProps {
   count: VideoGenCount;
   prompt: string;
   isGenerating: boolean;
-  /** 估价用的后端模型 ID；模型目录加载中 / fallback 时为 null（暂不发估价请求）。 */
+  /** Backend model ID used for estimation; null while the model catalog is loading / on fallback (no estimate request is sent for now). */
   videoBackendForCost: string | null;
   videoInputPresent: boolean;
   videoInputBillingReady: boolean;
@@ -288,7 +288,7 @@ export function VideoOperationsPanel({
   onSubmit,
 }: VideoOperationsPanelProps) {
     const { t } = useTranslation();
-    // 能力守卫返回的是 i18n key（见 videoModelCapabilities.ts），选择器要的是文案。
+    // The capability guard returns an i18n key (see videoModelCapabilities.ts), while the selector wants copy.
     const translateDisabledReason = (key: string | null) => (key ? t(key) : null);
     // `submitDisabled` already carries the org admission block from VideoNode;
     // this is only for the button's title, so a blocked member is told why.
@@ -298,8 +298,8 @@ export function VideoOperationsPanel({
     const addNode = useCanvasStore((state) => state.addNode);
     const addEdge = useCanvasStore((state) => state.addEdge);
     const deleteEdge = useCanvasStore((state) => state.deleteEdge);
-    // 与 inputRef 分开:那个是「替换本节点自身的视频」(单选、只收视频),
-    // 这个是「添加上游外部素材」(多选、收图片/视频/音频)。
+    // Separate from inputRef: that one is "replace this node's own video" (single select, video only),
+    // this one is "add upstream external assets" (multi-select, image/video/audio).
     const externalAssetInputRef = useRef<HTMLInputElement>(null);
     const referenceFileInputRef = useRef<HTMLInputElement>(null);
     const toolbarContentRef = useRef<HTMLDivElement>(null);
@@ -308,7 +308,7 @@ export function VideoOperationsPanel({
     const [referencePanelWidth, setReferencePanelWidth] = useState<number | null>(null);
     const [isTranslatingPrompt, setIsTranslatingPrompt] = useState(false);
     const [isCharacterLibraryOpen, setIsCharacterLibraryOpen] = useState(false);
-    // Local draft + composition guard so IME (中文输入法) candidates stop being
+    // Local draft + composition guard so IME (input method) candidates stop being
     // wiped by the store-driven re-render. Same fix pattern as
     // `docs/changes/2026-05-12-image-gen-ime-fix.md`.
     const [promptDraft, setPromptDraft] = useState(prompt);
@@ -372,9 +372,9 @@ export function VideoOperationsPanel({
         ...(value ? { referenceFileUrl: null, referenceFileName: null } : {}),
       });
     }, [id, referenceLinkDraft, updateNodeData]);
-    // 卸载前的 IME 合成兜底：合成进行中取消选中会直接卸载本面板，
-    // onCompositionEnd 再也没有机会触发，最新草稿只存在于本地 state。
-    // 用 ref 镜像 draft，卸载 cleanup 里发现仍在合成就把它落回 data.prompt。
+    // IME composition fallback before unmount: deselecting while composing is in progress unmounts this panel directly,
+    // onCompositionEnd never gets a chance to fire, and the latest draft exists only in local state.
+    // Mirror the draft with a ref; if cleanup on unmount finds composition still in progress, it lands the draft back in data.prompt.
     const promptDraftRef = useRef(promptDraft);
     promptDraftRef.current = promptDraft;
     useEffect(
@@ -385,10 +385,10 @@ export function VideoOperationsPanel({
       },
       [id, updateNodeData],
     );
-    // 「上下文调色盘」：与图生节点同款，把镜头里人物/道具的标记颜色快速插进提示词。
-    // palette 的全量 nodes/edges 订阅下沉到 NodeContextPromptPaletteButton，避免本节点
-    // 为它订阅整图、被任意节点拖动牵连重渲染。插入直接走编辑器命令式 API：弹层与编辑器
-    // 同在面板里、编辑器恒已挂载，故回调无需依赖 prompt（保持稳定引用）。
+    // "Context palette": same as the image-generation node, quickly inserting the marker colors of characters/props in the shot into the prompt.
+    // The palette's full nodes/edges subscription moves down into NodeContextPromptPaletteButton, so this node does not
+    // subscribe to the whole graph for it and get dragged into re-renders by any node drag. Insertion goes straight through the editor's imperative API: the popover and editor
+    // are both in the panel and the editor is always mounted, so the callback need not depend on prompt (keeping a stable reference).
     const insertContextPaletteEntry = useCallback(
       (entry: ContextPromptPaletteEntry) => {
         promptEditorRef.current?.insertTextAtCursor(
@@ -456,10 +456,10 @@ export function VideoOperationsPanel({
       (videoBillingRuleMissing
         ? t("common.billingRuleNotConfiguredShort")
         : null);
-    // 给每个 referenceMedia 条目补上「同类型序号 + 是否在当前模式上限内」。
-    // 当前 genMode 在 REFERENCE_CAPS_BY_MODE 里没有条目（如 textToVideo /
-    // imageToVideo / imageReference），统一按 within=true 处理；下游 chip /
-    // mention 候选会决定是否消费 within。
+    // Add "same-type index + whether within the current mode's cap" to each referenceMedia entry.
+    // When the current genMode has no entry in REFERENCE_CAPS_BY_MODE (such as textToVideo /
+    // imageToVideo / imageReference), everything is treated as within=true; the downstream chip /
+    // mention candidates decide whether to consume within.
     const referenceMediaCapInfo = useMemo(() => {
       const counts = { image: 0, video: 0, audio: 0 };
       return referenceMedia.map((item) => {
@@ -470,15 +470,15 @@ export function VideoOperationsPanel({
       });
     }, [referenceCaps, referenceMedia]);
 
-    // @ 提及候选 —— 图片、音频都可引用，但编号按 *各自类型* 的序号走，
-    // *不* 按行内混合位置。后端按上传的图片数量来对应 图片N，若用混合位置编号
-    // （音频排第一时图片就成了「图片2」），后端只看到 1 张图却被要求引用图片2
-    // 会报错。所以图片用图片序号、音频用音频序号，各自独立计数。
+    // @ mention candidates — images and audio can both be referenced, but the numbering follows *each type's own* index,
+    // *not* the mixed position in the row. The backend maps imageN by the number of uploaded images; if mixed positions were used for numbering
+    // (with audio first the image would become "image2"), the backend sees only 1 image yet is asked to reference image2
+    // and errors. So images use the image index and audio uses the audio index, each counted independently.
     //
-    // 在 REFERENCE_CAPS_BY_MODE 表里有条目的模式，超过 cap 的条目不能进
-    // @ 候选 —— 服务端会直接丢弃，留在候选里只会让用户选了之后被静默忽略。
-    // i18n-exempt-start —— 「图片N / 视频N / 音频N」是写进提示词、由后端解析
-    // 的引用 token，翻译掉后端就对不上了。
+    // For modes with an entry in the REFERENCE_CAPS_BY_MODE table, entries beyond the cap must not enter the
+    // @ candidates — the server drops them outright, and leaving them in the candidates would only get what the user picked silently ignored.
+    // "image1 / video1 / audio1" are reference tokens written into the prompt and parsed by the backend;
+    // translating them would make them stop matching the backend.
     const mentionCandidates = useMemo<MentionCandidate[]>(() => {
       const out: MentionCandidate[] = [];
       let imageIdx = 0;
@@ -492,7 +492,7 @@ export function VideoOperationsPanel({
           if (enforceCap && !info.withinCap) continue;
           out.push({
             key: item.nodeId,
-            name: `图片${imageIdx}`,
+            name: `image${imageIdx}`,
             imageUrl: resolveImageDisplayUrl(item.imageUrl),
             index: imageIdx,
           });
@@ -501,7 +501,7 @@ export function VideoOperationsPanel({
           if (enforceCap && !info.withinCap) continue;
           out.push({
             key: item.nodeId,
-            name: `视频${videoIdx}`,
+            name: `video${videoIdx}`,
             imageUrl: item.thumbUrl ? resolveImageDisplayUrl(item.thumbUrl) : "",
             videoUrl: resolveImageDisplayUrl(item.videoUrl),
             index: videoIdx,
@@ -511,7 +511,7 @@ export function VideoOperationsPanel({
           if (enforceCap && !info.withinCap) continue;
           out.push({
             key: item.nodeId,
-            name: `音频${audioIdx}`,
+            name: `audio${audioIdx}`,
             imageUrl: "",
             index: audioIdx,
             audioUrl: resolveImageDisplayUrl(item.audioUrl),
@@ -523,8 +523,8 @@ export function VideoOperationsPanel({
     }, [referenceCaps, referenceMediaCapInfo]);
     // i18n-exempt-end
 
-    // 取消关联某个上游素材：删掉「该上游节点 → 本节点」的连线。collectInputContents
-    // 只走一跳，item.nodeId 就是直接相连的上游节点，可精确定位要删的边。
+    // Detach an upstream asset: delete the edge "that upstream node → this node". collectInputContents
+    // walks only one hop, so item.nodeId is the directly connected upstream node, and the edge to delete can be located precisely.
     const handleDetachUpstream = useCallback(
       (sourceNodeId: string) => {
         useCanvasStore
@@ -535,8 +535,8 @@ export function VideoOperationsPanel({
       [id, deleteEdge],
     );
 
-    // 引用缩略图右下角的 @ 按钮：把这条引用按它当前的编号插进提示词。编号是
-    // mentionCandidates 算好的（图片 / 视频 / 音频各自计数），用户不必自己数。
+    // The @ button at the lower right of a reference thumbnail: insert this reference into the prompt by its current number. The number is
+    // computed by mentionCandidates (images / videos / audio each counted separately), so the user need not count.
     const mentionNameByNodeId = useMemo(() => {
       const map = new Map<string, string>();
       for (const candidate of mentionCandidates) map.set(candidate.key, candidate.name);
@@ -550,7 +550,7 @@ export function VideoOperationsPanel({
       },
       [mentionCandidates],
     );
-    // 双击引用 → 视口跳到那个上游节点，并在底部留下「返回节点」。
+    // Double-click a reference → the viewport jumps to that upstream node and leaves a "Back to node" at the bottom.
     const handleJumpToReference = useCallback(
       (nodeId: string) => {
         focusReferenceNode(nodeId, id);
@@ -558,12 +558,12 @@ export function VideoOperationsPanel({
       [id],
     );
 
-    // 替换选单的「素材引用」段：画布上还没连过来的素材。已引用的排除掉——它们
-    // 已经在上面那段里了，同一条出现两次只会让人以为是两个东西。按**边**排除，
-    // 连着但还没出内容的上游节点也算已引用（否则选中它只是对同一条边再建一次）。
+    // The "asset references" section of the replace menu: assets on the canvas not yet connected. Already referenced ones are excluded — they
+    // are already in the section above, and the same one appearing twice would only make people think they are two things. Excluded by **edge**:
+    // an upstream node that is connected but has no content yet also counts as referenced (otherwise selecting it would just create a second edge for the same one).
     //
-    // 打开选单时才算：这份清单要扫全画布，常驻订阅的话画布上拖任何一个节点都会
-    // 让这个面板每帧重算一遍。
+    // Computed only when the menu opens: this list scans the whole canvas, and with a resident subscription dragging any node on the canvas would
+    // make this panel recompute every frame.
     const getMentionMaterials = useCallback(() => {
       const store = useCanvasStore.getState();
       const attached = new Set(
@@ -571,9 +571,9 @@ export function VideoOperationsPanel({
       );
       return collectReferenceMaterials(store.nodes, id, CANVAS_NODE_TYPES.video, attached, t);
     }, [id, t]);
-    // 选中一条画布素材：连成上游即可——引用行、@ 候选编号都由上游推导链路跟上，
-    // 编辑器那边等它出现在候选里再把 @ 换过去。被拒（素材上限）时
-    // attachReferenceEdge 已经弹过原因，这里把结果回给编辑器，让它别空等。
+    // Selecting a canvas asset: just connect it as upstream — the reference row and @ candidate numbering are followed by the upstream derivation chain,
+    // and the editor swaps the @ over once it appears in the candidates. When rejected (asset limit)
+    // attachReferenceEdge has already shown the reason; here the result is returned to the editor so it does not wait in vain.
     const handleAttachMaterial = useCallback(
       (sourceNodeId: string) => attachReferenceEdge(sourceNodeId, id),
       [id],
@@ -619,9 +619,9 @@ export function VideoOperationsPanel({
               { audioUrl: sel.url, displayName },
             );
           } else if (sel.media === "video") {
-            // 资产库视频作为「上游视频引用素材」：建 referenceOnly 的 video 节点，
-            // 它能播放视频本体、被 isVideoNode 识别、下游自动切 videoEdit。之前建的是
-            // 只渲染图片的 upload 节点——即便塞了 videoUrl 也不显示、也不被识别成视频。
+            // A library video as an "upstream video reference asset": create a referenceOnly video node,
+            // which can play the video itself, is recognized by isVideoNode, and downstream auto-switches to videoEdit. It used to create an
+            // upload node that renders only images — even with videoUrl stuffed in, it neither displayed nor was recognized as video.
             newId = addNode(
               CANVAS_NODE_TYPES.video,
               { x: baseX, y },
@@ -656,29 +656,29 @@ export function VideoOperationsPanel({
     const handleExternalAssetFiles = useCallback(
       (event: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files ?? []);
-        // 先清空,好让用户能连续两次选同一个文件(否则 change 不触发)。
+        // Clear first so the user can pick the same file twice in a row (otherwise change does not fire).
         event.target.value = "";
         if (files.length === 0) return;
         const state = useCanvasStore.getState();
         const self = state.nodes.find((n) => n.id === id);
-        // 节点可能在文件选择器打开期间被删掉了。
+        // The node may have been deleted while the file picker was open.
         if (!self) return;
         spawnExternalAssetNodes(
           {
             id,
             position: self.position,
-            // measured 优先、再退 data.height —— 对齐 store duplicateNodeAsSibling
-            // (canvasStore.ts:1600)的口径 measured?.height ?? height ?? fallback。
-            // 只读 data.height 会漏掉「已重新测量但没写死 height」的常见节点,把整列
-            // 排偏(节点实高 280、却按 fallback 380 居中,下移约 50px)。spawn 侧对
-            // undefined/0 仍兜底成 380。
+            // measured first, then fall back to data.height — aligned with the store's duplicateNodeAsSibling
+            // (canvasStore.ts:1600) basis measured?.height ?? height ?? fallback.
+            // Reading only data.height would miss the common nodes that "have been re-measured but have no hard-coded height" and push the whole column
+            // off (node actual height 280, but centered by the fallback 380, shifting down about 50px). The spawn side still falls back to
+            // 380 for undefined/0.
             height: self.measured?.height ?? self.height ?? undefined,
           },
           files,
           {
             addNode,
             addEdge,
-            // canvasEventBus.publish 是原型方法、用到 this,不能裸传。
+            // canvasEventBus.publish is a prototype method that uses this, so it cannot be passed bare.
             publish: (type, payload) => canvasEventBus.publish(type, payload),
             autoGroupSpawn: (sourceId, spawnedIds, opts) =>
               state.autoGroupSpawn(sourceId, spawnedIds, opts),
@@ -720,7 +720,7 @@ export function VideoOperationsPanel({
       }
     }, [id, isGenerating, isTranslatingPrompt, prompt, updateNodeData]);
 
-    // 收起态浮动面板固定基础尺寸；放大用居中弹窗（见下方 OperationPanelShell）。
+    // The collapsed floating panel has a fixed base size; enlarge uses a centered dialog (see OperationPanelShell below).
     const panelHeight = OPERATIONS_PANEL_HEIGHT;
     const panelOverhang = OPERATIONS_PANEL_OVERHANG;
     const showReferenceDocumentControls =
@@ -811,8 +811,8 @@ export function VideoOperationsPanel({
                     value={genMode}
                     modelId={selectedVideoModel?.apiModel ?? selectedVideoModel?.id ?? modelId}
                     supportedModes={selectedVideoModel?.supportedModes}
-                    // HappyHorse 的可选模式由上游节点类型（含未填图的空节点）决定，
-                    // 其余模型仍按已解析素材 URL 计数。
+                    // HappyHorse's selectable modes are decided by the upstream node type (including empty nodes with no image filled),
+                    // while other models still count by resolved asset URLs.
                     upstreamCounts={
                       isHappyHorseModel ? upstreamTypeCounts : upstreamCounts
                     }
@@ -906,7 +906,7 @@ export function VideoOperationsPanel({
                 </div>
               </div>
 
-              {/* 引用素材单独占一行：顶排功能 chip 已经排满，素材再挤进去会顶掉输入区。 */}
+              {/* Reference assets get their own row: the top row of feature chips is already full, and squeezing assets in would push out the input area. */}
               {(upstreamTextContents.length > 0 || referenceMedia.length > 0) && (
                 <div className="nowheel flex shrink-0 items-center gap-3 overflow-x-auto px-3 pb-2">
                   {upstreamTextContents.map((content) => (
@@ -974,10 +974,10 @@ export function VideoOperationsPanel({
                       const nextModel = availableVideoModels.find(
                         (item) => item.id === nextModelId,
                       );
-                      // 切换模型后，若当前 genMode 不被新模型支持（如 HappyHorse
-                      // 专属的 videoEdit 切到普通模型），重置为通用安全值 textToVideo，
-                      // 让状态机按新模型 + 上游重新推导；否则残留模式会在提交时打到
-                      // 不支持的端点被后端 400（界面还停在错误的 tab）。
+                      // After switching models, if the current genMode is not supported by the new model (such as HappyHorse-only
+                      // videoEdit switching to a regular model), reset to the generic safe value textToVideo,
+                      // letting the state machine re-derive by the new model + upstream; otherwise a leftover mode would hit
+                      // an unsupported endpoint on submit and be rejected with a backend 400 (while the UI is still on the wrong tab).
                       const resetGenMode =
                         data.genMode != null &&
                         !isVideoModeSupportedByModel(
@@ -992,22 +992,22 @@ export function VideoOperationsPanel({
                           ? { genMode: "textToVideo" as VideoGenMode }
                           : {}),
                       });
-                      // 记住这次选择，后续新建的视频节点将继承它。
+                      // Remember this choice; video nodes created later will inherit it.
                       writeLastVideoModel(nextModelId);
                     }}
                     domain="video"
                     popoverPlacement="top"
                     getOptionDisabledReason={(model) =>
-                      // 传整个 ModelOption,不要塌成 id —— 能力口径以后台「媒体模型」
-                      // 声明的 supportedModes 为准,只传 id 会退到启发式,把目录里的
-                      // 改动整个丢掉(例如后台下掉 HappyHorse 的视频编辑后,它在这里
-                      // 依然可选,选进去所有模式都是灰的、提交也被拦)。与 VideoNode
-                      // 的提交守卫同源。
+                      // Pass the whole ModelOption, do not collapse it to an id — the capability basis is the supportedModes
+                      // declared by the admin "Media models"; passing only an id falls back to heuristics and discards the catalog's
+                      // changes entirely (for example, after the admin takes down HappyHorse's video edit, it is
+                      // still selectable here, and once selected every mode is gray and submit is blocked too). Same source as VideoNode's
+                      // submit guard.
                       translateDisabledReason(videoModelReferenceDisabledReason(model, {
                         images: upstreamCounts.images,
-                        // 视频 / 音频必须和自动切模型的 effect 同一口径（按节点类型，
-                        // 空节点也算）。若这里用「已解析 URL」口径，连着空视频节点时
-                        // 1.x 不置灰、用户能选回去，又被 effect 立刻切走，来回打架。
+                        // Video / audio must use the same basis as the auto model-switch effect (by node type,
+                        // empty nodes count too). If the "resolved URL" basis were used here, with an empty video node connected
+                        // 1.x would not be grayed out and the user could select it back, only to be switched away by the effect at once, fighting back and forth.
                         videos: upstreamTypeCounts.videos,
                         audios: upstreamTypeCounts.audios,
                       }))
@@ -1165,12 +1165,12 @@ export function videoModeDisabledReason(
   t: TFn,
   supportedModes?: string[],
 ): string | null {
-  // HappyHorse 的模式可用性完全由上游节点类型决定（文档 4 大功能）：
-  //   文生视频  — 仅无上游时可用
-  //   首帧/图生视频 — 仅上游正好 1 张图片时可用
-  //   图片参考  — 上游 1~9 张图片时可用
-  //   视频编辑  — 仅上游有 1 个视频时可用
-  // 不可用时返回 hover 文案（提示用户需要连接什么）。
+  // HappyHorse's mode availability is decided entirely by the upstream node type (the 4 major functions in the docs):
+  //   text-to-video       — available only with no upstream
+  //   first frame / image-to-video — available only when there is exactly 1 upstream image
+  //   image reference     — available with 1~9 upstream images
+  //   video edit          — available only with 1 upstream video
+  // When unavailable, return hover copy (telling the user what needs to be connected).
   if (isHappyHorseVideoModel(modelId)) {
     const { images, videos } = upstreamCounts;
     switch (mode) {
@@ -1192,7 +1192,7 @@ export function videoModeDisabledReason(
             : t("node.videoOps.modeDisabled.imageToVideoSingleImageUseRef");
         }
         return null;
-      case "imageReference": // 图片参考 (r2v)
+      case "imageReference": // image reference (r2v)
         if (videos > 0) return t("node.videoOps.modeDisabled.hasVideoNoImageReference");
         if (images === 0) return t("node.videoOps.modeDisabled.needImages1to9");
         if (images > 9) return t("node.videoOps.modeDisabled.imageReferenceMax9");
@@ -1205,8 +1205,8 @@ export function videoModeDisabledReason(
         return t("node.videoOps.modeDisabled.happyHorseUnsupported");
     }
   }
-  // 全能参考、视频编辑和视频延长都会消费上游视频；后两种模式在进入通用素材守卫前
-  // 分别校验自己的输入数量和模型能力。
+  // All reference, video edit and video extend all consume the upstream video; the latter two validate their own input counts and model capability
+  // separately before entering the generic asset guard.
   const model = supportedModes?.length
     ? { apiModel: modelId ?? undefined, supportedModes }
     : modelId;
@@ -1261,19 +1261,19 @@ function GenModeSelect({ value, modelId, supportedModes, upstreamCounts, onChang
     left: number;
     top: number;
   } | null>(null);
-  // HappyHorse 的模式面板把首帧与单图整体参考拆成独立入口。
-  //   - 隐藏「首尾帧」「全能参考」：HappyHorse 无这两种能力，点了只会报错。
-  //   - 首帧与图生视频是两个独立模式：前者锁定第一帧，后者把单图作为整体参考。
-  //   - 上游接入视频后，图片类入口隐藏，只保留「文生视频」(禁用) 与「视频编辑」。
-  // 非 HappyHorse 不暴露「视频编辑」(它是 HappyHorse 专属功能)。
+  // HappyHorse's mode panel splits first frame and single-image overall reference into separate entries.
+  //   - Hide "first-last-frame" and "all reference": HappyHorse has neither capability, and clicking would only error.
+  //   - First frame and image-to-video are two separate modes: the former locks the first frame, the latter uses the single image as an overall reference.
+  //   - Once video is connected upstream, image-type entries are hidden, leaving only "text-to-video" (disabled) and "video edit".
+  // Non-HappyHorse does not expose "video edit" (it is HappyHorse-only).
   const visibleTabs = useMemo(() => {
     if (supportedModes?.length) {
       const configuredModel = { apiModel: modelId ?? undefined, supportedModes };
       return MODE_TABS.filter((tab) => isVideoModeSupportedByModel(tab.key, configuredModel));
     }
     if (!isHappyHorseVideoModel(modelId)) {
-      // 按模型能力过滤，而非「非 HappyHorse 一律给全部」：Seedance 1.x 不支持
-      // 全能参考(400)与真尾帧首尾帧(静默丢尾帧)，这两个 tab 对它不可见。
+      // Filtered by model capability rather than "non-HappyHorse always gets everything": Seedance 1.x does not support
+      // all reference (400) or true-last-frame first-last-frame (last frame silently dropped), so those two tabs are invisible to it.
       return MODE_TABS.filter((tab) => isVideoModeSupportedByModel(tab.key, modelId));
     }
     const order =
@@ -1358,8 +1358,8 @@ function GenModeSelect({ value, modelId, supportedModes, upstreamCounts, onChang
               supportedModes,
             );
             const isDisabled = disabledReason != null && !isActive;
-            // 禁用按钮在多数浏览器里不触发 mouse 事件，hover 提示挂在外层 div 上；
-            // 提示气泡定位到菜单右侧，与设计稿一致。
+            // A disabled button fires no mouse events in most browsers, so the hover hint hangs on the outer div;
+            // the hint bubble is positioned to the right of the menu, consistent with the design.
             return (
               <div
                 key={tab.key}
@@ -1921,30 +1921,30 @@ function CountPicker({ value, onChange }: CountPickerProps) {
 
 interface ReferenceMediaCapEntry {
   item: ReferenceMediaItem;
-  /** 1-based 同类型序号（图片/视频/音频 各自累加），与 chip 角标 + @ 提及对齐。 */
+  /** 1-based same-type index (image/video/audio each accumulate), aligned with the chip badge + @ mention. */
   typeIndex: number;
-  /** 是否在当前模式的引用上限内；表里没有的模式默认 true。 */
+  /** Whether within the current mode's reference cap; modes absent from the table default to true. */
   withinCap: boolean;
 }
 
 interface ReferenceMediaRowProps {
   items: ReadonlyArray<ReferenceMediaCapEntry>;
   caps: { image: number; video: number; audio: number } | null;
-  /** 当前 genMode；用来决定 firstLastFrame 模式下给前两张图片打 首帧/尾帧 角标。 */
+  /** The current genMode; used to decide whether the first two images get first-frame/last-frame badges in firstLastFrame mode. */
   genMode: VideoGenMode;
   /**
-   * nodeId → 这条引用在提示词里的名字（图片1 / 视频2 …）。不在表里的没有 @ 按钮
-   * ——超出当前模式上限的素材本来就进不了 @ 候选，给它一个按钮只会插进一个后端
-   * 会丢掉的编号。
+   * nodeId → this reference's name in the prompt (image1 / video2 …). Ones not in the table get no @ button
+   * — assets beyond the current mode's cap never enter the @ candidates anyway, and giving them a button would only insert a number
+   * the backend would drop.
    */
   mentionNames: ReadonlyMap<string, string>;
   onFocus: (nodeId: string) => void;
-  /** 点右下角 @：把这条引用插进提示词。 */
+  /** The @ at the lower right: insert this reference into the prompt. */
   onMention: (nodeId: string) => void;
-  /** 双击 chip：视口跳到该素材在画布上的位置。 */
+  /** Double-click a chip: the viewport jumps to that asset's position on the canvas. */
   onJump: (nodeId: string) => void;
   onDetach: (nodeId: string) => void;
-  // 拖动 chip 换位后，回传新的「按可视顺序排列的上游节点 id 列表」。
+  // After dragging a chip to reorder, pass back the new "list of upstream node ids in visual order".
   onReorder: (orderedNodeIds: string[]) => void;
 }
 
@@ -1960,12 +1960,12 @@ function ReferenceMediaRow({
   onReorder,
 }: ReferenceMediaRowProps) {
   const { t } = useTranslation();
-  // 同时管理整行音频的「当前播放节点」—— 同一时间只允许一个 audio chip 在
-  // 播放。点击另一个会切换；再点同一个会暂停。
+  // Also manages the "currently playing node" of the whole audio row — only one audio chip may
+  // play at a time. Clicking another switches; clicking the same one again pauses.
   const [playingAudioNodeId, setPlayingAudioNodeId] = useState<string | null>(
     null,
   );
-  // 拖拽换位的临时状态：正在被拖的 chip / 当前悬停落点 chip。
+  // Temporary drag-reorder state: the chip being dragged / the chip currently hovered as the drop target.
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
   const [overNodeId, setOverNodeId] = useState<string | null>(null);
 
@@ -1994,7 +1994,7 @@ function ReferenceMediaRow({
     <div className="flex shrink-0 items-center gap-1.5">
       {items.map((entry) => {
         const { item, typeIndex, withinCap } = entry;
-        // 「超出当前模式上限」只在 REFERENCE_CAPS_BY_MODE 里登记过的模式生效。
+        // "Beyond the current mode's cap" applies only to modes registered in REFERENCE_CAPS_BY_MODE.
         const overCap = caps != null && !withinCap;
         const modeCap = caps?.[item.kind] ?? 0;
         const modeLabel = t(`node.videoOps.modes.${genMode}`, {
@@ -2010,9 +2010,9 @@ function ReferenceMediaRow({
               ),
             })
           : undefined;
-        // 首尾帧模式下，前两张图片打 首帧/尾帧 角标；超出 cap 的图片就回退到
-        // 数字角标，让用户看到「这张图被忽略」的同时仍能在 prompt 里通过原序号
-        // 对照——不过那种状态主要靠自动切换到 allReference 兜底，正常不会发生。
+        // In first-last-frame mode, the first two images get first-frame/last-frame badges; images beyond the cap fall back to
+        // numeric badges, so the user sees "this image is ignored" while still being able to cross-reference it by original index in the prompt
+        // — though that state is mainly covered by the auto-switch to allReference and normally does not occur.
         const slotLabel =
           genMode === "firstLastFrame" &&
           item.kind === "image" &&
@@ -2103,9 +2103,9 @@ function ReferenceMediaRow({
                 ? "ring-2 ring-accent ring-offset-1 ring-offset-surface-dark"
                 : ""
             } ${
-              // omni 上限外的 chip：去饱和 + 半透明 + 琥珀色描边；hover 时通过
-              // 父层 title 显示「超出上限不会使用」。配 detach 按钮提示用户主动
-              // 移除超额素材。
+              // Chips beyond the omni cap: desaturated + semi-transparent + amber outline; on hover the
+              // parent's title shows "Beyond the cap and will not be used". Paired with the detach button prompting the user to
+              // remove the excess assets themselves.
               overCap
                 ? "opacity-50 grayscale ring-1 ring-amber-400/45 ring-offset-1 ring-offset-surface-dark"
                 : ""
@@ -2150,9 +2150,9 @@ function useHoverPreviewPos(
 interface ReferenceImageChipProps {
   item: Extract<ReferenceMediaItem, { kind: "image" }>;
   index: number;
-  /** 给角标显示自定义文案（如「首帧」「尾帧」）。未设置时使用数字角标。 */
+  /** Custom copy shown on the badge (such as "First frame" / "Last frame"). When unset the numeric badge is used. */
   slotLabel?: string;
-  /** 这条引用在提示词里的名字；null 表示它不在 @ 候选里，不显示 @ 按钮。 */
+  /** This reference's name in the prompt; null means it is not in the @ candidates and no @ button is shown. */
   mentionName: string | null;
   onFocus: (nodeId: string) => void;
   onMention: (nodeId: string) => void;
@@ -2205,9 +2205,9 @@ function ReferenceImageChip({
           draggable={false}
         />
         {slotLabel ? (
-          // 首尾帧角标：结构信息（不是序号），保留。前端按产品要求不再显示
-          // 「图片N」的数字角标——引用统一呈现为「图片」，序号只存在于提交给
-          // 后端的 prompt（@图片N）里，不在引用缩略图上暴露。
+          // First/last-frame badges: structural info (not an index), kept. Per product requirements the frontend no longer shows
+          // numeric badges like "image N" — references are presented uniformly as "Image", and the index exists only in the prompt (@image1)
+          // submitted to the backend, not exposed on the reference thumbnails.
           <span
             className="pointer-events-none absolute bottom-1 left-1 z-10 text-[9px] font-medium leading-none text-white"
             style={{ textShadow: "0 0 2px rgba(0,0,0,0.65), 0 1px 1px rgba(0,0,0,0.55)" }}
@@ -2255,7 +2255,7 @@ function ReferenceImageChip({
 interface ReferenceVideoChipProps {
   item: Extract<ReferenceMediaItem, { kind: "video" }>;
   index: number;
-  /** 这条引用在提示词里的名字；null 表示它不在 @ 候选里，不显示 @ 按钮。 */
+  /** This reference's name in the prompt; null means it is not in the @ candidates and no @ button is shown. */
   mentionName: string | null;
   onFocus: (nodeId: string) => void;
   onMention: (nodeId: string) => void;
@@ -2280,8 +2280,8 @@ function ReferenceVideoChip({
     item.displayName?.trim()
     || t("node.videoOps.chip.videoFallback", { index: index + 1 });
 
-  // chip 缩略图：有 previewImageUrl 用静态图；否则用一个 muted 静止 <video>
-  // 显示首帧。preload=metadata 让 Safari/Chrome 自动定位到首帧。
+  // Chip thumbnail: use the static image when there is a previewImageUrl; otherwise use a muted still <video>
+  // to show the first frame. preload=metadata lets Safari/Chrome position to the first frame automatically.
   const thumb = item.thumbUrl ? (
     <img
       src={resolveImageDisplayUrl(item.thumbUrl)}
@@ -2343,8 +2343,8 @@ function ReferenceVideoChip({
             style={{ left: pos.left, top: pos.top, width: PREVIEW_W }}
           >
             <div className="overflow-hidden rounded-xl border border-white/15 bg-surface-dark/95 shadow-2xl backdrop-blur-sm">
-              {/* hover 时 autoplay + loop + muted —— 不弹声音不打扰其它正在
-                  播放的 audio chip。 */}
+              {/* On hover autoplay + loop + muted — no sound, so other playing
+                  audio chips are not disturbed. */}
               <video
                 src={resolveImageDisplayUrl(item.videoUrl)}
                 autoPlay
@@ -2366,7 +2366,7 @@ interface ReferenceAudioChipProps {
   index: number;
   isPlaying: boolean;
   onToggle: (playing: boolean) => void;
-  /** 这条引用在提示词里的名字；null 表示它不在 @ 候选里，不显示 @ 按钮。 */
+  /** This reference's name in the prompt; null means it is not in the @ candidates and no @ button is shown. */
   mentionName: string | null;
   onFocus: (nodeId: string) => void;
   onMention: (nodeId: string) => void;
@@ -2386,9 +2386,9 @@ function ReferenceAudioChip({
   onDetach,
 }: ReferenceAudioChipProps) {
   const { t } = useTranslation();
-  // 用 ref 持有一个 HTMLAudioElement —— 比挂在 DOM 上的 <audio> 简单：可以
-  // 直接 .play()/.pause()，也方便处理同时只放一个的逻辑（父层告诉这个
-  // chip 它不再是当前正在播的）。
+  // Hold an HTMLAudioElement with a ref — simpler than a <audio> hung on the DOM: it can
+  // be .play()/.pause() directly, and it is also easier to handle the "only one plays at a time" logic (the parent tells this
+  // chip it is no longer the one currently playing).
   const audioRef = useRef<HTMLAudioElement | null>(null);
   if (audioRef.current === null && typeof Audio !== "undefined") {
     audioRef.current = new Audio();
@@ -2408,7 +2408,7 @@ function ReferenceAudioChip({
     if (!audio) return;
     if (isPlaying) {
       void audio.play().catch(() => {
-        // 自动播放被浏览器拦或资源加载失败 —— 回滚父层状态。
+        // Autoplay blocked by the browser or resource loading failed — roll back the parent state.
         onToggle(false);
       });
     } else {
@@ -2424,7 +2424,7 @@ function ReferenceAudioChip({
     return () => audio.removeEventListener("ended", handleEnded);
   }, [onToggle]);
 
-  // 卸载时停掉播放，避免脏状态留在浏览器。
+  // Stop playback on unmount, so no dirty state is left in the browser.
   useEffect(() => {
     return () => {
       const audio = audioRef.current;
@@ -2443,13 +2443,13 @@ function ReferenceAudioChip({
       type="button"
       onClick={(event) => {
         event.stopPropagation();
-        // 单击：切换播放；同时把焦点切到上游节点（方便用户跳过去看）。
+        // Single click: toggle playback; also move focus to the upstream node (convenient for the user to jump over and look).
         onFocus(item.nodeId);
         onToggle(!isPlaying);
       }}
       onDoubleClick={(event) => {
-        // 双击跳到画布上那个音频节点。播放开关被这两下点成了「开了又关」，
-        // 正好回到双击前的状态，不用额外去抑制它。
+        // Double-click jumps to that audio node on the canvas. The playback toggle gets clicked into "on then off" by these two clicks,
+        // which lands exactly back at the pre-double-click state, so no extra suppression is needed.
         event.stopPropagation();
         onJump(item.nodeId);
       }}

@@ -99,7 +99,7 @@ import {
 const SHOW_EPISODE_FREEZONE_ENTRY = false;
 
 /**
- * /beats (镜头) — v2 card-grid + action-panel workbench.
+ * /beats (shots) - v2 card-grid + action-panel workbench.
  *
  * Layout:
  *   ├─ BatchBar         (episode-level batch actions, always visible)
@@ -110,9 +110,9 @@ const SHOW_EPISODE_FREEZONE_ENTRY = false;
  * NiceGUI sketch grid features are exposed from the toolbar as dialogs
  * so the default shell stays aligned with the FE main branch split layout.
  */
-// 导出只为页面级网络合同测试（``episode-beats-scope-contract.test.tsx``）：那条断言
-// 要的是"进这一集一共发了哪些 beats 请求"，hook 单测覆盖不到组合层顺手把别集也拉
-// 一遍的情况。路由本身仍只用文件末尾那个 ``Route``。
+// Exported only for the page-level network contract test (``episode-beats-scope-contract.test.tsx``): that assertion
+// wants "which beats requests entering this episode sends in total", which hook unit tests cannot cover when the composition layer also pulls
+// other episodes along. The route itself still only uses the ``Route`` at the end of the file.
 export function BeatsTabContent() {
   const { t } = useTranslation();
   const scrollHideRef = useHideHeaderOnScroll<HTMLDivElement>();
@@ -162,8 +162,8 @@ export function BeatsTabContent() {
   // Project-level prefs mirrored from NiceGUI video_studio_page.video_settings.
   const [videoBackend, setVideoBackendState] = useState(DEFAULT_VIDEO_BACKEND);
 
-  // 左(渲染/Beat 区)与右(详情/功能区)的可拖拽宽度占比。拖动中间分隔条调节占比;
-  // 比例持久化到 localStorage —— 属 UI 偏好(region 无关),不随切区清空。clamp 25%–70%。
+  // Draggable width ratio of the left (render/beat area) and right (details/feature area). Dragging the middle divider adjusts the ratio;
+  // the ratio is persisted to localStorage - a UI preference (region-independent), not cleared when switching regions. Clamped to 25%-70%.
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const splitDraggingRef = useRef(false);
   const [leftSplitPct, setLeftSplitPct] = useState<number>(() => {
@@ -201,12 +201,12 @@ export function BeatsTabContent() {
     [],
   );
 
-  // 画幅 (aspect ratio) — single global per-project source of truth. Drives
+  // Aspect ratio - single global per-project source of truth. Drives
   // sketch generation params, beat-card display, and render/video downstream.
   const { orientation, spec: aspectSpecValue, setOrientation } =
     useProjectAspectRatio(project);
   const sketchAspectRatio: SketchAspectRatio = aspectSpecValue.sketchAspect;
-  // Switching画幅 never re-stretches already-generated assets — it only changes
+  // Switching aspect ratio never re-stretches already-generated assets - it only changes
   // the ratio future generations use. Warn before flipping if this episode
   // already has sketches/renders/videos so the user can re-generate knowingly.
   const [pendingAspect, setPendingAspect] = useState<SketchAspectRatio | null>(
@@ -361,7 +361,7 @@ export function BeatsTabContent() {
     if (dispatchableItems.length === 0) {
       toast.warning(
         t("episode.workbench.batch.sketchGroupRunning", {
-          defaultValue: "相同草图组正在运行中",
+          defaultValue: "The same sketch group is already running",
         }),
       );
       return;
@@ -872,7 +872,7 @@ export function BeatsTabContent() {
                   <div className="truncate text-[10px] text-muted-foreground">
                     {lockedSketchItemIds.has(item.id)
                       ? t("episode.workbench.batch.sketchGroupRunning", {
-                          defaultValue: "相同草图组正在运行中",
+                          defaultValue: "The same sketch group is already running",
                         })
                       : item.modeLabel}
                   </div>

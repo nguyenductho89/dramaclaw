@@ -7,14 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Scene `environment_prompt` is a single backend string that follows a fixed
- * "360 空间合同" template — seven headings the scene-reference-image generator
+ * "360 spatial contract" template - seven headings the scene-reference-image generator
  * reads to understand each direction (see SuperTale
  * `cognee/pipeline.py: SCENE_ENRICHMENT_SYSTEM_PROMPT`). The backend has no
  * structured sub-fields, so this module is purely a frontend convenience: it
  * splits that one string into seven editable inputs (parse) and stitches them
  * back into the same labeled string on save (serialize).
  *
- * The serialized labels MUST stay Chinese (正面 / 背面 / …) regardless of UI
+ * The serialized labels MUST stay in English (Front / Back / ...) regardless of UI
  * language — they are the contract the generator parses, not display text.
  * Only the four directional headings are strictly required by the backend
  * (`SCENE_ENVIRONMENT_REQUIRED_HEADINGS`); the rest round-trip best-effort.
@@ -37,26 +37,24 @@ interface SceneEnvironmentSection {
   i18nKey: string;
 }
 
-// label 是写进序列化提示词的契约文字，跟界面语言无关；界面上显示的是 i18nKey。
-// i18n-exempt-start
+// label is the contract text written into the serialized prompt and is independent of the UI language; the UI shows i18nKey.
 export const SCENE_ENVIRONMENT_SECTIONS: readonly SceneEnvironmentSection[] = [
-  { key: "front", label: "正面", i18nKey: "assets.scenes.environment.front" },
-  { key: "left", label: "左侧", i18nKey: "assets.scenes.environment.left" },
-  { key: "right", label: "右侧", i18nKey: "assets.scenes.environment.right" },
-  { key: "back", label: "背面", i18nKey: "assets.scenes.environment.back" },
-  { key: "light", label: "光源", i18nKey: "assets.scenes.environment.light" },
+  { key: "front", label: "Front", i18nKey: "assets.scenes.environment.front" },
+  { key: "left", label: "Left", i18nKey: "assets.scenes.environment.left" },
+  { key: "right", label: "Right", i18nKey: "assets.scenes.environment.right" },
+  { key: "back", label: "Back", i18nKey: "assets.scenes.environment.back" },
+  { key: "light", label: "Lighting", i18nKey: "assets.scenes.environment.light" },
   {
     key: "material",
-    label: "材质/风格",
+    label: "Material/Style",
     i18nKey: "assets.scenes.environment.material",
   },
   {
     key: "forbidden",
-    label: "禁止元素",
+    label: "Forbidden elements",
     i18nKey: "assets.scenes.environment.forbidden",
   },
 ] as const;
-// i18n-exempt-end
 
 export type SceneEnvironmentSections = Record<SceneEnvironmentSectionKey, string>;
 
@@ -76,7 +74,7 @@ function escapeRegExp(value: string): string {
 
 /**
  * Split a labeled `environment_prompt` into its seven sections. A heading is
- * only recognized at the start of a line (`正面：…`), so the keyword appearing
+ * only recognized at the start of a line (`Front: ...`), so the keyword appearing
  * mid-sentence won't be mistaken for a section boundary. Legacy / free-form
  * prompts without any heading are kept whole in `front` so nothing is lost.
  */
@@ -90,7 +88,7 @@ export function parseEnvironmentPrompt(
   const labels = SCENE_ENVIRONMENT_SECTIONS.map((s) =>
     escapeRegExp(s.label),
   ).join("|");
-  const headingRe = new RegExp(`(?:^|\\n)\\s*(${labels})\\s*[:：]`, "g");
+  const headingRe = new RegExp(`(?:^|\\n)\\s*(${labels})\\s*:`, "g");
 
   const hits: Array<{
     key: SceneEnvironmentSectionKey;
@@ -142,7 +140,7 @@ export function serializeEnvironmentPrompt(
     value: (sections[s.key] ?? "").trim(),
   }))
     .filter((s) => s.value.length > 0)
-    .map((s) => `${s.label}：${s.value}`)
+    .map((s) => `${s.label}: ${s.value}`)
     .join("\n");
 }
 

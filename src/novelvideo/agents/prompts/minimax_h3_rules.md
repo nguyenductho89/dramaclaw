@@ -4,7 +4,7 @@ Used by `agents/minimax_h3_prompt_builder.py` to decide what a drama beat's
 `MiniMaxH3Content` fields should say. Sources: the official HF guides
 (`MiniMaxAI/MiniMax-H3/docs/VIDEO_PROMPT_WRITING_GUIDE_{base,ref}_en.md`),
 the `photoreal-short-drama-generator` project's production convention
-(`references/規則核心.md`, `3-提示詞.md`), and the community skills in
+(`references/core-rules.md`, `3-prompts.md`), and the community skills in
 `github.com/gordonlu/awesome-minimax-h3-skills/community-skills`
 (`h3-performance-director`, `h3-micro-cinematic-director`,
 `cinematic-key-art-animator`, `reference-motion-transfer`,
@@ -74,7 +74,7 @@ put in your structured answer's fields.
      quiet, at a normal pace"). Never the words being said, never a quote.
    - Leave room in `timeline`/`summary_action` for the line to land, but
      do not transcribe, translate, paraphrase, or invent it anywhere.
-   [anthology §1.3; reference-motion-transfer §8.6; photoreal 規則核心]
+   [anthology §1.3; reference-motion-transfer §8.6; photoreal core rules]
 
 7. **Identity.**
    - **Describe what you actually see in the attached images — not what a

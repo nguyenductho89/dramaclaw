@@ -25,12 +25,12 @@ export interface CapabilityInputDefinition {
 }
 
 export interface CapabilityParamOption {
-  /** 协议值：会原样拼进提示词或写进节点参数，不跟界面语言走。 */
+  /** Protocol value: assembled as-is into the prompt or written into node parameters; it does not follow the UI language. */
   value: string;
   labelKey: string;
   /**
-   * 少数能力（实景草图修复）把选项文案本身拼进提示词。那串是模型输入不是界面文案，
-   * 改动会直接改变生成结果，所以单独放一份，不跟界面语言走。
+   * A few capabilities (real-scene sketch repair) assemble the option text itself into the prompt. That string is model input, not UI copy,
+   * and changing it directly changes the generation result, so it is kept separate and does not follow the UI language.
    */
   promptLabel?: string;
 }
@@ -66,7 +66,7 @@ export interface ComposedCapabilityJob {
 
 export interface GenerationCapability {
   id: string;
-  /** 能力的展示文案全部落成词条 key（`canvas.capabilities.<id>.*`），渲染时才解析。 */
+  /** All of a capability's display copy is turned into locale keys (`canvas.capabilities.<id>.*`), resolved only at render time. */
   nameKey: string;
   shortNameKey: string;
   category: CapabilityCategory;

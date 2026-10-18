@@ -1,4 +1,4 @@
-"""角色列表 & 肖像/身份图生成端点。"""
+"""Character list & portrait/identity image generation endpoints."""
 
 import asyncio
 import logging
@@ -105,11 +105,11 @@ CHARACTER_ASSET_KINDS = {
 }
 
 VOICE_SLOT_LABELS = {
-    VOICE_DEFAULT_SLOT: "默认（兜底）",
-    "child": "幼年",
-    "youth": "青年",
-    "middle": "中年",
-    "elder": "老年",
+    VOICE_DEFAULT_SLOT: "default (fallback)",
+    "child": "Child",
+    "youth": "Youth",
+    "middle": "Middle-aged",
+    "elder": "Elder",
 }
 
 
@@ -143,15 +143,15 @@ async def _character_project_scope(
     required_role: str = "editor",
     load_graph_state: bool = True,
 ) -> "AsyncIterator[tuple[ProjectContext | None, str, str, Path, str, SQLiteStore]]":
-    """``_resolve_character_project`` 的作用域版：出了 ``async with`` 一定关连接。
+    """Scoped version of ``_resolve_character_project``: the connection is always closed on leaving ``async with``.
 
-    裸版本把 store 直接返回给路由，而路由从头到尾没有一处 ``close()``——正常返回、
-    "角色不存在" 这类提前返回、以及中途抛错，三条路都不关。每个 SQLiteStore 背后是
-    一条 aiosqlite 连接加一个后台线程，指望 GC 回收既不及时也不保证。角色页一进去
-    就打列表、选中角色再打 identities，这两条正是资产页的常规加载路径，泄漏是按请
-    求数累积的。
+    The bare version returns the store straight to the route, and the route never calls ``close()`` anywhere -- on normal return,
+    on early returns such as "character does not exist", and on mid-way errors, none of the three paths closes it. Behind every SQLiteStore is
+    an aiosqlite connection plus a background thread, and relying on GC is neither timely nor guaranteed. The character page, on entry,
+    fetches the list and, on selecting a character, fetches identities; these are the regular load paths of the asset page, and the leak accumulates
+    per request.
 
-    元组形状与裸版本一致，改造路由只需要把赋值换成 ``async with``。
+    The tuple shape is the same as the bare version, so converting a route only requires changing the assignment to ``async with``.
     """
     resolved = await resolve_project_scope(project, user, required_role=required_role)
     store_scope = (
@@ -726,17 +726,17 @@ async def _repair_duplicate_main_characters(
 async def _heal_path_unsafe_character_names(
     store: SQLiteStore, project_dir: Path
 ) -> dict[str, str]:
-    """修好库里名字带斜杠的存量角色，原名转成别名。
+    """Repair legacy characters in the database whose names contain slashes, turning the original name into an alias.
 
-    ``NovelCharacter.sanitize_name`` 一直在挡新数据，但它是**读的时候**才生效：主键里
-    留着斜杠的老行读出来名字已经是干净的，``DELETE ... WHERE name = ?`` 却一行都删不掉。
-    和场景 / 道具同一个毛病，见 :mod:`novelvideo.utils.asset_names`。
+    ``NovelCharacter.sanitize_name`` has always blocked new data, but it only takes effect **on read**: old rows
+    with slashes left in the primary key read out with clean names, yet ``DELETE ... WHERE name = ?`` deletes not a single row.
+    Same defect as scenes / props, see :mod:`novelvideo.utils.asset_names`.
 
-    调用方要先过 ``may_run_asset_repair``：这是一次写操作，不该由只读协作者触发。
+    Callers must first pass ``may_run_asset_repair``: this is a write operation and must not be triggered by a read-only collaborator.
     """
 
     def move_assets(old_name: str, new_name: str) -> None:
-        # 见 ``move_asset_dir``：old_name 是库里没消毒过的旧值，直接拼路径会爬出资产根。
+        # See ``move_asset_dir``: old_name is an unsanitized legacy value from the database, and joining it into a path directly could climb out of the asset root.
         move_asset_dir(project_dir / "assets" / "characters", old_name, new_name)
 
     return await store.repair_path_unsafe_asset_names("character", move_assets)
@@ -749,7 +749,7 @@ async def list_characters(
     names: Annotated[list[str] | None, Query()] = None,
     user: dict = Depends(get_api_user),
 ):
-    """获取角色列表；资产工作台可显式使用 summary 跳过文件探测。"""
+    """Get the character list; the asset workbench can explicitly use summary to skip file probing."""
     async with _character_project_scope(
         project,
         user,
@@ -810,11 +810,11 @@ async def list_characters(
                     ),
                 )
             ),
-            # 只出 id，不出身份详情。资产页要把 ``?type=identity&id=`` 深链解析到
-            # 拥有它的角色，此前是遍历每个角色各调一次 ``/characters/{name}/identities``
-            # ——角色有多少个就发多少个请求，只为建一张 id→角色名 的表。身份已经随
-            # ``get_all_characters()`` 在内存里了，这里带出来不多一次查询；而带的是
-            # 一串 id，载荷不会随身份的图片/描述增长。
+            # Emit only ids, not identity details. The asset page needs to resolve a ``?type=identity&id=`` deep link to the
+            # character owning it; previously it iterated over every character and called ``/characters/{name}/identities`` once each
+            # -- as many requests as there are characters, just to build an id -> character-name table. Identities are already in memory
+            # along with ``get_all_characters()``, so carrying them out costs no extra query; and what is carried is
+            # a list of ids, so the payload does not grow with identity images/descriptions.
             "identity_ids": [
                 str(getattr(ident, "identity_id", "") or "")
                 for ident in (getattr(c, "identities", None) or [])
@@ -848,7 +848,7 @@ async def add_character(
     body: CharacterCreate,
     user: dict = Depends(get_api_user),
 ):
-    """手动添加单个角色（当自动提取失败时使用）。"""
+    """Manually add a single character (used when automatic extraction fails)."""
     logger.info("[%s] add_character: %s (main=%s)", project, body.name, body.is_main)
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
@@ -856,12 +856,12 @@ async def add_character(
 
     from novelvideo.models import NovelCharacter
 
-    # 在查重之前消毒，否则两个只差斜杠的名字会双双通过查重、后写的静默覆盖先写的。
+    # Sanitize before the duplicate check; otherwise two names differing only by a slash would both pass the check and the later write would silently overwrite the earlier one.
     name = path_safe_asset_name(str(body.name or "").strip(), kind="character")
     if not name:
         return {"ok": False, "error": "Character name is required"}
 
-    # 检查角色是否已存在
+    # Check whether the character already exists
     existing = store.get_character(name)
     if existing is not None:
         return {"ok": False, "error": f"Character '{name}' already exists"}
@@ -898,7 +898,7 @@ async def add_character(
 
 @router.post("/projects/{project}/characters/build")
 async def build_characters(project: str, user: dict = Depends(get_api_user)):
-    """从知识图谱补充缺失角色。"""
+    """Supplement missing characters from the knowledge graph."""
     logger.info("[%s] build_characters", project)
     resolved = await resolve_project_scope(project, user, required_role="editor")
     ctx = resolved.ctx
@@ -921,10 +921,10 @@ async def build_characters(project: str, user: dict = Depends(get_api_user)):
             "task_key": project_task_state_key("build_characters", ctx.project_id, 0),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": "角色补充任务已进入队列",
+            "message": "Character supplement task queued",
         }
 
-    return {"ok": False, "error": "角色补充需要 project context"}
+    return {"ok": False, "error": "Character supplement requires a project context"}
 
 
 @router.get("/projects/{project}/character-image-selection")
@@ -932,7 +932,7 @@ async def get_project_character_image_selection(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取项目级角色/身份图生成源选择。"""
+    """Get the project-level character/identity image generation source selection."""
     _ctx, username, project_name, _project_dir, _output_dir, _store = (
         await _resolve_character_project(project, user, required_role="viewer")
     )
@@ -948,7 +948,7 @@ async def update_project_character_image_selection(
     body: CharacterImageSelectionRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存项目级角色/身份图生成源选择。"""
+    """Save the project-level character/identity image generation source selection."""
     _ctx, username, project_name, _project_dir, _output_dir, _store = (
         await _resolve_character_project(project, user)
     )
@@ -979,7 +979,7 @@ async def get_project_asset_image_source_selection(
     asset_kind: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取项目级素材图源选择。"""
+    """Get the project-level asset image source selection."""
     normalized_kind = _validate_asset_image_source_kind(asset_kind)
     if normalized_kind is None:
         return JSONResponse(
@@ -1002,7 +1002,7 @@ async def update_project_asset_image_source_selection(
     body: AssetImageSourceSelectionRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存项目级素材图源选择。"""
+    """Save the project-level asset image source selection."""
     normalized_kind = _validate_asset_image_source_kind(asset_kind)
     if normalized_kind is None:
         return JSONResponse(
@@ -1036,7 +1036,7 @@ async def get_project_character_image_usage(
     project: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取角色/身份图请求用量统计。"""
+    """Get character/identity image request usage statistics."""
     _ctx, _username, _project_name, project_dir, _output_dir, _store = (
         await _resolve_character_project(project, user, required_role="viewer")
     )
@@ -1053,9 +1053,9 @@ async def get_character_identities(
     name: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取角色全部身份及图片。"""
-    # store 只用来取角色，取完就关：后面拼载荷读的是已经在内存里的模型对象和
-    # 文件系统，不再需要连接。"角色不存在" 的提前返回因此也发生在关闭之后。
+    """Get all identities of a character and their images."""
+    # The store is only used to fetch the character and is closed once done: the payload assembled afterwards reads model objects already in memory and the
+    # filesystem, and no longer needs the connection. The early return for "character does not exist" therefore also happens after closing.
     async with _character_project_scope(
         project,
         user,
@@ -1158,7 +1158,7 @@ async def list_character_asset_history(
     identity_id: str = "",
     user: dict = Depends(get_api_user),
 ):
-    """列出角色资产的历史备份，用于 UI 回看和恢复。"""
+    """List the historical backups of a character asset, for UI review and restore."""
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user, required_role="viewer")
     )
@@ -1197,7 +1197,7 @@ async def restore_character_asset_history(
     body: CharacterAssetRestoreRequest,
     user: dict = Depends(get_api_user),
 ):
-    """把某个历史备份恢复到角色资产 canonical 槽位。"""
+    """Restore a historical backup to the canonical slot of the character asset."""
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1258,7 +1258,7 @@ async def update_character(
     body: CharacterUpdate,
     user: dict = Depends(get_api_user),
 ):
-    """编辑角色基本信息。"""
+    """Edit the basic information of a character."""
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1270,7 +1270,7 @@ async def update_character(
     updates = body.model_dump(exclude_none=True)
     requested_name = None
     if "name" in updates:
-        # 消毒后再查重、再改名：斜杠会让这个角色的 {name} 接口整排 404。
+        # Sanitize before the duplicate check and the rename: a slash would make this character's whole {name} endpoint family 404.
         requested_name = path_safe_asset_name(
             str(updates.pop("name") or "").strip(), kind="character"
         )
@@ -1317,7 +1317,7 @@ async def delete_character(
     name: str,
     user: dict = Depends(get_api_user),
 ):
-    """删除角色。POST 保持与 React active UI 的兼容契约。"""
+    """Delete a character. POST is kept for the compatibility contract with the React active UI."""
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1335,7 +1335,7 @@ async def list_character_voice_samples(
     name: str,
     user: dict = Depends(get_api_user),
 ):
-    """获取角色 IndexTTS2 声线样本插槽。"""
+    """Get the IndexTTS2 voice sample slots of a character."""
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user, required_role="viewer")
     )
@@ -1360,7 +1360,7 @@ async def upload_character_voice_sample(
     file: UploadFile = File(...),
     user: dict = Depends(get_api_user),
 ):
-    """上传角色 IndexTTS2 声线样本。"""
+    """Upload an IndexTTS2 voice sample for a character."""
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1413,7 +1413,7 @@ async def record_character_voice_sample(
     body: CharacterVoiceRecordRequest,
     user: dict = Depends(get_api_user),
 ):
-    """保存浏览器录音为角色 IndexTTS2 声线样本。"""
+    """Save a browser recording as an IndexTTS2 voice sample of a character."""
     ctx, username, project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1463,7 +1463,7 @@ async def trim_character_voice_sample(
     body: CharacterVoiceTrimRequest,
     user: dict = Depends(get_api_user),
 ):
-    """裁剪角色 IndexTTS2 声线样本并写回同一插槽。"""
+    """Trim a character's IndexTTS2 voice sample and write it back to the same slot."""
     ctx, username, project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1514,7 +1514,7 @@ async def delete_character_voice_sample(
     slot: str,
     user: dict = Depends(get_api_user),
 ):
-    """清除角色 IndexTTS2 声线样本。"""
+    """Clear a character's IndexTTS2 voice sample."""
     ctx, username, project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1558,7 +1558,7 @@ async def add_identity(
     body: IdentityCreate,
     user: dict = Depends(get_api_user),
 ):
-    """为角色新增一个身份。"""
+    """Add an identity to a character."""
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1600,7 +1600,7 @@ async def update_identity(
     body: IdentityUpdate,
     user: dict = Depends(get_api_user),
 ):
-    """编辑角色身份属性。"""
+    """Edit the attributes of a character identity."""
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1628,7 +1628,7 @@ async def delete_identity(
     identity_id: str,
     user: dict = Depends(get_api_user),
 ):
-    """删除角色身份。"""
+    """Delete a character identity."""
     _ctx, _username, _project_name, _project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -1639,7 +1639,7 @@ async def delete_identity(
 
     await store.delete_character_identity(name, identity_id)
 
-    return {"ok": True, "data": {"identity_id": identity_id, "message": "身份已删除"}}
+    return {"ok": True, "data": {"identity_id": identity_id, "message": "Identity deleted"}}
 
 
 @router.post("/projects/{project}/characters/{name}/portrait-async")
@@ -1649,7 +1649,7 @@ async def generate_single_portrait_async(
     body: PortraitGenRequest = PortraitGenRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """启动单角色 Portrait 后台任务。"""
+    """Start a background Portrait task for a single character."""
     ctx, username, project_name, project_dir, _output_dir, _store = (
         await _resolve_character_project(project, user)
     )
@@ -1688,10 +1688,10 @@ async def generate_single_portrait_async(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"肖像生成任务已进入队列: {name}",
+            "message": f"Portrait generation task queued: {name}",
         }
 
-    return {"ok": False, "error": "肖像生成需要 project context"}
+    return {"ok": False, "error": "Portrait generation requires a project context"}
 
 
 @router.post("/projects/{project}/characters/{name}/portrait")
@@ -1701,7 +1701,7 @@ async def generate_single_portrait(
     body: PortraitGenRequest,
     user: dict = Depends(get_api_user),
 ):
-    """为单个角色生成肖像（face close-up）。"""
+    """Generate a portrait (face close-up) for a single character."""
     logger.info(
         "[%s] generate_single_portrait: %s, model=%s", project, name, body.model
     )
@@ -1720,7 +1720,7 @@ async def generate_single_portrait(
         generate_character_reference_unified,
     )
 
-    # 备份旧肖像
+    # Back up the old portrait
     portrait_path = compute_portrait_path(project_dir, name)
     if portrait_path and Path(portrait_path).exists():
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -1742,7 +1742,7 @@ async def generate_single_portrait(
     if not paths:
         return {"ok": False, "error": "Portrait generation failed"}
 
-    # 复制为标准肖像路径
+    # Copy to the standard portrait path
     char_dir = project_dir / "assets" / "characters" / name
     char_dir.mkdir(parents=True, exist_ok=True)
     final_path = char_dir / "portrait.png"
@@ -1763,7 +1763,7 @@ async def upload_portrait(
     file: UploadFile = File(...),
     user: dict = Depends(get_api_user),
 ):
-    """上传角色肖像图片。"""
+    """Upload a character portrait image."""
     logger.info("[%s] upload_portrait: %s", project, name)
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
@@ -1799,7 +1799,7 @@ async def upload_identity_image(
     file: UploadFile = File(...),
     user: dict = Depends(get_api_user),
 ):
-    """上传角色身份图片。"""
+    """Upload a character identity image."""
     logger.info("[%s] upload_identity_image: %s/%s", project, name, identity_name)
     ctx, _username, _project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
@@ -2031,10 +2031,10 @@ async def generate_identity_portrait_async(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"身份 Portrait 生成任务已进入队列: {identity.identity_name}",
+            "message": f"Identity Portrait generation task queued: {identity.identity_name}",
         }
 
-    return {"ok": False, "error": "身份 Portrait 生成需要 project context"}
+    return {"ok": False, "error": "Identity Portrait generation requires a project context"}
 
 
 @router.post(
@@ -2047,7 +2047,7 @@ async def generate_identity_portrait(
     body: IdentityImageGenRequest = IdentityImageGenRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """同步生成身份级 portrait，供旧调用保留。新 UI 应优先使用 async。"""
+    """Synchronously generate an identity-level portrait, kept for legacy callers. New UIs should prefer async."""
     ctx, username, project_name, project_dir, _output_dir, store = (
         await _resolve_character_project(project, user)
     )
@@ -2058,7 +2058,7 @@ async def generate_identity_portrait(
     if identity is None:
         return {"ok": False, "error": f"Identity '{identity_id}' not found"}
     if not getattr(identity, "face_prompt", ""):
-        return {"ok": False, "error": "该身份无 face_prompt，无需独立 Portrait"}
+        return {"ok": False, "error": "This identity has no face_prompt and needs no separate Portrait"}
 
     from novelvideo.generators import generate_character_reference_unified
 
@@ -2085,7 +2085,7 @@ async def generate_identity_portrait(
             identity_name=identity.identity_name,
         )
         if not paths:
-            return {"ok": False, "error": "身份 Portrait 生成失败"}
+            return {"ok": False, "error": "Identity Portrait generation failed"}
         if target.exists():
             backup = (
                 identities_dir
@@ -2161,10 +2161,10 @@ async def generate_identity_image_async(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"身份图生成任务已进入队列: {identity.identity_name}",
+            "message": f"Identity image generation task queued: {identity.identity_name}",
         }
 
-    return {"ok": False, "error": "身份图生成需要 project context"}
+    return {"ok": False, "error": "Identity image generation requires a project context"}
 
 
 @router.get("/projects/{project}/characters/{name}/identities/{identity_id}/attempts")
@@ -2214,7 +2214,7 @@ async def generate_identity_image(
     body: IdentityImageGenRequest = IdentityImageGenRequest(),
     user: dict = Depends(get_api_user),
 ):
-    """基于角色肖像生成身份参考图（Identity Locking）。"""
+    """Generate an identity reference image from the character portrait (Identity Locking)."""
     from novelvideo.generators.image_generator import generate_identity_image_unified
 
     logger.info(
@@ -2232,7 +2232,7 @@ async def generate_identity_image(
     if character is None:
         return {"ok": False, "error": f"Character '{name}' not found"}
 
-    # 查找身份
+    # Look up the identity
     identity = None
     for id_ in character.identities or []:
         if id_.identity_id == identity_id:
@@ -2262,19 +2262,19 @@ async def generate_identity_image(
             "error": "Identity has no appearance_details, face_prompt, or costume_image",
         }
 
-    # 输出路径
+    # Output path
     identities_dir = project_dir / "assets" / "characters" / name / "identities"
     identities_dir.mkdir(parents=True, exist_ok=True)
     safe_identity_name = re.sub(r'[/\\:*?"<>|]', "_", identity.identity_name)
     output_path = identities_dir / f"{safe_identity_name}.png"
 
-    # 备份旧文件
+    # Back up old files
     if output_path.exists():
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
         backup = identities_dir / f"{safe_identity_name}_{ts}.png"
         shutil.copy(output_path, backup)
 
-    # 读取项目配置获取默认 style/ethnicity
+    # Read the project config to get the default style/ethnicity
     proj_config = load_project_config(username, project_name)
 
     face_override = getattr(identity, "face_prompt", "") or ""

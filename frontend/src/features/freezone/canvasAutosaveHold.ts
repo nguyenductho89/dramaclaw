@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 /**
- * 画布自动保存的「暂缓」开关。
+ * A "hold" switch for canvas autosave.
  *
- * 跨项目粘贴时，节点先带着源项目的媒体 URL 进 store，后端拷贝完成后才改写成目标
- * 项目的地址。中间这 800ms 的自动保存窗口若照常触发，源项目 URL 就会先落库一次——
- * 迁移一旦被打断（关标签、切项目、单条失败），那份脏数据就成了永久状态。
+ * During a cross-project paste, nodes enter the store carrying the source project's media URLs, and are rewritten to the target
+ * project's addresses only after the backend finishes copying. If the 800ms autosave window in between fires as usual, the source project's URLs land in the database first -
+ * and once the migration is interrupted (tab closed, project switched, a single failure), that dirty data becomes permanent state.
  *
- * 所以粘贴前先 `holdCanvasAutosave(project)`，迁移结束（成功或失败）再 release；
- * `useCanvasSync` 在 hold 期间只写本地草稿、不发 PUT，release 时补一次保存。
- * 每个 hold 都带安全上限，丢了 release 也不会把自动保存永远卡死。
+ * So call `holdCanvasAutosave(project)` before pasting and release when the migration ends (success or failure);
+ * during a hold `useCanvasSync` only writes the local draft and sends no PUT, and does one save on release.
+ * Every hold carries a safety cap, so a lost release cannot block autosave forever.
  */
 
 const DEFAULT_MAX_HOLD_MS = 90_000;
@@ -30,8 +30,8 @@ function notifyRelease(project: string): void {
 }
 
 /**
- * 暂缓 `project` 的自动保存，返回 release。多个 hold 叠加，全部 release 后才恢复；
- * 超过 `maxMs` 自动 release。
+ * Hold autosave for `project` and return a release. Multiple holds stack, and autosave resumes only after all are released;
+ * it auto-releases after `maxMs`.
  */
 export function holdCanvasAutosave(
   project: string,
@@ -84,7 +84,7 @@ export function isCanvasAutosaveHeld(project: string): boolean {
   return Boolean(holders && holders.size > 0);
 }
 
-/** 某个项目的所有 hold 都 release 之后回调一次。返回取消订阅。 */
+/** Called back once after all of a project's holds are released. Returns an unsubscribe. */
 export function subscribeCanvasAutosaveRelease(listener: ReleaseListener): () => void {
   listeners.add(listener);
   return () => {

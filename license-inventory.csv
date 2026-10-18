@@ -198,7 +198,7 @@ docs/zh/guides/tenant-relay-key-routing-design.md,Elastic-2.0,2026 SuperTale con
 docs/zh/guides/troubleshooting.md,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
 docs/zh/license.md,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
 docs/zh/reference/environment-variables.md,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
-docs/虾画token优化.md,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
+docs/freezone-token-optimization.md,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
 examples/__init__.py,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
 examples/codex/config.toml.example,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation
 examples/seedance2_fast_demo.py,Elastic-2.0,2026 SuperTale contributors,REUSE.toml aggregate annotation

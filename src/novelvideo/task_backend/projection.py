@@ -21,9 +21,9 @@ Shape -- a nested envelope inside ``payload``, never a new top-level field::
         "fields": {...},
     }
 
-``payload``内部没有 schema：签名只覆盖实际内容（``envelope.py:149-160``
-``_canonical_json``），不覆盖期望字段集，所以往 ``payload`` 里加嵌套字段天生不破坏
-签名验证。
+There is no schema inside ``payload``: the signature covers only the actual content (``envelope.py:149-160``
+``_canonical_json``) and not an expected field set, so adding nested fields to ``payload`` never breaks
+signature verification by construction.
 
 Evolution rules (keep these; they are what makes rolling upgrades possible):
 
@@ -141,8 +141,8 @@ class ProjectProjection:
         """
         if name not in self.fields:
             raise ValueError(
-                f"投射缺少字段 {name!r}（task_type={self.task_type}）；"
-                "入队侧未投射该字段，执行侧不回落读项目数据"
+                f"Projection is missing field {name!r} (task_type={self.task_type}); "
+                "the enqueue side did not project this field, and the execution side does not fall back to reading project data"
             )
         return self.fields[name]
 
@@ -159,8 +159,8 @@ def _assert_no_sensitive_field_names(value: Any, path: str = "projection") -> No
         for key, nested in value.items():
             if isinstance(key, str) and _normalize_field_name(key) in _SENSITIVE_PAYLOAD_FIELDS:
                 raise ValueError(
-                    f"投射含敏感字段名 {key!r}（位置 {path}）；"
-                    "该名字会让整个信封被拒，换一个字段名"
+                    f"Projection contains a sensitive field name {key!r} (at {path}); "
+                    "that name would get the whole envelope rejected; use a different field name"
                 )
             _assert_no_sensitive_field_names(nested, f"{path}.{key}")
     elif isinstance(value, (list, tuple)):
@@ -183,8 +183,8 @@ def assert_projection_is_deliverable(projection: Mapping[str, Any]) -> None:
     size = len(_canonical_json(projection).encode("utf-8"))
     if size > MAX_PROJECTION_BYTES:
         raise ValueError(
-            f"投射超出体积上限：{size} 字节 > {MAX_PROJECTION_BYTES} 字节。"
-            "只投射执行时真正读的字段，整表/整份配置不要进 payload"
+            f"Projection exceeds the size limit: {size} bytes > {MAX_PROJECTION_BYTES} bytes. "
+            "Project only the fields actually read at execution time; do not put whole tables or whole configs in the payload"
         )
 
 
@@ -292,7 +292,7 @@ async def build_projection(
 
     missing = set(PROJECTION_REQUIREMENTS[task_type]) - set(fields)
     if missing:
-        raise ValueError(f"投射未覆盖 {task_type} 的必需字段: {sorted(missing)}")
+        raise ValueError(f"Projection does not cover the required fields of {task_type}: {sorted(missing)}")
 
     projection = {
         "projection_version": CURRENT_PROJECTION_VERSION,
@@ -316,19 +316,19 @@ def read_projection(payload: Mapping[str, Any] | None) -> ProjectProjection | No
     if raw is None:
         return None
     if not isinstance(raw, Mapping):
-        raise ValueError("payload['projection'] 必须是对象")
+        raise ValueError("payload['projection'] must be an object")
 
     version = raw.get("projection_version")
     if version not in SUPPORTED_PROJECTION_VERSIONS:
         raise ValueError(
-            f"不支持的投射版本 {version!r}；本进程接受 "
+            f"Unsupported projection version {version!r}; this process accepts "
             f"{sorted(SUPPORTED_PROJECTION_VERSIONS)}"
         )
 
     task_type = str(raw.get("task_type") or "")
     fields = raw.get("fields")
     if not isinstance(fields, Mapping):
-        raise ValueError("payload['projection']['fields'] 必须是对象")
+        raise ValueError("payload['projection']['fields'] must be an object")
 
     projection = ProjectProjection(
         task_type=task_type,
@@ -338,10 +338,10 @@ def read_projection(payload: Mapping[str, Any] | None) -> ProjectProjection | No
 
     required = PROJECTION_REQUIREMENTS.get(task_type)
     if required is None:
-        raise ValueError(f"投射声明了未知的 task_type: {task_type!r}")
+        raise ValueError(f"Projection declared an unknown task_type: {task_type!r}")
     missing = set(required) - set(projection.fields)
     if missing:
         raise ValueError(
-            f"投射缺少 {task_type} 的必需字段: {sorted(missing)}；执行侧不回落读项目数据"
+            f"Projection is missing the required fields of {task_type}: {sorted(missing)}; the execution side does not fall back to reading project data"
         )
     return projection

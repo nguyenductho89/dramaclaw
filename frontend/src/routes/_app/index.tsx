@@ -1201,8 +1201,8 @@ function ProjectDashboard() {
     }
   };
 
-  // 进项目恢复上次停留的区块（虾画 / 虾集子页，默认虾画）；上次在虾镜且
-  // 有剧集深链则直达该集。
+  // On entering a project, restore the section last visited (Freezone / Mainline sub-page, default Freezone); if last on the storyboard
+  // with an episode deep link, go straight to that episode.
   const resolveProjectEntry = useCallback((project: string): string => {
     let section =
       useProjectNavStore.getState().lastSectionByProject[project] ?? "freezone";

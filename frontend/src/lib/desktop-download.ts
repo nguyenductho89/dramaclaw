@@ -177,13 +177,11 @@ export async function resolveDesktopRelease(
 
 function warnUnresolved(platform: DesktopPlatform, cause: unknown): void {
   // Developer log, not UI text.
-  // i18n-exempt-start
   console.warn(
     `[desktop-download] ${platform} version pointer resolution failed, falling back to GitHub Releases.` +
       ` If this is a network error, first check whether CSP connect-src allows ${DOWNLOAD_BASE}`,
     cause,
   );
-  // i18n-exempt-end
 }
 
 /**

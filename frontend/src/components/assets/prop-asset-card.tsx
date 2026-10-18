@@ -146,7 +146,7 @@ export function PropAssetCard({
         </div>
         {prop.owner && (
           <p className="text-xs text-muted-foreground">
-            {t("assets.props.owner")}：{prop.owner}
+            {t("assets.props.owner")}: {prop.owner}
           </p>
         )}
         {description && (

@@ -148,7 +148,7 @@ export function normalizeCanvasCommandNodeData(
       if (!hasNonEmptyStringField(next, "content")) {
         const content = firstStringField(next, TEXT_INPUT_ALIASES);
         if (content !== undefined) {
-          // 文本标注节点真实正文读 data.content；Agent 偶尔会按生成节点习惯写 prompt。
+          // A text annotation node reads its real body from data.content; the Agent sometimes writes prompt out of the habit of generation nodes.
           next.content = content;
         }
       }
@@ -158,7 +158,7 @@ export function normalizeCanvasCommandNodeData(
       if (!hasNonEmptyStringField(next, "text")) {
         const text = firstStringField(next, AUDIO_TEXT_ALIASES);
         if (text !== undefined) {
-          // 音频节点的 TTS/音乐文本读 data.text，不读 prompt/content。
+          // An audio node's TTS/music text is read from data.text, not prompt/content.
           next.text = text;
         }
       }
@@ -173,7 +173,7 @@ export function normalizeCanvasCommandNodeData(
       if (!hasNonEmptyStringField(next, "content")) {
         const content = firstStringField(next, TEXT_INPUT_ALIASES);
         if (content !== undefined) {
-          // beat 上下文节点的可见/可消费文本落在 content。
+          // The visible/consumable text of a beat context node lands in content.
           next.content = content;
         }
       }
@@ -182,7 +182,7 @@ export function normalizeCanvasCommandNodeData(
     case CANVAS_NODE_TYPES.script:
       if (!hasNonEmptyStringField(next, "prompt")) {
         const prompt = firstStringField(next, PROMPT_INPUT_ALIASES);
-        // 脚本生成节点提交时读取 prompt；content 只是兼容展示字段。
+        // A script generation node reads prompt on submit; content is only a compatibility display field.
         if (prompt !== undefined) next.prompt = prompt;
       }
       deleteFields(next, ["text", "body", "description", "video_prompt", "videoPrompt"]);

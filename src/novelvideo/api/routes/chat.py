@@ -81,16 +81,16 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 AI_ASSISTANT_CHAT_FEATURE_KEY = "assistant.chat"
-EMPTY_AGENT_REPLY_MESSAGE = "这轮操作没有收到虾导的有效回复，请稍后重试。"
+EMPTY_AGENT_REPLY_MESSAGE = "This turn received no valid reply from the assistant. Please try again later."
 
-# 出网台账里这条链路的 capability 口径。取自
-# `chat/hermes_egress.py:131` 的 `capability="agent.hermes.text"`，与 EG-07 对齐；
-# 绑定侧与账本侧必须是同一个字符串，不另取。
+# The capability convention of this chain in the egress ledger. Taken from
+# `capability="agent.hermes.text"` in `chat/hermes_egress.py:131`, aligned with EG-07;
+# the binding side and the ledger side must use the same string, do not pick another.
 HERMES_TEXT_EGRESS_TASK_TYPE = "agent.hermes.text"
 
 _REASONING_REQUIRED_ERROR_MESSAGE = (
-    "模型请求失败：当前上游模型要求启用推理，但模型网关仍将本次请求识别为关闭推理。"
-    "请检查 NewAPI 的模型映射和推理参数配置后重试。"
+    "Model request failed: the upstream model requires reasoning to be enabled, but the model gateway still recognizes this request as having reasoning disabled. "
+    "Check the NewAPI model mapping and reasoning parameter configuration and try again."
 )
 
 
@@ -101,16 +101,16 @@ def _user_facing_chat_error(exc: BaseException) -> str:
     lowered = raw.lower()
     if "reasoning is mandatory" in lowered and "cannot be disabled" in lowered:
         return _REASONING_REQUIRED_ERROR_MESSAGE
-    if "timed out" in lowered or "timeout" in lowered or "响应超时" in raw:
-        return "模型响应超时：上游服务未在规定时间内返回结果，请稍后重试。"
+    if "timed out" in lowered or "timeout" in lowered:
+        return "Model response timed out: the upstream service returned no result within the allotted time. Please try again later."
     if "connection refused" in lowered or "connection error" in lowered:
-        return "模型连接失败：当前无法连接上游模型服务，请检查服务状态后重试。"
+        return "Model connection failed: the upstream model service cannot be reached right now. Check the service status and try again."
 
     # The websocket used to expose this text directly in a transient red banner.
     # Keep the useful cause, but remove local paths/secrets and cap provider dumps.
     safe = chat_service._redact_local_filesystem_paths(raw).strip()  # type: ignore[attr-defined]
     if not safe:
-        return "本轮处理失败：服务未返回可识别的错误原因，请稍后重试。"
+        return "This turn failed: the service returned no recognizable error cause. Please try again later."
     if len(safe) > 800:
         safe = f"{safe[:800].rstrip()}…"
     return safe
@@ -220,7 +220,7 @@ async def clear_chat_scope(
     if scope.kind not in {"home", "project", "freezone"}:
         raise HTTPException(400, "unsupported chat scope for clear")
     if chat_service.get_chat_backend_name() != "codex":
-        raise HTTPException(409, "清空上下文当前仅支持 Codex Agent")
+        raise HTTPException(409, "Clearing context is currently supported only for the Codex Agent")
 
     username = str(user["username"])
     project_ctx = (
@@ -236,7 +236,7 @@ async def clear_chat_scope(
         lock_id = chat_service._acquire_chat_run_lock(username, lock_project)
     except RuntimeError as exc:
         raise HTTPException(
-            409, "当前对话仍在进行，请等待完成或先停止后再清空"
+            409, "The current conversation is still in progress. Wait for it to finish or stop it before clearing"
         ) from exc
 
     heartbeat_task = asyncio.create_task(
@@ -259,7 +259,7 @@ async def clear_chat_scope(
             project_state_dir=project_state_dir,
         )
         if not chat_service._heartbeat_chat_run_lock(username, lock_project, lock_id):
-            raise HTTPException(409, "清空操作已失去对话锁，请刷新后重试")
+            raise HTTPException(409, "The clear operation lost the conversation lock. Please refresh and try again")
         storage_scope = _chat_store_scope_for_project_context(scope, project_ctx)
         if project_ctx is not None and not _is_freezone_scope(scope):
             storage_scope = replace(storage_scope, state_dir=str(project_state_dir))
@@ -443,7 +443,7 @@ class DirectorAutoStartIn(BaseModel):
 
 
 class DirectorAutoSuspendIn(BaseModel):
-    reason: str = Field(default="等待用户确认是否修改", max_length=500)
+    reason: str = Field(default="Waiting for user confirmation on whether to modify", max_length=500)
 
 
 def _director_auto_payload(run: Any | None) -> dict[str, Any]:
@@ -504,7 +504,7 @@ async def pause_director_auto_run(
     run = await director_auto_coordinator.pause(
         username=str(user["username"]),
         project_id=ctx.project_id,
-        reason="用户切换为手动模式",
+        reason="User switched to manual mode",
     )
     return {"ok": True, "data": _director_auto_payload(run)}
 
@@ -522,7 +522,7 @@ async def suspend_director_auto_run(
         run = await director_auto_coordinator.suspend_for_confirmation(
             username=str(user["username"]),
             project_id=ctx.project_id,
-            reason=payload.reason.strip() or "等待用户确认是否修改",
+            reason=payload.reason.strip() or "Waiting for user confirmation on whether to modify",
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -731,7 +731,7 @@ async def _persist_chat_turn_error(
 ) -> dict[str, Any] | None:
     """Persist a terminal turn error so history reconciliation cannot erase it."""
 
-    content = f"本轮处理失败：{reason}\n\n请根据错误提示处理后重试。"
+    content = f"This turn failed: {reason}\n\nHandle the error shown and try again."
     try:
         project_ctx = (
             await _project_context_for_scope(user, scope)
@@ -1309,7 +1309,7 @@ def _resolve_skill_studio_tool_result_payload(
                 "Do not apply user-profile rules for short 'ok' replies. "
                 "Treat it as official saved catalog content that can be used immediately. "
                 "Do not ask the user to save it again, do not analyze the draft, do not start another Skill Studio step, "
-                "and do not include hidden reasoning. Reply briefly in Chinese only that it has been saved to Xi画 Skills / Recipes."
+                "and do not include hidden reasoning. Reply briefly in English only that it has been saved to Freezone Skills / Recipes."
             )
             message = (
                 payload.message
@@ -1348,9 +1348,9 @@ def _resolve_skill_studio_tool_result_payload(
     else:
         if save_requested:
             message = (
-                "Skill / Recipe 仅部分保存成功，请修正失败项后重试。"
+                "Skill / Recipe was only partially saved. Fix the failed items and try again."
                 if saved_skill_ids or saved_recipe_ids
-                else "Skill / Recipe 保存失败，未保存任何条目，请修正错误后重试。"
+                else "Skill / Recipe save failed and no entries were saved. Fix the errors and try again."
             )
             agent_instruction = (
                 "Catalog saving did not fully succeed. Report the errors and only the IDs "
@@ -1792,8 +1792,8 @@ async def agent_capability_price_reference(
             "enabled": True,
             "items": list(AGENT_PRODUCT_PRICE_REFERENCE),
             "note": (
-                "仅计算成功交付的 Workflow/Recipe 结果或定义；"
-                "文字、图片、音频和视频仍通过各自任务独立计费。"
+                "Only successfully delivered Workflow/Recipe results or definitions are counted; "
+                "text, images, audio, and video are still billed independently through their own tasks."
             ),
         },
     }
@@ -1992,9 +1992,11 @@ def _completion_text_or_existing(event_text: object, existing: str) -> str:
 
 
 def _is_completion_notice(text: str) -> bool:
+    from novelvideo.chat.presentation_text import ONE_STEP_NOTICE, WRITE_FAILED_NOTICE
+
     return text in {
-        "当前任务已开始处理。请稍后让我查看当前任务进度，或在任务完成后再继续下一步。",
-        "刚才这一步没有成功启动任务。请先根据返回的错误补齐前置条件；如果是配音缺少声线，可以到「虾塘」上传或录制缺失声线后再继续。",
+        ONE_STEP_NOTICE,
+        WRITE_FAILED_NOTICE,
     }
 
 
@@ -2171,7 +2173,7 @@ async def _require_ai_assistant_access(
         access = await _assistant_surface_access(user=user, scope=scope)
         if not access or access.get("available") is not True:
             message = str(
-                (access or {}).get("unavailable_message") or "虾画功能暂未开放"
+                (access or {}).get("unavailable_message") or "The Freezone feature is not available yet"
             )
             raise HTTPException(status_code=403, detail=message)
     user_id = await _requester_user_id_for_chat(user, scope)
@@ -2223,7 +2225,7 @@ async def _send_scope_changed(
         project_ctx = None
         if not await _send_json_best_effort(
             websocket,
-            {"type": "error", "message": "项目不存在或已删除，已切回首页聊天。"},
+            {"type": "error", "message": "The project does not exist or has been deleted. Switched back to home chat."},
         ):
             return None
     if not await _send_json_best_effort(
@@ -2254,10 +2256,10 @@ async def _send_json_best_effort(
                 await websocket.send_json(payload)
         return True
     except Exception as exc:
-        # 发送失败必须留痕。这里以前是静默 `return False`，调用方也不看返回值，于是
-        # 「终态帧根本没送出去」在线上完全不可观测——CORE-INF-02 的排查有一整天花在
-        # 后端找一个不存在的缺口上，就是因为这条路径无声。
-        # 脱敏：只记帧类型与轮次标识，payload 里可能带用户内容，不入日志。
+        # Send failures must leave a trace. This used to be a silent `return False`, and callers ignored the return value, so
+        # "the terminal frame was never sent" was completely unobservable in production -- the CORE-INF-02 investigation spent a whole day
+        # hunting a nonexistent gap in the backend, precisely because this path was silent.
+        # Redaction: only log the frame type and turn identifier; the payload may carry user content and does not go into logs.
         logger.warning(
             "dropped chat ws frame type=%s turn_id=%s: %s",
             payload.get("type"),
@@ -2632,7 +2634,7 @@ def _resolve_stale_pending_canvas_command(
             "project_id": pending.get("project_id") or scope.id,
             "canvas_id": pending.get("canvas_id") or scope.canvas_id,
             "message": "Canvas command timed out before the frontend reported a result.",
-            "user_message": "画布操作等待超时，已自动取消，没有应用新的画布变更。",
+            "user_message": "The canvas operation timed out and was cancelled automatically. No new canvas changes were applied.",
             "agent_instruction": (
                 "Do not claim success. Tell the user the canvas command timed out and ask "
                 "them to retry after checking the canvas connection."
@@ -2678,7 +2680,7 @@ def _resolve_stale_pending_canvas_context(
             "project_id": pending.get("project_id") or scope.id,
             "canvas_id": pending.get("canvas_id") or scope.canvas_id,
             "message": "Canvas context request timed out before the frontend reported a result.",
-            "user_message": "读取画布上下文等待超时，请确认画布页面仍然打开后重试。",
+            "user_message": "Reading the canvas context timed out. Confirm the canvas page is still open and try again.",
             "agent_instruction": (
                 "Do not wait indefinitely. Tell the user the canvas context request timed out "
                 "and ask them to retry after checking the canvas connection."
@@ -3299,14 +3301,14 @@ def _skill_studio_status_frame(
     if not chat_service._freezone_skill_studio_requested(route_text):  # type: ignore[attr-defined]
         return None
     status_messages = {
-        "routing": "正在整理 Skill 方向...",
+        "routing": "Organizing the Skill direction...",
     }
     return {
         "type": "skill_studio.status",
         "scope": scope.to_dict(),
         "turn_id": turn_id,
         "status": status,
-        "message": message or status_messages.get(status) or "正在整理 Skill 方向...",
+        "message": message or status_messages.get(status) or "Organizing the Skill direction...",
     }
 
 
@@ -3327,10 +3329,10 @@ async def _stream_project_turn(
     project = str(scope.id)
     project_ctx = await _project_context_for_scope(user, scope)
     if project_ctx is None:
-        # `ChatScope.from_payload`（`chat/store.py:82-83`）保证 project 态的 id 非空，
-        # 所以这里在本分支里够不着。够不着也必须 fail-closed：没有 registry 校验过的
-        # 身份就没法判定出网身份，绕过绑定直接开聊正是 OI-61 那条漏。
-        # 不新造错误码，复用既有词汇。
+        # `ChatScope.from_payload` (`chat/store.py:82-83`) guarantees a non-empty id for the project scope,
+        # so it cannot be reached in this branch. Even so it must fail-closed: without a registry-validated
+        # identity the egress identity cannot be determined, and bypassing the binding to start chatting is exactly the OI-61 hole.
+        # No new error code is minted; the existing vocabulary is reused.
         raise EgressBoundaryError("ORG_CONTEXT_REQUIRED")
     project_dir = project_ctx.output_dir
     project_state_dir = project_ctx.state_dir
@@ -3541,7 +3543,7 @@ async def _stream_project_turn(
                     "scope": scope.to_dict(),
                     "turn_id": turn_id,
                     "request_id": event.get("request_id"),
-                    "text": str(event.get("text") or "需要操作授权"),
+                    "text": str(event.get("text") or "Action authorization required"),
                     "options": event.get("options") or [],
                     "tool_call": event.get("tool_call") or {},
                 },
@@ -3642,14 +3644,14 @@ async def _stream_project_turn(
             )
 
     try:
-        # 请求路径上唯一的出网身份绑定点。放在这里而不是分发块，是为了复用
-        # `_project_context_for_scope` 已经解出的 `ProjectContext`——身份取值只走
-        # registry 校验过的 `project_ctx`，不用客户端输入的 `scope.id`，也不新增
-        # 第二次身份解析（第二条信任链就是第二个漏洞面）。
-        # 非组织身份（平台／个人／CE local／灰度未开）下 `request_egress_scope`
-        # 什么都不绑并 yield `None`；`egress_context=None` 照传，
-        # `service.py` 的 `if egress_context is not None` 会把它当平台路径跳过，
-        # 平台行为逐字节不变。刻意不写成 if/else 两条调用路径。
+        # The only egress-identity binding point on the request path. It is placed here rather than in the dispatch block, to reuse
+        # the `ProjectContext` already resolved by `_project_context_for_scope` -- the identity value comes only from the
+        # registry-validated `project_ctx`, not from the client-supplied `scope.id`, and no
+        # second identity resolution is added (a second trust chain is a second vulnerability surface).
+        # Under a non-organization identity (platform / personal / CE local / gray rollout off) `request_egress_scope`
+        # binds nothing and yields `None`; `egress_context=None` is still passed through,
+        # and the `if egress_context is not None` in `service.py` skips it as the platform path,
+        # so platform behavior is byte-for-byte unchanged. Deliberately not written as two if/else call paths.
         async with request_egress_scope(
             requester_user_id=project_ctx.requester_user_id,
             project_id=project_ctx.project_id,
@@ -3975,25 +3977,25 @@ async def _stream_home_turn(
         media=_attachment_payloads(attachments),
         turn_id=turn_id,
     )
-    # home 态请求路径上唯一的出网身份绑定点。`_stream_home_turn` 是一段绕开
-    # `chat/service.py` 的独立流式循环，所以绑定必须在这里就地做——OI-61 只补了
-    # project 态，home 态因此漏到了 OI-63。
+    # The only egress-identity binding point on the home-scope request path. `_stream_home_turn` is a standalone streaming loop that bypasses
+    # `chat/service.py`, so the binding must be done here in place -- OI-61 only patched the
+    # project scope, and the home scope therefore leaked into OI-63.
     #
-    # 身份解析复用既有 helper，不另发明第二条信任链；home 分支会落到
-    # `user_id_from_api_user(user)`。
+    # Identity resolution reuses the existing helper and does not invent a second trust chain; the home branch lands on
+    # `user_id_from_api_user(user)`.
     #
-    # 出网 project 身份用哨兵 `HOME_SCOPE_EGRESS_PROJECT_ID`：`TrustedEgressContext`
-    # 的 `project_id` 有非空不变量，而 home 态的**会话**身份必须是 None。两者是
-    # 两个口径，所以下面 `get_for_user` 里 `project_id` 与 `egress_project_id`
-    # 各传各的——哨兵只喂出网比对，不得漏进子进程的 DRAMACLAW_PROJECT_ID。
+    # The egress project identity uses the sentinel `HOME_SCOPE_EGRESS_PROJECT_ID`: `TrustedEgressContext`'s
+    # `project_id` has a non-empty invariant, while the home scope's **session** identity must be None. These are
+    # two bases, so in `get_for_user` below `project_id` and `egress_project_id`
+    # are passed separately -- the sentinel only feeds the egress comparison and must not leak into the subprocess's DRAMACLAW_PROJECT_ID.
     #
-    # 哨兵必须两跳一致：绑定、换 authorization、取号三处同值，否则
-    # `_strict_admission` 在 `authorize_credentialed_hermes` 与
-    # `build_hermes_child_env` 两处各比一次，任一处不一致即 TASK_ENVELOPE_INVALID。
+    # The sentinel must be consistent across two hops: the binding, the authorization exchange, and the number issuing all use the same value, otherwise
+    # `_strict_admission` compares once each in `authorize_credentialed_hermes` and
+    # `build_hermes_child_env`, and any inconsistency yields TASK_ENVELOPE_INVALID.
     #
-    # 非组织身份下 `request_egress_scope` 什么都不绑并 yield `None`，
-    # `authorize_hermes_launch` 随之返回 `None`，平台路径逐字节不变。
-    # 刻意不写成 if/else 两条调用路径。
+    # Under a non-organization identity `request_egress_scope` binds nothing and yields `None`,
+    # `authorize_hermes_launch` returns `None` accordingly, and the platform path is byte-for-byte unchanged.
+    # Deliberately not written as two if/else call paths.
     requester_user_id = await _requester_user_id_for_chat(user, scope)
     async with request_egress_scope(
         requester_user_id=requester_user_id,
@@ -4010,7 +4012,7 @@ async def _stream_home_turn(
         thread = await hermes_pool.get_for_user(
             username,
             scope_kind="home",
-            # 会话身份：home 态恒为 None。出网身份走 egress_project_id。
+            # Session identity: always None for the home scope. The egress identity goes through egress_project_id.
             project_id=None,
             egress_project_id=HOME_SCOPE_EGRESS_PROJECT_ID,
             requester_user_id=requester_user_id,
@@ -4247,7 +4249,7 @@ async def _stream_home_turn(
                         "scope": scope.to_dict(),
                         "turn_id": turn_id,
                         "request_id": event.request_id,
-                        "text": str(event.text or "需要操作授权"),
+                        "text": str(event.text or "Action authorization required"),
                         "options": event.options or [],
                         "tool_call": event.raw or {},
                     },
@@ -4599,11 +4601,12 @@ async def chat_ws(websocket: WebSocket) -> None:
                     turn_id,
                     type(exc).__name__,
                 )
-                if "当前用户已有 AI 对话正在处理中" in message:
+                if getattr(exc, "code", None) == "user_chat_busy":
                     await _send_json_best_effort(
                         websocket,
                         {
                             "type": "chat.busy",
+                            "code": "user_chat_busy",
                             "turn_id": turn_id,
                             "scope": scope.to_dict(),
                             "message": message,

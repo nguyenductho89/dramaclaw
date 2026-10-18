@@ -569,7 +569,7 @@ export function BatchPanel({
     if (dispatchableItems.length === 0) {
       toast.warning(
         t("episode.workbench.batch.sketchGroupRunning", {
-          defaultValue: "相同草图组正在运行中",
+          defaultValue: "The same sketch group is already running",
         }),
       );
       return;
@@ -735,11 +735,11 @@ export function BatchPanel({
                   askConfirm(
                     t("episode.workbench.batch.regenSketchSingleTitle", {
                       count,
-                      defaultValue: "单张重抽草图",
+                      defaultValue: "Regenerate single sketch",
                     }),
                     t("episode.workbench.batch.regenSketchSingleDesc", {
                       beats: beatList.join(", #"),
-                      defaultValue: "按当前画幅把选中 beats 拆成 1x1 草图任务。",
+                      defaultValue: "Split the selected beats into 1x1 sketch tasks using the current aspect ratio.",
                     }),
                     handleDispatchSingleSketches,
                   );
@@ -748,7 +748,7 @@ export function BatchPanel({
               >
                 <Square className="size-3" />
                 {t("episode.workbench.batch.singleRegen", {
-                  defaultValue: "单张重抽",
+                  defaultValue: "Single regen",
                 })}
               </Button>
               <Button
@@ -760,7 +760,7 @@ export function BatchPanel({
               >
                 <Grid2X2 className="size-3" />
                 {t("episode.workbench.batch.autoCombine", {
-                  defaultValue: "批量重抽",
+                  defaultValue: "Batch regen",
                 })}
                 <CreditCostInline
                   display={sketchPlanCostDisplay}
@@ -815,7 +815,7 @@ export function BatchPanel({
                       <div className="truncate text-[10px] text-muted-foreground">
                         {lockedSketchItemIds.has(item.id)
                           ? t("episode.workbench.batch.sketchGroupRunning", {
-                              defaultValue: "相同草图组正在运行中",
+                              defaultValue: "The same sketch group is already running",
                             })
                           : item.modeLabel}
                       </div>
@@ -864,7 +864,7 @@ export function BatchPanel({
               >
                 <Square className="size-3" />
                 {t("episode.workbench.batch.singleRegen", {
-                  defaultValue: "单张重抽",
+                  defaultValue: "Single regen",
                 })}
               </Button>
               <Button
@@ -876,7 +876,7 @@ export function BatchPanel({
               >
                 <Grid2X2 className="size-3" />
                 {t("episode.workbench.batch.autoCombine", {
-                  defaultValue: "自动组合",
+                  defaultValue: "Auto group",
                 })}
               </Button>
             </div>

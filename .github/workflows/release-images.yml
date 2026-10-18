@@ -6,18 +6,18 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "要构建的 release tag(如 v1.0.2)"
+        description: "Release tag to build (e.g. v1.0.2)"
         required: true
         type: string
       push_latest:
-        description: "同时更新 latest tag(重建旧版本时保持关闭)"
+        description: "Also update the latest tag (keep off when rebuilding old versions)"
         type: boolean
         default: false
 
 permissions:
   contents: read
 
-# release 事件取 tag 名(github.ref_name),手动触发取输入的 tag。
+# For release events the tag name is taken from github.ref_name; for manual triggers, from the input tag.
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
@@ -38,8 +38,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: claymorelab/dramaclaw
-          # release: latest=auto(prerelease 不推 latest);手动触发由 push_latest 决定,
-          # 默认 false —— 重建历史版本时避免把 latest 回退到旧版。
+          # release: latest=auto (prerelease does not push latest); for manual triggers push_latest decides,
+          # default false -- avoids rolling latest back to an old version when rebuilding historical versions.
           tags: |
             type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
           flavor: |

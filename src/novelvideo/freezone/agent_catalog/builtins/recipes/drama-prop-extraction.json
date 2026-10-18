@@ -2,19 +2,19 @@
   "id": "drama-prop-extraction",
   "enabled": true,
   "version": 2,
-  "name": "道具设定提取",
+  "name": "Prop Setting Extraction",
   "output_kind": "text",
   "action_keys": [
     "drama-prop-extraction"
   ],
-  "system_prompt": "你是一名资深道具设计师，请基于情节大纲和当前输入，直接提取并输出关键道具视觉设定。\n\n你的输出就是最终道具设定，不要返回给另一个模型的提示词或操作说明。\n\n最终输出必须包含以下结构化要素：\n-【角色设定】你是一名资深道具设计师，精通影视道具视觉规范与叙事功能设计\n-【任务目标】基于以下情节大纲，提取所有对剧情有推动作用的关键道具的视觉设定：[从上游情节大纲中提取的道具相关信息摘要]\n-【输出结构要求】为每个关键道具输出以下字段：道具名称、叙事功能（信物/线索/武器/象征物等）、外观描述（形状/尺寸/颜色/材质纹理/标志性细节）、特殊状态变化（若有）、出现场次\n-【质量标准】仅提取剧情关键道具，普通陈设不需单独提取；如无显著道具可输出\"无需单独提取道具\"；描述必须具体到可作为 AI 图像生成输入；输出中文，每个道具独立成段，方便后续按道具拆分用于多角度图生成",
+  "system_prompt": "You are a senior prop designer. Based on the plot outline and the current input, directly extract and output the visual settings of the key props.\n\nYour output is the final prop settings; do not return a prompt or operating instructions for another model.\n\nThe final output must contain the following structured elements:\n- [Role] You are a senior prop designer, proficient in film and TV prop visual standards and narrative function design\n- [Task goal] Based on the following plot outline, extract the visual settings of all key props that drive the plot: [summary of prop-related information extracted from the upstream plot outline]\n- [Output structure requirements] For each key prop output these fields: prop name, narrative function (token / clue / weapon / symbol, etc.), appearance description (shape / size / color / material texture / signature details), special state changes (if any), scenes in which it appears\n- [Quality standards] Extract only plot-critical props; ordinary furnishings need not be extracted separately; if there are no notable props you may output \"No separate props to extract\"; descriptions must be specific enough to serve as AI image generation input; write the output in the same language as the plot outline and user input, with each prop in its own paragraph so that it can later be split per prop for multi-angle image generation",
   "must_have_items": [
-    "【道具名称】",
-    "【外观描述】",
-    "【叙事功能】"
+    "[Prop name]",
+    "[Appearance description]",
+    "[Narrative function]"
   ],
-  "planning_prompt": "根据道具信息直接提取关键道具的外观、材质与叙事功能。",
-  "result_summary": "每个关键道具的外观、材质与叙事功能设定。",
+  "planning_prompt": "From the prop information, directly extract the appearance, material and narrative function of the key props.",
+  "result_summary": "Appearance, material and narrative function settings for each key prop.",
   "requires_source_media": true,
   "force_enhancement": false,
   "skip_detail_check": true

@@ -122,7 +122,7 @@ export function RenderGridGallery({
           {t("episode.workbench.renderGrid.noIndexedGrids")}
         </p>
       ) : (
-        // 卡片改自适应网格 + 纵向滚动,撑满弹窗;列宽 minmax 保证大屏多列、窄屏单列。
+        // Cards switched to an adaptive grid + vertical scrolling, filling the dialog; the minmax column width gives many columns on large screens and a single column on narrow ones.
         <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
           {groups.map((group) => (
             <RenderGridCard
@@ -582,7 +582,7 @@ function findBestPlannedGridIndex(
   return best?.gridIndex ?? null;
 }
 
-/** 分组用的兜底桶名。只当 Map 的 key，不上界面，所以用哨兵而不是文案。 */
+/** Fallback bucket name for grouping. Only used as a Map key and never shown in the UI, so it is a sentinel rather than copy. */
 const UNKNOWN_SCENE_BUCKET = "__unknown_scene__";
 
 function getBeatSceneId(beat: Beat): string {

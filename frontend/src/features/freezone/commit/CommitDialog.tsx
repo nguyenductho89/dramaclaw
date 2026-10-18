@@ -37,17 +37,17 @@ import { nodeDataAfterCommittedSlot } from "./committedNodePatch";
 import { isAutoEpisodeTitle } from "@/lib/episode-title";
 import type { TFn } from "@/lib/i18n-types";
 
-// CommitDialog 显示给用户的 slot 选项。已隐藏:
-// - scene_360       — 已 deprecate (presets.py:703-710 注释),被 scene_director_pano_360 取代
-// - scene_spatial_layout — 当前主线不再展示/回写空间布局图,保留 type 只为旧数据兼容
-// - scene_3gs_active_ply — 派生指针 (manifest 自动更新指向 master/reverse/pano 之一),
-//                           不应该让用户直接 push;真要更新去 push 对应的 master/reverse/pano_ply
-// - scene_3gs_collision_glb — 碰撞辅助文件,不是资产页可见场景槽位
+// Slot options CommitDialog shows to the user. Hidden:
+// - scene_360       - deprecated (see the presets.py:703-710 comment), replaced by scene_director_pano_360
+// - scene_spatial_layout - the mainline no longer shows/writes back the spatial layout image; the type is kept only for old-data compatibility
+// - scene_3gs_active_ply - a derived pointer (the manifest automatically points it at one of master/reverse/pano),
+//                           users should not push it directly; to really update, push the corresponding master/reverse/pano_ply
+// - scene_3gs_collision_glb - a collision helper file, not a scene slot visible on the asset page
 // - director_render is a structured bundle target. In user-facing UX we call it
-//   a "导演合成资产"; commit code wraps ordinary canvas images as manual bundles.
-// Backend PushTargetKind type 仍保留这些 kind (兼容旧 canvas / 旧 client 传入),
-// 只是 UI 不主动列出。
-// 槽位顺序即下拉里的顺序，所以保留成数组而不是靠词条表的键序。
+//   a "director composite asset"; commit code wraps ordinary canvas images as manual bundles.
+// Backend PushTargetKind type still keeps these kinds (compatible with old canvases / old clients passing them in),
+// the UI just does not list them proactively.
+// Slot order is the dropdown order, so keep it as an array rather than relying on the key order of a lookup table.
 const KIND_ORDER: PushTargetKind[] = [
   "frame",
   "sketch",
@@ -74,8 +74,8 @@ const KIND_ORDER: PushTargetKind[] = [
   "beat_audio",
 ];
 
-// 用户主动选择面板里隐藏的 slot kinds (defaultTarget 仍可被推断到,只是不
-// 在 UiSelect dropdown 里手动选)。
+// Slot kinds the user can actively choose that are hidden in the panel (defaultTarget can still be inferred,
+// they just cannot be picked manually in the UiSelect dropdown).
 const HIDDEN_KINDS = new Set<PushTargetKind>([
   "scene_360",
   "scene_spatial_layout",
@@ -207,13 +207,13 @@ export function modelSlotKindsForNodeData(
 
 interface CommitDialogProps {
   project: string;
-  /** Source media URL (must be /static/<u>/<p>/...). 图像/视频/音频/3GS。 */
+  /** Source media URL (must be /static/<u>/<p>/...). Image/video/audio/3GS. */
   sourceUrl: string;
   /** Optional thumbnail for header preview. */
   previewUrl?: string | null;
   /** Optional human label from the canvas node; avoids exposing raw generated file names. */
   sourceLabelOverride?: string | null;
-  /** 来源节点的媒体类型;决定预览方式与可选提交目标。默认 image。 */
+  /** Media type of the source node; decides the preview mode and selectable commit targets. Default image. */
   mediaType?: DropMediaType;
   /** Optional default target inferred from where the source came from. */
   defaultTarget?: Partial<PushTarget> & { kind: PushTargetKind };
@@ -701,7 +701,7 @@ export function CommitDialog({
             </div>
           )}
 
-          {/* 目标类型下拉：图像可选全部可见槽；3D 模型只可选场景 3GS 槽。 */}
+          {/* Target type dropdown: images can pick all visible slots; 3D models can only pick scene 3GS slots. */}
           {showTargetKindSelect && (
             <Section title={t("freezone.commit.sections.targetKind")}>
               <UiSelect
@@ -1040,7 +1040,7 @@ export function directorWorldSourceDisplayName(
   t: TFn,
 ): string {
   const source = activeDirectorWorldSource(nodeData, sourceUrl);
-  // label 是节点里存的来源名（用户可改），属于业务内容，原样显示。
+  // label is the source name stored in the node (user-editable); it is business content and shown as-is.
   const label = stringFromUnknown(source?.label);
   if (label) return label;
   const sourceKind = stringFromUnknown(source?.source_kind);

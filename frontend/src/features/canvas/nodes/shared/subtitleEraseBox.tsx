@@ -9,7 +9,7 @@ import {
   type ReactElement,
 } from 'react';
 
-/** 容器像素坐标系里的「视频画面实际占据的矩形」（object-contain 去掉黑边后）。 */
+/** In the container pixel coordinate system, "the rectangle the video picture actually occupies" (after object-contain removes the letterboxing). */
 export interface DisplayedRect {
   left: number;
   top: number;
@@ -17,7 +17,7 @@ export interface DisplayedRect {
   height: number;
 }
 
-/** 归一化（0..1，相对源画面）的框选区域。 */
+/** Normalized (0..1, relative to the source picture) selection region. */
 export interface SubtitleEraseBoxValue {
   x: number;
   y: number;
@@ -25,7 +25,7 @@ export interface SubtitleEraseBoxValue {
   height: number;
 }
 
-/** 拖拽中的瞬时两点（归一化坐标）。 */
+/** Transient two points while dragging (normalized coordinates). */
 export interface SubtitleEraseDrag {
   x0: number;
   y0: number;
@@ -39,8 +39,8 @@ export interface SubtitleEraseDrag {
  * it sits on top of the actual video pixels (not the letterbox bars) and (b)
  * convert pointer coords ↔ normalized 0..1 source coords.
  *
- * 从 VideoNode 的私有 getDisplayedVideoRect 原样搬出（工作流节点播放器与故事板
- * 详情播放器共用同一套换算）。视频固有宽高未知时退化为整个容器。
+ * Moved out verbatim from VideoNode's private getDisplayedVideoRect (the workflow node player and the storyboard
+ * detail player share the same conversion). Falls back to the whole container when the video's intrinsic size is unknown.
  */
 export function computeDisplayedVideoRect(
   containerW: number,
@@ -76,10 +76,10 @@ export interface SubtitleEraseBoxOverlayProps {
 }
 
 /**
- * 框选去字幕的拖拽层：绝对定位铺满播放器容器，把指针坐标换算成归一化的
- * 0..1 源画面坐标（先减掉 object-contain 的黑边偏移），并把当前框画出来。
+ * Drag layer for box-selecting subtitle removal: absolutely positioned to fill the player container, converting pointer coordinates to normalized
+ * 0..1 source-picture coordinates (after subtracting the object-contain letterbox offset), and drawing the current box.
  *
- * 从 VideoNode 的私有组件原样搬出，供工作流节点与故事板详情两处复用。
+ * Moved out verbatim from VideoNode's private component, for reuse by both the workflow node and the storyboard detail.
  */
 export function SubtitleEraseBoxOverlay({
   box,

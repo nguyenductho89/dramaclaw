@@ -1,4 +1,4 @@
-"""分集列表 & 规划 & 身份端点。"""
+"""Episode list & planning & identity endpoints."""
 
 import asyncio
 import logging
@@ -53,15 +53,15 @@ AssetCompiler = None
 
 
 def _dir_entry_names(directory: "Path") -> set[str]:
-    """目录里的文件名集合；目录不存在/不可读时当空。"""
+    """Set of file names in a directory; treated as empty if the directory does not exist or is unreadable."""
     try:
         return set(os.listdir(directory))
     except OSError:
         return set()
 
 _EPISODE_ASSET_PLANNER_TASKS = {
-    "scene": ("episode_scene_planner", "场景"),
-    "prop": ("episode_prop_planner", "道具"),
+    "scene": ("episode_scene_planner", "scene"),
+    "prop": ("episode_prop_planner", "prop"),
 }
 
 
@@ -247,19 +247,19 @@ async def _enqueue_episode_asset_planner(
         "backend": queued.backend,
         "queue": queued.queue,
         "data": {"target_episode": episode_num, "asset_kind": asset_kind},
-        "message": f"第 {episode_num} 集{label}规划已进入队列",
+        "message": f"Episode {episode_num} {label} planning queued",
     }
 
 
 @router.get("/projects/{project}/episodes")
 async def list_episodes(project: str, user: dict = Depends(get_api_user)):
-    """获取项目分集列表。"""
+    """Get the project episode list."""
     resolved = await resolve_project_scope(project, user, required_role="viewer")
 
-    # 裸 factory 把关闭责任丢给调用点，而这里正常返回和抛错两条路都没有 close()——
-    # 每个 SQLiteStore 背后是一条 aiosqlite 连接加一个后台线程，按请求数累积。
-    # 本 PR 给这个路由加了 beat_count 之后它是分集列表的唯一数据源，进一次虾镜就走
-    # 一次，泄漏更明显。
+    # The bare factory leaves closing to the call site, and here neither the normal return nor the error path calls close() --
+    # behind every SQLiteStore is an aiosqlite connection plus a background thread, accumulating per request.
+    # After this PR added beat_count to this route it is the sole data source of the episode list, and it is hit
+    # once per entry into the shot view, so the leak is more evident.
     store_scope = (
         sqlite_store_for_context_scope(resolved.ctx)
         if resolved.ctx
@@ -267,8 +267,8 @@ async def list_episodes(project: str, user: dict = Depends(get_api_user)):
     )
     async with store_scope as store:
         episodes = store.get_all_episodes()
-        # 每张分集卡片都要显示镜头数。一次分组查询带上，前端就不必逐集去拉完整
-        # beats 载荷再数长度——那是「有几集发几个请求」，且每个请求都远比这个整数贵。
+        # Every episode card must show the shot count. Bringing it along in one grouped query spares the frontend from pulling the full
+        # beats payload of each episode just to count the length -- that would be "as many requests as episodes", each far more expensive than this integer.
         beat_counts = await store.count_beats_by_episode()
 
         data = []
@@ -294,7 +294,7 @@ async def list_episodes(project: str, user: dict = Depends(get_api_user)):
 
 @router.post("/projects/{project}/episodes/plan")
 async def plan_episodes(project: str, body: EpisodePlanRequest, user: dict = Depends(get_api_user)):
-    """规划分集。"""
+    """Plan episodes."""
     logger.info(
         "[%s] plan_episodes: target=%d, mode=%s",
         project,
@@ -321,7 +321,7 @@ async def plan_episodes(project: str, body: EpisodePlanRequest, user: dict = Dep
             return {
                 "ok": False,
                 "code": KnowledgePipelineUnsupported.error_code,
-                "error": "该项目只支持按章节/集号的确定性分集",
+                "error": "This project only supports deterministic episode splitting by chapter / episode number",
             }
         queued = await get_task_backend().enqueue_project_task(
             ctx,
@@ -338,15 +338,15 @@ async def plan_episodes(project: str, body: EpisodePlanRequest, user: dict = Dep
             "task_key": project_task_state_key("build_episodes", ctx.project_id, 0),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"分集规划任务已进入队列 (目标 {body.target_episodes} 集)",
+            "message": f"Episode planning task queued (target {body.target_episodes} episodes)",
         }
 
-    return {"ok": False, "error": "分集规划需要 project context"}
+    return {"ok": False, "error": "Episode planning requires a project context"}
 
 
 @router.get("/projects/{project}/episodes/{episode_num}")
 async def get_episode_detail(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """获取指定集的完整详情。"""
+    """Get the full details of a specified episode."""
     resolved = await resolve_project_scope(project, user, required_role="viewer")
 
     store = (
@@ -363,13 +363,13 @@ async def get_episode_detail(project: str, episode_num: int, user: dict = Depend
 
 @router.get("/projects/{project}/episodes/{episode_num}/beats")
 async def get_beats(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """获取指定集数的 beats。"""
+    """Get the beats of a specified episode."""
     resolved = await resolve_project_scope(project, user, required_role="viewer")
     project_dir = resolved.project_dir
 
-    # 从图谱读取 beats（统一数据源）。
-    # get_beats_as_dicts 只读 beats 表，不碰 store 的角色/集/道具内存缓存，
-    # 所以跳过 load_graph_state()——那是三次全表读，比这里的查询本身还贵。
+    # Read beats from the graph (unified data source).
+    # get_beats_as_dicts only reads the beats table and does not touch the store's in-memory caches of characters/episodes/props,
+    # so load_graph_state() is skipped -- it is three whole-table reads, more expensive than the query here.
     store_scope = (
         sqlite_store_for_context_scope(resolved.ctx, load_graph_state=False)
         if resolved.ctx
@@ -378,31 +378,31 @@ async def get_beats(project: str, episode_num: int, user: dict = Depends(get_api
     async with store_scope as store:
         beats = await store.get_beats_as_dicts(episode_num)
 
-    # 为每个 beat 附加 sketch_url / frame_url / video_url / audio_url.
+    # Attach sketch_url / frame_url / video_url / audio_url to each beat.
     # Asset files are named by beat_number. Do not use enumerate index here:
     # manually inserted shots can have sparse/non-display-order beat numbers.
     sketches_dir = project_dir / "sketches" / f"ep{episode_num:03d}"
     frames_dir = project_dir / "frames" / f"ep{episode_num:03d}"
     videos_dir = project_dir / "videos" / "beats" / f"ep{episode_num:03d}"
     audio_dir = project_dir / "audio" / f"ep{episode_num:03d}"
-    # 整段文件存在性探测 + URL 组装一次性搬进线程，事件循环上不留同步 syscall。
-    # 原先是逐 beat 做的：4 次 Path.exists() 找文件，命中后 project_static_url 再各
-    # 做一次 exists()+stat()——静态 URL 尾巴上的 ?v=mtime 要靠 stat 拿。一集 20 个
-    # beat 就是约 160 次 exists 加 80 次 stat，全在 async handler 里同步执行。本地
-    # SSD 上无感；OSSFS/网络盘上每次都是一个网络往返，一旦卡顿，单个 /beats 请求就
-    # 能把 Uvicorn worker 的心跳按住，同进程的其他请求跟着一起等。
+    # The whole batch of file-existence probing + URL assembly is moved into a thread at once, leaving no synchronous syscalls on the event loop.
+    # It used to be done per beat: 4 Path.exists() calls to find files, and after a hit project_static_url did another
+    # exists()+stat() each -- the ?v=mtime at the tail of the static URL needs stat. For an episode with 20
+    # beats that is about 160 exists plus 80 stat calls, all executed synchronously inside the async handler. On a local
+    # SSD it is imperceptible; on OSSFS/network disks each one is a network round trip, and once it stalls, a single /beats request
+    # can hold the Uvicorn worker heartbeat, with other requests in the same process waiting along with it.
     #
-    # 现在：每个目录列一次（4 次 listdir 取代 4N 次 exists），剩下的 stat 仍是每个
-    # 命中文件一次，但整段都发生在线程里，事件循环随时可以调度别的请求。
+    # Now: each directory is listed once (4 listdir calls replace 4N exists calls), the remaining stat is still once per
+    # hit file, but all of it happens inside a thread so the event loop can schedule other requests at any time.
     def _attach_asset_urls() -> list[tuple[dict, str]]:
         sketch_names = _dir_entry_names(sketches_dir)
         frame_names = _dir_entry_names(frames_dir)
         video_names = _dir_entry_names(videos_dir)
         audio_names = _dir_entry_names(audio_dir)
 
-        # 收集已存在的音频交回给调用方并发探测时长，供前端时长控件做默认值/下限
-        # （视频时长须 >= 音频）。探测不在这个线程里做：它要 fork ffprobe，得走
-        # media_io 里那道有界并发闸门。
+        # Collect the existing audio and hand it back to the caller to probe durations concurrently, giving the frontend duration controls their default/lower bound
+        # (video duration must be >= audio). The probing is not done in this thread: it forks ffprobe and must go through
+        # the bounded concurrency gate in media_io.
         jobs: list[tuple[dict, str]] = []
         for beat in beats:
             beat["audio_duration_seconds"] = None
@@ -459,10 +459,10 @@ async def get_beats(project: str, episode_num: int, user: dict = Depends(get_api
     if audio_duration_jobs:
         from novelvideo.utils.media_io import get_audio_durations_async
 
-        # 有界并发。这里此前是对整集的音频一次性 gather——一集多少个有声镜头就同时
-        # fork 多少个 ffprobe，而且用的是默认线程池，抽干期间进程里其他阻塞调用一起
-        # 排队。真正的修法是把时长在生成时写进库、读的时候直接出（TTS 本来就量过），
-        # 这里先把扇出封顶。
+        # Bounded concurrency. This used to gather the audio of the whole episode at once -- as many voiced shots as an episode has,
+        # that many ffprobe forks at once, and on the default thread pool, so other blocking calls in the process queued along during the drain.
+        # The real fix is to write the duration into the database at generation time and read it directly (TTS measured it anyway),
+        # and for now the fan-out is merely capped.
         durations = await get_audio_durations_async(
             [path for _, path in audio_duration_jobs]
         )
@@ -480,7 +480,7 @@ async def delete_manual_shot_route(
     beat_number: int,
     user: dict = Depends(get_api_user),
 ):
-    """删除手工插入的 beat。普通主流程 beat 不允许从这里删。"""
+    """Delete a manually inserted beat. Regular mainline beats may not be deleted here."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
 
     from novelvideo.manual_shots import delete_manual_shot
@@ -510,12 +510,12 @@ async def insert_manual_shot_route(
     body: InsertManualShotRequest,
     user: dict = Depends(get_api_user),
 ):
-    """插入手工 beat；after_beat_number=None 表示插到第一张前。"""
+    """Insert a manual beat; after_beat_number=None means insert before the first one."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
 
     visual_description = (body.visual_description or "").strip()
     if not visual_description:
-        return {"ok": False, "error": "visual_description 不能为空"}
+        return {"ok": False, "error": "visual_description must not be empty"}
 
     from novelvideo.manual_shots import insert_manual_shot
 
@@ -557,7 +557,7 @@ async def insert_manual_shot_route(
 async def plan_episode_identities(
     project: str, episode_num: int, user: dict = Depends(get_api_user)
 ):
-    """规划单集角色身份。"""
+    """Plan the character identities of a single episode."""
     logger.info("[%s] EP%d plan_episode_identities", project, episode_num)
     resolved = await resolve_project_scope(project, user, required_role="editor")
     if resolved.ctx is not None:
@@ -600,7 +600,7 @@ async def plan_episode_identities(
             "backend": queued.backend,
             "queue": queued.queue,
             "data": {"target_episode": episode_num},
-            "message": f"第 {episode_num} 集身份规划已进入队列",
+            "message": f"Episode {episode_num} identity planning queued",
         }
 
     await get_usage_meter().set_project_llm_usage_context(
@@ -639,7 +639,7 @@ async def plan_episode_identities(
     )
     episode = _find_episode(store.get_all_episodes(), episode_num) or episode
 
-    # 收集身份信息
+    # Collect identity information
     characters = store.get_all_characters()
     identities = []
     for c in characters:
@@ -668,7 +668,7 @@ async def plan_episode_identities(
         "ok": True,
         "task_type": "identity_planner",
         "data": {"target_episode": episode_num},
-        "message": f"第 {episode_num} 集身份规划任务已启动",
+        "message": f"Episode {episode_num} identity planning task started",
     }
 
 
@@ -676,13 +676,13 @@ async def plan_episode_identities(
 async def plan_episode_identities_async(
     project: str, episode_num: int, user: dict = Depends(get_api_user)
 ):
-    """兼容 1.0/旧前端的异步身份规划入口。"""
+    """Async identity planning entry compatible with 1.0 / legacy frontends."""
     return await plan_episode_identities(project=project, episode_num=episode_num, user=user)
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/scenes/plan")
 async def plan_episode_scenes(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """规划单集场景菜单。"""
+    """Plan the scene menu of a single episode."""
     logger.info("[%s] EP%d plan_episode_scenes", project, episode_num)
     return await _enqueue_episode_asset_planner(
         project=project,
@@ -694,7 +694,7 @@ async def plan_episode_scenes(project: str, episode_num: int, user: dict = Depen
 
 @router.post("/projects/{project}/episodes/{episode_num}/props/plan")
 async def plan_episode_props(project: str, episode_num: int, user: dict = Depends(get_api_user)):
-    """规划单集道具菜单。"""
+    """Plan the prop menu of a single episode."""
     logger.info("[%s] EP%d plan_episode_props", project, episode_num)
     return await _enqueue_episode_asset_planner(
         project=project,
@@ -711,7 +711,7 @@ async def update_episode(
     body: EpisodeUpdate,
     user: dict = Depends(get_api_user),
 ):
-    """编辑指定集的元数据。"""
+    """Edit the metadata of a specified episode."""
     resolved = await resolve_project_scope(project, user, required_role="editor")
 
     store = (
@@ -720,7 +720,7 @@ async def update_episode(
         else await make_sqlite_store(resolved.username, resolved.project_name)
     )
 
-    # 确认集数存在
+    # Confirm the episode exists
     episode = store.get_episode(episode_num)
     if episode is None:
         return {"ok": False, "error": f"Episode {episode_num} not found"}
@@ -733,7 +733,7 @@ async def update_episode(
     # back the menus that planning just wrote.
     await store.patch_episode(episode_num, **updates)
 
-    # 返回更新后的集信息
+    # Return the updated episode info
     ep = store.get_episode(episode_num)
     return {"ok": True, "data": _episode_detail_payload(ep, episode_num)}
 
@@ -744,7 +744,7 @@ async def detect_chapters(
     spine_template: Literal["drama", "narrated"] | None = None,
     user: dict = Depends(get_api_user),
 ):
-    """检测已上传小说的章节结构。"""
+    """Detect the chapter structure of an uploaded novel."""
     resolved = await resolve_project_scope(project, user, required_role="viewer")
 
     store = (

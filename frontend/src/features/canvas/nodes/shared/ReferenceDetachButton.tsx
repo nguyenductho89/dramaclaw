@@ -4,22 +4,22 @@ import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface ReferenceDetachButtonProps {
-  /** 上游节点 id（连线的 source） */
+  /** Upstream node id (the edge's source) */
   nodeId: string;
-  /** 取消引用回调 */
+  /** Detach-reference callback */
   onDetach: (nodeId: string) => void;
-  /** 额外的定位/样式类名（默认贴在右上角） */
+  /** Extra positioning/style class names (defaults to the top right corner) */
   className?: string;
 }
 
 /**
- * 引用素材缩略图上的「取消引用」按钮。
+ * The "detach reference" button on a reference asset thumbnail.
  *
- * 使用 <span role="button">（而非 <button>），以便嵌套在本身就是
- * <button> 的引用 chip 内部而不产生非法的 button 嵌套。
+ * Uses <span role="button"> (rather than <button>) so that it can nest inside a reference chip that is
+ * itself a <button> without producing an illegal button nesting.
  *
- * 约定：父容器需带 `group relative`，按钮默认 `hidden`，hover 时
- * 通过 `group-hover:flex` 显示。
+ * Convention: the parent container needs `group relative`, the button is `hidden` by default and
+ * shown on hover through `group-hover:flex`.
  */
 export function ReferenceDetachButton({ nodeId, onDetach, className }: ReferenceDetachButtonProps) {
   const { t } = useTranslation();

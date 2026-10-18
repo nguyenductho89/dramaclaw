@@ -50,26 +50,32 @@ function assetTabStorageKey(project: string): string {
   return `${ASSET_TAB_STORAGE_KEY_PREFIX}${encodeURIComponent(project)}`;
 }
 
-// 下面两个函数比对的都是后端报错里的原文，不是界面文案，跟着界面语言走就认不出来了。
-// i18n-exempt-start
+// The two functions below match the original text of the backend error, not UI copy; following the UI language would make it unrecognizable.
+function isNarratorVoiceMissing(message: string): boolean {
+  return /voice_narrator_missing|narrator voice (?:is )?missing/i.test(message);
+}
+
+function mentionsCharacterWorkbench(message: string): boolean {
+  return /narrator protagonist|character workbench/i.test(message);
+}
+
 function audioPrereqTarget(error: string): VoiceConfigTarget | null {
   const message = String(error || "").trim();
-  if (!message.includes("解说声线缺失")) return null;
-  if (message.includes("解说主角") || message.includes("角色工作台")) return "characters";
+  if (!isNarratorVoiceMissing(message)) return null;
+  if (mentionsCharacterWorkbench(message)) return "characters";
   return "voices";
 }
 
 function audioPrereqMessage(error: string, t: (key: string) => string): string {
   const message = String(error || "").trim();
-  if (!message.includes("解说声线缺失")) return message;
-  if (message.includes("解说主角") || message.includes("角色工作台")) {
+  if (!isNarratorVoiceMissing(message)) return message;
+  if (mentionsCharacterWorkbench(message)) {
     return `${message}${t("episode.workbench.audio.prereqHintCharacters")}`;
   }
   return `${message}${t("episode.workbench.audio.prereqHintVoices")}`;
 }
-// i18n-exempt-end
 
-/** 音频 sub-tab — per-beat IndexTTS2 task dispatch and playback. */
+/** Audio sub-tab - per-beat IndexTTS2 task dispatch and playback. */
 export function AudioPane({
   beat,
   project,

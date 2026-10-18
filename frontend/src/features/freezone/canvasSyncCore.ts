@@ -365,8 +365,8 @@ export type SaveResponseOutcome =
   | { kind: "retry"; afterMs: number; code: "canvas_lock_busy" }
   | { kind: "fatal"; code: string; message: string }
   /**
-   * 422 canvas_media_scope_mismatch：这次保存想引入别的项目的媒体地址。可以自愈——
-   * 把素材拷进本项目再重试，所以不能和「载荷过大」一样归到 fatal 里躺平。
+   * 422 canvas_media_scope_mismatch: this save tried to introduce media URLs from another project. It can self-heal -
+   * copy the assets into this project and retry, so it must not lie flat under fatal like "payload too large".
    */
   | { kind: "media_scope"; refs: ForeignMediaRef[] }
   | { kind: "error"; message: string };

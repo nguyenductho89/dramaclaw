@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../zh/license.md)
-
 # License
 
 DramaClaw Community Edition (CE) is licensed under the [Elastic License 2.0 (ELv2)](../../LICENSES/Elastic-2.0.txt) and is **source available**. This document explains in plain terms what you can and cannot do.
@@ -32,7 +29,7 @@ EE is the proprietary commercial edition (multi-tenancy, team collaboration, bil
 
 ## Who owns the code I contribute
 
-Contributions are governed by the [Contributor Agreement](../../CONTRIBUTING.md#贡献者协议): your contributions may be used for commercial purposes (including the official cloud / hosted offering), and the maintainers may adjust the license as needed. See CONTRIBUTING for details.
+Contributions are governed by the [Contributor Agreement](../../CONTRIBUTING.md#contributor-agreement): your contributions may be used for commercial purposes (including the official cloud / hosted offering), and the maintainers may adjust the license as needed. See CONTRIBUTING for details.
 
 ## Commercial licensing / partnerships
 

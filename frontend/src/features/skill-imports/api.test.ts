@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import zh from '../../../public/locales/zh/translation.json';
+import vi from '../../../public/locales/vi/translation.json';
 import en from '../../../public/locales/en/translation.json';
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/api/client', () => ({ apiCall: vi.fn() }));
@@ -13,9 +13,9 @@ describe('external skill imports', () => {
     expect(apiCall).toHaveBeenCalledWith('projects/a%2Fb/freezone/skill-imports/candidate%2F1/validate', { method: 'POST', json: { bundle } });
   });
   it('preserves unicode Markdown bytes for backend conversion', async () => {
-    const files = await encodeSkillFiles([new File(['# 分镜'], 'SKILL.md')]);
+    const files = await encodeSkillFiles([new File(['# Phân cảnh'], 'SKILL.md')]);
     expect(files[0].name).toBe('SKILL.md');
-    expect(atob(files[0].content_base64)).toBe(unescape(encodeURIComponent('# 分镜')));
+    expect(atob(files[0].content_base64)).toBe(unescape(encodeURIComponent('# Phân cảnh')));
   });
   it('rejects unsupported inputs before submitting a batch', async () => {
     await expect(encodeSkillFiles([new File(['x'], 'secret.exe')])).rejects.toThrow();
@@ -32,15 +32,15 @@ describe('external skill imports', () => {
     expect(parseCandidateBundle(JSON.stringify(bundle))).toEqual(bundle);
   });
   it('hands off a native candidate without asking chat to run the canvas', async () => {
-    await i18n.init({ lng: 'zh', resources: { zh: { translation: zh }, en: { translation: en } } });
+    await i18n.init({ lng: 'vi', resources: { vi: { translation: vi }, en: { translation: en } } });
     const prompt = skillImportStudioPrompt({ skill: { id: 'ad' }, recipes: [] });
     expect(prompt).toContain('Skill Studio');
     expect(prompt).toContain('"id": "ad"');
-    expect(prompt).toContain('不要创建或运行画布节点');
+    expect(prompt).toContain('Không tạo hay chạy các nút trên bảng vẽ');
     await i18n.changeLanguage('en');
     const english = skillImportStudioPrompt({ skill: { id: 'ad' }, recipes: [] });
     expect(english).toContain('Do not create or run canvas nodes');
     expect(english).not.toMatch(/[\u4e00-\u9fff]/);
-    await i18n.changeLanguage('zh');
+    await i18n.changeLanguage('vi');
   });
 });

@@ -12,73 +12,23 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
- * 精品剧（drama）的导入标准格式与示例。逐行写死而不是塞进 i18n 的长字符串：
- * 这是要按原样展示的样例，任何换行/空格都有意义，不该被译者改动。
+ * Import standard format and examples for premium drama (drama). Hard-coded line by line instead of
+ * stuffing a long string into i18n: these are samples shown as is, and every line break / space
+ * is meaningful and must not be touched by translators.
  *
- * 中英各一套：解析器两种格式都认（utils/screenplay_scene_parser.py），但样例是
- * 「照着抄」的模板，中文界面给中文制片格式、英文界面给 Fountain 格式，混着给等于没给。
+ * English and Vietnamese each get a set: the parser (utils/screenplay_scene_parser.py) reads the same
+ * Fountain / Final Draft keywords for both, but the samples are "copy this" templates, so the
+ * Vietnamese UI shows Vietnamese content (names, actions, dialogue) around the literal keywords.
  *
- * NOTE FOR TRANSLATORS — this applies to the `ingest.novelFormat.rule*`,
+ * NOTE FOR TRANSLATORS - this applies to the `ingest.novelFormat.rule*`,
  * `ingest.sceneHeaders.*` and `aiAssistant.formatCheck.recommended` strings too:
- * the parser matches these keywords *literally*. It accepts the Chinese
- * production formats and Fountain / Final Draft, and nothing else. Translate the
- * explanation around them; never translate `第N集` / `EPISODE N`, `人物：` /
- * `Characters:`, `内` / `外` / `INT.` / `EXT.`, or the time values
- * (`深夜` / `NIGHT` / `DAY` / …). A localized guide whose keywords were
+ * the parser matches these keywords *literally*. It accepts Fountain / Final Draft
+ * headings and nothing else. Translate the explanation around them; never translate
+ * `EPISODE N`, `Characters:`, `INT.` / `EXT.`, or the time values
+ * (`NIGHT` / `DAY` / ...). A localized guide whose keywords were
  * translated reads fine and then fails every import made by someone who
  * followed it.
  */
-// i18n-exempt-start —— 样例本身就是解析器认的制片格式，翻译过去就不是那个格式了
-const DRAMA_FORMAT_SPEC = [
-  "中文制片格式（任选一种）",
-  "1-1 苏鸾寝殿 深夜 内",
-  "1.1 苏鸾寝殿 内 深夜",
-  "",
-  "中文分字段格式",
-  "场次：1",
-  "地点：苏鸾寝殿",
-  "时间：深夜",
-  "内外景：内",
-  "",
-  "Fountain / Final Draft 格式",
-  "内景 苏鸾寝殿 - 深夜",
-  "INT. BEDROOM - NIGHT",
-].join("\n");
-
-const DRAMA_REPAIRABLE_FORMAT = [
-  "第1集",
-  "",
-  "1.1 苏鸾寝殿 内",
-  "人物：苏糖、锦绣",
-  "▲ 漆黑寝殿，烛火摇曳。",
-  "苏糖：锦绣，几更了？",
-].join("\n");
-
-const DRAMA_FORMAT_EXAMPLE = [
-  "第1集",
-  "1-1 苏鸾寝殿 深夜 内",
-  "人物：苏糖、锦绣",
-  "△【闪回】漆黑寝殿，匕首尖正对跳动的烛火，刀身映出一张布满冷汗、瞳孔骤缩的少女脸。",
-  "△苏糖 OS：我不能死！",
-  "△【闪出】寒光匕首狠狠刺入少女心口，鲜血瞬间喷溅在锦被上。凶手缓缓抬头，露出贴身侍女锦绣冰冷的脸。",
-  "△苏糖 OS：我不能死得不明不白！",
-  "△【闪回】现代大学宿舍，书本被狠狠砸在地上，苏糖和室友激烈争吵。",
-  "△苏糖 OS：我叫苏糖，普通女大学生。昨天还在跟人吵架，今天一睁眼……",
-  "△【闪出】苏糖猛地从床榻弹坐而起，寝衣被冷汗浸透，双手死死攥住床帐，指节泛白。",
-  "苏糖（大口喘气，眼神涣散，声音发颤）：这种风格是……《乱世凤鸣录》？",
-  "△【特写】一双纤白细腻、完全陌生的手，在苏糖眼前缓缓攥成拳。",
-  "△苏糖 OS：这里是凤鸣大陆，七国乱战。我附身的人，是苏鸾！",
-  "△苏糖浑身剧烈一颤。",
-  "△苏糖 OS：这个世界的规则只有一条——弱肉强食。原著里，苏鸾是个路人甲。",
-  "△寝殿门扇“吱呀”一声，悄无声息推开一道缝。",
-  "△【特写】一只素白的手端着青瓷汤碗走入，宽大袖口滑落，手腕处一道细长的刀鞘轮廓，一闪而过。",
-  "△苏糖 OS：她会死。三天后，在这张床上，被她最信任的侍女一刀穿心。",
-  "△锦绣垂着头，无声走到床边，面色平静得没有一丝波澜。",
-  "苏糖（瞬间收敛所有情绪，声音带着刚睡醒的沙哑慵懒）：锦绣，几更了？",
-  "锦绣（头埋得极低，声音恭顺）：回公主，三更。公主噩梦惊醒，奴婢炖了安神汤。",
-  "△苏糖的眼神骤然锐利，随即立刻垂下眼帘，露出一副困倦不堪的模样。",
-].join("\n");
-
 const DRAMA_FORMAT_SPEC_EN = [
   "Fountain / Final Draft (recommended)",
   "INT. SEOUL SUBWAY STATION - NIGHT",
@@ -136,18 +86,73 @@ const DRAMA_FORMAT_EXAMPLE_EN = [
   "",
   "JI-WON: I made it back.",
 ].join("\n");
-// i18n-exempt-end
+const DRAMA_FORMAT_SPEC_VI = [
+  "Fountain / Final Draft (khuyến nghị)",
+  "INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT",
+  "EXT. PHỐ SEOUL - DAWN",
+  "",
+  "Giá trị thời gian",
+  "DAY / NIGHT / MORNING / AFTERNOON / EVENING / DAWN / DUSK",
+  "",
+  "Giờ chính xác (một dòng riêng, ngay dưới tiêu đề cảnh)",
+  "INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT",
+  "Time: 11:47 PM",
+].join("\n");
+
+const DRAMA_REPAIRABLE_FORMAT_VI = [
+  "EPISODE 1",
+  "",
+  "SCENE 1 - GA TÀU ĐIỆN NGẦM SEOUL",
+  "Characters: Ji-won, Bà cụ",
+  "△ Nước mưa nhỏ giọt từ trần xuống.",
+  "JI-WON: Có ai ở đây không?",
+  "",
+  "INT./EXT. TAXI ĐANG CHẠY - DAY",
+  "Characters: Ji-won",
+  "△ Chiếc taxi len lỏi giữa dòng xe.",
+  "JI-WON: Làm ơn đi nhanh lên.",
+].join("\n");
+
+const DRAMA_FORMAT_EXAMPLE_VI = [
+  "EPISODE 1",
+  "",
+  "INT. GA TÀU ĐIỆN NGẦM SEOUL - NIGHT",
+  "Characters: Ji-won, Bà cụ",
+  "",
+  "△ Nước mưa nhỏ giọt từ trần xuống. Sân ga hoàn toàn vắng lặng.",
+  "",
+  "JI-WON: Có ai ở đây không?",
+  "",
+  "BÀ CỤ: Cháu không nên đến muộn thế này.",
+  "",
+  "",
+  "INT. TOA TÀU - NIGHT",
+  "Characters: Ji-won, Bà cụ, Cậu bé",
+  "",
+  "△ Cửa tàu đóng lại. Đèn nhấp nháy trên những hàng ghế trống.",
+  "",
+  "JI-WON: Chuyến tàu này đi đâu vậy?",
+  "",
+  "BÀ CỤ: Đến ga cuối cùng.",
+  "",
+  "",
+  "EXT. PHỐ SEOUL - DAWN",
+  "Characters: Ji-won",
+  "",
+  "△ Ji-won bước ra con phố vắng khi những tia nắng đầu tiên xuất hiện.",
+  "",
+  "JI-WON: Mình đã trở về được rồi.",
+].join("\n");
 
 /**
- * 样例按界面语言取，不按剧本语言：这是「照着抄」的模板，跟着读的人走。
- * Locales without their own sample set get the Fountain one, which is what the
- * parser accepts for non-Chinese scripts — so this branch stays binary on purpose.
+ * Samples follow the UI language, not the script language: these are "copy this" templates and
+ * go with the person reading them. English is the default; Vietnamese gets its own set.
  */
 const FORMAT_SAMPLES = {
-  zh: {
-    spec: DRAMA_FORMAT_SPEC,
-    repairable: DRAMA_REPAIRABLE_FORMAT,
-    example: DRAMA_FORMAT_EXAMPLE,
+  vi: {
+    spec: DRAMA_FORMAT_SPEC_VI,
+    repairable: DRAMA_REPAIRABLE_FORMAT_VI,
+    example: DRAMA_FORMAT_EXAMPLE_VI,
   },
   en: {
     spec: DRAMA_FORMAT_SPEC_EN,
@@ -164,8 +169,8 @@ export function NovelFormatDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const samples = (i18n.resolvedLanguage ?? i18n.language ?? "").startsWith("zh")
-    ? FORMAT_SAMPLES.zh
+  const samples = (i18n.resolvedLanguage ?? i18n.language ?? "").startsWith("vi")
+    ? FORMAT_SAMPLES.vi
     : FORMAT_SAMPLES.en;
 
   return (
@@ -175,7 +180,7 @@ export function NovelFormatDialog({
           <DialogTitle>{t("ingest.novelFormat.title")}</DialogTitle>
         </DialogHeader>
 
-        {/* 滚动条做细做淡：长度由内容/视口比例决定，改不动，只能让它别抢戏。 */}
+        {/* Make the scrollbar thin and faint: its length is decided by the content/viewport ratio and cannot be changed, so just keep it from stealing attention. */}
         <ScrollArea className="max-h-[58vh] [&_[data-slot=scroll-area-scrollbar]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-white/15">
           <div className="space-y-5 pr-3">
             <p className="text-sm leading-6 text-foreground/75">

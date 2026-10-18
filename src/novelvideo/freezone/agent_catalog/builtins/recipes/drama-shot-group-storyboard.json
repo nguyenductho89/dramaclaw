@@ -2,21 +2,21 @@
   "id": "drama-shot-group-storyboard",
   "enabled": true,
   "version": 2,
-  "name": "镜头组故事板图",
+  "name": "Shot Group Storyboard Image",
   "output_kind": "image",
   "action_keys": [
     "drama-shot-group-storyboard"
   ],
-  "system_prompt": "你是一名资深分镜画师兼美术指导，请基于\"单个镜头组\"的细化分镜内容，配合规划器输入的人物模卡 / 场景多角度图 / 道具多角度图（**仅本组相关的资产**），把原始提示词改写为可生成\"该组故事板图\"的高质量图片生成指令，必须为中文。\n\n重要：本 recipe 一次只生成**一个镜头组的故事板图**（单张图）；规划器应为每个镜头组分别创建一个 imageGeneration 节点，并且每个节点的 inputLinks 仅连接本组镜头中实际出现的角色、场景与道具的参考图，不应连接与本组无关的资产。\n\n要求增强后的 prompt 必须包含以下结构化要素：\n\n- 【镜头组编号】：本图对应的镜头组编号（如 SG-01）\n- 【主视觉画面】：以该组**所有镜头**的关键画面为主视觉构图，包含：\n  - 场景：明确指出场景名称及当前视角（参照对应场景多角度图中的某个角度）\n  - 角色：列出本组出场的所有角色（参照对应人物模卡，外观/服饰严格一致）\n  - 道具：本组涉及到的道具及其当前状态（参照对应道具多角度图）\n  - 光线/色调：与场景多角度图一致\n- 【角色一致性】：角色面部五官、发型、服饰必须与人物模卡严格一致；多角色同框时各自外观独立可辨识\n- 【场景一致性】：空间结构、材质纹理、色温必须与场景多角度图一致\n- 【道具一致性】：若画面包含道具，外观/材质必须与道具多角度图一致\n- 【画面比例】：与最终视频一致（16:9 横版 / 9:16 竖版）\n- 【风格锁定】：与人物模卡 / 场景图 / 道具图保持同一视觉风格\n\n规则：\n- 使用多宫格、涵盖本组镜头的关键画面\n- 角色/场景/道具必须严格沿用上游参考图，不得再创造新人物或新道具\n- 不要在图中混入与本镜头组无关的角色或场景元素\n- 禁止添加文字标注、水印或边框\n- 如本组无角色（纯环境镜头），可只展示场景与道具，但严格保持场景图视角与色调一致",
+  "system_prompt": "You are a senior storyboard artist and art director. Based on the refined storyboard content of a \"single shot group\", together with the character model sheets / scene multi-angle images / prop multi-angle images supplied by the planner (**only the assets relevant to this group**), rewrite the original prompt into a high-quality image generation instruction that produces the \"storyboard image of this group\"; write it in the same language as the refined storyboard content.\n\nImportant: this recipe generates **the storyboard image of only one shot group** at a time (a single image); the planner should create one imageGeneration node for each shot group, and the inputLinks of each node must connect only the reference images of the characters, scenes and props that actually appear in this group's shots, and must not connect assets unrelated to this group.\n\nThe enhanced prompt must contain the following structured elements:\n\n- [Shot group number]: the shot group number this image corresponds to (such as SG-01)\n- [Main visual]: compose the main visual from the key pictures of **all shots** in the group, including:\n  - Scene: state the scene name and the current viewpoint (referring to one of the angles in the corresponding scene multi-angle image)\n  - Characters: list all characters appearing in this group (referring to the corresponding character model sheets, with strictly consistent appearance/costumes)\n  - Props: the props involved in this group and their current state (referring to the corresponding prop multi-angle images)\n  - Lighting / tone: consistent with the scene multi-angle image\n- [Character consistency]: facial features, hairstyle and costume must strictly match the character model sheet; when several characters share a frame, each one's appearance stays independent and recognizable\n- [Scene consistency]: spatial structure, material texture and color temperature must match the scene multi-angle image\n- [Prop consistency]: if the picture contains props, their appearance/material must match the prop multi-angle image\n- [Aspect ratio]: consistent with the final video (16:9 landscape / 9:16 portrait)\n- [Style lock]: keep the same visual style as the character model sheets / scene images / prop images\n\nRules:\n- Use a multi-panel grid covering the key pictures of this group's shots\n- Characters / scenes / props must strictly follow the upstream reference images; do not create new characters or new props\n- Do not mix in character or scene elements unrelated to this shot group\n- Do not add text labels, watermarks or borders\n- If this group has no characters (a pure environment shot), only the scene and props may be shown, while strictly keeping the scene image's viewpoint and tone consistent",
   "must_have_items": [
-    "【镜头组编号】",
-    "【主视觉画面】",
-    "【角色一致性】",
-    "【场景一致性】",
-    "【画面比例】"
+    "[Shot group number]",
+    "[Main visual]",
+    "[Character consistency]",
+    "[Scene consistency]",
+    "[Aspect ratio]"
   ],
-  "planning_prompt": "prompt 填【某个镜头组】的细化分镜内容，inputLinks 仅连接与本组相关的人物模卡/场景多角度图/道具多角度图，系统生成该组的故事板图",
-  "result_summary": "某个镜头组的故事板图（单张）：以本组所有镜头的关键画面为主视觉，严格遵循人物模卡/场景图/道具图的视觉一致性，作为该组视频生成的首帧/主参考",
+  "planning_prompt": "Put the refined storyboard content of a certain shot group in the prompt, and connect inputLinks only to the character model sheets / scene multi-angle images / prop multi-angle images relevant to this group; the system generates that group's storyboard image.",
+  "result_summary": "The storyboard image (single image) of a shot group: the main visual is composed from the key pictures of all shots in the group, strictly following the visual consistency of the character model sheets / scene images / prop images, serving as the first frame / main reference for that group's video generation",
   "requires_source_media": true,
   "force_enhancement": false,
   "skip_detail_check": true

@@ -48,7 +48,7 @@ def _seedance_final_prompt(beat: dict) -> str:
 async def _video_build(scope: PreviewScope, target: str) -> PromptPreview:
     beat = await _find_beat(scope, target)
     if beat is None:
-        return empty("video", "video", f"找不到分镜 / Beat not found: {target}")
+        return empty("video", "video", f"Beat not found: {target}")
     out = PromptPreview(step="video", model_kind="video", target_label=f"Beat {target}")
     seedance = _seedance_final_prompt(beat)
     keyframe = str(beat.get("keyframe_prompt") or "").strip()
@@ -60,9 +60,9 @@ async def _video_build(scope: PreviewScope, target: str) -> PromptPreview:
     if keyframe:
         out.parts.append(PromptPart("user", "keyframe_prompt", keyframe))
     if not out.parts:
-        out.note = "该分镜还没有视频提示词 / No video prompt yet; run the video-prompt step first"
+        out.note = "No video prompt yet; run the video-prompt step first"
     else:
-        out.note = "视频生成直接发送已保存的提示词 / Video generation sends the stored prompt as-is"
+        out.note = "Video generation sends the stored prompt as-is"
     return out
 
 
@@ -74,7 +74,7 @@ async def _tts_build(scope: PreviewScope, target: str) -> PromptPreview:
 
     beat = await _find_beat(scope, target)
     if beat is None:
-        return empty("tts", "tts", f"找不到分镜 / Beat not found: {target}")
+        return empty("tts", "tts", f"Beat not found: {target}")
     text = str(
         beat.get("narration_segment") or beat.get("dialogue") or beat.get("narration") or ""
     ).strip()
@@ -91,7 +91,7 @@ async def _tts_build(scope: PreviewScope, target: str) -> PromptPreview:
     if emotion:
         out.parts.append(PromptPart("user", "emotion_prompt", emotion))
     if not out.parts:
-        out.note = "该分镜没有台词 / This beat has no spoken text"
+        out.note = "This beat has no spoken text"
     return out
 
 
@@ -126,14 +126,14 @@ def _grid_steps(step: str, kind: str, label: str) -> StepSpec:
         root = (scope.project_dir / "grids" / f"ep{scope.episode or 0:03d}").resolve()
         path = (root / target).resolve()
         if root not in path.parents or not path.is_file():
-            return empty(step, "image", f"找不到文件 / Prompt file not found: {target}")
+            return empty(step, "image", f"Prompt file not found: {target}")
         last = read_last_sent(path)
         out = PromptPreview(
             step=step,
             model_kind="image",
             target_label=target,
             last_sent=last,
-            note="此步骤的完整提示词在生成时才拼装，这里显示最近一次发送的内容 / "
+            note=""
             "Assembled at generation time; showing the most recently sent prompt",
         )
         return out
@@ -141,9 +141,9 @@ def _grid_steps(step: str, kind: str, label: str) -> StepSpec:
     return StepSpec(step, label, "image", needs_episode=True, targets_fn=targets, build_fn=build)
 
 
-register(StepSpec("video", "视频生成 / Video", "video", needs_episode=True,
+register(StepSpec("video", "Video", "video", needs_episode=True,
                   targets_fn=_beat_targets, build_fn=_video_build))
-register(StepSpec("tts", "TTS 配音 / TTS", "tts", needs_episode=True,
+register(StepSpec("tts", "TTS", "tts", needs_episode=True,
                   targets_fn=_beat_targets, build_fn=_tts_build))
-register(_grid_steps("sketches", "sketch", "草图生成 / Sketch grids"))
-register(_grid_steps("first_frames", "render", "首帧生成 / First frames"))
+register(_grid_steps("sketches", "sketch", "Sketch grids"))
+register(_grid_steps("first_frames", "render", "First frames"))

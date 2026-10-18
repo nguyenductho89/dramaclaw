@@ -1,17 +1,17 @@
-"""任务状态持久化管理。
+"""Task state persistence management.
 
-使用项目本地 SQLite 持久化任务状态，解决 worker 退出后无法获取结果的问题。
+Persists task state in the project-local SQLite so results remain available after a worker exits.
 
-核心流程：
-1. API 侧 reserve 任务状态（submitting）
-2. broker 投递成功后进入队列（queued）
-3. worker 开始执行后更新进度（running）
-4. worker 完成/失败/取消时写入最终结果（completed/failed/cancelled）
+Core flow:
+1. The API side reserves the task state (submitting)
+2. After the broker accepts the message, the task enters the queue (queued)
+3. Once a worker starts executing, it updates progress (running)
+4. When a worker completes/fails/cancels, it writes the final result (completed/failed/cancelled)
 
-关键改进：
-- worker 完成时先写 SQLite，再退出
-- 前端优先从 SQLite 读取最终结果
-- worker 死亡不影响结果获取
+Key improvements:
+- A worker writes SQLite first when it finishes, then exits
+- The frontend reads the final result from SQLite first
+- A worker dying does not affect result retrieval
 """
 
 import json
@@ -138,7 +138,7 @@ _TASK_STATE_SCHEMA_VERSION = 1
 
 
 def compute_expiry(ttl_seconds: int | None) -> str | None:
-    """按 TTL 计算过期时间。"""
+    """Compute the expiry time from a TTL."""
     if ttl_seconds is None:
         return None
     return (
@@ -150,12 +150,12 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-# inline 后端的 worker 与 API 同进程:早于本进程启动仍标记 ACTIVE 的
-# inline 任务必然已中断(见 _sweep_interrupted_inline_tasks_once)。
+# For the inline backend the worker shares the API process: an inline task still marked ACTIVE from before this process started
+# has necessarily been interrupted (see _sweep_interrupted_inline_tasks_once).
 _PROCESS_STARTED_AT = utc_now_iso()
 if "." not in _PROCESS_STARTED_AT:
-    # isoformat 在整秒时省略小数位;同秒内 "...:56Z" 字典序大于 "...:56.4Z",
-    # 会把启动后同秒更新的活任务误判为过期,补齐小数位消除该反转。
+    # isoformat omits fractional digits on whole seconds; within the same second "...:56Z" sorts after "...:56.4Z",
+    # which would misjudge a live task updated after startup in the same second as expired. Pad the fractional digits to remove that inversion.
     _PROCESS_STARTED_AT = _PROCESS_STARTED_AT.replace("Z", ".000000Z")
 
 
@@ -175,7 +175,7 @@ def parse_task_timestamp(value: str | None) -> datetime | None:
 
 
 def get_project_task_db_path(username: str, project: str) -> Path:
-    """获取项目级 task state SQLite 路径。"""
+    """Get the project-level task state SQLite path."""
     from novelvideo.utils.project_paths import ProjectPaths
 
     ProjectPaths(username, project).bootstrap_from_legacy_output()
@@ -189,25 +189,25 @@ def get_project_task_db_path_for_context(ctx: ProjectContext) -> Path:
 
 @dataclass
 class TaskState:
-    """任务状态数据类。
+    """Task state data class.
 
     Attributes:
-        task_id: 任务唯一标识
-        task_type: 任务类型（如 video_composer, script_writer）
-        username: 用户名
-        project: 项目名称
-        episode: 集数
-        beat_num: Beat 编号（可选，用于单 Beat 任务）
-        scope: 任务作用域（可选，用于同集内多条并行任务）
-        status: 任务状态 (submitting|queued|running|completed|failed|cancelled)
-        progress: 进度 (0.0 - 1.0)
-        current_task: 当前正在执行的子任务描述
-        result: 任务结果（JSON 可序列化的字典）
-        error: 错误信息
-        logs: 最近 N 条日志
-        created_at: 创建时间
-        updated_at: 更新时间
-        completed_at: 完成时间
+        task_id: unique task identifier
+        task_type: task type (e.g. video_composer, script_writer)
+        username: user name
+        project: project name
+        episode: episode number
+        beat_num: Beat number (optional, for single-Beat tasks)
+        scope: task scope (optional, for multiple parallel tasks within one episode)
+        status: task status (submitting|queued|running|completed|failed|cancelled)
+        progress: progress (0.0 - 1.0)
+        current_task: description of the sub-task currently running
+        result: task result (JSON-serializable dict)
+        error: error message
+        logs: the most recent N log lines
+        created_at: creation time
+        updated_at: update time
+        completed_at: completion time
     """
 
     task_id: str
@@ -229,7 +229,7 @@ class TaskState:
     result: Optional[dict] = None
     metadata: Optional[dict] = None
     error: Optional[str] = None
-    # 每条要么是纯字符串（历史/未迁移调用点），要么是 {text, code, params}。
+    # Each entry is either a plain string (legacy / not-yet-migrated call sites) or {text, code, params}.
     logs: List = field(default_factory=list)
 
     created_at: str = ""
@@ -247,21 +247,21 @@ class TaskState:
 
 
 class TaskStateManager:
-    """任务状态管理器 - 使用 SQLite 持久化。
+    """Task state manager - persisted in SQLite.
 
-    Key 设计:
+    Key design:
         task:{task_type}:project:{project_id}:{episode}[:beat_num][:scope]
 
-    TTL 策略:
-        - submitting/queued/running: 无 TTL（由 worker/backend 维护）
-        - completed/failed/cancelled: TTL = 1 小时（允许前端获取结果）
+    TTL policy:
+        - submitting/queued/running: no TTL (maintained by the worker/backend)
+        - completed/failed/cancelled: TTL = 1 hour (lets the frontend fetch results)
     """
 
-    MAX_LOGS = 100  # 保留最近 100 条日志
-    COMPLETED_TTL = 3600  # 完成后保留 1 小时
+    MAX_LOGS = 100  # keep the most recent 100 log lines
+    COMPLETED_TTL = 3600  # keep for 1 hour after completion
 
     def __init__(self) -> None:
-        # 僵尸清扫按库只跑一次(见 _sweep_interrupted_inline_tasks_once)
+        # The zombie sweep runs only once per DB (see _sweep_interrupted_inline_tasks_once)
         self._swept_dbs: set[str] = set()
         self._sweep_db_locks: dict[str, threading.Lock] = {}
         self._sweep_lock = threading.Lock()
@@ -275,7 +275,7 @@ class TaskStateManager:
         result: dict | None,
         metadata: dict | None,
     ) -> dict | None:
-        """将任务 metadata 合并进 result_json，而不改表结构。"""
+        """Merge task metadata into result_json without changing the table schema."""
         if not metadata:
             return result
         if result is None:
@@ -300,17 +300,17 @@ class TaskStateManager:
         current_task: MessageLike,
         logs: Optional[List[MessageLike]],
     ) -> None:
-        """写入进度文案与日志，同时保留 i18n code/params。
+        """Write the progress text and logs while preserving the i18n code/params.
 
-        current_task / logs 可以是普通 str（历史调用点），也可以是
-        LocalizableMessage。中文照旧落在原有列里当兜底，code/params 走
-        metadata 与 logs_json 的结构化条目，CE 的 tasks 表和 EE 的
-        ee_task_states 镜像都不用加列。
+        current_task / logs may be plain str (legacy call sites) or
+        LocalizableMessage. The English fallback text stays in the existing columns, while code/params go into
+        the structured entries of metadata and logs_json, so neither the CE tasks table nor the EE
+        ee_task_states mirror needs a new column.
         """
         if current_task is not None:
             state.current_task = message_text(current_task)
-            # 这里即使 payload 是 None 也要写：纯字符串的更新必须把上一条消息的
-            # code 清掉，否则前端会拿旧 code 去翻译新的中文，显示成完全无关的文案。
+            # Write even when the payload is None: a plain-string update must clear the previous message's
+            # code, otherwise the frontend would use the stale code to translate the new text and show unrelated copy.
             state.metadata = self._merge_task_metadata(
                 state.metadata,
                 {"current_task_message": message_payload(current_task)},
@@ -324,11 +324,11 @@ class TaskStateManager:
 
     @staticmethod
     def _merge_logs(existing: List, incoming: List, max_logs: int) -> List:
-        """合并日志并消除尾部重叠。
+        """Merge logs and remove the overlapping tail.
 
-        Actor 侧上传的通常是 `status.logs[-N:]`，不是纯增量。
-        这里去掉 existing 后缀与 incoming 前缀的最大重叠部分，
-        避免同一段 tail 反复落库。
+        The Actor side usually uploads `status.logs[-N:]`, not a pure increment.
+        Drop the largest overlap between the suffix of existing and the prefix of incoming,
+        so the same tail is not persisted repeatedly.
         """
         if not incoming:
             return existing[-max_logs:]
@@ -511,7 +511,7 @@ class TaskStateManager:
 
     @staticmethod
     def _project_from_task_key(task_key: str) -> tuple[str, str]:
-        """从 task_key 中反解 username/project。"""
+        """Recover username/project from a task_key."""
         parts = task_key.split(":")
         if len(parts) < 5:
             raise ValueError(f"Invalid task key: {task_key}")
@@ -549,21 +549,21 @@ class TaskStateManager:
         metadata: dict | None = None,
         status: str = "pending",
     ) -> TaskState:
-        """创建新任务。
+        """Create a new task.
 
-        在 Actor 的 __init__ 中调用，标记任务开始。
+        Called from the Actor's __init__ to mark the task as started.
 
         Args:
-            task_type: 任务类型（如 video_composer）
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选，用于 mode_key、grid_index 等额外维度）
-            metadata: 额外任务元数据（兼容旧调用方，写入 result_json.task_metadata）
+            task_type: task type (e.g. video_composer)
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional, for extra dimensions such as mode_key and grid_index)
+            metadata: extra task metadata (kept for legacy callers; written to result_json.task_metadata)
 
         Returns:
-            新创建的 TaskState
+            The newly created TaskState
         """
         state = TaskState(
             task_id=str(uuid.uuid4()),
@@ -730,10 +730,10 @@ class TaskStateManager:
                 created_at=now,
                 updated_at=now,
             )
-            # 初始文案不走 update_progress_for_project，直接写字段就没有 code 可翻；
-            # 这里补一次，英文界面才不会闪一句中文。
+            # The initial text does not go through update_progress_for_project; writing the fields directly would leave no code to translate.
+            # Add it here so the English UI does not flash a non-English line.
             self._apply_progress_message(
-                state, lmsg("tasks.progress.submitting", "任务正在投递"), None
+                state, lmsg("tasks.progress.submitting", "Task is being submitted"), None
             )
             self._save_on_connection(conn, task_key, state, None)
             return state, True
@@ -779,11 +779,11 @@ class TaskStateManager:
                 return False
             state.status = "running"
             state.progress = max(float(state.progress or 0.0), 0.01)
-            # 走 helper 而不是直接赋值：直接赋值只换掉中文兜底，上一条
-            # tasks.progress.queued 的 code 会留在 metadata 里，英文界面就把一个
-            # running 的任务显示成 "Task queued"。
+            # Go through the helper instead of assigning directly: a direct assignment only replaces the fallback text, and the previous
+            # tasks.progress.queued code would stay in metadata, making the English UI show a
+            # running task as "Task queued".
             self._apply_progress_message(
-                state, lmsg("tasks.progress.started", "任务已开始"), None
+                state, lmsg("tasks.progress.started", "Task started"), None
             )
             if metadata is not None:
                 state.metadata = self._merge_task_metadata(state.metadata, metadata)
@@ -825,7 +825,7 @@ class TaskStateManager:
                 return False, state
             state.status = "cancelled"
             self._apply_progress_message(
-                state, lmsg("tasks.progress.cancelled", "任务已取消"), None
+                state, lmsg("tasks.progress.cancelled", "Task cancelled"), None
             )
             state.completed_at = state.completed_at or utc_now_iso()
             state.updated_at = utc_now_iso()
@@ -875,7 +875,7 @@ class TaskStateManager:
                 state.status = "queued"
                 state.progress = 0.0
                 self._apply_progress_message(
-                    state, lmsg("tasks.progress.queued", "任务已进入队列"), None
+                    state, lmsg("tasks.progress.queued", "Task queued"), None
                 )
             if metadata is not None:
                 state.metadata = self._merge_task_metadata(state.metadata, metadata)
@@ -931,25 +931,25 @@ class TaskStateManager:
         logs: List[MessageLike] | None = None,
         metadata: dict | None = None,
     ):
-        """更新任务进度（由 Actor 调用）。
+        """Update task progress (called by the Actor).
 
-        在 Actor 的 run 方法中定期调用，更新进度信息。
+        Called periodically from the Actor's run method to update progress information.
 
         Args:
-            task_type: 任务类型
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选）
-            progress: 进度 (0.0 - 1.0)
-            current_task: 当前子任务描述
-            logs: 新增的日志列表
-            metadata: 额外任务元数据（写入 result_json.task_metadata）
+            task_type: task type
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional)
+            progress: progress (0.0 - 1.0)
+            current_task: current sub-task description
+            logs: newly added log list
+            metadata: extra task metadata (written to result_json.task_metadata)
         """
         state = self.get_task(task_type, username, project, episode, beat_num, scope)
         if not state:
-            # 任务记录丢失时重建状态
+            # Rebuild the state when the task record is lost
             logger.warning(
                 f"Task state missing, recreating: {task_type}/{username}/{project}/{episode}"
             )
@@ -1064,26 +1064,26 @@ class TaskStateManager:
         logs: List[MessageLike] | None = None,
         metadata: dict | None = None,
     ):
-        """标记任务完成（由 Actor 在退出前调用）。
+        """Mark a task as completed (called by the Actor before exiting).
 
-        关键：必须在 Actor 退出前调用，确保结果被持久化。
+        Key: must be called before the Actor exits, so the result is persisted.
 
         Args:
-            task_type: 任务类型
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选）
-            result: 任务结果
-            progress: 最终进度
-            current_task: 最终当前任务描述
-            logs: 最终日志快照
-            metadata: 额外任务元数据（兼容旧调用方，写入 result_json.task_metadata）
+            task_type: task type
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional)
+            result: task result
+            progress: final progress
+            current_task: final current-task description
+            logs: final log snapshot
+            metadata: extra task metadata (kept for legacy callers; written to result_json.task_metadata)
         """
         state = self.get_task(task_type, username, project, episode, beat_num, scope)
         if not state:
-            # 即使记录丢失也要记录完成状态
+            # Record the completed state even if the record is lost
             logger.warning(
                 "Task state missing on complete, creating: %s/%s/%s/%s",
                 task_type,
@@ -1193,20 +1193,20 @@ class TaskStateManager:
         logs: List[MessageLike] | None = None,
         metadata: dict | None = None,
     ):
-        """标记任务失败（由 Actor 在异常时调用）。
+        """Mark a task as failed (called by the Actor on exception).
 
         Args:
-            task_type: 任务类型
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选）
-            error: 错误信息
+            task_type: task type
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional)
+            error: error message
         """
         state = self.get_task(task_type, username, project, episode, beat_num, scope)
         if not state:
-            # 即使记录丢失也要记录失败状态
+            # Record the failed state even if the record is lost
             logger.warning(
                 f"Task state missing on fail, creating: {task_type}/{username}/{project}/{episode}"
             )
@@ -1313,18 +1313,18 @@ class TaskStateManager:
         beat_num: int = None,
         scope: str | None = None,
     ) -> Optional[TaskState]:
-        """获取任务状态（由前端调用）。
+        """Get the task state (called by the frontend).
 
         Args:
-            task_type: 任务类型
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选）
+            task_type: task type
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional)
 
         Returns:
-            TaskState 或 None（如果不存在）
+            TaskState, or None (if it does not exist)
         """
         key = self._key(task_type, username, project, episode, beat_num, scope)
         with self._connect(username, project) as conn:
@@ -1340,27 +1340,27 @@ class TaskStateManager:
             return None
         return self._row_to_state(row)
 
-    # celery/EE worker 独立于本进程,判不了「早于进程启动即已中断」,只能按
-    # TTL 收:40min = task_time_limit 35min(EE celery_app.py 的 celery 配置)
-    # + 5min 余量。超过它仍未更新的在途行,worker 已被硬超时杀掉。
+    # celery/EE workers are independent of this process, so "interrupted before the process started" cannot be judged; only a TTL can reap them:
+    # 40min = task_time_limit 35min (celery config in EE celery_app.py)
+    # + 5min margin. An in-flight row not updated within that has had its worker hard-killed by the timeout.
     CELERY_STALE_TTL = 40 * 60
 
     def _sweep_stale_tasks_on_connection(self, conn) -> int | None:
-        """把不可能仍在执行的 ACTIVE 任务落为 failed(僵尸回收),两条轴:
+        """Mark ACTIVE tasks that can no longer be running as failed (zombie reaping), on two axes:
 
-        - inline:worker 随 API 进程消亡,早于本进程启动的必然已中断;
-        - celery/EE:worker 独立于本进程,按 CELERY_STALE_TTL 判(见其注释)。
+        - inline: the worker dies with the API process, so anything older than this process start has necessarily been interrupted;
+        - celery/EE: the worker is independent of this process; judged by CELERY_STALE_TTL (see its comment).
 
-        两条轴按 backend 标记互斥,彼此不外溢。
-        时间戳按字符串比较:两侧均为 utc_now_iso 产物且保证含小数位。
+        The two axes are mutually exclusive by backend marker and do not leak into each other.
+        Timestamps are compared as strings: both sides come from utc_now_iso and are guaranteed to carry fractional digits.
         """
         now = utc_now_iso()
         celery_stale_before = (
             datetime.now(timezone.utc) - timedelta(seconds=self.CELERY_STALE_TTL)
         ).isoformat().replace("+00:00", "Z")
         if "." not in celery_stale_before:
-            # 同 _PROCESS_STARTED_AT 的补位:整秒时 isoformat 省略小数位,
-            # "...:56Z" 字典序大于 "...:56.4Z",会多扫掉同秒内的活任务。
+            # Same padding as _PROCESS_STARTED_AT: on whole seconds isoformat omits fractional digits,
+            # "...:56Z" sorts after "...:56.4Z", which would sweep up live tasks within the same second.
             celery_stale_before = celery_stale_before.replace("Z", ".000000Z")
         try:
             inline_result = conn.execute(
@@ -1372,7 +1372,7 @@ class TaskStateManager:
                 "AND json_valid(result_json) "
                 "AND json_extract(result_json, '$.task_metadata.backend') = 'inline'",
                 (
-                    "服务重启,任务已中断,请重新发起",
+                    "Service restarted, task interrupted; please start it again",
                     now,
                     now,
                     compute_expiry(self.COMPLETED_TTL),
@@ -1388,7 +1388,7 @@ class TaskStateManager:
                 "AND json_valid(result_json) "
                 "AND json_extract(result_json, '$.task_metadata.backend') = 'celery'",
                 (
-                    "任务超时未更新,worker 已中断,请重新发起",
+                    "Task timed out without updates, worker interrupted; please start it again",
                     now,
                     now,
                     compute_expiry(self.COMPLETED_TTL),
@@ -1403,7 +1403,7 @@ class TaskStateManager:
         return inline_result.rowcount + celery_result.rowcount
 
     def _sweep_interrupted_inline_tasks_once(self, conn, db_path: Path) -> None:
-        """普通连接首次打开每个 DB 时运行清扫，失败则留给下次连接重试。"""
+        """On the first open of each DB by a normal connection, run the sweep; on failure, leave it for the next connection to retry."""
         key = str(db_path.resolve())
         with self._sweep_lock:
             if key in self._swept_dbs:
@@ -1419,7 +1419,7 @@ class TaskStateManager:
                     self._swept_dbs.add(key)
 
     def sweep_stale_tasks_for_project(self, ctx: ProjectContext) -> int | None:
-        """显式、可重复地清扫项目 DB 中已失联的在途任务。"""
+        """Explicitly and repeatably sweep in-flight tasks in the project DB that have lost their worker."""
         require_project_home_node(ctx, operation="sweep stale project tasks")
         db_path = get_project_task_db_path_for_context(ctx).resolve()
         key = str(db_path)
@@ -1460,17 +1460,17 @@ class TaskStateManager:
         beat_num: int = None,
         scope: str | None = None,
     ):
-        """删除任务状态。
+        """Delete the task state.
 
-        在重新启动任务或清理旧状态时调用。
+        Called when restarting a task or cleaning up old state.
 
         Args:
-            task_type: 任务类型
-            username: 用户名
-            project: 项目名称
-            episode: 集数
-            beat_num: Beat 编号（可选）
-            scope: 任务作用域（可选）
+            task_type: task type
+            username: user name
+            project: project name
+            episode: episode number
+            beat_num: Beat number (optional)
+            scope: task scope (optional)
         """
         key = self._key(task_type, username, project, episode, beat_num, scope)
         with self._connect(username, project) as conn:
@@ -1573,13 +1573,13 @@ class TaskStateManager:
             return 0
 
     def list_tasks_for_user(self, username: str) -> List[TaskState]:
-        """列出用户的所有任务。
+        """List all tasks of a user.
 
         Args:
-            username: 用户名
+            username: user name
 
         Returns:
-            按更新时间倒序排列的任务列表
+            List of tasks sorted by update time, newest first
         """
         tasks = []
         for db_path in self._list_project_db_paths(username):
@@ -1610,7 +1610,7 @@ class TaskStateManager:
         return tasks
 
     def count_active_tasks_for_user(self, username: str) -> int:
-        """统计用户所有项目中活跃任务数（轻量级 COUNT 查询，不反序列化行数据）。"""
+        """Count active tasks across all of a user's projects (lightweight COUNT query; rows are not deserialized)."""
         count = 0
         for db_path in self._list_project_db_paths(username):
             project = db_path.parent.name
@@ -1628,11 +1628,11 @@ class TaskStateManager:
         return count
 
     def _save(self, state: TaskState, ttl: int = None):
-        """保存任务状态到 SQLite。
+        """Save the task state to SQLite.
 
         Args:
-            state: 任务状态
-            ttl: 过期时间（秒），None 表示不过期
+            state: task state
+            ttl: expiry in seconds; None means no expiry
         """
         task_key = self._task_key_for_state(state)
         expires_at = compute_expiry(ttl)
@@ -1672,12 +1672,12 @@ class TaskStateManager:
 
     @staticmethod
     def _save_on_connection(conn, task_key: str, state: TaskState, expires_at: str | None) -> None:
-        # metadata 没有自己的列，靠 result_json.task_metadata 落库（见 _row_to_state）。
-        # 合并必须发生在写库边界，不能指望每个调用点自己同步：_apply_progress_message
-        # 改的是 state.metadata，而各调用点的手工合并大多挂在 `if metadata is not None`
-        # 下面，调用方没顺手传 metadata 时，进度文案的 i18n code 就在这一跳丢了——
-        # reserve 写的 tasks.progress.submitting、update_progress 传进来的
-        # LocalizableMessage 都是这么没的，英文界面因此还是渲染中文兜底。
+        # metadata has no column of its own and is persisted via result_json.task_metadata (see _row_to_state).
+        # The merge must happen at the write boundary rather than relying on each call site to sync: _apply_progress_message
+        # changes state.metadata, and most call sites' manual merges sit under `if metadata is not None`,
+        # so when the caller does not pass metadata the progress text's i18n code is lost at this hop --
+        # the tasks.progress.submitting written by reserve and the
+        # LocalizableMessage passed into update_progress were both lost this way, so the English UI still rendered the fallback text.
         result = TaskStateManager._merge_metadata_into_result(state.result, state.metadata)
         conn.execute(
             """
@@ -1737,15 +1737,15 @@ class TaskStateManager:
         )
 
 
-# 全局单例
+# Global singleton
 _task_manager: Optional[TaskStateManager] = None
 
 
 def get_task_manager() -> TaskStateManager:
-    """获取 TaskStateManager 单例。
+    """Get the TaskStateManager singleton.
 
     Returns:
-        TaskStateManager 实例
+        TaskStateManager instance
     """
     global _task_manager
     if _task_manager is None:
@@ -1754,10 +1754,10 @@ def get_task_manager() -> TaskStateManager:
 
 
 def set_task_manager(manager: Optional[TaskStateManager]) -> None:
-    """注入 TaskStateManager 实现(EE 在 bootstrap 时覆写单例)。
+    """Inject a TaskStateManager implementation (EE overrides the singleton at bootstrap).
 
     Args:
-        manager: 实现实例;传 None 清空,下次 get_task_manager() 重建默认单例
+        manager: implementation instance; pass None to clear it so the default singleton is rebuilt on the next get_task_manager()
     """
     global _task_manager
     _task_manager = manager

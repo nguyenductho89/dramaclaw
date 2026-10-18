@@ -77,7 +77,7 @@ function audioTypeLabel(
 }
 
 /**
- * 文案 sub-tab — per-beat full metadata editor. Autosaves on blur (text inputs)
+ * Text sub-tab - per-beat full metadata editor. Autosaves on blur (text inputs)
  * or on change (select, toggle). No manual save button.
  */
 export function TextPane({ beat, project, episode, spineTemplate = "drama" }: TextPaneProps) {
@@ -426,8 +426,8 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
     () => [...episodeIdentityIds, ...episodePropIds],
     [episodeIdentityIds, episodePropIds],
   );
-  // 徽章上显示的是 `角色名_时期`，时期名跟界面语言走（见 lib/identity-period）；
-  // 落库的 detected_identities、@提及 token 用的都还是原 id，只有这层显示本地化。
+  // The badge shows `character_period`, and the period name follows the UI language (see lib/identity-period);
+  // the stored detected_identities and the @mention tokens still use the original id, only this layer is localized for display.
   const identityBadgeLabels = useMemo(() => {
     const map: Record<string, string> = {
       [NO_CHARACTER_MARKER]: t("episode.workbench.text.noCharacter"),
@@ -451,7 +451,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
   );
   return (
     <div className="space-y-3.5">
-      {/* 台词 — full width */}
+      {/* Dialogue - full width */}
       <Field label={t("episode.workbench.text.narration")}>
         <MentionTextarea
           value={narration}
@@ -469,7 +469,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
       </Field>
 
       <MetadataSection>
-        {/* 类型 + 场景 + 时间 — compact inline row */}
+        {/* Type + scene + time - compact inline row */}
         <div className="col-span-full grid grid-cols-[auto_minmax(0,1fr)_minmax(7rem,12rem)_auto] gap-x-3 gap-y-3">
           <Field label={t("episode.workbench.text.type")}>
             <Select
@@ -563,7 +563,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
               </SelectContent>
             </Select>
           </Field>
-          <Field label={t("episode.workbench.text.sceneVariant", { defaultValue: "变体" })}>
+          <Field label={t("episode.workbench.text.sceneVariant", { defaultValue: "Variant" })}>
             <Select
               value={currentSceneRef.variant_id || NO_SCENE_VARIANT_MARKER}
               onValueChange={(v) => {
@@ -580,13 +580,13 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
               disabled={!currentSceneRef.scene_id}
             >
               <SelectTrigger
-                aria-label={t("episode.workbench.text.sceneVariant", { defaultValue: "变体" })}
+                aria-label={t("episode.workbench.text.sceneVariant", { defaultValue: "Variant" })}
                 className={cn(COMPACT_CONTROL_CLASS, "w-full")}
               >
                 <SelectValue>
                   {currentSceneRef.variant_id ||
                     t("episode.workbench.text.noSceneVariant", {
-                      defaultValue: "无变体",
+                      defaultValue: "No variant",
                     })}
                 </SelectValue>
               </SelectTrigger>
@@ -600,7 +600,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
                   className={SELECT_ITEM_CLASS}
                 >
                   {t("episode.workbench.text.noSceneVariant", {
-                    defaultValue: "无变体",
+                    defaultValue: "No variant",
                   })}
                 </SelectItem>
                 {sceneVariantChoices.map((variant) => (
@@ -663,7 +663,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
           </p>
         ) : null}
 
-        {/* 画面描述 — full width */}
+        {/* Visual description - full width */}
         <div className="col-span-full">
           <Field label={t("episode.workbench.text.visualDescription")}>
             <MentionTextarea
@@ -681,7 +681,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
           </Field>
         </div>
 
-        {/* 出场身份 */}
+        {/* Present identities */}
         <div className="col-span-full">
           <Field label={t("episode.workbench.text.identities")}>
             <IdentityBadgeGroup
@@ -704,7 +704,7 @@ export function TextPane({ beat, project, episode, spineTemplate = "drama" }: Te
           </Field>
         </div>
 
-        {/* 出场道具 */}
+        {/* Props in shot */}
         <div className="col-span-full">
           <Field label={t("episode.workbench.text.props")}>
             <IdentityBadgeGroup

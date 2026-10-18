@@ -228,14 +228,14 @@ function SceneDialog({
     generatedPlateName && hasPlateSuffix
       ? generatedPlateName
       : t("assets.scenes.generatedPlateNamePlaceholder", {
-          defaultValue: "填写变体或时间后自动生成",
+          defaultValue: "Generated automatically after you fill in a variant or time",
         });
   const title = initial
     ? isPlateDialog
-      ? t("assets.scenes.editPlate", { defaultValue: "编辑场景变体" })
+      ? t("assets.scenes.editPlate", { defaultValue: "Edit scene variant" })
       : t("assets.scenes.editScene")
     : isPlateDialog
-      ? t("assets.scenes.newPlate", { defaultValue: "添加场景变体" })
+      ? t("assets.scenes.newPlate", { defaultValue: "Add scene variant" })
       : t("assets.scenes.newScene");
   const SCENE_DIALOG_INPUT_CLASS =
     "h-11 rounded-[8px] border-white/12 bg-white/[0.04] px-3 text-sm placeholder:text-muted-foreground/70 focus-visible:border-white/25 focus-visible:ring-2 focus-visible:ring-white/8 dark:bg-white/[0.04]";
@@ -309,19 +309,19 @@ function SceneDialog({
             <span>{title}</span>
           </DialogTitle>
         </DialogHeader>
-        {/* 镜头/共现等内容多时整体限高并在 body 内滚动，避免弹窗撑过屏幕、上方字段被裁切看不到。 */}
+        {/* When shots/co-occurrences are numerous, cap the height and scroll inside the body, so the dialog does not outgrow the screen and crop the fields above. */}
         <div className="grid max-h-[70vh] min-w-0 gap-4 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
           {isPlateDialog ? (
             <div className="grid min-w-0 gap-3">
               <div className="grid min-w-0 gap-2">
                 <Label className="text-sm">
                   {t("assets.scenes.generatedPlateName", {
-                    defaultValue: "资产名",
+                    defaultValue: "Asset name",
                   })}
                 </Label>
                 <div
                   aria-label={t("assets.scenes.generatedPlateName", {
-                    defaultValue: "资产名",
+                    defaultValue: "Asset name",
                   })}
                   className={SCENE_DIALOG_DISPLAY_CLASS}
                 >
@@ -340,12 +340,12 @@ function SceneDialog({
                 <div className="grid min-w-0 gap-2">
                   <Label className="text-sm">
                     {t("assets.scenes.fields.baseScene", {
-                      defaultValue: "基础场景",
+                      defaultValue: "Base scene",
                     })}
                   </Label>
                   <Input
                     aria-label={t("assets.scenes.fields.baseScene", {
-                      defaultValue: "基础场景",
+                      defaultValue: "Base scene",
                     })}
                     value={draft.base_scene_id ?? ""}
                     readOnly
@@ -354,11 +354,11 @@ function SceneDialog({
                 </div>
                 <div className="grid min-w-0 gap-2">
                   <Label className="text-sm">
-                    {t("assets.scenes.fields.variant", { defaultValue: "变体" })}
+                    {t("assets.scenes.fields.variant", { defaultValue: "Variant" })}
                   </Label>
                   <Input
                     aria-label={t("assets.scenes.fields.variant", {
-                      defaultValue: "变体",
+                      defaultValue: "Variant",
                     })}
                     value={draft.variant_id ?? ""}
                     onChange={(event) =>
@@ -368,14 +368,14 @@ function SceneDialog({
                       }))
                     }
                     placeholder={t("assets.scenes.fields.variantPlaceholder", {
-                      defaultValue: "漏水",
+                      defaultValue: "Leaking",
                     })}
                     className={SCENE_DIALOG_INPUT_CLASS}
                   />
                 </div>
                 <div className="grid min-w-0 gap-2">
                   <Label className="text-sm">
-                    {t("assets.scenes.fields.timeOfDay", { defaultValue: "时间" })}
+                    {t("assets.scenes.fields.timeOfDay", { defaultValue: "Time" })}
                   </Label>
                   <Select
                     value={draft.time_of_day || "__NO_SCENE_TIME__"}
@@ -390,7 +390,7 @@ function SceneDialog({
                     <SelectTrigger
                       size="sm"
                       aria-label={t("assets.scenes.fields.timeOfDay", {
-                        defaultValue: "时间",
+                        defaultValue: "Time",
                       })}
                       className={SCENE_DIALOG_SELECT_TRIGGER_CLASS}
                     >
@@ -432,12 +432,12 @@ function SceneDialog({
             <div className="grid gap-2">
               <Label className="text-sm">
                 {t("assets.scenes.fields.variantPrompt", {
-                  defaultValue: "变体增量提示词",
+                  defaultValue: "Variant delta prompt",
                 })}
               </Label>
               <Textarea
                 aria-label={t("assets.scenes.fields.variantPrompt", {
-                  defaultValue: "变体增量提示词",
+                  defaultValue: "Variant delta prompt",
                 })}
                 rows={4}
                 value={draft.variant_prompt ?? ""}
@@ -1137,7 +1137,7 @@ function SceneGroupListItem({
       type="button"
       aria-label={t("assets.scenes.selectScene", {
         name: group.baseName,
-        defaultValue: "选择场景 {{name}}",
+        defaultValue: "Select scene {{name}}",
       })}
       aria-pressed={selected}
       onClick={onSelect}
@@ -1168,7 +1168,7 @@ function SceneGroupListItem({
             <span>
               {t("assets.scenes.variantCount", {
                 count: group.scenes.length,
-                defaultValue: "{{count}} 个变体",
+                defaultValue: "{{count}} variants",
               })}
             </span>
           ) : null}
@@ -1203,12 +1203,12 @@ export function ScenesPanel({
   const updateScene = useUpdateScene(project, editing?.name ?? "");
   const deleteScene = useDeleteScene(project);
   const buildScenes = useBuildScenes(project);
-  // loading 绑任务中心而不是 mutation.isPending：isPending 只覆盖入队那一次 POST，
-  // 真正的构建在后台跑，刷新后也只有任务中心还认得它。
+  // Loading is bound to the task center rather than mutation.isPending: isPending only covers the single enqueue POST,
+  // the real build runs in the background, and after a refresh only the task center still recognizes it.
   const buildActivity = useTaskActivity("build_scenes", { episode: 0 });
   const isBuildingScenes = buildScenes.isPending || buildActivity.isActive;
-  // 补水完成前 isActive 还不可信，按钮先禁用，避免硬刷新后重复入队。进度条和
-  // 「构建中」空态不看这个标志，否则补水那一瞬会闪一下假的构建中。
+  // Before hydration finishes isActive is not trustworthy yet, so the button is disabled first to avoid duplicate enqueues after a hard refresh. The progress bar and
+  // the "building" empty state do not look at this flag, otherwise a false "building" would flash during hydration.
   const buildDisabled = isBuildingScenes || buildActivity.isRestoring;
   const imageSourceQuery = useAssetImageSourceSelection(project, "scene");
   const imageSourceSelection = imageSourceQuery.data?.data.image_source_selection ?? "";
@@ -1366,7 +1366,7 @@ export function ScenesPanel({
       confirmVariant: "destructive",
     });
     if (!confirmed) return;
-    // ky 对 4xx/5xx 直接 reject，不接住的话删除失败就是「点了没反应」——用户会以为删掉了。
+    // ky rejects on 4xx/5xx directly; if not caught, a failed delete becomes "clicked and nothing happened" - the user would think it was deleted.
     let res;
     try {
       res = await deleteScene.mutateAsync(scene.name);
@@ -1381,7 +1381,7 @@ export function ScenesPanel({
     toast.success(t("assets.scenes.deleted"));
   }
 
-  // 进度条：任务中心里有记录就用它的进度/步骤文案，乐观空窗期先显示 0% 占位。
+  // Progress bar: if the task center has a record use its progress/step text; during the optimistic gap show a 0% placeholder first.
   const buildingProgress = (
     <div className="w-full max-w-[220px] rounded-[8px] bg-white/[0.05] p-3">
       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -1602,12 +1602,12 @@ export function ScenesPanel({
                       >
                         <Plus className="size-3.5" />
                         {t("assets.scenes.newPlate", {
-                          defaultValue: "添加场景变体",
+                          defaultValue: "Add scene variant",
                         })}
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
                         {t("assets.scenes.newPlateHint", {
-                          defaultValue: "场景变体即「同一个地点的不同状态」",
+                          defaultValue: "A scene variant is the same place in a different state",
                         })}
                       </TooltipContent>
                     </Tooltip>

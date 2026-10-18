@@ -1,4 +1,4 @@
-"""整集分镜总览评审。"""
+"""Whole-episode storyboard overview review."""
 
 import logging
 import math
@@ -88,7 +88,7 @@ class EpisodeReviewer:
                 output_type=EpisodeOverviewResult,
                 model_settings=get_newapi_structured_output_model_settings(),
                 output_retries=2,
-                name="导演分镜审片员",
+                name="Director storyboard reviewer",
             )
         return self._agent
 
@@ -125,15 +125,15 @@ class EpisodeReviewer:
 
         scene_distribution: dict[str, list[int]] = defaultdict(list)
         for beat_num, _, beat_data in image_entries:
-            scene_id = beat_scene_id(beat_data) or "未知"
+            scene_id = beat_scene_id(beat_data) or "unknown"
             if scene_id:
                 scene_distribution[scene_id].append(beat_num)
 
         task = (
-            f"以下是第 {episode_num} 集的分镜板网格图（共 {len(image_entries)} 个 beat），"
-            f"从左到右、从上到下按 beat 顺序排列。每个格子左上角标有 beat 编号。\n\n"
-            f"## 各 beat 描述\n{beat_summary}\n\n"
-            f"请评估整集分镜的整体表现。"
+            f"Below is the storyboard grid image of episode {episode_num} ({len(image_entries)} beats in total), "
+            f"arranged in beat order from left to right and top to bottom. The top-left corner of each cell is labeled with the beat number.\n\n"
+            f"## Description of each beat\n{beat_summary}\n\n"
+            f"Evaluate the overall performance of the whole episode storyboard."
         )
 
         agent = self._get_agent()

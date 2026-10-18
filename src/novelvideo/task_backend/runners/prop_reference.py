@@ -65,7 +65,7 @@ async def _run_prop_reference_asset(
     try:
         prop = await store.sqlite_store.get_prop(prop_name)
         if prop is None:
-            raise RuntimeError(f"找不到道具: {prop_name}")
+            raise RuntimeError(f"Prop not found: {prop_name}")
         visual_prompt = prop.visual_prompt or prop.description or prop.name
         prop_dir = output_dir / "assets" / "props" / prop.name
         prop_dir.mkdir(parents=True, exist_ok=True)
@@ -76,7 +76,7 @@ async def _run_prop_reference_asset(
             0,
             scope=scope,
             progress=0.50,
-            current_task="调用图像模型生成三视图...",
+            current_task="Calling the image model to generate the three-view sheet...",
         )
         with scene_reference_feature_billing():
             result_path = await generate_prop_reference(
@@ -89,7 +89,7 @@ async def _run_prop_reference_asset(
                 egress_context=egress_context,
             )
         if not result_path:
-            raise RuntimeError("图像 API 未返回有效图像")
+            raise RuntimeError("The image API did not return a valid image")
         await store.sqlite_store.touch_prop_asset(prop.name)
         return {"prop_name": prop.name, "path": str(result_path), "style": style}
     finally:

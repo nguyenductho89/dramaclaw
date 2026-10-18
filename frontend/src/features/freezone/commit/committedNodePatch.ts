@@ -110,8 +110,8 @@ function targetScopeMeta(target: PushTarget): Record<string, unknown> {
 }
 
 /**
- * 提交后写回节点的标题。文案跟着界面语言走，槽位后缀查词条；
- * EP/Beat、角色名、scene_id 这些是业务标识，原样拼。
+ * The title written back to the node after commit. The copy follows the UI language, and slot suffixes look up locale entries;
+ * EP/Beat, character names and scene_id are business identifiers and are concatenated as-is.
  */
 function targetLabel(target: PushTarget, t: TFn): string {
   const suffix = t(`freezone.commit.nodeLabels.${target.kind}`, { defaultValue: "" });

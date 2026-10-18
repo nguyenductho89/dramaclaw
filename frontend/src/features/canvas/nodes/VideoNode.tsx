@@ -236,8 +236,8 @@ type VideoNodeProps = NodeProps & {
 const DEFAULT_WIDTH = 580;
 export const DEFAULT_HEIGHT = 380;
 /**
- * 视频生成的计费 feature key。主体（错误态重试的计费探针）与操作面板（估价
- * 展示 + 提交置灰）共用，必须同一口径——放主体导出、面板 import。
+ * Billing feature key for video generation. Shared by the body (billing probe for error-state retry) and the operations panel (estimate
+ * display + submit disabling); they must use the same basis — exported from the body, imported by the panel.
  */
 export const VIDEO_GENERATE_FEATURE_KEY = "freezone.video_generate";
 
@@ -246,20 +246,20 @@ const MIN_HEIGHT = 280;
 const MAX_WIDTH = 1100;
 const MAX_HEIGHT = 1000;
 
-// 图片节点的默认落位尺寸（与 ImageGenNode 的 DEFAULT_WIDTH/HEIGHT 对齐）。
-// 「全能参考 / 图片参考」会在视频节点左侧新建一个图片节点，排版要按它的真实尺寸算。
+// Default landing size of image nodes (aligned with ImageGenNode's DEFAULT_WIDTH/HEIGHT).
+// "All reference / image reference" creates an image node to the left of the video node, and the layout must use its real size.
 const IMAGE_GEN_NODE_WIDTH = 580;
 const IMAGE_GEN_NODE_HEIGHT = 360;
 
-// 与图片节点同理：参考素材那一行落地后，提示词的可写高度被压得偏小，往上加一截。
+// Same as for the image node: once the reference-asset row lands, the writable height of the prompt gets squeezed small, so add a bit upward.
 export const OPERATIONS_PANEL_HEIGHT = 328;
 export const OPERATIONS_PANEL_GAP = 12;
 // Extend the ops panel beyond the node's left/right edges so the textarea +
 // chips have more room than the video frame itself.
 export const OPERATIONS_PANEL_OVERHANG = 120;
 
-// 空态 CTA 的图标 + 文案：具体展示哪几个模式由 `videoEmptyStateCtaModes(modelId)`
-// 按模型能力决定（见 shared/videoModelCapabilities.ts），这里只负责「模式 → 外观」。
+// Icon + copy of the empty-state CTA: which modes are shown is decided by `videoEmptyStateCtaModes(modelId)`
+// by model capability (see shared/videoModelCapabilities.ts); this only handles "mode → appearance".
 const VIDEO_EMPTY_STATE_CTA_META: Record<
   VideoEmptyStateCtaMode,
   { Icon: LucideIcon; labelKey: string }
@@ -271,22 +271,22 @@ const VIDEO_EMPTY_STATE_CTA_META: Record<
   firstLastFrame: { Icon: Layers, labelKey: "node.videoNode.cta.firstLastFrame" },
 };
 
-// 各 genMode 对上游引用数量的硬上限。UI 用这张表把后端字段约束（多图 / 多模态
-// 场景下）显式表达出来：超额 chip 标灰 + 从 @ 候选剔除，避免「prompt 引用了
-// @图片10 但提交时被静默丢掉」。
+// Hard upper limit of upstream reference counts per genMode. The UI uses this table to express the backend field constraints (multi-image / multimodal
+// scenarios) explicitly: over-limit chips are grayed out and removed from the @ candidates, avoiding "the prompt references
+// @image10 but it is silently dropped on submit".
 //
-// 表里没出现的模式默认不限制（textToVideo 不消费上游），走原有路径。
-//   - allReference (omni)  ：image 1-9 / video 0-3 / audio 0-3。音频另有两条厂商时长
-//                            约束——**逐条** 1.8~15.2s 和**总和** ≤15.2s（后台可配
-//                            referenceAudioTotalMaxSeconds）——都在提交前单独校验，
-//                            见 audioReferenceDurationRejection。时长口径不进这张表：
-//                            这里只表达条数。
-//   - videoEdit            ：默认 1 个源视频 + 5 张参考图；独立音频默认关闭，媒体目录
-//                            配置 referenceAudioMax > 0 后按该上限开放。
-//   - firstLastFrame       ：仅图片 2 张（首帧 + 尾帧），不允许任何视频 / 音频。
-//                            图片 >2 时另有自动切到 allReference 的兜底（见
-//                            VideoNode 内部 effect）。
-//   - firstFrame / imageToVideo：都只接 1 张图；前者锁定首帧，后者作为整体画面参考。
+// Modes absent from the table are unlimited by default (textToVideo consumes no upstream) and take the original path.
+//   - allReference (omni)  : image 1-9 / video 0-3 / audio 0-3. Audio has two more vendor duration
+//                            constraints — **per item** 1.8~15.2s and **total** ≤15.2s (admin-configurable
+//                            referenceAudioTotalMaxSeconds) — both validated separately before submit,
+//                            see audioReferenceDurationRejection. The duration basis does not enter this table:
+//                            it only expresses counts.
+//   - videoEdit            : by default 1 source video + 5 reference images; standalone audio is off by default and opens
+//                            up to that limit once the media catalog configures referenceAudioMax > 0.
+//   - firstLastFrame       : only 2 images (first frame + last frame), no video / audio allowed.
+//                            With images >2 there is another fallback that auto-switches to allReference (see the
+//                            effect inside VideoNode).
+//   - firstFrame / imageToVideo: both accept only 1 image; the former locks the first frame, the latter serves as an overall picture reference.
 const REFERENCE_CAPS_BY_MODE: Partial<
   Record<VideoGenMode, { image: number; video: number; audio: number }>
 > = {
@@ -299,8 +299,8 @@ const REFERENCE_CAPS_BY_MODE: Partial<
   firstLastFrame: { image: 2, video: 0, audio: 0 },
 };
 
-// 后台「媒体模型」未给该模型配置比例 / 分辨率时的兜底档位。正常路径下这两项
-// 都来自目录条目的 ratioOptions / resolutionOptions。
+// Fallback tiers used when the admin "Media models" config gives the model no ratio / resolution. On the normal path both
+// come from the catalog entry's ratioOptions / resolutionOptions.
 export const ASPECT_RATIOS: ReadonlyArray<FreezoneVideoAspectRatio> =
   FALLBACK_VIDEO_ASPECT_OPTIONS;
 const QUALITIES: ReadonlyArray<VideoGenQuality> = FALLBACK_VIDEO_RESOLUTION_OPTIONS;
@@ -345,9 +345,9 @@ export function clampVideoDuration(value: number, bounds: { min: number; max: nu
   return Math.min(Math.max(Math.round(value), bounds.min), bounds.max);
 }
 
-// 音频节点的 durationMs 是懒加载的（波形播放器挂载读元数据后才写入），刚上传、
-// 从未渲染过的音频节点可能为 null。提交前用一个临时 <audio> 探测真实时长兜底，
-// 探测失败（CORS/网络等）返回 null，不阻断提交，交由后端兜底。
+// An audio node's durationMs is lazily loaded (written only after the waveform player mounts and reads metadata); a just-uploaded
+// audio node never rendered may be null. Before submit, probe the real duration with a temporary <audio> as a fallback;
+// if probing fails (CORS/network etc.) it returns null and does not block submission, leaving the backend to handle it.
 function probeMediaDurationMs(url: string, media: "audio" | "video"): Promise<number | null> {
   return new Promise((resolve) => {
     if (!url) {
@@ -393,10 +393,10 @@ function isSeedance2ValueModel(modelId: string | null | undefined): boolean {
     normalized === "huimeng_seedance-2.0-fast-value";
 }
 
-// 模型能力判定（isHappyHorseVideoModel / isSeedance1xVideoModel /
-// isSeedance2VideoModel / isGrokVideoChannelModel / isVideoModeSupportedByModel）
-// 统一收敛到 nodes/shared/videoModelCapabilities.ts，作为 CTA / tab / 提交校验的
-// 单一事实来源；这里仅额外叠加媒体目录声明的逐模式素材上限。
+// Model capability checks (isHappyHorseVideoModel / isSeedance1xVideoModel /
+// isSeedance2VideoModel / isGrokVideoChannelModel / isVideoModeSupportedByModel)
+// are converged in nodes/shared/videoModelCapabilities.ts as the single source of truth for CTA / tabs / submit validation;
+// here we only additionally layer the per-mode asset caps declared by the media catalog.
 
 function selectedVideoModelReferenceDisabledReason(
   model: ModelOption | null | undefined,
@@ -424,9 +424,9 @@ function selectedVideoModelReferenceDisabledReason(
   return null;
 }
 
-// 首帧与单图图生视频的 1 张图是**结构性**的，不是模型容量。
-// 所以这条不接受媒体目录 referenceImageMax 的覆盖——那个字段表达的是「这个模型最多
-// 能吃几张参考图」，管的是参考类模式；让它盖住这里等于允许配置把首帧悄悄变成参考。
+// The single image of first frame and single-image image-to-video is **structural**, not model capacity.
+// So this does not accept an override by the media catalog's referenceImageMax — that field expresses "how many reference images
+// this model can take at most", governing reference-style modes; letting it override here would allow config to quietly turn a first frame into a reference.
 const FIXED_IMAGE_CAP_BY_MODE: Partial<Record<VideoGenMode, number>> = {
   firstFrame: 1,
   imageToVideo: 1,
@@ -518,9 +518,9 @@ function referenceImageUrl(node: CanvasNode | undefined | null): string | null {
   if (!node) return null;
   if (isImageGenNode(node)) {
     const data = node.data;
-    // imageGen 上传给生图用的「参考图」会写到 data.referenceImageUrl；
-    // 在 imageGen 自身还没生成结果之前，它就是该节点对外呈现的图片，
-    // 视频节点也应该把它当成上游图引用。
+    // The "reference image" an imageGen node uploads for generation is written to data.referenceImageUrl;
+    // until the imageGen node has its own result it is the image the node presents,
+    // so a video node should treat it as an upstream image reference as well.
     const ref =
       typeof data.referenceImageUrl === "string" &&
       data.referenceImageUrl.length > 0
@@ -540,10 +540,10 @@ function referenceImageUrl(node: CanvasNode | undefined | null): string | null {
   return null;
 }
 
-// 上游「视频引用」：视频节点自带 videoUrl，但从资产库选入的视频是 upload 节点，
-// 地址同样写在 data.videoUrl。所以「是不是视频上游」应按「存在非空 data.videoUrl」
-// 判定，而非节点类型——否则资产库视频会被漏认（HappyHorse 不自动切 videoEdit、
-// 提交找不到 videoUrl），还会被 referenceImageUrl / isUploadNode 误当图片。
+// Upstream "video references": a video node carries its own videoUrl, but a video picked from the asset library is an upload node
+// whose address is likewise stored in data.videoUrl. So "is this a video upstream" should be decided by
+// "a non-empty data.videoUrl exists", not by node type — otherwise library videos are missed (HappyHorse does not auto-switch to videoEdit,
+// submission finds no videoUrl), and they get mistaken for images by referenceImageUrl / isUploadNode.
 function referenceVideoUrl(node: CanvasNode | undefined | null): string | null {
   if (!node) return null;
   const url = (node.data as { videoUrl?: unknown }).videoUrl;
@@ -579,7 +579,7 @@ function resolveDroppedVideoFile(event: DragEvent<HTMLElement>): File | null {
   if (directFile && isVideoFile(directFile)) {
     return directFile;
   }
-  // items[].type 同样对 .mxf 为空串，先按 MIME 粗筛拿到 File 再用扩展名兜底。
+  // items[].type is likewise an empty string for .mxf, so first a coarse MIME filter to get the File, then the extension as a fallback.
   const candidates = Array.from(event.dataTransfer.items || []).filter(
     (candidate) => candidate.kind === "file",
   );
@@ -620,11 +620,11 @@ export const VideoNode = memo(
       (state) => state.setActiveOverlayNodeId,
     );
     const inputRef = useRef<HTMLInputElement>(null);
-    // 在途守卫：持到本批所有并发任务 allSettled 才释放（见 handleSubmit）。
+    // In-flight guard: held until all concurrent tasks of this batch allSettle (see handleSubmit).
     const submittingRef = useRef(false);
-    // Mirror the actual <video> element into state so VideoPlayerControls 能
-    // 在挂载/卸载时重新订阅事件（仅 ref 不会触发重渲染）。同时保留可写的
-    // ref，给非 React 路径（capture frame 之类）继续用 .current。
+    // Mirror the actual <video> element into state so VideoPlayerControls can
+    // re-subscribe to events on mount/unmount (a ref alone does not trigger a re-render). Also keep a writable
+    // ref for non-React paths (such as capture frame) to keep using .current.
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
     const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
@@ -632,13 +632,13 @@ export const VideoNode = memo(
       setVideoEl(el);
     }, []);
 
-    // 低缩放档：选择器返回 boolean，只在跨过阈值那一次触发重渲染；平移中
-    // transform[0]/[1] 每帧都变，但这里的返回值不变，所以不会每帧重渲染。
+    // Low-zoom tier: the selector returns a boolean and triggers a re-render only once when crossing the threshold; during panning
+    // transform[0]/[1] change every frame but the return value here does not, so there is no per-frame re-render.
     const lowDetailZoom = useStore((state) => isLowDetailZoom(state.transform[2]));
-    // 正在播放时不降级——用户主动播了就说明他在看，缩放小也别把播放器抽走。
+    // Do not downgrade while playing — the user playing it means they are watching, so do not pull the player away even when zoomed out.
     const isVideoPlayingRef = useRef(false);
-    // 卸载时清掉模块级播放标记：视口裁剪把播放中的节点卸掉时 <video> 不会派发
-    // pause 事件，不清会留下陈旧的「播放中」豁免，该节点从此不再降级。
+    // On unmount clear the module-level playing flag: when viewport culling unmounts a playing node the <video> does not dispatch
+    // a pause event, and without clearing a stale "playing" exemption would remain and this node would never downgrade again.
     useEffect(() => () => setNodeMediaActive(id, false), [id]);
     const transientUrlRef = useRef<string | null>(null);
     const [transientPreviewUrl, setTransientPreviewUrl] = useState<
@@ -648,17 +648,17 @@ export const VideoNode = memo(
     const [isComposingClip, setIsComposingClip] = useState(false);
     const [clipError, setClipError] = useState<string | null>(null);
 
-    // 每节点生成历史：仅在节点被选中时拉取，避免画布上每个视频节点都各发一次
-    // 请求。生成完成后调用 refreshHistory 把新记录拉进来。
+    // Per-node generation history: fetched only when the node is selected, avoiding every video node on the canvas each sending one
+    // request. After generation completes call refreshHistory to pull in the new record.
     const {
       records: historyRecords,
       isLoading: historyLoading,
       refresh: refreshHistory,
     } = useNodeGenerationHistory(id, { enabled: Boolean(selected) });
 
-    // 生成进行中时，点击历史记录走「非破坏性预览」：不覆写 videoUrl、不打断在途
-    // 任务，仅把这条历史视频临时显示在主体上（见 isGenerating 渲染分支）。新视频
-    // 生成完成后由下方 effect 自动清空，回到最新结果。非生成态恢复历史时也清掉它。
+    // While generating, clicking a history record goes through a "non-destructive preview": it does not overwrite videoUrl or interrupt the in-flight
+    // task, and only temporarily shows this history video on the body (see the isGenerating render branch). After the new video
+    // finishes, the effect below clears it automatically, returning to the latest result. It is also cleared when history is restored in the non-generating state.
     const [historyPreviewUrl, setHistoryPreviewUrl] = useState<string | null>(
       null,
     );
@@ -698,8 +698,8 @@ export const VideoNode = memo(
             "16:9",
           );
     const followsInputAspectRatio = videoModeForcesAutomaticAspectRatio(genMode);
-    // 关键帧/视频编辑的画幅跟随输入素材；只改变本次请求值，不覆盖节点保存的比例。
-    // 其它模式在 Admin 配置存在时原样提交，未配置时保留旧版 auto 推导逻辑。
+    // The aspect of keyframe/video-edit follows the input assets; it only changes this request's value and does not overwrite the ratio saved on the node.
+    // Other modes submit as is when the Admin config exists, and keep the old auto-derivation logic when it is not configured.
     const submitAspectRatio: FreezoneVideoAspectRatio =
       followsInputAspectRatio
         ? "auto"
@@ -749,11 +749,11 @@ export const VideoNode = memo(
       (typeof data.generateAudio === "boolean"
         ? data.generateAudio
         : defaultGenerateAudio);
-    // 家族判定必须喂 `selectedVideoModelId`(apiModel ?? id)，**不能用 `modelId`**：
-    // `modelId` 是 `selectedVideoModel.id`，在 EE 里是 media_model_catalog 的 ULID
-    // 主键（如 `01KZ58VSE52RFFDASY2T9SY4NC`），根本不含模型名，判定恒为 false ——
-    // 选了 Seedance 2.0 也会被「全能参考仅支持 Seedance 2.0」挡下，视频/音频上游
-    // 也不再自动切模式。CE 兜底列表恰好 id === apiModel，所以这个坑只在 EE 显形。
+    // Family checks must be fed `selectedVideoModelId` (apiModel ?? id), **not `modelId`**:
+    // `modelId` is `selectedVideoModel.id`, which in EE is the ULID primary key of media_model_catalog
+    // (such as `01KZ58VSE52RFFDASY2T9SY4NC`) and contains no model name at all, so the check is always false —
+    // even after choosing Seedance 2.0 it would be blocked by "All reference only supports Seedance 2.0", and video/audio upstreams
+    // would no longer auto-switch the mode. The CE fallback list happens to have id === apiModel, so this trap shows only in EE.
     const isSeedance20Model = isSeedance2VideoModel(selectedVideoModelId);
     const supportsAllReference = isVideoModeSupportedByModel(
       "allReference",
@@ -860,7 +860,7 @@ export const VideoNode = memo(
         ? data.generationErrorRequestId
         : "";
 
-    // 生成结束（成功/失败）后清掉临时历史预览，让主体回到最新结果。
+    // After generation ends (success/failure), clear the temporary history preview so the body returns to the latest result.
     useEffect(() => {
       if (!isGenerating) setHistoryPreviewUrl(null);
     }, [isGenerating]);
@@ -869,7 +869,7 @@ export const VideoNode = memo(
       (record: FreezoneGenerationHistoryRecord) => {
         const url = historyRecordOutputUrl(record);
         if (!url) return;
-        // 生成进行中：仅做非破坏性预览，绝不动 videoUrl，也不打断在途任务。
+        // While generating: only a non-destructive preview, never touching videoUrl and never interrupting the in-flight task.
         if (isGenerating) {
           setHistoryPreviewUrl(url);
           return;
@@ -883,7 +883,7 @@ export const VideoNode = memo(
           generationError: null,
           generationErrorDetails: null,
           generationErrorRequestId: null,
-          // 恢复单条历史结果时旧批次画册已与主视频脱钩——一并清掉。
+          // When restoring a single history result the old batch album is already detached from the main video — clear it as well.
           generationBatch: null,
         });
       },
@@ -897,7 +897,7 @@ export const VideoNode = memo(
     // referenceOrder taking precedence — see sortUpstreamByReferenceOrder.
     // Subscribe to ONLY this node's one-hop upstream (not the whole nodes array)
     // so dragging unrelated nodes doesn't re-render this node. See useUpstreamGraph.
-    // 节点被连线（存在入边）后：隐藏「试试」CTA，只在节点中间显示一个图标（对齐 libtv）。
+    // Once the node is connected (has incoming edges): hide the "Try" CTA and show only an icon in the middle of the node (aligned with libtv).
     const isConnected = useCanvasStore((state) =>
       state.edges.some((edge) => edge.target === id)
     );
@@ -917,9 +917,9 @@ export const VideoNode = memo(
         );
     }, [upstreamNodes, data.referenceOrder]);
 
-    // 统一的「图 / 视 / 音」上游引用条目，给 chips 行用。顺序按连接顺序
-    // （与 referenceImages 同步），让 chip 编号 1/2/3... 跟可视顺序一致。
-    // text 上游不进这一行 —— 上面已经单独渲染了「@文本 chip」。
+    // Unified "image / video / audio" upstream reference entries, for the chips row. The order follows the connection order
+    // (in sync with referenceImages), so chip numbers 1/2/3... match the visual order.
+    // Text upstreams do not enter this row — the "@text chip" is already rendered separately above.
     const referenceMedia = useMemo<ReferenceMediaItem[]>(() => {
       const upstream = sortUpstreamByReferenceOrder(
         upstreamNodes,
@@ -977,10 +977,10 @@ export const VideoNode = memo(
       return items;
     }, [upstreamNodes, data.referenceOrder]);
 
-    // 提示词里的 @图片N / @音频N 必须随「角色库」连线引用实时对应：删除 / 重排 /
-    // 新增引用时角色库会重新编号（删掉图片1 后原图片2 变图片1），这里把 prompt 里的
-    // mention 数字一并重写，被删引用的 mention 则移除。按「上一帧有序 id ↔ 这一帧有序
-    // id」差分，覆盖所有删边路径（detach 按钮 / 双击断开 / Delete 键）与手动重排。
+    // @image1 / @audio1 in the prompt must correspond live to the "character library" connected references: when deleting / reordering /
+    // adding references the library renumbers (after image1 is deleted the old image2 becomes image1), and here the mention numbers in the prompt
+    // are rewritten accordingly, with mentions of deleted references removed. By diffing "the previous frame's ordered ids ↔ this frame's ordered
+    // ids", it covers all edge-deletion paths (detach button / double-click disconnect / Delete key) and manual reordering.
     const orderedImageIds = useMemo(
       () =>
         referenceMedia
@@ -1009,11 +1009,11 @@ export const VideoNode = memo(
     useReferenceMentionSync(
       prompt,
       [
-        // 这三个前缀是提示词里 `@图片1` 这类引用记号的**协议**，会随 prompt 原样发给
-        // 后端，不是界面文案，翻了就对不上。
-        { prefix: "图片", ids: orderedImageIds }, // i18n-exempt
-        { prefix: "视频", ids: orderedVideoIds }, // i18n-exempt
-        { prefix: "音频", ids: orderedAudioIds }, // i18n-exempt
+        // These three prefixes are the **protocol** of reference tokens like `@image1` in the prompt, sent to the backend
+        // as is, not UI copy — translating them would make them stop matching.
+        { prefix: "image", ids: orderedImageIds },
+        { prefix: "video", ids: orderedVideoIds },
+        { prefix: "audio", ids: orderedAudioIds },
       ],
       applyPromptRemap,
     );
@@ -1023,9 +1023,9 @@ export const VideoNode = memo(
       [genMode, selectedVideoModel],
     );
 
-    // 通用上游遍历：拿到所有上游节点的 text/imageUrl/videoUrl/audioUrl 统一视图。
-    // 视频生成只用其中的 text 字段拼接到 prompt 前面；image/video/audio 仍走
-    // 各自分支已有的分类逻辑（带 backend 上限校验）。
+    // Generic upstream traversal: get a unified view of text/imageUrl/videoUrl/audioUrl of all upstream nodes.
+    // Video generation uses only the text field to prepend to the prompt; image/video/audio still go through
+    // the classification logic already in their own branches (with backend limit validation).
     const upstreamContents = useMemo(
       () => upstreamNodes.map(extractUpstreamContent),
       [upstreamNodes],
@@ -1036,15 +1036,15 @@ export const VideoNode = memo(
     );
 
     // Count upstream resources by media type. Drives the disable rules on the
-    // tab row — e.g. 图生视频 only makes sense with images (no upstream videos),
-    // 首尾帧 caps at 2 images.
+    // tab row — e.g. image-to-video only makes sense with images (no upstream videos),
+    // first-last-frame caps at 2 images.
     const upstreamCounts = useMemo(() => {
       let images = 0;
       let videos = 0;
       let audios = 0;
       for (const node of upstreamNodes) {
         if (referenceVideoUrl(node)) {
-          // 视频节点或携带 videoUrl 的 upload 节点（资产库选入的视频）都算视频。
+          // Video nodes or upload nodes carrying a videoUrl (videos picked from the asset library) all count as video.
           videos += 1;
         } else if (isAudioNode(node)) {
           if (
@@ -1059,16 +1059,16 @@ export const VideoNode = memo(
       }
       return { images, videos, audios };
     }, [upstreamNodes]);
-    // HappyHorse 的模式可用性由「上游节点类型」决定，而非素材是否已填。空的图片
-    // 节点（尚未生成/上传图）也应让「首帧 / 图片参考」可选——用户先连节点、后填图
-    // 是正常顺序。所以这里按节点类型统计，区别于 upstreamCounts 的「已解析 URL」口径。
+    // HappyHorse mode availability is decided by the "upstream node type", not by whether the asset is filled in. An empty image
+    // node (not yet generated/uploaded) should also make "first frame / image reference" selectable — connecting the node first and filling the image
+    // later is the normal order. So counts here are by node type, unlike the "resolved URL" basis of upstreamCounts.
     const upstreamTypeCounts = useMemo(() => {
       let images = 0;
       let videos = 0;
       let audios = 0;
       for (const node of upstreamNodes) {
-        // 携带 videoUrl 的 upload 节点（资产库视频）先判为视频，避免落到下面
-        // 的 isUploadNode 分支被误算成图片。空的 video 节点（尚未生成）仍按类型算视频。
+        // An upload node carrying a videoUrl (a library video) is judged as video first, avoiding falling into the isUploadNode branch below
+        // and being miscounted as an image. An empty video node (not yet generated) still counts as video by type.
         if (isVideoNode(node) || referenceVideoUrl(node)) {
           videos += 1;
         } else if (isAudioNode(node)) {
@@ -1105,19 +1105,19 @@ export const VideoNode = memo(
       MIN_HEIGHT,
       Math.round(height ?? DEFAULT_HEIGHT),
     );
-    // 收起态浮动面板固定基础尺寸；放大用居中弹窗（见下方 OperationPanelShell）。
+    // The collapsed floating panel has a fixed base size; enlarge uses a centered dialog (see OperationPanelShell below).
     const [panelExpanded, setPanelExpanded] = useState(false);
     const panelHeight = OPERATIONS_PANEL_HEIGHT;
     const panelOverhang = OPERATIONS_PANEL_OVERHANG;
 
-    // ── 叠卡画册（count > 1 的一组生成结果，与图片节点同构）──
-    // 收拢时主视频后探出 N-1 张卡片边；hover 出现右上角数量徽标，点开展开成
-    // 宫格画册。展开态点视频设为主视频、可单独「应用到画布」/ 下载。
+    // ── Stacked-card album (a group of generated results with count > 1, isomorphic with the image node) ──
+    // When collapsed, N-1 card edges peek out behind the main video; on hover a count badge appears at the top right, and clicking it expands into a
+    // grid album. In the expanded state clicking a video sets it as the main video, and it can be individually "applied to canvas" / downloaded.
     const albumRootRef = useRef<HTMLDivElement | null>(null);
     const albumPointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
     const [albumExpanded, setAlbumExpanded] = useState(false);
-    // 本次会话内"应到条数"——未完成的在画册里占位。存模块级登记表而非组件
-    // state：onlyRenderVisibleElements 下平移出视口会卸载组件，state 会丢。
+    // The "expected count" within this session — unfinished ones hold a place in the album. Stored in a module-level registry rather than component
+    // state: under onlyRenderVisibleElements panning out of the viewport unmounts the component and state is lost.
     const albumPendingTotal = useAlbumPendingTotal(id);
     const albumUrls = useMemo(() => {
       const raw = data.generationBatch;
@@ -1128,8 +1128,8 @@ export const VideoNode = memo(
     const albumPendingCount = Math.max(0, albumPendingTotal - albumUrls.length);
     const hasAlbum = albumTotalSlots > 1;
 
-    // 画册展开期间注册为本节点的 activeOverlay：外部 action 工具条 / 替换素材
-    // 把手 / + 派生按钮都认它让位（拖动重新选中也压得住）。
+    // While the album is expanded, register as this node's activeOverlay: the external action toolbar / replace-asset
+    // handle / + derive button all defer to it (and it holds even when a drag re-selects).
     useEffect(() => {
       if (!albumExpanded) return;
       setActiveOverlayNodeId(id);
@@ -1165,9 +1165,9 @@ export const VideoNode = memo(
       [id, updateNodeData],
     );
 
-    // 展开画册时取消节点激活态；必须经 onNodesChange 清 React Flow 自身的
-    // selected 标志（只清 store 的 selectedNodeId 会被选中同步 effect 写回）。
-    // 副作用放在 setState updater 外面：updater 必须纯（StrictMode 会双调用）。
+    // Deactivate the node when the album expands; React Flow's own selected flag must be cleared through onNodesChange
+    // (clearing only the store's selectedNodeId would be written back by the selection sync effect).
+    // The side effect goes outside the setState updater: the updater must be pure (StrictMode calls it twice).
     const handleToggleAlbumExpanded = useCallback(() => {
       if (!albumExpanded) {
         const store = useCanvasStore.getState();
@@ -1178,14 +1178,14 @@ export const VideoNode = memo(
           store.onNodesChange(selectionChanges);
         }
         setSelectedNode(null);
-        // 每次展开重置「应用到画布」的落点游标。
+        // Reset the "apply to canvas" drop cursor on every expansion.
         albumAppliedCountRef.current = 0;
       }
       setAlbumExpanded(!albumExpanded);
     }, [albumExpanded, setSelectedNode]);
 
-    // 「应用到画布」：把这条视频作为独立视频节点放到展开宫格右侧。连续应用
-    // 的落点逐次错开，避免精确叠在同一坐标上只看得见最后一个。
+    // "Apply to canvas": place this video as an independent video node to the right of the expanded grid. Successive applications'
+    // drop points are staggered so they do not stack exactly on the same coordinates with only the last visible.
     const albumAppliedCountRef = useRef(0);
     const handleApplyAlbumVideoToCanvas = useCallback(
       (url: string) => {
@@ -1240,12 +1240,12 @@ export const VideoNode = memo(
         setTransientPreviewUrl(previewUrl);
         updateNodeData(id, { sourceFileName: file.name, isUploading: true });
         try {
-          // HEVC（飞书录屏/iPhone）等 Web 不兼容编码先在浏览器内转成 H.264 再上传，
-          // 否则 Edge 等无对应解码器的浏览器只有声音没画面。见 videoTranscode.ts。
-          // 转码期间 UI 统一走「上传中」loading，不单独显示转码进度。
+          // Web-incompatible codecs such as HEVC (Feishu screen recordings / iPhone) are first transcoded to H.264 in the browser before upload,
+          // otherwise browsers like Edge without the matching decoder get sound but no picture. See videoTranscode.ts.
+          // During transcoding the UI uniformly shows the "uploading" loading, without a separate transcoding progress.
           const prepared = await ensureWebSafeVideo(file);
           if (prepared.transcoded) {
-            // 源编码在本浏览器可能根本解不了（Edge+HEVC），本地预览也换成转码产物。
+            // The source codec may not be decodable in this browser at all (Edge+HEVC), so the local preview is also swapped to the transcoded output.
             clearTransientPreview();
             const preparedUrl = URL.createObjectURL(prepared.file);
             transientUrlRef.current = preparedUrl;
@@ -1300,9 +1300,9 @@ export const VideoNode = memo(
     }, []);
 
     // Spawn the source node(s) to the left of this video node and wire them as
-    // inputs. Used by the empty-state 全能参考 / 图片参考 / 首尾帧 CTAs.
-    // 全能参考 / 图片参考走图片节点（可上传也可直接生图）+ 对应参考模式；
-    // 首尾帧走两个上传节点 + firstLastFrame 关键帧。
+    // inputs. Used by the empty-state All reference / Image reference / First-last-frame CTAs.
+    // All reference / image reference go through an image node (can upload or directly generate an image) + the matching reference mode;
+    // first-last-frame goes through two upload nodes + firstLastFrame keyframes.
     const spawnFrameUploads = useCallback(
       (
         mode:
@@ -1315,19 +1315,19 @@ export const VideoNode = memo(
         const state = useCanvasStore.getState();
         const self = state.nodes.find((n) => n.id === id);
         if (!self) return;
-        // 垂直居中要按视频节点的真实高度算，优先用测量值，未测量时回退设定高度/默认值。
+        // Vertical centering must use the video node's real height: prefer the measured value, and fall back to the set height/default when unmeasured.
         const selfHeight =
           self.measured?.height ??
           (typeof self.height === "number" ? self.height : DEFAULT_HEIGHT);
-        // 全能参考 / 图片参考 / 首帧生成视频都只铺一个图片节点；首尾帧要铺首帧 + 尾帧
-        // 两个上传节点。
+        // All reference / image reference / first-frame-to-video lay out only one image node; first-last-frame lays out a first frame + last frame
+        // two upload nodes.
         const isSingleImage =
           mode === "allReference" ||
           mode === "imageReference" ||
           mode === "firstFrame" ||
           mode === "imageToVideo";
-        // 两种源节点的默认尺寸不同（图片节点 580×360 / 上传节点 320×350），
-        // 左列的定位与避让都得按实际尺寸算，否则图片节点会压到视频节点身上。
+        // The two source node kinds have different default sizes (image node 580×360 / upload node 320×350),
+        // and the left column's positioning and avoidance must use the actual sizes, otherwise the image node would overlap the video node.
         const FRAME_WIDTH = isSingleImage ? IMAGE_GEN_NODE_WIDTH : 320;
         const FRAME_HEIGHT = isSingleImage ? IMAGE_GEN_NODE_HEIGHT : 350;
         const GAP_X = 40;
@@ -1399,11 +1399,11 @@ export const VideoNode = memo(
           return y;
         };
         if (isSingleImage) {
-          // 直接按视频高度垂直居中，不做向下避让。resolveAvailableY 只会向下顶，
-          // 左侧空间一旦被别的节点占用就把参考图挤下一行、破坏与视频的对齐（正是
-          // 「全能参考 vs 图片参考」对不齐的成因）。这里优先保证对齐：参考图恒在视频
-          // 左侧（有 GAP_X 间隔）不会压到视频本身；万一撞上左侧的无关节点，宁可让
-          // 用户手动挪开，也不牺牲与视频的对齐。
+          // Center vertically directly on the video height, with no downward avoidance. resolveAvailableY only pushes downward,
+          // and once the left space is occupied by other nodes it would push the reference image down a row and break alignment with the video (exactly
+          // the cause of "all reference vs image reference misaligned"). Alignment takes priority here: the reference image is always on
+          // the left of the video (with a GAP_X gap) and never overlaps the video itself; if it collides with an unrelated node on the left, we would rather let
+          // the user move it away by hand than sacrifice alignment with the video.
           const baseY = self.position.y + (selfHeight - FRAME_HEIGHT) / 2;
           const newId = addNode(
             CANVAS_NODE_TYPES.imageGen,
@@ -1431,10 +1431,10 @@ export const VideoNode = memo(
                   : "node.videoNode.spawn.allReferenceGroup",
           );
           state.autoGroupSpawn(id, [newId], { label: groupLabel });
-          // 上游图片直接作为素材喂给对应端点；模式切到用户点的那一个，不预填提示词
-          // （尊重用户已写内容）。HappyHorse 下由统一状态机确认（imageToVideo /
-          // imageReference 都与「1 张上游图」匹配，不会被改写）；非 HappyHorse 下
-          // data.genMode 一旦非空，默认推断 effect 就不再覆盖它。
+          // Upstream images feed the matching endpoint directly as assets; the mode switches to the one the user clicked, with no prompt prefilled
+          // (respecting what the user already wrote). Under HappyHorse the unified state machine confirms (imageToVideo /
+          // imageReference both match "1 upstream image" and are not rewritten); under non-HappyHorse
+          // once data.genMode is non-empty the default-inference effect no longer overrides it.
           updateNodeData(id, { genMode: mode });
           return;
         }
@@ -1471,8 +1471,8 @@ export const VideoNode = memo(
 
     const consumeExternalFile = useCallback(
       (file: File) => {
-        // 走到这里文件已经从暂存里被取走了,直接 return 等于把它丢在地上 ——
-        // 留一句警告,别静默。口径参照 UploadNode.tsx 的 `[upload-node] …`。
+        // By this point the file has already been taken from staging; returning directly would be dropping it on the floor —
+        // leave a warning, do not be silent. The wording follows `[upload-node] …` of UploadNode.tsx.
         if (!isVideoFile(file)) {
           console.warn(
             `[video-node] external file "${file.name}" (${file.type || "no mime"}) is not a video; dropped`,
@@ -1483,16 +1483,16 @@ export const VideoNode = memo(
       },
       [processFile],
     );
-    // File 本体走 pendingExternalFiles 暂存、挂载时补投 —— 低缩放档下本节点先以
-    // LOD shell 挂载，只订阅事件会漏掉投递（见 useExternalFileHandoff）。
+    // The File itself is staged in pendingExternalFiles and delivered on mount — at low zoom this node first mounts as an
+    // LOD shell, and subscribing to events alone would miss the handoff (see useExternalFileHandoff).
     useExternalFileHandoff("video-node/external-file", id, consumeExternalFile);
 
     // First time an upstream image becomes available, flip the gen mode so the
-    // video actually consumes it. 默认模式按模型能力选（videoUpstreamImageDefaultMode）：
-    // Seedance 2.0 → 全能参考（1-9 图的通用入口，首尾帧仍可经空态 CTA 进入）；
-    // Seedance 1.x → 首帧（1.x 不支持全能参考，默认推成它会让提交必 400）。
-    // 仅在 data.genMode 未定义时兜底——用户一旦选过任何 tab 就尊重其选择。
-    // HappyHorse 走下面的统一状态机，不参与这条默认。
+    // video actually consumes it. The default mode is chosen by model capability (videoUpstreamImageDefaultMode):
+    // Seedance 2.0 → all reference (the general entry for 1-9 images; first-last-frame is still reachable via the empty-state CTA);
+    // Seedance 1.x → first frame (1.x does not support all reference, and defaulting to it would make submit certainly 400).
+    // A fallback only when data.genMode is undefined — once the user has chosen any tab, their choice is respected.
+    // HappyHorse goes through the unified state machine below and does not take part in this default.
     useEffect(() => {
       if (isHappyHorseModel) return;
       if (data.genMode != null) return;
@@ -1508,15 +1508,15 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // HappyHorse 的模式完全由上游节点类型决定（文档的 4 大功能一一对应），这里用
-    // 一条统一状态机替代分散的兜底 effect，避免多个 effect 互相打架：
-    //   - 上游有视频            → 视频编辑 (videoEdit / video_url)
-    //   - 上游图片 >1 张        → 图片参考 (imageReference / reference_images 1-9)
-    //   - 上游图片 == 1 张      → 按目录能力选择单图默认入口，并尊重用户主动选择的
-    //                             首帧 / 图生视频 / 图片参考
-    //   - 无上游                → 文生视频 (textToVideo)
-    // 每次都纠正，确保 genMode 不会卡在与当前上游不匹配的模式（否则 submit 时会被
-    // 静默截断 / 触发上游互斥报错）。
+    // HappyHorse's mode is entirely decided by the upstream node type (the 4 major functions of the docs map one to one); here a
+    // unified state machine replaces scattered fallback effects, avoiding several effects fighting each other:
+    //   - upstream has video       → video edit (videoEdit / video_url)
+    //   - upstream images >1       → image reference (imageReference / reference_images 1-9)
+    //   - upstream images == 1     → pick the single-image default entry by catalog capability, and respect the user's
+    //                                explicit choice of first frame / image-to-video / image reference
+    //   - no upstream              → text-to-video (textToVideo)
+    // Corrected every time, ensuring genMode never gets stuck in a mode that mismatches the current upstream (otherwise submit would be
+    // silently truncated / trigger an upstream mutual-exclusion error).
     useEffect(() => {
       if (!isHappyHorseModel) return;
       const { images, videos } = upstreamTypeCounts;
@@ -1551,12 +1551,12 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 音频引用由全能参考消费；媒体目录明确为 video_edit 配置音频上限后，视频编辑也
-    // 可以消费。其它模式仍会丢弃音频，因此音频首次接入时切到 allReference。Tracked
+    // Audio references are consumed by all reference; after the media catalog explicitly configures an audio limit for video_edit, video edit
+    // can consume them too. Other modes still discard audio, so when audio is first connected, switch to allReference. Tracked
     // through a ref so we only fire on the 0 → ≥1 transition; once the user
     // disconnects all audio and reconnects, it fires again.
-    // 是否可消费音频由媒体目录的 all_reference 能力决定；未声明该能力的模型由
-    // 模型选择器拦截，这里不强推 allReference 以免顶进提交必 400 的模式。
+    // Whether audio can be consumed is decided by the media catalog's all_reference capability; models that do not declare it are
+    // blocked by the model selector, and allReference is not forced here so as not to push into a mode where submit is certain to 400.
     const prevHasAudioRef = useRef(false);
     const hasAudioUpstream = useMemo(
       () => referenceMedia.some((item) => item.kind === "audio"),
@@ -1585,24 +1585,24 @@ export const VideoNode = memo(
       videoEditAcceptsAudio,
     ]);
 
-    // Seedance 1.x 吃不下视频 / 音频，留在上面只能收获一次必然失败的提交。用户把
-    // 视频或音频节点连上来就是明确意图，直接替他换成 Seedance 2.0 + 全能参考。
-    // 判定走 upstreamTypeCounts（按节点类型）：空的视频节点也算 —— 先连节点、后生成
-    // 是正常顺序，等它出了 URL 再切模型就太迟了（用户中间会看见一个不该出现的 1.x）。
-    // 模型和模式必须一次 patch 写完：分两步会先渲染出「2.0 + 图生视频」的中间态，
-    // 再被下面那条 videos→allReference 的 effect 纠一次，白闪一帧。
+    // Seedance 1.x cannot take video / audio, and staying on it would only yield a submission that certainly fails. When the user connects a
+    // video or audio node, that is clear intent, so switch them straight to Seedance 2.0 + all reference.
+    // The check uses upstreamTypeCounts (by node type): an empty video node counts too — connecting the node first and generating later
+    // is the normal order, and switching the model after it gets a URL would be too late (the user would see a 1.x in between that should not appear).
+    // Model and mode must be written in one patch: two steps would first render the intermediate state "2.0 + image-to-video",
+    // then get corrected once more by the videos→allReference effect below, flashing for a frame for nothing.
     //
-    // 只在「没有 → 有视频/音频」这一次跳变时触发，**不能每次渲染都无条件纠正**：
-    // updateNodeData 每次都 pushSnapshot 且清空 future（canvasStore），若持续纠正，
-    // 用户 ⌘Z 恢复回 1.x 后边还在，effect 立刻把 2.0 写回去、再压一条 past ——
-    // 撤销看起来毫无反应，redo 栈还被清空，等于把「回到连线之前」这条路堵死。改的
-    // 又是 model 这种用户显式挑过的值，无声覆盖且撤不回来，性质比 genMode 重得多。
-    // 一次性触发也不会被绕过：素材在场期间选择器已经把 1.x 置灰了，切不回去。
-    // 与紧邻上面那条音频 → allReference 的 effect 用的是同一套闩锁。
+    // Trigger only on the one transition "none → has video/audio", **it must not correct unconditionally on every render**:
+    // updateNodeData pushSnapshot every time and clears future (canvasStore); if it kept correcting,
+    // after the user presses ⌘Z to restore 1.x while the edge is still there, the effect would immediately write 2.0 back and push another past —
+    // undo would look like it does nothing, and the redo stack would be cleared, blocking the path of "going back to before the connection". And what is changed
+    // is the model, a value the user explicitly picked, so overriding silently and irreversibly is far heavier than genMode.
+    // The one-shot trigger cannot be bypassed either: while the asset is present the selector already grays out 1.x, so it cannot be switched back.
+    // It uses the same latch as the audio → allReference effect right above.
     const autoSwitchedForMediaRef = useRef(false);
     useEffect(() => {
-      // 所有判断（加载态、闩锁、该不该换、换成谁）都在 videoReferenceAutoSwitchAction
-      // 里，这里只负责改 ref 和发 patch —— 那边是纯函数，异步加载时序才测得到。
+      // All judgments (loading state, latch, whether to switch, to whom) live in videoReferenceAutoSwitchAction;
+      // here we only change the ref and send the patch — that side is a pure function, so async loading timing can be tested.
       const action = videoReferenceAutoSwitchAction({
         counts: upstreamTypeCounts,
         currentModelId: selectedVideoModelId,
@@ -1624,8 +1624,8 @@ export const VideoNode = memo(
         genMode: action.genMode,
         generateAudio: videoModelDefaultGenerateAudio(nextModel),
       });
-      // 刻意不调 writeLastVideoModel：这是替用户救场，不是他表达的偏好，不该顺手
-      // 把后续新建视频节点继承的默认模型也改掉。
+      // Deliberately do not call writeLastVideoModel: this is a rescue on the user's behalf, not a preference they expressed, and it should not also
+      // change the default model inherited by video nodes created later.
     }, [
       availableVideoModels,
       id,
@@ -1635,11 +1635,11 @@ export const VideoNode = memo(
       videoModelsLoading,
     ]);
 
-    // 上游接入视频素材时，全能参考、视频编辑和视频延长都能消费；其它模式会把视频
-    // 丢弃。已经处于合法的显式视频任务时不要再强制改成 allReference。
-    // 与音频的「0→≥1 transition」不同，这里每次都纠正，确保视频在场期间无法切走。
-    // 是否可消费视频由媒体目录的 all_reference 能力决定；未声明该能力的模型不强推，
-    // 以免顶进提交必 400 的模式。
+    // When video material is connected upstream, all reference, video edit and video extend can all consume it; other modes discard the video.
+    // When already in a legitimate explicit video task, do not force allReference again.
+    // Unlike the audio "0→≥1 transition", this corrects every time, ensuring the mode cannot be switched away while a video is present.
+    // Whether video can be consumed is decided by the media catalog's all_reference capability; models that do not declare it are not forced,
+    // so as not to push into a mode where submit is certain to 400.
     useEffect(() => {
       if (upstreamCounts.videos === 0) return;
       if (isHappyHorseModel) return;
@@ -1659,11 +1659,11 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 文生视频不接受任何素材引用。即便用户先手动选了 textToVideo 再接入
-    // 图片/音频（此时上面两个自动切换 effect 都因 genMode 已显式而 bail），
-    // 也要强制切走，否则会停在 textToVideo 把已连素材丢弃。
-    // 有图 → 按模型能力选默认（2.0 全能参考 / 1.x 首帧）；仅音频（只有 Seedance 2.0
-    // 能消费）→ 全能参考；音频对非 2.0 不可用，由模型选择器拦截，这里不强推。
+    // Text-to-video accepts no asset references. Even if the user first manually picked textToVideo and then connected
+    // images/audio (the two auto-switch effects above both bail because genMode is already explicit),
+    // it must be forced away, otherwise it stays on textToVideo and discards the connected assets.
+    // With images → pick the default by model capability (2.0 all reference / 1.x first frame); audio only (only Seedance 2.0
+    // can consume it) → all reference; audio is unavailable for non-2.0, blocked by the model selector, and not forced here.
     useEffect(() => {
       if (isHappyHorseModel) return;
       if (genMode !== "textToVideo") return;
@@ -1685,10 +1685,10 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 首尾帧只承载「首帧 + 尾帧」两张图。一旦上游图片数 >2，从语义上就不再是
-    // 首尾帧场景（应该是多图参考 / 全能参考），自动切到 allReference 跟「视频
-    // 上游强制切 allReference」是同一类兜底逻辑。每次都纠正，避免用户在 >2
-    // 图状态下被卡在 firstLastFrame 触发 submit 时被静默截断成两张。
+    // First-last-frame carries only the two images "first frame + last frame". Once upstream images >2, semantically it is no longer
+    // a first-last-frame scenario (it should be multi-image reference / all reference); auto-switching to allReference is the same kind of fallback as
+    // "force allReference when video is upstream". Corrected every time, so the user is not stuck in firstLastFrame with >2
+    // images and silently truncated to two on submit.
     useEffect(() => {
       if (isHappyHorseModel) return;
       if (genMode !== "firstLastFrame") return;
@@ -1704,12 +1704,12 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 「首帧生成视频」只承载一张图。i2v 端点按图片张数分流（1 张 = 图生视频，
-    // 2-9 张 = 图片参考），接上第二张后做的其实已经是图片参考了，模式却还停在
-    // 首帧上——所以直接把模式导到它真正在做的事情：全能参考 / 图片参考。
-    // 跟上面首尾帧 >2 图那条是同一类兜底，每次都纠正（不做一次性闩锁），
-    // 免得用户在多图状态下停在首帧、提交时被静默截断成一张。
-    // 该切到哪个、哪些情况不该动，全部收在 videoMultiImageAutoSwitchMode 里。
+    // "First-frame-to-video" carries only one image. The i2v endpoint dispatches by image count (1 = image-to-video,
+    // 2-9 = image reference); after a second image is connected what it does is actually image reference, yet the mode still stays on
+    // first frame — so steer the mode straight to what it is really doing: all reference / image reference.
+    // Same kind of fallback as the first-last-frame >2 images one above, corrected every time (no one-shot latch),
+    // so the user is not stuck on first frame in a multi-image state and silently truncated to one image on submit.
+    // Which one to switch to and which cases must not be touched are all collected in videoMultiImageAutoSwitchMode.
     useEffect(() => {
       const target = videoMultiImageAutoSwitchMode(
         genMode,
@@ -1727,21 +1727,21 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 上面几条模式推导都是**单向**的：素材接进来就把模式推到能消费它的那一个，却没有
-    // 任何一条负责在素材撤空后把模式推回去。于是「连一张图 → 又把图撤掉」之后节点卡在
-    // 全能参考上：界面看不出异常，提交却会被 handleSubmit 的 references.length === 0
-    // 静默拦下，用户看到的就是「打了字、点发送没反应」。这里补上反向的那一档 ——
-    // 没有任何上游素材 = 文生视频，与 HappyHorse 统一状态机的「无上游 → 文生视频」同规则。
+    // The mode derivations above are all **one-directional**: when an asset connects they push the mode to the one that can consume it, but
+    // none is responsible for pushing the mode back once the assets are emptied. So after "connect an image → remove the image again" the node is stuck on
+    // all reference: the UI looks fine, yet submit is silently blocked by handleSubmit's references.length === 0,
+    // and the user sees "typed something, clicked send, nothing happened". The reverse tier is added here —
+    // no upstream assets at all = text-to-video, the same rule as HappyHorse's unified state machine "no upstream → text-to-video".
     //
-    // 用 upstreamTypeCounts（按节点类型）而非 upstreamCounts（已解析 URL）：空态 CTA
-    // 先铺一个还没出图的图片/上传节点、再切模式，按 URL 口径那一瞬间是 0 张，会被这条
-    // 当场顶回文生视频。理由同 videoNoUpstreamResetMode 的注释。
+    // Use upstreamTypeCounts (by node type) rather than upstreamCounts (resolved URLs): the empty-state CTA
+    // first lays out an image/upload node that has no image yet and then switches the mode; by the URL basis that instant is 0 images, and this one would
+    // push it straight back to text-to-video. Same reason as the comment of videoNoUpstreamResetMode.
     //
-    // recordHistory: false —— 这是用户「删掉素材」那一步的**衍生结果**，不是一次独立的
-    // 用户改动。若照常压 past，⌘Z 只会撤掉模式回到「无素材 + 全能参考」，本 effect 立刻
-    // 又把它改回来并清空 redo 栈，撤销看着毫无反应、也再回不到连线之前（成因见上面
-    // 模型自动救场那条 effect 的注释）。不记历史则 ⌘Z 直接回到「有图 + 全能参考」，正向 effect
-    // 看到素材还在便不再改写。
+    // recordHistory: false — this is the **derived result** of the user's "delete the asset" step, not an independent
+    // user change. If it pushed past as usual, ⌘Z would only undo the mode back to "no assets + all reference", this effect would immediately
+    // change it back and clear the redo stack, undo would look like it does nothing and could never return to before the connection (the cause is in the comment of the
+    // model auto-rescue effect above). Without recording history, ⌘Z returns straight to "has image + all reference", and the forward effect
+    // sees the asset still present and no longer rewrites it.
     useEffect(() => {
       if (isHappyHorseModel) return;
       const target = videoNoUpstreamResetMode(genMode, upstreamTypeCounts);
@@ -1768,25 +1768,25 @@ export const VideoNode = memo(
       return null;
     }, [data.videoUrl, transientPreviewUrl]);
 
-    // 预览专用 src：preload="metadata" 不会绘制任何一帧，又没有 poster，画布上
-    // 就是一个纯黑框（视频本身正常，下载可看）。追加 `#t=0.1` 媒体片段，让浏览器
-    // seek 到 0.1s 并把那一帧画出来当封面——与 NodeGenerationHistory /
-    // CanvasHistoryAssetsModal 的缩略图用法一致。仅用于显示，不影响下载/抓帧/播放。
+    // Preview-only src: preload="metadata" does not paint any frame and there is no poster, so on the canvas
+    // it is a pure black box (the video itself is fine, and downloading shows it). Append the `#t=0.1` media fragment so the browser
+    // seeks to 0.1s and paints that frame as the cover — consistent with the thumbnail usage in NodeGenerationHistory /
+    // CanvasHistoryAssetsModal. Used for display only; does not affect download/frame capture/playback.
     const videoPosterSource = useMemo(() => {
       if (!videoSource) return null;
       return videoSource.includes("#t=") ? videoSource : `${videoSource}#t=0.1`;
     }, [videoSource]);
 
-    // 低缩放档要用的静态缩略图，走离屏 <video> + CORS 抓帧（见 videoFrameCapture）。
-    // 在节点挂载时就排队，而不是等缩放缩下去才开始：低缩放档下画布上根本不挂
-    // <video>，那时才抓的话用户会先盯着一屏占位块；而且首屏视口若恢复在低缩放档，
-    // 展示用的 <video> 一次都不会挂载，永远等不到抓帧时机。
+    // The static thumbnail needed at the low-zoom tier, via an off-screen <video> + CORS frame capture (see videoFrameCapture).
+    // Queued when the node mounts, rather than starting only after zooming out: at the low-zoom tier the canvas mounts no
+    // <video> at all, and capturing only then would leave the user staring at a screen of placeholder blocks; also, if the first-paint viewport is restored at a low-zoom tier,
+    // the display <video> is never mounted even once and the capture opportunity never comes.
     useEffect(() => {
       requestLodStill(videoSource);
     }, [videoSource]);
 
-    // 订阅模块级缓存：节点被 onlyRenderVisibleElements 反复 mount/unmount 后缩略图
-    // 仍然在，重挂即用。快照是原始值，抓帧完成前后各渲染一次，不会每帧重渲染。
+    // Subscribe to the module-level cache: after the node is mounted/unmounted repeatedly by onlyRenderVisibleElements the thumbnail
+    // is still there and used right after remount. The snapshot is a primitive value, rendering once before and once after the capture, not re-rendering every frame.
     const lodStill = useSyncExternalStore(subscribeLodStills, () =>
       getLodStill(videoSource)
     );
@@ -1802,7 +1802,7 @@ export const VideoNode = memo(
       setVideoLoadError(false);
     }, [videoSource]);
 
-    // ---- subtitle erase mode (libtv-style 智能去字幕) ------------------------
+    // ---- subtitle erase mode (libtv-style smart subtitle removal) ------------------------
     const subtitleEraseMode = data.subtitleEraseMode ?? null;
     const subtitleEraseBox = data.subtitleEraseBox ?? null;
     const [isErasing, setIsErasing] = useState(false);
@@ -1977,13 +1977,13 @@ export const VideoNode = memo(
       updateNodeData,
     ]);
 
-    // 提交可用性按模式区分（对齐后端各端点校验），提示词与素材两条**分别**判定：
-    // - 提示词：文生 / 全能参考 后端强校验 prompt，必须有（自写或上游 text）；首帧 /
-    //   图生视频 / 图片参考 / 首尾帧 / 视频编辑允许空提示词 —— 这修掉「删掉默认提示词后
-    //   传了首帧仍无法直接生成」的问题。
-    // - 素材：除文生视频外都要有（图片类要 ≥1 张上游图；视频编辑要 ≥1 个上游视频；
-    //   全能参考图/视频/音频任意一类 ≥1）—— 对齐 handleSubmit 各分支的空素材早退。
-    // 全能参考是唯一两条都要的模式，所以这里不能写成「要提示词的就只看提示词」。
+    // Submit availability differs by mode (aligned with each backend endpoint's validation); prompt and assets are judged **separately**:
+    // - Prompt: text-to-video / all reference strongly validate the prompt on the backend, so one must exist (self-written or upstream text); first frame /
+    //   image-to-video / image reference / first-last-frame / video edit allow an empty prompt — this fixes the problem of "after deleting the default prompt
+    //   a first frame is passed yet generation still cannot start directly".
+    // - Assets: required except for text-to-video (image modes need ≥1 upstream image; video edit needs ≥1 upstream video;
+    //   all reference needs ≥1 of any of image/video/audio) — aligned with the empty-asset early returns in each handleSubmit branch.
+    // All reference is the only mode that needs both, so this cannot be written as "if it needs a prompt, only look at the prompt".
     const hasPromptText =
       prompt.trim().length > 0 || upstreamTextJoined.length > 0;
     const hasRequiredMediaForMode =
@@ -1993,8 +1993,8 @@ export const VideoNode = memo(
           ? upstreamCounts.images + upstreamCounts.videos + upstreamCounts.audios > 0 ||
             Boolean(data.referenceFileUrl || data.referenceLink?.trim())
           : upstreamCounts.images > 0;
-    // 提交前守卫：当前模型/模式无法消费已接入素材（视频/音频被静默丢、非 2.0 非
-    // HappyHorse 多图会被后端 400）时给出理由并禁用提交，替代静默丢素材 / 提交 400。
+    // Pre-submit guard: when the current model/mode cannot consume the connected assets (video/audio silently dropped, multi-image on non-2.0 non-
+    // HappyHorse gets a backend 400), give the reason and disable submit, replacing silently dropping assets / a submit 400.
     const mediaRejectionReasonKey = videoSubmitMediaRejectionReason(
       genMode,
       selectedVideoModel,
@@ -2035,11 +2035,11 @@ export const VideoNode = memo(
       }
       return null;
     })();
-    // 错误态重试的计费闸门。估价链随操作面板下沉后（选中才挂载、未选中不发请求），
-    // 失败态的 RegenerateButton 成了唯一在未选中时也能提交的入口——若不在主体拦截，
-    // 计费规则未配置时重试会放行一次注定被后端拒绝的请求。这里用一个仅错误态启用
-    // 的估价探针补回拦截：value 传 null 时 hook 不发请求，未选中且无错误的节点仍然
-    // 零估价开销；错误态与面板同时活跃时参数一致、查询同 key，由 react-query 去重。
+    // Billing gate for error-state retry. After the estimate chain moved down into the operations panel (mounted only when selected, no request when unselected),
+    // the failure state's RegenerateButton became the only entry that can submit even when unselected — if the body did not intercept,
+    // retry would let through a request doomed to be rejected by the backend when billing rules are not configured. Here a one-off enabled only in the error state is used
+    // estimate probe is added back to intercept: when value is null the hook sends no request, so an unselected node with no error still has
+    // zero estimate overhead; when the error state and the panel are active together, params are identical and the query shares the key, deduped by react-query.
     const retryBillingProbe = useGenerationCreditCost(
       "feature",
       hasGenerationError && videoBackendForCost && videoInputBilling.ready
@@ -2076,17 +2076,17 @@ export const VideoNode = memo(
       !selectedVideoModel ||
       selectedModelReferenceError !== null ||
       mediaRejectionReason != null ||
-      // 提示词与素材是**两条并列**的要求，不是二选一：全能参考两条都要（后端强校验
-      // prompt，omni 端点又没素材可发）。写成三元的时候，全能参考只看提示词，素材撤空后
-      // 按钮仍是可点态，点下去被 handleSubmit 的 references.length === 0 静默拦掉。
+      // Prompt and assets are **two parallel** requirements, not either-or: all reference needs both (the backend strongly validates
+      // the prompt, and the omni endpoint has no assets to send). When written as a ternary, all reference looked only at the prompt, and once assets were emptied the
+      // button stayed clickable, and clicking it was silently blocked by handleSubmit's references.length === 0.
       (videoModeRequiresPrompt(genMode) && !hasPromptText) ||
       (videoModeRequiresMedia(genMode) && !hasRequiredMediaForMode);
 
     const handleSubmit = useCallback(async () => {
       if (submitDisabled) return;
-      // 在途守卫（与 ImageGenNode 一致）：第 1 条完成就会清 isGenerating，
-      // submitDisabled 拦不住「旧批次 N-1 个任务还在跑时重新提交」——旧闭包
-      // 会用过期的 completedUrls 覆写新批次的 generationBatch。
+      // In-flight guard (consistent with ImageGenNode): the first completion clears isGenerating,
+      // and submitDisabled cannot stop "resubmitting while N-1 tasks of the old batch are still running" — the old closure
+      // would overwrite the new batch's generationBatch with stale completedUrls.
       if (submittingRef.current) return;
       submittingRef.current = true;
       setReferenceErrors([]);
@@ -2101,14 +2101,14 @@ export const VideoNode = memo(
         isGenerating: true,
         generationStartedAt: Date.now(),
         // Clear any prior failure so the banner reflects only this attempt.
-        // 注意 generationBatch 不在这里清：下面还有多条校验失败的早退路径，
-        // 在这里清会让一次失败的提交白白毁掉已有画册——批次清空挪到真正开跑前。
+        // Note generationBatch is not cleared here: below there are several more validation-failure early-return paths,
+        // and clearing here would let one failed submission needlessly destroy the existing album — batch clearing moves to just before the run really starts.
         generationError: null,
         generationErrorDetails: null,
         generationErrorRequestId: null,
       });
-      // 运镜 fragment 拼接到最终 prompt 的开头；上游 text 在前、用户自己写
-      // 的 prompt 在后，两段以 \n\n 隔开（与 ImageGenNode/ImageEditNode 一致）。
+      // The camera-movement fragment is prepended to the final prompt; upstream text comes first, the user's own
+      // prompt after, and the two segments are separated by \n\n (consistent with ImageGenNode/ImageEditNode).
       const fragment = cameraMovementPreset?.promptFragment;
       const trimmedPrompt = prompt.trim();
       const userPrompt = [upstreamTextJoined, trimmedPrompt]
@@ -2116,7 +2116,7 @@ export const VideoNode = memo(
         .join("\n\n");
       const fallbackPrompt = fragment
         ? userPrompt
-          ? `${fragment}，${userPrompt}`
+          ? `${fragment}, ${userPrompt}`
           : fragment
         : userPrompt;
       try {
@@ -2137,9 +2137,9 @@ export const VideoNode = memo(
           }),
         });
         // Walk the current edges/nodes once — used by every non-textToVideo
-        // branch to collect upstream resources. 必须与 UI 编号侧（useUpstreamNodes）
-        // 同源：按连线顺序收集。曾按 state.nodes 顺序（节点创建顺序）收集，先创建
-        // 但后连线的节点会排到 references 前面，@图片N 在后端就指向错位的图。
+        // branch to collect upstream resources. It must come from the same source as the UI numbering side (useUpstreamNodes):
+        // collected in connection order. It once collected in state.nodes order (node creation order), so a node created first
+        // but connected later was ordered before others in references, and @image1 pointed to a misaligned image on the backend.
         const collectUpstream = () => {
           const state = useCanvasStore.getState();
           return sortUpstreamByReferenceOrder(
@@ -2249,12 +2249,12 @@ export const VideoNode = memo(
 
         const durationClamped = clampVideoDuration(durationSec, durationBounds);
         const cameraTemplateId = cameraMovementId;
-        // 后端按 canvas_id + node_id 记录每个节点的生成历史。多条生成时每个
-        // 兄弟节点用各自的 targetId 作 node_id，历史才能分别落到对应节点。
+        // The backend records each node's generation history by canvas_id + node_id. With multiple generations each
+        // sibling node uses its own targetId as node_id, so history lands on the matching node separately.
         const canvasId = readUrl().canvas ?? "default";
 
-        // 后端不再支持一次出多条，改为按「生成数量」并发调用 N 次接口。先按
-        // genMode 组装出一个「调一次接口」的闭包 doSubmit，校验失败则置空提前返回。
+        // The backend no longer supports producing several at once; instead it calls the endpoint N times concurrently by "generation count". First
+        // assemble a "call the endpoint once" closure doSubmit by genMode; if validation fails it is set to empty and returns early.
         let doSubmit: ((targetId: string) => Promise<FreezoneJobRef>) | null = null;
         if (genMode === "firstFrame" || genMode === "firstLastFrame") {
           const keyframes = collectUpstreamKeyframeUrls();
@@ -2289,7 +2289,7 @@ export const VideoNode = memo(
               nodeId: targetId,
             });
         } else if (genMode === "imageToVideo" || genMode === "imageReference") {
-          // Unified i2v endpoint: 1 image = 图生视频, 2-9 images = 图片参考视频.
+          // Unified i2v endpoint: 1 image = image-to-video, 2-9 images = image-reference video.
           const imageUrls = collectUpstreamImageUrls().slice(
             0,
             referenceCaps?.image ?? 9,
@@ -2320,8 +2320,8 @@ export const VideoNode = memo(
               nodeId: targetId,
             });
         } else if (genMode === "videoEdit") {
-          // 视频编辑：1 个源视频，并按媒体目录上限附带参考图片和独立参考音频。
-          // 不再是 HappyHorse 专属 —— 目录里声明了 video_edit 的模型都走这条路。
+          // Video edit: 1 source video, with reference images and standalone reference audio attached per the media catalog limits.
+          // No longer HappyHorse-only — every model that declares video_edit in the catalog takes this path.
           const upstream = collectUpstream();
           const videoUrl =
             upstream
@@ -2421,8 +2421,8 @@ export const VideoNode = memo(
               nodeId: targetId,
             });
         } else if (genMode === "allReference") {
-          // 全能参考是否可用以媒体目录的 supportedModes 为准。这里前置守卫给出
-          // 可读提示，防止切换模型后残留模式打到不支持的端点。
+          // Whether all reference is available is decided by the media catalog's supportedModes. This guard in front gives
+          // a readable hint, preventing a leftover mode after switching models from hitting an unsupported endpoint.
           if (!supportsAllReference) {
             void showErrorDialog(
               t(
@@ -2445,7 +2445,7 @@ export const VideoNode = memo(
             : 12;
           const upstream = collectUpstream();
           const references: FreezoneVideoReferenceItem[] = [];
-          // 与 references 里 type==="audio" 的项一一对应，用于提交前逐条校验音频时长。
+          // Corresponds one to one with the items in references where type==="audio", used to validate each audio duration before submit.
           const audioRefs: {
             url: string;
             label: string;
@@ -2465,7 +2465,7 @@ export const VideoNode = memo(
             if (references.length >= totalReferenceLimit) break;
             const videoRefUrl = referenceVideoUrl(node);
             if (videoRefUrl) {
-              // 视频节点或携带 videoUrl 的 upload 节点（资产库视频）统一收集。
+              // Video nodes or upload nodes carrying a videoUrl (library videos) are collected uniformly.
               if (videoCount < caps.video) {
                 references.push({ type: "video", url: videoRefUrl });
                 videoRefs.push({
@@ -2487,8 +2487,8 @@ export const VideoNode = memo(
                   ? node.data.audioUrl
                   : "";
               if (url && audioCount < caps.audio) {
-                // 音频引用默认走「配乐参考」语义；label 用 sourceFileName /
-                // displayName 之一，方便后端日志和后续 UI 展示对得上。
+                // Audio references use the "soundtrack reference" semantics by default; label uses one of sourceFileName /
+                // displayName, so backend logs and later UI display line up.
                 const rawLabel =
                   (typeof node.data.sourceFileName === "string"
                     ? node.data.sourceFileName
@@ -2499,16 +2499,16 @@ export const VideoNode = memo(
                 references.push({
                   type: "audio",
                   url,
-                  role: "配乐参考", // i18n-exempt —— references[].role 是发给后端的协议字段
+                  role: "soundtrack_reference", // references[].role is a protocol field sent to the backend
                   label: rawLabel,
                 });
                 audioRefs.push({
                   url,
                   nodeId: node.id,
-                  // 时长超限时要指名道姓是哪条，所以这里连标签一起留着；没有文件名
-                  // 的（TTS 直出等）退回「音频N」。序号按音频自身 1-based 计，与后端
-                  // pipeline.py 的 enumerate(audio_paths, start=1) 同口径；标签本身
-                  // 只进提示文案、不随 references 发给后端，所以跟随界面语言。
+                  // When a duration limit is exceeded we must name which one, so the label is kept here too; those without a file name
+                  // (direct TTS output etc.) fall back to "Audio N". The index counts by the audio itself 1-based, on the same basis as the backend
+                  // pipeline.py enumerate(audio_paths, start=1); the label itself
+                  // only enters the hint copy and is not sent to the backend with references, so it follows the UI language.
                   label:
                     rawLabel ||
                     t("node.videoNode.audio.clipFallbackLabel", {
@@ -2533,14 +2533,14 @@ export const VideoNode = memo(
             references.push({
               type: "file",
               url: data.referenceFileUrl.trim(),
-              role: "文件参考", // i18n-exempt —— 同上，协议字段
+              role: "file_reference", // Same as above, a protocol field
               label: data.referenceFileName ?? "",
             });
           } else if (data.referenceLink?.trim()) {
             references.push({
               type: "link",
               url: data.referenceLink.trim(),
-              role: "网页参考", // i18n-exempt —— 同上，协议字段
+              role: "web_reference", // Same as above, a protocol field
             });
           }
           if (references.length === 0) {
@@ -2597,21 +2597,21 @@ export const VideoNode = memo(
         }
         const submitOnce = doSubmit;
 
-        // 多条生成不再复制兄弟节点：N 个任务并发、全部回填到当前节点的
-        // generationBatch（叠卡画册，与图片节点一致）。第 1 条完成的设为主视频，
-        // 其余逐条追加。
+        // Multiple generations no longer clone sibling nodes: N tasks run concurrently and all backfill the current node's
+        // generationBatch (stacked-card album, consistent with the image node). The first one to finish is set as the main video,
+        // and the rest are appended one by one.
         const total = Math.min(Math.max(count, 1), 4);
-        // 各并发任务完成顺序不定，本地累积已完成的 URL，整组写回（避免读改写竞态）。
+        // Concurrent tasks finish in no fixed order, so accumulate the completed URLs locally and write back the whole group (avoiding read-modify-write races).
         const completedUrls: string[] = [];
-        // 收集每个子任务的失败，留到整批 settle 后统一决定是否弹错误框——避免
-        // 「N 条里 1 条秒失败（如命中队列上限）、其余正常生成」时一边弹报错一边
-        // 又冒加载动画的矛盾观感。
+        // Collect each sub-task's failure and leave it until the whole batch settles to decide uniformly whether to show an error dialog — avoiding
+        // the contradictory look of "1 of N fails instantly (e.g. hits the queue limit) while the rest generate normally" showing an error and
+        // a loading animation at the same time.
         const runErrors: unknown[] = [];
         const runOne = async (runIndex: number) => {
           try {
             const ref = await submitOnce(id);
             // Persist the task handle so a page refresh can resume this job.
-            // N 个并发任务同节点只能存一个句柄——保留第 1 个（主视频）的。
+            // N concurrent tasks of the same node can store only one handle — keep the first one's (the main video's).
             if (runIndex === 0) {
               updateNodeData(id, generationTaskDescriptor(ref));
             }
@@ -2637,7 +2637,7 @@ export const VideoNode = memo(
               completedUrls.push(url);
               const isFirstCompleted = completedUrls.length === 1;
               updateNodeData(id, {
-                // 第 1 条完成的设为主视频并结束 loading；后续只扩充画册。
+                // The first to finish is set as the main video and ends loading; later ones only expand the album.
                 ...(isFirstCompleted
                   ? {
                       videoUrl: url,
@@ -2656,8 +2656,8 @@ export const VideoNode = memo(
                 "[video-node] video gen completed without output url",
                 completed,
               );
-              // 只有 run 0（任务句柄归属者）且尚无任何成功时才终结 loading——
-              // 非首个任务先「无 URL 完成」不能把还在跑的整体 loading 掐掉。
+              // Only run 0 (the owner of the task handle) with no success so far ends loading —
+              // a non-first task finishing first "without a URL" must not cut off the overall loading that is still running.
               if (runIndex === 0 && completedUrls.length === 0) {
                 updateNodeData(id, {
                   isGenerating: false,
@@ -2670,30 +2670,30 @@ export const VideoNode = memo(
             }
           } catch (error) {
             if (isTaskCancelledError(error)) {
-              // 用户已在终止确认里知情：不进 runErrors、不弹错误框、不落错误横幅。
+              // The user is already informed in the stop confirmation: do not enter runErrors, show no error dialog, leave no error banner.
               if (runIndex === 0 && completedUrls.length === 0) {
                 updateNodeData(id, { isGenerating: false, generationStartedAt: null });
               }
               return;
             }
             console.error("[video-node] video gen failed", error);
-            // 先记下错误再决定是否早退 —— settle 后的聚合分支靠 runErrors 判断
-            // 「部分失败」并弹 toast；早退前不记会把首个成功之后的失败彻底吞掉。
+            // Record the error first and then decide whether to return early — the aggregation branch after settle relies on runErrors to judge
+            // "partial failure" and show a toast; not recording before an early return would swallow failures after the first success entirely.
             runErrors.push(error);
-            // 已有同批其它视频完成（主视频已落）时不覆盖成功态为错误——
-            // 部分失败只影响画册条数。
+            // When other videos of the same batch have completed (the main video has landed), do not overwrite the success state with an error —
+            // a partial failure only affects the album count.
             if (completedUrls.length > 0) return;
-            // 轮询超时 ≠ 生成失败：后端还在跑。保留 isGenerating 与任务句柄，
-            // 刷新页面时 resumeNodeGeneration 会重新接上并回填结果；这里写错误
-            // 横幅只会把一个还活着的任务标成失败、并清掉可续接的句柄。
+            // A polling timeout is not a generation failure: the backend is still running. Keep isGenerating and the task handle;
+            // on page refresh resumeNodeGeneration reconnects and backfills the result; writing an error here
+            // banner would only mark a live task as failed and clear the resumable handle.
             if (isTaskPollTimeoutError(error)) return;
             const resolved = resolveErrorContent(error, t("node.videoNode.generation.failed"));
             const displayErrorMessage = backendErrorToastMessage(error, t);
             const diagnostics = resolveGenerationErrorDiagnostics(error, resolved.details);
-            // Persist the failure on the node so the 重新生成 entry survives after
+            // Persist the failure on the node so the regenerate entry survives after
             // the user dismisses the dialog (previously the error was dialog-only).
-            // 只有 run 0 失败才终结 loading：非首 run 失败时 run 0 可能还在跑，
-            // 它的成功补丁会清掉这里写的错误横幅。
+            // Only a run 0 failure ends loading: when a non-first run fails, run 0 may still be running,
+            // and its success patch would clear the error banner written here.
             updateNodeData(id, {
               ...(runIndex === 0
                 ? { isGenerating: false, generationStartedAt: null }
@@ -2705,19 +2705,19 @@ export const VideoNode = memo(
           }
         };
 
-        // 旧画册清空 + 占位计数都在所有校验通过、真正开跑前才动——前面有多个
-        // 校验失败的早退路径，提前动会白白毁掉已有画册 / 把「生成中」占位卡死。
+        // Clearing the old album + the placeholder count happen only after all validations pass and just before the run really starts — earlier there are several
+        // validation-failure early-return paths, and doing it earlier would needlessly destroy the existing album / leave the "generating" placeholder stuck.
         updateNodeData(id, { generationBatch: null });
         setAlbumPendingTotal(id, total > 1 ? total : 0);
         await Promise.allSettled(
           Array.from({ length: total }, (_, runIndex) => runOne(runIndex)),
         );
         setAlbumPendingTotal(id, 0);
-        // 整批结束后再决定错误反馈：
-        //  - 一条都没成功 → 弹一次错误框（含真人素材被拦截的专用引导）；
-        //  - 部分成功 → 不弹模态打断，仅用轻量 toast 告知少出了几条。
-        // 这样「N 条里 1 条命中队列上限秒失败、其余正常在跑」时不会再出现
-        // 「先弹上限报错、节点却又冒出加载动画」的矛盾观感。
+        // Decide the error feedback after the whole batch ends:
+        //  - none succeeded → show one error dialog (including dedicated guidance for blocked real-person assets);
+        //  - partially succeeded → no modal interruption, only a light toast saying how many fewer were produced.
+        // This way "1 of N hits the queue limit and fails instantly while the rest run normally" no longer produces
+        // the contradictory look of "a limit error pops up first, yet the node shows a loading animation".
         if (completedUrls.length === 0 && runErrors.length > 0) {
           const firstError = runErrors[0];
           const issues = referenceIssues(firstError);
@@ -2739,8 +2739,8 @@ export const VideoNode = memo(
               generationErrorDetails: null, generationErrorRequestId: null });
             return;
           }
-          // 整批都只是「前端不等了」时走中性提示：后端仍在生成，节点保持生成中
-          // 状态等待刷新续接，不该按报错呈现。真有失败混在里面则仍按失败处理。
+          // When the whole batch is merely "the frontend stopped waiting", use a neutral hint: the backend is still generating, and the node stays in the generating
+          // state awaiting refresh and resumption, and should not be presented as an error. If a real failure is mixed in it is still treated as a failure.
           if (runErrors.every((error) => isTaskPollTimeoutError(error))) {
             notifyTaskStillRunning(t);
             void refreshHistory();
@@ -2758,7 +2758,7 @@ export const VideoNode = memo(
               "InputImageSensitiveContentDetected.PrivateInformation",
             )
           ) {
-            // 素材含真实人脸被拦截：引导用户开启「真人素材审核」后重试。
+            // Assets containing a real face were blocked: guide the user to turn on "Real-person asset review" and retry.
             void showErrorDialog(
               t("node.videoNode.generation.faceBlockedMessage"),
               t("node.videoNode.generation.faceBlockedTitle"),
@@ -2779,8 +2779,8 @@ export const VideoNode = memo(
             }),
           );
         }
-        // 所有任务尘埃落定后统一拉一次历史：N 条记录都落在本节点名下，run 0
-        // settle 时就拉会漏掉后完成的 N-1 条（后端成功失败都会记）。
+        // After all tasks settle, fetch history once uniformly: all N records land under this node, and fetching when run 0
+        // settles would miss the N-1 that finish later (the backend records both success and failure).
         void refreshHistory();
       } catch (error) {
         console.error("[video-node] video gen failed", error);
@@ -2845,7 +2845,7 @@ export const VideoNode = memo(
               ? (latestData.upscaleResolution as FreezoneVideoUpscaleResolution)
               : "1080p";
           if (!sourceUrl) {
-            publishNodeActionError(requestId, id, action, new Error("缺少高清视频源"));
+            publishNodeActionError(requestId, id, action, new Error("Missing upscale video source"));
             return;
           }
           void submitVideoUpscale(id, { sourceUrl, resolution })
@@ -2905,7 +2905,7 @@ export const VideoNode = memo(
       !isClipMode &&
       !subtitleEraseMode &&
       !data.referenceOnly &&
-      // 视频高清节点用自己的 VideoUpscaleEditorOverlay 配置面板，不走常规生成面板。
+      // The video upscale node uses its own VideoUpscaleEditorOverlay config panel, not the regular generation panel.
       !data.isUpscaleNode;
 
     const handleCaptureFrame = useCallback(
@@ -3005,7 +3005,7 @@ export const VideoNode = memo(
         {referenceErrors.length > 0 && <button type="button" className="tap-button nodrag absolute -top-10 left-0" onClick={(event) => {
           event.stopPropagation(); setReferenceErrorsOpen(true);
         }}>{t("referenceValidation.title")}</button>}
-        {/* 叠卡画册的卡片边：从主视频右侧探出（与图片节点同款），点卡边也能展开画册。 */}
+        {/* Card edges of the stacked-card album: peeking out from the right of the main video (same as the image node); clicking a card edge also expands the album. */}
         {hasAlbum && !albumExpanded && videoSource && (
           <>
             {Array.from({ length: Math.min(albumTotalSlots - 1, 3) }, (_, index) => {
@@ -3048,7 +3048,7 @@ export const VideoNode = memo(
           className="!h-2 !w-2 !border-0 !bg-[rgb(148,163,184)]"
         />
 
-        {/* 画册展开时隐藏浮动标题和分辨率角标——画册容器自带头部（与图片节点一致）。 */}
+        {/* Hide the floating title and resolution badge when the album expands — the album container has its own header (consistent with the image node). */}
         {!albumExpanded && (
           <>
             <NodeHeader
@@ -3108,16 +3108,16 @@ export const VideoNode = memo(
 
         <div
           className={`relative flex h-full w-full items-center justify-center ${videoSource ? "overflow-hidden" : "overflow-visible"} rounded-[var(--node-radius)] border ${bodySurfaceClass} transition-colors ${bodyFrameClass} ${
-            // 画册展开时藏起节点本体——半透明的画册容器盖不严，底下的视频会透出来。
+            // Hide the node body when the album expands — the translucent album container does not cover it completely, and the video underneath would show through.
             albumExpanded && hasAlbum ? "invisible" : ""
           }`}
         >
-          {/* 生成/上传中优先显示 loading：原地重新生成时 videoUrl 仍是上一条结果，
-              若不加这层 guard，旧视频会一直占位、isGenerating 分支永远到不了。
-              失败时 isGenerating 归 false，旧视频自动复现（videoUrl 未被清空）。 */}
-          {/* 低缩放档：<video> 换成静态图/占位块。每个 <video> 都是一个独立
-              合成层，数量随可见节点数线性增长——实测 69 节点 / zoom 0.1 下，
-              只有连同视频层一起降级才能把 p90 帧时从 26ms 拉回 14ms。 */}
+          {/* While generating/uploading show loading first: when regenerating in place videoUrl is still the previous result,
+              and without this guard the old video would keep holding the place and the isGenerating branch would never be reached.
+              On failure isGenerating returns to false and the old video reappears automatically (videoUrl was not cleared). */}
+          {/* Low-zoom tier: <video> is replaced by a static image/placeholder block. Every <video> is an independent
+              compositing layer, and their number grows linearly with the visible nodes — measured at 69 nodes / zoom 0.1,
+              only downgrading together with the video layer brought the p90 frame time back from 26ms to 14ms. */}
           {!isGenerating &&
           !isUploading &&
           videoSource &&
@@ -3148,8 +3148,8 @@ export const VideoNode = memo(
               preload="metadata"
               onPlay={() => {
                 isVideoPlayingRef.current = true;
-                // shell 决策在组件外层（withLodShell），读不到组件内 ref，
-                // 播放态同步进模块级注册表：播放中的节点低缩放档不降级。
+                // The shell decision lives outside the component (withLodShell) and cannot read the in-component ref,
+                // so the playing state is synced into a module-level registry: a playing node is not downgraded at the low-zoom tier.
                 setNodeMediaActive(id, true);
               }}
               onPause={() => {
@@ -3157,7 +3157,7 @@ export const VideoNode = memo(
                 setNodeMediaActive(id, false);
               }}
               onClick={() => {
-                // 点击视频本体只负责选中节点 —— 播放/暂停统一交给左下角按钮。
+                // Clicking the video body only selects the node — play/pause is handled uniformly by the bottom-left button.
                 setSelectedNode(id);
               }}
               onLoadedMetadata={(event) => {
@@ -3165,10 +3165,10 @@ export const VideoNode = memo(
                 setHasMetadata(true);
                 setVideoLoadError(false);
                 if (el.videoWidth && el.videoHeight) {
-                  // 只把视频真实像素记到 widthPx/heightPx；不要写回 aspectRatio。
-                  // aspectRatio 仅保存用户选的比例预设（16:9 / auto…），否则
-                  // chip 会显示成像素串(1248:704)，且会作为非法 aspect_ratio 带进
-                  // 下一次生成请求。
+                  // Record only the video's real pixels into widthPx/heightPx; do not write back aspectRatio.
+                  // aspectRatio stores only the ratio preset the user picked (16:9 / auto…), otherwise
+                  // the chip would show a pixel string (1248:704) and carry an illegal aspect_ratio into
+                  // the next generation request.
                   const updates: Partial<VideoNodeData> = {};
                   if (data.widthPx !== el.videoWidth)
                     updates.widthPx = el.videoWidth;
@@ -3195,8 +3195,8 @@ export const VideoNode = memo(
               </span>
             </div>
           ) : isGenerating && historyPreviewUrl ? (
-            // 生成进行中，但用户点了历史记录预览：临时播放那条历史视频，新视频
-            // 仍在后台生成。顶部 pill 提示「生成中」，右上「返回」回到 loading。
+            // Generating, but the user clicked a history record preview: temporarily play that history video while the new video
+            // is still generating in the background. The top pill says "Generating", and "Back" at the top right returns to loading.
             <div className="relative h-full w-full">
               <video
                 src={resolveImageDisplayUrl(historyPreviewUrl)}
@@ -3277,14 +3277,14 @@ export const VideoNode = memo(
               </span>
             </div>
           ) : isConnected ? (
-            // 已连线：不再显示文字 CTA，只在节点中间放一个图标（对齐 libtv）。
+            // Connected: no longer show the text CTA, only put an icon in the middle of the node (aligned with libtv).
             <div className="flex h-full w-full items-center justify-center">
               <Play className="h-9 w-9 text-text-muted/46" />
             </div>
           ) : (
             <div className="flex h-full w-full items-center px-8">
-              {/* 空态（无入边）才走到这里。CTA 完全按媒体模型目录的 supportedModes
-                  决定；目录尚未加载时才使用模型族兜底，避免展示后端会拒绝的入口。 */}
+              {/* Only the empty state (no incoming edges) reaches here. The CTAs are decided entirely by the media model catalog's supportedModes;
+                  the model-family fallback is used only while the catalog has not loaded, avoiding showing entries the backend would reject. */}
               <div className="flex min-h-0 flex-col justify-center gap-2 py-4">
                 <div className="text-xs text-[var(--canvas-node-input-helper)]">
                   {t("node.videoNode.emptyState.tryLabel")}
@@ -3341,7 +3341,7 @@ export const VideoNode = memo(
               />
             )}
 
-          {/* 画册数量徽标：hover 节点出现，hover 徽标箭头下探，点击展开画册。 */}
+          {/* Album count badge: appears on node hover; the arrow dips down on badge hover; click to expand the album. */}
           {hasAlbum && !isGenerating && videoSource && (
             <button
               type="button"
@@ -3387,8 +3387,8 @@ export const VideoNode = memo(
           )}
         </div>
 
-        {/* 展开的画册宫格：与图片节点同构——「组」式轮廓 + 2 列宫格；点视频设为
-            主视频并收拢；hover 出现「应用到画布」+ 下载；按住可拖动整个节点。 */}
+        {/* Expanded album grid: isomorphic with the image node — "group"-style outline + 2-column grid; clicking a video sets it as
+            the main video and collapses; hover shows "Apply to canvas" + download; press and hold to drag the whole node. */}
         {albumExpanded && hasAlbum && (
           <div
             className="nowheel absolute -left-3 -top-3 z-[80] cursor-grab rounded-2xl border border-white/15 bg-white/[0.045] p-3 shadow-[0_16px_48px_rgba(0,0,0,0.4)] backdrop-blur-[2px] active:cursor-grabbing"
@@ -3413,7 +3413,7 @@ export const VideoNode = memo(
                     title={t("node.videoNode.album.setAsMain")}
                     onClick={(event) => {
                       event.stopPropagation();
-                      // 拖动画册（移动节点）后松手补发的 click 不算选主视频。
+                      // A click re-fired after dragging the album (moving the node) and releasing does not count as picking a main video.
                       const start = albumPointerDownPosRef.current;
                       if (
                         start
@@ -3475,7 +3475,7 @@ export const VideoNode = memo(
                   </div>
                 );
               })}
-              {/* 还在生成中的槽位：占位骨架，完成一条替换一条。 */}
+              {/* Slot still generating: placeholder skeleton, replaced one by one as each finishes. */}
               {Array.from({ length: albumPendingCount }, (_, index) => (
                 <div
                   key={`album-pending-${index}`}
@@ -3590,7 +3590,7 @@ export const VideoNode = memo(
                 isActive={(record) => {
                   const url = historyRecordOutputUrl(record);
                   if (!url) return false;
-                  // 预览态下高亮正在预览的历史条，否则高亮当前主视频。
+                  // In preview state highlight the history entry being previewed, otherwise highlight the current main video.
                   if (isGenerating && historyPreviewUrl) {
                     return url === historyPreviewUrl;
                   }
@@ -3654,10 +3654,10 @@ export type ReferenceMediaItem =
 
 // --- custom video player controls ------------------------------------------ //
 //
-// 替代 <video controls>：libtv 风格的浮层（底部一条）。订阅原生 <video>
-// 的 play/pause/timeupdate/durationchange/volumechange，写回时直接操作元素，
-// 由事件驱动 state 单向同步。隐藏时机：默认显示 0.85 透明度 + hover 加深，
-// 不做自动隐藏，避免画布上看不到「这个视频还能控制」。
+// Replaces <video controls>: a libtv-style floating layer (a strip at the bottom). Subscribes to the native <video>
+// play/pause/timeupdate/durationchange/volumechange, and on write-back operates the element directly,
+// with events driving state in one direction. Hiding policy: shown at 0.85 opacity by default + darker on hover,
+// no auto-hide, so the canvas never hides that "this video can still be controlled".
 
 interface VideoPlayerControlsProps {
   videoEl: HTMLVideoElement | null;
@@ -3742,7 +3742,7 @@ function VideoPlayerControls({
     [videoEl],
   );
 
-  // 进度百分比（用作 range 背景的渐变锚点）。
+  // Progress percentage (used as the gradient anchor of the range background).
   const progressPct =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const sliderBg = `linear-gradient(to right, rgb(var(--accent-rgb)) 0%, rgb(var(--accent-rgb)) ${progressPct}%, rgba(255,255,255,0.18) ${progressPct}%, rgba(255,255,255,0.18) 100%)`;
@@ -3752,7 +3752,7 @@ function VideoPlayerControls({
       <button
         type="button"
         onClick={(event) => {
-          // 唯一的播放/暂停入口:阻止冒泡,避免点它时把节点也选中。
+          // The only play/pause entry: stop propagation so clicking it does not also select the node.
           event.stopPropagation();
           togglePlay();
         }}

@@ -1,6 +1,6 @@
 {
   "id": "flying_craft",
-  "label_zh": "飞行器",
+  "label": "Flying craft",
   "default_scale": [3.0, 1.0, 4.0],
   "default_affordances": ["seatable", "blocking_mass"],
   "default_attachment_points": [
@@ -10,8 +10,8 @@
       "offset": [0, 1.0, 0],
       "facing_delta": 0,
       "actor_state": "sitting",
-      "description_zh": "乘坐点"
+      "description": "Ride point"
     }
   ],
-  "sketch_description_zh": "飞行器类 staging 轮廓，真实物件由 semantic_label 决定。"
+  "sketch_description": "Flying-craft staging silhouette; the real object is decided by semantic_label."
 }

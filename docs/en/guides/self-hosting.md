@@ -1,6 +1,3 @@
-<!-- lang-switch -->
-**English** · [简体中文](../../zh/guides/self-hosting.md)
-
 # Self-Hosting Handbook (Docker)
 
 > Deploy, configure, upgrade, and back up DramaClaw CE with Docker.
@@ -169,4 +166,4 @@ The script copies only missing files, never overwrites or deletes the source, an
 
 ## Related
 
-- [Quickstart](../getting-started/quickstart.md) ｜ [Configuring Model Providers](../getting-started/configuring-models.md)
+- [Quickstart](../getting-started/quickstart.md) | [Configuring Model Providers](../getting-started/configuring-models.md)

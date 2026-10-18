@@ -95,7 +95,7 @@ export function useHideHeaderOnScroll<T extends HTMLElement>() {
     // panes; that reflow clamps a pane's scrollTop back to 0 and fires phantom
     // `scroll` events throughout the animation. The reveal-on-top handler below
     // must not read those as "user reached the top" or the header bounces right
-    // back (esp. with a short right pane, e.g. only 文案 expanded). We suppress
+    // back (esp. with a short right pane, e.g. only Text expanded). We suppress
     // reveal-on-top while the collapse settles — but keyed off the reflow scrolls
     // themselves: each one pushes the window out, so it tracks the *actual*
     // animation rather than a guessed duration (robust to transition-length

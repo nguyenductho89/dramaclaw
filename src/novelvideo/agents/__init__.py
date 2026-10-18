@@ -1,4 +1,4 @@
-"""NovelVideo Agent 模块。"""
+"""NovelVideo Agent module."""
 
 from .episode_planner import EpisodePlannerAgent, create_episode_planner
 from .keyframe_prompt_builder import (

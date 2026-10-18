@@ -3,7 +3,7 @@
 import type {CanvasNode} from '@/features/canvas/domain/canvasNodes';
 import {extractUpstreamContent} from '@/features/canvas/application/graphContentResolver';
 
-export const HTML_REFERENCE_PREFIXES = ['文本', '图片', '视频', '音频'] as const; // i18n-exempt -- canonical @mention protocol tokens
+export const HTML_REFERENCE_PREFIXES = ['text', 'image', 'video', 'audio'] as const; // i18n-exempt -- canonical @mention protocol tokens
 export interface HtmlReference {
   nodeId: string;
   name: string;
@@ -53,25 +53,25 @@ export function buildHtmlReferences(nodes: CanvasNode[]): HtmlReference[] {
     const content = extractUpstreamContent(node);
     const data = node.data as Record<string, unknown>;
     const videoUrl = node.type === 'videoComposeNode' ? data.videoUrl as string | undefined : content.videoUrl;
-    const prefix = node.type === 'textAnnotationNode' || node.type === 'scriptNode' ? '文本' // i18n-exempt -- canonical @mention protocol token
-      : node.type === 'audioNode' ? '音频' // i18n-exempt -- canonical @mention protocol token
-      : videoUrl || node.type === 'videoNode' || node.type === 'videoComposeNode' ? '视频' // i18n-exempt -- canonical @mention protocol token
-      : content.imageUrl || ['imageGenNode','imageNode','uploadNode','exportImageNode','storyboardGenNode'].includes(node.type) ? '图片' : null; // i18n-exempt -- canonical @mention protocol token
+    const prefix = node.type === 'textAnnotationNode' || node.type === 'scriptNode' ? 'text' // i18n-exempt -- canonical @mention protocol token
+      : node.type === 'audioNode' ? 'audio' // i18n-exempt -- canonical @mention protocol token
+      : videoUrl || node.type === 'videoNode' || node.type === 'videoComposeNode' ? 'video' // i18n-exempt -- canonical @mention protocol token
+      : content.imageUrl || ['imageGenNode','imageNode','uploadNode','exportImageNode','storyboardGenNode'].includes(node.type) ? 'image' : null; // i18n-exempt -- canonical @mention protocol token
     if (!prefix) return [];
     const index = (counts.get(prefix) ?? 0) + 1;
     counts.set(prefix, index);
     const imageUrl = node.type === 'imageGenNode' ? data.imageUrl as string | undefined : content.imageUrl;
-    const width = positiveNumber(prefix === '视频' ? data.widthPx : data.imageNaturalWidth); // i18n-exempt -- canonical @mention protocol token
-    const height = positiveNumber(prefix === '视频' ? data.heightPx : data.imageNaturalHeight); // i18n-exempt -- canonical @mention protocol token
+    const width = positiveNumber(prefix === 'video' ? data.widthPx : data.imageNaturalWidth); // i18n-exempt -- canonical @mention protocol token
+    const height = positiveNumber(prefix === 'video' ? data.heightPx : data.imageNaturalHeight); // i18n-exempt -- canonical @mention protocol token
     return [{nodeId: node.id, name: content.displayName || `${prefix}${index}`, prefix, index,
       mention: `${prefix}${index}`, text: content.text,
-      url: prefix === '视频' ? videoUrl : prefix === '音频' ? content.audioUrl : prefix === '图片' ? imageUrl : undefined, // i18n-exempt -- canonical @mention protocol tokens
+      url: prefix === 'video' ? videoUrl : prefix === 'audio' ? content.audioUrl : prefix === 'image' ? imageUrl : undefined, // i18n-exempt -- canonical @mention protocol tokens
       width,
       height,
-      aspectRatio: prefix === '图片' || prefix === '视频' // i18n-exempt -- canonical @mention protocol tokens
+      aspectRatio: prefix === 'image' || prefix === 'video' // i18n-exempt -- canonical @mention protocol tokens
         ? mediaAspectRatio(width, height, data.aspectRatio)
         : undefined,
-      durationMs: prefix === '视频' ? positiveNumber(data.durationMs) : undefined, // i18n-exempt -- canonical @mention protocol token
+      durationMs: prefix === 'video' ? positiveNumber(data.durationMs) : undefined, // i18n-exempt -- canonical @mention protocol token
     }];
   });
 }

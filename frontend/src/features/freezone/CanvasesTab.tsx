@@ -39,8 +39,8 @@ interface CanvasesTabProps {
   hasPresetLabel: boolean;
   reloadToken?: number;
   /**
-   * 抽屉是否处于收起态。收起走的是 CSS `-translate-x-full`，组件并不卸载，
-   * 所以要显式往下传，让大纲停掉它那条按 nodes 重算的订阅（见 CanvasOutlineList）。
+   * Whether the drawer is collapsed. Collapsing is done with CSS `-translate-x-full` and the component does not unmount,
+   * so it must be passed down explicitly, letting the outline stop its subscription that recomputes by nodes (see CanvasOutlineList).
    */
   collapsed?: boolean;
 }
@@ -96,8 +96,8 @@ export function CanvasesTab({
 
   const handleRestoreMainline = async () => {
     if (!onRestoreMainlineDefault) return;
-    // 走统一的确认框而不是 window.confirm：原生弹窗在这套深色 UI 里是块白板，
-    // 而且这个动作会重建 preset 层，值得让人看清楚自己在同意什么。
+    // Use the shared confirm dialog instead of window.confirm: the native dialog is a white slab in this dark UI,
+    // and this action rebuilds the preset layer, so people should see clearly what they are agreeing to.
     const ok = await confirmDialog({
       title: t("freezone.canvases.restoreMenu"),
       description: t("freezone.canvases.restoreConfirm"),
@@ -112,12 +112,12 @@ export function CanvasesTab({
     }
   };
 
-  // 我自己在这个项目里建了几张、还能不能再建。上限是产品配额，后端不拦（见
-  // lib/limits.ts），所以拦截只能落在这里。
-  // 只有列表真的回来了才拿它算配额：`items` 在加载中是空数组，按它判定等于把
-  // 「不知道」当成「还有余量」。
-  // 刷新失败也算「不知道」：refetch() 不抛，失败后 React Query 留着上一份列表，
-  // 拿它接着数，刚建成的那张就不在账上，下一张能照建。
+  // How many canvases I created in this project and whether I can create more. The limit is a product quota that the backend does not enforce (see
+  // lib/limits.ts), so the blocking can only happen here.
+  // Only use the list for the quota once it has really come back: `items` is an empty array while loading, and judging by it
+  // would treat "unknown" as "room left".
+  // A failed refresh also counts as "unknown": refetch() does not throw, and after a failure React Query keeps the previous list;
+  // counting from it would leave the just-created canvas off the books, and the next one could still be created.
   const canvasQuota = canvasCreationQuotaStatus(
     canvasesQuery.data && !canvasesQuery.isError ? items : undefined,
     username,
@@ -138,8 +138,8 @@ export function CanvasesTab({
           },
     );
 
-  // 入口一直可点：置灰的菜单项只会让人反复点一个死掉的按钮，还得自己猜为什么。
-  // 点的那一下把话说清楚，再决定要不要开新建表单。
+  // The entry stays clickable: a greyed-out menu item only makes people click a dead button repeatedly and guess why.
+  // Say it clearly on click, then decide whether to open the create form.
   const handleRequestCreateForm = () => {
     if (canvasQuota !== "available") {
       showCanvasQuotaNotice(canvasQuota);
@@ -154,13 +154,13 @@ export function CanvasesTab({
     username,
     displayName,
   );
-  // 下拉里的一条列表：我的画布在最前，其余按最近修改排在后面。
+  // An item list in the dropdown: my canvas first, the rest ordered by most recent modification.
   const canvasOptions = flattenCanvasBrowserSections(sections);
   const showRestoreMainlineAction = currentCanvasId !== "default" && hasPresetLabel;
 
   const handleCreateCanvas = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // 表单可能是超限之前就开着的（别处又建了一张），提交这一下再兜一次。
+    // The form may have been open before the limit was exceeded (another one was created elsewhere); check once more at submit.
     if (canvasQuota !== "available") {
       showCanvasQuotaNotice(canvasQuota);
       return;
@@ -247,7 +247,7 @@ export function CanvasesTab({
         </div>
       )}
 
-      {/* 新建表单默认收起，从画布选择器的菜单里点「新建项目画布」才展开 */}
+      {/* The create form is collapsed by default and only expands when "New project canvas" is clicked in the canvas picker's menu */}
       {showCreateForm && (
         <form onSubmit={handleCreateCanvas} className="shrink-0 px-3 pb-1 pt-2.5">
           <div className="flex items-center gap-1 rounded-[8px] border border-white/[0.08] bg-white/[0.03] p-1.5">
@@ -274,7 +274,7 @@ export function CanvasesTab({
             >
               {creatingCanvas ? t("freezone.canvases.createBusy") : t("freezone.canvases.create")}
             </button>
-            {/* 表单是从菜单里开出来的，关它得有个自己的出口——原来那个 + 按钮已经不在了 */}
+            {/* The form was opened from the menu, so closing it needs its own exit - the original + button is gone */}
             <button
               type="button"
               onClick={closeCreateForm}
@@ -289,7 +289,7 @@ export function CanvasesTab({
         </form>
       )}
 
-      {/* 画布选择器直接坐进大纲的工具栏，原来那条独立的横向 tab 整行省掉 */}
+      {/* The canvas picker sits right in the outline's toolbar, saving the whole separate horizontal tab row */}
       <CanvasOutlineList
         collapsed={collapsed}
         leading={
@@ -318,11 +318,11 @@ const CANVAS_MENU_ITEM_CLASS =
   "gap-2 rounded-[8px] text-xs text-text-dark focus:bg-[rgb(var(--text-rgb)/0.075)] focus:text-text-dark";
 
 /**
- * 画布选择器。原来这里是一条横向 tab 条，自己占满一行。
- * 但侧栏顶上本来就有面板 tab 和大纲工具栏两条横杠，中间再夹一条同款的，
- * 三层看下来分不清谁管谁；而画布一次只可能激活一个，排成并列的 tab 是把
- * 「单选」画成了「多开」。收成下拉挂进大纲工具栏：省一整行，当前画布的名字
- * 反而成了这块面板最显眼的字。
+ * Canvas picker. This used to be a horizontal tab strip occupying a whole row by itself.
+ * But the top of the sidebar already has the panel tabs and the outline toolbar as two bars, and a third similar one in between
+ * makes it unclear which governs which; also only one canvas can be active at a time, and parallel tabs draw
+ * "single select" as "multi-open". Folded into a dropdown in the outline toolbar: saves a whole row, and the current canvas name
+ * becomes the most prominent text of this panel.
  */
 function CanvasSelect({
   items,
@@ -351,8 +351,8 @@ function CanvasSelect({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  // 菜单关闭时 base-ui 会把焦点抢回触发按钮，确认框要是这会儿开就会跟它抢一轮，
-  // 所以会弹窗的那两个动作先记下来，等菜单彻底关干净再跑。
+  // When the menu closes base-ui steals focus back to the trigger button, and a confirm dialog opened at that moment would fight it for focus,
+  // so the two actions that open dialogs are noted first and run after the menu has fully closed.
   const pendingRef = useRef<(() => void) | null>(null);
 
   const currentItem = items.find((item) => item.id === currentCanvasId) ?? null;
@@ -364,8 +364,8 @@ function CanvasSelect({
     : loading
       ? t("freezone.canvases.loading")
       : currentCanvasId;
-  // 同步/删除都是点完菜单就关，转圈要是画在菜单里就等于没画。
-  // 顶掉触发器上的那个箭头：位置一样大，行内一格都不用动。
+  // Sync/delete close the menu right after the click, so a spinner drawn inside the menu is as good as not drawn.
+  // It replaces the arrow on the trigger: same size and position, so nothing in the row moves.
   const busy = restoringMainline || deletingCanvasId !== null;
 
   return (
@@ -398,8 +398,8 @@ function CanvasSelect({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent className={CANVAS_MENU_CONTENT_CLASS} align="start">
-        {/* 只让画布列表滚。整块菜单一起滚的话，画布一多，「新建 / 回到来源」就被推到
-            滚动区末尾，每次要用都得先把列表拖到底。 */}
+        {/* Only the canvas list scrolls. If the whole menu scrolled, with many canvases "New / Back to source" would be pushed
+            to the end of the scroll area and the list would have to be dragged to the bottom every time they are needed. */}
         <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
           {items.map((item) => {
             const itemLabel = canvasSelectLabel(item, t);
@@ -417,7 +417,7 @@ function CanvasSelect({
                   }`}
                 >
                   <span className="min-w-0 truncate">{itemLabel}</span>
-                  {/* 同名画布靠修改时间区分；选中勾与删除入口共用行尾位置。 */}
+                  {/* Same-named canvases are told apart by modification time; the selected check and the delete entry share the row-end position. */}
                   {item.modified_at && (
                     <span className="ml-auto shrink-0 pl-2 text-xs tabular-nums text-text-muted/70">
                       {formatRelative(item.modified_at, t)}
@@ -495,7 +495,7 @@ function CanvasSelect({
   );
 }
 
-/** 「我的画布」那条在数据里存的是占位串，落到界面上得换成人话。 */
+/** The "My canvas" entry stores a placeholder string in the data; on the UI it must be replaced by a human-readable name. */
 function canvasSelectLabel(item: CanvasDisplaySummary, t: Translate): string {
   return item.displayKind === "personal" && item.displayName === PERSONAL_CANVAS_DISPLAY_NAME
     ? t("freezone.canvases.personalCanvasName")
@@ -560,7 +560,7 @@ export function buildCanvasBrowserSections(
   };
 }
 
-/** 把分组结果压成一条：我的画布在最前，成员画布、其他画布依次跟随，同 id 只保留一次。 */
+/** Flatten the grouped result into one list: my canvas first, then member canvases and other canvases, keeping each id only once. */
 export function flattenCanvasBrowserSections(
   sections: CanvasBrowserSections,
 ): CanvasDisplaySummary[] {
@@ -719,12 +719,12 @@ export function findDuplicateCanvasName(
 }
 
 /**
- * 本人在这个项目里建了几张画布。只数 `canvas_origin === "user_created"` 的空白
- * 画布 —— 预设画布（default/episode/beat/asset）和个人画布是系统投影出来的，
- * 不占用户配额。
+ * How many canvases the current user created in this project. Only blank canvases with `canvas_origin === "user_created"` are counted -
+ * preset canvases (default/episode/beat/asset) and personal canvases are system projections and
+ * do not use the user's quota.
  *
- * 没有 `creator_username` 的老画布归到匿名桶：传 `null` 时数的就是它们，所以
- * 匿名创建者同样受限，不会因为缺元数据绕过配额。
+ * Old canvases without `creator_username` go into the anonymous bucket: passing `null` counts them, so
+ * an anonymous creator is also limited and cannot bypass the quota through missing metadata.
  */
 export function countCanvasesCreatedBy(
   items: FreezoneCanvasSummary[],
@@ -736,17 +736,17 @@ export function countCanvasesCreatedBy(
   ).length;
 }
 
-/** 配额判定的三态。`unknown` 是前置状态还没齐，不是「还有余量」。 */
+/** The three states of the quota decision. `unknown` means a prerequisite is not ready yet, not "room left". */
 export type CanvasQuotaStatus = "unknown" | "available" | "reached";
 
 /**
- * 还能不能再建。
+ * Whether more can be created.
  *
- * 画布列表没回来（`items` 是 undefined）或身份没恢复（username 还是 null）时返回
- * `unknown`，调用方必须当成「不确定」处理而不是放行：后端不数个数，这个窗口里放过
- * 去的就是真的多出来一张，而且身份没恢复时建的画布会带着 `creatorUsername: null`
- * 落库，事后谁的配额都不算。反过来也不能拿匿名桶的数去拦人——那会把真作者挡在自己
- * 没建过的老画布后面。
+ * When the canvas list has not come back (`items` is undefined) or the identity is not restored (username is still null), return
+ * `unknown`; the caller must treat it as "uncertain" rather than letting it through: the backend does not count, so what passes in this window
+ * really is an extra canvas, and a canvas created before identity is restored is stored with `creatorUsername: null`
+ * and afterwards counts toward nobody's quota. Conversely the anonymous bucket's count must not be used to block people - that would block the real author behind
+ * old canvases they never created.
  */
 export function canvasCreationQuotaStatus(
   items: FreezoneCanvasSummary[] | undefined,

@@ -1,4 +1,4 @@
-"""文件下载端点（带路径遍历防护）。"""
+"""File download endpoints (with path traversal protection)."""
 
 import logging
 from pathlib import Path
@@ -222,10 +222,10 @@ async def download_file(
     file_path: str,
     user: dict = Depends(get_api_user),
 ):
-    """下载项目内的生成文件。
+    """Download generated files inside the project.
 
-    路径相对于 output/{username}/{project}/，
-    自动防止目录遍历攻击。
+    The path is relative to output/{username}/{project}/,
+    and directory traversal attacks are prevented automatically.
     """
     resolved = await resolve_project_scope(project, user, required_role="viewer")
     requested = _resolve_project_file(resolved, file_path)
@@ -241,13 +241,13 @@ async def preview_file(
     st_thumb: str | None = None,
     user: dict = Depends(get_api_user),
 ):
-    """预览项目内媒体文件。
+    """Preview media files inside the project.
 
-    与 /files 使用同样的鉴权和路径防护，但返回 inline 响应，供 React 的
-    <img>/<video>/<audio> 直接使用，避免裸 /static 依赖 NiceGUI session。
+    Uses the same auth and path protection as /files, but returns an inline response for React's
+    <img>/<video>/<audio> to use directly, avoiding a bare /static dependence on the NiceGUI session.
 
-    ``st_thumb`` 请求一个降采样变体（见 ``novelvideo.utils.thumbnails``）；
-    未知值等同于没传，回落原图。
+    ``st_thumb`` requests a downsampled variant (see ``novelvideo.utils.thumbnails``);
+    unknown values are treated as not passed and fall back to the original image.
     """
     resolved = await resolve_project_scope(project, user, required_role="viewer", media_read=True)
     requested = _resolve_project_file(resolved, file_path)

@@ -1,96 +1,96 @@
-# DramaClaw 步骤 API 参考
+# DramaClaw Step API Reference
 
-本文件只记录各步骤的端点、参数和任务类型，不拥有流程顺序决策权。Steps 1-7 的顺序以
-`playbooks/init.md` 为准，Steps 8-16 的顺序以 `playbooks/episode.md` 为准；恢复定位以
-`playbooks/resume.md` 为准。每个 API 调用必须以后端当前 FastAPI routes 为准。
+This file only records the endpoints, parameters and task types of each step, and does not own process-order decisions. The order of Steps 1-7 follows
+`playbooks/init.md`, the order of Steps 8-16 follows `playbooks/episode.md`; recovery positioning follows
+`playbooks/resume.md`. Every API call must follow the backend's current FastAPI routes.
 
-变量约定：
-- `$PID` = 当前 `DRAMACLAW_PROJECT_ID`
-- `$EP` = 集数编号
-- `$CHAR_NAME` = 角色名
-- `$IDENTITY_ID` = 身份 ID
-- `$BEAT` = beat 编号
+Variable conventions:
+- `$PID` = the current `DRAMACLAW_PROJECT_ID`
+- `$EP` = episode number
+- `$CHAR_NAME` = character name
+- `$IDENTITY_ID` = identity ID
+- `$BEAT` = beat number
 
-认证：所有请求使用 `Authorization: Bearer $DRAMACLAW_AGENT_TOKEN`。
+Auth: all requests use `Authorization: Bearer $DRAMACLAW_AGENT_TOKEN`.
 
 ---
 
-## 当前项目准备阶段
+## Current project preparation stage
 
-项目创建由前端/系统完成，虾导不会调用 `POST /projects`。以下步骤均要求
-`DRAMACLAW_PROJECT_ID` 已绑定到一个存在的项目。
+Project creation is done by the frontend/system; Shrimp Director never calls `POST /projects`. All the steps below require
+`DRAMACLAW_PROJECT_ID` to be bound to an existing project.
 
-### Step 1: 上传小说 [SYNC]
+### Step 1: Upload the novel [SYNC]
 
 ```
 POST /projects/$PID/ingest/upload
 Body: multipart/form-data, file=novel.txt
 ```
 
-### Step 2: 摄入 [ASYNC -> ingest_fast, ep=0]
+### Step 2: Ingest [ASYNC -> ingest_fast, ep=0]
 
 ```
 POST /projects/$PID/ingest/start
 Body: {"filename": "novel.txt", "rebuild": false}
 
-已摄入项目覆盖重建只能在二次确认后调用:
+Overwrite-rebuilding an already ingested project may only be called after double confirmation:
 Body: {"filename": "novel.txt", "rebuild": true}
 
 GET /projects/$PID/tasks/ingest_fast/0
 SSE /projects/$PID/tasks/ingest_fast/0/stream
 ```
 
-### Step 3: 配置项目 [SYNC]
+### Step 3: Configure the project [SYNC]
 
 ```
 PATCH /projects/$PID
 Body: {"visual_style": "...", "narration_style": "...", "ethnicity": "...", "rhythm": "..."}
 ```
 
-### Step 4: 角色提取 [ASYNC -> build_characters, ep=0]
+### Step 4: Character extraction [ASYNC -> build_characters, ep=0]
 
-**触发用专用工具 `dramaclaw_build_characters`（不要自己拼路径）**，它内部就是
-`POST /projects/$PID/characters/build`。
+**Trigger with the dedicated tool `dramaclaw_build_characters` (do not assemble the path yourself)**; internally it is
+`POST /projects/$PID/characters/build`.
 
 ```
-dramaclaw_build_characters            # 触发提取（项目默认取 DRAMACLAW_PROJECT_ID）
+dramaclaw_build_characters            # Trigger extraction (the project defaults to DRAMACLAW_PROJECT_ID)
 
-dramaclaw_get_task(task_type="build_characters", episode=0)   # 轮询状态
-SSE /projects/$PID/tasks/build_characters/0/stream            # 或流式
+dramaclaw_get_task(task_type="build_characters", episode=0)   # Poll the status
+SSE /projects/$PID/tasks/build_characters/0/stream            # Or stream
 ```
 
-完成后用：
+After completion use:
 
 ```
 GET /projects/$PID/characters
 ```
 
-手动添加角色 fallback：
+Manual character-add fallback:
 
 ```
 POST /projects/$PID/characters
-Body: {"name":"角色名","role":"主角","is_main":true,"gender":"female","age_group":"youth","description":"描述","face_prompt":"面部特征"}
+Body: {"name":"Character name","role":"protagonist","is_main":true,"gender":"female","age_group":"youth","description":"Description","face_prompt":"Facial features"}
 ```
 
-### Step 5: 角色 face_prompt 检查/补齐 [SYNC]
+### Step 5: Character face_prompt check/fill [SYNC]
 
-肖像生成依赖角色 `face_prompt`。进入肖像生成前必须读取角色列表并补齐缺失值：
+Portrait generation depends on the character's `face_prompt`. Before entering portrait generation you must read the character list and fill in missing values:
 
 ```
 GET /projects/$PID/characters
 PATCH /projects/$PID/characters/$CHAR_NAME
-Body: {"face_prompt": "具体面部特征描述"}
+Body: {"face_prompt": "Concrete facial-feature description"}
 ```
 
-缺失时优先用专用工具：
+When missing, prefer the dedicated tool:
 
 ```
 dramaclaw_update_character_face_prompt(name="$CHAR_NAME", face_prompt="...")
 ```
 
-`face_prompt` 只描述脸部，不写服装、场景、身份图。
+`face_prompt` describes only the face; do not write clothing, scenes or identity images.
 
-### Step 6: 分集规划 [ASYNC -> build_episodes, ep=0]
+### Step 6: Episode planning [ASYNC -> build_episodes, ep=0]
 
 ```
 POST /projects/$PID/episodes/plan
@@ -100,13 +100,13 @@ GET /projects/$PID/tasks/build_episodes/0
 SSE /projects/$PID/tasks/build_episodes/0/stream
 ```
 
-完成后用：
+After completion use:
 
 ```
 GET /projects/$PID/episodes
 ```
 
-### Step 7: 肖像生成 [SYNC]
+### Step 7: Portrait generation [SYNC]
 
 ```
 POST /projects/$PID/characters/$CHAR_NAME/portrait
@@ -115,15 +115,15 @@ Body: {"style": "...", "ethnicity": "...", "model": "nanobanana"}
 
 ---
 
-## 逐集生成阶段
+## Per-episode generation stage
 
-### Step 8: 身份规划 [SYNC]
+### Step 8: Identity planning [SYNC]
 
 ```
 POST /projects/$PID/episodes/$EP/identities/plan
 ```
 
-### Step 9: 身份图生成 [SYNC]
+### Step 9: Identity image generation [SYNC]
 
 ```
 GET /projects/$PID/characters/$CHAR_NAME/identities
@@ -132,9 +132,9 @@ POST /projects/$PID/characters/$CHAR_NAME/identities/$IDENTITY_ID/generate
 Body: {"style": "...", "model": "nanobanana"}
 ```
 
-`$CHAR_NAME` 必须来自已读取的角色列表或身份规划结果，且非空。禁止探测 `/characters//identities`。
+`$CHAR_NAME` must come from the character list already read or the identity planning result, and be non-empty. Probing `/characters//identities` is forbidden.
 
-### Step 10a: 解说改写 [ASYNC -> content_rewriter]
+### Step 10a: Narration rewrite [ASYNC -> content_rewriter]
 
 ```
 GET /projects/$PID/episodes/$EP/raw-content
@@ -146,15 +146,15 @@ GET /projects/$PID/tasks/content_rewriter/$EP
 SSE /projects/$PID/tasks/content_rewriter/$EP/stream
 ```
 
-完成后可用：
+After completion you may use:
 
 ```
 GET /projects/$PID/episodes/$EP/adapted-content
 ```
 
-### Step 10b: 剧本生成 [ASYNC -> script_writer]
+### Step 10b: Script generation [ASYNC -> script_writer]
 
-当前后端没有 `/literal-script/generate`。使用实际存在的：
+The current backend has no `/literal-script/generate`. Use the one that actually exists:
 
 ```
 POST /projects/$PID/episodes/$EP/script/generate
@@ -164,26 +164,26 @@ GET /projects/$PID/tasks/script_writer/$EP
 SSE /projects/$PID/tasks/script_writer/$EP/stream
 ```
 
-完成后验证：
+Verify after completion:
 
 ```
 GET /projects/$PID/episodes/$EP/script
 GET /projects/$PID/episodes/$EP/beats
 ```
 
-不要要求 `script_mode == "literal_source"`；当前后端不保证该字段。
+Do not require `script_mode == "literal_source"`; the current backend does not guarantee this field.
 
-### Step 11: 场景 / 道具上下文 [SYNC/ASYNC]
+### Step 11: Scene / prop context [SYNC/ASYNC]
 
-当前后端没有 `anchor-image/*`、`scene_anchor` task，也没有 `/episodes/$EP/scenes/snapshot-sync`。不要调用这些路径。
+The current backend has no `anchor-image/*`, no `scene_anchor` task and no `/episodes/$EP/scenes/snapshot-sync`. Do not call these paths.
 
-可用场景 API：
+Available scene APIs:
 
 ```
 GET /projects/$PID/scenes
 
 POST /projects/$PID/scenes
-Body: {"name":"场景名","description":"...","environment_prompt":"..."}
+Body: {"name":"Scene name","description":"...","environment_prompt":"..."}
 
 PATCH /projects/$PID/scenes/$SCENE_NAME
 Body: {"description":"...","environment_prompt":"..."}
@@ -191,7 +191,7 @@ Body: {"description":"...","environment_prompt":"..."}
 POST /projects/$PID/scenes/$SCENE_NAME/delete
 ```
 
-可用道具 API：
+Available prop APIs:
 
 ```
 POST /projects/$PID/episodes/$EP/props/plan
@@ -201,7 +201,7 @@ PATCH /projects/$PID/props/$PROP_NAME
 POST /projects/$PID/props/$PROP_NAME/delete
 ```
 
-### Step 12: 草图生成 [ASYNC -> sketch_generation]
+### Step 12: Sketch generation [ASYNC -> sketch_generation]
 
 ```
 POST /projects/$PID/episodes/$EP/sketches/assign-colors
@@ -213,21 +213,21 @@ GET /projects/$PID/tasks/sketch_generation/$EP?scope=grid_0
 SSE /projects/$PID/tasks/sketch_generation/$EP/stream?scope=grid_0
 ```
 
-按 `grid_index` 串行生成每张 grid。每个 grid 对应 task scope `grid_N`。
+Generate each grid serially by `grid_index`. Each grid corresponds to the task scope `grid_N`.
 
-状态/结果查看：
+View status/results:
 
 ```
 GET /projects/$PID/episodes/$EP/grids
 ```
 
-### Step 12.3: AI 身份检测 [SYNC]
+### Step 12.3: AI identity detection [SYNC]
 
 ```
 POST /projects/$PID/episodes/$EP/sketches/detect-identities
 ```
 
-### Step 12.5: 全局视频优化 [ASYNC -> global_optimize_video]
+### Step 12.5: Global video optimization [ASYNC -> global_optimize_video]
 
 ```
 POST /projects/$PID/episodes/$EP/optimize/video-global
@@ -237,45 +237,45 @@ GET /projects/$PID/tasks/global_optimize_video/$EP
 SSE /projects/$PID/tasks/global_optimize_video/$EP/stream
 ```
 
-### Step 13: 首帧生成 [ASYNC -> selected_regen]
+### Step 13: First-frame generation [ASYNC -> selected_regen]
 
 ```
 POST /projects/$PID/episodes/$EP/beats/regenerate
 Body: {"beat_indices": [1], "style": "...", "model": "nanobanana",
        "batch_id": "first-frame-...", "batch_size": 9}
 
-一次 `dramaclaw_render_first_frames` 最多为 9 个 beat 分别提交一个独立任务，共用 batch_id；
-省略 beat_indices 时自动选择接下来 9 个缺少首帧的 beat。图片队列最多并发执行 3 个，
-其余任务排队；每个任务独立计时并独立保存。
+One `dramaclaw_render_first_frames` call submits one independent task for each of at most 9 beats, sharing a batch_id;
+when beat_indices is omitted it automatically selects the next 9 beats that lack a first frame. The image queue runs at most 3 concurrently,
+the rest queue up; each task is timed independently and saved independently.
 
 GET /projects/$PID/tasks?task_type=selected_regen&episode=$EP
 ```
 
-### Step 14: 音频生成 [ASYNC -> audio_generation_indextts2]
+### Step 14: Audio generation [ASYNC -> audio_generation_indextts2]
 
-当前主线只使用 `audio/generate`。旧 `/tts/generate` 已移除，不要调用。
+The current main line uses only `audio/generate`. The old `/tts/generate` has been removed; do not call it.
 
 ```
 POST /projects/$PID/episodes/$EP/audio/generate
-Body: {"mode": "sync_changed"}  # 可省略，后端默认 sync_changed
+Body: {"mode": "sync_changed"}  # May be omitted; the backend defaults to sync_changed
 
 GET /projects/$PID/tasks/audio_generation_indextts2/$EP
 SSE /projects/$PID/tasks/audio_generation_indextts2/$EP/stream
 ```
 
-单 beat 音频重做：
+Single-beat audio redo:
 
 ```
 POST /projects/$PID/episodes/$EP/beats/$BEAT/audio
 ```
 
-### Step 15: 视频生成 [ASYNC -> single_video]
+### Step 15: Video generation [ASYNC -> single_video]
 
-当前后端没有 `/projects/$PID/episodes/$EP/videos/generate` 整集批量视频路由。
+The current backend has no whole-episode batch video route `/projects/$PID/episodes/$EP/videos/generate`.
 
-**单轮限制**：本步骤一次用户消息只调用一次视频启动工具。存在多个 eligible beat 时，优先调用 `dramaclaw_start_video_batch`；工具默认从缺少视频且已有首帧的 beat 中自动补足并按顺序提交最多 9 个独立任务。共享视频队列最多并发执行 3 个，其余排队。只有用户明确指定单个 beat 时调用 `dramaclaw_start_single_video`；明确指定少量 beat 时才传 `auto_fill=false`。用户首次说“完成第 N 集视频生成 / 生成第 N 集视频 / 整集视频”这类笼统目标时，先按根 Skill 的“大任务先澄清拆解”处理。启动后不要继续 compose。
+**Single-turn limit**: in this step, one user message calls a video start tool only once. When multiple eligible beats exist, prefer calling `dramaclaw_start_video_batch`; by default the tool automatically fills from beats that lack video but already have a first frame and submits at most 9 independent tasks in order. The shared video queue runs at most 3 concurrently and the rest queue up. Call `dramaclaw_start_single_video` only when the user explicitly specifies a single beat; pass `auto_fill=false` only when a small number of beats is explicitly specified. When the user first states a vague goal such as "finish the video generation of episode N / generate the video of episode N / whole-episode video", handle it first by the root Skill's "clarify and decompose large tasks first". Do not continue to compose after starting.
 
-生成单个 beat 视频：
+Generate a single beat's video:
 
 ```
 POST /projects/$PID/episodes/$EP/beats/$BEAT/video
@@ -285,16 +285,16 @@ GET /projects/$PID/tasks/single_video/$EP?beat_num=$BEAT
 SSE /projects/$PID/tasks/single_video/$EP/stream?beat_num=$BEAT
 ```
 
-启动接口返回 `ok:false` 或 HTTP 错误时，直接向用户反馈接口错误。启动成功后如果任务状态为 `failed` / `cancelled`，直接向用户反馈 `task.error`、`error_code` 或最近日志中的失败原因；不要把失败收口成“已重做完成”。
+When the start endpoint returns `ok:false` or an HTTP error, report the endpoint error directly to the user. If, after a successful start, the task status is `failed` / `cancelled`, report the failure reason from `task.error`, `error_code` or the latest logs directly to the user; do not wrap a failure up as "redone".
 
-如果用户要求“整集生成视频片段”，先读取 beats，选择最前面最多 9 个未完成且前置满足的 beat，通过批量业务工具提交；没有满足前置的 beat 时只汇报缺项。不要调用不存在的 `/videos/generate`，也不要通过通用 POST 循环模拟批量。
+If the user asks to "generate the video clips of the whole episode", first read the beats, pick at most the first 9 unfinished beats whose prerequisites are met, and submit them through the batch business tool; when no beat meets the prerequisites, only report what is missing. Do not call the nonexistent `/videos/generate`, and do not simulate batching with a loop of generic POSTs.
 
-### Step 16: 合成 [ASYNC -> compose_episode]
+### Step 16: Compose [ASYNC -> compose_episode]
 
-合成只能在本集所有 beat 视频都已完成后启动。启动 `compose_episode` 后立即收口；不要在同一轮先启动视频再启动合成，也不要等待合成完成后继续展示成片。
+Compose may start only after all beat videos of this episode are complete. Wrap up immediately after starting `compose_episode`; do not start video and then compose in the same turn, and do not wait for compose to finish before continuing to show the final cut.
 
-优先调用 `dramaclaw_compose_episode(episode=$EP)`。专用工具内部使用下面的规范请求体；它没有
-暴露 body 参数是预期行为，不得因此改用 `dramaclaw_post`，也不得在启动前重复查询同一状态。
+Prefer calling `dramaclaw_compose_episode(episode=$EP)`. The dedicated tool internally uses the canonical request body below; that it
+exposes no body parameter is expected behavior, so do not switch to `dramaclaw_post` because of it, and do not repeat the query of the same status before starting.
 
 ```
 POST /projects/$PID/episodes/$EP/videos/compose
@@ -304,15 +304,15 @@ GET /projects/$PID/tasks/compose_episode/$EP
 SSE /projects/$PID/tasks/compose_episode/$EP/stream
 ```
 
-compose 完成后，读取正式成片状态：
+After compose completes, read the official final-cut status:
 
 ```
 GET /projects/$PID/episodes/$EP/final
 ```
 
-若返回 `data.exists=true` 且有 `data.video_url`，用 `dramaclaw_get_final_video` 展示成片。不要自己拼 host、下载地址或 `/files` 路径。
+If it returns `data.exists=true` with a `data.video_url`, show the final cut with `dramaclaw_get_final_video`. Do not assemble a host, download address or `/files` path yourself.
 
-用户明确要导出文件时，可结合：
+When the user explicitly wants to export files, you may combine:
 
 ```
 GET /projects/$PID/episodes/$EP/export/srt

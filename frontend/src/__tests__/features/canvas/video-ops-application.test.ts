@@ -39,14 +39,14 @@ vi.mock('@/features/canvas/application/videoTranscode', async (importOriginal) =
   ...(await importOriginal<object>()),
   ensureWebSafeVideo,
 }));
-// 抽帧要一个能真解码的浏览器（jsdom 下 <video> 永远不会 loadeddata），整体替身掉，
-// 只验截帧编排本身（抽帧 → 上传 → 建节点 → 连边 → 写标题）。
+// Frame capture needs a browser that can really decode (a <video> under jsdom never fires loadeddata), so it is stubbed out wholesale,
+// verifying only the capture orchestration itself (capture -> upload -> create node -> wire edge -> write title).
 vi.mock('@/features/canvas/application/videoFrameBlob', () => ({ captureVideoFrameBlob }));
 
 import { analyzeVideoStory } from '@/features/canvas/application/videoAnalyzeStory';
 import {
   submitVideoClip,
-  VIDEO_CLIP_NO_URL_MESSAGE,
+  videoClipNoUrlMessage,
 } from '@/features/canvas/application/videoClipSubmit';
 import { replaceNodeVideo } from '@/features/canvas/application/videoReplaceUpload';
 import {
@@ -69,7 +69,7 @@ function seedVideoNode(extraData: Record<string, unknown> = {}) {
       data: {
         videoUrl: '/static/src.mp4',
         durationMs: 8000,
-        displayName: '源视频',
+        displayName: 'Source video',
         ...extraData,
       },
     } as CanvasNode,
@@ -93,8 +93,8 @@ beforeEach(() => {
   seedVideoNode();
 });
 
-describe('videoClipSubmit（剪辑提交编排）', () => {
-  it('单轨单片段提交 → 下游建剪辑视频节点并连边', async () => {
+describe('videoClipSubmit (clip submission orchestration)', () => {
+  it('single-track single-clip submit -> creates a downstream clip video node and wires the edge', async () => {
     submitFreezoneVideoCompose.mockResolvedValue({
       task_key: 'tk',
       task_type: 'freezone_video_compose',
@@ -121,12 +121,12 @@ describe('videoClipSubmit（剪辑提交编排）', () => {
     expect(nodeById(result.nodeId)?.data).toMatchObject({
       videoUrl: '/static/clip.mp4',
       durationMs: 2500,
-      displayName: '剪辑',
+      displayName: 'Clip',
     });
     expect(hasEdge('vid-1', result.nodeId)).toBe(true);
   });
 
-  it('非 1080P 源退回 720p；产物缺 url → 报错且不建节点', async () => {
+  it('a non-1080P source falls back to 720p; a result missing url -> error and no node created', async () => {
     submitFreezoneVideoCompose.mockResolvedValue({
       task_key: 'tk',
       task_type: 'freezone_video_compose',
@@ -144,11 +144,11 @@ describe('videoClipSubmit（剪辑提交编排）', () => {
     });
 
     expect(submitFreezoneVideoCompose.mock.calls[0][1].resolution).toBe('720p');
-    expect(result).toEqual({ nodeId: null, error: VIDEO_CLIP_NO_URL_MESSAGE });
+    expect(result).toEqual({ nodeId: null, error: videoClipNoUrlMessage() });
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 
-  it('区间非法 / 缺 project → 直接返回，不提交', async () => {
+  it('invalid range / missing project -> returns directly without submitting', async () => {
     expect(
       await submitVideoClip('vid-1', { sourceUrl: '/static/src.mp4', startMs: 5, endMs: 5 }),
     ).toEqual({ nodeId: null, error: null });
@@ -160,16 +160,16 @@ describe('videoClipSubmit（剪辑提交编排）', () => {
   });
 });
 
-describe('videoAnalyzeStory（视频解析生成分镜故事）', () => {
-  it('同步建 loading 故事节点 → 归一化结果回填，源节点清 isAnalyzing', async () => {
+describe('videoAnalyzeStory (video analysis generates a storyboard story)', () => {
+  it('synchronously creates a loading story node -> the normalized result is filled back, and the source node clears isAnalyzing', async () => {
     submitFreezoneAnalyzeVideoStory.mockResolvedValue({ task_key: 'tk-story' });
     awaitTaskCompletion.mockResolvedValue({
-      result: { shots: [{ start: 0, end: 2, description: '开场' }] },
+      result: { shots: [{ start: 0, end: 2, description: 'Opening' }] },
     });
 
     const result = analyzeVideoStory('vid-1', { videoUrl: '/static/src.mp4', durationSec: 8 });
     expect(result).not.toBeNull();
-    // 不等后端：故事节点此刻已经在画布上且是 loading 态。
+    // Without waiting for the backend: the story node is already on the canvas in the loading state.
     expect(nodeById(result?.nodeId)?.type).toBe(CANVAS_NODE_TYPES.videoStory);
     expect(nodeById(result?.nodeId)?.data).toMatchObject({
       sourceVideoUrl: '/static/src.mp4',
@@ -190,7 +190,7 @@ describe('videoAnalyzeStory（视频解析生成分镜故事）', () => {
     expect(nodeById('vid-1')?.data).toMatchObject({ isAnalyzing: false });
   });
 
-  it('响应没有 task_key → 把响应本身当同步结果，不轮询', async () => {
+  it('a response without task_key -> treats the response itself as the synchronous result, with no polling', async () => {
     submitFreezoneAnalyzeVideoStory.mockResolvedValue({ shots: [] });
     const result = analyzeVideoStory('vid-1', { videoUrl: '/static/src.mp4' });
     await result?.completion;
@@ -198,7 +198,7 @@ describe('videoAnalyzeStory（视频解析生成分镜故事）', () => {
     expect(nodeById(result?.nodeId)?.data).toMatchObject({ isAnalyzing: false });
   });
 
-  it('失败 → 错误同时写到故事节点与源节点', async () => {
+  it('failure -> the error is written to both the story node and the source node', async () => {
     submitFreezoneAnalyzeVideoStory.mockRejectedValue(new Error('analyze boom'));
     const result = analyzeVideoStory('vid-1', { videoUrl: '/static/src.mp4' });
     await result?.completion;
@@ -209,7 +209,7 @@ describe('videoAnalyzeStory（视频解析生成分镜故事）', () => {
     expect(nodeById('vid-1')?.data).toMatchObject({ analysisError: 'analyze boom' });
   });
 
-  it('缺 project → 返回 null，不建节点', () => {
+  it('missing project -> returns null and creates no node', () => {
     readUrl.mockReturnValue({ project: null, canvas: null });
     const before = useCanvasStore.getState().nodes.length;
     expect(analyzeVideoStory('vid-1', { videoUrl: '/static/src.mp4' })).toBeNull();
@@ -217,8 +217,8 @@ describe('videoAnalyzeStory（视频解析生成分镜故事）', () => {
   });
 });
 
-describe('videoSeparateAudio（分离音视频）', () => {
-  it('classify 优先取规范 *_url 字段', () => {
+describe('videoSeparateAudio (separate audio and video)', () => {
+  it('classify prefers the canonical *_url fields', () => {
     expect(
       classifyAudioSeparateResult({
         audio_path: '/data/output/u/p/a.mp3',
@@ -228,7 +228,7 @@ describe('videoSeparateAudio（分离音视频）', () => {
     ).toEqual({ audio: '/static/projects/p/a.mp3', video: '/static/projects/p/mute.mp4' });
   });
 
-  it('classify 兜底遍历按扩展名挑，且优先已可直接访问的地址', () => {
+  it('classify falls back to traversing and picking by extension, preferring already directly accessible addresses', () => {
     expect(
       classifyAudioSeparateResult({
         nested: { a: '/data/output/u/p/track.mp3', b: 'https://cdn/x/track.mp3' },
@@ -238,13 +238,13 @@ describe('videoSeparateAudio（分离音视频）', () => {
     expect(classifyAudioSeparateResult(null)).toEqual({ audio: null, video: null });
   });
 
-  it('resolveSeparateBaseName：源文件名 > 展示名 > video，且去扩展名', () => {
+  it('resolveSeparateBaseName: source file name > display name > video, with the extension stripped', () => {
     expect(resolveSeparateBaseName({ sourceFileName: 'a.mov', displayName: 'b' })).toBe('a');
-    expect(resolveSeparateBaseName({ displayName: '镜头1' })).toBe('镜头1');
+    expect(resolveSeparateBaseName({ displayName: 'Shot 1' })).toBe('Shot 1');
     expect(resolveSeparateBaseName({})).toBe('video');
   });
 
-  it('成功 → 建音频 + 静音视频两个节点并连边，最后清 isSeparatingAv', async () => {
+  it('success -> creates an audio node and a silent video node, wires the edges, and finally clears isSeparatingAv', async () => {
     seedVideoNode({ sourceFileName: 'shot.mp4' });
     submitFreezoneAudioSeparate.mockResolvedValue({ task_key: 'tk-av', job_id: 'job-av' });
     awaitTaskCompletion.mockResolvedValue({
@@ -257,17 +257,17 @@ describe('videoSeparateAudio（分离音视频）', () => {
     expect(nodeById(result.audioNodeId)?.type).toBe(CANVAS_NODE_TYPES.audio);
     expect(nodeById(result.audioNodeId)?.data).toMatchObject({
       audioUrl: '/static/a.mp3',
-      displayName: 'shot_背景音',
+      displayName: 'shot_background_audio',
     });
     expect(nodeById(result.videoNodeId)?.data).toMatchObject({
       videoUrl: '/static/mute.mp4',
-      displayName: 'shot_无声',
-      sourceFileName: 'shot_无声.mp4',
+      displayName: 'shot_silent',
+      sourceFileName: 'shot_silent.mp4',
     });
-    // 静音视频是 video→video，连得上。音频节点刻意不连边（用户拍板）：store 的
-    // 上游白名单里 audio 只接受 textAnnotation，video→audio 建了也会被拒——与其
-    // 悄悄调用一个注定失效的 addEdge，不如干脆不调用；音频节点仍正常建好、靠
-    // findNodePosition 落在源附近，只是没有入边。
+    // The silent video is video->video and connects. The audio node deliberately gets no edge (user decision): in the store's
+    // upstream whitelist audio accepts only textAnnotation, so a video->audio edge would be rejected anyway -- rather than
+    // quietly calling an addEdge that is bound to fail, it is better not to call it; the audio node is still built normally and relies on
+    // findNodePosition to land near the source, just without an incoming edge.
     expect(hasEdge('vid-1', result.videoNodeId)).toBe(true);
     expect(result.audioNodeId).not.toBeNull();
     expect(hasEdge('vid-1', result.audioNodeId)).toBe(false);
@@ -277,7 +277,7 @@ describe('videoSeparateAudio（分离音视频）', () => {
     expect(nodeById('vid-1')?.data).toMatchObject({ isSeparatingAv: false });
   });
 
-  it('SSE 结果缺地址 → 打 job result 接口兜底', async () => {
+  it('an SSE result missing addresses -> falls back to the job result endpoint', async () => {
     submitFreezoneAudioSeparate.mockResolvedValue({ task_key: 'tk-av', job_id: 'job-av' });
     awaitTaskCompletion.mockResolvedValue({ result: {} });
     fetchFreezoneAudioSeparateResult.mockResolvedValue({
@@ -290,7 +290,7 @@ describe('videoSeparateAudio（分离音视频）', () => {
     expect(nodeById(result.audioNodeId)?.data).toMatchObject({ audioUrl: '/static/fb.mp3' });
   });
 
-  it('失败 → 返回 error，仍清掉 isSeparatingAv', async () => {
+  it('failure -> returns error and still clears isSeparatingAv', async () => {
     submitFreezoneAudioSeparate.mockRejectedValue(new Error('av boom'));
     const result = await separateVideoAudio('vid-1', { sourceUrl: '/static/src.mp4' });
     expect(result.error).toBe('av boom');
@@ -298,21 +298,21 @@ describe('videoSeparateAudio（分离音视频）', () => {
   });
 });
 
-describe('videoCaptureFrame（截帧）', () => {
-  it('resolveCaptureSeekSec：首帧 0 / 尾帧退 0.05s / 当前帧取播放器进度', () => {
+describe('videoCaptureFrame (frame capture)', () => {
+  it('resolveCaptureSeekSec: first frame 0 / last frame backs off 0.05s / current frame takes the player progress', () => {
     expect(resolveCaptureSeekSec('first', { currentTimeSec: 3, durationSec: 8 })).toBe(0);
     expect(resolveCaptureSeekSec('last', { durationSec: 8 })).toBeCloseTo(7.95);
-    // 活的播放器没报时长时退回节点 data.durationMs 换算值。
+    // When the live player reports no duration, fall back to the value converted from node data.durationMs.
     expect(resolveCaptureSeekSec('last', { durationSec: null, fallbackDurationSec: 4 })).toBeCloseTo(
       3.95,
     );
-    // 两个时长都没有 → 交给 captureVideoFrameBlob 内部按实际 duration 夹到末尾。
+    // Neither duration available -> captureVideoFrameBlob clamps to the end by the actual duration internally.
     expect(resolveCaptureSeekSec('last', {})).toBe(Number.MAX_SAFE_INTEGER);
     expect(resolveCaptureSeekSec('current', { currentTimeSec: 2.5 })).toBe(2.5);
     expect(resolveCaptureSeekSec('current', { currentTimeSec: Number.NaN })).toBe(0);
   });
 
-  it('抽帧 → 上传 → 建派生图片节点、连边、写标题；比例取源视频像素宽高', async () => {
+  it('capture -> upload -> create a derived image node, wire the edge, write the title; the ratio comes from the source video pixel size', async () => {
     seedVideoNode({ widthPx: 1920, heightPx: 1080 });
     captureVideoFrameBlob.mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
     uploadFreezoneImage.mockResolvedValue({ url: '/static/frame.png' });
@@ -320,40 +320,40 @@ describe('videoCaptureFrame（截帧）', () => {
     const result = await captureVideoFrameToNode('vid-1', {
       videoUrl: '/static/src.mp4',
       seekSec: 0,
-      displayName: '首帧',
+      displayName: 'First frame',
     });
 
     expect(result.error).toBeNull();
-    // 结果节点是 exportImage（非 upload）：upload 没有 target handle，之前
-    // addEdge 静默失效；exportImage 有 target handle 且不受上游白名单限制，
-    // 连边应该成功。
+    // The result node is exportImage (not upload): upload has no target handle, so earlier
+    // addEdge silently failed; exportImage has a target handle and is not restricted by the upstream whitelist,
+    // so wiring the edge should succeed.
     expect(nodeById(result.nodeId)?.type).toBe(CANVAS_NODE_TYPES.exportImage);
     expect(nodeById(result.nodeId)?.data).toMatchObject({
       imageUrl: '/static/frame.png',
-      displayName: '首帧',
+      displayName: 'First frame',
     });
     expect(hasEdge('vid-1', result.nodeId)).toBe(true);
   });
 
-  it('抽帧失败 → 返回 error，不建节点', async () => {
+  it('capture failure -> returns error and creates no node', async () => {
     captureVideoFrameBlob.mockRejectedValue(new Error('taint'));
     const before = useCanvasStore.getState().nodes.length;
     const result = await captureVideoFrameToNode('vid-1', {
       videoUrl: '/static/src.mp4',
       seekSec: 0,
-      displayName: '首帧',
+      displayName: 'First frame',
     });
     expect(result).toEqual({ nodeId: null, error: 'taint' });
     expect(useCanvasStore.getState().nodes.length).toBe(before);
   });
 });
 
-describe('videoReplaceUpload（替换视频）', () => {
+describe('videoReplaceUpload (replace video)', () => {
   function videoFile(name = 'new.mp4') {
     return new File(['data'], name, { type: 'video/mp4' });
   }
 
-  it('转码后上传 → 回写 videoUrl、清预览图与 isUploading', async () => {
+  it('upload after transcoding -> writes back videoUrl and clears the preview image and isUploading', async () => {
     const transcoded = videoFile('new.h264.mp4');
     ensureWebSafeVideo.mockResolvedValue({ file: transcoded, transcoded: true });
     uploadFreezoneVideo.mockResolvedValue({ url: '/static/new.mp4' });
@@ -362,7 +362,7 @@ describe('videoReplaceUpload（替换视频）', () => {
     const result = await replaceNodeVideo('vid-1', videoFile(), { onTranscodedPreview });
 
     expect(result).toEqual({ url: '/static/new.mp4', error: null });
-    // 源编码本浏览器可能解不了 → 本地预览换成转码产物。
+    // The browser may be unable to decode the source encoding -> the local preview is swapped for the transcoded result.
     expect(onTranscodedPreview).toHaveBeenCalledWith(transcoded);
     expect(uploadFreezoneVideo).toHaveBeenCalledWith('proj-1', transcoded, 'new.h264.mp4');
     expect(nodeById('vid-1')?.data).toMatchObject({
@@ -373,7 +373,7 @@ describe('videoReplaceUpload（替换视频）', () => {
     });
   });
 
-  it('无需转码时不回调本地预览', async () => {
+  it('does not call back the local preview when no transcoding is needed', async () => {
     const original = videoFile();
     ensureWebSafeVideo.mockResolvedValue({ file: original, transcoded: false });
     uploadFreezoneVideo.mockResolvedValue({ url: '/static/new.mp4' });
@@ -382,7 +382,7 @@ describe('videoReplaceUpload（替换视频）', () => {
     expect(onTranscodedPreview).not.toHaveBeenCalled();
   });
 
-  it('非视频文件 / 缺 project → 不上传；上传失败 → 清 isUploading 并返回 error', async () => {
+  it('non-video file / missing project -> no upload; upload failure -> clears isUploading and returns error', async () => {
     await replaceNodeVideo('vid-1', new File(['x'], 'a.txt', { type: 'text/plain' }));
     expect(uploadFreezoneVideo).not.toHaveBeenCalled();
 
@@ -399,8 +399,8 @@ describe('videoReplaceUpload（替换视频）', () => {
   });
 });
 
-describe('computeDisplayedVideoRect（object-contain 坐标换算）', () => {
-  it('视频比容器更宽 → 上下留黑边', () => {
+describe('computeDisplayedVideoRect (object-contain coordinate conversion)', () => {
+  it('video wider than the container -> letterbox bars top and bottom', () => {
     expect(computeDisplayedVideoRect(400, 400, 1920, 1080)).toEqual({
       left: 0,
       top: 87.5,
@@ -409,7 +409,7 @@ describe('computeDisplayedVideoRect（object-contain 坐标换算）', () => {
     });
   });
 
-  it('视频比容器更高 → 左右留黑边', () => {
+  it('video taller than the container -> pillarbox bars left and right', () => {
     expect(computeDisplayedVideoRect(400, 400, 1080, 1920)).toEqual({
       left: 87.5,
       top: 0,
@@ -418,7 +418,7 @@ describe('computeDisplayedVideoRect（object-contain 坐标换算）', () => {
     });
   });
 
-  it('固有宽高未知 → 退化为整个容器', () => {
+  it('intrinsic size unknown -> degrades to the whole container', () => {
     expect(computeDisplayedVideoRect(400, 300, null, null)).toEqual({
       left: 0,
       top: 0,

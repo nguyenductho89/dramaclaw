@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "帮我看看当前第 1 集做到哪一步了",
+      "prompt": "Check which step episode 1 has reached",
       "expected_output": "Activate dramaclaw, load the resume playbook, query the bound project's current episode status, and report grounded progress without starting a write task.",
       "files": [],
       "expectations": [
@@ -15,7 +15,7 @@
     },
     {
       "id": 2,
-      "prompt": "继续生成第 1 集视频",
+      "prompt": "Continue generating the video for episode 1",
       "expected_output": "Activate dramaclaw and apply the cross-stage decomposition protocol before any write operation.",
       "files": [],
       "expectations": [
@@ -27,7 +27,7 @@
     },
     {
       "id": 3,
-      "prompt": "第 1 集现在缺配音声线，帮我用系统声线继续",
+      "prompt": "Episode 1 is missing dubbing voices now; continue with system voices",
       "expected_output": "Activate dramaclaw, verify current voice prerequisites, and prepare system voices only after this explicit choice; do not start TTS in the same turn.",
       "files": [],
       "expectations": [
@@ -39,7 +39,7 @@
     },
     {
       "id": 4,
-      "prompt": "把第 2 集第 7 个 beat 的说话人改成陆星然",
+      "prompt": "Change the speaker of beat 7 in episode 2 to Lu Xingran",
       "expected_output": "Activate dramaclaw, load update behavior, update only the requested beat, and stop before regenerating audio or composing.",
       "files": [],
       "expectations": [
@@ -51,7 +51,7 @@
     },
     {
       "id": 5,
-      "prompt": "展示第 1 集第 3 个 beat 的当前草图",
+      "prompt": "Show the current sketch of beat 3 in episode 1",
       "expected_output": "Activate dramaclaw and use the formal sketch display path, not sketch candidates, URLs, or text-only media output.",
       "files": [],
       "expectations": [
@@ -63,8 +63,8 @@
     },
     {
       "id": 6,
-      "prompt": "帮我写一个赛博朋克女总裁复仇短剧",
-      "expected_output": "Activate dramaclaw because this is an explicit production request, but do not create or ingest a screenplay from the one-line idea; direct the user to upload an existing screenplay in 虾料.",
+      "prompt": "Write me a cyberpunk female CEO revenge short drama",
+      "expected_output": "Activate dramaclaw because this is an explicit production request, but do not create or ingest a screenplay from the one-line idea; direct the user to upload an existing screenplay in Shrimp Feed.",
       "files": [],
       "expectations": [
         "Does not call a write or generation tool",
@@ -75,7 +75,7 @@
     },
     {
       "id": 7,
-      "prompt": "这个软件项目目前进度怎么样？",
+      "prompt": "How is this software project progressing so far?",
       "expected_output": "Do not activate dramaclaw without DramaClaw production context; ask which software project or answer from the active non-DramaClaw context.",
       "files": [],
       "expectations": [
@@ -86,7 +86,7 @@
     },
     {
       "id": 8,
-      "prompt": "你好，在吗？",
+      "prompt": "Hello, are you there?",
       "expected_output": "Reply briefly without activating dramaclaw or calling project APIs.",
       "files": [],
       "expectations": [

@@ -1,88 +1,88 @@
 # Read Behavior
 
-只读请求的目标是**优先满足用户要的结果本身**，而不是先解释如何查询。
+The goal of a read-only request is to **satisfy the result the user wants first**, rather than first explaining how the query is done.
 
-## 适用场景
+## Applicable scenarios
 
-- 项目列表
-- 任务列表/任务概览
-- 角色列表/角色详情
-- 身份名称列表
-- 某个对象的当前状态或事实查询
-- 当前项目已上传的摄入文件
+- Project list
+- Task list / task overview
+- Character list / character details
+- Identity name list
+- Current status or fact query of some object
+- Ingest files already uploaded to the current project
 
-## 默认处理原则
+## Default handling principles
 
-- 用户要列表，就先给列表结果。
-- 用户要对象事实，就先给对象事实。
-- 用户说“只列出 / 就行 / 只告诉我结果”，就收到结果本身为止。
-- 除非用户明确要过程、依据、限制或下一步建议，否则不要先展开说明你会查什么、确认什么、定位什么。
-- 默认单次收口：拿到结果后一次性回复，不在查询期间向用户直播准备动作。
+- If the user wants a list, give the list result first.
+- If the user wants facts about an object, give the facts about the object first.
+- If the user says "just list / that's enough / just tell me the result", stop at the result itself.
+- Unless the user explicitly wants the process, the basis, limitations or next-step advice, do not first elaborate on what you will check, confirm or locate.
+- Default to a single wrap-up: reply once after getting the result, and do not live-broadcast preparation actions to the user during the query.
 
-## 列表读取
+## List reads
 
-- 项目列表：先给项目数量和项目名清单。
-- 任务列表：先给运行中 / 排队中 / 已完成的任务概览。
-- 身份名称列表：先给名称清单。
-- 角色列表：只提取对用户最有用的识别信息，不复述整段对象结构。
+- Project list: first give the number of projects and the list of project names.
+- Task list: first give an overview of running / queued / completed tasks.
+- Identity name list: first give the list of names.
+- Character list: extract only the identifying information most useful to the user and do not restate the whole object structure.
 
-如果结果为空，也直接说空结果，不要先描述查询动作。
+If the result is empty, just say it is empty; do not first describe the query action.
 
-### 上传文件
+### Uploaded files
 
-- 用户问“上传了哪些文件 / 当前上传文件 / 刚才传了什么 / 已上传剧本”时，调用 `dramaclaw_list_ingest_uploads`，以返回的 `files` 为事实源。
-- 当前消息含 `[DRAMACLAW_UPLOADED_FILES]` 时，可用于说明刚上传的即时结果，但不能据此自动启动摄入或覆盖。
-- 不凭历史对话猜文件，不扫描文件系统，不把历史上传目录当作当前消息附件。
+- When the user asks "which files were uploaded / the currently uploaded files / what was just uploaded / the uploaded screenplay", call `dramaclaw_list_ingest_uploads` and treat the returned `files` as the source of truth.
+- When the current message contains `[DRAMACLAW_UPLOADED_FILES]`, it can be used to describe the immediate result of the just-completed upload, but ingest or overwrite must not be started automatically from it.
+- Do not guess files from conversation history, do not scan the filesystem, and do not treat the historical upload directory as the current message's attachment.
 
-### R1 列表读取默认开头
+### R1 default opening for list reads
 
-对项目列表、任务列表这类低歧义只读请求，用户可见的第一段就应该进入结果，不要先交代“按流程查”“先读说明”“先确认查询方式”。
+For low-ambiguity read-only requests such as the project list and the task list, the first paragraph visible to the user should go straight to the result; do not first state "checking per the flow", "reading the instructions first" or "confirming the query method first".
 
-推荐默认模板：
+Recommended default templates:
 
-- 项目列表：`现在有 N 个项目：...`
-- 任务列表：`现在有 N 个未完成任务：...` 或 `当前任务概览如下：...`
+- Project list: `There are currently N projects: ...`
+- Task list: `There are currently N unfinished tasks: ...` or `The current task overview is as follows: ...`
 
-不需要先写：
+There is no need to write first:
 
-- 你会按什么流程查
-- 你会先读哪个说明或 reference
-- 你会先确认哪个接口或查询方式
-- 你已经把请求归类成哪种读取场景
+- Which flow you will use to check
+- Which instruction or reference you will read first
+- Which endpoint or query method you will confirm first
+- Which kind of read scenario you have classified the request as
 
-### 列表读取的默认粒度
+### Default granularity of list reads
 
-- 项目列表：项目数量 + 项目名。
-- 任务列表：状态分布 + 正在运行或排队中的关键任务。
-- 身份名称列表：名称清单；用户说“就行”时，到此结束。
-- 角色列表：优先 `name`、是否主角、是否已有肖像这类关键信息。
+- Project list: number of projects + project names.
+- Task list: status distribution + key tasks that are running or queued.
+- Identity name list: the name list; when the user says "that's enough", end there.
+- Character list: prefer key information such as `name`, whether protagonist, and whether a portrait exists.
 
-## 详情读取
+## Detail reads
 
-- 先回答用户问的那个对象当前是什么状态、有哪些关键字段。
-- 只补充与问题直接相关的最小必要信息。
-- 不把完整 JSON、端点、路径或原始响应转述给用户。
+- First answer what state the object the user asked about is currently in and which key fields it has.
+- Add only the minimum necessary information directly related to the question.
+- Do not restate full JSON, endpoints, paths or raw responses to the user.
 
-### 响应精简默认规则
+### Default response trimming rules
 
-- 角色列表：默认只提取 `name`、`is_main`、`portrait_url`
-- beat 列表：默认只提取 `beat_number` 与最小必要内容摘要
-- 任务状态：默认只提取 `status` 和必要时的一句进度说明
-- 永远不要把完整 JSON 直接复述给用户
+- Character list: by default extract only `name`, `is_main`, `portrait_url`
+- Beat list: by default extract only `beat_number` and a minimal content summary
+- Task status: by default extract only `status` and, when necessary, a one-sentence progress note
+- Never restate full JSON directly to the user
 
-## 何时才补充解释
+## When to add an explanation
 
-只有这些情况才补一句解释：
+Add one sentence of explanation only in these cases:
 
-- 结果为空
-- 当前接口没有足够信息
-- 用户请求本身存在歧义
-- 用户明确问“为什么 / 怎么判断 / 依据是什么”
+- The result is empty
+- The current endpoint does not have enough information
+- The user's request itself is ambiguous
+- The user explicitly asks "why / how to judge / what is the basis"
 
-## 禁止
+## Prohibited
 
-- 不要先说“我先查一下 / 我先确认 / 我先定位 / 我去读参考 / 我已经切到查询路径”
-- 对 R1 列表读取，不要先说“我先按流程查 / 我先读说明 / 我先确认查询方式 / 我已经确认这是只读请求”
-- 不要把查询过程直播给用户
-- 不要把技术细节、JSON、端点路径当作结果的一部分输出
-- 不要为了读请求去访问文档页、根路径或无关端点做二次确认
+- Do not first say "let me check first / let me confirm first / let me locate first / I'll go read the reference / I have switched to the query path"
+- For R1 list reads, do not first say "let me check per the flow / let me read the instructions / let me confirm the query method / I have confirmed this is a read-only request"
+- Do not live-broadcast the query process to the user
+- Do not output technical details, JSON or endpoint paths as part of the result
+- Do not visit documentation pages, the root path or unrelated endpoints for a second confirmation of a read request

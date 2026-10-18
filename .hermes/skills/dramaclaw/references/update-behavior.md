@@ -1,71 +1,71 @@
 # Update Behavior
 
-更新请求的目标是：**改对用户要改的对象，并把返回范围控制在用户请求本身。**
+The goal of an update request: **change the right object the user wants changed, and keep the response scope to the user's request itself.**
 
-## 适用场景
+## Applicable scenarios
 
-- 改角色外貌、肖像、身份图
-- 改 beat 的画面描述、对白、音频类型、speaker
-- 换声线、重做音频、重做草图/首帧/视频
-- 改项目配置或某个可编辑字段
+- Changing a character's appearance, portrait or identity image
+- Changing a beat's visual description, dialogue, audio type or speaker
+- Changing voices, redoing audio, redoing sketches / first frames / videos
+- Changing the project configuration or some editable field
 
-## 默认处理原则
+## Default handling principles
 
-- 先明确用户要改的对象和字段。
-- 返回“改了什么 + 必要影响范围 + 当前状态”。
-- 不把必要影响链扩大成无关交付范围。
-- 默认收口模板：`已更新 <对象/字段>` + `当前状态` + `下一步可处理 <必要影响链的下一项>`
+- First make clear which object and field the user wants to change.
+- Return "what was changed + the necessary impact scope + current status".
+- Do not widen the necessary impact chain into an unrelated delivery scope.
+- Default closing template: `Updated <object/field>` + `Current status` + `Next you can handle <the next item of the necessary impact chain>`
 
-## 返回边界
+## Response boundaries
 
-- 用户要的是某个对象本身，就返回该对象结果或状态。
-- 用户要的是某个字段更新，就返回字段已更新及必要下游影响。
-- 用户没有明确索要最终成片/下载/打开路径时，不主动补最终成片交付。
-- 如果只是“改完继续生成到成片”，默认含义是按必要影响链逐步推进；本轮最多执行一个写操作并汇报状态，不额外做成片链接探测。
+- If the user wants an object itself, return that object's result or status.
+- If the user wants a field updated, return that the field was updated plus the necessary downstream impact.
+- When the user has not explicitly asked for the final cut / download / an open path, do not proactively add final-cut delivery.
+- If it is merely "after the change, keep generating up to the final cut", the default meaning is to advance step by step along the necessary impact chain; this turn executes at most one write operation and reports the status, without additionally probing a final-cut link.
 
-## 影响链表达
+## Expressing the impact chain
 
-- 只表达必要影响链，不夸大成“整集全部重做”。
-- 如果只是推进到合成/导出阶段，就按当前 `next_step` 启动一个必要任务或汇报当前状态，不等于已经拿到最终成片链接。
-- 如果接口没有返回正式结果路径，只能说明状态，不能伪造业务结果链接。
+- Express only the necessary impact chain; do not exaggerate it into "redo the entire episode".
+- If you are merely advancing to the compose/export stage, start one necessary task or report the current status according to the current `next_step`; that is not the same as having obtained a final-cut link.
+- If the endpoint returns no official result path, you can only describe the status and must not fabricate a business-result link.
 
-## 典型更新语义
+## Typical update semantics
 
-- 角色外貌变更：只更新被修改角色的一个当前目标字段或启动一个肖像/身份图任务，不要连带重做其他角色的身份图。默认返回“外貌已更新 / 当前任务已启动 / 下一步可处理受影响画面”。
-- beat 音频或说话人变更：本轮默认只更新目标 beat；下一轮再重做必要音频，音频完成后再由后续轮次合成。
-- beat 画面描述变更：默认只更新目标 beat 的 `visual_description`；草图、首帧、视频、合成链按后续轮次逐步继续。
-- 用户明确要求角色设定也一起改时，才扩到 `face_prompt`、`appearance_details`、肖像或身份图。
+- Character appearance change: only update one current target field of the modified character or start one portrait/identity image task; do not redo other characters' identity images along with it. By default return "appearance updated / current task started / affected shots can be handled next".
+- Beat audio or speaker change: this turn updates only the target beat by default; the next turn redoes the necessary audio, and after the audio completes a later turn composes.
+- Beat visual description change: by default only update the target beat's `visual_description`; the sketch, first frame, video and compose chain continue step by step in later turns.
+- Only when the user explicitly asks for the character settings to be changed as well do you extend to `face_prompt`, `appearance_details`, portraits or identity images.
 
-## 固定顺序
+## Fixed order
 
-- 当修改 `audio_type`、`speaker`、`fish_speech_prompt` 或 beat 对白文本时，默认顺序是：
-  1. 先更新 beat
-  2. 再重做该 beat 音频
-  3. 最后再触发合成
-- 上述顺序是跨轮次顺序，不是同一轮连续执行。一次用户消息最多执行其中一个写操作。
-- 即使 beat 当前对白文本已经与目标文本一致，只要 `audio_type`、`speaker`
-  或音频相关字段还未更新到目标值，仍然必须先更新 beat，再重做音频
-- `compose` 不能预启动、不能抢跑、不能为了省时间先发起再回头补音频。
-  必须等该 beat 的音频重做请求已经发出并返回成功后，才允许进入 `compose`。
+- When changing `audio_type`, `speaker`, `fish_speech_prompt` or a beat's dialogue text, the default order is:
+  1. First update the beat
+  2. Then redo that beat's audio
+  3. Finally trigger compose
+- The order above is a cross-turn order, not continuous execution in the same turn. One user message executes at most one of these write operations.
+- Even if the beat's current dialogue text already matches the target text, as long as `audio_type`, `speaker`
+  or audio-related fields have not yet been updated to the target values, you must still update the beat first and then redo the audio
+- `compose` must not be pre-started or run ahead, and must not be launched first to save time with the audio fixed afterwards.
+  It may be entered only after that beat's audio redo request has been sent and returned successfully.
 
-不要在音频重做之前先发起 `compose`。
+Do not launch `compose` before the audio redo.
 
-## 常见更新类型
+## Common update types
 
-- 角色外貌更新：返回角色外貌/肖像当前状态，以及下一步可处理的受影响画面。
-- beat 画面描述更新：默认只改目标 beat 的 `visual_description`，并提示下一步可继续重做草图/首帧/视频。
-- 身份规划返回后，只继续跟进有明确角色名且能在当前项目角色表中匹配到的身份；跳过空角色名或无效角色名，不要探测 `/characters//identities`。
-- 这类普通续跑里若命中 `selected_regen`，它仍属于正常首帧生成链。
-- 对用户描述必要影响链时，不要出现“整集全量重做”“全量重做”这类措辞，即使是否定句也不要说。
-- beat 音频/说话人更新：先改目标 beat，再重做必要音频，最后更新合成状态。
-- 字段修改：以 [editable-fields.md](editable-fields.md) 为准判断是否可改以及影响链。
+- Character appearance update: return the current status of the character's appearance/portrait, and the affected shots that can be handled next.
+- Beat visual description update: by default only change the target beat's `visual_description`, and hint that the next step can continue redoing the sketch / first frame / video.
+- After identity planning returns, only follow up on identities that have an explicit character name that can be matched in the current project's character table; skip empty or invalid character names and do not probe `/characters//identities`.
+- If `selected_regen` is hit in such an ordinary continuation, it still belongs to the normal first-frame generation chain.
+- When describing the necessary impact chain to the user, do not use wording like "redo the entire episode" or "full redo", even in a negative sentence.
+- Beat audio/speaker update: first change the target beat, then redo the necessary audio, and finally update the compose status.
+- Field modification: use [editable-fields.md](editable-fields.md) to judge whether it is changeable and what the impact chain is.
 
-## 禁止
+## Prohibited
 
-- 不要把局部更新说成整集全量重做
-- 不要把内部补偿步骤、接口重试、探测过程写给用户
-- 不要在用户没要时主动扩成交付最终成片、下载说明或无关产物
-- 不要在没有正式结果路径时承诺”视频已可下载/可打开”
-- 不要声称写入了实际未发送的字段（如 POST 只传了 name/role，不要说”已写入人设和外观”）
-- 不要叙述执行过程（如”先定位…再按链路执行””补查身份 ID””盯合成状态”），只说最终结果
-- 不要把“必要影响链”解释为同一轮自动完成草图→首帧→视频→合成
+- Do not describe a partial update as a full redo of the entire episode
+- Do not write internal compensation steps, endpoint retries or probing processes to the user
+- Do not proactively widen into delivering the final cut, download instructions or unrelated artifacts when the user did not ask
+- Do not promise "the video can now be downloaded / opened" when there is no official result path
+- Do not claim to have written fields that were not actually sent (for example, if POST only passed name/role, do not say "persona and appearance written")
+- Do not narrate the execution process (such as "first locate... then execute along the chain", "look up the identity ID", "watch the compose status"); only state the final result
+- Do not interpret the "necessary impact chain" as automatically completing sketch -> first frame -> video -> compose in the same turn

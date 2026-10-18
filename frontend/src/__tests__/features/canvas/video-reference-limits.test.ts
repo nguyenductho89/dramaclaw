@@ -25,7 +25,7 @@ function node(
   return { id, type, position: { x: 0, y: 0 }, data } as CanvasNode;
 }
 
-/** 目标视频节点 + n 个已连上的某类素材节点，返回 (nodes, edges) 供守卫查。 */
+/** A target video node + n connected material nodes of some kind, returning (nodes, edges) for the guard to check. */
 function scene(kinds: readonly CanvasNodeType[], datas: readonly Record<string, unknown>[] = []) {
   const target = node("video-target", CANVAS_NODE_TYPES.video);
   const sources = kinds.map((type, index) => node(`src-${index}`, type, datas[index] ?? {}));
@@ -39,16 +39,16 @@ function fill(type: CanvasNodeType, count: number): CanvasNodeType[] {
   return Array.from({ length: count }, () => type);
 }
 
-describe("classifyVideoReferenceMedia — 素材归类", () => {
-  it("按节点类型归类，空节点也算（先连节点后填素材是正常顺序）", () => {
+describe("classifyVideoReferenceMedia — material classification", () => {
+  it("classifies by node type, counting empty nodes too (wiring the node first and filling the material later is the normal order)", () => {
     expect(classifyVideoReferenceMedia(node("a", CANVAS_NODE_TYPES.imageGen))).toBe("image");
     expect(classifyVideoReferenceMedia(node("a", CANVAS_NODE_TYPES.upload))).toBe("image");
     expect(classifyVideoReferenceMedia(node("a", CANVAS_NODE_TYPES.video))).toBe("video");
     expect(classifyVideoReferenceMedia(node("a", CANVAS_NODE_TYPES.audio))).toBe("audio");
   });
 
-  // 资产库选入的视频是 upload 节点，地址写在 data.videoUrl —— 只看类型会被误当图片。
-  it("带 videoUrl 的 upload 节点算视频，不算图片", () => {
+  // A video picked from the asset library is an upload node with its address in data.videoUrl -- looking at the type alone would mistake it for an image.
+  it("an upload node with videoUrl counts as video, not image", () => {
     expect(
       classifyVideoReferenceMedia(
         node("a", CANVAS_NODE_TYPES.upload, { videoUrl: "/a.mp4" }),
@@ -56,25 +56,25 @@ describe("classifyVideoReferenceMedia — 素材归类", () => {
     ).toBe("video");
   });
 
-  it("非素材节点（文本 / 空）不计数", () => {
+  it("non-material nodes (text / empty) are not counted", () => {
     expect(classifyVideoReferenceMedia(node("a", CANVAS_NODE_TYPES.textAnnotation))).toBeNull();
     expect(classifyVideoReferenceMedia(null)).toBeNull();
   });
 });
 
-// 9/3/3/12 只是「目录没配」时的默认值。媒体目录允许把 referenceImageMax 等配成任意
-// 非负整数，后端 _catalog_reference_limits（api/routes/freezone.py:7004）会采用它们；
-// 前端要是把默认值当硬上限，一个配了 image=10 的合法模型会在第 10 张被拦掉，请求永远
-// 到不了本来会接受它的后端 —— 前端比后端严 = 把管理员配出来的能力吞掉。
-describe("videoReferenceEnvelopeForModel — 目录配置优先", () => {
-  it("没配任何目录值时用默认包络", () => {
+// 9/3/3/12 are only the defaults for "catalog not configured". The media catalog allows referenceImageMax and friends to be set to any
+// non-negative integer, and the backend _catalog_reference_limits (api/routes/freezone.py:7004) adopts them;
+// if the frontend treated the defaults as a hard cap, a legitimate model configured with image=10 would be blocked at the 10th image and the request would never
+// reach the backend that would have accepted it -- a frontend stricter than the backend swallows the capability the admin configured.
+describe("videoReferenceEnvelopeForModel — catalog configuration takes precedence", () => {
+  it("uses the default envelope when no catalog value is configured", () => {
     expect(videoReferenceEnvelopeForModel(undefined)).toEqual(VIDEO_REFERENCE_ENVELOPE);
     expect(videoReferenceEnvelopeForModel({})).toEqual(VIDEO_REFERENCE_ENVELOPE);
   });
 
-  // total 的算法与后端 omni 调用点（freezone.py:7857-7868）一致：三项里只要有任意
-  // 一项来自目录，总数就取三项之和；一项都没配才回落到 12。
-  it("配了任意一项就按三项之和算总数", () => {
+  // The total is computed the same way as the backend omni call site (freezone.py:7857-7868): as soon as any
+  // one of the three comes from the catalog, the total is the sum of the three; only when none is configured does it fall back to 12.
+  it("configuring any one item computes the total as the sum of the three", () => {
     expect(videoReferenceEnvelopeForModel({ referenceImageMax: 10 })).toEqual({
       image: 10,
       video: VIDEO_REFERENCE_ENVELOPE.video,
@@ -90,8 +90,8 @@ describe("videoReferenceEnvelopeForModel — 目录配置优先", () => {
     ).toEqual({ image: 4, video: 1, audio: 0, total: 5 });
   });
 
-  // 与后端 `type(value) is int and value >= 0` 同一口径。
-  it("null / 负数 / 小数一律当作没配", () => {
+  // Same rule as the backend `type(value) is int and value >= 0`.
+  it("null / negative / fractional values are all treated as not configured", () => {
     expect(
       videoReferenceEnvelopeForModel({
         referenceImageMax: null,
@@ -102,7 +102,7 @@ describe("videoReferenceEnvelopeForModel — 目录配置优先", () => {
   });
 });
 
-describe("videoReferenceEnvelopeForNode — 从节点解析出所选模型的包络", () => {
+describe("videoReferenceEnvelopeForNode — resolves the selected model's envelope from the node", () => {
   const catalog: ModelOption[] = [
     { id: 'first', providerId: 'seedance', apiModel: 'first', label: 'First' },
     {
@@ -114,14 +114,14 @@ describe("videoReferenceEnvelopeForNode — 从节点解析出所选模型的包
     },
   ];
 
-  it("按 data.model 在目录里查", () => {
+  it("looks up by data.model in the catalog", () => {
     const videoNode = node("v", CANVAS_NODE_TYPES.video, { model: 'wide' });
     expect(videoReferenceEnvelopeForNode(videoNode, catalog).image).toBe(10);
   });
 
-  // 兜底必须和 VideoNode 的 selectedVideoModel 一致（没存 model 时显示列表第一个），
-  // 否则会出现「界面按 A 模型显示上限、建边按 B 模型拦」。
-  it("没存 model / 目录里查不到时回落到列表第一个", () => {
+  // The fallback must match VideoNode's selectedVideoModel (the first in the list is shown when no model is stored),
+  // otherwise the UI would show the cap of model A while edge creation blocks by model B.
+  it("falls back to the first in the list when no model is stored / it is not found in the catalog", () => {
     expect(videoReferenceEnvelopeForNode(node("v", CANVAS_NODE_TYPES.video), catalog).image).toBe(
       VIDEO_REFERENCE_ENVELOPE.image,
     );
@@ -133,21 +133,21 @@ describe("videoReferenceEnvelopeForNode — 从节点解析出所选模型的包
     ).toBe(VIDEO_REFERENCE_ENVELOPE.image);
   });
 
-  it("目录还没加载出来（空列表）时退回默认包络", () => {
+  it("falls back to the default envelope when the catalog has not loaded yet (empty list)", () => {
     expect(videoReferenceEnvelopeForNode(node("v", CANVAS_NODE_TYPES.video), [])).toEqual(
       VIDEO_REFERENCE_ENVELOPE,
     );
   });
 });
 
-describe("videoReferenceConnectionRejection — 建边时的素材上限", () => {
+describe("videoReferenceConnectionRejection — material cap when creating an edge", () => {
   const connect = (nodes: CanvasNode[], edges: { source: string; target: string }[], sourceId: string) =>
     videoReferenceConnectionRejection(nodes, edges, {
       source: sourceId,
       target: "video-target",
     });
 
-  it(`图片满 ${VIDEO_REFERENCE_ENVELOPE.image} 张后拒绝第 ${VIDEO_REFERENCE_ENVELOPE.image + 1} 张`, () => {
+  it(`rejects image ${VIDEO_REFERENCE_ENVELOPE.image + 1} once ${VIDEO_REFERENCE_ENVELOPE.image} images are reached`, () => {
     const { nodes, edges } = scene(fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image));
     const extra = node("extra", CANVAS_NODE_TYPES.imageGen);
     expect(connect([...nodes, extra], edges, extra.id)).toContain(
@@ -155,7 +155,7 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     );
   });
 
-  it("没满就放行", () => {
+  it("allows it while not full", () => {
     const { nodes, edges } = scene(
       fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image - 1),
     );
@@ -163,16 +163,16 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     expect(connect([...nodes, extra], edges, extra.id)).toBeNull();
   });
 
-  // 这是「按能力包络拦」而不是「按当前模式那格拦」的核心用例：首帧只吃 1 张图，
-  // 但第 2 张必须连得上，否则 VideoNode 里「首帧 → 全能参考」的自动切换永远
-  // 触发不了，用户会被卡在单图状态。
-  it("首帧模式下第 2 张图仍放行 —— 留给自动切模式去纠正", () => {
+  // This is the core case for "block by capability envelope" rather than "block by the current mode's slot": first-frame takes only 1 image,
+  // but the 2nd must be connectable, otherwise the automatic switch "first frame -> omni reference" in VideoNode would never
+  // fire, and the user would be stuck in the single-image state.
+  it("the 2nd image is still allowed in first-frame mode -- left to the automatic mode switch to correct", () => {
     const { nodes, edges } = scene([CANVAS_NODE_TYPES.imageGen]);
     const second = node("second", CANVAS_NODE_TYPES.imageGen);
     expect(connect([...nodes, second], edges, second.id)).toBeNull();
   });
 
-  it(`视频 / 音频各自满 ${VIDEO_REFERENCE_ENVELOPE.video} 个后拒绝`, () => {
+  it(`rejects video / audio once each reaches ${VIDEO_REFERENCE_ENVELOPE.video}`, () => {
     for (const [type, cap] of [
       [CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video],
       [CANVAS_NODE_TYPES.audio, VIDEO_REFERENCE_ENVELOPE.audio],
@@ -183,9 +183,9 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     }
   });
 
-  // 后端 validate_omni_reference_limits 除了逐项还有 total_max=12：图 9 + 视频 3
-  // 已经顶满总数，再连音频逐项没超、总数超了。
-  it("逐项都没超但总数超 12 → 也拒绝", () => {
+  // Besides the per-item limits, the backend validate_omni_reference_limits also has total_max=12: 9 images + 3 videos
+  // already fill the total, and connecting audio exceeds the total while staying within the per-item limits.
+  it("every item within limits but the total exceeds 12 -> also rejected", () => {
     const { nodes, edges } = scene([
       ...fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image),
       ...fill(CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video),
@@ -196,12 +196,12 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     );
   });
 
-  it("目标不是视频节点 / 源不是素材节点 → 不管", () => {
+  it("target is not a video node / source is not a material node -> ignored", () => {
     const { nodes, edges } = scene(fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image));
     const text = node("text", CANVAS_NODE_TYPES.textAnnotation);
-    // 满 9 张图，但连进来的是文本节点：不占素材位。
+    // 9 images are full, but a text node is wired in: it takes no material slot.
     expect(connect([...nodes, text], edges, text.id)).toBeNull();
-    // 同样 9 张图，目标换成图片节点：这条上限只管视频节点。
+    // Same 9 images with an image node as target: this cap applies only to video nodes.
     const imageTarget = node("image-target", CANVAS_NODE_TYPES.imageGen);
     const extra = node("extra", CANVAS_NODE_TYPES.imageGen);
     expect(
@@ -213,14 +213,14 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     ).toBeNull();
   });
 
-  // 重连一条已存在的边不该被自己挡住（它本来也建不出第二条边）。
-  it("同一个源重复连线放行", () => {
+  // Reconnecting an existing edge must not be blocked by itself (it could not create a second edge anyway).
+  it("repeated wiring from the same source is allowed", () => {
     const { nodes, edges } = scene(fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image));
     expect(connect(nodes, edges, "src-0")).toBeNull();
   });
 
-  // 包络由调用方解析后喂进来：目录里配了 image=10 的模型，第 10 张必须放行。
-  it("按模型包络放行 —— 目录配 image=10 时第 10 张连得上", () => {
+  // The envelope is resolved by the caller and fed in: for a model configured with image=10 in the catalog, the 10th image must be allowed.
+  it("allows by model envelope -- the 10th image connects when the catalog sets image=10", () => {
     const { nodes, edges } = scene(fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image));
     const extra = node("extra", CANVAS_NODE_TYPES.imageGen);
     expect(
@@ -233,7 +233,7 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     ).toBeNull();
   });
 
-  it("上游是带 videoUrl 的 upload 节点时按视频计数，不占图片额度", () => {
+  it("an upstream upload node with videoUrl counts as video and takes no image quota", () => {
     const { nodes, edges } = scene(
       fill(CANVAS_NODE_TYPES.upload, VIDEO_REFERENCE_ENVELOPE.video),
       Array.from({ length: VIDEO_REFERENCE_ENVELOPE.video }, () => ({ videoUrl: "/a.mp4" })),
@@ -242,15 +242,15 @@ describe("videoReferenceConnectionRejection — 建边时的素材上限", () =>
     expect(connect([...nodes, extraVideo], edges, extraVideo.id)).toContain(
       String(VIDEO_REFERENCE_ENVELOPE.video),
     );
-    // 同样这批 upload 节点没占图片额度，图片还能继续连。
+    // The same upload nodes took no image quota, so images can still be connected.
     const extraImage = node("extra-image", CANVAS_NODE_TYPES.imageGen);
     expect(connect([...nodes, extraImage], edges, extraImage.id)).toBeNull();
   });
 });
 
-// 建边时的校验挡不住「先连边、后变类型」：外部文件导入先落空 Upload 并连边（按图片
-// 计数），再按 MIME 转成 video/audio。类型定下来之后必须能重算出溢出的那几条。
-describe("overflowingVideoReferenceEdgeIds — 类型变了之后的重算", () => {
+// Validation at edge creation cannot catch "wire first, change type later": an external file import first lands an empty Upload and wires it (counted as an image),
+// then converts it to video/audio by MIME. Once the type is settled, the overflowing edges must be recomputable.
+describe("overflowingVideoReferenceEdgeIds — recomputation after the type changed", () => {
   function graph(kinds: readonly CanvasNodeType[]) {
     const target = node("video-target", CANVAS_NODE_TYPES.video);
     const sources = kinds.map((type, index) => node(`src-${index}`, type));
@@ -264,12 +264,12 @@ describe("overflowingVideoReferenceEdgeIds — 类型变了之后的重算", () 
     };
   }
 
-  it("没超时返回空", () => {
+  it("returns empty when nothing overflows", () => {
     const { nodes, edges } = graph(fill(CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video));
     expect(overflowingVideoReferenceEdgeIds(nodes, edges, "video-target")).toEqual([]);
   });
 
-  it("超出的按先来后到只溢出最后几条", () => {
+  it("overflow goes by first come first served, so only the last few edges overflow", () => {
     const { nodes, edges } = graph(
       fill(CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video + 2),
     );
@@ -279,7 +279,7 @@ describe("overflowingVideoReferenceEdgeIds — 类型变了之后的重算", () 
     ]);
   });
 
-  it("逐项没超但总数超 12 时也算溢出", () => {
+  it("also counts as overflow when each item is within limits but the total exceeds 12", () => {
     const { nodes, edges } = graph([
       ...fill(CANVAS_NODE_TYPES.imageGen, VIDEO_REFERENCE_ENVELOPE.image),
       ...fill(CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video),
@@ -290,8 +290,8 @@ describe("overflowingVideoReferenceEdgeIds — 类型变了之后的重算", () 
     ]);
   });
 
-  // 重算同样按模型包络走：目录配了 video=5 的模型，5 条视频引用一条都不该被清掉。
-  it("按模型包络重算 —— 目录配 video=5 时 5 条视频都留下", () => {
+  // Recomputation also follows the model envelope: for a model configured with video=5, none of the 5 video references should be cleared.
+  it("recomputes by model envelope -- all 5 videos stay when the catalog sets video=5", () => {
     const { nodes, edges } = graph(fill(CANVAS_NODE_TYPES.video, 5));
     expect(
       overflowingVideoReferenceEdgeIds(nodes, edges, "video-target", () =>
@@ -300,7 +300,7 @@ describe("overflowingVideoReferenceEdgeIds — 类型变了之后的重算", () 
     ).toEqual([]);
   });
 
-  it("目标不是视频节点时不管", () => {
+  it("ignored when the target is not a video node", () => {
     const { nodes, edges } = graph(fill(CANVAS_NODE_TYPES.video, VIDEO_REFERENCE_ENVELOPE.video + 2));
     const imageTarget = node("image-target", CANVAS_NODE_TYPES.imageGen);
     expect(

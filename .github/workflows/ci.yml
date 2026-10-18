@@ -52,3 +52,15 @@ jobs:
           python-version: "3.12"
       - name: Check for hardcoded Chinese in backend user-facing copy
         run: python3 scripts/check_backend_i18n.py
+
+  # Repo-wide "no Chinese" ratchet: only English and Vietnamese are supported.
+  # Per-file line counts in scripts/no_cjk_allowlist.json may only shrink.
+  no-cjk-ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check for new Chinese text
+        run: python3 scripts/check_no_cjk.py

@@ -5199,7 +5199,7 @@
         "video": "video",
         "audio": "audio"
       },
-      "rejectKind": "A {{kind}} node can't be used as a reference yet",
+      "rejectKind": "This {{kind}} node can't be used as a reference yet",
       "rejectGeneric": "This node can't be used as a reference",
       "noTargets": "No node on the canvas can be used as a reference yet",
       "chip": "Reference",

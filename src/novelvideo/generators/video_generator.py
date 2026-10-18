@@ -2453,7 +2453,7 @@ class NewApiVideoGenerator(VideoGeneratorBase):
                 url = image_url.get("url") if isinstance(image_url, dict) else image_url
                 if not isinstance(url, str) or not url.strip():
                     continue
-                role = str(item.get("role") or "").strip().lower()
+                role = str(item.get("role") or "").strip().lower().replace(" ", "_")
                 if role == "last_frame" and not last_frame:
                     last_frame = url.strip()
                 elif role == "first_frame" and not first_frame:
@@ -3119,7 +3119,7 @@ class NewApiVideoGenerator(VideoGeneratorBase):
                     continue
                 if ref_type != "image":
                     continue
-                role = str(getattr(ref, "role", "") or "").strip()
+                role = str(getattr(ref, "role", "") or "").strip().lower().replace(" ", "_")
                 if "first_frame" in role and not first_frame_path:
                     first_frame_path = path
                 else:
@@ -3201,7 +3201,7 @@ class NewApiVideoGenerator(VideoGeneratorBase):
                 path = str(getattr(ref, "path", "") or "").strip()
                 if not path or ref_type != "image":
                     continue
-                role = str(getattr(ref, "role", "") or "").strip()
+                role = str(getattr(ref, "role", "") or "").strip().lower().replace(" ", "_")
                 if not first_frame_path and "first_frame" in role:
                     first_frame_path = path
                     continue

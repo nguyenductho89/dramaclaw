@@ -4827,6 +4827,9 @@ def _runpod_qwen_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["7", 0], "filename_prefix": "dramaclaw"},
     }
+    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
+
+    apply_sage_patch(graph, "1", sage_disabled_mode())
     return graph, reference_images
 
 
@@ -5325,6 +5328,9 @@ def _runpod_qwen21_render_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["7", 0], "filename_prefix": "dramaclaw_qwen21_render"},
     }
+    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
+
+    apply_sage_patch(graph, "1", sage_disabled_mode())
     return graph
 
 
@@ -5557,6 +5563,9 @@ def _runpod_qwen_edit_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["70", 0], "filename_prefix": "dramaclaw_edit2511"},
     }
+    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
+
+    apply_sage_patch(graph, "1", sage_disabled_mode())
     return graph
 
 

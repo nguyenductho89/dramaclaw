@@ -2319,6 +2319,7 @@ class CogneeStore:
         shot_order: int | None = None,
         duration_seconds: float | None = None,
         is_manual_shot: bool | None = None,
+        multishot_chain_id: str | None = None,
     ) -> bool:
         """更新 Beat 的资源字段。"""
         return await self.sqlite_store.update_beat_asset(
@@ -2339,6 +2340,7 @@ class CogneeStore:
             shot_order=shot_order,
             duration_seconds=duration_seconds,
             is_manual_shot=is_manual_shot,
+            multishot_chain_id=multishot_chain_id,
         )
 
     async def delete_manual_beat(self, episode_number: int, beat_number: int) -> bool:

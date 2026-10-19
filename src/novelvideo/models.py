@@ -1461,6 +1461,20 @@ class NovelVisualBeat(BaseModel):
     duration_seconds: Optional[float] = Field(default=None, description="用户指定目标时长（秒）")
     is_manual_shot: bool = Field(default=False, description="是否为用户手工插入的分镜")
 
+    # MiniMax H3 Multishot support (2026-10-19): a non-empty, user-chosen
+    # opaque string groups N CONSECUTIVE beats (by shot_order) into one
+    # continuous multi-shot take — see
+    # `generators/runpod_minimax_h3_multishot_video.py` and
+    # `api/routes/generation.py`'s multishot review/enqueue routes.
+    # Deliberately a separate, explicit field rather than inferring a chain
+    # from `scene_ref.scene_id`: that grouping can merge non-consecutive
+    # beats sharing a scene (see `generators/nanobanana_grid.py`'s
+    # `_group_beats_by_location`), which is not a safe proxy for "these
+    # beats form one continuous take".
+    multishot_chain_id: str = Field(
+        default="", description="同一条连续多镜头(H3 Multishot)序列的分组 ID，空表示不属于任何序列"
+    )
+
     @model_validator(mode="after")
     def ensure_fields_not_empty(self) -> "NovelVisualBeat":
         """确保关键字段不为空。"""

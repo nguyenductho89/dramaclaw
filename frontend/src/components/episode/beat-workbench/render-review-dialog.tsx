@@ -76,8 +76,14 @@ export function RenderReviewDialog({
   const { t } = useTranslation();
   const reviewMutation = useRenderReview(project, episode);
   const aiRewriteMutation = useGenerateQwenEditPrompt(project, episode);
-  const workerStatus = useRunpodWorkerStatus(open);
-  const startWorker = useStartRunpodWorker();
+  // `runpod_qwen_edit*` and `runpod_qwen21*` now live on 2 separate RunPod
+  // endpoints (split 2026-10-19) — same mapping the backend route itself
+  // uses (`api/routes/generation.py`'s `review_qwen_edit_render`).
+  const workerKey = (imageGenerationSelection ?? "").startsWith("runpod_qwen_edit")
+    ? "qwen_edit"
+    : "qwen_t2i";
+  const workerStatus = useRunpodWorkerStatus(workerKey, open);
+  const startWorker = useStartRunpodWorker(workerKey);
 
   const [fullPrompt, setFullPrompt] = useState("");
   const [scenePrompt, setScenePrompt] = useState("");

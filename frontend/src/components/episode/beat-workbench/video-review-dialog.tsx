@@ -76,9 +76,10 @@ export function VideoReviewDialog({
   const reviewMutation = useVideoReview(project, episode);
   const aiRewriteMutation = useGenerateMiniMaxH3Prompt(project, episode);
   // Reuse the existing dev-only RunPod worker control (Settings → Models)
-  // rather than inventing a new status endpoint/hook for this dialog.
-  const workerStatus = useRunpodWorkerStatus(open);
-  const startWorker = useStartRunpodWorker();
+  // rather than inventing a new status endpoint/hook for this dialog. This
+  // dialog only ever reviews the H3 (1-shot) backend, so the key is fixed.
+  const workerStatus = useRunpodWorkerStatus("h3", open);
+  const startWorker = useStartRunpodWorker("h3");
 
   const [editedPrompt, setEditedPrompt] = useState("");
   // Guards the textarea seed: it should only ever be set from the review's

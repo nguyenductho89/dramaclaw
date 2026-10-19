@@ -177,6 +177,9 @@ class BeatUpdate(BaseModel):
     speaker: Optional[str] = None  # 说话人身份ID（dialogue 时必填）
     detected_identities: Optional[list[str]] = None
     detected_props: Optional[list[str]] = None
+    # MiniMax H3 Multishot grouping (2026-10-19) — see
+    # `models.py`'s `NovelVisualBeat.multishot_chain_id`. "" clears it.
+    multishot_chain_id: Optional[str] = None
 
 
 class Seedance2PromptGenerateRequest(BaseModel):
@@ -201,6 +204,16 @@ class MiniMaxH3PromptGenerateRequest(BaseModel):
     # (the same field other video backends call `prompt_guidance`) — passed
     # through to `MiniMaxH3BeatContext.director_guidance`. Advisory only.
     prompt_guidance: Optional[str] = None
+
+
+class MultishotVideoRequest(BaseModel):
+    """Enqueue request for `POST .../multishot/{chain_id}/video` — see
+    `generators/runpod_minimax_h3_multishot_video.py` and
+    `runpod-h3-qwen-endpoints.md` section 5. `review_fingerprint` must match
+    the `input_fingerprint` the matching `/multishot/{chain_id}/review` call
+    just returned, same change-detection pattern as `SingleVideoRequest`."""
+
+    review_fingerprint: Optional[str] = None
 
 
 class QwenEditPrompts(BaseModel):

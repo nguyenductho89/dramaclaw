@@ -286,6 +286,123 @@ def run_single_video(envelope: dict[str, Any], ctx: ProjectContext) -> dict[str,
 register_project_task_runner("single_video", run_single_video)
 
 
+async def _run_multishot_video_async(
+    envelope: dict[str, Any], ctx: ProjectContext
+) -> dict[str, Any]:
+    """MiniMax H3 Multishot: one RunPod job rendering N chained beats into
+    one continuous video. See `generators/runpod_minimax_h3_multishot_video.py`
+    and `runpod-h3-qwen-endpoints.md` section 5 for the graph/design and the
+    real failures this was built to avoid — `generate_multishot_video`
+    (`api/routes/generation.py`) already validated the chain and built
+    `config` below; this runner just submits it."""
+    task_type = "multishot_video"
+    episode = int(envelope.get("episode") or 0)
+    chain_id = str(envelope.get("scope") or "")
+    payload = envelope.get("payload") or {}
+    config = dict(payload.get("config") or {})
+    output_dir = str(payload.get("output_dir") or ctx.output_dir)
+
+    manager = get_task_manager()
+
+    def on_log(msg: str) -> None:
+        manager.update_progress_for_project(
+            ctx,
+            task_type,
+            episode,
+            scope=chain_id,
+            current_task=msg,
+            logs=[msg],
+        )
+
+    beat_numbers = [int(n) for n in (config.get("beat_numbers") or [])]
+    on_log(f"开始生成 Multishot 链条 {chain_id} ({len(beat_numbers)} 个 beat)")
+
+    from novelvideo.config import (
+        RUNPOD_API_KEY,
+        RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
+        RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
+    )
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        build_h3_multishot_graph,
+        run_h3_multishot_job,
+    )
+    from novelvideo.utils.path_resolver import PathResolver
+
+    start_image_path = str(config.get("start_image_path") or "")
+    reference_image_paths = [str(p) for p in (config.get("reference_image_paths") or [])]
+    checkpoint = str(config.get("checkpoint") or "fl2va")
+
+    start_bytes = Path(start_image_path).read_bytes()
+    start_name = "ms_start" + (Path(start_image_path).suffix or ".png")
+    upload_payloads: list[tuple[str, bytes, str]] = [
+        (start_name, start_bytes, _mime_for(start_name))
+    ]
+
+    reference_names: list[str] = []
+    for i, ref_path in enumerate(reference_image_paths):
+        name = f"ms_ref_{i}" + (Path(ref_path).suffix or ".png")
+        upload_payloads.append((name, Path(ref_path).read_bytes(), _mime_for(name)))
+        reference_names.append(name)
+
+    graph = build_h3_multishot_graph(
+        script=str(config.get("script") or ""),
+        shot_count=len(beat_numbers),
+        width=int(config.get("width") or 768),
+        height=int(config.get("height") or 1344),
+        frames_per_shot=int(config.get("frames_per_shot") or 124),
+        seed=int(config.get("seed") or 0),
+        steps=20,
+        checkpoint=checkpoint,
+        start_image_name=start_name,
+        reference_image_names=reference_names if checkpoint == "ref2va" else None,
+    )
+
+    data, status_info, error = await run_h3_multishot_job(
+        api_key=RUNPOD_API_KEY,
+        endpoint_id=RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
+        timeout_seconds=RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
+        graph=graph,
+        upload_payloads=upload_payloads,
+        on_log=on_log,
+    )
+    if data is None:
+        raise RuntimeError(error or "Multishot 任务失败，原因未知")
+
+    paths = PathResolver(output_dir, episode)
+    videos_dir = paths.videos_dir()
+    videos_dir.mkdir(parents=True, exist_ok=True)
+    video_path = videos_dir / f"multishot_{chain_id}.mp4"
+    video_path.write_bytes(data)
+    on_log(f"完成，已保存到 {video_path}")
+
+    return {
+        "video_path": video_path.as_posix(),
+        "chain_id": chain_id,
+        "beat_numbers": beat_numbers,
+        "shot_count": len(beat_numbers),
+        "checkpoint": checkpoint,
+    }
+
+
+def _mime_for(filename: str) -> str:
+    import mimetypes
+
+    return mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+
+def run_multishot_video(envelope: dict[str, Any], ctx: ProjectContext) -> dict[str, Any]:
+    return asyncio.run(
+        await_envelope_with_cancel_watch(
+            _run_multishot_video_async(envelope, ctx),
+            envelope,
+            task_type="multishot_video",
+        )
+    )
+
+
+register_project_task_runner("multishot_video", run_multishot_video)
+
+
 def _audio_duration(
     audio_path: Path, *, timeout_seconds: int | None = 30
 ) -> float | None:

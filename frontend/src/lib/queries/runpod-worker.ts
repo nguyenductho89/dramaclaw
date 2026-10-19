@@ -24,7 +24,15 @@ export interface RunpodWorkerJobCounts {
   retried: number;
 }
 
+/** One of the 4 RunPod endpoints split out 2026-10-19 — see
+ * `runpod_worker_control.py`'s `_ENDPOINTS` registry. Fetch the live list
+ * via `useRunpodWorkerKeys()` rather than hardcoding this union where
+ * possible; it's kept here only for call sites that need a literal type. */
+export type RunpodWorkerKey = "h3" | "qwen_edit" | "qwen_t2i" | "multishot";
+
 export interface RunpodWorkerStatus {
+  key: string;
+  displayName?: string;
   configured: boolean;
   running: boolean;
   endpointId?: string;
@@ -44,17 +52,37 @@ type RunpodWorkerResponse =
   | ErrorResponse
   | FastApiErrorResponse;
 
-/** Dev-only RunPod Qwen Image 2.1 worker status — see Settings → Models.
- * Polls faster while a worker is mid-boot so the Start button's spinner
- * resolves promptly, slower once things have settled. */
-export function useRunpodWorkerStatus(enabled: boolean) {
+type RunpodWorkerKeysResponse =
+  | OkResponse<{ keys: string[] }>
+  | ErrorResponse
+  | FastApiErrorResponse;
+
+/** Stable list of endpoint keys ("h3", "qwen_edit", "qwen_t2i", "multishot")
+ * in display order — lets Settings render one section per endpoint without
+ * hardcoding the key list on the frontend too. */
+export function useRunpodWorkerKeys(enabled: boolean) {
   return useQuery({
-    queryKey: queryKeys.runpodWorker(),
+    queryKey: queryKeys.runpodWorkerKeys(),
     queryFn: ({ signal }) =>
       api
-        .get("api/v1/runpod-worker/status", { signal })
-        .json<OkResponse<RunpodWorkerStatus>>(),
+        .get("api/v1/runpod-worker/keys", { signal })
+        .json<RunpodWorkerKeysResponse>(),
     enabled,
+    staleTime: Infinity, // this list never changes at runtime
+  });
+}
+
+/** Dev-only RunPod worker status for one endpoint key — see
+ * Settings → Models. Polls faster while a worker is mid-boot so the Start
+ * button's spinner resolves promptly, slower once things have settled. */
+export function useRunpodWorkerStatus(key: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.runpodWorker(key),
+    queryFn: ({ signal }) =>
+      api
+        .get(`api/v1/runpod-worker/${key}/status`, { signal })
+        .json<OkResponse<RunpodWorkerStatus>>(),
+    enabled: enabled && !!key,
     refetchInterval: (query) => {
       const live = query.state.data?.data.live;
       return live && live.initializing > 0 ? 5_000 : 20_000;
@@ -62,41 +90,41 @@ export function useRunpodWorkerStatus(enabled: boolean) {
   });
 }
 
-export function useStartRunpodWorker() {
+export function useStartRunpodWorker(key: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
       api
-        .post("api/v1/runpod-worker/start", {
+        .post(`api/v1/runpod-worker/${key}/start`, {
           timeout: 30_000,
           throwHttpErrors: false,
         })
         .json<RunpodWorkerResponse>(),
     onSuccess: (response) => {
       if (response.ok === true) {
-        qc.setQueryData(queryKeys.runpodWorker(), response);
+        qc.setQueryData(queryKeys.runpodWorker(key), response);
       } else {
-        qc.invalidateQueries({ queryKey: queryKeys.runpodWorker() });
+        qc.invalidateQueries({ queryKey: queryKeys.runpodWorker(key) });
       }
     },
   });
 }
 
-export function useStopRunpodWorker() {
+export function useStopRunpodWorker(key: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
       api
-        .post("api/v1/runpod-worker/stop", {
+        .post(`api/v1/runpod-worker/${key}/stop`, {
           timeout: 30_000,
           throwHttpErrors: false,
         })
         .json<RunpodWorkerResponse>(),
     onSuccess: (response) => {
       if (response.ok === true) {
-        qc.setQueryData(queryKeys.runpodWorker(), response);
+        qc.setQueryData(queryKeys.runpodWorker(key), response);
       } else {
-        qc.invalidateQueries({ queryKey: queryKeys.runpodWorker() });
+        qc.invalidateQueries({ queryKey: queryKeys.runpodWorker(key) });
       }
     },
   });

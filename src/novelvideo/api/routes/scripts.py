@@ -443,6 +443,7 @@ async def update_beat(
                     "video_prompt",
                     "keyframe_prompt",
                     "seedance2_config_json",
+                    "multishot_chain_id",
                 )
             },
         )

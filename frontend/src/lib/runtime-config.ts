@@ -9,7 +9,11 @@ export const RuntimeConfigResponse = z.object({
     auth_required: z.boolean(),
     instance_id: z.string().optional(),
     mcp_direct_canvas_apply: z.boolean().optional(),
-    runpod_qwen_worker_control_enabled: z.boolean().optional(),
+    // Was "runpod_qwen_worker_control_enabled" before the 2026-10-19 RunPod
+    // endpoint split (1 shared Qwen+H3 endpoint -> 4 separate ones) — true
+    // if ANY of the 4 is configured. Settings fetches per-key status via
+    // GET /api/v1/runpod-worker/keys to decide which sections to render.
+    runpod_worker_control_enabled: z.boolean().optional(),
   }),
 });
 
@@ -26,7 +30,7 @@ export interface RuntimeConfig {
   phoneOtpEntryVisible: boolean;
   instanceId?: string;
   mcpDirectCanvasApply: boolean;
-  runpodQwenWorkerControlEnabled: boolean;
+  runpodWorkerControlEnabled: boolean;
 }
 
 let runtimeConfig: RuntimeConfig = {
@@ -34,7 +38,7 @@ let runtimeConfig: RuntimeConfig = {
   authRequired: true,
   mcpDirectCanvasApply: false,
   phoneOtpEntryVisible: false,
-  runpodQwenWorkerControlEnabled: false,
+  runpodWorkerControlEnabled: false,
 };
 
 function fallbackRuntimeConfig(): RuntimeConfig {
@@ -44,14 +48,14 @@ function fallbackRuntimeConfig(): RuntimeConfig {
         authRequired: false,
         phoneOtpEntryVisible: false,
         mcpDirectCanvasApply: false,
-        runpodQwenWorkerControlEnabled: false,
+        runpodWorkerControlEnabled: false,
       }
     : {
         edition: "ee",
         authRequired: true,
         phoneOtpEntryVisible: false,
         mcpDirectCanvasApply: false,
-        runpodQwenWorkerControlEnabled: false,
+        runpodWorkerControlEnabled: false,
       };
 }
 
@@ -86,8 +90,7 @@ export async function loadRuntimeConfig(): Promise<void> {
       phoneOtpEntryVisible,
       instanceId: parsed.data.instance_id,
       mcpDirectCanvasApply: parsed.data.mcp_direct_canvas_apply ?? false,
-      runpodQwenWorkerControlEnabled:
-        parsed.data.runpod_qwen_worker_control_enabled ?? false,
+      runpodWorkerControlEnabled: parsed.data.runpod_worker_control_enabled ?? false,
     };
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -112,6 +115,6 @@ export function phoneOtpEntryVisible(): boolean {
   return runtimeConfig.phoneOtpEntryVisible;
 }
 
-export function runpodQwenWorkerControlEnabled(): boolean {
-  return runtimeConfig.runpodQwenWorkerControlEnabled;
+export function runpodWorkerControlEnabled(): boolean {
+  return runtimeConfig.runpodWorkerControlEnabled;
 }

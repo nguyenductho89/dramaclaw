@@ -77,8 +77,11 @@ def test_h3_fl2va_guider_and_scheduler_use_patched_model(sage_on):
     assert _consumers(g, ["20", 0]) == []
 
 
-def test_qwen_graphs_switch_sage_back_off(sage_on):
+def test_qwen_graphs_never_get_sage_node_even_when_sage_on(sage_on):
+    # Qwen graphs run on a dedicated endpoint (split 2026-10-19) that has no
+    # ComfyUI-KJNodes installed — they must never call apply_sage_patch at
+    # all any more (not even to switch it "disabled"), since sending a
+    # PathchSageAttentionKJ node to that worker would 400 as an unknown node
+    # class. RUNPOD_H3_SAGE_ATTENTION is now H3-endpoint-only.
     for graph in _qwen_graphs().values():
-        node = graph[comfy_sage.SAGE_NODE_ID]
-        assert node["inputs"]["sage_attention"] == "disabled"
-        assert _consumers(graph, ["1", 0]) == []
+        assert comfy_sage.SAGE_NODE_ID not in graph

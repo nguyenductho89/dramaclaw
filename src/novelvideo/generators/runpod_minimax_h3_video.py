@@ -87,6 +87,26 @@ def frames_for_duration(seconds: float) -> int:
     return max(_FRAME_MIN, min(_FRAME_MAX, frames))
 
 
+def _round32(value: float) -> int:
+    """Nearest multiple of 32, minimum 32 — the grid every H3 width/height
+    dimension must land on."""
+    return max(32, round(value / 32.0) * 32)
+
+
+def stage1_dims_for_two_stage(width: int, height: int, scale_by: float) -> tuple[int, int]:
+    """Pass-1 resolution for `two_stage=True`: the final `width`/`height`
+    divided by `scale_by`, rounded to H3's 32px grid. For the `formal`
+    profile's 1344x768 (landscape) or 768x1344 (portrait) at the default
+    `scale_by=1.5` this divides evenly (896x512 / 512x896) — the exact
+    numbers in `runpod-h3-qwen-endpoints.md` section 4a. Other profiles may
+    round slightly, in which case `MiniMaxH3AVLatentUpscaleBy`'s actual
+    output resolution ends up a little off `width`/`height` — that's fine,
+    the final video just comes out at whatever resolution falls out of the
+    upscale, nothing downstream enforces an exact match.
+    """
+    return _round32(width / scale_by), _round32(height / scale_by)
+
+
 def dims_for_ratio(aspect_ratio: str, profile: str = "formal") -> tuple[int, int]:
     """Portrait profile dims, rotated to landscape when `aspect_ratio` is
     wider than it is tall. H3 only reliably supports this fixed pair of
@@ -163,6 +183,15 @@ def build_h3_ref2va_graph(
     frames: int,
     pdd_steps: int = 8,
     end_frame_name: str | None = None,
+    two_stage: bool = False,
+    stage2_scale_by: float = 1.5,
+    stage2_upscale_method: str = "bislerp",
+    stage2_nfe: str = "6",
+    stage2_denoise: float = 0.35,
+    audio_refine: bool = False,
+    audio_refine_steps: int = 4,
+    audio_refine_cfg: float = 1.0,
+    audio_refine_denoise: float = 0.5,
 ) -> dict[str, Any]:
     """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. `image_names[0]`
     is always the first frame (`<Picture 1>`, pinned at frame 0 via
@@ -170,7 +199,37 @@ def build_h3_ref2va_graph(
     reference images (`<Picture 2>`, `<Picture 3>`, ...); `audio_names` are
     voice-timbre reference clips (`<Audio 1>`, ...). `end_frame_name`, if
     given, is appended as one more `ref_image` and pinned at the last frame
-    (`frame_idx=-1`) for keyframe (first+last frame) mode."""
+    (`frame_idx=-1`) for keyframe (first+last frame) mode.
+
+    `two_stage` (added 2026-10-19, see `runpod-h3-qwen-endpoints.md` section
+    4a): render pass 1 at `width/height` already pre-scaled down by
+    `stage2_scale_by` by the caller — wait, no: THIS function takes the
+    FINAL target `width`/`height` and does the pass-1 downscale itself, then
+    `MiniMaxH3AVLatentUpscaleBy(scale_by=stage2_scale_by)` back up, then a
+    short partial-denoise redraw pass (`MiniMaxH3PDDAccScheduler`,
+    `nfe=stage2_nfe`, `denoise=stage2_denoise`) on a SEPARATE
+    `MiniMaxH3PDDAccApply` model branch off the same sigma-shifted base as
+    pass 1 (node "5") — pass 1's own nfe=8 branch (node "6") and its
+    sigmas/sampler (nodes 9/11/12) are completely untouched by this, so
+    enabling `two_stage` cannot change pass-1's own quality/timing, only add
+    a stage 2 after it.
+
+    `audio_refine` (same section): `MiniMaxH3ChainAudioRefineSampler` from
+    pack `ethanfel/ComfyUI-MiniMaxH3-Context-Loop` (NOT the PDD-Acc pack —
+    must be installed separately on the worker image). Freezes video,
+    re-denoises only audio. Its required `context_latent` input is wired to
+    a plain pre-sample AV latent that never gets a `noise_mask` key (node
+    "7"'s own latent output when `two_stage` is off, or the upscaled latent
+    "60" when it's on — either way just needs the right SHAPE, not real
+    "emptiness": `_existing_mask_streams` in that pack only inspects the
+    `noise_mask` key, not the data) — the node then treats this as "nothing
+    is protected yet", producing an all-ones (full-repaint) audio mask with
+    no need for the pack's full "Chain Context" machinery. `negative`
+    conditioning is wired to the SAME conditioning as `positive`: this
+    sampler runs at `cfg=1.0` like the rest of this pipeline, and CFG at
+    cfg=1 is mathematically `negative + 1.0*(positive-negative) = positive`,
+    i.e. negative has zero effect on the result at that cfg value.
+    """
     from novelvideo.config import (
         RUNPOD_H3_AUDIO_VAE,
         RUNPOD_H3_PDD_REF2VA,
@@ -181,8 +240,14 @@ def build_h3_ref2va_graph(
 
     if pdd_steps not in (4, 6, 8):
         raise ValueError(f"PDD acceleration only supports 4/6/8 steps, got {pdd_steps}")
+    if two_stage and stage2_nfe not in ("4", "6", "8"):
+        raise ValueError(f"stage2_nfe only supports '4'/'6'/'8', got {stage2_nfe!r}")
 
     all_image_names = list(image_names) + ([end_frame_name] if end_frame_name else [])
+
+    pass1_width, pass1_height = (
+        stage1_dims_for_two_stage(width, height, stage2_scale_by) if two_stage else (width, height)
+    )
 
     graph: dict[str, Any] = {
         "1": {
@@ -206,8 +271,8 @@ def build_h3_ref2va_graph(
                 "vae": ["3", 0],
                 "audio_vae": ["4", 0],
                 "prompt": prompt,
-                "width": width,
-                "height": height,
+                "width": pass1_width,
+                "height": pass1_height,
                 "length": frames,
                 "ref_image_size": "match",
             },
@@ -281,6 +346,90 @@ def build_h3_ref2va_graph(
     _chain_guides(
         graph, chain, cond=["7", 0], latent=["7", 1], vae_node="3", audio_vae_node="4", guider_node="8"
     )
+    # Final conditioning after AddGuide pinning — stage 2 / audio refine
+    # reuse this exact conditioning rather than re-deriving it, so a first
+    # (and optional last) frame pin applies identically to every stage.
+    final_cond = list(graph["8"]["inputs"]["conditioning"])
+
+    final_latent_node = "12"  # pass-1 sampler output, the default
+    # The AV latent fed as `context_latent` to the audio-refine sampler
+    # below: any latent with the same SHAPE as whatever is being refined and
+    # no `noise_mask` key works (see docstring) — node "7"'s own pre-sample
+    # latent output when there's no stage 2, or the upscaled stage-2 input
+    # latent "60" when there is (same resolution as stage 2's output).
+    audio_refine_context_latent = ["7", 1]
+
+    if two_stage:
+        graph["60"] = {
+            "class_type": "MiniMaxH3AVLatentUpscaleBy",
+            "inputs": {
+                "samples": ["12", 0],
+                "upscale_method": stage2_upscale_method,
+                "scale_by": stage2_scale_by,
+            },
+        }
+        graph["61"] = {
+            "class_type": "MiniMaxH3PDDAccApply",
+            "inputs": {
+                # Same sigma-shifted base as pass 1 (node "5"), a SEPARATE
+                # Apply branch at stage2_nfe — pass 1's own "6" branch
+                # (nfe=8) is untouched.
+                "model": ["5", 0],
+                "pdd_file": RUNPOD_H3_PDD_REF2VA,
+                "nfe": stage2_nfe,
+                "lora_strength": 1.0,
+                "head_strength": 1.0,
+                "on_off_grid": "error",
+            },
+        }
+        graph["62"] = {
+            "class_type": "MiniMaxH3PDDAccScheduler",
+            "inputs": {"nfe": stage2_nfe, "denoise": stage2_denoise},
+        }
+        graph["63"] = {
+            "class_type": "BasicGuider",
+            "inputs": {"model": ["61", 0], "conditioning": final_cond},
+        }
+        graph["64"] = {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}}
+        graph["65"] = {
+            "class_type": "SamplerCustomAdvanced",
+            "inputs": {
+                "noise": ["64", 0],
+                "guider": ["63", 0],
+                "sampler": ["9", 0],
+                "sigmas": ["62", 0],
+                "latent_image": ["60", 0],
+            },
+        }
+        final_latent_node = "65"
+        audio_refine_context_latent = ["60", 0]
+
+    if audio_refine:
+        # Reuse pass-1's own model branch ("6") for a single-stage refine;
+        # stage 2's branch ("61") when two_stage is also on — matches
+        # whichever branch actually produced `final_latent_node`.
+        refine_model = ["61", 0] if two_stage else ["6", 0]
+        graph["66"] = {
+            "class_type": "MiniMaxH3ChainAudioRefineSampler",
+            "inputs": {
+                "model": refine_model,
+                "positive": final_cond,
+                "negative": final_cond,
+                "latent": [final_latent_node, 0],
+                "context_latent": audio_refine_context_latent,
+                "seed": seed,
+                "steps": audio_refine_steps,
+                "cfg": audio_refine_cfg,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "audio_denoise": audio_refine_denoise,
+            },
+        }
+        final_latent_node = "66"
+
+    graph["13"]["inputs"]["samples"] = [final_latent_node, 0]
+    graph["14"]["inputs"]["samples"] = [final_latent_node, 0]
+
     from novelvideo.generators.comfy_sage import apply_sage_patch, sage_mode_requested
 
     apply_sage_patch(graph, "1", sage_mode_requested())
@@ -410,15 +559,31 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         references: list[ShotReference] | None = None,
         profile: str = "formal",
         pdd_steps: int = 8,
+        two_stage: bool | None = None,
+        audio_refine: bool | None = None,
         on_log: Any = None,
         on_progress: Any = None,
         **_kwargs: Any,
     ) -> VideoGenResult:
         from novelvideo.config import (
             RUNPOD_API_KEY,
+            RUNPOD_H3_AUDIO_REFINE_CFG,
+            RUNPOD_H3_AUDIO_REFINE_DENOISE,
+            RUNPOD_H3_AUDIO_REFINE_ENABLED,
+            RUNPOD_H3_AUDIO_REFINE_STEPS,
+            RUNPOD_H3_STAGE2_DENOISE,
+            RUNPOD_H3_STAGE2_NFE,
+            RUNPOD_H3_STAGE2_SCALE_BY,
+            RUNPOD_H3_STAGE2_UPSCALE_METHOD,
+            RUNPOD_H3_TWO_STAGE_ENABLED,
             RUNPOD_H3_VIDEO_ENDPOINT_ID,
             RUNPOD_H3_VIDEO_TIMEOUT_SECONDS,
         )
+
+        # None means "use the .env default" — a caller (task runner, API
+        # route) can still force either on/off per call.
+        two_stage = RUNPOD_H3_TWO_STAGE_ENABLED if two_stage is None else two_stage
+        audio_refine = RUNPOD_H3_AUDIO_REFINE_ENABLED if audio_refine is None else audio_refine
 
         def log(msg: str) -> None:
             logger.info("[runpod_minimax_h3] %s", msg)
@@ -500,9 +665,21 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 frames=frames,
                 pdd_steps=pdd_steps,
                 end_frame_name=end_frame_payload[0] if end_frame_payload else None,
+                two_stage=two_stage,
+                stage2_scale_by=RUNPOD_H3_STAGE2_SCALE_BY,
+                stage2_upscale_method=RUNPOD_H3_STAGE2_UPSCALE_METHOD,
+                stage2_nfe=RUNPOD_H3_STAGE2_NFE,
+                stage2_denoise=RUNPOD_H3_STAGE2_DENOISE,
+                audio_refine=audio_refine,
+                audio_refine_steps=RUNPOD_H3_AUDIO_REFINE_STEPS,
+                audio_refine_cfg=RUNPOD_H3_AUDIO_REFINE_CFG,
+                audio_refine_denoise=RUNPOD_H3_AUDIO_REFINE_DENOISE,
             )
             upload_payloads = list(image_payloads) + ([end_frame_payload] if end_frame_payload else []) + audio_payloads
         else:
+            # two_stage/audio_refine only apply to ref2va for now (see
+            # module docstring) — fl2va is unaffected even if the .env
+            # flags are on.
             graph = build_h3_fl2va_graph(
                 prompt=prompt,
                 first_frame_name=image_payloads[0][0],
@@ -514,7 +691,15 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             )
             upload_payloads = [image_payloads[0]] + ([end_frame_payload] if end_frame_payload else [])
 
-        log(f"MiniMax H3 ({mode}, {width}x{height}, {frames}帧/{frames / _FPS:.1f}s) 提交中...")
+        stage_note = ""
+        if mode == "ref2va" and (two_stage or audio_refine):
+            parts = []
+            if two_stage:
+                parts.append("two-stage")
+            if audio_refine:
+                parts.append("audio-refine")
+            stage_note = f" [{'+'.join(parts)}]"
+        log(f"MiniMax H3 ({mode}{stage_note}, {width}x{height}, {frames}帧/{frames / _FPS:.1f}s) 提交中...")
 
         from novelvideo.generators.nanobanana_grid import (
             _runpod_download_output_sync,

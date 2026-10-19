@@ -96,8 +96,9 @@ import {
   type MediaModelEntry,
   type MediaStorageProvider,
 } from "@/stores/settingsStore";
-import { isCeRuntime, runpodQwenWorkerControlEnabled } from "@/lib/runtime-config";
+import { isCeRuntime, runpodWorkerControlEnabled } from "@/lib/runtime-config";
 import {
+  useRunpodWorkerKeys,
   useRunpodWorkerStatus,
   useStartRunpodWorker,
   useStopRunpodWorker,
@@ -234,8 +235,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <div className="min-w-0 flex-1">
               <ScrollArea className="h-full [&_[data-slot=scroll-area-scrollbar]]:!w-1 [&_[data-slot=scroll-area-scrollbar]]:!border-l-0 [&_[data-slot=scroll-area-scrollbar]]:!p-0">
                 <ModelConfigSection open={open && page === "models"} />
-                {runpodQwenWorkerControlEnabled() && (
-                  <RunpodWorkerSection open={open && page === "models"} />
+                {runpodWorkerControlEnabled() && (
+                  <RunpodWorkerSections open={open && page === "models"} />
                 )}
                 {SHOW_CODEX_BRIDGE && <CodexBridgeSection />}
               </ScrollArea>
@@ -6174,19 +6175,49 @@ function FieldRow({
   );
 }
 
-/** Dev-only: start/stop the shared RunPod Qwen-Image 2.1 worker (workers.max
- * 0⇄1). Invisible unless this machine's `.env` has RUNPOD_API_KEY/R2_*
- * configured — see `runpod_qwen_worker_control_enabled` in GET /config. */
-function RunpodWorkerSection({ open }: { open: boolean }) {
+/** One section per RunPod endpoint key ("h3", "qwen_edit", "qwen_t2i",
+ * "multishot" — split 2026-10-19, see `runpod_worker_control.py`). The
+ * outer `runpod_worker_control_enabled` flag (GET /config) only means "at
+ * least one endpoint is configured"; each individual section still hides
+ * itself via its own status query's `configured: false`. */
+function RunpodWorkerSections({ open }: { open: boolean }) {
+  const keysQuery = useRunpodWorkerKeys(open);
+  const keys =
+    keysQuery.data?.ok === true ? keysQuery.data.data.keys : [];
+  return (
+    <>
+      {keys.map((key) => (
+        <RunpodWorkerSection key={key} workerKey={key} open={open} />
+      ))}
+    </>
+  );
+}
+
+/** Dev-only: start/stop one RunPod worker (workers.max 0⇄1). Invisible
+ * unless this machine's `.env` has that endpoint's RUNPOD_*_ENDPOINT_ID/
+ * R2_* configured — gated on this section's own status query, not a
+ * single shared flag. */
+function RunpodWorkerSection({
+  workerKey,
+  open,
+}: {
+  workerKey: string;
+  open: boolean;
+}) {
   const { t } = useTranslation();
-  const statusQuery = useRunpodWorkerStatus(open);
+  const statusQuery = useRunpodWorkerStatus(workerKey, open);
   const status = statusQuery.data?.data;
   const running = status?.running ?? false;
   const live = status?.live;
+  const configured = status?.configured ?? true; // don't flash-hide while loading
 
-  const startWorker = useStartRunpodWorker();
-  const stopWorker = useStopRunpodWorker();
+  const startWorker = useStartRunpodWorker(workerKey);
+  const stopWorker = useStopRunpodWorker(workerKey);
   const pending = startWorker.isPending || stopWorker.isPending;
+
+  if (statusQuery.isSuccess && !configured) {
+    return null;
+  }
 
   const handleStart = async () => {
     try {
@@ -6244,7 +6275,7 @@ function RunpodWorkerSection({ open }: { open: boolean }) {
           )}
         />
         <h3 className="font-heading text-sm font-medium text-foreground">
-          {t("settings.runpodWorker.title")}
+          {status?.displayName ?? t("settings.runpodWorker.title")}
         </h3>
         <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
           {t("settings.runpodWorker.badge")}

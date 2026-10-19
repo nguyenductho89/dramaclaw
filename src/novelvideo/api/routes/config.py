@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from ulid import ULID
 
-from novelvideo.runpod_worker_control import runpod_worker_control_configured
+from novelvideo.runpod_worker_control import any_runpod_worker_control_configured
 from novelvideo.shared import runtime_env
 
 router = APIRouter()
@@ -42,7 +42,13 @@ async def get_runtime_config():
                 "auth_required": edition == "ee",
                 "instance_id": _INSTANCE_ID,
                 "mcp_direct_canvas_apply": _mcp_direct_canvas_apply_enabled(),
-                "runpod_qwen_worker_control_enabled": runpod_worker_control_configured(),
+                # Was "runpod_qwen_worker_control_enabled" before the
+                # 2026-10-19 endpoint split (one shared Qwen+H3 endpoint ->
+                # 4 separate ones) — true if ANY of the 4 is configured; the
+                # frontend fetches per-key status via
+                # GET /api/v1/runpod-worker/keys to decide which sections to
+                # actually render.
+                "runpod_worker_control_enabled": any_runpod_worker_control_configured(),
             },
         }
     )

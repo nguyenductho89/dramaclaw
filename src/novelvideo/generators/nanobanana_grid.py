@@ -4827,9 +4827,12 @@ def _runpod_qwen_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["7", 0], "filename_prefix": "dramaclaw"},
     }
-    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
-
-    apply_sage_patch(graph, "1", sage_disabled_mode())
+    # No SageAttention disable-patch here anymore: this graph now runs on a
+    # dedicated Qwen-only endpoint (split 2026-10-19, see config.py) whose
+    # worker image has no ComfyUI-KJNodes installed. Sending a
+    # PathchSageAttentionKJ node to a worker that doesn't have that pack would
+    # 400 as an unknown node class — SageAttention is now H3-endpoint-only,
+    # see runpod_minimax_h3_video.py.
     return graph, reference_images
 
 
@@ -5328,9 +5331,8 @@ def _runpod_qwen21_render_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["7", 0], "filename_prefix": "dramaclaw_qwen21_render"},
     }
-    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
-
-    apply_sage_patch(graph, "1", sage_disabled_mode())
+    # No SageAttention disable-patch — see the matching comment in
+    # `_runpod_qwen_image_graph` above.
     return graph
 
 
@@ -5563,9 +5565,9 @@ def _runpod_qwen_edit_image_graph(
         "class_type": "SaveImage",
         "inputs": {"images": ["70", 0], "filename_prefix": "dramaclaw_edit2511"},
     }
-    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_disabled_mode
-
-    apply_sage_patch(graph, "1", sage_disabled_mode())
+    # No SageAttention disable-patch — see the matching comment in
+    # `_runpod_qwen_image_graph` above. This graph now runs on its own
+    # Edit-2511-only endpoint (split 2026-10-19, see config.py).
     return graph
 
 
@@ -5597,14 +5599,14 @@ async def _call_runpod_qwen_edit_image_api(
     import httpx
 
     from novelvideo.config import (
-        RUNPOD_QWEN_IMAGE_ENDPOINT_ID,
-        RUNPOD_QWEN_IMAGE_TIMEOUT_SECONDS,
+        RUNPOD_QWEN_EDIT_ENDPOINT_ID,
+        RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS,
     )
 
     if not api_key:
         return None, "", "RUNPOD_API_KEY is missing"
-    if not RUNPOD_QWEN_IMAGE_ENDPOINT_ID:
-        return None, "", "RUNPOD_QWEN_IMAGE_ENDPOINT_ID is missing"
+    if not RUNPOD_QWEN_EDIT_ENDPOINT_ID:
+        return None, "", "RUNPOD_QWEN_EDIT_ENDPOINT_ID is missing"
 
     ref_images = reference_images or []
     if not ref_images:
@@ -5637,7 +5639,7 @@ async def _call_runpod_qwen_edit_image_api(
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             submit_response = await client.post(
-                f"{base}/{RUNPOD_QWEN_IMAGE_ENDPOINT_ID}/run",
+                f"{base}/{RUNPOD_QWEN_EDIT_ENDPOINT_ID}/run",
                 headers=headers,
                 json={"input": job_input},
             )
@@ -5650,7 +5652,7 @@ async def _call_runpod_qwen_edit_image_api(
     # reason: once the job exists on RunPod it keeps running regardless of
     # what this client does, so a transient poll error must not abort the
     # call and orphan the job.
-    deadline = time.monotonic() + RUNPOD_QWEN_IMAGE_TIMEOUT_SECONDS
+    deadline = time.monotonic() + RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS
     status_resp: dict = {}
     last_poll_error = ""
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -5658,7 +5660,7 @@ async def _call_runpod_qwen_edit_image_api(
             await asyncio.sleep(5)
             try:
                 status_response = await client.get(
-                    f"{base}/{RUNPOD_QWEN_IMAGE_ENDPOINT_ID}/status/{job_id}",
+                    f"{base}/{RUNPOD_QWEN_EDIT_ENDPOINT_ID}/status/{job_id}",
                     headers=headers,
                 )
                 status_response.raise_for_status()
@@ -5671,7 +5673,7 @@ async def _call_runpod_qwen_edit_image_api(
         else:
             try:
                 await client.post(
-                    f"{base}/{RUNPOD_QWEN_IMAGE_ENDPOINT_ID}/cancel/{job_id}",
+                    f"{base}/{RUNPOD_QWEN_EDIT_ENDPOINT_ID}/cancel/{job_id}",
                     headers=headers,
                 )
             except httpx.HTTPError:
@@ -5682,7 +5684,7 @@ async def _call_runpod_qwen_edit_image_api(
                 None,
                 "",
                 f"runpod qwen edit image job {job_id} timed out after "
-                f"{RUNPOD_QWEN_IMAGE_TIMEOUT_SECONDS:.0f}s (still "
+                f"{RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS:.0f}s (still "
                 f"{status_note} — endpoint workers.max may be 0){poll_note}",
             )
 

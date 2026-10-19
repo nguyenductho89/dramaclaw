@@ -37,6 +37,7 @@ from novelvideo.api.schemas import (
     SketchRegenerateRequest,
     SingleVideoRequest,
     MiniMaxH3PromptGenerateRequest,
+    MultishotVideoRequest,
     RenderReviewRequest,
     QwenEditPromptGenerateRequest,
     QwenEditPrompts,
@@ -5534,7 +5535,7 @@ async def review_single_video(
             try:
                 from novelvideo.runpod_worker_control import get_status
 
-                worker_status = await get_status()
+                worker_status = await get_status("h3")
             except Exception as exc:  # noqa: BLE001
                 worker_status = {"error": str(exc)}
     else:
@@ -5787,6 +5788,376 @@ async def generate_minimax_h3_prompt(
     }
 
 
+# ── MiniMax H3 Multishot: chain N beats into one continuous take ──────────
+# Added 2026-10-19. See `generators/runpod_minimax_h3_multishot_video.py`
+# and `runpod-h3-qwen-endpoints.md` section 5 for the full design and the
+# table of real failures this was built to avoid. Each beat's own MiniMax
+# H3 prompt is generated exactly the same way as 1-shot H3 (the
+# `minimax-h3-prompt/generate` route above, saved on that beat's own
+# `seedance2_config_json.final_prompt`) — this section only adds the
+# chain-level grouping, validation, review and enqueue on top of that
+# already-proven per-beat prompt.
+
+
+def _multishot_chain_beats(beats: list[dict], chain_id: str) -> tuple[list[dict], str]:
+    """Beats sharing `multishot_chain_id == chain_id`, in the same
+    already-sorted order `get_beats_as_dicts` returns, restricted to a
+    CONTIGUOUS run (no other beat sits between two chain members in that
+    order) — the only way we trust "these beats form one continuous take"
+    (see `NovelVisualBeat.multishot_chain_id`'s docstring for why this is
+    not inferred from `scene_ref.scene_id`). Returns `(chain_beats,
+    error)`; `error` is "" on success."""
+    chain_id = str(chain_id or "").strip()
+    if not chain_id:
+        return [], "chain_id 不能为空"
+    indices = [
+        i for i, b in enumerate(beats) if str(b.get("multishot_chain_id") or "") == chain_id
+    ]
+    if not indices:
+        return [], f"没有 beat 标记了 multishot_chain_id={chain_id!r}"
+    if indices != list(range(indices[0], indices[0] + len(indices))):
+        return [], "链条中的 beat 必须在叙事顺序上连续（中间不能插入其他未标记的 beat）"
+    return [beats[i] for i in indices], ""
+
+
+def _multishot_shared_references(
+    character_map: dict, chain_beats: list[dict]
+) -> tuple[list[dict[str, str]], str]:
+    """All beats in a chain must resolve to the EXACT same identity
+    reference list (same identities, same order). `H3MultishotSampler`
+    carries one `reference_images` batch for the WHOLE chain, numbered
+    `<Picture 2>`/`<Picture 3>`/... once — but each beat's own saved
+    `final_prompt` was numbered independently against ITS OWN reference
+    list. Reusing those prompts verbatim as this chain's `script` is only
+    safe (a tag can never silently refer to a different person in a
+    different shot) when every beat already agrees on that list. v1
+    enforces this rather than trying to renumber/reconcile per-shot
+    reference lists after the fact."""
+    per_beat_ids = [
+        [r["identity_id"] for r in _h3_identity_references(character_map, b)] for b in chain_beats
+    ]
+    first = per_beat_ids[0]
+    if any(ids != first for ids in per_beat_ids[1:]):
+        return [], (
+            "链条内每个 beat 必须引用完全相同的角色参考图（相同身份、相同顺序）才能安全拼接成一条 "
+            "Multishot 脚本 — 当前各 beat 的角色引用不一致"
+        )
+    shared = _h3_identity_references(character_map, chain_beats[0]) if first else []
+    return shared, ""
+
+
+def _multishot_review_fingerprint(
+    *,
+    chain_id: str,
+    script: str,
+    checkpoint: str,
+    frames_per_shot: int,
+    frame_path: str | None,
+    reference_paths: list[str],
+) -> str:
+    """Same change-detection pattern as `_video_review_fingerprint`, scoped
+    to a whole chain instead of one beat."""
+    import hashlib
+
+    parts = [chain_id, script, checkpoint, str(frames_per_shot), frame_path or ""]
+    for p in reference_paths:
+        try:
+            parts.append(f"{p}:{Path(p).stat().st_mtime_ns}")
+        except OSError:
+            parts.append(p)
+    return hashlib.sha1("|".join(parts).encode("utf-8", "ignore")).hexdigest()[:16]
+
+
+async def _multishot_per_shot_frames(
+    output_dir: str,
+    episode_num: int,
+    chain_beats: list[dict],
+) -> tuple[int, list[dict[str, Any]]]:
+    """Per-beat duration -> frame count (`frames_for_shot`, dialogue beats
+    get a higher floor), and the shared `frames_per_shot` the whole chain
+    must use (`H3MultishotSampler.frames_per_shot` is ONE value for every
+    shot, not a per-shot list — the max across the chain, so no beat is cut
+    shorter than it needs)."""
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import frames_for_shot
+    from novelvideo.manual_shots import resolve_target_video_duration
+    from novelvideo.video_duration import video_duration_bounds_for_backend
+
+    h3_min, h3_max = video_duration_bounds_for_backend("runpod_minimax_h3_multishot")
+    max_frames = 0
+    shots_out: list[dict[str, Any]] = []
+    for b in chain_beats:
+        beat_num = int(b["beat_number"])
+        audio_duration = await _api_audio_duration_seconds(output_dir, episode_num, beat_num)
+        duration = resolve_target_video_duration(b, audio_duration)
+        if h3_min is not None:
+            duration = max(float(h3_min), min(float(h3_max), duration))
+        is_dialogue = str(b.get("audio_type") or "") == "dialogue"
+        frames = frames_for_shot(duration, is_dialogue=is_dialogue)
+        max_frames = max(max_frames, frames)
+        shots_out.append(
+            {
+                "beat_number": beat_num,
+                "duration_seconds": duration,
+                "frames": frames,
+                "is_dialogue": is_dialogue,
+            }
+        )
+    return max_frames, shots_out
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/multishot/{chain_id}/review")
+async def review_multishot_video(
+    project: str,
+    episode_num: int,
+    chain_id: str,
+    user: dict = Depends(get_api_user),
+):
+    """Dry-run preview for a MiniMax H3 Multishot chain — pure read, no
+    enqueue, no RunPod call. Mirrors `review_single_video`'s role but for
+    an N-beat chain (see module docstring above)."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+
+    beats = await store.get_beats_as_dicts(episode_num)
+    chain_beats, chain_error = _multishot_chain_beats(beats, chain_id)
+    if chain_error:
+        return {"ok": False, "error": chain_error}
+
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_MAX_SHOTS, _runpod_h3_multishot_configured
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        dims_for_multishot,
+        join_shots_script,
+    )
+    from novelvideo.seedance2_i2v.models import parse_seedance2_config
+    from novelvideo.utils.path_resolver import PathResolver
+
+    character_map = await _build_character_map(
+        store, beats, username, project_name, episode_num=episode_num
+    )
+    shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+    checkpoint = "ref2va" if shared_refs else "fl2va"
+
+    paths = PathResolver(output_dir, episode_num)
+    frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
+    frame_exists = frame_path.exists()
+
+    max_frames, shots_out = await _multishot_per_shot_frames(output_dir, episode_num, chain_beats)
+
+    missing_prompt_beats: list[int] = []
+    prompts: list[str] = []
+    for b, shot in zip(chain_beats, shots_out):
+        h3_config = parse_seedance2_config(b.get("seedance2_config_json"))
+        has_prompt = h3_config.prompt_source == "minimax_h3" and bool(h3_config.final_prompt.strip())
+        shot["has_prompt"] = has_prompt
+        shot["prompt_preview"] = h3_config.final_prompt[:200] if has_prompt else ""
+        if not has_prompt:
+            missing_prompt_beats.append(shot["beat_number"])
+        prompts.append(h3_config.final_prompt)
+
+    width, height = dims_for_multishot("9:16", "formal")
+    script = join_shots_script(prompts) if not missing_prompt_beats else ""
+
+    worker_status: dict[str, Any] | None = None
+    if _runpod_h3_multishot_configured():
+        try:
+            from novelvideo.runpod_worker_control import get_status
+
+            worker_status = await get_status("multishot")
+        except Exception as exc:  # noqa: BLE001
+            worker_status = {"error": str(exc)}
+
+    issues: list[str] = []
+    if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
+        issues.append(
+            f"链条有 {len(chain_beats)} 个 beat，超过当前上限 "
+            f"RUNPOD_H3_MULTISHOT_MAX_SHOTS={RUNPOD_H3_MULTISHOT_MAX_SHOTS}"
+        )
+    if missing_prompt_beats:
+        issues.append(
+            f"beat {missing_prompt_beats} 还没有生成 MiniMax H3 提示词 — "
+            "请先对每个 beat 调用 minimax-h3-prompt/generate"
+        )
+    if ref_error:
+        issues.append(ref_error)
+    if not frame_exists:
+        issues.append(f"beat {chain_beats[0]['beat_number']} 的首帧不存在，请先生成预览")
+    if not _runpod_h3_multishot_configured():
+        issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置")
+
+    fingerprint = _multishot_review_fingerprint(
+        chain_id=chain_id,
+        script=script,
+        checkpoint=checkpoint,
+        frames_per_shot=max_frames,
+        frame_path=str(frame_path) if frame_exists else None,
+        reference_paths=[r["path"] for r in shared_refs],
+    )
+
+    return {
+        "ok": True,
+        "chain_id": chain_id,
+        "beat_numbers": [int(b["beat_number"]) for b in chain_beats],
+        "shot_count": len(chain_beats),
+        "checkpoint": checkpoint,
+        "width": width,
+        "height": height,
+        "frames_per_shot": max_frames,
+        "total_duration_seconds": round(max_frames * len(chain_beats) / 24.0, 2),
+        "shots": shots_out,
+        "references": [{"tag": f"<Picture {i + 1}>", **r} for i, r in enumerate(shared_refs)],
+        "script_preview": script[:800],
+        "start_frame_path": _h3_display_url(
+            ctx, output_dir, str(frame_path) if frame_exists else None
+        ),
+        "frame_missing": not frame_exists,
+        "worker_status": worker_status,
+        "issues": issues,
+        "can_enqueue": not issues,
+        "input_fingerprint": fingerprint,
+        "max_shots": RUNPOD_H3_MULTISHOT_MAX_SHOTS,
+    }
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/multishot/{chain_id}/video")
+async def generate_multishot_video(
+    project: str,
+    episode_num: int,
+    chain_id: str,
+    body: MultishotVideoRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Enqueue a MiniMax H3 Multishot job for this chain. Call
+    `/multishot/{chain_id}/review` first and pass its `input_fingerprint`
+    back as `review_fingerprint` — a mismatch means something the review
+    looked at (a beat's prompt, its reference images, the first frame)
+    changed since, and this returns `input_stale` instead of enqueuing a
+    job that no longer matches what was reviewed (same contract as every
+    other review→enqueue pair in this file)."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+
+    beats = await store.get_beats_as_dicts(episode_num)
+    chain_beats, chain_error = _multishot_chain_beats(beats, chain_id)
+    if chain_error:
+        return {"ok": False, "error": chain_error}
+
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_MAX_SHOTS, _runpod_h3_multishot_configured
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        dims_for_multishot,
+        join_shots_script,
+        new_seed,
+    )
+    from novelvideo.seedance2_i2v.models import parse_seedance2_config
+    from novelvideo.utils.path_resolver import PathResolver
+
+    if not _runpod_h3_multishot_configured():
+        return {
+            "ok": False,
+            "error": "RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置",
+        }
+    if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
+        return {
+            "ok": False,
+            "error": (
+                f"链条有 {len(chain_beats)} 个 beat，超过当前上限 "
+                f"{RUNPOD_H3_MULTISHOT_MAX_SHOTS}"
+            ),
+        }
+
+    character_map = await _build_character_map(
+        store, beats, username, project_name, episode_num=episode_num
+    )
+    shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+    if ref_error:
+        return {"ok": False, "error": ref_error}
+    checkpoint = "ref2va" if shared_refs else "fl2va"
+
+    paths = PathResolver(output_dir, episode_num)
+    frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
+    if not frame_path.exists():
+        return {
+            "ok": False,
+            "error": f"beat {chain_beats[0]['beat_number']} 的首帧不存在，请先生成预览",
+        }
+
+    max_frames, _shots = await _multishot_per_shot_frames(output_dir, episode_num, chain_beats)
+
+    prompts: list[str] = []
+    for b in chain_beats:
+        beat_num = int(b["beat_number"])
+        h3_config = parse_seedance2_config(b.get("seedance2_config_json"))
+        if h3_config.prompt_source != "minimax_h3" or not h3_config.final_prompt.strip():
+            return {"ok": False, "error": f"beat {beat_num} 还没有生成 MiniMax H3 提示词"}
+        prompts.append(h3_config.final_prompt)
+
+    width, height = dims_for_multishot("9:16", "formal")
+    script = join_shots_script(prompts)
+
+    fingerprint = _multishot_review_fingerprint(
+        chain_id=chain_id,
+        script=script,
+        checkpoint=checkpoint,
+        frames_per_shot=max_frames,
+        frame_path=str(frame_path),
+        reference_paths=[r["path"] for r in shared_refs],
+    )
+    if body.review_fingerprint is not None and body.review_fingerprint != fingerprint:
+        return {"ok": False, "error": "input_stale", "input_fingerprint": fingerprint}
+
+    config = {
+        "chain_id": chain_id,
+        "beat_numbers": [int(b["beat_number"]) for b in chain_beats],
+        "script": script,
+        "checkpoint": checkpoint,
+        "width": width,
+        "height": height,
+        "frames_per_shot": max_frames,
+        "seed": new_seed(),
+        "start_image_path": str(frame_path),
+        "reference_image_paths": [r["path"] for r in shared_refs],
+    }
+
+    if ctx is not None:
+        queued = await get_task_backend().enqueue_project_task(
+            ctx,
+            product_surface="mainline",
+            task_type="multishot_video",
+            queue_kind="video",
+            episode=episode_num,
+            scope=chain_id,
+            payload={"config": config, "output_dir": output_dir, "billing": {}},
+        )
+        return {
+            "ok": True,
+            "task_type": "multishot_video",
+            "task_id": queued.task_state.task_id,
+            "task_key": project_task_state_key(
+                "multishot_video", ctx.project_id, episode_num, scope=chain_id
+            ),
+            "backend": queued.backend,
+            "queue": queued.queue,
+            "message": f"第 {episode_num} 集 Multishot 链条 {chain_id} 视频生成已入队",
+        }
+
+    return {"ok": False, "error": "Multishot 视频生成需要 project context"}
+
+
 # ── RunPod Qwen-Image-Edit-2511 render review (parallels the H3 video
 # review above, same reasons: ~10 minutes of RunPod GPU time per render is
 # too expensive to spend blind on a sketch/reference mismatch) ──────────
@@ -6002,7 +6373,11 @@ async def review_qwen_edit_render(
     try:
         from novelvideo.runpod_worker_control import get_status
 
-        worker_status = await get_status()
+        # `runpod_qwen_edit*` and `runpod_qwen21*` now live on 2 separate
+        # endpoints (split 2026-10-19) — pick the right one for this
+        # selection rather than always asking the Qwen-Edit worker's status.
+        worker_key = "qwen_edit" if selection.startswith("runpod_qwen_edit") else "qwen_t2i"
+        worker_status = await get_status(worker_key)
     except Exception as exc:  # noqa: BLE001
         worker_status = {"error": str(exc)}
 

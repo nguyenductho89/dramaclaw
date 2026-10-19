@@ -609,6 +609,10 @@ class SQLiteStore:
             "shot_order": "INTEGER",
             "duration_seconds": "REAL",
             "is_manual_shot": "INTEGER DEFAULT 0",
+            # MiniMax H3 Multishot (2026-10-19): groups consecutive beats
+            # into one continuous take — see `models.py`'s
+            # `NovelVisualBeat.multishot_chain_id`.
+            "multishot_chain_id": "TEXT DEFAULT ''",
         }
         for name, definition in columns.items():
             _add_column_if_missing(db, "beats", name, definition)
@@ -2439,6 +2443,10 @@ class SQLiteStore:
                 if "is_manual_shot" in row.keys() and row["is_manual_shot"] is not None
                 else False
             ),
+            multishot_chain_id=(
+                row["multishot_chain_id"] if "multishot_chain_id" in row.keys() else ""
+            )
+            or "",
         )
 
     async def list_visual_beats(self) -> List[NovelVisualBeat]:
@@ -2534,6 +2542,7 @@ class SQLiteStore:
                     "shot_order": getattr(b, "shot_order", None),
                     "duration_seconds": getattr(b, "duration_seconds", None),
                     "is_manual_shot": bool(getattr(b, "is_manual_shot", False)),
+                    "multishot_chain_id": getattr(b, "multishot_chain_id", "") or "",
                 }
             )
         return result
@@ -2577,6 +2586,7 @@ class SQLiteStore:
         shot_order: int | None = None,
         duration_seconds: float | None = None,
         is_manual_shot: bool | None = None,
+        multishot_chain_id: str | None = None,
     ) -> bool:
         bn = beat_number
         if bn is None:
@@ -2617,6 +2627,8 @@ class SQLiteStore:
             properties["duration_seconds"] = float(duration_seconds)
         if is_manual_shot is not None:
             properties["is_manual_shot"] = 1 if is_manual_shot else 0
+        if multishot_chain_id is not None:
+            properties["multishot_chain_id"] = str(multishot_chain_id or "")
 
         if scene_ref is not None:
             beat_payload = {"scene_ref": scene_ref}

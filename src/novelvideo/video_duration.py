@@ -65,6 +65,14 @@ def video_duration_bounds_for_backend(
         # MiniMax H3's frame grid is 17k+5 at 24fps, clamped to 124-294
         # frames (~5.17-12.25s) — see `runpod_minimax_h3_video.py`.
         "runpod_minimax_h3": (5, 12),
+        # Multishot (`runpod_minimax_h3_multishot_video.py`): this bound is
+        # PER SHOT (one beat), same grid/clamp as 1-shot H3 above — each
+        # beat in the chain still resolves its own target duration through
+        # the normal beat-duration path before being converted to frames
+        # via `frames_for_shot()`. The chain's TOTAL duration is whatever
+        # `RUNPOD_H3_MULTISHOT_MAX_SHOTS` shots of this length add up to;
+        # there is no separate "whole chain" duration bound here.
+        "runpod_minimax_h3_multishot": (5, 12),
     }
     return legacy_bounds.get(str(backend or "").strip().lower(), (None, None))
 

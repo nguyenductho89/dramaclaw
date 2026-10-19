@@ -627,9 +627,20 @@ QWEN_IMAGE_BASE_URL = os.environ.get(
     "QWEN_IMAGE_BASE_URL", "https://dashscope-intl.aliyuncs.com/api/v1"
 )
 QWEN_IMAGE_TIMEOUT_SECONDS = _env_float("QWEN_IMAGE_TIMEOUT_SECONDS", 180.0)
-# Dev-only: RunPod Serverless endpoint from the `photoreal-short-drama-generator`
-# project, running ComfyUI + Qwen-Image 2.1 (not DashScope — a different Qwen
-# image stack with its own worker, see nanobanana_grid.py
+# Dev-only: 3 independent RunPod Serverless endpoints (split 2026-10-19 from a
+# single shared endpoint that used to run Qwen-Image 2.1 + Qwen-Image-Edit-2511
+# + MiniMax H3 on one worker image — see `runpod-h3-qwen-endpoints.md` and
+# CLAUDE.md for why: SageAttention is global-on-worker so Qwen graphs had to
+# explicitly disable it, and every cold start paid to load all 3 model
+# families even though a job only ever needs one). Each endpoint now has its
+# own id/timeout/idle-timeout; they still share the same R2 bucket/credentials
+# below (not a per-endpoint concern) and the same network volume
+# (`zyen2jmxt3`, unchanged — moving to a RunPod Global Volume is a separate,
+# deferred piece of work, not done in this split).
+#
+# This one (`RUNPOD_QWEN_IMAGE_ENDPOINT_ID`, display name
+# `qwen-image-t2i-fast`) now runs ONLY Qwen-Image 2.1 (not DashScope — a
+# different Qwen image stack with its own worker, see nanobanana_grid.py
 # `_call_runpod_qwen_image_api`). The worker only accepts/returns files via
 # Cloudflare R2 (no base64 path), so this needs its own R2 bucket config,
 # independent of any other R2/S3 usage elsewhere in the app.
@@ -670,18 +681,27 @@ def _runpod_qwen_image_configured() -> bool:
     )
 
 
-# Dev-only: Qwen-Image-Edit-2511 on the same RunPod endpoint/worker as
-# RUNPOD_QWEN_IMAGE_* above, but a genuinely different model family — built on
-# the original 20B Qwen-Image architecture with a Qwen2.5-VL-7B text encoder,
-# not Qwen-Image-2.1's 7B/Qwen3-VL-8B pair, so it needs its own UNET/text
+# Dev-only: Qwen-Image-Edit-2511, on its OWN RunPod endpoint
+# (`qwen-edit-2511-relight`, split out 2026-10-19) — a genuinely different
+# model family from RUNPOD_QWEN_IMAGE_* above, built on the original 20B
+# Qwen-Image architecture with a Qwen2.5-VL-7B text encoder, not
+# Qwen-Image-2.1's 7B/Qwen3-VL-8B pair, so it needs its own UNET/text
 # encoder/VAE files (none shared with RUNPOD_QWEN_IMAGE_*) and its own ComfyUI
 # node family (TextEncodeQwenImageEditPlus + Flux-Kontext nodes, not
 # TextEncodeQwenImage21/QwenImage21Cache). See nanobanana_grid.py
-# `_call_runpod_qwen_edit_image_api`. Used only for the "render" stage
+# `_call_runpod_qwen_edit_image_api`. Used for the "render" stage
 # (compositing a character identity onto an existing sketch) — verified
 # end-to-end 2026-10-14 to reliably preserve the sketch's pose/composition
 # while applying the character's identity, unlike Qwen-Image-2.1's edit mode
-# for this same task (see CLAUDE.md).
+# for this same task — and for ad-hoc image edits such as relighting (see
+# CLAUDE.md).
+RUNPOD_QWEN_EDIT_ENDPOINT_ID = os.environ.get("RUNPOD_QWEN_EDIT_ENDPOINT_ID", "")
+RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS = _env_float(
+    "RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS", 1500.0
+)
+RUNPOD_QWEN_EDIT_IDLE_TIMEOUT_SECONDS = int(
+    _env_float("RUNPOD_QWEN_EDIT_IDLE_TIMEOUT_SECONDS", 90.0)
+)
 RUNPOD_QWEN_EDIT_UNET = os.environ.get(
     "RUNPOD_QWEN_EDIT_UNET", "qwen_image_edit_2511_int8_convrot.safetensors"
 )
@@ -692,7 +712,14 @@ RUNPOD_QWEN_EDIT_VAE = os.environ.get("RUNPOD_QWEN_EDIT_VAE", "qwen_image_vae.sa
 
 
 def _runpod_qwen_edit_configured() -> bool:
-    return _runpod_qwen_image_configured()
+    return bool(
+        RUNPOD_API_KEY
+        and RUNPOD_QWEN_EDIT_ENDPOINT_ID
+        and R2_ENDPOINT
+        and R2_BUCKET
+        and R2_ACCESS_KEY_ID
+        and R2_SECRET_ACCESS_KEY
+    )
 
 
 # Dev-only, render-only: Qwen-Image 2.1 (same checkpoint/endpoint as
@@ -753,19 +780,26 @@ def _runpod_qwen21_render_configured() -> bool:
     return _runpod_qwen_image_configured()
 
 
-# Dev-only: MiniMax-H3 video on the same RunPod endpoint/R2 bucket as
-# RUNPOD_QWEN_IMAGE_* (`a31613hf7l83r5`, RunPod display name
-# "qwen-t2i-h3-i2v-ref2va" since 2026-10-18 — was "photoreal-drama-h3", id
-# unchanged) — the only H3
-# path verified end-to-end (first frame + character-card reference images +
+# Dev-only: MiniMax-H3 video, on its OWN RunPod endpoint
+# (`a31613hf7l83r5`, RunPod display name `h3-i2v-ref2va` since the
+# 2026-10-19 3-way split — was `qwen-t2i-h3-i2v-ref2va` before that, and
+# `photoreal-drama-h3` before that; id unchanged throughout, it keeps its
+# model files/network volume and now carries ONLY H3) — the only H3 path
+# verified end-to-end (first frame + character-card reference images +
 # <d>[Vietnamese] dialogue + PDD 8-step acceleration + R2 mp4 with muxed
 # audio; see `movies/NgoaiTinhCongSo` in the photoreal project and
 # `.claude/CLAUDE.md`). Model files below come from that project's
 # `scripts/設定.json`; ported graph lives in `runpod_minimax_h3_video.py`.
-RUNPOD_H3_VIDEO_ENDPOINT_ID = os.environ.get(
-    "RUNPOD_H3_VIDEO_ENDPOINT_ID", RUNPOD_QWEN_IMAGE_ENDPOINT_ID
-)
+#
+# No fallback to RUNPOD_QWEN_IMAGE_ENDPOINT_ID anymore (there was one before
+# the split, since both used to live on the same endpoint) — H3 must have its
+# own id explicitly set, so a missing id fails `_runpod_h3_video_configured()`
+# loudly instead of silently routing to whichever endpoint now holds Qwen.
+RUNPOD_H3_VIDEO_ENDPOINT_ID = os.environ.get("RUNPOD_H3_VIDEO_ENDPOINT_ID", "")
 RUNPOD_H3_VIDEO_TIMEOUT_SECONDS = _env_float("RUNPOD_H3_VIDEO_TIMEOUT_SECONDS", 2400.0)
+RUNPOD_H3_VIDEO_IDLE_TIMEOUT_SECONDS = int(
+    _env_float("RUNPOD_H3_VIDEO_IDLE_TIMEOUT_SECONDS", 90.0)
+)
 RUNPOD_H3_UNET_REF2VA = os.environ.get(
     "RUNPOD_H3_UNET_REF2VA", "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 )
@@ -801,6 +835,100 @@ def _runpod_h3_video_configured() -> bool:
     return bool(
         RUNPOD_API_KEY
         and RUNPOD_H3_VIDEO_ENDPOINT_ID
+        and R2_ENDPOINT
+        and R2_BUCKET
+        and R2_ACCESS_KEY_ID
+        and R2_SECRET_ACCESS_KEY
+    )
+
+
+# Two-stage render (first pass at 1/RUNPOD_H3_STAGE2_SCALE_BY resolution ->
+# MiniMaxH3AVLatentUpscaleBy -> short partial-denoise redraw pass at full
+# resolution) + an audio-only refine pass, added 2026-10-19. Both reuse nodes
+# already shipped in the pinned `ComfyUI-MiniMax-H3-PDD-Acc` pack
+# (`MiniMaxH3AVLatentUpscaleBy`, `MiniMaxH3PDDAccScheduler`) except the audio
+# refine sampler, which needs a second pack — see RUNPOD_H3_CONTEXT_LOOP_*
+# below. Pass 1 keeps today's proven `RUNPOD_H3_PDD_REF2VA` nfe=8 Apply branch
+# unchanged; pass 2 patches a SEPARATE Apply branch off the same base model at
+# `RUNPOD_H3_STAGE2_NFE`, so pass-1 quality/timing is untouched if this is
+# disabled. Only applies to ref2va (fl2va I2V is unchanged). Not yet
+# benchmarked on real hardware — see `runpod-h3-qwen-endpoints.md`.
+RUNPOD_H3_TWO_STAGE_ENABLED = _env_bool("RUNPOD_H3_TWO_STAGE_ENABLED", False)
+RUNPOD_H3_STAGE2_SCALE_BY = _env_float("RUNPOD_H3_STAGE2_SCALE_BY", 1.5)
+RUNPOD_H3_STAGE2_UPSCALE_METHOD = os.environ.get(
+    "RUNPOD_H3_STAGE2_UPSCALE_METHOD", "bislerp"
+)
+# MiniMaxH3PDDAccScheduler only accepts "4", "6" or "8".
+RUNPOD_H3_STAGE2_NFE = os.environ.get("RUNPOD_H3_STAGE2_NFE", "6")
+# keep = round(nfe * denoise) blocks of the stage-2 grid are redrawn; the rest
+# of the latent is left as the upscaled pass-1 result.
+RUNPOD_H3_STAGE2_DENOISE = _env_float("RUNPOD_H3_STAGE2_DENOISE", 0.35)
+
+# Audio-only refine pass (`MiniMaxH3ChainAudioRefineSampler`, pack
+# `ethanfel/ComfyUI-MiniMaxH3-Context-Loop`, pinned at commit
+# `43afeffcc570beb5f7382593e79e4b211c7e02f6` — added to the H3 worker image
+# alongside `ComfyUI-MiniMax-H3-PDD-Acc`). Freezes the sampled video and only
+# re-denoises audio; does NOT require the pack's full "Chain Context" system
+# — the `context_latent` input is fed a plain pre-sample AV latent with no
+# `noise_mask` key, which the node treats as "no existing protection", i.e.
+# audio is fully eligible for refine everywhere (see `masked_context.py`'s
+# `_existing_mask_streams` in that pack: a missing `noise_mask` returns an
+# all-ones mask). cfg stays 1.0 like the rest of this PDD pipeline, so the
+# sampler's required `negative` conditioning is mathematically inert
+# (output = negative + cfg*(positive-negative) = positive at cfg=1) and can be
+# wired to the same conditioning as `positive`.
+RUNPOD_H3_AUDIO_REFINE_ENABLED = _env_bool("RUNPOD_H3_AUDIO_REFINE_ENABLED", False)
+RUNPOD_H3_AUDIO_REFINE_STEPS = int(_env_float("RUNPOD_H3_AUDIO_REFINE_STEPS", 4.0))
+RUNPOD_H3_AUDIO_REFINE_CFG = _env_float("RUNPOD_H3_AUDIO_REFINE_CFG", 1.0)
+RUNPOD_H3_AUDIO_REFINE_DENOISE = _env_float("RUNPOD_H3_AUDIO_REFINE_DENOISE", 0.5)
+RUNPOD_H3_CONTEXT_LOOP_PACK_COMMIT = "43afeffcc570beb5f7382593e79e4b211c7e02f6"
+
+
+# MiniMax H3 Multishot — a SEPARATE RunPod endpoint/worker image
+# (`h3-multishot-i2v-fl2va-ref2va`, id `u0hkrms7k1xeua`, shared with the
+# `comfy-trends` project) that chains several beats into one continuous
+# multi-shot video via the `H3MultishotSampler` node (pack
+# `jlucasmcrell/ComfyUI-H3-Multishot`, pinned commit
+# `d7d197709fc93c1afb125e3db1dfd4ac0ae28c60`, tag v2.7.2). Different node
+# family entirely from the 1-shot H3 graph above (`H3ModelLoaderAny`/
+# `H3ClipLoaderAny`, not `UNETLoader`/`CLIPLoader`).
+#
+# Added 2026-10-19 after reading the pack's source directly to root-cause
+# failures seen using this endpoint from `comfy-trends`/`photoreal` — see
+# `runpod-h3-qwen-endpoints.md` section 5a for the full table. Two fixes are
+# encoded here as config rather than left to the graph builder to get wrong
+# again:
+#   - `RUNPOD_H3_MULTISHOT_MAX_SHOTS` defaults low (2) for v1: nobody has run
+#     a chain this long before, and a 3-shot/243-frame chain was estimated at
+#     ~4.2h/~$5.2 and never actually tried.
+#   - There is deliberately NO `pin_frames` setting here — that parameter
+#     does not exist on `H3MultishotSampler` (only on the separate
+#     `H3MultishotMemorySampler`, which needs another pack that isn't
+#     installed); ComfyUI silently ignores unknown widget values, so the old
+#     client's `pin_frames=39` never did anything. Don't resurrect it without
+#     also installing `ComfyUI-H3-Motion-Context`.
+# `save_every_shot=True` is hardcoded in the graph builder (not an env flag)
+# to guard against the real host-RAM OOM seen before — see
+# `generators/runpod_minimax_h3_multishot_video.py`.
+RUNPOD_H3_MULTISHOT_ENDPOINT_ID = os.environ.get("RUNPOD_H3_MULTISHOT_ENDPOINT_ID", "")
+# Long chains can legitimately run for hours; this must NOT reuse
+# RUNPOD_H3_VIDEO_TIMEOUT_SECONDS (40 min — far too short, and the cause of a
+# real job being auto-cancelled near completion before, see
+# `runpod-h3-qwen-endpoints.md`). Capped at the endpoint's own 4h job timeout.
+RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS = _env_float(
+    "RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS", 14000.0
+)
+RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS = int(
+    _env_float("RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS", 90.0)
+)
+RUNPOD_H3_MULTISHOT_MAX_SHOTS = int(_env_float("RUNPOD_H3_MULTISHOT_MAX_SHOTS", 2.0))
+RUNPOD_H3_MULTISHOT_PACK_COMMIT = "d7d197709fc93c1afb125e3db1dfd4ac0ae28c60"
+
+
+def _runpod_h3_multishot_configured() -> bool:
+    return bool(
+        RUNPOD_API_KEY
+        and RUNPOD_H3_MULTISHOT_ENDPOINT_ID
         and R2_ENDPOINT
         and R2_BUCKET
         and R2_ACCESS_KEY_ID

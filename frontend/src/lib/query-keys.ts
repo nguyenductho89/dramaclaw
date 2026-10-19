@@ -137,6 +137,9 @@ export const queryKeys = {
   style: (id: string) => ["styles", "detail", id] as const,
   ttsVoices: (p: string) => ["projects", p, "tts", "voices"] as const,
   modelGateway: () => ["model-gateway", "config"] as const,
-  runpodWorker: () => ["runpod-worker", "status"] as const,
+  // One status per endpoint key since the 2026-10-19 split ("h3",
+  // "qwen_edit", "qwen_t2i", "multishot") — see runpod_worker_control.py.
+  runpodWorker: (key: string) => ["runpod-worker", "status", key] as const,
+  runpodWorkerKeys: () => ["runpod-worker", "keys"] as const,
   releaseNotifications: (locale: string) => ["release-notifications", locale] as const,
 };

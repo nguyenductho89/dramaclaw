@@ -91,6 +91,7 @@ _PROJECT_TASK_RESOURCE_KINDS = {
     "selected_regen": "render",
     "grid_regenerate": "render",
     "single_video": "video",
+    "multishot_video": "video",
     "compose_episode": "video",
     "global_optimize_video": "script",
     "audio_generation": "tts",

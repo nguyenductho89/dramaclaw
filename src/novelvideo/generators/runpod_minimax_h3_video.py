@@ -281,6 +281,9 @@ def build_h3_ref2va_graph(
     _chain_guides(
         graph, chain, cond=["7", 0], latent=["7", 1], vae_node="3", audio_vae_node="4", guider_node="8"
     )
+    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_mode_requested
+
+    apply_sage_patch(graph, "1", sage_mode_requested())
     return graph
 
 
@@ -380,6 +383,9 @@ def build_h3_fl2va_graph(
     if last_frame_name:
         graph["101"] = {"class_type": "LoadImage", "inputs": {"image": last_frame_name}}
         graph["24"]["inputs"]["last_frame"] = ["101", 0]
+    from novelvideo.generators.comfy_sage import apply_sage_patch, sage_mode_requested
+
+    apply_sage_patch(graph, "20", sage_mode_requested())
     return graph
 
 

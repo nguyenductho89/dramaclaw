@@ -781,6 +781,15 @@ RUNPOD_H3_VIDEO_VAE = os.environ.get(
 RUNPOD_H3_AUDIO_VAE = os.environ.get(
     "RUNPOD_H3_AUDIO_VAE", "minimax_h3_audio_vae_fp32.safetensors"
 )
+# SageAttention for H3 sampling (KJNodes `PathchSageAttentionKJ`, needs a worker
+# image with `sageattention` + ComfyUI-KJNodes installed). Empty = off, graphs
+# unchanged. Otherwise the `sage_attention` value to use, e.g. "auto". The patch
+# is global on the worker, so while enabled Qwen graphs on the same endpoint
+# explicitly switch it back off (see generators/comfy_sage.py).
+RUNPOD_H3_SAGE_ATTENTION = os.environ.get("RUNPOD_H3_SAGE_ATTENTION", "")
+# Value of `sage_attention` that reverts to stock attention. Verify against the
+# worker's `object_info` for PathchSageAttentionKJ before enabling.
+RUNPOD_SAGE_DISABLED_MODE = os.environ.get("RUNPOD_SAGE_DISABLED_MODE", "disabled")
 # PDD acceleration (8-step) — only applies to ref2va; fl2va always runs the
 # base 20-step res_multistep/simple schedule (no PDD file exists for it).
 RUNPOD_H3_PDD_REF2VA = os.environ.get(

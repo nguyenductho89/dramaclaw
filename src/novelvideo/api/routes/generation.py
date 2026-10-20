@@ -5191,6 +5191,10 @@ async def generate_single_video(
         ]
         if body.h3_profile:
             config["profile"] = body.h3_profile
+        if body.two_stage is not None:
+            config["two_stage"] = bool(body.two_stage)
+        if body.audio_refine is not None:
+            config["audio_refine"] = bool(body.audio_refine)
 
     billing_resolution = single_video_resolution or _seedance2_resolution_for_backend(
         body.video_backend,

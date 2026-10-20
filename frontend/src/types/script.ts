@@ -24,4 +24,6 @@ export interface BeatUpdate {
   speaker?: string;
   detected_identities?: string[];
   detected_props?: string[];
+  /** "" clears it. See `Beat.multishot_chain_id`. */
+  multishot_chain_id?: string;
 }

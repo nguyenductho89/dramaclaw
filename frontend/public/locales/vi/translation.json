@@ -3727,6 +3727,13 @@
         "selectionHint": "Chọn các beat để tạo lại phác thảo và render hàng loạt",
         "batchRegenSketch": "Tạo lại phác thảo",
         "batchRegenRender": "Render lại",
+        "groupMultishot": "Gộp thành Multishot",
+        "ungroupMultishot": "Bỏ gộp",
+        "reviewMultishot": "Xem trước Multishot",
+        "groupMultishotNeedsConsecutive": "Chọn 2 beat liên tiếp trở lên để gộp",
+        "groupMultishotSuccess": "Đã gộp các beat thành 1 chuỗi Multishot",
+        "groupMultishotFailed": "Gộp beat thất bại",
+        "ungroupMultishotSuccess": "Đã bỏ gộp khỏi chuỗi Multishot",
         "dragToResize": "Kéo để chỉnh tỉ lệ bề ngang trái/phải"
       },
       "text": {
@@ -3998,6 +4005,8 @@
         "generateGrokPrompt": "Tạo prompt Grok",
         "generateSubjectPrompt": "Tạo prompt chủ thể",
         "generateH3Prompt": "Tạo prompt MiniMax H3",
+        "h3TwoStage": "Hai giai đoạn (upscale + vẽ lại)",
+        "h3AudioRefine": "Tinh chỉnh âm thanh",
         "seedance2CropTitleWithAspect": "Cắt {{aspect}}",
         "seedance2CropDragHandle": "Di chuyển vùng cắt"
       },
@@ -4049,6 +4058,27 @@
         "startWorker": "Bật worker",
         "confirm": "Xác nhận",
         "cancel": "Hủy"
+      },
+      "multishotReview": {
+        "title": "Xem trước Multishot",
+        "loading": "Đang tải bản xem trước…",
+        "workerOff": "RunPod worker đang tắt",
+        "startWorker": "Bật worker",
+        "shotCountLabel": "Số shot",
+        "checkpointLabel": "Checkpoint",
+        "resolutionLabel": "Độ phân giải",
+        "durationLabel": "Tổng thời lượng",
+        "shotsLabel": "Danh sách shot",
+        "beatLabel": "Beat {{n}}",
+        "dialogue": "lời thoại",
+        "promptReady": "đã có prompt",
+        "promptMissing": "thiếu prompt",
+        "referencesLabel": "Ảnh tham chiếu",
+        "scriptPreviewLabel": "Xem trước script",
+        "confirm": "Xác nhận",
+        "inputStale": "Có thay đổi từ lúc xem trước — đang tải lại…",
+        "enqueueFailed": "Vào hàng đợi thất bại",
+        "enqueued": "Đã đưa video Multishot vào hàng đợi"
       },
       "sketch": {
         "switched": "Đã đổi phác thảo",

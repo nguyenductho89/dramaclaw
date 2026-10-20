@@ -320,6 +320,14 @@ export function VideoPane({
   // Dev-only MiniMax H3 backend: confirm goes through a review dialog instead
   // of the plain AlertDialog `regenConfirm` above.
   const [h3ReviewOpen, setH3ReviewOpen] = useState(false);
+  // Per-generation override of the env-gated H3 two-stage/audio-refine
+  // passes (see `SingleVideoRequestBody.two_stage`/`audio_refine`) —
+  // explicit per checkbox state, always sent (not left `undefined`), so
+  // the checkbox is the one source of truth for this generation rather
+  // than silently falling back to whatever the server's .env happens to
+  // have right now.
+  const [h3TwoStage, setH3TwoStage] = useState(false);
+  const [h3AudioRefine, setH3AudioRefine] = useState(false);
   const [seedance2CropIntent, setSeedance2CropIntent] =
     useState<Seedance2CropIntent | null>(null);
   const [seedance2TrimAsset, setSeedance2TrimAsset] =
@@ -2453,6 +2461,22 @@ export function VideoPane({
                 </div>
               </div>
             )}
+            {showRunpodH3Config && (
+              <>
+                <Seedance2Checkbox
+                  id={`${seedance2Id}-h3-two-stage`}
+                  checked={h3TwoStage}
+                  label={t("episode.workbench.video.h3TwoStage")}
+                  onChange={setH3TwoStage}
+                />
+                <Seedance2Checkbox
+                  id={`${seedance2Id}-h3-audio-refine`}
+                  checked={h3AudioRefine}
+                  label={t("episode.workbench.video.h3AudioRefine")}
+                  onChange={setH3AudioRefine}
+                />
+              </>
+            )}
           </div>
           {showSeedance2Config && seedance2Draft.return_last_frame && (
             <div
@@ -2794,6 +2818,8 @@ export function VideoPane({
             seedance2ConfigJson: JSON.stringify(
               serializeSeedance2Config(seedance2Draft, seedance2Config),
             ),
+            two_stage: h3TwoStage,
+            audio_refine: h3AudioRefine,
           }}
           onConfirm={handleH3Confirm}
         />

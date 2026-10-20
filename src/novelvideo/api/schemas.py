@@ -446,6 +446,12 @@ class SingleVideoRequest(BaseModel):
     review_fingerprint: Optional[str] = None
     h3_profile: Optional[Literal["formal", "draft"]] = None
     h3_reference_keys: Optional[list[str]] = None
+    # Per-generation override for `runpod_minimax_h3`'s env-gated two-stage
+    # (upscale + redraw pass) / audio-refine passes — None means "use the
+    # RUNPOD_H3_TWO_STAGE_ENABLED/RUNPOD_H3_AUDIO_REFINE_ENABLED .env
+    # default" (see `generators/runpod_minimax_h3_video.py`'s `generate()`).
+    two_stage: Optional[bool] = None
+    audio_refine: Optional[bool] = None
 
 
 # ── 风格 ──────────────────────────────────────────────────────────────────────

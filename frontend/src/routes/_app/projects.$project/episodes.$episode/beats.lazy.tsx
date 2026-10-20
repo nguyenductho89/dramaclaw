@@ -20,7 +20,7 @@ import { useBeatsWorkbenchParam } from "@/hooks/use-beats-workbench-param";
 import { useEpisodeImageTaskInvalidation } from "@/hooks/use-episode-image-task-invalidation";
 import { useSelection } from "@/hooks/use-selection";
 import { useViewToggles } from "@/hooks/use-view-toggles";
-import { useGenerateScript } from "@/lib/queries/scripts";
+import { useGenerateScript, useUpdateBeat } from "@/lib/queries/scripts";
 import {
   useSketchSettings,
   type SketchAspectRatio,
@@ -64,6 +64,7 @@ import {
 } from "@/components/episode/beat-workbench/sketch-studio-actions";
 import { RenderGridGallery } from "@/components/episode/beat-workbench/render-grid-gallery";
 import { ViewToggles } from "@/components/episode/beat-workbench/view-toggles";
+import { MultishotReviewDialog } from "@/components/episode/beat-workbench/multishot-review-dialog";
 import { ActionPanel } from "@/components/episode/beat-workbench/action-panel";
 import { RenderPlanDialog } from "@/components/episode/beat-workbench/render-plan-dialog";
 import { useHideHeaderOnScroll } from "@/components/episode/header-collapse";
@@ -353,6 +354,80 @@ export function BeatsTabContent() {
     if (checkedBeatNums.length === 0) return;
     setRenderPlanOpen(true);
   }, [checkedBeatNums.length]);
+
+  // MiniMax H3 Multishot (dev-only, see `multishot-review-dialog.tsx`):
+  // group the current multi-selection into one continuous take, or open the
+  // review dialog for an already-grouped selection. "Consecutive" is
+  // checked against `beats`' own display order (same order the backend's
+  // `_multishot_chain_beats` validates against), not raw beat_number
+  // adjacency, since manual shots can reorder beats.
+  const checkedBeatsOrdered = useMemo(
+    () =>
+      checkedBeatNums
+        .map((n) => beats.find((b) => b.beat_number === n))
+        .filter((b): b is (typeof beats)[number] => b !== undefined),
+    [beats, checkedBeatNums],
+  );
+  const checkedConsecutive = useMemo(() => {
+    if (checkedBeatNums.length < 2) return false;
+    const indices = checkedBeatNums.map((n) =>
+      beats.findIndex((b) => b.beat_number === n),
+    );
+    if (indices.some((i) => i === -1)) return false;
+    const sorted = [...indices].sort((a, b) => a - b);
+    return sorted.every((v, i) => i === 0 || v === sorted[i - 1] + 1);
+  }, [beats, checkedBeatNums]);
+  const existingMultishotChainId = useMemo(() => {
+    if (checkedBeatsOrdered.length !== checkedBeatNums.length) return null;
+    const ids = checkedBeatsOrdered.map((b) => b.multishot_chain_id || "");
+    if (ids.some((id) => !id)) return null;
+    return ids.every((id) => id === ids[0]) ? ids[0] : null;
+  }, [checkedBeatsOrdered, checkedBeatNums.length]);
+  const multishotState: "none" | "groupable" | "grouped" = existingMultishotChainId
+    ? "grouped"
+    : checkedConsecutive
+    ? "groupable"
+    : "none";
+  const updateBeat = useUpdateBeat(project, epNum);
+  const [multishotReviewOpen, setMultishotReviewOpen] = useState(false);
+  const [multishotReviewChainId, setMultishotReviewChainId] = useState("");
+
+  const handleGroupMultishot = useCallback(async () => {
+    if (!checkedConsecutive) {
+      toast.error(t("episode.workbench.view.groupMultishotNeedsConsecutive"));
+      return;
+    }
+    const chainId = crypto.randomUUID();
+    try {
+      await Promise.all(
+        checkedBeatNums.map((beatNum) =>
+          updateBeat.mutateAsync({ beatNum, data: { multishot_chain_id: chainId } }),
+        ),
+      );
+      toast.success(t("episode.workbench.view.groupMultishotSuccess"));
+    } catch {
+      toast.error(t("episode.workbench.view.groupMultishotFailed"));
+    }
+  }, [checkedBeatNums, checkedConsecutive, t, updateBeat]);
+
+  const handleUngroupMultishot = useCallback(async () => {
+    try {
+      await Promise.all(
+        checkedBeatNums.map((beatNum) =>
+          updateBeat.mutateAsync({ beatNum, data: { multishot_chain_id: "" } }),
+        ),
+      );
+      toast.success(t("episode.workbench.view.ungroupMultishotSuccess"));
+    } catch {
+      toast.error(t("episode.workbench.view.groupMultishotFailed"));
+    }
+  }, [checkedBeatNums, t, updateBeat]);
+
+  const handleReviewMultishot = useCallback(() => {
+    if (!existingMultishotChainId) return;
+    setMultishotReviewChainId(existingMultishotChainId);
+    setMultishotReviewOpen(true);
+  }, [existingMultishotChainId]);
 
   const dispatchSketchPlanItems = useCallback(async () => {
     const dispatchableItems = sketchPlanItems.filter(
@@ -683,6 +758,10 @@ export function BeatsTabContent() {
                 onClearSelection={clearSelection}
                 onBatchRegenSketch={openSketchPlan}
                 onBatchRegenRender={openRenderPlan}
+                multishotState={multishotState}
+                onGroupMultishot={() => void handleGroupMultishot()}
+                onUngroupMultishot={() => void handleUngroupMultishot()}
+                onReviewMultishot={handleReviewMultishot}
                 legendSlot={
                   <SketchColorLegend project={project} episode={epNum} />
                 }
@@ -913,6 +992,14 @@ export function BeatsTabContent() {
           toast.success(t("episode.renderPlan.dispatched"));
           clearSelection();
         }}
+      />
+      <MultishotReviewDialog
+        open={multishotReviewOpen}
+        onOpenChange={setMultishotReviewOpen}
+        project={project}
+        episode={epNum}
+        chainId={multishotReviewChainId}
+        onEnqueued={clearSelection}
       />
       <AlertDialog
         open={pendingAspect !== null}

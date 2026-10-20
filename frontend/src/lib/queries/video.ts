@@ -733,6 +733,11 @@ export interface SingleVideoRequestBody {
   review_fingerprint?: string;
   h3_profile?: "formal" | "draft";
   h3_reference_keys?: string[];
+  /** Per-generation override of the env-gated H3 two-stage
+   * (upscale+redraw) / audio-refine passes — `undefined` means "use the
+   * server's .env default", not "off". See `generators/runpod_minimax_h3_video.py`. */
+  two_stage?: boolean;
+  audio_refine?: boolean;
 }
 
 function buildSingleVideoRequestJson(body: SingleVideoRequestBody) {
@@ -755,6 +760,8 @@ function buildSingleVideoRequestJson(body: SingleVideoRequestBody) {
     ...(body.h3_reference_keys !== undefined
       ? { h3_reference_keys: body.h3_reference_keys }
       : {}),
+    ...(body.two_stage !== undefined ? { two_stage: body.two_stage } : {}),
+    ...(body.audio_refine !== undefined ? { audio_refine: body.audio_refine } : {}),
   };
 }
 

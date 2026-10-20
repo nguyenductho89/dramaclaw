@@ -231,8 +231,17 @@ async def _run_single_video_async(
         generate_kwargs["audio_setting"] = str(config["audio_setting"])
     if is_seedance2_backend:
         generate_kwargs["seedance2_config"] = seedance2_config
-    if backend_str == "runpod_minimax_h3" and config.get("profile"):
-        generate_kwargs["profile"] = str(config["profile"])
+    if backend_str == "runpod_minimax_h3":
+        if config.get("profile"):
+            generate_kwargs["profile"] = str(config["profile"])
+        # Per-generation override of the env-gated two-stage/audio-refine
+        # passes — None (key absent) means "fall through to generate()'s
+        # own RUNPOD_H3_TWO_STAGE_ENABLED/RUNPOD_H3_AUDIO_REFINE_ENABLED
+        # .env default", so only forward the key when it was actually set.
+        if "two_stage" in config:
+            generate_kwargs["two_stage"] = bool(config["two_stage"])
+        if "audio_refine" in config:
+            generate_kwargs["audio_refine"] = bool(config["audio_refine"])
 
     result = await video_gen.generate(**generate_kwargs)
     if result.status.value != "done":

@@ -19,6 +19,15 @@ interface ViewTogglesProps {
   onClearSelection: () => void;
   onBatchRegenSketch: () => void;
   onBatchRegenRender: () => void;
+  /** Multishot grouping state of the current multi-selection (dev-only
+   * MiniMax H3 Multishot feature — see `multishot-review-dialog.tsx`):
+   * "groupable" when 2+ CONSECUTIVE beats are selected and none already
+   * belongs to a chain, "grouped" when every selected beat already shares
+   * the same non-empty chain id, "none" otherwise (buttons hidden). */
+  multishotState?: "none" | "groupable" | "grouped";
+  onGroupMultishot?: () => void;
+  onUngroupMultishot?: () => void;
+  onReviewMultishot?: () => void;
   legendSlot?: React.ReactNode;
 }
 
@@ -30,6 +39,10 @@ export function ViewToggles({
   onClearSelection,
   onBatchRegenSketch,
   onBatchRegenRender,
+  multishotState = "none",
+  onGroupMultishot,
+  onUngroupMultishot,
+  onReviewMultishot,
   legendSlot,
 }: ViewTogglesProps) {
   const { t } = useTranslation();
@@ -90,6 +103,37 @@ export function ViewToggles({
               >
                 {t("episode.workbench.view.batchRegenRender")}
               </button>
+              {multishotState === "groupable" && onGroupMultishot && (
+                <button
+                  type="button"
+                  onClick={onGroupMultishot}
+                  className="inline-flex h-[22px] items-center rounded-[5px] border border-violet-400/35 bg-violet-400/[0.07] px-2 text-[11px] font-medium text-violet-300 transition-colors hover:border-violet-400/55 hover:bg-violet-400/[0.12] hover:text-violet-200"
+                >
+                  {t("episode.workbench.view.groupMultishot")}
+                </button>
+              )}
+              {multishotState === "grouped" && (
+                <>
+                  {onReviewMultishot && (
+                    <button
+                      type="button"
+                      onClick={onReviewMultishot}
+                      className="inline-flex h-[22px] items-center rounded-[5px] border border-violet-400/35 bg-violet-400/[0.07] px-2 text-[11px] font-medium text-violet-300 transition-colors hover:border-violet-400/55 hover:bg-violet-400/[0.12] hover:text-violet-200"
+                    >
+                      {t("episode.workbench.view.reviewMultishot")}
+                    </button>
+                  )}
+                  {onUngroupMultishot && (
+                    <button
+                      type="button"
+                      onClick={onUngroupMultishot}
+                      className="inline-flex h-[22px] items-center rounded-[5px] border border-white/[0.09] bg-white/[0.015] px-2 text-[11px] font-medium text-muted-foreground/85 transition-colors hover:border-white/[0.16] hover:bg-white/[0.04] hover:text-foreground"
+                    >
+                      {t("episode.workbench.view.ungroupMultishot")}
+                    </button>
+                  )}
+                </>
+              )}
               <button
                 type="button"
                 onClick={onClearSelection}

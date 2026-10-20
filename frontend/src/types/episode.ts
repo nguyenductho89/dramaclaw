@@ -88,6 +88,10 @@ export interface Beat {
   detected_props?: string[];
   /** True for user-inserted manual shots — only these can be deleted. */
   is_manual_shot?: boolean;
+  /** Groups N consecutive beats into one continuous MiniMax H3 Multishot
+   * take; "" means not part of any chain. See
+   * `multishot-review-dialog.tsx` / `runpod-h3-qwen-endpoints.md` §5. */
+  multishot_chain_id?: string;
   sketch_url?: string | null;
   frame_url?: string | null;
   video_url?: string | null;

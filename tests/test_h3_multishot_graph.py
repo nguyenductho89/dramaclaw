@@ -33,8 +33,24 @@ def test_frames_for_shot_clamped_to_v1_ceiling():
     assert ms.frames_for_shot(60.0, is_dialogue=False) == ms._SHOT_FRAME_GRID_MAX
 
 
-def test_join_shots_script_uses_triple_dash_separator():
-    assert ms.join_shots_script(["a", "b", "c"]) == "a\n---\nb\n---\nc"
+def test_join_shots_script_is_json_prompts_list():
+    import json
+
+    script = ms.join_shots_script([" a ", "b", "c"])
+    assert json.loads(script) == {"prompts": ["a", "b", "c"]}
+
+
+def test_join_shots_script_survives_bracket_led_prompts():
+    """Regression for real job ad485558: the pack treats a script whose
+    first char is `[`/`{` as JSON, and every H3 prompt starts `[Shot 1]`.
+    The JSON form must round-trip such prompts (and stray `---` lines)
+    exactly."""
+    import json
+
+    prompts = ["[Shot 1] Tiếng Việt <d>[Vietnamese] chào</d>", "[Shot 1] b\n---\nnot a split"]
+    script = ms.join_shots_script(prompts)
+    assert script.startswith("{")
+    assert json.loads(script)["prompts"] == prompts
 
 
 def _base_kwargs(**overrides):

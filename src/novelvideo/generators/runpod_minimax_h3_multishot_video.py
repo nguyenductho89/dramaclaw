@@ -99,13 +99,20 @@ def frames_for_shot(seconds: float, *, is_dialogue: bool) -> int:
 
 
 def join_shots_script(shot_prompts: list[str]) -> str:
-    """`H3MultishotSampler.script`: one prompt per shot, joined by `---` on
-    its own line. Each `shot_prompts[i]` should already independently repeat
-    (not abbreviate) character/scene descriptions per the pack's own
-    AIRLOCK/LAND SETTLED rules — see the multishot prompt builder, not this
-    function, for that."""
-    return "\n---\n".join(p.strip() for p in shot_prompts)
+    """`H3MultishotSampler.script`, always as the node's JSON form
+    `{"prompts": [...]}` — never the plain `---`-separated form.
 
+    The pack's `_parse_script` decides JSON vs plain text by the FIRST
+    character of the whole script: anything starting with `[` or `{` is
+    parsed as JSON and raises if that fails. Every DramaClaw H3 prompt
+    starts with the mandatory `[Shot 1]` tag, so a plain `---` join always
+    failed on the worker ("H3 script looks like JSON but does not parse",
+    real job ad485558, 2026-10-21). JSON is the node's other documented
+    input form and is immune to whatever a prompt contains (`[`, `{`, a
+    stray `---` line). Each `shot_prompts[i]` should already independently
+    repeat (not abbreviate) character/scene descriptions per the pack's own
+    AIRLOCK/LAND SETTLED rules."""
+    return json.dumps({"prompts": [p.strip() for p in shot_prompts]}, ensure_ascii=False)
 
 def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
     """Resolve how a chain on `checkpoint` will be sampled, from config.

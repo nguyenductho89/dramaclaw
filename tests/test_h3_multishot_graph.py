@@ -161,3 +161,76 @@ def test_voice_refs_wired_to_correct_slots_in_order():
 def test_new_seed_is_uint32_range():
     seed = ms.new_seed()
     assert 0 <= seed <= 0xFFFFFFFF
+
+
+# ── PDD acceleration (2026-10-20) ─────────────────────────────────────────
+
+
+def _pdd_graph(**overrides):
+    kwargs = dict(
+        script="a\n---\nb",
+        shot_count=2,
+        width=768,
+        height=1344,
+        frames_per_shot=124,
+        seed=1,
+        steps=8,
+        checkpoint="ref2va",
+        pdd_nfe="8",
+        pdd_file="MiniMax-H3-Ref2VA-Acc-8Step.safetensors",
+    )
+    kwargs.update(overrides)
+    return ms.build_h3_multishot_graph(**kwargs)
+
+
+def test_pdd_wires_patched_model_and_trained_sigmas_into_sampler():
+    graph = _pdd_graph()
+    assert graph["5"]["class_type"] == "MiniMaxH3SigmaShift"
+    assert graph["5"]["inputs"]["model"] == ["1", 0]
+    assert graph["6"]["class_type"] == "MiniMaxH3PDDAccApply"
+    assert graph["6"]["inputs"]["nfe"] == "8"
+    assert graph["6"]["inputs"]["on_off_grid"] == "error"
+    sampler = graph["10"]["inputs"]
+    assert sampler["model"] == ["6", 0]
+    assert sampler["sigmas"] == ["6", 1]
+    assert sampler["sampler_name"] == "euler"
+    assert sampler["steps"] == 8
+
+
+def test_no_pdd_keeps_base_model_and_no_sigmas():
+    graph = _pdd_graph(pdd_nfe="", pdd_file="", steps=20)
+    assert "5" not in graph and "6" not in graph
+    assert graph["10"]["inputs"]["model"] == ["1", 0]
+    assert "sigmas" not in graph["10"]["inputs"]
+
+
+def test_pdd_rejects_off_grid_nfe_and_missing_file():
+
+
+    with pytest.raises(ValueError):
+        _pdd_graph(pdd_nfe="10")
+    with pytest.raises(ValueError):
+        _pdd_graph(pdd_file="")
+
+
+def test_output_scale_only_set_when_above_one():
+    assert "output_scale" not in _pdd_graph()["10"]["inputs"]
+    assert _pdd_graph(output_scale=1.5)["10"]["inputs"]["output_scale"] == 1.5
+
+
+def test_sampling_plan_ref2va_uses_pdd_fl2va_falls_back_without_file(monkeypatch):
+    import novelvideo.config as cfg
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import multishot_sampling_plan
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_PDD_NFE", "8")
+    monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "")
+    ref = multishot_sampling_plan("ref2va")
+    assert ref["pdd_nfe"] == "8" and ref["steps"] == 8 and ref["pdd_file"]
+    fl = multishot_sampling_plan("fl2va")
+    assert fl == {"pdd_nfe": "", "pdd_file": "", "steps": 20, "output_scale": 1.0}
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "MiniMax-H3-FL2VA-Acc-8Step.safetensors")
+    assert multishot_sampling_plan("fl2va")["pdd_file"].startswith("MiniMax-H3-FL2VA")
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_PDD_NFE", "")
+    assert multishot_sampling_plan("ref2va")["steps"] == 20

@@ -829,6 +829,13 @@ RUNPOD_SAGE_DISABLED_MODE = os.environ.get("RUNPOD_SAGE_DISABLED_MODE", "disable
 RUNPOD_H3_PDD_REF2VA = os.environ.get(
     "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors"
 )
+# FL2VA PDD file (official, `alibaba-pai/MiniMax-H3-Acc-LoRAs`, ~1.37GB) is
+# NOT on the network volume yet — empty means "not installed", and fl2va
+# graphs keep the base 20-step schedule. Set it to
+# "MiniMax-H3-FL2VA-Acc-8Step.safetensors" once the file is copied into
+# `models/pdd_acc/` on volume `zyen2jmxt3`. Never pair it with a ref2va UNET
+# (the Apply node's fingerprint check rejects that anyway).
+RUNPOD_H3_PDD_FL2VA = os.environ.get("RUNPOD_H3_PDD_FL2VA", "")
 
 
 def _runpod_h3_video_configured() -> bool:
@@ -923,6 +930,20 @@ RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS = int(
 )
 RUNPOD_H3_MULTISHOT_MAX_SHOTS = int(_env_float("RUNPOD_H3_MULTISHOT_MAX_SHOTS", 2.0))
 RUNPOD_H3_MULTISHOT_PACK_COMMIT = "d7d197709fc93c1afb125e3db1dfd4ac0ae28c60"
+# PDD acceleration for the multishot chain (2026-10-20): `H3MultishotSampler`
+# accepts an external MODEL + `sigmas`, so the same SigmaShift(12/3) ->
+# MiniMaxH3PDDAccApply chain as 1-shot H3 plugs straight in (the node only
+# uses BasicGuider, i.e. cfg=1, which is what PDD was distilled for). "8" is
+# the trained grid; "6"/"4" are faster, coarser regroupings; "" disables.
+# Applies only when a PDD file exists for the chain's checkpoint (ref2va
+# always; fl2va only once RUNPOD_H3_PDD_FL2VA is set).
+RUNPOD_H3_MULTISHOT_PDD_NFE = os.environ.get("RUNPOD_H3_MULTISHOT_PDD_NFE", "8")
+# Post-decode pixel upscale built into `H3MultishotSampler` (`output_scale`,
+# lanczos — no upscale model is installed on this worker image). 1.0 = off.
+# This is the ONLY upscale the pack supports: its latent two-pass
+# upscale+redraw was removed in 2.1.3 as off-manifold ("colour-noise mush"),
+# so there is no in-chain Upscale -> Re-draw step. Adds pixels, not detail.
+RUNPOD_H3_MULTISHOT_OUTPUT_SCALE = _env_float("RUNPOD_H3_MULTISHOT_OUTPUT_SCALE", 1.0)
 
 
 def _runpod_h3_multishot_configured() -> bool:

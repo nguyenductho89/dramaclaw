@@ -5858,12 +5858,17 @@ def _multishot_review_fingerprint(
     frames_per_shot: int,
     frame_path: str | None,
     reference_paths: list[str],
+    sampling: dict[str, Any] | None = None,
 ) -> str:
     """Same change-detection pattern as `_video_review_fingerprint`, scoped
-    to a whole chain instead of one beat."""
+    to a whole chain instead of one beat. `sampling` (the
+    `multishot_sampling_plan` result) is included so a config change between
+    review and enqueue (PDD on/off, output_scale) reads as stale."""
     import hashlib
 
     parts = [chain_id, script, checkpoint, str(frames_per_shot), frame_path or ""]
+    if sampling:
+        parts.append(json.dumps(sampling, sort_keys=True))
     for p in reference_paths:
         try:
             parts.append(f"{p}:{Path(p).stat().st_mtime_ns}")
@@ -5939,6 +5944,7 @@ async def review_multishot_video(
     from novelvideo.generators.runpod_minimax_h3_multishot_video import (
         dims_for_multishot,
         join_shots_script,
+        multishot_sampling_plan,
     )
     from novelvideo.seedance2_i2v.models import parse_seedance2_config
     from novelvideo.utils.path_resolver import PathResolver
@@ -5948,6 +5954,7 @@ async def review_multishot_video(
     )
     shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
     checkpoint = "ref2va" if shared_refs else "fl2va"
+    sampling = multishot_sampling_plan(checkpoint)
 
     paths = PathResolver(output_dir, episode_num)
     frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
@@ -6003,6 +6010,7 @@ async def review_multishot_video(
         frames_per_shot=max_frames,
         frame_path=str(frame_path) if frame_exists else None,
         reference_paths=[r["path"] for r in shared_refs],
+        sampling=sampling,
     )
 
     return {
@@ -6011,6 +6019,7 @@ async def review_multishot_video(
         "beat_numbers": [int(b["beat_number"]) for b in chain_beats],
         "shot_count": len(chain_beats),
         "checkpoint": checkpoint,
+        "sampling": sampling,
         "width": width,
         "height": height,
         "frames_per_shot": max_frames,
@@ -6065,6 +6074,7 @@ async def generate_multishot_video(
     from novelvideo.generators.runpod_minimax_h3_multishot_video import (
         dims_for_multishot,
         join_shots_script,
+        multishot_sampling_plan,
         new_seed,
     )
     from novelvideo.seedance2_i2v.models import parse_seedance2_config
@@ -6091,6 +6101,7 @@ async def generate_multishot_video(
     if ref_error:
         return {"ok": False, "error": ref_error}
     checkpoint = "ref2va" if shared_refs else "fl2va"
+    sampling = multishot_sampling_plan(checkpoint)
 
     paths = PathResolver(output_dir, episode_num)
     frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
@@ -6120,6 +6131,7 @@ async def generate_multishot_video(
         frames_per_shot=max_frames,
         frame_path=str(frame_path),
         reference_paths=[r["path"] for r in shared_refs],
+        sampling=sampling,
     )
     if body.review_fingerprint is not None and body.review_fingerprint != fingerprint:
         return {"ok": False, "error": "input_stale", "input_fingerprint": fingerprint}
@@ -6135,6 +6147,7 @@ async def generate_multishot_video(
         "seed": new_seed(),
         "start_image_path": str(frame_path),
         "reference_image_paths": [r["path"] for r in shared_refs],
+        "sampling": sampling,
     }
 
     if ctx is not None:

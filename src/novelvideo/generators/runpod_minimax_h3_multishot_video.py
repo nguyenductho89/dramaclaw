@@ -61,6 +61,8 @@ _SHOT_FRAME_GRID_MIN = 124
 _SHOT_FRAME_GRID_MAX = 294
 _SHOT_DIALOGUE_FRAME_MIN = 192
 _FPS = 24.0
+_BASE_STEPS = 20
+_PDD_NFE_CHOICES = ("4", "6", "8")
 
 
 def _round32(value: float) -> int:
@@ -105,6 +107,33 @@ def join_shots_script(shot_prompts: list[str]) -> str:
     return "\n---\n".join(p.strip() for p in shot_prompts)
 
 
+def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
+    """Resolve how a chain on `checkpoint` will be sampled, from config.
+
+    PDD needs a distillation file matching the checkpoint's trunk: ref2va's
+    is on the volume, fl2va's only once `RUNPOD_H3_PDD_FL2VA` is set. Without
+    one the chain falls back to the base 20-step schedule. Shared by the
+    review route (so the dialog shows what will actually run), the enqueue
+    route and the runner, so the three can't disagree.
+    """
+    from novelvideo.config import (
+        RUNPOD_H3_MULTISHOT_OUTPUT_SCALE,
+        RUNPOD_H3_MULTISHOT_PDD_NFE,
+        RUNPOD_H3_PDD_FL2VA,
+        RUNPOD_H3_PDD_REF2VA,
+    )
+
+    nfe = str(RUNPOD_H3_MULTISHOT_PDD_NFE or "").strip()
+    pdd_file = RUNPOD_H3_PDD_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_PDD_FL2VA
+    use_pdd = bool(nfe) and bool(pdd_file)
+    return {
+        "pdd_nfe": nfe if use_pdd else "",
+        "pdd_file": pdd_file if use_pdd else "",
+        "steps": int(nfe) if use_pdd else _BASE_STEPS,
+        "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
+    }
+
+
 def build_h3_multishot_graph(
     *,
     script: str,
@@ -122,6 +151,9 @@ def build_h3_multishot_graph(
     reference_image_names: list[str] | None = None,
     voice_ref_names: list[str] | None = None,
     self_anchor_voice: bool = False,
+    pdd_nfe: str = "",
+    pdd_file: str = "",
+    output_scale: float = 1.0,
 ) -> dict[str, Any]:
     """Build the `H3MultishotSampler` API graph.
 
@@ -154,6 +186,13 @@ def build_h3_multishot_graph(
         )
     if len(voice_ref_names) > 3:
         raise ValueError("at most 3 voice_ref slots (voice_ref, voice_ref_2, voice_ref_3)")
+
+    if pdd_nfe and pdd_nfe not in _PDD_NFE_CHOICES:
+        raise ValueError(f"pdd_nfe only supports '4'/'6'/'8', got {pdd_nfe!r}")
+    if pdd_nfe and not pdd_file:
+        raise ValueError("pdd_nfe needs a pdd_file matching the checkpoint")
+    if output_scale < 1.0:
+        raise ValueError(f"output_scale must be >= 1.0, got {output_scale}")
 
     unet_name = RUNPOD_H3_UNET_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_UNET_FL2VA
 
@@ -228,6 +267,38 @@ def build_h3_multishot_graph(
             },
         },
     }
+
+    if pdd_nfe:
+        # Same chain as 1-shot H3 (`build_h3_ref2va_graph` nodes "5"/"6").
+        # The sampler takes the patched model AND the Apply node's own
+        # trained-grid sigmas; with `sigmas` wired it ignores `steps`/
+        # `scheduler`. euler is required: PDD was distilled on euler and
+        # `on_off_grid="error"` rejects evaluations off the block boundaries
+        # (the node's own default sampler, res_multistep, isn't what was
+        # trained).
+        graph["5"] = {
+            "class_type": "MiniMaxH3SigmaShift",
+            "inputs": {"model": ["1", 0], "shift_video": 12.0, "shift_audio": 3.0},
+        }
+        graph["6"] = {
+            "class_type": "MiniMaxH3PDDAccApply",
+            "inputs": {
+                "model": ["5", 0],
+                "pdd_file": pdd_file,
+                "nfe": pdd_nfe,
+                "lora_strength": 1.0,
+                "head_strength": 1.0,
+                "on_off_grid": "error",
+            },
+        }
+        sampler_inputs = graph["10"]["inputs"]
+        sampler_inputs["model"] = ["6", 0]
+        sampler_inputs["sigmas"] = ["6", 1]
+        sampler_inputs["steps"] = int(pdd_nfe)
+        sampler_inputs["sampler_name"] = "euler"
+
+    if output_scale > 1.0:
+        graph["10"]["inputs"]["output_scale"] = float(output_scale)
 
     if start_image_name:
         graph["100"] = {"class_type": "LoadImage", "inputs": {"image": start_image_name}}

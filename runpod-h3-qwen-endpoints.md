@@ -154,6 +154,14 @@ Thiết kế cuối cùng khác với dự kiến ban đầu ở 1 điểm quan 
 - **Không cần `VideoGeneratorBase` wrapper riêng** — runner gọi trực tiếp `run_h3_multishot_job()`/`build_h3_multishot_graph()`, không qua `create_video_generator()` factory (chain N-beat không khớp interface `generate(image_path, prompt, ...)` 1-beat của factory đó).
 - Test: `tests/test_multishot_chain_id_column.py` (4 test, SQLite thật qua migration) + `tests/test_multishot_review_helpers.py` (14 test, chain validation/shared-reference/fingerprint, pure Python).
 
+### 5f. PDD 8 cho multishot + vì sao KHÔNG có Upscale → Re-draw → Audio Refine trong chain (2026-10-20)
+
+- **PDD 8 đã code** (`multishot_sampling_plan()` + `build_h3_multishot_graph(pdd_nfe, pdd_file)`): `H3MultishotSampler` (v2.7.2, đã đọc source tại commit pin) nhận `model` + `sigmas` từ ngoài và chỉ dùng `BasicGuider` (cfg=1) — nên cắm thẳng `MiniMaxH3SigmaShift(12/3)` → `MiniMaxH3PDDAccApply(nfe=8)` giống 1-shot, `sigmas=["6",1]`, ép `sampler_name=euler` (default của node là `res_multistep`, không phải lưới PDD đã train). Endpoint multishot dùng chung volume `zyen2jmxt3` và image đã có pack PDD-Acc → không cần build lại image.
+- **fl2va chưa có file PDD trên volume**: file chính thức `alibaba-pai/MiniMax-H3-Acc-LoRAs` → `MiniMax-H3-FL2VA-Acc-8Step.safetensors` (~1.37GB). Chưa tải → chain fl2va (không có identity ref) vẫn chạy base 20 bước. Tải vào `models/pdd_acc/` rồi đặt `RUNPOD_H3_PDD_FL2VA=MiniMax-H3-FL2VA-Acc-8Step.safetensors`.
+- Biến: `RUNPOD_H3_MULTISHOT_PDD_NFE` (default `8`, `""` = tắt), `RUNPOD_H3_MULTISHOT_OUTPUT_SCALE` (default 1.0 = tắt; upscale lanczos sau decode, có sẵn trong node).
+- **Không ghép được Upscale → Re-draw → Audio Refine vào trong chain**: node là 1 khối đóng (lặp shot, relay frame cuối, seam-trim, decode bên trong) và chỉ trả IMAGE/AUDIO đã decode — không có latent để upscale/redraw/refine audio. Tác giả pack đã **xoá** latent two-pass upscale từ 2.1.3 vì latent H3 nội suy ra ngoài manifold → "colour-noise mush" (3 lần A/B). Redraw/refine sau khi ghép thì mỗi shot bị sửa độc lập → mất liên tục ở mối nối. Hai cách còn lại: (a) chỉ upscale pixel (`output_scale`), (b) bỏ node multishot, tự chain N job 1-shot (mỗi shot đủ PDD + two-stage + audio-refine, frame cuối shot trước làm first frame shot sau) — chưa làm, cần quyết định.
+- **Chưa verify GPU.** Rủi ro chính: chất lượng PDD trên chain dài (lỗi tích luỹ qua relay frame) chưa ai đo.
+
 ### 5e. Verification cần làm (tăng dần, tốn GPU thật — xác nhận trước mỗi bước)
 
 1. Dry-run review (miễn phí) cho 1 chain 2 beat thật.

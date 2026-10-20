@@ -193,7 +193,15 @@ export function MultishotReviewDialog({
                   />
                   <SummaryField
                     label={t("episode.workbench.multishotReview.checkpointLabel")}
-                    value={review.checkpoint}
+                    value={
+                      review.sampling
+                        ? `${review.checkpoint} · ${
+                            review.sampling.pdd_nfe
+                              ? `PDD ${review.sampling.pdd_nfe}`
+                              : `base ${review.sampling.steps}`
+                          }`
+                        : review.checkpoint
+                    }
                   />
                   <SummaryField
                     label={t("episode.workbench.multishotReview.resolutionLabel")}

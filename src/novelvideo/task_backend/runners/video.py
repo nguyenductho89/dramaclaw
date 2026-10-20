@@ -340,6 +340,9 @@ async def _run_multishot_video_async(
     start_image_path = str(config.get("start_image_path") or "")
     reference_image_paths = [str(p) for p in (config.get("reference_image_paths") or [])]
     checkpoint = str(config.get("checkpoint") or "fl2va")
+    # Tasks enqueued before PDD support carry no `sampling` key: keep their
+    # original base-20-step behaviour rather than re-resolving from config.
+    sampling = dict(config.get("sampling") or {})
 
     start_bytes = Path(start_image_path).read_bytes()
     start_name = "ms_start" + (Path(start_image_path).suffix or ".png")
@@ -360,10 +363,13 @@ async def _run_multishot_video_async(
         height=int(config.get("height") or 1344),
         frames_per_shot=int(config.get("frames_per_shot") or 124),
         seed=int(config.get("seed") or 0),
-        steps=20,
+        steps=int(sampling.get("steps") or 20),
         checkpoint=checkpoint,
         start_image_name=start_name,
         reference_image_names=reference_names if checkpoint == "ref2va" else None,
+        pdd_nfe=str(sampling.get("pdd_nfe") or ""),
+        pdd_file=str(sampling.get("pdd_file") or ""),
+        output_scale=float(sampling.get("output_scale") or 1.0),
     )
 
     data, status_info, error = await run_h3_multishot_job(
@@ -390,6 +396,7 @@ async def _run_multishot_video_async(
         "beat_numbers": beat_numbers,
         "shot_count": len(beat_numbers),
         "checkpoint": checkpoint,
+        "sampling": sampling,
     }
 
 

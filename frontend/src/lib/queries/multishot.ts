@@ -35,6 +35,9 @@ export interface MultishotReviewData {
   beat_numbers: number[];
   shot_count: number;
   checkpoint: "fl2va" | "ref2va";
+  /** How the chain will be sampled (`multishot_sampling_plan`). Empty
+   * `pdd_nfe` means no PDD file for this checkpoint: base 20-step schedule. */
+  sampling?: { pdd_nfe: string; pdd_file: string; steps: number; output_scale: number };
   width: number;
   height: number;
   frames_per_shot: number;

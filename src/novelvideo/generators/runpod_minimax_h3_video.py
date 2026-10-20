@@ -447,10 +447,16 @@ def build_h3_fl2va_graph(
     last_frame_name: str | None = None,
     steps: int = 20,
     scheduler: str = "simple",
+    pdd_file: str = "",
+    pdd_steps: int = 8,
 ) -> dict[str, Any]:
     """`MiniMaxH3ImageToVideo` — first frame only (no character/scene/prop
-    reference images, no voice-timbre audio). Base model, no PDD file
-    exists for this checkpoint."""
+    reference images, no voice-timbre audio).
+
+    Base model 20-step res_multistep by default. With `pdd_file` (the
+    official FL2VA PDD file, `RUNPOD_H3_PDD_FL2VA`) it uses the same
+    SigmaShift(12/3) -> MiniMaxH3PDDAccApply chain as ref2va: euler on the
+    Apply node's own trained-grid sigmas, `steps`/`scheduler` ignored."""
     from novelvideo.config import (
         RUNPOD_H3_AUDIO_VAE,
         RUNPOD_H3_TEXT_ENCODER,
@@ -528,6 +534,26 @@ def build_h3_fl2va_graph(
         },
         "100": {"class_type": "LoadImage", "inputs": {"image": first_frame_name}},
     }
+    if pdd_file:
+        graph["40"] = {
+            "class_type": "MiniMaxH3SigmaShift",
+            "inputs": {"model": ["20", 0], "shift_video": 12.0, "shift_audio": 3.0},
+        }
+        graph["41"] = {
+            "class_type": "MiniMaxH3PDDAccApply",
+            "inputs": {
+                "model": ["40", 0],
+                "pdd_file": pdd_file,
+                "nfe": str(pdd_steps),
+                "lora_strength": 1.0,
+                "head_strength": 1.0,
+                "on_off_grid": "error",
+            },
+        }
+        graph["26"]["inputs"]["model"] = ["41", 0]
+        graph["27"]["inputs"]["sampler_name"] = "euler"
+        graph["29"]["inputs"]["sigmas"] = ["41", 1]
+        del graph["28"]
     graph["24"]["inputs"]["first_frame"] = ["100", 0]
     if last_frame_name:
         graph["101"] = {"class_type": "LoadImage", "inputs": {"image": last_frame_name}}
@@ -571,6 +597,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             RUNPOD_H3_AUDIO_REFINE_DENOISE,
             RUNPOD_H3_AUDIO_REFINE_ENABLED,
             RUNPOD_H3_AUDIO_REFINE_STEPS,
+            RUNPOD_H3_PDD_FL2VA,
             RUNPOD_H3_STAGE2_DENOISE,
             RUNPOD_H3_STAGE2_NFE,
             RUNPOD_H3_STAGE2_SCALE_BY,
@@ -688,6 +715,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 height=height,
                 frames=frames,
                 last_frame_name=end_frame_payload[0] if end_frame_payload else None,
+                pdd_file=RUNPOD_H3_PDD_FL2VA,
+                pdd_steps=pdd_steps,
             )
             upload_payloads = [image_payloads[0]] + ([end_frame_payload] if end_frame_payload else [])
 

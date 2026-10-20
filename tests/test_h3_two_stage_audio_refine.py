@@ -149,3 +149,33 @@ def test_fl2va_graph_has_no_two_stage_or_refine_knobs():
     sig = inspect.signature(h3.build_h3_fl2va_graph)
     assert "two_stage" not in sig.parameters
     assert "audio_refine" not in sig.parameters
+
+
+# ── fl2va PDD (2026-10-21, FL2VA PDD file now on the volume) ──────────────
+
+
+def _fl2va(**kw):
+    from novelvideo.generators.runpod_minimax_h3_video import build_h3_fl2va_graph
+
+    return build_h3_fl2va_graph(
+        prompt="p", first_frame_name="f.png", seed=1, width=768, height=1344, frames=124, **kw
+    )
+
+
+def test_fl2va_without_pdd_file_keeps_base_schedule():
+    graph = _fl2va()
+    assert graph["28"]["class_type"] == "BasicScheduler"
+    assert graph["29"]["inputs"]["sigmas"] == ["28", 0]
+    assert graph["26"]["inputs"]["model"] == ["20", 0]
+    assert "41" not in graph
+
+
+def test_fl2va_with_pdd_file_uses_pdd_model_and_sigmas():
+    graph = _fl2va(pdd_file="MiniMax-H3-FL2VA-Acc-8Step.safetensors", pdd_steps=8)
+    assert graph["40"]["class_type"] == "MiniMaxH3SigmaShift"
+    assert graph["41"]["inputs"]["pdd_file"] == "MiniMax-H3-FL2VA-Acc-8Step.safetensors"
+    assert graph["41"]["inputs"]["nfe"] == "8"
+    assert graph["26"]["inputs"]["model"] == ["41", 0]
+    assert graph["29"]["inputs"]["sigmas"] == ["41", 1]
+    assert graph["27"]["inputs"]["sampler_name"] == "euler"
+    assert "28" not in graph

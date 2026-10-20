@@ -824,17 +824,16 @@ RUNPOD_H3_SAGE_ATTENTION = os.environ.get("RUNPOD_H3_SAGE_ATTENTION", "")
 # Value of `sage_attention` that reverts to stock attention. Verify against the
 # worker's `object_info` for PathchSageAttentionKJ before enabling.
 RUNPOD_SAGE_DISABLED_MODE = os.environ.get("RUNPOD_SAGE_DISABLED_MODE", "disabled")
-# PDD acceleration (8-step) — only applies to ref2va; fl2va always runs the
-# base 20-step res_multistep/simple schedule (no PDD file exists for it).
+# PDD acceleration (8-step). ref2va always; fl2va (1-shot and multishot) only
+# when RUNPOD_H3_PDD_FL2VA below is set, otherwise base 20-step.
 RUNPOD_H3_PDD_REF2VA = os.environ.get(
     "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors"
 )
-# FL2VA PDD file (official, `alibaba-pai/MiniMax-H3-Acc-LoRAs`, ~1.37GB) is
-# NOT on the network volume yet — empty means "not installed", and fl2va
-# graphs keep the base 20-step schedule. Set it to
-# "MiniMax-H3-FL2VA-Acc-8Step.safetensors" once the file is copied into
-# `models/pdd_acc/` on volume `zyen2jmxt3`. Never pair it with a ref2va UNET
-# (the Apply node's fingerprint check rejects that anyway).
+# FL2VA PDD file (official, `alibaba-pai/MiniMax-H3-Acc-LoRAs`, ~1.37GB,
+# sha256 0b29be70...0a196) — copied into `models/pdd_acc/` on volume
+# `zyen2jmxt3` on 2026-10-21. Empty = fl2va keeps the base 20-step schedule.
+# Never pair it with a ref2va UNET (the Apply node's fingerprint check
+# rejects that anyway).
 RUNPOD_H3_PDD_FL2VA = os.environ.get("RUNPOD_H3_PDD_FL2VA", "")
 
 

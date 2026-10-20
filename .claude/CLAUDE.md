@@ -239,6 +239,12 @@ Giả thuyết ban đầu: `qwen3vl_32b_minimax_h3_nvfp4_awq` bị emulate trên
 - Hai file INT8 vẫn nằm trên volume `zyen2jmxt3` (`models/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors` 27GB, `models/vae/minimax_h3_video_vae_int8_convrot.safetensors` 2.8GB) — xoá nếu cần lấy lại chỗ.
 - Hướng còn lại để nhanh hơn: giảm số điểm ảnh/frame (chi phí sampling tỉ lệ thuận), Sage Attention, hoặc GPU nhanh hơn cho DiT (chưa đo). Blackwell chỉ có lợi nếu dùng NVFP4 DiT, mà DiT hiện là INT8.
 
+## PDD 8 cho mọi đường H3 + Sage (2026-10-21)
+
+- File `MiniMax-H3-FL2VA-Acc-8Step.safetensors` đã có trên volume `zyen2jmxt3` (`models/pdd_acc/`, sha256 đã verify). `.env` có `RUNPOD_H3_PDD_FL2VA` → H3 1-shot fl2va và multishot (cả ref2va/fl2va, `RUNPOD_H3_MULTISHOT_PDD_NFE=8`) đều chạy PDD 8 bước thay vì base 20. Chi tiết: mục 5f `runpod-h3-qwen-endpoints.md`.
+- **CA-MTL-1 không có pod CPU** — muốn chép file lên volume thì thuê GPU pod rẻ nhất ở đó (A40 secure ~$0.59/h), image `alpine:3.20`, mount volume ở `/runpod-volume`, chạy lệnh tải ngay trong `cmd` rồi đọc kết quả qua `stream-pod-logs` (khỏi cần SSH/PTY), xong xoá pod.
+- `RUNPOD_H3_SAGE_ATTENTION` phải là `auto` (không phải `true`): giá trị đi thẳng vào combo `sage_attention` của `PathchSageAttentionKJ`, và image h3only cài `sageattention==1.0.6` chỉ có hàm cho `auto` (các mode `sageattn_qk_int8_*`/`sageattn3` cần bản 2.x+). Chỉ áp cho H3 1-shot; image multishot không có KJNodes.
+
 ## Dự án Tesla
 
 - `tesla_pov_short`, id `01M4QF11AY84RDH1B0FMW62W86`, kịch bản nguồn `examples/tesla-pov-short-60s.md`, mẫu `narrated`, đã ingest xong (`structured_v1`, 1 chunk).

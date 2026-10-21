@@ -4883,6 +4883,47 @@ def _runpod_download_output_sync(r2_key: str) -> bytes:
     return s3.get_object(Bucket=R2_BUCKET, Key=r2_key)["Body"].read()
 
 
+async def _runpod_submit_job_with_409_retry(
+    *,
+    client: Any,
+    base: str,
+    endpoint_id: str,
+    headers: dict[str, str],
+    job_input: dict,
+    label: str,
+) -> tuple[str | None, str]:
+    """POST `/run`, retrying a 409 (`ENDPOINT_PAUSED`) up to 5 times, 10s
+    apart — RunPod returns this for a few seconds right after a worker
+    transitions `workers.max` 0->1 (the common case: the user just clicked
+    "bật worker"), before the endpoint is actually ready to accept jobs.
+
+    Mirrors the retry already proven in `runpod_minimax_h3_video.py`/
+    `runpod_minimax_h3_multishot_video.py` for the H3 video callers — the 3
+    Qwen image callers (`_call_runpod_qwen_image_api`,
+    `_call_runpod_qwen_edit_image_api`, `_runpod_run_graph_job`) each did a
+    bare `submit_response.raise_for_status()` with no retry, so this exact
+    race surfaced as a hard failure for image generation
+    ("... submit failed: Client error '409 Conflict' ..."), real user
+    report 2026-10-21. Returns `(job_id, error)` — `job_id` is None on
+    failure, with `error` already formatted as `f"{label} submit failed: ..."`.
+    """
+    import httpx
+
+    for attempt in range(6):
+        try:
+            resp = await client.post(f"{base}/{endpoint_id}/run", headers=headers, json={"input": job_input})
+            if resp.status_code == 409 and attempt < 5:
+                await asyncio.sleep(10)
+                continue
+            resp.raise_for_status()
+            return resp.json()["id"], ""
+        except httpx.HTTPError as exc:
+            if attempt >= 5:
+                return None, f"{label} submit failed: {exc}"
+            await asyncio.sleep(10)
+    return None, f"{label} submit failed: unknown reason"
+
+
 async def _call_runpod_qwen_image_api(
     *,
     api_key: str,
@@ -4933,17 +4974,17 @@ async def _call_runpod_qwen_image_api(
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     job_input = {"action": "prompt", "workflow": graph, "inputs": job_inputs, "free_first": False}
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            submit_response = await client.post(
-                f"{base}/{RUNPOD_QWEN_IMAGE_ENDPOINT_ID}/run",
-                headers=headers,
-                json={"input": job_input},
-            )
-            submit_response.raise_for_status()
-            job_id = submit_response.json()["id"]
-    except httpx.HTTPError as exc:
-        return None, "", f"runpod qwen image submit failed: {exc}"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        job_id, submit_error = await _runpod_submit_job_with_409_retry(
+            client=client,
+            base=base,
+            endpoint_id=RUNPOD_QWEN_IMAGE_ENDPOINT_ID,
+            headers=headers,
+            job_input=job_input,
+            label="runpod qwen image",
+        )
+    if submit_error:
+        return None, "", submit_error
 
     # Poll separately from submit: once a job exists on RunPod it keeps
     # running (and billing) regardless of what this client does, so a
@@ -5063,17 +5104,17 @@ async def _runpod_run_graph_job(
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     job_input = {"action": "prompt", "workflow": graph, "inputs": job_inputs, "free_first": False}
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            submit_response = await client.post(
-                f"{base}/{endpoint_id}/run",
-                headers=headers,
-                json={"input": job_input},
-            )
-            submit_response.raise_for_status()
-            job_id = submit_response.json()["id"]
-    except httpx.HTTPError as exc:
-        return None, "", f"{label} submit failed: {exc}"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        job_id, submit_error = await _runpod_submit_job_with_409_retry(
+            client=client,
+            base=base,
+            endpoint_id=endpoint_id,
+            headers=headers,
+            job_input=job_input,
+            label=label,
+        )
+    if submit_error:
+        return None, "", submit_error
 
     # Same submit/poll split as the other RunPod callers, for the same
     # reason: once the job exists on RunPod it keeps running regardless of
@@ -5636,17 +5677,17 @@ async def _call_runpod_qwen_edit_image_api(
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     job_input = {"action": "prompt", "workflow": graph, "inputs": job_inputs, "free_first": False}
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            submit_response = await client.post(
-                f"{base}/{RUNPOD_QWEN_EDIT_ENDPOINT_ID}/run",
-                headers=headers,
-                json={"input": job_input},
-            )
-            submit_response.raise_for_status()
-            job_id = submit_response.json()["id"]
-    except httpx.HTTPError as exc:
-        return None, "", f"runpod qwen edit image submit failed: {exc}"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        job_id, submit_error = await _runpod_submit_job_with_409_retry(
+            client=client,
+            base=base,
+            endpoint_id=RUNPOD_QWEN_EDIT_ENDPOINT_ID,
+            headers=headers,
+            job_input=job_input,
+            label="runpod qwen edit image",
+        )
+    if submit_error:
+        return None, "", submit_error
 
     # Same submit/poll split as _call_runpod_qwen_image_api, for the same
     # reason: once the job exists on RunPod it keeps running regardless of

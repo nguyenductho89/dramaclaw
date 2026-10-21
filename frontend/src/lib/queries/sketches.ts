@@ -88,10 +88,10 @@ export function isRenderReviewSelection(selection: string | null | undefined): b
  * reference photos, no mannequin-figure sketch at all). The Render button
  * must not require an existing sketch for these, and the mode key should
  * come from the project's own render aspect rather than a sketch file's
- * pixel dimensions — matches `RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS` on the
+ * pixel dimensions — matches `SKETCH_FREE_COMPOSE_SELECTION_KEYS` on the
  * backend (`config.py`). */
 export function isSketchFreeRenderSelection(selection: string | null | undefined): boolean {
-  return selection === "runpod_qwen21_compose";
+  return selection === "runpod_qwen21_compose" || selection === "gemini_webai_compose";
 }
 
 function renderGenerationSettingsJson(

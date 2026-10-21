@@ -3440,9 +3440,9 @@ async def regenerate_beats(
     if detection_error:
         return {"ok": False, "error": detection_error}
 
-    from novelvideo.config import RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS
+    from novelvideo.config import SKETCH_FREE_COMPOSE_SELECTION_KEYS
 
-    is_sketch_free_compose = render_image_selection in RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS
+    is_sketch_free_compose = render_image_selection in SKETCH_FREE_COMPOSE_SELECTION_KEYS
 
     sketch_paths = PathResolver(output_dir, episode_num)
     if not is_sketch_free_compose:

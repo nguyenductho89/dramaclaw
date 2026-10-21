@@ -4239,6 +4239,164 @@ def build_qwen21_compose_prompt(
     return " ".join(parts)
 
 
+def build_gemini_compose_prompt(
+    beat: dict,
+    *,
+    identity_images: List[Tuple[str, str]],
+    prop_images: List[Tuple[str, str]],
+    identity_names: Optional[Dict[str, str]] = None,
+    prop_names: Optional[Dict[str, str]] = None,
+) -> str:
+    """Gemini WebAI's own sketch-free "compose" render prompt (added
+    2026-10-21) — same job as `build_qwen21_compose_prompt` just above
+    (compose directly from a scene background photo + each identity's
+    portrait + each prop's reference photo + the beat's own text, no
+    sketch, no mask), but written for a different model with a different
+    convention.
+
+    Qwen's compose prompt deliberately uses `<imageN>` tags because that
+    matches `TextEncodeQwenImageEditPlus`'s own auto-injected tokens on
+    the ComfyUI side (see that function's docstring). Gemini WebAI has no
+    such node — it is a plain multimodal chat endpoint
+    (`_call_webai_chat_image_api`: a prompt string + N ordered image
+    attachments) — so there is no special token for a tag convention to
+    match; this uses plain "Image 1"/"Image 2" phrasing instead, matching
+    how `UnifiedPromptBuilder` already refers to the sketch canvas for
+    this same provider elsewhere in this codebase ("BASE SKETCH LOCK:
+    Image 1 / SKETCH is the ONLY spatial source of truth...").
+
+    Not yet verified against a real Gemini WebAI render (2026-10-21, code
+    + unit tests only, per the user's explicit scope for this change) —
+    the marker-substitution helpers below (identity/prop `{{}}`/`[[]]`
+    replacement) are copied from `build_qwen21_compose_prompt`'s already
+    real-GPU-verified fixes (the double-comma and double-article bugs
+    documented there), since the underlying bug (punctuation in the
+    beat's own text colliding with a naively-appended suffix) is about
+    the TEXT being substituted into, not which model reads the prompt
+    afterward — but the overall phrasing here has not itself been
+    GPU-tested the way Qwen's was.
+
+    Same argument contract as `build_qwen21_compose_prompt`:
+    `identity_images`/`prop_images` are `(id, display_name)` pairs in the
+    exact order their reference images were actually uploaded (background
+    is always first/unnumbered here, then identities, then props) —
+    `nanobanana_grid.py`'s `_build_gemini_compose_plan` is the single
+    source of truth for that order. `identity_names`/`prop_names` are a
+    superset covering every `{{id}}`/`[[prop]]` marker that might appear
+    in `visual_description`, including ones with no resolvable reference
+    image.
+    """
+    identity_names = identity_names or {}
+    prop_names = prop_names or {}
+
+    identity_tag: Dict[str, str] = {}
+    prop_tag: Dict[str, str] = {}
+    next_idx = 2
+    for identity_id, _name in identity_images:
+        identity_tag[identity_id] = f"Image {next_idx}"
+        next_idx += 1
+    for prop_id, _name in prop_images:
+        prop_tag[prop_id] = f"Image {next_idx}"
+        next_idx += 1
+    total_images = next_idx - 1  # background (Image 1) + identities + props
+
+    parts: List[str] = []
+
+    if total_images <= 1:
+        parts.append(
+            "The reference image shows the location; use it only for the "
+            "setting, background elements, lighting and color palette, "
+            "not for any person or pose."
+        )
+        parts.append(
+            "Compose a new photorealistic photograph set in the location "
+            "shown in the image, matching its lighting and background "
+            "elements."
+        )
+    else:
+        parts.append(
+            "Image 1 is a reference photo of the location; use it only "
+            "for the setting, background elements, lighting and color "
+            "palette, not for any person or pose."
+        )
+        for identity_id, name in identity_images:
+            tag = identity_tag[identity_id]
+            parts.append(
+                f"{tag} shows {name}; take {name}'s face, hairstyle, age, "
+                f"body proportions and outfit exactly from {tag}."
+            )
+        for prop_id, name in prop_images:
+            tag = prop_tag[prop_id]
+            parts.append(
+                f"{tag} shows the {name}; take its exact shape, material, "
+                f"color and surface details from {tag}."
+            )
+        parts.append(
+            "Compose a new photorealistic photograph set in the location "
+            "from Image 1, matching its lighting and background elements."
+        )
+
+    seen_identities: set = set()
+    seen_props: set = set()
+
+    def _replace_identity(match: "re.Match[str]") -> str:
+        # Same punctuation-collision fix as build_qwen21_compose_prompt
+        # (parenthetical, not a trailing comma) — see that function's
+        # comment for the real bug this avoids.
+        marker_id = match.group(1)
+        name = identity_names.get(marker_id) or marker_id
+        tag = identity_tag.get(marker_id)
+        if tag and marker_id not in seen_identities:
+            seen_identities.add(marker_id)
+            return f"{name} (matching {tag} exactly)"
+        return name
+
+    def _replace_prop(match: "re.Match[str]") -> str:
+        # Same no-self-added-article fix as build_qwen21_compose_prompt —
+        # see that function's comment for the real bug this avoids.
+        marker_id = match.group(1)
+        name = prop_names.get(marker_id) or marker_id
+        tag = prop_tag.get(marker_id)
+        if tag and marker_id not in seen_props:
+            seen_props.add(marker_id)
+            return f"{name} (shown in {tag})"
+        return name
+
+    action = str(beat.get("visual_description") or "")
+    action = action.replace('"', "").replace("\n", " ")
+    action = _COMPOSE_IDENTITY_MARKER_RE.sub(_replace_identity, action)
+    action = _COMPOSE_PROP_MARKER_RE.sub(_replace_prop, action)
+    action = re.sub(r"\s+", " ", action).strip().rstrip(".")
+    if action:
+        parts.append(f"Scene: {action}.")
+
+    identity_count = len(identity_images)
+    if identity_count == 1:
+        parts.append(f"Show exactly 1 person — {identity_images[0][1]} — appearing once.")
+    elif identity_count >= 2:
+        names_joined = ", ".join(name for _id, name in identity_images)
+        parts.append(
+            f"Show exactly {identity_count} people — {names_joined} — each appearing once."
+        )
+    elif not identity_names:
+        parts.append("No people appear in the image.")
+
+    if identity_count >= 1:
+        parts.append(
+            "Render the people and the scene as a real photograph with "
+            "natural skin texture, realistic lighting and depth, not as "
+            "a sketch, illustration, painting or 3D render."
+        )
+    else:
+        parts.append(
+            "Render the scene as a real photograph with natural lighting "
+            "and depth, not as a sketch, illustration, painting or 3D "
+            "render."
+        )
+
+    return " ".join(parts)
+
+
 def create_prompt_context(
     mode: PromptMode,
     beats: List[dict],

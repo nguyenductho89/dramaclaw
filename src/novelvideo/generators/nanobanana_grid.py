@@ -63,6 +63,7 @@ from novelvideo.generators.prompt_builder import (
     PromptContext,
     PromptMode,
     UnifiedPromptBuilder,
+    build_gemini_compose_prompt,
     build_qwen21_compose_prompt,
     build_qwen21_render_prompt,
     build_qwen_edit_render_prompt,
@@ -6102,38 +6103,52 @@ class Qwen21ComposePlan:
     audit_refs: List[dict]  # for submitted.json, mirrors other providers' shape
 
 
-def _build_qwen21_compose_plan(
+def _resolve_compose_references(
     *,
     beat: dict,
     character_map: Dict[str, dict],
     scene_refs: Dict[int, list],
     prop_refs: Dict[int, list],
     mode_key: Optional[str],
+    max_reference_images: int,
 ) -> tuple:
-    """Build the full RunPod-ready plan (prompt + ordered unique-named
-    reference images) for the sketch-free "compose" render mode
-    (`runpod_qwen21_compose`, added 2026-10-18) — see that selection's
-    docstring in config.py for why this mode exists and what it fixes
-    over the sketch+mask `runpod_qwen21_render(_multi)` paths.
+    """Shared by every sketch-free "compose" render mode — resolve a
+    beat's scene master + character identities + prop images into one
+    ordered list of (filename, bytes, mime) uploads, with an audit trail.
+    Extracted 2026-10-21 (was the body of `_build_qwen21_compose_plan`)
+    when Gemini WebAI got its own sketch-free compose selection
+    (`gemini_webai_compose`) alongside Qwen's (`runpod_qwen21_compose`) —
+    which model will actually read the images doesn't change how they're
+    gathered, only how the PROMPT describing them is written (Qwen's
+    official `<imageN>`-tag Attribute-Disentanglement style vs Gemini's
+    plain "Image N" phrasing), so only the reference-gathering is shared
+    here; each caller still builds and lints its own prompt.
 
     `scene_refs`/`prop_refs` are `generate_grid()`'s own already-resolved
     `AssetResolver.resolve_all_for_beats()` output (1-based panel-index
     dicts — render mode's single beat is always panel 1) — this function
     does not re-resolve them, only picks the right entries out and reads
-    their files. Returns `(plan, "")` on success or `(None, error)`.
+    their files.
 
-    Reference order is always: scene background (`<image1>`), then every
+    Reference order is always: scene background first, then every
     identity with a resolvable portrait (`qwen_edit_identity_references()`
     — the SAME resolver the sketch+mask path already uses, so review/
     audit stays consistent), then every prop with a resolvable reference
     image. Each gets a unique filename via `_webai_ref_filename(i, mime)`
     — two references sharing a source basename (e.g. two characters both
     having a file literally named `primary.png`) would otherwise collide
-    inside one RunPod job, since the worker's `LoadImage` reads by name,
-    not by the R2 object's sha256 key.
-    """
-    MAX_REFERENCE_IMAGES = 16  # TextEncodeQwenImage21's images.image_1..image_16 Autogrow cap
+    inside one job, since a ComfyUI `LoadImage`/a multimodal chat
+    attachment is read/ordered by name, not by the R2 object's sha256 key.
 
+    Returns `(reference_images, audit_refs, identity_images, prop_images,
+    error)` — `reference_images` is `None` on failure, with `error` set.
+    `identity_images`/`prop_images` are `(id, display_name)` pairs in the
+    same order as `reference_images[1:]`, for the caller's own prompt
+    builder to consume. `audit_refs[i]["image_tag"]` is always the Qwen
+    `<imageN>` form regardless of caller — it is inert metadata recorded
+    for `submitted.json`/debugging, not text that reaches any model, so a
+    Gemini-reading caller does not need its own variant.
+    """
     beat_scene_refs = (scene_refs or {}).get(1) or []
     beat_prop_refs = (prop_refs or {}).get(1) or []
 
@@ -6149,7 +6164,7 @@ def _build_qwen21_compose_plan(
         None,
     )
     if scene_ref is None:
-        return None, "Qwen 2.1 compose 需要场景主图（场景参考图未配置或文件缺失）"
+        return None, [], [], [], "compose 需要场景主图（场景参考图未配置或文件缺失）"
 
     identity_refs = qwen_edit_identity_references(character_map, beat)
     prop_image_refs = [
@@ -6161,11 +6176,11 @@ def _build_qwen21_compose_plan(
     ]
 
     total = 1 + len(identity_refs) + len(prop_image_refs)
-    if total > MAX_REFERENCE_IMAGES:
-        keep_props = max(0, MAX_REFERENCE_IMAGES - 1 - len(identity_refs))
+    if total > max_reference_images:
+        keep_props = max(0, max_reference_images - 1 - len(identity_refs))
         dropped = len(prop_image_refs) - keep_props
         print(
-            f"[Qwen21Compose] 参考图超过 {MAX_REFERENCE_IMAGES} 张上限，"
+            f"[ComposeRefs] 参考图超过 {max_reference_images} 张上限，"
             f"丢弃 {dropped} 个道具参考（优先保留场景+身份）"
         )
         prop_image_refs = prop_image_refs[:keep_props]
@@ -6175,7 +6190,7 @@ def _build_qwen21_compose_plan(
         with open(scene_path, "rb") as f:
             scene_bytes = f.read()
     except OSError as exc:
-        return None, f"Qwen 2.1 compose 场景主图读取失败: {exc}"
+        return None, [], [], [], f"compose 场景主图读取失败: {exc}"
 
     from novelvideo.config import RUNPOD_QWEN21_COMPOSE_CROP_TO_MODE_ASPECT
 
@@ -6228,6 +6243,45 @@ def _build_qwen21_compose_plan(
         prop_images.append((ref.base_id, ref.base_id))
         idx += 1
 
+    return reference_images, audit_refs, identity_images, prop_images, ""
+
+
+def _build_qwen21_compose_plan(
+    *,
+    beat: dict,
+    character_map: Dict[str, dict],
+    scene_refs: Dict[int, list],
+    prop_refs: Dict[int, list],
+    mode_key: Optional[str],
+) -> tuple:
+    """Build the full RunPod-ready plan (prompt + ordered unique-named
+    reference images) for the sketch-free "compose" render mode
+    (`runpod_qwen21_compose`, added 2026-10-18) — see that selection's
+    docstring in config.py for why this mode exists and what it fixes
+    over the sketch+mask `runpod_qwen21_render(_multi)` paths. Reference
+    gathering is shared (`_resolve_compose_references`); this function
+    only adds the Qwen-specific prompt + lint. Returns `(plan, "")` on
+    success or `(None, error)`."""
+    MAX_REFERENCE_IMAGES = 16  # TextEncodeQwenImage21's images.image_1..image_16 Autogrow cap
+
+    (
+        reference_images,
+        audit_refs,
+        identity_images,
+        prop_images,
+        error,
+    ) = _resolve_compose_references(
+        beat=beat,
+        character_map=character_map,
+        scene_refs=scene_refs,
+        prop_refs=prop_refs,
+        mode_key=mode_key,
+        max_reference_images=MAX_REFERENCE_IMAGES,
+    )
+    if reference_images is None:
+        return None, f"Qwen 2.1 {error}"
+
+    beat_prop_refs = (prop_refs or {}).get(1) or []
     identity_names = _qwen21_compose_identity_name_map(character_map, beat)
     prop_names = _qwen21_compose_prop_name_map(beat, beat_prop_refs)
 
@@ -6244,6 +6298,69 @@ def _build_qwen21_compose_plan(
     lint_issues = lint_qwen21_compose_prompt(prompt, len(reference_images))
     if lint_issues:
         print(f"[Qwen21Compose] prompt lint warnings: {lint_issues}")
+
+    return (
+        Qwen21ComposePlan(prompt=prompt, reference_images=reference_images, audit_refs=audit_refs),
+        "",
+    )
+
+
+def _build_gemini_compose_plan(
+    *,
+    beat: dict,
+    character_map: Dict[str, dict],
+    scene_refs: Dict[int, list],
+    prop_refs: Dict[int, list],
+    mode_key: Optional[str],
+) -> tuple:
+    """Gemini WebAI's own sketch-free "compose" render mode
+    (`gemini_webai_compose`, added 2026-10-21) — same reference-gathering
+    as `_build_qwen21_compose_plan` (`_resolve_compose_references`,
+    shared), but a plain-English "Image N" prompt
+    (`build_gemini_compose_prompt`) instead of Qwen's official
+    `<imageN>`-tag Attribute-Disentanglement style: Gemini WebAI is a
+    multimodal chat endpoint (`_call_webai_chat_image_api`, prompt text +
+    N ordered image attachments) with no ComfyUI node auto-injecting
+    `<imageN>` tokens into conditioning the way `TextEncodeQwenImage21`
+    does, so writing Qwen's tag convention into a Gemini prompt would just
+    be literal text the model has no special reason to parse — matches
+    the plain "Image 1"/"Image 2" phrasing `UnifiedPromptBuilder` already
+    uses elsewhere for this same provider (see its "BASE SKETCH LOCK"
+    section). No RunPod-specific reference cap applies here (Gemini isn't
+    on the `TextEncodeQwenImage21` Autogrow cap of 16) — kept at the same
+    16 anyway as a sane, untested-beyond-that default; raise it if a real
+    beat ever needs more. Returns `(plan, "")` on success or
+    `(None, error)`."""
+    MAX_REFERENCE_IMAGES = 16
+
+    (
+        reference_images,
+        audit_refs,
+        identity_images,
+        prop_images,
+        error,
+    ) = _resolve_compose_references(
+        beat=beat,
+        character_map=character_map,
+        scene_refs=scene_refs,
+        prop_refs=prop_refs,
+        mode_key=mode_key,
+        max_reference_images=MAX_REFERENCE_IMAGES,
+    )
+    if reference_images is None:
+        return None, f"Gemini WebAI {error}"
+
+    beat_prop_refs = (prop_refs or {}).get(1) or []
+    identity_names = _qwen21_compose_identity_name_map(character_map, beat)
+    prop_names = _qwen21_compose_prop_name_map(beat, beat_prop_refs)
+
+    prompt = build_gemini_compose_prompt(
+        beat,
+        identity_images=identity_images,
+        prop_images=prop_images,
+        identity_names=identity_names,
+        prop_names=prop_names,
+    )
 
     return (
         Qwen21ComposePlan(prompt=prompt, reference_images=reference_images, audit_refs=audit_refs),
@@ -6875,7 +6992,7 @@ class NanoBananaGridGenerator:
             # 分流：Sketch 模式 vs Render 模式
             # 统一使用 UnifiedPromptBuilder 以确保导出和生成使用相同的提示词
             is_render_mode = False  # 标记是否为 Render 模式
-            compose_plan: Optional[Qwen21ComposePlan] = None  # runpod_qwen21_compose only
+            compose_plan: Optional[Qwen21ComposePlan] = None  # runpod_qwen21_compose / gemini_webai_compose only
             project_dir = _infer_project_dir(output_path, sketch_dir)
             episode_number = (
                 int(explicit_episode_number)
@@ -7050,6 +7167,35 @@ class NanoBananaGridGenerator:
                         generation_time=time.time() - start_time,
                     )
                 compose_plan, compose_err = _build_qwen21_compose_plan(
+                    beat=beats[0],
+                    character_map=valid_character_map,
+                    scene_refs=scene_refs,
+                    prop_refs=prop_asset_refs,
+                    mode_key=mode_key,
+                )
+                if compose_plan is None:
+                    return GridGenerationResult(
+                        success=False,
+                        error=compose_err,
+                        generation_time=time.time() - start_time,
+                    )
+                prompt = compose_plan.prompt
+                is_render_mode = True
+
+            elif self.provider == "gemini_webai_compose":
+                # Gemini WebAI's own sketch-free "compose" render mode
+                # (added 2026-10-21) — same reasoning as the Qwen branch
+                # just above for why this must be its own chain branch,
+                # not only in the dispatch switch further down. See
+                # `_build_gemini_compose_plan()`'s docstring.
+                print("[NanoBananaPro] 进入 Gemini WebAI Compose 模式（无草图）")
+                if len(beats[:grid_capacity]) != 1 or grid_capacity != 1:
+                    return GridGenerationResult(
+                        success=False,
+                        error="Gemini WebAI compose 仅支持单 beat 1x1 渲染",
+                        generation_time=time.time() - start_time,
+                    )
+                compose_plan, compose_err = _build_gemini_compose_plan(
                     beat=beats[0],
                     character_map=valid_character_map,
                     scene_refs=scene_refs,
@@ -7555,6 +7701,52 @@ class NanoBananaGridGenerator:
                 )
                 if not image_bytes:
                     message = "Gemini WebAI 未返回图像数据"
+                    if webai_error:
+                        message = f"{message}: {webai_error}"
+                    return _usage_fail(message)
+            elif self.provider == "gemini_webai_compose":
+                # Sketch-free "compose" mode (added 2026-10-21, see
+                # GEMINI_WEBAI_COMPOSE_SELECTION_KEYS in config.py and
+                # _build_gemini_compose_plan()'s docstring) — mirrors the
+                # runpod_qwen21_compose branch below, but calling the
+                # plain Gemini WebAI chat-image endpoint instead of a
+                # RunPod ComfyUI job. `compose_plan` was already fully
+                # built in the prompt-building chain above (scene
+                # background first in reference_images, same as every
+                # other `_call_webai_chat_image_api` caller expects —
+                # that call has no "canvas" concept, so a background photo
+                # works exactly like any other reference image here).
+                if sketch or compose_plan is None:
+                    return _usage_fail("Gemini WebAI compose selection 只能用于 Render 阶段")
+                print(
+                    f"[NanoBananaPro] 调用 Gemini WebAI ({self.model}) (compose, 无草图) 生成图像 "
+                    f"({len(compose_plan.reference_images)} 张参考图)..."
+                )
+                image_bytes, _text, webai_error = await _call_webai_chat_image_api(
+                    api_key=self.api_key,
+                    model=self.model,
+                    prompt=compose_plan.prompt,
+                    reference_images=compose_plan.reference_images,
+                    base_url=self.base_url,
+                )
+                if output_path:
+                    try:
+                        submitted_file.write_text(
+                            json.dumps(
+                                {
+                                    **submitted_payload,
+                                    "gemini_compose_prompt": compose_plan.prompt,
+                                    "render_provider": "gemini_webai_compose",
+                                },
+                                ensure_ascii=False,
+                                indent=2,
+                            ),
+                            encoding="utf-8",
+                        )
+                    except NameError:
+                        pass
+                if not image_bytes:
+                    message = "Gemini WebAI compose 未返回图像数据"
                     if webai_error:
                         message = f"{message}: {webai_error}"
                     return _usage_fail(message)

@@ -1421,6 +1421,23 @@ IMAGE_GENERATION_SELECTIONS: dict[str, dict[str, str]] = {
         "provider": "gemini_webai",
         "model": GEMINI_WEBAI_MODEL,
     },
+    # Dev-only, render stage only — sketch-free "compose" mode for Gemini
+    # WebAI (background + identity + prop refs, no sketch), mirroring
+    # runpod_qwen21_compose below but for the Gemini bridge. Same
+    # credential/endpoint as "gemini_webai" (same gate,
+    # GEMINI_WEBAI_COOKIE_FILE) — only the prompt-building path differs
+    # (see generators/nanobanana_grid.py's _build_gemini_compose_plan /
+    # generators/prompt_builder.py's build_gemini_compose_prompt). A
+    # separate "provider" string from plain "gemini_webai" is required so
+    # generate_grid()'s prompt-building chain can tell this selection
+    # apart from the sketch-based one (same reasoning as why
+    # runpod_qwen21_compose has its own provider string distinct from
+    # runpod_qwen21_render).
+    "gemini_webai_compose": {
+        "label": "Gemini WebAI Compose (no sketch, local dev)",
+        "provider": "gemini_webai_compose",
+        "model": GEMINI_WEBAI_MODEL,
+    },
     # Dev-only: direct Google AI Studio key, never shown in the hosted-gateway
     # UI. "image_size" here is a forced override (see NanoBananaGridGenerator.
     # force_image_size) — it wins over the grid-shape-driven resolution that
@@ -1640,6 +1657,22 @@ RUNPOD_QWEN21_RENDER_SELECTION_KEYS = (
 # (see .claude/CLAUDE.md) gives equivalent pre-GPU visibility instead.
 RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS = ("runpod_qwen21_compose",)
 
+# Gemini WebAI's own sketch-free compose mode (2026-10-21) — same shape as
+# RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS above, separate tuple because it is
+# gated on GEMINI_WEBAI_COOKIE_FILE (the local WebAI bridge), not
+# _runpod_qwen21_render_configured(). Render-stage only, same v1 scope as
+# the Qwen compose mode (not wired into RENDER_REVIEW_SELECTION_KEYS; no
+# review-dialog prompt-rewrite support for a variable-count reference set).
+GEMINI_WEBAI_COMPOSE_SELECTION_KEYS = ("gemini_webai_compose",)
+
+# Every "sketch-free, give it scene+identity+prop refs directly" render
+# selection, regardless of which model renders it — api/routes/
+# generation.py's beats/regenerate route bypasses the "sketch must exist"
+# 422 precondition for any of these.
+SKETCH_FREE_COMPOSE_SELECTION_KEYS = (
+    RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS + GEMINI_WEBAI_COMPOSE_SELECTION_KEYS
+)
+
 # Every selection that gets the render-review dialog (dry-run preview, AI
 # rewrite, lint) — api/routes/generation.py's render/review and
 # qwen-edit-prompt/generate routes dispatch on this, not on either tuple
@@ -1719,6 +1752,8 @@ def image_generation_selection_options() -> dict[str, str]:
     # a selectable menu option.
     if GEMINI_WEBAI_COOKIE_FILE:
         options["gemini_webai"] = IMAGE_GENERATION_SELECTIONS["gemini_webai"]["label"]
+        for key in GEMINI_WEBAI_COMPOSE_SELECTION_KEYS:
+            options[key] = IMAGE_GENERATION_SELECTIONS[key]["label"]
     if GOOGLE_AI_API_KEY:
         for key in GOOGLE_GEMINI_SELECTION_KEYS:
             options[key] = IMAGE_GENERATION_SELECTIONS[key]["label"]
@@ -1755,6 +1790,8 @@ def _visible_image_generation_selection(value: str | None) -> str:
     # the local WebAI-to-API cookie bridge. Everywhere else it stays unreachable,
     # so it never becomes an accidental fallback.
     if candidate == "gemini_webai" and GEMINI_WEBAI_COOKIE_FILE:
+        return candidate
+    if candidate in GEMINI_WEBAI_COMPOSE_SELECTION_KEYS and GEMINI_WEBAI_COOKIE_FILE:
         return candidate
     if candidate in GOOGLE_GEMINI_SELECTION_KEYS and GOOGLE_AI_API_KEY:
         return candidate
@@ -1912,7 +1949,10 @@ def _image_provider_config(
             "base_url": gateway.base_url,
             "force_image_size": force_image_size,
         }
-    if provider == "gemini_webai":
+    if provider in ("gemini_webai", "gemini_webai_compose"):
+        # Same credential/endpoint for both — compose is a different
+        # prompt-building path in generate_grid(), not a different
+        # upstream API or gateway channel.
         gateway = get_effective_newapi_gateway_config()
         return {
             "provider": provider,

@@ -5267,6 +5267,49 @@ def _h3_replace_identity_markers(text: str, character_map: dict) -> str:
     return _H3_IDENTITY_MARKER_RE.sub(_sub, text)
 
 
+_H3_SPEAKER_LABEL_RE_CACHE: dict[str, re.Pattern] = {}
+
+
+def _h3_strip_redundant_speaker_label(text: str, speaker_name: str) -> str:
+    """Strip a leading "SPEAKER NAME (optional direction): " screenplay
+    label from `text`, when `text` starts with (a case-insensitive match
+    of) the ALREADY-KNOWN `speaker_name` itself.
+
+    Real bug, 2026-10-21: a dialogue beat's `narration_segment` can arrive
+    as a full screenplay line — e.g.
+    `"LITTLE KIM (flat, polite): A wall. Charming..."` — instead of just
+    the words. H3's `<d>` tag is built verbatim from this text (rule 7:
+    "copy this EXACTLY character-for-character", see
+    `minimax_h3_prompt_builder.py`'s `_dialogue_block`), so the model
+    dutifully SPOKE the label too ("LITTLE KIM flat polite a wall...").
+
+    Matching against the name we already resolved from `beat.speaker` (or
+    the `{{identity}}` marker, for the multi-turn caller below) — rather
+    than a generic ALL-CAPS-word-then-colon heuristic — means this only
+    ever strips a label that repeats the speaker we already know is
+    talking, so there is no risk of eating real spoken words that happen
+    to start with a capitalized word and a colon (e.g. a line that
+    genuinely begins "Listen: ...").
+    """
+    name = speaker_name.strip()
+    body = text.strip()
+    if not name or not body:
+        return body
+    pattern = _H3_SPEAKER_LABEL_RE_CACHE.get(name)
+    if pattern is None:
+        escaped = re.escape(name)
+        pattern = re.compile(
+            rf"^{escaped}\s*(?:\([^)]{{0,120}}\)|（[^）]{{0,120}}）)?\s*[:：]\s*",
+            re.IGNORECASE,
+        )
+        _H3_SPEAKER_LABEL_RE_CACHE[name] = pattern
+    match = pattern.match(body)
+    if not match:
+        return body
+    stripped = body[match.end() :].strip()
+    return stripped or body
+
+
 def _h3_parse_dialogue_segment(
     raw: str, character_map: dict
 ) -> tuple[str, str]:
@@ -5298,6 +5341,9 @@ def _h3_parse_dialogue_segment(
         start = match.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(raw)
         line = raw[start:end].strip()
+        if not line:
+            continue
+        line = _h3_strip_redundant_speaker_label(line, char_name)
         if not line:
             continue
         turns.append(f"{char_name}: {line}")
@@ -5678,6 +5724,13 @@ async def generate_minimax_h3_prompt(
             # markers (more than one speaker folded into this beat) —
             # that labeling is more specific than beat.speaker.
             dialogue_speaker = multi_speaker_label
+        else:
+            # Single-speaker beat: _h3_parse_dialogue_segment returned
+            # narration verbatim (no {{identity}} markers to strip), so a
+            # screenplay-style "SPEAKER (direction): " prefix embedded
+            # directly in narration_segment is still there — strip it now
+            # that we know the speaker (beat.speaker, unchanged above).
+            dialogue_line = _h3_strip_redundant_speaker_label(dialogue_line, dialogue_speaker)
 
     context = MiniMaxH3BeatContext(
         mode="ref2va" if references else "fl2va",

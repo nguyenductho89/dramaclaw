@@ -90,13 +90,13 @@ Image hiện tại (`photoreal-h3-worker:0.37.2`) còn đủ cả Qwen+H3. Cần
 
 ---
 
-## 2. Endpoint mới `qwen-edit-2511-relight` — **code xong, endpoint CHƯA tạo**
+## 2. Endpoint `qwen-edit-2511-relight` — **đã tạo, đã verify GPU thật (2026-10-21)**
 
 - Chỉ Qwen-Image-Edit-2511 (render identity-swap + các việc edit ảnh khác như relight).
-- `.env`: `RUNPOD_QWEN_EDIT_ENDPOINT_ID` (mới, chưa có giá trị — endpoint chưa tồn tại), `RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS` (default 1500), `RUNPOD_QWEN_EDIT_IDLE_TIMEOUT_SECONDS` (default 90).
-- Code: `nanobanana_grid.py`'s `_call_runpod_qwen_edit_image_api` đã đổi sang dùng 2 biến trên (không còn dùng chung `RUNPOD_QWEN_IMAGE_*` của endpoint t2i); `_runpod_qwen_edit_image_graph` không còn gọi `apply_sage_patch`.
+- `.env`: `RUNPOD_QWEN_EDIT_ENDPOINT_ID=cekzpt4p7680pt`, `RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS` (default 1500), `RUNPOD_QWEN_EDIT_IDLE_TIMEOUT_SECONDS` (default 90). Image `ghcr.io/nguyenductho89/photoreal-qwen-worker:0.37.2`, GPU A40.
+- Code: `nanobanana_grid.py`'s `_call_runpod_qwen_edit_image_api` dùng 2 biến trên (không còn dùng chung `RUNPOD_QWEN_IMAGE_*` của endpoint t2i); `_runpod_qwen_edit_image_graph` không còn gọi `apply_sage_patch`.
 - Pipeline (không đổi): UNET/encoder/VAE Edit-2511, `ModelSamplingAuraFlow`+`CFGNorm`, `FluxKontextImageScale`→`VAEEncode`, `SetLatentNoiseMask` khi có mask, 40 bước/cfg 4.0.
-- **Cần làm**: build Dockerfile riêng (base/ComfyUI/Torch giống ảnh hiện tại, bỏ `ComfyUI-MiniMax-H3-PDD-Acc`/`ComfyUI-KJNodes`/`sageattention`, giữ model Edit-2511), tạo endpoint mới qua RunPod MCP, set `RUNPOD_QWEN_EDIT_ENDPOINT_ID`.
+- **Verify relight thật (job `9b92772d…`, không qua pipeline DramaClaw — gọi thẳng `_call_runpod_qwen_edit_image_api` với 1 ảnh, không mask, không reference thứ 2)**: yêu cầu đổi ánh sáng đêm (chỉ đèn bàn) sang ban ngày (cửa sổ chiếu mặt) + giữ đèn bàn sáng hắt tóc. Tổng thời gian gọi (gồm cold start lần đầu worker này chạy — kéo image + nạp model) **765 giây**. Kết quả: phòng chuyển sáng ban ngày đúng yêu cầu, cửa sổ/rèm/khung cảnh thành phố hiện qua ánh sáng ngày, đèn bàn vẫn sáng, trang phục/tư thế/bối cảnh giữ nguyên đúng yêu cầu Human-ID-Editing. **1 lệch đáng chú ý**: màu tóc đổi hẳn từ nâu đen sang nâu-cam ấm trên toàn bộ mái tóc (không chỉ viền rim-light mỏng như yêu cầu "chỉ hắt sáng viền tóc") — tức "warm rim light" bị model hiểu lan thành đổi tông màu nền tóc, không phải chỉ thêm highlight viền. Prompt sau cần nói rõ hơn "a thin warm rim-light highlight only along the hair's silhouette edge, keep the hair's own base color/shade unchanged" nếu muốn tránh lệch này.
 
 ---
 

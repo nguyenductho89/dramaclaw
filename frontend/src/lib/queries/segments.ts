@@ -43,10 +43,19 @@ export type SegmentListResponse = SegmentListData | ErrorResponse;
 
 /** `GET .../segments` — cheap, read-only, safe to poll. No LLM call, no
  * RunPod call. This is what drives the segments panel; `useSegmentVideosReview`
- * below (which DOES call the LLM) is only for the Phase 2 confirm dialog. */
-export function useSegments(project: string, episode: number, enabled = true) {
+ * below (which DOES call the LLM) is only for the Phase 2 confirm dialog.
+ * `pollMs`, when given, refetches on that interval — pass this while a
+ * batch of Phase 1 frame-generation jobs is in flight so newly-finished
+ * images show up without the user having to reopen the dialog. */
+export function useSegments(
+  project: string,
+  episode: number,
+  enabled = true,
+  pollMs?: number,
+) {
   return useQuery({
     queryKey: queryKeys.segments(project, episode),
+    refetchInterval: pollMs,
     queryFn: ({ signal }) =>
       jsonWithBackendError<SegmentListResponse>(
         api.get(p`api/v1/projects/${project}/episodes/${episode}/segments`, {
@@ -130,6 +139,12 @@ export type SegmentFrameResult =
 export interface SegmentFramesGenerateData {
   ok: true;
   results: SegmentFrameResult[];
+  /** The selection actually resolved/used (an explicit override or the
+   * project's own default) — not necessarily what the caller passed in. */
+  image_generation_selection: string;
+  /** `runpod_worker_control.py` key for that selection's RunPod endpoint,
+   * or null when it doesn't run on RunPod (e.g. gemini_webai_compose). */
+  runpod_worker_key: string | null;
 }
 
 export type SegmentFramesGenerateResponse = SegmentFramesGenerateData | ErrorResponse;

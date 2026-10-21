@@ -4228,7 +4228,9 @@
         "noApprovedSegments": "Hãy duyệt ít nhất một phần ở Pha 1 trước.",
         "generateSelectedVideos": "Tạo video ({{count}})",
         "videosQueued": "{{count}} video đã vào hàng đợi",
-        "videosPartialFailure": "{{count}} video vào hàng đợi thất bại"
+        "videosPartialFailure": "{{count}} video vào hàng đợi thất bại",
+        "autoStopWatching": "Đang tạo ảnh trên {{key}} — sẽ tự tắt worker này khi hàng đợi trống",
+        "autoStoppedWorker": "Đã xong hết ảnh đang chờ — đã tự tắt worker {{key}}"
       },
       "sketch": {
         "switched": "Đã đổi phác thảo",

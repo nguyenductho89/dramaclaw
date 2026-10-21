@@ -4342,7 +4342,9 @@
         "noApprovedSegments": "Approve at least one segment's frame in Phase 1 first.",
         "generateSelectedVideos": "Generate video ({{count}})",
         "videosQueued": "{{count}} video job(s) queued",
-        "videosPartialFailure": "{{count}} video job(s) failed to queue"
+        "videosPartialFailure": "{{count}} video job(s) failed to queue",
+        "autoStopWatching": "Generating frames on {{key}} — will automatically stop that worker once the queue is empty",
+        "autoStoppedWorker": "All pending frames are done — automatically stopped the {{key}} worker"
       },
       "sketch": {
         "switched": "Sketch switched",

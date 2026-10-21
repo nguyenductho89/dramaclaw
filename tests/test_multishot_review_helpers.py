@@ -174,3 +174,22 @@ def test_fingerprint_sensitive_to_reference_file_mtime(tmp_path):
     ref.write_bytes(b"ab")  # content/mtime changes
     fp2 = _fp(reference_paths=[str(ref)])
     assert fp1 != fp2
+
+
+# ── RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION ───────────────────────────────
+# Lets the Segments UI know which RunPod worker, if any, to watch for an
+# "auto-stop when the Phase 1 frame-generation queue is idle" affordance
+# (see `generate_segment_frames`'s response and
+# `segments-workbench-dialog.tsx`'s `autoStopWorkerKey`).
+
+
+def test_runpod_compose_selection_maps_to_qwen_t2i_worker():
+    from novelvideo.api.routes.generation import RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION
+
+    assert RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION["runpod_qwen21_compose"] == "qwen_t2i"
+
+
+def test_gemini_webai_compose_has_no_runpod_worker():
+    from novelvideo.api.routes.generation import RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION
+
+    assert RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION.get("gemini_webai_compose") is None

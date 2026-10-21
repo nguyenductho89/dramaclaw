@@ -6328,6 +6328,17 @@ def _segment_prefix_for_episode(episode_num: int) -> str:
     return f"seg_ep{episode_num:03d}_"
 
 
+# `runpod_worker_control.py`'s endpoint key for each sketch-free compose
+# selection that actually runs on a RunPod serverless worker — lets the UI
+# know whether/which worker to watch for an "auto-stop when the batch is
+# idle" affordance (see `generate_segment_frames` below). Not every
+# selection has one: `gemini_webai_compose` runs on the local WebAI
+# container, not RunPod.
+RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION = {
+    "runpod_qwen21_compose": "qwen_t2i",
+}
+
+
 def _frame_mtime_fingerprint(path: Path) -> str:
     try:
         return str(path.stat().st_mtime_ns)
@@ -6599,7 +6610,16 @@ async def generate_segment_frames(
             regen_result = {"ok": False, "error": str(exc.detail)}
         results.append({"chain_id": chain_id, "beat_number": first_beat_num, **regen_result})
 
-    return {"ok": True, "results": results}
+    return {
+        "ok": True,
+        "results": results,
+        # The selection actually resolved/used (body.image_generation_selection
+        # or the project default) — lets the UI know which RunPod worker key,
+        # if any, to watch for an auto-stop-when-idle affordance, without
+        # duplicating this route's own selection-resolution logic client-side.
+        "image_generation_selection": selection,
+        "runpod_worker_key": RUNPOD_WORKER_KEY_BY_COMPOSE_SELECTION.get(selection),
+    }
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/segments/{chain_id}/frame/approve")

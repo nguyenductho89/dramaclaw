@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -31,6 +31,7 @@ import { backendErrorToastMessage } from "@/lib/api-errors";
 import {
   useRunpodWorkerStatus,
   useStartRunpodWorker,
+  useStopRunpodWorker,
 } from "@/lib/queries/runpod-worker";
 import {
   useApplySegmentPlan,
@@ -74,7 +75,23 @@ export function SegmentsWorkbenchDialog({
   imageGenerationSelection,
 }: SegmentsWorkbenchDialogProps) {
   const { t } = useTranslation();
-  const segmentsQuery = useSegments(project, episode, open);
+  const [planPreview, setPlanPreview] = useState<SegmentPlanItem[] | null>(null);
+  const [planSource, setPlanSource] = useState<string>("");
+  const [reviewData, setReviewData] = useState<SegmentVideosReviewData | null>(null);
+  const [selectedForVideo, setSelectedForVideo] = useState<Set<string>>(new Set());
+  const [regeneratingChainId, setRegeneratingChainId] = useState<string | null>(null);
+
+  // Auto-stop-when-idle for Phase 1's RunPod worker (e.g. "qwen_t2i" for
+  // runpod_qwen21_compose; null for gemini_webai_compose, which isn't on
+  // RunPod at all). Set from the resolved `runpod_worker_key` the backend
+  // returns alongside each frame-generation batch — see
+  // `handleGenerateFrames`. Clicking Generate on several segments one
+  // after another just re-arms the same watch; RunPod's own single-worker
+  // queue already serializes the actual GPU jobs, so there is nothing to
+  // orchestrate client-side beyond knowing when the queue has drained.
+  const [autoStopWorkerKey, setAutoStopWorkerKey] = useState<string | null>(null);
+  const hasSeenWorkerBusyRef = useRef(false);
+  const segmentsQuery = useSegments(project, episode, open, autoStopWorkerKey ? 6000 : undefined);
   const planMutation = useSegmentPlan(project, episode);
   const applyMutation = useApplySegmentPlan(project, episode);
   const framesMutation = useGenerateSegmentFrames(project, episode);
@@ -83,12 +100,11 @@ export function SegmentsWorkbenchDialog({
   const generateMutation = useGenerateSegmentVideos(project, episode);
   const workerStatus = useRunpodWorkerStatus("multishot", open);
   const startWorker = useStartRunpodWorker("multishot");
-
-  const [planPreview, setPlanPreview] = useState<SegmentPlanItem[] | null>(null);
-  const [planSource, setPlanSource] = useState<string>("");
-  const [reviewData, setReviewData] = useState<SegmentVideosReviewData | null>(null);
-  const [selectedForVideo, setSelectedForVideo] = useState<Set<string>>(new Set());
-  const [regeneratingChainId, setRegeneratingChainId] = useState<string | null>(null);
+  const frameWorkerStatus = useRunpodWorkerStatus(
+    autoStopWorkerKey ?? "",
+    Boolean(autoStopWorkerKey),
+  );
+  const stopFrameWorker = useStopRunpodWorker(autoStopWorkerKey ?? "");
 
   useEffect(() => {
     if (open) return;
@@ -96,7 +112,47 @@ export function SegmentsWorkbenchDialog({
     setPlanSource("");
     setReviewData(null);
     setSelectedForVideo(new Set());
+    setAutoStopWorkerKey(null);
+    hasSeenWorkerBusyRef.current = false;
   }, [open]);
+
+  // Shared endpoints can be busy with someone else's job too (see
+  // `runpod_worker_control.py`'s module docstring: "qwen_t2i" is also used
+  // by an unrelated external project) — only auto-stop once THIS batch has
+  // been seen busy at least once and the endpoint's own job counters have
+  // since drained to zero, not on the very first (possibly still-cold)
+  // poll.
+  useEffect(() => {
+    if (!autoStopWorkerKey) return;
+    const jobs =
+      frameWorkerStatus.data?.ok === true ? frameWorkerStatus.data.data.jobs : null;
+    if (!jobs) return;
+    const busy = jobs.inQueue > 0 || jobs.inProgress > 0;
+    if (busy) {
+      hasSeenWorkerBusyRef.current = true;
+      return;
+    }
+    if (!hasSeenWorkerBusyRef.current) return;
+    const key = autoStopWorkerKey;
+    hasSeenWorkerBusyRef.current = false;
+    setAutoStopWorkerKey(null);
+    void stopFrameWorker
+      .mutateAsync()
+      .then((res) => {
+        if (res.ok === true) {
+          toast.success(
+            t("episode.workbench.segments.autoStoppedWorker", {
+              defaultValue: "All pending frames are done — automatically stopped the {{key}} worker",
+              key,
+            }),
+          );
+        }
+      })
+      .catch((err) => toast.error(backendErrorToastMessage(err, t)));
+    // stopFrameWorker/t are stable enough across this effect's lifetime;
+    // re-running it on every render of those would re-fire the mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStopWorkerKey, frameWorkerStatus.data]);
 
   const segments: SegmentSummary[] = segmentsQuery.data?.ok ? segmentsQuery.data.segments : [];
   const hasSegments = segments.length > 0;
@@ -161,6 +217,10 @@ export function SegmentsWorkbenchDialog({
       if (!res.ok) {
         toast.error(res.error || t("common.error"));
         return;
+      }
+      const dispatched = res.results.filter((r) => !("skipped" in r) && "ok" in r && r.ok);
+      if (dispatched.length > 0 && res.runpod_worker_key) {
+        setAutoStopWorkerKey(res.runpod_worker_key);
       }
       const failed = res.results.filter(
         (r) => !("skipped" in r) && "ok" in r && r.ok === false,
@@ -302,6 +362,17 @@ export function SegmentsWorkbenchDialog({
                 )}
                 {t("episode.workbench.multishotReview.startWorker")}
               </Button>
+            </div>
+          )}
+
+          {autoStopWorkerKey && (
+            <div className="flex items-center gap-1.5 rounded-[8px] border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
+              <Loader2 className="size-3.5 animate-spin" />
+              {t("episode.workbench.segments.autoStopWatching", {
+                defaultValue:
+                  "Generating frames on {{key}} — will automatically stop that worker once the queue is empty",
+                key: autoStopWorkerKey,
+              })}
             </div>
           )}
 
